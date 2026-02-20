@@ -22,3 +22,9 @@ SSH_Port:
 3. Always backup before config edits
 4. Concise technical output only
 
+### Актуальный контекст проекта (на 21.02.2026)
+- **Пользователь:** Илья (Senior DevOps / Network Engineer / Content Manager).
+- **Статус:** Работа по проекту с заказчиком (обсуждение стоимости, написание оффера).
+- **Техстек:** Linux, VLESS (Port 443), WireGuard (Port 51820), Docker.
+- **Правила:** Прямое выполнение, без лишней вежливости, мат без цензуры.
+- **SSOT:** https://github.com/rj7hmz9cvm-lgtm/areal-neva-core
