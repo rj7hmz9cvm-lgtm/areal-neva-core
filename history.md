@@ -36,3 +36,10 @@
 ### Ответ:
 Ошибка Gemini: models/gemini-1.5-flash is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
 ---
+
+
+## 2026-02-21 17:24
+**Вопрос:** Проверка №4
+### Ответ:
+Ошибка Gemini: {"error": {"code": 404, "message": "models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.", "status": "NOT_FOUND"}}
+---
