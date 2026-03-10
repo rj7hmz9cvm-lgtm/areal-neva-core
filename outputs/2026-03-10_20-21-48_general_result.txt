@@ -1,0 +1,53 @@
+TASK:
+cp ~/.areal-neva-core/executors/sport_executor.py ~/.areal-neva-core/executors/sport_executor.py.bak
+
+RESULT:
+ПОИСКОВЫЙ ОТЧЁТ
+
+1. Executors - Compatible Roblox Script Executors | ZekeHub
+Find the best Roblox script executors compatible with ZekeHub. Compare desktop and mobile executors by features, performance, and compatibility. Detailed guides for setting up all major executors including Solara, Wave, and more.
+https://zekehub.com/executors
+
+2. Delta Executor | How To Run or Execute Scripts on Roblox (Latest 2026)
+Audio tracks for some languages were automatically generated. Learn more In this video, I've provided a tutorial on how to run and execute scripts in Delta Executor.
+https://www.youtube.com/watch?v=J9kI0YYCff8
+
+3. Solara Executor - #1 Free Roblox Executor
+At Solara-Executor.com, we ensure the executor stays up to date with the latest Roblox updates and continues to support all new features released on the platform. We've also created a simple, step-by-step guide to help you easily download, install, and use Solara Executor to run custom scripts in your favorite Roblox games.
+https://solara-executor.com/
+
+4. How to use JJSploit 2025 - Roblox Exploit Tutorial - YouTube
+Learn how to use JJSploit, a free roblox exploit, the longest running and safest available cheat hub out there! Featuring a script executor, buttons, commands, ESP, aimbot, and more.
+https://www.youtube.com/watch?v=ryOD2pFncSY
+
+5. Executor — Airflow 3.0.3 Documentation
+Executor ¶ Executors are the mechanism by which task instances get run. They have a common API and are "pluggable", meaning you can swap executors based on your installation needs. Executors are set by the executor option in the [core] section of the configuration file. Built-in executors are referred to by name, for example:
+https://airflow.apache.org/docs/apache-airflow/3.0.3/core-concepts/executor/index.html
+
+6. Executors - Compatible Roblox Script Executors | ZekeHub
+Find the best Roblox script executors compatible with ZekeHub. Compare desktop and mobile executors by features, performance, and compatibility. Detailed guides for setting up all major executors including Solara, Wave, and more.
+https://zekehub.com/executors
+
+7. Delta Executor | How To Run or Execute Scripts on Roblox (Latest 2026)
+Audio tracks for some languages were automatically generated. Learn more In this video, I've provided a tutorial on how to run and execute scripts in Delta Executor.
+https://www.youtube.com/watch?v=J9kI0YYCff8
+
+8. Solara Executor - #1 Free Roblox Executor
+At Solara-Executor.com, we ensure the executor stays up to date with the latest Roblox updates and continues to support all new features released on the platform. We've also created a simple, step-by-step guide to help you easily download, install, and use Solara Executor to run custom scripts in your favorite Roblox games.
+https://solara-executor.com/
+
+9. How to use JJSploit 2025 - Roblox Exploit Tutorial - YouTube
+Learn how to use JJSploit, a free roblox exploit, the longest running and safest available cheat hub out there! Featuring a script executor, buttons, commands, ESP, aimbot, and more.
+https://www.youtube.com/watch?v=ryOD2pFncSY
+
+10. Remove Executor Coupling to Core Airlfow Code Base #27241
+Here you can see code in Configuration.py maintaining a set of specific Executors that do not support SQLite. So if someone was to add a new Executor, which does not support SQLite, then they would need to modify this piece of core Airflow code (and the other places where SQLite compatibility are checked). This is Executor coupling! Goal With this Discussion thread I hope to: List the points ...
+https://github.com/apache/airflow/discussions/27241
+
+11. Executors - Compatible Roblox Script Executors | ZekeHub
+Find the best Roblox script executors compatible with ZekeHub. Compare desktop and mobile executors by features, performance, and compatibility. Detailed guides for setting up all major executors including Solara, Wave, and more.
+https://zekehub.com/executors
+
+12. Delta Executor | How To Run or Execute Scripts on Roblox (Latest 2026)
+Audio tracks for some languages were automatically generated. Learn more In this video, I've provided a tutorial on how to run and execute scripts in Delta Executor.
+https://www.youtube.com/watch?v=J9kI0YYCff8
