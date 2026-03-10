@@ -19,11 +19,6 @@ def read_file(path: str) -> str:
         return f.read().strip()
 
 
-def write_file(path: str, text: str) -> None:
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(text)
-
-
 def get_active_profile_name() -> str:
     name = read_file(PROFILE_FILE).strip()
     return name if name else "chatgpt_orchestrator"
@@ -46,6 +41,7 @@ def detect_mode(user_prompt: str) -> str:
         "[LEADGEN]": "LEADGEN",
         "[TOUR]": "TOUR",
         "[TREND]": "TREND",
+        "[SPORT]": "SPORT",
     }
 
     for prefix, mode in prefix_map.items():
@@ -72,6 +68,9 @@ def detect_mode(user_prompt: str) -> str:
     if any(x in lowered for x in ["тур", "байкал", "камчат", "маршрут", "логистик", "поездк"]):
         return "TOUR"
 
+    if any(x in lowered for x in ["нхл", "кхл", "хоккей", "ставк", "спорт", "матч", "тотал", "фора", "игрок", "команд"]):
+        return "SPORT"
+
     return "DEVOPS"
 
 
@@ -84,6 +83,7 @@ def assign_model(mode: str) -> str:
         "LEADGEN": "ChatGPT",
         "TOUR": "Gemini",
         "TREND": "Grok",
+        "SPORT": "ChatGPT",
     }
     return mapping.get(mode, "ChatGPT")
 
@@ -97,6 +97,7 @@ def helper_model(mode: str) -> str:
         "LEADGEN": "Grok",
         "TOUR": "Grok",
         "TREND": "DeepSeek",
+        "SPORT": "DeepSeek",
     }
     return mapping.get(mode, "DeepSeek")
 
