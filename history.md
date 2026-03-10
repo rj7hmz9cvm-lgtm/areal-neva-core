@@ -422,3 +422,48 @@ https%3A%2F%2Fwww.transfermarkt.com%2Fvergleich%2FvereineBegegnungen%2Fstatistik
 [{'title': 'Premier League - Full statistics for Liverpool versus Manchester United ...', 'url': 'https%3A%2F%2Fthe%2Dpremier%2Dleague.com%2Fstatistics%2Fliverpool%2Dversus%2Dmanchester%2Dunited%2F&amp;rut=40c81d503ef98ae474434e022389c12d90ab0cb37626cef541eb2edba2a01bc4', 'body': 'Full statistics for Liverpool versus Manchester United - Matches | Results | Statistics | Goals | Standing | Wins | Draws | Losses'}, {'title': 'Manchester United vs Liverpool Complete Head to Head Statistics', 'url': 'http%3A%2F%2Fstats.football.co.uk%2Fhead_to_head%2Fmanchester_united%2Fvs%2Fliverpool%2Findex.shtml&amp;rut=06a0fc04571124530653b2f29ac96855e560770b49d80fdb484bbab921cdc010', 'body': 'Manchester United vs Liverpool Complete Head to Head Statistics Notts. County Oldham Athletic Plymouth Argyle Port Vale Stevenage Swindon Town Walsall Barnet Barrow Bromley Chesterfield Harrogate Town Leyton Orient Wrexham Aberdeen Dundee United Celtic Rangers Heart of Midlothian Hibernian Kilmarnock Livingston Motherwell St. Mirren Dundee Dundee United Falkirk Manchester United (95) Liverpool ...'}, {'title': 'Manchester United vs Liverpool Head to Head History - AiScore', 'url': 'https%3A%2F%2Fwww.aiscore.com%2Fhead%2Dto%2Dhead%2Fsoccer%2Dliverpool%2Dvs%2Dmanchester%2Dunited&amp;rut=d3a277a8bca1dbff7352c528e472292fe3d564bd638611bc16f83235cb703e44', 'body': 'Last 5, Liverpool won 3, Draw 0, Lose 2, 2.6 Goals per match, 1.0 Goals Conceded per match, Asian Handicap Win%: 80.0%, Total Goals Over%: 40.0%. This page lists the head-to-head record of Manchester United vs Liverpool including biggest victories and defeats between the two sides, and H2H stats in all competitions.'}, {'title': 'Liverpool vs Man Utd Head-to-Head Record and H2H Stats', 'url': 'http%3A%2F%2Feurorivals.net%2Fhead%2Dto%2Dhead%2Fliverpool%2Dvs%2Dman%2Dutd&amp;rut=80cc9d3273cd35d6b30a621a9c779c43682d060b009f229acb610020045d4c13', 'body': 'The full head to head record for Liverpool vs Man Utd including a list of H2H matches, biggest Liverpool wins and largest Man U victories.'}, {'title': 'liverpool vs manchester united head to head stats - StatMuse', 'url': 'https%3A%2F%2Fwww.statmuse.com%2Ffc%2Fask%2Fliverpool%2Dvs%2Dmanchester%2Dunited%2Dhead%2Dto%2Dhead%2Dstats&amp;rut=b45a5d0f10097eccbe3fcbd70f298612b97d1b42767d329c2d9edff734c3ecc8', 'body': 'liverpool vs manchester united head to head stats Unlock 2x data'}]
 
 [{'title': 'Manchester United vs Liverpool Complete Head to Head Statistics', 'url': 'http%3A%2F%2Fstats.football.co.uk%2Fhead_to_head%2Fmanchester_united%2Fvs%2Fliverpool%2Findex.shtml&amp;rut=06a0fc04571124530653b2f29ac96855e560770b49d80fdb484bbab921cdc010', 'body': 'Manchester United vs Liverpool Complete Head to Head Statistics Notts. County Oldham Athletic Plymouth Argyle Port Vale Stevenage Swindon Town Walsall Barnet Barrow Bromley Chesterfield Harrogate Town Leyton Orient Wrexham Aberdeen Dundee United Celtic Rangers Heart of Midlothian Hibernian Kilmarnock Livingston Motherwell St. Mirren Dundee Dundee United Falkirk Manchester United (95) Liverpool ...'}, {'title': 'Manchester United vs Liverpool Head to Head History - AiScore', 'url': 'https%3A%2F%2Fwww.aiscore.com%2Fhead%2Dto%2Dhead%2Fsoccer%2Dliverpool%2Dvs%2Dmanchester%2Dunited&amp;rut=d3a277a8bca1dbff7352c528e472292fe3d564bd638611bc16f83235cb703e44', 'body': 'Last 5, Liverpool won 3, Draw 0, Lose 2, 2.6 Goals per match, 1.0 Goals Conceded per match, Asian Handicap Win%: 80.0%, Total Goals Over%: 40.0%. This page lists the head-to-head record of Manchester United vs Liverpool including biggest victories and defeats between the two sides, and H2H stats in all competitions.'}, {'title': 'Liverpool vs Man Utd Head-to-Head Record and H2H Stats', 'url': 'http%3A%2F%2Feurorivals.net%2Fhead%2Dto%2Dhead%2Fliverpool%2Dvs%2Dman%2Dutd&amp;rut=80cc9d3273cd35d6b30a621a9c779c43682d060b009f229acb610020045d4c13', 'body': 'The full head to head record for Liverpool vs Man Utd including a list of H2H matches, biggest Liverpool wins and largest Man U victories.'}, {'title': 'Manchester United vs Liverpool Stats, H2H, xG | FootyStats', 'url': 'https%3A%2F%2Ffootystats.org%2Fengland%2Fmanchester%2Dunited%2Dfc%2Dvs%2Dliverpool%2Dfc%2Dh2h%2Dstats&amp;rut=3cc1d9ed5f30e5a1e520bc66d9f8de2bd551f50e1e44ee5250aca47f96dbc5cf', 'body': 'Head to Head, live stats, live scores, and prediction stats for Manchester United vs Liverpool in the Premier League. Goals Scored, Goals Conceded, Clean Sheets, BTTS and more.'}, {'title': 'liverpool vs manchester united head to head stats - StatMuse', 'url': 'https%3A%2F%2Fwww.statmuse.com%2Ffc%2Fask%2Fliverpool%2Dvs%2Dmanchester%2Dunited%2Dhead%2Dto%2Dhead%2Dstats&amp;rut=b45a5d0f10097eccbe3fcbd70f298612b97d1b42767d329c2d9edff734c3ecc8', 'body': 'liverpool vs manchester united head to head stats Unlock 2x data'}]
+
+
+## 2026-03-10 20:06:04.133084
+TASK:
+[SPORT] Manchester United Liverpool last 2 years statistics
+
+RESULT:
+СПОРТИВНЫЙ ОТЧЁТ
+
+Запрос:
+Manchester United Liverpool last 2 years statistics
+
+Разделы:
+— очные встречи
+— последние матчи
+— игроки и статистика
+— голы, карточки, травмы
+
+Источники:
+1. Liverpool vs Man Utd Head-to-Head Record and H2H Stats
+The full head to head record for Liverpool vs Man Utd including a list of H2H matches, biggest Liverpool wins and largest Man U victories.
+http://eurorivals.net/head-to-head/liverpool-vs-man-utd
+
+2. Manchester United vs Liverpool Complete Head to Head Statistics
+Manchester United v Liverpool Head-to-Head Record A complete record of competitive matches played between the two teams Manchester United vs
+http://stats.football.co.uk/head_to_head/manchester_united/vs/liverpool/index.shtml
+
+3. Manchester United vs Liverpool Head to Head History - AiScore
+Manchester United vs Liverpool Head to Head results record history. H2H stats and prediction, goals, past matches.
+https://www.aiscore.com/head-to-head/soccer-liverpool-vs-manchester-united
+
+4. Manchester United vs Liverpool Stats, H2H, xG | FootyStats
+Head to Head, live stats, live scores, and prediction stats for Manchester United vs Liverpool in the Premier League. Goals Scored, Goals Conceded, Clean Sheets, BTTS and more.
+https://footystats.org/england/manchester-united-fc-vs-liverpool-fc-h2h-stats
+
+5. Man United vs Liverpool Head to Head: Overall Stats, Records & Results
+Explore the all-time stats of Man United vs Liverpool head to head record, including wins, draws, top scorers, current form, biggest aggregate win & more.
+https://www.sportsdunia.com/football-analysis/man-united-vs-liverpool-head-to-head-record-stats-results
+
+6. Premier League - Full statistics for Liverpool versus Manchester United ...
+Full statistics for Liverpool versus Manchester United - Matches | Results | Statistics | Goals | Standing | Wins | Draws | Losses
+https://the-premier-league.com/statistics/liverpool-versus-manchester-united/
+
+Итог:
+Собраны открытые источники для полного спортивного разбора

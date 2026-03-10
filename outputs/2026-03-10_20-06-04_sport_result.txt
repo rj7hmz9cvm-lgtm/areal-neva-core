@@ -1,0 +1,42 @@
+TASK:
+[SPORT] Manchester United Liverpool last 2 years statistics
+
+RESULT:
+СПОРТИВНЫЙ ОТЧЁТ
+
+Запрос:
+Manchester United Liverpool last 2 years statistics
+
+Разделы:
+— очные встречи
+— последние матчи
+— игроки и статистика
+— голы, карточки, травмы
+
+Источники:
+1. Liverpool vs Man Utd Head-to-Head Record and H2H Stats
+The full head to head record for Liverpool vs Man Utd including a list of H2H matches, biggest Liverpool wins and largest Man U victories.
+http://eurorivals.net/head-to-head/liverpool-vs-man-utd
+
+2. Manchester United vs Liverpool Complete Head to Head Statistics
+Manchester United v Liverpool Head-to-Head Record A complete record of competitive matches played between the two teams Manchester United vs
+http://stats.football.co.uk/head_to_head/manchester_united/vs/liverpool/index.shtml
+
+3. Manchester United vs Liverpool Head to Head History - AiScore
+Manchester United vs Liverpool Head to Head results record history. H2H stats and prediction, goals, past matches.
+https://www.aiscore.com/head-to-head/soccer-liverpool-vs-manchester-united
+
+4. Manchester United vs Liverpool Stats, H2H, xG | FootyStats
+Head to Head, live stats, live scores, and prediction stats for Manchester United vs Liverpool in the Premier League. Goals Scored, Goals Conceded, Clean Sheets, BTTS and more.
+https://footystats.org/england/manchester-united-fc-vs-liverpool-fc-h2h-stats
+
+5. Man United vs Liverpool Head to Head: Overall Stats, Records & Results
+Explore the all-time stats of Man United vs Liverpool head to head record, including wins, draws, top scorers, current form, biggest aggregate win & more.
+https://www.sportsdunia.com/football-analysis/man-united-vs-liverpool-head-to-head-record-stats-results
+
+6. Premier League - Full statistics for Liverpool versus Manchester United ...
+Full statistics for Liverpool versus Manchester United - Matches | Results | Statistics | Goals | Standing | Wins | Draws | Losses
+https://the-premier-league.com/statistics/liverpool-versus-manchester-united/
+
+Итог:
+Собраны открытые источники для полного спортивного разбора
