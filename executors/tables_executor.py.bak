@@ -1,13 +1,9 @@
 import os
-from datetime import datetime
 from openpyxl import Workbook
 
 def run_tables(query):
     q = query.replace("[TABLES]", "").strip()
     os.makedirs("outputs", exist_ok=True)
-
-    stamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    path = f"outputs/{stamp}_table.xlsx"
 
     wb = Workbook()
     ws = wb.active
@@ -19,6 +15,7 @@ def run_tables(query):
     ws["A3"] = "NOTE"
     ws["B3"] = "Таблица создана автоматически"
 
+    path = "outputs/result.xlsx"
     wb.save(path)
 
     lines = []

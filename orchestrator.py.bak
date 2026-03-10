@@ -7,7 +7,7 @@ from executors.leadgen_executor import run_leadgen
 from executors.tour_executor import run_tour
 from executors.cad_executor import run_cad
 from executors.tables_executor import run_tables
-from executors.pdf_executor import create_pdf
+from executors.pdf_mode_executor import run_pdf
 
 def detect_mode(text):
     t = text.lower()
@@ -15,7 +15,7 @@ def detect_mode(text):
     if t.startswith("[sport]") or "хоккей" in t or "кхл" in t or "нхл" in t:
         return "SPORT"
 
-    if t.startswith("[content]") or "instagram" in t or "youtube" in t or "telegram" in t or "контент" in t:
+    if t.startswith("[content]") or "instagram" in t or "youtube" in t or "telegram-канал" in t or "контент" in t:
         return "CONTENT"
 
     if t.startswith("[crm]") or "amocrm" in t or "лид" in t or "воронк" in t or "бот" in t:
@@ -58,23 +58,23 @@ def execute(prompt):
     if mode == "SPORT":
         results = run_parallel([
             lambda: run_sport(prompt),
-            lambda: str(search_web("хоккей " + prompt + " новости", 5)),
-            lambda: str(search_web("хоккей " + prompt + " аналитика", 5)),
+            lambda: str(search_web("хоккей " + prompt, 6)),
+            lambda: str(search_web("игроки " + prompt, 6)),
         ])
         return "\n\n".join(results)
 
     if mode == "CONTENT":
         results = run_parallel([
             lambda: run_content(prompt),
-            lambda: str(search_web(prompt + " примеры", 5)),
             lambda: str(search_web(prompt + " тренды", 5)),
+            lambda: str(search_web(prompt + " примеры", 5)),
         ])
         return "\n\n".join(results)
 
     if mode == "CRM":
         results = run_parallel([
             lambda: run_crm(prompt),
-            lambda: str(search_web(prompt + " amocrm", 5)),
+            lambda: str(search_web(prompt + " amoCRM", 5)),
         ])
         return "\n\n".join(results)
 
@@ -93,8 +93,7 @@ def execute(prompt):
         return "\n\n".join(results)
 
     if mode == "PDF":
-        filename = create_pdf(prompt.replace("[PDF]", "").strip(), "pdf_task")
-        return "PDF создан\n\n" + filename
+        return run_pdf(prompt)
 
     if mode == "CAD":
         return run_cad(prompt)
@@ -103,13 +102,12 @@ def execute(prompt):
         return run_tables(prompt)
 
     if mode == "TECH":
-        pdf_file = create_pdf("ТЕХНИЧЕСКИЙ ОТЧЁТ\n\n" + prompt, "tech_report")
         results = run_parallel([
             lambda: run_cad(prompt),
+            lambda: run_pdf("ТЕХНИЧЕСКИЙ ОТЧЁТ\n\n" + prompt),
             lambda: run_tables(prompt),
             lambda: str(search_web(prompt + " нормы спецификация", 6)),
         ])
-        results.insert(0, "PDF создан\n\n" + pdf_file)
         return "\n\n".join(results)
 
     results = run_parallel([

@@ -2,15 +2,10 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfgen import canvas
-from datetime import datetime
 import os
 
-def create_pdf(text, prefix="report"):
+def create_pdf(text, filename="outputs/result.pdf"):
     os.makedirs("outputs", exist_ok=True)
-
-    stamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    filename = f"outputs/{stamp}_{prefix}.pdf"
-
     c = canvas.Canvas(filename, pagesize=A4)
     width, height = A4
 
