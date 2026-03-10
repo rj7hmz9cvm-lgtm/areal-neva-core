@@ -1,4 +1,3 @@
-import concurrent.futures
 from executors.web_search import search_web, format_sources
 from executors.sport_executor import run_sport
 from executors.content_executor import run_content
@@ -40,17 +39,6 @@ def detect_mode(text):
         return "TECH"
 
     return "SEARCH"
-
-def run_parallel(funcs):
-    results = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:
-        futures = [pool.submit(fn) for fn in funcs]
-        for f in futures:
-            try:
-                results.append(f.result())
-            except Exception as e:
-                results.append("ERROR\n\n" + str(e))
-    return results
 
 def execute(prompt):
     mode = detect_mode(prompt)

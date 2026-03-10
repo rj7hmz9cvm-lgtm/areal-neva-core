@@ -26,9 +26,8 @@ def _clean_url(url):
         except Exception:
             pass
     url = unquote(url)
-    url = url.replace("&rut=", " rut=")
-    if " rut=" in url:
-        url = url.split(" rut=", 1)[0]
+    if "&rut=" in url:
+        url = url.split("&rut=", 1)[0]
     return url.strip()
 
 def search_web(query, limit=8):
