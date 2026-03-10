@@ -328,3 +328,27 @@ Manchester United Liverpool last 2 years statistics
 []
 
 []
+
+
+## 2026-03-10 19:48:50.865487
+TASK:
+[SPORT] Manchester United Liverpool last 2 years statistics
+
+RESULT:
+СПОРТИВНЫЙ ОТЧЁТ
+
+Запрос:
+Manchester United Liverpool last 2 years statistics
+
+Что найдено:
+— очные встречи
+— последние матчи
+— статистика игроков
+— голы и удаления
+
+Источники не найдены
+Проверь интернет или поменяй формулировку запроса
+
+[]
+
+[]
