@@ -5,8 +5,8 @@ def run_sport(query):
 
     queries = [
         q,
-        q + " statistics last 2 years",
         q + " head to head",
+        q + " last matches",
         q + " player stats",
         q + " goals cards lineups"
     ]
@@ -21,9 +21,10 @@ def run_sport(query):
             body = r.get("body", "").strip()
             url = r.get("url", "").strip()
 
-            key = (title, url)
             if not title and not body and not url:
                 continue
+
+            key = (title, url)
             if key in seen:
                 continue
 
@@ -44,12 +45,11 @@ def run_sport(query):
     lines.append("— очные встречи")
     lines.append("— последние матчи")
     lines.append("— статистика игроков")
-    lines.append("— голы и удаления")
+    lines.append("— голы и карточки")
     lines.append("")
 
     if not collected:
         lines.append("Источники не найдены")
-        lines.append("Проверь интернет или поменяй формулировку запроса")
         return "\n".join(lines)
 
     lines.append("Источники:")
