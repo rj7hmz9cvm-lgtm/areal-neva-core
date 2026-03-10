@@ -2,32 +2,68 @@ from executors.web_search import search_web
 
 def run_sport(query):
     q = query.replace("[SPORT]", "").strip()
-    sources = search_web("хоккей " + q + " статистика матчи игроки голы удаления", 10)
+
+    queries = [
+        q,
+        q + " statistics last 2 years",
+        q + " head to head",
+        q + " player stats",
+        q + " goals cards lineups"
+    ]
+
+    collected = []
+    seen = set()
+
+    for item in queries:
+        results = search_web(item, 6)
+        for r in results:
+            title = r.get("title", "").strip()
+            body = r.get("body", "").strip()
+            url = r.get("url", "").strip()
+
+            key = (title, url)
+            if not title and not body and not url:
+                continue
+            if key in seen:
+                continue
+
+            seen.add(key)
+            collected.append({
+                "title": title,
+                "body": body,
+                "url": url
+            })
 
     lines = []
-    lines.append("СПОРТИВНЫЙ РАЗБОР")
+    lines.append("СПОРТИВНЫЙ ОТЧЁТ")
     lines.append("")
     lines.append("Запрос:")
     lines.append(q)
     lines.append("")
-    lines.append("Что собрано:")
-    lines.append("— открытые источники по матчам")
+    lines.append("Что найдено:")
+    lines.append("— очные встречи")
+    lines.append("— последние матчи")
     lines.append("— статистика игроков")
     lines.append("— голы и удаления")
-    lines.append("— новости и аналитика")
     lines.append("")
+
+    if not collected:
+        lines.append("Источники не найдены")
+        lines.append("Проверь интернет или поменяй формулировку запроса")
+        return "\n".join(lines)
+
     lines.append("Источники:")
     lines.append("")
 
-    for s in sources[:10]:
-        lines.append(s.get("title",""))
+    for i, s in enumerate(collected[:15], start=1):
+        lines.append(f"{i}. {s.get('title', '')}")
         if s.get("body"):
-            lines.append(s.get("body",""))
+            lines.append(s.get("body", ""))
         if s.get("url"):
-            lines.append(s.get("url",""))
+            lines.append(s.get("url", ""))
         lines.append("")
 
     lines.append("Итог:")
-    lines.append("Найденные данные собраны. Следующий слой внешних API можно будет подключить позже без смены архитектуры")
+    lines.append("Собраны открытые источники для анализа матча")
 
     return "\n".join(lines)
