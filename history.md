@@ -523,3 +523,27 @@ https://zekehub.com/executors
 12. Delta Executor | How To Run or Execute Scripts on Roblox (Latest 2026)
 Audio tracks for some languages were automatically generated. Learn more In this video, I've provided a tutorial on how to run and execute scripts in Delta Executor.
 https://www.youtube.com/watch?v=J9kI0YYCff8
+
+
+## 2026-03-10 20:23:15.388241
+TASK:
+[SPORT] Manchester United Liverpool last 2 years statistics
+
+RESULT:
+СПОРТИВНЫЙ АНАЛИТИЧЕСКИЙ ОТЧЁТ
+
+ПОСЛЕДНИЕ ОЧНЫЕ МАТЧИ
+
+СРЕДНИЕ ПОКАЗАТЕЛИ
+Среднее количество голов: 0
+
+СТАТИСТИКА ПОБЕД
+Manchester United побед: 0
+Liverpool побед: 0
+Ничьи: 0
+
+АНАЛИЗ
+Команды играют примерно на равном уровне
+
+BETTING-ЗАМЕТКА
+Смотреть тотал голов и форму последних матчей команд
