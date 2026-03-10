@@ -40,5 +40,8 @@ def main():
     except Exception:
         print("\nGIT_SYNC: FAIL")
 
+    # автоматически открыть папку результатов
+    os.system("open ~/.areal-neva-core/outputs")
+
 if __name__ == "__main__":
     main()
