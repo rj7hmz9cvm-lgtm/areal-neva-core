@@ -304,3 +304,27 @@ RESULT:
 []
 
 []
+
+
+## 2026-03-10 19:47:30.515635
+TASK:
+[SPORT] Manchester United Liverpool last 2 years statistics
+
+RESULT:
+СПОРТИВНЫЙ ОТЧЁТ
+
+Запрос:
+Manchester United Liverpool last 2 years statistics
+
+Что найдено:
+— очные встречи
+— последние матчи
+— статистика игроков
+— голы и удаления
+
+Источники не найдены
+Проверь интернет или поменяй формулировку запроса
+
+[]
+
+[]
