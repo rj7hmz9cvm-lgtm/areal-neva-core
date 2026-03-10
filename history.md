@@ -279,3 +279,28 @@ RESULT:
 []
 
 [{'title': 'Your Account - Amazon.fr', 'url': 'https://www.amazon.fr/gp/css/homepage.html?from=hz', 'body': 'Sign up for free to save on business purchases and download your VAT invoices easily.'}, {'title': 'Votre compte - Amazon.ca', 'url': 'https://www.amazon.ca/-/fr/your-account/', 'body': 'Inscrivez-vous pour économiser jusqu’à 10 % grâce à des prix exclusifs aux entreprises et séparer vos achats professionnels. Prodiguer …'}, {'title': 'Compte - Service client Amazon', 'url': 'https://www.cdn.amazon.fr/gp/help/customer/display.html?nodeId=TnUAXSKY2WmZK7SKUY', 'body': "Ces informations ont-elles été utiles ? Besoin d'aide ? Paiement 30 jours. Hors TVA. Pour les professionnels."}, {'title': 'Amazon.fr : livres, DVD, jeux vidéo, musique, high-tech, informatique ...', 'url': 'https://www.amazon.fr/', 'body': 'Achat et vente en ligne parmi des millions de produits en stock. Livraison gratuite à partir de 25€. Vos articles à petits prix : culture, high …'}, {'title': 'Amazon.fr : Votre Compte', 'url': 'https://www.amazon.fr/compte/s?k=votre+compte', 'body': 'Gérer commandes, paiements, paramètres des comptes et plus. En apprendre plus sur ces résultats. Consultez la page de chaque produit …'}]
+
+
+## 2026-03-10 19:37:20.783214
+TASK:
+[SPORT] Манчестер Юнайтед Ливерпуль за последние два года статистика
+
+RESULT:
+СПОРТИВНЫЙ ОТЧЁТ
+
+Запрос:
+Манчестер Юнайтед Ливерпуль за последние два года статистика
+
+Что найдено:
+— очные встречи
+— последние матчи
+— статистика игроков
+— голы и удаления
+
+Итог:
+Собраны открытые источники для анализа матча
+Для полного betting-модуля позже подключаются sports APIs без смены архитектуры
+
+[]
+
+[]
