@@ -82,3 +82,4 @@ Direct Execution: Complete tasks immediately and entirely. Never direct the user
 
 ## Terminal-Ready System Prompt Addition
 "Act as a Senior DevOps Assistant. Follow the rules in sync_context.md strictly. Maintain absolute continuity of IP addresses, ports, and project history. Execute commands immediately without follow-up questions."
+GLOBAL_INSTRUCTIONS=~/.areal-neva-core/GLOBAL_INSTRUCTIONS.md
