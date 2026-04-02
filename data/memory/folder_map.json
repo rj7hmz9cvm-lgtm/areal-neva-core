@@ -1,0 +1,94 @@
+{
+  "telegram": {
+    "path": "/root/AI_ORCHESTRA/telegram",
+    "drive": "12O8mImiDfAx89xc0VrqWocQ-xC6o2F94"
+  },
+  "TABLES": {
+    "path": "/root/AI_ORCHESTRA/TABLES",
+    "drive": "1ULhSGpyDo9jPHS0tEilAkVlP22inXG1p"
+  },
+  "PROJECTS": {
+    "path": "/root/AI_ORCHESTRA/PROJECTS",
+    "drive": "1IfkMKO5z3TWRNhX1RLAAD3OG4QJNXT4w"
+  },
+  "AUTO": {
+    "path": "/root/AI_ORCHESTRA/AUTO",
+    "drive": "1zzJjaxVt-Ecik-PpI6JjXkzHb7-xW82K"
+  },
+  "LOGS": {
+    "path": "/root/AI_ORCHESTRA/LOGS",
+    "drive": "1CfN5FLEyMGHhS-GjtVrbL3iaZ1dRAwU7"
+  },
+  "ARCHIVE_SERVER": {
+    "path": "/root/AI_ORCHESTRA/ARCHIVE_SERVER",
+    "drive": "1shTqeqGSOqUoQl5kpD-B1iWi45D_W4Sa"
+  },
+  "UNSORTED": {
+    "path": "/root/AI_ORCHESTRA/UNSORTED",
+    "drive": "1yr24E828c6etRoWvesgMVZSq5qB1h_D2"
+  },
+  "CLIENTS": {
+    "path": "/root/AI_ORCHESTRA/CLIENTS",
+    "drive": "1QY_Dqe2asfJOG2ACLle5HvzMGdfTNEKi"
+  },
+  "BARN_114M": {
+    "path": "/root/AI_ORCHESTRA/BARN_114M",
+    "drive": "1hvv5ZxpkCGo5hYIG4Am-eEA2gMEHLasl"
+  },
+  "DEVOPS_AUTOMATION": {
+    "path": "/root/AI_ORCHESTRA/DEVOPS_AUTOMATION",
+    "drive": "1kUhpudKjk2N6A3GlwbRAuA81e0OWx4tc"
+  },
+  "CRM_LEADS": {
+    "path": "/root/AI_ORCHESTRA/CRM_LEADS",
+    "drive": "1F5B_E6lCK3D7QIErwjFjDjfp04eKfrxT"
+  },
+  "ESTIMATES": {
+    "path": "/root/AI_ORCHESTRA/ESTIMATES",
+    "drive": "1gEhSmeHc6UgKy8-KIhEkHar1OpHr5HaZ"
+  },
+  "VIDEO_CONTENT": {
+    "path": "/root/AI_ORCHESTRA/VIDEO_CONTENT",
+    "drive": "1fMSwQ1KYEF17hA0zaigoO9ypZ9HFtxI0"
+  },
+  "TMP": {
+    "path": "/root/AI_ORCHESTRA/TMP",
+    "drive": "19LkgMpwD-XHDUDiK_nPPEHy7ZklFXfQD"
+  },
+  "INBOX": {
+    "path": "/root/AI_ORCHESTRA/INBOX",
+    "drive": "1ejYMVUQ0xdhmSr7r-CjY4N_orimC1fKU"
+  },
+  "tasks": {
+    "path": "/root/AI_ORCHESTRA/tasks",
+    "drive": "1g0vIZiYf2cKeDjJR_I1uPOtXlR2x9KOI"
+  },
+  "TEHNADZOR": {
+    "path": "/root/AI_ORCHESTRA/TEHNADZOR",
+    "drive": "11hBigC--T4q7jvGqPHOjkQDjcHeAy6AZ"
+  },
+  "NEURON_SOFT_VPN": {
+    "path": "/root/AI_ORCHESTRA/NEURON_SOFT_VPN",
+    "drive": "1MYCZhlcHN8bLi-Uec_ptARBKV5UNZtK7"
+  },
+  "DOCS_PDF_DWG": {
+    "path": "/root/AI_ORCHESTRA/DOCS_PDF_DWG",
+    "drive": "1ZFa7O6SCxOXjd8rJobT-hqR3K2O9VEGy"
+  },
+  "ADS_MARKETING": {
+    "path": "/root/AI_ORCHESTRA/ADS_MARKETING",
+    "drive": "1Lzre93hbQjKQnmorlgdtWCTpZRiCG7L1"
+  },
+  "STROYKA": {
+    "path": "/root/AI_ORCHESTRA/STROYKA",
+    "drive": "186A3Sewz_U5BD5HsabfKDmw1cpqLPHL0"
+  },
+  "TEXTS": {
+    "path": "/root/AI_ORCHESTRA/TEXTS",
+    "drive": "1PMghlWeUMySRh-Kgq-RZLExohEnLK5pW"
+  },
+  "BETTING": {
+    "path": "/root/AI_ORCHESTRA/BETTING",
+    "drive": "15DQXvEswn5177V1m3orGOg9Hmy7huml-"
+  }
+}

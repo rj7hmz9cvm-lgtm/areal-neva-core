@@ -1,0 +1,90 @@
+import os
+import json
+import asyncio
+from dotenv import load_dotenv
+from telethon import TelegramClient, events
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
+from google.oauth2 import service_account
+
+MAP_FILE = "/root/.areal-neva-core/data/memory/projects_map.json"
+ENV_FILE = "/root/.areal-neva-core/.env"
+SESSION_FILE = "/root/.areal-neva-core/sessions/bot_agent"
+TMP_DIR = "/tmp"
+
+load_dotenv(ENV_FILE)
+BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+GROUP_ID = int(os.getenv("TELEGRAM_ALLOWED_GROUP_ID"))
+API_ID = int(os.getenv("TG_API_ID"))
+API_HASH = os.getenv("TG_API_HASH")
+
+SCOPES = ["https://www.googleapis.com/auth/drive"]
+CREDS = service_account.Credentials.from_service_account_file(
+    "/root/.areal-neva-core/credentials.json",
+    scopes=SCOPES
+)
+drive = build("drive", "v3", credentials=CREDS, cache_discovery=False)
+
+client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
+
+def load_map():
+    if not os.path.exists(MAP_FILE):
+        return {}
+    with open(MAP_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def upload(file_path, name, folder):
+    media = MediaFileUpload(file_path, resumable=True)
+    drive.files().create(
+        body={"name": name, "parents": [folder]},
+        media_body=media,
+        fields="id"
+    ).execute()
+
+@client.on(events.NewMessage(chats=GROUP_ID))
+async def handler(event):
+    if not event.file:
+        return
+
+    m = load_map()
+    if not m:
+        return
+
+    project = None
+    reply_id = event.message.reply_to_msg_id if event.message.reply_to else None
+
+    if reply_id:
+        project = next((k for k, v in m.items() if v.get("telegram_topic") == reply_id), None)
+
+    if not project:
+        if "telegram" in m:
+            project = "telegram"
+        elif len(m) == 1:
+            project = list(m.keys())[0]
+        else:
+            return
+
+    folder = m.get(project, {}).get("drive")
+    if not folder:
+        return
+
+    name = getattr(event.file, "name", None) or f"{event.id}"
+    safe_name = name.replace("/", "_")
+    tmp = os.path.join(TMP_DIR, f"{event.id}_{safe_name}")
+
+    try:
+        file_path = await event.download_media(file=tmp)
+        if file_path:
+            await asyncio.to_thread(upload, file_path, safe_name, folder)
+            await event.reply("OK")
+    finally:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+
+async def main():
+    await client.start(bot_token=BOT_TOKEN)
+    print("BOT_AGENT_ONLINE")
+    await client.run_until_disconnected()
+
+if __name__ == "__main__":
+    asyncio.run(main())

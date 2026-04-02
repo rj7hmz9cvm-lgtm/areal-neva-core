@@ -1,0 +1,181 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TP Version="07" GUID="000064c5-3689-4543-bb09-17f2e0fd2d9e" NameSoftware="ТехноКад-Экспресс" VersionSoftware="2.27.00129.0">
+  <Building>
+    <Package>
+      <NewBuildings>
+        <NewBuilding>
+          <CadastralBlocks>
+            <CadastralBlock>47:07:1047005</CadastralBlock>
+          </CadastralBlocks>
+          <ParentCadastralNumbers>
+            <CadastralNumber>47:07:1047005:6790</CadastralNumber>
+          </ParentCadastralNumbers>
+          <AssignationBuilding>204001000000</AssignationBuilding>
+          <Name>производственно-складское здание</Name>
+          <ElementsConstruct>
+            <Material Wall="061001999000" />
+            <DifferentWall>сэндвич-панели</DifferentWall>
+          </ElementsConstruct>
+          <ExploitationChar YearBuilt="2024" />
+          <Floors Floors="1" />
+          <Area>
+            <Area>1296.0</Area>
+          </Area>
+          <Address AddressOrLocation="0">
+            <FIAS>db8758d6-b8ea-453d-a75f-8f2d3ff49fb0</FIAS>
+            <RussianFederation>Российская Федерация</RussianFederation>
+            <Region>47</Region>
+            <District Name="Всеволожский" Type="р-н" />
+            <Note>Российская Федерация, Ленинградская область, Всеволожский муниципальный район, Колтушское городское поселение, территория Промзона Мягловская, улица Круговая, земельный участок 47</Note>
+          </Address>
+          <EntitySpatial CsCode="47.2" Name="МСК-47, зона 2">
+            <SpatialElement Underground="0">
+              <SpelementUnit TypeUnit="Точка" SuNmb="1">
+                <Ordinate NumGeopoint="1" X="428837.27" Y="2234910.28" DeltaGeopoint="0.10" GeopointOpred="692005000000" Formula="Mt = √(m₀² + m₁²)=0.10" />
+              </SpelementUnit>
+              <SpelementUnit TypeUnit="Точка" SuNmb="2">
+                <Ordinate NumGeopoint="2" X="428844.29" Y="2234887.08" DeltaGeopoint="0.10" GeopointOpred="692005000000" Formula="Mt = √(m₀² + m₁²)=0.10" />
+              </SpelementUnit>
+              <SpelementUnit TypeUnit="Точка" SuNmb="3">
+                <Ordinate NumGeopoint="3" X="428896.21" Y="2234902.78" DeltaGeopoint="0.10" GeopointOpred="692005000000" Formula="Mt = √(m₀² + m₁²)=0.10" />
+              </SpelementUnit>
+              <SpelementUnit TypeUnit="Точка" SuNmb="4">
+                <Ordinate NumGeopoint="4" X="428889.19" Y="2234925.98" DeltaGeopoint="0.10" GeopointOpred="692005000000" Formula="Mt = √(m₀² + m₁²)=0.10" />
+              </SpelementUnit>
+              <SpelementUnit TypeUnit="Точка" SuNmb="5">
+                <Ordinate NumGeopoint="1" X="428837.27" Y="2234910.28" DeltaGeopoint="0.10" GeopointOpred="692005000000" Formula="Mt = √(m₀² + m₁²)=0.10" />
+              </SpelementUnit>
+            </SpatialElement>
+          </EntitySpatial>
+          <Plans>
+            <Plan Type="01" Name="0b97195d-a5b8-45dc-be81-6d142f8455c1\план 1 этажа_page-0001 - 2024-12-11T062254.222.jpg" Scale="1:1000" Number="1" />
+          </Plans>
+        </NewBuilding>
+      </NewBuildings>
+    </Package>
+    <GeneralCadastralWorks DateCadastral="2024-12-05">
+      <Contractor>
+        <FamilyName>Щелканов</FamilyName>
+        <FirstName>Аркадий</FirstName>
+        <Patronymic>Вениаминович</Patronymic>
+        <OGRNIP>324470400055772</OGRNIP>
+        <SNILS>14914186372</SNILS>
+        <CadastralEngineerRegistryNumber>2771</CadastralEngineerRegistryNumber>
+        <DateEntering>2024-06-19</DateEntering>
+        <Telephone>+79816837487</Telephone>
+        <Address>г. Всеволожск, ул. Бибиковская, дом 17, кв.53</Address>
+        <Email>arkadiy.geo@yandex.ru</Email>
+        <SelfRegulatoryOrganization>А СРО "ГКИ"</SelfRegulatoryOrganization>
+        <AgreementCadWork>
+          <Name>договор на производство кадастровых работ</Name>
+          <NumberAgreement>02/12/2024-1</NumberAgreement>
+          <DateAgreement>2024-12-02</DateAgreement>
+        </AgreementCadWork>
+      </Contractor>
+      <Reason>созданием здания, расположенного по адресу: Российская Федерация, Ленинградская область, Всеволожский муниципальный район, Колтушское городское поселение, территория Промзона Мягловская, улица Круговая, земельный участок 47</Reason>
+      <Clients>
+        <Client>
+          <Person>
+            <FamilyName>Арджа</FamilyName>
+            <FirstName>Джияд</FirstName>
+            <Patronymic>Мустафаевич</Patronymic>
+            <Address>г. Санкт-Петербург, улица Тарасова, дом 11, квартира 3</Address>
+            <Document>
+              <CodeDocument>008001001000</CodeDocument>
+              <Series>4020</Series>
+              <Number>766985</Number>
+              <Date>2021-01-14</Date>
+              <IssueOrgan>ГУ МВД России по г. Санкт-Петербургу и Ленинградской области</IssueOrgan>
+            </Document>
+          </Person>
+        </Client>
+      </Clients>
+    </GeneralCadastralWorks>
+    <InputData>
+      <Documents>
+        <Document>
+          <CodeDocument>558217000000</CodeDocument>
+          <Name>Кадастровый план территории кадастрового квартала 47:07:1047005</Name>
+          <Number>КУВИ-001/2024-196132864</Number>
+          <Date>2024-08-01</Date>
+          <IssueOrgan>Филиал публично-правовой компании "Роскадастр" по Ленинградской области</IssueOrgan>
+        </Document>
+        <Document>
+          <CodeDocument>558212000000</CodeDocument>
+          <Name>декларация</Name>
+          <Number>-</Number>
+          <Date>2024-12-02</Date>
+          <IssueOrgan>-</IssueOrgan>
+        </Document>
+        <Document>
+          <CodeDocument>558261000000</CodeDocument>
+          <Name>проектная документация</Name>
+          <Number>6790-04/2024-АР</Number>
+          <Date>2024-04-01</Date>
+          <IssueOrgan>ИП Николаев А.Н.</IssueOrgan>
+        </Document>
+      </Documents>
+      <GeodesicBases>
+        <GeodesicBase Name="МСК 47 зона 2" CsCode="47.2">
+          <PType>дифференциальные геодезические станции</PType>
+          <PName>VSVL</PName>
+          <PKind>ДГС</PKind>
+          <PKlass>СГС-1</PKlass>
+          <OrdX>444516.93</OrdX>
+          <OrdY>2231376.96</OrdY>
+          <ConditionPoint AsOfDate="2024-12-02">
+            <OutdoorPoint>
+              <StateConservation>-</StateConservation>
+              <NetworkPoints>627002000000</NetworkPoints>
+            </OutdoorPoint>
+            <CenterPoint>
+              <StateConservation>-</StateConservation>
+              <NetworkPoints>627001000000</NetworkPoints>
+            </CenterPoint>
+            <Mark>
+              <StateConservation>-</StateConservation>
+              <NetworkPoints>627002000000</NetworkPoints>
+            </Mark>
+          </ConditionPoint>
+        </GeodesicBase>
+      </GeodesicBases>
+      <MeansSurvey>
+        <MeanSurvey>
+          <Name>Аппаратура спутниковая геодезическая многочастотная RGK SR1</Name>
+          <Number>Y11U02038</Number>
+          <CertificateVerification>С-ГКФ/18-12-2023/302589549 от 18.12.2023 г.</CertificateVerification>
+        </MeanSurvey>
+      </MeansSurvey>
+    </InputData>
+    <Conclusion>Технический план подготовлен для постановки на кадастровый учет вновь выстроенного нежилого здания по адресу: Российская Федерация, Ленинградская область, Всеволожский муниципальный район, Колтушское городское поселение, территория Промзона Мягловская, улица Круговая, земельный участок 47.
+
+В соответствии с подпунктом  7 пункта 51 Приказа Росреестра от 15.03.2022 N П/0082 "Об установлении формы технического плана, требований к его подготовке и состава содержащихся в нем сведений" описание местоположения рассматриваемого здания указано относительно адреса земельного участка. 
+
+Здание расположено на земельном участке с кадастровым номером 47:07:1047005:6790  и состоит из 1 (одного) обособленного контура - наземного (на уровне примыкания к поверхности земли). </Conclusion>
+    <SchemeGeodesicPlotting Kind="01" Name="0b97195d-a5b8-45dc-be81-6d142f8455c1\Схема геодезических построений_ТП.pdf" />
+    <SchemeDisposition Kind="01" Name="0b97195d-a5b8-45dc-be81-6d142f8455c1\Схема расположения на земельном участке.pdf" />
+    <DiagramContour Kind="01" Name="0b97195d-a5b8-45dc-be81-6d142f8455c1\Чертеж контура.pdf" />
+    <Appendix>
+      <AppliedFiles>
+        <NumberAppendix>1</NumberAppendix>
+        <NameAppendix>декларация</NameAppendix>
+        <AppliedFile Kind="01" Name="0b97195d-a5b8-45dc-be81-6d142f8455c1\декларация_производственно-складское.pdf" />
+      </AppliedFiles>
+      <AppliedFiles>
+        <NumberAppendix>2</NumberAppendix>
+        <NameAppendix>проектная документация</NameAppendix>
+        <AppliedFile Kind="01" Name="0b97195d-a5b8-45dc-be81-6d142f8455c1\ПР.pdf" />
+      </AppliedFiles>
+      <AppliedFiles>
+        <NumberAppendix>3</NumberAppendix>
+        <NameAppendix>согласие на обработку персональных даных</NameAppendix>
+        <AppliedFile Kind="01" Name="0b97195d-a5b8-45dc-be81-6d142f8455c1\сопд.pdf" />
+      </AppliedFiles>
+      <AppliedFiles>
+        <NumberAppendix>1</NumberAppendix>
+        <NameAppendix>Технический план</NameAppendix>
+        <AppliedFile Kind="01" Name="0b97195d-a5b8-45dc-be81-6d142f8455c1\TP_001d7436-76f6-4d4f-b545-1fcf5e70b579.pdf" />
+      </AppliedFiles>
+    </Appendix>
+  </Building>
+</TP>

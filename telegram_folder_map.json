@@ -1,0 +1,13 @@
+{
+  "root": "/root/AI_ORCHESTRA/telegram",
+  "chat_map": {
+    "КОРДОН СНТ": {
+      "base": "/root/AI_ORCHESTRA/telegram/кордон СНТ",
+      "photo": "/root/AI_ORCHESTRA/telegram/кордон СНТ/фото",
+      "document": "/root/AI_ORCHESTRA/telegram/кордон СНТ/документы",
+      "messages": "/root/AI_ORCHESTRA/telegram/кордон СНТ/переписки",
+      "money": "/root/AI_ORCHESTRA/telegram/кордон СНТ/деньги",
+      "tmp": "/root/AI_ORCHESTRA/telegram/кордон СНТ/tmp"
+    }
+  }
+}

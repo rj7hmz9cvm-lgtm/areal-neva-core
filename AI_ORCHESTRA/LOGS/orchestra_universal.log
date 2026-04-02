@@ -1,0 +1,17 @@
+MAIN STARTED
+COPIED: test.txt
+REMOVED: test.txt
+Traceback (most recent call last):
+  File "/Users/ilakuznecov/.areal-neva-core/main.py", line 9, in <module>
+    for fname in os.listdir(IN):
+FileNotFoundError: [Errno 2] No such file or directory: '/Users/ilakuznecov/AI_ORCHESTRA/INBOX'
+MAIN STARTED
+COPIED: test.txt
+REMOVED: test.txt
+Traceback (most recent call last):
+  File "/Users/ilakuznecov/.areal-neva-core/main.py", line 9, in <module>
+    for fname in os.listdir(IN):
+FileNotFoundError: [Errno 2] No such file or directory: '/Users/ilakuznecov/AI_ORCHESTRA/INBOX'
+[2026-03-17 18:28:01] STARTED
+STARTED
+[2026-03-17 18:28:38] STARTED
