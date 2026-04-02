@@ -1,0 +1,114 @@
+Вот пример Python-скрипта, который выполняет описанные задачи. Скрипт использует библиотеку `ezdxf` для работы с DXF/DWG файлами и `reportlab` для генерации PDF-отчёта. Убедитесь, что установлены необходимые библиотеки (`pip install ezdxf reportlab`).
+
+```python
+import os
+import datetime
+from ezdxf import readfile, new
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle
+
+def create_simple_dxf(filename):
+    """Создаёт простой DXF-файл с несколькими слоями и объектами."""
+    doc = new()
+    # Добавляем слои
+    layer1 = doc.layers.add('Layer1')
+    layer2 = doc.layers.add('Layer2')
+    layer3 = doc.layers.add('Layer3')
+    
+    # Добавляем объекты на слои
+    msp = doc.modelspace()
+    msp.add_line((0, 0), (10, 10), dxfattribs={'layer': 'Layer1'})
+    msp.add_circle((5, 5), 3, dxfattribs={'layer': 'Layer2'})
+    msp.add_text('Hello, DXF!', dxfattribs={'layer': 'Layer3', 'height': 2})
+    
+    doc.saveas(filename)
+
+def extract_layer_info(dxf_file):
+    """Извлекает список всех слоёв и количество объектов на каждом слое."""
+    try:
+        doc = readfile(dxf_file)
+        layers = doc.layers
+        layer_info = {}
+        
+        for layer in layers:
+            layer_name = layer.dxf.name
+            entity_count = sum(1 for entity in doc.modelspace() if entity.dxf.layer == layer_name)
+            layer_info[layer_name] = entity_count
+        
+        return layer_info
+    except Exception as e:
+        print(f"Ошибка при чтении файла: {e}")
+        return None
+
+def generate_pdf_report(filename, layer_info):
+    """Генерирует PDF-отчёт с информацией о слоях."""
+    doc = SimpleDocTemplate(filename, pagesize=A4)
+    styles = getSampleStyleSheet()
+    elements = []
+    
+    # Добавляем заголовок
+    elements.append(Paragraph("Отчёт по файлу DXF", styles['Title']))
+    
+    # Добавляем информацию о файле
+    elements.append(Paragraph(f"Файл: {filename}", styles['Normal']))
+    
+    # Добавляем таблицу с информацией о слоях
+    data = [['Слой', 'Количество объектов']]
+    for layer, count in layer_info.items():
+        data.append([layer, str(count)])
+    
+    table = Table(data)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+    ]))
+    elements.append(table)
+    
+    # Добавляем дату и время создания отчёта
+    elements.append(Paragraph(f"Дата и время создания: {datetime.datetime.now()}", styles['Normal']))
+    
+    doc.build(elements)
+
+def main():
+    # Проверяем наличие файла 'drawing.dwg'
+    dwg_file = 'drawing.dwg'
+    dxf_file = 'drawing.dxf'  # Временный файл для примера
+    
+    if not os.path.exists(dwg_file):
+        print(f"Файл '{dwg_file}' не найден. Создаю простой DXF-файл для теста.")
+        create_simple_dxf(dxf_file)
+        dwg_file = dxf_file
+    
+    # Извлекаем информацию о слоях
+    layer_info = extract_layer_info(dwg_file)
+    
+    if layer_info:
+        # Генерируем PDF-отчёт
+        pdf_file = 'report.pdf'
+        generate_pdf_report(pdf_file, layer_info)
+        print(f"PDF-отчёт успешно создан: '{pdf_file}'")
+    else:
+        print("Не удалось извлечь информацию о слоях.")
+
+if __name__ == "__main__":
+    main()
+```
+
+### Описание работы скрипта:
+1. **Проверка наличия файла 'drawing.dwg':** Скрипт проверяет, существует ли файл `drawing.dwg` в текущей папке. Если файл отсутствует, создаётся простой DXF-файл с несколькими слоями и объектами.
+2. **Извлечение информации о слоях:** С помощью библиотеки `ezdxf` извлекается список всех слоёв и количество объектов на каждом слое.
+3. **Генерация PDF-отчёта:** Используя библиотеку `reportlab`, создаётся PDF-документ с заголовком, таблицей слоёв и количеством объектов, а также с указанием даты и времени создания отчёта.
+4. **Сохранение отчёта:** PDF-документ сохраняется в файл `report.pdf`.
+
+### Обработка ошибок:
+- В случае ошибки при чтении DXF/DWG файла, скрипт выведет сообщение об ошибке и не будет продолжать генерацию отчёта.
+- Если файл `drawing.dwg` отсутствует, создаётся временный файл `drawing.dxf` для тестирования.
+
+Этот скрипт самодостаточен и может быть использован для автоматизации задачи генерации отчётов из DXF/DWG файлов.
