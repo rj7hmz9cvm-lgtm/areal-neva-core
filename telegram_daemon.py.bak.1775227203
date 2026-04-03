@@ -47,31 +47,7 @@ def _extract_topic_id(event) -> int | None:
     except Exception:
         return None
 
-async def _create_task(chat_id: int, user_id: int, topic_id: int | None, input_type: str, raw_input: str, triggered_by: str = "telegram_daemon", reply_to_msg_id: int | None = None) -> None:
-    task_id = None
-    active = None
-
-    if reply_to_msg_id:
-        import aiosqlite
-        async with aiosqlite.connect("/root/.areal-neva-core/data/core.db") as conn:
-            conn.row_factory = aiosqlite.Row
-            async with conn.execute("SELECT task_id FROM artifacts WHERE source_message_id = ? LIMIT 1", (reply_to_msg_id,)) as cur:
-                row = await cur.fetchone()
-                if row: task_id = row["task_id"]
-
-        if task_id:
-            active = await core_db.get_task(task_id)
-
-    if active and active.get("state") not in ("DONE", "FAILED", "CANCELLED"):
-        allowed = core_db.VALID_TRANSITIONS.get(active["state"], set())
-        if "INTAKE" in allowed:
-            task_id = active["id"]
-            new_input = str(active.get("raw_input", "")) + f"\n{raw_input}"
-            await core_db.update_task_fields(task_id, raw_input=new_input)
-            await core_db.transition_task(task_id, "INTAKE", triggered_by=f"{triggered_by}_reply")
-            logger.info("TASK APPENDED id=%s type=%s msg_id=%s", task_id, input_type, reply_to_msg_id)
-            return
-
+async def _create_task(chat_id: int, user_id: int, topic_id: int | None, input_type: str, raw_input: str, triggered_by: str = "telegram_daemon") -> None:
     res = await core_db.create_task(
         chat_id=chat_id,
         user_id=user_id,
@@ -80,9 +56,9 @@ async def _create_task(chat_id: int, user_id: int, topic_id: int | None, input_t
         source="telegram",
         raw_input=raw_input,
     )
-    new_task_id = res.get("id") if isinstance(res, dict) else str(res)
-    await core_db.transition_task(new_task_id, "INTAKE", triggered_by=triggered_by)
-    logger.info("TASK CREATED id=%s type=%s chat_id=%s topic_id=%s", new_task_id, input_type, chat_id, topic_id)
+    task_id = res.get("id") if isinstance(res, dict) else str(res)
+    await core_db.transition_task(task_id, "INTAKE", triggered_by=triggered_by)
+    logger.info("TASK CREATED id=%s type=%s chat_id=%s topic_id=%s", task_id, input_type, chat_id, topic_id)
 
 async def _handle_text(event) -> None:
     chat_id = int(event.chat_id)

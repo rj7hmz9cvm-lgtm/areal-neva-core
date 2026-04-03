@@ -13121,3 +13121,515 @@ Use "rclone help backends" for a list of supported services.
 
 2026/04/03 15:54:10 Fatal error: unknown flag: --vfs-cache-mode
 Fri Apr  3 03:54:10 PM MSK 2026: Sync finished.
+Fri Apr  3 04:09:14 PM MSK 2026: Starting sync...
+Error: unknown flag: --vfs-cache-mode
+Usage:
+  rclone move source:path dest:path [flags]
+
+Flags:
+      --create-empty-src-dirs   Create empty source dirs on destination after move
+      --delete-empty-src-dirs   Delete empty source dirs after move
+  -h, --help                    help for move
+
+Use "rclone [command] --help" for more information about a command.
+Use "rclone help flags" for to see the global flags.
+Use "rclone help backends" for a list of supported services.
+
+2026/04/03 16:09:14 Fatal error: unknown flag: --vfs-cache-mode
+Fri Apr  3 04:09:14 PM MSK 2026: Sync finished.
+Fri Apr  3 04:24:33 PM MSK 2026: Starting sync...
+Error: unknown flag: --vfs-cache-mode
+Usage:
+  rclone move source:path dest:path [flags]
+
+Flags:
+      --create-empty-src-dirs   Create empty source dirs on destination after move
+      --delete-empty-src-dirs   Delete empty source dirs after move
+  -h, --help                    help for move
+
+Use "rclone [command] --help" for more information about a command.
+Use "rclone help flags" for to see the global flags.
+Use "rclone help backends" for a list of supported services.
+
+2026/04/03 16:24:33 Fatal error: unknown flag: --vfs-cache-mode
+Fri Apr  3 04:24:33 PM MSK 2026: Sync finished.
+Fri Apr  3 04:39:37 PM MSK 2026: Starting sync...
+Error: unknown flag: --vfs-cache-mode
+Usage:
+  rclone move source:path dest:path [flags]
+
+Flags:
+      --create-empty-src-dirs   Create empty source dirs on destination after move
+      --delete-empty-src-dirs   Delete empty source dirs after move
+  -h, --help                    help for move
+
+Use "rclone [command] --help" for more information about a command.
+Use "rclone help flags" for to see the global flags.
+Use "rclone help backends" for a list of supported services.
+
+2026/04/03 16:39:37 Fatal error: unknown flag: --vfs-cache-mode
+Fri Apr  3 04:39:37 PM MSK 2026: Sync finished.
+Fri Apr  3 04:54:43 PM MSK 2026: Starting sync...
+Error: unknown flag: --vfs-cache-mode
+Usage:
+  rclone move source:path dest:path [flags]
+
+Flags:
+      --create-empty-src-dirs   Create empty source dirs on destination after move
+      --delete-empty-src-dirs   Delete empty source dirs after move
+  -h, --help                    help for move
+
+Use "rclone [command] --help" for more information about a command.
+Use "rclone help flags" for to see the global flags.
+Use "rclone help backends" for a list of supported services.
+
+2026/04/03 16:54:43 Fatal error: unknown flag: --vfs-cache-mode
+Fri Apr  3 04:54:43 PM MSK 2026: Sync finished.
+Fri Apr  3 05:09:51 PM MSK 2026: Starting sync...
+Error: unknown flag: --vfs-cache-mode
+Usage:
+  rclone move source:path dest:path [flags]
+
+Flags:
+      --create-empty-src-dirs   Create empty source dirs on destination after move
+      --delete-empty-src-dirs   Delete empty source dirs after move
+  -h, --help                    help for move
+
+Use "rclone [command] --help" for more information about a command.
+Use "rclone help flags" for to see the global flags.
+Use "rclone help backends" for a list of supported services.
+
+2026/04/03 17:09:51 Fatal error: unknown flag: --vfs-cache-mode
+Fri Apr  3 05:09:51 PM MSK 2026: Sync finished.
+Fri Apr  3 05:25:13 PM MSK 2026: Starting sync...
+Error: unknown flag: --vfs-cache-mode
+Usage:
+  rclone move source:path dest:path [flags]
+
+Flags:
+      --create-empty-src-dirs   Create empty source dirs on destination after move
+      --delete-empty-src-dirs   Delete empty source dirs after move
+  -h, --help                    help for move
+
+Use "rclone [command] --help" for more information about a command.
+Use "rclone help flags" for to see the global flags.
+Use "rclone help backends" for a list of supported services.
+
+2026/04/03 17:25:13 Fatal error: unknown flag: --vfs-cache-mode
+Fri Apr  3 05:25:13 PM MSK 2026: Sync finished.
+Fri Apr  3 05:40:15 PM MSK 2026: Starting sync...
+Error: unknown flag: --vfs-cache-mode
+Usage:
+  rclone move source:path dest:path [flags]
+
+Flags:
+      --create-empty-src-dirs   Create empty source dirs on destination after move
+      --delete-empty-src-dirs   Delete empty source dirs after move
+  -h, --help                    help for move
+
+Use "rclone [command] --help" for more information about a command.
+Use "rclone help flags" for to see the global flags.
+Use "rclone help backends" for a list of supported services.
+
+2026/04/03 17:40:15 Fatal error: unknown flag: --vfs-cache-mode
+Fri Apr  3 05:40:15 PM MSK 2026: Sync finished.
+Fri Apr  3 05:55:16 PM MSK 2026: Starting sync...
+Error: unknown flag: --vfs-cache-mode
+Usage:
+  rclone move source:path dest:path [flags]
+
+Flags:
+      --create-empty-src-dirs   Create empty source dirs on destination after move
+      --delete-empty-src-dirs   Delete empty source dirs after move
+  -h, --help                    help for move
+
+Use "rclone [command] --help" for more information about a command.
+Use "rclone help flags" for to see the global flags.
+Use "rclone help backends" for a list of supported services.
+
+2026/04/03 17:55:16 Fatal error: unknown flag: --vfs-cache-mode
+Fri Apr  3 05:55:16 PM MSK 2026: Sync finished.
+Fri Apr  3 06:10:16 PM MSK 2026: Starting sync...
+Error: unknown flag: --vfs-cache-mode
+Usage:
+  rclone move source:path dest:path [flags]
+
+Flags:
+      --create-empty-src-dirs   Create empty source dirs on destination after move
+      --delete-empty-src-dirs   Delete empty source dirs after move
+  -h, --help                    help for move
+
+Use "rclone [command] --help" for more information about a command.
+Use "rclone help flags" for to see the global flags.
+Use "rclone help backends" for a list of supported services.
+
+2026/04/03 18:10:17 Fatal error: unknown flag: --vfs-cache-mode
+Fri Apr  3 06:10:17 PM MSK 2026: Sync finished.
+Fri Apr  3 06:25:19 PM MSK 2026: Starting sync...
+Error: unknown flag: --vfs-cache-mode
+Usage:
+  rclone move source:path dest:path [flags]
+
+Flags:
+      --create-empty-src-dirs   Create empty source dirs on destination after move
+      --delete-empty-src-dirs   Delete empty source dirs after move
+  -h, --help                    help for move
+
+Use "rclone [command] --help" for more information about a command.
+Use "rclone help flags" for to see the global flags.
+Use "rclone help backends" for a list of supported services.
+
+2026/04/03 18:25:19 Fatal error: unknown flag: --vfs-cache-mode
+Fri Apr  3 06:25:19 PM MSK 2026: Sync finished.
+Fri Apr  3 06:40:33 PM MSK 2026: Starting sync...
+Error: unknown flag: --vfs-cache-mode
+Usage:
+  rclone move source:path dest:path [flags]
+
+Flags:
+      --create-empty-src-dirs   Create empty source dirs on destination after move
+      --delete-empty-src-dirs   Delete empty source dirs after move
+  -h, --help                    help for move
+
+Use "rclone [command] --help" for more information about a command.
+Use "rclone help flags" for to see the global flags.
+Use "rclone help backends" for a list of supported services.
+
+2026/04/03 18:40:33 Fatal error: unknown flag: --vfs-cache-mode
+Fri Apr  3 06:40:33 PM MSK 2026: Sync finished.
+Fri Apr  3 06:55:33 PM MSK 2026: Starting sync...
+Error: unknown flag: --vfs-cache-mode
+Usage:
+  rclone move source:path dest:path [flags]
+
+Flags:
+      --create-empty-src-dirs   Create empty source dirs on destination after move
+      --delete-empty-src-dirs   Delete empty source dirs after move
+  -h, --help                    help for move
+
+Use "rclone [command] --help" for more information about a command.
+Use "rclone help flags" for to see the global flags.
+Use "rclone help backends" for a list of supported services.
+
+2026/04/03 18:55:33 Fatal error: unknown flag: --vfs-cache-mode
+Fri Apr  3 06:55:33 PM MSK 2026: Sync finished.
+Fri Apr  3 07:11:03 PM MSK 2026: Starting sync...
+Error: unknown flag: --vfs-cache-mode
+Usage:
+  rclone move source:path dest:path [flags]
+
+Flags:
+      --create-empty-src-dirs   Create empty source dirs on destination after move
+      --delete-empty-src-dirs   Delete empty source dirs after move
+  -h, --help                    help for move
+
+Use "rclone [command] --help" for more information about a command.
+Use "rclone help flags" for to see the global flags.
+Use "rclone help backends" for a list of supported services.
+
+2026/04/03 19:11:03 Fatal error: unknown flag: --vfs-cache-mode
+Fri Apr  3 07:11:03 PM MSK 2026: Sync finished.
+Fri Apr  3 07:26:12 PM MSK 2026: Starting sync...
+Error: unknown flag: --vfs-cache-mode
+Usage:
+  rclone move source:path dest:path [flags]
+
+Flags:
+      --create-empty-src-dirs   Create empty source dirs on destination after move
+      --delete-empty-src-dirs   Delete empty source dirs after move
+  -h, --help                    help for move
+
+Use "rclone [command] --help" for more information about a command.
+Use "rclone help flags" for to see the global flags.
+Use "rclone help backends" for a list of supported services.
+
+2026/04/03 19:26:12 Fatal error: unknown flag: --vfs-cache-mode
+Fri Apr  3 07:26:12 PM MSK 2026: Sync finished.
+Fri Apr  3 07:41:12 PM MSK 2026: Starting sync...
+Error: unknown flag: --vfs-cache-mode
+Usage:
+  rclone move source:path dest:path [flags]
+
+Flags:
+      --create-empty-src-dirs   Create empty source dirs on destination after move
+      --delete-empty-src-dirs   Delete empty source dirs after move
+  -h, --help                    help for move
+
+Use "rclone [command] --help" for more information about a command.
+Use "rclone help flags" for to see the global flags.
+Use "rclone help backends" for a list of supported services.
+
+2026/04/03 19:41:12 Fatal error: unknown flag: --vfs-cache-mode
+Fri Apr  3 07:41:12 PM MSK 2026: Sync finished.
+Fri Apr  3 07:56:19 PM MSK 2026: Starting sync...
+Error: unknown flag: --vfs-cache-mode
+Usage:
+  rclone move source:path dest:path [flags]
+
+Flags:
+      --create-empty-src-dirs   Create empty source dirs on destination after move
+      --delete-empty-src-dirs   Delete empty source dirs after move
+  -h, --help                    help for move
+
+Use "rclone [command] --help" for more information about a command.
+Use "rclone help flags" for to see the global flags.
+Use "rclone help backends" for a list of supported services.
+
+2026/04/03 19:56:19 Fatal error: unknown flag: --vfs-cache-mode
+Fri Apr  3 07:56:19 PM MSK 2026: Sync finished.
+Fri Apr  3 08:11:25 PM MSK 2026: Starting sync...
+Error: unknown flag: --vfs-cache-mode
+Usage:
+  rclone move source:path dest:path [flags]
+
+Flags:
+      --create-empty-src-dirs   Create empty source dirs on destination after move
+      --delete-empty-src-dirs   Delete empty source dirs after move
+  -h, --help                    help for move
+
+Use "rclone [command] --help" for more information about a command.
+Use "rclone help flags" for to see the global flags.
+Use "rclone help backends" for a list of supported services.
+
+2026/04/03 20:11:25 Fatal error: unknown flag: --vfs-cache-mode
+Fri Apr  3 08:11:25 PM MSK 2026: Sync finished.
+Fri Apr  3 08:26:26 PM MSK 2026: Starting sync...
+Error: unknown flag: --vfs-cache-mode
+Usage:
+  rclone move source:path dest:path [flags]
+
+Flags:
+      --create-empty-src-dirs   Create empty source dirs on destination after move
+      --delete-empty-src-dirs   Delete empty source dirs after move
+  -h, --help                    help for move
+
+Use "rclone [command] --help" for more information about a command.
+Use "rclone help flags" for to see the global flags.
+Use "rclone help backends" for a list of supported services.
+
+2026/04/03 20:26:26 Fatal error: unknown flag: --vfs-cache-mode
+Fri Apr  3 08:26:26 PM MSK 2026: Sync finished.
+Fri Apr  3 08:41:30 PM MSK 2026: Starting sync...
+Error: unknown flag: --vfs-cache-mode
+Usage:
+  rclone move source:path dest:path [flags]
+
+Flags:
+      --create-empty-src-dirs   Create empty source dirs on destination after move
+      --delete-empty-src-dirs   Delete empty source dirs after move
+  -h, --help                    help for move
+
+Use "rclone [command] --help" for more information about a command.
+Use "rclone help flags" for to see the global flags.
+Use "rclone help backends" for a list of supported services.
+
+2026/04/03 20:41:30 Fatal error: unknown flag: --vfs-cache-mode
+Fri Apr  3 08:41:30 PM MSK 2026: Sync finished.
+Fri Apr  3 08:56:33 PM MSK 2026: Starting sync...
+Error: unknown flag: --vfs-cache-mode
+Usage:
+  rclone move source:path dest:path [flags]
+
+Flags:
+      --create-empty-src-dirs   Create empty source dirs on destination after move
+      --delete-empty-src-dirs   Delete empty source dirs after move
+  -h, --help                    help for move
+
+Use "rclone [command] --help" for more information about a command.
+Use "rclone help flags" for to see the global flags.
+Use "rclone help backends" for a list of supported services.
+
+2026/04/03 20:56:33 Fatal error: unknown flag: --vfs-cache-mode
+Fri Apr  3 08:56:33 PM MSK 2026: Sync finished.
+Fri Apr  3 09:11:43 PM MSK 2026: Starting sync...
+Error: unknown flag: --vfs-cache-mode
+Usage:
+  rclone move source:path dest:path [flags]
+
+Flags:
+      --create-empty-src-dirs   Create empty source dirs on destination after move
+      --delete-empty-src-dirs   Delete empty source dirs after move
+  -h, --help                    help for move
+
+Use "rclone [command] --help" for more information about a command.
+Use "rclone help flags" for to see the global flags.
+Use "rclone help backends" for a list of supported services.
+
+2026/04/03 21:11:43 Fatal error: unknown flag: --vfs-cache-mode
+Fri Apr  3 09:11:43 PM MSK 2026: Sync finished.
+Fri Apr  3 09:26:54 PM MSK 2026: Starting sync...
+Error: unknown flag: --vfs-cache-mode
+Usage:
+  rclone move source:path dest:path [flags]
+
+Flags:
+      --create-empty-src-dirs   Create empty source dirs on destination after move
+      --delete-empty-src-dirs   Delete empty source dirs after move
+  -h, --help                    help for move
+
+Use "rclone [command] --help" for more information about a command.
+Use "rclone help flags" for to see the global flags.
+Use "rclone help backends" for a list of supported services.
+
+2026/04/03 21:26:54 Fatal error: unknown flag: --vfs-cache-mode
+Fri Apr  3 09:26:54 PM MSK 2026: Sync finished.
+Fri Apr  3 09:42:20 PM MSK 2026: Starting sync...
+Error: unknown flag: --vfs-cache-mode
+Usage:
+  rclone move source:path dest:path [flags]
+
+Flags:
+      --create-empty-src-dirs   Create empty source dirs on destination after move
+      --delete-empty-src-dirs   Delete empty source dirs after move
+  -h, --help                    help for move
+
+Use "rclone [command] --help" for more information about a command.
+Use "rclone help flags" for to see the global flags.
+Use "rclone help backends" for a list of supported services.
+
+2026/04/03 21:42:20 Fatal error: unknown flag: --vfs-cache-mode
+Fri Apr  3 09:42:20 PM MSK 2026: Sync finished.
+Fri Apr  3 09:57:24 PM MSK 2026: Starting sync...
+Error: unknown flag: --vfs-cache-mode
+Usage:
+  rclone move source:path dest:path [flags]
+
+Flags:
+      --create-empty-src-dirs   Create empty source dirs on destination after move
+      --delete-empty-src-dirs   Delete empty source dirs after move
+  -h, --help                    help for move
+
+Use "rclone [command] --help" for more information about a command.
+Use "rclone help flags" for to see the global flags.
+Use "rclone help backends" for a list of supported services.
+
+2026/04/03 21:57:24 Fatal error: unknown flag: --vfs-cache-mode
+Fri Apr  3 09:57:24 PM MSK 2026: Sync finished.
+Fri Apr  3 10:12:30 PM MSK 2026: Starting sync...
+Error: unknown flag: --vfs-cache-mode
+Usage:
+  rclone move source:path dest:path [flags]
+
+Flags:
+      --create-empty-src-dirs   Create empty source dirs on destination after move
+      --delete-empty-src-dirs   Delete empty source dirs after move
+  -h, --help                    help for move
+
+Use "rclone [command] --help" for more information about a command.
+Use "rclone help flags" for to see the global flags.
+Use "rclone help backends" for a list of supported services.
+
+2026/04/03 22:12:30 Fatal error: unknown flag: --vfs-cache-mode
+Fri Apr  3 10:12:30 PM MSK 2026: Sync finished.
+Fri Apr  3 10:27:31 PM MSK 2026: Starting sync...
+Error: unknown flag: --vfs-cache-mode
+Usage:
+  rclone move source:path dest:path [flags]
+
+Flags:
+      --create-empty-src-dirs   Create empty source dirs on destination after move
+      --delete-empty-src-dirs   Delete empty source dirs after move
+  -h, --help                    help for move
+
+Use "rclone [command] --help" for more information about a command.
+Use "rclone help flags" for to see the global flags.
+Use "rclone help backends" for a list of supported services.
+
+2026/04/03 22:27:31 Fatal error: unknown flag: --vfs-cache-mode
+Fri Apr  3 10:27:31 PM MSK 2026: Sync finished.
+Fri Apr  3 10:42:33 PM MSK 2026: Starting sync...
+Error: unknown flag: --vfs-cache-mode
+Usage:
+  rclone move source:path dest:path [flags]
+
+Flags:
+      --create-empty-src-dirs   Create empty source dirs on destination after move
+      --delete-empty-src-dirs   Delete empty source dirs after move
+  -h, --help                    help for move
+
+Use "rclone [command] --help" for more information about a command.
+Use "rclone help flags" for to see the global flags.
+Use "rclone help backends" for a list of supported services.
+
+2026/04/03 22:42:33 Fatal error: unknown flag: --vfs-cache-mode
+Fri Apr  3 10:42:33 PM MSK 2026: Sync finished.
+Fri Apr  3 10:57:33 PM MSK 2026: Starting sync...
+Error: unknown flag: --vfs-cache-mode
+Usage:
+  rclone move source:path dest:path [flags]
+
+Flags:
+      --create-empty-src-dirs   Create empty source dirs on destination after move
+      --delete-empty-src-dirs   Delete empty source dirs after move
+  -h, --help                    help for move
+
+Use "rclone [command] --help" for more information about a command.
+Use "rclone help flags" for to see the global flags.
+Use "rclone help backends" for a list of supported services.
+
+2026/04/03 22:57:33 Fatal error: unknown flag: --vfs-cache-mode
+Fri Apr  3 10:57:33 PM MSK 2026: Sync finished.
+Fri Apr  3 11:12:45 PM MSK 2026: Starting sync...
+Error: unknown flag: --vfs-cache-mode
+Usage:
+  rclone move source:path dest:path [flags]
+
+Flags:
+      --create-empty-src-dirs   Create empty source dirs on destination after move
+      --delete-empty-src-dirs   Delete empty source dirs after move
+  -h, --help                    help for move
+
+Use "rclone [command] --help" for more information about a command.
+Use "rclone help flags" for to see the global flags.
+Use "rclone help backends" for a list of supported services.
+
+2026/04/03 23:12:45 Fatal error: unknown flag: --vfs-cache-mode
+Fri Apr  3 11:12:45 PM MSK 2026: Sync finished.
+Fri Apr  3 11:27:53 PM MSK 2026: Starting sync...
+Error: unknown flag: --vfs-cache-mode
+Usage:
+  rclone move source:path dest:path [flags]
+
+Flags:
+      --create-empty-src-dirs   Create empty source dirs on destination after move
+      --delete-empty-src-dirs   Delete empty source dirs after move
+  -h, --help                    help for move
+
+Use "rclone [command] --help" for more information about a command.
+Use "rclone help flags" for to see the global flags.
+Use "rclone help backends" for a list of supported services.
+
+2026/04/03 23:27:53 Fatal error: unknown flag: --vfs-cache-mode
+Fri Apr  3 11:27:53 PM MSK 2026: Sync finished.
+Fri Apr  3 11:43:03 PM MSK 2026: Starting sync...
+Error: unknown flag: --vfs-cache-mode
+Usage:
+  rclone move source:path dest:path [flags]
+
+Flags:
+      --create-empty-src-dirs   Create empty source dirs on destination after move
+      --delete-empty-src-dirs   Delete empty source dirs after move
+  -h, --help                    help for move
+
+Use "rclone [command] --help" for more information about a command.
+Use "rclone help flags" for to see the global flags.
+Use "rclone help backends" for a list of supported services.
+
+2026/04/03 23:43:03 Fatal error: unknown flag: --vfs-cache-mode
+Fri Apr  3 11:43:03 PM MSK 2026: Sync finished.
+Fri Apr  3 11:58:04 PM MSK 2026: Starting sync...
+Error: unknown flag: --vfs-cache-mode
+Usage:
+  rclone move source:path dest:path [flags]
+
+Flags:
+      --create-empty-src-dirs   Create empty source dirs on destination after move
+      --delete-empty-src-dirs   Delete empty source dirs after move
+  -h, --help                    help for move
+
+Use "rclone [command] --help" for more information about a command.
+Use "rclone help flags" for to see the global flags.
+Use "rclone help backends" for a list of supported services.
+
+2026/04/03 23:58:04 Fatal error: unknown flag: --vfs-cache-mode
+Fri Apr  3 11:58:04 PM MSK 2026: Sync finished.
