@@ -1,0 +1,152 @@
+### Комплексная система для автоматического сбора и анализа хоккейной статистики (НХЛ/КХЛ)
+
+---
+
+#### **1. Архитектура системы**
+```mermaid
+graph TD
+    A[Источники данных] --> B[Парсинг и ETL]
+    B --> C[База данных]
+    C --> D[Аналитический модуль]
+    D --> E[Прогнозная модель]
+    E --> F[Сравнение с букмекерами]
+    F --> G[Рекомендации]
+```
+
+---
+
+#### **2. Детализация компонентов**
+
+**2.1. Парсинг данных (Python примеры)**
+```python
+# NHL API (официальный)
+import requests
+
+def get_nhl_game_data(game_id):
+    url = f"https://api-web.nhle.com/v1/gamecenter/{game_id}/play-by-play"
+    response = requests.get(url)
+    return response.json()
+
+# Пример парсинга сдвигов (shifts)
+def get_shifts_data(game_id):
+    url = f"https://api.nhle.com/stats/rest/en/shiftcharts?cayenneExp=gameId={game_id}"
+    return requests.get(url).json()
+
+# Альтернативный парсинг HTML (если API недоступно)
+from bs4 import BeautifulSoup
+import pandas as pd
+
+def parse_khl_boxscore(url):
+    html = requests.get(url).text
+    soup = BeautifulSoup(html, 'html.parser')
+    tables = soup.find_all('table')
+    return pd.read_html(str(tables[0]))[0]  # Первая таблица с основными показателями
+```
+
+**2.2. Ключевые метрики (формулы)**
+- **Corsi (CF%)** = (Броски команды) / (Броски команды + Броски соперника) * 100  
+  `где броски = SOG + missed shots + blocked shots`
+- **xG (ожидаемые голы)** = Σ (вероятность гола для каждого броска)  
+  `используются веса из моделей MoneyPuck или NaturalStatTrick`
+- **PDO** = On-ice Sh% + On-ice Sv%  
+  `нормальное значение ≈100, отклонения указывают на удачу/неудачу`
+
+**2.3. Пример расчёта в Python**
+```python
+def calculate_metrics(team_data):
+    corsi_for = team_data['SOG'] + team_data['Missed'] + team_data['Blocked']
+    corsi_against = team_data['SOG_against'] + team_data['Missed_against'] + team_data['Blocked_against']
+    cf_pct = corsi_for / (corsi_for + corsi_against) * 100
+    pdo = (team_data['Goals'] / team_data['SOG'] * 100) + (1 - team_data['Goals_against'] / team_data['SOG_against']) * 100
+    return {'CF%': cf_pct, 'PDO': pdo}
+```
+
+---
+
+#### **3. Прогнозная модель**
+**3.1. Алгоритм:**
+1. **Feature Engineering**:
+   - Временные ряды (форма последних 10 игр).
+   - Взаимодействия: CF% * xG, PDO * Home/Away.
+2. **Модель**:
+   - Градиентный бустинг (XGBoost/LightGBM) для вероятностей исходов.
+   - Калибровка через Platt Scaling.
+
+**3.2. Пример обучения:**
+```python
+from xgboost import XGBClassifier
+
+model = XGBClassifier(objective='binary:logistic')
+model.fit(X_train, y_train)  # X_train: массив с CF%, xG, PDO и т.д.
+
+# Прогноз
+prob_home_win = model.predict_proba([home_team_metrics])[0][1]
+```
+
+---
+
+#### **4. Сравнение с букмекерами**
+**4.1. Value Betting:**
+- Если модель даёт вероятность 55%, а букмекер предлагает коэффициент 2.0 (подразумеваемая вероятность 50%):
+  - **Value** = (55% * 2.0) - 1 = 0.1 (10% ожидаемой прибыли).
+
+**4.2. Автоматизация поиска Value:**
+```python
+def find_value_bets(model, games_today):
+    value_bets = []
+    for game in games_today:
+        prob = model.predict_proba([game['features']])[0][1]
+        implied_prob = 1 / game['odds']
+        if prob > implied_prob + 0.05:  # Порог value
+            value_bets.append(game)
+    return value_bets
+```
+
+---
+
+#### **5. Рекомендации по ставкам**
+**5.1. Стратегии:**
+- **Live-ставки**:  
+  - Если команда с CF% >55% проигрывает после 2-го периода, ставка на её победу/ничью в основное время.
+- **Тоталы**:  
+  - При xG >3.5 за игру и коэффициенте на ТБ 2.5 >1.9 — ставка на "больше".
+
+**5.2. Управление банком:**
+- **Критерий Келли**:  
+  `Размер ставки = (вероятность * коэффициент - 1) / (коэффициент - 1)`
+
+---
+
+#### **6. Развёртывание**
+**6.1. Технологический стек:**
+- **Backend**: Python (FastAPI/Django), PostgreSQL.
+- **Планировщик**: Celery + Redis для периодического сбора данных.
+- **Frontend** (опционально): Streamlit/Dash для визуализации.
+
+**6.2. Пример Docker-конфигурации:**
+```dockerfile
+FROM python:3.9
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+CMD ["python", "main.py"]
+```
+
+---
+
+#### **7. Готовые датасеты и API**
+- **NHL**: https://gitlab.com/dword4/nhlapi/-/blob/master/stats-api.md
+- **КХЛ**: https://www.khl.ru/stat/ (парсинг через BeautifulSoup).
+- **Готовые модели**: https://github.com/mckayjohns/hockey-all (примеры xG моделей).
+
+---
+
+#### **8. Предупреждения**
+- **Юридические аспекты**: Проверьте TOS NHL/KHL перед коммерческим использованием данных.
+- **Модельные риски**: Всегда тестируйте на out-of-sample данных (например, прошлых сезонах).
+
+Для начала работы рекомендую:
+1. Настроить сбор данных для 5-10 команд.
+2. Протестировать модель на сезоне 2022-2023.
+3. Внедрить управление банком до реальных ставок.

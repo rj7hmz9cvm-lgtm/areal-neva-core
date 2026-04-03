@@ -1,0 +1,15 @@
+services:
+  orchestra:
+    build:
+      context: /root/.areal-neva-core
+      dockerfile: Dockerfile.orchestra
+    container_name: areal-orchestra-live
+    restart: always
+    ports:
+      - "89.22.227.213:8080:8080"
+    volumes:
+      - /root/.areal-neva-core:/app
+      - /root/AI_ORCHESTRA:/root/AI_ORCHESTRA
+      - /root/.ssh:/root/.ssh:ro
+    env_file:
+      - /root/.areal-neva-core/.env
