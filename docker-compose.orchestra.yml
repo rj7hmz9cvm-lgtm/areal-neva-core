@@ -1,0 +1,12 @@
+services:
+  orchestra-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.orchestra
+    container_name: orchestra-api
+    restart: always
+    ports:
+      - "89.22.227.213:8080:8080"
+    volumes:
+      - .:/app
+    env_file: .env

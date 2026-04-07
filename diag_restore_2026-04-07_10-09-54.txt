@@ -1,0 +1,690 @@
+===== 0. META =====
+Tue Apr  7 10:09:54 MSK 2026
+BASE=/root/.areal-neva-core
+PY=/root/.areal-neva-core/.venv/bin/python3
+DB=/root/.areal-neva-core/data/core.db
+
+===== 1. FILES =====
+--- FILE: /root/.areal-neva-core/telegram_ingress.py
+-rw-r--r-- 1 root root 3.2K Apr  7 09:59 /root/.areal-neva-core/telegram_ingress.py
+127 /root/.areal-neva-core/telegram_ingress.py
+import os
+import sys
+import requests
+import logging
+import time
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Гарантируем видимость локальных модулей
+sys.path.append("/root/.areal-neva-core")
+
+--- FILE: /root/.areal-neva-core/task_worker.py
+-rw-r--r-- 1 root root 17K Apr  7 09:59 /root/.areal-neva-core/task_worker.py
+487 /root/.areal-neva-core/task_worker.py
+from __future__ import annotations
+
+
+
+
+
+from pathlib import Path
+from core.stt import transcribe_audio
+
+import asyncio
+
+--- FILE: /root/.areal-neva-core/telegram_daemon.py
+-rw-r--r-- 1 root root 5.0K Apr  7 09:59 /root/.areal-neva-core/telegram_daemon.py
+138 /root/.areal-neva-core/telegram_daemon.py
+from __future__ import annotations
+
+import asyncio
+import logging
+import os
+import sys
+from pathlib import Path
+
+from dotenv import load_dotenv
+from telethon import TelegramClient, events
+
+--- MISSING: /root/.areal-neva-core/telegram_reply_daemon.py
+
+--- FILE: /root/.areal-neva-core/core/stt.py
+-rw-r--r-- 1 root root 474 Apr  7 09:59 /root/.areal-neva-core/core/stt.py
+18 /root/.areal-neva-core/core/stt.py
+from pathlib import Path
+import os
+
+_MODEL = None
+
+def transcribe_audio(path: str) -> str:
+    global _MODEL
+    p = Path(path)
+    if not p.exists() or p.stat().st_size <= 0:
+        return ""
+
+--- FILE: /root/.areal-neva-core/ask_ai.py
+-rwxr-xr-x 1 root root 1.7K Apr  7 09:59 /root/.areal-neva-core/ask_ai.py
+63 /root/.areal-neva-core/ask_ai.py
+#!/usr/bin/env python3
+import os
+import sys
+
+BASE = os.path.expanduser("~/.areal-neva-core")
+if os.path.exists("/app"):
+    BASE = "/app"
+
+if BASE not in sys.path:
+    sys.path.insert(0, BASE)
+
+--- FILE: /root/.areal-neva-core/core/db.py
+-rw-r--r-- 1 root root 14K Apr  6 22:15 /root/.areal-neva-core/core/db.py
+399 /root/.areal-neva-core/core/db.py
+from __future__ import annotations
+
+import asyncio
+import json
+import logging
+import uuid
+from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
+from typing import Any, Optional
+
+
+
+===== 2. COMPILE CHECK =====
+--- COMPILE: /root/.areal-neva-core/telegram_ingress.py
+OK
+
+--- COMPILE: /root/.areal-neva-core/task_worker.py
+OK
+
+--- COMPILE: /root/.areal-neva-core/telegram_daemon.py
+OK
+
+--- COMPILE: /root/.areal-neva-core/core/stt.py
+OK
+
+--- COMPILE: /root/.areal-neva-core/ask_ai.py
+OK
+
+--- COMPILE: /root/.areal-neva-core/core/db.py
+OK
+
+
+===== 3. PROCESS CHECK =====
+384349 flock -n /root/.areal-neva-core/runlocks/ingress.lock /root/.areal-neva-core/.venv/bin/python3 -u /root/.areal-neva-core/telegram_ingress.py
+384351 /root/.areal-neva-core/.venv/bin/python3 -u /root/.areal-neva-core/telegram_ingress.py
+384354 flock -n /root/.areal-neva-core/runlocks/worker.lock /root/.areal-neva-core/.venv/bin/python3 -u /root/.areal-neva-core/task_worker.py
+384356 /root/.areal-neva-core/.venv/bin/python3 -u /root/.areal-neva-core/task_worker.py
+384362 flock -n /root/.areal-neva-core/runlocks/daemon.lock /root/.areal-neva-core/.venv/bin/python3 -u /root/.areal-neva-core/telegram_daemon.py
+384364 /root/.areal-neva-core/.venv/bin/python3 -u /root/.areal-neva-core/telegram_daemon.py
+
+===== 4. DB CHECK =====
+-rw-r--r-- 1 root root 212K Apr  7 01:59 /root/.areal-neva-core/data/core.db
+ok
+--- TABLES
+agent_executions
+artifacts
+automation_events
+automation_rules
+cognitive_journal
+context_sessions
+file_registry
+followup_state
+leads_log
+memory_log
+pinned_messages
+reminders
+sqlite_sequence
+state_transitions
+tasks
+--- TASKS COLUMNS
+0|id|TEXT|0||1
+1|parent_task_id|TEXT|0||0
+2|media_group_id|TEXT|0||0
+3|chat_id|INTEGER|1||0
+4|topic_id|INTEGER|0||0
+5|user_id|INTEGER|1|0|0
+6|source|TEXT|1|''|0
+7|input_type|TEXT|1|''|0
+8|raw_input|TEXT|0||0
+9|parsed_input|TEXT|0||0
+10|agent_type|TEXT|0||0
+11|state|TEXT|1|'NEW'|0
+12|priority|INTEGER|1|5|0
+13|cancellable|INTEGER|1|1|0
+14|retry_count|INTEGER|1|0|0
+15|max_retries|INTEGER|1|3|0
+16|next_retry_at|TEXT|0||0
+17|result|TEXT|0||0
+18|drive_url|TEXT|0||0
+19|error_message|TEXT|0||0
+20|created_at|TEXT|1|strftime('%Y-%m-%dT%H:%M:%fZ','now')|0
+21|updated_at|TEXT|1|strftime('%Y-%m-%dT%H:%M:%fZ','now')|0
+22|timeout_at|TEXT|0||0
+23|prompt|TEXT|0||0
+24|query|TEXT|0||0
+25|payload|TEXT|0||0
+--- TASK STATES
+AWAITING_CONFIRMATION|13
+FAILED|1
+--- LAST 15 TASKS
+id                                    state                  result80                                                                          err80                                           updated_at              
+------------------------------------  ---------------------  --------------------------------------------------------------------------------  ----------------------------------------------  ------------------------
+99f6b7ef-404f-4f11-b07f-9826b8128d32  AWAITING_CONFIRMATION  Голосовой набор работает. Файлы с расширением .txt создаются в директории `/root                                                  2026-04-07T07:02:16.298Z
+
+25944b89-70b2-4ab5-975c-3e432404de56  AWAITING_CONFIRMATION  тест                                                                                                                              2026-04-07T07:01:55.712Z
+
+eee073f3-d0f5-4dae-8dfe-8da52320279f  AWAITING_CONFIRMATION  Выполняю техническое задание по стабилизации системы.                                                                             2026-04-06T22:32:25.508Z
+                                                                                                                                                                                                                       
+                                                             **1. Process Cleanup (Glo                                                                                                                                 
+
+f85857a8-eb87-4bf5-96da-a144e7db7f7b  AWAITING_CONFIRMATION  Отключите один из процессов записи. Проверьте конфигурацию логгеров или скриптов                                                  2026-04-06T22:28:11.610Z
+
+d169a4f5-a0dc-4e33-9ec9-16981d61c53b  AWAITING_CONFIRMATION  Дублирование файлов происходит из-за двух параллельных процессов записи: один в                                                   2026-04-06T22:27:43.060Z
+
+22ec5596-afa6-4c19-87aa-0b6f77b3ceaf  AWAITING_CONFIRMATION  Голосовой набор работает. Файлы с расширением .txt создаются в директории `/root                                                  2026-04-06T22:27:19.012Z
+
+8bdbda44-7185-4bde-94d4-73bb8964a5c2  AWAITING_CONFIRMATION  тест                                                                                                                              2026-04-06T22:27:02.482Z
+
+201780c2-fa3b-41c9-8c14-18be56f33091  FAILED                                                                                                   object str can't be used in 'await' expression  2026-04-06T22:10:54.430Z
+
+5e3624bf-8364-40e4-a9f8-0f382be12ea7  AWAITING_CONFIRMATION  тест                                                                                                                              2026-04-06T22:10:42.431Z
+
+35291940-2a36-49b7-bb39-c26594d4aabd  AWAITING_CONFIRMATION  тест                                                                                                                              2026-04-06T21:50:54.670Z
+
+fb2034d2-e02f-4a29-b78f-31135ec9fc7f  AWAITING_CONFIRMATION  тест                                                                                                                              2026-04-06T21:47:34.696Z
+
+e78e67d7-c305-4b56-8566-742a841e18fd  AWAITING_CONFIRMATION  тест                                                                                                                              2026-04-06T21:25:17.027Z
+
+99fd2657-84c1-4dfe-a30c-f4b97236a57a  AWAITING_CONFIRMATION  Тест пройден.                                                                                                                     2026-04-06T19:18:11.457Z
+
+2c5e3f5e-465a-4b1d-8d0d-58bfd6382068  AWAITING_CONFIRMATION  Живой: я, DeepSeek. Оркестр из нейросетей отсутствует.                                                                            2026-04-06T19:18:06.452Z
+
+===== 5. RESULT PIPELINE CHECK =====
+--- task_worker result hooks
+39:from core.ai_router import process_ai_task
+70:        result = _init_db_orig()
+133:        result = transition_task(task_id, to_state, triggered_by=triggered_by)
+142:async def _safe_update(task_id: str, **kwargs) -> None:
+144:        result = update_task_fields(task_id, **kwargs)
+152:    await _safe_update(task_id, error_message=error)
+155:        result = transition_task(task_id, "FAILED", triggered_by=triggered_by)
+163:        preview = _preview((current or {}).get("raw_input"))
+188:        await _notify(chat_id, f"⏳ В работе\nЗапрос: {_preview(task.get('raw_input'))}", topic_id)
+193:    raw_input = task.get("raw_input") or ""
+201:    lead = quick_extract(raw_input, source)
+217:            "raw": raw_input,
+226:    await _safe_update(task_id, result=summary)
+234:    text = task.get("raw_input") or ""
+243:        result = await route_task(text=text, chat_id=chat_id, user_id=user_id, topic_id=topic_id)
+248:    await _safe_update(task_id, result=result.get("summary", ""))
+257:def web_search(query):
+259:        if not query or len(query.strip()) <= 3: return ""
+261:        print(f"WEB_SEARCH_START query={query[:50]}")
+262:        r = requests.get("https://api.duckduckgo.com/", params={"q": query, "format": "json"}, timeout=5)
+277:    raw_input = task.get("raw_input") or ""
+281:        await _notify(chat_id, f"✅ Принято\nЗапрос: {_preview('голосовое сообщение' if input_type == 'voice' else raw_input)}", topic_id)
+288:        raw_input = task.get("raw_input") or ""
+290:        if "напомни" in raw_input.lower():
+291:            await add_reminder(chat_id, raw_input, topic_id=topic_id)
+294:            await _safe_update(task_id, result=raw_input)
+300:            voice_path = raw_input.strip()
+308:            await _safe_update(task_id, raw_input=text)
+314:            raw_input = task.get("raw_input") or text
+316:        lower = raw_input.lower()
+324:        if is_lead(raw_input):
+328:        # AREAL_BUS_START
+331:        _t = task.get("raw_input") or task.get("payload") or task.get("text") or ""
+357:        assembled_prompt = f"{_f_txt}\n{_web}\n{_mem}\n{_f_ctx}\n{_t}".strip()
+358:        print(f"AI INPUT LEN {len(assembled_prompt)}")
+359:        for k in ["raw_input", "prompt", "input", "text", "query", "payload"]: task[k] = assembled_prompt
+363:                for col in ["raw_input", "payload", "prompt", "text", "input", "query"]:
+365:                        _c.execute(f"UPDATE tasks SET {col}=? WHERE id=?", (assembled_prompt, task.get("id")))
+371:        print(f"FINAL RAW_INPUT LEN {len(task.get('raw_input',''))}")
+374:        await asyncio.wait_for(process_ai_task(task), timeout=TASK_TIMEOUT)
+396:        result = (full_task.get("result") or "").strip()
+402:        preview = _preview(full_task.get("raw_input"))
+440:        result = get_tasks_by_state(state)
+442:            result = await result
+--- telegram_daemon result hooks
+
+===== 6. VOICE PIPELINE CHECK =====
+6:def transcribe_audio(path: str) -> str:
+12:        import whisper
+14:            _MODEL = whisper.load_model(os.getenv("WHISPER_MODEL", "base"))
+8:from core.stt import transcribe_audio
+12:import logging
+21:logging.basicConfig(
+22:    level=logging.INFO,
+25:        logging.FileHandler(f"{_LOGDIR}/task_worker.log"),
+26:        logging.StreamHandler(),
+31:logger = logging.getLogger("task_worker")
+56:        logger.warning("send_reply stub chat=%s", chat_id)
+62:    async def transcribe(path: str) -> str:
+64:        text = transcribe_audio(_stt_path)
+71:        if inspect.isawaitable(result):
+128:        logger.warning("notify failed chat=%s err=%s", chat_id, exc)
+134:        if inspect.isawaitable(result):
+138:        logger.error("task=%s transition=%s err=%s", task_id, to_state, exc)
+145:        if inspect.isawaitable(result):
+148:        logger.error("task=%s update failed: %s", task_id, exc)
+156:        if inspect.isawaitable(result):
+159:        logger.error("task=%s failed transition err=%s", task_id, exc)
+212:        logger.exception("task=%s lead artifact error", task_id)
+224:        logger.exception("task=%s lead log error", task_id)
+281:        await _notify(chat_id, f"✅ Принято\nЗапрос: {_preview('голосовое сообщение' if input_type == 'voice' else raw_input)}", topic_id)
+299:        if input_type == "voice":
+300:            voice_path = raw_input.strip()
+301:            if not voice_path or not os.path.exists(voice_path):
+302:                await _fail_task(task_id, f"voice file missing: {voice_path!r}", "task_worker", chat_id, topic_id)
+304:            text = await transcribe(voice_path)
+379:        import logging
+380:        logging.getLogger(__name__).exception("task=%s intake error", task_id)
+409:        logger.exception("_run_ready_bg task=%s", task_id)
+433:        logger.exception("_fetch_by_state_raw error state=%s", state)
+441:        if inspect.isawaitable(result):
+456:            logger.exception("reminders_loop error")
+462:    logger.info("task_worker started poll=%s timeout=%s", POLL_INTERVAL, TASK_TIMEOUT)
+482:            logger.exception("worker loop error")
+
+===== 7. INGRESS CHECK =====
+4:import logging
+22:logging.basicConfig(
+23:    level=logging.INFO,
+24:    format="%(asctime)s | %(levelname)s | %(message)s",
+26:        logging.FileHandler("/root/.areal-neva-core/logs/telegram_ingress.log"),
+27:        logging.StreamHandler()
+41:        logging.error(f"get_updates error: {e}")
+54:def create_task(payload, chat_id, msg_id):
+55:    storage_layer.create_task(
+64:    msg_id = msg["message_id"]
+68:        create_task(
+72:        logging.info("TEXT task created")
+76:    if msg.get("voice"):
+77:        file_id = msg["voice"]["file_id"]
+79:        dst = BASE_DIR / f"{msg_id}.ogg"
+82:        create_task(
+84:                "text": "voice message",
+86:                "type": "voice",
+91:        logging.info("VOICE task created")
+101:        create_task(
+109:        logging.info("PHOTO task created")
+115:    logging.info("telegram_ingress start | db_ready")
+121:            msg = upd.get("message")
+
+===== 8. LOGS =====
+--- LOG: /root/.areal-neva-core/logs/telegram_ingress.log
+2026-04-06 19:48:51,279 | INFO | telegram_ingress start | db_ready
+2026-04-06 19:48:52,088 | INFO | telegram_ingress start | db_ready
+2026-04-06 19:49:16,186 | INFO | TEXT task created
+2026-04-06 19:51:44,016 | INFO | TEXT task created
+2026-04-06 19:51:54,696 | INFO | VOICE task created
+2026-04-06 20:20:59,347 | INFO | telegram_ingress start | db_ready
+2026-04-06 20:21:36,493 | INFO | TEXT task created
+2026-04-06 20:24:09,220 | INFO | TEXT task created
+2026-04-06 21:06:33,658 | INFO | TEXT task created
+2026-04-06 21:06:44,965 | INFO | VOICE task created
+2026-04-06 21:49:27,756 | INFO | telegram_ingress start | db_ready
+2026-04-06 21:49:47,877 | INFO | telegram_ingress start | db_ready
+2026-04-06 21:49:47,877 | INFO | telegram_ingress start | db_ready
+2026-04-06 21:51:05,224 | INFO | TEXT task created
+2026-04-06 21:51:05,224 | INFO | TEXT task created
+2026-04-06 21:51:05,990 | INFO | TEXT task created
+2026-04-06 21:51:16,732 | INFO | VOICE task created
+2026-04-06 21:51:16,732 | INFO | VOICE task created
+2026-04-06 21:51:18,092 | INFO | VOICE task created
+2026-04-06 21:52:21,470 | INFO | TEXT task created
+2026-04-06 21:52:21,470 | INFO | TEXT task created
+2026-04-06 21:56:51,463 | INFO | TEXT task created
+2026-04-06 21:56:51,463 | INFO | TEXT task created
+2026-04-06 21:56:52,154 | INFO | TEXT task created
+2026-04-06 21:58:45,474 | INFO | telegram_ingress start | db_ready
+2026-04-06 21:58:56,088 | INFO | TEXT task created
+2026-04-06 21:59:03,902 | INFO | VOICE task created
+2026-04-06 22:00:01,181 | INFO | TEXT task created
+2026-04-06 22:00:41,917 | INFO | VOICE task created
+2026-04-06 22:00:46,408 | INFO | TEXT task created
+2026-04-06 22:03:40,215 | INFO | telegram_ingress start | db_ready
+2026-04-06 22:04:43,163 | INFO | VOICE task created
+2026-04-06 22:06:08,986 | INFO | VOICE task created
+2026-04-06 22:06:33,683 | INFO | TEXT task created
+2026-04-06 22:07:19,306 | INFO | VOICE task created
+2026-04-06 22:08:27,273 | INFO | telegram_ingress start | db_ready
+2026-04-06 22:10:26,410 | INFO | telegram_ingress start | db_ready
+2026-04-06 22:11:01,110 | INFO | TEXT task created
+2026-04-06 22:14:49,666 | INFO | TEXT task created
+2026-04-06 22:14:56,619 | INFO | VOICE task created
+2026-04-06 22:15:16,225 | INFO | telegram_ingress start | db_ready
+2026-04-06 22:17:05,557 | INFO | telegram_ingress start | db_ready
+2026-04-06 22:17:45,882 | INFO | VOICE task created
+2026-04-06 22:17:56,146 | INFO | TEXT task created
+2026-04-07 09:59:17,168 | INFO | telegram_ingress start | db_ready
+2026-04-07 09:59:17,326 | INFO | TEXT task created
+2026-04-07 09:59:17,330 | INFO | TEXT task created
+2026-04-07 09:59:17,334 | INFO | TEXT task created
+2026-04-07 09:59:17,338 | INFO | TEXT task created
+2026-04-07 09:59:17,342 | INFO | TEXT task created
+2026-04-07 09:59:17,346 | INFO | TEXT task created
+2026-04-07 09:59:17,350 | INFO | TEXT task created
+2026-04-07 09:59:17,695 | INFO | VOICE task created
+2026-04-07 09:59:17,699 | INFO | TEXT task created
+2026-04-07 09:59:18,054 | INFO | VOICE task created
+2026-04-07 09:59:18,405 | INFO | VOICE task created
+2026-04-07 09:59:18,752 | INFO | VOICE task created
+2026-04-07 09:59:18,757 | INFO | TEXT task created
+2026-04-07 10:01:51,735 | INFO | TEXT task created
+2026-04-07 10:02:08,371 | INFO | VOICE task created
+
+--- LOG: /root/.areal-neva-core/logs/ingress.log
+2026-04-07 09:59:17,168 | INFO | telegram_ingress start | db_ready
+2026-04-07 09:59:17,326 | INFO | TEXT task created
+2026-04-07 09:59:17,330 | INFO | TEXT task created
+2026-04-07 09:59:17,334 | INFO | TEXT task created
+2026-04-07 09:59:17,338 | INFO | TEXT task created
+2026-04-07 09:59:17,342 | INFO | TEXT task created
+2026-04-07 09:59:17,346 | INFO | TEXT task created
+2026-04-07 09:59:17,350 | INFO | TEXT task created
+2026-04-07 09:59:17,695 | INFO | VOICE task created
+2026-04-07 09:59:17,699 | INFO | TEXT task created
+2026-04-07 09:59:18,054 | INFO | VOICE task created
+2026-04-07 09:59:18,405 | INFO | VOICE task created
+2026-04-07 09:59:18,752 | INFO | VOICE task created
+2026-04-07 09:59:18,757 | INFO | TEXT task created
+2026-04-07 10:01:51,735 | INFO | TEXT task created
+2026-04-07 10:02:08,371 | INFO | VOICE task created
+
+--- LOG: /root/.areal-neva-core/logs/task_worker.log
+FINAL RAW_INPUT LEN 4
+2026-04-07 00:50:53,289 core.ai_router INFO task=35291940-2a36-49b7-bb39-c26594d4aabd ai done intent=DEFAULT keys=тест
+2026-04-07 00:53:59,053 task_worker INFO task_worker started poll=1.5 timeout=120
+2026-04-07 00:56:39,775 task_worker INFO task_worker started poll=1.5 timeout=120
+2026-04-07 01:10:16,862 task_worker INFO task_worker started poll=1.5 timeout=120
+BUS FILE 
+WEB_SEARCH_START query=тест
+WEB_SEARCH_DONE
+AI INPUT LEN 4
+2026-04-07 01:10:38,321 task_worker ERROR task=5e3624bf-8364-40e4-a9f8-0f382be12ea7 update failed: no such column: prompt
+DB FORCE UPDATE OK task_id=5e3624bf-8364-40e4-a9f8-0f382be12ea7
+FINAL RAW_INPUT LEN 4
+2026-04-07 01:10:41,049 core.ai_router INFO task=5e3624bf-8364-40e4-a9f8-0f382be12ea7 ai done intent=DEFAULT keys=тест
+2026-04-07 01:10:54,428 __main__ ERROR task=201780c2-fa3b-41c9-8c14-18be56f33091 intake error
+Traceback (most recent call last):
+  File "/root/.areal-neva-core/task_worker.py", line 309, in _run_intake_bg
+    text = await transcribe(voice_path)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: object str can't be used in 'await' expression
+2026-04-07 01:26:27,893 task_worker INFO task_worker started poll=1.5 timeout=120
+BUS FILE /root/AI_ORCHESTRA/telegram/1911.ogg
+WEB_SEARCH_START query=тест
+WEB_SEARCH_DONE
+AI INPUT LEN 4
+DB FORCE UPDATE OK task_id=8bdbda44-7185-4bde-94d4-73bb8964a5c2
+FINAL RAW_INPUT LEN 4
+2026-04-07 01:27:02,005 core.ai_router INFO task=8bdbda44-7185-4bde-94d4-73bb8964a5c2 ai done intent=DEFAULT keys=тест
+BUS FILE 
+WEB_SEARCH_START query=Так, ну что, как у нас работает голосовой набор?
+WEB_SEARCH_DONE
+AI INPUT LEN 48
+DB FORCE UPDATE OK task_id=22ec5596-afa6-4c19-87aa-0b6f77b3ceaf
+FINAL RAW_INPUT LEN 48
+2026-04-07 01:27:17,985 core.ai_router INFO task=22ec5596-afa6-4c19-87aa-0b6f77b3ceaf ai done intent=BUILD keys=работает,голосовой,набор
+BUS FILE 
+WEB_SEARCH_START query=а почему у нас два раза создаётся текстовой набор 
+WEB_SEARCH_DONE
+AI INPUT LEN 60
+DB FORCE UPDATE OK task_id=d169a4f5-a0dc-4e33-9ec9-16981d61c53b
+FINAL RAW_INPUT LEN 60
+2026-04-07 01:27:41,732 core.ai_router INFO task=d169a4f5-a0dc-4e33-9ec9-16981d61c53b ai done intent=DEFAULT keys=почему,раза,созда,текстовой
+BUS FILE 
+WEB_SEARCH_START query=Как решить эту задачу быстро и технически? Потому 
+WEB_SEARCH_DONE
+AI INPUT LEN 88
+DB FORCE UPDATE OK task_id=f85857a8-eb87-4bf5-96da-a144e7db7f7b
+FINAL RAW_INPUT LEN 88
+2026-04-07 01:28:10,179 core.ai_router INFO task=f85857a8-eb87-4bf5-96da-a144e7db7f7b ai done intent=DEFAULT keys=решить,задачу,быстро,технически
+BUS FILE /root/AI_ORCHESTRA/telegram/1923.ogg
+WEB_SEARCH_START query=---
+
+## Technical Assignment: System Stabilization
+AI INPUT LEN 1587
+DB FORCE UPDATE OK task_id=eee073f3-d0f5-4dae-8dfe-8da52320279f
+FINAL RAW_INPUT LEN 1587
+2026-04-07 01:32:24,114 core.ai_router INFO task=eee073f3-d0f5-4dae-8dfe-8da52320279f ai done intent=DEFAULT keys=technical,assignment,system,stabilization
+2026-04-07 09:25:54,547 task_worker INFO task_worker started poll=1.5 timeout=120
+2026-04-07 09:59:19,250 task_worker INFO task_worker started poll=1.5 timeout=120
+2026-04-07 10:01:55,080 core.ai_router INFO task=25944b89-70b2-4ab5-975c-3e432404de56 ai done intent=DEFAULT keys=тест
+2026-04-07 10:02:15,247 core.ai_router INFO task=99f6b7ef-404f-4f11-b07f-9826b8128d32 ai done intent=BUILD keys=голос,работает,здесь,аркестре
+
+--- LOG: /root/.areal-neva-core/logs/worker.log
+2026-04-07 09:59:19,250 task_worker INFO task_worker started poll=1.5 timeout=120
+BUS FILE 
+WEB_SEARCH_START query=тест
+WEB_SEARCH_DONE
+AI INPUT LEN 4
+DB FORCE UPDATE OK task_id=25944b89-70b2-4ab5-975c-3e432404de56
+FINAL RAW_INPUT LEN 4
+2026-04-07 10:01:55,080 core.ai_router INFO task=25944b89-70b2-4ab5-975c-3e432404de56 ai done intent=DEFAULT keys=тест
+BUS FILE 
+WEB_SEARCH_START query=голос работает, все работает, кто здесь в аркестре
+WEB_SEARCH_DONE
+AI INPUT LEN 51
+DB FORCE UPDATE OK task_id=99f6b7ef-404f-4f11-b07f-9826b8128d32
+FINAL RAW_INPUT LEN 51
+2026-04-07 10:02:15,247 core.ai_router INFO task=99f6b7ef-404f-4f11-b07f-9826b8128d32 ai done intent=BUILD keys=голос,работает,здесь,аркестре
+
+--- LOG: /root/.areal-neva-core/logs/telegram_daemon.log
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/base_events.py", line 687, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/root/.areal-neva-core/telegram_daemon.py", line 131, in main
+    await maybe
+  File "/root/.areal-neva-core/core/db.py", line 50, in init_db
+    await _pool.execute("PRAGMA journal_mode=WAL")
+  File "/root/.areal-neva-core/.venv/lib/python3.12/site-packages/aiosqlite/core.py", line 223, in execute
+    cursor = await self._execute(self._conn.execute, sql, parameters)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.areal-neva-core/.venv/lib/python3.12/site-packages/aiosqlite/core.py", line 160, in _execute
+    return await future
+           ^^^^^^^^^^^^
+  File "/root/.areal-neva-core/.venv/lib/python3.12/site-packages/aiosqlite/core.py", line 63, in _connection_worker_thread
+    result = function()
+             ^^^^^^^^^^
+sqlite3.DatabaseError: malformed database schema (0)
+2026-04-06 22:17:06,214 | INFO | BOT STARTED id=8216054898 username=ai_orkestra_all_bot
+2026-04-06 22:17:45,333 | INFO | FILE SAVED /root/AI_ORCHESTRA/telegram/1888.ogg
+2026-04-06 22:17:45,333 | INFO | RAW_INPUT READY chat_id=-1003725299009 type=voice raw_input=/root/AI_ORCHESTRA/telegram/1888.ogg
+2026-04-06 22:17:45,336 | INFO | TASK CREATED id=2c5e3f5e-465a-4b1d-8d0d-58bfd6382068 type=voice chat_id=-1003725299009 topic_id=None
+2026-04-06 22:17:56,134 | INFO | TASK CREATED id=99fd2657-84c1-4dfe-a30c-f4b97236a57a type=text chat_id=-1003725299009 topic_id=None
+2026-04-07 00:10:16,022 | INFO | BOT STARTED id=8216054898 username=ai_orkestra_all_bot
+2026-04-07 00:13:23,978 | INFO | BOT STARTED id=8216054898 username=ai_orkestra_all_bot
+2026-04-07 00:20:00,061 | INFO | BOT STARTED id=8216054898 username=ai_orkestra_all_bot
+2026-04-07 00:23:38,780 | INFO | BOT STARTED id=8216054898 username=ai_orkestra_all_bot
+2026-04-07 00:24:27,015 | INFO | BOT STARTED id=8216054898 username=ai_orkestra_all_bot
+2026-04-07 00:25:09,296 | INFO | TASK CREATED id=e78e67d7-c305-4b56-8566-742a841e18fd type=text chat_id=-1003725299009 topic_id=2
+2026-04-07 00:28:35,658 | INFO | BOT STARTED id=8216054898 username=ai_orkestra_all_bot
+2026-04-07 00:29:37,570 | INFO | BOT STARTED id=8216054898 username=ai_orkestra_all_bot
+2026-04-07 00:31:45,833 | INFO | BOT STARTED id=8216054898 username=ai_orkestra_all_bot
+2026-04-07 00:38:01,345 | INFO | BOT STARTED id=8216054898 username=ai_orkestra_all_bot
+2026-04-07 00:46:41,890 | INFO | BOT STARTED id=8216054898 username=ai_orkestra_all_bot
+2026-04-07 00:47:31,030 | INFO | TASK CREATED id=fb2034d2-e02f-4a29-b78f-31135ec9fc7f type=text chat_id=-1003725299009 topic_id=2
+2026-04-07 00:50:50,120 | INFO | TASK CREATED id=35291940-2a36-49b7-bb39-c26594d4aabd type=text chat_id=-1003725299009 topic_id=2
+2026-04-07 01:10:16,925 | INFO | BOT STARTED id=8216054898 username=ai_orkestra_all_bot
+2026-04-07 01:10:36,637 | INFO | TASK CREATED id=5e3624bf-8364-40e4-a9f8-0f382be12ea7 type=text chat_id=-1003725299009 topic_id=2
+2026-04-07 01:10:51,598 | INFO | FILE SAVED /root/AI_ORCHESTRA/telegram/1911.ogg
+2026-04-07 01:10:51,598 | INFO | RAW_INPUT READY chat_id=-1003725299009 type=voice raw_input=/root/AI_ORCHESTRA/telegram/1911.ogg
+2026-04-07 01:10:51,600 | INFO | TASK CREATED id=201780c2-fa3b-41c9-8c14-18be56f33091 type=voice chat_id=-1003725299009 topic_id=2
+2026-04-07 01:26:27,994 | INFO | BOT STARTED id=8216054898 username=ai_orkestra_all_bot
+2026-04-07 01:26:56,746 | INFO | TASK CREATED id=8bdbda44-7185-4bde-94d4-73bb8964a5c2 type=text chat_id=-1003725299009 topic_id=None
+2026-04-07 01:27:11,778 | INFO | FILE SAVED /root/AI_ORCHESTRA/telegram/1917.ogg
+2026-04-07 01:27:11,778 | INFO | RAW_INPUT READY chat_id=-1003725299009 type=voice raw_input=/root/AI_ORCHESTRA/telegram/1917.ogg
+2026-04-07 01:27:11,780 | INFO | TASK CREATED id=22ec5596-afa6-4c19-87aa-0b6f77b3ceaf type=voice chat_id=-1003725299009 topic_id=None
+2026-04-07 01:27:35,145 | INFO | FILE SAVED /root/AI_ORCHESTRA/telegram/1920.ogg
+2026-04-07 01:27:35,145 | INFO | RAW_INPUT READY chat_id=-1003725299009 type=voice raw_input=/root/AI_ORCHESTRA/telegram/1920.ogg
+2026-04-07 01:27:35,146 | INFO | TASK CREATED id=d169a4f5-a0dc-4e33-9ec9-16981d61c53b type=voice chat_id=-1003725299009 topic_id=None
+2026-04-07 01:28:01,776 | INFO | FILE SAVED /root/AI_ORCHESTRA/telegram/1923.ogg
+2026-04-07 01:28:01,776 | INFO | RAW_INPUT READY chat_id=-1003725299009 type=voice raw_input=/root/AI_ORCHESTRA/telegram/1923.ogg
+2026-04-07 01:28:01,778 | INFO | TASK CREATED id=f85857a8-eb87-4bf5-96da-a144e7db7f7b type=voice chat_id=-1003725299009 topic_id=None
+2026-04-07 01:30:23,995 | INFO | TASK CREATED id=eee073f3-d0f5-4dae-8dfe-8da52320279f type=text chat_id=-1003725299009 topic_id=None
+2026-04-07 09:25:54,511 | INFO | BOT STARTED id=8216054898 username=ai_orkestra_all_bot
+2026-04-07 09:59:21,713 | INFO | BOT STARTED id=8216054898 username=ai_orkestra_all_bot
+2026-04-07 10:01:51,731 | INFO | TASK CREATED id=25944b89-70b2-4ab5-975c-3e432404de56 type=text chat_id=-1003725299009 topic_id=None
+2026-04-07 10:02:08,113 | INFO | FILE SAVED /root/AI_ORCHESTRA/telegram/1933.ogg
+2026-04-07 10:02:08,114 | INFO | RAW_INPUT READY chat_id=-1003725299009 type=voice raw_input=/root/AI_ORCHESTRA/telegram/1933.ogg
+2026-04-07 10:02:08,115 | INFO | TASK CREATED id=99f6b7ef-404f-4f11-b07f-9826b8128d32 type=voice chat_id=-1003725299009 topic_id=None
+
+--- LOG: /root/.areal-neva-core/logs/telegram_reply_daemon.log
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+NO_ROWS
+/root/.areal-neva-core/.venv/bin/python3: can't open file '/root/.areal-neva-core/telegram_reply_daemon.py': [Errno 2] No such file or directory
+/root/.areal-neva-core/.venv/bin/python3: can't open file '/root/.areal-neva-core/telegram_reply_daemon.py': [Errno 2] No such file or directory
+/root/.areal-neva-core/.venv/bin/python3: can't open file '/root/.areal-neva-core/telegram_reply_daemon.py': [Errno 2] No such file or directory
+/root/.areal-neva-core/.venv/bin/python3: can't open file '/root/.areal-neva-core/telegram_reply_daemon.py': [Errno 2] No such file or directory
+
+--- LOG: /root/.areal-neva-core/logs/daemon.log
+
+
+===== 9. BACKUPS =====
+/root/.areal-neva-core/core/stt.py.bak_2026-04-07_01-24-39
+/root/.areal-neva-core/core/stt.py.bak_2026-04-07_01-26-20
+/root/.areal-neva-core/core/stt.py.bak_2026-04-07_01-59-14
+/root/.areal-neva-core/core/stt.py.bak_2026-04-07_02-08-22
+/root/.areal-neva-core/core/stt.py.bak_2026-04-07_02-09-46
+/root/.areal-neva-core/core/stt.py.bak_2026-04-07_02-11-05
+/root/.areal-neva-core/core/stt.py.pre_reset_2026-04-07_09-59-11
+/root/.areal-neva-core/core/stt.py.pre_restore_2026-04-07_09-13-26
+/root/.areal-neva-core/core/stt.py.pre_restore_2026-04-07_09-15-53
+/root/.areal-neva-core/data/core.db-shm.corrupted_2026-04-07_00-23-33
+/root/.areal-neva-core/data/core.db-wal.corrupted_2026-04-07_00-23-33
+/root/.areal-neva-core/data/core.db.bak_2026-04-07_01-24-39
+/root/.areal-neva-core/data/core.db.bak_2026-04-07_01-26-20
+/root/.areal-neva-core/data/core.db.bak_2026-04-07_01-59-14
+/root/.areal-neva-core/data/core.db.bak_2026-04-07_02-08-22
+/root/.areal-neva-core/data/core.db.bak_2026-04-07_02-09-46
+/root/.areal-neva-core/data/core.db.bak_2026-04-07_02-11-05
+/root/.areal-neva-core/data/core.db.corrupted_2026-04-07_00-23-33
+/root/.areal-neva-core/data/core.db.pre_reset_2026-04-07_09-59-11
+/root/.areal-neva-core/data/core.db.pre_restore_2026-04-07_09-13-26
+/root/.areal-neva-core/data/core.db.pre_restore_2026-04-07_09-15-53
+/root/.areal-neva-core/task_worker.py.bak_2026-04-06_23-59-58
+/root/.areal-neva-core/task_worker.py.bak_2026-04-07_00-02-35
+/root/.areal-neva-core/task_worker.py.bak_2026-04-07_00-04-37
+/root/.areal-neva-core/task_worker.py.bak_2026-04-07_00-10-07
+/root/.areal-neva-core/task_worker.py.bak_2026-04-07_01-24-39
+/root/.areal-neva-core/task_worker.py.bak_2026-04-07_01-26-20
+/root/.areal-neva-core/task_worker.py.bak_2026-04-07_01-59-14
+/root/.areal-neva-core/task_worker.py.bak_2026-04-07_02-08-22
+/root/.areal-neva-core/task_worker.py.bak_2026-04-07_02-09-46
+/root/.areal-neva-core/task_worker.py.bak_2026-04-07_02-11-05
+/root/.areal-neva-core/task_worker.py.bak_cleanup_2026-04-07_01-10-07
+/root/.areal-neva-core/task_worker.py.bak_final_stab_safe
+/root/.areal-neva-core/task_worker.py.bak_fix_future_2026-04-07_09-25-45
+/root/.areal-neva-core/task_worker.py.pre_reset_2026-04-07_09-59-11
+/root/.areal-neva-core/task_worker.py.pre_restore_2026-04-07_09-13-26
+/root/.areal-neva-core/task_worker.py.pre_restore_2026-04-07_09-15-53
+/root/.areal-neva-core/telegram_daemon.py.bak_2026-04-07_00-13-21
+/root/.areal-neva-core/telegram_daemon.py.bak_2026-04-07_00-19-57
+/root/.areal-neva-core/telegram_ingress.py.pre_reset_2026-04-07_09-59-11
+
+===== 10. GIT =====
+a42953f
+a42953f Fri Apr 3 16:05:05 2026 +0300 SAFE SYSTEM SNAPSHOT 2026-04-03_16-05-04
+ M orchestra.db
+ M server_archive_to_drive.log
+?? core/stt.py.bak_2026-04-07_01-24-39
+?? core/stt.py.bak_2026-04-07_01-26-20
+?? core/stt.py.bak_2026-04-07_01-59-14
+?? core/stt.py.bak_2026-04-07_02-08-22
+?? core/stt.py.bak_2026-04-07_02-09-46
+?? core/stt.py.bak_2026-04-07_02-11-05
+?? core/stt.py.pre_reset_2026-04-07_09-59-11
+?? core/stt.py.pre_restore_2026-04-07_09-13-26
+?? core/stt.py.pre_restore_2026-04-07_09-15-53
+?? data/core_dump_2026-04-07_00-23-33.sql
+?? diag_restore_2026-04-07_10-09-54.txt
+?? modules/
+?? runlocks/
+?? task_worker.py.bak_2026-04-06_23-59-58
+?? task_worker.py.bak_2026-04-07_00-02-35
+?? task_worker.py.bak_2026-04-07_00-04-37
+?? task_worker.py.bak_2026-04-07_00-10-07
+?? task_worker.py.bak_2026-04-07_01-24-39
+?? task_worker.py.bak_2026-04-07_01-26-20
+?? task_worker.py.bak_2026-04-07_01-59-14
+?? task_worker.py.bak_2026-04-07_02-08-22
+?? task_worker.py.bak_2026-04-07_02-09-46
+?? task_worker.py.bak_2026-04-07_02-11-05
+?? task_worker.py.bak_cleanup_2026-04-07_01-10-07
+?? task_worker.py.bak_final_stab_safe
+?? task_worker.py.bak_fix_future_2026-04-07_09-25-45
+?? task_worker.py.pre_reset_2026-04-07_09-59-11
+?? task_worker.py.pre_restore_2026-04-07_09-13-26
+?? task_worker.py.pre_restore_2026-04-07_09-15-53
+?? telegram_daemon.py.bak_2026-04-07_00-13-21
+?? telegram_daemon.py.bak_2026-04-07_00-19-57
+?? telegram_ingress.py.pre_reset_2026-04-07_09-59-11
+
+===== 11. RECOVERY HINTS =====
+IF telegram_ingress.py is tiny/stub -> restore ingress from git or .bak
+IF task_worker compile fails -> restore worker from a42953f then patch narrowly
+IF result80 empty on DONE tasks -> fix worker result propagation
+IF result80 filled but no Telegram reply -> fix daemon query/send logic
+IF voice tasks exist but no text result -> fix stt/task_worker await chain
+IF duplicate statuses only -> inspect daemon/status-only behavior
