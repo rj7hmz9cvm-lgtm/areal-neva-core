@@ -1,0 +1,9 @@
+import asyncio
+import whisper, os
+model = whisper.load_model("base")
+def _transcribe_sync(path):
+    res = model.transcribe(path, fp16=False, language='ru')
+    return res.get("text", "").strip()
+
+async def transcribe(*args, **kwargs):
+    return await asyncio.to_thread(_transcribe_sync, *args, **kwargs)
