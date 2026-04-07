@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+logs/
+data/telegram_media/
+core.db*
+.env*
+keys/
+sessions/
+runlocks/
+artifacts/
+outputs/
+token.json
+credentials.json
+*.tar.gz
+*.tgz

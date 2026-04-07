@@ -1,0 +1,1 @@
+/root/.areal-neva-core/data/memory/DEVOPS_AUTOMATION/tg_agent.py

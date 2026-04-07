@@ -1,0 +1,1 @@
+# CORE-10 SSOT
