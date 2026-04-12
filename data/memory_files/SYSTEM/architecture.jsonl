@@ -1,0 +1,2 @@
+{"timestamp": "2026-04-12T15:19:52.467453", "data": "Telegram -> telegram_daemon.py -> core.db(tasks) -> task_worker.py -> core/ai_router.py -> OpenRouter API -> memory_api_server.py(memory.db) -> Telegram"}
+{"timestamp": "2026-04-12T21:15:02.804170+00:00", "data": "Server-first Telegram orchestration where telegram_daemon creates tasks in core.db, task_worker processes tasks, ai_router executes AI logic via ask_ai and orchestra_runtime, reply_sender delivers results to Telegram"}
