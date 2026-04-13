@@ -1,0 +1,2 @@
+{"timestamp": "2026-04-12T15:19:52.467564", "data": "path=/root/.areal-neva-core/data/memory.db; table=memory(id,chat_id,key,value,timestamp); write=POST /memory and save_memory(user_input,assistant_output); read=GET /memory?chat_id=...; injection=partial via ai_router context"}
+{"timestamp": "2026-04-12T21:15:02.804170+00:00", "data": "Primary memory stored in /root/.areal-neva-core/data/memory.db with automatic read via ask_ai GET /memory and automatic write after response; task results stored in core.db and re-read by worker for final delivery"}
