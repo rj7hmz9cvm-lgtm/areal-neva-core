@@ -1,0 +1,52 @@
+{
+  "chat_id": "UNKNOWN",
+  "exported_at": "2026-04-12T00:00:00Z",
+  "source_platform": "ChatGPT",
+  "source_model": "GPT-5.3",
+  "system": "AREAL-NEVA CORE ORCHESTRA; MVP; server-first; Telegram interface; OpenRouter LLM; SQLite memory; simplified stack without tg_agent/storage_layer/orchestra.db",
+  "architecture": "Telegram -> telegram_daemon.py -> core.db(tasks) -> task_worker.py -> core/ai_router.py -> OpenRouter API -> memory_api_server.py(memory.db) -> Telegram",
+  "pipeline": "message intake -> INSERT task(state='NEW') -> SELECT NEW ORDER BY created_at -> UPDATE 'IN_PROGRESS' -> process_ai_task -> OpenRouter call -> response -> send_reply -> UPDATE DONE/FAILED -> memory write/read",
+  "memory": "path=/root/.areal-neva-core/data/memory.db; table=memory(id,chat_id,key,value,timestamp); write=POST /memory and save_memory(user_input,assistant_output); read=GET /memory?chat_id=...; injection=partial via ai_router context",
+  "integrations": "telegram=aiogram polling; openrouter=HTTP POST https://openrouter.ai/api/v1/chat/completions; memory_api=Flask 127.0.0.1:8091; google_drive=NOT_IMPLEMENTED",
+  "files": [
+    "/root/.areal-neva-core/telegram_daemon.py",
+    "/root/.areal-neva-core/task_worker.py",
+    "/root/.areal-neva-core/core/ai_router.py",
+    "/root/.areal-neva-core/memory_api_server.py",
+    "/root/.areal-neva-core/data/core.db",
+    "/root/.areal-neva-core/data/memory.db",
+    "/root/.areal-neva-core/logs/task_worker.log",
+    "/root/.areal-neva-core/logs/telegram_daemon.log",
+    "/root/.areal-neva-core/logs/memory_api.log"
+  ],
+  "services": [
+    "telegram_daemon.py",
+    "task_worker.py",
+    "memory_api_server.py"
+  ],
+  "env": [
+    "OPENROUTER_API_KEY",
+    "TELEGRAM_BOT_TOKEN",
+    "MEMORY_API_TOKEN"
+  ],
+  "db": "core.db: table tasks(id,chat_id,user_id,input_type,raw_input,state,reply_to_message_id,result,error_message,created_at,updated_at); memory.db: table memory(id,chat_id,key,value,timestamp)",
+  "logic": "states=NEW,IN_PROGRESS,DONE,FAILED; worker loop select->update->process->reply->update; reply uses reply_to_message_id; memory saved on input/output",
+  "decisions": "remove tg_agent/storage_layer/orchestra.db; use direct Telegram daemon + core.db; OpenRouter as single LLM; memory via memory_api_server; snapshot baseline fixed; emergency memory write via SQLite",
+  "solutions": "sql_quotes_fix; state_machine_simplify; env_load_fix; ai_router_ru_prompt; memory_write_patch; cleanup_old_files; pycache_cleanup; pkill_split_fix",
+  "code": "SELECT id,chat_id,raw_input,reply_to_message_id FROM tasks WHERE state='NEW' ORDER BY created_at ASC LIMIT 1; UPDATE tasks SET state='IN_PROGRESS' WHERE id=?; result=resp['choices'][0]['message']['content']; POST /memory JSON(chat_id,key,value)",
+  "errors": [
+    "no such column NEW → use state='NEW'",
+    "no such column IN_PROGRESS → use state='IN_PROGRESS'",
+    "invalid transition NEW->NEW → remove duplicate transition",
+    "invalid transition IN_PROGRESS->IN_PROGRESS → simplify state flow",
+    "no LLM API key → load env",
+    "send_reply missing token → fix TELEGRAM_BOT_TOKEN",
+    "future import error → clean ai_router",
+    "route_task missing args → remove old router",
+    "pkill killed shell → split commands",
+    "old logs mismatch → cleanup files"
+  ],
+  "state": "telegram→task→worker→OpenRouter→memory→reply working",
+  "limits": "no Google Drive; no file pipeline; no OCR/STT; no document/estimate/DWG engines; memory context limited; no confirmation/archived states",
+  "pending": "drive integration; file pipeline; OCR; document_engine; estimate_engine; DWG; full memory context; confirmation lifecycle"
+}
