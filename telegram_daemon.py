@@ -1,0 +1,573 @@
+import asyncio, hashlib, json, logging, os, re, uuid, fcntl, tempfile, time
+from datetime import datetime, timezone, timedelta
+import aiofiles, aiohttp, aiosqlite
+from aiogram import Bot, Dispatcher, types
+from google_io import upload_to_drive
+
+BOT_TOKEN = (os.getenv("TELEGRAM_BOT_TOKEN") or "").strip()
+DB = "/root/.areal-neva-core/data/core.db"
+VOICE_DIR = "/root/.areal-neva-core/runtime/voice_queue"
+MEMORY_FILES = "/root/.areal-neva-core/data/memory_files"
+CHAT_MAP_FILE = os.path.join(MEMORY_FILES, "CHAT_MAP.json")
+
+if not BOT_TOKEN:
+    raise RuntimeError("TELEGRAM_BOT_TOKEN missing")
+
+for d in ["GLOBAL", "CHATS", "SYSTEM", "ERRORS"]:
+    os.makedirs(os.path.join(MEMORY_FILES, d), exist_ok=True)
+os.makedirs(VOICE_DIR, exist_ok=True)
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s DAEMON: %(message)s")
+logger = logging.getLogger("telegram_daemon")
+
+bot = Bot(BOT_TOKEN)
+dp = Dispatcher()
+
+SYSTEM_CMDS = ["память", "память оркестра", "выгрузи память", "статус", "архив", "сброс задач", "очистить задачи", "yzon"]
+CANCEL_CMDS = ["отбой", "отмена", "не надо"]
+EZONE_KEYS = ("system", "architecture", "pipeline", "memory")
+EZONE_EXTS = (".json", ".jsonl", ".txt")
+SEARCH_TRIGGERS = ["цена", "наличие", "где купить", "площадка", "сайт", "сравнение", "новости", "актуальная"]
+SHORT_CONFIRM = ["да", "нет", "ок", "подтверждаю", "не так", "ага", "верно"]
+NEGATIVE_CONFIRM = ["нет", "не так"]
+
+_RECENT_INGEST = {}
+
+def now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+def today_key() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+def normalize_json_text(text: str) -> str:
+    if not text: return text
+    replacements = {"“": '"', "”": '"', "„": '"', "«": '"', "»": '"', "‘": "'", "’": "'", "…": "..."}
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+    return text.strip()
+
+def is_ezone_payload(text: str) -> bool:
+    if not text: return False
+    norm = normalize_json_text(text)
+    try:
+        data = json.loads(norm)
+        return isinstance(data, dict) and any(k in data for k in EZONE_KEYS)
+    except:
+        low = norm.lower()
+        return any(k in low for k in EZONE_KEYS)
+
+def content_hash(text: str) -> str:
+    return hashlib.sha256(normalize_json_text(text).encode()).hexdigest()
+
+def build_chat_key(telegram_chat_id: int) -> str:
+    return f"{telegram_chat_id}__telegram"
+
+def update_chat_map_atomic(telegram_chat_id: int, chat_key: str):
+    lock_file = CHAT_MAP_FILE + ".lock"
+    try:
+        with open(lock_file, "w") as lf:
+            fcntl.flock(lf, fcntl.LOCK_EX)
+            try:
+                chat_map = json.load(open(CHAT_MAP_FILE)) if os.path.exists(CHAT_MAP_FILE) else {}
+                tg_id = str(telegram_chat_id)
+                if tg_id not in chat_map:
+                    chat_map[tg_id] = {}
+                elif isinstance(chat_map[tg_id], list):
+                    chat_map[tg_id] = {k: "unknown" for k in chat_map[tg_id]}
+                chat_map[tg_id] = {k: v for k, v in chat_map[tg_id].items() if "unknown" not in k}
+                chat_map[tg_id][chat_key] = "telegram"
+                fd, tmp = tempfile.mkstemp(dir=os.path.dirname(CHAT_MAP_FILE), prefix=".chat_map_", suffix=".tmp")
+                with os.fdopen(fd, "w") as f:
+                    json.dump(chat_map, f, ensure_ascii=False, indent=2)
+                    f.flush(); os.fsync(f.fileno())
+                os.replace(tmp, CHAT_MAP_FILE)
+            finally:
+                fcntl.flock(lf, fcntl.LOCK_UN)
+    except Exception as e:
+        logger.error("CHAT_MAP update failed: %s", e)
+    finally:
+        try: os.unlink(lock_file)
+        except: pass
+
+def is_duplicate_today(hash_val: str, chat_key: str) -> bool:
+    dup_file = os.path.join(MEMORY_FILES, "CHATS", chat_key, ".duplicates.jsonl")
+    today = today_key()
+    if os.path.exists(dup_file):
+        with open(dup_file) as f:
+            for line in f:
+                try:
+                    if json.loads(line).get("hash") == hash_val and json.loads(line).get("date") == today:
+                        return True
+                except: pass
+    os.makedirs(os.path.dirname(dup_file), exist_ok=True)
+    with open(dup_file, "a") as f:
+        f.write(json.dumps({"hash": hash_val, "date": today, "ts": now_iso()}) + "\n")
+    return False
+
+def save_ezone_json(text: str, telegram_chat_id: int) -> tuple:
+    norm = normalize_json_text(text)
+    try: data = json.loads(norm)
+    except: data = {"raw_text": norm}
+    if not isinstance(data, dict): data = {"raw_text": norm}
+    
+    chat_key = build_chat_key(telegram_chat_id)
+    ts = now_iso()
+    hash_val = content_hash(text)
+    
+    if is_duplicate_today(hash_val, chat_key):
+        return False, chat_key, "duplicate"
+    
+    data["_meta"] = {"chat_key": chat_key, "ingested_at": ts, "source": "telegram"}
+    chat_dir = os.path.join(MEMORY_FILES, "CHATS", chat_key)
+    os.makedirs(chat_dir, exist_ok=True)
+    
+    with open(os.path.join(chat_dir, "raw.json"), "w") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    
+    entry = json.dumps({"timestamp": ts, "data": data}, ensure_ascii=False)
+    with open(os.path.join(chat_dir, "timeline.jsonl"), "a") as f:
+        f.write(entry + "\n")
+    with open(os.path.join(MEMORY_FILES, "GLOBAL", "timeline.jsonl"), "a") as f:
+        f.write(json.dumps({"timestamp": ts, "chat_key": chat_key, "data": data}, ensure_ascii=False) + "\n")
+    
+    for key in EZONE_KEYS:
+        if key in data:
+            with open(os.path.join(MEMORY_FILES, "SYSTEM", f"{key}.jsonl"), "a") as f:
+                f.write(json.dumps({"timestamp": ts, "chat_key": chat_key, "data": data[key]}, ensure_ascii=False) + "\n")
+    
+    update_chat_map_atomic(telegram_chat_id, chat_key)
+    logger.info("eZone saved: chat_key=%s telegram_chat=%s", chat_key, telegram_chat_id)
+    return True, chat_key, ""
+
+
+def dump_yzon_state(chat_id: int) -> str:
+    import sqlite3, json
+
+    result = {
+        "system": {"name": "AREAL-NEVA ORCHESTRA", "role": "task execution system"},
+        "architecture": {
+            "pipeline": "telegram_daemon -> task_worker -> ai_router -> reply_sender",
+            "memory": "memory.db + memory_files",
+            "storage": "Google Drive",
+            "mode": "server-first"
+        },
+        "runtime": {
+            "chat_id": str(chat_id),
+            "has_active_task": False,
+            "has_active_pin": False,
+            "daemon": "running",
+            "worker": "running"
+        },
+        "active_context": {},
+        "recent_results": [],
+        "recent_decisions": []
+    }
+
+    try:
+        conn = sqlite3.connect("/root/.areal-neva-core/data/core.db")
+
+        cur = conn.execute(
+            "SELECT id, state, raw_input FROM tasks WHERE chat_id = ? AND state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION') ORDER BY created_at DESC LIMIT 1",
+            (str(chat_id),)
+        )
+        row = cur.fetchone()
+        if row:
+            result["runtime"]["has_active_task"] = True
+            result["active_context"]["task_id"] = row[0]
+            result["active_context"]["state"] = row[1]
+            result["active_context"]["input"] = row[2][:200] if row[2] else ""
+
+        cur = conn.execute(
+            "SELECT task_id FROM pin WHERE chat_id = ? AND state = 'ACTIVE' ORDER BY updated_at DESC LIMIT 1",
+            (str(chat_id),)
+        )
+        pin_row = cur.fetchone()
+        if pin_row:
+            result["runtime"]["has_active_pin"] = True
+            result["active_context"]["active_pin"] = pin_row[0]
+
+        cur = conn.execute(
+            "SELECT id, result FROM tasks WHERE chat_id = ? AND state = 'DONE' AND result IS NOT NULL ORDER BY updated_at DESC LIMIT 5",
+            (str(chat_id),)
+        )
+        for row in cur.fetchall():
+            result["recent_results"].append({"task_id": row[0], "summary": row[1][:200] if row[1] else ""})
+
+        cur = conn.execute(
+            "SELECT task_id, action FROM task_history WHERE task_id IN (SELECT id FROM tasks WHERE chat_id = ?) ORDER BY created_at DESC LIMIT 10",
+            (str(chat_id),)
+        )
+        for row in cur.fetchall():
+            result["recent_decisions"].append({"task_id": row[0], "action": row[1]})
+
+        conn.close()
+    except Exception as e:
+        result["error"] = str(e)
+
+    return json.dumps(result, ensure_ascii=False, indent=2)
+
+
+def dump_system_state() -> str:
+    import sqlite3, json, os
+    from datetime import datetime, timezone
+
+    result = {
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "chat_id": None,
+        "active_task": None,
+        "active_pin": None,
+        "recent_results": [],
+        "architecture": {
+            "system": "AREAL-NEVA ORCHESTRA",
+            "stack": "telegram_daemon + task_worker + ai_router + OpenRouter",
+            "memory": "memory_files + memory.db",
+            "files": "Google Drive via google_io"
+        }
+    }
+
+    try:
+        conn = sqlite3.connect("/root/.areal-neva-core/data/core.db")
+        cur = conn.execute("SELECT id, state, raw_input FROM tasks WHERE chat_id = '-1003725299009' AND state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION') ORDER BY created_at DESC LIMIT 1")
+        row = cur.fetchone()
+        if row:
+            result["chat_id"] = "-1003725299009"
+            result["active_task"] = {"id": row[0], "state": row[1], "input": row[2][:200]}
+        
+        cur = conn.execute("SELECT task_id FROM pin WHERE chat_id = '-1003725299009' AND state = 'ACTIVE' ORDER BY updated_at DESC LIMIT 1")
+        pin_row = cur.fetchone()
+        if pin_row:
+            result["active_pin"] = pin_row[0]
+        
+        cur = conn.execute("SELECT id, result FROM tasks WHERE chat_id = '-1003725299009' AND state = 'DONE' AND result IS NOT NULL ORDER BY updated_at DESC LIMIT 20")
+        for row in cur.fetchall():
+            result["recent_results"].append({"task_id": row[0], "summary": row[1][:200]})
+        
+        conn.close()
+    except Exception as e:
+        result["error"] = str(e)
+
+    return json.dumps(result, ensure_ascii=False, indent=2)
+
+def split_message(text: str, limit: int = 4000) -> list:
+    text = text or ""
+    parts = []
+    while text and len(parts) < 10:
+        if len(text) <= limit:
+            parts.append(text); break
+        split_at = text.rfind("\n", 0, limit)
+        if split_at == -1 or split_at < limit // 3:
+            split_at = limit
+        parts.append(text[:split_at])
+        text = text[split_at:].lstrip("\n")
+    return parts or [""]
+
+async def create_task(message: types.Message, input_type: str, raw_input: str, state: str = "NEW"):
+    task_id = str(uuid.uuid4())
+    now = now_iso()
+    user_id = getattr(message.from_user, "id", 0) if message.from_user else 0
+    async with aiosqlite.connect(DB) as db:
+        await db.execute(
+            "INSERT INTO tasks (id, chat_id, user_id, input_type, raw_input, state, reply_to_message_id, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
+            (task_id, message.chat.id, user_id, input_type, raw_input, state, message.message_id, now, now))
+        await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (task_id, f"created:{state}", now))
+        await db.commit()
+    logger.info("Task %s created state=%s", task_id, state)
+    return task_id
+
+async def get_active_task(chat_id: int) -> dict:
+    async with aiosqlite.connect(DB) as db:
+        cur = await db.execute(
+            "SELECT id, state, raw_input FROM tasks WHERE chat_id=? AND state IN ('NEW','IN_PROGRESS') ORDER BY created_at DESC LIMIT 1",
+            (chat_id,))
+        row = await cur.fetchone()
+        if row:
+            return {"id": row[0], "state": row[1], "raw_input": row[2]}
+        return None
+
+async def cancel_active_task(chat_id: int):
+    async with aiosqlite.connect(DB) as db:
+        cur = await db.execute(
+            "SELECT id FROM tasks WHERE chat_id=? AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION')",
+            (chat_id,)
+        )
+        tasks = await cur.fetchall()
+        for t in tasks:
+            await db.execute("UPDATE tasks SET state='CANCELLED', updated_at=? WHERE id=?", (now_iso(), t[0]))
+            await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (t[0], "cancelled", now_iso()))
+        await db.commit()
+async def reset_all_open_tasks(chat_id: int):
+    async with aiosqlite.connect(DB) as db:
+        cur = await db.execute(
+            "SELECT id FROM tasks WHERE chat_id=? AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION')",
+            (chat_id,)
+        )
+        rows = await cur.fetchall()
+        now = now_iso()
+        for row in rows:
+            task_id = row[0]
+            await db.execute(
+                "UPDATE tasks SET state='CANCELLED', updated_at=? WHERE id=?",
+                (now, task_id)
+            )
+            await db.execute(
+                "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)",
+                (task_id, "reset:CANCELLED", now)
+            )
+        try:
+            await db.execute(
+                "UPDATE pin SET state='CLOSED', updated_at=? WHERE chat_id=? AND state='ACTIVE'",
+                (now, str(chat_id))
+            )
+        except Exception:
+            pass
+        await db.commit()
+
+
+async def download_telegram_file(file_path: str, local_path: str) -> str:
+    url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
+    async with aiohttp.ClientSession() as s:
+        async with s.get(url, timeout=aiohttp.ClientTimeout(total=300)) as r:
+            r.raise_for_status()
+            async with aiofiles.open(local_path, "wb") as f:
+                await f.write(await r.read())
+    return local_path
+
+@dp.message()
+async def universal_handler(message: types.Message):
+    update_id = getattr(message, 'update_id', None)
+    if update_id:
+        async with aiosqlite.connect(DB) as db:
+            await db.execute("DELETE FROM processed_updates WHERE created_at < ?", ((datetime.now(timezone.utc) - timedelta(days=1)).isoformat(),))
+            cur = await db.execute("SELECT 1 FROM processed_updates WHERE update_id = ?", (update_id,))
+            if await cur.fetchone():
+                await db.commit()
+                return
+            await db.execute("INSERT INTO processed_updates (update_id, created_at) VALUES (?, ?)", (update_id, now_iso()))
+            await db.commit()
+    
+    try:
+        text = message.text or ""
+        lower = text.lower()
+        tg_id = message.chat.id
+        now_ts = time.monotonic()
+        reply_to = message.reply_to_message.message_id if message.reply_to_message else None
+        
+        # 1. SYSTEM COMMANDS
+        if lower in SYSTEM_CMDS:
+            if lower in ("сброс задач", "очистить задачи"):
+                await reset_all_open_tasks(tg_id)
+                await message.answer("Все незакрытые задачи и активные pin закрыты")
+            elif lower == "статус":
+                async with aiosqlite.connect(DB) as db:
+                    cur = await db.execute("SELECT state, COUNT(*) FROM tasks WHERE chat_id = ? GROUP BY state", (tg_id,))
+                    rows = await cur.fetchall()
+                    cur = await db.execute("SELECT task_id FROM pin WHERE chat_id = ? AND state = 'ACTIVE'", (str(tg_id),))
+                    pin_row = await cur.fetchone()
+                    status_msg = "Статус:\n" + "\n".join([f"{r[0]}: {r[1]}" for r in rows]) if rows else "Нет задач"
+                    if pin_row:
+                        status_msg += f"\nАктивный pin: {pin_row[0]}"
+                    await message.answer(status_msg)
+            elif lower == "yzon":
+                dump = dump_yzon_state(tg_id)
+                await message.answer(dump)
+                return
+            elif lower == "архив":
+                async with aiosqlite.connect(DB) as db:
+                    cur = await db.execute("SELECT id, state, substr(raw_input,1,100) FROM tasks WHERE chat_id = ? AND state IN ('DONE','FAILED','CANCELLED','ARCHIVED') ORDER BY updated_at DESC LIMIT 10", (tg_id,))
+                    rows = await cur.fetchall()
+                    if rows:
+                        archive_msg = "Архив:\n" + "\n".join([f"{r[0][:8]}: {r[1]} - {r[2]}" for r in rows])
+                    else:
+                        archive_msg = "Архив пуст"
+                    await message.answer(archive_msg)
+            else:
+                dump = dump_system_state()
+                for part in split_message(dump):
+                    await message.answer(part)
+                    await asyncio.sleep(0.5)
+            return
+        
+        # 2. CANCEL
+        if lower in CANCEL_CMDS:
+            await cancel_active_task(tg_id)
+            await message.answer("Задача отменена")
+            return
+        
+        # 3. EZONE FILE INGEST
+        if message.document and message.document.file_name:
+            if message.document.file_name.lower().endswith(EZONE_EXTS):
+                tg_file = await bot.get_file(message.document.file_id)
+                local_path = f"/tmp/{uuid.uuid4()}_{message.document.file_name}"
+                await download_telegram_file(tg_file.file_path, local_path)
+                try:
+                    drive_result = await upload_to_drive(local_path, message.document.file_name)
+                    with open(local_path, "r", errors="ignore") as f:
+                        content = f.read()
+                    if is_ezone_payload(content):
+                        ok, chat_key, _ = save_ezone_json(content, tg_id)
+                        _RECENT_INGEST[tg_id] = now_ts
+                        await message.answer(f"Принял, память загружена ({chat_key})" if ok else "Уже загружено")
+                        return
+                finally:
+                    try: os.remove(local_path)
+                    except: pass
+        
+        # 4. EZONE TEXT INGEST
+        if message.text and is_ezone_payload(text):
+            ok, chat_key, _ = save_ezone_json(text, tg_id)
+            _RECENT_INGEST[tg_id] = now_ts
+            await message.answer(f"Принял, память загружена ({chat_key})" if ok else "Уже загружено")
+            return
+        
+        # 5. ANTI-DUP AFTER INGEST
+        if message.text:
+            last = _RECENT_INGEST.get(tg_id, 0.0)
+            if now_ts - last < 5:
+                if text.lstrip().startswith("{") or any(k in lower for k in EZONE_KEYS):
+                    return
+        
+        # 6. CONFIRMATION AND REPLY CONTINUATION
+        active_confirm = None
+        async with aiosqlite.connect(DB) as db:
+            cur = await db.execute(
+                "SELECT id, state FROM tasks WHERE chat_id = ? AND state = 'AWAITING_CONFIRMATION' ORDER BY updated_at DESC LIMIT 1",
+                (tg_id,)
+            )
+            active_confirm = await cur.fetchone()
+
+        if active_confirm and message.text:
+            parent_id, parent_state = active_confirm
+            if any(x in lower for x in SHORT_CONFIRM) and not any(x in lower for x in NEGATIVE_CONFIRM):
+                async with aiosqlite.connect(DB) as db:
+                    await db.execute("UPDATE tasks SET state = 'DONE', updated_at = ? WHERE id = ?", (now_iso(), parent_id))
+                    await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, "confirmed:DONE", now_iso()))
+                    await db.execute("UPDATE pin SET state = 'CLOSED', updated_at = ? WHERE task_id = ? AND state = 'ACTIVE'", (now_iso(), parent_id))
+                    await db.commit()
+                await message.answer("Задача завершена")
+                return
+            elif any(x in lower for x in NEGATIVE_CONFIRM):
+                async with aiosqlite.connect(DB) as db:
+                    await db.execute("UPDATE tasks SET state = 'WAITING_CLARIFICATION', updated_at = ? WHERE id = ?", (now_iso(), parent_id))
+                    await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, "rejected:WAITING_CLARIFICATION", now_iso()))
+                    await db.execute("UPDATE pin SET state = 'CLOSED', updated_at = ? WHERE task_id = ? AND state = 'ACTIVE'", (now_iso(), parent_id))
+                    await db.commit()
+                await message.answer("Уточните, что исправить")
+                return
+
+        if reply_to:
+            async with aiosqlite.connect(DB) as db:
+                cur = await db.execute(
+                    "SELECT id, state FROM tasks WHERE chat_id = ? AND reply_to_message_id = ? AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION') ORDER BY updated_at DESC LIMIT 1",
+                    (tg_id, reply_to)
+                )
+                parent = await cur.fetchone()
+            if parent:
+                parent_id, parent_state = parent
+                if parent_state == "WAITING_CLARIFICATION":
+                    async with aiosqlite.connect(DB) as db:
+                        await db.execute("UPDATE tasks SET state = 'IN_PROGRESS', updated_at = ? WHERE id = ?", (now_iso(), parent_id))
+                        await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, f"clarified:{text}", now_iso()))
+                        await db.commit()
+                    await message.answer("Принято, продолжаю")
+                elif any(x in lower for x in SHORT_CONFIRM) and not any(x in lower for x in NEGATIVE_CONFIRM):
+                    async with aiosqlite.connect(DB) as db:
+                        await db.execute("UPDATE tasks SET state = 'IN_PROGRESS', updated_at = ? WHERE id = ?", (now_iso(), parent_id))
+                        await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, f"confirmed:{text}", now_iso()))
+                        await db.commit()
+                    await message.answer("Принято, выполняю")
+                else:
+                    await message.answer("Уточните запрос")
+                return
+
+        # 7. SEARCH TASK
+        if any(t in lower for t in SEARCH_TRIGGERS):
+            # CONFIRMATION WITHOUT REPLY (FINAL)
+            async with aiosqlite.connect(DB) as db:
+                cur = await db.execute(
+                    "SELECT id FROM tasks WHERE chat_id = ? AND state = 'AWAITING_CONFIRMATION' ORDER BY updated_at DESC LIMIT 1",
+                    (tg_id,)
+                )
+                confirm_row = await cur.fetchone()
+            if confirm_row and message.text:
+                confirm_id = confirm_row[0]
+                if any(x in lower for x in ("да","ок","подтверждаю","верно","ага","+")):
+                    now = now_iso()
+                    async with aiosqlite.connect(DB) as db:
+                        await db.execute(
+                            "UPDATE tasks SET state=DONE, updated_at=? WHERE id=?",
+                            (now, confirm_id)
+                        )
+                        await db.execute(
+                            "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)",
+                            (confirm_id, "confirmed:DONE", now)
+                        )
+                        await db.execute(
+                            "UPDATE pin SET state=CLOSED, updated_at=? WHERE task_id=? AND state=ACTIVE",
+                            (now, confirm_id)
+                        )
+                        await db.commit()
+                    await message.answer("Задача завершена")
+                    return
+                elif any(x in lower for x in ("нет","не так","-")):
+                    now = now_iso()
+                    async with aiosqlite.connect(DB) as db:
+                        await db.execute(
+                            "UPDATE tasks SET state=WAITING_CLARIFICATION, updated_at=? WHERE id=?",
+                            (now, confirm_id)
+                        )
+                        await db.execute(
+                            "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)",
+                            (confirm_id, "rejected:WAITING_CLARIFICATION", now)
+                        )
+                        await db.execute(
+                            "UPDATE pin SET state=CLOSED, updated_at=? WHERE task_id=? AND state=ACTIVE",
+                            (now, confirm_id)
+                        )
+                        await db.commit()
+                    await message.answer("Уточните, что исправить")
+                    return
+
+            active = await get_active_task(tg_id)
+            if active:
+                await message.answer(f"Уже есть активная задача: {active['state']}")
+                return
+            await create_task(message, "search", text, "NEW")
+            return
+        
+        # 8. VOICE
+        if message.voice:
+            active = await get_active_task(tg_id)
+            if active:
+                await message.answer(f"Уже есть активная задача: {active['state']}")
+                return
+            tg_file = await bot.get_file(message.voice.file_id)
+            local_path = os.path.join(VOICE_DIR, f"voice_{abs(tg_id)}_{message.message_id}.ogg")
+            await download_telegram_file(tg_file.file_path, local_path)
+            await upload_to_drive(local_path, f"voice_{message.message_id}.ogg")
+            await create_task(message, "voice", local_path, "NEW")
+            return
+        
+        # 9. NORMAL TEXT
+        if message.text:
+            active = await get_active_task(tg_id)
+            if active:
+                await message.answer(f"Уже есть активная задача: {active['state']}")
+                return
+            await create_task(message, "text", text, "NEW")
+            return
+        
+    except Exception as e:
+        logger.error("HANDLER_CRASH: %s", e)
+        try:
+            await message.answer("Ошибка обработки")
+        except:
+            pass
+
+async def main():
+    await bot.delete_webhook(drop_pending_updates=True)
+    me = await bot.get_me()
+    logger.info("BOT STARTED id=%s username=%s", me.id, me.username)
+    await dp.start_polling(bot)
+
+if __name__ == "__main__":
+    asyncio.run(main())
