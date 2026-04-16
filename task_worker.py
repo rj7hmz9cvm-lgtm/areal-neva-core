@@ -224,6 +224,15 @@ def _send_once(conn, task_id: str, chat_id: str, text: str, reply_to: Optional[i
         _history(conn, task_id, f"reply_sent:{kind}")
     return ok
 
+def _send_once_ex(conn, task_id: str, chat_id: str, text: str, reply_to: Optional[int], kind: str) -> dict:
+    if _already_replied(conn, task_id, kind):
+        return {"ok": True, "bot_message_id": None}
+    from core.reply_sender import send_reply_ex
+    res = send_reply_ex(chat_id=chat_id, text=text, reply_to_message_id=reply_to)
+    if res.get("ok"):
+        _history(conn, task_id, f"reply_sent:{kind}")
+    return res
+
 def _confirm_message(raw_input: str) -> str:
     safe = _sanitize_raw_input(raw_input)
     return f"Понял задачу так: {_clean(safe, 700)}\n\nПодтверди или уточни"
@@ -484,12 +493,14 @@ async def _handle_in_progress(conn, task):
         logger.error("STT FAILED task=%s err=%s", task_id, e, exc_info=True)
         _update_task(conn, task_id, state="WAITING_CLARIFICATION", error_message="STT_FAILED")
         _history(conn, task_id, "state:WAITING_CLARIFICATION")
+        _send_once(conn, task_id, chat_id, "Голос не распознан. Повтори голосом или напиши текстом", reply_to, "stt_failed_notify")
         return
 
     normalized_input = _clean(normalized_input)
     if not normalized_input:
         _update_task(conn, task_id, state="WAITING_CLARIFICATION", error_message="EMPTY_TRANSCRIPT")
         _history(conn, task_id, "state:WAITING_CLARIFICATION")
+        _send_once(conn, task_id, chat_id, "Не удалось получить текст из голосового. Повтори или напиши текстом", reply_to, "empty_transcript_notify")
         return
 
     active_task_context = _active_unfinished_context(conn, chat_id, task_id)
@@ -520,6 +531,7 @@ async def _handle_in_progress(conn, task):
         logger.error("ROUTER FAILED task=%s err=%s", task_id, e, exc_info=True)
         _update_task(conn, task_id, state="FAILED", error_message=_clean(str(e), 500))
         _history(conn, task_id, "state:FAILED")
+        _send_once(conn, task_id, chat_id, "Задача не выполнена. Уточни или повтори запрос", reply_to, "router_failed_notify")
         return
 
     ai_result = _clean(ai_result)
@@ -540,7 +552,51 @@ async def _handle_in_progress(conn, task):
     if normalized_input.startswith("[VOICE] "):
         clean_transcript = normalized_input[8:]
         _send_once(conn, task_id, chat_id, f"🎤 {clean_transcript}", reply_to, "transcript")
-    _send_once(conn, task_id, chat_id, ai_result, reply_to, "result")
+    _res = _send_once_ex(conn, task_id, chat_id, ai_result, reply_to, "result")
+    if _res.get("ok") and _res.get("bot_message_id"):
+        cols = _cols(conn, "tasks")
+        if "bot_message_id" in cols:
+            conn.execute("UPDATE tasks SET bot_message_id=? WHERE id=?", (_res["bot_message_id"], task_id))
+
+
+def _is_semantically_closed(conn, task_id: str) -> bool:
+    row = conn.execute(
+        "SELECT state, COALESCE(result,''), COALESCE(error_message,'') FROM tasks WHERE id=?",
+        (task_id,)
+    ).fetchone()
+    if not row:
+        return True
+
+    state = (row[0] or "").strip()
+    result = (row[1] or "").strip().lower()
+    error_message = (row[2] or "").strip().upper()
+
+    if state in ("DONE", "CANCELLED"):
+        return True
+
+    if result.startswith("задача закрыта") or result.startswith("все запросы отменены"):
+        return True
+
+    if error_message in ("CONFIRM_ACCEPTED", "TASK_CLOSED", "CLARIFICATION_ACCEPTED"):
+        return True
+
+    hist_rows = conn.execute(
+        "SELECT COALESCE(action,'') FROM task_history WHERE task_id=? ORDER BY id DESC LIMIT 20",
+        (task_id,)
+    ).fetchall()
+    actions = " ".join((r[0] or "") for r in hist_rows).lower()
+
+    if any(x in actions for x in (
+        "finish:done",
+        "confirmed:done",
+        "cancelled:cancelled",
+        "reset:cancelled",
+        "control:close",
+        "state:done:semantic_close",
+    )):
+        return True
+
+    return False
 
 def _pick_next_task(conn):
     conn.execute("BEGIN IMMEDIATE")
@@ -565,6 +621,17 @@ def _recover_stale_tasks(conn):
         task_id = row[0]
         chat_id = str(row[1])
         reply_to = row[2]
+        if _is_semantically_closed(conn, task_id):
+            conn.execute(
+                "UPDATE tasks SET state='DONE', updated_at=datetime('now') WHERE id=? AND state NOT IN ('DONE','CANCELLED')" ,
+                (task_id,)
+            )
+            conn.execute(
+                "UPDATE pin SET state='CLOSED', updated_at=datetime('now') WHERE task_id=? AND state='ACTIVE'",
+                (task_id,)
+            )
+            _history(conn, task_id, "state:DONE:SEMANTIC_CLOSE")
+            continue
         conn.execute(
             "UPDATE tasks SET state='FAILED', error_message='STALE_TIMEOUT', updated_at=datetime('now') WHERE id=?",
             (task_id,)

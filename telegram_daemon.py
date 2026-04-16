@@ -30,6 +30,15 @@ EZONE_EXTS = (".json", ".jsonl", ".txt")
 SEARCH_TRIGGERS = ["цена", "наличие", "где купить", "площадка", "сайт", "сравнение", "новости", "актуальная"]
 SHORT_CONFIRM = ["да", "нет", "ок", "подтверждаю", "не так", "ага", "верно"]
 NEGATIVE_CONFIRM = ["нет", "не так"]
+FINISH_PHRASES = [
+    "спасибо поиск завершен", "поиск завершен", "завершено", "завершен",
+    "готово", "всё", "все", "не надо", "можно завершать",
+    "задача закрыта", "закрывай", "хватит", "достаточно", "принято", "выполнено"
+]
+CANCEL_PHRASES = [
+    "все запросы отменены", "отменяю все запросы", "сброс задач",
+    "очистить задачи", "отмена", "отменяю", "сброс", "отбой"
+]
 
 _RECENT_INGEST = {}
 
@@ -322,6 +331,163 @@ async def reset_all_open_tasks(chat_id: int):
             pass
         await db.commit()
 
+def _has_any_phrase(lower_text: str, phrases: list[str]) -> bool:
+    t = (lower_text or "").strip()
+    return any(p in t for p in phrases)
+
+async def close_latest_open_task(chat_id: int, action: str = "finish:DONE") -> bool:
+    async with aiosqlite.connect(DB) as db:
+        cur = await db.execute(
+            "SELECT id FROM tasks WHERE chat_id=? AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION') ORDER BY updated_at DESC, created_at DESC LIMIT 1",
+            (chat_id,)
+        )
+        row = await cur.fetchone()
+        if not row:
+            return False
+        task_id = row[0]
+        now = now_iso()
+        await db.execute(
+            "UPDATE tasks SET state='DONE', updated_at=? WHERE id=?",
+            (now, task_id)
+        )
+        await db.execute(
+            "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)",
+            (task_id, action, now)
+        )
+        try:
+            await db.execute(
+                "UPDATE pin SET state='CLOSED', updated_at=? WHERE task_id=? AND state='ACTIVE'",
+                (now, task_id)
+            )
+            await db.execute(
+                "UPDATE pin SET state='CLOSED', updated_at=? WHERE chat_id=? AND state='ACTIVE'",
+                (now, str(chat_id))
+            )
+        except Exception:
+            pass
+        await db.commit()
+        return True
+
+async def cancel_all_open_tasks(chat_id: int) -> int:
+    async with aiosqlite.connect(DB) as db:
+        cur = await db.execute(
+            "SELECT id FROM tasks WHERE chat_id=? AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION')",
+            (chat_id,)
+        )
+        rows = await cur.fetchall()
+        now = now_iso()
+        count = 0
+        for row in rows:
+            task_id = row[0]
+            await db.execute(
+                "UPDATE tasks SET state='CANCELLED', updated_at=? WHERE id=?",
+                (now, task_id)
+            )
+            await db.execute(
+                "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)",
+                (task_id, "cancelled:CANCELLED", now)
+            )
+            count += 1
+        try:
+            await db.execute(
+                "UPDATE pin SET state='CLOSED', updated_at=? WHERE chat_id=? AND state='ACTIVE'",
+                (now, str(chat_id))
+            )
+        except Exception:
+            pass
+        await db.commit()
+        return count
+
+async def _find_parent_task(chat_id: int, reply_to: int | None):
+    async with aiosqlite.connect(DB) as db:
+        if reply_to:
+            cur = await db.execute(
+                "SELECT id, state FROM tasks WHERE chat_id=? AND bot_message_id=? AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION') ORDER BY updated_at DESC LIMIT 1",
+                (chat_id, reply_to)
+            )
+            row = await cur.fetchone()
+            if row:
+                return row
+            cur = await db.execute(
+                "SELECT id, state FROM tasks WHERE chat_id=? AND reply_to_message_id=? AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION') ORDER BY updated_at DESC LIMIT 1",
+                (chat_id, reply_to)
+            )
+            row = await cur.fetchone()
+            if row:
+                return row
+        cur = await db.execute(
+            "SELECT id, state FROM tasks WHERE chat_id=? AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION') ORDER BY updated_at DESC LIMIT 1",
+            (chat_id,)
+        )
+        return await cur.fetchone()
+
+async def _handle_control_text(message, tg_id: int, text: str, lower: str, reply_to: int | None) -> bool:
+    if _has_any_phrase(lower, CANCEL_PHRASES):
+        closed = await cancel_all_open_tasks(tg_id)
+        await message.answer("Все запросы отменены" if closed else "Нет активных задач")
+        return True
+
+    parent = await _find_parent_task(tg_id, reply_to)
+
+    if _has_any_phrase(lower, FINISH_PHRASES):
+        if parent:
+            parent_id = parent[0]
+            now = now_iso()
+            async with aiosqlite.connect(DB) as db:
+                await db.execute("UPDATE tasks SET state='DONE', updated_at=? WHERE id=?", (now, parent_id))
+                await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, "finish:DONE", now))
+                await db.execute("UPDATE pin SET state='CLOSED', updated_at=? WHERE task_id=? AND state='ACTIVE'", (now, parent_id))
+                await db.commit()
+            await message.answer("Задача закрыта")
+            return True
+        closed = await close_latest_open_task(tg_id, "finish:DONE")
+        await message.answer("Задача закрыта" if closed else "Нет активных задач")
+        return True
+
+    if not parent:
+        return False
+
+    parent_id, parent_state = parent[0], parent[1]
+
+    if parent_state == "AWAITING_CONFIRMATION":
+        if any(x in lower for x in SHORT_CONFIRM) and not any(x in lower for x in NEGATIVE_CONFIRM):
+            now = now_iso()
+            async with aiosqlite.connect(DB) as db:
+                await db.execute("UPDATE tasks SET state='DONE', updated_at=? WHERE id=?", (now, parent_id))
+                await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, "confirmed:DONE", now))
+                await db.execute("UPDATE pin SET state='CLOSED', updated_at=? WHERE task_id=? AND state='ACTIVE'", (now, parent_id))
+                await db.commit()
+            await message.answer("Задача завершена")
+            return True
+        if any(x in lower for x in NEGATIVE_CONFIRM):
+            now = now_iso()
+            async with aiosqlite.connect(DB) as db:
+                await db.execute("UPDATE tasks SET state='WAITING_CLARIFICATION', updated_at=? WHERE id=?", (now, parent_id))
+                await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, "rejected:WAITING_CLARIFICATION", now))
+                await db.execute("UPDATE pin SET state='CLOSED', updated_at=? WHERE task_id=? AND state='ACTIVE'", (now, parent_id))
+                await db.commit()
+            await message.answer("Уточните, что исправить")
+            return True
+
+    if parent_state == "WAITING_CLARIFICATION":
+        now = now_iso()
+        async with aiosqlite.connect(DB) as db:
+            await db.execute("UPDATE tasks SET state='IN_PROGRESS', updated_at=? WHERE id=?", (now, parent_id))
+            await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, f"clarified:{text}", now))
+            await db.commit()
+        await message.answer("Принято, продолжаю")
+        return True
+
+    if parent_state == "IN_PROGRESS" and reply_to:
+        now = now_iso()
+        async with aiosqlite.connect(DB) as db:
+            await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, f"continued:{text}", now))
+            await db.commit()
+        await message.answer("Принято, продолжаю")
+        return True
+
+    return False
+
 
 async def download_telegram_file(file_path: str, local_path: str) -> str:
     url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
@@ -491,6 +657,17 @@ async def universal_handler(message: types.Message):
                     await message.answer("Уточните запрос")
                 return
 
+        # 6.5 EARLY CONTROL LAYER
+        if message.text:
+            if _has_any_phrase(lower, CANCEL_PHRASES):
+                closed = await cancel_all_open_tasks(tg_id)
+                await message.answer("Все запросы отменены" if closed else "Нет активных задач")
+                return
+            if _has_any_phrase(lower, FINISH_PHRASES):
+                closed = await close_latest_open_task(tg_id, "finish:DONE")
+                await message.answer("Задача закрыта" if closed else "Нет активных задач")
+                return
+
         # 7. SEARCH TASK
         if any(t in lower for t in SEARCH_TRIGGERS):
             # CONFIRMATION WITHOUT REPLY (FINAL)
@@ -539,10 +716,6 @@ async def universal_handler(message: types.Message):
                     await message.answer("Уточните, что исправить")
                     return
 
-            active = await get_active_task(tg_id)
-            if active:
-                await message.answer(f"Уже есть активная задача: {active['state']}")
-                return
             await create_task(message, "search", text, "NEW")
             return
         
@@ -563,11 +736,19 @@ async def universal_handler(message: types.Message):
                 logger.error("STT_EMPTY chat=%s", tg_id)
                 await create_task(message, "text", "STT_FAILED", "FAILED")
                 return
-            await create_task(message, "text", "[VOICE] " + _transcript.strip(), "NEW")
+            voice_text = _transcript.strip()
+            voice_lower = voice_text.lower()
+            voice_reply_to = message.reply_to_message.message_id if message.reply_to_message else None
+            if await _handle_control_text(message, tg_id, voice_text, voice_lower, voice_reply_to):
+                return
+            await create_task(message, "text", "[VOICE] " + voice_text, "NEW")
             return
         
         # 9. NORMAL TEXT
         if message.text:
+            reply_to = message.reply_to_message.message_id if message.reply_to_message else None
+            if await _handle_control_text(message, tg_id, text, lower, reply_to):
+                return
             await create_task(message, "text", text, "NEW")
             return
         
