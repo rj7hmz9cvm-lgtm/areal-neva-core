@@ -23,7 +23,7 @@ logger = logging.getLogger("telegram_daemon")
 bot = Bot(BOT_TOKEN)
 dp = Dispatcher()
 
-SYSTEM_CMDS = ["память", "память оркестра", "выгрузи память", "статус", "архив", "сброс задач", "очистить задачи", "yzon"]
+SYSTEM_CMDS = ["память", "память оркестра", "выгрузи память", "статус", "архив", "сброс задач", "очистить задачи", "yzon", "дамп"]
 CANCEL_CMDS = ["отбой", "отмена", "не надо"]
 EZONE_KEYS = ("system", "architecture", "pipeline", "memory")
 EZONE_EXTS = (".json", ".jsonl", ".txt")
@@ -371,6 +371,18 @@ async def universal_handler(message: types.Message):
                 dump = dump_yzon_state(tg_id)
                 await message.answer(dump)
                 return
+            elif lower == "дамп":
+                import subprocess
+                result = subprocess.run(["/root/.areal-neva-core/.venv/bin/python3", "/root/.areal-neva-core/orchestra_full_dump.py"], capture_output=True, text=True, timeout=60)
+                dump_files = sorted([f for f in os.listdir("/root/.areal-neva-core/data/memory/UNSORTED") if f.startswith("orchestra_dump_")], reverse=True)
+                if dump_files:
+                    dump_path = f"/root/.areal-neva-core/data/memory/UNSORTED/{dump_files[0]}"
+                    content=open(dump_path).read()
+                    for part in split_message(content):
+                        await message.answer(part)
+                else:
+                    await message.answer("Дамп не создан")
+                return
             elif lower == "архив":
                 async with aiosqlite.connect(DB) as db:
                     cur = await db.execute("SELECT id, state, substr(raw_input,1,100) FROM tasks WHERE chat_id = ? AND state IN ('DONE','FAILED','CANCELLED','ARCHIVED') ORDER BY updated_at DESC LIMIT 10", (tg_id,))
@@ -536,23 +548,26 @@ async def universal_handler(message: types.Message):
         
         # 8. VOICE
         if message.voice:
-            active = await get_active_task(tg_id)
-            if active:
-                await message.answer(f"Уже есть активная задача: {active['state']}")
-                return
             tg_file = await bot.get_file(message.voice.file_id)
             local_path = os.path.join(VOICE_DIR, f"voice_{abs(tg_id)}_{message.message_id}.ogg")
             await download_telegram_file(tg_file.file_path, local_path)
             await upload_to_drive(local_path, f"voice_{message.message_id}.ogg")
-            await create_task(message, "voice", local_path, "NEW")
+            from core.stt_engine import transcribe_voice as _stt
+            try:
+                _transcript = await _stt(local_path)
+            except Exception as _err:
+                logger.error("STT_FAILED chat=%s err=%s", tg_id, _err)
+                await create_task(message, "text", "STT_FAILED", "FAILED")
+                return
+            if not _transcript or not _transcript.strip():
+                logger.error("STT_EMPTY chat=%s", tg_id)
+                await create_task(message, "text", "STT_FAILED", "FAILED")
+                return
+            await create_task(message, "text", "[VOICE] " + _transcript.strip(), "NEW")
             return
         
         # 9. NORMAL TEXT
         if message.text:
-            active = await get_active_task(tg_id)
-            if active:
-                await message.answer(f"Уже есть активная задача: {active['state']}")
-                return
             await create_task(message, "text", text, "NEW")
             return
         

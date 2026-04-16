@@ -1,139 +1,608 @@
-import asyncio, json, logging, os, sys
-from datetime import datetime, timezone, timedelta
+import os
+import re
+import sys
+import time
+import json
+import sqlite3
+import logging
+import inspect
+import asyncio
+import hashlib
+from typing import Any, List, Optional, Tuple
 
-sys.path.insert(0, "/root/.areal-neva-core")
+from dotenv import load_dotenv
+
+BASE = "/root/.areal-neva-core"
+CORE_DB = f"{BASE}/data/core.db"
+MEM_DB = f"{BASE}/data/memory.db"
+LOG_PATH = f"{BASE}/logs/task_worker.log"
+
+load_dotenv(f"{BASE}/.env", override=False)
+sys.path.insert(0, BASE)
+
 from core.ai_router import process_ai_task
 from core.reply_sender import send_reply
-from core.web_engine import web_search
-from core.pin_manager import activate_pin
+from core.pin_manager import get_pin_context, save_pin
 
-DB = "/root/.areal-neva-core/data/core.db"
-BOT_TOKEN = (os.getenv("TELEGRAM_BOT_TOKEN") or "").strip()
+os.makedirs(f"{BASE}/logs", exist_ok=True)
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s WORKER: %(message)s")
 logger = logging.getLogger("task_worker")
+logger.setLevel(logging.INFO)
+if not logger.handlers:
+    fh = logging.FileHandler(LOG_PATH)
+    fh.setFormatter(logging.Formatter("%(asctime)s %(levelname)s WORKER: %(message)s"))
+    logger.addHandler(fh)
 
-TIMEOUT_MINUTES = 30
+POLL_SEC = 1.5
+MIN_RESULT_LEN = 8
 
-async def get_db():
-    import aiosqlite
-    db = await aiosqlite.connect(DB)
-    await db.execute("PRAGMA busy_timeout=30000")
-    await db.execute("PRAGMA journal_mode=WAL")
-    return db
+CONFIRM_INTENTS = [
+    "да", "подтверждаю", "всё верно", "все верно", "ок", "окей", "хорошо", "принято"
+]
+FINISH_INTENTS = [
+    "уже есть", "не надо", "можно завершать", "задача закрыта", "закрывай", "нет, задачу можно завершать"
+]
+REVISION_INTENTS = [
+    "нет", "не так", "переделай", "исправь", "доработай", "уточню", "уточнение"
+]
 
-async def process_one_task():
-    import logging
-    logger = logging.getLogger("task_worker")
-    db = await get_db()
-    
-    timeout_threshold = (datetime.now(timezone.utc) - timedelta(minutes=TIMEOUT_MINUTES)).isoformat()
-    await db.execute(
-        "UPDATE tasks SET state = 'FAILED', error_message = 'timeout' WHERE state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION') AND updated_at < ?",
-        (timeout_threshold,)
-    )
-    await db.commit()
-    
-    async with db.execute(
-        "SELECT id, chat_id, input_type, raw_input, reply_to_message_id, state FROM tasks WHERE state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS') AND (result IS NULL OR result = '') ORDER BY created_at ASC LIMIT 1"
-    ) as c:
-        task = await c.fetchone()
-    
-    if not task:
-        await db.close()
+SEARCH_PATTERNS = [
+    r"\bнайди\b", r"\bнайти\b", r"\bпоиск\b", r"\bпоищи\b", r"\bsearch\b",
+    r"\bцена\b", r"\bстоимость\b", r"\bсколько стоит\b",
+    r"\bavito\b", r"\bozon\b", r"\bwildberries\b", r"\bauto\.ru\b", r"\bdrom\b",
+    r"\bновости\b", r"\bпогода\b", r"\bкурс\b", r"\bмаркетплейс\b"
+]
+
+BAD_RESULT_RE = [
+    r"\bой\b", r"сорян", r"дружище", r"не переживай",
+    r"дай мне немного времени", r"я могу помочь",
+    r"извини", r"извините", r"😅", r"💪", r"😎",
+    r"delete from", r"\bsql\b", r"task_worker\.py", r"telegram_daemon\.py",
+    r"остановите task_worker", r"выполните sql", r"повторяю инструкцию по отбою",
+    r"\bищу\b", r"\bнайду\b", r"непонятно",
+    r"недостаточно данных", r"ссылк[аи]\s+предоставлю",
+    r"готов искать", r"могу найти", r"укажите,?\s+что именно нужно найти"
+]
+
+MEMORY_BAD_MARKERS = [
+    "traceback",
+    "forbidden default model",
+    "голосовые временно недоступны",
+    "/root/",
+    ".json",
+    ".log",
+    "не могу выполнить запрос",
+    "не нашёл конкретного запроса",
+    "delete from",
+    "task_worker.py",
+    "telegram_daemon.py",
+    "выполните sql",
+    "укажите данные для сохранения",
+    "проверить статус системы",
+    "получить данные из памяти",
+    "повторяю инструкцию по отбою",
+]
+
+def db(path: str):
+    conn = sqlite3.connect(path, timeout=20, isolation_level=None)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=15000")
+    return conn
+
+def _s(v: Any) -> str:
+    if v is None:
+        return ""
+    if isinstance(v, str):
+        return v.strip()
+    try:
+        return json.dumps(v, ensure_ascii=False)
+    except Exception:
+        return str(v).strip()
+
+def _clean(text: str, limit: int = 12000) -> str:
+    text = (text or "").replace("\r", "\n")
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()[:limit]
+
+def _hash(text: str) -> str:
+    return hashlib.sha1(_clean(text).lower().encode("utf-8")).hexdigest()
+
+def _has_table(conn, table: str) -> bool:
+    row = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone()
+    return row is not None
+
+def _match_any(patterns: List[str], text: str) -> bool:
+    t = _clean(text).lower()
+    return any(re.search(p, t, re.I) for p in patterns)
+
+def _task_field(task, name: str, default: str = "") -> str:
+    try:
+        if hasattr(task, "keys") and name in task.keys():
+            return _s(task[name])
+    except Exception:
+        pass
+    return default
+
+def _is_confirm_intent(text: str) -> bool:
+    return _clean(text).lower() in CONFIRM_INTENTS
+
+def _is_finish_intent(text: str) -> bool:
+    t = _clean(text).lower()
+    return t in FINISH_INTENTS or "можно завершать" in t or "задача закрыта" in t
+
+def _is_revision_intent(text: str) -> bool:
+    t = _clean(text).lower()
+    return t in REVISION_INTENTS or "не так" in t or "переделай" in t or "исправ" in t
+
+def _is_search(text: str, input_type: str) -> bool:
+    if (input_type or "").lower() == "search":
+        return True
+    return _match_any(SEARCH_PATTERNS, text)
+
+def _looks_like_placeholder_search(result: str, raw_input: str) -> bool:
+    r = _clean(result).lower()
+    q = _clean(raw_input).lower()
+    if not _is_search(q, "text"):
         return False
-    
-    task_id, chat_id, input_type, raw_input, reply_to, state = task
-    
-    if state == "NEW":
-        await db.execute(
-            "UPDATE tasks SET state = 'IN_PROGRESS', updated_at = ? WHERE id = ?",
-            (datetime.now(timezone.utc).isoformat(), task_id)
-        )
-        await db.execute(
-            "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)",
-            (task_id, "picked:IN_PROGRESS", datetime.now(timezone.utc).isoformat())
-        )
-        await db.commit()
-        state = "IN_PROGRESS"
-    
-    await db.close()
-    logger.info("PICKED %s state=%s", task_id, state)
-    
-    if input_type == "voice":
-        import inspect
-        logger.info("STT start file=%s", raw_input)
-        from core.stt_engine import transcribe_voice
-        if inspect.iscoroutinefunction(transcribe_voice):
-            transcript = await transcribe_voice(raw_input)
-        else:
-            transcript = transcribe_voice(raw_input)
-        if not transcript or not transcript.strip():
-            logger.error("STT failed for %s", raw_input)
-            await send_reply(BOT_TOKEN, int(chat_id), "Не удалось распознать голос", reply_to)
-            db = await get_db()
-            await db.execute("UPDATE tasks SET state = 'FAILED', error_message = 'stt_failed' WHERE id = ?", (task_id,))
-            await db.commit(); await db.close()
-            return True
-        logger.info("STT ok transcript_len=%d", len(transcript))
-        db = await get_db()
-        await db.execute("UPDATE tasks SET raw_input = ?, error_message = NULL WHERE id = ?", (transcript, task_id))
-        await db.commit(); await db.close()
-        raw_input = transcript
+    if "http://" in r or "https://" in r or "www." in r:
+        return False
+    bad_markers = [
+        "ищу", "найду", "ссылки предоставлю", "готов искать",
+        "могу найти", "укажите, что именно нужно найти"
+    ]
+    return any(m in r for m in bad_markers)
 
-    if input_type == "search":
-        ai_result = await web_search(raw_input)
-        final_state = "DONE"
-    else:
-        ai_result = await process_ai_task({
-            "id": task_id, "chat_id": chat_id, "input_type": input_type,
-            "raw_input": raw_input, "state": state, "reply_to_message_id": reply_to
-        })
-        final_state = "AWAITING_CONFIRMATION"
-    
-    db = await get_db()
-    await db.execute("UPDATE tasks SET result = ? WHERE id = ?", (ai_result, task_id))
-    await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (task_id, f"result:{ai_result[:100]}", datetime.now(timezone.utc).isoformat()))
-    
-    if final_state == "AWAITING_CONFIRMATION":
-        await db.execute("UPDATE tasks SET state = 'AWAITING_CONFIRMATION', updated_at = ? WHERE id = ?", (datetime.now(timezone.utc).isoformat(), task_id))
-        await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (task_id, "state:AWAITING_CONFIRMATION", datetime.now(timezone.utc).isoformat()))
-        await db.commit()
-        await db.close()
-        activate_pin(str(chat_id), task_id)
-        msg_id = await send_reply(BOT_TOKEN, int(chat_id), ai_result + "\n\nПодтвердить выполнение?", reply_to)
-        if not msg_id:
-            db = await get_db()
-            await db.execute("UPDATE tasks SET state = 'FAILED', error_message = 'send_reply_failed' WHERE id = ?", (task_id,))
-            await db.commit()
-            await db.close()
-    else:
-        await db.execute("UPDATE tasks SET state = 'DONE', updated_at = ? WHERE id = ?", (datetime.now(timezone.utc).isoformat(), task_id))
-        await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (task_id, "state:DONE", datetime.now(timezone.utc).isoformat()))
-        await db.commit()
-        await db.close()
-        await send_reply(BOT_TOKEN, int(chat_id), ai_result, reply_to)
-    
+def _is_valid_result(result: str, raw_input: str) -> bool:
+    r = _clean(result)
+    if not r or len(r) < MIN_RESULT_LEN:
+        return False
+    if _match_any(BAD_RESULT_RE, r):
+        return False
+    if _looks_like_placeholder_search(r, raw_input):
+        return False
+    if _hash(r) == _hash(raw_input):
+        return False
+    if "/root/" in r or ".ogg" in r.lower():
+        return False
     return True
 
-async def archive_old_tasks():
-    while True:
-        await asyncio.sleep(3600)
-        db = await get_db()
-        await db.execute("UPDATE tasks SET state = 'ARCHIVED' WHERE state IN ('DONE','FAILED','CANCELLED') AND updated_at < datetime('now', '-7 days')")
-        await db.commit()
-        await db.close()
+def _sanitize_raw_input(raw_input: str) -> str:
+    s = (raw_input or "").strip()
+    if s.startswith("/root/"):
+        return "голосовое сообщение"
+    if re.search(r"\.ogg$", s, re.I):
+        return "голосовое сообщение"
+    return s
+
+def _cols(conn, table: str):
+    return [r[1] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()]
+
+def _update_task(conn, task_id: str, *, state: Optional[str] = None, result: Optional[str] = None, error_message: Optional[str] = None, raw_input: Optional[str] = None):
+    cols = _cols(conn, "tasks")
+    parts = []
+    vals: List[Any] = []
+    if state is not None and "state" in cols:
+        parts.append("state=?")
+        vals.append(state)
+    if result is not None and "result" in cols:
+        parts.append("result=?")
+        vals.append(result)
+    if error_message is not None and "error_message" in cols:
+        parts.append("error_message=?")
+        vals.append(error_message[:4000])
+    if raw_input is not None and "raw_input" in cols:
+        parts.append("raw_input=?")
+        vals.append(raw_input)
+    if "updated_at" in cols:
+        parts.append("updated_at=datetime('now')")
+    vals.append(task_id)
+    conn.execute(f"UPDATE tasks SET {', '.join(parts)} WHERE id=?", vals)
+
+def _history(conn, task_id: str, action: str):
+    if _has_table(conn, "task_history"):
+        conn.execute(
+            "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, datetime('now'))",
+            (task_id, action[:1000])
+        )
+
+def _already_replied(conn, task_id: str, kind: str) -> bool:
+    if not _has_table(conn, "task_history"):
+        return False
+    row = conn.execute(
+        "SELECT 1 FROM task_history WHERE task_id=? AND action=? LIMIT 1",
+        (task_id, f"reply_sent:{kind}")
+    ).fetchone()
+    return row is not None
+
+def _send_once(conn, task_id: str, chat_id: str, text: str, reply_to: Optional[int], kind: str) -> bool:
+    if _already_replied(conn, task_id, kind):
+        return True
+    ok = send_reply(chat_id=chat_id, text=text, reply_to_message_id=reply_to)
+    if ok:
+        _history(conn, task_id, f"reply_sent:{kind}")
+    return ok
+
+def _confirm_message(raw_input: str) -> str:
+    safe = _sanitize_raw_input(raw_input)
+    return f"Понял задачу так: {_clean(safe, 700)}\n\nПодтверди или уточни"
+
+def _await_message() -> str:
+    return "Готово. Проверь результат. Подтверди закрытие или дай правку"
+
+def _archive_done(conn):
+    conn.execute("""
+        UPDATE tasks
+        SET state='ARCHIVED',
+            updated_at=datetime('now')
+        WHERE state='DONE'
+          AND (strftime('%s','now') - strftime('%s', updated_at)) > 60
+    """)
+
+def _cleanup_garbage(conn):
+    conn.execute("""
+        UPDATE tasks
+        SET state='FAILED',
+            error_message='JUNK_RESULT_CLEANUP',
+            updated_at=datetime('now')
+        WHERE state IN ('DONE','FAILED','AWAITING_CONFIRMATION')
+          AND (
+               lower(COALESCE(result,'')) LIKE '%ой, сорян%'
+            OR lower(COALESCE(result,'')) LIKE '%дружище%'
+            OR lower(COALESCE(result,'')) LIKE '%прости за задержку%'
+            OR lower(COALESCE(result,'')) LIKE '%сейчас всё обработаю%'
+            OR lower(COALESCE(result,'')) LIKE '%давай разберёмся%'
+            OR lower(COALESCE(result,'')) LIKE '%delete from%'
+            OR lower(COALESCE(result,'')) LIKE '%sql%'
+            OR lower(COALESCE(result,'')) LIKE '%task_worker.py%'
+            OR lower(COALESCE(result,'')) LIKE '%telegram_daemon.py%'
+            OR lower(COALESCE(result,'')) LIKE '%повторяю инструкцию по отбою%'
+          )
+    """)
+
+def _load_memory_context(chat_id: str) -> Tuple[str, str]:
+    if not os.path.exists(MEM_DB):
+        return "", ""
+    conn = db(MEM_DB)
+    try:
+        if not _has_table(conn, "memory"):
+            return "", ""
+        rows = conn.execute("""
+            SELECT key, value
+            FROM memory
+            WHERE chat_id=?
+            ORDER BY timestamp DESC
+            LIMIT 20
+        """, (str(chat_id),)).fetchall()
+        short_memory = []
+        long_memory = []
+        for row in rows:
+            key = _s(row["key"])
+            value = _clean(_s(row["value"]), 500)
+            if not value:
+                continue
+            low = value.lower()
+            if any(x in low for x in MEMORY_BAD_MARKERS):
+                continue
+            if key in ("user_input", "assistant_output", "task_summary"):
+                short_memory.append(f"{key}: {value}")
+            else:
+                long_memory.append(f"{key}: {value}")
+        return "\n".join(short_memory[:3]), "\n".join(long_memory[:8])
+    finally:
+        conn.close()
+
+def _save_memory(chat_id: str, raw_input: str, result: str):
+    if not os.path.exists(MEM_DB):
+        return
+    bad = ["ошибка", "не найдено", "уточните", "traceback", "/root/", ".ogg", "TASK_CLOSED", "REVISION_ACCEPTED", "CONFIRM_ACCEPTED", "CLARIFICATION_ACCEPTED"]
+    if not result or len(result) < 20:
+        return
+    if any(b in result.lower() for b in bad):
+        return
+    try:
+        conn = db(MEM_DB)
+        if not _has_table(conn, "memory"):
+            conn.execute("CREATE TABLE IF NOT EXISTS memory (chat_id TEXT, key TEXT, value TEXT, timestamp TEXT)")
+        conn.execute("INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))", (str(chat_id), "task_result", result[:2000]))
+        conn.execute("INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))", (str(chat_id), "user_input", raw_input[:500]))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        logger.error("save_memory_fail err=%s", e)
+
+def _active_unfinished_context(conn, chat_id: str, exclude_task_id: str) -> str:
+    row = conn.execute("""
+        SELECT raw_input, result, state
+        FROM tasks
+        WHERE chat_id=?
+          AND id<>?
+          AND state IN ('WAITING_CLARIFICATION','AWAITING_CONFIRMATION','IN_PROGRESS')
+        ORDER BY updated_at DESC, created_at DESC
+        LIMIT 1
+    """, (str(chat_id), exclude_task_id)).fetchone()
+    if not row:
+        return ""
+    raw = _clean(_s(row["raw_input"]), 800)
+    res = _clean(_s(row["result"]), 800)
+    low = f"{raw}\n{res}".lower()
+    if any(x in low for x in MEMORY_BAD_MARKERS + [".ogg"]):
+        return ""
+    parts = []
+    if raw:
+        parts.append("raw_input: " + raw)
+    if res:
+        parts.append("result: " + res)
+    if row["state"]:
+        parts.append("state: " + _clean(_s(row["state"]), 100))
+    return "\n".join(parts)
+
+def _search_fact_context(conn, chat_id: str) -> str:
+    rows = conn.execute("""
+        SELECT raw_input, result
+        FROM tasks
+        WHERE chat_id=?
+          AND state IN ('DONE','ARCHIVED','AWAITING_CONFIRMATION')
+          AND lower(COALESCE(raw_input,'')) GLOB '*най*'
+        ORDER BY updated_at DESC
+        LIMIT 5
+    """, (str(chat_id),)).fetchall()
+    facts = []
+    for row in rows:
+        q = _clean(_s(row["raw_input"]), 300)
+        r = _clean(_s(row["result"]), 500)
+        low = f"{q}\n{r}".lower()
+        if any(x in low for x in MEMORY_BAD_MARKERS + [".ogg"]):
+            continue
+        if q and r:
+            facts.append(f"search_done: {q} => {r}")
+    return "\n".join(facts[:3])
+
+async def _transcribe_if_voice(task) -> Tuple[str, str]:
+    input_type = _task_field(task, "input_type", "text").lower()
+    raw_input = _task_field(task, "raw_input", "")
+
+    if input_type != "voice":
+        return input_type or "text", raw_input
+
+    for _ in range(10):
+        if os.path.exists(raw_input):
+            break
+        await asyncio.sleep(0.3)
+
+    if not os.path.exists(raw_input):
+        raise RuntimeError(f"voice file not found after wait: {raw_input}")
+
+    try:
+        from core.stt_engine import transcribe_voice
+    except Exception as e:
+        logger.error("STT import failed err=%s", e)
+        raise RuntimeError("STT failed")
+
+    last_err = None
+    for attempt in range(2):
+        try:
+            logger.info("STT start file=%s attempt=%s", raw_input, attempt + 1)
+            if inspect.iscoroutinefunction(transcribe_voice):
+                transcript = await transcribe_voice(raw_input)
+            else:
+                transcript = transcribe_voice(raw_input)
+            transcript = _clean(_s(transcript))
+            if not transcript:
+                raise RuntimeError("empty transcript")
+            logger.info("STT ok transcript_len=%s transcript=%s", len(transcript), transcript[:200])
+            return "text", transcript
+        except Exception as e:
+            last_err = e
+            logger.warning("STT attempt=%s failed file=%s err=%s", attempt + 1, raw_input, e)
+            if attempt == 0:
+                await asyncio.sleep(0.5)
+
+    logger.error("STT failed for %s err=%s", raw_input, last_err)
+    raise RuntimeError("STT failed")
+
+async def _handle_new(conn, task):
+    task_id = _task_field(task, "id")
+    chat_id = _task_field(task, "chat_id")
+    raw_input = _clean(_task_field(task, "raw_input"))
+    input_type = _task_field(task, "input_type", "text").lower()
+    reply_to = task["reply_to_message_id"] if hasattr(task, "keys") and "reply_to_message_id" in task.keys() else None
+
+    if input_type == "voice":
+        _update_task(conn, task_id, state="IN_PROGRESS")
+        _history(conn, task_id, "state:IN_PROGRESS")
+        return
+
+    pending_confirm = conn.execute("""
+        SELECT *
+        FROM tasks
+        WHERE chat_id=?
+          AND id<>?
+          AND state='AWAITING_CONFIRMATION'
+        ORDER BY updated_at DESC
+        LIMIT 1
+    """, (chat_id, task_id)).fetchone()
+
+    pending_clarify = conn.execute("""
+        SELECT *
+        FROM tasks
+        WHERE chat_id=?
+          AND id<>?
+          AND state='WAITING_CLARIFICATION'
+        ORDER BY updated_at DESC
+        LIMIT 1
+    """, (chat_id, task_id)).fetchone()
+
+    if pending_confirm:
+        pending_id = _s(pending_confirm["id"])
+        if _is_finish_intent(raw_input) or _is_confirm_intent(raw_input):
+            _update_task(conn, pending_id, state="DONE")
+            _history(conn, pending_id, "state:DONE")
+            _update_task(conn, task_id, state="DONE", result="TASK_CLOSED")
+            _history(conn, task_id, "control:close")
+            _send_once(conn, task_id, chat_id, "Задача закрыта", reply_to, "close")
+            return
+        if _is_revision_intent(raw_input) and not _is_finish_intent(raw_input):
+            merged = _clean(_s(pending_confirm["raw_input"]) + "\n\nУточнение пользователя:\n" + raw_input)
+            _update_task(conn, pending_id, state="IN_PROGRESS", raw_input=merged)
+            _history(conn, pending_id, "state:IN_PROGRESS")
+            _update_task(conn, task_id, state="DONE", result="REVISION_ACCEPTED")
+            _history(conn, task_id, "control:revision")
+            _send_once(conn, task_id, chat_id, "Уточнение принято. Выполняю", reply_to, "revision")
+            return
+
+    if pending_clarify:
+        pending_id = _s(pending_clarify["id"])
+        if _is_confirm_intent(raw_input):
+            _update_task(conn, pending_id, state="IN_PROGRESS")
+            _history(conn, pending_id, "state:IN_PROGRESS")
+            _update_task(conn, task_id, state="DONE", result="CONFIRM_ACCEPTED")
+            _history(conn, task_id, "control:confirm")
+            _send_once(conn, task_id, chat_id, "Подтверждение принято. Выполняю", reply_to, "confirm")
+            return
+        merged = _clean(_s(pending_clarify["raw_input"]) + "\n\nУточнение пользователя:\n" + raw_input)
+        _update_task(conn, pending_id, state="IN_PROGRESS", raw_input=merged)
+        _history(conn, pending_id, "state:IN_PROGRESS")
+        _update_task(conn, task_id, state="DONE", result="CLARIFICATION_ACCEPTED")
+        _history(conn, task_id, "control:clarification")
+        _send_once(conn, task_id, chat_id, "Уточнение принято. Выполняю", reply_to, "clarification")
+        return
+
+    _update_task(conn, task_id, state="IN_PROGRESS")
+    _history(conn, task_id, "state:IN_PROGRESS")
+
+async def _handle_in_progress(conn, task):
+    task_id = _task_field(task, "id")
+    chat_id = _task_field(task, "chat_id")
+    input_type = _task_field(task, "input_type", "text").lower()
+    reply_to = task["reply_to_message_id"] if hasattr(task, "keys") and "reply_to_message_id" in task.keys() else None
+
+    try:
+        normalized_type, normalized_input = await _transcribe_if_voice(task)
+    except Exception as e:
+        logger.error("STT FAILED task=%s err=%s", task_id, e, exc_info=True)
+        _update_task(conn, task_id, state="WAITING_CLARIFICATION", error_message="STT_FAILED")
+        _history(conn, task_id, "state:WAITING_CLARIFICATION")
+        return
+
+    normalized_input = _clean(normalized_input)
+    if not normalized_input:
+        _update_task(conn, task_id, state="WAITING_CLARIFICATION", error_message="EMPTY_TRANSCRIPT")
+        _history(conn, task_id, "state:WAITING_CLARIFICATION")
+        return
+
+    active_task_context = _active_unfinished_context(conn, chat_id, task_id)
+    short_memory, long_memory = _load_memory_context(chat_id)
+    pin_context = get_pin_context(chat_id, normalized_input)
+    search_context = _search_fact_context(conn, chat_id)
+
+    payload = {
+        "id": task_id,
+        "chat_id": chat_id,
+        "input_type": "text",
+        "raw_input": normalized_input,
+        "normalized_input": normalized_input,
+        "state": "IN_PROGRESS",
+        "reply_to_message_id": reply_to,
+        "active_task_context": active_task_context,
+        "pin_context": pin_context,
+        "short_memory_context": short_memory,
+        "long_memory_context": long_memory,
+        "search_context": search_context,
+    }
+
+    logger.info("PICKED %s state=IN_PROGRESS text=%s", task_id, normalized_input[:200])
+
+    try:
+        ai_result = await asyncio.wait_for(process_ai_task(payload), timeout=180)
+    except Exception as e:
+        logger.error("ROUTER FAILED task=%s err=%s", task_id, e, exc_info=True)
+        _update_task(conn, task_id, state="FAILED", error_message=_clean(str(e), 500))
+        _history(conn, task_id, "state:FAILED")
+        return
+
+    ai_result = _clean(ai_result)
+    logger.info("ROUTER RESULT task=%s len=%s text=%s", task_id, len(ai_result), ai_result[:200])
+
+    if not _is_valid_result(ai_result, normalized_input):
+        logger.warning("INVALID_RESULT task=%s result=%s", task_id, ai_result[:200])
+        _update_task(conn, task_id, state="FAILED", error_message="INVALID_RESULT_GATE")
+        _history(conn, task_id, "state:FAILED")
+        _send_once(conn, task_id, chat_id, "Не понял запрос. Уточни что нужно сделать.", reply_to, "invalid_result_notify")
+        return
+
+    _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=ai_result, error_message="")
+    _history(conn, task_id, f"result:{_clean(ai_result, 400)}")
+    save_pin(chat_id, task_id, ai_result)
+    _save_memory(chat_id, normalized_input, ai_result)
+
+    if normalized_input.startswith("[VOICE] "):
+        clean_transcript = normalized_input[8:]
+        _send_once(conn, task_id, chat_id, f"🎤 {clean_transcript}", reply_to, "transcript")
+    _send_once(conn, task_id, chat_id, ai_result, reply_to, "result")
+
+def _pick_next_task(conn):
+    conn.execute("BEGIN IMMEDIATE")
+    row = conn.execute("""
+        SELECT *
+        FROM tasks
+        WHERE state IN ('NEW','IN_PROGRESS')
+        ORDER BY CASE state WHEN 'IN_PROGRESS' THEN 0 ELSE 1 END, created_at ASC
+        LIMIT 1
+    """).fetchone()
+    conn.execute("COMMIT")
+    return row
+
+def _recover_stale_tasks(conn):
+    rows = conn.execute("""
+        SELECT id, chat_id, reply_to_message_id
+        FROM tasks
+        WHERE state IN ('IN_PROGRESS', 'WAITING_CLARIFICATION', 'AWAITING_CONFIRMATION', 'NEW')
+          AND (strftime('%s','now') - strftime('%s', COALESCE(updated_at, created_at))) > 300
+    """).fetchall()
+    for row in rows:
+        task_id = row[0]
+        chat_id = str(row[1])
+        reply_to = row[2]
+        conn.execute(
+            "UPDATE tasks SET state='FAILED', error_message='STALE_TIMEOUT', updated_at=datetime('now') WHERE id=?",
+            (task_id,)
+        )
+        _history(conn, task_id, "state:FAILED:STALE_TIMEOUT")
+        _send_once(conn, task_id, chat_id, "Задача не завершена. Уточни запрос.", reply_to, "stale_timeout")
+    if rows:
+        logger.info("recovered %s stale tasks", len(rows))
 
 async def main():
     logger.info("WORKER STARTED pid=%s", os.getpid())
-    asyncio.create_task(archive_old_tasks())
+    conn = db(CORE_DB)
+    try:
+        _recover_stale_tasks(conn)
+        _cleanup_garbage(conn)
+        _archive_done(conn)
+    finally:
+        conn.close()
+
+    _loop_counter = 0
     while True:
+        conn = db(CORE_DB)
         try:
-            if not await process_one_task():
-                await asyncio.sleep(1)
-        except Exception as e:
-            logger.exception("CRASH: %s", e)
-            await asyncio.sleep(2)
+            _loop_counter += 1
+            if _loop_counter % 10 == 0:
+                _recover_stale_tasks(conn)
+            task = _pick_next_task(conn)
+            if not task:
+                time.sleep(POLL_SEC)
+                continue
+            state = _s(task["state"]).upper()
+            if state == "NEW":
+                await _handle_new(conn, task)
+            elif state == "IN_PROGRESS":
+                await _handle_in_progress(conn, task)
+        finally:
+            conn.close()
+        time.sleep(POLL_SEC)
 
 if __name__ == "__main__":
     asyncio.run(main())

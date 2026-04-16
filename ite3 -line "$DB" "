@@ -1,0 +1,67 @@
+[33mcommit 1d907595ee720b25f8ade3d1b962629e2c6d8038[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;33mtag: [m[1;33morik_working_scheme_clean_2026-04-13_15-37-25[m[33m, [m[1;33mtag: [m[1;33mPOCHTI_VSE_GOTOVO_ORIC-2026-04-13_17-31-58[m[33m, [m[1;33mtag: [m[1;33mPOCHTI_VSE_GOTOVO_ORIC-2026-04-13_17-31-53[m[33m, [m[1;31morigin/main[m[33m)[m
+Author: Ila <ilakuznecov@mac.local>
+Date:   Mon Apr 13 15:37:25 2026 +0300
+
+    ОРИК ГОТОВАЯ СХЕМА CLEAN 2026-04-13
+
+ .gitignore                                         |  25 [32m+[m
+ ...STRA_BASE_CORE_OPENROUTER_WORKING_2026-04-11.md | 130 [32m+++++[m
+ ..._CORE_OPENROUTER_WORKING_2026-04-11.memory.json | 269 [32m++++++++++[m
+ ...IC_pre_fullfix_2026-04-13_09-56-51.manifest.txt |  25 [32m+[m
+ ...IC_pre_fullfix_2026-04-13_09-53-58.manifest.txt |  25 [32m+[m
+ .../ai_router.py                                   | 144 [32m++++++[m
+ .../memory_api_server.py                           |  39 [32m++[m
+ .../reply_sender.py                                |  54 [32m++[m
+ .../stt_engine.py                                  |  58 [32m+++[m
+ .../task_worker.py                                 | 100 [32m++++[m
+ .../telegram_daemon.py                             |  91 [32m++++[m
+ .../web_engine.py                                  |  28 [32m+[m
+ core/__init__.py                                   |   0
+ core/ai_router.py                                  | 124 [32m+++++[m
+ core/ai_router.py.fullfix.20260413_151117          | 124 [32m+++++[m
+ core/document_engine.py                            |  65 [32m+++[m
+ core/pin_manager.py                                |  28 [32m+[m
+ core/reply_sender.py                               |  19 [32m+[m
+ core/stt_engine.py                                 |  68 [32m+++[m
+ core/stt_engine.py.backup_2026-04-11_19-29-47      |  45 [32m++[m
+ core/web_engine.py                                 |  26 [32m+[m
+ .../-1003725299009__telegram/.duplicates.jsonl     |  38 [32m++[m
+ .../CHATS/-1003725299009__telegram/raw.json        |   8 [32m+[m
+ .../CHATS/-1003725299009__telegram/timeline.jsonl  |  38 [32m++[m
+ data/memory_files/CHATS/UNKNOWN/raw.json           |  52 [32m++[m
+ data/memory_files/CHATS/UNKNOWN/timeline.jsonl     |   1 [32m+[m
+ .../CHATS/to__unknown_model/.duplicates.jsonl      |   1 [32m+[m
+ data/memory_files/CHATS/to__unknown_model/raw.json |   7 [32m+[m
+ .../CHATS/to__unknown_model/timeline.jsonl         |   1 [32m+[m
+ .../CHATS/unknown_2026-04-12T16-21-24/raw.json     |   3 [32m+[m
+ .../unknown_2026-04-12T16-21-24/timeline.jsonl     |   2 [32m+[m
+ .../CHATS/unknown_2026-04-12T17-23-27/raw.json     |   3 [32m+[m
+ .../unknown_2026-04-12T17-23-27/timeline.jsonl     |   1 [32m+[m
+ .../.duplicates.jsonl                              |   1 [32m+[m
+ .../raw.json                                       |   7 [32m+[m
+ .../timeline.jsonl                                 |   1 [32m+[m
+ .../.duplicates.jsonl                              |   1 [32m+[m
+ .../raw.json                                       |   7 [32m+[m
+ .../timeline.jsonl                                 |   1 [32m+[m
+ .../.duplicates.jsonl                              |   1 [32m+[m
+ .../raw.json                                       |   7 [32m+[m
+ .../timeline.jsonl                                 |   1 [32m+[m
+ .../.duplicates.jsonl                              |   1 [32m+[m
+ .../raw.json                                       |   7 [32m+[m
+ .../timeline.jsonl                                 |   1 [32m+[m
+ .../CHATS/unknown__UNKNOWN/.duplicates.jsonl       |   1 [32m+[m
+ data/memory_files/CHATS/unknown__UNKNOWN/raw.json  |  55 [32m++[m
+ .../CHATS/unknown__UNKNOWN/timeline.jsonl          |   1 [32m+[m
+ data/memory_files/CHAT_MAP.json                    |   5 [32m+[m
+ data/memory_files/GLOBAL/timeline.jsonl            |  48 [32m++[m
+ data/memory_files/SYSTEM/architecture.jsonl        |   4 [32m+[m
+ data/memory_files/SYSTEM/ingest.jsonl              |   6 [32m+[m
+ data/memory_files/SYSTEM/memory.jsonl              |   4 [32m+[m
+ data/memory_files/SYSTEM/pipeline.jsonl            |   4 [32m+[m
+ data/memory_files/SYSTEM/system.jsonl              |   4 [32m+[m
+ google_io.py                                       |  40 [32m++[m
+ memory_api_server.py                               |  39 [32m++[m
+ task_worker.py                                     | 139 [32m+++++[m
+ task_worker.py.fullfix.20260413_151117             | 138 [32m+++++[m
+ telegram_daemon.py                                 | 573 [32m+++++++++++++++++++++[m
+ 60 files changed, 2739 insertions(+)
