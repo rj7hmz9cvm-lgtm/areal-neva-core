@@ -1,3 +1,46 @@
+
+def _load_archive_context(chat_id: str, user_text: str) -> str:
+    import os, json, re
+
+    path = f"/root/.areal-neva-core/data/memory_files/CHATS/{chat_id}__telegram/timeline.jsonl"
+    if not os.path.exists(path):
+        return ""
+
+    try:
+        with open(path, "r") as f:
+            lines = f.readlines()[-30:]
+    except:
+        return ""
+
+    user_words = set(re.findall(r"\w+", user_text.lower()))
+    user_words = {w for w in user_words if len(w) > 3}
+
+    if not user_words:
+        return ""
+
+    result = []
+    for line in reversed(lines):
+        try:
+            obj = json.loads(line)
+            text = json.dumps(obj, ensure_ascii=False).lower()
+
+            if any(x in text for x in [
+                "traceback", "/root/", ".log", ".json",
+                "не могу", "ошибка", "stt_failed"
+            ]):
+                continue
+
+            words = set(re.findall(r"\w+", text))
+            if user_words & words:
+                result.append(text[:400])
+        except:
+            continue
+
+        if len(result) >= 3:
+            break
+
+    return "\n".join(result)
+
 import os
 import re
 import sys
@@ -508,7 +551,10 @@ async def _handle_in_progress(conn, task):
     pin_context = get_pin_context(chat_id, normalized_input)
     search_context = _search_fact_context(conn, chat_id)
 
+    archive_context = _load_archive_context(str(chat_id), normalized_input)
+
     payload = {
+        "archive_context": archive_context,
         "id": task_id,
         "chat_id": chat_id,
         "input_type": "text",

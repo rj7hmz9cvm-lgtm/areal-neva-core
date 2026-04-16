@@ -118,6 +118,17 @@ def _s(v: Any) -> str:
     except Exception:
         return str(v).strip()
 
+
+def _dedup_text(text: str) -> str:
+    seen = set()
+    out = []
+    for line in text.split("\n"):
+        key = line.strip().lower()
+        if key and key not in seen:
+            seen.add(key)
+            out.append(line)
+    return "\n".join(out)
+
 def _clean(text: str, limit: int = 12000) -> str:
     text = (text or "").replace("\r", "\n")
     text = re.sub(r"[ \t]+", " ", text)
@@ -162,15 +173,24 @@ def _extract_user_text(payload: Dict[str, Any]) -> str:
             return text
     return ""
 
+
 def _build_messages(payload: Dict[str, Any], user_text: str) -> List[Dict[str, str]]:
+    user_text = _dedup_text(user_text)
+    if not user_text.strip():
+        return [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": "REQUEST:\nпустой запрос"}
+        ]
+
     input_type = _s(payload.get("input_type")).lower() or "text"
     state = _s(payload.get("state")).upper() or "IN_PROGRESS"
 
     blocks = _dedup_blocks([
         _sanitize_block("ACTIVE_TASK", payload.get("active_task_context")),
-        _sanitize_block("PIN", payload.get("pin_context")),
         _sanitize_block("SHORT_MEMORY", payload.get("short_memory_context")),
         _sanitize_block("LONG_MEMORY", payload.get("long_memory_context")),
+        _sanitize_block("ARCHIVE", payload.get("archive_context")),
+        _sanitize_block("PIN", payload.get("pin_context")),
         _sanitize_block("SEARCH_RESULT", payload.get("search_context")),
     ])
 
@@ -224,7 +244,7 @@ async def process_ai_task(payload: Dict[str, Any]) -> str:
     if not OPENROUTER_API_KEY:
         raise RuntimeError("OPENROUTER_API_KEY not set")
 
-    user_text = _extract_user_text(payload)
+    user_text = _dedup_text(_extract_user_text(payload))
     if not user_text:
         return ""
 
@@ -269,17 +289,7 @@ async def process_ai_task(payload: Dict[str, Any]) -> str:
         is_search,
     )
 
-    messages = _build_messages(work_payload, user_text)
-    ctx_str = _clean_context("\n\n".join(m.get("content", "") for m in messages))
-    if _context_has_answer(ctx_str):
-        for m in messages:
-            if m.get("role") == "system":
-                m["content"] += "\nFORBIDDEN: do not ask clarifying questions."
-                break
-    result = await _openrouter_call(DEFAULT_MODEL, messages)
-    bad_clarify = ["уточни", "не понял", "недостаточно данных", "пришли"]
-    if any(x in result.lower() for x in bad_clarify):
-        result = "Выполняю на основе текущего контекста"
+    result = await _openrouter_call(DEFAULT_MODEL, _build_messages(work_payload, user_text))
 
     if _match_any(BAD_RESULT_RE, result):
         logger.warning("router_result_filtered result=%s", result[:120])
@@ -287,5 +297,21 @@ async def process_ai_task(payload: Dict[str, Any]) -> str:
 
     logger.info("router_ok chars=%s", len(result))
     return result
+
+
+
+def _clean_context(text: str) -> str:
+    if not text:
+        return ""
+    text = text.replace("\r", "\n")
+    text = text.replace("\t", " ")
+    while "\n\n\n" in text:
+        text = text.replace("\n\n\n", "\n\n")
+    return text.strip()[:12000]
+
+def _context_has_answer(text: str) -> bool:
+    if not text:
+        return False
+    return len(text.strip()) > 50
 
 # FORCE CLEAN CONTEXT

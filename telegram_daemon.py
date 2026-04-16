@@ -730,11 +730,11 @@ async def universal_handler(message: types.Message):
                 _transcript = await _stt(local_path)
             except Exception as _err:
                 logger.error("STT_FAILED chat=%s err=%s", tg_id, _err)
-                await create_task(message, "text", "STT_FAILED", "FAILED")
+                await message.answer("Голос не распознан. Повтори голосом или напиши текстом")
                 return
             if not _transcript or not _transcript.strip():
                 logger.error("STT_EMPTY chat=%s", tg_id)
-                await create_task(message, "text", "STT_FAILED", "FAILED")
+                await message.answer("Не удалось получить текст из голосового. Повтори или напиши текстом")
                 return
             voice_text = _transcript.strip()
             voice_lower = voice_text.lower()
