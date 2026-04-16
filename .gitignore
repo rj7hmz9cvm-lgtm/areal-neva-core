@@ -34,3 +34,5 @@ data/*.safe*
 *.before_recover*
 *.fullfix*
 *.bak2
+*.pyc
+*.pyo

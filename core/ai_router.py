@@ -289,7 +289,14 @@ async def process_ai_task(payload: Dict[str, Any]) -> str:
         is_search,
     )
 
-    result = await _openrouter_call(DEFAULT_MODEL, _build_messages(work_payload, user_text))
+    messages = _build_messages(work_payload, user_text)
+    ctx_str = _clean_context("\n\n".join(m.get("content", "") for m in messages))
+    if _context_has_answer(ctx_str):
+        for m in messages:
+            if m.get("role") == "system":
+                m["content"] += "\nFORBIDDEN: do not ask clarifying questions. Answer directly."
+                break
+    result = await _openrouter_call(DEFAULT_MODEL, messages)
 
     if _match_any(BAD_RESULT_RE, result):
         logger.warning("router_result_filtered result=%s", result[:120])

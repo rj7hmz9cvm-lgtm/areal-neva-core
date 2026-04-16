@@ -313,7 +313,7 @@ def _cleanup_garbage(conn):
           )
     """)
 
-def _load_memory_context(chat_id: str) -> Tuple[str, str]:
+def _load_memory_context(chat_id: str, topic_id: int = 0) -> Tuple[str, str]:
     if not os.path.exists(MEM_DB):
         return "", ""
     conn = db(MEM_DB)
@@ -329,6 +329,7 @@ def _load_memory_context(chat_id: str) -> Tuple[str, str]:
         """, (str(chat_id),)).fetchall()
         short_memory = []
         long_memory = []
+        topic_prefix = f"topic_{topic_id}_" if topic_id else ""
         for row in rows:
             key = _s(row["key"])
             value = _clean(_s(row["value"]), 500)
@@ -336,6 +337,8 @@ def _load_memory_context(chat_id: str) -> Tuple[str, str]:
                 continue
             low = value.lower()
             if any(x in low for x in MEMORY_BAD_MARKERS):
+                continue
+            if topic_prefix and key.startswith("topic_") and not key.startswith(topic_prefix):
                 continue
             if key in ("user_input", "assistant_output", "task_summary"):
                 short_memory.append(f"{key}: {value}")
@@ -364,16 +367,29 @@ def _save_memory(chat_id: str, raw_input: str, result: str):
     except Exception as e:
         logger.error("save_memory_fail err=%s", e)
 
-def _active_unfinished_context(conn, chat_id: str, exclude_task_id: str) -> str:
-    row = conn.execute("""
-        SELECT raw_input, result, state
-        FROM tasks
-        WHERE chat_id=?
-          AND id<>?
-          AND state IN ('WAITING_CLARIFICATION','AWAITING_CONFIRMATION','IN_PROGRESS')
-        ORDER BY updated_at DESC, created_at DESC
-        LIMIT 1
-    """, (str(chat_id), exclude_task_id)).fetchone()
+def _active_unfinished_context(conn, chat_id: str, exclude_task_id: str, topic_id: int = 0) -> str:
+    cols = _cols(conn, "tasks")
+    if "topic_id" in cols and topic_id:
+        row = conn.execute("""
+            SELECT raw_input, result, state
+            FROM tasks
+            WHERE chat_id=?
+              AND id<>?
+              AND topic_id=?
+              AND state IN ('WAITING_CLARIFICATION','AWAITING_CONFIRMATION','IN_PROGRESS')
+            ORDER BY updated_at DESC, created_at DESC
+            LIMIT 1
+        """, (str(chat_id), exclude_task_id, topic_id)).fetchone()
+    else:
+        row = conn.execute("""
+            SELECT raw_input, result, state
+            FROM tasks
+            WHERE chat_id=?
+              AND id<>?
+              AND state IN ('WAITING_CLARIFICATION','AWAITING_CONFIRMATION','IN_PROGRESS')
+            ORDER BY updated_at DESC, created_at DESC
+            LIMIT 1
+        """, (str(chat_id), exclude_task_id)).fetchone()
     if not row:
         return ""
     raw = _clean(_s(row["raw_input"]), 800)
@@ -546,8 +562,9 @@ async def _handle_in_progress(conn, task):
         _send_once(conn, task_id, chat_id, "Не удалось получить текст из голосового. Повтори или напиши текстом", reply_to, "empty_transcript_notify")
         return
 
-    active_task_context = _active_unfinished_context(conn, chat_id, task_id)
-    short_memory, long_memory = _load_memory_context(chat_id)
+    topic_id = int(_task_field(task, "topic_id", 0) or 0)
+    active_task_context = _active_unfinished_context(conn, chat_id, task_id, topic_id)
+    short_memory, long_memory = _load_memory_context(chat_id, topic_id)
     pin_context = get_pin_context(chat_id, normalized_input)
     search_context = _search_fact_context(conn, chat_id)
 

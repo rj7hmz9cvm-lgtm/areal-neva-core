@@ -274,13 +274,20 @@ async def create_task(message: types.Message, input_type: str, raw_input: str, s
     task_id = str(uuid.uuid4())
     now = now_iso()
     user_id = getattr(message.from_user, "id", 0) if message.from_user else 0
+    topic_id = getattr(message, "message_thread_id", None) or 0
     async with aiosqlite.connect(DB) as db:
-        await db.execute(
-            "INSERT INTO tasks (id, chat_id, user_id, input_type, raw_input, state, reply_to_message_id, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
-            (task_id, message.chat.id, user_id, input_type, raw_input, state, message.message_id, now, now))
+        cols = [r[1] for r in await (await db.execute("PRAGMA table_info(tasks)")).fetchall()]
+        if "topic_id" in cols:
+            await db.execute(
+                "INSERT INTO tasks (id, chat_id, user_id, input_type, raw_input, state, reply_to_message_id, topic_id, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                (task_id, message.chat.id, user_id, input_type, raw_input, state, message.message_id, topic_id, now, now))
+        else:
+            await db.execute(
+                "INSERT INTO tasks (id, chat_id, user_id, input_type, raw_input, state, reply_to_message_id, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
+                (task_id, message.chat.id, user_id, input_type, raw_input, state, message.message_id, now, now))
         await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (task_id, f"created:{state}", now))
         await db.commit()
-    logger.info("Task %s created state=%s", task_id, state)
+    logger.info("Task %s created state=%s topic_id=%s", task_id, state, topic_id)
     return task_id
 
 async def get_active_task(chat_id: int) -> dict:
@@ -398,36 +405,40 @@ async def cancel_all_open_tasks(chat_id: int) -> int:
         await db.commit()
         return count
 
-async def _find_parent_task(chat_id: int, reply_to: int | None):
+async def _find_parent_task(chat_id: int, reply_to: int | None, topic_id: int = 0):
     async with aiosqlite.connect(DB) as db:
+        cols = [r[1] for r in await (await db.execute("PRAGMA table_info(tasks)")).fetchall()]
+        has_topic = "topic_id" in cols and topic_id > 0
+        topic_filter = " AND topic_id=?" if has_topic else ""
+        topic_args = (topic_id,) if has_topic else ()
         if reply_to:
             cur = await db.execute(
-                "SELECT id, state FROM tasks WHERE chat_id=? AND bot_message_id=? AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION') ORDER BY updated_at DESC LIMIT 1",
-                (chat_id, reply_to)
+                f"SELECT id, state FROM tasks WHERE chat_id=? AND bot_message_id=?{topic_filter} AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION') ORDER BY updated_at DESC LIMIT 1",
+                (chat_id, reply_to) + topic_args
             )
             row = await cur.fetchone()
             if row:
                 return row
             cur = await db.execute(
-                "SELECT id, state FROM tasks WHERE chat_id=? AND reply_to_message_id=? AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION') ORDER BY updated_at DESC LIMIT 1",
-                (chat_id, reply_to)
+                f"SELECT id, state FROM tasks WHERE chat_id=? AND reply_to_message_id=?{topic_filter} AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION') ORDER BY updated_at DESC LIMIT 1",
+                (chat_id, reply_to) + topic_args
             )
             row = await cur.fetchone()
             if row:
                 return row
         cur = await db.execute(
-            "SELECT id, state FROM tasks WHERE chat_id=? AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION') ORDER BY updated_at DESC LIMIT 1",
-            (chat_id,)
+            f"SELECT id, state FROM tasks WHERE chat_id=?{topic_filter} AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION') ORDER BY updated_at DESC LIMIT 1",
+            (chat_id,) + topic_args
         )
         return await cur.fetchone()
 
-async def _handle_control_text(message, tg_id: int, text: str, lower: str, reply_to: int | None) -> bool:
+async def _handle_control_text(message, tg_id: int, text: str, lower: str, reply_to: int | None, topic_id: int = 0) -> bool:
     if _has_any_phrase(lower, CANCEL_PHRASES):
         closed = await cancel_all_open_tasks(tg_id)
         await message.answer("Все запросы отменены" if closed else "Нет активных задач")
         return True
 
-    parent = await _find_parent_task(tg_id, reply_to)
+    parent = await _find_parent_task(tg_id, reply_to, topic_id)
 
     if _has_any_phrase(lower, FINISH_PHRASES):
         if parent:
@@ -739,15 +750,19 @@ async def universal_handler(message: types.Message):
             voice_text = _transcript.strip()
             voice_lower = voice_text.lower()
             voice_reply_to = message.reply_to_message.message_id if message.reply_to_message else None
-            if await _handle_control_text(message, tg_id, voice_text, voice_lower, voice_reply_to):
-                return
+            _voice_topic_id = getattr(message, "message_thread_id", None) or 0
+            _VOICE_CONTROL = ["отбой", "отмена", "не надо", "всё", "готово", "можно закрывать", "задача закрыта", "да", "нет", "ок", "+"]
+            if any(voice_lower.strip() == x for x in _VOICE_CONTROL):
+                if await _handle_control_text(message, tg_id, voice_text, voice_lower, voice_reply_to, _voice_topic_id):
+                    return
             await create_task(message, "text", "[VOICE] " + voice_text, "NEW")
             return
         
         # 9. NORMAL TEXT
         if message.text:
             reply_to = message.reply_to_message.message_id if message.reply_to_message else None
-            if await _handle_control_text(message, tg_id, text, lower, reply_to):
+            _text_topic_id = getattr(message, "message_thread_id", None) or 0
+            if await _handle_control_text(message, tg_id, text, lower, reply_to, _text_topic_id):
                 return
             await create_task(message, "text", text, "NEW")
             return
