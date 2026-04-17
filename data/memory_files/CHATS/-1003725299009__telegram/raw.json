@@ -1,0 +1,8 @@
+{
+  "raw_text": "service\",\n    \"Восстановить areal-drive-ingest.service\",\n    \"Удалить duckduckgo из web_engine.py\",\n    \"Добавить auto_memory_dump.sh в cron\",\n    \"Настроить credentials.json для STT fallback OpenAI\",\n    \"Верифицировать MEMORY_API_TOKEN\",\n    \"Починить Drive upload (google_io.py)\"\n  ]\n}",
+  "_meta": {
+    "chat_key": "-1003725299009__telegram",
+    "ingested_at": "2026-04-17T06:44:43.794304+00:00",
+    "source": "telegram"
+  }
+}

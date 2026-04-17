@@ -1,0 +1,7 @@
+{"timestamp": "2026-04-12T15:19:52.467263", "data": "AREAL-NEVA CORE ORCHESTRA; MVP; server-first; Telegram interface; OpenRouter LLM; SQLite memory; simplified stack without tg_agent/storage_layer/orchestra.db"}
+{"timestamp": "2026-04-12T21:15:02.804170+00:00", "data": "AREAL-NEVA CORE Telegram orchestration with task_worker, ai_router, reply_sender, ask_ai, OpenRouter gateway, memory.db storage"}
+{"timestamp": "2026-04-13T11:02:14.367364+00:00", "chat_key": "-1003725299009__telegram", "data": "AREAL-NEVA CORE Telegram orchestration with task_worker, ai_router, reply_sender, ask_ai, OpenRouter gateway, memory.db storage"}
+{"timestamp": "2026-04-13T11:03:56.624399+00:00", "chat_key": "-1003725299009__telegram", "data": "AREAL-NEVA CORE ORCHESTRA MVP server-first Telegram interface OpenRouter LLM SQLite memory_api_server no tg_agent no storage_layer no orchestra.db"}
+{"timestamp": "2026-04-15T15:57:31.418516+00:00", "chat_key": "-1003725299009__telegram", "data": "NEURON SOFT VPN memory / areal-neva-core multi-agent AI orchestration system owned by Ilya Kuznetsov. Coordinates multiple AI agents under unified memory and file routing architecture."}
+{"timestamp": "2026-04-16T14:26:27.440687+00:00", "chat_key": "-1003725299009__telegram", "data": "AREAL-NEVA ORCHESTRA running on VPS with telegram-ingress and areal-task-worker active"}
+{"timestamp": "2026-04-16T20:44:10.779413+00:00", "chat_key": "-1003725299009__telegram", "data": "Telegram-based AI orchestration system on VPS with task_worker, ai_router, telegram_daemon"}
