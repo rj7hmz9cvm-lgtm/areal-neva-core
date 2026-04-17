@@ -755,7 +755,6 @@ async def universal_handler(message: types.Message):
             if any(voice_lower.strip() == x for x in _VOICE_CONTROL):
                 if await _handle_control_text(message, tg_id, voice_text, voice_lower, voice_reply_to, _voice_topic_id):
                     return
-            await message.answer("🎤 " + voice_text)
             await create_task(message, "text", "[VOICE] " + voice_text, "NEW")
             return
         

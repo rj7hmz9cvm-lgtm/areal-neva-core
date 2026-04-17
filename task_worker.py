@@ -348,7 +348,7 @@ def _load_memory_context(chat_id: str, topic_id: int = 0) -> Tuple[str, str]:
     finally:
         conn.close()
 
-def _save_memory(chat_id: str, raw_input: str, result: str):
+def _save_memory(chat_id: str, topic_id: int, raw_input: str, result: str):
     if not os.path.exists(MEM_DB):
         return
     bad = ["ошибка", "не найдено", "уточните", "traceback", "/root/", ".ogg", "TASK_CLOSED", "REVISION_ACCEPTED", "CONFIRM_ACCEPTED", "CLARIFICATION_ACCEPTED"]
@@ -610,7 +610,7 @@ async def _handle_in_progress(conn, task):
     _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=ai_result, error_message="")
     _history(conn, task_id, f"result:{_clean(ai_result, 400)}")
     save_pin(chat_id, task_id, ai_result)
-    _save_memory(chat_id, normalized_input, ai_result)
+    _save_memory(chat_id, topic_id, normalized_input, ai_result)
 
     if normalized_input.startswith("[VOICE] "):
         clean_transcript = normalized_input[8:]
