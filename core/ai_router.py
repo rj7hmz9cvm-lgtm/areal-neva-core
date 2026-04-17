@@ -232,7 +232,7 @@ async def _openrouter_call(model: str, messages: List[Dict[str, str]]) -> str:
         "messages": messages,
         "temperature": 0.2,
     }
-    async with httpx.AsyncClient(timeout=httpx.Timeout(90.0, connect=30.0)) as client:
+    async with httpx.AsyncClient(timeout=httpx.Timeout(300.0, connect=30.0)) as client:
         r = await client.post(f"{OPENROUTER_BASE_URL}/chat/completions", headers=headers, json=body)
     if r.status_code != 200:
         msg = f"OPENROUTER_HTTP_{r.status_code}: {r.text[:500]}"
