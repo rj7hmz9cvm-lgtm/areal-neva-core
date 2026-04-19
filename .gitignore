@@ -21,3 +21,6 @@ runtime/voice_queue/
 *.safe
 *.ogg
 *.pyc
+DIAG_FIRST_PASS/
+data/memory/UNSORTED/
+*.bak.*
