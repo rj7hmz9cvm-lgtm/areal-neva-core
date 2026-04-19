@@ -24,3 +24,4 @@ runtime/voice_queue/
 DIAG_FIRST_PASS/
 data/memory/UNSORTED/
 *.bak.*
+data/source_registry.db
