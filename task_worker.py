@@ -382,7 +382,28 @@ def _cleanup_garbage(conn):
           )
     """)
 
-def _load_memory_context(chat_id: str, topic_id: int = 0) -> Tuple[str, str]:
+
+def _detect_role_assignment(text: str) -> str:
+    import re as _re
+    triggers = [
+        r"этот чат для (.+)",
+        r"этот чат про (.+)",
+        r"этот топик для (.+)",
+        r"этот топик про (.+)",
+        r"чат закрепл[её]н за (.+)",
+        r"здесь мы (.+)",
+        r"закрепи (.+)",
+        r"этот чат исключительно для (.+)",
+        r"этот чат используется (.+)",
+    ]
+    t = (text or "").strip().lower()
+    for pattern in triggers:
+        m = _re.search(pattern, t)
+        if m:
+            return m.group(1).strip()[:200]
+    return ""
+
+def _load_memory_context(chat_id: str, topic_id: int = 0) -> Tuple[str, str, str, str]:
     if not os.path.exists(MEM_DB):
         return "", ""
     conn = db(MEM_DB)
@@ -412,7 +433,24 @@ def _load_memory_context(chat_id: str, topic_id: int = 0) -> Tuple[str, str]:
                 short_memory.append(f"{key}: {value}")
             else:
                 long_memory.append(f"{key}: {value}")
-        return "\n".join(short_memory[:10]), "\n".join(long_memory[:10])
+        topic_role = ""
+        topic_directions = ""
+        try:
+            role_row = conn.execute(
+                "SELECT value FROM memory WHERE chat_id=? AND key=? ORDER BY timestamp DESC LIMIT 1",
+                (str(chat_id), f"topic_{int(topic_id)}_role")
+            ).fetchone()
+            if role_row:
+                topic_role = str(role_row["value"] or "").strip()[:500]
+            dir_row = conn.execute(
+                "SELECT value FROM memory WHERE chat_id=? AND key=? ORDER BY timestamp DESC LIMIT 1",
+                (str(chat_id), f"topic_{int(topic_id)}_directions")
+            ).fetchone()
+            if dir_row:
+                topic_directions = str(dir_row["value"] or "").strip()[:1000]
+        except Exception:
+            pass
+        return "\n".join(short_memory[:100]), "\n".join(long_memory[:100]), topic_role, topic_directions
     finally:
         conn.close()
 
@@ -700,8 +738,23 @@ async def _handle_in_progress(conn, task):
         return
 
     topic_id = int(_task_field(task, "topic_id", 0) or 0)
+
+    detected_role = _detect_role_assignment(normalized_input)
+    if detected_role and os.path.exists(MEM_DB):
+        try:
+            _mem = db(MEM_DB)
+            _mem.execute(
+                "INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
+                (str(chat_id), f"topic_{topic_id}_role", detected_role)
+            )
+            _mem.commit()
+            _mem.close()
+            logger.info("ROLE_SAVED chat=%s topic=%s role=%s", chat_id, topic_id, detected_role)
+        except Exception as _re:
+            logger.warning("ROLE_SAVE_FAIL err=%s", _re)
+
     active_task_context = _active_unfinished_context(conn, chat_id, task_id, topic_id)
-    short_memory, long_memory = _load_memory_context(chat_id, topic_id)
+    short_memory, long_memory, topic_role, topic_directions = _load_memory_context(chat_id, topic_id)
     pin_context = get_pin_context(chat_id, normalized_input, topic_id)
     search_context = _search_fact_context(conn, chat_id, topic_id)
 
@@ -738,7 +791,7 @@ async def _handle_in_progress(conn, task):
                     if detected_topic != topic_id:
                         topic_id = detected_topic
                         active_task_context = _active_unfinished_context(conn, chat_id, task_id, topic_id)
-                        short_memory, long_memory = _load_memory_context(chat_id, topic_id)
+                        short_memory, long_memory, topic_role, topic_directions = _load_memory_context(chat_id, topic_id)
                         pin_context = get_pin_context(chat_id, normalized_input, topic_id)
     except Exception as e:
         logger.error("TOPIC_RECOVERY_FAIL task=%s err=%s", task_id, e)
@@ -757,6 +810,8 @@ async def _handle_in_progress(conn, task):
         "short_memory_context": short_memory,
         "long_memory_context": long_memory,
         "search_context": search_context,
+        "topic_role": topic_role,
+        "topic_directions": topic_directions,
     }
 
     logger.info("PICKED %s state=IN_PROGRESS text=%s", task_id, normalized_input[:200])

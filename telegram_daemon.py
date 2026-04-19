@@ -23,7 +23,7 @@ logger = logging.getLogger("telegram_daemon")
 bot = Bot(BOT_TOKEN)
 dp = Dispatcher()
 
-SYSTEM_CMDS = ["память", "память оркестра", "выгрузи память", "статус", "архив", "сброс задач", "очистить задачи", "yzon", "дамп"]
+SYSTEM_CMDS = ["память", "память оркестра", "выгрузи память", "статус", "архив", "сброс задач", "очистить задачи", "yzon", "дамп", "язон", "язон файл", "дамп файл", "память файл", "архив файл", "система", "система файл", "код файл", "файл"]
 CANCEL_CMDS = ["отбой", "отмена", "не надо"]
 EZONE_KEYS = ("system", "architecture", "pipeline", "memory")
 EZONE_EXTS = (".json", ".jsonl", ".txt")
@@ -375,12 +375,18 @@ async def close_latest_open_task(chat_id: int, action: str = "finish:DONE") -> b
         await db.commit()
         return True
 
-async def cancel_all_open_tasks(chat_id: int) -> int:
+async def cancel_all_open_tasks(chat_id: int, topic_id: int = 0) -> int:
     async with aiosqlite.connect(DB) as db:
-        cur = await db.execute(
-            "SELECT id FROM tasks WHERE chat_id=? AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION')",
-            (chat_id,)
-        )
+        if topic_id > 0:
+            cur = await db.execute(
+                "SELECT id FROM tasks WHERE chat_id=? AND topic_id=? AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION')",
+                (chat_id, topic_id)
+            )
+        else:
+            cur = await db.execute(
+                "SELECT id FROM tasks WHERE chat_id=? AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION')",
+                (chat_id,)
+            )
         rows = await cur.fetchall()
         now = now_iso()
         count = 0
@@ -434,7 +440,7 @@ async def _find_parent_task(chat_id: int, reply_to: int | None, topic_id: int = 
 
 async def _handle_control_text(message, tg_id: int, text: str, lower: str, reply_to: int | None, topic_id: int = 0) -> bool:
     if _has_any_phrase(lower, CANCEL_PHRASES):
-        closed = await cancel_all_open_tasks(tg_id)
+        closed = await cancel_all_open_tasks(tg_id, topic_id)
         await message.answer("Все запросы отменены" if closed else "Нет активных задач")
         return True
 
@@ -528,6 +534,7 @@ async def universal_handler(message: types.Message):
         tg_id = message.chat.id
         now_ts = time.monotonic()
         reply_to = message.reply_to_message.message_id if message.reply_to_message else None
+        topic_id = int(getattr(message, "message_thread_id", 0) or 0)
         
         # 1. SYSTEM COMMANDS
         if lower in SYSTEM_CMDS:
@@ -569,6 +576,103 @@ async def universal_handler(message: types.Message):
                     else:
                         archive_msg = "Архив пуст"
                     await message.answer(archive_msg)
+            elif lower == "язон":
+                dump = dump_yzon_state(tg_id)
+                await message.answer(dump)
+                return
+            elif lower == "язон файл":
+                dump = dump_yzon_state(tg_id)
+                import io
+                bio = io.BytesIO(dump.encode("utf-8"))
+                bio.name = "yzon_state.json"
+                await message.answer_document(bio)
+                return
+            elif lower == "дамп файл":
+                import subprocess
+                subprocess.run(["/root/.areal-neva-core/.venv/bin/python3", "/root/.areal-neva-core/orchestra_full_dump.py"], capture_output=True, text=True, timeout=60)
+                dump_files = sorted([f for f in os.listdir("/root/.areal-neva-core/data/memory/UNSORTED") if f.startswith("orchestra_dump_")], reverse=True)
+                if dump_files:
+                    dump_path = f"/root/.areal-neva-core/data/memory/UNSORTED/{dump_files[0]}"
+                    await message.answer_document(open(dump_path, "rb"), filename=dump_files[0])
+                else:
+                    await message.answer("Дамп не создан")
+                return
+            elif lower == "память файл":
+                import sqlite3 as _sq, io, json as _json
+                try:
+                    _mc = _sq.connect("/root/.areal-neva-core/data/memory.db")
+                    _mc.row_factory = _sq.Row
+                    _rows = _mc.execute("SELECT chat_id, key, value, timestamp FROM memory WHERE chat_id=? ORDER BY timestamp DESC LIMIT 200", (str(tg_id),)).fetchall()
+                    _mc.close()
+                    _data = [dict(r) for r in _rows]
+                    bio = io.BytesIO(_json.dumps(_data, ensure_ascii=False, indent=2).encode("utf-8"))
+                    bio.name = "memory_dump.json"
+                    await message.answer_document(bio)
+                except Exception as _e:
+                    await message.answer(f"Ошибка: {_e}")
+                return
+            elif lower == "архив файл":
+                import sqlite3 as _sq, io, json as _json
+                try:
+                    _mc = _sq.connect("/root/.areal-neva-core/data/memory.db")
+                    _mc.row_factory = _sq.Row
+                    _rows = _mc.execute("SELECT key, value, timestamp FROM memory WHERE chat_id=? AND key LIKE 'archive_legacy_%' ORDER BY timestamp DESC LIMIT 100", (str(tg_id),)).fetchall()
+                    _mc.close()
+                    _data = [dict(r) for r in _rows]
+                    bio = io.BytesIO(_json.dumps(_data, ensure_ascii=False, indent=2).encode("utf-8"))
+                    bio.name = "archive_dump.json"
+                    await message.answer_document(bio)
+                except Exception as _e:
+                    await message.answer(f"Ошибка: {_e}")
+                return
+            elif lower in ("система", "система файл"):
+                sys_info = (
+                    "AREAL-NEVA ORCHESTRA\n"
+                    "Server: 89.22.225.136 | Ubuntu 24.04\n"
+                    "Bot: @ai_orkestra_all_bot\n"
+                    "Models: deepseek/deepseek-chat + perplexity/sonar\n"
+                    "Pipeline: telegram_daemon -> core.db -> task_worker -> ai_router -> Telegram\n"
+                    "Services: telegram-ingress, areal-task-worker, areal-memory-api\n"
+                )
+                if lower == "система файл":
+                    import io
+                    bio = io.BytesIO(sys_info.encode("utf-8"))
+                    bio.name = "system_info.txt"
+                    await message.answer_document(bio)
+                else:
+                    await message.answer(sys_info)
+                return
+            elif lower == "код файл":
+                import io, zipfile
+                buf = io.BytesIO()
+                files_to_zip = [
+                    "/root/.areal-neva-core/task_worker.py",
+                    "/root/.areal-neva-core/core/ai_router.py",
+                    "/root/.areal-neva-core/telegram_daemon.py",
+                ]
+                with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+                    for fp in files_to_zip:
+                        if os.path.exists(fp):
+                            zf.write(fp, os.path.basename(fp))
+                buf.seek(0)
+                buf.name = "core_code.zip"
+                await message.answer_document(buf, filename="core_code.zip")
+                return
+            elif lower == "файл":
+                import sqlite3 as _sq, io
+                try:
+                    _cc = _sq.connect("/root/.areal-neva-core/data/core.db")
+                    _rows = _cc.execute("SELECT state, COUNT(*) as cnt FROM tasks GROUP BY state").fetchall()
+                    _cc.close()
+                    lines = ["AREAL-NEVA ORCHESTRA — краткий статус", ""]
+                    for r in _rows:
+                        lines.append(f"{r[0]}: {r[1]}")
+                    bio = io.BytesIO("\n".join(lines).encode("utf-8"))
+                    bio.name = "status.md"
+                    await message.answer_document(bio)
+                except Exception as _e:
+                    await message.answer(f"Ошибка: {_e}")
+                return
             else:
                 dump = dump_system_state()
                 for part in split_message(dump):
@@ -671,7 +775,7 @@ async def universal_handler(message: types.Message):
         # 6.5 EARLY CONTROL LAYER
         if message.text:
             if _has_any_phrase(lower, CANCEL_PHRASES):
-                closed = await cancel_all_open_tasks(tg_id)
+                closed = await cancel_all_open_tasks(tg_id, topic_id)
                 await message.answer("Все запросы отменены" if closed else "Нет активных задач")
                 return
             if _has_any_phrase(lower, FINISH_PHRASES):

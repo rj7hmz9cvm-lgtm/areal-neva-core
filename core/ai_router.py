@@ -185,6 +185,15 @@ def _build_messages(payload: Dict[str, Any], user_text: str) -> List[Dict[str, s
     input_type = _s(payload.get("input_type")).lower() or "text"
     state = _s(payload.get("state")).upper() or "IN_PROGRESS"
 
+    topic_role = _clean(_s(payload.get("topic_role")), 500)
+    topic_directions = _clean(_s(payload.get("topic_directions")), 1000)
+    system_content = SYSTEM_PROMPT
+    if topic_role:
+        system_content = f"Роль этого чата: {topic_role}\n\n" + system_content
+    if topic_directions:
+        system_content = system_content + f"\n\nТиповые задачи этого чата: {topic_directions}"
+
+
     blocks = _dedup_blocks([
         _sanitize_block("ACTIVE_TASK", payload.get("active_task_context")),
         _sanitize_block("SHORT_MEMORY", payload.get("short_memory_context")),
@@ -203,7 +212,7 @@ def _build_messages(payload: Dict[str, Any], user_text: str) -> List[Dict[str, s
     user_parts.append("REQUEST:\n" + user_text)
 
     return [
-        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "system", "content": system_content},
         {"role": "user", "content": "\n\n".join(user_parts)},
     ]
 
