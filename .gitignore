@@ -13,3 +13,11 @@ credentials.json
 *.tgz
 *.session
 *.session-*
+.env
+data/*.db
+data/memory_files/
+runtime/voice_queue/
+*.bak
+*.safe
+*.ogg
+*.pyc

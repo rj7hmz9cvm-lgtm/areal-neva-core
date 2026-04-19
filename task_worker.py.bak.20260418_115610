@@ -226,15 +226,7 @@ def _task_field(task, name: str, default: str = "") -> str:
     return default
 
 def _is_confirm_intent(text: str) -> bool:
-    t = _norm(text)
-    if t in CONFIRM_INTENTS:
-        return True
-    prefix_ok = (
-        "довол", "дово", "да дов", "я дов",
-        "подтвер", "согла", "верно",
-        "завершен", "ок", "okay", "ok",
-    )
-    return any(t.startswith(x) for x in prefix_ok)
+    return _clean(text).lower() in CONFIRM_INTENTS
 
 def _is_finish_intent(text: str) -> bool:
     t = _clean(text).lower()
@@ -416,11 +408,10 @@ def _load_memory_context(chat_id: str, topic_id: int = 0) -> Tuple[str, str]:
 def _save_memory(chat_id: str, topic_id: int, raw_input: str, result: str):
     if not os.path.exists(MEM_DB):
         return
-    bad = ["ошибка", "не найдено", "уточните", "traceback", "/root/", ".ogg", "TASK_CLOSED", "REVISION_ACCEPTED", "CONFIRM_ACCEPTED", "CLARIFICATION_ACCEPTED", "не содержит активной задачи", "чат не содержит"]
+    bad = ["ошибка", "не найдено", "уточните", "traceback", "/root/", ".ogg", "TASK_CLOSED", "REVISION_ACCEPTED", "CONFIRM_ACCEPTED", "CLARIFICATION_ACCEPTED"]
     if not result or len(result) < 20:
         return
     if any(b in result.lower() for b in bad):
-        logger.warning("save_memory_skip bad_filter chat=%s topic=%s result=%s", chat_id, topic_id, result[:50])
         return
     try:
         conn = db(MEM_DB)
@@ -440,10 +431,6 @@ def _save_archive(chat_id: str, topic_id: int, raw_input: str, result: str):
     if not os.path.exists(MEM_DB):
         return
     if not result or len(result) < 20:
-        return
-    low = result.lower()
-    if "не содержит активной задачи" in low or "чат не содержит" in low:
-        logger.warning("save_archive_skip bad_filter chat=%s topic=%s result=%s", chat_id, topic_id, result[:50])
         return
     try:
         conn = db(MEM_DB)
@@ -480,7 +467,6 @@ def _finalize_done(conn, task_id: str):
     ).fetchone()
     if not row:
         return
-    logger.info("finalize_done task=%s chat=%s topic=%s result_len=%s", task_id, _s(row[1]), row[2], len(_s(row[4])))
     _update_task(conn, task_id, state="DONE", error_message="")
     _close_pin(conn, task_id)
     raw_in = _clean(_s(row[3]), 500)
@@ -490,7 +476,6 @@ def _finalize_done(conn, task_id: str):
     if result:
         _save_memory(chat_id, topic_id, raw_in, result)
         _save_archive(chat_id, topic_id, raw_in, result)
-    logger.info("finalize_done_complete task=%s chat=%s topic=%s", task_id, chat_id, topic_id)
 
 def _active_unfinished_context(conn, chat_id: str, exclude_task_id: str, topic_id: int = 0) -> str:
     cols = _cols(conn, "tasks")

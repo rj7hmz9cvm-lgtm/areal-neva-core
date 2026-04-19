@@ -226,15 +226,7 @@ def _task_field(task, name: str, default: str = "") -> str:
     return default
 
 def _is_confirm_intent(text: str) -> bool:
-    t = _norm(text)
-    if t in CONFIRM_INTENTS:
-        return True
-    prefix_ok = (
-        "довол", "дово", "да дов", "я дов",
-        "подтвер", "согла", "верно",
-        "завершен", "ок", "okay", "ok",
-    )
-    return any(t.startswith(x) for x in prefix_ok)
+    return _clean(text).lower() in CONFIRM_INTENTS
 
 def _is_finish_intent(text: str) -> bool:
     t = _clean(text).lower()

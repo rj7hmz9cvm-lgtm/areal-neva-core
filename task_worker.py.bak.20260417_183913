@@ -131,10 +131,6 @@ if not logger.handlers:
 
 POLL_SEC = 1.5
 MIN_RESULT_LEN = 8
-SHORT_OK_RESULTS = {
-    'ок', 'ok', 'понял', 'принял', 'да', 'нет', 'привет',
-    'здравствуйте', 'готово', 'верно', 'уверен'
-}
 
 CONFIRM_INTENTS = [
     "да", "подтверждаю", "всё верно", "все верно", "ок", "окей", "хорошо", "принято"
@@ -226,15 +222,7 @@ def _task_field(task, name: str, default: str = "") -> str:
     return default
 
 def _is_confirm_intent(text: str) -> bool:
-    t = _norm(text)
-    if t in CONFIRM_INTENTS:
-        return True
-    prefix_ok = (
-        "довол", "дово", "да дов", "я дов",
-        "подтвер", "согла", "верно",
-        "завершен", "ок", "okay", "ok",
-    )
-    return any(t.startswith(x) for x in prefix_ok)
+    return _clean(text).lower() in CONFIRM_INTENTS
 
 def _is_finish_intent(text: str) -> bool:
     t = _clean(text).lower()
@@ -264,12 +252,11 @@ def _looks_like_placeholder_search(result: str, raw_input: str) -> bool:
 
 def _is_valid_result(result: str, raw_input: str) -> bool:
     r = _clean(result)
-    if not r:
-        return False
-    short_norm = re.sub(r'[^\wа-яё]+', '', r.lower(), flags=re.I)
-    if len(r) < MIN_RESULT_LEN and short_norm not in SHORT_OK_RESULTS:
+    if not r or len(r) < MIN_RESULT_LEN:
         return False
     if _match_any(BAD_RESULT_RE, r):
+        return False
+    if _looks_like_placeholder_search(r, raw_input):
         return False
     if _hash(r) == _hash(raw_input):
         return False
@@ -347,7 +334,7 @@ def _confirm_message(raw_input: str) -> str:
     return f"Понял задачу так: {_clean(safe, 700)}\n\nПодтверди или уточни"
 
 def _await_message() -> str:
-    return "Доволен результатом? Ответь: Да / Уточни / Правки"
+    return "Готово. Проверь результат. Подтверди закрытие или дай правку"
 
 def _archive_done(conn):
     conn.execute("""
@@ -355,7 +342,7 @@ def _archive_done(conn):
         SET state='ARCHIVED',
             updated_at=datetime('now')
         WHERE state='DONE'
-          AND (strftime('%s','now') - strftime('%s', updated_at)) > 604800
+          AND (strftime('%s','now') - strftime('%s', updated_at)) > 60
     """)
 
 def _cleanup_garbage(conn):
@@ -393,7 +380,7 @@ def _load_memory_context(chat_id: str, topic_id: int = 0) -> Tuple[str, str]:
             WHERE chat_id=?
               AND key GLOB ?
             ORDER BY timestamp DESC
-            LIMIT 100
+            LIMIT 40
         """, (str(chat_id), f"{topic_prefix}*")).fetchall()
         short_memory = []
         long_memory = []
@@ -409,88 +396,30 @@ def _load_memory_context(chat_id: str, topic_id: int = 0) -> Tuple[str, str]:
                 short_memory.append(f"{key}: {value}")
             else:
                 long_memory.append(f"{key}: {value}")
-        return "\n".join(short_memory[:10]), "\n".join(long_memory[:10])
+        return "\n".join(short_memory[:3]), "\n".join(long_memory[:8])
     finally:
         conn.close()
 
 def _save_memory(chat_id: str, topic_id: int, raw_input: str, result: str):
     if not os.path.exists(MEM_DB):
         return
-    bad = ["ошибка", "не найдено", "уточните", "traceback", "/root/", ".ogg", "TASK_CLOSED", "REVISION_ACCEPTED", "CONFIRM_ACCEPTED", "CLARIFICATION_ACCEPTED", "не содержит активной задачи", "чат не содержит"]
+    bad = ["ошибка", "не найдено", "уточните", "traceback", "/root/", ".ogg", "TASK_CLOSED", "REVISION_ACCEPTED", "CONFIRM_ACCEPTED", "CLARIFICATION_ACCEPTED"]
     if not result or len(result) < 20:
         return
     if any(b in result.lower() for b in bad):
-        logger.warning("save_memory_skip bad_filter chat=%s topic=%s result=%s", chat_id, topic_id, result[:50])
         return
     try:
         conn = db(MEM_DB)
         if not _has_table(conn, "memory"):
             conn.execute("CREATE TABLE IF NOT EXISTS memory (chat_id TEXT, key TEXT, value TEXT, timestamp TEXT)")
         topic_prefix = f"topic_{int(topic_id)}_"
-        conn.execute("INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))", (str(chat_id), f"{topic_prefix}assistant_output", result[:50000]))
-        conn.execute("INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))", (str(chat_id), f"{topic_prefix}task_summary", result[:20000]))
+        conn.execute("INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))", (str(chat_id), f"{topic_prefix}assistant_output", result[:2000]))
+        conn.execute("INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))", (str(chat_id), f"{topic_prefix}task_summary", result[:500]))
         conn.execute("INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))", (str(chat_id), f"{topic_prefix}user_input", raw_input[:500]))
         conn.commit()
-        logger.info("save_memory_ok chat=%s topic=%s", chat_id, topic_id)
         conn.close()
     except Exception as e:
         logger.error("save_memory_fail err=%s", e)
-
-def _save_archive(chat_id: str, topic_id: int, raw_input: str, result: str):
-    if not os.path.exists(MEM_DB):
-        return
-    if not result or len(result) < 20:
-        return
-    low = result.lower()
-    if "не содержит активной задачи" in low or "чат не содержит" in low:
-        logger.warning("save_archive_skip bad_filter chat=%s topic=%s result=%s", chat_id, topic_id, result[:50])
-        return
-    try:
-        conn = db(MEM_DB)
-        if not _has_table(conn, "memory"):
-            conn.execute("CREATE TABLE IF NOT EXISTS memory (chat_id TEXT, key TEXT, value TEXT, timestamp TEXT)")
-        key = f"archive_legacy_{int(time.time())}_{int(topic_id)}"
-        payload = json.dumps({
-            "topic_id": int(topic_id),
-            "raw_input": _clean(raw_input, 500),
-            "result": _clean(result, 2000),
-            "timestamp": int(time.time())
-        }, ensure_ascii=False)
-        conn.execute(
-            "INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
-            (str(chat_id), key, payload)
-        )
-        conn.commit()
-        logger.info("save_archive_ok chat=%s key=%s", chat_id, key)
-        conn.close()
-    except Exception as e:
-        logger.error("save_archive_fail err=%s", e)
-
-def _close_pin(conn, task_id: str):
-    if _has_table(conn, "pin"):
-        conn.execute(
-            "UPDATE pin SET state='CLOSED', updated_at=datetime('now') WHERE task_id=? AND state='ACTIVE'",
-            (task_id,)
-        )
-
-def _finalize_done(conn, task_id: str):
-    row = conn.execute(
-        "SELECT id, chat_id, COALESCE(topic_id,0) AS topic_id, COALESCE(raw_input,''), COALESCE(result,'') FROM tasks WHERE id=? LIMIT 1",
-        (task_id,)
-    ).fetchone()
-    if not row:
-        return
-    logger.info("finalize_done task=%s chat=%s topic=%s result_len=%s", task_id, _s(row[1]), row[2], len(_s(row[4])))
-    _update_task(conn, task_id, state="DONE", error_message="")
-    _close_pin(conn, task_id)
-    raw_in = _clean(_s(row[3]), 500)
-    result = _clean(_s(row[4]), 50000)
-    chat_id = _s(row[1])
-    topic_id = int(row[2] or 0)
-    if result:
-        _save_memory(chat_id, topic_id, raw_in, result)
-        _save_archive(chat_id, topic_id, raw_in, result)
-    logger.info("finalize_done_complete task=%s chat=%s topic=%s", task_id, chat_id, topic_id)
 
 def _active_unfinished_context(conn, chat_id: str, exclude_task_id: str, topic_id: int = 0) -> str:
     cols = _cols(conn, "tasks")
@@ -531,17 +460,16 @@ def _active_unfinished_context(conn, chat_id: str, exclude_task_id: str, topic_i
         parts.append("state: " + _clean(_s(row["state"]), 100))
     return "\n".join(parts)
 
-def _search_fact_context(conn, chat_id: str, topic_id: int = 0) -> str:
+def _search_fact_context(conn, chat_id: str) -> str:
     rows = conn.execute("""
         SELECT raw_input, result
         FROM tasks
         WHERE chat_id=?
           AND state IN ('DONE','ARCHIVED','AWAITING_CONFIRMATION')
           AND lower(COALESCE(raw_input,'')) GLOB '*най*'
-          AND topic_id=?
         ORDER BY updated_at DESC
         LIMIT 5
-    """, (str(chat_id), int(topic_id))).fetchall()
+    """, (str(chat_id),)).fetchall()
     facts = []
     for row in rows:
         q = _clean(_s(row["raw_input"]), 300)
@@ -602,12 +530,10 @@ async def _handle_new(conn, task):
     raw_input = _clean(_task_field(task, "raw_input"))
     input_type = _task_field(task, "input_type", "text").lower()
     reply_to = task["reply_to_message_id"] if hasattr(task, "keys") and "reply_to_message_id" in task.keys() else None
-    topic_id = int(_task_field(task, "topic_id", 0) or 0)
 
     if input_type == "voice":
         _update_task(conn, task_id, state="IN_PROGRESS")
         _history(conn, task_id, "state:IN_PROGRESS")
-        conn.commit()
         return
 
     pending_confirm = conn.execute("""
@@ -615,31 +541,28 @@ async def _handle_new(conn, task):
         FROM tasks
         WHERE chat_id=?
           AND id<>?
-          AND topic_id=?
           AND state='AWAITING_CONFIRMATION'
         ORDER BY updated_at DESC
         LIMIT 1
-    """, (chat_id, task_id, topic_id)).fetchone()
+    """, (chat_id, task_id)).fetchone()
 
     pending_clarify = conn.execute("""
         SELECT *
         FROM tasks
         WHERE chat_id=?
           AND id<>?
-          AND topic_id=?
           AND state='WAITING_CLARIFICATION'
         ORDER BY updated_at DESC
         LIMIT 1
-    """, (chat_id, task_id, topic_id)).fetchone()
+    """, (chat_id, task_id)).fetchone()
 
     if pending_confirm:
         pending_id = _s(pending_confirm["id"])
         if _is_finish_intent(raw_input) or _is_confirm_intent(raw_input):
-            _finalize_done(conn, pending_id)
+            _update_task(conn, pending_id, state="DONE")
             _history(conn, pending_id, "state:DONE")
             _update_task(conn, task_id, state="DONE", result="TASK_CLOSED")
             _history(conn, task_id, "control:close")
-            conn.commit()
             _send_once(conn, task_id, chat_id, "Задача закрыта", reply_to, "close")
             return
         if _is_revision_intent(raw_input) and not _is_finish_intent(raw_input):
@@ -648,7 +571,6 @@ async def _handle_new(conn, task):
             _history(conn, pending_id, "state:IN_PROGRESS")
             _update_task(conn, task_id, state="DONE", result="REVISION_ACCEPTED")
             _history(conn, task_id, "control:revision")
-            conn.commit()
             _send_once(conn, task_id, chat_id, "Уточнение принято. Выполняю", reply_to, "revision")
             return
 
@@ -659,7 +581,6 @@ async def _handle_new(conn, task):
             _history(conn, pending_id, "state:IN_PROGRESS")
             _update_task(conn, task_id, state="DONE", result="CONFIRM_ACCEPTED")
             _history(conn, task_id, "control:confirm")
-            conn.commit()
             _send_once(conn, task_id, chat_id, "Подтверждение принято. Выполняю", reply_to, "confirm")
             return
         merged = _clean(_s(pending_clarify["raw_input"]) + "\n\nУточнение пользователя:\n" + raw_input)
@@ -667,13 +588,11 @@ async def _handle_new(conn, task):
         _history(conn, pending_id, "state:IN_PROGRESS")
         _update_task(conn, task_id, state="DONE", result="CLARIFICATION_ACCEPTED")
         _history(conn, task_id, "control:clarification")
-        conn.commit()
         _send_once(conn, task_id, chat_id, "Уточнение принято. Выполняю", reply_to, "clarification")
         return
 
     _update_task(conn, task_id, state="IN_PROGRESS")
     _history(conn, task_id, "state:IN_PROGRESS")
-    conn.commit()
 
 async def _handle_in_progress(conn, task):
     task_id = _task_field(task, "id")
@@ -701,7 +620,7 @@ async def _handle_in_progress(conn, task):
     active_task_context = _active_unfinished_context(conn, chat_id, task_id, topic_id)
     short_memory, long_memory = _load_memory_context(chat_id, topic_id)
     pin_context = get_pin_context(chat_id, normalized_input, topic_id)
-    search_context = _search_fact_context(conn, chat_id, topic_id)
+    search_context = _search_fact_context(conn, chat_id)
 
     archive_context = _load_archive_context(str(chat_id), normalized_input)
 
@@ -760,13 +679,11 @@ async def _handle_in_progress(conn, task):
     logger.info("PICKED %s state=IN_PROGRESS text=%s", task_id, normalized_input[:200])
 
     try:
-        ai_result = await asyncio.wait_for(process_ai_task(payload), timeout=300)
+        ai_result = await asyncio.wait_for(process_ai_task(payload), timeout=180)
     except Exception as e:
         logger.error("ROUTER FAILED task=%s err=%s", task_id, e, exc_info=True)
         _update_task(conn, task_id, state="FAILED", error_message=_clean(str(e), 500))
-        _close_pin(conn, task_id)
         _history(conn, task_id, "state:FAILED")
-        conn.commit()
         _send_once(conn, task_id, chat_id, "Задача не выполнена. Уточни или повтори запрос", reply_to, "router_failed_notify")
         return
 
@@ -776,25 +693,23 @@ async def _handle_in_progress(conn, task):
     if not _is_valid_result(ai_result, normalized_input):
         logger.warning("INVALID_RESULT task=%s result=%s", task_id, ai_result[:200])
         _update_task(conn, task_id, state="FAILED", error_message="INVALID_RESULT_GATE")
-        _close_pin(conn, task_id)
         _history(conn, task_id, "state:FAILED")
-        conn.commit()
         _send_once(conn, task_id, chat_id, "Не понял запрос. Уточни что нужно сделать.", reply_to, "invalid_result_notify")
         return
 
     _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=ai_result, error_message="")
     _history(conn, task_id, f"result:{_clean(ai_result, 400)}")
     save_pin(chat_id, task_id, ai_result, topic_id)
+    _save_memory(chat_id, topic_id, normalized_input, ai_result)
 
-    if input_type == "voice":
-        _send_once(conn, task_id, chat_id, f"🎤 {normalized_input}", reply_to, "transcript")
-    confirmation_text = f"{ai_result}\n\n{_await_message()}"
-    _res = _send_once_ex(conn, task_id, chat_id, confirmation_text, reply_to, "result")
+    if normalized_input.startswith("[VOICE] "):
+        clean_transcript = normalized_input[8:]
+        _send_once(conn, task_id, chat_id, f"🎤 {clean_transcript}", reply_to, "transcript")
+    _res = _send_once_ex(conn, task_id, chat_id, ai_result, reply_to, "result")
     if _res.get("ok") and _res.get("bot_message_id"):
         cols = _cols(conn, "tasks")
         if "bot_message_id" in cols:
             conn.execute("UPDATE tasks SET bot_message_id=? WHERE id=?", (_res["bot_message_id"], task_id))
-    conn.commit()
 
 
 def _is_semantically_closed(conn, task_id: str) -> bool:
@@ -841,7 +756,7 @@ def _pick_next_task(conn):
     row = conn.execute("""
         SELECT *
         FROM tasks
-        WHERE state IN ('NEW', 'IN_PROGRESS', 'WAITING_CLARIFICATION')
+        WHERE state IN ('NEW', 'IN_PROGRESS', 'WAITING_CLARIFICATION', 'AWAITING_CONFIRMATION')
         ORDER BY CASE state WHEN 'IN_PROGRESS' THEN 0 ELSE 1 END, created_at ASC
         LIMIT 1
     """).fetchone()
@@ -853,53 +768,31 @@ def _recover_stale_tasks(conn):
         SELECT id, chat_id, reply_to_message_id
         FROM tasks
         WHERE state IN ('IN_PROGRESS', 'WAITING_CLARIFICATION', 'AWAITING_CONFIRMATION')
-          AND (strftime('%s','now') - strftime('%s', COALESCE(updated_at, created_at))) > 600
+          AND (strftime('%s','now') - strftime('%s', COALESCE(updated_at, created_at))) > 300
     """).fetchall()
     for row in rows:
         task_id = row[0]
         chat_id = str(row[1])
         reply_to = row[2]
         if _is_semantically_closed(conn, task_id):
-            _finalize_done(conn, task_id)
+            conn.execute(
+                "UPDATE tasks SET state='DONE', updated_at=datetime('now') WHERE id=? AND state NOT IN ('DONE','CANCELLED')" ,
+                (task_id,)
+            )
+            conn.execute(
+                "UPDATE pin SET state='CLOSED', updated_at=datetime('now') WHERE task_id=? AND state='ACTIVE'",
+                (task_id,)
+            )
             _history(conn, task_id, "state:DONE:SEMANTIC_CLOSE")
-            conn.commit()
             continue
         conn.execute(
             "UPDATE tasks SET state='FAILED', error_message='STALE_TIMEOUT', updated_at=datetime('now') WHERE id=?",
             (task_id,)
         )
-        _close_pin(conn, task_id)
         _history(conn, task_id, "state:FAILED:STALE_TIMEOUT")
-        conn.commit()
         _send_once(conn, task_id, chat_id, "Задача не завершена. Уточни запрос.", reply_to, "stale_timeout")
     if rows:
         logger.info("recovered %s stale tasks", len(rows))
-
-def _remind_awaiting_confirmation(conn):
-    rows = conn.execute("""
-        SELECT id, chat_id, reply_to_message_id, COALESCE(result,'') AS result
-        FROM tasks
-        WHERE state='AWAITING_CONFIRMATION'
-          AND (strftime('%s','now') - strftime('%s', COALESCE(updated_at, created_at))) >= 180
-          AND COALESCE(result,'') <> ''
-          AND COALESCE(result,'') NOT IN ('TASK_CLOSED', 'REVISION_ACCEPTED', 'CONFIRM_ACCEPTED', 'CLARIFICATION_ACCEPTED')
-          AND lower(COALESCE(result,'')) NOT LIKE '%чат не содержит активной задачи%'
-          AND lower(COALESCE(result,'')) NOT LIKE '%не понял запрос%'
-          AND lower(COALESCE(result,'')) NOT LIKE '%уточни что нужно сделать%'
-    """).fetchall()
-    for row in rows:
-        task_id = _s(row["id"])
-        recent = conn.execute(
-            "SELECT 1 FROM task_history WHERE task_id=? AND action='reminder:awaiting' AND (strftime('%s','now') - strftime('%s', created_at)) < 180 LIMIT 1",
-            (task_id,)
-        ).fetchone()
-        if recent:
-            continue
-        reminder_text = _clean(f"{_s(row['result'])}\n\n{_await_message()}", 4000)
-        ok = send_reply(chat_id=_s(row["chat_id"]), text=reminder_text, reply_to_message_id=row["reply_to_message_id"])
-        if ok:
-            _history(conn, task_id, "reminder:awaiting")
-            conn.commit()
 
 async def main():
     logger.info("WORKER STARTED pid=%s", os.getpid())
@@ -908,7 +801,6 @@ async def main():
         _recover_stale_tasks(conn)
         _cleanup_garbage(conn)
         _archive_done(conn)
-        conn.commit()
     finally:
         conn.close()
 
@@ -919,10 +811,6 @@ async def main():
             _loop_counter += 1
             if _loop_counter % 10 == 0:
                 _recover_stale_tasks(conn)
-                _remind_awaiting_confirmation(conn)
-            if _loop_counter % 200 == 0:
-                _archive_done(conn)
-                conn.commit()
             task = _pick_next_task(conn)
             if not task:
                 time.sleep(POLL_SEC)
@@ -938,3 +826,58 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+import sqlite3
+import json
+
+def _load_archive_context(chat_id, topic_id):
+    import sqlite3
+    archive_context = ''
+    try:
+        conn = sqlite3.connect("/root/.areal-neva-core/data/memory.db")
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT value FROM memory 
+            WHERE chat_id = ? AND key LIKE 'archive_legacy_%'
+            ORDER BY timestamp DESC LIMIT 10
+        """, (chat_id,))
+        rows = cursor.fetchall()
+        for row in rows:
+            archive_context += row["value"] + "\n"
+        conn.close()
+    except Exception as e:
+        archive_context = f"Error loading archive context: {e}"
+    return archive_context
+
+def _load_memory_context(chat_id, topic_id):
+    import sqlite3
+    memory_context = ''
+    try:
+        conn = sqlite3.connect("/root/.areal-neva-core/data/memory.db")
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT value FROM memory 
+            WHERE chat_id = ? AND key LIKE ?
+            ORDER BY timestamp DESC LIMIT 5
+        """, (chat_id, f"topic_{topic_id}_%"))
+        rows = cursor.fetchall()
+        for row in rows:
+            memory_context += row["value"] + "\n"
+        conn.close()
+    except Exception as e:
+        memory_context = f"Error loading memory context: {e}"
+    return memory_context
+
+def process_task(task):
+    topic_id = task.get('topic_id', 0)
+    memory_context = _load_memory_context(task['chat_id'], topic_id)
+    if not memory_context:
+        archive_context = _load_archive_context(task['chat_id'], topic_id)
+        if archive_context:
+            task['archive_context'] = archive_context
+        else:
+            task['archive_context'] = 'No relevant context found in archive'
+    else:
+        task['memory_context'] = memory_context

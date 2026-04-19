@@ -200,6 +200,9 @@ def _s(v: Any) -> str:
     except Exception:
         return str(v).strip()
 
+def _norm(s: str) -> str:
+    return _clean(s).strip().lower()
+
 def _clean(text: str, limit: int = 12000) -> str:
     text = (text or "").replace("\r", "\n")
     text = re.sub(r"[ \t]+", " ", text)

@@ -755,10 +755,6 @@ async def universal_handler(message: types.Message):
             if any(voice_lower.strip() == x for x in _VOICE_CONTROL):
                 if await _handle_control_text(message, tg_id, voice_text, voice_lower, voice_reply_to, _voice_topic_id):
                     return
-            try:
-                await message.answer(f"🎤 {voice_text}")
-            except Exception as _e:
-                logger.warning("transcript_send_fail err=%s", _e)
             await create_task(message, "text", "[VOICE] " + voice_text, "NEW")
             return
         
