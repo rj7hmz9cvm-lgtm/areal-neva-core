@@ -2,7 +2,10 @@ import asyncio, hashlib, json, logging, os, re, uuid, fcntl, tempfile, time
 from datetime import datetime, timezone, timedelta
 import aiofiles, aiohttp, aiosqlite
 from aiogram import Bot, Dispatcher, types
+from aiogram.types import BufferedInputFile, FSInputFile
 from google_io import upload_to_drive
+from core.drive_folder_resolver import get_or_create_topic_folder
+from core.topic_drive_oauth import upload_file_to_topic
 
 BOT_TOKEN = (os.getenv("TELEGRAM_BOT_TOKEN") or "").strip()
 DB = "/root/.areal-neva-core/data/core.db"
@@ -31,9 +34,9 @@ SEARCH_TRIGGERS = ["цена", "наличие", "где купить", "пло�
 SHORT_CONFIRM = ["да", "нет", "ок", "подтверждаю", "не так", "ага", "верно"]
 NEGATIVE_CONFIRM = ["нет", "не так"]
 FINISH_PHRASES = [
-    "спасибо поиск завершен", "поиск завершен", "завершено", "завершен",
-    "готово", "всё", "все", "не надо", "можно завершать",
-    "задача закрыта", "закрывай", "хватит", "достаточно", "принято", "выполнено"
+    "спасибо поиск завершен", "поиск завершен",
+    "не надо", "можно завершать",
+    "задача закрыта", "закрывай", "хватит"
 ]
 CANCEL_PHRASES = [
     "все запросы отменены", "отменяю все запросы", "сброс задач",
@@ -290,6 +293,22 @@ async def create_task(message: types.Message, input_type: str, raw_input: str, s
     logger.info("Task %s created state=%s topic_id=%s", task_id, state, topic_id)
     return task_id
 
+async def continue_parent_task(parent_id: str, user_text: str):
+    now = now_iso()
+    merged_sql = "COALESCE(raw_input,'') || ?"
+    suffix = "\n\nПродолжение пользователя:\n" + user_text
+    async with aiosqlite.connect(DB) as db:
+        await db.execute(
+            f"UPDATE tasks SET raw_input={merged_sql}, state='IN_PROGRESS', updated_at=? WHERE id=?",
+            (suffix, now, parent_id)
+        )
+        await db.execute(
+            "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)",
+            (parent_id, "continuation:IN_PROGRESS", now)
+        )
+        await db.commit()
+    logger.info("Task %s continued -> IN_PROGRESS", parent_id)
+
 async def get_active_task(chat_id: int) -> dict:
     async with aiosqlite.connect(DB) as db:
         cur = await db.execute(
@@ -340,7 +359,7 @@ async def reset_all_open_tasks(chat_id: int):
 
 def _has_any_phrase(lower_text: str, phrases: list[str]) -> bool:
     t = (lower_text or "").strip()
-    return any(p in t for p in phrases)
+    return t in phrases
 
 async def close_latest_open_task(chat_id: int, action: str = "finish:DONE") -> bool:
     async with aiosqlite.connect(DB) as db:
@@ -467,7 +486,7 @@ async def _handle_control_text(message, tg_id: int, text: str, lower: str, reply
     parent_id, parent_state = parent[0], parent[1]
 
     if parent_state == "AWAITING_CONFIRMATION":
-        if any(x in lower for x in SHORT_CONFIRM) and not any(x in lower for x in NEGATIVE_CONFIRM):
+        if lower.strip() in SHORT_CONFIRM and lower.strip() not in NEGATIVE_CONFIRM:
             now = now_iso()
             async with aiosqlite.connect(DB) as db:
                 await db.execute("UPDATE tasks SET state='DONE', updated_at=? WHERE id=?", (now, parent_id))
@@ -476,7 +495,7 @@ async def _handle_control_text(message, tg_id: int, text: str, lower: str, reply
                 await db.commit()
             await message.answer("Задача завершена")
             return True
-        if any(x in lower for x in NEGATIVE_CONFIRM):
+        if lower.strip() in NEGATIVE_CONFIRM:
             now = now_iso()
             async with aiosqlite.connect(DB) as db:
                 await db.execute("UPDATE tasks SET state='WAITING_CLARIFICATION', updated_at=? WHERE id=?", (now, parent_id))
@@ -582,10 +601,8 @@ async def universal_handler(message: types.Message):
                 return
             elif lower == "язон файл":
                 dump = dump_yzon_state(tg_id)
-                import io
-                bio = io.BytesIO(dump.encode("utf-8"))
-                bio.name = "yzon_state.json"
-                await message.answer_document(bio)
+                doc = BufferedInputFile(dump.encode("utf-8"), filename="yzon_state.json")
+                await message.answer_document(doc)
                 return
             elif lower == "дамп файл":
                 import subprocess
@@ -593,21 +610,20 @@ async def universal_handler(message: types.Message):
                 dump_files = sorted([f for f in os.listdir("/root/.areal-neva-core/data/memory/UNSORTED") if f.startswith("orchestra_dump_")], reverse=True)
                 if dump_files:
                     dump_path = f"/root/.areal-neva-core/data/memory/UNSORTED/{dump_files[0]}"
-                    await message.answer_document(open(dump_path, "rb"), filename=dump_files[0])
+                    await message.answer_document(FSInputFile(dump_path, filename=dump_files[0]))
                 else:
                     await message.answer("Дамп не создан")
                 return
             elif lower == "память файл":
-                import sqlite3 as _sq, io, json as _json
+                import sqlite3 as _sq, json as _json
                 try:
                     _mc = _sq.connect("/root/.areal-neva-core/data/memory.db")
                     _mc.row_factory = _sq.Row
                     _rows = _mc.execute("SELECT chat_id, key, value, timestamp FROM memory WHERE chat_id=? ORDER BY timestamp DESC LIMIT 200", (str(tg_id),)).fetchall()
                     _mc.close()
                     _data = [dict(r) for r in _rows]
-                    bio = io.BytesIO(_json.dumps(_data, ensure_ascii=False, indent=2).encode("utf-8"))
-                    bio.name = "memory_dump.json"
-                    await message.answer_document(bio)
+                    doc = BufferedInputFile(_json.dumps(_data, ensure_ascii=False, indent=2).encode("utf-8"), filename="memory_dump.json")
+                    await message.answer_document(doc)
                 except Exception as _e:
                     await message.answer(f"Ошибка: {_e}")
                 return
@@ -619,9 +635,8 @@ async def universal_handler(message: types.Message):
                     _rows = _mc.execute("SELECT key, value, timestamp FROM memory WHERE chat_id=? AND key LIKE 'archive_legacy_%' ORDER BY timestamp DESC LIMIT 100", (str(tg_id),)).fetchall()
                     _mc.close()
                     _data = [dict(r) for r in _rows]
-                    bio = io.BytesIO(_json.dumps(_data, ensure_ascii=False, indent=2).encode("utf-8"))
-                    bio.name = "archive_dump.json"
-                    await message.answer_document(bio)
+                    doc = BufferedInputFile(_json.dumps(_data, ensure_ascii=False, indent=2).encode("utf-8"), filename="archive_dump.json")
+                    await message.answer_document(doc)
                 except Exception as _e:
                     await message.answer(f"Ошибка: {_e}")
                 return
@@ -635,10 +650,8 @@ async def universal_handler(message: types.Message):
                     "Services: telegram-ingress, areal-task-worker, areal-memory-api\n"
                 )
                 if lower == "система файл":
-                    import io
-                    bio = io.BytesIO(sys_info.encode("utf-8"))
-                    bio.name = "system_info.txt"
-                    await message.answer_document(bio)
+                    doc = BufferedInputFile(sys_info.encode("utf-8"), filename="system_info.txt")
+                    await message.answer_document(doc)
                 else:
                     await message.answer(sys_info)
                 return
@@ -654,12 +667,11 @@ async def universal_handler(message: types.Message):
                     for fp in files_to_zip:
                         if os.path.exists(fp):
                             zf.write(fp, os.path.basename(fp))
-                buf.seek(0)
-                buf.name = "core_code.zip"
-                await message.answer_document(buf, filename="core_code.zip")
+                doc = BufferedInputFile(buf.getvalue(), filename="core_code.zip")
+                await message.answer_document(doc)
                 return
             elif lower == "файл":
-                import sqlite3 as _sq, io
+                import sqlite3 as _sq
                 try:
                     _cc = _sq.connect("/root/.areal-neva-core/data/core.db")
                     _rows = _cc.execute("SELECT state, COUNT(*) as cnt FROM tasks GROUP BY state").fetchall()
@@ -667,9 +679,8 @@ async def universal_handler(message: types.Message):
                     lines = ["AREAL-NEVA ORCHESTRA — краткий статус", ""]
                     for r in _rows:
                         lines.append(f"{r[0]}: {r[1]}")
-                    bio = io.BytesIO("\n".join(lines).encode("utf-8"))
-                    bio.name = "status.md"
-                    await message.answer_document(bio)
+                    doc = BufferedInputFile("\n".join(lines).encode("utf-8"), filename="status.md")
+                    await message.answer_document(doc)
                 except Exception as _e:
                     await message.answer(f"Ошибка: {_e}")
                 return
@@ -686,13 +697,13 @@ async def universal_handler(message: types.Message):
             await message.answer("Задача отменена")
             return
         
-        # 3. EZONE FILE INGEST
+        # 3. FILE TASKS + EZONE FILE INGEST
         if message.document and message.document.file_name:
-            if message.document.file_name.lower().endswith(EZONE_EXTS):
-                tg_file = await bot.get_file(message.document.file_id)
-                local_path = f"/tmp/{uuid.uuid4()}_{message.document.file_name}"
-                await download_telegram_file(tg_file.file_path, local_path)
-                try:
+            tg_file = await bot.get_file(message.document.file_id)
+            local_path = f"/tmp/{uuid.uuid4()}_{message.document.file_name}"
+            await download_telegram_file(tg_file.file_path, local_path)
+            try:
+                if message.document.file_name.lower().endswith(EZONE_EXTS):
                     drive_result = await upload_to_drive(local_path, message.document.file_name)
                     with open(local_path, "r", errors="ignore") as f:
                         content = f.read()
@@ -701,9 +712,57 @@ async def universal_handler(message: types.Message):
                         _RECENT_INGEST[tg_id] = now_ts
                         await message.answer(f"Принял, память загружена ({chat_key})" if ok else "Уже загружено")
                         return
-                finally:
-                    try: os.remove(local_path)
-                    except: pass
+                else:
+                    topic_id = getattr(message, "message_thread_id", 0) or 0
+                    drive_result = await upload_file_to_topic(local_path, message.document.file_name, tg_id, topic_id, getattr(message.document, "mime_type", "") or None)
+                    if isinstance(drive_result, dict) and drive_result.get("ok") and drive_result.get("drive_file_id"):
+                        payload = {
+                            "file_id": drive_result.get("drive_file_id", ""),
+                            "file_name": message.document.file_name,
+                            "mime_type": getattr(message.document, "mime_type", "") or "",
+                            "caption": (message.caption or message.text or "").strip(),
+                            "source": "telegram",
+                            "telegram_message_id": message.message_id,
+                            "telegram_chat_id": message.chat.id,
+                        }
+                        await create_task(message, "drive_file", json.dumps(payload, ensure_ascii=False), "NEW")
+                        await message.answer("Файл принят в обработку")
+                        return
+                    else:
+                        await message.answer("Ошибка загрузки файла в Drive")
+                        return
+            finally:
+                try: os.remove(local_path)
+                except: pass
+
+        # 3A. PHOTO TASK
+        if message.photo:
+            photo = message.photo[-1]
+            tg_file = await bot.get_file(photo.file_id)
+            file_name = f"photo_{message.chat.id}_{message.message_id}.jpg"
+            local_path = f"/tmp/{uuid.uuid4()}_{file_name}"
+            await download_telegram_file(tg_file.file_path, local_path)
+            try:
+                drive_result = await upload_file_to_topic(local_path, file_name, tg_id, topic_id, "image/jpeg")
+                if isinstance(drive_result, dict) and drive_result.get("ok") and drive_result.get("drive_file_id"):
+                    payload = {
+                        "file_id": drive_result.get("drive_file_id", ""),
+                        "file_name": file_name,
+                        "mime_type": "image/jpeg",
+                        "caption": (message.caption or message.text or "").strip(),
+                        "source": "telegram",
+                        "telegram_message_id": message.message_id,
+                        "telegram_chat_id": message.chat.id,
+                    }
+                    await create_task(message, "drive_file", json.dumps(payload, ensure_ascii=False), "NEW")
+                    await message.answer("Фото принято в обработку")
+                    return
+                else:
+                    await message.answer("Ошибка загрузки фото в Drive")
+                    return
+            finally:
+                try: os.remove(local_path)
+                except: pass
         
         # 4. EZONE TEXT INGEST
         if message.text and is_ezone_payload(text):
@@ -730,7 +789,7 @@ async def universal_handler(message: types.Message):
 
         if active_confirm and message.text:
             parent_id, parent_state = active_confirm
-            if any(x in lower for x in SHORT_CONFIRM) and not any(x in lower for x in NEGATIVE_CONFIRM):
+            if lower.strip() in SHORT_CONFIRM and lower.strip() not in NEGATIVE_CONFIRM:
                 async with aiosqlite.connect(DB) as db:
                     await db.execute("UPDATE tasks SET state = 'DONE', updated_at = ? WHERE id = ?", (now_iso(), parent_id))
                     await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, "confirmed:DONE", now_iso()))
@@ -738,7 +797,7 @@ async def universal_handler(message: types.Message):
                     await db.commit()
                 await message.answer("Задача завершена")
                 return
-            elif any(x in lower for x in NEGATIVE_CONFIRM):
+            elif lower.strip() in NEGATIVE_CONFIRM:
                 async with aiosqlite.connect(DB) as db:
                     await db.execute("UPDATE tasks SET state = 'WAITING_CLARIFICATION', updated_at = ? WHERE id = ?", (now_iso(), parent_id))
                     await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, "rejected:WAITING_CLARIFICATION", now_iso()))
@@ -762,7 +821,7 @@ async def universal_handler(message: types.Message):
                         await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, f"clarified:{text}", now_iso()))
                         await db.commit()
                     await message.answer("Принято, продолжаю")
-                elif any(x in lower for x in SHORT_CONFIRM) and not any(x in lower for x in NEGATIVE_CONFIRM):
+                elif lower.strip() in SHORT_CONFIRM and lower.strip() not in NEGATIVE_CONFIRM:
                     async with aiosqlite.connect(DB) as db:
                         await db.execute("UPDATE tasks SET state = 'IN_PROGRESS', updated_at = ? WHERE id = ?", (now_iso(), parent_id))
                         await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, f"confirmed:{text}", now_iso()))
@@ -772,65 +831,8 @@ async def universal_handler(message: types.Message):
                     await message.answer("Уточните запрос")
                 return
 
-        # 6.5 EARLY CONTROL LAYER
-        if message.text:
-            if _has_any_phrase(lower, CANCEL_PHRASES):
-                closed = await cancel_all_open_tasks(tg_id, topic_id)
-                await message.answer("Все запросы отменены" if closed else "Нет активных задач")
-                return
-            if _has_any_phrase(lower, FINISH_PHRASES):
-                closed = await close_latest_open_task(tg_id, "finish:DONE")
-                await message.answer("Задача закрыта" if closed else "Нет активных задач")
-                return
-
         # 7. SEARCH TASK
         if any(t in lower for t in SEARCH_TRIGGERS):
-            # CONFIRMATION WITHOUT REPLY (FINAL)
-            async with aiosqlite.connect(DB) as db:
-                cur = await db.execute(
-                    "SELECT id FROM tasks WHERE chat_id = ? AND state = 'AWAITING_CONFIRMATION' ORDER BY updated_at DESC LIMIT 1",
-                    (tg_id,)
-                )
-                confirm_row = await cur.fetchone()
-            if confirm_row and message.text:
-                confirm_id = confirm_row[0]
-                if any(x in lower for x in ("да","ок","подтверждаю","верно","ага","+")):
-                    now = now_iso()
-                    async with aiosqlite.connect(DB) as db:
-                        await db.execute(
-                            "UPDATE tasks SET state=DONE, updated_at=? WHERE id=?",
-                            (now, confirm_id)
-                        )
-                        await db.execute(
-                            "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)",
-                            (confirm_id, "confirmed:DONE", now)
-                        )
-                        await db.execute(
-                            "UPDATE pin SET state=CLOSED, updated_at=? WHERE task_id=? AND state=ACTIVE",
-                            (now, confirm_id)
-                        )
-                        await db.commit()
-                    await message.answer("Задача завершена")
-                    return
-                elif any(x in lower for x in ("нет","не так","-")):
-                    now = now_iso()
-                    async with aiosqlite.connect(DB) as db:
-                        await db.execute(
-                            "UPDATE tasks SET state=WAITING_CLARIFICATION, updated_at=? WHERE id=?",
-                            (now, confirm_id)
-                        )
-                        await db.execute(
-                            "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)",
-                            (confirm_id, "rejected:WAITING_CLARIFICATION", now)
-                        )
-                        await db.execute(
-                            "UPDATE pin SET state=CLOSED, updated_at=? WHERE task_id=? AND state=ACTIVE",
-                            (now, confirm_id)
-                        )
-                        await db.commit()
-                    await message.answer("Уточните, что исправить")
-                    return
-
             await create_task(message, "search", text, "NEW")
             return
         

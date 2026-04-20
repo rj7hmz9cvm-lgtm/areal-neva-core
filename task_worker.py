@@ -1,126 +1,135 @@
-
-def _load_archive_context(chat_id: str, user_text: str) -> str:
-    import os, json, re, sqlite3
-
-    user_words = set(re.findall(r"\w+", user_text.lower()))
-    user_words = {w for w in user_words if len(w) > 3}
-    if not user_words:
-        return ""
-
-    results = []
-
-    # primary source: archived legacy memory from memory.db
-    try:
-        mem_db = "/root/.areal-neva-core/data/memory.db"
-        if os.path.exists(mem_db):
-            conn = sqlite3.connect(mem_db)
-            conn.row_factory = sqlite3.Row
-            rows = conn.execute(
-                """
-                SELECT value
-                FROM memory
-                WHERE chat_id=?
-                  AND key LIKE 'archive_legacy_%'
-                ORDER BY rowid DESC
-                LIMIT 300
-                """,
-                (str(chat_id),)
-            ).fetchall()
-            conn.close()
-
-            scored = []
-            for row in rows:
-                value = str(row["value"] or "").strip()
-                if not value:
-                    continue
-                low = value.lower()
-                if any(x in low for x in [
-                    "traceback", "/root/", ".log", ".json", "stt_failed",
-                    "source_platform", "source_model", "exported_at",
-                    "\"system\"", "\"architecture\"", "\"pipeline\"",
-                    "\"memory\"", "\"logic\"", "\"decisions\"",
-                    "topic_id подтверждён pragma", "drive_files(task_id"
-                ]):
-                    continue
-                words = set(re.findall(r"\w+", low))
-                overlap = len(user_words & words)
-                if overlap > 0:
-                    scored.append((overlap, value[:400]))
-
-            scored.sort(key=lambda x: (-x[0], x[1]))
-            for _, text in scored[:3]:
-                results.append(text)
-    except Exception:
-        pass
-
-    if results:
-        return "\n".join(results[:3])
-
-    # fallback source: timeline.jsonl
-    timeline = f"/root/.areal-neva-core/data/memory_files/CHATS/{chat_id}__telegram/timeline.jsonl"
-    if not os.path.exists(timeline):
-        return ""
-
-    try:
-        with open(timeline, "r", encoding="utf-8") as f:
-            lines = f.readlines()[-50:]
-    except Exception:
-        return ""
-
-    for line in reversed(lines):
-        try:
-            obj = json.loads(line)
-            text = json.dumps(obj, ensure_ascii=False).lower()
-        except Exception:
-            continue
-
-        if any(x in text for x in [
-            "traceback", "/root/", ".log", ".json", "stt_failed",
-            "source_platform", "source_model", "exported_at",
-            "\"system\"", "\"architecture\"", "\"pipeline\"",
-            "\"memory\"", "\"logic\"", "\"decisions\"",
-            "topic_id подтверждён pragma", "drive_files(task_id"
-        ]):
-            continue
-
-        words = set(re.findall(r"\w+", text))
-        if user_words & words:
-            results.append(text[:400])
-
-        if len(results) >= 3:
-            break
-
-    return "\n".join(results[:3])
-
-
-
 import os
+BASE = "/root/.areal-neva-core"
+
 import re
-import sys
 import time
 import json
 import sqlite3
-import logging
-import inspect
 import asyncio
 import hashlib
-from typing import Any, List, Optional, Tuple
+import logging
+import fcntl
+from typing import Any, Dict, List, Optional, Tuple
 
 from dotenv import load_dotenv
+from core.ai_router import process_ai_task
+from core.reply_sender import send_reply, send_reply_ex
+from core.pin_manager import get_pin_context, save_pin
+from core.topic_drive_oauth import upload_file_to_topic
+from core.artifact_pipeline import analyze_downloaded_file
 
-BASE = "/root/.areal-neva-core"
+load_dotenv(f"{BASE}/.env", override=True)
+
 CORE_DB = f"{BASE}/data/core.db"
 MEM_DB = f"{BASE}/data/memory.db"
 LOG_PATH = f"{BASE}/logs/task_worker.log"
+LOCK_PATH = f"{BASE}/runtime/task_worker.lock"
 
-load_dotenv(f"{BASE}/.env", override=False)
-sys.path.insert(0, BASE)
+POLL_SEC = 1.5
+MIN_RESULT_LEN = 8
+AI_TIMEOUT = 300
+STALE_TIMEOUT = 600
+REMINDER_SEC = 180
 
-from core.ai_router import process_ai_task
-from core.reply_sender import send_reply
-from core.pin_manager import get_pin_context, save_pin
+BAD_RESULT_RE = [
+    r"\bой\b",
+    r"сорян",
+    r"дружище",
+    r"не переживай",
+    r"дай мне немного времени",
+    r"я могу помочь",
+    r"извини",
+    r"извините",
+    r"😅",
+    r"💪",
+    r"😎",
+    r"delete from",
+    r"\bsql\b",
+    r"task_worker\.py",
+    r"\bищу\b",
+    r"\bнайду\b",
+    r"непонятно",
+    r"недостаточно данных",
+    r"ссылки предоставлю",
+    r"готов искать",
+    r"могу найти",
+    r"укажите\s+что\s+именно\s+нужно\s+найти",
+]
+
+MEMORY_BAD_MARKERS = [
+    "traceback",
+    "forbidden default model",
+    "/root/",
+    ".json",
+    ".log",
+    "не могу выполнить запрос",
+    "delete from",
+    "task_worker.py",
+    "telegram_daemon.py",
+    "выполните sql",
+]
+
+CONFIRM_INTENTS = {
+    "да",
+    "ок",
+    "ok",
+    "окей",
+    "хорошо",
+    "подтверждаю",
+    "принято",
+    "согласен",
+    "верно",
+    "всё верно",
+    "все верно",
+}
+
+REVISION_INTENTS = {
+    "нет",
+    "не так",
+    "переделай",
+    "исправь",
+    "доработай",
+    "уточню",
+    "уточнение",
+    "правки",
+    "уточни",
+}
+
+MEMORY_NOISE_MARKERS = [
+    "чат не содержит активной задачи",
+    "привет. чат не содержит активной задачи",
+    "чат создан для",
+    "тест диагностика",
+]
+
+def _is_memory_noise(text: str) -> bool:
+    t = _clean(_s(text), 1000).lower()
+    if not t:
+        return False
+    return any(x in t for x in MEMORY_NOISE_MARKERS)
+
+SEARCH_PATTERNS = [
+    r"\bнайди\b",
+    r"\bнайти\b",
+    r"\bпоиск\b",
+    r"\bпоищи\b",
+    r"\bsearch\b",
+    r"\bцена\b",
+    r"\bстоимость\b",
+    r"\bсколько\s+стоит\b",
+    r"\bavito\b",
+    r"\bozon\b",
+    r"\bwildberries\b",
+    r"\bauto\.ru\b",
+    r"\bdrom\b",
+    r"\bновости\b",
+    r"\bпогода\b",
+    r"\bкурс\b",
+    r"\bмаркетплейс\b",
+]
 
 os.makedirs(f"{BASE}/logs", exist_ok=True)
+os.makedirs(f"{BASE}/runtime", exist_ok=True)
 
 logger = logging.getLogger("task_worker")
 logger.setLevel(logging.INFO)
@@ -129,66 +138,14 @@ if not logger.handlers:
     fh.setFormatter(logging.Formatter("%(asctime)s %(levelname)s WORKER: %(message)s"))
     logger.addHandler(fh)
 
-POLL_SEC = 1.5
-MIN_RESULT_LEN = 8
-SHORT_OK_RESULTS = {
-    'ок', 'ok', 'понял', 'принял', 'да', 'нет', 'привет',
-    'здравствуйте', 'готово', 'верно', 'уверен'
-}
 
-CONFIRM_INTENTS = [
-    "да", "подтверждаю", "всё верно", "все верно", "ок", "окей", "хорошо", "принято"
-]
-FINISH_INTENTS = [
-    "уже есть", "не надо", "можно завершать", "задача закрыта", "закрывай", "нет, задачу можно завершать"
-]
-REVISION_INTENTS = [
-    "нет", "не так", "переделай", "исправь", "доработай", "уточню", "уточнение"
-]
-
-SEARCH_PATTERNS = [
-    r"\bнайди\b", r"\bнайти\b", r"\bпоиск\b", r"\bпоищи\b", r"\bsearch\b",
-    r"\bцена\b", r"\bстоимость\b", r"\bсколько стоит\b",
-    r"\bavito\b", r"\bozon\b", r"\bwildberries\b", r"\bauto\.ru\b", r"\bdrom\b",
-    r"\bновости\b", r"\bпогода\b", r"\bкурс\b", r"\bмаркетплейс\b"
-]
-
-BAD_RESULT_RE = [
-    r"\bой\b", r"сорян", r"дружище", r"не переживай",
-    r"дай мне немного времени", r"я могу помочь",
-    r"извини", r"извините", r"😅", r"💪", r"😎",
-    r"delete from", r"\bsql\b", r"task_worker\.py", r"telegram_daemon\.py",
-    r"остановите task_worker", r"выполните sql", r"повторяю инструкцию по отбою",
-    r"\bищу\b", r"\bнайду\b", r"непонятно",
-    r"недостаточно данных", r"ссылк[аи]\s+предоставлю",
-    r"готов искать", r"могу найти", r"укажите,?\s+что именно нужно найти"
-]
-
-MEMORY_BAD_MARKERS = [
-    "traceback",
-    "forbidden default model",
-    "голосовые временно недоступны",
-    "/root/",
-    ".json",
-    ".log",
-    "не могу выполнить запрос",
-    "не нашёл конкретного запроса",
-    "delete from",
-    "task_worker.py",
-    "telegram_daemon.py",
-    "выполните sql",
-    "укажите данные для сохранения",
-    "проверить статус системы",
-    "получить данные из памяти",
-    "повторяю инструкцию по отбою",
-]
-
-def db(path: str):
+def db(path: str) -> sqlite3.Connection:
     conn = sqlite3.connect(path, timeout=20, isolation_level=None)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA busy_timeout=15000")
     return conn
+
 
 def _s(v: Any) -> str:
     if v is None:
@@ -200,8 +157,6 @@ def _s(v: Any) -> str:
     except Exception:
         return str(v).strip()
 
-def _norm(s: str) -> str:
-    return _clean(s).strip().lower()
 
 def _clean(text: str, limit: int = 12000) -> str:
     text = (text or "").replace("\r", "\n")
@@ -209,70 +164,109 @@ def _clean(text: str, limit: int = 12000) -> str:
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()[:limit]
 
+
+def _task_field(task: Any, field: str, default: Any = "") -> Any:
+    try:
+        if hasattr(task, "keys") and field in task.keys():
+            return task[field]
+    except Exception:
+        pass
+    try:
+        return getattr(task, field)
+    except Exception:
+        return default
+
+
+def _has_table(conn: sqlite3.Connection, table: str) -> bool:
+    row = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+        (table,),
+    ).fetchone()
+    return row is not None
+
+
+def _cols(conn: sqlite3.Connection, table: str) -> List[str]:
+    try:
+        return [r[1] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()]
+    except Exception:
+        return []
+
+
+def _update_task(conn: sqlite3.Connection, task_id: str, **kwargs: Any) -> None:
+    cols = _cols(conn, "tasks")
+    parts: List[str] = []
+    vals: List[Any] = []
+
+    for key, value in kwargs.items():
+        if key in cols:
+            parts.append(f"{key}=?")
+            if key == "error_message":
+                vals.append(_clean(_s(value), 4000))
+            elif key == "result":
+                vals.append(_clean(_s(value), 50000))
+            elif key == "raw_input":
+                vals.append(_clean(_s(value), 12000))
+            else:
+                vals.append(value)
+
+    if "updated_at" in cols:
+        parts.append("updated_at=datetime('now')")
+
+    if not parts:
+        return
+
+    vals.append(task_id)
+    conn.execute(f"UPDATE tasks SET {', '.join(parts)} WHERE id=?", vals)
+
+
+def _history(conn: sqlite3.Connection, task_id: str, action: str) -> None:
+    if not _has_table(conn, "task_history"):
+        return
+    conn.execute(
+        "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, datetime('now'))",
+        (task_id, _clean(action, 1000)),
+    )
+
+
+def _already_replied(conn: sqlite3.Connection, task_id: str, kind: str) -> bool:
+    if not _has_table(conn, "task_history"):
+        return False
+    row = conn.execute(
+        "SELECT 1 FROM task_history WHERE task_id=? AND action=? LIMIT 1",
+        (task_id, f"reply_sent:{kind}"),
+    ).fetchone()
+    return row is not None
+
+
+def _send_once(conn: sqlite3.Connection, task_id: str, chat_id: str, text: str, reply_to: Optional[int], kind: str) -> bool:
+    if _already_replied(conn, task_id, kind):
+        return True
+    ok = send_reply(chat_id=chat_id, text=text, reply_to_message_id=reply_to)
+    if ok:
+        _history(conn, task_id, f"reply_sent:{kind}")
+    return bool(ok)
+
+
+def _send_once_ex(conn: sqlite3.Connection, task_id: str, chat_id: str, text: str, reply_to: Optional[int], kind: str) -> Dict[str, Any]:
+    if _already_replied(conn, task_id, kind):
+        return {"ok": True, "bot_message_id": None, "skipped": True}
+    res = send_reply_ex(chat_id=chat_id, text=text, reply_to_message_id=reply_to)
+    if not isinstance(res, dict):
+        res = {"ok": bool(res)}
+    if res.get("ok"):
+        _history(conn, task_id, f"reply_sent:{kind}")
+    return res
+
+
 def _hash(text: str) -> str:
     return hashlib.sha1(_clean(text).lower().encode("utf-8")).hexdigest()
 
-def _has_table(conn, table: str) -> bool:
-    row = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone()
-    return row is not None
 
-def _match_any(patterns: List[str], text: str) -> bool:
-    t = _clean(text).lower()
-    return any(re.search(p, t, re.I) for p in patterns)
-
-def _task_field(task, name: str, default: str = "") -> str:
-    try:
-        if hasattr(task, "keys") and name in task.keys():
-            return _s(task[name])
-    except Exception:
-        pass
-    return default
-
-def _is_confirm_intent(text: str) -> bool:
-    t = _norm(text)
-    if t in CONFIRM_INTENTS:
-        return True
-    prefix_ok = (
-        "довол", "дово", "да дов", "я дов",
-        "подтвер", "согла", "верно",
-        "завершен", "ок", "okay", "ok",
-    )
-    return any(t.startswith(x) for x in prefix_ok)
-
-def _is_finish_intent(text: str) -> bool:
-    t = _clean(text).lower()
-    return t in FINISH_INTENTS or "можно завершать" in t or "задача закрыта" in t
-
-def _is_revision_intent(text: str) -> bool:
-    t = _clean(text).lower()
-    return t in REVISION_INTENTS or "не так" in t or "переделай" in t or "исправ" in t
-
-def _is_search(text: str, input_type: str) -> bool:
-    if (input_type or "").lower() == "search":
-        return True
-    return _match_any(SEARCH_PATTERNS, text)
-
-def _looks_like_placeholder_search(result: str, raw_input: str) -> bool:
-    r = _clean(result).lower()
-    q = _clean(raw_input).lower()
-    if not _is_search(q, "text"):
+def _is_valid_result(text: str, raw_input: str) -> bool:
+    r = _clean(text)
+    if not r or len(r) < MIN_RESULT_LEN:
         return False
-    if "http://" in r or "https://" in r or "www." in r:
-        return False
-    bad_markers = [
-        "ищу", "найду", "ссылки предоставлю", "готов искать",
-        "могу найти", "укажите, что именно нужно найти"
-    ]
-    return any(m in r for m in bad_markers)
-
-def _is_valid_result(result: str, raw_input: str) -> bool:
-    r = _clean(result)
-    if not r:
-        return False
-    short_norm = re.sub(r'[^\wа-яё]+', '', r.lower(), flags=re.I)
-    if len(r) < MIN_RESULT_LEN and short_norm not in SHORT_OK_RESULTS:
-        return False
-    if _match_any(BAD_RESULT_RE, r):
+    if any(re.search(p, r, re.I) for p in BAD_RESULT_RE):
         return False
     if _hash(r) == _hash(raw_input):
         return False
@@ -280,716 +274,651 @@ def _is_valid_result(result: str, raw_input: str) -> bool:
         return False
     return True
 
-def _sanitize_raw_input(raw_input: str) -> str:
-    s = (raw_input or "").strip()
-    if s.startswith("/root/"):
-        return "голосовое сообщение"
-    if re.search(r"\.ogg$", s, re.I):
-        return "голосовое сообщение"
-    return s
-
-def _cols(conn, table: str):
-    return [r[1] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()]
-
-def _update_task(conn, task_id: str, *, state: Optional[str] = None, result: Optional[str] = None, error_message: Optional[str] = None, raw_input: Optional[str] = None):
-    cols = _cols(conn, "tasks")
-    parts = []
-    vals: List[Any] = []
-    if state is not None and "state" in cols:
-        parts.append("state=?")
-        vals.append(state)
-    if result is not None and "result" in cols:
-        parts.append("result=?")
-        vals.append(result)
-    if error_message is not None and "error_message" in cols:
-        parts.append("error_message=?")
-        vals.append(error_message[:4000])
-    if raw_input is not None and "raw_input" in cols:
-        parts.append("raw_input=?")
-        vals.append(raw_input)
-    if "updated_at" in cols:
-        parts.append("updated_at=datetime('now')")
-    vals.append(task_id)
-    conn.execute(f"UPDATE tasks SET {', '.join(parts)} WHERE id=?", vals)
-
-def _history(conn, task_id: str, action: str):
-    if _has_table(conn, "task_history"):
-        conn.execute(
-            "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, datetime('now'))",
-            (task_id, action[:1000])
-        )
-
-def _already_replied(conn, task_id: str, kind: str) -> bool:
-    if not _has_table(conn, "task_history"):
-        return False
-    row = conn.execute(
-        "SELECT 1 FROM task_history WHERE task_id=? AND action=? LIMIT 1",
-        (task_id, f"reply_sent:{kind}")
-    ).fetchone()
-    return row is not None
-
-def _send_once(conn, task_id: str, chat_id: str, text: str, reply_to: Optional[int], kind: str) -> bool:
-    if _already_replied(conn, task_id, kind):
-        return True
-    ok = send_reply(chat_id=chat_id, text=text, reply_to_message_id=reply_to)
-    if ok:
-        _history(conn, task_id, f"reply_sent:{kind}")
-    return ok
-
-def _send_once_ex(conn, task_id: str, chat_id: str, text: str, reply_to: Optional[int], kind: str) -> dict:
-    if _already_replied(conn, task_id, kind):
-        return {"ok": True, "bot_message_id": None}
-    from core.reply_sender import send_reply_ex
-    res = send_reply_ex(chat_id=chat_id, text=text, reply_to_message_id=reply_to)
-    if res.get("ok"):
-        _history(conn, task_id, f"reply_sent:{kind}")
-    return res
-
-def _confirm_message(raw_input: str) -> str:
-    safe = _sanitize_raw_input(raw_input)
-    return f"Понял задачу так: {_clean(safe, 700)}\n\nПодтверди или уточни"
-
-def _await_message() -> str:
-    return "Доволен результатом? Ответь: Да / Уточни / Правки"
-
-def _archive_done(conn):
-    conn.execute("""
-        UPDATE tasks
-        SET state='ARCHIVED',
-            updated_at=datetime('now')
-        WHERE state='DONE'
-          AND (strftime('%s','now') - strftime('%s', updated_at)) > 604800
-    """)
-
-def _cleanup_garbage(conn):
-    conn.execute("""
-        UPDATE tasks
-        SET state='FAILED',
-            error_message='JUNK_RESULT_CLEANUP',
-            updated_at=datetime('now')
-        WHERE state IN ('IN_PROGRESS', 'WAITING_CLARIFICATION')
-          AND (
-               lower(COALESCE(result,'')) LIKE '%ой, сорян%'
-            OR lower(COALESCE(result,'')) LIKE '%дружище%'
-            OR lower(COALESCE(result,'')) LIKE '%прости за задержку%'
-            OR lower(COALESCE(result,'')) LIKE '%сейчас всё обработаю%'
-            OR lower(COALESCE(result,'')) LIKE '%давай разберёмся%'
-            OR lower(COALESCE(result,'')) LIKE '%delete from%'
-            OR lower(COALESCE(result,'')) LIKE '%sql%'
-            OR lower(COALESCE(result,'')) LIKE '%task_worker.py%'
-            OR lower(COALESCE(result,'')) LIKE '%telegram_daemon.py%'
-            OR lower(COALESCE(result,'')) LIKE '%повторяю инструкцию по отбою%'
-          )
-    """)
-
 
 def _detect_role_assignment(text: str) -> str:
-    import re as _re
     triggers = [
-        r"этот чат для (.+)",
-        r"этот чат про (.+)",
-        r"этот топик для (.+)",
-        r"этот топик про (.+)",
-        r"чат закрепл[её]н за (.+)",
-        r"здесь мы (.+)",
-        r"закрепи (.+)",
-        r"этот чат исключительно для (.+)",
-        r"этот чат используется (.+)",
+        r"^(?:\[voice\]\s*)?этот чат для\s+(.+)$",
+        r"^(?:\[voice\]\s*)?этот чат про\s+(.+)$",
+        r"^(?:\[voice\]\s*)?этот топик для\s+(.+)$",
+        r"^(?:\[voice\]\s*)?этот топик про\s+(.+)$",
+        r"^(?:\[voice\]\s*)?чат закрепл[её]н за\s+(.+)$",
+        r"^(?:\[voice\]\s*)?этот чат исключительно для\s+(.+)$",
+        r"^(?:\[voice\]\s*)?этот чат используется для\s+(.+)$",
+        r"^(?:\[voice\]\s*)?закрепи чат за\s+(.+)$",
+        r"^(?:\[voice\]\s*)?закрепи этот чат за\s+(.+)$",
     ]
-    t = (text or "").strip().lower()
+    t = _clean(text, 500).lower()
     for pattern in triggers:
-        m = _re.search(pattern, t)
+        m = re.fullmatch(pattern, t)
         if m:
-            return m.group(1).strip()[:200]
+            return _clean(m.group(1), 200)
     return ""
 
-def _load_memory_context(chat_id: str, topic_id: int = 0) -> Tuple[str, str, str, str]:
+
+def _extract_role_confirmation(result: str) -> str:
+    t = _clean(_s(result), 500)
+    m = re.fullmatch(r"Понял назначение чата так:\n(.+?)\n\nПодтверди или уточни", t, re.S)
+    if not m:
+        return ""
+    return _clean(m.group(1), 200)
+
+
+def _save_topic_role(chat_id: str, topic_id: int, role: str) -> None:
+    if not role or not os.path.exists(MEM_DB):
+        return
+    mem = db(MEM_DB)
+    try:
+        if not _has_table(mem, "memory"):
+            mem.execute("CREATE TABLE IF NOT EXISTS memory (chat_id TEXT, key TEXT, value TEXT, timestamp TEXT)")
+        key = f"topic_{topic_id}_role"
+        mem.execute("DELETE FROM memory WHERE chat_id=? AND key=?", (str(chat_id), key))
+        mem.execute(
+            "INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
+            (str(chat_id), key, role),
+        )
+        mem.commit()
+    finally:
+        mem.close()
+
+
+def _load_memory_context(chat_id: str, topic_id: int) -> Tuple[str, str, str, str]:
     if not os.path.exists(MEM_DB):
-        return "", ""
+        return "", "", "", ""
+
     conn = db(MEM_DB)
     try:
         if not _has_table(conn, "memory"):
-            return "", ""
+            return "", "", "", ""
+
         topic_prefix = f"topic_{int(topic_id)}_"
-        rows = conn.execute("""
+        rows = conn.execute(
+            """
             SELECT key, value
             FROM memory
             WHERE chat_id=?
               AND key GLOB ?
             ORDER BY timestamp DESC
             LIMIT 100
-        """, (str(chat_id), f"{topic_prefix}*")).fetchall()
-        short_memory = []
-        long_memory = []
+            """,
+            (str(chat_id), f"{topic_prefix}*"),
+        ).fetchall()
+
+        short_memory: List[str] = []
+        long_memory: List[str] = []
+        topic_role = ""
+        topic_directions = ""
+
         for row in rows:
             key = _s(row["key"])
             value = _clean(_s(row["value"]), 500)
             if not value:
                 continue
             low = value.lower()
-            if any(x in low for x in MEMORY_BAD_MARKERS):
+            if _is_memory_noise(low) or any(x in low for x in MEMORY_BAD_MARKERS):
+                continue
+
+            if key.endswith("_role") and not topic_role:
+                topic_role = value[:500]
+                continue
+            if key.endswith("_directions") and not topic_directions:
+                topic_directions = value[:1000]
                 continue
             if key.endswith("_user_input") or key.endswith("_task_summary"):
-                short_memory.append(f"{key}: {value}")
+                if not _is_memory_noise(value):
+                    short_memory.append(f"{key}: {value}")
             else:
-                long_memory.append(f"{key}: {value}")
-        topic_role = ""
-        topic_directions = ""
-        try:
-            role_row = conn.execute(
-                "SELECT value FROM memory WHERE chat_id=? AND key=? ORDER BY timestamp DESC LIMIT 1",
-                (str(chat_id), f"topic_{int(topic_id)}_role")
-            ).fetchone()
-            if role_row:
-                topic_role = str(role_row["value"] or "").strip()[:500]
-            dir_row = conn.execute(
-                "SELECT value FROM memory WHERE chat_id=? AND key=? ORDER BY timestamp DESC LIMIT 1",
-                (str(chat_id), f"topic_{int(topic_id)}_directions")
-            ).fetchone()
-            if dir_row:
-                topic_directions = str(dir_row["value"] or "").strip()[:1000]
-        except Exception:
-            pass
+                if not _is_memory_noise(value):
+                    long_memory.append(f"{key}: {value}")
+
         return "\n".join(short_memory[:100]), "\n".join(long_memory[:100]), topic_role, topic_directions
     finally:
         conn.close()
 
-def _save_memory(chat_id: str, topic_id: int, raw_input: str, result: str):
-    if not os.path.exists(MEM_DB):
-        return
-    bad = ["ошибка", "не найдено", "уточните", "traceback", "/root/", ".ogg", "TASK_CLOSED", "REVISION_ACCEPTED", "CONFIRM_ACCEPTED", "CLARIFICATION_ACCEPTED", "не содержит активной задачи", "чат не содержит"]
-    if not result or len(result) < 20:
-        return
-    if any(b in result.lower() for b in bad):
-        logger.warning("save_memory_skip bad_filter chat=%s topic=%s result=%s", chat_id, topic_id, result[:50])
-        return
+
+def _load_archive_context(chat_id: str, topic_id: int, user_text: str) -> str:
+    words = {w for w in re.findall(r"\w+", _clean(user_text).lower()) if len(w) > 3}
+    if not words or not os.path.exists(MEM_DB):
+        return ""
+
+    conn = db(MEM_DB)
     try:
-        conn = db(MEM_DB)
         if not _has_table(conn, "memory"):
-            conn.execute("CREATE TABLE IF NOT EXISTS memory (chat_id TEXT, key TEXT, value TEXT, timestamp TEXT)")
-        topic_prefix = f"topic_{int(topic_id)}_"
-        conn.execute("INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))", (str(chat_id), f"{topic_prefix}assistant_output", result[:50000]))
-        conn.execute("INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))", (str(chat_id), f"{topic_prefix}task_summary", result[:20000]))
-        conn.execute("INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))", (str(chat_id), f"{topic_prefix}user_input", raw_input[:500]))
-        conn.commit()
-        logger.info("save_memory_ok chat=%s topic=%s", chat_id, topic_id)
+            return ""
+        rows = conn.execute(
+            """
+            SELECT key, value
+            FROM memory
+            WHERE chat_id=?
+              AND key LIKE 'archive_legacy_%'
+            ORDER BY timestamp DESC
+            LIMIT 300
+            """,
+            (str(chat_id),),
+        ).fetchall()
+    finally:
         conn.close()
-    except Exception as e:
-        logger.error("save_memory_fail err=%s", e)
 
-def _save_archive(chat_id: str, topic_id: int, raw_input: str, result: str):
-    if not os.path.exists(MEM_DB):
-        return
-    if not result or len(result) < 20:
-        return
-    low = result.lower()
-    if "не содержит активной задачи" in low or "чат не содержит" in low:
-        logger.warning("save_archive_skip bad_filter chat=%s topic=%s result=%s", chat_id, topic_id, result[:50])
-        return
-    try:
-        conn = db(MEM_DB)
-        if not _has_table(conn, "memory"):
-            conn.execute("CREATE TABLE IF NOT EXISTS memory (chat_id TEXT, key TEXT, value TEXT, timestamp TEXT)")
-        key = f"archive_legacy_{int(time.time())}_{int(topic_id)}"
-        payload = json.dumps({
-            "topic_id": int(topic_id),
-            "raw_input": _clean(raw_input, 500),
-            "result": _clean(result, 2000),
-            "timestamp": int(time.time())
-        }, ensure_ascii=False)
-        conn.execute(
-            "INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
-            (str(chat_id), key, payload)
-        )
-        conn.commit()
-        logger.info("save_archive_ok chat=%s key=%s", chat_id, key)
-        conn.close()
-    except Exception as e:
-        logger.error("save_archive_fail err=%s", e)
+    scored: List[Tuple[int, str]] = []
+    for row in rows:
+        raw = _s(row["value"])
+        if any(x in raw.lower() for x in MEMORY_BAD_MARKERS):
+            continue
+        try:
+            payload = json.loads(raw)
+        except Exception:
+            continue
+        if int(payload.get("topic_id", -1)) != int(topic_id):
+            continue
+        blob = _clean(f"{_s(payload.get('raw_input', ''))}\n{_s(payload.get('result', ''))}", 1200)
+        ov = len(words & set(re.findall(r"\w+", blob.lower())))
+        if ov > 0:
+            scored.append((ov, blob))
 
-def _close_pin(conn, task_id: str):
-    if _has_table(conn, "pin"):
-        conn.execute(
-            "UPDATE pin SET state='CLOSED', updated_at=datetime('now') WHERE task_id=? AND state='ACTIVE'",
-            (task_id,)
-        )
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return "\n\n".join(x[1] for x in scored[:3]) if scored else ""
 
-def _finalize_done(conn, task_id: str):
-    row = conn.execute(
-        "SELECT id, chat_id, COALESCE(topic_id,0) AS topic_id, COALESCE(raw_input,''), COALESCE(result,'') FROM tasks WHERE id=? LIMIT 1",
-        (task_id,)
-    ).fetchone()
-    if not row:
-        return
-    logger.info("finalize_done task=%s chat=%s topic=%s result_len=%s", task_id, _s(row[1]), row[2], len(_s(row[4])))
-    _update_task(conn, task_id, state="DONE", error_message="")
-    _close_pin(conn, task_id)
-    raw_in = _clean(_s(row[3]), 500)
-    result = _clean(_s(row[4]), 50000)
-    chat_id = _s(row[1])
-    topic_id = int(row[2] or 0)
-    if result:
-        _save_memory(chat_id, topic_id, raw_in, result)
-    logger.info("finalize_done_complete task=%s chat=%s topic=%s", task_id, chat_id, topic_id)
 
-def _active_unfinished_context(conn, chat_id: str, exclude_task_id: str, topic_id: int = 0) -> str:
+def _active_unfinished_context(conn: sqlite3.Connection, chat_id: str, topic_id: int, task_id: str) -> str:
     cols = _cols(conn, "tasks")
-    if "topic_id" in cols and topic_id:
-        row = conn.execute("""
-            SELECT raw_input, result, state
-            FROM tasks
-            WHERE chat_id=?
-              AND id<>?
-              AND topic_id=?
-              AND state IN ('WAITING_CLARIFICATION','AWAITING_CONFIRMATION','IN_PROGRESS')
-            ORDER BY updated_at DESC, created_at DESC
-            LIMIT 1
-        """, (str(chat_id), exclude_task_id, topic_id)).fetchone()
-    else:
-        row = conn.execute("""
-            SELECT raw_input, result, state
-            FROM tasks
-            WHERE chat_id=?
-              AND id<>?
-              AND state IN ('WAITING_CLARIFICATION','AWAITING_CONFIRMATION','IN_PROGRESS')
-            ORDER BY updated_at DESC, created_at DESC
-            LIMIT 1
-        """, (str(chat_id), exclude_task_id)).fetchone()
-    if not row:
-        return ""
-    raw = _clean(_s(row["raw_input"]), 800)
-    res = _clean(_s(row["result"]), 800)
-    low = f"{raw}\n{res}".lower()
-    if any(x in low for x in MEMORY_BAD_MARKERS + [".ogg"]):
-        return ""
-    parts = []
-    if raw:
-        parts.append("raw_input: " + raw)
-    if res:
-        parts.append("result: " + res)
-    if row["state"]:
-        parts.append("state: " + _clean(_s(row["state"]), 100))
-    return "\n".join(parts)
+    where = [
+        "chat_id=?",
+        "id<>?",
+        "state IN ('WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION')",
+    ]
+    params: List[Any] = [str(chat_id), task_id]
+    if "topic_id" in cols:
+        where.append("COALESCE(topic_id,0)=?")
+        params.append(int(topic_id))
 
-def _search_fact_context(conn, chat_id: str, topic_id: int = 0) -> str:
-    rows = conn.execute("""
+    rows = conn.execute(
+        f"""
+        SELECT raw_input, result, state
+        FROM tasks
+        WHERE {' AND '.join(where)}
+        ORDER BY updated_at DESC, created_at DESC
+        LIMIT 3
+        """,
+        params,
+    ).fetchall()
+
+    parts = []
+    for row in rows:
+        raw = _clean(_s(row["raw_input"]), 300)
+        res = _clean(_s(row["result"]), 500)
+        state = _clean(_s(row["state"]), 100)
+        low = f"{raw}\n{res}".lower()
+        if any(x in low for x in MEMORY_BAD_MARKERS):
+            continue
+        chunk = []
+        if raw:
+            chunk.append(f"raw_input: {raw}")
+        if res:
+            chunk.append(f"result: {res}")
+        if state:
+            chunk.append(f"state: {state}")
+        if chunk:
+            parts.append("\n".join(chunk))
+    return "\n\n".join(parts[:3])
+
+
+def _search_fact_context(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> str:
+    cols = _cols(conn, "tasks")
+    where = [
+        "chat_id=?",
+        "state IN ('DONE','ARCHIVED')",
+        "lower(COALESCE(raw_input,'')) GLOB '*най*'",
+    ]
+    params: List[Any] = [str(chat_id)]
+    if "topic_id" in cols:
+        where.append("COALESCE(topic_id,0)=?")
+        params.append(int(topic_id))
+
+    rows = conn.execute(
+        f"""
         SELECT raw_input, result
         FROM tasks
-        WHERE chat_id=?
-          AND state IN ('DONE','ARCHIVED','AWAITING_CONFIRMATION')
-          AND lower(COALESCE(raw_input,'')) GLOB '*най*'
-          AND topic_id=?
+        WHERE {' AND '.join(where)}
         ORDER BY updated_at DESC
         LIMIT 5
-    """, (str(chat_id), int(topic_id))).fetchall()
-    facts = []
+        """,
+        params,
+    ).fetchall()
+
+    facts: List[str] = []
     for row in rows:
         q = _clean(_s(row["raw_input"]), 300)
         r = _clean(_s(row["result"]), 500)
         low = f"{q}\n{r}".lower()
-        if any(x in low for x in MEMORY_BAD_MARKERS + [".ogg"]):
+        if any(x in low for x in MEMORY_BAD_MARKERS):
             continue
         if q and r:
             facts.append(f"search_done: {q} => {r}")
     return "\n".join(facts[:3])
 
-async def _transcribe_if_voice(task) -> Tuple[str, str]:
-    input_type = _task_field(task, "input_type", "text").lower()
-    raw_input = _task_field(task, "raw_input", "")
 
-    if input_type != "voice":
-        return input_type or "text", raw_input
-
-    for _ in range(10):
-        if os.path.exists(raw_input):
-            break
-        await asyncio.sleep(0.3)
-
-    if not os.path.exists(raw_input):
-        raise RuntimeError(f"voice file not found after wait: {raw_input}")
-
-    try:
-        from core.stt_engine import transcribe_voice
-    except Exception as e:
-        logger.error("STT import failed err=%s", e)
-        raise RuntimeError("STT failed")
-
-    last_err = None
-    for attempt in range(2):
-        try:
-            logger.info("STT start file=%s attempt=%s", raw_input, attempt + 1)
-            if inspect.iscoroutinefunction(transcribe_voice):
-                transcript = await transcribe_voice(raw_input)
-            else:
-                transcript = transcribe_voice(raw_input)
-            transcript = _clean(_s(transcript))
-            if not transcript:
-                raise RuntimeError("empty transcript")
-            logger.info("STT ok transcript_len=%s transcript=%s", len(transcript), transcript[:200])
-            return "text", transcript
-        except Exception as e:
-            last_err = e
-            logger.warning("STT attempt=%s failed file=%s err=%s", attempt + 1, raw_input, e)
-            if attempt == 0:
-                await asyncio.sleep(0.5)
-
-    logger.error("STT failed for %s err=%s", raw_input, last_err)
-    raise RuntimeError("STT failed")
-
-async def _handle_new(conn, task):
-    task_id = _task_field(task, "id")
-    chat_id = _task_field(task, "chat_id")
-    raw_input = _clean(_task_field(task, "raw_input"))
-    input_type = _task_field(task, "input_type", "text").lower()
-    reply_to = task["reply_to_message_id"] if hasattr(task, "keys") and "reply_to_message_id" in task.keys() else None
-    topic_id = int(_task_field(task, "topic_id", 0) or 0)
-
-    if input_type == "voice":
-        _update_task(conn, task_id, state="IN_PROGRESS")
-        _history(conn, task_id, "state:IN_PROGRESS")
-        conn.commit()
+def _save_memory(chat_id: str, topic_id: int, raw_input: str, result: str) -> None:
+    bad = [
+        "ошибка",
+        "не найдено",
+        "уточните",
+        "traceback",
+        "/root/",
+        ".ogg",
+        "delete from",
+        "task_worker.py",
+        "telegram_daemon.py",
+    ]
+    if not result or len(result) <= 20:
+        return
+    low = result.lower()
+    if any(b in low for b in bad):
+        return
+    if not os.path.exists(MEM_DB):
         return
 
-    pending_confirm = conn.execute("""
-        SELECT *
-        FROM tasks
-        WHERE chat_id=?
-          AND id<>?
-          AND topic_id=?
-          AND state='AWAITING_CONFIRMATION'
-        ORDER BY updated_at DESC
-        LIMIT 1
-    """, (chat_id, task_id, topic_id)).fetchone()
+    conn = db(MEM_DB)
+    try:
+        if not _has_table(conn, "memory"):
+            conn.execute("CREATE TABLE IF NOT EXISTS memory (chat_id TEXT, key TEXT, value TEXT, timestamp TEXT)")
+        prefix = f"topic_{int(topic_id)}_"
+        conn.execute(
+            "INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
+            (str(chat_id), f"{prefix}assistant_output", _clean(result, 50000)),
+        )
+        conn.execute(
+            "INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
+            (str(chat_id), f"{prefix}task_summary", _clean(result, 20000)),
+        )
+        conn.execute(
+            "INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
+            (str(chat_id), f"{prefix}user_input", _clean(raw_input, 500)),
+        )
+        conn.commit()
+        logger.info("save_memory_ok chat=%s topic=%s", chat_id, topic_id)
+    finally:
+        conn.close()
 
-    pending_clarify = conn.execute("""
-        SELECT *
+
+def _close_pin(conn: sqlite3.Connection, task_id: str) -> None:
+    if not _has_table(conn, "pin"):
+        return
+    conn.execute(
+        "UPDATE pin SET state='CLOSED', updated_at=datetime('now') WHERE task_id=? AND state='ACTIVE'",
+        (task_id,),
+    )
+
+
+def _finalize_done(conn: sqlite3.Connection, task_id: str, chat_id: str, topic_id: int, reply_to: Optional[int]) -> None:
+    row = conn.execute(
+        "SELECT COALESCE(raw_input,''), COALESCE(result,'') FROM tasks WHERE id=? LIMIT 1",
+        (task_id,),
+    ).fetchone()
+    raw_input = _clean(_s(row[0]) if row else "", 500)
+    result = _clean(_s(row[1]) if row else "", 50000)
+
+    _update_task(conn, task_id, state="DONE", error_message="")
+    _history(conn, task_id, "state:DONE")
+    if result:
+        _save_memory(chat_id, topic_id, raw_input, result)
+    conn.commit()
+
+
+def _is_confirm_intent(text: str) -> bool:
+    t = _clean(text, 200).lower()
+    if t in CONFIRM_INTENTS:
+        return True
+    return any(t.startswith(x) for x in ["да", "подтвер", "соглас", "верно", "ок"])
+
+
+def _is_revision_intent(text: str) -> bool:
+    t = _clean(text, 200).lower()
+    if t in REVISION_INTENTS:
+        return True
+    return any(x in t for x in ["не так", "передел", "исправ", "правк", "уточн"])
+
+
+def _recover_stale_tasks(conn: sqlite3.Connection, chat_id: Optional[str]) -> None:
+    where = [
+        "state IN ('IN_PROGRESS','WAITING_CLARIFICATION')",
+        "(strftime('%s','now') - strftime('%s', COALESCE(updated_at, created_at))) > ?",
+    ]
+    params: List[Any] = [STALE_TIMEOUT]
+    if chat_id:
+        where.insert(0, "chat_id=?")
+        params.insert(0, str(chat_id))
+
+    rows = conn.execute(
+        f"""
+        SELECT id, chat_id, COALESCE(topic_id,0) AS topic_id, reply_to_message_id
+        FROM tasks
+        WHERE {' AND '.join(where)}
+        """,
+        params,
+    ).fetchall()
+
+    for row in rows:
+        task_id = _s(row["id"])
+        tg_chat_id = _s(row["chat_id"])
+        reply_to = row["reply_to_message_id"]
+        _update_task(conn, task_id, state="FAILED", error_message="STALE_TIMEOUT")
+        _close_pin(conn, task_id)
+        _history(conn, task_id, "state:FAILED")
+        conn.commit()
+        _send_once(conn, task_id, tg_chat_id, "Задача не выполнена. Повтори или уточни запрос", reply_to, "stale_failed")
+
+
+async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str, topic_id: int) -> None:
+    task_id = _s(_task_field(task, "id"))
+    raw_input = _clean(_s(_task_field(task, "raw_input")), 4000)
+    reply_to = _task_field(task, "reply_to_message_id", None)
+
+    role = _detect_role_assignment(raw_input)
+    if role:
+        ask = f"Понял назначение чата так:\n{role}\n\nПодтверди или уточни"
+        _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=ask, error_message="")
+        _history(conn, task_id, "state:AWAITING_CONFIRMATION")
+        conn.commit()
+        _send_once(conn, task_id, chat_id, ask, reply_to, "role_confirmation")
+        return
+
+    pending_confirm = conn.execute(
+        """
+        SELECT id, COALESCE(raw_input,'') AS raw_input, COALESCE(result,'') AS result
         FROM tasks
         WHERE chat_id=?
           AND id<>?
-          AND topic_id=?
-          AND state='WAITING_CLARIFICATION'
-        ORDER BY updated_at DESC
+          AND COALESCE(topic_id,0)=?
+          AND state='AWAITING_CONFIRMATION'
+        ORDER BY updated_at DESC, created_at DESC
         LIMIT 1
-    """, (chat_id, task_id, topic_id)).fetchone()
+        """,
+        (str(chat_id), task_id, int(topic_id)),
+    ).fetchone()
 
     if pending_confirm:
         pending_id = _s(pending_confirm["id"])
-        if _is_finish_intent(raw_input) or _is_confirm_intent(raw_input):
-            _finalize_done(conn, pending_id)
-            _history(conn, pending_id, "state:DONE")
-            _update_task(conn, task_id, state="DONE", result="TASK_CLOSED")
-            _history(conn, task_id, "control:close")
+        pending_role = _extract_role_confirmation(_s(pending_confirm["result"]))
+        if pending_role and _is_confirm_intent(raw_input):
+            _save_topic_role(chat_id, topic_id, pending_role)
+            _update_task(conn, pending_id, state="DONE", result=f"Чат закреплён за: {pending_role}", error_message="")
+            _history(conn, pending_id, f"role_saved:{pending_role}")
+            _update_task(conn, task_id, state="DONE", result="Подтверждение принято", error_message="")
+            _history(conn, task_id, "confirm_accepted")
             conn.commit()
-            _send_once(conn, task_id, chat_id, "Задача закрыта", reply_to, "close")
+            _send_once(conn, task_id, chat_id, f"Принял. Чат закреплён за: {pending_role}", reply_to, "role_saved")
             return
-        if _is_revision_intent(raw_input) and not _is_finish_intent(raw_input):
-            merged = _clean(_s(pending_confirm["raw_input"]) + "\n\nУточнение пользователя:\n" + raw_input)
-            _update_task(conn, pending_id, state="IN_PROGRESS", raw_input=merged)
-            _history(conn, pending_id, "state:IN_PROGRESS")
-            _update_task(conn, task_id, state="DONE", result="REVISION_ACCEPTED")
-            _history(conn, task_id, "control:revision")
+        if pending_role and _is_revision_intent(raw_input):
+            _update_task(conn, pending_id, raw_input=raw_input, state="NEW", result="", error_message="")
+            _history(conn, pending_id, "role_revision_requested")
+            _update_task(conn, task_id, state="DONE", result="Правки приняты", error_message="")
+            _history(conn, task_id, "state:DONE")
             conn.commit()
-            _send_once(conn, task_id, chat_id, "Уточнение принято. Выполняю", reply_to, "revision")
+            _send_once(conn, task_id, chat_id, "Принял правки. Уточни назначение чата одной фразой", reply_to, "role_revision_ok")
             return
+        if _is_confirm_intent(raw_input):
+            _finalize_done(conn, pending_id, chat_id, topic_id, reply_to)
+            _update_task(conn, task_id, state="DONE", result="Подтверждение принято", error_message="")
+            _history(conn, task_id, "confirm_accepted")
+            conn.commit()
+            _send_once(conn, task_id, chat_id, "Принял. Задача закрыта", reply_to, "confirm_done")
+            return
+        if _is_revision_intent(raw_input):
+            merged = _clean(_s(pending_confirm["raw_input"]) + "\n\nУточнение пользователя:\n" + raw_input, 12000)
+            _update_task(conn, pending_id, raw_input=merged, state="IN_PROGRESS", error_message="")
+            _history(conn, pending_id, "revision_accepted")
+            _update_task(conn, task_id, state="DONE", result="Правки приняты", error_message="")
+            _history(conn, task_id, "state:DONE")
+            conn.commit()
+            _send_once(conn, task_id, chat_id, "Принял правки. Делаю", reply_to, "revision_ok")
+            return
+
+    pending_clarify = conn.execute(
+        """
+        SELECT id, COALESCE(raw_input,'') AS raw_input
+        FROM tasks
+        WHERE chat_id=?
+          AND id<>?
+          AND COALESCE(topic_id,0)=?
+          AND state='WAITING_CLARIFICATION'
+        ORDER BY updated_at DESC, created_at DESC
+        LIMIT 1
+        """,
+        (str(chat_id), task_id, int(topic_id)),
+    ).fetchone()
 
     if pending_clarify:
         pending_id = _s(pending_clarify["id"])
-        if _is_confirm_intent(raw_input):
-            _update_task(conn, pending_id, state="IN_PROGRESS")
-            _history(conn, pending_id, "state:IN_PROGRESS")
-            _update_task(conn, task_id, state="DONE", result="CONFIRM_ACCEPTED")
-            _history(conn, task_id, "control:confirm")
-            conn.commit()
-            _send_once(conn, task_id, chat_id, "Подтверждение принято. Выполняю", reply_to, "confirm")
-            return
-        merged = _clean(_s(pending_clarify["raw_input"]) + "\n\nУточнение пользователя:\n" + raw_input)
-        _update_task(conn, pending_id, state="IN_PROGRESS", raw_input=merged)
-        _history(conn, pending_id, "state:IN_PROGRESS")
-        _update_task(conn, task_id, state="DONE", result="CLARIFICATION_ACCEPTED")
-        _history(conn, task_id, "control:clarification")
+        merged = _clean(_s(pending_clarify["raw_input"]) + "\n\nУточнение пользователя:\n" + raw_input, 12000)
+        _update_task(conn, pending_id, raw_input=merged, state="IN_PROGRESS", error_message="")
+        _history(conn, pending_id, "clarification_accepted")
+        _update_task(conn, task_id, state="DONE", result="Уточнение принято", error_message="")
+        _history(conn, task_id, "state:DONE")
         conn.commit()
-        _send_once(conn, task_id, chat_id, "Уточнение принято. Выполняю", reply_to, "clarification")
+        _send_once(conn, task_id, chat_id, "Принял уточнение. Делаю", reply_to, "clarification_ok")
         return
 
-    _update_task(conn, task_id, state="IN_PROGRESS")
+    _update_task(conn, task_id, state="IN_PROGRESS", error_message="")
     _history(conn, task_id, "state:IN_PROGRESS")
     conn.commit()
 
-async def _handle_in_progress(conn, task):
-    task_id = _task_field(task, "id")
-    chat_id = _task_field(task, "chat_id")
-    input_type = _task_field(task, "input_type", "text").lower()
-    reply_to = task["reply_to_message_id"] if hasattr(task, "keys") and "reply_to_message_id" in task.keys() else None
 
-    try:
-        normalized_type, normalized_input = await _transcribe_if_voice(task)
-    except Exception as e:
-        logger.error("STT FAILED task=%s err=%s", task_id, e, exc_info=True)
-        _update_task(conn, task_id, state="WAITING_CLARIFICATION", error_message="STT_FAILED")
-        _history(conn, task_id, "state:WAITING_CLARIFICATION")
-        _send_once(conn, task_id, chat_id, "Голос не распознан. Повтори голосом или напиши текстом", reply_to, "stt_failed_notify")
-        return
+async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str, topic_id: int) -> None:
+    task_id = _s(_task_field(task, "id"))
+    raw_input = _clean(_s(_task_field(task, "raw_input")), 12000)
+    reply_to = _task_field(task, "reply_to_message_id", None)
 
-    normalized_input = _clean(normalized_input)
-    if not normalized_input:
-        _update_task(conn, task_id, state="WAITING_CLARIFICATION", error_message="EMPTY_TRANSCRIPT")
-        _history(conn, task_id, "state:WAITING_CLARIFICATION")
-        _send_once(conn, task_id, chat_id, "Не удалось получить текст из голосового. Повтори или напиши текстом", reply_to, "empty_transcript_notify")
-        return
-
-    topic_id = int(_task_field(task, "topic_id", 0) or 0)
-
-    detected_role = _detect_role_assignment(normalized_input)
-    if detected_role and os.path.exists(MEM_DB):
-        try:
-            _mem = db(MEM_DB)
-            _mem.execute(
-                "INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
-                (str(chat_id), f"topic_{topic_id}_role", detected_role)
-            )
-            _mem.commit()
-            _mem.close()
-            logger.info("ROLE_SAVED chat=%s topic=%s role=%s", chat_id, topic_id, detected_role)
-        except Exception as _re:
-            logger.warning("ROLE_SAVE_FAIL err=%s", _re)
-
-    active_task_context = _active_unfinished_context(conn, chat_id, task_id, topic_id)
+    active_task_context = _active_unfinished_context(conn, chat_id, topic_id, task_id)
     short_memory, long_memory, topic_role, topic_directions = _load_memory_context(chat_id, topic_id)
-    pin_context = get_pin_context(chat_id, normalized_input, topic_id)
+    pin_context = get_pin_context(chat_id, raw_input, topic_id)
+    archive_context = _load_archive_context(chat_id, topic_id, raw_input)
     search_context = _search_fact_context(conn, chat_id, topic_id)
 
-    archive_context = _load_archive_context(str(chat_id), normalized_input)
-
-    try:
-        weak_topic_context = (not pin_context) and (len(short_memory or "") < 120) and (len(long_memory or "") < 200)
-        if weak_topic_context:
-            words = {w for w in re.findall(r"\w+", normalized_input.lower()) if len(w) > 3}
-            if words:
-                rows = conn.execute(
-                    """
-                    SELECT topic_id, COALESCE(raw_input,''), COALESCE(result,'')
-                    FROM tasks
-                    WHERE chat_id=?
-                      AND id<>?
-                      AND COALESCE(result,'')<>''
-                    ORDER BY updated_at DESC, created_at DESC
-                    LIMIT 200
-                    """,
-                    (chat_id, task_id)
-                ).fetchall()
-
-                scores = {}
-                for row in rows:
-                    cand_topic = int(row["topic_id"] or 0)
-                    blob = f"{row['raw_input']} {row['result']}".lower()
-                    overlap = len(words & set(re.findall(r"\w+", blob)))
-                    if overlap > 0:
-                        scores[cand_topic] = scores.get(cand_topic, 0) + overlap
-
-                if scores:
-                    detected_topic = max(scores, key=scores.get)
-                    if detected_topic != topic_id:
-                        topic_id = detected_topic
-                        active_task_context = _active_unfinished_context(conn, chat_id, task_id, topic_id)
-                        short_memory, long_memory, topic_role, topic_directions = _load_memory_context(chat_id, topic_id)
-                        pin_context = get_pin_context(chat_id, normalized_input, topic_id)
-    except Exception as e:
-        logger.error("TOPIC_RECOVERY_FAIL task=%s err=%s", task_id, e)
-
-    payload = {
-        "archive_context": archive_context,
+    payload: Dict[str, Any] = {
         "id": task_id,
         "chat_id": chat_id,
-        "input_type": "text",
-        "raw_input": normalized_input,
-        "normalized_input": normalized_input,
+        "input_type": _s(_task_field(task, "input_type", "text")).lower() or "text",
+        "raw_input": raw_input,
+        "normalized_input": raw_input,
         "state": "IN_PROGRESS",
         "reply_to_message_id": reply_to,
         "active_task_context": active_task_context,
         "pin_context": pin_context,
         "short_memory_context": short_memory,
         "long_memory_context": long_memory,
+        "archive_context": archive_context,
         "search_context": search_context,
         "topic_role": topic_role,
         "topic_directions": topic_directions,
     }
 
-    logger.info("PICKED %s state=IN_PROGRESS text=%s", task_id, normalized_input[:200])
-
     try:
-        ai_result = await asyncio.wait_for(process_ai_task(payload), timeout=300)
+        ROLE_Q = re.compile(r"(для чего|о чём|о чем|про что|напомни.*(чат|топик)|чем занимается|зачем этот чат)", re.IGNORECASE)
+        HISTORY_Q = re.compile(r"(что мы писали|что писали раньше|о ч[её]м общались|напомни.*что.*(писали|обсуждали)|что было в этом чате|история чата)", re.IGNORECASE)
+        if topic_role and (ROLE_Q.search(raw_input) or HISTORY_Q.search(raw_input)):
+            ai_result = f"Этот чат закреплён за: {topic_role}"
+        else:
+            ai_result = await asyncio.wait_for(process_ai_task(payload), timeout=AI_TIMEOUT)
     except Exception as e:
-        logger.error("ROUTER FAILED task=%s err=%s", task_id, e, exc_info=True)
         _update_task(conn, task_id, state="FAILED", error_message=_clean(str(e), 500))
         _close_pin(conn, task_id)
         _history(conn, task_id, "state:FAILED")
         conn.commit()
-        _send_once(conn, task_id, chat_id, "Задача не выполнена. Уточни или повтори запрос", reply_to, "router_failed_notify")
+        _send_once(conn, task_id, chat_id, "Задача не выполнена. Уточни или повтори запрос", reply_to, "router_failed")
         return
 
-    ai_result = _clean(ai_result)
-    logger.info("ROUTER RESULT task=%s len=%s text=%s", task_id, len(ai_result), ai_result[:200])
-
-    if not _is_valid_result(ai_result, normalized_input):
-        logger.warning("INVALID_RESULT task=%s result=%s", task_id, ai_result[:200])
+    ai_result = _clean(_s(ai_result), 50000)
+    if not _is_valid_result(ai_result, raw_input):
         _update_task(conn, task_id, state="FAILED", error_message="INVALID_RESULT_GATE")
         _close_pin(conn, task_id)
         _history(conn, task_id, "state:FAILED")
         conn.commit()
-        _send_once(conn, task_id, chat_id, "Не понял запрос. Уточни что нужно сделать.", reply_to, "invalid_result_notify")
+        _send_once(conn, task_id, chat_id, "Не понял запрос. Уточни что нужно сделать", reply_to, "invalid_result")
         return
 
     _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=ai_result, error_message="")
     _history(conn, task_id, f"result:{_clean(ai_result, 400)}")
-    save_pin(chat_id, task_id, ai_result, topic_id)
 
-    if input_type == "voice":
-        _send_once(conn, task_id, chat_id, f"🎤 {normalized_input}", reply_to, "transcript")
-    confirmation_text = f"{ai_result}\n\n{_await_message()}"
-    _res = _send_once_ex(conn, task_id, chat_id, confirmation_text, reply_to, "result")
-    if _res.get("ok") and _res.get("bot_message_id"):
-        cols = _cols(conn, "tasks")
-        if "bot_message_id" in cols:
-            conn.execute("UPDATE tasks SET bot_message_id=? WHERE id=?", (_res["bot_message_id"], task_id))
+    try:
+        save_pin(chat_id, task_id, ai_result, topic_id)
+    except Exception as e:
+        logger.warning("save_pin_fail task=%s err=%s", task_id, e)
+
+    confirmation_text = f"{ai_result}\n\nДоволен результатом? Ответь: Да / Уточни / Правки"
+    sent = _send_once_ex(conn, task_id, chat_id, confirmation_text, reply_to, "result")
+    bot_message_id = sent.get("bot_message_id") if isinstance(sent, dict) else None
+    if bot_message_id is not None:
+        _update_task(conn, task_id, bot_message_id=bot_message_id)
     conn.commit()
 
 
-def _is_semantically_closed(conn, task_id: str) -> bool:
-    row = conn.execute(
-        "SELECT state, COALESCE(result,''), COALESCE(error_message,'') FROM tasks WHERE id=?",
-        (task_id,)
-    ).fetchone()
-    if not row:
-        return True
+def _pick_next_task(conn: sqlite3.Connection, chat_id: Optional[str]) -> Optional[sqlite3.Row]:
+    where = ["state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION')"]
+    params: List[Any] = []
+    if chat_id:
+        where.insert(0, "chat_id=?")
+        params.append(str(chat_id))
 
-    state = (row[0] or "").strip()
-    result = (row[1] or "").strip().lower()
-    error_message = (row[2] or "").strip().upper()
-
-    if state in ("DONE", "CANCELLED"):
-        return True
-
-    if result.startswith("задача закрыта") or result.startswith("все запросы отменены"):
-        return True
-
-    if error_message in ("CONFIRM_ACCEPTED", "TASK_CLOSED", "CLARIFICATION_ACCEPTED"):
-        return True
-
-    hist_rows = conn.execute(
-        "SELECT COALESCE(action,'') FROM task_history WHERE task_id=? ORDER BY id DESC LIMIT 20",
-        (task_id,)
-    ).fetchall()
-    actions = " ".join((r[0] or "") for r in hist_rows).lower()
-
-    if any(x in actions for x in (
-        "finish:done",
-        "confirmed:done",
-        "cancelled:cancelled",
-        "reset:cancelled",
-        "control:close",
-        "state:done:semantic_close",
-    )):
-        return True
-
-    return False
-
-def _pick_next_task(conn):
     conn.execute("BEGIN IMMEDIATE")
-    row = conn.execute("""
+    row = conn.execute(
+        f"""
         SELECT *
         FROM tasks
-        WHERE state IN ('NEW', 'IN_PROGRESS', 'WAITING_CLARIFICATION')
-        ORDER BY CASE state WHEN 'IN_PROGRESS' THEN 0 ELSE 1 END, created_at ASC
+        WHERE {' AND '.join(where)}
+        ORDER BY CASE state WHEN 'IN_PROGRESS' THEN 0 WHEN 'WAITING_CLARIFICATION' THEN 1 ELSE 2 END,
+                 created_at ASC
         LIMIT 1
-    """).fetchone()
+        """
+        ,
+        params,
+    ).fetchone()
     conn.execute("COMMIT")
     return row
 
-def _recover_stale_tasks(conn):
-    rows = conn.execute("""
-        SELECT id, chat_id, reply_to_message_id
-        FROM tasks
-        WHERE state IN ('IN_PROGRESS', 'WAITING_CLARIFICATION', 'AWAITING_CONFIRMATION')
-          AND (strftime('%s','now') - strftime('%s', COALESCE(updated_at, created_at))) > 600
-    """).fetchall()
-    for row in rows:
-        task_id = row[0]
-        chat_id = str(row[1])
-        reply_to = row[2]
-        if _is_semantically_closed(conn, task_id):
-            _finalize_done(conn, task_id)
-            _history(conn, task_id, "state:DONE:SEMANTIC_CLOSE")
-            conn.commit()
-            continue
-        conn.execute(
-            "UPDATE tasks SET state='FAILED', error_message='STALE_TIMEOUT', updated_at=datetime('now') WHERE id=?",
-            (task_id,)
-        )
-        _close_pin(conn, task_id)
-        _history(conn, task_id, "state:FAILED:STALE_TIMEOUT")
-        conn.commit()
-        _send_once(conn, task_id, chat_id, "Задача не завершена. Уточни запрос.", reply_to, "stale_timeout")
-    if rows:
-        logger.info("recovered %s stale tasks", len(rows))
 
-def _remind_awaiting_confirmation(conn):
-    rows = conn.execute("""
-        SELECT id, chat_id, reply_to_message_id, COALESCE(result,'') AS result
-        FROM tasks
-        WHERE state='AWAITING_CONFIRMATION'
-          AND (strftime('%s','now') - strftime('%s', COALESCE(updated_at, created_at))) >= 180
-          AND COALESCE(result,'') <> ''
-          AND COALESCE(result,'') NOT IN ('TASK_CLOSED', 'REVISION_ACCEPTED', 'CONFIRM_ACCEPTED', 'CLARIFICATION_ACCEPTED')
-          AND lower(COALESCE(result,'')) NOT LIKE '%чат не содержит активной задачи%'
-          AND lower(COALESCE(result,'')) NOT LIKE '%не понял запрос%'
-          AND lower(COALESCE(result,'')) NOT LIKE '%уточни что нужно сделать%'
-    """).fetchall()
-    for row in rows:
-        task_id = _s(row["id"])
-        recent = conn.execute(
-            "SELECT 1 FROM task_history WHERE task_id=? AND action='reminder:awaiting' AND (strftime('%s','now') - strftime('%s', created_at)) < 180 LIMIT 1",
-            (task_id,)
-        ).fetchone()
-        if recent:
-            continue
-        reminder_text = _clean(f"{_s(row['result'])}\n\n{_await_message()}", 4000)
-        ok = send_reply(chat_id=_s(row["chat_id"]), text=reminder_text, reply_to_message_id=row["reply_to_message_id"])
-        if ok:
-            _history(conn, task_id, "reminder:awaiting")
-            conn.commit()
-
-async def main():
-    logger.info("WORKER STARTED pid=%s", os.getpid())
-    conn = db(CORE_DB)
+async def main() -> None:
+    lock_fp = open(LOCK_PATH, "w")
     try:
-        _recover_stale_tasks(conn)
-        _cleanup_garbage(conn)
-        conn.commit()
-    finally:
-        conn.close()
+        fcntl.flock(lock_fp.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        logger.info("WORKER LOCKED BY OTHER PROCESS")
+        return
 
-    _loop_counter = 0
+    logger.info("WORKER STARTED pid=%s", os.getpid())
+
     while True:
         conn = db(CORE_DB)
         try:
-            _loop_counter += 1
-            if _loop_counter % 10 == 0:
-                _recover_stale_tasks(conn)
-                _remind_awaiting_confirmation(conn)
-            if _loop_counter % 200 == 0:
-                conn.commit()
-            task = _pick_next_task(conn)
+            _recover_stale_tasks(conn, None)
+            task = _pick_next_task(conn, None)
             if not task:
                 time.sleep(POLL_SEC)
                 continue
-            state = _s(task["state"]).upper()
+
+            task_id = _s(_task_field(task, "id"))
+            chat_id = _s(_task_field(task, "chat_id"))
+            topic_id = int(_task_field(task, "topic_id", 0) or 0)
+            state = _s(_task_field(task, "state")).upper()
+
+            logger.info("PICKED %s state=%s chat=%s topic=%s", task_id, state, chat_id, topic_id)
+            input_type = _s(_task_field(task, "input_type")).lower()
+            if input_type == "drive_file":
+                try:
+                    await _handle_drive_file(conn, task, chat_id, topic_id)
+                except Exception as e:
+                    logger.error("DRIVE_FILE CRASH task=%s err=%s", task_id, str(e))
+                continue
+
             if state == "NEW":
-                await _handle_new(conn, task)
+                await _handle_new(conn, task, chat_id, topic_id)
             elif state == "IN_PROGRESS":
-                await _handle_in_progress(conn, task)
+                await _handle_in_progress(conn, task, chat_id, topic_id)
+            elif state == "WAITING_CLARIFICATION":
+                await _handle_in_progress(conn, task, chat_id, topic_id)
         finally:
             conn.close()
+
         time.sleep(POLL_SEC)
+
+
+
+# === DRIVE FILE HANDLING ===
+def _download_from_drive(file_id: str, local_path: str) -> bool:
+    try:
+        from googleapiclient.discovery import build
+        from googleapiclient.http import MediaIoBaseDownload
+        from google.oauth2.service_account import Credentials
+        import io
+        creds = Credentials.from_service_account_file(
+            '/root/.areal-neva-core/credentials.json',
+            scopes=['https://www.googleapis.com/auth/drive.readonly']
+        )
+        service = build('drive', 'v3', credentials=creds)
+        request = service.files().get_media(fileId=file_id)
+        with io.FileIO(local_path, 'wb') as fh:
+            downloader = MediaIoBaseDownload(fh, request)
+            done = False
+            while not done:
+                status, done = downloader.next_chunk()
+        return True
+    except Exception as e:
+        import logging
+        logging.getLogger("task_worker").error(f"Drive download failed: {e}")
+        return False
+
+async def _handle_drive_file(conn, task, chat_id, topic_id):
+    import json, os
+    task_id = task["id"]
+    raw_input = task["raw_input"]
+    try:
+        data = json.loads(raw_input)
+        file_id = data["file_id"]
+        file_name = data["file_name"]
+    except Exception as e:
+        logger.error(f"DRIVE_FILE: invalid raw_input for {task_id}: {e}")
+        _update_task(conn, task_id, state="FAILED", error_message="invalid raw_input")
+        return
+
+    local_path = f"/root/.areal-neva-core/runtime/drive_files/{task_id}_{file_name}"
+    os.makedirs(os.path.dirname(local_path), exist_ok=True)
+
+    logger.info(f"DRIVE_FILE: downloading {file_id} -> {local_path}")
+    ok = _download_from_drive(file_id, local_path)
+    if not ok:
+        _update_task(conn, task_id, state="FAILED", error_message="download failed")
+        return
+
+    conn.execute("UPDATE drive_files SET stage='downloaded' WHERE task_id=?", (task_id,))
+
+    result = f"Файл {file_name} скачан, ожидает анализа"
+    try:
+        _, _, topic_role, _ = _load_memory_context(chat_id, topic_id)
+        analysis = await analyze_downloaded_file(
+            local_path=local_path,
+            file_name=file_name,
+            mime_type=data.get("mime_type", ""),
+            user_text=data.get("caption", ""),
+            topic_role=topic_role,
+        )
+        if isinstance(analysis, dict):
+            summary = _s(analysis.get("summary")) or result
+            artifact_path = _s(analysis.get("artifact_path"))
+            artifact_name = _s(analysis.get("artifact_name")) or os.path.basename(artifact_path)
+            result = summary
+            if artifact_path and os.path.exists(artifact_path):
+                try:
+                    upload_res = await upload_file_to_topic(artifact_path, artifact_name, chat_id, topic_id)
+                    if isinstance(upload_res, dict) and upload_res.get("ok") and upload_res.get("drive_file_id"):
+                        result = summary + f"\n\nАртефакт: https://drive.google.com/file/d/{upload_res.get('drive_file_id')}/view"
+                    else:
+                        result = summary + "\n\nАртефакт создан, но загрузка в Drive не подтвердилась"
+                except Exception as e:
+                    logger.error(f"DRIVE_FILE artifact upload failed task={task_id} err={e}")
+                    result = summary + "\n\nАртефакт создан локально, но загрузка в Drive завершилась ошибкой"
+    except Exception as e:
+        logger.error(f"DRIVE_FILE analyze skipped task={task_id} err={e}")
+
+    _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=result)
+    logger.info(f"DRIVE_FILE: {task_id} processed")
 
 if __name__ == "__main__":
     asyncio.run(main())
