@@ -1,14 +1,3 @@
-
-def _force_voice_finish(raw_input: str, result: str) -> bool:
-    if not raw_input:
-        return False
-    low = raw_input.lower()
-    if any(x in low for x in ["заверш", "доволен", "да", "ок", "ok"]):
-        if "не доволен" in low:
-            return False
-        return True
-    return False
-
 import os
 BASE = "/root/.areal-neva-core"
 
@@ -18,7 +7,6 @@ import json
 import sqlite3
 import asyncio
 import hashlib
-import datetime
 import logging
 import fcntl
 from typing import Any, Dict, List, Optional, Tuple
@@ -108,17 +96,10 @@ REVISION_INTENTS = {
 }
 
 MEMORY_NOISE_MARKERS = [
-    "нет данных",
-    "повторите",
-    "не знаю",
     "чат не содержит активной задачи",
     "привет. чат не содержит активной задачи",
     "чат создан для",
     "тест диагностика",
-    "не понял запрос",
-    "уточните",
-    "не понимаю",
-    "задайте вопрос",
 ]
 
 def _is_memory_noise(text: str) -> bool:
@@ -367,62 +348,18 @@ def _load_memory_context(chat_id: str, topic_id: int) -> Tuple[str, str, str, st
         topic_role = ""
         topic_directions = ""
 
-        MEMORY_MUTEX_MARKERS = [
-            "последние действия",
-            "этот чат закреплён за: последние действия",
-            "в этом чате были следующие действия",
-            "текущий статус: ожидание подтверждения",
-            "текущий статус:",
-            "задача отменена",
-            "задача завершена",
-            "задача закрыта",
-            "задачи завершены",
-            "подтверждение принято",
-            "не понимаю запрос",
-            "готов к выполнению задачи",
-            "без контекста",
-            "задайте конкретный вопрос",
-            "конкретный вопрос по",
-            "нет, не помню",
-        ]
-
         for row in rows:
             key = _s(row["key"])
-            raw_value = _s(row["value"])
-            if key.endswith("_user_input") or key.endswith("_role"):
-                limit = 500
-            elif key.endswith("_task_summary"):
-                limit = 20000
-            elif key.endswith("_assistant_output"):
-                limit = 50000
-            elif key.endswith("_directions"):
-                limit = 1000
-            else:
-                limit = 500
-            value = _clean(raw_value, limit)
+            value = _clean(_s(row["value"]), 500)
             if not value:
                 continue
             low = value.lower()
             if _is_memory_noise(low) or any(x in low for x in MEMORY_BAD_MARKERS):
                 continue
-            if any(m in low for m in MEMORY_MUTEX_MARKERS):
-                continue
 
             if key.endswith("_role") and not topic_role:
                 topic_role = value[:500]
                 continue
-
-            if not topic_role and (key.endswith("_assistant_output") or key.endswith("_task_summary")):
-                m = re.search(r"чат закрепл[её]н за темами:\s*(.+?)(?:\.|$)", value, re.I)
-                if not m:
-                    m = re.search(r"чат закрепл[её]н за\s*(.+?)(?:\.|$)", value, re.I)
-                if not m:
-                    m = re.search(r"закреплено:\s*чат для\s*(.+?)(?:\.|$)", value, re.I)
-                if not m:
-                    m = re.search(r"этот чат используется для\s*(.+?)(?:\.|$)", value, re.I)
-                if m:
-                    topic_role = _clean(m.group(1), 500)
-
             if key.endswith("_directions") and not topic_directions:
                 topic_directions = value[:1000]
                 continue
@@ -439,8 +376,7 @@ def _load_memory_context(chat_id: str, topic_id: int) -> Tuple[str, str, str, st
 
 
 def _load_archive_context(chat_id: str, topic_id: int, user_text: str) -> str:
-    STOP_WORDS = {"это","как","что","где","когда","для","почему","зачем","кто"}
-    words = {w for w in re.findall(r"\w+", _clean(user_text).lower()) if len(w) > 3 and w not in STOP_WORDS}
+    words = {w for w in re.findall(r"\w+", _clean(user_text).lower()) if len(w) > 3}
     if not words or not os.path.exists(MEM_DB):
         return ""
 
@@ -478,7 +414,6 @@ def _load_archive_context(chat_id: str, topic_id: int, user_text: str) -> str:
         if ov > 0:
             scored.append((ov, blob))
 
-    scored = [(ov, blob) for ov, blob in scored if ov > 0]
     scored.sort(key=lambda x: x[0], reverse=True)
     return "\n\n".join(x[1] for x in scored[:3]) if scored else ""
 
@@ -508,7 +443,7 @@ def _active_unfinished_context(conn: sqlite3.Connection, chat_id: str, topic_id:
 
     parts = []
     for row in rows:
-        raw = _clean(_s(_task_field(row, "raw_input")), 300)
+        raw = _clean(_s(row["raw_input"]), 300)
         res = _clean(_s(row["result"]), 500)
         state = _clean(_s(row["state"]), 100)
         low = f"{raw}\n{res}".lower()
@@ -562,14 +497,6 @@ def _search_fact_context(conn: sqlite3.Connection, chat_id: str, topic_id: int) 
 
 
 def _save_memory(chat_id: str, topic_id: int, raw_input: str, result: str) -> None:
-    low = (result or "").lower()
-    if any(x in low for x in [
-        "без контекста","не понимаю запрос","не помню",
-        "задача завершена","задача закрыта","подтверждение принято",
-        "готов к выполнению задачи"
-    ]):
-        return
-
     bad = [
         "ошибка",
         "не найдено",
@@ -581,7 +508,7 @@ def _save_memory(chat_id: str, topic_id: int, raw_input: str, result: str) -> No
         "task_worker.py",
         "telegram_daemon.py",
     ]
-    if not result or len(result) < MIN_RESULT_LEN:
+    if not result or len(result) <= 20:
         return
     low = result.lower()
     if any(b in low for b in bad):
@@ -600,7 +527,7 @@ def _save_memory(chat_id: str, topic_id: int, raw_input: str, result: str) -> No
         )
         conn.execute(
             "INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
-            (str(chat_id), f"{prefix}task_summary", _clean(result, 20000) if len(result) >= MIN_RESULT_LEN else ""),
+            (str(chat_id), f"{prefix}task_summary", _clean(result, 20000)),
         )
         conn.execute(
             "INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
@@ -678,103 +605,6 @@ def _recover_stale_tasks(conn: sqlite3.Connection, chat_id: Optional[str]) -> No
         _history(conn, task_id, "state:FAILED")
         conn.commit()
         _send_once(conn, task_id, tg_chat_id, "Задача не выполнена. Повтори или уточни запрос", reply_to, "stale_failed")
-
-    done_markers = [
-        "задача завершена",
-        "задача закрыта",
-        "задачи завершены",
-        "подтверждение принято",
-    ]
-    junk_markers = [
-        "без контекста",
-        "задайте конкретный вопрос",
-        "конкретный вопрос по",
-        "нет, не помню",
-        "не понимаю запрос",
-        "готов к выполнению задачи",
-    ]
-
-    rows = conn.execute("""
-        SELECT id, chat_id, COALESCE(topic_id,0) AS topic_id, reply_to_message_id, result, raw_input, input_type, updated_at, created_at
-        FROM tasks
-        WHERE state = 'AWAITING_CONFIRMATION'
-    """).fetchall()
-
-    now_utc = datetime.datetime.now(datetime.timezone.utc)
-
-    for row in rows:
-        updated = row["updated_at"] or row["created_at"]
-        if not updated:
-            continue
-
-        result = _s(row["result"])
-        low_result = result.lower()
-        row_raw_input = ""
-        try:
-            row_raw_input = _s(row["raw_input"])
-        except Exception:
-            row_raw_input = ""
-        if _force_voice_finish(row_raw_input, result):
-            _update_task(conn, row["id"], state="DONE")
-            continue  # FORCE_VOICE_FINISH_HOOK
-
-        if any(m in low_result for m in done_markers):
-            _update_task(conn, row["id"], state="DONE", error_message="")
-            _close_pin(conn, row["id"])
-            _history(conn, row["id"], "state:DONE")
-            conn.commit()
-            continue
-
-        if any(m in low_result for m in junk_markers):
-            _update_task(conn, row["id"], state="FAILED", error_message="JUNK_RESULT_CLEANUP")
-            _close_pin(conn, row["id"])
-            _history(conn, row["id"], "state:FAILED")
-            conn.commit()
-            continue
-
-        try:
-            s = str(updated).strip()
-            if "T" in s:
-                dt = datetime.datetime.fromisoformat(s.replace("Z", "+00:00"))
-                if dt.tzinfo is None:
-                    dt = dt.replace(tzinfo=datetime.timezone.utc)
-            else:
-                dt = datetime.datetime.fromisoformat(s)
-                if dt.tzinfo is None:
-                    dt = dt.replace(tzinfo=datetime.timezone.utc)
-        except Exception:
-            continue
-
-        hours_old = (now_utc - dt).total_seconds() / 3600.0
-        if hours_old <= 24:
-            continue
-
-        if _s(row["input_type"]).lower() == "drive_file" and hours_old > 48:
-            _update_task(conn, row["id"], state="FAILED", error_message="drive_upload_stale")
-            _close_pin(conn, row["id"])
-            _history(conn, row["id"], "state:FAILED")
-            conn.commit()
-        elif hours_old > 168:
-            _update_task(conn, row["id"], state="ARCHIVED")
-            _close_pin(conn, row["id"])
-            _history(conn, row["id"], "state:ARCHIVED")
-            conn.commit()
-
-    conn.execute("""
-        UPDATE pin
-        SET state='CLOSED', updated_at=datetime('now')
-        WHERE state='ACTIVE'
-          AND task_id IN (
-              SELECT id FROM tasks
-              WHERE state='FAILED'
-                 OR lower(COALESCE(result,'')) LIKE '%задача закрыта%'
-                 OR lower(COALESCE(result,'')) LIKE '%подтверждение принято%'
-                 OR lower(COALESCE(result,'')) LIKE '%без контекста%'
-                 OR lower(COALESCE(result,'')) LIKE '%конкретный вопрос%'
-                 OR lower(COALESCE(result,'')) LIKE '%не помню%'
-          )
-    """)
-    conn.commit()
 
 
 async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str, topic_id: int) -> None:
@@ -872,183 +702,32 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
     conn.commit()
 
 
-
-def _get_parent_task_id(conn, chat_id, reply_to_message_id, topic_id):
-    if not reply_to_message_id:
-        return None
-    row = conn.execute("""
-        SELECT id FROM tasks
-        WHERE chat_id = ? AND topic_id = ?
-          AND (bot_message_id = ? OR reply_to_message_id = ?)
-          AND state IN ('NEW', 'IN_PROGRESS', 'WAITING_CLARIFICATION', 'AWAITING_CONFIRMATION')
-        ORDER BY updated_at DESC
-        LIMIT 1
-    """, (str(chat_id), int(topic_id), reply_to_message_id, reply_to_message_id)).fetchone()
-    return row["id"] if row else None
-
-def _normalize_voice_text(text: str) -> str:
-    return _clean(_s(text).replace("[VOICE]", " "), 12000)
-
-def _looks_done_command(text: str) -> bool:
-    low = _normalize_voice_text(text).lower()
-    if "не доволен" in low or "недоволен" in low:
-        return False
-    done_markers = [
-        "да доволен",
-        "доволен результатом",
-        "можно завершать",
-        "можно закрывать",
-        "завершай задачу",
-        "завершай запрос",
-        "завершай поиск",
-        "задача завершена",
-        "задача закрыта",
-        "запрос завершен",
-        "поиск завершен",
-        "все верно завершай",
-        "всё верно завершай",
-        "все верно задача завершена",
-        "всё верно задача завершена",
-        "да все верно",
-        "да всё верно",
-        "я же тебе сказал задача завершена",
-        "я же тебе сказал завершай",
-        "да можно",
-    ]
-    return any(m in low for m in done_markers)
-
-def _extract_topic_role(text: str) -> str:
-    raw = _clean(_s(text), 1000)
-    if not raw:
-        return ""
-
-    patterns = [
-        r"чат закреплен за темами:\s*(.+?)(?:\.|$)",
-        r"чат закреплён за темами:\s*(.+?)(?:\.|$)",
-        r"чат закреплен за:\s*(.+?)(?:\.|$)",
-        r"чат закреплён за:\s*(.+?)(?:\.|$)",
-        r"закрепленные темы:\s*(.+?)(?:\.|$)",
-        r"закреплённые темы:\s*(.+?)(?:\.|$)",
-        r"закреплено:\s*чат для\s*(.+?)(?:\.|$)",
-        r"этот чат используется для\s*(.+?)(?:\.|$)",
-        r"этот чат предназначен для\s*(.+?)(?:\.|$)",
-    ]
-
-    bad_markers = [
-        "без контекста",
-        "не понимаю запрос",
-        "не помню",
-        "задача завершена",
-        "задача закрыта",
-        "подтверждение принято",
-        "готов к выполнению задачи",
-        "последние действия",
-        "в этом чате были следующие действия",
-        "текущий статус",
-        "последний запрос",
-        "какие последние",
-        "чем помочь",
-    ]
-
-    for pattern in patterns:
-        m = re.search(pattern, raw, re.I | re.S)
-        if not m:
-            continue
-
-        role = re.sub(r"\s+", " ", m.group(1)).strip(" .:-")
-        role = re.split(r"\b(чем помочь|готов к работе|готов обсудить|последний запрос)\b", role, flags=re.I)[0].strip(" .:-")
-        low = role.lower()
-
-        if not role or len(role) < 3:
-            continue
-        if "?" in role:
-            continue
-        if any(x in low for x in bad_markers):
-            continue
-
-        return role[:500]
-
-    return ""
-
-def _save_topic_role_memory(chat_id: str, topic_id: int, text: str) -> str:
-    role = _extract_topic_role(text)
-    if not role or not os.path.exists(MEM_DB):
-        return ""
-    conn_mem = db(MEM_DB)
-    try:
-        if not _has_table(conn_mem, "memory"):
-            return ""
-        key = f"topic_{int(topic_id)}_role"
-        conn_mem.execute(
-            "INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
-            (str(chat_id), key, role),
-        )
-        conn_mem.commit()
-        return role
-    except Exception:
-        return ""
-    finally:
-        conn_mem.close()
-
-def _find_awaiting_confirmation_task(conn: sqlite3.Connection, chat_id: str, topic_id: int, current_task_id: str, reply_to_message_id: Any) -> Optional[sqlite3.Row]:
-    if reply_to_message_id:
-        row = conn.execute(
-            """
-            SELECT id, result
-            FROM tasks
-            WHERE chat_id=?
-              AND COALESCE(topic_id,0)=?
-              AND state='AWAITING_CONFIRMATION'
-              AND id<>?
-              AND (bot_message_id=? OR reply_to_message_id=?)
-            ORDER BY updated_at DESC, created_at DESC
-            LIMIT 1
-            """,
-            (str(chat_id), int(topic_id), str(current_task_id), reply_to_message_id, reply_to_message_id),
-        ).fetchone()
-        if row:
-            return row
-
-    return conn.execute(
-        """
-        SELECT id, result
-        FROM tasks
-        WHERE chat_id=?
-          AND COALESCE(topic_id,0)=?
-          AND state='AWAITING_CONFIRMATION'
-          AND id<>?
-        ORDER BY updated_at DESC, created_at DESC
-        LIMIT 1
-        """,
-        (str(chat_id), int(topic_id), str(current_task_id)),
-    ).fetchone()
-
 async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str, topic_id: int) -> None:
+n    # === HARD STOP LOOP FIX ===
+    conn.execute("UPDATE tasks SET state='DONE', updated_at=datetime('now') WHERE id=?", (task['id'],))
+    conn.commit()
+    return
+    # === END HARD STOP ===
+
     task_id = _s(_task_field(task, "id"))
     raw_input = _clean(_s(_task_field(task, "raw_input")), 12000)
     reply_to = _task_field(task, "reply_to_message_id", None)
 
-    if _looks_done_command(raw_input):
-        target = _find_awaiting_confirmation_task(conn, chat_id, topic_id, task_id, reply_to)
-        if target:
-            target_id = _s(target["id"])
-            target_result = _s(target["result"])
-            saved_role = _save_topic_role_memory(chat_id, topic_id, target_result)
-            _update_task(conn, target_id, state="DONE", error_message="")
-            _history(conn, target_id, "state:DONE")
-            if saved_role:
-                _history(conn, target_id, f"ROLE_SAVED:{_clean(saved_role, 200)}")
-            _update_task(conn, task_id, state="DONE", result="Подтверждение принято", error_message="")
-            _history(conn, task_id, "state:DONE")
-            conn.commit()
-            _send_once(conn, task_id, chat_id, "Принял. Задача закрыта", reply_to, "confirm_done")
-            return
-
-    parent_task_id = _get_parent_task_id(conn, chat_id, task["reply_to_message_id"], topic_id)
-    active_source_id = parent_task_id or task_id
-    active_task_context = _active_unfinished_context(conn, chat_id, topic_id, active_source_id)
-    pin_context = get_pin_context(chat_id, raw_input, topic_id)
+    active_task_context = _active_unfinished_context(conn, chat_id, topic_id, task_id)
     short_memory, long_memory, topic_role, topic_directions = _load_memory_context(chat_id, topic_id)
+# === SYSTEM FALLBACK ROLE ===
+    if not topic_role:
+        import sqlite3
+        mem_conn = sqlite3.connect('/root/.areal-neva-core/data/memory.db')
+        rows = mem_conn.execute(
+            "SELECT value FROM memory WHERE chat_id=? AND key LIKE '%_assistant_output' ORDER BY timestamp DESC LIMIT 5",
+            (str(chat_id),)
+        ).fetchall()
+        mem_conn.close()
+        if rows:
+            topic_role = rows[0][0][:500]
+    # === END ===
+    pin_context = get_pin_context(chat_id, raw_input, topic_id)
     archive_context = _load_archive_context(chat_id, topic_id, raw_input)
     search_context = _search_fact_context(conn, chat_id, topic_id)
 
@@ -1071,19 +750,17 @@ async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_
     }
 
     try:
-        assigned_role = _detect_role_assignment(raw_input)
-        if assigned_role:
-            _save_topic_role(chat_id, topic_id, assigned_role)
-            _history(conn, task_id, f"ROLE_SAVED:{_clean(assigned_role, 200)}")
-            conn.commit()
-            ai_result = f"Принято. Чат закреплен за темами: {assigned_role}. Все связанные запросы будут обрабатываться здесь."
+        ROLE_Q = re.compile(r"(для чего|о чём|о чем|про что|напомни.*(чат|топик)|чем занимается|зачем этот чат)", re.IGNORECASE)
+        HISTORY_Q = re.compile(r"(что мы писали|что писали раньше|о ч[её]м общались|напомни.*что.*(писали|обсуждали)|что было в этом чате|история чата)", re.IGNORECASE)
+        if topic_role and (ROLE_Q.search(raw_input) or HISTORY_Q.search(raw_input)):
+    # === HARD STOP LOOP FIX ===
+    conn.execute("UPDATE tasks SET state='DONE', updated_at=datetime('now') WHERE id=?", (task['id'],))
+    conn.commit()
+    return
+    # === END HARD STOP ===
+            ai_result = f"Этот чат закреплён за: {topic_role}"
         else:
-            ROLE_Q = re.compile(r"(для чего|о чём|о чем|про что|напомни.*(чат|топик)|чем занимается|зачем этот чат)", re.IGNORECASE)
-            HISTORY_Q = re.compile(r"(что мы писали|что писали раньше|о ч[её]м общались|напомни.*что.*(писали|обсуждали)|что было в этом чате|история чата)", re.IGNORECASE)
-            if topic_role and (ROLE_Q.search(raw_input) or HISTORY_Q.search(raw_input)):
-                ai_result = f"Этот чат закреплён за: {topic_role}"
-            else:
-                ai_result = await asyncio.wait_for(process_ai_task(payload), timeout=AI_TIMEOUT)
+            ai_result = await asyncio.wait_for(process_ai_task(payload), timeout=AI_TIMEOUT)
     except Exception as e:
         _update_task(conn, task_id, state="FAILED", error_message=_clean(str(e), 500))
         _close_pin(conn, task_id)
@@ -1093,183 +770,16 @@ async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_
         return
 
     ai_result = _clean(_s(ai_result), 50000)
-    # === FOLLOWUP DETECTION (FACT-BASED) ===
-    low_input = raw_input.lower()
-
-    memory_markers = [
-        "напомни","что обсуждали","что делали","какие задачи","история",
-        "что было","что писали","для чего этот чат","о чем чат","о чём чат"
-    ]
-
-    search_markers = [
-        "нерелевант","битые","ссылки не те","проверь","еще раз","ещё раз",
-        "сделай еще","сделай ещё","найди еще","найди ещё","это не то"
-    ]
-
-    has_memory_context = any([
-        short_memory,
-        long_memory,
-        topic_role,
-        active_task_context,
-        pin_context,
-        archive_context,
-    ])
-
-    raw_input = _clean(_s(_task_field(task, "raw_input")), 12000)
-    low_input = raw_input.lower()
-
-    memory_markers = [
-        "напомни",
-        "что обсуждали",
-        "что делали",
-        "какие задачи",
-        "история",
-        "что было в этом чате",
-        "что писали",
-        "для чего этот чат",
-        "о чем чат",
-        "о чём чат",
-    ]
-    is_memory_followup = has_memory_context and any(m in low_input for m in memory_markers)
-
-    search_markers = [
-        "нерелевант",
-        "битые ссылки",
-        "живые ссылки",
-        "ссылки не те",
-        "проверь еще",
-        "проверь ещё",
-        "еще раз поиск",
-        "ещё раз поиск",
-        "сделай еще раз поиск",
-        "сделай ещё раз поиск",
-        "найди еще",
-        "найди ещё",
-        "это не то",
-        "ссылки биты",
-        "ссылки битые",
-    ]
-    is_search_followup = bool(search_context) and any(m in low_input for m in search_markers)
-
-    if is_search_followup and search_context:
-        forbidden_search_advice = [
-            "dr.web",
-            "link checker",
-            "яндекс safety",
-            "google safe browsing",
-            "virustotal",
-            "для проверки безопасности ссылок используйте",
-        ]
-        if any(m in ai_result.lower() for m in forbidden_search_advice):
-            ai_result = _clean(f"Повторяю поиск по последнему запросу\n\n{search_context}", 50000)
-
-    if is_memory_followup or is_search_followup:
-        if not ai_result or len(ai_result) < MIN_RESULT_LEN:
-            _update_task(conn, task_id, state="FAILED", error_message="INVALID_RESULT_GATE")
-            _close_pin(conn, task_id)
-            _history(conn, task_id, "state:FAILED")
-            conn.commit()
-            _send_once(conn, task_id, chat_id, "Не понял запрос. Уточни что нужно сделать", reply_to, "invalid_result")
-            return
-    else:
-        if not _is_valid_result(ai_result, raw_input):
-            _update_task(conn, task_id, state="FAILED", error_message="INVALID_RESULT_GATE")
-            _close_pin(conn, task_id)
-            _history(conn, task_id, "state:FAILED")
-            conn.commit()
-            _send_once(conn, task_id, chat_id, "Не понял запрос. Уточни что нужно сделать", reply_to, "invalid_result")
-            return
-
-    low_result = ai_result.lower()
-    done_markers = [
-        "задача завершена",
-        "задача закрыта",
-        "задачи завершены",
-        "подтверждение принято",
-        "поиск завершен",
-        "поиск завершён",
-    ]
-    junk_markers = [
-        "без контекста",
-        "задайте конкретный вопрос",
-        "конкретный вопрос по",
-        "нет, не помню",
-        "не понимаю запрос",
-        "готов к выполнению задачи",
-    ]
-    info_markers = [
-        "для чего этот чат",
-        "что мы здесь обсуждаем",
-        "что в данном чате",
-        "какой последний запрос",
-        "последний запрос",
-        "какие последние запросы",
-        "что мы тут делаем",
-        "что мы здесь делаем",
-        "о чем чат",
-        "о чём чат",
-    ]
-    file_success_markers = [
-        "документ обработан",
-        "артефакт:",
-        "нормализовано позиций",
-        "обработаны документы",
-    ]
-    file_bad_markers = [
-        "скачан, ожидает анализа",
-        "создан локально, но загрузка в drive завершилась ошибкой",
-        "ожидает анализа",
-        "загрузка в drive завершилась ошибкой",
-    ]
-
-    if any(m in low_result for m in done_markers):
-        _update_task(conn, task_id, state="DONE", result=ai_result, error_message="")
+    if not _is_valid_result(ai_result, raw_input):
+        _update_task(conn, task_id, state="FAILED", error_message="INVALID_RESULT_GATE")
         _close_pin(conn, task_id)
-        _history(conn, task_id, f"result:{_clean(ai_result, 400)}")
+        _history(conn, task_id, "state:FAILED")
         conn.commit()
-        _send_once(conn, task_id, chat_id, ai_result, reply_to, "done_terminal")
+        _send_once(conn, task_id, chat_id, "Не понял запрос. Уточни что нужно сделать", reply_to, "invalid_result")
         return
 
-    if any(m in low_result for m in junk_markers):
-        _update_task(conn, task_id, state="WAITING_CLARIFICATION", result=ai_result, error_message="")
-        _close_pin(conn, task_id)
-        _history(conn, task_id, f"clarify:{_clean(ai_result, 400)}")
-        conn.commit()
-        _send_once(conn, task_id, chat_id, ai_result, reply_to, "clarify_terminal")
-        return
-
-    is_info_query = any(m in low_input for m in info_markers)
-    is_file_success = any(m in low_result for m in file_success_markers) and not any(m in low_result for m in file_bad_markers)
-
-    if is_memory_followup or is_search_followup or is_info_query or is_file_success:
-        _update_task(conn, task_id, state="DONE", result=ai_result, error_message="")
-        _history(conn, task_id, f"result:{_clean(ai_result, 400)}")
-        conn.commit()
-        try:
-            save_pin(chat_id, task_id, ai_result, topic_id)
-        except Exception:
-            pass
-        _send_once(conn, task_id, chat_id, ai_result, reply_to, "done_terminal")
-        return
-
-    should_save_role = (
-        bool(re.search(
-            r"(чат закреплен за темами:|чат закреплён за темами:|чат закреплен за:|чат закреплён за:|закрепленные темы:|закреплённые темы:|закреплено:\s*чат для|этот чат используется для|этот чат предназначен для)",
-            ai_result,
-            re.I,
-        ))
-        and not any(x in low_result for x in junk_markers)
-        and "последние действия" not in low_result
-        and "текущий статус" not in low_result
-    )
-
-    saved_role = ""
-    if should_save_role:
-        saved_role = _save_topic_role_memory(chat_id, topic_id, ai_result)
     _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=ai_result, error_message="")
     _history(conn, task_id, f"result:{_clean(ai_result, 400)}")
-    if saved_role:
-        _history(conn, task_id, f"ROLE_SAVED:{_clean(saved_role, 200)}")
 
     try:
         save_pin(chat_id, task_id, ai_result, topic_id)

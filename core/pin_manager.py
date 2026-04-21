@@ -1,3 +1,4 @@
+import re
 import sqlite3
 
 CORE_DB = "/root/.areal-neva-core/data/core.db"
@@ -31,15 +32,29 @@ def get_pin_context(chat_id: str, request_text: str = "", topic_id: int = 0) -> 
         ).fetchone()
 
         if task_row and task_row["result"]:
-            return str(task_row["result"]).strip()[:4000]
+            pin_text = str(task_row["result"]).strip()
+            if any(m in pin_text.lower() for m in PIN_MUTEX_MARKERS):
+                return ""
+            if request_text:
+                request_words = set(re.findall(r"\w+", request_text.lower()))
+                pin_words = set(re.findall(r"\w+", pin_text.lower()))
+                if request_words & pin_words:
+                    return pin_text[:4000]
+                return ""
+            return pin_text[:4000]
 
         return ""
     finally:
         conn.close()
 
+PIN_MUTEX_MARKERS = ["задача отменена", "задача завершена", "не понимаю запрос", "готов к выполнению задачи"]
+
 def save_pin(chat_id: str, task_id: str, result_text: str, topic_id: int = 0) -> bool:
     text = (result_text or "").strip()
     if not text:
+        return False
+    if any(m in text.lower() for m in PIN_MUTEX_MARKERS):
+        return False  # PIN_STRICT_DONE_ONLY
         return False
     conn = _conn()
     try:

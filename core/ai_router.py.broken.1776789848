@@ -193,23 +193,9 @@ def _build_messages(payload: Dict[str, Any], user_text: str) -> List[Dict[str, s
     topic_directions = _clean(_s(payload.get("topic_directions")), 1000)
     system_content = SYSTEM_PROMPT
     # search-followup: если жалуются на ссылки и есть search_context — не давать общие советы
-    search_followup_markers = [
-        "нерелевант",
-        "битые",
-        "битые ссылки",
-        "ссылки биты",
-        "ссылки битые",
-        "живые ссылки",
-        "ссылки не те",
-        "проверь",
-        "проверь еще",
-        "проверь ещё",
-        "ещё раз",
-        "еще раз",
-        "это не то",
-    ]
+    search_followup_markers = ["нерелевант", "битые", "проверь", "ещё раз", "еще раз"]
     if any(m in user_text.lower() for m in search_followup_markers) and payload.get("search_context"):
-        system_content += "\n\nFORBIDDEN_SEARCH_ADVICE: ЗАПРЕЩЕНО предлагать Dr.Web, Link Checker, Yandex Safety, Google Safe Browsing, VirusTotal и любые общие сервисы проверки ссылок. Нужно продолжить именно предыдущую поисковую задачу, опираясь на SEARCH_RESULT, без общих советов и без ухода в сторону."
+        system_content += "\n\nFORBIDDEN_SEARCH_ADVICE: ЗАПРЕЩЕНО давать общие советы. Только продолжение поиска. не предлагать проверку ссылок через сторонние сервисы. Продолжи поиск по последнему запросу."
     if topic_role:
         system_content = f"Роль этого чата: {topic_role}\n\n" + system_content
     if topic_directions:
