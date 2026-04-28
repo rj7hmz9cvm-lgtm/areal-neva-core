@@ -1,0 +1,123 @@
+{
+  "chat_id": "UNKNOWN",
+  "chat_name": "github_ssot_technical_orchestra",
+  "exported_at": "2026-04-29T00:00:00+02:00",
+  "source_model": "ChatGPT GPT-5.5 Thinking",
+  "system": "AREAL-NEVA ORCHESTRA: сервер 89.22.225.136, base /root/.areal-neva-core, Telegram bot @ai_orkestra_all_bot, GitHub repo rj7hmz9cvm-lgtm/areal-neva-core, GitHub используется как SSOT для канонов и shared context, сервер используется как runtime, Google Drive оставлен как резерв и хранилище тяжёлых файлов",
+  "architecture": "Telegram -> telegram_daemon/task_worker -> ai_router/OpenRouter/DeepSeek -> engines/Python -> validator -> HUMAN_DECISION_EDITOR -> Telegram. GitHub docs/CANON_FINAL и docs/SHARED_CONTEXT являются текстовым SSOT. Сервер хранит runtime, core.db, memory.db, обработку файлов. Drive не является главным мозгом",
+  "pipeline": "Базовый lifecycle задач: NEW -> IN_PROGRESS -> AWAITING_CONFIRMATION -> DONE -> ARCHIVED. Для файлового контура целевой pipeline: INGESTED -> DOWNLOADED -> PARSED -> CLEANED -> NORMALIZED -> CALCULATED -> ARTIFACT_CREATED -> UPLOADED",
+  "files": [
+    "README.md -> описание GitHub SSOT",
+    "docs/ARCHITECTURE/SEARCH_MONOLITH_V1.md -> канон интернет-поиска topic_500",
+    "docs/CANON_FINAL/00_INDEX.md -> индекс канонов",
+    "docs/HANDOFFS/LATEST_HANDOFF.md -> handoff состояния 28.04.2026",
+    "docs/REPORTS/NOT_CLOSED.md -> незакрытые задачи",
+    "docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md -> master architecture block v1",
+    "tools/context_aggregator.py -> заготовка агрегатора контекста",
+    "tools/secret_scan.sh -> pre-commit secret scan",
+    "runtime/.gitkeep -> заглушка runtime без хранения мусора",
+    "/root/.areal-neva-core/task_worker.py -> worker, был crashloop из-за NameError p на строке 3981, исправлен терминалом"
+  ],
+  "code": "Python 3 venv /root/.areal-neva-core/.venv/bin/python3, SQLite core.db/memory.db, systemd services, GitHub API/git, Telegram, OpenRouter/DeepSeek, планируемые модели: Gemini, Mistral, Cerebras, Cohere, Perplexity, Cloudflare/HuggingFace fallback, Python engines для расчётов и файлов",
+  "patches": [
+    "INIT_GITHUB_SSOT_STRUCTURE -> GitHub repo -> README/docs/tools/runtime -> status: applied_by_terminal commit 21a0e95",
+    "ORCHESTRA_MASTER_BLOCK_V1 -> docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md -> status: applied_by_terminal commit 3e98117",
+    "FIX_NAMEERROR_P_20260429 -> /root/.areal-neva-core/task_worker.py line 3981 -> status: applied_by_terminal, SYNTAX_OK, service active",
+    "CONTEXT_AGGREGATOR_DRAFT -> /root/.areal-neva-core/tools/context_aggregator.py -> status: drafted in chat, terminal execution result not provided"
+  ],
+  "commands": [
+    "ssh areal ... git clone repo, create docs/CANON_FINAL docs/SHARED_CONTEXT docs/ARCHITECTURE docs/HANDOFFS docs/REPORTS tools scripts runtime, write README, secret_scan, SEARCH_MONOLITH, handoff, NOT_CLOSED, context_aggregator stub, git commit/push",
+    "bash tools/secret_scan.sh -> initial scan failed because patterns inside secret_scan.sh matched itself",
+    "secret patterns moved to /root/.areal-neva-core/.secret_patterns, tools/secret_scan.sh committed and pushed",
+    "git commit -m 'FIX: secret_scan паттерны вынесены из репо 28.04.2026' -> commit 21a0e95",
+    "git commit -m 'ARCH: ORCHESTRA_MASTER_BLOCK v1 верифицировано Claude+GPT 28.04.2026' -> commit 3e98117",
+    "diagnostic command checked journalctl, DB files, sqlite tables, worker direct start, grep DB paths",
+    "patch command replaced open(p).read() with open(__file__, encoding='utf-8', errors='ignore').read() in task_worker.py line 3981",
+    "py_compile task_worker.py -> SYNTAX_OK",
+    "systemctl restart areal-task-worker -> active",
+    "sqlite3 /root/.areal-neva-core/data/core.db 'SELECT count(*) FROM tasks;' -> 694"
+  ],
+  "db": "Факт диагностики: /root/.areal-neva-core/core.db существует, размер 0, tasks table отсутствует и считается мусором. Рабочая БД: /root/.areal-neva-core/data/core.db, таблицы drive_files, processed_updates, tasks, pin, task_history, templates, tasks_count=694. task_worker.py CORE_DB строка 30 указывает на /root/.areal-neva-core/data/core.db",
+  "memory": "memory.db находится в /root/.areal-neva-core/data/memory.db, размер 728K по выводу терминала. Детальная проверка содержимого memory.db в этом чате не выполнялась",
+  "services": [
+    "areal-task-worker.service: active после FIX_NAMEERROR_P_20260429",
+    "telegram-ingress.service: ранее active по диагностике пользователя",
+    "areal-memory-api.service: ранее active по диагностике пользователя"
+  ],
+  "canons": [
+    "GitHub SSOT: GitHub = мозг для канонов, shared context, handoff, reports, scripts; сервер = runtime; Drive = резерв и тяжёлые файлы",
+    "GITHUB_SSOT_RULES: каноны не перетирать, только version/add, secret_scan обязателен, секреты/БД/логи/тяжёлые файлы не коммитить",
+    "SEARCH_MONOLITH_V1: topic_500 работает как цифровой снабженец, не просто поиск ссылок; этапы включают Search Session, Review Trust Score, SELLER_RISK, TCO, живой рынок, technical audit",
+    "ORCHESTRA_MASTER_BLOCK: три блока — technical file pipeline, multi-model orchestra layer, GitHub SSOT + aggregator",
+    "Python считает и создаёт файлы, LLM анализирует и понимает смысл, финальный вывод проходит через validator и HUMAN_DECISION_EDITOR",
+    "Все модели должны работать внутри оркестра, получать общий ORCHESTRA_SHARED_CONTEXT и не отвечать пользователю напрямую"
+  ],
+  "decisions": [
+    "РЕШЕНИЕ -> перенести каноны и shared context в GitHub SSOT -> применено созданием структуры docs/* и push в main",
+    "РЕШЕНИЕ -> Google Drive оставить резервом и хранилищем тяжёлых файлов -> применено в архитектуре",
+    "РЕШЕНИЕ -> агрегатор пока отсутствует, временно человек вручную собирает монолит и пушит в GitHub -> применено как текущая схема",
+    "РЕШЕНИЕ -> multi-model layer должен работать до финальной сборки DeepSeek/OpenRouter и иметь общий контекст -> применено в ORCHESTRA_MASTER_BLOCK",
+    "РЕШЕНИЕ -> HUMAN_DECISION_EDITOR обязателен, чтобы технический мусор переводился в человеческое решение -> применено в master block"
+  ],
+  "errors": [
+    "SECRET_SCAN false positive -> secret_scan.sh ловил собственные паттерны sk-ant/sk-or/ghp_ -> паттерны вынесены в /root/.areal-neva-core/.secret_patterns, commit 21a0e95",
+    "GITHUB_TOKEN leaked in chat/terminal text -> причина: токен был вставлен открытым текстом -> решение: токен должен быть отозван и заменён, в коде использовать env only",
+    "areal-task-worker crashloop -> причина: task_worker.py line 3981 NameError name 'p' is not defined -> решение: заменить open(p).read() на open(__file__, encoding='utf-8', errors='ignore').read(), SYNTAX_OK, service active",
+    "no such table: tasks -> причина: sqlite3 смотрел в пустой /root/.areal-neva-core/core.db -> решение: подтверждено что worker использует /root/.areal-neva-core/data/core.db, пустой core.db не трогать",
+    ".env invalid environment assignment -> причина: строка export GITHUB_TOKEN=[REDACTED] в .env невалидна для systemd EnvironmentFile -> решение: заменить на GITHUB_TOKEN=... и ротировать токен"
+  ],
+  "solutions": [
+    "ПРОБЛЕМА -> ручная передача контекста между чатами -> РЕШЕНИЕ -> GitHub SSOT + ONE_SHARED_CONTEXT + будущий aggregator -> СТАТУС -> структура GitHub создана, aggregator не реализован",
+    "ПРОБЛЕМА -> много моделей могут создать хаос -> РЕШЕНИЕ -> MODEL_ROUTER, MODEL_REGISTRY, FALLBACK_CHAIN, ORCHESTRA_SHARED_CONTEXT, PRE_OPENROUTER_MODEL_LAYER -> СТАТУС -> зафиксировано в ORCHESTRA_MASTER_BLOCK",
+    "ПРОБЛЕМА -> технический контур должен работать с PDF/XLSX/CSV/PNG/JPG/DWG/DXF -> РЕШЕНИЕ -> TECHNICAL_FILE_PIPELINE 8 стадий + engines + FILE_RESULT_GUARD -> СТАТУС -> архитектура зафиксирована, полная реализация не подтверждена",
+    "ПРОБЛЕМА -> пользователю не нужен технический мусор -> РЕШЕНИЕ -> HUMAN_DECISION_EDITOR + USER_MODE_SWITCH -> СТАТУС -> зафиксировано в master block",
+    "ПРОБЛЕМА -> task_worker crashloop -> РЕШЕНИЕ -> точечный patch line 3981 -> СТАТУС -> active, tasks_count 694"
+  ],
+  "state": "GitHub SSOT структура создана и запушена; ORCHESTRA_MASTER_BLOCK v1 запушен; task_worker crashloop по NameError p исправлен; агрегатор контекста пока только в ТЗ/драфте и должен быть реализован следующим шагом",
+  "what_working": [
+    "GitHub push в main работает: commit 21a0e95 и 3e98117 подтверждены терминалом",
+    "secret_scan после выноса паттернов показал SECRET_SCAN_OK",
+    "areal-task-worker после патча task_worker.py line 3981 показал active",
+    "py_compile task_worker.py показал SYNTAX_OK",
+    "core.db рабочая БД /root/.areal-neva-core/data/core.db содержит tasks_count=694"
+  ],
+  "what_broken": [
+    ".env содержит невалидную для systemd строку export GITHUB_TOKEN=[REDACTED] по journalctl",
+    "GITHUB_TOKEN был засвечен в чате/терминале и должен быть ротирован",
+    "context_aggregator.py на сервере пока stub или draft, нет подтверждённого DONE: ONE_SHARED_CONTEXT pushed",
+    "Drive/GitHub aggregator в полном виде не реализован"
+  ],
+  "what_not_done": [
+    "docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md ещё не подтверждён как автоматически созданный агрегатором",
+    "context_aggregator.py не подтверждён успешным запуском",
+    "tools/watch_exports.py не создан",
+    "TECHNICAL_FULL_CONTOUR не закрыт live-тестами для PDF/XLSX/CSV/PNG/JPG/DWG/DXF",
+    "MODEL_ROUTER полный не реализован в коде",
+    "RESULT_VALIDATOR, RESULT_FORMAT_ENFORCER, FILE_RESULT_GUARD, HUMAN_DECISION_EDITOR не подтверждены кодом",
+    "FALLBACK_CHAIN и MODEL_REGISTRY не подтверждены кодом",
+    "SEARCH_MONOLITH_V1 live-test не проводился"
+  ],
+  "current_breakpoint": "Следующее действие: реализовать и запустить /root/.areal-neva-core/tools/context_aggregator.py так, чтобы он создал docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md в GitHub и вывел DONE: ONE_SHARED_CONTEXT pushed; перед этим ротировать GITHUB_TOKEN и исправить .env без export",
+  "root_causes": [
+    "task_worker crashloop -> NameError p undefined on line 3981 -> подтверждение direct start traceback и patched context",
+    "no such table tasks -> пустой /root/.areal-neva-core/core.db использовался в ручной проверке, не worker -> подтверждение CORE_DB line 30 and /root/.areal-neva-core/data/core.db tasks_count=694",
+    "secret_scan initial fail -> script scanned its own secret pattern literals -> подтверждение SECRET FOUND lines before moving patterns out of repo"
+  ],
+  "verification": [
+    "INIT_GITHUB_SSOT_STRUCTURE -> terminal output commit 21a0e95, push main -> main",
+    "ORCHESTRA_MASTER_BLOCK -> terminal output commit 3e98117, create docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md, push main -> main",
+    "FIX_NAMEERROR_P_20260429 -> terminal output PATCH_OK, SYNTAX_OK, systemctl is-active active, tasks_count 694",
+    "DB_PATH -> grep output task_worker.py line 30 CORE_DB = f'{BASE}/data/core.db'",
+    "working DB -> sqlite output tables drive_files processed_updates tasks pin task_history templates and tasks_count 694",
+    "secret_scan -> terminal output SECRET_SCAN_OK before commits"
+  ],
+  "limits": [
+    "Не трогать .env без отдельного явного действия и ротации токена",
+    "Не коммитить секреты, core.db, memory.db, logs, sessions, credentials, token files, heavy files",
+    "Не трогать estimate_engine.py, file_intake_router.py, ai_router.py, reply_sender.py в рамках task_worker crashloop fix",
+    "Файлы экспорта чата создавать только в chat_exports/",
+    "Каноны не перетирать, только version/add",
+    "Любой патч: backup -> patch -> py_compile -> restart -> logs -> DB/service check",
+    "Неподтверждённое не писать как working"
+  ]
+}
