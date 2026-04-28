@@ -1,0 +1,58 @@
+{
+  "chat_id": "claude_session_29_04_2026",
+  "chat_name": "AREAL-NEVA ORCHESTRA — Claude Session 28-29.04.2026",
+  "exported_at": "2026-04-29T01:45:00+03:00",
+  "source_model": "Claude Sonnet 4.6",
+  "system": "AREAL-NEVA ORCHESTRA Ubuntu 24.04 89.22.225.136 /root/.areal-neva-core",
+  "architecture": "Telegram → telegram_daemon.py → core.db → task_worker.py → ai_router.py → OpenRouter → reply_sender.py → Telegram",
+  "pipeline": "NEW → INTAKE → IN_PROGRESS → RESULT_READY → AWAITING_CONFIRMATION → DONE → ARCHIVED",
+  "patches": [
+    "FIX_VOICE_GUARD_20260428 → telegram_daemon.py:961 → word-boundary → SYNTAX_OK active",
+    "FIX_IS_SEARCH_20260428 → task_worker.py:2266 → is_search в payload → SYNTAX_OK active",
+    "FIX_SEARCH_CONTEXT_20260428 → task_worker.py:2248 → clear search_context → SYNTAX_OK active",
+    "FIX_VOICE_REVISION_V2 → telegram_daemon.py:880+ → empty revision fix → SYNTAX_OK active",
+    "FIX_VOICE_CONFIRM_IN_PROGRESS → telegram_daemon.py:560 → голос confirm → SYNTAX_OK active",
+    "FIX_CRASHLOOP_3981 → task_worker.py:3981 → NameError p=__file__ → SYNTAX_OK active",
+    "FIX_CP8_ERROR_CLOSE → task_worker.py → estimate errors → FAILED не повисают → SYNTAX_OK active",
+    "FIX_CP8_SEARCH_TYPE → task_worker.py → input_type search → CP8 estimate hook → SYNTAX_OK active",
+    "FIX_EMPTY_AI_RETRY → task_worker.py:2297 → retry 3x при chars=0 → SYNTAX_OK active",
+    "FIX_DRIVE_OAUTH → task_worker.py:2569 → _download_from_drive_oauth token.json → SYNTAX_OK active",
+    "FIX_ENV_EXPORT → .env:16 → убран export GITHUB_TOKEN → active"
+  ],
+  "what_working": [
+    "areal-task-worker active NRestarts=0",
+    "telegram-ingress active",
+    "areal-memory-api active",
+    "Смета текстом из topic_500 → ответ ✅",
+    "Голос revision ✅",
+    "GitHub SSOT → 3 канона + 40 chat_exports + HANDOFF + PROTOCOL",
+    "context_aggregator.py → ONE_SHARED_CONTEXT.md ✅ 47 файлов",
+    "Drive OAuth token.json ✅"
+  ],
+  "what_not_done": [
+    "Смета → Excel файл на Drive (не протестировано)",
+    "КЖ PDF pipeline",
+    "Дублирование ответа в разные топики",
+    "Голос 00:02-00:04 → revision вместо confirm",
+    "Нормы СП/ГОСТ в technadzor_engine",
+    "Шаблоны, multi-file"
+  ],
+  "current_breakpoint": "Все патчи applied. Завтра тест: смета Excel на Drive, КЖ PDF, дублирование",
+  "github": {
+    "repo": "rj7hmz9cvm-lgtm/areal-neva-core",
+    "files": [
+      "docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md",
+      "docs/ARCHITECTURE/SEARCH_MONOLITH_V1.md",
+      "docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md",
+      "docs/HANDOFFS/LATEST_HANDOFF.md",
+      "docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md",
+      "docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md",
+      "chat_exports/ (40 файлов)",
+      "tools/context_aggregator.py",
+      "tools/secret_scan.sh"
+    ]
+  },
+  "db": "ARCHIVED 371 | DONE 98 | CANCELLED 165 | FAILED 60",
+  "services": ["areal-task-worker: active", "telegram-ingress: active", "areal-memory-api: active"],
+  "state": "Система стабильна. Все патчи applied. GitHub SSOT настроен. Тест завтра."
+}
