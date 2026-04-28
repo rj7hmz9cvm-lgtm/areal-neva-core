@@ -1,0 +1,68 @@
+﻿AREAL-NEVA ORCHESTRA - SESSION HANDOFF 2026-04-27 02:10 MSK
+SOURCE: Claude session 26-27.04.2026
+FOR: Next AI - read this FIRST before any action
+
+
+== SYSTEM STATE ==
+Server: 89.22.225.136 Path: /root/.areal-neva-core
+Services: areal-telegram-daemon PID 1566302 running since 01:37 (systemd shows inactive but process alive), areal-task-worker ACTIVE, areal-memory-api ACTIVE
+
+
+== VOICE FIX APPLIED TODAY ==
+ROOT CAUSE: telegram_daemon.py line 902-903 referenced CHAT_ONLY_PHRASES (NameError). CANON_PASS13 defined it at line 940 after main() runs.
+FIX: sed -i 902-903 commented out with DISABLED_PASS13. Voice now works.
+
+
+== BROKEN - FIX NEXT ==
+
+
+P0 CONFIRMATION HANDLER:
+- Da after Dovolet? creates NEW task instead of closing existing AWAITING_CONFIRMATION
+- Canon 2.1 violation: CONFIRM must close task
+- Canon 2.3 violation: reply to bot must NOT create new task
+- FIX: grep -n _handle_control_text telegram_daemon.py, read function, verify bot_message_id lookup vs reply_to_message_id
+- CHECK: sqlite3 data/core.db SELECT bot_message_id FROM tasks WHERE state=AWAITING_CONFIRMATION LIMIT 5
+
+
+P1 CHAT INTENT AUTO-CLOSE:
+- Conversational responses hang 600s STALE_TIMEOUT
+- Fix: task_worker.py overlay after AI responds, if intent==CHAT immediately DONE
+
+
+P2 DRIVE DOWNLOAD_FAILED:
+- drive_file tasks fail DOWNLOAD_FAILED
+- Check CANON_PASS3_REAL_DRIVEFILE_WIRING lines 2237-2403 task_worker.py
+
+
+== KEY CODE LOCATIONS ==
+telegram_daemon.py:
+- Lines 10-23: CANON_PASS6 fcntl.flock lock
+- Lines 902-903: DISABLED_PASS13 (commented out)
+- Lines 940-950: CANON_PASS13 CHAT_ONLY_PHRASES def
+task_worker.py:
+- Line 47: _auto_close_trash_awaiting
+- Line 1842: _auto_close_trash_awaiting called
+- Lines 2237-2403: CANON_PASS3_REAL_DRIVEFILE_WIRING
+- Lines 2573-2598: CANON_PASS6_LIVE_CORE_OVERLAY with _cp6_save_topic_directions
+
+
+== API KEYS ==
+WORKING: OpenRouter (DeepSeek+Perplexity), Google API
+DEAD: Anthropic 401, OpenAI 429, Grok 403, DeepSeek 402, Groq 403
+
+
+== DB STATE ==
+AWAITING_CONFIRMATION: 45+, FAILED: 677, DONE: 24, ARCHIVED: 371
+
+
+== CANON KEY RULES ==
+2.1: FINISH>CONFIRM>REVISION>TASK>SEARCH>CHAT
+2.3: Reply to bot = NO NEW TASK, find old task via bot_message_id
+8.3: ok/ponyat/spasibo = CHAT, no new tasks
+10.1: STALE_TIMEOUT=600s AI_TIMEOUT=300s
+
+
+== DRIVE FOLDERS ==
+Chat exports: 14bYA9bHaKahkE8d4IDwWxL4Ojn-G0sDl
+CANON_FINAL: 1U_IrEOtIJfUVAdjH-kHwms2M2z3FXan0
+Main canon: 1k_KIpQ7jD15_w83sMz4WfqoEIINIXTHTaTOtUovf2gU

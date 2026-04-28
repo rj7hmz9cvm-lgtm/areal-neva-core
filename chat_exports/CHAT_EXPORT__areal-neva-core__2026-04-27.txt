@@ -1,0 +1,107 @@
+{
+  "chat_id": "UNKNOWN",
+  "chat_name": "areal-neva-core",
+  "exported_at": "2026-04-27T20:00:00Z",
+  "source_model": "Claude Sonnet 4.6",
+  "system": "Multi-agent AI orchestration infrastructure areal-neva-core. Telegram bots, async task workers, Python agents, Google Drive sync, SQLite-backed state management. Self-hosted Linux server + MacBook Air.",
+  "architecture": "Telegram bot -> task_worker.py -> SQLite WAL task queue -> agent handlers (Claude/ChatGPT/Gemini/Grok/DeepSeek/Perplexity) -> results stored in SQLite -> Google Drive sync via Mac",
+  "pipeline": "NEW -> IN_PROGRESS -> DONE / FAILED -> ARCHIVED",
+  "files": [
+    "task_worker.py -> central async worker for task lifecycle",
+    "google_io.py -> Google Drive integration with lazy imports",
+    "pin_manager.py -> pin state management via SQLite",
+    "drive_ingest.py -> Google Drive file ingestion with service file filters",
+    "deploy_patch.sh -> deployment script: stop/backup/patch/restart/logs"
+  ],
+  "code": "Python asyncio / SQLite WAL / Telethon / openpyxl / Bash / Linux server + macOS local",
+  "patches": [
+    "task_worker_race_condition_guard -> task_worker.py -> voice file availability check -> status: applied_by_terminal",
+    "task_worker_stt_retry_logic -> task_worker.py -> STT retry on failure -> status: applied_by_terminal",
+    "task_worker_voice_state_routing -> task_worker.py -> incorrect state routing for voice tasks -> status: applied_by_terminal",
+    "task_worker_raw_path_leakage -> task_worker.py -> raw file path leak in user-facing messages -> status: applied_by_terminal",
+    "task_worker_empty_transcript -> task_worker.py -> empty transcript handling -> status: applied_by_terminal",
+    "task_worker_internal_path_pattern_leak -> task_worker.py -> internal path pattern leakage in results -> status: applied_by_terminal",
+    "google_io_lazy_import -> google_io.py -> top-level googleapiclient import crash fix -> status: applied_by_terminal",
+    "pin_manager_table_ref -> pin_manager.py -> pins table -> pin table correction -> status: applied_by_terminal",
+    "pin_manager_schema_readwrite -> pin_manager.py -> pin context in tasks.result via task_id -> status: applied_by_terminal",
+    "task_worker_fcntl_lock_release -> task_worker.py -> fcntl locks in finally blocks -> status: applied_by_terminal",
+    "drive_ingest_service_file_filter -> drive_ingest.py -> is_service_file_for_ingest() filters CHAT_EXPORT_* FULL_CANON_* EXTERNAL_WORK_MONITORING_* UNKNOWN_* INDEX__* voice_*.ogg topic_* application/ogg -> status: applied_by_terminal"
+  ],
+  "commands": [
+    "cp <file> <file>.bak before all modifications",
+    "systemctl stop / start / restart areal-neva-core services",
+    "sqlite3 update tasks set status='NEW' where status='IN_PROGRESS'",
+    "tail -f /var/log/areal-neva-core/*.log"
+  ],
+  "db": "SQLite WAL: tasks (status NEW/IN_PROGRESS/DONE/FAILED/ARCHIVED), pin (pin context via task_id -> tasks.result), memory.db (topic isolation)",
+  "memory": "state: keys and values per topic; topic isolation active; local path ~/.areal-neva-core/data/memory",
+  "services": [
+    "task_worker: applied patches confirmed",
+    "google_io: lazy import fix applied",
+    "pin_manager: table ref and schema fix applied",
+    "drive_ingest: service file filter active"
+  ],
+  "canons": [
+    "CANON 1 - DRIVE_INGEST_HYGIENE: drive_ingest.py not create tasks for CHAT_EXPORT_* FULL_CANON_* EXTERNAL_WORK_MONITORING_* UNKNOWN_* INDEX__* voice_*.ogg topic_* application/ogg -> is_service_file_for_ingest() function",
+    "CANON_FINAL on server: /root/.areal-neva-core/CANON_FINAL/ -> 11 files. SHA256SUMS.txt verified. Agents: Claude(verification/TZ), ChatGPT(patches), Gemini(security), Grok(architecture), DeepSeek(text pipeline), Perplexity(ONLINE_MODEL)",
+    "TECH_CONTOUR_CLOSED_2026_04_24: Worker stable, PDF->XLSX artifact working, service files filter active, requeue loop guard applied, memory cleaned, queue clean, tesseract rus+eng confirmed, duplicate file guard implemented"
+  ],
+  "decisions": [
+    "lazy imports for googleapiclient -> prevent startup crash when not installed -> google_io.py",
+    "fcntl locks in finally blocks -> prevent worker conflicts on abnormal exit -> task_worker.py",
+    "pin context via tasks.result + task_id -> schema-aware read/write -> pin_manager.py",
+    "direct download to final destination paths -> prevent shutil silent failure on filename mismatch -> Telethon agent",
+    "ASCII-safe paths only -> prevent Cyrillic failures in Python 3.9+zsh on macOS"
+  ],
+  "errors": [
+    "googleapiclient not installed -> top-level import crash on startup -> moved to lazy import inside functions",
+    "pin_manager reading from pins table -> table does not exist -> corrected to pin table",
+    "voice file race condition -> file not yet available on disk -> added availability guard",
+    "stale IN_PROGRESS tasks -> worker restart leaves orphaned records -> reset via SQLite UPDATE on deploy",
+    "drive_ingest processing service files -> CHAT_EXPORT_* and system files created spurious tasks -> is_service_file_for_ingest() filter added"
+  ],
+  "solutions": [
+    "STT retry logic -> explicit retry with backoff on failure -> DOMNE",
+    "voice task state routing -> explicit per-spec state transitions -> DONE",
+    "path leakage in user messages -> stripped internal path references -> DONE",
+    "deploy_patch.sh -> unified deploy script: stop/backup/patch/reset-DTInProgress/restart/logs -> DONE",
+    "duplicate file guard -> prevent reprocessing same Drive file -> DONE"
+  ],
+  "state": "TECH_CONTOUR_CLOSED_2026_04_24: worker stable, all known patches applied, service file filter active, queue clean",
+  "what_working": [
+    "task_worker.py: voice race guard, STT retry, state routing, path leak fixes, fcntl lock release",
+    "google_io.py: lazy import fix, startup stable",
+    "pin_manager.py: table ref + schema correct",
+    "drive_ingest.py: service file filter active",
+    "PDF->XLSX artifact pipeline working",
+    "tesseract rus+eng confirmed on server",
+    "CANON_FINAL: 11 files, SHA256SUMS.txt verified"
+  ],
+  "what_broken": [
+    "Telethon-based media download agent: verification incomplete from prior session"
+  ],
+  "what_not_done": [
+    "Telethon media download agent: full operational verification pending",
+    "full end-to-end system status confirmation after all patches"
+  ],
+  "current_breakpoint": "Session opened: Ilya confirmed readiness for technical code work. Awaiting specific task.",
+  "root_causes": [
+    "stale IN_PROGRESS on server restart -> no atomic state reset on startup -> fixed in deploy_script",
+    "fcntl locks not released -> exception paths skipped finally -> fixed with finally blocks",
+    "service files ingested -> no filter existed -> fixed with is_service_file_for_ingest()"
+  ],
+  "verification": [
+    "drive_ingest service filter -> is_service_file_for_ingest() function present in code -> syntax OK",
+    "CANON_FINAL -> SHA256SUMS.txt matched server = local Drive = gdrive:AI_ORCHESTRA/CANON_FINAL",
+    "TECH_CONTOUR_CLOSED_2026_04_24: worker stable status confirmed by owner"
+  ],
+  "limits": [
+    "no new directories outside allowed list",
+    "no files in root of }/.areal-neva-core/data/memory or ~/AI_ORCHESTRA or drive",
+    "backup mandatory before any file modification",
+    "no deletion without explicit command",
+    "disable sync before large sort operations",
+    "verification models not via OpenRouter",
+    "Cyrillic paths prohibited on macOS zsh Python 3.9+"
+  ]
+}

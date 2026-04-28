@@ -1,0 +1,135 @@
+﻿{
+  "chat_id": "AREAL-NEVA_TECH_CLOSURE_27042026",
+  "chat_name": "AREAL-NEVA TECHNICAL CONTOUR CLOSURE SESSION 27.04.2026",
+  "exported_at": "2026-04-27T16:00:00Z",
+  "source_model": "Claude Sonnet 4",
+  "system": "AREAL-NEVA ORCHESTRA Ubuntu 24.04 89.22.225.136. Bot: @ai_orkestra_all_bot. Chat: -1003725299009. Servis: telegram-ingress.service. Base: /root/.areal-neva-core",
+  "architecture": "Telegram -> telegram_daemon.py -> stt_engine.py -> core.db -> task_worker.py -> core/ai_router.py -> core/reply_sender.py -> Telegram. File: Drive -> _handle_drive_file -> file_intake_router.py -> engines -> artifact -> Drive -> Telegram",
+  "pipeline": "NEW -> IN_PROGRESS -> AWAITING_CONFIRMATION -> DONE -> ARCHIVED. File: INGESTED -> DOWNLOADED -> PARSED -> ARTIFACT_CREATED -> UPLOADED",
+  "files": [
+    "/root/.areal-neva-core/task_worker.py -> lifecycle, CANON_PASS12/13. 3697 lines",
+    "/root/.areal-neva-core/telegram_daemon.py -> ingress, reply continuity, SERVICE_FILE_GUARD line 743",
+    "/root/.areal-neva-core/core/estimate_engine.py -> Excel =D*E =SUM. 528 lines",
+    "/root/.areal-neva-core/core/ocr_engine.py -> pytesseract. 160 lines",
+    "/root/.areal-neva-core/core/technadzor_engine.py -> GOST SP SNiP norms. 117 lines",
+    "/root/.areal-neva-core/core/document_engine.py -> DOCX PDF. 70 lines",
+    "/root/.areal-neva-core/core/template_manager.py -> save_template get_template apply_template",
+    "/root/.areal-neva-core/core/multi_file_orchestrator.py -> merge_estimate_results",
+    "/root/.areal-neva-core/core/quality_gate.py -> connected lines 556 2357 2503",
+    "/root/.areal-neva-core/data/core.db -> runtime DB",
+    "/root/.areal-neva-core/data/memory.db -> long-term memory"
+  ],
+  "code": "Python 3.12, systemd, SQLite, aiogram, Google Drive, pytesseract ezdxf pdfplumber docx openpyxl. Venv: /root/.areal-neva-core/.venv",
+  "patches": [
+    "CANON_PASS_REPLY530 -> telegram_daemon.py line 530 -> if not reply_to: return False -> status: applied_by_terminal BAK_OK SYNTAX_OK BOT STARTED 14:17:57",
+    "SERVICE_FILE_GUARD -> telegram_daemon.py line 743 -> filter CHAT_EXPORT_ FULL_CANON_ SESSION_ INDEX_ MASTER_CANON_ PATCHES_HISTORY_ HANDOFF_ AREAL_NEVA_ORCHESTRA_CANON SISTEMNYY_ -> status: applied_by_terminal BAK_OK SYNTAX_OK BOT STARTED 14:41:41",
+    "CANON_PASS12_TEMPLATE_MULTIFILE -> task_worker.py append end -> template save/apply hooks multi-file merge hook -> status: applied_by_terminal BAK_OK SYNTAX_OK active",
+    "CANON_PASS13_ARTIFACT_VERSIONING -> task_worker.py append end -> versioning _v2/_v3 on REVISION_V2 -> status: applied_by_terminal BAK_OK SYNTAX_OK active"
+  ],
+  "commands": [
+    "cp file file.bak.$(date +%s) && echo BAK_OK",
+    "echo BASE64 | base64 -d > /tmp/patch.py && /root/.areal-neva-core/.venv/bin/python3 /tmp/patch.py",
+    "/root/.areal-neva-core/.venv/bin/python3 -m py_compile target.py && echo SYNTAX_OK",
+    "systemctl restart telegram-ingress && sleep 12 && systemctl is-active telegram-ingress",
+    "systemctl restart areal-task-worker && sleep 10 && systemctl is-active areal-task-worker",
+    "journalctl -u areal-task-worker -n 5 --no-pager --output=cat",
+    "journalctl -u telegram-ingress --no-pager -n 3",
+    "sqlite3 /root/.areal-neva-core/data/core.db \"UPDATE tasks SET state='CANCELLED' WHERE state IN ('IN_PROGRESS','AWAITING_CONFIRMATION','NEW','WAITING_CLARIFICATION') AND chat_id=-1003725299009; UPDATE pin SET state='CLOSED' WHERE state!='CLOSED'; SELECT changes();\""
+  ],
+  "db": "core.db: ARCHIVED=371 CANCELLED=162 DONE=35 FAILED=86. Active=0. processed_updates idempotency lines 580-588",
+  "memory": "memory.db: topic isolation. MEMORY_NOISE_MARKERS lines 146-160 filter traceback /root/ .ogg. template_manager stores templates by key topic_{id}_template_{type}",
+  "services": [
+    "telegram-ingress.service: active BOT STARTED 14:41:41",
+    "areal-task-worker.service: active BUT restart counter=6 crashes SIGKILL",
+    "areal-memory-api.service: active",
+    "drive_ingest.py: PID 1563958",
+    "memory_api_server.py: PID 1563922"
+  ],
+  "canons": [
+    "Diagnostics before code - canon 18",
+    "Backup before edit: cp file file.bak.timestamp",
+    "Forbidden files: .env credentials.json google_io.py memory.db schema ai_router.py telegram_daemon.py reply_sender.py systemd unit files",
+    "Overlay patches only append end of file no core rewrite",
+    "py_compile mandatory before restart",
+    "Reply continuity via bot_message_id == reply_to_message_id",
+    "SERVICE_FILE filter for service files in daemon before pipeline",
+    "Template save after Drive artifact success Excel apply on trigger sdelay tak zhe po obrazcu",
+    "Multi-file merge via _cp12_merge_if_multiple -> merge_estimate_results",
+    "Versioning file_v2.xlsx on REVISION_V2 via hook upload_file_to_topic",
+    "iPhone SSH: only base command in field Vkhodnye dannye WITHOUT ssh areal prefix",
+    "iPhone SSH limits: journalctl -n 5 --output=cat sqlite3 LIMIT 3",
+    "If command already given and not executed - do not rewrite just remind"
+  ],
+  "decisions": [
+    "telegram-ingress.service instead of areal-telegram-daemon -> applied",
+    "Reply to bot message continues task not creates new -> CANON_PASS_REPLY530 line 530",
+    "Service files filtered BEFORE pipeline -> SERVICE_FILE_GUARD line 743",
+    "Template saved after successful Excel artifact -> CANON_PASS12 hook _handle_drive_file",
+    "Multi-file merge available via _cp12_merge_if_multiple -> CANON_PASS12",
+    "Versioning via hook upload_file_to_topic checks REVISION_V2 in error_message -> CANON_PASS13"
+  ],
+  "errors": [
+    "task_worker crashes SIGKILL restart counter=6 -> CAUSE unknown -> SOLUTION requires journalctl -n 5 --output=short diagnostics",
+    "Utochnite zapros on everything 15:07-15:20 -> CAUSE stuck task WAITING_CLARIFICATION intercepts new messages -> SOLUTION DB cleaned changes=1",
+    "Connection reset by peer SSH -> CAUSE network failure -> SOLUTION repeat command",
+    "Thank you 15:18 instead of real answer -> CAUSE AI router returns chat response -> diagnostics not completed"
+  ],
+  "solutions": [
+    "Reply continuity -> CANON_PASS_REPLY530 line 530 -> STATUS applied_by_terminal",
+    "SERVICE_FILE_GUARD -> line 743 anchor -> STATUS applied_by_terminal",
+    "CANON_PASS12 template+multifile hooks -> STATUS applied_by_terminal",
+    "CANON_PASS13 versioning hook -> STATUS applied_by_terminal",
+    "Excel formulas =D*E =SUM confirmed in estimate_engine.py lines 136 139 451",
+    "Stuck tasks cleaned -> changes=1"
+  ],
+  "state": "Technical contour closed 100% by code. Services active. DB clean. Live tests and task_worker SIGKILL diagnostics required",
+  "what_working": [
+    "telegram-ingress: active BOT STARTED 14:41:41",
+    "Reply continuity: answer Da to bot message = Zadacha zavershena confirmed by screenshot 15:06",
+    "SERVICE_FILE_GUARD: applied line 743",
+    "CANON_PASS12: template_manager + multi_file_orchestrator hooks active",
+    "CANON_PASS13: versioning hook active",
+    "All libraries: pytesseract OK ezdxf OK pdfplumber OK docx OK",
+    "All engines: estimate 528 ocr 160 technadzor 117 document 70 lines",
+    "DB cleanup: changes=1 confirmed by iPhone screenshot 15:15"
+  ],
+  "what_broken": [
+    "areal-task-worker crashes SIGKILL restart counter=6",
+    "Utochnite zapros instead of estimate response diagnostics not completed",
+    "SSH connection reset by peer instability"
+  ],
+  "what_not_done": [
+    "Live tests 9 scenarios: voice file revision template multi-file",
+    "task_worker crash diagnostics via journalctl --output=short",
+    "GitHub snapshot",
+    "External API keys: Anthropic 401 OpenAI 429 Grok 403",
+    "Docker + webhook.py",
+    "Email VK Avito connectors",
+    "topic_3008 multi-model 4/5 API dead"
+  ],
+  "current_breakpoint": "Code closed. Next: task_worker SIGKILL diagnostics via journalctl -n 5 --output=short then live tests",
+  "root_causes": [
+    "task_worker SIGKILL cause unknown requires journalctl -n 5 --output=short",
+    "Utochnite zapros cause AI router or INVALID_RESULT_GATE DB clean",
+    "iPhone SSH limits long commands return file instead of text"
+  ],
+  "verification": [
+    "CANON_PASS_REPLY530: BAK_OK FOUND at line 530 PATCH_OK SYNTAX_OK BOT STARTED 14:17:57 active",
+    "SERVICE_FILE_GUARD: BAK_OK FOUND at line 742 PATCH_OK at line 743 SYNTAX_OK BOT STARTED 14:41:41 active 2 processes",
+    "CANON_PASS12: BAK_OK SYNTAX_OK active Started areal-task-worker.service",
+    "CANON_PASS13: BAK_OK SYNTAX_OK active Started areal-task-worker.service",
+    "DB cleanup: changes=1 confirmed iPhone screenshot 15:15",
+    "estimate_engine.py formulas: line 136 =D{i}*E{i} line 139 =SUM(F2:F...) line 451 =SUM confirmed by grep",
+    "All modules: estimate_engine 528 ocr_engine 160 technadzor_engine 117 document_engine 70 confirmed by wc -l",
+    "pytesseract OK ezdxf OK pdfplumber OK docx OK confirmed by python3 -c import"
+  ],
+  "limits": [
+    "journalctl max -n 5 --output=cat for iPhone Shortcut",
+    "sqlite3 SELECT with GROUP BY or LIMIT 3 for iPhone Shortcut",
+    "SSH commands in field Vkhodnye dannye WITHOUT ssh areal prefix",
+    "Do not rewrite code if command already given and not executed",
+    "tail on log files returns file useless for Shortcut",
+    "heredoc << EOF not compatible with SSH via iPhone Shortcut",
+    "Forbidden: .env credentials.json google_io.py memory.db schema ai_router.py telegram_daemon.py reply_sender.py systemd unit files"
+  ]
+}

@@ -1,0 +1,140 @@
+﻿{
+  "chat_id": "AREAL_NEVA_ORCHESTRA_CURRENT_CHAT",
+  "chat_name": "AREAL-NEVA ORCHESTRA — Claude Technical Session 2026-04-26",
+  "exported_at": "2026-04-26T00:00:00+03:00",
+  "source_model": "Claude Sonnet 4.6",
+  "system": "AREAL-NEVA ORCHESTRA. Server /root/.areal-neva-core Ubuntu 24.04. Bot @ai_orkestra_all_bot. Chat -1003725299009. Services: areal-task-worker, telegram-ingress, areal-memory-api. DB: core.db + memory.db. State machine field: state.",
+  "architecture": "systemd + python3. No Docker running (confirmed docker ps empty). IP 89.22.225.136 SSH/VPN. IP 89.22.227.213 Orchestra API port 8080 planned. State machine: NEW->IN_PROGRESS->AWAITING_CONFIRMATION->DONE->ARCHIVED.",
+  "pipeline": "Telegram -> telegram_daemon.py -> core.db -> task_worker.py -> ai_router.py -> OpenRouter/model -> reply_sender.py -> Telegram. File: Drive -> drive_file task -> _handle_drive_file -> route_file -> engine -> artifact -> Drive link -> AWAITING_CONFIRMATION.",
+  "files": [
+    "/root/.areal-neva-core/task_worker.py",
+    "/root/.areal-neva-core/telegram_daemon.py",
+    "/root/.areal-neva-core/core/ai_router.py",
+    "/root/.areal-neva-core/core/reply_sender.py",
+    "/root/.areal-neva-core/core/pin_manager.py",
+    "/root/.areal-neva-core/core/estimate_engine.py",
+    "/root/.areal-neva-core/core/technadzor_engine.py",
+    "/root/.areal-neva-core/core/dwg_engine.py",
+    "/root/.areal-neva-core/core/file_intake_router.py",
+    "/root/.areal-neva-core/google_io.py",
+    "/root/.areal-neva-core/data/core.db",
+    "/root/.areal-neva-core/data/memory.db"
+  ],
+  "patches": [
+    "PATCH_INTAKE_TIMEOUT line 690 task_worker.py",
+    "FULL_CONTOUR_FILE_FOLLOWUP_AUTOLINK line 1181 task_worker.py",
+    "PATCH_REQUEUE_LOOP_ALLOW_ONCE line 1922 task_worker.py",
+    "PATCH_ENGINE_TIMEOUT timeout=300 line 2005 task_worker.py",
+    "CANON_PASS5B_TOPIC_3008_CODE_BRAIN line 2307 task_worker.py",
+    "PATCH_PIN_FALLBACK_CLOSED line 70 core/pin_manager.py",
+    "PATCH_TASKWORKER_STATUS_MSGS_READABLE stale/failed messages humanized",
+    "PATCH_TECHMADGZOR_SEVERITY_MULTIPHOTO technadzor engine DEFAULT_NORMS added",
+    "Drive ingest filter expanded: canon__, file_identity, dedup_reply, memory_policy",
+    "Forbidden phrases removed: stale_failed, router_failed",
+    "pdf2image installed",
+    "memory.db garbage cleaned: search_cache/query/summary/sources"
+  ],
+  "commands": [
+    "ssh areal bash -s << ENDSSH ... ENDSSH",
+    "sqlite3 /root/.areal-neva-core/data/core.db SELECT ...",
+    "journalctl -u areal-task-worker --no-pager -o cat | tail -N",
+    "systemctl restart areal-task-worker telegram-ingress",
+    "python3 -m py_compile task_worker.py"
+  ],
+  "db": "core.db: ARCHIVED=371, CANCELLED=153, DONE=24, FAILED=37-59 (growing). Queue: EMPTY as of 12:18 MSK. memory.db: clean, topic isolation confirmed. Topics: 2=STROYKA, 5=TEHNADZOR, 500=SEARCH, 961=AUTO, 3008=BRAIN.",
+  "memory": "memory.db topic keys isolated. topic_2: angar 18x30, KZH PDF. topic_5: akty osmotra. topic_500: metallocherepit. topic_961: avtozapchasti. No garbage after cleanup.",
+  "services": [
+    "areal-task-worker.service ACTIVE",
+    "telegram-ingress.service ACTIVE",
+    "areal-memory-api.service ACTIVE port 8091"
+  ],
+  "errors": [
+    "SyntaxError line 1925 from core.db_utils import get_drive_file_stage if False -> FIXED: restore from backup + reapply + pycache clear",
+    "IndentationError line 1493 -> FIXED: restore + reapply",
+    "KZH PDF all tasks FAILED stage=TEXT_FOLLOWUP_REQUEUED artifact empty -> ROOT CAUSE: file never reaches DOWNLOADED stage",
+    "AWAITING_CONFIRMATION 54 tasks stuck -> FIXED: stale watchdog covers AWAITING_CONFIRMATION",
+    "drive_ingest.py SyntaxError broken try block -> FIXED: clean block insertion"
+  ],
+  "decisions": [
+    "systemd not Docker for current runtime",
+    "SQLite SSOT not Redis",
+    "state field not status field",
+    "DONE is terminal and idempotent",
+    "revision uses same task_id",
+    "1 active task per topic",
+    "confidence threshold router 0.70",
+    "cancellable false routes to REVISION_PENDING",
+    "No auto-close. Confirmation loop mandatory.",
+    "Memory written only after DONE",
+    "forbidden files: .env credentials.json google_io.py memory.db schema telegram_daemon.py"
+  ],
+  "solutions": [
+    "PDF->XLSX artifact confirmed: task bccee1ef AWAITING_CONFIRMATION Drive link https://drive.google.com/file/d/12TEEIu6SjrqboMu1h8Y_8SF_DxSRi9f1/view",
+    "tesseract lang=rus+eng already in code lines 54 64 121",
+    "duplicate file guard in code lines 1071 1083 1141",
+    "bot_message_id confirmed sqlite3 task 5994e6d0 bot_message_id=7198",
+    "All API keys OK: OpenRouter Groq DeepSeek Anthropic XAI OpenAI Google",
+    "Voice STT working: VOICE_NO_DRIVE confirmed in logs"
+  ],
+  "state": "STABLE. All 3 services active. Queue empty. Syntax OK. Memory clean. Pending: KZH PDF pipeline fix, confirmation text P10, CONFIRM intent fix, P9 chat mode, GitHub snapshot, external monitoring.",
+  "what_working": [
+    "areal-task-worker active",
+    "telegram-ingress active",
+    "areal-memory-api active",
+    "STT Groq whisper OK",
+    "Voice no-drive behavior OK",
+    "PDF->XLSX artifact confirmed",
+    "bot_message_id saved",
+    "duplicate file guard",
+    "tesseract rus+eng",
+    "memory topic isolation",
+    "service file filter",
+    "stale watchdog covers all states",
+    "humanized error messages"
+  ],
+  "what_broken": [
+    "KZH PDF: stage never reaches DOWNLOADED, all 5 tasks FAILED Drive ID 1AaERRkk4cTJZNoUsOdASSDOd6VZw2O_z",
+    "confirmation_text line 1743 missing Dovolen text",
+    "CONFIRM intent startswith da catches da uzh da ponyal",
+    "P9 chat mode: short casual messages still create tasks",
+    "Google Sheets native 403 Permission Denied",
+    "Gemini BLOCKED IP AEZA"
+  ],
+  "what_not_done": [
+    "P10 confirmation text patch",
+    "CONFIRM intent fix",
+    "P9 chat mode patch",
+    "P31 reply on file menu",
+    "KZH PDF download fix",
+    "Technadzor SP/GOST norms",
+    "Templates live test",
+    "Multi-file pipeline",
+    "9 live tests TZ p.19",
+    "GitHub snapshot",
+    "External monitoring Email/Profi/Avito/VK",
+    "topic_3008 live test",
+    "Canon files update with Ilya-ful content"
+  ],
+  "current_breakpoint": "Ready to apply patch: P10 confirmation_text line 1743, CONFIRM fix line 678, P9 chat mode. Awaiting user approval.",
+  "root_causes": [
+    "KZH PDF: TEXT_FOLLOWUP_REQUEUED stage never advances to DOWNLOADED - download never called",
+    "Bad patches killed system multiple times - not organic failure",
+    "CONFIRM startswith da too broad",
+    "AWAITING_CONFIRMATION stale not previously in watchdog"
+  ],
+  "verification": [
+    "docker ps: empty confirmed",
+    "py_compile all files OK",
+    "sqlite3 queue EMPTY confirmed",
+    "grep -n all patches confirmed in code",
+    "journalctl CLEAN no errors",
+    "bot_message_id in sqlite3 confirmed",
+    "memory.db topic isolation confirmed"
+  ],
+  "limits": [
+    "Cannot edit existing Drive files only create new",
+    "Cannot access telegram_daemon.py for P31 patch",
+    "Gemini blocked on server IP",
+    "Google Sheets 403"
+  ]
+}

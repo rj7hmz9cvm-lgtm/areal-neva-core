@@ -1,0 +1,171 @@
+﻿{
+  "chat_id": "-1003725299009",
+  "chat_name": "areal-neva-core-claude-session-2026-04-19-20",
+  "exported_at": "2026-04-20T13:10:00+03:00",
+  "source_model": "claude-sonnet-4-6",
+  "system": {
+    "server": "89.22.225.136 | Ubuntu 24.04",
+    "base": "/root/.areal-neva-core/",
+    "venv": "/root/.areal-neva-core/.venv/bin/python3",
+    "bot": "@ai_orkestra_all_bot | id=8216054898",
+    "chat_id": "-1003725299009",
+    "second_ip": "89.22.227.213",
+    "github": "rj7hmzycvm-lgtm/areal-neva-core",
+    "drive": "13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB",
+    "memory_api_port": 8091,
+    "stt_primary": "Groq whisper-large-v3-turbo",
+    "credentials_json": "EXISTS at /root/.areal-neva-core/credentials.json",
+    "service_account": "ai-orchestra@areal-neva-automation.iam.gserviceaccount.com"
+  },
+  "architecture": {
+    "components": [
+      "telegram_daemon.py -- primary Telegram entry point",
+      "task_worker.py -- state machine poller",
+      "core/ai_router.py -- process_ai_task(payload) async",
+      "core/reply_sender.py -- send_reply_ex(chat_id, text, reply_to)",
+      "core/pin_manager.py -- save_pin, get_pin_context",
+      "data/core.db -- SSOT tasks",
+      "data/memory.db -- long-term memory"
+    ],
+    "state_machine": "NEW -> IN_PROGRESS -> AWATTING_CONFIRMATION -> DONE -> ARCHIVED | WAITING_CLARIFCATION | FAILED | CANCELLED"
+  },
+  "pipeline": "voice/text -> telegram_daemon.py -> STT(Groq) -> create_task(topic_id) -> core.db NEW -> task_worker poll 1.5s -> _handle_new/_handle_in_progress -> context assembly -> ai_router -> reply_sender -> Telegram",
+  "files": [
+    "/root/.areal-neva-core/task_worker.py",
+    "/root/.areal-neva-core/telegram_daemon.py",
+    "/root/.areal-neva-core/core/ai_router.py",
+    "/root/.areal-neva-core/core/reply_sender.py",
+    "/root/.areal-neva-core/core/pin_manager.py",
+    "/root/.areal-neva-core/core/web_engine.py",
+    "/root/.areal-neva-core/data/core.db",
+    "/root/.areal-neva-core/data/memory.db",
+    "/root/.areal-neva-core/credentials.json"
+  ],
+  "code": {
+    "archive_context_sig": "def _load_archive_context(chat_id: str, topic_id: int, user_text: str) -> str:",
+    "role_intercept": "ROLE_Q + HISTORY_Q regex -> if topic_role and match: ai_result = f'Etot chat zakreplyon za: {topic_role}'",
+    "handle_new_final": "_update_task(conn, task_id, state='IN_PROGRESS') -- no more WAITING_CLARIFCATION",
+    "drive_file_wrapper": "if input_type == 'drive_file': try: await _handle_drive_file(...) except Exception as e: logger.error('DRIVE_FILE CRASH')"
+  },
+  "patches": [
+    {"name": "archive_topic_scope", "file": "task_worker.py", "result": "OI"},
+    {"name": "task_worker_rewrite_from_scratch", "file": "task_worker.py", "result": "active running since 13:02:28"},
+    {"name": "role_history_intercept", "file": "task_worker.py", "result": "OI"},
+    {"name": "confirm_exact_7anchors", "file": "telegram_daemon.py", "result": "PATCH_OK changed=7"},
+    {"name": "handle_new_in_progress_direct", "file": "task_worker.py", "result": "PATCH_OK"},
+    {"name": "drive_file_enable", "file": "task_worker.py", "result": "PATCH_OK"},
+    {"name": "drive_file_safe_wrapper", "file": "task_worker.py", "result": "PATCH_OK"},
+    {"name": "main_block_move_to_end", "file": "task_worker.py", "result": "PENDING"},
+    {"name": "search_system_prompt_url", "file": "core/ai_router.py", "result": "PATCH_OK"},
+    {"name": "topic_961_memory_seed", "target": "memory.db", "result": "topic_961_role=auto zapchasti poisk"},
+    {"name": "purge_bad_tasks_961", "target": "core.db", "result": "8 tasks CANCELLED"}
+  ],
+  "commands": [
+    "systemctl restart areal-task-worker telegram-ingress",
+    "python3 -m py_compile <file>",
+    "sqlite3 core.db SELECT tasks",
+    "sqlite3 memory.db SELECT memory",
+    "journalctl -u areal-task-worker -n 20",
+    "tar -tzf BACKUPS/*.tar.gz | grep task_worker"
+  ],
+  "db": {
+    "core_db": "/root/.areal-neva-core/data/core.db",
+    "memory_db": "/root/.areal-neva-core/data/memory.db",
+    "tasks_schema": "id, chat_id, user_id, input_type, raw_input, state, result, error_message, reply_to_message_id, bot_message_id, topic_id INTEGER DEFAULT 0, created_at, updated_at",
+    "state_counts": {"ARCHIVED": 294, "AWAITING_CONFIRMATION": 10, "CANCELLED": 49, "DONE": 46, "FAILED": 572},
+    "archive_legacy_format": "JSON: {topic_id, raw_input, result, timestamp}"
+  },
+  "memory": {
+    "topic_961_role": "avto zapchasti poisk",
+    "topic_961_directions": "poisk i podbor avtozapchastej, artikuly, sovmestimost, analogi, tseny, magaziny",
+    "topic_5_role": "funksii tekhnadzora",
+    "topic_3008_assistant_output": "2026-04-20 06:35:59",
+    "topic_961_assistant_output": "2026-04-20 09:34:38"
+  },
+  "services": {
+    "telegram-ingress": "active running since 10:03:36",
+    "areal-task-worker": "active running since 13:03:02",
+    "areal-memory-api": "UNKNOWN",
+    "dead": ["areal-automation-daemon", "areal-email-ingress", "areal-drive-ingest"]
+  },
+  "errors": [
+    {"error": "task_worker.py imports srezany", "cause": "archive patch srezal verkh faila", "fix": "GPT perepisal fial s nulya"},
+    {"error": "drive_file worker crash loop", "cause": "_handle_drive_file opredelena POSLE if __name__", "fix": "PENDING - need to move __main__ to end"},
+    {"error": "topic_961 gallucinations", "cause": "archive_context not topic_scoped", "fix": "archive topic_id scope patch + purge bad tasks"},
+    {"error": "confirm too wide", "cause": "any(x in lower)", "fix": "lower.strip() in SET - PATCH_OK"}
+  ],
+  "decisions": [
+    "not use .bak files - all broken",
+    "write task_worker.py from scratch",
+    "archive_context filter by topic_id",
+    "role/history intercept without ai_router",
+    "drive_file branch await + safe wrapper",
+    "confirm exact match only lower.strip() in SET"
+  ],
+  "solutions": [
+    "task_worker.py rewritten from scratch",
+    "archive_context topic_scoped",
+    "role_intercept standing",
+    "confirm exact match 7 anchors",
+    "handle_new -> IN_PROGRESS direct",
+    "drive_file safe wrapper applied",
+    "credentials.json on server",
+    "service_account added to drive folder"
+  ],
+  "state": {
+    "areal-task-worker": "active running since 13:03:02",
+    "telegram-ingress": "active running since 10:03:36",
+    "task_worker.py": "new file from scratch + all patches applied",
+    "memory_db": "topic_961 role+directions written, topic_5 role written",
+    "drive_file_contour": "PENDING - __main__ move to end not yet applied"
+  },
+  "what_working": [
+    "areal-task-worker active",
+    "telegram-ingress active",
+    "STT Groq",
+    "state machine NEW -> IN_PROGRESS -> AWAITING_CONFIRMATION -> DONE",
+    "archive_context topic_scoped",
+    "role_intercept",
+    "confirm exact match",
+    "memory writes after DONE confirmed save_memory_ok",
+    "credentials.json on server",
+    "service_account in drive folder as Editor"
+  ],
+  "what_broken": [
+    "drive_file contour - __main__ before _handle_drive_file definition"
+  ],
+  "what_not_done": [
+    "move __main__ to end of task_worker.py",
+    "live test drive_file contour",
+    "areal-memory-api status verify",
+    "Orchestra Webhook 89.22.227.213",
+    "topic_500 role not written"
+  ],
+  "current_breakpoint": "__hainn__ block on line 841 before _handle_drive_file on line 868 - prevents drive_file processing",
+  "root_causes": [
+    "all .bak files from 16-19 april already broken",
+    "git bba1c12 also lacked full imports",
+    "archive_context not topic_scoped - caused mixing",
+    "drive_file __main__ before function definition"
+  ],
+  "verification": [
+    "areal-task-worker active 13:03:02 - confirmed",
+    "PATCH_OK + SYNTAX_OK all patches",
+    "save_memory_ok in logs 12:34:38 - confirmed",
+    "credentials.json 2381 bytes - confirmed",
+    "service_account Editor in drive - confirmed",
+    "NOT verified: drive_file live run",
+    "NOT verified: areal-memory-api status"
+  ],
+  "limits": [
+    "tail_claude=40",
+    "tail_gpt=20",
+    "ai_timeout=300",
+    "stale_timeout=600",
+    "poll_sec=1.5",
+    "min_result_len=8",
+    "short_memory_limit=100",
+    "long_memory_limit=100",
+    "_save_archive i _archive_done ZAPRESHCHENO"
+  ]
+}

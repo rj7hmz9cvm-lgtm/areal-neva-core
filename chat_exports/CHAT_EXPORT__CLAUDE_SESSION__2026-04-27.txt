@@ -1,0 +1,90 @@
+﻿{"chat_id":"CLAUDE_SESSION_2026-04-27","chat_name":"AREAL-NEVA ORCHESTRA - Claude Session 26-27.04.2026","exported_at":"2026-04-27T02:10:00+03:00","source_model":"Claude Sonnet 4.5",
+"system":"AREAL-NEVA ORCHESTRA on Ubuntu 24.04 (89.22.225.136). Server path: /root/.areal-neva-core. Python 3.12, aiogram 3.x, aiosqlite, Redis. Services: areal-telegram-daemon, areal-task-worker, areal-memory-api. Bot: @ai_orkestra_all_bot 'AI_ORCESTRA'. User: Ilya NADZOR812 Kuznetsov. IPhone Shortcut SSH = NO heredoc, only single-line ssh commands or ssh areal 'bash -s' << 'ENDSSH.",
+"architecture":"Telegram -> telegram_daemon.py -> core.db -> task_worker.py -> core/ai_router.py -> core/reply_sender.py -> Telegram. Voice: Telegram -> .ogg -> Groq Whisper STT -> text -> create_task.",
+"pipeline":"NEW -> IN_PROGRESS -> AWAITING_CONFIRMATION -> DONE -> ARCHIVED.",
+"files":[
+  "/root/.areal-neva-core/telegram_daemon.py",
+  "/root/.areal-neva-core/task_worker.py",
+  "/root/.areal-neva-core/core/ai_router.py",
+  "/root/.areal-neva-core/core/reply_sender.py",
+  "/root/.areal-neva-core/data/core.db",
+  "/root/.areal-neva-core/logs/telegram_daemon.log"
+],
+"patches_applied_today":[
+  "CANON_PASS6_SINGLE_INSTANCE_LOCK -> telegram_daemon.py lines 10-23 -> fcntl.flock prevents duplicate daemons -> status: ACTIVE",
+  "CANON_PASS13_CHAT_ONLY_PHRASES_FIX -> telegram_daemon.py lines 940-950 -> defines CHAT_ONLY_PHRASES dict -> status: APPLIED BUT NOT EFFECTIVE (executes after main())",
+  "CANON_PASS13_DISABLE -> sed -i '902,103s/.../' -> Lines 902-903 commented out with # DISABLED_PASS13 -> status: ACTIVE - FIXED VOICE",
+  "CANON_PASS14_LOCK_PID_KILL -> REVERTED -> caused systemd restart race condition"
+],
+"patches_from_other_AI_sessions":[
+  "GPT sed patch: logger.exception + INTAKE_CREATE_TASK_FAILED error message -> APPLIED",
+  "PATCH_ENGINE_TIMEOUT -> task_worker.py line 1996 -> route_file wrapped in 240s timeout -> APPLIED",
+  "CANON_PASS2_FILE_MEMORY_REPLY_GUARD-> task_worker.py lines 2490-2569 -> ACTIVE",
+  "CANON_PASS3_REAL_DRIVEFILE_WIRIGN -> task_worker.py lines 2237-2403 -> ACTIVE",
+  "CANON_PASS5B_TOPIC_3008_CODE_BRAIN -> task_worker.py lines 2405-2420 -> ACTIVE",
+  "CANON_PASS6_LIVE_CORE_OVERLAY -> task_worker.py lines 2573-2598 -> includes _cp6_save_topic_directions -> ACTIVE"
+],
+"state_current":{
+  "voice":"WORKING - STT ok, create_task ok, answer returns Dovolen?",
+  "daemon_processes":"2 (one running, one exits quickly via CANON_PASS6 lock)",
+  "systemd_status":"inactive but PID 1566302 running since 01:37",
+  "confirmation_handler":"BROKEN - Da creates new task instead of closing existing",
+  "reply_continuity":"BROKEN - reply to bot message creates new task instead of updating existing",
+  "task_worker":"active",
+  "memory_api":"active",
+  "last_voice_task":"AWAITING_CONFIRMATION [VOICE] Orik, dobry vecher at 22:45"
+},
+"what_working":[
+  "Voice STT Groq Whisper - ogg -> transcript ok",
+  "create_task from voice - task created in DB",
+  "AI processing - DeepSeek via OpenRouter responds",
+  "reply_sender - bot sends result to Telegram",
+  "logger.exception - tracebacks now in log",
+  "task_worker active",
+  "memory_api active"
+],
+"what_broken":[
+  "CONFIRMATION HANDLER: 'Da' creates new task instead of closing AWAITING_CONFIRMATION task - P 0",
+  "REPLY CONTINUITY: Reply to bot message creates new task - violates Canon 2.3 - P1",
+  "CHAT INTENT AUTO-CLOSE: 'ok/'ponyal' responses hang 600s in STALE_TIMEOUT - P1",
+  "drive_file DOWNLOAD_FAILED - google_io.download_file not working for Drive files - P2",
+  "API keys dead: Anthropic 401, OpenAI 429, Grok 403 AEZA IP block, DeepSeek 402 no balance, Groq 403 Cloudflare"
+],
+"what_not_done":[
+  "Confirmation handler fix - need overlay in telegram_daemon.py universal_handler before text processing - see code analysis below",
+  "CHAT intent auto-close overlay in task_worker.py",
+  "Stuck 'Oshibka obrabotki' messages cleanup via bot.delete_message",
+  "Excel formulas =C2*D2 / =SUM live test",
+  "Tehnadzor SP/GOST/SNiP norm database",
+  "GitHub snapshot",
+  "Mistral/Cerebras/Cohere API keys registration"
+],
+"critical_code_fact_confirmation_handler":"In telegram_daemon.py universal_handler seen at line ~855: function _handle_control_text exists and handles FINISH/CONFIRM/intents. When the user sends Da as a reply, _handle_control_text is called but returns 'Utochite zapros' instead of closing task. Root cause: task lookup by reply_to_message_id does not match bot_message_id in tasks table. Fix: check DB for task with bot_message_id matching reply_to_message_id.",
+"next_step_confirmation_fix":"Guaranteed fix - run on server: grep -n _handle_control_text /root/.areal-neva-core/telegram_daemon.py - then sed -n '<start>,<end>p' telegram_daemon.py to see full function - then apply overlay that searches tasks where bot_message_id = reply_to_message_id AND state = 'AWAITING_CONFIRMATION' and checks if text contains confirm words.",
+"api_keys_status":{
+  "OPENROUTER_API_KEY":"WORKING - DeepSeek + Perplexity",
+  "GOOGLE_API_KEY":"WORKING - 1500/day limit",
+  "ANTHROPCI_API_KEY":"DEAD - 401",
+  "OPENAI_API_KEY":"DEAD - 429",
+  "XAI_API_KEY":"DEAD - 403 AEZA IP block",
+  "DEEPSEEK_API_KEY":"DEAD - 402 no balance",
+  "GROQ_API_KEY":"DEAD - 403 Cloudflare"
+},
+"services":[
+  "areal-telegram-daemon: PID 1566302 running since 01:37, systemd shows inactive but process alive",
+  "areal-task-worker: active",
+  "areal-memory-api: active"
+],
+"canon_rules_vided":[
+  "Section 2.1: FINISH > CONFIRM > REVISION > TASK > SEARCH > CHAT",
+  "Section 2.2: NEW -> IN_PROGRESS -> AWAITING_CONFIRMATION -> DONE -> ARCHIVED",
+  "Section 2.3: Reply to bot message = NO NEW TASK, must continue old chain",
+  "Section 8.3: ok/ponyal/spasibo = CHAT MODE, no new tasks",
+  "Section 10.1: STALE_TIMEOUT = 600s, REMINDER_INTERVAL = 180s",
+  "Section 13.5: Text answer without artefact = FAIL for file tasks"
+],
+"logs_paths":{
+  "telegram_daemon":"/root/.areal-neva-core/logs/telegram_daemon.log",
+  "task_worker":"/root/.areal-neva-core/logs/task_worker.log",
+  "memory_api":"/root/.areal-neva-core/logs/memory_api.log"
+}}

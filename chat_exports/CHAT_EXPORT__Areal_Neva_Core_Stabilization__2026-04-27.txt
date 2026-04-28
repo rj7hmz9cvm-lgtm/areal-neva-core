@@ -1,0 +1,68 @@
+﻿{
+ "chat_id": "areal_neva_stabilization_20260427",
+ "chat_name": "Areal_Neva_Core_Stabilization",
+ "exported_at": "2026-04-27T00:05:00Z",
+ "source_model": "Gemini 1.5 Pro",
+ "system": "areal-neva-core: AI Telegram Agent on VPS (Ubuntu 22.04 / Python 3.12)",
+ "architecture": "Telegram API -> core.db -> Task Worker -> Google Drive / LLM -> Telegram",
+ "pipeline": "NEW -> IN_PROGRESS -> TEXT_FOLLOWUP_REQUEUED -> DOWNLOADED -> PARSED -> DONE",
+ "files": [
+   "task_worker.py",
+   "telegram_daemon.py",
+   "google_io.py"
+ ],
+ "code": "Python 3.12, SQLite 3, systemd, google-api-python-client, Telethon",
+ "patches": [
+   "FIX_DRIVE_DOWNLOAD -> task_worker.py -> 2106 -> status: failed (IndentationError: line 41)",
+   "RESURRECT_TASK -> core.db -> b6ed8407 -> status: applied_by_terminal"
+ ],
+ "commands": [
+   "ssh areal 'grep -n ... google_io.py'",
+   "ssh areal 'python3 -c ... (Drive Auth Test)'",
+   "ssh areal 'sed -n \"2100,2115p\" task_worker.py'",
+   "sqlite3 core.db \"UPDATE tasks SET state='IN_PROGRESS'...\""
+ ],
+ "db": "tasks: b6ed8407-3a71... (state: IN_PROGRESS), drive_files: stage (INGESTED)",
+ "memory": "memory.db: state saved, topic isolation",
+ "services": [
+   "areal-task-worker: failed (IndentationError at line 41)",
+   "areal-telegram-daemon: active"
+ ],
+ "canons": [
+   "Priority 0: Drive Auth (OAuth2/Refresh Token)",
+   "Patch Protocol (backup/compile/restart)"
+ ],
+ "decisions": [
+   "Use google_io.download_file with OAuth2 instead of service account"
+ ],
+ "errors": [
+   "403 Forbidden (Service Account rights)",
+   "IndentationError (line 41)"
+ ],
+ "solutions": [
+   "Replace _download_from_drive with await download_file"
+ ],
+ "state": "Worker down due to syntax error at line 41. Task b6ed8407 is IN_PROGRESS.",
+ "what_working": [
+   "Drive Auth via google_io",
+   "Database manipulation"
+ ],
+ "what_broken": [
+   "task_worker.py execution",
+   "Auto-transition for TEXT_FOLLOWUP"
+ ],
+ "what_not_done": [
+   "Cleanup of multiple 'import asyncio' statements"
+ ],
+ "current_breakpoint": "Fixing line 41 IndentationError in task_worker.py",
+ "root_causes": [
+   "Incorrect indentation in surgical patch"
+ ],
+ "verification": [
+   "PATCH_OK received, but SyntaxError: unexpected indent verified"
+ ],
+ "limits": [
+   "tail -n 20 for logs",
+   "No access to sensitive .env/credentials"
+ ]
+}

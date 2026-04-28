@@ -1,0 +1,141 @@
+﻿{
+  "chat_id": "UNKNOWN",
+  "chat_name": "AREAL_NEVA_ORCHESTRA_TECH_CONTOUR_CHAT",
+  "exported_at": "2026-04-24T10:00:00+03:00",
+  "source_model": "GPT-5.5 Thinking",
+  "system": "Server project AREAL-NEVA ORCHESTRA. Base path /root/.areal-neva-core. Core DB /root/.areal-neva-core/data/core.db. Memory DB /root/.areal-neva-core/data/memory.db. Services mentioned: areal-task-worker, telegram-ingress, areal-memory-api. Google Drive AI_ORCHESTRA folder ID 13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB.",
+  "architecture": "Telegram/Drive file pipeline and server-side worker architecture discussed. Confirmed services active. Technical contour target: PDF/DOCX/XLSX/photo -> parse/OCR -> extract construction quantities -> create non-empty Excel/DOCX artifact -> upload to Drive topic folder -> Telegram result link.",
+  "pipeline": "Known pipeline in chat: Google Drive file tasks in core.db with input_type=drive_file; task_worker.py handles drive_file through _handle_drive_file; _download_from_drive downloads files; route_file/analyze_downloaded_file/process_estimate_to_excel/process_image_to_excel/create_google_sheet/create_google_doc are involved.",
+  "files": [
+    "/root/.areal-neva-core/core/artifact_pipeline.py",
+    "/root/.areal-neva-core/core/estimate_engine.py",
+    "/root/.areal-neva-core/core/document_engine.py",
+    "/root/.areal-neva-core/core/file_intake_router.py",
+    "/root/.areal-neva-core/core/ocr_engine.py",
+    "/root/.areal-neva-core/core/technadzor_engine.py",
+    "/root/.areal-neva-core/core/sheets_generator.py",
+    "/root/.areal-neva-core/core/docs_generator.py",
+    "/root/.areal-neva-core/core/tech_contour_router.py",
+    "/root/.areal-neva-core/task_worker.py",
+    "/root/.areal-neva-core/google_io.py",
+    "/root/.areal-neva-core/core/engine_base.py",
+    "/root/.areal-neva-core/data/core.db",
+    "/root/.areal-neva-core/data/memory.db",
+    "/root/BACKUPS/areal-neva-core/secret_snapshot_20260424_100814",
+    "/root/.areal-neva-core/runtime/drive_files/b6ed8407-3a71-486a-a73b-55d279dd0211_У1-02-26-Р-КЖ1.6.pdf"
+  ],
+  "code": "Confirmed code anchors: estimate_engine.py has process_estimate_to_excel and process_estimate_to_sheets; artifact_pipeline.py uses pypdf PdfReader and unit regex; file_intake_router.py has estimate/ocr/document routes and create_google_sheet/create_google_doc calls; ocr_engine.py uses pytesseract with rus+eng; task_worker.py has _handle_drive_file and _download_from_drive.",
+  "patches": [
+    "PATCH__UPLOAD_DRIVE_SYNC_ROOT_FIX__FACT_ONLY__V1 changed google_io.upload_to_drive from async def to def according to later grep output",
+    "SECRET_BACKUP_WITH_HUMAN_INDEX__V2 created backup at /root/BACKUPS/areal-neva-core/secret_snapshot_20260424_100814",
+    "No confirmed final patch closing PDF estimate/document contour in this chat"
+  ],
+  "commands": [
+    "grep -n \"_run_upload_sync\\|upload_to_drive\" /root/.areal-neva-core/core/engine_base.py",
+    "systemctl restart areal-task-worker",
+    "journalctl -u areal-task-worker -n 30 --no-pager -o cat",
+    "grep -n \"def upload_to_drive\\|async def upload_to_drive\" /root/.areal-neva-core/google_io.py",
+    "sqlite3 queries against /root/.areal-neva-core/data/core.db for tasks and drive_files",
+    "pypdf/pdfplumber/pytesseract/openpyxl parser diagnostics against У1-02-26-Р-КЖ1.6.pdf"
+  ],
+  "db": "core.db facts: 28 tasks with state=NEW input_type=drive_file were shown; drive_files had discovered|28; failed PDF task 9ba1bc25-0fc4-4e6c-ad0e-1ee60a91de21 with file У1-02-26-Р-КЖ1.6.pdf and error PIPELINE_NOT_EXECUTED; previous PDF task 7c940256-e531-4c99-bc71-553cddc55740 failed STALE_TIMEOUT after result 'Файл ... скачан, ожидает анализа'; failed photo task 42462bef-ba92-4371-a27c-e4e53531f175 error PIPELINE_NOT_EXECUTED; task_history schema is id, task_id, action, created_at.",
+  "memory": "memory API active and returned {\"status\":\"ok\"}. memory.db examples shown for topic_5, topic_500, topic_961. topic_5_role exists, topic_961_role and topic_961_directions exist. topic_500_role, topic_3008_role, and latest confirmed topic_2 construction/estimate role were not confirmed in the output.",
+  "services": [
+    "areal-task-worker=active",
+    "telegram-ingress=active",
+    "areal-memory-api=active"
+  ],
+  "errors": [
+    "upload_artifact_to_drive: This event loop is already running → async upload_to_drive called from running loop → google_io later shown as def upload_to_drive and engine_base calls link = upload_to_drive(file_path, versioned_name)",
+    "RuntimeWarning coroutine upload_to_drive was never awaited → async/sync mismatch → later import showed upload_to_drive is <class 'function'> and IS_COROUTINE False",
+    "create_google_sheet 403 caller does not have permission → Google Sheets native generation permission problem → not fixed in this chat",
+    "У1-02-26-Р-КЖ1.6.pdf PIPELINE_NOT_EXECUTED → technical contour did not produce real estimate → not fixed in this chat",
+    "Empty /tmp/artifact_*.docx 0 bytes → DOCX quality gate missing → not fixed in this chat",
+    "Almost empty /tmp/est_*.xlsx around 6099-6100 bytes → estimate quality gate missing → not fixed in this chat",
+    "pypdf returned broken Cyrillic glyphs like ǋǮǭǷ → PDF text extraction unusable → OCR fallback required",
+    "pdfplumber returned (cid:...) text while detecting tables → text extraction unusable → OCR fallback required"
+  ],
+  "decisions": [
+    "Main focus changed from export/chat queue to full technical contour",
+    "Primary priority: close PDF/estimate/document technical contour before memory and behavior contours",
+    "Do not spend current cycle on CHAT_EXPORT drive_file NEW queue unless it blocks real file processing",
+    "Technical contour must reject empty Excel/DOCX as failure, not success"
+  ],
+  "solutions": [
+    "OAuth refresh was verified OK",
+    "Drive topic upload contract tested OK for topics 0, 2, 500, 961, 3008",
+    "Secret backup with human index created at /root/BACKUPS/areal-neva-core/secret_snapshot_20260424_100814",
+    "PDF estimate/document contour still requires fullfix"
+  ],
+  "state": "Current main breakpoint: technical contour is not production-ready because PDF text extraction is broken and OCR fallback / estimate quality gate are not enforcing a real non-empty result. Memory and behavior contours are also not fully verified end-to-end.",
+  "what_working": [
+    "areal-task-worker active",
+    "telegram-ingress active",
+    "areal-memory-api active",
+    "OAuth refresh OK",
+    "DRIVE_INGEST_FOLDER_ID set",
+    "upload_file_to_topic returned ok=true with drive_file_id/folder_id/chat_folder_id for tested topics",
+    "pypdf installed",
+    "pdfplumber installed",
+    "pytesseract installed",
+    "tesseract binary exists with eng/osd/rus languages",
+    "openpyxl installed",
+    "pandas installed"
+  ],
+  "what_broken": [
+    "PDF estimate extraction produces empty/almost empty xlsx",
+    "DOCX artifacts were 0 bytes",
+    "PDF text layer extraction returns corrupted Cyrillic or cid text",
+    "No confirmed OCR fallback for broken PDF estimate path",
+    "Google Sheets create_google_sheet had 403 permission errors",
+    "PIPELINE_NOT_EXECUTED occurred for construction PDF and photo tasks"
+  ],
+  "what_not_done": [
+    "Implement PDF broken-text detection",
+    "Implement OCR fallback for broken PDF text",
+    "Implement robust estimate row extraction",
+    "Implement Excel quality gate",
+    "Implement DOCX quality gate",
+    "Implement automatic estimate intent for construction PDFs even with empty caption",
+    "Verify non-empty Excel from existing У1-02-26-Р-КЖ1.6.pdf",
+    "Verify memory/pin/archive end-to-end",
+    "Verify Telegram text/voice/reply/file lifecycle end-to-end",
+    "Clean GitHub SSOT snapshot after successful fixes"
+  ],
+  "current_breakpoint": "Existing PDF /root/.areal-neva-core/runtime/drive_files/b6ed8407-3a71-486a-a73b-55d279dd0211_У1-02-26-Р-КЖ1.6.pdf is readable as a file but text extraction is corrupted; estimate engine produced near-empty xlsx; no accepted production-grade estimate artifact exists from this PDF.",
+  "root_causes": [
+    "PDF has unusable embedded text for pypdf/pdfplumber extraction",
+    "Estimate pipeline lacks enforced OCR fallback for broken PDF text",
+    "Artifact quality gates allow empty/near-empty outputs",
+    "Routing with empty caption can lead to PIPELINE_NOT_EXECUTED instead of construction estimate processing"
+  ],
+  "verification": [
+    "PDF exists with size 2.6M",
+    "pypdf pages: 8 and returned broken glyph text",
+    "pdfplumber pages: 8 and saw tables, but table/text content contained cid sequences",
+    "tesseract 5.3.4 available with rus language",
+    "Local artifacts list showed many 0 byte docx and 6099-6100 byte xlsx files",
+    "core.db showed failed PDF task with PIPELINE_NOT_EXECUTED"
+  ],
+  "limits": [
+    "This export is based only on the visible current chat content",
+    "No external web verification performed",
+    "Created Google Doc may not be in requested parentId because available create_file tool schema did not expose parentId/content parameters",
+    "This batch update writes JSON into an already created Google Doc using Google Docs API requests"
+  ]
+}
+
+
+
+
+--- APPEND__MANUAL_ORCHESTRA_FOLDER_CONFIRMED__2026-04-24 ---
+{
+  "append_reason": "User manually moved the document into the required AI_ORCHESTRA folder after initial creation limitations.",
+  "manual_folder_fix": "CONFIRMED_BY_USER",
+  "required_folder_id": "13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB",
+  "required_folder_name": "AI_ORCHESTRA",
+  "export_status_after_append": "JSON content exists in document; document location was manually corrected by user; this append records that correction inside the export document.",
+  "remaining_protocol_deviation": "Initial creation was not performed through text/plain + base64 + parentId due to available tool schema limitations; content was inserted through Google Docs batch_update_document.",
+  "current_focus": "Close technical contour first: PDF estimate extraction, OCR fallback, non-empty Excel/DOCX quality gates, construction file routing, then memory/pin/archive and answer behavior contours.",
+  "main_breakpoint": "Existing PDF У1-02-26-Р-КЖ1.6.pdf has broken embedded text extraction; pypdf/pdfplumber return corrupted text; estimate output was near-empty; DOCX outputs were 0 bytes; OCR fallback and quality gates are required."
+}
