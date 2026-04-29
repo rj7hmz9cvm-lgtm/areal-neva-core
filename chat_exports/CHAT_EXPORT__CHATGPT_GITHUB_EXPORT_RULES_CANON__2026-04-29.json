@@ -1,0 +1,94 @@
+{
+  "chat_id": "CHATGPT_GITHUB_EXPORT_RULES_CANON",
+  "chat_name": "ChatGPT GitHub export rules and canon update session",
+  "exported_at": "2026-04-29T19:25:00+00:00",
+  "source_model": "ChatGPT GPT-5.5 Thinking",
+  "system": "AREAL-NEVA / NEURON SOFT ORCHESTRA. GitHub is the public SSOT for neural-network context. Server is runtime/private archive. This export is GitHub CLEAN only and contains no private authentication data or raw private configuration values.",
+  "architecture": "GitHub repo rj7hmz9cvm-lgtm/areal-neva-core stores CANON_FINAL, SHARED_CONTEXT, HANDOFFS, REPORTS, tools, scripts and chat_exports. Server path used in canon is /root/.areal-neva-core, but this export is committed only to GitHub. Google Drive was explicitly excluded from the final GitHub/server export workflow in this chat.",
+  "pipeline": "Current chat established and pushed a canon addition: GitHub CLEAN exports are public SSOT; server FULL exports are private. For freshness, neural networks must read GitHub files by latest commit SHA and verify internal updated_at rather than trusting cached GitHub web UI pages.",
+  "files": [
+    "docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md",
+    "docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md",
+    "docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md",
+    "chat_exports/CHAT_EXPORT__CHATGPT_GITHUB_EXPORT_RULES_CANON__2026-04-29.json"
+  ],
+  "code": "No executable project code was changed in this chat export operation. The session added canon text and protocol text to documentation files. GitHub CLEAN export created as a JSON object only.",
+  "patches": [
+    "canon §14 + handoff: chat export protocol v2"
+  ],
+  "commands": [
+    "ssh areal 'bash -s' << 'ENDSSH' ... git reset --hard origin/main ... append §14 ... append CHAT EXPORT PROTOCOL v2 ... git add -f ... git commit ... git push origin main ... ENDSSH",
+    "git push origin main",
+    "create GitHub clean export file chat_exports/CHAT_EXPORT__CHATGPT_GITHUB_EXPORT_RULES_CANON__2026-04-29.json"
+  ],
+  "db": "No database schema or runtime database changes were made in this chat. core.db and memory.db were mentioned only as server runtime/memory locations in canon context.",
+  "memory": "GitHub CLEAN export is the public memory unit for neural-network recovery. Server FULL export is private archive and is not required for AI-to-AI context recovery.",
+  "services": [
+    "GitHub connector",
+    "server SSH executed by user through Mac terminal"
+  ],
+  "errors": [
+    "Initial terminal blocks failed because nested heredoc markers appeared inside an outer heredoc and caused Mac terminal heredoc continuation.",
+    "A local commit push was rejected as non-fast-forward.",
+    "A rebase attempt failed due to unstaged changes.",
+    "A later rebase hit an add/add conflict in chat_exports/CHAT_EXPORT__AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR__2026-04-29.json.",
+    "Repository state was recovered by aborting broken rebase, resetting tracked files to origin/main, then appending the two documentation sections again."
+  ],
+  "decisions": [
+    "Google Drive is not used for this workflow; only server and GitHub are relevant.",
+    "GitHub must contain only clean, verified, useful information without private authentication/config/access values.",
+    "Server FULL export may contain complete private technical context but is not pushed to GitHub.",
+    "GitHub CLEAN export is the only public SSOT for neural networks.",
+    "docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md is the correct file for the new GitHub freshness and chat export canon section.",
+    "docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md is the correct file for chat export protocol v2.",
+    "Existing canon must not be rewritten; new rules are appended to the end of existing files.",
+    "GitHub UI blob/main pages are not freshness proof because rendered pages may be cached or stale."
+  ],
+  "solutions": [
+    "Added §14 GITHUB FRESHNESS AND CHAT EXPORT RULE to docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md.",
+    "Added CHAT EXPORT PROTOCOL v2 — 29.04.2026 to docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md.",
+    "Resolved broken local Git state by resetting tracked files to origin/main before appending only the required canon/protocol sections.",
+    "Avoided nested heredoc in final protocol text by describing SSH-block requirement without embedding a live nested terminator inside the outer shell block.",
+    "Verified successful push with commit e402dc9 on main."
+  ],
+  "state": "GitHub canon/protocol update completed and pushed. Current GitHub CLEAN chat export file created for this ChatGPT session.",
+  "what_working": [
+    "GitHub repository access confirmed for rj7hmz9cvm-lgtm/areal-neva-core.",
+    "GitHub commit e402dc9 pushed to main with canon §14 and handoff protocol v2.",
+    "docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md contains §14. GITHUB FRESHNESS AND CHAT EXPORT RULE.",
+    "docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md contains CHAT EXPORT PROTOCOL v2 — 29.04.2026.",
+    "Latest GitHub commits showed AGG ONE_SHARED_CONTEXT updates at 16:00, 17:00 and 18:00 UTC on 2026-04-29.",
+    "Reading ONE_SHARED_CONTEXT.md by exact commit SHA 50a76d4 showed updated_at 2026-04-29T18:00:29.325256+00:00 and included recent chat exports."
+  ],
+  "what_broken": [
+    "GitHub web UI may show cached/stale rendered content and must not be used as freshness proof.",
+    "Mac terminal can hang in heredoc mode if pasted text contains an inner heredoc terminator that conflicts with the outer block.",
+    "Server working tree contained many untracked runtime, backup and private files; those were not committed to GitHub in this export."
+  ],
+  "what_not_done": [
+    "Server FULL export for this chat was not created by ChatGPT because this environment does not have direct SSH write access.",
+    "Aggregator was not manually rerun after commit e402dc9 inside this chat.",
+    "No changes were made to runtime Python code or services."
+  ],
+  "current_breakpoint": "Future neural networks must start from GitHub latest main commit SHA, read docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md by exact SHA, verify updated_at, then read required chat_exports by exact SHA. For this workflow, GitHub receives only CLEAN exports; server FULL exports are private and generated as user-run SSH blocks when needed.",
+  "root_causes": [
+    "Earlier prompt drafts mixed server FULL export and GitHub CLEAN export rules, causing ambiguity.",
+    "Use of nested heredoc syntax inside a heredoc-delivered command caused shell continuation problems.",
+    "Non-fast-forward push occurred because remote main had newer commits than local main.",
+    "Rebase conflict occurred because the same chat export file existed both locally and remotely as an add/add conflict.",
+    "Cached GitHub UI display caused apparent mismatch between visible file content and actual latest commit content."
+  ],
+  "verification": [
+    "Final server command output showed commit e402dc9 canon §14 + handoff: chat export protocol v2.",
+    "Final server command output showed push 50a76d4..e402dc9 main -> main.",
+    "Final verification showed docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md line 326 contains §14. GITHUB FRESHNESS AND CHAT EXPORT RULE.",
+    "Final verification showed docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md line 127 contains CHAT EXPORT PROTOCOL v2 — 29.04.2026.",
+    "This GitHub export file was checked for filename collision before creation and is a single JSON object with no text outside JSON."
+  ],
+  "limits": [
+    "This export intentionally excludes private authentication/config/access values.",
+    "This export is a GitHub CLEAN export only, not a server FULL export.",
+    "The content is based only on facts visible in the current ChatGPT conversation and GitHub connector responses.",
+    "No claim is made that server FULL export for this chat exists."
+  ]
+}
