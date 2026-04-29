@@ -1,0 +1,216 @@
+{
+  "chat_id": "CURRENT_CHAT",
+  "chat_name": "FILE_INTAKE_DRIVE_UPLOAD_2026-04-30",
+  "exported_at": "2026-04-30T00:00:00+03:00",
+  "source_model": "GPT-5.5 Thinking",
+  "system": {
+    "mode": "FACTS_ONLY_CURRENT_CHAT",
+    "server": "/root/.areal-neva-core",
+    "repo": "rj7hmz9cvm-lgtm/areal-neva-core"
+  },
+  "architecture": {
+    "pipeline": "Telegram file -> telegram_ingress -> core.db task input_type=drive_file -> task_worker.py -> file intake menu -> reply choice -> engine -> artifact -> Drive upload",
+    "drive_target": "AI_ORCHESTRA folder_id 13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB",
+    "service_account": "ai-orchestra@areal-neva-automation.iam.gserviceaccount.com"
+  },
+  "pipeline": [
+    "Confirmed Telegram files are created as input_type=drive_file, not file",
+    "Confirmed drive_file raw_input contains file_id, file_name, mime_type, caption, telegram_message_id, telegram_chat_id",
+    "Confirmed drive_file without caption must go to NEEDS_CONTEXT before download/processing",
+    "Confirmed reply/voice/text on file menu must be processed before confirm/finish/chat logic"
+  ],
+  "files": [
+    "/root/.areal-neva-core/task_worker.py",
+    "/root/.areal-neva-core/core/drive_service_account_uploader.py",
+    "/root/.areal-neva-core/core/artifact_pipeline.py",
+    "/root/.areal-neva-core/core/estimate_engine.py",
+    "/root/.areal-neva-core/core/dwg_engine.py",
+    "/root/.areal-neva-core/core/project_engine.py",
+    "/root/.areal-neva-core/core/file_intake_router.py",
+    "/root/.areal-neva-core/credentials.json",
+    "/root/.areal-neva-core/token.json",
+    "/root/.areal-neva-core/core.bak.before_rollback_20260427_202634/engine_base.py"
+  ],
+  "code": {
+    "installed_patches": [
+      "PATCH_FILE_INTAKE_NEEDS_CONTEXT_V3_MINIMAL",
+      "PATCH_DRIVE_GUARD_BEFORE_DOWNLOAD_V1",
+      "PATCH_WORKER_PICK_BEFORE_STALE_V1",
+      "PATCH_FIX_PFIN3_MENU_SHADOW_V1",
+      "PATCH_FILE_CHOICE_PRIORITY_V1",
+      "PATCH_DRIVE_SERVICE_ACCOUNT_PRIMARY_V1"
+    ],
+    "rejected_or_not_to_run": [
+      "RESTORE_ENGINE_BASE generated from scratch was rejected as unsafe/self-invented",
+      "PATCH_ENGINE_BASE_SERVICE_ACCOUNT_UPLOAD_V2_LIVE_TEST failed because find selected backup engine_base.py",
+      "PATCH_ENGINE_BASE_SERVICE_ACCOUNT_UPLOAD_V3_LIVE_ONLY failed because live /root/.areal-neva-core/core/engine_base.py does not exist"
+    ]
+  },
+  "patches": [
+    {
+      "name": "PATCH_FILE_INTAKE_NEEDS_CONTEXT_V3_MINIMAL",
+      "file": "task_worker.py",
+      "status": "INSTALLED",
+      "facts": [
+        "Added file-intake menu logic for drive_file",
+        "Added NEEDS_CONTEXT handling and topic menus",
+        "Worker active and syntax OK after installation"
+      ]
+    },
+    {
+      "name": "PATCH_DRIVE_GUARD_BEFORE_DOWNLOAD_V1",
+      "file": "task_worker.py",
+      "status": "INSTALLED",
+      "facts": [
+        "Moved intent/NEEDS_CONTEXT guard before _download_from_drive",
+        "Fixed issue where download path could block before menu"
+      ]
+    },
+    {
+      "name": "PATCH_WORKER_PICK_BEFORE_STALE_V1",
+      "file": "task_worker.py",
+      "status": "INSTALLED",
+      "facts": [
+        "Moved task pick before stale recovery",
+        "Later found not the final root cause for stuck drive_file tasks"
+      ]
+    },
+    {
+      "name": "PATCH_FIX_PFIN3_MENU_SHADOW_V1",
+      "file": "task_worker.py",
+      "status": "VERIFIED",
+      "facts": [
+        "Fixed UnboundLocalError caused by _pfin3_menu = _pfin3_menu(...) shadowing function",
+        "After fix, tasks d95b1fcb and 1e7b6864 moved from NEW to NEEDS_CONTEXT",
+        "bot_message_id saved: 8149 and 8150",
+        "FILE_INTAKE_GUARD_HIT appeared in logs"
+      ]
+    },
+    {
+      "name": "PATCH_FILE_CHOICE_PRIORITY_V1",
+      "file": "task_worker.py",
+      "status": "INSTALLED_PARTIALLY_VERIFIED",
+      "facts": [
+        "Added priority file-choice handler before role/confirm/finish/chat logic",
+        "Tech-supervision topic task d95b1fcb reached AWAITING_CONFIRMATION",
+        "Project topic task 1e7b6864 became CANCELLED due to user reply parsed as cancel/check"
+      ]
+    },
+    {
+      "name": "PATCH_DRIVE_SERVICE_ACCOUNT_PRIMARY_V1",
+      "files": [
+        "core/drive_service_account_uploader.py",
+        "core/artifact_pipeline.py",
+        "task_worker.py"
+      ],
+      "status": "INSTALLED_NOT_COMPLETE",
+      "facts": [
+        "Created drive_service_account_uploader.py",
+        "Service Account healthcheck returned ok=True",
+        "credentials path /root/.areal-neva-core/credentials.json",
+        "folder_id 13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB",
+        "Did not complete common upload path because core/engine_base.py is missing"
+      ]
+    }
+  ],
+  "commands": [
+    "grep/sed/sqlite3 diagnostics confirmed input_type=drive_file",
+    "journal/task_worker.log diagnostics confirmed invalid_grant on Drive upload",
+    "importlib.util.find_spec confirmed core.engine_base => NOT_FOUND",
+    "find confirmed only backup engine_base.py exists at /root/.areal-neva-core/core.bak.before_rollback_20260427_202634/engine_base.py"
+  ],
+  "db": {
+    "confirmed_tasks": [
+      {
+        "id": "d95b1fcb-b31f-4b2f-b0a2-3342c8d35984",
+        "topic_id": 5,
+        "input_type": "drive_file",
+        "final_seen_state": "AWAITING_CONFIRMATION",
+        "result_fact": "Нормализовано позиций: 32; artifact created locally; Drive upload failed"
+      },
+      {
+        "id": "1e7b6864-bdd7-4d17-878f-be49940c398f",
+        "topic_id": 210,
+        "input_type": "drive_file",
+        "final_seen_state": "CANCELLED",
+        "result_fact": "project topic reply was parsed as cancel/check"
+      }
+    ]
+  },
+  "memory": {
+    "rule": "Do not use token.json as permanent primary Drive upload path",
+    "service_account": "ai-orchestra@areal-neva-automation.iam.gserviceaccount.com",
+    "drive_folder_id": "13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB"
+  },
+  "services": [
+    "areal-task-worker active during checks",
+    "telegram-ingress active during checks",
+    "areal-memory-api active during checks"
+  ],
+  "errors": [
+    "V2 patch was too large and rollback was triggered by sqlite diagnostic error",
+    "Initial file guard targeted input_type=file but real tasks use input_type=drive_file",
+    "Guard was initially placed after download; download could block before menu",
+    "UnboundLocalError: cannot access local variable _pfin3_menu where it is not associated with a value",
+    "Drive upload failed with invalid_grant: Token has been expired or revoked",
+    "core.engine_base missing from live /root/.areal-neva-core/core/",
+    "engine_base restore from scratch was rejected as unsafe",
+    "find-based engine_base patch selected backup path instead of live core path"
+  ],
+  "decisions": [
+    "Do not patch by guessing",
+    "Do not recreate engine_base.py from scratch",
+    "Use Service Account as permanent primary Drive upload path",
+    "token.json can only be legacy fallback, not primary path",
+    "Drive failure must not break file task if local artifact exists",
+    "Claude must find confirmed source for engine_base.py and return READY_FOR_PATCH or BLOCKED_WITH_REASON"
+  ],
+  "solutions": [
+    "File intake menu path partially fixed and verified for NEEDS_CONTEXT",
+    "Reply-choice priority installed",
+    "Service Account helper installed and healthcheck ok",
+    "Permanent Drive upload remains blocked until engine_base.py is restored from confirmed source and upload_artifact_to_drive is patched there"
+  ],
+  "state": "PARTIAL_FIX_INSTALLED_DRIVE_UPLOAD_NOT_CLOSED",
+  "what_working": [
+    "drive_file -> NEEDS_CONTEXT menu",
+    "bot_message_id saved for menu messages",
+    "reply-choice can advance tech-supervision file task",
+    "local artifact generation worked for d95b1fcb",
+    "Service Account credentials healthcheck ok"
+  ],
+  "what_broken": [
+    "Permanent Drive artifact upload is not closed",
+    "token.json OAuth path failed invalid_grant",
+    "core.engine_base.py missing from live core directory",
+    "project topic reply-choice/cancel behavior needs separate verification",
+    "common upload path used by estimate/dwg/project engines cannot be safely patched until engine_base.py source is confirmed"
+  ],
+  "what_not_done": [
+    "No confirmed restore of core/engine_base.py yet",
+    "No live upload_artifact_to_drive test returning drive.google.com link yet",
+    "No final VERIFIED status for Drive upload contour",
+    "No multi-file guard",
+    "No duplicate guard",
+    "No memory/pin lookup before file menu",
+    "No link-intake guard"
+  ],
+  "current_breakpoint": "Need confirmed source for core/engine_base.py, then patch upload_artifact_to_drive to Service Account primary and run live upload test",
+  "root_causes": [
+    "Drive upload depended on unstable OAuth token.json path",
+    "core.engine_base.py is missing while live engines still import core.engine_base",
+    "Previous attempts guessed paths or reconstructed code instead of using confirmed source"
+  ],
+  "verification": [
+    "Service Account healthcheck ok=True with credentials.json",
+    "Task d95b1fcb reached AWAITING_CONFIRMATION with local artifact result",
+    "Task 1e7b6864 reached CANCELLED after project topic reply",
+    "importlib find_spec core.engine_base returned NOT_FOUND",
+    "find showed backup engine_base.py at core.bak.before_rollback_20260427_202634/engine_base.py"
+  ],
+  "limits": [
+    "This export contains only facts discussed in current chat",
+    "No live GitHub code patch was completed for engine_base.py",
+    "No Drive upload live link verified yet"
+  ]
+}
