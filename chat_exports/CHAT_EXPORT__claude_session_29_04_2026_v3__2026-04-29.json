@@ -1,0 +1,39 @@
+{
+  "chat_id": "claude_session_29_04_2026_v3",
+  "chat_name": "AREAL-NEVA ORCHESTRA — Claude Session 29.04.2026 v3 FINAL",
+  "exported_at": "2026-04-29T17:00:00+03:00",
+  "source_model": "Claude Sonnet 4.6",
+  "patches_installed": [
+    "PIPELINE_INTEGRATION_V40 — task_worker.py — SYNTAX_OK active",
+    "PIPELINE_INTEGRATION_V41 — task_worker.py — SYNTAX_OK active",
+    "FILE_INTAKE_PROJECT_V41 — file_intake_router.py — SYNTAX_OK active",
+    "ESTIMATE_QUALITY_V41 — estimate_engine.py — SYNTAX_OK active",
+    "TEMPLATE_SYSTEM_V41 — template_manager.py — SYNTAX_OK active",
+    "PROJECT_ENGINE_V1 — core/project_engine.py — создан SYNTAX_OK",
+    "CLARIFICATION_UI — get_clarification_message + Проектирование пункт"
+  ],
+  "p1_bug_confirmed": {
+    "bug": "SHORT_VOICE_CONFIRM_WIRED",
+    "file": "telegram_daemon.py:601",
+    "symptom": "голос 00:02-00:04 при AWAITING_CONFIRMATION → revision вместо confirm",
+    "root_cause": "_all_contours_short_voice_confirm перехватывает до STT результата",
+    "fix_needed": "читать STT текст → да/ок/принято → confirm, иначе revision"
+  },
+  "not_closed_live_test": [
+    "Смета PDF → Excel → Drive",
+    "КЖ PDF pipeline",
+    "DWG → Excel → Drive",
+    "Фото дефекта → акт",
+    "Шаблон → новый файл",
+    "project_engine end-to-end",
+    "Поиск с постпроцессингом"
+  ],
+  "decisions": [
+    "project_engine.py — разрешение получено 29.04.2026",
+    "detect_intent не переопределять — пользователь выбирает через clarification",
+    "Орик спрашивает Смета/Проектирование/Распознать — ждёт ответа",
+    "Python создаёт файлы LLM не считает цифры",
+    "Без артефакта FAILED Без ссылки FAILED"
+  ],
+  "prompt_v8": "Обновлён — heredoc обязателен, монолитные блоки, запрет повторных запросов, структура сервера CANON_FINAL/"
+}
