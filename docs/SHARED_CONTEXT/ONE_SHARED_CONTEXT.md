@@ -1,5 +1,5 @@
 # ONE_SHARED_CONTEXT
-updated_at: 2026-04-29T07:00:21.876396+00:00
+updated_at: 2026-04-29T07:59:25.787919+00:00
 
 ## SOURCE FILES
 - chat_exports/CHAT_EXPORT_FULL_MAX__NEURON_SOFT_VPN_TECH_CHAT__2026-04-24.txt
@@ -149,6 +149,21 @@ DB: data/core.db (694 задачи) | memory.db (728KB)
 
 ## DB STATE
 ARCHIVED: 371 | DONE: 98 | CANCELLED: 165 | FAILED: 60
+
+
+## ПАТЧИ СЕССИИ 29.04.2026
+
+| Патч | Суть |
+|---|---|
+| CRON_AGGREGATOR | context_aggregator.py в cron каждый час, ONE_SHARED_CONTEXT.md обновляется автоматически |
+## SESSION 29.04.2026 RESULTS
+
+| Patch | File | Status |
+|---|---|---|
+| CRON_AGGREGATOR | tools/context_aggregator.py | INSTALLED, not battle-tested |
+| P0_1_TEXT_ESTIMATE_FORCE_EXCEL_UPLOAD_V1 | core/estimate_engine.py | INSTALLED, not battle-tested |
+
+SYNTAX_OK. Service active, NRestarts=0.
 
 ## NOT CLOSED
 # NOT_CLOSED — 28.04.2026
