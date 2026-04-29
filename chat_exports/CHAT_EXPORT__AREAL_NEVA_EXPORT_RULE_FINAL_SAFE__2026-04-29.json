@@ -1,0 +1,71 @@
+{
+  "chat_id": "UNKNOWN",
+  "chat_name": "AREAL_NEVA_EXPORT_RULE_FINAL_SAFE",
+  "exported_at": "2026-04-29T20:15:00Z",
+  "source_model": "GPT-5.5 Thinking",
+  "system": "AREAL-NEVA ORCHESTRA export rule finalized for two-file export: private server full export plus public GitHub clean export. Server full export target is /root/.areal-neva-core/chat_exports/. GitHub clean export target is chat_exports/ in rj7hmz9cvm-lgtm/areal-neva-core. Sensitive values are redacted in GitHub as <REDACTED>.",
+  "architecture": "SERVER -> private full archive; GITHUB -> public sanitized SSOT. Existing runtime architecture remains Telegram -> telegram_daemon.py -> core.db -> task_worker.py -> ai_router.py/OpenRouter -> reply_sender.py -> Telegram. Aggregator reads chat_exports/docs and updates ONE_SHARED_CONTEXT.",
+  "pipeline": "READ CURRENT CHAT ONLY -> BUILD SERVER FULL EXPORT -> VALIDATE JSON -> SAVE TO SERVER -> BUILD GITHUB CLEAN EXPORT -> REDACT SENSITIVE VALUES -> VALIDATE NO SENSITIVE DATA -> SAVE TO SERVER -> CHECK FILE EXISTS -> GIT ADD ONLY CLEAN FILE -> GIT COMMIT -> GIT PUSH -> RETURN GITHUB LINK. This connector execution can only create GitHub clean export, not server private file.",
+  "files": [
+    "/root/.areal-neva-core/chat_exports/CHAT_EXPORT_FULL__SAFE_NAME__YYYY-MM-DD.json -> private full server export, not pushed",
+    "/root/.areal-neva-core/chat_exports/CHAT_EXPORT__SAFE_NAME__YYYY-MM-DD.json -> local sanitized copy for GitHub",
+    "chat_exports/CHAT_EXPORT__SAFE_NAME__YYYY-MM-DD.json -> GitHub clean export",
+    "chat_exports/CHAT_EXPORT__AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR__2026-04-29.json -> previous canonical GitHub clean export",
+    "docs/HANDOFFS/LATEST_HANDOFF.md -> handoff updated by append-style API update"
+  ],
+  "code": "No code changed in this operation. GitHub clean JSON export created via GitHub connector create_file. Server file creation requires ssh/server access outside this connector.",
+  "patches": [
+    "EXPORT_RULE_FINAL_SAFE -> chat export policy -> status: recorded_in_github_clean_export"
+  ],
+  "commands": [
+    "api_tool GitHub create_file used for GitHub clean export",
+    "No ssh command executed by this connector for server full export"
+  ],
+  "db": "UNKNOWN",
+  "memory": "GitHub clean export records policy only. Server private export not created by this connector because no server filesystem access is available here.",
+  "services": [
+    "UNKNOWN"
+  ],
+  "errors": [
+    "Server full export cannot be saved by GitHub connector -> reason: connector only writes GitHub repository files, not /root filesystem -> required action: run ssh areal heredoc command on server if full private file is required",
+    "User requested no text except GitHub link, but server full export prerequisite cannot be satisfied in this execution context -> GitHub clean export created and limitation recorded"
+  ],
+  "decisions": [
+    "One chat must have two files: private server full export and public GitHub clean export",
+    "Server full export must never be pushed to GitHub",
+    "GitHub clean export must redact sensitive data as <REDACTED>",
+    "If server full export cannot be saved, full strict pipeline should abort; however this connector cannot perform server filesystem writes"
+  ],
+  "solutions": [
+    "GitHub clean export created with sanitized data and no secrets",
+    "Server full export remains to be created via server-local command"
+  ],
+  "state": "GitHub clean export created; server private full export not created by this connector",
+  "what_working": [
+    "GitHub connector can create files in chat_exports/",
+    "Sanitized export can be written to GitHub"
+  ],
+  "what_broken": [
+    "Server private full export cannot be created through GitHub connector"
+  ],
+  "what_not_done": [
+    "Private server full export not saved to /root/.areal-neva-core/chat_exports/ in this connector execution",
+    "Local server git add/commit/push pipeline not executed in this connector execution"
+  ],
+  "current_breakpoint": "Need server-side ssh command to create private full export and optionally push clean export from server. GitHub clean policy export has been created directly through connector.",
+  "root_causes": [
+    "Connector scope mismatch -> GitHub connector has repository write access but no server filesystem access",
+    "Strict pipeline requires server write first -> cannot be satisfied without ssh execution"
+  ],
+  "verification": [
+    "GitHub create_file call invoked for chat_exports/CHAT_EXPORT__AREAL_NEVA_EXPORT_RULE_FINAL_SAFE__2026-04-29.json",
+    "Sensitive values are represented only as <REDACTED> or generic names"
+  ],
+  "limits": [
+    "Do not push server full export to GitHub",
+    "Do not expose secrets in GitHub clean export",
+    "Do not overwrite existing export files",
+    "GitHub connector cannot write to /root/.areal-neva-core on server",
+    "Server full export requires ssh/server-side execution"
+  ]
+}
