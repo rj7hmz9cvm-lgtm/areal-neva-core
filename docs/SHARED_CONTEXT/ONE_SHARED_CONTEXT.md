@@ -1,9 +1,10 @@
 # ONE_SHARED_CONTEXT
-updated_at: 2026-04-29T23:00:01+00:00
+updated_at: 2026-04-29T23:30:01+00:00
 
 ## SOURCE FILES
 - docs/CANON_FINAL/00_INDEX.md [UNKNOWN]
 - docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md [REJECTED]
+- docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md [RESTORED]
 - docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md [BROKEN]
 - docs/HANDOFFS/LATEST_HANDOFF.md [REJECTED]
 - docs/REPORTS/NOT_CLOSED.md [RESTORED]
@@ -38,6 +39,7 @@ updated_at: 2026-04-29T23:00:01+00:00
 - chat_exports/CHAT_EXPORT__CHATGPT_GEMINI_AGGREGATOR_V2_FINAL__2026-04-29.json [RESTORED]
 - chat_exports/CHAT_EXPORT__CHATGPT_GITHUB_EXPORT_RULES_CANON__2026-04-29.json [REJECTED]
 - chat_exports/CHAT_EXPORT__CLAUDE_SESSION__2026-04-27.txt [BROKEN]
+- chat_exports/CHAT_EXPORT__CURRENT_CHAT_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.json [RESTORED]
 - chat_exports/CHAT_EXPORT__DOKAT_3__.txt [BROKEN]
 - chat_exports/CHAT_EXPORT__NEURON_SOFT_VPN_TECH_CHAT__2026-04-24.txt [REJECTED]
 - chat_exports/CHAT_EXPORT__NEURON_SOFT_VPN_TECH_CHAT__2026-04-24__DOKAT_4.txt [UNKNOWN]
@@ -101,6 +103,22 @@ REJECTED  = патч отклонён
 | 880+  FIX_VOICE_REVISION_V2 | docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md | UNKNOWN |
 | 961   FIX_VOICE_GUARD word-boundary | docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md | UNKNOWN |
 | - архитектура, решения, патчи, ошибки, текущее состояние | docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md | UNKNOWN |
+| STATUS: PARTIAL_FIX_INSTALLED / DRIVE_UPLOAD_NOT_CLOSED | docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md | INSTALLED |
+| - Reply/voice/text choice priority was patched before role/confirm/finish/chat l | docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md | UNKNOWN |
+| ## PATCHES INSTALLED IN CURRENT SESSION | docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md | INSTALLED |
+| ### PATCH_FILE_INTAKE_NEEDS_CONTEXT_V3_MINIMAL | docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md | UNKNOWN |
+| ### PATCH_DRIVE_GUARD_BEFORE_DOWNLOAD_V1 | docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md | UNKNOWN |
+| ### PATCH_WORKER_PICK_BEFORE_STALE_V1 | docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md | UNKNOWN |
+| ### PATCH_FIX_PFIN3_MENU_SHADOW_V1 | docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md | UNKNOWN |
+| ### PATCH_FILE_CHOICE_PRIORITY_V1 | docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md | UNKNOWN |
+| ### PATCH_DRIVE_SERVICE_ACCOUNT_PRIMARY_V1 | docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md | UNKNOWN |
+| - `find`-based patch selected backup `engine_base.py` instead of live path. | docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md | UNKNOWN |
+| - Upload path cannot be safely patched until `engine_base.py` is restored from c | docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md | RESTORED |
+| - Do not patch `.env`. | docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md | UNKNOWN |
+| ## NEXT VALID PATCH REQUIREMENT | docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md | UNKNOWN |
+| Patch is allowed only after confirming source for `core/engine_base.py`. | docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md | UNKNOWN |
+| Patch plan agreed by Claude: | docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md | UNKNOWN |
+| - Next state: READY_FOR_PATCH after restoring confirmed `engine_base.py`. | docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md | UNKNOWN |
 | "patches": ["PATCH_NAME → файл → строка → статус: applied_by_terminal / drafted  | docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md | INSTALLED |
 | "verification": ["ПАТЧ/ФАКТ → подтверждение: grep line X / terminal output"], | docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md | UNKNOWN |
 | 3. Патчи только подтверждённые терминалом — не писать applied без вывода | docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md | UNKNOWN |
@@ -162,22 +180,6 @@ REJECTED  = патч отклонён
 | GPT        — патчи кода, сервер | docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md | UNKNOWN |
 | Trust Score 0-100 | SELLER_RISK | TCO | Шаблон звонка | Патч-протокол 8 шагов | docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md | UNKNOWN |
 | GPT        — сервер / код / патчи | docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md | UNKNOWN |
-| "patches": [""], | chat_exports/CHAT_EXPORT_SYSTEM_PROMPT__UNIVERSAL__2026-04-26.txt | UNKNOWN |
-| ﻿{"chat_id":"-1003725299009","chat_name":"UNKNOWN","exported_at":"2026-04-20T10: | chat_exports/CHAT_EXPORT__-1003725299009__.txt | BROKEN |
-| ﻿{"chat_id":"-1003725299009","chat_name":"UNKNOWN","exported_at":"2026-04-23T10: | chat_exports/CHAT_EXPORT__-1003725299009__2026-04-23.txt | BROKEN |
-| ﻿{"chat_id":"-1003725299009","chat_name":"AREAL-NEVA ORCHESTRA","exported_at":"2 | chat_exports/CHAT_EXPORT__-1003725299009__GPT-5.4__2026-04-23.txt | BROKEN |
-| ﻿{ "chat_id": "UNKNOWN", "chat_name": "AI_Orchestra_Stabilization", "exported_at | chat_exports/CHAT_EXPORT__AI_Orchestra__2026-04-25.txt | BROKEN |
-| "patches": [ | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
-| "P01 task_worker.py:1587 - PATCH_INVALID_RESULT_MSG_FIX SYNTAX_OK", | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | INSTALLED |
-| "P02 task_worker.py:1136 - PATCH_FILE_NOT_FOUND_MSG_FIX SYNTAX_OK", | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | INSTALLED |
-| "SyntaxError unterminated string literal -> Python inline code multiline strings | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
-| "AssertionError P1 NOT FOUND -> anchor mismatch after previous patch already app | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
-| "zsh parse error near ) -> nested quotes in SSH inline python -> use base64 enco | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
-| "Backup FIRST before every patch - /root/BACKUPS/areal-neva-core/PATCH_NAME_TIME | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
-| "Patch via /tmp/patch.py file - not inline Python in SSH", | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
-| "base64 encode patch script to avoid SSH quote problems", | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
-| "state": "STABLE. Services active. Queue empty. DB: ARCHIVED=371, CANCELLED=153, | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
-| "CHAT_ONLY_PHRASES working - confirmed PATCHED OK in terminal", | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
 
 ## LIVE ТЕСТЫ (VERIFIED)
 - areal-task-worker.service   task_worker.py      ОСНОВНОЙ ✅ [docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md]
@@ -198,6 +200,13 @@ REJECTED  = патч отклонён
 - 7.  Проверка источника: CONFIRMED/PARTIAL/UNVERIFIED/RISK [docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md]
 - 14. Живой рынок: остатки/ликвидация → UNVERIFIED до подтверждения [docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md]
 - Шаг1 ✅ DONE: is_search→Perplexity (28.04.2026) [docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md]
+- - `drive_file -> NEEDS_CONTEXT -> menu` was verified on live tasks. [docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md]
+- Status: VERIFIED [docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md]
+- Status: INSTALLED_PARTIALLY_VERIFIED [docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md]
+- Final status can be VERIFIED only if: [docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md]
+- - Reply choice priority: INSTALLED_PARTIALLY_VERIFIED. [docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md]
+- - Local artifact generation: VERIFIED for one task. [docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md]
+- - Service Account healthcheck: VERIFIED. [docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md]
 - ## LIVE ТЕСТ 29.04.2026 [docs/HANDOFFS/LATEST_HANDOFF.md]
 - - Смета текстом: «Сделай смету: профлист 100 м², цена 450 руб/м²» → ответ получен ✅ [docs/HANDOFFS/LATEST_HANDOFF.md]
 - - CP8 search type fix → смета теперь ловится из topic_500 ✅ [docs/HANDOFFS/LATEST_HANDOFF.md]
@@ -223,15 +232,9 @@ REJECTED  = патч отклонён
 - "EXECUTION_PIPELINE_CLOSE_V44 -> task_worker.py -> grep verified lines 5114-5281 -> status: applied_by_terminal", [chat_exports/CHAT_EXPORT__AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR__2026-04-29.json]
 - "FILE_ROUTE_CLOSE_V44 -> core/file_intake_router.py -> grep verified lines 492-544 -> status: applied_by_terminal", [chat_exports/CHAT_EXPORT__AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR__2026-04-29.json]
 - "TEMPLATE_CLOSE_V44 -> core/template_manager.py -> grep verified lines 149-193 -> status: applied_by_terminal", [chat_exports/CHAT_EXPORT__AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR__2026-04-29.json]
-- "PROJECT_CLOSE_V44 -> core/project_engine.py -> grep verified lines 251-332 -> status: applied_by_terminal", [chat_exports/CHAT_EXPORT__AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR__2026-04-29.json]
-- "VERSIONING_CLOSE_V44 -> core/engine_base.py -> grep verified lines 239-244 -> status: applied_by_terminal", [chat_exports/CHAT_EXPORT__AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR__2026-04-29.json]
-- "NORMATIVE_SEARCH_ENGINE_V45 -> core/normative_search_engine.py -> grep verified lines 2-124 -> status: applied_by_termi [chat_exports/CHAT_EXPORT__AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR__2026-04-29.json]
-- "PROJECT_ENGINE_USE_NORMATIVE_SEARCH_V45 -> core/project_engine.py -> grep verified lines 334-356 -> status: applied_by_ [chat_exports/CHAT_EXPORT__AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR__2026-04-29.json]
-- "V44 markers verified by grep", [chat_exports/CHAT_EXPORT__AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR__2026-04-29.json]
-- "V45 markers verified by grep", [chat_exports/CHAT_EXPORT__AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR__2026-04-29.json]
-- "EXECUTION_PIPELINE_CLOSE_V44 -> task_worker.py -> grep verified lines 5114-5281 -> status: applied_by_terminal", [chat_exports/CHAT_EXPORT__AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR__2026-04-29__GPT_DIRECT.json]
 
 ## СЛОМАНО (BROKEN)
+- ## CURRENT BROKEN POINT [docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md]
 - "what_broken": ["что сломано подтверждено фактами"], [docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md]
 - ## ИНЦИДЕНТ 29.04.2026 22:17 — ВОССТАНОВЛЕНИЕ ФАЙЛОВ [docs/REPORTS/NOT_CLOSED.md]
 - GPT патч GEMINI_VISION удалил core/file_intake_router.py и другие файлы. [docs/REPORTS/NOT_CLOSED.md]
@@ -271,7 +274,6 @@ REJECTED  = патч отклонён
 - "what_broken": [ [chat_exports/CHAT_EXPORT__CHATGPT_GEMINI_AGGREGATOR_V2_FINAL__2026-04-29.json]
 - "Repository state was recovered by aborting broken rebase, resetting tracked files to origin/main, then appending the tw [chat_exports/CHAT_EXPORT__CHATGPT_GITHUB_EXPORT_RULES_CANON__2026-04-29.json]
 - "Resolved broken local Git state by resetting tracked files to origin/main before appending only the required canon/prot [chat_exports/CHAT_EXPORT__CHATGPT_GITHUB_EXPORT_RULES_CANON__2026-04-29.json]
-- "what_broken": [ [chat_exports/CHAT_EXPORT__CHATGPT_GITHUB_EXPORT_RULES_CANON__2026-04-29.json]
 
 ## НЕ ЗАКРЫТО
 - §2.4 Inbox Aggregator (P2 — не реализован): [docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md]
@@ -322,6 +324,7 @@ REJECTED  = патч отклонён
 - "what_not_done": [ [chat_exports/CHAT_EXPORT__CHATGPT_GEMINI_AGGREGATOR_V2_FINAL__2026-04-29.json]
 - "what_not_done": [ [chat_exports/CHAT_EXPORT__CHATGPT_GITHUB_EXPORT_RULES_CANON__2026-04-29.json]
 - "what_not_done":[ [chat_exports/CHAT_EXPORT__CLAUDE_SESSION__2026-04-27.txt]
+- "what_not_done": [ [chat_exports/CHAT_EXPORT__CURRENT_CHAT_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.json]
 - "what_not_done": [ [chat_exports/CHAT_EXPORT__DOKAT_3__.txt]
 - "what_not_done": [ [chat_exports/CHAT_EXPORT__NEURON_SOFT_VPN_TECH_CHAT__2026-04-24.txt]
 - ﻿{"chat_id":"current_chat","chat_name":"NEURON_SOFT_VPN_TECH_CHAT","exported_at":"2026-04-27T00:00:00+03:00","source_mod [chat_exports/CHAT_EXPORT__NEURON_SOFT_VPN_TECH_CHAT__2026-04-27.txt]
@@ -525,6 +528,177 @@ google_io.py            — Drive I/O (ЗАПРЕЩЕНО без разреше�
 §4.2 Таймауты:
 STT=30с | router=60с | engine=300с(строки 2291/2664/2968) | drive=60с | send=30с | confirmation
 ...[TRUNCATED]
+
+### docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md [RESTORED]
+# 09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30
+
+MODE: FACTS ONLY
+SOURCE: current chat, 2026-04-30
+STATUS: PARTIAL_FIX_INSTALLED / DRIVE_UPLOAD_NOT_CLOSED
+
+## CONFIRMED FACTS
+
+- Telegram file tasks are created as `input_type='drive_file'`, not `file`.
+- `drive_file.raw_input` contains file metadata including `file_id`, `file_name`, `mime_type`, `caption`, `telegram_message_id`, `telegram_chat_id`.
+- `drive_file` without clear `caption/user_intent` must enter `NEEDS_CONTEXT` before download or processing.
+- `drive_file -> NEEDS_CONTEXT -> menu` was verified on live tasks.
+- `bot_message_id` for file menu was saved.
+- Reply/voice/text choice priority was patched before role/confirm/finish/chat logic.
+- Local artifact generation worked for task `d95b1fcb-b31f-4b2f-b0a2-3342c8d35984`.
+- That task reached `AWAITING_CONFIRMATION`.
+- Result contained `Нормализовано позиций: 32`.
+- Drive upload failed with `invalid_grant: Token has been expired or revoked`.
+- Service Account healthcheck returned `ok=True`.
+- Service Account email: `ai-orchestra@areal-neva-automation.iam.gserviceaccount.com`.
+- Drive folder id: `13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB`.
+- Helper module created: `/root/.areal-neva-core/core/drive_service_account_uploader.py`.
+- Live `/root/.areal-neva-core/core/engine_base.py` is missing.
+- `import core.engine_base` returned `NOT_FOUND`.
+- Live files still import `core.engine_base`.
+- Backup source found: `/root/.areal-neva-core/core.bak.before_rollback_20260427_202634/engine_base.py`.
+
+## PATCHES INSTALLED IN CURRENT SESSION
+
+### PATCH_FILE_INTAKE_NEEDS_CONTEXT_V3_MINIMAL
+Status: INSTALLED
+
+Facts:
+- Added file-intake menu logic for `drive_file`.
+- Added `NEEDS_CONTEXT` path.
+- Added topic-based menus.
+- Syntax OK and worker active after install.
+
+### PATCH_DRIVE_GUARD_BEFORE_DOWNLOAD_V1
+Status: INSTALLED
+
+Facts:
+- Moved intent and `NEEDS_CONTEXT` guard before `_download_from_drive`.
+- Fixed issue where download path could block before menu.
+
+### PATCH_WORKER_PICK_BEFORE_STALE_V1
+Status: INSTALLED
+
+Facts:
+- Moved task pick before stale recovery.
+- Later confirmed this was not the final root cause of stuck `drive_file` tasks.
+
+### PATCH_FIX_PFIN3_MENU_SHADOW_V1
+Status: VERIFIED
+
+Facts:
+- Fixed Python bug `_pfin3_menu = _pfin3_menu(...)`.
+- Removed `UnboundLocalError` caused by local variable shadowing function.
+- Tasks `d95b1fcb...` and `1e7b6864...` moved from `NEW` to `NEEDS_CONTEXT`.
+- `bot_message_id` saved: `8149` and `8150`.
+- `FILE_INTAKE_GUARD_HIT` appeared in logs.
+
+### PATCH_FILE_CHOICE_PRIORITY_V1
+Status: INSTALLED_PARTIALLY_VERIFIED
+
+Facts:
+- Added priority file-choice handler before role/confirm/finish/chat logic.
+- Tech-supervision topic task `d95b1fcb...` reached `AWAITING_CONFIRMATION`.
+- Project topic task `1e7b6864...` became `CANCELLED` after user reply parsed as cancel/check.
+
+### PATCH_DRIVE_SERVICE_ACCOUNT_PRIMARY_V1
+Status: INSTALLED_NOT_COMPLETE
+
+Facts:
+- Service Account uploader module was created.
+- Service Account healthcheck returned `ok=True`.
+- Folder id confirmed as `13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB`.
+- Common upload path is not closed because live `core/engine_base.py` is missing.
+
+## ERRORS FOUND
+
+- Initial guard targeted `input_type='file'`, but real input is `drive_file`.
+- Guard was initially after download, so download could block before menu.
+- `_download_from_drive` could block the file-intake menu path.
+- `_pfin3_menu` variable shadowed `_pfin3_menu()` function.
+- Drive upload failed with `invalid_grant: Token has been expired or revoked`.
+- `core.engine_base` missing while live engines still import it.
+- Generated `engine_base.py` from scratch was rejected as unsafe.
+- `find`-based patch selected backup `engine_base.py` instead of live path.
+
+## CURRENT BROKEN POINT
+
+Permanent Drive artifact upload is not closed.
+
+Reason:
+- OAuth token path failed with `invalid_grant`.
+- Service Account exists and healthcheck works.
+- Common module `core.engine_base.py` is missing from live core directory.
+- Engines import `core.engine_base`.
+- Upload path cannot be safely patched until `engine_base.py` is restored from confirmed source.
+
+## CANON DECISIONS
+
+- Do not use daily manual OAuth token repair as final solution.
+- token OAuth is legacy fallback only, not primary upload path.
+- Primary Drive upload must use Service Account.
+- Drive failure must not break file task if local artifact exists.
+- Do not recreate `engine_base.py` by guessing.
+- Restore `engine_base.py` only from confirmed source.
+- Do not patch `.env`.
+- Do not delete token or credentials files.
+- Do not rewrite `estimate_engine.py`, `dwg_engine.py`, or `project_engine.py` unless diagnostics prove direct need.
+
+## REQUIRED ENGINE_BASE CONTRACTS
+
+`core.engine_base` must provide at least:
+
+- `detect_real_file_type`
+- `update_drive_file_stage`
+- `upload_artifact_to_drive`
+- `quality_gate`
+- `calculate_file_hash`
+- `normalize_unit`
+- `is_false_number`
+- `normalize_item_name`
+
+## NEXT VALID PATCH REQUIREMENT
+
+Patch is allowed only after confirming source for `core/engine_base.py`.
+
+Confirmed source found in current session:
+- `/root/.areal-neva-core/core.bak.before_rollback_20260427_202634/engine_base.py`
+
+Patch plan agreed by Claude:
+
+1. Restore `/root/.areal-neva-core/core/engine_base.py` from confirmed backup.
+2. Replace only `upload_artifact_to_drive` with Service Account primary implementation.
+3. Do not touch `.env`, credentials, or token files.
+4. Do not touch engines unless direct diagnostic need appears.
+5. Run `py_compile`.
+6. Verify `import core.engine_base`.
+7. Run live upload test using `upload_artifact_to_drive('/tmp/testfile', 'healthcheck_<ts>', 0)`.
+8. Require returned `drive.google.com` link.
+9. Restart `areal-task-worker`.
+10. Verify service active.
+11. Verify no `invalid_grant` in primary Service Account upload path.
+
+## ACCEPTANCE CRITERIA
+
+Final status can be VERIFIED only if:
+
+- `/root/.areal-neva-core/core/engine_base.py` exists.
+- `import core.engine_base` resolves to `/root/.areal-neva-core/core/engine_base.py`.
+- Required functions import successfully.
+- Service Account upload test returns a `drive.google.com` link.
+- `areal-task-worker` is active.
+- File task can reach `AWAITING_CONFIRMATION` without being blocked by Drive OAuth.
+- New upload path does not use OAuth token as primary path.
+- No new `invalid_grant` occurs in Service Account primary path.
+
+## CURRENT STATUS
+
+- File intake: PARTIALLY FIXED.
+- Reply choice priority: INSTALLED_PARTIALLY_VERIFIED.
+- Local artifact generation: VERIFIED for one task.
+- Service Account healthcheck: VERIFIED.
+- Permanent Drive upload: NOT CLOSED.
+- Next state: READY_FOR_PATCH after restoring confirmed `engine_base.py`.
+
 
 ### docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md [NOT_DONE]
 # ORCHESTRA_MASTER_BLOCK — ЦЕЛЕВАЯ АРХИТЕКТУРА ОРКЕСТРА
@@ -2197,6 +2371,76 @@ Main canon: 1k_KIpQ7jD15_w83sMz4WfqoEIINIXTHTaTOtUovf2gU
     "Fields without confirmed data were set to UNKNOWN."
   ]
 }
+
+### chat_exports/CHAT_EXPORT__CURRENT_CHAT_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.json [RESTORED]
+{
+  "chat_id": "CURRENT_CHAT",
+  "chat_name": "FILE_INTAKE_DRIVE_UPLOAD_2026-04-30",
+  "exported_at": "2026-04-30T00:00:00+03:00",
+  "source_model": "GPT-5.5 Thinking",
+  "system": {
+    "mode": "FACTS_ONLY_CURRENT_CHAT",
+    "server": "/root/.areal-neva-core",
+    "repo": "rj7hmz9cvm-lgtm/areal-neva-core"
+  },
+  "architecture": {
+    "pipeline": "Telegram file -> telegram_ingress -> core.db task input_type=drive_file -> task_worker.py -> file intake menu -> reply choice -> engine -> artifact -> Drive upload",
+    "drive_target": "AI_ORCHESTRA folder_id 13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB",
+    "service_account": "ai-orchestra@areal-neva-automation.iam.gserviceaccount.com"
+  },
+  "pipeline": [
+    "Confirmed Telegram files are created as input_type=drive_file, not file",
+    "Confirmed drive_file raw_input contains file_id, file_name, mime_type, caption, telegram_message_id, telegram_chat_id",
+    "Confirmed drive_file without caption must go to NEEDS_CONTEXT before download/processing",
+    "Confirmed reply/voice/text on file menu must be processed before confirm/finish/chat logic"
+  ],
+  "files": [
+    "/root/.areal-neva-core/task_worker.py",
+    "/root/.areal-neva-core/core/drive_service_account_uploader.py",
+    "/root/.areal-neva-core/core/artifact_pipeline.py",
+    "/root/.areal-neva-core/core/estimate_engine.py",
+    "/root/.areal-neva-core/core/dwg_engine.py",
+    "/root/.areal-neva-core/core/project_engine.py",
+    "/root/.areal-neva-core/core/file_intake_router.py",
+    "/root/.areal-neva-core/credentials.json",
+    "/root/.areal-neva-core/token.json",
+    "/root/.areal-neva-core/core.bak.before_rollback_20260427_202634/engine_base.py"
+  ],
+  "code": {
+    "installed_patches": [
+      "PATCH_FILE_INTAKE_NEEDS_CONTEXT_V3_MINIMAL",
+      "PATCH_DRIVE_GUARD_BEFORE_DOWNLOAD_V1",
+      "PATCH_WORKER_PICK_BEFORE_STALE_V1",
+      "PATCH_FIX_PFIN3_MENU_SHADOW_V1",
+      "PATCH_FILE_CHOICE_PRIORITY_V1",
+      "PATCH_DRIVE_SERVICE_ACCOUNT_PRIMARY_V1"
+    ],
+    "rejected_or_not_to_run": [
+      "RESTORE_ENGINE_BASE generated from scratch was rejected as unsafe/self-invented",
+      "PATCH_ENGINE_BASE_SERVICE_ACCOUNT_UPLOAD_V2_LIVE_TEST failed because find selected backup engine_base.py",
+      "PATCH_ENGINE_BASE_SERVICE_ACCOUNT_UPLOAD_V3_LIVE_ONLY failed because live /root/.areal-neva-core/core/engine_base.py does not exist"
+    ]
+  },
+  "patches": [
+    {
+      "name": "PATCH_FILE_INTAKE_NEEDS_CONTEXT_V3_MINIMAL",
+      "file": "task_worker.py",
+      "status": "INSTALLED",
+      "facts": [
+        "Added file-intake menu logic for drive_file",
+        "Added NEEDS_CONTEXT handling and topic menus",
+        "Worker active and syntax OK after installation"
+      ]
+    },
+    {
+      "name": "PATCH_DRIVE_GUARD_BEFORE_DOWNLOAD_V1",
+      "file": "task_worker.py",
+      "status": "INSTALLED",
+      "facts": [
+        "Moved intent/NEEDS_CONTEXT guard before _download_from_drive",
+        "Fixed issue where download path could block before menu"
+      
+...[TRUNCATED]
 
 ### chat_exports/CHAT_EXPORT__CLAUDE_SESSION__2026-04-27.txt [BROKEN]
 ﻿{"chat_id":"CLAUDE_SESSION_2026-04-27","chat_name":"AREAL-NEVA ORCHESTRA - Claude Session 26-27.04.2026","exported_at":"2026-04-27T02:10:00+03:00","source_model":"Claude Sonnet 4.5",
