@@ -322,3 +322,44 @@ P2:
 - Движки из снапшота
 - Intake с предложением действий
 - Multi-file поддержка
+
+## §14. GITHUB FRESHNESS AND CHAT EXPORT RULE — ДОПОЛНЕНИЕ
+
+GitHub является единственным публичным SSOT для нейросетей.
+
+GitHub хранит только CLEAN export:
+- проверенная информация
+- архитектура, решения, патчи, ошибки, текущее состояние
+- незакрытые задачи, команды и код без приватных значений
+
+Сервер хранит FULL export:
+- полный приватный технический архив
+- runtime context, внутренние значения
+
+FULL export сервера запрещено пушить в GitHub.
+
+Для GitHub:
+- один чат = один CLEAN файл
+- путь: chat_exports/CHAT_EXPORT__<SAFE_NAME>__YYYY-MM-DD.json
+- формат: валидный JSON object only, без текста до и после
+- без перезаписи существующих файлов
+- private/auth/config/access values заменяются на "<REDACTED>"
+
+Для сервера:
+- один чат = один FULL файл
+- путь: /root/.areal-neva-core/chat_exports/CHAT_EXPORT_FULL__<SAFE_NAME>__YYYY-MM-DD.json
+- если у нейросети нет SSH-доступа → вернуть готовый SSH-блок для пользователя без вложенных heredoc
+
+GitHub freshness rule:
+- GitHub web UI не является доказательством свежести
+- запрещено доверять cached blob/main странице
+- перед чтением контекста: получить latest commit SHA ветки main
+- читать docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md по exact commit SHA
+- сверить updated_at с последним AGG-коммитом
+- если mismatch → STALE_GITHUB_CONTEXT → остановка
+
+Источник правды по свежести:
+1. latest commit SHA main
+2. raw file at exact SHA
+3. internal updated_at
+4. GitHub UI page — NOT proof

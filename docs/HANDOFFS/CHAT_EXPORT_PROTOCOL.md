@@ -121,3 +121,58 @@ exported_at         — точное время (ОБЯЗАТЕЛЬНО)
 - путь файла: chat_exports/CHAT_EXPORT__<name>__<date>.json
 - commit message
 - статус: SUCCESS / FALLBACK_B / FALLBACK_C
+
+---
+
+## CHAT EXPORT PROTOCOL v2 — 29.04.2026
+
+MODE: FACT ONLY ZERO ASSUMPTIONS STRICT EXECUTION
+
+GOAL: два файла на каждый чат — SERVER FULL + GITHUB CLEAN
+
+TARGETS:
+- SERVER: 89.22.225.136 /root/.areal-neva-core/chat_exports/CHAT_EXPORT_FULL__<SAFE_NAME>__YYYY-MM-DD.json
+- GITHUB: chat_exports/CHAT_EXPORT__<SAFE_NAME>__YYYY-MM-DD.json
+
+NAMING:
+- латиница + цифры + _
+- без пробелов
+- дата строго YYYY-MM-DD
+
+SERVER FULL:
+- все факты
+- все команды
+- весь код
+- все ошибки
+- все решения
+- все пути
+- все конфигурационные значения
+- runtime context
+- НЕ редактировать
+- НЕ удалять
+
+GITHUB CLEAN:
+- та же структура
+- только верифицированная полезная информация
+- все чувствительные значения → "<REDACTED>"
+
+EXECUTION:
+- нейросеть без SSH обязана вернуть готовый SSH-блок для пользователя
+- SSH-блок должен создать SERVER FULL export в /root/.areal-neva-core/chat_exports/
+- GitHub CLEAN создаётся и пушится в GitHub напрямую при наличии GitHub-доступа
+
+GITHUB CLEAN:
+- git add chat_exports/CHAT_EXPORT__<SAFE_NAME>__YYYY-MM-DD.json
+- git commit -m "CHAT EXPORT <SAFE_NAME> YYYY-MM-DD"
+- git push
+
+CRITICAL:
+- FULL не пушить в GitHub
+- CLEAN не содержит чувствительных данных
+- один чат = два файла
+- не перезаписывать файлы
+
+VALIDATION:
+- JSON валиден
+- нет текста вне JSON
+- CLEAN без чувствительных данных
