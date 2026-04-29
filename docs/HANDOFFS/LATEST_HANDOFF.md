@@ -52,3 +52,13 @@ ARCHIVED: 371 | DONE: 98 | CANCELLED: 165 | FAILED: 60
 | P0_1_TEXT_ESTIMATE_FORCE_EXCEL_UPLOAD_V1 | core/estimate_engine.py | INSTALLED, not battle-tested |
 
 SYNTAX_OK. Service active, NRestarts=0.
+
+## ALL_CONTOURS PATCH 29.04.2026
+
+| Patch | Status |
+|---|---|
+| ALL_CONTOURS_ROUTE_FILE_V2 | INSTALLED, not battle-tested |
+| ALL_CONTOURS_TECHNADZOR_NORMS_V2 | INSTALLED, not battle-tested |
+| ALL_CONTOURS_TEMPLATE_MANAGER_V2 | INSTALLED, not battle-tested |
+| ALL_CONTOURS_CP8_DRIVE_LINK_V2 | INSTALLED, not battle-tested |
+| ALL_CONTOURS_SHORT_VOICE_CONFIRM_V2 | INSTALLED, not battle-tested |
