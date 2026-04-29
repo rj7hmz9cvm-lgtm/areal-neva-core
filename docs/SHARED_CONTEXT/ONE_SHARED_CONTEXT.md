@@ -1,5 +1,5 @@
 # ONE_SHARED_CONTEXT
-updated_at: 2026-04-28T21:45:12.434653+00:00
+updated_at: 2026-04-29T06:52:37.351145+00:00
 
 ## SOURCE FILES
 - chat_exports/CHAT_EXPORT_FULL_MAX__NEURON_SOFT_VPN_TECH_CHAT__2026-04-24.txt
@@ -40,6 +40,8 @@ updated_at: 2026-04-28T21:45:12.434653+00:00
 - chat_exports/CHAT_EXPORT__areal-neva-core-claude__2026-04-20.txt
 - chat_exports/CHAT_EXPORT__areal-neva-core__2026-04-27.txt
 - chat_exports/CHAT_EXPORT__areal_neva__2026-04-23.txt
+- chat_exports/CHAT_EXPORT__claude_session_29_04_2026__2026-04-29.json
+- chat_exports/CHAT_EXPORT__github_ssot_technical_orchestra__2026-04-29.json
 - chat_exports/HANDOFF__CLAUDE_TO_NEXT_AI__2026-04-27.txt
 - chat_exports/README.md
 - chat_exports/ZAPROS_DLY_AI_AGENTOV_2026-04-27.txt
@@ -51,7 +53,31 @@ updated_at: 2026-04-28T21:45:12.434653+00:00
 - docs/REPORTS/NOT_CLOSED.md
 
 ## CURRENT SYSTEM STATE
-UNKNOWN
+## СЕРВЕР
+IP: 89.22.225.136 | Base: /root/.areal-neva-core
+Services: areal-task-worker ACTIVE | telegram-ingress ACTIVE | areal-memory-api ACTIVE
+DB: data/core.db (694 задачи) | memory.db (728KB)
+
+## ПАТЧИ СЕССИИ 28-29.04.2026 (все SYNTAX_OK, active)
+
+| Патч | Файл | Суть |
+|---|---|---|
+| FIX_VOICE_GUARD_20260428 | telegram_daemon.py:961 | substring→word-boundary |
+| FIX_IS_SEARCH_20260428 | task_worker.py:2266 | SEARCH_PATTERNS→is_search |
+| FIX_SEARCH_CONTEXT_20260428 | task_worker.py:2248 | fresh search без старого контекста |
+| FIX_VOICE_REVISION_V2 | telegram_daemon.py:880+ | empty revision fix |
+| FIX_VOICE_CONFIRM_IN_PROGRESS | telegram_daemon.py:560 | голос confirm в IN_PROGRESS |
+| FIX_CRASHLOOP_3981 | task_worker.py:3981 | NameError p → p=__file__ |
+| FIX_CP8_ERROR_CLOSE | task_worker.py | CP8 estimate ошибки → FAILED не повисают |
+| FIX_CP8_SEARCH_TYPE | task_worker.py | input_type search → CP8 estimate hook |
+| FIX_EMPTY_AI_RETRY | task_worker.py:2297 | retry 3x при chars=0 |
+| FIX_DRIVE_OAUTH | task_worker.py:2569 | _download_from_drive_oauth через token.json |
+| FIX_ENV_EXPORT | .env:16 | убран export перед GITHUB_TOKEN |
+
+## LIVE ТЕСТ 29.04.2026
+- Смета текстом: «Сделай смету: профлист 100 м², цена 450 руб/м²» → ответ получен ✅
+- CP8 search type fix → смета теперь ловится из topic_500 ✅
+- Drive OAuth → token.json вместо credentials.json ✅
 
 ## ACTIVE CANON
 ### docs/CANON_FINAL/00_INDEX.md
@@ -91,29 +117,38 @@ UNKNOWN
 §0.2 Главный канон — пользователь. Все решения принимает только пользователь.
 
 ## VERIFIED FACTS
-## ПАТЧИ СЕССИИ (все applied, SYNTAX_OK, active)
+## ПАТЧИ СЕССИИ 28-29.04.2026 (все SYNTAX_OK, active)
 
-| Патч | Файл | Строка | Суть |
-|---|---|---|---|
-| FIX_VOICE_GUARD_20260428 | telegram_daemon.py | 961 | substring -> word-boundary |
-| FIX_IS_SEARCH_20260428 | task_worker.py | 2266 | SEARCH_PATTERNS -> is_search |
-| FIX_SEARCH_CONTEXT_20260428 | task_worker.py | 2248 | свежий поиск без старых результатов |
-| FIX_VOICE_REVISION_20260428_V2 | telegram_daemon.py | 880+ | [REVISION] пустой -> strip |
-| FIX_VOICE_CONFIRM_IN_PROGRESS_20260428 | telegram_daemon.py | 560 | confirm в IN_PROGRESS |
+| Патч | Файл | Суть |
+|---|---|---|
+| FIX_VOICE_GUARD_20260428 | telegram_daemon.py:961 | substring→word-boundary |
+| FIX_IS_SEARCH_20260428 | task_worker.py:2266 | SEARCH_PATTERNS→is_search |
+| FIX_SEARCH_CONTEXT_20260428 | task_worker.py:2248 | fresh search без старого контекста |
+| FIX_VOICE_REVISION_V2 | telegram_daemon.py:880+ | empty revision fix |
+| FIX_VOICE_CONFIRM_IN_PROGRESS | telegram_daemon.py:560 | голос confirm в IN_PROGRESS |
+| FIX_CRASHLOOP_3981 | task_worker.py:3981 | NameError p → p=__file__ |
+| FIX_CP8_ERROR_CLOSE | task_worker.py | CP8 estimate ошибки → FAILED не повисают |
+| FIX_CP8_SEARCH_TYPE | task_worker.py | input_type search → CP8 estimate hook |
+| FIX_EMPTY_AI_RETRY | task_worker.py:2297 | retry 3x при chars=0 |
+| FIX_DRIVE_OAUTH | task_worker.py:2569 | _download_from_drive_oauth через token.json |
+| FIX_ENV_EXPORT | .env:16 | убран export перед GITHUB_TOKEN |
 
-## СТРОКИ (верифицировано grep)
+## LIVE ТЕСТ 29.04.2026
+- Смета текстом: «Сделай смету: профлист 100 м², цена 450 руб/м²» → ответ получен ✅
+- CP8 search type fix → смета теперь ловится из topic_500 ✅
+- Drive OAuth → token.json вместо credentials.json ✅
+- Worker: active, NRestarts=0 ✅
 
-task_worker.py: 735, 2579, 2291/2664/2968, 2641/2654/2794/2795, 2266, 2248
-telegram_daemon.py: 961, 560, 543/558, 899, 1086, 1122, 743-745
+## НЕ ЗАКРЫТО (тест завтра)
+- Смета → Excel файл на Drive (CP8 срабатывает, но upload не протестирован)
+- КЖ PDF pipeline (Drive OAuth fix должен помочь)
+- Дублирование ответа в разные топики
+- Голос 00:02-00:04 → revision вместо confirm
+- Нормы СП/ГОСТ в technadzor_engine
+- Шаблоны, multi-file
 
-## LIVE ТЕСТ OK
-- Поиск RAL 8017: osnova.spb.ru 440 + pkmm.ru 801 (без RAL 6005)
-- Голос revision -> Принял правки. Переделываю
-- AWAITING_CONFIRMATION=0
-
-## НЕ ЗАКРЫТО
-P1: дублирование задач x2 / голос 00:02 -> revision вместо confirm
-P2: monitor_jobs.py нет / SEARCH_MONOLITH_V1 live-тест не проводился
+## DB STATE
+ARCHIVED: 371 | DONE: 98 | CANCELLED: 165 | FAILED: 60
 
 ## NOT CLOSED
 # NOT_CLOSED — 28.04.2026
@@ -158,44 +193,44 @@ GitHub SSOT регламент | secret_scan pre-commit | ROLLBACK_POINT | USER_
 HEALTHCHECK | PRICE_AGING +5-10%
 
 ## LAST CHAT EXPORTS
-### chat_exports/CHAT_EXPORT__areal-neva-core__2026-04-27.txt
+### chat_exports/CHAT_EXPORT__claude_session_29_04_2026__2026-04-29.json
+{
+  "chat_id": "claude_session_29_04_2026",
+  "chat_name": "AREAL-NEVA ORCHESTRA — Claude Session 28-29.04.2026",
+  "exported_at": "2026-04-29T01:45:00+03:00",
+  "source_model": "Claude Sonnet 4.6",
+  "system": "AREAL-NEVA ORCHESTRA Ubuntu 24.04 89.22.225.136 /root/.areal-neva-core",
+  "architecture": "Telegram → telegram_daemon.py → core.db → task_worker.py → ai_router.py → OpenRouter → reply_sender.py → Telegram",
+  "pipeline": "NEW → INTAKE → IN_PROGRESS → RESULT_READY → AWAITING_CONFIRMATION → DONE → ARCHIVED",
+  "patches": [
+    "FIX_VOICE_GUARD_20260428 → telegram_daemon.py:961 → word-boundary → SYNTAX_OK active",
+    "FIX_IS_SEARCH_20260428 → task_worker.py:2266 → is_search в payload → SYNTAX_OK active",
+    "FIX_SEARCH_CONTEXT_20260428 → task_worker.py:2248 → clear search_context → SYNTAX_OK active",
+    "FIX_VOICE_REVISION_V2 → telegram_daemon.py:880+ → empty revision fix → SYNTAX_OK active",
+    "FIX_VOICE_CONFIRM_IN_PROGRESS → telegram_daemon.py:560 → голос confirm → SYNTAX_OK active",
+    "FIX_CRASHLOOP_3981 → task_worker.py:3981 → NameError p=__file__ → SYNTAX_OK active",
+    "FIX_CP8_ERROR_CLOSE → task_worker.py → estimate errors → FAILED не повисают → SYNTAX_OK active",
+    "FIX_CP8_SEARCH_TYPE → task_worker.py → input_type search → CP8 estimate hook → SYNTAX_OK active",
+    "FIX_EMPTY_AI_RETRY → task_worker.py:2297 → retry 3x при chars=0 → SYNTAX_OK active",
+### chat_exports/CHAT_EXPORT__github_ssot_technical_orchestra__2026-04-29.json
 {
   "chat_id": "UNKNOWN",
-  "chat_name": "areal-neva-core",
-  "exported_at": "2026-04-27T20:00:00Z",
-  "source_model": "Claude Sonnet 4.6",
-  "system": "Multi-agent AI orchestration infrastructure areal-neva-core. Telegram bots, async task workers, Python agents, Google Drive sync, SQLite-backed state management. Self-hosted Linux server + MacBook Air.",
-  "architecture": "Telegram bot -> task_worker.py -> SQLite WAL task queue -> agent handlers (Claude/ChatGPT/Gemini/Grok/DeepSeek/Perplexity) -> results stored in SQLite -> Google Drive sync via Mac",
-  "pipeline": "NEW -> IN_PROGRESS -> DONE / FAILED -> ARCHIVED",
+  "chat_name": "github_ssot_technical_orchestra",
+  "exported_at": "2026-04-29T00:00:00+02:00",
+  "source_model": "ChatGPT GPT-5.5 Thinking",
+  "system": "AREAL-NEVA ORCHESTRA: сервер 89.22.225.136, base /root/.areal-neva-core, Telegram bot @ai_orkestra_all_bot, GitHub repo rj7hmz9cvm-lgtm/areal-neva-core, GitHub используется как SSOT для канонов и shared context, сервер используется как runtime, Google Drive оставлен как резерв и хранилище тяжёлых файлов",
+  "architecture": "Telegram -> telegram_daemon/task_worker -> ai_router/OpenRouter/DeepSeek -> engines/Python -> validator -> HUMAN_DECISION_EDITOR -> Telegram. GitHub docs/CANON_FINAL и docs/SHARED_CONTEXT являются текстовым SSOT. Сервер хранит runtime, core.db, memory.db, обработку файлов. Drive не является главным мозгом",
+  "pipeline": "Базовый lifecycle задач: NEW -> IN_PROGRESS -> AWAITING_CONFIRMATION -> DONE -> ARCHIVED. Для файлового контура целевой pipeline: INGESTED -> DOWNLOADED -> PARSED -> CLEANED -> NORMALIZED -> CALCULATED -> ARTIFACT_CREATED -> UPLOADED",
   "files": [
-    "task_worker.py -> central async worker for task lifecycle",
-    "google_io.py -> Google Drive integration with lazy imports",
-    "pin_manager.py -> pin state management via SQLite",
-    "drive_ingest.py -> Google Drive file ingestion with service file filters",
-    "deploy_patch.sh -> deployment script: stop/backup/patch/restart/logs"
-  ],
-  "code": "Python asyncio / SQLite WAL / Telethon / openpyxl / Bash / Linux server + macOS local",
-  "patches": [
-    "task_worker_race_condition_guard -> task_worker.py -> voice file availability check -> status: applied_by_terminal",
-### chat_exports/CHAT_EXPORT__areal_neva__2026-04-23.txt
-﻿{
-  "chat_id": "-1003725299009",
-  "chat_name": "areal_neva_orchestra",
-  "exported_at": "2026-04-23T09:30:00Z",
-  "source_model": "claude-sonnet-4-6",
-  "system": {
-    "server": "89.22.225.136",
-    "os": "Ubuntu 24.04",
-    "base": "/root/.areal-neva-core",
-    "venv": "/root/.areal-neva-core/.venv/bin/python3",
-    "bot": "@ai_orkestra_all_bot id=8216054898",
-    "db_path": "/root/.areal-neva-core/data/core.db",
-    "memory_db": "/root/.areal-neva-core/data/memory.db"
-  },
-  "architecture": [
-    "telegram_daemon.py â€” intake Ð³Ð¾Ð»Ð¾Ñ�/Ñ‚ÐµÐºÑ�Ô¿Ñ„Ð°Ð¹Ð»Ñ‹",
-    "task_worker.py â€” Ð¾Ð±Ñ€Ð°Ð±Ð¾Ñ‚ÐºÐ° Ð·Ð°Ð´Ð°Ñ‡, polling",
-    "core/ai_router.py â€” routing Ð² LLM (deepseek/openrouter)",
+    "README.md -> описание GitHub SSOT",
+    "docs/ARCHITECTURE/SEARCH_MONOLITH_V1.md -> канон интернет-поиска topic_500",
+    "docs/CANON_FINAL/00_INDEX.md -> индекс канонов",
+    "docs/HANDOFFS/LATEST_HANDOFF.md -> handoff состояния 28.04.2026",
+    "docs/REPORTS/NOT_CLOSED.md -> незакрытые задачи",
+    "docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md -> master architecture block v1",
+    "tools/context_aggregator.py -> заготовка агрегатора контекста",
+    "tools/secret_scan.sh -> pre-commit secret scan",
+    "runtime/.gitkeep -> заглушка runtime без хранения мусора",
 ### chat_exports/HANDOFF__CLAUDE_TO_NEXT_AI__2026-04-27.txt
 ﻿AREAL-NEVA ORCHESTRA - SESSION HANDOFF 2026-04-27 02:10 MSK
 SOURCE: Claude session 26-27.04.2026
@@ -241,11 +276,6 @@ grep -n 'SHORT_CONFIRM\|CANCEL_PHRASES\|CHAT_ONLY\|FINISH_PHRASES' telegram_daem
 ENDSSH
 
 ## BROKEN NOW
-P1: дублирование задач x2 / голос 00:02 -> revision вместо confirm
-P2: monitor_jobs.py нет / SEARCH_MONOLITH_V1 live-тест не проводился
-
-# NOT_CLOSED — 28.04.2026
-
 ## P1
 - Дублирование задач x2
 - Голос 00:02 -> revision вместо confirm
