@@ -1,0 +1,99 @@
+{
+  "chat_id": "CHATGPT_GEMINI_AGGREGATOR_V2_FINAL",
+  "chat_name": "ChatGPT session — Gemini menu-only integration and Context Aggregator v2",
+  "exported_at": "2026-04-29T21:20:00+00:00",
+  "source_model": "ChatGPT GPT-5.5 Thinking",
+  "system": "AREAL-NEVA ORCHESTRA. GitHub CLEAN export only. No private values included.",
+  "architecture": "Орик работает на сервере. Telegram является интерфейсом. GitHub является публичным SSOT. Server FULL export является приватным архивом и не пушится в GitHub.",
+  "pipeline": "File flow fixed conceptually: any file -> Oрик asks what to do -> user selects action -> selected intent -> engine -> result. Gemini is used only for explicit user-selected intent=vision.",
+  "files": [
+    "core/gemini_vision.py",
+    "core/file_intake_router.py",
+    "tools/context_aggregator.py",
+    "docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md",
+    "chat_exports/CHAT_EXPORT__CHATGPT_GEMINI_AGGREGATOR_V2_FINAL__2026-04-29.json"
+  ],
+  "code": "No secrets. Gemini must be direct Google API tool only, not OpenRouter. DeepSeek and Perplexity routes must not be touched.",
+  "patches": [
+    "GEMINI_VISION_MENU_CANON_ONLY",
+    "file_intake_router restore from backup after broken patch",
+    "CONTEXT_AGGREGATOR_V2 completed by user-side execution"
+  ],
+  "commands": [
+    "restore file_intake_router.py from core/file_intake_router.py.bak.20260429_192333",
+    "restore related engines from latest backups",
+    "add Анализ фото / Схема to get_clarification_message in STROYKA, TEHNADZOR and DEFAULT",
+    "restart areal-task-worker",
+    "run tools/context_aggregator.py",
+    "push ONE_SHARED_CONTEXT.md to GitHub"
+  ],
+  "db": "No database schema changes made in this session.",
+  "memory": "Important rule confirmed: if information is not in GitHub export/canon/handoff, next neural network will not reliably know it.",
+  "services": [
+    "areal-task-worker",
+    "cron",
+    "GitHub",
+    "context_aggregator.py"
+  ],
+  "errors": [
+    "core/file_intake_router.py was missing and only .bak files existed",
+    "initial Gemini patch attempted automatic image interception and violated clarification flow",
+    "context_aggregator cron had wrong path /root/.areal-neva-core/context_aggregator.py",
+    "manual run showed tools/context_aggregator.py was the real file",
+    "old aggregator run reported TODO/not implemented before CONTEXT_AGGREGATOR_V2 work",
+    "GitHub connector unavailable in this ChatGPT turn"
+  ],
+  "decisions": [
+    "Gemini must be added only as menu-selected tool, not automatic router",
+    "Any file must first trigger clarification",
+    "User must choose action before any engine starts",
+    "Анализ фото / Схема must exist in all file clarification menus",
+    "No Gemini via OpenRouter",
+    "DeepSeek remains final/default model",
+    "Perplexity remains search model",
+    "Aggregator reads GitHub sources and builds ONE_SHARED_CONTEXT.md mechanically, without LLM decisions"
+  ],
+  "solutions": [
+    "core/gemini_vision.py kept as direct Google API tool",
+    "file_intake_router.py restored from valid backup",
+    "menu item Анализ фото / Схема added to STROYKA, TEHNADZOR and DEFAULT",
+    "intent == vision branch already present in restored file_intake_router.py",
+    "CONTEXT_AGGREGATOR_V2 specification accepted: read all chat_exports plus canon/handoff/reports/architecture, filter by statuses, write ONE_SHARED_CONTEXT.md, push to GitHub every 30 minutes"
+  ],
+  "state": "Gemini menu-only logic is patched and worker is active. Aggregator v2 was reported as done by user with commit e56c2fd83fb5946fbefb3351192fd0307530c30b. This export records the final ChatGPT-side state.",
+  "what_working": [
+    "core/gemini_vision.py exists",
+    "core/file_intake_router.py exists after restore",
+    "Анализ фото / Схема appears in all three clarification branches",
+    "areal-task-worker restarted and active after menu patch",
+    "CONTEXT_AGGREGATOR_V2 produced commit e56c2fd83fb5946fbefb3351192fd0307530c30b according to user terminal output"
+  ],
+  "what_broken": [
+    "Direct GitHub connector is unavailable in this ChatGPT tool session",
+    "Earlier cron path for aggregator was wrong",
+    "Earlier Gemini patch logic tried to infer intent automatically and was rejected"
+  ],
+  "what_not_done": [
+    "Live Telegram test of file -> clarification -> Анализ фото / Схема -> Gemini result is not shown in this chat",
+    "Live test of project_engine end-to-end is not shown in this chat",
+    "Server FULL export of this ChatGPT chat is not created here"
+  ],
+  "current_breakpoint": "Start live tests in Telegram: send file, verify Oрик asks what to do, select Анализ фото / Схема, confirm Gemini result, then verify task status, reply binding, memory, pin and archive behavior.",
+  "root_causes": [
+    "The system needed menu-based file intent lifecycle, not automatic model selection",
+    "Gemini is a tool for selected vision intent, not a replacement for file pipeline",
+    "Aggregator must read GitHub sources mechanically and must not depend on stale UI pages or wrong cron path"
+  ],
+  "verification": [
+    "User terminal output showed Анализ фото / Схема at lines 65, 67, 69 of core/file_intake_router.py",
+    "User terminal output showed SYNTAX_OK for core/file_intake_router.py",
+    "User terminal output showed areal-task-worker active",
+    "User terminal output showed AGGREGATOR DONE commit e56c2fd83fb5946fbefb3351192fd0307530c30b"
+  ],
+  "limits": [
+    "No private authentication values included",
+    "No raw .env content included",
+    "No server FULL export included",
+    "GitHub CLEAN export only"
+  ]
+}
