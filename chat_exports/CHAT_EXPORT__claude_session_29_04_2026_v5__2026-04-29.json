@@ -1,0 +1,43 @@
+{
+  "chat_id": "claude_session_29_04_2026_v5",
+  "chat_name": "AREAL-NEVA ORCHESTRA — Claude Session 29.04.2026 FINAL V5",
+  "exported_at": "2026-04-29T23:00:14.611516",
+  "source_model": "Claude Sonnet 4.6",
+  "patches_installed": [
+    "TECHNADZOR_RU_NORMS_V39 — core/technadzor_engine.py — SYNTAX_OK active",
+    "FILE_INTAKE_KM_V39 — core/file_intake_router.py — SYNTAX_OK active",
+    "DWG_EZDXF_V39 — core/dwg_engine.py — SYNTAX_OK active",
+    "ESTIMATE_V39_HELPERS — core/estimate_engine.py — SYNTAX_OK active",
+    "TASK_WORKER_V39_HELPERS — task_worker.py — SYNTAX_OK active",
+    "MONITOR_HISTORY_V39 — monitor_jobs.py — SYNTAX_OK active",
+    "SEARCH_POSTPROCESS_WIRED — task_worker.py:2348 — SYNTAX_OK active",
+    "DUPLICATE_GUARD_WIRED — task_worker.py INSERT INTO tasks — SYNTAX_OK active",
+    "REGION_WIRED — task_worker.py payload — SYNTAX_OK active",
+    "TOPIC_MISMATCH_GUARD — task_worker.py — SYNTAX_OK active",
+    "SEARCH_DEPTH_LIMIT — task_worker.py — SYNTAX_OK active",
+    "PRICE_AGING — task_worker.py — SYNTAX_OK active",
+    "OUTPUT_DECISION_LOGIC — task_worker.py — SYNTAX_OK active",
+    "TRUST_RISK_SCORE — task_worker.py — SYNTAX_OK active",
+    "SHORT_VOICE_CONFIRM_WIRED — telegram_daemon.py — SYNTAX_OK active",
+    "AI_ROUTER_RU_PROMPT — core/ai_router.py — SYNTAX_OK active",
+    "search_session TABLE — core.db + memory.db — OK",
+    "retry_worker.py, media_group.py, context_engine.py, delivery.py, startup_recovery.py — CREATED"
+  ],
+  "not_closed": [
+    "Голосовой confirm при AWAITING_CONFIRMATION — live-тест не проводился",
+    "Смета PDF -> Excel -> Drive — live-тест не проводился",
+    "КЖ PDF pipeline end-to-end — live-тест не проводился",
+    "DWG -> Excel -> Drive — live-тест не проводился",
+    "project_engine end-to-end через Telegram — live-тест не проводился"
+  ],
+  "services": {
+    "areal-task-worker": "active",
+    "telegram-ingress": "active",
+    "areal-memory-api": "active"
+  },
+  "confirmed_by_terminal": [
+    "SYNTAX_OK все файлы",
+    "active NRestarts=0",
+    "BOT STARTED id=8216054898"
+  ]
+}
