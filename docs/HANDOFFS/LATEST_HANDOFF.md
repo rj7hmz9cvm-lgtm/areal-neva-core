@@ -144,3 +144,28 @@ SYNTAX_OK. Service active, NRestarts=0.
 
 Дальнейшая работа:
 реализация оркестра, не добавление моделей
+
+
+---
+
+## СЕССИЯ 30.04.2026 — ИТОГИ
+
+СДЕЛАНО:
+- CONTEXT_AGGREGATOR_V2 — tools/context_aggregator.py — VERIFIED коммит e56c2fd
+- Cron исправлен: каждые 30 минут с подгрузкой .env — VERIFIED
+- Gemini — core/gemini_vision.py существует, меню во всех топиках, intent=vision в route_file — INSTALLED
+- PATCH_FILE_INTAKE_NEEDS_CONTEXT_V1 — логика согласована, готова к диагностике и патчу
+
+НЕ ЗАКРЫТО:
+- PATCH_FILE_INTAKE_NEEDS_CONTEXT_V1 — патч не поставлен, ждёт диагностики
+- Голос confirm при AWAITING_CONFIRMATION (P1 баг, telegram_daemon.py:601)
+- Смета PDF → Excel → Drive
+- КЖ PDF pipeline
+- project_engine end-to-end
+- Gemini live-тест
+- docs/CANON_FINAL/02-11 — физически не существуют в GitHub
+
+СЛЕДУЮЩИЙ ШАГ:
+1. Диагностика task_worker.py + file_intake_router.py
+2. Патч PATCH_FILE_INTAKE_NEEDS_CONTEXT_V1
+3. Live-тест: файл без команды → меню → выбор → engine → artifact
