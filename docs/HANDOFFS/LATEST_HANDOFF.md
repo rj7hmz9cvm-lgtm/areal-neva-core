@@ -89,3 +89,37 @@ SYNTAX_OK. Service active, NRestarts=0.
 - SOURCE_DEDUPLICATION вызов
 - apply_template в pipeline
 - Trust Score + Risk Score
+
+
+---
+
+## SESSION 2026-04-29 — V44/V45 + GIT CLEANUP + AGGREGATOR
+
+### СДЕЛАНО
+- Внедрены V44 закрытия pipeline (task_worker, file_intake_router, template_manager, project_engine, engine_base)
+- Внедрён V45 нормативный поиск (normative_search_engine + интеграция в project_engine)
+- Выполнен git hygiene: добавлен .gitignore для скрытия runtime/secret файлов
+- Подтверждена работа GitHub aggregator (AGG commits в origin/main, ONE_SHARED_CONTEXT обновляется)
+
+### ПОДТВЕРЖДЕНО ТЕРМИНАЛОМ
+- grep маркеры V44/V45 присутствуют
+- py_compile → SYNTAX_OK
+- systemctl → areal-task-worker active
+- journalctl без критических ошибок
+- SECRET_SCAN_OK перед commit
+
+### НЕ ПРОТЕСТИРОВАНО LIVE
+- Telegram pipeline после V44
+- Drive upload после V45
+- normative search на реальных задачах
+
+### ПРОБЛЕМЫ
+- git push rejected (non-fast-forward)
+- worktree грязный (много modified файлов)
+- локальный ONE_SHARED_CONTEXT устаревший относительно origin
+
+### СЛЕДУЮЩИЙ ШАГ
+- безопасная синхронизация Git (без git add .)
+- whitelist commit только чистых файлов
+- live тест Telegram + Drive
+
