@@ -1,5 +1,5 @@
 # ONE_SHARED_CONTEXT
-updated_at: 2026-04-29T20:34:31+00:00
+updated_at: 2026-04-29T20:43:01+00:00
 
 ## SOURCE FILES
 - docs/CANON_FINAL/00_INDEX.md [UNKNOWN]
@@ -35,6 +35,7 @@ updated_at: 2026-04-29T20:34:31+00:00
 - chat_exports/CHAT_EXPORT__Areal_Neva_Core_Emergency_Fix__2026-04-25.txt [BROKEN]
 - chat_exports/CHAT_EXPORT__Areal_Neva_Core_Stabilization__2026-04-27.txt [BROKEN]
 - chat_exports/CHAT_EXPORT__Asimov_Laws_and_Bio__2026-04-27.txt [BROKEN]
+- chat_exports/CHAT_EXPORT__CHATGPT_GEMINI_AGGREGATOR_V2_FINAL__2026-04-29.json [RESTORED]
 - chat_exports/CHAT_EXPORT__CHATGPT_GITHUB_EXPORT_RULES_CANON__2026-04-29.json [REJECTED]
 - chat_exports/CHAT_EXPORT__CLAUDE_SESSION__2026-04-27.txt [BROKEN]
 - chat_exports/CHAT_EXPORT__DOKAT_3__.txt [BROKEN]
@@ -50,6 +51,7 @@ updated_at: 2026-04-29T20:34:31+00:00
 - chat_exports/CHAT_EXPORT__UNKNOWN__2026-04-25.txt [UNKNOWN]
 - chat_exports/CHAT_EXPORT__areal-neva-core-claude__2026-04-20.txt [BROKEN]
 - chat_exports/CHAT_EXPORT__areal-neva-core__2026-04-27.txt [BROKEN]
+- chat_exports/CHAT_EXPORT__areal-neva-orchestra-dev__2026-04-29.json [VERIFIED]
 - chat_exports/CHAT_EXPORT__areal_neva__2026-04-23.txt [BROKEN]
 - chat_exports/CHAT_EXPORT__claude_session_29_04_2026__2026-04-29.json [VERIFIED]
 - chat_exports/CHAT_EXPORT__claude_session_29_04_2026_v2__2026-04-29.json [UNKNOWN]
@@ -265,11 +267,11 @@ REJECTED  = патч отклонён
 - ﻿{ "chat_id": "Gemini_Areal_Neva_Fix_20260425", "chat_name": "Areal Neva Core Emergency Fix", "exported_at": "2026-04-25 [chat_exports/CHAT_EXPORT__Areal_Neva_Core_Emergency_Fix__2026-04-25.txt]
 - "what_broken": [ [chat_exports/CHAT_EXPORT__Areal_Neva_Core_Stabilization__2026-04-27.txt]
 - ﻿{ "chat_id": "UNKNOWN", "chat_name": "Asimov_Laws_and_Bio", "exported_at": "2026-04-27T00:06:00Z", "source_model": "Gem [chat_exports/CHAT_EXPORT__Asimov_Laws_and_Bio__2026-04-27.txt]
+- "file_intake_router restore from backup after broken patch", [chat_exports/CHAT_EXPORT__CHATGPT_GEMINI_AGGREGATOR_V2_FINAL__2026-04-29.json]
+- "what_broken": [ [chat_exports/CHAT_EXPORT__CHATGPT_GEMINI_AGGREGATOR_V2_FINAL__2026-04-29.json]
 - "Repository state was recovered by aborting broken rebase, resetting tracked files to origin/main, then appending the tw [chat_exports/CHAT_EXPORT__CHATGPT_GITHUB_EXPORT_RULES_CANON__2026-04-29.json]
 - "Resolved broken local Git state by resetting tracked files to origin/main before appending only the required canon/prot [chat_exports/CHAT_EXPORT__CHATGPT_GITHUB_EXPORT_RULES_CANON__2026-04-29.json]
 - "what_broken": [ [chat_exports/CHAT_EXPORT__CHATGPT_GITHUB_EXPORT_RULES_CANON__2026-04-29.json]
-- "confirmation_handler":"BROKEN - Da creates new task instead of closing existing", [chat_exports/CHAT_EXPORT__CLAUDE_SESSION__2026-04-27.txt]
-- "reply_continuity":"BROKEN - reply to bot message creates new task instead of updating existing", [chat_exports/CHAT_EXPORT__CLAUDE_SESSION__2026-04-27.txt]
 
 ## НЕ ЗАКРЫТО
 - §2.4 Inbox Aggregator (P2 — не реализован): [docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md]
@@ -316,6 +318,7 @@ REJECTED  = патч отклонён
 - ﻿{ "chat_id": "Gemini_Areal_Neva_Fix_20260425", "chat_name": "Areal Neva Core Emergency Fix", "exported_at": "2026-04-25 [chat_exports/CHAT_EXPORT__Areal_Neva_Core_Emergency_Fix__2026-04-25.txt]
 - "what_not_done": [ [chat_exports/CHAT_EXPORT__Areal_Neva_Core_Stabilization__2026-04-27.txt]
 - ﻿{ "chat_id": "UNKNOWN", "chat_name": "Asimov_Laws_and_Bio", "exported_at": "2026-04-27T00:06:00Z", "source_model": "Gem [chat_exports/CHAT_EXPORT__Asimov_Laws_and_Bio__2026-04-27.txt]
+- "what_not_done": [ [chat_exports/CHAT_EXPORT__CHATGPT_GEMINI_AGGREGATOR_V2_FINAL__2026-04-29.json]
 - "what_not_done": [ [chat_exports/CHAT_EXPORT__CHATGPT_GITHUB_EXPORT_RULES_CANON__2026-04-29.json]
 - "what_not_done":[ [chat_exports/CHAT_EXPORT__CLAUDE_SESSION__2026-04-27.txt]
 - "what_not_done": [ [chat_exports/CHAT_EXPORT__DOKAT_3__.txt]
@@ -1847,6 +1850,54 @@ Main canon: 1k_KIpQ7jD15_w83sMz4WfqoEIINIXTHTaTOtUovf2gU
     "HttpError 403 Google Docs/Sheets â†’ get_media ne rabotaet â†’ EXPOR
 ...[TRUNCATED]
 
+### chat_exports/CHAT_EXPORT__areal-neva-orchestra-dev__2026-04-29.json [VERIFIED]
+{
+  "chat_id": "claude_session_29_04_2026_MAIN",
+  "chat_name": "AREAL-NEVA ORCHESTRA — Claude Session 29.04.2026 — MAIN DEV SESSION",
+  "exported_at": "2026-04-29T20:45:00+03:00",
+  "source_model": "Claude Sonnet 4.6",
+  "session_summary": "Полная сессия разработки 29.04.2026. Закрыто 39 пунктов кодом.",
+  "patches_confirmed_by_terminal": [
+    "CRON_AGGREGATOR — tools/context_aggregator.py — AGG_OK",
+    "P0_1_TEXT_ESTIMATE_FORCE_EXCEL_UPLOAD_V1 — core/estimate_engine.py — SYNTAX_OK active",
+    "ALL_CONTOURS_ROUTE_FILE_V2 — core/file_intake_router.py — SYNTAX_OK active",
+    "ALL_CONTOURS_TECHNADZOR_NORMS_V2 — core/technadzor_engine.py — SYNTAX_OK active",
+    "ALL_CONTOURS_TEMPLATE_MANAGER_V2 — core/template_manager.py — SYNTAX_OK active",
+    "ALL_CONTOURS_CP8_DRIVE_LINK_V2 — task_worker.py — SYNTAX_OK active",
+    "ALL_CONTOURS_SHORT_VOICE_CONFIRM_V2 — telegram_daemon.py — SYNTAX_OK active",
+    "FINAL_CODE_CONTOUR_FILE_INTAKE_V1 — core/file_intake_router.py — SYNTAX_OK active",
+    "FINAL_CODE_CONTOUR_ESTIMATE_KZH_V1 — core/estimate_engine.py — SYNTAX_OK active",
+    "FINAL_CODE_CONTOUR_TEMPLATE_APPLY_V1 — core/template_manager.py — SYNTAX_OK active",
+    "FINAL_CODE_CONTOUR_SHEETS_SIGNATURE_V1 — core/sheets_generator.py — SYNTAX_OK active",
+    "FINAL_CODE_CONTOUR_WORKER_V1 — task_worker.py — SYNTAX_OK active",
+    "TECHNADZOR_RU_NORMS_V39 — core/technadzor_engine.py — SYNTAX_OK active",
+    "FILE_INTAKE_KM_V39 — core/file_intake_router.py — SYNTAX_OK active",
+    "DWG_EZDXF_V39 — core/dwg_engine.py — SYNTAX_OK active",
+    "ESTIMATE_V39_HELPERS — core/estimate_engine.py — SYNTAX_OK active",
+    "TASK_WORKER_V39_HELPERS — task_worker.py — SYNTAX_OK active",
+    "MONITOR_HISTORY_V39 — monitor_jobs.py — SYNTAX_OK active",
+    "SEARCH_POSTPROCESS_WIRED — task_worker.py:2348 — SYNTAX_OK active",
+    "DUPLICATE_GUARD_WIRED — task_worker.py INSERT INTO tasks — SYNTAX_OK active",
+    "REGION_WIRED — task_worker.py payload — SYNTAX_OK active",
+    "TOPIC_MISMATCH_GUARD — task_worker.py — SYNTAX_OK active",
+    "SEARCH_DEPTH_LIMIT — task_worker.py — SYNTAX_OK active",
+    "PRICE_AGING — task_worker.py — SYNTAX_OK active",
+    "OUTPUT_DECISION_LOGIC — task_worker.py — SYNTAX_OK active",
+    "TRUST_RISK_SCORE — task_worker.py — SYNTAX_OK active",
+    "SHORT_VOICE_CONFIRM_WIRED — telegram_daemon.py — SYNTAX_OK active",
+    "AI_ROUTER_RU_PROMPT — core/ai_router.py — SYNTAX_OK active",
+    "search_session TABLE — core.db + memory.db — OK",
+    "retry_worker.py, media_group.py, context_engine.py, delivery.py, startup_recovery.py — CREATED",
+    "HANDLE_MULTIPLE_FILES — core/file_intake_router.py — SYNTAX_OK active",
+    "CACHE_LAYER_V1 — task_worker.py — SYNTAX_OK active",
+    "REGION_PRIORITY_V1 — task_worker.py — SYNTAX_OK active"
+  ],
+  "already_existed_confirmed": [
+    "CACHE_LAYER — core/ai_router.py строки 485-498",
+    "SOURCE_DEDUPLICATION — task_worker.py _cp11_sha256_file строки 4357-4359",
+    "apply_template — task_worker.py CANON_PASS12 ст
+...[TRUNCATED]
+
 ### chat_exports/CHAT_EXPORT__areal-neva-core__2026-04-27.txt [BROKEN]
 {
   "chat_id": "UNKNOWN",
@@ -2141,6 +2192,66 @@ Main canon: 1k_KIpQ7jD15_w83sMz4WfqoEIINIXTHTaTOtUovf2gU
     "A rebase attempt failed due to unstaged changes.",
     "A later rebase hit an add/add conflict in chat_exports/CHAT_EXPORT__AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR__2026-04-29.json.",
     "Repository state was recovered by aborting broken rebase, resetting tracked files to origin/main, then appending the two documentation sections a
+...[TRUNCATED]
+
+### chat_exports/CHAT_EXPORT__CHATGPT_GEMINI_AGGREGATOR_V2_FINAL__2026-04-29.json [RESTORED]
+{
+  "chat_id": "CHATGPT_GEMINI_AGGREGATOR_V2_FINAL",
+  "chat_name": "ChatGPT session — Gemini menu-only integration and Context Aggregator v2",
+  "exported_at": "2026-04-29T21:20:00+00:00",
+  "source_model": "ChatGPT GPT-5.5 Thinking",
+  "system": "AREAL-NEVA ORCHESTRA. GitHub CLEAN export only. No private values included.",
+  "architecture": "Орик работает на сервере. Telegram является интерфейсом. GitHub является публичным SSOT. Server FULL export является приватным архивом и не пушится в GitHub.",
+  "pipeline": "File flow fixed conceptually: any file -> Oрик asks what to do -> user selects action -> selected intent -> engine -> result. Gemini is used only for explicit user-selected intent=vision.",
+  "files": [
+    "core/gemini_vision.py",
+    "core/file_intake_router.py",
+    "tools/context_aggregator.py",
+    "docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md",
+    "chat_exports/CHAT_EXPORT__CHATGPT_GEMINI_AGGREGATOR_V2_FINAL__2026-04-29.json"
+  ],
+  "code": "No secrets. Gemini must be direct Google API tool only, not OpenRouter. DeepSeek and Perplexity routes must not be touched.",
+  "patches": [
+    "GEMINI_VISION_MENU_CANON_ONLY",
+    "file_intake_router restore from backup after broken patch",
+    "CONTEXT_AGGREGATOR_V2 completed by user-side execution"
+  ],
+  "commands": [
+    "restore file_intake_router.py from core/file_intake_router.py.bak.20260429_192333",
+    "restore related engines from latest backups",
+    "add Анализ фото / Схема to get_clarification_message in STROYKA, TEHNADZOR and DEFAULT",
+    "restart areal-task-worker",
+    "run tools/context_aggregator.py",
+    "push ONE_SHARED_CONTEXT.md to GitHub"
+  ],
+  "db": "No database schema changes made in this session.",
+  "memory": "Important rule confirmed: if information is not in GitHub export/canon/handoff, next neural network will not reliably know it.",
+  "services": [
+    "areal-task-worker",
+    "cron",
+    "GitHub",
+    "context_aggregator.py"
+  ],
+  "errors": [
+    "core/file_intake_router.py was missing and only .bak files existed",
+    "initial Gemini patch attempted automatic image interception and violated clarification flow",
+    "context_aggregator cron had wrong path /root/.areal-neva-core/context_aggregator.py",
+    "manual run showed tools/context_aggregator.py was the real file",
+    "old aggregator run reported TODO/not implemented before CONTEXT_AGGREGATOR_V2 work",
+    "GitHub connector unavailable in this ChatGPT turn"
+  ],
+  "decisions": [
+    "Gemini must be added only as menu-selected tool, not automatic router",
+    "Any file must first trigger clarification",
+    "User must choose action before any engine starts",
+    "Анализ фото / Схема must exist in all file clarification menus",
+    "No Gemini via OpenRouter",
+    "DeepSeek remains final/default model",
+    "Perplexity remains search model",
+    "Aggregator reads GitHub sources and builds ONE_SHARED_CONTEXT.md mechanically, without LLM decisions"
+  ],
+  "solutions": [
+    "core/gemini_vision.py kept as 
 ...[TRUNCATED]
 
 ### chat_exports/CHAT_EXPORT__Asimov_Laws_and_Bio__2026-04-27.txt [BROKEN]
