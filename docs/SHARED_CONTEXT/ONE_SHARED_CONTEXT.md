@@ -1,5 +1,5 @@
 # ONE_SHARED_CONTEXT
-updated_at: 2026-04-29T13:00:23.083222+00:00
+updated_at: 2026-04-29T14:00:23.597772+00:00
 
 ## SOURCE FILES
 - chat_exports/CHAT_EXPORT_FULL_MAX__NEURON_SOFT_VPN_TECH_CHAT__2026-04-24.txt
@@ -41,6 +41,9 @@ updated_at: 2026-04-29T13:00:23.083222+00:00
 - chat_exports/CHAT_EXPORT__areal-neva-core__2026-04-27.txt
 - chat_exports/CHAT_EXPORT__areal_neva__2026-04-23.txt
 - chat_exports/CHAT_EXPORT__claude_session_29_04_2026__2026-04-29.json
+- chat_exports/CHAT_EXPORT__claude_session_29_04_2026_v2__2026-04-29.json
+- chat_exports/CHAT_EXPORT__claude_session_29_04_2026_v3__2026-04-29.json
+- chat_exports/CHAT_EXPORT__claude_session_29_04_2026_v4__2026-04-29.json
 - chat_exports/CHAT_EXPORT__github_ssot_technical_orchestra__2026-04-29.json
 - chat_exports/HANDOFF__CLAUDE_TO_NEXT_AI__2026-04-27.txt
 - chat_exports/README.md
@@ -192,6 +195,66 @@ SYNTAX_OK. Service active, NRestarts=0.
 - КЖ PDF pipeline — не реализован
 - Нормы СП/ГОСТ — не реализованы
 
+---
+
+## СЕССИЯ 29.04.2026 — ИТОГИ ПАТЧЕЙ
+
+### УСТАНОВЛЕНО (SYNTAX_OK, active, не battle-tested)
+- PIPELINE_INTEGRATION_V40: STALE_CONTEXT_GUARD, CACHE_READ, NEGATIVE_SELECTION, FILE_RESULT_GUARD подключены в pipeline
+- PIPELINE_INTEGRATION_V41: жёсткий routing, strict search result guard, file/project result guard
+- FILE_INTAKE_PROJECT_V41: route_file → project_engine при intent=project
+- ESTIMATE_QUALITY_V41: price_normalize_v41, multi_offer_consistency_v41 подключены в _write_xlsx
+- TEMPLATE_SYSTEM_V41: template_learn_v41, template_priority_v41, project_template_engine_v41
+- get_clarification_message: добавлен пункт "Проектирование / Расчёт нагрузок"
+- core/project_engine.py: создан, КЖ/КМ/КМД/АР/ОВ/ВК/ЭОМ/СС/ГП/ПЗ/СМ/ТХ
+
+### P1 БАГ — НЕ ЗАКРЫТ (подтверждён живым тестом 29.04.2026 16:28)
+- telegram_daemon.py строка 601: SHORT_VOICE_CONFIRM_WIRED
+- голос 00:02-00:04 при AWAITING_CONFIRMATION → revision вместо confirm
+- STT работает, текст распознаётся
+- но _all_contours_short_voice_confirm перехватывает до worker
+- нужно: читать STT текст → если "да/ок/принято" → confirm, иначе revision
+
+### НЕ ЗАКРЫТО (код есть, live-тест не проводился)
+- Смета PDF → Excel → Drive link
+- КЖ PDF pipeline end-to-end
+- DWG/DXF → Excel → Drive link
+- Фото дефекта → акт → Drive link
+- Шаблон → новый файл → Drive link
+- Поиск цены → закупочный ответ с постпроцессингом
+- project_engine end-to-end через Telegram
+
+### ПОДТВЕРЖДЕНО ЖИВЫМ ТЕСТОМ
+- Смета текстом → ответ получен ✅
+- CP8 search type fix ✅
+- Drive OAuth token.json ✅
+- Worker active NRestarts=0 ✅
+
+---
+
+## ПАТЧИ 29.04.2026 — ФИНАЛЬНЫЙ ПРОХОД V41/V42
+
+### УСТАНОВЛЕНО (SYNTAX_OK, active)
+- PIPELINE_INTEGRATION_V41 — task_worker.py — cache read, stale guard, negative selection, file result guard
+- FILE_INTAKE_PROJECT_V41 — file_intake_router.py — route_file → project_engine при intent=project
+- ESTIMATE_QUALITY_V41 — estimate_engine.py — price_normalize_v41, multi_offer_consistency_v41
+- TEMPLATE_SYSTEM_V41 — template_manager.py — template_learn_v41, template_priority_v41
+- search_session TABLE — создана в core.db + memory.db
+- VOICE_CONFIRM_EMPTY_REVISION_FIX_V42 — telegram_daemon.py — пустой голос не создаёт [REVISION]
+
+### СТАТУС СЕРВИСОВ
+- telegram-ingress: active ✅ BOT STARTED 16:38:18
+- areal-task-worker: active ✅ NRestarts=0
+
+### НЕ ЗАКРЫТО (live-тест не проводился)
+- Голосовой confirm при AWAITING_CONFIRMATION — патч V42 установлен, тест не проводился
+- Смета PDF → Excel → Drive
+- КЖ PDF pipeline end-to-end
+- DWG → Excel → Drive
+- Фото дефекта → акт → Drive
+- project_engine end-to-end через Telegram
+- Поиск с постпроцессингом V41
+
 
 ## NEXT PRIORITIES
 P1 — реализовать первым:
@@ -220,25 +283,25 @@ GitHub SSOT регламент | secret_scan pre-commit | ROLLBACK_POINT | USER_
 HEALTHCHECK | PRICE_AGING +5-10%
 
 ## LAST CHAT EXPORTS
-### chat_exports/CHAT_EXPORT__claude_session_29_04_2026__2026-04-29.json
+### chat_exports/CHAT_EXPORT__claude_session_29_04_2026_v4__2026-04-29.json
 {
-  "chat_id": "claude_session_29_04_2026",
-  "chat_name": "AREAL-NEVA ORCHESTRA — Claude Session 28-29.04.2026",
-  "exported_at": "2026-04-29T01:45:00+03:00",
+  "chat_id": "claude_session_29_04_2026_v4",
+  "chat_name": "AREAL-NEVA ORCHESTRA — Claude Session 29.04.2026 FINAL",
+  "exported_at": "2026-04-29T17:30:00+03:00",
   "source_model": "Claude Sonnet 4.6",
-  "system": "AREAL-NEVA ORCHESTRA Ubuntu 24.04 89.22.225.136 /root/.areal-neva-core",
-  "architecture": "Telegram → telegram_daemon.py → core.db → task_worker.py → ai_router.py → OpenRouter → reply_sender.py → Telegram",
-  "pipeline": "NEW → INTAKE → IN_PROGRESS → RESULT_READY → AWAITING_CONFIRMATION → DONE → ARCHIVED",
-  "patches": [
-    "FIX_VOICE_GUARD_20260428 → telegram_daemon.py:961 → word-boundary → SYNTAX_OK active",
-    "FIX_IS_SEARCH_20260428 → task_worker.py:2266 → is_search в payload → SYNTAX_OK active",
-    "FIX_SEARCH_CONTEXT_20260428 → task_worker.py:2248 → clear search_context → SYNTAX_OK active",
-    "FIX_VOICE_REVISION_V2 → telegram_daemon.py:880+ → empty revision fix → SYNTAX_OK active",
-    "FIX_VOICE_CONFIRM_IN_PROGRESS → telegram_daemon.py:560 → голос confirm → SYNTAX_OK active",
-    "FIX_CRASHLOOP_3981 → task_worker.py:3981 → NameError p=__file__ → SYNTAX_OK active",
-    "FIX_CP8_ERROR_CLOSE → task_worker.py → estimate errors → FAILED не повисают → SYNTAX_OK active",
-    "FIX_CP8_SEARCH_TYPE → task_worker.py → input_type search → CP8 estimate hook → SYNTAX_OK active",
-    "FIX_EMPTY_AI_RETRY → task_worker.py:2297 → retry 3x при chars=0 → SYNTAX_OK active",
+  "patches_installed": [
+    "PIPELINE_INTEGRATION_V40 — task_worker.py — SYNTAX_OK active",
+    "PIPELINE_INTEGRATION_V41 — task_worker.py — SYNTAX_OK active",
+    "FILE_INTAKE_PROJECT_V41 — file_intake_router.py — SYNTAX_OK active",
+    "ESTIMATE_QUALITY_V41 — estimate_engine.py — SYNTAX_OK active",
+    "TEMPLATE_SYSTEM_V41 — template_manager.py — SYNTAX_OK active",
+    "PROJECT_ENGINE_V1 — core/project_engine.py — создан SYNTAX_OK",
+    "CLARIFICATION_UI — get_clarification_message + Проектирование/Расчёт нагрузок",
+    "VOICE_CONFIRM_EMPTY_REVISION_FIX_V42 — telegram_daemon.py — SYNTAX_OK active",
+    "search_session TABLE — core.db + memory.db"
+  ],
+  "services": {
+    "telegram-ingress": "active",
 ### chat_exports/CHAT_EXPORT__github_ssot_technical_orchestra__2026-04-29.json
 {
   "chat_id": "UNKNOWN",
@@ -314,6 +377,66 @@ ENDSSH
 - Excel =C2*D2 / =SUM — не реализованы
 - КЖ PDF pipeline — не реализован
 - Нормы СП/ГОСТ — не реализованы
+
+---
+
+## СЕССИЯ 29.04.2026 — ИТОГИ ПАТЧЕЙ
+
+### УСТАНОВЛЕНО (SYNTAX_OK, active, не battle-tested)
+- PIPELINE_INTEGRATION_V40: STALE_CONTEXT_GUARD, CACHE_READ, NEGATIVE_SELECTION, FILE_RESULT_GUARD подключены в pipeline
+- PIPELINE_INTEGRATION_V41: жёсткий routing, strict search result guard, file/project result guard
+- FILE_INTAKE_PROJECT_V41: route_file → project_engine при intent=project
+- ESTIMATE_QUALITY_V41: price_normalize_v41, multi_offer_consistency_v41 подключены в _write_xlsx
+- TEMPLATE_SYSTEM_V41: template_learn_v41, template_priority_v41, project_template_engine_v41
+- get_clarification_message: добавлен пункт "Проектирование / Расчёт нагрузок"
+- core/project_engine.py: создан, КЖ/КМ/КМД/АР/ОВ/ВК/ЭОМ/СС/ГП/ПЗ/СМ/ТХ
+
+### P1 БАГ — НЕ ЗАКРЫТ (подтверждён живым тестом 29.04.2026 16:28)
+- telegram_daemon.py строка 601: SHORT_VOICE_CONFIRM_WIRED
+- голос 00:02-00:04 при AWAITING_CONFIRMATION → revision вместо confirm
+- STT работает, текст распознаётся
+- но _all_contours_short_voice_confirm перехватывает до worker
+- нужно: читать STT текст → если "да/ок/принято" → confirm, иначе revision
+
+### НЕ ЗАКРЫТО (код есть, live-тест не проводился)
+- Смета PDF → Excel → Drive link
+- КЖ PDF pipeline end-to-end
+- DWG/DXF → Excel → Drive link
+- Фото дефекта → акт → Drive link
+- Шаблон → новый файл → Drive link
+- Поиск цены → закупочный ответ с постпроцессингом
+- project_engine end-to-end через Telegram
+
+### ПОДТВЕРЖДЕНО ЖИВЫМ ТЕСТОМ
+- Смета текстом → ответ получен ✅
+- CP8 search type fix ✅
+- Drive OAuth token.json ✅
+- Worker active NRestarts=0 ✅
+
+---
+
+## ПАТЧИ 29.04.2026 — ФИНАЛЬНЫЙ ПРОХОД V41/V42
+
+### УСТАНОВЛЕНО (SYNTAX_OK, active)
+- PIPELINE_INTEGRATION_V41 — task_worker.py — cache read, stale guard, negative selection, file result guard
+- FILE_INTAKE_PROJECT_V41 — file_intake_router.py — route_file → project_engine при intent=project
+- ESTIMATE_QUALITY_V41 — estimate_engine.py — price_normalize_v41, multi_offer_consistency_v41
+- TEMPLATE_SYSTEM_V41 — template_manager.py — template_learn_v41, template_priority_v41
+- search_session TABLE — создана в core.db + memory.db
+- VOICE_CONFIRM_EMPTY_REVISION_FIX_V42 — telegram_daemon.py — пустой голос не создаёт [REVISION]
+
+### СТАТУС СЕРВИСОВ
+- telegram-ingress: active ✅ BOT STARTED 16:38:18
+- areal-task-worker: active ✅ NRestarts=0
+
+### НЕ ЗАКРЫТО (live-тест не проводился)
+- Голосовой confirm при AWAITING_CONFIRMATION — патч V42 установлен, тест не проводился
+- Смета PDF → Excel → Drive
+- КЖ PDF pipeline end-to-end
+- DWG → Excel → Drive
+- Фото дефекта → акт → Drive
+- project_engine end-to-end через Telegram
+- Поиск с постпроцессингом V41
 
 ## FORBIDDEN
 ЗАПРЕЩЕНО: перезатирать, удалять, упрощать каноны.
