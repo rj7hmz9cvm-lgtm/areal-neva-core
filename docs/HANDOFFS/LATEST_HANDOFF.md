@@ -62,3 +62,30 @@ SYNTAX_OK. Service active, NRestarts=0.
 | ALL_CONTOURS_TEMPLATE_MANAGER_V2 | INSTALLED, not battle-tested |
 | ALL_CONTOURS_CP8_DRIVE_LINK_V2 | INSTALLED, not battle-tested |
 | ALL_CONTOURS_SHORT_VOICE_CONFIRM_V2 | INSTALLED, not battle-tested |
+
+## ПАТЧ 29.04.2026 — ФИНАЛЬНЫЙ ПРОХОД
+
+### УСТАНОВЛЕНО И ПОДТВЕРЖДЕНО ТЕРМИНАЛОМ:
+- Заглушки retry_worker, media_group, context_engine, delivery, startup_recovery
+- TECHNADZOR_RU_NORMS_V39: нормы СП/ГОСТ на русском
+- FILE_INTAKE_KM_V39: КМ/КМД русские триггеры
+- DWG_EZDXF_V39: реальное чтение через ezdxf
+- ESTIMATE_V39_HELPERS: price_normalize, multi_offer_consistency
+- TASK_WORKER_V39_HELPERS: result_validator, human_decision, format_enforcer, postprocess, cache_put, region, duplicate_guard, search_depth, price_aging, output_decision
+- MONITOR_HISTORY_V39: запись MONITOR_TIMEOUT в task_history
+- search_session таблица в memory.db и core.db
+- detect_intent_from_filename_v2 replace в task_worker
+- SEARCH_POSTPROCESS_WIRED: postprocess + cache_put подключены к поисковому результату строка ~2348
+- DUPLICATE_GUARD_WIRED: _v39_recent_duplicate подключена к INSERT INTO tasks
+- REGION_WIRED: _v39_region добавлена к payload перед поиском
+- TOPIC_MISMATCH_GUARD: guard перед AWAITING_CONFIRMATION
+- SEARCH_DEPTH_LIMIT: счётчик retry поиска
+- PRICE_AGING: предупреждение о старых ценах
+- OUTPUT_DECISION_LOGIC: блок РЕКОМЕНДАЦИЯ в результате
+
+### НЕ ЗАКРЫТО (требует живого теста):
+- _all_contours_short_voice_confirm: telegram_daemon.py запрещён §0.8
+- CACHE_LAYER перед поиском
+- SOURCE_DEDUPLICATION вызов
+- apply_template в pipeline
+- Trust Score + Risk Score
