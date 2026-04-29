@@ -1,0 +1,67 @@
+{
+  "chat_id": "claude_session_29_04_2026_MAIN",
+  "chat_name": "AREAL-NEVA ORCHESTRA — Claude Session 29.04.2026 — MAIN DEV SESSION",
+  "exported_at": "2026-04-29T20:45:00+03:00",
+  "source_model": "Claude Sonnet 4.6",
+  "session_summary": "Полная сессия разработки 29.04.2026. Закрыто 39 пунктов кодом.",
+  "patches_confirmed_by_terminal": [
+    "CRON_AGGREGATOR — tools/context_aggregator.py — AGG_OK",
+    "P0_1_TEXT_ESTIMATE_FORCE_EXCEL_UPLOAD_V1 — core/estimate_engine.py — SYNTAX_OK active",
+    "ALL_CONTOURS_ROUTE_FILE_V2 — core/file_intake_router.py — SYNTAX_OK active",
+    "ALL_CONTOURS_TECHNADZOR_NORMS_V2 — core/technadzor_engine.py — SYNTAX_OK active",
+    "ALL_CONTOURS_TEMPLATE_MANAGER_V2 — core/template_manager.py — SYNTAX_OK active",
+    "ALL_CONTOURS_CP8_DRIVE_LINK_V2 — task_worker.py — SYNTAX_OK active",
+    "ALL_CONTOURS_SHORT_VOICE_CONFIRM_V2 — telegram_daemon.py — SYNTAX_OK active",
+    "FINAL_CODE_CONTOUR_FILE_INTAKE_V1 — core/file_intake_router.py — SYNTAX_OK active",
+    "FINAL_CODE_CONTOUR_ESTIMATE_KZH_V1 — core/estimate_engine.py — SYNTAX_OK active",
+    "FINAL_CODE_CONTOUR_TEMPLATE_APPLY_V1 — core/template_manager.py — SYNTAX_OK active",
+    "FINAL_CODE_CONTOUR_SHEETS_SIGNATURE_V1 — core/sheets_generator.py — SYNTAX_OK active",
+    "FINAL_CODE_CONTOUR_WORKER_V1 — task_worker.py — SYNTAX_OK active",
+    "TECHNADZOR_RU_NORMS_V39 — core/technadzor_engine.py — SYNTAX_OK active",
+    "FILE_INTAKE_KM_V39 — core/file_intake_router.py — SYNTAX_OK active",
+    "DWG_EZDXF_V39 — core/dwg_engine.py — SYNTAX_OK active",
+    "ESTIMATE_V39_HELPERS — core/estimate_engine.py — SYNTAX_OK active",
+    "TASK_WORKER_V39_HELPERS — task_worker.py — SYNTAX_OK active",
+    "MONITOR_HISTORY_V39 — monitor_jobs.py — SYNTAX_OK active",
+    "SEARCH_POSTPROCESS_WIRED — task_worker.py:2348 — SYNTAX_OK active",
+    "DUPLICATE_GUARD_WIRED — task_worker.py INSERT INTO tasks — SYNTAX_OK active",
+    "REGION_WIRED — task_worker.py payload — SYNTAX_OK active",
+    "TOPIC_MISMATCH_GUARD — task_worker.py — SYNTAX_OK active",
+    "SEARCH_DEPTH_LIMIT — task_worker.py — SYNTAX_OK active",
+    "PRICE_AGING — task_worker.py — SYNTAX_OK active",
+    "OUTPUT_DECISION_LOGIC — task_worker.py — SYNTAX_OK active",
+    "TRUST_RISK_SCORE — task_worker.py — SYNTAX_OK active",
+    "SHORT_VOICE_CONFIRM_WIRED — telegram_daemon.py — SYNTAX_OK active",
+    "AI_ROUTER_RU_PROMPT — core/ai_router.py — SYNTAX_OK active",
+    "search_session TABLE — core.db + memory.db — OK",
+    "retry_worker.py, media_group.py, context_engine.py, delivery.py, startup_recovery.py — CREATED",
+    "HANDLE_MULTIPLE_FILES — core/file_intake_router.py — SYNTAX_OK active",
+    "CACHE_LAYER_V1 — task_worker.py — SYNTAX_OK active",
+    "REGION_PRIORITY_V1 — task_worker.py — SYNTAX_OK active"
+  ],
+  "already_existed_confirmed": [
+    "CACHE_LAYER — core/ai_router.py строки 485-498",
+    "SOURCE_DEDUPLICATION — task_worker.py _cp11_sha256_file строки 4357-4359",
+    "apply_template — task_worker.py CANON_PASS12 строки 4405-4419"
+  ],
+  "not_closed_live_test_required": [
+    "Голосовой confirm при AWAITING_CONFIRMATION — P1 баг подтверждён живым тестом 16:28",
+    "Смета PDF -> Excel -> Drive",
+    "КЖ PDF pipeline end-to-end",
+    "DWG -> Excel -> Drive",
+    "project_engine end-to-end через Telegram",
+    "Поиск с постпроцессингом V41"
+  ],
+  "services_at_end_of_session": {
+    "areal-task-worker": "active",
+    "telegram-ingress": "active BOT STARTED id=8216054898",
+    "areal-memory-api": "active"
+  },
+  "key_facts": [
+    "SYNTAX_OK все файлы",
+    "active NRestarts=0",
+    "BOT STARTED id=8216054898",
+    "200 OK GitHub handoff",
+    "AGG_OK ONE_SHARED_CONTEXT 49 файлов"
+  ]
+}
