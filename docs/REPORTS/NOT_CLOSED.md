@@ -71,3 +71,27 @@
 - Фото дефекта → акт → Drive
 - project_engine end-to-end через Telegram
 - Поиск с постпроцессингом V41
+
+---
+
+## ИНЦИДЕНТ 29.04.2026 22:17 — ВОССТАНОВЛЕНИЕ ФАЙЛОВ
+
+### ЧТО ПРОИЗОШЛО
+GPT патч GEMINI_VISION удалил core/file_intake_router.py и другие файлы.
+Файлы восстановлены из бэкапов 19:23-19:31.
+
+### ВОССТАНОВЛЕНО ИЗ БЭКАПОВ
+- core/file_intake_router.py ← bak.20260429_192333
+- core/dwg_engine.py ← bak.20260429_142000
+- core/estimate_engine.py ← bak.20260429_185518
+- core/project_engine.py ← bak.20260429_193106
+- core/template_manager.py ← bak.20260429_192333
+
+### СТАТУС
+SYNTAX_OK, active, NRestarts=0
+
+### GEMINI VISION — НЕ ЗАКРЫТО
+- core/gemini_vision.py — не создан
+- "Анализ фото / Схема" — не добавлен в get_clarification_message
+- intent=vision в route_file — не добавлен
+- Патч GPT отклонён — удалял файлы
