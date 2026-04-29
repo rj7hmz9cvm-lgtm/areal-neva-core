@@ -1,0 +1,78 @@
+﻿{
+ "chat_id": "-1003725299009",
+ "chat_name": "AREAL-NEVA-ORCHESTRA",
+ "exported_at": "2026-04-26T22:05:00Z",
+ "source_model": "Gemini-1.5-Pro",
+ "system": "Telegram-бот @ai_orkestra_all_bot на сервере Ubuntu 24.04 (89.22.225.136), Python + aiogram + aiosqlite + Redis",
+ "architecture": "Голос → STT (Groq Whisper) → AI (DeepSeek через OpenRouter) → ответ в Telegram. FSM: NEW → IN_PROGRESS → AWAITING_CONFIRMATION → DONE/FAILED",
+ "pipeline": "NEW → IN_PROGRESS → AWAITING_CONFIRMATION → DONE/FAILED. Файловый конвейер (INGESTED → UPLOADED)",
+ "files": [
+   "telegram_daemon.py → обработка входящих сообщений Telegram",
+   "task_worker.py → обработка задач и бизнес-логика",
+   "core.db → оперативная память (runtime)",
+   "memory.db → долгосрочная память"
+ ],
+ "code": "Python 3.12, aiogram, aiosqlite, Redis",
+ "patches": [
+   "OVERLAY_VOICE_FIX → telegram_daemon.py → конец файла → status: applied_by_terminal"
+ ],
+ "commands": [
+   "ssh areal 'bash -s' << 'ENDSSH'",
+   "cp /root/.areal-neva-core/telegram_daemon.py /root/.areal-neva-core/telegram_daemon.py.bak.$(date +%s)",
+   "python3 /tmp/patch_daemon.py",
+   "python3 -m py_compile /root/.areal-neva-core/telegram_daemon.py",
+   "systemctl restart areal-telegram-daemon"
+ ],
+ "db": "В tasks пусто по raw_input LIKE '%VOICE%' после 15:13",
+ "memory": "core.db (краткосрочная), memory.db (долгосрочная). Записывается topic_{id}_role, не пишется topic_{id}_directions.",
+ "services": [
+   "areal-telegram-daemon: active",
+   "areal-task-worker: active",
+   "areal-memory-api: active"
+ ],
+ "canons": [
+   "Только overlay патчинг (# === CANON_PASS# ===) → никакого переписывания ядра",
+   "Патчинг telegram_daemon.py только снизу",
+   "STRICT FACT-ONLY → исключает додумывание данных",
+   "Иерархия интентов: FINISH > CONFIRM > REVISION > TASK",
+   "Патч через /tmp Python скрипт, не sed/awk"
+ ],
+ "decisions": [
+   "Использовать monkey-patching для create_task → обоснование: запрет на использование sed в ядре → применено в telegram_daemon.py через overlay скрипт в /tmp"
+ ],
+ "errors": [
+   "Ошибка обработки голоса → ПРИЧИНА: падение внутри create_task без логирования traceback → РЕШЕНИЕ: monkey-patch с logger.exception",
+   "INVALID_RESULT_GATE + STALE_TIMEOUT на разговорные ответы → ПРИЧИНА: CHAT intent не закрывается как DONE → РЕШЕНИЕ: нужен overlay в task_worker.py"
+ ],
+ "solutions": [
+   "Нет traceback в логах для голоса → monkey-patch create_task через overlay → СТАТУС: applied_by_terminal"
+ ],
+ "state": "Патч применен по канону, ожидается голосовое сообщение для генерации Traceback.",
+ "what_working": [
+   "STT (Groq Whisper)",
+   "Текстовые задачи"
+ ],
+ "what_broken": [
+   "Голосовые задачи (не создаются в БД)",
+   "Верификация в Topic 3008 (НЕТ ОТВЕТА)"
+ ],
+ "what_not_done": [
+   "Excel формулы =C2*D2 =SUM",
+   "Нормы СП/ГОСТ/СНиП",
+   "topic_directions",
+   "Удаление зависших сообщений"
+ ],
+ "current_breakpoint": "Патч применен. Ожидание отправки голосового сообщения пользователем для выявления точной строки падения в логах.",
+ "root_causes": [
+   "create_task падает из-за конфликта типов (message.text = None у voice) → факт: отсутствие записей в БД и отправка сообщения 'Ошибка обработки'"
+ ],
+ "verification": [
+   "Патч OVERLAY_VOICE_FIX → подтверждение: terminal output 'Патч применен. Отправьте голосовое сообщение для генерации Traceback.'"
+ ],
+ "limits": [
+   "Создание в корне My Drive ЗАПРЕЩЕНО",
+   "Патчинг только overlay",
+   "Запрет трогать: .env, credentials.json, google_io.py, ai_router.py, reply_sender.py, memory.db schema, systemd unit-файлы",
+   "Патч через /tmp Python скрипт, не sed/awk"
+ ]
+}

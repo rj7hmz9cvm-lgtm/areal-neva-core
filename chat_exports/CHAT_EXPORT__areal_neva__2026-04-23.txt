@@ -1,0 +1,121 @@
+﻿{
+  "chat_id": "-1003725299009",
+  "chat_name": "areal_neva_orchestra",
+  "exported_at": "2026-04-23T09:30:00Z",
+  "source_model": "claude-sonnet-4-6",
+  "system": {
+    "server": "89.22.225.136",
+    "os": "Ubuntu 24.04",
+    "base": "/root/.areal-neva-core",
+    "venv": "/root/.areal-neva-core/.venv/bin/python3",
+    "bot": "@ai_orkestra_all_bot id=8216054898",
+    "db_path": "/root/.areal-neva-core/data/core.db",
+    "memory_db": "/root/.areal-neva-core/data/memory.db"
+  },
+  "architecture": [
+    "telegram_daemon.py â€” intake Ð³Ð¾Ð»Ð¾Ñ�/Ñ‚ÐµÐºÑ�Ô¿Ñ„Ð°Ð¹Ð»Ñ‹",
+    "task_worker.py â€” Ð¾Ð±Ñ€Ð°Ð±Ð¾Ñ‚ÐºÐ° Ð·Ð°Ð´Ð°Ñ‡, polling",
+    "core/ai_router.py â€” routing Ð² LLM (deepseek/openrouter)",
+    "core/reply_sender.py â€” Ð¾Ñ‚Ð¿Ñ€Ð°Ð²ÐºÐ° Ð¾ Telegram",
+    "core/artifact_pipeline.py â€” Ð¾Ð±Ñ€Ð°Ð±Ð¾Ñ‚ÐºÐ° Ñ„Ð°Ð¹Ð»Ð¾Ð²",
+    "core/file_intake_router.py â€” Ð¸Ð½Ñ‚ÐµÐ½Ñ‚ Ñ„Ð°Ð¹Ð»Ð¾Ð² Ð¿Ð¾ route",
+    "core/technadzor_engine.py â€” Ñ‚ÐµÑ…Ð½Ð°Ð´Ð·Ð¾Ñ€",
+    "core/estimate_engine.py â€” Ñ�Ð¼ÐµÑ‚Ñ‹",
+    "core/ocr_engine.py â€” OCR (pytesseract not installed)",
+    "core/engine_base.py â€” Ð±Ð°Ð·Ð¾Ð²Ñ‹Ðµ ÑƒÑ‚Ð¸Ð»Ð¸Ñ‚Ñ‹",
+    "core/pin_manager.py â€” Ð·Ð°ÐºÑ€ÐµÐ¿Ð»Ñ‘Ð½Ð½Ñ‹Ð¹ ÐºÐ¾Ð½Ñ‚ÐµÐºÑ�Ñ‚",
+    "google_io.py â€” Ð·Ð°Ð³Ñ€ÑƒÐ·ÐºÐ° Ð² Google Drive",
+    "data/core.db â€” runtime Ñ�Ð¾Ñ�Ñ‚Ð¾Ñ�Ð½Ð¸Ðµ Ð·Ð°Ð´Ð°Ñ‡",
+    "data/memory.db â€” Ð´Ð¾Ð»Ð³Ð°Ñ� Ð¿Ð°Ð¼Ñ�Ñ‚ÑŒ"
+  ],
+  "pipeline": {
+    "text_voice": "TeeÐ ram â†’ telegram_daemon.py â†’ create_task(core.db) â†’ task_worker.py â†’ ai_router.py â€’ deepseek/Ð¾Ñ‚Ð²ÐµÑ‚ â†’ reply_sender.py â†’ Telegram",
+    "file": "TeeÐ ram file â†’ upload_file_to_topic â€’ Google Drive â†’ drive_file Ñ‚Ð°Ñ�ÐºÐ°  ask_worker â†’ download â†’ file_intake_router â†’ engine â†’ artifact"
+  },
+  "files": {
+    "modified": [
+      "/root/.areal-neva-core/task_worker.py",
+      "/root/.areal-neva-core/core/artifact_pipeline.py",
+      "/root/.areal-neva-core/core/ai_router.py"
+    ]
+  },
+  "patches": [
+    {
+      "file": "task_worker.py",
+      "change": "DRIVE_FILE CRASH except â€” dobavlen _update_task state=FAILED",
+      "verified": true
+    },
+    {
+      "file": "task_worker.py _download_from_drive",
+      "change": "EXPOPTH_MAP to Export Google Docs/Sheets via export_media",
+      "verified": "kod viimod stan korectnyj"
+    },
+    {
+      "file": "core/artifact_pipeline.py",
+      "change": "1) kind=audio dla ogg 2) asyncio.to_thread dla vseh sync functions",
+      "verified": "COMPILE_OK"
+    }
+  ],
+  "services": {
+    "areal-task-worker": "active",
+    "areal-telegram-ingress": "inactive",
+    "areal-memory-api": "active",
+    "areal-automation-daemon": "activating (zavis)",
+    "areal-email-ingress": "activating (zavis)",
+    "areal-drive-ingest": "active"
+  },
+  "errors": [
+    "DRIVE_FILE CRASH beskonechnyj retry â†’ except ne perevodil v FAILED â†’ ô£ÐºÑ€ÐµÐ¿Ð»ÐµÐ½ dOM-FAILED",
+    "HttpError 403 Google Docs/Sheets â†’ get_media ne rabotaet â†’ EXPORT_MAP *ne protestirovano na livom)",
+    "OGG STALE_TIMEOUT â†’ kind=binary ï»¿ kind=audio â†’ fix primenen",
+    "route_file intent=technadzor fmt=excel â†’ no result â†’ upload_to_drive async/sync ne provereno",
+    "OCR v\dostupen â†’ pytesseract ne ustanovlen"
+  ],
+  "what_working": [
+    "task_worker active",
+    "ai_router router_ok",
+    "reply_sender reply_ok",
+    "memory.db pishetsya po topikam",
+    "STT Groq",
+    "OGG ne zavisaet",
+    "download files iz Drive"
+  ],
+  "what_broken": [
+    "technadzor route_file no result",
+    "OCR pytesseract missing",
+    "telegram-ingress inactive",
+    "automation-daemon activating",
+    "email-ingress activating"
+  ],
+  "what_not_done": [
+    "Excel formulas =C2*D2 =SUM",
+    "OCR foto j excel",
+    "shelony actov technadzora",
+    "multi-file obedinenie",
+    "DWG/DXF obrabotka",
+    "Google Sheets sozdanie",
+    "save_pin dla drive_file",
+    "retry mekhanizm",
+    "link validation",
+    "temp file cleanup",
+    "versionirovanie artefaktov"
+  ],
+  "current_breakpoint": "upload_artifact_to_drive vyzyvaet google_io.upload_to_drive synkhronno -- async/sync status ne proveren",
+  "root_causes": [
+    "upload_to_drive async/sync neyasno",
+    "pytesseract ne ustanovlen",
+    "telegram-ingress inactive - prichina neizvestna"
+  ],
+  "db": {
+    "task_states": {"ARCHIVED": 371, "AWAITING_CONFIRMATION": 32, "CANCELLED": 58, "DONE": 6, "FAILED": 622},
+    "drive_file_failed_reasons": {"legacy_drive_task_replaced": 305, "drive_file_queue_unblocked": 20, "drive_upload_stale": 10, "STALE_TIMEOUT": 7}
+  },
+  "memory": {
+    "confirmed_keys": ["topic_5_assistant_output", "topic_5_task_summary", "topic_500_assistant_output", "topic_961_assistant_output"]
+  },
+  "limits": {
+    "STALE_TIMEOUT": 600,
+    "AI_TIMEOUT": 300,
+    "MEMORY_LIMIT": 100
+  }
+}

@@ -1,0 +1,57 @@
+﻿{
+  "chat_id": "UNKNOWN",
+  "chat_name": "Докат 3",
+  "exported_at": "2026-04-24",
+  "source_model": "GPT-5.5 Thinking",
+  "system": "SYSTEM PROMPT: GOOGLE DRIVE CHAT EXPORT STANDARD — AREAL-NEVA / NEURON SOFT ORCHESTRA. MODE: FACT ONLY. ZERO ASSUMPTIONS. ZERO HALLUCINATIONS. STRICT ISOLATION PER CHAT.",
+  "architecture": "SERVER = LOGIC. GOOGLE DRIVE = STORAGE. CHAT EXPORTS = FACT MEMORY LAYER.",
+  "pipeline": "READ CURRENT CHAT ONLY -> EXTRACT FACTS ONLY -> BUILD JSON OBJECT -> CREATE GOOGLE DOC -> WRITE JSON ONLY -> SAVE TO AI_ORCHESTRA/telegram_exports/<chat_id_or_chat_name>/ -> RETURN LINK.",
+  "files": [
+    "/mnt/data/Выгрузка на гугл.txt"
+  ],
+  "code": "UNKNOWN",
+  "patches": [
+    "UNKNOWN"
+  ],
+  "commands": [
+    "Докат 3"
+  ],
+  "db": "UNKNOWN",
+  "memory": "A chat export standard was provided in the uploaded file. The standard requires one chat per folder, one export per file, and JSON-only Google Doc content.",
+  "services": [
+    "UNKNOWN"
+  ],
+  "errors": [
+    "UNKNOWN"
+  ],
+  "decisions": [
+    "Use separate Google Drive export per chat without mixing contexts.",
+    "Use UNKNOWN when no fact is available."
+  ],
+  "solutions": [
+    "Created Google Doc CHAT_EXPORT__DOKAT_3__ containing one JSON object."
+  ],
+  "state": "EXPORT_CREATED_AS_GOOGLE_DOC; exact target folder placement is UNKNOWN because the available Google Drive create_file tool did not expose parent folder selection.",
+  "what_working": [
+    "Google Doc creation succeeded.",
+    "JSON object was written to the Google Doc."
+  ],
+  "what_broken": [
+    "UNKNOWN"
+  ],
+  "what_not_done": [
+    "Folder placement under AI_ORCHESTRA/telegram_exports/DOKAT_3 was not verified."
+  ],
+  "current_breakpoint": "UNKNOWN",
+  "root_causes": [
+    "UNKNOWN"
+  ],
+  "verification": [
+    "Google Drive create_file returned fileId 1VLfpBuf94uOSNExSGBtDgI1zqBpPKNM_AvqvfjQyLoc and a Google Docs URL."
+  ],
+  "limits": [
+    "Only current chat facts were used.",
+    "No facts from other chats were added.",
+    "Fields without confirmed data were set to UNKNOWN."
+  ]
+}

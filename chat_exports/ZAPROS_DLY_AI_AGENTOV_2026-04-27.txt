@@ -1,0 +1,45 @@
+﻿ZAPROS K AI-AGENTU — AREAL-NEVA ORCHESTRA
+Data: 27.04.2026 09:10 MSK
+
+
+TY OBYAZAN VYPOLNIT SLEDUYUSCHIE SHAGI PO PORYADKU:
+
+
+1. Zaydi na Google Drive
+2. Prochitay VSE fayly v papke CANON_FINAL id=1U_IrEOtIJfUVAdjH-kHwms2M2z3FXan0
+3. Prochitay VSE fayly v papke vygruzki chatov id=14bYA9bHaKahkE8d4IDwWxL4Ojn-G0sDl
+4. Glavnyy kanon: id=1k_KIpQ7jD15_w83sMz4WfqoEIINIXTHTaTOtUovf2gU
+5. Posle prochteniya — zaydi na server SSH areal (89.22.225.136)
+6. Prover zhivoe sostoyanie sistemy komandami nizhe
+7. Day reshenie TOLKO po faktam
+
+
+DIAGNOSTICHESKIE KOMANDY:
+ssh areal 'bash -s' << 'ENDSSH'
+cd /root/.areal-neva-core
+sed -n '475,560p' telegram_daemon.py
+sqlite3 data/core.db 'SELECT state, COUNT(*) FROM tasks GROUP BY state'
+tail -30 logs/telegram_daemon.log
+grep -n 'SHORT_CONFIRM\|CANCEL_PHRASES\|CHAT_ONLY\|FINISH_PHRASES' telegram_daemon.py | head -20
+ENDSSH
+
+
+FAKTY (tolko fakty, bez interpretatsii):
+- Golosovye soobshcheniya v bolshinstve chatov: otvet 'Utochnite zapros'
+- Polzovatel govorit 'Da' — bot ne vsegda zakryvaet zadachu
+- Reply na soobshchenie bota — sozdaet novuyu zadachu vmesto prodolzheniya
+- 'Dobryy vecher/ok/ponyat' — sozdaet zadachu vmesto prostogo otveta
+
+
+DB sostoyanie: ARCHIVED 369, CANCELLED 154, DONE 31, FAILED 78, AWAITING_CONFIRMATION 0
+
+
+TVOYA ZADACHA:
+1. Prochti VSE kanony na Drive
+2. Prochti VSE vygruzki chatov na Drive
+3. Proydi po diagnosticheskim komandam
+4. Day tochnye root cause + patch po kanonu
+5. Prover chto patch ne narushaet ni odnogo pravila kanona
+
+
+ZAPRESCHENO: gadat, predlagat bez proverki zhivogo koda, trogat .env credentials google_io.py ai_router.py reply_sender.py memory.db schema systemd

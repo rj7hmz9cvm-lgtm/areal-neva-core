@@ -1,0 +1,93 @@
+﻿{
+ "chat_id": "-1003725299009",
+ "chat_name": "AREAL_NEVA_CORE",
+ "exported_at": "2026-04-27T00:05:00Z",
+ "source_model": "Gemini",
+ "system": "AI Orchestra на Ubuntu 24.04 (89.22.225.136). Хост-рантайм через systemd (areal-task-worker, telegram-ingress, areal-memory-api). Инфраструктура Docker установлена, но контейнеры в данный момент не запущены.",
+ "architecture": "Telegram/API -> Intake -> Google Drive -> task_worker -> ai_router -> профильные движки (OCR, Estimate, Technadzor и т.д.) -> Генерация артефакта -> Хранение в Google Drive -> Ответ пользователю.",
+ "pipeline": "NEW -> IN_PROGRESS -> AWAITING_CONFIRMATION -> DONE -> ARCHIVED (через 7 дней).",
+ "files": [
+   "telegram_daemon.py -> Telegram ingress",
+   "task_worker.py -> Главный исполнитель жизненного цикла",
+   "ai_router.py -> Роутинг и сборка контекста",
+   "reply_sender.py -> Доставка ответов в Telegram",
+   "pin_manager.py -> Управление контекстом через пины",
+   "google_io.py -> Интеграция с Drive",
+   "webhook.py -> Flask API",
+   "core.db -> БД задач и рантайма",
+   "memory.db -> БД знаний"
+ ],
+ "code": "Python 3.11, Flask, SQLite3, Docker, Groq Whisper (STT), DeepSeek/Perplexity/Gemini (LLMs).",
+ "patches": [
+   "CANON_FULLFIX_FINAL_FACT_ONLY_V1 -> task_worker.py/ai_router.py -> статус: applied_by_terminal",
+   "LIVING_MEMORY_FULLFIX_FINAL_V5 -> task_worker.py/memory.db -> статус: applied_by_terminal",
+   "ORCHESTRA_DOCKER_API -> Настройка инфраструктуры -> статус: drafted (offline)"
+ ],
+ "commands": [
+   "ssh root@89.22.225.136",
+   "docker ps",
+   "systemctl restart areal-task-worker",
+   "sqlite3 data/core.db",
+   "ping 89.22.225.136"
+ ],
+ "db": "core.db: таблицы (tasks, pin, processed_updates, drive_files). memory.db: изолированные ключи (role, directions, summary).",
+ "memory": "Краткосрочная в core.db (LIMIT 100). Долгосрочная в memory.db. Изоляция по topic_id. Фильтрация шума через MEMORY_NOISE_MARKERS.",
+ "services": [
+   "areal-task-worker: статус=active",
+   "telegram-ingress: статус=active",
+   "areal-memory-api: статус=active",
+   "areal-orchestra-live (docker): статус=inactive"
+ ],
+ "canons": [
+   "Приоритет интентов (FINISH > CONFIRM > REVISION > TASK > SEARCH > CHAT)",
+   "Стадии обработки файлов (INGESTED -> ... -> UPLOADED)",
+   "Иерархия контекста (reply > pin > role > active_task > memory)",
+   "Golden Backup (sqlite3 .backup)",
+   "Zero-nagging: максимум один уточняющий вопрос"
+ ],
+ "decisions": [
+   "Переход с Gunicorn на Flask для стабильности subprocess в API",
+   "Dual-IP сеть (89.22.225.136 Управление, 89.22.227.213 API)",
+   "Строгая изоляция topic-id для контекста и памяти"
+ ],
+ "errors": [
+   "Зависание subprocess.run под Gunicorn -> заменено на Flask",
+   "storageQuotaExceeded на Drive -> Fallback на SCP/ручную загрузку",
+   "Ложные срабатывания INVALID_RESULT_GATE -> добавлена логика байпаса для запросов истории"
+ ],
+ "solutions": [
+   "Reply continuity через маппинг bot_message_id/reply_to_message_id",
+   "Фильтрация мусора в памяти через MEMORY_NOISE_MARKERS",
+   "Фикс ядра net.ipv4.ip_nonlocal_bind для бинда dual IP"
+ ],
+ "state": "Операционный рантайм на хосте стабилен; Docker API оффлайн; Инженерные каноны полностью определены.",
+ "what_working": [
+   "Прием сообщений и голоса в Telegram",
+   "Синхронизация хранилища Google Drive",
+   "Контекстный вызов памяти",
+   "Стабильность сервисов systemd"
+ ],
+ "what_broken": [
+   "Docker контейнеры остановлены",
+   "Порт 8080 API недоступен извне"
+ ],
+ "what_not_done": [
+   "Полная валидация инженерных артефактов (формулы OCR/Smeta)",
+   "Подтверждение нормативного маппинга Технадзора",
+   "Верификация слияния нескольких файлов"
+ ],
+ "current_breakpoint": "Реактивация инфраструктуры Docker API и верификация полного цикла генерации артефактов.",
+ "root_causes": [
+   "Контейнеры Docker остановлены (вероятно, после ребута хоста или сбоя старта)"
+ ],
+ "verification": [
+   "docker ps подтвердил отсутствие запущенных контейнеров",
+   "ping 89.22.225.136 подтвердил доступность хоста",
+   "journalctl подтвердил работу сервисов systemd"
+ ],
+ "limits": [
+   "tail max 20 строк",
+   "Лимит размера файла 50MB",
+   "Запрещенные файлы: .env, credentials.json"
+ ]
+}
