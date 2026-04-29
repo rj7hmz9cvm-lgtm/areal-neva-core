@@ -46,3 +46,28 @@
 - CP8 search type fix ✅
 - Drive OAuth token.json ✅
 - Worker active NRestarts=0 ✅
+
+---
+
+## ПАТЧИ 29.04.2026 — ФИНАЛЬНЫЙ ПРОХОД V41/V42
+
+### УСТАНОВЛЕНО (SYNTAX_OK, active)
+- PIPELINE_INTEGRATION_V41 — task_worker.py — cache read, stale guard, negative selection, file result guard
+- FILE_INTAKE_PROJECT_V41 — file_intake_router.py — route_file → project_engine при intent=project
+- ESTIMATE_QUALITY_V41 — estimate_engine.py — price_normalize_v41, multi_offer_consistency_v41
+- TEMPLATE_SYSTEM_V41 — template_manager.py — template_learn_v41, template_priority_v41
+- search_session TABLE — создана в core.db + memory.db
+- VOICE_CONFIRM_EMPTY_REVISION_FIX_V42 — telegram_daemon.py — пустой голос не создаёт [REVISION]
+
+### СТАТУС СЕРВИСОВ
+- telegram-ingress: active ✅ BOT STARTED 16:38:18
+- areal-task-worker: active ✅ NRestarts=0
+
+### НЕ ЗАКРЫТО (live-тест не проводился)
+- Голосовой confirm при AWAITING_CONFIRMATION — патч V42 установлен, тест не проводился
+- Смета PDF → Excel → Drive
+- КЖ PDF pipeline end-to-end
+- DWG → Excel → Drive
+- Фото дефекта → акт → Drive
+- project_engine end-to-end через Telegram
+- Поиск с постпроцессингом V41

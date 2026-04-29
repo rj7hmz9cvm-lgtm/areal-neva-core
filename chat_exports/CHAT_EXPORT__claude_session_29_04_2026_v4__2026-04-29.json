@@ -1,0 +1,40 @@
+{
+  "chat_id": "claude_session_29_04_2026_v4",
+  "chat_name": "AREAL-NEVA ORCHESTRA — Claude Session 29.04.2026 FINAL",
+  "exported_at": "2026-04-29T17:30:00+03:00",
+  "source_model": "Claude Sonnet 4.6",
+  "patches_installed": [
+    "PIPELINE_INTEGRATION_V40 — task_worker.py — SYNTAX_OK active",
+    "PIPELINE_INTEGRATION_V41 — task_worker.py — SYNTAX_OK active",
+    "FILE_INTAKE_PROJECT_V41 — file_intake_router.py — SYNTAX_OK active",
+    "ESTIMATE_QUALITY_V41 — estimate_engine.py — SYNTAX_OK active",
+    "TEMPLATE_SYSTEM_V41 — template_manager.py — SYNTAX_OK active",
+    "PROJECT_ENGINE_V1 — core/project_engine.py — создан SYNTAX_OK",
+    "CLARIFICATION_UI — get_clarification_message + Проектирование/Расчёт нагрузок",
+    "VOICE_CONFIRM_EMPTY_REVISION_FIX_V42 — telegram_daemon.py — SYNTAX_OK active",
+    "search_session TABLE — core.db + memory.db"
+  ],
+  "services": {
+    "telegram-ingress": "active",
+    "areal-task-worker": "active",
+    "bot": "@ai_orkestra_all_bot started 16:38:18"
+  },
+  "decisions": [
+    "detect_intent не переопределять — пользователь выбирает через clarification",
+    "Орик спрашивает Смета/Проектирование/Распознать — ждёт ответа пользователя",
+    "project_engine.py — разрешение получено 29.04.2026",
+    "Python создаёт файлы LLM не считает цифры",
+    "Без артефакта FAILED Без ссылки FAILED",
+    "Нормы не придумывать — только СП/ГОСТ/СНиП через Perplexity"
+  ],
+  "not_closed_live_test": [
+    "Голосовой confirm при AWAITING_CONFIRMATION",
+    "Смета PDF → Excel → Drive",
+    "КЖ PDF pipeline",
+    "DWG → Excel → Drive",
+    "Фото дефекта → акт",
+    "project_engine end-to-end",
+    "Поиск с постпроцессингом V41"
+  ],
+  "prompt_v8": "Обновлён — heredoc обязателен, монолитные блоки, запрет повторных запросов, CANON_FINAL/ структура сервера"
+}
