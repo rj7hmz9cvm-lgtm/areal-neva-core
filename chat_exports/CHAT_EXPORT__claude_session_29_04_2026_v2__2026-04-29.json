@@ -1,0 +1,24 @@
+{
+  "chat_id": "claude_session_29_04_2026_v2",
+  "chat_name": "AREAL-NEVA ORCHESTRA — Claude Session 29.04.2026 v2",
+  "exported_at": "2026-04-29T16:00:00+03:00",
+  "source_model": "Claude Sonnet 4.6",
+  "decisions": [
+    "project_engine.py — новый файл, разрешение получено 29.04.2026",
+    "Орик разрабатывает проектную документацию КЖ/КМ/АР по ГОСТ/СНиП/СП",
+    "Шаблоны пользователя — основа для генерации разделов",
+    "Python создаёт файлы, LLM не считает цифры",
+    "Промпт v8 обновлён — heredoc обязателен, монолитные блоки, запрет повторных запросов"
+  ],
+  "not_closed": [
+    "AVAILABILITY_CHECK", "CONTACT_VALIDATION", "STALE_CONTEXT_GUARD",
+    "NEGATIVE_SELECTION", "SOURCE_TRACE",
+    "PROJECT_SECTION_DETECTOR", "PROJECT_STRUCTURE_BUILDER",
+    "NORMATIVE_SEARCH_ENGINE", "PROJECT_ARTIFACT_GENERATOR",
+    "PROJECT_CALC_ENGINE", "METAL_STRUCTURE_ENGINE",
+    "PROJECT_RESULT_GUARD", "PROJECT_VALIDATOR",
+    "PROJECT_TEMPLATE_ENGINE", "TEMPLATE_LEARN", "TEMPLATE_PRIORITY_RULE",
+    "ERROR_GUARD_PROJECT", "OUTPUT_DECISION_LOGIC",
+    "UNIT_STANDARDIZATION", "SPECIFICATION_FORMAT", "VERSIONING"
+  ]
+}
