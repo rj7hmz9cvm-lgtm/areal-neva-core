@@ -1,12 +1,12 @@
 # ONE_SHARED_CONTEXT
-updated_at: 2026-04-29T21:30:01+00:00
+updated_at: 2026-04-29T22:00:01+00:00
 
 ## SOURCE FILES
 - docs/CANON_FINAL/00_INDEX.md [UNKNOWN]
 - docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md [REJECTED]
 - docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md [BROKEN]
 - docs/HANDOFFS/LATEST_HANDOFF.md [REJECTED]
-- docs/REPORTS/NOT_CLOSED.md [REJECTED]
+- docs/REPORTS/NOT_CLOSED.md [RESTORED]
 - docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md [NOT_DONE]
 - docs/ARCHITECTURE/SEARCH_MONOLITH_V1.md [REJECTED]
 - chat_exports/CHAT_EXPORT_FULL_MAX__NEURON_SOFT_VPN_TECH_CHAT__2026-04-24.txt [UNKNOWN]
@@ -138,6 +138,9 @@ REJECTED  = патч отклонён
 | - grep маркеры V44/V45 присутствуют | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
 | - Telegram pipeline после V44 | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
 | - Drive upload после V45 | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
+| - PATCH_FILE_INTAKE_NEEDS_CONTEXT_V1 — логика согласована, готова к диагностике  | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
+| - PATCH_FILE_INTAKE_NEEDS_CONTEXT_V1 — патч не поставлен, ждёт диагностики | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
+| 2. Патч PATCH_FILE_INTAKE_NEEDS_CONTEXT_V1 | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
 | ## СЕССИЯ 29.04.2026 — ИТОГИ ПАТЧЕЙ | docs/REPORTS/NOT_CLOSED.md | UNKNOWN |
 | - PIPELINE_INTEGRATION_V40: STALE_CONTEXT_GUARD, CACHE_READ, NEGATIVE_SELECTION, | docs/REPORTS/NOT_CLOSED.md | UNKNOWN |
 | - PIPELINE_INTEGRATION_V41: жёсткий routing, strict search result guard, file/pr | docs/REPORTS/NOT_CLOSED.md | UNKNOWN |
@@ -154,6 +157,8 @@ REJECTED  = патч отклонён
 | - Поиск с постпроцессингом V41 | docs/REPORTS/NOT_CLOSED.md | UNKNOWN |
 | GPT патч GEMINI_VISION удалил core/file_intake_router.py и другие файлы. | docs/REPORTS/NOT_CLOSED.md | BROKEN |
 | - Патч GPT отклонён — удалял файлы | docs/REPORTS/NOT_CLOSED.md | REJECTED |
+| ### PATCH_FILE_INTAKE_NEEDS_CONTEXT_V1 — READY FOR DIAGNOSTICS → PATCH | docs/REPORTS/NOT_CLOSED.md | UNKNOWN |
+| Статус: Логика закрыта. Диагностика + патч следующим шагом. | docs/REPORTS/NOT_CLOSED.md | UNKNOWN |
 | GPT        — патчи кода, сервер | docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md | UNKNOWN |
 | Trust Score 0-100 | SELLER_RISK | TCO | Шаблон звонка | Патч-протокол 8 шагов | docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md | UNKNOWN |
 | GPT        — сервер / код / патчи | docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md | UNKNOWN |
@@ -173,11 +178,6 @@ REJECTED  = патч отклонён
 | "base64 encode patch script to avoid SSH quote problems", | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
 | "state": "STABLE. Services active. Queue empty. DB: ARCHIVED=371, CANCELLED=153, | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
 | "CHAT_ONLY_PHRASES working - confirmed PATCHED OK in terminal", | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
-| "message.reply - confirmed PATCHED OK + SYNTAX_OK + active", | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | INSTALLED |
-| "Patch without reading live file FORBIDDEN", | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
-| "Backup before patch REQUIRED", | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
-| "patches": [ | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA__2026-04-26.txt | UNKNOWN |
-| "python3 /tmp/patch_daemon.py", | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA__2026-04-26.txt | UNKNOWN |
 
 ## LIVE ТЕСТЫ (VERIFIED)
 - areal-task-worker.service   task_worker.py      ОСНОВНОЙ ✅ [docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md]
@@ -204,6 +204,8 @@ REJECTED  = патч отклонён
 - - Drive OAuth → token.json вместо credentials.json ✅ [docs/HANDOFFS/LATEST_HANDOFF.md]
 - - Worker: active, NRestarts=0 ✅ [docs/HANDOFFS/LATEST_HANDOFF.md]
 - - live тест Telegram + Drive [docs/HANDOFFS/LATEST_HANDOFF.md]
+- - CONTEXT_AGGREGATOR_V2 — tools/context_aggregator.py — VERIFIED коммит e56c2fd [docs/HANDOFFS/LATEST_HANDOFF.md]
+- - Cron исправлен: каждые 30 минут с подгрузкой .env — VERIFIED [docs/HANDOFFS/LATEST_HANDOFF.md]
 - ### ПОДТВЕРЖДЕНО ЖИВЫМ ТЕСТОМ [docs/REPORTS/NOT_CLOSED.md]
 - - Смета текстом → ответ получен ✅ [docs/REPORTS/NOT_CLOSED.md]
 - - CP8 search type fix ✅ [docs/REPORTS/NOT_CLOSED.md]
@@ -211,6 +213,7 @@ REJECTED  = патч отклонён
 - - Worker active NRestarts=0 ✅ [docs/REPORTS/NOT_CLOSED.md]
 - - telegram-ingress: active ✅ BOT STARTED 16:38:18 [docs/REPORTS/NOT_CLOSED.md]
 - - areal-task-worker: active ✅ NRestarts=0 [docs/REPORTS/NOT_CLOSED.md]
+- Статус-фильтр: только VERIFIED/INSTALLED/RESTORED [docs/REPORTS/NOT_CLOSED.md]
 - Статус доверия: CONFIRMED / PARTIAL / UNVERIFIED / RISK [docs/ARCHITECTURE/SEARCH_MONOLITH_V1.md]
 - Любая цена, отзыв, риск или рекомендация должны иметь источник. Нет источника → UNVERIFIED. [docs/ARCHITECTURE/SEARCH_MONOLITH_V1.md]
 - Всё из чатов и соцсетей = автоматически UNVERIFIED до подтверждения цены, даты, контакта и наличия. [docs/ARCHITECTURE/SEARCH_MONOLITH_V1.md]
@@ -227,9 +230,6 @@ REJECTED  = патч отклонён
 - "V44 markers verified by grep", [chat_exports/CHAT_EXPORT__AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR__2026-04-29.json]
 - "V45 markers verified by grep", [chat_exports/CHAT_EXPORT__AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR__2026-04-29.json]
 - "EXECUTION_PIPELINE_CLOSE_V44 -> task_worker.py -> grep verified lines 5114-5281 -> status: applied_by_terminal", [chat_exports/CHAT_EXPORT__AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR__2026-04-29__GPT_DIRECT.json]
-- "FILE_ROUTE_CLOSE_V44 -> core/file_intake_router.py -> grep verified lines 492-544 -> status: applied_by_terminal", [chat_exports/CHAT_EXPORT__AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR__2026-04-29__GPT_DIRECT.json]
-- "TEMPLATE_CLOSE_V44 -> core/template_manager.py -> grep verified lines 149-193 -> status: applied_by_terminal", [chat_exports/CHAT_EXPORT__AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR__2026-04-29__GPT_DIRECT.json]
-- "PROJECT_CLOSE_V44 -> core/project_engine.py -> grep verified lines 251-332 -> status: applied_by_terminal", [chat_exports/CHAT_EXPORT__AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR__2026-04-29__GPT_DIRECT.json]
 
 ## СЛОМАНО (BROKEN)
 - "what_broken": ["что сломано подтверждено фактами"], [docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md]
@@ -282,6 +282,7 @@ REJECTED  = патч отклонён
 - ### НЕ ЗАКРЫТО (требует живого теста): [docs/HANDOFFS/LATEST_HANDOFF.md]
 - ### НЕ ПРОТЕСТИРОВАНО LIVE [docs/HANDOFFS/LATEST_HANDOFF.md]
 - Модели добавлены в канон, но не реализованы в коде. [docs/HANDOFFS/LATEST_HANDOFF.md]
+- НЕ ЗАКРЫТО: [docs/HANDOFFS/LATEST_HANDOFF.md]
 - - monitor_jobs.py — НЕТ ФАЙЛА НЕТ CRON [docs/REPORTS/NOT_CLOSED.md]
 - - Excel =C2*D2 / =SUM — не реализованы [docs/REPORTS/NOT_CLOSED.md]
 - - КЖ PDF pipeline — не реализован [docs/REPORTS/NOT_CLOSED.md]
@@ -1300,7 +1301,32 @@ SYNTAX_OK. Service active, NRestarts=0.
 реализация оркестра, не добавление моделей
 
 
-### docs/REPORTS/NOT_CLOSED.md [REJECTED]
+---
+
+## СЕССИЯ 30.04.2026 — ИТОГИ
+
+СДЕЛАНО:
+- CONTEXT_AGGREGATOR_V2 — tools/context_aggregator.py — VERIFIED коммит e56c2fd
+- Cron исправлен: каждые 30 минут с подгрузкой .env — VERIFIED
+- Gemini — core/gemini_vision.py существует, меню во всех топиках, intent=vision в route_file — INSTALLED
+- PATCH_FILE_INTAKE_NEEDS_CONTEXT_V1 — логика согласована, готова к диагностике и патчу
+
+НЕ ЗАКРЫТО:
+- PATCH_FILE_INTAKE_NEEDS_CONTEXT_V1 — патч не поставлен, ждёт диагностики
+- Голос confirm при AWAITING_CONFIRMATION (P1 баг, telegram_daemon.py:601)
+- Смета PDF → Excel → Drive
+- КЖ PDF pipeline
+- project_engine end-to-end
+- Gemini live-тест
+- docs/CANON_FINAL/02-11 — физически не существуют в GitHub
+
+СЛЕДУЮЩИЙ ШАГ:
+1. Диагностика task_worker.py + file_intake_router.py
+2. Патч PATCH_FILE_INTAKE_NEEDS_CONTEXT_V1
+3. Live-тест: файл без команды → меню → выбор → engine → artifact
+
+
+### docs/REPORTS/NOT_CLOSED.md [RESTORED]
 # NOT_CLOSED — 28.04.2026
 
 ## P1
@@ -1398,6 +1424,64 @@ SYNTAX_OK, active, NRestarts=0
 - "Анализ фото / Схема" — не добавлен в get_clarification_message
 - intent=vision в route_file — не добавлен
 - Патч GPT отклонён — удалял файлы
+
+
+---
+
+## СЕССИЯ 30.04.2026 — ПРИНЯТЫЕ РЕШЕНИЯ
+
+### PATCH_FILE_INTAKE_NEEDS_CONTEXT_V1 — READY FOR DIAGNOSTICS → PATCH
+
+Цель: Орик перестаёт запускать обработку файла без понятной задачи пользователя.
+Статус: Логика закрыта. Диагностика + патч следующим шагом.
+Файлы: task_worker.py, core/file_intake_router.py
+Запрещено трогать: telegram_daemon.py, ai_router.py, reply_sender.py, google_io.py, .env
+
+Полная входная цепочка:
+INPUT (file/link/voice/text)
+→ voice: STT internal, пользователь не видит
+→ связать с предыдущим intent если был в topic_id
+→ активная NEEDS_CONTEXT в topic_id? → добавить файл туда
+→ duplicate guard (file_id/hash)
+→ pin + memory lookup (макс 3 записи)
+→ wrong-topic guard
+→ если intent ясен → route_file → engine
+→ если intent НЕ ясен → NEEDS_CONTEXT + меню по топику
+→ ждать выбор (bot_message_id)
+→ выбор парсится свободно ("1", "шаблон", "смета", "акт")
+→ engine → только НОВЫЙ artifact
+→ human ответ
+→ AWAITING_CONFIRMATION
+→ DONE только после подтверждения
+→ memory + pin только после DONE
+
+Главные запреты:
+НЕ запускать engine без выбора пользователя
+НЕ писать "Получил файл, обрабатываю"
+НЕ спрашивать "правки" до результата
+НЕ показывать STT текст
+НЕ закрывать задачу без artifact
+НЕ писать память до DONE
+НЕ выдавать исходный файл как результат
+НЕ показывать технические статусы пользователю
+НЕ запускать engine в NEEDS_CONTEXT
+НЕ плодить несколько NEEDS_CONTEXT в одном topic_id
+
+Меню СТРОЙКА: 1.Смета / 2.Объёмы / 3.Excel / 4.Чертёж / 5.Шаблон
+Меню ТЕХНАДЗОР: 1.Акт / 2.Ведомость / 3.Дефекты / 4.Нормы СП/ГОСТ / 5.Шаблон
+Меню ПРОЕКТИРОВАНИЕ: 1.Шаблон проекта / 2.Структура / 3.Новый документ / 4.Проверить / 5.Таблицы
+Меню DEFAULT: 1.Шаблон / 2.Смета / 3.Проект / 4.Новый документ / 5.Распознать / 6.Сохранить
+Ссылка без команды: NEEDS_CONTEXT + меню ссылки
+Multi-file: одна intake-сессия, одно меню по комплекту
+Дубликат: "Этот файл уже был. Тогда делали: [кратко]. Повторить или другое?"
+Отмена: "отбой/отмена/не надо" → CANCELLED
+Шаблон: TEMPLATE_CANDIDATE pending до DONE
+Финальный ответ: "Готово. Сделал [что]. Файл: [link]. Проверь. Всё правильно?"
+Result guard: нет artifact → не закрывать
+Маркеры лога: FILE_INTAKE_GUARD_HIT / FILE_NEEDS_CONTEXT_SET / FILE_CHOICE_PARSED / FILE_ROUTE_STARTED / FILE_ARTIFACT_READY / FILE_NO_ARTIFACT_BLOCKED
+Статус-фильтр: только VERIFIED/INSTALLED/RESTORED
+Rollback: если worker не active → откатить оба файла из .bak
+Обратная совместимость: текстовые задачи без файлов → старая логика не трогается
 
 
 ## CHAT EXPORTS (все, от новых к старым)
