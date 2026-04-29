@@ -95,3 +95,61 @@ SYNTAX_OK, active, NRestarts=0
 - "Анализ фото / Схема" — не добавлен в get_clarification_message
 - intent=vision в route_file — не добавлен
 - Патч GPT отклонён — удалял файлы
+
+
+---
+
+## СЕССИЯ 30.04.2026 — ПРИНЯТЫЕ РЕШЕНИЯ
+
+### PATCH_FILE_INTAKE_NEEDS_CONTEXT_V1 — READY FOR DIAGNOSTICS → PATCH
+
+Цель: Орик перестаёт запускать обработку файла без понятной задачи пользователя.
+Статус: Логика закрыта. Диагностика + патч следующим шагом.
+Файлы: task_worker.py, core/file_intake_router.py
+Запрещено трогать: telegram_daemon.py, ai_router.py, reply_sender.py, google_io.py, .env
+
+Полная входная цепочка:
+INPUT (file/link/voice/text)
+→ voice: STT internal, пользователь не видит
+→ связать с предыдущим intent если был в topic_id
+→ активная NEEDS_CONTEXT в topic_id? → добавить файл туда
+→ duplicate guard (file_id/hash)
+→ pin + memory lookup (макс 3 записи)
+→ wrong-topic guard
+→ если intent ясен → route_file → engine
+→ если intent НЕ ясен → NEEDS_CONTEXT + меню по топику
+→ ждать выбор (bot_message_id)
+→ выбор парсится свободно ("1", "шаблон", "смета", "акт")
+→ engine → только НОВЫЙ artifact
+→ human ответ
+→ AWAITING_CONFIRMATION
+→ DONE только после подтверждения
+→ memory + pin только после DONE
+
+Главные запреты:
+НЕ запускать engine без выбора пользователя
+НЕ писать "Получил файл, обрабатываю"
+НЕ спрашивать "правки" до результата
+НЕ показывать STT текст
+НЕ закрывать задачу без artifact
+НЕ писать память до DONE
+НЕ выдавать исходный файл как результат
+НЕ показывать технические статусы пользователю
+НЕ запускать engine в NEEDS_CONTEXT
+НЕ плодить несколько NEEDS_CONTEXT в одном topic_id
+
+Меню СТРОЙКА: 1.Смета / 2.Объёмы / 3.Excel / 4.Чертёж / 5.Шаблон
+Меню ТЕХНАДЗОР: 1.Акт / 2.Ведомость / 3.Дефекты / 4.Нормы СП/ГОСТ / 5.Шаблон
+Меню ПРОЕКТИРОВАНИЕ: 1.Шаблон проекта / 2.Структура / 3.Новый документ / 4.Проверить / 5.Таблицы
+Меню DEFAULT: 1.Шаблон / 2.Смета / 3.Проект / 4.Новый документ / 5.Распознать / 6.Сохранить
+Ссылка без команды: NEEDS_CONTEXT + меню ссылки
+Multi-file: одна intake-сессия, одно меню по комплекту
+Дубликат: "Этот файл уже был. Тогда делали: [кратко]. Повторить или другое?"
+Отмена: "отбой/отмена/не надо" → CANCELLED
+Шаблон: TEMPLATE_CANDIDATE pending до DONE
+Финальный ответ: "Готово. Сделал [что]. Файл: [link]. Проверь. Всё правильно?"
+Result guard: нет artifact → не закрывать
+Маркеры лога: FILE_INTAKE_GUARD_HIT / FILE_NEEDS_CONTEXT_SET / FILE_CHOICE_PARSED / FILE_ROUTE_STARTED / FILE_ARTIFACT_READY / FILE_NO_ARTIFACT_BLOCKED
+Статус-фильтр: только VERIFIED/INSTALLED/RESTORED
+Rollback: если worker не active → откатить оба файла из .bak
+Обратная совместимость: текстовые задачи без файлов → старая логика не трогается
