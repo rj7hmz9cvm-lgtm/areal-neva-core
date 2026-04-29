@@ -37,3 +37,10 @@ DB: data/core.db (694 задачи) | memory.db (728KB)
 
 ## DB STATE
 ARCHIVED: 371 | DONE: 98 | CANCELLED: 165 | FAILED: 60
+
+
+## ПАТЧИ СЕССИИ 29.04.2026
+
+| Патч | Суть |
+|---|---|
+| CRON_AGGREGATOR | context_aggregator.py в cron каждый час, ONE_SHARED_CONTEXT.md обновляется автоматически |
