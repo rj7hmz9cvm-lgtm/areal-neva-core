@@ -1,0 +1,125 @@
+{
+  "chat_id": "UNKNOWN",
+  "chat_name": "AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR",
+  "exported_at": "2026-04-29T20:05:00Z",
+  "source_model": "GPT-5.5 Thinking",
+  "system": "Ubuntu VPS 24.04, Telegram orchestration pipeline, GitHub clean context layer, server holds runtime secrets and local data. Secrets are redacted by export policy.",
+  "architecture": "Telegram -> telegram_daemon.py -> core.db -> task_worker.py -> ai_router.py/OpenRouter -> reply_sender.py -> Telegram. Aggregator reads chat_exports and docs, then updates docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md on GitHub.",
+  "pipeline": "Task lifecycle discussed as NEW -> IN_PROGRESS -> AWAITING_CONFIRMATION -> DONE -> ARCHIVED, with FAILED/WAITING_CLARIFICATION/CANCELLED as side states.",
+  "files": [
+    "task_worker.py -> main task worker and result pipeline",
+    "core/file_intake_router.py -> file routing and clarification menu",
+    "core/project_engine.py -> project/design document generation layer",
+    "core/normative_search_engine.py -> normative internet search via OpenRouter/Perplexity",
+    "core/template_manager.py -> template handling",
+    "core/engine_base.py -> artifact/version helper layer",
+    "tools/context_aggregator.py -> GitHub API aggregator for ONE_SHARED_CONTEXT",
+    "docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md -> aggregated shared context",
+    ".gitignore -> runtime/secret guard"
+  ],
+  "code": "Python 3.12, systemd, SQLite, Git, GitHub API, OpenRouter, Perplexity sonar, Telegram bot services.",
+  "patches": [
+    "EXECUTION_PIPELINE_CLOSE_V44 -> task_worker.py -> grep verified lines 5114-5281 -> status: applied_by_terminal",
+    "FILE_ROUTE_CLOSE_V44 -> core/file_intake_router.py -> grep verified lines 492-544 -> status: applied_by_terminal",
+    "TEMPLATE_CLOSE_V44 -> core/template_manager.py -> grep verified lines 149-193 -> status: applied_by_terminal",
+    "PROJECT_CLOSE_V44 -> core/project_engine.py -> grep verified lines 251-332 -> status: applied_by_terminal",
+    "VERSIONING_CLOSE_V44 -> core/engine_base.py -> grep verified lines 239-244 -> status: applied_by_terminal",
+    "NORMATIVE_SEARCH_ENGINE_V45 -> core/normative_search_engine.py -> grep verified lines 2-124 -> status: applied_by_terminal",
+    "PROJECT_ENGINE_USE_NORMATIVE_SEARCH_V45 -> core/project_engine.py -> grep verified lines 334-356 -> status: applied_by_terminal",
+    "RUNTIME_SECRET_GUARD_20260429 -> .gitignore -> ADDED 16 -> status: applied_by_terminal",
+    "FINAL_CLEAN_GUARD_20260429 -> .gitignore -> ADDED 2 -> status: applied_by_terminal"
+  ],
+  "commands": [
+    "ssh areal 'bash -s' blocks used for diagnostics and patches",
+    "git status -s, git diff --name-only, git log origin/main",
+    "git show origin/main:docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md | head -40",
+    "systemctl restart areal-task-worker && sleep 5 && systemctl is-active areal-task-worker",
+    "journalctl -u areal-task-worker -n 20 --no-pager",
+    "python3 heredoc patch scripts",
+    "git add chat_exports/CHAT_EXPORT__AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR__2026-04-29.json",
+    "bash tools/secret_scan.sh returned SECRET_SCAN_OK",
+    "git commit created local commit 48c8fc9 but push was rejected non-fast-forward"
+  ],
+  "db": "data/core.db and data/memory.db exist on server. search_session and audit_log tables were created/confirmed by DB_OK in V44 patch logs. Runtime DB files are intentionally not committed to GitHub.",
+  "memory": "memory.db remains server runtime memory. GitHub shared memory is ONE_SHARED_CONTEXT.md generated from chat_exports/docs. Local ONE_SHARED_CONTEXT.md was older than origin/main, but origin/main had fresh AGG commits.",
+  "services": [
+    "areal-task-worker: active confirmed after V44/V45 restarts",
+    "areal-gdrive-sync.timer: listed",
+    "areal-rclone-sync.timer: listed"
+  ],
+  "canons": [
+    "Server keeps secrets/runtime/DB/logs/local files",
+    "GitHub contains clean code/docs/canons/chat_exports/shared context only",
+    "No git add .",
+    "No secrets in GitHub; redact tokens/secrets as [REDACTED]",
+    "Diagnostics first before write actions",
+    "Patch protocol: backup -> patch -> py_compile -> restart -> active -> journal",
+    "Mac terminal commands use ssh areal 'bash -s' heredoc style"
+  ],
+  "decisions": [
+    "Do not execute blanket git add . because untracked included .env, credentials.json, token.json, sessions, .venv, data, backups and many bak files",
+    "Add .gitignore as a Git visibility guard, not as server cleanup",
+    "Keep server runtime files in place and only hide dangerous files from Git",
+    "Treat GitHub aggregator as working because origin/main has AGG commits and ONE_SHARED_CONTEXT updated to 2026-04-29T16:00:30Z",
+    "V44/V45 code is installed but live Telegram/Drive tests are still separate"
+  ],
+  "errors": [
+    "zsh parse errors occurred with complex one-line printf/base64 commands -> solution: use heredoc style ssh areal 'bash -s'",
+    "Git push rejected non-fast-forward after local export commit 48c8fc9 -> cause: local branch behind origin/main -> solution needed: integrate origin/main before push or create export via GitHub API/direct connector",
+    "Git worktree dirty with 11 tracked modified files -> cause: server runtime worktree mixed with code changes -> solution: whitelist commits only",
+    "Danger files visible before gitignore -> cause: missing runtime ignore rules -> solution: .gitignore guards added",
+    "secret_scan.sh missing in one earlier diagnostic path, later tools/secret_scan.sh existed and returned SECRET_SCAN_OK"
+  ],
+  "solutions": [
+    "Problem: Git saw secrets/runtime files -> Solution: .gitignore runtime guard -> Status: applied and danger check empty",
+    "Problem: Aggregator status unclear -> Solution: compare origin/main file and logs -> Status: aggregator confirmed working on GitHub",
+    "Problem: Need normative search -> Solution: core/normative_search_engine.py V45 + project_engine wrapper -> Status: applied_by_terminal, SYNTAX_OK, worker active",
+    "Problem: Project/file pipeline code gaps -> Solution: V44 patches -> Status: applied_by_terminal, SYNTAX_OK, worker active"
+  ],
+  "state": "Server runtime remains dirty but protected; GitHub aggregator works; V44/V45 installed; export attempted locally and push rejected due to non-fast-forward; canonical export created in chat_exports.",
+  "what_working": [
+    "Aggregator pushed ONE_SHARED_CONTEXT to origin/main with commit 3a60ef8 at 2026-04-29T16:00:30Z",
+    "V44 markers verified by grep",
+    "V45 markers verified by grep",
+    "py_compile returned SYNTAX_OK after V44 and V45",
+    "areal-task-worker returned active after restarts",
+    "Danger check became empty after .gitignore rules",
+    "SECRET_SCAN_OK returned before local export commit"
+  ],
+  "what_broken": [
+    "Local git push rejected non-fast-forward because local main is behind origin/main",
+    "Local worktree remains dirty with tracked modified files",
+    "Local docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md is older than origin/main copy"
+  ],
+  "what_not_done": [
+    "No live Telegram/Drive tests for V44/V45 in this chat",
+    "No clean whitelist commit of server code changes yet",
+    "No reconciliation of local branch with origin/main after push rejection",
+    "No cleanup/removal of runtime files from server, by design"
+  ],
+  "current_breakpoint": "Resolve Git synchronization safely: do not use git add .; either pull/rebase/merge only after protecting local changes, or create exports through GitHub API/connector; later perform whitelist commit of clean code files only.",
+  "root_causes": [
+    "Git push rejection -> origin/main ahead of local main -> confirmed by non-fast-forward error and origin AGG commits",
+    "Secret leak risk -> untracked .env/credentials/token/sessions/.venv/data shown before gitignore -> confirmed by git status output",
+    "Aggregator local-vs-remote mismatch -> GitHub API writes origin/main but local file not updated -> confirmed by local timestamp Apr 29 16:04 and origin updated_at 2026-04-29T16:00:30Z"
+  ],
+  "verification": [
+    "V44 grep output showed markers in task_worker.py, core/file_intake_router.py, core/template_manager.py, core/project_engine.py, core/engine_base.py",
+    "V45 grep output showed NORMATIVE_SEARCH_ENGINE_V45 and PROJECT_ENGINE_USE_NORMATIVE_SEARCH_V45 markers",
+    "py_compile output: SYNTAX_OK",
+    "systemctl is-active output: active",
+    "git log origin/main showed 3a60ef8 AGG: ONE_SHARED_CONTEXT 2026-04-29T16:00:30Z",
+    "git show origin/main:docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md showed updated_at 2026-04-29T16:00:30.211754+00:00",
+    "danger check after final .gitignore produced no matching output",
+    "local export commit output: [main 48c8fc9] EXPORT: AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR 2026-04-29",
+    "push output: rejected main -> main (non-fast-forward)"
+  ],
+  "limits": [
+    "Secrets must be redacted and never committed to GitHub",
+    "Files must be created only under chat_exports for chat exports",
+    "No overwrite of existing export files",
+    "No git add .",
+    "Do not touch .env, credentials.json, ai_router.py, reply_sender.py, google_io.py, telegram_daemon.py unless explicitly allowed in a separate patch",
+    "Written code is not equal to installed; installed requires terminal verification"
+  ]
+}
