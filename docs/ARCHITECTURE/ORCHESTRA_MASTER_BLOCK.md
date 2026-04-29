@@ -166,3 +166,42 @@ FSM pipeline | File pipeline 8 стадий | FAILED коды + таймауты
 Trust Score 0-100 | SELLER_RISK | TCO | Шаблон звонка | Патч-протокол 8 шагов
 GitHub SSOT регламент | secret_scan pre-commit | ROLLBACK_POINT | USER_APPROVAL_GATE
 HEALTHCHECK | PRICE_AGING +5-10%
+
+---
+
+## MULTI_MODEL_ORCHESTRA_ACTUAL_STATE_2026_04_29
+
+### ACTIVE MODELS (CANON)
+Gemini     — vision / OCR / схемы / таблицы  
+Mistral    — структуризация / нормализация  
+Cerebras   — reasoning / логика  
+Cohere     — rerank / фильтрация  
+Perplexity — поиск (СП/ГОСТ/цены/поставщики)  
+DeepSeek   — финальный ответ (DEFAULT)  
+Claude     — канон / проверка / ТЗ  
+GPT        — сервер / код / патчи  
+Python     — расчёт / Excel / файлы  
+
+### MODEL_ROUTER (TARGET LOGIC)
+photo/schema      → Gemini  
+search            → Perplexity  
+structure         → Mistral  
+reasoning         → Cerebras  
+calculation       → Python ONLY  
+final             → DeepSeek  
+
+### FALLBACK_CHAIN (TARGET)
+Gemini → Mistral → Cloudflare → HuggingFace  
+
+### STATUS
+- модели описаны в каноне ✔  
+- MODEL_ROUTER — НЕ реализован  
+- FALLBACK_CHAIN — НЕ реализован  
+- MODEL_REGISTRY — НЕ реализован  
+- MULTI-MODEL EXECUTION — НЕ реализован  
+
+### CRITICAL RULE
+Сейчас оркестр работает как:
+1 модель (DeepSeek) + поиск (Perplexity)
+
+Полный multi-model НЕ запущен

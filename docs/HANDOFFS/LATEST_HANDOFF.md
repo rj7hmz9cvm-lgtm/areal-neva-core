@@ -123,3 +123,24 @@ SYNTAX_OK. Service active, NRestarts=0.
 - whitelist commit только чистых файлов
 - live тест Telegram + Drive
 
+
+---
+
+## MULTI MODEL STATUS — 29.04.2026
+
+Модели добавлены в канон, но не реализованы в коде.
+
+Текущий режим:
+- DeepSeek (основной)
+- Perplexity (поиск)
+
+Целевой режим:
+- multi-model orchestration через MODEL_ROUTER
+
+Блокер:
+- MODEL_ROUTER
+- FALLBACK_CHAIN
+- MODEL_REGISTRY
+
+Дальнейшая работа:
+реализация оркестра, не добавление моделей
