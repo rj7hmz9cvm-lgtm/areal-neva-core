@@ -1,5 +1,5 @@
 # ONE_SHARED_CONTEXT
-updated_at: 2026-04-29T11:00:22.367302+00:00
+updated_at: 2026-04-29T11:31:49.758128+00:00
 
 ## SOURCE FILES
 - chat_exports/CHAT_EXPORT_FULL_MAX__NEURON_SOFT_VPN_TECH_CHAT__2026-04-24.txt
@@ -174,6 +174,8 @@ SYNTAX_OK. Service active, NRestarts=0.
 | ALL_CONTOURS_TEMPLATE_MANAGER_V2 | INSTALLED, not battle-tested |
 | ALL_CONTOURS_CP8_DRIVE_LINK_V2 | INSTALLED, not battle-tested |
 | ALL_CONTOURS_SHORT_VOICE_CONFIRM_V2 | INSTALLED, not battle-tested |
+
+## ПАТЧ 29.04.2026 — ФИНАЛЬНЫЙ ПРОХОД
 
 ## NOT CLOSED
 # NOT_CLOSED — 28.04.2026
