@@ -193,6 +193,30 @@ def process_estimate_task_sync(task_id, chat_id, topic_id, raw_input):
                 c.execute("UPDATE tasks SET bot_message_id=?,updated_at=datetime('now') WHERE id=?", (str(bmid), task_id))
                 c.commit()
 
+        # === FULLFIX_19_EUE_MEMORY_V3 ===
+        try:
+            from core.memory_client import save_memory as _ff19_sm
+            _ff19_sm(
+                str(chat_id),
+                "topic_" + str(topic_id or 0) + "_last_estimate",
+                {"task_id": task_id, "rows": len(rows), "total": total, "bot_message_id": bmid},
+                topic_id=int(topic_id or 0),
+                scope="topic"
+            )
+            _ff19_sm(
+                str(chat_id),
+                "active_task",
+                {"task_id": task_id, "type": "estimate", "state": "AWAITING_CONFIRMATION"},
+                topic_id=int(topic_id or 0),
+                scope="active"
+            )
+        except Exception as _ff19_me:
+            try:
+                logger.warning("FF19_EUE_MEMORY_ERR=%s", _ff19_me)
+            except Exception:
+                pass
+        # === END FULLFIX_19_EUE_MEMORY_V3 ===
+
         return True
 
     except Exception as e:
