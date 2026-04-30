@@ -1,0 +1,62 @@
+{
+  "chat_id": "claude_session_30_04_2026_final",
+  "chat_name": "AREAL-NEVA ORCHESTRA — Claude Session 30.04.2026 FINAL",
+  "exported_at": "2026-04-30T04:15:00+03:00",
+  "source_model": "Claude Sonnet 4.6",
+  "patches_verified": [
+    "PATCH_FILE_INTAKE_NEEDS_CONTEXT_V3_MINIMAL — task_worker.py — VERIFIED",
+    "PATCH_DRIVE_GUARD_BEFORE_DOWNLOAD_V1 — task_worker.py — VERIFIED",
+    "PATCH_WORKER_PICK_BEFORE_STALE_V1 — task_worker.py — VERIFIED",
+    "PATCH_FIX_PFIN3_MENU_SHADOW_V1 — task_worker.py — VERIFIED",
+    "PATCH_FILE_CHOICE_PRIORITY_V1 — task_worker.py — VERIFIED",
+    "PATCH_FILE_PARENT_STRICT_OPEN_ONLY_V1 — task_worker.py — VERIFIED",
+    "PATCH_ENGINE_BASE_RESTORE_SA_UPLOAD_V1 — core/engine_base.py — VERIFIED",
+    "PATCH_DRIVE_DIRECT_OAUTH_V1 — core/engine_base.py — VERIFIED",
+    "PATCH_DRIVE_UPLOAD_AND_TG_FALLBACK_V1 — task_worker.py — VERIFIED",
+    "core/upload_retry_queue.py + cron 10min — VERIFIED",
+    "core/telegram_artifact_fallback.py — VERIFIED",
+    "OAuth app In Production — VERIFIED",
+    "override.conf fix — VERIFIED",
+    "Stale test tasks cancelled — DONE"
+  ],
+  "patches_installed": [
+    "PATCH_DUPLICATE_GUARD_V1 — task_worker.py — INSTALLED",
+    "PATCH_MULTI_FILE_INTAKE_V1 — task_worker.py — INSTALLED",
+    "PATCH_LINK_INTAKE_NEEDS_CONTEXT_V1 — task_worker.py — INSTALLED",
+    "core/duplicate_guard.py — INSTALLED",
+    "core/multi_file_intake.py — INSTALLED",
+    "core/storage_adapter.py — INSTALLED",
+    "core/storage_healthcheck.py — INSTALLED",
+    "core/runtime_cleanup.py — INSTALLED",
+    "tools/canon_updater.py — INSTALLED"
+  ],
+  "new_architecture_rules": {
+    "drive_upload": "Direct OAuth primary → TG fallback → retry queue 10min",
+    "file_task_isolation": "parent lookup только NEEDS_CONTEXT, topic_id=0 без cross-topic fallback",
+    "storage_resilience": "Drive fail → TG → retry восстанавливает Drive upload автоматически",
+    "server_storage": "Сервер НЕ постоянное хранилище — артефакты удаляются после выдачи",
+    "cron_jobs": [
+      "context_aggregator.py — каждые 30 минут",
+      "upload_retry_queue.py — каждые 10 минут",
+      "storage_healthcheck.py — каждые 30 минут"
+    ]
+  },
+  "key_incidents": [
+    "engine_base.py отсутствовал — восстановлен из core.bak.before_rollback_20260427_202634",
+    "Service Account storageQuotaExceeded — переключились на Direct OAuth",
+    "OAuth token протухал — приложение переведено в Production mode",
+    "override.conf GDRIVE_REFRESH_TOKEN без закрывающей кавычки — исправлено",
+    "task_history колонка action не event — исправлено до запуска"
+  ],
+  "services": {
+    "areal-task-worker": "active",
+    "telegram-ingress": "active",
+    "areal-memory-api": "active"
+  },
+  "not_closed_p1": [
+    "Голосовой confirm при AWAITING_CONFIRMATION — telegram_daemon.py:601",
+    "DUPLICATE_GUARD live-тест",
+    "MULTI_FILE live-тест",
+    "LINK_INTAKE live-тест"
+  ]
+}
