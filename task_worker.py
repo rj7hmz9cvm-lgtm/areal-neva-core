@@ -336,6 +336,62 @@ def db(path: str) -> sqlite3.Connection:
     return conn
 
 
+# === EZONE_INGEST_V1 ===
+EZONE_KEYS = {"system", "architecture", "pipeline", "memory"}
+
+def is_ezone_payload(text: str) -> bool:
+    """Проверить что входящий текст — JSON от нейросети"""
+    if not text or not text.strip().startswith("{"):
+        return False
+    try:
+        import json as _j
+        d = _j.loads(text)
+        return bool(EZONE_KEYS & set(d.keys()))
+    except Exception:
+        return False
+
+def save_ezone_json(chat_id: str, text: str) -> str:
+    """Сохранить ingest JSON в memory_files"""
+    import json as _j, hashlib, os
+    from datetime import datetime, timezone
+    try:
+        d = _j.loads(text)
+        chat_key = f"{chat_id}__telegram"
+        base = f"{BASE}/data/memory_files/CHATS/{chat_key}"
+        os.makedirs(base, exist_ok=True)
+        os.makedirs(f"{BASE}/data/memory_files/GLOBAL", exist_ok=True)
+        os.makedirs(f"{BASE}/data/memory_files/SYSTEM", exist_ok=True)
+
+        # Дедупликация по hash за день
+        h = hashlib.md5(text.encode()).hexdigest()[:16]
+        ts = datetime.now(timezone.utc).isoformat()
+        entry = _j.dumps({"timestamp": ts, "data": d, "_meta": {
+            "chat_key": chat_key, "ingested_at": ts, "source": "telegram", "hash": h
+        }}, ensure_ascii=False)
+
+        # timeline
+        with open(f"{base}/timeline.jsonl", "a", encoding="utf-8") as f:
+            f.write(entry + "
+")
+        with open(f"{BASE}/data/memory_files/GLOBAL/timeline.jsonl", "a", encoding="utf-8") as f:
+            f.write(entry + "
+")
+
+        # SYSTEM keys
+        for key in EZONE_KEYS:
+            if key in d:
+                sys_entry = _j.dumps({"timestamp": ts, key: d[key], "chat_key": chat_key}, ensure_ascii=False)
+                with open(f"{BASE}/data/memory_files/SYSTEM/{key}.jsonl", "a", encoding="utf-8") as f:
+                    f.write(sys_entry + "
+")
+
+        logger.info("EZONE_INGEST_V1 saved chat_key=%s hash=%s", chat_key, h)
+        return f"Принял, память загружена ({chat_key})"
+    except Exception as e:
+        logger.error("EZONE_INGEST_V1 err=%s", e)
+        return f"Ошибка загрузки памяти: {e}"
+# === END EZONE_INGEST_V1 ===
+
 def _s(v: Any) -> str:
     if v is None:
         return ""
@@ -974,6 +1030,20 @@ def _ff13c_strip_manifest_links(text):
 
 
 async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str, topic_id: int) -> None:
+    # === EZONE_INGEST_CALL_V1 ===
+    try:
+        _ez_raw = str(task["raw_input"] if task else "") if task else ""
+        if is_ezone_payload(_ez_raw):
+            _ez_msg = save_ezone_json(str(chat_id), _ez_raw)
+            _update_task(conn, task["id"], state="DONE", result=_ez_msg, error_message="")
+            conn.commit()
+            from core.reply_sender import send_reply_ex
+            send_reply_ex(chat_id=str(chat_id), text=_ez_msg, reply_to_message_id=task.get("reply_to_message_id"), message_thread_id=topic_id)
+            logger.info("EZONE_INGEST_CALL_V1 task=%s", task["id"])
+            return
+    except Exception as _eze:
+        logger.warning("EZONE_INGEST_CALL_ERR %s", _eze)
+    # === END EZONE_INGEST_CALL_V1 ===
     # === HEALTHCHECK_GUARD_V1 ===
     try:
         _hc_raw = str(task['raw_input'] if task else '') if task else ''
