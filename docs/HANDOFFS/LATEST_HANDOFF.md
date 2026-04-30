@@ -156,3 +156,21 @@ AI_ORCHESTRA/
 4. **bot_message_id критичен для retry** — без него reply не находит parent
 5. **AI router цепляет stale задачи** — старые AWAITING_CONFIRMATION загрязняют контекст
 6. **drive_ingest подхватывает healthcheck файлы** — поэтому healthcheck через list API
+
+
+## ОБНОВЛЕНИЕ 30.04.2026 10:00
+
+### Новые баги выявлены в сессии (live наблюдение)
+
+**BUG_CONFIRM_UNFINISHED** — AWAITING_CONFIRMATION без реального результата
+- task_worker.py строки 2068-2075
+- ТЗ: PATCH_CONFIRM_ONLY_ON_DONE_V1 в NOT_CLOSED
+
+**BUG_TEMPLATE_NO_STRUCT** — шаблон = OCR текст вместо структурной модели
+- core/artifact_pipeline.py — intent игнорируется
+- core/template_manager.py — не используется
+- ТЗ: PATCH_TEMPLATE_INTENT_V1 в NOT_CLOSED
+
+### Факт из live БД topic=210
+АР/КД/КЖ PDF файлы обрабатывались как "document" → OCR текст → "Сводка по документу"
+Пользователь ожидал: структурную модель проекта с составом листов, марками, параметрами
