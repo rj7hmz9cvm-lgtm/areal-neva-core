@@ -27,6 +27,11 @@ from dotenv import load_dotenv
 from core.ai_router import process_ai_task
 from core.reply_sender import send_reply, send_reply_ex
 try:
+    from core.technadzor_engine import process_technadzor as _te_process, is_technadzor_intent as _te_intent  # TECHNADZOR_ENGINE_V1_WIRED
+except Exception:
+    _te_process = lambda *a, **kw: {"ok": False, "result_text": "", "artifact": None, "error_code": "IMPORT_FAIL"}
+    _te_intent = lambda *a: False
+try:
     from core.intake_offer_actions import needs_offer as _ioa_needs, get_offer_text as _ioa_text, parse_offer_reply as _ioa_parse  # INTAKE_OFFER_V1_WIRED
 except Exception:
     _ioa_needs = lambda *a: False
@@ -2217,6 +2222,33 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
 
     logger.info(f"DRIVE_FILE: downloading {file_id} -> {local_path}")
     ok = _download_from_drive(file_id, local_path)
+    # === FILE_INTAKE_ROUTER_V1_WIRED ===
+    if ok and local_path and os.path.exists(local_path):
+        try:
+            from core.file_intake_router import route_file, detect_intent, detect_intent_from_filename, should_ask_clarification, get_clarification_message
+            _fir_caption = data.get("caption", "") or raw_input or ""
+            _fir_intent = detect_intent(_fir_caption) or detect_intent_from_filename(file_name)
+            _fir_topic_role = ""
+            if _fir_intent:
+                _fir_result = await route_file(local_path, task_id, int(topic_id or 0), _fir_intent)
+                if _fir_result and _fir_result.get("success"):
+                    _fir_msg = _fir_result.get("result_text") or _fir_result.get("drive_link") or "Готово"
+                    _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_fir_msg, error_message="")
+                    _history(conn, task_id, "state:AWAITING_CONFIRMATION:file_intake_router")
+                    conn.commit()
+                    from core.reply_sender import send_reply_ex
+                    send_reply_ex(chat_id=str(chat_id), text=_fir_msg, reply_to_message_id=reply_to, message_thread_id=topic_id)
+                    return
+            elif should_ask_clarification(_fir_caption, has_file=True):
+                _fir_clarif = get_clarification_message(file_name, int(topic_id or 0))
+                _update_task(conn, task_id, state="WAITING_CLARIFICATION", result=_fir_clarif, error_message="")
+                conn.commit()
+                from core.reply_sender import send_reply_ex
+                send_reply_ex(chat_id=str(chat_id), text=_fir_clarif, reply_to_message_id=reply_to, message_thread_id=topic_id)
+                return
+        except Exception as _fir_err:
+            logger.warning("FILE_INTAKE_ROUTER_V1_ERR task=%s err=%s", task_id, _fir_err)
+    # === END FILE_INTAKE_ROUTER_V1_WIRED ===
     if not ok:
         _update_task(conn, task_id, state="FAILED", error_message="download failed")
         return
