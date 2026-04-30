@@ -20,6 +20,11 @@ import asyncio
 import hashlib
 import datetime
 import logging
+def now_iso_utc() -> str:
+    """UTC_TIMESTAMP_V1"""
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).isoformat()
+
 import fcntl
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -262,6 +267,18 @@ def _quality_gate_artifact(artifact_path: str = None, drive_link: str = None,
         return {"ok": True, "reason": "ARTIFACT_EXISTS"}
 
     return {"ok": False, "reason": "NO_ARTIFACT_NO_LINK"}
+
+def _is_heavy_task(input_type: str, task_type: str = "") -> bool:
+    """FAST_HEAVY_TASK_V1 — определить тип задачи"""
+    return input_type in ("drive_file", "file") or task_type in (
+        "ESTIMATE_TASK", "OCR_TASK", "DWG_TASK", "TECHNADZOR_TASK", "DOCUMENT_TASK", "MULTI_TASK"
+    )
+
+def _get_task_sla(input_type: str, task_type: str = "") -> int:
+    """Возвращает SLA в секундах"""
+    if _is_heavy_task(input_type, task_type):
+        return 120  # HEAVY < 120s
+    return 10  # FAST < 10s
 
 def _check_result_before_confirm(result: str, input_type: str = "text", intent: str = "") -> bool:
     """RESULT_VALIDATOR_CALL_V1 — проверить result перед AWAITING_CONFIRMATION"""

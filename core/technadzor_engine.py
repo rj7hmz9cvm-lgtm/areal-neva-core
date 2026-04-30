@@ -51,6 +51,88 @@ def extract_defects(text: str) -> list:
         defects.append(" ".join(current))
     return defects[:20]
 
+def generate_act_docx_full(
+    defects: list,
+    object_name: str = "Объект",
+    task_id: str = "",
+    photo_links: list = None,
+    norm_results: list = None,
+) -> str:
+    """TECHNADZOR_DOCX_FULL_V1 — полный акт: заголовок/объект/дата/таблица/нормы/вывод"""
+    try:
+        from docx import Document
+        from docx.shared import Pt, RGBColor
+        from datetime import datetime
+        import os
+
+        doc = Document()
+
+        # Заголовок
+        h = doc.add_heading("АКТ ТЕХНИЧЕСКОГО ОСМОТРА", level=1)
+        h.alignment = 1  # CENTER
+
+        # Метаданные
+        from datetime import date
+        doc.add_paragraph(f"Объект: {object_name}")
+        doc.add_paragraph(f"Дата: {date.today().strftime('%d.%m.%Y')}")
+        doc.add_paragraph(f"Задача: {task_id}")
+        doc.add_paragraph("")
+
+        # Таблица замечаний
+        headers = ["№", "Описание", "Место", "Тяжесть", "Норма", "Риск"]
+        table = doc.add_table(rows=1, cols=len(headers))
+        table.style = "Table Grid"
+        hdr_cells = table.rows[0].cells
+        for i, h in enumerate(headers):
+            hdr_cells[i].text = h
+            hdr_cells[i].paragraphs[0].runs[0].bold = True
+
+        for i, d in enumerate(defects, 1):
+            row_cells = table.add_row().cells
+            severity = classify_severity(d)
+            norm = find_norm(d)
+            row_cells[0].text = str(i)
+            row_cells[1].text = str(d)[:200]
+            row_cells[2].text = "см. фото" if photo_links else ""
+            row_cells[3].text = severity
+            row_cells[4].text = norm or "уточняется"
+            row_cells[5].text = "ВЫСОКИЙ" if severity == "CRITICAL" else "СРЕДНИЙ" if severity == "MAJOR" else "НИЗКИЙ"
+
+        doc.add_paragraph("")
+
+        # Нормативные требования
+        if norm_results:
+            doc.add_heading("Нормативные требования", level=2)
+            for n in norm_results[:5]:
+                doc.add_paragraph(f"• {n.get('norm_id','')}: {n.get('requirement','')[:200]}")
+
+        # Фото ссылки
+        if photo_links:
+            doc.add_heading("Фотофиксация", level=2)
+            for i, link in enumerate(photo_links, 1):
+                doc.add_paragraph(f"Фото {i}: {link}")
+
+        # Вывод
+        doc.add_heading("Заключение", level=2)
+        critical = sum(1 for d in defects if classify_severity(d) == "CRITICAL")
+        major = sum(1 for d in defects if classify_severity(d) == "MAJOR")
+        if critical:
+            doc.add_paragraph(f"Выявлено критических нарушений: {critical}. Требуется немедленное устранение.")
+        if major:
+            doc.add_paragraph(f"Выявлено значительных нарушений: {major}. Требуется устранение в установленные сроки.")
+        if not defects:
+            doc.add_paragraph("Видимых дефектов не выявлено.")
+
+        # Сохранение
+        out_path = f"/tmp/act_{task_id or 'unknown'}.docx"
+        doc.save(out_path)
+        logger.info("TECHNADZOR_DOCX_FULL_V1 saved=%s", out_path)
+        return out_path
+
+    except Exception as e:
+        logger.error("TECHNADZOR_DOCX_FULL_ERR %s", e)
+        return ""
+
 def generate_act_text(defects: list, object_name: str = "Объект") -> str:
     lines = [f"АКТ ТЕХНИЧЕСКОГО ОСМОТРА\nОбъект: {object_name}\n"]
     for i, d in enumerate(defects, 1):
@@ -112,9 +194,16 @@ def process_technadzor(
     # Генерируем акт
     act_text = generate_act_text(defects) + norm_text
 
-    # DOCX
+    # DOCX — DOCX_FULL_CALL_V1
     try:
-        from core.defect_act_engine import generate_act_docx
+        docx_path = generate_act_docx_full(
+            defects=defects,
+            object_name=str(raw_input or "Объект")[:80],
+            task_id=task_id,
+            photo_links=[local_path] if local_path else None,
+            norm_results=norm_results if "norm_results" in dir() else None,
+        )
+
         docx_path = generate_act_docx(task_id, analysis_text, file_name)
         if docx_path and os.path.exists(docx_path):
             # Upload
