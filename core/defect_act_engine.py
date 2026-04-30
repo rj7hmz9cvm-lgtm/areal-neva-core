@@ -71,6 +71,25 @@ def generate_act_pdf(task_id, caption, file_name, object_name="UNKNOWN"):
 def process_defect_act_sync(conn, task_id, chat_id, topic_id, raw_input, file_name="", local_path=""):
     from core.artifact_upload_guard import upload_many_or_fail
     from core.reply_sender import send_reply_ex
+    # === FULLFIX_20_GEMINI_DEFECT_SYNC ===
+    _ff20_vision_text = ""
+    try:
+        if local_path and any(str(local_path).lower().endswith(ext) for ext in (".jpg",".jpeg",".png",".webp",".heic")):
+            import asyncio as _ff20_aio
+            from core.gemini_vision import analyze_image_file as _ff20_gif
+            try:
+                _ff20_aio.get_running_loop()
+            except RuntimeError:
+                _ff20_vision_text = _ff20_aio.run(
+                    _ff20_gif(local_path, prompt="\u041e\u043f\u0438\u0448\u0438 \u0434\u0435\u0444\u0435\u043a\u0442 \u0434\u043b\u044f \u0430\u043a\u0442\u0430", timeout=60)
+                ) or ""
+            logger.info("FF20_GEMINI_DEFECT_SYNC len=%s", len(_ff20_vision_text))
+    except Exception as _ff20_ve:
+        logger.warning("FF20_GEMINI_DEFECT_SYNC_ERR=%s", _ff20_ve)
+    if _ff20_vision_text:
+        raw_input = str(raw_input or "") + "\n\n\u041e\u043f\u0438\u0441\u0430\u043d\u0438\u0435 \u0434\u0435\u0444\u0435\u043a\u0442\u0430: " + str(_ff20_vision_text)
+    # === END FULLFIX_20_GEMINI_DEFECT_SYNC ===
+
     try:
         caption = raw_input or file_name
         docx_path = generate_act_docx(task_id, caption, file_name)

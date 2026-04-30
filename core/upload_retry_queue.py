@@ -216,4 +216,13 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    # === FULLFIX_20_RETRY_LOOP ===
+    import time as _ff20_time
+    logger.info("UPLOAD_RETRY_SERVICE_START")
+    while True:
+        try:
+            run()
+        except Exception as _ff20_re:
+            logger.exception("UPLOAD_RETRY_LOOP_ERR=%s", _ff20_re)
+        _ff20_time.sleep(300)
+    # === END FULLFIX_20_RETRY_LOOP ===

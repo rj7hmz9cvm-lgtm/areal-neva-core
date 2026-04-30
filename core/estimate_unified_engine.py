@@ -49,7 +49,39 @@ def parse_estimate_rows(text):
         rows.append({"name": name, "qty": qty, "unit": unit, "price": price, "total": round(qty*price, 2)})
     return rows
 
-def generate_xlsx(rows, task_id):
+
+# === FULLFIX_20_ACTIVE_TEMPLATE ===
+def _ff20_load_active_template(chat_id=None, topic_id=0):
+    try:
+        import glob, json
+        topic = str(int(topic_id or 0))
+        patterns = []
+        if chat_id is not None:
+            patterns.append(
+                "/root/.areal-neva-core/data/templates/estimate/ACTIVE__chat_"
+                + str(chat_id) + "__topic_" + topic + ".json"
+            )
+        patterns.append(
+            "/root/.areal-neva-core/data/templates/estimate/ACTIVE__*__topic_"
+            + topic + ".json"
+        )
+        for pat in patterns:
+            hits = glob.glob(pat)
+            if hits:
+                with open(hits[0], "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                cols = data.get("columns") or data.get("headers") or data.get("xlsx_headers")
+                if isinstance(cols, list) and len(cols) >= 2:
+                    return [str(x) for x in cols]
+    except Exception as e:
+        try:
+            logger.warning("FF20_ACTIVE_TEMPLATE_ERR=%s", e)
+        except Exception:
+            pass
+    return None
+# === END FULLFIX_20_ACTIVE_TEMPLATE ===
+
+def generate_xlsx(rows, task_id, chat_id=None, topic_id=0):
     import openpyxl
     from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
     path = os.path.join(RUNTIME_DIR, "estimate_" + str(task_id)[:8] + ".xlsx")
@@ -61,7 +93,7 @@ def generate_xlsx(rows, task_id):
     ws["A1"].font = Font(bold=True, size=14)
     ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
     thin = Border(left=Side(style="thin"), right=Side(style="thin"), top=Side(style="thin"), bottom=Side(style="thin"))
-    hdrs = ["№", "Наименование", "Ед.", "Кол-во", "Цена, руб.", "Сумма, руб."]
+    hdrs = _ff20_load_active_template(chat_id=chat_id, topic_id=topic_id) or ["№", "Наименование", "Ед.", "Кол-во", "Цена, руб.", "Сумма, руб."]  # FULLFIX_20_ACTIVE_TEMPLATE
     for c, h in enumerate(hdrs, 1):
         cell = ws.cell(row=2, column=c, value=h)
         cell.font = Font(bold=True)
@@ -143,7 +175,7 @@ def process_estimate_task_sync(task_id, chat_id, topic_id, raw_input):
             send_reply_ex(chat_id=str(chat_id), text=msg, reply_to_message_id=None, message_thread_id=topic_id)
             return False
 
-        xlsx_path = generate_xlsx(rows, task_id)
+        xlsx_path = generate_xlsx(rows, task_id, chat_id=str(chat_id), topic_id=topic_id)
         pdf_path = generate_pdf(rows, task_id)
         up = upload_many_or_fail(
             [{"path": pdf_path, "kind": "estimate_pdf"}, {"path": xlsx_path, "kind": "estimate_xlsx"}],
