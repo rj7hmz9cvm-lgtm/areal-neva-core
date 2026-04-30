@@ -974,6 +974,19 @@ def _ff13c_strip_manifest_links(text):
 
 
 async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str, topic_id: int) -> None:
+    # === HEALTHCHECK_GUARD_V1 ===
+    try:
+        _hc_raw = str(task['raw_input'] if task else '') if task else ''
+        _hc_res = str(task['result'] if task else '') if task else ''
+        _hc_markers = ['retry_queue_healthcheck', 'healthcheck', 'areal_hc_', '_hc_file']
+        if any(m in _hc_raw or m in _hc_res for m in _hc_markers):
+            _update_task(conn, task['id'], state='CANCELLED', error_message='SERVICE_FILE_IGNORED:HEALTHCHECK')
+            conn.commit()
+            logger.info('HEALTHCHECK_GUARD_V1 cancelled task=%s', task['id'])
+            return
+    except Exception as _hcge:
+        logger.warning('HEALTHCHECK_GUARD_ERR %s', _hcge)
+    # === END HEALTHCHECK_GUARD_V1 ===
     task_id = _s(_task_field(task, "id"))
     raw_input = _clean(_s(_task_field(task, "raw_input")), 4000)
     reply_to = _task_field(task, "reply_to_message_id", None)
