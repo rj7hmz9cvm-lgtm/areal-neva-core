@@ -2454,3 +2454,47 @@ except Exception:
     pass
 # === END FULLFIX_07_PROJECT_ENGINE_OVERRIDE ===
 
+
+# === FULLFIX_08_PROJECT_SIGNATURE_COMPAT_OVERRIDE ===
+# Final public project API used by task_worker
+# Accepts any old/new call signature and delegates to CAD closure engine
+
+try:
+    from core.cad_project_engine import (
+        create_project_pdf_dxf_artifact as _ff08_cad_create_project_pdf_dxf_artifact,
+        create_full_project_documentation as _ff08_cad_create_full_project_documentation,
+    )
+
+    async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
+        return await _ff08_cad_create_project_pdf_dxf_artifact(
+            raw_input,
+            task_id,
+            int(topic_id or 0),
+            str(template_hint or ""),
+            *args,
+            **kwargs
+        )
+
+    async def create_full_project_documentation(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
+        return await _ff08_cad_create_full_project_documentation(
+            raw_input,
+            task_id,
+            int(topic_id or 0),
+            str(template_hint or ""),
+            *args,
+            **kwargs
+        )
+
+except Exception as _ff08_import_error:
+    async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
+        return {
+            "success": False,
+            "engine": "FULLFIX_08_PROJECT_SIGNATURE_COMPAT_OVERRIDE",
+            "error": "CAD_PROJECT_ENGINE_IMPORT_FAILED: " + str(_ff08_import_error)[:300],
+        }
+
+    async def create_full_project_documentation(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
+        return await create_project_pdf_dxf_artifact(raw_input, task_id, topic_id, template_hint, *args, **kwargs)
+
+# === END FULLFIX_08_PROJECT_SIGNATURE_COMPAT_OVERRIDE ===
+

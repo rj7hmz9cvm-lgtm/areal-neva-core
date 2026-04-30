@@ -791,3 +791,50 @@ async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id
     return create_full_project_package(raw_input, task_id, topic_id, template_hint)
 
 # === END FULLFIX_07_CAD_PROJECT_DOCUMENTATION_CLOSURE ===
+
+
+# === FULLFIX_08_PROJECT_SIGNATURE_COMPAT ===
+# Compatibility layer:
+# - accepts legacy worker calls with extra positional args
+# - exposes create_full_project_documentation for diagnostics and future routes
+# - keeps the real FULLFIX_07 CAD generator as the single backend
+
+_FF08_ORIGINAL_CREATE_PROJECT_PDF_DXF_ARTIFACT = globals().get("create_project_pdf_dxf_artifact")
+
+async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
+    if _FF08_ORIGINAL_CREATE_PROJECT_PDF_DXF_ARTIFACT is None:
+        return {
+            "success": False,
+            "engine": "FULLFIX_08_PROJECT_SIGNATURE_COMPAT",
+            "error": "ORIGINAL_CREATE_PROJECT_PDF_DXF_ARTIFACT_NOT_FOUND",
+        }
+
+    try:
+        return await _FF08_ORIGINAL_CREATE_PROJECT_PDF_DXF_ARTIFACT(
+            raw_input,
+            task_id,
+            int(topic_id or 0),
+            str(template_hint or "")
+        )
+    except TypeError as e:
+        msg = str(e)
+        if "positional arguments" not in msg and "argument" not in msg:
+            raise
+        return await _FF08_ORIGINAL_CREATE_PROJECT_PDF_DXF_ARTIFACT(
+            raw_input,
+            task_id,
+            int(topic_id or 0)
+        )
+
+async def create_full_project_documentation(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
+    return await create_project_pdf_dxf_artifact(
+        raw_input,
+        task_id,
+        int(topic_id or 0),
+        str(template_hint or ""),
+        *args,
+        **kwargs
+    )
+
+# === END FULLFIX_08_PROJECT_SIGNATURE_COMPAT ===
+

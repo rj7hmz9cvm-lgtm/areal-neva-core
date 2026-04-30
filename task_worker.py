@@ -866,12 +866,12 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
                 conn,
                 task_id,
                 state="FAILED",
-                result="Проект не создан: ошибка генерации полного комплекта",
+                result="Проект не создан: ошибка генерации полного комплекта: " + _err,
                 error_message=_err,
             )
             _history(conn, task_id, "FULLFIX_07_EXCEPTION:" + _err)
             conn.commit()
-            _send_once(conn, task_id, chat_id, "Проект не создан: ошибка генерации полного комплекта", reply_to, "project_exception")
+            _send_once(conn, task_id, chat_id, "Проект не создан: ошибка генерации полного комплекта: " + _err, reply_to, "project_exception")
             return
     # === END FULLFIX_07_PROJECT_DESIGN_CLOSURE_ROUTE ===
 
@@ -1704,3 +1704,5 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+# === FULLFIX_08_PROJECT_ERROR_VISIBILITY ===
