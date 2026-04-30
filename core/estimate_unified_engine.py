@@ -140,7 +140,7 @@ def process_estimate_task_sync(task_id, chat_id, topic_id, raw_input):
                 c.execute("INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
                     (task_id, "state:FAILED:no_rows"))
                 c.commit()
-            send_reply_ex(chat_id=str(chat_id), text=msg, reply_to_message_id=None)
+            send_reply_ex(chat_id=str(chat_id), text=msg, reply_to_message_id=None, message_thread_id=topic_id)
             return False
 
         xlsx_path = generate_xlsx(rows, task_id)
@@ -163,7 +163,7 @@ def process_estimate_task_sync(task_id, chat_id, topic_id, raw_input):
                 c.execute("INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
                     (task_id, "state:FAILED:upload_failed"))
                 c.commit()
-            send_reply_ex(chat_id=str(chat_id), text=msg, reply_to_message_id=None)
+            send_reply_ex(chat_id=str(chat_id), text=msg, reply_to_message_id=None, message_thread_id=topic_id)
             return False
 
         lines = ["Смета готова.", "Позиций: " + str(len(rows)) + ". Итого: %.2f руб" % total]
@@ -182,7 +182,7 @@ def process_estimate_task_sync(task_id, chat_id, topic_id, raw_input):
                 (task_id, "state:AWAITING_CONFIRMATION:estimate_unified"))
             c.commit()
 
-        br = send_reply_ex(chat_id=str(chat_id), text=result_text, reply_to_message_id=None)
+        br = send_reply_ex(chat_id=str(chat_id), text=result_text, reply_to_message_id=None, message_thread_id=topic_id)
         bmid = None
         if isinstance(br, dict):
             bmid = br.get("bot_message_id") or br.get("message_id")
@@ -210,7 +210,7 @@ def process_estimate_task_sync(task_id, chat_id, topic_id, raw_input):
             pass
         try:
             from core.reply_sender import send_reply_ex
-            send_reply_ex(chat_id=str(chat_id), text=msg, reply_to_message_id=None)
+            send_reply_ex(chat_id=str(chat_id), text=msg, reply_to_message_id=None, message_thread_id=topic_id)
         except Exception:
             pass
         return False
