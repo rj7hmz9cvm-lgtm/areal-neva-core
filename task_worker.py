@@ -2153,7 +2153,7 @@ async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_
             if ai_result is None:
                 pass
             else:
-                ai_result = await asyncio.wait_for(process_ai_task(_stage1_dir_payload(payload))  # FULLFIX_DIRECTION_KERNEL_STAGE_1_CALL, timeout=AI_TIMEOUT)
+                ai_result = await asyncio.wait_for(process_ai_task(_stage1_dir_payload(payload)), timeout=AI_TIMEOUT)
     except Exception as e:
         _update_task(conn, task_id, state="FAILED", error_message=_clean(str(e), 500))
         _close_pin(conn, task_id)
