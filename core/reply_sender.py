@@ -1,3 +1,16 @@
+
+
+# === FULLFIX_13D_REPLY_SENDER_GLOBAL_MANIFEST_STRIP ===
+def _ff13d_strip_manifest_links(text):
+    import re
+    if text is None:
+        return text
+    t = str(text)
+    t = re.sub(r"(?im)^\s*MANIFEST\s*:\s*https?://\S+\s*$", "", t)
+    t = re.sub(r"\n{3,}", "\n\n", t).strip()
+    return t
+# === END FULLFIX_13D_REPLY_SENDER_GLOBAL_MANIFEST_STRIP ===
+
 import os
 import logging
 from typing import Optional, Dict, Any
@@ -26,7 +39,7 @@ def _clean(text: str) -> str:
     return text[:12000]
 
 def send_reply(chat_id: str, text: str, reply_to_message_id: Optional[int] = None) -> bool:
-    return send_reply_ex(chat_id=chat_id, text=text, reply_to_message_id=reply_to_message_id)["ok"]
+    return send_reply_ex(chat_id=chat_id, text=_ff13d_strip_manifest_links(text), reply_to_message_id=reply_to_message_id)["ok"]
 
 def send_reply_ex(chat_id: str, text: str, reply_to_message_id: Optional[int] = None) -> Dict[str, Any]:
     text = _clean(text)
@@ -39,7 +52,7 @@ def send_reply_ex(chat_id: str, text: str, reply_to_message_id: Optional[int] = 
     if not text:
         logger.error("text empty")
         return {"ok": False, "bot_message_id": None}
-    payload = {"chat_id": str(chat_id), "text": text, "disable_web_page_preview": True}
+    payload = {"chat_id": str(chat_id), "text": _ff13d_strip_manifest_links(text), "disable_web_page_preview": True}
     if reply_to_message_id:
         payload["reply_to_message_id"] = int(reply_to_message_id)
     try:

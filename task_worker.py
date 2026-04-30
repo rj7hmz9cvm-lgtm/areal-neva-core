@@ -777,6 +777,22 @@ def _recover_stale_tasks(conn: sqlite3.Connection, chat_id: Optional[str]) -> No
     conn.commit()
 
 
+
+# === FULLFIX_13D_TASK_WORKER_SEND_BELT ===
+# reply_sender also strips MANIFEST globally
+# === END FULLFIX_13D_TASK_WORKER_SEND_BELT ===
+
+# === FULLFIX_13C_STRIP_MANIFEST_BEFORE_SEND ===
+def _ff13c_strip_manifest_links(text):
+    import re
+    msg = str(text or "")
+    msg = re.sub(r"(?im)^MANIFEST:\s*https?://\S+\s*$", "", msg)
+    msg = re.sub(r"(?im)^Manifest:\s*https?://\S+\s*$", "", msg)
+    msg = re.sub(r"\n{3,}", "\n\n", msg).strip()
+    return msg
+# === END FULLFIX_13C_STRIP_MANIFEST_BEFORE_SEND ===
+
+
 async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str, topic_id: int) -> None:
     task_id = _s(_task_field(task, "id"))
     raw_input = _clean(_s(_task_field(task, "raw_input")), 4000)
@@ -854,10 +870,10 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
         }
         if _ff13b_low in _ff13b_false_project_phrases:
             _msg = "Принял как образец. Дальше можно писать простым языком: сделай смету / сделай проект"
-            await safe_update(conn, task_id, state="DONE", result=_msg, error_message="")
+            await safe_update(conn, task_id, state="DONE", result=_ff13c_strip_manifest_links(_msg), error_message="")
             try:
                 from core.reply_sender import send_reply_ex
-                send_reply_ex(chat_id=str(chat_id), text=_msg, reply_to_message_id=reply_to)
+                send_reply_ex(chat_id=str(chat_id), text=_ff13c_strip_manifest_links(_msg), reply_to_message_id=reply_to)
             except Exception:
                 pass
             try:
@@ -940,7 +956,7 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
                 if not isinstance(_ff10_res, dict) or not _ff10_res.get("success"):
                     _err = str((_ff10_res or {}).get("error", "PROJECT_FAILED"))[:400]
                     _msg = "Проект не создан: " + _err
-                    _update_task(conn, task_id, state="FAILED", result=_msg, error_message=_err)
+                    _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message=_err)
                     _history(conn, task_id, "FULLFIX_10_PROJECT_FAILED:" + _err)
                     conn.commit()
                     _send_once(conn, task_id, chat_id, _msg, reply_to, "ff10_project_failed")
@@ -971,7 +987,7 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
                     _send_once(conn, task_id, chat_id, "Проект не создан: нет PDF/DXF ссылки", reply_to, "ff10_project_links_missing")
                     return
 
-                _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_msg, error_message="")
+                _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
                 _history(conn, task_id, "FULLFIX_10_PROJECT_OK")
                 conn.commit()
                 _sent = _send_once_ex(conn, task_id, str(chat_id), _msg, reply_to, "ff10_project_result")
@@ -986,14 +1002,14 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
             if not isinstance(_ff10_res, dict) or not _ff10_res.get("success"):
                 _err = str((_ff10_res or {}).get("error", "ESTIMATE_FAILED"))[:400]
                 _msg = "Смета не создана: " + _err
-                _update_task(conn, task_id, state="FAILED", result=_msg, error_message=_err)
+                _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message=_err)
                 _history(conn, task_id, "FULLFIX_10_ESTIMATE_FAILED:" + _err)
                 conn.commit()
                 _send_once(conn, task_id, chat_id, _msg, reply_to, "ff10_estimate_failed")
                 return
 
             _msg = str(_ff10_res.get("message") or "")
-            _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_msg, error_message="")
+            _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
             _history(conn, task_id, "FULLFIX_10_ESTIMATE_OK")
             conn.commit()
             _sent = _send_once_ex(conn, task_id, str(chat_id), _msg, reply_to, "ff10_estimate_result")
@@ -1076,7 +1092,7 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
                 "Доволен результатом? Ответь: Да / Уточни / Правки"
             )
 
-            _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_msg, error_message="")
+            _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
             _history(conn, task_id, "FULLFIX_07_PROJECT_OK")
             conn.commit()
 
@@ -1175,7 +1191,7 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
                 f"MANIFEST: {_ff06_res.get('manifest_link')}\n\n"
                 "Доволен результатом? Ответь: Да / Уточни / Правки"
             )
-            _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_msg, error_message="")
+            _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
             _history(conn, task_id, "FULLFIX_06_PROJECT_OK")
             conn.commit()
             _sent = _send_once_ex(conn, task_id, str(chat_id), _msg, reply_to, "project_result_ff06")
@@ -1306,7 +1322,7 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
                 _msg += f"MANIFEST: {_manifest}\n"
             _msg += "\nДоволен результатом? Ответь: Да / Уточни / Правки"
 
-            _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_msg, error_message="")
+            _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
             _history(conn, task_id, "FULLFIX_05_PROJECT_PDF_DXF_OK")
             conn.commit()
 
@@ -1928,7 +1944,7 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
     except Exception as e:
         logger.error(f"DRIVE_FILE analyze skipped task={task_id} err={e}")
 
-    _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=result)
+    _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(result))
     logger.info(f"DRIVE_FILE: {task_id} processed")
 
 if __name__ == "__main__":
