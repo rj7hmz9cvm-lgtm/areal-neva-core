@@ -1,0 +1,76 @@
+{
+  "chat_id": "claude_session_30_04_2026_FINAL",
+  "chat_name": "AREAL-NEVA ORCHESTRA — Claude Session 30.04.2026 FINAL",
+  "exported_at": "2026-04-30T05:40:00+03:00",
+  "source_model": "Claude Sonnet 4.6",
+  "session_duration_hours": 8,
+  "patches_total": 25,
+  "patches_verified": [
+    "PATCH_FILE_INTAKE_NEEDS_CONTEXT_V3_MINIMAL",
+    "PATCH_DRIVE_GUARD_BEFORE_DOWNLOAD_V1",
+    "PATCH_WORKER_PICK_BEFORE_STALE_V1",
+    "PATCH_FIX_PFIN3_MENU_SHADOW_V1",
+    "PATCH_FILE_CHOICE_PRIORITY_V1",
+    "PATCH_FILE_PARENT_STRICT_OPEN_ONLY_V1",
+    "PATCH_ENGINE_BASE_RESTORE_SA_UPLOAD_V1",
+    "PATCH_DRIVE_DIRECT_OAUTH_V1",
+    "PATCH_DRIVE_UPLOAD_AND_TG_FALLBACK_V1",
+    "PATCH_RETRY_TOPIC_FOLDER_V1",
+    "PATCH_DAEMON_OAUTH_OVERRIDE_V1",
+    "PATCH_SCOPE_FULL_V1"
+  ],
+  "patches_installed_no_live_test": [
+    "PATCH_DOWNLOAD_OAUTH_V1",
+    "PATCH_SOURCE_GUARD_V1",
+    "PATCH_FILE_ERROR_RETRY_V1",
+    "PATCH_DRIVE_BOTMSG_SAVE_V1",
+    "PATCH_DRIVE_DOWNLOAD_FAIL_MSG_V1",
+    "PATCH_CRASH_BOTMSG_V1",
+    "PATCH_RETRY_TG_MSG_V1",
+    "PATCH_HC_NO_UPLOAD",
+    "PATCH_DAEMON_USE_OAUTH_V1",
+    "PATCH_VOICE_OAUTH_V1",
+    "PATCH_DUPLICATE_GUARD_V1",
+    "PATCH_MULTI_FILE_INTAKE_V1",
+    "PATCH_LINK_INTAKE_NEEDS_CONTEXT_V1"
+  ],
+  "key_decisions_chronological": [
+    "OAuth app переведён в Production",
+    "engine_base.py восстановлен из bak",
+    "Direct OAuth заменил Service Account",
+    "Telegram fallback при упавшем Drive",
+    "upload_retry_queue cron 10min",
+    "retry в topic папку не INGEST",
+    "healthcheck через list API",
+    "Source guard для не-telegram файлов",
+    "File error retry на reply",
+    "Расширенный retry поиск (bot_message_id + reply_to + tg_msg_id)",
+    "Crash bot_message_id save",
+    "Daemon OAuth override.conf",
+    "Daemon переключен на upload_file_to_topic",
+    "Voice через OAuth",
+    "Scope full=drive в 3 файлах (РЕШИЛ invalid_scope)"
+  ],
+  "key_lessons": [
+    "Service Account не работает с My Drive — только OAuth",
+    "Refresh token и scope должны совпадать иначе invalid_scope",
+    "systemd Environment не наследуется — override.conf для каждого сервиса",
+    "bot_message_id критичен для retry",
+    "AI router цепляет stale задачи — нужна чистка",
+    "drive_ingest подхватывает healthcheck — нужен list API",
+    "STT Whisper галлюцинирует имена (Олег вместо Илья)"
+  ],
+  "new_canon_rules": {
+    "0.11": "Самопроверка AI обязательна",
+    "drive_folder_isolation": "Артефакты только в chat_{id}/topic_{id}/",
+    "retry_chain": "TG → cron retry → topic папка",
+    "source_guard": "Только source=telegram обрабатывается",
+    "error_retry": "Reply на ошибку = автоматический перезапуск",
+    "scope_full": "OAuth scope=drive (не drive.file) во всех файлах"
+  },
+  "services_at_end": {
+    "areal-task-worker": "active",
+    "telegram-ingress": "active",
+    "areal-memory-api": "active"
+  }
+}
