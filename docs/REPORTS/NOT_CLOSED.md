@@ -353,3 +353,21 @@ task_history: id, task_id, action, created_at
 7. Самопроверка после написания кода (§0.11)
 8. Written code ≠ installed | Installed ≠ verified | Verified = live test passed
 ```
+
+
+---
+
+## MASTER CLOSURE PLAN
+
+Полный план закрытия в 7 проходах: `docs/REPORTS/MASTER_CLOSURE_PLAN.md`
+
+**Порядок:**
+1. PATCH_CONFIRM_ONLY_ON_DONE_V1 — task_worker.py 2070-2075
+2. PATCH_TEMPLATE_INTENT_V1 — artifact_pipeline + template_manager
+3. Voice confirm — telegram_daemon.py с явного «да»
+4. Live-тесты INSTALLED патчей — без нового кода
+5. Estimate contour — estimate_engine
+6. Technadzor contour — technadzor_engine
+7. Project engine — после template_manager
+
+**Issue #2:** OBSOLETE — superseded by PATCH_SCOPE_FULL_V1 + LATEST_HANDOFF 30.04.2026
