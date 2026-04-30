@@ -438,3 +438,22 @@ task_history: id, task_id, action, created_at
 - monitor_jobs.py — файла нет
 - SEARCH_MONOLITH_V1 — live-тест не проводился
 - Нормы СП/ГОСТ в technadzor_engine
+
+## FULLFIX_20_CODE_CLOSURE — 2026-04-30
+
+### Закрыто кодом:
+- A1: context_query send_reply_ex + message_thread_id=topic_id
+- A2: multifile send_reply_ex + message_thread_id=topic_id
+- B1: OCE memory save внутри create_estimate_files
+- B2: active template headers из data/templates/estimate/ACTIVE__chat_*__topic_*.json
+- C1: Gemini vision в process_defect_act_sync (asyncio.run с get_running_loop guard)
+- C2: multifile merge PDF (pypdf + PIL) + Drive upload
+- C3: upload_retry_queue while True loop + areal-upload-retry.service
+
+### Pending live-тесты (код есть, Telegram не тестировался):
+- template_intake: файл + "возьми как образец"
+- defect_act: фото + "акт осмотра"
+- multifile: "сводка по всем файлам"
+- active_context_query: "ну что там / где смета"
+- DWG pipeline end-to-end
+- КЖ PDF pipeline end-to-end

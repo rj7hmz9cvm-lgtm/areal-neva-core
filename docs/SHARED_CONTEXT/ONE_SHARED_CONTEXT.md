@@ -4060,3 +4060,8 @@ content: base64 от JSON строки (UTF-8)
 РАЗРЕШЕНО: только добавление, версионирование v1/v2/v3.
 secret_scan.sh обязателен перед push.
 USER_APPROVAL_GATE: канон меняется только после явного да.
+
+## FULLFIX_20_CODE_CLOSURE — 2026-04-30
+Commits: eb891d3, 841a3c3
+5 сервисов active: areal-task-worker, telegram-ingress, areal-memory-api, areal-monitor-jobs, areal-upload-retry
+Все FULLFIX_20_* маркеры verified self-check.
