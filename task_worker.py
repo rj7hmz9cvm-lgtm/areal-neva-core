@@ -524,7 +524,7 @@ def _load_memory_context(chat_id: str, topic_id: int) -> Tuple[str, str, str, st
                 if not _is_memory_noise(value):
                     long_memory.append(f"{key}: {value}")
 
-        return "\n".join(short_memory[:100]), "\n".join(long_memory[:100]), topic_role, topic_directions
+        return "\n".join(short_memory[:20]), "\n".join(long_memory[:20]), topic_role, topic_directions  # MEMORY_LIMIT_20_V1
     finally:
         conn.close()
 

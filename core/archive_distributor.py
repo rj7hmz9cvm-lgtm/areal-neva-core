@@ -67,11 +67,21 @@ def distribute_timeline(timeline_path: str, chat_id: str = CHAT_ID, dry_run: boo
 
             # Собираем текст для классификации
             text_parts = []
-            for field in ["text", "message", "content", "result", "raw_input", "value"]:
+            # timeline.jsonl имеет структуру {"timestamp":..., "data": {...}}
+            data_block = entry.get("data") or entry
+            if isinstance(data_block, dict):
+                for field in ["raw_text", "text", "message", "content", "result",
+                              "raw_input", "value", "system", "architecture",
+                              "pipeline", "memory", "pending", "decisions"]:
+                    v = data_block.get(field)
+                    if v and isinstance(v, str) and len(v) > 10:
+                        text_parts.append(v[:800])
+            # тоже проверяем корень
+            for field in ["text", "message", "content"]:
                 v = entry.get(field)
                 if v and isinstance(v, str):
-                    text_parts.append(v)
-            text = " ".join(text_parts)[:2000]
+                    text_parts.append(v[:400])
+            text = " ".join(text_parts)[:3000]
 
             if not text or len(text) < 20:
                 stats["skipped"] += 1
