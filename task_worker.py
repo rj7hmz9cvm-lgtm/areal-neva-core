@@ -27,6 +27,31 @@ from dotenv import load_dotenv
 from core.ai_router import process_ai_task
 from core.reply_sender import send_reply, send_reply_ex
 try:
+    from core.constraint_engine import rank_offers as _ce_rank, apply_constraints as _ce_apply, validate_offer as _ce_validate  # CONSTRAINT_ENGINE_V1_WIRED
+except Exception:
+    _ce_rank = lambda o: o
+    _ce_apply = lambda o, **kw: o
+    _ce_validate = lambda o: {"ok": True}
+try:
+    from core.audit_log import audit as _audit  # AUDIT_LOG_V1_WIRED
+except Exception:
+    _audit = lambda *a, **kw: None
+try:
+    from core.source_dedup import dedup_offers as _sd_dedup, sort_by_region as _sd_region  # SOURCE_DEDUP_V1_WIRED
+except Exception:
+    _sd_dedup = lambda o: o
+    _sd_region = lambda o, **kw: o
+try:
+    from core.error_explainer import user_friendly_error as _ee_explain  # ERROR_EXPLAINER_V1_WIRED
+except Exception:
+    _ee_explain = lambda c: c
+try:
+    from core.data_classification import classify_domain as _dc_domain, classify_intent as _dc_intent, classify_file_type as _dc_ftype  # DATA_CLASS_V1_WIRED
+except Exception:
+    _dc_domain = lambda *a: "UNSORTED"
+    _dc_intent = lambda t: "text"
+    _dc_ftype = lambda f: "UNKNOWN"
+try:
     from core.intent_lock import is_chat_only as _il_chat_only, file_result_guard as _il_file_guard  # INTENT_LOCK_V1_WIRED
 except Exception:
     _il_chat_only = lambda t: False
