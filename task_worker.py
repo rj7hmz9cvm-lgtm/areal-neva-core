@@ -27,6 +27,26 @@ from dotenv import load_dotenv
 from core.ai_router import process_ai_task
 from core.reply_sender import send_reply, send_reply_ex
 try:
+    from core.intent_lock import is_chat_only as _il_chat_only, file_result_guard as _il_file_guard  # INTENT_LOCK_V1_WIRED
+except Exception:
+    _il_chat_only = lambda t: False
+    _il_file_guard = lambda **kw: {"ok": True}
+try:
+    from core.orchestra_context import build_shared_context as _oc_build, user_mode_switch as _oc_mode  # ORCHESTRA_CTX_V1_WIRED
+except Exception:
+    _oc_build = lambda **kw: ""
+    _oc_mode = lambda t: "HUMAN"
+try:
+    from core.price_normalization import normalize_price_text as _pn_fmt, extract_price as _pn_extract  # PRICE_NORM_V1_WIRED
+except Exception:
+    _pn_fmt = lambda t: t
+    _pn_extract = lambda t: []
+try:
+    from core.memory_filter import filter_memory_for_prompt as _mf_filter, sanitize_before_write as _mf_clean  # MEMORY_FILTER_V1_WIRED
+except Exception:
+    _mf_filter = lambda m, **kw: m
+    _mf_clean = lambda v: v
+try:
     from core.result_validator import validate_result as _rv_validate, is_generic_response as _rv_generic  # RESULT_VALIDATOR_V1_WIRED
 except Exception:
     _rv_validate = lambda r, **kw: {"ok": True, "reason": "IMPORT_FAIL"}
