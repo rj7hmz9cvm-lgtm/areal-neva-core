@@ -50,3 +50,8 @@ Retry: core/upload_retry_queue.py (cron */10) → TG file_id → Drive
 Healthcheck: core/storage_healthcheck.py (cron */30)
 Service Account: НЕ подходит для My Drive
 google_io.py: НЕ используется для upload
+
+## AUTO-UPDATE 2026-04-30 04:25
+- PATCH_RETRY_TOPIC_FOLDER_V1: VERIFIED ✅ — retry загружает в topic папку, не в INGEST корень
+- §0.11 ОБЯЗАТЕЛЬНАЯ САМОПРОВЕРКА AI: добавлена в канон
+- Drive folder isolation: артефакты только в chat_{id}/topic_{id}/
