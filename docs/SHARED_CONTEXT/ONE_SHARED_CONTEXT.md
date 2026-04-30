@@ -4083,3 +4083,12 @@ WorkItem + DirectionRegistry + 26 directions + shadow wiring в task_worker
 Commit a8955bb. WorkItem + DirectionRegistry + 26 directions + shadow wiring.
 monitor_jobs zombie fix: KillMode=control-group.
 Следующий: Stage 2 Capability Router.
+
+---
+## UPDATE 2026-04-30 финал — ВСЕ СТЕЙДЖИ ЗАКРЫТЫ
+
+Stage 1-7 установлены (e156253). Shadow mode. Старый pipeline жив.
+Новые core модули: work_item, direction_registry, capability_router,
+context_loader, quality_gate, search_engine, archive_engine, format_adapter.
+
+Следующий шаг: live тест цепочки + P2 dispatch по execution_plan.

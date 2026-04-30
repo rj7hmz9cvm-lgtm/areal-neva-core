@@ -494,3 +494,33 @@ KillMode=control-group — дочерние процессы убиваются 
 
 ### Stage 2 — Capability Router (P1)
 Берёт direction из payload, формирует execution_plan, shadow mode
+
+---
+## ЗАКРЫТО 2026-04-30 (финал сессии)
+
+### Stage 2 Capability Router ✅ ef9b269
+### Stage 3 Context Loader ✅ e52c1d8
+### Stage 4 Quality Gate ✅ 14675cf
+### Stage 5 Search Engine ✅ 15c8753
+### Stage 6 Archive Engine ✅ 967b356
+### Stage 7 Format Adapter ✅ e156253
+
+---
+## ОТКРЫТО (следующий приоритет)
+
+### P1 — Live тест всей цепочки
+Отправить задачу в бот, проверить что в логах идут все FULLFIX маркеры:
+FULLFIX_DIRECTION_KERNEL_STAGE_1
+FULLFIX_CAPABILITY_ROUTER_STAGE_2
+FULLFIX_SEARCH_ENGINE_STAGE_5 (если поиск)
+FULLFIX_CONTEXT_LOADER_STAGE_3
+FULLFIX_QUALITY_GATE_STAGE_4
+FULLFIX_ARCHIVE_ENGINE_STAGE_6
+FULLFIX_FORMAT_ADAPTER_STAGE_7
+
+### P2 — Подключение реального dispatch по execution_plan
+Сейчас execution_plan формируется но не используется для маршрутизации.
+Stage 4 dispatch: router.route() → вызов реального движка по engine из плана.
+
+### P3 — memory_api /archive endpoint
+Archive Engine пишет в POST /archive но endpoint не реализован в memory_api_server.py
