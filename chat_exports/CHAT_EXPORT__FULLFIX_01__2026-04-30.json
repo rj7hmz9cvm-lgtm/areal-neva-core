@@ -1,0 +1,37 @@
+{
+  "chat_id": "claude_session_30_04_2026_FULLFIX_01",
+  "chat_name": "AREAL-NEVA ORCHESTRA — FULLFIX_01 30.04.2026",
+  "exported_at": "2026-04-30T10:30:00+03:00",
+  "source_model": "Claude Sonnet 4.6",
+  "fullfix_01_verified": {
+    "PATCH_TEMPLATE_MODEL_EXTRACTOR_V1": "core/project_engine.py — VERIFIED",
+    "PATCH_PROJECT_TEMPLATE_STORAGE_V1": "core/template_manager.py — VERIFIED",
+    "PATCH_TEMPLATE_INTENT_BRANCH_V1": "core/artifact_pipeline.py — VERIFIED",
+    "PATCH_CONFIRM_ONLY_ON_DONE_V1": "task_worker.py 2073 — VERIFIED",
+    "PATCH_CONFIRM_GUARD_C_V1": "task_worker.py 1711 — VERIFIED"
+  },
+  "live_test": {
+    "file": "ПРОЕКТ КД кровля 5.pdf",
+    "task_id": "2a249e66-8399-4994-8211-dcad82496f18",
+    "topic_id": 210,
+    "state": "AWAITING_CONFIRMATION",
+    "result_preview": "PROJECT_TEMPLATE_MODEL создан / Раздел: АР / Структура: план, Фасады, Разрез",
+    "timestamp": "2026-04-30T07:09:52"
+  },
+  "not_closed_p1": [
+    "voice confirm (telegram_daemon.py ~601)",
+    "project_type regex improvement (КД→АР false positive)",
+    "sheet_register extraction improvement",
+    "estimate PDF → Excel → Drive",
+    "КЖ pipeline",
+    "DUPLICATE_GUARD / MULTI_FILE / LINK_INTAKE live tests"
+  ],
+  "canon_rules_applied": {
+    "0.3": "явное да от пользователя",
+    "0.4": "диагностика перед патчем",
+    "0.5": "bak → patch → compile → restart → journal",
+    "0.6": "ТЗ Claude → код GPT → вывод GPT → сверка Claude",
+    "0.8": "запрещённые файлы не тронуты",
+    "0.11": "самопроверка после написания ТЗ"
+  }
+}
