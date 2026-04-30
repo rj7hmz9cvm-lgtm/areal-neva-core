@@ -27,6 +27,12 @@ from dotenv import load_dotenv
 from core.ai_router import process_ai_task
 from core.reply_sender import send_reply, send_reply_ex
 try:
+    from core.temp_cleanup import cleanup_file as _tc_file, cleanup_task_temps as _tc_task, cleanup_after_upload as _tc_upload  # TEMP_CLEANUP_V1_WIRED
+except Exception:
+    _tc_file = lambda p: False
+    _tc_task = lambda t: 0
+    _tc_upload = lambda l: 0
+try:
     from core.technadzor_engine import process_technadzor as _te_process, is_technadzor_intent as _te_intent  # TECHNADZOR_ENGINE_V1_WIRED
 except Exception:
     _te_process = lambda *a, **kw: {"ok": False, "result_text": "", "artifact": None, "error_code": "IMPORT_FAIL"}
@@ -2275,6 +2281,13 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
                     upload_res = await upload_file_to_topic(artifact_path, artifact_name, chat_id, topic_id)
                     if isinstance(upload_res, dict) and upload_res.get("ok") and upload_res.get("drive_file_id"):
                         result = summary + f"\n\nАртефакт: https://drive.google.com/file/d/{upload_res.get('drive_file_id')}/view"
+                    # === TEMP_CLEANUP_AFTER_UPLOAD_V1 ===
+                    try:
+                        _tc_upload([local_path])
+                        _tc_task(task_id)
+                    except Exception:
+                        pass
+                    # === END TEMP_CLEANUP_AFTER_UPLOAD_V1 ===
                         # === PATCH: save_pin + save_memory + log ===
                         try:
                             save_pin(chat_id, task_id, result, topic_id)

@@ -48,6 +48,27 @@ def detect_format(text: str) -> str:
     elif any(x in t for x in FORMAT_TRIGGERS["excel"]): return "excel"
     return "excel"
 
+def format_priority(file_name: str, available_files: list = None) -> str:
+    """FORMAT_PRIORITY_V1 — DWG/DXF > XLSX > DOCX > PDF > IMAGE"""
+    files = available_files or [file_name]
+    # Приоритет по канону §11.9
+    for ext in [".dwg", ".dxf"]:
+        if any(f.lower().endswith(ext) for f in files):
+            return "dwg"
+    for ext in [".xlsx", ".xls", ".csv"]:
+        if any(f.lower().endswith(ext) for f in files):
+            return "excel"
+    for ext in [".docx", ".doc"]:
+        if any(f.lower().endswith(ext) for f in files):
+            return "word"
+    for ext in [".pdf"]:
+        if any(f.lower().endswith(ext) for f in files):
+            return "pdf"
+    for ext in [".jpg", ".jpeg", ".png", ".heic", ".webp", ".tiff", ".bmp"]:
+        if any(f.lower().endswith(ext) for f in files):
+            return "image"
+    return "unknown"
+
 def get_topic_role(topic_id: int) -> str:
     try:
         import sqlite3
@@ -74,7 +95,10 @@ def mark_offer_sent(tid): _OFFER_SENT[tid] = True
 def is_offer_sent(tid): return _OFFER_SENT.get(tid, False)
 # === END CANON_PASS_INTAKE_OFFER_SENT ===
 
-def should_ask_clarification(raw_input: str, has_file: bool) -> bool:
+def should_ask_clarification(raw_input: str, has_file: bool, already_asked: bool = False) -> bool:
+    # === ANTI_REPEAT_V1 — не спрашивать если уже спрашивали ===
+    if already_asked:
+        return False
     if not has_file: return False
     return detect_intent(raw_input) is None
 
