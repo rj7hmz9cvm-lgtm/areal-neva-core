@@ -338,7 +338,7 @@ def create_estimate_files(raw_input: str, task_id: str, topic_id: int = 0) -> Di
         f"Итого: {total} руб\n"
         f"PDF: {pdf_link}\n"
         f"XLSX: {xlsx_link}\n"
-        f"MANIFEST: {manifest_link or ''}\n\n"
+        ""
         "Доволен результатом? Ответь: Да / Уточни / Правки"
     )
     return {
@@ -353,6 +353,7 @@ def create_estimate_files(raw_input: str, task_id: str, topic_id: int = 0) -> Di
         "rows": rows,
     }
 
+# === FULLFIX_16_OCE_MSG_STRIP: manifest removed from message strings ===
 # === END FULLFIX_10_TOTAL_CLOSURE_ENGINE ===
 
 # === FULLFIX_12_COMPACT_PROJECT_PDF_LAYOUT ===
