@@ -1164,3 +1164,540 @@ async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id
 
 # === END FULLFIX_05_REAL_PROJECT_ENGINE ===
 
+
+# === FULLFIX_06_FINAL_PROJECT_TEMPLATE_REPLAY ===
+import os as _os_ff06
+import re as _re_ff06
+import json as _json_ff06
+import glob as _glob_ff06
+import tempfile as _tempfile_ff06
+from pathlib import Path as _Path_ff06
+from datetime import datetime as _dt_ff06
+
+def _ff06_clean_text(v, limit=5000):
+    return str(v or "").replace("\x00", " ").strip()[:limit]
+
+def _ff06_find_font():
+    candidates = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed.ttf",
+        "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
+    ]
+    for x in candidates:
+        if _os_ff06.path.exists(x):
+            return x
+    return ""
+
+def _ff06_latest_template(topic_id=0, preferred_section=""):
+    base = "/root/.areal-neva-core/data/project_templates"
+    files = sorted(
+        _glob_ff06.glob(_os_ff06.path.join(base, "PROJECT_TEMPLATE_MODEL__*.json")),
+        key=lambda x: _os_ff06.path.getmtime(x),
+        reverse=True,
+    )
+    if not files:
+        return {}
+    topic_id = int(topic_id or 0)
+    preferred_section = _ff06_clean_text(preferred_section).upper()
+    best = None
+    for fp in files:
+        try:
+            data = _json_ff06.loads(_Path_ff06(fp).read_text(encoding="utf-8"))
+            data["_template_file"] = fp
+            pt = _ff06_clean_text(data.get("project_type")).upper()
+            dtid = int(data.get("topic_id", 0) or 0)
+            if topic_id and dtid == topic_id and preferred_section and pt == preferred_section:
+                return data
+            if topic_id and dtid == topic_id and not best:
+                best = data
+            if preferred_section and pt == preferred_section and not best:
+                best = data
+            if not best:
+                best = data
+        except Exception:
+            continue
+    return best or {}
+
+def _ff06_parse_request(raw_input, template_hint=""):
+    text = _ff06_clean_text(raw_input, 10000)
+    low = text.lower()
+    out = {
+        "section": "КЖ",
+        "project_name": "Проект фундаментной плиты",
+        "length_m": 10.0,
+        "width_m": 10.0,
+        "slab_mm": 200,
+        "sand_mm": 300,
+        "gravel_mm": 100,
+        "concrete_class": "B25",
+        "rebar_class": "A500",
+        "rebar_diam_mm": 12,
+        "rebar_step_mm": 200,
+        "raw_input": text,
+        "template_hint": template_hint or "",
+    }
+
+    if "кд" in low or "кров" in low or "строп" in low:
+        out["section"] = "КД"
+        out["project_name"] = "Проект кровли"
+    if "ар" in low and "фундамент" not in low and "кров" not in low:
+        out["section"] = "АР"
+        out["project_name"] = "Архитектурный раздел"
+    if "кж" in low or "фундамент" in low or "плит" in low:
+        out["section"] = "КЖ"
+        out["project_name"] = "Проект фундаментной плиты"
+
+    m = _re_ff06.search(r"(\d+(?:[,.]\d+)?)\s*[xх×]\s*(\d+(?:[,.]\d+)?)\s*(?:м|m)?", low)
+    if m:
+        out["length_m"] = float(m.group(1).replace(",", "."))
+        out["width_m"] = float(m.group(2).replace(",", "."))
+
+    def mm(keys, default):
+        for key in keys:
+            mmx = _re_ff06.search(key + r".{0,40}?(\d{2,4})\s*мм", low)
+            if mmx:
+                return int(mmx.group(1))
+        return default
+
+    out["slab_mm"] = mm(["толщина", "плита", "бетон"], out["slab_mm"])
+    out["sand_mm"] = mm(["песчан", "песок"], out["sand_mm"])
+    out["gravel_mm"] = mm(["щеб", "основан"], out["gravel_mm"])
+    out["rebar_step_mm"] = mm(["шаг"], out["rebar_step_mm"])
+
+    md = _re_ff06.search(r"(?:ø|Ø|ф|диаметр)\s*(\d{1,2})", low)
+    if md:
+        out["rebar_diam_mm"] = int(md.group(1))
+    mc = _re_ff06.search(r"\b[вbВB]\s*([123456789]\d)\b", text)
+    if mc:
+        out["concrete_class"] = "B" + mc.group(1)
+    ma = _re_ff06.search(r"\bA\s*([245]\d{2})\b", text, _re_ff06.I)
+    if ma:
+        out["rebar_class"] = "A" + ma.group(1)
+
+    return out
+
+def _ff06_sheet_rows(sheet_register, section):
+    rows = []
+    for i, sh in enumerate(sheet_register or [], 1):
+        if isinstance(sh, dict):
+            mark = _ff06_clean_text(sh.get("mark") or section, 20) or section
+            num = _ff06_clean_text(sh.get("number") or str(i), 30) or str(i)
+            title = _ff06_clean_text(sh.get("title") or sh.get("name") or "", 180)
+            if not title:
+                title = f"Лист {num}"
+            rows.append({"mark": mark, "number": num, "title": title})
+        else:
+            raw = _ff06_clean_text(sh, 180)
+            if not raw:
+                continue
+            rows.append({"mark": section, "number": str(i), "title": raw})
+    return rows
+
+def _ff06_material_rows(materials, data):
+    rows = []
+    for x in materials or []:
+        if isinstance(x, dict):
+            name = _ff06_clean_text(x.get("name") or x.get("material") or x.get("title") or "Материал", 180)
+            unit = _ff06_clean_text(x.get("unit") or x.get("ед") or "шт", 30)
+            qty = x.get("quantity", x.get("qty", x.get("count", "-")))
+            note = _ff06_clean_text(x.get("note") or "", 120)
+            rows.append((name, unit, qty, note))
+        else:
+            name = _ff06_clean_text(x, 180)
+            if name:
+                rows.append((name, "по проекту", "-", "из шаблона"))
+    if rows:
+        return rows[:80]
+
+    L = float(data["length_m"])
+    W = float(data["width_m"])
+    area = L * W
+    slab = int(data["slab_mm"])
+    sand = int(data["sand_mm"])
+    gravel = int(data["gravel_mm"])
+    step = max(int(data["rebar_step_mm"]), 50)
+    bars_x = int((W * 1000) / step) + 1
+    bars_y = int((L * 1000) / step) + 1
+    rebar_m = round((bars_x * L + bars_y * W) * 2, 1)
+
+    return [
+        (f"Бетон {data['concrete_class']}", "м3", round(area * slab / 1000, 3), "фундаментная плита"),
+        ("Песчаная подушка", "м3", round(area * sand / 1000, 3), ""),
+        ("Щебёночное основание", "м3", round(area * gravel / 1000, 3), ""),
+        (f"Арматура {data['rebar_class']} Ø{data['rebar_diam_mm']} шаг {step}", "п.м", rebar_m, "верхняя и нижняя сетка"),
+    ]
+
+def _ff06_register_font():
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    font_path = _ff06_find_font()
+    if font_path:
+        try:
+            pdfmetrics.registerFont(TTFont("ArealDejaVu", font_path))
+            return "ArealDejaVu"
+        except Exception:
+            pass
+    return "Helvetica"
+
+def _ff06_draw_frame(c, page_w, page_h, sheet, sheet_no, sheet_total, font):
+    from reportlab.lib.units import mm
+    c.setLineWidth(0.7)
+    c.rect(10*mm, 10*mm, page_w - 20*mm, page_h - 20*mm)
+    c.rect(page_w - 190*mm, 10*mm, 180*mm, 40*mm)
+    c.line(page_w - 190*mm, 30*mm, page_w - 10*mm, 30*mm)
+    c.line(page_w - 80*mm, 10*mm, page_w - 80*mm, 50*mm)
+    c.line(page_w - 45*mm, 10*mm, page_w - 45*mm, 50*mm)
+    c.setFont(font, 8)
+    c.drawString(page_w - 187*mm, 42*mm, "AREAL-NEVA")
+    c.drawString(page_w - 187*mm, 34*mm, _ff06_clean_text(sheet.get("title"), 80))
+    c.drawString(page_w - 77*mm, 34*mm, f"Лист {sheet_no}")
+    c.drawString(page_w - 42*mm, 34*mm, f"Листов {sheet_total}")
+    c.setFont(font, 14)
+    c.drawString(18*mm, page_h - 22*mm, f"{sheet.get('mark')} {sheet.get('number')} — {sheet.get('title')}")
+
+def _ff06_write_pdf(path, data, template, sheets, material_rows):
+    from reportlab.lib.pagesizes import A3, landscape
+    from reportlab.lib.units import mm
+    from reportlab.pdfgen import canvas
+
+    font = _ff06_register_font()
+    page_w, page_h = landscape(A3)
+    c = canvas.Canvas(path, pagesize=landscape(A3))
+
+    L = float(data["length_m"])
+    W = float(data["width_m"])
+    slab = int(data["slab_mm"])
+    sand = int(data["sand_mm"])
+    gravel = int(data["gravel_mm"])
+    step = int(data["rebar_step_mm"])
+    rd = int(data["rebar_diam_mm"])
+    section = data["section"]
+
+    for idx, sheet in enumerate(sheets, 1):
+        _ff06_draw_frame(c, page_w, page_h, sheet, idx, len(sheets), font)
+        title_low = (sheet.get("title") or "").lower()
+
+        if any(x in title_low for x in ("общие", "данные", "пояснит", "исходн")):
+            y = 260
+            lines = [
+                f"Проект: {data['project_name']}",
+                f"Раздел: {section}",
+                f"Основа генерации: сохранённый PROJECT_TEMPLATE_MODEL",
+                f"Шаблон: {template.get('_template_file', '')}",
+                f"Плита: {L:g} x {W:g} м, толщина {slab} мм",
+                f"Основание: щебень {gravel} мм, песчаная подушка {sand} мм",
+                f"Бетон: {data['concrete_class']}",
+                f"Арматура: {data['rebar_class']} Ø{rd}, шаг {step} мм",
+            ]
+            c.setFont(font, 10)
+            for line in lines:
+                c.drawString(25*mm, y*mm, line)
+                y -= 8
+
+        elif any(x in title_low for x in ("ведомость лист", "состав лист", "листов")):
+            y = 260
+            c.setFont(font, 10)
+            for j, sh in enumerate(sheets, 1):
+                c.drawString(25*mm, y*mm, f"{j}. {sh['mark']} {sh['number']} — {sh['title']}")
+                y -= 7
+
+        elif any(x in title_low for x in ("план", "плит", "схема")):
+            x0, y0 = 70*mm, 60*mm
+            scale = min((page_w - 150*mm) / (L * 1000), 115*mm / (W * 1000))
+            rw = L * 1000 * scale
+            rh = W * 1000 * scale
+            c.setLineWidth(1.1)
+            c.rect(x0, y0, rw, rh)
+            c.setDash(4, 3)
+            c.line(x0, y0 + rh / 2, x0 + rw, y0 + rh / 2)
+            c.line(x0 + rw / 2, y0, x0 + rw / 2, y0 + rh)
+            c.setDash()
+            step_draw = max(0.7*mm, step * scale)
+            c.setLineWidth(0.25)
+            xx = x0 + step_draw
+            while xx < x0 + rw:
+                c.line(xx, y0, xx, y0 + rh)
+                xx += step_draw
+            yy = y0 + step_draw
+            while yy < y0 + rh:
+                c.line(x0, yy, x0 + rw, yy)
+                yy += step_draw
+            c.setFont(font, 9)
+            c.drawString(x0, y0 - 8*mm, f"{L:g} м")
+            c.saveState()
+            c.translate(x0 - 8*mm, y0)
+            c.rotate(90)
+            c.drawString(0, 0, f"{W:g} м")
+            c.restoreState()
+            c.setFont(font, 10)
+            c.drawString(25*mm, 260*mm, f"Армирование: {data['rebar_class']} Ø{rd}, шаг {step} мм")
+
+        elif any(x in title_low for x in ("разрез", "сечени", "1-1")):
+            bx, by = 55*mm, 70*mm
+            total = slab + gravel + sand
+            k = 105*mm / total
+            ycur = by
+            c.setLineWidth(0.9)
+            for name, th, note in [
+                ("Фундаментная плита", slab, f"Бетон {data['concrete_class']}"),
+                ("Щебёночное основание", gravel, "Щебень"),
+                ("Песчаная подушка", sand, "Песок"),
+            ]:
+                hh = th * k
+                c.rect(bx, ycur, 230*mm, hh)
+                c.setFont(font, 10)
+                c.drawString(bx + 5*mm, ycur + hh/2, f"{name}: {th} мм — {note}")
+                ycur += hh
+            c.setFont(font, 10)
+            c.drawString(25*mm, 240*mm, "Разрез 1-1")
+
+        elif any(x in title_low for x in ("армир", "арматур", "сетка")):
+            x0, y0 = 70*mm, 60*mm
+            scale = min((page_w - 150*mm) / (L * 1000), 115*mm / (W * 1000))
+            rw = L * 1000 * scale
+            rh = W * 1000 * scale
+            c.setLineWidth(1.0)
+            c.rect(x0, y0, rw, rh)
+            step_draw = max(1.0*mm, step * scale)
+            c.setLineWidth(0.35)
+            xx = x0 + step_draw
+            while xx < x0 + rw:
+                c.line(xx, y0, xx, y0 + rh)
+                xx += step_draw
+            yy = y0 + step_draw
+            while yy < y0 + rh:
+                c.line(x0, yy, x0 + rw, yy)
+                yy += step_draw
+            c.setFont(font, 10)
+            c.drawString(25*mm, 260*mm, f"Верхняя и нижняя сетки: {data['rebar_class']} Ø{rd}, шаг {step} мм")
+
+        elif any(x in title_low for x in ("специф", "материал", "ведомость объем", "ведомость объём")):
+            y = 260
+            c.setFont(font, 10)
+            c.drawString(25*mm, y*mm, "№")
+            c.drawString(40*mm, y*mm, "Наименование")
+            c.drawString(170*mm, y*mm, "Ед")
+            c.drawString(195*mm, y*mm, "Кол-во")
+            c.drawString(230*mm, y*mm, "Примечание")
+            y -= 8
+            for j, row in enumerate(material_rows[:28], 1):
+                c.drawString(25*mm, y*mm, str(j))
+                c.drawString(40*mm, y*mm, _ff06_clean_text(row[0], 70))
+                c.drawString(170*mm, y*mm, _ff06_clean_text(row[1], 12))
+                c.drawString(195*mm, y*mm, _ff06_clean_text(row[2], 18))
+                c.drawString(230*mm, y*mm, _ff06_clean_text(row[3], 50))
+                y -= 7
+
+        else:
+            y = 250
+            c.setFont(font, 10)
+            c.drawString(25*mm, y*mm, f"Лист выполнен по структуре шаблона: {sheet['title']}")
+            y -= 10
+            c.drawString(25*mm, y*mm, f"Раздел: {section}")
+            y -= 8
+            c.drawString(25*mm, y*mm, f"Параметры: {L:g} x {W:g} м, бетон {data['concrete_class']}")
+
+        c.showPage()
+
+    c.save()
+    return path
+
+def _ff06_write_dxf(path, data, sheets, material_rows):
+    import ezdxf
+    doc = ezdxf.new("R2010")
+    doc.header["$INSUNITS"] = 4
+    msp = doc.modelspace()
+
+    for layer, color in [("KJ_PLAN", 7), ("KJ_AXES", 2), ("KJ_REBAR", 3), ("KJ_TEXT", 1), ("KJ_SECTION", 5)]:
+        if layer not in doc.layers:
+            doc.layers.add(layer, color=color)
+
+    L = float(data["length_m"]) * 1000
+    W = float(data["width_m"]) * 1000
+    slab = int(data["slab_mm"])
+    sand = int(data["sand_mm"])
+    gravel = int(data["gravel_mm"])
+    step = int(data["rebar_step_mm"])
+
+    msp.add_lwpolyline([(0,0), (L,0), (L,W), (0,W), (0,0)], dxfattribs={"layer": "KJ_PLAN"})
+    msp.add_line((L/2, 0), (L/2, W), dxfattribs={"layer": "KJ_AXES"})
+    msp.add_line((0, W/2), (L, W/2), dxfattribs={"layer": "KJ_AXES"})
+
+    x = step
+    while x < L:
+        msp.add_line((x, 0), (x, W), dxfattribs={"layer": "KJ_REBAR"})
+        x += step
+    y = step
+    while y < W:
+        msp.add_line((0, y), (L, y), dxfattribs={"layer": "KJ_REBAR"})
+        y += step
+
+    msp.add_text(f"FOUNDATION SLAB {L/1000:g} x {W/1000:g} m", dxfattribs={"height": 250, "layer": "KJ_TEXT"}).set_placement((0, -700))
+    msp.add_text(f"SLAB {slab} mm / GRAVEL {gravel} mm / SAND {sand} mm", dxfattribs={"height": 250, "layer": "KJ_TEXT"}).set_placement((0, -1100))
+    msp.add_text(f"REBAR {data['rebar_class']} D{data['rebar_diam_mm']} STEP {step} mm", dxfattribs={"height": 250, "layer": "KJ_TEXT"}).set_placement((0, -1500))
+
+    sx, sy = 0, -3000
+    widths = [slab, gravel, sand]
+    names = ["SLAB", "GRAVEL", "SAND"]
+    cur = sy
+    for name, th in zip(names, widths):
+        msp.add_lwpolyline([(sx,cur), (sx+L,cur), (sx+L,cur-th), (sx,cur-th), (sx,cur)], dxfattribs={"layer": "KJ_SECTION"})
+        msp.add_text(f"{name} {th} mm", dxfattribs={"height": 220, "layer": "KJ_TEXT"}).set_placement((sx + 300, cur - th/2))
+        cur -= th
+
+    doc.saveas(path)
+    return path
+
+def _ff06_write_xlsx(path, data, sheets, material_rows, template):
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment
+    wb = Workbook()
+
+    ws = wb.active
+    ws.title = "Ведомость листов"
+    ws.append(["№", "Марка", "Лист", "Наименование"])
+    for c in ws[1]:
+        c.font = Font(bold=True)
+        c.alignment = Alignment(horizontal="center")
+    for i, sh in enumerate(sheets, 1):
+        ws.append([i, sh["mark"], sh["number"], sh["title"]])
+    ws.column_dimensions["D"].width = 80
+
+    ws2 = wb.create_sheet("Спецификация")
+    ws2.append(["№", "Наименование", "Ед. изм", "Кол-во", "Примечание"])
+    for c in ws2[1]:
+        c.font = Font(bold=True)
+    for i, row in enumerate(material_rows, 1):
+        ws2.append([i, row[0], row[1], row[2], row[3]])
+    ws2.column_dimensions["B"].width = 70
+    ws2.column_dimensions["E"].width = 50
+
+    ws3 = wb.create_sheet("Параметры")
+    for k in ["project_name", "section", "length_m", "width_m", "slab_mm", "sand_mm", "gravel_mm", "concrete_class", "rebar_class", "rebar_diam_mm", "rebar_step_mm"]:
+        ws3.append([k, data.get(k)])
+    ws3.append(["template_file", template.get("_template_file", "")])
+    ws3.column_dimensions["A"].width = 25
+    ws3.column_dimensions["B"].width = 80
+
+    wb.save(path)
+    return path
+
+async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", require_template: bool = True) -> dict:
+    data = _ff06_parse_request(raw_input, template_hint)
+    template = _ff06_latest_template(topic_id, data.get("section"))
+
+    res = {
+        "success": False,
+        "engine": "FULLFIX_06_FINAL_PROJECT_TEMPLATE_REPLAY",
+        "section": data["section"],
+        "pdf_path": "",
+        "dxf_path": "",
+        "xlsx_path": "",
+        "manifest_path": "",
+        "pdf_link": "",
+        "dxf_link": "",
+        "xlsx_link": "",
+        "manifest_link": "",
+        "template_file": "",
+        "sheet_count": 0,
+        "error": None,
+        "data": data,
+    }
+
+    if require_template and not template:
+        res["error"] = "PROJECT_TEMPLATE_MODEL_NOT_FOUND"
+        return res
+
+    sheets = _ff06_sheet_rows((template or {}).get("sheet_register") or [], data["section"])
+    if require_template and not sheets:
+        res["error"] = "PROJECT_TEMPLATE_MODEL_HAS_EMPTY_SHEET_REGISTER"
+        res["template_file"] = (template or {}).get("_template_file", "")
+        return res
+
+    if not sheets:
+        res["error"] = "NO_TEMPLATE_SHEETS_NO_PROJECT"
+        return res
+
+    material_rows = _ff06_material_rows((template or {}).get("materials") or [], data)
+
+    stamp = _dt_ff06.utcnow().strftime("%Y%m%d_%H%M%S")
+    safe_task = _re_ff06.sub(r"[^A-Za-z0-9_-]+", "_", str(task_id or "manual"))[:24]
+    out_dir = _Path_ff06(_tempfile_ff06.gettempdir()) / f"areal_project_ff06_{safe_task}_{stamp}"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    pdf_path = str(out_dir / f"{data['section']}_PROJECT_{safe_task}.pdf")
+    dxf_path = str(out_dir / f"{data['section']}_PROJECT_{safe_task}.dxf")
+    xlsx_path = str(out_dir / f"{data['section']}_SPEC_{safe_task}.xlsx")
+    manifest_path = str(out_dir / f"{data['section']}_MANIFEST_{safe_task}.json")
+
+    try:
+        _ff06_write_pdf(pdf_path, data, template, sheets, material_rows)
+        _ff06_write_dxf(dxf_path, data, sheets, material_rows)
+        _ff06_write_xlsx(xlsx_path, data, sheets, material_rows, template)
+
+        checks = [
+            ("PDF_NOT_CREATED", pdf_path, 2500),
+            ("DXF_NOT_CREATED", dxf_path, 500),
+            ("XLSX_NOT_CREATED", xlsx_path, 1000),
+        ]
+        for err, fp, min_size in checks:
+            if not _os_ff06.path.exists(fp) or _os_ff06.path.getsize(fp) < min_size:
+                res["error"] = err
+                return res
+
+        manifest = {
+            "schema": "AREAL_PROJECT_ARTIFACT_V3",
+            "engine": "FULLFIX_06_FINAL_PROJECT_TEMPLATE_REPLAY",
+            "created_at": _dt_ff06.utcnow().isoformat() + "Z",
+            "task_id": task_id,
+            "topic_id": topic_id,
+            "input": raw_input,
+            "template_file": template.get("_template_file", ""),
+            "sheet_count": len(sheets),
+            "sheets": sheets,
+            "data": data,
+            "artifacts": {
+                "pdf_path": pdf_path,
+                "dxf_path": dxf_path,
+                "xlsx_path": xlsx_path,
+            },
+        }
+        _Path_ff06(manifest_path).write_text(_json_ff06.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        from core.engine_base import upload_artifact_to_drive
+        pdf_link = upload_artifact_to_drive(pdf_path, task_id, topic_id)
+        dxf_link = upload_artifact_to_drive(dxf_path, task_id, topic_id)
+        xlsx_link = upload_artifact_to_drive(xlsx_path, task_id, topic_id)
+        manifest_link = upload_artifact_to_drive(manifest_path, task_id, topic_id)
+
+        if not pdf_link:
+            res["error"] = "PDF_UPLOAD_FAILED"
+            return res
+        if not dxf_link:
+            res["error"] = "DXF_UPLOAD_FAILED"
+            return res
+        if not xlsx_link:
+            res["error"] = "XLSX_UPLOAD_FAILED"
+            return res
+
+        res.update({
+            "success": True,
+            "pdf_path": pdf_path,
+            "dxf_path": dxf_path,
+            "xlsx_path": xlsx_path,
+            "manifest_path": manifest_path,
+            "pdf_link": str(pdf_link),
+            "dxf_link": str(dxf_link),
+            "xlsx_link": str(xlsx_link),
+            "manifest_link": str(manifest_link or ""),
+            "template_file": template.get("_template_file", ""),
+            "sheet_count": len(sheets),
+        })
+        return res
+
+    except Exception as e:
+        res["error"] = str(e)[:500]
+        return res
+
+# === END FULLFIX_06_FINAL_PROJECT_TEMPLATE_REPLAY ===
+

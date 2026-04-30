@@ -782,6 +782,63 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
     raw_input = _clean(_s(_task_field(task, "raw_input")), 4000)
     reply_to = _task_field(task, "reply_to_message_id", None)
 
+    # === FULLFIX_06_FINAL_PROJECT_TEMPLATE_ROUTE ===
+    _ff06_low = str(raw_input or "").lower()
+    _ff06_project_triggers = (
+        "создай проект",
+        "сделай проект",
+        "разработай проект",
+        "готовый проект",
+        "проект фундамент",
+        "проект фундаментной плиты",
+        "проект кровли",
+        "проект по образцу",
+        "проект по шаблону",
+        "план фундаментной плиты",
+        "чертеж фундаментной плиты",
+        "чертёж фундаментной плиты",
+    )
+    if any(x in _ff06_low for x in _ff06_project_triggers):
+        try:
+            from core.project_engine import create_project_pdf_dxf_artifact
+            _ff06_res = await create_project_pdf_dxf_artifact(str(raw_input), task_id, int(topic_id or 0), "", True)
+            if not isinstance(_ff06_res, dict) or not _ff06_res.get("success"):
+                _err = str((_ff06_res or {}).get("error", "PROJECT_FAILED"))[:300]
+                _update_task(conn, task_id, state="FAILED", result="Проект не создан: нет сохранённого шаблона или не созданы PDF/DXF/XLSX ссылки", error_message=_err)
+                _history(conn, task_id, "FULLFIX_06_PROJECT_FAILED:" + _err)
+                conn.commit()
+                _send_once(conn, task_id, chat_id, "Проект не создан: нет сохранённого шаблона или не созданы PDF/DXF/XLSX ссылки", reply_to, "project_failed_ff06")
+                return
+
+            _msg = (
+                "Проект создан по сохранённому шаблону\n"
+                f"Раздел: {_ff06_res.get('section')}\n"
+                f"Листов по шаблону: {_ff06_res.get('sheet_count')}\n"
+                f"Шаблон: {_ff06_res.get('template_file')}\n"
+                f"PDF: {_ff06_res.get('pdf_link')}\n"
+                f"DXF: {_ff06_res.get('dxf_link')}\n"
+                f"XLSX: {_ff06_res.get('xlsx_link')}\n"
+                f"MANIFEST: {_ff06_res.get('manifest_link')}\n\n"
+                "Доволен результатом? Ответь: Да / Уточни / Правки"
+            )
+            _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_msg, error_message="")
+            _history(conn, task_id, "FULLFIX_06_PROJECT_OK")
+            conn.commit()
+            _sent = _send_once_ex(conn, task_id, str(chat_id), _msg, reply_to, "project_result_ff06")
+            if isinstance(_sent, dict) and _sent.get("bot_message_id"):
+                _update_task(conn, task_id, bot_message_id=_sent["bot_message_id"])
+                conn.commit()
+            return
+        except Exception as _ff06_e:
+            _err = str(_ff06_e)[:500]
+            _update_task(conn, task_id, state="FAILED", result="Проект не создан: ошибка генерации PDF/DXF/XLSX", error_message=_err)
+            _history(conn, task_id, "FULLFIX_06_PROJECT_EXCEPTION:" + _err)
+            conn.commit()
+            _send_once(conn, task_id, chat_id, "Проект не создан: ошибка генерации PDF/DXF/XLSX", reply_to, "project_exception_ff06")
+            return
+    # === END FULLFIX_06_FINAL_PROJECT_TEMPLATE_ROUTE ===
+
+
     role = _detect_role_assignment(raw_input)
     if role:
         ask = f"Понял назначение чата так:\n{role}\n\nПодтверди или уточни"
