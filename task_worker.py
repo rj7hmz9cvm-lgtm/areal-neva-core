@@ -784,6 +784,52 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
 
 
 
+
+    # === FULLFIX_13A_SAMPLE_TEMPLATE_AND_TEMPLATE_ESTIMATE_ROUTE ===
+    try:
+        from core.sample_template_engine import (
+            handle_sample_template_intent as _ff13a_handle_sample_template_intent,
+            handle_template_estimate_intent as _ff13a_handle_template_estimate_intent,
+        )
+        # === FULLFIX_13A_ROUTE_LOCALS_FIX ===
+        # _handle_new has task/raw_input/reply_to locals, not input_type/reply_to_message_id locals
+        _ff13a_conn = conn
+        _ff13a_task_id = str(task_id or "")
+        _ff13a_chat_id = str(chat_id or "")
+        _ff13a_topic_id = int(topic_id or 0)
+        _ff13a_raw_input = str(raw_input or "")
+        _ff13a_input_type = str(_task_field(task, "input_type", "") or "")
+        _ff13a_reply_to = _task_field(task, "reply_to_message_id", None) or _task_field(task, "telegram_message_id", None)
+        # === END FULLFIX_13A_ROUTE_LOCALS_FIX ===
+        _ff13a_done = await _ff13a_handle_sample_template_intent(
+            conn=_ff13a_conn,
+            task_id=_ff13a_task_id,
+            chat_id=_ff13a_chat_id,
+            topic_id=_ff13a_topic_id,
+            raw_input=_ff13a_raw_input,
+            input_type=_ff13a_input_type,
+            reply_to_message_id=_ff13a_reply_to,
+        )
+        if _ff13a_done:
+            return
+        _ff13a_done = await _ff13a_handle_template_estimate_intent(
+            conn=_ff13a_conn,
+            task_id=_ff13a_task_id,
+            chat_id=_ff13a_chat_id,
+            topic_id=_ff13a_topic_id,
+            raw_input=_ff13a_raw_input,
+            input_type=_ff13a_input_type,
+            reply_to_message_id=_ff13a_reply_to,
+        )
+        if _ff13a_done:
+            return
+    except Exception as _ff13a_err:
+        try:
+            logger.error("FULLFIX_13A_SAMPLE_ROUTE_ERROR task=%s err=%s", task_id, str(_ff13a_err))
+        except Exception:
+            pass
+    # === END FULLFIX_13A_SAMPLE_TEMPLATE_AND_TEMPLATE_ESTIMATE_ROUTE ===
+
     # === FULLFIX_10_TOTAL_CLOSURE_UNIVERSAL_ROUTE ===
     try:
         from core.orchestra_closure_engine import (

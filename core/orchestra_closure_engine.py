@@ -677,3 +677,14 @@ async def create_compact_project_documentation(raw_input: str, task_id: str, top
 # override public name inside this module
 create_full_project_documentation = create_compact_project_documentation
 # === END FULLFIX_12_COMPACT_PROJECT_PDF_LAYOUT ===
+
+# === FULLFIX_13A_SAMPLE_TEMPLATE_PUBLIC_HELPERS ===
+async def ff13a_create_estimate_from_saved_template(raw_input: str, task_id: str, chat_id: str, topic_id: int = 0) -> dict:
+    from core.sample_template_engine import create_estimate_from_saved_template
+    return await create_estimate_from_saved_template(raw_input, task_id, chat_id, topic_id)
+
+def ff13a_detect_sample_template_intent(raw_input: str, input_type: str = "text") -> bool:
+    from core.sample_template_engine import detect_sample_template_intent
+    return detect_sample_template_intent(raw_input, input_type)
+# === END FULLFIX_13A_SAMPLE_TEMPLATE_PUBLIC_HELPERS ===
+
