@@ -842,6 +842,84 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
             _send_once(conn, task_id, chat_id, "Принял правки. Делаю", reply_to, "revision_ok")
             return
 
+    # === FULLFIX_05_REQUIRE_REAL_PDF_DXF_PROJECT ===
+    _ff05_low = str(raw_input or "").lower()
+    _ff05_project_triggers = (
+        "создай проект",
+        "сделай проект",
+        "проект фундамент",
+        "проект фундаментной плиты",
+        "план фундамент",
+        "план фундаментной плиты",
+        "фундаментной плиты",
+        "проект по образцу",
+        "проект по шаблону",
+        "сделай по образцу",
+    )
+    if any(x in _ff05_low for x in _ff05_project_triggers):
+        try:
+            from core.project_engine import create_project_pdf_dxf_artifact
+            _ff05_res = await create_project_pdf_dxf_artifact(str(raw_input), task_id, int(topic_id or 0), "")
+            if not isinstance(_ff05_res, dict) or not _ff05_res.get("success"):
+                _err = str((_ff05_res or {}).get("error", "PROJECT_FAILED"))[:300]
+                _update_task(
+                    conn,
+                    task_id,
+                    state="FAILED",
+                    result="Проект не создан: нет PDF/DXF файла или ссылки",
+                    error_message=_err,
+                )
+                _history(conn, task_id, "FULLFIX_05_PROJECT_FAILED:" + _err)
+                conn.commit()
+                _send_once(
+                    conn,
+                    task_id,
+                    chat_id,
+                    "Проект не создан: нет PDF/DXF файла или ссылки",
+                    reply_to,
+                    "project_failed",
+                )
+                return
+
+            _pdf = str(_ff05_res.get("pdf_link") or "")
+            _dxf = str(_ff05_res.get("dxf_link") or "")
+            _manifest = str(_ff05_res.get("manifest_link") or "")
+            _sec = str(_ff05_res.get("section") or "КЖ")
+            _msg = (
+                f"Проект создан как PDF/DXF комплект\n"
+                f"Раздел: {_sec}\n"
+                f"PDF: {_pdf}\n"
+                f"DXF: {_dxf}\n"
+            )
+            if _manifest:
+                _msg += f"MANIFEST: {_manifest}\n"
+            _msg += "\nДоволен результатом? Ответь: Да / Уточни / Правки"
+
+            _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_msg, error_message="")
+            _history(conn, task_id, "FULLFIX_05_PROJECT_PDF_DXF_OK")
+            conn.commit()
+
+            _sent = _send_once_ex(conn, task_id, str(chat_id), _msg, reply_to, "project_pdf_dxf_result")
+            if isinstance(_sent, dict) and _sent.get("bot_message_id"):
+                _update_task(conn, task_id, bot_message_id=_sent["bot_message_id"])
+                conn.commit()
+            return
+
+        except Exception as _ff05_e:
+            _err = str(_ff05_e)[:500]
+            _update_task(
+                conn,
+                task_id,
+                state="FAILED",
+                result="Проект не создан: ошибка генерации PDF/DXF",
+                error_message=_err,
+            )
+            _history(conn, task_id, "FULLFIX_05_PROJECT_EXCEPTION:" + _err)
+            conn.commit()
+            _send_once(conn, task_id, chat_id, "Проект не создан: ошибка генерации PDF/DXF", reply_to, "project_exception")
+            return
+    # === END FULLFIX_05_REQUIRE_REAL_PDF_DXF_PROJECT ===
+
     pending_clarify = conn.execute(
         """
         SELECT id, COALESCE(raw_input,'') AS raw_input
@@ -866,6 +944,7 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
         conn.commit()
         _send_once(conn, task_id, chat_id, "Принял уточнение. Делаю", reply_to, "clarification_ok")
         return
+
 
     _update_task(conn, task_id, state="IN_PROGRESS", error_message="")
     _history(conn, task_id, "state:IN_PROGRESS")
