@@ -2059,9 +2059,7 @@ async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_
                         _t3_desc = _re3008.sub(r"напиши\s+код|написать\s+код","",str(raw_input or ""),flags=_re3008.I).strip()
                         if _t3_generate:
                             _t3_gen = await asyncio.wait_for(_t3_generate(_t3_desc,_t3_ctx),timeout=120)
-                            ai_result = _t3_gen + "
-
----
+                            ai_result = _t3_gen + "\n\n---\nПроверить код?"
 Проверить код?"
                     elif _t3_command == "verify":
                         _t3_code = _t3_extract(str(raw_input or ""))
