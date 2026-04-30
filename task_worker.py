@@ -27,6 +27,12 @@ from dotenv import load_dotenv
 from core.ai_router import process_ai_task
 from core.reply_sender import send_reply, send_reply_ex
 try:
+    from core.intake_offer_actions import needs_offer as _ioa_needs, get_offer_text as _ioa_text, parse_offer_reply as _ioa_parse  # INTAKE_OFFER_V1_WIRED
+except Exception:
+    _ioa_needs = lambda *a: False
+    _ioa_text = lambda: ""
+    _ioa_parse = lambda r: ""
+try:
     from core.search_session import get_session as _ss_get, create_session as _ss_create, update_session as _ss_update, extract_criteria as _ss_criteria  # SEARCH_SESSION_V1_WIRED
 except Exception:
     _ss_get = lambda *a: None
@@ -194,6 +200,17 @@ MEMORY_NOISE_MARKERS = [
     "не понимаю",
     "задайте вопрос",
 ]
+
+def _check_result_before_confirm(result: str, input_type: str = "text", intent: str = "") -> bool:
+    """RESULT_VALIDATOR_CALL_V1 — проверить result перед AWAITING_CONFIRMATION"""
+    try:
+        rv = _rv_validate(result, input_type=input_type, intent=intent)
+        if not rv.get("ok"):
+            logger.warning("RESULT_VALIDATOR_BLOCKED reason=%s result_prefix=%s", rv.get("reason"), str(result)[:80])
+            return False
+    except Exception as _rve:
+        logger.warning("RESULT_VALIDATOR_ERR %s", _rve)
+    return True
 
 def _is_memory_noise(text: str) -> bool:
     t = _clean(_s(text), 1000).lower()

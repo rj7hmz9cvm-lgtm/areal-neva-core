@@ -934,6 +934,14 @@ async def universal_handler(message: types.Message):
             _text_topic_id = getattr(message, "message_thread_id", None) or 0
             if await _handle_control_text(message, tg_id, text, lower, reply_to, _text_topic_id):
                 return
+            # === CHAT_GUARD_V1 ===
+            try:
+                from core.intent_lock import is_chat_only as _ig_chat
+                if _ig_chat(text):
+                    return  # короткие реакции не создают задачи
+            except Exception:
+                pass
+            # === END CHAT_GUARD_V1 ===
             await create_task(message, "text", text, "NEW")
             return
         
