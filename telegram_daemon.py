@@ -502,7 +502,7 @@ async def _handle_control_text(message, tg_id: int, text: str, lower: str, reply
                 await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, "rejected:WAITING_CLARIFICATION", now))
                 await db.execute("UPDATE pin SET state='CLOSED', updated_at=? WHERE task_id=? AND state='ACTIVE'", (now, parent_id))
                 await db.commit()
-            await message.answer("Уточните, что исправить")
+            await message.answer("Хорошо, доработаю. Подтверждение снято.  # FULLFIX_02_E")
             return True
 
     if parent_state == "WAITING_CLARIFICATION":
@@ -803,7 +803,7 @@ async def universal_handler(message: types.Message):
                     await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, "rejected:WAITING_CLARIFICATION", now_iso()))
                     await db.execute("UPDATE pin SET state = 'CLOSED', updated_at = ? WHERE task_id = ? AND state = 'ACTIVE'", (now_iso(), parent_id))
                     await db.commit()
-                await message.answer("Уточните, что исправить")
+                await message.answer("Хорошо, доработаю. Подтверждение снято.  # FULLFIX_02_E")
                 return
 
         if reply_to:
@@ -912,7 +912,7 @@ async def universal_handler(message: types.Message):
                             (now_iso(), parent_id)
                         )
                         await db.commit()
-                    await message.answer("Уточните, что исправить")
+                    await message.answer("Хорошо, доработаю. Подтверждение снято.  # FULLFIX_02_E")
                     return
             except Exception as _voice_confirm_err:
                 logger.error("VOICE_CONFIRM_DIRECT_ERROR chat=%s err=%s", tg_id, _voice_confirm_err)

@@ -89,6 +89,25 @@ def process_defect_act_sync(conn, task_id, chat_id, topic_id, raw_input, file_na
     if _ff20_vision_text:
         raw_input = str(raw_input or "") + "\n\n\u041e\u043f\u0438\u0441\u0430\u043d\u0438\u0435 \u0434\u0435\u0444\u0435\u043a\u0442\u0430: " + str(_ff20_vision_text)
     # === END FULLFIX_20_GEMINI_DEFECT_SYNC ===
+    # === NORMATIVE_DB_V1_WIRED ===
+    try:
+        import asyncio as _norm_aio
+        from core.normative_db import search_norms as _search_norms
+        _norm_desc = str(raw_input or "") + " " + str(_ff20_vision_text or "")
+        try:
+            _norm_loop = _norm_aio.get_running_loop()
+            _norm_results = []
+        except RuntimeError:
+            _norm_results = _norm_aio.run(_search_norms(_norm_desc))
+        if _norm_results:
+            _norm_lines = ["\n\nНормативные требования:"]
+            for _n in _norm_results:
+                _norm_lines.append(f"  {_n['norm_id']}: {_n['requirement'][:200]}")
+            raw_input = str(raw_input or "") + "\n".join(_norm_lines)
+    except Exception as _ne:
+        logger.warning("NORMATIVE_DB_V1_WIRED err=%s", _ne)
+    # === END NORMATIVE_DB_V1_WIRED ===
+
 
     try:
         caption = raw_input or file_name
