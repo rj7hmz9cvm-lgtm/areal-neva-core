@@ -1,171 +1,65 @@
-# LATEST_HANDOFF — 29.04.2026 01:40 MSK
+# LATEST_HANDOFF — 30.04.2026 03:10 MSK
 
 ## СЕРВЕР
 IP: 89.22.225.136 | Base: /root/.areal-neva-core
 Services: areal-task-worker ACTIVE | telegram-ingress ACTIVE | areal-memory-api ACTIVE
-DB: data/core.db (694 задачи) | memory.db (728KB)
 
-## ПАТЧИ СЕССИИ 28-29.04.2026 (все SYNTAX_OK, active)
+## ПАТЧИ СЕССИИ 30.04.2026 — ВСЕ VERIFIED/INSTALLED
 
-| Патч | Файл | Суть |
+| Патч | Файл | Статус |
 |---|---|---|
-| FIX_VOICE_GUARD_20260428 | telegram_daemon.py:961 | substring→word-boundary |
-| FIX_IS_SEARCH_20260428 | task_worker.py:2266 | SEARCH_PATTERNS→is_search |
-| FIX_SEARCH_CONTEXT_20260428 | task_worker.py:2248 | fresh search без старого контекста |
-| FIX_VOICE_REVISION_V2 | telegram_daemon.py:880+ | empty revision fix |
-| FIX_VOICE_CONFIRM_IN_PROGRESS | telegram_daemon.py:560 | голос confirm в IN_PROGRESS |
-| FIX_CRASHLOOP_3981 | task_worker.py:3981 | NameError p → p=__file__ |
-| FIX_CP8_ERROR_CLOSE | task_worker.py | CP8 estimate ошибки → FAILED не повисают |
-| FIX_CP8_SEARCH_TYPE | task_worker.py | input_type search → CP8 estimate hook |
-| FIX_EMPTY_AI_RETRY | task_worker.py:2297 | retry 3x при chars=0 |
-| FIX_DRIVE_OAUTH | task_worker.py:2569 | _download_from_drive_oauth через token.json |
-| FIX_ENV_EXPORT | .env:16 | убран export перед GITHUB_TOKEN |
+| CONTEXT_AGGREGATOR_V2 | tools/context_aggregator.py | VERIFIED ✅ |
+| PATCH_FILE_INTAKE_NEEDS_CONTEXT_V3_MINIMAL | task_worker.py | VERIFIED ✅ |
+| PATCH_DRIVE_GUARD_BEFORE_DOWNLOAD_V1 | task_worker.py | VERIFIED ✅ |
+| PATCH_WORKER_PICK_BEFORE_STALE_V1 | task_worker.py | VERIFIED ✅ |
+| PATCH_FIX_PFIN3_MENU_SHADOW_V1 | task_worker.py | VERIFIED ✅ |
+| PATCH_FILE_CHOICE_PRIORITY_V1 | task_worker.py | VERIFIED ✅ |
+| PATCH_ENGINE_BASE_RESTORE_SA_UPLOAD_V1 | core/engine_base.py | VERIFIED ✅ |
+| PATCH_DRIVE_DIRECT_OAUTH_V1 | core/engine_base.py | VERIFIED ✅ |
+| PATCH_DRIVE_OAUTH_PRIMARY_MYDRIVE_V1 | core/engine_base.py | VERIFIED ✅ |
+| PATCH_DRIVE_UPLOAD_AND_TG_FALLBACK_V1 | task_worker.py | INSTALLED |
+| core/telegram_artifact_fallback.py | создан | INSTALLED |
 
-## LIVE ТЕСТ 29.04.2026
-- Смета текстом: «Сделай смету: профлист 100 м², цена 450 руб/м²» → ответ получен ✅
-- CP8 search type fix → смета теперь ловится из topic_500 ✅
-- Drive OAuth → token.json вместо credentials.json ✅
-- Worker: active, NRestarts=0 ✅
+## VERIFIED LIVE TESTS
 
-## НЕ ЗАКРЫТО (тест завтра)
-- Смета → Excel файл на Drive (CP8 срабатывает, но upload не протестирован)
-- КЖ PDF pipeline (Drive OAuth fix должен помочь)
-- Дублирование ответа в разные топики
-- Голос 00:02-00:04 → revision вместо confirm
-- Нормы СП/ГОСТ в technadzor_engine
-- Шаблоны, multi-file
+- drive_file NEW → NEEDS_CONTEXT → меню по topic_id ✅
+- reply/voice choice → FILE_CHOICE_PARSED → IN_PROGRESS ✅
+- estimate engine → локальный artifact → "Нормализовано позиций: 32" ✅
+- Drive upload → drive.google.com link → UPLOAD_OK ✅
+- OAuth app переведён в Production → refresh_token не протухает ✅
+- engine_base.py восстановлен из bak → import OK ✅
 
-## DB STATE
-ARCHIVED: 371 | DONE: 98 | CANCELLED: 165 | FAILED: 60
+## ТЕКУЩАЯ АРХИТЕКТУРА DRIVE UPLOAD
 
+1. Primary: Direct OAuth через `core/engine_base.upload_artifact_to_drive`
+   - refresh_token из GDRIVE_REFRESH_TOKEN в .env + systemd override
+   - НЕ Service Account (storageQuotaExceeded для My Drive)
+   - НЕ google_io.py (drive.file scope ограничен)
+2. Fallback: `core/telegram_artifact_fallback.send_artifact_to_telegram`
+   - sendDocument через Bot API
+   - topic_id > 0 → message_thread_id передаётся
+   - topic_id == 0 → message_thread_id не передаётся
 
-## ПАТЧИ СЕССИИ 29.04.2026
+## OAUTH СТАТУС
 
-| Патч | Суть |
-|---|---|
-| CRON_AGGREGATOR | context_aggregator.py в cron каждый час, ONE_SHARED_CONTEXT.md обновляется автоматически |
-## SESSION 29.04.2026 RESULTS
+- App: areal-neva-automation → **In Production** ✅
+- Client: AI_ORCHESTRA_NEW (Desktop)
+- GDRIVE_REFRESH_TOKEN: обновлён в .env и systemd override
+- Scope: https://www.googleapis.com/auth/drive (полный)
+- Папка: AI_ORCHESTRA (13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB) — обычная My Drive
 
-| Patch | File | Status |
-|---|---|---|
-| CRON_AGGREGATOR | tools/context_aggregator.py | INSTALLED, not battle-tested |
-| P0_1_TEXT_ESTIMATE_FORCE_EXCEL_UPLOAD_V1 | core/estimate_engine.py | INSTALLED, not battle-tested |
+## НЕ ЗАКРЫТО (требует live-теста)
 
-SYNTAX_OK. Service active, NRestarts=0.
-
-## ALL_CONTOURS PATCH 29.04.2026
-
-| Patch | Status |
-|---|---|
-| ALL_CONTOURS_ROUTE_FILE_V2 | INSTALLED, not battle-tested |
-| ALL_CONTOURS_TECHNADZOR_NORMS_V2 | INSTALLED, not battle-tested |
-| ALL_CONTOURS_TEMPLATE_MANAGER_V2 | INSTALLED, not battle-tested |
-| ALL_CONTOURS_CP8_DRIVE_LINK_V2 | INSTALLED, not battle-tested |
-| ALL_CONTOURS_SHORT_VOICE_CONFIRM_V2 | INSTALLED, not battle-tested |
-
-## ПАТЧ 29.04.2026 — ФИНАЛЬНЫЙ ПРОХОД
-
-### УСТАНОВЛЕНО И ПОДТВЕРЖДЕНО ТЕРМИНАЛОМ:
-- Заглушки retry_worker, media_group, context_engine, delivery, startup_recovery
-- TECHNADZOR_RU_NORMS_V39: нормы СП/ГОСТ на русском
-- FILE_INTAKE_KM_V39: КМ/КМД русские триггеры
-- DWG_EZDXF_V39: реальное чтение через ezdxf
-- ESTIMATE_V39_HELPERS: price_normalize, multi_offer_consistency
-- TASK_WORKER_V39_HELPERS: result_validator, human_decision, format_enforcer, postprocess, cache_put, region, duplicate_guard, search_depth, price_aging, output_decision
-- MONITOR_HISTORY_V39: запись MONITOR_TIMEOUT в task_history
-- search_session таблица в memory.db и core.db
-- detect_intent_from_filename_v2 replace в task_worker
-- SEARCH_POSTPROCESS_WIRED: postprocess + cache_put подключены к поисковому результату строка ~2348
-- DUPLICATE_GUARD_WIRED: _v39_recent_duplicate подключена к INSERT INTO tasks
-- REGION_WIRED: _v39_region добавлена к payload перед поиском
-- TOPIC_MISMATCH_GUARD: guard перед AWAITING_CONFIRMATION
-- SEARCH_DEPTH_LIMIT: счётчик retry поиска
-- PRICE_AGING: предупреждение о старых ценах
-- OUTPUT_DECISION_LOGIC: блок РЕКОМЕНДАЦИЯ в результате
-
-### НЕ ЗАКРЫТО (требует живого теста):
-- _all_contours_short_voice_confirm: telegram_daemon.py запрещён §0.8
-- CACHE_LAYER перед поиском
-- SOURCE_DEDUPLICATION вызов
-- apply_template в pipeline
-- Trust Score + Risk Score
-
-
----
-
-## SESSION 2026-04-29 — V44/V45 + GIT CLEANUP + AGGREGATOR
-
-### СДЕЛАНО
-- Внедрены V44 закрытия pipeline (task_worker, file_intake_router, template_manager, project_engine, engine_base)
-- Внедрён V45 нормативный поиск (normative_search_engine + интеграция в project_engine)
-- Выполнен git hygiene: добавлен .gitignore для скрытия runtime/secret файлов
-- Подтверждена работа GitHub aggregator (AGG commits в origin/main, ONE_SHARED_CONTEXT обновляется)
-
-### ПОДТВЕРЖДЕНО ТЕРМИНАЛОМ
-- grep маркеры V44/V45 присутствуют
-- py_compile → SYNTAX_OK
-- systemctl → areal-task-worker active
-- journalctl без критических ошибок
-- SECRET_SCAN_OK перед commit
-
-### НЕ ПРОТЕСТИРОВАНО LIVE
-- Telegram pipeline после V44
-- Drive upload после V45
-- normative search на реальных задачах
-
-### ПРОБЛЕМЫ
-- git push rejected (non-fast-forward)
-- worktree грязный (много modified файлов)
-- локальный ONE_SHARED_CONTEXT устаревший относительно origin
-
-### СЛЕДУЮЩИЙ ШАГ
-- безопасная синхронизация Git (без git add .)
-- whitelist commit только чистых файлов
-- live тест Telegram + Drive
-
-
----
-
-## MULTI MODEL STATUS — 29.04.2026
-
-Модели добавлены в канон, но не реализованы в коде.
-
-Текущий режим:
-- DeepSeek (основной)
-- Perplexity (поиск)
-
-Целевой режим:
-- multi-model orchestration через MODEL_ROUTER
-
-Блокер:
-- MODEL_ROUTER
-- FALLBACK_CHAIN
-- MODEL_REGISTRY
-
-Дальнейшая работа:
-реализация оркестра, не добавление моделей
-
-
----
-
-## СЕССИЯ 30.04.2026 — ИТОГИ
-
-СДЕЛАНО:
-- CONTEXT_AGGREGATOR_V2 — tools/context_aggregator.py — VERIFIED коммит e56c2fd
-- Cron исправлен: каждые 30 минут с подгрузкой .env — VERIFIED
-- Gemini — core/gemini_vision.py существует, меню во всех топиках, intent=vision в route_file — INSTALLED
-- PATCH_FILE_INTAKE_NEEDS_CONTEXT_V1 — логика согласована, готова к диагностике и патчу
-
-НЕ ЗАКРЫТО:
-- PATCH_FILE_INTAKE_NEEDS_CONTEXT_V1 — патч не поставлен, ждёт диагностики
-- Голос confirm при AWAITING_CONFIRMATION (P1 баг, telegram_daemon.py:601)
-- Смета PDF → Excel → Drive
+- Полный Telegram file → artifact → Drive link flow (PATCH_DRIVE_UPLOAD_AND_TG_FALLBACK_V1 установлен, тест не проводился)
+- Голосовой confirm при AWAITING_CONFIRMATION (P1 баг, telegram_daemon.py:601)
+- Смета PDF → Excel → Drive end-to-end
 - КЖ PDF pipeline
-- project_engine end-to-end
+- project_engine end-to-end через Telegram
 - Gemini live-тест
-- docs/CANON_FINAL/02-11 — физически не существуют в GitHub
+- Multi-file, duplicate guard, memory/pin перед меню
 
-СЛЕДУЮЩИЙ ШАГ:
-1. Диагностика task_worker.py + file_intake_router.py
-2. Патч PATCH_FILE_INTAKE_NEEDS_CONTEXT_V1
-3. Live-тест: файл без команды → меню → выбор → engine → artifact
+## СЛЕДУЮЩИЙ ШАГ
+
+1. Живой тест: файл без caption → меню → выбор → artifact → Drive link в Telegram
+2. Проверить AWAITING_CONFIRMATION → confirm → DONE
+3. Зафиксировать результат в NOT_CLOSED.md
