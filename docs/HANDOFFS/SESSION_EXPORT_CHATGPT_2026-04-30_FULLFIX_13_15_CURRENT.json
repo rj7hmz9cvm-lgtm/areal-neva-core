@@ -1,0 +1,235 @@
+{
+  "chat_id": "chatgpt_current_session_2026-04-30_fullfix_13_15",
+  "chat_name": "ChatGPT current session — AREAL-NEVA ORCHESTRA fullfix 13-15",
+  "exported_at": "2026-04-30T13:35:00+03:00",
+  "source_model": "GPT-5.5 Thinking",
+  "source_scope": "Facts explicitly present in the current visible ChatGPT session only. No hidden server state was invented. No secrets included.",
+  "repository": {
+    "full_name": "rj7hmz9cvm-lgtm/areal-neva-core",
+    "default_branch": "main",
+    "verified_connector_permission": "admin, maintain, pull, push, triage"
+  },
+  "system": {
+    "project": "AREAL-NEVA ORCHESTRA / NEURON SOFT VPN",
+    "server_path": "/root/.areal-neva-core",
+    "main_services": [
+      "areal-task-worker",
+      "telegram-ingress",
+      "areal-memory-api",
+      "areal-monitor-jobs"
+    ],
+    "main_db": "/root/.areal-neva-core/data/core.db",
+    "memory_db": "/root/.areal-neva-core/data/memory.db",
+    "runtime_path": "/root/.areal-neva-core/runtime"
+  },
+  "architecture": {
+    "core_pipeline": "Telegram -> telegram_daemon.py -> core.db -> task_worker.py -> route engines -> reply_sender.py -> Telegram",
+    "storage_rule": "Server stores logic/runtime; Google Drive stores generated heavy artifacts",
+    "github_rule": "GitHub areal-neva-core main branch is SSOT for source code and factual handoffs"
+  },
+  "completed_verified_in_session": [
+    {
+      "id": "FULLFIX_10_TOTAL_CLOSURE",
+      "commit": "6234457",
+      "facts": [
+        "Installed and pushed to main",
+        "SYNTAX_OK",
+        "Project smoke succeeded: KJ, 14 sheets, PDF, DXF, XLSX, MANIFEST",
+        "Estimate smoke succeeded: total 10000, PDF, XLSX, MANIFEST",
+        "Classifier smoke: da->confirm, net->revision, project->project, estimate->estimate",
+        "areal-task-worker active",
+        "areal-monitor-jobs active"
+      ]
+    },
+    {
+      "id": "FULLFIX_12_COMPACT_PROJECT_PDF_LAYOUT",
+      "commit": "17dc9f3",
+      "facts": [
+        "Installed and pushed to main",
+        "Compact project PDF smoke succeeded",
+        "Engine marker FULLFIX_12_COMPACT_PROJECT_PDF_LAYOUT present",
+        "Generated compact KJ foundation slab PDF album with 4 sheets",
+        "Services active after restart"
+      ]
+    },
+    {
+      "id": "FULLFIX_13A_SAMPLE_FILE_INTENT_AND_TEMPLATE_ESTIMATE",
+      "commits": [
+        "3da6a02",
+        "a6432d2 local rejected before later successful push chain"
+      ],
+      "facts": [
+        "core/sample_template_engine.py created",
+        "task_worker.py route inserted before FULLFIX_10 route",
+        "sample intent smoke passed true/false cases",
+        "estimate intent smoke passed",
+        "template estimate parser returned 2 items for proflist and montazh",
+        "route locals were fixed because _handle_new had task/raw_input/reply_to locals, not input_type/reply_to_message_id locals"
+      ]
+    },
+    {
+      "id": "FULLFIX_13B_ESTIMATE_OUTPUT_FORMULAS_NO_MANIFEST",
+      "commit": "da1818a",
+      "facts": [
+        "Installed before FULLFIX_13D according to git log",
+        "Purpose in session: estimate formulas, clean output, sample hard stop"
+      ]
+    },
+    {
+      "id": "FULLFIX_13C_STRIP_MANIFEST_BEFORE_SEND",
+      "facts": [
+        "task_worker.py patched with _ff13c_strip_manifest_links",
+        "Smoke showed HAS_PDF True, HAS_XLSX True, HAS_MANIFEST False",
+        "Worker restarted and active",
+        "Marker present at task_worker.py around line 781"
+      ]
+    },
+    {
+      "id": "FULLFIX_13D_REPLY_SENDER_GLOBAL_MANIFEST_STRIP",
+      "commit": "48881a9",
+      "facts": [
+        "core/reply_sender.py patched globally",
+        "task_worker.py direct send belt patched",
+        "Smoke showed HAS_PDF True, HAS_XLSX True, HAS_MANIFEST False",
+        "telegram-ingress restarted and active",
+        "areal-task-worker restarted and active",
+        "Committed locally and present in later pushed history"
+      ]
+    },
+    {
+      "id": "FULLFIX_14_ARTIFACT_UPLOAD_GUARD_ESTIMATE_TEMPLATE_DEFECT_MULTIFILE",
+      "commit": "cca22a8",
+      "facts": [
+        "5 engine files written: core/artifact_upload_guard.py, core/estimate_unified_engine.py, core/template_intake_engine.py, core/defect_act_engine.py, core/multifile_artifact_engine.py",
+        "PY_COMPILE OK for 5 files",
+        "IMPORT_OK for 5 files",
+        "Direct smoke: ESTIMATE_ROWS 2, ESTIMATE_TOTAL 55000.0",
+        "Sample intent true for 'возьми это как образец' and false for 'сделай смету профлист'",
+        "File row multifile parser printed recent estimate artifacts",
+        "FULLFIX_14_UNIFIED_ROUTE inserted in task_worker.py",
+        "task_worker.py py_compile OK",
+        "areal-task-worker active after restart",
+        "Git push to main succeeded"
+      ]
+    },
+    {
+      "id": "PATCH_VOICE_CONFIRM_DIRECT",
+      "commit": "64bbac9",
+      "facts": [
+        "telegram_daemon.py patched after STT because voice does not populate message.text",
+        "Patch marker PATCH_VOICE_CONFIRM_DIRECT present",
+        "New task_history actions: voice_confirmed:DONE and voice_rejected:WAITING_CLARIFICATION",
+        "telegram_daemon.py py_compile OK",
+        "telegram-ingress restarted and active",
+        "Git push to main succeeded"
+      ]
+    }
+  ],
+  "terminal_facts_recorded": {
+    "latest_known_pushed_head": "64bbac9 PATCH voice confirm after STT for awaiting confirmation",
+    "previous_head_sequence_seen": [
+      "cca22a8 FULLFIX_14 artifact_upload_guard estimate_unified template_intake defect_act multifile",
+      "48881a9 FULLFIX_13D global strip manifest links before Telegram send",
+      "da1818a FULLFIX_13B estimate formulas clean output and sample hard stop",
+      "3da6a02 FULLFIX_13A fix sample route locals and commit sample template engine",
+      "9264511 SESSION_EXPORT: ChatGPT fullfix 08-12 factual export 2026-04-30",
+      "17dc9f3 FULLFIX_12 compact project PDF layout",
+      "6234457 FULLFIX_10 total closure routes project estimate memory replies monitor"
+    ],
+    "fullfix_14_push_result": "To github main: 3da6a02..cca22a8 main -> main",
+    "voice_confirm_push_result": "To github main: cca22a8..64bbac9 main -> main"
+  },
+  "known_not_verified_or_not_closed": [
+    {
+      "item": "FULLFIX_15 final Cyrillic PDF artifact quality and route guards",
+      "status": "NOT VERIFIED in current visible session",
+      "evidence": "Diagnostic showed ls: cannot access core/pdf_cyrillic.py and grep FULLFIX_15 in core/estimate_unified_engine.py returned 0"
+    },
+    {
+      "item": "Cyrillic in generated estimate PDF",
+      "status": "NOT VERIFIED",
+      "evidence": "User reported PDF text was bad/unreadable and asked to inspect link; no terminal proof of fixed Cyrillic was provided"
+    },
+    {
+      "item": "Live Telegram estimate route after FULLFIX_14/FULLFIX_15",
+      "status": "PARTIALLY VERIFIED",
+      "evidence": "Bot returned estimates with PDF and XLSX links; later MANIFEST disappeared after 13D in one shown response, but PDF quality remained bad"
+    },
+    {
+      "item": "Voice confirm live test through Telegram",
+      "status": "CODE VERIFIED ONLY, LIVE NOT VERIFIED",
+      "evidence": "Patch exists and telegram-ingress active, but no DB row showing voice_confirmed:DONE from a live voice message was provided"
+    },
+    {
+      "item": "Project route after FULLFIX_14",
+      "status": "NOT LIVE VERIFIED AFTER FULLFIX_14",
+      "evidence": "Earlier FULLFIX_12 project smoke worked; no later live Telegram proof after FULLFIX_14 was shown"
+    },
+    {
+      "item": "Defect act route",
+      "status": "NOT LIVE VERIFIED",
+      "evidence": "FULLFIX_14 wrote defect_act_engine.py and import passed; no Telegram photo-to-act output was provided"
+    },
+    {
+      "item": "Multi-file route",
+      "status": "NOT LIVE VERIFIED",
+      "evidence": "FULLFIX_14 direct smoke parsed recent file rows; no user-facing multifile artifact output was shown"
+    },
+    {
+      "item": "Internet search quality contour",
+      "status": "NOT CLOSED IN THIS SESSION",
+      "evidence": "SEARCH_MONOLITH_V1 was listed earlier as not live-tested; no later terminal proof was shown"
+    },
+    {
+      "item": "ONE_SHARED_CONTEXT cron/aggregator freshness",
+      "status": "NOT CLOSED IN THIS SESSION",
+      "evidence": "Earlier list stated ONE_SHARED_CONTEXT cron not updated since 29.04; no later proof of repair was shown"
+    }
+  ],
+  "technical_tasks_handed_to_claude": [
+    {
+      "task": "FULLFIX_15_FINAL_ARTIFACT_QUALITY_AND_CYRILLIC_CLOSURE",
+      "purpose": "Fix Cyrillic PDF, estimate layout, XLSX formulas, manifest stripping, route guards, defect act PDF/DOCX, and smoke tests",
+      "status": "Assigned to Claude by user; output not shown as completed in current visible session"
+    },
+    {
+      "task": "ADDENDUM TO CLAUDE — FULL FINAL CLOSURE AFTER FULLFIX_14 + VOICE_CONFIRM_DIRECT",
+      "purpose": "Final closure checklist including route priority, Cyrillic, estimate, defect, multifile, voice confirm verification, and git acceptance criteria",
+      "status": "Provided to user for Claude"
+    }
+  ],
+  "current_required_next_steps": [
+    "Install and verify FULLFIX_15 or equivalent Cyrillic/font patch",
+    "Run direct smoke for PDF Cyrillic extraction and XLSX formulas",
+    "Run live Telegram estimate test and inspect generated PDF text",
+    "Run live voice confirm test and prove DB state DONE plus task_history voice_confirmed:DONE",
+    "Run live sample/template test and prove no project task is created",
+    "Run live project command test after FULLFIX_14/FULLFIX_15",
+    "Run live defect photo-to-act test",
+    "Run live multifile aggregation test",
+    "Return to search contour and ONE_SHARED_CONTEXT cron after artifact quality is verified"
+  ],
+  "safe_git_policy_used": [
+    "Only source files should be staged",
+    "Do not stage .env, token.json, credentials.json, sessions, data, runtime, logs, backups, *.bak, *.db, *.session",
+    "Server backup commands were used before edits in terminal outputs",
+    "Several git status outputs showed many untracked backups/secrets/runtime files, but commits shown only staged intended source files"
+  ],
+  "limits": [
+    "This export is based on the current visible ChatGPT session and user-provided terminal outputs",
+    "No direct SSH execution was performed by ChatGPT in this export step",
+    "No hidden chain-of-thought included",
+    "No secrets included",
+    "Live server truth must still be verified by terminal logs and DB queries"
+  ],
+  "final_state": {
+    "github_export_created_by_chatgpt": true,
+    "export_file_path": "docs/HANDOFFS/SESSION_EXPORT_CHATGPT_2026-04-30_FULLFIX_13_15_CURRENT.json",
+    "highest_verified_pushed_commit_in_session": "64bbac9",
+    "artifact_quality_contour": "PARTIAL, FULLFIX_15 not verified",
+    "voice_confirm_contour": "CODE PATCHED, LIVE TEST STILL REQUIRED",
+    "estimate_contour": "ARTIFACT GENERATION WORKING, PDF CYRILLIC QUALITY STILL REQUIRED",
+    "project_contour": "COMPACT PROJECT PDF WORKING EARLIER, POST-FULLFIX_14 LIVE TEST REQUIRED",
+    "memory_and_search_contour": "NOT FULLY CLOSED IN THIS SESSION"
+  }
+}
