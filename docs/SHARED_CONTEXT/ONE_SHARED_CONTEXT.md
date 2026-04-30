@@ -4076,3 +4076,10 @@ WorkItem + DirectionRegistry + 26 directions + shadow wiring в task_worker
 Требует фикса до Stage 2
 
 Следующий шаг: фикс monitor_jobs → Stage 2 Capability Router
+
+---
+## UPDATE 2026-04-30 — STAGE 1 CLOSED
+
+Commit a8955bb. WorkItem + DirectionRegistry + 26 directions + shadow wiring.
+monitor_jobs zombie fix: KillMode=control-group.
+Следующий: Stage 2 Capability Router.
