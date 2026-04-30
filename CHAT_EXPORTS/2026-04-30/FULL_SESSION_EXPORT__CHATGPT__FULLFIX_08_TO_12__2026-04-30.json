@@ -1,0 +1,306 @@
+{
+  "chat_id": "chatgpt_current_project_chat",
+  "chat_name": "AREAL-NEVA ORCHESTRA / technical contour closure session",
+  "exported_at": "2026-04-30T00:00:00Z",
+  "source_model": "GPT-5.5 Thinking",
+  "system": {
+    "mode": "FACT ONLY / ZERO ASSUMPTIONS / GITHUB SSOT / NO SECRETS",
+    "repository": "rj7hmz9cvm-lgtm/areal-neva-core",
+    "branch": "main",
+    "server_baseline_from_chat": {
+      "base_path": "/root/.areal-neva-core",
+      "core_db": "/root/.areal-neva-core/data/core.db",
+      "memory_db": "/root/.areal-neva-core/data/memory.db",
+      "primary_services": [
+        "areal-task-worker",
+        "telegram-ingress",
+        "areal-memory-api",
+        "areal-monitor-jobs"
+      ],
+      "telegram_topic_under_test": 210
+    }
+  },
+  "architecture": {
+    "declared_pipeline": "Telegram -> telegram_daemon.py -> core.db -> task_worker.py -> core/orchestra_closure_engine.py/core/project_engine.py/core/cad_project_engine.py -> Drive artifacts -> Telegram reply",
+    "runtime_goal": "one unified technical contour for live replies, project generation, estimate generation, file artifacts, memory, pins, task lifecycle and GitHub SSOT preservation",
+    "google_drive_role": "artifact storage for generated PDF/DXF/XLSX/MANIFEST links",
+    "github_role": "code and factual session export SSOT"
+  },
+  "pipeline": {
+    "project_generation": "simple user text should route to project generation without requiring technical prompt wording",
+    "estimate_generation": "simple estimate text should route to estimate PDF/XLSX/MANIFEST generation",
+    "confirmation": "short text/voice 'да' should confirm AWAITING_CONFIRMATION tasks and move them to DONE",
+    "revision": "short text/voice 'нет/переделай/правки' should route to revision instead of closing task",
+    "file_tasks": "file/photo/PDF/table tasks must return artifacts, not only text"
+  },
+  "files": {
+    "changed_or_created_in_session_outputs": [
+      "core/cad_project_engine.py",
+      "core/project_engine.py",
+      "core/orchestra_closure_engine.py",
+      "task_worker.py",
+      "monitor_jobs.py",
+      "requirements.txt",
+      "data/project_templates/PROJECT_TEMPLATE_MODEL__АР_manual.json",
+      "data/project_templates/PROJECT_TEMPLATE_MODEL__АР_repaired.json",
+      "data/project_templates/PROJECT_TEMPLATE_MODEL__АР_smoke.json",
+      "data/project_templates/PROJECT_TEMPLATE_MODEL__КД_manual.json",
+      "data/project_templates/PROJECT_TEMPLATE_MODEL__КД_repaired.json",
+      "data/project_templates/PROJECT_TEMPLATE_MODEL__КЖ_repaired.json"
+    ],
+    "generated_github_export_file": "CHAT_EXPORTS/2026-04-30/FULL_SESSION_EXPORT__CHATGPT__FULLFIX_08_TO_12__2026-04-30.json"
+  },
+  "code": {
+    "commits_observed_in_chat": [
+      {
+        "sha": "2f690c9",
+        "message": "FULLFIX_08 project signature compatibility",
+        "facts": [
+          "Syntax check passed",
+          "4/4 signature smoke tests passed",
+          "areal-task-worker active",
+          "telegram-ingress active",
+          "areal-memory-api active",
+          "pushed to main"
+        ]
+      },
+      {
+        "sha": "e34f11a",
+        "message": "FULLFIX_09 repair project template sheet register",
+        "facts": [
+          "Template registers repaired for КД, КЖ, АР",
+          "Direct smoke for КЖ/КД/АР succeeded",
+          "pushed to main"
+        ]
+      },
+      {
+        "sha": "6234457",
+        "message": "FULLFIX_10 total closure routes project estimate memory replies monitor",
+        "facts": [
+          "core/orchestra_closure_engine.py created",
+          "monitor_jobs.py created and service started",
+          "Project smoke succeeded with КЖ, 14 sheets, PDF/DXF/XLSX/MANIFEST",
+          "Estimate smoke succeeded with PDF/XLSX/MANIFEST and total 10000.0",
+          "Classifier smoke: да=>confirm, нет=>revision, project=>project, estimate=>estimate",
+          "areal-task-worker active",
+          "telegram-ingress active",
+          "areal-memory-api active",
+          "areal-monitor-jobs active",
+          "pushed to main"
+        ]
+      },
+      {
+        "sha": "17dc9f3",
+        "message": "FULLFIX_12 compact project PDF layout",
+        "facts": [
+          "Compact PDF layout patch installed",
+          "Direct smoke compact PDF succeeded",
+          "Engine FULLFIX_12_COMPACT_PROJECT_PDF_LAYOUT returned PDF and MANIFEST links",
+          "areal-task-worker active",
+          "telegram-ingress active",
+          "areal-memory-api active",
+          "pushed to main"
+        ]
+      }
+    ],
+    "known_markers": [
+      "FULLFIX_08_PROJECT_SIGNATURE_COMPAT",
+      "FULLFIX_08_PROJECT_SIGNATURE_COMPAT_OVERRIDE",
+      "FULLFIX_08_PROJECT_ERROR_VISIBILITY",
+      "FULLFIX_09_PROJECT_TEMPLATE_REGISTER_REPAIR",
+      "FULLFIX_09_PROJECT_TEMPLATE_REGISTER_PUBLIC_OVERRIDE",
+      "FULLFIX_10_TOTAL_CLOSURE_ENGINE",
+      "FULLFIX_10_TOTAL_CLOSURE_UNIVERSAL_ROUTE",
+      "FULLFIX_12_COMPACT_PROJECT_PDF_LAYOUT",
+      "FULLFIX_12_COMPACT_PROJECT_PDF_LAYOUT_CAD_OVERRIDE",
+      "FULLFIX_12_COMPACT_PROJECT_PDF_LAYOUT_PUBLIC_OVERRIDE"
+    ]
+  },
+  "patches": {
+    "FULLFIX_08": {
+      "status": "installed_pushed",
+      "purpose": "signature compatibility between project generation callers and create_project_pdf_dxf_artifact/create_full_project_documentation",
+      "error_closed": "create_project_pdf_dxf_artifact() takes from 2 to 4 positional arguments but 5 were given",
+      "verification": "direct smoke all signatures returned success true with PDF/DXF/XLSX/MANIFEST true"
+    },
+    "FULLFIX_09": {
+      "status": "installed_pushed",
+      "purpose": "repair project template sheet register from core.db facts",
+      "verification": "КД sheets=24, КЖ sheets=20, АР sheets=29 registered; direct smoke succeeded"
+    },
+    "FULLFIX_10": {
+      "status": "installed_pushed",
+      "purpose": "total closure routes for project, estimate, memory, replies, monitor",
+      "verification": "project smoke success with links; estimate smoke success with total; classifier smoke success; services active"
+    },
+    "FULLFIX_12": {
+      "status": "installed_pushed",
+      "purpose": "compact project PDF layout",
+      "verification": "compact PDF smoke success with PDF and MANIFEST links",
+      "known_regression_or_gap": "compact smoke did not prove DXF and XLSX links, while FULLFIX_10 did prove PDF/DXF/XLSX/MANIFEST"
+    }
+  },
+  "commands": {
+    "observed_user_run_blocks": [
+      "FULLFIX_08_PROJECT_SIGNATURE_COMPAT block",
+      "FULLFIX_09_PROJECT_TEMPLATE_REGISTER_REPAIR block",
+      "FULLFIX_10_TOTAL_CLOSURE block",
+      "FULLFIX_12_COMPACT_PROJECT_PDF_LAYOUT block"
+    ],
+    "rules_reaffirmed_by_user": [
+      "do not require technical prompt wording from user",
+      "simple language requests must work",
+      "full code closure needed for technical contour and live answer logic",
+      "GitHub export must preserve session information without overwrite"
+    ]
+  },
+  "db": {
+    "observed_counts_after_FULLFIX_10": {
+      "ARCHIVED": 371,
+      "AWAITING_CONFIRMATION": 18,
+      "CANCELLED": 267,
+      "DONE": 213,
+      "FAILED": 79
+    },
+    "observed_topic_210_project_task": {
+      "task_id": "0f869439-a7ce-4daf-99bd-41967ba48b43",
+      "state": "DONE",
+      "input": "создай проект фундаментной плиты 12х8 м, толщина 250 мм, бетон B25, арматура A500 шаг 200 мм",
+      "result_facts": [
+        "Engine FULLFIX_07_CAD_PROJECT_DOCUMENTATION_CLOSURE",
+        "Раздел КЖ",
+        "20 sheets",
+        "PDF/DXF/XLSX/MANIFEST links returned"
+      ]
+    }
+  },
+  "memory": {
+    "expected_behavior": [
+      "save useful artifact results into memory.db by topic",
+      "filter technical noise, traceback, /root paths, task_worker.py/telegram_daemon.py references",
+      "topic scoped memory only",
+      "pin should not override current user input"
+    ],
+    "not_fully_verified": [
+      "end-to-end memory read/write after live Telegram project and estimate tasks",
+      "archive recall by topic",
+      "pin lifecycle with DONE/FAILED closure"
+    ]
+  },
+  "services": {
+    "verified_active_in_outputs": [
+      "areal-task-worker",
+      "telegram-ingress",
+      "areal-memory-api",
+      "areal-monitor-jobs"
+    ],
+    "observed_logs": [
+      "systemd restarts succeeded after patches",
+      "older areal-task-worker exit-code events were visible before later restart success",
+      "telegram-ingress handled updates and STT started for voice messages"
+    ]
+  },
+  "errors": [
+    {
+      "error": "create_full_project_documentation import failed before FULLFIX_08",
+      "evidence": "ImportError: cannot import name 'create_full_project_documentation' from core.cad_project_engine",
+      "status": "closed_by_FULLFIX_08"
+    },
+    {
+      "error": "create_project_pdf_dxf_artifact positional argument mismatch",
+      "evidence": "FULLFIX_07_EXCEPTION:create_project_pdf_dxf_artifact() takes from 2 to 4 positional arguments but 5 were given",
+      "status": "closed_by_FULLFIX_08"
+    },
+    {
+      "error": "project PDF visually too sparse/spread out",
+      "evidence": "user reported FULLFIX_10 PDF was too spread out and not compact enough",
+      "status": "partially_closed_by_FULLFIX_12_compact_pdf_smoke"
+    },
+    {
+      "error": "compact FULLFIX_12 smoke did not confirm DXF/XLSX",
+      "evidence": "FULLFIX_12 smoke output showed PDF_LINK and MANIFEST_LINK only",
+      "status": "open"
+    }
+  ],
+  "decisions": [
+    "User will not write detailed technical prompts; simple natural-language requests must route correctly",
+    "Project output must be real artifacts, not text-only claims",
+    "FULLFIX_13_FINAL_UNIFIED_TECH_CONTOUR is required to unify FULLFIX_10 full artifact set with FULLFIX_12 compact PDF layout",
+    "No overwrite export: write new GitHub file under CHAT_EXPORTS/2026-04-30"
+  ],
+  "solutions": {
+    "installed": [
+      "FULLFIX_08 signature compatibility",
+      "FULLFIX_09 template register repair",
+      "FULLFIX_10 total closure engine with project/estimate/classifier/monitor",
+      "FULLFIX_12 compact project PDF layout"
+    ],
+    "next_required_code_solution": "FULLFIX_13_FINAL_UNIFIED_TECH_CONTOUR"
+  },
+  "state": {
+    "current_head_observed_after_FULLFIX_12": "17dc9f3",
+    "latest_installed_patch": "FULLFIX_12_COMPACT_PROJECT_PDF_LAYOUT",
+    "technical_contour_state": "partially working, not fully closed",
+    "session_export_state": "created in GitHub by this export"
+  },
+  "what_working": [
+    "Project direct smoke works",
+    "Telegram project live result with PDF/DXF/XLSX/MANIFEST was observed for topic_210 before FULLFIX_12",
+    "Compact project PDF direct smoke works after FULLFIX_12",
+    "Estimate direct smoke works with PDF/XLSX/MANIFEST",
+    "Classifier direct smoke works for confirm/revision/project/estimate",
+    "Core services active after restarts",
+    "GitHub pushes completed through commit 17dc9f3"
+  ],
+  "what_broken": [
+    "FULLFIX_12 compact path did not prove DXF/XLSX output",
+    "There are still 18 AWAITING_CONFIRMATION tasks in DB count after FULLFIX_10 output",
+    "File contour is not fully verified live",
+    "Reply/voice confirmation is not fully verified live",
+    "Search route is not fully verified live",
+    "Repository working tree shown in outputs contained many untracked sensitive/runtime candidates that must not be committed"
+  ],
+  "what_not_done": [
+    "FULLFIX_13 unified final contour not written in this chat export",
+    "DWG full export not closed",
+    "Photo defect to act not closed",
+    "Photo/table to Excel not closed",
+    "Multi-file to one artifact not closed",
+    "Google Drive link intake end-to-end not closed",
+    "Live Telegram estimate test not closed",
+    "Live Telegram voice 'да' confirmation not closed",
+    "SEARCH_MONOLITH_V1 live test not closed",
+    "ONE_SHARED_CONTEXT cron/aggregator not fully verified",
+    "Git hygiene/secret guard not fully closed"
+  ],
+  "current_breakpoint": "Need FULLFIX_13_FINAL_UNIFIED_TECH_CONTOUR to combine compact PDF layout with full artifact generation PDF/DXF/XLSX/MANIFEST and close file/memory/reply/search/lifecycle hygiene gaps",
+  "root_causes": [
+    "Multiple layered overrides across project_engine.py, cad_project_engine.py and task_worker.py create regression risk",
+    "Smoke tests verified isolated paths but not all live Telegram paths",
+    "Compact PDF patch improved visual layout but did not prove full artifact bundle",
+    "File, memory, search and lifecycle contours are distributed across several modules and not yet unified into a single final route"
+  ],
+  "verification": {
+    "verified_by_outputs": [
+      "SYNTAX_OK in FULLFIX_08/FULLFIX_09/FULLFIX_10/FULLFIX_12",
+      "project smoke success in FULLFIX_10",
+      "estimate smoke success in FULLFIX_10",
+      "classifier smoke success in FULLFIX_10",
+      "compact PDF smoke success in FULLFIX_12",
+      "GitHub commits pushed: 2f690c9, e34f11a, 6234457, 17dc9f3"
+    ],
+    "not_verified_by_outputs": [
+      "visual Drive inspection of generated PDF contents by assistant",
+      "live Telegram estimate after FULLFIX_10",
+      "live voice confirmation to DONE",
+      "DXF/XLSX in compact FULLFIX_12 path",
+      "file/photo/OCR/multi-file end-to-end",
+      "search marketplaces end-to-end"
+    ]
+  },
+  "limits": [
+    "This export contains only facts visible in the current chat and provided terminal outputs",
+    "No secrets, tokens, credentials, session files or database contents are included",
+    "No claim is made that all technical contours are fully closed"
+  ]
+}
