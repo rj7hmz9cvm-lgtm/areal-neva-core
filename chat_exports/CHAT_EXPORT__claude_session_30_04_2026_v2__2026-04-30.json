@@ -1,0 +1,40 @@
+{
+  "chat_id": "claude_session_30_04_2026_v2",
+  "chat_name": "AREAL-NEVA ORCHESTRA — Claude Session 30.04.2026 V2 FINAL",
+  "exported_at": "2026-04-30T04:30:00+03:00",
+  "source_model": "Claude Sonnet 4.6",
+  "patches_verified": [
+    "PATCH_FILE_INTAKE_NEEDS_CONTEXT_V3_MINIMAL — VERIFIED",
+    "PATCH_DRIVE_GUARD_BEFORE_DOWNLOAD_V1 — VERIFIED",
+    "PATCH_WORKER_PICK_BEFORE_STALE_V1 — VERIFIED",
+    "PATCH_FIX_PFIN3_MENU_SHADOW_V1 — VERIFIED",
+    "PATCH_FILE_CHOICE_PRIORITY_V1 — VERIFIED",
+    "PATCH_FILE_PARENT_STRICT_OPEN_ONLY_V1 — VERIFIED",
+    "PATCH_ENGINE_BASE_RESTORE_SA_UPLOAD_V1 — VERIFIED",
+    "PATCH_DRIVE_DIRECT_OAUTH_V1 — VERIFIED",
+    "PATCH_DRIVE_UPLOAD_AND_TG_FALLBACK_V1 — VERIFIED",
+    "PATCH_RETRY_TOPIC_FOLDER_V1 — VERIFIED",
+    "core/upload_retry_queue.py + cron 10min — VERIFIED",
+    "OAuth app In Production — VERIFIED",
+    "override.conf fix — VERIFIED",
+    "Stale test tasks cancelled — DONE"
+  ],
+  "new_canon_rules": {
+    "0.11": "Обязательная самопроверка AI перед и после кода — для любой нейросети",
+    "drive_folder_isolation": "Артефакты только в chat_{id}/topic_{id}/, не в INGEST корень",
+    "retry_upload_chain": "Drive FAIL → TG → cron 10min retry → topic папка → уведомление",
+    "topic_auto_folder": "При новом топике папка создаётся автоматически через _ensure_folder"
+  },
+  "key_decisions": [
+    "upload_retry_queue использует topic_drive_oauth._upload_file_sync не engine_base",
+    "engine_base.upload_artifact_to_drive только для healthcheck и тестов",
+    "drive.file scope достаточен для создания папок топиков",
+    "task_history колонка называется action не event",
+    "PYTHONPATH=/root/.areal-neva-core обязателен для cron скриптов"
+  ],
+  "services": {
+    "areal-task-worker": "active",
+    "telegram-ingress": "active",
+    "areal-memory-api": "active"
+  }
+}
