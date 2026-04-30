@@ -375,6 +375,13 @@ try:
 except Exception:
     _Stage5Search = None
 # === END STAGE5 ===
+# === FULLFIX_ARCHIVE_ENGINE_STAGE_6_IMPORT ===
+try:
+    from core.archive_engine import ArchiveEngine as _Stage6Archive
+except Exception:
+    _Stage6Archive = None
+# === END STAGE6 ===
+
 
 
 
@@ -2254,6 +2261,12 @@ async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_
                                     _qg_report["overall"], _qg_report["failed"], payload.get("direction"))
                     except Exception as _e4:
                         logger.error("FULLFIX_QUALITY_GATE_STAGE_4_ERR %s", _e4)
+                # FULLFIX_ARCHIVE_ENGINE_STAGE_6_CALL
+                if _Stage6Archive is not None:
+                    try:
+                        _Stage6Archive().archive(payload, ai_result if isinstance(ai_result, dict) else {})
+                    except Exception as _e6:
+                        logger.error("FULLFIX_ARCHIVE_ENGINE_STAGE_6_ERR %s", _e6)
     except Exception as e:
         _update_task(conn, task_id, state="FAILED", error_message=_clean(str(e), 500))
         _close_pin(conn, task_id)
