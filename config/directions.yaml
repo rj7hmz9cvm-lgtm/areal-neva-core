@@ -1,0 +1,843 @@
+{
+  "version": "DIRECTION_REGISTRY_V1",
+  "marker": "FULLFIX_DIRECTION_KERNEL_STAGE_1_DIRECTIONS",
+  "directions": {
+    "general_chat": {
+      "title": "Общий чат",
+      "enabled": true,
+      "topic_ids": [],
+      "aliases": [],
+      "input_types": [
+        "text",
+        "voice"
+      ],
+      "input_formats": [
+        "text"
+      ],
+      "output_formats": [
+        "telegram_text"
+      ],
+      "engine": "ai_router",
+      "requires_search": false,
+      "quality_gates": [
+        "non_empty_answer"
+      ]
+    },
+    "orchestration_core": {
+      "title": "Мозги оркестра",
+      "enabled": true,
+      "topic_ids": [
+        3008
+      ],
+      "aliases": [
+        "оркестр",
+        "канон",
+        "kernel",
+        "workitem",
+        "direction",
+        "архитектур"
+      ],
+      "input_types": [
+        "text",
+        "voice",
+        "file"
+      ],
+      "input_formats": [
+        "text",
+        "json",
+        "md"
+      ],
+      "output_formats": [
+        "telegram_text",
+        "json",
+        "md"
+      ],
+      "engine": "ai_router",
+      "requires_search": false,
+      "quality_gates": [
+        "canon_consistency"
+      ]
+    },
+    "telegram_automation": {
+      "title": "Telegram automation",
+      "enabled": true,
+      "topic_ids": [],
+      "aliases": [
+        "bot_message_id",
+        "message_thread_id",
+        "telegram daemon"
+      ],
+      "input_types": [
+        "text",
+        "voice"
+      ],
+      "input_formats": [
+        "text"
+      ],
+      "output_formats": [
+        "telegram_text"
+      ],
+      "engine": "telegram_pipeline",
+      "requires_search": false,
+      "quality_gates": [
+        "reply_thread_required"
+      ]
+    },
+    "memory_archive": {
+      "title": "Память и архив",
+      "enabled": true,
+      "topic_ids": [],
+      "aliases": [
+        "chat_exports",
+        "выгрузк",
+        "архив",
+        "memory.db",
+        "short_memory",
+        "long_memory"
+      ],
+      "input_types": [
+        "text",
+        "file"
+      ],
+      "input_formats": [
+        "text",
+        "json",
+        "md",
+        "txt"
+      ],
+      "output_formats": [
+        "telegram_text",
+        "json"
+      ],
+      "engine": "context_search_archive_engine",
+      "requires_search": false,
+      "quality_gates": [
+        "verified_sources_only"
+      ]
+    },
+    "internet_search": {
+      "title": "Интернет-поиск",
+      "enabled": true,
+      "topic_ids": [
+        500
+      ],
+      "aliases": [
+        "найд",
+        "поиск",
+        "перплексити",
+        "в интернете"
+      ],
+      "input_types": [
+        "text",
+        "voice"
+      ],
+      "input_formats": [
+        "text",
+        "url"
+      ],
+      "output_formats": [
+        "telegram_text",
+        "table",
+        "sources"
+      ],
+      "engine": "search_supplier",
+      "requires_search": true,
+      "quality_gates": [
+        "sources_required"
+      ]
+    },
+    "product_search": {
+      "title": "Товарный поиск",
+      "enabled": true,
+      "topic_ids": [
+        500,
+        961,
+        4569
+      ],
+      "strong_aliases": [
+        "avito",
+        "ozon",
+        "wildberries",
+        "авито",
+        "озон",
+        "вб"
+      ],
+      "aliases": [
+        "куп",
+        "цен",
+        "дешевл",
+        "товар",
+        "поставщик",
+        "заказ"
+      ],
+      "input_types": [
+        "text",
+        "voice",
+        "photo"
+      ],
+      "input_formats": [
+        "text",
+        "photo",
+        "url"
+      ],
+      "output_formats": [
+        "telegram_table",
+        "json",
+        "xlsx"
+      ],
+      "engine": "search_supplier",
+      "requires_search": true,
+      "quality_gates": [
+        "price_required",
+        "source_required",
+        "tco_required"
+      ]
+    },
+    "auto_parts_search": {
+      "title": "Автозапчасти",
+      "enabled": true,
+      "topic_ids": [
+        961,
+        4569
+      ],
+      "strong_aliases": [
+        "drom",
+        "auto.ru",
+        "exist",
+        "emex",
+        "zzap",
+        "brembo",
+        "брембо",
+        "дром"
+      ],
+      "aliases": [
+        "авто",
+        "запчаст",
+        "фара",
+        "рычаг",
+        "суппорт",
+        "oem",
+        "разборк",
+        "toyota",
+        "hiace"
+      ],
+      "input_types": [
+        "text",
+        "voice",
+        "photo"
+      ],
+      "input_formats": [
+        "text",
+        "photo",
+        "url"
+      ],
+      "output_formats": [
+        "telegram_table",
+        "json"
+      ],
+      "engine": "search_supplier",
+      "requires_search": true,
+      "quality_gates": [
+        "compatibility_required"
+      ]
+    },
+    "construction_search": {
+      "title": "Строительный поиск",
+      "enabled": true,
+      "topic_ids": [
+        500,
+        2
+      ],
+      "aliases": [
+        "металлочерепиц",
+        "профнастил",
+        "газобетон",
+        "утеплител",
+        "арматур",
+        "ral",
+        "grand line",
+        "петрович",
+        "леруа"
+      ],
+      "input_types": [
+        "text",
+        "voice",
+        "photo"
+      ],
+      "input_formats": [
+        "text",
+        "photo",
+        "url"
+      ],
+      "output_formats": [
+        "telegram_table",
+        "xlsx"
+      ],
+      "engine": "search_supplier",
+      "requires_search": true,
+      "quality_gates": [
+        "price_required",
+        "delivery_required"
+      ]
+    },
+    "technical_supervision": {
+      "title": "Технадзор",
+      "enabled": true,
+      "topic_ids": [
+        2
+      ],
+      "aliases": [
+        "технадзор",
+        "наруш",
+        "дефект",
+        "осмотр",
+        "замечан",
+        "снип",
+        "гост"
+      ],
+      "input_types": [
+        "text",
+        "voice",
+        "photo",
+        "file"
+      ],
+      "input_formats": [
+        "text",
+        "photo",
+        "pdf"
+      ],
+      "output_formats": [
+        "telegram_text",
+        "docx",
+        "pdf"
+      ],
+      "engine": "defect_act",
+      "requires_search": false,
+      "quality_gates": [
+        "defect_description_required",
+        "normative_section_required"
+      ]
+    },
+    "estimates": {
+      "title": "Сметы",
+      "enabled": true,
+      "topic_ids": [
+        2
+      ],
+      "aliases": [
+        "смет",
+        "расценк",
+        "ведомост",
+        "объем работ",
+        "вор",
+        "фер",
+        "тер"
+      ],
+      "input_types": [
+        "text",
+        "voice",
+        "file",
+        "drive_file"
+      ],
+      "input_formats": [
+        "text",
+        "pdf",
+        "xlsx",
+        "csv",
+        "photo"
+      ],
+      "output_formats": [
+        "xlsx",
+        "pdf",
+        "drive_link",
+        "telegram_text"
+      ],
+      "engine": "estimate_unified",
+      "requires_search": false,
+      "quality_gates": [
+        "items_required",
+        "total_required",
+        "xlsx_required"
+      ]
+    },
+    "defect_acts": {
+      "title": "Акты дефектов",
+      "enabled": true,
+      "topic_ids": [
+        2
+      ],
+      "aliases": [
+        "акт дефект",
+        "акт осмотр",
+        "дефектный акт",
+        "трещин",
+        "протечк",
+        "фото дефект"
+      ],
+      "input_types": [
+        "text",
+        "voice",
+        "photo",
+        "file"
+      ],
+      "input_formats": [
+        "text",
+        "photo",
+        "pdf"
+      ],
+      "output_formats": [
+        "docx",
+        "pdf",
+        "drive_link"
+      ],
+      "engine": "defect_act",
+      "requires_search": false,
+      "quality_gates": [
+        "document_required"
+      ]
+    },
+    "documents": {
+      "title": "Документы",
+      "enabled": true,
+      "topic_ids": [],
+      "aliases": [
+        "docx",
+        "документ word",
+        "напиши письмо",
+        "напиши отчет",
+        "напиши отчёт"
+      ],
+      "input_types": [
+        "text",
+        "voice",
+        "file",
+        "drive_file"
+      ],
+      "input_formats": [
+        "text",
+        "pdf",
+        "docx"
+      ],
+      "output_formats": [
+        "docx",
+        "pdf",
+        "drive_link"
+      ],
+      "engine": "document_engine",
+      "requires_search": false,
+      "quality_gates": [
+        "document_output_required"
+      ]
+    },
+    "spreadsheets": {
+      "title": "Таблицы",
+      "enabled": true,
+      "topic_ids": [],
+      "aliases": [
+        "xlsx",
+        "excel таблиц",
+        "google sheets",
+        "гугл таблиц",
+        "csv файл"
+      ],
+      "input_types": [
+        "text",
+        "voice",
+        "file",
+        "drive_file"
+      ],
+      "input_formats": [
+        "text",
+        "xlsx",
+        "csv",
+        "pdf"
+      ],
+      "output_formats": [
+        "xlsx",
+        "google_sheet",
+        "csv",
+        "drive_link"
+      ],
+      "engine": "sheets_route",
+      "requires_search": false,
+      "quality_gates": [
+        "table_required"
+      ]
+    },
+    "google_drive_storage": {
+      "title": "Google Drive",
+      "enabled": true,
+      "topic_ids": [],
+      "aliases": [
+        "загрузи на drive",
+        "залей на гугл диск",
+        "сохрани на drive"
+      ],
+      "input_types": [
+        "text",
+        "file",
+        "drive_file"
+      ],
+      "input_formats": [
+        "text",
+        "file",
+        "url"
+      ],
+      "output_formats": [
+        "drive_link",
+        "telegram_text"
+      ],
+      "engine": "drive_storage",
+      "requires_search": false,
+      "quality_gates": [
+        "drive_link_required"
+      ]
+    },
+    "devops_server": {
+      "title": "Сервер DevOps",
+      "enabled": false,
+      "topic_ids": [],
+      "aliases": [
+        "systemctl",
+        "journalctl",
+        "docker",
+        "nginx"
+      ],
+      "input_types": [
+        "text",
+        "voice"
+      ],
+      "input_formats": [
+        "text"
+      ],
+      "output_formats": [
+        "telegram_text"
+      ],
+      "engine": "ai_router",
+      "requires_search": false,
+      "quality_gates": []
+    },
+    "vpn_network": {
+      "title": "VPN",
+      "enabled": false,
+      "topic_ids": [],
+      "aliases": [
+        "vpn",
+        "vless",
+        "wireguard",
+        "xray",
+        "reality"
+      ],
+      "input_types": [
+        "text",
+        "voice"
+      ],
+      "input_formats": [
+        "text"
+      ],
+      "output_formats": [
+        "telegram_text"
+      ],
+      "engine": "ai_router",
+      "requires_search": false,
+      "quality_gates": []
+    },
+    "ocr_photo": {
+      "title": "OCR фото",
+      "enabled": false,
+      "topic_ids": [],
+      "aliases": [
+        "ocr",
+        "распознай текст",
+        "фото в таблицу"
+      ],
+      "input_types": [
+        "photo",
+        "file"
+      ],
+      "input_formats": [
+        "photo",
+        "pdf"
+      ],
+      "output_formats": [
+        "text",
+        "xlsx"
+      ],
+      "engine": "ocr_engine",
+      "requires_search": false,
+      "quality_gates": []
+    },
+    "cad_dwg": {
+      "title": "CAD DWG",
+      "enabled": false,
+      "topic_ids": [
+        210
+      ],
+      "aliases": [
+        "dwg",
+        "cad",
+        "autocad",
+        "чертеж",
+        "чертёж"
+      ],
+      "input_types": [
+        "file",
+        "drive_file"
+      ],
+      "input_formats": [
+        "dwg",
+        "pdf"
+      ],
+      "output_formats": [
+        "pdf",
+        "xlsx"
+      ],
+      "engine": "dwg_engine",
+      "requires_search": false,
+      "quality_gates": []
+    },
+    "structural_design": {
+      "title": "КЖ КМ",
+      "enabled": false,
+      "topic_ids": [
+        210
+      ],
+      "aliases": [
+        "кж",
+        "км",
+        "проект",
+        "расчет",
+        "расчёт",
+        "балка",
+        "плита"
+      ],
+      "input_types": [
+        "text",
+        "file",
+        "drive_file"
+      ],
+      "input_formats": [
+        "text",
+        "pdf",
+        "dwg"
+      ],
+      "output_formats": [
+        "pdf",
+        "xlsx",
+        "docx"
+      ],
+      "engine": "project_engine",
+      "requires_search": false,
+      "quality_gates": []
+    },
+    "roofing": {
+      "title": "Кровля",
+      "enabled": false,
+      "topic_ids": [],
+      "aliases": [
+        "кровля",
+        "стропил",
+        "обрешетк",
+        "обрешётк"
+      ],
+      "input_types": [
+        "text",
+        "file",
+        "photo"
+      ],
+      "input_formats": [
+        "text",
+        "pdf",
+        "photo"
+      ],
+      "output_formats": [
+        "xlsx",
+        "pdf"
+      ],
+      "engine": "estimate_unified",
+      "requires_search": false,
+      "quality_gates": []
+    },
+    "monolith_concrete": {
+      "title": "Монолит бетон",
+      "enabled": false,
+      "topic_ids": [],
+      "aliases": [
+        "монолит",
+        "бетон",
+        "опалубк"
+      ],
+      "input_types": [
+        "text",
+        "file",
+        "photo"
+      ],
+      "input_formats": [
+        "text",
+        "pdf",
+        "photo"
+      ],
+      "output_formats": [
+        "xlsx",
+        "pdf"
+      ],
+      "engine": "estimate_unified",
+      "requires_search": false,
+      "quality_gates": []
+    },
+    "crm_leads": {
+      "title": "CRM лиды",
+      "enabled": false,
+      "topic_ids": [],
+      "aliases": [
+        "лид",
+        "amocrm",
+        "заявк",
+        "заказчик"
+      ],
+      "input_types": [
+        "text",
+        "voice"
+      ],
+      "input_formats": [
+        "text"
+      ],
+      "output_formats": [
+        "telegram_text",
+        "json"
+      ],
+      "engine": "ai_router",
+      "requires_search": true,
+      "quality_gates": []
+    },
+    "email_ingress": {
+      "title": "Почта",
+      "enabled": false,
+      "topic_ids": [],
+      "aliases": [
+        "почта",
+        "email",
+        "gmail",
+        "письмо вложением"
+      ],
+      "input_types": [
+        "text",
+        "file"
+      ],
+      "input_formats": [
+        "text",
+        "file"
+      ],
+      "output_formats": [
+        "telegram_text",
+        "docx"
+      ],
+      "engine": "email_ingress",
+      "requires_search": false,
+      "quality_gates": []
+    },
+    "social_content": {
+      "title": "Соцсети",
+      "enabled": false,
+      "topic_ids": [],
+      "aliases": [
+        "instagram",
+        "youtube",
+        "рилс",
+        "tiktok",
+        "личный бренд"
+      ],
+      "input_types": [
+        "text",
+        "photo",
+        "video"
+      ],
+      "input_formats": [
+        "text",
+        "photo",
+        "video"
+      ],
+      "output_formats": [
+        "telegram_text",
+        "script"
+      ],
+      "engine": "content_engine",
+      "requires_search": false,
+      "quality_gates": []
+    },
+    "video_production": {
+      "title": "Видео",
+      "enabled": false,
+      "topic_ids": [],
+      "aliases": [
+        "монтаж видео",
+        "shorts",
+        "reels",
+        "voiceover"
+      ],
+      "input_types": [
+        "text",
+        "file",
+        "video"
+      ],
+      "input_formats": [
+        "text",
+        "video",
+        "audio"
+      ],
+      "output_formats": [
+        "mp4",
+        "script",
+        "drive_link"
+      ],
+      "engine": "video_production_agent",
+      "requires_search": false,
+      "quality_gates": []
+    },
+    "photo_cleanup": {
+      "title": "Чистка фото",
+      "enabled": false,
+      "topic_ids": [],
+      "aliases": [
+        "почисти фото",
+        "убери мусор с фото"
+      ],
+      "input_types": [
+        "photo",
+        "file"
+      ],
+      "input_formats": [
+        "photo"
+      ],
+      "output_formats": [
+        "photo",
+        "drive_link"
+      ],
+      "engine": "photo_cleanup",
+      "requires_search": false,
+      "quality_gates": []
+    },
+    "isolated_project_ivan": {
+      "title": "Ivan project",
+      "enabled": false,
+      "topic_ids": [],
+      "aliases": [
+        "проект иван",
+        "ivan project"
+      ],
+      "input_types": [
+        "text",
+        "voice"
+      ],
+      "input_formats": [
+        "text"
+      ],
+      "output_formats": [
+        "telegram_text"
+      ],
+      "engine": "ivan_project",
+      "requires_search": false,
+      "quality_gates": []
+    }
+  }
+}

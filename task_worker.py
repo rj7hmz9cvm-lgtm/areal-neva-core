@@ -343,6 +343,17 @@ os.makedirs(f"{BASE}/logs", exist_ok=True)
 os.makedirs(f"{BASE}/runtime", exist_ok=True)
 
 logger = logging.getLogger("task_worker")
+
+# === FULLFIX_DIRECTION_KERNEL_STAGE_1_IMPORT ===
+try:
+    from core.work_item import WorkItem as _Stage1WorkItem
+    from core.direction_registry import DirectionRegistry as _Stage1DirReg
+except Exception:
+    _Stage1WorkItem = None
+    _Stage1DirReg = None
+# === END FULLFIX_DIRECTION_KERNEL_STAGE_1_IMPORT ===
+
+
 logger.setLevel(logging.INFO)
 if not logger.handlers:
     fh = logging.FileHandler(LOG_PATH)
@@ -1992,6 +2003,54 @@ def _find_awaiting_confirmation_task(conn: sqlite3.Connection, chat_id: str, top
         (str(chat_id), int(topic_id), str(current_task_id)),
     ).fetchone()
 
+
+
+# === FULLFIX_DIRECTION_KERNEL_STAGE_1_HELPER ===
+def _stage1_dir_payload(payload):
+    """Shadow-mode: detect direction, write to payload, do not change execution."""
+    try:
+        p = dict(payload or {})
+        if _Stage1WorkItem is None or _Stage1DirReg is None:
+            p.setdefault("direction", "general_chat")
+            p.setdefault("direction_audit", {"error": "stage1_import_unavailable"})
+            return p
+        row = {
+            "id": p.get("task_id") or p.get("id") or "",
+            "chat_id": str(p.get("chat_id") or ""),
+            "topic_id": int(p.get("topic_id") or 0),
+            "input_type": p.get("input_type") or "unknown",
+            "raw_input": p.get("raw_input") or p.get("raw_text") or "",
+            "state": p.get("state") or "IN_PROGRESS",
+            "reply_to_message_id": p.get("reply_to_message_id"),
+            "bot_message_id": p.get("bot_message_id"),
+        }
+        wi = _Stage1WorkItem.from_task_row(row)
+        prof = _Stage1DirReg().detect(wi)
+        did = prof.get("id") or "general_chat"
+        wi.set_direction(did, prof)
+        wi.add_audit("stage", "FULLFIX_DIRECTION_KERNEL_STAGE_1")
+        wi.add_audit("shadow_mode", True)
+        p.update({
+            "direction": did,
+            "direction_profile": prof,
+            "direction_audit": wi.audit,
+            "work_item": wi.to_dict(),
+        })
+        try:
+            logger.info("FULLFIX_DIRECTION_KERNEL_STAGE_1 dir=%s score=%s task=%s topic=%s",
+                        did, prof.get("score"), row["id"], row["topic_id"])
+        except Exception:
+            pass
+        return p
+    except Exception as e:
+        try: logger.error("FULLFIX_DIRECTION_KERNEL_STAGE_1_ERR %s", e)
+        except Exception: pass
+        p = dict(payload or {})
+        p.setdefault("direction", "general_chat")
+        p.setdefault("direction_audit", {"error": str(e)})
+        return p
+# === END FULLFIX_DIRECTION_KERNEL_STAGE_1_HELPER ===
+
 async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str, topic_id: int) -> None:
     task_id = _s(_task_field(task, "id"))
     raw_input = _clean(_s(_task_field(task, "raw_input")), 12000)
@@ -2094,7 +2153,7 @@ async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_
             if ai_result is None:
                 pass
             else:
-                ai_result = await asyncio.wait_for(process_ai_task(payload), timeout=AI_TIMEOUT)
+                ai_result = await asyncio.wait_for(process_ai_task(_stage1_dir_payload(payload))  # FULLFIX_DIRECTION_KERNEL_STAGE_1_CALL, timeout=AI_TIMEOUT)
     except Exception as e:
         _update_task(conn, task_id, state="FAILED", error_message=_clean(str(e), 500))
         _close_pin(conn, task_id)
