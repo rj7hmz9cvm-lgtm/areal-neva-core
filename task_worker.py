@@ -351,6 +351,13 @@ except Exception:
     _Stage1WorkItem = None
     _Stage1DirReg = None
 # === END ===
+# === FULLFIX_CAPABILITY_ROUTER_STAGE_2_IMPORT ===
+try:
+    from core.capability_router import CapabilityRouter as _Stage2Router
+except Exception:
+    _Stage2Router = None
+# === END STAGE2 ===
+
 
 logger.setLevel(logging.INFO)
 if not logger.handlers:
@@ -2148,6 +2155,32 @@ async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_
             else:
                 # FULLFIX_DIRECTION_KERNEL_STAGE_1_CALL
                 payload = _stage1_dir_payload(payload)
+                # FULLFIX_CAPABILITY_ROUTER_STAGE_2_CALL
+                if _Stage2Router is not None:
+                    try:
+                        from core.work_item import WorkItem as _WI2
+                        _wi2 = _WI2.from_task_row({
+                            "id": payload.get("task_id") or payload.get("id") or "",
+                            "chat_id": str(payload.get("chat_id") or ""),
+                            "topic_id": int(payload.get("topic_id") or 0),
+                            "input_type": payload.get("input_type") or "unknown",
+                            "raw_input": payload.get("raw_input") or payload.get("raw_text") or "",
+                            "state": payload.get("state") or "IN_PROGRESS",
+                        })
+                        _wi2.set_direction(
+                            payload.get("direction") or "general_chat",
+                            payload.get("direction_profile") or {},
+                        )
+                        _r2 = _Stage2Router().apply_to_work_item(_wi2)
+                        payload["engine"] = _r2["engine"]
+                        payload["execution_plan"] = _r2["execution_plan"]
+                        payload["formats_out"] = _r2["formats_out"]
+                        payload["quality_gates"] = _r2["quality_gates"]
+                        payload["capability_router"] = _r2["router_version"]
+                        logger.info("FULLFIX_CAPABILITY_ROUTER_STAGE_2 engine=%s steps=%s dir=%s",
+                                    _r2["engine"], len(_r2["execution_plan"]), payload.get("direction"))
+                    except Exception as _e2:
+                        logger.error("FULLFIX_CAPABILITY_ROUTER_STAGE_2_ERR %s", _e2)
                 ai_result = await asyncio.wait_for(process_ai_task(payload), timeout=AI_TIMEOUT)
     except Exception as e:
         _update_task(conn, task_id, state="FAILED", error_message=_clean(str(e), 500))
