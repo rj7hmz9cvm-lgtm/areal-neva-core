@@ -1235,11 +1235,11 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
                     return
 
                     # === RESULT_VALIDATOR_GUARD_V1 ===
-                if _check_result_before_confirm(_ff13c_strip_manifest_links(_msg)):
-                    _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
-                else:
-                    _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message="FORBIDDEN_PHRASE")
-                # === END RESULT_VALIDATOR_GUARD_V1 ===
+                    if _check_result_before_confirm(_ff13c_strip_manifest_links(_msg)):
+                        _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
+                    else:
+                        _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message="FORBIDDEN_PHRASE")
+                    # === END RESULT_VALIDATOR_GUARD_V1 ===
                 _history(conn, task_id, "FULLFIX_10_PROJECT_OK")
                 conn.commit()
                 _sent = _send_once_ex(conn, task_id, str(chat_id), _msg, reply_to, "ff10_project_result")
@@ -1485,11 +1485,11 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
     if role:
         ask = f"Понял назначение чата так:\n{role}\n\nПодтверди или уточни"
         # === RESULT_VALIDATOR_GUARD_V1 ===
-            if _check_result_before_confirm(ask):
-                _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=ask, error_message="")
-            else:
-                _update_task(conn, task_id, state="FAILED", result=ask, error_message="FORBIDDEN_PHRASE")
-            # === END RESULT_VALIDATOR_GUARD_V1 ===
+        if _check_result_before_confirm(ask):
+            _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=ask, error_message="")
+        else:
+            _update_task(conn, task_id, state="FAILED", result=ask, error_message="FORBIDDEN_PHRASE")
+        # === END RESULT_VALIDATOR_GUARD_V1 ===
         _history(conn, task_id, "state:AWAITING_CONFIRMATION")
         conn.commit()
         _send_once(conn, task_id, chat_id, ask, reply_to, "role_confirmation")
@@ -2062,11 +2062,11 @@ async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_
     if should_save_role:
         saved_role = _save_topic_role_memory(chat_id, topic_id, ai_result)
         # === RESULT_VALIDATOR_GUARD_V1 ===
-                if _check_result_before_confirm(ai_result):
-                    _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=ai_result, error_message="")
-                else:
-                    _update_task(conn, task_id, state="FAILED", result=ai_result, error_message="FORBIDDEN_PHRASE")
-                # === END RESULT_VALIDATOR_GUARD_V1 ===
+        if _check_result_before_confirm(ai_result):
+            _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=ai_result, error_message="")
+        else:
+            _update_task(conn, task_id, state="FAILED", result=ai_result, error_message="FORBIDDEN_PHRASE")
+        # === END RESULT_VALIDATOR_GUARD_V1 ===
     _history(conn, task_id, f"result:{_clean(ai_result, 400)}")
     if saved_role:
         _history(conn, task_id, f"ROLE_SAVED:{_clean(saved_role, 200)}")
@@ -2193,11 +2193,11 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
                 file_name = data.get("file_name", "файл")
                 _dupe_msg = duplicate_message(_dupe, file_name)
                 # === RESULT_VALIDATOR_GUARD_V1 ===
-            if _check_result_before_confirm(_dupe_msg):
-                _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_dupe_msg, error_message="")
-            else:
-                _update_task(conn, task_id, state="FAILED", result=_dupe_msg, error_message="FORBIDDEN_PHRASE")
-            # === END RESULT_VALIDATOR_GUARD_V1 ===
+                if _check_result_before_confirm(_dupe_msg):
+                    _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_dupe_msg, error_message="")
+                else:
+                    _update_task(conn, task_id, state="FAILED", result=_dupe_msg, error_message="FORBIDDEN_PHRASE")
+                # === END RESULT_VALIDATOR_GUARD_V1 ===
                 _history(conn, task_id, "state:AWAITING_CONFIRMATION:duplicate_guard")
                 conn.commit()
                 from core.reply_sender import send_reply_ex
