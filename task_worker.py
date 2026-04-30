@@ -27,6 +27,23 @@ from dotenv import load_dotenv
 from core.ai_router import process_ai_task
 from core.reply_sender import send_reply, send_reply_ex
 try:
+    from core.search_session import get_session as _ss_get, create_session as _ss_create, update_session as _ss_update, extract_criteria as _ss_criteria  # SEARCH_SESSION_V1_WIRED
+except Exception:
+    _ss_get = lambda *a: None
+    _ss_create = lambda *a, **kw: {}
+    _ss_update = lambda *a, **kw: None
+    _ss_criteria = lambda t: {}
+try:
+    from core.output_decision import format_task_result as _od_format, format_search_output as _od_search  # OUTPUT_DECISION_V1_WIRED
+except Exception:
+    _od_format = lambda r, s, **kw: r
+    _od_search = lambda o, **kw: str(o)
+try:
+    from core.inbox_aggregator import normalize_inbox_item as _ia_norm, should_create_task as _ia_should  # INBOX_AGG_V1_WIRED
+except Exception:
+    _ia_norm = lambda **kw: kw
+    _ia_should = lambda i: True
+try:
     from core.constraint_engine import rank_offers as _ce_rank, apply_constraints as _ce_apply, validate_offer as _ce_validate  # CONSTRAINT_ENGINE_V1_WIRED
 except Exception:
     _ce_rank = lambda o: o
