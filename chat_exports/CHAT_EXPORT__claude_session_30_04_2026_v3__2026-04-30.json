@@ -1,0 +1,24 @@
+{
+  "chat_id": "claude_session_30_04_2026_v3",
+  "chat_name": "AREAL-NEVA ORCHESTRA — Claude Session 30.04.2026 V3",
+  "exported_at": "2026-04-30T04:45:00+03:00",
+  "source_model": "Claude Sonnet 4.6",
+  "patches_installed": [
+    "PATCH_DOWNLOAD_OAUTH_V1 — _download_from_drive через OAuth не SA",
+    "PATCH_SOURCE_GUARD_V1 — файлы не из Telegram → CANCELLED",
+    "PATCH_FILE_ERROR_RETRY_V1 — reply на ошибку → перезапуск файла",
+    "PATCH_HC_NO_UPLOAD — healthcheck через list API не upload"
+  ],
+  "key_decisions": [
+    "Service Account не может скачивать файлы My Drive пользователя — только OAuth",
+    "drive_ingest подхватывал healthcheck файлы — исправлено через list API",
+    "Reply на ошибку обработки перезапускает файл автоматически",
+    "source=google_drive файлы игнорируются — только source=telegram"
+  ],
+  "new_canon_rules": {
+    "0.11": "Самопроверка AI обязательна перед и после кода",
+    "source_guard": "Только файлы source=telegram проходят обработку",
+    "error_retry": "Reply на ошибку = перезапуск, не повторная отправка файла",
+    "download_oauth": "_download_from_drive использует OAuth scope=drive"
+  }
+}
