@@ -369,6 +369,13 @@ try:
 except Exception:
     _Stage4QG = None
 # === END STAGE4 ===
+# === FULLFIX_SEARCH_ENGINE_STAGE_5_IMPORT ===
+try:
+    from core.search_engine import SearchEngine as _Stage5Search
+except Exception:
+    _Stage5Search = None
+# === END STAGE5 ===
+
 
 
 
@@ -2195,6 +2202,25 @@ async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_
                                     _r2["engine"], len(_r2["execution_plan"]), payload.get("direction"))
                     except Exception as _e2:
                         logger.error("FULLFIX_CAPABILITY_ROUTER_STAGE_2_ERR %s", _e2)
+                # FULLFIX_SEARCH_ENGINE_STAGE_5_CALL
+                if _Stage5Search is not None:
+                    try:
+                        from core.work_item import WorkItem as _WI5
+                        _wi5 = _WI5.from_task_row({
+                            "id": payload.get("task_id") or payload.get("id") or "",
+                            "chat_id": str(payload.get("chat_id") or ""),
+                            "topic_id": int(payload.get("topic_id") or 0),
+                            "input_type": payload.get("input_type") or "unknown",
+                            "raw_input": payload.get("raw_input") or payload.get("raw_text") or "",
+                            "state": payload.get("state") or "IN_PROGRESS",
+                        })
+                        _wi5.set_direction(
+                            payload.get("direction") or "general_chat",
+                            payload.get("direction_profile") or {},
+                        )
+                        _Stage5Search().apply_to_payload(_wi5, payload)
+                    except Exception as _e5:
+                        logger.error("FULLFIX_SEARCH_ENGINE_STAGE_5_ERR %s", _e5)
                 # FULLFIX_CONTEXT_LOADER_STAGE_3_CALL
                 if _Stage3Loader is not None:
                     try:
