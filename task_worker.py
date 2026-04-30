@@ -371,11 +371,9 @@ def save_ezone_json(chat_id: str, text: str) -> str:
 
         # timeline
         with open(f"{base}/timeline.jsonl", "a", encoding="utf-8") as f:
-            f.write(entry + \n")
-")
+            f.write(entry + "\n")
         with open(f"{BASE}/data/memory_files/GLOBAL/timeline.jsonl", "a", encoding="utf-8") as f:
-            f.write(entry + \n")
-")
+            f.write(entry + "\n")
 
         # SYSTEM keys
         for key in EZONE_KEYS:
