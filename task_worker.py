@@ -801,7 +801,65 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
 
 
 
-    # === FULLFIX_13A_SAMPLE_TEMPLATE_AND_TEMPLATE_ESTIMATE_ROUTE ===
+        # === FULLFIX_14_UNIFIED_ROUTE ===
+    try:
+        from core.template_intake_engine import is_sample_intent as _ff14_is_sample, process_template_intake as _ff14_tmpl
+        from core.defect_act_engine import is_defect_act_intent as _ff14_is_defect, process_defect_act as _ff14_defect
+        from core.multifile_artifact_engine import is_multifile_intent as _ff14_is_multi, process_multifile as _ff14_multi
+        from core.estimate_unified_engine import process_estimate_task as _ff14_estimate, parse_estimate_rows as _ff14_parse
+        _ff14_raw = str(raw_input or "")
+        _ff14_itype = str(_task_field(task, "input_type") or "")
+        _ff14_mime = ""
+        _ff14_fname = ""
+        _ff14_lpath = ""
+        if _ff14_itype == "drive_file":
+            try:
+                import json as _ff14j
+                _ff14_meta = _ff14j.loads(_task_field(task, "raw_input") or "{}")
+                _ff14_mime = _ff14_meta.get("mime_type", "")
+                _ff14_fname = _ff14_meta.get("file_name", "")
+                _ff14_lpath = _ff14_meta.get("local_path", "")
+            except Exception:
+                pass
+        # 1. template/sample intake — highest priority
+        if _ff14_is_sample(_ff14_raw):
+            _ff14_done = await _ff14_tmpl(
+                conn=conn, task_id=task_id, chat_id=chat_id, topic_id=topic_id,
+                raw_input=_ff14_raw, local_path=_ff14_lpath,
+                file_name=_ff14_fname, mime_type=_ff14_mime
+            )
+            if _ff14_done:
+                return
+        # 2. defect/photo act
+        if _ff14_is_defect(_ff14_raw, _ff14_mime):
+            _ff14_done = await _ff14_defect(
+                conn=conn, task_id=task_id, chat_id=chat_id, topic_id=topic_id,
+                raw_input=_ff14_raw, file_name=_ff14_fname, local_path=_ff14_lpath
+            )
+            if _ff14_done:
+                return
+        # 3. estimate from natural language text
+        if _ff14_itype in ("text", "search") and _ff14_parse(_ff14_raw):
+            _ff14_done = await _ff14_estimate(
+                conn=conn, task_id=task_id, chat_id=chat_id, topic_id=topic_id, raw_input=_ff14_raw
+            )
+            if _ff14_done:
+                return
+        # 4. multifile aggregation
+        if _ff14_is_multi(_ff14_raw):
+            _ff14_done = await _ff14_multi(
+                conn=conn, task_id=task_id, chat_id=chat_id, topic_id=topic_id, raw_input=_ff14_raw
+            )
+            if _ff14_done:
+                return
+    except Exception as _ff14_err:
+        try:
+            logger.error("FULLFIX_14_ROUTE_ERROR task=%s err=%s", task_id, str(_ff14_err))
+        except Exception:
+            pass
+    # === END FULLFIX_14_UNIFIED_ROUTE ===
+
+# === FULLFIX_13A_SAMPLE_TEMPLATE_AND_TEMPLATE_ESTIMATE_ROUTE ===
     try:
         from core.sample_template_engine import (
             handle_sample_template_intent as _ff13a_handle_sample_template_intent,

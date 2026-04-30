@@ -1,0 +1,31 @@
+# === FULLFIX_14_ARTIFACT_UPLOAD_GUARD ===
+import os, logging
+logger = logging.getLogger(__name__)
+
+def upload_or_fail(path, task_id, topic_id, kind="artifact"):
+    if not path or not os.path.exists(path):
+        return {"success": False, "error": "FILE_NOT_FOUND", "path": path}
+    size = os.path.getsize(path)
+    if size < 10:
+        return {"success": False, "error": "FILE_TOO_SMALL", "path": path, "size": size}
+    tried = []
+    try:
+        from core.engine_base import upload_artifact_to_drive
+        link = upload_artifact_to_drive(path, task_id, topic_id)
+        if link and str(link).startswith("http"):
+            return {"success": True, "link": str(link), "path": path}
+        tried.append("engine_base:empty_link")
+    except Exception as e:
+        tried.append("engine_base:" + str(e))
+    return {"success": False, "error": "UPLOAD_FAILED", "path": path, "size": size, "tried": tried}
+
+def upload_many_or_fail(files, task_id, topic_id):
+    results = {}
+    all_ok = True
+    for f in files:
+        r = upload_or_fail(f["path"], task_id, topic_id, f.get("kind", "artifact"))
+        results[f["path"]] = r
+        if not r["success"]:
+            all_ok = False
+    return {"success": all_ok, "results": results}
+# === END FULLFIX_14_ARTIFACT_UPLOAD_GUARD ===
