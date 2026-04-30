@@ -530,6 +530,16 @@ def _load_memory_context(chat_id: str, topic_id: int) -> Tuple[str, str, str, st
 
 
 def _load_archive_context(chat_id: str, topic_id: int, user_text: str) -> str:
+    # === ARCHIVE_DISTRIBUTOR_V1_WIRED ===
+    try:
+        from core.archive_distributor import _load_archive_for_topic
+        arc = _load_archive_for_topic(chat_id, topic_id, user_text, limit=5)
+        if arc:
+            return arc
+    except Exception as _ade:
+        logger.warning("ARCHIVE_DISTRIBUTOR_ERR %s", _ade)
+    # === END ARCHIVE_DISTRIBUTOR_V1_WIRED ===
+    # Fallback — старый метод через archive_legacy
     STOP_WORDS = {"это","как","что","где","когда","для","почему","зачем","кто"}
     words = {w for w in re.findall(r"\w+", _clean(user_text).lower()) if len(w) > 3 and w not in STOP_WORDS}
     if not words or not os.path.exists(MEM_DB):
