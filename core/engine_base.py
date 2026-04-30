@@ -117,6 +117,34 @@ def calculate_file_hash(file_path: str) -> str:
 
 
 # === PATCH_DRIVE_DIRECT_OAUTH_V1 ===
+def _telegram_fallback_send(local_path: str, task_id: str, topic_id: int) -> str:
+    """TELEGRAM_FALLBACK_V1 — отправить файл в Telegram если Drive недоступен"""
+    try:
+        import requests, os
+        BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+        CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "-1003725299009")
+        if not BOT_TOKEN or not os.path.exists(local_path):
+            return ""
+        caption = f"[DRIVE_UNAVAIL] Файл задачи {task_id[:8]} — Drive недоступен, отправляю напрямую"
+        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument"
+        with open(local_path, "rb") as f:
+            resp = requests.post(url, data={
+                "chat_id": CHAT_ID,
+                "message_thread_id": str(topic_id) if topic_id else "",
+                "caption": caption,
+            }, files={"document": f}, timeout=60)
+        if resp.ok:
+            result = resp.json()
+            file_id = result.get("result", {}).get("document", {}).get("file_id", "")
+            logger.info("TELEGRAM_FALLBACK_V1 sent file_id=%s task=%s", file_id, task_id)
+            return f"telegram://file/{file_id}"
+        else:
+            logger.warning("TELEGRAM_FALLBACK_V1 failed status=%s", resp.status_code)
+            return ""
+    except Exception as e:
+        logger.warning("TELEGRAM_FALLBACK_V1 err=%s", e)
+        return ""
+
 def upload_artifact_to_drive(file_path: str, task_id: str, topic_id: int):
     import os, logging, mimetypes
     from dotenv import load_dotenv
