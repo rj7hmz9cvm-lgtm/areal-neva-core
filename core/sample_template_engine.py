@@ -616,3 +616,18 @@ async def handle_template_estimate_intent(
     return True
 
 # === END FULLFIX_13A_SAMPLE_FILE_INTENT_AND_TEMPLATE_ESTIMATE ===
+
+
+# === FULLFIX_13B_TEMPLATE_SAVE_STRICT_ACK ===
+def ff13b_template_saved_message(file_name: str = "", template_type: str = "estimate", topic_id: int = 0) -> str:
+    name = str(file_name or "файл").strip()
+    t = str(template_type or "estimate").strip()
+    return (
+        "Шаблон сохранён\n"
+        f"Файл: {name}\n"
+        f"Тип: {t}\n"
+        f"Topic: {topic_id}\n\n"
+        "Дальше можно писать простым языком: сделай смету / сделай проект"
+    )
+# === END FULLFIX_13B_TEMPLATE_SAVE_STRICT_ACK ===
+

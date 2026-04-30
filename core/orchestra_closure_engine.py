@@ -688,3 +688,71 @@ def ff13a_detect_sample_template_intent(raw_input: str, input_type: str = "text"
     return detect_sample_template_intent(raw_input, input_type)
 # === END FULLFIX_13A_SAMPLE_TEMPLATE_PUBLIC_HELPERS ===
 
+
+# === FULLFIX_13B_ESTIMATE_OUTPUT_FORMULAS_NO_MANIFEST ===
+def ff13b_rewrite_estimate_xlsx_with_formulas(xlsx_path: str) -> str:
+    """
+    Ensure estimate XLSX is a real working spreadsheet:
+    - Qty / Price / Total columns
+    - Total column uses Excel formulas
+    - Final total row uses SUM formula
+    """
+    from openpyxl import load_workbook
+    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    from openpyxl.utils import get_column_letter
+
+    wb = load_workbook(xlsx_path)
+    ws = wb.active
+
+    headers = ["№", "Наименование", "Ед.", "Кол-во", "Цена", "Сумма"]
+    for col, h in enumerate(headers, 1):
+        c = ws.cell(row=1, column=col, value=h)
+        c.font = Font(bold=True)
+        c.alignment = Alignment(horizontal="center")
+        c.fill = PatternFill("solid", fgColor="D9EAF7")
+
+    max_row = ws.max_row
+    first_data = 2
+    last_data = max_row
+
+    # detect if old sheet has no clean header
+    if max_row < 2:
+        last_data = 2
+
+    for row in range(first_data, last_data + 1):
+        qty = ws.cell(row=row, column=4).value
+        price = ws.cell(row=row, column=5).value
+        if qty not in (None, "") and price not in (None, ""):
+            ws.cell(row=row, column=6, value=f"=D{row}*E{row}")
+
+    total_row = last_data + 1
+    ws.cell(row=total_row, column=5, value="ИТОГО").font = Font(bold=True)
+    ws.cell(row=total_row, column=6, value=f"=SUM(F{first_data}:F{last_data})").font = Font(bold=True)
+
+    widths = [8, 42, 12, 14, 14, 16]
+    thin = Side(style="thin", color="999999")
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+    for col, width in enumerate(widths, 1):
+        ws.column_dimensions[get_column_letter(col)].width = width
+        for row in range(1, total_row + 1):
+            ws.cell(row=row, column=col).border = border
+            ws.cell(row=row, column=col).alignment = Alignment(vertical="center", wrap_text=True)
+
+    wb.save(xlsx_path)
+    return xlsx_path
+
+
+def ff13b_clean_estimate_user_message(message: str) -> str:
+    """
+    User must see only useful estimate outputs:
+    - PDF
+    - XLSX
+    No MANIFEST in Telegram answer
+    """
+    import re
+    msg = str(message or "")
+    msg = re.sub(r"(?im)^MANIFEST:\s*https?://\S+\s*$", "", msg)
+    msg = re.sub(r"\n{3,}", "\n\n", msg).strip()
+    return msg
+# === END FULLFIX_13B_ESTIMATE_OUTPUT_FORMULAS_NO_MANIFEST ===
+

@@ -810,7 +810,12 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
             input_type=_ff13a_input_type,
             reply_to_message_id=_ff13a_reply_to,
         )
+        # === FULLFIX_13B_SAMPLE_HARD_STOP_1 ===
         if _ff13a_done:
+            try:
+                conn.commit()
+            except Exception:
+                pass
             return
         _ff13a_done = await _ff13a_handle_template_estimate_intent(
             conn=_ff13a_conn,
@@ -821,7 +826,12 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
             input_type=_ff13a_input_type,
             reply_to_message_id=_ff13a_reply_to,
         )
+        # === FULLFIX_13B_SAMPLE_HARD_STOP_2 ===
         if _ff13a_done:
+            try:
+                conn.commit()
+            except Exception:
+                pass
             return
     except Exception as _ff13a_err:
         try:
@@ -829,6 +839,39 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
         except Exception:
             pass
     # === END FULLFIX_13A_SAMPLE_TEMPLATE_AND_TEMPLATE_ESTIMATE_ROUTE ===
+
+
+    # === FULLFIX_13B_FALSE_PROJECT_PHRASE_GUARD ===
+    try:
+        _ff13b_low = str(raw_input or "").strip().lower()
+        _ff13b_false_project_phrases = {
+            "это один из вариантов",
+            "это как образец",
+            "это пример",
+            "вот образец",
+            "вот пример",
+            "сохрани как образец",
+        }
+        if _ff13b_low in _ff13b_false_project_phrases:
+            _msg = "Принял как образец. Дальше можно писать простым языком: сделай смету / сделай проект"
+            await safe_update(conn, task_id, state="DONE", result=_msg, error_message="")
+            try:
+                from core.reply_sender import send_reply_ex
+                send_reply_ex(chat_id=str(chat_id), text=_msg, reply_to_message_id=reply_to)
+            except Exception:
+                pass
+            try:
+                conn.execute("INSERT INTO task_history (task_id,action,created_at) VALUES (?,?,datetime('now'))", (task_id, "FULLFIX_13B_FALSE_PROJECT_GUARDED"))
+                conn.commit()
+            except Exception:
+                pass
+            return
+    except Exception as _ff13b_guard_err:
+        try:
+            logger.error("FULLFIX_13B_FALSE_PROJECT_GUARD_ERROR task=%s err=%s", task_id, str(_ff13b_guard_err))
+        except Exception:
+            pass
+    # === END FULLFIX_13B_FALSE_PROJECT_PHRASE_GUARD ===
 
     # === FULLFIX_10_TOTAL_CLOSURE_UNIVERSAL_ROUTE ===
     try:
@@ -841,6 +884,16 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
         )
 
         _ff10_intent = _ff10_classify_user_task(str(raw_input or ""))
+
+
+        # === FULLFIX_13B_CLEAN_ESTIMATE_MESSAGE_BEFORE_SEND_FALLBACK ===
+        def _ff13b_clean_any_estimate_text(_txt):
+            try:
+                from core.orchestra_closure_engine import ff13b_clean_estimate_user_message
+                return ff13b_clean_estimate_user_message(_txt)
+            except Exception:
+                return _txt
+        # === END FULLFIX_13B_CLEAN_ESTIMATE_MESSAGE_BEFORE_SEND_FALLBACK ===
 
         if _ff10_intent in ("confirm", "revision"):
             _ff10_parent = conn.execute(
