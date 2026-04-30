@@ -363,6 +363,13 @@ try:
 except Exception:
     _Stage3Loader = None
 # === END STAGE3 ===
+# === FULLFIX_QUALITY_GATE_STAGE_4_IMPORT ===
+try:
+    from core.quality_gate import QualityGate as _Stage4QG
+except Exception:
+    _Stage4QG = None
+# === END STAGE4 ===
+
 
 
 
@@ -2211,6 +2218,16 @@ async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_
                     except Exception as _e3:
                         logger.error("FULLFIX_CONTEXT_LOADER_STAGE_3_ERR %s", _e3)
                 ai_result = await asyncio.wait_for(process_ai_task(payload), timeout=AI_TIMEOUT)
+                # FULLFIX_QUALITY_GATE_STAGE_4_CALL
+                if _Stage4QG is not None and isinstance(ai_result, dict):
+                    try:
+                        _qg_payload = {**payload, **ai_result}
+                        _qg_report = _Stage4QG().apply_to_payload(_qg_payload)
+                        ai_result["quality_gate_report"] = _qg_report
+                        logger.info("FULLFIX_QUALITY_GATE_STAGE_4 overall=%s failed=%s dir=%s",
+                                    _qg_report["overall"], _qg_report["failed"], payload.get("direction"))
+                    except Exception as _e4:
+                        logger.error("FULLFIX_QUALITY_GATE_STAGE_4_ERR %s", _e4)
     except Exception as e:
         _update_task(conn, task_id, state="FAILED", error_message=_clean(str(e), 500))
         _close_pin(conn, task_id)
