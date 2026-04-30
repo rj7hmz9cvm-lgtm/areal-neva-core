@@ -363,3 +363,38 @@ GitHub freshness rule:
 2. raw file at exact SHA
 3. internal updated_at
 4. GitHub UI page — NOT proof
+
+## §0.11 ОБЯЗАТЕЛЬНАЯ САМОПРОВЕРКА AI (30.04.2026)
+
+Правило обязательно для любой нейросети: Claude, ChatGPT, Gemini и других.
+
+### Перед написанием кода AI обязан:
+1. Прочитать актуальные каноны (GitHub docs/CANON_FINAL/)
+2. Прочитать LATEST_HANDOFF.md и NOT_CLOSED.md
+3. Найти все принятые решения по данной теме в текущем чате
+4. Убедиться что файлы которые будут изменены — не в списке §0.8 ЗАПРЕЩЁННЫХ
+5. Запросить диагностику актуального состояния кода если якорь неизвестен
+
+### После написания кода AI обязан провести самопроверку:
+1. §0.3 — есть явное «да» от пользователя?
+2. §0.5 — соблюдён порядок: BAK → patch → py_compile → restart → sleep → is-active → journal?
+3. §0.8 — не тронуты запрещённые файлы?
+4. §0.9 — правильный SSH формат?
+5. Якоря — взяты из актуального кода (не из памяти)?
+6. Колонки БД — проверены перед INSERT/UPDATE?
+7. PYTHONPATH — передан если нужен?
+8. Правила изоляции топиков — соблюдены?
+
+### Если самопроверка выявила ошибку:
+Молча исправить → провести самопроверку повторно → только потом предложить запуск.
+
+### Drive/Storage правило (30.04.2026):
+Артефакты загружаются ТОЛЬКО в папку топика: chat_{chat_id}/topic_{topic_id}/
+НЕ в корень INGEST папки.
+Используется core/topic_drive_oauth.py:_upload_file_sync или upload_file_to_topic.
+engine_base.upload_artifact_to_drive — только для healthcheck и прямых тестов.
+При создании нового топика папка создаётся автоматически через _ensure_folder.
+
+### Retry upload правило (30.04.2026):
+Если Drive упал → artifact → Telegram (TELEGRAM_ARTIFACT_FALLBACK_SENT в task_history)
+core/upload_retry_queue.py (cron */10) → проверяет Drive → если живой → скачивает из TG → загружает в topic папку → уведомляет пользователя → DRIVE_RETRY_UPLOAD_OK в task_history
