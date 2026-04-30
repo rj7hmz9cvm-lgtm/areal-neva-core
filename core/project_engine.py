@@ -2553,3 +2553,20 @@ except Exception as _ff10_project_override_error:
 
 # === END FULLFIX_10_TOTAL_CLOSURE_PUBLIC_PROJECT_OVERRIDE ===
 
+
+# === FULLFIX_12_COMPACT_PROJECT_PDF_LAYOUT_PUBLIC_OVERRIDE ===
+try:
+    from core.orchestra_closure_engine import create_compact_project_documentation as _ff12_compact_project
+
+    async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
+        return await _ff12_compact_project(raw_input, task_id, topic_id, template_hint, *args, **kwargs)
+
+    async def create_full_project_documentation(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
+        return await _ff12_compact_project(raw_input, task_id, topic_id, template_hint, *args, **kwargs)
+except Exception:
+    async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
+        return {"success": False, "engine": "FULLFIX_12_COMPACT_PROJECT_PDF_LAYOUT_PUBLIC_OVERRIDE", "error": "COMPACT_ENGINE_IMPORT_FAILED"}
+
+    async def create_full_project_documentation(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
+        return await create_project_pdf_dxf_artifact(raw_input, task_id, topic_id, template_hint, *args, **kwargs)
+# === END FULLFIX_12_COMPACT_PROJECT_PDF_LAYOUT_PUBLIC_OVERRIDE ===

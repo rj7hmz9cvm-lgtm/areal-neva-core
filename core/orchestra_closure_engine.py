@@ -344,3 +344,336 @@ def create_estimate_files(raw_input: str, task_id: str, topic_id: int = 0) -> Di
     }
 
 # === END FULLFIX_10_TOTAL_CLOSURE_ENGINE ===
+
+# === FULLFIX_12_COMPACT_PROJECT_PDF_LAYOUT ===
+# Goal:
+# - project PDF must look like compact project album, not sparse text dump
+# - one dense A3 landscape sheet frame
+# - fewer duplicate sheets
+# - plans, sections, nodes, specs placed compactly on each page
+# - old FULLFIX_07 renderer must not define the visual quality anymore
+
+def _ff12_font():
+    try:
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        for name, path in [
+            ("DejaVuSans", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+            ("Arial", "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf"),
+        ]:
+            if os.path.exists(path):
+                try:
+                    pdfmetrics.registerFont(TTFont(name, path))
+                    return name
+                except Exception:
+                    pass
+    except Exception:
+        pass
+    return "Helvetica"
+
+def _ff12_draw_stamp(c, page_w, page_h, sheet_title, sheet_no, sheet_total, section, font):
+    from reportlab.lib.units import mm
+
+    margin = 10 * mm
+    c.setLineWidth(0.7)
+    c.rect(margin, margin, page_w - 2 * margin, page_h - 2 * margin)
+
+    stamp_w = 185 * mm
+    stamp_h = 36 * mm
+    sx = page_w - margin - stamp_w
+    sy = margin
+    c.rect(sx, sy, stamp_w, stamp_h)
+
+    c.line(sx, sy + 10*mm, sx + stamp_w, sy + 10*mm)
+    c.line(sx, sy + 20*mm, sx + stamp_w, sy + 20*mm)
+    c.line(sx + 45*mm, sy, sx + 45*mm, sy + stamp_h)
+    c.line(sx + 135*mm, sy, sx + 135*mm, sy + stamp_h)
+    c.line(sx + 160*mm, sy, sx + 160*mm, sy + stamp_h)
+
+    c.setFont(font, 7)
+    c.drawString(sx + 3*mm, sy + 26*mm, "СК АРЕАЛ-НЕВА")
+    c.drawString(sx + 48*mm, sy + 26*mm, "Индивидуальный жилой дом")
+    c.drawString(sx + 138*mm, sy + 26*mm, "Стадия")
+    c.drawString(sx + 163*mm, sy + 26*mm, "Лист")
+
+    c.setFont(font, 9)
+    c.drawString(sx + 48*mm, sy + 14*mm, str(sheet_title)[:55])
+    c.drawString(sx + 138*mm, sy + 14*mm, "П")
+    c.drawString(sx + 163*mm, sy + 14*mm, f"{sheet_no}/{sheet_total}")
+
+    c.setFont(font, 7)
+    c.drawString(margin + 3*mm, margin + 3*mm, f"{section} · FULLFIX_12_COMPACT_PROJECT_PDF_LAYOUT")
+
+def _ff12_table(c, x, y, widths, rows, font, row_h=6, size=7):
+    from reportlab.lib.units import mm
+
+    c.setFont(font, size)
+    yy = y
+    for row in rows:
+        xx = x
+        max_lines = 1
+        split_cells = []
+        for val, w in zip(row, widths):
+            text = str(val)
+            chars = max(8, int(w / (size * 0.55)))
+            lines = [text[i:i+chars] for i in range(0, len(text), chars)] or [""]
+            split_cells.append(lines[:3])
+            max_lines = max(max_lines, len(lines[:3]))
+        h = row_h * mm * max_lines
+        for cell_lines, w in zip(split_cells, widths):
+            c.rect(xx, yy - h, w*mm, h)
+            ty = yy - 4*mm
+            for line in cell_lines:
+                c.drawString(xx + 1.5*mm, ty, line)
+                ty -= row_h*mm
+            xx += w*mm
+        yy -= h
+    return yy
+
+def _ff12_draw_plan(c, x, y, w, h, data, calc, font, title):
+    from reportlab.lib.units import mm
+
+    L = float(data["length_m"])
+    W = float(data["width_m"])
+    step = int(data["rebar_step_mm"])
+    scale = min(w / max(L, 1), h / max(W, 1))
+    rw = L * scale
+    rh = W * scale
+    x0 = x + (w - rw) / 2
+    y0 = y + (h - rh) / 2
+
+    c.setFont(font, 9)
+    c.drawString(x, y + h + 4*mm, title)
+    c.setLineWidth(1.1)
+    c.rect(x0, y0, rw, rh)
+
+    c.setLineWidth(0.25)
+    grid = max(3*mm, step / 1000 * scale)
+    xx = x0 + grid
+    while xx < x0 + rw:
+        c.line(xx, y0, xx, y0 + rh)
+        xx += grid
+    yy = y0 + grid
+    while yy < y0 + rh:
+        c.line(x0, yy, x0 + rw, yy)
+        yy += grid
+
+    c.setFont(font, 7)
+    c.drawString(x0, y0 - 5*mm, f"{L:g} м")
+    c.saveState()
+    c.translate(x0 - 7*mm, y0)
+    c.rotate(90)
+    c.drawString(0, 0, f"{W:g} м")
+    c.restoreState()
+
+def _ff12_draw_section(c, x, y, w, h, data, font, title):
+    from reportlab.lib.units import mm
+
+    slab = int(data["slab_mm"])
+    sand = int(data["sand_mm"])
+    gravel = int(data["gravel_mm"])
+    total = max(slab + sand + gravel, 1)
+    c.setFont(font, 9)
+    c.drawString(x, y + h + 4*mm, title)
+
+    layer_rows = [
+        ("Песчаная подушка", sand, "послойное уплотнение"),
+        ("Щебёночное основание", gravel, "послойное уплотнение"),
+        ("Фундаментная плита", slab, f"бетон {data['concrete_class']}, защитный слой {data.get('cover_mm',40)} мм"),
+    ]
+
+    yy = y
+    for name, th, note in layer_rows:
+        hh = max(10*mm, h * th / total)
+        c.rect(x, yy, w, hh)
+        c.setFont(font, 7)
+        c.drawString(x + 3*mm, yy + hh/2 - 2*mm, f"{name}: {th} мм — {note}")
+        yy += hh
+
+    c.setLineWidth(0.4)
+    c.line(x + 5*mm, y + h - 7*mm, x + w - 5*mm, y + h - 7*mm)
+    c.line(x + 5*mm, y + h - 13*mm, x + w - 5*mm, y + h - 13*mm)
+    c.setFont(font, 7)
+    c.drawString(x + 8*mm, y + h - 5*mm, f"{data['rebar_class']} Ø{data['rebar_diam_mm']} шаг {data['rebar_step_mm']} мм")
+
+def _ff12_draw_nodes(c, x, y, w, h, data, font):
+    from reportlab.lib.units import mm
+
+    c.setFont(font, 9)
+    c.drawString(x, y + h + 4*mm, "Типовые узлы")
+    node_w = w / 3 - 3*mm
+    names = ["Край плиты", "Защитный слой", "Основание"]
+    for i, name in enumerate(names):
+        nx = x + i * (node_w + 4*mm)
+        c.rect(nx, y, node_w, h)
+        c.setFont(font, 7)
+        c.drawString(nx + 2*mm, y + h - 5*mm, name)
+        c.line(nx + 4*mm, y + 12*mm, nx + node_w - 4*mm, y + 12*mm)
+        c.line(nx + 4*mm, y + 20*mm, nx + node_w - 4*mm, y + 20*mm)
+        c.drawString(nx + 2*mm, y + 5*mm, f"Ø{data['rebar_diam_mm']} {data['rebar_class']}")
+        c.drawString(nx + 2*mm, y + 28*mm, f"ЗС {data.get('cover_mm',40)} мм")
+
+def _ff12_material_rows(data, calc):
+    return [
+        ["1", f"Бетон {data['concrete_class']} для фундаментной плиты", "м³", calc["concrete_m3"], "по объёму плиты"],
+        ["2", "Песчаная подушка", "м³", calc["sand_m3"], "послойное уплотнение"],
+        ["3", "Щебёночное основание", "м³", calc["gravel_m3"], "послойное уплотнение"],
+        ["4", f"Арматура {data['rebar_class']} Ø{data['rebar_diam_mm']}", "п.м", calc["rebar_m_total"], "верхняя и нижняя сетка"],
+        ["5", f"Арматура {data['rebar_class']} Ø{data['rebar_diam_mm']}", "т", calc["rebar_t"], "расчётный вес"],
+    ]
+
+def _ff12_write_compact_project_pdf(path: str, data: dict, calc: dict) -> str:
+    from reportlab.lib.pagesizes import A3, landscape
+    from reportlab.lib.units import mm
+    from reportlab.pdfgen import canvas
+
+    font = _ff12_font()
+    page_w, page_h = landscape(A3)
+    c = canvas.Canvas(path, pagesize=landscape(A3))
+
+    section = data["section"]
+    sheets = [
+        "Общие данные + ведомость листов",
+        "План плиты + армирование",
+        "Разрезы и узлы",
+        "Спецификация + контроль качества",
+    ]
+    sheet_total = len(sheets)
+
+    # Sheet 1
+    _ff12_draw_stamp(c, page_w, page_h, sheets[0], 1, sheet_total, section, font)
+    c.setFont(font, 14)
+    c.drawString(20*mm, 275*mm, "Проект фундаментной плиты")
+    c.setFont(font, 9)
+    left_rows = [
+        ["Раздел", section],
+        ["Тип", "Фундаментная плита"],
+        ["Размер", f"{data['length_m']:g} x {data['width_m']:g} м"],
+        ["Толщина плиты", f"{data['slab_mm']} мм"],
+        ["Основание", f"Песок {data['sand_mm']} мм, щебень {data['gravel_mm']} мм"],
+        ["Бетон", data["concrete_class"]],
+        ["Арматура", f"{data['rebar_class']} Ø{data['rebar_diam_mm']} шаг {data['rebar_step_mm']} мм"],
+        ["Площадь", f"{calc['area_m2']} м²"],
+        ["Объём бетона", f"{calc['concrete_m3']} м³"],
+    ]
+    _ff12_table(c, 20*mm, 258*mm, [42, 95], left_rows, font, row_h=6, size=8)
+
+    sheet_rows = [[str(i+1), title] for i, title in enumerate(sheets)]
+    _ff12_table(c, 180*mm, 258*mm, [15, 110], [["№", "Наименование листа"]] + sheet_rows, font, row_h=6, size=8)
+
+    norm_rows = [["№", "Нормативная база"]] + [[str(i+1), n] for i, n in enumerate(NORMATIVE_NOTES[:6])]
+    _ff12_table(c, 20*mm, 165*mm, [15, 250], norm_rows, font, row_h=6, size=7)
+    c.showPage()
+
+    # Sheet 2
+    _ff12_draw_stamp(c, page_w, page_h, sheets[1], 2, sheet_total, section, font)
+    _ff12_draw_plan(c, 20*mm, 65*mm, 235*mm, 165*mm, data, calc, font, "План фундаментной плиты и сетка армирования")
+    c.setFont(font, 8)
+    notes = [
+        f"Нижняя и верхняя сетки: {data['rebar_class']} Ø{data['rebar_diam_mm']} шаг {data['rebar_step_mm']} мм",
+        f"Защитный слой бетона: {data.get('cover_mm',40)} мм",
+        f"Количество стержней по X/Y: {calc['bars_x']} / {calc['bars_y']}",
+        f"Общий расход арматуры: {calc['rebar_m_total']} п.м / {calc['rebar_t']} т",
+    ]
+    y = 245*mm
+    for n in notes:
+        c.drawString(275*mm, y, n)
+        y -= 8*mm
+    c.showPage()
+
+    # Sheet 3
+    _ff12_draw_stamp(c, page_w, page_h, sheets[2], 3, sheet_total, section, font)
+    _ff12_draw_section(c, 20*mm, 60*mm, 170*mm, 105*mm, data, font, "Разрез 1-1")
+    _ff12_draw_section(c, 215*mm, 60*mm, 170*mm, 105*mm, data, font, "Разрез 2-2")
+    _ff12_draw_nodes(c, 20*mm, 195*mm, 365*mm, 55*mm, data, font)
+    c.showPage()
+
+    # Sheet 4
+    _ff12_draw_stamp(c, page_w, page_h, sheets[3], 4, sheet_total, section, font)
+    rows = [["№", "Наименование", "Ед", "Кол-во", "Примечание"]] + _ff12_material_rows(data, calc)
+    _ff12_table(c, 20*mm, 260*mm, [12, 120, 20, 30, 95], rows, font, row_h=7, size=8)
+
+    qc = [
+        ["1", "Проверить подготовку основания и уплотнение"],
+        ["2", "Проверить защитный слой и фиксаторы арматуры"],
+        ["3", "Проверить шаг и диаметр арматуры до бетонирования"],
+        ["4", "Принять бетон по паспортам и фактической укладке"],
+    ]
+    _ff12_table(c, 20*mm, 170*mm, [12, 190], [["№", "Контроль качества"]] + qc, font, row_h=7, size=8)
+    c.showPage()
+
+    c.save()
+    return path
+
+async def create_compact_project_documentation(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
+    data = parse_foundation_request(raw_input)
+    data["section"] = "КЖ"
+    data["project_kind"] = "foundation_slab"
+    calc = calc_foundation(data)
+
+    safe = re.sub(r"[^A-Za-z0-9_-]+", "_", str(task_id or "manual"))[:30]
+    out_dir = Path(tempfile.gettempdir()) / f"areal_compact_project_{safe}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    pdf_path = str(out_dir / f"КЖ_COMPACT_PROJECT_{safe}.pdf")
+    manifest_path = str(out_dir / f"КЖ_COMPACT_PROJECT_{safe}.manifest.json")
+
+    _ff12_write_compact_project_pdf(pdf_path, data, calc)
+
+    pdf_text = extract_pdf_text(pdf_path)
+    valid, reason = validate_foundation_text(pdf_text)
+
+    manifest = {
+        "engine": "FULLFIX_12_COMPACT_PROJECT_PDF_LAYOUT",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "task_id": task_id,
+        "topic_id": topic_id,
+        "input": raw_input,
+        "data": data,
+        "calc": calc,
+        "sheet_count": 4,
+        "pdf_text_valid": valid,
+        "pdf_text_error": reason,
+        "pdf_path": pdf_path,
+    }
+    Path(manifest_path).write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    from core.engine_base import upload_artifact_to_drive
+    pdf_link = upload_artifact_to_drive(pdf_path, task_id, topic_id)
+    manifest_link = upload_artifact_to_drive(manifest_path, task_id, topic_id)
+
+    if not pdf_link:
+        return {"success": False, "engine": "FULLFIX_12_COMPACT_PROJECT_PDF_LAYOUT", "error": "PDF_UPLOAD_FAILED"}
+
+    return {
+        "success": True,
+        "engine": "FULLFIX_12_COMPACT_PROJECT_PDF_LAYOUT",
+        "section": "КЖ",
+        "project_kind": "foundation_slab",
+        "sheet_count": 4,
+        "pdf_path": pdf_path,
+        "pdf_link": str(pdf_link),
+        "manifest_link": str(manifest_link or ""),
+        "data": data,
+        "calc": calc,
+        "message": (
+            "Проект создан компактным PDF-альбомом\\n"
+            "Engine: FULLFIX_12_COMPACT_PROJECT_PDF_LAYOUT\\n"
+            "Раздел: КЖ\\n"
+            "Тип: фундаментная плита\\n"
+            "Листов: 4\\n"
+            f"Размер: {data['length_m']:g} x {data['width_m']:g} м\\n"
+            f"Плита: {data['slab_mm']} мм\\n"
+            f"Бетон: {data['concrete_class']}\\n"
+            f"Арматура: {data['rebar_class']} Ø{data['rebar_diam_mm']} шаг {data['rebar_step_mm']} мм\\n"
+            f"Бетон: {calc['concrete_m3']} м³\\n"
+            f"Арматура: {calc['rebar_t']} т\\n\\n"
+            f"PDF: {pdf_link}\\n"
+            f"MANIFEST: {manifest_link or ''}\\n\\n"
+            "Доволен результатом? Ответь: Да / Уточни / Правки"
+        )
+    }
+
+# override public name inside this module
+create_full_project_documentation = create_compact_project_documentation
+# === END FULLFIX_12_COMPACT_PROJECT_PDF_LAYOUT ===
