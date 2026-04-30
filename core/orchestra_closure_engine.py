@@ -355,6 +355,20 @@ def create_estimate_files(raw_input: str, task_id: str, topic_id: int = 0) -> Di
         pass
     # === END FULLFIX_19_OCE_MEMORY_INVOKE ===
 
+    # === FULLFIX_20_OCE_MEMORY_INVOKE ===
+    try:
+        from core.memory_client import save_memory as _ff20_sm
+        _ff20_sm(
+            "shared",
+            "topic_" + str(topic_id or 0) + "_last_estimate_oce",
+            {"task_id": task_id, "topic_id": topic_id},
+            topic_id=int(topic_id or 0),
+            scope="topic"
+        )
+    except Exception:
+        pass
+    # === END FULLFIX_20_OCE_MEMORY_INVOKE ===
+
     return {
         "success": True,
         "engine": ENGINE,

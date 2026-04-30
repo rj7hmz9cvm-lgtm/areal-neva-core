@@ -844,7 +844,7 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
                     _ff16_parts.append(_ff16_clean)
                 _ff16_msg = "\n".join(_ff16_parts)
                 from core.reply_sender import send_reply_ex
-                send_reply_ex(chat_id=str(chat_id), text=_ff16_msg, reply_to_message_id=reply_to)
+                send_reply_ex(chat_id=str(chat_id), text=_ff16_msg, reply_to_message_id=reply_to, message_thread_id=topic_id)  # FULLFIX_20_CONTEXT_QUERY_TOPIC
                 conn.execute(
                     "UPDATE tasks SET state='DONE',result=?,updated_at=datetime('now') WHERE id=?",
                     ("Ответил по активной задаче", task_id)
