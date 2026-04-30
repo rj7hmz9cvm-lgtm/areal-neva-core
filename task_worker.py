@@ -212,6 +212,57 @@ MEMORY_NOISE_MARKERS = [
     "задайте вопрос",
 ]
 
+def _version_artifact_path(path: str, task_id: str) -> str:
+    """ARTIFACT_VERSION_V1 — создать версионированный путь file_v2.xlsx"""
+    if not path:
+        return path
+    import re as _re
+    # Если уже версионирован — увеличить номер
+    m = _re.search(r"_v(\d+)(\.\w+)$", path)
+    if m:
+        n = int(m.group(1)) + 1
+        return path[:m.start()] + f"_v{n}" + m.group(2)
+    # Первая ревизия
+    base, ext = os.path.splitext(path)
+    return f"{base}_v2{ext}"
+
+def _quality_gate_artifact(artifact_path: str = None, drive_link: str = None,
+                             input_type: str = "text", task_type: str = "") -> dict:
+    """QUALITY_GATE_CALL_V1 — проверить артефакт перед отправкой"""
+    is_file_task = input_type in ("drive_file", "file") or task_type in (
+        "ESTIMATE_TASK", "OCR_TASK", "DWG_TASK", "TECHNADZOR_TASK", "DOCUMENT_TASK"
+    )
+    if not is_file_task:
+        return {"ok": True, "reason": "NOT_FILE_TASK"}
+
+    # Есть Drive ссылка — OK
+    if drive_link and "drive.google" in str(drive_link):
+        return {"ok": True, "reason": "DRIVE_LINK_PRESENT"}
+
+    # Есть артефакт файл
+    if artifact_path and os.path.exists(artifact_path):
+        size = os.path.getsize(artifact_path)
+        if size < 100:
+            return {"ok": False, "reason": "ARTIFACT_TOO_SMALL"}
+        # Для Excel проверяем формулы
+        if artifact_path.endswith(".xlsx"):
+            try:
+                from openpyxl import load_workbook
+                wb = load_workbook(artifact_path)
+                ws = wb.active
+                has_formula = any(
+                    str(ws.cell(r, c).value or "").startswith("=")
+                    for r in range(1, min(ws.max_row+1, 20))
+                    for c in range(1, min(ws.max_column+1, 10))
+                )
+                if not has_formula:
+                    logger.warning("QUALITY_GATE: no formulas in %s", artifact_path)
+            except Exception:
+                pass
+        return {"ok": True, "reason": "ARTIFACT_EXISTS"}
+
+    return {"ok": False, "reason": "NO_ARTIFACT_NO_LINK"}
+
 def _check_result_before_confirm(result: str, input_type: str = "text", intent: str = "") -> bool:
     """RESULT_VALIDATOR_CALL_V1 — проверить result перед AWAITING_CONFIRMATION"""
     try:
@@ -2197,6 +2248,31 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
     try:
         data = json.loads(raw_input)
         file_id = data["file_id"]
+        # === TASK_TYPE_DETECT_V1 ===
+        _task_type = "DOCUMENT_TASK"
+        _fn_lower = file_name.lower()
+        _caption_lower = (data.get("caption") or raw_input or "").lower()
+        if any(_fn_lower.endswith(e) for e in (".dwg", ".dxf")):
+            _task_type = "DWG_TASK"
+        elif any(_fn_lower.endswith(e) for e in (".xlsx", ".xls", ".csv")):
+            _task_type = "ESTIMATE_TASK"
+        elif any(_fn_lower.endswith(e) for e in (".jpg", ".jpeg", ".png", ".heic", ".webp")):
+            if any(w in _caption_lower for w in ["дефект", "акт", "технадзор", "нарушен"]):
+                _task_type = "TECHNADZOR_TASK"
+            else:
+                _task_type = "OCR_TASK"
+        elif any(w in _caption_lower for w in ["смета", "расчёт", "посчитай", "калькул"]):
+            _task_type = "ESTIMATE_TASK"
+        elif any(w in _caption_lower for w in ["дефект", "акт", "технадзор"]):
+            _task_type = "TECHNADZOR_TASK"
+        try:
+            conn.execute("UPDATE tasks SET task_type=? WHERE id=?", (_task_type, task_id))
+            conn.commit()
+        except Exception:
+            pass
+        logger.info("TASK_TYPE_DETECT_V1 task=%s type=%s", task_id, _task_type)
+        # === END TASK_TYPE_DETECT_V1 ===
+
         # === DUPLICATE_GUARD_CALL_V1 ===
         try:
             _dupe = find_duplicate(conn, str(chat_id), int(topic_id or 0), file_id)
@@ -2227,6 +2303,19 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
     os.makedirs(os.path.dirname(local_path), exist_ok=True)
 
     logger.info(f"DRIVE_FILE: downloading {file_id} -> {local_path}")
+    # === FILE_SIZE_LIMIT_V1 ===
+    if ok and local_path and os.path.exists(local_path):
+        _fsize = os.path.getsize(local_path)
+        if _fsize > 50 * 1024 * 1024:  # 50MB
+            _update_task(conn, task_id, state="FAILED",
+                        result="", error_message="FILE_TOO_LARGE")
+            conn.commit()
+            from core.reply_sender import send_reply_ex
+            send_reply_ex(chat_id=str(chat_id),
+                         text="Файл слишком большой (>50MB). Сожми или разбей на части.",
+                         reply_to_message_id=reply_to, message_thread_id=topic_id)
+            return
+    # === END FILE_SIZE_LIMIT_V1 ===
     ok = _download_from_drive(file_id, local_path)
     # === FILE_INTAKE_ROUTER_V1_WIRED ===
     if ok and local_path and os.path.exists(local_path):
@@ -2281,6 +2370,15 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
                     upload_res = await upload_file_to_topic(artifact_path, artifact_name, chat_id, topic_id)
                     if isinstance(upload_res, dict) and upload_res.get("ok") and upload_res.get("drive_file_id"):
                         result = summary + f"\n\nАртефакт: https://drive.google.com/file/d/{upload_res.get('drive_file_id')}/view"
+                    # === QUALITY_GATE_WIRED_V1 ===
+                    _qg = _quality_gate_artifact(
+                        drive_link=result,
+                        input_type=input_type,
+                        task_type=_task_type if '_task_type' in dir() else ""
+                    )
+                    if not _qg.get("ok"):
+                        logger.warning("QUALITY_GATE_FAIL task=%s reason=%s", task_id, _qg.get("reason"))
+                    # === END QUALITY_GATE_WIRED_V1 ===
                     # === TEMP_CLEANUP_AFTER_UPLOAD_V1 ===
                     try:
                         _tc_upload([local_path])
