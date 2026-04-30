@@ -1,12 +1,12 @@
 # ONE_SHARED_CONTEXT
-updated_at: 2026-04-30T01:30:01+00:00
+updated_at: 2026-04-30T02:00:01+00:00
 
 ## SOURCE FILES
 - docs/CANON_FINAL/00_INDEX.md [UNKNOWN]
 - docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md [REJECTED]
 - docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md [RESTORED]
 - docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md [BROKEN]
-- docs/HANDOFFS/LATEST_HANDOFF.md [BROKEN]
+- docs/HANDOFFS/LATEST_HANDOFF.md [VERIFIED]
 - docs/REPORTS/NOT_CLOSED.md [BROKEN]
 - docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md [NOT_DONE]
 - docs/ARCHITECTURE/SEARCH_MONOLITH_V1.md [REJECTED]
@@ -62,6 +62,7 @@ updated_at: 2026-04-30T01:30:01+00:00
 - chat_exports/CHAT_EXPORT__claude_session_29_04_2026_v5__2026-04-29.json [VERIFIED]
 - chat_exports/CHAT_EXPORT__claude_session_30_04_2026_final__2026-04-30.json [VERIFIED]
 - chat_exports/CHAT_EXPORT__claude_session_30_04_2026_v2__2026-04-30.json [VERIFIED]
+- chat_exports/CHAT_EXPORT__claude_session_30_04_2026_v3__2026-04-30.json [INSTALLED]
 - chat_exports/CHAT_EXPORT__github_ssot_technical_orchestra__2026-04-29.json [BROKEN]
 - chat_exports/HANDOFF__CLAUDE_TO_NEXT_AI__2026-04-27.txt [BROKEN]
 - chat_exports/README.md [UNKNOWN]
@@ -137,10 +138,20 @@ REJECTED  = патч отклонён
 | | PATCH_ENGINE_BASE_RESTORE_SA_UPLOAD_V1 | core/engine_base.py | VERIFIED ✅ | | docs/HANDOFFS/LATEST_HANDOFF.md | VERIFIED |
 | | PATCH_DRIVE_DIRECT_OAUTH_V1 | core/engine_base.py | VERIFIED ✅ | | docs/HANDOFFS/LATEST_HANDOFF.md | VERIFIED |
 | | PATCH_DRIVE_UPLOAD_AND_TG_FALLBACK_V1 | task_worker.py | VERIFIED ✅ | | docs/HANDOFFS/LATEST_HANDOFF.md | VERIFIED |
+| | PATCH_DOWNLOAD_OAUTH_V1 | task_worker.py | INSTALLED | | docs/HANDOFFS/LATEST_HANDOFF.md | INSTALLED |
+| | PATCH_SOURCE_GUARD_V1 | task_worker.py | INSTALLED | | docs/HANDOFFS/LATEST_HANDOFF.md | INSTALLED |
+| | PATCH_FILE_ERROR_RETRY_V1 | task_worker.py | INSTALLED | | docs/HANDOFFS/LATEST_HANDOFF.md | INSTALLED |
+| | PATCH_RETRY_TOPIC_FOLDER_V1 | core/upload_retry_queue.py | VERIFIED ✅ | | docs/HANDOFFS/LATEST_HANDOFF.md | VERIFIED |
+| | PATCH_HC_NO_UPLOAD | core/upload_retry_queue.py | INSTALLED | | docs/HANDOFFS/LATEST_HANDOFF.md | INSTALLED |
 | | PATCH_DUPLICATE_GUARD_V1 | task_worker.py | INSTALLED | | docs/HANDOFFS/LATEST_HANDOFF.md | INSTALLED |
 | | PATCH_MULTI_FILE_INTAKE_V1 | task_worker.py | INSTALLED | | docs/HANDOFFS/LATEST_HANDOFF.md | INSTALLED |
 | | PATCH_LINK_INTAKE_NEEDS_CONTEXT_V1 | task_worker.py | INSTALLED | | docs/HANDOFFS/LATEST_HANDOFF.md | INSTALLED |
-| | PATCH_RETRY_TOPIC_FOLDER_V1 | core/upload_retry_queue.py | VERIFIED ✅ | | docs/HANDOFFS/LATEST_HANDOFF.md | VERIFIED |
+| Патч: PATCH_SOURCE_GUARD_V1 в _handle_drive_file. | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
+| Патч: PATCH_FILE_ERROR_RETRY_V1 в _handle_new. | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
+| Патч: PATCH_DOWNLOAD_OAUTH_V1. | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
+| - PATCH_DOWNLOAD_OAUTH_V1 — INSTALLED, live-тест не проводился | docs/HANDOFFS/LATEST_HANDOFF.md | INSTALLED |
+| - PATCH_SOURCE_GUARD_V1 — INSTALLED, live-тест не проводился | docs/HANDOFFS/LATEST_HANDOFF.md | INSTALLED |
+| - PATCH_FILE_ERROR_RETRY_V1 — INSTALLED, live-тест не проводился | docs/HANDOFFS/LATEST_HANDOFF.md | INSTALLED |
 | - PATCH_DUPLICATE_GUARD_V1 — live-тест не проводился | docs/HANDOFFS/LATEST_HANDOFF.md | NOT_DONE |
 | - PATCH_MULTI_FILE_INTAKE_V1 — live-тест не проводился | docs/HANDOFFS/LATEST_HANDOFF.md | NOT_DONE |
 | - PATCH_LINK_INTAKE_NEEDS_CONTEXT_V1 — live-тест не проводился | docs/HANDOFFS/LATEST_HANDOFF.md | NOT_DONE |
@@ -172,16 +183,6 @@ REJECTED  = патч отклонён
 | "P02 task_worker.py:1136 - PATCH_FILE_NOT_FOUND_MSG_FIX SYNTAX_OK", | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | INSTALLED |
 | "SyntaxError unterminated string literal -> Python inline code multiline strings | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
 | "AssertionError P1 NOT FOUND -> anchor mismatch after previous patch already app | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
-| "zsh parse error near ) -> nested quotes in SSH inline python -> use base64 enco | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
-| "Backup FIRST before every patch - /root/BACKUPS/areal-neva-core/PATCH_NAME_TIME | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
-| "Patch via /tmp/patch.py file - not inline Python in SSH", | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
-| "base64 encode patch script to avoid SSH quote problems", | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
-| "state": "STABLE. Services active. Queue empty. DB: ARCHIVED=371, CANCELLED=153, | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
-| "CHAT_ONLY_PHRASES working - confirmed PATCHED OK in terminal", | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
-| "message.reply - confirmed PATCHED OK + SYNTAX_OK + active", | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | INSTALLED |
-| "Patch without reading live file FORBIDDEN", | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
-| "Backup before patch REQUIRED", | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
-| "patches": [ | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA__2026-04-26.txt | UNKNOWN |
 
 ## LIVE ТЕСТЫ (VERIFIED)
 - areal-task-worker.service   task_worker.py      ОСНОВНОЙ ✅ [docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md]
@@ -219,21 +220,21 @@ REJECTED  = патч отклонён
 - | PATCH_DRIVE_DIRECT_OAUTH_V1 | core/engine_base.py | VERIFIED ✅ | [docs/HANDOFFS/LATEST_HANDOFF.md]
 - | PATCH_DRIVE_UPLOAD_AND_TG_FALLBACK_V1 | task_worker.py | VERIFIED ✅ | [docs/HANDOFFS/LATEST_HANDOFF.md]
 - | PATCH_RETRY_TOPIC_FOLDER_V1 | core/upload_retry_queue.py | VERIFIED ✅ | [docs/HANDOFFS/LATEST_HANDOFF.md]
-- | core/upload_retry_queue.py | создан + cron */10 | VERIFIED ✅ | [docs/HANDOFFS/LATEST_HANDOFF.md]
-- | core/telegram_artifact_fallback.py | создан | VERIFIED ✅ | [docs/HANDOFFS/LATEST_HANDOFF.md]
 - | §0.11 САМОПРОВЕРКА AI | docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md | VERIFIED ✅ | [docs/HANDOFFS/LATEST_HANDOFF.md]
-- | Stale test tasks cleanup | data/core.db | DONE ✅ | [docs/HANDOFFS/LATEST_HANDOFF.md]
-- | override.conf GDRIVE_REFRESH_TOKEN fix | systemd | VERIFIED ✅ | [docs/HANDOFFS/LATEST_HANDOFF.md]
-- ## VERIFIED LIVE TESTS (30.04.2026) [docs/HANDOFFS/LATEST_HANDOFF.md]
-- - drive_file NEW → NEEDS_CONTEXT → меню по topic_id ✅ [docs/HANDOFFS/LATEST_HANDOFF.md]
-- - reply/voice choice → FILE_CHOICE_PARSED → IN_PROGRESS ✅ [docs/HANDOFFS/LATEST_HANDOFF.md]
-- - Drive upload → drive.google.com link → UPLOAD_OK ✅ [docs/HANDOFFS/LATEST_HANDOFF.md]
-- - Telegram fallback → artifact в Telegram если Drive упал ✅ [docs/HANDOFFS/LATEST_HANDOFF.md]
-- - upload_retry_queue → TG fallback → Drive → RETRY_UPLOAD_OK ✅ [docs/HANDOFFS/LATEST_HANDOFF.md]
-- - retry загружает в topic папку (не INGEST корень) ✅ [docs/HANDOFFS/LATEST_HANDOFF.md]
-- - OAuth app → In Production → не протухает ✅ [docs/HANDOFFS/LATEST_HANDOFF.md]
-- - engine_base.py восстановлен ✅ [docs/HANDOFFS/LATEST_HANDOFF.md]
-- - FILE_PARENT_STRICT: DONE/CANCELLED не цепляются ✅ [docs/HANDOFFS/LATEST_HANDOFF.md]
+- ## ЗАКРЫТО КОДОМ И VERIFIED (30.04.2026) [docs/REPORTS/NOT_CLOSED.md]
+- | drive_file без intent → NEEDS_CONTEXT + меню | PATCH_FILE_INTAKE_NEEDS_CONTEXT_V3_MINIMAL | VERIFIED ✅ | [docs/REPORTS/NOT_CLOSED.md]
+- | Worker зависал на _recover_stale_tasks | PATCH_WORKER_PICK_BEFORE_STALE_V1 | VERIFIED ✅ | [docs/REPORTS/NOT_CLOSED.md]
+- | Guard до download | PATCH_DRIVE_GUARD_BEFORE_DOWNLOAD_V1 | VERIFIED ✅ | [docs/REPORTS/NOT_CLOSED.md]
+- | UnboundLocalError _pfin3_menu | PATCH_FIX_PFIN3_MENU_SHADOW_V1 | VERIFIED ✅ | [docs/REPORTS/NOT_CLOSED.md]
+- | Reply choice во всех топиках | PATCH_FILE_CHOICE_PRIORITY_V1 | VERIFIED ✅ | [docs/REPORTS/NOT_CLOSED.md]
+- | Старые DONE/CANCELLED цеплялись как parent | PATCH_FILE_PARENT_STRICT_OPEN_ONLY_V1 | VERIFIED ✅ | [docs/REPORTS/NOT_CLOSED.md]
+- | topic_id=0 захватывал чужие file tasks | PATCH_FILE_PARENT_STRICT_OPEN_ONLY_V1 | VERIFIED ✅ | [docs/REPORTS/NOT_CLOSED.md]
+- | engine_base.py отсутствовал | PATCH_ENGINE_BASE_RESTORE_SA_UPLOAD_V1 | VERIFIED ✅ | [docs/REPORTS/NOT_CLOSED.md]
+- | Drive upload через Direct OAuth | PATCH_DRIVE_DIRECT_OAUTH_V1 | VERIFIED ✅ | [docs/REPORTS/NOT_CLOSED.md]
+- | Telegram fallback если Drive упал | PATCH_DRIVE_UPLOAD_AND_TG_FALLBACK_V1 | VERIFIED ✅ | [docs/REPORTS/NOT_CLOSED.md]
+- | Retry upload из TG в Drive при восстановлении | core/upload_retry_queue.py + cron 10min | VERIFIED ✅ | [docs/REPORTS/NOT_CLOSED.md]
+- | OAuth app → Production | Google Cloud Console | VERIFIED ✅ | [docs/REPORTS/NOT_CLOSED.md]
+- | override.conf без закрывающей кавычки | fix | VERIFIED ✅ | [docs/REPORTS/NOT_CLOSED.md]
 
 ## СЛОМАНО (BROKEN)
 - ## CURRENT BROKEN POINT [docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md]
@@ -1319,8 +1320,8 @@ VALIDATION:
 - CLEAN без чувствительных данных
 
 
-### docs/HANDOFFS/LATEST_HANDOFF.md [BROKEN]
-# LATEST_HANDOFF — 30.04.2026 04:30 MSK
+### docs/HANDOFFS/LATEST_HANDOFF.md [VERIFIED]
+# LATEST_HANDOFF — 30.04.2026 04:45 MSK
 
 ## СЕРВЕР
 IP: 89.22.225.136 | Base: /root/.areal-neva-core
@@ -1339,61 +1340,44 @@ Services: areal-task-worker ACTIVE | telegram-ingress ACTIVE | areal-memory-api 
 | PATCH_ENGINE_BASE_RESTORE_SA_UPLOAD_V1 | core/engine_base.py | VERIFIED ✅ |
 | PATCH_DRIVE_DIRECT_OAUTH_V1 | core/engine_base.py | VERIFIED ✅ |
 | PATCH_DRIVE_UPLOAD_AND_TG_FALLBACK_V1 | task_worker.py | VERIFIED ✅ |
+| PATCH_DOWNLOAD_OAUTH_V1 | task_worker.py | INSTALLED |
+| PATCH_SOURCE_GUARD_V1 | task_worker.py | INSTALLED |
+| PATCH_FILE_ERROR_RETRY_V1 | task_worker.py | INSTALLED |
+| PATCH_RETRY_TOPIC_FOLDER_V1 | core/upload_retry_queue.py | VERIFIED ✅ |
+| PATCH_HC_NO_UPLOAD | core/upload_retry_queue.py | INSTALLED |
 | PATCH_DUPLICATE_GUARD_V1 | task_worker.py | INSTALLED |
 | PATCH_MULTI_FILE_INTAKE_V1 | task_worker.py | INSTALLED |
 | PATCH_LINK_INTAKE_NEEDS_CONTEXT_V1 | task_worker.py | INSTALLED |
-| PATCH_RETRY_TOPIC_FOLDER_V1 | core/upload_retry_queue.py | VERIFIED ✅ |
-| core/upload_retry_queue.py | создан + cron */10 | VERIFIED ✅ |
-| core/telegram_artifact_fallback.py | создан | VERIFIED ✅ |
-| core/duplicate_guard.py | создан | INSTALLED |
-| core/multi_file_intake.py | создан | INSTALLED |
-| core/storage_adapter.py | создан | INSTALLED |
-| core/storage_healthcheck.py | создан | INSTALLED |
-| core/runtime_cleanup.py | создан | INSTALLED |
-| tools/canon_updater.py | создан | INSTALLED |
 | §0.11 САМОПРОВЕРКА AI | docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md | VERIFIED ✅ |
-| Stale test tasks cleanup | data/core.db | DONE ✅ |
-| override.conf GDRIVE_REFRESH_TOKEN fix | systemd | VERIFIED ✅ |
 
-## VERIFIED LIVE TESTS (30.04.2026)
+## НОВЫЕ ПРАВИЛА (30.04.2026 финал)
 
-- drive_file NEW → NEEDS_CONTEXT → меню по topic_id ✅
-- reply/voice choice → FILE_CHOICE_PARSED → IN_PROGRESS ✅
-- Drive upload → drive.google.com link → UPLOAD_OK ✅
-- Telegram fallback → artifact в Telegram если Drive упал ✅
-- upload_retry_queue → TG fallback → Drive → RETRY_UPLOAD_OK ✅
-- retry загружает в topic папку (не INGEST корень) ✅
-- OAuth app → In Production → не протухает ✅
-- engine_base.py восстановлен ✅
-- FILE_PARENT_STRICT: DONE/CANCELLED не цепляются ✅
-- topic_id=0 не берёт чужие file tasks ✅
+### Source Guard
+Файлы не из Telegram (source != "telegram") → CANCELLED автоматически.
+Системный мусор из google_drive ingest не попадает в чаты.
+Патч: PATCH_SOURCE_GUARD_V1 в _handle_drive_file.
 
-## НОВЫЕ ПРАВИЛА (30.04.2026)
+### File Error Retry
+Reply на сообщение с ошибкой → автоматический перезапуск файла.
+Пользователь не должен повторно кидать файл.
+Патч: PATCH_FILE_ERROR_RETRY_V1 в _handle_new.
 
-### §0.11 — Обязательная самопроверка AI
-Любая нейросеть перед кодом: читает каноны + решения чата.
-После кода: самопроверка по §0.3-§0.9, якоря, колонки БД, PYTHONPATH.
-Записано в docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md
+### Download OAuth
+_download_from_drive использует OAuth а не Service Account.
+Service Account не имеет доступа к My Drive пользователя.
+Патч: PATCH_DOWNLOAD_OAUTH_V1.
 
 ### Drive Folder Isolation
-Артефакты ТОЛЬКО в: AI_ORCHESTRA/chat_{chat_id}/topic_{topic_id}/
-НЕ в корень INGEST.
-Функция: core/topic_drive_oauth._upload_file_sync
-При новом топике папка создаётся автоматически.
-
-### Storage Resilience Chain
-Drive OK → Drive link в result
-Drive FAIL → Telegram sendDocument → TELEGRAM_ARTIFACT_FALLBACK_SENT
-Cron */10 → upload_retry_queue → Drive alive? → TG → topic папка → уведомление → DRIVE_RETRY_UPLOAD_OK
-
-### Cron Jobs (финальный список)
-- tools/context_aggregator.py — каждые 30 минут
-- core/upload_retry_queue.py — каждые 10 минут
-- core/storage_healthcheck.py — каждые 30 минут
+Артефакты только в: AI_ORCHESTRA/chat_{chat_id}/topic_{topic_id}/
+Retry queue использует topic_drive_oauth._upload_file_sync.
+Healthcheck НЕ создаёт файлы в Drive (только list API).
 
 ## НЕ ЗАКРЫТО — P1
 
 - Голосовой confirm при AWAITING_CONFIRMATION (telegram_daemon.py:601)
+- PATCH_DOWNLOAD_OAUTH_V1 — INSTALLED, live-тест не проводился
+- PATCH_SOURCE_GUARD_V1 — INSTALLED, live-тест не проводился
+- PATCH_FILE_ERROR_RETRY_V1 — INSTALLED, live-тест не проводился
 - PATCH_DUPLICATE_GUARD_V1 — live-тест не проводился
 - PATCH_MULTI_FILE_INTAKE_V1 — live-тест не проводился
 - PATCH_LINK_INTAKE_NEEDS_CONTEXT_V1 — live-тест не проводился
@@ -1403,15 +1387,12 @@ Cron */10 → upload_retry_queue → Drive alive? → TG → topic папка �
 - Смета PDF → Excel → Drive end-to-end
 - КЖ PDF pipeline
 - project_engine end-to-end
-- Gemini vision live-тест
+- Gemini vision
 - Excel формулы =C2*D2 / =SUM
-- Нормы СП/ГОСТ в technadzor_engine
+- Нормы СП/ГОСТ
 - Multi-file один артефакт
-- Memory/pin перед меню
 - Google Sheets интеграция
 - Шаблоны end-to-end
-- Storage adapter unified layer
-- Universal result guard
 - MODEL_ROUTER, FALLBACK_CHAIN
 
 
@@ -1635,6 +1616,32 @@ Main canon: 1k_KIpQ7jD15_w83sMz4WfqoEIINIXTHTaTOtUovf2gU
     "ssh areal ... git clone repo, create docs/CANON_FINAL docs/SHARED_CONTEXT docs/ARCHITECTURE docs/HANDOFFS docs/REPORTS tools scripts runtime, write README, secret_scan, SEARCH_MONOLITH, handoff, NOT_CLOSED, context_aggregator stub, git commit/push",
     "bash tools/secret_scan.sh -> initial scan failed because patterns inside secret_sc
 ...[TRUNCATED]
+
+### chat_exports/CHAT_EXPORT__claude_session_30_04_2026_v3__2026-04-30.json [INSTALLED]
+{
+  "chat_id": "claude_session_30_04_2026_v3",
+  "chat_name": "AREAL-NEVA ORCHESTRA — Claude Session 30.04.2026 V3",
+  "exported_at": "2026-04-30T04:45:00+03:00",
+  "source_model": "Claude Sonnet 4.6",
+  "patches_installed": [
+    "PATCH_DOWNLOAD_OAUTH_V1 — _download_from_drive через OAuth не SA",
+    "PATCH_SOURCE_GUARD_V1 — файлы не из Telegram → CANCELLED",
+    "PATCH_FILE_ERROR_RETRY_V1 — reply на ошибку → перезапуск файла",
+    "PATCH_HC_NO_UPLOAD — healthcheck через list API не upload"
+  ],
+  "key_decisions": [
+    "Service Account не может скачивать файлы My Drive пользователя — только OAuth",
+    "drive_ingest подхватывал healthcheck файлы — исправлено через list API",
+    "Reply на ошибку обработки перезапускает файл автоматически",
+    "source=google_drive файлы игнорируются — только source=telegram"
+  ],
+  "new_canon_rules": {
+    "0.11": "Самопроверка AI обязательна перед и после кода",
+    "source_guard": "Только файлы source=telegram проходят обработку",
+    "error_retry": "Reply на ошибку = перезапуск, не повторная отправка файла",
+    "download_oauth": "_download_from_drive использует OAuth scope=drive"
+  }
+}
 
 ### chat_exports/CHAT_EXPORT__claude_session_30_04_2026_v2__2026-04-30.json [VERIFIED]
 {
