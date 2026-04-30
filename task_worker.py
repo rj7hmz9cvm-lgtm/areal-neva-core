@@ -343,7 +343,6 @@ os.makedirs(f"{BASE}/logs", exist_ok=True)
 os.makedirs(f"{BASE}/runtime", exist_ok=True)
 
 logger = logging.getLogger("task_worker")
-
 # === FULLFIX_DIRECTION_KERNEL_STAGE_1_IMPORT ===
 try:
     from core.work_item import WorkItem as _Stage1WorkItem
@@ -351,8 +350,7 @@ try:
 except Exception:
     _Stage1WorkItem = None
     _Stage1DirReg = None
-# === END FULLFIX_DIRECTION_KERNEL_STAGE_1_IMPORT ===
-
+# === END ===
 
 logger.setLevel(logging.INFO)
 if not logger.handlers:
@@ -2004,15 +2002,12 @@ def _find_awaiting_confirmation_task(conn: sqlite3.Connection, chat_id: str, top
     ).fetchone()
 
 
-
 # === FULLFIX_DIRECTION_KERNEL_STAGE_1_HELPER ===
 def _stage1_dir_payload(payload):
-    """Shadow-mode: detect direction, write to payload, do not change execution."""
     try:
         p = dict(payload or {})
         if _Stage1WorkItem is None or _Stage1DirReg is None:
             p.setdefault("direction", "general_chat")
-            p.setdefault("direction_audit", {"error": "stage1_import_unavailable"})
             return p
         row = {
             "id": p.get("task_id") or p.get("id") or "",
@@ -2047,10 +2042,8 @@ def _stage1_dir_payload(payload):
         except Exception: pass
         p = dict(payload or {})
         p.setdefault("direction", "general_chat")
-        p.setdefault("direction_audit", {"error": str(e)})
         return p
-# === END FULLFIX_DIRECTION_KERNEL_STAGE_1_HELPER ===
-
+# === END ===
 async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str, topic_id: int) -> None:
     task_id = _s(_task_field(task, "id"))
     raw_input = _clean(_s(_task_field(task, "raw_input")), 12000)
@@ -2153,7 +2146,9 @@ async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_
             if ai_result is None:
                 pass
             else:
-                ai_result = await asyncio.wait_for(process_ai_task(_stage1_dir_payload(payload)), timeout=AI_TIMEOUT)
+                # FULLFIX_DIRECTION_KERNEL_STAGE_1_CALL
+                payload = _stage1_dir_payload(payload)
+                ai_result = await asyncio.wait_for(process_ai_task(payload), timeout=AI_TIMEOUT)
     except Exception as e:
         _update_task(conn, task_id, state="FAILED", error_message=_clean(str(e), 500))
         _close_pin(conn, task_id)
