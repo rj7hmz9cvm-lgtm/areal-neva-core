@@ -286,17 +286,27 @@ def create_estimate_files(raw_input: str, task_id: str, topic_id: int = 0) -> Di
     ws.append(["", "ИТОГО", "", "", "", total])
     wb.save(xlsx_path)
 
+    # === FULLFIX_15_OCE_CYR_FIX ===
+    try:
+        from core.pdf_cyrillic import register_cyrillic_fonts, FONT_REGULAR, FONT_BOLD
+        register_cyrillic_fonts()
+        _ocyr_reg = FONT_REGULAR
+        _ocyr_bold = FONT_BOLD
+    except Exception:
+        _ocyr_reg = 'Helvetica'
+        _ocyr_bold = 'Helvetica-Bold'
     c = canvas.Canvas(pdf_path, pagesize=A4)
     w, h = A4
-    c.setFont("Helvetica-Bold", 14)
-    c.drawString(20*mm, h-20*mm, "Estimate")
+    c.setFont(_ocyr_bold, 14)
+    c.drawString(20*mm, h-20*mm, "СМЕТА")
     y = h - 35*mm
-    c.setFont("Helvetica", 9)
+    c.setFont(_ocyr_reg, 9)
     for i, r in enumerate(rows, 1):
+        c.setFont(_ocyr_reg, 9)
         c.drawString(20*mm, y, f"{i}. {r['name']} — {r['qty']} {r['unit']} x {r['price']} = {r['total']} руб")
         y -= 8*mm
-    c.setFont("Helvetica-Bold", 11)
-    c.drawString(20*mm, y-5*mm, f"TOTAL: {total} руб")
+    c.setFont(_ocyr_bold, 11)
+    c.drawString(20*mm, y-5*mm, f"ИТОГО: {total} руб")
     c.save()
 
     manifest = {
