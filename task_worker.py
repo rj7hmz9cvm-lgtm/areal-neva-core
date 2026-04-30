@@ -875,6 +875,38 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
             return
     # === END FULLFIX_07_PROJECT_DESIGN_CLOSURE_ROUTE ===
 
+
+    # === FULLFIX_07_CAD_PROJECT_DOCUMENTATION_ROUTE ===
+    try:
+        from core.cad_project_engine import is_project_design_request, create_full_project_package, format_project_result_message
+        if is_project_design_request(raw_input):
+            _ff07_res = create_full_project_package(str(raw_input), task_id, int(topic_id or 0), "")
+            _ff07_msg = format_project_result_message(_ff07_res)
+            if not isinstance(_ff07_res, dict) or not _ff07_res.get("success"):
+                _err = str((_ff07_res or {}).get("error") or "PROJECT_DOCUMENTATION_FAILED")[:300]
+                _update_task(conn, task_id, state="FAILED", result=_ff07_msg, error_message=_err)
+                _history(conn, task_id, "FULLFIX_07_PROJECT_FAILED:" + _err)
+                conn.commit()
+                _send_once(conn, task_id, chat_id, _ff07_msg, reply_to, "ff07_project_failed")
+                return
+
+            _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff07_msg, error_message="")
+            _history(conn, task_id, "FULLFIX_07_PROJECT_OK")
+            conn.commit()
+            _sent = _send_once_ex(conn, task_id, str(chat_id), _ff07_msg, reply_to, "ff07_project_result")
+            if isinstance(_sent, dict) and _sent.get("bot_message_id"):
+                _update_task(conn, task_id, bot_message_id=_sent["bot_message_id"])
+                conn.commit()
+            return
+    except Exception as _ff07_e:
+        _err = str(_ff07_e)[:500]
+        _update_task(conn, task_id, state="FAILED", result="Проект не создан: ошибка FULLFIX_07", error_message=_err)
+        _history(conn, task_id, "FULLFIX_07_EXCEPTION:" + _err)
+        conn.commit()
+        _send_once(conn, task_id, chat_id, "Проект не создан: ошибка FULLFIX_07", reply_to, "ff07_project_exception")
+        return
+    # === END FULLFIX_07_CAD_PROJECT_DOCUMENTATION_ROUTE ===
+
     # === FULLFIX_06_FINAL_PROJECT_TEMPLATE_ROUTE ===
     _ff06_low = str(raw_input or "").lower()
     _ff06_project_triggers = (

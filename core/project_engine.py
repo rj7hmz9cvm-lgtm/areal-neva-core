@@ -2440,3 +2440,17 @@ async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id
         return res
 
 # === END FULLFIX_07_PROJECT_DESIGN_CLOSURE ===
+
+
+# === FULLFIX_07_PROJECT_ENGINE_OVERRIDE ===
+try:
+    from core.cad_project_engine import (
+        create_project_pdf_dxf_artifact,
+        create_full_project_package,
+        is_project_design_request,
+        format_project_result_message,
+    )
+except Exception:
+    pass
+# === END FULLFIX_07_PROJECT_ENGINE_OVERRIDE ===
+

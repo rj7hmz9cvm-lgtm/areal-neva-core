@@ -4,3 +4,4 @@ openpyxl
 pypdf
 pdfplumber
 python-docx
+pillow
