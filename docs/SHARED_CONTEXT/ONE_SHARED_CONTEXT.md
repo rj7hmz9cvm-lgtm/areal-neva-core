@@ -4065,3 +4065,14 @@ USER_APPROVAL_GATE: канон меняется только после явно
 Commits: eb891d3, 841a3c3
 5 сервисов active: areal-task-worker, telegram-ingress, areal-memory-api, areal-monitor-jobs, areal-upload-retry
 Все FULLFIX_20_* маркеры verified self-check.
+
+---
+## UPDATE 2026-04-30 вечер — STAGE 1 ЗАКРЫТ
+
+FULLFIX_DIRECTION_KERNEL_STAGE_1 установлен (commit a8955bb)
+WorkItem + DirectionRegistry + 26 directions + shadow wiring в task_worker
+
+КРИТИЧНО: areal-monitor-jobs плодит zombie процессы → OOM
+Требует фикса до Stage 2
+
+Следующий шаг: фикс monitor_jobs → Stage 2 Capability Router

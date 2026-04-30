@@ -457,3 +457,24 @@ task_history: id, task_id, action, created_at
 - active_context_query: "ну что там / где смета"
 - DWG pipeline end-to-end
 - КЖ PDF pipeline end-to-end
+
+---
+## ЗАКРЫТО 2026-04-30 вечер
+
+### FULLFIX_DIRECTION_KERNEL_STAGE_1 ✅ CLOSED
+- core/work_item.py установлен
+- core/direction_registry.py установлен
+- config/directions.yaml 26 directions установлен
+- task_worker.py wiring shadow mode
+- 6/6 smoke tests OK
+- GitHub: a8955bb
+
+---
+## ОТКРЫТО (новое) 2026-04-30
+
+### P0 — areal-monitor-jobs zombie процессы
+monitor_jobs.py накапливает дочерние процессы, не чистит их
+100+ зомби → OOM → убивает task_worker
+Нужен фикс: либо KillMode=control-group в systemd, либо фикс в monitor_jobs.py
+
+### Stage 2 — Capability Router (следующий после monitor_jobs)
