@@ -2045,7 +2045,37 @@ async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_
                         payload["model_override"] = _mo  # MODEL_ROUTER_V1_WIRED
                 except Exception:
                     pass
-            ai_result = await asyncio.wait_for(process_ai_task(payload), timeout=AI_TIMEOUT)
+            # === TOPIC_3008_HANDLER_V1 ===
+            if _t3_check(int(topic_id or 0)):
+                _t3_command = _t3_cmd(str(raw_input or ""))
+                if _t3_command != "none":
+                    import re as _re3008
+                    _t3_ctx = " ".join(filter(None,[
+                        str(payload.get("active_task_context") or "")[:200],
+                        str(payload.get("pin_context") or "")[:100],
+                        str(payload.get("short_memory_context") or "")[:200],
+                    ]))
+                    if _t3_command == "write":
+                        _t3_desc = _re3008.sub(r"напиши\s+код|написать\s+код","",str(raw_input or ""),flags=_re3008.I).strip()
+                        if _t3_generate:
+                            _t3_gen = await asyncio.wait_for(_t3_generate(_t3_desc,_t3_ctx),timeout=120)
+                            ai_result = _t3_gen + "
+
+---
+Проверить код?"
+                    elif _t3_command == "verify":
+                        _t3_code = _t3_extract(str(raw_input or ""))
+                        if len(_t3_code.strip()) < 10:
+                            ai_result = "Отправь код для проверки."
+                        elif _t3_verify:
+                            from core.reply_sender import send_reply_ex as _t3srex
+                            _t3srex(chat_id=str(chat_id),text="Запущена верификация. Ожидаю ответы (до 1.5 мин)...",reply_to_message_id=reply_to,message_thread_id=topic_id)
+                            ai_result = await asyncio.wait_for(_t3_verify(_t3_code,_t3_ctx),timeout=150)
+            # === END TOPIC_3008_HANDLER_V1 ===
+            if ai_result is None:
+                pass
+            else:
+                ai_result = await asyncio.wait_for(process_ai_task(payload), timeout=AI_TIMEOUT)
     except Exception as e:
         _update_task(conn, task_id, state="FAILED", error_message=_clean(str(e), 500))
         _close_pin(conn, task_id)
