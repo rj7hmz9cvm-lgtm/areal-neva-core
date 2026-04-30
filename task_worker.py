@@ -805,6 +805,7 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
     # === FULLFIX_16_CONTEXT_QUERY ===
     try:
         _ff16_low = str(raw_input or "").strip().lower().rstrip("!?. ")
+        _ff16_low = _ff16_low.replace("[voice] ", "").replace("[VOICE] ", "").strip()  # FF21_FIX_VOICE_PREFIX
         _ff16_triggers = ["nu chto", "gde rezultat", "chto tam", "gde smeta", "gde proekt"]
         _ff16_ru_triggers = [
             "ну что",
@@ -1927,7 +1928,8 @@ async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_
     except Exception as e:
         logger.warning("save_pin_fail task=%s err=%s", task_id, e)
 
-    confirmation_text = f"{ai_result}\n\nДоволен результатом? Ответь: Да / Уточни / Правки"
+    _ai_result_clean = str(ai_result or "").replace("\n\nДоволен результатом? Ответь: Да / Уточни / Правки", "").strip()  # FF21_FIX_DOUBLE_DOVOLEN
+    confirmation_text = f"{_ai_result_clean}\n\nДоволен результатом? Ответь: Да / Уточни / Правки"
     sent = _send_once_ex(conn, task_id, chat_id, confirmation_text, reply_to, "result")
     bot_message_id = sent.get("bot_message_id") if isinstance(sent, dict) else None
     if bot_message_id is not None:

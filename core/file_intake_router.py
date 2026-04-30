@@ -95,8 +95,27 @@ async def route_file(file_path: str, task_id: str, topic_id: int, intent: str, f
     try:
         from core.engine_base import detect_real_file_type
         real_type = detect_real_file_type(file_path)
-        if real_type in ("zip", "rar", "7z"):
-            return {"success": False, "error": f"ARCHIVE_PIPELINE_NOT_IMPLEMENTED:{real_type}"}
+        # === UNIVERSAL_FILE_HANDLER_V1_WIRED ===
+        if real_type in ("zip", "rar", "7z", "dwg", "dxf", "video", "mp4", "audio", "text_fallback", "unknown") or intent == "dwg":
+            try:
+                from core.universal_file_handler import extract_text_from_file
+                _ufh = extract_text_from_file(file_path, task_id, topic_id)
+                _ufh_text = (_ufh.get("text") or "").strip()
+                _ufh_rows = _ufh.get("rows") or []
+                if _ufh.get("success") and (_ufh_text or _ufh_rows):
+                    _summary = f"\u0424\u0430\u0439\u043b \u043e\u0431\u0440\u0430\u0431\u043e\u0442\u0430\u043d ({_ufh.get('type','unknown')}):\n"
+                    if _ufh_rows:
+                        _summary += f"\u0421\u0442\u0440\u043e\u043a \u0434\u0430\u043d\u043d\u044b\u0445: {len(_ufh_rows)}\n"
+                        for row in _ufh_rows[:5]:
+                            _summary += "  " + " | ".join(str(c) for c in row if c) + "\n"
+                    if _ufh_text:
+                        _summary += _ufh_text[:1500]
+                    return {"success": True, "text": _summary, "type": _ufh.get("type")}
+                else:
+                    return {"success": False, "error": _ufh.get("error") or f"\u0424\u043e\u0440\u043c\u0430\u0442 {real_type} \u043d\u0435 \u043f\u043e\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442\u0441\u044f"}
+            except Exception as _ufh_e:
+                return {"success": False, "error": f"UNIVERSAL_HANDLER_ERROR: {_ufh_e}"}
+        # === END UNIVERSAL_FILE_HANDLER_V1_WIRED ===
         if real_type in ("csv", "txt") and intent not in ("estimate", "technadzor", "ocr"):
             intent = "estimate"
         if real_type == "dwg":
