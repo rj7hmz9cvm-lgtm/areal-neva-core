@@ -26,6 +26,13 @@ from typing import Any, Dict, List, Optional, Tuple
 from dotenv import load_dotenv
 from core.ai_router import process_ai_task
 from core.reply_sender import send_reply, send_reply_ex
+try:
+    from core.search_quality import availability_check as _sq_avail, cache_get as _sq_cget, cache_set as _sq_cset  # SEARCH_QUALITY_V1_WIRED
+except Exception:
+    _sq_avail = lambda r: True
+    _sq_cget = lambda q: None
+    _sq_cset = lambda q, r: None
+from core.duplicate_guard import find_duplicate, duplicate_message  # DUPLICATE_GUARD_V1_WIRED
 from core.pin_manager import get_pin_context, save_pin
 from core.topic_drive_oauth import upload_file_to_topic
 from core.artifact_pipeline import analyze_downloaded_file
