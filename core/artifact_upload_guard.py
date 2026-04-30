@@ -17,6 +17,26 @@ def upload_or_fail(path, task_id, topic_id, kind="artifact"):
         tried.append("engine_base:empty_link")
     except Exception as e:
         tried.append("engine_base:" + str(e))
+    # === FULLFIX_19_RETRY_QUEUE_REAL ===
+    try:
+        import sqlite3 as _ff19_sql
+        with _ff19_sql.connect("/root/.areal-neva-core/data/core.db", timeout=10) as _ff19_c:
+            _ff19_c.execute("""CREATE TABLE IF NOT EXISTS upload_retry_queue(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                path TEXT, task_id TEXT, topic_id INTEGER,
+                kind TEXT, attempts INTEGER DEFAULT 0,
+                last_error TEXT,
+                created_at TEXT DEFAULT (datetime('now')),
+                last_attempt TEXT
+            )""")
+            _ff19_c.execute(
+                "INSERT INTO upload_retry_queue(path,task_id,topic_id,kind,last_error) VALUES(?,?,?,?,?)",
+                (str(path), str(task_id), int(topic_id or 0), str(kind), "UPLOAD_FAILED")
+            )
+            _ff19_c.commit()
+    except Exception:
+        pass
+    # === END FULLFIX_19_RETRY_QUEUE_REAL ===
     return {"success": False, "error": "UPLOAD_FAILED", "path": path, "size": size, "tried": tried}
 
 def upload_many_or_fail(files, task_id, topic_id):

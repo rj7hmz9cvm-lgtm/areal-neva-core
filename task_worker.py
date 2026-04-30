@@ -979,6 +979,29 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
     # === END FULLFIX_13A_SAMPLE_TEMPLATE_AND_TEMPLATE_ESTIMATE_ROUTE ===
 
 
+    # === FULLFIX_19_PROJECT_GUARD_REAL_V2 ===
+    try:
+        _ff19_low = str(raw_input or "").strip().lower()
+        _ff19_short_replies = {"да","нет","ок","готово","угу","так","ясно","понятно"}
+        if _ff19_low in _ff19_short_replies:
+            try:
+                conn.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (task_id, "FULLFIX_19_PROJECT_GUARD_BLOCKED_SHORT_REPLY")
+                )
+                conn.execute(
+                    "UPDATE tasks SET state='DONE', updated_at=datetime('now'), result=COALESCE(NULLIF(result,''),?) WHERE id=?",
+                    ("Принято", task_id)
+                )
+                conn.commit()
+            except Exception:
+                pass
+            logger.info("FF19_GUARD_BLOCKED_SHORT_REPLY task=%s text=%s", task_id, _ff19_low)
+            return
+    except Exception as _ff19_err:
+        logger.error("FF19_PROJECT_GUARD_ERR task=%s err=%s", task_id, _ff19_err)
+    # === END FULLFIX_19_PROJECT_GUARD_REAL_V2 ===
+
     # === FULLFIX_13B_FALSE_PROJECT_PHRASE_GUARD ===
     try:
         _ff13b_low = str(raw_input or "").strip().lower()
