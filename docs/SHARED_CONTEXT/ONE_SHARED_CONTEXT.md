@@ -1,5 +1,5 @@
 # ONE_SHARED_CONTEXT
-updated_at: 2026-04-30T07:00:01+00:00
+updated_at: 2026-04-30T07:30:01+00:00
 
 ## SOURCE FILES
 - docs/CANON_FINAL/00_INDEX.md [UNKNOWN]
@@ -43,6 +43,7 @@ updated_at: 2026-04-30T07:00:01+00:00
 - chat_exports/CHAT_EXPORT__CLAUDE_SESSION__2026-04-27.txt [BROKEN]
 - chat_exports/CHAT_EXPORT__CURRENT_CHAT_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.json [RESTORED]
 - chat_exports/CHAT_EXPORT__DOKAT_3__.txt [BROKEN]
+- chat_exports/CHAT_EXPORT__FULLFIX_01__2026-04-30.json [VERIFIED]
 - chat_exports/CHAT_EXPORT__NEURON_SOFT_VPN_TECH_CHAT__2026-04-24.txt [REJECTED]
 - chat_exports/CHAT_EXPORT__NEURON_SOFT_VPN_TECH_CHAT__2026-04-24__DOKAT_4.txt [UNKNOWN]
 - chat_exports/CHAT_EXPORT__NEURON_SOFT_VPN_TECH_CHAT__2026-04-27.txt [BROKEN]
@@ -163,6 +164,14 @@ REJECTED  = патч отклонён
 | - Live-тест PATCH_CRASH_BOTMSG_V1 | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
 | - ТЗ: PATCH_CONFIRM_ONLY_ON_DONE_V1 в NOT_CLOSED | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
 | - ТЗ: PATCH_TEMPLATE_INTENT_V1 в NOT_CLOSED | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
+| ## ОБНОВЛЕНИЕ 30.04.2026 10:30 — FULLFIX_01_CANON_CLOSE_CORE VERIFIED | docs/HANDOFFS/LATEST_HANDOFF.md | VERIFIED |
+| ### Патчи VERIFIED live-тестом: | docs/HANDOFFS/LATEST_HANDOFF.md | VERIFIED |
+| | PATCH_TEMPLATE_MODEL_EXTRACTOR_V1 | core/project_engine.py | VERIFIED ✅ | | docs/HANDOFFS/LATEST_HANDOFF.md | VERIFIED |
+| | PATCH_PROJECT_TEMPLATE_STORAGE_V1 | core/template_manager.py | VERIFIED ✅ | | docs/HANDOFFS/LATEST_HANDOFF.md | VERIFIED |
+| | PATCH_TEMPLATE_INTENT_BRANCH_V1 | core/artifact_pipeline.py | VERIFIED ✅ | | docs/HANDOFFS/LATEST_HANDOFF.md | VERIFIED |
+| | PATCH_CONFIRM_ONLY_ON_DONE_V1 | task_worker.py строки 2073+ | VERIFIED ✅ | | docs/HANDOFFS/LATEST_HANDOFF.md | VERIFIED |
+| | PATCH_CONFIRM_GUARD_C_V1 | task_worker.py строка 1711 | VERIFIED ✅ | | docs/HANDOFFS/LATEST_HANDOFF.md | VERIFIED |
+| ### Что закрыто FULLFIX_01: | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
 | ⚠️ PATCH_SOURCE_GUARD_V1 | docs/REPORTS/CANON_CLOSURE_PLAN.md | UNKNOWN |
 | ⚠️ PATCH_FILE_ERROR_RETRY_V1 | docs/REPORTS/CANON_CLOSURE_PLAN.md | UNKNOWN |
 | ⚠️ PATCH_DRIVE_BOTMSG_SAVE_V1 | docs/REPORTS/CANON_CLOSURE_PLAN.md | UNKNOWN |
@@ -178,14 +187,6 @@ REJECTED  = патч отклонён
 | ### PASS 4 — LIVE-ТЕСТЫ INSTALLED ПАТЧЕЙ | docs/REPORTS/CANON_CLOSURE_PLAN.md | INSTALLED |
 | | Патч | Строки | Что не проверено | | docs/REPORTS/MASTER_CLOSURE_PLAN.md | UNKNOWN |
 | | PATCH_DOWNLOAD_OAUTH_V1 | 1807-1835 | OAuth download реального файла | | docs/REPORTS/MASTER_CLOSURE_PLAN.md | UNKNOWN |
-| | PATCH_SOURCE_GUARD_V1 | 1834-1847 | только google_drive файлы видели | | docs/REPORTS/MASTER_CLOSURE_PLAN.md | UNKNOWN |
-| | PATCH_FILE_ERROR_RETRY_V1 | 1029-1055 | reply на ошибку не сработал в тестах | | docs/REPORTS/MASTER_CLOSURE_PLAN.md | UNKNOWN |
-| | PATCH_DRIVE_BOTMSG_SAVE_V1 | 2046-2055 | bot_message_id в задачах пустой | | docs/REPORTS/MASTER_CLOSURE_PLAN.md | UNKNOWN |
-| | PATCH_CRASH_BOTMSG_V1 | 1774-1790 | crash не воспроизводили | | docs/REPORTS/MASTER_CLOSURE_PLAN.md | UNKNOWN |
-| | PATCH_DUPLICATE_GUARD_V1 | 1800 | не тестировали | | docs/REPORTS/MASTER_CLOSURE_PLAN.md | UNKNOWN |
-| | PATCH_MULTI_FILE_INTAKE_V1 | 1846 | не тестировали | | docs/REPORTS/MASTER_CLOSURE_PLAN.md | UNKNOWN |
-| | PATCH_LINK_INTAKE_NEEDS_CONTEXT_V1 | 1095-1118 | не тестировали | | docs/REPORTS/MASTER_CLOSURE_PLAN.md | UNKNOWN |
-| | PATCH_DAEMON_USE_OAUTH_V1 | daemon 707 | "Ошибка обработки" продолжалась | | docs/REPORTS/MASTER_CLOSURE_PLAN.md | UNKNOWN |
 
 ## LIVE ТЕСТЫ (VERIFIED)
 - areal-task-worker.service   task_worker.py      ОСНОВНОЙ ✅ [docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md]
@@ -1500,6 +1501,23 @@ AI_ORCHESTRA/
 АР/КД/КЖ PDF файлы обрабатывались как "document" → OCR текст → "Сводка по документу"
 Пользователь ожидал: структурную модель проекта с составом листов, марками, параметрами
 
+## ОБНОВЛЕНИЕ 30.04.2026 10:30 — FULLFIX_01_CANON_CLOSE_CORE VERIFIED
+
+### Патчи VERIFIED live-тестом:
+
+| Патч | Файл | Статус |
+|---|---|---|
+| PATCH_TEMPLATE_MODEL_EXTRACTOR_V1 | core/project_engine.py | VERIFIED ✅ |
+| PATCH_PROJECT_TEMPLATE_STORAGE_V1 | core/template_manager.py | VERIFIED ✅ |
+| PATCH_TEMPLATE_INTENT_BRANCH_V1 | core/artifact_pipeline.py | VERIFIED ✅ |
+| PATCH_CONFIRM_ONLY_ON_DONE_V1 | task_worker.py строки 2073+ | VERIFIED ✅ |
+| PATCH_CONFIRM_GUARD_C_V1 | task_worker.py строка 1711 | VERIFIED ✅ |
+
+### Live-тест 30.04 10:09
+
+```
+Файл: ПРОЕКТ КД
+...[TRUNCATED]
 
 ### docs/REPORTS/CANON_CLOSURE_PLAN.md [RESTORED]
 # AREAL-NEVA ORCHESTRA — CANON CLOSURE PLAN
@@ -3103,6 +3121,45 @@ Main canon: 1k_KIpQ7jD15_w83sMz4WfqoEIINIXTHTaTOtUovf2gU
     "RF05/RF06 attempted to inject file context near process_ai_task but did not change queue counts and was later identified as wrong because drive_file and text are separate task IDs",
     "FINAL_RECOVERY_S
 ...[TRUNCATED]
+
+### chat_exports/CHAT_EXPORT__FULLFIX_01__2026-04-30.json [VERIFIED]
+{
+  "chat_id": "claude_session_30_04_2026_FULLFIX_01",
+  "chat_name": "AREAL-NEVA ORCHESTRA — FULLFIX_01 30.04.2026",
+  "exported_at": "2026-04-30T10:30:00+03:00",
+  "source_model": "Claude Sonnet 4.6",
+  "fullfix_01_verified": {
+    "PATCH_TEMPLATE_MODEL_EXTRACTOR_V1": "core/project_engine.py — VERIFIED",
+    "PATCH_PROJECT_TEMPLATE_STORAGE_V1": "core/template_manager.py — VERIFIED",
+    "PATCH_TEMPLATE_INTENT_BRANCH_V1": "core/artifact_pipeline.py — VERIFIED",
+    "PATCH_CONFIRM_ONLY_ON_DONE_V1": "task_worker.py 2073 — VERIFIED",
+    "PATCH_CONFIRM_GUARD_C_V1": "task_worker.py 1711 — VERIFIED"
+  },
+  "live_test": {
+    "file": "ПРОЕКТ КД кровля 5.pdf",
+    "task_id": "2a249e66-8399-4994-8211-dcad82496f18",
+    "topic_id": 210,
+    "state": "AWAITING_CONFIRMATION",
+    "result_preview": "PROJECT_TEMPLATE_MODEL создан / Раздел: АР / Структура: план, Фасады, Разрез",
+    "timestamp": "2026-04-30T07:09:52"
+  },
+  "not_closed_p1": [
+    "voice confirm (telegram_daemon.py ~601)",
+    "project_type regex improvement (КД→АР false positive)",
+    "sheet_register extraction improvement",
+    "estimate PDF → Excel → Drive",
+    "КЖ pipeline",
+    "DUPLICATE_GUARD / MULTI_FILE / LINK_INTAKE live tests"
+  ],
+  "canon_rules_applied": {
+    "0.3": "явное да от пользователя",
+    "0.4": "диагностика перед патчем",
+    "0.5": "bak → patch → compile → restart → journal",
+    "0.6": "ТЗ Claude → код GPT → вывод GPT → сверка Claude",
+    "0.8": "запрещённые файлы не тронуты",
+    "0.11": "самопроверка после написания ТЗ"
+  }
+}
 
 ### chat_exports/CHAT_EXPORT__DOKAT_3__.txt [BROKEN]
 ﻿{
