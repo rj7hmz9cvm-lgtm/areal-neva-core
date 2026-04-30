@@ -823,7 +823,7 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
                 _ff16_pid, _ff16_pst, _ff16_pres = _ff16_parent
                 _ff16_msg = "Статус: " + str(_ff16_pst)
                 if _ff16_pres:
-                    _ff16_msg += "\n" + str(_ff16_pres)[:800]
+                _ff16_msg += "\n" + str(_ff16_pres)[:800]
                 import re as _re16
                 _ff16_msg = _re16.sub(r"(?im)^\s*MANIFEST\s*:\s*https?://\S+\s*$", "", _ff16_msg).strip()
                 from core.reply_sender import send_reply_ex
