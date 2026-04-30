@@ -371,3 +371,31 @@ task_history: id, task_id, action, created_at
 7. Project engine — после template_manager
 
 **Issue #2:** OBSOLETE — superseded by PATCH_SCOPE_FULL_V1 + LATEST_HANDOFF 30.04.2026
+
+---
+
+## ОБНОВЛЕНИЕ 30.04.2026 10:30 — FULLFIX_01 VERIFIED
+
+### ЗАКРЫТО FULLFIX_01 (live-тест 10:09):
+
+| Что | Файл | Статус |
+|---|---|---|
+| PROJECT_TEMPLATE_MODEL извлечение из PDF | core/project_engine.py | VERIFIED ✅ |
+| template_manager хранение модели | core/template_manager.py | VERIFIED ✅ |
+| artifact_pipeline ветка intent=template | core/artifact_pipeline.py | VERIFIED ✅ |
+| AWAITING_CONFIRMATION guard (drive_file) | task_worker.py 2073+ | VERIFIED ✅ |
+| AWAITING_CONFIRMATION guard (_handle_in_progress) | task_worker.py 1711 | VERIFIED ✅ |
+
+### P1 — ОСТАЁТСЯ (следующий проход FULLFIX_02):
+
+- Голосовой confirm при AWAITING_CONFIRMATION (telegram_daemon.py ~601)
+- project_type определение неточное (КД → АР) — улучшить regex
+- Состав листов не извлекается если марки не в тексте PDF
+- Estimate PDF → Excel → Drive end-to-end
+- КЖ PDF pipeline
+- Live-тесты: DUPLICATE_GUARD, MULTI_FILE, LINK_INTAKE, FILE_ERROR_RETRY
+
+### FULLFIX_02 цель:
+- voice confirm (telegram_daemon.py с явного "да")
+- улучшить extract_template_model_from_text (КД/КЖ детектор)
+- estimate_engine → Excel с формулами
