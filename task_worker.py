@@ -801,37 +801,58 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
 
 
 
-        # === FULLFIX_16_CONTEXT_QUERY ===
+    
+    # === FULLFIX_16_CONTEXT_QUERY ===
     try:
-        _ff16_raw_low = str(raw_input or "").strip().lower().rstrip("!?. ")
-        # Safe triggers only — no "и", "ну" alone to avoid capturing estimate/project phrases
-        _ff16_safe_triggers = [
-            "ну что", "что там", "где результат", "что с задачей",
-            "где смета", "где проект", "что там у нас", "ну как там",
-            "где файл", "ну что там", "ну давай", "что по задаче"
+        _ff16_low = str(raw_input or "").strip().lower().rstrip("!?. ")
+        _ff16_triggers = ["nu chto", "gde rezultat", "chto tam", "gde smeta", "gde proekt"]
+        _ff16_ru_triggers = [
+            "ну что",
+            "где результат",
+            "что там",
+            "где смета",
+            "где проект",
+            "что с задачей",
+            "что там у нас",
+            "ну как там",
+            "где файл",
+            "ну что там",
+            "ну давай",
+            "что по задаче",
         ]
-        _ff16_is_ctx = any(_ff16_raw_low == t or _ff16_raw_low.startswith(t) for t in _ff16_safe_triggers)
+        _ff16_is_ctx = len(_ff16_low) <= 35 and any(
+            _ff16_low == t or _ff16_low.startswith(t) for t in _ff16_ru_triggers
+        )
         if _ff16_is_ctx:
-            _ff16_parent = conn.execute(
-                """SELECT id,state,result FROM tasks
-                   WHERE chat_id=? AND COALESCE(topic_id,0)=? AND id<>?
-                   AND state IN ('AWAITING_CONFIRMATION','IN_PROGRESS','WAITING_CLARIFICATION')
-                   ORDER BY updated_at DESC LIMIT 1""",
+            _ff16_row = conn.execute(
+                "SELECT id,state,result FROM tasks"
+                " WHERE chat_id=? AND COALESCE(topic_id,0)=? AND id<>?"
+                " AND state IN ('AWAITING_CONFIRMATION','IN_PROGRESS','WAITING_CLARIFICATION')"
+                " ORDER BY updated_at DESC LIMIT 1",
                 (chat_id, topic_id, task_id)
             ).fetchone()
-            if _ff16_parent:
-                _ff16_pid, _ff16_pst, _ff16_pres = _ff16_parent
-                _ff16_msg = "Статус: " + str(_ff16_pst)
-                if _ff16_pres:
-                    _ff16_msg += "\n" + str(_ff16_pres)[:800]
-                import re as _re16
-                _ff16_msg = _re16.sub(r"(?im)^\s*MANIFEST\s*:\s*https?://\S+\s*$", "", _ff16_msg).strip()
+            if _ff16_row is not None:
+                _ff16_pid, _ff16_pst, _ff16_pres = _ff16_row
+                _ff16_parts = ["Статус: " + str(_ff16_pst)]
+                if _ff16_pres is not None:
+                    import re as _re16
+                    _ff16_clean = _re16.sub(
+                        r"(?im)^\s*MANIFEST\s*:\s*https?://\S+\s*$",
+                        "",
+                        str(_ff16_pres)[:800]
+                    ).strip()
+                    _ff16_parts.append(_ff16_clean)
+                _ff16_msg = "\n".join(_ff16_parts)
                 from core.reply_sender import send_reply_ex
                 send_reply_ex(chat_id=str(chat_id), text=_ff16_msg, reply_to_message_id=reply_to)
-                conn.execute("UPDATE tasks SET state='DONE',result=?,updated_at=datetime('now') WHERE id=?",
-                    ("Ответил по активной задаче", task_id))
-                conn.execute("INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
-                    (task_id, "state:DONE:context_query_ff16"))
+                conn.execute(
+                    "UPDATE tasks SET state='DONE',result=?,updated_at=datetime('now') WHERE id=?",
+                    ("Ответил по активной задаче", task_id)
+                )
+                conn.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (task_id, "state:DONE:context_query_ff16")
+                )
                 conn.commit()
                 return
     except Exception as _ff16_ctx_err:
