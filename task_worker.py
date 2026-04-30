@@ -32,6 +32,14 @@ from dotenv import load_dotenv
 from core.ai_router import process_ai_task
 from core.reply_sender import send_reply, send_reply_ex
 try:
+    from core.topic_3008_engine import is_topic_3008 as _t3_check, detect_command as _t3_cmd, extract_code as _t3_extract, verify_code as _t3_verify, generate_code as _t3_generate  # TOPIC_3008_V1_WIRED
+except Exception:
+    _t3_check = lambda t: False
+    _t3_cmd = lambda t: "none"
+    _t3_extract = lambda t: t
+    _t3_verify = None
+    _t3_generate = None
+try:
     from core.temp_cleanup import cleanup_file as _tc_file, cleanup_task_temps as _tc_task, cleanup_after_upload as _tc_upload  # TEMP_CLEANUP_V1_WIRED
 except Exception:
     _tc_file = lambda p: False
