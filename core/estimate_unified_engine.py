@@ -193,16 +193,6 @@ def process_estimate_task_sync(task_id, chat_id, topic_id, raw_input):
                 c.execute("UPDATE tasks SET bot_message_id=?,updated_at=datetime('now') WHERE id=?", (str(bmid), task_id))
                 c.commit()
 
-        try:
-            with sqlite3.connect(MEMORY_DB, timeout=10) as mc:
-                import json
-                mc.execute("INSERT OR REPLACE INTO memory(chat_id,key,value,timestamp) VALUES(?,?,?,datetime('now'))",
-                    (str(chat_id), "topic_"+str(topic_id)+"_last_estimate",
-                     json.dumps({"task_id": task_id, "rows": len(rows), "total": total}, ensure_ascii=False)))
-                mc.commit()
-        except Exception as me:
-            logger.warning("ESTIMATE_MEMORY_SAVE err=%s", me)
-
         return True
 
     except Exception as e:
