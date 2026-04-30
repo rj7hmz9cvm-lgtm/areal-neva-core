@@ -2136,6 +2136,21 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
     try:
         data = json.loads(raw_input)
         file_id = data["file_id"]
+        # === DUPLICATE_GUARD_CALL_V1 ===
+        try:
+            _dupe = find_duplicate(conn, str(chat_id), int(topic_id or 0), file_id)
+            if _dupe:
+                file_name = data.get("file_name", "файл")
+                _dupe_msg = duplicate_message(_dupe, file_name)
+                _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_dupe_msg, error_message="")
+                _history(conn, task_id, "state:AWAITING_CONFIRMATION:duplicate_guard")
+                conn.commit()
+                from core.reply_sender import send_reply_ex
+                send_reply_ex(chat_id=str(chat_id), text=_dupe_msg, reply_to_message_id=reply_to, message_thread_id=topic_id)
+                return
+        except Exception as _dge:
+            logger.warning("DUPLICATE_GUARD_CALL_ERR %s", _dge)
+        # === END DUPLICATE_GUARD_CALL_V1 ===
         file_name = data["file_name"]
     except Exception as e:
         logger.error(f"DRIVE_FILE: invalid raw_input for {task_id}: {e}")
