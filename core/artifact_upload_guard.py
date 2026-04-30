@@ -57,6 +57,15 @@ def upload_or_fail(path, task_id, topic_id, kind="artifact"):
     except Exception:
         pass
     # === END FULLFIX_19_RETRY_QUEUE_REAL ===
+    # === TG_FALLBACK_WIRED ===
+    try:
+        from core.engine_base import _telegram_fallback_send
+        _tg_link = _telegram_fallback_send(str(path), str(task_id), int(topic_id or 0))
+        if _tg_link:
+            return {"success": True, "link": _tg_link, "path": path, "drive_failed": True, "telegram_fallback": True}
+    except Exception as _tge:
+        tried.append("telegram_fallback:" + str(_tge))
+    # === END TG_FALLBACK_WIRED ===
     return {"success": False, "error": "UPLOAD_FAILED", "path": path, "size": size, "tried": tried}
 
 def upload_many_or_fail(files, task_id, topic_id):
