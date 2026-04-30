@@ -380,8 +380,7 @@ def save_ezone_json(chat_id: str, text: str) -> str:
             if key in d:
                 sys_entry = _j.dumps({"timestamp": ts, key: d[key], "chat_key": chat_key}, ensure_ascii=False)
                 with open(f"{BASE}/data/memory_files/SYSTEM/{key}.jsonl", "a", encoding="utf-8") as f:
-                    f.write(sys_entry + "
-")
+                    f.write(sys_entry + "\n")
 
         logger.info("EZONE_INGEST_V1 saved chat_key=%s hash=%s", chat_key, h)
         return f"Принял, память загружена ({chat_key})"
