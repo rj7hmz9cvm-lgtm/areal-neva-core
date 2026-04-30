@@ -123,7 +123,7 @@ def distribute_timeline(timeline_path: str, chat_id: str = CHAT_ID, dry_run: boo
 
     return {"ok": True, **stats}
 
-def run_distribution(chat_id: str = CHAT_ID) -> dict:
+def run_distribution(chat_id: str = CHAT_ID) -> dict:  # CHAT_EXPORTS_POLICY_V1_WIRED
     """Запустить распределение для всех timeline.jsonl чата"""
     results = {}
     chats_dir = BASE / "data/memory_files/CHATS"
@@ -182,6 +182,11 @@ def _load_archive_for_topic(chat_id: str, topic_id: int, user_text: str = "", li
         return ""
     finally:
         conn.close()
+
+try:
+    from core.chat_exports_policy import get_canonical_exports_dir as _ced
+except Exception:
+    _ced = None
 
 if __name__ == "__main__":
     print("Running archive distribution...")

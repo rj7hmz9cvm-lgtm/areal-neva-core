@@ -1234,7 +1234,12 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
                     _send_once(conn, task_id, chat_id, "Проект не создан: нет PDF/DXF ссылки", reply_to, "ff10_project_links_missing")
                     return
 
+                # === RESULT_VALIDATOR_GUARD_V1 ===
+            if _check_result_before_confirm(_ff13c_strip_manifest_links(_msg)):
                 _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
+            else:
+                _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message="FORBIDDEN_PHRASE")
+            # === END RESULT_VALIDATOR_GUARD_V1 ===
                 _history(conn, task_id, "FULLFIX_10_PROJECT_OK")
                 conn.commit()
                 _sent = _send_once_ex(conn, task_id, str(chat_id), _msg, reply_to, "ff10_project_result")
@@ -1256,7 +1261,12 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
                 return
 
             _msg = str(_ff10_res.get("message") or "")
-            _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
+            # === RESULT_VALIDATOR_GUARD_V1 ===
+            if _check_result_before_confirm(_ff13c_strip_manifest_links(_msg)):
+                _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
+            else:
+                _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message="FORBIDDEN_PHRASE")
+            # === END RESULT_VALIDATOR_GUARD_V1 ===
             _history(conn, task_id, "FULLFIX_10_ESTIMATE_OK")
             conn.commit()
             _sent = _send_once_ex(conn, task_id, str(chat_id), _msg, reply_to, "ff10_estimate_result")
@@ -1339,7 +1349,12 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
                 "Доволен результатом? Ответь: Да / Уточни / Правки"
             )
 
-            _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
+            # === RESULT_VALIDATOR_GUARD_V1 ===
+            if _check_result_before_confirm(_ff13c_strip_manifest_links(_msg)):
+                _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
+            else:
+                _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message="FORBIDDEN_PHRASE")
+            # === END RESULT_VALIDATOR_GUARD_V1 ===
             _history(conn, task_id, "FULLFIX_07_PROJECT_OK")
             conn.commit()
 
@@ -1382,7 +1397,12 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
                 _send_once(conn, task_id, chat_id, _ff07_msg, reply_to, "ff07_project_failed")
                 return
 
-            _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff07_msg, error_message="")
+            # === RESULT_VALIDATOR_GUARD_V1 ===
+            if _check_result_before_confirm(_ff07_msg):
+                _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff07_msg, error_message="")
+            else:
+                _update_task(conn, task_id, state="FAILED", result=_ff07_msg, error_message="FORBIDDEN_PHRASE")
+            # === END RESULT_VALIDATOR_GUARD_V1 ===
             _history(conn, task_id, "FULLFIX_07_PROJECT_OK")
             conn.commit()
             _sent = _send_once_ex(conn, task_id, str(chat_id), _ff07_msg, reply_to, "ff07_project_result")
@@ -1438,7 +1458,12 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
                 f"MANIFEST: {_ff06_res.get('manifest_link')}\n\n"
                 "Доволен результатом? Ответь: Да / Уточни / Правки"
             )
-            _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
+            # === RESULT_VALIDATOR_GUARD_V1 ===
+            if _check_result_before_confirm(_ff13c_strip_manifest_links(_msg)):
+                _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
+            else:
+                _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message="FORBIDDEN_PHRASE")
+            # === END RESULT_VALIDATOR_GUARD_V1 ===
             _history(conn, task_id, "FULLFIX_06_PROJECT_OK")
             conn.commit()
             _sent = _send_once_ex(conn, task_id, str(chat_id), _msg, reply_to, "project_result_ff06")
@@ -1459,7 +1484,12 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
     role = _detect_role_assignment(raw_input)
     if role:
         ask = f"Понял назначение чата так:\n{role}\n\nПодтверди или уточни"
-        _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=ask, error_message="")
+        # === RESULT_VALIDATOR_GUARD_V1 ===
+            if _check_result_before_confirm(ask):
+                _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=ask, error_message="")
+            else:
+                _update_task(conn, task_id, state="FAILED", result=ask, error_message="FORBIDDEN_PHRASE")
+            # === END RESULT_VALIDATOR_GUARD_V1 ===
         _history(conn, task_id, "state:AWAITING_CONFIRMATION")
         conn.commit()
         _send_once(conn, task_id, chat_id, ask, reply_to, "role_confirmation")
@@ -1569,7 +1599,12 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
                 _msg += f"MANIFEST: {_manifest}\n"
             _msg += "\nДоволен результатом? Ответь: Да / Уточни / Правки"
 
-            _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
+            # === RESULT_VALIDATOR_GUARD_V1 ===
+            if _check_result_before_confirm(_ff13c_strip_manifest_links(_msg)):
+                _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
+            else:
+                _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message="FORBIDDEN_PHRASE")
+            # === END RESULT_VALIDATOR_GUARD_V1 ===
             _history(conn, task_id, "FULLFIX_05_PROJECT_PDF_DXF_OK")
             conn.commit()
 
@@ -2026,7 +2061,12 @@ async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_
     saved_role = ""
     if should_save_role:
         saved_role = _save_topic_role_memory(chat_id, topic_id, ai_result)
-    _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=ai_result, error_message="")
+    # === RESULT_VALIDATOR_GUARD_V1 ===
+            if _check_result_before_confirm(ai_result):
+                _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=ai_result, error_message="")
+            else:
+                _update_task(conn, task_id, state="FAILED", result=ai_result, error_message="FORBIDDEN_PHRASE")
+            # === END RESULT_VALIDATOR_GUARD_V1 ===
     _history(conn, task_id, f"result:{_clean(ai_result, 400)}")
     if saved_role:
         _history(conn, task_id, f"ROLE_SAVED:{_clean(saved_role, 200)}")
@@ -2152,7 +2192,12 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
             if _dupe:
                 file_name = data.get("file_name", "файл")
                 _dupe_msg = duplicate_message(_dupe, file_name)
+                # === RESULT_VALIDATOR_GUARD_V1 ===
+            if _check_result_before_confirm(_dupe_msg):
                 _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_dupe_msg, error_message="")
+            else:
+                _update_task(conn, task_id, state="FAILED", result=_dupe_msg, error_message="FORBIDDEN_PHRASE")
+            # === END RESULT_VALIDATOR_GUARD_V1 ===
                 _history(conn, task_id, "state:AWAITING_CONFIRMATION:duplicate_guard")
                 conn.commit()
                 from core.reply_sender import send_reply_ex
