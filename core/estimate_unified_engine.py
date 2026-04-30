@@ -14,6 +14,28 @@ def parse_estimate_rows(text):
     except Exception:
         pass
     rows = []
+    # Fallback simple parser: "name qty unit price"
+    try:
+        import re as _re
+        simple_pat = _re.compile(
+            r"([а-яёА-ЯЁa-zA-Z][а-яёА-ЯЁa-zA-Z0-9 \-/\.]{1,50}?)"
+            r"\s+(\d+(?:[.,]\d+)?)\s*"
+            r"(м²|м2|м³|м3|п\.м|м\.п|шт|кг|тн|т|компл|л)\s*"
+            r"(?:(?:цена|по|x|х|@)?\s*(\d+(?:[.,]\d+)?)(?:\s*руб(?:\.)?)?)?",
+            _re.IGNORECASE | _re.UNICODE
+        )
+        for m in simple_pat.finditer(text):
+            name = m.group(1).strip().rstrip(",:. ")
+            if len(name) < 2 or name.lower() in ("сделай","смету","смета","итого","всего"):
+                continue
+            qty = float(m.group(2).replace(",", "."))
+            unit = m.group(3)
+            price = float(m.group(4).replace(",", ".")) if m.group(4) else 0.0
+            rows.append({"name": name, "qty": qty, "unit": unit, "price": price, "total": round(qty*price, 2)})
+        if rows:
+            return rows
+    except Exception:
+        pass
     pat = re.compile(
         r"([а-яёА-ЯЁa-zA-Z][а-яёА-ЯЁa-zA-Z0-9 \-/\.]+?)"
         r"\s+(\d+(?:[.,]\d+)?)\s*"

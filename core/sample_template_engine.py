@@ -413,7 +413,15 @@ def _write_estimate_pdf(path: str, items: List[Dict[str, Any]], template: Option
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
 
-    font = "Helvetica"
+    # === FULLFIX_15_SAMPLE_PDF_CYR_FIX ===
+    try:
+        from core.pdf_cyrillic import register_cyrillic_fonts, FONT_REGULAR, FONT_BOLD
+        register_cyrillic_fonts()
+        font = FONT_REGULAR
+        font_bold = FONT_BOLD
+    except Exception:
+        font = "Helvetica"
+        font_bold = "Helvetica-Bold"
     for fp in ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"):
         if os.path.exists(fp):
             try:
