@@ -680,7 +680,7 @@ async def create_compact_project_documentation(raw_input: str, task_id: str, top
             f"Бетон: {calc['concrete_m3']} м³\\n"
             f"Арматура: {calc['rebar_t']} т\\n\\n"
             f"PDF: {pdf_link}\\n"
-            f"MANIFEST: {manifest_link or ''}\\n\\n"
+            ""
             "Доволен результатом? Ответь: Да / Уточни / Правки"
         )
     }
