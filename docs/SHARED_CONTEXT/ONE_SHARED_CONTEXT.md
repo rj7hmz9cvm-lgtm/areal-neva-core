@@ -1,13 +1,13 @@
 # ONE_SHARED_CONTEXT
-updated_at: 2026-04-30T00:00:01+00:00
+updated_at: 2026-04-30T00:30:01+00:00
 
 ## SOURCE FILES
 - docs/CANON_FINAL/00_INDEX.md [UNKNOWN]
 - docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md [REJECTED]
 - docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md [RESTORED]
 - docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md [BROKEN]
-- docs/HANDOFFS/LATEST_HANDOFF.md [REJECTED]
-- docs/REPORTS/NOT_CLOSED.md [RESTORED]
+- docs/HANDOFFS/LATEST_HANDOFF.md [VERIFIED]
+- docs/REPORTS/NOT_CLOSED.md [VERIFIED]
 - docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md [NOT_DONE]
 - docs/ARCHITECTURE/SEARCH_MONOLITH_V1.md [REJECTED]
 - chat_exports/CHAT_EXPORT_FULL_MAX__NEURON_SOFT_VPN_TECH_CHAT__2026-04-24.txt [UNKNOWN]
@@ -123,63 +123,63 @@ REJECTED  = патч отклонён
 | "verification": ["ПАТЧ/ФАКТ → подтверждение: grep line X / terminal output"], | docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md | UNKNOWN |
 | 3. Патчи только подтверждённые терминалом — не писать applied без вывода | docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md | UNKNOWN |
 | verification        — подтверждение каждого патча (ОБЯЗАТЕЛЬНО) | docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md | UNKNOWN |
-| ## ПАТЧИ СЕССИИ 28-29.04.2026 (все SYNTAX_OK, active) | docs/HANDOFFS/LATEST_HANDOFF.md | INSTALLED |
-| | Патч | Файл | Суть | | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| | FIX_VOICE_GUARD_20260428 | telegram_daemon.py:961 | substring→word-boundary | | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| | FIX_IS_SEARCH_20260428 | task_worker.py:2266 | SEARCH_PATTERNS→is_search | | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| | FIX_SEARCH_CONTEXT_20260428 | task_worker.py:2248 | fresh search без старого к | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| | FIX_VOICE_REVISION_V2 | telegram_daemon.py:880+ | empty revision fix | | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| | FIX_VOICE_CONFIRM_IN_PROGRESS | telegram_daemon.py:560 | голос confirm в IN_PR | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| | FIX_CRASHLOOP_3981 | task_worker.py:3981 | NameError p → p=__file__ | | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| | FIX_CP8_ERROR_CLOSE | task_worker.py | CP8 estimate ошибки → FAILED не повисаю | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| | FIX_CP8_SEARCH_TYPE | task_worker.py | input_type search → CP8 estimate hook | | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| | FIX_EMPTY_AI_RETRY | task_worker.py:2297 | retry 3x при chars=0 | | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| | FIX_DRIVE_OAUTH | task_worker.py:2569 | _download_from_drive_oauth через token | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| | FIX_ENV_EXPORT | .env:16 | убран export перед GITHUB_TOKEN | | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| ## ПАТЧИ СЕССИИ 29.04.2026 | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| | Патч | Суть | | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| | Patch | File | Status | | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| ## ALL_CONTOURS PATCH 29.04.2026 | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| | Patch | Status | | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| ## ПАТЧ 29.04.2026 — ФИНАЛЬНЫЙ ПРОХОД | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| - TECHNADZOR_RU_NORMS_V39: нормы СП/ГОСТ на русском | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| - FILE_INTAKE_KM_V39: КМ/КМД русские триггеры | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| - DWG_EZDXF_V39: реальное чтение через ezdxf | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| - ESTIMATE_V39_HELPERS: price_normalize, multi_offer_consistency | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| - TASK_WORKER_V39_HELPERS: result_validator, human_decision, format_enforcer, po | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| - MONITOR_HISTORY_V39: запись MONITOR_TIMEOUT в task_history | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| - DUPLICATE_GUARD_WIRED: _v39_recent_duplicate подключена к INSERT INTO tasks | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| - REGION_WIRED: _v39_region добавлена к payload перед поиском | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| ## SESSION 2026-04-29 — V44/V45 + GIT CLEANUP + AGGREGATOR | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| - Внедрены V44 закрытия pipeline (task_worker, file_intake_router, template_mana | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| - Внедрён V45 нормативный поиск (normative_search_engine + интеграция в project_ | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| - grep маркеры V44/V45 присутствуют | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| - Telegram pipeline после V44 | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| - Drive upload после V45 | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| - PATCH_FILE_INTAKE_NEEDS_CONTEXT_V1 — логика согласована, готова к диагностике  | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| - PATCH_FILE_INTAKE_NEEDS_CONTEXT_V1 — патч не поставлен, ждёт диагностики | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| 2. Патч PATCH_FILE_INTAKE_NEEDS_CONTEXT_V1 | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
-| ## СЕССИЯ 29.04.2026 — ИТОГИ ПАТЧЕЙ | docs/REPORTS/NOT_CLOSED.md | UNKNOWN |
-| - PIPELINE_INTEGRATION_V40: STALE_CONTEXT_GUARD, CACHE_READ, NEGATIVE_SELECTION, | docs/REPORTS/NOT_CLOSED.md | UNKNOWN |
-| - PIPELINE_INTEGRATION_V41: жёсткий routing, strict search result guard, file/pr | docs/REPORTS/NOT_CLOSED.md | UNKNOWN |
-| - FILE_INTAKE_PROJECT_V41: route_file → project_engine при intent=project | docs/REPORTS/NOT_CLOSED.md | UNKNOWN |
-| - ESTIMATE_QUALITY_V41: price_normalize_v41, multi_offer_consistency_v41 подключ | docs/REPORTS/NOT_CLOSED.md | UNKNOWN |
-| - TEMPLATE_SYSTEM_V41: template_learn_v41, template_priority_v41, project_templa | docs/REPORTS/NOT_CLOSED.md | UNKNOWN |
-| ## ПАТЧИ 29.04.2026 — ФИНАЛЬНЫЙ ПРОХОД V41/V42 | docs/REPORTS/NOT_CLOSED.md | UNKNOWN |
-| - PIPELINE_INTEGRATION_V41 — task_worker.py — cache read, stale guard, negative  | docs/REPORTS/NOT_CLOSED.md | UNKNOWN |
-| - FILE_INTAKE_PROJECT_V41 — file_intake_router.py — route_file → project_engine  | docs/REPORTS/NOT_CLOSED.md | UNKNOWN |
-| - ESTIMATE_QUALITY_V41 — estimate_engine.py — price_normalize_v41, multi_offer_c | docs/REPORTS/NOT_CLOSED.md | UNKNOWN |
-| - TEMPLATE_SYSTEM_V41 — template_manager.py — template_learn_v41, template_prior | docs/REPORTS/NOT_CLOSED.md | UNKNOWN |
-| - VOICE_CONFIRM_EMPTY_REVISION_FIX_V42 — telegram_daemon.py — пустой голос не со | docs/REPORTS/NOT_CLOSED.md | UNKNOWN |
-| - Голосовой confirm при AWAITING_CONFIRMATION — патч V42 установлен, тест не про | docs/REPORTS/NOT_CLOSED.md | UNKNOWN |
-| - Поиск с постпроцессингом V41 | docs/REPORTS/NOT_CLOSED.md | UNKNOWN |
-| GPT патч GEMINI_VISION удалил core/file_intake_router.py и другие файлы. | docs/REPORTS/NOT_CLOSED.md | BROKEN |
-| - Патч GPT отклонён — удалял файлы | docs/REPORTS/NOT_CLOSED.md | REJECTED |
-| ### PATCH_FILE_INTAKE_NEEDS_CONTEXT_V1 — READY FOR DIAGNOSTICS → PATCH | docs/REPORTS/NOT_CLOSED.md | UNKNOWN |
-| Статус: Логика закрыта. Диагностика + патч следующим шагом. | docs/REPORTS/NOT_CLOSED.md | UNKNOWN |
+| ## ПАТЧИ СЕССИИ 30.04.2026 — ВСЕ VERIFIED/INSTALLED | docs/HANDOFFS/LATEST_HANDOFF.md | VERIFIED |
+| | Патч | Файл | Статус | | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
+| | PATCH_FILE_INTAKE_NEEDS_CONTEXT_V3_MINIMAL | task_worker.py | VERIFIED ✅ | | docs/HANDOFFS/LATEST_HANDOFF.md | VERIFIED |
+| | PATCH_DRIVE_GUARD_BEFORE_DOWNLOAD_V1 | task_worker.py | VERIFIED ✅ | | docs/HANDOFFS/LATEST_HANDOFF.md | VERIFIED |
+| | PATCH_WORKER_PICK_BEFORE_STALE_V1 | task_worker.py | VERIFIED ✅ | | docs/HANDOFFS/LATEST_HANDOFF.md | VERIFIED |
+| | PATCH_FIX_PFIN3_MENU_SHADOW_V1 | task_worker.py | VERIFIED ✅ | | docs/HANDOFFS/LATEST_HANDOFF.md | VERIFIED |
+| | PATCH_FILE_CHOICE_PRIORITY_V1 | task_worker.py | VERIFIED ✅ | | docs/HANDOFFS/LATEST_HANDOFF.md | VERIFIED |
+| | PATCH_ENGINE_BASE_RESTORE_SA_UPLOAD_V1 | core/engine_base.py | VERIFIED ✅ | | docs/HANDOFFS/LATEST_HANDOFF.md | VERIFIED |
+| | PATCH_DRIVE_DIRECT_OAUTH_V1 | core/engine_base.py | VERIFIED ✅ | | docs/HANDOFFS/LATEST_HANDOFF.md | VERIFIED |
+| | PATCH_DRIVE_OAUTH_PRIMARY_MYDRIVE_V1 | core/engine_base.py | VERIFIED ✅ | | docs/HANDOFFS/LATEST_HANDOFF.md | VERIFIED |
+| | PATCH_DRIVE_UPLOAD_AND_TG_FALLBACK_V1 | task_worker.py | INSTALLED | | docs/HANDOFFS/LATEST_HANDOFF.md | INSTALLED |
+| - Полный Telegram file → artifact → Drive link flow (PATCH_DRIVE_UPLOAD_AND_TG_F | docs/HANDOFFS/LATEST_HANDOFF.md | UNKNOWN |
+| | Что | Патч | Статус | | docs/REPORTS/NOT_CLOSED.md | UNKNOWN |
+| | drive_file без intent → NEEDS_CONTEXT + меню | PATCH_FILE_INTAKE_NEEDS_CONTEXT | docs/REPORTS/NOT_CLOSED.md | VERIFIED |
+| | Worker зависал на _recover_stale_tasks | PATCH_WORKER_PICK_BEFORE_STALE_V1 | V | docs/REPORTS/NOT_CLOSED.md | VERIFIED |
+| | Guard до download | PATCH_DRIVE_GUARD_BEFORE_DOWNLOAD_V1 | VERIFIED ✅ | | docs/REPORTS/NOT_CLOSED.md | VERIFIED |
+| | UnboundLocalError _pfin3_menu | PATCH_FIX_PFIN3_MENU_SHADOW_V1 | VERIFIED ✅ | | docs/REPORTS/NOT_CLOSED.md | VERIFIED |
+| | Reply choice во всех топиках | PATCH_FILE_CHOICE_PRIORITY_V1 | VERIFIED ✅ | | docs/REPORTS/NOT_CLOSED.md | VERIFIED |
+| | engine_base.py отсутствовал | PATCH_ENGINE_BASE_RESTORE_SA_UPLOAD_V1 | VERIFIE | docs/REPORTS/NOT_CLOSED.md | VERIFIED |
+| | Drive upload через Direct OAuth | PATCH_DRIVE_DIRECT_OAUTH_V1 | VERIFIED ✅ | | docs/REPORTS/NOT_CLOSED.md | VERIFIED |
+| - PATCH_DRIVE_UPLOAD_AND_TG_FALLBACK_V1 — INSTALLED, live-тест не проводился | docs/REPORTS/NOT_CLOSED.md | INSTALLED |
 | GPT        — патчи кода, сервер | docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md | UNKNOWN |
 | Trust Score 0-100 | SELLER_RISK | TCO | Шаблон звонка | Патч-протокол 8 шагов | docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md | UNKNOWN |
 | GPT        — сервер / код / патчи | docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md | UNKNOWN |
+| "patches": [""], | chat_exports/CHAT_EXPORT_SYSTEM_PROMPT__UNIVERSAL__2026-04-26.txt | UNKNOWN |
+| ﻿{"chat_id":"-1003725299009","chat_name":"UNKNOWN","exported_at":"2026-04-20T10: | chat_exports/CHAT_EXPORT__-1003725299009__.txt | BROKEN |
+| ﻿{"chat_id":"-1003725299009","chat_name":"UNKNOWN","exported_at":"2026-04-23T10: | chat_exports/CHAT_EXPORT__-1003725299009__2026-04-23.txt | BROKEN |
+| ﻿{"chat_id":"-1003725299009","chat_name":"AREAL-NEVA ORCHESTRA","exported_at":"2 | chat_exports/CHAT_EXPORT__-1003725299009__GPT-5.4__2026-04-23.txt | BROKEN |
+| ﻿{ "chat_id": "UNKNOWN", "chat_name": "AI_Orchestra_Stabilization", "exported_at | chat_exports/CHAT_EXPORT__AI_Orchestra__2026-04-25.txt | BROKEN |
+| "patches": [ | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
+| "P01 task_worker.py:1587 - PATCH_INVALID_RESULT_MSG_FIX SYNTAX_OK", | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | INSTALLED |
+| "P02 task_worker.py:1136 - PATCH_FILE_NOT_FOUND_MSG_FIX SYNTAX_OK", | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | INSTALLED |
+| "SyntaxError unterminated string literal -> Python inline code multiline strings | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
+| "AssertionError P1 NOT FOUND -> anchor mismatch after previous patch already app | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
+| "zsh parse error near ) -> nested quotes in SSH inline python -> use base64 enco | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
+| "Backup FIRST before every patch - /root/BACKUPS/areal-neva-core/PATCH_NAME_TIME | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
+| "Patch via /tmp/patch.py file - not inline Python in SSH", | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
+| "base64 encode patch script to avoid SSH quote problems", | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
+| "state": "STABLE. Services active. Queue empty. DB: ARCHIVED=371, CANCELLED=153, | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
+| "CHAT_ONLY_PHRASES working - confirmed PATCHED OK in terminal", | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
+| "message.reply - confirmed PATCHED OK + SYNTAX_OK + active", | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | INSTALLED |
+| "Patch without reading live file FORBIDDEN", | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
+| "Backup before patch REQUIRED", | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt | UNKNOWN |
+| "patches": [ | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA__2026-04-26.txt | UNKNOWN |
+| "python3 /tmp/patch_daemon.py", | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA__2026-04-26.txt | UNKNOWN |
+| "Только overlay патчинг (# === CANON_PASS# ===) → никакого переписывания ядра", | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA__2026-04-26.txt | UNKNOWN |
+| "Патчинг telegram_daemon.py только снизу", | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA__2026-04-26.txt | UNKNOWN |
+| "Патч через /tmp Python скрипт, не sed/awk" | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA__2026-04-26.txt | UNKNOWN |
+| "Использовать monkey-patching для create_task → обоснование: запрет на использов | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA__2026-04-26.txt | UNKNOWN |
+| "Ошибка обработки голоса → ПРИЧИНА: падение внутри create_task без логирования t | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA__2026-04-26.txt | UNKNOWN |
+| "Нет traceback в логах для голоса → monkey-patch create_task через overlay → СТА | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA__2026-04-26.txt | INSTALLED |
+| "state": "Патч применен по канону, ожидается голосовое сообщение для генерации T | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA__2026-04-26.txt | UNKNOWN |
+| "current_breakpoint": "Патч применен. Ожидание отправки голосового сообщения пол | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA__2026-04-26.txt | UNKNOWN |
+| "Патч OVERLAY_VOICE_FIX → подтверждение: terminal output 'Патч применен. Отправь | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA__2026-04-26.txt | UNKNOWN |
+| "Патчинг только overlay", | chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA__2026-04-26.txt | UNKNOWN |
+| "patches": [ | chat_exports/CHAT_EXPORT__AREAL_NEVA_CORE__2026-04-27.txt | UNKNOWN |
+| "CANON_FULLFIX_FINAL_FACT_ONLY_V1 -> task_worker.py/ai_router.py -> статус: appl | chat_exports/CHAT_EXPORT__AREAL_NEVA_CORE__2026-04-27.txt | INSTALLED |
 
 ## LIVE ТЕСТЫ (VERIFIED)
 - areal-task-worker.service   task_worker.py      ОСНОВНОЙ ✅ [docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md]
@@ -207,37 +207,35 @@ REJECTED  = патч отклонён
 - - Reply choice priority: INSTALLED_PARTIALLY_VERIFIED. [docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md]
 - - Local artifact generation: VERIFIED for one task. [docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md]
 - - Service Account healthcheck: VERIFIED. [docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md]
-- ## LIVE ТЕСТ 29.04.2026 [docs/HANDOFFS/LATEST_HANDOFF.md]
-- - Смета текстом: «Сделай смету: профлист 100 м², цена 450 руб/м²» → ответ получен ✅ [docs/HANDOFFS/LATEST_HANDOFF.md]
-- - CP8 search type fix → смета теперь ловится из topic_500 ✅ [docs/HANDOFFS/LATEST_HANDOFF.md]
-- - Drive OAuth → token.json вместо credentials.json ✅ [docs/HANDOFFS/LATEST_HANDOFF.md]
-- - Worker: active, NRestarts=0 ✅ [docs/HANDOFFS/LATEST_HANDOFF.md]
-- - live тест Telegram + Drive [docs/HANDOFFS/LATEST_HANDOFF.md]
-- - CONTEXT_AGGREGATOR_V2 — tools/context_aggregator.py — VERIFIED коммит e56c2fd [docs/HANDOFFS/LATEST_HANDOFF.md]
-- - Cron исправлен: каждые 30 минут с подгрузкой .env — VERIFIED [docs/HANDOFFS/LATEST_HANDOFF.md]
-- ### ПОДТВЕРЖДЕНО ЖИВЫМ ТЕСТОМ [docs/REPORTS/NOT_CLOSED.md]
-- - Смета текстом → ответ получен ✅ [docs/REPORTS/NOT_CLOSED.md]
-- - CP8 search type fix ✅ [docs/REPORTS/NOT_CLOSED.md]
-- - Drive OAuth token.json ✅ [docs/REPORTS/NOT_CLOSED.md]
-- - Worker active NRestarts=0 ✅ [docs/REPORTS/NOT_CLOSED.md]
-- - telegram-ingress: active ✅ BOT STARTED 16:38:18 [docs/REPORTS/NOT_CLOSED.md]
-- - areal-task-worker: active ✅ NRestarts=0 [docs/REPORTS/NOT_CLOSED.md]
-- Статус-фильтр: только VERIFIED/INSTALLED/RESTORED [docs/REPORTS/NOT_CLOSED.md]
-- Статус доверия: CONFIRMED / PARTIAL / UNVERIFIED / RISK [docs/ARCHITECTURE/SEARCH_MONOLITH_V1.md]
-- Любая цена, отзыв, риск или рекомендация должны иметь источник. Нет источника → UNVERIFIED. [docs/ARCHITECTURE/SEARCH_MONOLITH_V1.md]
-- Всё из чатов и соцсетей = автоматически UNVERIFIED до подтверждения цены, даты, контакта и наличия. [docs/ARCHITECTURE/SEARCH_MONOLITH_V1.md]
-- Шаг 1 DONE: is_search в work_payload → Perplexity (28.04.2026) ✅ [docs/ARCHITECTURE/SEARCH_MONOLITH_V1.md]
-- ﻿{"chat_id":"-1003725299009","chat_name":"UNKNOWN","exported_at":"2026-04-23T10:00:00Z","source_model":"GPT-5.3","system [chat_exports/CHAT_EXPORT__-1003725299009__2026-04-23.txt]
-- "Anchor verified in live file via sed -n before write", [chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt]
-- "EXECUTION_PIPELINE_CLOSE_V44 -> task_worker.py -> grep verified lines 5114-5281 -> status: applied_by_terminal", [chat_exports/CHAT_EXPORT__AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR__2026-04-29.json]
-- "FILE_ROUTE_CLOSE_V44 -> core/file_intake_router.py -> grep verified lines 492-544 -> status: applied_by_terminal", [chat_exports/CHAT_EXPORT__AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR__2026-04-29.json]
-- "TEMPLATE_CLOSE_V44 -> core/template_manager.py -> grep verified lines 149-193 -> status: applied_by_terminal", [chat_exports/CHAT_EXPORT__AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR__2026-04-29.json]
+- ## ПАТЧИ СЕССИИ 30.04.2026 — ВСЕ VERIFIED/INSTALLED [docs/HANDOFFS/LATEST_HANDOFF.md]
+- | CONTEXT_AGGREGATOR_V2 | tools/context_aggregator.py | VERIFIED ✅ | [docs/HANDOFFS/LATEST_HANDOFF.md]
+- | PATCH_FILE_INTAKE_NEEDS_CONTEXT_V3_MINIMAL | task_worker.py | VERIFIED ✅ | [docs/HANDOFFS/LATEST_HANDOFF.md]
+- | PATCH_DRIVE_GUARD_BEFORE_DOWNLOAD_V1 | task_worker.py | VERIFIED ✅ | [docs/HANDOFFS/LATEST_HANDOFF.md]
+- | PATCH_WORKER_PICK_BEFORE_STALE_V1 | task_worker.py | VERIFIED ✅ | [docs/HANDOFFS/LATEST_HANDOFF.md]
+- | PATCH_FIX_PFIN3_MENU_SHADOW_V1 | task_worker.py | VERIFIED ✅ | [docs/HANDOFFS/LATEST_HANDOFF.md]
+- | PATCH_FILE_CHOICE_PRIORITY_V1 | task_worker.py | VERIFIED ✅ | [docs/HANDOFFS/LATEST_HANDOFF.md]
+- | PATCH_ENGINE_BASE_RESTORE_SA_UPLOAD_V1 | core/engine_base.py | VERIFIED ✅ | [docs/HANDOFFS/LATEST_HANDOFF.md]
+- | PATCH_DRIVE_DIRECT_OAUTH_V1 | core/engine_base.py | VERIFIED ✅ | [docs/HANDOFFS/LATEST_HANDOFF.md]
+- | PATCH_DRIVE_OAUTH_PRIMARY_MYDRIVE_V1 | core/engine_base.py | VERIFIED ✅ | [docs/HANDOFFS/LATEST_HANDOFF.md]
+- ## VERIFIED LIVE TESTS [docs/HANDOFFS/LATEST_HANDOFF.md]
+- - drive_file NEW → NEEDS_CONTEXT → меню по topic_id ✅ [docs/HANDOFFS/LATEST_HANDOFF.md]
+- - reply/voice choice → FILE_CHOICE_PARSED → IN_PROGRESS ✅ [docs/HANDOFFS/LATEST_HANDOFF.md]
+- - estimate engine → локальный artifact → "Нормализовано позиций: 32" ✅ [docs/HANDOFFS/LATEST_HANDOFF.md]
+- - Drive upload → drive.google.com link → UPLOAD_OK ✅ [docs/HANDOFFS/LATEST_HANDOFF.md]
+- - OAuth app переведён в Production → refresh_token не протухает ✅ [docs/HANDOFFS/LATEST_HANDOFF.md]
+- - engine_base.py восстановлен из bak → import OK ✅ [docs/HANDOFFS/LATEST_HANDOFF.md]
+- - App: areal-neva-automation → **In Production** ✅ [docs/HANDOFFS/LATEST_HANDOFF.md]
+- 1. Живой тест: файл без caption → меню → выбор → artifact → Drive link в Telegram [docs/HANDOFFS/LATEST_HANDOFF.md]
+- ## СЕССИЯ 30.04.2026 — ЗАКРЫТО КОДОМ (VERIFIED) [docs/REPORTS/NOT_CLOSED.md]
+- | drive_file без intent → NEEDS_CONTEXT + меню | PATCH_FILE_INTAKE_NEEDS_CONTEXT_V3_MINIMAL | VERIFIED ✅ | [docs/REPORTS/NOT_CLOSED.md]
+- | Worker зависал на _recover_stale_tasks | PATCH_WORKER_PICK_BEFORE_STALE_V1 | VERIFIED ✅ | [docs/REPORTS/NOT_CLOSED.md]
+- | Guard до download | PATCH_DRIVE_GUARD_BEFORE_DOWNLOAD_V1 | VERIFIED ✅ | [docs/REPORTS/NOT_CLOSED.md]
+- | UnboundLocalError _pfin3_menu | PATCH_FIX_PFIN3_MENU_SHADOW_V1 | VERIFIED ✅ | [docs/REPORTS/NOT_CLOSED.md]
+- | Reply choice во всех топиках | PATCH_FILE_CHOICE_PRIORITY_V1 | VERIFIED ✅ | [docs/REPORTS/NOT_CLOSED.md]
 
 ## СЛОМАНО (BROKEN)
 - ## CURRENT BROKEN POINT [docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md]
 - "what_broken": ["что сломано подтверждено фактами"], [docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md]
-- ## ИНЦИДЕНТ 29.04.2026 22:17 — ВОССТАНОВЛЕНИЕ ФАЙЛОВ [docs/REPORTS/NOT_CLOSED.md]
-- GPT патч GEMINI_VISION удалил core/file_intake_router.py и другие файлы. [docs/REPORTS/NOT_CLOSED.md]
 - "what_broken": [""], [chat_exports/CHAT_EXPORT_SYSTEM_PROMPT__UNIVERSAL__2026-04-26.txt]
 - ﻿{"chat_id":"-1003725299009","chat_name":"UNKNOWN","exported_at":"2026-04-20T10:30:00Z","source_model":"gpt-5.3","system [chat_exports/CHAT_EXPORT__-1003725299009__.txt]
 - ﻿{"chat_id":"-1003725299009","chat_name":"UNKNOWN","exported_at":"2026-04-23T10:00:00Z","source_model":"GPT-5.3","system [chat_exports/CHAT_EXPORT__-1003725299009__2026-04-23.txt]
@@ -274,25 +272,19 @@ REJECTED  = патч отклонён
 - "what_broken": [ [chat_exports/CHAT_EXPORT__CHATGPT_GEMINI_AGGREGATOR_V2_FINAL__2026-04-29.json]
 - "Repository state was recovered by aborting broken rebase, resetting tracked files to origin/main, then appending the tw [chat_exports/CHAT_EXPORT__CHATGPT_GITHUB_EXPORT_RULES_CANON__2026-04-29.json]
 - "Resolved broken local Git state by resetting tracked files to origin/main before appending only the required canon/prot [chat_exports/CHAT_EXPORT__CHATGPT_GITHUB_EXPORT_RULES_CANON__2026-04-29.json]
+- "what_broken": [ [chat_exports/CHAT_EXPORT__CHATGPT_GITHUB_EXPORT_RULES_CANON__2026-04-29.json]
+- "confirmation_handler":"BROKEN - Da creates new task instead of closing existing", [chat_exports/CHAT_EXPORT__CLAUDE_SESSION__2026-04-27.txt]
 
 ## НЕ ЗАКРЫТО
 - §2.4 Inbox Aggregator (P2 — не реализован): [docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md]
 - - monitor_jobs.py — НЕТ ФАЙЛА НЕТ CRON [docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md]
 - "what_not_done": ["что не реализовано / не протестировано"], [docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md]
 - what_not_done       — что не сделано (ОБЯЗАТЕЛЬНО) [docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md]
-- ## НЕ ЗАКРЫТО (тест завтра) [docs/HANDOFFS/LATEST_HANDOFF.md]
-- ### НЕ ЗАКРЫТО (требует живого теста): [docs/HANDOFFS/LATEST_HANDOFF.md]
-- ### НЕ ПРОТЕСТИРОВАНО LIVE [docs/HANDOFFS/LATEST_HANDOFF.md]
-- Модели добавлены в канон, но не реализованы в коде. [docs/HANDOFFS/LATEST_HANDOFF.md]
-- НЕ ЗАКРЫТО: [docs/HANDOFFS/LATEST_HANDOFF.md]
-- - monitor_jobs.py — НЕТ ФАЙЛА НЕТ CRON [docs/REPORTS/NOT_CLOSED.md]
-- - Excel =C2*D2 / =SUM — не реализованы [docs/REPORTS/NOT_CLOSED.md]
-- - КЖ PDF pipeline — не реализован [docs/REPORTS/NOT_CLOSED.md]
-- - Нормы СП/ГОСТ — не реализованы [docs/REPORTS/NOT_CLOSED.md]
-- ### НЕ ЗАКРЫТО (код есть, live-тест не проводился) [docs/REPORTS/NOT_CLOSED.md]
-- ### НЕ ЗАКРЫТО (live-тест не проводился) [docs/REPORTS/NOT_CLOSED.md]
-- ### GEMINI VISION — НЕ ЗАКРЫТО [docs/REPORTS/NOT_CLOSED.md]
-- - core/gemini_vision.py — не создан [docs/REPORTS/NOT_CLOSED.md]
+- ## НЕ ЗАКРЫТО (требует live-теста) [docs/HANDOFFS/LATEST_HANDOFF.md]
+- ## НЕ ЗАКРЫТО — P1 [docs/REPORTS/NOT_CLOSED.md]
+- ## НЕ ЗАКРЫТО — P2 [docs/REPORTS/NOT_CLOSED.md]
+- - MODEL_ROUTER — не реализован [docs/REPORTS/NOT_CLOSED.md]
+- - FALLBACK_CHAIN — не реализован [docs/REPORTS/NOT_CLOSED.md]
 - - MODEL_ROUTER — НЕ реализован [docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md]
 - - FALLBACK_CHAIN — НЕ реализован [docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md]
 - - MODEL_REGISTRY — НЕ реализован [docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md]
@@ -1326,336 +1318,125 @@ VALIDATION:
 - CLEAN без чувствительных данных
 
 
-### docs/HANDOFFS/LATEST_HANDOFF.md [REJECTED]
-# LATEST_HANDOFF — 29.04.2026 01:40 MSK
+### docs/HANDOFFS/LATEST_HANDOFF.md [VERIFIED]
+# LATEST_HANDOFF — 30.04.2026 03:10 MSK
 
 ## СЕРВЕР
 IP: 89.22.225.136 | Base: /root/.areal-neva-core
 Services: areal-task-worker ACTIVE | telegram-ingress ACTIVE | areal-memory-api ACTIVE
-DB: data/core.db (694 задачи) | memory.db (728KB)
 
-## ПАТЧИ СЕССИИ 28-29.04.2026 (все SYNTAX_OK, active)
+## ПАТЧИ СЕССИИ 30.04.2026 — ВСЕ VERIFIED/INSTALLED
 
-| Патч | Файл | Суть |
+| Патч | Файл | Статус |
 |---|---|---|
-| FIX_VOICE_GUARD_20260428 | telegram_daemon.py:961 | substring→word-boundary |
-| FIX_IS_SEARCH_20260428 | task_worker.py:2266 | SEARCH_PATTERNS→is_search |
-| FIX_SEARCH_CONTEXT_20260428 | task_worker.py:2248 | fresh search без старого контекста |
-| FIX_VOICE_REVISION_V2 | telegram_daemon.py:880+ | empty revision fix |
-| FIX_VOICE_CONFIRM_IN_PROGRESS | telegram_daemon.py:560 | голос confirm в IN_PROGRESS |
-| FIX_CRASHLOOP_3981 | task_worker.py:3981 | NameError p → p=__file__ |
-| FIX_CP8_ERROR_CLOSE | task_worker.py | CP8 estimate ошибки → FAILED не повисают |
-| FIX_CP8_SEARCH_TYPE | task_worker.py | input_type search → CP8 estimate hook |
-| FIX_EMPTY_AI_RETRY | task_worker.py:2297 | retry 3x при chars=0 |
-| FIX_DRIVE_OAUTH | task_worker.py:2569 | _download_from_drive_oauth через token.json |
-| FIX_ENV_EXPORT | .env:16 | убран export перед GITHUB_TOKEN |
+| CONTEXT_AGGREGATOR_V2 | tools/context_aggregator.py | VERIFIED ✅ |
+| PATCH_FILE_INTAKE_NEEDS_CONTEXT_V3_MINIMAL | task_worker.py | VERIFIED ✅ |
+| PATCH_DRIVE_GUARD_BEFORE_DOWNLOAD_V1 | task_worker.py | VERIFIED ✅ |
+| PATCH_WORKER_PICK_BEFORE_STALE_V1 | task_worker.py | VERIFIED ✅ |
+| PATCH_FIX_PFIN3_MENU_SHADOW_V1 | task_worker.py | VERIFIED ✅ |
+| PATCH_FILE_CHOICE_PRIORITY_V1 | task_worker.py | VERIFIED ✅ |
+| PATCH_ENGINE_BASE_RESTORE_SA_UPLOAD_V1 | core/engine_base.py | VERIFIED ✅ |
+| PATCH_DRIVE_DIRECT_OAUTH_V1 | core/engine_base.py | VERIFIED ✅ |
+| PATCH_DRIVE_OAUTH_PRIMARY_MYDRIVE_V1 | core/engine_base.py | VERIFIED ✅ |
+| PATCH_DRIVE_UPLOAD_AND_TG_FALLBACK_V1 | task_worker.py | INSTALLED |
+| core/telegram_artifact_fallback.py | создан | INSTALLED |
 
-## LIVE ТЕСТ 29.04.2026
-- Смета текстом: «Сделай смету: профлист 100 м², цена 450 руб/м²» → ответ получен ✅
-- CP8 search type fix → смета теперь ловится из topic_500 ✅
-- Drive OAuth → token.json вместо credentials.json ✅
-- Worker: active, NRestarts=0 ✅
+## VERIFIED LIVE TESTS
 
-## НЕ ЗАКРЫТО (тест завтра)
-- Смета → Excel файл на Drive (CP8 срабатывает, но upload не протестирован)
-- КЖ PDF pipeline (Drive OAuth fix должен помочь)
-- Дублирование ответа в разные топики
-- Голос 00:02-00:04 → revision вместо confirm
-- Нормы СП/ГОСТ в technadzor_engine
-- Шаблоны, multi-file
+- drive_file NEW → NEEDS_CONTEXT → меню по topic_id ✅
+- reply/voice choice → FILE_CHOICE_PARSED → IN_PROGRESS ✅
+- estimate engine → локальный artifact → "Нормализовано позиций: 32" ✅
+- Drive upload → drive.google.com link → UPLOAD_OK ✅
+- OAuth app переведён в Production → refresh_token не протухает ✅
+- engine_base.py восстановлен из bak → import OK ✅
 
-## DB STATE
-ARCHIVED: 371 | DONE: 98 | CANCELLED: 165 | FAILED: 60
+## ТЕКУЩАЯ АРХИТЕКТУРА DRIVE UPLOAD
 
+1. Primary: Direct OAuth через `core/engine_base.upload_artifact_to_drive`
+   - refresh_token из GDRIVE_REFRESH_TOKEN в .env + systemd override
+   - НЕ Service Account (storageQuotaExceeded для My Drive)
+   - НЕ google_io.py (drive.file scope ограничен)
+2. Fallback: `core/telegram_artifact_fallback.send_artifact_to_telegram`
+   - sendDocument через Bot API
+   - topic_id > 0 → message_thread_id передаётся
+   - topic_id == 0 → message_thread_id не передаётся
 
-## ПАТЧИ СЕССИИ 29.04.2026
+## OAUTH СТАТУС
 
-| Патч | Суть |
-|---|---|
-| CRON_AGGREGATOR | context_aggregator.py в cron каждый час, ONE_SHARED_CONTEXT.md обновляется автоматически |
-## SESSION 29.04.2026 RESULTS
+- App: areal-neva-automation → **In Production** ✅
+- Client: AI_ORCHESTRA_NEW (Desktop)
+- GDRIVE_REFRESH_TOKEN: обновлён в .env и systemd override
+- Scope: https://www.googleapis.com/auth/drive (полный)
+- Папка: AI_ORCHESTRA (13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB) — обычная My Drive
 
-| Patch | File | Status |
-|---|---|---|
-| CRON_AGGREGATOR | tools/context_aggregator.py | INSTALLED, not battle-tested |
-| P0_1_TEXT_ESTIMATE_FORCE_EXCEL_UPLOAD_V1 | core/estimate_engine.py | INSTALLED, not battle-tested |
+## НЕ ЗАКРЫТО (требует live-теста)
 
-SYNTAX_OK. Service active, NRestarts=0.
-
-## ALL_CONTOURS PATCH 29.04.2026
-
-| Patch | Status |
-|---|---|
-| ALL_CONTOURS_ROUTE_FILE_V2 | INSTALLED, not battle-tested |
-| ALL_CONTOURS_TECHNADZOR_NORMS_V2 | INSTALLED, not battle-tested |
-| ALL_CONTOURS_TEMPLATE_MANAGER_V2 | INSTALLED, not battle-tested |
-| ALL_CONTOURS_CP8_DRIVE_LINK_V2 | INSTALLED, not battle-tested |
-| ALL_CONTOURS_SHORT_VOICE_CONFIRM_V2 | INSTALLED, not battle-tested |
-
-## ПАТЧ 29.04.2026 — ФИНАЛЬНЫЙ ПРОХОД
-
-### УСТАНОВЛЕНО И ПОДТВЕРЖДЕНО ТЕРМИНАЛОМ:
-- Заглушки retry_worker, media_group, context_engine, delivery, startup_recovery
-- TECHNADZOR_RU_NORMS_V39: нормы СП/ГОСТ на русском
-- FILE_INTAKE_KM_V39: КМ/КМД русские триггеры
-- DWG_EZDXF_V39: реальное чтение через ezdxf
-- ESTIMATE_V39_HELPERS: price_normalize, multi_offer_consistency
-- TASK_WORKER_V39_HELPERS: result_validator, human_decision, format_enforcer, postprocess, cache_put, region, duplicate_guard, search_depth, price_aging, output_decision
-- MONITOR_HISTORY_V39: запись MONITOR_TIMEOUT в task_history
-- search_session таблица в memory.db и core.db
-- detect_intent_from_filename_v2 replace в task_worker
-- SEARCH_POSTPROCESS_WIRED: postprocess + cache_put подключены к поисковому результату строка ~2348
-- DUPLICATE_GUARD_WIRED: _v39_recent_duplicate подключена к INSERT INTO tasks
-- REGION_WIRED: _v39_region добавлена к payload перед поиском
-- TOPIC_MISMATCH_GUARD: guard перед AWAITING_CONFIRMATION
-- SEARCH_DEPTH_LIMIT: счётчик retry поиска
-- PRICE_AGING: предупреждение о старых ценах
-- OUTPUT_DECISION_LOGIC: блок РЕКОМЕНДАЦИЯ в результате
-
-### НЕ ЗАКРЫТО (требует живого теста):
-- _all_contours_short_voice_confirm: telegram_daemon.py запрещён §0.8
-- CACHE_LAYER перед поиском
-- SOURCE_DEDUPLICATION вызов
-- apply_template в pipeline
-- Trust Score + Risk Score
-
-
----
-
-## SESSION 2026-04-29 — V44/V45 + GIT CLEANUP + AGGREGATOR
-
-### СДЕЛАНО
-- Внедрены V44 закрытия pipeline (task_worker, file_intake_router, template_manager, project_engine, engine_base)
-- Внедрён V45 нормативный поиск (normative_search_engine + интеграция в project_engine)
-- Выполнен git hygiene: добавлен .gitignore для скрытия runtime/secret файлов
-- Подтверждена работа GitHub aggregator (AGG commits в origin/main, ONE_SHARED_CONTEXT обновляется)
-
-### ПОДТВЕРЖДЕНО ТЕРМИНАЛОМ
-- grep маркеры V44/V45 присутствуют
-- py_compile → SYNTAX_OK
-- systemctl → areal-task-worker active
-- journalctl без критических ошибок
-- SECRET_SCAN_OK перед commit
-
-### НЕ ПРОТЕСТИРОВАНО LIVE
-- Telegram pipeline после V44
-- Drive upload после V45
-- normative search на реальных задачах
-
-### ПРОБЛЕМЫ
-- git push rejected (non-fast-forward)
-- worktree грязный (много modified файлов)
-- локальный ONE_SHARED_CONTEXT устаревший относительно origin
-
-### СЛЕДУЮЩИЙ ШАГ
-- безопасная синхронизация Git (без git add .)
-- whitelist commit только чистых файлов
-- live тест Telegram + Drive
-
-
----
-
-## MULTI MODEL STATUS — 29.04.2026
-
-Модели добавлены в канон, но не реализованы в коде.
-
-Текущий режим:
-- DeepSeek (основной)
-- Perplexity (поиск)
-
-Целевой режим:
-- multi-model orchestration через MODEL_ROUTER
-
-Блокер:
-- MODEL_ROUTER
-- FALLBACK_CHAIN
-- MODEL_REGISTRY
-
-Дальнейшая работа:
-реализация оркестра, не добавление моделей
-
-
----
-
-## СЕССИЯ 30.04.2026 — ИТОГИ
-
-СДЕЛАНО:
-- CONTEXT_AGGREGATOR_V2 — tools/context_aggregator.py — VERIFIED коммит e56c2fd
-- Cron исправлен: каждые 30 минут с подгрузкой .env — VERIFIED
-- Gemini — core/gemini_vision.py существует, меню во всех топиках, intent=vision в route_file — INSTALLED
-- PATCH_FILE_INTAKE_NEEDS_CONTEXT_V1 — логика согласована, готова к диагностике и патчу
-
-НЕ ЗАКРЫТО:
-- PATCH_FILE_INTAKE_NEEDS_CONTEXT_V1 — патч не поставлен, ждёт диагностики
-- Голос confirm при AWAITING_CONFIRMATION (P1 баг, telegram_daemon.py:601)
-- Смета PDF → Excel → Drive
+- Полный Telegram file → artifact → Drive link flow (PATCH_DRIVE_UPLOAD_AND_TG_FALLBACK_V1 установлен, тест не проводился)
+- Голосовой confirm при AWAITING_CONFIRMATION (P1 баг, telegram_daemon.py:601)
+- Смета PDF → Excel → Drive end-to-end
 - КЖ PDF pipeline
-- project_engine end-to-end
+- project_engine end-to-end через Telegram
 - Gemini live-тест
-- docs/CANON_FINAL/02-11 — физически не существуют в GitHub
+- Multi-file, duplicate guard, memory/pin перед меню
 
-СЛЕДУЮЩИЙ ШАГ:
-1. Диагностика task_worker.py + file_intake_router.py
-2. Патч PATCH_FILE_INTAKE_NEEDS_CONTEXT_V1
-3. Live-тест: файл без команды → меню → выбор → engine → artifact
+## СЛЕДУЮЩИЙ ШАГ
+
+1. Живой тест: файл без caption → меню → выбор → artifact → Drive link в Telegram
+2. Проверить AWAITING_CONFIRMATION → confirm → DONE
+3. Зафиксировать результат в NOT_CLOSED.md
 
 
-### docs/REPORTS/NOT_CLOSED.md [RESTORED]
-# NOT_CLOSED — 28.04.2026
+### docs/REPORTS/NOT_CLOSED.md [VERIFIED]
+# NOT_CLOSED — 30.04.2026
 
-## P1
+## СЕССИЯ 30.04.2026 — ЗАКРЫТО КОДОМ (VERIFIED)
+
+| Что | Патч | Статус |
+|---|---|---|
+| drive_file без intent → NEEDS_CONTEXT + меню | PATCH_FILE_INTAKE_NEEDS_CONTEXT_V3_MINIMAL | VERIFIED ✅ |
+| Worker зависал на _recover_stale_tasks | PATCH_WORKER_PICK_BEFORE_STALE_V1 | VERIFIED ✅ |
+| Guard до download | PATCH_DRIVE_GUARD_BEFORE_DOWNLOAD_V1 | VERIFIED ✅ |
+| UnboundLocalError _pfin3_menu | PATCH_FIX_PFIN3_MENU_SHADOW_V1 | VERIFIED ✅ |
+| Reply choice во всех топиках | PATCH_FILE_CHOICE_PRIORITY_V1 | VERIFIED ✅ |
+| engine_base.py отсутствовал | PATCH_ENGINE_BASE_RESTORE_SA_UPLOAD_V1 | VERIFIED ✅ |
+| Drive upload через Direct OAuth | PATCH_DRIVE_DIRECT_OAUTH_V1 | VERIFIED ✅ |
+| OAuth app → Production (не протухает) | Google Cloud Console | VERIFIED ✅ |
+
+## НЕ ЗАКРЫТО — P1
+
+- Голосовой confirm при AWAITING_CONFIRMATION (telegram_daemon.py:601)
+- PATCH_DRIVE_UPLOAD_AND_TG_FALLBACK_V1 — INSTALLED, live-тест не проводился
+
+## НЕ ЗАКРЫТО — P2
+
+- Смета PDF → Excel → Drive end-to-end
+- КЖ PDF pipeline
+- project_engine end-to-end через Telegram
+- Gemini vision live-тест
+- Excel формулы =C2*D2 / =SUM
+- Нормы СП/ГОСТ в technadzor_engine
+- Multi-file комплект
+- Duplicate guard
+- Memory/pin перед меню
+- Link intake через NEEDS_CONTEXT
+- Google Sheets интеграция
+- Шаблоны end-to-end
+
+## DRIVE UPLOAD АРХИТЕКТУРА (финальная на 30.04)
+
+Primary: Direct OAuth (engine_base.upload_artifact_to_drive)
+Fallback: Telegram sendDocument (core/telegram_artifact_fallback.py)
+Service Account: НЕ подходит для My Drive (storageQuotaExceeded)
+google_io.py: НЕ используется для upload (drive.file scope)
+
+## ПРЕДЫДУЩИЕ НЕ ЗАКРЫТЫЕ (из сессий 28-29.04)
+
 - Дублирование задач x2
-- Голос 00:02 -> revision вместо confirm
-
-## P2
-- monitor_jobs.py — НЕТ ФАЙЛА НЕТ CRON
+- monitor_jobs.py — cron установлен, live-тест не проводился
 - SEARCH_MONOLITH_V1 — live-тест не проводился
-- Промпт Perplexity в ai_router.py — не написан
-- Excel =C2*D2 / =SUM — не реализованы
-- КЖ PDF pipeline — не реализован
-- Нормы СП/ГОСТ — не реализованы
-
----
-
-## СЕССИЯ 29.04.2026 — ИТОГИ ПАТЧЕЙ
-
-### УСТАНОВЛЕНО (SYNTAX_OK, active, не battle-tested)
-- PIPELINE_INTEGRATION_V40: STALE_CONTEXT_GUARD, CACHE_READ, NEGATIVE_SELECTION, FILE_RESULT_GUARD подключены в pipeline
-- PIPELINE_INTEGRATION_V41: жёсткий routing, strict search result guard, file/project result guard
-- FILE_INTAKE_PROJECT_V41: route_file → project_engine при intent=project
-- ESTIMATE_QUALITY_V41: price_normalize_v41, multi_offer_consistency_v41 подключены в _write_xlsx
-- TEMPLATE_SYSTEM_V41: template_learn_v41, template_priority_v41, project_template_engine_v41
-- get_clarification_message: добавлен пункт "Проектирование / Расчёт нагрузок"
-- core/project_engine.py: создан, КЖ/КМ/КМД/АР/ОВ/ВК/ЭОМ/СС/ГП/ПЗ/СМ/ТХ
-
-### P1 БАГ — НЕ ЗАКРЫТ (подтверждён живым тестом 29.04.2026 16:28)
-- telegram_daemon.py строка 601: SHORT_VOICE_CONFIRM_WIRED
-- голос 00:02-00:04 при AWAITING_CONFIRMATION → revision вместо confirm
-- STT работает, текст распознаётся
-- но _all_contours_short_voice_confirm перехватывает до worker
-- нужно: читать STT текст → если "да/ок/принято" → confirm, иначе revision
-
-### НЕ ЗАКРЫТО (код есть, live-тест не проводился)
-- Смета PDF → Excel → Drive link
-- КЖ PDF pipeline end-to-end
-- DWG/DXF → Excel → Drive link
-- Фото дефекта → акт → Drive link
-- Шаблон → новый файл → Drive link
-- Поиск цены → закупочный ответ с постпроцессингом
-- project_engine end-to-end через Telegram
-
-### ПОДТВЕРЖДЕНО ЖИВЫМ ТЕСТОМ
-- Смета текстом → ответ получен ✅
-- CP8 search type fix ✅
-- Drive OAuth token.json ✅
-- Worker active NRestarts=0 ✅
-
----
-
-## ПАТЧИ 29.04.2026 — ФИНАЛЬНЫЙ ПРОХОД V41/V42
-
-### УСТАНОВЛЕНО (SYNTAX_OK, active)
-- PIPELINE_INTEGRATION_V41 — task_worker.py — cache read, stale guard, negative selection, file result guard
-- FILE_INTAKE_PROJECT_V41 — file_intake_router.py — route_file → project_engine при intent=project
-- ESTIMATE_QUALITY_V41 — estimate_engine.py — price_normalize_v41, multi_offer_consistency_v41
-- TEMPLATE_SYSTEM_V41 — template_manager.py — template_learn_v41, template_priority_v41
-- search_session TABLE — создана в core.db + memory.db
-- VOICE_CONFIRM_EMPTY_REVISION_FIX_V42 — telegram_daemon.py — пустой голос не создаёт [REVISION]
-
-### СТАТУС СЕРВИСОВ
-- telegram-ingress: active ✅ BOT STARTED 16:38:18
-- areal-task-worker: active ✅ NRestarts=0
-
-### НЕ ЗАКРЫТО (live-тест не проводился)
-- Голосовой confirm при AWAITING_CONFIRMATION — патч V42 установлен, тест не проводился
-- Смета PDF → Excel → Drive
-- КЖ PDF pipeline end-to-end
-- DWG → Excel → Drive
-- Фото дефекта → акт → Drive
-- project_engine end-to-end через Telegram
-- Поиск с постпроцессингом V41
-
----
-
-## ИНЦИДЕНТ 29.04.2026 22:17 — ВОССТАНОВЛЕНИЕ ФАЙЛОВ
-
-### ЧТО ПРОИЗОШЛО
-GPT патч GEMINI_VISION удалил core/file_intake_router.py и другие файлы.
-Файлы восстановлены из бэкапов 19:23-19:31.
-
-### ВОССТАНОВЛЕНО ИЗ БЭКАПОВ
-- core/file_intake_router.py ← bak.20260429_192333
-- core/dwg_engine.py ← bak.20260429_142000
-- core/estimate_engine.py ← bak.20260429_185518
-- core/project_engine.py ← bak.20260429_193106
-- core/template_manager.py ← bak.20260429_192333
-
-### СТАТУС
-SYNTAX_OK, active, NRestarts=0
-
-### GEMINI VISION — НЕ ЗАКРЫТО
-- core/gemini_vision.py — не создан
-- "Анализ фото / Схема" — не добавлен в get_clarification_message
-- intent=vision в route_file — не добавлен
-- Патч GPT отклонён — удалял файлы
-
-
----
-
-## СЕССИЯ 30.04.2026 — ПРИНЯТЫЕ РЕШЕНИЯ
-
-### PATCH_FILE_INTAKE_NEEDS_CONTEXT_V1 — READY FOR DIAGNOSTICS → PATCH
-
-Цель: Орик перестаёт запускать обработку файла без понятной задачи пользователя.
-Статус: Логика закрыта. Диагностика + патч следующим шагом.
-Файлы: task_worker.py, core/file_intake_router.py
-Запрещено трогать: telegram_daemon.py, ai_router.py, reply_sender.py, google_io.py, .env
-
-Полная входная цепочка:
-INPUT (file/link/voice/text)
-→ voice: STT internal, пользователь не видит
-→ связать с предыдущим intent если был в topic_id
-→ активная NEEDS_CONTEXT в topic_id? → добавить файл туда
-→ duplicate guard (file_id/hash)
-→ pin + memory lookup (макс 3 записи)
-→ wrong-topic guard
-→ если intent ясен → route_file → engine
-→ если intent НЕ ясен → NEEDS_CONTEXT + меню по топику
-→ ждать выбор (bot_message_id)
-→ выбор парсится свободно ("1", "шаблон", "смета", "акт")
-→ engine → только НОВЫЙ artifact
-→ human ответ
-→ AWAITING_CONFIRMATION
-→ DONE только после подтверждения
-→ memory + pin только после DONE
-
-Главные запреты:
-НЕ запускать engine без выбора пользователя
-НЕ писать "Получил файл, обрабатываю"
-НЕ спрашивать "правки" до результата
-НЕ показывать STT текст
-НЕ закрывать задачу без artifact
-НЕ писать память до DONE
-НЕ выдавать исходный файл как результат
-НЕ показывать технические статусы пользователю
-НЕ запускать engine в NEEDS_CONTEXT
-НЕ плодить несколько NEEDS_CONTEXT в одном topic_id
-
-Меню СТРОЙКА: 1.Смета / 2.Объёмы / 3.Excel / 4.Чертёж / 5.Шаблон
-Меню ТЕХНАДЗОР: 1.Акт / 2.Ведомость / 3.Дефекты / 4.Нормы СП/ГОСТ / 5.Шаблон
-Меню ПРОЕКТИРОВАНИЕ: 1.Шаблон проекта / 2.Структура / 3.Новый документ / 4.Проверить / 5.Таблицы
-Меню DEFAULT: 1.Шаблон / 2.Смета / 3.Проект / 4.Новый документ / 5.Распознать / 6.Сохранить
-Ссылка без команды: NEEDS_CONTEXT + меню ссылки
-Multi-file: одна intake-сессия, одно меню по комплекту
-Дубликат: "Этот файл уже был. Тогда делали: [кратко]. Повторить или другое?"
-Отмена: "отбой/отмена/не надо" → CANCELLED
-Шаблон: TEMPLATE_CANDIDATE pending до DONE
-Финальный ответ: "Готово. Сделал [что]. Файл: [link]. Проверь. Всё правильно?"
-Result guard: нет artifact → не закрывать
-Маркеры лога: FILE_INTAKE_GUARD_HIT / FILE_NEEDS_CONTEXT_SET / FILE_CHOICE_PARSED / FILE_ROUTE_STARTED / FILE_ARTIFACT_READY / FILE_NO_ARTIFACT_BLOCKED
-Статус-фильтр: только VERIFIED/INSTALLED/RESTORED
-Rollback: если worker не active → откатить оба файла из .bak
-Обратная совместимость: текстовые задачи без файлов → старая логика не трогается
+- Промпт Perplexity в ai_router.py
+- MODEL_ROUTER — не реализован
+- FALLBACK_CHAIN — не реализован
 
 
 ## CHAT EXPORTS (все, от новых к старым)
