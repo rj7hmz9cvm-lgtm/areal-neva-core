@@ -4,6 +4,26 @@ logger = logging.getLogger(__name__)
 
 def upload_or_fail(path, task_id, topic_id, kind="artifact"):
     if not path or not os.path.exists(path):
+        # === FULLFIX_19_RETRY_FILE_NOT_FOUND ===
+        try:
+            import sqlite3 as _ff19_sql
+            with _ff19_sql.connect("/root/.areal-neva-core/data/core.db", timeout=10) as _ff19_c:
+                _ff19_c.execute("""CREATE TABLE IF NOT EXISTS upload_retry_queue(
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    path TEXT, task_id TEXT, topic_id INTEGER,
+                    kind TEXT, attempts INTEGER DEFAULT 0,
+                    last_error TEXT,
+                    created_at TEXT DEFAULT (datetime('now')),
+                    last_attempt TEXT
+                )""")
+                _ff19_c.execute(
+                    "INSERT INTO upload_retry_queue(path,task_id,topic_id,kind,last_error) VALUES(?,?,?,?,?)",
+                    (str(path), str(task_id), int(topic_id or 0), str(kind), "FILE_NOT_FOUND")
+                )
+                _ff19_c.commit()
+        except Exception:
+            pass
+        # === END FULLFIX_19_RETRY_FILE_NOT_FOUND ===
         return {"success": False, "error": "FILE_NOT_FOUND", "path": path}
     size = os.path.getsize(path)
     if size < 10:
