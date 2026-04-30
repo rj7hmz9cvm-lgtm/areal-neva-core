@@ -209,3 +209,24 @@ Result: PROJECT_TEMPLATE_MODEL создан
 - project_type определяется неточно (КД файл определён как АР)
 - Состав листов (0) — марки листов не всегда извлекаются
 - Голосовой confirm при AWAITING_CONFIRMATION — не закрыт
+
+---
+# HANDOFF 30.04.2026 — FULLFIX_02 SESSION
+
+## STATE
+- areal-task-worker: active | telegram-ingress: active | areal-memory-api: active
+- DB ORDER: использовать ORDER BY rowid DESC
+
+## VERIFIED THIS SESSION
+- FULLFIX_02_BC: project_type КД из filename ✅, sheet_register fallback ✅
+- FULLFIX_01: PROJECT_TEMPLATE_MODEL создан ✅
+
+## INSTALLED, AWAITING LIVE TEST
+- FULLFIX_02_DA: neg bind + false confirm guard + voice negative
+- FULLFIX_02_E: negative confirm all paths (NOT YET RUN)
+
+## CRITICAL NEXT ACTIONS
+1. Запустить FULLFIX_02_E
+2. Live: "переделай" → "Хорошо, доработаю"
+3. Live: голос "да" при AWAITING_CONFIRMATION → DONE
+4. Live: estimate PDF → xlsx → Drive

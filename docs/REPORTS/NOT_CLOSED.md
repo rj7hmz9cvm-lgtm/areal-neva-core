@@ -399,3 +399,42 @@ task_history: id, task_id, action, created_at
 - voice confirm (telegram_daemon.py с явного "да")
 - улучшить extract_template_model_from_text (КД/КЖ детектор)
 - estimate_engine → Excel с формулами
+
+---
+# FULLFIX_02 — СЕССИЯ 30.04.2026
+
+## VERIFIED (live-тест подтверждён)
+
+### FULLFIX_02_BC — project_engine.py + task_worker.py
+- Файл: core/project_engine.py
+- Патчи: FULLFIX_02_B1 (filename-first detect_section), FULLFIX_02_B2 (filename-first project_type, КД/КЖ before АР), FULLFIX_02_B3 (sheet_register fallback из sections)
+- Файл: task_worker.py
+- Патч: FULLFIX_02_C_NEGATIVE_PARENT_BIND
+- BACKUP: 20260430_104019
+- LIVE DB: задачи 99f8f617, 18aec40e → Раздел: КД, Состав листов (7) и (1) ✅
+
+## INSTALLED, NOT VERIFIED
+
+### FULLFIX_02_DA — task_worker.py + telegram_daemon.py
+- BACKUP: 20260430_105448, SYNTAX_OK, services active
+- D_HELPERS: _ff2_is_negative_user_signal, _ff2_allow_final_result
+- D_NO_FALSE_CONFIRM: блок финала без артефакта → FAILED
+- A_VOICE_NEGATIVE: расширенный negative check в _handle_control_text
+- NOT VERIFIED: neg:routed не появился после live теста
+
+### FULLFIX_02_E — telegram_daemon.py (DESIGNED, NOT YET RUN)
+- Цель: "переделай" → "Хорошо, доработаю. Подтверждение снято"
+- Устраняет: "Уточните, что исправить"
+
+## NOT CLOSED (код есть, live-тест не проводился)
+- Смета PDF → Excel → Drive end-to-end
+- КЖ PDF pipeline end-to-end
+- project_engine end-to-end через Telegram
+- Голосовой confirm при AWAITING_CONFIRMATION
+- Дублирование задач x2
+- PATCH_FILE_ERROR_RETRY_V1, PATCH_CRASH_BOTMSG_V1
+- PATCH_DUPLICATE_AND_MULTIFILE_INTAKE_V1
+- PATCH_LINK_INTAKE_NEEDS_CONTEXT_V1
+- monitor_jobs.py — файла нет
+- SEARCH_MONOLITH_V1 — live-тест не проводился
+- Нормы СП/ГОСТ в technadzor_engine
