@@ -1,0 +1,469 @@
+{
+  "report_type": "FULL_CANON_CODE_GAP_AUDIT",
+  "generated_at_utc": "2026-04-30T14:03:47.065634Z",
+  "git": {
+    "head": "8473438",
+    "log_last_20": [
+      "8473438 FULLFIX_29 duplicate_guard_call in _handle_drive_file",
+      "6b9a50e FULLFIX_28 ocr_engine + chat_guard + result_validator_call + intake_offer + drive_ingest_unit",
+      "3f0380c SEARCH_MONOLITH_V1 perplexity/sonar + 14-step supplier prompt",
+      "2fd93ee FULLFIX_27 search_session + output_decision + inbox_aggregator wired",
+      "c5ac20c FULLFIX_26 constraint_engine + audit_log + source_dedup + error_explainer + data_classification",
+      "3492f2d FULLFIX_25 intent_lock + orchestra_ctx + price_norm + memory_filter wired",
+      "e9f2819 FULLFIX_24 result_validator + human_decision_editor wired",
+      "d191c9a FULLFIX_23 duplicate_guard_wire + search_quality + model_router_v2",
+      "15d085a FULLFIX_22C fix model_router inject indentation",
+      "f08f3d8 FULLFIX_22B revision reply + model_router wired + normative wired",
+      "4eb8844 FULLFIX_22 model_router normative_db sheets_route",
+      "489c180 MEMORY_API_CLIENT_V1 fix 201 status code",
+      "cd75a41 MEMORY_API_CLIENT_V1 HTTP wrapper with token fallback SQLite",
+      "6565a18 FULLFIX_21 universal handler zip detect fix + wiring + FF16 voice + double dovolen",
+      "df615e5 CLEANUP remove CHAT_EXPORTS uppercase folder violation",
+      "0ae47f9 FULLFIX_20_DOCS update NOT_CLOSED and ONE_SHARED_CONTEXT",
+      "841a3c3 FULLFIX_20_FINAL B2 active template C1 gemini defect sync C3 retry loop",
+      "eb891d3 FULLFIX_20 topic replies oce memory active template gemini multifile merge",
+      "8372a26 FULLFIX_19_V5 retry queue covers FILE_NOT_FOUND path too",
+      "6edc837 FULLFIX_19_V4 commit untracked core modules retry verify gitignore extend"
+    ]
+  },
+  "services": [
+    "active",
+    "active",
+    "active",
+    "active",
+    "active"
+  ],
+  "source_scan": {
+    "files_total": 72
+  },
+  "code_scan": {
+    "python_files_total": 75,
+    "marker_index": {
+      "backups/20260427_085344/ai_router.py": [
+        "SEARCH"
+      ],
+      "backups/20260427_085344/task_worker.py": [
+        "SEARCH"
+      ],
+      "backups/20260427_085344/telegram_daemon.py": [
+        "SEARCH"
+      ],
+      "backups/RECOVER_ORCHESTRA_2026-04-11_20-43-35/ai_router.py": [
+        "SEARCH"
+      ],
+      "backups/RECOVER_ORCHESTRA_2026-04-11_20-43-35/web_engine.py": [
+        "SEARCH"
+      ],
+      "backups/patch_2b_strict_20260413_223116/ai_router.py": [
+        "SEARCH"
+      ],
+      "backups/patch_2b_strict_20260413_223116/task_worker.py": [
+        "SEARCH"
+      ],
+      "core/ai_router.py": [
+        "SEARCH"
+      ],
+      "core/artifact_pipeline.py": [
+        "SEARCH"
+      ],
+      "core/cad_project_engine.py": [
+        "SEARCH"
+      ],
+      "core/data_classification.py": [
+        "SEARCH"
+      ],
+      "core/defect_act_engine.py": [
+        "FULLFIX_20",
+        "NORMATIVE_DB_V1",
+        "SEARCH"
+      ],
+      "core/error_explainer.py": [
+        "SEARCH"
+      ],
+      "core/estimate_engine.py": [
+        "MARKET",
+        "SEARCH"
+      ],
+      "core/estimate_unified_engine.py": [
+        "FULLFIX_20"
+      ],
+      "core/file_intake_router.py": [
+        "SEARCH"
+      ],
+      "core/intent_lock.py": [
+        "SEARCH"
+      ],
+      "core/memory_client.py": [
+        "MEMORY_API_CLIENT_V1",
+        "SEARCH"
+      ],
+      "core/model_router.py": [
+        "FALLBACK_CHAIN_V1",
+        "FULLFIX_23",
+        "MODEL_ROUTER_V1",
+        "SEARCH"
+      ],
+      "core/multifile_artifact_engine.py": [
+        "FULLFIX_20"
+      ],
+      "core/normative_db.py": [
+        "NORMATIVE_DB_V1",
+        "SEARCH"
+      ],
+      "core/orchestra_closure_engine.py": [
+        "FULLFIX_20",
+        "SEARCH"
+      ],
+      "core/orchestra_context.py": [
+        "SEARCH"
+      ],
+      "core/output_decision.py": [
+        "SEARCH"
+      ],
+      "core/project_engine.py": [
+        "SEARCH"
+      ],
+      "core/result_validator.py": [
+        "SEARCH"
+      ],
+      "core/sample_template_engine.py": [
+        "SEARCH"
+      ],
+      "core/search_quality.py": [
+        "SEARCH"
+      ],
+      "core/search_session.py": [
+        "SEARCH"
+      ],
+      "core/sheets_route.py": [
+        "SHEETS_ROUTE_V1"
+      ],
+      "core/source_dedup.py": [
+        "SEARCH"
+      ],
+      "core/upload_retry_queue.py": [
+        "FULLFIX_20"
+      ],
+      "core/web_engine.py": [
+        "SEARCH"
+      ],
+      "orchestra_full_dump.py": [
+        "SEARCH"
+      ],
+      "task_worker.py": [
+        "FULLFIX_20",
+        "MODEL_ROUTER_V1",
+        "SEARCH"
+      ],
+      "telegram_daemon.py": [
+        "SEARCH"
+      ]
+    },
+    "capability_index": {
+      "internet_search": [
+        {
+          "file": "core/search_session.py",
+          "exists": true,
+          "markers": [
+            "SEARCH"
+          ]
+        },
+        {
+          "file": "core/source_dedup.py",
+          "exists": true,
+          "markers": [
+            "SEARCH"
+          ]
+        },
+        {
+          "file": "core/result_validator.py",
+          "exists": true,
+          "markers": [
+            "SEARCH"
+          ]
+        },
+        {
+          "file": "core/output_decision.py",
+          "exists": true,
+          "markers": [
+            "SEARCH"
+          ]
+        },
+        {
+          "file": "core/constraint_engine.py",
+          "exists": true,
+          "markers": []
+        },
+        {
+          "file": "core/model_router.py",
+          "exists": true,
+          "markers": [
+            "FALLBACK_CHAIN_V1",
+            "FULLFIX_23",
+            "MODEL_ROUTER_V1",
+            "SEARCH"
+          ]
+        }
+      ],
+      "product_search": [
+        {
+          "file": "core/search_session.py",
+          "exists": true,
+          "markers": [
+            "SEARCH"
+          ]
+        },
+        {
+          "file": "core/source_dedup.py",
+          "exists": true,
+          "markers": [
+            "SEARCH"
+          ]
+        },
+        {
+          "file": "core/result_validator.py",
+          "exists": true,
+          "markers": [
+            "SEARCH"
+          ]
+        },
+        {
+          "file": "core/constraint_engine.py",
+          "exists": true,
+          "markers": []
+        },
+        {
+          "file": "core/output_decision.py",
+          "exists": true,
+          "markers": [
+            "SEARCH"
+          ]
+        }
+      ],
+      "live_dialogue": [
+        {
+          "file": "task_worker.py",
+          "exists": true,
+          "markers": [
+            "FULLFIX_20",
+            "MODEL_ROUTER_V1",
+            "SEARCH"
+          ]
+        },
+        {
+          "file": "telegram_daemon.py",
+          "exists": true,
+          "markers": [
+            "SEARCH"
+          ]
+        },
+        {
+          "file": "core/reply_sender.py",
+          "exists": true,
+          "markers": []
+        },
+        {
+          "file": "core/pin_manager.py",
+          "exists": true,
+          "markers": []
+        }
+      ],
+      "memory": [
+        {
+          "file": "core/memory_client.py",
+          "exists": true,
+          "markers": [
+            "MEMORY_API_CLIENT_V1",
+            "SEARCH"
+          ]
+        },
+        {
+          "file": "memory_api_server.py",
+          "exists": true,
+          "markers": []
+        },
+        {
+          "file": "data/memory.db",
+          "exists": true,
+          "markers": []
+        }
+      ],
+      "technical_contour": [
+        {
+          "file": "core/estimate_unified_engine.py",
+          "exists": true,
+          "markers": [
+            "FULLFIX_20"
+          ]
+        },
+        {
+          "file": "core/orchestra_closure_engine.py",
+          "exists": true,
+          "markers": [
+            "FULLFIX_20",
+            "SEARCH"
+          ]
+        },
+        {
+          "file": "core/defect_act_engine.py",
+          "exists": true,
+          "markers": [
+            "FULLFIX_20",
+            "NORMATIVE_DB_V1",
+            "SEARCH"
+          ]
+        },
+        {
+          "file": "core/multifile_artifact_engine.py",
+          "exists": true,
+          "markers": [
+            "FULLFIX_20"
+          ]
+        },
+        {
+          "file": "core/dwg_engine.py",
+          "exists": true,
+          "markers": []
+        },
+        {
+          "file": "core/cad_project_engine.py",
+          "exists": true,
+          "markers": [
+            "SEARCH"
+          ]
+        },
+        {
+          "file": "core/sheets_route.py",
+          "exists": true,
+          "markers": [
+            "SHEETS_ROUTE_V1"
+          ]
+        },
+        {
+          "file": "core/normative_db.py",
+          "exists": true,
+          "markers": [
+            "NORMATIVE_DB_V1",
+            "SEARCH"
+          ]
+        },
+        {
+          "file": "core/template_intake_engine.py",
+          "exists": true,
+          "markers": []
+        }
+      ],
+      "file_drive": [
+        {
+          "file": "core/artifact_upload_guard.py",
+          "exists": true,
+          "markers": []
+        },
+        {
+          "file": "core/upload_retry_queue.py",
+          "exists": true,
+          "markers": [
+            "FULLFIX_20"
+          ]
+        },
+        {
+          "file": "core/engine_base.py",
+          "exists": true,
+          "markers": []
+        },
+        {
+          "file": "google_io.py",
+          "exists": true,
+          "markers": []
+        },
+        {
+          "file": "core/drive_folder_resolver.py",
+          "exists": true,
+          "markers": []
+        },
+        {
+          "file": "core/topic_drive_oauth.py",
+          "exists": true,
+          "markers": []
+        }
+      ]
+    }
+  },
+  "not_closed_by_code_or_not_verified": [
+    {
+      "group": "internet_search",
+      "source_files_count": 63,
+      "unverified_or_broken_count": 44,
+      "missing_expected_code_files": [],
+      "existing_without_markers": [
+        "core/constraint_engine.py"
+      ],
+      "status": "HAS_UNVERIFIED_SOURCES"
+    },
+    {
+      "group": "product_search",
+      "source_files_count": 19,
+      "unverified_or_broken_count": 13,
+      "missing_expected_code_files": [],
+      "existing_without_markers": [
+        "core/constraint_engine.py"
+      ],
+      "status": "HAS_UNVERIFIED_SOURCES"
+    },
+    {
+      "group": "live_dialogue",
+      "source_files_count": 61,
+      "unverified_or_broken_count": 42,
+      "missing_expected_code_files": [],
+      "existing_without_markers": [
+        "core/reply_sender.py",
+        "core/pin_manager.py"
+      ],
+      "status": "HAS_UNVERIFIED_SOURCES"
+    },
+    {
+      "group": "memory",
+      "source_files_count": 59,
+      "unverified_or_broken_count": 44,
+      "missing_expected_code_files": [],
+      "existing_without_markers": [
+        "memory_api_server.py",
+        "data/memory.db"
+      ],
+      "status": "HAS_UNVERIFIED_SOURCES"
+    },
+    {
+      "group": "technical_contour",
+      "source_files_count": 55,
+      "unverified_or_broken_count": 38,
+      "missing_expected_code_files": [],
+      "existing_without_markers": [
+        "core/dwg_engine.py",
+        "core/template_intake_engine.py"
+      ],
+      "status": "HAS_UNVERIFIED_SOURCES"
+    },
+    {
+      "group": "file_drive",
+      "source_files_count": 61,
+      "unverified_or_broken_count": 42,
+      "missing_expected_code_files": [],
+      "existing_without_markers": [
+        "core/artifact_upload_guard.py",
+        "core/engine_base.py",
+        "google_io.py",
+        "core/drive_folder_resolver.py",
+        "core/topic_drive_oauth.py"
+      ],
+      "status": "HAS_UNVERIFIED_SOURCES"
+    },
+    {
+      "group": "patch_rules",
+      "source_files_count": 63,
+      "unverified_or_broken_count": 44,
+      "missing_expected_code_files": [],
+      "existing_without_markers": [],
+      "status": "HAS_UNVERIFIED_SOURCES"
+    }
+  ]
+}
