@@ -1736,12 +1736,12 @@ async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_
                 ai_result = f"Этот чат закреплён за: {topic_role}"
             else:
                 try:
-                from core.model_router import route_model
-                _model_override = route_model(payload)
-                if _model_override:
-                    payload["model_override"] = _model_override  # MODEL_ROUTER_V1_WIRED
-            except Exception:
-                pass
+                    from core.model_router import route_model as _rm
+                    _mo = _rm(payload)
+                    if _mo:
+                        payload["model_override"] = _mo  # MODEL_ROUTER_V1_WIRED
+                except Exception:
+                    pass
             ai_result = await asyncio.wait_for(process_ai_task(payload), timeout=AI_TIMEOUT)
     except Exception as e:
         _update_task(conn, task_id, state="FAILED", error_message=_clean(str(e), 500))
