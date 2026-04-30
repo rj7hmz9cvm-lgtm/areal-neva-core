@@ -857,6 +857,66 @@ async def universal_handler(message: types.Message):
             voice_lower = voice_text.lower()
             voice_reply_to = message.reply_to_message.message_id if message.reply_to_message else None
             _voice_topic_id = getattr(message, "message_thread_id", None) or 0
+
+            # === PATCH_VOICE_CONFIRM_DIRECT ===
+            # Voice does not populate message.text, so confirm/reject must be checked after STT
+            try:
+                _voice_cmd = voice_lower.strip().rstrip("!., ")
+                async with aiosqlite.connect(DB) as db:
+                    cur = await db.execute(
+                        """
+                        SELECT id, state
+                        FROM tasks
+                        WHERE chat_id = ?
+                          AND COALESCE(topic_id,0) = COALESCE(?,0)
+                          AND state = 'AWAITING_CONFIRMATION'
+                        ORDER BY updated_at DESC
+                        LIMIT 1
+                        """,
+                        (tg_id, _voice_topic_id)
+                    )
+                    _voice_active_confirm = await cur.fetchone()
+
+                if _voice_active_confirm and _voice_cmd in SHORT_CONFIRM and _voice_cmd not in NEGATIVE_CONFIRM:
+                    parent_id, parent_state = _voice_active_confirm
+                    async with aiosqlite.connect(DB) as db:
+                        await db.execute(
+                            "UPDATE tasks SET state = 'DONE', updated_at = ? WHERE id = ?",
+                            (now_iso(), parent_id)
+                        )
+                        await db.execute(
+                            "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)",
+                            (parent_id, "voice_confirmed:DONE", now_iso())
+                        )
+                        await db.execute(
+                            "UPDATE pin SET state = 'CLOSED', updated_at = ? WHERE task_id = ? AND state = 'ACTIVE'",
+                            (now_iso(), parent_id)
+                        )
+                        await db.commit()
+                    await message.answer("Задача завершена")
+                    return
+
+                if _voice_active_confirm and _voice_cmd in NEGATIVE_CONFIRM:
+                    parent_id, parent_state = _voice_active_confirm
+                    async with aiosqlite.connect(DB) as db:
+                        await db.execute(
+                            "UPDATE tasks SET state = 'WAITING_CLARIFICATION', updated_at = ? WHERE id = ?",
+                            (now_iso(), parent_id)
+                        )
+                        await db.execute(
+                            "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)",
+                            (parent_id, "voice_rejected:WAITING_CLARIFICATION", now_iso())
+                        )
+                        await db.execute(
+                            "UPDATE pin SET state = 'CLOSED', updated_at = ? WHERE task_id = ? AND state = 'ACTIVE'",
+                            (now_iso(), parent_id)
+                        )
+                        await db.commit()
+                    await message.answer("Уточните, что исправить")
+                    return
+            except Exception as _voice_confirm_err:
+                logger.error("VOICE_CONFIRM_DIRECT_ERROR chat=%s err=%s", tg_id, _voice_confirm_err)
+            # === END PATCH_VOICE_CONFIRM_DIRECT ===
             _VOICE_CONTROL = ["отбой", "отмена", "не надо", "всё", "готово", "можно закрывать", "задача закрыта", "да", "нет", "ок", "+"]
             if any(voice_lower.strip() == x for x in _VOICE_CONTROL):
                 if await _handle_control_text(message, tg_id, voice_text, voice_lower, voice_reply_to, _voice_topic_id):
