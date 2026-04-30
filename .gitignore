@@ -22,3 +22,8 @@ token.json
 *.session
 *.session-journal
 core.db
+*.safe.*
+data/*.safe.*
+CANON_FINAL/
+task_worker.py.bak_*
+*.bak_*
