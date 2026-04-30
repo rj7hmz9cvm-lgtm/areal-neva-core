@@ -93,7 +93,33 @@ def generate_act_docx_full(
             norm = find_norm(d)
             row_cells[0].text = str(i)
             row_cells[1].text = str(d)[:200]
-            row_cells[2].text = "см. фото" if photo_links else ""
+            # === PHOTO_LINKAGE_V1 ===
+            if photo_links and i <= len(photo_links):
+                link = photo_links[i-1] if i <= len(photo_links) else ""
+                if link and "drive.google" in str(link):
+                    from docx.oxml.ns import qn
+                    from docx.oxml import OxmlElement
+                    p_elem = row_cells[2].paragraphs[0]
+                    run = p_elem.add_run("Фото " + str(i))
+                    run.font.color.rgb = None
+                    try:
+                        from docx.opc.constants import RELATIONSHIP_TYPE as RT
+                        rPr = run._r.get_or_add_rPr()
+                        rStyle = OxmlElement("w:rStyle")
+                        rStyle.set(qn("w:val"), "Hyperlink")
+                        rPr.insert(0, rStyle)
+                        rel = row_cells[2].paragraphs[0].part.relate_to(link, "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink", is_external=True)
+                        r_elem = run._r
+                        hlinkClick = OxmlElement("w:hlinkClick")
+                        hlinkClick.set(qn("r:id"), rel)
+                        rPr.append(hlinkClick)
+                    except Exception:
+                        run.text = link[:80]
+                else:
+                    row_cells[2].text = str(link)[:80] if link else "см. фото"
+            else:
+                row_cells[2].text = ""
+            # === END PHOTO_LINKAGE_V1 ===
             row_cells[3].text = severity
             row_cells[4].text = norm or "уточняется"
             row_cells[5].text = "ВЫСОКИЙ" if severity == "CRITICAL" else "СРЕДНИЙ" if severity == "MAJOR" else "НИЗКИЙ"

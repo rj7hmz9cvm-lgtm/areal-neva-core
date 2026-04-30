@@ -32,6 +32,13 @@ from dotenv import load_dotenv
 from core.ai_router import process_ai_task
 from core.reply_sender import send_reply, send_reply_ex
 try:
+    from core.template_engine_v1 import is_template_request as _tpl_check, get_template as _tpl_get, save_template as _tpl_save, apply_template_to_xlsx as _tpl_apply  # TEMPLATE_ENGINE_V1_WIRED
+except Exception:
+    _tpl_check = lambda t: False
+    _tpl_get = lambda *a: None
+    _tpl_save = lambda *a: False
+    _tpl_apply = lambda *a: False
+try:
     from core.topic_3008_engine import is_topic_3008 as _t3_check, detect_command as _t3_cmd, extract_code as _t3_extract, verify_code as _t3_verify, generate_code as _t3_generate  # TOPIC_3008_V1_WIRED
 except Exception:
     _t3_check = lambda t: False
@@ -245,8 +252,15 @@ def _quality_gate_artifact(artifact_path: str = None, drive_link: str = None,
     is_file_task = input_type in ("drive_file", "file") or task_type in (
         "ESTIMATE_TASK", "OCR_TASK", "DWG_TASK", "TECHNADZOR_TASK", "DOCUMENT_TASK"
     )
+    # === DRIVE_LINK_MANDATORY_V1 ===
     if not is_file_task:
         return {"ok": True, "reason": "NOT_FILE_TASK"}
+    # Если file task — Drive ссылка обязательна
+    if drive_link and "drive.google" in str(drive_link):
+        return {"ok": True, "reason": "DRIVE_LINK_PRESENT"}
+    if not drive_link and not artifact_path:
+        return {"ok": False, "reason": "NO_DRIVE_LINK_NO_ARTIFACT"}
+    # === END DRIVE_LINK_MANDATORY_V1 ===
 
     # Есть Drive ссылка — OK
     if drive_link and "drive.google" in str(drive_link):
@@ -2045,7 +2059,15 @@ async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_
                         payload["model_override"] = _mo  # MODEL_ROUTER_V1_WIRED
                 except Exception:
                     pass
-            # === TOPIC_3008_HANDLER_V1 ===
+                        # === TEMPLATE_TRIGGER_V1 ===
+            if _tpl_check(str(raw_input or "")):
+                _tpl_path = _tpl_get(int(topic_id or 0))
+                if _tpl_path and os.path.exists(_tpl_path):
+                    logger.info("TEMPLATE_TRIGGER_V1 using template=%s task=%s", _tpl_path, task_id)
+                    payload["template_path"] = _tpl_path
+                    payload["use_template"] = True
+            # === END TEMPLATE_TRIGGER_V1 ===
+# === TOPIC_3008_HANDLER_V1 ===
             if _t3_check(int(topic_id or 0)):
                 _t3_command = _t3_cmd(str(raw_input or ""))
                 if _t3_command != "none":
