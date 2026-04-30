@@ -25,7 +25,7 @@ def _api_save(chat_id, key, value, topic_id=0, scope="topic"):
             method="POST"
         )
         with _urllib_req.urlopen(req, timeout=_API_TIMEOUT) as r:
-            return r.status == 200
+            return r.status in (200, 201)
     except Exception:
         return False
 
