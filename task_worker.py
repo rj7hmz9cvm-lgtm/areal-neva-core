@@ -381,6 +381,13 @@ try:
 except Exception:
     _Stage6Archive = None
 # === END STAGE6 ===
+# === FULLFIX_FORMAT_ADAPTER_STAGE_7_IMPORT ===
+try:
+    from core.format_adapter import FormatAdapter as _Stage7FA
+except Exception:
+    _Stage7FA = None
+# === END STAGE7 ===
+
 
 
 
@@ -2267,6 +2274,17 @@ async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_
                         _Stage6Archive().archive(payload, ai_result if isinstance(ai_result, dict) else {})
                     except Exception as _e6:
                         logger.error("FULLFIX_ARCHIVE_ENGINE_STAGE_6_ERR %s", _e6)
+                # FULLFIX_FORMAT_ADAPTER_STAGE_7_CALL
+                if _Stage7FA is not None and isinstance(ai_result, dict):
+                    try:
+                        _formats_out = payload.get("formats_out") or ["telegram_text"]
+                        _adapted = _Stage7FA().adapt(ai_result, _formats_out, payload)
+                        ai_result["format_adapted"] = _adapted
+                        logger.info("FULLFIX_FORMAT_ADAPTER_STAGE_7 formats=%s primary=%s dir=%s",
+                                    _formats_out, list(_adapted.get("outputs", {}).keys())[:2],
+                                    payload.get("direction"))
+                    except Exception as _e7:
+                        logger.error("FULLFIX_FORMAT_ADAPTER_STAGE_7_ERR %s", _e7)
     except Exception as e:
         _update_task(conn, task_id, state="FAILED", error_message=_clean(str(e), 500))
         _close_pin(conn, task_id)
