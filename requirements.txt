@@ -5,3 +5,4 @@ pypdf
 pdfplumber
 python-docx
 pillow
+python-dotenv

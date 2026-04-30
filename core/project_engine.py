@@ -2526,3 +2526,30 @@ except Exception as _ff09_public_e:
 
 # === END FULLFIX_09_PROJECT_TEMPLATE_REGISTER_PUBLIC_OVERRIDE ===
 
+
+# === FULLFIX_10_TOTAL_CLOSURE_PUBLIC_PROJECT_OVERRIDE ===
+try:
+    from core.cad_project_engine import (
+        create_project_pdf_dxf_artifact as _ff10_create_project_pdf_dxf_artifact,
+        create_full_project_documentation as _ff10_create_full_project_documentation,
+    )
+
+    async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
+        return await _ff10_create_project_pdf_dxf_artifact(raw_input, task_id, topic_id, template_hint, *args, **kwargs)
+
+    async def create_full_project_documentation(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
+        return await _ff10_create_full_project_documentation(raw_input, task_id, topic_id, template_hint, *args, **kwargs)
+
+except Exception as _ff10_project_override_error:
+    async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
+        return {
+            "success": False,
+            "engine": "FULLFIX_10_TOTAL_CLOSURE_PUBLIC_PROJECT_OVERRIDE",
+            "error": str(_ff10_project_override_error)[:300],
+        }
+
+    async def create_full_project_documentation(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
+        return await create_project_pdf_dxf_artifact(raw_input, task_id, topic_id, template_hint, *args, **kwargs)
+
+# === END FULLFIX_10_TOTAL_CLOSURE_PUBLIC_PROJECT_OVERRIDE ===
+

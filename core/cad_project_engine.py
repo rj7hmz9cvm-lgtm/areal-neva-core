@@ -1016,3 +1016,70 @@ async def create_full_project_documentation(raw_input: str, task_id: str, topic_
 
 # === END FULLFIX_09_PROJECT_TEMPLATE_REGISTER_REPAIR ===
 
+
+# === FULLFIX_10_TOTAL_CLOSURE_CAD_OVERRIDE ===
+# Purpose:
+# - user may write simple natural text: "сделай плиту 12 на 8..."
+# - foundation slab must always be КЖ
+# - foundation slab must never use КД/roof/wood sheet register
+# - generated PDF must pass forbidden-word validation before returning links
+
+from core.orchestra_closure_engine import (
+    parse_foundation_request as _ff10_parse_foundation_request,
+    foundation_sheets as _ff10_foundation_sheets,
+    extract_pdf_text as _ff10_extract_pdf_text,
+    validate_foundation_text as _ff10_validate_foundation_text,
+    ENGINE as _FF10_ENGINE,
+)
+
+_FF10_ORIGINAL_PARSE_PROJECT_REQUEST = globals().get("parse_project_request")
+_FF10_ORIGINAL_NORMALIZE_SHEET_REGISTER = globals().get("_normalize_sheet_register")
+_FF10_ORIGINAL_CREATE_PROJECT_PDF_DXF_ARTIFACT = globals().get("create_project_pdf_dxf_artifact")
+
+def parse_project_request(raw_input: str, template_hint: str = "") -> dict:
+    data = _ff10_parse_foundation_request(str(raw_input or "") + " " + str(template_hint or ""))
+    if data.get("project_kind") == "foundation_slab":
+        data["section"] = "КЖ"
+        data["project_name"] = "Проект фундаментной плиты"
+        return data
+    if callable(_FF10_ORIGINAL_PARSE_PROJECT_REQUEST):
+        return _FF10_ORIGINAL_PARSE_PROJECT_REQUEST(raw_input, template_hint)
+    return data
+
+def _normalize_sheet_register(template: dict, data: dict) -> list:
+    if str((data or {}).get("project_kind") or "").lower() == "foundation_slab":
+        return _ff10_foundation_sheets()
+    if callable(_FF10_ORIGINAL_NORMALIZE_SHEET_REGISTER):
+        return _FF10_ORIGINAL_NORMALIZE_SHEET_REGISTER(template, data)
+    return _ff10_foundation_sheets()
+
+async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
+    if not callable(_FF10_ORIGINAL_CREATE_PROJECT_PDF_DXF_ARTIFACT):
+        return {"success": False, "engine": _FF10_ENGINE, "error": "ORIGINAL_PROJECT_ENGINE_NOT_FOUND"}
+
+    res = await _FF10_ORIGINAL_CREATE_PROJECT_PDF_DXF_ARTIFACT(raw_input, task_id, topic_id, template_hint, *args, **kwargs)
+    if not isinstance(res, dict):
+        return {"success": False, "engine": _FF10_ENGINE, "error": "INVALID_ENGINE_RESULT"}
+
+    data = res.get("data") or parse_project_request(raw_input, template_hint)
+    if str(data.get("project_kind") or "").lower() == "foundation_slab":
+        res["section"] = "КЖ"
+        res["sheet_count"] = len(_ff10_foundation_sheets())
+        pdf_path = str(res.get("pdf_path") or "")
+        pdf_text = _ff10_extract_pdf_text(pdf_path)
+        ok, err = _ff10_validate_foundation_text(pdf_text)
+        if not ok:
+            res["success"] = False
+            res["engine"] = _FF10_ENGINE
+            res["error"] = err
+            res["message"] = "Проект не создан: проверка PDF не пройдена"
+            return res
+
+    res["engine"] = _FF10_ENGINE
+    return res
+
+async def create_full_project_documentation(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
+    return await create_project_pdf_dxf_artifact(raw_input, task_id, topic_id, template_hint, *args, **kwargs)
+
+# === END FULLFIX_10_TOTAL_CLOSURE_CAD_OVERRIDE ===
+
