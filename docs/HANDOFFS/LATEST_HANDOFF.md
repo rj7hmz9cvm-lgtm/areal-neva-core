@@ -174,3 +174,38 @@ AI_ORCHESTRA/
 ### Факт из live БД topic=210
 АР/КД/КЖ PDF файлы обрабатывались как "document" → OCR текст → "Сводка по документу"
 Пользователь ожидал: структурную модель проекта с составом листов, марками, параметрами
+
+## ОБНОВЛЕНИЕ 30.04.2026 10:30 — FULLFIX_01_CANON_CLOSE_CORE VERIFIED
+
+### Патчи VERIFIED live-тестом:
+
+| Патч | Файл | Статус |
+|---|---|---|
+| PATCH_TEMPLATE_MODEL_EXTRACTOR_V1 | core/project_engine.py | VERIFIED ✅ |
+| PATCH_PROJECT_TEMPLATE_STORAGE_V1 | core/template_manager.py | VERIFIED ✅ |
+| PATCH_TEMPLATE_INTENT_BRANCH_V1 | core/artifact_pipeline.py | VERIFIED ✅ |
+| PATCH_CONFIRM_ONLY_ON_DONE_V1 | task_worker.py строки 2073+ | VERIFIED ✅ |
+| PATCH_CONFIRM_GUARD_C_V1 | task_worker.py строка 1711 | VERIFIED ✅ |
+
+### Live-тест 30.04 10:09
+
+```
+Файл: ПРОЕКТ КД кровля 5.pdf → topic_id=210
+Task: 2a249e66-8399-4994-8211-dcad82496f18
+State: AWAITING_CONFIRMATION
+Result: PROJECT_TEMPLATE_MODEL создан
+Раздел: АР
+Структура: план, расчет, Фасады, Разрез, План
+Размеры мм: 940, 730, 2025, 16940, 10730, 360, 2001...
+```
+
+### Что закрыто FULLFIX_01:
+- PDF проекта → PROJECT_TEMPLATE_MODEL (не OCR summary) ✅
+- AWAITING_CONFIRMATION только при валидном результате ✅
+- "Доволен результатом?" не показывается при ошибке/пустом result ✅
+- template_manager сохраняет модель в data/project_templates/ ✅
+
+### Что осталось не идеальным (следующий проход):
+- project_type определяется неточно (КД файл определён как АР)
+- Состав листов (0) — марки листов не всегда извлекаются
+- Голосовой confirm при AWAITING_CONFIRMATION — не закрыт
