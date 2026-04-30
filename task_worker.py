@@ -27,6 +27,11 @@ from dotenv import load_dotenv
 from core.ai_router import process_ai_task
 from core.reply_sender import send_reply, send_reply_ex
 try:
+    from core.result_validator import validate_result as _rv_validate, is_generic_response as _rv_generic  # RESULT_VALIDATOR_V1_WIRED
+except Exception:
+    _rv_validate = lambda r, **kw: {"ok": True, "reason": "IMPORT_FAIL"}
+    _rv_generic = lambda r: False
+try:
     from core.search_quality import availability_check as _sq_avail, cache_get as _sq_cget, cache_set as _sq_cset  # SEARCH_QUALITY_V1_WIRED
 except Exception:
     _sq_avail = lambda r: True
