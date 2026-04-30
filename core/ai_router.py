@@ -394,7 +394,10 @@ async def process_ai_task(payload: Dict[str, Any]) -> str:
             if m.get("role") == "system":
                 m["content"] += "\nFORBIDDEN: do not ask clarifying questions. Answer directly."
                 break
-    result = await _openrouter_call(DEFAULT_MODEL, messages)
+    # === MODEL_OVERRIDE_V1 ===
+    _final_model = work_payload.get("model_override") or DEFAULT_MODEL
+    result = await _openrouter_call(_final_model, messages)
+    # === END MODEL_OVERRIDE_V1 ===
 
     if _match_any(BAD_RESULT_RE, result):
         logger.warning("router_result_filtered result=%s", result[:120])

@@ -1234,12 +1234,12 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
                     _send_once(conn, task_id, chat_id, "Проект не создан: нет PDF/DXF ссылки", reply_to, "ff10_project_links_missing")
                     return
 
-                # === RESULT_VALIDATOR_GUARD_V1 ===
-            if _check_result_before_confirm(_ff13c_strip_manifest_links(_msg)):
-                _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
-            else:
-                _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message="FORBIDDEN_PHRASE")
-            # === END RESULT_VALIDATOR_GUARD_V1 ===
+                    # === RESULT_VALIDATOR_GUARD_V1 ===
+                if _check_result_before_confirm(_ff13c_strip_manifest_links(_msg)):
+                    _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
+                else:
+                    _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message="FORBIDDEN_PHRASE")
+                # === END RESULT_VALIDATOR_GUARD_V1 ===
                 _history(conn, task_id, "FULLFIX_10_PROJECT_OK")
                 conn.commit()
                 _sent = _send_once_ex(conn, task_id, str(chat_id), _msg, reply_to, "ff10_project_result")
@@ -1397,12 +1397,12 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
                 _send_once(conn, task_id, chat_id, _ff07_msg, reply_to, "ff07_project_failed")
                 return
 
-            # === RESULT_VALIDATOR_GUARD_V1 ===
-            if _check_result_before_confirm(_ff07_msg):
-                _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff07_msg, error_message="")
-            else:
-                _update_task(conn, task_id, state="FAILED", result=_ff07_msg, error_message="FORBIDDEN_PHRASE")
-            # === END RESULT_VALIDATOR_GUARD_V1 ===
+                # === RESULT_VALIDATOR_GUARD_V1 ===
+                if _check_result_before_confirm(_ff07_msg):
+                    _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff07_msg, error_message="")
+                else:
+                    _update_task(conn, task_id, state="FAILED", result=_ff07_msg, error_message="FORBIDDEN_PHRASE")
+                # === END RESULT_VALIDATOR_GUARD_V1 ===
             _history(conn, task_id, "FULLFIX_07_PROJECT_OK")
             conn.commit()
             _sent = _send_once_ex(conn, task_id, str(chat_id), _ff07_msg, reply_to, "ff07_project_result")
@@ -2061,12 +2061,12 @@ async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_
     saved_role = ""
     if should_save_role:
         saved_role = _save_topic_role_memory(chat_id, topic_id, ai_result)
-    # === RESULT_VALIDATOR_GUARD_V1 ===
-            if _check_result_before_confirm(ai_result):
-                _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=ai_result, error_message="")
-            else:
-                _update_task(conn, task_id, state="FAILED", result=ai_result, error_message="FORBIDDEN_PHRASE")
-            # === END RESULT_VALIDATOR_GUARD_V1 ===
+        # === RESULT_VALIDATOR_GUARD_V1 ===
+                if _check_result_before_confirm(ai_result):
+                    _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=ai_result, error_message="")
+                else:
+                    _update_task(conn, task_id, state="FAILED", result=ai_result, error_message="FORBIDDEN_PHRASE")
+                # === END RESULT_VALIDATOR_GUARD_V1 ===
     _history(conn, task_id, f"result:{_clean(ai_result, 400)}")
     if saved_role:
         _history(conn, task_id, f"ROLE_SAVED:{_clean(saved_role, 200)}")
