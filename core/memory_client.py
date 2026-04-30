@@ -2,6 +2,47 @@
 import sqlite3, logging, json, uuid
 from pathlib import Path
 
+# === MEMORY_API_CLIENT_V1 ===
+import os as _os, urllib.request as _urllib_req, urllib.error as _urllib_err
+_API_BASE = "http://127.0.0.1:8091"
+_API_TOKEN = _os.getenv("MEMORY_API_TOKEN", "")
+_API_TIMEOUT = 2
+_USE_API = bool(_API_TOKEN)
+
+def _api_save(chat_id, key, value, topic_id=0, scope="topic"):
+    if not _USE_API:
+        return False
+    try:
+        import json as _json
+        data = _json.dumps({
+            "chat_id": str(chat_id), "key": str(key), "value": str(value),
+            "topic_id": int(topic_id or 0), "scope": str(scope)
+        }).encode("utf-8")
+        req = _urllib_req.Request(
+            f"{_API_BASE}/memory", data=data,
+            headers={"Content-Type": "application/json",
+                     "Authorization": f"Bearer {_API_TOKEN}"},
+            method="POST"
+        )
+        with _urllib_req.urlopen(req, timeout=_API_TIMEOUT) as r:
+            return r.status == 200
+    except Exception:
+        return False
+
+def _api_get(chat_id, key, topic_id=0):
+    if not _USE_API:
+        return None
+    try:
+        import json as _json
+        url = f"{_API_BASE}/memory?chat_id={chat_id}&key={key}&topic_id={int(topic_id or 0)}"
+        req = _urllib_req.Request(url, headers={"Authorization": f"Bearer {_API_TOKEN}"})
+        with _urllib_req.urlopen(req, timeout=_API_TIMEOUT) as r:
+            body = _json.loads(r.read())
+            return body.get("value")
+    except Exception:
+        return None
+# === END MEMORY_API_CLIENT_V1 ===
+
 MEMORY_DB = "/root/.areal-neva-core/data/memory.db"
 logger = logging.getLogger("memory_client")
 
@@ -31,6 +72,8 @@ def _ensure():
 
 def save_memory(chat_id, key, value, topic_id=0, scope="topic"):
     try:
+        if _api_save(chat_id, key, value, topic_id, scope):
+            return  # MEMORY_API_CLIENT_V1_SAVE
         _ensure()
         v = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
         with sqlite3.connect(MEMORY_DB, timeout=10) as c:
@@ -55,6 +98,9 @@ def save_memory(chat_id, key, value, topic_id=0, scope="topic"):
         return False
 
 def get_memory(chat_id, key, topic_id=0):
+    _api_val = _api_get(chat_id, key, topic_id)
+    if _api_val is not None:
+        return _api_val  # MEMORY_API_CLIENT_V1_GET
     try:
         _ensure()
         with sqlite3.connect(MEMORY_DB, timeout=10) as c:
