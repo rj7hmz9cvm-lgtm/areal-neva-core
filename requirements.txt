@@ -1,0 +1,6 @@
+reportlab
+ezdxf
+openpyxl
+pypdf
+pdfplumber
+python-docx

@@ -782,6 +782,99 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
     raw_input = _clean(_s(_task_field(task, "raw_input")), 4000)
     reply_to = _task_field(task, "reply_to_message_id", None)
 
+
+    # === FULLFIX_07_PROJECT_DESIGN_CLOSURE_ROUTE ===
+    _ff07_low = str(raw_input or "").lower()
+    _ff07_triggers = (
+        "создай проект",
+        "сделай проект",
+        "проект фундамент",
+        "проект фундаментной плиты",
+        "план фундамент",
+        "план фундаментной плиты",
+        "фундаментной плиты",
+        "проект по образцу",
+        "по образцу проект",
+        "проект по шаблону",
+        "dxf проект",
+        "dwg проект",
+    )
+    if any(x in _ff07_low for x in _ff07_triggers):
+        try:
+            from core.project_engine import create_project_pdf_dxf_artifact
+            _ff07_res = await create_project_pdf_dxf_artifact(str(raw_input), task_id, int(topic_id or 0), "", True)
+
+            if not isinstance(_ff07_res, dict) or not _ff07_res.get("success"):
+                _err = str((_ff07_res or {}).get("error", "PROJECT_FAILED"))[:500]
+                _update_task(
+                    conn,
+                    task_id,
+                    state="FAILED",
+                    result="Проект не создан: нет полного комплекта PDF/DXF/XLSX/MANIFEST или шаблон неполный",
+                    error_message=_err,
+                )
+                _history(conn, task_id, "FULLFIX_07_FAILED:" + _err)
+                conn.commit()
+                _send_once(
+                    conn,
+                    task_id,
+                    chat_id,
+                    "Проект не создан: нет полного комплекта PDF/DXF/XLSX/MANIFEST или шаблон неполный",
+                    reply_to,
+                    "project_failed",
+                )
+                return
+
+            _pdf = str(_ff07_res.get("pdf_link") or "")
+            _dxf = str(_ff07_res.get("dxf_link") or "")
+            _xlsx = str(_ff07_res.get("xlsx_link") or "")
+            _manifest = str(_ff07_res.get("manifest_link") or "")
+            _engine = str(_ff07_res.get("engine") or "FULLFIX_07_PROJECT_DESIGN_CLOSURE")
+            _tpl = str(_ff07_res.get("template_file") or "")
+            _sheet_count = str(_ff07_res.get("sheet_count") or "0")
+            _sec = str(_ff07_res.get("section") or "КЖ")
+
+            _msg = (
+                "Проект создан\n"
+                f"Engine: {_engine}\n"
+                f"Раздел: {_sec}\n"
+                f"Листов: {_sheet_count}\n"
+                f"Шаблон: {_tpl}\n"
+                f"PDF: {_pdf}\n"
+                f"DXF: {_dxf}\n"
+                f"XLSX: {_xlsx}\n"
+                f"MANIFEST: {_manifest}\n\n"
+                "Доволен результатом? Ответь: Да / Уточни / Правки"
+            )
+
+            _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_msg, error_message="")
+            _history(conn, task_id, "FULLFIX_07_PROJECT_OK")
+            conn.commit()
+
+            try:
+                _sent = _send_once_ex(conn, task_id, str(chat_id), _msg, reply_to, "project_fullfix_07_result")
+                if isinstance(_sent, dict) and _sent.get("bot_message_id"):
+                    _update_task(conn, task_id, bot_message_id=_sent["bot_message_id"])
+                    conn.commit()
+            except Exception:
+                _send_once(conn, task_id, chat_id, _msg, reply_to, "project_fullfix_07_result")
+            return
+
+        except Exception as _ff07_e:
+            _err = str(_ff07_e)[:700]
+            _update_task(
+                conn,
+                task_id,
+                state="FAILED",
+                result="Проект не создан: ошибка генерации полного комплекта",
+                error_message=_err,
+            )
+            _history(conn, task_id, "FULLFIX_07_EXCEPTION:" + _err)
+            conn.commit()
+            _send_once(conn, task_id, chat_id, "Проект не создан: ошибка генерации полного комплекта", reply_to, "project_exception")
+            return
+    # === END FULLFIX_07_PROJECT_DESIGN_CLOSURE_ROUTE ===
+
     # === FULLFIX_06_FINAL_PROJECT_TEMPLATE_ROUTE ===
     _ff06_low = str(raw_input or "").lower()
     _ff06_project_triggers = (
