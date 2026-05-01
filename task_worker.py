@@ -1257,6 +1257,53 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
     raw_input = _clean(_s(_task_field(task, "raw_input")), 4000)
     reply_to = _task_field(task, "reply_to_message_id", None)
 
+    # === VOICE_CONFIRM_AWAITING_V1 ===
+    try:
+        _vc_raw = str(raw_input or "").strip()
+        _vc_is_voice = _vc_raw.lower().startswith("[voice]")
+        _vc_text = re.sub(r"^\s*\[voice\]\s*", "", _vc_raw, flags=re.I).strip()
+        _vc_low = _vc_text.lower().strip().rstrip("!?. ")
+        if _vc_is_voice and (_vc_low in CONFIRM_INTENTS or _vc_low in REVISION_INTENTS):
+            _vc_parent = conn.execute(
+                """
+                SELECT id, result, raw_input
+                FROM tasks
+                WHERE chat_id=?
+                  AND COALESCE(topic_id,0)=?
+                  AND id<>?
+                  AND state='AWAITING_CONFIRMATION'
+                ORDER BY updated_at DESC
+                LIMIT 1
+                """,
+                (str(chat_id), int(topic_id or 0), task_id),
+            ).fetchone()
+
+            if _vc_parent is not None and _vc_low in CONFIRM_INTENTS:
+                _vc_parent_id = _s(_vc_parent["id"])
+                _finalize_done(conn, _vc_parent_id, str(chat_id), int(topic_id or 0), reply_to)
+                _update_task(conn, task_id, state="DONE", result="Подтверждение принято голосом. Задача закрыта", error_message="")
+                _history(conn, _vc_parent_id, "VOICE_CONFIRM_AWAITING_V1:PARENT_DONE")
+                _history(conn, task_id, "VOICE_CONFIRM_AWAITING_V1:CHILD_DONE")
+                conn.commit()
+                _send_once(conn, task_id, str(chat_id), "Подтверждение принято голосом. Задача закрыта", reply_to, "voice_confirm_awaiting_v1")
+                logger.info("VOICE_CONFIRM_AWAITING_V1 confirmed parent=%s child=%s topic=%s", _vc_parent_id, task_id, topic_id)
+                return
+
+            if _vc_parent is not None and _vc_low in REVISION_INTENTS:
+                _vc_parent_id = _s(_vc_parent["id"])
+                _vc_merged = _clean(_s(_vc_parent["result"]) + "\n\nПравки пользователя голосом:\n" + _vc_text, 12000)
+                _update_task(conn, _vc_parent_id, state="IN_PROGRESS", raw_input=_vc_merged, error_message="")
+                _update_task(conn, task_id, state="DONE", result="Голосовые правки приняты. Задача возвращена в работу", error_message="")
+                _history(conn, _vc_parent_id, "VOICE_CONFIRM_AWAITING_V1:PARENT_REVISION")
+                _history(conn, task_id, "VOICE_CONFIRM_AWAITING_V1:CHILD_DONE_REVISION")
+                conn.commit()
+                _send_once(conn, task_id, str(chat_id), "Голосовые правки приняты. Задача возвращена в работу", reply_to, "voice_revision_awaiting_v1")
+                logger.info("VOICE_CONFIRM_AWAITING_V1 revision parent=%s child=%s topic=%s", _vc_parent_id, task_id, topic_id)
+                return
+    except Exception as _vc_e:
+        logger.error("VOICE_CONFIRM_AWAITING_V1_ERR task=%s err=%s", task_id, _vc_e)
+    # === END VOICE_CONFIRM_AWAITING_V1 ===
+
 
 
 
