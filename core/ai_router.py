@@ -5,6 +5,14 @@ import hashlib
 import logging
 from typing import Any, Dict, List
 
+# === SEARCH_MONOLITH_V2_IMPORT ===
+try:
+    from core.search_session import run_search_monolith_v2, has_active_search_session
+except Exception:
+    run_search_monolith_v2 = None
+    has_active_search_session = lambda chat_id, topic_id: False
+# === END SEARCH_MONOLITH_V2_IMPORT ===
+
 import httpx
 from dotenv import load_dotenv
 
@@ -386,10 +394,24 @@ async def process_ai_task(payload: Dict[str, Any]) -> str:
         return ""
 
     input_type = _s(payload.get("input_type")).lower()
-    is_search = _search_intent(user_text, input_type)
+    _s_chat = _s(payload.get("chat_id"))
+    try: _s_topic = int(payload.get("topic_id") or 0)
+    except: _s_topic = 0
+    is_search = _search_intent(user_text, input_type) or bool(has_active_search_session(_s_chat, _s_topic))
     work_payload = dict(payload)
 
     if is_search:
+        # === SEARCH_MONOLITH_V2_CALL ===
+        try:
+            if run_search_monolith_v2 is not None:
+                _v2 = await run_search_monolith_v2(work_payload, user_text, _openrouter_call, ONLINE_MODEL, SEARCH_SYSTEM_PROMPT)
+                _v2 = _clean(_s(_v2), 12000)
+                if _v2:
+                    logger.info("SEARCH_MONOLITH_V2_OK chars=%s", len(_v2))
+                    return _v2
+        except Exception as _v2e:
+            logger.error("SEARCH_MONOLITH_V2_FAIL err=%s fallback=V1", _v2e)
+        # === END SEARCH_MONOLITH_V2_CALL ===
         logger.info(
             "router_search_call model=%s input_type=%s state=%s chars=%s",
             ONLINE_MODEL,

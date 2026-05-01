@@ -30,6 +30,12 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from dotenv import load_dotenv
 from core.ai_router import process_ai_task
+# === SEARCH_MONOLITH_V2_TASK_WORKER_IMPORT ===
+try:
+    from core.search_session import is_search_clarification_output as _search_v2_is_clarification
+except Exception:
+    _search_v2_is_clarification = lambda text: False
+# === END SEARCH_MONOLITH_V2_TASK_WORKER_IMPORT ===
 try:
     from core.topic_meta_loader import load_topic_meta, is_what_is_this_question, build_topic_self_answer
     TOPIC_META_LOADER_WIRED = True
@@ -2669,6 +2675,17 @@ async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_
         saved_role = _save_topic_role_memory(chat_id, topic_id, ai_result)
         # === RESULT_VALIDATOR_GUARD_V1 ===
         if _check_result_before_confirm(ai_result):
+            # === SEARCH_MONOLITH_V2_CLARIFICATION_HANDLER ===
+            try:
+                if _search_v2_is_clarification(ai_result):
+                    _cmsg = str(ai_result).replace("SEARCH_CLARIFICATION_REQUIRED:","").strip()
+                    _update_task(conn, task_id, state="WAITING_CLARIFICATION", result=_cmsg, error_message="")
+                    _history(conn, task_id, "SEARCH_MONOLITH_V2:WAITING_CLARIFICATION")
+                    conn.commit()
+                    _send_once(conn, task_id, str(chat_id), _cmsg, reply_to, "search_v2_clarification")
+                    return
+            except Exception as _e: logger.warning("SEARCH_V2_CLARIFICATION_HANDLER_ERR %s", _e)
+            # === END SEARCH_MONOLITH_V2_CLARIFICATION_HANDLER ===
             _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=ai_result, error_message="")
         else:
             _update_task(conn, task_id, state="FAILED", result=ai_result, error_message="FORBIDDEN_PHRASE")
