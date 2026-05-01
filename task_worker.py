@@ -36,6 +36,20 @@ try:
 except Exception:
     _search_v2_is_clarification = lambda text: False
 # === END SEARCH_MONOLITH_V2_TASK_WORKER_IMPORT ===
+# === FILE_TECH_CONTOUR_FULL_CLOSE_V1_IMPORT ===
+try:
+    from core.file_memory_bridge import (
+        should_handle_file_followup as _filemem_should_followup,
+        build_file_followup_answer as _filemem_build_answer,
+        is_service_file as _filemem_is_service_file,
+        save_file_catalog_snapshot as _filemem_save_catalog,
+    )
+except Exception:
+    _filemem_should_followup = lambda text: False
+    _filemem_build_answer = lambda *a, **kw: None
+    _filemem_is_service_file = lambda *a, **kw: False
+    _filemem_save_catalog = lambda *a, **kw: {"ok": False}
+# === END FILE_TECH_CONTOUR_FULL_CLOSE_V1_IMPORT ===
 try:
     from core.topic_meta_loader import load_topic_meta, is_what_is_this_question, build_topic_self_answer
     TOPIC_META_LOADER_WIRED = True
@@ -1314,6 +1328,45 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
 
 
     
+    # === FILE_TECH_CONTOUR_FOLLOWUP_V2 ===
+    try:
+        _ft_low = str(raw_input or "").strip()
+        if _filemem_should_followup(_ft_low):
+            _ft_answer = _filemem_build_answer(str(chat_id), int(topic_id or 0), _ft_low)
+            if _ft_answer:
+                _update_task(conn, task_id, state="DONE", result=_ft_answer, error_message="")
+                _history(conn, task_id, "FILE_TECH_CONTOUR_FOLLOWUP_V2:DONE")
+                try:
+                    _save_memory(str(chat_id), int(topic_id or 0), str(raw_input or ""), _ft_answer)
+                except Exception as _e:
+                    logger.warning("FILE_TECH_CONTOUR_FOLLOWUP_V2_SAVE_ERR %s", _e)
+                try:
+                    if _Stage6Archive is not None:
+                        _Stage6Archive().archive(
+                            {
+                                "task_id": task_id,
+                                "chat_id": str(chat_id),
+                                "topic_id": int(topic_id or 0),
+                                "direction": "file_tech_followup",
+                                "engine": "file_memory_bridge",
+                                "input_type": "text",
+                                "raw_input": str(raw_input or ""),
+                            },
+                            {"text": _ft_answer, "result": {"text": _ft_answer}},
+                        )
+                except Exception as _e:
+                    logger.warning("FILE_TECH_CONTOUR_FOLLOWUP_V2_ARCHIVE_ERR %s", _e)
+                try:
+                    _append_timeline_event_v1(str(chat_id), int(topic_id or 0), task_id, "file_tech_followup_done", raw_input, _ft_answer)
+                except Exception as _e:
+                    logger.warning("FILE_TECH_CONTOUR_FOLLOWUP_V2_TIMELINE_ERR %s", _e)
+                conn.commit()
+                _send_once(conn, task_id, str(chat_id), _ft_answer, reply_to, "file_tech_followup_v2")
+                logger.info("FILE_TECH_CONTOUR_FOLLOWUP_V2 done task=%s topic=%s", task_id, topic_id)
+                return
+    except Exception as _ft_e:
+        logger.error("FILE_TECH_CONTOUR_FOLLOWUP_V2_ERR task=%s err=%s", task_id, _ft_e)
+    # === END FILE_TECH_CONTOUR_FOLLOWUP_V2 ===
     # === MEMORY_QUERY_GUARD_V1 ===
     try:
         _mq_low = str(raw_input or "").strip().lower().rstrip("!?. ")
@@ -2864,6 +2917,22 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
         data = json.loads(raw_input)
         file_id = data["file_id"]
         file_name = data.get("file_name", "файл")  # HOTFIX_FILE_NAME_EARLY_V1
+        # === DRIVE_FILE_CONTENT_SERVICE_GUARD_V1 ===
+        try:
+            if _filemem_is_service_file(str(file_name or ""), str(data.get("source") or ""), int(topic_id or 0), str(raw_input or "")):
+                _msg = "Служебный файл синхронизации проигнорирован"
+                _update_task(conn, task_id, state="CANCELLED", result=_msg, error_message="SERVICE_FILE_IGNORED")
+                _history(conn, task_id, "DRIVE_FILE_CONTENT_SERVICE_GUARD_V1:CANCELLED")
+                try:
+                    _append_timeline_event_v1(str(chat_id), int(topic_id or 0), task_id, "service_file_ignored", raw_input, _msg)
+                except Exception:
+                    pass
+                conn.commit()
+                logger.info("DRIVE_FILE_CONTENT_SERVICE_GUARD_V1 cancelled task=%s file=%s source=%s topic=%s", task_id, file_name, data.get("source"), topic_id)
+                return
+        except Exception as _svc_e:
+            logger.warning("DRIVE_FILE_CONTENT_SERVICE_GUARD_V1_ERR task=%s err=%s", task_id, _svc_e)
+        # === END DRIVE_FILE_CONTENT_SERVICE_GUARD_V1 ===
         # === DRIVE_FILE_MEMORY_INDEX_V1 + FILE_DUPLICATE_MEMORY_GUARD_V1 ===
         try:
             _df_file_id = str(data.get("file_id") or "")
@@ -2922,6 +2991,12 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
                 logger.warning("DRIVE_FILE_CONTENT_MEMORY_INDEX_V1_ERR task=%s err=%s", task_id, _dfci_e)
             # === END DRIVE_FILE_CONTENT_MEMORY_INDEX_V1_CALL ===
             logger.info("DRIVE_FILE_MEMORY_INDEX_V1 task=%s file=%s", task_id, _df_file_name)
+            # === FILE_CATALOG_AUTOSYNC_AFTER_DRIVE_FILE_V1 ===
+            try:
+                _filemem_save_catalog(str(chat_id), int(topic_id or 0))
+            except Exception as _cat_e:
+                logger.warning("FILE_CATALOG_AUTOSYNC_AFTER_DRIVE_FILE_V1_ERR task=%s err=%s", task_id, _cat_e)
+            # === END FILE_CATALOG_AUTOSYNC_AFTER_DRIVE_FILE_V1 ===
         except Exception as _e:
             logger.warning("DRIVE_FILE_MEMORY_INDEX_V1_ERR task=%s err=%s", task_id, _e)
         # === END DRIVE_FILE_MEMORY_INDEX_V1 + FILE_DUPLICATE_MEMORY_GUARD_V1 ===
