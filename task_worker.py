@@ -2227,9 +2227,7 @@ async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_
                             _t3srex(chat_id=str(chat_id),text="Запущена верификация. Ожидаю ответы (до 1.5 мин)...",reply_to_message_id=reply_to,message_thread_id=topic_id)
                             ai_result = await asyncio.wait_for(_t3_verify(_t3_code,_t3_ctx),timeout=150)
             # === END TOPIC_3008_HANDLER_V1 ===
-            if ai_result is None:
-                pass
-            else:
+            if ai_result is None:  # AI_LOGIC_FIX_V1
                 # FULLFIX_DIRECTION_KERNEL_STAGE_1_CALL
                 payload = _stage1_dir_payload(payload)
                 # FULLFIX_TOPIC_AUTODISCOVERY_V2_CALL
