@@ -284,7 +284,8 @@
       "title": "Технадзор",
       "enabled": true,
       "topic_ids": [
-        2
+        2,
+        5
       ],
       "aliases": [
         "технадзор",
