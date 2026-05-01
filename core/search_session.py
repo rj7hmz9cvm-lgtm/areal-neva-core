@@ -252,9 +252,23 @@ class SearchMonolithV2:
             session = SearchSession(chat_id=str(chat_id), topic_id=int(topic_id or 0), goal=user_text, criteria=extracted)
             self.sessions.save(session)
         elif existing:
+            # === SEARCH_SESSION_CLARIFICATION_PRESERVE_FIX_V1 ===
             existing.clarifications.append(user_text)
-            existing.criteria.update({k:v for k,v in extracted.items() if v not in ("",None,[],{})})
+            _keep = dict(existing.criteria or {})
+            _safe_update_keys = ("region", "quantity", "budget", "condition", "ral", "thickness_mm", "oem_or_article")
+            for k, v in (extracted or {}).items():
+                if v in ("", None, [], {}):
+                    continue
+                if k in ("category", "target"):
+                    if not _keep.get(k):
+                        _keep[k] = v
+                    continue
+                if k in _safe_update_keys:
+                    _keep[k] = v
+            existing.criteria = _keep
+            logger.info("SEARCH_SESSION_CLARIFICATION_PRESERVE_FIX_V1 preserved category=%s target=%s", existing.criteria.get("category"), existing.criteria.get("target"))
             session = existing
+            # === END SEARCH_SESSION_CLARIFICATION_PRESERVE_FIX_V1 ===
         else:
             session = self.sessions.get_or_create(chat_id, topic_id, user_text, extracted)
     # === END SEARCH_SESSION_ISOLATION_FIX_V1 ===
