@@ -387,6 +387,14 @@ try:
 except Exception:
     _Stage7FA = None
 # === END STAGE7 ===
+# === FULLFIX_TOPIC_AUTODISCOVERY_V2_IMPORT ===
+try:
+    from core.topic_autodiscovery import process as _topic_autodiscovery, check_naming_timeout as _topic_naming_check
+except Exception:
+    _topic_autodiscovery = None
+    _topic_naming_check = None
+# === END TOPIC_AUTO ===
+
 
 
 
@@ -2190,6 +2198,21 @@ async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_
             else:
                 # FULLFIX_DIRECTION_KERNEL_STAGE_1_CALL
                 payload = _stage1_dir_payload(payload)
+                # FULLFIX_TOPIC_AUTODISCOVERY_V2_CALL
+                if _topic_autodiscovery is not None:
+                    try:
+                        from core.work_item import WorkItem as _WITA
+                        _wita = _WITA.from_task_row({
+                            "id": payload.get("task_id") or payload.get("id") or "",
+                            "chat_id": str(payload.get("chat_id") or ""),
+                            "topic_id": int(payload.get("topic_id") or 0),
+                            "input_type": payload.get("input_type") or "unknown",
+                            "raw_input": payload.get("raw_input") or payload.get("raw_text") or "",
+                            "state": payload.get("state") or "IN_PROGRESS",
+                        })
+                        _topic_autodiscovery(_wita, payload)
+                    except Exception as _eta:
+                        logger.error("TOPIC_AUTODISCOVERY_ERR %s", _eta)
                 # FULLFIX_CAPABILITY_ROUTER_STAGE_2_CALL
                 if _Stage2Router is not None:
                     try:
