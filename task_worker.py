@@ -30,6 +30,15 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from dotenv import load_dotenv
 from core.ai_router import process_ai_task
+try:
+    from core.topic_meta_loader import load_topic_meta, is_what_is_this_question, build_topic_self_answer
+    TOPIC_META_LOADER_WIRED = True
+except Exception:
+    TOPIC_META_LOADER_WIRED = False
+    def load_topic_meta(t): return None
+    def is_what_is_this_question(t): return False
+    def build_topic_self_answer(m): return ""
+# TOPIC_META_LOADER_V1_IMPORT
 from core.reply_sender import send_reply, send_reply_ex
 try:
     from core.template_engine_v1 import is_template_request as _tpl_check, get_template as _tpl_get, save_template as _tpl_save, apply_template_to_xlsx as _tpl_apply  # TEMPLATE_ENGINE_V1_WIRED
@@ -737,6 +746,18 @@ def _load_memory_context(chat_id: str, topic_id: int) -> Tuple[str, str, str, st
                 if not _is_memory_noise(value):
                     long_memory.append(f"{key}: {value}")
 
+        # === TOPIC_META_ROLE_INJECT_V1 ===
+        if not topic_role and TOPIC_META_LOADER_WIRED:
+            try:
+                _tm = load_topic_meta(int(topic_id or 0))
+                if _tm:
+                    _tm_name = _tm.get("name", "")
+                    _tm_dir = _tm.get("direction", "")
+                    if _tm_name:
+                        topic_role = f"Топик: {_tm_name} | Направление: {_tm_dir}"
+            except Exception:
+                pass
+        # === END TOPIC_META_ROLE_INJECT_V1 ===
         return "\n".join(short_memory[:20]), "\n".join(long_memory[:20]), topic_role, topic_directions  # MEMORY_LIMIT_20_V1
     finally:
         conn.close()
@@ -2151,6 +2172,18 @@ async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_
         else:
             ROLE_Q = re.compile(r"(для чего|о чём|о чем|про что|напомни.*(чат|топик)|чем занимается|зачем этот чат)", re.IGNORECASE)
             HISTORY_Q = re.compile(r"(что мы писали|что писали раньше|о ч[её]м общались|напомни.*что.*(писали|обсуждали)|что было в этом чате|история чата)", re.IGNORECASE)
+            # === WHAT_IS_THIS_META_V1 ===
+            if TOPIC_META_LOADER_WIRED and is_what_is_this_question(raw_input):
+                _wt_meta = load_topic_meta(int(topic_id or 0))
+                if _wt_meta:
+                    _wt_answer = build_topic_self_answer(_wt_meta)
+                    if _wt_answer:
+                        _update_task(conn, task_id, state="DONE", result=_wt_answer, error_message="")
+                        conn.commit()
+                        from core.reply_sender import send_reply_ex
+                        send_reply_ex(chat_id=str(chat_id), text=_wt_answer, reply_to_message_id=reply_to, message_thread_id=topic_id)
+                        return
+            # === END WHAT_IS_THIS_META_V1 ===
             if topic_role and (ROLE_Q.search(raw_input) or HISTORY_Q.search(raw_input)):
                 ai_result = f"Этот чат закреплён за: {topic_role}"
             else:
@@ -2615,6 +2648,7 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
     try:
         data = json.loads(raw_input)
         file_id = data["file_id"]
+        file_name = data.get("file_name", "файл")  # HOTFIX_FILE_NAME_EARLY_V1
         # === TASK_TYPE_DETECT_V1 ===
         _task_type = "DOCUMENT_TASK"
         _fn_lower = file_name.lower()
@@ -2670,6 +2704,7 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
     os.makedirs(os.path.dirname(local_path), exist_ok=True)
 
     logger.info(f"DRIVE_FILE: downloading {file_id} -> {local_path}")
+    ok = _download_from_drive(file_id, local_path)  # HOTFIX_OK_BEFORE_SIZE_CHECK_V1
     # === FILE_SIZE_LIMIT_V1 ===
     if ok and local_path and os.path.exists(local_path):
         _fsize = os.path.getsize(local_path)
@@ -2683,7 +2718,6 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
                          reply_to_message_id=reply_to, message_thread_id=topic_id)
             return
     # === END FILE_SIZE_LIMIT_V1 ===
-    ok = _download_from_drive(file_id, local_path)
     # === FILE_INTAKE_ROUTER_V1_WIRED ===
     if ok and local_path and os.path.exists(local_path):
         try:

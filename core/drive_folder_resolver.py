@@ -6,7 +6,7 @@ from googleapiclient.discovery import build
 logger = logging.getLogger("drive_folder_resolver")
 
 SERVICE_ACCOUNT_FILE = "/root/.areal-neva-core/credentials.json"
-SCOPES = ["https://www.googleapis.com/auth/drive.file"]
+SCOPES = ["https://www.googleapis.com/auth/drive"]  # SCOPE_FULL_V2
 SHARED_DRIVE_ID = "13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB"
 CHAT_ID = "-1003725299009"
 

@@ -22,7 +22,7 @@ def _oauth_service():
         token_uri="https://oauth2.googleapis.com/token",
         client_id=client_id,
         client_secret=client_secret,
-        scopes=["https://www.googleapis.com/auth/drive.file"],
+        scopes=["https://www.googleapis.com/auth/drive"]  # SCOPE_FULL_V2,
     )
     creds.refresh(Request())
     return build("drive", "v3", credentials=creds)
