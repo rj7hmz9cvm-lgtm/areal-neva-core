@@ -1,18 +1,24 @@
 {
   "chat_id": "claude_session_01_05_2026_FIXES",
-  "chat_name": "AREAL-NEVA ORCHESTRA — Claude Session 01.05.2026 HOTFIXES",
+  "chat_name": "AREAL-NEVA ORCHESTRA — Claude Session 01.05.2026 FIXES",
   "exported_at": "2026-05-01T15:00:00+03:00",
   "source_model": "Claude Sonnet 4.6",
   "patches_verified": [
     "HOTFIX_FILE_NAME_EARLY_V1 — task_worker.py — file_name до TASK_TYPE_DETECT_V1 — VERIFIED",
-    "HOTFIX_OK_BEFORE_SIZE_CHECK_V1 — task_worker.py — ok = _download перед FILE_SIZE_LIMIT_V1 — VERIFIED",
+    "HOTFIX_OK_BEFORE_SIZE_CHECK_V1 — task_worker.py — ok = _download перед FILE_SIZE_LIMIT — VERIFIED",
     "TOPIC_META_LOADER_V1_IMPORT — task_worker.py — импорт topic_meta_loader — VERIFIED",
     "TOPIC_META_ROLE_INJECT_V1 — task_worker.py — topic_role из meta.json — VERIFIED",
-    "WHAT_IS_THIS_META_V1 — task_worker.py — ответ кто-ты из meta.json — VERIFIED",
+    "WHAT_IS_THIS_META_V1 — task_worker.py — ответ на кто ты из meta.json — VERIFIED",
     "SCOPE_FULL_V2 — core/topic_drive_oauth.py — drive.file → drive — VERIFIED",
     "SCOPE_FULL_V2 — core/drive_folder_resolver.py — drive.file → drive — VERIFIED"
   ],
-  "root_cause": "TOPIC_AUTODISCOVERY_V2 коммиты вставили TASK_TYPE_DETECT_V1 и FILE_SIZE_LIMIT_V1 используя file_name и ok до их присвоения — CrashLoop + 2799 FAILED задач",
+  "root_cause": "TOPIC_AUTODISCOVERY_V2 + TOPIC_NAMING_24H коммиты вставили TASK_TYPE_DETECT_V1 и FILE_SIZE_LIMIT_V1 в task_worker.py используя переменные file_name и ok до их присвоения",
+  "key_decisions": [
+    "task_worker.py только правится — запрещённые файлы не тронуты",
+    "topic_meta_loader.py подключён через try/except — безопасный импорт",
+    "SCOPE_FULL drive вместо drive.file в обоих oauth файлах",
+    "11 топиков синхронизированы в data/topics/*/meta.json через TOPIC_SYNC_FULL_V1"
+  ],
   "topics_synced": [
     {"topic_id": 0, "name": "ЛИДЫ АМО", "direction": "crm_leads"},
     {"topic_id": 2, "name": "СТРОЙКА", "direction": "estimates"},
@@ -26,26 +32,20 @@
     {"topic_id": 4569, "name": "ЛИДЫ РЕКЛАМА", "direction": "crm_leads"},
     {"topic_id": 6104, "name": "РАБОТА ПОИСК", "direction": "job_search"}
   ],
-  "key_decisions": [
-    "topic_meta_loader.py подключён через try/except — безопасный импорт без риска краша",
-    "SCOPE drive вместо drive.file — позволяет создавать папки топиков",
-    "11 топиков синхронизированы в data/topics/*/meta.json",
-    "Бот отвечает на вопрос кто-ты из meta.json топика"
-  ],
   "services": {
     "areal-task-worker": "active",
     "telegram-ingress": "active",
     "areal-memory-api": "active"
   },
   "not_closed": [
+    "invalid_scope на Drive upload при analyze — SCOPE_FULL_V2 применён, тест pending",
+    "detect_intent() takes 1 arg — warning, не блокирует обработку",
     "Голосовой confirm при AWAITING_CONFIRMATION — telegram_daemon.py ~601",
-    "detect_intent() takes 1 arg — warning не блокирует",
-    "FULLFIX_DIRECTION_KERNEL Stage 2 dispatch — execution_plan не используется реально",
-    "memory_api /archive endpoint не реализован"
+    "FULLFIX_DIRECTION_KERNEL Stage 2 dispatch — execution_plan не используется реально"
   ],
   "lessons": [
-    "TOPIC_AUTODISCOVERY коммиты не тестировались — сломали file pipeline",
-    "Якорь патча надо проверять grep перед применением",
-    "scope drive.file не позволяет создавать папки — нужен scope drive"
+    "TOPIC_AUTODISCOVERY коммиты вставили код с forward reference на переменные",
+    "Всегда проверять якорь в файле перед патчем — NOT_FOUND = неверный якорь",
+    "SCOPE drive.file не позволяет создавать папки — нужен scope drive"
   ]
 }
