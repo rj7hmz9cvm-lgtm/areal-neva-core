@@ -41,16 +41,36 @@ def _safe(v: Any) -> str:
     return re.sub(r"[^A-Za-zА-Яа-я0-9_.-]+", "_", _s(v, 120)).strip("._") or "template"
 
 def _load_index() -> Dict[str, Any]:
+    # === TEMPLATE_INDEX_DICT_FIX_V1 ===
     if INDEX.exists():
         try:
-            return json.loads(INDEX.read_text(encoding="utf-8"))
-        except Exception:
-            return {}
-    return {}
+            data = json.loads(INDEX.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                return data
+            return {
+                "_schema": "TEMPLATE_INDEX_DICT_FIX_V1",
+                "_legacy_type": type(data).__name__,
+                "_legacy_data": data,
+            }
+        except Exception as e:
+            return {
+                "_schema": "TEMPLATE_INDEX_DICT_FIX_V1",
+                "_legacy_error": str(e),
+            }
+    return {"_schema": "TEMPLATE_INDEX_DICT_FIX_V1"}
+    # === END_TEMPLATE_INDEX_DICT_FIX_V1 ===
 
 def _save_index(idx: Dict[str, Any]) -> None:
+    # === TEMPLATE_INDEX_SAVE_DICT_FIX_V1 ===
     TEMPLATE_DIR.mkdir(parents=True, exist_ok=True)
+    if not isinstance(idx, dict):
+        idx = {
+            "_schema": "TEMPLATE_INDEX_SAVE_DICT_FIX_V1",
+            "_legacy_type": type(idx).__name__,
+            "_legacy_data": idx,
+        }
     INDEX.write_text(json.dumps(idx, ensure_ascii=False, indent=2), encoding="utf-8")
+    # === END_TEMPLATE_INDEX_SAVE_DICT_FIX_V1 ===
 
 def _detect_domain(text: str) -> Optional[str]:
     low = (text or "").lower()
