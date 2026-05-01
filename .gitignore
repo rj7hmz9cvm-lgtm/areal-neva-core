@@ -24,7 +24,6 @@ token.json
 core.db
 *.safe.*
 data/*.safe.*
-CANON_FINAL/
 task_worker.py.bak_*
 *.bak_*
 backups/
