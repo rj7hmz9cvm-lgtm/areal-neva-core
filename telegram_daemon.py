@@ -704,7 +704,7 @@ async def universal_handler(message: types.Message):
             await download_telegram_file(tg_file.file_path, local_path)
             try:
                 if message.document.file_name.lower().endswith(EZONE_EXTS):
-                    drive_result = await upload_to_drive(local_path, message.document.file_name)
+                    drive_result = await upload_file_to_topic(local_path, message.document.file_name, tg_id, topic_id, getattr(message.document, "mime_type", "") or None)  # DAEMON_OAUTH_FIX_V1
                     with open(local_path, "r", errors="ignore") as f:
                         content = f.read()
                     if is_ezone_payload(content):

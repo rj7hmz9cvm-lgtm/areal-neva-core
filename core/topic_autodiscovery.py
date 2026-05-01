@@ -98,7 +98,7 @@ def _register_topic(topic_id: int, direction: str, data: dict):
 def _send_naming_question(chat_id: str, topic_id: int):
     """Отправляет вопрос о названии топика один раз."""
     try:
-        from reply_sender import send_reply
+        from core.reply_sender import send_reply  # IMPORT_FIX_V1
         send_reply(
             chat_id=str(chat_id),
             text="Как назовём этот чат? Ответь голосом или текстом.",
