@@ -27,3 +27,7 @@ data/*.safe.*
 CANON_FINAL/
 task_worker.py.bak_*
 *.bak_*
+backups/
+*.broken*
+data/*.backup*
+data/project_templates_bak*/
