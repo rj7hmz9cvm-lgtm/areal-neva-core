@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sqlite3
 import hashlib
 from datetime import datetime, timezone
@@ -104,6 +105,23 @@ def main():
             data = safe_json(raw)
             file_name = str(data.get("file_name") or "")
             source = str(data.get("source") or "")
+            file_id = str(data.get("file_id") or "")
+
+            # === SYNC_REAL_FILE_REF_FILTER_V2 ===
+            _sync_hay = raw + "\n" + result
+            _sync_links = re.findall(r"https?://\S+", _sync_hay)
+            _sync_has_real_file_ref = bool(
+                file_id
+                or file_name
+                or _sync_links
+                or re.search(r"\.(xlsx|xls|csv|pdf|docx|doc|jpg|jpeg|png|heic|webp|dwg|dxf)\b", _sync_hay, re.I)
+                or "drive.google" in _sync_hay
+                or "docs.google" in _sync_hay
+            )
+            if not _sync_has_real_file_ref:
+                skipped += 1
+                continue
+            # === END SYNC_REAL_FILE_REF_FILTER_V2 ===
 
             if is_service_file(file_name, source, topic_id, raw):
                 skipped += 1
@@ -116,7 +134,7 @@ def main():
                 "topic_id": topic_id,
                 "input_type": r["input_type"],
                 "state": r["state"],
-                "file_id": data.get("file_id") or "",
+                "file_id": file_id,
                 "file_name": file_name,
                 "mime_type": data.get("mime_type") or "",
                 "caption": data.get("caption") or "",

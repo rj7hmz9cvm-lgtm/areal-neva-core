@@ -152,6 +152,27 @@ def _score_item(query: str, item: Dict[str, Any]) -> int:
 def _extract_links(text: str) -> List[str]:
     return re.findall(r"https?://\S+", text or "")
 
+# === FILE_MEMORY_REAL_IDENTITY_FILTER_V2 ===
+def _has_real_file_identity(item: Dict[str, Any]) -> bool:
+    fname = _clean(item.get("file_name") or "", 500)
+    fid = _clean(item.get("file_id") or "", 500)
+    links = item.get("links") or []
+    value = _clean(item.get("value") or item.get("summary") or "", 50000)
+
+    if fname and fname.lower() not in ("без имени", "none", "null"):
+        return True
+    if fid:
+        return True
+    if links:
+        return True
+    if re.search(r"\.(xlsx|xls|csv|pdf|docx|doc|jpg|jpeg|png|heic|webp|dwg|dxf)\b", value, re.I):
+        return True
+    if "drive.google" in value or "docs.google" in value:
+        return True
+    return False
+# === END FILE_MEMORY_REAL_IDENTITY_FILTER_V2 ===
+
+
 def load_file_memory(chat_id: str, topic_id: int, query: str = "", limit: int = 12) -> List[Dict[str, Any]]:
     chat_id = str(chat_id)
     topic_id = int(topic_id or 0)
@@ -274,6 +295,10 @@ def load_file_memory(chat_id: str, topic_id: int, query: str = "", limit: int = 
         seen.add(key)
         item["_score"] = _score_item(query or "", item)
         filtered.append(item)
+
+    # === FILE_MEMORY_FINAL_FILTER_FAKE_ENTRIES_V2 ===
+    filtered = [it for it in filtered if _has_real_file_identity(it)]
+    # === END FILE_MEMORY_FINAL_FILTER_FAKE_ENTRIES_V2 ===
 
     if query:
         filtered.sort(key=lambda x: (x.get("_score", 0), x.get("timestamp") or ""), reverse=True)

@@ -2963,7 +2963,21 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
             _append_timeline_event_v1(str(chat_id), int(topic_id or 0), task_id, "drive_file_indexed", raw_input, "")
             # === DRIVE_FILE_CONTENT_MEMORY_INDEX_V1_CALL ===
             try:
-                if _df_content_index is not None and _df_file_id:
+                # === DRIVE_FILE_CONTENT_INDEX_SKIP_SERVICE_V2 ===
+                try:
+                    _df_skip_content_index = bool(_filemem_is_service_file(
+                        _df_file_name,
+                        str(data.get("source") or ""),
+                        int(topic_id or 0),
+                        str(raw_input or "")
+                    ))
+                except Exception as _df_skip_e:
+                    _df_skip_content_index = False
+                    logger.warning("DRIVE_FILE_CONTENT_INDEX_SKIP_SERVICE_V2_ERR task=%s err=%s", task_id, _df_skip_e)
+                if _df_skip_content_index:
+                    logger.info("DRIVE_FILE_CONTENT_INDEX_SKIP_SERVICE_V2 skipped task=%s file=%s source=%s topic=%s", task_id, _df_file_name, data.get("source"), topic_id)
+                # === END DRIVE_FILE_CONTENT_INDEX_SKIP_SERVICE_V2 ===
+                if (not _df_skip_content_index) and _df_content_index is not None and _df_file_id:
                     _df_ci = await asyncio.to_thread(
                         _df_content_index,
                         str(chat_id),
