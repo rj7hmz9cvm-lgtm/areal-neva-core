@@ -170,6 +170,29 @@ def generate_act_text(defects: list, object_name: str = "Объект") -> str:
         lines.append("Видимых дефектов не обнаружено.")
     return "\n".join(lines)
 
+
+# === TECHNADZOR_GENERATE_ACT_DOCX_ALIAS_V1 ===
+def generate_act_docx(task_id: str, analysis_text: str, file_name: str = "") -> str:
+    """
+    Backward-compatible DOCX alias.
+    process_technadzor already calls generate_act_docx(); without this alias the DOCX branch can fail.
+    """
+    try:
+        defects = extract_defects(analysis_text or "")
+        if not defects and analysis_text:
+            defects = [str(analysis_text)[:500]]
+        return generate_act_docx_full(
+            defects=defects,
+            object_name=(file_name or "Объект"),
+            task_id=task_id,
+            photo_links=None,
+            norm_results=None,
+        )
+    except Exception as e:
+        logger.warning("TECHNADZOR_GENERATE_ACT_DOCX_ALIAS_V1_ERR %s", e)
+        return ""
+# === END_TECHNADZOR_GENERATE_ACT_DOCX_ALIAS_V1 ===
+
 def process_technadzor(
     conn, task_id: str, chat_id: str, topic_id: int,
     raw_input: str, file_name: str = "", local_path: str = ""

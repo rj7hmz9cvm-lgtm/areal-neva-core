@@ -40,6 +40,117 @@ def _kind(file_name: str, mime_type: str = "") -> str:
         return "drawing"
     return "binary"
 
+
+# === DOMAIN_CONTOUR_ROUTER_V1 ===
+def _artifact_task_id(file_name: str, engine: str = "artifact") -> str:
+    base = re.sub(r"[^A-Za-zА-Яа-я0-9_.-]+", "_", os.path.splitext(os.path.basename(file_name or engine))[0]).strip("._")
+    return (base or engine)[:80]
+
+def _domain_flags(file_name: str, mime_type: str = "", user_text: str = "", topic_role: str = "") -> Dict[str, bool]:
+    hay = f"{file_name}\n{mime_type}\n{user_text}\n{topic_role}".lower()
+    estimate = any(x in hay for x in ("смет", "расчёт", "расчет", "вор", "ведомость объем", "ведомость объём", "estimate", "xlsx", "xls", "csv"))
+    tech = any(x in hay for x in ("технадзор", "дефект", "акт", "осмотр", "нарушен", "предписан", "гост", "снип", "сп ", "фотофиксац", "трещин", "протеч", "скол"))
+    project = any(x in hay for x in ("проект", "проектирован", "кж", "кмд", "км", "кр", "ар", "ов", "вк", "эом", "гп", "пз", "чертеж", "чертёж", "dxf", "dwg"))
+    return {"estimate": estimate, "tech": tech, "project": project}
+
+async def _domain_estimate_artifact(local_path: str, file_name: str, mime_type: str, user_text: str, topic_role: str) -> Optional[Dict[str, Any]]:
+    try:
+        from core.estimate_engine import process_estimate_to_excel
+        tid = _artifact_task_id(file_name, "estimate_artifact")
+        res = await process_estimate_to_excel(local_path, tid, 0)
+        if res and (res.get("success") or res.get("excel_path")) and res.get("excel_path"):
+            link = res.get("drive_link") or ""
+            summary = "Сметный файл обработан\n"
+            summary += f"Excel: {link}" if link else "Excel создан локально, Drive ссылка не подтверждена"
+            if res.get("error"):
+                summary += f"\nОграничение: {res.get('error')}"
+            return {
+                "summary": summary,
+                "artifact_path": res.get("excel_path"),
+                "artifact_name": f"{os.path.splitext(os.path.basename(file_name))[0]}_estimate.xlsx",
+                "engine": "DOMAIN_ESTIMATE_ENGINE_V1",
+                "drive_link": link,
+            }
+    except Exception as e:
+        return {
+            "summary": f"Сметный engine недоступен: {e}",
+            "artifact_path": "",
+            "artifact_name": "",
+            "engine": "DOMAIN_ESTIMATE_ENGINE_V1",
+            "error": str(e)[:300],
+        }
+    return None
+
+async def _domain_technadzor_artifact(local_path: str, file_name: str, mime_type: str, user_text: str, topic_role: str, extracted_text: str = "") -> Optional[Dict[str, Any]]:
+    try:
+        from core.technadzor_engine import process_technadzor
+        tid = _artifact_task_id(file_name, "technadzor_artifact")
+        raw = "\n".join(x for x in [user_text or "", extracted_text or "", topic_role or ""] if x).strip()
+        res = process_technadzor(
+            conn=None,
+            task_id=tid,
+            chat_id="artifact_pipeline",
+            topic_id=0,
+            raw_input=raw or "Технический осмотр файла",
+            file_name=file_name,
+            local_path=local_path,
+        )
+        if res and res.get("ok"):
+            art = res.get("artifact") or {}
+            path = art.get("path") or ""
+            link = art.get("drive_link") or ""
+            summary = _clean(res.get("result_text") or "Акт технического осмотра сформирован", 6000)
+            if link and link not in summary:
+                summary += f"\n\nДокумент: {link}"
+            return {
+                "summary": summary,
+                "artifact_path": path,
+                "artifact_name": f"{os.path.splitext(os.path.basename(file_name))[0]}_technadzor_act.docx",
+                "engine": "DOMAIN_TECHNADZOR_ENGINE_V1",
+                "drive_link": link,
+            }
+    except Exception as e:
+        return {
+            "summary": f"Технадзор engine недоступен: {e}",
+            "artifact_path": "",
+            "artifact_name": "",
+            "engine": "DOMAIN_TECHNADZOR_ENGINE_V1",
+            "error": str(e)[:300],
+        }
+    return None
+
+async def _domain_project_document_artifact(local_path: str, file_name: str, mime_type: str, user_text: str, topic_role: str) -> Optional[Dict[str, Any]]:
+    try:
+        from core.project_document_engine import process_project_document
+        tid = _artifact_task_id(file_name, "project_document")
+        res = await process_project_document(
+            file_path=local_path,
+            file_name=file_name,
+            user_text=user_text,
+            topic_role=topic_role,
+            task_id=tid,
+            topic_id=0,
+        )
+        if res and res.get("success"):
+            return {
+                "summary": _clean(res.get("summary") or "Проектный документ обработан", 6000),
+                "artifact_path": res.get("artifact_path"),
+                "artifact_name": res.get("artifact_name") or f"{os.path.splitext(os.path.basename(file_name))[0]}_project_document_package.zip",
+                "extra_artifacts": res.get("extra_artifacts") or [],
+                "engine": "PROJECT_DOCUMENT_ENGINE_V1",
+                "model": res.get("model") or {},
+            }
+    except Exception as e:
+        return {
+            "summary": f"Project document engine недоступен: {e}",
+            "artifact_path": "",
+            "artifact_name": "",
+            "engine": "PROJECT_DOCUMENT_ENGINE_V1",
+            "error": str(e)[:300],
+        }
+    return None
+# === END_DOMAIN_CONTOUR_ROUTER_V1 ===
+
 def _build_word(title: str, summary: str, defects: List[Dict[str, Any]], recommendations: List[str], sources: List[str]) -> str:
     from docx import Document
 
@@ -290,6 +401,13 @@ async def analyze_downloaded_file(local_path: str, file_name: str, mime_type: st
     sources = [file_name]
 
     if kind == "image":
+        # === DOMAIN_TECHNADZOR_IMAGE_ROUTE_V1 ===
+        flags = _domain_flags(file_name, mime_type, user_text, topic_role)
+        if flags.get("tech") or not flags.get("estimate"):
+            routed = await _domain_technadzor_artifact(local_path, file_name, mime_type, user_text, topic_role)
+            if routed and (routed.get("artifact_path") or routed.get("summary")):
+                return routed
+        # === END_DOMAIN_TECHNADZOR_IMAGE_ROUTE_V1 ===
         analysis = await _vision_image(local_path, user_text, topic_role)
         if not analysis:
             return None
@@ -310,6 +428,13 @@ async def analyze_downloaded_file(local_path: str, file_name: str, mime_type: st
         }
 
     if kind == "table":
+        # === DOMAIN_ESTIMATE_TABLE_ROUTE_V1 ===
+        flags = _domain_flags(file_name, mime_type, user_text, topic_role)
+        if flags.get("estimate") or not flags.get("project"):
+            routed = await _domain_estimate_artifact(local_path, file_name, mime_type, user_text, topic_role)
+            if routed and (routed.get("artifact_path") or routed.get("summary")):
+                return routed
+        # === END_DOMAIN_ESTIMATE_TABLE_ROUTE_V1 ===
         items = _extract_table_items(local_path, file_name)
         summary = f"Нормализовано позиций: {len(items)}"
         artifact_path = _build_excel(
@@ -364,6 +489,32 @@ async def analyze_downloaded_file(local_path: str, file_name: str, mime_type: st
     # === END_DWG_DXF_PROJECT_CLOSE_V1_CALL ===
 
     if kind == "document":
+        # === DOMAIN_DOCUMENT_ROUTE_V1 ===
+        flags = _domain_flags(file_name, mime_type, user_text, topic_role)
+        _ext_for_domain = os.path.splitext((file_name or "").lower())[1]
+        _domain_text = ""
+        if _ext_for_domain == ".pdf":
+            _domain_text = _extract_pdf(local_path)
+        elif _ext_for_domain == ".docx":
+            _domain_text = _extract_docx(local_path)
+        elif _ext_for_domain in (".txt", ".doc"):
+            _domain_text = _extract_txt(local_path)
+
+        if flags.get("tech"):
+            routed = await _domain_technadzor_artifact(local_path, file_name, mime_type, user_text, topic_role, _domain_text)
+            if routed and (routed.get("artifact_path") or routed.get("summary")):
+                return routed
+
+        if flags.get("estimate"):
+            routed = await _domain_estimate_artifact(local_path, file_name, mime_type, user_text, topic_role)
+            if routed and (routed.get("artifact_path") or routed.get("summary")):
+                return routed
+
+        if flags.get("project"):
+            routed = await _domain_project_document_artifact(local_path, file_name, mime_type, user_text, topic_role)
+            if routed and (routed.get("artifact_path") or routed.get("summary")):
+                return routed
+        # === END_DOMAIN_DOCUMENT_ROUTE_V1 ===
         ext = os.path.splitext((file_name or "").lower())[1]
         if ext == ".pdf":
             text = _extract_pdf(local_path)
