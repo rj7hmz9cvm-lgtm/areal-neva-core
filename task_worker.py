@@ -2484,6 +2484,7 @@ async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_
         _update_task(conn, task_id, state="DONE", result=ai_result, error_message="")
         _close_pin(conn, task_id)
         _history(conn, task_id, f"result:{_clean(ai_result, 400)}")
+        _save_memory(chat_id, topic_id, raw_input, ai_result)  # SAVE_MEM_DONE_V2
         conn.commit()
         _send_once(conn, task_id, chat_id, ai_result, reply_to, "done_terminal")
         return
@@ -2502,6 +2503,7 @@ async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_
     if is_memory_followup or is_search_followup or is_info_query or is_file_success:
         _update_task(conn, task_id, state="DONE", result=ai_result, error_message="")
         _history(conn, task_id, f"result:{_clean(ai_result, 400)}")
+        _save_memory(chat_id, topic_id, raw_input, ai_result)  # SAVE_MEM_FOLLOWUP_V2
         conn.commit()
         try:
             save_pin(chat_id, task_id, ai_result, topic_id)
@@ -2523,6 +2525,7 @@ async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_
 
     saved_role = ""
     if should_save_role:
+        _save_memory(chat_id, topic_id, raw_input, ai_result)  # SAVE_MEM_CONFIRM_V2
         saved_role = _save_topic_role_memory(chat_id, topic_id, ai_result)
         # === RESULT_VALIDATOR_GUARD_V1 ===
         if _check_result_before_confirm(ai_result):
