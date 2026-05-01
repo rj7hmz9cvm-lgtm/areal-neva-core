@@ -524,3 +524,23 @@ Stage 4 dispatch: router.route() → вызов реального движка 
 
 ### P3 — memory_api /archive endpoint
 Archive Engine пишет в POST /archive но endpoint не реализован в memory_api_server.py
+
+---
+## ОБНОВЛЕНИЕ 01.05.2026 — ИТОГИ СЕССИИ
+
+### VERIFIED LIVE ТЕСТОМ 01.05.2026:
+- AI_LOGIC_FIX_V1: DeepSeek вызывается корректно ✅
+- SAVE_MEM: save_memory_ok topic=2,5,794,6104 в 16:00-16:01 ✅
+- ARCHIVED: 381 задача в архиве ✅
+- TOPICS: все 11 топиков знают себя ✅
+- DRIVE: DRIVE_ALIVE PENDING_RETRY_COUNT=0 ✅
+- ZOMBIES: 4 зомби-сервиса удалены навсегда ✅
+- DAEMON: restarts=0 после DAEMON_OAUTH_FIX_V1 ✅
+
+### ОСТАЁТСЯ НЕ ЗАКРЫТЫМ:
+- ПРОХОД 3: Voice confirm при AWAITING_CONFIRMATION
+- ПРОХОД 5: Estimate PDF→Excel→Drive (live-тест)
+- ПРОХОД 6: Technadzor фото→акт (live-тест)
+- ПРОХОД 7: Project engine end-to-end
+- detect_intent() takes 1 arg — warning в FILE_INTAKE_ROUTER_V1
+- AWAITING_CONFIRMATION: 19 задач — проверить не зависли ли

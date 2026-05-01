@@ -399,3 +399,62 @@ engine_base.upload_artifact_to_drive — только для healthcheck и пр
 ### Retry upload правило (30.04.2026):
 Если Drive упал → artifact → Telegram (TELEGRAM_ARTIFACT_FALLBACK_SENT в task_history)
 core/upload_retry_queue.py (cron */10) → проверяет Drive → если живой → скачивает из TG → загружает в topic папку → уведомляет пользователя → DRIVE_RETRY_UPLOAD_OK в task_history
+
+## §15. ПАТЧИ И ПРАВИЛА СЕССИИ 01.05.2026
+
+### §15.1 Критические фиксы (все VERIFIED live-тестом)
+
+**AI_LOGIC_FIX_V1** — `if ai_result is None: pass / else:` была перевёрнута.
+Правило: `if ai_result is None:` → запускать `process_ai_task`. Иначе AI никогда не вызывался.
+
+**AI_RESULT_INIT_V1** — `ai_result = None` обязательно в начале try-блока `_handle_in_progress`.
+Без этого Python бросает UnboundLocalError если ни один if-блок не присвоил значение.
+
+**SAVE_MEM_ALL_DONE_PATHS_V2** — `_save_memory` вызывается на ВСЕХ путях DONE:
+- done_markers ветка (строка 2487)
+- followup/file_success ветка (строка 2506)
+- AWAITING_CONFIRMATION ветка (строка 2528)
+
+**DAEMON_OAUTH_FIX_V1** — `telegram_daemon.py` строка 707: `upload_to_drive` заменён на
+`upload_file_to_topic` (OAuth). Service Account → invalid_scope → 559 рестартов.
+
+**INPUT_TYPE_DRIVE_FIX_V1** — `input_type = "drive_file"` объявляется в начале
+`_handle_drive_file` чтобы не падать при вызове `_quality_gate_artifact`.
+
+**SCOPE_FULL_V2** — `drive.file` → `drive` в `topic_drive_oauth.py` и
+`drive_folder_resolver.py`. Scope `drive.file` не позволяет создавать папки.
+
+**IMPORT_FIX_V1** — `core/topic_autodiscovery.py`: `from reply_sender` →
+`from core.reply_sender`. Иначе падает при первом срабатывании 24h таймера.
+
+**PORT_FIX_V1** — `archive_engine.py`: порт 8765 → 8091 (канон §1.1).
+
+### §15.2 Сервисы — правило навсегда
+
+ЗАПРЕЩЕНО оставлять сервисы с `Restart=always` без файла скрипта.
+При обнаружении зомби-сервиса — `systemctl stop + disable` И `rm unit-файл` И
+`systemctl daemon-reload`. Только удаление unit-файла гарантирует невозврат.
+
+Зомби-сервисы 01.05.2026 — удалены навсегда:
+- areal-automation-daemon (run_automation_daemon.py — не существовал)
+- areal-email-ingress (email_ingress.py — не существовал)
+- areal-memory-import (memory_importer_service.py — не существовал)
+- areal-memory-router (memory_router_service.py — не существовал)
+
+### §15.3 Архитектура памяти (уточнение)
+
+Три слоя памяти:
+1. `_save_memory` → `memory.db` напрямую после DONE (краткосрочная + task_summary)
+2. `archive_engine` Stage 6 → `memory_api` порт 8091 → `memory.db` (долгосрочная)
+3. `archive_distributor` → `timeline.jsonl` → `memory.db` по топикам (историческая)
+
+Чтение при каждом запросе: `_load_archive_context` → `_load_archive_for_topic` →
+релевантные записи по ключевым словам запроса.
+
+DONE → ARCHIVED через 168 часов (7 дней) автоматически.
+
+### §15.4 Топики — правило
+
+11 топиков синхронизированы в `data/topics/{id}/meta.json` через TOPIC_SYNC_FULL_V1.
+`TOPIC_META_LOADER_WIRED = True` — оркестр знает название и направление каждого топика.
+Новый топик → `topic_autodiscovery.py` → auto-detect direction → создать папку → 24h → спросить название.

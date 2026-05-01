@@ -1,0 +1,61 @@
+{
+  "chat_id": "claude_session_01_05_2026_FULL_RESTORE",
+  "chat_name": "AREAL-NEVA — Полное восстановление системы 01.05.2026",
+  "exported_at": "2026-05-01T16:10:18.154174",
+  "source_model": "Claude Sonnet 4.6",
+  "patches_verified": [
+    "AI_LOGIC_FIX_V1 — task_worker.py — if/else перевёрнут исправлен — VERIFIED",
+    "AI_RESULT_INIT_V1 — task_worker.py строка 2166 — VERIFIED",
+    "SAVE_MEM_DONE_V2 — task_worker.py строки 2487/2506/2528 — VERIFIED",
+    "DAEMON_OAUTH_FIX_V1 — telegram_daemon.py строка 707 — VERIFIED",
+    "INPUT_TYPE_DRIVE_FIX_V1 — task_worker.py строка 2648 — VERIFIED",
+    "SCOPE_FULL_V2 — topic_drive_oauth.py + drive_folder_resolver.py — VERIFIED",
+    "PORT_FIX_V1 — archive_engine.py — 8765→8091 — VERIFIED",
+    "MEMORY_API_SERVER_V1 — core/memory_api_server.py создан — VERIFIED",
+    "IMPORT_FIX_V1 — core/topic_autodiscovery.py — VERIFIED",
+    "ZOMBIE_UNITS_REMOVED — 4 unit-файла удалены — VERIFIED",
+    "HOTFIX_FILE_NAME_EARLY_V1 — task_worker.py — VERIFIED",
+    "HOTFIX_OK_BEFORE_SIZE_CHECK_V1 — task_worker.py — VERIFIED"
+  ],
+  "live_tests": [
+    "СТРОЙКА topic=2: вспомнил сметы 55000р с Drive ссылками ✅",
+    "ТЕХНАДЗОР topic=5: вспомнил архив чата ✅",
+    "save_memory_ok: topic=2,5,794,6104 в 16:00-16:01 ✅",
+    "archive_distributor: ok=True ✅",
+    "Drive ALIVE PENDING_RETRY_COUNT=0 ✅",
+    "telegram-ingress restarts=0 ✅"
+  ],
+  "services": {
+    "areal-task-worker": "active restarts=0",
+    "telegram-ingress": "active restarts=0",
+    "areal-memory-api": "active restarts=0",
+    "areal-monitor-jobs": "active restarts=1",
+    "areal-upload-retry": "active restarts=3",
+    "areal-drive-ingest": "active restarts=5"
+  },
+  "db_state": {
+    "FAILED": 2811,
+    "CANCELLED": 543,
+    "ARCHIVED": 381,
+    "DONE": 348,
+    "AWAITING_CONFIRMATION": 19
+  },
+  "memory_state": {
+    "archive_records": 969,
+    "last_save_memory_ok": "2026-05-01 16:01:52 topic=6104",
+    "topics_with_meta": 11
+  },
+  "not_closed": [
+    "Voice confirm при AWAITING_CONFIRMATION",
+    "Estimate PDF→Excel→Drive live-тест",
+    "Technadzor фото→акт live-тест",
+    "detect_intent() takes 1 arg warning",
+    "19 задач в AWAITING_CONFIRMATION — проверить"
+  ],
+  "canon_rules": {
+    "§15.1": "AI_LOGIC_FIX — if ai_result is None запускать AI",
+    "§15.2": "Зомби-сервисы — удалять unit-файл физически",
+    "§15.3": "Три слоя памяти: _save_memory + archive_engine + archive_distributor",
+    "§15.4": "11 топиков в meta.json, autodiscovery 24h"
+  }
+}

@@ -230,3 +230,54 @@ Result: PROJECT_TEMPLATE_MODEL создан
 2. Live: "переделай" → "Хорошо, доработаю"
 3. Live: голос "да" при AWAITING_CONFIRMATION → DONE
 4. Live: estimate PDF → xlsx → Drive
+# HANDOFF 01.05.2026 — ПОЛНАЯ СЕССИЯ ВОССТАНОВЛЕНИЯ
+
+## СЕРВЕР
+IP: 89.22.225.136 | Base: /root/.areal-neva-core
+Services: areal-task-worker ACTIVE restarts=0 | telegram-ingress ACTIVE restarts=0 | areal-memory-api ACTIVE
+
+## ЧТО БЫЛО СЛОМАНО И ПОЧИНЕНО
+
+| Патч | Файл | Проблема | Статус |
+|---|---|---|---|
+| AI_LOGIC_FIX_V1 | task_worker.py | if/else перевёрнут — AI не вызывался | VERIFIED ✅ |
+| AI_RESULT_INIT_V1 | task_worker.py | UnboundLocalError ai_result | VERIFIED ✅ |
+| SAVE_MEM_ALL_DONE_PATHS_V2 | task_worker.py | _save_memory не вызывалась | VERIFIED ✅ |
+| DAEMON_OAUTH_FIX_V1 | telegram_daemon.py | upload_to_drive→upload_file_to_topic | VERIFIED ✅ |
+| INPUT_TYPE_DRIVE_FIX_V1 | task_worker.py | input_type not defined в drive_file | VERIFIED ✅ |
+| SCOPE_FULL_V2 | topic_drive_oauth.py + drive_folder_resolver.py | drive.file→drive | VERIFIED ✅ |
+| PORT_FIX_V1 | archive_engine.py | порт 8765→8091 | VERIFIED ✅ |
+| MEMORY_API_SERVER_V1 | core/memory_api_server.py | файл отсутствовал | VERIFIED ✅ |
+| IMPORT_FIX_V1 | core/topic_autodiscovery.py | from reply_sender→from core.reply_sender | VERIFIED ✅ |
+| ZOMBIE_UNITS_REMOVED | systemd | 4 unit-файла удалены навсегда | VERIFIED ✅ |
+| TOPIC_META_LOADER_V1 | task_worker.py | топики знают себя | VERIFIED ✅ |
+| HOTFIX_FILE_NAME_EARLY_V1 | task_worker.py | file_name до TASK_TYPE_DETECT | VERIFIED ✅ |
+
+## СОСТОЯНИЕ БД
+- FAILED: 2811 (исторические, не мешают)
+- CANCELLED: 543
+- ARCHIVED: 381
+- DONE: 348
+- AWAITING_CONFIRMATION: 19
+
+## ПАМЯТЬ
+- memory.db: 969 архивных записей по топикам
+- save_memory_ok работает с 16:00 01.05.2026
+- archive_distributor: ok=True
+
+## ТОПИКИ (все 11 настроены)
+topic_0=ЛИДЫ АМО | topic_2=СТРОЙКА | topic_5=ТЕХНАДЗОР | topic_11=ВИДЕОКОНТЕНТ
+topic_210=ПРОЕКТИРОВАНИЕ | topic_500=ВЕБ ПОИСК | topic_794=НЕЙРОНКИ СОФТ ВПН ВПС
+topic_961=АВТО ЗАПЧАСТИ | topic_3008=КОДЫ МОЗГОВ | topic_4569=ЛИДЫ РЕКЛАМА | topic_6104=РАБОТА ПОИСК
+
+## LIVE TESTS PASSED
+- СТРОЙКА: вспомнил сметы за 24ч с Drive ссылками ✅
+- ТЕХНАДЗОР: вспомнил архивные функции чата ✅
+- КОДЫ МОЗГОВ: ответил по контексту ✅
+- Drive: ALIVE, retry queue чист ✅
+
+## НЕ ЗАКРЫТО
+- Voice confirm при AWAITING_CONFIRMATION
+- Estimate PDF→Excel→Drive live-тест
+- Technadzor фото→акт live-тест
+- detect_intent() 1 arg warning
