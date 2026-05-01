@@ -1,4 +1,5 @@
 # === UNIVERSAL_FORMAT_REGISTRY_V1 ===
+# === DWG_DXF_KIND_FIX_V1 ===
 from __future__ import annotations
 
 import mimetypes
@@ -22,12 +23,13 @@ def classify_file(file_name: str = "", mime_type: str = "", user_text: str = "",
     mime = (mime_type or mimetypes.guess_type(file_name or "")[0] or "").lower()
     hay = f"{file_name}\n{mime}\n{user_text}\n{topic_role}".lower()
 
-    if ext in IMAGE_EXT or mime.startswith("image/"):
+    # drawing first: mimetypes may classify .dwg/.dxf as image/*
+    if ext in DRAWING_EXT or any(x in mime for x in ("dwg", "dxf", "ifc", "revit", "cad", "step", "stp", "iges", "igs")):
+        kind = "drawing"
+    elif ext in IMAGE_EXT or mime.startswith("image/"):
         kind = "image"
     elif ext in TABLE_EXT or "spreadsheet" in mime or mime in ("text/csv", "application/vnd.ms-excel"):
         kind = "table"
-    elif ext in DRAWING_EXT or any(x in mime for x in ("dwg", "dxf", "ifc", "revit", "cad")):
-        kind = "drawing"
     elif ext in DOCUMENT_EXT or mime in ("application/pdf", "text/plain", "application/msword") or "wordprocessingml" in mime:
         kind = "document"
     elif ext in PRESENTATION_EXT or "presentation" in mime:
@@ -65,4 +67,5 @@ def classify_file(file_name: str = "", mime_type: str = "", user_text: str = "",
             "binary": "universal",
         }.get(kind, "universal"),
     }
+# === END_DWG_DXF_KIND_FIX_V1 ===
 # === END_UNIVERSAL_FORMAT_REGISTRY_V1 ===

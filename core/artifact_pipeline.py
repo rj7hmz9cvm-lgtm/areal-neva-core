@@ -29,18 +29,21 @@ def _clean(text: str, limit: int = 12000) -> str:
 
 def _kind(file_name: str, mime_type: str = "") -> str:
     # === UNIVERSAL_FORMAT_REGISTRY_V1_KIND ===
+    # === DWG_DXF_KIND_FIX_V1_ARTIFACT_PIPELINE ===
     try:
         from core.format_registry import classify_file
         return classify_file(file_name, mime_type).get("kind") or "binary"
     except Exception:
         ext = os.path.splitext((file_name or "").lower())[1]
         mime = (mime_type or "").lower()
+
+        # drawing first: mimetypes may classify .dwg/.dxf as image/*
+        if ext in (".dwg", ".dxf", ".ifc", ".rvt", ".rfa", ".skp", ".stl", ".obj", ".step", ".stp", ".iges", ".igs") or any(x in mime for x in ("dxf", "dwg", "ifc", "cad", "step", "stp", "iges", "igs")):
+            return "drawing"
         if ext in (".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif", ".tif", ".tiff", ".bmp", ".gif") or mime.startswith("image/"):
             return "image"
         if ext in (".xlsx", ".xls", ".xlsm", ".csv", ".ods", ".tsv") or "spreadsheet" in mime or mime in ("text/csv", "application/vnd.ms-excel"):
             return "table"
-        if ext in (".dwg", ".dxf", ".ifc", ".rvt", ".rfa", ".skp", ".stl", ".obj", ".step", ".stp", ".iges", ".igs") or any(x in mime for x in ("dxf", "dwg", "ifc", "cad")):
-            return "drawing"
         if ext in (".pdf", ".docx", ".doc", ".txt", ".md", ".rtf", ".odt", ".html", ".htm", ".xml", ".json", ".yaml", ".yml") or mime in ("application/pdf", "text/plain"):
             return "document"
         if ext in (".ppt", ".pptx", ".odp", ".key"):
@@ -50,8 +53,8 @@ def _kind(file_name: str, mime_type: str = "") -> str:
         if ext in (".mp4", ".mov", ".avi", ".mkv", ".mp3", ".wav", ".m4a", ".ogg"):
             return "media"
         return "binary"
+    # === END_DWG_DXF_KIND_FIX_V1_ARTIFACT_PIPELINE ===
     # === END_UNIVERSAL_FORMAT_REGISTRY_V1_KIND ===
-
 
 
 # === DOMAIN_CONTOUR_ROUTER_V1 ===
