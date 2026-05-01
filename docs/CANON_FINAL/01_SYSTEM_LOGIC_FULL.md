@@ -540,3 +540,142 @@ TELEGRAM_TIMELINE_APPEND_V1 | LIVE_MEMORY_HELPERS_V1
 ### §17.6 НЕ РЕАЛИЗОВАНО
 Drive содержимое файлов → автоиндексация в memory.db
 Telegram история → автосинхронизация
+
+---
+## §17 ПОЛНЫЙ КАНОН ЖИВОЙ ПАМЯТИ И ЛОГИКИ ОТВЕТОВ — 01.05.2026
+
+### §17.1 ТРИ СЛОЯ ПАМЯТИ — ВСЕ ОБЯЗАТЕЛЬНЫ ПРИ КАЖДОМ ЗАПРОСЕ
+
+СЛОЙ 1 SHORT (core.db):
+  Текущие задачи + последние DONE за 24 часа
+  Читается через: _active_unfinished_context()
+
+СЛОЙ 2 LONG (memory.db):
+  Факты после каждого DONE через _save_memory()
+  Ключи: topic_N_assistant_output | topic_N_task_summary | topic_N_user_input
+  Читается через: _load_memory_context(chat_id, topic_id)
+
+СЛОЙ 3 ARCHIVE (memory.db + timeline.jsonl):
+  Все DONE+ARCHIVED задачи за всё время
+  Ключи: topic_N_archive_TASKID
+  Читается через: _load_archive_context(chat_id, topic_id, user_text)
+  Поиск по ключевым словам из запроса пользователя
+
+ИЗОЛЯЦИЯ — ЖЕЛЕЗНО:
+  chat_id + topic_id — всегда оба фильтра
+  Данные из topic_2 НИКОГДА не попадают в topic_5
+  Данные из topic_0 не попадают никуда
+
+ЗАПИСЬ — ТОЛЬКО ПОСЛЕ DONE:
+  _save_memory() → memory.db
+  archive_engine.archive() → POST http://127.0.0.1:8091/archive → memory.db
+  DONE → ARCHIVED через 168 часов (7 дней)
+
+### §17.2 ПОРЯДОК ОБРАБОТКИ В _handle_new
+
+ШАГ 0: HEALTHCHECK_GUARD
+  retry_queue_healthcheck в raw_input/result → CANCELLED
+  tmp*.txt + topic=0 + source=google_drive → CANCELLED
+
+ШАГ 1: ACTIVE TASK RESOLVER
+  reply на bot_message_id → контекст той задачи
+  AWAITING_CONFIRMATION + "да/ок/+" → DONE
+  WAITING_CLARIFICATION → любой ответ → IN_PROGRESS
+  Intent приоритет: FINISH > CANCEL > CONFIRM > REVISION > TASK > SEARCH > CHAT
+
+ШАГ 2: MEMORY_QUERY_GUARD_V1
+  Маркеры: "что обсуждали" | "что делали" | "что мы делали" | "что мы обсуждали"
+           "неделю назад" | "две недели" | "три недели" | "месяц назад"
+           "апреля" | "марта" | "февраля" | "января"
+           "помнишь" | "напомни" | "какие задачи были" | "что было" | "расскажи что"
+  → _load_archive_context + _load_memory_context → DeepSeek → DONE
+  НЕ попадает в FULLFIX_10 project route
+
+ШАГ 3: FULLFIX_16_CONTEXT_QUERY
+  Короткие статус-запросы ≤35 символов
+  Триггеры: "где результат" | "что там" | "где смета" | "ну что" | "где проект"
+  → Статус активной задачи
+
+ШАГ 4: FULLFIX_14/13A
+  topic_2: "смета" | "расчёт" | "посчитай" → estimate_engine
+  topic_5: "дефект" | "акт" | "технадзор" → technadzor_engine
+
+ШАГ 5: FULLFIX_19_PROJECT_GUARD
+  Короткие ответы ≤3 слова → блок попадания в project engine
+
+ШАГ 6: FULLFIX_10_TOTAL_CLOSURE_UNIVERSAL_ROUTE
+  classify_user_task() → estimate | project | confirm | revision | chat
+
+ШАГ 7: AI_ROUTER
+  payload: short_memory + long_memory + archive_context + topic_id (ОБЯЗАТЕЛЬНО)
+
+### §17.3 ФАЙЛОВЫЙ ПРИЁМ
+
+Файл БЕЗ caption:
+  Telegram → daemon → Drive upload → create_task(drive_file)
+  → FILE_INTAKE_ROUTER → меню по топику → NEEDS_CONTEXT
+  → reply пользователя → FILE_CHOICE_PARSED → IN_PROGRESS → engine
+
+Файл С caption:
+  "смета/расчёт/посчитай" → estimate_engine
+  "дефект/акт/технадзор" → technadzor_engine
+  любой caption → сразу IN_PROGRESS без меню
+
+Source guard ДО create_task:
+  source=google_drive → CANCELLED молча
+  healthcheck маркеры в file_name → CANCELLED молча
+
+Voice:
+  voice → STT Groq Whisper → "[VOICE] текст" — идентично тексту
+  "[VOICE] да" = "да" — без разницы
+  Голос НЕ загружается на Drive
+
+Drive файл:
+  DRIVE_FILE_MEMORY_INDEX_V1 → topic_N_file_TASKID в memory.db
+  Повторный file_id → FILE_DUPLICATE_MEMORY_GUARD_V1 → "Файл уже есть"
+
+Timeline:
+  Каждая задача → TELEGRAM_TIMELINE_APPEND_V1 → timeline.jsonl по топику + GLOBAL
+
+### §17.4 GOOGLE DRIVE СТРУКТУРА
+
+AI_ORCHESTRA/chat_-1003725299009/
+├── topic_2/    СТРОЙКА
+├── topic_5/    ТЕХНАДЗОР
+├── topic_11/   ВИДЕОКОНТЕНТ
+├── topic_210/  ПРОЕКТИРОВАНИЕ
+├── topic_500/  ВЕБ ПОИСК
+├── topic_794/  НЕЙРОНКИ СОФТ ВПН ВПС
+├── topic_961/  АВТО ЗАПЧАСТИ
+├── topic_3008/ КОДЫ МОЗГОВ
+├── topic_4569/ ЛИДЫ РЕКЛАМА АМО
+└── topic_6104/ РАБОТА ПОИСК
+
+Артефакты: Excel + PDF + DOCX → Drive → ссылка в Telegram
+Retry: Drive упал → TG fallback → cron 10 мин → восстановление
+
+### §17.5 ТОПИКИ И ДВИЖКИ
+
+topic_2  СТРОЙКА:    PDF/XLSX/фото → estimate_engine → Excel =C*D =SUM + PDF → Drive
+topic_5  ТЕХНАДЗОР:  фото → Gemini Vision → СП/ГОСТ → DOCX акт | PDF → дефекты → DOCX
+topic_210 ПРОЕКТИРОВАНИЕ: PDF → project_engine → DOCX+XLSX → Drive. КЖ/КМ/КМД/АР/ОВ/ВК/ЭОМ/СС/ГП/ПЗ/СМ/ТХ
+topic_500 ВЕБ ПОИСК: Perplexity → 14 этапов → результат с источниками
+topic_3008 КОДЫ МОЗГОВ: верификация кода. No Auto-Patch.
+topic_11,794,961,4569,6104 ОБЫЧНЫЕ: файл → меню → выбор → engine
+
+### §17.6 LIFECYCLE + WATCHDOG
+
+NEW → IN_PROGRESS → AWAITING_CONFIRMATION → DONE → ARCHIVED (168ч)
+AWAITING_CONFIRMATION > 30 мин → FAILED:CONFIRMATION_TIMEOUT
+IN_PROGRESS > 15 мин по created_at → FAILED:EXECUTION_TIMEOUT
+STALE_TIMEOUT = 600 сек по updated_at
+ARCHIVE_DEDUP: один task_id → одна запись в memory.db
+
+### §17.7 ЗАПРЕЩЕНО
+
+LLM считать цифры в сметах
+Нормы СП/ГОСТ без источника
+topic_id=0 для задач из конкретного топика
+AWAITING_CONFIRMATION без реального результата (len<100 или "ошибка")
+Memory из чужого топика в контексте
+Новые папки в репо без явного разрешения
