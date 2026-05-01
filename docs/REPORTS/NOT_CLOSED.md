@@ -544,3 +544,23 @@ Archive Engine пишет в POST /archive но endpoint не реализова
 - ПРОХОД 7: Project engine end-to-end
 - detect_intent() takes 1 arg — warning в FILE_INTAKE_ROUTER_V1
 - AWAITING_CONFIRMATION: 19 задач — проверить не зависли ли
+
+---
+## ОБНОВЛЕНИЕ 01.05.2026 22:30 — LIVE ТЕСТЫ
+
+### VERIFIED LIVE 01.05.2026:
+- ТЕХНАДЗОР: вспомнил файл "ВОР проезды и площадки.xlsx" из архива ✅
+- СТРОЙКА: вспомнил смету 55000 руб с Drive ссылками ✅
+- Память (1714 записей) работает ✅
+- /archive endpoint работает ✅
+
+### БАГИ НАЙДЕННЫЕ LIVE:
+- P1: task зависает в IN_PROGRESS и крутится каждые 2 сек — archive_engine пишет дубли в loop
+- P1: СТРОЙКА: голос "три недели назад" → попадает в FULLFIX_10 project route вместо memory lookup
+- P2: topic_6104 архив содержит только JSON метаданные без реального контента
+- P2: Worker падает при ручном restart через systemd (traceback пуст, работает через авторестарт)
+
+### ЕЩЁ НЕ ПРОВЕРЕНО:
+- Файл в чате → бот говорит "этот файл уже есть" (DUPLICATE_GUARD)
+- Voice "да" при AWAITING_CONFIRMATION → DONE
+- Estimate PDF→Excel live тест с реальным файлом
