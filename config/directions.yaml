@@ -5,7 +5,13 @@
     "general_chat": {
       "title": "Общий чат",
       "enabled": true,
-      "topic_ids": [],
+      "topic_ids": [
+        0,
+        9,
+        11,
+        13,
+        794
+      ],
       "aliases": [],
       "input_types": [
         "text",
@@ -152,7 +158,8 @@
       "topic_ids": [
         500,
         961,
-        4569
+        4569,
+        6104
       ],
       "strong_aliases": [
         "avito",
