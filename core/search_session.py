@@ -208,17 +208,56 @@ class SearchMonolithV2:
         self.planner = SourcePlanner(); self.risk = RiskScorer()
         self.tco = TcoCalculator(); self.ranker = ResultRanker(); self.formatter = SearchOutputFormatter()
     def has_active_session(self, chat_id, topic_id): return self.sessions.get(chat_id, topic_id) is not None
+
+    # === SEARCH_SESSION_ISOLATION_FIX_V1 ===
+    def _is_new_search_goal(self, user_text, existing, extracted):
+        low = _clean(user_text, 1000).lower()
+        new_markers = ("найди ", "найти ", "поищи ", "поиск ", "подбери ", "сколько стоит ", "цена на ", "стоимость ")
+        if not any(low.startswith(m) for m in new_markers):
+            return False
+
+        old_target = str((existing.criteria or {}).get("target") or existing.goal or "").lower()
+        new_target = str((extracted or {}).get("target") or user_text or "").lower()
+        old_cat = str((existing.criteria or {}).get("category") or "")
+        new_cat = str((extracted or {}).get("category") or "")
+
+        if old_cat and new_cat and old_cat != new_cat:
+            return True
+
+        old_words = set(w for w in re.findall(r"[а-яa-z0-9]{4,}", old_target) if w not in ("найди","найти","поищи","поиск","купить","цена","стоимость"))
+        new_words = set(w for w in re.findall(r"[а-яa-z0-9]{4,}", new_target) if w not in ("найди","найти","поищи","поиск","купить","цена","стоимость"))
+
+        if old_words and new_words:
+            overlap = len(old_words & new_words)
+            if overlap == 0:
+                return True
+            if overlap / max(1, min(len(old_words), len(new_words))) < 0.35:
+                return True
+
+        return False
+
     async def run(self, payload, user_text, online_call, online_model, base_system_prompt=""):
         chat_id = str(payload.get("chat_id") or ""); topic_id = int(payload.get("topic_id") or 0)
         user_text = _clean(user_text, 4000)
         existing = self.sessions.get(chat_id, topic_id)
         extracted = self.extractor.extract(user_text)
-        if existing:
+
+        if existing and self._is_new_search_goal(user_text, existing, extracted):
+            try:
+                existing.status = "CLOSED"
+                self.sessions.save(existing)
+                logger.info("SEARCH_SESSION_ISOLATION_FIX_V1 closed_old_session chat=%s topic=%s old_goal=%s new_goal=%s", chat_id, topic_id, existing.goal, user_text)
+            except Exception as e:
+                logger.warning("SEARCH_SESSION_ISOLATION_FIX_V1_CLOSE_ERR %s", e)
+            session = SearchSession(chat_id=str(chat_id), topic_id=int(topic_id or 0), goal=user_text, criteria=extracted)
+            self.sessions.save(session)
+        elif existing:
             existing.clarifications.append(user_text)
             existing.criteria.update({k:v for k,v in extracted.items() if v not in ("",None,[],{})})
             session = existing
         else:
             session = self.sessions.get_or_create(chat_id, topic_id, user_text, extracted)
+    # === END SEARCH_SESSION_ISOLATION_FIX_V1 ===
         ask = self.clarifier.ask(session)
         if ask: session.status = "WAITING_CLARIFICATION"; self.sessions.save(session); return ask
         session.status = "IN_PROGRESS"
