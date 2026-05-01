@@ -1,14 +1,14 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-01T21:06:18.081264+00:00
+generated_at_utc: 2026-05-01T21:06:20.079816+00:00
 git_branch: main
-git_head_short: 35a2a3a
-git_head_full: 35a2a3ac35d8ba6e26c43d766d4730bb88d3cb59
+git_head_short: cd5ff54
+git_head_full: cd5ff54b390440880f2b231eb4b0ffd76cdba2e4
 
 ## SERVICES
 - areal-task-worker: active
 - telegram-ingress: active
 - areal-memory-api: active
-- areal-claude-bootstrap-aggregator.timer: inactive
+- areal-claude-bootstrap-aggregator.timer: active
 
 ## CORE_DB_STATE_COUNTS
 - FAILED|2828
@@ -57,13 +57,12 @@ git_head_full: 35a2a3ac35d8ba6e26c43d766d4730bb88d3cb59
 - mtime_utc=2026-05-01T21:05:19.110756+00:00
 
 ## GIT_STATUS_SAFE
-?? docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
-?? tools/claude_bootstrap_aggregator.py
+M docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
 
 ## FILES_MANIFEST_SAFE
 - docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md|bytes=168322|sha256=0640b8349254cfb36f1143c1f195715014e2ca1b1b428943847fd1fd80d9d8fe
-- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md|UNKNOWN
-- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md|bytes=2013|sha256=ca4ea621980677b65796c40ccfc09b53f51241117715c5023fe15617e6e4e427
+- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md|bytes=35341|sha256=2ad87149e4bb44c6c30f6468be6395c75dd8afa02f1803a33ab2ac39a800437d
+- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md|bytes=2013|sha256=de44a7a4788b5854e9cea80a8e02c150de0cbdecea452f1a2740eaf63ebf51e9
 - docs/CANON_FINAL/00_INDEX.md|bytes=808|sha256=999acb6bfdd6c7215f11d76342ea1b9f8cdf5715418064acb3716f33999c8af6
 - docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md|bytes=40765|sha256=e348f84dfc1a1dea957f64996a8780c4fe66dc1619252c02dce6594230c2661a
 - docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md|bytes=6714|sha256=1a439843e1eb214745752720c85b49adc48f1823765982960ce7b1e285947d84
