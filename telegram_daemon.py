@@ -1,3 +1,4 @@
+import json
 import asyncio, hashlib, json, logging, os, re, uuid, fcntl, tempfile, time
 from datetime import datetime, timezone, timedelta
 import aiofiles, aiohttp, aiosqlite
@@ -290,6 +291,30 @@ async def create_task(message: types.Message, input_type: str, raw_input: str, s
                 (task_id, message.chat.id, user_id, input_type, raw_input, state, message.message_id, now, now))
         await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (task_id, f"created:{state}", now))
         await db.commit()
+
+    # === TELEGRAM_TIMELINE_APPEND_V1 ===
+    try:
+        _tl_chat_key = build_chat_key(message.chat.id)
+        _tl_chat_dir = os.path.join(MEMORY_FILES, "CHATS", _tl_chat_key)
+        os.makedirs(_tl_chat_dir, exist_ok=True)
+        os.makedirs(os.path.join(MEMORY_FILES, "GLOBAL"), exist_ok=True)
+        _tl_entry = json.dumps({
+            "timestamp": now, "chat_id": str(message.chat.id),
+            "topic_id": int(topic_id or 0), "task_id": task_id,
+            "input_type": input_type, "state": state,
+            "raw_input": str(raw_input or "")[:4000],
+            "source": "telegram_daemon_create_task",
+        }, ensure_ascii=False)
+        for _tl_path in [
+            os.path.join(_tl_chat_dir, "timeline.jsonl"),
+            os.path.join(MEMORY_FILES, "GLOBAL", "timeline.jsonl"),
+        ]:
+            with open(_tl_path, "a", encoding="utf-8") as _f:
+                _f.write(_tl_entry + "\n")
+    except Exception as _tl_e:
+        logger.warning("TELEGRAM_TIMELINE_APPEND_V1_ERR %s", _tl_e)
+    # === END TELEGRAM_TIMELINE_APPEND_V1 ===
+
     logger.info("Task %s created state=%s topic_id=%s", task_id, state, topic_id)
     return task_id
 

@@ -26,10 +26,13 @@ def archive():  # ARCHIVE_ENDPOINT_FIX_V1
         value = data.get("value") or json.dumps(data, ensure_ascii=False)
         key = f"topic_{topic_id}_archive_{task_id[:8]}"
         with sqlite3.connect(DB) as conn:
-            conn.execute("INSERT OR IGNORE INTO memory (id, chat_id, key, value, timestamp) VALUES (?,?,?,?,?)",
+            existing = conn.execute("SELECT 1 FROM memory WHERE chat_id=? AND key=? LIMIT 1", (chat_id, key)).fetchone()  # ARCHIVE_DEDUP_BY_KEY_V1
+            if existing:
+                return jsonify({"ok": True, "key": key, "dedup": True}), 200
+            conn.execute("INSERT INTO memory (id, chat_id, key, value, timestamp) VALUES (?,?,?,?,?)",
                 (str(uuid.uuid4()), chat_id, key, str(value), datetime.utcnow().isoformat()))
             conn.commit()
-        return jsonify({"ok": True, "key": key}), 200
+        return jsonify({"ok": True, "key": key, "dedup": False}), 200
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 

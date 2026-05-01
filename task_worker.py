@@ -551,6 +551,61 @@ def _update_task(conn: sqlite3.Connection, task_id: str, **kwargs: Any) -> None:
     conn.execute(f"UPDATE tasks SET {', '.join(parts)} WHERE id=?", vals)
 
 
+
+# === LIVE_MEMORY_HELPERS_V1 ===
+def _memory_insert_topic_entry_v1(chat_id: str, key: str, value: str) -> None:
+    try:
+        import sqlite3 as _sq
+        if not os.path.exists(MEM_DB):
+            return
+        _mc = _sq.connect(MEM_DB)
+        try:
+            _mc.row_factory = _sq.Row
+            _cols_mem = [r[1] for r in _mc.execute("PRAGMA table_info(memory)").fetchall()]
+            if not _cols_mem:
+                return
+            _ts = datetime.datetime.utcnow().isoformat()
+            _val = _clean(_s(value), 50000)
+            if not _val:
+                return
+            _mid = hashlib.sha1(f"{chat_id}:{key}:{_ts}:{_val[:80]}".encode()).hexdigest()
+            _mc.execute(
+                "INSERT OR IGNORE INTO memory (id, chat_id, key, value, timestamp) VALUES (?,?,?,?,?)",
+                (_mid, str(chat_id), str(key), _val, _ts),
+            )
+            _mc.commit()
+        finally:
+            _mc.close()
+    except Exception as _mi_e:
+        logger.warning("LIVE_MEMORY_HELPERS_V1_INSERT_ERR %s", _mi_e)
+
+def _append_timeline_event_v1(chat_id: str, topic_id: int, task_id: str, kind: str, raw_input: str = "", result: str = "") -> None:
+    try:
+        _base = f"{BASE}/data/memory_files"
+        _chat_key = f"{chat_id}__telegram"
+        _chat_dir = os.path.join(_base, "CHATS", _chat_key)
+        os.makedirs(_chat_dir, exist_ok=True)
+        os.makedirs(os.path.join(_base, "GLOBAL"), exist_ok=True)
+        _entry = json.dumps({
+            "timestamp": datetime.datetime.utcnow().isoformat(),
+            "chat_id": str(chat_id),
+            "topic_id": int(topic_id or 0),
+            "task_id": str(task_id),
+            "kind": str(kind),
+            "raw_input": _clean(_s(raw_input), 4000),
+            "result": _clean(_s(result), 4000),
+            "source": "task_worker",
+        }, ensure_ascii=False)
+        for _tl_path in [
+            os.path.join(_chat_dir, "timeline.jsonl"),
+            os.path.join(_base, "GLOBAL", "timeline.jsonl"),
+        ]:
+            with open(_tl_path, "a", encoding="utf-8") as _f:
+                _f.write(_entry + "\n")
+    except Exception as _tl_e:
+        logger.warning("LIVE_MEMORY_HELPERS_V1_TIMELINE_ERR %s", _tl_e)
+# === END LIVE_MEMORY_HELPERS_V1 ===
+
 def _history(conn: sqlite3.Connection, task_id: str, action: str) -> None:
     if not _has_table(conn, "task_history"):
         return
@@ -998,6 +1053,30 @@ def _recover_stale_tasks(conn: sqlite3.Connection, chat_id: Optional[str]) -> No
         conn.commit()
     except Exception as _ct_e:
         logger.warning("CONFIRMATION_TIMEOUT_FIX_V1_ERR %s", _ct_e)
+    # IN_PROGRESS_HARD_TIMEOUT_V1
+    try:
+        _hp = [] if not chat_id else [str(chat_id)]
+        _hw = (["chat_id=?"] if chat_id else []) + [
+            "state='IN_PROGRESS'",
+            "created_at < datetime('now','-15 minutes')",
+        ]
+        for _hr in conn.execute(
+            f"SELECT id,chat_id,COALESCE(topic_id,0) AS topic_id,reply_to_message_id,raw_input FROM tasks WHERE {' AND '.join(_hw)}",
+            _hp,
+        ).fetchall():
+            _htid = _s(_hr["id"]); _hchat = _s(_hr["chat_id"])
+            _htopic = int(_hr["topic_id"] or 0); _hreply = _hr["reply_to_message_id"]
+            _hmsg = "Задача не выполнена: превышено время выполнения"
+            _update_task(conn, _htid, state="FAILED", result=_hmsg, error_message="EXECUTION_TIMEOUT")
+            _close_pin(conn, _htid); _history(conn, _htid, "state:FAILED:EXECUTION_TIMEOUT")
+            try:
+                _append_timeline_event_v1(_hchat, _htopic, _htid, "execution_timeout", _s(_hr["raw_input"]), _hmsg)
+            except Exception: pass
+            conn.commit()
+            _send_once(conn, _htid, _hchat, _hmsg, _hreply, "execution_timeout")
+    except Exception as _e:
+        logger.warning("IN_PROGRESS_HARD_TIMEOUT_V1_ERR %s", _e)
+
     where = [
         "state IN ('IN_PROGRESS','WAITING_CLARIFICATION')",
         "(strftime('%s','now') - strftime('%s', COALESCE(updated_at, created_at))) > ?",
@@ -1176,6 +1255,55 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
 
 
     
+    # === MEMORY_QUERY_GUARD_V1 ===
+    try:
+        _mq_low = str(raw_input or "").strip().lower().rstrip("!?. ")
+        _mq_low = _mq_low.replace("[voice] ", "").replace("[VOICE] ", "").strip()
+        _mq_markers = (
+            "что обсуждали", "что делали", "что мы делали", "что мы обсуждали",
+            "неделю назад", "две недели", "три недели", "месяц назад",
+            "апреля", "марта", "февраля", "января", "помнишь", "напомни",
+            "какие задачи были", "что было", "расскажи что",
+        )
+        if any(m in _mq_low for m in _mq_markers):
+            _archive_ctx = _load_archive_context(str(chat_id), int(topic_id or 0), str(raw_input or ""))
+            _short_ctx, _long_ctx, _topic_role, _topic_directions = _load_memory_context(str(chat_id), int(topic_id or 0))
+            _mq_payload = {
+                "id": task_id, "task_id": task_id,
+                "chat_id": str(chat_id), "topic_id": int(topic_id or 0),
+                "input_type": "text", "state": "IN_PROGRESS",
+                "raw_input": str(raw_input or ""),
+                "short_memory_context": _short_ctx, "long_memory_context": _long_ctx,
+                "archive_context": _archive_ctx, "topic_role": _topic_role,
+                "topic_directions": _topic_directions,
+                "direction": "memory_query", "engine": "ai_router",
+            }
+            if not str(_archive_ctx or "").strip() and not str(_long_ctx or "").strip():
+                _mq_msg = "В этом топике архивных данных по запросу не найдено"
+            else:
+                _mq_ai = await asyncio.wait_for(process_ai_task(_mq_payload), timeout=AI_TIMEOUT)
+                _mq_msg = _clean(_s(_mq_ai), 12000) or "Архив найден, но ответ не сформирован"
+            _update_task(conn, task_id, state="DONE", result=_mq_msg, error_message="")
+            _history(conn, task_id, "MEMORY_QUERY_GUARD_V1:DONE")
+            try:
+                _save_memory(str(chat_id), int(topic_id or 0), str(raw_input or ""), _mq_msg)
+            except Exception as _e:
+                logger.warning("MEMORY_QUERY_GUARD_V1_SAVE_ERR %s", _e)
+            try:
+                if _Stage6Archive is not None:
+                    _Stage6Archive().archive(_mq_payload, {"text": _mq_msg, "result": {"text": _mq_msg}})
+            except Exception as _e:
+                logger.warning("MEMORY_QUERY_GUARD_V1_ARCHIVE_ERR %s", _e)
+            try:
+                _append_timeline_event_v1(str(chat_id), int(topic_id or 0), task_id, "memory_query_done", raw_input, _mq_msg)
+            except Exception as _e:
+                logger.warning("MEMORY_QUERY_GUARD_V1_TIMELINE_ERR %s", _e)
+            conn.commit()
+            _send_once(conn, task_id, str(chat_id), _mq_msg, reply_to, "memory_query_guard_v1")
+            return
+    except Exception as _mq_e:
+        logger.error("MEMORY_QUERY_GUARD_V1_ERR task=%s err=%s", task_id, _mq_e)
+    # === END MEMORY_QUERY_GUARD_V1 ===
     # === FULLFIX_16_CONTEXT_QUERY ===
     try:
         _ff16_low = str(raw_input or "").strip().lower().rstrip("!?. ")
@@ -2666,6 +2794,38 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
         data = json.loads(raw_input)
         file_id = data["file_id"]
         file_name = data.get("file_name", "файл")  # HOTFIX_FILE_NAME_EARLY_V1
+        # === DRIVE_FILE_MEMORY_INDEX_V1 + FILE_DUPLICATE_MEMORY_GUARD_V1 ===
+        try:
+            _df_file_id = str(data.get("file_id") or "")
+            _df_file_name = str(file_name or "")
+            _df_meta = json.dumps({
+                "task_id": task_id, "chat_id": str(chat_id),
+                "topic_id": int(topic_id or 0), "file_id": _df_file_id,
+                "file_name": _df_file_name,
+                "caption": str(data.get("caption") or ""),
+                "source": str(data.get("source") or ""),
+            }, ensure_ascii=False)
+            if _df_file_id:
+                _dupe = conn.execute(
+                    "SELECT id,state FROM tasks WHERE chat_id=? AND COALESCE(topic_id,0)=? AND id<>? AND input_type='drive_file' AND raw_input LIKE ? AND state IN ('DONE','ARCHIVED','AWAITING_CONFIRMATION') ORDER BY updated_at DESC LIMIT 1",
+                    (str(chat_id), int(topic_id or 0), task_id, "%" + _df_file_id + "%"),
+                ).fetchone()
+                if _dupe is not None:
+                    _dmsg = "Файл уже есть в этом топике. Предыдущая задача: " + _s(_dupe["id"])[:8]
+                    _update_task(conn, task_id, state="DONE", result=_dmsg, error_message="")
+                    _history(conn, task_id, "FILE_DUPLICATE_MEMORY_GUARD_V1:DONE")
+                    _memory_insert_topic_entry_v1(str(chat_id), f"topic_{int(topic_id or 0)}_file_duplicate_{task_id}", _df_meta)
+                    _append_timeline_event_v1(str(chat_id), int(topic_id or 0), task_id, "file_duplicate", raw_input, _dmsg)
+                    conn.commit()
+                    _send_once(conn, task_id, str(chat_id), _dmsg, _task_field(task, "reply_to_message_id", None), "file_dup_guard_v1")
+                    logger.info("FILE_DUPLICATE_MEMORY_GUARD_V1 task=%s", task_id)
+                    return
+            _memory_insert_topic_entry_v1(str(chat_id), f"topic_{int(topic_id or 0)}_file_{task_id}", _df_meta)
+            _append_timeline_event_v1(str(chat_id), int(topic_id or 0), task_id, "drive_file_indexed", raw_input, "")
+            logger.info("DRIVE_FILE_MEMORY_INDEX_V1 task=%s file=%s", task_id, _df_file_name)
+        except Exception as _e:
+            logger.warning("DRIVE_FILE_MEMORY_INDEX_V1_ERR task=%s err=%s", task_id, _e)
+        # === END DRIVE_FILE_MEMORY_INDEX_V1 + FILE_DUPLICATE_MEMORY_GUARD_V1 ===
         # DRIVE_FILE_SOURCE_HEALTHCHECK_GUARD_V1
         _hc_src = str(data.get("source") or "").lower()
         _hc_fn = str(file_name or "").lower()
