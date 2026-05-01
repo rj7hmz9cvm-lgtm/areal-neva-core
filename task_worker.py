@@ -155,6 +155,12 @@ from core.duplicate_guard import find_duplicate, duplicate_message  # DUPLICATE_
 from core.pin_manager import get_pin_context, save_pin
 from core.topic_drive_oauth import upload_file_to_topic
 from core.artifact_pipeline import analyze_downloaded_file
+# === DRIVE_FILE_CONTENT_MEMORY_INDEX_V1_IMPORT ===
+try:
+    from core.drive_content_indexer import index_drive_file_content as _df_content_index
+except Exception:
+    _df_content_index = None
+# === END DRIVE_FILE_CONTENT_MEMORY_INDEX_V1_IMPORT ===
 
 load_dotenv(f"{BASE}/.env", override=True)
 
@@ -2886,6 +2892,35 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
                     return
             _memory_insert_topic_entry_v1(str(chat_id), f"topic_{int(topic_id or 0)}_file_{task_id}", _df_meta)
             _append_timeline_event_v1(str(chat_id), int(topic_id or 0), task_id, "drive_file_indexed", raw_input, "")
+            # === DRIVE_FILE_CONTENT_MEMORY_INDEX_V1_CALL ===
+            try:
+                if _df_content_index is not None and _df_file_id:
+                    _df_ci = await asyncio.to_thread(
+                        _df_content_index,
+                        str(chat_id),
+                        int(topic_id or 0),
+                        str(task_id),
+                        str(_df_file_id),
+                        str(_df_file_name),
+                        str(data.get("mime_type") or ""),
+                    )
+                    _memory_insert_topic_entry_v1(
+                        str(chat_id),
+                        f"topic_{int(topic_id or 0)}_file_content_status_{task_id}",
+                        json.dumps(_df_ci, ensure_ascii=False),
+                    )
+                    _append_timeline_event_v1(
+                        str(chat_id),
+                        int(topic_id or 0),
+                        task_id,
+                        "drive_file_content_indexed",
+                        raw_input,
+                        json.dumps(_df_ci, ensure_ascii=False),
+                    )
+                    logger.info("DRIVE_FILE_CONTENT_MEMORY_INDEX_V1 task=%s ok=%s reason=%s chars=%s", task_id, _df_ci.get("ok"), _df_ci.get("reason"), _df_ci.get("chars"))
+            except Exception as _dfci_e:
+                logger.warning("DRIVE_FILE_CONTENT_MEMORY_INDEX_V1_ERR task=%s err=%s", task_id, _dfci_e)
+            # === END DRIVE_FILE_CONTENT_MEMORY_INDEX_V1_CALL ===
             logger.info("DRIVE_FILE_MEMORY_INDEX_V1 task=%s file=%s", task_id, _df_file_name)
         except Exception as _e:
             logger.warning("DRIVE_FILE_MEMORY_INDEX_V1_ERR task=%s err=%s", task_id, _e)
