@@ -28,17 +28,30 @@ def _clean(text: str, limit: int = 12000) -> str:
     return text.strip()[:limit]
 
 def _kind(file_name: str, mime_type: str = "") -> str:
-    ext = os.path.splitext((file_name or "").lower())[1]
-    mime = (mime_type or "").lower()
-    if ext in (".jpg", ".jpeg", ".png", ".heic", ".webp") or mime.startswith("image/"):
-        return "image"
-    if ext in (".xlsx", ".xlsm", ".csv") or "spreadsheet" in mime or mime == "text/csv":
-        return "table"
-    if ext in (".pdf", ".docx", ".doc", ".txt") or mime in ("application/pdf", "text/plain"):
-        return "document"
-    if ext in (".dwg", ".dxf") or "dxf" in mime or "dwg" in mime:
-        return "drawing"
-    return "binary"
+    # === UNIVERSAL_FORMAT_REGISTRY_V1_KIND ===
+    try:
+        from core.format_registry import classify_file
+        return classify_file(file_name, mime_type).get("kind") or "binary"
+    except Exception:
+        ext = os.path.splitext((file_name or "").lower())[1]
+        mime = (mime_type or "").lower()
+        if ext in (".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif", ".tif", ".tiff", ".bmp", ".gif") or mime.startswith("image/"):
+            return "image"
+        if ext in (".xlsx", ".xls", ".xlsm", ".csv", ".ods", ".tsv") or "spreadsheet" in mime or mime in ("text/csv", "application/vnd.ms-excel"):
+            return "table"
+        if ext in (".dwg", ".dxf", ".ifc", ".rvt", ".rfa", ".skp", ".stl", ".obj", ".step", ".stp", ".iges", ".igs") or any(x in mime for x in ("dxf", "dwg", "ifc", "cad")):
+            return "drawing"
+        if ext in (".pdf", ".docx", ".doc", ".txt", ".md", ".rtf", ".odt", ".html", ".htm", ".xml", ".json", ".yaml", ".yml") or mime in ("application/pdf", "text/plain"):
+            return "document"
+        if ext in (".ppt", ".pptx", ".odp", ".key"):
+            return "presentation"
+        if ext in (".zip", ".7z", ".rar", ".tar", ".gz", ".tgz"):
+            return "archive"
+        if ext in (".mp4", ".mov", ".avi", ".mkv", ".mp3", ".wav", ".m4a", ".ogg"):
+            return "media"
+        return "binary"
+    # === END_UNIVERSAL_FORMAT_REGISTRY_V1_KIND ===
+
 
 
 # === DOMAIN_CONTOUR_ROUTER_V1 ===
@@ -53,33 +66,131 @@ def _domain_flags(file_name: str, mime_type: str = "", user_text: str = "", topi
     project = any(x in hay for x in ("проект", "проектирован", "кж", "кмд", "км", "кр", "ар", "ов", "вк", "эом", "гп", "пз", "чертеж", "чертёж", "dxf", "dwg"))
     return {"estimate": estimate, "tech": tech, "project": project}
 
+
+# === ESTIMATE_PDF_PACKAGE_V2 ===
+def _pdf_escape_v2(text: str) -> str:
+    return str(text or "").replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+
+def _write_simple_pdf_v2(path: str, title: str, lines: List[str]) -> str:
+    out = os.path.join(tempfile.gettempdir(), os.path.splitext(os.path.basename(path))[0] + "_estimate_summary.pdf")
+    safe_lines = [_pdf_escape_v2(title or "Estimate summary")]
+    safe_lines += [_pdf_escape_v2(x) for x in (lines or [])[:40]]
+
+    stream_lines = ["BT", "/F1 11 Tf", "50 790 Td"]
+    first = True
+    for line in safe_lines:
+        if not first:
+            stream_lines.append("0 -16 Td")
+        first = False
+        stream_lines.append(f"({line[:105]}) Tj")
+    stream_lines.append("ET")
+    stream = "\n".join(stream_lines).encode("utf-8", errors="ignore")
+
+    objects = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        b"<< /Length " + str(len(stream)).encode() + b" >>\nstream\n" + stream + b"\nendstream",
+    ]
+
+    pdf = bytearray(b"%PDF-1.4\n")
+    offsets = [0]
+    for i, obj in enumerate(objects, 1):
+        offsets.append(len(pdf))
+        pdf.extend(f"{i} 0 obj\n".encode())
+        pdf.extend(obj)
+        pdf.extend(b"\nendobj\n")
+    xref = len(pdf)
+    pdf.extend(f"xref\n0 {len(objects)+1}\n".encode())
+    pdf.extend(b"0000000000 65535 f \n")
+    for off in offsets[1:]:
+        pdf.extend(f"{off:010d} 00000 n \n".encode())
+    pdf.extend(f"trailer << /Size {len(objects)+1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n".encode())
+
+    with open(out, "wb") as f:
+        f.write(pdf)
+    return out
+
+def _zip_files_v2(files: List[str], name: str) -> str:
+    import zipfile
+    out = os.path.join(tempfile.gettempdir(), re.sub(r"[^A-Za-zА-Яа-я0-9_.-]+", "_", name or "estimate_package").strip("._") + ".zip")
+    with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as z:
+        for f in files or []:
+            if f and os.path.exists(f):
+                z.write(f, arcname=os.path.basename(f))
+    return out
+# === END_ESTIMATE_PDF_PACKAGE_V2 ===
+
 async def _domain_estimate_artifact(local_path: str, file_name: str, mime_type: str, user_text: str, topic_role: str) -> Optional[Dict[str, Any]]:
+    # === DOMAIN_ESTIMATE_PDF_XLSX_PACKAGE_V2 ===
     try:
         from core.estimate_engine import process_estimate_to_excel
         tid = _artifact_task_id(file_name, "estimate_artifact")
         res = await process_estimate_to_excel(local_path, tid, 0)
+
         if res and (res.get("success") or res.get("excel_path")) and res.get("excel_path"):
+            excel_path = res.get("excel_path")
             link = res.get("drive_link") or ""
-            summary = "Сметный файл обработан\n"
-            summary += f"Excel: {link}" if link else "Excel создан локально, Drive ссылка не подтверждена"
+            lines = [
+                f"Файл: {file_name}",
+                "Engine: DOMAIN_ESTIMATE_ENGINE_V1",
+                f"Drive: {link or 'не подтвержден'}",
+                f"Status: {'OK' if excel_path else 'PARTIAL'}",
+            ]
             if res.get("error"):
-                summary += f"\nОграничение: {res.get('error')}"
+                lines.append(f"Ограничение: {res.get('error')}")
+
+            pdf_path = _write_simple_pdf_v2(excel_path or local_path, "Сметный результат", lines)
+            package = _zip_files_v2([excel_path, pdf_path], os.path.splitext(os.path.basename(file_name or "estimate"))[0] + "_estimate_package")
+
+            summary = "Сметный файл обработан\nАртефакты: XLSX + PDF"
+            if link:
+                summary += f"\nExcel: {link}"
+            else:
+                summary += "\nExcel создан локально, Drive ссылка не подтверждена"
+            summary += "\nPDF включён в ZIP пакет"
+
             return {
                 "summary": summary,
-                "artifact_path": res.get("excel_path"),
-                "artifact_name": f"{os.path.splitext(os.path.basename(file_name))[0]}_estimate.xlsx",
+                "artifact_path": package,
+                "artifact_name": f"{os.path.splitext(os.path.basename(file_name))[0]}_estimate_package.zip",
                 "engine": "DOMAIN_ESTIMATE_ENGINE_V1",
                 "drive_link": link,
+                "extra_artifacts": [excel_path, pdf_path],
             }
-    except Exception as e:
+
+        reason = (res or {}).get("error") or "ESTIMATE_ENGINE_NO_ARTIFACT"
+        pdf_path = _write_simple_pdf_v2(local_path, "Сметный файл принят без расчётного результата", [
+            f"Файл: {file_name}",
+            f"Причина: {reason}",
+            "Расчётные строки не подтверждены",
+        ])
+        package = _zip_files_v2([pdf_path], os.path.splitext(os.path.basename(file_name or "estimate"))[0] + "_estimate_diagnostic_package")
         return {
-            "summary": f"Сметный engine недоступен: {e}",
-            "artifact_path": "",
-            "artifact_name": "",
+            "summary": f"Сметный файл принят, но расчётные строки не подтверждены\nПричина: {reason}\nСоздан диагностический PDF пакет",
+            "artifact_path": package,
+            "artifact_name": f"{os.path.splitext(os.path.basename(file_name))[0]}_estimate_diagnostic_package.zip",
+            "engine": "DOMAIN_ESTIMATE_ENGINE_V1",
+            "error": str(reason)[:300],
+            "extra_artifacts": [pdf_path],
+        }
+    except Exception as e:
+        pdf_path = _write_simple_pdf_v2(local_path, "Сметный engine недоступен", [
+            f"Файл: {file_name}",
+            f"Ошибка: {e}",
+            "Расчётные строки не подтверждены",
+        ])
+        package = _zip_files_v2([pdf_path], os.path.splitext(os.path.basename(file_name or "estimate"))[0] + "_estimate_error_package")
+        return {
+            "summary": f"Сметный engine недоступен: {e}\nСоздан диагностический PDF пакет",
+            "artifact_path": package,
+            "artifact_name": f"{os.path.splitext(os.path.basename(file_name))[0]}_estimate_error_package.zip",
             "engine": "DOMAIN_ESTIMATE_ENGINE_V1",
             "error": str(e)[:300],
+            "extra_artifacts": [pdf_path],
         }
-    return None
+    # === END_DOMAIN_ESTIMATE_PDF_XLSX_PACKAGE_V2 ===
 
 async def _domain_technadzor_artifact(local_path: str, file_name: str, mime_type: str, user_text: str, topic_role: str, extracted_text: str = "") -> Optional[Dict[str, Any]]:
     try:
@@ -401,55 +512,62 @@ async def analyze_downloaded_file(local_path: str, file_name: str, mime_type: st
     sources = [file_name]
 
     if kind == "image":
-        # === DOMAIN_TECHNADZOR_IMAGE_ROUTE_V1 ===
+        # === DOMAIN_TECHNADZOR_IMAGE_ASYNC_VISION_V2 ===
         flags = _domain_flags(file_name, mime_type, user_text, topic_role)
+        vision_text = ""
+        analysis = None
+
         if flags.get("tech") or not flags.get("estimate"):
-            routed = await _domain_technadzor_artifact(local_path, file_name, mime_type, user_text, topic_role)
+            analysis = await _vision_image(local_path, user_text, topic_role)
+            if isinstance(analysis, dict):
+                vision_text = json.dumps(analysis, ensure_ascii=False)
+            elif analysis:
+                vision_text = str(analysis)
+
+            routed = await _domain_technadzor_artifact(local_path, file_name, mime_type, user_text, topic_role, vision_text)
+            if routed and (routed.get("artifact_path") or routed.get("summary")):
+                routed["engine"] = routed.get("engine") or "DOMAIN_TECHNADZOR_IMAGE_ASYNC_VISION_V2"
+                return routed
+
+        if analysis is None:
+            analysis = await _vision_image(local_path, user_text, topic_role)
+
+        if not analysis:
+            routed = await _domain_technadzor_artifact(local_path, file_name, mime_type, user_text, topic_role, "Фото принято без vision-анализа")
             if routed and (routed.get("artifact_path") or routed.get("summary")):
                 return routed
-        # === END_DOMAIN_TECHNADZOR_IMAGE_ROUTE_V1 ===
-        analysis = await _vision_image(local_path, user_text, topic_role)
-        if not analysis:
             return None
-        summary = _s(analysis.get("summary")) or "Фото проанализировано"
-        defects = analysis.get("defects") if isinstance(analysis.get("defects"), list) else []
-        recommendations = analysis.get("recommendations") if isinstance(analysis.get("recommendations"), list) else []
-        artifact_path = _build_word(
-            "Акт замечаний по фотофиксации",
-            summary,
-            defects,
-            [_s(x) for x in recommendations],
-            sources,
-        )
+
+        summary = _s(analysis.get("summary")) if isinstance(analysis, dict) else _s(analysis)
+        summary = summary or "Фото проанализировано"
+        defects = analysis.get("defects") if isinstance(analysis, dict) and isinstance(analysis.get("defects"), list) else []
+        recommendations = analysis.get("recommendations") if isinstance(analysis, dict) and isinstance(analysis.get("recommendations"), list) else []
+        artifact_path = _build_word("Акт замечаний по фотофиксации", summary, defects, [_s(x) for x in recommendations], sources)
         return {
             "summary": summary,
             "artifact_path": artifact_path,
             "artifact_name": f"{os.path.splitext(os.path.basename(file_name))[0]}_photo_report.docx",
+            "engine": "DOMAIN_TECHNADZOR_IMAGE_ASYNC_VISION_V2",
         }
+        # === END_DOMAIN_TECHNADZOR_IMAGE_ASYNC_VISION_V2 ===
 
     if kind == "table":
-        # === DOMAIN_ESTIMATE_TABLE_ROUTE_V1 ===
         flags = _domain_flags(file_name, mime_type, user_text, topic_role)
         if flags.get("estimate") or not flags.get("project"):
             routed = await _domain_estimate_artifact(local_path, file_name, mime_type, user_text, topic_role)
             if routed and (routed.get("artifact_path") or routed.get("summary")):
                 return routed
-        # === END_DOMAIN_ESTIMATE_TABLE_ROUTE_V1 ===
+
         items = _extract_table_items(local_path, file_name)
         summary = f"Нормализовано позиций: {len(items)}"
-        artifact_path = _build_excel(
-            "Сметный/табличный результат",
-            items,
-            summary,
-            sources,
-        )
+        artifact_path = _build_excel("Сметный/табличный результат", items, summary, sources)
         return {
             "summary": summary,
             "artifact_path": artifact_path,
             "artifact_name": f"{os.path.splitext(os.path.basename(file_name))[0]}_estimate.xlsx",
+            "engine": "TABLE_FALLBACK_ENGINE",
         }
 
-    # === DWG_DXF_PROJECT_CLOSE_V1_CALL ===
     if kind == "drawing":
         try:
             from core.dwg_engine import process_drawing_file
@@ -486,22 +604,19 @@ async def analyze_downloaded_file(local_path: str, file_name: str, mime_type: st
                 "engine": "DWG_DXF_PROJECT_CLOSE_V1",
                 "error": str(e)[:300],
             }
-    # === END_DWG_DXF_PROJECT_CLOSE_V1_CALL ===
 
     if kind == "document":
-        # === DOMAIN_DOCUMENT_ROUTE_V1 ===
         flags = _domain_flags(file_name, mime_type, user_text, topic_role)
-        _ext_for_domain = os.path.splitext((file_name or "").lower())[1]
-        _domain_text = ""
-        if _ext_for_domain == ".pdf":
-            _domain_text = _extract_pdf(local_path)
-        elif _ext_for_domain == ".docx":
-            _domain_text = _extract_docx(local_path)
-        elif _ext_for_domain in (".txt", ".doc"):
-            _domain_text = _extract_txt(local_path)
+        ext = os.path.splitext((file_name or "").lower())[1]
+        if ext == ".pdf":
+            domain_text = _extract_pdf(local_path)
+        elif ext == ".docx":
+            domain_text = _extract_docx(local_path)
+        else:
+            domain_text = _extract_txt(local_path)
 
         if flags.get("tech"):
-            routed = await _domain_technadzor_artifact(local_path, file_name, mime_type, user_text, topic_role, _domain_text)
+            routed = await _domain_technadzor_artifact(local_path, file_name, mime_type, user_text, topic_role, domain_text)
             if routed and (routed.get("artifact_path") or routed.get("summary")):
                 return routed
 
@@ -514,27 +629,44 @@ async def analyze_downloaded_file(local_path: str, file_name: str, mime_type: st
             routed = await _domain_project_document_artifact(local_path, file_name, mime_type, user_text, topic_role)
             if routed and (routed.get("artifact_path") or routed.get("summary")):
                 return routed
-        # === END_DOMAIN_DOCUMENT_ROUTE_V1 ===
-        ext = os.path.splitext((file_name or "").lower())[1]
-        if ext == ".pdf":
-            text = _extract_pdf(local_path)
-        elif ext == ".docx":
-            text = _extract_docx(local_path)
-        else:
-            text = _extract_txt(local_path)
 
-        summary = _clean(text, 3000) if text else "Документ обработан"
-        artifact_path = _build_word(
-            "Сводка по документу",
-            summary,
-            [],
-            [],
-            sources,
-        )
+        summary = _clean(domain_text, 3000) if domain_text else "Документ обработан"
+        artifact_path = _build_word("Сводка по документу", summary, [], [], sources)
         return {
             "summary": summary,
             "artifact_path": artifact_path,
             "artifact_name": f"{os.path.splitext(os.path.basename(file_name))[0]}_document_summary.docx",
+            "engine": "DOCUMENT_FALLBACK_ENGINE",
         }
 
+    # === UNIVERSAL_FILE_ENGINE_FALLBACK_V1 ===
+    try:
+        from core.universal_file_engine import process_universal_file
+        data = process_universal_file(
+            local_path=local_path,
+            file_name=file_name,
+            mime_type=mime_type,
+            user_text=user_text,
+            topic_role=topic_role,
+            task_id=_artifact_task_id(file_name, "universal_file"),
+            topic_id=0,
+        )
+        if data and data.get("success"):
+            return {
+                "summary": _clean(data.get("summary") or "Файл обработан универсальным контуром", 6000),
+                "artifact_path": data.get("artifact_path"),
+                "artifact_name": data.get("artifact_name") or f"{os.path.splitext(os.path.basename(file_name))[0]}_universal_file_package.zip",
+                "extra_artifacts": data.get("extra_artifacts") or [],
+                "engine": "UNIVERSAL_FILE_ENGINE_V1",
+                "model": data.get("model") or {},
+            }
+    except Exception as e:
+        return {
+            "summary": f"Универсальный файловый контур завершился ошибкой: {e}",
+            "artifact_path": "",
+            "artifact_name": "",
+            "engine": "UNIVERSAL_FILE_ENGINE_V1",
+            "error": str(e)[:300],
+        }
     return None
+    # === END_UNIVERSAL_FILE_ENGINE_FALLBACK_V1 ===

@@ -1,3 +1,4 @@
+import os
 # === TECHNADZOR_ENGINE_V1 ===
 import logging, os
 from typing import Dict, Any, Optional
@@ -200,10 +201,8 @@ def process_technadzor(
     """Основная точка входа для технадзора"""
     result = {"ok": False, "result_text": "", "artifact": None, "error_code": None}
 
-    # Gemini vision если фото
     vision_text = ""
-    if local_path and any(local_path.lower().endswith(ext)
-                          for ext in (".jpg", ".jpeg", ".png", ".webp", ".heic")):
+    if local_path and any(local_path.lower().endswith(ext) for ext in (".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif")):
         try:
             import asyncio
             from core.gemini_vision import analyze_image_file
@@ -211,18 +210,20 @@ def process_technadzor(
                 asyncio.get_running_loop()
             except RuntimeError:
                 vision_text = asyncio.run(
-                    analyze_image_file(local_path,
-                                       prompt="Опиши все видимые дефекты строительных конструкций",
-                                       timeout=60)
+                    analyze_image_file(
+                        local_path,
+                        prompt="Опиши все видимые дефекты строительных конструкций",
+                        timeout=60,
+                    )
                 ) or ""
         except Exception as e:
             logger.warning("TECHNADZOR_VISION_ERR %s", e)
 
-    # Собираем текст для анализа
     analysis_text = " ".join(filter(None, [raw_input, vision_text]))
 
-    # Нормы через normative_db
+    # === TECHNADZOR_NORMATIVE_SAFE_V2 ===
     norm_text = ""
+    norm_results = []
     try:
         from core.normative_db import search_norms
         import asyncio
@@ -231,47 +232,76 @@ def process_technadzor(
             norm_results = []
         except RuntimeError:
             norm_results = asyncio.run(search_norms(analysis_text))
+    except Exception as e:
+        logger.warning("TECHNADZOR_NORM_DB_ERR %s", e)
+
+    try:
+        if not norm_results:
+            from core.normative_engine import search_norms_sync
+            norm_results = search_norms_sync(analysis_text)
+
+        safe_norms = []
+        for n in norm_results or []:
+            if isinstance(n, dict):
+                safe_norms.append(n)
+            else:
+                safe_norms.append({"norm_id": "NORM_TEXT", "requirement": str(n), "confidence": "PARTIAL"})
+
+        norm_results = safe_norms
         if norm_results:
-            norm_lines = [f"  {n['norm_id']}: {n['requirement'][:150]}" for n in norm_results[:3]]
+            norm_lines = []
+            for n in norm_results[:5]:
+                norm_lines.append(f"  {n.get('norm_id','')}: {str(n.get('requirement',''))[:220]}")
             norm_text = "\nНормативные требования:\n" + "\n".join(norm_lines)
     except Exception as e:
-        logger.warning("TECHNADZOR_NORM_ERR %s", e)
+        logger.warning("TECHNADZOR_NORMATIVE_SAFE_V2_ERR %s", e)
+        norm_results = []
+    # === END_TECHNADZOR_NORMATIVE_SAFE_V2 ===
 
-    # Дефекты
     defects = extract_defects(analysis_text)
-
-    # Генерируем акт
     act_text = generate_act_text(defects) + norm_text
 
-    # DOCX — DOCX_FULL_CALL_V1
+    # === TECHNADZOR_DOCX_UPLOAD_FIX_V2 ===
     try:
         docx_path = generate_act_docx_full(
             defects=defects,
             object_name=str(raw_input or "Объект")[:80],
             task_id=task_id,
             photo_links=[local_path] if local_path else None,
-            norm_results=norm_results if "norm_results" in dir() else None,
+            norm_results=norm_results,
         )
 
-        docx_path = generate_act_docx(task_id, analysis_text, file_name)
+        if not docx_path or not os.path.exists(docx_path):
+            docx_path = generate_act_docx(task_id, analysis_text, file_name)
+
         if docx_path and os.path.exists(docx_path):
-            # Upload
             try:
                 from core.artifact_upload_guard import upload_many_or_fail
-                up = upload_many_or_fail([docx_path], task_id, int(topic_id or 0))
-                link = up.get("links", {}).get(docx_path) or up.get("drive_link", "")
+                up = upload_many_or_fail([{"path": docx_path, "kind": "technadzor_act"}], task_id, int(topic_id or 0))
+                link = ""
+                if isinstance(up, dict):
+                    link = (up.get("links") or {}).get(docx_path, "")
+                    if not link:
+                        rr = (up.get("results") or {}).get(docx_path) or {}
+                        if isinstance(rr, dict):
+                            link = rr.get("link") or rr.get("drive_link") or ""
+
                 if link:
                     act_text += f"\n\nДокумент: {link}"
                     result["artifact"] = {"path": docx_path, "drive_link": link}
+                else:
+                    result["artifact"] = {"path": docx_path}
             except Exception as ue:
                 logger.warning("TECHNADZOR_UPLOAD_ERR %s", ue)
                 result["artifact"] = {"path": docx_path}
     except Exception as de:
         logger.warning("TECHNADZOR_DOCX_ERR %s", de)
+    # === END_TECHNADZOR_DOCX_UPLOAD_FIX_V2 ===
 
     result["ok"] = True
     result["result_text"] = act_text
     return result
+
 
 def is_technadzor_intent(text: str, mime_type: str = "") -> bool:
     low = text.lower()

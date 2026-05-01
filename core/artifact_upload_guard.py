@@ -69,12 +69,34 @@ def upload_or_fail(path, task_id, topic_id, kind="artifact"):
     return {"success": False, "error": "UPLOAD_FAILED", "path": path, "size": size, "tried": tried}
 
 def upload_many_or_fail(files, task_id, topic_id):
+    # === UPLOAD_MANY_COMPAT_V2 ===
     results = {}
+    links = {}
     all_ok = True
-    for f in files:
-        r = upload_or_fail(f["path"], task_id, topic_id, f.get("kind", "artifact"))
-        results[f["path"]] = r
-        if not r["success"]:
+
+    for f in files or []:
+        if isinstance(f, str):
+            path = f
+            kind = "artifact"
+        elif isinstance(f, dict):
+            path = f.get("path") or f.get("file") or f.get("artifact_path") or ""
+            kind = f.get("kind") or "artifact"
+        else:
+            path = str(f or "")
+            kind = "artifact"
+
+        r = upload_or_fail(path, task_id, topic_id, kind)
+        results[path] = r
+
+        if not isinstance(r, dict) or not r.get("success"):
             all_ok = False
-    return {"success": all_ok, "results": results}
+
+        if isinstance(r, dict):
+            link = str(r.get("link") or r.get("drive_link") or "")
+            if link:
+                links[path] = link
+
+    return {"success": all_ok, "results": results, "links": links}
+    # === END_UPLOAD_MANY_COMPAT_V2 ===
+
 # === END FULLFIX_14_ARTIFACT_UPLOAD_GUARD ===

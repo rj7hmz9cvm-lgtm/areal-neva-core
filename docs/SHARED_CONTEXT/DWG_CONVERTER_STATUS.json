@@ -1,0 +1,7 @@
+{
+  "checked_at": "2026-05-01T22:49:05.964682+00:00",
+  "dwg2dxf": null,
+  "ODAFileConverter": null,
+  "geometry_status": "DWG_METADATA_ONLY_DXF_FULL_PARSE_READY",
+  "note": "DXF parses directly. DWG full geometry requires dwg2dxf or ODAFileConverter; without converter DWG metadata path remains active"
+}
