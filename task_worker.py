@@ -986,6 +986,18 @@ def _is_revision_intent(text: str) -> bool:
 
 
 def _recover_stale_tasks(conn: sqlite3.Connection, chat_id: Optional[str]) -> None:
+    # CONFIRMATION_TIMEOUT_FIX_V1
+    try:
+        conn.execute("""
+            UPDATE tasks SET state='FAILED', error_message='CONFIRMATION_TIMEOUT', updated_at=datetime('now')
+            WHERE state='AWAITING_CONFIRMATION'
+              AND updated_at < datetime('now','-30 minutes')
+              AND COALESCE(raw_input,'') NOT LIKE '%retry_queue_healthcheck%'
+              AND COALESCE(result,'') NOT LIKE '%retry_queue_healthcheck%'
+        """)
+        conn.commit()
+    except Exception as _ct_e:
+        logger.warning("CONFIRMATION_TIMEOUT_FIX_V1_ERR %s", _ct_e)
     where = [
         "state IN ('IN_PROGRESS','WAITING_CLARIFICATION')",
         "(strftime('%s','now') - strftime('%s', COALESCE(updated_at, created_at))) > ?",
@@ -2146,6 +2158,8 @@ async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_
 
     payload: Dict[str, Any] = {
         "id": task_id,
+        "task_id": task_id,  # PAYLOAD_TOPIC_ID_FIX_V1
+        "topic_id": int(topic_id or 0),
         "chat_id": chat_id,
         "input_type": _s(_task_field(task, "input_type", "text")).lower() or "text",
         "raw_input": raw_input,
@@ -2652,6 +2666,16 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
         data = json.loads(raw_input)
         file_id = data["file_id"]
         file_name = data.get("file_name", "файл")  # HOTFIX_FILE_NAME_EARLY_V1
+        # DRIVE_FILE_SOURCE_HEALTHCHECK_GUARD_V1
+        _hc_src = str(data.get("source") or "").lower()
+        _hc_fn = str(file_name or "").lower()
+        _hc_raw_low = str(raw_input or "").lower()
+        _hc_markers = ("retry_queue_healthcheck", "healthcheck", "areal_hc_", "_hc_file")
+        if _hc_src in ("google_drive", "gdrive") or any(m in _hc_fn or m in _hc_raw_low for m in _hc_markers):
+            _update_task(conn, task_id, state="CANCELLED", error_message="SERVICE_FILE_IGNORED:HEALTHCHECK")
+            conn.commit()
+            logger.info("DRIVE_FILE_SOURCE_HEALTHCHECK_GUARD_V1 cancelled task=%s", task_id)
+            return
         # === TASK_TYPE_DETECT_V1 ===
         _task_type = "DOCUMENT_TASK"
         _fn_lower = file_name.lower()

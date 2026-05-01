@@ -16,6 +16,23 @@ def init_db():
 @app.route("/health", methods=["GET"])
 def health(): return jsonify({"status": "ok"})
 
+@app.route("/archive", methods=["POST"])
+def archive():  # ARCHIVE_ENDPOINT_FIX_V1
+    try:
+        data = request.get_json(silent=True) or {}
+        chat_id = str(data.get("chat_id") or "unknown")
+        topic_id = int(data.get("topic_id") or 0)
+        task_id = str(data.get("task_id") or str(uuid.uuid4()))
+        value = data.get("value") or json.dumps(data, ensure_ascii=False)
+        key = f"topic_{topic_id}_archive_{task_id[:8]}"
+        with sqlite3.connect(DB) as conn:
+            conn.execute("INSERT OR IGNORE INTO memory (id, chat_id, key, value, timestamp) VALUES (?,?,?,?,?)",
+                (str(uuid.uuid4()), chat_id, key, str(value), datetime.utcnow().isoformat()))
+            conn.commit()
+        return jsonify({"ok": True, "key": key}), 200
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
 @app.route("/memory", methods=["GET"])
 def get_memory():
     if request.headers.get("Authorization") != f"Bearer {TOKEN}": return jsonify({"error": "unauthorized"}), 403

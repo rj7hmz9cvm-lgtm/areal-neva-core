@@ -699,6 +699,17 @@ async def universal_handler(message: types.Message):
         
         # 3. FILE TASKS + EZONE FILE INGEST
         if message.document and message.document.file_name:
+            # HEALTHCHECK_DAEMON_GUARD_V1
+            try:
+                _hc_check = " ".join([
+                    str(message.document.file_name or ""),
+                    str(message.caption or ""),
+                ]).lower()
+                if any(m in _hc_check for m in ("retry_queue_healthcheck", "healthcheck", "areal_hc_", "_hc_file")):
+                    logger.info("HEALTHCHECK_DAEMON_GUARD_V1 ignored file=%s", message.document.file_name)
+                    return
+            except Exception as _hc_e:
+                logger.warning("HEALTHCHECK_DAEMON_GUARD_V1_ERR %s", _hc_e)
             tg_file = await bot.get_file(message.document.file_id)
             local_path = f"/tmp/{uuid.uuid4()}_{message.document.file_name}"
             await download_telegram_file(tg_file.file_path, local_path)
@@ -841,7 +852,7 @@ async def universal_handler(message: types.Message):
             tg_file = await bot.get_file(message.voice.file_id)
             local_path = os.path.join(VOICE_DIR, f"voice_{abs(tg_id)}_{message.message_id}.ogg")
             await download_telegram_file(tg_file.file_path, local_path)
-            await upload_to_drive(local_path, f"voice_{message.message_id}.ogg")
+            pass  # VOICE_UPLOAD_SKIP_V1 — голос не загружаем на Drive
             from core.stt_engine import transcribe_voice as _stt
             try:
                 _transcript = await _stt(local_path)

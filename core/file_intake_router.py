@@ -398,7 +398,7 @@ try:
         src = (str(file_name or "") + " " + str(raw_input or "")).lower()
         if _v41_project_section_hit(src):
             return "project"
-        return _v41_orig_detect_intent(file_name, raw_input, *args, **kwargs)
+        return _v41_orig_detect_intent(file_name)  # DETECT_INTENT_FIX_V1
 except Exception:
     pass
 
