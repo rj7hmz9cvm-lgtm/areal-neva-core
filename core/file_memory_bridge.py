@@ -307,6 +307,40 @@ def load_file_memory(chat_id: str, topic_id: int, query: str = "", limit: int = 
 
     return filtered[:limit]
 
+
+# === FILE_DISPLAY_NAME_FROM_LINK_V1 ===
+def _display_name_for_item_v1(item: Dict[str, Any]) -> str:
+    fname = _clean(item.get("file_name") or "", 500)
+    if fname and fname.lower() not in ("без имени", "none", "null"):
+        return fname
+
+    links = item.get("links") or []
+    value = _clean(item.get("value") or item.get("summary") or "", 50000)
+    hay = "\n".join([value] + [str(x) for x in links]).lower()
+
+    if "docs.google.com/spreadsheets" in hay:
+        return "Google Sheets / XLSX артефакт"
+    if "docs.google.com/document" in hay:
+        return "Google Docs / DOCX артефакт"
+    if "drive.google.com" in hay:
+        if ".pdf" in hay or "pdf" in hay:
+            return "PDF артефакт на Google Drive"
+        if ".xlsx" in hay or ".xls" in hay or "spreadsheets" in hay:
+            return "XLSX артефакт на Google Drive"
+        if ".docx" in hay or "document" in hay:
+            return "DOCX артефакт на Google Drive"
+        return "Файл на Google Drive"
+
+    m = re.search(r"([^/\\?#]+\.(xlsx|xls|csv|pdf|docx|doc|jpg|jpeg|png|heic|webp|dwg|dxf))", hay, re.I)
+    if m:
+        return m.group(1)
+
+    if links:
+        return "Файл по ссылке"
+
+    return "без имени"
+# === END FILE_DISPLAY_NAME_FROM_LINK_V1 ===
+
 def build_file_followup_answer(chat_id: str, topic_id: int, user_text: str, limit: int = 8) -> Optional[str]:
     if not should_handle_file_followup(user_text):
         return None
@@ -329,7 +363,7 @@ def build_file_followup_answer(chat_id: str, topic_id: int, user_text: str, limi
     ]
 
     for i, item in enumerate(items, 1):
-        fname = item.get("file_name") or "без имени"
+        fname = _display_name_for_item_v1(item)  # FILE_DISPLAY_NAME_FROM_LINK_V1
         direction = item.get("direction") or "FILE_GENERAL"
         ts = item.get("timestamp") or ""
         task_id = str(item.get("task_id") or "")[:8]

@@ -7,12 +7,18 @@ import os
 import re
 import sqlite3
 import hashlib
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 BASE = Path("/root/.areal-neva-core")
 CORE_DB = BASE / "data/core.db"
 MEM_DB = BASE / "data/memory.db"
+
+# === SYNC_SELF_PYTHONPATH_FIX_V1 ===
+if str(BASE) not in sys.path:
+    sys.path.insert(0, str(BASE))
+# === END SYNC_SELF_PYTHONPATH_FIX_V1 ===
 
 from core.file_memory_bridge import (
     is_service_file,
