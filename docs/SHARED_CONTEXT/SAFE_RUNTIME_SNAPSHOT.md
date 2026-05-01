@@ -1,8 +1,8 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-01T21:36:21.867847+00:00
+generated_at_utc: 2026-05-01T22:06:23.876821+00:00
 git_branch: main
-git_head_short: 2a98e96
-git_head_full: 2a98e9606405e8ff8dc1405a879ab6989174e1ad
+git_head_short: 7617092
+git_head_full: 7617092ad6c80cd35d35e2521ac15c342573defe
 
 ## SERVICES
 - areal-task-worker: active
@@ -11,53 +11,52 @@ git_head_full: 2a98e9606405e8ff8dc1405a879ab6989174e1ad
 - areal-claude-bootstrap-aggregator.timer: active
 
 ## CORE_DB_STATE_COUNTS
-- FAILED|2832
-- CANCELLED|623
+- FAILED|2833
+- CANCELLED|629
 - DONE|411
 - ARCHIVED|381
-- AWAITING_CONFIRMATION|1
-- OPEN_TASKS|1
+- OPEN_TASKS|0
 
 ## LATEST_TASKS_SAFE
+- 7edb64c4-4e8a-4109-914a-2d9333105367|0|drive_file|CANCELLED|{"file_id": "1x4eUJBmFtOqyHbxfsJpAuo3Ld8NYC5ww", "file_name": "tmpqanqm1pe.txt",|Служебный файл синхронизации проигнорирован|2026-05-01 22:05:43
+- cfa58bd3-fdc6-435c-8d70-a18669115fa1|0|drive_file|CANCELLED|{"file_id": "1zWPrxzSsixB6XwHXmO-HdPvP-UX0_483", "file_name": "tmpf5ed5uam.txt",|Служебный файл синхронизации проигнорирован|2026-05-01 22:00:41
+- 3d3db5b1-4306-4612-b934-364603e3a0b0|0|drive_file|CANCELLED|{"file_id": "1OQQyfXaJ7LZmXentiMzXi4pbwbXlMPlh", "file_name": "tmpayhhqvij.txt",|Служебный файл синхронизации проигнорирован|2026-05-01 21:55:39
+- 6a9c665e-6307-4247-a170-fb2847b9633d|2|drive_file|FAILED|{"file_id": "1bXXtuHRsXCuxBSRUl8Tj5z6E877Krn4n", "file_name": "vor_kirpich_ispra|Нормализовано позиций: 82
+
+Артефакт создан, но загрузка в Drive не подтвердилась|2026-05-01 21:54:48
+- 4ca59e99-fc5b-4283-bacb-35e34cf2a9e2|0|drive_file|CANCELLED|{"file_id": "1_EeFlur_VLiT1SL_kPBv-urtqPbOk38F", "file_name": "tmpiqosoi_y.txt",|Служебный файл синхронизации проигнорирован|2026-05-01 21:50:37
+- 3e4355a4-540b-4c25-8eed-5a4cddfc7e17|0|drive_file|CANCELLED|{"file_id": "1lgz6TiPn4lWxQgdJQONrYgsQvSbpqXu5", "file_name": "tmpkii_dute.txt",|None|2026-05-01 21:45:35
+- f435ae20-32ac-4a8e-b8cb-7b8d056614ad|0|drive_file|CANCELLED|{"file_id": "1D4zV7pADDyCrSovaFo2MjvleETB1MYz2", "file_name": "tmpruqem5_2.txt",|None|2026-05-01 21:40:34
 - 27cf8a24-47f5-4e08-a96d-8f7883c25ef3|0|drive_file|CANCELLED|{"file_id": "1CofrBxvyqMBr_N4VA2DZpvZtM1kd9rPt", "file_name": "tmpxwifcm1v.txt",|None|2026-05-01 21:35:31
 - b63cca84-2d7b-4026-8dfb-705c218c258a|0|drive_file|CANCELLED|{"file_id": "18EopBDE_9f4Q04q5zuV4uAm2L2HTcjbi", "file_name": "tmpirxtlwtl.txt",|None|2026-05-01 21:30:30
 - b218bb49-cebd-4f00-8d2c-6cf2f59293c4|2|text|FAILED|[VOICE] Дальше то что? Я тебе не скидывал раньше разве этот файл? Скажи мне пожа|None|2026-05-01 21:25:45
 - 0ca7088c-3d02-41c4-843f-5107f97511fc|0|drive_file|CANCELLED|{"file_id": "16o_euVmIvdKaUodVFS7DLRrsQk_AzUZZ", "file_name": "tmp1uzj1myw.txt",|None|2026-05-01 21:25:28
-- 6a9c665e-6307-4247-a170-fb2847b9633d|2|drive_file|AWAITING_CONFIRMATION|{"file_id": "1bXXtuHRsXCuxBSRUl8Tj5z6E877Krn4n", "file_name": "vor_kirpich_ispra|Нормализовано позиций: 82
-
-Артефакт создан, но загрузка в Drive не подтвердилась|2026-05-01 21:24:46
 - 66b9f841-1826-442f-a87e-b85067a38dff|0|text|FAILED|[VOICE] Что прости, не понял?|None|2026-05-01 21:23:59
-- 5c19256b-8425-46d7-b00f-4332a8f53e22|0|text|FAILED|[VOICE] А где я тебе это скидывал? Можешь найти?|None|2026-05-01 21:23:48
-- bab630ba-7e3f-4c43-88ff-3e917e5c6279|2|text|DONE|[VOICE] Слушай, а мы тут делали как-то смету последнюю. Я тебе скидывал для шабл|Образец принят. Тип: смета. Файл: Техническое задание Кордон снт.docx. Шаблон со|2026-05-01 21:20:57
-- 3fbfa6d7-9583-4cc6-90d2-d671fc0d3426|0|drive_file|CANCELLED|{"file_id": "1qJ3iMswCHRO1JIRjiFDRnBoEfv52aLVu", "file_name": "tmpcl7xtgqo.txt",|None|2026-05-01 21:20:26
-- 89731e14-598d-4cec-a9fb-cb81cb1295fa|5|text|DONE|[VOICE] Да нет, всё понял, задача закрыта.|Задача закрыта. Если потребуется помощь с другими вопросами, обращайтесь.|2026-05-01 21:19:01
-- 714b9ea7-a451-41a2-9b46-9a014ed8a105|5|text|FAILED|[VOICE] Да.|None|2026-05-01 21:18:46
-- 6017a8cf-74d0-4c9e-8fda-623296f8cf79|5|text|DONE|[VOICE] Да, хорошо.|Задача завершена. Продолжаем работу в рамках текущего чата.|2026-05-01 21:18:26
 
 ## MEMORY_DB_COUNTS
-- MEMORY_ROWS|1816
+- MEMORY_ROWS|1830
 
 ## LATEST_MEMORY_SAFE
-- topic_0_file_content_status_27cf8a24-47f5-4e08-a96d-8f7883c25ef3|{"ok": true, "reason": "INDEXED", "key": "topic_0_file_content_27cf8a24-47f5-4e08-a96d-8f7883c25ef3", "dedup": false, "k|2026-05-01T21:35:31.742540
-- topic_0_file_27cf8a24-47f5-4e08-a96d-8f7883c25ef3|{"task_id": "27cf8a24-47f5-4e08-a96d-8f7883c25ef3", "chat_id": "-1003725299009", "topic_id": 0, "file_id": "1CofrBxvyqMB|2026-05-01T21:35:30.860419
-- topic_0_file_content_status_b63cca84-2d7b-4026-8dfb-705c218c258a|{"ok": true, "reason": "INDEXED", "key": "topic_0_file_content_b63cca84-2d7b-4026-8dfb-705c218c258a", "dedup": false, "k|2026-05-01T21:30:30.254241
-- topic_0_file_b63cca84-2d7b-4026-8dfb-705c218c258a|{"task_id": "b63cca84-2d7b-4026-8dfb-705c218c258a", "chat_id": "-1003725299009", "topic_id": 0, "file_id": "18EopBDE_9f4|2026-05-01T21:30:29.330903
-- topic_2_archive_b218bb49|{"task_id": "b218bb49-cebd-4f00-8d2c-6cf2f59293c4", "chat_id": "-1003725299009", "topic_id": 2, "direction": "estimates"|2026-05-01T21:25:38.778525
-- topic_0_file_content_status_0ca7088c-3d02-41c4-843f-5107f97511fc|{"ok": true, "reason": "INDEXED", "key": "topic_0_file_content_0ca7088c-3d02-41c4-843f-5107f97511fc", "dedup": false, "k|2026-05-01T21:25:28.522822
-- topic_0_file_0ca7088c-3d02-41c4-843f-5107f97511fc|{"task_id": "0ca7088c-3d02-41c4-843f-5107f97511fc", "chat_id": "-1003725299009", "topic_id": 0, "file_id": "16o_euVmIvdK|2026-05-01T21:25:27.637853
-- topic_2_file_content_status_6a9c665e-6307-4247-a170-fb2847b9633d|{"ok": true, "reason": "INDEXED", "key": "topic_2_file_content_6a9c665e-6307-4247-a170-fb2847b9633d", "dedup": false, "k|2026-05-01T21:24:43.460812
-- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "file_id": "1bXXtuHRsXCu|2026-05-01T21:24:42.278158
-- topic_0_archive_66b9f841|{"task_id": "66b9f841-1826-442f-a87e-b85067a38dff", "chat_id": "-1003725299009", "topic_id": 0, "direction": "general_ch|2026-05-01T21:23:59.824671
-- topic_0_search_session_-1003725299009|{"chat_id": "-1003725299009", "topic_id": 0, "goal": "[VOICE] А где я тебе это скидывал? Можешь найти?", "criteria": {"c|2026-05-01T21:23:59.819688+00:00
-- topic_0_archive_5c19256b|{"task_id": "5c19256b-8425-46d7-b00f-4332a8f53e22", "chat_id": "-1003725299009", "topic_id": 0, "direction": "general_ch|2026-05-01T21:22:04.543882
+- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 10, "updated_at": "2026-05-01T22:05:43.157732+00:00", "files": [{"|2026-05-01T22:05:43.158027+00:00
+- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-01T22:05:43.143168+00:00", "files": [{"|2026-05-01T22:05:43.144369+00:00
+- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-01T22:05:43.119937+00:00
+- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "s|2026-05-01T22:05:43.119852+00:00
+- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-01T22:05:43.119634+00:00
+- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-01T22:05:43.119528+00:00
+- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-01T22:05:43.119438+00:00
+- topic_2_file_234e52f8-3ce8-4f2f-99c3-7cc22265a151|{"task_id": "234e52f8-3ce8-4f2f-99c3-7cc22265a151", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-01T22:05:43.119360+00:00
+- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_fil|2026-05-01T22:05:43.119158+00:00
+- topic_0_file_content_status_3e4355a4-540b-4c25-8eed-5a4cddfc7e17|{"ok": true, "reason": "INDEXED", "key": "topic_0_file_content_3e4355a4-540b-4c25-8eed-5a4cddfc7e17", "dedup": false, "k|2026-05-01T21:45:35.954924
+- topic_0_file_3e4355a4-540b-4c25-8eed-5a4cddfc7e17|{"task_id": "3e4355a4-540b-4c25-8eed-5a4cddfc7e17", "chat_id": "-1003725299009", "topic_id": 0, "file_id": "1lgz6TiPn4lW|2026-05-01T21:45:35.202082
+- topic_0_file_content_status_f435ae20-32ac-4a8e-b8cb-7b8d056614ad|{"ok": true, "reason": "INDEXED", "key": "topic_0_file_content_f435ae20-32ac-4a8e-b8cb-7b8d056614ad", "dedup": false, "k|2026-05-01T21:40:34.546003
 
 ## SEARCH_SESSIONS
 - topic_500_search_session_-1003725299009|{"chat_id": "-1003725299009", "topic_id": 500, "goal": "найди запчасть OEM 34116794300 новый тормозной диск BMW в СПб", "criteria": {"category": "AUTO_PARTS", "target": "запчасть O|2026-05-01T20:57:33.559044+00:00
 
 ## TIMELINE_INFO
 - path=/root/.areal-neva-core/data/memory_files/CHATS/-1003725299009__telegram/timeline.jsonl
-- bytes=530037
-- mtime_utc=2026-05-01T21:35:31.742759+00:00
+- bytes=533793
+- mtime_utc=2026-05-01T22:05:43.511906+00:00
 
 ## GIT_STATUS_SAFE
 M data/templates/index.json
@@ -66,8 +65,8 @@ M data/templates/index.json
 
 ## FILES_MANIFEST_SAFE
 - docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md|bytes=168322|sha256=0640b8349254cfb36f1143c1f195715014e2ca1b1b428943847fd1fd80d9d8fe
-- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md|bytes=35374|sha256=23255240c784cd0f98b3791d8ae7157aaa004efeba470c990d00bb6d5dbcdecb
-- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md|bytes=2013|sha256=246d14ea220f5ddd1eda3787387b51460d436de9b78ba3e562115fb9b2c928f7
+- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md|bytes=35865|sha256=bd47defe3a9cfb76498526ab8c82d49125a9d515897b9da75375cebb6321bddd
+- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md|bytes=2013|sha256=4623ed2bc04d14dd306ab667aa49fb0c0307ef61d7df68e5eb22383dcc774090
 - docs/CANON_FINAL/00_INDEX.md|bytes=808|sha256=999acb6bfdd6c7215f11d76342ea1b9f8cdf5715418064acb3716f33999c8af6
 - docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md|bytes=40765|sha256=e348f84dfc1a1dea957f64996a8780c4fe66dc1619252c02dce6594230c2661a
 - docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md|bytes=6714|sha256=1a439843e1eb214745752720c85b49adc48f1823765982960ce7b1e285947d84
@@ -77,7 +76,7 @@ M data/templates/index.json
 - docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md|bytes=9846|sha256=e9b63408cbfdd13c05ed9b174f3380d5067493e3815318661c81b30ba13be440
 - docs/ARCHITECTURE/SEARCH_MONOLITH_V1.md|bytes=16952|sha256=26676725c7608d217d6f9162526748875a7647f92320f64a5a0e10b5fd0afa28
 - docs/ARCHITECTURE/SEARCH_MONOLITH_V2.md|UNKNOWN
-- task_worker.py|bytes=140825|sha256=3da9e45d4a4e308a6c60d498caab6f095ac5a6e9ee62de5afa9964d82faf8fba
+- task_worker.py|bytes=146107|sha256=b7aae0e8c0ef22c2270d2d745cee2fe88d0795f8d92e0d980730cbd5cf672273
 - telegram_daemon.py|bytes=50299|sha256=3214209f6f5f507ffee95a2414a651d72b1490fe364266c876c380b745dee837
 - memory_api_server.py|bytes=2956|sha256=17550a64d4e256489801b49ef81f49c3619598f74a5f6d9d0feda3c79b6805d1
 - core/ai_router.py|bytes=22208|sha256=def3922d4afbdc845a83edd3be08837a34446d8eadb9472292c83c417c7fbe69
@@ -97,103 +96,103 @@ M data/templates/index.json
 29: from typing import Any, Dict, List, Optional, Tuple
 33: # === SEARCH_MONOLITH_V2_TASK_WORKER_IMPORT ===
 38: # === END SEARCH_MONOLITH_V2_TASK_WORKER_IMPORT ===
-40: from core.topic_meta_loader import load_topic_meta, is_what_is_this_question, build_topic_self_answer
-41: TOPIC_META_LOADER_WIRED = True
-43: TOPIC_META_LOADER_WIRED = False
-44: def load_topic_meta(t): return None
-46: def build_topic_self_answer(m): return ""
-47: # TOPIC_META_LOADER_V1_IMPORT
-48: from core.reply_sender import send_reply, send_reply_ex
-57: from core.topic_3008_engine import is_topic_3008 as _t3_check, detect_command as _t3_cmd, extract_code as _t3_extract, verify_code as _t3_verify, generate_code as _t3_generate  # TOPIC_3008_V1_WIRED
-76: from core.intake_offer_actions import needs_offer as _ioa_needs, get_offer_text as _ioa_text, parse_offer_reply as _ioa_parse  # INTAKE_OFFER_V1_WIRED
-155: from core.pin_manager import get_pin_context, save_pin
-156: from core.topic_drive_oauth import upload_file_to_topic
-367: # === FULLFIX_DIRECTION_KERNEL_STAGE_1_IMPORT ===
-375: # === FULLFIX_CAPABILITY_ROUTER_STAGE_2_IMPORT ===
-381: # === FULLFIX_CONTEXT_LOADER_STAGE_3_IMPORT ===
-387: # === FULLFIX_QUALITY_GATE_STAGE_4_IMPORT ===
-393: # === FULLFIX_SEARCH_ENGINE_STAGE_5_IMPORT ===
-399: # === FULLFIX_ARCHIVE_ENGINE_STAGE_6_IMPORT ===
-401: from core.archive_engine import ArchiveEngine as _Stage6Archive
-405: # === FULLFIX_FORMAT_ADAPTER_STAGE_7_IMPORT ===
-411: # === FULLFIX_TOPIC_AUTODISCOVERY_V2_IMPORT ===
-413: from core.topic_autodiscovery import process as _topic_autodiscovery, check_naming_timeout as _topic_naming_check
-415: _topic_autodiscovery = None
-416: _topic_naming_check = None
-417: # === END TOPIC_AUTO ===
-568: def _memory_insert_topic_entry_v1(chat_id: str, key: str, value: str) -> None:
-594: def _append_timeline_event_v1(chat_id: str, topic_id: int, task_id: str, kind: str, raw_input: str = "", result: str = "") -> None:
-604: "topic_id": int(topic_id or 0),
-635: (task_id, f"reply_sent:{kind}"),
-640: def _send_once(conn: sqlite3.Connection, task_id: str, chat_id: str, text: str, reply_to: Optional[int], kind: str) -> bool:
-643: ok = send_reply(chat_id=chat_id, text=text, reply_to_message_id=reply_to)
-645: _history(conn, task_id, f"reply_sent:{kind}")
-649: def _send_once_ex(conn: sqlite3.Connection, task_id: str, chat_id: str, text: str, reply_to: Optional[int], kind: str) -> Dict[str, Any]:
-652: res = send_reply_ex(chat_id=chat_id, text=text, reply_to_message_id=reply_to)
-656: _history(conn, task_id, f"reply_sent:{kind}")
-705: def _save_topic_role(chat_id: str, topic_id: int, role: str) -> None:
-712: key = f"topic_{topic_id}_role"
-723: def _load_memory_context(chat_id: str, topic_id: int) -> Tuple[str, str, str, str]:
-732: topic_prefix = f"topic_{int(topic_id)}_"
-742: (str(chat_id), f"{topic_prefix}*"),
-747: topic_role = ""
-748: topic_directions = ""
-791: if key.endswith("_role") and not topic_role:
-792: topic_role = value[:500]
-795: if not topic_role and (key.endswith("_assistant_output") or key.endswith("_task_summary")):
-804: topic_role = _clean(m.group(1), 500)
-806: if key.endswith("_directions") and not topic_directions:
-807: topic_directions = value[:1000]
-816: # === TOPIC_META_ROLE_INJECT_V1 ===
-817: if not topic_role and TOPIC_META_LOADER_WIRED:
-819: _tm = load_topic_meta(int(topic_id or 0))
-824: topic_role = f"Топик: {_tm_name} | Направление: {_tm_dir}"
-827: # === END TOPIC_META_ROLE_INJECT_V1 ===
-828: return "\n".join(short_memory[:20]), "\n".join(long_memory[:20]), topic_role, topic_directions  # MEMORY_LIMIT_20_V1
-833: def _load_archive_context(chat_id: str, topic_id: int, user_text: str) -> str:
-836: from core.archive_distributor import _load_archive_for_topic
-837: arc = _load_archive_for_topic(chat_id, topic_id, user_text, limit=5)
-876: if int(payload.get("topic_id", -1)) != int(topic_id):
-888: def _active_unfinished_context(conn: sqlite3.Connection, chat_id: str, topic_id: int, task_id: str) -> str:
-896: if "topic_id" in cols:
-897: where.append("COALESCE(topic_id,0)=?")
-898: params.append(int(topic_id))
-931: def _search_fact_context(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> str:
-939: if "topic_id" in cols:
-940: where.append("COALESCE(topic_id,0)=?")
-941: params.append(int(topic_id))
-966: def _save_memory(chat_id: str, topic_id: int, raw_input: str, result: str) -> None:
-998: prefix = f"topic_{int(topic_id)}_"
-1012: logger.info("save_memory_ok chat=%s topic=%s", chat_id, topic_id)
-1017: def _close_pin(conn: sqlite3.Connection, task_id: str) -> None:
-1018: if not _has_table(conn, "pin"):
-1021: "UPDATE pin SET state='CLOSED', updated_at=datetime('now') WHERE task_id=? AND state='ACTIVE'",
-1026: def _finalize_done(conn: sqlite3.Connection, task_id: str, chat_id: str, topic_id: int, reply_to: Optional[int]) -> None:
-1037: _save_memory(chat_id, topic_id, raw_input, result)
-1056: # CONFIRMATION_TIMEOUT_FIX_V1
-1059: UPDATE tasks SET state='FAILED', error_message='CONFIRMATION_TIMEOUT', updated_at=datetime('now')
-1062: AND COALESCE(raw_input,'') NOT LIKE '%retry_queue_healthcheck%'
-1063: AND COALESCE(result,'') NOT LIKE '%retry_queue_healthcheck%'
-1067: logger.warning("CONFIRMATION_TIMEOUT_FIX_V1_ERR %s", _ct_e)
-1068: # IN_PROGRESS_HARD_TIMEOUT_V1
-1076: f"SELECT id,chat_id,COALESCE(topic_id,0) AS topic_id,reply_to_message_id,raw_input FROM tasks WHERE {' AND '.join(_hw)}",
-1080: _htopic = int(_hr["topic_id"] or 0); _hreply = _hr["reply_to_message_id"]
-1083: _close_pin(conn, _htid); _history(conn, _htid, "state:FAILED:EXECUTION_TIMEOUT")
-1085: _append_timeline_event_v1(_hchat, _htopic, _htid, "execution_timeout", _s(_hr["raw_input"]), _hmsg)
-1088: _send_once(conn, _htid, _hchat, _hmsg, _hreply, "execution_timeout")
-1090: logger.warning("IN_PROGRESS_HARD_TIMEOUT_V1_ERR %s", _e)
-1103: SELECT id, chat_id, COALESCE(topic_id,0) AS topic_id, reply_to_message_id
-1113: reply_to = row["reply_to_message_id"]
-1115: _close_pin(conn, task_id)
-1118: _send_once(conn, task_id, tg_chat_id, "Задача не выполнена. Повтори или уточни запрос", reply_to, "stale_failed")
-1136: SELECT id, chat_id, COALESCE(topic_id,0) AS topic_id, reply_to_message_id, result, raw_input, input_type, updated_at, created_at
-1161: _close_pin(conn, row["id"])
-1168: _close_pin(conn, row["id"])
-1192: _close_pin(conn, row["id"])
-1197: _close_pin(conn, row["id"])
-1202: UPDATE pin
-1219: # === FULLFIX_13D_TASK_WORKER_SEND_BELT ===
-1220: # reply_sender also strips MANIFEST globally
+54: from core.topic_meta_loader import load_topic_meta, is_what_is_this_question, build_topic_self_answer
+55: TOPIC_META_LOADER_WIRED = True
+57: TOPIC_META_LOADER_WIRED = False
+58: def load_topic_meta(t): return None
+60: def build_topic_self_answer(m): return ""
+61: # TOPIC_META_LOADER_V1_IMPORT
+62: from core.reply_sender import send_reply, send_reply_ex
+71: from core.topic_3008_engine import is_topic_3008 as _t3_check, detect_command as _t3_cmd, extract_code as _t3_extract, verify_code as _t3_verify, generate_code as _t3_generate  # TOPIC_3008_V1_WIRED
+90: from core.intake_offer_actions import needs_offer as _ioa_needs, get_offer_text as _ioa_text, parse_offer_reply as _ioa_parse  # INTAKE_OFFER_V1_WIRED
+169: from core.pin_manager import get_pin_context, save_pin
+170: from core.topic_drive_oauth import upload_file_to_topic
+381: # === FULLFIX_DIRECTION_KERNEL_STAGE_1_IMPORT ===
+389: # === FULLFIX_CAPABILITY_ROUTER_STAGE_2_IMPORT ===
+395: # === FULLFIX_CONTEXT_LOADER_STAGE_3_IMPORT ===
+401: # === FULLFIX_QUALITY_GATE_STAGE_4_IMPORT ===
+407: # === FULLFIX_SEARCH_ENGINE_STAGE_5_IMPORT ===
+413: # === FULLFIX_ARCHIVE_ENGINE_STAGE_6_IMPORT ===
+415: from core.archive_engine import ArchiveEngine as _Stage6Archive
+419: # === FULLFIX_FORMAT_ADAPTER_STAGE_7_IMPORT ===
+425: # === FULLFIX_TOPIC_AUTODISCOVERY_V2_IMPORT ===
+427: from core.topic_autodiscovery import process as _topic_autodiscovery, check_naming_timeout as _topic_naming_check
+429: _topic_autodiscovery = None
+430: _topic_naming_check = None
+431: # === END TOPIC_AUTO ===
+582: def _memory_insert_topic_entry_v1(chat_id: str, key: str, value: str) -> None:
+608: def _append_timeline_event_v1(chat_id: str, topic_id: int, task_id: str, kind: str, raw_input: str = "", result: str = "") -> None:
+618: "topic_id": int(topic_id or 0),
+649: (task_id, f"reply_sent:{kind}"),
+654: def _send_once(conn: sqlite3.Connection, task_id: str, chat_id: str, text: str, reply_to: Optional[int], kind: str) -> bool:
+657: ok = send_reply(chat_id=chat_id, text=text, reply_to_message_id=reply_to)
+659: _history(conn, task_id, f"reply_sent:{kind}")
+663: def _send_once_ex(conn: sqlite3.Connection, task_id: str, chat_id: str, text: str, reply_to: Optional[int], kind: str) -> Dict[str, Any]:
+666: res = send_reply_ex(chat_id=chat_id, text=text, reply_to_message_id=reply_to)
+670: _history(conn, task_id, f"reply_sent:{kind}")
+719: def _save_topic_role(chat_id: str, topic_id: int, role: str) -> None:
+726: key = f"topic_{topic_id}_role"
+737: def _load_memory_context(chat_id: str, topic_id: int) -> Tuple[str, str, str, str]:
+746: topic_prefix = f"topic_{int(topic_id)}_"
+756: (str(chat_id), f"{topic_prefix}*"),
+761: topic_role = ""
+762: topic_directions = ""
+805: if key.endswith("_role") and not topic_role:
+806: topic_role = value[:500]
+809: if not topic_role and (key.endswith("_assistant_output") or key.endswith("_task_summary")):
+818: topic_role = _clean(m.group(1), 500)
+820: if key.endswith("_directions") and not topic_directions:
+821: topic_directions = value[:1000]
+830: # === TOPIC_META_ROLE_INJECT_V1 ===
+831: if not topic_role and TOPIC_META_LOADER_WIRED:
+833: _tm = load_topic_meta(int(topic_id or 0))
+838: topic_role = f"Топик: {_tm_name} | Направление: {_tm_dir}"
+841: # === END TOPIC_META_ROLE_INJECT_V1 ===
+842: return "\n".join(short_memory[:20]), "\n".join(long_memory[:20]), topic_role, topic_directions  # MEMORY_LIMIT_20_V1
+847: def _load_archive_context(chat_id: str, topic_id: int, user_text: str) -> str:
+850: from core.archive_distributor import _load_archive_for_topic
+851: arc = _load_archive_for_topic(chat_id, topic_id, user_text, limit=5)
+890: if int(payload.get("topic_id", -1)) != int(topic_id):
+902: def _active_unfinished_context(conn: sqlite3.Connection, chat_id: str, topic_id: int, task_id: str) -> str:
+910: if "topic_id" in cols:
+911: where.append("COALESCE(topic_id,0)=?")
+912: params.append(int(topic_id))
+945: def _search_fact_context(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> str:
+953: if "topic_id" in cols:
+954: where.append("COALESCE(topic_id,0)=?")
+955: params.append(int(topic_id))
+980: def _save_memory(chat_id: str, topic_id: int, raw_input: str, result: str) -> None:
+1012: prefix = f"topic_{int(topic_id)}_"
+1026: logger.info("save_memory_ok chat=%s topic=%s", chat_id, topic_id)
+1031: def _close_pin(conn: sqlite3.Connection, task_id: str) -> None:
+1032: if not _has_table(conn, "pin"):
+1035: "UPDATE pin SET state='CLOSED', updated_at=datetime('now') WHERE task_id=? AND state='ACTIVE'",
+1040: def _finalize_done(conn: sqlite3.Connection, task_id: str, chat_id: str, topic_id: int, reply_to: Optional[int]) -> None:
+1051: _save_memory(chat_id, topic_id, raw_input, result)
+1070: # CONFIRMATION_TIMEOUT_FIX_V1
+1073: UPDATE tasks SET state='FAILED', error_message='CONFIRMATION_TIMEOUT', updated_at=datetime('now')
+1076: AND COALESCE(raw_input,'') NOT LIKE '%retry_queue_healthcheck%'
+1077: AND COALESCE(result,'') NOT LIKE '%retry_queue_healthcheck%'
+1081: logger.warning("CONFIRMATION_TIMEOUT_FIX_V1_ERR %s", _ct_e)
+1082: # IN_PROGRESS_HARD_TIMEOUT_V1
+1090: f"SELECT id,chat_id,COALESCE(topic_id,0) AS topic_id,reply_to_message_id,raw_input FROM tasks WHERE {' AND '.join(_hw)}",
+1094: _htopic = int(_hr["topic_id"] or 0); _hreply = _hr["reply_to_message_id"]
+1097: _close_pin(conn, _htid); _history(conn, _htid, "state:FAILED:EXECUTION_TIMEOUT")
+1099: _append_timeline_event_v1(_hchat, _htopic, _htid, "execution_timeout", _s(_hr["raw_input"]), _hmsg)
+1102: _send_once(conn, _htid, _hchat, _hmsg, _hreply, "execution_timeout")
+1104: logger.warning("IN_PROGRESS_HARD_TIMEOUT_V1_ERR %s", _e)
+1117: SELECT id, chat_id, COALESCE(topic_id,0) AS topic_id, reply_to_message_id
+1127: reply_to = row["reply_to_message_id"]
+1129: _close_pin(conn, task_id)
+1132: _send_once(conn, task_id, tg_chat_id, "Задача не выполнена. Повтори или уточни запрос", reply_to, "stale_failed")
+1150: SELECT id, chat_id, COALESCE(topic_id,0) AS topic_id, reply_to_message_id, result, raw_input, input_type, updated_at, created_at
+1175: _close_pin(conn, row["id"])
+1182: _close_pin(conn, row["id"])
+1206: _close_pin(conn, row["id"])
+1211: _close_pin(conn, row["id"])
+1216: UPDATE pin
+1233: # === FULLFIX_13D_TASK_WORKER_SEND_BELT ===
+1234: # reply_sender also strips MANIFEST globally
 ...TRUNCATED_MARKERS...
 
 ## telegram_daemon.py
