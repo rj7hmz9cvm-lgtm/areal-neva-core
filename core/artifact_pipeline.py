@@ -324,6 +324,45 @@ async def analyze_downloaded_file(local_path: str, file_name: str, mime_type: st
             "artifact_name": f"{os.path.splitext(os.path.basename(file_name))[0]}_estimate.xlsx",
         }
 
+    # === DWG_DXF_PROJECT_CLOSE_V1_CALL ===
+    if kind == "drawing":
+        try:
+            from core.dwg_engine import process_drawing_file
+            data = process_drawing_file(
+                local_path=local_path,
+                file_name=file_name,
+                mime_type=mime_type,
+                user_text=user_text,
+                topic_role=topic_role,
+                task_id="artifact",
+                topic_id=0,
+            )
+            if data and data.get("success"):
+                return {
+                    "summary": _clean(data.get("summary") or "DWG/DXF файл обработан", 4000),
+                    "artifact_path": data.get("artifact_path"),
+                    "artifact_name": data.get("artifact_name") or f"{os.path.splitext(os.path.basename(file_name))[0]}_dwg_dxf_project_package.zip",
+                    "extra_artifacts": data.get("extra_artifacts") or [],
+                    "engine": "DWG_DXF_PROJECT_CLOSE_V1",
+                    "model": data.get("model") or {},
+                }
+            return {
+                "summary": _clean((data or {}).get("summary") or (data or {}).get("error") or "DWG/DXF файл не обработан", 3000),
+                "artifact_path": "",
+                "artifact_name": "",
+                "engine": "DWG_DXF_PROJECT_CLOSE_V1",
+                "error": (data or {}).get("error") or "DRAWING_PROCESS_FAILED",
+            }
+        except Exception as e:
+            return {
+                "summary": f"DWG/DXF обработка завершилась ошибкой: {e}",
+                "artifact_path": "",
+                "artifact_name": "",
+                "engine": "DWG_DXF_PROJECT_CLOSE_V1",
+                "error": str(e)[:300],
+            }
+    # === END_DWG_DXF_PROJECT_CLOSE_V1_CALL ===
+
     if kind == "document":
         ext = os.path.splitext((file_name or "").lower())[1]
         if ext == ".pdf":

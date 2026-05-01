@@ -2570,3 +2570,39 @@ except Exception:
     async def create_full_project_documentation(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
         return await create_project_pdf_dxf_artifact(raw_input, task_id, topic_id, template_hint, *args, **kwargs)
 # === END FULLFIX_12_COMPACT_PROJECT_PDF_LAYOUT_PUBLIC_OVERRIDE ===
+
+
+# === DWG_DXF_PROJECT_ENGINE_ADAPTER_V1 ===
+async def process_dwg_dxf_project_file(file_path: str, task_id: str, topic_id: int, raw_input: str = "", file_name: str = "", mime_type: str = "") -> dict:
+    """
+    Project-engine adapter for DWG/DXF files.
+    This keeps design files inside the project contour instead of returning None in artifact_pipeline.
+    """
+    try:
+        from core.dwg_engine import process_drawing_file
+        res = process_drawing_file(
+            local_path=file_path,
+            file_name=file_name or file_path,
+            mime_type=mime_type,
+            user_text=raw_input,
+            topic_role="проектирование",
+            task_id=task_id,
+            topic_id=topic_id,
+        )
+        if not res.get("success"):
+            return {"success": False, "error": res.get("error") or "DWG_DXF_PROJECT_FAILED"}
+        return {
+            "success": True,
+            "engine": "DWG_DXF_PROJECT_CLOSE_V1",
+            "section": ((res.get("model") or {}).get("section") or "кр"),
+            "summary": res.get("summary") or "",
+            "artifact_path": res.get("artifact_path") or "",
+            "docx_path": res.get("docx_path") or "",
+            "xlsx_path": res.get("xlsx_path") or "",
+            "json_path": res.get("json_path") or "",
+            "model": res.get("model") or {},
+        }
+    except Exception as e:
+        return {"success": False, "error": f"DWG_DXF_PROJECT_ENGINE_ADAPTER_ERR:{e}"}
+# === END_DWG_DXF_PROJECT_ENGINE_ADAPTER_V1 ===
+
