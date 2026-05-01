@@ -515,6 +515,25 @@ async def analyze_downloaded_file(local_path: str, file_name: str, mime_type: st
     sources = [file_name]
 
     if kind == "image":
+        # === OCR_TABLE_TO_EXCEL_FULL_CLOSE_V1_ROUTE ===
+        try:
+            _ocr_hay = f"{file_name} {mime_type} {user_text} {topic_role}".lower()
+            if any(_x in _ocr_hay for _x in ("смет", "таблиц", "вор", "excel", "xlsx", "расчет", "расчёт")):
+                from core.ocr_table_engine import image_table_to_excel
+                _ocr = await image_table_to_excel(local_path, _artifact_task_id(file_name, "ocr_table"), user_text, 0)
+                if _ocr and _ocr.get("success"):
+                    return {
+                        "summary": _clean(_ocr.get("summary") or "Фото таблицы распознано", 4000),
+                        "artifact_path": _ocr.get("artifact_path"),
+                        "artifact_name": _ocr.get("artifact_name") or f"{os.path.splitext(os.path.basename(file_name))[0]}_ocr_table_package.zip",
+                        "extra_artifacts": _ocr.get("extra_artifacts") or [],
+                        "engine": "OCR_TABLE_TO_EXCEL_FULL_CLOSE_V1",
+                        "model": {"rows": _ocr.get("rows") or []},
+                    }
+        except Exception as _ocr_e:
+            import logging as _ocr_log
+            _ocr_log.getLogger(__name__).warning("OCR_TABLE_TO_EXCEL_FULL_CLOSE_V1_ROUTE_ERR %s", _ocr_e)
+        # === END_OCR_TABLE_TO_EXCEL_FULL_CLOSE_V1_ROUTE ===
         # === DOMAIN_TECHNADZOR_IMAGE_ASYNC_VISION_V2 ===
         flags = _domain_flags(file_name, mime_type, user_text, topic_role)
         vision_text = ""

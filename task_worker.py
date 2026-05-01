@@ -30,6 +30,18 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from dotenv import load_dotenv
 from core.ai_router import process_ai_task
+# === CANON_REMAINING_CODE_FULL_CLOSE_V1_IMPORT ===
+try:
+    from core.engine_contract import validate_engine_result, result_to_user_text
+    from core.active_dialog_state import maybe_handle_active_dialog, save_dialog_event
+    from core.template_workflow import maybe_handle_template_workflow
+except Exception as _canon_import_err:
+    validate_engine_result = None
+    result_to_user_text = None
+    maybe_handle_active_dialog = None
+    save_dialog_event = None
+    maybe_handle_template_workflow = None
+# === END_CANON_REMAINING_CODE_FULL_CLOSE_V1_IMPORT ===
 # === SEARCH_MONOLITH_V2_TASK_WORKER_IMPORT ===
 try:
     from core.search_session import is_search_clarification_output as _search_v2_is_clarification
@@ -1367,6 +1379,28 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
     except Exception as _ft_e:
         logger.error("FILE_TECH_CONTOUR_FOLLOWUP_V2_ERR task=%s err=%s", task_id, _ft_e)
     # === END FILE_TECH_CONTOUR_FOLLOWUP_V2 ===
+    # === ACTIVE_DIALOG_STATE_V1_TASK_WORKER_HOOK ===
+    try:
+        for _canon_handler in (maybe_handle_template_workflow, maybe_handle_active_dialog):
+            if _canon_handler is None:
+                continue
+            _canon_result = _canon_handler(conn, task, chat_id, topic_id)
+            if _canon_result and _canon_result.get("handled"):
+                _canon_state = str(_canon_result.get("state") or "DONE")
+                _canon_text = str(_canon_result.get("result") or "")
+                _canon_error = str(_canon_result.get("error") or "")
+                _update_task(conn, task_id, state=_canon_state, result=_canon_text, error_message=_canon_error)
+                _history(conn, task_id, str(_canon_result.get("event") or "CANON_REMAINING_CODE_FULL_CLOSE_V1:DONE"))
+                try:
+                    if save_dialog_event is not None:
+                        save_dialog_event(chat_id, topic_id, str(_canon_result.get("event") or "event"), _canon_result)
+                except Exception as _sd_e:
+                    logger.warning("ACTIVE_DIALOG_STATE_V1_SAVE_ERR %s", _sd_e)
+                return
+    except Exception as _ads_e:
+        logger.warning("ACTIVE_DIALOG_STATE_V1_TASK_WORKER_HOOK_ERR task=%s err=%s", task_id, _ads_e)
+    # === END_ACTIVE_DIALOG_STATE_V1_TASK_WORKER_HOOK ===
+
     # === MEMORY_QUERY_GUARD_V1 ===
     try:
         _mq_low = str(raw_input or "").strip().lower().rstrip("!?. ")
@@ -2792,6 +2826,28 @@ async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_
                     return
             except Exception as _e: logger.warning("SEARCH_V2_CLARIFICATION_HANDLER_ERR %s", _e)
             # === END SEARCH_MONOLITH_V2_CLARIFICATION_HANDLER ===
+            # === UNIFIED_ENGINE_RESULT_VALIDATOR_V1_TASK_WORKER_AI_RESULT ===
+            try:
+                if validate_engine_result is not None:
+                    _payload_for_uv = locals().get("payload", {}) or {}
+                    _raw_for_uv = ""
+                    try:
+                        _raw_for_uv = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                    except Exception:
+                        _raw_for_uv = str(_payload_for_uv.get("raw_input") or _payload_for_uv.get("user_text") or "")
+                    _input_type_for_uv = ""
+                    try:
+                        _input_type_for_uv = str(task["input_type"] if "input_type" in task.keys() else "")
+                    except Exception:
+                        _input_type_for_uv = str(_payload_for_uv.get("input_type") or "")
+                    _uv = validate_engine_result({"summary": ai_result, "engine": "AI_ROUTER"}, input_type=_input_type_for_uv, user_text=_raw_for_uv, topic_id=topic_id)
+                    if not _uv.get("ok"):
+                        _update_task(conn, task_id, state="FAILED", result="", error_message="UNIFIED_ENGINE_RESULT_VALIDATOR_V1:" + str(_uv.get("reason") or "INVALID"))
+                        _history(conn, task_id, "UNIFIED_ENGINE_RESULT_VALIDATOR_V1:FAILED:" + str(_uv.get("reason") or "INVALID"))
+                        return
+            except Exception as _uv_e:
+                logger.warning("UNIFIED_ENGINE_RESULT_VALIDATOR_V1_ERR task=%s err=%s", task_id, _uv_e)
+            # === END_UNIFIED_ENGINE_RESULT_VALIDATOR_V1_TASK_WORKER_AI_RESULT ===
             _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=ai_result, error_message="")
         else:
             _update_task(conn, task_id, state="FAILED", result=ai_result, error_message="FORBIDDEN_PHRASE")
