@@ -2163,6 +2163,7 @@ async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_
     }
 
     try:
+        ai_result = None  # AI_RESULT_INIT_V1
         assigned_role = _detect_role_assignment(raw_input)
         if assigned_role:
             _save_topic_role(chat_id, topic_id, assigned_role)
@@ -2644,6 +2645,7 @@ def _download_from_drive(file_id: str, local_path: str) -> bool:
 async def _handle_drive_file(conn, task, chat_id, topic_id):
     import json, os
     task_id = task["id"]
+    input_type = "drive_file"  # INPUT_TYPE_DRIVE_FIX_V1
     raw_input = task["raw_input"]
     try:
         data = json.loads(raw_input)
