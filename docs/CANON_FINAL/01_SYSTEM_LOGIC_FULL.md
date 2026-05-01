@@ -499,3 +499,44 @@ AI_ORCHESTRA/chat_-1003725299009/topic_2,5,11,210,500,794,961,3008,4569,6104/
 
 ### §16.7 ТРЕБУЕТ LIVE-ТЕСТА
 Voice confirm | INTAKE_OFFER_ACTIONS | Estimate PDF→Excel | Technadzor фото→акт | DUPLICATE_GUARD | MULTI_FILE | LINK_INTAKE
+
+---
+## §17 ЖИВАЯ ПАМЯТЬ, ЛОГИКА ОТВЕТОВ, ФАЙЛЫ — КАНОН 01.05.2026
+
+### §17.1 ТРИ СЛОЯ ПАМЯТИ
+СЛОЙ 1 SHORT: core.db — _active_unfinished_context()
+СЛОЙ 2 LONG: memory.db — _save_memory() после каждого DONE. Ключи: topic_N_assistant_output | topic_N_task_summary | topic_N_user_input
+СЛОЙ 3 ARCHIVE: memory.db + timeline.jsonl — archive_engine → POST /archive. Ключи: topic_N_archive_TASKID. Timeline пишется через TELEGRAM_TIMELINE_APPEND_V1
+ИЗОЛЯЦИЯ: chat_id + topic_id — всегда оба. Чужие топики запрещены.
+
+### §17.2 ПОРЯДОК _handle_new
+ШАГ 0: HEALTHCHECK_GUARD → CANCELLED
+ШАГ 1: ACTIVE_TASK_RESOLVER — reply/confirm/revision/intent
+ШАГ 2: MEMORY_QUERY_GUARD_V1 — "что обсуждали/делали/было/неделю назад/апреля/напомни/помнишь" → archive_context → DeepSeek → DONE (не попадает в FULLFIX_10)
+ШАГ 3: FULLFIX_16 — короткие статус-запросы ≤35 символов
+ШАГ 4: FULLFIX_14/13A — estimate/technadzor
+ШАГ 5: FULLFIX_19 — project guard
+ШАГ 6: FULLFIX_10 — project/estimate engine
+ШАГ 7: AI_ROUTER — DeepSeek + полный контекст памяти
+
+### §17.3 ФАЙЛОВЫЙ ПРИЁМ
+Без caption → меню → NEEDS_CONTEXT → reply → engine
+С caption → сразу IN_PROGRESS
+Source guard ДО create_task: google_drive/healthcheck → CANCELLED
+Voice → STT → "[VOICE] текст" — идентично тексту. На Drive не грузится.
+Drive файл → DRIVE_FILE_MEMORY_INDEX_V1 → topic_N_file_TASKID в memory.db
+Повторный файл → FILE_DUPLICATE_MEMORY_GUARD_V1 → "Файл уже есть"
+
+### §17.4 WATCHDOG
+AWAITING_CONFIRMATION > 30 мин → FAILED:CONFIRMATION_TIMEOUT
+IN_PROGRESS > 15 мин по created_at → FAILED:EXECUTION_TIMEOUT (IN_PROGRESS_HARD_TIMEOUT_V1)
+STALE_TIMEOUT = 600 сек по updated_at
+
+### §17.5 ПАТЧИ 01.05.2026
+MEMORY_QUERY_GUARD_V1 | IN_PROGRESS_HARD_TIMEOUT_V1 | ARCHIVE_DEDUP_BY_KEY_V1
+DRIVE_FILE_MEMORY_INDEX_V1 | FILE_DUPLICATE_MEMORY_GUARD_V1
+TELEGRAM_TIMELINE_APPEND_V1 | LIVE_MEMORY_HELPERS_V1
+
+### §17.6 НЕ РЕАЛИЗОВАНО
+Drive содержимое файлов → автоиндексация в memory.db
+Telegram история → автосинхронизация
