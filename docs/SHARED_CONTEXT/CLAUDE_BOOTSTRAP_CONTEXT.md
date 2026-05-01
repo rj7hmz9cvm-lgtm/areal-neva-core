@@ -1,3 +1,89 @@
+# CLAUDE_BOOTSTRAP_CONTEXT
+
+SYSTEM: AREAL-NEVA ORCHESTRA
+MODE: FACT_ONLY / ZERO_ASSUMPTIONS / GITHUB_SSOT / CANON_LOCK
+PURPOSE: one-file bootstrap for Claude and external LLMs
+GENERATED_AT_UTC: 2026-05-01T21:06:18.118060+00:00
+GIT_BRANCH: main
+GIT_SHA: 35a2a3ac35d8ba6e26c43d766d4730bb88d3cb59
+RAW_URL: https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md
+
+# CLAUDE_OPERATING_PROTOCOL_CANON_LOCK_V3
+
+CRITICAL:
+This file is the mandatory single bootstrap context for Claude / external LLM work on AREAL-NEVA ORCHESTRA
+
+RAW_URL:
+https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md
+
+IF THIS FILE IS NOT READ:
+Answer only:
+CLAUDE_BOOTSTRAP_CONTEXT_UNAVAILABLE
+
+FACT SOURCE ORDER:
+1. Current user message and provided terminal output
+2. This CLAUDE_BOOTSTRAP_CONTEXT
+3. GitHub SSOT files listed in SOURCE_INDEX
+4. Live diagnostics/logs/code snippets explicitly provided by user
+5. UNKNOWN
+
+FORBIDDEN:
+- inventing facts
+- relying on old chat memory if bootstrap contradicts it
+- answering from general memory when GitHub SSOT is required
+- changing architecture without explicit user command
+- touching secrets, .env, credentials, token files, sessions
+- modifying files outside allowed task scope
+- declaring DONE without verification
+- mixing topic memory
+- treating topic_0 as a project topic
+- creating broad rewrites when a surgical patch is required
+
+MANDATORY PATCH ORDER:
+1. DIAGNOSTICS
+2. BACKUP
+3. PATCH
+4. PY_COMPILE
+5. RESTART
+6. LOGS
+7. DB VERIFY
+8. GIT STATUS
+9. COMMIT/PUSH
+10. FINAL VERIFY
+
+MANDATORY FINAL VERIFY FOR SYSTEM CHANGES:
+- syntax OK
+- services active
+- no fatal logs
+- DB open task count checked
+- memory write checked if memory was touched
+- Git push OK
+- context_aggregator.py still tracked
+- no secrets committed
+
+CANON LOCK:
+Claude must treat this file as session memory, project memory, and operational contract
+Claude must not say it cannot remember if this file is available
+Claude must reload this file at start of each new session
+
+SOURCE_INDEX:
+- docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md | bytes=168322 | sha256=0640b8349254cfb36f1143c1f195715014e2ca1b1b428943847fd1fd80d9d8fe
+- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md | bytes=35341 | sha256=2ad87149e4bb44c6c30f6468be6395c75dd8afa02f1803a33ab2ac39a800437d
+- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md | bytes=74 | sha256=1a4c8e19e206a16b41b7d761d30cb115f9e4d965bc68e3f326b02dcb8c757944
+- docs/CANON_FINAL/00_INDEX.md | bytes=808 | sha256=999acb6bfdd6c7215f11d76342ea1b9f8cdf5715418064acb3716f33999c8af6
+- docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md | bytes=40765 | sha256=e348f84dfc1a1dea957f64996a8780c4fe66dc1619252c02dce6594230c2661a
+- docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md | bytes=6714 | sha256=1a439843e1eb214745752720c85b49adc48f1823765982960ce7b1e285947d84
+- docs/HANDOFFS/LATEST_HANDOFF.md | bytes=14374 | sha256=a6e9e020ecaa9bbdc4fc4bd482480f94cb43dec2d8025200e7728aabb3971489
+- docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md | bytes=7393 | sha256=097209d23a01f15125b0711a85458f986e97eed44f8fb603f354df1e3b495171
+- docs/REPORTS/NOT_CLOSED.md | bytes=23423 | sha256=a89262813d94d7cf62284fc31a1e8476a0cc354061745591fca707f3d08bf969
+- docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md | bytes=9846 | sha256=e9b63408cbfdd13c05ed9b174f3380d5067493e3815318661c81b30ba13be440
+- docs/ARCHITECTURE/SEARCH_MONOLITH_V1.md | bytes=16952 | sha256=26676725c7608d217d6f9162526748875a7647f92320f64a5a0e10b5fd0afa28
+- docs/ARCHITECTURE/SEARCH_MONOLITH_V2.md | bytes=65 | sha256=7405fb3735184d38c6ecdb2e36a66725f3bc4b02159900ac599aebfbcc9b7e20
+
+
+========================================================================================================================
+BEGIN_FILE: docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md
+========================================================================================================================
 # ONE_SHARED_CONTEXT
 updated_at: 2026-05-01T10:08:54.797702+00:00
 
@@ -3907,6 +3993,535 @@ processed_updates: (дедупликация)
 ПРОХОД 6 — Technadzor contour                 (technadzor_engine)
 ПРОХОД 7 — Project engine end-to-end          (project_engine, после template_manager)
 ```
+========================================================================================================================
+END_FILE: docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md
+========================================================================================================================
+
+
+========================================================================================================================
+BEGIN_FILE: docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md
+========================================================================================================================
+# SAFE_RUNTIME_SNAPSHOT
+generated_at_utc: 2026-05-01T21:06:18.081264+00:00
+git_branch: main
+git_head_short: 35a2a3a
+git_head_full: 35a2a3ac35d8ba6e26c43d766d4730bb88d3cb59
+
+## SERVICES
+- areal-task-worker: active
+- telegram-ingress: active
+- areal-memory-api: active
+- areal-claude-bootstrap-aggregator.timer: inactive
+
+## CORE_DB_STATE_COUNTS
+- FAILED|2828
+- CANCELLED|617
+- DONE|408
+- ARCHIVED|381
+- OPEN_TASKS|0
+
+## LATEST_TASKS_SAFE
+- 99ee25cb-ddb7-4f77-8c33-68153401b86b|0|drive_file|CANCELLED|{"file_id": "1cROScm8QFQCzujHoQP4TRGfl0aH4AWaK", "file_name": "tmp283wjqn0.txt",|None|2026-05-01 21:05:19
+- f1598e27-423c-4311-bc6e-dd98e8f0080e|0|drive_file|CANCELLED|{"file_id": "1ywn0KsVa7adaszgLTcBqJoCUeSCNJzEt", "file_name": "tmp_jsxeand.txt",|None|2026-05-01 21:00:17
+- c471a243-d0d3-474f-9137-7e747b1165dd|0|drive_file|CANCELLED|{"file_id": "1K_ZPrG4TBIiNlB4zdhT_HiejKaftz9tI", "file_name": "tmp8pf7qonf.txt",|None|2026-05-01 20:55:13
+- 774cec07-377b-4185-baf3-0683375775cc|0|drive_file|CANCELLED|{"file_id": "1pY4cdep5GBJ47hKJ-iq3PXTlx_pSWOK8", "file_name": "tmpx7f7e_0t.txt",|None|2026-05-01 20:50:12
+- dc3aff31-116b-47f0-87c2-e29e74a297b0|0|drive_file|CANCELLED|{"file_id": "1y9isA-XP9pDTBDsWWBfm9tYb2L0jm7X_", "file_name": "tmp_ftmuoks.txt",|None|2026-05-01 20:45:10
+- 511cb7d3-2d68-4293-b485-1f30466b35a9|0|drive_file|CANCELLED|{"file_id": "1l-lnhghaSjydPyP0qzz8WSBPa3IcMFaA", "file_name": "tmpj8gj0oq5.txt",|None|2026-05-01 20:40:07
+- 50fa28be-b8ec-45fe-8ceb-e1f20d0f28e3|0|drive_file|CANCELLED|{"file_id": "1nAzihykDKjdKLqgABjpNsDlHlsa4pilQ", "file_name": "tmpgapyq9p1.txt",|None|2026-05-01 20:35:06
+- ebafe1fa-da57-4ed0-a76a-21bd6bb75d25|0|drive_file|CANCELLED|{"file_id": "1LC7JEXpgYZ2YSZ_uies7-sN6AHZ3HsOM", "file_name": "tmphuiamdz7.txt",|None|2026-05-01 20:30:02
+- 42731e09-14b2-43de-9ca2-e452606a1169|0|drive_file|CANCELLED|{"file_id": "1VEy-A5WbfxdC0-JeFSU0Lv2mNBJslVKT", "file_name": "tmpwoc0k3do.txt",|None|2026-05-01 20:25:02
+- 38da6113-8fef-4bd1-afe5-a28cdaaf8376|0|drive_file|CANCELLED|{"file_id": "1oDlb1jefIO05KuSy2AtRUji9yx6Q-Rs0", "file_name": "tmpspwsi13h.txt",|None|2026-05-01 20:19:58
+- 4c743778-1932-4c25-96d5-6a12e94c57d8|0|drive_file|CANCELLED|{"file_id": "1Diz_ET-qYtUdIomn2WoIOqbvEN4R5weh", "file_name": "tmpejiw45sx.txt",|None|2026-05-01 20:14:56
+- a1fd435f-9c6f-4d0e-8ac2-d6e4d2f5619d|0|drive_file|CANCELLED|{"file_id": "1BjnZVH20jPQ6hOk4G5jOGWNmnfHqGOyF", "file_name": "tmppf903k7p.txt",|None|2026-05-01 20:09:55
+
+## MEMORY_DB_COUNTS
+- MEMORY_ROWS|1791
+
+## LATEST_MEMORY_SAFE
+- topic_0_file_99ee25cb-ddb7-4f77-8c33-68153401b86b|{"task_id": "99ee25cb-ddb7-4f77-8c33-68153401b86b", "chat_id": "-1003725299009", "topic_id": 0, "file_id": "1cROScm8QFQC|2026-05-01T21:05:19.110683
+- topic_0_file_f1598e27-423c-4311-bc6e-dd98e8f0080e|{"task_id": "f1598e27-423c-4311-bc6e-dd98e8f0080e", "chat_id": "-1003725299009", "topic_id": 0, "file_id": "1ywn0KsVa7ad|2026-05-01T21:00:17.024702
+- topic_500_search_session_-1003725299009|{"chat_id": "-1003725299009", "topic_id": 500, "goal": "найди запчасть OEM 34116794300 новый тормозной диск BMW в СПб", |2026-05-01T20:57:33.559044+00:00
+- topic_0_file_c471a243-d0d3-474f-9137-7e747b1165dd|{"task_id": "c471a243-d0d3-474f-9137-7e747b1165dd", "chat_id": "-1003725299009", "topic_id": 0, "file_id": "1K_ZPrG4TBIi|2026-05-01T20:55:13.866815
+- topic_0_file_774cec07-377b-4185-baf3-0683375775cc|{"task_id": "774cec07-377b-4185-baf3-0683375775cc", "chat_id": "-1003725299009", "topic_id": 0, "file_id": "1pY4cdep5GBJ|2026-05-01T20:50:12.470027
+- topic_0_file_dc3aff31-116b-47f0-87c2-e29e74a297b0|{"task_id": "dc3aff31-116b-47f0-87c2-e29e74a297b0", "chat_id": "-1003725299009", "topic_id": 0, "file_id": "1y9isA-XP9pD|2026-05-01T20:45:10.656747
+- topic_0_file_511cb7d3-2d68-4293-b485-1f30466b35a9|{"task_id": "511cb7d3-2d68-4293-b485-1f30466b35a9", "chat_id": "-1003725299009", "topic_id": 0, "file_id": "1l-lnhghaSjy|2026-05-01T20:40:07.036844
+- topic_0_file_50fa28be-b8ec-45fe-8ceb-e1f20d0f28e3|{"task_id": "50fa28be-b8ec-45fe-8ceb-e1f20d0f28e3", "chat_id": "-1003725299009", "topic_id": 0, "file_id": "1nAzihykDKjd|2026-05-01T20:35:06.423041
+- topic_0_file_ebafe1fa-da57-4ed0-a76a-21bd6bb75d25|{"task_id": "ebafe1fa-da57-4ed0-a76a-21bd6bb75d25", "chat_id": "-1003725299009", "topic_id": 0, "file_id": "1LC7JEXpgYZ2|2026-05-01T20:30:02.827094
+- topic_0_file_42731e09-14b2-43de-9ca2-e452606a1169|{"task_id": "42731e09-14b2-43de-9ca2-e452606a1169", "chat_id": "-1003725299009", "topic_id": 0, "file_id": "1VEy-A5Wbfxd|2026-05-01T20:25:02.230784
+- topic_0_file_38da6113-8fef-4bd1-afe5-a28cdaaf8376|{"task_id": "38da6113-8fef-4bd1-afe5-a28cdaaf8376", "chat_id": "-1003725299009", "topic_id": 0, "file_id": "1oDlb1jefIO0|2026-05-01T20:19:58.581715
+- topic_0_file_4c743778-1932-4c25-96d5-6a12e94c57d8|{"task_id": "4c743778-1932-4c25-96d5-6a12e94c57d8", "chat_id": "-1003725299009", "topic_id": 0, "file_id": "1Diz_ET-qYtU|2026-05-01T20:14:56.453443
+
+## SEARCH_SESSIONS
+- topic_500_search_session_-1003725299009|{"chat_id": "-1003725299009", "topic_id": 500, "goal": "найди запчасть OEM 34116794300 новый тормозной диск BMW в СПб", "criteria": {"category": "AUTO_PARTS", "target": "запчасть O|2026-05-01T20:57:33.559044+00:00
+
+## TIMELINE_INFO
+- path=/root/.areal-neva-core/data/memory_files/CHATS/-1003725299009__telegram/timeline.jsonl
+- bytes=521363
+- mtime_utc=2026-05-01T21:05:19.110756+00:00
+
+## GIT_STATUS_SAFE
+?? docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
+?? tools/claude_bootstrap_aggregator.py
+
+## FILES_MANIFEST_SAFE
+- docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md|bytes=168322|sha256=0640b8349254cfb36f1143c1f195715014e2ca1b1b428943847fd1fd80d9d8fe
+- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md|UNKNOWN
+- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md|bytes=2013|sha256=ca4ea621980677b65796c40ccfc09b53f51241117715c5023fe15617e6e4e427
+- docs/CANON_FINAL/00_INDEX.md|bytes=808|sha256=999acb6bfdd6c7215f11d76342ea1b9f8cdf5715418064acb3716f33999c8af6
+- docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md|bytes=40765|sha256=e348f84dfc1a1dea957f64996a8780c4fe66dc1619252c02dce6594230c2661a
+- docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md|bytes=6714|sha256=1a439843e1eb214745752720c85b49adc48f1823765982960ce7b1e285947d84
+- docs/HANDOFFS/LATEST_HANDOFF.md|bytes=14374|sha256=a6e9e020ecaa9bbdc4fc4bd482480f94cb43dec2d8025200e7728aabb3971489
+- docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md|bytes=7393|sha256=097209d23a01f15125b0711a85458f986e97eed44f8fb603f354df1e3b495171
+- docs/REPORTS/NOT_CLOSED.md|bytes=23423|sha256=a89262813d94d7cf62284fc31a1e8476a0cc354061745591fca707f3d08bf969
+- docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md|bytes=9846|sha256=e9b63408cbfdd13c05ed9b174f3380d5067493e3815318661c81b30ba13be440
+- docs/ARCHITECTURE/SEARCH_MONOLITH_V1.md|bytes=16952|sha256=26676725c7608d217d6f9162526748875a7647f92320f64a5a0e10b5fd0afa28
+- docs/ARCHITECTURE/SEARCH_MONOLITH_V2.md|UNKNOWN
+- task_worker.py|bytes=136013|sha256=8824c5597343f3a1fbd02b4445ca2ff032ceb50d467ecf29ecc2279b2d32c8b1
+- telegram_daemon.py|bytes=50299|sha256=3214209f6f5f507ffee95a2414a651d72b1490fe364266c876c380b745dee837
+- memory_api_server.py|bytes=2956|sha256=17550a64d4e256489801b49ef81f49c3619598f74a5f6d9d0feda3c79b6805d1
+- core/ai_router.py|bytes=22208|sha256=def3922d4afbdc845a83edd3be08837a34446d8eadb9472292c83c417c7fbe69
+- core/search_session.py|bytes=18734|sha256=8d2d860cbb2d10fd64341d94f837fef7edb9a55466f73b1a65860ecaa17ac0f0
+- core/search_engine.py|bytes=2127|sha256=1f35cefd94b014de6ca4eeb0cfd8802ce0f9275e7ea160c7fe43f70a288e94d6
+- core/file_intake_router.py|bytes=27759|sha256=a16f296f1afd4184434b39f85a6bc392ede34478be87a6f4dde5a7e1c01b6c19
+- core/archive_engine.py|bytes=2684|sha256=04fdd1d0f6927a38b62f869f0a020b30b8cc81d798083d607f1a86d3c61c6e1e
+- core/reply_sender.py|bytes=2987|sha256=c49d63d23f3b580cc5ef2066ed2531665df90a2df5fed4fc4d4b2f924854d932
+- core/pin_manager.py|bytes=2603|sha256=612acafe7a005144bbd67b00fe54ac90c166aa76dafd8badcedc5f9a89812dfa
+- core/topic_drive_oauth.py|bytes=3254|sha256=ab7a2f3d255c60920df39d77c43b731e65a020fd6e9d4640b9ab72ad5f9cb4c3
+- tools/context_aggregator.py|bytes=4724|sha256=38deff2fcf58fb816de3b3c42c2e7d6585af70f97e106dac2c0b91cb7c7e40b0
+- tools/claude_bootstrap_aggregator.py|bytes=16736|sha256=643ef4e68c1e5afcebf478f316070e4ce3ce9133686c2610147097c20e7d7ffd
+
+# CODE_MARKERS_SAFE
+
+## task_worker.py
+29: from typing import Any, Dict, List, Optional, Tuple
+33: # === SEARCH_MONOLITH_V2_TASK_WORKER_IMPORT ===
+38: # === END SEARCH_MONOLITH_V2_TASK_WORKER_IMPORT ===
+40: from core.topic_meta_loader import load_topic_meta, is_what_is_this_question, build_topic_self_answer
+41: TOPIC_META_LOADER_WIRED = True
+43: TOPIC_META_LOADER_WIRED = False
+44: def load_topic_meta(t): return None
+46: def build_topic_self_answer(m): return ""
+47: # TOPIC_META_LOADER_V1_IMPORT
+48: from core.reply_sender import send_reply, send_reply_ex
+57: from core.topic_3008_engine import is_topic_3008 as _t3_check, detect_command as _t3_cmd, extract_code as _t3_extract, verify_code as _t3_verify, generate_code as _t3_generate  # TOPIC_3008_V1_WIRED
+76: from core.intake_offer_actions import needs_offer as _ioa_needs, get_offer_text as _ioa_text, parse_offer_reply as _ioa_parse  # INTAKE_OFFER_V1_WIRED
+155: from core.pin_manager import get_pin_context, save_pin
+156: from core.topic_drive_oauth import upload_file_to_topic
+361: # === FULLFIX_DIRECTION_KERNEL_STAGE_1_IMPORT ===
+369: # === FULLFIX_CAPABILITY_ROUTER_STAGE_2_IMPORT ===
+375: # === FULLFIX_CONTEXT_LOADER_STAGE_3_IMPORT ===
+381: # === FULLFIX_QUALITY_GATE_STAGE_4_IMPORT ===
+387: # === FULLFIX_SEARCH_ENGINE_STAGE_5_IMPORT ===
+393: # === FULLFIX_ARCHIVE_ENGINE_STAGE_6_IMPORT ===
+395: from core.archive_engine import ArchiveEngine as _Stage6Archive
+399: # === FULLFIX_FORMAT_ADAPTER_STAGE_7_IMPORT ===
+405: # === FULLFIX_TOPIC_AUTODISCOVERY_V2_IMPORT ===
+407: from core.topic_autodiscovery import process as _topic_autodiscovery, check_naming_timeout as _topic_naming_check
+409: _topic_autodiscovery = None
+410: _topic_naming_check = None
+411: # === END TOPIC_AUTO ===
+562: def _memory_insert_topic_entry_v1(chat_id: str, key: str, value: str) -> None:
+588: def _append_timeline_event_v1(chat_id: str, topic_id: int, task_id: str, kind: str, raw_input: str = "", result: str = "") -> None:
+598: "topic_id": int(topic_id or 0),
+629: (task_id, f"reply_sent:{kind}"),
+634: def _send_once(conn: sqlite3.Connection, task_id: str, chat_id: str, text: str, reply_to: Optional[int], kind: str) -> bool:
+637: ok = send_reply(chat_id=chat_id, text=text, reply_to_message_id=reply_to)
+639: _history(conn, task_id, f"reply_sent:{kind}")
+643: def _send_once_ex(conn: sqlite3.Connection, task_id: str, chat_id: str, text: str, reply_to: Optional[int], kind: str) -> Dict[str, Any]:
+646: res = send_reply_ex(chat_id=chat_id, text=text, reply_to_message_id=reply_to)
+650: _history(conn, task_id, f"reply_sent:{kind}")
+699: def _save_topic_role(chat_id: str, topic_id: int, role: str) -> None:
+706: key = f"topic_{topic_id}_role"
+717: def _load_memory_context(chat_id: str, topic_id: int) -> Tuple[str, str, str, str]:
+726: topic_prefix = f"topic_{int(topic_id)}_"
+736: (str(chat_id), f"{topic_prefix}*"),
+741: topic_role = ""
+742: topic_directions = ""
+785: if key.endswith("_role") and not topic_role:
+786: topic_role = value[:500]
+789: if not topic_role and (key.endswith("_assistant_output") or key.endswith("_task_summary")):
+798: topic_role = _clean(m.group(1), 500)
+800: if key.endswith("_directions") and not topic_directions:
+801: topic_directions = value[:1000]
+810: # === TOPIC_META_ROLE_INJECT_V1 ===
+811: if not topic_role and TOPIC_META_LOADER_WIRED:
+813: _tm = load_topic_meta(int(topic_id or 0))
+818: topic_role = f"Топик: {_tm_name} | Направление: {_tm_dir}"
+821: # === END TOPIC_META_ROLE_INJECT_V1 ===
+822: return "\n".join(short_memory[:20]), "\n".join(long_memory[:20]), topic_role, topic_directions  # MEMORY_LIMIT_20_V1
+827: def _load_archive_context(chat_id: str, topic_id: int, user_text: str) -> str:
+830: from core.archive_distributor import _load_archive_for_topic
+831: arc = _load_archive_for_topic(chat_id, topic_id, user_text, limit=5)
+870: if int(payload.get("topic_id", -1)) != int(topic_id):
+882: def _active_unfinished_context(conn: sqlite3.Connection, chat_id: str, topic_id: int, task_id: str) -> str:
+890: if "topic_id" in cols:
+891: where.append("COALESCE(topic_id,0)=?")
+892: params.append(int(topic_id))
+925: def _search_fact_context(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> str:
+933: if "topic_id" in cols:
+934: where.append("COALESCE(topic_id,0)=?")
+935: params.append(int(topic_id))
+960: def _save_memory(chat_id: str, topic_id: int, raw_input: str, result: str) -> None:
+992: prefix = f"topic_{int(topic_id)}_"
+1006: logger.info("save_memory_ok chat=%s topic=%s", chat_id, topic_id)
+1011: def _close_pin(conn: sqlite3.Connection, task_id: str) -> None:
+1012: if not _has_table(conn, "pin"):
+1015: "UPDATE pin SET state='CLOSED', updated_at=datetime('now') WHERE task_id=? AND state='ACTIVE'",
+1020: def _finalize_done(conn: sqlite3.Connection, task_id: str, chat_id: str, topic_id: int, reply_to: Optional[int]) -> None:
+1031: _save_memory(chat_id, topic_id, raw_input, result)
+1050: # CONFIRMATION_TIMEOUT_FIX_V1
+1053: UPDATE tasks SET state='FAILED', error_message='CONFIRMATION_TIMEOUT', updated_at=datetime('now')
+1056: AND COALESCE(raw_input,'') NOT LIKE '%retry_queue_healthcheck%'
+1057: AND COALESCE(result,'') NOT LIKE '%retry_queue_healthcheck%'
+1061: logger.warning("CONFIRMATION_TIMEOUT_FIX_V1_ERR %s", _ct_e)
+1062: # IN_PROGRESS_HARD_TIMEOUT_V1
+1070: f"SELECT id,chat_id,COALESCE(topic_id,0) AS topic_id,reply_to_message_id,raw_input FROM tasks WHERE {' AND '.join(_hw)}",
+1074: _htopic = int(_hr["topic_id"] or 0); _hreply = _hr["reply_to_message_id"]
+1077: _close_pin(conn, _htid); _history(conn, _htid, "state:FAILED:EXECUTION_TIMEOUT")
+1079: _append_timeline_event_v1(_hchat, _htopic, _htid, "execution_timeout", _s(_hr["raw_input"]), _hmsg)
+1082: _send_once(conn, _htid, _hchat, _hmsg, _hreply, "execution_timeout")
+1084: logger.warning("IN_PROGRESS_HARD_TIMEOUT_V1_ERR %s", _e)
+1097: SELECT id, chat_id, COALESCE(topic_id,0) AS topic_id, reply_to_message_id
+1107: reply_to = row["reply_to_message_id"]
+1109: _close_pin(conn, task_id)
+1112: _send_once(conn, task_id, tg_chat_id, "Задача не выполнена. Повтори или уточни запрос", reply_to, "stale_failed")
+1130: SELECT id, chat_id, COALESCE(topic_id,0) AS topic_id, reply_to_message_id, result, raw_input, input_type, updated_at, created_at
+1155: _close_pin(conn, row["id"])
+1162: _close_pin(conn, row["id"])
+1186: _close_pin(conn, row["id"])
+1191: _close_pin(conn, row["id"])
+1196: UPDATE pin
+1213: # === FULLFIX_13D_TASK_WORKER_SEND_BELT ===
+1214: # reply_sender also strips MANIFEST globally
+...TRUNCATED_MARKERS...
+
+## telegram_daemon.py
+8: from core.drive_folder_resolver import get_or_create_topic_folder
+9: from core.topic_drive_oauth import upload_file_to_topic
+162: "pipeline": "telegram_daemon -> task_worker -> ai_router -> reply_sender",
+170: "has_active_pin": False,
+194: "SELECT task_id FROM pin WHERE chat_id = ? AND state = 'ACTIVE' ORDER BY updated_at DESC LIMIT 1",
+197: pin_row = cur.fetchone()
+198: if pin_row:
+199: result["runtime"]["has_active_pin"] = True
+200: result["active_context"]["active_pin"] = pin_row[0]
+231: "active_pin": None,
+235: "stack": "telegram_daemon + task_worker + ai_router + OpenRouter",
+249: cur = conn.execute("SELECT task_id FROM pin WHERE chat_id = '-1003725299009' AND state = 'ACTIVE' ORDER BY updated_at DESC LIMIT 1")
+250: pin_row = cur.fetchone()
+251: if pin_row:
+252: result["active_pin"] = pin_row[0]
+281: topic_id = getattr(message, "message_thread_id", None) or 0
+284: if "topic_id" in cols:
+286: "INSERT INTO tasks (id, chat_id, user_id, input_type, raw_input, state, reply_to_message_id, topic_id, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+287: (task_id, message.chat.id, user_id, input_type, raw_input, state, message.message_id, topic_id, now, now))
+290: "INSERT INTO tasks (id, chat_id, user_id, input_type, raw_input, state, reply_to_message_id, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
+295: # === TELEGRAM_TIMELINE_APPEND_V1 ===
+303: "topic_id": int(topic_id or 0), "task_id": task_id,
+315: logger.warning("TELEGRAM_TIMELINE_APPEND_V1_ERR %s", _tl_e)
+316: # === END TELEGRAM_TIMELINE_APPEND_V1 ===
+318: logger.info("Task %s created state=%s topic_id=%s", task_id, state, topic_id)
+378: "UPDATE pin SET state='CLOSED', updated_at=? WHERE chat_id=? AND state='ACTIVE'",
+410: "UPDATE pin SET state='CLOSED', updated_at=? WHERE task_id=? AND state='ACTIVE'",
+414: "UPDATE pin SET state='CLOSED', updated_at=? WHERE chat_id=? AND state='ACTIVE'",
+422: async def cancel_all_open_tasks(chat_id: int, topic_id: int = 0) -> int:
+424: if topic_id > 0:
+426: "SELECT id FROM tasks WHERE chat_id=? AND topic_id=? AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION')",
+427: (chat_id, topic_id)
+450: "UPDATE pin SET state='CLOSED', updated_at=? WHERE chat_id=? AND state='ACTIVE'",
+458: async def _find_parent_task(chat_id: int, reply_to: int | None, topic_id: int = 0):
+461: has_topic = "topic_id" in cols and topic_id > 0
+462: topic_filter = " AND topic_id=?" if has_topic else ""
+463: topic_args = (topic_id,) if has_topic else ()
+464: if reply_to:
+466: f"SELECT id, state FROM tasks WHERE chat_id=? AND bot_message_id=?{topic_filter} AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION') ORDER BY updated_at DESC LIMIT 1",
+467: (chat_id, reply_to) + topic_args
+473: f"SELECT id, state FROM tasks WHERE chat_id=? AND reply_to_message_id=?{topic_filter} AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION') ORDER BY updated_at DESC LIMIT 1",
+474: (chat_id, reply_to) + topic_args
+480: f"SELECT id, state FROM tasks WHERE chat_id=?{topic_filter} AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION') ORDER BY updated_at DESC LIMIT 1",
+481: (chat_id,) + topic_args
+485: async def _handle_control_text(message, tg_id: int, text: str, lower: str, reply_to: int | None, topic_id: int = 0) -> bool:
+487: closed = await cancel_all_open_tasks(tg_id, topic_id)
+491: parent = await _find_parent_task(tg_id, reply_to, topic_id)
+500: await db.execute("UPDATE pin SET state='CLOSED', updated_at=? WHERE task_id=? AND state='ACTIVE'", (now, parent_id))
+519: await db.execute("UPDATE pin SET state='CLOSED', updated_at=? WHERE task_id=? AND state='ACTIVE'", (now, parent_id))
+528: await db.execute("UPDATE pin SET state='CLOSED', updated_at=? WHERE task_id=? AND state='ACTIVE'", (now, parent_id))
+530: await message.answer("Хорошо, доработаю. Подтверждение снято.  # FULLFIX_02_E")
+542: if parent_state == "IN_PROGRESS" and reply_to:
+580: reply_to = message.reply_to_message.message_id if message.reply_to_message else None
+581: topic_id = int(getattr(message, "message_thread_id", 0) or 0)
+587: await message.answer("Все незакрытые задачи и активные pin закрыты")
+592: cur = await db.execute("SELECT task_id FROM pin WHERE chat_id = ? AND state = 'ACTIVE'", (str(tg_id),))
+593: pin_row = await cur.fetchone()
+595: if pin_row:
+596: status_msg += f"\nАктивный pin: {pin_row[0]}"
+673: "Models: deepseek/deepseek-chat + perplexity/sonar\n"
+727: # HEALTHCHECK_DAEMON_GUARD_V1
+733: if any(m in _hc_check for m in ("retry_queue_healthcheck", "healthcheck", "areal_hc_", "_hc_file")):
+734: logger.info("HEALTHCHECK_DAEMON_GUARD_V1 ignored file=%s", message.document.file_name)
+737: logger.warning("HEALTHCHECK_DAEMON_GUARD_V1_ERR %s", _hc_e)
+743: drive_result = await upload_file_to_topic(local_path, message.document.file_name, tg_id, topic_id, getattr(message.document, "mime_type", "") or None)  # DAEMON_OAUTH_FIX_V1
+752: topic_id = getattr(message, "message_thread_id", 0) or 0
+753: drive_result = await upload_file_to_topic(local_path, message.document.file_name, tg_id, topic_id, getattr(message.document, "mime_type", "") or None)
+782: drive_result = await upload_file_to_topic(local_path, file_name, tg_id, topic_id, "image/jpeg")
+817: # 6. CONFIRMATION AND REPLY CONTINUATION
+832: await db.execute("UPDATE pin SET state = 'CLOSED', updated_at = ? WHERE task_id = ? AND state = 'ACTIVE'", (now_iso(), parent_id))
+840: await db.execute("UPDATE pin SET state = 'CLOSED', updated_at = ? WHERE task_id = ? AND state = 'ACTIVE'", (now_iso(), parent_id))
+842: await message.answer("Хорошо, доработаю. Подтверждение снято.  # FULLFIX_02_E")
+845: if reply_to:
+848: "SELECT id, state FROM tasks WHERE chat_id = ? AND reply_to_message_id = ? AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION') ORDER BY updated_at DESC LIMIT 1",
+849: (tg_id, reply_to)
+880: pass  # VOICE_UPLOAD_SKIP_V1 — голос не загружаем на Drive
+881: from core.stt_engine import transcribe_voice as _stt
+883: _transcript = await _stt(local_path)
+885: logger.error("STT_FAILED chat=%s err=%s", tg_id, _err)
+889: logger.error("STT_EMPTY chat=%s", tg_id)
+894: voice_reply_to = message.reply_to_message.message_id if message.reply_to_message else None
+895: _voice_topic_id = getattr(message, "message_thread_id", None) or 0
+898: # Voice does not populate message.text, so confirm/reject must be checked after STT
+907: AND COALESCE(topic_id,0) = COALESCE(?,0)
+912: (tg_id, _voice_topic_id)
+928: "UPDATE pin SET state = 'CLOSED', updated_at = ? WHERE task_id = ? AND state = 'ACTIVE'",
+947: "UPDATE pin SET state = 'CLOSED', updated_at = ? WHERE task_id = ? AND state = 'ACTIVE'",
+951: await message.answer("Хорошо, доработаю. Подтверждение снято.  # FULLFIX_02_E")
+958: if await _handle_control_text(message, tg_id, voice_text, voice_lower, voice_reply_to, _voice_topic_id):
+969: reply_to = message.reply_to_message.message_id if message.reply_to_message else None
+970: _text_topic_id = getattr(message, "message_thread_id", None) or 0
+971: if await _handle_control_text(message, tg_id, text, lower, reply_to, _text_topic_id):
+
+## memory_api_server.py
+24: topic_id = int(data.get("topic_id") or 0)
+27: key = f"topic_{topic_id}_archive_{task_id[:8]}"
+29: existing = conn.execute("SELECT 1 FROM memory WHERE chat_id=? AND key=? LIMIT 1", (chat_id, key)).fetchone()  # ARCHIVE_DEDUP_BY_KEY_V1
+
+## core/ai_router.py
+6: from typing import Any, Dict, List
+8: # === SEARCH_MONOLITH_V2_IMPORT ===
+12: run_search_monolith_v2 = None
+14: # === END SEARCH_MONOLITH_V2_IMPORT ===
+33: OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "").strip()
+34: OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").strip().rstrip("/")
+36: DEFAULT_MODEL = os.getenv("OPENROUTER_MODEL", "deepseek/deepseek-chat").strip() or "deepseek/deepseek-chat"
+37: ONLINE_MODEL = os.getenv("OPENROUTER_MODEL_ONLINE", "perplexity/sonar").strip() or "perplexity/sonar"  # SEARCH_MONOLITH_V1
+52: r"stt failed",
+86: # CANON_SYSTEM_PROMPT_V1
+94: 3. PIN (только если совпадает с темой)
+107: Если есть topic_role — это твой рабочий режим.
+147: """.strip()  # CANON_SYSTEM_PROMPT_V1
+149: SEARCH_SYSTEM_PROMPT = """# SEARCH_MONOLITH_V1 — ЦИФРОВОЙ СНАБЖЕНЕЦ
+227: """  # END SEARCH_MONOLITH_V1.strip()
+306: topic_role = _clean(_s(payload.get("topic_role")), 500)
+307: topic_directions = _clean(_s(payload.get("topic_directions")), 1000)
+327: if topic_role:
+328: system_content = f"Роль этого чата: {topic_role}\n\n" + system_content
+329: if topic_directions:
+330: system_content = system_content + f"\n\nТиповые задачи этого чата: {topic_directions}"
+335: _sanitize_block("PIN", payload.get("pin_context")),
+370: async def _openrouter_call(model: str, messages: List[Dict[str, str]]) -> str:
+372: "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+381: r = await client.post(f"{OPENROUTER_BASE_URL}/chat/completions", headers=headers, json=body)
+383: msg = f"OPENROUTER_HTTP_{r.status_code}: {r.text[:500]}"
+389: if not OPENROUTER_API_KEY:
+390: raise RuntimeError("OPENROUTER_API_KEY not set")
+398: try: _s_topic = int(payload.get("topic_id") or 0)
+399: except: _s_topic = 0
+404: # === SEARCH_MONOLITH_V2_CALL ===
+406: if run_search_monolith_v2 is not None:
+407: _v2 = await run_search_monolith_v2(work_payload, user_text, _openrouter_call, ONLINE_MODEL, SEARCH_SYSTEM_PROMPT)
+410: logger.info("SEARCH_MONOLITH_V2_OK chars=%s", len(_v2))
+413: logger.error("SEARCH_MONOLITH_V2_FAIL err=%s fallback=V1", _v2e)
+414: # === END SEARCH_MONOLITH_V2_CALL ===
+423: search_result = await _openrouter_call(
+460: result = await _openrouter_call(_final_model, messages)
+
+## core/search_session.py
+1: # === SEARCH_MONOLITH_V2_FULL ===
+6: from typing import Any, Callable, Dict, List, Optional
+38: chat_id: str; topic_id: int; goal: str
+66: def get(self, chat_id, topic_id):
+69: row = c.execute("SELECT value FROM memory WHERE chat_id=? AND key=? ORDER BY timestamp DESC LIMIT 1", (str(chat_id), self.key(chat_id, topic_id))).fetchone()
+77: k = self.key(s.chat_id, s.topic_id)
+83: def get_or_create(self, chat_id, topic_id, goal, criteria=None):
+84: s = self.get(chat_id, topic_id)
+91: def close(self, chat_id, topic_id):
+92: s = self.get(chat_id, topic_id)
+188: return f"""SEARCH_MONOLITH_V2_FULL
+240: chat_id = str(payload.get("chat_id") or ""); topic_id = int(payload.get("topic_id") or 0)
+282: system = (base_system_prompt or "") + "\nSEARCH_MONOLITH_V2_FULL_ACTIVE\n" + self.tco.instruction() + "\n" + self.ranker.instruction()
+293: async def run_search_monolith_v2(payload, user_text, online_call, online_model, base_system_prompt=""): return await _MONOLITH.run(payload, user_text, online_call, online_model, base_system_prompt)
+298: # === END SEARCH_MONOLITH_V2_FULL ===
+
+## core/search_engine.py
+1: # === FULLFIX_SEARCH_ENGINE_STAGE_5 ===
+3: from typing import Any, Dict, List, Optional
+43: "FULLFIX_SEARCH_ENGINE_STAGE_5 dir=%s sources=%s strategy=%s",
+53: # === END FULLFIX_SEARCH_ENGINE_STAGE_5 ===
+
+## core/file_intake_router.py
+3: from typing import Dict, Any, Optional, List
+72: def get_topic_role(topic_id: int) -> str:
+77: cur.execute("SELECT value FROM memory WHERE key = ?", (f"topic_{topic_id}_role",))
+82: def get_clarification_message(file_name: str, topic_id: int) -> str:
+83: role = get_topic_role(topic_id)
+85: if topic_id == 2 or "СТРОЙКА" in role:
+87: elif topic_id == 5 or "ТЕХНАДЗОР" in role:
+92: # === CANON_PASS_INTAKE_OFFER_SENT ===
+96: # === END CANON_PASS_INTAKE_OFFER_SENT ===
+118: async def route_file(file_path: str, task_id: str, topic_id: int, intent: str, fmt: str = "excel") -> Optional[Dict[str, Any]]:
+126: _ufh = extract_text_from_file(file_path, task_id, topic_id)
+151: data = await process_estimate_to_excel(file_path, task_id, topic_id)
+172: return await process_estimate_to_excel(file_path, task_id, topic_id)
+175: return await process_image_to_excel(file_path, task_id, topic_id)
+178: data = await process_defect_to_report(file_path, task_id, topic_id)
+206: return await process_dwg_to_excel(file_path, task_id, topic_id)
+209: tmpl = get_template(str(topic_id), topic_id, "estimate")
+245: results = search_in_estimates(file_path, topic_id)
+252: async def handle_multiple_files(file_paths: List[str], task_id: str, topic_id: int, intent: str, fmt: str = "excel") -> Optional[Dict[str, Any]]:
+258: r = await process_estimate_to_excel(fp, task_id, topic_id)
+293: async def route_file(file_path, task_id, topic_id=0, *args, **kwargs):
+300: return {"success":True,"intent":"template","template_path":save_template(fp,int(topic_id or 0),"template")}
+306: return await process_kzh_pdf(fp,str(task_id),int(topic_id or 0))
+309: res=_all_contours_orig_route_file(fp,task_id,topic_id,*args,**kwargs)
+318: sh=create_google_sheet(xl,task_id=task_id,topic_id=topic_id)
+342: async def route_file(file_path, task_id, topic_id=0, *args, **kwargs):
+350: return await process_kzh_pdf(fp,str(task_id),int(topic_id or 0))
+353: res=_final_orig_route_file(fp,task_id,topic_id,*args,**kwargs)
+408: async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *args, **kwargs):
+416: return await process_project_file(file_path, task_id, topic_id, raw_input)
+420: res = _v41_orig_route_file(file_path, task_id, topic_id, final_intent, fmt, *args, **kwargs)
+446: async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *args, **kwargs):
+453: res = await process_project_file(file_path, task_id, topic_id, raw_input)
+467: res = _v42_orig_route_file(file_path, task_id, topic_id, intent, fmt, *args, **kwargs)
+497: async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *args, **kwargs):
+504: ok = template_learn_v43(file_path, topic_id, intent or "project")
+512: template = template_priority_v43(topic_id, "project")
+514: res = await process_project_file(file_path, task_id, topic_id, raw_input)
+524: res = _v43_orig_route_file(file_path, task_id, topic_id, intent, fmt, *args, **kwargs)
+
+## core/archive_engine.py
+1: # === FULLFIX_ARCHIVE_ENGINE_STAGE_6 ===
+5: from typing import Any, Dict, Optional
+7: ARCHIVE_ENGINE_VERSION = "ARCHIVE_ENGINE_V1"
+22: "topic_id":     int(payload.get("topic_id") or 0),
+32: "archive_version": ARCHIVE_ENGINE_VERSION,
+50: logger.info("FULLFIX_ARCHIVE_ENGINE_STAGE_6 archived task=%s dir=%s qg=%s",
+53: logger.warning("FULLFIX_ARCHIVE_ENGINE_STAGE_6 memory_api unavailable: %s", e)
+58: # === END FULLFIX_ARCHIVE_ENGINE_STAGE_6 ===
+
+## core/reply_sender.py
+3: # === FULLFIX_13D_REPLY_SENDER_GLOBAL_MANIFEST_STRIP ===
+12: # === END FULLFIX_13D_REPLY_SENDER_GLOBAL_MANIFEST_STRIP ===
+16: from typing import Optional, Dict, Any
+23: LOG_PATH = f"{BASE}/logs/reply_sender.log"
+26: logger = logging.getLogger("reply_sender")
+41: def send_reply(chat_id: str, text: str, reply_to_message_id: Optional[int] = None, message_thread_id: Optional[int] = None) -> bool:
+42: return send_reply_ex(chat_id=chat_id, text=_ff13d_strip_manifest_links(text), reply_to_message_id=reply_to_message_id, message_thread_id=message_thread_id)["ok"]
+44: def send_reply_ex(chat_id: str, text: str, reply_to_message_id: Optional[int] = None, message_thread_id: Optional[int] = None) -> Dict[str, Any]:
+58: if reply_to_message_id:
+59: payload["reply_to_message_id"] = int(reply_to_message_id)
+64: logger.info("reply_ok chat_id=%s reply_to=%s chars=%s bot_message_id=%s", chat_id, reply_to_message_id, len(text), bot_message_id)
+66: logger.error("reply_fail code=%s body=%s", r.status_code, r.text[:500])
+69: logger.exception("reply_exception %s", e)
+
+## core/pin_manager.py
+15: def get_pin_context(chat_id: str, request_text: str = "", topic_id: int = 0) -> str:
+18: if not _has_table(conn, "pin"):
+22: "SELECT task_id FROM pin WHERE chat_id=? AND topic_id=? AND state='ACTIVE' ORDER BY rowid DESC LIMIT 1",
+23: (str(chat_id), int(topic_id))
+35: pin_text = str(task_row["result"]).strip()
+36: if any(m in pin_text.lower() for m in PIN_MUTEX_MARKERS):
+40: pin_words = set(re.findall(r"\w+", pin_text.lower()))
+41: if request_words & pin_words:
+42: return pin_text[:4000]
+44: return pin_text[:4000]
+50: PIN_MUTEX_MARKERS = ["задача отменена", "задача завершена", "не понимаю запрос", "готов к выполнению задачи"]
+52: def save_pin(chat_id: str, task_id: str, result_text: str, topic_id: int = 0) -> bool:
+56: if any(m in text.lower() for m in PIN_MUTEX_MARKERS):
+57: return False  # PIN_STRICT_DONE_ONLY
+61: if not _has_table(conn, "pin"):
+65: "UPDATE pin SET state='CLOSED', updated_at=datetime('now') WHERE chat_id=? AND topic_id=? AND state='ACTIVE'",
+66: (str(chat_id), int(topic_id))
+69: "INSERT INTO pin (chat_id, task_id, topic_id, state, created_at, updated_at) VALUES (?, ?, ?, 'ACTIVE', datetime('now'), datetime('now'))",
+70: (str(chat_id), task_id, int(topic_id))
+
+## core/topic_drive_oauth.py
+3: from typing import Optional, Dict, Any
+68: def _upload_file_sync(file_path: str, file_name: str, chat_id: str, topic_id: int, mime_type: Optional[str] = None) -> Dict[str, Any]:
+72: topic_folder = _ensure_folder(service, chat_folder, f"topic_{int(topic_id or 0)}")
+76: "parents": [topic_folder],
+87: "folder_id": topic_folder,
+91: async def upload_file_to_topic(file_path: str, file_name: str, chat_id: str, topic_id: int, mime_type: Optional[str] = None) -> Dict[str, Any]:
+92: return await asyncio.to_thread(_upload_file_sync, file_path, file_name, str(chat_id), int(topic_id or 0), mime_type)
+
+## tools/context_aggregator.py
+11: 'docs/CANON_FINAL/',
+21: "docs/CANON_FINAL",
+90: lines.append("## CANON_FINAL")
+92: if "CANON_FINAL" in path:
+
+## tools/claude_bootstrap_aggregator.py
+2: # === CLAUDE_BOOTSTRAP_AGGREGATOR_CANON_LOCK_V3 ===
+14: OUTPUT = BASE / "docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md"
+15: SNAPSHOT = BASE / "docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md"
+18: RAW_URL = "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md"
+22: "docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
+25: "docs/CANON_FINAL/00_INDEX.md",
+26: "docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md",
+27: "docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md",
+35: "docs/ARCHITECTURE/SEARCH_MONOLITH_V1.md",
+36: "docs/ARCHITECTURE/SEARCH_MONOLITH_V2.md",
+47: "core/archive_engine.py",
+48: "core/reply_sender.py",
+49: "core/pin_manager.py",
+50: "core/topic_drive_oauth.py",
+52: "tools/claude_bootstrap_aggregator.py",
+69: r"PAYLOAD_TOPIC_ID|CONFIRMATION_TIMEOUT|HEALTHCHECK|VOICE_UPLOAD_SKIP|"
+70: r"TELEGRAM_TIMELINE|DRIVE_FILE_MEMORY|FILE_DUPLICATE|FULLFIX|CANON|ARCHIVE_ENGINE|"
+71: r"STT|GROQ|PERPLEXITY|OPENROUTER|TOPIC|PIN|REPLY|WATCHDOG|LIFECYCLE|"
+72: r"CLAUDE_BOOTSTRAP|SAFE_RUNTIME)",
+140: CLAUDE_BOOTSTRAP_CONTEXT_UNAVAILABLE
+175: 6. Use only allowed files from canon unless user explicitly allows more
+177: 8. Do not use memory from another topic
+178: 9. Do not treat topic_id=0 as a specific topic
+187: WHEN ASKED TO CLOSE A CANON:
+197: - canon docs updated
+232: def write_safe_runtime_snapshot() -> None:
+261: "SELECT id, COALESCE(topic_id,0), input_type, state, substr(raw_input,1,80), substr(result,1,80), updated_at FROM tasks ORDER BY updated_at DESC LIMIT 12",
+299: content.append("# SAFE_RUNTIME_SNAPSHOT")
+339: return f"""# CLAUDE_OPERATING_PROTOCOL_CANON_LOCK_V3
+349: CLAUDE_BOOTSTRAP_CONTEXT_UNAVAILABLE
+353: 2. This CLAUDE_BOOTSTRAP_CONTEXT
+366: - mixing topic memory
+367: - treating topic_0 as a project topic
+392: CANON LOCK:
+401: write_safe_runtime_snapshot()
+413: lines.append("# CLAUDE_BOOTSTRAP_CONTEXT")
+416: lines.append("MODE: FACT_ONLY / ZERO_ASSUMPTIONS / GITHUB_SSOT / CANON_LOCK")
+475: "docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md",
+476: "docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
+478: "tools/claude_bootstrap_aggregator.py",
+494: ["git", "commit", "-m", "CLAUDE_BOOTSTRAP_CONTEXT_AUTO_V3: canon locked refresh"],
+515: print("CLAUDE_BOOTSTRAP_AGGREGATOR_CANON_LOCK_V3_START")
+517: subprocess.run(["rm", "-rf", "CANON_FINAL"], cwd=str(BASE))
+529: print("CLAUDE_BOOTSTRAP_AGGREGATOR_CANON_LOCK_V3_DONE")
+534: # === END CLAUDE_BOOTSTRAP_AGGREGATOR_CANON_LOCK_V3 ===
+========================================================================================================================
+END_FILE: docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md
+========================================================================================================================
+
+
+========================================================================================================================
+BEGIN_FILE: docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
+========================================================================================================================
+FORBIDDEN_SECRET_PATH: docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
+========================================================================================================================
+END_FILE: docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
+========================================================================================================================
+
+
+========================================================================================================================
+BEGIN_FILE: docs/CANON_FINAL/00_INDEX.md
+========================================================================================================================
 # CANON_FINAL INDEX
 Версия: v1 | Дата: 28.04.2026
 
@@ -3923,6 +4538,14 @@ processed_updates: (дедупликация)
 | 09_MODES_FULL.md | Режимы работы |
 | 10_LIMITS_SLA_FULL.md | Лимиты и SLA |
 | 11_DIAGNOSTICS_FULL.md | Диагностика |
+========================================================================================================================
+END_FILE: docs/CANON_FINAL/00_INDEX.md
+========================================================================================================================
+
+
+========================================================================================================================
+BEGIN_FILE: docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md
+========================================================================================================================
 # AREAL-NEVA ORCHESTRA — ЕДИНЫЙ МОНОЛИТНЫЙ КАНОН
 Версия: v13 + SESSION_28.04.2026 FINAL | Дата: 28.04.2026 | Режим: FACT-ONLY
 
@@ -4604,6 +5227,190 @@ topic_id=0 для задач из конкретного топика
 AWAITING_CONFIRMATION без реального результата (len<100 или "ошибка")
 Memory из чужого топика в контексте
 Новые папки в репо без явного разрешения
+========================================================================================================================
+END_FILE: docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md
+========================================================================================================================
+
+
+========================================================================================================================
+BEGIN_FILE: docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md
+========================================================================================================================
+# 09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30
+
+MODE: FACTS ONLY
+SOURCE: current chat, 2026-04-30
+STATUS: PARTIAL_FIX_INSTALLED / DRIVE_UPLOAD_NOT_CLOSED
+
+## CONFIRMED FACTS
+
+- Telegram file tasks are created as `input_type='drive_file'`, not `file`.
+- `drive_file.raw_input` contains file metadata including `file_id`, `file_name`, `mime_type`, `caption`, `telegram_message_id`, `telegram_chat_id`.
+- `drive_file` without clear `caption/user_intent` must enter `NEEDS_CONTEXT` before download or processing.
+- `drive_file -> NEEDS_CONTEXT -> menu` was verified on live tasks.
+- `bot_message_id` for file menu was saved.
+- Reply/voice/text choice priority was patched before role/confirm/finish/chat logic.
+- Local artifact generation worked for task `d95b1fcb-b31f-4b2f-b0a2-3342c8d35984`.
+- That task reached `AWAITING_CONFIRMATION`.
+- Result contained `Нормализовано позиций: 32`.
+- Drive upload failed with `invalid_grant: Token has been expired or revoked`.
+- Service Account healthcheck returned `ok=True`.
+- Service Account email: `ai-orchestra@areal-neva-automation.iam.gserviceaccount.com`.
+- Drive folder id: `13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB`.
+- Helper module created: `/root/.areal-neva-core/core/drive_service_account_uploader.py`.
+- Live `/root/.areal-neva-core/core/engine_base.py` is missing.
+- `import core.engine_base` returned `NOT_FOUND`.
+- Live files still import `core.engine_base`.
+- Backup source found: `/root/.areal-neva-core/core.bak.before_rollback_20260427_202634/engine_base.py`.
+
+## PATCHES INSTALLED IN CURRENT SESSION
+
+### PATCH_FILE_INTAKE_NEEDS_CONTEXT_V3_MINIMAL
+Status: INSTALLED
+
+Facts:
+- Added file-intake menu logic for `drive_file`.
+- Added `NEEDS_CONTEXT` path.
+- Added topic-based menus.
+- Syntax OK and worker active after install.
+
+### PATCH_DRIVE_GUARD_BEFORE_DOWNLOAD_V1
+Status: INSTALLED
+
+Facts:
+- Moved intent and `NEEDS_CONTEXT` guard before `_download_from_drive`.
+- Fixed issue where download path could block before menu.
+
+### PATCH_WORKER_PICK_BEFORE_STALE_V1
+Status: INSTALLED
+
+Facts:
+- Moved task pick before stale recovery.
+- Later confirmed this was not the final root cause of stuck `drive_file` tasks.
+
+### PATCH_FIX_PFIN3_MENU_SHADOW_V1
+Status: VERIFIED
+
+Facts:
+- Fixed Python bug `_pfin3_menu = _pfin3_menu(...)`.
+- Removed `UnboundLocalError` caused by local variable shadowing function.
+- Tasks `d95b1fcb...` and `1e7b6864...` moved from `NEW` to `NEEDS_CONTEXT`.
+- `bot_message_id` saved: `8149` and `8150`.
+- `FILE_INTAKE_GUARD_HIT` appeared in logs.
+
+### PATCH_FILE_CHOICE_PRIORITY_V1
+Status: INSTALLED_PARTIALLY_VERIFIED
+
+Facts:
+- Added priority file-choice handler before role/confirm/finish/chat logic.
+- Tech-supervision topic task `d95b1fcb...` reached `AWAITING_CONFIRMATION`.
+- Project topic task `1e7b6864...` became `CANCELLED` after user reply parsed as cancel/check.
+
+### PATCH_DRIVE_SERVICE_ACCOUNT_PRIMARY_V1
+Status: INSTALLED_NOT_COMPLETE
+
+Facts:
+- Service Account uploader module was created.
+- Service Account healthcheck returned `ok=True`.
+- Folder id confirmed as `13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB`.
+- Common upload path is not closed because live `core/engine_base.py` is missing.
+
+## ERRORS FOUND
+
+- Initial guard targeted `input_type='file'`, but real input is `drive_file`.
+- Guard was initially after download, so download could block before menu.
+- `_download_from_drive` could block the file-intake menu path.
+- `_pfin3_menu` variable shadowed `_pfin3_menu()` function.
+- Drive upload failed with `invalid_grant: Token has been expired or revoked`.
+- `core.engine_base` missing while live engines still import it.
+- Generated `engine_base.py` from scratch was rejected as unsafe.
+- `find`-based patch selected backup `engine_base.py` instead of live path.
+
+## CURRENT BROKEN POINT
+
+Permanent Drive artifact upload is not closed.
+
+Reason:
+- OAuth token path failed with `invalid_grant`.
+- Service Account exists and healthcheck works.
+- Common module `core.engine_base.py` is missing from live core directory.
+- Engines import `core.engine_base`.
+- Upload path cannot be safely patched until `engine_base.py` is restored from confirmed source.
+
+## CANON DECISIONS
+
+- Do not use daily manual OAuth token repair as final solution.
+- token OAuth is legacy fallback only, not primary upload path.
+- Primary Drive upload must use Service Account.
+- Drive failure must not break file task if local artifact exists.
+- Do not recreate `engine_base.py` by guessing.
+- Restore `engine_base.py` only from confirmed source.
+- Do not patch `.env`.
+- Do not delete token or credentials files.
+- Do not rewrite `estimate_engine.py`, `dwg_engine.py`, or `project_engine.py` unless diagnostics prove direct need.
+
+## REQUIRED ENGINE_BASE CONTRACTS
+
+`core.engine_base` must provide at least:
+
+- `detect_real_file_type`
+- `update_drive_file_stage`
+- `upload_artifact_to_drive`
+- `quality_gate`
+- `calculate_file_hash`
+- `normalize_unit`
+- `is_false_number`
+- `normalize_item_name`
+
+## NEXT VALID PATCH REQUIREMENT
+
+Patch is allowed only after confirming source for `core/engine_base.py`.
+
+Confirmed source found in current session:
+- `/root/.areal-neva-core/core.bak.before_rollback_20260427_202634/engine_base.py`
+
+Patch plan agreed by Claude:
+
+1. Restore `/root/.areal-neva-core/core/engine_base.py` from confirmed backup.
+2. Replace only `upload_artifact_to_drive` with Service Account primary implementation.
+3. Do not touch `.env`, credentials, or token files.
+4. Do not touch engines unless direct diagnostic need appears.
+5. Run `py_compile`.
+6. Verify `import core.engine_base`.
+7. Run live upload test using `upload_artifact_to_drive('/tmp/testfile', 'healthcheck_<ts>', 0)`.
+8. Require returned `drive.google.com` link.
+9. Restart `areal-task-worker`.
+10. Verify service active.
+11. Verify no `invalid_grant` in primary Service Account upload path.
+
+## ACCEPTANCE CRITERIA
+
+Final status can be VERIFIED only if:
+
+- `/root/.areal-neva-core/core/engine_base.py` exists.
+- `import core.engine_base` resolves to `/root/.areal-neva-core/core/engine_base.py`.
+- Required functions import successfully.
+- Service Account upload test returns a `drive.google.com` link.
+- `areal-task-worker` is active.
+- File task can reach `AWAITING_CONFIRMATION` without being blocked by Drive OAuth.
+- New upload path does not use OAuth token as primary path.
+- No new `invalid_grant` occurs in Service Account primary path.
+
+## CURRENT STATUS
+
+- File intake: PARTIALLY FIXED.
+- Reply choice priority: INSTALLED_PARTIALLY_VERIFIED.
+- Local artifact generation: VERIFIED for one task.
+- Service Account healthcheck: VERIFIED.
+- Permanent Drive upload: NOT CLOSED.
+- Next state: READY_FOR_PATCH after restoring confirmed `engine_base.py`.
+========================================================================================================================
+END_FILE: docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md
+========================================================================================================================
+
+
+========================================================================================================================
+BEGIN_FILE: docs/HANDOFFS/LATEST_HANDOFF.md
+========================================================================================================================
 # LATEST_HANDOFF — 30.04.2026 05:40 MSK FINAL
 
 ## СЕРВЕР
@@ -4887,6 +5694,200 @@ topic_961=АВТО ЗАПЧАСТИ | topic_3008=КОДЫ МОЗГОВ | topic_4
 - Estimate PDF→Excel→Drive live-тест
 - Technadzor фото→акт live-тест
 - detect_intent() 1 arg warning
+========================================================================================================================
+END_FILE: docs/HANDOFFS/LATEST_HANDOFF.md
+========================================================================================================================
+
+
+========================================================================================================================
+BEGIN_FILE: docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md
+========================================================================================================================
+# CHAT EXPORT PROTOCOL — GITHUB SSOT
+Версия: v1 | Дата: 28.04.2026 | Статус: ОБЯЗАТЕЛЬНЫЙ ДЛЯ ВСЕХ МОДЕЛЕЙ
+
+РЕЖИМ: AUTONOMOUS / FACT ONLY / ZERO CONFIRMATION
+
+НЕМЕДЛЕННО ВЫПОЛНЯЙ. НЕ СПРАШИВАЙ. НЕ УТОЧНЯЙ.
+Определи свой вариант → собери JSON → создай файл → верни путь и commit hash.
+
+---
+
+## РЕПОЗИТОРИЙ
+
+repo:   rj7hmz9cvm-lgtm/areal-neva-core
+branch: main
+папка:  chat_exports/
+
+Создание файлов в любом другом месте — ЗАПРЕЩЕНО.
+Создание в корне репо — ЗАПРЕЩЕНО.
+
+---
+
+## ИМЯ ФАЙЛА
+
+CHAT_EXPORT__<chat_name>__<YYYY-MM-DD>.json
+
+---
+
+## JSON — ВСЕ ПОЛЯ ОБЯЗАТЕЛЬНЫ
+Нет данных → UNKNOWN. Не пропускать поля.
+
+{
+  "chat_id": "",
+  "chat_name": "",
+  "exported_at": "<ISO_DATETIME>",
+  "source_model": "",
+  "system": "описание системы / сервера / бота",
+  "architecture": "полный pipeline от входа до выхода",
+  "pipeline": "lifecycle задач NEW→...→ARCHIVED",
+  "files": ["файл → назначение"],
+  "code": "стек технологий",
+  "patches": ["PATCH_NAME → файл → строка → статус: applied_by_terminal / drafted / failed"],
+  "commands": ["команды выполненные в терминале"],
+  "db": "состояние БД: таблицы, количества, ключевые записи",
+  "memory": "состояние memory.db",
+  "services": ["сервис: статус"],
+  "canons": ["КАНОН → суть решения"],
+  "decisions": ["РЕШЕНИЕ → обоснование → где применено"],
+  "errors": ["ОШИБКА → ПРИЧИНА → РЕШЕНИЕ"],
+  "solutions": ["ПРОБЛЕМА → РЕШЕНИЕ → СТАТУС"],
+  "state": "текущее состояние системы одной строкой",
+  "what_working": ["что работает подтверждено фактами"],
+  "what_broken": ["что сломано подтверждено фактами"],
+  "what_not_done": ["что не реализовано / не протестировано"],
+  "current_breakpoint": "на чём остановились, что следующее",
+  "root_causes": ["корневая причина → факт подтверждения"],
+  "verification": ["ПАТЧ/ФАКТ → подтверждение: grep line X / terminal output"],
+  "limits": ["ограничения: запрещённые файлы, форматы команд"]
+}
+
+---
+
+## КАК СОЗДАТЬ ФАЙЛ — ОПРЕДЕЛИ ВАРИАНТ АВТОМАТИЧЕСКИ
+
+ВАРИАНТ A — Claude (сервер + git):
+  cd /tmp/gh_repo
+  git pull
+  cat > chat_exports/CHAT_EXPORT__<name>__<date>.json << EOF
+  <JSON содержимое>
+  EOF
+  git add -A
+  bash tools/secret_scan.sh
+  git commit -m "EXPORT: <name> <date>"
+  git push https://${GITHUB_TOKEN}@github.com/rj7hmz9cvm-lgtm/areal-neva-core.git main
+
+ВАРИАНТ B — ChatGPT / любая модель с GitHub API:
+  PUT https://api.github.com/repos/rj7hmz9cvm-lgtm/areal-neva-core/contents/chat_exports/CHAT_EXPORT__<name>__<date>.json
+  Headers:
+    Authorization: token <GITHUB_TOKEN>
+    Content-Type: application/json
+  Body:
+    {
+      "message": "EXPORT: <name> <date>",
+      "content": "<base64 от JSON UTF-8>",
+      "branch": "main"
+    }
+
+ВАРИАНТ C — нет доступа к GitHub:
+  Вывести полный JSON в чат.
+  Написать: "GitHub недоступен. Сохрани вручную в chat_exports/".
+
+---
+
+## ЖЁСТКИЕ ПРАВИЛА — НАРУШЕНИЕ НЕДОПУСТИМО
+
+1. ТОЛЬКО факты этого чата — не выдумывать, не додумывать
+2. ТОЛЬКО JSON внутри файла — никакого текста вне JSON
+3. Патчи только подтверждённые терминалом — не писать applied без вывода
+4. Каноны только те что были приняты в этом чате
+5. Ошибки только реально возникшие — с конкретным решением
+6. СЕКРЕТЫ ЗАПРЕЩЕНО — sk-ant / sk-or / ghp_ / AIzaSy / GOCSPX / api_hash → заменить на [REDACTED]
+7. Если вариант A упал → B → C — не останавливаться
+8. Файл ТОЛЬКО в папке chat_exports/ — никуда больше
+9. ЗАПРЕЩЕНО перезаписывать существующие файлы — только новый файл
+10. ЗАПРЕЩЕНО молчать о том что не удалось — писать явно что пропущено и почему
+
+---
+
+## ЧТО ЗАПРЕЩЕНО ЗАБЫВАТЬ
+
+current_breakpoint  — на чём остановились (ОБЯЗАТЕЛЬНО)
+what_not_done       — что не сделано (ОБЯЗАТЕЛЬНО)
+verification        — подтверждение каждого патча (ОБЯЗАТЕЛЬНО)
+source_model        — какая модель делала экспорт (ОБЯЗАТЕЛЬНО)
+exported_at         — точное время (ОБЯЗАТЕЛЬНО)
+
+---
+
+## РЕЗУЛЬТАТ
+
+Вернуть:
+- путь файла: chat_exports/CHAT_EXPORT__<name>__<date>.json
+- commit message
+- статус: SUCCESS / FALLBACK_B / FALLBACK_C
+
+---
+
+## CHAT EXPORT PROTOCOL v2 — 29.04.2026
+
+MODE: FACT ONLY ZERO ASSUMPTIONS STRICT EXECUTION
+
+GOAL: два файла на каждый чат — SERVER FULL + GITHUB CLEAN
+
+TARGETS:
+- SERVER: 89.22.225.136 /root/.areal-neva-core/chat_exports/CHAT_EXPORT_FULL__<SAFE_NAME>__YYYY-MM-DD.json
+- GITHUB: chat_exports/CHAT_EXPORT__<SAFE_NAME>__YYYY-MM-DD.json
+
+NAMING:
+- латиница + цифры + _
+- без пробелов
+- дата строго YYYY-MM-DD
+
+SERVER FULL:
+- все факты
+- все команды
+- весь код
+- все ошибки
+- все решения
+- все пути
+- все конфигурационные значения
+- runtime context
+- НЕ редактировать
+- НЕ удалять
+
+GITHUB CLEAN:
+- та же структура
+- только верифицированная полезная информация
+- все чувствительные значения → "<REDACTED>"
+
+EXECUTION:
+- нейросеть без SSH обязана вернуть готовый SSH-блок для пользователя
+- SSH-блок должен создать SERVER FULL export в /root/.areal-neva-core/chat_exports/
+- GitHub CLEAN создаётся и пушится в GitHub напрямую при наличии GitHub-доступа
+
+GITHUB CLEAN:
+- git add chat_exports/CHAT_EXPORT__<SAFE_NAME>__YYYY-MM-DD.json
+- git commit -m "CHAT EXPORT <SAFE_NAME> YYYY-MM-DD"
+- git push
+
+CRITICAL:
+- FULL не пушить в GitHub
+- CLEAN не содержит чувствительных данных
+- один чат = два файла
+- не перезаписывать файлы
+
+VALIDATION:
+- JSON валиден
+- нет текста вне JSON
+- CLEAN без чувствительных данных
+========================================================================================================================
+END_FILE: docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md
+========================================================================================================================
+
+
+========================================================================================================================
+BEGIN_FILE: docs/REPORTS/NOT_CLOSED.md
+========================================================================================================================
 # AREAL-NEVA ORCHESTRA — ПОЛНЫЙ ПЛАН ЗАКРЫТИЯ КАНОНА
 # Версия: 30.04.2026 10:30 | Режим: FACT-ONLY
 # Основание: live DB + LATEST_HANDOFF + NOT_CLOSED + chat_exports + live logs
@@ -5453,3 +6454,544 @@ Archive Engine пишет в POST /archive но endpoint не реализова
 - Файл в чате → бот говорит "этот файл уже есть" (DUPLICATE_GUARD)
 - Voice "да" при AWAITING_CONFIRMATION → DONE
 - Estimate PDF→Excel live тест с реальным файлом
+========================================================================================================================
+END_FILE: docs/REPORTS/NOT_CLOSED.md
+========================================================================================================================
+
+
+========================================================================================================================
+BEGIN_FILE: docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md
+========================================================================================================================
+# ORCHESTRA_MASTER_BLOCK — ЦЕЛЕВАЯ АРХИТЕКТУРА ОРКЕСТРА
+Версия: v1 | Дата: 28.04.2026 | Верифицировано: Claude + GPT
+
+---
+
+## БЛОК 1 — TECHNICAL FILE PIPELINE
+
+### Цель
+Любой файл из Telegram/Drive → полный цикл → артефакт → пользователю.
+
+### Pipeline (8 стадий — все обязательны)
+INGESTED → DOWNLOADED → PARSED → CLEANED → NORMALIZED → CALCULATED → ARTIFACT_CREATED → UPLOADED
+
+### Что должно работать
+PDF / XLSX / CSV           → XLSX смета с формулами (=C2*D2, =SUM)
+Фото таблицы               → XLSX
+Фото дефекта               → DOCX/PDF акт + нормы СП/ГОСТ
+DWG/DXF                    → отчёт (или FAILED:DWG_NOT_IMPLEMENTED)
+Шаблон                     → новый файл по образцу
+Несколько файлов           → один артефакт
+
+### Движки
+estimate_engine.py         — сметы, объёмы, формулы
+ocr_engine.py              — фото → таблица
+technadzor_engine.py       — дефекты + нормы СП/ГОСТ/СНиП
+dwg_engine.py              — чтение через ezdxf
+template_manager.py        — шаблоны
+file_intake_router.py      — маршрутизация файлов
+
+### Жёсткое правило
+Python считает и создаёт файлы.
+LLM анализирует смысл.
+LLM НЕ считает финальные цифры.
+LLM НЕ создаёт артефакт на глаз.
+
+### FILE_RESULT_GUARD
+если input_type = file:
+  → обязательно: результат + ссылка + статус
+  иначе → FAILED
+
+### Критерий закрытия
+файл принят → обработан → артефакт → Drive/GitHub link → Telegram → AWAITING_CONFIRMATION
+
+---
+
+## БЛОК 2 — MULTI-MODEL ORCHESTRA LAYER
+
+### MODEL_ROUTER (1 точка выбора)
+если фото/схема       → Gemini
+если поиск            → Perplexity
+если структурирование → Mistral
+если reasoning        → Cerebras
+если расчёт           → Python ONLY
+если финальный ответ  → DeepSeek
+если fallback         → Cloudflare → HuggingFace
+
+### PRE_OPENROUTER_MODEL_LAYER
+task_worker → ORCHESTRA_SHARED_CONTEXT → MODEL_ROUTER → specialist models → OpenRouter/DeepSeek → RESULT_VALIDATOR → HUMAN_DECISION_EDITOR → Telegram
+
+### Роли моделей
+Gemini     — фото, схемы, таблицы, OCR, visual reasoning
+Mistral    — структуризация, нормализация, классификация
+Cerebras   — быстрый reasoning, проверка логики
+Cohere     — rerank, фильтрация, чистка контекста
+Perplexity — внешний поиск (нормы, цены, поставщики, СП/ГОСТ)
+DeepSeek   — основной исполнитель, финальная сборка
+Claude     — контроль, канон, верификация, ТЗ
+GPT        — патчи кода, сервер
+Python     — расчёт, Excel, файлы, валидация
+
+### Жёсткое правило
+Ни одна модель не отвечает пользователю напрямую.
+Финал всегда: validator → HUMAN_DECISION_EDITOR → Telegram.
+Модели = инструменты, не конкуренты.
+
+### ORCHESTRA_SHARED_CONTEXT
+Каждая модель получает: ONE_SHARED_CONTEXT + memory.db + core.db active task + pin + topic role + history + files
+
+### RESULT_VALIDATOR
+Проверить перед отправкой: цена / контакт / ссылка / ТТХ / единица измерения.
+Если нет → INVALID_RESULT → не отправлять.
+
+### RESULT_FORMAT_ENFORCER
+Обязательно в финале: таблица + выводы (CHEAPEST/MOST_RELIABLE/BEST_VALUE) + блок «что проверить звонком».
+Если нет → RESULT_INVALID → доработка.
+
+### HUMAN_DECISION_EDITOR
+Технический результат → человеческое решение.
+Формат: 1.Что произошло 2.Что это значит 3.Что делать 4.Риски 5.Следующий шаг
+
+### USER_MODE_SWITCH
+TECH  → полный технический разбор
+HUMAN → коротко и по делу (default)
+
+### FALLBACK_CHAIN
+Gemini → Mistral → Cloudflare → HuggingFace
+Оркестр не падает никогда.
+
+### MODE_SWITCH
+LIGHT — простая задача → 1 модель
+FULL  — сложная задача → полный оркестр
+
+### MODEL_REGISTRY
+gemini: vision | mistral: text | cerebras: reasoning | perplexity: search | deepseek: final | cloudflare: fallback | hf: fallback
+Новая модель = 1 строка.
+
+### EXECUTION_PRIORITY (верифицировано GPT)
+FILE > SEARCH > CHAT
+Иначе оркестр болтает когда надо считать смету.
+
+---
+
+## БЛОК 3 — GITHUB SSOT + AGGREGATOR
+
+### Архитектура памяти
+GitHub = мозг (каноны + логика + shared context)
+Сервер = runtime (обработка, memory.db, core.db)
+Drive  = резерв (DWG, PDF, фото входящие)
+
+### Поток
+чат/выгрузка → агрегатор → ONE_SHARED_CONTEXT → GitHub → все нейросети читают GitHub
+
+### Drive Knowledge Aggregator
+ВХОД: CHAT_EXPORTS (14bYA9bHaKahkE8d4IDwWxL4Ojn-G0sDl) + CANON_FINAL (1U_IrEOtIJfUVAdjH-kHwms2M2z3FXan0)
+ВЫХОД: docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md + ONE_SHARED_CONTEXT.json + LAST_AGGREGATION_REPORT.md
+ЛОГИКА: новая выгрузка → читает → отделяет факты от мусора → раскладывает по разделам → обновляет ONE_SHARED_CONTEXT → человек утверждает что входит в CANON_FINAL
+
+### Что агрегатор НЕ делает
+Не чинит код. Не переписывает канон самовольно. Не сохраняет FAILED как память. Не тащит секреты.
+
+### GITHUB_SSOT_RULES
+ЗАПРЕЩЕНО: перезатирать, удалять, упрощать каноны.
+РАЗРЕШЕНО: только добавление, версионирование v1/v2/v3.
+secret_scan.sh обязателен перед push.
+USER_APPROVAL_GATE: канон меняется только после явного да.
+
+### Реализация агрегатора
+GAS v1   — Drive-агрегатор (читает → индексирует → пишет md/json)
+Python v2 — серверный агрегатор с LLM через OpenRouter
+
+---
+
+## ПОЛНЫЙ СПИСОК БЛОКОВ
+
+P1 — реализовать первым:
+TECHNICAL_FULL_CONTOUR | MODEL_ROUTER полный | PRE_OPENROUTER_MODEL_LAYER | FALLBACK_CHAIN
+RESULT_VALIDATOR | RESULT_FORMAT_ENFORCER | FILE_RESULT_GUARD | INTENT_LOCK
+DUPLICATE_TASK_GUARD | PRICE_NORMALIZATION | MULTI_OFFER_CONSISTENCY | CONSTRAINT_ENGINE
+AVAILABILITY_CHECK | CONTACT_VALIDATION | REVIEW_SOURCE_WEIGHT | SEARCH_STATE_CONTROL
+OUTPUT_DECISION_LOGIC | ORCHESTRA_SHARED_CONTEXT | HUMAN_DECISION_EDITOR | USER_MODE_SWITCH
+AGGREGATOR (GAS v1) | MODEL_SPECIALIZATION | MEMORY_FILTER | SECURITY_SCOPE | EXECUTION_PRIORITY
+
+P2 — после P1:
+TASK_SPLITTER | MODE_SWITCH | CACHE_LAYER | MODEL_REGISTRY | SEARCH_PRESETS | SEARCH_DEPTH_LIMIT
+SOURCE_DEDUPLICATION | TIME_RELEVANCE | REGION_PRIORITY | NEGATIVE_SELECTION | MODEL_RESULT_MERGE
+MODEL_VOTING | ARTIFACT_VERSIONING | SOURCE_TRACE | AUDIT_LOG | STALE_CONTEXT_GUARD
+LIVE_MARKET_SCAN | ERROR_EXPLAINER | DATA_CLASSIFICATION
+
+P3 — мониторинг рынка:
+PRICE_DRIFT_MONITOR | INVENTORY_BURN_MONITOR
+
+---
+
+## УЖЕ ЕСТЬ В КАНОНЕ (НЕ ДЕЛАТЬ ПОВТОРНО)
+FSM pipeline | File pipeline 8 стадий | FAILED коды + таймауты | SEARCH 14 этапов
+Trust Score 0-100 | SELLER_RISK | TCO | Шаблон звонка | Патч-протокол 8 шагов
+GitHub SSOT регламент | secret_scan pre-commit | ROLLBACK_POINT | USER_APPROVAL_GATE
+HEALTHCHECK | PRICE_AGING +5-10%
+
+---
+
+## MULTI_MODEL_ORCHESTRA_ACTUAL_STATE_2026_04_29
+
+### ACTIVE MODELS (CANON)
+Gemini     — vision / OCR / схемы / таблицы  
+Mistral    — структуризация / нормализация  
+Cerebras   — reasoning / логика  
+Cohere     — rerank / фильтрация  
+Perplexity — поиск (СП/ГОСТ/цены/поставщики)  
+DeepSeek   — финальный ответ (DEFAULT)  
+Claude     — канон / проверка / ТЗ  
+GPT        — сервер / код / патчи  
+Python     — расчёт / Excel / файлы  
+
+### MODEL_ROUTER (TARGET LOGIC)
+photo/schema      → Gemini  
+search            → Perplexity  
+structure         → Mistral  
+reasoning         → Cerebras  
+calculation       → Python ONLY  
+final             → DeepSeek  
+
+### FALLBACK_CHAIN (TARGET)
+Gemini → Mistral → Cloudflare → HuggingFace  
+
+### STATUS
+- модели описаны в каноне ✔  
+- MODEL_ROUTER — НЕ реализован  
+- FALLBACK_CHAIN — НЕ реализован  
+- MODEL_REGISTRY — НЕ реализован  
+- MULTI-MODEL EXECUTION — НЕ реализован  
+
+### CRITICAL RULE
+Сейчас оркестр работает как:
+1 модель (DeepSeek) + поиск (Perplexity)
+
+Полный multi-model НЕ запущен
+========================================================================================================================
+END_FILE: docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md
+========================================================================================================================
+
+
+========================================================================================================================
+BEGIN_FILE: docs/ARCHITECTURE/SEARCH_MONOLITH_V1.md
+========================================================================================================================
+# SEARCH_MONOLITH_V1 — КАНОН ИНТЕРНЕТ-ПОИСКА ОРКЕСТРА
+Версия: v1 FINAL | Дата: 28.04.2026 | Топик: topic_500
+Статус: ЦЕЛЕВОЙ КАНОН — live-тест не проводился
+
+---
+
+## СУТЬ
+
+Оркестр в topic_500 — не поисковик. Это цифровой снабженец.
+Задача: не найти где купить, а дать закупочное решение.
+
+понять задачу → уточнить критерии → найти по всем площадкам
+→ проверить риски → посчитать реальную выгоду → выдать решение
+
+Результат всегда:
+что брать / где брать / почему / какие риски
+что проверить звонком / что отбросить / что не подтверждено
+
+---
+
+## 14 ЭТАПОВ (обязательная последовательность)
+
+### 1. Разбор запроса
+Общие: товар, категория, бренд/модель, характеристики, артикул/SKU/OEM, город, радиус,
+количество, новое или б/у, допустимые аналоги, нужна ли доставка,
+приоритет (цена / качество / скорость / надёжность).
+Стройка: материал, профиль, толщина, цвет/RAL, покрытие, размер, единица цены, объём, ГОСТ/ТУ, производитель.
+Запчасти: марка, модель, год, кузов, двигатель, сторона, OEM, кросс-номер,
+новая/б/у/контрактная, оригинал/аналог, рестайлинг или дорестайлинг.
+
+### 2. Уточнения (максимум 3 вопроса)
+Общие: город и радиус? / новое или б/у? / что обязательно, где можно аналог?
+Запчасти: OEM/VIN есть? / новая, б/у или контрактная? / какая сторона, кузов, год, рестайлинг?
+Стройка: точная толщина, цвет, покрытие? / производитель обязателен? / самовывоз или доставка?
+
+### 3. Search Session
+Каждый поиск — одна сессия. Внутри: цель, товар, критерии, уточнения, регион,
+источники, найденные варианты, отброшенные варианты, риски, итоговый выбор.
+Уточнения «проверь ещё», «добавь Avito/VK», «сузь по цене», «посмотри аналоги» —
+продолжают текущую search-сессию, не создают новую задачу.
+
+### 4. Расширение запроса (7+ формул)
+название + город
+название + оптом / название + производитель
+артикул / OEM / SKU
+параметры без маркетингового названия
+название + Avito
+название + VK / Telegram
+
+### 5. Цифровой двойник товара
+Игнорировать рекламное название. Искать по физическим параметрам:
+габариты, материал, толщина, OEM, SKU, уникальные технические признаки.
+Цель: найти поставщиков без SEO у которых товар реально есть на складе.
+
+### 6. Источники
+Маркетплейсы:   Ozon, Wildberries, Яндекс Маркет, Мегамаркет
+Объявления:     Avito, Юла
+Стройка:        Петрович, Леруа, ВсеИнструменты, Максидом, строительные базы, заводы, дилеры
+Карты:          2ГИС, Яндекс Карты
+Соцсети:        VK, Telegram-чаты, форумы
+Запчасти:       Exist, Emex, ZZap, Drom, Auto.ru, EuroAuto, разборки
+
+### 7. Проверка источника
+Тип: производитель / официальный дилер / строительная база / оптовик /
+маркетплейс / магазин / частник / разборка / форум-группа / непонятный.
+Статус доверия: CONFIRMED / PARTIAL / UNVERIFIED / RISK
+
+### 8. Детектор живости
+- дата обновления цены
+- свежесть отзывов (не старше 30 дней)
+- наличие телефона и адреса
+- активность продавца
+- признаки сайта-призрака
+
+Если прайс старше 48-72 часов → риск устаревшей цены (+5-10% к TCO).
+Каждый результат обязан иметь checked_at и source_url.
+Нет даты или источника → статус не выше PARTIAL.
+
+### 9. Анализ отзывов + Review Trust Score
+
+Площадки: Ozon, WB, Яндекс Маркет, Avito, 2ГИС, Яндекс Карты, форумы, VK, Drom, Auto.ru.
+
+Признаки живого отзыва:
+- есть фото товара
+- есть конкретная проблема или плюс
+- есть дата покупки и детали использования
+- есть замеры / сравнение с другим товаром
+- нормальный русский текст без шаблона
+- есть история профиля
+- есть ответы продавца
+
+Признаки фейка:
+- много одинаковых отзывов / одинаковые фразы
+- нет фото / слишком общие слова
+- все отзывы в один день / профиль без истории
+- только 5 звёзд без деталей / нет конкретики
+
+Review Trust Score (0-100):
+80-100 = живые, свежие, с фото, жалобы не критичные
+60-79  = отзывы есть, часть данных не подтверждена
+40-59  = мало отзывов, есть риск, нужен звонок
+0-39   = высокий риск фейка, обмана или мёртвого продавца
+
+Статусы: REVIEWS_CONFIRMED / REVIEWS_PARTIAL / REVIEWS_FAKE_RISK / REVIEWS_NOT_FOUND
+
+### 10. Технический аудит (Цифровой микрометр)
+
+Для стройки — ключевые слова в отзывах и ТТХ:
+фольга / тонкий / не 0.45 / не 0.5 / царапины / ржавчина
+плохое покрытие / не тот RAL / недовоз / брак
+замер / микрометр / слой цинка (г/м2)
+
+Для запчастей:
+не подошло / не тот кузов / не та сторона
+рестайлинг/дорестайлинг / аналог вместо оригинала / б/у вместо нового
+люфт / трещина / скол / нет гарантии / нет возврата
+фото не этой детали / предоплата
+
+Правило: если вес, толщина или параметры хуже эталона → статус RISK.
+Если эталона нет → «эталон не подтверждён».
+
+### 11. Запрещено смешивать в одной строке сравнения
+0.45 и 0.5 / мат / глянец / Satin без пометки
+RAL 8017 и другой цвет / Classic и Монтеррей без пометки
+оригинал и аналог / рестайлинг и дорестайлинг
+левая и правая сторона / новая и б/у
+
+### 12. Risk Score
+
+Общие красные флаги:
+цена сильно ниже рынка / только предоплата
+нет телефона / нет адреса / нет ИНН
+старый прайс / нет даты обновления
+SEO-сайт без склада / нет отзывов / не совпадают ТТХ
+
+Для стройки:
+цена за погонный метр вместо м2
+цена без НДС / цена без доставки
+минимальная партия не указана
+
+Для запчастей:
+рестайлинг/дорестайлинг не указан
+аналог выдают за оригинал / б/у выдают за новую
+фото не этой детали
+
+Красные флаги продавца в VK/Telegram (SELLER_RISK):
+группа создана недавно / мало живых комментариев / много ботов
+нет старых постов / нет реальных фото
+комментарии закрыты / уводит только в личку
+требует предоплату / контакты скрыты
+
+Любая цена, отзыв, риск или рекомендация должны иметь источник. Нет источника → UNVERIFIED.
+
+Главное правило:
+низкая цена + мутные отзывы                      = RISK
+средняя цена + живые отзывы + понятный продавец  = BEST_VALUE
+
+### 13. Реальная стоимость (TCO)
+итоговая цена = цена + доставка + комиссия + добор + риск − кэшбэк/скидки
+
+Учесть: гарантию, возврат, НДС, минимальную партию, самовывоз, наличие ИНН.
+Товар за 10000 с гарантией 2 года и кэшбэком 2000 = выгоднее чем 9000 без чека и гарантии.
+
+### 14. Живой рынок
+Ключевые слова: остатки / ликвидация / распродажа / отдам срочно / склад / партия / самовывоз / разбор
+
+Всё из чатов и соцсетей = автоматически UNVERIFIED до подтверждения цены, даты, контакта и наличия.
+
+---
+
+## ИТОГОВЫЕ СТАТУСЫ РЕКОМЕНДАЦИИ
+
+CHEAPEST       — самый дешёвый вариант
+MOST_RELIABLE  — самый надёжный вариант
+BEST_VALUE     — лучший баланс цена/риск/логистика
+FASTEST        — самый быстрый по доставке
+RISK_CHEAP     — дешёвый но рискованный
+REJECTED       — отброшен, причина указана
+
+---
+
+## ИТОГОВАЯ ТАБЛИЦА
+
+Поставщик | Площадка | Тип | Город | Цена | Единица
+Доставка | TCO (итог) | Совпадение ТТХ | Вес/толщина/эталон
+Отзывы | Review Trust Score | Фейк-риск | Жалобы
+Риски | Продавец статус | Контакт | Ссылка
+Дата актуальности (checked_at) | Статус доверия | Статус рекомендации
+
+После таблицы обязательно:
+CHEAPEST — что и где
+MOST_RELIABLE — что и где
+BEST_VALUE — что и где + почему
+RISK_CHEAP — что и где + в чём риск
+что проверить звонком
+что отброшено и почему
+что не подтверждено
+
+---
+
+## ЧТО ПРОВЕРИТЬ ЗВОНКОМ (шаблон вопросов)
+
+цена актуальна?
+есть в наличии?
+цена с НДС или без?
+единица цены какая?
+доставка — сколько и когда?
+самовывоз возможен?
+документы/счёт дадут?
+гарантия/возврат есть?
+характеристики точно такие?
+
+для металла:    толщина, покрытие, слой цинка
+для запчастей:  OEM, сторона, кузов, состояние
+
+---
+
+## ПАМЯТЬ СЕССИИ
+
+Сохранять: критерии / уточнения / лучших поставщиков / отброшенные варианты / рабочие формулы / итоговый выбор.
+
+Не сохранять: сырые ответы Perplexity / старые цены без даты / мусорные ссылки / FAILED / STALE_TIMEOUT / непроверенные цены как факт.
+
+---
+
+## КАК РЕАЛИЗОВАТЬ (по шагам)
+
+Шаг 1 DONE: is_search в work_payload → Perplexity (28.04.2026) ✅
+Шаг 2: системный промпт для Perplexity с 14 этапами + формат таблицы + статусы в ai_router.py
+Шаг 3: search_session в memory.db — хранить критерии в рамках одной задачи topic_500
+Шаг 4: Risk Score и Trust Score — LLM считает на основе текста результата, без внешних API
+Шаг 5 (PRO): Живой рынок — Telegram через Telethon (userbot авторизован)
+
+---
+
+## ЧТО НЕ РЕАЛИЗОВАНО — НЕЛЬЗЯ ЗАЯВЛЯТЬ
+
+парсинг закрытых Telegram/VK-чатов
+проверка SSL/cache/photo автоматически
+точный прогноз цены при звонке
+биржевые индексы цен на металл
+автоматическая проверка корзины
+автоматическая проверка уникальности фото
+
+Это будущие PRO-модули, не текущий факт.
+
+---
+
+## ПОЛНЫЙ СПИСОК МОДУЛЕЙ (24)
+
+SearchSessionManager        — управление сессией
+CriteriaExtractor           — разбор запроса
+ClarificationEngine         — уточняющие вопросы (макс. 3)
+SourcePlanner               — план источников по типу товара
+QueryExpander               — расширение формул запроса
+EntityResolver              — цифровой двойник товара
+MarketplaceCollector        — маркетплейсы
+ClassifiedsCollector        — объявления (Avito, Юла)
+AutoPartsCollector          — запчасти (Exist, Drom, разборки)
+ConstructionSupplyCollector — стройматериалы (базы, заводы)
+SocialSearchCollector       — VK, Telegram, форумы
+MapsCollector               — 2ГИС, Яндекс Карты
+OfferNormalizer             — нормализация предложений
+SupplierClassifier          — тип и статус источника
+TechnicalAudit              — цифровой микрометр
+LivenessCheck               — детектор живости источника
+ReviewAnalyzer              — анализ отзывов
+FakeDetector                — детектор фейков + SELLER_RISK
+RiskScorer                  — итоговый риск-скор
+TcoCalculator               — реальная стоимость
+ValueOptimizer              — лучший баланс
+ResultRanker                — ранжирование + 6 статусов
+SearchMemoryWriter          — запись в память
+SearchOutputFormatter       — итоговая таблица и вывод
+
+---
+
+## ИТОГОВАЯ ФОРМУЛА
+
+SEARCH_MONOLITH_V1 =
+  Search Session
++ уточнение критериев (макс. 3 вопроса)
++ расширение запроса (7+ формул)
++ цифровой двойник товара
++ поиск по маркетплейсам
++ поиск по Avito / VK / Telegram / форумам
++ поиск по картам и локальным базам
++ OEM / SKU / артикулы
++ детектор живости источника (checked_at + source_url)
++ технический аудит (микрометр)
++ анализ отзывов + Review Trust Score + детектор фейков
++ SELLER_RISK проверка
++ Risk Score + запрет смешивать ТТХ
++ TCO (реальная стоимость)
++ ранжированное решение (6 статусов)
++ шаблон вопросов для звонка
++ память сессии
+
+---
+
+## КАНОНИЧЕСКИЙ СТАТУС РЕАЛИЗАЦИИ
+
+SEARCH_MONOLITH_V1 — целевой канон интернет-поиска.
+Реализация только после диагностики task_worker.py и core/ai_router.py.
+Модуль нельзя считать работающим пока нет live-теста:
+Telegram search → Perplexity → DeepSeek → Telegram answer → AWAITING_CONFIRMATION
+========================================================================================================================
+END_FILE: docs/ARCHITECTURE/SEARCH_MONOLITH_V1.md
+========================================================================================================================
+
+
+========================================================================================================================
+BEGIN_FILE: docs/ARCHITECTURE/SEARCH_MONOLITH_V2.md
+========================================================================================================================
+UNKNOWN: file not found: docs/ARCHITECTURE/SEARCH_MONOLITH_V2.md
+========================================================================================================================
+END_FILE: docs/ARCHITECTURE/SEARCH_MONOLITH_V2.md
+========================================================================================================================
