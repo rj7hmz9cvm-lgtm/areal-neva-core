@@ -639,3 +639,240 @@ def ff13b_template_saved_message(file_name: str = "", template_type: str = "esti
     )
 # === END FULLFIX_13B_TEMPLATE_SAVE_STRICT_ACK ===
 
+# === PROJECT_TECHNADZOR_TEMPLATE_CLOSE_V1 ===
+
+TECHNADZOR_TEMPLATE_DIR = TEMPLATE_ROOT / "technadzor"
+TECHNADZOR_TEMPLATE_DIR.mkdir(parents=True, exist_ok=True)
+
+TECHNADZOR_WORDS = (
+    "технадзор", "дефект", "акт", "нарушение", "предписание", "замечание",
+    "осмотр", "проверка", "инспекция", "обследование", "фотофиксация",
+)
+
+PROJECT_INTENT_WORDS = (
+    "сделай проект", "создай проект", "разработай проект", "подготовь проект",
+    "применить шаблон", "используй шаблон", "по шаблону", "как в шаблоне",
+    "создай документацию", "сделай документацию", "разработай документацию",
+    "по образцу", "аналогично шаблону",
+)
+
+TECHNADZOR_INTENT_WORDS = (
+    "составь акт", "сделай акт", "создай акт", "сформируй акт",
+    "акт по шаблону", "акт как в шаблоне", "технадзор по шаблону",
+    "используй шаблон акта", "применить шаблон акта",
+)
+
+def detect_project_template_intent(raw_input: Any) -> bool:
+    low = _low(raw_input)
+    return any(w in low for w in PROJECT_INTENT_WORDS)
+
+def detect_technadzor_template_intent(raw_input: Any) -> bool:
+    low = _low(raw_input)
+    return any(w in low for w in TECHNADZOR_INTENT_WORDS)
+
+def _technadzor_template_paths(chat_id: str, topic_id: int):
+    base = TECHNADZOR_TEMPLATE_DIR / f"chat_{chat_id}" / f"topic_{topic_id}"
+    base.mkdir(parents=True, exist_ok=True)
+    return base / "active.json", base / "index.json"
+
+async def create_project_from_saved_template(
+    raw_input: str,
+    task_id: str,
+    chat_id: str,
+    topic_id: int = 0,
+) -> Dict[str, Any]:
+    template = _load_active_template("project", chat_id, topic_id)
+    if not template:
+        return {"success": False, "error": "PROJECT_TEMPLATE_NOT_FOUND"}
+
+    source_file = template.get("source_file_name") or ""
+    source_path = template.get("source_file_path") or ""
+    section = template.get("section") or "кр"
+
+    try:
+        if source_path and any(source_path.lower().endswith(e) for e in (".dwg", ".dxf")):
+            from core.project_engine import process_dwg_dxf_project_file
+            import asyncio
+            res = await process_dwg_dxf_project_file(
+                file_path=source_path,
+                task_id=task_id,
+                topic_id=topic_id,
+                raw_input=raw_input,
+                file_name=source_file,
+                mime_type="",
+            )
+            if res and res.get("success"):
+                link = _upload(res.get("artifact_path") or res.get("docx_path") or "", task_id, topic_id)
+                msg = (
+                    f"Проект создан по шаблону {source_file}\n"
+                    f"Раздел: {res.get('section', section).upper()}\n"
+                )
+                if link:
+                    msg += f"Документ: {link}"
+                return {"success": True, "message": msg, "drive_link": link, "engine": "DWG_TEMPLATE"}
+            return {"success": False, "error": str((res or {}).get("error", "DWG_PROJECT_FAILED"))}
+
+        if source_path and any(source_path.lower().endswith(e) for e in (".pdf", ".docx", ".txt")):
+            from core.project_document_engine import process_project_document
+            res = await process_project_document(
+                file_path=source_path,
+                file_name=source_file,
+                user_text=raw_input,
+                topic_role="проектирование по шаблону",
+                task_id=task_id,
+                topic_id=topic_id,
+            )
+            if res and res.get("success"):
+                link = _upload(res.get("artifact_path") or "", task_id, topic_id)
+                msg = (
+                    f"Проектная документация создана по шаблону {source_file}\n"
+                    f"Раздел: {res.get('model', {}).get('section_title', section)}\n"
+                )
+                if link:
+                    msg += f"Документ: {link}"
+                return {"success": True, "message": msg, "drive_link": link, "engine": "PROJECT_DOC_TEMPLATE"}
+            return {"success": False, "error": str((res or {}).get("error", "PROJECT_DOC_FAILED"))}
+
+        return {"success": False, "error": "PROJECT_TEMPLATE_SOURCE_NOT_FOUND_OR_UNSUPPORTED"}
+
+    except Exception as e:
+        return {"success": False, "error": f"PROJECT_TEMPLATE_ERR:{e}"}
+
+
+async def create_technadzor_from_saved_template(
+    raw_input: str,
+    task_id: str,
+    chat_id: str,
+    topic_id: int = 0,
+    local_photo_path: str = "",
+) -> Dict[str, Any]:
+    act_ptr, _ = _technadzor_template_paths(chat_id, topic_id)
+    if not act_ptr.exists():
+        return {"success": False, "error": "TECHNADZOR_TEMPLATE_NOT_FOUND"}
+
+    try:
+        template = _json_loads_maybe(act_ptr.read_text(encoding="utf-8"))
+    except Exception:
+        return {"success": False, "error": "TECHNADZOR_TEMPLATE_CORRUPT"}
+
+    from core.technadzor_engine import process_technadzor
+    res = process_technadzor(
+        conn=None,
+        task_id=task_id,
+        chat_id=chat_id,
+        topic_id=topic_id,
+        raw_input=raw_input or "Технический осмотр по шаблону",
+        file_name=template.get("source_file_name") or "",
+        local_path=local_photo_path or template.get("source_file_path") or "",
+    )
+
+    if res and res.get("ok"):
+        art = res.get("artifact") or {}
+        link = art.get("drive_link") or _upload(art.get("path") or "", task_id, topic_id)
+        msg = res.get("result_text") or "Акт технадзора создан по шаблону"
+        if link and link not in msg:
+            msg += f"\n\nДокумент: {link}"
+        return {"success": True, "message": msg, "drive_link": link, "engine": "TECHNADZOR_TEMPLATE"}
+
+    return {"success": False, "error": "TECHNADZOR_TEMPLATE_ACT_FAILED"}
+
+
+async def save_technadzor_template_pointer(
+    conn,
+    chat_id: str,
+    topic_id: int,
+    task_id: str,
+    raw_input: Any,
+    input_type: str = "text",
+) -> Tuple[bool, Dict[str, Any], str]:
+    act_ptr, idx_ptr = _technadzor_template_paths(chat_id, topic_id)
+
+    payload = _parse_file_payload(raw_input)
+    template = {
+        "kind": "technadzor",
+        "task_id": task_id,
+        "chat_id": chat_id,
+        "topic_id": topic_id,
+        "source_file_id": payload.get("file_id") or "",
+        "source_file_name": payload.get("file_name") or "",
+        "source_file_path": payload.get("local_path") or payload.get("file_path") or "",
+        "saved_at": _now(),
+        "input_type": input_type,
+        "raw_text": _safe_text(payload.get("caption") or raw_input)[:500],
+    }
+
+    try:
+        act_ptr.write_text(_safe_text(template), encoding="utf-8")
+        import json
+        act_ptr.write_text(json.dumps(template, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception as e:
+        return False, template, f"TECHNADZOR_TEMPLATE_SAVE_ERR:{e}"
+
+    return True, template, ""
+
+
+async def handle_template_project_intent(
+    conn,
+    task_id: str,
+    chat_id: str,
+    topic_id: int,
+    raw_input: Any,
+    input_type: str,
+    reply_to_message_id=None,
+) -> bool:
+    if conn is None:
+        return False
+    if input_type not in ("text", "voice"):
+        return False
+    if not detect_project_template_intent(raw_input):
+        return False
+    template = _load_active_template("project", chat_id, topic_id)
+    if not template:
+        return False
+
+    res = await create_project_from_saved_template(str(raw_input), task_id, chat_id, topic_id)
+    if not res.get("success"):
+        _task_history_insert(conn, task_id, f"PROJECT_TEMPLATE_FAILED:{res.get('error')}")
+        return False
+
+    msg = res.get("message") or "Проект создан по шаблону"
+    bot_id = _send_reply(chat_id, msg, reply_to_message_id)
+    _update_task(conn, task_id, "AWAITING_CONFIRMATION", msg, "", bot_id)
+    _task_history_insert(conn, task_id, "PROJECT_TEMPLATE_CLOSE_V1_OK")
+    return True
+
+
+async def handle_template_technadzor_intent(
+    conn,
+    task_id: str,
+    chat_id: str,
+    topic_id: int,
+    raw_input: Any,
+    input_type: str,
+    reply_to_message_id=None,
+) -> bool:
+    if conn is None:
+        return False
+    if input_type not in ("text", "voice"):
+        return False
+    if not detect_technadzor_template_intent(raw_input):
+        return False
+
+    act_ptr, _ = _technadzor_template_paths(chat_id, topic_id)
+    if not act_ptr.exists():
+        return False
+
+    res = await create_technadzor_from_saved_template(str(raw_input), task_id, chat_id, topic_id)
+    if not res.get("success"):
+        _task_history_insert(conn, task_id, f"TECHNADZOR_TEMPLATE_FAILED:{res.get('error')}")
+        return False
+
+    msg = res.get("message") or "Акт технадзора создан по шаблону"
+    bot_id = _send_reply(chat_id, msg, reply_to_message_id)
+    _update_task(conn, task_id, "AWAITING_CONFIRMATION", msg, "", bot_id)
+    _task_history_insert(conn, task_id, "TECHNADZOR_TEMPLATE_CLOSE_V1_OK")
+    return True
+
+# === END PROJECT_TECHNADZOR_TEMPLATE_CLOSE_V1 ===
+
+
