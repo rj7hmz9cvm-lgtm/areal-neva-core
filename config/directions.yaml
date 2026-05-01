@@ -5,13 +5,7 @@
     "general_chat": {
       "title": "Общий чат",
       "enabled": true,
-      "topic_ids": [
-        0,
-        9,
-        11,
-        13,
-        794
-      ],
+      "topic_ids": [],
       "aliases": [],
       "input_types": [
         "text",
@@ -155,12 +149,7 @@
     "product_search": {
       "title": "Товарный поиск",
       "enabled": true,
-      "topic_ids": [
-        500,
-        961,
-        4569,
-        6104
-      ],
+      "topic_ids": [],
       "strong_aliases": [
         "avito",
         "ozon",
@@ -204,8 +193,7 @@
       "title": "Автозапчасти",
       "enabled": true,
       "topic_ids": [
-        961,
-        4569
+        961
       ],
       "strong_aliases": [
         "drom",
@@ -251,10 +239,7 @@
     "construction_search": {
       "title": "Строительный поиск",
       "enabled": true,
-      "topic_ids": [
-        500,
-        2
-      ],
+      "topic_ids": [],
       "aliases": [
         "металлочерепиц",
         "профнастил",
@@ -291,7 +276,6 @@
       "title": "Технадзор",
       "enabled": true,
       "topic_ids": [
-        2,
         5
       ],
       "aliases": [
@@ -371,9 +355,7 @@
     "defect_acts": {
       "title": "Акты дефектов",
       "enabled": true,
-      "topic_ids": [
-        2
-      ],
+      "topic_ids": [],
       "aliases": [
         "акт дефект",
         "акт осмотр",
@@ -504,7 +486,9 @@
     "devops_server": {
       "title": "Сервер DevOps",
       "enabled": false,
-      "topic_ids": [],
+      "topic_ids": [
+        794
+      ],
       "aliases": [
         "systemctl",
         "journalctl",
@@ -523,7 +507,8 @@
       ],
       "engine": "ai_router",
       "requires_search": false,
-      "quality_gates": []
+      "quality_gates": [],
+      "status": "active"
     },
     "vpn_network": {
       "title": "VPN",
@@ -578,9 +563,7 @@
     "cad_dwg": {
       "title": "CAD DWG",
       "enabled": false,
-      "topic_ids": [
-        210
-      ],
+      "topic_ids": [],
       "aliases": [
         "dwg",
         "cad",
@@ -696,7 +679,9 @@
     "crm_leads": {
       "title": "CRM лиды",
       "enabled": false,
-      "topic_ids": [],
+      "topic_ids": [
+        4569
+      ],
       "aliases": [
         "лид",
         "amocrm",
@@ -716,7 +701,8 @@
       ],
       "engine": "ai_router",
       "requires_search": true,
-      "quality_gates": []
+      "quality_gates": [],
+      "status": "active"
     },
     "email_ingress": {
       "title": "Почта",
@@ -776,7 +762,9 @@
     "video_production": {
       "title": "Видео",
       "enabled": false,
-      "topic_ids": [],
+      "topic_ids": [
+        11
+      ],
       "aliases": [
         "монтаж видео",
         "shorts",
@@ -800,7 +788,8 @@
       ],
       "engine": "video_production_agent",
       "requires_search": false,
-      "quality_gates": []
+      "quality_gates": [],
+      "status": "active"
     },
     "photo_cleanup": {
       "title": "Чистка фото",
@@ -846,6 +835,15 @@
       "engine": "ivan_project",
       "requires_search": false,
       "quality_gates": []
+    },
+    "job_search": {
+      "id": "job_search",
+      "name": "Поиск работы",
+      "status": "active",
+      "topic_ids": [
+        6104
+      ],
+      "engine": "search_engine"
     }
   }
 }

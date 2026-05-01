@@ -1,0 +1,17 @@
+{
+  "engine": "FULLFIX_13A_SAMPLE_FILE_INTENT_AND_TEMPLATE_ESTIMATE",
+  "kind": "estimate",
+  "status": "active",
+  "chat_id": "-1003725299009",
+  "topic_id": 3008,
+  "saved_by_task_id": "7270364c-bb74-4e1e-b531-de64dfe713b7",
+  "source_task_id": "f5c33c40-dacf-46c9-97ca-2dc19e245650",
+  "source_file_id": "1XsuPOtO-vyA73IX5Ui9AR9kf6uUAE5b_",
+  "source_file_name": "estimate_c925a897-66ec-435e-8312-15687f.xlsx",
+  "source_mime_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "source_caption": "",
+  "source_score": 110,
+  "saved_at": "2026-05-01T08:38:07.108195+00:00",
+  "usage_rule": "Use this file as formatting/sample reference for future estimate/project artifacts in the same chat and topic",
+  "raw_user_instruction": "этот чат у нас используется с тобой для работы, соответственно, как ты правильно и сказал, по AI роутеру Arial Niva, но также мы здесь еще с тобой пишем коды по определенным запросам команд, которые ты вот сейчас мне написал, например, напиши код. То есть здесь мы также с тобой создаем еще коды, которые делаются на основании четырех моделей, которые присутствуют у нас с тобой."
+}

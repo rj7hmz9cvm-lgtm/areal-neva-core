@@ -1,0 +1,10 @@
+{
+  "snapshot_name": "orek_recovery_20260414_174137",
+  "display_name": "Orek Recovery",
+  "created_at_utc": "2026-04-14T14:41:43Z",
+  "type": "server_raw_snapshot",
+  "overwrite": false,
+  "delete": false,
+  "repo": "https://github.com/rj7hmz9cvm-lgtm/areal-neva-core.git",
+  "commit": "1d907595ee720b25f8ade3d1b962629e2c6d8038"
+}

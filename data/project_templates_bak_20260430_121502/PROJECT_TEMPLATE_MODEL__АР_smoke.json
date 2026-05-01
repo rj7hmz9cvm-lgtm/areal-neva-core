@@ -1,0 +1,105 @@
+{
+  "schema": "PROJECT_TEMPLATE_MODEL_V1",
+  "project_type": "АР",
+  "source_files": [
+    "АР тест.pdf"
+  ],
+  "sheet_register": [
+    {
+      "mark": "АР",
+      "number": "1",
+      "title": "Общие данные"
+    },
+    {
+      "mark": "АР",
+      "number": "2",
+      "title": "План этажа"
+    },
+    {
+      "mark": "АР",
+      "number": "3",
+      "title": "Фасады"
+    },
+    {
+      "mark": "АР",
+      "number": "4",
+      "title": "Разрез 1-1"
+    },
+    {
+      "mark": "АР",
+      "number": "5",
+      "title": "Узлы"
+    }
+  ],
+  "marks": [
+    "АР"
+  ],
+  "sections": [
+    "Общие данные",
+    "Ведомость листов",
+    "АР-1 Общие данные",
+    "АР-2 План этажа",
+    "АР-3 Фасады",
+    "АР-4 Разрез 1-1",
+    "Спецификация материалов"
+  ],
+  "axes_grid": {
+    "axes_letters": [
+      "А"
+    ],
+    "axes_numbers": [
+      "1"
+    ]
+  },
+  "dimensions": [
+    6000,
+    3000,
+    2500,
+    500,
+    2024
+  ],
+  "levels": [
+    "0.0"
+  ],
+  "nodes": [],
+  "specifications": [
+    "Ведомость листов",
+    "Спецификация материалов"
+  ],
+  "materials": [
+    "Бетон В25",
+    "Арматура А500"
+  ],
+  "stamp_fields": {
+    "address": "Ленинградская область, Всеволожский район",
+    "developer": "ООО СК Ареал-Нева",
+    "year": "2024"
+  },
+  "variable_parameters": [
+    "project_name",
+    "address",
+    "customer",
+    "area",
+    "floors",
+    "axes_grid",
+    "dimensions",
+    "materials",
+    "sheet_register"
+  ],
+  "output_documents": [
+    "DOCX_PROJECT_TEMPLATE_SUMMARY",
+    "JSON_PROJECT_TEMPLATE_MODEL",
+    "XLSX_SPECIFICATION_DRAFT"
+  ],
+  "quality": {
+    "has_sheet_register": true,
+    "has_sections": true,
+    "has_axes_or_dimensions": true,
+    "has_materials": true,
+    "text_chars": 297,
+    "lines": 17
+  },
+  "task_id": "smoke",
+  "chat_id": "-1003725299009",
+  "topic_id": 210
+}
