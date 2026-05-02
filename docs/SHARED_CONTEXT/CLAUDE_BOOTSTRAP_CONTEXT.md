@@ -3,9 +3,9 @@
 SYSTEM: AREAL-NEVA ORCHESTRA
 MODE: FACT_ONLY / ZERO_ASSUMPTIONS / GITHUB_SSOT / CANON_LOCK
 PURPOSE: one-file bootstrap for Claude and external LLMs
-GENERATED_AT_UTC: 2026-05-01T23:36:28.924498+00:00
+GENERATED_AT_UTC: 2026-05-02T00:06:29.922702+00:00
 GIT_BRANCH: main
-GIT_SHA: c166b4e98fbcfd493c5743a4af36655f00889dd8
+GIT_SHA: fa00008fd808e5d32013c5cbae0008ef74696aaf
 RAW_URL: https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md
 
 # CLAUDE_OPERATING_PROTOCOL_CANON_LOCK_V3
@@ -68,7 +68,7 @@ Claude must reload this file at start of each new session
 
 SOURCE_INDEX:
 - docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md | bytes=168322 | sha256=0640b8349254cfb36f1143c1f195715014e2ca1b1b428943847fd1fd80d9d8fe
-- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md | bytes=36243 | sha256=bb7cfca448a8708818fad082d20dc5010aee0ecab5c1ba3a07b89865d9a66982
+- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md | bytes=36559 | sha256=e8559df2810b56cf78cccc73da9257a98c81f4a9f5418274e6e0c0b7dfe9b9fc
 - docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md | bytes=74 | sha256=1a4c8e19e206a16b41b7d761d30cb115f9e4d965bc68e3f326b02dcb8c757944
 - docs/CANON_FINAL/00_INDEX.md | bytes=808 | sha256=999acb6bfdd6c7215f11d76342ea1b9f8cdf5715418064acb3716f33999c8af6
 - docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md | bytes=40765 | sha256=e348f84dfc1a1dea957f64996a8780c4fe66dc1619252c02dce6594230c2661a
@@ -4002,10 +4002,10 @@ END_FILE: docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md
 BEGIN_FILE: docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md
 ========================================================================================================================
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-01T23:36:28.889750+00:00
+generated_at_utc: 2026-05-02T00:06:29.894139+00:00
 git_branch: main
-git_head_short: c166b4e
-git_head_full: c166b4e98fbcfd493c5743a4af36655f00889dd8
+git_head_short: fa00008
+git_head_full: fa00008fd808e5d32013c5cbae0008ef74696aaf
 
 ## SERVICES
 - areal-task-worker: active
@@ -4015,12 +4015,17 @@ git_head_full: c166b4e98fbcfd493c5743a4af36655f00889dd8
 
 ## CORE_DB_STATE_COUNTS
 - FAILED|2833
-- CANCELLED|651
+- CANCELLED|656
 - DONE|411
 - ARCHIVED|381
 - OPEN_TASKS|0
 
 ## LATEST_TASKS_SAFE
+- 915172b4-d629-4679-897a-3455b75e9235|0|drive_file|CANCELLED|{"file_id": "1RygYcRzoOeN3M8vaN5HPvwWnn7rBUd27", "file_name": "tmpms95125v.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 00:01:30
+- 8c06d03f-abce-4c56-9bc8-e3a425e88c94|0|drive_file|CANCELLED|{"file_id": "1HzF8tDMPG00JMnvdgvkln6G3FkLwel2v", "file_name": "tmpknw5nej8.txt",|Служебный файл синхронизации проигнорирован|2026-05-01 23:56:28
+- 6ae1ace7-f793-4e1e-815b-c48bd79d0176|0|drive_file|CANCELLED|{"file_id": "15wxnOBd7TPvHflMAUpymN_Z3v_BaBYgl", "file_name": "tmp9i277scc.txt",|Служебный файл синхронизации проигнорирован|2026-05-01 23:51:26
+- 76e45140-7b0f-4e2a-8623-d6bf348a5167|0|drive_file|CANCELLED|{"file_id": "1m8Q2KKZoD1smm9YbIFqdUa5eWd5I9ldz", "file_name": "tmp4kyrqnd_.txt",|Служебный файл синхронизации проигнорирован|2026-05-01 23:46:24
+- 5e89e3a7-2c4c-415c-9908-178e0a09feee|0|drive_file|CANCELLED|{"file_id": "1NV_TK9uFGO2_5opAkr9WGgzVi5DrgclD", "file_name": "tmp_34g4evv.txt",|Служебный файл синхронизации проигнорирован|2026-05-01 23:41:22
 - e7a8a575-ea8b-4bd8-ae8a-95cb6b7d2e5b|0|drive_file|CANCELLED|{"file_id": "1-wnNH_JKzLj138WAT3Vthn-teznx8I3X", "file_name": "tmpif3n6wne.txt",|Служебный файл синхронизации проигнорирован|2026-05-01 23:36:20
 - c94194ea-399f-4582-8820-8ef14723c75f|0|drive_file|CANCELLED|{"file_id": "10XaLHunzuG73y20fNvIb3NvK1JIh-xdw", "file_name": "tmpjoxa199h.txt",|Служебный файл синхронизации проигнорирован|2026-05-01 23:31:18
 - 4f8d3d70-1830-4842-9a45-c295522f2dc5|0|drive_file|CANCELLED|{"file_id": "1wHlLzlTk5u65jHt6jkTXa_JIHr86HHp3", "file_name": "tmp5al8rs5l.txt",|Служебный файл синхронизации проигнорирован|2026-05-01 23:26:16
@@ -4028,25 +4033,20 @@ git_head_full: c166b4e98fbcfd493c5743a4af36655f00889dd8
 - 2b5fb67c-574b-4ed7-963e-532e4da9273e|0|drive_file|CANCELLED|{"file_id": "1JOqb8yDQ5IcLQ9Mvstj8gQtD0Q1VIX33", "file_name": "tmpgt8t1g62.txt",|Служебный файл синхронизации проигнорирован|2026-05-01 23:16:12
 - e157c75e-4d8a-4067-a0ab-1f253a9875be|0|drive_file|CANCELLED|{"file_id": "1tFb6O5j_pQBC62dSYq7ZG0MT8hpFKeLz", "file_name": "tmpnwolohne.txt",|Служебный файл синхронизации проигнорирован|2026-05-01 23:11:10
 - 278db600-3ce9-44b9-ad00-efb7c92bd1bb|0|drive_file|CANCELLED|{"file_id": "1YF0LJh6DEbCbmJTfTcy-1OloR7f0qAkk", "file_name": "tmpbwt87f_d.txt",|Служебный файл синхронизации проигнорирован|2026-05-01 23:06:08
-- 93f8b1af-c5d5-43ad-95a4-9d1d82cd8da2|0|drive_file|CANCELLED|{"file_id": "1dB-dzT-Oh605abgArHIEpExo2x-ACeeI", "file_name": "tmp6gwpjrk6.txt",|Служебный файл синхронизации проигнорирован|2026-05-01 23:01:06
-- be47373f-0d66-470e-8bfb-4ca2881be914|0|drive_file|CANCELLED|{"file_id": "1Et9zAfY8cTECXjv9e1V3qHAHkf44ZaUk", "file_name": "tmphcr4anw7.txt",|Служебный файл синхронизации проигнорирован|2026-05-01 22:56:04
-- 757bd07c-2cc3-4851-bd3a-49c4bd5ae000|0|drive_file|CANCELLED|{"file_id": "1wNwB5VFT_sNQ8pRovypVmAWkJew3O6wG", "file_name": "tmpxp1sfd44.txt",|Служебный файл синхронизации проигнорирован|2026-05-01 22:51:01
-- c57fdaf0-7ef8-4c7d-a008-514da4ddad63|0|drive_file|CANCELLED|{"file_id": "1K0fZG49zhyZBXvQ8CFQmgMq9kqGaB69g", "file_name": "act_smoke_tech_v2|None|2026-05-01 22:50:04
-- 1e7d0890-faf4-4684-9872-713deea48c40|0|drive_file|CANCELLED|{"file_id": "1IFiaZW7BI4zjL37NTbQZO5razfNBhzWz", "file_name": "act_дефект_бетон.|None|2026-05-01 22:50:03
 
 ## MEMORY_DB_COUNTS
 - MEMORY_ROWS|5362
 
 ## LATEST_MEMORY_SAFE
-- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 11, "updated_at": "2026-05-01T23:16:08.884165+00:00", "files": [{"|2026-05-01T23:16:08.884602+00:00
-- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-01T23:16:08.864416+00:00", "files": [{"|2026-05-01T23:16:08.864965+00:00
-- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-01T23:16:08.835757+00:00
-- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "s|2026-05-01T23:16:08.835679+00:00
-- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-01T23:16:08.835490+00:00
-- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-01T23:16:08.835364+00:00
-- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-01T23:16:08.835272+00:00
-- topic_2_file_234e52f8-3ce8-4f2f-99c3-7cc22265a151|{"task_id": "234e52f8-3ce8-4f2f-99c3-7cc22265a151", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-01T23:16:08.835199+00:00
-- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_fil|2026-05-01T23:16:08.835068+00:00
+- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 11, "updated_at": "2026-05-01T23:46:09.908472+00:00", "files": [{"|2026-05-01T23:46:09.908954+00:00
+- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-01T23:46:09.890862+00:00", "files": [{"|2026-05-01T23:46:09.891286+00:00
+- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-01T23:46:09.860143+00:00
+- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "s|2026-05-01T23:46:09.860060+00:00
+- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-01T23:46:09.859847+00:00
+- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-01T23:46:09.859749+00:00
+- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-01T23:46:09.859683+00:00
+- topic_2_file_234e52f8-3ce8-4f2f-99c3-7cc22265a151|{"task_id": "234e52f8-3ce8-4f2f-99c3-7cc22265a151", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-01T23:46:09.859577+00:00
+- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_fil|2026-05-01T23:46:09.859410+00:00
 - topic_0_history_file_e157c75e-4d8a-4067-a0ab-1f253a9875be|{"schema": "TELEGRAM_HISTORY_FULL_BACKFILL_V1", "task_id": "e157c75e-4d8a-4067-a0ab-1f253a9875be", "chat_id": "-10037252|2026-05-01T23:15:51.094749+00:00
 - topic_0_history_file_278db600-3ce9-44b9-ad00-efb7c92bd1bb|{"schema": "TELEGRAM_HISTORY_FULL_BACKFILL_V1", "task_id": "278db600-3ce9-44b9-ad00-efb7c92bd1bb", "chat_id": "-10037252|2026-05-01T23:15:51.094749+00:00
 - topic_0_history_file_93f8b1af-c5d5-43ad-95a4-9d1d82cd8da2|{"schema": "TELEGRAM_HISTORY_FULL_BACKFILL_V1", "task_id": "93f8b1af-c5d5-43ad-95a4-9d1d82cd8da2", "chat_id": "-10037252|2026-05-01T23:15:51.094749+00:00
@@ -4056,16 +4056,22 @@ git_head_full: c166b4e98fbcfd493c5743a4af36655f00889dd8
 
 ## TIMELINE_INFO
 - path=/root/.areal-neva-core/data/memory_files/CHATS/-1003725299009__telegram/timeline.jsonl
-- bytes=546273
-- mtime_utc=2026-05-01T23:36:20.347467+00:00
+- bytes=548568
+- mtime_utc=2026-05-02T00:01:30.116510+00:00
 
 ## GIT_STATUS_SAFE
-M docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
+M core/artifact_upload_guard.py
+ M core/engine_base.py
+ M core/estimate_engine.py
+ M docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
+ M task_worker.py
+?? core/sheets_generator.py
+?? tools/upload_retry_unified_worker.py
 
 ## FILES_MANIFEST_SAFE
 - docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md|bytes=168322|sha256=0640b8349254cfb36f1143c1f195715014e2ca1b1b428943847fd1fd80d9d8fe
-- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md|bytes=36031|sha256=086f54ca2e1051e448c7cd1814f0244f0d9c9fb0a609c15c696ca8f99df9b6a1
-- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md|bytes=2013|sha256=90451ec5f7d29193c15385d2420191b1a7d516c5d32d36ce4cee1bdbcf4d2cad
+- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md|bytes=36243|sha256=bb7cfca448a8708818fad082d20dc5010aee0ecab5c1ba3a07b89865d9a66982
+- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md|bytes=2013|sha256=87e77de4b73c693e431ff5741f24675e48e763b5b96e35013b963fcdcd7cc489
 - docs/CANON_FINAL/00_INDEX.md|bytes=808|sha256=999acb6bfdd6c7215f11d76342ea1b9f8cdf5715418064acb3716f33999c8af6
 - docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md|bytes=40765|sha256=e348f84dfc1a1dea957f64996a8780c4fe66dc1619252c02dce6594230c2661a
 - docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md|bytes=6714|sha256=1a439843e1eb214745752720c85b49adc48f1823765982960ce7b1e285947d84
@@ -4075,7 +4081,7 @@ M docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
 - docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md|bytes=9846|sha256=e9b63408cbfdd13c05ed9b174f3380d5067493e3815318661c81b30ba13be440
 - docs/ARCHITECTURE/SEARCH_MONOLITH_V1.md|bytes=16952|sha256=26676725c7608d217d6f9162526748875a7647f92320f64a5a0e10b5fd0afa28
 - docs/ARCHITECTURE/SEARCH_MONOLITH_V2.md|UNKNOWN
-- task_worker.py|bytes=149617|sha256=137998540dbfb4f36a0f53056d110010e076e0310d9ae49505b84b75b6367893
+- task_worker.py|bytes=167026|sha256=c8c496d9872d6b735929a9ea1813affd5c8ded131f6b02b62f41751fbcb2d899
 - telegram_daemon.py|bytes=50299|sha256=3214209f6f5f507ffee95a2414a651d72b1490fe364266c876c380b745dee837
 - memory_api_server.py|bytes=2956|sha256=17550a64d4e256489801b49ef81f49c3619598f74a5f6d9d0feda3c79b6805d1
 - core/ai_router.py|bytes=22208|sha256=def3922d4afbdc845a83edd3be08837a34446d8eadb9472292c83c417c7fbe69
