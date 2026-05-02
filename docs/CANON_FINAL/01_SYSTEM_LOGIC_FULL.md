@@ -23,7 +23,11 @@
 НАРУШЕНИЕ ЗАФИКСИРОВАНО 28.04.2026: Claude загрузил файл без явного «да».
 §0.4 Диагностика первой: logs → db → pin → memory → context → patch.
 tail ≤ 40 строк (Claude) / ≤ 20 (GPT/iPhone). grep|head ≤ 30 строк/файл. Не более 5-6 файлов.
-§0.5 Порядок патчей (8 шагов):
+§0.5 Общий порядок любого патча:
+READ CURRENT FILE → FIND CURRENT MARKERS → PATCH ONLY GAP → COMPILE → RESTART → LOGS → GIT PUSH
+Каждый шаг обязателен. Пропуск = нарушение.
+
+§0.5.1 Детальный порядок (8 шагов):
 1. Диагностика 2. Анализ 3. Описать+ждать «да»
 4. cp bak && echo BAK_OK
 5. Patch через /tmp
