@@ -351,9 +351,9 @@ def _fm_public_norm(text: Any) -> str:
 
 def _fm_is_take_sample_command(text: str) -> bool:
     low = _fm_public_norm(text).lower().replace("ё", "е")
-    if not any(x in low for x in ("возьми", "прими", "используй", "сохрани")):
+    if not any(x in low for x in ("возьми", "прими", "принимай", "принять", "используй", "сохрани", "закрепи", "закрепить", "работай")):
         return False
-    return any(x in low for x in ("образец", "шаблон", "пример", "как образец"))
+    return any(x in low for x in ("образец", "образцы", "образцов", "шаблон", "пример", "эталон", "эталоны", "как образец", "как образцы", "как эталон", "как эталоны"))
 
 
 def _fm_query_domain(text: str) -> str:
@@ -480,7 +480,7 @@ def _fm_relevant_public_items(items: List[Dict[str, Any]], user_text: str, limit
 # === FILE_MEMORY_SAMPLE_STATUS_SKIP_P0_V2 ===
 def _fm_is_sample_status_query(text: str) -> bool:
     low = _fm_public_norm(text).lower().replace("ё", "е")
-    if not any(x in low for x in ("образец", "образцов", "шаблон", "шаблона")):
+    if not any(x in low for x in ("образец", "образцов", "образцы", "шаблон", "шаблона", "эталон", "эталоны", "эталона")):
         return False
 
     strict_status_or_selection = (
@@ -508,13 +508,36 @@ def _fm_is_sample_status_query(text: str) -> bool:
         "закрепляй как",
         "оставь как образец",
         "сохрани как образец",
+        "сохрани как образцы",
+        "прими как образец",
+        "прими как образцы",
+        "прими эти сметы как образцы",
+        "прими эти файлы как образцы",
+        "принимай как образец",
+        "принимай как образцы",
+        "принимай эти сметы как образцы",
+        "принимай эти файлы как образцы",
+        "принимай эти таблицы как образцы",
+        "принимай сметы как образцы",
+        "принимай файлы как образцы",
+        "работай по ним",
+        "работай по этим сметам",
+        "работай по этим образцам",
+        "работать по ним",
+        "работать по этим сметам",
+        "логика структура",
+        "логика и структура",
+        "все должно быть синхронизировано",
+        "всё должно быть синхронизировано",
+        "как эталон",
+        "как эталоны",
         "один из образцов",
         "как один из образцов",
     )
     if any(x in low for x in strict_status_or_selection):
         return True
 
-    if "как образец" in low and any(x in low for x in (
+    if any(x in low for x in ("как образец", "как образцы", "как эталон", "как эталоны")) and any(x in low for x in (
         "да ",
         "да,",
         "да.",
