@@ -60,6 +60,234 @@ def _send_payload(message: str, kind: str, state: str = "DONE", history: str = "
 # === FINAL_CLOSURE_MEMORY_QUERY_PUBLIC_OUTPUT_V2 ===
 
 # === FINAL_CLOSURE_MEMORY_QUERY_PUBLIC_OUTPUT_V3 ===
+
+# === PROJECT_SAMPLE_STATUS_P0_V1 ===
+def _fc_norm_public(text: Any) -> str:
+    s = "" if text is None else str(text)
+    s = s.replace("\\\\n", "\n").replace("\\n", "\n").replace("\\\\t", " ").replace("\\t", " ")
+    s = s.replace("ё", "е")
+    return s.strip()
+
+
+def _fc_clean_title(name: str) -> str:
+    name = _fc_norm_public(name)
+    name = re.sub(r"^\s*\d+\.\s*", "", name).strip().strip("\"'«»")
+    return name[:180]
+
+
+def _fc_is_sample_status_request(text: str) -> bool:
+    low = _fc_norm_public(text).lower()
+    if not any(x in low for x in ("образец", "шаблон")):
+        return False
+
+    sample_status_words = (
+        "взял как образец",
+        "взял за образец",
+        "ты взял как образец",
+        "уже взял как образец",
+        "взял их как образец",
+        "взял это как образец",
+        "принял как образец",
+        "принял за образец",
+        "ты принял как образец",
+        "уже принял как образец",
+        "принял их как образец",
+        "принял это как образец",
+        "используешь как образец",
+        "используется как образец",
+        "файлы взяты как образец",
+        "файлы приняты как образец",
+        "взяты как образец",
+        "приняты как образец",
+    )
+    return any(x in low for x in sample_status_words)
+
+
+def _fc_extract_titles_from_text(text: str) -> list[str]:
+    src = _fc_norm_public(text)
+    titles: list[str] = []
+
+    try:
+        data = json.loads(src)
+        if isinstance(data, dict):
+            for key in ("file_name", "name", "title"):
+                val = _fc_clean_title(data.get(key) or "")
+                if val:
+                    titles.append(val)
+    except Exception:
+        pass
+
+    for m in re.finditer(r'"file_name"\s*:\s*"([^"]+)"', src, re.I):
+        val = _fc_clean_title(m.group(1))
+        if val:
+            titles.append(val)
+
+    for m in re.finditer(r'([А-ЯA-Z0-9Ёё][^\\n\\r]{0,120}\.(?:pdf|dwg|dxf|xlsx|xls|docx|doc))', src, re.I):
+        val = _fc_clean_title(m.group(1))
+        if val:
+            titles.append(val)
+
+    out: list[str] = []
+    seen = set()
+    for title in titles:
+        key = title.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(title)
+    return out
+
+
+def _fc_sample_raw_hay(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> str:
+    old_rf = conn.row_factory
+    parts: list[str] = []
+    try:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            """
+            SELECT raw_input,result
+            FROM tasks
+            WHERE chat_id=?
+              AND COALESCE(topic_id,0)=?
+              AND (
+                COALESCE(raw_input,'') LIKE '%file_name%'
+                OR COALESCE(raw_input,'') LIKE '%.pdf%'
+                OR COALESCE(raw_input,'') LIKE '%.dwg%'
+                OR COALESCE(raw_input,'') LIKE '%.dxf%'
+                OR COALESCE(raw_input,'') LIKE '%.xlsx%'
+                OR COALESCE(result,'') LIKE '%file_name%'
+                OR COALESCE(result,'') LIKE '%.pdf%'
+                OR COALESCE(result,'') LIKE '%.dwg%'
+                OR COALESCE(result,'') LIKE '%.dxf%'
+                OR COALESCE(result,'') LIKE '%.xlsx%'
+              )
+            ORDER BY updated_at DESC
+            LIMIT 80
+            """,
+            (str(chat_id), int(topic_id or 0)),
+        ).fetchall()
+    except Exception:
+        rows = []
+    finally:
+        conn.row_factory = old_rf
+
+    for r in rows:
+        try:
+            parts.append(_fc_norm_public(r["raw_input"]))
+            parts.append(_fc_norm_public(r["result"]))
+        except Exception:
+            try:
+                parts.append(_fc_norm_public(r[0]))
+                parts.append(_fc_norm_public(r[1]))
+            except Exception:
+                pass
+
+    return " ".join(parts).lower().replace("ё", "е")
+
+
+def _fc_sample_titles(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> list[str]:
+    old_rf = conn.row_factory
+    titles: list[str] = []
+    try:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            """
+            SELECT raw_input,result,updated_at
+            FROM tasks
+            WHERE chat_id=?
+              AND COALESCE(topic_id,0)=?
+              AND (
+                COALESCE(raw_input,'') LIKE '%file_name%'
+                OR COALESCE(raw_input,'') LIKE '%.pdf%'
+                OR COALESCE(raw_input,'') LIKE '%.dwg%'
+                OR COALESCE(raw_input,'') LIKE '%.dxf%'
+                OR COALESCE(raw_input,'') LIKE '%.xlsx%'
+                OR COALESCE(result,'') LIKE '%.pdf%'
+                OR COALESCE(result,'') LIKE '%.dwg%'
+                OR COALESCE(result,'') LIKE '%.dxf%'
+                OR COALESCE(result,'') LIKE '%.xlsx%'
+              )
+            ORDER BY updated_at DESC
+            LIMIT 80
+            """,
+            (str(chat_id), int(topic_id or 0)),
+        ).fetchall()
+    except Exception:
+        rows = []
+    finally:
+        conn.row_factory = old_rf
+
+    for r in rows:
+        try:
+            titles.extend(_fc_extract_titles_from_text(r["raw_input"]))
+            titles.extend(_fc_extract_titles_from_text(r["result"]))
+        except Exception:
+            continue
+
+    out: list[str] = []
+    seen = set()
+    for title in titles:
+        key = title.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(title)
+    return out[:12]
+
+
+def _fc_sample_domain_from_hay(hay: str) -> str:
+    hay = _fc_norm_public(hay).lower().replace("ё", "е")
+    if any(x in hay for x in ("кж", "кд", "кмд", "км", " ар ", "ар ", "проект", "цоколь", ".dwg", ".dxf")):
+        return "project"
+    if any(x in hay for x in ("смет", "вор", "расцен", "кс-2", "кс2", ".xlsx", ".xls")):
+        return "estimate"
+    if any(x in hay for x in ("акт", "технадзор", "дефект")):
+        return "technadzor"
+    return ""
+
+
+def _fc_sample_domain_from_titles(titles: list[str]) -> str:
+    return _fc_sample_domain_from_hay(" ".join(titles))
+
+
+def _handle_sample_status(conn: sqlite3.Connection, chat_id: str, topic_id: int, raw_input: str) -> Dict[str, Any]:
+    if not _fc_is_sample_status_request(raw_input):
+        return {"handled": False}
+
+    titles = _fc_sample_titles(conn, chat_id, topic_id)
+    raw_hay = _fc_sample_raw_hay(conn, chat_id, topic_id)
+    domain = _fc_sample_domain_from_hay(" ".join(titles) + " " + raw_hay)
+
+    if domain == "project":
+        msg = (
+            "Файлы в этом топике уже взяты в работу как образец проектирования\n\n"
+            "Напиши действие: использовать как образец / открыть / обработать заново / сравнить"
+        )
+    elif domain == "estimate":
+        msg = (
+            "Файлы в этом топике уже взяты в работу как образец сметы\n\n"
+            "Напиши действие: использовать как образец / открыть / обработать заново / сравнить"
+        )
+    elif domain == "technadzor":
+        msg = (
+            "Файлы в этом топике уже взяты в работу как образец для технадзора\n\n"
+            "Напиши действие: использовать как образец / открыть / обработать заново / сравнить"
+        )
+    else:
+        msg = (
+            "Файлы в этом топике уже взяты в работу как образец\n\n"
+            "Напиши действие: использовать как образец / открыть / обработать заново / сравнить"
+        )
+
+    return _send_payload(
+        msg,
+        "project_sample_status",
+        "DONE",
+        "PROJECT_SAMPLE_STATUS_P0_V1:ANSWERED",
+    )
+# === END_PROJECT_SAMPLE_STATUS_P0_V1 ===
+
+
 def _handle_memory_query(conn: sqlite3.Connection, chat_id: str, topic_id: int, raw_input: str) -> Dict[str, Any]:
     t = raw_input.lower().replace("ё", "е")
 
@@ -204,6 +432,10 @@ def maybe_handle_final_closure(
     topic_id = int(topic_id or _field(task, "topic_id", 0) or 0)
 
     r = _handle_runtime_file(conn, task, task_id, chat_id, topic_id, raw_input, input_type)
+    if r.get("handled"):
+        return r
+
+    r = _handle_sample_status(conn, chat_id, topic_id, raw_input)
     if r.get("handled"):
         return r
 

@@ -475,8 +475,39 @@ def _fm_relevant_public_items(items: List[Dict[str, Any]], user_text: str, limit
     return out
 
 
+
+# === FILE_MEMORY_SAMPLE_STATUS_SKIP_P0_V1 ===
+def _fm_is_sample_status_query(text: str) -> bool:
+    low = _fm_public_norm(text).lower().replace("ё", "е")
+    if not any(x in low for x in ("образец", "шаблон")):
+        return False
+
+    sample_status_words = (
+        "взял как образец",
+        "взял за образец",
+        "ты взял как образец",
+        "уже взял как образец",
+        "взял их как образец",
+        "взял это как образец",
+        "принял как образец",
+        "принял за образец",
+        "ты принял как образец",
+        "уже принял как образец",
+        "принял их как образец",
+        "принял это как образец",
+        "используешь как образец",
+        "используется как образец",
+        "файлы взяты как образец",
+        "файлы приняты как образец",
+        "взяты как образец",
+        "приняты как образец",
+    )
+    return any(x in low for x in sample_status_words)
+# === END_FILE_MEMORY_SAMPLE_STATUS_SKIP_P0_V1 ===
+
+
 def build_file_followup_answer(chat_id: str, topic_id: int, user_text: str, limit: int = 3) -> Optional[str]:
-    if _fm_is_take_sample_command(user_text):
+    if _fm_is_take_sample_command(user_text) or _fm_is_sample_status_query(user_text):
         return None
 
     if not should_handle_file_followup(user_text):
