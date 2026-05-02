@@ -534,3 +534,169 @@ if "route_file" in globals():
         return res
 
 # === END_CODE_CLOSE_V43_FILE_INTAKE ===
+
+
+# === FILE_INTAKE_KZH_INTENT_FIX_V1 ===
+# Bare KЖ/КД/project files are project-context files, not estimate files.
+# File upload without explicit user instruction must ask what to do.
+
+import json as _fik_json
+import os as _fik_os
+import re as _fik_re
+from typing import Optional as _FIKOptional
+
+ESTIMATE_FILENAME_TRIGGERS = [
+    "смет", "расход", "ведомост", "спецификац",
+    "у1-", "у2-", "кр-",
+]
+
+PROJECT_FILENAME_TRIGGERS = [
+    "кж", "кд", "кмд", "км", "ар",
+    "плит", "фундамент", "конструкци", "конструкция",
+    "узел", "цоколь", "разрез", "армирован", "чертеж", "чертёж",
+]
+
+def _fik_norm_text(value) -> str:
+    return str(value or "").lower().replace("ё", "е").strip()
+
+def _fik_word_hit(text: str, words) -> bool:
+    t = _fik_norm_text(text)
+    for w in words:
+        ww = _fik_norm_text(w)
+        if not ww:
+            continue
+        if len(ww) <= 3:
+            if _fik_re.search(r"(^|[^а-яa-z0-9])" + _fik_re.escape(ww) + r"([^а-яa-z0-9]|$)", t, _fik_re.I):
+                return True
+        elif ww in t:
+            return True
+    return False
+
+def _fik_extract_user_instruction(raw_input: str) -> str:
+    """
+    Extract only explicit user instruction.
+    Ignore file_name/file_id/mime/source metadata, because filename alone must not auto-run pipeline.
+    """
+    raw = str(raw_input or "").strip()
+    if not raw:
+        return ""
+    try:
+        obj = _fik_json.loads(raw)
+        if isinstance(obj, dict):
+            for key in ("caption", "user_text", "text", "prompt", "comment", "message"):
+                val = obj.get(key)
+                if isinstance(val, str) and val.strip():
+                    return val.strip()
+            return ""
+    except Exception:
+        pass
+    if raw.startswith("{") and ("file_name" in raw or "file_id" in raw or "mime_type" in raw):
+        return ""
+    return raw
+
+def detect_intent_from_filename(file_name: str) -> _FIKOptional[str]:
+    fn = _fik_norm_text(_fik_os.path.basename(str(file_name or "")))
+
+    if _fik_word_hit(fn, PROJECT_FILENAME_TRIGGERS):
+        return "project"
+
+    if _fik_word_hit(fn, ESTIMATE_FILENAME_TRIGGERS):
+        return "estimate"
+
+    if _fik_word_hit(fn, ("акт", "дефект", "осмотр", "технадзор")):
+        return "technadzor"
+
+    if _fik_word_hit(fn, (".dwg", ".dxf", "dwg", "dxf", "чертеж", "чертёж")):
+        return "dwg"
+
+    return None
+
+def detect_intent_from_filename_v2(file_name: str) -> _FIKOptional[str]:
+    return detect_intent_from_filename(file_name)
+
+def should_ask_clarification(raw_input: str, has_file: bool, already_asked: bool = False) -> bool:
+    if already_asked:
+        return False
+    if not has_file:
+        return False
+
+    instruction = _fik_extract_user_instruction(raw_input)
+    low = _fik_norm_text(instruction)
+
+    service_words = (
+        "tmp", "healthcheck", "service_file", "служебный", "синхронизации"
+    )
+    if _fik_word_hit(low, service_words):
+        return False
+
+    explicit_action_words = (
+        "сделай", "делай", "создай", "сформируй", "подготовь", "разработай",
+        "посчитай", "рассчитай", "проверь", "проанализируй", "выгрузи",
+        "сохрани", "возьми", "прими", "используй", "распознай", "обработай",
+        "шаблон", "образец", "по образцу", "по шаблону",
+        "смет", "проект", "кж", "кд", "км", "кмд", "акт", "технадзор",
+        "таблиц", "excel", "xlsx", "pdf", "dxf", "dwg", "ocr",
+        "проектирование", "расчет нагрузок", "расчёт нагрузок",
+    )
+
+    return not _fik_word_hit(low, explicit_action_words)
+
+try:
+    _fik_orig_route_file = route_file
+except Exception:
+    _fik_orig_route_file = None
+
+async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *args, **kwargs):
+    """
+    Final guard:
+    - KЖ/KД/project filenames never become estimate automatically
+    - if caller passes estimate for project file without explicit estimate command, downgrade to project
+    - raw file with no user instruction must return clarification payload
+    """
+    import inspect as _fik_inspect
+
+    raw_input = str(kwargs.get("raw_input") or kwargs.get("prompt") or kwargs.get("user_text") or "")
+    instruction = _fik_extract_user_instruction(raw_input)
+    filename_intent = detect_intent_from_filename(str(file_path or ""))
+
+    if not instruction and filename_intent in ("project", "estimate", "technadzor", "dwg"):
+        try:
+            msg = get_clarification_message(_fik_os.path.basename(str(file_path or "")), int(topic_id or 0))
+        except Exception:
+            msg = (
+                "Файл принят.\n"
+                "Что сделать с ним?\n\n"
+                "1. Взять как шаблон проекта\n"
+                "2. Взять как шаблон сметы\n"
+                "3. Взять как шаблон технадзора\n"
+                "4. Обработать как обычный файл\n\n"
+                "Ответь одним сообщением"
+            )
+        return {
+            "success": False,
+            "needs_clarification": True,
+            "state": "WAITING_CLARIFICATION",
+            "intent": filename_intent,
+            "result_text": msg,
+            "error": "FILE_INTAKE_NEEDS_CONTEXT",
+        }
+
+    low_instruction = _fik_norm_text(instruction)
+    explicit_estimate = _fik_word_hit(low_instruction, ("смет", "расход", "ведомост", "спецификац", "расчет", "расчёт", "стоимость", "цена", "объем", "объём"))
+
+    if filename_intent == "project" and str(intent or "").lower() == "estimate" and not explicit_estimate:
+        intent = "project"
+
+    if intent is None:
+        intent = filename_intent
+
+    if _fik_orig_route_file is None:
+        return {"success": False, "error": "original_route_file_missing", "intent": intent}
+
+    res = _fik_orig_route_file(file_path, task_id, topic_id, intent, fmt, *args, **kwargs)
+    if _fik_inspect.isawaitable(res):
+        res = await res
+    return res
+
+# === END_FILE_INTAKE_KZH_INTENT_FIX_V1 ===
+
