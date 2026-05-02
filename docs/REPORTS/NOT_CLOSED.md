@@ -644,3 +644,47 @@ Archive Engine пишет в POST /archive но endpoint не реализова
 
 11. WEB_SEARCH_PRICE_ENRICHMENT_V1 (см. P0 п.2)
     При создании сметы по шаблону — цены материалов искать в интернете актуальные
+
+---
+## ОБНОВЛЕНИЕ 02.05.2026 13:40 — ПОСЛЕ eefeec0
+
+### ЗАКРЫТО КОДОМ (979e1ec + eefeec0):
+- CONTEXT_AWARE_FILE_INTAKE_V1 — pending intent перед файлами
+- MULTI_FILE_TEMPLATE_INTAKE_V1 — batch шаблонов смет
+- TELEGRAM_FILE_MEMORY_INDEX_V1 — индекс файлов + дубли
+- WEB_SEARCH_PRICE_ENRICHMENT_V1 — цены из интернета через OpenRouter
+- PRICE_CONFIRMATION_BEFORE_ESTIMATE_V1 — выбор цен перед финальной сметой
+- PDF_SPEC_EXTRACTOR_REAL_V1 — реальный pdfplumber парсер
+- ROOT_TMP_UPLOAD_GUARD_V1 — healthcheck больше не грузит tmp*.txt в Drive root
+- DRIVE_CANON_FOLDER_RESOLVER_V1 — OAuth вместо Service Account, canonical layout
+- DRIVE_CANON_SINGLE_FOLDER_PICK_V1 — детерминированный выбор папки
+
+### НЕ ЗАКРЫТО КОДОМ (P0):
+1. REPLY_REPEAT_PARENT_TASK_V1
+   "повтори"/"ответишь?"/"ещё раз" → не цепляется к parent task
+   DB факт: 152a73c3 FAILED/INVALID_RESULT_GATE, 6e3b7899 FAILED/FORBIDDEN_PHRASE
+
+2. UNIFIED_USER_OUTPUT_SANITIZER_V1
+   Нет единого sanitizer — Engine/MANIFEST/tmp/artifact_path могут утечь в ответ пользователю
+   output_sanitizer.py не существует
+
+3. PROJECT_ROUTE_FIX_NO_ESTIMATE_REGRESSION_V1
+   DB факт: "Сделай проект КЖ" → "Смета обработана"
+
+4. PROJECT_ENGINE_CLEAN_USER_OUTPUT_V1
+   Проектный ответ может содержать Engine/MANIFEST/tmp пути
+
+### НЕ ЗАКРЫТО КОДОМ (P1):
+5. ARCHIVE_DUPLICATE_GUARD_V1 — нет UNIQUE index на (chat_id, key) в memory.db
+6. XLSX_GOOGLE_SHEETS_FORMULA_VALUES_FIX_V1 — Sheets показывает формулы без значений
+7. MEMORY_SCOPE_FULL_WIRING_V1 — маркер не найден
+8. DWG_CONVERTER_INSTALL_V1 — системная зависимость
+
+### ТОЛЬКО LIVE-ТЕСТ:
+- Voice confirm при AWAITING_CONFIRMATION
+- Batch смет-образцов live
+- Дубль Telegram-файла live
+- Web prices → выбор → XLSX/PDF live
+- PDF spec extractor реальным файлом
+- Project КЖ end-to-end без "Смета обработана"
+- Новый Telegram файл → canonical Drive topic folder live
