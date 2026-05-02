@@ -30,3 +30,6 @@ backups/
 *.broken*
 data/*.backup*
 data/project_templates_bak*/
+data/telegram_file_catalog/
+data/templates/estimate_batch/
+outputs/

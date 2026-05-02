@@ -1,6 +1,6 @@
 # FINAL_SESSION_CODE_TAIL_VERIFY_REPORT
 
-generated_at: 2026-05-02T09:55:16.162608+00:00
+generated_at: 2026-05-02T10:15:27.257895+00:00
 status: OK
 markers_ok: True
 hook_order_ok: True
@@ -11,12 +11,12 @@ smoke_ok: True
 ## RAW_JSON
 ```json
 {
-  "generated_at": "2026-05-02T09:55:16.162608+00:00",
+  "generated_at": "2026-05-02T10:15:27.257895+00:00",
   "git": {
-    "head": "c2b3167",
-    "origin": "affc142",
+    "head": "34aaae5",
+    "origin": "597c1f1",
     "ahead_behind": "0\t1",
-    "status": "M core/final_closure_engine.py\n M core/price_enrichment.py\n M docs/REPORTS/CLAUDE_BOOTSTRAP_PENDING_PUSH.md\n?? data/telegram_file_catalog/\n?? data/templates/estimate_batch/\n?? docs/REPORTS/areal-claude-bootstrap-aggregator.service.before.20260502_121121.txt\n?? outputs/\n?? tools/final_session_code_tail_verify.py\n?? tools/telegram_file_memory_backfill.py"
+    "status": "M core/file_context_intake.py\n M core/file_memory_bridge.py\n M core/final_closure_engine.py\n M core/output_sanitizer.py\n M docs/REPORTS/CLAUDE_BOOTSTRAP_PENDING_PUSH.md\n?? data/telegram_file_catalog/\n?? data/templates/estimate_batch/\n?? docs/REPORTS/areal-claude-bootstrap-aggregator.service.before.20260502_121121.txt\n?? outputs/\n?? tools/telegram_file_memory_backfill.py"
   },
   "markers": {
     "task_worker.py": {
