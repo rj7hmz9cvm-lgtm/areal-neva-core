@@ -773,3 +773,68 @@ try:
 except Exception:
     pass
 # === END_FILE_INTAKE_SUPPORTED_FORMATS_V1 ===
+
+
+# === CONTEXT_AWARE_FILE_INTAKE_V1_DB_LOOKUP ===
+def _context_aware_file_intake_lookup_v1(chat_id: str = "", topic_id: int = 0) -> str:
+    import sqlite3
+    try:
+        conn = sqlite3.connect("/root/.areal-neva-core/data/core.db")
+        try:
+            if chat_id:
+                rows = conn.execute(
+                    "SELECT raw_input, input_type, state, result FROM tasks WHERE chat_id=? AND COALESCE(topic_id,0)=? AND state IN ('DONE','AWAITING_CONFIRMATION','IN_PROGRESS','WAITING_CLARIFICATION') ORDER BY updated_at DESC LIMIT 5",
+                    (str(chat_id), int(topic_id or 0)),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT raw_input, input_type, state, result FROM tasks WHERE COALESCE(topic_id,0)=? AND state IN ('DONE','AWAITING_CONFIRMATION','IN_PROGRESS','WAITING_CLARIFICATION') ORDER BY updated_at DESC LIMIT 5",
+                    (int(topic_id or 0),),
+                ).fetchall()
+        finally:
+            conn.close()
+    except Exception:
+        rows = []
+
+    for r in rows or []:
+        combined = " ".join(str(x or "") for x in r).lower()
+        if any(x in combined for x in ("смет", "estimate", "расцен", "стоимость", "цена")):
+            return "estimate"
+        if any(x in combined for x in ("проект", "кж", "кд", "ар", "эскиз", "км", "кмд", "ов", "вк", "эо")):
+            return "project"
+        if any(x in combined for x in ("акт", "технадзор", "дефект", "нарушение")):
+            return "technadzor"
+        if any(x in combined for x in ("образец", "шаблон", "эталон")):
+            return "template"
+    return ""
+
+try:
+    _context_aware_orig_route_file_v1 = route_file
+    async def route_file(*args, **kwargs):
+        import inspect
+        lst = list(args)
+        raw_input = str(kwargs.get("raw_input") or kwargs.get("caption") or kwargs.get("user_text") or "")
+        chat_id = str(kwargs.get("chat_id") or "")
+        topic_id = kwargs.get("topic_id", lst[2] if len(lst) >= 3 else 0)
+        current_intent = kwargs.get("intent", lst[3] if len(lst) >= 4 else None)
+        final_intent = current_intent
+
+        if not final_intent or str(final_intent).lower() in ("unknown", "none", ""):
+            if not raw_input.strip():
+                final_intent = _context_aware_file_intake_lookup_v1(chat_id=chat_id, topic_id=int(topic_id or 0))
+
+        if final_intent and final_intent != current_intent:
+            if "intent" in kwargs:
+                kwargs["intent"] = final_intent
+            elif len(lst) >= 4:
+                lst[3] = final_intent
+            else:
+                kwargs["intent"] = final_intent
+
+        res = _context_aware_orig_route_file_v1(*lst, **kwargs)
+        if inspect.isawaitable(res):
+            res = await res
+        return res
+except Exception:
+    pass
+# === END_CONTEXT_AWARE_FILE_INTAKE_V1_DB_LOOKUP ===

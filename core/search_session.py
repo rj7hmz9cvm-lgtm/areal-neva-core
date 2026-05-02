@@ -296,3 +296,90 @@ def close_session(chat_id, topic_id): _MONOLITH.sessions.close(str(chat_id), int
 def extract_criteria(text): return CriteriaExtractor().extract(text)
 SEARCH_PRESETS = SEARCH_PROFILES
 # === END SEARCH_MONOLITH_V2_FULL ===
+
+
+# === REAL_SEARCH_QUALITY_LOGIC_V1 ===
+_NEGATIVE_DOMAINS_V1 = ("avito.ru", "dzen.ru", "zen.yandex.ru")
+
+def _negative_selection_v1(results):
+    # NEGATIVE_SELECTION_V1
+    out = []
+    for r in results or []:
+        url = ""
+        try:
+            url = str(r.get("url") or r.get("link") or "")
+        except Exception:
+            url = str(r or "")
+        if any(nd in url.lower() for nd in _NEGATIVE_DOMAINS_V1):
+            continue
+        out.append(r)
+    return out
+
+def _stale_context_guard_v1(payload):
+    # STALE_CONTEXT_GUARD_V1
+    try:
+        ts = None
+        if isinstance(payload, dict):
+            ts = payload.get("search_context_timestamp") or payload.get("checked_at")
+        if not ts:
+            return payload
+        from datetime import datetime, timezone, timedelta
+        ctx_time = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+        if ctx_time.tzinfo is None:
+            ctx_time = ctx_time.replace(tzinfo=timezone.utc)
+        if datetime.now(timezone.utc) - ctx_time > timedelta(hours=24):
+            if isinstance(payload, dict):
+                payload = dict(payload)
+                payload["search_context"] = None
+                payload["stale_context_dropped"] = True
+        return payload
+    except Exception:
+        return payload
+
+def _availability_check_v1(result):
+    # AVAILABILITY_CHECK_V1
+    try:
+        url = str(result.get("url") or result.get("link") or "")
+        title = str(result.get("title") or result.get("name") or "")
+        return bool(url or title)
+    except Exception:
+        return bool(result)
+
+try:
+    _orig_run_search_monolith_v2_quality_v1 = run_search_monolith_v2
+    async def run_search_monolith_v2(*args, **kwargs):
+        import inspect
+        if "payload" in kwargs and isinstance(kwargs["payload"], dict):
+            kwargs["payload"] = _stale_context_guard_v1(kwargs["payload"])
+        res = _orig_run_search_monolith_v2_quality_v1(*args, **kwargs)
+        if inspect.isawaitable(res):
+            res = await res
+        if isinstance(res, list):
+            return [r for r in _negative_selection_v1(res) if _availability_check_v1(r)]
+        if isinstance(res, dict):
+            for key in ("results", "items", "offers"):
+                if isinstance(res.get(key), list):
+                    res[key] = [r for r in _negative_selection_v1(res[key]) if _availability_check_v1(r)]
+        return res
+except Exception:
+    pass
+
+try:
+    _orig_run_quality_v1 = run
+    async def run(*args, **kwargs):
+        import inspect
+        if "payload" in kwargs and isinstance(kwargs["payload"], dict):
+            kwargs["payload"] = _stale_context_guard_v1(kwargs["payload"])
+        res = _orig_run_quality_v1(*args, **kwargs)
+        if inspect.isawaitable(res):
+            res = await res
+        if isinstance(res, list):
+            return [r for r in _negative_selection_v1(res) if _availability_check_v1(r)]
+        if isinstance(res, dict):
+            for key in ("results", "items", "offers"):
+                if isinstance(res.get(key), list):
+                    res[key] = [r for r in _negative_selection_v1(res[key]) if _availability_check_v1(r)]
+        return res
+except Exception:
+    pass
+# === END_REAL_SEARCH_QUALITY_LOGIC_V1 ===

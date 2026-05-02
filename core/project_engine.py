@@ -2746,3 +2746,64 @@ except Exception:
     pass
 # === END_PROJECT_ENGINE_CLEAN_USER_OUTPUT_V1_WRAPPER ===
 
+
+
+# === PROJECT_ENGINE_CLEAN_USER_OUTPUT_V1 ===
+def _project_public_clean_v1(text: str) -> str:
+    import re
+    text = "" if text is None else str(text)
+    patterns = [
+        r"Engine:[^\n]*\n?",
+        r"MANIFEST:[^\n]*\n?",
+        r"task_id\s*[:=][^\n]*\n?",
+        r"file_id\s*[:=][^\n]*\n?",
+        r"/root/[^\s]*",
+        r"tmp[a-zA-Z0-9_\-]{6,}\.(?:pdf|xlsx|docx|dxf)",
+        r"\{[\"'][a-z_]+[\"']\s*:[^}]{0,300}\}",
+    ]
+    for pat in patterns:
+        text = re.sub(pat, "", text, flags=re.I | re.S)
+    return re.sub(r"\n{3,}", "\n\n", text).strip()
+
+def _project_clean_payload_v1(obj):
+    if isinstance(obj, dict):
+        out = {}
+        for k, v in obj.items():
+            if isinstance(v, str) and k.lower() in ("message", "text", "text_result", "result", "error"):
+                out[k] = _project_public_clean_v1(v)
+            else:
+                out[k] = v
+        return out
+    if isinstance(obj, str):
+        return _project_public_clean_v1(obj)
+    return obj
+
+try:
+    _project_engine_orig_generate_project_section_v1 = generate_project_section
+    async def generate_project_section(*args, **kwargs):
+        import inspect
+        res = _project_engine_orig_generate_project_section_v1(*args, **kwargs)
+        if inspect.isawaitable(res):
+            res = await res
+        return _project_clean_payload_v1(res)
+except Exception:
+    pass
+
+try:
+    _project_engine_orig_process_project_file_v1 = process_project_file
+    async def process_project_file(*args, **kwargs):
+        import inspect
+        res = _project_engine_orig_process_project_file_v1(*args, **kwargs)
+        if inspect.isawaitable(res):
+            res = await res
+        return _project_clean_payload_v1(res)
+except Exception:
+    pass
+
+try:
+    _project_engine_orig_project_result_guard_v1 = project_result_guard
+    def project_result_guard(result):
+        return _project_clean_payload_v1(_project_engine_orig_project_result_guard_v1(result))
+except Exception:
+    pass
+# === END_PROJECT_ENGINE_CLEAN_USER_OUTPUT_V1 ===

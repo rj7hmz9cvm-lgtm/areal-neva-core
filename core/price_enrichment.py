@@ -67,17 +67,43 @@ def _is_web_price_request(text: str) -> bool:
 
 
 def _detect_price_choice(text: str) -> str:
+    # PRICE_CHOICE_DETECT_EXPAND_V1
     low = _low(text)
-    if any(x in low for x in ("дешев", "минималь", "самые низкие", "вариант а", "а —", "а-")):
+    import re as _re_inner
+    t = _re_inner.sub(r"\\s+", " ", low).strip(" .,!?:;()[]{}")
+
+    exact = {
+        "а": "cheapest", "а)": "cheapest", "1": "cheapest",
+        "вариант 1": "cheapest", "вариант а": "cheapest",
+        "первый": "cheapest", "самый дешевый": "cheapest",
+        "самый дешёвый": "cheapest", "самые дешевые": "cheapest",
+        "самые дешёвые": "cheapest", "минимум": "cheapest",
+        "минимальная": "cheapest",
+        "б": "average", "б)": "average", "2": "average",
+        "вариант 2": "average", "вариант б": "average",
+        "второй": "average", "среднее": "average",
+        "средняя": "average", "средние": "average",
+        "рыночная": "average",
+        "в": "reliable", "в)": "reliable", "3": "reliable",
+        "вариант 3": "reliable", "вариант в": "reliable",
+        "третий": "reliable", "надежный": "reliable",
+        "надёжный": "reliable", "проверенный": "reliable",
+        "г": "manual", "г)": "manual", "4": "manual",
+        "вариант 4": "manual", "вариант г": "manual",
+        "своя": "manual", "ручная": "manual", "вручную": "manual",
+    }
+    if t in exact:
+        return exact[t]
+
+    if any(x in low for x in ("дешев", "дешёв", "минималь", "самые низкие", "вариант а", "а —", "а-", "вариант 1", "первый")):
         return "cheapest"
-    if any(x in low for x in ("средн", "рынок", "вариант б", "б —", "б-")):
+    if any(x in low for x in ("средн", "рынок", "вариант б", "б —", "б-", "вариант 2", "второй")):
         return "average"
-    if any(x in low for x in ("надеж", "надёж", "проверенн", "вариант в", "в —", "в-")):
+    if any(x in low for x in ("надеж", "надёж", "проверенн", "вариант в", "в —", "в-", "вариант 3", "третий")):
         return "reliable"
-    if any(x in low for x in ("вручную", "сам укажу", "мои цены", "вариант г", "г —", "г-")):
+    if any(x in low for x in ("вручную", "сам укажу", "мои цены", "вариант г", "г —", "г-", "вариант 4", "своя")):
         return "manual"
     return ""
-
 
 def _load_price_mode_from_memory(chat_id: str, topic_id: int) -> str:
     try:
@@ -117,6 +143,7 @@ def _parse_json_from_text(text: str) -> Any:
 
 
 async def _openrouter_price_search(item_name: str, unit: str = "", region: str = "Санкт-Петербург") -> List[Dict[str, Any]]:
+    # PRICE_SEARCH_MULTI_SOURCE_V1
     api_key = (os.getenv("OPENROUTER_API_KEY") or "").strip()
     if not api_key:
         return []
@@ -124,61 +151,97 @@ async def _openrouter_price_search(item_name: str, unit: str = "", region: str =
     model = (os.getenv("OPENROUTER_MODEL_ONLINE") or "perplexity/sonar").strip()
     base_url = (os.getenv("OPENROUTER_BASE_URL") or "https://openrouter.ai/api/v1").strip().rstrip("/")
 
-    prompt = (
-        "Найди актуальные цены на строительный материал для сметы\n"
-        f"Материал: {item_name}\n"
-        f"Единица: {unit or 'UNKNOWN'}\n"
-        f"Регион: {region}\n\n"
-        "Верни только JSON object:\n"
-        "{\n"
-        '  "offers": [\n'
-        '    {"name":"...", "price":123.45, "unit":"м3/м2/т/шт/кг/п.м", "supplier":"...", "url":"https://...", "checked_at":"ISO_DATE", "status":"CONFIRMED|PARTIAL|UNVERIFIED", "risk":"low|medium|high"}\n'
-        "  ]\n"
-        "}\n"
-        "Не выдумывай URL. Если цена не подтверждена — status=UNVERIFIED"
-    )
+    source_queries = [
+        f"{item_name} цена {unit or ''} Санкт-Петербург Леруа Мерлен Петрович ВсеИнструменты",
+        f"{item_name} купить {unit or ''} СПб Строительный двор Максидом ОБИ",
+        f"{item_name} стоимость {unit or ''} Ленинградская область поставщик строительные материалы",
+    ]
 
-    try:
-        import httpx
-        body = {
-            "model": model,
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.1,
-        }
-        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-        async with httpx.AsyncClient(timeout=httpx.Timeout(90.0, connect=20.0)) as client:
-            r = await client.post(f"{base_url}/chat/completions", headers=headers, json=body)
-            r.raise_for_status()
-            data = r.json()
-        content = data["choices"][0]["message"]["content"]
-        if isinstance(content, list):
-            content = "\n".join(x.get("text", "") if isinstance(x, dict) else str(x) for x in content)
-        parsed = _parse_json_from_text(content)
-        offers = parsed.get("offers") if isinstance(parsed, dict) else []
-        clean = []
-        for o in offers or []:
-            if not isinstance(o, dict):
-                continue
-            try:
-                price = float(str(o.get("price") or "0").replace(" ", "").replace(",", "."))
-            except Exception:
-                price = 0.0
-            if price <= 0:
-                continue
-            clean.append({
-                "name": _s(o.get("name"))[:160] or item_name,
-                "price": price,
-                "unit": _s(o.get("unit"))[:30] or unit,
-                "supplier": _s(o.get("supplier"))[:160],
-                "url": _s(o.get("url"))[:500],
-                "checked_at": _s(o.get("checked_at"))[:80] or _now(),
-                "status": _s(o.get("status"))[:30] or "UNVERIFIED",
-                "risk": _s(o.get("risk"))[:30] or "medium",
-            })
-        return clean[:5]
-    except Exception:
-        return []
+    async def _one_query(prompt_query: str) -> List[Dict[str, Any]]:
+        prompt = (
+            "Найди актуальные цены на строительный материал для сметы\\n"
+            f"Материал: {item_name}\\n"
+            f"Единица: {unit or 'UNKNOWN'}\\n"
+            f"Регион: {region}\\n"
+            f"Поисковый запрос: {prompt_query}\\n\\n"
+            "Проверь разные источники: Леруа Мерлен, Петрович, ВсеИнструменты, Строительный двор, ОБИ, Максидом и независимых поставщиков\\n"
+            "Не повторяй один сайт дважды\\n"
+            "Верни только JSON object:\\n"
+            "{\\n"
+            '  "offers": [\\n'
+            '    {"name":"...", "price":123.45, "unit":"м3/м2/т/шт/кг/п.м", "supplier":"...", "url":"https://...", "checked_at":"ISO_DATE", "status":"CONFIRMED|PARTIAL|UNVERIFIED", "risk":"low|medium|high"}\\n'
+            "  ]\\n"
+            "}\\n"
+            "Не выдумывай URL. Если цена не подтверждена — status=UNVERIFIED"
+        )
+        try:
+            import httpx
+            body = {
+                "model": model,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.1,
+            }
+            headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+            async with httpx.AsyncClient(timeout=httpx.Timeout(90.0, connect=20.0)) as client:
+                r = await client.post(f"{base_url}/chat/completions", headers=headers, json=body)
+                r.raise_for_status()
+                data = r.json()
+            content = data["choices"][0]["message"]["content"]
+            if isinstance(content, list):
+                content = "\\n".join(x.get("text", "") if isinstance(x, dict) else str(x) for x in content)
+            parsed = _parse_json_from_text(content)
+            offers = parsed.get("offers") if isinstance(parsed, dict) else []
+            clean = []
+            for o in offers or []:
+                if not isinstance(o, dict):
+                    continue
+                try:
+                    price = float(str(o.get("price") or "0").replace(" ", "").replace(",", "."))
+                except Exception:
+                    price = 0.0
+                if price <= 0:
+                    continue
+                clean.append({
+                    "name": _s(o.get("name"))[:160] or item_name,
+                    "price": price,
+                    "unit": _s(o.get("unit"))[:30] or unit,
+                    "supplier": _s(o.get("supplier"))[:160],
+                    "url": _s(o.get("url"))[:500],
+                    "checked_at": _s(o.get("checked_at"))[:80] or _now(),
+                    "status": _s(o.get("status"))[:30] or "UNVERIFIED",
+                    "risk": _s(o.get("risk"))[:30] or "medium",
+                })
+            return clean
+        except Exception:
+            return []
 
+    from urllib.parse import urlparse
+
+    merged: List[Dict[str, Any]] = []
+    seen_domains = set()
+    for q in source_queries:
+        offers = await _one_query(q)
+        for o in offers:
+            url = _s(o.get("url"))
+            domain = urlparse(url).netloc.lower().replace("www.", "") if url else _s(o.get("supplier")).lower()
+            if not domain:
+                domain = f"unknown_{len(merged)}"
+            if domain in seen_domains:
+                continue
+            seen_domains.add(domain)
+            o["domain"] = domain
+            merged.append(o)
+            if len(merged) >= 5:
+                break
+        if len(merged) >= 5:
+            break
+
+    if len(seen_domains) < 2 and merged:
+        merged[0]["status"] = "PARTIAL"
+        merged[0]["risk"] = "high"
+        merged[0]["note"] = "Цены уточняются — найден только один источник"
+
+    return merged[:5]
 
 def _fallback_offer(item_name: str, unit: str = "") -> List[Dict[str, Any]]:
     return [{

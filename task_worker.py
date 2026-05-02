@@ -365,6 +365,13 @@ def _check_result_before_confirm(result: str, input_type: str = "text", intent: 
 _REPEAT_PARENT_WORDS_V1 = {
     "ну и", "дальше", "повтори", "проверяй", "не так",
     "ещё раз", "еще раз", "заново", "дописывай", "и что", "и?",
+    "а", "б", "в", "г", "1", "2", "3", "4",
+    "а)", "б)", "в)", "г)",
+    "да", "нет", "ок", "хорошо",
+    "среднее", "средняя", "минимум", "максимум", "своя",
+    "вариант 1", "вариант 2", "вариант 3", "вариант 4",
+    "первый", "второй", "третий",
+    "самый дешевый", "самый дешёвый", "надежный", "надёжный",
 }
 def _is_repeat_parent_task_v1(text: str) -> bool:
     t = _clean(_s(text), 500).lower()
@@ -377,11 +384,11 @@ def _find_repeat_parent_task_v1(conn, chat_id: str, topic_id: int, exclude_task_
         cols = _cols(conn, "tasks")
         if "topic_id" in cols:
             return conn.execute(
-                "SELECT * FROM tasks WHERE chat_id=? AND COALESCE(topic_id,0)=? AND id<>? AND state IN ('IN_PROGRESS','AWAITING_CONFIRMATION','WAITING_CLARIFICATION','NEW') ORDER BY updated_at DESC LIMIT 1",
+                "SELECT * FROM tasks WHERE chat_id=? AND COALESCE(topic_id,0)=? AND id<>? AND state IN ('IN_PROGRESS','AWAITING_CONFIRMATION','WAITING_CLARIFICATION','AWAITING_PRICE_CONFIRMATION','NEW') ORDER BY updated_at DESC LIMIT 1",
                 (str(chat_id), int(topic_id or 0), str(exclude_task_id)),
             ).fetchone()
         return conn.execute(
-            "SELECT * FROM tasks WHERE chat_id=? AND id<>? AND state IN ('IN_PROGRESS','AWAITING_CONFIRMATION','WAITING_CLARIFICATION','NEW') ORDER BY updated_at DESC LIMIT 1",
+            "SELECT * FROM tasks WHERE chat_id=? AND id<>? AND state IN ('IN_PROGRESS','AWAITING_CONFIRMATION','WAITING_CLARIFICATION','AWAITING_PRICE_CONFIRMATION','NEW') ORDER BY updated_at DESC LIMIT 1",
             (str(chat_id), str(exclude_task_id)),
         ).fetchone()
     except Exception as _e:
@@ -4032,6 +4039,13 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
     _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(result))
     logger.info(f"DRIVE_FILE: {task_id} processed")
 
+
+
+# === SINGLE_CHAR_REPLY_AS_PRICE_CHOICE_V1 ===
+# Однобуквенный выбор цены и голосовой выбор должны продолжать parent task, а не создавать общий ответ
+# AWAITING_PRICE_CONFIRMATION_STATE_V1
+# VOICE_REPLY_TO_PARENT_TASK_V1
+# === END_SINGLE_CHAR_REPLY_AS_PRICE_CHOICE_V1 ===
 
 # === STARTUP_RECOVERY_V1_MAIN_WRAP ===
 try:

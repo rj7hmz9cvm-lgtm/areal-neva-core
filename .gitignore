@@ -36,3 +36,4 @@ outputs/
 data/templates/estimate_logic/
 data/templates/reference_monolith/
 data/templates/design_logic/
+data/price_quotes/

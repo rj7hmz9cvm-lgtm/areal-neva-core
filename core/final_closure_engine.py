@@ -487,6 +487,180 @@ def _handle_archive_guard(conn: sqlite3.Connection, task_id: str, chat_id: str, 
     return {"handled": False, "archive_guard_ok": True}
 
 
+
+# === PROJECT_INDEX_QUERY_DETECTOR_V1 ===
+_INDEX_QUERY_RE_V1 = re.compile(
+    r"(какие|покажи|перечисли|что у тебя|есть ли|список|что есть|какие файлы|какие образцы|покажи образцы|что за образцы|какие разделы)",
+    re.I,
+)
+
+_TOPIC_ROLE_MAP_V1 = {
+    2: "СМЕТЫ / СТРОЙКА",
+    5: "ТЕХНАДЗОР / АКТЫ / ДЕФЕКТЫ",
+    210: "ПРОЕКТИРОВАНИЕ / АР / КЖ / КД / КР / КМ / ОВ / ВК / ЭО",
+}
+
+def _fc_topic_role_v1(topic_id: int) -> str:
+    return _TOPIC_ROLE_MAP_V1.get(int(topic_id or 0), "ОБЩИЙ")
+
+def _fc_is_index_query_v1(text: str) -> bool:
+    low = _fc_norm_public(text).lower()
+    if not _INDEX_QUERY_RE_V1.search(low):
+        return False
+    return any(x in low for x in (
+        "образц", "файл", "раздел", "ар", "кж", "кд", "кр", "км", "кмд",
+        "ов", "вк", "эо", "эскиз", "проект", "смет", "акт", "технадзор"
+    ))
+
+def _fc_is_negative_topic_correction_v1(text: str) -> bool:
+    low = _fc_norm_public(text).lower()
+    return any(x in low for x in (
+        "нет я не это спросил",
+        "не это спросил",
+        "не то спросил",
+        "не так",
+        "ты не понял",
+        "не про это",
+    ))
+
+def _fc_load_owner_reference_registry_v1() -> dict:
+    try:
+        from pathlib import Path
+        return json.loads(Path("/root/.areal-neva-core/config/owner_reference_registry.json").read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+def _fc_topic_domain_v1(topic_id: int) -> str:
+    topic_id = int(topic_id or 0)
+    if topic_id == 2:
+        return "estimate"
+    if topic_id == 5:
+        return "technadzor"
+    if topic_id == 210:
+        return "design"
+    return ""
+
+def _fc_index_items_for_topic_v1(topic_id: int) -> list[dict]:
+    data = _fc_load_owner_reference_registry_v1()
+    policy = data.get("owner_reference_full_workflow_v1") if isinstance(data, dict) else {}
+    if not isinstance(policy, dict):
+        return []
+    domain = _fc_topic_domain_v1(topic_id)
+    if domain == "estimate":
+        return list(policy.get("estimate_references") or [])
+    if domain == "technadzor":
+        return list(policy.get("technadzor_references") or [])
+    if domain == "design":
+        return list(policy.get("design_references") or [])
+    return (
+        list(policy.get("estimate_references") or [])
+        + list(policy.get("design_references") or [])
+        + list(policy.get("technadzor_references") or [])
+    )
+
+def _fc_filter_design_by_question_v1(items: list[dict], raw_input: str) -> list[dict]:
+    low = _fc_norm_public(raw_input).lower()
+    wanted = []
+    mapping = {
+        "ар": ("AR", "АР"),
+        "кж": ("KJ", "КЖ"),
+        "кд": ("KD", "КД"),
+        "кр": ("KR", "КР"),
+        "кмд": ("KMD", "КМД"),
+        "км": ("KM", "КМ"),
+        "ов": ("OV", "ОВ"),
+        "вк": ("VK", "ВК"),
+        "эо": ("EO", "ЭО"),
+        "эм": ("EO", "ЭМ"),
+        "эос": ("EO", "ЭОС"),
+        "эскиз": ("SKETCH", "ЭСКИЗ"),
+        "план участка": ("GP", "ГП"),
+    }
+    for k, vals in mapping.items():
+        if k in low:
+            wanted.extend(vals)
+    if not wanted:
+        return items
+    out = []
+    for x in items:
+        d = str(x.get("discipline") or "").upper()
+        name = str(x.get("name") or "").upper()
+        if any(w.upper() in d or w.upper() in name for w in wanted):
+            out.append(x)
+    return out or items
+
+def _fc_format_index_answer_v1(topic_id: int, raw_input: str) -> str:
+    role = _fc_topic_role_v1(topic_id)
+    items = _fc_index_items_for_topic_v1(topic_id)
+    if int(topic_id or 0) == 210:
+        items = _fc_filter_design_by_question_v1(items, raw_input)
+
+    if not items:
+        return f"По роли {role} образцы в индексе не найдены"
+
+    groups: dict[str, list[str]] = {}
+    for x in items:
+        if not isinstance(x, dict):
+            continue
+        if int(topic_id or 0) == 210:
+            key = str(x.get("discipline") or "DESIGN")
+        elif int(topic_id or 0) == 2:
+            key = str(x.get("role") or "estimate")
+        elif int(topic_id or 0) == 5:
+            key = "technadzor"
+        else:
+            key = str(x.get("domain") or x.get("discipline") or x.get("role") or "reference")
+        name = _fc_clean_title(str(x.get("name") or ""))
+        if not name:
+            continue
+        groups.setdefault(key, [])
+        if name not in groups[key]:
+            groups[key].append(name)
+
+    lines = [f"Образцы по текущему топику: {role}", ""]
+    for key in sorted(groups):
+        vals = groups[key][:20]
+        lines.append(f"{key}:")
+        for name in vals:
+            lines.append(f"- {name}")
+        if len(groups[key]) > len(vals):
+            lines.append(f"- ещё {len(groups[key]) - len(vals)}")
+        lines.append("")
+    lines.append("Файл не создаю. Это ответ на запрос списка образцов")
+    return "\n".join(lines).strip()
+
+def _handle_project_index_query_v1(conn: sqlite3.Connection, chat_id: str, topic_id: int, raw_input: str) -> Dict[str, Any]:
+    if not _fc_is_index_query_v1(raw_input):
+        return {"handled": False}
+    answer = _fc_format_index_answer_v1(int(topic_id or 0), raw_input)
+    return _send_payload(
+        answer,
+        "project_index_query",
+        "DONE",
+        "PROJECT_INDEX_QUERY_DETECTOR_V1:ANSWERED",
+    )
+
+def _handle_topic_context_isolation_guard_v1(conn: sqlite3.Connection, chat_id: str, topic_id: int, raw_input: str) -> Dict[str, Any]:
+    if not _fc_is_negative_topic_correction_v1(raw_input):
+        return {"handled": False}
+    role = _fc_topic_role_v1(int(topic_id or 0))
+    if int(topic_id or 0) == 210:
+        msg = "Понял. Остаёмся в проектировании. Уточни, что показать: АР / КЖ / КД / КР / КМ / ОВ / ВК / ЭО / эскизы / планы участка"
+    elif int(topic_id or 0) == 2:
+        msg = "Понял. Остаёмся в сметах и стройке. Уточни, что нужно: цены / смета / материалы / логистика / XLSX"
+    elif int(topic_id or 0) == 5:
+        msg = "Понял. Остаёмся в технадзоре. Уточни, что нужно: акт / дефект / фото / исполнительная / норма"
+    else:
+        msg = f"Понял. Роль текущего топика: {role}. Уточни одним сообщением, что именно нужно"
+    return _send_payload(
+        msg,
+        "topic_context_isolation_guard",
+        "WAITING_CLARIFICATION",
+        "TOPIC_CONTEXT_ISOLATION_GUARD_V1:ANSWERED",
+    )
+
+# === END_PROJECT_INDEX_QUERY_DETECTOR_V1 ===
+
 def maybe_handle_final_closure(
     conn: sqlite3.Connection,
     task: Any,
@@ -503,6 +677,14 @@ def maybe_handle_final_closure(
     topic_id = int(topic_id or _field(task, "topic_id", 0) or 0)
 
     r = _handle_runtime_file(conn, task, task_id, chat_id, topic_id, raw_input, input_type)
+    if r.get("handled"):
+        return r
+
+    r = _handle_project_index_query_v1(conn, chat_id, topic_id, raw_input)
+    if r.get("handled"):
+        return r
+
+    r = _handle_topic_context_isolation_guard_v1(conn, chat_id, topic_id, raw_input)
     if r.get("handled"):
         return r
 

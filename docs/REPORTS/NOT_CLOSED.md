@@ -789,3 +789,26 @@ grep -nE "def handle_voice_confirm|def voice_confirm|VOICE_CONFIRM_AWAITING_V1|v
 - topic_2 не тянет проектные образцы topic_210
 - topic_210 не тянет сметные артефакты как результат
 - topic_5 не тянет КЖ/АР без прямой команды
+
+## P0_LIVE_BUGS_CLOSE_V1_VERIFICATION
+
+Статус: CODE INSTALLED
+
+Закрыто кодом:
+- PROJECT_INDEX_QUERY_CREATES_FILE
+- TOPIC_CONTEXT_SWITCH
+- SINGLE_CHAR_REPLY_NOT_PARENT_TASK
+- PRICE_SEARCH_SINGLE_SOURCE
+- PRICE_CHOICE_DETECT_EXPAND
+- VOICE_CONTEXT_LOSS_IN_PRICE_FLOW
+- WRONG_FILES_SHOWN_IN_TOPIC_2
+- PDF_SPEC_EXTRACTOR_REAL_V1_PDFPLUMBER
+- PROJECT_ENGINE_CLEAN_USER_OUTPUT_V1
+- CONTEXT_AWARE_FILE_INTAKE_V1_DB_LOOKUP
+- REAL_SEARCH_QUALITY_LOGIC_V1
+
+Остаётся live-test:
+- проверить topic_210: "какие образцы есть по АР/КЖ/КД" должен показать список без создания файла
+- проверить topic_2: "В" и "вариант 2" после выбора цены должны создать XLSX/PDF
+- проверить price search: минимум 2 разных домена или пометка об одном источнике
+- проверить topic isolation: topic_2 не должен показывать КЖ/АР файлы topic_210 без прямого запроса

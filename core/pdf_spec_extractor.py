@@ -145,3 +145,70 @@ def extract_spec(file_path: str, **kwargs) -> Dict[str, Any]:
 
 
 # === END_PDF_SPEC_EXTRACTOR_REAL_V1 ===
+
+
+# === PDF_SPEC_EXTRACTOR_REAL_V1_PDFPLUMBER ===
+def _clean_cell_v1(v):
+    return re.sub(r"\s+", " ", _s(v)).strip()
+
+def _parse_num_v1(v):
+    try:
+        src = _clean_cell_v1(v).replace(" ", "").replace(",", ".")
+        m = re.search(r"-?\d+(?:\.\d+)?", src)
+        return float(m.group(0)) if m else 0.0
+    except Exception:
+        return 0.0
+
+def extract_spec_rows(pdf_path: str, max_pages: int = 30):
+    import pdfplumber
+
+    rows = []
+    with pdfplumber.open(pdf_path) as pdf:
+        for page_no, page in enumerate(pdf.pages[:int(max_pages or 30)], 1):
+            tables = page.extract_tables() or []
+            for table in tables:
+                for row in table or []:
+                    if not row or len(row) < 3:
+                        continue
+                    cells = [_clean_cell_v1(c) for c in row]
+                    name = ""
+                    for c in cells:
+                        if c and not UNIT_RE.search(c) and not NUM_RE.match(c.replace(" ", "").replace(",", ".")):
+                            if len(c) >= 3 and not any(x in c.lower() for x in ("итого", "сумма", "всего", "кол-во", "количество", "ед.")):
+                                name = c
+                                break
+                    unit = ""
+                    for c in cells:
+                        m = UNIT_RE.search(c)
+                        if m:
+                            unit = _unit(m.group(1))
+                            break
+                    nums = [_parse_num_v1(c) for c in cells if _parse_num_v1(c)]
+                    qty = nums[0] if len(nums) >= 1 else 0.0
+                    price = nums[1] if len(nums) >= 2 else 0.0
+                    total = nums[2] if len(nums) >= 3 else (qty * price if qty and price else 0.0)
+                    if name and (qty or price):
+                        rows.append({
+                            "name": name[:240],
+                            "unit": unit,
+                            "qty": qty,
+                            "price": price,
+                            "total": round(total, 2),
+                            "page": page_no,
+                            "source": "PDF_SPEC_EXTRACTOR_REAL_V1_PDFPLUMBER",
+                        })
+
+    dedup = []
+    seen = set()
+    for r in rows:
+        key = (r.get("name"), r.get("unit"), r.get("qty"), r.get("price"), r.get("total"))
+        if key in seen:
+            continue
+        seen.add(key)
+        dedup.append(r)
+
+    if not dedup:
+        raise ValueError("PDF_SPEC_NO_TABLES_FOUND")
+
+    return dedup
+# === END_PDF_SPEC_EXTRACTOR_REAL_V1_PDFPLUMBER ===
