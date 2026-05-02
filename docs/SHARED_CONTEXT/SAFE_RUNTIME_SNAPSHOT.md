@@ -1,8 +1,8 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-02T08:06:48.907287+00:00
+generated_at_utc: 2026-05-02T08:36:50.882103+00:00
 git_branch: main
-git_head_short: 6b36da1
-git_head_full: 6b36da1232c6a7ee2a37362dcb21b02aa733f8c6
+git_head_short: eefeec0
+git_head_full: eefeec0814b5f12c9bca078daee2e7a9cacf2880
 
 ## SERVICES
 - areal-task-worker: active
@@ -12,12 +12,18 @@ git_head_full: 6b36da1232c6a7ee2a37362dcb21b02aa733f8c6
 
 ## CORE_DB_STATE_COUNTS
 - FAILED|2835
-- CANCELLED|752
+- CANCELLED|758
 - DONE|426
 - ARCHIVED|381
 - OPEN_TASKS|0
 
 ## LATEST_TASKS_SAFE
+- 698e9c8f-9428-43ee-a092-cc3c95f4de30|0|drive_file|CANCELLED|{"file_id": "1i5S_K7MW1HlZACv7Ls6EdHaDxBtMcFiC", "file_name": "tmp5w3uuuxy.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 08:34:59
+- 6bcb4ed5-5dc6-476b-ae87-2f28486b8a42|0|drive_file|CANCELLED|{"file_id": "1e6FDtuktDgZDEwK_XX93S0YbTZQu-fEf", "file_name": "tmps38ycrdw.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 08:29:57
+- eb29428e-a79b-4e62-b7bc-60d0015c2ac0|0|drive_file|CANCELLED|{"file_id": "1lwQ-64OYZ1qBmSMZ0pdNb_QjgRoEOyr7", "file_name": "tmpoun_2n8j.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 08:24:54
+- 716c881e-1f03-4687-84f0-28414a44a45d|0|drive_file|CANCELLED|{"file_id": "11O1La9IBS1OcE_rnS-s8H_Q7DcWsJsuV", "file_name": "tmpe2lqd1_t.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 08:19:53
+- c54822e8-a6cd-4021-9250-f74933a84f52|0|drive_file|CANCELLED|{"file_id": "1e4cH6r38ubNpgxp4EgsNDE5ogREWZlxl", "file_name": "tmp_xkqy8rk.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 08:14:50
+- b21e8acc-7a46-459d-a18c-ab8cb9e99592|0|drive_file|CANCELLED|{"file_id": "1X0mOre7RKu5CMhnEUbNUL_bAOROFA900", "file_name": "tmpz8ql1iyl.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 08:09:48
 - 152a73c3-cc82-4ade-a819-68e8dd58f188|2|text|FAILED|ответишь?|None|2026-05-02 08:05:34
 - 61aca230-a05a-4b0c-8d69-7118b96e6138|0|drive_file|CANCELLED|{"file_id": "10UJ8x2GXPaObeH3sQvLBOSH-P84-ga4N", "file_name": "tmp0n69ppc4.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 08:04:45
 - 1eb92aed-f978-47e4-8596-d26d261f036c|0|drive_file|CANCELLED|{"file_id": "1oSjI_2VrUnVYuPRAMlwC28gCgRV155BU", "file_name": "tmpr8nxdara.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 07:59:44
@@ -26,65 +32,59 @@ git_head_full: 6b36da1232c6a7ee2a37362dcb21b02aa733f8c6
 - abcd4a92-a4d8-472d-a879-4b89eea94f34|2|text|DONE|сейчас скину несколько смет. их надо принять как образцы но информацию о стоимос|Файлы в этом топике уже есть. Нашёл релевантное:
 
 1. Google Sheets / XLSX артефа|2026-05-02 07:46:54
-- cfde8f92-ff86-417b-84c3-9558919119c7|0|drive_file|CANCELLED|{"file_id": "1pxnKfgTCzAX8X2mdNOehrn1Sd9-EsQPw", "file_name": "tmpwtwooe96.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 07:44:38
-- 5f18bf79-7a4b-477c-b746-ecfe413e77da|0|drive_file|CANCELLED|{"file_id": "1CDUrKbrsAik0F9dZDVSTk99Mf5fC6IQz", "file_name": "tmp7_j8j66s.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 07:39:35
-- 1ebc2fc0-701e-4dd5-8aab-20d9521f768c|0|drive_file|CANCELLED|{"file_id": "1o7Xm0f0RWFpv52tfCUvSj8ZZDOF1krQw", "file_name": "tmpq7xqjia9.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 07:34:33
-- d6e19204-aa99-4c5e-b02e-ced290867c98|0|drive_file|CANCELLED|{"file_id": "1SbZ3fS9fBlBKccyjdPFHD8dhZFaJwrHl", "file_name": "tmpcqfnq2bs.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 07:29:32
-- c7d3f400-24cd-4c9a-9f25-e5a584cc77f1|0|drive_file|CANCELLED|{"file_id": "1uGV9siCsGv6wgPK99NE7KoQLS0_t6eiT", "file_name": "tmpj38u9si0.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 07:24:28
-- 92cf5224-7bed-43eb-8ab7-77d9bd804431|0|drive_file|CANCELLED|{"file_id": "1ELGzMb1Z_O08OegeLzoPDD5T7g4JT1b7", "file_name": "tmpwiry43k0.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 07:19:28
 
 ## MEMORY_DB_COUNTS
-- MEMORY_ROWS|5406
+- MEMORY_ROWS|5407
 
 ## LATEST_MEMORY_SAFE
-- topic_2_archive_152a73c3|{"task_id": "152a73c3-cc82-4ade-a819-68e8dd58f188", "chat_id": "-1003725299009", "topic_id": 2, "direction": "estimates"|2026-05-02T08:05:12.957419
-- topic_2_archive_abcd4a92|{"task_id": "abcd4a92-a4d8-472d-a879-4b89eea94f34", "chat_id": "-1003725299009", "topic_id": 2, "direction": "file_tech_|2026-05-02T07:46:54.845816
-- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 39, "updated_at": "2026-05-02T07:46:28.931553+00:00", "files": [|2026-05-02T07:46:28.931990+00:00
-- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 11, "updated_at": "2026-05-02T07:46:28.900166+00:00", "files": [{"|2026-05-02T07:46:28.901043+00:00
-- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-02T07:46:28.876688+00:00", "files": [{"|2026-05-02T07:46:28.877170+00:00
-- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T07:46:28.834194+00:00
-- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "s|2026-05-02T07:46:28.834112+00:00
-- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T07:46:28.833924+00:00
-- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T07:46:28.833839+00:00
-- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T07:46:28.833770+00:00
-- topic_2_file_234e52f8-3ce8-4f2f-99c3-7cc22265a151|{"task_id": "234e52f8-3ce8-4f2f-99c3-7cc22265a151", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T07:46:28.833717+00:00
-- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_fil|2026-05-02T07:46:28.833625+00:00
+- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 39, "updated_at": "2026-05-02T08:16:30.941848+00:00", "files": [|2026-05-02T08:16:30.942309+00:00
+- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 11, "updated_at": "2026-05-02T08:16:30.910060+00:00", "files": [{"|2026-05-02T08:16:30.910995+00:00
+- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-02T08:16:30.887101+00:00", "files": [{"|2026-05-02T08:16:30.887568+00:00
+- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T08:16:30.844442+00:00
+- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "s|2026-05-02T08:16:30.844368+00:00
+- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T08:16:30.844183+00:00
+- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T08:16:30.844109+00:00
+- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T08:16:30.844055+00:00
+- topic_2_file_234e52f8-3ce8-4f2f-99c3-7cc22265a151|{"task_id": "234e52f8-3ce8-4f2f-99c3-7cc22265a151", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T08:16:30.844003+00:00
+- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_fil|2026-05-02T08:16:30.843919+00:00
+- topic_2_file_acecae89-87a8-42da-881a-db41cd0134e6|{"task_id": "acecae89-87a8-42da-881a-db41cd0134e6", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T08:16:30.843849+00:00
+- topic_2_file_a4956f79-592e-45e3-8f17-925366b5eb2f|{"task_id": "a4956f79-592e-45e3-8f17-925366b5eb2f", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T08:16:30.843776+00:00
 
 ## SEARCH_SESSIONS
 - topic_500_search_session_-1003725299009|{"chat_id": "-1003725299009", "topic_id": 500, "goal": "найди запчасть OEM 34116794300 новый тормозной диск BMW в СПб", "criteria": {"category": "AUTO_PARTS", "target": "запчасть O|2026-05-01T20:57:33.559044+00:00
 
 ## TIMELINE_INFO
 - path=/root/.areal-neva-core/data/memory_files/CHATS/-1003725299009__telegram/timeline.jsonl
-- bytes=647632
-- mtime_utc=2026-05-02T08:05:09.068534+00:00
+- bytes=650386
+- mtime_utc=2026-05-02T08:34:59.471490+00:00
 
 ## GIT_STATUS_SAFE
 M docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
 
 ## FILES_MANIFEST_SAFE
 - docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md|bytes=168322|sha256=0640b8349254cfb36f1143c1f195715014e2ca1b1b428943847fd1fd80d9d8fe
-- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md|bytes=36348|sha256=26bdd3c1ef1de19ad2ae93437439622a1c751656535214cb216ce13c96c8928e
-- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md|bytes=2013|sha256=dc2e6eeec24f33c5b1c85a7f4979d786a5271af521f91df307a05e20112e0ce9
+- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md|bytes=36672|sha256=4b0e2c4dbf369ca1f92119db5e0b3da26942ac214ac458aec5ae8eb7e00d55c9
+- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md|bytes=2013|sha256=80cfbe9f3a07941249c04120e06dfec460117ce1cd77a3389eb8da3e91b7266c
 - docs/CANON_FINAL/00_INDEX.md|bytes=808|sha256=999acb6bfdd6c7215f11d76342ea1b9f8cdf5715418064acb3716f33999c8af6
 - docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md|bytes=41018|sha256=dbd5f683361eafc258ab0822056f6c33f751e5581998dc420f79395d14863177
 - docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md|bytes=6714|sha256=1a439843e1eb214745752720c85b49adc48f1823765982960ce7b1e285947d84
 - docs/HANDOFFS/LATEST_HANDOFF.md|bytes=15246|sha256=2edbc34cb3917727c3555f1765d861c00e524dcf092ad335c7cf5565d9de5f54
 - docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md|bytes=7393|sha256=097209d23a01f15125b0711a85458f986e97eed44f8fb603f354df1e3b495171
-- docs/REPORTS/NOT_CLOSED.md|bytes=23423|sha256=a89262813d94d7cf62284fc31a1e8476a0cc354061745591fca707f3d08bf969
+- docs/REPORTS/NOT_CLOSED.md|bytes=28690|sha256=69f61b1fb57f3cc75391f3f683a269ec67f961bbd9e609d1cb7380ab4b9feb3a
 - docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md|bytes=9846|sha256=e9b63408cbfdd13c05ed9b174f3380d5067493e3815318661c81b30ba13be440
 - docs/ARCHITECTURE/SEARCH_MONOLITH_V1.md|bytes=16952|sha256=26676725c7608d217d6f9162526748875a7647f92320f64a5a0e10b5fd0afa28
 - docs/ARCHITECTURE/SEARCH_MONOLITH_V2.md|UNKNOWN
-- task_worker.py|bytes=184829|sha256=c6248a1337df24cd050f1ad2a83babe0d6d775a3988ff1ace1687929f75473af
+- task_worker.py|bytes=187312|sha256=c44840841fb71e2c3a9126c2da51995381f9218c798f4c42d27957b18a59b42e
 - telegram_daemon.py|bytes=50299|sha256=3214209f6f5f507ffee95a2414a651d72b1490fe364266c876c380b745dee837
 - memory_api_server.py|bytes=2956|sha256=17550a64d4e256489801b49ef81f49c3619598f74a5f6d9d0feda3c79b6805d1
 - core/ai_router.py|bytes=22208|sha256=def3922d4afbdc845a83edd3be08837a34446d8eadb9472292c83c417c7fbe69
 - core/search_session.py|bytes=18734|sha256=8d2d860cbb2d10fd64341d94f837fef7edb9a55466f73b1a65860ecaa17ac0f0
 - core/search_engine.py|bytes=2127|sha256=1f35cefd94b014de6ca4eeb0cfd8802ce0f9275e7ea160c7fe43f70a288e94d6
-- core/file_intake_router.py|bytes=34243|sha256=2efab07f85bc5e773980141135707c2293ce1067c8c010ce2eac30125b9b97e9
+- core/file_intake_router.py|bytes=35401|sha256=507c2a73927f61fcdbf605297e4a69016c06ca3c07d556a843989dad9c882d99
 - core/archive_engine.py|bytes=2684|sha256=04fdd1d0f6927a38b62f869f0a020b30b8cc81d798083d607f1a86d3c61c6e1e
 - core/reply_sender.py|bytes=2987|sha256=c49d63d23f3b580cc5ef2066ed2531665df90a2df5fed4fc4d4b2f924854d932
 - core/pin_manager.py|bytes=2603|sha256=612acafe7a005144bbd67b00fe54ac90c166aa76dafd8badcedc5f9a89812dfa
-- core/topic_drive_oauth.py|bytes=3254|sha256=ab7a2f3d255c60920df39d77c43b731e65a020fd6e9d4640b9ab72ad5f9cb4c3
+- core/topic_drive_oauth.py|bytes=3542|sha256=cbde2203d361fae3bc4e89a7c234fce54f655642088eae22c8b399fe8bfe7e39
 - tools/context_aggregator.py|bytes=4724|sha256=38deff2fcf58fb816de3b3c42c2e7d6585af70f97e106dac2c0b91cb7c7e40b0
 - tools/claude_bootstrap_aggregator.py|bytes=16736|sha256=643ef4e68c1e5afcebf478f316070e4ce3ce9133686c2610147097c20e7d7ffd
 
@@ -400,6 +400,10 @@ M docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
 649: async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *args, **kwargs):
 664: msg = get_clarification_message(_fik_os.path.basename(str(file_path or "")), int(topic_id or 0))
 696: res = _fik_orig_route_file(file_path, task_id, topic_id, intent, fmt, *args, **kwargs)
+710: async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *args, **kwargs):
+715: from core.file_context_intake import latest_pending_instruction_for_topic
+717: pending = latest_pending_instruction_for_topic(int(topic_id or 0), chat_id)
+727: res = _ca_fir_orig_route_file(file_path, task_id, topic_id, intent, fmt, *args, **kwargs)
 
 ## core/archive_engine.py
 1: # === FULLFIX_ARCHIVE_ENGINE_STAGE_6 ===
@@ -449,12 +453,14 @@ M docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
 
 ## core/topic_drive_oauth.py
 3: from typing import Optional, Dict, Any
-68: def _upload_file_sync(file_path: str, file_name: str, chat_id: str, topic_id: int, mime_type: Optional[str] = None) -> Dict[str, Any]:
-72: topic_folder = _ensure_folder(service, chat_folder, f"topic_{int(topic_id or 0)}")
-76: "parents": [topic_folder],
-87: "folder_id": topic_folder,
-91: async def upload_file_to_topic(file_path: str, file_name: str, chat_id: str, topic_id: int, mime_type: Optional[str] = None) -> Dict[str, Any]:
-92: return await asyncio.to_thread(_upload_file_sync, file_path, file_name, str(chat_id), int(topic_id or 0), mime_type)
+37: # === DRIVE_CANON_SINGLE_FOLDER_PICK_V1 ===
+55: # === END_DRIVE_CANON_SINGLE_FOLDER_PICK_V1 ===
+73: def _upload_file_sync(file_path: str, file_name: str, chat_id: str, topic_id: int, mime_type: Optional[str] = None) -> Dict[str, Any]:
+77: topic_folder = _ensure_folder(service, chat_folder, f"topic_{int(topic_id or 0)}")
+81: "parents": [topic_folder],
+92: "folder_id": topic_folder,
+96: async def upload_file_to_topic(file_path: str, file_name: str, chat_id: str, topic_id: int, mime_type: Optional[str] = None) -> Dict[str, Any]:
+97: return await asyncio.to_thread(_upload_file_sync, file_path, file_name, str(chat_id), int(topic_id or 0), mime_type)
 
 ## tools/context_aggregator.py
 11: 'docs/CANON_FINAL/',
