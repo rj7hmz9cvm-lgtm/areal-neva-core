@@ -1371,6 +1371,35 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
     except Exception as _ftc_file_err:
         logger.warning("FULL_TECH_CONTOUR_CLOSE_V1_FILE_ERR %s", _ftc_file_err)
     # === END_FULL_TECH_CONTOUR_CLOSE_V1_WIRED ===
+
+    # === FINAL_CLOSURE_BLOCKER_FIX_V1_TASK_WORKER_HOOK ===
+    try:
+        from core.final_closure_engine import maybe_handle_final_closure as _fcv1_handle
+        _fcv1 = _fcv1_handle(
+            conn=conn,
+            task=task,
+            task_id=str(task_id),
+            chat_id=str(chat_id),
+            topic_id=int(topic_id or 0),
+            raw_input=raw_input,
+            input_type=input_type,
+            reply_to=reply_to,
+        )
+        if isinstance(_fcv1, dict) and _fcv1.get("handled"):
+            _fcv1_msg = str(_fcv1.get("message") or "").strip()
+            _fcv1_state = str(_fcv1.get("state") or "DONE").strip()
+            _fcv1_kind = str(_fcv1.get("kind") or "final_closure_blocker_fix_v1").strip()
+            if _fcv1_msg:
+                _fcv1_send = _send_once_ex(conn, str(task_id), str(chat_id), _fcv1_msg, reply_to, _fcv1_kind)
+                _fcv1_bot = _fcv1_send.get("bot_message_id") if isinstance(_fcv1_send, dict) else None
+                _update_task(conn, str(task_id), state=_fcv1_state, result=_fcv1_msg, bot_message_id=_fcv1_bot, error_message="")
+                _history(conn, str(task_id), _fcv1.get("history", "FINAL_CLOSURE_BLOCKER_FIX_V1:HANDLED"))
+                conn.commit()
+                return
+    except Exception as _fcv1_err:
+        logger.warning("FINAL_CLOSURE_BLOCKER_FIX_V1_TASK_WORKER_HOOK_ERR %s", _fcv1_err)
+    # === END_FINAL_CLOSURE_BLOCKER_FIX_V1_TASK_WORKER_HOOK ===
+
     # === EZONE_INGEST_CALL_V1 ===
     try:
         _ez_raw = str(task["raw_input"] if task else "") if task else ""

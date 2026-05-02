@@ -1174,3 +1174,69 @@ async def generate_estimate_from_text(raw_input: str, task_id: str, topic_id: in
 # === END_ESTIMATE_NO_LLM_CALC_GUARD_V1 ===
 # === END_ESTIMATE_RESULT_VALIDATOR_V1 ===
 # === END_REAL_GAPS_CLOSE_V2_ESTIMATE ===
+
+
+# === FINAL_CLOSURE_BLOCKER_FIX_V1_ESTIMATE_XLSX_FORMULAS ===
+def create_estimate_xlsx_from_rows(rows, out_path: str, title: str = "Смета") -> str:
+    from pathlib import Path
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font
+    from openpyxl.utils import get_column_letter
+
+    out = Path(out_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Смета"
+
+    ws["A1"] = title
+    ws["A1"].font = Font(bold=True, size=14)
+    ws.merge_cells("A1:F1")
+
+    headers = ["№", "Наименование", "Ед.", "Кол-во", "Цена", "Сумма"]
+    for c, h in enumerate(headers, 1):
+        cell = ws.cell(row=3, column=c, value=h)
+        cell.font = Font(bold=True)
+        cell.alignment = Alignment(horizontal="center")
+
+    start = 4
+    safe_rows = rows or []
+
+    for i, r in enumerate(safe_rows, start):
+        idx = i - start + 1
+        name = r.get("name") or r.get("work") or r.get("item") or ""
+        unit = r.get("unit") or ""
+        qty = r.get("qty") or r.get("quantity") or 0
+        price = r.get("price") or r.get("unit_price") or 0
+
+        try:
+            qty = float(str(qty).replace(",", ".").replace(" ", ""))
+        except Exception:
+            qty = 0
+
+        try:
+            price = float(str(price).replace(",", ".").replace(" ", ""))
+        except Exception:
+            price = 0
+
+        ws.cell(row=i, column=1, value=idx)
+        ws.cell(row=i, column=2, value=name)
+        ws.cell(row=i, column=3, value=unit)
+        ws.cell(row=i, column=4, value=qty)
+        ws.cell(row=i, column=5, value=price)
+        ws.cell(row=i, column=6, value=f"=D{i}*E{i}")
+
+    total_row = start + len(safe_rows)
+    ws.cell(row=total_row, column=5, value="Итого")
+    ws.cell(row=total_row, column=5).font = Font(bold=True)
+    ws.cell(row=total_row, column=6, value=f"=SUM(F{start}:F{total_row-1})" if safe_rows else "=0")
+    ws.cell(row=total_row, column=6).font = Font(bold=True)
+
+    for i, w in enumerate([8, 55, 12, 14, 14, 16], 1):
+        ws.column_dimensions[get_column_letter(i)].width = w
+
+    wb.save(out)
+    return str(out)
+# === END_FINAL_CLOSURE_BLOCKER_FIX_V1_ESTIMATE_XLSX_FORMULAS ===
+
