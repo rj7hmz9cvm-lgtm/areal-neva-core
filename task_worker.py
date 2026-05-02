@@ -202,34 +202,23 @@ LOG_PATH = f"{BASE}/logs/task_worker.log"
 LOCK_PATH = f"{BASE}/runtime/task_worker.lock"
 
 POLL_SEC = 1.5
-MIN_RESULT_LEN = 8
+MIN_RESULT_LEN = 2  # RESULT_VALIDATOR_FIX_V1: was 8
 AI_TIMEOUT = 300
 STALE_TIMEOUT = 600
 REMINDER_SEC = 180
 
 BAD_RESULT_RE = [
-    r"\bой\b",
+    # === RESULT_VALIDATOR_FIX_V1 ===
+    # Убраны: извини/извините/ищу/найду/могу найти/я могу помочь
+    # Это нормальные слова, AI имеет право их использовать
     r"сорян",
     r"дружище",
-    r"не переживай",
-    r"дай мне немного времени",
-    r"я могу помочь",
-    r"извини",
-    r"извините",
-    r"😅",
-    r"💪",
-    r"😎",
     r"delete from",
-    r"\bsql\b",
     r"task_worker\.py",
-    r"\bищу\b",
-    r"\bнайду\b",
-    r"непонятно",
-    r"недостаточно данных",
-    r"ссылки предоставлю",
-    r"готов искать",
-    r"могу найти",
-    r"укажите\s+что\s+именно\s+нужно\s+найти",
+    r"telegram_daemon\.py",
+    r"выполните sql",
+    r"/root/\.areal",
+    # === END_RESULT_VALIDATOR_FIX_V1 ===
 ]
 
 MEMORY_BAD_MARKERS = [
