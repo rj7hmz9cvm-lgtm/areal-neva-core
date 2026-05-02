@@ -3242,7 +3242,46 @@ async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_
     conn.commit()
 
 
+
+# === IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1 ===
+def _in_progress_hard_timeout_by_created_at_fix_v1(conn, minutes: int = 30) -> int:
+    try:
+        rows = conn.execute(
+            """
+            SELECT id FROM tasks
+            WHERE state='IN_PROGRESS'
+              AND datetime(COALESCE(created_at, updated_at, 'now')) <= datetime('now', ?)
+            ORDER BY created_at ASC
+            LIMIT 200
+            """,
+            (f"-{int(minutes)} minutes",),
+        ).fetchall()
+        n = 0
+        for row in rows:
+            tid = row["id"] if hasattr(row, "keys") else row[0]
+            conn.execute(
+                "UPDATE tasks SET state='FAILED', error_message='IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1', updated_at=datetime('now') WHERE id=? AND state='IN_PROGRESS'",
+                (str(tid),),
+            )
+            try:
+                _history(conn, str(tid), "IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1:FAILED")
+            except Exception:
+                pass
+            n += 1
+        if n:
+            try: conn.commit()
+            except Exception: pass
+            logger.warning("IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1 closed=%s", n)
+        return n
+    except Exception as e:
+        logger.warning("IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1_ERR %s", e)
+        return 0
+# === END_IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1 ===
+
 def _pick_next_task(conn: sqlite3.Connection, chat_id: Optional[str]) -> Optional[sqlite3.Row]:
+    # === IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1_HOOK ===
+    _in_progress_hard_timeout_by_created_at_fix_v1(conn, minutes=30)
+    # === END_IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1_HOOK ===
     where = ["state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION')"]
     params: List[Any] = []
     if chat_id:
