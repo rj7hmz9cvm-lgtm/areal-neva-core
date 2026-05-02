@@ -1,8 +1,8 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-02T09:14:22.993333+00:00
+generated_at_utc: 2026-05-02T09:44:23.879733+00:00
 git_branch: main
-git_head_short: c38a37e
-git_head_full: c38a37e216166d58e029d24c03be627f83704482
+git_head_short: affc142
+git_head_full: affc1426c592647635cdbfeadfb223e210b3627e
 
 ## SERVICES
 - areal-task-worker: active
@@ -37,18 +37,18 @@ git_head_full: c38a37e216166d58e029d24c03be627f83704482
 - MEMORY_ROWS|5431
 
 ## LATEST_MEMORY_SAFE
-- topic_2_pending_file_intent_clarification|{"task_id": "8c6074e8-6138-4d54-8574-cf3da6da0cf9", "rowid": 5104, "text": "Ну ты должен не сразу искать в интернете ты |2026-05-02T09:06:12.501904+00:00
-- topic_2_price_mode|ask_before_search|2026-05-02T09:06:12.500285+00:00
-- topic_2_price_mode|ask_before_search|2026-05-02T09:06:12.499115+00:00
-- topic_2_pending_file_intent|{"kind": "estimate", "mode": "pending_estimate_files", "price_mode": "ask_before_search", "raw_text": "[VOICE] Итак, сей|2026-05-02T09:06:12.497415+00:00
-- topic_2_pending_file_intent|{"kind": "estimate", "mode": "pending_estimate_files", "price_mode": "", "raw_text": "[VOICE] Итак, сейчас если я тебе с|2026-05-02T09:06:12.495708+00:00
-- topic_2_pending_file_intent|{"kind": "estimate", "mode": "template_batch", "price_mode": "", "raw_text": "сейчас скину несколько смет. их надо приня|2026-05-02T09:06:12.494300+00:00
-- topic_2_pending_file_intent_clarification|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "rowid": 4671, "text": "Смета создана\nПозиций: 1\nИтого: 0.0 руб\nP|2026-05-02T09:06:12.491682+00:00
-- topic_2_pending_file_intent|{"kind": "estimate", "mode": "template_batch", "price_mode": "", "raw_text": "Тот файл который я тебе скинул последний в|2026-05-02T09:06:12.490083+00:00
-- topic_2_pending_file_intent_clarification|{"task_id": "673bf651-1db3-4300-ab85-33c4a22b8a35", "rowid": 1772, "text": "[VOICE] итак мне нужно посчитать соответстве|2026-05-02T09:06:12.488298+00:00
-- topic_2_pending_file_intent|{"kind": "estimate", "mode": "template_batch", "price_mode": "", "raw_text": "Тот файл который я тебе скинул последний в|2026-05-02T09:06:12.486314+00:00
-- topic_2_pending_file_intent_clarification|{"task_id": "b68cf2f9-fc6a-4695-844e-80e528b5791c", "rowid": 1714, "text": "Добрый день.\nПрошу уточнить есть ли у вас о|2026-05-02T09:06:12.484555+00:00
-- topic_2_pending_file_intent|{"kind": "estimate", "mode": "template_batch", "price_mode": "", "raw_text": "Тот файл который я тебе скинул последний в|2026-05-02T09:06:12.483318+00:00
+- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 39, "updated_at": "2026-05-02T09:16:33.887622+00:00", "files": [|2026-05-02T09:16:33.888136+00:00
+- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 11, "updated_at": "2026-05-02T09:16:33.852296+00:00", "files": [{"|2026-05-02T09:16:33.853598+00:00
+- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-02T09:16:33.826886+00:00", "files": [{"|2026-05-02T09:16:33.827620+00:00
+- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T09:16:33.782558+00:00
+- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "s|2026-05-02T09:16:33.782456+00:00
+- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T09:16:33.782205+00:00
+- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T09:16:33.782104+00:00
+- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T09:16:33.782033+00:00
+- topic_2_file_234e52f8-3ce8-4f2f-99c3-7cc22265a151|{"task_id": "234e52f8-3ce8-4f2f-99c3-7cc22265a151", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T09:16:33.781950+00:00
+- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_fil|2026-05-02T09:16:33.781840+00:00
+- topic_2_file_acecae89-87a8-42da-881a-db41cd0134e6|{"task_id": "acecae89-87a8-42da-881a-db41cd0134e6", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T09:16:33.781747+00:00
+- topic_2_file_a4956f79-592e-45e3-8f17-925366b5eb2f|{"task_id": "a4956f79-592e-45e3-8f17-925366b5eb2f", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T09:16:33.781628+00:00
 
 ## SEARCH_SESSIONS
 - topic_500_search_session_-1003725299009|{"chat_id": "-1003725299009", "topic_id": 500, "goal": "найди запчасть OEM 34116794300 новый тормозной диск BMW в СПб", "criteria": {"category": "AUTO_PARTS", "target": "запчасть O|2026-05-01T20:57:33.559044+00:00
@@ -62,25 +62,24 @@ git_head_full: c38a37e216166d58e029d24c03be627f83704482
 M docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
 ?? data/telegram_file_catalog/
 ?? data/templates/estimate_batch/
-?? docs/REPORTS/CLAUDE_BOOTSTRAP_PENDING_PUSH.md
 ?? docs/REPORTS/areal-claude-bootstrap-aggregator.service.before.20260502_121121.txt
-?? docs/REPORTS/areal-claude-bootstrap-aggregator.service.before.20260502_121422.txt
+?? outputs/
 ?? tools/telegram_file_memory_backfill.py
 
 ## FILES_MANIFEST_SAFE
 - docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md|bytes=168322|sha256=0640b8349254cfb36f1143c1f195715014e2ca1b1b428943847fd1fd80d9d8fe
-- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md|bytes=37457|sha256=4a4345d9c671758ddde1ea9abbccf6cdd862871601730cad2c85ec23bff9fd0c
-- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md|bytes=2013|sha256=83b6c2c1af1ef8168e029001a74927be515fa30df38194a9adca8f5cb978aef4
+- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md|bytes=37551|sha256=be9797a606746c960af4cb1ee2c13bb307021f640b8317ea2cc0056fca152634
+- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md|bytes=2013|sha256=b43107036896b626e79a822bfa66e6f203039fbaac8df95ef645a4e1cebd3df7
 - docs/CANON_FINAL/00_INDEX.md|bytes=808|sha256=999acb6bfdd6c7215f11d76342ea1b9f8cdf5715418064acb3716f33999c8af6
 - docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md|bytes=41018|sha256=dbd5f683361eafc258ab0822056f6c33f751e5581998dc420f79395d14863177
 - docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md|bytes=6714|sha256=1a439843e1eb214745752720c85b49adc48f1823765982960ce7b1e285947d84
 - docs/HANDOFFS/LATEST_HANDOFF.md|bytes=15246|sha256=2edbc34cb3917727c3555f1765d861c00e524dcf092ad335c7cf5565d9de5f54
 - docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md|bytes=7393|sha256=097209d23a01f15125b0711a85458f986e97eed44f8fb603f354df1e3b495171
-- docs/REPORTS/NOT_CLOSED.md|bytes=31102|sha256=e48fbc1d89019d0f8a8c2e8b40ece879a60c02909a20a42800d59b46d4b0c8aa
+- docs/REPORTS/NOT_CLOSED.md|bytes=35741|sha256=ba3da5e76fd4dee4d745d159b94cfb0b5d39255e452fa0849079aa8ada941522
 - docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md|bytes=9846|sha256=e9b63408cbfdd13c05ed9b174f3380d5067493e3815318661c81b30ba13be440
 - docs/ARCHITECTURE/SEARCH_MONOLITH_V1.md|bytes=16952|sha256=26676725c7608d217d6f9162526748875a7647f92320f64a5a0e10b5fd0afa28
 - docs/ARCHITECTURE/SEARCH_MONOLITH_V2.md|UNKNOWN
-- task_worker.py|bytes=190921|sha256=3b3ef06b4a72f16039b19ad058e33f9b077471cc53d45a3a71b75419ac8b57f1
+- task_worker.py|bytes=192376|sha256=e6ed445acefe580ae336b05641cc44f2d90b69558dab7816fd7861a11df668ab
 - telegram_daemon.py|bytes=50299|sha256=3214209f6f5f507ffee95a2414a651d72b1490fe364266c876c380b745dee837
 - memory_api_server.py|bytes=2956|sha256=17550a64d4e256489801b49ef81f49c3619598f74a5f6d9d0feda3c79b6805d1
 - core/ai_router.py|bytes=22208|sha256=def3922d4afbdc845a83edd3be08837a34446d8eadb9472292c83c417c7fbe69
