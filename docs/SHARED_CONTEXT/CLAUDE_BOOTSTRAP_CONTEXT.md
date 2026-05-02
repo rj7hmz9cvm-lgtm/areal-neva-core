@@ -3,9 +3,9 @@
 SYSTEM: AREAL-NEVA ORCHESTRA
 MODE: FACT_ONLY / ZERO_ASSUMPTIONS / GITHUB_SSOT / CANON_LOCK
 PURPOSE: one-file bootstrap for Claude and external LLMs
-GENERATED_AT_UTC: 2026-05-02T08:36:50.919668+00:00
+GENERATED_AT_UTC: 2026-05-02T09:06:52.916450+00:00
 GIT_BRANCH: main
-GIT_SHA: eefeec0814b5f12c9bca078daee2e7a9cacf2880
+GIT_SHA: 5044af567d9c152611d3906a6d09d852ba689179
 RAW_URL: https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md
 
 # CLAUDE_OPERATING_PROTOCOL_CANON_LOCK_V3
@@ -68,14 +68,14 @@ Claude must reload this file at start of each new session
 
 SOURCE_INDEX:
 - docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md | bytes=168322 | sha256=0640b8349254cfb36f1143c1f195715014e2ca1b1b428943847fd1fd80d9d8fe
-- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md | bytes=37191 | sha256=516d98f2701bb56589de3959658e9f035b6c936f35e8b89910897f3e7b49eacf
+- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md | bytes=37200 | sha256=05f3ba1fa5289f71a6d9075a5a755afa9782dd52a34b00940d5b33fdf8bb9f03
 - docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md | bytes=74 | sha256=1a4c8e19e206a16b41b7d761d30cb115f9e4d965bc68e3f326b02dcb8c757944
 - docs/CANON_FINAL/00_INDEX.md | bytes=808 | sha256=999acb6bfdd6c7215f11d76342ea1b9f8cdf5715418064acb3716f33999c8af6
 - docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md | bytes=41018 | sha256=dbd5f683361eafc258ab0822056f6c33f751e5581998dc420f79395d14863177
 - docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md | bytes=6714 | sha256=1a439843e1eb214745752720c85b49adc48f1823765982960ce7b1e285947d84
 - docs/HANDOFFS/LATEST_HANDOFF.md | bytes=15246 | sha256=2edbc34cb3917727c3555f1765d861c00e524dcf092ad335c7cf5565d9de5f54
 - docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md | bytes=7393 | sha256=097209d23a01f15125b0711a85458f986e97eed44f8fb603f354df1e3b495171
-- docs/REPORTS/NOT_CLOSED.md | bytes=28690 | sha256=69f61b1fb57f3cc75391f3f683a269ec67f961bbd9e609d1cb7380ab4b9feb3a
+- docs/REPORTS/NOT_CLOSED.md | bytes=31102 | sha256=e48fbc1d89019d0f8a8c2e8b40ece879a60c02909a20a42800d59b46d4b0c8aa
 - docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md | bytes=9846 | sha256=e9b63408cbfdd13c05ed9b174f3380d5067493e3815318661c81b30ba13be440
 - docs/ARCHITECTURE/SEARCH_MONOLITH_V1.md | bytes=16952 | sha256=26676725c7608d217d6f9162526748875a7647f92320f64a5a0e10b5fd0afa28
 - docs/ARCHITECTURE/SEARCH_MONOLITH_V2.md | bytes=65 | sha256=7405fb3735184d38c6ecdb2e36a66725f3bc4b02159900ac599aebfbcc9b7e20
@@ -4002,10 +4002,10 @@ END_FILE: docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md
 BEGIN_FILE: docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md
 ========================================================================================================================
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-02T08:36:50.882103+00:00
+generated_at_utc: 2026-05-02T09:06:52.878702+00:00
 git_branch: main
-git_head_short: eefeec0
-git_head_full: eefeec0814b5f12c9bca078daee2e7a9cacf2880
+git_head_short: 5044af5
+git_head_full: 5044af567d9c152611d3906a6d09d852ba689179
 
 ## SERVICES
 - areal-task-worker: active
@@ -4014,13 +4014,17 @@ git_head_full: eefeec0814b5f12c9bca078daee2e7a9cacf2880
 - areal-claude-bootstrap-aggregator.timer: active
 
 ## CORE_DB_STATE_COUNTS
-- FAILED|2835
+- FAILED|2836
 - CANCELLED|758
-- DONE|426
+- DONE|427
 - ARCHIVED|381
 - OPEN_TASKS|0
 
 ## LATEST_TASKS_SAFE
+- 8c6074e8-6138-4d54-8574-cf3da6da0cf9|2|text|FAILED|Ну ты должен не сразу искать в интернете ты должна спросить нужно ли это мне|None|2026-05-02 08:56:30
+- 0568a7a8-2e73-4452-a493-78dfc359bd15|2|text|DONE|[VOICE] Итак, сейчас если я тебе скину несколько смет, ты возьмешь их в работу, |Принял
+Следующие файлы в этом топике приму как образцы сметы
+Если файл уже был в|2026-05-02 08:55:03
 - 698e9c8f-9428-43ee-a092-cc3c95f4de30|0|drive_file|CANCELLED|{"file_id": "1i5S_K7MW1HlZACv7Ls6EdHaDxBtMcFiC", "file_name": "tmp5w3uuuxy.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 08:34:59
 - 6bcb4ed5-5dc6-476b-ae87-2f28486b8a42|0|drive_file|CANCELLED|{"file_id": "1e6FDtuktDgZDEwK_XX93S0YbTZQu-fEf", "file_name": "tmps38ycrdw.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 08:29:57
 - eb29428e-a79b-4e62-b7bc-60d0015c2ac0|0|drive_file|CANCELLED|{"file_id": "1lwQ-64OYZ1qBmSMZ0pdNb_QjgRoEOyr7", "file_name": "tmpoun_2n8j.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 08:24:54
@@ -4031,53 +4035,52 @@ git_head_full: eefeec0814b5f12c9bca078daee2e7a9cacf2880
 - 61aca230-a05a-4b0c-8d69-7118b96e6138|0|drive_file|CANCELLED|{"file_id": "10UJ8x2GXPaObeH3sQvLBOSH-P84-ga4N", "file_name": "tmp0n69ppc4.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 08:04:45
 - 1eb92aed-f978-47e4-8596-d26d261f036c|0|drive_file|CANCELLED|{"file_id": "1oSjI_2VrUnVYuPRAMlwC28gCgRV155BU", "file_name": "tmpr8nxdara.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 07:59:44
 - a2d270b2-6450-494d-b9f2-c41b2ffb352f|0|drive_file|CANCELLED|{"file_id": "1J0pomxumGIN9G2oS-vBy41OeZ5nRZC4C", "file_name": "tmpm24u1ate.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 07:54:42
-- d27fe9c7-eb23-413a-bde0-7880e591b89a|0|drive_file|CANCELLED|{"file_id": "1ONimdaCbW5RDNEXVz5GbWTKn3vxQI6ar", "file_name": "tmpp2xqe1fx.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 07:49:39
-- abcd4a92-a4d8-472d-a879-4b89eea94f34|2|text|DONE|сейчас скину несколько смет. их надо принять как образцы но информацию о стоимос|Файлы в этом топике уже есть. Нашёл релевантное:
-
-1. Google Sheets / XLSX артефа|2026-05-02 07:46:54
 
 ## MEMORY_DB_COUNTS
-- MEMORY_ROWS|5407
+- MEMORY_ROWS|5431
 
 ## LATEST_MEMORY_SAFE
-- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 39, "updated_at": "2026-05-02T08:16:30.941848+00:00", "files": [|2026-05-02T08:16:30.942309+00:00
-- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 11, "updated_at": "2026-05-02T08:16:30.910060+00:00", "files": [{"|2026-05-02T08:16:30.910995+00:00
-- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-02T08:16:30.887101+00:00", "files": [{"|2026-05-02T08:16:30.887568+00:00
-- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T08:16:30.844442+00:00
-- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "s|2026-05-02T08:16:30.844368+00:00
-- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T08:16:30.844183+00:00
-- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T08:16:30.844109+00:00
-- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T08:16:30.844055+00:00
-- topic_2_file_234e52f8-3ce8-4f2f-99c3-7cc22265a151|{"task_id": "234e52f8-3ce8-4f2f-99c3-7cc22265a151", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T08:16:30.844003+00:00
-- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_fil|2026-05-02T08:16:30.843919+00:00
-- topic_2_file_acecae89-87a8-42da-881a-db41cd0134e6|{"task_id": "acecae89-87a8-42da-881a-db41cd0134e6", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T08:16:30.843849+00:00
-- topic_2_file_a4956f79-592e-45e3-8f17-925366b5eb2f|{"task_id": "a4956f79-592e-45e3-8f17-925366b5eb2f", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T08:16:30.843776+00:00
+- topic_2_pending_file_intent_clarification|{"task_id": "8c6074e8-6138-4d54-8574-cf3da6da0cf9", "rowid": 5104, "text": "Ну ты должен не сразу искать в интернете ты |2026-05-02T09:06:12.501904+00:00
+- topic_2_price_mode|ask_before_search|2026-05-02T09:06:12.500285+00:00
+- topic_2_price_mode|ask_before_search|2026-05-02T09:06:12.499115+00:00
+- topic_2_pending_file_intent|{"kind": "estimate", "mode": "pending_estimate_files", "price_mode": "ask_before_search", "raw_text": "[VOICE] Итак, сей|2026-05-02T09:06:12.497415+00:00
+- topic_2_pending_file_intent|{"kind": "estimate", "mode": "pending_estimate_files", "price_mode": "", "raw_text": "[VOICE] Итак, сейчас если я тебе с|2026-05-02T09:06:12.495708+00:00
+- topic_2_pending_file_intent|{"kind": "estimate", "mode": "template_batch", "price_mode": "", "raw_text": "сейчас скину несколько смет. их надо приня|2026-05-02T09:06:12.494300+00:00
+- topic_2_pending_file_intent_clarification|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "rowid": 4671, "text": "Смета создана\nПозиций: 1\nИтого: 0.0 руб\nP|2026-05-02T09:06:12.491682+00:00
+- topic_2_pending_file_intent|{"kind": "estimate", "mode": "template_batch", "price_mode": "", "raw_text": "Тот файл который я тебе скинул последний в|2026-05-02T09:06:12.490083+00:00
+- topic_2_pending_file_intent_clarification|{"task_id": "673bf651-1db3-4300-ab85-33c4a22b8a35", "rowid": 1772, "text": "[VOICE] итак мне нужно посчитать соответстве|2026-05-02T09:06:12.488298+00:00
+- topic_2_pending_file_intent|{"kind": "estimate", "mode": "template_batch", "price_mode": "", "raw_text": "Тот файл который я тебе скинул последний в|2026-05-02T09:06:12.486314+00:00
+- topic_2_pending_file_intent_clarification|{"task_id": "b68cf2f9-fc6a-4695-844e-80e528b5791c", "rowid": 1714, "text": "Добрый день.\nПрошу уточнить есть ли у вас о|2026-05-02T09:06:12.484555+00:00
+- topic_2_pending_file_intent|{"kind": "estimate", "mode": "template_batch", "price_mode": "", "raw_text": "Тот файл который я тебе скинул последний в|2026-05-02T09:06:12.483318+00:00
 
 ## SEARCH_SESSIONS
 - topic_500_search_session_-1003725299009|{"chat_id": "-1003725299009", "topic_id": 500, "goal": "найди запчасть OEM 34116794300 новый тормозной диск BMW в СПб", "criteria": {"category": "AUTO_PARTS", "target": "запчасть O|2026-05-01T20:57:33.559044+00:00
 
 ## TIMELINE_INFO
 - path=/root/.areal-neva-core/data/memory_files/CHATS/-1003725299009__telegram/timeline.jsonl
-- bytes=650386
-- mtime_utc=2026-05-02T08:34:59.471490+00:00
+- bytes=651161
+- mtime_utc=2026-05-02T08:55:24.113956+00:00
 
 ## GIT_STATUS_SAFE
 M docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
+?? data/telegram_file_catalog/
+?? data/templates/estimate_batch/
+?? tools/telegram_file_memory_backfill.py
 
 ## FILES_MANIFEST_SAFE
 - docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md|bytes=168322|sha256=0640b8349254cfb36f1143c1f195715014e2ca1b1b428943847fd1fd80d9d8fe
-- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md|bytes=36672|sha256=4b0e2c4dbf369ca1f92119db5e0b3da26942ac214ac458aec5ae8eb7e00d55c9
-- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md|bytes=2013|sha256=80cfbe9f3a07941249c04120e06dfec460117ce1cd77a3389eb8da3e91b7266c
+- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md|bytes=37191|sha256=516d98f2701bb56589de3959658e9f035b6c936f35e8b89910897f3e7b49eacf
+- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md|bytes=2013|sha256=bbcc3e83ef17d956e05fc26d8121af3798fdb72779f63ccb8d5ea47046e2c839
 - docs/CANON_FINAL/00_INDEX.md|bytes=808|sha256=999acb6bfdd6c7215f11d76342ea1b9f8cdf5715418064acb3716f33999c8af6
 - docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md|bytes=41018|sha256=dbd5f683361eafc258ab0822056f6c33f751e5581998dc420f79395d14863177
 - docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md|bytes=6714|sha256=1a439843e1eb214745752720c85b49adc48f1823765982960ce7b1e285947d84
 - docs/HANDOFFS/LATEST_HANDOFF.md|bytes=15246|sha256=2edbc34cb3917727c3555f1765d861c00e524dcf092ad335c7cf5565d9de5f54
 - docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md|bytes=7393|sha256=097209d23a01f15125b0711a85458f986e97eed44f8fb603f354df1e3b495171
-- docs/REPORTS/NOT_CLOSED.md|bytes=28690|sha256=69f61b1fb57f3cc75391f3f683a269ec67f961bbd9e609d1cb7380ab4b9feb3a
+- docs/REPORTS/NOT_CLOSED.md|bytes=31102|sha256=e48fbc1d89019d0f8a8c2e8b40ece879a60c02909a20a42800d59b46d4b0c8aa
 - docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md|bytes=9846|sha256=e9b63408cbfdd13c05ed9b174f3380d5067493e3815318661c81b30ba13be440
 - docs/ARCHITECTURE/SEARCH_MONOLITH_V1.md|bytes=16952|sha256=26676725c7608d217d6f9162526748875a7647f92320f64a5a0e10b5fd0afa28
 - docs/ARCHITECTURE/SEARCH_MONOLITH_V2.md|UNKNOWN
-- task_worker.py|bytes=187312|sha256=c44840841fb71e2c3a9126c2da51995381f9218c798f4c42d27957b18a59b42e
+- task_worker.py|bytes=190921|sha256=3b3ef06b4a72f16039b19ad058e33f9b077471cc53d45a3a71b75419ac8b57f1
 - telegram_daemon.py|bytes=50299|sha256=3214209f6f5f507ffee95a2414a651d72b1490fe364266c876c380b745dee837
 - memory_api_server.py|bytes=2956|sha256=17550a64d4e256489801b49ef81f49c3619598f74a5f6d9d0feda3c79b6805d1
 - core/ai_router.py|bytes=22208|sha256=def3922d4afbdc845a83edd3be08837a34446d8eadb9472292c83c417c7fbe69
@@ -4129,71 +4132,71 @@ M docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
 625: "topic_id": int(topic_id or 0),
 656: (task_id, f"reply_sent:{kind}"),
 661: def _send_once(conn: sqlite3.Connection, task_id: str, chat_id: str, text: str, reply_to: Optional[int], kind: str) -> bool:
-664: ok = send_reply(chat_id=chat_id, text=text, reply_to_message_id=reply_to)
-666: _history(conn, task_id, f"reply_sent:{kind}")
-670: def _send_once_ex(conn: sqlite3.Connection, task_id: str, chat_id: str, text: str, reply_to: Optional[int], kind: str) -> Dict[str, Any]:
-673: res = send_reply_ex(chat_id=chat_id, text=text, reply_to_message_id=reply_to)
-677: _history(conn, task_id, f"reply_sent:{kind}")
-726: def _save_topic_role(chat_id: str, topic_id: int, role: str) -> None:
-733: key = f"topic_{topic_id}_role"
-744: def _load_memory_context(chat_id: str, topic_id: int) -> Tuple[str, str, str, str]:
-753: topic_prefix = f"topic_{int(topic_id)}_"
-763: (str(chat_id), f"{topic_prefix}*"),
-768: topic_role = ""
-769: topic_directions = ""
-812: if key.endswith("_role") and not topic_role:
-813: topic_role = value[:500]
-816: if not topic_role and (key.endswith("_assistant_output") or key.endswith("_task_summary")):
-825: topic_role = _clean(m.group(1), 500)
-827: if key.endswith("_directions") and not topic_directions:
-828: topic_directions = value[:1000]
-837: # === TOPIC_META_ROLE_INJECT_V1 ===
-838: if not topic_role and TOPIC_META_LOADER_WIRED:
-840: _tm = load_topic_meta(int(topic_id or 0))
-845: topic_role = f"Топик: {_tm_name} | Направление: {_tm_dir}"
-848: # === END TOPIC_META_ROLE_INJECT_V1 ===
-849: return "\n".join(short_memory[:20]), "\n".join(long_memory[:20]), topic_role, topic_directions  # MEMORY_LIMIT_20_V1
-854: def _load_archive_context(chat_id: str, topic_id: int, user_text: str) -> str:
-857: from core.archive_distributor import _load_archive_for_topic
-858: arc = _load_archive_for_topic(chat_id, topic_id, user_text, limit=5)
-897: if int(payload.get("topic_id", -1)) != int(topic_id):
-909: def _active_unfinished_context(conn: sqlite3.Connection, chat_id: str, topic_id: int, task_id: str) -> str:
-917: if "topic_id" in cols:
-918: where.append("COALESCE(topic_id,0)=?")
-919: params.append(int(topic_id))
-952: def _search_fact_context(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> str:
-960: if "topic_id" in cols:
-961: where.append("COALESCE(topic_id,0)=?")
-962: params.append(int(topic_id))
-987: def _save_memory(chat_id: str, topic_id: int, raw_input: str, result: str) -> None:
-1019: prefix = f"topic_{int(topic_id)}_"
-1033: logger.info("save_memory_ok chat=%s topic=%s", chat_id, topic_id)
-1038: def _close_pin(conn: sqlite3.Connection, task_id: str) -> None:
-1039: if not _has_table(conn, "pin"):
-1042: "UPDATE pin SET state='CLOSED', updated_at=datetime('now') WHERE task_id=? AND state='ACTIVE'",
-1047: def _finalize_done(conn: sqlite3.Connection, task_id: str, chat_id: str, topic_id: int, reply_to: Optional[int]) -> None:
-1058: _save_memory(chat_id, topic_id, raw_input, result)
-1077: # CONFIRMATION_TIMEOUT_FIX_V1
-1080: UPDATE tasks SET state='FAILED', error_message='CONFIRMATION_TIMEOUT', updated_at=datetime('now')
-1083: AND COALESCE(raw_input,'') NOT LIKE '%retry_queue_healthcheck%'
-1084: AND COALESCE(result,'') NOT LIKE '%retry_queue_healthcheck%'
-1088: logger.warning("CONFIRMATION_TIMEOUT_FIX_V1_ERR %s", _ct_e)
-1089: # IN_PROGRESS_HARD_TIMEOUT_V1
-1097: f"SELECT id,chat_id,COALESCE(topic_id,0) AS topic_id,reply_to_message_id,raw_input FROM tasks WHERE {' AND '.join(_hw)}",
-1101: _htopic = int(_hr["topic_id"] or 0); _hreply = _hr["reply_to_message_id"]
-1104: _close_pin(conn, _htid); _history(conn, _htid, "state:FAILED:EXECUTION_TIMEOUT")
-1106: _append_timeline_event_v1(_hchat, _htopic, _htid, "execution_timeout", _s(_hr["raw_input"]), _hmsg)
-1109: _send_once(conn, _htid, _hchat, _hmsg, _hreply, "execution_timeout")
-1111: logger.warning("IN_PROGRESS_HARD_TIMEOUT_V1_ERR %s", _e)
-1124: SELECT id, chat_id, COALESCE(topic_id,0) AS topic_id, reply_to_message_id
-1134: reply_to = row["reply_to_message_id"]
-1136: _close_pin(conn, task_id)
-1139: _send_once(conn, task_id, tg_chat_id, "Задача не выполнена. Повтори или уточни запрос", reply_to, "stale_failed")
-1157: SELECT id, chat_id, COALESCE(topic_id,0) AS topic_id, reply_to_message_id, result, raw_input, input_type, updated_at, created_at
-1182: _close_pin(conn, row["id"])
-1189: _close_pin(conn, row["id"])
-1213: _close_pin(conn, row["id"])
-1218: _close_pin(conn, row["id"])
+671: ok = send_reply(chat_id=chat_id, text=text, reply_to_message_id=reply_to)
+673: _history(conn, task_id, f"reply_sent:{kind}")
+677: def _send_once_ex(conn: sqlite3.Connection, task_id: str, chat_id: str, text: str, reply_to: Optional[int], kind: str) -> Dict[str, Any]:
+687: res = send_reply_ex(chat_id=chat_id, text=text, reply_to_message_id=reply_to)
+691: _history(conn, task_id, f"reply_sent:{kind}")
+740: def _save_topic_role(chat_id: str, topic_id: int, role: str) -> None:
+747: key = f"topic_{topic_id}_role"
+758: def _load_memory_context(chat_id: str, topic_id: int) -> Tuple[str, str, str, str]:
+767: topic_prefix = f"topic_{int(topic_id)}_"
+777: (str(chat_id), f"{topic_prefix}*"),
+782: topic_role = ""
+783: topic_directions = ""
+826: if key.endswith("_role") and not topic_role:
+827: topic_role = value[:500]
+830: if not topic_role and (key.endswith("_assistant_output") or key.endswith("_task_summary")):
+839: topic_role = _clean(m.group(1), 500)
+841: if key.endswith("_directions") and not topic_directions:
+842: topic_directions = value[:1000]
+851: # === TOPIC_META_ROLE_INJECT_V1 ===
+852: if not topic_role and TOPIC_META_LOADER_WIRED:
+854: _tm = load_topic_meta(int(topic_id or 0))
+859: topic_role = f"Топик: {_tm_name} | Направление: {_tm_dir}"
+862: # === END TOPIC_META_ROLE_INJECT_V1 ===
+863: return "\n".join(short_memory[:20]), "\n".join(long_memory[:20]), topic_role, topic_directions  # MEMORY_LIMIT_20_V1
+868: def _load_archive_context(chat_id: str, topic_id: int, user_text: str) -> str:
+871: from core.archive_distributor import _load_archive_for_topic
+872: arc = _load_archive_for_topic(chat_id, topic_id, user_text, limit=5)
+911: if int(payload.get("topic_id", -1)) != int(topic_id):
+923: def _active_unfinished_context(conn: sqlite3.Connection, chat_id: str, topic_id: int, task_id: str) -> str:
+931: if "topic_id" in cols:
+932: where.append("COALESCE(topic_id,0)=?")
+933: params.append(int(topic_id))
+966: def _search_fact_context(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> str:
+974: if "topic_id" in cols:
+975: where.append("COALESCE(topic_id,0)=?")
+976: params.append(int(topic_id))
+1001: def _save_memory(chat_id: str, topic_id: int, raw_input: str, result: str) -> None:
+1033: prefix = f"topic_{int(topic_id)}_"
+1047: logger.info("save_memory_ok chat=%s topic=%s", chat_id, topic_id)
+1052: def _close_pin(conn: sqlite3.Connection, task_id: str) -> None:
+1053: if not _has_table(conn, "pin"):
+1056: "UPDATE pin SET state='CLOSED', updated_at=datetime('now') WHERE task_id=? AND state='ACTIVE'",
+1061: def _finalize_done(conn: sqlite3.Connection, task_id: str, chat_id: str, topic_id: int, reply_to: Optional[int]) -> None:
+1072: _save_memory(chat_id, topic_id, raw_input, result)
+1091: # CONFIRMATION_TIMEOUT_FIX_V1
+1094: UPDATE tasks SET state='FAILED', error_message='CONFIRMATION_TIMEOUT', updated_at=datetime('now')
+1097: AND COALESCE(raw_input,'') NOT LIKE '%retry_queue_healthcheck%'
+1098: AND COALESCE(result,'') NOT LIKE '%retry_queue_healthcheck%'
+1102: logger.warning("CONFIRMATION_TIMEOUT_FIX_V1_ERR %s", _ct_e)
+1103: # IN_PROGRESS_HARD_TIMEOUT_V1
+1111: f"SELECT id,chat_id,COALESCE(topic_id,0) AS topic_id,reply_to_message_id,raw_input FROM tasks WHERE {' AND '.join(_hw)}",
+1115: _htopic = int(_hr["topic_id"] or 0); _hreply = _hr["reply_to_message_id"]
+1118: _close_pin(conn, _htid); _history(conn, _htid, "state:FAILED:EXECUTION_TIMEOUT")
+1120: _append_timeline_event_v1(_hchat, _htopic, _htid, "execution_timeout", _s(_hr["raw_input"]), _hmsg)
+1123: _send_once(conn, _htid, _hchat, _hmsg, _hreply, "execution_timeout")
+1125: logger.warning("IN_PROGRESS_HARD_TIMEOUT_V1_ERR %s", _e)
+1138: SELECT id, chat_id, COALESCE(topic_id,0) AS topic_id, reply_to_message_id
+1148: reply_to = row["reply_to_message_id"]
+1150: _close_pin(conn, task_id)
+1153: _send_once(conn, task_id, tg_chat_id, "Задача не выполнена. Повтори или уточни запрос", reply_to, "stale_failed")
+1171: SELECT id, chat_id, COALESCE(topic_id,0) AS topic_id, reply_to_message_id, result, raw_input, input_type, updated_at, created_at
+1196: _close_pin(conn, row["id"])
+1203: _close_pin(conn, row["id"])
+1227: _close_pin(conn, row["id"])
+1232: _close_pin(conn, row["id"])
 ...TRUNCATED_MARKERS...
 
 ## telegram_daemon.py
@@ -6564,6 +6567,50 @@ Archive Engine пишет в POST /archive но endpoint не реализова
 
 11. WEB_SEARCH_PRICE_ENRICHMENT_V1 (см. P0 п.2)
     При создании сметы по шаблону — цены материалов искать в интернете актуальные
+
+---
+## ОБНОВЛЕНИЕ 02.05.2026 13:40 — ПОСЛЕ eefeec0
+
+### ЗАКРЫТО КОДОМ (979e1ec + eefeec0):
+- CONTEXT_AWARE_FILE_INTAKE_V1 — pending intent перед файлами
+- MULTI_FILE_TEMPLATE_INTAKE_V1 — batch шаблонов смет
+- TELEGRAM_FILE_MEMORY_INDEX_V1 — индекс файлов + дубли
+- WEB_SEARCH_PRICE_ENRICHMENT_V1 — цены из интернета через OpenRouter
+- PRICE_CONFIRMATION_BEFORE_ESTIMATE_V1 — выбор цен перед финальной сметой
+- PDF_SPEC_EXTRACTOR_REAL_V1 — реальный pdfplumber парсер
+- ROOT_TMP_UPLOAD_GUARD_V1 — healthcheck больше не грузит tmp*.txt в Drive root
+- DRIVE_CANON_FOLDER_RESOLVER_V1 — OAuth вместо Service Account, canonical layout
+- DRIVE_CANON_SINGLE_FOLDER_PICK_V1 — детерминированный выбор папки
+
+### НЕ ЗАКРЫТО КОДОМ (P0):
+1. REPLY_REPEAT_PARENT_TASK_V1
+   "повтори"/"ответишь?"/"ещё раз" → не цепляется к parent task
+   DB факт: 152a73c3 FAILED/INVALID_RESULT_GATE, 6e3b7899 FAILED/FORBIDDEN_PHRASE
+
+2. UNIFIED_USER_OUTPUT_SANITIZER_V1
+   Нет единого sanitizer — Engine/MANIFEST/tmp/artifact_path могут утечь в ответ пользователю
+   output_sanitizer.py не существует
+
+3. PROJECT_ROUTE_FIX_NO_ESTIMATE_REGRESSION_V1
+   DB факт: "Сделай проект КЖ" → "Смета обработана"
+
+4. PROJECT_ENGINE_CLEAN_USER_OUTPUT_V1
+   Проектный ответ может содержать Engine/MANIFEST/tmp пути
+
+### НЕ ЗАКРЫТО КОДОМ (P1):
+5. ARCHIVE_DUPLICATE_GUARD_V1 — нет UNIQUE index на (chat_id, key) в memory.db
+6. XLSX_GOOGLE_SHEETS_FORMULA_VALUES_FIX_V1 — Sheets показывает формулы без значений
+7. MEMORY_SCOPE_FULL_WIRING_V1 — маркер не найден
+8. DWG_CONVERTER_INSTALL_V1 — системная зависимость
+
+### ТОЛЬКО LIVE-ТЕСТ:
+- Voice confirm при AWAITING_CONFIRMATION
+- Batch смет-образцов live
+- Дубль Telegram-файла live
+- Web prices → выбор → XLSX/PDF live
+- PDF spec extractor реальным файлом
+- Project КЖ end-to-end без "Смета обработана"
+- Новый Telegram файл → canonical Drive topic folder live
 ========================================================================================================================
 END_FILE: docs/REPORTS/NOT_CLOSED.md
 ========================================================================================================================
