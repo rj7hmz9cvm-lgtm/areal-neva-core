@@ -1,8 +1,8 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-02T01:06:33.862101+00:00
+generated_at_utc: 2026-05-02T01:36:33.906334+00:00
 git_branch: main
-git_head_short: 756f307
-git_head_full: 756f307aa1b383466fae921a1afba95343d67cf8
+git_head_short: 09b0b36
+git_head_full: 09b0b36c4663915df2582f6284f8dffb194abe38
 
 ## SERVICES
 - areal-task-worker: active
@@ -11,13 +11,30 @@ git_head_full: 756f307aa1b383466fae921a1afba95343d67cf8
 - areal-claude-bootstrap-aggregator.timer: active
 
 ## CORE_DB_STATE_COUNTS
-- FAILED|2833
-- CANCELLED|668
-- DONE|420
+- FAILED|2834
+- CANCELLED|674
+- DONE|422
 - ARCHIVED|381
 - OPEN_TASKS|0
 
 ## LATEST_TASKS_SAFE
+- 1f309341-b3ce-4258-8f81-c0cd8b8ca391|0|drive_file|CANCELLED|{"file_id": "1hjvn6N32BXWWaOHrEZQagbNL2j4RYvS0", "file_name": "tmp7twjyen6.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 01:32:06
+- 7dca3b5f-2782-400f-af84-fb030904e917|210|text|DONE|да мне надо проект плиты. написал выше|Файлы в этом топике уже есть. Нашёл релевантное:
+
+1. Google Sheets / XLSX артефа|2026-05-02 01:29:45
+- 6e3b7899-b090-42c4-b70b-368885d3fd31|210|text|FAILED|повтори|Этот чат предназначен для:
+1. Проектирования конструкций (КМ, КМД, КЖ)
+2. Расчёт|2026-05-02 01:29:22
+- a0c4e94f-e8cc-4ac3-8235-503627cd7c1d|0|drive_file|CANCELLED|{"file_id": "1Skjyc35dxPJ_1ixHwT0Y787S_Oo7RMxs", "file_name": "tmpepplmkn1.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 01:27:04
+- 17b37fe3-1cb2-4bdc-95d1-7187d19b80e0|0|drive_file|CANCELLED|{"file_id": "1oNin3qlg2Ms-_4FWjB1yDFr5LBzszTVZ", "file_name": "tmp0u3qrn48.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 01:22:02
+- 3867cb96-92e2-4b4f-8ebc-3731f2e8a0c1|0|drive_file|CANCELLED|{"file_id": "1-2e59MlGepR6tHAl0VCq0xh4Zb36Z1yk", "file_name": "tmp66072zpe.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 01:17:00
+- 42320ab0-c49a-4a08-8f9b-5e38618a4e58|210|text|DONE|делай проект монолитной фундаментной плиты 200 мм с усложнением
+
+Объект: частный|Файлы в этом топике уже есть. Нашёл релевантное:
+
+1. Google Sheets / XLSX артефа|2026-05-02 01:14:23
+- 46325555-1f9a-4803-a9fa-22232cf7bb0f|0|drive_file|CANCELLED|{"file_id": "1X3vOuzTh03ih6IKJIIm6RS8IiCWj1thO", "file_name": "tmpdf36e_81.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 01:11:58
+- 2150b2fb-5033-4f1c-854d-435d3b3dcd5c|0|drive_file|CANCELLED|{"file_id": "1RMgEfDYl8ZkakQ5jIJOBe9CaMJRoL0My", "file_name": "tmp923yr56r.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 01:06:57
 - a6dbef0c-dd3e-4f4a-998e-79b4db623373|0|drive_file|CANCELLED|{"file_id": "1sPmszeTZl-3g-kFxlEiO3RSsp6n5cZp8", "file_name": "tmp5j52rif7.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 01:01:54
 - bedaac88-98dd-4f3c-97d8-732538dfff49|0|drive_file|CANCELLED|{"file_id": "12-sHD3t2BzjZD5qx2-iMBDak1j_CAVxB", "file_name": "tmpmxtg0iju.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 00:56:52
 - c8619b7e-9ebb-4731-973a-b3f6064bbe38|210|text|DONE|Сделай проект монолитной фундаментной плиты КЖ.
@@ -25,62 +42,41 @@ git_head_full: 756f307aa1b383466fae921a1afba95343d67cf8
 Объект: частный дом 10×8 м, Сан|Смета обработана
 
 PDF: https://drive.google.com/file/d/1HzQZjyhIMCPJhrcEu_x_S7qK|2026-05-02 00:54:42
-- 6f249d71-1422-40f8-a04d-18a6b9da591c|0|drive_file|CANCELLED|{"file_id": "1iNY6N62gX0ts0QRKVLcIdU9ZKNiCG-vw", "file_name": "tmpavn6jjaq.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 00:51:51
-- ce9421cb-5451-4cea-9823-a413b698bc94|210|text|DONE|ТЗ: сделай проект монолитной фундаментной плиты 200 мм с усложнением
-
-Объект: ча|Смета обработана
-
-PDF: https://drive.google.com/file/d/19xpaWxa05JW62JXdpiXEOBAv|2026-05-02 00:51:13
-- 62138075-34d2-451a-ae58-2b1cb0db7e87|2|text|DONE|отлично. готово|Активный контекст найден
-Задача: 62138075-34d2-451a-ae58-2b1cb0db7e87
-Статус: NE|2026-05-02 00:49:12
-- 3d35681d-2c3a-4320-9ff5-c3ddef6bd632|2|search|DONE|Сделай подробную смету по монолитным работам для фундамента частного дома.
-
-Объе|Смета создана по образцу ВОР_кирпичная_кладка_ИСПРАВЛЕНО.xlsx
-Позиций: 13 | Итог|2026-05-02 00:47:28
-- a87687df-e0fc-432e-826c-57a0041d595d|0|drive_file|CANCELLED|{"file_id": "1XDNVBAHtKGa8pK4X5s0K-ZQgXij-7C-9", "file_name": "tmp7qg4tjja.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 00:46:48
-- 447f2c86-d7db-4a6c-8e10-8853d811ffd9|0|drive_file|CANCELLED|{"file_id": "1fxUkdC3K5FZCkFNtZaRWIOUnhfrhzg5r", "file_name": "tmpchynzz8l.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 00:41:46
-- eab0fc81-724d-4710-b711-226d959f77b8|0|drive_file|CANCELLED|{"file_id": "1cQM91pWInYikVUYe1UH2PqUDbvIvoW-H", "file_name": "tmplutxkv8i.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 00:36:44
-- 92de809d-9274-48ee-82b4-584058ea4e48|2|search|DONE|Сделай подробную смету по монолитным работам для фундамента частного дома.
-
-Объе|Смета создана по сохранённому образцу
-Engine: FULLFIX_13A_SAMPLE_FILE_INTENT_AND|2026-05-02 00:33:58
-- cb8d8bf3-f2c2-4480-a1d6-41cd6b292d10|0|drive_file|CANCELLED|{"file_id": "1p7XOO8N6XMpd9PCh1PRQwgFfxasO0eqe", "file_name": "tmpdlxtm1kx.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 00:31:42
 
 ## MEMORY_DB_COUNTS
-- MEMORY_ROWS|5380
+- MEMORY_ROWS|5391
 
 ## LATEST_MEMORY_SAFE
-- topic_2_dialog_ACTIVE_DIALOG_STATE_V1:SHORT_CONTROL_ACTIVE_TASK|{"handled": true, "state": "DONE", "result": "Активный контекст найден\nЗадача: 62138075-34d2-451a-ae58-2b1cb0db7e87\nСт|2026-05-02T00:49:12.808954+00:00
-- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 11, "updated_at": "2026-05-02T00:46:10.408485+00:00", "files": [{"|2026-05-02T00:46:10.409065+00:00
-- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-02T00:46:10.390440+00:00", "files": [{"|2026-05-02T00:46:10.390848+00:00
-- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T00:46:10.360435+00:00
-- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "s|2026-05-02T00:46:10.360268+00:00
-- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T00:46:10.359992+00:00
-- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T00:46:10.359872+00:00
-- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T00:46:10.359793+00:00
-- topic_2_file_234e52f8-3ce8-4f2f-99c3-7cc22265a151|{"task_id": "234e52f8-3ce8-4f2f-99c3-7cc22265a151", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T00:46:10.359702+00:00
-- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_fil|2026-05-02T00:46:10.359562+00:00
-- topic_2_file_acecae89-87a8-42da-881a-db41cd0134e6|{"task_id": "acecae89-87a8-42da-881a-db41cd0134e6", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T00:46:10.359443+00:00
-- topic_2_file_a4956f79-592e-45e3-8f17-925366b5eb2f|{"task_id": "a4956f79-592e-45e3-8f17-925366b5eb2f", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T00:46:10.359298+00:00
+- topic_210_archive_7dca3b5f|{"task_id": "7dca3b5f-2782-400f-af84-fb030904e917", "chat_id": "-1003725299009", "topic_id": 210, "direction": "file_tec|2026-05-02T01:29:45.618962
+- topic_210_archive_6e3b7899|{"task_id": "6e3b7899-b090-42c4-b70b-368885d3fd31", "chat_id": "-1003725299009", "topic_id": 210, "direction": "structur|2026-05-02T01:29:22.771665
+- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 34, "updated_at": "2026-05-02T01:16:10.668945+00:00", "files": [|2026-05-02T01:16:10.669217+00:00
+- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 11, "updated_at": "2026-05-02T01:16:10.644704+00:00", "files": [{"|2026-05-02T01:16:10.644996+00:00
+- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-02T01:16:10.630631+00:00", "files": [{"|2026-05-02T01:16:10.631066+00:00
+- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T01:16:10.599241+00:00
+- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "s|2026-05-02T01:16:10.599167+00:00
+- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T01:16:10.599007+00:00
+- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T01:16:10.598934+00:00
+- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T01:16:10.598882+00:00
+- topic_2_file_234e52f8-3ce8-4f2f-99c3-7cc22265a151|{"task_id": "234e52f8-3ce8-4f2f-99c3-7cc22265a151", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T01:16:10.598829+00:00
+- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_fil|2026-05-02T01:16:10.598756+00:00
 
 ## SEARCH_SESSIONS
 - topic_500_search_session_-1003725299009|{"chat_id": "-1003725299009", "topic_id": 500, "goal": "найди запчасть OEM 34116794300 новый тормозной диск BMW в СПб", "criteria": {"category": "AUTO_PARTS", "target": "запчасть O|2026-05-01T20:57:33.559044+00:00
 
 ## TIMELINE_INFO
 - path=/root/.areal-neva-core/data/memory_files/CHATS/-1003725299009__telegram/timeline.jsonl
-- bytes=579342
-- mtime_utc=2026-05-02T01:01:54.958752+00:00
+- bytes=597948
+- mtime_utc=2026-05-02T01:32:06.255194+00:00
 
 ## GIT_STATUS_SAFE
 M docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
 
 ## FILES_MANIFEST_SAFE
 - docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md|bytes=168322|sha256=0640b8349254cfb36f1143c1f195715014e2ca1b1b428943847fd1fd80d9d8fe
-- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md|bytes=36543|sha256=7d5000a557410c5ac930dbaee72412aad0422fd58afbb482c16c08861eb84678
-- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md|bytes=2013|sha256=35f8325cdcede0bec4d283e9f3593ab4c43c6b08468463616203a6f6e63739fc
+- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md|bytes=36714|sha256=badf66301266e80c7e7a2f367290019d21e177219ac6652e866feb197bc43739
+- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md|bytes=2013|sha256=500f708714d9e7cf1655a29092c98adaabbe22bb55c7df225b8b230997e88d90
 - docs/CANON_FINAL/00_INDEX.md|bytes=808|sha256=999acb6bfdd6c7215f11d76342ea1b9f8cdf5715418064acb3716f33999c8af6
-- docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md|bytes=40765|sha256=e348f84dfc1a1dea957f64996a8780c4fe66dc1619252c02dce6594230c2661a
+- docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md|bytes=41018|sha256=dbd5f683361eafc258ab0822056f6c33f751e5581998dc420f79395d14863177
 - docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md|bytes=6714|sha256=1a439843e1eb214745752720c85b49adc48f1823765982960ce7b1e285947d84
 - docs/HANDOFFS/LATEST_HANDOFF.md|bytes=15246|sha256=2edbc34cb3917727c3555f1765d861c00e524dcf092ad335c7cf5565d9de5f54
 - docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md|bytes=7393|sha256=097209d23a01f15125b0711a85458f986e97eed44f8fb603f354df1e3b495171
@@ -88,7 +84,7 @@ M docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
 - docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md|bytes=9846|sha256=e9b63408cbfdd13c05ed9b174f3380d5067493e3815318661c81b30ba13be440
 - docs/ARCHITECTURE/SEARCH_MONOLITH_V1.md|bytes=16952|sha256=26676725c7608d217d6f9162526748875a7647f92320f64a5a0e10b5fd0afa28
 - docs/ARCHITECTURE/SEARCH_MONOLITH_V2.md|UNKNOWN
-- task_worker.py|bytes=175773|sha256=ba583951a7656f2a23342a917f9b203b3d1cc80aedb55b5910cfd7c0ec980730
+- task_worker.py|bytes=184829|sha256=c6248a1337df24cd050f1ad2a83babe0d6d775a3988ff1ace1687929f75473af
 - telegram_daemon.py|bytes=50299|sha256=3214209f6f5f507ffee95a2414a651d72b1490fe364266c876c380b745dee837
 - memory_api_server.py|bytes=2956|sha256=17550a64d4e256489801b49ef81f49c3619598f74a5f6d9d0feda3c79b6805d1
 - core/ai_router.py|bytes=22208|sha256=def3922d4afbdc845a83edd3be08837a34446d8eadb9472292c83c417c7fbe69
