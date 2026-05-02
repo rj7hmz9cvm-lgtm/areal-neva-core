@@ -342,7 +342,7 @@ def _display_name_for_item_v1(item: Dict[str, Any]) -> str:
 # === END FILE_DISPLAY_NAME_FROM_LINK_V1 ===
 
 
-# === FILE_MEMORY_PUBLIC_OUTPUT_DOMAIN_FILTER_V4 ===
+# === FILE_MEMORY_PUBLIC_OUTPUT_DOMAIN_FILTER_V5 ===
 def _fm_public_norm(text: Any) -> str:
     s = _clean(text, 50000)
     s = s.replace("\\\\n", "\n").replace("\\n", "\n").replace("\\\\t", " ").replace("\\t", " ")
@@ -369,7 +369,18 @@ def _fm_query_domain(text: str) -> str:
     return ""
 
 
+
 def _fm_item_domain(item: Dict[str, Any]) -> str:
+    fname = _fm_public_norm(item.get("file_name") or "").lower().replace("ё", "е")
+    fname = re.sub(r"^\d+\.\s*", "", fname).strip().strip("\"'«»")
+
+    if any(x in fname for x in ("кж", "кд", "км", "кмд", "ар", "проект", "цоколь", ".dwg", ".dxf")):
+        return "project"
+    if any(x in fname for x in ("смет", "вор", "расцен")):
+        return "estimate"
+    if any(x in fname for x in ("акт", "технадзор", "дефект")):
+        return "technadzor"
+
     hay = _fm_public_norm(" ".join([
         str(item.get("direction") or ""),
         str(item.get("kind") or ""),
@@ -391,13 +402,15 @@ def _fm_item_domain(item: Dict[str, Any]) -> str:
 
 def _fm_public_title(item: Dict[str, Any]) -> str:
     name = _fm_public_norm(item.get("file_name") or "")
+    name = re.sub(r"^\d+\.\s*", "", name).strip().strip("\"'«»")
     if name and name.lower() not in ("без имени", "none", "null", "unknown"):
         return name[:160]
 
     value = _fm_public_norm(item.get("value") or item.get("summary") or "")
     m = re.search(r"([^/\\?#\n]+\.(?:xlsx|xls|csv|pdf|docx|doc|jpg|jpeg|png|heic|webp|dwg|dxf))", value, re.I)
     if m:
-        return m.group(1)[:160]
+        clean_name = re.sub(r"^\d+\.\s*", "", m.group(1)).strip().strip("\"'«»")
+        return clean_name[:160]
 
     if "docs.google.com/spreadsheets" in value:
         return "Таблица Google Sheets"
@@ -408,34 +421,30 @@ def _fm_public_title(item: Dict[str, Any]) -> str:
     return "Файл"
 
 
-def _fm_public_links(item: Dict[str, Any], limit: int = 3) -> List[str]:
-    blobs = []
-    for k in ("value", "summary", "result", "raw_input"):
-        v = item.get(k)
-        if v:
-            blobs.append(_fm_public_norm(v))
-    for link in item.get("links") or []:
-        blobs.append(_fm_public_norm(link))
-
+def _fm_public_links(item: Dict[str, Any], limit: int = 2) -> List[str]:
     found: List[str] = []
     seen = set()
-    for blob in blobs:
-        blob = blob.replace("\\\\n", "\n").replace("\\n", "\n")
-        for m in re.finditer(r"https://(?:drive|docs)\.google\.com/[^\s\"'<>()]+", blob, re.I):
-            url = m.group(0)
-            url = re.split(r"(?:PDF|DXF|XLSX|XLS|DOCX|MANIFEST)\s*:", url, flags=re.I)[0]
-            url = url.rstrip(".,;)")
-            low = url.lower()
-            if "manifest" in low or low.endswith(".json"):
-                continue
-            if url in seen:
-                continue
-            seen.add(url)
-            found.append(url)
-            if len(found) >= limit:
-                return found
-    return found
 
+    for link in item.get("links") or []:
+        url = _fm_public_norm(link).split("\n")[0].strip()
+        if not url.startswith("http"):
+            continue
+
+        url = re.split(r"(?:DXF|XLSX|MANIFEST|PDF|DOCX)\s*:", url, flags=re.I)[0].rstrip(".,;)")
+        low = url.lower()
+
+        if "manifest" in low or low.endswith(".json"):
+            continue
+        if url in seen:
+            continue
+
+        seen.add(url)
+        found.append(url)
+
+        if len(found) >= int(limit or 2):
+            break
+
+    return found
 
 def _fm_relevant_public_items(items: List[Dict[str, Any]], user_text: str, limit: int) -> List[Dict[str, Any]]:
     qdom = _fm_query_domain(user_text)
@@ -523,7 +532,7 @@ def build_file_followup_answer(chat_id: str, topic_id: int, user_text: str, limi
     except Exception:
         return "\n".join(lines).strip()
 
-# === END_FILE_MEMORY_PUBLIC_OUTPUT_DOMAIN_FILTER_V4 ===
+# === END_FILE_MEMORY_PUBLIC_OUTPUT_DOMAIN_FILTER_V5 ===
 
 
 
