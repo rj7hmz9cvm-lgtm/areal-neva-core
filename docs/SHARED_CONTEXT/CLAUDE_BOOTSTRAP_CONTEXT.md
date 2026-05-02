@@ -3,9 +3,9 @@
 SYSTEM: AREAL-NEVA ORCHESTRA
 MODE: FACT_ONLY / ZERO_ASSUMPTIONS / GITHUB_SSOT / CANON_LOCK
 PURPOSE: one-file bootstrap for Claude and external LLMs
-GENERATED_AT_UTC: 2026-05-02T02:36:35.912332+00:00
+GENERATED_AT_UTC: 2026-05-02T03:06:36.927474+00:00
 GIT_BRANCH: main
-GIT_SHA: 549ba92de82f32baa2e23019b1b84583630b8467
+GIT_SHA: 827926b92c2493879d2abe39806f9270727deb33
 RAW_URL: https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md
 
 # CLAUDE_OPERATING_PROTOCOL_CANON_LOCK_V3
@@ -68,7 +68,7 @@ Claude must reload this file at start of each new session
 
 SOURCE_INDEX:
 - docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md | bytes=168322 | sha256=0640b8349254cfb36f1143c1f195715014e2ca1b1b428943847fd1fd80d9d8fe
-- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md | bytes=36288 | sha256=86660b21037606d801d63c91cf7baa4027d27f62c726b3407045e767cafc11f3
+- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md | bytes=36348 | sha256=607d17fbc40af3b4d884346bf92b71d59388708dea4b44d2aa0821a96fb228e9
 - docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md | bytes=74 | sha256=1a4c8e19e206a16b41b7d761d30cb115f9e4d965bc68e3f326b02dcb8c757944
 - docs/CANON_FINAL/00_INDEX.md | bytes=808 | sha256=999acb6bfdd6c7215f11d76342ea1b9f8cdf5715418064acb3716f33999c8af6
 - docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md | bytes=41018 | sha256=dbd5f683361eafc258ab0822056f6c33f751e5581998dc420f79395d14863177
@@ -4002,10 +4002,10 @@ END_FILE: docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md
 BEGIN_FILE: docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md
 ========================================================================================================================
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-02T02:36:35.885675+00:00
+generated_at_utc: 2026-05-02T03:06:36.892464+00:00
 git_branch: main
-git_head_short: 549ba92
-git_head_full: 549ba92de82f32baa2e23019b1b84583630b8467
+git_head_short: 827926b
+git_head_full: 827926b92c2493879d2abe39806f9270727deb33
 
 ## SERVICES
 - areal-task-worker: active
@@ -4015,61 +4015,57 @@ git_head_full: 549ba92de82f32baa2e23019b1b84583630b8467
 
 ## CORE_DB_STATE_COUNTS
 - FAILED|2834
-- CANCELLED|686
+- CANCELLED|692
 - DONE|425
 - ARCHIVED|381
 - OPEN_TASKS|0
 
 ## LATEST_TASKS_SAFE
+- 20661bd2-b0e0-42d9-964f-3a8b2e805a89|0|drive_file|CANCELLED|{"file_id": "1Po_WTxzitKNH_iePGhGD8Bg71GbqekUc", "file_name": "tmpuf_rp8z4.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 03:02:43
+- 2ebac353-20ed-4200-a29b-5018a8ce9a86|0|drive_file|CANCELLED|{"file_id": "1mZ1wTPpLUe9yWPFqpjYqT097nJbS0N4x", "file_name": "tmptibs3dgi.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 02:57:41
+- 8dccfd3f-a7bb-4f08-ad69-3a1dc0c459ca|0|drive_file|CANCELLED|{"file_id": "1gX-zxeES85yfdr5usHbmScgJKnNkyVPH", "file_name": "tmp_b5llh_l.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 02:52:38
+- 0224641a-f915-4ec8-bf24-3a19281a9d8b|0|drive_file|CANCELLED|{"file_id": "1uM35uSj3bAFBPWy2q8Kr9wbBdy9Fl2JU", "file_name": "tmpdak_mi82.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 02:47:36
+- fc5598dd-6448-4265-acc4-46ac99bf7ab1|0|drive_file|CANCELLED|{"file_id": "1dS2fktMtnGijyt4EpliLiQRXtpFqTP4z", "file_name": "tmp_ozuksrd.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 02:42:34
+- e67f597f-ac2d-445d-8a15-eada45c2f6bf|0|drive_file|CANCELLED|{"file_id": "1Ej4zp_PDjcQcCrgB63-VCSnGf9rhFr56", "file_name": "tmph_rajax2.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 02:37:33
 - 56fcdbcd-52f4-4703-a3fd-d6890114974c|0|drive_file|CANCELLED|{"file_id": "1Zb8cn6oFaxCXAQet4XcQlxg04kv78fgj", "file_name": "tmp1bwfeh6q.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 02:32:31
 - 88a5d7e1-5821-406a-a9b6-9bfa3912c1c6|0|drive_file|CANCELLED|{"file_id": "19Yx6sNPtvKqC_pDtuvzStwIGm1YOJpG8", "file_name": "tmp5dancrob.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 02:27:29
 - b81c3763-d52e-434c-a5ad-8371eb90aef1|0|drive_file|CANCELLED|{"file_id": "12VvoY5Og0ypiy1_Ygo_qj68z8_Lbidns", "file_name": "tmp3p8ctdv5.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 02:22:26
 - 2a8e478e-f275-42ca-82fc-a9f4d6e0b47a|0|drive_file|CANCELLED|{"file_id": "1pUNY4D_9t1HonGEaB53-pM137g9ky1kZ", "file_name": "tmp9qb9kc0o.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 02:17:24
 - db25c7c4-c43d-45a0-8f18-905d5e45ff3f|0|drive_file|CANCELLED|{"file_id": "1dJaUN512GES0aONauBJcRV42l2_nNi44", "file_name": "tmpodoglqca.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 02:12:22
 - 8fbe4d5f-7b3f-4fe0-98cd-c46fe788f492|0|drive_file|CANCELLED|{"file_id": "1JkNw0GIYV2QLPjNFJC9DGJx26A0803IV", "file_name": "tmpbfy1ndny.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 02:07:20
-- 2d8b0e53-8491-4c48-ba6f-93571a454e2d|0|drive_file|CANCELLED|{"file_id": "1BCPVk_mMa3vMgXWc3Z1UdA4miwu3V6wy", "file_name": "tmpbo5m_p7l.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 02:02:19
-- ee4adcb4-f0e4-4cd9-8aba-16de49f212d5|0|drive_file|CANCELLED|{"file_id": "1XtutmvV3zLZl6cNfMACe4ALoaoQR1a8I", "file_name": "tmpg0hx9yk_.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 01:57:17
-- eba28dfb-4b57-4f19-acbf-f5ba62690e85|0|drive_file|CANCELLED|{"file_id": "1h3suybsaTvHJK7WhYWHr_0dOeZnnFSz1", "file_name": "tmp4fdnlwtg.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 01:52:15
-- 8eede301-c831-402c-ab01-48fed6d14ae3|0|drive_file|CANCELLED|{"file_id": "1OeCpxH32Wfg0LS1pTVwf6aKdVXrEN5s5", "file_name": "tmpjhr0s1bq.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 01:47:12
-- b1f8e982-db2e-42de-9046-833287d3567d|210|text|DONE|возьми как образец|Файлы в этом топике уже есть. Нашёл релевантное:
-
-1. Google Sheets / XLSX артефа|2026-05-02 01:45:31
-- b1885142-64bf-4483-a957-62c144c9c378|210|text|DONE|ну что|Активный контекст найден
-Задача: b1885142-64bf-4483-a957-62c144c9c378
-Статус: NE|2026-05-02 01:42:28
 
 ## MEMORY_DB_COUNTS
 - MEMORY_ROWS|5401
 
 ## LATEST_MEMORY_SAFE
-- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 39, "updated_at": "2026-05-02T02:16:11.923580+00:00", "files": [|2026-05-02T02:16:11.923909+00:00
-- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 11, "updated_at": "2026-05-02T02:16:11.898598+00:00", "files": [{"|2026-05-02T02:16:11.899080+00:00
-- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-02T02:16:11.880487+00:00", "files": [{"|2026-05-02T02:16:11.880976+00:00
-- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T02:16:11.850898+00:00
-- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "s|2026-05-02T02:16:11.850805+00:00
-- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T02:16:11.850635+00:00
-- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T02:16:11.850547+00:00
-- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T02:16:11.850492+00:00
-- topic_2_file_234e52f8-3ce8-4f2f-99c3-7cc22265a151|{"task_id": "234e52f8-3ce8-4f2f-99c3-7cc22265a151", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T02:16:11.850440+00:00
-- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_fil|2026-05-02T02:16:11.850364+00:00
-- topic_2_file_acecae89-87a8-42da-881a-db41cd0134e6|{"task_id": "acecae89-87a8-42da-881a-db41cd0134e6", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T02:16:11.850293+00:00
-- topic_2_file_a4956f79-592e-45e3-8f17-925366b5eb2f|{"task_id": "a4956f79-592e-45e3-8f17-925366b5eb2f", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T02:16:11.850226+00:00
+- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 39, "updated_at": "2026-05-02T02:46:12.929146+00:00", "files": [|2026-05-02T02:46:12.929544+00:00
+- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 11, "updated_at": "2026-05-02T02:46:12.897119+00:00", "files": [{"|2026-05-02T02:46:12.897643+00:00
+- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-02T02:46:12.874770+00:00", "files": [{"|2026-05-02T02:46:12.875271+00:00
+- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T02:46:12.839742+00:00
+- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "s|2026-05-02T02:46:12.839666+00:00
+- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T02:46:12.839466+00:00
+- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T02:46:12.839379+00:00
+- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T02:46:12.839316+00:00
+- topic_2_file_234e52f8-3ce8-4f2f-99c3-7cc22265a151|{"task_id": "234e52f8-3ce8-4f2f-99c3-7cc22265a151", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T02:46:12.839253+00:00
+- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_fil|2026-05-02T02:46:12.839146+00:00
+- topic_2_file_acecae89-87a8-42da-881a-db41cd0134e6|{"task_id": "acecae89-87a8-42da-881a-db41cd0134e6", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T02:46:12.839018+00:00
+- topic_2_file_a4956f79-592e-45e3-8f17-925366b5eb2f|{"task_id": "a4956f79-592e-45e3-8f17-925366b5eb2f", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T02:46:12.838897+00:00
 
 ## SEARCH_SESSIONS
 - topic_500_search_session_-1003725299009|{"chat_id": "-1003725299009", "topic_id": 500, "goal": "найди запчасть OEM 34116794300 новый тормозной диск BMW в СПб", "criteria": {"category": "AUTO_PARTS", "target": "запчасть O|2026-05-01T20:57:33.559044+00:00
 
 ## TIMELINE_INFO
 - path=/root/.areal-neva-core/data/memory_files/CHATS/-1003725299009__telegram/timeline.jsonl
-- bytes=611542
-- mtime_utc=2026-05-02T02:32:31.448937+00:00
+- bytes=614296
+- mtime_utc=2026-05-02T03:02:43.484945+00:00
 
 ## GIT_STATUS_SAFE
 M docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
 
 ## FILES_MANIFEST_SAFE
 - docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md|bytes=168322|sha256=0640b8349254cfb36f1143c1f195715014e2ca1b1b428943847fd1fd80d9d8fe
-- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md|bytes=36351|sha256=516d0049e5bd8fb9c1190285a45c789012521e253fa5e10a3fa58e5fdd56f1f3
-- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md|bytes=2013|sha256=5afd84fa3cc136556834c2637ec4b848feb0dea83006a1124496f1383e2a1f84
+- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md|bytes=36288|sha256=86660b21037606d801d63c91cf7baa4027d27f62c726b3407045e767cafc11f3
+- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md|bytes=2013|sha256=efcec9e414365fbdb1af64f736ac60e270169c06a0cce4500bbc6521176a7514
 - docs/CANON_FINAL/00_INDEX.md|bytes=808|sha256=999acb6bfdd6c7215f11d76342ea1b9f8cdf5715418064acb3716f33999c8af6
 - docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md|bytes=41018|sha256=dbd5f683361eafc258ab0822056f6c33f751e5581998dc420f79395d14863177
 - docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md|bytes=6714|sha256=1a439843e1eb214745752720c85b49adc48f1823765982960ce7b1e285947d84
