@@ -761,3 +761,22 @@ Archive Engine пишет в POST /archive но endpoint не реализова
 - НЕ дублировать VOICE_CONFIRM_AWAITING_V1 (уже строка 1405 task_worker.py)
 - Новый hook ставить ПОСЛЕ FULL_TECH_CONTOUR_CLOSE_V1_WIRED, не перед ACTIVE_DIALOG
 - Все новые файлы — только append/create, не перезапись рабочего кода
+
+---
+## ПРАВИЛО: VOICE_CONFIRM_BLOCKER (зафиксировано 02.05.2026)
+
+После каждой записи `core/final_closure_engine.py` обязательно выполнять:
+
+```bash
+grep -nE "def handle_voice_confirm|def voice_confirm|VOICE_CONFIRM_AWAITING_V1|voice_confirm|handle_voice_confirm" core/final_closure_engine.py && exit 1
+```
+
+Правила:
+- НЕ отключать проверку
+- НЕ ослаблять проверку
+- НЕ выносить её из блока
+- НЕ разрешать строку VOICE_CONFIRM_AWAITING_V1 даже в диагностическом списке
+- core/final_closure_engine.py должен быть полностью чистым от voice-confirm логики
+- voice-confirm остаётся только в task_worker.py в VOICE_CONFIRM_AWAITING_V1 (строка ~1434)
+- Правильный статус в отчёте: BLOCKER_KEPT (не FALSE_FORBIDDEN_LIST_REMOVED)
+- Если GPT пишет FORBIDDEN_FUNCTIONS список с этими строками внутри файла — это баг патча
