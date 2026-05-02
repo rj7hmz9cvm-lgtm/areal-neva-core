@@ -2679,3 +2679,51 @@ async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id
     return result
 # === END_PROJECT_LOAD_CALC_REGION_FROM_INPUT_V1 ===
 # === END_REAL_GAPS_CLOSE_V2_PROJECT ===
+
+# === PROJECT_ENGINE_FALLBACK_SHEET_REGISTER_V1 ===
+# If template sheet_register is absent or too small, project engine must not fail.
+# Default KЖ sheet register is used as safe fallback for project artifact generation.
+
+_PROJECT_ENGINE_DEFAULT_KZH_SHEET_REGISTER_V1 = [
+    {"mark": "КЖ", "number": "1", "title": "Общие данные"},
+    {"mark": "КЖ", "number": "2", "title": "Схема расположения элементов"},
+    {"mark": "КЖ", "number": "3", "title": "Армирование. Нижняя сетка"},
+    {"mark": "КЖ", "number": "4", "title": "Армирование. Верхняя сетка"},
+    {"mark": "КЖ", "number": "5", "title": "Спецификация арматуры"},
+    {"mark": "КЖ", "number": "6", "title": "Ведомость материалов"},
+    {"mark": "КЖ", "number": "7", "title": "Конструктивные узлы"},
+    {"mark": "КЖ", "number": "8", "title": "Схема фундаментной плиты"},
+]
+
+try:
+    _pefs_orig_ff07_sheet_rows_from_template = globals().get("_ff07_sheet_rows_from_template")
+except Exception:
+    _pefs_orig_ff07_sheet_rows_from_template = None
+
+def _project_engine_default_sheet_register_v1(section: str = "кж", data: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+    sec = str(section or "кж").lower()
+    mark = "КЖ" if sec in ("кж", "kd", "foundation", "slab") else sec.upper()
+    rows = []
+    for item in _PROJECT_ENGINE_DEFAULT_KZH_SHEET_REGISTER_V1:
+        row = dict(item)
+        row["mark"] = mark
+        rows.append(row)
+    return rows
+
+def _ff07_sheet_rows_from_template(template: Dict[str, Any], section: str, data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    rows: List[Dict[str, Any]] = []
+    try:
+        if callable(_pefs_orig_ff07_sheet_rows_from_template):
+            base_rows = _pefs_orig_ff07_sheet_rows_from_template(template or {}, section, data or {})
+            if isinstance(base_rows, list):
+                rows = [r for r in base_rows if isinstance(r, dict)]
+    except Exception as e:
+        logger.warning("PROJECT_ENGINE_FALLBACK_SHEET_REGISTER_V1_ORIG_ERR %s", e)
+
+    if len(rows) >= 8:
+        return rows
+
+    fallback = _project_engine_default_sheet_register_v1(section or (data or {}).get("section") or "кж", data or {})
+    logger.warning("PROJECT_ENGINE_FALLBACK_SHEET_REGISTER_V1_USED section=%s old_len=%s new_len=%s", section, len(rows), len(fallback))
+    return fallback
+# === END_PROJECT_ENGINE_FALLBACK_SHEET_REGISTER_V1 ===
