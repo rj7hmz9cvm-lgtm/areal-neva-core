@@ -152,6 +152,24 @@ def maybe_handle_active_dialog(conn: sqlite3.Connection, task: sqlite3.Row, chat
         return None
     # === END_ACTIVE_DIALOG_SKIP_EXPLICIT_ESTIMATE_CREATE_V1 ===
 
+    # === ACTIVE_DIALOG_SKIP_EXPLICIT_PROJECT_CREATE_V1 ===
+    project_create_words = (
+        "сделай", "делай", "создай", "сформируй", "подготовь", "разработай",
+        "оформи", "выгрузи", "сохрани", "нарисуй", "собери"
+    )
+    project_words = (
+        "проект", "кж", "кд", "км", "кмд", "ар",
+        "фундамент", "фундаментн", "плита", "плиты", "плиту",
+        "армирован", "арматур", "dxf", "dwg", "чертеж", "чертёж", "конструктив"
+    )
+    if (
+        any(w in low for w in project_create_words)
+        and any(w in low for w in project_words)
+        and not any(w in low for w in followup_words)
+    ):
+        return None
+    # === END_ACTIVE_DIALOG_SKIP_EXPLICIT_PROJECT_CREATE_V1 ===
+
     file_followup = any(x in low for x in (
         "скидывал файл", "скидывал смету", "какой файл", "что дальше", "дальше то что",
         "покажи файл", "где файл", "где смета", "что с файлом", "по этому файлу",

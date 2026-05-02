@@ -1335,6 +1335,145 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
 
 
     
+    # === CREATE_PROJECT_PRIORITY_NO_ROLLBACK_V1 ===
+    try:
+        _cpp_raw = ""
+        try:
+            _cpp_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+        except Exception:
+            _cpp_raw = ""
+        _cpp_clean = re.sub(r"^\s*\[VOICE\]\s*", "", _cpp_raw or "", flags=re.I).strip()
+        _cpp_low = _cpp_clean.lower()
+
+        _cpp_create_words = (
+            "сделай", "делай", "создай", "сформируй", "подготовь", "разработай",
+            "оформи", "выгрузи", "сохрани", "нарисуй", "собери"
+        )
+        _cpp_project_words = (
+            "проект", "кж", "кд", "км", "кмд", "ар",
+            "фундамент", "фундаментн", "плита", "плиты", "плиту",
+            "армирован", "арматур", "конструктив", "чертеж", "чертёж",
+            "dxf", "dwg", "узел", "узлы", "спецификац"
+        )
+        _cpp_followup_words = (
+            "я тебе скидывал", "уже скидывал", "где файл", "где проект",
+            "что дальше", "дальше то что", "ты сделал", "что мы делали",
+            "какие последние", "покажи прошл", "найди прошл", "помнишь"
+        )
+
+        _cpp_is_create_project = (
+            any(w in _cpp_low for w in _cpp_create_words)
+            and any(w in _cpp_low for w in _cpp_project_words)
+            and not any(w in _cpp_low for w in _cpp_followup_words)
+        )
+
+        if _cpp_is_create_project:
+            _history(conn, task_id, "CREATE_PROJECT_PRIORITY_NO_ROLLBACK_V1:ROUTE_PROJECT_ENGINE")
+
+            from core.project_engine import create_project_pdf_dxf_artifact
+
+            try:
+                _cpp_data = await create_project_pdf_dxf_artifact(
+                    raw_input=_cpp_clean,
+                    task_id=str(task_id),
+                    topic_id=int(topic_id or 0),
+                    template_hint="",
+                    require_template=False,
+                )
+            except TypeError:
+                _cpp_data = await create_project_pdf_dxf_artifact(
+                    _cpp_clean,
+                    str(task_id),
+                    int(topic_id or 0),
+                    "",
+                )
+
+            if not isinstance(_cpp_data, dict):
+                _update_task(conn, task_id, state="FAILED", result="", error_message="CREATE_PROJECT_PRIORITY_NO_ROLLBACK_V1:NON_DICT_RESULT")
+                _history(conn, task_id, "CREATE_PROJECT_PRIORITY_NO_ROLLBACK_V1:NON_DICT_RESULT")
+                return
+
+            _cpp_links = {}
+            for _k in ("pdf_link", "dxf_link", "xlsx_link", "docx_link", "drive_link", "google_sheet_link", "link"):
+                _v = _cpp_data.get(_k)
+                if isinstance(_v, str) and _v.startswith("http"):
+                    _cpp_links[_k] = _v
+
+            if isinstance(_cpp_data.get("links"), dict):
+                for _k, _v in _cpp_data.get("links").items():
+                    if isinstance(_v, str) and _v.startswith("http"):
+                        _cpp_links[str(_k)] = _v
+
+            _cpp_artifacts = []
+            for _k in ("artifact_path", "package_path", "zip_path", "pdf_path", "dxf_path", "xlsx_path", "docx_path"):
+                _v = _cpp_data.get(_k)
+                if isinstance(_v, str) and _v:
+                    _cpp_artifacts.append({"path": _v, "kind": "project_" + _k.replace("_path", "")})
+
+            if _cpp_artifacts and not _cpp_links:
+                try:
+                    from core.artifact_upload_guard import upload_many_or_fail
+                    _up = upload_many_or_fail(_cpp_artifacts, str(task_id), int(topic_id or 0))
+                    if isinstance(_up, dict):
+                        for _k, _v in (_up.get("links") or {}).items():
+                            if isinstance(_v, str) and _v.startswith("http"):
+                                _cpp_links[str(_k)] = _v
+                except Exception as _up_e:
+                    logger.warning("CREATE_PROJECT_PRIORITY_NO_ROLLBACK_V1_UPLOAD_ERR task=%s err=%s", task_id, _up_e)
+
+            _pdf = ""
+            _dxf = ""
+            _xlsx = ""
+            _other = ""
+
+            for _k, _v in _cpp_links.items():
+                _kl = str(_k).lower()
+                _vl = str(_v).lower()
+                if not _pdf and ("pdf" in _kl or ".pdf" in _vl):
+                    _pdf = _v
+                elif not _dxf and ("dxf" in _kl or ".dxf" in _vl):
+                    _dxf = _v
+                elif not _xlsx and ("xlsx" in _kl or "sheet" in _kl or "spreadsheets" in _vl or ".xlsx" in _vl):
+                    _xlsx = _v
+                elif not _other:
+                    _other = _v
+
+            _cpp_result_lines = ["Проект плиты создан"]
+            if _pdf:
+                _cpp_result_lines.append("PDF: " + _pdf)
+            if _dxf:
+                _cpp_result_lines.append("DXF: " + _dxf)
+            if _xlsx:
+                _cpp_result_lines.append("XLSX: " + _xlsx)
+            if not (_pdf or _dxf or _xlsx) and _other:
+                _cpp_result_lines.append("Файл: " + _other)
+
+            _cpp_result = "\n".join(_cpp_result_lines).strip()
+
+            _cpp_success = bool(_cpp_data.get("success")) or bool(_cpp_links) or bool(_cpp_artifacts)
+            if _cpp_success and (_cpp_links or _cpp_artifacts):
+                _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_cpp_result, error_message="")
+                _history(conn, task_id, "CREATE_PROJECT_PRIORITY_NO_ROLLBACK_V1:AWAITING_CONFIRMATION")
+                try:
+                    _reply_to = task["reply_to_message_id"] if "reply_to_message_id" in task.keys() else None
+                except Exception:
+                    _reply_to = None
+                _send_once_ex(conn, task_id, chat_id, _cpp_result, _reply_to, "project_create_priority")
+                return
+
+            _err = str(_cpp_data.get("error") or "PROJECT_ENGINE_NO_ARTIFACT")[:500]
+            _user_err = "Проект не создан: " + _err
+            _update_task(conn, task_id, state="FAILED", result="", error_message="CREATE_PROJECT_PRIORITY_NO_ROLLBACK_V1:" + _err)
+            _history(conn, task_id, "CREATE_PROJECT_PRIORITY_NO_ROLLBACK_V1:FAILED:" + _err[:200])
+            try:
+                _reply_to = task["reply_to_message_id"] if "reply_to_message_id" in task.keys() else None
+            except Exception:
+                _reply_to = None
+            _send_once_ex(conn, task_id, chat_id, _user_err, _reply_to, "project_create_priority_error")
+            return
+    except Exception as _cpp_e:
+        logger.warning("CREATE_PROJECT_PRIORITY_NO_ROLLBACK_V1_ERR task=%s err=%s", task_id, _cpp_e)
+    # === END_CREATE_PROJECT_PRIORITY_NO_ROLLBACK_V1 ===
     # === CREATE_ESTIMATE_PRIORITY_NO_ROLLBACK_V1 ===
     try:
         _cep_raw = ""
@@ -1359,11 +1498,19 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
             "какие последние", "покажи прошл", "найди прошл", "помнишь"
         )
 
+        # === CEP_PROJECT_EXCLUSION_V1 ===
+        _cep_project_words = (
+            "проект", "кж", "кд", "км", "кмд", "ар",
+            "фундамент", "фундаментн", "плита", "плиты", "плиту",
+            "армирован", "арматур", "dxf", "dwg", "чертеж", "чертёж", "конструктив",
+        )
         _cep_is_create_estimate = (
             any(w in _cep_low for w in _cep_create_words)
             and any(w in _cep_low for w in _cep_estimate_words)
             and not any(w in _cep_low for w in _cep_followup_words)
+            and not any(w in _cep_low for w in _cep_project_words)
         )
+        # === END_CEP_PROJECT_EXCLUSION_V1 ===
 
         if _cep_is_create_estimate:
             from core.estimate_engine import generate_estimate_from_text
