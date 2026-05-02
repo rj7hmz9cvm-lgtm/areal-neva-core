@@ -345,7 +345,7 @@ async def _build_estimate_from_cache(conn: sqlite3.Connection, task: Any, cache:
     return _send_update_payload(conn, task_id, "AWAITING_CONFIRMATION", msg, "")
 
 
-async def prehandle_price_task_v1(conn: sqlite3.Connection, task: Any) -> Optional[Dict[str, Any]]:
+async def _base_prehandle_price_task_v1(conn: sqlite3.Connection, task: Any) -> Optional[Dict[str, Any]]:
     task_id = _s(_task_field(task, "id"))
     chat_id = _s(_task_field(task, "chat_id"))
     topic_id = int(_task_field(task, "topic_id", 0) or 0)
@@ -449,7 +449,7 @@ async def maybe_handle_price_enrichment_from_template_engine(conn, task_id: str,
 
 # === PRICE_DECISION_BEFORE_WEB_SEARCH_V1 ===
 try:
-    _pdbws_orig_prehandle_price_task_v1 = prehandle_price_task_v1
+    _pdbws_orig_prehandle_price_task_v1 = _base_prehandle_price_task_v1
 except Exception:
     _pdbws_orig_prehandle_price_task_v1 = None
 

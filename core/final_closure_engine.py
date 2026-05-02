@@ -29,6 +29,23 @@ def _field(task: Any, key: str, default=None):
         return default
 
 
+def _row_get(row: Any, key: str, idx: int, default: Any = "") -> Any:
+    try:
+        if hasattr(row, "keys") and key in row.keys():
+            return row[key]
+    except Exception:
+        pass
+    try:
+        if isinstance(row, dict):
+            return row.get(key, default)
+    except Exception:
+        pass
+    try:
+        return row[idx]
+    except Exception:
+        return default
+
+
 def _send_payload(message: str, kind: str, state: str = "DONE", history: str = "") -> Dict[str, Any]:
     return {
         "handled": True,
@@ -70,14 +87,12 @@ def _handle_memory_query(conn: sqlite3.Connection, chat_id: str, topic_id: int, 
 
     lines = ["Файлы в этом топике:"]
     for r in rows:
-        try:
-            raw = _json(r["raw_input"])
-            name = raw.get("file_name") or raw.get("name") or "UNKNOWN"
-            fid = raw.get("file_id") or ""
-        except Exception:
-            name = "UNKNOWN"
-            fid = ""
-        lines.append(f"- {name} | task={str(r['id'])[:8]} | file_id={fid} | {r['updated_at']}")
+        raw = _json(_s(_row_get(r, "raw_input", 3, "")))
+        name = raw.get("file_name") or raw.get("name") or "UNKNOWN"
+        fid = raw.get("file_id") or ""
+        tid = _s(_row_get(r, "id", 1, ""))
+        upd = _s(_row_get(r, "updated_at", 5, ""))
+        lines.append(f"- {name} | task={tid[:8]} | file_id={fid} | {upd}")
 
     return _send_payload(
         "\n".join(lines),
