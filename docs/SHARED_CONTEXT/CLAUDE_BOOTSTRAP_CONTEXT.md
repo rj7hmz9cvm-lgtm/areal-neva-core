@@ -3,9 +3,9 @@
 SYSTEM: AREAL-NEVA ORCHESTRA
 MODE: FACT_ONLY / ZERO_ASSUMPTIONS / GITHUB_SSOT / CANON_LOCK
 PURPOSE: one-file bootstrap for Claude and external LLMs
-GENERATED_AT_UTC: 2026-05-02T13:44:31.795243+00:00
+GENERATED_AT_UTC: 2026-05-02T14:14:31.940472+00:00
 GIT_BRANCH: main
-GIT_SHA: 04378dcf11fadc75bfd4e4a2ddaa03dba340cf3a
+GIT_SHA: 3d148d94bd362b607616e68f096c89948173a72f
 RAW_URL: https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md
 
 # CLAUDE_OPERATING_PROTOCOL_CANON_LOCK_V3
@@ -68,7 +68,7 @@ Claude must reload this file at start of each new session
 
 SOURCE_INDEX:
 - docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md | bytes=168322 | sha256=0640b8349254cfb36f1143c1f195715014e2ca1b1b428943847fd1fd80d9d8fe
-- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md | bytes=37556 | sha256=096c32eb2206a2435a38d4fd9c5abfcdbb7c25723960ac7cdd3c6ee574a44de7
+- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md | bytes=37260 | sha256=5b7c228016577d964889cd243a4cdb5789fdfa92dfb252ea837f1d1671ffe937
 - docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md | bytes=74 | sha256=1a4c8e19e206a16b41b7d761d30cb115f9e4d965bc68e3f326b02dcb8c757944
 - docs/CANON_FINAL/00_INDEX.md | bytes=808 | sha256=999acb6bfdd6c7215f11d76342ea1b9f8cdf5715418064acb3716f33999c8af6
 - docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md | bytes=41018 | sha256=dbd5f683361eafc258ab0822056f6c33f751e5581998dc420f79395d14863177
@@ -4002,10 +4002,10 @@ END_FILE: docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md
 BEGIN_FILE: docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md
 ========================================================================================================================
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-02T13:44:31.754206+00:00
+generated_at_utc: 2026-05-02T14:14:31.902775+00:00
 git_branch: main
-git_head_short: 04378dc
-git_head_full: 04378dcf11fadc75bfd4e4a2ddaa03dba340cf3a
+git_head_short: 3d148d9
+git_head_full: 3d148d94bd362b607616e68f096c89948173a72f
 
 ## SERVICES
 - areal-task-worker: active
@@ -4014,13 +4014,18 @@ git_head_full: 04378dcf11fadc75bfd4e4a2ddaa03dba340cf3a
 - areal-claude-bootstrap-aggregator.timer: active
 
 ## CORE_DB_STATE_COUNTS
-- FAILED|2839
+- FAILED|2841
 - CANCELLED|762
-- DONE|440
+- DONE|441
 - ARCHIVED|381
 - OPEN_TASKS|0
 
 ## LATEST_TASKS_SAFE
+- c758eeaa-0de4-45e3-bc00-84d47d850c64|2|text|DONE|[VOICE] Всё, отбой, задача закрыта.|STATE: FINISHED
+
+RESULT: Задача закрыта по запросу. Все предыдущие файлы и сметы|2026-05-02 13:51:34
+- 70258b1e-8326-45b6-a018-7500f865a7e7|2|text|FAILED|[VOICE] Посмотри мои предыдущие вопросы, наш диалог, посмотри, вот несколько соо|None|2026-05-02 13:51:18
+- 1a8a5e9f-3321-4177-8bbb-c80d71a47abf|2|text|FAILED|[VOICE] Ну а теперь ты точно понимаешь, как делать?|None|2026-05-02 13:50:44
 - 7ac4172b-2c11-4414-89ff-624364516e86|2|text|DONE|[VOICE] Принимай эти сметы как образцы и работай по ним. Логику, структуру, то е|Принял
 Следующие файлы в этом топике приму как образцы сметы
 Если файл уже был в|2026-05-02 13:42:47
@@ -4034,74 +4039,43 @@ git_head_full: 04378dcf11fadc75bfd4e4a2ddaa03dba340cf3a
 - f8381f8e-5ab6-4e6b-bedc-1148471d25ce|0|drive_file|CANCELLED|{"file_id": "1DQw2qgMHtq2SqgJJP-93eIArpj1hnNNm", "file_name": "Ареал Нева.xlsx",|None|2026-05-02 12:05:28
 - f8436aa9-6064-4ca9-bfd4-e4d52f78ff0c|0|drive_file|CANCELLED|{"file_id": "1P_ZeKlGpj1MjP4ZlrF_cSU0F_ZiJR51X", "file_name": "СМЕТЫ-20260502T11|None|2026-05-02 11:58:23
 - 9a49e6f6-8ce4-4ea9-97bf-14a328e1be28|0|drive_file|CANCELLED|{"file_id": "1EdIo45jftG9REadRgzL7IqH-cRsU4UX1", "file_name": "ПРОЕКТЫ-20260502T|None|2026-05-02 11:56:22
-- 4b402275-e99b-4d9f-b331-08f2ba2a93be|5|text|DONE|[VOICE] Скажи мне пожалуйста, для чего у нас с тобой используется этот чат и как|Файлы в этом топике уже есть. Нашёл релевантное:
-
-1. photo_-1003725299009_8397.j|2026-05-02 11:27:44
-- da881d3e-cbab-452b-84bb-3e2439a9f138|210|text|DONE|Да цоколь как образец проектирования закрепляет как один из образцов|Файлы в этом топике уже есть. Нашёл релевантное:
-
-1. КЖ Цоколь 1.1.pdf
- Можно ис|2026-05-02 10:45:06
-- 32924587-28e9-4bf0-8a48-25180ed5b3c6|210|text|DONE|[VOICE] Это образец по проектированию, конструкции железобетонных. Какой тут акт|Файлы в этом топике уже есть. Нашёл релевантное:
-
-1. КЖ Цоколь 1.1.pdf
- Можно ис|2026-05-02 10:30:38
 
 ## MEMORY_DB_COUNTS
-- MEMORY_ROWS|5501
+- MEMORY_ROWS|5504
 
 ## LATEST_MEMORY_SAFE
-- topic_2_pending_file_intent|{"kind": "estimate", "mode": "template_batch", "price_mode": "", "raw_text": "[VOICE] Принимай эти сметы как образцы и р|2026-05-02T13:42:46.879759+00:00
-- topic_2_dialog_ACTIVE_DIALOG_STATE_V1:SHORT_CONTROL_ACTIVE_TASK|{"handled": true, "state": "DONE", "result": "Активный контекст найден\nЗадача: 7ac4172b-2c11-4414-89ff-624364516e86\nСт|2026-05-02T13:42:45.361463+00:00
-- topic_2_archive_1a6cb0a5|{"task_id": "1a6cb0a5-f241-4847-932d-563261f18b21", "chat_id": "-1003725299009", "topic_id": 2, "direction": "estimates"|2026-05-02T13:41:19.675766
-- topic_2_archive_b9368fcb|{"task_id": "b9368fcb-48c2-4097-a5b4-948541322642", "chat_id": "-1003725299009", "topic_id": 2, "direction": "estimates"|2026-05-02T13:40:54.088574
-- topic_2_price_mode|web_confirm|2026-05-02T13:40:30.800072+00:00
-- estimate_top_templates_logistics_canon_v4|{
-  "version": "ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4",
-  "status": "ACTIVE_CANON",
-  "updated_at": "2026-05-02T13:3|2026-05-02T13:37:39.369027+00:00
-- topic_0_estimate_top_templates_logistics_canon_v4|{
-  "version": "ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4",
-  "status": "ACTIVE_CANON",
-  "updated_at": "2026-05-02T13:3|2026-05-02T13:37:39.369027+00:00
-- topic_2_estimate_top_templates_logistics_canon_v4|{
-  "version": "ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4",
-  "status": "ACTIVE_CANON",
-  "updated_at": "2026-05-02T13:3|2026-05-02T13:37:39.369027+00:00
-- topic_210_estimate_top_templates_logistics_canon_v4|{
-  "version": "ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4",
-  "status": "ACTIVE_CANON",
-  "updated_at": "2026-05-02T13:3|2026-05-02T13:37:39.369027+00:00
-- estimate_universal_material_calculation_policy_v4|{
-  "version": "ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4",
-  "status": "ACTIVE_CANON",
-  "updated_at": "2026-05-02T13:3|2026-05-02T13:37:39.369027+00:00
-- estimate_price_confirmation_required_v4|{
-  "version": "ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4",
-  "status": "ACTIVE_CANON",
-  "updated_at": "2026-05-02T13:3|2026-05-02T13:37:39.369027+00:00
-- estimate_logistics_required_v4|{
-  "version": "ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4",
-  "status": "ACTIVE_CANON",
-  "updated_at": "2026-05-02T13:3|2026-05-02T13:37:39.369027+00:00
+- topic_2_archive_c758eeaa|{"task_id": "c758eeaa-0de4-45e3-bc00-84d47d850c64", "chat_id": "-1003725299009", "topic_id": 2, "direction": "estimates"|2026-05-02T13:51:34.927035
+- topic_2_archive_70258b1e|{"task_id": "70258b1e-8326-45b6-a018-7500f865a7e7", "chat_id": "-1003725299009", "topic_id": 2, "direction": "estimates"|2026-05-02T13:51:18.519120
+- topic_2_archive_1a8a5e9f|{"task_id": "1a8a5e9f-3321-4177-8bbb-c80d71a47abf", "chat_id": "-1003725299009", "topic_id": 2, "direction": "estimates"|2026-05-02T13:50:44.726772
+- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 48, "updated_at": "2026-05-02T13:46:44.940033+00:00", "files": [|2026-05-02T13:46:44.940653+00:00
+- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 12, "updated_at": "2026-05-02T13:46:44.894969+00:00", "files": [{"|2026-05-02T13:46:44.895645+00:00
+- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-02T13:46:44.873389+00:00", "files": [{"|2026-05-02T13:46:44.873894+00:00
+- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T13:46:44.835332+00:00
+- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "s|2026-05-02T13:46:44.835236+00:00
+- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T13:46:44.835047+00:00
+- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T13:46:44.834937+00:00
+- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T13:46:44.834852+00:00
+- topic_2_file_234e52f8-3ce8-4f2f-99c3-7cc22265a151|{"task_id": "234e52f8-3ce8-4f2f-99c3-7cc22265a151", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T13:46:44.834787+00:00
 
 ## SEARCH_SESSIONS
 - topic_500_search_session_-1003725299009|{"chat_id": "-1003725299009", "topic_id": 500, "goal": "найди запчасть OEM 34116794300 новый тормозной диск BMW в СПб", "criteria": {"category": "AUTO_PARTS", "target": "запчасть O|2026-05-01T20:57:33.559044+00:00
 
 ## TIMELINE_INFO
 - path=/root/.areal-neva-core/data/memory_files/CHATS/-1003725299009__telegram/timeline.jsonl
-- bytes=682848
-- mtime_utc=2026-05-02T13:42:12.417799+00:00
+- bytes=683875
+- mtime_utc=2026-05-02T13:51:30.303492+00:00
 
 ## GIT_STATUS_SAFE
 M docs/REPORTS/CLAUDE_BOOTSTRAP_PENDING_PUSH.md
  M docs/REPORTS/FINAL_SESSION_CODE_TAIL_VERIFY_REPORT.md
  M docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
 ?? docs/REPORTS/areal-claude-bootstrap-aggregator.service.before.20260502_121121.txt
+?? tools/drive_ai_orchestra_root_cleanup_v1.py
 
 ## FILES_MANIFEST_SAFE
 - docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md|bytes=168322|sha256=0640b8349254cfb36f1143c1f195715014e2ca1b1b428943847fd1fd80d9d8fe
-- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md|bytes=37711|sha256=b0d9e3c4856bf4a0ea5992a0075a19cc4494dda541fd58ea356f78d86eea126d
-- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md|bytes=2013|sha256=5bd4b5fdc5059a1020527390be046eb01cf059f33bb7bca754e8c347633b45b2
+- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md|bytes=37556|sha256=096c32eb2206a2435a38d4fd9c5abfcdbb7c25723960ac7cdd3c6ee574a44de7
+- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md|bytes=2013|sha256=5a4651a81ae804d9312f538c6b26ea5b758221487b4ac1d5536fc1ba89c4115e
 - docs/CANON_FINAL/00_INDEX.md|bytes=808|sha256=999acb6bfdd6c7215f11d76342ea1b9f8cdf5715418064acb3716f33999c8af6
 - docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md|bytes=41018|sha256=dbd5f683361eafc258ab0822056f6c33f751e5581998dc420f79395d14863177
 - docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md|bytes=6714|sha256=1a439843e1eb214745752720c85b49adc48f1823765982960ce7b1e285947d84
