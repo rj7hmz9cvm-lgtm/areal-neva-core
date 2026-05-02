@@ -1,6 +1,6 @@
 # FINAL_SESSION_CODE_TAIL_VERIFY_REPORT
 
-generated_at: 2026-05-02T10:15:27.257895+00:00
+generated_at: 2026-05-02T10:39:44.404392+00:00
 status: OK
 markers_ok: True
 hook_order_ok: True
@@ -11,15 +11,25 @@ smoke_ok: True
 ## RAW_JSON
 ```json
 {
-  "generated_at": "2026-05-02T10:15:27.257895+00:00",
+  "generated_at": "2026-05-02T10:39:44.404392+00:00",
   "git": {
-    "head": "34aaae5",
-    "origin": "597c1f1",
-    "ahead_behind": "0\t1",
-    "status": "M core/file_context_intake.py\n M core/file_memory_bridge.py\n M core/final_closure_engine.py\n M core/output_sanitizer.py\n M docs/REPORTS/CLAUDE_BOOTSTRAP_PENDING_PUSH.md\n?? data/telegram_file_catalog/\n?? data/templates/estimate_batch/\n?? docs/REPORTS/areal-claude-bootstrap-aggregator.service.before.20260502_121121.txt\n?? outputs/\n?? tools/telegram_file_memory_backfill.py"
+    "head": "89827a8",
+    "origin": "89827a8",
+    "ahead_behind": "0\t0",
+    "status": "M core/file_memory_bridge.py\n M core/output_sanitizer.py\n M core/technadzor_engine.py\n M docs/REPORTS/FINAL_SESSION_CODE_TAIL_VERIFY_REPORT.md\n M tools/final_session_code_tail_verify.py\n?? docs/REPORTS/areal-claude-bootstrap-aggregator.service.before.20260502_121121.txt"
   },
   "markers": {
     "task_worker.py": {
+      "exists": true,
+      "missing": [],
+      "ok": true
+    },
+    "core/file_memory_bridge.py": {
+      "exists": true,
+      "missing": [],
+      "ok": true
+    },
+    "core/output_sanitizer.py": {
       "exists": true,
       "missing": [],
       "ok": true
@@ -68,6 +78,11 @@ smoke_ok: True
       "exists": true,
       "missing": [],
       "ok": true
+    },
+    "core/sheets_generator.py": {
+      "exists": true,
+      "missing": [],
+      "ok": true
     }
   },
   "hook_order": {
@@ -78,7 +93,8 @@ smoke_ok: True
   "counts": {
     "public_prehandle_price_task_v1": 1,
     "base_prehandle_price_task_v1": 1,
-    "create_estimate_xlsx_from_rows": 1
+    "create_estimate_xlsx_from_rows": 1,
+    "prehandle_task_context_v1": 2
   },
   "forbidden": {
     "telegram_daemon_dirty": false,
@@ -96,10 +112,20 @@ smoke_ok: True
       "project": "project"
     },
     "router_ok": true,
+    "file_memory_domain_project_ok": true,
+    "file_memory_title_ok": true,
+    "file_memory_links_only_item_ok": true,
+    "file_memory_no_blob_link_ok": true,
+    "sanitizer_public_ok": true,
     "price_function_exists": true,
     "price_function_result_type_ok": true,
     "final_closure_memory_ok": true,
-    "estimate_xlsx_function_ok": true
+    "final_closure_public_ok": true,
+    "estimate_xlsx_function_ok": true,
+    "technadzor_public_message_ok": true,
+    "google_sheets_user_entered_ok": true,
+    "ocr_real_not_closed_fact": true,
+    "dwg_converter_present": false
   },
   "markers_ok": true,
   "hook_order_ok": true,

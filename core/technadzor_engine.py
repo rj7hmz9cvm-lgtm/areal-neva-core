@@ -64,7 +64,7 @@ def process_technadzor(text: str = "", task_id: str = "", chat_id: str = "", top
         "kind": "technadzor_act",
         "state": "DONE",
         "artifact_path": str(txt_path),
-        "message": f"Технадзорный акт подготовлен\nФайл: {txt_path}",
+        "message": "Технадзорный акт подготовлен",  # TECHNADZOR_PUBLIC_MESSAGE_NO_LOCAL_PATH_V1
         "history": "FINAL_CLOSURE_BLOCKER_FIX_V1:TECHNADZOR_ACT_CREATED",
     }
 

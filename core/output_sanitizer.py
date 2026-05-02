@@ -1,4 +1,4 @@
-# === UNIFIED_USER_OUTPUT_SANITIZER_V4_NO_SERVICE_JUNK ===
+# === UNIFIED_USER_OUTPUT_SANITIZER_V5_STRICT_PUBLIC_CLEAN ===
 from __future__ import annotations
 
 import re
@@ -66,11 +66,7 @@ SERVICE_SUBSTRINGS = [
     "Traceback",
 ]
 
-NOISE_EXACT = {
-    "доволен",
-    "недоволен",
-    "готово",
-}
+NOISE_EXACT = {"доволен", "недоволен", "готово"}
 
 def _s(v: Any) -> str:
     if v is None:
@@ -106,57 +102,42 @@ def _clean_google_link(line: str) -> str:
 def _bad_line(line: str) -> bool:
     raw = line.strip()
     low = raw.lower()
-
     if not raw:
         return False
-
     if low in NOISE_EXACT:
         return True
-
     if re.fullmatch(r"[-–—]?\s*$", raw):
         return True
-
     for p in SERVICE_LINE_RE:
         if re.search(p, raw, re.I):
             return True
-
     if re.match(r"^\s*[-–—]\s*(dxf|xlsx|xls|pdf|docx|manifest)\s*:\s*$", raw, re.I):
         return True
-
     if re.search(r"\{[^{}]*(task_id|chat_id|topic_id|file_id|caption|engine)[^{}]*\}", raw, re.I):
         return True
-
     if raw.startswith("{") and raw.endswith("}"):
         return True
-
     for s in SERVICE_SUBSTRINGS:
         if s.lower() in low:
             return True
-
     if re.search(r"\b[A-Z_]{6,}_V\d+\b", raw) and not _is_google_link(raw):
         return True
-
     return False
 
 def sanitize_user_output(text: Any, fallback: str = "Готово") -> str:
     src = _normalize_escaped_text(text)
     if not src.strip():
         return fallback
-
     lines = []
     skip_next_google_link = False
-
     for original in src.split("\n"):
         line = original.rstrip()
-
         if re.match(r"^\s*manifest\s*:\s*$", line, re.I):
             skip_next_google_link = True
             continue
-
         if skip_next_google_link and _is_google_link(line):
             skip_next_google_link = False
             continue
-
         if _is_google_link(line):
             clean_url = _clean_google_link(line)
             if "manifest" in clean_url.lower() or clean_url.lower().endswith(".json"):
@@ -164,24 +145,17 @@ def sanitize_user_output(text: Any, fallback: str = "Готово") -> str:
             lines.append(clean_url)
             skip_next_google_link = False
             continue
-
         skip_next_google_link = False
-
         if _bad_line(line):
             continue
-
         lines.append(line)
-
     out = "\n".join(lines)
     out = re.sub(r"\n{3,}", "\n\n", out).strip()
     out = re.sub(r"[ \t]{2,}", " ", out)
-
     if not out:
         out = fallback
-
     if len(out) > 3900:
         out = out[:3800].rstrip() + "\n\nТекст сокращён. Полный результат смотри в файле"
-
     return out
 
 def sanitize_project_message(text: Any) -> str:
@@ -190,4 +164,4 @@ def sanitize_project_message(text: Any) -> str:
 def sanitize_estimate_message(text: Any) -> str:
     return sanitize_user_output(text, fallback="Сметный результат подготовлен")
 
-# === END_UNIFIED_USER_OUTPUT_SANITIZER_V4_NO_SERVICE_JUNK ===
+# === END_UNIFIED_USER_OUTPUT_SANITIZER_V5_STRICT_PUBLIC_CLEAN ===

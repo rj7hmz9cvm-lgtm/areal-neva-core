@@ -342,7 +342,7 @@ def _display_name_for_item_v1(item: Dict[str, Any]) -> str:
 # === END FILE_DISPLAY_NAME_FROM_LINK_V1 ===
 
 
-# === FILE_MEMORY_PUBLIC_OUTPUT_DOMAIN_FILTER_V5 ===
+# === FILE_MEMORY_PUBLIC_OUTPUT_DOMAIN_FILTER_V6_FINAL_SESSION ===
 def _fm_public_norm(text: Any) -> str:
     s = _clean(text, 50000)
     s = s.replace("\\\\n", "\n").replace("\\n", "\n").replace("\\\\t", " ").replace("\\t", " ")
@@ -532,7 +532,7 @@ def build_file_followup_answer(chat_id: str, topic_id: int, user_text: str, limi
     except Exception:
         return "\n".join(lines).strip()
 
-# === END_FILE_MEMORY_PUBLIC_OUTPUT_DOMAIN_FILTER_V5 ===
+# === END_FILE_MEMORY_PUBLIC_OUTPUT_DOMAIN_FILTER_V6_FINAL_SESSION ===
 
 
 
