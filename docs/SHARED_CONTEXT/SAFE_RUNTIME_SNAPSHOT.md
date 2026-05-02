@@ -1,8 +1,8 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-02T13:14:29.903874+00:00
+generated_at_utc: 2026-05-02T13:44:31.754206+00:00
 git_branch: main
-git_head_short: d38d0f8
-git_head_full: d38d0f84fc4fcafb9867a2403ebce3bfb1bc6c11
+git_head_short: 04378dc
+git_head_full: 04378dcf11fadc75bfd4e4a2ddaa03dba340cf3a
 
 ## SERVICES
 - areal-task-worker: active
@@ -11,13 +11,22 @@ git_head_full: d38d0f84fc4fcafb9867a2403ebce3bfb1bc6c11
 - areal-claude-bootstrap-aggregator.timer: active
 
 ## CORE_DB_STATE_COUNTS
-- FAILED|2837
+- FAILED|2839
 - CANCELLED|762
-- DONE|437
+- DONE|440
 - ARCHIVED|381
 - OPEN_TASKS|0
 
 ## LATEST_TASKS_SAFE
+- 7ac4172b-2c11-4414-89ff-624364516e86|2|text|DONE|[VOICE] Принимай эти сметы как образцы и работай по ним. Логику, структуру, то е|Принял
+Следующие файлы в этом топике приму как образцы сметы
+Если файл уже был в|2026-05-02 13:42:47
+- 6dd3452b-7adb-42de-9ac2-d3c68e42787f|2|text|DONE|[VOICE] Да, все верно.|Активный контекст найден
+Задача: 7ac4172b-2c11-4414-89ff-624364516e86
+Статус: NE|2026-05-02 13:42:45
+- 1a6cb0a5-f241-4847-932d-563261f18b21|2|text|FAILED|[VOICE] При составлении СМЕД ты обязан уточнять еще местоположение объекта, чтоб|None|2026-05-02 13:42:43
+- b9368fcb-48c2-4097-a5b4-948541322642|2|text|FAILED|[VOICE] А логика построения ответов, то есть формулы, все понятно тебе полностью|None|2026-05-02 13:41:07
+- 155cbea7-1832-48a5-9de3-725b63e24753|2|text|DONE|[VOICE] Так, посмотри, у тебя есть теперь образцы смет? Ты понимаешь, как нужно |Принял. При создании сметы найду актуальные цены в интернете, покажу варианты и |2026-05-02 13:40:30
 - 599bc7df-ed7a-4b7e-b26d-7e77cc5d863d|0|drive_file|CANCELLED|{"file_id": "10Muc2vJHAeKn7FXDTNIDHTX883XgpUJ1", "file_name": "М-110.xlsx", "mim|None|2026-05-02 12:27:37
 - f8381f8e-5ab6-4e6b-bedc-1148471d25ce|0|drive_file|CANCELLED|{"file_id": "1DQw2qgMHtq2SqgJJP-93eIArpj1hnNNm", "file_name": "Ареал Нева.xlsx",|None|2026-05-02 12:05:28
 - f8436aa9-6064-4ca9-bfd4-e4d52f78ff0c|0|drive_file|CANCELLED|{"file_id": "1P_ZeKlGpj1MjP4ZlrF_cSU0F_ZiJR51X", "file_name": "СМЕТЫ-20260502T11|None|2026-05-02 11:58:23
@@ -33,58 +42,63 @@ git_head_full: d38d0f84fc4fcafb9867a2403ebce3bfb1bc6c11
 
 1. КЖ Цоколь 1.1.pdf
  Можно ис|2026-05-02 10:30:38
-- d3f1d1ea-2bb8-4251-af63-800645975b2c|210|text|FAILED|[VOICE] Ты взял это в работу или нет? Я не понял.|None|2026-05-02 10:30:36
-- 69b99676-9f07-42cb-858f-fc7b92810beb|210|text|DONE|взял как образец?|Файлы в этом топике уже есть. Нашёл релевантное:
-
-1. "проект кд кровля 5.pdf
- Сс|2026-05-02 10:17:51
-- af2ca8ad-cfae-4109-935e-c167bd83bd6a|210|text|DONE|[VOICE] Возьми это как образец|Файлы в этом топике уже есть. Нашёл релевантное:
-
-1. КЖ Цоколь 1.1.pdf
- Тип: PRO|2026-05-02 09:59:37
-- 804884fa-c197-4dca-8e1d-5bbaec49e36f|210|text|DONE|[VOICE] Не как сметы, а как проектирование, я тебе говорю, проектирование.|Файлы в этом топике уже есть. Нашёл релевантное:
-
-1. Google Sheets / XLSX артефа|2026-05-02 09:54:29
-- fe299b1a-78ea-4e47-8e6e-f42067d17131|210|text|DONE|[VOICE] Последний файл, который я тебе скинул, ты взял как образец составления с|Принял
-Следующие файлы в этом топике приму как образцы сметы
-Если файл уже был в|2026-05-02 09:54:16
 
 ## MEMORY_DB_COUNTS
-- MEMORY_ROWS|5486
+- MEMORY_ROWS|5501
 
 ## LATEST_MEMORY_SAFE
-- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 48, "updated_at": "2026-05-02T12:46:40.868635+00:00", "files": [|2026-05-02T12:46:40.869347+00:00
-- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 12, "updated_at": "2026-05-02T12:46:40.827314+00:00", "files": [{"|2026-05-02T12:46:40.828389+00:00
-- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-02T12:46:40.801882+00:00", "files": [{"|2026-05-02T12:46:40.802576+00:00
-- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T12:46:40.756706+00:00
-- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "s|2026-05-02T12:46:40.756615+00:00
-- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T12:46:40.756383+00:00
-- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T12:46:40.756312+00:00
-- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T12:46:40.756261+00:00
-- topic_2_file_234e52f8-3ce8-4f2f-99c3-7cc22265a151|{"task_id": "234e52f8-3ce8-4f2f-99c3-7cc22265a151", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T12:46:40.756204+00:00
-- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_fil|2026-05-02T12:46:40.756125+00:00
-- topic_2_file_acecae89-87a8-42da-881a-db41cd0134e6|{"task_id": "acecae89-87a8-42da-881a-db41cd0134e6", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T12:46:40.756047+00:00
-- topic_2_file_a4956f79-592e-45e3-8f17-925366b5eb2f|{"task_id": "a4956f79-592e-45e3-8f17-925366b5eb2f", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T12:46:40.755968+00:00
+- topic_2_pending_file_intent|{"kind": "estimate", "mode": "template_batch", "price_mode": "", "raw_text": "[VOICE] Принимай эти сметы как образцы и р|2026-05-02T13:42:46.879759+00:00
+- topic_2_dialog_ACTIVE_DIALOG_STATE_V1:SHORT_CONTROL_ACTIVE_TASK|{"handled": true, "state": "DONE", "result": "Активный контекст найден\nЗадача: 7ac4172b-2c11-4414-89ff-624364516e86\nСт|2026-05-02T13:42:45.361463+00:00
+- topic_2_archive_1a6cb0a5|{"task_id": "1a6cb0a5-f241-4847-932d-563261f18b21", "chat_id": "-1003725299009", "topic_id": 2, "direction": "estimates"|2026-05-02T13:41:19.675766
+- topic_2_archive_b9368fcb|{"task_id": "b9368fcb-48c2-4097-a5b4-948541322642", "chat_id": "-1003725299009", "topic_id": 2, "direction": "estimates"|2026-05-02T13:40:54.088574
+- topic_2_price_mode|web_confirm|2026-05-02T13:40:30.800072+00:00
+- estimate_top_templates_logistics_canon_v4|{
+  "version": "ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4",
+  "status": "ACTIVE_CANON",
+  "updated_at": "2026-05-02T13:3|2026-05-02T13:37:39.369027+00:00
+- topic_0_estimate_top_templates_logistics_canon_v4|{
+  "version": "ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4",
+  "status": "ACTIVE_CANON",
+  "updated_at": "2026-05-02T13:3|2026-05-02T13:37:39.369027+00:00
+- topic_2_estimate_top_templates_logistics_canon_v4|{
+  "version": "ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4",
+  "status": "ACTIVE_CANON",
+  "updated_at": "2026-05-02T13:3|2026-05-02T13:37:39.369027+00:00
+- topic_210_estimate_top_templates_logistics_canon_v4|{
+  "version": "ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4",
+  "status": "ACTIVE_CANON",
+  "updated_at": "2026-05-02T13:3|2026-05-02T13:37:39.369027+00:00
+- estimate_universal_material_calculation_policy_v4|{
+  "version": "ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4",
+  "status": "ACTIVE_CANON",
+  "updated_at": "2026-05-02T13:3|2026-05-02T13:37:39.369027+00:00
+- estimate_price_confirmation_required_v4|{
+  "version": "ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4",
+  "status": "ACTIVE_CANON",
+  "updated_at": "2026-05-02T13:3|2026-05-02T13:37:39.369027+00:00
+- estimate_logistics_required_v4|{
+  "version": "ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4",
+  "status": "ACTIVE_CANON",
+  "updated_at": "2026-05-02T13:3|2026-05-02T13:37:39.369027+00:00
 
 ## SEARCH_SESSIONS
 - topic_500_search_session_-1003725299009|{"chat_id": "-1003725299009", "topic_id": 500, "goal": "найди запчасть OEM 34116794300 новый тормозной диск BMW в СПб", "criteria": {"category": "AUTO_PARTS", "target": "запчасть O|2026-05-01T20:57:33.559044+00:00
 
 ## TIMELINE_INFO
 - path=/root/.areal-neva-core/data/memory_files/CHATS/-1003725299009__telegram/timeline.jsonl
-- bytes=680707
-- mtime_utc=2026-05-02T12:27:37.969520+00:00
+- bytes=682848
+- mtime_utc=2026-05-02T13:42:12.417799+00:00
 
 ## GIT_STATUS_SAFE
 M docs/REPORTS/CLAUDE_BOOTSTRAP_PENDING_PUSH.md
  M docs/REPORTS/FINAL_SESSION_CODE_TAIL_VERIFY_REPORT.md
  M docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
 ?? docs/REPORTS/areal-claude-bootstrap-aggregator.service.before.20260502_121121.txt
-?? tools/estimate_template_formula_price_policy_v2.py
 
 ## FILES_MANIFEST_SAFE
 - docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md|bytes=168322|sha256=0640b8349254cfb36f1143c1f195715014e2ca1b1b428943847fd1fd80d9d8fe
-- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md|bytes=37714|sha256=be4f9ea96afc93376c03a90ef41cab3a1c876e9a6c57505cb92b9ca1b5bc67de
-- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md|bytes=2013|sha256=9a029eed06dedb71ab8d01097762300a384e10dec9582464f3077f21eff1605e
+- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md|bytes=37711|sha256=b0d9e3c4856bf4a0ea5992a0075a19cc4494dda541fd58ea356f78d86eea126d
+- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md|bytes=2013|sha256=5bd4b5fdc5059a1020527390be046eb01cf059f33bb7bca754e8c347633b45b2
 - docs/CANON_FINAL/00_INDEX.md|bytes=808|sha256=999acb6bfdd6c7215f11d76342ea1b9f8cdf5715418064acb3716f33999c8af6
 - docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md|bytes=41018|sha256=dbd5f683361eafc258ab0822056f6c33f751e5581998dc420f79395d14863177
 - docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md|bytes=6714|sha256=1a439843e1eb214745752720c85b49adc48f1823765982960ce7b1e285947d84
@@ -97,7 +111,7 @@ M docs/REPORTS/CLAUDE_BOOTSTRAP_PENDING_PUSH.md
 - task_worker.py|bytes=192376|sha256=e6ed445acefe580ae336b05641cc44f2d90b69558dab7816fd7861a11df668ab
 - telegram_daemon.py|bytes=50299|sha256=3214209f6f5f507ffee95a2414a651d72b1490fe364266c876c380b745dee837
 - memory_api_server.py|bytes=2956|sha256=17550a64d4e256489801b49ef81f49c3619598f74a5f6d9d0feda3c79b6805d1
-- core/ai_router.py|bytes=22208|sha256=def3922d4afbdc845a83edd3be08837a34446d8eadb9472292c83c417c7fbe69
+- core/ai_router.py|bytes=22767|sha256=8700a16e227183232873f1581147fbe989723102558415b2622a47fcb131e2f5
 - core/search_session.py|bytes=18734|sha256=8d2d860cbb2d10fd64341d94f837fef7edb9a55466f73b1a65860ecaa17ac0f0
 - core/search_engine.py|bytes=2127|sha256=1f35cefd94b014de6ca4eeb0cfd8802ce0f9275e7ea160c7fe43f70a288e94d6
 - core/file_intake_router.py|bytes=35401|sha256=507c2a73927f61fcdbf605297e4a69016c06ca3c07d556a843989dad9c882d99
@@ -334,23 +348,23 @@ M docs/REPORTS/CLAUDE_BOOTSTRAP_PENDING_PUSH.md
 328: system_content = f"Роль этого чата: {topic_role}\n\n" + system_content
 329: if topic_directions:
 330: system_content = system_content + f"\n\nТиповые задачи этого чата: {topic_directions}"
-335: _sanitize_block("PIN", payload.get("pin_context")),
-370: async def _openrouter_call(model: str, messages: List[Dict[str, str]]) -> str:
-372: "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-381: r = await client.post(f"{OPENROUTER_BASE_URL}/chat/completions", headers=headers, json=body)
-383: msg = f"OPENROUTER_HTTP_{r.status_code}: {r.text[:500]}"
-389: if not OPENROUTER_API_KEY:
-390: raise RuntimeError("OPENROUTER_API_KEY not set")
-398: try: _s_topic = int(payload.get("topic_id") or 0)
-399: except: _s_topic = 0
-404: # === SEARCH_MONOLITH_V2_CALL ===
-406: if run_search_monolith_v2 is not None:
-407: _v2 = await run_search_monolith_v2(work_payload, user_text, _openrouter_call, ONLINE_MODEL, SEARCH_SYSTEM_PROMPT)
-410: logger.info("SEARCH_MONOLITH_V2_OK chars=%s", len(_v2))
-413: logger.error("SEARCH_MONOLITH_V2_FAIL err=%s fallback=V1", _v2e)
-414: # === END SEARCH_MONOLITH_V2_CALL ===
-423: search_result = await _openrouter_call(
-460: result = await _openrouter_call(_final_model, messages)
+345: _sanitize_block("PIN", payload.get("pin_context")),
+380: async def _openrouter_call(model: str, messages: List[Dict[str, str]]) -> str:
+382: "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+391: r = await client.post(f"{OPENROUTER_BASE_URL}/chat/completions", headers=headers, json=body)
+393: msg = f"OPENROUTER_HTTP_{r.status_code}: {r.text[:500]}"
+399: if not OPENROUTER_API_KEY:
+400: raise RuntimeError("OPENROUTER_API_KEY not set")
+408: try: _s_topic = int(payload.get("topic_id") or 0)
+409: except: _s_topic = 0
+414: # === SEARCH_MONOLITH_V2_CALL ===
+416: if run_search_monolith_v2 is not None:
+417: _v2 = await run_search_monolith_v2(work_payload, user_text, _openrouter_call, ONLINE_MODEL, SEARCH_SYSTEM_PROMPT)
+420: logger.info("SEARCH_MONOLITH_V2_OK chars=%s", len(_v2))
+423: logger.error("SEARCH_MONOLITH_V2_FAIL err=%s fallback=V1", _v2e)
+424: # === END SEARCH_MONOLITH_V2_CALL ===
+433: search_result = await _openrouter_call(
+470: result = await _openrouter_call(_final_model, messages)
 
 ## core/search_session.py
 1: # === SEARCH_MONOLITH_V2_FULL ===
