@@ -497,3 +497,168 @@ def router_pending_instruction(raw_input: str, topic_id: int, chat_id: str = "")
 
 
 # === END_FILE_CONTEXT_INTAKE_FULL_CLOSE_V1 ===
+
+
+# === PENDING_INTENT_CLARIFICATION_V1 ===
+try:
+    _pic_orig_prehandle_task_context_v1 = prehandle_task_context_v1
+except Exception:
+    _pic_orig_prehandle_task_context_v1 = None
+
+
+def _pic_has_active_pending_intent(chat_id: str, topic_id: int) -> Dict[str, Any]:
+    try:
+        data = _load_pending_intent(chat_id, topic_id)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def _pic_is_clarification_text(text: str) -> bool:
+    low = _low(text)
+    if not low:
+        return False
+
+    explicit_new_task = any(x in low for x in (
+        "сделай проект", "создай проект", "разработай проект",
+        "сделай смету", "создай смету", "посчитай смету", "рассчитай смету",
+        "сделай акт", "создай акт", "найди мне", "поищи мне"
+    ))
+    if explicit_new_task:
+        return False
+
+    clar_words = (
+        "ты должен", "ты должна", "должен", "должна", "надо", "нужно",
+        "нужно ли", "надо ли", "спроси", "спросить", "уточни", "уточнить",
+        "не сразу", "сначала", "перед тем", "до того", "после этого",
+        "цены", "интернет", "искать", "не искать", "без интернета",
+        "актуальные", "поставить", "подставить", "согласовать",
+        "подтвердить", "не создавай сразу", "сначала спросить",
+        "сначала спроси", "спросить нужно ли", "спроси нужно ли"
+    )
+    return any(x in low for x in clar_words)
+
+
+def _pic_update_intent_with_clarification(intent: Dict[str, Any], text: str) -> Dict[str, Any]:
+    low = _low(text)
+    updated = dict(intent or {})
+
+    clarifications = updated.get("clarifications")
+    if not isinstance(clarifications, list):
+        clarifications = []
+    clarifications.append({"text": text, "created_at": _now()})
+    updated["clarifications"] = clarifications[-20:]
+    updated["updated_at"] = _now()
+    updated["last_clarification"] = text
+
+    ask_before_web = any(x in low for x in (
+        "не сразу", "сначала спрос", "спросить нужно ли", "спроси нужно ли",
+        "нужно ли", "надо ли", "перед тем как искать", "перед поиском",
+        "сначала уточни", "не ищи сразу", "не надо сразу",
+        "согласовать цены", "подтвердить цены"
+    ))
+
+    disable_web = any(x in low for x in (
+        "не искать в интернете", "без интернета", "не надо интернет",
+        "цены не ищи", "не ищи цены", "без поиска цен"
+    ))
+
+    force_web = any(x in low for x in (
+        "ищи в интернете", "искать в интернете", "цены из интернета",
+        "актуальные цены", "проверить цены", "найти цены"
+    ))
+
+    if disable_web:
+        updated["price_mode"] = "manual_or_template"
+        updated["web_search_disabled"] = True
+        updated["ask_before_web_search"] = False
+        updated["price_confirmation_required"] = False
+    elif ask_before_web:
+        updated["price_mode"] = "ask_before_search"
+        updated["ask_before_web_search"] = True
+        updated["price_confirmation_required"] = True
+        updated["web_search_disabled"] = False
+    elif force_web:
+        updated["price_mode"] = "web_confirm"
+        updated["ask_before_web_search"] = False
+        updated["price_confirmation_required"] = True
+        updated["web_search_disabled"] = False
+
+    original = str(updated.get("raw_text") or "").strip()
+    if text and text not in original:
+        updated["raw_text"] = (original + "\nУточнение: " + text).strip()
+
+    return updated
+
+
+def _pic_confirmation_message(intent: Dict[str, Any]) -> str:
+    price_mode = str(intent.get("price_mode") or "")
+    if price_mode == "ask_before_search":
+        price_line = "Перед поиском цен в интернете сначала спрошу, нужно ли искать актуальные цены"
+    elif price_mode == "web_confirm":
+        price_line = "Цены материалов буду искать в интернете, затем покажу варианты и спрошу какие поставить"
+    elif price_mode == "manual_or_template":
+        price_line = "Интернет-цены не ищу, пока ты отдельно не скажешь искать"
+    else:
+        price_line = "Цены не подставляю без отдельного подтверждения"
+
+    return (
+        "Уточнение к приёму смет принято\n"
+        "Следующие файлы в этом топике остаются образцами сметы\n"
+        f"{price_line}\n"
+        "Финальную смету не создаю без твоего выбора цен"
+    )
+
+
+def prehandle_task_context_v1(conn: sqlite3.Connection, task: Any) -> Optional[Dict[str, Any]]:
+    if _pic_orig_prehandle_task_context_v1 is not None:
+        res = _pic_orig_prehandle_task_context_v1(conn, task)
+        if res and res.get("handled"):
+            return res
+
+    task_id = _s(_task_field(task, "id"))
+    chat_id = _s(_task_field(task, "chat_id"))
+    topic_id = int(_task_field(task, "topic_id", 0) or 0)
+    input_type = _s(_task_field(task, "input_type"))
+    raw_input = _s(_task_field(task, "raw_input"))
+
+    if not task_id or not chat_id:
+        return None
+
+    if input_type not in ("text", "voice"):
+        return None
+
+    text = _extract_user_text(raw_input)
+    if not text:
+        return None
+
+    pending = _pic_has_active_pending_intent(chat_id, topic_id)
+    if not pending:
+        return None
+
+    if not _pic_is_clarification_text(text):
+        return None
+
+    updated = _pic_update_intent_with_clarification(pending, text)
+    _save_pending_intent(chat_id, topic_id, updated)
+
+    if updated.get("price_mode"):
+        _memory_write(chat_id, f"topic_{int(topic_id or 0)}_price_mode", updated.get("price_mode"))
+
+    _memory_write(chat_id, f"topic_{int(topic_id or 0)}_pending_file_intent_clarification", {
+        "task_id": task_id,
+        "text": text,
+        "updated_intent": updated,
+        "created_at": _now(),
+    })
+
+    return {
+        "handled": True,
+        "state": "DONE",
+        "kind": "pending_intent_clarification",
+        "message": _pic_confirmation_message(updated),
+        "history": "PENDING_INTENT_CLARIFICATION_V1:UPDATED",
+    }
+
+# === END_PENDING_INTENT_CLARIFICATION_V1 ===
+

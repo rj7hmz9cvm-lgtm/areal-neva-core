@@ -445,3 +445,155 @@ async def maybe_handle_price_enrichment_from_template_engine(conn, task_id: str,
 
 # === END_WEB_SEARCH_PRICE_ENRICHMENT_V1 ===
 # === END_PRICE_CONFIRMATION_BEFORE_ESTIMATE_V1 ===
+
+
+# === PRICE_DECISION_BEFORE_WEB_SEARCH_V1 ===
+try:
+    _pdbws_orig_prehandle_price_task_v1 = prehandle_price_task_v1
+except Exception:
+    _pdbws_orig_prehandle_price_task_v1 = None
+
+
+def _pdbws_mem_cols(conn) -> list:
+    try:
+        return [r[1] for r in conn.execute("PRAGMA table_info(memory)").fetchall()]
+    except Exception:
+        return []
+
+
+def _pdbws_mem_latest(chat_id: str, key: str) -> str:
+    try:
+        mem = BASE / "data" / "memory.db"
+        if not mem.exists():
+            return ""
+        import sqlite3
+        conn = sqlite3.connect(str(mem))
+        try:
+            row = conn.execute(
+                "SELECT value FROM memory WHERE chat_id=? AND key=? ORDER BY rowid DESC LIMIT 1",
+                (str(chat_id), str(key)),
+            ).fetchone()
+            return row[0] if row else ""
+        finally:
+            conn.close()
+    except Exception:
+        return ""
+
+
+def _pdbws_mem_write(chat_id: str, key: str, value: Any) -> None:
+    try:
+        mem = BASE / "data" / "memory.db"
+        if not mem.exists():
+            return
+        import sqlite3
+        import hashlib
+        conn = sqlite3.connect(str(mem))
+        try:
+            cols = _pdbws_mem_cols(conn)
+            payload = json.dumps(value, ensure_ascii=False) if not isinstance(value, str) else value
+            if value == "":
+                conn.execute(
+                    "DELETE FROM memory WHERE chat_id=? AND key=?",
+                    (str(chat_id), str(key)),
+                )
+            elif "id" in cols:
+                mid = hashlib.sha1(f"{chat_id}:{key}:{_now()}:{payload[:160]}".encode("utf-8")).hexdigest()
+                conn.execute(
+                    "INSERT OR IGNORE INTO memory (id,chat_id,key,value,timestamp) VALUES (?,?,?,?,?)",
+                    (mid, str(chat_id), str(key), payload, _now()),
+                )
+            else:
+                conn.execute(
+                    "INSERT INTO memory (chat_id,key,value,timestamp) VALUES (?,?,?,?)",
+                    (str(chat_id), str(key), payload, _now()),
+                )
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception:
+        return
+
+
+def _pdbws_is_estimate_create_request(text: str) -> bool:
+    low = _low(text)
+    if not low:
+        return False
+    return any(x in low for x in (
+        "смет", "расчет", "расчёт", "посчитай", "рассчитай",
+        "сделай", "создай", "сформируй"
+    ))
+
+
+def _pdbws_yes(text: str) -> bool:
+    low = _low(text)
+    if any(x in low for x in ("нет", "не надо", "не ищи", "без интернета", "не нужно")):
+        return False
+    return any(x in low for x in ("да", "ищи", "искать", "интернет", "актуальные", "нужно", "надо"))
+
+
+def _pdbws_no(text: str) -> bool:
+    low = _low(text)
+    return any(x in low for x in ("нет", "не надо", "не ищи", "без интернета", "не нужно", "цены не ищи"))
+
+
+async def prehandle_price_task_v1(conn: sqlite3.Connection, task: Any) -> Optional[Dict[str, Any]]:
+    task_id = _s(_task_field(task, "id"))
+    chat_id = _s(_task_field(task, "chat_id"))
+    topic_id = int(_task_field(task, "topic_id", 0) or 0)
+    input_type = _s(_task_field(task, "input_type"))
+    raw_input = _s(_task_field(task, "raw_input"))
+
+    if input_type in ("text", "voice"):
+        decision_key = f"topic_{topic_id}_price_decision_awaiting"
+        awaiting_raw = _pdbws_mem_latest(chat_id, decision_key)
+
+        if awaiting_raw:
+            if _pdbws_no(raw_input):
+                _pdbws_mem_write(chat_id, f"topic_{topic_id}_price_mode", "manual_or_template")
+                _pdbws_mem_write(chat_id, decision_key, "")
+                return {
+                    "handled": True,
+                    "state": "DONE",
+                    "message": "Принял. Интернет-цены не ищу. Смету буду делать по образцу и данным из файла/текста",
+                    "kind": "price_decision_before_web_search",
+                    "history": "PRICE_DECISION_BEFORE_WEB_SEARCH_V1:NO_WEB",
+                }
+
+            if _pdbws_yes(raw_input):
+                _pdbws_mem_write(chat_id, f"topic_{topic_id}_price_mode", "web_confirm")
+                _pdbws_mem_write(chat_id, decision_key, "")
+                return {
+                    "handled": True,
+                    "state": "DONE",
+                    "message": "Принял. При создании сметы найду актуальные цены в интернете, покажу варианты и спрошу какие поставить",
+                    "kind": "price_decision_before_web_search",
+                    "history": "PRICE_DECISION_BEFORE_WEB_SEARCH_V1:WEB_CONFIRMED",
+                }
+
+        price_mode = _pdbws_mem_latest(chat_id, f"topic_{topic_id}_price_mode")
+        if price_mode == "ask_before_search" and _pdbws_is_estimate_create_request(raw_input):
+            _pdbws_mem_write(chat_id, decision_key, {
+                "task_id": task_id,
+                "raw_input": raw_input,
+                "created_at": _now(),
+                "reason": "ask_before_search",
+            })
+            return {
+                "handled": True,
+                "state": "WAITING_CLARIFICATION",
+                "message": (
+                    "Перед созданием сметы уточняю\n"
+                    "Искать актуальные цены материалов в интернете?\n"
+                    "Ответь: да — искать и показать варианты / нет — делать без интернет-цен"
+                ),
+                "kind": "price_decision_before_web_search",
+                "history": "PRICE_DECISION_BEFORE_WEB_SEARCH_V1:ASK_USER",
+            }
+
+    if _pdbws_orig_prehandle_price_task_v1 is None:
+        return None
+
+    return await _pdbws_orig_prehandle_price_task_v1(conn, task)
+
+# === END_PRICE_DECISION_BEFORE_WEB_SEARCH_V1 ===
+
