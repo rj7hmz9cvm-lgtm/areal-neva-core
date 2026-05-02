@@ -1335,6 +1335,104 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
 
 
     
+    # === CREATE_ESTIMATE_PRIORITY_NO_ROLLBACK_V1 ===
+    try:
+        _cep_raw = ""
+        try:
+            _cep_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+        except Exception:
+            _cep_raw = ""
+        _cep_clean = re.sub(r"^\s*\[VOICE\]\s*", "", _cep_raw or "", flags=re.I).strip()
+        _cep_low = _cep_clean.lower()
+
+        _cep_create_words = (
+            "сделай", "создай", "сформируй", "подготовь", "составь",
+            "посчитай", "рассчитай", "выгрузи", "сохрани", "оформи"
+        )
+        _cep_estimate_words = (
+            "смет", "расчет", "расчёт", "xlsx", "excel", "эксель",
+            "pdf", "ндс", "итог", "объем", "объём", "расценк", "позици"
+        )
+        _cep_followup_words = (
+            "я тебе скидывал", "уже скидывал", "где файл", "где смета",
+            "что дальше", "дальше то что", "ты сделал", "что мы делали",
+            "какие последние", "покажи прошл", "найди прошл", "помнишь"
+        )
+
+        _cep_is_create_estimate = (
+            any(w in _cep_low for w in _cep_create_words)
+            and any(w in _cep_low for w in _cep_estimate_words)
+            and not any(w in _cep_low for w in _cep_followup_words)
+        )
+
+        if _cep_is_create_estimate:
+            from core.estimate_engine import generate_estimate_from_text
+
+            _history(conn, task_id, "CREATE_ESTIMATE_PRIORITY_NO_ROLLBACK_V1:ROUTE_ESTIMATE_ENGINE")
+            _cep_data = await generate_estimate_from_text(
+                raw_input=_cep_clean,
+                task_id=str(task_id),
+                topic_id=int(topic_id or 0),
+                chat_id=str(chat_id),
+            )
+
+            if isinstance(_cep_data, dict):
+                _cep_state = str(_cep_data.get("state") or "")
+                _cep_success = bool(_cep_data.get("success"))
+                _cep_links = []
+                for _k in ("drive_link", "google_sheet_link", "link", "pdf_link", "xlsx_link", "telegram_link"):
+                    _v = _cep_data.get(_k)
+                    if isinstance(_v, str) and _v.startswith("http"):
+                        _cep_links.append((_k, _v))
+                if isinstance(_cep_data.get("links"), dict):
+                    for _k, _v in _cep_data.get("links").items():
+                        if isinstance(_v, str) and _v.startswith("http"):
+                            _cep_links.append((str(_k), _v))
+
+                _cep_result = str(_cep_data.get("result_text") or _cep_data.get("message") or _cep_data.get("summary") or "").strip()
+                if not _cep_result:
+                    _cep_result = "Смета обработана"
+                if _cep_links:
+                    _cep_result += "\n\nСсылки:"
+                    _seen = set()
+                    for _k, _v in _cep_links:
+                        if _v in _seen:
+                            continue
+                        _seen.add(_v)
+                        _cep_result += f"\n- {_k}: {_v}"
+                if _cep_data.get("artifact_path"):
+                    _cep_result += "\n\nАртефакт: " + str(_cep_data.get("artifact_path"))
+                if _cep_data.get("validator_reason"):
+                    _cep_result += "\n\nПроверка: " + str(_cep_data.get("validator_reason"))
+
+                if _cep_success or _cep_links or _cep_data.get("artifact_path"):
+                    _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_cep_result, error_message="")
+                    _history(conn, task_id, "CREATE_ESTIMATE_PRIORITY_NO_ROLLBACK_V1:AWAITING_CONFIRMATION")
+                    try:
+                        _reply_to = task["reply_to_message_id"] if "reply_to_message_id" in task.keys() else None
+                    except Exception:
+                        _reply_to = None
+                    _send_once_ex(conn, task_id, chat_id, _cep_result, _reply_to, "estimate_create_priority")
+                    return
+
+                _cep_err = str(_cep_data.get("error") or "ESTIMATE_ENGINE_NO_ARTIFACT")
+                _cep_user = str(_cep_data.get("result_text") or _cep_err)
+                _target_state = "WAITING_CLARIFICATION" if _cep_state == "WAITING_CLARIFICATION" else "FAILED"
+                _update_task(conn, task_id, state=_target_state, result=_cep_user, error_message=_cep_err)
+                _history(conn, task_id, "CREATE_ESTIMATE_PRIORITY_NO_ROLLBACK_V1:" + _target_state)
+                try:
+                    _reply_to = task["reply_to_message_id"] if "reply_to_message_id" in task.keys() else None
+                except Exception:
+                    _reply_to = None
+                _send_once_ex(conn, task_id, chat_id, _cep_user or _cep_err, _reply_to, "estimate_create_priority_error")
+                return
+
+            _update_task(conn, task_id, state="FAILED", result="", error_message="CREATE_ESTIMATE_PRIORITY_NO_ROLLBACK_V1:NON_DICT_RESULT")
+            _history(conn, task_id, "CREATE_ESTIMATE_PRIORITY_NO_ROLLBACK_V1:NON_DICT_RESULT")
+            return
+    except Exception as _cep_e:
+        logger.warning("CREATE_ESTIMATE_PRIORITY_NO_ROLLBACK_V1_ERR task=%s err=%s", task_id, _cep_e)
+    # === END_CREATE_ESTIMATE_PRIORITY_NO_ROLLBACK_V1 ===
     # === FILE_TECH_CONTOUR_FOLLOWUP_V2 ===
     try:
         _ft_low = str(raw_input or "").strip()
