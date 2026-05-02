@@ -688,3 +688,76 @@ Archive Engine пишет в POST /archive но endpoint не реализова
 - PDF spec extractor реальным файлом
 - Project КЖ end-to-end без "Смета обработана"
 - Новый Telegram файл → canonical Drive topic folder live
+
+---
+## АУДИТ 02.05.2026 14:00 — ПОЛНЫЙ СПИСОК НЕ ЗАКРЫТО КОДОМ
+
+### ФАКТ ПО GITHUB main (68dfd30):
+
+#### НЕ УСТАНОВЛЕНО КОДОМ — маркеры отсутствуют в GitHub:
+1. ESTIMATE_PDF_TO_XLSX_FORMULA_V1
+   estimate_engine.py существует, но нет create_estimate_xlsx_from_rows с =D*E =SUM
+   Нужно: PDF → pdfplumber rows → XLSX формулами → Drive
+
+2. TECHNADZOR_ACT_ENGINE_FULL_V1
+   technadzor_engine.py существует (старый маркер), но нет полного акта
+   Нужно: фото/файл → дефект → нормы СП/ГОСТ → DOCX → Drive
+
+3. SP_GOST_NORM_RESOLVER_V1
+   Нормы не должны выдумываться — если источник не подтверждён → "норма не подтверждена"
+
+4. OCR_TABLE_TO_EXCEL_V1
+   ocr_engine.py существует (старый маркер), нет нового контура
+   Нужно: фото/скан таблицы → структура → Excel
+
+5. MODEL_ROUTER_FALLBACK_CHAIN_V1
+   model_router.py существует (старый маркер)
+   Нужно: жёсткое разделение smeta/technadzor/project/memory/search
+
+6. ARCHIVE_DUPLICATE_GUARD_V1
+   archive_guard.py — файла нет вообще
+   Нужно: task_id+content_hash guard против дублей архива
+
+7. RUNTIME_TELEGRAM_FILE_CATALOG_V1
+   runtime_file_catalog.py — файла нет
+   Нужно: каждый новый Telegram-файл автоматически в каталог при приёме
+
+8. FINAL_CLOSURE_ENGINE_V1
+   final_closure_engine.py — файла нет
+   Нужно: единый prehandle с voice_confirm, memory_query, pdf_estimate, technadzor, ocr
+
+9. ABSOLUTE_CODE_CLOSURE_ALL_CONTOURS_V1
+   task_worker hook — не установлен
+   Нужно: хук ПОСЛЕ существующих P0 хуков, без дублирования voice_confirm
+
+10. XLSX_GOOGLE_SHEETS_FORMULA_VALUES_FIX_V1
+    XLSX создаются, но Google Sheets formula values не проверены
+
+#### УСТАНОВЛЕНО КОДОМ (verified по GitHub):
+- PENDING_INTENT_CLARIFICATION_V1 ✅
+- PRICE_DECISION_BEFORE_WEB_SEARCH_V1 ✅
+- REPLY_REPEAT_PARENT_TASK_V1 ✅
+- PROJECT_ROUTE_FIX_NO_ESTIMATE_REGRESSION_V1 ✅
+- UNIFIED_USER_OUTPUT_SANITIZER_V1 ✅
+- ROOT_TMP_UPLOAD_GUARD_V1 ✅
+- DRIVE_CANON_FOLDER_RESOLVER_V1 ✅
+- FILE_INTAKE_KZH_INTENT_FIX_V1 ✅
+- AGGREGATOR_PUSH_FAILURE_GUARD_V1 ✅
+- PDF_SPEC_EXTRACTOR_REAL_V1 (маркер есть, import smoke OK) ✅
+
+#### ТОЛЬКО LIVE-ТЕСТ (код есть, не verif):
+- Voice confirm AWAITING_CONFIRMATION
+- Reply "ответишь?" / "повтори" live
+- Batch смет-образцов live
+- Дубль Telegram-файла live
+- Web prices → выбор → XLSX/PDF live
+- Project КЖ end-to-end
+- Technadzor фото → акт live
+- DWG через Telegram
+- Drive canonical topic folder live после eefeec0
+
+#### ПРАВИЛА СЛЕДУЮЩЕГО ПАТЧА:
+- НЕ трогать telegram_daemon.py без явного "да"
+- НЕ дублировать VOICE_CONFIRM_AWAITING_V1 (уже строка 1405 task_worker.py)
+- Новый hook ставить ПОСЛЕ FULL_TECH_CONTOUR_CLOSE_V1_WIRED, не перед ACTIVE_DIALOG
+- Все новые файлы — только append/create, не перезапись рабочего кода
