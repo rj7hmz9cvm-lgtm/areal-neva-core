@@ -1,0 +1,9 @@
+# /etc/systemd/system/areal-claude-bootstrap-aggregator.service
+[Unit]
+Description=AREAL Claude Bootstrap Context Aggregator Canon Lock
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/.areal-neva-core
+ExecStart=/root/.areal-neva-core/.venv/bin/python3 /root/.areal-neva-core/tools/claude_bootstrap_aggregator.py
