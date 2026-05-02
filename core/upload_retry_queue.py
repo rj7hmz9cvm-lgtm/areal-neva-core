@@ -7,6 +7,7 @@ Notifies user in Telegram with new Drive link.
 import os
 import sqlite3
 import logging
+import json
 import tempfile
 import requests
 from dotenv import load_dotenv
@@ -25,20 +26,27 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN") or os.environ.get("TELEGRAM_BOT_TOKEN")
 
 
 def check_drive_alive() -> bool:
+    # === ROOT_TMP_UPLOAD_GUARD_V1 ===
+    # Healthcheck MUST NOT upload tmp*.txt into AI_ORCHESTRA root.
+    # It only lists the configured Drive root via OAuth.
     try:
-        from core.engine_base import upload_artifact_to_drive
-        with tempfile.NamedTemporaryFile(suffix=".txt", delete=False, mode="w") as f:
-            f.write("retry_queue_healthcheck")
-            tmp = f.name
-        link = upload_artifact_to_drive(tmp, "retry_hc", 0)
-        try:
-            os.remove(tmp)
-        except Exception:
-            pass
-        return bool(link and "drive.google.com" in str(link))
+        from core.topic_drive_oauth import _oauth_service, _root_folder_id
+        service = _oauth_service()
+        root_id = _root_folder_id()
+        service.files().list(
+            q=f"'{root_id}' in parents and trashed = false",
+            spaces="drive",
+            pageSize=1,
+            fields="files(id,name)",
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True,
+        ).execute()
+        logger.info("ROOT_TMP_UPLOAD_GUARD_V1: DRIVE_HEALTH_CHECK_LIST_OK root=%s", root_id)
+        return True
     except Exception as e:
-        logger.warning("DRIVE_HEALTH_CHECK_FAILED err=%s", e)
+        logger.warning("ROOT_TMP_UPLOAD_GUARD_V1: DRIVE_HEALTH_CHECK_FAILED err=%s", e)
         return False
+    # === END_ROOT_TMP_UPLOAD_GUARD_V1 ===
 
 
 def get_pending_retry_tasks(conn: sqlite3.Connection):

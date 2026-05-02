@@ -1,55 +1,40 @@
+# === DRIVE_CANON_FOLDER_RESOLVER_V1 ===
+from __future__ import annotations
+
 import os
 import logging
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
+from dotenv import load_dotenv
 
 logger = logging.getLogger("drive_folder_resolver")
 
-SERVICE_ACCOUNT_FILE = "/root/.areal-neva-core/credentials.json"
-SCOPES = ["https://www.googleapis.com/auth/drive"]  # SCOPE_FULL_V2
-SHARED_DRIVE_ID = "13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB"
-CHAT_ID = "-1003725299009"
+BASE = "/root/.areal-neva-core"
+load_dotenv(f"{BASE}/.env", override=True)
 
-def get_or_create_topic_folder(topic_id: int) -> str:
-    """Возвращает ID папки для топика. Создаёт, если не существует."""
-    creds = service_account.Credentials.from_service_account_file(
-        SERVICE_ACCOUNT_FILE, scopes=SCOPES
+DEFAULT_CHAT_ID = "-1003725299009"
+
+
+def get_or_create_topic_folder(topic_id: int, chat_id: str = "") -> str:
+    """
+    Canonical Drive layout:
+    AI_ORCHESTRA / chat_<chat_id> / topic_<topic_id>
+
+    This resolver MUST NOT use Service Account and MUST NOT create flat folders:
+    chat_-1003725299009_topic_2
+    """
+    from core.topic_drive_oauth import _oauth_service, _root_folder_id, _ensure_folder
+
+    service = _oauth_service()
+    root_id = _root_folder_id()
+    chat = str(chat_id or os.getenv("TELEGRAM_CHAT_ID") or DEFAULT_CHAT_ID)
+    chat_folder = _ensure_folder(service, root_id, f"chat_{chat}")
+    topic_folder = _ensure_folder(service, chat_folder, f"topic_{int(topic_id or 0)}")
+    logger.info(
+        "DRIVE_CANON_FOLDER_RESOLVER_V1_OK chat=%s topic=%s folder=%s",
+        chat,
+        int(topic_id or 0),
+        topic_folder,
     )
-    service = build("drive", "v3", credentials=creds)
+    return topic_folder
 
-    folder_name = f"chat_{CHAT_ID}_topic_{topic_id}"
 
-    # Ищем существующую папку
-    query = f"name = '{folder_name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
-    response = service.files().list(
-        q=query,
-        spaces="drive",
-        fields="files(id, name)",
-        supportsAllDrives=True,
-        includeItemsFromAllDrives=True,
-        driveId=SHARED_DRIVE_ID,
-        corpora="drive"
-    ).execute()
-
-    files = response.get("files", [])
-    if files:
-        folder_id = files[0]["id"]
-        logger.info(f"Папка топика {topic_id} найдена: {folder_id}")
-        return folder_id
-
-    # Создаём новую папку в Shared Drive
-    file_metadata = {
-        "name": folder_name,
-        "mimeType": "application/vnd.google-apps.folder",
-        "driveId": SHARED_DRIVE_ID,
-        "parents": [SHARED_DRIVE_ID]
-    }
-    folder = service.files().create(
-        body=file_metadata,
-        fields="id",
-        supportsAllDrives=True
-    ).execute()
-
-    folder_id = folder["id"]
-    logger.info(f"Папка топика {topic_id} создана: {folder_id}")
-    return folder_id
+# === END_DRIVE_CANON_FOLDER_RESOLVER_V1 ===

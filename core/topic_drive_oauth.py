@@ -34,20 +34,25 @@ def _root_folder_id() -> str:
     return folder_id
 
 def _find_child_folder(service, parent_id: str, name: str) -> Optional[str]:
+    # === DRIVE_CANON_SINGLE_FOLDER_PICK_V1 ===
+    # Deterministic folder lookup: if duplicates exist, use the oldest existing folder.
+    safe_name = str(name or "").replace("'", "\\'")
     q = (
-        f"name = '{name}' and "
+        f"name = '{safe_name}' and "
         f"mimeType = 'application/vnd.google-apps.folder' and "
         f"'{parent_id}' in parents and trashed = false"
     )
     resp = service.files().list(
         q=q,
         spaces="drive",
-        fields="files(id,name)",
+        fields="files(id,name,createdTime)",
+        orderBy="createdTime",
         supportsAllDrives=True,
         includeItemsFromAllDrives=True,
     ).execute()
     files = resp.get("files", [])
     return files[0]["id"] if files else None
+    # === END_DRIVE_CANON_SINGLE_FOLDER_PICK_V1 ===
 
 def _ensure_folder(service, parent_id: str, name: str) -> str:
     found = _find_child_folder(service, parent_id, name)
