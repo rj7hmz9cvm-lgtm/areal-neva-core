@@ -330,7 +330,17 @@ def _build_messages(payload: Dict[str, Any], user_text: str) -> List[Dict[str, s
         system_content = system_content + f"\n\nТиповые задачи этого чата: {topic_directions}"
 
 
+    # === ESTIMATE_TEMPLATE_POLICY_CONTEXT_V4_TOP_LOGISTICS ===
+    try:
+        from core.estimate_template_policy import build_estimate_template_context
+        _estimate_template_policy_context = build_estimate_template_context(user_text)
+    except Exception as _etp_err:
+        logger.warning("ESTIMATE_TEMPLATE_POLICY_CONTEXT_V4_ERR %s", _etp_err)
+        _estimate_template_policy_context = ""
+    # === END_ESTIMATE_TEMPLATE_POLICY_CONTEXT_V4_TOP_LOGISTICS ===
+
     blocks = _dedup_blocks([
+        _sanitize_block("ESTIMATE_TEMPLATE_POLICY", _estimate_template_policy_context),
         _sanitize_block("ACTIVE_TASK", payload.get("active_task_context")),
         _sanitize_block("PIN", payload.get("pin_context")),
         _sanitize_block("SHORT_MEMORY", payload.get("short_memory_context")),
