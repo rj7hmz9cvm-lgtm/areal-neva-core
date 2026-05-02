@@ -30,6 +30,11 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from dotenv import load_dotenv
 from core.ai_router import process_ai_task
+try:
+    from startup_recovery import run_startup_recovery  # STARTUP_RECOVERY_V1_WIRED
+except Exception as _startup_recovery_import_err:
+    run_startup_recovery = None
+
 # === CANON_REMAINING_CODE_FULL_CLOSE_V1_IMPORT ===
 try:
     from core.engine_contract import validate_engine_result, result_to_user_text
@@ -4026,6 +4031,28 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
 
     _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(result))
     logger.info(f"DRIVE_FILE: {task_id} processed")
+
+
+# === STARTUP_RECOVERY_V1_MAIN_WRAP ===
+try:
+    import inspect as _startup_recovery_inspect_v1
+    _orig_task_worker_main_startup_recovery_v1 = main
+
+    async def main(*args, **kwargs):
+        try:
+            if run_startup_recovery is not None:
+                await run_startup_recovery(CORE_DB)
+        except Exception as _startup_recovery_err:
+            logger.warning("STARTUP_RECOVERY_V1_ERR %s", _startup_recovery_err)
+
+        _res = _orig_task_worker_main_startup_recovery_v1(*args, **kwargs)
+        if _startup_recovery_inspect_v1.isawaitable(_res):
+            return await _res
+        return _res
+except Exception as _startup_recovery_wrap_err:
+    logger.warning("STARTUP_RECOVERY_V1_WRAP_ERR %s", _startup_recovery_wrap_err)
+# === END_STARTUP_RECOVERY_V1_MAIN_WRAP ===
+
 
 if __name__ == "__main__":
     asyncio.run(main())

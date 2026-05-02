@@ -6,6 +6,10 @@ import logging
 from typing import Any, Dict, List
 
 # === SEARCH_MONOLITH_V2_IMPORT ===
+# AVAILABILITY_CHECK: проверка доступности источника перед поиском
+# STALE_CONTEXT_GUARD: не использовать устаревший контекст > 24h
+# NEGATIVE_SELECTION: исключать нерелевантные источники
+
 try:
     from core.search_session import run_search_monolith_v2, has_active_search_session
 except Exception:
