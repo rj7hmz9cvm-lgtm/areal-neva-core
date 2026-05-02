@@ -1,29 +1,50 @@
-# === UNIFIED_USER_OUTPUT_SANITIZER_V1 ===
+# === UNIFIED_USER_OUTPUT_SANITIZER_V4_NO_SERVICE_JUNK ===
 from __future__ import annotations
 
 import re
 from typing import Any
 
-FORBIDDEN_LINE_PATTERNS = [
-    r"^\s*Engine\s*:",
-    r"^\s*MANIFEST\s*:",
+SERVICE_LINE_RE = [
+    r"^\s*engine\s*:",
+    r"^\s*kind\s*:",
+    r"^\s*source\s*:",
+    r"^\s*status\s*:",
+    r"^\s*type\s*:\s*[A-Z_]{4,}",
+    r"^\s*тип\s*:\s*[A-Z_]{4,}",
+    r"^\s*task\s*:",
+    r"^\s*task_id\s*:",
+    r"^\s*задача\s*:\s*[0-9a-fA-F-]{6,}",
+    r"^\s*drive\s+file_id\s*:",
+    r"^\s*file_id\s*:",
+    r"^\s*chat_id\s*:",
+    r"^\s*topic_id\s*:",
     r"^\s*manifest\s*:",
-    r"^\s*Artifact\s*:",
+    r"^\s*dxf\s*:",
+    r"^\s*xlsx\s*:",
+    r"^\s*xls\s*:",
+    r"^\s*pdf\s*:",
+    r"^\s*docx\s*:",
+    r"^\s*artifact\s*:",
     r"^\s*artifact_path\s*:",
     r"^\s*validator_reason\s*:",
-    r"^\s*internal[_ -]?keys?\s*:",
     r"^\s*raw_result\s*:",
+    r"^\s*raw_payload\s*:",
+    r"^\s*raw_input\s*:",
     r"^\s*debug\s*:",
     r"^\s*traceback\s*:",
     r"^\s*stacktrace\s*:",
     r"^\s*tmp_path\s*:",
+    r"^\s*кратко\s*:\s*\{",
+    r"^\s*кратко\s*:\s*\[",
+    r"^\s*google sheets\s*/\s*xlsx\s*артефакт\s*$",
 ]
 
-FORBIDDEN_SUBSTRINGS = [
+SERVICE_SUBSTRINGS = [
     "/root/.areal-neva-core",
     "/root/",
     "/tmp/",
     "file_context_intake.py",
+    "file_memory_bridge.py",
     "price_enrichment.py",
     "sample_template_engine.py",
     "task_worker.py",
@@ -34,14 +55,22 @@ FORBIDDEN_SUBSTRINGS = [
     "ACTIVE__chat_",
     "ACTIVE_BATCH__chat_",
     "PENDING__chat_",
+    "FINAL_CLOSURE_BLOCKER_FIX_V1",
+    "UNIFIED_USER_OUTPUT_SANITIZER",
     "validator_reason",
     "internal_key",
     "raw_payload",
     "raw_input_json",
-    "traceback",
     "ModuleNotFoundError",
     "SyntaxError",
+    "Traceback",
 ]
+
+NOISE_EXACT = {
+    "доволен",
+    "недоволен",
+    "готово",
+}
 
 def _s(v: Any) -> str:
     if v is None:
@@ -50,38 +79,98 @@ def _s(v: Any) -> str:
         return v
     return str(v)
 
-def _is_drive_line(line: str) -> bool:
-    low = line.lower()
+def _normalize_escaped_text(text: Any) -> str:
+    src = _s(text)
+    src = src.replace("\r", "\n")
+    src = src.replace("\\\\n", "\n")
+    src = src.replace("\\n", "\n")
+    src = src.replace("\\\\t", " ")
+    src = src.replace("\\t", " ")
+    src = src.replace('\\"', '"')
+    src = re.sub(r"\x00+", " ", src)
+    return src
+
+def _is_google_link(text: str) -> bool:
+    low = text.lower()
     return "https://drive.google.com/" in low or "https://docs.google.com/" in low
 
+def _clean_google_link(line: str) -> str:
+    m = re.search(r"https://(?:drive|docs)\.google\.com/[^\s\"'<>()]+", line, re.I)
+    if not m:
+        return line.strip()
+    url = m.group(0)
+    url = re.split(r"(?:PDF|DXF|XLSX|XLS|DOCX|MANIFEST)\s*:", url, flags=re.I)[0]
+    url = url.rstrip(".,;)")
+    return url
+
 def _bad_line(line: str) -> bool:
-    if _is_drive_line(line):
+    raw = line.strip()
+    low = raw.lower()
+
+    if not raw:
         return False
-    for p in FORBIDDEN_LINE_PATTERNS:
-        if re.search(p, line, re.I):
+
+    if low in NOISE_EXACT:
+        return True
+
+    if re.fullmatch(r"[-–—]?\s*$", raw):
+        return True
+
+    for p in SERVICE_LINE_RE:
+        if re.search(p, raw, re.I):
             return True
-    low = line.lower()
-    for s in FORBIDDEN_SUBSTRINGS:
+
+    if re.match(r"^\s*[-–—]\s*(dxf|xlsx|xls|pdf|docx|manifest)\s*:\s*$", raw, re.I):
+        return True
+
+    if re.search(r"\{[^{}]*(task_id|chat_id|topic_id|file_id|caption|engine)[^{}]*\}", raw, re.I):
+        return True
+
+    if raw.startswith("{") and raw.endswith("}"):
+        return True
+
+    for s in SERVICE_SUBSTRINGS:
         if s.lower() in low:
             return True
-    if re.search(r"\b[A-Z_]{6,}_V\d+\b", line) and not _is_drive_line(line):
+
+    if re.search(r"\b[A-Z_]{6,}_V\d+\b", raw) and not _is_google_link(raw):
         return True
-    if re.search(r"\{[^{}]*\"engine\"[^{}]*\}", line, re.I):
-        return True
+
     return False
 
 def sanitize_user_output(text: Any, fallback: str = "Готово") -> str:
-    src = _s(text).replace("\r", "\n")
+    src = _normalize_escaped_text(text)
     if not src.strip():
         return fallback
 
-    src = re.sub(r"\x00+", " ", src)
     lines = []
-    for line in src.split("\n"):
-        clean = line.rstrip()
-        if _bad_line(clean):
+    skip_next_google_link = False
+
+    for original in src.split("\n"):
+        line = original.rstrip()
+
+        if re.match(r"^\s*manifest\s*:\s*$", line, re.I):
+            skip_next_google_link = True
             continue
-        lines.append(clean)
+
+        if skip_next_google_link and _is_google_link(line):
+            skip_next_google_link = False
+            continue
+
+        if _is_google_link(line):
+            clean_url = _clean_google_link(line)
+            if "manifest" in clean_url.lower() or clean_url.lower().endswith(".json"):
+                continue
+            lines.append(clean_url)
+            skip_next_google_link = False
+            continue
+
+        skip_next_google_link = False
+
+        if _bad_line(line):
+            continue
+
+        lines.append(line)
 
     out = "\n".join(lines)
     out = re.sub(r"\n{3,}", "\n\n", out).strip()
@@ -101,4 +190,4 @@ def sanitize_project_message(text: Any) -> str:
 def sanitize_estimate_message(text: Any) -> str:
     return sanitize_user_output(text, fallback="Сметный результат подготовлен")
 
-# === END_UNIFIED_USER_OUTPUT_SANITIZER_V1 ===
+# === END_UNIFIED_USER_OUTPUT_SANITIZER_V4_NO_SERVICE_JUNK ===

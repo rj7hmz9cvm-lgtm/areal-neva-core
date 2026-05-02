@@ -341,7 +341,135 @@ def _display_name_for_item_v1(item: Dict[str, Any]) -> str:
     return "без имени"
 # === END FILE_DISPLAY_NAME_FROM_LINK_V1 ===
 
-def build_file_followup_answer(chat_id: str, topic_id: int, user_text: str, limit: int = 8) -> Optional[str]:
+
+# === FILE_MEMORY_PUBLIC_OUTPUT_DOMAIN_FILTER_V4 ===
+def _fm_public_norm(text: Any) -> str:
+    s = _clean(text, 50000)
+    s = s.replace("\\\\n", "\n").replace("\\n", "\n").replace("\\\\t", " ").replace("\\t", " ")
+    return s.strip()
+
+
+def _fm_is_take_sample_command(text: str) -> bool:
+    low = _fm_public_norm(text).lower().replace("ё", "е")
+    if not any(x in low for x in ("возьми", "прими", "используй", "сохрани")):
+        return False
+    return any(x in low for x in ("образец", "шаблон", "пример", "как образец"))
+
+
+def _fm_query_domain(text: str) -> str:
+    low = _fm_public_norm(text).lower().replace("ё", "е")
+    if any(x in low for x in ("смет", "вор", "расцен", "стоимост", "объем", "объём", "калькуляц")):
+        return "estimate"
+    if any(x in low for x in ("проект", "кж", "км", "кмд", "ар", "чертеж", "чертёж", "конструкц", "плита", "цоколь", "узел")):
+        return "project"
+    if any(x in low for x in ("технадзор", "акт", "дефект", "нарушен", "замечан", "гост", "снип", " сп ")):
+        return "technadzor"
+    if any(x in low for x in ("фото", "картин", "изображ", "ocr", "таблиц")):
+        return "ocr"
+    return ""
+
+
+def _fm_item_domain(item: Dict[str, Any]) -> str:
+    hay = _fm_public_norm(" ".join([
+        str(item.get("direction") or ""),
+        str(item.get("kind") or ""),
+        str(item.get("file_name") or ""),
+        str(item.get("summary") or ""),
+        str(item.get("value") or ""),
+    ])).lower().replace("ё", "е")
+
+    if any(x in hay for x in ("технадзор", "tech", "акт", "defect", "gost", "snip", "нарушен", "замечан")):
+        return "technadzor"
+    if any(x in hay for x in ("estimate", "смет", "вор", "расцен", "стоимост", "калькуляц")):
+        return "estimate"
+    if any(x in hay for x in ("project", "проект", "кж", "кмд", "км", "чертеж", "чертёж", "конструкц", "цоколь", "плита", ".dxf", ".dwg")):
+        return "project"
+    if any(x in hay for x in ("ocr", "фото", "image", ".jpg", ".jpeg", ".png", ".heic", ".webp")):
+        return "ocr"
+    return ""
+
+
+def _fm_public_title(item: Dict[str, Any]) -> str:
+    name = _fm_public_norm(item.get("file_name") or "")
+    if name and name.lower() not in ("без имени", "none", "null", "unknown"):
+        return name[:160]
+
+    value = _fm_public_norm(item.get("value") or item.get("summary") or "")
+    m = re.search(r"([^/\\?#\n]+\.(?:xlsx|xls|csv|pdf|docx|doc|jpg|jpeg|png|heic|webp|dwg|dxf))", value, re.I)
+    if m:
+        return m.group(1)[:160]
+
+    if "docs.google.com/spreadsheets" in value:
+        return "Таблица Google Sheets"
+    if "docs.google.com/document" in value:
+        return "Документ Google Docs"
+    if "drive.google.com" in value:
+        return "Файл Google Drive"
+    return "Файл"
+
+
+def _fm_public_links(item: Dict[str, Any], limit: int = 3) -> List[str]:
+    blobs = []
+    for k in ("value", "summary", "result", "raw_input"):
+        v = item.get(k)
+        if v:
+            blobs.append(_fm_public_norm(v))
+    for link in item.get("links") or []:
+        blobs.append(_fm_public_norm(link))
+
+    found: List[str] = []
+    seen = set()
+    for blob in blobs:
+        blob = blob.replace("\\\\n", "\n").replace("\\n", "\n")
+        for m in re.finditer(r"https://(?:drive|docs)\.google\.com/[^\s\"'<>()]+", blob, re.I):
+            url = m.group(0)
+            url = re.split(r"(?:PDF|DXF|XLSX|XLS|DOCX|MANIFEST)\s*:", url, flags=re.I)[0]
+            url = url.rstrip(".,;)")
+            low = url.lower()
+            if "manifest" in low or low.endswith(".json"):
+                continue
+            if url in seen:
+                continue
+            seen.add(url)
+            found.append(url)
+            if len(found) >= limit:
+                return found
+    return found
+
+
+def _fm_relevant_public_items(items: List[Dict[str, Any]], user_text: str, limit: int) -> List[Dict[str, Any]]:
+    qdom = _fm_query_domain(user_text)
+    out: List[Dict[str, Any]] = []
+    seen = set()
+
+    for item in items:
+        idom = _fm_item_domain(item)
+        if qdom and idom and qdom != idom:
+            continue
+
+        title = _fm_public_title(item)
+        links = _fm_public_links(item)
+        key = (title, tuple(links[:2]))
+        if key in seen:
+            continue
+        seen.add(key)
+
+        clean = dict(item)
+        clean["_public_title"] = title
+        clean["_public_links"] = links
+        clean["_public_domain"] = idom
+        out.append(clean)
+
+        if len(out) >= min(int(limit or 3), 3):
+            break
+
+    return out
+
+
+def build_file_followup_answer(chat_id: str, topic_id: int, user_text: str, limit: int = 3) -> Optional[str]:
+    if _fm_is_take_sample_command(user_text):
+        return None
+
     if not should_handle_file_followup(user_text):
         return None
 
@@ -349,13 +477,11 @@ def build_file_followup_answer(chat_id: str, topic_id: int, user_text: str, limi
     if topic_id == 0:
         return "В общем топике файлы не смешиваю. Для поиска файла нужен конкретный рабочий топик"
 
-    items = load_file_memory(chat_id, topic_id, user_text, limit=limit)
+    items = load_file_memory(chat_id, topic_id, user_text, limit=30)
+    items = _fm_relevant_public_items(items, user_text, limit=limit)
 
     if not items:
-        return (
-            "В этом топике файлов по запросу не найдено\n\n"
-            "Могу принять файл заново и определить действие: смета, технадзор, акт, проект, OCR или проверка"
-        )
+        return "В этом топике релевантных файлов по запросу не найдено"
 
     lines = [
         "Файлы в этом топике уже есть. Нашёл релевантное:",
@@ -363,46 +489,43 @@ def build_file_followup_answer(chat_id: str, topic_id: int, user_text: str, limi
     ]
 
     for i, item in enumerate(items, 1):
-        fname = _display_name_for_item_v1(item)  # FILE_DISPLAY_NAME_FROM_LINK_V1
-        direction = item.get("direction") or "FILE_GENERAL"
-        ts = item.get("timestamp") or ""
-        task_id = str(item.get("task_id") or "")[:8]
-        links = item.get("links") or []
-
-        lines.append(f"{i}. {fname}")
-        lines.append(f"   Тип: {direction}")
-        if task_id:
-            lines.append(f"   Задача: {task_id}")
-        if ts:
-            lines.append(f"   Дата: {ts}")
+        title = item.get("_public_title") or _fm_public_title(item)
+        links = item.get("_public_links") or []
+        lines.append(f"{i}. {title}")
 
         if links:
-            lines.append("   Ссылки:")
-            for link in links[:4]:
-                lines.append(f"   - {link}")
-        else:
-            fid = item.get("file_id") or ""
-            if fid:
-                lines.append(f"   Drive file_id: {fid}")
+            if len(links) == 1:
+                lines.append(f"   Ссылка: {links[0]}")
+            else:
+                lines.append("   Ссылки:")
+                for link in links[:3]:
+                    lines.append(f"   - {link}")
 
-        summary = _clean(item.get("summary") or "", 260)
-        if summary:
-            lines.append(f"   Кратко: {summary}")
+        domain = item.get("_public_domain") or _fm_item_domain(item)
+        if domain == "project":
+            lines.append("   Можно использовать как образец проектирования")
+        elif domain == "estimate":
+            lines.append("   Можно использовать как образец сметы")
+        elif domain == "technadzor":
+            lines.append("   Можно использовать для акта технадзора")
+        elif domain == "ocr":
+            lines.append("   Можно разобрать через OCR")
+
         lines.append("")
 
     lines.extend([
-        "Что могу сделать с выбранным файлом:",
-        "1. составить или пересчитать смету",
-        "2. сделать акт технадзора с ГОСТ/СП/СНиП",
-        "3. разобрать фото дефектов и оформить замечания",
-        "4. извлечь таблицу/OCR",
-        "5. использовать как шаблон",
-        "6. выдать ссылки на готовые PDF/XLSX/DOCX",
-        "",
-        "Напиши номер действия или ответь на сообщение с файлом",
+        "Напиши действие: использовать как образец / открыть / обработать заново / сравнить",
     ])
 
-    return "\n".join(lines).strip()
+    try:
+        from core.output_sanitizer import sanitize_user_output
+        return sanitize_user_output("\n".join(lines).strip(), fallback="Файлы найдены")
+    except Exception:
+        return "\n".join(lines).strip()
+
+# === END_FILE_MEMORY_PUBLIC_OUTPUT_DOMAIN_FILTER_V4 ===
+
+
 
 def save_file_catalog_snapshot(chat_id: str, topic_id: int) -> Dict[str, Any]:
     chat_id = str(chat_id)

@@ -610,6 +610,123 @@ def _pic_confirmation_message(intent: Dict[str, Any]) -> str:
     )
 
 
+
+# === PROJECT_SAMPLE_TEXT_INTAKE_V1 ===
+def _pst_is_sample_text(text: str) -> bool:
+    low = _low(text)
+    if not low:
+        return False
+    if not any(x in low for x in ("возьми", "прими", "используй", "сохрани")):
+        return False
+    return any(x in low for x in ("образец", "шаблон", "пример", "как образец"))
+
+
+def _pst_is_projectish(payload: Dict[str, Any], text: str = "") -> bool:
+    hay = _low(" ".join([
+        payload.get("file_name") or "",
+        payload.get("caption") or "",
+        payload.get("mime_type") or "",
+        text or "",
+    ]))
+    return any(x in hay for x in (
+        "кж", "км", "кмд", "ар", "проект", "чертеж", "чертёж",
+        "конструкц", "цоколь", "плита", ".dxf", ".dwg", ".pdf"
+    )) and not any(x in hay for x in (
+        "смет", "вор", "расцен", "стоимост", "технадзор", "акт дефект", "нарушен"
+    ))
+
+
+def _pst_latest_project_file(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> Dict[str, Any]:
+    try:
+        rows = conn.execute(
+            """
+            SELECT id,raw_input,result,updated_at,rowid
+            FROM tasks
+            WHERE CAST(chat_id AS TEXT)=CAST(? AS TEXT)
+              AND COALESCE(topic_id,0)=?
+              AND input_type IN ('drive_file','file')
+            ORDER BY rowid DESC
+            LIMIT 80
+            """,
+            (str(chat_id), int(topic_id or 0)),
+        ).fetchall()
+    except Exception:
+        rows = []
+
+    for r in rows:
+        try:
+            raw = r["raw_input"] if hasattr(r, "keys") else r[1]
+            tid = r["id"] if hasattr(r, "keys") else r[0]
+            upd = r["updated_at"] if hasattr(r, "keys") else r[3]
+        except Exception:
+            continue
+
+        payload = _file_payload(raw)
+        if _is_service_file(payload):
+            continue
+        if _pst_is_projectish(payload, raw):
+            return {
+                "task_id": str(tid),
+                "file_id": payload.get("file_id") or "",
+                "file_name": payload.get("file_name") or "",
+                "mime_type": payload.get("mime_type") or "",
+                "caption": payload.get("caption") or "",
+                "source": payload.get("source") or "",
+                "updated_at": str(upd or ""),
+            }
+
+    return {}
+
+
+def _pst_save_project_sample(chat_id: str, topic_id: int, task_id: str, sample: Dict[str, Any], text: str) -> None:
+    payload = {
+        "engine": "PROJECT_SAMPLE_TEXT_INTAKE_V1",
+        "kind": "project",
+        "status": "active",
+        "chat_id": str(chat_id),
+        "topic_id": int(topic_id or 0),
+        "saved_by_task_id": str(task_id),
+        "source_task_id": sample.get("task_id") or "",
+        "source_file_id": sample.get("file_id") or "",
+        "source_file_name": sample.get("file_name") or "",
+        "source_mime_type": sample.get("mime_type") or "",
+        "source_caption": sample.get("caption") or "",
+        "saved_at": _now(),
+        "usage_rule": "Use this file as project/design sample only inside the same chat and topic",
+        "raw_user_instruction": text,
+    }
+    _memory_write(chat_id, f"topic_{int(topic_id or 0)}_project_active_template", payload)
+    _memory_write(chat_id, f"topic_{int(topic_id or 0)}_project_sample_file", payload)
+
+
+def _pst_try_project_sample_text(conn: sqlite3.Connection, task_id: str, chat_id: str, topic_id: int, text: str) -> Optional[Dict[str, Any]]:
+    if not _pst_is_sample_text(text):
+        return None
+
+    sample = _pst_latest_project_file(conn, chat_id, topic_id)
+    if not sample:
+        return None
+
+    _pst_save_project_sample(chat_id, topic_id, task_id, sample, text)
+
+    file_name = sample.get("file_name") or "файл"
+    msg = (
+        "Образец проектирования принят\n"
+        f"Файл: {file_name}\n"
+        "Дальше буду использовать его как образец для проектных задач только в этом топике"
+    )
+
+    return {
+        "handled": True,
+        "state": "DONE",
+        "kind": "project_sample_text_intake",
+        "message": msg,
+        "history": "PROJECT_SAMPLE_TEXT_INTAKE_V1:SAVED",
+    }
+
+# === END_PROJECT_SAMPLE_TEXT_INTAKE_V1 ===
+
+
 def prehandle_task_context_v1(conn: sqlite3.Connection, task: Any) -> Optional[Dict[str, Any]]:
     if _pic_orig_prehandle_task_context_v1 is not None:
         res = _pic_orig_prehandle_task_context_v1(conn, task)
@@ -631,6 +748,11 @@ def prehandle_task_context_v1(conn: sqlite3.Connection, task: Any) -> Optional[D
     text = _extract_user_text(raw_input)
     if not text:
         return None
+
+    # PROJECT_SAMPLE_TEXT_INTAKE_V1_HOOK
+    sample_res = _pst_try_project_sample_text(conn, task_id, chat_id, topic_id, text)
+    if sample_res and sample_res.get("handled"):
+        return sample_res
 
     pending = _pic_has_active_pending_intent(chat_id, topic_id)
     if not pending:

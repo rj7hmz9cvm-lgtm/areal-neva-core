@@ -56,50 +56,63 @@ def _send_payload(message: str, kind: str, state: str = "DONE", history: str = "
     }
 
 
+
+# === FINAL_CLOSURE_MEMORY_QUERY_PUBLIC_OUTPUT_V2 ===
+
+# === FINAL_CLOSURE_MEMORY_QUERY_PUBLIC_OUTPUT_V3 ===
 def _handle_memory_query(conn: sqlite3.Connection, chat_id: str, topic_id: int, raw_input: str) -> Dict[str, Any]:
     t = raw_input.lower().replace("ё", "е")
-    if not any(x in t for x in ["что скидывал", "какие файлы", "какой файл", "последний файл", "документы в чате"]):
+
+    trigger = False
+    try:
+        from core.file_memory_bridge import should_handle_file_followup
+        trigger = bool(should_handle_file_followup(raw_input))
+    except Exception:
+        trigger = False
+
+    if not trigger:
+        trigger = any(x in t for x in [
+            "что скидывал",
+            "что я скидывал",
+            "что отправлял",
+            "что загружал",
+            "какие файлы",
+            "какой файл",
+            "проектные файлы",
+            "файлы проекта",
+            "файлы в чате",
+            "документы в чате",
+            "последний файл",
+            "скидывал",
+            "загружал",
+        ])
+
+    if not trigger:
         return {"handled": False}
 
     try:
-        rows = conn.execute(
-            """
-            SELECT rowid, id, input_type, raw_input, result, updated_at
-            FROM tasks
-            WHERE CAST(chat_id AS TEXT)=CAST(? AS TEXT)
-              AND COALESCE(topic_id,0)=?
-              AND input_type IN ('drive_file','file')
-            ORDER BY rowid DESC
-            LIMIT 10
-            """,
-            (str(chat_id), int(topic_id or 0)),
-        ).fetchall()
+        from core.file_memory_bridge import build_file_followup_answer
+        answer = build_file_followup_answer(str(chat_id), int(topic_id or 0), raw_input, limit=3)
     except Exception:
-        rows = []
+        answer = ""
 
-    if not rows:
-        return _send_payload(
-            "В этом топике файлов в runtime tasks не нашёл",
-            "memory_query",
-            "DONE",
-            "FINAL_CLOSURE_BLOCKER_FIX_V1:MEMORY_NO_FILES",
-        )
+    if not answer:
+        answer = "В этом топике релевантных файлов по запросу не найдено"
 
-    lines = ["Файлы в этом топике:"]
-    for r in rows:
-        raw = _json(_s(_row_get(r, "raw_input", 3, "")))
-        name = raw.get("file_name") or raw.get("name") or "UNKNOWN"
-        fid = raw.get("file_id") or ""
-        tid = _s(_row_get(r, "id", 1, ""))
-        upd = _s(_row_get(r, "updated_at", 5, ""))
-        lines.append(f"- {name} | task={tid[:8]} | file_id={fid} | {upd}")
+    try:
+        from core.output_sanitizer import sanitize_user_output
+        answer = sanitize_user_output(answer, fallback="Файлы найдены")
+    except Exception:
+        pass
 
     return _send_payload(
-        "\n".join(lines),
+        answer,
         "memory_query",
         "DONE",
-        "FINAL_CLOSURE_BLOCKER_FIX_V1:MEMORY_FILES_LISTED",
+        "FINAL_CLOSURE_MEMORY_QUERY_PUBLIC_OUTPUT_V3:LISTED",
     )
+
+# === END_FINAL_CLOSURE_MEMORY_QUERY_PUBLIC_OUTPUT_V3 ===
 
 
 def _handle_runtime_file(conn: sqlite3.Connection, task: Any, task_id: str, chat_id: str, topic_id: int, raw_input: str, input_type: str) -> Dict[str, Any]:
