@@ -1213,3 +1213,51 @@ async def create_estimate_from_saved_template(raw_input: str, task_id: str, chat
         "result_text": msg,
     }
 # === END_CLEAN_ESTIMATE_USER_OUTPUT_AND_TOTAL_FIX_V2 ===
+
+
+# === WEB_SEARCH_PRICE_ENRICHMENT_V1_SAMPLE_TEMPLATE_WRAPPER ===
+try:
+    _web_price_orig_handle_template_estimate_intent = handle_template_estimate_intent
+except Exception:
+    _web_price_orig_handle_template_estimate_intent = None
+
+async def handle_template_estimate_intent(
+    conn,
+    task_id: str,
+    chat_id: str,
+    topic_id: int,
+    raw_input,
+    input_type: str,
+    reply_to_message_id=None,
+) -> bool:
+    try:
+        from core.price_enrichment import maybe_handle_price_enrichment_from_template_engine
+        handled = await maybe_handle_price_enrichment_from_template_engine(
+            conn=conn,
+            task_id=task_id,
+            chat_id=chat_id,
+            topic_id=topic_id,
+            raw_input=raw_input,
+            input_type=input_type,
+            reply_to_message_id=reply_to_message_id,
+        )
+        if handled:
+            return True
+    except Exception:
+        pass
+
+    if _web_price_orig_handle_template_estimate_intent is None:
+        return False
+
+    return await _web_price_orig_handle_template_estimate_intent(
+        conn,
+        task_id,
+        chat_id,
+        topic_id,
+        raw_input,
+        input_type,
+        reply_to_message_id,
+    )
+
+# === END_WEB_SEARCH_PRICE_ENRICHMENT_V1_SAMPLE_TEMPLATE_WRAPPER ===
+

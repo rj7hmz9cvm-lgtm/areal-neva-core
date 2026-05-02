@@ -1253,6 +1253,52 @@ def _ff13c_strip_manifest_links(text):
 
 
 async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str, topic_id: int) -> None:
+    # === FULL_TECH_CONTOUR_CLOSE_V1_WIRED ===
+    # P0 guard: price confirmation, context-aware file intake, Telegram duplicate file memory
+    try:
+        from core.price_enrichment import prehandle_price_task_v1 as _ftc_price_prehandle
+        _ftc_price = await _ftc_price_prehandle(conn, task)
+        if _ftc_price and _ftc_price.get("handled"):
+            _ftc_tid = _s(_task_field(task, "id", ""))
+            _ftc_chat = _s(_task_field(task, "chat_id", ""))
+            _ftc_reply = _task_field(task, "reply_to_message_id", None)
+            _ftc_text = _ftc_price.get("message") or ""
+            _ftc_send = _send_once_ex(conn, _ftc_tid, _ftc_chat, _ftc_text, _ftc_reply, _ftc_price.get("kind", "price_enrichment"))
+            _update_task(
+                conn,
+                _ftc_tid,
+                state=_ftc_price.get("state", "WAITING_CLARIFICATION"),
+                result=_ftc_text,
+                error_message=_ftc_price.get("error_message", ""),
+                bot_message_id=_ftc_send.get("bot_message_id"),
+            )
+            _history(conn, _ftc_tid, _ftc_price.get("history", "WEB_SEARCH_PRICE_ENRICHMENT_V1:HANDLED"))
+            return
+    except Exception as _ftc_price_err:
+        logger.warning("FULL_TECH_CONTOUR_CLOSE_V1_PRICE_ERR %s", _ftc_price_err)
+
+    try:
+        from core.file_context_intake import prehandle_task_context_v1 as _ftc_file_prehandle
+        _ftc_file = _ftc_file_prehandle(conn, task)
+        if _ftc_file and _ftc_file.get("handled"):
+            _ftc_tid = _s(_task_field(task, "id", ""))
+            _ftc_chat = _s(_task_field(task, "chat_id", ""))
+            _ftc_reply = _task_field(task, "reply_to_message_id", None)
+            _ftc_text = _ftc_file.get("message") or ""
+            _ftc_send = _send_once_ex(conn, _ftc_tid, _ftc_chat, _ftc_text, _ftc_reply, _ftc_file.get("kind", "file_context_intake"))
+            _update_task(
+                conn,
+                _ftc_tid,
+                state=_ftc_file.get("state", "DONE"),
+                result=_ftc_text,
+                error_message=_ftc_file.get("error_message", ""),
+                bot_message_id=_ftc_send.get("bot_message_id"),
+            )
+            _history(conn, _ftc_tid, _ftc_file.get("history", "CONTEXT_AWARE_FILE_INTAKE_V1:HANDLED"))
+            return
+    except Exception as _ftc_file_err:
+        logger.warning("FULL_TECH_CONTOUR_CLOSE_V1_FILE_ERR %s", _ftc_file_err)
+    # === END_FULL_TECH_CONTOUR_CLOSE_V1_WIRED ===
     # === EZONE_INGEST_CALL_V1 ===
     try:
         _ez_raw = str(task["raw_input"] if task else "") if task else ""

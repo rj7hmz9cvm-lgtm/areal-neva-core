@@ -700,3 +700,34 @@ async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *
 
 # === END_FILE_INTAKE_KZH_INTENT_FIX_V1 ===
 
+
+# === CONTEXT_AWARE_FILE_INTAKE_V1_ROUTER_WRAPPER ===
+try:
+    _ca_fir_orig_route_file = route_file
+except Exception:
+    _ca_fir_orig_route_file = None
+
+async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *args, **kwargs):
+    import inspect
+    raw_input = str(kwargs.get("raw_input") or kwargs.get("prompt") or kwargs.get("user_text") or "")
+    if not raw_input:
+        try:
+            from core.file_context_intake import latest_pending_instruction_for_topic
+            chat_id = str(kwargs.get("chat_id") or "")
+            pending = latest_pending_instruction_for_topic(int(topic_id or 0), chat_id)
+            if pending:
+                kwargs["raw_input"] = pending
+                raw_input = pending
+        except Exception:
+            pass
+
+    if _ca_fir_orig_route_file is None:
+        return {"success": False, "error": "CONTEXT_AWARE_FILE_INTAKE_V1: original_route_file_missing"}
+
+    res = _ca_fir_orig_route_file(file_path, task_id, topic_id, intent, fmt, *args, **kwargs)
+    if inspect.isawaitable(res):
+        res = await res
+    return res
+
+# === END_CONTEXT_AWARE_FILE_INTAKE_V1_ROUTER_WRAPPER ===
+
