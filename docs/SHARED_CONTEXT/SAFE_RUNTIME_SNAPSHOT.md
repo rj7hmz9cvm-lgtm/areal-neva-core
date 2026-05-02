@@ -1,8 +1,8 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-02T20:44:44.925479+00:00
+generated_at_utc: 2026-05-02T21:14:45.891208+00:00
 git_branch: main
-git_head_short: 88c2635
-git_head_full: 88c26350c961f8ee453df3d570e6b295134735f1
+git_head_short: c911c80
+git_head_full: c911c807f6b2f64a7ffa613ffda8e70c18d3683b
 
 ## SERVICES
 - areal-task-worker: active
@@ -11,13 +11,25 @@ git_head_full: 88c26350c961f8ee453df3d570e6b295134735f1
 - areal-claude-bootstrap-aggregator.timer: active
 
 ## CORE_DB_STATE_COUNTS
-- FAILED|2842
+- FAILED|2843
 - CANCELLED|762
-- DONE|442
+- DONE|446
 - ARCHIVED|381
 - OPEN_TASKS|0
 
 ## LATEST_TASKS_SAFE
+- 79c43ee2-1bcf-487b-9ac3-27ec0c4a747e|2|text|DONE|[VOICE] Я же тебе сказал, вариант 2.|Файлы в этом топике уже есть. Нашёл релевантное:
+
+1. У1-02-26-Р-КЖ1.6.pdf
+ Можно|2026-05-02 21:02:24
+- 306ac12b-8a4b-41f0-9d4b-de6842210989|2|text|DONE|[VOICE] Я тебе задал вопрос, ты уточнил, я тебе ответил. Дальше что?|Уточнение к приёму смет принято
+Следующие файлы в этом топике остаются образцами|2026-05-02 21:02:03
+- 540f1575-9d37-404c-b3bf-b73f9d4d2d30|2|text|FAILED|[VOICE] Ну так и что по итогу с моим вопросом?|None|2026-05-02 21:01:49
+- 8c2bbfd5-d270-440a-8780-389ded2b6e68|210|text|DONE|нет я не это спросил|Уточнение к приёму смет принято
+Следующие файлы в этом топике остаются образцами|2026-05-02 20:45:34
+- 230335dc-7d77-4818-b064-be9cb867d966|210|text|DONE|Какие проектные образцы у тебя есть? Покажи по разделам АР, КЖ, КД|Проектный файл создан
+Раздел: АР
+https://docs.google.com/document/d/1W7o5DHznaqo|2026-05-02 20:44:58
 - ccc68e94-2ab2-47e4-8d6e-93269ee3f3a7|0|text|DONE|Принимай эти сметы как образцы и работай по ним|Принял
 Следующие файлы в этом топике приму как образцы сметы
 Если файл уже был в|2026-05-02 20:43:31
@@ -36,57 +48,41 @@ RESULT: Задача закрыта по запросу. Все предыдущ
 - 6dd3452b-7adb-42de-9ac2-d3c68e42787f|2|text|DONE|[VOICE] Да, все верно.|Активный контекст найден
 Задача: 7ac4172b-2c11-4414-89ff-624364516e86
 Статус: NE|2026-05-02 13:42:45
-- 1a6cb0a5-f241-4847-932d-563261f18b21|2|text|FAILED|[VOICE] При составлении СМЕД ты обязан уточнять еще местоположение объекта, чтоб|None|2026-05-02 13:42:43
-- b9368fcb-48c2-4097-a5b4-948541322642|2|text|FAILED|[VOICE] А логика построения ответов, то есть формулы, все понятно тебе полностью|None|2026-05-02 13:41:07
-- 155cbea7-1832-48a5-9de3-725b63e24753|2|text|DONE|[VOICE] Так, посмотри, у тебя есть теперь образцы смет? Ты понимаешь, как нужно |Принял. При создании сметы найду актуальные цены в интернете, покажу варианты и |2026-05-02 13:40:30
-- 599bc7df-ed7a-4b7e-b26d-7e77cc5d863d|0|drive_file|CANCELLED|{"file_id": "10Muc2vJHAeKn7FXDTNIDHTX883XgpUJ1", "file_name": "М-110.xlsx", "mim|None|2026-05-02 12:27:37
-- f8381f8e-5ab6-4e6b-bedc-1148471d25ce|0|drive_file|CANCELLED|{"file_id": "1DQw2qgMHtq2SqgJJP-93eIArpj1hnNNm", "file_name": "Ареал Нева.xlsx",|None|2026-05-02 12:05:28
 
 ## MEMORY_DB_COUNTS
-- MEMORY_ROWS|5511
+- MEMORY_ROWS|5521
 
 ## LATEST_MEMORY_SAFE
-- topic_0_pending_file_intent|{"kind": "estimate", "mode": "template_batch", "price_mode": "", "raw_text": "Принимай эти сметы как образцы и работай п|2026-05-02T20:43:31.383492+00:00
-- topic_2_archive_2af172a3|{"task_id": "2af172a3-2251-4787-b2af-5eb11d2bee2c", "chat_id": "-1003725299009", "topic_id": 2, "direction": "estimates"|2026-05-02T20:41:13.519903
-- topic_0_archive_archive_|archive smoke ok|2026-05-02T20:21:04.070870
-- owner_reference_full_workflow_v1|{
-  "version": "AREAL_REFERENCE_FULL_MONOLITH_V1",
-  "status": "ACTIVE",
-  "updated_at": "2026-05-02T20:20:56.522887+00:|2026-05-02T20:20:56.529956+00:00
-- topic_2_estimate_reference_v1|{
-  "version": "AREAL_REFERENCE_FULL_MONOLITH_V1",
-  "status": "ACTIVE",
-  "updated_at": "2026-05-02T20:20:56.522887+00:|2026-05-02T20:20:56.529956+00:00
-- topic_210_design_reference_v1|{
-  "version": "AREAL_REFERENCE_FULL_MONOLITH_V1",
-  "status": "ACTIVE",
-  "updated_at": "2026-05-02T20:20:56.522887+00:|2026-05-02T20:20:56.529956+00:00
-- topic_5_technadzor_reference_v1|{
-  "version": "AREAL_REFERENCE_FULL_MONOLITH_V1",
-  "status": "ACTIVE",
-  "updated_at": "2026-05-02T20:20:56.522887+00:|2026-05-02T20:20:56.529956+00:00
-- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 48, "updated_at": "2026-05-02T20:16:52.935894+00:00", "files": [|2026-05-02T20:16:52.936661+00:00
-- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 12, "updated_at": "2026-05-02T20:16:52.893834+00:00", "files": [{"|2026-05-02T20:16:52.894376+00:00
-- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-02T20:16:52.875163+00:00", "files": [{"|2026-05-02T20:16:52.875873+00:00
-- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T20:16:52.840507+00:00
-- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "s|2026-05-02T20:16:52.840411+00:00
+- topic_2_archive_79c43ee2|{"task_id": "79c43ee2-1bcf-487b-9ac3-27ec0c4a747e", "chat_id": "-1003725299009", "topic_id": 2, "direction": "file_tech_|2026-05-02T21:02:24.399338
+- topic_2_pending_file_intent_clarification|{"task_id": "306ac12b-8a4b-41f0-9d4b-de6842210989", "text": "[VOICE] Я тебе задал вопрос, ты уточнил, я тебе ответил. Да|2026-05-02T21:02:03.011403+00:00
+- topic_2_pending_file_intent|{"kind": "estimate", "mode": "template_batch", "price_mode": "", "raw_text": "[VOICE] Принимай эти сметы как образцы и р|2026-05-02T21:02:03.008957+00:00
+- topic_2_archive_540f1575|{"task_id": "540f1575-9d37-404c-b3bf-b73f9d4d2d30", "chat_id": "-1003725299009", "topic_id": 2, "direction": "estimates"|2026-05-02T21:01:49.194835
+- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 49, "updated_at": "2026-05-02T20:46:53.308519+00:00", "files": [|2026-05-02T20:46:53.309155+00:00
+- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 12, "updated_at": "2026-05-02T20:46:53.274787+00:00", "files": [{"|2026-05-02T20:46:53.275319+00:00
+- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-02T20:46:53.255963+00:00", "files": [{"|2026-05-02T20:46:53.256505+00:00
+- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T20:46:53.218951+00:00
+- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "s|2026-05-02T20:46:53.218855+00:00
+- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T20:46:53.218645+00:00
+- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T20:46:53.218557+00:00
+- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T20:46:53.218505+00:00
 
 ## SEARCH_SESSIONS
 - topic_500_search_session_-1003725299009|{"chat_id": "-1003725299009", "topic_id": 500, "goal": "найди запчасть OEM 34116794300 новый тормозной диск BMW в СПб", "criteria": {"category": "AUTO_PARTS", "target": "запчасть O|2026-05-01T20:57:33.559044+00:00
 
 ## TIMELINE_INFO
 - path=/root/.areal-neva-core/data/memory_files/CHATS/-1003725299009__telegram/timeline.jsonl
-- bytes=684543
-- mtime_utc=2026-05-02T20:43:30.419862+00:00
+- bytes=687292
+- mtime_utc=2026-05-02T21:02:24.401573+00:00
 
 ## GIT_STATUS_SAFE
-M docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
+M docs/REPORTS/CLAUDE_BOOTSTRAP_PENDING_PUSH.md
+ M docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
 ?? data/price_quotes/
 
 ## FILES_MANIFEST_SAFE
 - docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md|bytes=168322|sha256=0640b8349254cfb36f1143c1f195715014e2ca1b1b428943847fd1fd80d9d8fe
-- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md|bytes=37306|sha256=58122da47e47b675aab80a8f2bcf9ef5696c83cef8242d2634f563237ba9c406
-- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md|bytes=2013|sha256=596705b8629daf4b7a6a5c3144e17655b31344d62707ac9e2fce7021717cfac2
+- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md|bytes=37294|sha256=b1ae9b3feff9ef02c49a17dda1688ec9773452bb50a441be06ec06b705c0e563
+- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md|bytes=2013|sha256=f938cb96dc13337fe1aca50767c1e4315c41258ca351d8bfad362d41e96ab8dc
 - docs/CANON_FINAL/00_INDEX.md|bytes=808|sha256=999acb6bfdd6c7215f11d76342ea1b9f8cdf5715418064acb3716f33999c8af6
 - docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md|bytes=41018|sha256=dbd5f683361eafc258ab0822056f6c33f751e5581998dc420f79395d14863177
 - docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md|bytes=6714|sha256=1a439843e1eb214745752720c85b49adc48f1823765982960ce7b1e285947d84
