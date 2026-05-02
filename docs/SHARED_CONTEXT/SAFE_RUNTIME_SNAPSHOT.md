@@ -1,8 +1,8 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-02T09:44:23.879733+00:00
+generated_at_utc: 2026-05-02T10:14:24.852297+00:00
 git_branch: main
-git_head_short: affc142
-git_head_full: affc1426c592647635cdbfeadfb223e210b3627e
+git_head_short: 597c1f1
+git_head_full: 597c1f18ffc954eaa53034ff5926b9f503a50a36
 
 ## SERVICES
 - areal-task-worker: active
@@ -13,11 +13,30 @@ git_head_full: affc1426c592647635cdbfeadfb223e210b3627e
 ## CORE_DB_STATE_COUNTS
 - FAILED|2836
 - CANCELLED|758
-- DONE|427
+- DONE|433
 - ARCHIVED|381
 - OPEN_TASKS|0
 
 ## LATEST_TASKS_SAFE
+- af2ca8ad-cfae-4109-935e-c167bd83bd6a|210|text|DONE|[VOICE] Возьми это как образец|Файлы в этом топике уже есть. Нашёл релевантное:
+
+1. КЖ Цоколь 1.1.pdf
+ Тип: PRO|2026-05-02 09:59:37
+- 804884fa-c197-4dca-8e1d-5bbaec49e36f|210|text|DONE|[VOICE] Не как сметы, а как проектирование, я тебе говорю, проектирование.|Файлы в этом топике уже есть. Нашёл релевантное:
+
+1. Google Sheets / XLSX артефа|2026-05-02 09:54:29
+- fe299b1a-78ea-4e47-8e6e-f42067d17131|210|text|DONE|[VOICE] Последний файл, который я тебе скинул, ты взял как образец составления с|Принял
+Следующие файлы в этом топике приму как образцы сметы
+Если файл уже был в|2026-05-02 09:54:16
+- fb6aadc5-b372-488a-aede-f3433a030e55|210|text|DONE|[VOICE] Ну, принят в обработку, дальше что? Что с ним?|Файлы в этом топике уже есть. Нашёл релевантное:
+
+1. Google Sheets / XLSX артефа|2026-05-02 09:53:47
+- 5ead32f3-23d5-4872-9279-a42460ba5dd1|210|drive_file|DONE|{"file_id": "1qy-mPcmRZxJIzEnY2Gp8B8J2iY5Gwg-U", "file_name": "КЖ Цоколь 1.1.pdf|Проектный документ обработан
+Файл: КЖ Цоколь 1.1.pdf
+Раздел: КЖ — Конструкции же|2026-05-02 09:53:29
+- eeb0d013-704a-404c-9390-5a06c90ee976|210|text|DONE|[VOICE] Ну что, ты добавил это в образец, как делать проекты, да или нет?|Да. Вот результат по исходной задаче
+
+Файлы в этом топике уже есть. Нашёл релева|2026-05-02 09:51:17
 - 8c6074e8-6138-4d54-8574-cf3da6da0cf9|2|text|FAILED|Ну ты должен не сразу искать в интернете ты должна спросить нужно ли это мне|None|2026-05-02 08:56:30
 - 0568a7a8-2e73-4452-a493-78dfc359bd15|2|text|DONE|[VOICE] Итак, сейчас если я тебе скину несколько смет, ты возьмешь их в работу, |Принял
 Следующие файлы в этом топике приму как образцы сметы
@@ -26,40 +45,39 @@ git_head_full: affc1426c592647635cdbfeadfb223e210b3627e
 - 6bcb4ed5-5dc6-476b-ae87-2f28486b8a42|0|drive_file|CANCELLED|{"file_id": "1e6FDtuktDgZDEwK_XX93S0YbTZQu-fEf", "file_name": "tmps38ycrdw.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 08:29:57
 - eb29428e-a79b-4e62-b7bc-60d0015c2ac0|0|drive_file|CANCELLED|{"file_id": "1lwQ-64OYZ1qBmSMZ0pdNb_QjgRoEOyr7", "file_name": "tmpoun_2n8j.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 08:24:54
 - 716c881e-1f03-4687-84f0-28414a44a45d|0|drive_file|CANCELLED|{"file_id": "11O1La9IBS1OcE_rnS-s8H_Q7DcWsJsuV", "file_name": "tmpe2lqd1_t.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 08:19:53
-- c54822e8-a6cd-4021-9250-f74933a84f52|0|drive_file|CANCELLED|{"file_id": "1e4cH6r38ubNpgxp4EgsNDE5ogREWZlxl", "file_name": "tmp_xkqy8rk.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 08:14:50
-- b21e8acc-7a46-459d-a18c-ab8cb9e99592|0|drive_file|CANCELLED|{"file_id": "1X0mOre7RKu5CMhnEUbNUL_bAOROFA900", "file_name": "tmpz8ql1iyl.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 08:09:48
-- 152a73c3-cc82-4ade-a819-68e8dd58f188|2|text|FAILED|ответишь?|None|2026-05-02 08:05:34
-- 61aca230-a05a-4b0c-8d69-7118b96e6138|0|drive_file|CANCELLED|{"file_id": "10UJ8x2GXPaObeH3sQvLBOSH-P84-ga4N", "file_name": "tmp0n69ppc4.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 08:04:45
-- 1eb92aed-f978-47e4-8596-d26d261f036c|0|drive_file|CANCELLED|{"file_id": "1oSjI_2VrUnVYuPRAMlwC28gCgRV155BU", "file_name": "tmpr8nxdara.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 07:59:44
-- a2d270b2-6450-494d-b9f2-c41b2ffb352f|0|drive_file|CANCELLED|{"file_id": "1J0pomxumGIN9G2oS-vBy41OeZ5nRZC4C", "file_name": "tmpm24u1ate.txt",|Служебный файл синхронизации проигнорирован|2026-05-02 07:54:42
 
 ## MEMORY_DB_COUNTS
-- MEMORY_ROWS|5431
+- MEMORY_ROWS|5449
 
 ## LATEST_MEMORY_SAFE
-- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 39, "updated_at": "2026-05-02T09:16:33.887622+00:00", "files": [|2026-05-02T09:16:33.888136+00:00
-- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 11, "updated_at": "2026-05-02T09:16:33.852296+00:00", "files": [{"|2026-05-02T09:16:33.853598+00:00
-- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-02T09:16:33.826886+00:00", "files": [{"|2026-05-02T09:16:33.827620+00:00
-- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T09:16:33.782558+00:00
-- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "s|2026-05-02T09:16:33.782456+00:00
-- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T09:16:33.782205+00:00
-- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T09:16:33.782104+00:00
-- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T09:16:33.782033+00:00
-- topic_2_file_234e52f8-3ce8-4f2f-99c3-7cc22265a151|{"task_id": "234e52f8-3ce8-4f2f-99c3-7cc22265a151", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T09:16:33.781950+00:00
-- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_fil|2026-05-02T09:16:33.781840+00:00
-- topic_2_file_acecae89-87a8-42da-881a-db41cd0134e6|{"task_id": "acecae89-87a8-42da-881a-db41cd0134e6", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T09:16:33.781747+00:00
-- topic_2_file_a4956f79-592e-45e3-8f17-925366b5eb2f|{"task_id": "a4956f79-592e-45e3-8f17-925366b5eb2f", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T09:16:33.781628+00:00
+- topic_210_archive_af2ca8ad|{"task_id": "af2ca8ad-cfae-4109-935e-c167bd83bd6a", "chat_id": "-1003725299009", "topic_id": 210, "direction": "file_tec|2026-05-02T09:59:37.530419
+- topic_2_price_decision_awaiting|{"task_id": "verify_price_task", "raw_input": "сделай смету по образцу", "created_at": "2026-05-02T09:55:16.188786+00:00|2026-05-02T09:55:16.190082+00:00
+- topic_210_archive_804884fa|{"task_id": "804884fa-c197-4dca-8e1d-5bbaec49e36f", "chat_id": "-1003725299009", "topic_id": 210, "direction": "file_tec|2026-05-02T09:54:29.064296
+- topic_210_pending_file_intent|{"kind": "estimate", "mode": "template_batch", "price_mode": "", "raw_text": "[VOICE] Последний файл, который я тебе ски|2026-05-02T09:54:16.762720+00:00
+- topic_210_archive_fb6aadc5|{"task_id": "fb6aadc5-b372-488a-aede-f3433a030e55", "chat_id": "-1003725299009", "topic_id": 210, "direction": "file_tec|2026-05-02T09:53:47.802216
+- topic_2_price_decision_awaiting|{"task_id": "verify_price_task", "raw_input": "сделай смету по образцу", "created_at": "2026-05-02T09:53:08.997765+00:00|2026-05-02T09:53:08.999020+00:00
+- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 42, "updated_at": "2026-05-02T09:53:00.967148+00:00", "files": [|2026-05-02T09:53:00.968554+00:00
+- topic_210_file_content_status_5ead32f3-23d5-4872-9279-a42460ba5dd1|{"ok": true, "reason": "INDEXED", "key": "topic_210_file_content_5ead32f3-23d5-4872-9279-a42460ba5dd1", "dedup": false, |2026-05-02T09:53:00.923803
+- topic_210_file_5ead32f3-23d5-4872-9279-a42460ba5dd1|{"task_id": "5ead32f3-23d5-4872-9279-a42460ba5dd1", "chat_id": "-1003725299009", "topic_id": 210, "file_id": "1qy-mPcmRZ|2026-05-02T09:52:45.258094
+- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 11, "updated_at": "2026-05-02T09:46:33.910497+00:00", "files": [{"|2026-05-02T09:46:33.911238+00:00
+- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-02T09:46:33.887761+00:00", "files": [{"|2026-05-02T09:46:33.889012+00:00
+- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T09:46:33.845874+00:00
 
 ## SEARCH_SESSIONS
 - topic_500_search_session_-1003725299009|{"chat_id": "-1003725299009", "topic_id": 500, "goal": "найди запчасть OEM 34116794300 новый тормозной диск BMW в СПб", "criteria": {"category": "AUTO_PARTS", "target": "запчасть O|2026-05-01T20:57:33.559044+00:00
 
 ## TIMELINE_INFO
 - path=/root/.areal-neva-core/data/memory_files/CHATS/-1003725299009__telegram/timeline.jsonl
-- bytes=651161
-- mtime_utc=2026-05-02T08:55:24.113956+00:00
+- bytes=670076
+- mtime_utc=2026-05-02T09:59:37.533455+00:00
 
 ## GIT_STATUS_SAFE
-M docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
+M core/file_context_intake.py
+ M core/file_memory_bridge.py
+ M core/final_closure_engine.py
+ M core/output_sanitizer.py
+ M docs/REPORTS/CLAUDE_BOOTSTRAP_PENDING_PUSH.md
+ M docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
 ?? data/telegram_file_catalog/
 ?? data/templates/estimate_batch/
 ?? docs/REPORTS/areal-claude-bootstrap-aggregator.service.before.20260502_121121.txt
@@ -68,8 +86,8 @@ M docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
 
 ## FILES_MANIFEST_SAFE
 - docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md|bytes=168322|sha256=0640b8349254cfb36f1143c1f195715014e2ca1b1b428943847fd1fd80d9d8fe
-- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md|bytes=37551|sha256=be9797a606746c960af4cb1ee2c13bb307021f640b8317ea2cc0056fca152634
-- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md|bytes=2013|sha256=b43107036896b626e79a822bfa66e6f203039fbaac8df95ef645a4e1cebd3df7
+- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md|bytes=37508|sha256=6248709bbb827f41a17bf15847afadee0169897e3df7ce0c41d7bb3c34a4c859
+- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md|bytes=2013|sha256=eecd605dc23fa9e22216e761152f113cfeb99cd35110d7a1c632f2b000d5725c
 - docs/CANON_FINAL/00_INDEX.md|bytes=808|sha256=999acb6bfdd6c7215f11d76342ea1b9f8cdf5715418064acb3716f33999c8af6
 - docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md|bytes=41018|sha256=dbd5f683361eafc258ab0822056f6c33f751e5581998dc420f79395d14863177
 - docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md|bytes=6714|sha256=1a439843e1eb214745752720c85b49adc48f1823765982960ce7b1e285947d84
