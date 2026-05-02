@@ -766,3 +766,411 @@ except Exception:
     pass
 
 # === END_ESTIMATE_QUALITY_V41 ===
+
+
+# === GOOGLE_DRIVE_ESTIMATE_ARTIFACT_FULL_CLOSE_V1 ===
+# === ESTIMATE_NO_LINK_NO_SUCCESS_V1 ===
+# === ESTIMATE_UPLOAD_RETRY_UNIFIED_V1 ===
+_gdea_orig_excel = process_estimate_to_excel
+_gdea_orig_sheets = process_estimate_to_sheets
+_gdea_orig_text = generate_estimate_from_text
+
+def _gdea_first_link(links: dict) -> str:
+    for l in links.values():
+        if str(l).startswith("https://docs.google.com/spreadsheets"):
+            return str(l)
+    for l in links.values():
+        if str(l).startswith("http"):
+            return str(l)
+    return ""
+
+def _gdea_pdf_stub(xlsx_path: str, task_id: str) -> str:
+    import os, tempfile
+    from pathlib import Path as _P
+    out = _P(tempfile.gettempdir()) / f"estimate_{str(task_id)[:8]}_summary.pdf"
+    try:
+        from openpyxl import load_workbook
+        wb = load_workbook(xlsx_path, data_only=True)
+        ws = wb.active
+        rows = [" | ".join("" if v is None else str(v) for v in row)
+                for row in ws.iter_rows(max_row=40, values_only=True)]
+        wb.close()
+        text = "СМЕТА\n" + "\n".join(rows)
+    except Exception:
+        text = "СМЕТА\n" + os.path.basename(str(xlsx_path))
+    safe = text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")[:2000]
+    stream = f"BT /F1 10 Tf 40 800 Td ({safe}) Tj ET".encode("utf-8", errors="ignore")
+    pdf = (b"%PDF-1.4\n1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj\n"
+           b"2 0 obj<< /Type /Pages /Kids [3 0 R] /Count 1 >>endobj\n"
+           b"3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842]"
+           b" /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>endobj\n"
+           b"4 0 obj<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>endobj\n"
+           b"5 0 obj<< /Length " + str(len(stream)).encode() + b" >>stream\n"
+           + stream + b"\nendstream endobj\ntrailer<< /Root 1 0 R >>\n%%EOF")
+    out.write_bytes(pdf)
+    return str(out)
+
+def _gdea_finalize(data: dict, task_id: str, topic_id: int, prefer_sheets: bool = False) -> dict:
+    import os
+    if not isinstance(data, dict):
+        return {"success": False, "error": "ESTIMATE_RESULT_NOT_DICT"}
+    xlsx = str(data.get("excel_path") or data.get("xlsx_path") or data.get("artifact_path") or "")
+    existing_link = str(data.get("drive_link") or data.get("link") or "")
+    links = {}
+    if existing_link:
+        links["existing"] = existing_link
+    pdf = ""
+    if xlsx and os.path.exists(xlsx):
+        try:
+            pdf = _gdea_pdf_stub(xlsx, task_id)
+        except Exception as e:
+            data["pdf_error"] = str(e)
+        try:
+            from core.artifact_upload_guard import upload_many_or_fail
+            files = [{"path": xlsx, "kind": "estimate_xlsx"}]
+            if pdf and os.path.exists(pdf):
+                files.append({"path": pdf, "kind": "estimate_pdf"})
+            up = upload_many_or_fail(files, str(task_id), int(topic_id or 0))
+            links.update(up.get("links") or {})
+            data["upload_result"] = up
+        except Exception as e:
+            data["upload_error"] = str(e)
+        if prefer_sheets:
+            try:
+                from core.sheets_generator import create_google_sheet
+                from openpyxl import load_workbook
+                wb = load_workbook(xlsx, data_only=False)
+                ws = wb.active
+                rows = [[cell.value for cell in row] for row in ws.iter_rows()]
+                wb.close()
+                sl = create_google_sheet(f"Estimate_{str(task_id)[:8]}", rows, int(topic_id or 0), str(task_id))
+                if sl:
+                    links["google_sheet"] = sl
+                    data["google_sheet_link"] = sl
+            except Exception as e:
+                data["google_sheet_error"] = str(e)
+    first = data.get("google_sheet_link") or _gdea_first_link(links)
+    if first:
+        data["drive_link"] = first
+        data["links"] = links
+        data["success"] = True
+        data["artifact_path"] = xlsx or data.get("artifact_path")
+        if pdf:
+            extras = data.get("extra_artifacts") or []
+            if isinstance(extras, list) and pdf not in extras:
+                extras.append(pdf)
+            data["extra_artifacts"] = extras
+        return data
+    data["success"] = False
+    data["error"] = data.get("error") or "ESTIMATE_NO_LINK_NO_SUCCESS_V1:NO_DRIVE_TELEGRAM_OR_RETRY_LINK"
+    return data
+
+async def process_estimate_to_excel(file_path: str, task_id: str, topic_id: int):
+    data = await _gdea_orig_excel(file_path, task_id, topic_id)
+    return _gdea_finalize(data, task_id, topic_id, prefer_sheets=False)
+
+async def process_estimate_to_sheets(file_path: str, task_id: str, topic_id: int):
+    data = await _gdea_orig_excel(file_path, task_id, topic_id)
+    return _gdea_finalize(data, task_id, topic_id, prefer_sheets=True)
+
+async def generate_estimate_from_text(raw_input: str, task_id: str, topic_id: int = 0):
+    data = await _gdea_orig_text(raw_input, task_id, topic_id)
+    return _gdea_finalize(data, task_id, topic_id, prefer_sheets=True)
+# === END_ESTIMATE_UPLOAD_RETRY_UNIFIED_V1 ===
+# === END_ESTIMATE_NO_LINK_NO_SUCCESS_V1 ===
+# === END_GOOGLE_DRIVE_ESTIMATE_ARTIFACT_FULL_CLOSE_V1 ===
+
+
+# === REAL_GAPS_CLOSE_V2_ESTIMATE ===
+# === ESTIMATE_RESULT_VALIDATOR_V1 ===
+# === ESTIMATE_NO_LLM_CALC_GUARD_V1 ===
+# === ESTIMATE_TEMPLATE_STRICT_REUSE_V1 ===
+
+import os as _rgc2_os
+import re as _rgc2_re
+import sqlite3 as _rgc2_sqlite3
+
+_CORE_DB_RGC2 = "/root/.areal-neva-core/data/core.db"
+
+def _rgc2_resolve_task_context(task_id: str, fallback_topic_id: int = 0) -> dict:
+    try:
+        with _rgc2_sqlite3.connect(_CORE_DB_RGC2, timeout=10) as _c:
+            _c.row_factory = _rgc2_sqlite3.Row
+            _r = _c.execute(
+                "SELECT chat_id, COALESCE(topic_id, ?) AS topic_id FROM tasks WHERE id=? LIMIT 1",
+                (int(fallback_topic_id or 0), str(task_id)),
+            ).fetchone()
+            if _r:
+                return {
+                    "chat_id": str(_r["chat_id"] or ""),
+                    "topic_id": int(_r["topic_id"] or fallback_topic_id or 0),
+                }
+    except Exception:
+        pass
+    return {"chat_id": "", "topic_id": int(fallback_topic_id or 0)}
+
+def _rgc2_retry_exists(task_id: str) -> bool:
+    try:
+        with _rgc2_sqlite3.connect(_CORE_DB_RGC2, timeout=10) as _c:
+            _c.execute("""CREATE TABLE IF NOT EXISTS upload_retry_queue(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                path TEXT,
+                task_id TEXT,
+                topic_id INTEGER,
+                kind TEXT,
+                attempts INTEGER DEFAULT 0,
+                last_error TEXT,
+                created_at TEXT DEFAULT (datetime('now')),
+                last_attempt TEXT
+            )""")
+            _r = _c.execute(
+                "SELECT 1 FROM upload_retry_queue WHERE task_id=? LIMIT 1",
+                (str(task_id),),
+            ).fetchone()
+            return bool(_r)
+    except Exception:
+        return False
+
+def _rgc2_links(result: dict) -> list:
+    links = []
+    if not isinstance(result, dict):
+        return links
+    for k in ("drive_link", "link", "google_sheet_link", "pdf_link", "xlsx_link", "manifest_link", "telegram_link"):
+        v = result.get(k)
+        if isinstance(v, str) and v.startswith("http"):
+            links.append(v)
+    for v in (result.get("links") or {}).values() if isinstance(result.get("links"), dict) else []:
+        if isinstance(v, str) and v.startswith("http"):
+            links.append(v)
+    up = result.get("upload_result")
+    if isinstance(up, dict):
+        for v in (up.get("links") or {}).values() if isinstance(up.get("links"), dict) else []:
+            if isinstance(v, str) and v.startswith("http"):
+                links.append(v)
+    return list(dict.fromkeys(links))
+
+def _rgc2_best_link(result: dict) -> str:
+    links = _rgc2_links(result)
+    for l in links:
+        if "docs.google.com/spreadsheets" in l:
+            return l
+    for l in links:
+        if "drive.google.com" in l or "docs.google.com" in l:
+            return l
+    return links[0] if links else ""
+
+def _rgc2_has_llm_arithmetic(text: str) -> bool:
+    s = str(text or "")
+    return bool(_rgc2_re.search(r"\b\d[\d\s.,]*\s*[xх×*]\s*\d[\d\s.,]*\s*=\s*\d[\d\s.,]*\b", s, _rgc2_re.I))
+
+def validate_estimate_result(result: dict, task_id: str = "") -> dict:
+    if not isinstance(result, dict):
+        return {"ok": False, "reason": "ESTIMATE_RESULT_NOT_DICT"}
+
+    excel = str(result.get("excel_path") or result.get("xlsx_path") or result.get("artifact_path") or "")
+    error = str(result.get("error") or "")
+    links = _rgc2_links(result)
+    queued = bool(isinstance(result.get("upload_result"), dict) and result["upload_result"].get("queued")) or _rgc2_retry_exists(task_id)
+
+    if error and not links and not excel and not queued:
+        return {"ok": False, "reason": "ESTIMATE_ENGINE_ERROR:" + error[:200]}
+
+    if excel:
+        if not _rgc2_os.path.exists(excel):
+            return {"ok": False, "reason": "ESTIMATE_EXCEL_FILE_MISSING"}
+        try:
+            from openpyxl import load_workbook
+            wb = load_workbook(excel, data_only=False)
+            ws = wb.active
+            data_rows = [
+                row for row in ws.iter_rows(min_row=2, values_only=False)
+                if any(c.value is not None for c in row)
+            ]
+            has_formula = any(str(c.value or "").startswith("=") for row in data_rows for c in row)
+            wb.close()
+            if not data_rows:
+                return {"ok": False, "reason": "ESTIMATE_EXCEL_ZERO_DATA_ROWS"}
+            if not has_formula:
+                return {"ok": False, "reason": "ESTIMATE_EXCEL_NO_FORMULAS"}
+        except Exception as e:
+            return {"ok": False, "reason": "ESTIMATE_EXCEL_VALIDATE_ERR:" + str(e)[:200]}
+
+    if not links and not queued:
+        return {"ok": False, "reason": "ESTIMATE_NO_CONFIRMED_LINK_OR_RETRY"}
+
+    if result.get("success") is True and not links and not queued:
+        return {"ok": False, "reason": "ESTIMATE_SUCCESS_WITHOUT_LINK_OR_RETRY_FORBIDDEN"}
+
+    return {"ok": True, "reason": "OK"}
+
+def _rgc2_get_active_estimate_template(chat_id: str, topic_id: int) -> dict:
+    try:
+        from core.sample_template_engine import _load_active_template
+        return _load_active_template("estimate", str(chat_id), int(topic_id or 0)) or {}
+    except Exception:
+        return {}
+
+def should_use_estimate_template(chat_id: str, topic_id: int) -> bool:
+    return bool(_rgc2_get_active_estimate_template(str(chat_id), int(topic_id or 0)))
+
+_rgc2_orig_excel = process_estimate_to_excel
+_rgc2_orig_sheets = process_estimate_to_sheets
+_rgc2_orig_text = generate_estimate_from_text
+
+def _rgc2_make_pdf_stub(xlsx_path: str, task_id: str) -> str:
+    import tempfile
+    from pathlib import Path as _P
+    out = _P(tempfile.gettempdir()) / ("estimate_" + str(task_id)[:8] + "_summary.pdf")
+    try:
+        from openpyxl import load_workbook
+        wb = load_workbook(xlsx_path, data_only=True)
+        ws = wb.active
+        rows = [
+            " | ".join("" if v is None else str(v) for v in row)
+            for row in ws.iter_rows(max_row=40, values_only=True)
+        ]
+        wb.close()
+        text = "СМЕТА\n" + "\n".join(rows)
+    except Exception:
+        text = "СМЕТА\n" + _rgc2_os.path.basename(str(xlsx_path))
+    safe = text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")[:2000]
+    stream = ("BT /F1 10 Tf 40 800 Td (" + safe + ") Tj ET").encode("utf-8", errors="ignore")
+    out.write_bytes(
+        b"%PDF-1.4\n1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj\n"
+        b"2 0 obj<< /Type /Pages /Kids [3 0 R] /Count 1 >>endobj\n"
+        b"3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>endobj\n"
+        b"4 0 obj<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>endobj\n"
+        b"5 0 obj<< /Length " + str(len(stream)).encode() + b" >>stream\n"
+        + stream + b"\nendstream endobj\ntrailer<< /Root 1 0 R >>\n%%EOF"
+    )
+    return str(out)
+
+def _rgc2_finalize(data: dict, task_id: str, topic_id: int, prefer_sheets: bool = False) -> dict:
+    if not isinstance(data, dict):
+        return {"success": False, "error": "ESTIMATE_RESULT_NOT_DICT"}
+
+    excel = str(data.get("excel_path") or data.get("xlsx_path") or data.get("artifact_path") or "")
+    links = {}
+    for l in _rgc2_links(data):
+        links["existing_" + str(len(links) + 1)] = l
+
+    pdf = ""
+    if excel and _rgc2_os.path.exists(excel):
+        try:
+            pdf = _rgc2_make_pdf_stub(excel, task_id)
+        except Exception as e:
+            data["pdf_error"] = str(e)
+
+        try:
+            from core.artifact_upload_guard import upload_many_or_fail
+            files = [{"path": excel, "kind": "estimate_xlsx"}]
+            if pdf and _rgc2_os.path.exists(pdf):
+                files.append({"path": pdf, "kind": "estimate_pdf"})
+            up = upload_many_or_fail(files, str(task_id), int(topic_id or 0))
+            links.update(up.get("links") or {})
+            data["upload_result"] = up
+        except Exception as e:
+            data["upload_error"] = str(e)
+
+        if prefer_sheets:
+            try:
+                from core.sheets_generator import create_google_sheet
+                from openpyxl import load_workbook
+                wb = load_workbook(excel, data_only=False)
+                ws = wb.active
+                rows = [[cell.value for cell in row] for row in ws.iter_rows()]
+                wb.close()
+                sl = create_google_sheet("Estimate_" + str(task_id)[:8], rows, int(topic_id or 0), str(task_id))
+                if sl:
+                    links["google_sheet"] = sl
+                    data["google_sheet_link"] = sl
+            except Exception as e:
+                data["google_sheet_error"] = str(e)
+
+    if links:
+        data["links"] = {**(data.get("links") or {}), **links} if isinstance(data.get("links"), dict) else links
+
+    first = data.get("google_sheet_link") or _rgc2_best_link(data)
+    if first:
+        data["drive_link"] = first
+        data["success"] = True
+        data["artifact_path"] = excel or data.get("artifact_path")
+        if pdf:
+            extras = data.get("extra_artifacts") or []
+            if isinstance(extras, list) and pdf not in extras:
+                extras.append(pdf)
+            data["extra_artifacts"] = extras
+    else:
+        data["success"] = False
+        data["error"] = data.get("error") or "ESTIMATE_NO_LINK_NO_SUCCESS_V1:NO_DRIVE_TELEGRAM_OR_RETRY_LINK"
+
+    vr = validate_estimate_result(data, task_id=str(task_id))
+    data["estimate_validator"] = vr
+    if not vr.get("ok"):
+        data["success"] = False
+        data["validator_reason"] = vr.get("reason")
+    return data
+
+async def process_estimate_to_excel(file_path: str, task_id: str, topic_id: int):
+    data = await _rgc2_orig_excel(file_path, task_id, topic_id)
+    return _rgc2_finalize(data, task_id, topic_id, prefer_sheets=False)
+
+async def process_estimate_to_sheets(file_path: str, task_id: str, topic_id: int):
+    try:
+        data = await _rgc2_orig_sheets(file_path, task_id, topic_id)
+    except Exception:
+        data = await _rgc2_orig_excel(file_path, task_id, topic_id)
+    return _rgc2_finalize(data, task_id, topic_id, prefer_sheets=True)
+
+async def generate_estimate_from_text(raw_input: str, task_id: str, topic_id: int = 0, chat_id: str = ""):
+    ctx = _rgc2_resolve_task_context(str(task_id), int(topic_id or 0))
+    if not chat_id:
+        chat_id = ctx.get("chat_id") or ""
+    topic_id = int(ctx.get("topic_id") or topic_id or 0)
+
+    if _rgc2_has_llm_arithmetic(raw_input):
+        try:
+            logger.warning("ESTIMATE_NO_LLM_CALC_GUARD_V1_INPUT_ARITHMETIC task=%s", task_id)
+        except Exception:
+            pass
+
+    if chat_id:
+        tpl = _rgc2_get_active_estimate_template(str(chat_id), int(topic_id or 0))
+        if tpl:
+            try:
+                from core.sample_template_engine import create_estimate_from_saved_template
+                result = await create_estimate_from_saved_template(
+                    raw_input=str(raw_input),
+                    task_id=str(task_id),
+                    chat_id=str(chat_id),
+                    topic_id=int(topic_id or 0),
+                )
+                if isinstance(result, dict) and (result.get("pdf_link") or result.get("xlsx_link") or result.get("drive_link") or result.get("excel_path")):
+                    return _rgc2_finalize(result, task_id, topic_id, prefer_sheets=True)
+                return {
+                    "success": False,
+                    "state": "WAITING_CLARIFICATION",
+                    "error": "ESTIMATE_TEMPLATE_STRICT_REUSE_V1:TEMPLATE_NOT_APPLICABLE",
+                    "result_text": "Активный шаблон сметы найден, но не подошёл к запросу. Уточни состав работ, объёмы или замени шаблон.",
+                }
+            except Exception as e:
+                return {
+                    "success": False,
+                    "state": "WAITING_CLARIFICATION",
+                    "error": "ESTIMATE_TEMPLATE_STRICT_REUSE_V1:ERROR:" + str(e)[:200],
+                    "result_text": "Активный шаблон сметы найден, но применить его не удалось. Уточни параметры или замени шаблон.",
+                }
+
+    data = await _rgc2_orig_text(raw_input, task_id, topic_id)
+    result_text = " ".join(str(data.get(k) or "") for k in ("result", "result_text", "message", "summary")) if isinstance(data, dict) else str(data)
+    if _rgc2_has_llm_arithmetic(result_text) and not (isinstance(data, dict) and (data.get("excel_path") or data.get("artifact_path"))):
+        return {
+            "success": False,
+            "error": "ESTIMATE_NO_LLM_CALC_GUARD_V1:TEXT_CALC_WITHOUT_PYTHON_ARTIFACT",
+            "result_text": "Смета не принята: обнаружен текстовый расчёт без Python/OpenPyXL артефакта.",
+        }
+    return _rgc2_finalize(data, task_id, topic_id, prefer_sheets=True)
+# === END_ESTIMATE_TEMPLATE_STRICT_REUSE_V1 ===
+# === END_ESTIMATE_NO_LLM_CALC_GUARD_V1 ===
+# === END_ESTIMATE_RESULT_VALIDATOR_V1 ===
+# === END_REAL_GAPS_CLOSE_V2_ESTIMATE ===

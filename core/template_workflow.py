@@ -271,3 +271,90 @@ def maybe_handle_template_workflow(conn: sqlite3.Connection, task: sqlite3.Row, 
 # === END_TEMPLATE_SCOPE_ENFORCER_V1 ===
 # === END_TECHNADZOR_ACT_TEMPLATE_WORKFLOW_V1 ===
 # === END_PROJECT_TEMPLATE_WORKFLOW_FULL_CLOSE_V1 ===
+
+
+# === PROJECT_DWG_TEMPLATE_REUSE_V2 ===
+async def async_apply_template(chat_id: str, topic_id: int, domain: str, user_text: str) -> Optional[Dict[str, Any]]:
+    tpl = _load_active_template(chat_id, topic_id, domain)
+    if not tpl:
+        return {
+            "handled": True,
+            "state": "WAITING_CLARIFICATION",
+            "result": f"Активный шаблон {domain} не найден. Пришли файл и напиши: возьми это как образец",
+            "event": f"{domain.upper()}_TEMPLATE_APPLY:NO_TEMPLATE",
+        }
+
+    tid = _safe(tpl.get("template_id") or "tpl")
+    source_text = _s(tpl.get("source_raw_input") or tpl.get("source_result"), 3000)
+
+    if domain == "project":
+        try:
+            from core.project_engine import create_project_pdf_dxf_artifact
+            combined = str(user_text or "") + " " + str(source_text or "")
+            result = await create_project_pdf_dxf_artifact(
+                raw_input=combined,
+                task_id="tpl_" + tid,
+                topic_id=int(topic_id or 0),
+                template_hint=_s(tpl.get("source_raw_input"), 500),
+                require_template=False,
+            )
+            if result and result.get("success") and result.get("artifact_path"):
+                link = result.get("drive_link") or ""
+                if not link:
+                    try:
+                        from core.artifact_upload_guard import upload_many_or_fail
+                        up = upload_many_or_fail(
+                            [{"path": result["artifact_path"], "kind": "project_template_package"}],
+                            "tpl_" + tid,
+                            int(topic_id or 0),
+                        )
+                        link = list((up.get("links") or {}).values())[0] if up.get("links") else ""
+                    except Exception:
+                        pass
+                res_text = "Проект создан по сохранённому шаблону"
+                res_text += "\nПакет: " + str(result.get("artifact_path", ""))
+                res_text += "\nDrive: " + (link or "не подтверждён")
+                if result.get("region_detected"):
+                    res_text += "\nРегион нагрузок: " + str(result.get("region_detected"))
+                return {
+                    "handled": True,
+                    "state": "AWAITING_CONFIRMATION",
+                    "result": res_text,
+                    "artifact_path": result.get("artifact_path"),
+                    "drive_link": link,
+                    "event": "PROJECT_DWG_TEMPLATE_REUSE_V2:APPLIED_REAL_ENGINE",
+                }
+            err = (result or {}).get("error") or "PROJECT_ENGINE_RETURNED_NO_ARTIFACT"
+            return {
+                "handled": True,
+                "state": "FAILED",
+                "result": "",
+                "error": "PROJECT_DWG_TEMPLATE_REUSE_V2:ENGINE_FAILED:" + str(err)[:200],
+                "event": "PROJECT_DWG_TEMPLATE_REUSE_V2:ENGINE_FAILED",
+            }
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning("PROJECT_DWG_TEMPLATE_REUSE_V2_ERR %s", e)
+            return {
+                "handled": True,
+                "state": "FAILED",
+                "result": "",
+                "error": "PROJECT_DWG_TEMPLATE_REUSE_V2:EXCEPTION:" + str(e)[:200],
+                "event": "PROJECT_DWG_TEMPLATE_REUSE_V2:EXCEPTION",
+            }
+
+    return apply_template(chat_id, topic_id, domain, user_text)
+
+async def maybe_handle_template_workflow_async(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str, topic_id: int) -> Optional[Dict[str, Any]]:
+    raw = _s(task["raw_input"] if "raw_input" in task.keys() else "")
+    clean = re.sub(r"^\s*\[VOICE\]\s*", "", raw, flags=re.I).strip()
+    low = clean.lower()
+    domain = _detect_domain(low)
+    if not domain:
+        return None
+    if _is_save_template(low):
+        return save_template(conn, chat_id, topic_id, domain, task, clean)
+    if _is_apply_template(low):
+        return await async_apply_template(chat_id, topic_id, domain, clean)
+    return None
+# === END_PROJECT_DWG_TEMPLATE_REUSE_V2 ===

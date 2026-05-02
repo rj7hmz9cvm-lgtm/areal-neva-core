@@ -42,6 +42,12 @@ except Exception as _canon_import_err:
     save_dialog_event = None
     maybe_handle_template_workflow = None
 # === END_CANON_REMAINING_CODE_FULL_CLOSE_V1_IMPORT ===
+# === REAL_GAPS_CLOSE_V2_IMPORT_ASYNC_TEMPLATE ===
+try:
+    from core.template_workflow import maybe_handle_template_workflow_async
+except Exception:
+    maybe_handle_template_workflow_async = None
+# === END_REAL_GAPS_CLOSE_V2_IMPORT_ASYNC_TEMPLATE ===
 # === SEARCH_MONOLITH_V2_TASK_WORKER_IMPORT ===
 try:
     from core.search_session import is_search_clarification_output as _search_v2_is_clarification
@@ -1380,6 +1386,34 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
         logger.error("FILE_TECH_CONTOUR_FOLLOWUP_V2_ERR task=%s err=%s", task_id, _ft_e)
     # === END FILE_TECH_CONTOUR_FOLLOWUP_V2 ===
     # === ACTIVE_DIALOG_STATE_V1_TASK_WORKER_HOOK ===
+    # === ASYNC_TEMPLATE_WORKFLOW_HOOK_V2 ===
+    try:
+        if maybe_handle_template_workflow_async is not None:
+            _async_tpl = await maybe_handle_template_workflow_async(conn, task, chat_id, topic_id)
+            if _async_tpl and _async_tpl.get("handled"):
+                _async_state = str(_async_tpl.get("state") or "DONE")
+                _async_result = str(_async_tpl.get("result") or "")
+                _async_error = str(_async_tpl.get("error") or "")
+                _update_task(
+                    conn,
+                    task_id,
+                    state=_async_state,
+                    result=_async_result,
+                    error_message=_async_error,
+                )
+                _history(conn, task_id, str(_async_tpl.get("event") or "ASYNC_TEMPLATE_WORKFLOW_HOOK_V2:DONE"))
+                try:
+                    _reply_to = None
+                    if "reply_to_message_id" in task.keys():
+                        _reply_to = task["reply_to_message_id"]
+                    _send_text = _async_result or _async_error or "Задача обработана через шаблон"
+                    _send_once_ex(conn, task_id, chat_id, _send_text, _reply_to, "async_template")
+                except Exception as _async_send_e:
+                    logger.warning("ASYNC_TEMPLATE_WORKFLOW_HOOK_V2_SEND_ERR task=%s err=%s", task_id, _async_send_e)
+                return
+    except Exception as _async_tpl_e:
+        logger.warning("ASYNC_TEMPLATE_WORKFLOW_HOOK_V2_ERR task=%s err=%s", task_id, _async_tpl_e)
+    # === END_ASYNC_TEMPLATE_WORKFLOW_HOOK_V2 ===
     try:
         for _canon_handler in (maybe_handle_template_workflow, maybe_handle_active_dialog):
             if _canon_handler is None:
@@ -1783,6 +1817,34 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
 
                     # === RESULT_VALIDATOR_GUARD_V1 ===
                     if _check_result_before_confirm(_ff13c_strip_manifest_links(_msg)):
+                        # === TASK_WORKER_ARTIFACT_GATE_V1 ===
+                        try:
+                            if validate_engine_result is not None:
+                                _twag_raw = ""
+                                _twag_input_type = ""
+                                try:
+                                    _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                                except Exception:
+                                    _twag_raw = ""
+                                try:
+                                    _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
+                                except Exception:
+                                    _twag_input_type = ""
+                                _twag_result = _ff13c_strip_manifest_links(_msg)
+                                _twag_check = validate_engine_result(
+                                    {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
+                                    input_type=_twag_input_type,
+                                    user_text=_twag_raw,
+                                    topic_id=topic_id,
+                                )
+                                if not _twag_check.get("ok"):
+                                    _update_task(conn, task_id, state="FAILED", result="",
+                                        error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
+                                    _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
+                                    return
+                        except Exception as _twag_e:
+                            logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
+                        # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
                         _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
                     else:
                         _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message="FORBIDDEN_PHRASE")
@@ -1810,6 +1872,34 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
             _msg = str(_ff10_res.get("message") or "")
             # === RESULT_VALIDATOR_GUARD_V1 ===
             if _check_result_before_confirm(_ff13c_strip_manifest_links(_msg)):
+                # === TASK_WORKER_ARTIFACT_GATE_V1 ===
+                try:
+                    if validate_engine_result is not None:
+                        _twag_raw = ""
+                        _twag_input_type = ""
+                        try:
+                            _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                        except Exception:
+                            _twag_raw = ""
+                        try:
+                            _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
+                        except Exception:
+                            _twag_input_type = ""
+                        _twag_result = _ff13c_strip_manifest_links(_msg)
+                        _twag_check = validate_engine_result(
+                            {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
+                            input_type=_twag_input_type,
+                            user_text=_twag_raw,
+                            topic_id=topic_id,
+                        )
+                        if not _twag_check.get("ok"):
+                            _update_task(conn, task_id, state="FAILED", result="",
+                                error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
+                            _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
+                            return
+                except Exception as _twag_e:
+                    logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
+                # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
                 _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
             else:
                 _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message="FORBIDDEN_PHRASE")
@@ -1898,6 +1988,34 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
 
             # === RESULT_VALIDATOR_GUARD_V1 ===
             if _check_result_before_confirm(_ff13c_strip_manifest_links(_msg)):
+                # === TASK_WORKER_ARTIFACT_GATE_V1 ===
+                try:
+                    if validate_engine_result is not None:
+                        _twag_raw = ""
+                        _twag_input_type = ""
+                        try:
+                            _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                        except Exception:
+                            _twag_raw = ""
+                        try:
+                            _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
+                        except Exception:
+                            _twag_input_type = ""
+                        _twag_result = _ff13c_strip_manifest_links(_msg)
+                        _twag_check = validate_engine_result(
+                            {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
+                            input_type=_twag_input_type,
+                            user_text=_twag_raw,
+                            topic_id=topic_id,
+                        )
+                        if not _twag_check.get("ok"):
+                            _update_task(conn, task_id, state="FAILED", result="",
+                                error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
+                            _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
+                            return
+                except Exception as _twag_e:
+                    logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
+                # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
                 _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
             else:
                 _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message="FORBIDDEN_PHRASE")
@@ -1946,6 +2064,34 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
 
                 # === RESULT_VALIDATOR_GUARD_V1 ===
                 if _check_result_before_confirm(_ff07_msg):
+                    # === TASK_WORKER_ARTIFACT_GATE_V1 ===
+                    try:
+                        if validate_engine_result is not None:
+                            _twag_raw = ""
+                            _twag_input_type = ""
+                            try:
+                                _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                            except Exception:
+                                _twag_raw = ""
+                            try:
+                                _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
+                            except Exception:
+                                _twag_input_type = ""
+                            _twag_result = _ff07_msg
+                            _twag_check = validate_engine_result(
+                                {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
+                                input_type=_twag_input_type,
+                                user_text=_twag_raw,
+                                topic_id=topic_id,
+                            )
+                            if not _twag_check.get("ok"):
+                                _update_task(conn, task_id, state="FAILED", result="",
+                                    error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
+                                _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
+                                return
+                    except Exception as _twag_e:
+                        logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
+                    # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
                     _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff07_msg, error_message="")
                 else:
                     _update_task(conn, task_id, state="FAILED", result=_ff07_msg, error_message="FORBIDDEN_PHRASE")
@@ -2007,6 +2153,34 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
             )
             # === RESULT_VALIDATOR_GUARD_V1 ===
             if _check_result_before_confirm(_ff13c_strip_manifest_links(_msg)):
+                # === TASK_WORKER_ARTIFACT_GATE_V1 ===
+                try:
+                    if validate_engine_result is not None:
+                        _twag_raw = ""
+                        _twag_input_type = ""
+                        try:
+                            _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                        except Exception:
+                            _twag_raw = ""
+                        try:
+                            _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
+                        except Exception:
+                            _twag_input_type = ""
+                        _twag_result = _ff13c_strip_manifest_links(_msg)
+                        _twag_check = validate_engine_result(
+                            {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
+                            input_type=_twag_input_type,
+                            user_text=_twag_raw,
+                            topic_id=topic_id,
+                        )
+                        if not _twag_check.get("ok"):
+                            _update_task(conn, task_id, state="FAILED", result="",
+                                error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
+                            _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
+                            return
+                except Exception as _twag_e:
+                    logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
+                # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
                 _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
             else:
                 _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message="FORBIDDEN_PHRASE")
@@ -2033,6 +2207,34 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
         ask = f"Понял назначение чата так:\n{role}\n\nПодтверди или уточни"
         # === RESULT_VALIDATOR_GUARD_V1 ===
         if _check_result_before_confirm(ask):
+            # === TASK_WORKER_ARTIFACT_GATE_V1 ===
+            try:
+                if validate_engine_result is not None:
+                    _twag_raw = ""
+                    _twag_input_type = ""
+                    try:
+                        _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                    except Exception:
+                        _twag_raw = ""
+                    try:
+                        _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
+                    except Exception:
+                        _twag_input_type = ""
+                    _twag_result = ask
+                    _twag_check = validate_engine_result(
+                        {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
+                        input_type=_twag_input_type,
+                        user_text=_twag_raw,
+                        topic_id=topic_id,
+                    )
+                    if not _twag_check.get("ok"):
+                        _update_task(conn, task_id, state="FAILED", result="",
+                            error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
+                        _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
+                        return
+            except Exception as _twag_e:
+                logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
+            # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
             _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=ask, error_message="")
         else:
             _update_task(conn, task_id, state="FAILED", result=ask, error_message="FORBIDDEN_PHRASE")
@@ -2148,6 +2350,34 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
 
             # === RESULT_VALIDATOR_GUARD_V1 ===
             if _check_result_before_confirm(_ff13c_strip_manifest_links(_msg)):
+                # === TASK_WORKER_ARTIFACT_GATE_V1 ===
+                try:
+                    if validate_engine_result is not None:
+                        _twag_raw = ""
+                        _twag_input_type = ""
+                        try:
+                            _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                        except Exception:
+                            _twag_raw = ""
+                        try:
+                            _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
+                        except Exception:
+                            _twag_input_type = ""
+                        _twag_result = _ff13c_strip_manifest_links(_msg)
+                        _twag_check = validate_engine_result(
+                            {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
+                            input_type=_twag_input_type,
+                            user_text=_twag_raw,
+                            topic_id=topic_id,
+                        )
+                        if not _twag_check.get("ok"):
+                            _update_task(conn, task_id, state="FAILED", result="",
+                                error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
+                            _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
+                            return
+                except Exception as _twag_e:
+                    logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
+                # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
                 _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
             else:
                 _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message="FORBIDDEN_PHRASE")
@@ -2848,6 +3078,34 @@ async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_
             except Exception as _uv_e:
                 logger.warning("UNIFIED_ENGINE_RESULT_VALIDATOR_V1_ERR task=%s err=%s", task_id, _uv_e)
             # === END_UNIFIED_ENGINE_RESULT_VALIDATOR_V1_TASK_WORKER_AI_RESULT ===
+            # === TASK_WORKER_ARTIFACT_GATE_V1 ===
+            try:
+                if validate_engine_result is not None:
+                    _twag_raw = ""
+                    _twag_input_type = ""
+                    try:
+                        _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                    except Exception:
+                        _twag_raw = ""
+                    try:
+                        _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
+                    except Exception:
+                        _twag_input_type = ""
+                    _twag_result = ai_result
+                    _twag_check = validate_engine_result(
+                        {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
+                        input_type=_twag_input_type,
+                        user_text=_twag_raw,
+                        topic_id=topic_id,
+                    )
+                    if not _twag_check.get("ok"):
+                        _update_task(conn, task_id, state="FAILED", result="",
+                            error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
+                        _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
+                        return
+            except Exception as _twag_e:
+                logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
+            # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
             _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=ai_result, error_message="")
         else:
             _update_task(conn, task_id, state="FAILED", result=ai_result, error_message="FORBIDDEN_PHRASE")
@@ -3113,6 +3371,34 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
                 _dupe_msg = duplicate_message(_dupe, file_name)
                 # === RESULT_VALIDATOR_GUARD_V1 ===
                 if _check_result_before_confirm(_dupe_msg):
+                    # === TASK_WORKER_ARTIFACT_GATE_V1 ===
+                    try:
+                        if validate_engine_result is not None:
+                            _twag_raw = ""
+                            _twag_input_type = ""
+                            try:
+                                _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                            except Exception:
+                                _twag_raw = ""
+                            try:
+                                _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
+                            except Exception:
+                                _twag_input_type = ""
+                            _twag_result = _dupe_msg
+                            _twag_check = validate_engine_result(
+                                {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
+                                input_type=_twag_input_type,
+                                user_text=_twag_raw,
+                                topic_id=topic_id,
+                            )
+                            if not _twag_check.get("ok"):
+                                _update_task(conn, task_id, state="FAILED", result="",
+                                    error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
+                                _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
+                                return
+                    except Exception as _twag_e:
+                        logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
+                    # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
                     _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_dupe_msg, error_message="")
                 else:
                     _update_task(conn, task_id, state="FAILED", result=_dupe_msg, error_message="FORBIDDEN_PHRASE")
@@ -3160,6 +3446,34 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
                 _fir_result = await route_file(local_path, task_id, int(topic_id or 0), _fir_intent)
                 if _fir_result and _fir_result.get("success"):
                     _fir_msg = _fir_result.get("result_text") or _fir_result.get("drive_link") or "Готово"
+                    # === TASK_WORKER_ARTIFACT_GATE_V1 ===
+                    try:
+                        if validate_engine_result is not None:
+                            _twag_raw = ""
+                            _twag_input_type = ""
+                            try:
+                                _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                            except Exception:
+                                _twag_raw = ""
+                            try:
+                                _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
+                            except Exception:
+                                _twag_input_type = ""
+                            _twag_result = _fir_msg
+                            _twag_check = validate_engine_result(
+                                {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
+                                input_type=_twag_input_type,
+                                user_text=_twag_raw,
+                                topic_id=topic_id,
+                            )
+                            if not _twag_check.get("ok"):
+                                _update_task(conn, task_id, state="FAILED", result="",
+                                    error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
+                                _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
+                                return
+                    except Exception as _twag_e:
+                        logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
+                    # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
                     _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_fir_msg, error_message="")
                     _history(conn, task_id, "state:AWAITING_CONFIRMATION:file_intake_router")
                     conn.commit()

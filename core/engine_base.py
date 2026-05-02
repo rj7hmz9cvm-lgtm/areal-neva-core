@@ -145,49 +145,82 @@ def _telegram_fallback_send(local_path: str, task_id: str, topic_id: int) -> str
         logger.warning("TELEGRAM_FALLBACK_V1 err=%s", e)
         return ""
 
-def upload_artifact_to_drive(file_path: str, task_id: str, topic_id: int):
-    import os, logging, mimetypes
+# === DRIVE_TOPIC_FOLDER_ENFORCER_V1 ===
+def _drive_creds_v1():
+    import os
     from dotenv import load_dotenv
     load_dotenv("/root/.areal-neva-core/.env", override=False)
+    from google.oauth2.credentials import Credentials
+    from google.auth.transport.requests import Request
+    creds = Credentials(
+        None,
+        refresh_token=os.environ["GDRIVE_REFRESH_TOKEN"],
+        token_uri="https://oauth2.googleapis.com/token",
+        client_id=os.environ["GDRIVE_CLIENT_ID"],
+        client_secret=os.environ["GDRIVE_CLIENT_SECRET"],
+        scopes=["https://www.googleapis.com/auth/drive"],
+    )
+    creds.refresh(Request())
+    return creds
+
+def _drive_svc_v1():
+    from googleapiclient.discovery import build
+    return build("drive", "v3", credentials=_drive_creds_v1(), cache_discovery=False)
+
+def _drive_get_or_create_folder(svc, name: str, parent_id: str) -> str:
+    safe = str(name or "").replace("'", "\'")
+    q = f"mimeType=\'application/vnd.google-apps.folder\' and trashed=false and name=\'{safe}\' and \'{parent_id}\' in parents"
+    r = svc.files().list(q=q, fields="files(id)", pageSize=1).execute()
+    files = r.get("files") or []
+    if files:
+        return files[0]["id"]
+    f = svc.files().create(
+        body={"name": str(name), "mimeType": "application/vnd.google-apps.folder", "parents": [parent_id]},
+        fields="id",
+    ).execute()
+    return f.get("id") or ""
+
+def get_drive_topic_folder_id(topic_id: int, chat_id: str = "") -> str:
+    import os
+    from dotenv import load_dotenv
+    load_dotenv("/root/.areal-neva-core/.env", override=False)
+    svc = _drive_svc_v1()
+    root = os.environ.get("DRIVE_INGEST_FOLDER_ID", "13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB")
+    chat = str(chat_id or os.environ.get("TELEGRAM_CHAT_ID", "-1003725299009"))
+    chat_folder = _drive_get_or_create_folder(svc, f"chat_{chat}", root)
+    return _drive_get_or_create_folder(svc, f"topic_{int(topic_id or 0)}", chat_folder)
+
+def upload_artifact_to_drive(file_path: str, task_id: str, topic_id: int):
+    import logging, mimetypes, os
     _logger = logging.getLogger(__name__)
-
     if not file_path or not os.path.exists(str(file_path)):
-        _logger.error("UPLOAD_ARTIFACT_FILE_NOT_FOUND task=%s", task_id)
+        _logger.error("DRIVE_TOPIC_FOLDER_ENFORCER_V1_NOT_FOUND task=%s path=%s", task_id, file_path)
         return None
-
     try:
-        from google.oauth2.credentials import Credentials
-        from google.auth.transport.requests import Request
-        from googleapiclient.discovery import build
         from googleapiclient.http import MediaFileUpload
-
-        creds = Credentials(
-            None,
-            refresh_token=os.environ["GDRIVE_REFRESH_TOKEN"],
-            token_uri="https://oauth2.googleapis.com/token",
-            client_id=os.environ["GDRIVE_CLIENT_ID"],
-            client_secret=os.environ["GDRIVE_CLIENT_SECRET"],
-            scopes=["https://www.googleapis.com/auth/drive"],
-        )
-        creds.refresh(Request())
-
-        service = build("drive", "v3", credentials=creds, cache_discovery=False)
-        folder_id = os.environ.get("DRIVE_INGEST_FOLDER_ID", "13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB")
+        svc = _drive_svc_v1()
+        folder_id = get_drive_topic_folder_id(int(topic_id or 0))
         name = os.path.basename(str(file_path))
-        mime = mimetypes.guess_type(file_path)[0] or "application/octet-stream"
-
-        meta = {"name": name, "parents": [folder_id]}
-        media = MediaFileUpload(str(file_path), mimetype=mime, resumable=True)
-        f = service.files().create(body=meta, media_body=media, fields="id,webViewLink").execute()
-
-        link = f.get("webViewLink") or f"https://drive.google.com/file/d/{f['id']}/view"
-        _logger.info("DRIVE_OAUTH_UPLOAD_OK task=%s link=%s", task_id, link)
+        mime = mimetypes.guess_type(str(file_path))[0] or "application/octet-stream"
+        f = svc.files().create(
+            body={"name": name, "parents": [folder_id]},
+            media_body=MediaFileUpload(str(file_path), mimetype=mime, resumable=True),
+            fields="id,webViewLink",
+        ).execute()
+        fid = f.get("id")
+        if not fid:
+            return None
+        try:
+            svc.permissions().create(fileId=fid, body={"role": "reader", "type": "anyone"}, fields="id").execute()
+        except Exception as pe:
+            _logger.warning("DRIVE_TOPIC_FOLDER_ENFORCER_V1_PERM_ERR task=%s err=%s", task_id, pe)
+        link = f.get("webViewLink") or f"https://drive.google.com/file/d/{fid}/view"
+        _logger.info("DRIVE_TOPIC_FOLDER_ENFORCER_V1_OK task=%s topic=%s link=%s", task_id, topic_id, link)
         return link
     except Exception as e:
-        _logger.error("DRIVE_OAUTH_UPLOAD_FAILED task=%s err=%s", task_id, e)
+        _logger.error("DRIVE_TOPIC_FOLDER_ENFORCER_V1_FAILED task=%s err=%s", task_id, e)
         return None
-# === END PATCH_DRIVE_DIRECT_OAUTH_V1 ===
-
+# === END_DRIVE_TOPIC_FOLDER_ENFORCER_V1 ===
 
 def quality_gate(file_path: str, task_id: str, expected_type: str = "excel") -> Dict[str, Any]:
     err, warn = [], []

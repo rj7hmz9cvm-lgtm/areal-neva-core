@@ -2606,3 +2606,76 @@ async def process_dwg_dxf_project_file(file_path: str, task_id: str, topic_id: i
         return {"success": False, "error": f"DWG_DXF_PROJECT_ENGINE_ADAPTER_ERR:{e}"}
 # === END_DWG_DXF_PROJECT_ENGINE_ADAPTER_V1 ===
 
+
+
+# === REAL_GAPS_CLOSE_V2_PROJECT ===
+# === PROJECT_LOAD_CALC_REGION_FROM_INPUT_V1 ===
+_PROJECT_REGION_MAP_V2 = {
+    "москва": 3, "московск": 3, "подмосков": 3,
+    "петербург": 3, "санкт-петербург": 3, "ленинград": 3, "спб": 3,
+    "нижний новгород": 3, "нижегородск": 3, "воронеж": 3, "рязань": 3,
+    "тула": 3, "орёл": 3, "орел": 3, "калуга": 3, "ярославль": 3,
+    "кострома": 3, "иваново": 3, "владимир": 3, "смоленск": 3,
+    "брянск": 3, "тверь": 3,
+    "краснодар": 2, "сочи": 2, "ростов": 2, "ставрополь": 2,
+    "астрахань": 2, "волгоград": 2, "крым": 2, "симферополь": 2,
+    "казань": 3, "татарстан": 3, "самара": 3, "саратов": 3,
+    "ульяновск": 3, "пенза": 3, "оренбург": 4,
+    "екатеринбург": 4, "свердловск": 4, "челябинск": 4,
+    "пермь": 4, "тюмень": 4, "уфа": 4, "башкортостан": 4,
+    "новосибирск": 5, "омск": 5, "томск": 5, "кемерово": 5,
+    "красноярск": 5, "иркутск": 5, "бурятия": 5, "барнаул": 5,
+    "якутия": 6, "якутск": 6, "хабаровск": 6, "сахалин": 6,
+    "мурманск": 6, "ямал": 6, "ямало": 6,
+    "магадан": 7, "чукотка": 7, "камчатка": 7, "норильск": 7, "воркута": 7,
+}
+
+def parse_region_from_text(text: str, default: int = 3) -> int:
+    import re
+    low = str(text or "").lower()
+    m = re.search(r"район\s*([1-8])", low)
+    if m:
+        return int(m.group(1))
+    m = re.search(r"([1-8])\s*-?\s*й?\s*снеговой", low)
+    if m:
+        return int(m.group(1))
+    for key, region in _PROJECT_REGION_MAP_V2.items():
+        if key in low:
+            return region
+    return default
+
+def calc_loads_from_text(text: str, default_region: int = 3) -> dict:
+    return calc_loads(parse_region_from_text(text, default_region))
+
+_rgc2_orig_project_create = create_project_pdf_dxf_artifact
+
+async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
+    region = parse_region_from_text(str(raw_input or "") + " " + str(template_hint or ""))
+    forced_input = str(raw_input or "")
+    if "снеговой район" not in forced_input.lower() and "район " not in forced_input.lower():
+        forced_input = forced_input + "\n" + "Снеговой район " + str(region) + " по автоматически определённому региону"
+    try:
+        result = await _rgc2_orig_project_create(
+            raw_input=forced_input,
+            task_id=task_id,
+            topic_id=topic_id,
+            template_hint=template_hint,
+            *args,
+            **kwargs,
+        )
+    except TypeError:
+        try:
+            result = await _rgc2_orig_project_create(forced_input, task_id, topic_id, template_hint)
+        except TypeError:
+            result = await _rgc2_orig_project_create(forced_input, task_id, topic_id)
+
+    if isinstance(result, dict):
+        result["region_detected"] = region
+        result["loads_detected"] = calc_loads(region)
+        model = result.get("model") or result.get("data")
+        if isinstance(model, dict):
+            model.setdefault("region", region)
+            model.setdefault("loads", calc_loads(region))
+    return result
+# === END_PROJECT_LOAD_CALC_REGION_FROM_INPUT_V1 ===
+# === END_REAL_GAPS_CLOSE_V2_PROJECT ===
