@@ -167,16 +167,37 @@ def row_text(row: List[Any]) -> str:
     return " ".join(clean(x) for x in row if clean(x))
 
 def detect_scenario(text: str, title: str) -> str:
+    title_low = (title or "").lower()
     low = (title + " " + text).lower()
-    if any(x in low for x in ["фундамент", "плита", "ростверк", "свая", "склад"]):
-        if "кров" not in low:
-            return "foundation"
-    if any(x in low for x in ["кров", "стропил", "перекр", "балк"]):
-        return "roof_and_floors"
-    if any(x in low for x in ["газобетон", "кладка стен", "монолитная ж/б плита", "арматурного каркаса", "бетон в20", "бетон в22", "монолитная плита"]):
+
+    # ВАЖНО: сначала название файла/листа, потому что полные сметы М-80/М-110
+    # содержат внутри кровлю и перекрытия, но листы называются "Каркас" и "Газобетон"
+    if any(x in title_low for x in ["каркас", "frame"]):
+        return "frame_house"
+
+    if any(x in title_low for x in ["газобетон", "газо", "кладка", "masonry"]):
         return "gasbeton_or_masonry_with_monolithic_foundation"
+
+    if any(x in title_low for x in ["фундамент", "склад", "foundation"]):
+        return "foundation"
+
+    if any(x in title_low for x in ["крыш", "кров", "перекр", "roof", "floor"]):
+        return "roof_and_floors"
+
+    # Потом fallback по содержимому
+    if any(x in low for x in ["газобетон", "кладка стен", "арматурного каркаса", "бетон в20", "бетон в22"]):
+        return "gasbeton_or_masonry_with_monolithic_foundation"
+
     if any(x in low for x in ["каркас", "свая винтовая", "свайный фундамент", "обвязка свай", "доска с/к"]):
         return "frame_house"
+
+    if any(x in low for x in ["фундамент", "монолитная плита", "ростверк", "свая", "склад"]):
+        if not any(y in low for y in ["кровля", "кровель", "стропил", "перекрыт"]):
+            return "foundation"
+
+    if any(x in low for x in ["кров", "стропил", "перекр", "балк"]):
+        return "roof_and_floors"
+
     return "general_estimate"
 
 def extract_formula_cells(ws) -> List[Dict[str, str]]:
@@ -264,7 +285,7 @@ def analyze_template(service, template: Dict[str, Any], meta: Dict[str, Any]) ->
 
     for ws_f, ws_v in zip(wb_formula.worksheets, wb_values.worksheets):
         formulas = extract_formula_cells(ws_f)
-        struct = extract_structure(ws_v, meta.get("name") or "")
+        struct = extract_structure(ws_v, f"{meta.get('name') or ''} {ws_f.title}")
         formula_total += len(formulas)
         formula_samples.extend(formulas[:50])
         sheets.append({

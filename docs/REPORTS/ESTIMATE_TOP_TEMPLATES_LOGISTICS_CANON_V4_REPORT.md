@@ -1,7 +1,7 @@
 # ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4_REPORT
 
 status: OK
-updated_at: 2026-05-02T13:30:04.179799+00:00
+updated_at: 2026-05-02T13:37:39.354912+00:00
 canon: docs/CANON_FINAL/ESTIMATE_TEMPLATE_M80_M110_CANON.md
 registry: config/estimate_template_registry.json
 formula_index: data/templates/estimate_logic/estimate_template_formula_index.json
@@ -20,7 +20,7 @@ formula_index: data/templates/estimate_logic/estimate_template_formula_index.jso
 {
   "version": "ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4",
   "status": "ACTIVE_CANON",
-  "updated_at": "2026-05-02T13:30:04.179799+00:00",
+  "updated_at": "2026-05-02T13:37:39.354912+00:00",
   "purpose": "Use top estimate files as scalable estimate calculation logic templates with mandatory logistics and web price confirmation",
   "source_files": [
     {
@@ -541,7 +541,7 @@ formula_index: data/templates/estimate_logic/estimate_template_formula_index.jso
       "sheets": [
         {
           "sheet_name": "Каркас под ключ",
-          "scenario": "roof_and_floors",
+          "scenario": "frame_house",
           "sections": [
             "Фундамент",
             "Каркас",
@@ -1100,7 +1100,7 @@ formula_index: data/templates/estimate_logic/estimate_template_formula_index.jso
         },
         {
           "sheet_name": "Газобетон_под ключ",
-          "scenario": "roof_and_floors",
+          "scenario": "gasbeton_or_masonry_with_monolithic_foundation",
           "sections": [
             "Фундамент",
             "Стены",
@@ -2177,7 +2177,7 @@ formula_index: data/templates/estimate_logic/estimate_template_formula_index.jso
       "sheets": [
         {
           "sheet_name": "Каркас под ключ",
-          "scenario": "roof_and_floors",
+          "scenario": "frame_house",
           "sections": [
             "Фундамент",
             "Каркас",
@@ -2736,7 +2736,7 @@ formula_index: data/templates/estimate_logic/estimate_template_formula_index.jso
         },
         {
           "sheet_name": "Газобетон",
-          "scenario": "roof_and_floors",
+          "scenario": "gasbeton_or_masonry_with_monolithic_foundation",
           "sections": [
             "Фундамент",
             "Стены",
@@ -4849,7 +4849,7 @@ formula_index: data/templates/estimate_logic/estimate_template_formula_index.jso
       "sheets": [
         {
           "sheet_name": "смета",
-          "scenario": "roof_and_floors",
+          "scenario": "gasbeton_or_masonry_with_monolithic_foundation",
           "sections": [
             "Кровля",
             "Окна, двери",

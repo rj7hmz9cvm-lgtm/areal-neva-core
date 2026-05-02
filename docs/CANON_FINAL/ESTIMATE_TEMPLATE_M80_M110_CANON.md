@@ -2,7 +2,7 @@
 
 status: ACTIVE_CANON
 version: ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4
-updated_at: 2026-05-02T13:30:04.179799+00:00
+updated_at: 2026-05-02T13:37:39.354912+00:00
 
 ## ГЛАВНОЕ
 
@@ -71,16 +71,16 @@ updated_at: 2026-05-02T13:30:04.179799+00:00
 - file_id: `1yt-RJsGRhO13zmPKNAn6bMuGrpXY7kWp`
 - drive_url: https://docs.google.com/spreadsheets/d/1yt-RJsGRhO13zmPKNAn6bMuGrpXY7kWp/edit?usp=drivesdk&ouid=110231323399920032425&rtpof=true&sd=true
 - formula_total: 1670
-  - sheet: Каркас под ключ | scenario=roof_and_floors | formulas=799 | material_rows=130 | work_rows=96 | logistics_rows=17
-  - sheet: Газобетон_под ключ | scenario=roof_and_floors | formulas=871 | material_rows=156 | work_rows=99 | logistics_rows=23
+  - sheet: Каркас под ключ | scenario=frame_house | formulas=799 | material_rows=130 | work_rows=96 | logistics_rows=17
+  - sheet: Газобетон_под ключ | scenario=gasbeton_or_masonry_with_monolithic_foundation | formulas=871 | material_rows=156 | work_rows=99 | logistics_rows=23
 
 ### М-110.xlsx
 - role: `full_house_estimate_template`
 - file_id: `1Ub9fcwOcJ4pV30dcX88yf1225WOIdpWo`
 - drive_url: https://docs.google.com/spreadsheets/d/1Ub9fcwOcJ4pV30dcX88yf1225WOIdpWo/edit?usp=drivesdk&ouid=110231323399920032425&rtpof=true&sd=true
 - formula_total: 1647
-  - sheet: Каркас под ключ | scenario=roof_and_floors | formulas=791 | material_rows=130 | work_rows=96 | logistics_rows=17
-  - sheet: Газобетон | scenario=roof_and_floors | formulas=856 | material_rows=154 | work_rows=99 | logistics_rows=23
+  - sheet: Каркас под ключ | scenario=frame_house | formulas=791 | material_rows=130 | work_rows=96 | logistics_rows=17
+  - sheet: Газобетон | scenario=gasbeton_or_masonry_with_monolithic_foundation | formulas=856 | material_rows=154 | work_rows=99 | logistics_rows=23
 
 ### крыша и перекр.xlsx
 - role: `roof_and_floor_estimate_template`
@@ -101,7 +101,7 @@ updated_at: 2026-05-02T13:30:04.179799+00:00
 - file_id: `1DQw2qgMHtq2SqgJJP-93eIArpj1hnNNm`
 - drive_url: https://docs.google.com/spreadsheets/d/1DQw2qgMHtq2SqgJJP-93eIArpj1hnNNm/edit?usp=drivesdk&ouid=110231323399920032425&rtpof=true&sd=true
 - formula_total: 1192
-  - sheet: смета | scenario=roof_and_floors | formulas=1192 | material_rows=194 | work_rows=78 | logistics_rows=18
+  - sheet: смета | scenario=gasbeton_or_masonry_with_monolithic_foundation | formulas=1192 | material_rows=194 | work_rows=78 | logistics_rows=18
 
 ## ОБЯЗАТЕЛЬНОЕ ПОВЕДЕНИЕ
 
