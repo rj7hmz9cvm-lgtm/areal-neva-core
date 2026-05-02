@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 from typing import Any, Dict
 
@@ -61,7 +62,8 @@ def _send_payload(message: str, kind: str, state: str = "DONE", history: str = "
 
 # === FINAL_CLOSURE_MEMORY_QUERY_PUBLIC_OUTPUT_V3 ===
 
-# === PROJECT_SAMPLE_STATUS_P0_V1 ===
+
+# === PROJECT_SAMPLE_SELECTION_P0_V2 ===
 def _fc_norm_public(text: Any) -> str:
     s = "" if text is None else str(text)
     s = s.replace("\\\\n", "\n").replace("\\n", "\n").replace("\\\\t", " ").replace("\\t", " ")
@@ -77,10 +79,10 @@ def _fc_clean_title(name: str) -> str:
 
 def _fc_is_sample_status_request(text: str) -> bool:
     low = _fc_norm_public(text).lower()
-    if not any(x in low for x in ("образец", "шаблон")):
+    if not any(x in low for x in ("образец", "образцов", "шаблон", "шаблона")):
         return False
 
-    sample_status_words = (
+    strict_status_or_selection = (
         "взял как образец",
         "взял за образец",
         "ты взял как образец",
@@ -99,8 +101,37 @@ def _fc_is_sample_status_request(text: str) -> bool:
         "файлы приняты как образец",
         "взяты как образец",
         "приняты как образец",
+        "закрепи как образец",
+        "закрепить как образец",
+        "закрепляется как",
+        "закрепляй как",
+        "оставь как образец",
+        "сохрани как образец",
+        "один из образцов",
+        "как один из образцов",
     )
-    return any(x in low for x in sample_status_words)
+    if any(x in low for x in strict_status_or_selection):
+        return True
+
+    if "как образец" in low and any(x in low for x in (
+        "да ",
+        "да,",
+        "да.",
+        "цоколь",
+        "кж",
+        "кд",
+        "км",
+        "кмд",
+        "ар",
+        "проект",
+        "смет",
+        "вор",
+        "акт",
+        "технадзор",
+    )):
+        return True
+
+    return False
 
 
 def _fc_extract_titles_from_text(text: str) -> list[str]:
@@ -122,7 +153,7 @@ def _fc_extract_titles_from_text(text: str) -> list[str]:
         if val:
             titles.append(val)
 
-    for m in re.finditer(r'([А-ЯA-Z0-9Ёё][^\\n\\r]{0,120}\.(?:pdf|dwg|dxf|xlsx|xls|docx|doc))', src, re.I):
+    for m in re.finditer(r'([А-ЯA-Z0-9Ёё][^\n\r]{0,120}\.(?:pdf|dwg|dxf|xlsx|xls|docx|doc))', src, re.I):
         val = _fc_clean_title(m.group(1))
         if val:
             titles.append(val)
@@ -138,14 +169,13 @@ def _fc_extract_titles_from_text(text: str) -> list[str]:
     return out
 
 
-def _fc_sample_raw_hay(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> str:
+def _fc_recent_file_rows(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> list[Any]:
     old_rf = conn.row_factory
-    parts: list[str] = []
     try:
         conn.row_factory = sqlite3.Row
         rows = conn.execute(
             """
-            SELECT raw_input,result
+            SELECT id, raw_input, result, updated_at
             FROM tasks
             WHERE chat_id=?
               AND COALESCE(topic_id,0)=?
@@ -166,58 +196,27 @@ def _fc_sample_raw_hay(conn: sqlite3.Connection, chat_id: str, topic_id: int) ->
             """,
             (str(chat_id), int(topic_id or 0)),
         ).fetchall()
+        return list(rows or [])
     except Exception:
-        rows = []
+        return []
     finally:
         conn.row_factory = old_rf
 
-    for r in rows:
+
+def _fc_sample_raw_hay(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> str:
+    parts: list[str] = []
+    for r in _fc_recent_file_rows(conn, chat_id, topic_id):
         try:
             parts.append(_fc_norm_public(r["raw_input"]))
             parts.append(_fc_norm_public(r["result"]))
         except Exception:
-            try:
-                parts.append(_fc_norm_public(r[0]))
-                parts.append(_fc_norm_public(r[1]))
-            except Exception:
-                pass
-
+            pass
     return " ".join(parts).lower().replace("ё", "е")
 
 
 def _fc_sample_titles(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> list[str]:
-    old_rf = conn.row_factory
     titles: list[str] = []
-    try:
-        conn.row_factory = sqlite3.Row
-        rows = conn.execute(
-            """
-            SELECT raw_input,result,updated_at
-            FROM tasks
-            WHERE chat_id=?
-              AND COALESCE(topic_id,0)=?
-              AND (
-                COALESCE(raw_input,'') LIKE '%file_name%'
-                OR COALESCE(raw_input,'') LIKE '%.pdf%'
-                OR COALESCE(raw_input,'') LIKE '%.dwg%'
-                OR COALESCE(raw_input,'') LIKE '%.dxf%'
-                OR COALESCE(raw_input,'') LIKE '%.xlsx%'
-                OR COALESCE(result,'') LIKE '%.pdf%'
-                OR COALESCE(result,'') LIKE '%.dwg%'
-                OR COALESCE(result,'') LIKE '%.dxf%'
-                OR COALESCE(result,'') LIKE '%.xlsx%'
-              )
-            ORDER BY updated_at DESC
-            LIMIT 80
-            """,
-            (str(chat_id), int(topic_id or 0)),
-        ).fetchall()
-    except Exception:
-        rows = []
-    finally:
-        conn.row_factory = old_rf
-
-    for r in rows:
+    for r in _fc_recent_file_rows(conn, chat_id, topic_id):
         try:
             titles.extend(_fc_extract_titles_from_text(r["raw_input"]))
             titles.extend(_fc_extract_titles_from_text(r["result"]))
@@ -246,8 +245,53 @@ def _fc_sample_domain_from_hay(hay: str) -> str:
     return ""
 
 
-def _fc_sample_domain_from_titles(titles: list[str]) -> str:
-    return _fc_sample_domain_from_hay(" ".join(titles))
+def _fc_select_sample_title(raw_input: str, titles: list[str]) -> str:
+    low = _fc_norm_public(raw_input).lower()
+    for title in titles:
+        tlow = title.lower()
+        words = [w for w in re.split(r"[\s._\-]+", tlow) if len(w) >= 3]
+        if any(w in low for w in words):
+            return title
+    if len(titles) == 1:
+        return titles[0]
+    if "цоколь" in low:
+        for title in titles:
+            if "цоколь" in title.lower():
+                return title
+    return ""
+
+
+def _fc_write_sample_memory(chat_id: str, topic_id: int, domain: str, title: str, raw_input: str) -> None:
+    try:
+        import datetime
+        mem = sqlite3.connect("/root/.areal-neva-core/data/memory.db")
+        try:
+            payload = json.dumps(
+                {
+                    "engine": "PROJECT_SAMPLE_SELECTION_P0_V2",
+                    "chat_id": str(chat_id),
+                    "topic_id": int(topic_id or 0),
+                    "domain": domain,
+                    "title": title,
+                    "raw_input": raw_input,
+                    "created_at": datetime.datetime.utcnow().isoformat() + "Z",
+                },
+                ensure_ascii=False,
+            )
+            mem.execute(
+                "INSERT INTO memory(chat_id,key,value,timestamp) VALUES (?,?,?,?)",
+                (
+                    str(chat_id),
+                    f"topic_{int(topic_id or 0)}_{domain or 'sample'}_selected_sample",
+                    payload,
+                    datetime.datetime.utcnow().isoformat() + "Z",
+                ),
+            )
+            mem.commit()
+        finally:
+            mem.close()
+    except Exception:
+        pass
 
 
 def _handle_sample_status(conn: sqlite3.Connection, chat_id: str, topic_id: int, raw_input: str) -> Dict[str, Any]:
@@ -256,36 +300,40 @@ def _handle_sample_status(conn: sqlite3.Connection, chat_id: str, topic_id: int,
 
     titles = _fc_sample_titles(conn, chat_id, topic_id)
     raw_hay = _fc_sample_raw_hay(conn, chat_id, topic_id)
-    domain = _fc_sample_domain_from_hay(" ".join(titles) + " " + raw_hay)
+    selected_title = _fc_select_sample_title(raw_input, titles)
+    domain = _fc_sample_domain_from_hay(" ".join([raw_input, selected_title, " ".join(titles), raw_hay]))
 
     if domain == "project":
-        msg = (
-            "Файлы в этом топике уже взяты в работу как образец проектирования\n\n"
-            "Напиши действие: использовать как образец / открыть / обработать заново / сравнить"
-        )
+        if selected_title:
+            msg = f"{selected_title} закреплён как образец проектирования"
+        else:
+            msg = "Файлы в этом топике уже взяты в работу как образец проектирования"
     elif domain == "estimate":
-        msg = (
-            "Файлы в этом топике уже взяты в работу как образец сметы\n\n"
-            "Напиши действие: использовать как образец / открыть / обработать заново / сравнить"
-        )
+        if selected_title:
+            msg = f"{selected_title} закреплён как образец сметы"
+        else:
+            msg = "Файлы в этом топике уже взяты в работу как образец сметы"
     elif domain == "technadzor":
-        msg = (
-            "Файлы в этом топике уже взяты в работу как образец для технадзора\n\n"
-            "Напиши действие: использовать как образец / открыть / обработать заново / сравнить"
-        )
+        if selected_title:
+            msg = f"{selected_title} закреплён как образец для технадзора"
+        else:
+            msg = "Файлы в этом топике уже взяты в работу как образец для технадзора"
     else:
-        msg = (
-            "Файлы в этом топике уже взяты в работу как образец\n\n"
-            "Напиши действие: использовать как образец / открыть / обработать заново / сравнить"
-        )
+        if selected_title:
+            msg = f"{selected_title} закреплён как образец"
+        else:
+            msg = "Файлы в этом топике уже взяты в работу как образец"
+
+    _fc_write_sample_memory(str(chat_id), int(topic_id or 0), domain or "sample", selected_title, raw_input)
 
     return _send_payload(
         msg,
-        "project_sample_status",
+        "project_sample_selection",
         "DONE",
-        "PROJECT_SAMPLE_STATUS_P0_V1:ANSWERED",
+        "PROJECT_SAMPLE_SELECTION_P0_V2:ANSWERED",
     )
-# === END_PROJECT_SAMPLE_STATUS_P0_V1 ===
+# === END_PROJECT_SAMPLE_SELECTION_P0_V2 ===
+
 
 
 def _handle_memory_query(conn: sqlite3.Connection, chat_id: str, topic_id: int, raw_input: str) -> Dict[str, Any]:

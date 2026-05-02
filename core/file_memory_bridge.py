@@ -476,13 +476,14 @@ def _fm_relevant_public_items(items: List[Dict[str, Any]], user_text: str, limit
 
 
 
-# === FILE_MEMORY_SAMPLE_STATUS_SKIP_P0_V1 ===
+
+# === FILE_MEMORY_SAMPLE_STATUS_SKIP_P0_V2 ===
 def _fm_is_sample_status_query(text: str) -> bool:
     low = _fm_public_norm(text).lower().replace("ё", "е")
-    if not any(x in low for x in ("образец", "шаблон")):
+    if not any(x in low for x in ("образец", "образцов", "шаблон", "шаблона")):
         return False
 
-    sample_status_words = (
+    strict_status_or_selection = (
         "взял как образец",
         "взял за образец",
         "ты взял как образец",
@@ -501,9 +502,39 @@ def _fm_is_sample_status_query(text: str) -> bool:
         "файлы приняты как образец",
         "взяты как образец",
         "приняты как образец",
+        "закрепи как образец",
+        "закрепить как образец",
+        "закрепляется как",
+        "закрепляй как",
+        "оставь как образец",
+        "сохрани как образец",
+        "один из образцов",
+        "как один из образцов",
     )
-    return any(x in low for x in sample_status_words)
-# === END_FILE_MEMORY_SAMPLE_STATUS_SKIP_P0_V1 ===
+    if any(x in low for x in strict_status_or_selection):
+        return True
+
+    if "как образец" in low and any(x in low for x in (
+        "да ",
+        "да,",
+        "да.",
+        "цоколь",
+        "кж",
+        "кд",
+        "км",
+        "кмд",
+        "ар",
+        "проект",
+        "смет",
+        "вор",
+        "акт",
+        "технадзор",
+    )):
+        return True
+
+    return False
+# === END_FILE_MEMORY_SAMPLE_STATUS_SKIP_P0_V2 ===
+
 
 
 def build_file_followup_answer(chat_id: str, topic_id: int, user_text: str, limit: int = 3) -> Optional[str]:
