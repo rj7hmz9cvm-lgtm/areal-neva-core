@@ -1,8 +1,8 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-02T09:06:52.878702+00:00
+generated_at_utc: 2026-05-02T09:11:22.646315+00:00
 git_branch: main
-git_head_short: 5044af5
-git_head_full: 5044af567d9c152611d3906a6d09d852ba689179
+git_head_short: 6ddd2c5
+git_head_full: 6ddd2c5c019944eef7b805c85d2eecd04c36aaa4
 
 ## SERVICES
 - areal-task-worker: active
@@ -60,14 +60,16 @@ git_head_full: 5044af567d9c152611d3906a6d09d852ba689179
 
 ## GIT_STATUS_SAFE
 M docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
+ M tools/claude_bootstrap_aggregator.py
 ?? data/telegram_file_catalog/
 ?? data/templates/estimate_batch/
+?? docs/REPORTS/areal-claude-bootstrap-aggregator.service.before.20260502_121121.txt
 ?? tools/telegram_file_memory_backfill.py
 
 ## FILES_MANIFEST_SAFE
 - docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md|bytes=168322|sha256=0640b8349254cfb36f1143c1f195715014e2ca1b1b428943847fd1fd80d9d8fe
-- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md|bytes=37191|sha256=516d98f2701bb56589de3959658e9f035b6c936f35e8b89910897f3e7b49eacf
-- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md|bytes=2013|sha256=bbcc3e83ef17d956e05fc26d8121af3798fdb72779f63ccb8d5ea47046e2c839
+- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md|bytes=37200|sha256=05f3ba1fa5289f71a6d9075a5a755afa9782dd52a34b00940d5b33fdf8bb9f03
+- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md|bytes=2013|sha256=e01f18f84cf027bce3567753ac103c667bb5adedcba8b726775434f990597de2
 - docs/CANON_FINAL/00_INDEX.md|bytes=808|sha256=999acb6bfdd6c7215f11d76342ea1b9f8cdf5715418064acb3716f33999c8af6
 - docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md|bytes=41018|sha256=dbd5f683361eafc258ab0822056f6c33f751e5581998dc420f79395d14863177
 - docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md|bytes=6714|sha256=1a439843e1eb214745752720c85b49adc48f1823765982960ce7b1e285947d84
@@ -89,7 +91,7 @@ M docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
 - core/pin_manager.py|bytes=2603|sha256=612acafe7a005144bbd67b00fe54ac90c166aa76dafd8badcedc5f9a89812dfa
 - core/topic_drive_oauth.py|bytes=3542|sha256=cbde2203d361fae3bc4e89a7c234fce54f655642088eae22c8b399fe8bfe7e39
 - tools/context_aggregator.py|bytes=4724|sha256=38deff2fcf58fb816de3b3c42c2e7d6585af70f97e106dac2c0b91cb7c7e40b0
-- tools/claude_bootstrap_aggregator.py|bytes=16736|sha256=643ef4e68c1e5afcebf478f316070e4ce3ce9133686c2610147097c20e7d7ffd
+- tools/claude_bootstrap_aggregator.py|bytes=19110|sha256=c10e49f6dd292bf3ed4a4803fbd0580b068321836a6f2c34123f1fe8457b5c73
 
 # CODE_MARKERS_SAFE
 
@@ -516,4 +518,6 @@ M docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
 515: print("CLAUDE_BOOTSTRAP_AGGREGATOR_CANON_LOCK_V3_START")
 517: subprocess.run(["rm", "-rf", "CANON_FINAL"], cwd=str(BASE))
 529: print("CLAUDE_BOOTSTRAP_AGGREGATOR_CANON_LOCK_V3_DONE")
-534: # === END CLAUDE_BOOTSTRAP_AGGREGATOR_CANON_LOCK_V3 ===
+547: report = base / "docs" / "REPORTS" / "CLAUDE_BOOTSTRAP_PENDING_PUSH.md"
+557: content.append("# CLAUDE_BOOTSTRAP_PENDING_PUSH")
+609: # === END CLAUDE_BOOTSTRAP_AGGREGATOR_CANON_LOCK_V3 ===

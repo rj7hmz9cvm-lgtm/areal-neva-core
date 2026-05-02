@@ -529,6 +529,81 @@ def main() -> None:
     print("CLAUDE_BOOTSTRAP_AGGREGATOR_CANON_LOCK_V3_DONE")
 
 
+
+
+# === AGGREGATOR_PUSH_FAILURE_GUARD_V1 ===
+try:
+    _apfg_orig_git_commit_push = git_commit_push
+except Exception:
+    _apfg_orig_git_commit_push = None
+
+
+def _apfg_write_pending_push_report(error_text: str) -> None:
+    from pathlib import Path
+    import datetime
+    import subprocess
+
+    base = Path("/root/.areal-neva-core")
+    report = base / "docs" / "REPORTS" / "CLAUDE_BOOTSTRAP_PENDING_PUSH.md"
+    report.parent.mkdir(parents=True, exist_ok=True)
+
+    def _run(cmd):
+        try:
+            return subprocess.check_output(cmd, cwd=str(base), text=True, stderr=subprocess.STDOUT).strip()
+        except Exception as e:
+            return "ERROR: " + str(e)
+
+    content = []
+    content.append("# CLAUDE_BOOTSTRAP_PENDING_PUSH")
+    content.append("")
+    content.append("generated_at: " + datetime.datetime.utcnow().isoformat() + "Z")
+    content.append("")
+    content.append("status: LOCAL_COMMIT_CREATED_PUSH_NOT_CONFIRMED")
+    content.append("")
+    content.append("reason:")
+    content.append("```text")
+    content.append(str(error_text).strip())
+    content.append("```")
+    content.append("")
+    content.append("git_head:")
+    content.append("```text")
+    content.append(_run(["git", "log", "-3", "--pretty=format:%h %ci %s"]))
+    content.append("```")
+    content.append("")
+    content.append("git_status:")
+    content.append("```text")
+    content.append(_run(["git", "status", "--short"]))
+    content.append("```")
+    content.append("")
+    content.append("manual_command:")
+    content.append("```bash")
+    content.append("cd /root/.areal-neva-core && git push origin main")
+    content.append("```")
+    report.write_text("\n".join(content) + "\n", encoding="utf-8")
+
+
+def git_commit_push(changed):
+    if _apfg_orig_git_commit_push is None:
+        return None
+
+    try:
+        return _apfg_orig_git_commit_push(changed)
+    except RuntimeError as e:
+        msg = str(e)
+        if (
+            "could not read Username" in msg
+            or "Authentication failed" in msg
+            or "No such device or address" in msg
+            or "terminal prompts disabled" in msg
+        ):
+            _apfg_write_pending_push_report(msg)
+            print("AGGREGATOR_PUSH_FAILURE_GUARD_V1: push failed, report written, service kept non-fatal")
+            return None
+        raise
+
+# === END_AGGREGATOR_PUSH_FAILURE_GUARD_V1 ===
+
+
 if __name__ == "__main__":
     main()
 # === END CLAUDE_BOOTSTRAP_AGGREGATOR_CANON_LOCK_V3 ===
