@@ -17,7 +17,7 @@ def init_db():
 def health(): return jsonify({"status": "ok"})
 
 @app.route("/archive", methods=["POST"])
-def archive():  # ARCHIVE_ENDPOINT_FIX_V1
+def archive():  # ARCHIVE_ENDPOINT_SCOPE_V2
     try:
         data = request.get_json(silent=True) or {}
         chat_id = str(data.get("chat_id") or "unknown")

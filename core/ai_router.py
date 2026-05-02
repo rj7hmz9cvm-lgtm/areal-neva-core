@@ -330,6 +330,15 @@ def _build_messages(payload: Dict[str, Any], user_text: str) -> List[Dict[str, s
         system_content = system_content + f"\n\nТиповые задачи этого чата: {topic_directions}"
 
 
+    # === OWNER_REFERENCE_FULL_WORKFLOW_POLICY_V1 ===
+    try:
+        from core.owner_reference_policy import build_owner_reference_context
+        _owner_reference_policy_context = build_owner_reference_context(user_text)
+    except Exception as _orp_err:
+        logger.warning("OWNER_REFERENCE_POLICY_V1_ERR %s", _orp_err)
+        _owner_reference_policy_context = ""
+    # === END_OWNER_REFERENCE_FULL_WORKFLOW_POLICY_V1 ===
+
     # === ESTIMATE_TEMPLATE_POLICY_CONTEXT_V4_TOP_LOGISTICS ===
     try:
         from core.estimate_template_policy import build_estimate_template_context
@@ -340,6 +349,7 @@ def _build_messages(payload: Dict[str, Any], user_text: str) -> List[Dict[str, s
     # === END_ESTIMATE_TEMPLATE_POLICY_CONTEXT_V4_TOP_LOGISTICS ===
 
     blocks = _dedup_blocks([
+        _sanitize_block("OWNER_REFERENCE_POLICY", _owner_reference_policy_context),
         _sanitize_block("ESTIMATE_TEMPLATE_POLICY", _estimate_template_policy_context),
         _sanitize_block("ACTIVE_TASK", payload.get("active_task_context")),
         _sanitize_block("PIN", payload.get("pin_context")),

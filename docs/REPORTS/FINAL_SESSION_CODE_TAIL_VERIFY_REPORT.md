@@ -1,6 +1,6 @@
 # FINAL_SESSION_CODE_TAIL_VERIFY_REPORT
 
-generated_at: 2026-05-02T10:39:44.404392+00:00
+generated_at: 2026-05-02T10:48:46.722641+00:00
 status: OK
 markers_ok: True
 hook_order_ok: True
@@ -11,12 +11,12 @@ smoke_ok: True
 ## RAW_JSON
 ```json
 {
-  "generated_at": "2026-05-02T10:39:44.404392+00:00",
+  "generated_at": "2026-05-02T10:48:46.722641+00:00",
   "git": {
-    "head": "89827a8",
-    "origin": "89827a8",
-    "ahead_behind": "0\t0",
-    "status": "M core/file_memory_bridge.py\n M core/output_sanitizer.py\n M core/technadzor_engine.py\n M docs/REPORTS/FINAL_SESSION_CODE_TAIL_VERIFY_REPORT.md\n M tools/final_session_code_tail_verify.py\n?? docs/REPORTS/areal-claude-bootstrap-aggregator.service.before.20260502_121121.txt"
+    "head": "f767180",
+    "origin": "db602f4",
+    "ahead_behind": "0\t1",
+    "status": "M core/file_memory_bridge.py\n M core/final_closure_engine.py\n M docs/REPORTS/CLAUDE_BOOTSTRAP_PENDING_PUSH.md\n M docs/REPORTS/FINAL_SESSION_CODE_TAIL_VERIFY_REPORT.md\n?? docs/REPORTS/areal-claude-bootstrap-aggregator.service.before.20260502_121121.txt"
   },
   "markers": {
     "task_worker.py": {

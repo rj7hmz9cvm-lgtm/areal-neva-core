@@ -780,3 +780,12 @@ grep -nE "def handle_voice_confirm|def voice_confirm|VOICE_CONFIRM_AWAITING_V1|v
 - voice-confirm остаётся только в task_worker.py в VOICE_CONFIRM_AWAITING_V1 (строка ~1434)
 - Правильный статус в отчёте: BLOCKER_KEPT (не FALSE_FORBIDDEN_LIST_REMOVED)
 - Если GPT пишет FORBIDDEN_FUNCTIONS список с этими строками внутри файла — это баг патча
+
+## TOPIC_ISOLATION_LIVE_TEST_PENDING_02052026
+
+Статус: PENDING LIVE TEST
+
+Проверить живым Telegram тестом:
+- topic_2 не тянет проектные образцы topic_210
+- topic_210 не тянет сметные артефакты как результат
+- topic_5 не тянет КЖ/АР без прямой команды

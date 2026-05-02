@@ -355,6 +355,35 @@ def _check_result_before_confirm(result: str, input_type: str = "text", intent: 
         logger.warning("RESULT_VALIDATOR_ERR %s", _rve)
     return True
 
+
+# === REPLY_REPEAT_PARENT_TASK_V1 ===
+_REPEAT_PARENT_WORDS_V1 = {
+    "ну и", "дальше", "повтори", "проверяй", "не так",
+    "ещё раз", "еще раз", "заново", "дописывай", "и что", "и?",
+}
+def _is_repeat_parent_task_v1(text: str) -> bool:
+    t = _clean(_s(text), 500).lower()
+    if not t:
+        return False
+    return t in _REPEAT_PARENT_WORDS_V1 or any(t.startswith(x + " ") for x in _REPEAT_PARENT_WORDS_V1)
+
+def _find_repeat_parent_task_v1(conn, chat_id: str, topic_id: int, exclude_task_id: str = ""):
+    try:
+        cols = _cols(conn, "tasks")
+        if "topic_id" in cols:
+            return conn.execute(
+                "SELECT * FROM tasks WHERE chat_id=? AND COALESCE(topic_id,0)=? AND id<>? AND state IN ('IN_PROGRESS','AWAITING_CONFIRMATION','WAITING_CLARIFICATION','NEW') ORDER BY updated_at DESC LIMIT 1",
+                (str(chat_id), int(topic_id or 0), str(exclude_task_id)),
+            ).fetchone()
+        return conn.execute(
+            "SELECT * FROM tasks WHERE chat_id=? AND id<>? AND state IN ('IN_PROGRESS','AWAITING_CONFIRMATION','WAITING_CLARIFICATION','NEW') ORDER BY updated_at DESC LIMIT 1",
+            (str(chat_id), str(exclude_task_id)),
+        ).fetchone()
+    except Exception as _e:
+        logger.warning("REPLY_REPEAT_PARENT_TASK_V1_FIND_ERR %s", _e)
+        return None
+# === END_REPLY_REPEAT_PARENT_TASK_V1 ===
+
 def _is_memory_noise(text: str) -> bool:
     t = _clean(_s(text), 1000).lower()
     if not t:
@@ -4002,3 +4031,88 @@ if __name__ == "__main__":
     asyncio.run(main())
 
 # === FULLFIX_08_PROJECT_ERROR_VISIBILITY ===
+
+
+# === AWAITING_CONFIRMATION_ONLY_ON_REAL_RESULT_V1 ===
+_GENERIC_RESULT_PATTERNS_V1 = [
+    r"Файл скачан, ожидает анализа",
+    r"Этот чат предназначен",
+    r"Структура проекта включает этапы",
+    r"Файл содержит раздел",
+    r"не понял запрос",
+    r"готов к выполнению",
+]
+def _is_generic_or_fake_result_v1(result: str) -> bool:
+    r = _clean(_s(result), 2000)
+    if not r:
+        return True
+    return any(re.search(p, r, re.I) for p in _GENERIC_RESULT_PATTERNS_V1)
+
+try:
+    _orig_is_valid_result_areal_v1 = _is_valid_result
+    def _is_valid_result(text: str, raw_input: str) -> bool:
+        if _is_generic_or_fake_result_v1(text):
+            logger.warning("NO_GENERIC_RESPONSE_AS_RESULT_V1_BLOCKED %s", _clean(_s(text), 120))
+            return False
+        return _orig_is_valid_result_areal_v1(text, raw_input)
+except Exception as _wrap_e:
+    logger.warning("AWAITING_CONFIRMATION_ONLY_ON_REAL_RESULT_V1_WRAP_ERR %s", _wrap_e)
+
+try:
+    _orig_check_result_before_confirm_areal_v1 = _check_result_before_confirm
+    def _check_result_before_confirm(result: str, input_type: str = "text", intent: str = "") -> bool:
+        if _is_generic_or_fake_result_v1(result):
+            logger.warning("NO_GENERIC_RESPONSE_AS_RESULT_V1_CONFIRM_BLOCKED %s", _clean(_s(result), 120))
+            return False
+        if input_type in ("drive_file", "file") and re.search(r"Файл скачан|ожидает анализа", _s(result), re.I):
+            logger.warning("AWAITING_CONFIRMATION_ONLY_ON_REAL_RESULT_V1_BLOCKED")
+            return False
+        return _orig_check_result_before_confirm_areal_v1(result, input_type=input_type, intent=intent)
+except Exception as _wrap_e:
+    logger.warning("CHECK_RESULT_REAL_RESULT_V1_WRAP_ERR %s", _wrap_e)
+
+try:
+    import inspect as _inspect_repeat_v1
+    _orig_process_ai_task_repeat_v1 = process_ai_task
+    async def process_ai_task(*args, **kwargs):
+        try:
+            raw = kwargs.get("raw_input") or kwargs.get("user_text") or kwargs.get("prompt") or ""
+            if not raw and args:
+                raw = args[0]
+            chat_id = str(kwargs.get("chat_id") or kwargs.get("chat") or "")
+            topic_id = int(kwargs.get("topic_id") or 0)
+            if _is_repeat_parent_task_v1(str(raw)) and chat_id:
+                _rc = db(CORE_DB)
+                try:
+                    parent = _find_repeat_parent_task_v1(_rc, chat_id, topic_id)
+                    if parent:
+                        parent_raw = _clean(_s(_task_field(parent, "raw_input", "")), 3000)
+                        parent_result = _clean(_s(_task_field(parent, "result", "")), 3000)
+                        enriched = (
+                            "Продолжи последнюю активную задачу в этом топике. "
+                            "Не отвечай общим описанием чата. "
+                            "Если данных не хватает — задай один короткий вопрос.\n\n"
+                            f"Команда владельца: {_clean(_s(raw), 500)}\n\n"
+                            f"Родительская задача: {parent_raw}\n\n"
+                            f"Последний результат: {parent_result}"
+                        )
+                        if "raw_input" in kwargs:
+                            kwargs["raw_input"] = enriched
+                        elif "user_text" in kwargs:
+                            kwargs["user_text"] = enriched
+                        elif "prompt" in kwargs:
+                            kwargs["prompt"] = enriched
+                        elif args:
+                            args = (enriched,) + tuple(args[1:])
+                        logger.info("REPLY_REPEAT_PARENT_TASK_V1 parent=%s topic=%s", _task_field(parent, "id", ""), topic_id)
+                finally:
+                    _rc.close()
+        except Exception as _repeat_e:
+            logger.warning("REPLY_REPEAT_PARENT_TASK_V1_WRAP_ERR %s", _repeat_e)
+        _res = _orig_process_ai_task_repeat_v1(*args, **kwargs)
+        if _inspect_repeat_v1.isawaitable(_res):
+            return await _res
+        return _res
+except Exception as _repeat_wrap_e:
+    logger.warning("REPLY_REPEAT_PARENT_TASK_V1_PROCESS_WRAP_ERR %s", _repeat_wrap_e)
+# === END_AWAITING_CONFIRMATION_ONLY_ON_REAL_RESULT_V1 ===

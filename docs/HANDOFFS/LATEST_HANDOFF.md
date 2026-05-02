@@ -295,3 +295,14 @@ topic_961=АВТО ЗАПЧАСТИ | topic_3008=КОДЫ МОЗГОВ | topic_4
 Причина: CLEAN_RESULT_TEXT_V1 — обнаружили что Engine:/MANIFEST:/системные ключи
 попадали в ответ пользователю из sample_template_engine.py строки 533-545,
 потому что не прочитали текущий код перед патчем.
+
+## СЕССИЯ 02.05.2026
+
+| Patch | Commit | Status |
+|---|---:|---|
+| ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4 | e370c53 | VERIFIED ✅ |
+| ESTIMATE_SCENARIO_CLASSIFICATION_FIX_V1 | 04378dc | VERIFIED ✅ |
+| SAMPLE_ACCEPT_DIALOG_CONTEXT_FIX_V1 | 3d148d9 | VERIFIED ✅ |
+| DRIVE_AI_ORCHESTRA_ROOT_CLEANUP_V1 | 4f0b15b | VERIFIED ✅ |
+| DRIVE_AI_ORCHESTRA_ROOT_FOLDER_FINAL_CLEAN_V1 | 226769c | VERIFIED ✅ |
+| AREAL_REFERENCE_FULL_MONOLITH_V1 | current | VERIFIED ✅ |

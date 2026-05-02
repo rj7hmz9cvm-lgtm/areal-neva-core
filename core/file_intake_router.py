@@ -731,3 +731,45 @@ async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *
 
 # === END_CONTEXT_AWARE_FILE_INTAKE_V1_ROUTER_WRAPPER ===
 
+
+
+# === FILE_INTAKE_SUPPORTED_FORMATS_V1 ===
+SUPPORTED_IMAGE_FORMATS = {".jpg", ".jpeg", ".png", ".heic", ".heif", ".webp", ".bmp", ".tiff", ".tif", ".gif", ".svg"}
+SUPPORTED_DOCUMENT_FORMATS = {".pdf", ".docx", ".doc", ".xlsx", ".xls", ".csv", ".txt", ".rtf"}
+SUPPORTED_CAD_FORMATS = {".dwg", ".dxf", ".ifc", ".pln", ".rvt"}
+SUPPORTED_AUDIO_FORMATS = {".ogg", ".mp3", ".wav", ".m4a", ".flac", ".aac"}
+SUPPORTED_ARCHIVE_FORMATS = {".zip", ".rar", ".7z"}
+
+def get_supported_file_format_v1(file_name: str) -> str:
+    import os
+    ext = os.path.splitext(str(file_name or "").lower())[1]
+    if ext in SUPPORTED_IMAGE_FORMATS:
+        return "image_ocr_vision"
+    if ext in SUPPORTED_DOCUMENT_FORMATS:
+        return "document"
+    if ext in SUPPORTED_CAD_FORMATS:
+        if ext == ".pln":
+            return "pln_metadata_only"
+        if ext == ".rvt":
+            return "rvt_metadata_only"
+        if ext == ".ifc":
+            return "ifc_ifcopenshell"
+        return "cad_ezdxf"
+    if ext in SUPPORTED_AUDIO_FORMATS:
+        return "audio_groq_stt"
+    if ext in SUPPORTED_ARCHIVE_FORMATS:
+        return "archive_recursive"
+    return "unsupported"
+
+def unsupported_format_message_v1(file_name: str) -> str:
+    return "Формат файла не читается напрямую. Пришли PDF/DOCX/XLSX или экспортированный чертёж"
+
+try:
+    ESTIMATE_FILENAME_TRIGGERS = list(set(ESTIMATE_FILENAME_TRIGGERS + [
+        "jpg", "jpeg", "png", "heic", "heif", "webp", "bmp", "tiff", "gif", "svg",
+        "dwg", "dxf", "ifc", "pln", "rvt", "zip", "rar", "7z",
+        "км", "кмд", "ов", "вк", "эо", "эм", "эос"
+    ]))
+except Exception:
+    pass
+# === END_FILE_INTAKE_SUPPORTED_FORMATS_V1 ===
