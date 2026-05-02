@@ -1392,19 +1392,46 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
                 _cep_result = str(_cep_data.get("result_text") or _cep_data.get("message") or _cep_data.get("summary") or "").strip()
                 if not _cep_result:
                     _cep_result = "Смета обработана"
-                if _cep_links:
-                    _cep_result += "\n\nСсылки:"
-                    _seen = set()
-                    for _k, _v in _cep_links:
-                        if _v in _seen:
-                            continue
-                        _seen.add(_v)
-                        _cep_result += f"\n- {_k}: {_v}"
-                if _cep_data.get("artifact_path"):
-                    _cep_result += "\n\nАртефакт: " + str(_cep_data.get("artifact_path"))
-                if _cep_data.get("validator_reason"):
-                    _cep_result += "\n\nПроверка: " + str(_cep_data.get("validator_reason"))
+                # === CLEAN_CEP_RESULT_TEXT_V2 ===
+                _clean_lines = []
+                for _line in str(_cep_result or "").splitlines():
+                    _l = _line.strip()
+                    _ll = _l.lower()
+                    if not _l:
+                        _clean_lines.append(_line)
+                        continue
+                    if _ll.startswith(("engine:", "manifest:", "артефакт:", "проверка:", "drive_link:", "pdf_link:", "xlsx_link:", "google_sheet_link:", "existing_")):
+                        continue
+                    if _ll == "ссылки:":
+                        continue
+                    if _ll.startswith(("- drive_link:", "- pdf_link:", "- xlsx_link:", "- google_sheet_link:", "- existing_")):
+                        continue
+                    _clean_lines.append(_line)
+                _cep_result = "\n".join(_clean_lines).strip()
 
+                if _cep_links and not any(x in _cep_result for x in ("PDF:", "XLSX:", "Google Sheets:")):
+                    _seen_public = set()
+                    _pdf_public = ""
+                    _xlsx_public = ""
+                    for _k, _v in _cep_links:
+                        _vv = str(_v or "")
+                        if not _vv.startswith("http") or _vv in _seen_public:
+                            continue
+                        _seen_public.add(_vv)
+                        if "spreadsheets" in _vv or str(_k).lower() in ("xlsx_link", "google_sheet", "google_sheet_link", "drive_link"):
+                            if not _xlsx_public:
+                                _xlsx_public = _vv
+                        elif ".pdf" in _vv.lower() or "pdf" in str(_k).lower():
+                            if not _pdf_public:
+                                _pdf_public = _vv
+                    _extra = []
+                    if _pdf_public:
+                        _extra.append("PDF: " + _pdf_public)
+                    if _xlsx_public:
+                        _extra.append("XLSX: " + _xlsx_public)
+                    if _extra:
+                        _cep_result += "\n\n" + "\n".join(_extra)
+                # === END_CLEAN_CEP_RESULT_TEXT_V2 ===
                 if _cep_success or _cep_links or _cep_data.get("artifact_path"):
                     _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_cep_result, error_message="")
                     _history(conn, task_id, "CREATE_ESTIMATE_PRIORITY_NO_ROLLBACK_V1:AWAITING_CONFIRMATION")

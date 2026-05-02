@@ -876,3 +876,340 @@ async def handle_template_technadzor_intent(
 # === END PROJECT_TECHNADZOR_TEMPLATE_CLOSE_V1 ===
 
 
+
+# === CLEAN_ESTIMATE_USER_OUTPUT_AND_TOTAL_FIX_V2 ===
+# Public Telegram/PDF/XLSX output must not expose internal engine names, manifest links, temp paths, validator text or internal link keys.
+# Saved template is formatting reference only. Current user text is the calculation source.
+
+def _ceu2_num(v):
+    try:
+        return float(str(v or "0").replace(" ", "").replace(",", "."))
+    except Exception:
+        return 0.0
+
+def _ceu2_unit(u: str) -> str:
+    s = str(u or "").lower().replace("м.2", "м²").replace("м2", "м²").replace("м.3", "м³").replace("м3", "м³")
+    s = s.replace("пм", "п.м").replace("пог.м", "п.м").replace("п. м", "п.м")
+    return s.strip()
+
+def _ceu2_find_price(text: str, patterns) -> float:
+    for pat in patterns:
+        m = re.search(pat, str(text or ""), re.I)
+        if m:
+            return _ceu2_num(m.group(1))
+    return 0.0
+
+def _parse_estimate_items(text: str) -> List[Dict[str, Any]]:
+    src = _safe_text(text)
+    if not src:
+        return []
+
+    lines = []
+    for line in re.split(r"[\n\r]+", src):
+        s = line.strip(" \t-•")
+        if not s:
+            continue
+        s = re.sub(r"^\d+[\).\s-]+", "", s).strip()
+        if not re.search(r"\d", s):
+            continue
+        if re.search(r"(м²|м2|м³|м3|п\.?\s?м|шт|кг|т\b|тонн|рейс)", s, re.I):
+            lines.append(s)
+
+    if not lines:
+        lines = [x.strip() for x in re.split(r";+", src) if x.strip()]
+
+    items = []
+    for line in lines:
+        m = re.search(
+            r"(?P<name>.*?)(?:—|-|:)?\s*(?P<qty>\d+(?:[.,]\d+)?)\s*(?P<unit>м²|м2|м³|м3|п\.?\s?м|шт|кг|т\b|тонн|рейс)",
+            line,
+            re.I,
+        )
+        if not m:
+            continue
+
+        name = re.sub(r"\s*[—:-]\s*$", "", m.group("name")).strip(" —:-")
+        if not name:
+            name = "Позиция"
+
+        qty = _ceu2_num(m.group("qty"))
+        unit = _ceu2_unit(m.group("unit"))
+        tail = line[m.end():]
+
+        material_price = _ceu2_find_price(tail, [
+            r"цена\s+материал[а-я]*\s*(\d+(?:[.,]\d+)?)",
+            r"материал[а-я]*\s*(\d+(?:[.,]\d+)?)\s*руб",
+            r"цена\s*(\d+(?:[.,]\d+)?)\s*руб",
+            r"по\s*(\d+(?:[.,]\d+)?)\s*руб",
+        ])
+
+        work_price = _ceu2_find_price(tail, [
+            r"цена\s+работ[а-я]*\s*(\d+(?:[.,]\d+)?)",
+            r"работ[а-я]*\s*(\d+(?:[.,]\d+)?)\s*руб",
+            r"вязк[а-я]*\s*(\d+(?:[.,]\d+)?)\s*руб",
+        ])
+
+        if material_price <= 0 and work_price <= 0:
+            single = _ceu2_find_price(tail, [r"(\d+(?:[.,]\d+)?)\s*руб"])
+            material_price = single
+
+        material_sum = round(qty * material_price, 2)
+        work_sum = round(qty * work_price, 2)
+        total = round(material_sum + work_sum, 2)
+
+        items.append({
+            "name": name[:160],
+            "unit": unit,
+            "qty": qty,
+            "material_price": material_price,
+            "material_sum": material_sum,
+            "work_price": work_price,
+            "work_sum": work_sum,
+            "price": round(material_price + work_price, 2),
+            "total": total,
+        })
+
+    return items
+
+def _write_estimate_xlsx(path: str, items: List[Dict[str, Any]], template: Optional[Dict[str, Any]], raw_input: str) -> None:
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+    from openpyxl.utils import get_column_letter
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Смета"
+
+    thin = Side(style="thin")
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+    fill = PatternFill(start_color="D9EAF7", end_color="D9EAF7", fill_type="solid")
+
+    ws["A1"] = "Смета"
+    ws["A1"].font = Font(bold=True, size=14)
+    ws.merge_cells("A1:I1")
+    ws["A2"] = "Шаблон используется только как формат"
+    ws["A3"] = f"Образец: {template.get('source_file_name') if template else 'не задан'}"
+
+    headers = ["№", "Наименование", "Ед.", "Объём", "Цена материала", "Сумма материала", "Цена работы", "Сумма работы", "Итог"]
+    for c, h in enumerate(headers, 1):
+        cell = ws.cell(row=5, column=c, value=h)
+        cell.font = Font(bold=True)
+        cell.fill = fill
+        cell.border = border
+        cell.alignment = Alignment(horizontal="center")
+
+    row = 6
+    for i, item in enumerate(items, 1):
+        ws.cell(row=row, column=1, value=i)
+        ws.cell(row=row, column=2, value=item["name"])
+        ws.cell(row=row, column=3, value=item["unit"])
+        ws.cell(row=row, column=4, value=item["qty"])
+        ws.cell(row=row, column=5, value=item["material_price"])
+        ws.cell(row=row, column=6, value=f"=D{row}*E{row}")
+        ws.cell(row=row, column=7, value=item["work_price"])
+        ws.cell(row=row, column=8, value=f"=D{row}*G{row}")
+        ws.cell(row=row, column=9, value=f"=F{row}+H{row}")
+        for c in range(1, 10):
+            ws.cell(row=row, column=c).border = border
+        row += 1
+
+    total_row = row + 1
+    ws.cell(row=total_row, column=5, value="Итого материалы").font = Font(bold=True)
+    ws.cell(row=total_row, column=6, value=f"=SUM(F6:F{row-1})").font = Font(bold=True)
+    ws.cell(row=total_row + 1, column=5, value="Итого работы").font = Font(bold=True)
+    ws.cell(row=total_row + 1, column=8, value=f"=SUM(H6:H{row-1})").font = Font(bold=True)
+    ws.cell(row=total_row + 2, column=5, value="Общий итог").font = Font(bold=True)
+    ws.cell(row=total_row + 2, column=9, value=f"=SUM(I6:I{row-1})").font = Font(bold=True)
+    ws.cell(row=total_row + 3, column=5, value="НДС 20%").font = Font(bold=True)
+    ws.cell(row=total_row + 3, column=9, value=f"=I{total_row+2}*20%").font = Font(bold=True)
+    ws.cell(row=total_row + 4, column=5, value="Итого с НДС").font = Font(bold=True)
+    ws.cell(row=total_row + 4, column=9, value=f"=I{total_row+2}+I{total_row+3}").font = Font(bold=True)
+
+    for idx, width in enumerate([6, 48, 10, 12, 16, 18, 16, 18, 18], 1):
+        ws.column_dimensions[get_column_letter(idx)].width = width
+
+    ws2 = wb.create_sheet("Итоги")
+    ws2["A1"] = "Итоги"
+    ws2["A1"].font = Font(bold=True, size=14)
+    ws2["A3"] = "Итого материалы"
+    ws2["B3"] = f"='Смета'!F{total_row}"
+    ws2["A4"] = "Итого работы"
+    ws2["B4"] = f"='Смета'!H{total_row+1}"
+    ws2["A5"] = "Общий итог"
+    ws2["B5"] = f"='Смета'!I{total_row+2}"
+    ws2["A6"] = "НДС 20%"
+    ws2["B6"] = f"='Смета'!I{total_row+3}"
+    ws2["A7"] = "Итого с НДС"
+    ws2["B7"] = f"='Смета'!I{total_row+4}"
+
+    ws3 = wb.create_sheet("Исходные данные")
+    ws3["A1"] = "Текущее задание"
+    ws3["A1"].font = Font(bold=True)
+    ws3["A2"] = raw_input[:32000]
+    ws3["A4"] = "Образец"
+    ws3["A5"] = template.get("source_file_name") if template else "не задан"
+    ws3.column_dimensions["A"].width = 120
+
+    wb.save(path)
+
+def _write_estimate_pdf(path: str, items: List[Dict[str, Any]], template: Optional[Dict[str, Any]], raw_input: str) -> None:
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.units import mm
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+
+    font = "Helvetica"
+    for fp in ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"):
+        if os.path.exists(fp):
+            try:
+                pdfmetrics.registerFont(TTFont("ArealSans", fp))
+                font = "ArealSans"
+                break
+            except Exception:
+                pass
+
+    c = canvas.Canvas(path, pagesize=A4)
+    w, h = A4
+    x = 15 * mm
+    y = h - 18 * mm
+
+    c.setFont(font, 14)
+    c.drawString(x, y, "Смета")
+    y -= 8 * mm
+    c.setFont(font, 8)
+    c.drawString(x, y, "Образец: " + str(template.get("source_file_name") if template else "не задан")[:90])
+    y -= 8 * mm
+
+    xs = [x, x + 10*mm, x + 95*mm, x + 115*mm, x + 140*mm, x + 165*mm]
+    headers = ["№", "Наименование", "Ед", "Объём", "Цена", "Итог"]
+    for col, val in zip(xs, headers):
+        c.drawString(col, y, val)
+    y -= 4 * mm
+    c.line(x, y, w - 15*mm, y)
+    y -= 5 * mm
+
+    total = 0.0
+    for i, item in enumerate(items, 1):
+        if y < 25 * mm:
+            c.showPage()
+            c.setFont(font, 8)
+            y = h - 20 * mm
+        total += float(item.get("total") or 0)
+        vals = [
+            str(i),
+            str(item.get("name", ""))[:44],
+            str(item.get("unit", "")),
+            f"{float(item.get('qty') or 0):g}",
+            f"{float(item.get('material_price') or 0) + float(item.get('work_price') or 0):.2f}",
+            f"{float(item.get('total') or 0):.2f}",
+        ]
+        for col, val in zip(xs, vals):
+            c.drawString(col, y, val)
+        y -= 6 * mm
+
+    y -= 4 * mm
+    c.line(x, y, w - 15*mm, y)
+    y -= 7 * mm
+    c.setFont(font, 10)
+    c.drawString(x + 125*mm, y, f"Итого: {total:.2f} руб")
+    c.save()
+
+def _ceu2_public_message(template: Optional[Dict[str, Any]], items: List[Dict[str, Any]], total: float, pdf_link: str, xlsx_link: str) -> str:
+    file_name = ""
+    try:
+        file_name = str((template or {}).get("source_file_name") or "").strip()
+    except Exception:
+        file_name = ""
+    if file_name:
+        first = f"Смета создана по образцу {file_name}"
+    else:
+        first = "Смета создана"
+    return (
+        f"{first}\n"
+        f"Позиций: {len(items)} | Итого: {total:.2f} руб\n\n"
+        f"PDF: {pdf_link}\n"
+        f"XLSX: {xlsx_link}\n\n"
+        "Доволен результатом? Да / Уточни / Правки"
+    )
+
+async def create_estimate_from_saved_template(raw_input: str, task_id: str, chat_id: str, topic_id: int = 0) -> Dict[str, Any]:
+    template = _load_active_template("estimate", chat_id, topic_id)
+    if not template:
+        return {"success": False, "error": "ACTIVE_ESTIMATE_TEMPLATE_NOT_FOUND"}
+
+    items = _parse_estimate_items(raw_input)
+    if not items:
+        return {"success": False, "error": "ESTIMATE_ITEMS_NOT_PARSED"}
+
+    total = round(sum(float(x.get("total") or 0) for x in items), 2)
+    if total <= 0:
+        return {
+            "success": False,
+            "error": "ESTIMATE_ZERO_TOTAL_BLOCKED",
+            "result_text": "Смета не создана: позиции распознаны, но итог равен 0. Проверь цены материала/работы в задании",
+            "items": items,
+            "total": total,
+        }
+
+    safe = re.sub(r"[^A-Za-z0-9_-]+", "_", str(task_id))[:30]
+    out_dir = Path(tempfile.gettempdir()) / f"areal_estimate_{safe}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    xlsx_path = str(out_dir / f"estimate_{safe}.xlsx")
+    pdf_path = str(out_dir / f"estimate_{safe}.pdf")
+    manifest_path = str(out_dir / f"estimate_{safe}.manifest.json")
+
+    _write_estimate_xlsx(xlsx_path, items, template, raw_input)
+    _write_estimate_pdf(pdf_path, items, template, raw_input)
+
+    manifest = {
+        "engine": "CLEAN_ESTIMATE_USER_OUTPUT_AND_TOTAL_FIX_V2",
+        "task_id": task_id,
+        "chat_id": str(chat_id),
+        "topic_id": int(topic_id or 0),
+        "template_used_as_format_only": True,
+        "template_file": template.get("source_file_name"),
+        "items": items,
+        "total": total,
+        "created_at": _now(),
+    }
+    Path(manifest_path).write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    pdf_link = _upload(pdf_path, task_id, topic_id)
+    xlsx_link = _upload(xlsx_path, task_id, topic_id)
+    manifest_link = _upload(manifest_path, task_id, topic_id)
+
+    if not pdf_link or not xlsx_link:
+        return {
+            "success": False,
+            "error": "ESTIMATE_UPLOAD_FAILED",
+            "result_text": "Смета создана локально, но не выгрузилась в Google Drive. Повторю выгрузку через очередь",
+            "pdf_link": pdf_link,
+            "xlsx_link": xlsx_link,
+            "excel_path": xlsx_path,
+            "artifact_path": xlsx_path,
+            "items": items,
+            "total": total,
+        }
+
+    msg = _ceu2_public_message(template, items, total, pdf_link, xlsx_link)
+
+    return {
+        "success": True,
+        "engine": "CLEAN_ESTIMATE_USER_OUTPUT_AND_TOTAL_FIX_V2",
+        "items": items,
+        "total": total,
+        "template": template,
+        "template_used_as_format_only": True,
+        "pdf_link": pdf_link,
+        "xlsx_link": xlsx_link,
+        "manifest_link": manifest_link,
+        "drive_link": xlsx_link,
+        "google_sheet_link": xlsx_link,
+        "excel_path": xlsx_path,
+        "artifact_path": xlsx_path,
+        "message": msg,
+        "result_text": msg,
+    }
+# === END_CLEAN_ESTIMATE_USER_OUTPUT_AND_TOTAL_FIX_V2 ===
