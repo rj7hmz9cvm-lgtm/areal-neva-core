@@ -1,8 +1,8 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-02T20:14:43.912370+00:00
+generated_at_utc: 2026-05-02T20:44:44.925479+00:00
 git_branch: main
-git_head_short: dfc6afb
-git_head_full: dfc6afbdaf60bdfac0446c05ef95ff5af405611b
+git_head_short: 88c2635
+git_head_full: 88c26350c961f8ee453df3d570e6b295134735f1
 
 ## SERVICES
 - areal-task-worker: active
@@ -11,13 +11,20 @@ git_head_full: dfc6afbdaf60bdfac0446c05ef95ff5af405611b
 - areal-claude-bootstrap-aggregator.timer: active
 
 ## CORE_DB_STATE_COUNTS
-- FAILED|2841
+- FAILED|2842
 - CANCELLED|762
-- DONE|441
+- DONE|442
 - ARCHIVED|381
 - OPEN_TASKS|0
 
 ## LATEST_TASKS_SAFE
+- ccc68e94-2ab2-47e4-8d6e-93269ee3f3a7|0|text|DONE|Принимай эти сметы как образцы и работай по ним|Принял
+Следующие файлы в этом топике приму как образцы сметы
+Если файл уже был в|2026-05-02 20:43:31
+- 2af172a3-2251-4787-b2af-5eb11d2bee2c|2|text|FAILED|Посчитай смету дома из газобетона 100 м² в 50 км от Питера|Нашёл актуальные цены для сметы
+
+1. Посчитай смету дома из газобетона
+ 1) 4000 р|2026-05-02 20:41:13
 - c758eeaa-0de4-45e3-bc00-84d47d850c64|2|text|DONE|[VOICE] Всё, отбой, задача закрыта.|STATE: FINISHED
 
 RESULT: Задача закрыта по запросу. Все предыдущие файлы и сметы|2026-05-02 13:51:34
@@ -34,60 +41,68 @@ RESULT: Задача закрыта по запросу. Все предыдущ
 - 155cbea7-1832-48a5-9de3-725b63e24753|2|text|DONE|[VOICE] Так, посмотри, у тебя есть теперь образцы смет? Ты понимаешь, как нужно |Принял. При создании сметы найду актуальные цены в интернете, покажу варианты и |2026-05-02 13:40:30
 - 599bc7df-ed7a-4b7e-b26d-7e77cc5d863d|0|drive_file|CANCELLED|{"file_id": "10Muc2vJHAeKn7FXDTNIDHTX883XgpUJ1", "file_name": "М-110.xlsx", "mim|None|2026-05-02 12:27:37
 - f8381f8e-5ab6-4e6b-bedc-1148471d25ce|0|drive_file|CANCELLED|{"file_id": "1DQw2qgMHtq2SqgJJP-93eIArpj1hnNNm", "file_name": "Ареал Нева.xlsx",|None|2026-05-02 12:05:28
-- f8436aa9-6064-4ca9-bfd4-e4d52f78ff0c|0|drive_file|CANCELLED|{"file_id": "1P_ZeKlGpj1MjP4ZlrF_cSU0F_ZiJR51X", "file_name": "СМЕТЫ-20260502T11|None|2026-05-02 11:58:23
-- 9a49e6f6-8ce4-4ea9-97bf-14a328e1be28|0|drive_file|CANCELLED|{"file_id": "1EdIo45jftG9REadRgzL7IqH-cRsU4UX1", "file_name": "ПРОЕКТЫ-20260502T|None|2026-05-02 11:56:22
 
 ## MEMORY_DB_COUNTS
-- MEMORY_ROWS|5504
+- MEMORY_ROWS|5511
 
 ## LATEST_MEMORY_SAFE
-- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 48, "updated_at": "2026-05-02T19:46:51.946548+00:00", "files": [|2026-05-02T19:46:51.947169+00:00
-- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 12, "updated_at": "2026-05-02T19:46:51.905520+00:00", "files": [{"|2026-05-02T19:46:51.906241+00:00
-- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-02T19:46:51.882856+00:00", "files": [{"|2026-05-02T19:46:51.883656+00:00
-- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T19:46:51.845923+00:00
-- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "s|2026-05-02T19:46:51.845846+00:00
-- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T19:46:51.845658+00:00
-- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T19:46:51.845554+00:00
-- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T19:46:51.845500+00:00
-- topic_2_file_234e52f8-3ce8-4f2f-99c3-7cc22265a151|{"task_id": "234e52f8-3ce8-4f2f-99c3-7cc22265a151", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T19:46:51.845435+00:00
-- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_fil|2026-05-02T19:46:51.845358+00:00
-- topic_2_file_acecae89-87a8-42da-881a-db41cd0134e6|{"task_id": "acecae89-87a8-42da-881a-db41cd0134e6", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T19:46:51.845275+00:00
-- topic_2_file_a4956f79-592e-45e3-8f17-925366b5eb2f|{"task_id": "a4956f79-592e-45e3-8f17-925366b5eb2f", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T19:46:51.845165+00:00
+- topic_0_pending_file_intent|{"kind": "estimate", "mode": "template_batch", "price_mode": "", "raw_text": "Принимай эти сметы как образцы и работай п|2026-05-02T20:43:31.383492+00:00
+- topic_2_archive_2af172a3|{"task_id": "2af172a3-2251-4787-b2af-5eb11d2bee2c", "chat_id": "-1003725299009", "topic_id": 2, "direction": "estimates"|2026-05-02T20:41:13.519903
+- topic_0_archive_archive_|archive smoke ok|2026-05-02T20:21:04.070870
+- owner_reference_full_workflow_v1|{
+  "version": "AREAL_REFERENCE_FULL_MONOLITH_V1",
+  "status": "ACTIVE",
+  "updated_at": "2026-05-02T20:20:56.522887+00:|2026-05-02T20:20:56.529956+00:00
+- topic_2_estimate_reference_v1|{
+  "version": "AREAL_REFERENCE_FULL_MONOLITH_V1",
+  "status": "ACTIVE",
+  "updated_at": "2026-05-02T20:20:56.522887+00:|2026-05-02T20:20:56.529956+00:00
+- topic_210_design_reference_v1|{
+  "version": "AREAL_REFERENCE_FULL_MONOLITH_V1",
+  "status": "ACTIVE",
+  "updated_at": "2026-05-02T20:20:56.522887+00:|2026-05-02T20:20:56.529956+00:00
+- topic_5_technadzor_reference_v1|{
+  "version": "AREAL_REFERENCE_FULL_MONOLITH_V1",
+  "status": "ACTIVE",
+  "updated_at": "2026-05-02T20:20:56.522887+00:|2026-05-02T20:20:56.529956+00:00
+- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 48, "updated_at": "2026-05-02T20:16:52.935894+00:00", "files": [|2026-05-02T20:16:52.936661+00:00
+- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 12, "updated_at": "2026-05-02T20:16:52.893834+00:00", "files": [{"|2026-05-02T20:16:52.894376+00:00
+- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-02T20:16:52.875163+00:00", "files": [{"|2026-05-02T20:16:52.875873+00:00
+- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-02T20:16:52.840507+00:00
+- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "s|2026-05-02T20:16:52.840411+00:00
 
 ## SEARCH_SESSIONS
 - topic_500_search_session_-1003725299009|{"chat_id": "-1003725299009", "topic_id": 500, "goal": "найди запчасть OEM 34116794300 новый тормозной диск BMW в СПб", "criteria": {"category": "AUTO_PARTS", "target": "запчасть O|2026-05-01T20:57:33.559044+00:00
 
 ## TIMELINE_INFO
 - path=/root/.areal-neva-core/data/memory_files/CHATS/-1003725299009__telegram/timeline.jsonl
-- bytes=683875
-- mtime_utc=2026-05-02T13:51:30.303492+00:00
+- bytes=684543
+- mtime_utc=2026-05-02T20:43:30.419862+00:00
 
 ## GIT_STATUS_SAFE
-M docs/REPORTS/CLAUDE_BOOTSTRAP_PENDING_PUSH.md
- M docs/REPORTS/FINAL_SESSION_CODE_TAIL_VERIFY_REPORT.md
- M docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
-?? docs/REPORTS/areal-claude-bootstrap-aggregator.service.before.20260502_121121.txt
+M docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
+?? data/price_quotes/
 
 ## FILES_MANIFEST_SAFE
 - docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md|bytes=168322|sha256=0640b8349254cfb36f1143c1f195715014e2ca1b1b428943847fd1fd80d9d8fe
-- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md|bytes=37306|sha256=95d7d9cc41d706d7177379e6c6a5f14b4303e3d7ee70e36a78775a88fae91ed0
-- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md|bytes=2013|sha256=dea06b2675da2e461e61c50abbfb45230b75b5c73b7c14cb91351881c09bf80a
+- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md|bytes=37306|sha256=58122da47e47b675aab80a8f2bcf9ef5696c83cef8242d2634f563237ba9c406
+- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md|bytes=2013|sha256=596705b8629daf4b7a6a5c3144e17655b31344d62707ac9e2fce7021717cfac2
 - docs/CANON_FINAL/00_INDEX.md|bytes=808|sha256=999acb6bfdd6c7215f11d76342ea1b9f8cdf5715418064acb3716f33999c8af6
 - docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md|bytes=41018|sha256=dbd5f683361eafc258ab0822056f6c33f751e5581998dc420f79395d14863177
 - docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md|bytes=6714|sha256=1a439843e1eb214745752720c85b49adc48f1823765982960ce7b1e285947d84
-- docs/HANDOFFS/LATEST_HANDOFF.md|bytes=15246|sha256=2edbc34cb3917727c3555f1765d861c00e524dcf092ad335c7cf5565d9de5f54
+- docs/HANDOFFS/LATEST_HANDOFF.md|bytes=15724|sha256=ddca1b3513c29f6dbcd12e42d21e6b52a182b80be13aa083d17ffeca8fb13cf4
 - docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md|bytes=7393|sha256=097209d23a01f15125b0711a85458f986e97eed44f8fb603f354df1e3b495171
-- docs/REPORTS/NOT_CLOSED.md|bytes=35741|sha256=ba3da5e76fd4dee4d745d159b94cfb0b5d39255e452fa0849079aa8ada941522
+- docs/REPORTS/NOT_CLOSED.md|bytes=36104|sha256=4ebc0172ed427e8424f9f77291180f8158522bd903894fd1fc6fe0a1086f48d5
 - docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md|bytes=9846|sha256=e9b63408cbfdd13c05ed9b174f3380d5067493e3815318661c81b30ba13be440
 - docs/ARCHITECTURE/SEARCH_MONOLITH_V1.md|bytes=16952|sha256=26676725c7608d217d6f9162526748875a7647f92320f64a5a0e10b5fd0afa28
 - docs/ARCHITECTURE/SEARCH_MONOLITH_V2.md|UNKNOWN
-- task_worker.py|bytes=192376|sha256=e6ed445acefe580ae336b05641cc44f2d90b69558dab7816fd7861a11df668ab
+- task_worker.py|bytes=199271|sha256=39dce2d88d95ef49f5db313d628f687ff688bcdee475ecdd50d6d6eee585c579
 - telegram_daemon.py|bytes=50299|sha256=3214209f6f5f507ffee95a2414a651d72b1490fe364266c876c380b745dee837
-- memory_api_server.py|bytes=2956|sha256=17550a64d4e256489801b49ef81f49c3619598f74a5f6d9d0feda3c79b6805d1
-- core/ai_router.py|bytes=22767|sha256=8700a16e227183232873f1581147fbe989723102558415b2622a47fcb131e2f5
+- memory_api_server.py|bytes=2958|sha256=93b1aa663723371ecc698d8c1691dd1e57530431c77d07c6ceb0e2701338ccd7
+- core/ai_router.py|bytes=23574|sha256=4586d46c7311007172232effe379894f9d7895b538ebce11895b4d21758b9d01
 - core/search_session.py|bytes=18734|sha256=8d2d860cbb2d10fd64341d94f837fef7edb9a55466f73b1a65860ecaa17ac0f0
 - core/search_engine.py|bytes=2127|sha256=1f35cefd94b014de6ca4eeb0cfd8802ce0f9275e7ea160c7fe43f70a288e94d6
-- core/file_intake_router.py|bytes=35401|sha256=507c2a73927f61fcdbf605297e4a69016c06ca3c07d556a843989dad9c882d99
+- core/file_intake_router.py|bytes=37148|sha256=74899640e82d24af39dde159e3e71185e192d2734c1e367ae24aca54427a63b6
 - core/archive_engine.py|bytes=2684|sha256=04fdd1d0f6927a38b62f869f0a020b30b8cc81d798083d607f1a86d3c61c6e1e
 - core/reply_sender.py|bytes=2987|sha256=c49d63d23f3b580cc5ef2066ed2531665df90a2df5fed4fc4d4b2f924854d932
 - core/pin_manager.py|bytes=2603|sha256=612acafe7a005144bbd67b00fe54ac90c166aa76dafd8badcedc5f9a89812dfa
@@ -99,105 +114,105 @@ M docs/REPORTS/CLAUDE_BOOTSTRAP_PENDING_PUSH.md
 
 ## task_worker.py
 29: from typing import Any, Dict, List, Optional, Tuple
-33: # === CANON_REMAINING_CODE_FULL_CLOSE_V1_IMPORT ===
-38: except Exception as _canon_import_err:
-44: # === END_CANON_REMAINING_CODE_FULL_CLOSE_V1_IMPORT ===
-51: # === SEARCH_MONOLITH_V2_TASK_WORKER_IMPORT ===
-56: # === END SEARCH_MONOLITH_V2_TASK_WORKER_IMPORT ===
-72: from core.topic_meta_loader import load_topic_meta, is_what_is_this_question, build_topic_self_answer
-73: TOPIC_META_LOADER_WIRED = True
-75: TOPIC_META_LOADER_WIRED = False
-76: def load_topic_meta(t): return None
-78: def build_topic_self_answer(m): return ""
-79: # TOPIC_META_LOADER_V1_IMPORT
-80: from core.reply_sender import send_reply, send_reply_ex
-89: from core.topic_3008_engine import is_topic_3008 as _t3_check, detect_command as _t3_cmd, extract_code as _t3_extract, verify_code as _t3_verify, generate_code as _t3_generate  # TOPIC_3008_V1_WIRED
-108: from core.intake_offer_actions import needs_offer as _ioa_needs, get_offer_text as _ioa_text, parse_offer_reply as _ioa_parse  # INTAKE_OFFER_V1_WIRED
-187: from core.pin_manager import get_pin_context, save_pin
-188: from core.topic_drive_oauth import upload_file_to_topic
-388: # === FULLFIX_DIRECTION_KERNEL_STAGE_1_IMPORT ===
-396: # === FULLFIX_CAPABILITY_ROUTER_STAGE_2_IMPORT ===
-402: # === FULLFIX_CONTEXT_LOADER_STAGE_3_IMPORT ===
-408: # === FULLFIX_QUALITY_GATE_STAGE_4_IMPORT ===
-414: # === FULLFIX_SEARCH_ENGINE_STAGE_5_IMPORT ===
-420: # === FULLFIX_ARCHIVE_ENGINE_STAGE_6_IMPORT ===
-422: from core.archive_engine import ArchiveEngine as _Stage6Archive
-426: # === FULLFIX_FORMAT_ADAPTER_STAGE_7_IMPORT ===
-432: # === FULLFIX_TOPIC_AUTODISCOVERY_V2_IMPORT ===
-434: from core.topic_autodiscovery import process as _topic_autodiscovery, check_naming_timeout as _topic_naming_check
-436: _topic_autodiscovery = None
-437: _topic_naming_check = None
-438: # === END TOPIC_AUTO ===
-589: def _memory_insert_topic_entry_v1(chat_id: str, key: str, value: str) -> None:
-615: def _append_timeline_event_v1(chat_id: str, topic_id: int, task_id: str, kind: str, raw_input: str = "", result: str = "") -> None:
-625: "topic_id": int(topic_id or 0),
-656: (task_id, f"reply_sent:{kind}"),
-661: def _send_once(conn: sqlite3.Connection, task_id: str, chat_id: str, text: str, reply_to: Optional[int], kind: str) -> bool:
-671: ok = send_reply(chat_id=chat_id, text=text, reply_to_message_id=reply_to)
-673: _history(conn, task_id, f"reply_sent:{kind}")
-677: def _send_once_ex(conn: sqlite3.Connection, task_id: str, chat_id: str, text: str, reply_to: Optional[int], kind: str) -> Dict[str, Any]:
-687: res = send_reply_ex(chat_id=chat_id, text=text, reply_to_message_id=reply_to)
-691: _history(conn, task_id, f"reply_sent:{kind}")
-740: def _save_topic_role(chat_id: str, topic_id: int, role: str) -> None:
-747: key = f"topic_{topic_id}_role"
-758: def _load_memory_context(chat_id: str, topic_id: int) -> Tuple[str, str, str, str]:
-767: topic_prefix = f"topic_{int(topic_id)}_"
-777: (str(chat_id), f"{topic_prefix}*"),
-782: topic_role = ""
-783: topic_directions = ""
-826: if key.endswith("_role") and not topic_role:
-827: topic_role = value[:500]
-830: if not topic_role and (key.endswith("_assistant_output") or key.endswith("_task_summary")):
-839: topic_role = _clean(m.group(1), 500)
-841: if key.endswith("_directions") and not topic_directions:
-842: topic_directions = value[:1000]
-851: # === TOPIC_META_ROLE_INJECT_V1 ===
-852: if not topic_role and TOPIC_META_LOADER_WIRED:
-854: _tm = load_topic_meta(int(topic_id or 0))
-859: topic_role = f"Топик: {_tm_name} | Направление: {_tm_dir}"
-862: # === END TOPIC_META_ROLE_INJECT_V1 ===
-863: return "\n".join(short_memory[:20]), "\n".join(long_memory[:20]), topic_role, topic_directions  # MEMORY_LIMIT_20_V1
-868: def _load_archive_context(chat_id: str, topic_id: int, user_text: str) -> str:
-871: from core.archive_distributor import _load_archive_for_topic
-872: arc = _load_archive_for_topic(chat_id, topic_id, user_text, limit=5)
-911: if int(payload.get("topic_id", -1)) != int(topic_id):
-923: def _active_unfinished_context(conn: sqlite3.Connection, chat_id: str, topic_id: int, task_id: str) -> str:
-931: if "topic_id" in cols:
-932: where.append("COALESCE(topic_id,0)=?")
-933: params.append(int(topic_id))
-966: def _search_fact_context(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> str:
-974: if "topic_id" in cols:
-975: where.append("COALESCE(topic_id,0)=?")
-976: params.append(int(topic_id))
-1001: def _save_memory(chat_id: str, topic_id: int, raw_input: str, result: str) -> None:
-1033: prefix = f"topic_{int(topic_id)}_"
-1047: logger.info("save_memory_ok chat=%s topic=%s", chat_id, topic_id)
-1052: def _close_pin(conn: sqlite3.Connection, task_id: str) -> None:
-1053: if not _has_table(conn, "pin"):
-1056: "UPDATE pin SET state='CLOSED', updated_at=datetime('now') WHERE task_id=? AND state='ACTIVE'",
-1061: def _finalize_done(conn: sqlite3.Connection, task_id: str, chat_id: str, topic_id: int, reply_to: Optional[int]) -> None:
-1072: _save_memory(chat_id, topic_id, raw_input, result)
-1091: # CONFIRMATION_TIMEOUT_FIX_V1
-1094: UPDATE tasks SET state='FAILED', error_message='CONFIRMATION_TIMEOUT', updated_at=datetime('now')
-1097: AND COALESCE(raw_input,'') NOT LIKE '%retry_queue_healthcheck%'
-1098: AND COALESCE(result,'') NOT LIKE '%retry_queue_healthcheck%'
-1102: logger.warning("CONFIRMATION_TIMEOUT_FIX_V1_ERR %s", _ct_e)
-1103: # IN_PROGRESS_HARD_TIMEOUT_V1
-1111: f"SELECT id,chat_id,COALESCE(topic_id,0) AS topic_id,reply_to_message_id,raw_input FROM tasks WHERE {' AND '.join(_hw)}",
-1115: _htopic = int(_hr["topic_id"] or 0); _hreply = _hr["reply_to_message_id"]
-1118: _close_pin(conn, _htid); _history(conn, _htid, "state:FAILED:EXECUTION_TIMEOUT")
-1120: _append_timeline_event_v1(_hchat, _htopic, _htid, "execution_timeout", _s(_hr["raw_input"]), _hmsg)
-1123: _send_once(conn, _htid, _hchat, _hmsg, _hreply, "execution_timeout")
-1125: logger.warning("IN_PROGRESS_HARD_TIMEOUT_V1_ERR %s", _e)
-1138: SELECT id, chat_id, COALESCE(topic_id,0) AS topic_id, reply_to_message_id
-1148: reply_to = row["reply_to_message_id"]
-1150: _close_pin(conn, task_id)
-1153: _send_once(conn, task_id, tg_chat_id, "Задача не выполнена. Повтори или уточни запрос", reply_to, "stale_failed")
-1171: SELECT id, chat_id, COALESCE(topic_id,0) AS topic_id, reply_to_message_id, result, raw_input, input_type, updated_at, created_at
-1196: _close_pin(conn, row["id"])
-1203: _close_pin(conn, row["id"])
-1227: _close_pin(conn, row["id"])
-1232: _close_pin(conn, row["id"])
+38: # === CANON_REMAINING_CODE_FULL_CLOSE_V1_IMPORT ===
+43: except Exception as _canon_import_err:
+49: # === END_CANON_REMAINING_CODE_FULL_CLOSE_V1_IMPORT ===
+56: # === SEARCH_MONOLITH_V2_TASK_WORKER_IMPORT ===
+61: # === END SEARCH_MONOLITH_V2_TASK_WORKER_IMPORT ===
+77: from core.topic_meta_loader import load_topic_meta, is_what_is_this_question, build_topic_self_answer
+78: TOPIC_META_LOADER_WIRED = True
+80: TOPIC_META_LOADER_WIRED = False
+81: def load_topic_meta(t): return None
+83: def build_topic_self_answer(m): return ""
+84: # TOPIC_META_LOADER_V1_IMPORT
+85: from core.reply_sender import send_reply, send_reply_ex
+94: from core.topic_3008_engine import is_topic_3008 as _t3_check, detect_command as _t3_cmd, extract_code as _t3_extract, verify_code as _t3_verify, generate_code as _t3_generate  # TOPIC_3008_V1_WIRED
+113: from core.intake_offer_actions import needs_offer as _ioa_needs, get_offer_text as _ioa_text, parse_offer_reply as _ioa_parse  # INTAKE_OFFER_V1_WIRED
+192: from core.pin_manager import get_pin_context, save_pin
+193: from core.topic_drive_oauth import upload_file_to_topic
+364: # === REPLY_REPEAT_PARENT_TASK_V1 ===
+375: def _find_repeat_parent_task_v1(conn, chat_id: str, topic_id: int, exclude_task_id: str = ""):
+378: if "topic_id" in cols:
+380: "SELECT * FROM tasks WHERE chat_id=? AND COALESCE(topic_id,0)=? AND id<>? AND state IN ('IN_PROGRESS','AWAITING_CONFIRMATION','WAITING_CLARIFICATION','NEW') ORDER BY updated_at DESC LIMIT 1",
+381: (str(chat_id), int(topic_id or 0), str(exclude_task_id)),
+388: logger.warning("REPLY_REPEAT_PARENT_TASK_V1_FIND_ERR %s", _e)
+390: # === END_REPLY_REPEAT_PARENT_TASK_V1 ===
+422: # === FULLFIX_DIRECTION_KERNEL_STAGE_1_IMPORT ===
+430: # === FULLFIX_CAPABILITY_ROUTER_STAGE_2_IMPORT ===
+436: # === FULLFIX_CONTEXT_LOADER_STAGE_3_IMPORT ===
+442: # === FULLFIX_QUALITY_GATE_STAGE_4_IMPORT ===
+448: # === FULLFIX_SEARCH_ENGINE_STAGE_5_IMPORT ===
+454: # === FULLFIX_ARCHIVE_ENGINE_STAGE_6_IMPORT ===
+456: from core.archive_engine import ArchiveEngine as _Stage6Archive
+460: # === FULLFIX_FORMAT_ADAPTER_STAGE_7_IMPORT ===
+466: # === FULLFIX_TOPIC_AUTODISCOVERY_V2_IMPORT ===
+468: from core.topic_autodiscovery import process as _topic_autodiscovery, check_naming_timeout as _topic_naming_check
+470: _topic_autodiscovery = None
+471: _topic_naming_check = None
+472: # === END TOPIC_AUTO ===
+623: def _memory_insert_topic_entry_v1(chat_id: str, key: str, value: str) -> None:
+649: def _append_timeline_event_v1(chat_id: str, topic_id: int, task_id: str, kind: str, raw_input: str = "", result: str = "") -> None:
+659: "topic_id": int(topic_id or 0),
+690: (task_id, f"reply_sent:{kind}"),
+695: def _send_once(conn: sqlite3.Connection, task_id: str, chat_id: str, text: str, reply_to: Optional[int], kind: str) -> bool:
+705: ok = send_reply(chat_id=chat_id, text=text, reply_to_message_id=reply_to)
+707: _history(conn, task_id, f"reply_sent:{kind}")
+711: def _send_once_ex(conn: sqlite3.Connection, task_id: str, chat_id: str, text: str, reply_to: Optional[int], kind: str) -> Dict[str, Any]:
+721: res = send_reply_ex(chat_id=chat_id, text=text, reply_to_message_id=reply_to)
+725: _history(conn, task_id, f"reply_sent:{kind}")
+774: def _save_topic_role(chat_id: str, topic_id: int, role: str) -> None:
+781: key = f"topic_{topic_id}_role"
+792: def _load_memory_context(chat_id: str, topic_id: int) -> Tuple[str, str, str, str]:
+801: topic_prefix = f"topic_{int(topic_id)}_"
+811: (str(chat_id), f"{topic_prefix}*"),
+816: topic_role = ""
+817: topic_directions = ""
+860: if key.endswith("_role") and not topic_role:
+861: topic_role = value[:500]
+864: if not topic_role and (key.endswith("_assistant_output") or key.endswith("_task_summary")):
+873: topic_role = _clean(m.group(1), 500)
+875: if key.endswith("_directions") and not topic_directions:
+876: topic_directions = value[:1000]
+885: # === TOPIC_META_ROLE_INJECT_V1 ===
+886: if not topic_role and TOPIC_META_LOADER_WIRED:
+888: _tm = load_topic_meta(int(topic_id or 0))
+893: topic_role = f"Топик: {_tm_name} | Направление: {_tm_dir}"
+896: # === END TOPIC_META_ROLE_INJECT_V1 ===
+897: return "\n".join(short_memory[:20]), "\n".join(long_memory[:20]), topic_role, topic_directions  # MEMORY_LIMIT_20_V1
+902: def _load_archive_context(chat_id: str, topic_id: int, user_text: str) -> str:
+905: from core.archive_distributor import _load_archive_for_topic
+906: arc = _load_archive_for_topic(chat_id, topic_id, user_text, limit=5)
+945: if int(payload.get("topic_id", -1)) != int(topic_id):
+957: def _active_unfinished_context(conn: sqlite3.Connection, chat_id: str, topic_id: int, task_id: str) -> str:
+965: if "topic_id" in cols:
+966: where.append("COALESCE(topic_id,0)=?")
+967: params.append(int(topic_id))
+1000: def _search_fact_context(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> str:
+1008: if "topic_id" in cols:
+1009: where.append("COALESCE(topic_id,0)=?")
+1010: params.append(int(topic_id))
+1035: def _save_memory(chat_id: str, topic_id: int, raw_input: str, result: str) -> None:
+1067: prefix = f"topic_{int(topic_id)}_"
+1081: logger.info("save_memory_ok chat=%s topic=%s", chat_id, topic_id)
+1086: def _close_pin(conn: sqlite3.Connection, task_id: str) -> None:
+1087: if not _has_table(conn, "pin"):
+1090: "UPDATE pin SET state='CLOSED', updated_at=datetime('now') WHERE task_id=? AND state='ACTIVE'",
+1095: def _finalize_done(conn: sqlite3.Connection, task_id: str, chat_id: str, topic_id: int, reply_to: Optional[int]) -> None:
+1106: _save_memory(chat_id, topic_id, raw_input, result)
+1125: # CONFIRMATION_TIMEOUT_FIX_V1
+1128: UPDATE tasks SET state='FAILED', error_message='CONFIRMATION_TIMEOUT', updated_at=datetime('now')
+1131: AND COALESCE(raw_input,'') NOT LIKE '%retry_queue_healthcheck%'
+1132: AND COALESCE(result,'') NOT LIKE '%retry_queue_healthcheck%'
+1136: logger.warning("CONFIRMATION_TIMEOUT_FIX_V1_ERR %s", _ct_e)
+1137: # IN_PROGRESS_HARD_TIMEOUT_V1
+1145: f"SELECT id,chat_id,COALESCE(topic_id,0) AS topic_id,reply_to_message_id,raw_input FROM tasks WHERE {' AND '.join(_hw)}",
+1149: _htopic = int(_hr["topic_id"] or 0); _hreply = _hr["reply_to_message_id"]
+1152: _close_pin(conn, _htid); _history(conn, _htid, "state:FAILED:EXECUTION_TIMEOUT")
+1154: _append_timeline_event_v1(_hchat, _htopic, _htid, "execution_timeout", _s(_hr["raw_input"]), _hmsg)
+1157: _send_once(conn, _htid, _hchat, _hmsg, _hreply, "execution_timeout")
+1159: logger.warning("IN_PROGRESS_HARD_TIMEOUT_V1_ERR %s", _e)
+1172: SELECT id, chat_id, COALESCE(topic_id,0) AS topic_id, reply_to_message_id
+1182: reply_to = row["reply_to_message_id"]
 ...TRUNCATED_MARKERS...
 
 ## telegram_daemon.py
@@ -302,42 +317,42 @@ M docs/REPORTS/CLAUDE_BOOTSTRAP_PENDING_PUSH.md
 ## core/ai_router.py
 6: from typing import Any, Dict, List
 8: # === SEARCH_MONOLITH_V2_IMPORT ===
-12: run_search_monolith_v2 = None
-14: # === END SEARCH_MONOLITH_V2_IMPORT ===
-33: OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "").strip()
-34: OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").strip().rstrip("/")
-36: DEFAULT_MODEL = os.getenv("OPENROUTER_MODEL", "deepseek/deepseek-chat").strip() or "deepseek/deepseek-chat"
-37: ONLINE_MODEL = os.getenv("OPENROUTER_MODEL_ONLINE", "perplexity/sonar").strip() or "perplexity/sonar"  # SEARCH_MONOLITH_V1
-52: r"stt failed",
-86: # CANON_SYSTEM_PROMPT_V1
-94: 3. PIN (только если совпадает с темой)
-107: Если есть topic_role — это твой рабочий режим.
-147: """.strip()  # CANON_SYSTEM_PROMPT_V1
-149: SEARCH_SYSTEM_PROMPT = """# SEARCH_MONOLITH_V1 — ЦИФРОВОЙ СНАБЖЕНЕЦ
-227: """  # END SEARCH_MONOLITH_V1.strip()
-306: topic_role = _clean(_s(payload.get("topic_role")), 500)
-307: topic_directions = _clean(_s(payload.get("topic_directions")), 1000)
-327: if topic_role:
-328: system_content = f"Роль этого чата: {topic_role}\n\n" + system_content
-329: if topic_directions:
-330: system_content = system_content + f"\n\nТиповые задачи этого чата: {topic_directions}"
-345: _sanitize_block("PIN", payload.get("pin_context")),
-380: async def _openrouter_call(model: str, messages: List[Dict[str, str]]) -> str:
-382: "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-391: r = await client.post(f"{OPENROUTER_BASE_URL}/chat/completions", headers=headers, json=body)
-393: msg = f"OPENROUTER_HTTP_{r.status_code}: {r.text[:500]}"
-399: if not OPENROUTER_API_KEY:
-400: raise RuntimeError("OPENROUTER_API_KEY not set")
-408: try: _s_topic = int(payload.get("topic_id") or 0)
-409: except: _s_topic = 0
-414: # === SEARCH_MONOLITH_V2_CALL ===
-416: if run_search_monolith_v2 is not None:
-417: _v2 = await run_search_monolith_v2(work_payload, user_text, _openrouter_call, ONLINE_MODEL, SEARCH_SYSTEM_PROMPT)
-420: logger.info("SEARCH_MONOLITH_V2_OK chars=%s", len(_v2))
-423: logger.error("SEARCH_MONOLITH_V2_FAIL err=%s fallback=V1", _v2e)
-424: # === END SEARCH_MONOLITH_V2_CALL ===
-433: search_result = await _openrouter_call(
-470: result = await _openrouter_call(_final_model, messages)
+16: run_search_monolith_v2 = None
+18: # === END SEARCH_MONOLITH_V2_IMPORT ===
+37: OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "").strip()
+38: OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").strip().rstrip("/")
+40: DEFAULT_MODEL = os.getenv("OPENROUTER_MODEL", "deepseek/deepseek-chat").strip() or "deepseek/deepseek-chat"
+41: ONLINE_MODEL = os.getenv("OPENROUTER_MODEL_ONLINE", "perplexity/sonar").strip() or "perplexity/sonar"  # SEARCH_MONOLITH_V1
+56: r"stt failed",
+90: # CANON_SYSTEM_PROMPT_V1
+98: 3. PIN (только если совпадает с темой)
+111: Если есть topic_role — это твой рабочий режим.
+151: """.strip()  # CANON_SYSTEM_PROMPT_V1
+153: SEARCH_SYSTEM_PROMPT = """# SEARCH_MONOLITH_V1 — ЦИФРОВОЙ СНАБЖЕНЕЦ
+231: """  # END SEARCH_MONOLITH_V1.strip()
+310: topic_role = _clean(_s(payload.get("topic_role")), 500)
+311: topic_directions = _clean(_s(payload.get("topic_directions")), 1000)
+331: if topic_role:
+332: system_content = f"Роль этого чата: {topic_role}\n\n" + system_content
+333: if topic_directions:
+334: system_content = system_content + f"\n\nТиповые задачи этого чата: {topic_directions}"
+359: _sanitize_block("PIN", payload.get("pin_context")),
+394: async def _openrouter_call(model: str, messages: List[Dict[str, str]]) -> str:
+396: "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+405: r = await client.post(f"{OPENROUTER_BASE_URL}/chat/completions", headers=headers, json=body)
+407: msg = f"OPENROUTER_HTTP_{r.status_code}: {r.text[:500]}"
+413: if not OPENROUTER_API_KEY:
+414: raise RuntimeError("OPENROUTER_API_KEY not set")
+422: try: _s_topic = int(payload.get("topic_id") or 0)
+423: except: _s_topic = 0
+428: # === SEARCH_MONOLITH_V2_CALL ===
+430: if run_search_monolith_v2 is not None:
+431: _v2 = await run_search_monolith_v2(work_payload, user_text, _openrouter_call, ONLINE_MODEL, SEARCH_SYSTEM_PROMPT)
+434: logger.info("SEARCH_MONOLITH_V2_OK chars=%s", len(_v2))
+437: logger.error("SEARCH_MONOLITH_V2_FAIL err=%s fallback=V1", _v2e)
+438: # === END SEARCH_MONOLITH_V2_CALL ===
+447: search_result = await _openrouter_call(
+484: result = await _openrouter_call(_final_model, messages)
 
 ## core/search_session.py
 1: # === SEARCH_MONOLITH_V2_FULL ===
@@ -411,6 +426,7 @@ M docs/REPORTS/CLAUDE_BOOTSTRAP_PENDING_PUSH.md
 715: from core.file_context_intake import latest_pending_instruction_for_topic
 717: pending = latest_pending_instruction_for_topic(int(topic_id or 0), chat_id)
 727: res = _ca_fir_orig_route_file(file_path, task_id, topic_id, intent, fmt, *args, **kwargs)
+759: return "audio_groq_stt"
 
 ## core/archive_engine.py
 1: # === FULLFIX_ARCHIVE_ENGINE_STAGE_6 ===
