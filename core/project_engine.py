@@ -2727,3 +2727,22 @@ def _ff07_sheet_rows_from_template(template: Dict[str, Any], section: str, data:
     logger.warning("PROJECT_ENGINE_FALLBACK_SHEET_REGISTER_V1_USED section=%s old_len=%s new_len=%s", section, len(rows), len(fallback))
     return fallback
 # === END_PROJECT_ENGINE_FALLBACK_SHEET_REGISTER_V1 ===
+
+
+# === PROJECT_ENGINE_CLEAN_USER_OUTPUT_V1_WRAPPER ===
+try:
+    _pec_orig_create_project_artifact_from_latest_template = create_project_artifact_from_latest_template
+
+    def create_project_artifact_from_latest_template(user_text: str, task_id: str, topic_id: int = 0) -> dict:
+        res = _pec_orig_create_project_artifact_from_latest_template(user_text, task_id, topic_id)
+        try:
+            from core.project_route_guard import format_project_result_message
+            from core.output_sanitizer import sanitize_project_message
+            res["user_message"] = sanitize_project_message(format_project_result_message(res, user_text))
+        except Exception:
+            pass
+        return res
+except Exception:
+    pass
+# === END_PROJECT_ENGINE_CLEAN_USER_OUTPUT_V1_WRAPPER ===
+

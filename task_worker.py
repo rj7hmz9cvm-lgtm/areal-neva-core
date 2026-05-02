@@ -659,6 +659,13 @@ def _already_replied(conn: sqlite3.Connection, task_id: str, kind: str) -> bool:
 
 
 def _send_once(conn: sqlite3.Connection, task_id: str, chat_id: str, text: str, reply_to: Optional[int], kind: str) -> bool:
+    # === _send_once_UNIFIED_USER_OUTPUT_SANITIZER_V1 ===
+    try:
+        from core.output_sanitizer import sanitize_user_output as _uos_sanitize
+        text = _uos_sanitize(text)
+    except Exception as _uos_err:
+        logger.warning("UNIFIED_USER_OUTPUT_SANITIZER_V1_ERR %s", _uos_err)
+    # === END__send_once_UNIFIED_USER_OUTPUT_SANITIZER_V1 ===
     if _already_replied(conn, task_id, kind):
         return True
     ok = send_reply(chat_id=chat_id, text=text, reply_to_message_id=reply_to)
@@ -668,6 +675,13 @@ def _send_once(conn: sqlite3.Connection, task_id: str, chat_id: str, text: str, 
 
 
 def _send_once_ex(conn: sqlite3.Connection, task_id: str, chat_id: str, text: str, reply_to: Optional[int], kind: str) -> Dict[str, Any]:
+    # === _send_once_ex_UNIFIED_USER_OUTPUT_SANITIZER_V1 ===
+    try:
+        from core.output_sanitizer import sanitize_user_output as _uos_sanitize
+        text = _uos_sanitize(text)
+    except Exception as _uos_err:
+        logger.warning("UNIFIED_USER_OUTPUT_SANITIZER_V1_ERR %s", _uos_err)
+    # === END__send_once_ex_UNIFIED_USER_OUTPUT_SANITIZER_V1 ===
     if _already_replied(conn, task_id, kind):
         return {"ok": True, "bot_message_id": None, "skipped": True}
     res = send_reply_ex(chat_id=chat_id, text=text, reply_to_message_id=reply_to)
@@ -1253,6 +1267,64 @@ def _ff13c_strip_manifest_links(text):
 
 
 async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str, topic_id: int) -> None:
+    # === REMAINING_TECH_CONTOUR_CLOSE_V1_WIRED ===
+    # P0 guard order:
+    # 1. reply repeat parent
+    # 2. explicit project route before estimate/template/file followup
+    try:
+        from core.reply_repeat_parent import prehandle_reply_repeat_parent_v1 as _rrp_prehandle
+        _rrp = _rrp_prehandle(conn, task)
+        if _rrp and _rrp.get("handled"):
+            _rrp_tid = _s(_task_field(task, "id", ""))
+            _rrp_chat = _s(_task_field(task, "chat_id", ""))
+            _rrp_reply = _task_field(task, "reply_to_message_id", None)
+            _rrp_text = _rrp.get("message") or ""
+            try:
+                from core.output_sanitizer import sanitize_user_output as _sanitize_out
+                _rrp_text = _sanitize_out(_rrp_text)
+            except Exception:
+                pass
+            _rrp_send = _send_once_ex(conn, _rrp_tid, _rrp_chat, _rrp_text, _rrp_reply, _rrp.get("kind", "reply_repeat_parent"))
+            _update_task(
+                conn,
+                _rrp_tid,
+                state=_rrp.get("state", "DONE"),
+                result=_rrp_text,
+                error_message=_rrp.get("error_message", ""),
+                bot_message_id=_rrp_send.get("bot_message_id"),
+            )
+            _history(conn, _rrp_tid, _rrp.get("history", "REPLY_REPEAT_PARENT_TASK_V1:HANDLED"))
+            return
+    except Exception as _rrp_err:
+        logger.warning("REMAINING_TECH_CONTOUR_CLOSE_V1_REPLY_ERR %s", _rrp_err)
+
+    try:
+        from core.project_route_guard import prehandle_project_route_v1 as _proj_prehandle
+        _proj = await _proj_prehandle(conn, task)
+        if _proj and _proj.get("handled"):
+            _proj_tid = _s(_task_field(task, "id", ""))
+            _proj_chat = _s(_task_field(task, "chat_id", ""))
+            _proj_reply = _task_field(task, "reply_to_message_id", None)
+            _proj_text = _proj.get("message") or ""
+            try:
+                from core.output_sanitizer import sanitize_project_message as _sanitize_project_out
+                _proj_text = _sanitize_project_out(_proj_text)
+            except Exception:
+                pass
+            _proj_send = _send_once_ex(conn, _proj_tid, _proj_chat, _proj_text, _proj_reply, _proj.get("kind", "project_route_guard"))
+            _update_task(
+                conn,
+                _proj_tid,
+                state=_proj.get("state", "WAITING_CLARIFICATION"),
+                result=_proj_text,
+                error_message=_proj.get("error_message", ""),
+                bot_message_id=_proj_send.get("bot_message_id"),
+            )
+            _history(conn, _proj_tid, _proj.get("history", "PROJECT_ROUTE_FIX_NO_ESTIMATE_REGRESSION_V1:HANDLED"))
+            return
+    except Exception as _proj_err:
+        logger.warning("REMAINING_TECH_CONTOUR_CLOSE_V1_PROJECT_ERR %s", _proj_err)
+    # === END_REMAINING_TECH_CONTOUR_CLOSE_V1_WIRED ===
     # === FULL_TECH_CONTOUR_CLOSE_V1_WIRED ===
     # P0 guard: price confirmation, context-aware file intake, Telegram duplicate file memory
     try:
