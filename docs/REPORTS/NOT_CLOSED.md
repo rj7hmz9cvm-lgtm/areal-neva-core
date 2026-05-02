@@ -564,3 +564,83 @@ Archive Engine пишет в POST /archive но endpoint не реализова
 - Файл в чате → бот говорит "этот файл уже есть" (DUPLICATE_GUARD)
 - Voice "да" при AWAITING_CONFIRMATION → DONE
 - Estimate PDF→Excel live тест с реальным файлом
+
+---
+## ОБНОВЛЕНИЕ 02.05.2026 — ПОЛНЫЙ СПИСОК НЕЗАКРЫТОГО (сессия 02.05)
+
+### ЗАКРЫТО КОДОМ В ЭТОЙ СЕССИИ (верифицировано git + smoke):
+- RESULT_VALIDATOR_FIX_V1: убраны false-positive BAD_RESULT_RE, MIN_RESULT_LEN 8→2 (e3c742d)
+- CREATE_ESTIMATE_PRIORITY_NO_ROLLBACK_V1: явный запрос сметы → estimate engine до followup (b2a725b)
+- CLEAN_ESTIMATE_USER_OUTPUT_AND_TOTAL_FIX_V2: чистый вывод без Engine/MANIFEST/tmp (756f307)
+- RULE §0.5: READ→FIND→PATCH→COMPILE→RESTART→LOGS→PUSH в каноне (3538995)
+- REAL_GAPS_CLOSE_V2: estimate validator, no-llm guard, strict template, region parser, async template (efa4832)
+- IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1: hard 30min timeout по created_at (c5b4326)
+- PROJECT_ENGINE_FALLBACK_SHEET_REGISTER_V1: fallback 8 листов КЖ без шаблона (09b0b36)
+- PROJECT_PRIORITY_ROUTE_NO_ROLLBACK_V1: проект идёт выше сметы и file-followup (2faa8ea)
+- FILE_INTAKE_KZH_INTENT_FIX_V1: КЖ/КД файлы → project, голый файл → уточнение (349aeed)
+- PDF_SPEC_EXTRACTOR_STUB_V1: заглушка, воркер больше не падает (6b36da1)
+
+### НЕ ЗАКРЫТО КОДОМ — ТРЕБУЕТ ПАТЧА:
+
+#### P0 — БЛОКИРУЕТ ЖИВУЮ РАБОТУ:
+1. REPLY_REPEAT_PARENT_TASK_V1
+   "повтори" / "ещё раз" / "заново" без project_words → уходит в topic description
+   Нужно: найти parent task в топике → взять raw_input → повторить в правильный движок
+   Файл: task_worker.py, вставить ДО CREATE_PROJECT_PRIORITY_NO_ROLLBACK_V1
+
+2. WEB_SEARCH_PRICE_ENRICHMENT_V1
+   Пользователь: "принять Excel как образец, но цены на материалы брать из интернета"
+   Нужно: при create_estimate_from_saved_template → для каждой позиции → web_search актуальной цены → подставить в smeta
+   Файл: core/sample_template_engine.py + core/estimate_engine.py
+
+3. CONTEXT_AWARE_FILE_INTAKE_V1
+   Файл пришёл → бот не видит ТЗ написанное выше в чате → спрашивает "что делать?"
+   Нужно: should_ask_clarification проверять последние 5 задач топика на project/estimate words
+   Файл: core/file_intake_router.py
+
+#### P1 — ФУНКЦИОНАЛЬНЫЕ ПРОБЕЛЫ:
+4. PDF_SPEC_EXTRACTOR_REAL_V1
+   Сейчас заглушка — PDF сметы/спецификации не парсятся
+   Нужно: pdfplumber → извлечь таблицы → найти qty/unit/price → вернуть rows
+   Файл: core/pdf_spec_extractor.py
+
+5. PROJECT_ENGINE_CLEAN_USER_OUTPUT_V1
+   Проектный результат показывает Engine/MANIFEST/tmp пути пользователю
+   Нужно: чистый вывод PDF/DXF/XLSX + ссылки Drive без системных ключей
+   Файл: task_worker.py CREATE_PROJECT_PRIORITY_NO_ROLLBACK_V1
+
+6. ARCHIVE_DUPLICATE_GUARD_V1
+   Нет UNIQUE index на (chat_id, key) в memory.db → дубли накапливаются
+   Нужно: CREATE UNIQUE INDEX + DELETE дублей
+   Файл: tools/telegram_history_full_backfill.py + memory.db
+
+7. XLSX_GOOGLE_SHEETS_FORMULA_VALUES_FIX_V1
+   Google Sheets показывает формулы вместо значений при data_only=False
+   Нужно: дублировать числовое значение рядом с формулой
+   Файл: core/sample_template_engine.py _write_estimate_xlsx
+
+#### P2 — СИСТЕМНОЕ:
+8. DWG_CONVERTER_INSTALL_V1
+   dwg2dxf/ODAFileConverter не установлен → DWG файлы только metadata
+   Нужно: apt install или скачать ODAFileConverter
+
+9. NORMATIVE_SOURCE_ENGINE_FULL_CLOSE_V1
+   Только 3 записи без пунктов (СП 70, СП 63, ГОСТ 21.101) — все PARTIAL
+   Нужно: реальная база с clause + source + confidence=CONFIRMED
+
+#### ТОЛЬКО LIVE-ТЕСТ (код есть):
+- Voice confirm при AWAITING_CONFIRMATION
+- Estimate PDF→Excel→Drive реальным файлом
+- Technadzor фото→акт реальным фото
+- DWG через Telegram реальным файлом
+- DUPLICATE_GUARD два одинаковых файла
+- MULTI_FILE_INTAKE несколько файлов одной задачей
+- LINK_INTAKE ссылка без файла
+
+### НОВЫЕ ЗАДАЧИ ОТ ПОЛЬЗОВАТЕЛЯ (02.05.2026):
+10. MULTI_FILE_TEMPLATE_INTAKE_V1
+    Несколько Excel смет пришли → каждый сохранить как отдельный шаблон
+    Сейчас: один активный шаблон на топик, остальные игнорируются
+
+11. WEB_SEARCH_PRICE_ENRICHMENT_V1 (см. P0 п.2)
+    При создании сметы по шаблону — цены материалов искать в интернете актуальные
