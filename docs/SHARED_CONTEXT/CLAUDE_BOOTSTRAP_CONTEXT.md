@@ -3,9 +3,9 @@
 SYSTEM: AREAL-NEVA ORCHESTRA
 MODE: FACT_ONLY / ZERO_ASSUMPTIONS / GITHUB_SSOT / CANON_LOCK
 PURPOSE: one-file bootstrap for Claude and external LLMs
-GENERATED_AT_UTC: 2026-05-03T07:45:12.641069+00:00
+GENERATED_AT_UTC: 2026-05-03T08:15:13.791020+00:00
 GIT_BRANCH: main
-GIT_SHA: d42f9c04dfed092328ffc9090873f5da01d7f063
+GIT_SHA: 4c5af549b55dc271eb120172dbfbfbd7f4ff27cd
 RAW_URL: https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md
 
 # CLAUDE_OPERATING_PROTOCOL_CANON_LOCK_V3
@@ -68,7 +68,7 @@ Claude must reload this file at start of each new session
 
 SOURCE_INDEX:
 - docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md | bytes=168322 | sha256=0640b8349254cfb36f1143c1f195715014e2ca1b1b428943847fd1fd80d9d8fe
-- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md | bytes=38780 | sha256=1388bc068dee387c0203dc73ca1adca86b4eefea7de3674a673aaab5764f4c23
+- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md | bytes=38780 | sha256=e041aa4e3da1bc2697efe5ee94a57065dd78df11f45adf99f023980976173af7
 - docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md | bytes=74 | sha256=1a4c8e19e206a16b41b7d761d30cb115f9e4d965bc68e3f326b02dcb8c757944
 - docs/CANON_FINAL/00_INDEX.md | bytes=808 | sha256=999acb6bfdd6c7215f11d76342ea1b9f8cdf5715418064acb3716f33999c8af6
 - docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md | bytes=41018 | sha256=dbd5f683361eafc258ab0822056f6c33f751e5581998dc420f79395d14863177
@@ -4002,10 +4002,10 @@ END_FILE: docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md
 BEGIN_FILE: docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md
 ========================================================================================================================
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-03T07:45:12.603636+00:00
+generated_at_utc: 2026-05-03T08:15:13.747826+00:00
 git_branch: main
-git_head_short: d42f9c0
-git_head_full: d42f9c04dfed092328ffc9090873f5da01d7f063
+git_head_short: 4c5af54
+git_head_full: 4c5af549b55dc271eb120172dbfbfbd7f4ff27cd
 
 ## SERVICES
 - areal-task-worker: active
@@ -4059,18 +4059,18 @@ https://docs.google.com/document/d/18CJ-VD-y_8h|2026-05-03 06:04:31
 - MEMORY_ROWS|5535
 
 ## LATEST_MEMORY_SAFE
-- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 50, "updated_at": "2026-05-03T07:17:17.218561+00:00", "files": [|2026-05-03T07:17:17.219152+00:00
-- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 12, "updated_at": "2026-05-03T07:17:17.184201+00:00", "files": [{"|2026-05-03T07:17:17.184688+00:00
-- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-03T07:17:17.167511+00:00", "files": [{"|2026-05-03T07:17:17.168189+00:00
-- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-03T07:17:17.126808+00:00
-- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "s|2026-05-03T07:17:17.126708+00:00
-- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-03T07:17:17.126477+00:00
-- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-03T07:17:17.126365+00:00
-- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-03T07:17:17.126303+00:00
-- topic_2_file_234e52f8-3ce8-4f2f-99c3-7cc22265a151|{"task_id": "234e52f8-3ce8-4f2f-99c3-7cc22265a151", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-03T07:17:17.126254+00:00
-- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_fil|2026-05-03T07:17:17.126192+00:00
-- topic_2_file_acecae89-87a8-42da-881a-db41cd0134e6|{"task_id": "acecae89-87a8-42da-881a-db41cd0134e6", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-03T07:17:17.126121+00:00
-- topic_2_file_a4956f79-592e-45e3-8f17-925366b5eb2f|{"task_id": "a4956f79-592e-45e3-8f17-925366b5eb2f", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-03T07:17:17.126049+00:00
+- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 50, "updated_at": "2026-05-03T07:47:17.940584+00:00", "files": [|2026-05-03T07:47:17.941008+00:00
+- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 12, "updated_at": "2026-05-03T07:47:17.901567+00:00", "files": [{"|2026-05-03T07:47:17.902031+00:00
+- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-03T07:47:17.883914+00:00", "files": [{"|2026-05-03T07:47:17.884481+00:00
+- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-03T07:47:17.839939+00:00
+- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "s|2026-05-03T07:47:17.839860+00:00
+- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-03T07:47:17.839676+00:00
+- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-03T07:47:17.839580+00:00
+- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-03T07:47:17.839497+00:00
+- topic_2_file_234e52f8-3ce8-4f2f-99c3-7cc22265a151|{"task_id": "234e52f8-3ce8-4f2f-99c3-7cc22265a151", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-03T07:47:17.839445+00:00
+- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_fil|2026-05-03T07:47:17.839378+00:00
+- topic_2_file_acecae89-87a8-42da-881a-db41cd0134e6|{"task_id": "acecae89-87a8-42da-881a-db41cd0134e6", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-03T07:47:17.839304+00:00
+- topic_2_file_a4956f79-592e-45e3-8f17-925366b5eb2f|{"task_id": "a4956f79-592e-45e3-8f17-925366b5eb2f", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-03T07:47:17.839218+00:00
 
 ## SEARCH_SESSIONS
 - topic_500_search_session_-1003725299009|{"chat_id": "-1003725299009", "topic_id": 500, "goal": "Найди", "criteria": {"category": "GENERAL", "target": "Найди"}, "clarifications": ["Найди", "Найди", "Найди", "Найди", "Найд|2026-05-03T06:16:42.448346+00:00
@@ -4086,8 +4086,8 @@ M docs/REPORTS/CLAUDE_BOOTSTRAP_PENDING_PUSH.md
 
 ## FILES_MANIFEST_SAFE
 - docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md|bytes=168322|sha256=0640b8349254cfb36f1143c1f195715014e2ca1b1b428943847fd1fd80d9d8fe
-- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md|bytes=38780|sha256=caac06c9229672f08b4a3112fa22c0fb6999a40c4f20b0197a33c2fb031a3b1a
-- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md|bytes=2013|sha256=86d643783524d28f6d23d7b3b32043b74f6135a63c48d0646c526bfcbeac4d7e
+- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md|bytes=38780|sha256=1388bc068dee387c0203dc73ca1adca86b4eefea7de3674a673aaab5764f4c23
+- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md|bytes=2013|sha256=be169fcecd9c5ee923f1ead807154d08ed702bce794aac3aacd6ee18ada4c0c8
 - docs/CANON_FINAL/00_INDEX.md|bytes=808|sha256=999acb6bfdd6c7215f11d76342ea1b9f8cdf5715418064acb3716f33999c8af6
 - docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md|bytes=41018|sha256=dbd5f683361eafc258ab0822056f6c33f751e5581998dc420f79395d14863177
 - docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md|bytes=6714|sha256=1a439843e1eb214745752720c85b49adc48f1823765982960ce7b1e285947d84
@@ -4097,7 +4097,7 @@ M docs/REPORTS/CLAUDE_BOOTSTRAP_PENDING_PUSH.md
 - docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md|bytes=9846|sha256=e9b63408cbfdd13c05ed9b174f3380d5067493e3815318661c81b30ba13be440
 - docs/ARCHITECTURE/SEARCH_MONOLITH_V1.md|bytes=16952|sha256=26676725c7608d217d6f9162526748875a7647f92320f64a5a0e10b5fd0afa28
 - docs/ARCHITECTURE/SEARCH_MONOLITH_V2.md|UNKNOWN
-- task_worker.py|bytes=200134|sha256=fe8a3cca2b4d8ece3d6d3fae8e1e143c78f68e3ee6672a62e86f576830f2c777
+- task_worker.py|bytes=200142|sha256=26cb58a7f8ea21d73572638e92c0063cf445c0eacf2d3e6d5bdd279d371d0d61
 - telegram_daemon.py|bytes=50299|sha256=3214209f6f5f507ffee95a2414a651d72b1490fe364266c876c380b745dee837
 - memory_api_server.py|bytes=2958|sha256=93b1aa663723371ecc698d8c1691dd1e57530431c77d07c6ceb0e2701338ccd7
 - core/ai_router.py|bytes=23574|sha256=4586d46c7311007172232effe379894f9d7895b538ebce11895b4d21758b9d01
