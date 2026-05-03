@@ -3093,6 +3093,18 @@ def _stage1_dir_payload(payload):
         return p
 # === END ===
 async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str, topic_id: int) -> None:
+
+    # === FULL_STROYKA_V3_IN_PROGRESS_GUARD ===
+    try:
+        _stroyka_ip_topic = int(_task_field(task, "topic_id", 0) or 0)
+        if _stroyka_ip_topic == 2:
+            from core.stroyka_estimate_canon import maybe_handle_stroyka_estimate as _stroyka_v3_handle
+            if await _stroyka_v3_handle(conn, task, logger):
+                _history(conn, _s(_task_field(task, "id", "")), "FULL_STROYKA_V3_IN_PROGRESS_GUARD:handled")
+                return
+    except Exception as _stroyka_v3_ip_err:
+        logger.exception("FULL_STROYKA_V3_IN_PROGRESS_GUARD_ERR %s", _stroyka_v3_ip_err)
+    # === END_FULL_STROYKA_V3_IN_PROGRESS_GUARD ===
     task_id = _s(_task_field(task, "id"))
     raw_input = _clean(_s(_task_field(task, "raw_input")), 12000)
     reply_to = _task_field(task, "reply_to_message_id", None)

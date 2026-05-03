@@ -215,6 +215,14 @@ def _pending_is_fresh(pending: Optional[Dict[str, Any]], max_seconds: int = 600)
 def _is_bad_estimate_result(text: str) -> bool:
     t = _low(text)
     bad = (
+        # === FULL_STROYKA_V3_SEARCH_LOOP_BAD_RESULT_FIX ===
+        "поставщик | площадка",
+        "auto_parts",
+        "search_monolith",
+        "tco | риски",
+        "ошибка классификации запроса",
+        "категория не совпадает",
+        # === END_FULL_STROYKA_V3_SEARCH_LOOP_BAD_RESULT_FIX ===
         "файлы в этом топике уже есть",
         "нашёл релевантное",
         "нашел релевантное",
@@ -726,6 +734,16 @@ def _estimate_raw_score(raw: str) -> int:
 def _is_old_task_finish_request(text: str) -> bool:
     t = _low(text).replace("[voice]", "").strip()
     phrases = (
+
+        # === FULL_STROYKA_V3_REVIVE_PHRASES_FIX ===
+        "что продолжаешь",
+        "что продолжаешь-то",
+        "где моя смета",
+        "моя смета",
+        "смета по итогу",
+        "посмотри их задания",
+        "посмотрите их задания",
+        # === END_FULL_STROYKA_V3_REVIVE_PHRASES_FIX ===
         "доделай",
         "доделай задачу",
         "доделай смету",
