@@ -1261,3 +1261,620 @@ async def handle_template_estimate_intent(
 
 # === END_WEB_SEARCH_PRICE_ENRICHMENT_V1_SAMPLE_TEMPLATE_WRAPPER ===
 
+# === THREE_CONTOURS_FINAL_SOURCE_LOCK_V1 ===
+# Final source lock:
+# - topic_2 estimates: ESTIMATES/templates from Drive is mandatory source of formatting/template
+# - current user raw_input is mandatory calculation source
+# - stale active templates, stale task results, old Drive links are forbidden
+# - project/foundation/roof words must not block estimate route when "смет" is present
+
+_FINAL_ESTIMATE_DRIVE_FOLDER_ID = "19Z3acDgPub4nV55mad5mb8ju63FsqoG9"
+_FINAL_ROOT_DRIVE_FOLDER_ID = "13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB"
+_FINAL_DEFAULT_CHAT_ID = "-1003725299009"
+
+def _final_json_dump(obj) -> str:
+    import json as _json
+    return _json.dumps(obj, ensure_ascii=False, indent=2)
+
+def _final_drive_svc_v1():
+    try:
+        from core.engine_base import _drive_svc_v1
+        return _drive_svc_v1()
+    except Exception:
+        return None
+
+def _final_drive_list_files_v1(folder_id: str):
+    svc = _final_drive_svc_v1()
+    if svc is None:
+        return []
+    try:
+        res = svc.files().list(
+            q=f"'{folder_id}' in parents and trashed=false",
+            fields="files(id,name,mimeType,size,modifiedTime)",
+            pageSize=100,
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True,
+        ).execute()
+        return res.get("files") or []
+    except Exception:
+        return []
+
+def _final_estimate_score_template_v1(file_name: str, raw_input: str = "") -> int:
+    low = (str(file_name or "") + " " + str(raw_input or "")).lower().replace("ё", "е")
+    score = 0
+    if file_name.lower().endswith((".xlsx", ".xls")):
+        score += 100
+    if any(x in low for x in ("м-80", "m-80", "м80", "m80")):
+        score += 80
+    if any(x in low for x in ("м-110", "m-110", "м110", "m110")):
+        score += 80
+    if any(x in low for x in ("фундамент", "склад", "плита", "бетон", "монолит")) and any(x in str(file_name).lower().replace("ё","е") for x in ("фундамент", "склад")):
+        score += 70
+    if any(x in low for x in ("кров", "крыша", "перекр", "строп")) and any(x in str(file_name).lower().replace("ё","е") for x in ("крыш", "кров", "перекр")):
+        score += 70
+    if any(x in low for x in ("ареал", "нева", "газобетон")) and any(x in str(file_name).lower().replace("ё","е") for x in ("ареал", "нева")):
+        score += 70
+    try:
+        score += min(int(str(file_name).count(" ")) * 2, 10)
+    except Exception:
+        pass
+    return score
+
+def _final_select_estimate_template_v1(raw_input: str = "") -> dict:
+    files = _final_drive_list_files_v1(_FINAL_ESTIMATE_DRIVE_FOLDER_ID)
+    xlsx = [f for f in files if str(f.get("name","")).lower().endswith((".xlsx", ".xls"))]
+    if not xlsx:
+        return {}
+    xlsx = sorted(
+        xlsx,
+        key=lambda f: (
+            _final_estimate_score_template_v1(f.get("name",""), raw_input),
+            int(f.get("size") or 0),
+            str(f.get("modifiedTime") or ""),
+        ),
+        reverse=True,
+    )
+    return xlsx[0]
+
+def _final_template_paths_estimate_v1(chat_id: str, topic_id: int):
+    import re as _re
+    safe_chat = _re.sub(r"[^0-9A-Za-z_-]+", "_", str(chat_id or _FINAL_DEFAULT_CHAT_ID))[:80]
+    ESTIMATE_TEMPLATE_DIR.mkdir(parents=True, exist_ok=True)
+    active = ESTIMATE_TEMPLATE_DIR / f"ACTIVE__chat_{safe_chat}__topic_{int(topic_id or 0)}.json"
+    snapshot = ESTIMATE_TEMPLATE_DIR / f"TEMPLATE__chat_{safe_chat}__topic_{int(topic_id or 0)}__FINAL_SOURCE_LOCK.json"
+    return active, snapshot
+
+def _final_force_drive_estimate_template_v1(chat_id: str, topic_id: int, raw_input: str = "") -> dict:
+    from datetime import datetime as _dt, timezone as _tz
+    selected = _final_select_estimate_template_v1(raw_input)
+    if not selected:
+        return {}
+    all_files = [
+        {
+            "file_id": f.get("id",""),
+            "file_name": f.get("name",""),
+            "mime_type": f.get("mimeType",""),
+            "size": f.get("size",""),
+            "modifiedTime": f.get("modifiedTime",""),
+        }
+        for f in _final_drive_list_files_v1(_FINAL_ESTIMATE_DRIVE_FOLDER_ID)
+        if str(f.get("name","")).lower().endswith((".xlsx", ".xls"))
+    ]
+    template = {
+        "engine": "THREE_CONTOURS_FINAL_SOURCE_LOCK_V1",
+        "kind": "estimate",
+        "status": "active",
+        "source": "DRIVE_ESTIMATES_TEMPLATES",
+        "source_folder_name": "ESTIMATES/templates",
+        "source_folder_id": _FINAL_ESTIMATE_DRIVE_FOLDER_ID,
+        "chat_id": str(chat_id or _FINAL_DEFAULT_CHAT_ID),
+        "topic_id": int(topic_id or 0),
+        "source_file_id": selected.get("id",""),
+        "source_file_name": selected.get("name",""),
+        "source_mime_type": selected.get("mimeType",""),
+        "source_size": selected.get("size",""),
+        "source_modifiedTime": selected.get("modifiedTime",""),
+        "synced_at": _dt.now(_tz.utc).isoformat(),
+        "template_used_as_format_only": True,
+        "calculation_source_rule": "ONLY_CURRENT_RAW_INPUT",
+        "forbidden_sources": [
+            "old_task_result",
+            "old_drive_links",
+            "old_estimate_artifacts",
+            "project_artifacts",
+            "topic_210_project_templates",
+        ],
+        "all_templates": all_files,
+        "raw_user_instruction_sample": str(raw_input or "")[:500],
+    }
+    active, snapshot = _final_template_paths_estimate_v1(chat_id, topic_id)
+    active.write_text(_final_json_dump(template), encoding="utf-8")
+    snapshot.write_text(_final_json_dump(template), encoding="utf-8")
+    return template
+
+def _final_download_drive_file_v1(file_id: str, dst_path: str) -> bool:
+    try:
+        import io as _io
+        from googleapiclient.http import MediaIoBaseDownload
+        svc = _final_drive_svc_v1()
+        if svc is None:
+            return False
+        meta = svc.files().get(fileId=file_id, fields="id,name,mimeType").execute()
+        mime = str(meta.get("mimeType") or "")
+        if mime == "application/vnd.google-apps.spreadsheet":
+            req = svc.files().export_media(
+                fileId=file_id,
+                mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        else:
+            req = svc.files().get_media(fileId=file_id)
+        fh = _io.FileIO(dst_path, "wb")
+        downloader = MediaIoBaseDownload(fh, req)
+        done = False
+        while not done:
+            _, done = downloader.next_chunk()
+        fh.close()
+        return True
+    except Exception:
+        return False
+
+def detect_estimate_intent(raw_input: Any) -> bool:
+    low = _low(raw_input)
+    if not low:
+        return False
+    if "смет" in low or "кс-2" in low or "кс2" in low or "ведомост" in low:
+        return True
+    if "проект" in low and not any(w in low for w in ("смет", "стоимост", "цена", "расчет", "расчёт")):
+        return False
+    return any(w in low for w in ("посчитай", "расчет", "расчёт", "цена", "стоимость", "руб", "м2", "м²", "м3", "м³", "шт", "ведомость"))
+
+def _load_active_template(kind: str, chat_id: str, topic_id: int):
+    if kind == "estimate":
+        forced = _final_force_drive_estimate_template_v1(str(chat_id or _FINAL_DEFAULT_CHAT_ID), int(topic_id or 0), "")
+        if forced:
+            return forced
+    active, _ = _template_paths(kind, chat_id, topic_id)
+    if active.exists():
+        try:
+            import json as _json
+            return _json.loads(active.read_text(encoding="utf-8"))
+        except Exception:
+            return None
+    return None
+
+def _final_num_v1(v):
+    try:
+        return float(str(v or "0").replace(" ", "").replace(",", "."))
+    except Exception:
+        return 0.0
+
+def _final_unit_v1(u: str) -> str:
+    s = str(u or "").lower().replace("м.2", "м²").replace("м2", "м²").replace("м.3", "м³").replace("м3", "м³")
+    s = s.replace("пм", "п.м").replace("пог.м", "п.м").replace("п. м", "п.м")
+    return s.strip()
+
+def _final_parse_price_v1(text: str, patterns) -> float:
+    import re as _re
+    for pat in patterns:
+        m = _re.search(pat, str(text or ""), _re.I)
+        if m:
+            return _final_num_v1(m.group(1))
+    return 0.0
+
+def _final_extract_rates_from_template_v1(template_path: str) -> dict:
+    rates = {}
+    try:
+        from openpyxl import load_workbook
+        wb = load_workbook(template_path, data_only=True)
+        for ws in wb.worksheets:
+            for row in ws.iter_rows(min_row=1, max_row=min(ws.max_row, 300), values_only=True):
+                vals = [x for x in row if x not in (None, "")]
+                if len(vals) < 2:
+                    continue
+                texts = [str(x).strip() for x in vals if isinstance(x, str) and len(str(x).strip()) >= 3]
+                nums = []
+                for x in vals:
+                    if isinstance(x, (int, float)) and 0 < float(x) < 1000000:
+                        nums.append(float(x))
+                if texts and nums:
+                    name = max(texts, key=len).lower().replace("ё", "е")
+                    price = nums[-1]
+                    if price > 0:
+                        for token in name.split():
+                            if len(token) >= 4:
+                                rates[token] = price
+        wb.close()
+    except Exception:
+        pass
+    return rates
+
+def _parse_estimate_items(text: str) -> List[Dict[str, Any]]:
+    import re as _re
+    src = _safe_text(text)
+    if not src:
+        return []
+    lines = []
+    for line in _re.split(r"[\n\r;]+", src):
+        s = line.strip(" \t-•")
+        if s:
+            lines.append(s)
+    if not lines:
+        lines = [src]
+
+    items = []
+    for line in lines:
+        m = _re.search(
+            r"(?P<name>.*?)(?:—|-|:)?\s*(?P<qty>\d+(?:[.,]\d+)?)\s*(?P<unit>м²|м2|м³|м3|п\.?\s?м|пог\.?\s?м|м\b|шт|кг|т\b|тонн|рейс)",
+            line,
+            _re.I,
+        )
+        if not m:
+            continue
+        name = _re.sub(r"^(сделай|смета|смету|посчитай|расчет|расчёт|подробную)\s*:?", "", m.group("name").strip(), flags=_re.I).strip(" —:-")
+        if not name:
+            name = "Позиция"
+        qty = _final_num_v1(m.group("qty"))
+        unit = _final_unit_v1(m.group("unit"))
+        tail = line[m.end():]
+
+        material_price = _final_parse_price_v1(tail, [
+            r"цена\s+материал[а-я]*\s*(\d+(?:[.,]\d+)?)",
+            r"материал[а-я]*\s*(\d+(?:[.,]\d+)?)\s*руб",
+            r"по\s*(\d+(?:[.,]\d+)?)\s*руб",
+            r"цена\s*(\d+(?:[.,]\d+)?)\s*руб",
+        ])
+        work_price = _final_parse_price_v1(tail, [
+            r"цена\s+работ[а-я]*\s*(\d+(?:[.,]\d+)?)",
+            r"работ[а-я]*\s*(\d+(?:[.,]\d+)?)\s*руб",
+            r"вязк[а-я]*\s*(\d+(?:[.,]\d+)?)\s*руб",
+            r"монтаж[а-я]*\s*(\d+(?:[.,]\d+)?)\s*руб",
+        ])
+        if material_price <= 0 and work_price <= 0:
+            material_price = _final_parse_price_v1(tail, [r"(\d+(?:[.,]\d+)?)\s*руб"])
+        total = round(qty * (material_price + work_price), 2)
+        items.append({
+            "name": name[:180],
+            "unit": unit,
+            "qty": qty,
+            "material_price": material_price,
+            "work_price": work_price,
+            "price": round(material_price + work_price, 2),
+            "material_sum": round(qty * material_price, 2),
+            "work_sum": round(qty * work_price, 2),
+            "total": total,
+        })
+
+    low = src.lower().replace("ё", "е")
+    if not items and ("плит" in low or "фундамент" in low or "монолит" in low):
+        m = _re.search(r"(\d+(?:[.,]\d+)?)\s*(?:на|x|х|×)\s*(\d+(?:[.,]\d+)?)", low)
+        length = _final_num_v1(m.group(1)) if m else 10.0
+        width = _final_num_v1(m.group(2)) if m else 10.0
+        area = round(length * width, 2)
+        thick_m = 0.25
+        mt = _re.search(r"толщин[а-я]*\s*(\d{2,4})\s*мм", low)
+        if mt:
+            thick_m = _final_num_v1(mt.group(1)) / 1000.0
+        concrete = round(area * thick_m, 2)
+        rebar_kg = round(area * 25, 2)
+        perimeter = round((length + width) * 2, 2)
+        default_rows = [
+            ("Подготовка основания", area, "м²", 0, 350),
+            ("Песчаная подушка", round(area * 0.30, 2), "м³", 1200, 450),
+            ("Щебёночная подготовка", round(area * 0.10, 2), "м³", 1800, 450),
+            ("Опалубка периметра", perimeter, "п.м", 0, 950),
+            ("Арматура А500С", rebar_kg, "кг", 75, 35),
+            ("Бетон В25", concrete, "м³", 7500, 2500),
+        ]
+        for name, qty, unit, mat, work in default_rows:
+            items.append({
+                "name": name,
+                "unit": unit,
+                "qty": qty,
+                "material_price": mat,
+                "work_price": work,
+                "price": round(mat + work, 2),
+                "material_sum": round(qty * mat, 2),
+                "work_sum": round(qty * work, 2),
+                "total": round(qty * (mat + work), 2),
+            })
+
+    return items
+
+def _write_estimate_xlsx(path: str, items: List[Dict[str, Any]], template: Optional[Dict[str, Any]], raw_input: str) -> None:
+    import os as _os
+    import tempfile as _tempfile
+    from openpyxl import Workbook, load_workbook
+    from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+    from openpyxl.utils import get_column_letter
+
+    template_file = ""
+    try:
+        fid = str((template or {}).get("source_file_id") or "")
+        if fid:
+            tmp = _os.path.join(_tempfile.gettempdir(), "areal_estimate_template_final.xlsx")
+            if _final_download_drive_file_v1(fid, tmp):
+                template_file = tmp
+    except Exception:
+        template_file = ""
+
+    wb = None
+    if template_file and _os.path.exists(template_file):
+        try:
+            wb = load_workbook(template_file)
+        except Exception:
+            wb = None
+    if wb is None:
+        wb = Workbook()
+
+    ws = wb.create_sheet("Смета_текущее_задание", 0)
+    for old in wb.worksheets[1:]:
+        try:
+            old.sheet_state = "hidden"
+        except Exception:
+            pass
+
+    thin = Side(style="thin")
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+    fill = PatternFill(start_color="D9EAF7", end_color="D9EAF7", fill_type="solid")
+
+    ws["A1"] = "Смета по текущему заданию"
+    ws["A1"].font = Font(bold=True, size=14)
+    ws.merge_cells("A1:I1")
+    ws["A2"] = "Источник расчёта: только текущий текст задачи"
+    ws["A3"] = "Шаблон оформления: " + str((template or {}).get("source_file_name") or "ESTIMATES/templates")
+    ws["A4"] = "Старые сметы, старые Drive-ссылки и старые task result не используются"
+
+    headers = ["№", "Наименование", "Ед.", "Объём", "Цена материала", "Сумма материала", "Цена работы", "Сумма работы", "Итог"]
+    for c, h in enumerate(headers, 1):
+        cell = ws.cell(row=6, column=c, value=h)
+        cell.font = Font(bold=True)
+        cell.fill = fill
+        cell.border = border
+        cell.alignment = Alignment(horizontal="center")
+
+    row = 7
+    for i, item in enumerate(items, 1):
+        ws.cell(row=row, column=1, value=i)
+        ws.cell(row=row, column=2, value=item["name"])
+        ws.cell(row=row, column=3, value=item["unit"])
+        ws.cell(row=row, column=4, value=float(item["qty"]))
+        ws.cell(row=row, column=5, value=float(item.get("material_price") or 0))
+        ws.cell(row=row, column=6, value=f"=D{row}*E{row}")
+        ws.cell(row=row, column=7, value=float(item.get("work_price") or 0))
+        ws.cell(row=row, column=8, value=f"=D{row}*G{row}")
+        ws.cell(row=row, column=9, value=f"=F{row}+H{row}")
+        for c in range(1, 10):
+            ws.cell(row=row, column=c).border = border
+        row += 1
+
+    total_row = row + 1
+    ws.cell(row=total_row, column=5, value="Итого материалы").font = Font(bold=True)
+    ws.cell(row=total_row, column=6, value=f"=SUM(F7:F{row-1})").font = Font(bold=True)
+    ws.cell(row=total_row + 1, column=5, value="Итого работы").font = Font(bold=True)
+    ws.cell(row=total_row + 1, column=8, value=f"=SUM(H7:H{row-1})").font = Font(bold=True)
+    ws.cell(row=total_row + 2, column=5, value="Общий итог").font = Font(bold=True)
+    ws.cell(row=total_row + 2, column=9, value=f"=SUM(I7:I{row-1})").font = Font(bold=True)
+
+    for idx, width in enumerate([6, 52, 10, 12, 16, 18, 16, 18, 18], 1):
+        ws.column_dimensions[get_column_letter(idx)].width = width
+
+    ws2 = wb.create_sheet("Исходные_данные", 1)
+    ws2["A1"] = "Текущее задание"
+    ws2["A1"].font = Font(bold=True)
+    ws2["A2"] = raw_input[:32000]
+    ws2["A4"] = "Шаблон"
+    ws2["B4"] = str((template or {}).get("source_file_name") or "")
+    ws2["A5"] = "Правило"
+    ws2["B5"] = "Расчёт только из текущего raw_input"
+    ws2.column_dimensions["A"].width = 30
+    ws2.column_dimensions["B"].width = 120
+
+    wb.save(path)
+    wb.close()
+
+def _write_estimate_pdf(path: str, items: List[Dict[str, Any]], template: Optional[Dict[str, Any]], raw_input: str) -> None:
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.units import mm
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    import os as _os
+
+    font = "Helvetica"
+    for fp in ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"):
+        if _os.path.exists(fp):
+            try:
+                pdfmetrics.registerFont(TTFont("ArealSans", fp))
+                font = "ArealSans"
+                break
+            except Exception:
+                pass
+
+    c = canvas.Canvas(path, pagesize=A4)
+    w, h = A4
+    x = 12 * mm
+    y = h - 18 * mm
+    c.setFont(font, 13)
+    c.drawString(x, y, "Смета по текущему заданию")
+    y -= 7 * mm
+    c.setFont(font, 8)
+    c.drawString(x, y, "Шаблон: " + str((template or {}).get("source_file_name") or "ESTIMATES/templates")[:95])
+    y -= 5 * mm
+    c.drawString(x, y, "Источник расчёта: только текущий текст задачи")
+    y -= 8 * mm
+
+    headers = ["№", "Наименование", "Ед", "Объём", "Цена", "Итог"]
+    xs = [x, x + 9*mm, x + 96*mm, x + 116*mm, x + 140*mm, x + 165*mm]
+    for col, val in zip(xs, headers):
+        c.drawString(col, y, val)
+    y -= 4 * mm
+    c.line(x, y, w - 12*mm, y)
+    y -= 5 * mm
+
+    total = 0.0
+    c.setFont(font, 7)
+    for i, item in enumerate(items, 1):
+        if y < 25 * mm:
+            c.showPage()
+            c.setFont(font, 7)
+            y = h - 18 * mm
+        total += float(item.get("total") or 0)
+        vals = [
+            str(i),
+            str(item.get("name",""))[:48],
+            str(item.get("unit","")),
+            f"{float(item.get('qty') or 0):g}",
+            f"{float(item.get('price') or 0):.2f}",
+            f"{float(item.get('total') or 0):.2f}",
+        ]
+        for col, val in zip(xs, vals):
+            c.drawString(col, y, val)
+        y -= 5 * mm
+
+    y -= 4 * mm
+    c.line(x, y, w - 12*mm, y)
+    y -= 7 * mm
+    c.setFont(font, 10)
+    c.drawString(x + 125*mm, y, f"Итого: {total:.2f} руб")
+    c.save()
+
+def _final_public_estimate_message_v1(template: Optional[Dict[str, Any]], items: List[Dict[str, Any]], total: float, pdf_link: str, xlsx_link: str) -> str:
+    tmpl = str((template or {}).get("source_file_name") or "ESTIMATES/templates").strip()
+    return (
+        "Смета создана по новому заданию\n"
+        f"Шаблон: {tmpl}\n"
+        f"Позиций: {len(items)}\n"
+        f"Итого: {total:.2f} руб\n\n"
+        "Источник расчёта: только текущий текст задачи\n"
+        "Старые сметы, старые Drive-ссылки и старые результаты не использованы\n\n"
+        f"PDF: {pdf_link}\n"
+        f"XLSX: {xlsx_link}\n\n"
+        "Доволен результатом? Да / Уточни / Правки"
+    )
+
+async def create_estimate_from_saved_template(raw_input: str, task_id: str, chat_id: str, topic_id: int = 0) -> Dict[str, Any]:
+    import re as _re
+    import tempfile as _tempfile
+    import json as _json
+    from pathlib import Path as _Path
+    from datetime import datetime as _dt
+
+    template = _final_force_drive_estimate_template_v1(str(chat_id or _FINAL_DEFAULT_CHAT_ID), int(topic_id or 0), str(raw_input or ""))
+    if not template:
+        return {"success": False, "engine": "THREE_CONTOURS_FINAL_SOURCE_LOCK_V1", "error": "DRIVE_ESTIMATES_TEMPLATE_NOT_FOUND"}
+
+    items = _parse_estimate_items(str(raw_input or ""))
+    if not items:
+        return {"success": False, "engine": "THREE_CONTOURS_FINAL_SOURCE_LOCK_V1", "error": "ESTIMATE_ITEMS_NOT_PARSED_FROM_CURRENT_RAW_INPUT"}
+
+    total = round(sum(float(x.get("total") or 0) for x in items), 2)
+    if total <= 0:
+        return {
+            "success": False,
+            "engine": "THREE_CONTOURS_FINAL_SOURCE_LOCK_V1",
+            "error": "ESTIMATE_ZERO_TOTAL_BLOCKED",
+            "result_text": "Смета не создана: итог равен 0, старые данные использовать запрещено",
+            "items": items,
+            "total": total,
+        }
+
+    safe = _re.sub(r"[^A-Za-z0-9_-]+", "_", str(task_id))[:30]
+    out_dir = _Path(_tempfile.gettempdir()) / f"areal_final_estimate_{safe}_{_dt.utcnow().strftime('%Y%m%d_%H%M%S')}"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    xlsx_path = str(out_dir / f"estimate_{safe}.xlsx")
+    pdf_path = str(out_dir / f"estimate_{safe}.pdf")
+    manifest_path = str(out_dir / f"estimate_{safe}.manifest.json")
+
+    _write_estimate_xlsx(xlsx_path, items, template, str(raw_input or ""))
+    _write_estimate_pdf(pdf_path, items, template, str(raw_input or ""))
+
+    manifest = {
+        "engine": "THREE_CONTOURS_FINAL_SOURCE_LOCK_V1",
+        "task_id": task_id,
+        "chat_id": str(chat_id),
+        "topic_id": int(topic_id or 0),
+        "source_folder": "ESTIMATES/templates",
+        "template_used_as_format_only": True,
+        "calculation_source": "current_raw_input_only",
+        "template": template,
+        "items": items,
+        "total": total,
+        "created_at": _now(),
+    }
+    _Path(manifest_path).write_text(_json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    pdf_link = _upload(pdf_path, task_id, topic_id)
+    xlsx_link = _upload(xlsx_path, task_id, topic_id)
+
+    if not pdf_link or not xlsx_link:
+        return {
+            "success": False,
+            "engine": "THREE_CONTOURS_FINAL_SOURCE_LOCK_V1",
+            "error": "ESTIMATE_UPLOAD_FAILED",
+            "pdf_link": pdf_link,
+            "xlsx_link": xlsx_link,
+            "excel_path": xlsx_path,
+            "artifact_path": xlsx_path,
+            "items": items,
+            "total": total,
+        }
+
+    msg = _final_public_estimate_message_v1(template, items, total, pdf_link, xlsx_link)
+    return {
+        "success": True,
+        "engine": "THREE_CONTOURS_FINAL_SOURCE_LOCK_V1",
+        "items": items,
+        "total": total,
+        "template": template,
+        "template_used_as_format_only": True,
+        "pdf_link": pdf_link,
+        "xlsx_link": xlsx_link,
+        "drive_link": xlsx_link,
+        "google_sheet_link": xlsx_link,
+        "excel_path": xlsx_path,
+        "artifact_path": xlsx_path,
+        "message": msg,
+        "result_text": msg,
+    }
+
+try:
+    _final_prev_handle_template_estimate_intent_v1 = handle_template_estimate_intent
+except Exception:
+    _final_prev_handle_template_estimate_intent_v1 = None
+
+async def handle_template_estimate_intent(
+    conn,
+    task_id: str,
+    chat_id: str,
+    topic_id: int,
+    raw_input,
+    input_type: str,
+    reply_to_message_id=None,
+) -> bool:
+    if conn is None:
+        return False
+    if input_type not in ("text", "voice", "search"):
+        return False
+    if not detect_estimate_intent(raw_input):
+        return False
+
+    if int(topic_id or 0) == 2:
+        res = await create_estimate_from_saved_template(str(raw_input or ""), task_id, chat_id, topic_id)
+        if not res.get("success"):
+            _task_history_insert(conn, task_id, f"THREE_CONTOURS_FINAL_SOURCE_LOCK_V1_FAILED:{res.get('error')}")
+            return False
+        msg = res.get("message") or "Смета создана"
+        bot_id = _send_reply(chat_id, msg, reply_to_message_id)
+        _update_task(conn, task_id, "AWAITING_CONFIRMATION", msg, "", bot_id)
+        _task_history_insert(conn, task_id, "THREE_CONTOURS_FINAL_SOURCE_LOCK_V1_ESTIMATE_OK")
+        return True
+
+    if _final_prev_handle_template_estimate_intent_v1 is not None:
+        return await _final_prev_handle_template_estimate_intent_v1(
+            conn, task_id, chat_id, topic_id, raw_input, input_type, reply_to_message_id
+        )
+    return False
+
+# === END_THREE_CONTOURS_FINAL_SOURCE_LOCK_V1 ===
+

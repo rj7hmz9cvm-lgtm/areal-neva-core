@@ -1807,6 +1807,25 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
     except Exception as _cep_e:
         logger.warning("CREATE_ESTIMATE_PRIORITY_NO_ROLLBACK_V1_ERR task=%s err=%s", task_id, _cep_e)
     # === END_CREATE_ESTIMATE_PRIORITY_NO_ROLLBACK_V1 ===
+    # === THREE_CONTOURS_FINAL_SOURCE_LOCK_V1_WORKER_HOOK ===
+    try:
+        if int(topic_id or 0) == 2:
+            from core.sample_template_engine import handle_template_estimate_intent as _final_three_contours_estimate_handler
+            if await _final_three_contours_estimate_handler(
+                conn,
+                task_id,
+                str(chat_id),
+                int(topic_id or 0),
+                raw_input,
+                input_type,
+                reply_to,
+            ):
+                logger.info("THREE_CONTOURS_FINAL_SOURCE_LOCK_V1 estimate handled task=%s topic=%s", task_id, topic_id)
+                return
+    except Exception as _final_three_contours_err:
+        logger.error("THREE_CONTOURS_FINAL_SOURCE_LOCK_V1_WORKER_ERR task=%s err=%s", task_id, _final_three_contours_err)
+
+    # === END_THREE_CONTOURS_FINAL_SOURCE_LOCK_V1_WORKER_HOOK ===
     # === FILE_TECH_CONTOUR_FOLLOWUP_V2 ===
     try:
         _ft_low = str(raw_input or "").strip()

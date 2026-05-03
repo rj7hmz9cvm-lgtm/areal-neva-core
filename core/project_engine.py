@@ -2998,3 +2998,304 @@ def _project_template_memory_catalog_sync_absolute_v1(topic_id: int = 210, dry_r
 
     return result
 # === END_PROJECT_TEMPLATE_MEMORY_CATALOG_SYNC_ABSOLUTE_V1 ===
+
+# === THREE_CONTOURS_FINAL_SOURCE_LOCK_V1 ===
+# Project source lock:
+# - topic_210 project templates: Образцы проектов from Drive
+# - sketch/design references: PROJECT_DESIGN_REFERENCES when folder exists
+# - PROJECT_ARTIFACTS is output only and forbidden as source
+
+_FINAL_PROJECT_SAMPLES_FOLDER_ID = "1kcJbrn7XMcov__Z1JdWhKlJMZd7GUkgP"
+_FINAL_PROJECT_ROOT_FOLDER_ID = "13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB"
+
+def _final_project_drive_svc_v1():
+    try:
+        from core.engine_base import _drive_svc_v1
+        return _drive_svc_v1()
+    except Exception:
+        return None
+
+def _final_project_list_folder_v1(folder_id: str):
+    svc = _final_project_drive_svc_v1()
+    if svc is None:
+        return []
+    try:
+        r = svc.files().list(
+            q=f"'{folder_id}' in parents and trashed=false",
+            fields="files(id,name,mimeType,size,modifiedTime)",
+            pageSize=100,
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True,
+        ).execute()
+        return r.get("files") or []
+    except Exception:
+        return []
+
+def _final_project_find_folder_by_name_v1(name: str) -> str:
+    svc = _final_project_drive_svc_v1()
+    if svc is None:
+        return ""
+    try:
+        q = "mimeType='application/vnd.google-apps.folder' and trashed=false and name='" + str(name).replace("'", "\\'") + "'"
+        r = svc.files().list(
+            q=q,
+            fields="files(id,name,parents,modifiedTime)",
+            pageSize=20,
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True,
+        ).execute()
+        files = r.get("files") or []
+        return files[0]["id"] if files else ""
+    except Exception:
+        return ""
+
+def _final_project_section_from_name_v1(name: str) -> str:
+    low = str(name or "").lower().replace("ё", "е")
+    if "кмд" in low:
+        return "КМД"
+    if any(x in low for x in ("км", "металл", "ферм", "каркас", "м-80", "м-110", "m-80", "m-110")):
+        return "КМ"
+    if any(x in low for x in ("кд", "кровл", "строп", "дерев", "балк")):
+        return "КД"
+    if any(x in low for x in ("кж", "фундамент", "плит", "бетон", "армир", "цоколь")):
+        return "КЖ"
+    if any(x in low for x in ("ар", "архитект", "фасад", "планиров")):
+        return "АР"
+    if any(x in low for x in ("эскиз", "eskiz")):
+        return "ЭСКИЗ"
+    return "UNKNOWN"
+
+def _final_project_section_from_request_v1(text: str) -> str:
+    low = str(text or "").lower().replace("ё", "е")
+    if "кмд" in low:
+        return "КМД"
+    if "км" in low or "металл" in low:
+        return "КМ"
+    if "кд" in low or "кров" in low or "строп" in low:
+        return "КД"
+    if "ар" in low or "архитект" in low or "эскиз" in low or "эскизн" in low:
+        return "ЭСКИЗ" if "эскиз" in low else "АР"
+    if "кж" in low or "фундамент" in low or "плит" in low or "бетон" in low or "монолит" in low:
+        return "КЖ"
+    return "КЖ"
+
+def _final_sync_project_drive_templates_v1(topic_id: int = 210) -> dict:
+    import json as _json
+    from pathlib import Path as _Path
+    from datetime import datetime as _dt, timezone as _tz
+
+    out_dir = _Path("/root/.areal-neva-core/data/project_templates")
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    result = {
+        "marker": "THREE_CONTOURS_FINAL_SOURCE_LOCK_V1",
+        "ok": False,
+        "source_folder": "Образцы проектов",
+        "source_folder_id": _FINAL_PROJECT_SAMPLES_FOLDER_ID,
+        "design_references_folder": "PROJECT_DESIGN_REFERENCES",
+        "project_artifacts_rule": "OUTPUT_ONLY_NOT_SOURCE",
+        "synced_sections": [],
+    }
+
+    files = _final_project_list_folder_v1(_FINAL_PROJECT_SAMPLES_FOLDER_ID)
+    design_folder_id = _final_project_find_folder_by_name_v1("PROJECT_DESIGN_REFERENCES")
+    design_files = _final_project_list_folder_v1(design_folder_id) if design_folder_id else []
+
+    by_section = {}
+    for f in files:
+        name = f.get("name","")
+        sec = _final_project_section_from_name_v1(name)
+        if sec == "UNKNOWN":
+            continue
+        by_section.setdefault(sec, []).append(f)
+
+    if design_files:
+        by_section.setdefault("ЭСКИЗ", []).extend(design_files)
+
+    now = _dt.now(_tz.utc).isoformat()
+
+    for sec, sec_files in by_section.items():
+        clean = [f for f in sec_files if str(f.get("name","")).strip()]
+        if not clean:
+            continue
+        best = max(clean, key=lambda f: int(f.get("size") or 0))
+        model = {
+            "_schema": "THREE_CONTOURS_FINAL_SOURCE_LOCK_V1",
+            "project_type": sec,
+            "topic_id": int(topic_id or 210),
+            "source": "DRIVE_PROJECT_SOURCES",
+            "source_folder_name": "Образцы проектов",
+            "source_folder_id": _FINAL_PROJECT_SAMPLES_FOLDER_ID,
+            "source_file_id": best.get("id",""),
+            "source_file_name": best.get("name",""),
+            "source_mime_type": best.get("mimeType",""),
+            "source_modifiedTime": best.get("modifiedTime",""),
+            "synced_at": now,
+            "project_artifacts_forbidden_as_source": True,
+            "design_references_folder_id": design_folder_id,
+            "sheet_register": [
+                {"mark": sec, "number": str(i + 1), "title": f.get("name",""), "file_id": f.get("id","")}
+                for i, f in enumerate(clean)
+            ],
+            "sections": [f.get("name","") for f in clean],
+            "materials": [],
+            "axes_grid": {"axes_letters": [], "axes_numbers": []},
+            "dimensions": [],
+        }
+        out = out_dir / f"PROJECT_TEMPLATE_MODEL__{sec}_FINAL_SOURCE_LOCK.json"
+        out.write_text(_json.dumps(model, ensure_ascii=False, indent=2), encoding="utf-8")
+        result["synced_sections"].append(sec)
+
+    result["ok"] = True
+    return result
+
+def _final_project_model_for_request_v1(user_text: str, topic_id: int = 210) -> dict:
+    import json as _json
+    from pathlib import Path as _Path
+    _final_sync_project_drive_templates_v1(int(topic_id or 210))
+    sec = _final_project_section_from_request_v1(user_text)
+    base = _Path("/root/.areal-neva-core/data/project_templates")
+    candidates = []
+    if sec == "ЭСКИЗ":
+        candidates.append(base / "PROJECT_TEMPLATE_MODEL__ЭСКИЗ_FINAL_SOURCE_LOCK.json")
+        candidates.append(base / "PROJECT_TEMPLATE_MODEL__АР_FINAL_SOURCE_LOCK.json")
+    else:
+        candidates.append(base / f"PROJECT_TEMPLATE_MODEL__{sec}_FINAL_SOURCE_LOCK.json")
+    candidates.append(base / "PROJECT_TEMPLATE_MODEL__КЖ_FINAL_SOURCE_LOCK.json")
+    for p in candidates:
+        if p.exists():
+            try:
+                return _json.loads(p.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+    return {}
+
+def create_project_artifact_from_latest_template(user_text: str, task_id: str, topic_id: int = 0) -> dict:
+    import os as _os
+    import tempfile as _tempfile
+    from datetime import datetime as _dt, timezone as _tz
+
+    result = {
+        "success": False,
+        "error": "",
+        "docx_path": "",
+        "xlsx_path": "",
+        "docx_link": "",
+        "xlsx_link": "",
+        "template_found": False,
+        "project_type": "UNKNOWN",
+    }
+
+    model = _final_project_model_for_request_v1(user_text, int(topic_id or 210))
+    if not model:
+        result["error"] = "PROJECT_DRIVE_TEMPLATE_NOT_FOUND"
+        return result
+
+    params = _ff3_extract_project_params(user_text)
+    project_type = _final_project_section_from_request_v1(user_text)
+    if project_type == "UNKNOWN":
+        project_type = model.get("project_type") or "КЖ"
+
+    result["template_found"] = True
+    result["project_type"] = project_type
+
+    safe_task = str(task_id or "manual")[:8]
+    out_dir = _tempfile.gettempdir()
+    docx_path = _os.path.join(out_dir, f"project_{project_type}_{safe_task}.docx")
+    xlsx_path = _os.path.join(out_dir, f"project_{project_type}_{safe_task}.xlsx")
+
+    sheets = model.get("sheet_register") or []
+    norm_sheets = []
+    for sh in sheets:
+        if isinstance(sh, str) and sh.strip():
+            norm_sheets.append({"mark": project_type, "number": str(len(norm_sheets)+1), "title": sh.strip()[:160]})
+        elif isinstance(sh, dict):
+            norm_sheets.append(sh)
+    sheets = norm_sheets or [{"mark": project_type, "number": "1", "title": model.get("source_file_name") or "Образец проекта"}]
+
+    try:
+        from docx import Document
+        doc = Document()
+        doc.add_heading(_ff3_safe_docx_text(params.get("project_name") or f"Проект {project_type}"), level=1)
+        doc.add_paragraph("Источник: Google Drive / Образцы проектов")
+        doc.add_paragraph("PROJECT_ARTIFACTS используется только как выходная папка, не как источник")
+        doc.add_paragraph(f"Раздел: {project_type}")
+        doc.add_paragraph(f"Образец: {model.get('source_file_name') or ''}")
+        doc.add_paragraph(f"Дата: {_dt.now(_tz.utc).isoformat()}")
+
+        doc.add_heading("Текущее задание", level=2)
+        doc.add_paragraph(_ff3_safe_docx_text(user_text))
+
+        doc.add_heading("Состав по источникам Drive", level=2)
+        tbl = doc.add_table(rows=1, cols=4)
+        tbl.rows[0].cells[0].text = "Марка"
+        tbl.rows[0].cells[1].text = "Лист"
+        tbl.rows[0].cells[2].text = "Наименование"
+        tbl.rows[0].cells[3].text = "Drive file id"
+        for sh in sheets:
+            row = tbl.add_row().cells
+            row[0].text = _ff3_safe_docx_text(sh.get("mark") or project_type)
+            row[1].text = _ff3_safe_docx_text(sh.get("number") or "")
+            row[2].text = _ff3_safe_docx_text(sh.get("title") or "")
+            row[3].text = _ff3_safe_docx_text(sh.get("file_id") or "")
+
+        doc.add_heading("Разделы", level=2)
+        for sec in (model.get("sections") or [])[:100]:
+            doc.add_paragraph(_ff3_safe_docx_text(sec))
+
+        doc.save(docx_path)
+    except Exception as e:
+        result["error"] = "DOCX_CREATE_FAILED: " + str(e)[:250]
+        return result
+
+    try:
+        from openpyxl import Workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Состав проекта"
+        headers = ["№", "Марка", "Лист", "Наименование", "Drive file id", "Источник"]
+        for c, h in enumerate(headers, 1):
+            ws.cell(1, c, h)
+        for i, sh in enumerate(sheets, 2):
+            ws.cell(i, 1, i - 1)
+            ws.cell(i, 2, sh.get("mark") or project_type)
+            ws.cell(i, 3, sh.get("number") or "")
+            ws.cell(i, 4, sh.get("title") or "")
+            ws.cell(i, 5, sh.get("file_id") or "")
+            ws.cell(i, 6, "Образцы проектов / PROJECT_DESIGN_REFERENCES")
+        ws2 = wb.create_sheet("Текущее задание")
+        ws2.cell(1, 1, "Задание")
+        ws2.cell(2, 1, str(user_text or "")[:32000])
+        ws2.cell(4, 1, "Запрещено")
+        ws2.cell(5, 1, "PROJECT_ARTIFACTS не использовать как источник")
+        for col, width in {"D": 80, "E": 45, "F": 45}.items():
+            ws.column_dimensions[col].width = width
+        ws2.column_dimensions["A"].width = 120
+        wb.save(xlsx_path)
+        wb.close()
+    except Exception as e:
+        result["error"] = "XLSX_CREATE_FAILED: " + str(e)[:250]
+        return result
+
+    result["docx_path"] = docx_path
+    result["xlsx_path"] = xlsx_path
+
+    try:
+        from core.engine_base import upload_artifact_to_drive
+        result["docx_link"] = upload_artifact_to_drive(docx_path, task_id, int(topic_id or 0)) or ""
+        result["xlsx_link"] = upload_artifact_to_drive(xlsx_path, task_id, int(topic_id or 0)) or ""
+    except Exception as e:
+        result["upload_error"] = str(e)[:250]
+
+    result["success"] = bool(_os.path.exists(docx_path) and _os.path.getsize(docx_path) > 1000)
+    if not result["success"]:
+        result["error"] = "PROJECT_ARTIFACT_EMPTY"
+    try:
+        from core.project_route_guard import format_project_result_message
+        from core.output_sanitizer import sanitize_project_message
+        result["user_message"] = sanitize_project_message(format_project_result_message(result, user_text))
+    except Exception:
+        pass
+    return result
+
+# === END_THREE_CONTOURS_FINAL_SOURCE_LOCK_V1 ===
