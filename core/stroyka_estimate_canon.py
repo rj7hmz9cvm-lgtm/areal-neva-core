@@ -214,6 +214,29 @@ def _pending_is_fresh(pending: Optional[Dict[str, Any]], max_seconds: int = 600)
 
 def _is_bad_estimate_result(text: str) -> bool:
     t = _low(text)
+
+    # === STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED_BAD_RESULT_MARKERS ===
+    stale_markers = (
+        "задачи за последние 24 часа",
+        "создание сметы: профлист",
+        "итоговая сумма: 55000",
+        "1capn1ikkxwypbxhny5caokqrsxbgzho",
+        "1glcscpl3d91elveo_m11ezwh_uu5b4vm",
+        "1pu77xrzhmpobus1pfximwdwckrgje1tn",
+        "смета уже есть:",
+        "смета создана по образцу вор",
+        "вор_кирпичная_кладка",
+        "vor_kirpich",
+        "позиций: 13 | итого: 690510",
+        "690510.00 руб",
+        "файлы в этом топике уже есть",
+        "нашёл релевантное",
+        "нашел релевантное",
+        "активный контекст найден",
+    )
+    if any(x in t for x in stale_markers):
+        return True
+    # === END_STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED_BAD_RESULT_MARKERS ===
     bad = (
         # === FULL_STROYKA_V3_SEARCH_LOOP_BAD_RESULT_FIX ===
         "поставщик | площадка",
@@ -409,6 +432,12 @@ def _parse_request(text: str) -> Dict[str, Any]:
 
 
 def _missing_question(parsed: Dict[str, Any]) -> Optional[str]:
+
+    # === STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED_DIRECT_PRICE_NO_MISSING ===
+    raw = _low(parsed.get("raw", ""))
+    if ("цена" in raw or "руб" in raw or "₽" in raw) and any(u in raw for u in ("м²", "м2", "м³", "м3", "шт", "кг", "тн", "тонн")) and any(x in raw for x in ("смет", "фундамент", "монолит", "кровл", "работ")):
+        return None
+    # === END_STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED_DIRECT_PRICE_NO_MISSING ===
     if not parsed.get("object"):
         return "Что строим: дом, ангар, склад, фундамент или кровлю?"
     if not parsed.get("material") and parsed.get("object") not in ("фундамент", "кровля", "ангар", "склад"):
@@ -683,11 +712,11 @@ async def _send_document(chat_id: str, file_path: str, caption: str, reply_to: O
 
 def _latest_estimate_result(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> Optional[sqlite3.Row]:
     """
-    FULL_STROYKA_DISABLE_OLD_ESTIMATE_RECALL_FINAL
+    STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED
 
     Old DONE/ARCHIVED estimate reuse is forbidden for topic_2.
-    Reason: it reused stale VOR/proflist artifacts and spammed old Drive links instead of processing current task.
-    New estimate requests must be processed from current raw_input only.
+    Every new stroyka estimate must be calculated from current raw_input only.
+    Old Drive links, old VOR files, old proflist estimates and stale memory are never valid input.
     """
     return None
 
@@ -1162,7 +1191,261 @@ async def _generate_and_send(conn: sqlite3.Connection, task: Any, pending: Dict[
     return True
 
 
+
+# === STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED_DIRECT_ITEM_ENGINE ===
+def _stroyka_final_parse_direct_items(raw_text: str) -> List[Dict[str, Any]]:
+    raw = _s(raw_text)
+    if not raw:
+        return []
+    lines = [x.strip(" \t-—") for x in raw.replace("\r", "\n").splitlines() if x.strip()]
+    items: List[Dict[str, Any]] = []
+    unit_re = r"(м²|м2|м\^2|м³|м3|м\^3|п\.?\s*м\.?|пм|м\.?|шт\.?|кг|тн|тонн?а?|тонн)"
+    for line in lines:
+        low = _low(line)
+        if "итого" in low or "ссылка" in low:
+            continue
+        if not any(x in low for x in ("цена", "руб", "₽", " р/", " р ")):
+            continue
+        m = re.search(
+            rf"^(?P<name>.*?)(?:[—:-]\s*)?(?P<qty>\d+(?:[.,]\d+)?)\s*(?P<unit>{unit_re})\b.*?(?:цена|по)?\s*(?P<price>\d[\d\s]*(?:[.,]\d+)?)\s*(?:руб|р|₽)?",
+            line, flags=re.I,
+        )
+        if not m:
+            continue
+        name = re.sub(r"^\s*\d+[\).]?\s*", "", m.group("name")).strip(" —:-")
+        if not name:
+            name = "Работа/материал"
+        qty = float(m.group("qty").replace(",", "."))
+        unit = m.group("unit").replace(" ", "").replace("^2", "²").replace("^3", "³")
+        price = float(m.group("price").replace(" ", "").replace(",", "."))
+        if qty <= 0 or price <= 0:
+            continue
+        amount = round(qty * price, 2)
+        items.append({"name": name, "qty": qty, "unit": unit, "price": price, "amount": amount, "source_line": line})
+    return items
+
+
+def _stroyka_final_pdf_escape(text: str) -> str:
+    return str(text).replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+
+
+def _stroyka_final_create_simple_pdf(path: str, title: str, lines: List[str]) -> None:
+    try:
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        from reportlab.lib.pagesizes import A4
+        from reportlab.pdfgen import canvas
+        font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+        font_name = "DejaVuSans"
+        if os.path.exists(font_path):
+            pdfmetrics.registerFont(TTFont(font_name, font_path))
+        else:
+            font_name = "Helvetica"
+        c = canvas.Canvas(path, pagesize=A4)
+        width, height = A4
+        y = height - 40
+        c.setFont(font_name, 12)
+        c.drawString(40, y, title)
+        y -= 24
+        c.setFont(font_name, 9)
+        for line in lines:
+            if y < 40:
+                c.showPage()
+                y = height - 40
+                c.setFont(font_name, 9)
+            c.drawString(40, y, str(line)[:130])
+            y -= 14
+        c.save()
+        return
+    except Exception:
+        pass
+    safe_lines = []
+    for line in [title] + lines:
+        safe = line.encode("latin-1", "replace").decode("latin-1")
+        safe_lines.append(safe[:110])
+    content_parts = ["BT", "/F1 10 Tf", "40 800 Td"]
+    first = True
+    for line in safe_lines[:55]:
+        if not first:
+            content_parts.append("0 -14 Td")
+        content_parts.append(f"({_stroyka_final_pdf_escape(line)}) Tj")
+        first = False
+    content_parts.append("ET")
+    stream = "\n".join(content_parts).encode("latin-1", "replace")
+    objs = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        b"<< /Length " + str(len(stream)).encode() + b" >>\nstream\n" + stream + b"\nendstream",
+    ]
+    out = bytearray(b"%PDF-1.4\n")
+    offsets = [0]
+    for i, obj in enumerate(objs, 1):
+        offsets.append(len(out))
+        out.extend(f"{i} 0 obj\n".encode())
+        out.extend(obj)
+        out.extend(b"\nendobj\n")
+    xref = len(out)
+    out.extend(f"xref\n0 {len(objs)+1}\n".encode())
+    out.extend(b"0000000000 65535 f \n")
+    for off in offsets[1:]:
+        out.extend(f"{off:010d} 00000 n \n".encode())
+    out.extend(f"trailer << /Root 1 0 R /Size {len(objs)+1} >>\nstartxref\n{xref}\n%%EOF\n".encode())
+    Path(path).write_bytes(bytes(out))
+
+
+def _stroyka_final_create_xlsx(path: str, items: List[Dict[str, Any]], raw_input: str) -> None:
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    from openpyxl.utils import get_column_letter
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Смета"
+    ws["A1"] = "Смета по текущему заданию"
+    ws["A2"] = "Основание: только текущий текст задачи, без старых смет и старых ссылок"
+    ws["A1"].font = Font(bold=True, size=14)
+    headers = ["№", "Наименование", "Кол-во", "Ед.", "Цена", "Сумма", "Источник"]
+    start_row = 4
+    for col, h in enumerate(headers, 1):
+        c = ws.cell(start_row, col, h)
+        c.font = Font(bold=True)
+        c.fill = PatternFill("solid", fgColor="D9EAF7")
+        c.alignment = Alignment(horizontal="center")
+    for i, item in enumerate(items, 1):
+        r = start_row + i
+        ws.cell(r, 1, i)
+        ws.cell(r, 2, item["name"])
+        ws.cell(r, 3, item["qty"])
+        ws.cell(r, 4, item["unit"])
+        ws.cell(r, 5, item["price"])
+        ws.cell(r, 6, f"=C{r}*E{r}")
+        ws.cell(r, 7, item.get("source_line", "текущий ввод"))
+    total_row = start_row + len(items) + 1
+    ws.cell(total_row, 5, "Итого").font = Font(bold=True)
+    ws.cell(total_row, 6, f"=SUM(F{start_row+1}:F{total_row-1})").font = Font(bold=True)
+    ws.cell(total_row + 2, 1, "Исходный текст:")
+    ws.cell(total_row + 3, 1, _clean(raw_input, 3000))
+    ws.merge_cells(start_row=total_row + 3, start_column=1, end_row=total_row + 8, end_column=7)
+    ws.cell(total_row + 3, 1).alignment = Alignment(wrap_text=True, vertical="top")
+    widths = [6, 38, 12, 10, 14, 16, 70]
+    for idx, width in enumerate(widths, 1):
+        ws.column_dimensions[get_column_letter(idx)].width = width
+    thin = Side(style="thin", color="999999")
+    for row in ws.iter_rows(min_row=start_row, max_row=total_row, min_col=1, max_col=7):
+        for cell in row:
+            cell.border = Border(left=thin, right=thin, top=thin, bottom=thin)
+            cell.alignment = Alignment(wrap_text=True, vertical="top")
+    wb.save(path)
+
+
+async def _stroyka_final_upload_or_send(chat_id: str, topic_id: int, reply_to: Optional[int], file_path: str, caption: str, mime_type: str) -> str:
+    try:
+        from core.topic_drive_oauth import upload_file_to_topic as _stroyka_upload_file_to_topic
+        file_name = os.path.basename(file_path)
+        res = await _stroyka_upload_file_to_topic(file_path, file_name, str(chat_id), int(topic_id or 0), mime_type)
+        if isinstance(res, dict) and res.get("drive_file_id"):
+            return f"https://drive.google.com/file/d/{res['drive_file_id']}/view?usp=drivesdk"
+    except Exception:
+        pass
+    ok = await _send_document(str(chat_id), file_path, caption, reply_to, int(topic_id or 0))
+    return "Telegram fallback: файл отправлен" if ok else "UPLOAD_FAILED"
+
+
+async def _stroyka_final_handle_direct_item_estimate(conn: sqlite3.Connection, task: Any, logger: Any) -> bool:
+    task_id = _s(_row_get(task, "id", ""))
+    chat_id = _s(_row_get(task, "chat_id", ""))
+    topic_id = int(_row_get(task, "topic_id", 0) or 0)
+    reply_to = _row_get(task, "reply_to_message_id", None)
+    raw = _s(_row_get(task, "raw_input", ""))
+
+    if topic_id != TOPIC_ID_STROYKA:
+        return False
+    items = _stroyka_final_parse_direct_items(raw)
+    if not items:
+        return False
+
+    outdir = BASE / "runtime" / "stroyka_estimates" / task_id
+    outdir.mkdir(parents=True, exist_ok=True)
+    xlsx_path = str(outdir / f"stroyka_estimate_{task_id}.xlsx")
+    pdf_path = str(outdir / f"stroyka_estimate_{task_id}.pdf")
+
+    _stroyka_final_create_xlsx(xlsx_path, items, raw)
+    total = round(sum(float(i["amount"]) for i in items), 2)
+
+    pdf_lines = [
+        f"task_id: {task_id}",
+        "Основание: текущий ввод, старые сметы отключены",
+        f"Позиций: {len(items)}",
+        f"Итого: {total:.2f} руб",
+        "",
+    ]
+    for i, item in enumerate(items, 1):
+        pdf_lines.append(f"{i}. {item['name']} — {item['qty']} {item['unit']} x {item['price']} = {item['amount']} руб")
+    _stroyka_final_create_simple_pdf(pdf_path, "Смета по текущему заданию", pdf_lines)
+
+    if not os.path.exists(xlsx_path) or os.path.getsize(xlsx_path) < 1000:
+        _update_task_safe(conn, task_id, state="FAILED", result="STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED: XLSX_CREATE_FAILED")
+        _history_safe(conn, task_id, "STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED:XLSX_CREATE_FAILED")
+        return True
+    if not os.path.exists(pdf_path) or os.path.getsize(pdf_path) < 100:
+        _update_task_safe(conn, task_id, state="FAILED", result="STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED: PDF_CREATE_FAILED")
+        _history_safe(conn, task_id, "STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED:PDF_CREATE_FAILED")
+        return True
+
+    xlsx_link = await _stroyka_final_upload_or_send(
+        chat_id, topic_id, reply_to, xlsx_path,
+        "Excel смета по текущему заданию",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    pdf_link = await _stroyka_final_upload_or_send(
+        chat_id, topic_id, reply_to, pdf_path,
+        "PDF смета по текущему заданию",
+        "application/pdf",
+    )
+
+    result = "\n".join([
+        "Смета готова по текущему заданию",
+        "",
+        f"Позиций: {len(items)}",
+        f"Итого: {total:.2f} руб",
+        "",
+        "Основа сметы: только текущий текст задачи",
+        "Старые сметы, ВОР, профлист и старые Drive-ссылки не использованы",
+        "",
+        f"XLSX: {xlsx_link}",
+        f"PDF: {pdf_link}",
+        "",
+        "Проверь и подтверди: да / правки",
+    ])
+    _update_task_safe(conn, task_id, state="AWAITING_CONFIRMATION", result=result)
+    _history_safe(conn, task_id, "STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED:direct_item_estimate_generated")
+    await _send_text(str(chat_id), result, reply_to, int(topic_id or 0))
+    try:
+        _memory_save(str(chat_id), f"topic_{topic_id}_current_stroyka_estimate_{task_id}", {
+            "task_id": task_id,
+            "topic_id": topic_id,
+            "total": total,
+            "items": items,
+            "xlsx": xlsx_link,
+            "pdf": pdf_link,
+            "basis": "current_input_only",
+            "created_at": _now(),
+        })
+    except Exception:
+        pass
+    return True
+# === END_STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED_DIRECT_ITEM_ENGINE ===
+
 async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, logger=None) -> bool:
+
+    # === STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED_DIRECT_HANDLER_CALL ===
+    try:
+        if await _stroyka_final_handle_direct_item_estimate(conn, task, logger):
+            return True
+    except Exception as _stroyka_direct_err:
+        logger.exception("STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED_DIRECT_HANDLER_ERR %s", _stroyka_direct_err)
+    # === END_STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED_DIRECT_HANDLER_CALL ===
     if not is_stroyka_estimate_candidate(task):
         return False
 

@@ -3208,40 +3208,32 @@ async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_
                             ai_result = await asyncio.wait_for(_t3_verify(_t3_code,_t3_ctx),timeout=150)
             # === END TOPIC_3008_HANDLER_V1 ===
             if ai_result is None:  # AI_LOGIC_FIX_V1
-                # === FULL_STROYKA_LOOP_FINAL_CLOSE_PRE_DIRECTION_GUARD ===
+                # === STROYKA_FULL_CHAIN_FINAL_CLOSE_PRE_DIRECTION_GUARD ===
                 try:
-                    _fs_topic = int(_task_field(task, "topic_id", topic_id) or 0)
-                    _fs_state = _s(_task_field(task, "state", "")).upper()
-                    _fs_task_id = _s(_task_field(task, "id", ""))
-                    _fs_raw = _s(_task_field(task, "raw_input", "")).lower()
-                    _fs_result = _s(_task_field(task, "result", "")).lower()
-                    if _fs_topic == 2:
-                        _bad_old_estimate = any(x in (_fs_raw + "\n" + _fs_result) for x in (
-                            "вор_кирпич",
-                            "vor_kirpich",
-                            "вор_кирпичная_кладка",
-                            "смета создана по образцу вор",
-                            "поставщик | площадка",
-                            "auto_parts",
-                            "search_monolith",
-                            "tco | риски",
-                            "ошибка классификации запроса",
-                            "категория не совпадает",
+                    _stroyka_topic = int(_task_field(task, "topic_id", 0) or 0)
+                    _stroyka_state = _s(_task_field(task, "state", ""))
+                    _stroyka_task_id = _s(_task_field(task, "id", ""))
+                    if _stroyka_topic == 2 and _stroyka_state in ("NEW", "IN_PROGRESS"):
+                        _stroyka_raw = _s(_task_field(task, "raw_input", "")).lower()
+                        _stroyka_result = _s(_task_field(task, "result", "")).lower()
+                        _stroyka_bad = any(x in (_stroyka_raw + "\n" + _stroyka_result) for x in (
+                            "вор_кирпич", "vor_kirpich", "вор_кирпичная_кладка",
+                            "смета создана по образцу вор", "поставщик | площадка",
+                            "auto_parts", "search_monolith", "tco | риски",
+                            "ошибка классификации запроса", "категория не совпадает",
                         ))
-                        if _bad_old_estimate and _fs_state in ("NEW", "IN_PROGRESS", "WAITING_CLARIFICATION", "AWAITING_CONFIRMATION", "AWAITING_PRICE_CONFIRMATION"):
-                            _update_task(conn, _fs_task_id, state="FAILED", result="FULL_STROYKA_LOOP_FINAL_CLOSE: blocked stale VOR/search/autoparts estimate contamination")
-                            _history(conn, _fs_task_id, "FULL_STROYKA_LOOP_FINAL_CLOSE:blocked_bad_old_estimate")
+                        if _stroyka_bad:
+                            _update_task(conn, _stroyka_task_id, state="FAILED",
+                                result="STROYKA_FULL_CHAIN_FINAL_CLOSE_PRE_DIRECTION_GUARD: blocked stale estimate contamination")
+                            _history(conn, _stroyka_task_id, "STROYKA_FULL_CHAIN_FINAL_CLOSE_PRE_DIRECTION_GUARD:blocked_bad_estimate")
                             return
-                        if _fs_state in ("WAITING_CLARIFICATION", "AWAITING_CONFIRMATION", "AWAITING_PRICE_CONFIRMATION"):
-                            _history(conn, _fs_task_id, "FULL_STROYKA_LOOP_FINAL_CLOSE:wait_state_not_reprocessed")
+                        from core.stroyka_estimate_canon import maybe_handle_stroyka_estimate as _stroyka_final_handle
+                        if await _stroyka_final_handle(conn, task, logger):
+                            _history(conn, _stroyka_task_id, "STROYKA_FULL_CHAIN_FINAL_CLOSE_PRE_DIRECTION_GUARD:handled")
                             return
-                        from core.stroyka_estimate_canon import maybe_handle_stroyka_estimate as _fs_v3
-                        if await _fs_v3(conn, task, logger):
-                            _history(conn, _fs_task_id, "FULL_STROYKA_LOOP_FINAL_CLOSE:v3_handled_before_direction_kernel")
-                            return
-                except Exception as _fs_err:
-                    logger.exception("FULL_STROYKA_LOOP_FINAL_CLOSE_PRE_DIRECTION_GUARD_ERR %s", _fs_err)
-                # === END_FULL_STROYKA_LOOP_FINAL_CLOSE_PRE_DIRECTION_GUARD ===
+                except Exception as _stroyka_final_err:
+                    logger.exception("STROYKA_FULL_CHAIN_FINAL_CLOSE_PRE_DIRECTION_GUARD_ERR %s", _stroyka_final_err)
+                # === END_STROYKA_FULL_CHAIN_FINAL_CLOSE_PRE_DIRECTION_GUARD ===
                 # FULLFIX_DIRECTION_KERNEL_STAGE_1_CALL
                 payload = _stage1_dir_payload(payload)
                 # FULLFIX_TOPIC_AUTODISCOVERY_V2_CALL
@@ -3676,7 +3668,7 @@ def _pick_next_task(conn: sqlite3.Connection, chat_id: Optional[str]) -> Optiona
         SELECT *
         FROM tasks
         WHERE {' AND '.join(where)}
-        ORDER BY CASE state WHEN 'IN_PROGRESS' THEN 0 WHEN  THEN 1 ELSE 2 END,
+        ORDER BY CASE state WHEN 'IN_PROGRESS' THEN 0 ELSE 1 END,
                  created_at ASC
         LIMIT 1
         """
