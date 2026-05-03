@@ -4606,6 +4606,304 @@ except Exception as _st2_pm_wrap_err:
 # === END_STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1 ===
 
 
+# === TOPIC2_ONE_BIG_FINAL_PIPELINE_V1_WORKER_GUARD ===
+# Final topic_2 guard before worker main:
+# - blocks old generated search subtasks
+# - blocks FILE_TECH_CONTOUR_FOLLOWUP_V2 for topic_2 vague messages
+# - blocks memory revive of old estimates
+# - merges current message + current clarifications + live parent context
+# - sends complete estimate context to one formula-preserving template pipeline
+# - never leaves handled topic_2 task in endless IN_PROGRESS
+
+_TOP2_ONE_BIG_ORIG_HANDLE_IN_PROGRESS_V1 = _handle_in_progress
+
+def _top2_ob_row(row, key, default=None):
+    try:
+        return row[key]
+    except Exception:
+        pass
+    try:
+        idx = {
+            "id": 0,
+            "chat_id": 1,
+            "user_id": 2,
+            "input_type": 3,
+            "raw_input": 4,
+            "state": 5,
+            "result": 6,
+            "error_message": 7,
+            "reply_to_message_id": 8,
+            "created_at": 9,
+            "updated_at": 10,
+            "bot_message_id": 11,
+            "topic_id": 12,
+            "task_type": 13,
+        }.get(key)
+        if idx is not None:
+            return row[idx]
+    except Exception:
+        pass
+    return default
+
+def _top2_ob_s(v):
+    return "" if v is None else str(v)
+
+def _top2_ob_low(v):
+    return _top2_ob_s(v).lower().replace("ё", "е").strip()
+
+def _top2_ob_history_col(conn):
+    try:
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(task_history)").fetchall()]
+        if "action" in cols:
+            return "action"
+        if "event" in cols:
+            return "event"
+    except Exception:
+        pass
+    return ""
+
+def _top2_ob_hist(conn, task_id, action):
+    try:
+        _history(conn, task_id, action)
+        return
+    except Exception:
+        pass
+    try:
+        col = _top2_ob_history_col(conn)
+        if col:
+            conn.execute(f"INSERT INTO task_history(task_id,{col},created_at) VALUES(?,?,datetime('now'))", (task_id, action))
+            conn.commit()
+    except Exception:
+        pass
+
+def _top2_ob_update(conn, task_id, state, result="", error=""):
+    try:
+        _update_task(conn, task_id, state=state, result=result, error_message=error)
+        return
+    except Exception:
+        pass
+    try:
+        conn.execute(
+            "UPDATE tasks SET state=?, result=?, error_message=?, updated_at=datetime('now') WHERE id=?",
+            (state, result, error, task_id),
+        )
+        conn.commit()
+    except Exception:
+        pass
+
+def _top2_ob_send(conn, task_id, chat_id, text, reply_to, kind):
+    try:
+        _send_once_ex(conn, task_id, chat_id, text, reply_to, kind)
+        return
+    except Exception:
+        pass
+    try:
+        _send_once(conn, task_id, str(chat_id), text, reply_to, kind)
+    except Exception:
+        pass
+
+def _top2_ob_current_clarifications(conn, task_id):
+    out = []
+    try:
+        col = _top2_ob_history_col(conn)
+        if not col:
+            return out
+        rows = conn.execute(
+            f"SELECT {col} FROM task_history WHERE task_id=? AND {col} LIKE 'clarified:%' ORDER BY rowid ASC LIMIT 50",
+            (task_id,),
+        ).fetchall()
+        for r in rows:
+            v = _top2_ob_s(r[0])
+            if ":" in v:
+                x = v.split(":", 1)[1].strip()
+                if x:
+                    out.append(x)
+    except Exception:
+        pass
+    return out
+
+def _top2_ob_latest_live_parent(conn, task_id, chat_id, topic_id):
+    try:
+        row = conn.execute(
+            """
+            SELECT id, raw_input, state
+            FROM tasks
+            WHERE chat_id=?
+              AND COALESCE(topic_id,0)=?
+              AND id<>?
+              AND state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION')
+              AND input_type<>'search'
+            ORDER BY rowid DESC
+            LIMIT 1
+            """,
+            (chat_id, int(topic_id or 0), task_id),
+        ).fetchone()
+        if row:
+            return _top2_ob_s(row[0]), _top2_ob_s(row[1]), _top2_ob_s(row[2])
+    except Exception:
+        pass
+    return "", "", ""
+
+def _top2_ob_is_vague(text):
+    low = _top2_ob_low(text)
+    low = re.sub(r"^\s*\[voice\]\s*", "", low, flags=re.I).strip()
+    if not low:
+        return True
+    vague = (
+        "что дальше", "ну что", "что там", "посмотри", "я скидывал", "я тебе скидывал",
+        "последнее задание", "какое последнее", "вообще не так", "не так",
+        "ты тупишь", "где", "еще раз", "ещё раз", "продолжай"
+    )
+    strong = (
+        "смет", "посчитай", "рассчитай", "стоимость", "дом", "фундамент",
+        "плита", "монолит", "каркас", "газобетон", "барн", "бар house", "бархаус",
+        "12", "10", "8", "м2", "м3", "руб"
+    )
+    return any(x in low for x in vague) and not any(x in low for x in strong)
+
+def _top2_ob_cancel_text(text):
+    low = _top2_ob_low(text)
+    return any(x in low for x in ("все задачи отменены", "всё отменено", "отмени все", "стоп все", "стоп всё", "закрой все задачи"))
+
+def _top2_ob_estimate_like(text):
+    low = _top2_ob_low(text)
+    return any(x in low for x in (
+        "смет", "стоимост", "посчитай", "рассчитай", "расчет", "расчёт",
+        "монолит", "фундамент", "плит", "дом", "каркас", "газобетон",
+        "барн", "бар house", "бархаус", "материал", "работ"
+    ))
+
+def _top2_ob_build_context(conn, task_id, chat_id, topic_id, raw):
+    parts = []
+    cur = _top2_ob_s(raw).strip()
+    if cur:
+        parts.append("Текущее сообщение:\n" + cur)
+
+    clar = _top2_ob_current_clarifications(conn, task_id)
+    if clar:
+        parts.append("Уточнения текущей задачи:\n" + "\n".join(clar))
+
+    parent_id, parent_raw, parent_state = _top2_ob_latest_live_parent(conn, task_id, chat_id, topic_id)
+    if parent_id and parent_raw and not _top2_ob_is_vague(parent_raw):
+        parts.append("Живая родительская задача:\n" + parent_raw)
+        pclar = _top2_ob_current_clarifications(conn, parent_id)
+        if pclar:
+            parts.append("Уточнения родительской задачи:\n" + "\n".join(pclar))
+
+    return "\n\n".join(parts).strip(), parent_id
+
+async def _handle_in_progress(conn, task):
+    task_id = _top2_ob_s(_top2_ob_row(task, "id"))
+    chat_id = _top2_ob_row(task, "chat_id")
+    topic_id = int(_top2_ob_row(task, "topic_id", 0) or 0)
+    input_type = _top2_ob_s(_top2_ob_row(task, "input_type", "text"))
+    raw_input = _top2_ob_s(_top2_ob_row(task, "raw_input", ""))
+    reply_to = _top2_ob_row(task, "reply_to_message_id", None)
+
+    if topic_id == 2:
+        try:
+            if input_type == "search":
+                _top2_ob_update(conn, task_id, "DONE", "TOPIC2_ONE_BIG_FINAL_PIPELINE_V1: generated search subtask blocked", "")
+                _top2_ob_hist(conn, task_id, "TOPIC2_ONE_BIG_FINAL_PIPELINE_V1:blocked_search_subtask")
+                return
+
+            if _top2_ob_cancel_text(raw_input):
+                try:
+                    conn.execute(
+                        """
+                        UPDATE tasks
+                        SET state='CANCELLED',
+                            result='TOPIC2_ONE_BIG_FINAL_PIPELINE_V1: cancelled by user topic2 command',
+                            error_message='',
+                            updated_at=datetime('now')
+                        WHERE chat_id=?
+                          AND COALESCE(topic_id,0)=2
+                          AND state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION')
+                          AND id<>?
+                        """,
+                        (chat_id, task_id),
+                    )
+                    conn.commit()
+                except Exception:
+                    pass
+                msg = "Все активные задачи topic 2 закрыты"
+                _top2_ob_update(conn, task_id, "DONE", msg, "")
+                _top2_ob_hist(conn, task_id, "TOPIC2_ONE_BIG_FINAL_PIPELINE_V1:cancel_all_topic2")
+                _top2_ob_send(conn, task_id, chat_id, msg, reply_to, "topic2_cancel_all")
+                return
+
+            full_context, parent_id = _top2_ob_build_context(conn, task_id, chat_id, topic_id, raw_input)
+
+            if _top2_ob_is_vague(raw_input) and not _top2_ob_estimate_like(full_context):
+                msg = "Нового полного ТЗ для сметы в сообщении нет. Старую смету из памяти не поднимаю"
+                _top2_ob_update(conn, task_id, "DONE", msg, "")
+                _top2_ob_hist(conn, task_id, "TOPIC2_ONE_BIG_FINAL_PIPELINE_V1:vague_no_memory_revive")
+                _top2_ob_send(conn, task_id, chat_id, msg, reply_to, "topic2_vague_blocked")
+                return
+
+            if _top2_ob_estimate_like(full_context):
+                try:
+                    from core.sample_template_engine import handle_topic2_one_big_formula_pipeline_v1
+                except Exception as e:
+                    err = "TOPIC2_ONE_BIG_FINAL_PIPELINE_V1_IMPORT_ERR:" + _top2_ob_s(e)[:300]
+                    _top2_ob_update(conn, task_id, "FAILED", err, err)
+                    _top2_ob_hist(conn, task_id, err)
+                    _top2_ob_send(conn, task_id, chat_id, err, reply_to, "topic2_formula_import_error")
+                    return
+
+                handled = await handle_topic2_one_big_formula_pipeline_v1(
+                    conn=conn,
+                    task_id=task_id,
+                    chat_id=str(chat_id),
+                    topic_id=topic_id,
+                    raw_input=full_context,
+                    input_type=input_type or "text",
+                    reply_to_message_id=reply_to,
+                )
+
+                if handled:
+                    try:
+                        cur_state = conn.execute("SELECT state FROM tasks WHERE id=?", (task_id,)).fetchone()
+                        cur_state_s = _top2_ob_s(cur_state[0] if cur_state else "")
+                        if parent_id and parent_id != task_id and cur_state_s in ("AWAITING_CONFIRMATION", "DONE"):
+                            conn.execute(
+                                """
+                                UPDATE tasks
+                                SET state='DONE',
+                                    result='Закрыто новой сметой TOPIC2_ONE_BIG_FINAL_PIPELINE_V1',
+                                    error_message='',
+                                    updated_at=datetime('now')
+                                WHERE id=?
+                                  AND state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION')
+                                """,
+                                (parent_id,),
+                            )
+                            conn.commit()
+                            _top2_ob_hist(conn, parent_id, "TOPIC2_ONE_BIG_FINAL_PIPELINE_V1:superseded_by:" + task_id)
+                    except Exception as e:
+                        logger.warning("TOPIC2_ONE_BIG_FINAL_PIPELINE_V1_PARENT_CLOSE_ERR %s", e)
+                    logger.info("TOPIC2_ONE_BIG_FINAL_PIPELINE_V1 handled task=%s topic=%s", task_id, topic_id)
+                    return
+
+            if _top2_ob_is_vague(raw_input):
+                msg = "Старый сметный контекст не использую. Пришли полное ТЗ одним сообщением"
+                _top2_ob_update(conn, task_id, "DONE", msg, "")
+                _top2_ob_hist(conn, task_id, "TOPIC2_ONE_BIG_FINAL_PIPELINE_V1:vague_blocked_after_gate")
+                _top2_ob_send(conn, task_id, chat_id, msg, reply_to, "topic2_vague_blocked_after_gate")
+                return
+
+        except Exception as e:
+            err = "TOPIC2_ONE_BIG_FINAL_PIPELINE_V1_WORKER_ERR:" + _top2_ob_s(e)[:500]
+            logger.warning(err)
+            _top2_ob_update(conn, task_id, "FAILED", err, err)
+            _top2_ob_hist(conn, task_id, err)
+            _top2_ob_send(conn, task_id, chat_id, err, reply_to, "topic2_guard_error")
+            return
+
+    return await _TOP2_ONE_BIG_ORIG_HANDLE_IN_PROGRESS_V1(conn, task)
+# === END_TOPIC2_ONE_BIG_FINAL_PIPELINE_V1_WORKER_GUARD ===
+
+
 if __name__ == "__main__":
     asyncio.run(main())
 

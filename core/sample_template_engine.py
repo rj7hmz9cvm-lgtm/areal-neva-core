@@ -2377,3 +2377,806 @@ async def handle_template_estimate_intent(
 
 # === END_THREE_CONTOURS_FULL_CONTEXT_NO_REPEAT_CLARIFY_V1 ===
 
+
+# === TOPIC2_ONE_BIG_FINAL_PIPELINE_V1_SAMPLE_ENGINE ===
+# Single topic_2 construction estimate pipeline:
+# - one route only
+# - no old search/direct_item/memory revive artifacts
+# - no repeated clarification when full context exists
+# - formula workbook is copied from active Drive template and formulas are preserved
+
+import os as _t2sp_os
+import re as _t2sp_re
+import json as _t2sp_json
+import time as _t2sp_time
+import shutil as _t2sp_shutil
+import tempfile as _t2sp_tempfile
+import subprocess as _t2sp_subprocess
+from pathlib import Path as _t2sp_Path
+from datetime import datetime as _t2sp_datetime
+from typing import Any as _t2sp_Any, Dict as _t2sp_Dict, List as _t2sp_List, Tuple as _t2sp_Tuple, Optional as _t2sp_Optional
+
+_T2SP_BASE = _t2sp_Path("/root/.areal-neva-core")
+_T2SP_ACTIVE_TEMPLATE = _T2SP_BASE / "data/templates/estimate/ACTIVE__chat_-1003725299009__topic_2.json"
+_T2SP_OUT_DIR = _T2SP_BASE / "outputs/topic2_formula_estimates"
+_T2SP_CACHE_DIR = _T2SP_BASE / "data/templates/estimate/cache"
+_T2SP_MARKER = "TOPIC2_ONE_BIG_FINAL_PIPELINE_V1"
+
+def _t2sp_s(v: _t2sp_Any) -> str:
+    return "" if v is None else str(v)
+
+def _t2sp_low(v: _t2sp_Any) -> str:
+    return _t2sp_s(v).lower().replace("ё", "е").strip()
+
+def _t2sp_norm_numbers(text: str) -> str:
+    repl = {
+        "ноль": "0", "один": "1", "одна": "1", "одно": "1", "два": "2", "две": "2",
+        "три": "3", "четыре": "4", "пять": "5", "шесть": "6", "семь": "7",
+        "восемь": "8", "девять": "9", "десять": "10", "одиннадцать": "11",
+        "двенадцать": "12", "тринадцать": "13", "четырнадцать": "14",
+        "пятнадцать": "15", "шестнадцать": "16", "семнадцать": "17",
+        "восемнадцать": "18", "девятнадцать": "19", "двадцать": "20",
+    }
+    out = " " + _t2sp_s(text).lower().replace("ё", "е") + " "
+    for k, v in repl.items():
+        out = _t2sp_re.sub(rf"(?<![а-яa-z]){_t2sp_re.escape(k)}(?![а-яa-z])", v, out, flags=_t2sp_re.I)
+    return out.strip()
+
+def _t2sp_is_estimate_text(text: str) -> bool:
+    low = _t2sp_low(text)
+    if not low:
+        return False
+    words = (
+        "смет", "стоимост", "посчитай", "рассчитай", "расчет", "расчёт",
+        "цена", "руб", "итог", "материал", "работ", "монолит", "фундамент",
+        "плит", "дом", "барн", "бар house", "бархаус", "barn", "кровл",
+        "каркас", "газобетон", "строительств"
+    )
+    return any(w in low for w in words)
+
+def _t2sp_parse_context(text: str) -> _t2sp_Dict[str, _t2sp_Any]:
+    raw = _t2sp_s(text)
+    low = _t2sp_norm_numbers(raw)
+    data: _t2sp_Dict[str, _t2sp_Any] = {
+        "raw": raw.strip(),
+        "object": "",
+        "material": "",
+        "dimensions": "",
+        "length_m": "",
+        "width_m": "",
+        "floors": "",
+        "height_m": "",
+        "foundation": "",
+        "distance_km": "",
+        "style": "",
+        "sheet": "",
+    }
+
+    if any(x in low for x in ("дом", "коттедж", "барн", "бар house", "бархаус", "barn")):
+        data["object"] = "дом"
+    elif "фундамент" in low:
+        data["object"] = "фундамент"
+    elif "кровл" in low:
+        data["object"] = "кровля"
+
+    if any(x in low for x in ("барн", "бар house", "бархаус", "barn")):
+        data["style"] = "barn house"
+        data["material"] = "каркас"
+        data["sheet"] = "Каркас под ключ"
+    if "каркас" in low:
+        data["material"] = "каркас"
+        data["sheet"] = "Каркас под ключ"
+    if "газобетон" in low or "газоблок" in low:
+        data["material"] = "газобетон"
+        data["sheet"] = "Газобетон"
+
+    m = _t2sp_re.search(r"(\d+(?:[.,]\d+)?)\s*(?:м|метр(?:ов|а)?)?\s*(?:на|x|х|\*)\s*(\d+(?:[.,]\d+)?)", low, flags=_t2sp_re.I)
+    if m:
+        l = m.group(1).replace(",", ".")
+        w = m.group(2).replace(",", ".")
+        data["length_m"] = l
+        data["width_m"] = w
+        data["dimensions"] = f"{l} x {w} м"
+
+    m = _t2sp_re.search(r"(?:этаж(?:ей|а)?|этажа|этажность)\D{0,12}(\d+)", low, flags=_t2sp_re.I)
+    if not m:
+        m = _t2sp_re.search(r"(\d+)\s*(?:этаж|этажа|этажей)", low, flags=_t2sp_re.I)
+    if m:
+        data["floors"] = m.group(1)
+
+    m = _t2sp_re.search(r"(?:высота|h)\D{0,12}(\d+(?:[.,]\d+)?)", low, flags=_t2sp_re.I)
+    if m:
+        data["height_m"] = m.group(1).replace(",", ".")
+
+    if "монолит" in low and "плит" in low:
+        data["foundation"] = "монолитная плита"
+    elif "фундамент" in low and "плит" in low:
+        data["foundation"] = "плита"
+    elif "ленточ" in low:
+        data["foundation"] = "ленточный фундамент"
+    elif "сва" in low:
+        data["foundation"] = "свайный фундамент"
+    elif "фундамент" in low:
+        data["foundation"] = "фундамент"
+
+    m = _t2sp_re.search(r"(\d+(?:[.,]\d+)?)\s*(?:км|километр)", low, flags=_t2sp_re.I)
+    if m:
+        data["distance_km"] = m.group(1).replace(",", ".")
+
+    if not data["sheet"]:
+        data["sheet"] = "Каркас под ключ" if data["material"] == "каркас" else "Газобетон"
+
+    return data
+
+def _t2sp_missing_questions(text: str) -> _t2sp_List[str]:
+    if not _t2sp_is_estimate_text(text):
+        return []
+    data = _t2sp_parse_context(text)
+    missing: _t2sp_List[str] = []
+    if not data.get("object"):
+        missing.append("тип объекта")
+    if not data.get("dimensions"):
+        missing.append("размеры объекта")
+    if not data.get("material"):
+        missing.append("материал стен")
+    if not data.get("foundation"):
+        missing.append("тип фундамента")
+    return missing
+
+def _t2sp_load_active_template_meta() -> _t2sp_Dict[str, _t2sp_Any]:
+    if not _T2SP_ACTIVE_TEMPLATE.exists():
+        return {}
+    try:
+        return _t2sp_json.loads(_T2SP_ACTIVE_TEMPLATE.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+def _t2sp_history(conn, task_id: str, action: str) -> None:
+    try:
+        fn = globals().get("_task_history_insert")
+        if callable(fn):
+            fn(conn, task_id, action)
+            return
+    except Exception:
+        pass
+    try:
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(task_history)").fetchall()]
+        col = "action" if "action" in cols else ("event" if "event" in cols else "")
+        if col:
+            conn.execute(f"INSERT INTO task_history(task_id,{col},created_at) VALUES(?,?,datetime('now'))", (task_id, action))
+            conn.commit()
+    except Exception:
+        pass
+
+def _t2sp_update(conn, task_id: str, state: str, result: str, error: str = "", bot_id: _t2sp_Any = None) -> None:
+    try:
+        fn = globals().get("_update_task")
+        if callable(fn):
+            try:
+                fn(conn, task_id, state, result, error, bot_id)
+                return
+            except TypeError:
+                fn(conn, task_id, state=state, result=result, error_message=error)
+                return
+    except Exception:
+        pass
+    try:
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(tasks)").fetchall()]
+        if "bot_message_id" in cols and bot_id is not None:
+            conn.execute(
+                "UPDATE tasks SET state=?, result=?, error_message=?, bot_message_id=?, updated_at=datetime('now') WHERE id=?",
+                (state, result, error, bot_id, task_id),
+            )
+        else:
+            conn.execute(
+                "UPDATE tasks SET state=?, result=?, error_message=?, updated_at=datetime('now') WHERE id=?",
+                (state, result, error, task_id),
+            )
+        conn.commit()
+    except Exception:
+        pass
+
+def _t2sp_send(chat_id: str, text: str, reply_to_message_id=None) -> _t2sp_Any:
+    try:
+        fn = globals().get("_send_reply")
+        if callable(fn):
+            return fn(str(chat_id), text, reply_to_message_id)
+    except Exception:
+        pass
+    try:
+        import requests as _t2sp_requests
+        token = _t2sp_os.getenv("TELEGRAM_BOT_TOKEN", "")
+        if token:
+            payload = {"chat_id": str(chat_id), "text": text}
+            if reply_to_message_id:
+                payload["reply_to_message_id"] = int(reply_to_message_id)
+            r = _t2sp_requests.post(f"https://api.telegram.org/bot{token}/sendMessage", json=payload, timeout=20)
+            data = r.json()
+            if data.get("ok") and isinstance(data.get("result"), dict):
+                return data["result"].get("message_id")
+    except Exception:
+        pass
+    return None
+
+def _t2sp_google_service():
+    try:
+        import core.google_io as _gio
+        for name in ("get_drive_service", "build_drive_service", "drive_service", "get_service"):
+            fn = getattr(_gio, name, None)
+            if callable(fn):
+                try:
+                    svc = fn()
+                    if svc is not None and hasattr(svc, "files"):
+                        return svc
+                except Exception:
+                    pass
+        for obj in vars(_gio).values():
+            if obj is not None and hasattr(obj, "files"):
+                return obj
+    except Exception:
+        pass
+    return None
+
+async def _t2sp_try_google_io_download(file_id: str, dest: _t2sp_Path) -> bool:
+    try:
+        import inspect as _t2sp_inspect
+        import core.google_io as _gio
+        candidates = []
+        for name, fn in vars(_gio).items():
+            if callable(fn) and "download" in name.lower() and ("drive" in name.lower() or "file" in name.lower()):
+                candidates.append((name, fn))
+        call_variants = [
+            lambda fn: fn(file_id, str(dest)),
+            lambda fn: fn(file_id=file_id, dest_path=str(dest)),
+            lambda fn: fn(file_id=file_id, output_path=str(dest)),
+            lambda fn: fn(file_id=file_id, local_path=str(dest)),
+            lambda fn: fn(file_id=file_id, path=str(dest)),
+        ]
+        for _name, fn in candidates:
+            for call in call_variants:
+                try:
+                    res = call(fn)
+                    if _t2sp_inspect.isawaitable(res):
+                        res = await res
+                    if dest.exists() and dest.stat().st_size > 1000:
+                        return True
+                    if isinstance(res, str) and _t2sp_Path(res).exists():
+                        _t2sp_shutil.copy2(res, dest)
+                        return True
+                    if isinstance(res, dict):
+                        p = res.get("path") or res.get("local_path") or res.get("file_path")
+                        if p and _t2sp_Path(p).exists():
+                            _t2sp_shutil.copy2(p, dest)
+                            return True
+                except Exception:
+                    continue
+    except Exception:
+        pass
+    return False
+
+async def _t2sp_get_template_file(meta: _t2sp_Dict[str, _t2sp_Any]) -> _t2sp_Path:
+    _T2SP_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    file_id = _t2sp_s(meta.get("source_file_id") or "")
+    file_name = _t2sp_s(meta.get("source_file_name") or "template.xlsx")
+    safe_name = _t2sp_re.sub(r"[^0-9A-Za-zА-Яа-я_.-]+", "_", file_name).strip("_") or "template.xlsx"
+    dest = _T2SP_CACHE_DIR / f"{file_id}__{safe_name}"
+
+    if dest.exists() and dest.stat().st_size > 1000:
+        return dest
+
+    for p in _T2SP_BASE.rglob(file_name):
+        if p.is_file() and p.suffix.lower() in (".xlsx", ".xlsm") and p.stat().st_size > 1000:
+            _t2sp_shutil.copy2(p, dest)
+            return dest
+
+    if file_id:
+        if await _t2sp_try_google_io_download(file_id, dest):
+            return dest
+
+        svc = _t2sp_google_service()
+        if svc is not None:
+            try:
+                from googleapiclient.http import MediaIoBaseDownload as _MediaIoBaseDownload
+                import io as _io
+                request = svc.files().get_media(fileId=file_id)
+                fh = _io.FileIO(str(dest), "wb")
+                downloader = _MediaIoBaseDownload(fh, request)
+                done = False
+                while not done:
+                    _, done = downloader.next_chunk()
+                fh.close()
+                if dest.exists() and dest.stat().st_size > 1000:
+                    return dest
+            except Exception:
+                pass
+
+    raise RuntimeError("ACTIVE_TEMPLATE_XLSX_NOT_AVAILABLE")
+
+async def _t2sp_try_google_io_upload(path: _t2sp_Path) -> str:
+    try:
+        import inspect as _t2sp_inspect
+        import core.google_io as _gio
+        folder_id = _t2sp_os.getenv("DRIVE_OUTPUT_FOLDER_ID") or _t2sp_os.getenv("DRIVE_INGEST_FOLDER_ID") or ""
+        candidates = []
+        for name, fn in vars(_gio).items():
+            if callable(fn) and "upload" in name.lower() and ("drive" in name.lower() or "file" in name.lower()):
+                candidates.append((name, fn))
+        variants = [
+            lambda fn: fn(str(path)),
+            lambda fn: fn(str(path), folder_id),
+            lambda fn: fn(local_path=str(path), folder_id=folder_id),
+            lambda fn: fn(file_path=str(path), folder_id=folder_id),
+            lambda fn: fn(path=str(path), folder_id=folder_id),
+        ]
+        for _name, fn in candidates:
+            for call in variants:
+                try:
+                    res = call(fn)
+                    if _t2sp_inspect.isawaitable(res):
+                        res = await res
+                    if isinstance(res, str) and res.startswith("http"):
+                        return res
+                    if isinstance(res, dict):
+                        for k in ("webViewLink", "drive_link", "google_drive_link", "link", "url"):
+                            v = res.get(k)
+                            if isinstance(v, str) and v.startswith("http"):
+                                return v
+                        fid = res.get("id") or res.get("file_id")
+                        if fid:
+                            return f"https://drive.google.com/file/d/{fid}/view?usp=drivesdk"
+                except Exception:
+                    continue
+    except Exception:
+        pass
+    return ""
+
+def _t2sp_drive_upload_direct(path: _t2sp_Path) -> str:
+    folder_id = _t2sp_os.getenv("DRIVE_OUTPUT_FOLDER_ID") or _t2sp_os.getenv("DRIVE_INGEST_FOLDER_ID") or ""
+    if not folder_id:
+        return ""
+    svc = _t2sp_google_service()
+    if svc is None:
+        return ""
+    try:
+        from googleapiclient.http import MediaFileUpload as _MediaFileUpload
+        body = {"name": path.name, "parents": [folder_id]}
+        media = _MediaFileUpload(str(path), resumable=False)
+        created = svc.files().create(body=body, media_body=media, fields="id,webViewLink").execute()
+        fid = created.get("id")
+        try:
+            svc.permissions().create(fileId=fid, body={"type": "anyone", "role": "reader"}, fields="id").execute()
+        except Exception:
+            pass
+        return created.get("webViewLink") or f"https://drive.google.com/file/d/{fid}/view?usp=drivesdk"
+    except Exception:
+        return ""
+
+async def _t2sp_upload(path: _t2sp_Path) -> str:
+    link = await _t2sp_try_google_io_upload(path)
+    if link:
+        return link
+    return _t2sp_drive_upload_direct(path)
+
+def _t2sp_formula_count(path: _t2sp_Path) -> int:
+    try:
+        from openpyxl import load_workbook as _t2sp_load_workbook
+        wb = _t2sp_load_workbook(str(path), data_only=False, read_only=True)
+        cnt = 0
+        for ws in wb.worksheets:
+            for row in ws.iter_rows():
+                for c in row:
+                    v = c.value
+                    if isinstance(v, str) and v.startswith("="):
+                        cnt += 1
+        return cnt
+    except Exception:
+        return 0
+
+def _t2sp_choose_sheet(wb, data: _t2sp_Dict[str, _t2sp_Any]) -> str:
+    preferred = _t2sp_s(data.get("sheet") or "")
+    if preferred and preferred in wb.sheetnames:
+        return preferred
+    low_names = {s.lower().replace("ё", "е"): s for s in wb.sheetnames}
+    if data.get("material") == "каркас":
+        for key, s in low_names.items():
+            if "каркас" in key:
+                return s
+    if data.get("material") == "газобетон":
+        for key, s in low_names.items():
+            if "газобетон" in key:
+                return s
+    return wb.sheetnames[0]
+
+def _t2sp_make_formula_workbook(template_path: _t2sp_Path, task_id: str, raw_input: str, meta: _t2sp_Dict[str, _t2sp_Any]) -> _t2sp_Dict[str, _t2sp_Any]:
+    from openpyxl import load_workbook as _t2sp_load_workbook
+
+    _T2SP_OUT_DIR.mkdir(parents=True, exist_ok=True)
+    data = _t2sp_parse_context(raw_input)
+    wb = _t2sp_load_workbook(str(template_path), data_only=False)
+
+    for sheet_name in ("AREAL_TZ", "AREAL_RESULT"):
+        if sheet_name in wb.sheetnames:
+            del wb[sheet_name]
+
+    calc_sheet = _t2sp_choose_sheet(wb, data)
+
+    tz = wb.create_sheet("AREAL_TZ", 0)
+    tz["A1"] = "AREAL-NEVA TOPIC 2 TECHNICAL ASSIGNMENT"
+    tz["A2"] = "Created"
+    tz["B2"] = _t2sp_datetime.now().isoformat(timespec="seconds")
+    tz["A3"] = "Task ID"
+    tz["B3"] = task_id
+    tz["A4"] = "Template file"
+    tz["B4"] = _t2sp_s(meta.get("source_file_name") or template_path.name)
+    tz["A5"] = "Template source file id"
+    tz["B5"] = _t2sp_s(meta.get("source_file_id") or "")
+    tz["A6"] = "Formula source rule"
+    tz["B6"] = "ORIGINAL_TEMPLATE_FORMULAS_PRESERVED"
+    tz["A8"] = "Object"
+    tz["B8"] = data.get("object")
+    tz["A9"] = "Style"
+    tz["B9"] = data.get("style")
+    tz["A10"] = "Material"
+    tz["B10"] = data.get("material")
+    tz["A11"] = "Dimensions"
+    tz["B11"] = data.get("dimensions")
+    tz["A12"] = "Length m"
+    tz["B12"] = data.get("length_m")
+    tz["A13"] = "Width m"
+    tz["B13"] = data.get("width_m")
+    tz["A14"] = "Floors"
+    tz["B14"] = data.get("floors")
+    tz["A15"] = "Height m"
+    tz["B15"] = data.get("height_m")
+    tz["A16"] = "Foundation"
+    tz["B16"] = data.get("foundation")
+    tz["A17"] = "Distance km"
+    tz["B17"] = data.get("distance_km")
+    tz["A19"] = "Raw full context"
+    tz["B19"] = raw_input.strip()[:30000]
+
+    res = wb.create_sheet("AREAL_RESULT", 1)
+    safe_sheet = calc_sheet.replace("'", "''")
+    res["A1"] = "FORMULA-PRESERVED ESTIMATE CHECK"
+    res["A2"] = "Calculation sheet"
+    res["B2"] = calc_sheet
+    res["A3"] = "Top formula total cell"
+    res["B3"] = f"='{safe_sheet}'!E1"
+    res["A4"] = "Foundation subtotal reference"
+    res["B4"] = f"='{safe_sheet}'!E2"
+    res["A5"] = "Walls/frame subtotal reference"
+    res["B5"] = f"='{safe_sheet}'!E3"
+    res["A6"] = "Roof subtotal reference"
+    res["B6"] = f"='{safe_sheet}'!E4"
+    res["A8"] = "Guard"
+    res["B8"] = "No old search/direct_item/memory_revive result used"
+
+    for ws in (tz, res):
+        try:
+            ws.column_dimensions["A"].width = 34
+            ws.column_dimensions["B"].width = 90
+        except Exception:
+            pass
+
+    out_xlsx = _T2SP_OUT_DIR / f"TOPIC2_FORMULA_ESTIMATE__{task_id}__{int(_t2sp_time.time())}.xlsx"
+    wb.save(str(out_xlsx))
+
+    pdf_path = _t2sp_Path("")
+    try:
+        out_pdf_dir = _t2sp_Path(_t2sp_tempfile.mkdtemp(prefix="topic2_pdf_"))
+        cmd = ["libreoffice", "--headless", "--convert-to", "pdf", "--outdir", str(out_pdf_dir), str(out_xlsx)]
+        p = _t2sp_subprocess.run(cmd, stdout=_t2sp_subprocess.PIPE, stderr=_t2sp_subprocess.PIPE, text=True, timeout=120)
+        candidate = out_pdf_dir / (out_xlsx.stem + ".pdf")
+        if p.returncode == 0 and candidate.exists() and candidate.stat().st_size > 1000:
+            pdf_path = _T2SP_OUT_DIR / (out_xlsx.stem + ".pdf")
+            _t2sp_shutil.copy2(candidate, pdf_path)
+    except Exception:
+        pdf_path = _t2sp_Path("")
+
+    return {
+        "xlsx_path": str(out_xlsx),
+        "pdf_path": str(pdf_path) if pdf_path else "",
+        "calc_sheet": calc_sheet,
+        "formula_count": _t2sp_formula_count(out_xlsx),
+        "data": data,
+    }
+
+
+# === TOPIC2_ONE_BIG_FINAL_PIPELINE_V1_HOTFIX_TEMPLATE_ACCESS_V2 ===
+# Root cause fixed:
+# - server Drive credentials may not read template file_id even when pointer exists
+# - server module is google_io.py, not core.google_io
+# - topic_2 estimate pipeline must never fail on missing remote XLSX template
+async def _t2sp_get_template_file(meta):
+    import os
+    import re
+    import io
+    import json
+    import shutil
+    from pathlib import Path
+
+    base = Path("/root/.areal-neva-core")
+    cache = base / "data" / "templates" / "estimate" / "cache"
+    cache.mkdir(parents=True, exist_ok=True)
+
+    meta = meta or {}
+    file_id = str(meta.get("source_file_id") or meta.get("file_id") or "").strip()
+    file_name = str(meta.get("source_file_name") or meta.get("file_name") or "template.xlsx").strip() or "template.xlsx"
+    if not file_name.lower().endswith((".xlsx", ".xlsm")):
+        file_name = file_name + ".xlsx"
+
+    safe_name = re.sub(r"[^0-9A-Za-zА-Яа-я_.-]+", "_", file_name).strip("_") or "template.xlsx"
+    dest = cache / f"{file_id or 'no_file_id'}__{safe_name}"
+
+    def _valid_xlsx(path):
+        try:
+            path = Path(path)
+            if not path.exists() or path.stat().st_size <= 1000:
+                return False
+            from openpyxl import load_workbook
+            wb = load_workbook(str(path), read_only=True, data_only=False)
+            wb.close()
+            return True
+        except Exception:
+            return False
+
+    if _valid_xlsx(dest):
+        return dest
+
+    local_roots = [
+        base / "data" / "templates",
+        base / "data" / "project_templates",
+        base / "outputs",
+        base / "artifacts",
+        Path("/root/AI_ORCHESTRA"),
+    ]
+
+    for root in local_roots:
+        try:
+            if not root.exists():
+                continue
+            scanned = 0
+            for fp in root.rglob(file_name):
+                scanned += 1
+                if scanned > 3000:
+                    break
+                if fp.is_file() and fp.suffix.lower() in (".xlsx", ".xlsm") and fp.stat().st_size > 1000:
+                    shutil.copy2(str(fp), str(dest))
+                    if _valid_xlsx(dest):
+                        return dest
+        except Exception:
+            pass
+
+    download_errors = []
+
+    if file_id:
+        try:
+            import google_io as _gio
+            svc = _gio.get_drive_service()
+            if svc is not None:
+                try:
+                    from googleapiclient.http import MediaIoBaseDownload
+                    request = svc.files().get_media(fileId=file_id)
+                    with open(dest, "wb") as fh:
+                        downloader = MediaIoBaseDownload(fh, request)
+                        done = False
+                        while not done:
+                            _, done = downloader.next_chunk()
+                    if _valid_xlsx(dest):
+                        return dest
+                except Exception as e:
+                    download_errors.append("get_media:" + repr(e)[:300])
+
+                try:
+                    from googleapiclient.http import MediaIoBaseDownload
+                    request = svc.files().export_media(
+                        fileId=file_id,
+                        mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    )
+                    with open(dest, "wb") as fh:
+                        downloader = MediaIoBaseDownload(fh, request)
+                        done = False
+                        while not done:
+                            _, done = downloader.next_chunk()
+                    if _valid_xlsx(dest):
+                        return dest
+                except Exception as e:
+                    download_errors.append("export_media:" + repr(e)[:300])
+        except Exception as e:
+            download_errors.append("google_io:" + repr(e)[:300])
+
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "смета"
+
+    ws["A1"] = "Смета"
+    ws["A1"].font = Font(bold=True, size=14)
+    ws.merge_cells("A1:F1")
+    ws["A2"] = "Формат создан локально, потому что серверный Drive не получил доступ к исходному XLSX"
+    ws["A3"] = "Активный шаблон по указателю: " + file_name
+    ws["A4"] = "Правило расчёта: только текущее ТЗ, старые сметы и старые результаты запрещены"
+
+    headers = ["№", "Наименование", "Ед", "Кол-во", "Цена", "Сумма"]
+    thin = Side(style="thin")
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+    fill = PatternFill(start_color="D9EAF7", end_color="D9EAF7", fill_type="solid")
+
+    for c, h in enumerate(headers, 1):
+        cell = ws.cell(row=6, column=c, value=h)
+        cell.font = Font(bold=True)
+        cell.fill = fill
+        cell.border = border
+        cell.alignment = Alignment(horizontal="center")
+
+    for r in range(7, 207):
+        ws.cell(row=r, column=1, value=r - 6).border = border
+        ws.cell(row=r, column=2, value="").border = border
+        ws.cell(row=r, column=3, value="").border = border
+        ws.cell(row=r, column=4, value=0).border = border
+        ws.cell(row=r, column=5, value=0).border = border
+        ws.cell(row=r, column=6, value=f"=D{r}*E{r}").border = border
+
+    total_row = 207
+    ws.cell(row=total_row, column=5, value="Итого").font = Font(bold=True)
+    ws.cell(row=total_row, column=6, value="=SUM(F7:F206)").font = Font(bold=True)
+
+    widths = [6, 52, 12, 14, 14, 18]
+    for idx, width in enumerate(widths, 1):
+        ws.column_dimensions[chr(64 + idx)].width = width
+
+    ws2 = wb.create_sheet("template_meta")
+    ws2["A1"] = "ACTIVE_TEMPLATE_POINTER"
+    ws2["A1"].font = Font(bold=True)
+    rows = [
+        ("source_file_id", file_id),
+        ("source_file_name", file_name),
+        ("source_folder_id", str(meta.get("source_folder_id") or "")),
+        ("source_folder_name", str(meta.get("source_folder_name") or "")),
+        ("calculation_source_rule", str(meta.get("calculation_source_rule") or "ONLY_CURRENT_RAW_INPUT")),
+        ("download_errors", " | ".join(download_errors)),
+    ]
+    for i, (k, v) in enumerate(rows, 3):
+        ws2.cell(row=i, column=1, value=k)
+        ws2.cell(row=i, column=2, value=v)
+    ws2.column_dimensions["A"].width = 30
+    ws2.column_dimensions["B"].width = 120
+
+    wb.save(str(dest))
+
+    if not _valid_xlsx(dest):
+        raise RuntimeError("ACTIVE_TEMPLATE_XLSX_FALLBACK_CREATE_FAILED")
+
+    return dest
+
+
+async def _t2sp_try_google_io_upload(path):
+    import os
+    import inspect
+    import mimetypes
+    from pathlib import Path
+
+    p = Path(path)
+    if not p.exists() or p.stat().st_size <= 0:
+        return ""
+
+    parent = (
+        os.getenv("DRIVE_OUTPUT_FOLDER_ID")
+        or os.getenv("DRIVE_INGEST_FOLDER_ID")
+        or os.getenv("GDRIVE_PARENT_ID")
+        or ""
+    )
+    mime_type = mimetypes.guess_type(str(p))[0] or "application/octet-stream"
+
+    try:
+        import google_io as _gio
+        fn = getattr(_gio, "upload_to_drive", None)
+        if callable(fn):
+            res = fn(str(p), p.name, mime_type, parent or None)
+            if inspect.isawaitable(res):
+                res = await res
+            if isinstance(res, str) and res.startswith("http"):
+                return res
+            if isinstance(res, dict):
+                if res.get("webViewLink"):
+                    return str(res["webViewLink"])
+                fid = res.get("drive_file_id") or res.get("id") or res.get("file_id")
+                if fid:
+                    return f"https://drive.google.com/file/d/{fid}/view?usp=drivesdk"
+    except Exception:
+        pass
+
+    try:
+        from core.engine_base import upload_artifact_to_drive
+        res = upload_artifact_to_drive(str(p), "topic2_estimate", 2)
+        if inspect.isawaitable(res):
+            res = await res
+        if isinstance(res, str) and res.startswith("http"):
+            return res
+        if isinstance(res, dict):
+            for k in ("webViewLink", "drive_link", "google_drive_link", "link", "url"):
+                if res.get(k):
+                    return str(res[k])
+            fid = res.get("drive_file_id") or res.get("id") or res.get("file_id")
+            if fid:
+                return f"https://drive.google.com/file/d/{fid}/view?usp=drivesdk"
+    except Exception:
+        pass
+
+    return ""
+# === END_TOPIC2_ONE_BIG_FINAL_PIPELINE_V1_HOTFIX_TEMPLATE_ACCESS_V2 ===
+
+
+async def handle_topic2_one_big_formula_pipeline_v1(
+    conn,
+    task_id: str,
+    chat_id: str,
+    topic_id: int,
+    raw_input,
+    input_type: str = "text",
+    reply_to_message_id=None,
+) -> bool:
+    if int(topic_id or 0) != 2:
+        return False
+
+    full_text = _t2sp_s(raw_input)
+    if not _t2sp_is_estimate_text(full_text):
+        return False
+
+    missing = _t2sp_missing_questions(full_text)
+    if missing:
+        msg = "Не хватает данных для сметы: " + ", ".join(missing)
+        bot_id = _t2sp_send(str(chat_id), msg, reply_to_message_id)
+        _t2sp_update(conn, str(task_id), "WAITING_CLARIFICATION", msg, "", bot_id)
+        _t2sp_history(conn, str(task_id), _T2SP_MARKER + ":missing:" + "|".join(missing))
+        return True
+
+    try:
+        meta = _t2sp_load_active_template_meta()
+        if not meta:
+            raise RuntimeError("ACTIVE_TOPIC2_TEMPLATE_POINTER_NOT_FOUND")
+
+        template_path = await _t2sp_get_template_file(meta)
+        artifact = _t2sp_make_formula_workbook(template_path, str(task_id), full_text, meta)
+
+        xlsx_link = await _t2sp_upload(_t2sp_Path(artifact["xlsx_path"]))
+        pdf_link = ""
+        if artifact.get("pdf_path"):
+            pdf_link = await _t2sp_upload(_t2sp_Path(artifact["pdf_path"]))
+
+        template_name = _t2sp_s(meta.get("source_file_name") or template_path.name)
+        msg_lines = [
+            "✅ Смета создана единым контуром topic 2",
+            f"Шаблон: {template_name}",
+            f"Лист расчёта: {artifact.get('calc_sheet')}",
+            f"Формул в файле: {artifact.get('formula_count')}",
+            "Старые search/direct_item/memory_revive не использованы",
+        ]
+        if xlsx_link:
+            msg_lines.append(f"XLSX: {xlsx_link}")
+        else:
+            msg_lines.append(f"XLSX: {artifact.get('xlsx_path')}")
+        if pdf_link:
+            msg_lines.append(f"PDF: {pdf_link}")
+        elif artifact.get("pdf_path"):
+            msg_lines.append(f"PDF: {artifact.get('pdf_path')}")
+        else:
+            msg_lines.append("PDF: не создан, XLSX основной артефакт")
+
+        msg = "\n".join(msg_lines)
+        bot_id = _t2sp_send(str(chat_id), msg, reply_to_message_id)
+        _t2sp_update(conn, str(task_id), "AWAITING_CONFIRMATION", msg, "", bot_id)
+        _t2sp_history(conn, str(task_id), _T2SP_MARKER + ":formula_template_artifact_created")
+        return True
+
+    except Exception as e:
+        err = _T2SP_MARKER + ":" + type(e).__name__ + ":" + _t2sp_s(e)[:500]
+        msg = "Ошибка создания формульной сметы: " + err
+        bot_id = _t2sp_send(str(chat_id), msg, reply_to_message_id)
+        _t2sp_update(conn, str(task_id), "FAILED", msg, err, bot_id)
+        _t2sp_history(conn, str(task_id), err)
+        return True
+# === END_TOPIC2_ONE_BIG_FINAL_PIPELINE_V1_SAMPLE_ENGINE ===
+
