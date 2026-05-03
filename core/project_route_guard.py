@@ -56,8 +56,8 @@ def is_explicit_project_intent(text: Any) -> bool:
         return False
     strong = any(x in low for x in PROJECT_STRONG)
     weak_project = sum(1 for x in PROJECT_WEAK if x in low) >= 2
-    estimate_only = any(x in low for x in ESTIMATE_ONLY) and not strong and not weak_project
-    if estimate_only:
+    estimate_only = any(x in low for x in ESTIMATE_ONLY)  # ESTIMATE_PRIORITY_FIX_V1
+    if estimate_only and not strong:  # ESTIMATE_PRIORITY_FIX_V1
         return False
     return bool(strong or weak_project)
 

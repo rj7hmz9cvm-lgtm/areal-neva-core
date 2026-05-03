@@ -584,6 +584,15 @@ def create_project_artifact_from_latest_template(user_text: str, task_id: str, t
     xlsx_path = os.path.join(out_dir, f"project_{project_type}_{safe_task}.xlsx")
 
     sheets = model.get("sheet_register") or []
+    # === SHEETS_NORMALIZE_V1 ===
+    _sheets_raw = sheets
+    sheets = []
+    for _sh in _sheets_raw:
+        if isinstance(_sh, str) and _sh.strip():
+            sheets.append({"mark": project_type, "number": str(len(sheets) + 1), "title": _sh.strip()[:120]})
+        elif isinstance(_sh, dict):
+            sheets.append(_sh)
+    # === END_SHEETS_NORMALIZE_V1 ===
     if not sheets:
         for i, sec in enumerate(model.get("sections") or [], 1):
             sheets.append({"mark": project_type, "number": str(i), "title": str(sec)[:120]})

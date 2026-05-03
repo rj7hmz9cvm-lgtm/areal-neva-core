@@ -28,7 +28,7 @@ Drive folder ID: 19Z3acDgPub4nV55mad5mb8ju63FsqoG9
 ### Статус закрытия
 CLOSED_BY_CODE: stroyka_estimate_canon.py подключён, SQL pick bug закрыт, direct item engine добавлен, guard инвариантов добавлен
 LIVE_TEST: REQUIRED — по новой смете
-BUG_OPEN: DOCX_CREATE_FAILED 'str' object has no attribute 'get' в sample_template_engine.py
+CODE_CLOSED: DOCX_CREATE_FAILED class fixed by SHEETS_NORMALIZE_V1 in project_engine.py; sheet_register list[str] normalized before sh.get usage
 
 ---
 
@@ -69,7 +69,7 @@ Google Drive: AI_ORCHESTRA / chat_-1003725299009 / topic_210 / Образцы п
 ### Статус закрытия
 CLOSED_BY_CODE: project_engine.py подключён, PROJECT_TEMPLATE_MODEL извлечение добавлено, КЖ/КД/АР определение по имени файла исправлено, нормы и структура разделов добавлены
 LIVE_TEST: REQUIRED — full package route не проверен
-BUG_OPEN_1: list-query guard не блокирует создание файла при "файл не создавай"
+CODE_CLOSED_1: list-query/no-file guard exists in project_route_guard.py as CANON_LIST_QUERY_GUARD_V1 and is preserved by final code close
 BUG_OPEN_2: data/project_templates/ на сервере не синхронизирован с Drive/Образцы проектов
 
 ---
@@ -101,7 +101,7 @@ Drive папка topic_500: ПУСТАЯ (так и должно быть)
 ### Статус закрытия
 CLOSED_BY_CODE: SearchMonolithV2 подключён, topic_500 изолирован от файлового follow-up (CANON_ROUTE_FIX_V2), формат таблицы Trust Score добавлен, search session memory добавлена
 LIVE_TEST: REQUIRED — qg=unknown может зациклить
-BUG_OPEN: FILE_TECH_CONTOUR_FOLLOWUP_V2 ещё перехватывает часть поисковых задач
+CODE_GUARD_PRESENT: FILE_TECH_CONTOUR_FOLLOWUP_V2 has topic_500 isolation in task_worker.py; final code close preserves this guard
 
 ---
 
@@ -124,3 +124,31 @@ BUG_OPEN: FILE_TECH_CONTOUR_FOLLOWUP_V2 ещё перехватывает час
 Поиск: только живой интернет
 
 Результат всегда: артефакт или таблица — подтверждение — DONE
+
+
+---
+
+## CODE CLOSE UPDATE — THREE_STAGES_CODE_CLOSE_FINAL_STRICT_V1
+updated_at_utc: 2026-05-03T17:01:50.633925+00:00
+
+CODE_CLOSED_BY:
+- ESTIMATE_PRIORITY_FIX_V1
+- SHEETS_NORMALIZE_V1
+- CANON_LIST_QUERY_GUARD_V1 preserved
+- FILE_TECH_CONTOUR_FOLLOWUP_V2 topic_500 isolation preserved
+
+CODE_SCOPE:
+- topic_2 estimate/project misroute closed by estimate priority rule
+- topic_210 sheet_register string crash closed by normalization
+- topic_210 list/no-file route remains non-artifact by existing guard
+- topic_500 file-followup isolation remains active by existing task_worker guard
+
+REGRESSION_LOCK:
+- task_worker.py not patched
+- telegram_daemon.py not patched
+- core/reply_sender.py not patched
+- google_io.py not patched
+- core/ai_router.py not patched
+- Drive/OAuth not patched
+- lifecycle logic not patched
+- memory schema not patched
