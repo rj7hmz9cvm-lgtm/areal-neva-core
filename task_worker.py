@@ -4271,7 +4271,7 @@ def _tcfc1_worker_build_full_context(conn, task_id: str, chat_id: str, topic_id:
 
     return "\n\n".join(parts).strip(), parent_id
 
-async def _handle_in_progress(conn, task):
+async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
     try:
         task_id = str(_tcfc1_row_get(task, "id", "") or "")
         chat_id = str(_tcfc1_row_get(task, "chat_id", "") or "")
