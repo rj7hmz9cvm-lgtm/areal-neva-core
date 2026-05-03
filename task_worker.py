@@ -4159,6 +4159,164 @@ except Exception as _startup_recovery_wrap_err:
 # === END_STARTUP_RECOVERY_V1_MAIN_WRAP ===
 
 
+# === THREE_CONTOURS_FULL_CONTEXT_NO_REPEAT_CLARIFY_V1_WORKER_WRAPPER ===
+_tcfc1_orig_handle_in_progress_worker = _handle_in_progress
+
+def _tcfc1_row_get(row, key, default=None):
+    try:
+        return row[key]
+    except Exception:
+        try:
+            idx = {
+                "id": 0, "chat_id": 1, "user_id": 2, "input_type": 3, "raw_input": 4,
+                "state": 5, "result": 6, "error_message": 7, "reply_to_message_id": 8,
+                "created_at": 9, "updated_at": 10, "bot_message_id": 11, "topic_id": 12,
+                "task_type": 13,
+            }.get(key)
+            if idx is not None:
+                return row[idx]
+        except Exception:
+            pass
+    return default
+
+def _tcfc1_worker_history_col(conn):
+    try:
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(task_history)").fetchall()]
+        if "action" in cols:
+            return "action"
+        if "event" in cols:
+            return "event"
+    except Exception:
+        pass
+    return ""
+
+def _tcfc1_worker_build_full_context(conn, task_id: str, chat_id: str, topic_id: int, current_raw: str) -> tuple[str, str]:
+    parts = []
+    cur = str(current_raw or "").strip()
+    if cur:
+        parts.append("Текущее сообщение:\n" + cur)
+
+    parent_id = ""
+    try:
+        row = conn.execute(
+            """
+            SELECT id, raw_input
+            FROM tasks
+            WHERE chat_id=?
+              AND COALESCE(topic_id,0)=?
+              AND id<>?
+              AND state IN ('WAITING_CLARIFICATION','IN_PROGRESS')
+            ORDER BY rowid DESC
+            LIMIT 1
+            """,
+            (str(chat_id), int(topic_id or 0), str(task_id)),
+        ).fetchone()
+        if row:
+            parent_id = str(row[0])
+            if str(row[1] or "").strip():
+                parts.insert(0, "Исходная активная задача:\n" + str(row[1] or "").strip())
+    except Exception:
+        parent_id = ""
+
+    hist_ids = [x for x in (parent_id, str(task_id)) if x]
+    hcol = _tcfc1_worker_history_col(conn)
+    if hcol and hist_ids:
+        try:
+            qmarks = ",".join("?" for _ in hist_ids)
+            rows = conn.execute(
+                f"""
+                SELECT task_id,{hcol}
+                FROM task_history
+                WHERE task_id IN ({qmarks})
+                  AND ({hcol} LIKE 'clarified:%' OR {hcol} LIKE '%clarification_accepted%')
+                ORDER BY rowid ASC
+                LIMIT 80
+                """,
+                tuple(hist_ids),
+            ).fetchall()
+            clar = []
+            for r in rows:
+                v = str(r[1] or "")
+                if v.startswith("clarified:"):
+                    clar.append(v.split(":", 1)[1].strip())
+            if clar:
+                parts.append("Уточнения пользователя:\n" + "\n".join(x for x in clar if x))
+        except Exception:
+            pass
+
+    try:
+        rows = conn.execute(
+            """
+            SELECT raw_input
+            FROM tasks
+            WHERE chat_id=?
+              AND COALESCE(topic_id,0)=?
+              AND id<>?
+              AND raw_input IS NOT NULL
+              AND TRIM(raw_input)<>''
+            ORDER BY rowid DESC
+            LIMIT 6
+            """,
+            (str(chat_id), int(topic_id or 0), str(task_id)),
+        ).fetchall()
+        recent = []
+        for r in rows:
+            v = str(r[0] or "").strip()
+            if v and v not in "\n\n".join(parts):
+                recent.append(v)
+        if recent:
+            parts.append("Последние сообщения топика без результатов и ссылок:\n" + "\n".join(recent))
+    except Exception:
+        pass
+
+    return "\n\n".join(parts).strip(), parent_id
+
+async def _handle_in_progress(conn, task):
+    try:
+        task_id = str(_tcfc1_row_get(task, "id", "") or "")
+        chat_id = str(_tcfc1_row_get(task, "chat_id", "") or "")
+        topic_id = int(_tcfc1_row_get(task, "topic_id", 0) or 0)
+        input_type = str(_tcfc1_row_get(task, "input_type", "text") or "text")
+        raw_input = str(_tcfc1_row_get(task, "raw_input", "") or "")
+        reply_to = _tcfc1_row_get(task, "reply_to_message_id", None)
+
+        if topic_id == 2 and task_id:
+            full_context, parent_id = _tcfc1_worker_build_full_context(conn, task_id, chat_id, topic_id, raw_input)
+            if full_context:
+                try:
+                    from core.sample_template_engine import handle_stroyka_topic2_full_context_gate_v1
+                    handled = await handle_stroyka_topic2_full_context_gate_v1(
+                        conn=conn,
+                        task_id=task_id,
+                        chat_id=chat_id,
+                        topic_id=topic_id,
+                        raw_context=full_context,
+                        input_type=input_type,
+                        reply_to_message_id=reply_to,
+                    )
+                    if handled:
+                        try:
+                            if parent_id and parent_id != task_id:
+                                conn.execute(
+                                    "UPDATE tasks SET state='DONE', result=?, error_message='', updated_at=datetime('now') WHERE id=?",
+                                    ("Закрыто новой сметой по полному контексту", parent_id),
+                                )
+                                _history(conn, parent_id, f"THREE_CONTOURS_FULL_CONTEXT_NO_REPEAT_CLARIFY_V1:superseded_by:{task_id}")
+                                conn.commit()
+                        except Exception as _e:
+                            logger.warning("THREE_CONTOURS_FULL_CONTEXT_NO_REPEAT_CLARIFY_V1_PARENT_CLOSE_ERR %s", _e)
+                        logger.info("THREE_CONTOURS_FULL_CONTEXT_NO_REPEAT_CLARIFY_V1 handled task=%s topic=%s", task_id, topic_id)
+                        return
+                except Exception as _e:
+                    logger.warning("THREE_CONTOURS_FULL_CONTEXT_NO_REPEAT_CLARIFY_V1_ERR task=%s err=%s", task_id, _e)
+    except Exception as _e:
+        logger.warning("THREE_CONTOURS_FULL_CONTEXT_NO_REPEAT_CLARIFY_V1_WRAPPER_ERR %s", _e)
+
+    return await _tcfc1_orig_handle_in_progress_worker(conn, task)
+
+# === END_THREE_CONTOURS_FULL_CONTEXT_NO_REPEAT_CLARIFY_V1_WORKER_WRAPPER ===
+
+
 if __name__ == "__main__":
     asyncio.run(main())
 

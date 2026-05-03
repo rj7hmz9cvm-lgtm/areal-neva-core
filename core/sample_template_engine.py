@@ -1948,3 +1948,432 @@ async def handle_template_estimate_intent(
 
 # === END_STROYKA_TOPIC2_SOURCE_LOCK_PRIORITY_FIX_V1 ===
 
+# === THREE_CONTOURS_FULL_CONTEXT_NO_REPEAT_CLARIFY_V1 ===
+# Full-context gate:
+# - topic_2 estimate must not ask step-by-step when the merged task context already contains required facts
+# - current raw input + parent waiting task + clarified:* history are calculation context
+# - Drive template remains format source only
+# - old task results, old Drive links and project artifacts remain forbidden as calculation sources
+
+def _tcfc1_s(v: Any) -> str:
+    return str(v or "").strip()
+
+def _tcfc1_low(v: Any) -> str:
+    return _tcfc1_s(v).lower().replace("ё", "е")
+
+def _tcfc1_has_estimate_intent(text: str) -> bool:
+    low = _tcfc1_low(text)
+    return any(x in low for x in (
+        "смет", "стоимост", "посчитай", "расчет", "расчёт", "цена", "руб",
+        "строительств", "работ", "материал", "дом", "фундамент", "плит",
+        "монолит", "кровл", "каркас", "барн", "бар хаус", "barn"
+    ))
+
+def _tcfc1_dims(text: str):
+    import re as _re
+    low = _tcfc1_low(text)
+    m = _re.search(r"(\d+(?:[,.]\d+)?)\s*(?:x|х|×|на)\s*(\d+(?:[,.]\d+)?)\s*(?:м|метр|$|\s)", low)
+    if m:
+        a = float(m.group(1).replace(",", "."))
+        b = float(m.group(2).replace(",", "."))
+        if a > 0 and b > 0:
+            return a, b, round(a * b, 2)
+    m = _re.search(r"(?:площадь|пятно|объект)\D{0,20}(\d+(?:[,.]\d+)?)\s*(?:м2|м²|кв)", low)
+    if m:
+        area = float(m.group(1).replace(",", "."))
+        return 0.0, 0.0, round(area, 2)
+    return 0.0, 0.0, 0.0
+
+def _tcfc1_height(text: str) -> float:
+    import re as _re
+    low = _tcfc1_low(text)
+    m = _re.search(r"высот[а-я]*\D{0,12}(\d+(?:[,.]\d+)?)\s*(?:м|метр)", low)
+    if m:
+        return float(m.group(1).replace(",", "."))
+    return 3.0
+
+def _tcfc1_distance_km(text: str) -> float:
+    import re as _re
+    low = _tcfc1_low(text)
+    m = _re.search(r"(\d+(?:[,.]\d+)?)\s*км", low)
+    if m:
+        return float(m.group(1).replace(",", "."))
+    return 0.0
+
+def _tcfc1_object_kind(text: str) -> str:
+    low = _tcfc1_low(text)
+    if any(x in low for x in ("дом", "барн", "бар хаус", "barn")):
+        return "дом"
+    if any(x in low for x in ("фундамент", "плит", "монолит")):
+        return "фундамент"
+    if any(x in low for x in ("кровл", "крыша", "клик фальц", "кликфальц")):
+        return "кровля"
+    if "бан" in low:
+        return "баня"
+    if "склад" in low:
+        return "склад"
+    if "ангар" in low:
+        return "ангар"
+    return ""
+
+def _tcfc1_missing_questions(text: str) -> List[str]:
+    low = _tcfc1_low(text)
+    kind = _tcfc1_object_kind(low)
+    a, b, area = _tcfc1_dims(low)
+
+    missing = []
+    if not kind:
+        missing.append("Что строим: дом, фундамент, кровлю, склад или ангар?")
+    if area <= 0:
+        missing.append("Какие размеры объекта?")
+    if kind == "дом":
+        if not any(x in low for x in ("каркас", "газобет", "кирпич", "брус", "бревно", "сип", "sip")):
+            missing.append("Какой материал стен?")
+        if not any(x in low for x in ("кров", "крыша", "фальц", "металлочереп", "профлист", "мягкая")):
+            missing.append("Какая кровля?")
+    return missing
+
+def _tcfc1_build_rows_from_context(text: str) -> List[Dict[str, Any]]:
+    low = _tcfc1_low(text)
+    kind = _tcfc1_object_kind(text)
+    a, b, area = _tcfc1_dims(text)
+    h = _tcfc1_height(text)
+    dist = _tcfc1_distance_km(text)
+
+    if area <= 0:
+        return []
+
+    if a > 0 and b > 0:
+        perimeter = round((a + b) * 2, 2)
+    else:
+        perimeter = round((area ** 0.5) * 4, 2)
+
+    wall_area = round(perimeter * h, 2)
+    roof_area = round(area * 1.25, 2)
+
+    rows: List[Dict[str, Any]] = []
+
+    def add(name, unit, qty, mat, work):
+        qty = round(float(qty or 0), 2)
+        mat = round(float(mat or 0), 2)
+        work = round(float(work or 0), 2)
+        rows.append({
+            "name": name,
+            "unit": unit,
+            "qty": qty,
+            "material_price": mat,
+            "material_sum": round(qty * mat, 2),
+            "work_price": work,
+            "work_sum": round(qty * work, 2),
+            "price": round(mat + work, 2),
+            "total": round(qty * (mat + work), 2),
+        })
+
+    if kind == "фундамент" or any(x in low for x in ("фундамент", "плит", "монолит")):
+        add("Подготовка основания", "м²", area, 450, 350)
+        add("Песчаная подготовка с уплотнением", "м²", area, 650, 450)
+        add("Щебёночная подготовка", "м²", area, 850, 500)
+        add("Армирование фундаментной плиты", "м²", area, 2200, 1600)
+        add("Бетонирование фундаментной плиты", "м²", area, 3600, 2200)
+        add("Гидроизоляция и защитные работы", "м²", area, 700, 450)
+
+    if kind == "дом":
+        add("Фундаментная часть под дом", "м²", area, 4200, 2600)
+        add("Каркас стен", "м²", wall_area, 3800, 2400)
+        if any(x in low for x in ("имитац", "бруса", "фасад", "снаруж")):
+            add("Наружная отделка имитацией бруса", "м²", wall_area, 1450, 1250)
+        else:
+            add("Наружная отделка фасада", "м²", wall_area, 1300, 1200)
+        if any(x in low for x in ("внутри", "внутрен", "отделка")):
+            add("Внутренняя отделка", "м²", round(wall_area + area, 2), 1600, 1500)
+        if any(x in low for x in ("клик фальц", "кликфальц", "фальц")):
+            add("Кровля клик-фальц", "м²", roof_area, 2800, 1900)
+        else:
+            add("Кровельные работы", "м²", roof_area, 2200, 1700)
+
+    if kind == "кровля" and not rows:
+        add("Кровельное покрытие", "м²", roof_area, 2400, 1800)
+        add("Обрешётка и подконструкция", "м²", roof_area, 900, 850)
+        add("Водосточная система и доборные элементы", "п.м", perimeter, 850, 650)
+
+    if dist > 0:
+        add("Логистика и доставка", "км", dist, 0, 350)
+
+    if not rows:
+        add("Строительные работы по заданию", "м²", area, 3000, 2500)
+
+    return rows
+
+def _tcfc1_write_xlsx(path: str, rows: List[Dict[str, Any]], template: Optional[Dict[str, Any]], raw_context: str) -> None:
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+    from openpyxl.utils import get_column_letter
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Смета"
+
+    thin = Side(style="thin")
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+    fill = PatternFill(start_color="D9EAF7", end_color="D9EAF7", fill_type="solid")
+
+    ws["A1"] = "Смета по полному техническому заданию"
+    ws["A1"].font = Font(bold=True, size=14)
+    ws.merge_cells("A1:I1")
+    ws["A2"] = "Источник расчёта: текущий текст задачи + уточнения пользователя"
+    ws["A3"] = f"Шаблон формата: {(template or {}).get('source_file_name') or 'не задан'}"
+
+    headers = ["№", "Наименование", "Ед.", "Объём", "Цена материала", "Сумма материала", "Цена работы", "Сумма работы", "Итог"]
+    for c, h in enumerate(headers, 1):
+        cell = ws.cell(row=5, column=c, value=h)
+        cell.font = Font(bold=True)
+        cell.fill = fill
+        cell.border = border
+        cell.alignment = Alignment(horizontal="center")
+
+    row = 6
+    for i, item in enumerate(rows, 1):
+        ws.cell(row=row, column=1, value=i)
+        ws.cell(row=row, column=2, value=item["name"])
+        ws.cell(row=row, column=3, value=item["unit"])
+        ws.cell(row=row, column=4, value=item["qty"])
+        ws.cell(row=row, column=5, value=item["material_price"])
+        ws.cell(row=row, column=6, value=f"=D{row}*E{row}")
+        ws.cell(row=row, column=7, value=item["work_price"])
+        ws.cell(row=row, column=8, value=f"=D{row}*G{row}")
+        ws.cell(row=row, column=9, value=f"=F{row}+H{row}")
+        for c in range(1, 10):
+            ws.cell(row=row, column=c).border = border
+        row += 1
+
+    total_row = row + 1
+    ws.cell(row=total_row, column=5, value="Итого материалы").font = Font(bold=True)
+    ws.cell(row=total_row, column=6, value=f"=SUM(F6:F{row-1})").font = Font(bold=True)
+    ws.cell(row=total_row + 1, column=5, value="Итого работы").font = Font(bold=True)
+    ws.cell(row=total_row + 1, column=8, value=f"=SUM(H6:H{row-1})").font = Font(bold=True)
+    ws.cell(row=total_row + 2, column=5, value="Общий итог").font = Font(bold=True)
+    ws.cell(row=total_row + 2, column=9, value=f"=SUM(I6:I{row-1})").font = Font(bold=True)
+
+    for idx, width in enumerate([6, 52, 10, 12, 16, 18, 16, 18, 18], 1):
+        ws.column_dimensions[get_column_letter(idx)].width = width
+
+    ws2 = wb.create_sheet("Исходные данные")
+    ws2["A1"] = "Полный контекст расчёта"
+    ws2["A1"].font = Font(bold=True)
+    ws2["A2"] = raw_context[:32000]
+    ws2["A4"] = "Правило"
+    ws2["A5"] = "Если все данные есть в контексте, уточнения не задаются"
+    ws2.column_dimensions["A"].width = 120
+
+    wb.save(path)
+
+def _tcfc1_write_pdf(path: str, rows: List[Dict[str, Any]], template: Optional[Dict[str, Any]]) -> None:
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.units import mm
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+
+    font = "Helvetica"
+    for fp in ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"):
+        if os.path.exists(fp):
+            try:
+                pdfmetrics.registerFont(TTFont("ArealSans", fp))
+                font = "ArealSans"
+                break
+            except Exception:
+                pass
+
+    c = canvas.Canvas(path, pagesize=A4)
+    w, h = A4
+    x = 15 * mm
+    y = h - 18 * mm
+
+    c.setFont(font, 13)
+    c.drawString(x, y, "Смета по полному техническому заданию")
+    y -= 7 * mm
+    c.setFont(font, 8)
+    c.drawString(x, y, "Шаблон: " + str((template or {}).get("source_file_name") or "не задан")[:90])
+    y -= 8 * mm
+
+    xs = [x, x + 10*mm, x + 100*mm, x + 118*mm, x + 143*mm, x + 168*mm]
+    headers = ["№", "Наименование", "Ед", "Объём", "Цена", "Итог"]
+    for col, val in zip(xs, headers):
+        c.drawString(col, y, val)
+    y -= 4 * mm
+    c.line(x, y, w - 15*mm, y)
+    y -= 5 * mm
+
+    total = 0.0
+    for i, item in enumerate(rows, 1):
+        if y < 25 * mm:
+            c.showPage()
+            c.setFont(font, 8)
+            y = h - 20 * mm
+        total += float(item.get("total") or 0)
+        vals = [
+            str(i),
+            str(item.get("name", ""))[:46],
+            str(item.get("unit", "")),
+            f"{float(item.get('qty') or 0):g}",
+            f"{float(item.get('price') or 0):.2f}",
+            f"{float(item.get('total') or 0):.2f}",
+        ]
+        for col, val in zip(xs, vals):
+            c.drawString(col, y, val)
+        y -= 6 * mm
+
+    y -= 4 * mm
+    c.line(x, y, w - 15*mm, y)
+    y -= 7 * mm
+    c.setFont(font, 10)
+    c.drawString(x + 125*mm, y, f"Итого: {total:.2f} руб")
+    c.save()
+
+async def tcfc1_create_estimate_from_full_context(raw_context: str, task_id: str, chat_id: str, topic_id: int = 2) -> Dict[str, Any]:
+    template = _load_active_template("estimate", str(chat_id), int(topic_id or 0))
+    if not template:
+        try:
+            _final_source_lock_sync_estimate_templates_v1(str(chat_id), int(topic_id or 0))
+            template = _load_active_template("estimate", str(chat_id), int(topic_id or 0))
+        except Exception:
+            template = None
+
+    rows = _tcfc1_build_rows_from_context(raw_context)
+    if not rows:
+        return {"success": False, "error": "FULL_CONTEXT_ROWS_NOT_BUILT"}
+
+    safe = re.sub(r"[^A-Za-z0-9_-]+", "_", str(task_id))[:30]
+    out_dir = Path(tempfile.gettempdir()) / f"areal_tcfc1_estimate_{safe}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    xlsx_path = str(out_dir / f"estimate_full_context_{safe}.xlsx")
+    pdf_path = str(out_dir / f"estimate_full_context_{safe}.pdf")
+    manifest_path = str(out_dir / f"estimate_full_context_{safe}.manifest.json")
+
+    _tcfc1_write_xlsx(xlsx_path, rows, template, raw_context)
+    _tcfc1_write_pdf(pdf_path, rows, template)
+
+    total = round(sum(float(x.get("total") or 0) for x in rows), 2)
+    manifest = {
+        "engine": "THREE_CONTOURS_FULL_CONTEXT_NO_REPEAT_CLARIFY_V1",
+        "task_id": task_id,
+        "chat_id": str(chat_id),
+        "topic_id": int(topic_id or 0),
+        "template_used_as_format_only": True,
+        "template_file": (template or {}).get("source_file_name"),
+        "calculation_source_rule": "CURRENT_RAW_INPUT_PLUS_USER_CLARIFICATIONS_ONLY",
+        "rows": rows,
+        "total": total,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    Path(manifest_path).write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    pdf_link = _upload(pdf_path, task_id, topic_id)
+    xlsx_link = _upload(xlsx_path, task_id, topic_id)
+    manifest_link = _upload(manifest_path, task_id, topic_id)
+
+    if not pdf_link or not xlsx_link:
+        return {
+            "success": False,
+            "error": "FULL_CONTEXT_UPLOAD_FAILED",
+            "pdf_link": pdf_link,
+            "xlsx_link": xlsx_link,
+            "excel_path": xlsx_path,
+            "artifact_path": xlsx_path,
+            "rows": rows,
+            "total": total,
+        }
+
+    msg = (
+        "Смета создана по полному техническому заданию\n"
+        f"Шаблон формата: {(template or {}).get('source_file_name') or 'не задан'}\n"
+        f"Позиций: {len(rows)}\n"
+        f"Итого: {total:.2f} руб\n\n"
+        "Уточнения не запрашивались: нужные данные найдены в исходном сообщении и уточнениях\n\n"
+        f"PDF: {pdf_link}\n"
+        f"XLSX: {xlsx_link}\n\n"
+        "Доволен результатом? Да / Уточни / Правки"
+    )
+
+    return {
+        "success": True,
+        "engine": "THREE_CONTOURS_FULL_CONTEXT_NO_REPEAT_CLARIFY_V1",
+        "rows": rows,
+        "items": rows,
+        "total": total,
+        "template": template,
+        "pdf_link": pdf_link,
+        "xlsx_link": xlsx_link,
+        "manifest_link": manifest_link,
+        "drive_link": xlsx_link,
+        "google_sheet_link": xlsx_link,
+        "excel_path": xlsx_path,
+        "artifact_path": xlsx_path,
+        "message": msg,
+        "result_text": msg,
+    }
+
+async def handle_stroyka_topic2_full_context_gate_v1(
+    conn,
+    task_id: str,
+    chat_id: str,
+    topic_id: int,
+    raw_context: Any,
+    input_type: str = "text",
+    reply_to_message_id=None,
+) -> bool:
+    if conn is None:
+        return False
+    if int(topic_id or 0) != 2:
+        return False
+    if str(input_type or "text") not in ("text", "voice", "search"):
+        return False
+
+    ctx = _tcfc1_s(raw_context)
+    if not _tcfc1_has_estimate_intent(ctx):
+        return False
+
+    missing = _tcfc1_missing_questions(ctx)
+    if missing:
+        _task_history_insert(conn, task_id, "THREE_CONTOURS_FULL_CONTEXT_NO_REPEAT_CLARIFY_V1:missing:" + " | ".join(missing[:3]))
+        return False
+
+    res = await tcfc1_create_estimate_from_full_context(ctx, task_id, str(chat_id), int(topic_id or 0))
+    if not res.get("success"):
+        _task_history_insert(conn, task_id, f"THREE_CONTOURS_FULL_CONTEXT_NO_REPEAT_CLARIFY_V1:fallback:{res.get('error')}")
+        return False
+
+    msg = res.get("message") or res.get("result_text") or "Смета создана по полному техническому заданию"
+    bot_id = _send_reply(str(chat_id), msg, reply_to_message_id)
+    _update_task(conn, task_id, "AWAITING_CONFIRMATION", msg, "", bot_id)
+    _task_history_insert(conn, task_id, "THREE_CONTOURS_FULL_CONTEXT_NO_REPEAT_CLARIFY_V1:estimate_ok")
+    return True
+
+_tcfc1_prev_handle_template_estimate_intent = handle_template_estimate_intent
+
+async def handle_template_estimate_intent(
+    conn,
+    task_id: str,
+    chat_id: str,
+    topic_id: int,
+    raw_input,
+    input_type: str,
+    reply_to_message_id=None,
+) -> bool:
+    if int(topic_id or 0) == 2:
+        try:
+            handled = await handle_stroyka_topic2_full_context_gate_v1(
+                conn, task_id, str(chat_id), int(topic_id or 0), raw_input, input_type, reply_to_message_id
+            )
+            if handled:
+                return True
+        except Exception:
+            pass
+
+    return await _tcfc1_prev_handle_template_estimate_intent(
+        conn, task_id, chat_id, topic_id, raw_input, input_type, reply_to_message_id
+    )
+
+# === END_THREE_CONTOURS_FULL_CONTEXT_NO_REPEAT_CLARIFY_V1 ===
+
