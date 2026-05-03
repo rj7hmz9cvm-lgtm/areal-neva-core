@@ -568,6 +568,12 @@ def create_project_artifact_from_latest_template(user_text: str, task_id: str, t
         "project_type": "UNKNOWN",
     }
 
+    # === PROJECT_TEMPLATE_MEMORY_CATALOG_SYNC_ABSOLUTE_HOOK_V1 ===
+    try:
+        _project_template_memory_catalog_sync_absolute_v1(int(topic_id or 210), dry_run=False)
+    except Exception:
+        pass
+    # === END_PROJECT_TEMPLATE_MEMORY_CATALOG_SYNC_ABSOLUTE_HOOK_V1 ===
     model = _ff3_latest_project_template_model(topic_id)
     params = _ff3_extract_project_params(user_text)
     if not model:
@@ -2838,3 +2844,157 @@ def detect_section(file_name: str, text: str = ""):
 def _detect_section(file_name: str, text: str = ""):
     return detect_section(file_name, text)
 # === END_PROJECT_SEARCH_FINAL_REGEX_AND_HEADER_FIX_SECTION_DETECTOR ===
+
+# === PROJECT_TEMPLATE_MEMORY_CATALOG_SYNC_ABSOLUTE_V1 ===
+def _project_template_memory_catalog_sync_absolute_v1(topic_id: int = 210, dry_run: bool = False) -> dict:
+    import json as _json_pta1
+    import sqlite3 as _sqlite_pta1
+    from pathlib import Path as _Path_pta1
+    from datetime import datetime as _dt_pta1, timezone as _tz_pta1
+
+    base = _Path_pta1("/root/.areal-neva-core")
+    mem_db = base / "data/memory.db"
+    out_dir = base / "data/project_templates"
+
+    result = {
+        "marker": "PROJECT_TEMPLATE_MEMORY_CATALOG_SYNC_ABSOLUTE_V1",
+        "ok": False,
+        "dry_run": bool(dry_run),
+        "sections": [],
+        "would_create": [],
+        "created": [],
+        "index_path": str(out_dir / "PROJECT_TEMPLATE_MODEL__MEMORY_CATALOG_INDEX.json"),
+    }
+
+    if not mem_db.exists():
+        result["error"] = "MEMORY_DB_NOT_FOUND"
+        return result
+
+    conn = _sqlite_pta1.connect(str(mem_db))
+    conn.row_factory = _sqlite_pta1.Row
+    try:
+        row = conn.execute(
+            "SELECT value, timestamp FROM memory WHERE key=? ORDER BY timestamp DESC LIMIT 1",
+            ("topic_210_file_catalog_autosync",),
+        ).fetchone()
+    finally:
+        conn.close()
+
+    if not row:
+        result["error"] = "TOPIC_210_FILE_CATALOG_NOT_FOUND"
+        return result
+
+    try:
+        catalog = _json_pta1.loads(row["value"])
+    except Exception as e:
+        result["error"] = "CATALOG_JSON_ERROR: " + str(e)[:160]
+        return result
+
+    files = catalog.get("files") if isinstance(catalog, dict) else []
+    if not isinstance(files, list):
+        files = []
+
+    def _name(item):
+        if isinstance(item, dict):
+            for k in ("file_name", "name", "title", "original_name"):
+                v = str(item.get(k) or "").strip()
+                if v:
+                    return v
+            links = item.get("links")
+            if isinstance(links, list):
+                for link in links:
+                    v = str(link or "").strip()
+                    if v:
+                        return v[:180]
+        return str(item or "").strip()
+
+    def _section(name, item):
+        raw = name.lower().replace("ё", "е")
+        if isinstance(item, dict):
+            raw += " " + str(item.get("direction") or "").lower().replace("ё", "е")
+        if "кмд" in raw:
+            return "КМД"
+        if any(x in raw for x in ("км", "металл", "ферм", "каркас")):
+            return "КМ"
+        if any(x in raw for x in ("кд", "кровл", "стропил", "дерев", "балк")):
+            return "КД"
+        if any(x in raw for x in ("кж", "фундамент", "плит", "бетон", "армирован", "цоколь")):
+            return "КЖ"
+        if any(x in raw for x in ("ар", "архитект", "фасад", "планиров")):
+            return "АР"
+        return ""
+
+    by_section = {}
+    for item in files:
+        name = _name(item)
+        section = _section(name, item)
+        if not name or not section:
+            continue
+        by_section.setdefault(section, []).append({
+            "mark": section,
+            "number": str(len(by_section.get(section, [])) + 1),
+            "title": name[:180],
+            "source": "topic_210_file_catalog_autosync",
+        })
+
+    result["sections"] = sorted(by_section.keys())
+
+    existing_sections = set()
+    if out_dir.exists():
+        for p in out_dir.glob("PROJECT_TEMPLATE_MODEL__*.json"):
+            try:
+                data = _json_pta1.loads(p.read_text(encoding="utf-8"))
+                pt = str(data.get("project_type") or "").upper().strip()
+                if pt:
+                    existing_sections.add(pt)
+            except Exception:
+                continue
+
+    for section in sorted(by_section.keys()):
+        if section not in existing_sections:
+            result["would_create"].append(section)
+
+    result["ok"] = True
+
+    if dry_run:
+        return result
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    now = _dt_pta1.now(_tz_pta1.utc).isoformat()
+
+    index = {
+        "_schema": "PROJECT_TEMPLATE_MEMORY_CATALOG_SYNC_ABSOLUTE_V1",
+        "updated_at_utc": now,
+        "catalog_timestamp": row["timestamp"],
+        "source": "memory.db:topic_210_file_catalog_autosync",
+        "sections": result["sections"],
+        "counts": {k: len(v) for k, v in by_section.items()},
+        "existing_sections": sorted(existing_sections),
+        "would_create": result["would_create"],
+    }
+    (out_dir / "PROJECT_TEMPLATE_MODEL__MEMORY_CATALOG_INDEX.json").write_text(
+        _json_pta1.dumps(index, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    for section in result["would_create"]:
+        rows = by_section.get(section) or []
+        model = {
+            "_schema": "PROJECT_TEMPLATE_MEMORY_CATALOG_SYNC_ABSOLUTE_V1",
+            "project_type": section,
+            "topic_id": int(topic_id or 210),
+            "updated_at_utc": now,
+            "source": "topic_210_file_catalog_autosync",
+            "source_files": [r["title"] for r in rows],
+            "sheet_register": rows,
+            "sections": [r["title"] for r in rows],
+            "materials": [],
+            "axes_grid": {"axes_letters": [], "axes_numbers": []},
+            "dimensions": [],
+        }
+        path = out_dir / f"PROJECT_TEMPLATE_MODEL__{section}_memory_catalog.json"
+        path.write_text(_json_pta1.dumps(model, ensure_ascii=False, indent=2), encoding="utf-8")
+        result["created"].append(str(path))
+
+    return result
+# === END_PROJECT_TEMPLATE_MEMORY_CATALOG_SYNC_ABSOLUTE_V1 ===

@@ -70,7 +70,7 @@ Google Drive: AI_ORCHESTRA / chat_-1003725299009 / topic_210 / Образцы п
 CLOSED_BY_CODE: project_engine.py подключён, PROJECT_TEMPLATE_MODEL извлечение добавлено, КЖ/КД/АР определение по имени файла исправлено, нормы и структура разделов добавлены
 LIVE_TEST: REQUIRED — full package route не проверен
 CODE_CLOSED_1: list-query/no-file guard exists in project_route_guard.py as CANON_LIST_QUERY_GUARD_V1 and is preserved by final code close
-BUG_OPEN_2: data/project_templates/ на сервере не синхронизирован с Drive/Образцы проектов
+CODE_CLOSED_2: data/project_templates runtime sync installed from topic_210_file_catalog_autosync by PROJECT_TEMPLATE_MEMORY_CATALOG_SYNC_ABSOLUTE_V1
 
 ---
 
@@ -152,3 +152,39 @@ REGRESSION_LOCK:
 - Drive/OAuth not patched
 - lifecycle logic not patched
 - memory schema not patched
+
+
+---
+
+## CODE CLOSE UPDATE — ALL_THREE_DIRECTIONS_ABSOLUTE_CODE_CLOSE_V1
+updated_at_utc: 2026-05-03T17:34:57.876558+00:00
+
+STATUS: CODE_CLOSED_ALL_THREE_DIRECTIONS
+
+CODE_CLOSED_BY:
+- topic_2: ESTIMATE_PRIORITY_FIX_V1
+- topic_210: SHEETS_NORMALIZE_V1
+- topic_210: PROJECT_TEMPLATE_MEMORY_CATALOG_SYNC_ABSOLUTE_V1
+- topic_210: PROJECT_TEMPLATE_MEMORY_CATALOG_SYNC_ABSOLUTE_HOOK_V1
+- topic_210: CANON_LIST_QUERY_GUARD_V1 preserved
+- topic_500: FILE_TECH_CONTOUR_FOLLOWUP_V2 preserved
+- topic_500: SEARCH_TOPIC500_FTCF_ISOLATION_V1 preserved
+
+CODE_SCOPE:
+- smeta: estimate priority installed, project misroute closed by code
+- projects: sheet_register normalization installed, project template runtime sync installed by code
+- search: topic_500 file-followup isolation preserved by code
+
+REGRESSION_LOCK:
+- task_worker.py not patched
+- telegram_daemon.py not patched
+- core/reply_sender.py not patched
+- google_io.py not patched
+- core/ai_router.py not patched
+- systemd units not patched
+- Drive/OAuth not patched
+- memory.db schema not patched
+- core.db schema not patched
+- .env not patched
+- credentials not patched
+- sessions not patched
