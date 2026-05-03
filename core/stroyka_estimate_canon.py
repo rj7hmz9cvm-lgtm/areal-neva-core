@@ -181,6 +181,76 @@ def _memory_latest(chat_id: str, key_prefix: str) -> Optional[Dict[str, Any]]:
         return None
 
 
+
+# === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_CONTEXT_BLEED_FIX ===
+def _parse_iso_ts(value: Any) -> Optional[datetime.datetime]:
+    txt = _s(value)
+    if not txt:
+        return None
+    txt = txt.replace("Z", "+00:00")
+    try:
+        dt = datetime.datetime.fromisoformat(txt)
+        if dt.tzinfo is not None:
+            dt = dt.astimezone(datetime.timezone.utc).replace(tzinfo=None)
+        return dt
+    except Exception:
+        return None
+
+
+def _age_seconds(value: Any) -> Optional[float]:
+    dt = _parse_iso_ts(value)
+    if not dt:
+        return None
+    return (datetime.datetime.utcnow() - dt).total_seconds()
+
+
+def _pending_is_fresh(pending: Optional[Dict[str, Any]], max_seconds: int = 600) -> bool:
+    if not pending:
+        return False
+    created = pending.get("created_at") or pending.get("_memory_timestamp")
+    age = _age_seconds(created)
+    return age is not None and 0 <= age <= max_seconds
+
+
+def _is_bad_estimate_result(text: str) -> bool:
+    t = _low(text)
+    bad = (
+        "файлы в этом топике уже есть",
+        "нашёл релевантное",
+        "нашел релевантное",
+        "можно использовать как образец сметы",
+        "активный контекст найден",
+        "проектный файл не создан",
+        "docx_create_failed",
+        "state: finished",
+        "задача закрыта по запросу",
+    )
+    return any(x in t for x in bad)
+
+
+def _has_real_estimate_artifact(text: str) -> bool:
+    t = _low(text)
+    if _is_bad_estimate_result(t):
+        return False
+    good = (
+        "excel:",
+        "xlsx:",
+        ".xlsx",
+        "pdf:",
+        ".pdf",
+        "предварительная смета готова",
+        "итого:",
+    )
+    return any(x in t for x in good)
+
+
+def _is_confirm_only(text: str) -> bool:
+    t = _low(text).replace("[voice]", "").strip()
+    if any(x in t for x in ESTIMATE_WORDS):
+        return False
+    return _is_confirm(t)
+# === END_FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_CONTEXT_BLEED_FIX ===
+
 def _drive_service():
     from core.topic_drive_oauth import _oauth_service
     return _oauth_service()
@@ -579,34 +649,49 @@ async def _send_document(chat_id: str, file_path: str, caption: str, reply_to: O
 
 def _latest_estimate_result(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> Optional[sqlite3.Row]:
     try:
-        return conn.execute(
+        rows = conn.execute(
             """
             SELECT * FROM tasks
             WHERE chat_id=? AND COALESCE(topic_id,0)=?
               AND result IS NOT NULL
-              AND (result LIKE '%Excel:%' OR result LIKE '%PDF:%' OR result LIKE '%drive.google%' OR result LIKE '%смет%')
               AND state IN ('AWAITING_CONFIRMATION','DONE','ARCHIVED')
             ORDER BY updated_at DESC
-            LIMIT 1
+            LIMIT 25
             """,
             (str(chat_id), int(topic_id or 0)),
-        ).fetchone()
+        ).fetchall()
+        for row in rows:
+            if _has_real_estimate_artifact(_s(_row_get(row, "result", ""))):
+                return row
+        return None
     except Exception:
         return None
 
 
 def _latest_estimate_task(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> Optional[sqlite3.Row]:
     try:
-        return conn.execute(
+        rows = conn.execute(
             """
             SELECT * FROM tasks
             WHERE chat_id=? AND COALESCE(topic_id,0)=?
-              AND (raw_input LIKE '%смет%' OR raw_input LIKE '%стоимость%' OR raw_input LIKE '%газобетон%' OR raw_input LIKE '%фундамент%' OR raw_input LIKE '%кровл%' OR raw_input LIKE '%ангар%' OR result LIKE '%смет%')
+              AND state IN ('WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION')
+              AND updated_at >= datetime('now','-24 hours')
+              AND (
+                raw_input LIKE '%смет%' OR raw_input LIKE '%стоимость%' OR raw_input LIKE '%газобетон%' OR
+                raw_input LIKE '%фундамент%' OR raw_input LIKE '%кровл%' OR raw_input LIKE '%ангар%' OR
+                result LIKE '%смет%'
+              )
             ORDER BY updated_at DESC
-            LIMIT 1
+            LIMIT 20
             """,
             (str(chat_id), int(topic_id or 0)),
-        ).fetchone()
+        ).fetchall()
+        for row in rows:
+            result = _s(_row_get(row, "result", ""))
+            if result and _is_bad_estimate_result(result):
+                continue
+            return row
+        return None
     except Exception:
         return None
 
@@ -972,7 +1057,14 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
     if _is_confirm(raw_input):
         pending = _memory_latest(chat_id, "topic_2_estimate_pending_")
         if pending and pending.get("status") == "WAITING_PRICE_CONFIRMATION":
-            return await _generate_and_send(conn, task, pending, raw_input, logger=logger)
+            if _pending_is_fresh(pending, 600):
+                return await _generate_and_send(conn, task, pending, raw_input, logger=logger)
+            stale_key = "topic_2_estimate_stale_pending_" + _s(pending.get("task_id") or task_id)
+            stale_payload = dict(pending)
+            stale_payload["status"] = "STALE_DEPRECATED"
+            stale_payload["deprecated_at"] = _now()
+            stale_payload["deprecated_reason"] = "price confirmation timeout > 10 min"
+            _memory_save(chat_id, stale_key, stale_payload)
 
         old = _latest_estimate_result(conn, chat_id, topic_id)
         if old and any(x in _low(raw_input) for x in ("где", "ну что", "смет")):
@@ -988,6 +1080,15 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
         latest = _latest_estimate_task(conn, chat_id, topic_id)
         if latest and _s(_row_get(latest, "raw_input", "")) != raw_input:
             raw_input = _s(_row_get(latest, "raw_input", "")) + "\n" + raw_input
+        elif _is_confirm_only(raw_input):
+            text = "Нет активной сметной задачи для продолжения. Напиши сметное задание одним сообщением"
+            send_res = await _send_text(chat_id, text, reply_to, topic_id)
+            kwargs = {"state": "WAITING_CLARIFICATION", "result": text}
+            if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+                kwargs["bot_message_id"] = send_res.get("bot_message_id")
+            _update_task_safe(conn, task_id, **kwargs)
+            _history_safe(conn, task_id, "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_CONTEXT_BLEED_FIX:no_active_estimate")
+            return True
 
     parsed = _parse_request(raw_input)
     question = _missing_question(parsed)
