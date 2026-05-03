@@ -222,6 +222,16 @@ def _is_bad_estimate_result(text: str) -> bool:
         "tco | риски",
         "ошибка классификации запроса",
         "категория не совпадает",
+        # === FULL_STROYKA_LOOP_FINAL_CLOSE_BAD_RESULT_FIX ===
+        "смета создана по образцу вор",
+        "смета уже есть:",
+        "вор_кирпичная_кладка",
+        "вор_кирпич",
+        "vor_kirpich",
+        "в_ор_кирпич",
+        "позиций: 13 | итого: 690510",
+        "690510.00 руб",
+        # === END_FULL_STROYKA_LOOP_FINAL_CLOSE_BAD_RESULT_FIX ===
         # === END_FULL_STROYKA_V3_SEARCH_LOOP_BAD_RESULT_FIX ===
         "файлы в этом топике уже есть",
         "нашёл релевантное",
@@ -734,6 +744,15 @@ def _estimate_raw_score(raw: str) -> int:
 def _is_old_task_finish_request(text: str) -> bool:
     t = _low(text).replace("[voice]", "").strip()
     phrases = (
+        # === FULL_STROYKA_LOOP_FINAL_CLOSE_REVIVE_PHRASES_FIX ===
+        "что с моими задачами",
+        "какое ты задание получил",
+        "почему ты не сделаешь мне смету",
+        "предыдущее техническое задание",
+        "посмотри что мы строим",
+        "задача завершена",
+        "все задачи отменены",
+        # === END_FULL_STROYKA_LOOP_FINAL_CLOSE_REVIVE_PHRASES_FIX ===
 
         # === FULL_STROYKA_V3_REVIVE_PHRASES_FIX ===
         "что продолжаешь",

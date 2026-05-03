@@ -3094,17 +3094,6 @@ def _stage1_dir_payload(payload):
 # === END ===
 async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str, topic_id: int) -> None:
 
-    # === FULL_STROYKA_V3_IN_PROGRESS_GUARD ===
-    try:
-        _stroyka_ip_topic = int(_task_field(task, "topic_id", 0) or 0)
-        if _stroyka_ip_topic == 2:
-            from core.stroyka_estimate_canon import maybe_handle_stroyka_estimate as _stroyka_v3_handle
-            if await _stroyka_v3_handle(conn, task, logger):
-                _history(conn, _s(_task_field(task, "id", "")), "FULL_STROYKA_V3_IN_PROGRESS_GUARD:handled")
-                return
-    except Exception as _stroyka_v3_ip_err:
-        logger.exception("FULL_STROYKA_V3_IN_PROGRESS_GUARD_ERR %s", _stroyka_v3_ip_err)
-    # === END_FULL_STROYKA_V3_IN_PROGRESS_GUARD ===
     task_id = _s(_task_field(task, "id"))
     raw_input = _clean(_s(_task_field(task, "raw_input")), 12000)
     reply_to = _task_field(task, "reply_to_message_id", None)
@@ -3219,6 +3208,40 @@ async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_
                             ai_result = await asyncio.wait_for(_t3_verify(_t3_code,_t3_ctx),timeout=150)
             # === END TOPIC_3008_HANDLER_V1 ===
             if ai_result is None:  # AI_LOGIC_FIX_V1
+                # === FULL_STROYKA_LOOP_FINAL_CLOSE_PRE_DIRECTION_GUARD ===
+                try:
+                    _fs_topic = int(_task_field(task, "topic_id", topic_id) or 0)
+                    _fs_state = _s(_task_field(task, "state", "")).upper()
+                    _fs_task_id = _s(_task_field(task, "id", ""))
+                    _fs_raw = _s(_task_field(task, "raw_input", "")).lower()
+                    _fs_result = _s(_task_field(task, "result", "")).lower()
+                    if _fs_topic == 2:
+                        _bad_old_estimate = any(x in (_fs_raw + "\n" + _fs_result) for x in (
+                            "вор_кирпич",
+                            "vor_kirpich",
+                            "вор_кирпичная_кладка",
+                            "смета создана по образцу вор",
+                            "поставщик | площадка",
+                            "auto_parts",
+                            "search_monolith",
+                            "tco | риски",
+                            "ошибка классификации запроса",
+                            "категория не совпадает",
+                        ))
+                        if _bad_old_estimate and _fs_state in ("NEW", "IN_PROGRESS", "WAITING_CLARIFICATION", "AWAITING_CONFIRMATION", "AWAITING_PRICE_CONFIRMATION"):
+                            _update_task(conn, _fs_task_id, state="FAILED", result="FULL_STROYKA_LOOP_FINAL_CLOSE: blocked stale VOR/search/autoparts estimate contamination")
+                            _history(conn, _fs_task_id, "FULL_STROYKA_LOOP_FINAL_CLOSE:blocked_bad_old_estimate")
+                            return
+                        if _fs_state in ("WAITING_CLARIFICATION", "AWAITING_CONFIRMATION", "AWAITING_PRICE_CONFIRMATION"):
+                            _history(conn, _fs_task_id, "FULL_STROYKA_LOOP_FINAL_CLOSE:wait_state_not_reprocessed")
+                            return
+                        from core.stroyka_estimate_canon import maybe_handle_stroyka_estimate as _fs_v3
+                        if await _fs_v3(conn, task, logger):
+                            _history(conn, _fs_task_id, "FULL_STROYKA_LOOP_FINAL_CLOSE:v3_handled_before_direction_kernel")
+                            return
+                except Exception as _fs_err:
+                    logger.exception("FULL_STROYKA_LOOP_FINAL_CLOSE_PRE_DIRECTION_GUARD_ERR %s", _fs_err)
+                # === END_FULL_STROYKA_LOOP_FINAL_CLOSE_PRE_DIRECTION_GUARD ===
                 # FULLFIX_DIRECTION_KERNEL_STAGE_1_CALL
                 payload = _stage1_dir_payload(payload)
                 # FULLFIX_TOPIC_AUTODISCOVERY_V2_CALL
@@ -3641,7 +3664,7 @@ def _pick_next_task(conn: sqlite3.Connection, chat_id: Optional[str]) -> Optiona
     # === IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1_HOOK ===
     _in_progress_hard_timeout_by_created_at_fix_v1(conn, minutes=30)
     # === END_IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1_HOOK ===
-    where = ["state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION')"]
+    where = ["state IN ('NEW','IN_PROGRESS')"]
     params: List[Any] = []
     if chat_id:
         where.insert(0, "chat_id=?")
