@@ -820,3 +820,9 @@ needs_live_test:
 - expected: template selected, correct sheet selected, template prices + online prices with sources + price choice menu
 - reply: "средняя плюс 10% да сделай"
 - expected: same estimate task continues, XLSX/PDF created from template, Drive or Telegram fallback links returned
+
+## FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_MEMORY_REVIVE_FIX
+status: INSTALLED_NOT_VERIFIED
+needs_live_test:
+- topic_2: "Доделай мне нормально эту задачу"
+- expected: bot finds previous valid estimate task raw_input, does not repeat old file-menu/result, starts STROYKA V3 price confirmation flow

@@ -322,3 +322,10 @@ topic_961=АВТО ЗАПЧАСТИ | topic_3008=КОДЫ МОЗГОВ | topic_4
 - XLSX is created from selected XLSX template with added AREAL_CALC sheet and formulas
 - Python calculates, LLM does not calculate final numbers
 - VERIFIED requires live Telegram test
+
+## FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_MEMORY_REVIVE_FIX — INSTALLED_NOT_VERIFIED
+- Старые задачи topic_2 считаются памятью, не мусором
+- Старый raw_input / ТЗ / голосовые уточнения используются для продолжения задачи
+- Старый ошибочный result не отдаётся пользователю как готовая смета
+- Команды "доделай", "где смета", "смету в Excel", "ну что", "да сделай" поднимают последнюю валидную сметную задачу за 7 дней
+- Продолжение идёт через STROYKA V3: шаблон, лист, цены из шаблона, интернет-цены, выбор цены, подтверждение, XLSX/PDF

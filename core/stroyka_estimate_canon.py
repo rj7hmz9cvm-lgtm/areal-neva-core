@@ -526,6 +526,8 @@ def is_stroyka_estimate_candidate(task: Any) -> bool:
         return False
     if any(x in raw for x in PROJECT_ONLY_WORDS) and "смет" not in raw and "стоим" not in raw:
         return False
+    if _is_old_task_finish_request(raw):
+        return True
     if any(x in raw for x in ESTIMATE_WORDS):
         return True
     if raw in CONTINUATION_WORDS or any(raw.startswith(x + " ") for x in CONTINUATION_WORDS):
@@ -695,6 +697,96 @@ def _latest_estimate_task(conn: sqlite3.Connection, chat_id: str, topic_id: int)
     except Exception:
         return None
 
+
+
+# === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_MEMORY_REVIVE_FIX ===
+def _estimate_raw_score(raw: str) -> int:
+    parsed = _parse_request(raw)
+    score = 0
+    if parsed.get("object"):
+        score += 20
+    if parsed.get("material"):
+        score += 20
+    if parsed.get("dimensions"):
+        score += 25
+    if parsed.get("floors"):
+        score += 10
+    if parsed.get("distance_km") is not None:
+        score += 15
+    if parsed.get("foundation"):
+        score += 10
+    if parsed.get("scope"):
+        score += 5
+    raw_low = _low(raw)
+    if "смет" in raw_low or "стоим" in raw_low or "посчитай" in raw_low:
+        score += 15
+    return score
+
+
+def _is_old_task_finish_request(text: str) -> bool:
+    t = _low(text).replace("[voice]", "").strip()
+    phrases = (
+        "доделай",
+        "доделай задачу",
+        "доделай смету",
+        "продолжай",
+        "закончи",
+        "смету в excel",
+        "смету в эксель",
+        "мне нужна смета",
+        "где смета",
+        "ну что",
+    )
+    if any(p in t for p in phrases):
+        return True
+    if t in ("да", "сделай", "да сделай", "ок", "окей"):
+        return True
+    return False
+
+
+def _latest_revivable_estimate_task(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> Optional[sqlite3.Row]:
+    try:
+        rows = conn.execute(
+            """
+            SELECT * FROM tasks
+            WHERE chat_id=? AND COALESCE(topic_id,0)=?
+              AND state IN ('FAILED','DONE','CANCELLED','ARCHIVED')
+              AND updated_at >= datetime('now','-7 days')
+              AND (
+                raw_input LIKE '%смет%' OR raw_input LIKE '%стоимость%' OR raw_input LIKE '%посчитай%' OR
+                raw_input LIKE '%газобетон%' OR raw_input LIKE '%фундамент%' OR raw_input LIKE '%кровл%' OR
+                raw_input LIKE '%ангар%' OR raw_input LIKE '%коробк%' OR raw_input LIKE '%монолит%' OR
+                raw_input LIKE '%дом%'
+              )
+            ORDER BY updated_at DESC
+            LIMIT 80
+            """,
+            (str(chat_id), int(topic_id or 0)),
+        ).fetchall()
+
+        best = None
+        best_score = 0
+        for row in rows:
+            raw = _s(_row_get(row, "raw_input", ""))
+            result = _s(_row_get(row, "result", ""))
+
+            # ВАЖНО: старые задачи являются памятью и не удаляются
+            # Нельзя повторно отдавать старый ошибочный result как готовую смету
+            # Можно и нужно брать старый raw_input как исходное ТЗ
+            if _is_bad_estimate_result(result) and not raw:
+                continue
+
+            score = _estimate_raw_score(raw)
+            if score > best_score:
+                best = row
+                best_score = score
+
+        if best is not None and best_score >= 45:
+            return best
+        return None
+    except Exception:
+        return None
+# === END_FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_MEMORY_REVIVE_FIX ===
 
 async def _search_prices_online(parsed: Dict[str, Any], template: Dict[str, Any], sheet_name: Optional[str]) -> str:
     api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
@@ -1054,7 +1146,7 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
         _update_task_safe(conn, task_id, **kwargs)
         return True
 
-    if _is_confirm(raw_input):
+    if _is_confirm(raw_input) or _is_old_task_finish_request(raw_input):
         pending = _memory_latest(chat_id, "topic_2_estimate_pending_")
         if pending and pending.get("status") == "WAITING_PRICE_CONFIRMATION":
             if _pending_is_fresh(pending, 600):
@@ -1080,15 +1172,24 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
         latest = _latest_estimate_task(conn, chat_id, topic_id)
         if latest and _s(_row_get(latest, "raw_input", "")) != raw_input:
             raw_input = _s(_row_get(latest, "raw_input", "")) + "\n" + raw_input
-        elif _is_confirm_only(raw_input):
-            text = "Нет активной сметной задачи для продолжения. Напиши сметное задание одним сообщением"
-            send_res = await _send_text(chat_id, text, reply_to, topic_id)
-            kwargs = {"state": "WAITING_CLARIFICATION", "result": text}
-            if isinstance(send_res, dict) and send_res.get("bot_message_id"):
-                kwargs["bot_message_id"] = send_res.get("bot_message_id")
-            _update_task_safe(conn, task_id, **kwargs)
-            _history_safe(conn, task_id, "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_CONTEXT_BLEED_FIX:no_active_estimate")
-            return True
+            _history_safe(conn, task_id, "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_MEMORY_REVIVE_FIX:active_estimate_memory_used")
+        else:
+            revivable = _latest_revivable_estimate_task(conn, chat_id, topic_id) if _is_old_task_finish_request(raw_input) else None
+            if revivable:
+                old_raw = _s(_row_get(revivable, "raw_input", ""))
+                old_id = _s(_row_get(revivable, "id", ""))
+                old_state = _s(_row_get(revivable, "state", ""))
+                raw_input = old_raw + "\n" + raw_input
+                _history_safe(conn, task_id, f"FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_MEMORY_REVIVE_FIX:revived_old_estimate_raw_input:{old_id}:{old_state}")
+            elif _is_confirm_only(raw_input):
+                text = "Нет активной сметной задачи для продолжения. Напиши сметное задание одним сообщением"
+                send_res = await _send_text(chat_id, text, reply_to, topic_id)
+                kwargs = {"state": "WAITING_CLARIFICATION", "result": text}
+                if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+                    kwargs["bot_message_id"] = send_res.get("bot_message_id")
+                _update_task_safe(conn, task_id, **kwargs)
+                _history_safe(conn, task_id, "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_CONTEXT_BLEED_FIX:no_active_estimate")
+                return True
 
     parsed = _parse_request(raw_input)
     question = _missing_question(parsed)
