@@ -1,15 +1,16 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-03T09:38:37.091234+00:00
-git_sha_before_commit: f78f74d5aeee627b64b7644a495a729ba8d56a98
+generated_at_utc: 2026-05-03T10:06:29.758655+00:00
+git_sha_before_commit: a57325c6341abf3a627bed7ecf628fd7b89310ad
 git_branch: main
 
 ## SERVICES
 - areal-task-worker: active
 - telegram-ingress: active
 - areal-memory-api: active
-- areal-claude-bootstrap-aggregator.timer: active
+- areal-claude-bootstrap-aggregator.timer: inactive
 
 ## GIT_LOG_30
+a57325c FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 f78f74d FULL_CONTEXT_AGGREGATOR_V1: publish unified full context
 6d24f1e CLAUDE_BOOTSTRAP_CONTEXT_AUTO_V3: canon locked refresh
 b93e411 CLAUDE_BOOTSTRAP_CONTEXT_AUTO_V3: canon locked refresh
@@ -39,38 +40,33 @@ d3000b9 CLAUDE_BOOTSTRAP_CONTEXT_AUTO_V3: canon locked refresh
 8b2b936 CLAUDE_BOOTSTRAP_CONTEXT_AUTO_V3: canon locked refresh
 c911c80 CLAUDE_BOOTSTRAP_CONTEXT_AUTO_V3: canon locked refresh
 88c2635 TAIL_CLOSE_THREE_MISSING_V1: close search markers media group and startup recovery
-b7d3a47 AREAL_REFERENCE_FULL_MONOLITH_V1: close owner reference policy index archive and guards
 
 ## GIT_SHOW_STAT_HEAD
-commit f78f74d5aeee627b64b7644a495a729ba8d56a98
-Author: Ila <ilakuznecov@mac.local>
-Date:   Sun May 3 12:28:39 2026 +0300
+commit a57325c6341abf3a627bed7ecf628fd7b89310ad
+Author: root <root@graceful-olive.ptr.network>
+Date:   Sun May 3 12:38:40 2026 +0300
 
-    FULL_CONTEXT_AGGREGATOR_V1: publish unified full context
+    FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
- .gitignore                                         |     4 +
- docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md    |  7389 +------------
- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md |    69 +-
- docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |    86 +
- docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |  3995 +-------
- docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |    49 +
- .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  2581 +++++
- .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |  4971 +++++++++
- .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |  5956 +++++++++++
- .../ORCHESTRA_FULL_CONTEXT_PART_003.md             | 10267 +++++++++++++++++++
- .../ORCHESTRA_FULL_CONTEXT_PART_004.md             |  7903 ++++++++++++++
- .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |  8656 ++++++++++++++++
- .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |  3651 +++++++
- .../ORCHESTRA_FULL_CONTEXT_PART_007.md             |  8233 +++++++++++++++
- .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |  8359 +++++++++++++++
- .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |  9129 +++++++++++++++++
- .../ORCHESTRA_FULL_CONTEXT_PART_010.md             |  9355 +++++++++++++++++
- .../ORCHESTRA_FULL_CONTEXT_PART_011.md             |  6994 +++++++++++++
- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       |   753 +-
- tools/claude_bootstrap_aggregator.py               |   605 +-
- tools/context_aggregator.py                        |   156 +-
- tools/full_context_aggregator.py                   |   739 ++
- 22 files changed, 87365 insertions(+), 12535 deletions(-)
+ docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md    |   6 +-
+ docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md |   2 +-
+ docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |   6 +-
+ docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |   6 +-
+ docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |   6 +-
+ .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           | 136 ++++++++++++++++++++-
+ .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_004.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_007.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_010.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_011.md             |   4 +-
+ docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       |  62 ++++++++--
+ 18 files changed, 216 insertions(+), 52 deletions(-)
 
 ## GIT_CHANGED_FILES_10
 .gitignore
@@ -204,26 +200,26 @@ https://docs.google.com/document/d/1W7o5DHznaqoIP0Zb8pc7ri7eGTz-Wx78/edit?usp=dr
 - 5540
 
 ## LATEST_MEMORY_20
-- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 50, "updated_at": "2026-05-03T09:17:21.945333+00:00", "files": [{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "file_id|2026-05-03T09:17:21.946700+00:00
-- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 12, "updated_at": "2026-05-03T09:17:21.907940+00:00", "files": [{"task_id": "4b402275-e99b-4d9f-b331-08f2ba2a93be", "file_id":|2026-05-03T09:17:21.908251+00:00
-- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-03T09:17:21.893176+00:00", "files": [{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "file_id":|2026-05-03T09:17:21.893676+00:00
-- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-03T09:17:21.849080+00:00
-- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "state": "FAILED", "file_id": "", "file_name": "", "mime_type"|2026-05-03T09:17:21.848983+00:00
-- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-03T09:17:21.848766+00:00
-- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-03T09:17:21.848664+00:00
-- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-03T09:17:21.848568+00:00
-- topic_2_file_234e52f8-3ce8-4f2f-99c3-7cc22265a151|{"task_id": "234e52f8-3ce8-4f2f-99c3-7cc22265a151", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-03T09:17:21.848446+00:00
-- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_file", "state": "FAILED", "file_id": "1bXXtuHRsXCuxBSRUl8Tj5z6E|2026-05-03T09:17:21.848321+00:00
-- topic_2_file_acecae89-87a8-42da-881a-db41cd0134e6|{"task_id": "acecae89-87a8-42da-881a-db41cd0134e6", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-03T09:17:21.848229+00:00
-- topic_2_file_a4956f79-592e-45e3-8f17-925366b5eb2f|{"task_id": "a4956f79-592e-45e3-8f17-925366b5eb2f", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-03T09:17:21.847819+00:00
-- topic_2_file_999e36c2-c98b-48e8-a7d0-140e7ef382a9|{"task_id": "999e36c2-c98b-48e8-a7d0-140e7ef382a9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "search", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-03T09:17:21.847547+00:00
-- topic_2_file_92de809d-9274-48ee-82b4-584058ea4e48|{"task_id": "92de809d-9274-48ee-82b4-584058ea4e48", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "search", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-03T09:17:21.847078+00:00
-- topic_2_file_3d35681d-2c3a-4320-9ff5-c3ddef6bd632|{"task_id": "3d35681d-2c3a-4320-9ff5-c3ddef6bd632", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "search", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-03T09:17:21.846847+00:00
-- topic_210_file_ce9421cb-5451-4cea-9823-a413b698bc94|{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-03T09:17:21.846662+00:00
-- topic_210_file_c8619b7e-9ebb-4731-973a-b3f6064bbe38|{"task_id": "c8619b7e-9ebb-4731-973a-b3f6064bbe38", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-03T09:17:21.846384+00:00
-- topic_210_file_42320ab0-c49a-4a08-8f9b-5e38618a4e58|{"task_id": "42320ab0-c49a-4a08-8f9b-5e38618a4e58", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-03T09:17:21.846250+00:00
-- topic_210_file_7dca3b5f-2782-400f-af84-fb030904e917|{"task_id": "7dca3b5f-2782-400f-af84-fb030904e917", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-03T09:17:21.845867+00:00
-- topic_210_file_12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88|{"task_id": "12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "16V3s5DcAvnXj8f-3CcfZE2g5|2026-05-03T09:17:21.845482+00:00
+- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 50, "updated_at": "2026-05-03T09:47:22.729507+00:00", "files": [{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "file_id|2026-05-03T09:47:22.729892+00:00
+- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 12, "updated_at": "2026-05-03T09:47:22.694101+00:00", "files": [{"task_id": "4b402275-e99b-4d9f-b331-08f2ba2a93be", "file_id":|2026-05-03T09:47:22.694380+00:00
+- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-03T09:47:22.678080+00:00", "files": [{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "file_id":|2026-05-03T09:47:22.678666+00:00
+- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-03T09:47:22.637578+00:00
+- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "state": "FAILED", "file_id": "", "file_name": "", "mime_type"|2026-05-03T09:47:22.637504+00:00
+- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-03T09:47:22.637341+00:00
+- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-03T09:47:22.637266+00:00
+- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-03T09:47:22.637214+00:00
+- topic_2_file_234e52f8-3ce8-4f2f-99c3-7cc22265a151|{"task_id": "234e52f8-3ce8-4f2f-99c3-7cc22265a151", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-03T09:47:22.637166+00:00
+- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_file", "state": "FAILED", "file_id": "1bXXtuHRsXCuxBSRUl8Tj5z6E|2026-05-03T09:47:22.637103+00:00
+- topic_2_file_acecae89-87a8-42da-881a-db41cd0134e6|{"task_id": "acecae89-87a8-42da-881a-db41cd0134e6", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-03T09:47:22.637033+00:00
+- topic_2_file_a4956f79-592e-45e3-8f17-925366b5eb2f|{"task_id": "a4956f79-592e-45e3-8f17-925366b5eb2f", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-03T09:47:22.636965+00:00
+- topic_2_file_999e36c2-c98b-48e8-a7d0-140e7ef382a9|{"task_id": "999e36c2-c98b-48e8-a7d0-140e7ef382a9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "search", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-03T09:47:22.636739+00:00
+- topic_2_file_92de809d-9274-48ee-82b4-584058ea4e48|{"task_id": "92de809d-9274-48ee-82b4-584058ea4e48", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "search", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-03T09:47:22.636419+00:00
+- topic_2_file_3d35681d-2c3a-4320-9ff5-c3ddef6bd632|{"task_id": "3d35681d-2c3a-4320-9ff5-c3ddef6bd632", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "search", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-03T09:47:22.636244+00:00
+- topic_210_file_ce9421cb-5451-4cea-9823-a413b698bc94|{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-03T09:47:22.636077+00:00
+- topic_210_file_c8619b7e-9ebb-4731-973a-b3f6064bbe38|{"task_id": "c8619b7e-9ebb-4731-973a-b3f6064bbe38", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-03T09:47:22.635887+00:00
+- topic_210_file_42320ab0-c49a-4a08-8f9b-5e38618a4e58|{"task_id": "42320ab0-c49a-4a08-8f9b-5e38618a4e58", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-03T09:47:22.635793+00:00
+- topic_210_file_7dca3b5f-2782-400f-af84-fb030904e917|{"task_id": "7dca3b5f-2782-400f-af84-fb030904e917", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-03T09:47:22.635487+00:00
+- topic_210_file_12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88|{"task_id": "12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "16V3s5DcAvnXj8f-3CcfZE2g5|2026-05-03T09:47:22.635236+00:00
 
 ## JOURNAL_AREAL_TASK_WORKER_60
 Started areal-task-worker.service - Areal Task Worker.

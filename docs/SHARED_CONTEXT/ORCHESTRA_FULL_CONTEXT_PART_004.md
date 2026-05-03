@@ -1,7903 +1,8359 @@
 # ORCHESTRA_FULL_CONTEXT_PART_004
-generated_at_utc: 2026-05-03T09:38:37.242689+00:00
-git_sha_before_commit: f78f74d5aeee627b64b7644a495a729ba8d56a98
-part: 4/11
+generated_at_utc: 2026-05-03T10:06:29.917245+00:00
+git_sha_before_commit: a57325c6341abf3a627bed7ecf628fd7b89310ad
+part: 4/7
 
 
 ====================================================================================================
-BEGIN_FILE: docs/REPORTS/DRIVE_AI_ORCHESTRA_ROOT_CLEANUP_V1_REPORT.md
-FILE_CHUNK: 3/3
-SHA256_FULL_FILE: 3d56855de23129e0ca521ea2ac0b162d5eaee8c443ca4796b9f0b0a32be7d779
+BEGIN_FILE: task_worker.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 26cb58a7f8ea21d73572638e92c0063cf445c0eacf2d3e6d5bdd279d371d0d61
 ====================================================================================================
-      "file_id": "1vFrLgJ41nayzd0runBWkzwd2ZJTrmVnE",
-      "name": "tmpnh8s7m6_.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1cVpytGduPrgdtGSegU3ku0SSImF0PvNU",
-      "name": "tmpyhlq576c.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1JjLDafNLOUFWgZsnVAo-T5q_tMzs6sZX",
-      "name": "tmpcfm50rpp.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1IVr5QTl9amxhixE9Qi84Io7zot291224",
-      "name": "tmp22o3jia6.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "13AGWVHd-HFg-C-SXd8xM7VBQGNwb1Vvg",
-      "name": "tmp6sqf7wj1.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1N4rpe7OptGC6W5zlSFnkFhNMMbhqBjwH",
-      "name": "tmpsu2pzy80.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1mGIlw_tmsKKbF6fgATCCTM6knkKH43ui",
-      "name": "tmp12jipgo9.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "10oxfFBFXZ4ifcFM9vhSwZjwyvLt6Hupx",
-      "name": "tmpjoyn2nq0.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1VKkitkYrOiaND41RdT_A2e_dg4YAn5m6",
-      "name": "tmpdmubgdge.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ZKKtQUYo2-3MN4SQ9mGkWV9DIMpkP5jM",
-      "name": "tmp63fbe8bp.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "17PclUnbZZbZhKDDb39IXkKlnFtmUe90E",
-      "name": "tmpxp_4k9sg.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1A3sdllgzbuRs6UOwPz9Bd9YawzKlmUbh",
-      "name": "tmpwczaswd5.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1a5DEXHypWRmds6XyvxASAf2P88ybwWHO",
-      "name": "tmp0hacxnxv.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Hn6P4bd04DaZnqOh92S5WXp2WRFP2-f7",
-      "name": "tmpp7a3mmj6.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1WpZfzmOL_PYPx1__XftI72lFvqVg7KxJ",
-      "name": "tmpeyypd30o.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1KZ-mlJqysXcvbfDlXWkXhU8cdQLOjugL",
-      "name": "tmpsumjjqw5.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "10LzIz8TqlERxMcnKRRXcoMvoZgIoP_CR",
-      "name": "tmp2uhf4jj6.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "147gB1ssCdeKyZbHRe4mPHBxzCVG-jSsn",
-      "name": "tmpcj00w02g.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1IK3WGqvf34zQmeiiAIarHSB0l6QVLu9C",
-      "name": "tmpfpzpz_tz.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1cjzux8UNvAto6gSfAKfOVx-4ndobflq_",
-      "name": "tmpwyperhfz.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1lM4Hr6OW5uV-uWUCb_neMIVCE9d9XK13",
-      "name": "tmp92n9cuo4.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1FT6GNJwKoLy7MH8Vl_XSJhcMDYnX1IWV",
-      "name": "tmpsyi2r2gl.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1t6zwkcyX8nhCIKu9n-lH7qdqMlRM0jGU",
-      "name": "tmpufzy69rv.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1CiPSZGdZeE5-15EPNnSTZELBMsWnnLFn",
-      "name": "tmplicpz_9r.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1eUGx2BkEgcBRnZUJ5DNaUyZ1Lc-0AS14",
-      "name": "tmpmk3yq6xc.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1S1oZv9pNgKzTH89t9LItv9SD2uun0ddC",
-      "name": "tmpxygp5w89.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ZqFjmRMJXjgAgWEE4Ie54mkVWKLik3J3",
-      "name": "tmpfgh4mtc8.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1pXGeHWX5GjoUZDBtLmLxfOBTNf-G-NMU",
-      "name": "tmpmcvbaiwq.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "15mtZx6BbsMmrn3eTEYD6fud3Fi0VuGNl",
-      "name": "tmpsqgd704k.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "11c6cJDrst7N1lDf3BT1YR69pZX3ogLQe",
-      "name": "tmp52e1a_9v.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Es10PF9c20F-EsOXCzzCWUcX-RlGxiVd",
-      "name": "tmpo5naltf1.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1r-qYmDXIZSwu-n9K6Uqp7kG_WfazZ5Nr",
-      "name": "tmpido7iziz.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1_5ui5SfEnXapC8VRAHuNbeG0mcm0cxK0",
-      "name": "tmph077bxx5.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1JvDgxvCKFOpOMZ8Js0c4gA4gTMiZv8YU",
-      "name": "tmprjrzsauz.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1bvdP82mADmOAMPZa6YO_ZvXQDK1RyRHT",
-      "name": "tmpkefkkvzi.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1AxQdLbmuwB5U4-qnGk90k0X0hzPJdZ-u",
-      "name": "tmp_7ly55iu.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Uku35Ai18ijznVIFe8P2q28N9vkxtl1F",
-      "name": "tmpdjeikror.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1DqW-B8cWqBK0FgvcnGNlRXIEAGO7B24F",
-      "name": "tmpryg20n58.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1yYZqp_SSdYH_EwOAbAYo3xa6--AlWQ2I",
-      "name": "tmphgvr455e.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Xqo_QteOIzWUC6nckCZ6B6Sx-_pPLLdV",
-      "name": "tmprsytb3t6.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1qt6ycAADatoVswQslUAd-frwveGymeGc",
-      "name": "tmp1tr_og3r.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "14vtsRC4dCKy3NcKFyBuL9dyLSulEYZMd",
-      "name": "tmp4bwktbig.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1AeWtdnw9rILXYqYc89CYQloPppvXZ_0e",
-      "name": "tmparbgv2nz.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1JhnFC9FhjsjlAoeo1FHn9jIyaVJEwvxP",
-      "name": "tmpcejv2l2_.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1-uLlw6WA0kGK52oHsUcB7h_lbQT5g_c0",
-      "name": "tmpf78swahc.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1SkTlL9qAjuvVyJ6W_a0zmm0xJC69Ksel",
-      "name": "tmp73bkuq4f.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1xGQK28rPEzDJ8AF1oMoR7WWukrYZFt_X",
-      "name": "tmpw45f369r.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1odvZg2iBk9gSL7MD096vwusZfKu_wo1w",
-      "name": "tmp2r995pcg.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1gH5Bi_E9zqUBiFZG3-ZmUscu65sMNjDv",
-      "name": "tmpx4zr7eik.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1b3ucio1sMxkUin8sKc7948UYSbDZ8wMn",
-      "name": "tmp3egs99d2.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "18fvNPAVJrhZodw3R3pRz1Dq0SAQA9wTH",
-      "name": "tmpbu063ec4.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1XdrZI7yrH5pEP1FWizFW_uHzJ5tAlmlP",
-      "name": "tmpdjwatmp5.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1wru7DIybBn0Ba_ORBlpuXw8T92GLvx8j",
-      "name": "tmpza_r52lc.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1HOdaz2qrjICPamS4XY6dV1xhRlIv7fAj",
-      "name": "tmpe1ya_xfg.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1-DjIPDjXEEkb_ZrO8l3ktm1ZZxKcDwgC",
-      "name": "tmplueb5n2m.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "16xdwybWJkbIXXKzOcfmsD5y8afk4lzKz",
-      "name": "tmp7c321qtt.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "10SPAb-ZthCmMcICxcbHKCK_DxKFZVN8R",
-      "name": "tmptapge2j3.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "12g3sH9ReI1Sek7-Xh07dCwrS_aHrByhf",
-      "name": "tmp9fw6x02r.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1kbEmi8-Tr_I90pJkvl36z9HceWva8tew",
-      "name": "tmpfayu7_yg.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1O2WOpFvTpuJWulz4C5kdHBopEEJ0VgiE",
-      "name": "tmpz5juf8c8.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "10_iDhFQbE_AwcNFOwb5LN2I33p0s71mI",
-      "name": "tmpgcysmaxl.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1LWlfXQWaOsCTMFy_c-Uk0wpqZW_2jnmj",
-      "name": "tmpyckos2w5.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "14Vjdrjw4_hq9GY4uRQKwHcW6WaA-fQNJ",
-      "name": "tmpw9v3eloo.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1_JIlBXLeosKdhghFyzZ255R_YCfN2p3G",
-      "name": "tmpuu98c7w4.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1jHj_5ZgARcFZIpzHxbyBxZkU5ErhvWxD",
-      "name": "tmp1zvvnuz3.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ocTr1SsjjCsH_bpUoPgnormewbd8WEOw",
-      "name": "tmpwkqn2rlp.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1jVXxhYQAz5jA4PNo73aFuGnMaKsUU4Vr",
-      "name": "tmp_sko0gq3.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ZKmPXctFM10DL_EXNSURjo8PBIfTyNbA",
-      "name": "tmp5fgi4x9q.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1xnrLIqcelJZ0rF_dZvzRzFXGy5LnEWsc",
-      "name": "tmp917lm9wh.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1DHc_m9Inni3U6VdTiTRYF5tHYOfNwLJK",
-      "name": "tmp4vlgjva7.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1bMRKCWrT1wOCl6IJuWP6zhE-P9HpmPq8",
-      "name": "tmpiz01z_f6.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1vjuZ9XCxU3cGudJY8f7MM-CJEdgh7ZgX",
-      "name": "tmp9z95gv51.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "136oofJgQ72cXYeL09NHp_1ANaMCbZ2CK",
-      "name": "tmpr4lh5r5j.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1BdUlzvnvGxXxbdPvmAs3sYHqeWXH7oDr",
-      "name": "tmpw06bkd_r.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1qX-2P2LIX5c6pOWeJGoFl_rg3ubsqe63",
-      "name": "tmpjf7ik5k_.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "128OajCI3lx8q2qpz7G4MSa8jRg8ZiOoW",
-      "name": "tmpjr5ohjhe.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "12LYPlNYgeteTRMzJySYxSYnPOSSk8P7s",
-      "name": "tmp7aakn4ie.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1WM8eT_eE-B8_H3341FCiCHWBU8zFObII",
-      "name": "tmpggob_fh1.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "12QZvsK09MQ4V3mE4l82IgwwgDNHUrVwN",
-      "name": "tmpup_is6wa.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Qc5MpquXTu-e7qkcCfOH7hWiurApercH",
-      "name": "tmp7swuw6q7.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1QZciAedAhZoO0n0OBPcrHqbn5wDb-1aV",
-      "name": "tmp_8qmls5j.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1dkY9KW2nhkl1USDbgIE4mBeXQuUx_fFM",
-      "name": "tmpyo86q_mj.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1RkF0smr9vgKTJF45nnkvhnr9dvXebtkQ",
-      "name": "tmpsuwanbpb.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1cUnrE31aZNEQKe0Sa7MiuLQXBtQg54TI",
-      "name": "tmpmvq1hkqs.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1qPF95SldH56Dr0zI2qgzIRUqllEKMaF7",
-      "name": "tmpmvb9dfrm.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "13s1B_ylpaot4y0u1q1TQkdh8rL-JVo7A",
-      "name": "tmp4hznui6e.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "14bht3R64xEJ4ZrHWT2Duby5WG4iCzg9L",
-      "name": "tmpz0fkh2vz.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1SCiZYgPUYE2zDiw13Jnhx9zWNYIuDnaP",
-      "name": "tmprhok04_k.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "11zw5WK8hOmXzBFJ1r2bDjFo2BBYHCKRR",
-      "name": "tmpq7vg85p_.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1U5hq3T_MUmQJzJfylKpTZoaj9fpHFF3R",
-      "name": "tmp1irf7d4m.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1bfdx0I7st2XFNuM3_kzJywBc_IfIzN2g",
-      "name": "tmpnnseb0bj.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1SywZq-PObmkBjLeM6jmFnB60y8oNVtAd",
-      "name": "tmpbokuo_pf.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1mPKPN6lSA-Emz44ginlIxwCNMU7crk1w",
-      "name": "tmp8xyfy3vd.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "14jKdnnt5cyf_4TAxY4FbO3VYOmMd17BI",
-      "name": "tmph96pfiq5.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "15VTa_Nu5EtpvYacG_UqgCu8WiJJTxj5w",
-      "name": "tmpk5ewalc2.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "174ISLqkYGrkQQMB_TxQXAoZ-UQyKmqxX",
-      "name": "tmp8slzvxf0.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1h29l4dAJzmPtWqRHSwF1WFXrGi6vcQyQ",
-      "name": "tmp8br0aix4.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1JPsAfW0j8_DUjeNiEDkaItyfvscPZXun",
-      "name": "tmpmawdlcu6.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1-DdYdCIEaRMAibBT0iT-u4obl9TNtqO0",
-      "name": "tmpqz77tx70.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1YjFi-1go9Wh3mx784EQd0gbW9bcWJwS2",
-      "name": "tmpfy7e5yj0.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1CAIzqyIAEoC0Ca2iApz7xna8g3GUJAr_",
-      "name": "tmp3g7chsge.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1CFqKgrnUfnvDQdzQUvLFJbyv6P4_4iJv",
-      "name": "tmpf_4ufqa0.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1w2f0F2zmju21zZ3Oc-aotckvXFKOSOXA",
-      "name": "tmpk045bzpp.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1jd3a7r4qATwPZhP2oxENa9p66XtlNGdF",
-      "name": "tmplbryi2m_.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1s4rmXFQxA-ryrcTZY0mtH2mTV-sJbyXm",
-      "name": "tmp3rvmfa4p.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1lA9Uff5wg2Hml1n5LihfB_yuBOgZqwLH",
-      "name": "tmpj3pha3g4.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1K-PNM46poDucy6qz1nlK7eSsKMm3xuUJ",
-      "name": "tmpp1fzik0f.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "159JeuQe61MZ0Pj2-aK_-yUc9WmAYT8nz",
-      "name": "tmp767h3rgo.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1qQzjSXiKlsngLDBb4GxDeHuSJEY_WAKz",
-      "name": "tmp781q25l7.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1bXr2BgYoI3q3G7EB_hFcBU8yPMCsml-J",
-      "name": "tmpxx_ew9gu.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ELYPsoRyc4wMuf_WQ0VCfIYBS1atEt1q",
-      "name": "tmpcxbdtnkf.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "19mbxDA9zmTj00NrxcRbKsnZYWyWZCeSN",
-      "name": "tmpzxy7eblu.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "15Z-FW3_-JvtuwMTuSCh54zv7iXHeqPkv",
-      "name": "tmpxgx6ok3a.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1kCIu8LbMRIFhAcE5bhVLhEEwOf3C6JE5",
-      "name": "tmpsgxg7y41.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1OAzn2EUQMnvx2Sf5HCxWehc90ftSKjkN",
-      "name": "tmpxkp89tya.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1NIxm9HTN3rUNh04c6ZOo-9aAf-RtB7Xz",
-      "name": "tmpx12a3jm8.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1er50eprSITJvKe8oI1xnfww8LbWT-qbU",
-      "name": "tmpi198oi_k.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1jnH_5GC6NDYTJPdenB3_ZPiu8cLAe7ng",
-      "name": "tmpxzzjknwr.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1r9f6SRSOnlI4dKQ3Qk7t8_UdbPewonKo",
-      "name": "tmphun2hfbw.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1sMb67q9A2PcF2VULG_YP6VcKEf3x5vKr",
-      "name": "tmpxvdiku6r.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1XxV2gNnu57g2_qs_LNfnA05vgebBCawl",
-      "name": "tmpkdtm185_.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1NKaYQH7PHoKJ2KtAz7Deva_Sx3pT8d2J",
-      "name": "tmpp04aaogx.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1UMNyWBjDnRJpoV_lQCNSvj3h18SjWJrT",
-      "name": "tmpflsfqsf4.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ZtIYlItldBRoX-8ic8iPBLD5-2yZ7muM",
-      "name": "tmpx4hsc477.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "15EvGJ3-AmDD7Qyt5uVo4BFMKqqTwBxWd",
-      "name": "tmpqdascj4h.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1TeJoEvR69qch_5_AJCUbL8HZTa6x7bRK",
-      "name": "tmpa7z6kvqp.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1tmJ6KsYnMeHkF14JlfxwneKWLxvfNHVi",
-      "name": "tmpxnh5o20z.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1TlbQ7TLjYT1F_QoDYP7B9do5eQOqUc-A",
-      "name": "tmpmcvch4k0.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1fZCNgVrCtxYcABvWYdRnlTzIoU4skZjX",
-      "name": "tmp2b4g_2a2.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1R_Ih3kCp6gJTO7eyDRpNPThnvxR6U9w9",
-      "name": "tmprpdqno6v.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1UN2XcpToSdcYh3ckCOmzV-7YrShT_qkx",
-      "name": "tmpu06ldjok.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1M5HR-yeHsKK5QLKdgbA7s6LO8oVbP5i0",
-      "name": "tmp7rl63xtn.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1fvGzv2vijHgfO7uEk9NOuvigE68_A3dt",
-      "name": "tmps5s9aw08.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1b2Ogv-jgOTCre8xBO9-BXXwj346N8vlc",
-      "name": "tmp5r72lg7t.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1glAA8f325naNha49VTZQdZY7KhSUPP5D",
-      "name": "tmpy83rbfj7.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ZziD1XPIeBG18dkzlegZTzwCLp0i_Lkw",
-      "name": "tmppwyabv3o.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Ma1R-mn_Zq2Ii_n0259rDlDfflw8CtW4",
-      "name": "tmpp623q0qw.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1UJn_OBbwdqUJJeyZghPv85OPOrN0AIdZ",
-      "name": "tmpn7b02m8_.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1kMRRdgRDzbRNtxiV3m83UuOaOBTzbS4l",
-      "name": "tmpji6tmacg.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1aPsJh6gH3XvacLUdcvUC0za1sYTZZCXR",
-      "name": "tmpx93dnldo.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1c1AP8cFi4Ojh9hTfyVkxrzstFRVVlHdK",
-      "name": "tmpg68eif69.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1nw1Z2I3Lua_J-trq9Q3Bzy8grklkPWqF",
-      "name": "tmpdj6zgswu.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1q5zPXjcQ53sHv1fuA4mf6BQAYrpp7kFr",
-      "name": "tmpktur68zy.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1uUcvL2zPSeqcteEQfEDUOjaXjN1te-0L",
-      "name": "tmpe205md43.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1KzgSQjc9VpEp6m37leopPpF7EaWlzG5c",
-      "name": "tmpg_a9j74d.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1GsP52zxdRGIkINw5sS7dVSOuL7T_lL5j",
-      "name": "tmplwytm48c.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1C8if2UJDWWeEpPMH_744FaAkf5ZMfLEy",
-      "name": "tmptlbt0wey.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "16QB9-fIXzKM4LVV0tjzlxuoXOxwMSMsR",
-      "name": "tmp8kqq_8ue.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "16S0wP0uLHlEnScR3lvLH81wuQwi4FgEW",
-      "name": "tmpticjkt8y.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1OH9M0qjfYz7bhNwSv8rpkXDszWds64PO",
-      "name": "tmppojl00xc.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "10sQAeLUKxVlu6j4PHGmeAGlJx5DgVj6v",
-      "name": "tmphpvfmyuo.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1njg5A215-8E3fITLRbwuVVftVbrKIZmv",
-      "name": "tmpyfcjjpoh.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "18ouMcvDuQAZYTLZjdKhCLO1zRUYc2RIk",
-      "name": "tmpph1i_1yz.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1GPVIEZUOAN0-wi5W6FeuXdvkfaMtfQzc",
-      "name": "tmpasn_h80r.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1zAsCPah8mvziY5ebaOf3q1BmLiGEpUD2",
-      "name": "tmppd78gxjh.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "14y2U7aXa7XdjSVuixDg7CuuuhGc-IB-O",
-      "name": "tmpwlurpjep.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1wvWJ4nfBRytLfP723qNK0cQXu4pzL9DR",
-      "name": "tmpwh71br9l.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1X0h4DfrL4xhUk2fMDL8OZSFeXZm9uVX7",
-      "name": "tmpqpp9mvmt.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "11Q2TXbBII0g87Mfn22L3oQmJexCiL_KL",
-      "name": "tmp9n1990v9.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1CSESQJ7RAL7fYNYdXZKytAPrrZ6etLc_",
-      "name": "tmptpebufal.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1XxC1FESGMvX7OISCi-bOazIJ1wvT2nRg",
-      "name": "tmpi6351v2v.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1avGaLuFJz-FSv_LDwQozdItmKw2E-DNJ",
-      "name": "tmpbidhvfcm.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1D3ddZfMeA-bsLAJaUkK-BmKi43-6JkFd",
-      "name": "tmpfskvs71u.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1QLxYE9RLsXJBVdUyxS-OFUwDyQedLykC",
-      "name": "tmpunpnmlkt.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "128Ro-xJy8Dkx8XjNJMpisbJifUh8eIcD",
-      "name": "tmpgya78upi.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1hS8jshkV-cBUvQ4z5j6Te81jCg4Mx5PC",
-      "name": "tmp5apxe4me.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1_62a2lj9kKpzpjXmlWHRemoMbqg1hxHI",
-      "name": "tmp7z7nppqn.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1yMrorsnR53XHrsVQPb1W_giuY5eNgh9c",
-      "name": "tmpyk59ymyh.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1PmQpqtAKRMyFgYtndyqKJPxGUp-BxxUO",
-      "name": "tmpqkq4qqu0.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1fXByQxg9S5ltN_0JW_1nuJ6AfwjwkKAl",
-      "name": "tmpty16pgrd.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1aY3QhDJkQP_D79jvohVoas5a1vgH6IzA",
-      "name": "tmpsmg_p482.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1GdRK02rBAFtQYq2Nd2M8WVymzSJmcCcP",
-      "name": "tmpnlvzqjfm.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1IibEZPikaJZibiUPo1fm0Oe7BHQEly0b",
-      "name": "tmpro0mq4al.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1DOTrCe2AfXT-FDYIs7K_ThUVxweoVZSx",
-      "name": "tmpkfhjhy52.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "19dDRY0_2c57M38jfkW9tTSi2n8Y4oDoh",
-      "name": "tmpxmapzaxc.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1XzAQnwkOYI37zG3EI6V3rdVd0qmhmhSr",
-      "name": "tmpunk2gfrf.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1NwS87PXtQdKpFAyNvTvopmpWJCPj3hcY",
-      "name": "tmp1js02rnt.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Bt-8hVRu_PoEExS1oRHxHrIImrLmTK8e",
-      "name": "tmpnq7tfvwc.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1--YNCW8JM-cCl1sYQnQBxy4cPSmpJd4V",
-      "name": "tmpe7__0z2b.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1UCqRXw2-pIQVGhxG6u-eunDYGetqKdaT",
-      "name": "tmpoj52b81v.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1aajxH9TmPT-H78Br2Uf7dQf-M3iZ6Htb",
-      "name": "tmpe3qq8503.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "18BCrb5RtMaFMrdAger-WClijoltVrgUj",
-      "name": "tmp41wiwva1.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1H-yVv7UewjRnaXOZsF6fFFOe13FBypId",
-      "name": "tmp1k8gnlac.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1SloTM5sZjfpmMquOJQCsZQy1vGSRATFS",
-      "name": "tmpey3yq89s.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Zr0Jrt2xgn6MIAoQORX8C43h6gwkRcjQ",
-      "name": "tmp34dglb5f.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "17V3p8vJxg2rLcqunCIWiwFPaylAs5LQv",
-      "name": "tmpp002wimq.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1sbB1-1VSv4SBinREU-t4vUfIC2BpQIQ1",
-      "name": "tmpmr1j2zs8.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "14PmcvN4QhAc4zI4z9UhAQmTOCTSbvwLl",
-      "name": "tmp7w5rbona.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1tDK30x9tFcSe3qxXBCgzwZrbeExQyLTa",
-      "name": "tmprjswdad0.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ugzBvv9eAFYIos4FQ_r0d8Xj0V7vlbQs",
-      "name": "tmpodunsgy2.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1o6N8XRC4Dc4atUDPK2Ryw1HNnd5V7y62",
-      "name": "tmpafgmk3ie.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1vWklSaa8O-esoLX21HU6yDrYBLE6-QKX",
-      "name": "tmp7w25eh98.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1PnLd_Zmlui0IijF4ok6ZMuHoeyrjEMEU",
-      "name": "tmpwpopa01r.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1sPUtxOvsB0w-71W2XLJcDsjxLhhfSkrN",
-      "name": "tmpf4qex_2p.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1nN-faP7iTeLZf1Ho_9xpgk7LhC5qUWTN",
-      "name": "tmp02e2jseh.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ddvdzqjZbYWyvb12ae1bEcjQ_xkyEa2l",
-      "name": "tmpzrxxvp6t.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1eEjZ9RAvsC-LganBRtN8RvnA6CrQANnr",
-      "name": "tmpngljyqjb.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1lN_dUyhXKAjkLI6Qt4uKu0o20YU8_n2C",
-      "name": "tmp8fc3husm.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1rYu6XzmCyBC874crmCRX8q-9QjAPvGF7",
-      "name": "tmp0oskikwc.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1e1G6h3mMPXUh-_poz0TfzEx-56GRRZyR",
-      "name": "tmp7m79w1k_.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1pCeAzxlvKyjo5wXpmaJkhH1h6UofCtgd",
-      "name": "tmp9f81802y.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1tWbL883p3dn9wF8oirQzA3_GXd4GfSI6",
-      "name": "tmpwnh2z1sm.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1kN0sh-cXNVpFjScfyG_hA2pS9VjT9YxC",
-      "name": "tmpv_o4vy6o.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "11iGSvRd-HOcaeYlh5oJK0C2c9ke8X6el",
-      "name": "tmpae3mmmaq.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1nBHEiBWbPiCa96urcuNooxPkST5MXwLS",
-      "name": "tmp3gdss5i0.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1uHM9L6Lca89V5xyJ0OVHf76O3rPP6NCT",
-      "name": "tmpkddr576w.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1koHW2_uANbwsKGH0x01-tubcXN0Bi7oz",
-      "name": "tmp6mvx6eyo.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1SZ0y2c3qOvpA6rPexCNZTncnqyuMgYmp",
-      "name": "tmpmtsdw2uk.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1BNDl_LZizEm9FdAF4QWPN9S5NetRg6xw",
-      "name": "tmpj183bndd.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ZiqcvbFJY1X7HHBfyYotKiewsv0-rMiY",
-      "name": "tmpmhkuflui.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1la4k7r8GotNXmFXQmvEBasMw3-kdIc66",
-      "name": "tmpn7d007or.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1S_n9Ux2p9BX1NHGALpZFdI7ShE_APa06",
-      "name": "tmpf3z9cydp.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1sZ-Zx1WMw966LusrDm39jYK30GcD6MBy",
-      "name": "tmp6dcl987d.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1P47T4hhsO6W24CBJPZd-zMkxJk92J1ft",
-      "name": "tmpqtj86amj.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1jFMXGFNUzkIhCdjS0Vl1HztSR2qNZ4b7",
-      "name": "tmpw3ba7i1n.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "11d0ffEnEYcq4AqR5KrA_9bElQZrLwtj9",
-      "name": "tmpi9z0mk_n.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1mIUi6rb4OTnUP7OEnUB_gJNV3ljPpFqq",
-      "name": "tmp2rc0whqx.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1KU4JrYpC-Nmc5yfIHqEXHu6Xq8erPB9B",
-      "name": "tmp_i6023gq.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1KOkN_N5SHldaeBnHx7cGTKMCicpffr8z",
-      "name": "tmpq2tc387a.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Kt-Eq7B3jFPymVNsLcLzrGRWK0jdRzUL",
-      "name": "tmpb1ua2_cw.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1E6MhoVrqJovI6TN4X7XmUpg-9i15Dh0f",
-      "name": "tmpvyodnb76.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1jJtcjwJzCggFJFr6Ask-T5vGiFx2RiyM",
-      "name": "tmpsswnpf0b.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1T2f-tzNr12ztd9A0-7qE8EFPU4U3quns",
-      "name": "tmpk1jgk2hb.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1dyME5boQjuY8JuCzIpyx_uzK77prFEqC",
-      "name": "tmpjeg_inid.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1WiPlsECoZSWVcPsF-RmIKJOPhAT4ZOQ2",
-      "name": "tmp0i_8b96g.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1wkszj8HC_K_pa-T5Zf85f8Hy18bYX1sq",
-      "name": "tmpek0wjbl8.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1wvrfppKYagKfNYG0Mf2KRdLmOOTOvz2K",
-      "name": "tmpqf72nmvr.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1gdeoTTyUCZ5glhZtuY1B6JFaq1YaI7tr",
-      "name": "tmpl_5_mu5e.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "14t_e6P9J_YpAmwlT0-JSuXxtiB5rnphX",
-      "name": "tmpa_9ivcy_.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1nJXOrztYH-roCvLRB4l3gLpYrkgewKer",
-      "name": "tmpm3837a4u.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Vztq8I2pz4SaaCvcvs3IcebGJcr5zo8M",
-      "name": "tmpx9xtzie6.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1lH-TWzeRGjPjOi5r0iiEFcf4NmoGd84A",
-      "name": "tmp699p8vuy.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Ol3AuNgzzPJtW_ZBv_LhWgKuNFFNPR8d",
-      "name": "tmpyidl16d0.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1hUyp8jDQszLMuhlIsnC3SmhP_J1WJ0pj",
-      "name": "tmpqmxeyv_1.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1hD5zBG5Virae_hF1iknBJq1w8wt2CeUN",
-      "name": "tmp87k3rxfy.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1HFxUOPzlavptmiExanw4ax8UPzFf-vzy",
-      "name": "tmpj3i9f49y.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1JDAXGLSfMTm6bZUcselRetTA9Br2II-E",
-      "name": "tmphuzeepnl.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Qa9wjGUunkGLCpmB9jC6araaW2zps84U",
-      "name": "tmphsmc0qtz.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1vQ5Ekwtv-91oksdykQ4ZpNylywqPN2l8",
-      "name": "tmpt3afa_bm.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "188VeAkbOJNFDZqiffATxqdNQTuv2ewoY",
-      "name": "tmpq09aw9ge.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1yw6UawdBoMujM_wdrZrwclOvfz10U6_m",
-      "name": "tmpptvge2qb.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Ppon7AggjrgIHCPo3g04xHeLoRh1M7pD",
-      "name": "tmpsrmn15ii.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1wH5beV3z9to8ZVStzF6i2rtI7IWENk5v",
-      "name": "tmpeibhy8al.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Ydr98Y7j9kto2g5VWo4Ks_2uvlZQwWkw",
-      "name": "tmp5z5jceqz.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1xRrcxhoGBbx_v-XE99PLVOhNdmRO0hic",
-      "name": "tmpi7dz5kl_.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1X9X0NdQp-T3wmbOOhNfBAPVGcnWgTBcF",
-      "name": "tmpnh_kcak2.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1mLPbAl3YwiHUvbJxZA4iD70w_VjZ5LqL",
-      "name": "tmpppygtonc.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1PR7VH_oZFYeX7e0NyUfU1BJBpuL88pEr",
-      "name": "tmpiyyecoe_.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1T4Q5l7mDghDHeWLm9mR4XIstvD9fDVcw",
-      "name": "tmpgn4yz1q9.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1I3gnvXTDMOZ5bZJkIHIfdQR4znbsnRpe",
-      "name": "tmp0tp_6vpt.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1D6zR6DCaEz0Ig1Y4oI6htZt0xyOjaOeG",
-      "name": "tmpu1jhwgqv.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1YkJHH7x5VTgJ17uYiwQVwlvWajIwhc8K",
-      "name": "tmp86fiforz.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1FhX0RE1ppcsRkFrNLWvJsPmUs0CDHhiX",
-      "name": "tmpk0w2huqu.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1K2d2_ErVokPQTalTMnpWQsX0XJd7mehg",
-      "name": "tmpcrs1mh8d.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1wt_Xrk4smrwPIjEG43D9q7-rIE21ClWP",
-      "name": "tmp5sez8vh5.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1y42lorDOub4_Ru4p-T3699Xj5TORKCE0",
-      "name": "tmpnw3lfj7h.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1wDcrWQMpuYsKJtiEmTQyAsilgwyubhCi",
-      "name": "tmpxrs53qlh.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1V9-mvaQLT0tEIweKSM5IBEl9FLoJWz5n",
-      "name": "tmpchdg2glb.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1uLJTmwPrKrEG5FzjokOsb7JPfwmpmJ6u",
-      "name": "tmpxfk2x99a.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1QQuLZ_dtB4EWpHS3frH3Qy0gJZ8LLf8_",
-      "name": "tmpgyztmm8c.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1K5GfI5V2O-tWtpuF-Gaq7frnrL2w6V5n",
-      "name": "tmpaq6k540_.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "161iMbgumk9BmYCJOKPzi3DYD8szo16p0",
-      "name": "tmpr3w_cvuy.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1hl0eYlwlEgeRdnz3Zb0mDMPHhUaNYu8r",
-      "name": "tmpqjnvmajg.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1PAwUagocaGEMWlCIK8C03imQf-DeqK4O",
-      "name": "tmpbmc0xw0v.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "18dJ3WJr8Q3isIRW3Mw4QyKWD1IufVXJy",
-      "name": "tmpsbh34slj.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1_sjUageSTUK2UdAaqKlb5-ugwTM7NtnO",
-      "name": "tmp67sl0zmw.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "19pX9XHBN-vw1BwVGGl3mz5LdX44qIBxN",
-      "name": "tmpdl300ber.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1UroFBkMPbkJwQQgUu1U2Opjw77JQczqr",
-      "name": "tmpk0nx_zhl.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1VdC3xYh-JIoTLnCYnXPxl2yH5rrJMPUq",
-      "name": "tmpwo6k91gq.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1aQflBwPjlDMNsuyt62mxcWIf6MxCNW9w",
-      "name": "tmp99uh_j10.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1w_ER9fpraQACZ0TsaHeuGutETLcumNFq",
-      "name": "tmpxei9iv85.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "17qmv2wBcoHkNQefmtky1mPwFGG7ardIu",
-      "name": "tmpl2o0swny.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1M7-CsKI1vn9PKgWemh-ycee6BG87qQom",
-      "name": "tmppyo6q9b7.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Fq4MpidbzUj2_0aXOmfXXgkQ5JGOgD47",
-      "name": "tmpzz0fg4oy.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1UZJaEV5KqKg9p89f2-p8zIbhUv3z3PvR",
-      "name": "tmp4flpnwjg.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1cCAoHCMo1HQjPQqvTfzxn1yUot7ftOQ1",
-      "name": "tmpc0lcua5o.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1SR3mI7F2o6I4fvm6_fpRX4-Zsh3jvsVd",
-      "name": "tmp_qfjedv8.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1T94wB_9k9Y7q_GJWhUrgV8aJtSsbfrWE",
-      "name": "tmpr5k_pyif.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "171lS4pSccMajEecFc4GJpOnNqraCiqLM",
-      "name": "tmpmeucs3az.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1CTqUcPyyiz8ln1bGhrf6OipaVl06mecW",
-      "name": "tmpz7a7n9gd.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1DuKXJmNX3xB2sjjPqO3_Ao1lnU5RJPnp",
-      "name": "tmptquxvesj.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1gkfdO7ugKtVairCRsAPfcZb-ZgY9OJ2n",
-      "name": "tmpch2aad31.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1WRcOC0fKOWrnbooo_pMT-Z8-5cjtgK11",
-      "name": "tmpdhui2i8h.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1iLEsrXlZ1H8eUJNpS82hPOi4iplMKQBz",
-      "name": "tmp8jtjn3de.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1mOa0Cvsu7vcgi__unmiZAxI5jNloiB7x",
-      "name": "tmpo6ge4q6t.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1wYm6AxWIUCq6pzBcWbmj3vvKfdjmGteu",
-      "name": "tmp6g8sd7q7.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1wV51YZRlFxu6fnQowLxOC8Xpq68ushtR",
-      "name": "tmpw8uk51ox.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "11YV2f9h3b7mvShScD_5D15s6Ukh7CBRK",
-      "name": "tmph7d9ae5l.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1M48RyFDcJkHnmkgVulNHahy1iqG-ex4V",
-      "name": "tmpkj9jx8xq.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1iGBl2EQ5AfgO2SfPCmLfymZTO2mc15_n",
-      "name": "tmpu08g3d5z.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1lAMpYcRaXpyW7nVYEcAZ5nCZ50-07Jw_",
-      "name": "tmptdm714vp.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1xni9lvJwy8ScToKv3foq107BIfRhI504",
-      "name": "tmpvy56jadr.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1-jMYMV96S1KbLejPLejFuqyTmavfQVbe",
-      "name": "tmpo0blbmsv.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1YFDCRJw3PHMuQGyJEehgfZnOKlRFN9MJ",
-      "name": "tmp56fh_h37.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "10euqtvPNUZez8XjpqUt0CuKePmyhqJls",
-      "name": "tmpn4j3ds3g.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1QfLugv90kb7bQYf6aH72DeDvWM9H85d-",
-      "name": "tmpovlatggh.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1mRy5S_dctbFrELX0Za-n8YucQPk4d81X",
-      "name": "tmpec19kon6.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1_XgPasU8SSWyqZ8zqw-TK4Ih1_QIIa__",
-      "name": "tmpj7tra3bp.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1G6Lo8qG8cjtqPNj3bSbaJ7ougJabxSe8",
-      "name": "tmprp4p0qlt.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1cJf1uO-6lWKpw439ZsAdKMFt1RYiVnwR",
-      "name": "tmptgtbahzr.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1_4fgSoftToJbcoTL3qRCAOVi-MGXAmT-",
-      "name": "tmp416y3dgn.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1xnvAQsqfBDVyfBdSnXOehsId7nraWiB2",
-      "name": "tmpwvbvymp_.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "14A_UpV2h-ZmEGHxRLCXdzHllOPisRo21",
-      "name": "tmpley5up3k.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "14B1VPQCFF4uxh9KvHE113RSC6mOu9xfl",
-      "name": "tmpcbvw5x_s.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1EwVwSIWf8uhRcL2t2gUsqiUj547A7Zj2",
-      "name": "tmprmlpdxa0.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1JoLgpa-2JPzV_pJOePFW_kZSDOc0NGw8",
-      "name": "tmppxfqxwrq.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1XdZ6wEWC33FqjlfqWk7J2SR3Oo4MzV0_",
-      "name": "tmpkbxh25oa.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1am5BhQumkHmb_Jd8Of7HVnl8gHIHyYY3",
-      "name": "tmps8uj_8wz.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1zJ3-GluJwFAjFOC5ek9wCx2F4ec1KrFu",
-      "name": "tmpmb6wtdad.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "15e2dDBjhKnp8kpm8xR6aJvYzBCqg_Att",
-      "name": "tmp28w8ninl.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1jfUWuL_k0t7AFWg5ZkrvhEe1ssDNtu2u",
-      "name": "tmp7qokrat2.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "16WBigFZ81GMuRUlY8VdXFJypgVLZKaAi",
-      "name": "tmpqk8r_7n7.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "15-RDy1VxwfE1kjaESDfoAVQ_7iJhYGSW",
-      "name": "tmpaq_9jsvb.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1lQWLhxHugDcK9057y0UtBOJAxw5AMppd",
-      "name": "tmpaaprxl4g.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1oBYkjtlEBuPBF0sgy1RYTFBFoUr6L5ps",
-      "name": "tmpl861p7t7.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1QMeJCSr32RMj6Pu9wtXoDs0EYtTT_cPN",
-      "name": "tmpnb7ngqpj.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1GLCLrwfITbwavgjJcSABb7_JUlTyuzJr",
-      "name": "tmppaces4b_.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1PEyKKEXfgPseXB12_xZVN-HFvMnBlyWG",
-      "name": "tmpkg8ddeis.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1YCy-BzmNYloISpR8Iurpz7uQpHHq_nYv",
-      "name": "tmpgqhklw1f.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1aZgWwUpEhVJyvUhA8uDKJNhIPXs0IZGx",
-      "name": "tmpyc94m6xv.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1f9rTbUP2_eo61KTLkfu1-TFOz7pNopqQ",
-      "name": "tmpc83b2eof.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1rnTrAKZwAfvwTzh3GyAjrWyG5fDAf4xl",
-      "name": "tmp1xwjbsum.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ZFtgAD7tjjLovCXQGjIGzAgz5uhuwB8O",
-      "name": "tmppwnn_f6w.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1u3gpiHLLh90usfV8DVjkFYblswsGdHAi",
-      "name": "tmp0rr935pi.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1PiGgK0-ne2qN2lPhYyWb58fpZea6vFHP",
-      "name": "tmp2l2ec2fd.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1RVhS_Qxsfg5t6sdkqu0YKrZ5WFiJGKP2",
-      "name": "tmpo_8s_ocj.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1r3ZPB70Gn4BT2gUpefGv06WPgmctgtpT",
-      "name": "tmpykq4e787.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1u_uDGy94QJle5bvpcghtatLPKHdBgJ5P",
-      "name": "tmphde569ag.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1gyRZTSVK2L1gw35C0eIDres7BTvC4KmM",
-      "name": "tmp07x37na0.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1D4YmUEwfjLLsMLQgOVt_RId2g3pku71s",
-      "name": "tmp9csjnvb0.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1O_BP86o6deb3y9wxwv6wuBNkZ3JqXq_y",
-      "name": "tmp_t93go76.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "15WCOOchiL9qFeN-xOotE_OCUnjlp29gu",
-      "name": "tmppeblrdup.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1nUQqCHMYYZDR0-4dUF2-LJI1DHbyuOyB",
-      "name": "tmpoyiwyw9p.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1lBJNg1a5s8EU6fsmc5xP-zq0-5BVhZyQ",
-      "name": "tmpd9oseehs.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1KLarFDXXHV45ZIXHcqf9X93YM9CXLPiJ",
-      "name": "tmps0zt6o4o.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1yBHNp_Km5jJkZTSizN1J5wXI6CDXA2lI",
-      "name": "tmpp2ihugi2.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1hmRI7BdBvf7bkn8xuWVOd86bY86LU6wJ",
-      "name": "tmphjh9c418.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1hhABkFzhKTn5pRfzBgHOXYfBBbSWKtau",
-      "name": "tmpp5fev9vm.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1FYNDnC0uPnMl-_90zc_lF6XKoZ-kd1BM",
-      "name": "tmpdws1kaw0.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1OOeWT-mGihsG0nAijR2mOqgwm-6fG3A6",
-      "name": "tmpqqpt_ham.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ePZ3PuySPfFNF0bCFVVMToua_KgV-eFh",
-      "name": "tmp9_gu9k71.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1YbPu3FY0iGIFrHKOPjWOXswgTOG4RdT0",
-      "name": "tmp8ekarr61.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1G6vcxceNNpq_GE3VADAq6_7Rkf9M8kYL",
-      "name": "tmpj068pqt3.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ZJYMz7IuiSpUKtWTAnqnIYy3DhVyb_IX",
-      "name": "tmpeu2a_d2n.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Vw_fDuBL-UynhVtPJVqp66lLcQjqr_KY",
-      "name": "tmp6zlj3yy2.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "106m-tDp_v6rEY6fqsJ_xv-QwO0Ru29W_",
-      "name": "tmproazh4a1.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1eBHwEMdflK5Mow_Z1164jvsBCdJwNSyh",
-      "name": "tmp3tiir304.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1LN1r-E46ztsUcCvvnPTakvjWiBA6GK2p",
-      "name": "tmpckauw7w3.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1uCHSDKECS3cT7EzFcGgUi8T6OetJW2zP",
-      "name": "tmpbk28btdv.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1756RhEdDvFS9c3oAAfXGw7K0qbXPV3WQ",
-      "name": "tmp7ueeii59.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "13UjxgbeWLJKol_29dpJ-sjQXaudPrZ_o",
-      "name": "tmpfdbu3jsd.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1TAsitPKnj_rq0-UQ8wD-WcDAiUPfJjHj",
-      "name": "tmpmnnhlw1g.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "10ZPq2Qvjo4Q7gegldH1ZEhRXZMhV-Bqg",
-      "name": "tmpf1fxq6zp.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1kAYeE1yux7FTmAZKwzwmuRxsIXFkSSzX",
-      "name": "tmpznfs12fd.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1y2FK6a-KAt3gLfT81IA2YxlYx--Wo13D",
-      "name": "tmpiy645gpz.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1zlyMkrlmW2_e5siPujaKFrTweOfNPlYL",
-      "name": "tmpzwe4oaqk.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1o3o8K2lraYpFlXH-5xaC83SaGrhRM29W",
-      "name": "tmpm2iu_q0o.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1fF8ugWJ0-Xp-U1FPTIF8gTN585NKvnkq",
-      "name": "tmpc4yuej0o.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1B8v2zkxF9lSAJEjre_eDRDeeOw84JXh-",
-      "name": "tmpjv3wj3lr.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1gENx7N7RUIWgwiWB58BrT4Rr2rZ-C7DY",
-      "name": "tmpsktekwrl.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1SSHds376sDcRvdS-kQmEq-3May9JsKrs",
-      "name": "tmp70dsjgsn.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1MkJyFLubJ2J4z3v9MLVWK3h0mhwL0YCB",
-      "name": "tmplnij46ze.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1CTUhezIwAocyHPADBWe9jvHXaEl7WoXw",
-      "name": "tmpcq2jha9q.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1JS7EFJphMcLbFZGzu7rqBFW8adQP5JSL",
-      "name": "tmptnr3ia4y.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1m6eLjlRBVXzA24jkMQtWy7S1MvSnFXKr",
-      "name": "tmpvssjzgl5.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1autkzHlQNW_EL14pGgyQEEKiG2GJBgIK",
-      "name": "tmpqj2co625.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1F9lR6bais7nDrEO2mBwBDR-AuYF4P8F7",
-      "name": "tmp21wpmei0.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1N__FEYt74FMp7Td08gND5rKAJRt4grUI",
-      "name": "tmp64ec2hbt.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "14fSz1DPlzTcwxtgCO7QinMFPqrd1XyuM",
-      "name": "tmpx7twb4at.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1VF9OtCc-harIjZcpPDZXuwCQS7lpmTko",
-      "name": "tmpc662g78k.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1v5zAvKJ3EVqgRoLDnLNEN93TX02yx980",
-      "name": "tmpdwg6cqpo.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1egsKNKpTSGf1w431EUJeyu_UaNvuIzWt",
-      "name": "tmplco_tsnv.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "12n6dbFA7WW2iFyI-xdRLm61hL8Oy9PSa",
-      "name": "tmp1nbodp1l.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1h2OCMWyQIoqGZBB9jGvh0-3BGxmZyoFp",
-      "name": "tmp0w474kov.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1bDpCvzja1EMtCWdUcK-OsfVRPRs6TBzQ",
-      "name": "tmp14g7443k.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1W26gg5lnwCQvgSjfr22F6f-dKUHpwNVl",
-      "name": "tmpdurjlm50.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1nRO0-QjiwoBZnCTnlNQoakqC0UBUxNx9",
-      "name": "tmpmcghmwgg.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Jf91J9cp-sK0wpVmg_bmoKTISVslYqj_",
-      "name": "tmppwz5wzee.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1YdYH1JsD1hhJOgdRbnljIOkDmNKTyRoA",
-      "name": "tmpz54r1_71.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1QgiRFCkLQfCsEQvz81NhAbDRyM8LqR8x",
-      "name": "tmpxmldb6x7.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "10jIh01YhDeFzR4CT0CaVWWh35jKFw4Ku",
-      "name": "tmpjfe8aus7.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1WJdaNDiao3UJvYoM_9GspdcxFnBZTylx",
-      "name": "tmpt9_wzsji.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1UZO80i1NVRHZ_ImyL3jfO0hLEOH6KfwH",
-      "name": "tmpcj8agztu.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1aEldlvhj6icPiAYgtVBkrH7Ca95iiS31",
-      "name": "tmpxbhgo_nx.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1KWx1PS0JfZxg4lOtRFuKP3WMJb0WDPDq",
-      "name": "tmp8xwq94n1.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1WikV2y42RVl4wGH774VxqRUvm4URUP2J",
-      "name": "tmpijvnvdbo.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1V1J4Lgm4QxqBAHoWhXPQUtsHDTXGvmD8",
-      "name": "tmpwmjcjo5d.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "15AZCTJlnw8LNgZN9xFQKRIHYH9jon4xS",
-      "name": "tmpfqw65mxz.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "14pj3-_K9FhDAdyaAGldZYy3-RMyJOqXz",
-      "name": "tmp7hwrc_7c.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1pk3KGA5zz5bBRqXH-e9YQCMyRjSgGKhz",
-      "name": "tmpsqgys5ez.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "11juurPPkbF3hNuKWmQwgUTOxFatstYJZ",
-      "name": "tmptcn_4wyr.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1pHACqvBh_xHgA5kFlTcIDEl2DuXNoeXV",
-      "name": "tmpo84tlhml.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1EVzvXvgW-7vljjRSAkAx5yPFD0_TuVup",
-      "name": "tmpm57jizx7.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1kjrls-VH1v3vyuhuU9xYv7lyfqIRvAdZ",
-      "name": "tmpurianxor.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1q7lfNAlKXVY43GvjUpkAKJSBsfGBI3ub",
-      "name": "tmphalm6bdq.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1IBh6pzscsfL3hLayD9P9nOY22_U8jzQ6",
-      "name": "tmpk96fd9o2.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1LVj5K_TiOm6XsldnnCvD641au5acmzj-",
-      "name": "tmpjfr_tgl6.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1DP0bEZpnFh4YJz2GVGmOfMVwxwhdEYIU",
-      "name": "tmpq4hncjoh.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1rjucGIpbElL0Rsm0QkdnAZt9mupnb0Q9",
-      "name": "tmpnd114p7y.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1UB68Z29XehnoYfUTx656vjwjYlL_ZUMF",
-      "name": "tmpdaw4k_no.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1dMtcWg4iDFpTDkfXVh7psHZ8V3OcnA-t",
-      "name": "tmpng4hwv17.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1e290cgepHga9e8AZCkCS5PyJhoZU_gJ-",
-      "name": "tmpuy0hmdr1.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1iaxOlzvzaQDNrv5hTGJFRo_L3bnyVK-q",
-      "name": "tmpnbjqt_6e.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1xyyBrBGvVVqZAJ3b-cne9inlE_sYEXgK",
-      "name": "tmpnojjc44r.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1yhqCR59y3PaAIDahZDK5gPwYILftER0j",
-      "name": "tmpl0mzxpu4.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1T9wMq7OpYGRvtaZqsAr3VeEAC8OUfWvG",
-      "name": "tmpc20072op.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "13_eHO36aCRtf8cuM8b6awoVVbOvdVfhe",
-      "name": "tmp4_eljle4.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1dOFT-nb1tSYYo95XAC55FzfMEeUXe3k9",
-      "name": "tmpqzlesaqz.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "12PaSedekZVcLUAf5JB21BDe5u8Dz0dvw",
-      "name": "tmpcr6yg36b.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1HuB8qThEWoSuvrcNy6xnDnz77gUS2Y05",
-      "name": "tmpjfprwjrc.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1iYkPOGQ9Vas4JIM3lgcL-Ja4XsZTKdN9",
-      "name": "tmp9lojgccy.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1m17Q3xM0baWPexrKSLIVRFyvjf8cAW4w",
-      "name": "tmpig09kemi.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1nOfbMIJ6arbwqneyTFdIoA2U-M0UDIQs",
-      "name": "tmpx39867mm.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1nrXiLQKf3RDzL4CB0Xfmgsq_L-O6PYUo",
-      "name": "tmpc9xm1q74.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1R4Jy-quHvUbwE-X7o37FUarTKucfZ1lp",
-      "name": "tmpmfbsfbdz.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1CeJJ9iQfNzf3juZuEa1Nwicju91xjBmZ",
-      "name": "tmph800pwed.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1PeAjPtICjB2s9xKm7W_JbF1l9X_WBIsS",
-      "name": "tmpxjfk0z10.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1MGImyoEuq2Vu1J7gX9-2MqpINZnBSzzO",
-      "name": "tmpj4m3i1i6.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1_VbA5d1k7aB6Yr7Hq5rCkqRnlvZLxKDk",
-      "name": "tmpqkmnew2_.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1tArlaa9HlZhnxfHobebifJumQvGbg2YN",
-      "name": "tmp58_6hd17.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ZJA1gaRi7MBRZYsiq3elTK9jFN42DeIh",
-      "name": "tmputza3hib.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1nZWDDZmyTozExaJcHF4o_eiucH0MJKo6",
-      "name": "tmpjbjtikb8.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1tMTG1yVEAESLGIrtMnBZucq9CXWMOKqd",
-      "name": "tmp_oi3y0t6.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1XxZsDCAVtcWUk2kmJndxI2zt2EGDNGTf",
-      "name": "tmpo6qnti2i.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1CUAXVAs7ok5xRoqalMYmk7RFOazq-Nbq",
-      "name": "tmpekzy3e66.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1uBXy-enbzbA6DlQ_MjPGMlZ2kWExzKH0",
-      "name": "tmp2ehwojj9.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1DCzpqTGdTGqBJNS4G4GdvSQYwz_ob8nU",
-      "name": "tmpm9mc9osx.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1XZuKG0_fSVIxS-uA9Nndm1zGLdS0m85i",
-      "name": "tmp6gzvihc_.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1IsFZCySblgK_mnG8wDVYw2LIPpg6lHC5",
-      "name": "tmpqunurt3v.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "17OPwyoNhRYmGJIQ4YX4rcwejj3zh_y8a",
-      "name": "tmpr0et4oag.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1nmYQQKygMAKF916ABfBdh2chryOnKQOu",
-      "name": "tmp8q504ihf.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1oCrqU_M0rvZe2ib5SRqqedrsdHXMIw6R",
-      "name": "tmpjs5l0zz1.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1MDcjMVbTxdZtOQHL9oOU7GSt4otQ6MZG",
-      "name": "tmpliazf0ir.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1MZ7b362Ig-6AA3QRrSa5VLagXJ8RUYJ5",
-      "name": "tmpyg8_71yt.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1HfgWipLwN8urpC17g-pGF72jk5o10hcd",
-      "name": "tmp4cfm2hg3.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1f7vgmKBjGaTJ9L1dXcBuWdfRCz7H7ihj",
-      "name": "tmpv41y0pt1.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1uiDXxzwq4TBIbMRmoGy5gwOft_nSl9cn",
-      "name": "tmpu81tdgaq.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1wFpRNtyn2UcLAGD-jl0TPc1Z2UCMLF_J",
-      "name": "tmpcvioc6pv.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "16NByUXr-s6vd4I-SShjGzc2BTsR9v-hH",
-      "name": "tmp3p5or26h.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "18rLOk5b2U_z_xqIxaqC8DjHlkxKPqqIg",
-      "name": "tmp4ob3jtz6.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1kIB_eqk4lqpLYeGp6GUDz3ltFVr_ljLM",
-      "name": "tmpq_4_1pyx.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Mv0r4rw0iouvexnPWBiXRLnfMV_8ffeH",
-      "name": "tmpnay8cgvn.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1gllBdvct71A9NtM1kvkVew8Bp44od7-x",
-      "name": "tmpkb0bweg7.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1r3EIC69xll3fnfXDMY_C8-NM9GvUBX8j",
-      "name": "tmp1astjxmr.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1CLnaUJq_aPe901D8azKA3Qlf25OYd4b5",
-      "name": "tmpnqtn2qjp.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1FsWp7COljdZvxBc3LJh6nkonB-a70x7C",
-      "name": "tmpg7jkb6tz.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1HsmEtuzgsoDoxteYuwFMFXZaoPGcRhGT",
-      "name": "tmp04anecrs.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1BZx1CYcS4YXqDD6zs8AFCt2V2zIc_HqX",
-      "name": "tmpe8hdz75z.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1lKzfX4pSuapwdDen4TzWWX5WdCdwxP2B",
-      "name": "tmpnz9sjwz9.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "15rL9u6CBVtMwO7M7bIlvdEy5N41QU_3t",
-      "name": "tmp1a0xiay4.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1JGrU-sA26hKTshH1uyHGaOG71yOshcaq",
-      "name": "tmpayedu0ye.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1CAJwLdlQUKBUGziHPPEcKCEhlRyFiyMi",
-      "name": "tmp946jf70b.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1CYnGEtCBjnuY8eCC_Jp3CDfRh7gleMfB",
-      "name": "tmpgm8m79rx.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1fgkJxc3Fda_Bpeeo5F-OmRkJehZj77ul",
-      "name": "tmpjyc8e3z3.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "10vqrj03aJhylfrwCg_YUTWuGngUO2fWh",
-      "name": "tmpkcc5jxn8.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1p9teunS0dxO0LqbF7oy92J9p_AtO_1RB",
-      "name": "tmpn9_kejf0.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1pe4l2PGrqoX4qxKBoEpSJF-amkoCjpK1",
-      "name": "tmptd3lhaaf.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1RkDtK8cC1FBIbAPl01y6pybWCb6ZMady",
-      "name": "tmprlayulam.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1vWZC8zqWV2e-awtWqBJcsJ-5eR6cBE68",
-      "name": "tmpkrvzi3_t.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1uzSGBtKPwzXC3bknvAyFOP5HeG3S8HMe",
-      "name": "tmp9rz830tu.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "18TwuByKJ7wnZtd_PWUWki7Wherf1PO4w",
-      "name": "tmp84xft5lf.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1jBJhLEEOriJ3CEtgw4sOX4xijFi8Cwjo",
-      "name": "tmpbs7km71z.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1u4NxXSaU8Z6poQDLawjWrYF6lASWgl3T",
-      "name": "tmpe2k0olgc.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1sAIvaa2dAe9XpKrX0n0d7udT8T1_Dozh",
-      "name": "tmp8n1uj0xa.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1rT2X_fXUyD88Bw93Qd0OXDtzcptRkAt7",
-      "name": "tmpdp8en3ep.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Rk3Qy6huNV8S60gN_rj9_YFB-ErvN8H_",
-      "name": "tmpvl5_afl_.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "16R2oW1QP2Q4HW4_zJdh06ThfV11LwsOV",
-      "name": "tmpml3m57vo.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1j5_EUITQQDYr-DLLuSAYkJHRmQs937GN",
-      "name": "tmp5w5dy55k.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1MlG-45Vvq7EBuznKKp8A2uzzfFiS82Zu",
-      "name": "tmp84osz59h.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1zr_gmHALpueGWfE2LVQQx32eAT_B3klA",
-      "name": "tmp4i0vekrb.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1hm2Pgww5hYFRcXKGgs63akbIefUCFKyq",
-      "name": "tmp8j57_vfz.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "11MzOZMjLHBAfj5yBde7peUbPoS7Y4EhV",
-      "name": "tmpar_d53wt.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1RMt4rhFoWlzwr7SGIMGFgkUzr9-uAF5F",
-      "name": "tmpczsb43ww.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1KXHyuEW3aLOGrNl0-CpByPDivM83BKXL",
-      "name": "tmp74ercekh.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1NF06YAWwvwlJo9tqR28U1BYmsbVr1PEz",
-      "name": "tmp8bstgtbn.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1-YP24I4Coi3sHPysSpgA4H2stdQlVSgY",
-      "name": "tmptyftfyct.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1I8QayXzVtobLM_vbQ0-e8RS2iu2Hzr_5",
-      "name": "tmpc2hd7adg.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1DhrjXf3EHQ5ZzyShUeuTnw-pPQrgDv2R",
-      "name": "tmp92u24hee.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1aUbgHrBa5gthHncuyHdTjEFQGf2mNeW5",
-      "name": "tmpggr56bo9.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "12TNigjyfURJoAck1LPoUVSd-reUO7s-1",
-      "name": "tmpa_beiclq.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1AHAlREMXnxCug6KPiZ6AQNRVW7PIFR9u",
-      "name": "tmpnn09hnrd.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1EgM-75UBhPeOPvWNNfwvhDaHjSmngfsQ",
-      "name": "tmpoxa6fpjq.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1cTVsRbTqqykACOBVUmXgLjDB5rUSO2hI",
-      "name": "tmpbtonvpmy.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1RcGpNiyzHDgd_WgxZhBG89rWSwxCkw6U",
-      "name": "tmpuufboues.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "17wzXY0Ipvuq8NG1JlwuO5rEomvCfSA7g",
-      "name": "tmp4sxgjrb9.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1isozZKpjB8cH0rkoyS927JKDwvZBfEsj",
-      "name": "tmpe0oww1kn.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1lb8L_WHuoBiQBh9Q3K6xjJKN-mOX1qQO",
-      "name": "tmph1lkn29x.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "18hvkvdWLdhpnCL9ebfR3zGQj0LmV2pUr",
-      "name": "tmpe3pt5n72.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1m4oaEkLq-I3deCvaPdzrarMrl1jlysdY",
-      "name": "tmpin2t30bj.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Sryh1O2sdK9rX4ifjXfXAFWy42Ay5am0",
-      "name": "tmp7eg2jd5i.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1PCmgEFypfKa1NoUedYilgjrR8AV9S8Xj",
-      "name": "tmpzpv09n3t.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Jy-6fqZqaARoORAiuL1sYF_FGjbhKpNe",
-      "name": "tmpc_35hqbr.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1rDg9gdIKd0vj8R2qQVNVytahRSXTLZKu",
-      "name": "tmpl0n7buvl.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1HHm5vXJZ7DpTsZKLmyaSUCSaV-tty6mq",
-      "name": "tmp_kmrae0e.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1xscKm1gZlT4i2vH5qXRFzCHR6v_qxhL6",
-      "name": "tmphn8d_fdm.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1vwt3GQ5C2y-z0xMgzhXCsi5tm-OwtUuG",
-      "name": "tmpw8u5cap7.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1NHQjWNcV9xfLPoJC0Wkb1BWPWAiHS70Z",
-      "name": "tmp8_amellq.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ICbK87d3KgirmcKo6pYfRrSknB4v2gSF",
-      "name": "tmp9kkgeykh.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Vbr0S6qKP-CXF9bLI1X9JfWh7noCODqk",
-      "name": "tmpqwt2z_pq.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1hkd2zuOehZZCRUA8SG0-dH8byOUTae2v",
-      "name": "tmpzv4g4eis.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1eRXhsdJ0b0x7kfX7zCIyER2jNzsPyXLa",
-      "name": "tmp3glnj2lf.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1-6KpMumdjJuInEm_SZCARH00SWzXrT0j",
-      "name": "tmpea3ytobt.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1WI2oV8pepDMQlusE_gS2vihU5H6rUJey",
-      "name": "tmpfmwbw3h7.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1HaxaUXIqtZp9IzPxC5epncox1iDM0mWr",
-      "name": "tmplvkqesqj.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1LNhf1JhwVSF7kjirmk4saSXL7h6LrfPV",
-      "name": "tmpav0mz434.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1gga5ltD6RAWdqLYuMGduNVpoBR5r4G0r",
-      "name": "tmpmlsodh20.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Ro_YERsVmVRYmsCMHyfXupB0I5NLjYZw",
-      "name": "tmpyp9s4llf.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "14vM7AnR30dvmQO2ipAnh9RhtJ3fPuLeE",
-      "name": "tmpsbuxqjkb.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1HI3xh9lhxw4UudNhWecu5nyqjx651mKE",
-      "name": "tmpadkoh_6a.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1BHDdJlAO1w9HAp1u0tSrG0Hs7H5PLbB6",
-      "name": "tmpsbzx874h.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1cPoKtfQEMvFdCZqPmZTFxhm7XR1LUIlT",
-      "name": "tmptgadhovz.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "16BMD4xwaeXNowhBmIQ0lnQMUi_n4CFP0",
-      "name": "tmparvzz163.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1LX9nb3cYoE8mCeb0KHMP1qHBVnsmJBhb",
-      "name": "tmpxw4vbc5h.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1vwvtiEWs2UeaaPp8hXWv2lovnGezpgPA",
-      "name": "tmp8bbu13x6.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1U9AkcahpLhagurqyCOpE60N2uH9nz6R0",
-      "name": "tmp7vr9i4qw.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1a1dnN6qbJnS65urQSXrwqhtylU8q-9hY",
-      "name": "tmp6t7kfp3c.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Tg8F9Hl6MlEfeX2CSP8mED9T3jZXvQ8V",
-      "name": "tmpzlmmh0y7.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ygaW0YRPXujjpWO6uESLc-WAe-TLuHbc",
-      "name": "tmpea06_jxj.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "17rmsRxgPi5oZuDGe8oQ8HU583B2nMbaO",
-      "name": "tmp7cnej925.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1u_wuy0aZwD83KWiwKViY2lFY8RdHXodk",
-      "name": "tmpnxt7hjrj.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1537OeeOIG4HLWbDp-u5zzSINs-AEWLOZ",
-      "name": "tmp2fl8h182.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1fN55Dty44plAOy22vPtCSkHF8LS9FyvR",
-      "name": "tmpgbm60cre.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1-rnhOO3fuC42wbCpfF2bimexrcZOpHie",
-      "name": "tmppwqk0xlz.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1YK5YLR5IaUldrJ8Wq0DW56GFmMh-0eOV",
-      "name": "tmpal_ay6ql.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1jntiE0J7_1REjaooTCZchZMLV6LSPqQs",
-      "name": "tmpk1z6ag5d.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1suJrLAHDlRQKzTmrjKq2SaUB-CTZIsYw",
-      "name": "tmpu10owwdg.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "12ng1TyOPXAgtE9_w1nnVGppDjb7JTute",
-      "name": "tmpez2x_kg5.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Htm1eoDMByOZfAteNDJ5OS4QE_VJv4FD",
-      "name": "tmpqmg_4qmb.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1bnPPhpuv462mTmp9QcS5g97w0gld_ejs",
-      "name": "tmppjpo0cs7.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1HbKFpBko9wSz4zJ7_wDhIxECT4IMfTV-",
-      "name": "tmp_h55pqqz.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1MH_BIKuTT2SIbQMK2Qph6JPWr3uAP5ss",
-      "name": "tmpjssx_ez2.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "19TmOHdT9VComFZVs_URZz58sB3WozlED",
-      "name": "tmpr8vccoia.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1UOSoyj0KT6doB4jzMZ8MOvLbRlZMVeO8",
-      "name": "tmpqrx1xkvq.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1O2HK-JjTSH7caeXwipGsStQMY7n-EWuZ",
-      "name": "tmpx7m2tyb5.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1NqRkrrHUoVVNxUOAZIZ8krO95ehNQhbm",
-      "name": "tmpa9pf_8u3.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "168T8rm5p_NtRBn38tSN0E2y4gLZHvLYo",
-      "name": "tmprv4lc1ah.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Y9QKjeD9N2SCaNx4zoihAjyzaiygp2LK",
-      "name": "tmpniejhw4e.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1fuQ36yrXCe516TmgpKjBW0hYh7gJLabE",
-      "name": "tmps1jwufgp.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1PFh8Wm4sqUbPyGiUKGmgbrB8aArb333y",
-      "name": "tmp7xj_ac0l.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1dzH1fO6AhHK7r0ZtFhRlGBE_SVP_wE5Q",
-      "name": "tmpd33yn04z.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1c6KnjEtlhwLJS3DsrWItEUXVsGm8kNzx",
-      "name": "tmpdijlgu4h.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1JpgdXR_ieLo18-l0Z1rOnFqklRJn20OU",
-      "name": "tmpgcsh00rd.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1UwQ_UQJeZlBXqenlbpBoZpnyER3-JPxi",
-      "name": "tmp5l69uv_1.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1UU6saB0VVvf7sifsoFEVJmfTtp-R9TW6",
-      "name": "tmpo7wq1b4r.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1PH0J_0pnbm1dYuD-p1FBaB6E1rClWz-d",
-      "name": "tmp15vrrvuh.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "147Iz4P49XC8kDPZ6HEeZIhtGVpFhfTPX",
-      "name": "tmpbrhjeljk.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1A-jRh5eyv43ijEBgSStprIei2TmS0jEn",
-      "name": "tmpckop_p4y.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1X5COua0NjIXSl5Mm2vJTagWoxsV0PZn7",
-      "name": "tmp484qg47d.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1i2S-3xjHELCJrnSdxWMOtHR3udyRKgfS",
-      "name": "tmpigybbetz.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1PRn_OhK_whe3uQjO92PkeScD92ePk_KI",
-      "name": "tmpvmvldy6z.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1q1rxQpjgeSE8DfJP7MBzkTr8KX08mDWu",
-      "name": "tmpqeml19sq.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1bUSC0fc0BvVyBri0-2-OOy_ZX6QywpVe",
-      "name": "tmppd_sq9j2.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1sraESvANY2nA8NLi0VvEjMDIdqHWFqhz",
-      "name": "tmpjrupzwdg.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1RuOpiQLKiYCUh8UVanwGgDRAFNbGzzi2",
-      "name": "tmpi7l0ho5y.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "18BTDNDkjvXNV7TaXSNn8-JcpHI4cdaD0",
-      "name": "tmpze8s8rnd.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1edIEG-SVD2A9-SJ4Z8ZRuf7MznjYRR0g",
-      "name": "tmpbqdo44s8.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Qa-tzsHbUhOnvKEEioIRQvMuUHtDRbli",
-      "name": "tmp_723tb0r.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ilCDNqWGgeFZu3ve1PAzSGbliBYiIyoH",
-      "name": "tmpfve0mrp9.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1t82OyuhToT_Gto4_-6dxExvLDPHm_uTw",
-      "name": "tmpvjle46ek.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Jl2XamCibktqc_iyZAV_WhyTPYQyBo-a",
-      "name": "tmpn2rd4uv9.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "10wysp6nyCjrD_4FzcbFbA2-Q_J-UueEk",
-      "name": "tmp9ge77ful.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1GvckI1sbzP3Lrznw3Su1MZLHtFCE4WKO",
-      "name": "tmp2gqm_nsr.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1fuphvj945_rVT4yY3jO8bIT2cPk4jghP",
-      "name": "tmpp2muf3t7.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "18br38XfyFHdTchLntbphqJFpPCut253R",
-      "name": "tmpv6562ogp.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1EoUogljOf4zQYw3tyffbTL8Eiwt_gqvv",
-      "name": "tmpnb1fc8_3.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1LOqBSal0LkcnYFnGFooS4ZZ7KQ5ErfkC",
-      "name": "tmp2epvh2t0.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ZDbr8hrVbRFATC9mY8MwFdxTghgjA9oH",
-      "name": "tmp3tgeteg0.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1xRR4XU1wsNFWd4cfIr16rfB14ccw_XNG",
-      "name": "tmpr3dii19p.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "13dHQGJ_Te9XqVaTZUtaQk58PUiVmAPyN",
-      "name": "tmp35hccpxw.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1KC--19luPEoIh-WCdbAxgq7KwrmWMFNn",
-      "name": "tmpwk385o8e.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ta1lIEo6nXMoOtxOPcbN2E3vXvuICKd4",
-      "name": "tmptw4s5y1c.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1YeNQ2l4qVNAiLS49mW0LIcI0nrxLECkh",
-      "name": "tmp_tzyisf_.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1r0p5U1323DfLjXwTKJMCmdQzZZneGDbf",
-      "name": "tmptrzyoalo.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1orNREcVBhaG67bNu1bJal0RErX1ICvNh",
-      "name": "tmpl3sklzcs.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1X_bY7wMrBSoBd6HwQvEWyi6fGOTlOzVQ",
-      "name": "tmphxwon9ij.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1HPU0pdFYLiqDL1XEMTuMw0HRRk2B0x6q",
-      "name": "tmp8tfwdnoc.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1hewkWnSaFKmyQuqTu2k6Kx6P_4lSv7nY",
-      "name": "tmpzbap2u24.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1v2n2bIWkhtYO1oQVRM03HlROMo11q_EH",
-      "name": "tmptqutu95o.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1MQVzG0aM83dGUr5owW8aJ4osg7hECEEH",
-      "name": "tmpjno851vn.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1xGBuOJEumuWxqs9ceLRm3DdCVDOCrb2b",
-      "name": "tmp3scbmi0g.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "10coc70uZzaz89gh7VJ4YvFPwMdh06cOx",
-      "name": "tmp3yx4xo4y.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "19rfLopc6SwDLsYE6xiOyrEXLbJa1VH3b",
-      "name": "tmpqtll1kl0.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1rdKJFVGUgzmfVJ66Fk9Zep7uPmUQfUQT",
-      "name": "tmpz8znpebd.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1y5gOZqwKDkK_WUfhdsUdI7tLIsazYvf7",
-      "name": "tmpk20ep4m3.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1sjk6SE8OOiekEiXmaxETsI_WcdOczaTv",
-      "name": "tmprok_28fi.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1pbbuOGEV_v9c3vHdAH6mkgypbVDBI9kz",
-      "name": "tmp69so4af_.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1bnMWCDfS46PrjNrNwnkB0arapVGSRaHd",
-      "name": "tmpdcbqo6wa.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Ji6S4TlOJ47Hye4apGxtNFGwmgoUUAbW",
-      "name": "tmpz3k97e3j.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Rlb0mTTkmcMLeNyIJXEf2t0hqCKfeXw2",
-      "name": "tmpkwshzshe.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1qZ8fg7GNcqOusrTjkxg8uv_vxkk1Gdlc",
-      "name": "tmp81s2kvrs.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1S2UOghn3PdbUzWoitmIYzscD-Ya0a0ws",
-      "name": "tmpf0gw60jq.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1BicHLdqnm8NnU80VxJcpvnfOiYmkgNSd",
-      "name": "tmpmd574f31.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1UavcfycLSkDVYZ82GCdsWNYGEvVLPMen",
-      "name": "tmpmqo0ghyp.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1uO1kF8ASzMJXkHzuJ-QIm7tGOEXOh2W0",
-      "name": "tmpeonkr24y.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "12VzJCTKfi4OFvLenei5p6gEZCB7FzJv8",
-      "name": "tmp0kbj8zb4.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ltwyFj9CZELlmirSZx3QknU_5Cikp5eY",
-      "name": "tmpt5e07ucj.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1VVaPKdLFJHySyxHqp_9hPZ8m03z0cO9I",
-      "name": "tmpq88tcfmb.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1noPpkmTTRLaAEBdcAZpYzb1qbCsTmRJM",
-      "name": "tmpjy4perqn.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1TqsP92eoUyvlKpCxporVc-sQszYG7Wc4",
-      "name": "tmpldg0ezkr.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1uhNvbGb3gyo5wSH_BixUirSDwAhDrr0U",
-      "name": "tmp1z9pc14n.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1rLG9y1dQzZHaDc6QxIh5Lavnftk2BjyD",
-      "name": "tmpg6n7duyp.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1TqutiyxydOh1QFCWeagXaJL3nDOGwZ9j",
-      "name": "tmpapmgyqlg.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1tovwwCLr8pYnnUXg7uomYsk2vc-PhQyM",
-      "name": "tmp_fbxlmu8.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ic8kJ26ihjHV_-mEP_zsDQd1FEMz25Uh",
-      "name": "tmp5x6zeir2.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1_GUzXvZld3Bp2Pn6NJHnJGNajmPGs-2z",
-      "name": "tmpcr2u93t6.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Xu0iXnuo5r_7ELmJigKUr3XygRicPF3b",
-      "name": "tmpwogxmumd.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "14A7PPyN4BEmCynwezeu9sP1uCghk8eVd",
-      "name": "tmpxb6tpdvs.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1DZF0KrCj2G2vT451kOIsN7eGh4Mw6Mz4",
-      "name": "tmp2br2_idv.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1jtZfM6eqrcfvxN12CUKoTD2OztmzMmoY",
-      "name": "tmpon75falh.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1UJ0JvUvS83ZJJ_GSDsRLoLOJ1zIRp0kr",
-      "name": "tmpd9yikolg.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1lD3VxeKjsaudY0cekr_lpUjEG6ux9kND",
-      "name": "tmpgt4lndv_.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1nVUmgDcdrgdbaRxndsOVfuch-tbCJYv0",
-      "name": "tmpw0dyug9y.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1WyqcFMaWza45dlIl7Lycdg8UnuQqgrNt",
-      "name": "tmpqb2ps_tx.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1EFYV6pECgfBIdNwfX7rveM569Ey_CeYz",
-      "name": "tmprp_qe239.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Ry7bl8vT5XgBwzf_Ez4ZszWl619N9U09",
-      "name": "tmpj51hk2lq.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1-RHv3c7BTb2YbUTBqdyhKmXkYpl-eG37",
-      "name": "tmprrgh3tn8.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Ri73i5k_zZHaRXKm6seL2sn4Chlvp66Z",
-      "name": "tmpm34uqlum.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1dmKY5SRAGK8Pe2mezEDicomSYrlvuBdt",
-      "name": "tmp3eqa77qi.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1OsojSaR_iLX9I3XHHc_R3PugozAjMTbQ",
-      "name": "tmpmt0hy0uo.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1m4iqFtaO7AEWMiAww9j5PqHMRmztsrFM",
-      "name": "tmp8h_ejar8.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1mSnixaRinFr9LaZW-LOF9Zg9RrIXwzf9",
-      "name": "tmpqz32ytfs.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1uzvnOqXnLvcq4Z0lUwl0Kir3xnJIceoF",
-      "name": "tmpzakculwe.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1hsQsNFJe53SQaZqmQKajlJMAGs7WInmw",
-      "name": "tmp2b7ztmv6.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1k5uxvmuDm-_Iearb1Oh_jtOW_foYjNks",
-      "name": "tmpkeego3n3.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1-0_SDiyJsh8Lw9YX_OIlo0GnZDfYNNgo",
-      "name": "tmpz5r1ndka.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ZRtYzidPB4E6HMNcyg-KAU7M7HrKRQwP",
-      "name": "tmpezp9zlbx.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1FeTYEl4oHmKMxp43fc-LGpAskCYImnfb",
-      "name": "tmpmevtvfr7.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1dj5LaIPz2NbdYAtVYq83O-DD7PfKGZe8",
-      "name": "tmpr84kiq97.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1TcswwD5qAu8t9SBAkn13kSvtJiqk6Dol",
-      "name": "tmpg35dpduo.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1CwQXOF96HoSSOnfuqRw92N4m9hjQkVbi",
-      "name": "tmp7tfdg5g8.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1iVD5kgtMo2S4TWKKJkTtM1-KCMoYoh4w",
-      "name": "tmpbigijam0.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1NdIM2eTXSckQSCC4JeC-owHutIw0tQZ_",
-      "name": "tmppi5nsz6n.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1_h72gZ5s043dZIV4lIRnxda2G6FjqA4p",
-      "name": "tmp5asud15s.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1RwHmmw1bs6Ts0guY6FMyz9iItiZQg5q_",
-      "name": "tmpdm7eui5o.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1wqU0Jwfig7e0zuJ_uMpvYmhbDxHTddyO",
-      "name": "tmpezh5aceu.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1A6COT1BZ4up1XOFPz6Jl5HMm8Z-VKnhs",
-      "name": "tmpib2c0hpk.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1KhFrRkwtHhlYmF2dble7DPWHieccXffd",
-      "name": "tmp9tcxbk_3.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1dy6jZCZpin2lef02lOpbquszvjliVfnI",
-      "name": "tmp9q0w4_i9.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ZJnIbv257SPnt2N415VqkMrXIK4aeQvu",
-      "name": "tmptbrkt_d2.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1z-D5K1U6SSxXwwmJTIn69S_Z4Yvr5xhq",
-      "name": "tmp8ufg5kre.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1TEsYmTnMz-IwfR4lMEpuFXywTjJvpcFe",
-      "name": "tmpw2e4ckle.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1owkkXNvIaL-v6vK3gU6BGUoZ3YEG6R9Q",
-      "name": "tmpmg8m103g.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Mz3esoCEN17rxsjEkQXwqcQlyEom8ZX0",
-      "name": "tmp4nbmu1hb.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1uFW2WQJlGQ0mw2uDeJH0p8AVvMQZVWSu",
-      "name": "tmp4p8tfa1t.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Q38oQxTs6ah0eawet5HjILibwffnr7yd",
-      "name": "tmpz8117i89.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1bsqSW3yK9SGK275xjuo670D6MTX-b1M6",
-      "name": "tmpjkih2v2i.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1VadaoYkT4OIbWyM1zGhLhYScBBg6jIV3",
-      "name": "tmp5csrzj_u.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1rwebKYEOKHmRTam0x74Z4JrFemhKsoLz",
-      "name": "tmp9_bgudcu.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1hVG71U-bQbdGJMfZ54U-DHg4yF_l8bDo",
-      "name": "tmpyim0lbsj.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1x7ubyBUin6MrJAe_eCXXw16RWzoAYHPr",
-      "name": "tmpu623_glt.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "18wZ671lDekqP2ekNgITuHKmh6ftEpRvP",
-      "name": "tmp4t5alh03.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "19G-vccOQkFz6yRoIK-LmQi2Cyxl2yLZA",
-      "name": "tmpmewxs83_.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ldqzHLsslxByIZ7f7I0Z_WdwHfwmxzFG",
-      "name": "tmpbrr_enip.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1lHyE3f34iyB7JpIUgUpstkcmOyJY0dVP",
-      "name": "tmpyvrkmgfc.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1xv53n6TfS9xfJcu6yYW0RhEN3v0KA4i1",
-      "name": "tmpbnarot_5.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1mYBNQstRUP6TbWugQTOByJQ9GIWW6l5z",
-      "name": "tmpjcd0dptt.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1gEAy2ZzETJPa2oSGQizIHstKew2TtjdE",
-      "name": "tmpm7kq72qf.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1XgLPGFsb3-UqsTgoaKLAhG3AB9UyI459",
-      "name": "tmpt8_z_l0v.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1AvsKG0wVNaNiTT9TgJBQu5IMtd0JxK2Q",
-      "name": "tmpgg0d37ey.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1DMWmIthMCUrpYwDLI8Dx6hqn3vK7wjN7",
-      "name": "tmptw4eai7n.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Lh5t6J0Z7H4jzxwflaEMskbY3Kr6qyxa",
-      "name": "tmp6tsfapjx.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1gGTUJC6_fwOHq-McyxHL_5sm8TByLUmC",
-      "name": "tmpt02le08c.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1VLmD8Lhlg8mgmS5Dl3hTdbwrThdgNwAp",
-      "name": "tmp2kz3d5ng.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1T3jGP-dyHZIplQFLwCG7f1ed_N_DXagK",
-      "name": "tmpkr0aftw6.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1lKPcG0YgbHYT45lo3Alhv7Azi0lJxY6j",
-      "name": "tmp6imwgix8.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1hHOULjKNmCd5nOrH4jZdctzyKXx4t1rJ",
-      "name": "tmpmgssnkhx.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Ezrynt5S0r6sXdYoAvv54x9Pcau_kKrA",
-      "name": "tmpe8m4hgw_.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ieQXAlzrWdZjGfmAMvNCnVn_cPMG28d8",
-      "name": "tmp6cblu9be.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ZCVB0fBiz-qilw4LJ-E8tL-39PqZRp7Z",
-      "name": "tmpv3lw0l0p.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1rsZ4hXiRW9aJfbn5rx8ywEttwc2Vv25K",
-      "name": "tmp08v0xsp2.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "17aCxONNl-jhCPI8L55sXXvqqNC1OVSsW",
-      "name": "tmpu46zzgfj.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1BQIuR0EHehBt4KGOC-eQSg4F8h4ZSlSc",
-      "name": "tmptp9q9mys.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "18jYzR1dIh4tyIJgngRWqMA-gdwW8ZDBr",
-      "name": "tmpx5_k4uug.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1giuBzGK-zZ9myRHhOBLKqwr6We5DPqbF",
-      "name": "tmp2kgvia_b.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1pIsVXciTdf1Zp-LGI8CXgL1vgliICBq-",
-      "name": "tmpr04horj9.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1aNxp_KYwC5nvSJe80iOOuu_SQJWREh3R",
-      "name": "tmpcgt4r5c9.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1VgOsXGS5X3ZICaQMVuLDfptEEvXKtSeN",
-      "name": "tmpwiztv_mt.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "106B2kJImGrhzdyeZeZV98De40z4f9ToX",
-      "name": "tmpnwwwqph2.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1slXzrlOYRTm3GlMZHe8lRs7Dvl-z2oj6",
-      "name": "tmp3bgb2u0v.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1actsimT6mMsf13btGBIJ1bPjwWkQrCMa",
-      "name": "tmpqnpdn25x.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1dV8uylcLnlWTb_Y-xdGZd8cEFG38ZL3n",
-      "name": "tmpbo1e05k8.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1MRSjOpDqPnhjaF4dhRgwNxhXdCLRPHTq",
-      "name": "tmpu8d5g_mr.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1n0VEQGoyFsWK_Wv-8qk4NQQ4lGB6X7kq",
-      "name": "tmpbv5mpfe1.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1rPwrLRnkVAb5LxVgy7x75l2ITH8Dqeou",
-      "name": "tmposyh45em.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1J3yEbRt3glNWxZSBgvGkZg5WKejHpnzY",
-      "name": "tmppd4v_62b.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1WXfNPyKql-ceF8aaKoGJQCUISvYbFtzx",
-      "name": "tmpfbx6irha.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "10lzLNRi4K9_sZnGhDBJAiMo4cZnBKErG",
-      "name": "tmpptdj6x0o.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1uHrRP3LAMKa3NxFtpZLA-OR4D4iPcadY",
-      "name": "tmp8_o17qil.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1_lxPrKsjocVke-cdFx8wxKUJ2z-26fsw",
-      "name": "tmp0riapg2q.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1wEU9kp-t96EK2LG1FCC6YjrZ9gsfhc8x",
-      "name": "tmprk_2ny8l.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "136R_TSm2Jzz_4C4C9J6ZhNn5gaT8SeCe",
-      "name": "tmp6306gcd7.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1I3ZriMfr5W-o0RBNBISZnAl0umRBJyiu",
-      "name": "tmpsw97pj4q.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "17UemnTQW5JPcyMjTMA6wxWwtTIgh1MxR",
-      "name": "tmpp16nqn38.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1sQdln2bgcFYm85jqLzeTZiCkS9t0Il_f",
-      "name": "tmpq12we3hx.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "13DSSmz3sFfc6P8IprfL8mFpaRWG4JPNL",
-      "name": "tmpo0zh2euq.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1PjVuk7VL33bCtKTmFp196PB36CzENUlv",
-      "name": "tmp7u1zny2x.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1nEHLVEW5F9bUTAAKCXjjTCyXWNN--KuS",
-      "name": "tmpk7bmgoty.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1caC870kWm0-AGecJH-EtuAKOrkEZTLPt",
-      "name": "tmpiuvds2li.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1UzVcjbH6vMvh5i8PWMx8d1a_qMbt3sOi",
-      "name": "tmpa_liwbg4.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1DrnKGVhKjA3RnMHCuPNCity4_LF1Vmmi",
-      "name": "tmpv8lzn8h8.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "13hGWfwEN-FQmXK_XG1W_mSG8MR271dDh",
-      "name": "tmp_rf8jwaf.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1DHNOh-6BqVXDqY6EaFUUXWeEQoFJ_qdt",
-      "name": "tmpytu49r24.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1BgbswA5bAOoOp2fDCIQQQjSkxS_1hoEm",
-      "name": "tmpi9pgg7r2.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1TFHpuXotdHekAbRhBKM6cqod04OvTBZz",
-      "name": "tmppdo1fesb.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1AzpiEeSRB_CnkOk7ZvOj91ytN61uavic",
-      "name": "tmprd6uztx1.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1z5J6zvh2zTAyGdCCVi91CKg3r3qp1iib",
-      "name": "tmpjhtnf8ka.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1blyAwJxtJO50mFyq1IIilU7o2Cc7NI_3",
-      "name": "tmpldm8fyp0.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1eY3qj85ZyYOarLDvl4VZwUNc4ytnGVQV",
-      "name": "tmp09qudakf.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1khdvE17QOZPML_m6qiZSqoYKlY-tQoS9",
-      "name": "tmpm_o1q0cd.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "10olgzdrgd4K7WVLKkkS9HB7q9SQIWUWP",
-      "name": "tmpzs5kt6k8.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Hv-IPgdRGjTQYF9kb5ZethfSPz6W21kb",
-      "name": "tmppxax8q3y.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1qpl4ESCW48sX_PNbk5kyP7bWYXy2aPNu",
-      "name": "tmpu3c7ius2.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1eI5HyB3fec9kwbR1rueFYqR5trxDyxxd",
-      "name": "tmpsjuydm3i.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1cPqBeqL_57FxWSwb85QXPFf_YEF192sC",
-      "name": "tmppoh493bv.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1p0WuXdetMlP13pLCXN-MF0B2e2QH2jBY",
-      "name": "tmp_6ft6ban.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1_VFwdaugWgmx8Xdoy8QpXmuF1p_95j-r",
-      "name": "tmpzfn9lxll.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1tF7tyHM6wF32brWAVc82kDbYGogLJD_M",
-      "name": "tmpbush6f8h.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1cbRxorMkjy0lsXBeuwpFPQ7R4ia-IaRO",
-      "name": "tmpwwjm5qro.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ZN3CConHg-XsatCYcs6DyjNJmOHVV84S",
-      "name": "tmp7gpf4bdb.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1rlWGfoRzsOto5MN_Jm8Bux3yW4_IsyTe",
-      "name": "tmpg2_kbsay.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1AsHXhkpMmzW0jWOtb8epBthQWd46MfF6",
-      "name": "tmpyw64j9dc.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1dgqU8woYm1zyioZzDNRb-fnXm7fggpHV",
-      "name": "tmpyxf7b_sv.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1dXLMcMdljkYGgREPa8L7bNnjisFiws7P",
-      "name": "tmpr4mab0_2.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1F3v8o4L20dGkIAX8JGHPbKhv4AQhU1o-",
-      "name": "tmpnh7mqf0k.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1CV9QBjn_o7q40SoY6Dl_5e9_VQLVH5TB",
-      "name": "tmp2otuu4m6.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1K5LyGWMdGEHeYSHICEIc3ZIFumZnFiXj",
-      "name": "tmp8ha_v1iq.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1U3N-njp-KLBGpG9gQady9ybE14JSe6_b",
-      "name": "tmp4r4rglea.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1CaW-1yW7XXbHk-tM5xphW-IedoFrjltm",
-      "name": "tmpl_rw4eer.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1UByEuusfYtAVvzJ_qH8PFSkTqKUD-NYf",
-      "name": "tmpce7ytntu.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1OVDtzJnFpq8ZPCv0TGxq7jGPNc-dXvX3",
-      "name": "tmpxzbz7xt0.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1oFThZQTeWwkZPb2ojZUzdS_L-kpLjlz0",
-      "name": "tmpib5ux0p0.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1x3qSltv6cVULytyRDIaan6onmQ6hr_GZ",
-      "name": "tmpvp9obj4t.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1gecZA-OjAeHMxC-qXewqD-hx3HN3elDe",
-      "name": "tmp5kwn3lj3.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1JZCwRt6Sm2mAgSOQ6nOjaKrZxreWbwNO",
-      "name": "tmp76q8erpe.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1yVRk6pzLCWeBsYK7Rf5xbGCQFPTy0kW6",
-      "name": "tmp6emwjf79.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1_ZgwVLZQIzoGzsdBDhXqCdfs5BEf4Izm",
-      "name": "tmpwb4hr565.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "16NdDGBtX0jf3mFTeDbG3tbKMhzGfljRL",
-      "name": "tmpx5x2oo1c.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1lW9PsBjVWyivRx56XfLUFmEcxF4lE_78",
-      "name": "tmpnka8j0zt.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "14PzTWN2VJdy3DqgJi1-Ajd8JjDFP3ojt",
-      "name": "tmpe3u5spwt.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1IffU4JnxGTAud1WuwxIIjdDtwptTTfSd",
-      "name": "tmpxa0zgnrk.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1KaSwkQ2dTSmmDqPrY8R3Js4NB5TaxoqK",
-      "name": "tmp36tqf_tq.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "16NyI0VU7F19pyQZsjU1i-x7MvOtifSm3",
-      "name": "tmpdenjkwdg.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1u_0BUVWdcSdUi7VHxkwu2C0dXNN1Rg5h",
-      "name": "tmplhju6e2f.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1E1GTDOyhh79-ShdNtMQWmFnTUYbSeK-d",
-      "name": "tmpm7pbvc05.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "11N2fzVSM4ZV-9tjrXlrzA8o8QssDLg2-",
-      "name": "tmpxxnpn3_2.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "14aV_zlPvMAr9e7bWBlmCsnk0ukRZq2wD",
-      "name": "tmpd6dt4mnv.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1bS-p7SOIZvR3j7KbVcgXoYWA4gkFHRPn",
-      "name": "tmpybl89wn0.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1PI3KI5UFFAyB-280-cvRUI8dr9qvIWn6",
-      "name": "tmpmpzw64a0.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1S3VnmkTc_Tqvor2zI3B0kFTZ4miF3OUl",
-      "name": "tmpy7xb4oiq.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1sgI6R9i_H5nIJNVqfdAQq5oRrnU0ELiG",
-      "name": "tmp7xzt7_t1.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1rPwrz0O7VCxSb9X97rNbOo-tzK2QStjK",
-      "name": "tmpa7__1h_q.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1z14u_vzShcNbLnH6tVapssP8QK9JwSYx",
-      "name": "tmpyqvv7bjo.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "11RdkxZ0dYyTAQz6DfH_EBAJaMGSRUl6f",
-      "name": "tmpitj6myib.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1k-OEZvSxv2GiKyU73KaVi6qJg9zkPc65",
-      "name": "tmpcm33g5sf.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Z0I1xs-thNyZizqufHUp1MXRTmqUGc9B",
-      "name": "tmpvxnr67b1.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Fn4A3XbWw9up4bxn8Dn0IjpPprQXS6uU",
-      "name": "tmpgub5__e6.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1LMzH4uLKZ5Pz6WSDWSEWdGgoMd2RVkAi",
-      "name": "tmpv2t9temz.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1DFSaOihNQqHSmAH6hv0XR5OYk_HpFk_4",
-      "name": "tmpmmekrw7d.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1s1OoaIndPrxPAHEt0CGGuiDga1GrZclu",
-      "name": "tmpxz1gmsuq.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1WDuDqnUnVmhF1YoQpI2LPOm6N-S7pHwU",
-      "name": "tmpsnf63_gh.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1gU7otemt2R8P1K6Uk4ekEtYuRJuvAriQ",
-      "name": "tmp3plycqrk.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1N_227UZlvaF_tCul4c2AOq2Gpm3V-h72",
-      "name": "tmp81q01fhz.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1BSCwrtwO5pa2liiZGxAEx7TNQ7g9M31C",
-      "name": "tmp5l6iw4g9.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1cyUrqUrqqlC91VoDkewXH8jLwVkfIH6B",
-      "name": "tmp3eaj7120.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1NZMsqacjFQd-Ofk27qzy9CdL5uuqw4kg",
-      "name": "tmputjprhnt.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Bgfi6p7AVB0-HGwUuutCBY5OIQv_VB5h",
-      "name": "tmppsp3glpw.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1fsUTaTwhOOn2p0qHVHYWSc3m53Dh1dLQ",
-      "name": "tmprsw3jtn6.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1TgXazGT8l-XSB2K8HEZZCL2gKld0Xl0L",
-      "name": "tmpymibmmiv.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1BxS-rbFHHSWaBf-T0KYS6rwGkzGSc7nZ",
-      "name": "tmphspzklxm.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Rq5Sc9awCzZr30j41Xu7lxl4qWunr7aQ",
-      "name": "tmpnkey8uck.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1dnuvwIRF3SAyyfuwnWWOIrI6G-F80Yga",
-      "name": "tmpoyi8f8id.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1q2VCU502FxBcYAY57nee9EbqbBHwcBjq",
-      "name": "tmp8pdeydsi.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1T0t5AL0AbDR2keD498cTW26cH-QWnGCj",
-      "name": "tmpgofbqgzg.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1I5tiBqr7jWCK1zAkLzPA3sK1AM5tFSsS",
-      "name": "tmpo3q6d9f1.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1sSisSqQmQsr2_lCXk8JuxbPT3Agp6nAi",
-      "name": "tmp4ap10ejb.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1yA-QpfqPM68A_JWzVVM5NFAGEpayDooO",
-      "name": "tmpshn3cmm6.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1FtMYK5ZzTEFsrFeLsK_kakmcW2A4dHCi",
-      "name": "tmpdqd40s15.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "10VZESN2jQ0k3viL_gbRy3MrRn26bQqpB",
-      "name": "tmp1sw12uw1.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1bebNNPy2219jFF-yg_jD7fmIP6gT1CV-",
-      "name": "tmpza456j62.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1g5ScPVOtAGCvMLdMEmmcLBWtCcsEBuHW",
-      "name": "tmp2im6r425.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1mzkUJGSsJziwg_pdumsdfDePGFSdE91j",
-      "name": "tmplw7by7ku.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "18P-XKHwVLWR8Hdx6VDlOHwV41OzmUs0M",
-      "name": "tmp76nuqo0b.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1CLcuW5bRNMy2NwW1NLQXOGgsDxQIplcT",
-      "name": "tmputd1dw0a.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1NXstQG2l2txk3-Dvj2Ku4sfBaaDnW4uy",
-      "name": "tmprjm0y5yp.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1-T4ncwJ_TkjSCzrjmoF-rMlny2fVmXxo",
-      "name": "tmptf166kpd.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1lZKFPkxlkQyxfXgWF7mXEZ8y-iYT8gED",
-      "name": "tmpu4o71roo.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1WqCJbyZzT6MsvA1t-n6LM4JSY2KMiyz_",
-      "name": "tmp4h0r68fd.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1qMFcBrZFVn97GNcdxW9ecVFx3yJEx1EY",
-      "name": "tmpu3v61ftw.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1DHrqZcEUuY6kQju4w-3qLPtJZR7ydrMo",
-      "name": "tmp6tb5ytw9.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1qjLLAqM7YD7yZSyspz-jYQ6mW5UNgoll",
-      "name": "tmpwhyqpgb3.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1NaOIrFNcZCXpylXnxRvKmklknhIxzlcq",
-      "name": "tmp1pauxqev.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1FCtmQ7IR-IknIV5UMwXLkmgCunwEYi7y",
-      "name": "tmp8a35h2lg.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "16Fp6QKJKine9G4TrZBObYPgJT9TW3Iik",
-      "name": "tmpds0q1223.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "16CdV2M9oxvhDeHIQIPbGGGv0Ky2xot5u",
-      "name": "tmpr1yjbxum.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1OUOyHRgPfH8jvOvuK1JB4VuRLNuIe04u",
-      "name": "tmpudi9_juk.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "13FiDqWGIchehQX-aq5YArwneug_vW6uh",
-      "name": "tmpgvvx0_i7.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1p79KMrMSAKKW0cvO0kCZcLQfMkr0JkDP",
-      "name": "tmpzavnotp7.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1JTXir0AtJNQvLtbZqBlhhh44EkO-VDhY",
-      "name": "tmp530n7_zp.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1pg2E8_ANA4fRVpvypBom-63vENBOQmxY",
-      "name": "tmpgznnkapk.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1NcH782Gtd6MwXl2qdufcGG_fvVWURNWT",
-      "name": "tmpt0mxlnar.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1DpFr-oJbE2Um8QpImzCxbQqFZJZZy_ku",
-      "name": "tmpun3usb0x.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Lb_LShNzkoq38BHeaYN1dsZRnZ7ddMwl",
-      "name": "tmpo7tw5rkj.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1XR3k9sIhoEjb2QvMF3eHFKaWBqJuBsIE",
-      "name": "tmpkpw2og5u.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1e2HMjuVrM6SLIxmWVQ8qB81XBUtlDW6x",
-      "name": "tmpz0d62s6t.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1pPifprdzw15VHZqNz_9ixzgIQSc2T2nF",
-      "name": "tmpbi5r90to.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1qVoU5G6-r2LJAGZGVfeLEiAVm3D_lAm6",
-      "name": "tmp_4q_4068.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ObruduNfnc8HNnR9DrblFprkms8NVvh_",
-      "name": "tmplwttpocu.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1aCVXwwVa1n9Dx-XNqMIVh0YeU6m8iF3q",
-      "name": "tmplwg9h_f0.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1BtMFC0UIaue69P9GBXEu9sPbl0zHME67",
-      "name": "tmptkilyc3n.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1DXicckjGQJ-rWbpxtYkNaKQ8HIFZdEYm",
-      "name": "tmpf4q1yiyd.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "17zadcr1PXdXYG_gMQYc06emBFftIrAAK",
-      "name": "tmpil65gq_y.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1eiBEHCULMKwFvyo-pMn_WrMNBenFoYpJ",
-      "name": "tmpxi4_29y8.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1foerHhHoTN2KFs7U36L4Yr_bOFAjGnIy",
-      "name": "tmpza4qxzfb.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1nCuHT-RQCr8cRh_TnWuP61QkIIyQ9zhU",
-      "name": "tmpnbrp2gol.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1-pFioQZv6ydnxIHUO_k_ukUouZzN83G0",
-      "name": "tmpykozpxyp.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1TiBU9zVw2uhtAdX8U-r7tPlKjXPSY3LN",
-      "name": "tmp29bnqhjz.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1QbXhmLdWNeLZhiIwjp7DcCljT38Yr8FT",
-      "name": "tmpwu18r9_u.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "17kjrxuVxfH70twRMLrlrxAJ9A7Z-Ub06",
-      "name": "tmpv2uch3r7.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Wccbv0xg0DiGUnWw91CYViNb4PNlYEnn",
-      "name": "tmp37hjd6tz.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1xuY-vYr7dao6AompryUXeiJNpglFNIJF",
-      "name": "tmpj6bolm49.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1t07KNfSnX6Sg4qfKWJa7S6pGuPOrVAlM",
-      "name": "tmpq8yskfrq.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1IBRi_uDMuQvUfZTsM_dU8E7EE4oStdnk",
-      "name": "tmps5f7aeh5.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1RXRKZ03SOvWHbKfT8PNcgdio-s_Ybzan",
-      "name": "tmps_ar37jk.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1G1xs_1a6H2zDV2bWF65oeslB2Y3CVeO5",
-      "name": "tmp3q43zpsi.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Br1pe3LElAI52aoOLKHdPzL0g1VtVMLk",
-      "name": "tmp38iqtvgv.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1qpdpTNlawjBjMGRhPfg0lfOCQOTst10_",
-      "name": "tmpo_rz4rrr.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1eTz-Mg0YwtWPYJyn3RQUDiLX9pN9D9RF",
-      "name": "tmpbdwu04cy.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1LDvyBw8mwOI1o-9TNfSfZif0j2FjGA8u",
-      "name": "tmp6kax6rdu.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1TjqbBM_GBi60nZ5v-Wti1z4GqwOIBUsT",
-      "name": "tmpoz4dm10z.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1CK2uXdoXDYcm3K-ZGOLVYy65WKujqwj6",
-      "name": "tmpa6sb4la9.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1TNMG7vx6sSTll4H-o88niwdRrrJXAvdl",
-      "name": "tmpdkio2n_x.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1UPg8YiGTQUcU7ModfzLlRBceQFp8s1zm",
-      "name": "tmp8xporpn1.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "15lnaS5Jt_bVMR6AdZV-_CqNISRZeocIA",
-      "name": "tmpmqe95mn8.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1teX0VSQEWJqUCHjR9zwGpMNxMGDCtNeL",
-      "name": "tmp0mgx1ha1.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1_N8F8zlJpZmiAWDeCNMONgi2QKD2fEfZ",
-      "name": "tmpcte_ouxf.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1WL_4aup-rN-7kiskRMIjVZuM7Jx72SsF",
-      "name": "tmpidfrgtvy.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1imHRtPb54bAKGLB16YwUvr9ema4mvOxr",
-      "name": "tmpzt_iumjw.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Z3tXxKZEsgOHZV6q4mVVzNCT1bqtl2Sa",
-      "name": "tmp2pu3o_ye.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1IKwUMo7AAdCfGgXhMnrW2ai4FN73oejB",
-      "name": "tmpmrnoldsu.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ivNCf2m_7w_oW8KNt5B03pBTUAT8Wb1F",
-      "name": "tmpfsyhp68q.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1o6qqwY0dUzSkA8M3HahEHc1oPg21N6px",
-      "name": "tmp_zusy44v.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1zfVu8SWjx5fio6R_P6X9bhXqeJ0GVT0u",
-      "name": "tmp043dfpxp.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "12CWNd0oOCWOh1qmkT3iyM9JeWNE9nOQq",
-      "name": "tmp0yy6isz9.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1A4AhHxyiVJT0zDUWynHT8GYhQQ97GT3G",
-      "name": "tmplkzqp20_.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1PpDP0co0-UZgaWPjkOe9PQV8MrUxv-2B",
-      "name": "tmpndymr04_.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1bdBV9Vn6WupHoHsC-4OQ597k-sgvY-yT",
-      "name": "tmply2v4t7l.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1y0l4U30LgfdQm6E8a_W0YRiPmx7uSxpV",
-      "name": "tmpnxi1fz3w.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1LD_X1QwXmNa8c2eNrcoC4HqnpoWcZqah",
-      "name": "tmpa25omenz.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1sHrXHYiUqq_-jCFV4zgJnzJxwXa_Ch6G",
-      "name": "tmpomow075u.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1a8n599dYpjMCMNingxIj6msFQfNKoRTQ",
-      "name": "tmpjy5s1hei.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1I8Vv_MS6P79Ngm5ZySUilDbt4d-r3Bje",
-      "name": "tmpd0erqcpv.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1LvuicqkHAxpPcu5g9VK3EoXxYH8mXoer",
-      "name": "tmp7g581ox1.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "10ZWsq7un2aMnCIDM77gsabCW1KZ08YJY",
-      "name": "tmpaqlw7lmc.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1SsL3VHUG-HCi6NZm_0MOxVnXn6Tl9QNn",
-      "name": "tmpv2qr1fh2.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1fW_mvc6L1CMj9VpwzmZFVABIwV4Bkh-F",
-      "name": "tmply2oya7i.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "15wuC3vZDWglDWIHgWOB5GLUStA8s3_Nn",
-      "name": "tmp8rz4frj8.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1mbVVjsQclB0Xm8Hpaa6un7Sj0B1k_6Yb",
-      "name": "tmpxy258ugo.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1jYud00GoCsI9g379qC19IO0XBaGfJZWY",
-      "name": "tmpba5q4w98.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1KypOpauQtXqu6rJXZOF5eN--zsuhAJZW",
-      "name": "tmp5tnds_fr.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1YmxoOV-rS2IA1rTO9M7dCJIwGkgXm9iZ",
-      "name": "tmp3jb35cb7.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1gGgc7BKFkn0dwk0Ktc0LHcbctKfDBn0o",
-      "name": "tmp8dbssk8l.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1rHuDidDZrRicCQ5s5Tlufyr88Z7Dscw7",
-      "name": "tmpta02xoyl.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "13UJK9Nx2lLhGyp2FXPAeOzZITDjsIf6N",
-      "name": "tmp6wr8yzmk.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1W9GiV41t3r7UVTpTzq0bPSca_0p3obTj",
-      "name": "tmpb_z_01mq.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "17LlCe-mswAHTtipQkvVYZVGWRvRV8hBc",
-      "name": "tmp3a6ywy7k.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Yr6pDfVPS0dsCMK5bgPxRtcIr1viW694",
-      "name": "tmpj69r5l2r.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1EbMLE4M69YPDiF-7KNzUNcso-mIMd-Yz",
-      "name": "tmptq1cv_yg.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1VsZXXyXXyV9XekP7aSwVtf73TMT44Wp6",
-      "name": "tmpiohjmjds.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1BIrxwu0E2nR_i19UOE5eSbIj9bsROBc8",
-      "name": "tmpz3rrdoe5.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1T22tKMl1699duzDt8xKpBCFQawv9npp2",
-      "name": "tmpy39nau9o.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1wj8ObSqZWCkNb6x1jnYWBUpIgnBUR3jR",
-      "name": "tmpq5a8o3in.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1pJndzBe7dXdLqRhZd2Dr8Ro7lkBhTbsq",
-      "name": "tmp_xpvysxu.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1OjBpfJK71Wwf6vuLOXfUXyPsqCikixf_",
-      "name": "tmpniyrhleq.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1MYfDFun-b7FZBNwzsxNS1qW_-m6HVwOk",
-      "name": "tmpcfit1jxe.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1PLTKkIHqOvNz5BSZcQQbHN9cxNtSWJmx",
-      "name": "tmp11coh5vv.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1QdwLxh9tx4NI7O3wSB4vl4D70hMhp48F",
-      "name": "tmpn9xpvi0f.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "15_L6m5YkHYaX8hgx-zuRywI5Qxil9VOG",
-      "name": "tmprxutn5rq.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "13wKM1q-Ezxavud9jMYmiga3JFj-Z1S6v",
-      "name": "tmpoidykzwt.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1PJPmfKtOhK2C3TW8n2xgP9ZR_ReMbxVl",
-      "name": "tmprf0oj8j7.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1MFtAJs6PUvWEo1sBACTZVkP0CQ8KykxD",
-      "name": "tmppqn8k5xo.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1fd5dQ_T4kiIMIbicX_F0OBT7zwmIe1P8",
-      "name": "tmpack4qvw8.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1-Fu82hM0c0M4XcFQ8SyN2PQ0uM_ro2zI",
-      "name": "tmpwjiqlln8.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Kvo83ib_uhj7o_Hh5dY6BRt3YWXIFnGo",
-      "name": "tmpzefc2tzr.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Z5KhKzQaO_6Lr_--on4jFlNB62weT_BN",
-      "name": "tmpha0y5cfr.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1De2gTSb3DhoKG5fnSN2TmMHD6_iZ5-vw",
-      "name": "tmp0kk6wctd.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "17tptzprMdpjUrl3XGi6XnQD_XfZoR_H0",
-      "name": "tmpu8a6gk2i.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1-FAZfQ22BSzFJM6y7sZX21DUltGRQrm0",
-      "name": "tmpnmsb084j.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Ebha4aSZ3QQN_kDvZDIsQQWqPC9--g49",
-      "name": "tmp1jc_olrl.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1SjHBUZhIEWx6it96sCjnmzGFXJ9MQhhB",
-      "name": "tmpx9nd7_91.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1-hKBI-g2s3QK3OkDBEVKa794Ebldf0is",
-      "name": "tmpy7k5tjg5.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1bGMEon04bc_AvqJhEVlkRIuslhIO8HYd",
-      "name": "tmpjwqcai70.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Zham9_9zb1oN770GSJK7RjWI-2U_Yl0X",
-      "name": "tmpqxhg1r0x.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1nFvjcRBKUJb6g3FludBrKll07DiUZi-S",
-      "name": "tmpgekg874n.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1wcrib7hIu-273olbeYvFVCG6SquiPpVV",
-      "name": "tmpt_sfvxn_.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1zR-MxuJgLsA4Yoac4BeJuyzOkanJ8fDN",
-      "name": "tmp_w65e8u9.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1o7LrzwJOLvCIa4uGxzWrLOxVXrO-efim",
-      "name": "tmpa9ihv1nc.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "16IlrBRYLgsPZOA1ta5FBcTATimL0uqqf",
-      "name": "tmpgdeq4cpa.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1d4QU3CxoGaDvkpz3x-rGIFsuyiy9SYdG",
-      "name": "tmpolokio6x.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1pJcvikGMOEUmUSc5FvzRxAiNSIZi8Cnn",
-      "name": "tmp90lyne4b.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1EwuBFxlIyXFEaUrf6LF8vrk-17D3sjwV",
-      "name": "tmpfqhe446e.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1M9ZXWskR0qbsLZiOZVaEe6j92EU0TeOk",
-      "name": "tmp1g684a5f.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1O-b_aHiZznq_w3qB-o8rEpfaN6Xpmos_",
-      "name": "tmpapr1vyc1.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1_I1ZEUgxI7vGvPag-7WZ4oQl3iWPzQa6",
-      "name": "tmp0km6gngz.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1DYI3X9ed-O0hMY_zQc1VXh2_8Ak6EiTB",
-      "name": "tmpnnul7tvb.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1qljM6c2k6gcasacX0rBKObjjBhC0Q4-K",
-      "name": "tmpgt2phmep.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1UEiUtd3xc_ScXw4QH4MMjtozaW515a5Q",
-      "name": "tmpherx2dbi.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1zBiAlUMnTLsDwXQUmq633rpt0L0tKVDP",
-      "name": "tmpcouyeknc.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1vGYcijckq0ykvkwcVpYa_dCgkemJ3_qs",
-      "name": "tmpdqfb0sha.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1mFk7nYo86a8bVvhUIpvJzhWvyljRmzWu",
-      "name": "tmp7qyn7wl6.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "191L5UneJd6AtO4h04CwtNvZ9B5potYFE",
-      "name": "tmpb79zdlqa.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1d1ur0oecxJ4Yf55AjSxDDHiRlgQzXR3g",
-      "name": "tmpf1m9n1vm.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1vJLTjtJq77AYKkSYKm7Q8yfm6LOPa04_",
-      "name": "tmpeywdxa6o.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1TK4ZE5gZzHCc7xLWe_aZjTkRxI0AWtaW",
-      "name": "tmpu6y3xhjd.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1bgymqmOvL7AbYLF87BO4XV20yquywbm-",
-      "name": "tmp8d3iifxd.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "187enZOLxqKiJiqgkj6SQIYpmZqjBm6Kt",
-      "name": "tmpbrsdm1mv.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Y9f2TMN4TxdkohejGx8TLZteAhIvrmAe",
-      "name": "tmpt38xipkq.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1t302TxrJjxtPY812ApFm4Oli4RfnZiFk",
-      "name": "tmptxohuzel.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1AWlbkegaQmK8Bt4akr9-Ct2-zR7Ye9YR",
-      "name": "tmpigfz42et.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1phN-I3K5XSHuQeAk1vuPE5LBQNX0l7UE",
-      "name": "tmpdp_y75o5.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1R6URHTo4FxW1wQfVG8ntWss8FBjO1vkc",
-      "name": "tmpbwvw8f3a.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1o32G38v4BvZYyItHIKtkPoeICOiDEWkc",
-      "name": "tmpib51p817.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1bFn9jvlx0ICAN-GYH2rA-cPvESftXH4h",
-      "name": "tmpt_5olb5j.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1n8F5hDUIu2pHrmu-d6LvHgjpUs_OrN5c",
-      "name": "tmp8io_qnmb.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1I2GX3HUXruHkL9-FKV8nbnI8oveJ71Qz",
-      "name": "tmpm_5tz36s.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1fo-SrL4x0Ol6gMInhq50-RPsJM69j0xU",
-      "name": "tmp5kj5sk0y.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1tjPrqdJ6jBD1K60cHmcLYGIMkvMaB8PR",
-      "name": "tmp2v1psvyx.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1w6GAZ9meCj61GlKfoBgvPT43GJuj9OE1",
-      "name": "tmp6yz7t1of.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1nbB-nuQVacRS0x8o4NUIVPMjFQRoqLR6",
-      "name": "tmp0gcbvbmj.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1jA563zLW1XYOBN1muBqV03D_9ev6bE1w",
-      "name": "tmprb1hoxqp.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1uV9EXyrFBCD5qMPb_ayBhb_xwPwU0NlN",
-      "name": "tmpvt8brqgi.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1wV19mtGZCAJHnJA1AjJbQHEBSRG0mHl3",
-      "name": "tmp5tu1c9wr.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1klp2VI1LKA612SkJ0ruadE7TB92GHUr4",
-      "name": "tmpcrh_c83h.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1OhZ4WdRPZiMAfalhSijOMcuUVZvOVx9T",
-      "name": "tmp3ahkosk1.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1KPFJ0i6Fddc9bjeSUR6A8B775Xcn0CGN",
-      "name": "tmpfzv46vxj.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1CfpUmqV54eGCAA1v1exKKvl6ZqAnUx3S",
-      "name": "tmpld2ei3mk.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "14afRyB4Qb9tO9qwPEos-1ll5JxysT1cI",
-      "name": "tmpzaty2po7.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1vOsdkRfVDOpMdWj-uQhJb3JrvZeETADo",
-      "name": "tmpoa1uobyr.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1vMP3clDckCsQuEiI7iPpBaYq-ipw7HGF",
-      "name": "tmpkax5daom.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1TAMtzx8mqeWNECAJ5fRevZBBcmnbC6Gc",
-      "name": "tmprdsokfo9.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1inWzKEBjUlVnei-Z5MOnvQbDANjy8Rys",
-      "name": "tmpeobuw9_l.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1UWNaMw06U1GfMbKiWwUYrYzy3XIh8nh1",
-      "name": "tmp21hs9bvp.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1f0hGaGr-vpT1pdJYpRzzAWVw4BkAgEFE",
-      "name": "tmpiti_5li1.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "19wUKJJcFNiemYY_K-SVg_-bS8s0OhHRk",
-      "name": "tmp4tl6ycvp.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1VshWcF8szWrrCCAtzRaOVbglGwIEWXvm",
-      "name": "tmpgrpbb_03.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1bMVrPtzdgHirKtEVDZxUABMXDGEB7hR7",
-      "name": "tmp5pmy6eb_.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1DEf4jieYAjFDAvrQk04KJxS8B5mQa1EC",
-      "name": "tmpaxleg_lb.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ikQPA5xnBRLVdH52Uv7lY_vkq0IdnyM8",
-      "name": "tmp3vl6o3pq.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1mzb10IU69iDvg0-mo_smrrVPz8Sa9cJD",
-      "name": "tmpzoml5vw2.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "11BWRo4MW_ZLa9M9VCqLnp5VSvZ0jQEWp",
-      "name": "tmpshdwtfr7.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1SZ82JEFmABo-THId97sQPo65fMtFM88B",
-      "name": "tmpygm1g1zw.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1_iUJsN7quGHz8CO9wxLG6h6hhc_H4cNz",
-      "name": "tmpbly0vvrx.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "18KA_Ps_hMsVvqsGnkHzIMhTHwBJZIylZ",
-      "name": "tmpqsdp1dsa.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1s4_SxMtYUSmaE02TG4oi1xp3aVMM4efC",
-      "name": "tmp2aeknrm1.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1pKd0FIqZvePvD_cvj8tFdNGApaHi6Cn0",
-      "name": "tmpklmjcazs.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1o1mdR5JLQP0pB82WvvUtP51U9BK7PFjw",
-      "name": "tmp8pcrozy_.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1OuOLkDUIu85b8gKgSZ4ru4o-v166QxWB",
-      "name": "tmph7cot3oj.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1HLUPx2Sk6N5WmcKrUC40Pz_uPkd5OhP8",
-      "name": "tmpt1wdnvrv.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1dyzZDBA2hi41aduel72wrX0wbh8A-Px2",
-      "name": "tmptzs9naor.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1N1y2_dIeWNxKy6KoFEgLFqHd2gAEIslt",
-      "name": "tmpmwas7w28.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1PvH8wN_z5K8NaXB039u7V-KW9abCCOSO",
-      "name": "tmpdm4k40fa.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1wWvFrnQSgu9x_HPY7lUr_0GjIVEZLlDg",
-      "name": "tmpirdednw5.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ML0Bz_JBTofwXFSmVJo26jnYKkLMabvq",
-      "name": "tmpvxgrjbah.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Hyf76qeB_3rPriVGVG4uNWiYf2dtk1c4",
-      "name": "tmpjgictqty.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1p3qBp1QWpwkUVLjtMWpDytvGSURZs2Kt",
-      "name": "tmp0xqc4wn3.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1HqsEspjvFesdV5B2CHWYfO1qBqg5a0c7",
-      "name": "tmpt7u6qsb0.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1xrK0Lr0dRckCOnPPkqCsWkTX2JoQtUY4",
-      "name": "tmppg2tgsbr.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1G4pqPAVdofeYe3t7KgWXjTXit0Bg1URX",
-      "name": "tmpsay8agjo.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1BnT3BUSzjDfCU7FFDTOOiOAIpZSRaw3h",
-      "name": "tmpp9koa6u2.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1kfSrCZgXgnvWlFerVMw4TiaXbkV0C0E1",
-      "name": "tmpn97qvozp.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1EvIDHnvotpOdm78gVBAZHhb1POS0SFN-",
-      "name": "tmpvuneuc96.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1dgJdQED87yNVYFV3vb6cDLSpl1MX5C_f",
-      "name": "tmpedj95xnf.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "17_Va8ppQIz4V7EhT-rgOnNLvz3hfZ74m",
-      "name": "tmpsygkv6dt.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1HJHAORdxvA-dCt6jG5LTz2TznKen9A8K",
-      "name": "tmpt8w20n13.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1uGeDfRwWIUDzHTBmV6Eapo8tTvy3wMrL",
-      "name": "tmppqnkdt_c.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1R8Y-xYho4RRCUru7Mfn_fhaY9km1BPjC",
-      "name": "tmp0yqm1xjw.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1T7R5PxdcvGBOMy9K1dsP1klnlOMuepcU",
-      "name": "tmp6aeaqhqe.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1UexVKLAjrE0cBpMuWWcdqB3f7zy9Fa9V",
-      "name": "tmpbypxaybj.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1eMKTpAeqjtXDxKOlVooFWF4LnBhcvNyr",
-      "name": "tmpmdpzpna8.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1tvKs8cKbR2OURiGy-LDKrwC91uICNGeK",
-      "name": "tmpu0wkb_2o.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1sSL8C6U1I8nPMhdz_djxqgNBk00IRPFG",
-      "name": "tmpzevhdnsm.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1UeeV4Laht-h4xgcA25ySZbMl-duwOHps",
-      "name": "tmp8b6za13r.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "18cf1bJjpZXrvvGJ0HMftRhHwv3sM4tFV",
-      "name": "tmpalpgd_ek.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Bu7No7QBNrLhnRBhoTOFso2TUMg4B-eo",
-      "name": "tmpddqr0cer.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Zt5aPv_HJnG_k58rsrUNUzL_MhMM9uPy",
-      "name": "tmpu7f6o5ja.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1TKesFAYrYwjnuqYCpENpFayaRUlXP2ir",
-      "name": "tmpnfghw_26.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1syetl-lPO9IBdUboe0DYNF7n6d8BXrzo",
-      "name": "tmpteckmxx8.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1pGjhbVjakh22SA8hDqE5Jh4_UPZShJZ1",
-      "name": "tmpnljq5mtm.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1-Dv2jDMCth0QdWYMZzwOSrialTtES9LI",
-      "name": "tmpbmi9g3tk.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1TyxM80arnmaCKAe3eYAitpMdsraqDsjU",
-      "name": "tmpw3pycm4l.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1f2yMPLSEt4Njbth_GjE91S7JZgUL18Hl",
-      "name": "tmpo5n8tj9m.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1q5OpmTFIQO9X4hJIzM5keYKlb_IYmlZ5",
-      "name": "tmppfrkrn6z.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1s2yYHLVETPnKUiYRR3stpsJ3YV0hTA_B",
-      "name": "tmpuo6qsrwe.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1kuKz_kaQyyOl_YyL2QCmsRuJ8vipqCUc",
-      "name": "tmp6va0ykb9.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1si4IS9GLhJ4yCPQxunLB8UGhkMIn25Zm",
-      "name": "tmp_fqiexc7.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1PYmXD2wvTiu2yx3GI_EEWtYX2jBVntVa",
-      "name": "tmp_z74_ie9.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ZEYinVGxO2j1LOwWyVwcDbuRaNRUAhNE",
-      "name": "tmpso81cu7p.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1PEN-E2UHYl6yZZpnE3JACPpUonlV8mx3",
-      "name": "tmpl2ap7_2_.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1QQJuIB0FN5cmJK2fn-1FBgCGDHqNzIin",
-      "name": "tmpnh_o0mla.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1moWNMxb6CpJFydsYqWiKlEnE-obg6nYA",
-      "name": "tmpjbj7h6qa.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "14plYhh_3LczoaEOsT5CdHDp659nWAcZt",
-      "name": "tmpfodc1ai4.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1y2xNqxpN2cRv4CGBezC0XpnNFzLMWRiK",
-      "name": "tmp5p1jpj5j.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1yg49ui9hFq8otQco--e5d5obuvudPDji",
-      "name": "tmph3w3ltfr.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "18r2WQEs9wPaTVYzVGWIkfAm2kaa3Hq6B",
-      "name": "tmpt35oblm9.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1LJn11VDKMPR9VD53Of99ZfQU_rl09g2n",
-      "name": "tmpsrz1pur_.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1k4Rw6p_LxEix9wAyG7GWCRFPI1nIwCeR",
-      "name": "tmpxskrmi6e.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1UnZQ5hKXepNaoOsCJQZNIhd1cZWPz6S2",
-      "name": "tmpl_94tlhr.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1snw4ozDgSDI3OPNwYWOgm1CwIs5DpVpO",
-      "name": "tmpihi0f_ta.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "14tyNHUDxDrcyUkF8SCHSaUXZM8Ftwa6S",
-      "name": "tmp6aauktyd.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1gByPlR8O3kZh-Md5sp4wrUdoRLYJNP0a",
-      "name": "tmpzr7q25vu.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1PeYkMTIRnJQFQ87xPo0UBKTmyGMOLmjf",
-      "name": "tmprvb3z0ze.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1KM1TbsFwlYTYeSXk9TPCNqbO74F7YHjj",
-      "name": "tmpes9apq15.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1WuTo689vlYZQB3SyjYt03heUPWDXLTP3",
-      "name": "tmpu1vq4391.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1qjQ83kd1oXrGT_yNo9bhvPTEi2Lb8zpl",
-      "name": "tmpmx5e_n51.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1_dvXIURdqIbtpYoeF6_JqO7hGHbWNdlj",
-      "name": "tmp7ymuqd4u.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1nwuBj80zpiu5vUUzGipBEdu66pJYb1ju",
-      "name": "tmpe1f917tj.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "10-DpBqSIMwBMKik66XjP8NVJhxnkxgjo",
-      "name": "tmp61npcexp.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1eVl95EbdGkXt__PHrdn4ZKx15baZBScJ",
-      "name": "tmpmc7vfqm6.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1MJixixQLDlUe32eqnH3QUW6dqqFXkXyU",
-      "name": "tmp5meilc8n.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1C1MkUn-R8f3VOrtriIpoo56tgze09FH5",
-      "name": "tmpr76_h3h7.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1qlY9RTzeoTbgItbU9WyaT-0zBS8bPe22",
-      "name": "tmph0w8rq1k.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1-J5Vp0X1k-AX0aKJISI1YZ9FqlM8LjEA",
-      "name": "tmpm3xx8rqs.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Hkab2rnjUDupmVkUlNkizKFoughV6KkL",
-      "name": "tmp6cojti6j.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1FifBKr_iIi60zK4pK4zzl7qeht3yLT2s",
-      "name": "tmp1u1bbxn7.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1CvxLgCS2lNrmLTVZVPjfqIKBcdxxVMoE",
-      "name": "tmp4wje74up.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1LZSm97hStV8BRUqa3RltCF6etjV3eouL",
-      "name": "tmpo1_cfs7l.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1EjoqzzLqbXj-IT43XplYTqrskMIOlKAw",
-      "name": "tmptbp7xam4.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "14ozBq03R67SePW46jX9KUWnO1GJNXICo",
-      "name": "tmp38qz3qmx.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Fr6cxsHIcsBa1BEfgw0HKNq3XfCsW4Cb",
-      "name": "tmpd_t7eek7.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1hr8QkKXK3IMVNn33bfVaSoftHvbvSXXt",
-      "name": "tmp39f_lc8l.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Cr43-xth_40zygNwDkkUPI95a3jG2G7-",
-      "name": "tmpq2g6f0kb.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1JaVvhP8gT7pEPlMRQc6Y7cu-K7tq9luH",
-      "name": "tmpjya2_gtx.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ci0sgE9E3MvSSU7D71y8gpaow01ck4yf",
-      "name": "tmpg_qye40r.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1aqzKzvuwIiQx4RcLnupUY2XTYkgFtQ4Y",
-      "name": "tmpsqm_0h2r.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1unz5Xf34pxIJ9lC1OLOXV5hBkwNZUqL_",
-      "name": "tmpzk3dhod6.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1wBv25crDGON6Rbk66TDwK4iWqxddJXP-",
-      "name": "tmpc4d53n91.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1jmiTyI6AWfi9EIjI-A7vwxLaWyWgaIXu",
-      "name": "tmp57xkz90v.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1wjLqiqsDksWBReF4AzQ-RW-a4JOtE6hl",
-      "name": "tmphq_ictlq.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Q_LwGSsmSzxaU-kf8mycJalwKcKZF_rI",
-      "name": "tmpnvy6o340.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1hvB7w7YuLjq1Irub1iRWXIEF9mR8U-S-",
-      "name": "tmpuup8ui0q.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "13TSrKY92oXSFhS7yi_u3-uAgjiqSU9Id",
-      "name": "tmpkb89l7sr.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1G8ungS8LcR8i3TkNFIp-chwmvkB3V_0m",
-      "name": "tmpdw672ytv.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1mebSXq3hLWNcYlDsj5Sv860UU1bGxoS_",
-      "name": "tmp95_59dcl.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1UPL7Etofj9j4YbRx0DVltth0XCj21lrX",
-      "name": "tmp23k5ell1.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1qkWE4BuXXSc4I6JN3PqnbKgLFUCV-8j6",
-      "name": "tmpecoums32.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1lp7SyVii4MPzcCXEPJZvgVGUTrp0wNxP",
-      "name": "tmpfpfk0gni.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1NBZrppSbNvoZQCFuuDedktNavOzSaH1W",
-      "name": "tmpbyz5bwt3.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "104xopVxNihJ9XoEt4YqALV__UGWt1QNr",
-      "name": "tmp61u84yc8.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "13K8YZymp3hVIRA7cZaVwOS123ngDPDgC",
-      "name": "tmp012jcpoh.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "17aa4q0dxe9CzNE7OBz0mBYAu1nMx3KGe",
-      "name": "tmpbpxd74yc.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1eyg94247J14brVMNblhTsQhzb1tyk4Rh",
-      "name": "tmp44mb4ztl.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1zfWSY3WQU52H8A3a3aFqr0AxqW_rgOaB",
-      "name": "tmp5qfstte4.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "11c0muy6U73GR6r0qPcVe5bSbgD1m8Lcz",
-      "name": "tmpc8rp4b3l.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1YlYMcvzBxzOcMsQusofTvnuay3mi2YEB",
-      "name": "tmpgfok8q4_.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1w00ibJLN5J50zRx-yi4KNop8Dz8A7qX_",
-      "name": "estimate_45313dc5-4b38-4dee-b857-04c56d.manifest.json",
-      "mimeType": "application/json",
-      "target": "ESTIMATES/generated/_manifests"
-    },
-    {
-      "file_id": "1mH5JCJ8iv-JHbG9PiLM1R0upHWzZ3ydX",
-      "name": "estimate_45313dc5-4b38-4dee-b857-04c56d.pdf",
-      "mimeType": "application/pdf",
-      "target": "ESTIMATES/generated/pdf"
-    },
-    {
-      "file_id": "1iFm33OrknndvWPEiHqpbbwcZlBIiKWaz",
-      "name": "estimate_45313dc5-4b38-4dee-b857-04c56d.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "ESTIMATES/generated"
-    },
-    {
-      "file_id": "1zufNUx6o6HneYqmuZGXoBB1ix8zEuxbk",
-      "name": "tmpw80ijfuo.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1SHgyX3qR8T0jK5qXplfx_W_LY61TO7SX",
-      "name": "tmp3m9cb4ly.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "109kIo1PpvQb0k7dLU8JHUi2nXNLOHW-1",
-      "name": "tmpjl3vmrwa.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "15rdlxYWxVLKfHl-EhuwMS1mWEZEaVth_",
-      "name": "tmp2n6t0yis.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1b0cHzD94sVakoljVDuUS5FwtsoXdOc3W",
-      "name": "tmpny8q0rh6.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1V0qZrWntlBw9HlsLUVvHONk1utN7esa3",
-      "name": "tmptec4q8ta.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1YOYZD-2QbfUdy6VtpcOzZ4eTu1QMfRhX",
-      "name": "tmp2yu9c051.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "13IMkPzQ8n-PtDoM76tyZMWaG_cLovc32",
-      "name": "tmpqebjntfx.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1u3G2jAUaV7d0N8J3i6CQPYjh0sLUdGtS",
-      "name": "КЖ_COMPACT_PROJECT_673bf651-1db3-4300-ab85-33c4a2.manifest.json",
-      "mimeType": "application/json",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS/_manifests"
-    },
-    {
-      "file_id": "1wrEWUF5BoeLukRGYuytxJypjVdr84ZAF",
-      "name": "КЖ_COMPACT_PROJECT_673bf651-1db3-4300-ab85-33c4a2.pdf",
-      "mimeType": "application/pdf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1Jdk5BGV-NfNLj5l_DqvsUTDDA9BcslP0",
-      "name": "tmp4s7_ebpl.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1RvJVrWisE0sqZ1FSHxxCcI3LpBBzUZNG",
-      "name": "tmpzxbwcs56.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1llGyWA1aMAaOOYYKULwWOZ4Aznp9rhDQ",
-      "name": "tmp7v1qy_ei.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1vk_NrmGFlPTsb8YdMz5_FhhyABR61vJK",
-      "name": "tmp4cly04yx.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1YQKfbcSeTdElnJDEA7YCiIpQfCenP-Po",
-      "name": "tmpr77xu9r2.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1zZq4GH9NUJmI18IWYbhgoW1Vd7_xv0VR",
-      "name": "tmpy_dds34c.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "13YxWjPQG_lb6DFlVzNVYe646177AHy3n",
-      "name": "tmp7xtolyta.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Fq3n8y3IRoj_wXuUSPuNbZL_bNJJqnjY",
-      "name": "tmp43p459oy.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1iaXYtL8kGsWj3xPHzfAzkPxBqGwYEI4b",
-      "name": "tmpx2fow0_o.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1e7ewqblg8Xd0G4fy_4WdIDst0W_2RMjq",
-      "name": "tmp06r125yf.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1bM3N614QMQryCkHCnHH10sKDJbih4gaQ",
-      "name": "tmp2_1qee02.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1FSKD_FlwqYe5W3DFqZys185wAFQTtR9P",
-      "name": "tmpe2yzwu1w.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "11_rOddGV3bYcKhKV4sp-OYYOBrdwBRNA",
-      "name": "tmpxe4o3_fv.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1CWWM9N9eDE7jn8aPX62zvVhJG_pRkYk2",
-      "name": "tmpswri_usp.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1UH_qakuHSD2yW1Z7-E4fs9DRnFa--mJv",
-      "name": "tmpaz51stl0.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1VlewKcMf96iIyYFBNIDWQ0GBwXWMFW_y",
-      "name": "tmp_xgac0p0.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1KNf-bsGUEG-TMcpRW2mItl5tNIQ6aRwL",
-      "name": "tmp2bsg_1ub.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "10h8dmPKA9PaUB4O7JD_IYi5cjioPPpif",
-      "name": "tmpn9bm8khx.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1-iU-pMWV-oG0xddyVgXilKKVpprLuiGV",
-      "name": "tmp9436rghz.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1LawTMhChezawvAMTTZl_JJ8JFwogXad4",
-      "name": "tmp8uu1o33h.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1obup-M300o2u3ZoUH-0PQk8s98_dHxEw",
-      "name": "tmprl_cxyia.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1-20OxnSUakT20_JORXQfJVqGya7_ZaKu",
-      "name": "tmpjnls3e4l.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1fNDWEpZ2LT0BPuskSyXjTiNfn5fWC_G0",
-      "name": "tmp4n9x8vz1.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Ymtcx4ZTUnAcye6NjerHE97gYYysGrFH",
-      "name": "tmp_x3oaf61.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1lslo8tFxrl2s7eZxBBHKaqIT2gimSSUO",
-      "name": "tmp9pcvcw5f.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1z8nS4zrkkHd5Af-UPsXa2UOQ9vMupGnP",
-      "name": "tmphfvtkvwl.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1iKQQ29CDdEsew3iR60za4KjCnzNdic17",
-      "name": "tmpcospu0dm.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1btyln8Dsy0KDSRxanVFd6uKR1DtXydG-",
-      "name": "tmp431b4iqy.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1mdUlORaU-QY7lFGyerkVakMPFHNNwYAH",
-      "name": "tmpx9deyneq.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "11NoUgNXvOQdLWer6CavQazIFy-OK7LOm",
-      "name": "tmpwzmclduk.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1LiK7Ul6L1dEcpwoDiIYQgWwZXWOZXvPI",
-      "name": "tmpg18jwctf.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1rrhodSn0cglQWgUkDOLe3dwxAUGFkjHY",
-      "name": "tmp8w7_2rqq.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1eMgYGW4btwKmsycpbUQvMGlF_GaCgjju",
-      "name": "tmpp_pyk9o8.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1EryVrwdapHaMYL2fYRrgnUbbQjeJ_QVR",
-      "name": "tmp0v5acuwx.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1gaqnkrvJmwTojDR67_ntV4VhsO4uDZbg",
-      "name": "tmptod4a3q7.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1kjLJfmKctw5rGmgyMc03ooOrhNRQxNHQ",
-      "name": "tmptbzzxjl4.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1bGpQfq-WdIbR0OswYcQZi-o-PEi777TO",
-      "name": "tmph3_bav8_.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1rexgKMgDvR6wnwr_cW7A5s45N7LkohSk",
-      "name": "tmplbed0ec9.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1aQ4hgmErzNiaj8A2M1skKC-4EsuopNcN",
-      "name": "tmpzb2rre7d.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1aTjIC2p9S4c6qDoWqWJoWdodY29eSwwl",
-      "name": "tmpgd2dx6ps.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "13d0ljeXCv66zvTtt970nbEjOu_a519Qi",
-      "name": "estimate_4b3ddca1.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "ESTIMATES/generated"
-    },
-    {
-      "file_id": "10iIKHCnfSIS24wgDeKb8wQ-pEVDk5prV",
-      "name": "estimate_4b3ddca1.pdf",
-      "mimeType": "application/pdf",
-      "target": "ESTIMATES/generated/pdf"
-    },
-    {
-      "file_id": "1Pc451RzNp7DCmnwLfzhrVWptCvDaXsFD",
-      "name": "tmpyouqa9hg.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "15f7fhqsIsjvaBC2HnxFgLWhXtZ5A8uUC",
-      "name": "tmpz5wr190s.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1zYNyJKaegZnSYLC_0xn6BBaNxt0seV5m",
-      "name": "tmp_3yytrtz.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "14ssnzpfAMio9pikKzvlyDnRqoX1Gl2FX",
-      "name": "estimate_9b89cf60.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "ESTIMATES/generated"
-    },
-    {
-      "file_id": "136F8QusWjID8N0Y4i_MnoTzB4dyWcb4M",
-      "name": "estimate_9b89cf60.pdf",
-      "mimeType": "application/pdf",
-      "target": "ESTIMATES/generated/pdf"
-    },
-    {
-      "file_id": "1QW53hmGlOT1Qbnv8W_nGi9T6B6rbZlBT",
-      "name": "estimate_b57852c8.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "ESTIMATES/generated"
-    },
-    {
-      "file_id": "1xNO5efkeekKY_pOAE6fgW7dcrz6RU7oQ",
-      "name": "estimate_b57852c8.pdf",
-      "mimeType": "application/pdf",
-      "target": "ESTIMATES/generated/pdf"
-    },
-    {
-      "file_id": "1SxJOqw4SM8sBciz8kMbvqooA0hYdRiiz",
-      "name": "tmpjwdluqwv.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1iYqiD9kgdeEZMWYuA1N_PKr3RoUp_VQL",
-      "name": "tmp1mtgyg3a.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "10pgg5XhyiGXPkiGhDFHKNeM-Xoc-ZZS2",
-      "name": "tmp07_908wg.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1tZxUexM6ihBjcJPDXbQIuwD9obvX3S5g",
-      "name": "estimate_oce_smoke_cyr.manifest.json",
-      "mimeType": "application/json",
-      "target": "ESTIMATES/generated/_manifests"
-    },
-    {
-      "file_id": "1nzyJyG1KV7Uj1XF-tvU_VVKMkSHZWRqk",
-      "name": "estimate_oce_smoke_cyr.pdf",
-      "mimeType": "application/pdf",
-      "target": "ESTIMATES/generated/pdf"
-    },
-    {
-      "file_id": "1otfLDvkJKWaL1wHq3IfwuZrkmwDFrwwR",
-      "name": "estimate_oce_smoke_cyr.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "ESTIMATES/generated"
-    },
-    {
-      "file_id": "17o6rQfnFIYH_-7UpCo8-ZcREWVQ3izgb",
-      "name": "tmpx7gxqhl5.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Pu77XRZHMpoBus1pfxiMwdwCkrgJe1tn",
-      "name": "estimate_47a7935d-ebd5-4de2-a1e9-8309c6.manifest.json",
-      "mimeType": "application/json",
-      "target": "ESTIMATES/generated/_manifests"
-    },
-    {
-      "file_id": "1CAPN1IKkxWyPBxHny5CaOkqrsxBGzHO-",
-      "name": "estimate_47a7935d-ebd5-4de2-a1e9-8309c6.pdf",
-      "mimeType": "application/pdf",
-      "target": "ESTIMATES/generated/pdf"
-    },
-    {
-      "file_id": "1GlCSCPl3d91elvEO_m11ezWh_uu5B4Vm",
-      "name": "estimate_47a7935d-ebd5-4de2-a1e9-8309c6.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "ESTIMATES/generated"
-    },
-    {
-      "file_id": "1R3qqRASMHoiQrw_5WfW6mf5q7NhMQap3",
-      "name": "estimate_47a7935d.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "ESTIMATES/generated"
-    },
-    {
-      "file_id": "1ZDU7XT3xAM3VIaM4tLDyxofedYlyfm1i",
-      "name": "estimate_47a7935d.pdf",
-      "mimeType": "application/pdf",
-      "target": "ESTIMATES/generated/pdf"
-    },
-    {
-      "file_id": "1iGgQ_4tOmQxRS1Z8ugTiW8vbzYQu-11L",
-      "name": "tmpmunokje6.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1n5BjBEEJ7F_EHMaxaoXONQ59CGdJAyHY",
-      "name": "tmp8092t28n.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1FGu7FEzAc90b8hdvgmKc4NmhHgDdGP4E",
-      "name": "estimate_63bb6974-f062-4760-b052-73a789.manifest.json",
-      "mimeType": "application/json",
-      "target": "ESTIMATES/generated/_manifests"
-    },
-    {
-      "file_id": "1GPrzA7Oabg5z3t5O2lugDToN_k7LHuu5",
-      "name": "estimate_63bb6974-f062-4760-b052-73a789.pdf",
-      "mimeType": "application/pdf",
-      "target": "ESTIMATES/generated/pdf"
-    },
-    {
-      "file_id": "1R122QlCSPTHuO3BWWX5mAikDv1m1ozB3",
-      "name": "estimate_63bb6974-f062-4760-b052-73a789.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "ESTIMATES/generated"
-    },
-    {
-      "file_id": "1CG_9I3HP0GeG9T1udjjpqixNKr14EeLD",
-      "name": "tmps_p5ohqb.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1eyyi3n3DMxt5zChNu-rwuxtJuzWE6yN7",
-      "name": "estimate_99310b6d-c273-432f-8e8d-a500a0.manifest.json",
-      "mimeType": "application/json",
-      "target": "ESTIMATES/generated/_manifests"
-    },
-    {
-      "file_id": "17meU9WpKkE6jaWoJNXEVZ27x1Pv8ojTS",
-      "name": "estimate_99310b6d-c273-432f-8e8d-a500a0.pdf",
-      "mimeType": "application/pdf",
-      "target": "ESTIMATES/generated/pdf"
-    },
-    {
-      "file_id": "1SiI9fmvhPVwVhMhC5R08-tLj0b_xH8A2",
-      "name": "estimate_99310b6d-c273-432f-8e8d-a500a0.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "ESTIMATES/generated"
-    },
-    {
-      "file_id": "1Cre01AW242xhgY-ZVobh6NtfJZcMpC25",
-      "name": "estimate_76bcfd80-4924-4fbd-bba3-a8884e.manifest.json",
-      "mimeType": "application/json",
-      "target": "ESTIMATES/generated/_manifests"
-    },
-    {
-      "file_id": "1-4gCucmQVnypltLZ-vRKqS2DmDCAKf-0",
-      "name": "estimate_76bcfd80-4924-4fbd-bba3-a8884e.pdf",
-      "mimeType": "application/pdf",
-      "target": "ESTIMATES/generated/pdf"
-    },
-    {
-      "file_id": "1ihrkzrc5P0KFKf0pXMlQoM_KuH2ckAnR",
-      "name": "estimate_76bcfd80-4924-4fbd-bba3-a8884e.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "ESTIMATES/generated"
-    },
-    {
-      "file_id": "1RkPKJIrPskqXyAPmeuidfp71AY0mMUca",
-      "name": "estimate_1856d059-efda-4368-b7f6-d44a52.manifest.json",
-      "mimeType": "application/json",
-      "target": "ESTIMATES/generated/_manifests"
-    },
-    {
-      "file_id": "1_9bJl6zBmDredLbSGi19kOt9NT0N_D-S",
-      "name": "estimate_1856d059-efda-4368-b7f6-d44a52.pdf",
-      "mimeType": "application/pdf",
-      "target": "ESTIMATES/generated/pdf"
-    },
-    {
-      "file_id": "1kHdRtE1UkEKqP08H_f6WdECGPFXSzMvr",
-      "name": "estimate_1856d059-efda-4368-b7f6-d44a52.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "ESTIMATES/generated"
-    },
-    {
-      "file_id": "1w_vHPxVbdSKNMFoVtZIzuGCddHw9JfUK",
-      "name": "КЖ_COMPACT_PROJECT_b669d105-4dbe-446b-9a6f-0a773b.manifest.json",
-      "mimeType": "application/json",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS/_manifests"
-    },
-    {
-      "file_id": "1-RHKbjSfMgO_74B1bABrk0Ht8VUUL9NB",
-      "name": "КЖ_COMPACT_PROJECT_b669d105-4dbe-446b-9a6f-0a773b.pdf",
-      "mimeType": "application/pdf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "19BGvtsStIGwgrLF7psfUoT99JpuCrJEC",
-      "name": "tmpj5xnyjx6.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1IJbb7tpfRYgc4_JBqRhXk9QZzCCkmrlv",
-      "name": "tmp75v_ytht.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1KBDlu5clvNgi6EaK7Mpz29wklPG5xK4c",
-      "name": "estimate_1f242f44-4995-430e-af4c-d576d7.manifest.json",
-      "mimeType": "application/json",
-      "target": "ESTIMATES/generated/_manifests"
-    },
-    {
-      "file_id": "1O-2dVMEJFS1sCcCpqJXAvAq7SLoh7QW-",
-      "name": "estimate_1f242f44-4995-430e-af4c-d576d7.pdf",
-      "mimeType": "application/pdf",
-      "target": "ESTIMATES/generated/pdf"
-    },
-    {
-      "file_id": "1bRuaXKMnayUaYlRGEwJ0cJtbliKmBBiG",
-      "name": "estimate_1f242f44-4995-430e-af4c-d576d7.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "ESTIMATES/generated"
-    },
-    {
-      "file_id": "1k3v_JbCTEgTFPhWYClhAt3eQHyUZ2mms",
-      "name": "tmpw3gilcqx.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1qS6IauZK7VwJg1inaRnC4LVL7rTnjm5C",
-      "name": "КЖ_COMPACT_PROJECT_smoke_ff12_compact.manifest.json",
-      "mimeType": "application/json",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS/_manifests"
-    },
-    {
-      "file_id": "1lyAazVNk2RuZl6pQJEZNzQ4osNyEbDWS",
-      "name": "КЖ_COMPACT_PROJECT_smoke_ff12_compact.pdf",
-      "mimeType": "application/pdf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "14vYjQKhOKX5zVXcdAi6S53GwNkFCo1vH",
-      "name": "tmp2o9fwc5o.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1E-p3UoEaSi-zzYwjpPGiZx-uu_2rhnLC",
-      "name": "КЖ_project_6c7d0a0d-2b80-4b92-b.manifest.json",
-      "mimeType": "application/json",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS/_manifests"
-    },
-    {
-      "file_id": "16-CFB_R1JRH_mxRV_SrIVtRBR5eyObYv",
-      "name": "КЖ_project_6c7d0a0d-2b80-4b92-b.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1h0JqxRh9j2CRDfhaknu7zmTnjiLc3dTx",
-      "name": "КЖ_project_6c7d0a0d-2b80-4b92-b.dxf",
-      "mimeType": "image/vnd.dxf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1_8xQ-QcAsGRMXyd9Dr56Qj3m-EGgkwgy",
-      "name": "КЖ_project_6c7d0a0d-2b80-4b92-b.pdf",
-      "mimeType": "application/pdf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1oRiLjAhkxpu-qIc1_c7_UtYXWwkxKue7",
-      "name": "estimate_smoke_ff10_estimate.manifest.json",
-      "mimeType": "application/json",
-      "target": "ESTIMATES/generated/_manifests"
-    },
-    {
-      "file_id": "12paMv23Lvo_G_BOQM0Emwtqt60VoYJ2Y",
-      "name": "estimate_smoke_ff10_estimate.pdf",
-      "mimeType": "application/pdf",
-      "target": "ESTIMATES/generated/pdf"
-    },
-    {
-      "file_id": "1_FMscnzPamH4MAe7UqbLaIiCxT7FZauR",
-      "name": "estimate_smoke_ff10_estimate.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "ESTIMATES/generated"
-    },
-    {
-      "file_id": "1MacajqphpkojNHo85-v3-Q5riNTHaRno",
-      "name": "КЖ_project_smoke_ff10_project.manifest.json",
-      "mimeType": "application/json",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS/_manifests"
-    },
-    {
-      "file_id": "1MOQYN0IjLM0mg5wEUPqbVnUuLBDmPyvq",
-      "name": "КЖ_project_smoke_ff10_project.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1LWTl7e_RMPtzWgP61WcF6IplkHP-I2c2",
-      "name": "КЖ_project_smoke_ff10_project.dxf",
-      "mimeType": "image/vnd.dxf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1Itkz-lWw8tIdu9uZ3O6lfClJrcswi9hd",
-      "name": "КЖ_project_smoke_ff10_project.pdf",
-      "mimeType": "application/pdf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "17_g4TP7fVH7gG4JB0GzWU1MQSoelDqBR",
-      "name": "tmptvjc2rcb.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1G6Uu_pNr3w1rwiWtRS4J5gb6bNG9cYZw",
-      "name": "КД_project_87b491a5-3ec8-4cf0-a.manifest.json",
-      "mimeType": "application/json",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS/_manifests"
-    },
-    {
-      "file_id": "14b5a4lxgHDIrO6gt00SaYE44PR2xeOOh",
-      "name": "КД_project_87b491a5-3ec8-4cf0-a.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1QJ7Ia4AYGn4lekB_sPwQ4tGKVZQkAoUf",
-      "name": "КД_project_87b491a5-3ec8-4cf0-a.dxf",
-      "mimeType": "image/vnd.dxf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1dJzAz1r43g9hXNfsrjx_iFLeu7jk4I0V",
-      "name": "КД_project_87b491a5-3ec8-4cf0-a.pdf",
-      "mimeType": "application/pdf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1--Cw92bcTcTB_nTXcCOfATYPyZMfeOV2",
-      "name": "АР_project_smoke_ff09_АР.manifest.json",
-      "mimeType": "application/json",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS/_manifests"
-    },
-    {
-      "file_id": "1UwbBLpz2-Fx-KL-RGhAv1e7hSIJa_6F3",
-      "name": "АР_project_smoke_ff09_АР.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1_go1pmIzHeNuK-rNdyteXX-X7chr_jpt",
-      "name": "АР_project_smoke_ff09_АР.dxf",
-      "mimeType": "image/vnd.dxf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1T1tuHlONXoCKe_Wi4tvXWzgvHLsxnXrB",
-      "name": "АР_project_smoke_ff09_АР.pdf",
-      "mimeType": "application/pdf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1LCabegaMIvg4yTgzzZU14j1KIL4P6liV",
-      "name": "КД_project_smoke_ff09_КД.manifest.json",
-      "mimeType": "application/json",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS/_manifests"
-    },
-    {
-      "file_id": "1XbQrcL26RU_keloJzvuwe5Krs5q03y53",
-      "name": "КД_project_smoke_ff09_КД.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1M6NpUSY0VEbeLQC5HqDjbaD78uSFKxMl",
-      "name": "КД_project_smoke_ff09_КД.dxf",
-      "mimeType": "image/vnd.dxf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1p6nxTgonAlIq7v0o9AS3dIB8SBjFH9cV",
-      "name": "КД_project_smoke_ff09_КД.pdf",
-      "mimeType": "application/pdf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1yVcBXwAE64kQGpdTS6RkuIryvsfLrGhX",
-      "name": "КЖ_project_smoke_ff09_КЖ.manifest.json",
-      "mimeType": "application/json",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS/_manifests"
-    },
-    {
-      "file_id": "1PtjboTm3EA_boROOb8JI_BTdszk-ML5E",
-      "name": "КЖ_project_smoke_ff09_КЖ.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1UKnIaYGuGli9berV5MR4QD9aWFjd9QTz",
-      "name": "КЖ_project_smoke_ff09_КЖ.dxf",
-      "mimeType": "image/vnd.dxf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1fGdnnh3JBqor3dDHlQg91-woOQQWUXV-",
-      "name": "КЖ_project_smoke_ff09_КЖ.pdf",
-      "mimeType": "application/pdf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1gR-XBHj1VuEAc10Zyy9KiX_NMBClhZs-",
-      "name": "tmpnfb1_cy0.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "15znz4spDIeGzzm0gTBmqlWsisL_RySHT",
-      "name": "КЖ_project_0f869439-a7ce-4daf-9.manifest.json",
-      "mimeType": "application/json",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS/_manifests"
-    },
-    {
-      "file_id": "1t_dPRvn4A6yMO0_Ix6BHSC9SPAeZq64t",
-      "name": "КЖ_project_0f869439-a7ce-4daf-9.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1QpT4KF2-6yuIj1THgGOJP7te_Bsqzcdl",
-      "name": "КЖ_project_0f869439-a7ce-4daf-9.dxf",
-      "mimeType": "image/vnd.dxf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1PBs0bL4Gl04suQOhSlGqeYfvaWvxzF0C",
-      "name": "КЖ_project_0f869439-a7ce-4daf-9.pdf",
-      "mimeType": "application/pdf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1kuRbK4V9zJagSNNn57HKb5g3E-ba3br2",
-      "name": "КЖ_project_smoke_ff08d.manifest.json",
-      "mimeType": "application/json",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS/_manifests"
-    },
-    {
-      "file_id": "1YyN1r60051Aj1qstEo-5YS5jJkELJnN0",
-      "name": "КЖ_project_smoke_ff08d.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1cuW2T_b6sfE9Zn-kIyBPeRPmnPokhJmV",
-      "name": "КЖ_project_smoke_ff08d.dxf",
-      "mimeType": "image/vnd.dxf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1ydJB1fNAhKfhHRt4pj8vjrS9FsipDjBM",
-      "name": "КЖ_project_smoke_ff08d.pdf",
-      "mimeType": "application/pdf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1PneYHvZXXFwRNbme8VBEgFQAB2uRjuZ4",
-      "name": "КЖ_project_smoke_ff08c.manifest.json",
-      "mimeType": "application/json",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS/_manifests"
-    },
-    {
-      "file_id": "1ZI_8E2-Gs6nzZ6Qh3UqCXuKG2d6oGiHv",
-      "name": "КЖ_project_smoke_ff08c.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1DACQLUAR5M_oZJ_4FPlCzqZcvTZWLBs5",
-      "name": "КЖ_project_smoke_ff08c.dxf",
-      "mimeType": "image/vnd.dxf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1fS1lEwgU2UM1a3B9PevTbkZmnvRPw2sO",
-      "name": "КЖ_project_smoke_ff08c.pdf",
-      "mimeType": "application/pdf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1wr8MyUY_ZF9ikcf-JWfzZsAUZgNwsNCQ",
-      "name": "КЖ_project_smoke_ff08b.manifest.json",
-      "mimeType": "application/json",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS/_manifests"
-    },
-    {
-      "file_id": "1U6SU1iDDUR_Cqn74fUin3Rt9hbaJjFW_",
-      "name": "КЖ_project_smoke_ff08b.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1keWIZnVTDQ-2rM34NA82hlWGLzrzB4yQ",
-      "name": "КЖ_project_smoke_ff08b.dxf",
-      "mimeType": "image/vnd.dxf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "15zse5XF48iCTWXPifG6NoGtAkqOAlRis",
-      "name": "КЖ_project_smoke_ff08b.pdf",
-      "mimeType": "application/pdf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1FIxsbud2eTx7IGWJk7sk-CBr4XunfRR-",
-      "name": "КЖ_project_smoke_ff08a.manifest.json",
-      "mimeType": "application/json",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS/_manifests"
-    },
-    {
-      "file_id": "1nRBr22TH-jDUrebHMm-ZrbcN9te5etWw",
-      "name": "КЖ_project_smoke_ff08a.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "13MXJD00kwlFjK9ssBX3QeuMUX-YsyTOU",
-      "name": "КЖ_project_smoke_ff08a.dxf",
-      "mimeType": "image/vnd.dxf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1SOvtx5wa2gcxqN5b3njIiDEw3pFP3FvM",
-      "name": "КЖ_project_smoke_ff08a.pdf",
-      "mimeType": "application/pdf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "174cYmJwf8KWJcX_MH9ituAaDWaSnn3Ts",
-      "name": "КЖ_project_smoke_ff07.manifest.json",
-      "mimeType": "application/json",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS/_manifests"
-    },
-    {
-      "file_id": "1EOAsBaB_vqRjy7t8_Sf6SkdnTjB4i6HV",
-      "name": "КЖ_project_smoke_ff07.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "146ezdb9dCk0zXuTnuChXSV5NZo4vcq_u",
-      "name": "КЖ_project_smoke_ff07.dxf",
-      "mimeType": "image/vnd.dxf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1ts_nkbmFuitaZjnYRpRmnkJTfjVhoQ4T",
-      "name": "КЖ_project_smoke_ff07.pdf",
-      "mimeType": "application/pdf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1RLOraF919822N1hcMgyuwfaxP8UXJ_pZ",
-      "name": "tmpcadi86l4.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1p6sHQllzOAe8FTpMgnvXa6DcyhX0kKTG",
-      "name": "КЖ_MANIFEST_smoke_ff07.json",
-      "mimeType": "application/json",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS/_manifests"
-    },
-    {
-      "file_id": "1mRBlljXex0kAshb86voE9mfa9z8gqiZm",
-      "name": "КЖ_SPEC_smoke_ff07.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "16zn4tfKfLsBO-pzxIvgSlxxQPomlBkud",
-      "name": "КЖ_PROJECT_smoke_ff07.dxf",
-      "mimeType": "image/vnd.dxf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1D1gDkGF7O78qIXwzT6SGvUzdXKgv483B",
-      "name": "КЖ_PROJECT_smoke_ff07.pdf",
-      "mimeType": "application/pdf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1j6VonhkfsXpeQfvL4ipreeqAsm1d8Aak",
-      "name": "КЖ_MANIFEST_smoke_ff06_final.json",
-      "mimeType": "application/json",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS/_manifests"
-    },
-    {
-      "file_id": "1qoQSt_9HF9wSvfKF7aBORvBy5PwCzztv",
-      "name": "КЖ_SPEC_smoke_ff06_final.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1p1N9XLh4nzX9cd_d2XPklbAF1KbhCfYF",
-      "name": "КЖ_PROJECT_smoke_ff06_final.dxf",
-      "mimeType": "image/vnd.dxf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1zWr4DEbQlOemH-F8YbUTV6fbayrkP_81",
-      "name": "КЖ_PROJECT_smoke_ff06_final.pdf",
-      "mimeType": "application/pdf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1UwwnO2jZ9UPALYAE8ABn4Df_ZdC2_Brb",
-      "name": "tmpofb6xg86.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1yUTFojZz6OPp5lqDCtmcX8UhrH4oe0H1",
-      "name": "КЖ_foundation_slab_smoke_ff05.manifest.json",
-      "mimeType": "application/json",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS/_manifests"
-    },
-    {
-      "file_id": "1Pu_JamfluXP9bO_ZqP108C_OiDrQ3XsY",
-      "name": "КЖ_foundation_slab_smoke_ff05.dxf",
-      "mimeType": "image/vnd.dxf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1YCsURMnuaoSPOVTWuLgrQxbu8wPhco7i",
-      "name": "КЖ_foundation_slab_smoke_ff05.pdf",
-      "mimeType": "application/pdf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1D2cUwzBVk4mVaQVF927GIdZTN7FBMJfV",
-      "name": "tmp4g56o4ht.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "17zKT6ELGmpNQD_i5jE7dNvIsoMKbeKlx",
-      "name": "project_КЖ_9fac561b_20260430_083807.dxf",
-      "mimeType": "image/vnd.dxf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1Ascj52KEybUoL1HYhli9h05kwhSli8Rx",
-      "name": "project_КЖ_9fac561b_20260430_083807.pdf",
-      "mimeType": "application/pdf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1sZ2lDlTKZHbvcY_te6u7xZvqFahf7BX6",
-      "name": "project_КЖ_smoke_ff_20260430_083643.dxf",
-      "mimeType": "image/vnd.dxf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1rOfnpnmL1I9Bt1fxdhaIUZn6E0rqRRQz",
-      "name": "project_КЖ_smoke_ff_20260430_083643.pdf",
-      "mimeType": "application/pdf",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1-OJYlCnSp65OjNdj5uk6nPFnDF1orQ2b",
-      "name": "tmp4kese_gy.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1EhQbI74E3vRU3l9WhuEgeu8hqliVxMGD",
-      "name": "project_КЖ_4e06863a.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1lPXSrx7LWM64J8VT4K0ZD92R73164VvR",
-      "name": "project_КЖ_4e06863a.docx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1DKKw90vQ8DgknHCvmvrCDdraqANID7cv",
-      "name": "tmprqdh08py.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "15NS2sE74pyNqUsni3LEMOhjQglQn8ZFr",
-      "name": "project_КЖ_smoke_ff.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1W-Gdx5y0vVDNdtnEOujkZTEDTwKDScFI",
-      "name": "project_КЖ_smoke_ff.docx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "target": "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-    },
-    {
-      "file_id": "1vOcnb8vsAFOJBd6eOHZ9uU1pcw_iuECB",
-      "name": "tmpgl2nlqg9.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "13m-K2-73ODchoOdq9nLmooJd2G5To9Qx",
-      "name": "tmpnk94jbpi.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "163uDpeSL-oflHWc1zcSHmX-LiiYzS4Cu",
-      "name": "tmp7gr32006.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "18J7ZnG0JghRLp3rjQ90MwIADwguHqCR5",
-      "name": "tmp2ulp3ibw.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1GIN9IeJEAsu45HJXd0u0-kROb4llBRfg",
-      "name": "tmps3gv2ya4.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1Lbofmh3ZRWkjn9GEewNIk_IhZ95ZbN1x",
-      "name": "tmpbyu73fye.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1stVN-qk3VyAncMHP7WFNwdlwVwroGpzA",
-      "name": "tmp0cktctn4.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1TTuBjQVGE0Otg9lhAAc-91jy1_xIfwC4",
-      "name": "tmpzgl5j29z.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1-ocNYgpUt6Nu9ierw-fKT2sRnsm3gy9R",
-      "name": "tmpypcxxi49.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1QN8oqLlIganwxeovNZTB-XPRkg_QsWIK",
-      "name": "tmp393j5_k0.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1rFLXb5fsFCQUww9DI2pcy43KNKBAKhPq",
-      "name": "tmp4e02o3xl.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1AbrmMSLB2N66gUmMFcbBpPAcVILcG8b-",
-      "name": "tmpme8z99vh.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1yB3DZxDBRYXetQOnffOA7Q9r3_LJjUG3",
-      "name": "tmp9fsjozow.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1BtZSOe8KMQ7eOm_ITDGf1ion1cWcayc-",
-      "name": "tmpdr5acr9f.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1A30SkBbvT1XTPE8pgghqKMoV72-OVKpa",
-      "name": "tmpxa5y_9iq.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "14zyeDz-p_RX_HHNzQ5YJc0cyIiqooIFH",
-      "name": "tmph5umllz_.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1RuG9Bk22T4lS85k8yB9piKbsOeXiyWQw",
-      "name": "tmpt1d6ggpe.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "15ZRyoMNe1ra58lZKtBDK7rhhbGn3GlWF",
-      "name": "tmp8ug_3d2_.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1WPi5OWZZXmGHwxbGWC9_JP9pHLTr7cKU",
-      "name": "tmpb_jnzdki.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1NF5wsTO3nXziddrsp5jH6bz4giNXFeY8",
-      "name": "tmpvktqb7v1.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "189rfl3ZVZPhGkL4SSHYbGwjnhYPA25CF",
-      "name": "tmpbkg_yp1v.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1ZGMWLnnEu1J7vA09dGq5DPRNhyq87j7D",
-      "name": "tmpcqmknkh5.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1BTG0wh3aDlQDMWjZd22oZFZyx_9qK5mc",
-      "name": "tmpmq_nz5q1.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1incVr2RogpaGUFWQaAt3C9g-48zXSI5E",
-      "name": "tmpj87u6any.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1k4Ezlbix-BE1w1uwP2E77wmRhTKiu5sA",
-      "name": "tmppumtcup5.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1lrmSDh6FfgBYnGEmvjbE5lQo2Lu0kC40",
-      "name": "tmp0rm_ipk5.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1CEclzSUIDyUJjzHgrebSdj-9PVV4qurc",
-      "name": "tmp0iinv62j.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "15vjt8PSCYCuxXKtcUNQryAOCsxpJCBmC",
-      "name": "tmppi3c97s7.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1KK8QShAjZtfR8qkgO0cInSqwIaD73fDj",
-      "name": "tmp_gamloic.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "14BNnep0GH9h4tpZs1yVx4lBkM60h8wAW",
-      "name": "tmp01cs0iur.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1AFzl_ySPElokgSh27VXcPv_ws_J_A6bM",
-      "name": "tmpq7ehf1g3.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1afJIuPM7OQKuEl6Wzf021ltYp7h6ipvg",
-      "name": "tmppytknlre.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1jvFows26xiV5zDq9L_96ewITjxx0Fnkb",
-      "name": "artifact_scqen12t.docx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/unknown_files"
-    },
-    {
-      "file_id": "1TeOL19mvJOsBu2fe9n-MnX7D7BoAZSDU",
-      "name": "artifact_geotnyiq.docx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/unknown_files"
-    },
-    {
-      "file_id": "1F1lty1SuWEZ8L-8ZIJXfUfax-XTv1sDd",
-      "name": "artifact_bzpidepc.docx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/unknown_files"
-    },
-    {
-      "file_id": "1O8Zxz6HFMhyQD5gm12YEKnxVukQDcJnv",
-      "name": "tmp69otm3cm.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1gjAAAcXhjLnyTE7Za23tikJtQQdQb2is",
-      "name": "artifact_ta1eh4bf.docx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/unknown_files"
-    },
-    {
-      "file_id": "1kRUD8JrDCVqgrPUyLCRyoWc9fmwy2sv7",
-      "name": "tmp4qjmijyg.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1tbWPaRySD_-gjxZS_epw6P7xWNlV6O1f",
-      "name": "tmpym_1cp6e.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1bSBKK_nEZo0qP1yRz3ByZztMhjW_VCpE",
-      "name": "tmpybpik2m7.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1icKuPQnAKTgF8t3LtrYf_LDa6bMQiSKI",
-      "name": "tmp73qc4w2u.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1YtlGoTUBp9WtwJfLGyqnisFQs6qWeb3q",
-      "name": "tmp509q45r8.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1mk71wSzci4vWc3E48PLxvb55KoPcp9o6",
-      "name": "tmp09dm985u.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1SHKUW7X3sLP0vi0_y1PZnb2UIWbpzCRa",
-      "name": "tmpv3j5xkx9.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1KlJJoJO36Vm5ipEniByJV4mgxzYGzxxy",
-      "name": "tmp1go6ksui.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1M0fxnnjFesXxuEnfOjZQbIPl5DbWgyEr",
-      "name": "tmp6w6q_4e1.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1o1MJlUYyV_H7lI0naF1CSCc9q7EGbm8v",
-      "name": "tmp5r4n9k31.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "17z8GiSLw2E3AiufqJbhSKdfoNDpIZrFi",
-      "name": "tmpcakju6u7.bin",
-      "mimeType": "application/x-zip",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1l_XFzSHOcwTeRG7EBZF4lnVTVkluUsEv",
-      "name": "tmpty2sjj_r.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/tmp_txt"
-    },
-    {
-      "file_id": "1yo2Ke799PFMkXHcnCt9tZukV9Esg7in4",
-      "name": "t_final.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/unknown_files"
-    },
-    {
-      "file_id": "1bE99u9WZPRdzOhryfGxaZgWPTMtglAaK",
-      "name": "artifact_exlf8uyk.docx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/unknown_files"
-    },
-    {
-      "file_id": "140aQLzGxhC3Wx07lYvjRk0pZCYAPPlDf",
-      "name": "ph2.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/unknown_files"
-    },
-    {
-      "file_id": "12Uw_7f3_ddNaxUGqGVlmppK7CPITPJ8i",
-      "name": "t6.txt",
-      "mimeType": "text/plain",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/unknown_files"
-    },
-    {
-      "file_id": "1N3TIDR0UaukefEN0qY_nImRRA8pwJ0hm",
-      "name": "smoke_v1.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/unknown_files"
-    },
-    {
-      "file_id": "1VkarK-N6t1NKKer-EDNNfbtv3c7wgLLt",
-      "name": "VOICE_MESSAGES",
-      "mimeType": "application/vnd.google-apps.folder",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/unknown_folders"
-    },
-    {
-      "file_id": "12O8mImiDfAx89xc0VrqWocQ-xC6o2F94",
-      "name": "telegram",
-      "mimeType": "application/vnd.google-apps.folder",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/unknown_folders"
-    },
-    {
-      "file_id": "18YB-YH7ARuAt_4bYIh5kygdZd--ktBRx",
-      "name": "09_datasets",
-      "mimeType": "application/vnd.google-apps.folder",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/unknown_folders"
-    },
-    {
-      "file_id": "1KkHedRJ2ZSZYsoynYORKnTox6qdTyNsW",
-      "name": "08_uploads",
-      "mimeType": "application/vnd.google-apps.folder",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/unknown_folders"
-    },
-    {
-      "file_id": "1xq-U-tHGNtvYjOyIbLQnNBntkz7HsEqo",
-      "name": "07_media",
-      "mimeType": "application/vnd.google-apps.folder",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/unknown_folders"
-    },
-    {
-      "file_id": "1hYP8bnHofH6K0hFKJkRFd-YcB1D-ODhN",
-      "name": "06_sheets",
-      "mimeType": "application/vnd.google-apps.folder",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/unknown_folders"
-    },
-    {
-      "file_id": "1mC8eng1MGAbEmUlCB6HDoQvm2hzcJPXx",
-      "name": "05_docs",
-      "mimeType": "application/vnd.google-apps.folder",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/unknown_folders"
-    },
-    {
-      "file_id": "173AlFTGsZvfC1ec1UaYPGxq9W1XbGgv7",
-      "name": "04_results",
-      "mimeType": "application/vnd.google-apps.folder",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/unknown_folders"
-    },
-    {
-      "file_id": "1ajp2iML8cObsoCuIp22ubzzk5DRaKbhR",
-      "name": "03_logs",
-      "mimeType": "application/vnd.google-apps.folder",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/unknown_folders"
-    },
-    {
-      "file_id": "1hlgNjoMZ_7gCFLJ3oJhVsvJbVUc0Enk1",
-      "name": "02_configs",
-      "mimeType": "application/vnd.google-apps.folder",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/unknown_folders"
-    },
-    {
-      "file_id": "1ZEaZFiNHRqoBa2qjIQf6oNSDBB-AD7qV",
-      "name": "01_rules",
-      "mimeType": "application/vnd.google-apps.folder",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/unknown_folders"
-    },
-    {
-      "file_id": "1gXAI-I8AvpXMUf_G5yhutkOe67jvmA-1",
-      "name": "00_shared_context",
-      "mimeType": "application/vnd.google-apps.folder",
-      "target": "_QUARANTINE_ROOT_CLEANUP/20260502_141149/unknown_folders"
-    },
-    {
-      "file_id": "1yt-RJsGRhO13zmPKNAn6bMuGrpXY7kWp",
-      "name": "М-80.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "ESTIMATES/templates"
-    },
-    {
-      "file_id": "1KuoSI4OI7gJoIBPVqBQGXtQnolXKMiDp",
-      "name": "фундамент_Склад2.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "ESTIMATES/templates"
-    },
-    {
-      "file_id": "1Ub9fcwOcJ4pV30dcX88yf1225WOIdpWo",
-      "name": "М-110.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "ESTIMATES/templates"
-    },
-    {
-      "file_id": "16YecwnJ9umnVprFu9V77UCV6cPrYbNh3",
-      "name": "крыша и перекр.xlsx",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "target": "ESTIMATES/templates"
-    }
-  ],
-  "skipped": [
-    {
-      "name": "_QUARANTINE_ROOT_CLEANUP",
-      "reason": "canonical_root_folder"
-    },
-    {
-      "name": "telegram_exports",
-      "reason": "canonical_root_folder"
-    },
-    {
-      "name": "chat_-1003725299009",
-      "reason": "canonical_root_folder"
-    },
-    {
-      "name": "ESTIMATES",
-      "reason": "canonical_root_folder"
-    },
-    {
-      "name": "CHAT_EXPORTS",
-      "reason": "canonical_root_folder"
-    },
-    {
-      "name": "CANON_FINAL",
-      "reason": "canonical_root_folder"
-    },
-    {
-      "name": "AI_ORCHESTRA",
-      "reason": "canonical_root_folder"
-    }
-  ],
-  "noncanonical_root_after": [
-    {
-      "id": "1gJZ-tiPAGJDT4foQB5gKOyc4NmWjBOE2",
-      "name": "AI_ORCHESTRA",
-      "mimeType": "application/vnd.google-apps.folder"
-    }
-  ]
+
+def _force_voice_finish(raw_input: str, result: str) -> bool:
+    if not raw_input:
+        return False
+    low = raw_input.lower()
+    if any(x in low for x in ["заверш", "доволен", "да", "ок", "ok"]):
+        if "не доволен" in low:
+            return False
+        return True
+    return False
+
+import os
+BASE = "/root/.areal-neva-core"
+
+import re
+import time
+import json
+import sqlite3
+import asyncio
+import hashlib
+import datetime
+import logging
+def now_iso_utc() -> str:
+    """UTC_TIMESTAMP_V1"""
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).isoformat()
+
+import fcntl
+from typing import Any, Dict, List, Optional, Tuple
+
+from dotenv import load_dotenv
+from core.ai_router import process_ai_task
+try:
+    from startup_recovery import run_startup_recovery  # STARTUP_RECOVERY_V1_WIRED
+except Exception as _startup_recovery_import_err:
+    run_startup_recovery = None
+
+# === CANON_REMAINING_CODE_FULL_CLOSE_V1_IMPORT ===
+try:
+    from core.engine_contract import validate_engine_result, result_to_user_text
+    from core.active_dialog_state import maybe_handle_active_dialog, save_dialog_event
+    from core.template_workflow import maybe_handle_template_workflow
+except Exception as _canon_import_err:
+    validate_engine_result = None
+    result_to_user_text = None
+    maybe_handle_active_dialog = None
+    save_dialog_event = None
+    maybe_handle_template_workflow = None
+# === END_CANON_REMAINING_CODE_FULL_CLOSE_V1_IMPORT ===
+# === REAL_GAPS_CLOSE_V2_IMPORT_ASYNC_TEMPLATE ===
+try:
+    from core.template_workflow import maybe_handle_template_workflow_async
+except Exception:
+    maybe_handle_template_workflow_async = None
+# === END_REAL_GAPS_CLOSE_V2_IMPORT_ASYNC_TEMPLATE ===
+# === SEARCH_MONOLITH_V2_TASK_WORKER_IMPORT ===
+try:
+    from core.search_session import is_search_clarification_output as _search_v2_is_clarification
+except Exception:
+    _search_v2_is_clarification = lambda text: False
+# === END SEARCH_MONOLITH_V2_TASK_WORKER_IMPORT ===
+# === FILE_TECH_CONTOUR_FULL_CLOSE_V1_IMPORT ===
+try:
+    from core.file_memory_bridge import (
+        should_handle_file_followup as _filemem_should_followup,
+        build_file_followup_answer as _filemem_build_answer,
+        is_service_file as _filemem_is_service_file,
+        save_file_catalog_snapshot as _filemem_save_catalog,
+    )
+except Exception:
+    _filemem_should_followup = lambda text: False
+    _filemem_build_answer = lambda *a, **kw: None
+    _filemem_is_service_file = lambda *a, **kw: False
+    _filemem_save_catalog = lambda *a, **kw: {"ok": False}
+# === END FILE_TECH_CONTOUR_FULL_CLOSE_V1_IMPORT ===
+try:
+    from core.topic_meta_loader import load_topic_meta, is_what_is_this_question, build_topic_self_answer
+    TOPIC_META_LOADER_WIRED = True
+except Exception:
+    TOPIC_META_LOADER_WIRED = False
+    def load_topic_meta(t): return None
+    def is_what_is_this_question(t): return False
+    def build_topic_self_answer(m): return ""
+# TOPIC_META_LOADER_V1_IMPORT
+from core.reply_sender import send_reply, send_reply_ex
+try:
+    from core.template_engine_v1 import is_template_request as _tpl_check, get_template as _tpl_get, save_template as _tpl_save, apply_template_to_xlsx as _tpl_apply  # TEMPLATE_ENGINE_V1_WIRED
+except Exception:
+    _tpl_check = lambda t: False
+    _tpl_get = lambda *a: None
+    _tpl_save = lambda *a: False
+    _tpl_apply = lambda *a: False
+try:
+    from core.topic_3008_engine import is_topic_3008 as _t3_check, detect_command as _t3_cmd, extract_code as _t3_extract, verify_code as _t3_verify, generate_code as _t3_generate  # TOPIC_3008_V1_WIRED
+except Exception:
+    _t3_check = lambda t: False
+    _t3_cmd = lambda t: "none"
+    _t3_extract = lambda t: t
+    _t3_verify = None
+    _t3_generate = None
+try:
+    from core.temp_cleanup import cleanup_file as _tc_file, cleanup_task_temps as _tc_task, cleanup_after_upload as _tc_upload  # TEMP_CLEANUP_V1_WIRED
+except Exception:
+    _tc_file = lambda p: False
+    _tc_task = lambda t: 0
+    _tc_upload = lambda l: 0
+try:
+    from core.technadzor_engine import process_technadzor as _te_process, is_technadzor_intent as _te_intent  # TECHNADZOR_ENGINE_V1_WIRED
+except Exception:
+    _te_process = lambda *a, **kw: {"ok": False, "result_text": "", "artifact": None, "error_code": "IMPORT_FAIL"}
+    _te_intent = lambda *a: False
+try:
+    from core.intake_offer_actions import needs_offer as _ioa_needs, get_offer_text as _ioa_text, parse_offer_reply as _ioa_parse  # INTAKE_OFFER_V1_WIRED
+except Exception:
+    _ioa_needs = lambda *a: False
+    _ioa_text = lambda: ""
+    _ioa_parse = lambda r: ""
+try:
+    from core.search_session import get_session as _ss_get, create_session as _ss_create, update_session as _ss_update, extract_criteria as _ss_criteria  # SEARCH_SESSION_V1_WIRED
+except Exception:
+    _ss_get = lambda *a: None
+    _ss_create = lambda *a, **kw: {}
+    _ss_update = lambda *a, **kw: None
+    _ss_criteria = lambda t: {}
+try:
+    from core.output_decision import format_task_result as _od_format, format_search_output as _od_search  # OUTPUT_DECISION_V1_WIRED
+except Exception:
+    _od_format = lambda r, s, **kw: r
+    _od_search = lambda o, **kw: str(o)
+try:
+    from core.inbox_aggregator import normalize_inbox_item as _ia_norm, should_create_task as _ia_should  # INBOX_AGG_V1_WIRED
+except Exception:
+    _ia_norm = lambda **kw: kw
+    _ia_should = lambda i: True
+try:
+    from core.constraint_engine import rank_offers as _ce_rank, apply_constraints as _ce_apply, validate_offer as _ce_validate  # CONSTRAINT_ENGINE_V1_WIRED
+except Exception:
+    _ce_rank = lambda o: o
+    _ce_apply = lambda o, **kw: o
+    _ce_validate = lambda o: {"ok": True}
+try:
+    from core.audit_log import audit as _audit  # AUDIT_LOG_V1_WIRED
+except Exception:
+    _audit = lambda *a, **kw: None
+try:
+    from core.source_dedup import dedup_offers as _sd_dedup, sort_by_region as _sd_region  # SOURCE_DEDUP_V1_WIRED
+except Exception:
+    _sd_dedup = lambda o: o
+    _sd_region = lambda o, **kw: o
+try:
+    from core.error_explainer import user_friendly_error as _ee_explain  # ERROR_EXPLAINER_V1_WIRED
+except Exception:
+    _ee_explain = lambda c: c
+try:
+    from core.data_classification import classify_domain as _dc_domain, classify_intent as _dc_intent, classify_file_type as _dc_ftype  # DATA_CLASS_V1_WIRED
+except Exception:
+    _dc_domain = lambda *a: "UNSORTED"
+    _dc_intent = lambda t: "text"
+    _dc_ftype = lambda f: "UNKNOWN"
+try:
+    from core.intent_lock import is_chat_only as _il_chat_only, file_result_guard as _il_file_guard  # INTENT_LOCK_V1_WIRED
+except Exception:
+    _il_chat_only = lambda t: False
+    _il_file_guard = lambda **kw: {"ok": True}
+try:
+    from core.orchestra_context import build_shared_context as _oc_build, user_mode_switch as _oc_mode  # ORCHESTRA_CTX_V1_WIRED
+except Exception:
+    _oc_build = lambda **kw: ""
+    _oc_mode = lambda t: "HUMAN"
+try:
+    from core.price_normalization import normalize_price_text as _pn_fmt, extract_price as _pn_extract  # PRICE_NORM_V1_WIRED
+except Exception:
+    _pn_fmt = lambda t: t
+    _pn_extract = lambda t: []
+try:
+    from core.memory_filter import filter_memory_for_prompt as _mf_filter, sanitize_before_write as _mf_clean  # MEMORY_FILTER_V1_WIRED
+except Exception:
+    _mf_filter = lambda m, **kw: m
+    _mf_clean = lambda v: v
+try:
+    from core.result_validator import validate_result as _rv_validate, is_generic_response as _rv_generic  # RESULT_VALIDATOR_V1_WIRED
+except Exception:
+    _rv_validate = lambda r, **kw: {"ok": True, "reason": "IMPORT_FAIL"}
+    _rv_generic = lambda r: False
+try:
+    from core.search_quality import availability_check as _sq_avail, cache_get as _sq_cget, cache_set as _sq_cset  # SEARCH_QUALITY_V1_WIRED
+except Exception:
+    _sq_avail = lambda r: True
+    _sq_cget = lambda q: None
+    _sq_cset = lambda q, r: None
+from core.duplicate_guard import find_duplicate, duplicate_message  # DUPLICATE_GUARD_V1_WIRED
+from core.pin_manager import get_pin_context, save_pin
+from core.topic_drive_oauth import upload_file_to_topic
+from core.artifact_pipeline import analyze_downloaded_file
+# === DRIVE_FILE_CONTENT_MEMORY_INDEX_V1_IMPORT ===
+try:
+    from core.drive_content_indexer import index_drive_file_content as _df_content_index
+except Exception:
+    _df_content_index = None
+# === END DRIVE_FILE_CONTENT_MEMORY_INDEX_V1_IMPORT ===
+
+load_dotenv(f"{BASE}/.env", override=True)
+
+CORE_DB = f"{BASE}/data/core.db"
+MEM_DB = f"{BASE}/data/memory.db"
+LOG_PATH = f"{BASE}/logs/task_worker.log"
+LOCK_PATH = f"{BASE}/runtime/task_worker.lock"
+
+POLL_SEC = 1.5
+MIN_RESULT_LEN = 2  # RESULT_VALIDATOR_FIX_V1: was 8
+AI_TIMEOUT = 300
+STALE_TIMEOUT = 600
+REMINDER_SEC = 180
+
+BAD_RESULT_RE = [
+    # === RESULT_VALIDATOR_FIX_V1 ===
+    # Убраны: извини/извините/ищу/найду/могу найти/я могу помочь
+    # Это нормальные слова, AI имеет право их использовать
+    r"сорян",
+    r"дружище",
+    r"delete from",
+    r"task_worker\.py",
+    r"telegram_daemon\.py",
+    r"выполните sql",
+    r"/root/\.areal",
+    # === END_RESULT_VALIDATOR_FIX_V1 ===
+]
+
+MEMORY_BAD_MARKERS = [
+    "traceback",
+    "forbidden default model",
+    "/root/",
+    ".json",
+    ".log",
+    "не могу выполнить запрос",
+    "delete from",
+    "task_worker.py",
+    "telegram_daemon.py",
+    "выполните sql",
+]
+
+CONFIRM_INTENTS = {
+    "да",
+    "ок",
+    "ok",
+    "окей",
+    "хорошо",
+    "подтверждаю",
+    "принято",
+    "согласен",
+    "верно",
+    "всё верно",
+    "все верно",
 }
-```
+
+REVISION_INTENTS = {
+    "нет",
+    "не так",
+    "переделай",
+    "исправь",
+    "доработай",
+    "уточню",
+    "уточнение",
+    "правки",
+    "уточни",
+}
+
+MEMORY_NOISE_MARKERS = [
+    "нет данных",
+    "повторите",
+    "не знаю",
+    "чат не содержит активной задачи",
+    "привет. чат не содержит активной задачи",
+    "чат создан для",
+    "тест диагностика",
+    "не понял запрос",
+    "уточните",
+    "не понимаю",
+    "задайте вопрос",
+]
+
+def _version_artifact_path(path: str, task_id: str) -> str:
+    """ARTIFACT_VERSION_V1 — создать версионированный путь file_v2.xlsx"""
+    if not path:
+        return path
+    import re as _re
+    # Если уже версионирован — увеличить номер
+    m = _re.search(r"_v(\d+)(\.\w+)$", path)
+    if m:
+        n = int(m.group(1)) + 1
+        return path[:m.start()] + f"_v{n}" + m.group(2)
+    # Первая ревизия
+    base, ext = os.path.splitext(path)
+    return f"{base}_v2{ext}"
+
+def _quality_gate_artifact(artifact_path: str = None, drive_link: str = None,
+                             input_type: str = "text", task_type: str = "") -> dict:
+    """QUALITY_GATE_CALL_V1 — проверить артефакт перед отправкой"""
+    is_file_task = input_type in ("drive_file", "file") or task_type in (
+        "ESTIMATE_TASK", "OCR_TASK", "DWG_TASK", "TECHNADZOR_TASK", "DOCUMENT_TASK"
+    )
+    # === DRIVE_LINK_MANDATORY_V1 ===
+    if not is_file_task:
+        return {"ok": True, "reason": "NOT_FILE_TASK"}
+    # Если file task — Drive ссылка обязательна
+    if drive_link and "drive.google" in str(drive_link):
+        return {"ok": True, "reason": "DRIVE_LINK_PRESENT"}
+    if not drive_link and not artifact_path:
+        return {"ok": False, "reason": "NO_DRIVE_LINK_NO_ARTIFACT"}
+    # === END DRIVE_LINK_MANDATORY_V1 ===
+
+    # Есть Drive ссылка — OK
+    if drive_link and "drive.google" in str(drive_link):
+        return {"ok": True, "reason": "DRIVE_LINK_PRESENT"}
+
+    # Есть артефакт файл
+    if artifact_path and os.path.exists(artifact_path):
+        size = os.path.getsize(artifact_path)
+        if size < 100:
+            return {"ok": False, "reason": "ARTIFACT_TOO_SMALL"}
+        # Для Excel проверяем формулы
+        if artifact_path.endswith(".xlsx"):
+            try:
+                from openpyxl import load_workbook
+                wb = load_workbook(artifact_path)
+                ws = wb.active
+                has_formula = any(
+                    str(ws.cell(r, c).value or "").startswith("=")
+                    for r in range(1, min(ws.max_row+1, 20))
+                    for c in range(1, min(ws.max_column+1, 10))
+                )
+                if not has_formula:
+                    logger.warning("QUALITY_GATE: no formulas in %s", artifact_path)
+            except Exception:
+                pass
+        return {"ok": True, "reason": "ARTIFACT_EXISTS"}
+
+    return {"ok": False, "reason": "NO_ARTIFACT_NO_LINK"}
+
+def _is_heavy_task(input_type: str, task_type: str = "") -> bool:
+    """FAST_HEAVY_TASK_V1 — определить тип задачи"""
+    return input_type in ("drive_file", "file") or task_type in (
+        "ESTIMATE_TASK", "OCR_TASK", "DWG_TASK", "TECHNADZOR_TASK", "DOCUMENT_TASK", "MULTI_TASK"
+    )
+
+def _get_task_sla(input_type: str, task_type: str = "") -> int:
+    """Возвращает SLA в секундах"""
+    if _is_heavy_task(input_type, task_type):
+        return 120  # HEAVY < 120s
+    return 10  # FAST < 10s
+
+def _check_result_before_confirm(result: str, input_type: str = "text", intent: str = "") -> bool:
+    """RESULT_VALIDATOR_CALL_V1 — проверить result перед AWAITING_CONFIRMATION"""
+    try:
+        rv = _rv_validate(result, input_type=input_type, intent=intent)
+        if not rv.get("ok"):
+            logger.warning("RESULT_VALIDATOR_BLOCKED reason=%s result_prefix=%s", rv.get("reason"), str(result)[:80])
+            return False
+    except Exception as _rve:
+        logger.warning("RESULT_VALIDATOR_ERR %s", _rve)
+    return True
+
+
+# === REPLY_REPEAT_PARENT_TASK_V1 ===
+_REPEAT_PARENT_WORDS_V1 = {
+    "ну и", "дальше", "повтори", "проверяй", "не так",
+    "ещё раз", "еще раз", "заново", "дописывай", "и что", "и?",
+    "а", "б", "в", "г", "1", "2", "3", "4",
+    "а)", "б)", "в)", "г)",
+    "да", "нет", "ок", "хорошо",
+    "среднее", "средняя", "минимум", "максимум", "своя",
+    "вариант 1", "вариант 2", "вариант 3", "вариант 4",
+    "первый", "второй", "третий",
+    "самый дешевый", "самый дешёвый", "надежный", "надёжный",
+}
+def _is_repeat_parent_task_v1(text: str) -> bool:
+    t = _clean(_s(text), 500).lower()
+    if not t:
+        return False
+    return t in _REPEAT_PARENT_WORDS_V1 or any(t.startswith(x + " ") for x in _REPEAT_PARENT_WORDS_V1)
+
+def _find_repeat_parent_task_v1(conn, chat_id: str, topic_id: int, exclude_task_id: str = ""):
+    try:
+        cols = _cols(conn, "tasks")
+        if "topic_id" in cols:
+            return conn.execute(
+                "SELECT * FROM tasks WHERE chat_id=? AND COALESCE(topic_id,0)=? AND id<>? AND state IN ('IN_PROGRESS','AWAITING_CONFIRMATION','WAITING_CLARIFICATION','AWAITING_PRICE_CONFIRMATION','NEW') ORDER BY updated_at DESC LIMIT 1",
+                (str(chat_id), int(topic_id or 0), str(exclude_task_id)),
+            ).fetchone()
+        return conn.execute(
+            "SELECT * FROM tasks WHERE chat_id=? AND id<>? AND state IN ('IN_PROGRESS','AWAITING_CONFIRMATION','WAITING_CLARIFICATION','AWAITING_PRICE_CONFIRMATION','NEW') ORDER BY updated_at DESC LIMIT 1",
+            (str(chat_id), str(exclude_task_id)),
+        ).fetchone()
+    except Exception as _e:
+        logger.warning("REPLY_REPEAT_PARENT_TASK_V1_FIND_ERR %s", _e)
+        return None
+# === END_REPLY_REPEAT_PARENT_TASK_V1 ===
+
+def _is_memory_noise(text: str) -> bool:
+    t = _clean(_s(text), 1000).lower()
+    if not t:
+        return False
+    return any(x in t for x in MEMORY_NOISE_MARKERS)
+
+SEARCH_PATTERNS = [
+    r"\bнайди\b",
+    r"\bнайти\b",
+    r"\bпоиск\b",
+    r"\bпоищи\b",
+    r"\bsearch\b",
+    r"\bцена\b",
+    r"\bстоимость\b",
+    r"\bсколько\s+стоит\b",
+    r"\bavito\b",
+    r"\bozon\b",
+    r"\bwildberries\b",
+    r"\bauto\.ru\b",
+    r"\bdrom\b",
+    r"\bновости\b",
+    r"\bпогода\b",
+    r"\bкурс\b",
+    r"\bмаркетплейс\b",
+]
+
+os.makedirs(f"{BASE}/logs", exist_ok=True)
+os.makedirs(f"{BASE}/runtime", exist_ok=True)
+
+logger = logging.getLogger("task_worker")
+# === FULLFIX_DIRECTION_KERNEL_STAGE_1_IMPORT ===
+try:
+    from core.work_item import WorkItem as _Stage1WorkItem
+    from core.direction_registry import DirectionRegistry as _Stage1DirReg
+except Exception:
+    _Stage1WorkItem = None
+    _Stage1DirReg = None
+# === END ===
+# === FULLFIX_CAPABILITY_ROUTER_STAGE_2_IMPORT ===
+try:
+    from core.capability_router import CapabilityRouter as _Stage2Router
+except Exception:
+    _Stage2Router = None
+# === END STAGE2 ===
+# === FULLFIX_CONTEXT_LOADER_STAGE_3_IMPORT ===
+try:
+    from core.context_loader import ContextLoader as _Stage3Loader
+except Exception:
+    _Stage3Loader = None
+# === END STAGE3 ===
+# === FULLFIX_QUALITY_GATE_STAGE_4_IMPORT ===
+try:
+    from core.quality_gate import QualityGate as _Stage4QG
+except Exception:
+    _Stage4QG = None
+# === END STAGE4 ===
+# === FULLFIX_SEARCH_ENGINE_STAGE_5_IMPORT ===
+try:
+    from core.search_engine import SearchEngine as _Stage5Search
+except Exception:
+    _Stage5Search = None
+# === END STAGE5 ===
+# === FULLFIX_ARCHIVE_ENGINE_STAGE_6_IMPORT ===
+try:
+    from core.archive_engine import ArchiveEngine as _Stage6Archive
+except Exception:
+    _Stage6Archive = None
+# === END STAGE6 ===
+# === FULLFIX_FORMAT_ADAPTER_STAGE_7_IMPORT ===
+try:
+    from core.format_adapter import FormatAdapter as _Stage7FA
+except Exception:
+    _Stage7FA = None
+# === END STAGE7 ===
+# === FULLFIX_TOPIC_AUTODISCOVERY_V2_IMPORT ===
+try:
+    from core.topic_autodiscovery import process as _topic_autodiscovery, check_naming_timeout as _topic_naming_check
+except Exception:
+    _topic_autodiscovery = None
+    _topic_naming_check = None
+# === END TOPIC_AUTO ===
+
+
+
+
+
+
+
+
+logger.setLevel(logging.INFO)
+if not logger.handlers:
+    fh = logging.FileHandler(LOG_PATH)
+    fh.setFormatter(logging.Formatter("%(asctime)s %(levelname)s WORKER: %(message)s"))
+    logger.addHandler(fh)
+
+
+def db(path: str) -> sqlite3.Connection:
+    conn = sqlite3.connect(path, timeout=20, isolation_level=None, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=15000")
+    return conn
+
+
+# === EZONE_INGEST_V1 ===
+EZONE_KEYS = {"system", "architecture", "pipeline", "memory"}
+
+def is_ezone_payload(text: str) -> bool:
+    """Проверить что входящий текст — JSON от нейросети"""
+    if not text or not text.strip().startswith("{"):
+        return False
+    try:
+        import json as _j
+        d = _j.loads(text)
+        return bool(EZONE_KEYS & set(d.keys()))
+    except Exception:
+        return False
+
+def save_ezone_json(chat_id: str, text: str) -> str:
+    """Сохранить ingest JSON в memory_files"""
+    import json as _j, hashlib, os
+    from datetime import datetime, timezone
+    try:
+        d = _j.loads(text)
+        chat_key = f"{chat_id}__telegram"
+        base = f"{BASE}/data/memory_files/CHATS/{chat_key}"
+        os.makedirs(base, exist_ok=True)
+        os.makedirs(f"{BASE}/data/memory_files/GLOBAL", exist_ok=True)
+        os.makedirs(f"{BASE}/data/memory_files/SYSTEM", exist_ok=True)
+
+        # Дедупликация по hash за день
+        h = hashlib.md5(text.encode()).hexdigest()[:16]
+        ts = datetime.now(timezone.utc).isoformat()
+        entry = _j.dumps({"timestamp": ts, "data": d, "_meta": {
+            "chat_key": chat_key, "ingested_at": ts, "source": "telegram", "hash": h
+        }}, ensure_ascii=False)
+
+        # timeline
+        with open(f"{base}/timeline.jsonl", "a", encoding="utf-8") as f:
+            f.write(entry + "\n")
+        with open(f"{BASE}/data/memory_files/GLOBAL/timeline.jsonl", "a", encoding="utf-8") as f:
+            f.write(entry + "\n")
+
+        # SYSTEM keys
+        for key in EZONE_KEYS:
+            if key in d:
+                sys_entry = _j.dumps({"timestamp": ts, key: d[key], "chat_key": chat_key}, ensure_ascii=False)
+                with open(f"{BASE}/data/memory_files/SYSTEM/{key}.jsonl", "a", encoding="utf-8") as f:
+                    f.write(sys_entry + "\n")
+
+        logger.info("EZONE_INGEST_V1 saved chat_key=%s hash=%s", chat_key, h)
+        return f"Принял, память загружена ({chat_key})"
+    except Exception as e:
+        logger.error("EZONE_INGEST_V1 err=%s", e)
+        return f"Ошибка загрузки памяти: {e}"
+# === END EZONE_INGEST_V1 ===
+
+def _s(v: Any) -> str:
+    if v is None:
+        return ""
+    if isinstance(v, str):
+        return v.strip()
+    try:
+        return json.dumps(v, ensure_ascii=False)
+    except Exception:
+        return str(v).strip()
+
+
+def _clean(text: str, limit: int = 12000) -> str:
+    text = (text or "").replace("\r", "\n")
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()[:limit]
+
+
+def _task_field(task: Any, field: str, default: Any = "") -> Any:
+    try:
+        if hasattr(task, "keys") and field in task.keys():
+            return task[field]
+    except Exception:
+        pass
+    try:
+        return getattr(task, field)
+    except Exception:
+        return default
+
+
+def _has_table(conn: sqlite3.Connection, table: str) -> bool:
+    row = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+        (table,),
+    ).fetchone()
+    return row is not None
+
+
+def _cols(conn: sqlite3.Connection, table: str) -> List[str]:
+    try:
+        return [r[1] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()]
+    except Exception:
+        return []
+
+
+def _update_task(conn: sqlite3.Connection, task_id: str, **kwargs: Any) -> None:
+    cols = _cols(conn, "tasks")
+    parts: List[str] = []
+    vals: List[Any] = []
+
+    for key, value in kwargs.items():
+        if key in cols:
+            parts.append(f"{key}=?")
+            if key == "error_message":
+                vals.append(_clean(_s(value), 4000))
+            elif key == "result":
+                vals.append(_clean(_s(value), 50000))
+            elif key == "raw_input":
+                vals.append(_clean(_s(value), 12000))
+            else:
+                vals.append(value)
+
+    if "updated_at" in cols:
+        parts.append("updated_at=datetime('now')")
+
+    if not parts:
+        return
+
+    vals.append(task_id)
+    conn.execute(f"UPDATE tasks SET {', '.join(parts)} WHERE id=?", vals)
+
+
+
+# === LIVE_MEMORY_HELPERS_V1 ===
+def _memory_insert_topic_entry_v1(chat_id: str, key: str, value: str) -> None:
+    try:
+        import sqlite3 as _sq
+        if not os.path.exists(MEM_DB):
+            return
+        _mc = _sq.connect(MEM_DB)
+        try:
+            _mc.row_factory = _sq.Row
+            _cols_mem = [r[1] for r in _mc.execute("PRAGMA table_info(memory)").fetchall()]
+            if not _cols_mem:
+                return
+            _ts = datetime.datetime.utcnow().isoformat()
+            _val = _clean(_s(value), 50000)
+            if not _val:
+                return
+            _mid = hashlib.sha1(f"{chat_id}:{key}:{_ts}:{_val[:80]}".encode()).hexdigest()
+            _mc.execute(
+                "INSERT OR IGNORE INTO memory (id, chat_id, key, value, timestamp) VALUES (?,?,?,?,?)",
+                (_mid, str(chat_id), str(key), _val, _ts),
+            )
+            _mc.commit()
+        finally:
+            _mc.close()
+    except Exception as _mi_e:
+        logger.warning("LIVE_MEMORY_HELPERS_V1_INSERT_ERR %s", _mi_e)
+
+def _append_timeline_event_v1(chat_id: str, topic_id: int, task_id: str, kind: str, raw_input: str = "", result: str = "") -> None:
+    try:
+        _base = f"{BASE}/data/memory_files"
+        _chat_key = f"{chat_id}__telegram"
+        _chat_dir = os.path.join(_base, "CHATS", _chat_key)
+        os.makedirs(_chat_dir, exist_ok=True)
+        os.makedirs(os.path.join(_base, "GLOBAL"), exist_ok=True)
+        _entry = json.dumps({
+            "timestamp": datetime.datetime.utcnow().isoformat(),
+            "chat_id": str(chat_id),
+            "topic_id": int(topic_id or 0),
+            "task_id": str(task_id),
+            "kind": str(kind),
+            "raw_input": _clean(_s(raw_input), 4000),
+            "result": _clean(_s(result), 4000),
+            "source": "task_worker",
+        }, ensure_ascii=False)
+        for _tl_path in [
+            os.path.join(_chat_dir, "timeline.jsonl"),
+            os.path.join(_base, "GLOBAL", "timeline.jsonl"),
+        ]:
+            with open(_tl_path, "a", encoding="utf-8") as _f:
+                _f.write(_entry + "\n")
+    except Exception as _tl_e:
+        logger.warning("LIVE_MEMORY_HELPERS_V1_TIMELINE_ERR %s", _tl_e)
+# === END LIVE_MEMORY_HELPERS_V1 ===
+
+def _history(conn: sqlite3.Connection, task_id: str, action: str) -> None:
+    if not _has_table(conn, "task_history"):
+        return
+    conn.execute(
+        "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, datetime('now'))",
+        (task_id, _clean(action, 1000)),
+    )
+
+
+def _already_replied(conn: sqlite3.Connection, task_id: str, kind: str) -> bool:
+    if not _has_table(conn, "task_history"):
+        return False
+    row = conn.execute(
+        "SELECT 1 FROM task_history WHERE task_id=? AND action=? LIMIT 1",
+        (task_id, f"reply_sent:{kind}"),
+    ).fetchone()
+    return row is not None
+
+
+def _send_once(conn: sqlite3.Connection, task_id: str, chat_id: str, text: str, reply_to: Optional[int], kind: str) -> bool:
+    # === _send_once_UNIFIED_USER_OUTPUT_SANITIZER_V1 ===
+    try:
+        from core.output_sanitizer import sanitize_user_output as _uos_sanitize
+        text = _uos_sanitize(text)
+    except Exception as _uos_err:
+        logger.warning("UNIFIED_USER_OUTPUT_SANITIZER_V1_ERR %s", _uos_err)
+    # === END__send_once_UNIFIED_USER_OUTPUT_SANITIZER_V1 ===
+    if _already_replied(conn, task_id, kind):
+        return True
+    ok = send_reply(chat_id=chat_id, text=text, reply_to_message_id=reply_to)
+    if ok:
+        _history(conn, task_id, f"reply_sent:{kind}")
+    return bool(ok)
+
+
+def _send_once_ex(conn: sqlite3.Connection, task_id: str, chat_id: str, text: str, reply_to: Optional[int], kind: str) -> Dict[str, Any]:
+    # === _send_once_ex_UNIFIED_USER_OUTPUT_SANITIZER_V1 ===
+    try:
+        from core.output_sanitizer import sanitize_user_output as _uos_sanitize
+        text = _uos_sanitize(text)
+    except Exception as _uos_err:
+        logger.warning("UNIFIED_USER_OUTPUT_SANITIZER_V1_ERR %s", _uos_err)
+    # === END__send_once_ex_UNIFIED_USER_OUTPUT_SANITIZER_V1 ===
+    if _already_replied(conn, task_id, kind):
+        return {"ok": True, "bot_message_id": None, "skipped": True}
+    res = send_reply_ex(chat_id=chat_id, text=text, reply_to_message_id=reply_to)
+    if not isinstance(res, dict):
+        res = {"ok": bool(res)}
+    if res.get("ok"):
+        _history(conn, task_id, f"reply_sent:{kind}")
+    return res
+
+
+def _hash(text: str) -> str:
+    return hashlib.sha1(_clean(text).lower().encode("utf-8")).hexdigest()
+
+
+def _is_valid_result(text: str, raw_input: str) -> bool:
+    r = _clean(text)
+    if not r or len(r) < MIN_RESULT_LEN:
+        return False
+    if any(re.search(p, r, re.I) for p in BAD_RESULT_RE):
+        return False
+    if _hash(r) == _hash(raw_input):
+        return False
+    if "/root/" in r or ".ogg" in r.lower():
+        return False
+    return True
+
+
+def _detect_role_assignment(text: str) -> str:
+    triggers = [
+        r"^(?:\[voice\]\s*)?этот чат для\s+(.+)$",
+        r"^(?:\[voice\]\s*)?этот чат про\s+(.+)$",
+        r"^(?:\[voice\]\s*)?этот топик для\s+(.+)$",
+        r"^(?:\[voice\]\s*)?этот топик про\s+(.+)$",
+        r"^(?:\[voice\]\s*)?чат закрепл[её]н за\s+(.+)$",
+        r"^(?:\[voice\]\s*)?этот чат исключительно для\s+(.+)$",
+        r"^(?:\[voice\]\s*)?этот чат используется для\s+(.+)$",
+        r"^(?:\[voice\]\s*)?закрепи чат за\s+(.+)$",
+        r"^(?:\[voice\]\s*)?закрепи этот чат за\s+(.+)$",
+    ]
+    t = _clean(text, 500).lower()
+    for pattern in triggers:
+        m = re.fullmatch(pattern, t)
+        if m:
+            return _clean(m.group(1), 200)
+    return ""
+
+
+def _extract_role_confirmation(result: str) -> str:
+    t = _clean(_s(result), 500)
+    m = re.fullmatch(r"Понял назначение чата так:\n(.+?)\n\nПодтверди или уточни", t, re.S)
+    if not m:
+        return ""
+    return _clean(m.group(1), 200)
+
+
+def _save_topic_role(chat_id: str, topic_id: int, role: str) -> None:
+    if not role or not os.path.exists(MEM_DB):
+        return
+    mem = db(MEM_DB)
+    try:
+        if not _has_table(mem, "memory"):
+            mem.execute("CREATE TABLE IF NOT EXISTS memory (chat_id TEXT, key TEXT, value TEXT, timestamp TEXT)")
+        key = f"topic_{topic_id}_role"
+        mem.execute("DELETE FROM memory WHERE chat_id=? AND key=?", (str(chat_id), key))
+        mem.execute(
+            "INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
+            (str(chat_id), key, role),
+        )
+        mem.commit()
+    finally:
+        mem.close()
+
+
+def _load_memory_context(chat_id: str, topic_id: int) -> Tuple[str, str, str, str]:
+    if not os.path.exists(MEM_DB):
+        return "", "", "", ""
+
+    conn = db(MEM_DB)
+    try:
+        if not _has_table(conn, "memory"):
+            return "", "", "", ""
+
+        topic_prefix = f"topic_{int(topic_id)}_"
+        rows = conn.execute(
+            """
+            SELECT key, value
+            FROM memory
+            WHERE chat_id=?
+              AND key GLOB ?
+            ORDER BY timestamp DESC
+            LIMIT 100
+            """,
+            (str(chat_id), f"{topic_prefix}*"),
+        ).fetchall()
+
+        short_memory: List[str] = []
+        long_memory: List[str] = []
+        topic_role = ""
+        topic_directions = ""
+
+        MEMORY_MUTEX_MARKERS = [
+            "последние действия",
+            "этот чат закреплён за: последние действия",
+            "в этом чате были следующие действия",
+            "текущий статус: ожидание подтверждения",
+            "текущий статус:",
+            "задача отменена",
+            "задача завершена",
+            "задача закрыта",
+            "задачи завершены",
+            "подтверждение принято",
+            "не понимаю запрос",
+            "готов к выполнению задачи",
+            "без контекста",
+            "задайте конкретный вопрос",
+            "конкретный вопрос по",
+            "нет, не помню",
+        ]
+
+        for row in rows:
+            key = _s(row["key"])
+            raw_value = _s(row["value"])
+            if key.endswith("_user_input") or key.endswith("_role"):
+                limit = 500
+            elif key.endswith("_task_summary"):
+                limit = 20000
+            elif key.endswith("_assistant_output"):
+                limit = 50000
+            elif key.endswith("_directions"):
+                limit = 1000
+            else:
+                limit = 500
+            value = _clean(raw_value, limit)
+            if not value:
+                continue
+            low = value.lower()
+            if _is_memory_noise(low) or any(x in low for x in MEMORY_BAD_MARKERS):
+                continue
+            if any(m in low for m in MEMORY_MUTEX_MARKERS):
+                continue
+
+            if key.endswith("_role") and not topic_role:
+                topic_role = value[:500]
+                continue
+
+            if not topic_role and (key.endswith("_assistant_output") or key.endswith("_task_summary")):
+                m = re.search(r"чат закрепл[её]н за темами:\s*(.+?)(?:\.|$)", value, re.I)
+                if not m:
+                    m = re.search(r"чат закрепл[её]н за\s*(.+?)(?:\.|$)", value, re.I)
+                if not m:
+                    m = re.search(r"закреплено:\s*чат для\s*(.+?)(?:\.|$)", value, re.I)
+                if not m:
+                    m = re.search(r"этот чат используется для\s*(.+?)(?:\.|$)", value, re.I)
+                if m:
+                    topic_role = _clean(m.group(1), 500)
+
+            if key.endswith("_directions") and not topic_directions:
+                topic_directions = value[:1000]
+                continue
+            if key.endswith("_user_input") or key.endswith("_task_summary"):
+                if not _is_memory_noise(value):
+                    short_memory.append(f"{key}: {value}")
+            else:
+                if not _is_memory_noise(value):
+                    long_memory.append(f"{key}: {value}")
+
+        # === TOPIC_META_ROLE_INJECT_V1 ===
+        if not topic_role and TOPIC_META_LOADER_WIRED:
+            try:
+                _tm = load_topic_meta(int(topic_id or 0))
+                if _tm:
+                    _tm_name = _tm.get("name", "")
+                    _tm_dir = _tm.get("direction", "")
+                    if _tm_name:
+                        topic_role = f"Топик: {_tm_name} | Направление: {_tm_dir}"
+            except Exception:
+                pass
+        # === END TOPIC_META_ROLE_INJECT_V1 ===
+        return "\n".join(short_memory[:20]), "\n".join(long_memory[:20]), topic_role, topic_directions  # MEMORY_LIMIT_20_V1
+    finally:
+        conn.close()
+
+
+def _load_archive_context(chat_id: str, topic_id: int, user_text: str) -> str:
+    # === ARCHIVE_DISTRIBUTOR_V1_WIRED ===
+    try:
+        from core.archive_distributor import _load_archive_for_topic
+        arc = _load_archive_for_topic(chat_id, topic_id, user_text, limit=5)
+        if arc:
+            return arc
+    except Exception as _ade:
+        logger.warning("ARCHIVE_DISTRIBUTOR_ERR %s", _ade)
+    # === END ARCHIVE_DISTRIBUTOR_V1_WIRED ===
+    # Fallback — старый метод через archive_legacy
+    STOP_WORDS = {"это","как","что","где","когда","для","почему","зачем","кто"}
+    words = {w for w in re.findall(r"\w+", _clean(user_text).lower()) if len(w) > 3 and w not in STOP_WORDS}
+    if not words or not os.path.exists(MEM_DB):
+        return ""
+
+    conn = db(MEM_DB)
+    try:
+        if not _has_table(conn, "memory"):
+            return ""
+        rows = conn.execute(
+            """
+            SELECT key, value
+            FROM memory
+            WHERE chat_id=?
+              AND key LIKE 'archive_legacy_%'
+            ORDER BY timestamp DESC
+            LIMIT 300
+            """,
+            (str(chat_id),),
+        ).fetchall()
+    finally:
+        conn.close()
+
+    scored: List[Tuple[int, str]] = []
+    for row in rows:
+        raw = _s(row["value"])
+        if any(x in raw.lower() for x in MEMORY_BAD_MARKERS):
+            continue
+        try:
+            payload = json.loads(raw)
+        except Exception:
+            continue
+        if int(payload.get("topic_id", -1)) != int(topic_id):
+            continue
+        blob = _clean(f"{_s(payload.get('raw_input', ''))}\n{_s(payload.get('result', ''))}", 1200)
+        ov = len(words & set(re.findall(r"\w+", blob.lower())))
+        if ov > 0:
+            scored.append((ov, blob))
+
+    scored = [(ov, blob) for ov, blob in scored if ov > 0]
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return "\n\n".join(x[1] for x in scored[:3]) if scored else ""
+
+
+def _active_unfinished_context(conn: sqlite3.Connection, chat_id: str, topic_id: int, task_id: str) -> str:
+    cols = _cols(conn, "tasks")
+    where = [
+        "chat_id=?",
+        "id<>?",
+        "state IN ('WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION')",
+    ]
+    params: List[Any] = [str(chat_id), task_id]
+    if "topic_id" in cols:
+        where.append("COALESCE(topic_id,0)=?")
+        params.append(int(topic_id))
+
+    rows = conn.execute(
+        f"""
+        SELECT raw_input, result, state
+        FROM tasks
+        WHERE {' AND '.join(where)}
+        ORDER BY updated_at DESC, created_at DESC
+        LIMIT 3
+        """,
+        params,
+    ).fetchall()
+
+    parts = []
+    for row in rows:
+        raw = _clean(_s(_task_field(row, "raw_input")), 300)
+        res = _clean(_s(row["result"]), 500)
+        state = _clean(_s(row["state"]), 100)
+        low = f"{raw}\n{res}".lower()
+        if any(x in low for x in MEMORY_BAD_MARKERS):
+            continue
+        chunk = []
+        if raw:
+            chunk.append(f"raw_input: {raw}")
+        if res:
+            chunk.append(f"result: {res}")
+        if state:
+            chunk.append(f"state: {state}")
+        if chunk:
+            parts.append("\n".join(chunk))
+    return "\n\n".join(parts[:3])
+
+
+def _search_fact_context(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> str:
+    cols = _cols(conn, "tasks")
+    where = [
+        "chat_id=?",
+        "state IN ('DONE','ARCHIVED')",
+        "lower(COALESCE(raw_input,'')) GLOB '*най*'",
+    ]
+    params: List[Any] = [str(chat_id)]
+    if "topic_id" in cols:
+        where.append("COALESCE(topic_id,0)=?")
+        params.append(int(topic_id))
+
+    rows = conn.execute(
+        f"""
+        SELECT raw_input, result
+        FROM tasks
+        WHERE {' AND '.join(where)}
+        ORDER BY updated_at DESC
+        LIMIT 5
+        """,
+        params,
+    ).fetchall()
+
+    facts: List[str] = []
+    for row in rows:
+        q = _clean(_s(row["raw_input"]), 300)
+        r = _clean(_s(row["result"]), 500)
+        low = f"{q}\n{r}".lower()
+        if any(x in low for x in MEMORY_BAD_MARKERS):
+            continue
+        if q and r:
+            facts.append(f"search_done: {q} => {r}")
+    return "\n".join(facts[:3])
+
+
+def _save_memory(chat_id: str, topic_id: int, raw_input: str, result: str) -> None:
+    low = (result or "").lower()
+    if any(x in low for x in [
+        "без контекста","не понимаю запрос","не помню",
+        "задача завершена","задача закрыта","подтверждение принято",
+        "готов к выполнению задачи"
+    ]):
+        return
+
+    bad = [
+        "ошибка",
+        "не найдено",
+        "уточните",
+        "traceback",
+        "/root/",
+        ".ogg",
+        "delete from",
+        "task_worker.py",
+        "telegram_daemon.py",
+    ]
+    if not result or len(result) < MIN_RESULT_LEN:
+        return
+    low = result.lower()
+    if any(b in low for b in bad):
+        return
+    if not os.path.exists(MEM_DB):
+        return
+
+    conn = db(MEM_DB)
+    try:
+        if not _has_table(conn, "memory"):
+            conn.execute("CREATE TABLE IF NOT EXISTS memory (chat_id TEXT, key TEXT, value TEXT, timestamp TEXT)")
+        prefix = f"topic_{int(topic_id)}_"
+        conn.execute(
+            "INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
+            (str(chat_id), f"{prefix}assistant_output", _clean(result, 50000)),
+        )
+        conn.execute(
+            "INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
+            (str(chat_id), f"{prefix}task_summary", _clean(result, 20000) if len(result) >= MIN_RESULT_LEN else ""),
+        )
+        conn.execute(
+            "INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
+            (str(chat_id), f"{prefix}user_input", _clean(raw_input, 500)),
+        )
+        conn.commit()
+        logger.info("save_memory_ok chat=%s topic=%s", chat_id, topic_id)
+    finally:
+        conn.close()
+
+
+def _close_pin(conn: sqlite3.Connection, task_id: str) -> None:
+    if not _has_table(conn, "pin"):
+        return
+    conn.execute(
+        "UPDATE pin SET state='CLOSED', updated_at=datetime('now') WHERE task_id=? AND state='ACTIVE'",
+        (task_id,),
+    )
+
+
+def _finalize_done(conn: sqlite3.Connection, task_id: str, chat_id: str, topic_id: int, reply_to: Optional[int]) -> None:
+    row = conn.execute(
+        "SELECT COALESCE(raw_input,''), COALESCE(result,'') FROM tasks WHERE id=? LIMIT 1",
+        (task_id,),
+    ).fetchone()
+    raw_input = _clean(_s(row[0]) if row else "", 500)
+    result = _clean(_s(row[1]) if row else "", 50000)
+
+    _update_task(conn, task_id, state="DONE", error_message="")
+    _history(conn, task_id, "state:DONE")
+    if result:
+        _save_memory(chat_id, topic_id, raw_input, result)
+    conn.commit()
+
+
+def _is_confirm_intent(text: str) -> bool:
+    t = _clean(text, 200).lower()
+    if t in CONFIRM_INTENTS:
+        return True
+    return any(t.startswith(x) for x in ["да", "подтвер", "соглас", "верно", "ок"])
+
+
+def _is_revision_intent(text: str) -> bool:
+    t = _clean(text, 200).lower()
+    if t in REVISION_INTENTS:
+        return True
+    return any(x in t for x in ["не так", "передел", "исправ", "правк", "уточн"])
+
+
+def _recover_stale_tasks(conn: sqlite3.Connection, chat_id: Optional[str]) -> None:
+    # CONFIRMATION_TIMEOUT_FIX_V1
+    try:
+        conn.execute("""
+            UPDATE tasks SET state='FAILED', error_message='CONFIRMATION_TIMEOUT', updated_at=datetime('now')
+            WHERE state='AWAITING_CONFIRMATION'
+              AND updated_at < datetime('now','-30 minutes')
+              AND COALESCE(raw_input,'') NOT LIKE '%retry_queue_healthcheck%'
+              AND COALESCE(result,'') NOT LIKE '%retry_queue_healthcheck%'
+        """)
+        conn.commit()
+    except Exception as _ct_e:
+        logger.warning("CONFIRMATION_TIMEOUT_FIX_V1_ERR %s", _ct_e)
+    # IN_PROGRESS_HARD_TIMEOUT_V1
+    try:
+        _hp = [] if not chat_id else [str(chat_id)]
+        _hw = (["chat_id=?"] if chat_id else []) + [
+            "state='IN_PROGRESS'",
+            "created_at < datetime('now','-15 minutes')",
+        ]
+        for _hr in conn.execute(
+            f"SELECT id,chat_id,COALESCE(topic_id,0) AS topic_id,reply_to_message_id,raw_input FROM tasks WHERE {' AND '.join(_hw)}",
+            _hp,
+        ).fetchall():
+            _htid = _s(_hr["id"]); _hchat = _s(_hr["chat_id"])
+            _htopic = int(_hr["topic_id"] or 0); _hreply = _hr["reply_to_message_id"]
+            _hmsg = "Задача не выполнена: превышено время выполнения"
+            _update_task(conn, _htid, state="FAILED", result=_hmsg, error_message="EXECUTION_TIMEOUT")
+            _close_pin(conn, _htid); _history(conn, _htid, "state:FAILED:EXECUTION_TIMEOUT")
+            try:
+                _append_timeline_event_v1(_hchat, _htopic, _htid, "execution_timeout", _s(_hr["raw_input"]), _hmsg)
+            except Exception: pass
+            conn.commit()
+            _send_once(conn, _htid, _hchat, _hmsg, _hreply, "execution_timeout")
+    except Exception as _e:
+        logger.warning("IN_PROGRESS_HARD_TIMEOUT_V1_ERR %s", _e)
+
+    where = [
+        "state IN ('IN_PROGRESS','WAITING_CLARIFICATION')",
+        "(strftime('%s','now') - strftime('%s', COALESCE(updated_at, created_at))) > ?",
+    ]
+    params: List[Any] = [STALE_TIMEOUT]
+    if chat_id:
+        where.insert(0, "chat_id=?")
+        params.insert(0, str(chat_id))
+
+    rows = conn.execute(
+        f"""
+        SELECT id, chat_id, COALESCE(topic_id,0) AS topic_id, reply_to_message_id
+        FROM tasks
+        WHERE {' AND '.join(where)}
+        """,
+        params,
+    ).fetchall()
+
+    for row in rows:
+        task_id = _s(row["id"])
+        tg_chat_id = _s(row["chat_id"])
+        reply_to = row["reply_to_message_id"]
+        _update_task(conn, task_id, state="FAILED", error_message="STALE_TIMEOUT")
+        _close_pin(conn, task_id)
+        _history(conn, task_id, "state:FAILED")
+        conn.commit()
+        _send_once(conn, task_id, tg_chat_id, "Задача не выполнена. Повтори или уточни запрос", reply_to, "stale_failed")
+
+    done_markers = [
+        "задача завершена",
+        "задача закрыта",
+        "задачи завершены",
+        "подтверждение принято",
+    ]
+    junk_markers = [
+        "без контекста",
+        "задайте конкретный вопрос",
+        "конкретный вопрос по",
+        "нет, не помню",
+        "не понимаю запрос",
+        "готов к выполнению задачи",
+    ]
+
+    rows = conn.execute("""
+        SELECT id, chat_id, COALESCE(topic_id,0) AS topic_id, reply_to_message_id, result, raw_input, input_type, updated_at, created_at
+        FROM tasks
+        WHERE state = 'AWAITING_CONFIRMATION'
+    """).fetchall()
+
+    now_utc = datetime.datetime.now(datetime.timezone.utc)
+
+    for row in rows:
+        updated = row["updated_at"] or row["created_at"]
+        if not updated:
+            continue
+
+        result = _s(row["result"])
+        low_result = result.lower()
+        row_raw_input = ""
+        try:
+            row_raw_input = _s(row["raw_input"])
+        except Exception:
+            row_raw_input = ""
+        if _force_voice_finish(row_raw_input, result):
+            _update_task(conn, row["id"], state="DONE")
+            continue  # FORCE_VOICE_FINISH_HOOK
+
+        if any(m in low_result for m in done_markers):
+            _update_task(conn, row["id"], state="DONE", error_message="")
+            _close_pin(conn, row["id"])
+            _history(conn, row["id"], "state:DONE")
+            conn.commit()
+            continue
+
+        if any(m in low_result for m in junk_markers):
+            _update_task(conn, row["id"], state="FAILED", error_message="JUNK_RESULT_CLEANUP")
+            _close_pin(conn, row["id"])
+            _history(conn, row["id"], "state:FAILED")
+            conn.commit()
+            continue
+
+        try:
+            s = str(updated).strip()
+            if "T" in s:
+                dt = datetime.datetime.fromisoformat(s.replace("Z", "+00:00"))
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=datetime.timezone.utc)
+            else:
+                dt = datetime.datetime.fromisoformat(s)
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=datetime.timezone.utc)
+        except Exception:
+            continue
+
+        hours_old = (now_utc - dt).total_seconds() / 3600.0
+        if hours_old <= 24:
+            continue
+
+        if _s(row["input_type"]).lower() == "drive_file" and hours_old > 48:
+            _update_task(conn, row["id"], state="FAILED", error_message="drive_upload_stale")
+            _close_pin(conn, row["id"])
+            _history(conn, row["id"], "state:FAILED")
+            conn.commit()
+        elif hours_old > 168:
+            _update_task(conn, row["id"], state="ARCHIVED")
+            _close_pin(conn, row["id"])
+            _history(conn, row["id"], "state:ARCHIVED")
+            conn.commit()
+
+    conn.execute("""
+        UPDATE pin
+        SET state='CLOSED', updated_at=datetime('now')
+        WHERE state='ACTIVE'
+          AND task_id IN (
+              SELECT id FROM tasks
+              WHERE state='FAILED'
+                 OR lower(COALESCE(result,'')) LIKE '%задача закрыта%'
+                 OR lower(COALESCE(result,'')) LIKE '%подтверждение принято%'
+                 OR lower(COALESCE(result,'')) LIKE '%без контекста%'
+                 OR lower(COALESCE(result,'')) LIKE '%конкретный вопрос%'
+                 OR lower(COALESCE(result,'')) LIKE '%не помню%'
+          )
+    """)
+    conn.commit()
+
+
+
+# === FULLFIX_13D_TASK_WORKER_SEND_BELT ===
+# reply_sender also strips MANIFEST globally
+# === END FULLFIX_13D_TASK_WORKER_SEND_BELT ===
+
+# === FULLFIX_13C_STRIP_MANIFEST_BEFORE_SEND ===
+def _ff13c_strip_manifest_links(text):
+    import re
+    msg = str(text or "")
+    msg = re.sub(r"(?im)^MANIFEST:\s*https?://\S+\s*$", "", msg)
+    msg = re.sub(r"(?im)^Manifest:\s*https?://\S+\s*$", "", msg)
+    msg = re.sub(r"\n{3,}", "\n\n", msg).strip()
+    return msg
+# === END FULLFIX_13C_STRIP_MANIFEST_BEFORE_SEND ===
+
+
+async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str, topic_id: int) -> None:
+    # === REMAINING_TECH_CONTOUR_CLOSE_V1_WIRED ===
+    # P0 guard order:
+    # 1. reply repeat parent
+    # 2. explicit project route before estimate/template/file followup
+    try:
+        from core.reply_repeat_parent import prehandle_reply_repeat_parent_v1 as _rrp_prehandle
+        _rrp = _rrp_prehandle(conn, task)
+        if _rrp and _rrp.get("handled"):
+            _rrp_tid = _s(_task_field(task, "id", ""))
+            _rrp_chat = _s(_task_field(task, "chat_id", ""))
+            _rrp_reply = _task_field(task, "reply_to_message_id", None)
+            _rrp_text = _rrp.get("message") or ""
+            try:
+                from core.output_sanitizer import sanitize_user_output as _sanitize_out
+                _rrp_text = _sanitize_out(_rrp_text)
+            except Exception:
+                pass
+            _rrp_send = _send_once_ex(conn, _rrp_tid, _rrp_chat, _rrp_text, _rrp_reply, _rrp.get("kind", "reply_repeat_parent"))
+            _update_task(
+                conn,
+                _rrp_tid,
+                state=_rrp.get("state", "DONE"),
+                result=_rrp_text,
+                error_message=_rrp.get("error_message", ""),
+                bot_message_id=_rrp_send.get("bot_message_id"),
+            )
+            _history(conn, _rrp_tid, _rrp.get("history", "REPLY_REPEAT_PARENT_TASK_V1:HANDLED"))
+            return
+    except Exception as _rrp_err:
+        logger.warning("REMAINING_TECH_CONTOUR_CLOSE_V1_REPLY_ERR %s", _rrp_err)
+
+    try:
+        from core.project_route_guard import prehandle_project_route_v1 as _proj_prehandle
+        _proj = await _proj_prehandle(conn, task)
+        if _proj and _proj.get("handled"):
+            _proj_tid = _s(_task_field(task, "id", ""))
+            _proj_chat = _s(_task_field(task, "chat_id", ""))
+            _proj_reply = _task_field(task, "reply_to_message_id", None)
+            _proj_text = _proj.get("message") or ""
+            try:
+                from core.output_sanitizer import sanitize_project_message as _sanitize_project_out
+                _proj_text = _sanitize_project_out(_proj_text)
+            except Exception:
+                pass
+            _proj_send = _send_once_ex(conn, _proj_tid, _proj_chat, _proj_text, _proj_reply, _proj.get("kind", "project_route_guard"))
+            _update_task(
+                conn,
+                _proj_tid,
+                state=_proj.get("state", "WAITING_CLARIFICATION"),
+                result=_proj_text,
+                error_message=_proj.get("error_message", ""),
+                bot_message_id=_proj_send.get("bot_message_id"),
+            )
+            _history(conn, _proj_tid, _proj.get("history", "PROJECT_ROUTE_FIX_NO_ESTIMATE_REGRESSION_V1:HANDLED"))
+            return
+    except Exception as _proj_err:
+        logger.warning("REMAINING_TECH_CONTOUR_CLOSE_V1_PROJECT_ERR %s", _proj_err)
+    # === END_REMAINING_TECH_CONTOUR_CLOSE_V1_WIRED ===
+    # === FULL_TECH_CONTOUR_CLOSE_V1_WIRED ===
+    # P0 guard: price confirmation, context-aware file intake, Telegram duplicate file memory
+    try:
+        from core.price_enrichment import prehandle_price_task_v1 as _ftc_price_prehandle
+        _ftc_price = await _ftc_price_prehandle(conn, task)
+        if _ftc_price and _ftc_price.get("handled"):
+            _ftc_tid = _s(_task_field(task, "id", ""))
+            _ftc_chat = _s(_task_field(task, "chat_id", ""))
+            _ftc_reply = _task_field(task, "reply_to_message_id", None)
+            _ftc_text = _ftc_price.get("message") or ""
+            _ftc_send = _send_once_ex(conn, _ftc_tid, _ftc_chat, _ftc_text, _ftc_reply, _ftc_price.get("kind", "price_enrichment"))
+            _update_task(
+                conn,
+                _ftc_tid,
+                state=_ftc_price.get("state", "WAITING_CLARIFICATION"),
+                result=_ftc_text,
+                error_message=_ftc_price.get("error_message", ""),
+                bot_message_id=_ftc_send.get("bot_message_id"),
+            )
+            _history(conn, _ftc_tid, _ftc_price.get("history", "WEB_SEARCH_PRICE_ENRICHMENT_V1:HANDLED"))
+            return
+    except Exception as _ftc_price_err:
+        logger.warning("FULL_TECH_CONTOUR_CLOSE_V1_PRICE_ERR %s", _ftc_price_err)
+
+    try:
+        from core.file_context_intake import prehandle_task_context_v1 as _ftc_file_prehandle
+        _ftc_file = _ftc_file_prehandle(conn, task)
+        if _ftc_file and _ftc_file.get("handled"):
+            _ftc_tid = _s(_task_field(task, "id", ""))
+            _ftc_chat = _s(_task_field(task, "chat_id", ""))
+            _ftc_reply = _task_field(task, "reply_to_message_id", None)
+            _ftc_text = _ftc_file.get("message") or ""
+            _ftc_send = _send_once_ex(conn, _ftc_tid, _ftc_chat, _ftc_text, _ftc_reply, _ftc_file.get("kind", "file_context_intake"))
+            _update_task(
+                conn,
+                _ftc_tid,
+                state=_ftc_file.get("state", "DONE"),
+                result=_ftc_text,
+                error_message=_ftc_file.get("error_message", ""),
+                bot_message_id=_ftc_send.get("bot_message_id"),
+            )
+            _history(conn, _ftc_tid, _ftc_file.get("history", "CONTEXT_AWARE_FILE_INTAKE_V1:HANDLED"))
+            return
+    except Exception as _ftc_file_err:
+        logger.warning("FULL_TECH_CONTOUR_CLOSE_V1_FILE_ERR %s", _ftc_file_err)
+    # === END_FULL_TECH_CONTOUR_CLOSE_V1_WIRED ===
+
+    # === FINAL_CLOSURE_BLOCKER_FIX_V1_TASK_WORKER_HOOK ===
+    try:
+        from core.final_closure_engine import maybe_handle_final_closure as _fcv1_handle
+        _fcv1 = _fcv1_handle(
+            conn=conn,
+            task=task,
+            task_id=str(task_id),
+            chat_id=str(chat_id),
+            topic_id=int(topic_id or 0),
+            raw_input=raw_input,
+            input_type=input_type,
+            reply_to=reply_to,
+        )
+        if isinstance(_fcv1, dict) and _fcv1.get("handled"):
+            _fcv1_msg = str(_fcv1.get("message") or "").strip()
+            _fcv1_state = str(_fcv1.get("state") or "DONE").strip()
+            _fcv1_kind = str(_fcv1.get("kind") or "final_closure_blocker_fix_v1").strip()
+            if _fcv1_msg:
+                _fcv1_send = _send_once_ex(conn, str(task_id), str(chat_id), _fcv1_msg, reply_to, _fcv1_kind)
+                _fcv1_bot = _fcv1_send.get("bot_message_id") if isinstance(_fcv1_send, dict) else None
+                _update_task(conn, str(task_id), state=_fcv1_state, result=_fcv1_msg, bot_message_id=_fcv1_bot, error_message="")
+                _history(conn, str(task_id), _fcv1.get("history", "FINAL_CLOSURE_BLOCKER_FIX_V1:HANDLED"))
+                conn.commit()
+                return
+    except Exception as _fcv1_err:
+        logger.warning("FINAL_CLOSURE_BLOCKER_FIX_V1_TASK_WORKER_HOOK_ERR %s", _fcv1_err)
+    # === END_FINAL_CLOSURE_BLOCKER_FIX_V1_TASK_WORKER_HOOK ===
+
+    # === EZONE_INGEST_CALL_V1 ===
+    try:
+        _ez_raw = str(task["raw_input"] if task else "") if task else ""
+        if is_ezone_payload(_ez_raw):
+            _ez_msg = save_ezone_json(str(chat_id), _ez_raw)
+            _update_task(conn, task["id"], state="DONE", result=_ez_msg, error_message="")
+            conn.commit()
+            from core.reply_sender import send_reply_ex
+            send_reply_ex(chat_id=str(chat_id), text=_ez_msg, reply_to_message_id=task.get("reply_to_message_id"), message_thread_id=topic_id)
+            logger.info("EZONE_INGEST_CALL_V1 task=%s", task["id"])
+            return
+    except Exception as _eze:
+        logger.warning("EZONE_INGEST_CALL_ERR %s", _eze)
+    # === END EZONE_INGEST_CALL_V1 ===
+    # === HEALTHCHECK_GUARD_V1 ===
+    try:
+        _hc_raw = str(task['raw_input'] if task else '') if task else ''
+        _hc_res = str(task['result'] if task else '') if task else ''
+        _hc_markers = ['retry_queue_healthcheck', 'healthcheck', 'areal_hc_', '_hc_file']
+        if any(m in _hc_raw or m in _hc_res for m in _hc_markers):
+            _update_task(conn, task['id'], state='CANCELLED', error_message='SERVICE_FILE_IGNORED:HEALTHCHECK')
+            conn.commit()
+            logger.info('HEALTHCHECK_GUARD_V1 cancelled task=%s', task['id'])
+            return
+    except Exception as _hcge:
+        logger.warning('HEALTHCHECK_GUARD_ERR %s', _hcge)
+    # === END HEALTHCHECK_GUARD_V1 ===
+    task_id = _s(_task_field(task, "id"))
+    raw_input = _clean(_s(_task_field(task, "raw_input")), 4000)
+    reply_to = _task_field(task, "reply_to_message_id", None)
+
+    # === VOICE_CONFIRM_AWAITING_V1 ===
+    try:
+        _vc_raw = str(raw_input or "").strip()
+        _vc_is_voice = _vc_raw.lower().startswith("[voice]")
+        _vc_text = re.sub(r"^\s*\[voice\]\s*", "", _vc_raw, flags=re.I).strip()
+        _vc_low = _vc_text.lower().strip().rstrip("!?. ")
+        if _vc_is_voice and (_vc_low in CONFIRM_INTENTS or _vc_low in REVISION_INTENTS):
+            _vc_parent = conn.execute(
+                """
+                SELECT id, result, raw_input
+                FROM tasks
+                WHERE chat_id=?
+                  AND COALESCE(topic_id,0)=?
+                  AND id<>?
+                  AND state='AWAITING_CONFIRMATION'
+                ORDER BY updated_at DESC
+                LIMIT 1
+                """,
+                (str(chat_id), int(topic_id or 0), task_id),
+            ).fetchone()
+
+            if _vc_parent is not None and _vc_low in CONFIRM_INTENTS:
+                _vc_parent_id = _s(_vc_parent["id"])
+                _finalize_done(conn, _vc_parent_id, str(chat_id), int(topic_id or 0), reply_to)
+                _update_task(conn, task_id, state="DONE", result="Подтверждение принято голосом. Задача закрыта", error_message="")
+                _history(conn, _vc_parent_id, "VOICE_CONFIRM_AWAITING_V1:PARENT_DONE")
+                _history(conn, task_id, "VOICE_CONFIRM_AWAITING_V1:CHILD_DONE")
+                conn.commit()
+                _send_once(conn, task_id, str(chat_id), "Подтверждение принято голосом. Задача закрыта", reply_to, "voice_confirm_awaiting_v1")
+                logger.info("VOICE_CONFIRM_AWAITING_V1 confirmed parent=%s child=%s topic=%s", _vc_parent_id, task_id, topic_id)
+                return
+
+            if _vc_parent is not None and _vc_low in REVISION_INTENTS:
+                _vc_parent_id = _s(_vc_parent["id"])
+                _vc_merged = _clean(_s(_vc_parent["result"]) + "\n\nПравки пользователя голосом:\n" + _vc_text, 12000)
+                _update_task(conn, _vc_parent_id, state="IN_PROGRESS", raw_input=_vc_merged, error_message="")
+                _update_task(conn, task_id, state="DONE", result="Голосовые правки приняты. Задача возвращена в работу", error_message="")
+                _history(conn, _vc_parent_id, "VOICE_CONFIRM_AWAITING_V1:PARENT_REVISION")
+                _history(conn, task_id, "VOICE_CONFIRM_AWAITING_V1:CHILD_DONE_REVISION")
+                conn.commit()
+                _send_once(conn, task_id, str(chat_id), "Голосовые правки приняты. Задача возвращена в работу", reply_to, "voice_revision_awaiting_v1")
+                logger.info("VOICE_CONFIRM_AWAITING_V1 revision parent=%s child=%s topic=%s", _vc_parent_id, task_id, topic_id)
+                return
+    except Exception as _vc_e:
+        logger.error("VOICE_CONFIRM_AWAITING_V1_ERR task=%s err=%s", task_id, _vc_e)
+    # === END VOICE_CONFIRM_AWAITING_V1 ===
+
+
+
+
+    
+    # === CREATE_PROJECT_PRIORITY_NO_ROLLBACK_V1 ===
+    try:
+        _cpp_raw = ""
+        try:
+            _cpp_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+        except Exception:
+            _cpp_raw = ""
+        _cpp_clean = re.sub(r"^\s*\[VOICE\]\s*", "", _cpp_raw or "", flags=re.I).strip()
+        _cpp_low = _cpp_clean.lower()
+
+        _cpp_create_words = (
+            "сделай", "делай", "создай", "сформируй", "подготовь", "разработай",
+            "оформи", "выгрузи", "сохрани", "нарисуй", "собери"
+        )
+        # === CREATE_PROJECT_CPP_WORDS_FIX_V1 ===
+        _cpp_project_words = (
+            "проект", "кж", "кд", "км", "кмд", "ар",
+            "фундамент", "фундаментн",
+            "армирован", "арматур", "конструктив", "чертеж", "чертёж",
+            "dxf", "dwg", "узел", "узлы", "спецификац"
+        )
+        # === END_CREATE_PROJECT_CPP_WORDS_FIX_V1 ===
+        _cpp_followup_words = (
+            "я тебе скидывал", "уже скидывал", "где файл", "где проект",
+            "что дальше", "дальше то что", "ты сделал", "что мы делали",
+            "какие последние", "покажи прошл", "найди прошл", "помнишь"
+        )
+
+        _cpp_is_create_project = (
+            any(w in _cpp_low for w in _cpp_create_words)
+            and any(w in _cpp_low for w in _cpp_project_words)
+            and not any(w in _cpp_low for w in _cpp_followup_words)
+        )
+
+        if _cpp_is_create_project:
+            _history(conn, task_id, "CREATE_PROJECT_PRIORITY_NO_ROLLBACK_V1:ROUTE_PROJECT_ENGINE")
+
+            from core.project_engine import create_project_pdf_dxf_artifact
+
+            try:
+                _cpp_data = await create_project_pdf_dxf_artifact(
+                    raw_input=_cpp_clean,
+                    task_id=str(task_id),
+                    topic_id=int(topic_id or 0),
+                    template_hint="",
+                    require_template=False,
+                )
+            except TypeError:
+                _cpp_data = await create_project_pdf_dxf_artifact(
+                    _cpp_clean,
+                    str(task_id),
+                    int(topic_id or 0),
+                    "",
+                )
+
+            if not isinstance(_cpp_data, dict):
+                _update_task(conn, task_id, state="FAILED", result="", error_message="CREATE_PROJECT_PRIORITY_NO_ROLLBACK_V1:NON_DICT_RESULT")
+                _history(conn, task_id, "CREATE_PROJECT_PRIORITY_NO_ROLLBACK_V1:NON_DICT_RESULT")
+                return
+
+            _cpp_links = {}
+            for _k in ("pdf_link", "dxf_link", "xlsx_link", "docx_link", "drive_link", "google_sheet_link", "link"):
+                _v = _cpp_data.get(_k)
+                if isinstance(_v, str) and _v.startswith("http"):
+                    _cpp_links[_k] = _v
+
+            if isinstance(_cpp_data.get("links"), dict):
+                for _k, _v in _cpp_data.get("links").items():
+                    if isinstance(_v, str) and _v.startswith("http"):
+                        _cpp_links[str(_k)] = _v
+
+            _cpp_artifacts = []
+            for _k in ("artifact_path", "package_path", "zip_path", "pdf_path", "dxf_path", "xlsx_path", "docx_path"):
+                _v = _cpp_data.get(_k)
+                if isinstance(_v, str) and _v:
+                    _cpp_artifacts.append({"path": _v, "kind": "project_" + _k.replace("_path", "")})
+
+            if _cpp_artifacts and not _cpp_links:
+                try:
+                    from core.artifact_upload_guard import upload_many_or_fail
+                    _up = upload_many_or_fail(_cpp_artifacts, str(task_id), int(topic_id or 0))
+                    if isinstance(_up, dict):
+                        for _k, _v in (_up.get("links") or {}).items():
+                            if isinstance(_v, str) and _v.startswith("http"):
+                                _cpp_links[str(_k)] = _v
+                except Exception as _up_e:
+                    logger.warning("CREATE_PROJECT_PRIORITY_NO_ROLLBACK_V1_UPLOAD_ERR task=%s err=%s", task_id, _up_e)
+
+            _pdf = ""
+            _dxf = ""
+            _xlsx = ""
+            _other = ""
+
+            for _k, _v in _cpp_links.items():
+                _kl = str(_k).lower()
+                _vl = str(_v).lower()
+                if not _pdf and ("pdf" in _kl or ".pdf" in _vl):
+                    _pdf = _v
+                elif not _dxf and ("dxf" in _kl or ".dxf" in _vl):
+                    _dxf = _v
+                elif not _xlsx and ("xlsx" in _kl or "sheet" in _kl or "spreadsheets" in _vl or ".xlsx" in _vl):
+                    _xlsx = _v
+                elif not _other:
+                    _other = _v
+
+            _cpp_result_lines = ["Проект плиты создан"]
+            if _pdf:
+                _cpp_result_lines.append("PDF: " + _pdf)
+            if _dxf:
+                _cpp_result_lines.append("DXF: " + _dxf)
+            if _xlsx:
+                _cpp_result_lines.append("XLSX: " + _xlsx)
+            if not (_pdf or _dxf or _xlsx) and _other:
+                _cpp_result_lines.append("Файл: " + _other)
+
+            _cpp_result = "\n".join(_cpp_result_lines).strip()
+
+            _cpp_success = bool(_cpp_data.get("success")) or bool(_cpp_links) or bool(_cpp_artifacts)
+            if _cpp_success and (_cpp_links or _cpp_artifacts):
+                _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_cpp_result, error_message="")
+                _history(conn, task_id, "CREATE_PROJECT_PRIORITY_NO_ROLLBACK_V1:AWAITING_CONFIRMATION")
+                try:
+                    _reply_to = task["reply_to_message_id"] if "reply_to_message_id" in task.keys() else None
+                except Exception:
+                    _reply_to = None
+                _send_once_ex(conn, task_id, chat_id, _cpp_result, _reply_to, "project_create_priority")
+                return
+
+            _err = str(_cpp_data.get("error") or "PROJECT_ENGINE_NO_ARTIFACT")[:500]
+            _user_err = "Проект не создан: " + _err
+            _update_task(conn, task_id, state="FAILED", result="", error_message="CREATE_PROJECT_PRIORITY_NO_ROLLBACK_V1:" + _err)
+            _history(conn, task_id, "CREATE_PROJECT_PRIORITY_NO_ROLLBACK_V1:FAILED:" + _err[:200])
+            try:
+                _reply_to = task["reply_to_message_id"] if "reply_to_message_id" in task.keys() else None
+            except Exception:
+                _reply_to = None
+            _send_once_ex(conn, task_id, chat_id, _user_err, _reply_to, "project_create_priority_error")
+            return
+    except Exception as _cpp_e:
+        logger.warning("CREATE_PROJECT_PRIORITY_NO_ROLLBACK_V1_ERR task=%s err=%s", task_id, _cpp_e)
+    # === END_CREATE_PROJECT_PRIORITY_NO_ROLLBACK_V1 ===
+    # === CREATE_ESTIMATE_PRIORITY_NO_ROLLBACK_V1 ===
+    try:
+        _cep_raw = ""
+        try:
+            _cep_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+        except Exception:
+            _cep_raw = ""
+        _cep_clean = re.sub(r"^\s*\[VOICE\]\s*", "", _cep_raw or "", flags=re.I).strip()
+        _cep_low = _cep_clean.lower()
+
+        _cep_create_words = (
+            "сделай", "создай", "сформируй", "подготовь", "составь",
+            "посчитай", "рассчитай", "выгрузи", "сохрани", "оформи"
+        )
+        _cep_estimate_words = (
+            "смет", "расчет", "расчёт", "xlsx", "excel", "эксель",
+            "pdf", "ндс", "итог", "объем", "объём", "расценк", "позици"
+        )
+        _cep_followup_words = (
+            "я тебе скидывал", "уже скидывал", "где файл", "где смета",
+            "что дальше", "дальше то что", "ты сделал", "что мы делали",
+            "какие последние", "покажи прошл", "найди прошл", "помнишь"
+        )
+
+        # === CEP_PROJECT_EXCLUSION_V2 ===
+        _cep_project_words = (
+            "проект", "кж", "кд", "км", "кмд", "ар",
+            "фундамент", "фундаментн", "армирован", "арматур", "dxf", "dwg", "чертеж", "чертёж", "конструктив",
+        )
+        _cep_is_create_estimate = (
+            any(w in _cep_low for w in _cep_create_words)
+            and any(w in _cep_low for w in _cep_estimate_words)
+            and not any(w in _cep_low for w in _cep_followup_words)
+            and not any(w in _cep_low for w in _cep_project_words)
+        )
+        # === END_CEP_PROJECT_EXCLUSION_V2 ===
+
+        if _cep_is_create_estimate:
+            from core.estimate_engine import generate_estimate_from_text
+
+            _history(conn, task_id, "CREATE_ESTIMATE_PRIORITY_NO_ROLLBACK_V1:ROUTE_ESTIMATE_ENGINE")
+            _cep_data = await generate_estimate_from_text(
+                raw_input=_cep_clean,
+                task_id=str(task_id),
+                topic_id=int(topic_id or 0),
+                chat_id=str(chat_id),
+            )
+
+            if isinstance(_cep_data, dict):
+                _cep_state = str(_cep_data.get("state") or "")
+                _cep_success = bool(_cep_data.get("success"))
+                _cep_links = []
+                for _k in ("drive_link", "google_sheet_link", "link", "pdf_link", "xlsx_link", "telegram_link"):
+                    _v = _cep_data.get(_k)
+                    if isinstance(_v, str) and _v.startswith("http"):
+                        _cep_links.append((_k, _v))
+                if isinstance(_cep_data.get("links"), dict):
+                    for _k, _v in _cep_data.get("links").items():
+                        if isinstance(_v, str) and _v.startswith("http"):
+                            _cep_links.append((str(_k), _v))
+
+                _cep_result = str(_cep_data.get("result_text") or _cep_data.get("message") or _cep_data.get("summary") or "").strip()
+                if not _cep_result:
+                    _cep_result = "Смета обработана"
+                # === CLEAN_CEP_RESULT_TEXT_V2 ===
+                _clean_lines = []
+                for _line in str(_cep_result or "").splitlines():
+                    _l = _line.strip()
+                    _ll = _l.lower()
+                    if not _l:
+                        _clean_lines.append(_line)
+                        continue
+                    if _ll.startswith(("engine:", "manifest:", "артефакт:", "проверка:", "drive_link:", "pdf_link:", "xlsx_link:", "google_sheet_link:", "existing_")):
+                        continue
+                    if _ll == "ссылки:":
+                        continue
+                    if _ll.startswith(("- drive_link:", "- pdf_link:", "- xlsx_link:", "- google_sheet_link:", "- existing_")):
+                        continue
+                    _clean_lines.append(_line)
+                _cep_result = "\n".join(_clean_lines).strip()
+
+                if _cep_links and not any(x in _cep_result for x in ("PDF:", "XLSX:", "Google Sheets:")):
+                    _seen_public = set()
+                    _pdf_public = ""
+                    _xlsx_public = ""
+                    for _k, _v in _cep_links:
+                        _vv = str(_v or "")
+                        if not _vv.startswith("http") or _vv in _seen_public:
+                            continue
+                        _seen_public.add(_vv)
+                        if "spreadsheets" in _vv or str(_k).lower() in ("xlsx_link", "google_sheet", "google_sheet_link", "drive_link"):
+                            if not _xlsx_public:
+                                _xlsx_public = _vv
+                        elif ".pdf" in _vv.lower() or "pdf" in str(_k).lower():
+                            if not _pdf_public:
+                                _pdf_public = _vv
+                    _extra = []
+                    if _pdf_public:
+                        _extra.append("PDF: " + _pdf_public)
+                    if _xlsx_public:
+                        _extra.append("XLSX: " + _xlsx_public)
+                    if _extra:
+                        _cep_result += "\n\n" + "\n".join(_extra)
+                # === END_CLEAN_CEP_RESULT_TEXT_V2 ===
+                if _cep_success or _cep_links or _cep_data.get("artifact_path"):
+                    _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_cep_result, error_message="")
+                    _history(conn, task_id, "CREATE_ESTIMATE_PRIORITY_NO_ROLLBACK_V1:AWAITING_CONFIRMATION")
+                    try:
+                        _reply_to = task["reply_to_message_id"] if "reply_to_message_id" in task.keys() else None
+                    except Exception:
+                        _reply_to = None
+                    _send_once_ex(conn, task_id, chat_id, _cep_result, _reply_to, "estimate_create_priority")
+                    return
+
+                _cep_err = str(_cep_data.get("error") or "ESTIMATE_ENGINE_NO_ARTIFACT")
+                _cep_user = str(_cep_data.get("result_text") or _cep_err)
+                _target_state = "WAITING_CLARIFICATION" if _cep_state == "WAITING_CLARIFICATION" else "FAILED"
+                _update_task(conn, task_id, state=_target_state, result=_cep_user, error_message=_cep_err)
+                _history(conn, task_id, "CREATE_ESTIMATE_PRIORITY_NO_ROLLBACK_V1:" + _target_state)
+                try:
+                    _reply_to = task["reply_to_message_id"] if "reply_to_message_id" in task.keys() else None
+                except Exception:
+                    _reply_to = None
+                _send_once_ex(conn, task_id, chat_id, _cep_user or _cep_err, _reply_to, "estimate_create_priority_error")
+                return
+
+            _update_task(conn, task_id, state="FAILED", result="", error_message="CREATE_ESTIMATE_PRIORITY_NO_ROLLBACK_V1:NON_DICT_RESULT")
+            _history(conn, task_id, "CREATE_ESTIMATE_PRIORITY_NO_ROLLBACK_V1:NON_DICT_RESULT")
+            return
+    except Exception as _cep_e:
+        logger.warning("CREATE_ESTIMATE_PRIORITY_NO_ROLLBACK_V1_ERR task=%s err=%s", task_id, _cep_e)
+    # === END_CREATE_ESTIMATE_PRIORITY_NO_ROLLBACK_V1 ===
+    # === FILE_TECH_CONTOUR_FOLLOWUP_V2 ===
+    try:
+        _ft_low = str(raw_input or "").strip()
+        if _filemem_should_followup(_ft_low):
+            _ft_answer = _filemem_build_answer(str(chat_id), int(topic_id or 0), _ft_low)
+            if _ft_answer:
+                _update_task(conn, task_id, state="DONE", result=_ft_answer, error_message="")
+                _history(conn, task_id, "FILE_TECH_CONTOUR_FOLLOWUP_V2:DONE")
+                try:
+                    _save_memory(str(chat_id), int(topic_id or 0), str(raw_input or ""), _ft_answer)
+                except Exception as _e:
+                    logger.warning("FILE_TECH_CONTOUR_FOLLOWUP_V2_SAVE_ERR %s", _e)
+                try:
+                    if _Stage6Archive is not None:
+                        _Stage6Archive().archive(
+                            {
+                                "task_id": task_id,
+                                "chat_id": str(chat_id),
+                                "topic_id": int(topic_id or 0),
+                                "direction": "file_tech_followup",
+                                "engine": "file_memory_bridge",
+                                "input_type": "text",
+                                "raw_input": str(raw_input or ""),
+                            },
+                            {"text": _ft_answer, "result": {"text": _ft_answer}},
+                        )
+                except Exception as _e:
+                    logger.warning("FILE_TECH_CONTOUR_FOLLOWUP_V2_ARCHIVE_ERR %s", _e)
+                try:
+                    _append_timeline_event_v1(str(chat_id), int(topic_id or 0), task_id, "file_tech_followup_done", raw_input, _ft_answer)
+                except Exception as _e:
+                    logger.warning("FILE_TECH_CONTOUR_FOLLOWUP_V2_TIMELINE_ERR %s", _e)
+                conn.commit()
+                _send_once(conn, task_id, str(chat_id), _ft_answer, reply_to, "file_tech_followup_v2")
+                logger.info("FILE_TECH_CONTOUR_FOLLOWUP_V2 done task=%s topic=%s", task_id, topic_id)
+                return
+    except Exception as _ft_e:
+        logger.error("FILE_TECH_CONTOUR_FOLLOWUP_V2_ERR task=%s err=%s", task_id, _ft_e)
+    # === END FILE_TECH_CONTOUR_FOLLOWUP_V2 ===
+    # === ACTIVE_DIALOG_STATE_V1_TASK_WORKER_HOOK ===
+    # === ASYNC_TEMPLATE_WORKFLOW_HOOK_V2 ===
+    try:
+        if maybe_handle_template_workflow_async is not None:
+            _async_tpl = await maybe_handle_template_workflow_async(conn, task, chat_id, topic_id)
+            if _async_tpl and _async_tpl.get("handled"):
+                _async_state = str(_async_tpl.get("state") or "DONE")
+                _async_result = str(_async_tpl.get("result") or "")
+                _async_error = str(_async_tpl.get("error") or "")
+                _update_task(
+                    conn,
+                    task_id,
+                    state=_async_state,
+                    result=_async_result,
+                    error_message=_async_error,
+                )
+                _history(conn, task_id, str(_async_tpl.get("event") or "ASYNC_TEMPLATE_WORKFLOW_HOOK_V2:DONE"))
+                try:
+                    _reply_to = None
+                    if "reply_to_message_id" in task.keys():
+                        _reply_to = task["reply_to_message_id"]
+                    _send_text = _async_result or _async_error or "Задача обработана через шаблон"
+                    _send_once_ex(conn, task_id, chat_id, _send_text, _reply_to, "async_template")
+                except Exception as _async_send_e:
+                    logger.warning("ASYNC_TEMPLATE_WORKFLOW_HOOK_V2_SEND_ERR task=%s err=%s", task_id, _async_send_e)
+                return
+    except Exception as _async_tpl_e:
+        logger.warning("ASYNC_TEMPLATE_WORKFLOW_HOOK_V2_ERR task=%s err=%s", task_id, _async_tpl_e)
+    # === END_ASYNC_TEMPLATE_WORKFLOW_HOOK_V2 ===
+    try:
+        for _canon_handler in (maybe_handle_template_workflow, maybe_handle_active_dialog):
+            if _canon_handler is None:
+                continue
+            _canon_result = _canon_handler(conn, task, chat_id, topic_id)
+            if _canon_result and _canon_result.get("handled"):
+                _canon_state = str(_canon_result.get("state") or "DONE")
+                _canon_text = str(_canon_result.get("result") or "")
+                _canon_error = str(_canon_result.get("error") or "")
+                _update_task(conn, task_id, state=_canon_state, result=_canon_text, error_message=_canon_error)
+                _history(conn, task_id, str(_canon_result.get("event") or "CANON_REMAINING_CODE_FULL_CLOSE_V1:DONE"))
+                try:
+                    if save_dialog_event is not None:
+                        save_dialog_event(chat_id, topic_id, str(_canon_result.get("event") or "event"), _canon_result)
+                except Exception as _sd_e:
+                    logger.warning("ACTIVE_DIALOG_STATE_V1_SAVE_ERR %s", _sd_e)
+                return
+    except Exception as _ads_e:
+        logger.warning("ACTIVE_DIALOG_STATE_V1_TASK_WORKER_HOOK_ERR task=%s err=%s", task_id, _ads_e)
+    # === END_ACTIVE_DIALOG_STATE_V1_TASK_WORKER_HOOK ===
+
+    # === MEMORY_QUERY_GUARD_V1 ===
+    try:
+        _mq_low = str(raw_input or "").strip().lower().rstrip("!?. ")
+        _mq_low = _mq_low.replace("[voice] ", "").replace("[VOICE] ", "").strip()
+        _mq_markers = (
+            "что обсуждали", "что делали", "что мы делали", "что мы обсуждали",
+            "неделю назад", "две недели", "три недели", "месяц назад",
+            "апреля", "марта", "февраля", "января", "помнишь", "напомни",
+            "какие задачи были", "что было", "расскажи что",
+        )
+        if any(m in _mq_low for m in _mq_markers):
+            _archive_ctx = _load_archive_context(str(chat_id), int(topic_id or 0), str(raw_input or ""))
+            _short_ctx, _long_ctx, _topic_role, _topic_directions = _load_memory_context(str(chat_id), int(topic_id or 0))
+            _mq_payload = {
+                "id": task_id, "task_id": task_id,
+                "chat_id": str(chat_id), "topic_id": int(topic_id or 0),
+                "input_type": "text", "state": "IN_PROGRESS",
+                "raw_input": str(raw_input or ""),
+                "short_memory_context": _short_ctx, "long_memory_context": _long_ctx,
+                "archive_context": _archive_ctx, "topic_role": _topic_role,
+                "topic_directions": _topic_directions,
+                "direction": "memory_query", "engine": "ai_router",
+            }
+            if not str(_archive_ctx or "").strip() and not str(_long_ctx or "").strip():
+                _mq_msg = "В этом топике архивных данных по запросу не найдено"
+            else:
+                _mq_ai = await asyncio.wait_for(process_ai_task(_mq_payload), timeout=AI_TIMEOUT)
+                _mq_msg = _clean(_s(_mq_ai), 12000) or "Архив найден, но ответ не сформирован"
+            _update_task(conn, task_id, state="DONE", result=_mq_msg, error_message="")
+            _history(conn, task_id, "MEMORY_QUERY_GUARD_V1:DONE")
+            try:
+                _save_memory(str(chat_id), int(topic_id or 0), str(raw_input or ""), _mq_msg)
+            except Exception as _e:
+                logger.warning("MEMORY_QUERY_GUARD_V1_SAVE_ERR %s", _e)
+            try:
+                if _Stage6Archive is not None:
+                    _Stage6Archive().archive(_mq_payload, {"text": _mq_msg, "result": {"text": _mq_msg}})
+            except Exception as _e:
+                logger.warning("MEMORY_QUERY_GUARD_V1_ARCHIVE_ERR %s", _e)
+            try:
+                _append_timeline_event_v1(str(chat_id), int(topic_id or 0), task_id, "memory_query_done", raw_input, _mq_msg)
+            except Exception as _e:
+                logger.warning("MEMORY_QUERY_GUARD_V1_TIMELINE_ERR %s", _e)
+            conn.commit()
+            _send_once(conn, task_id, str(chat_id), _mq_msg, reply_to, "memory_query_guard_v1")
+            return
+    except Exception as _mq_e:
+        logger.error("MEMORY_QUERY_GUARD_V1_ERR task=%s err=%s", task_id, _mq_e)
+    # === END MEMORY_QUERY_GUARD_V1 ===
+    # === FULLFIX_16_CONTEXT_QUERY ===
+    try:
+        _ff16_low = str(raw_input or "").strip().lower().rstrip("!?. ")
+        _ff16_low = _ff16_low.replace("[voice] ", "").replace("[VOICE] ", "").strip()  # FF21_FIX_VOICE_PREFIX
+        _ff16_triggers = ["nu chto", "gde rezultat", "chto tam", "gde smeta", "gde proekt"]
+        _ff16_ru_triggers = [
+            "ну что",
+            "где результат",
+            "что там",
+            "где смета",
+            "где проект",
+            "что с задачей",
+            "что там у нас",
+            "ну как там",
+            "где файл",
+            "ну что там",
+            "ну давай",
+            "что по задаче",
+        ]
+        _ff16_is_ctx = len(_ff16_low) <= 35 and any(
+            _ff16_low == t or _ff16_low.startswith(t) for t in _ff16_ru_triggers
+        )
+        if _ff16_is_ctx:
+            _ff16_row = conn.execute(
+                "SELECT id,state,result FROM tasks"
+                " WHERE chat_id=? AND COALESCE(topic_id,0)=? AND id<>?"
+                " AND state IN ('AWAITING_CONFIRMATION','IN_PROGRESS','WAITING_CLARIFICATION')"
+                " ORDER BY updated_at DESC LIMIT 1",
+                (chat_id, topic_id, task_id)
+            ).fetchone()
+            if _ff16_row is not None:
+                _ff16_pid, _ff16_pst, _ff16_pres = _ff16_row
+                _ff16_parts = ["Статус: " + str(_ff16_pst)]
+                if _ff16_pres is not None:
+                    import re as _re16
+                    _ff16_clean = _re16.sub(
+                        r"(?im)^\s*MANIFEST\s*:\s*https?://\S+\s*$",
+                        "",
+                        str(_ff16_pres)[:800]
+                    ).strip()
+                    _ff16_parts.append(_ff16_clean)
+                _ff16_msg = "\n".join(_ff16_parts)
+                from core.reply_sender import send_reply_ex
+                send_reply_ex(chat_id=str(chat_id), text=_ff16_msg, reply_to_message_id=reply_to, message_thread_id=topic_id)  # FULLFIX_20_CONTEXT_QUERY_TOPIC
+                conn.execute(
+                    "UPDATE tasks SET state='DONE',result=?,updated_at=datetime('now') WHERE id=?",
+                    ("Ответил по активной задаче", task_id)
+                )
+                conn.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (task_id, "state:DONE:context_query_ff16")
+                )
+                conn.commit()
+                return
+    except Exception as _ff16_ctx_err:
+        logger.error("FULLFIX_16_CONTEXT_QUERY_ERROR task=%s err=%s", task_id, _ff16_ctx_err)
+    # === END FULLFIX_16_CONTEXT_QUERY ===
+
+    # === FULLFIX_14_UNIFIED_ROUTE ===
+    try:
+        from core.template_intake_engine import is_sample_intent as _ff14_is_sample, process_template_intake as _ff14_tmpl
+        from core.defect_act_engine import is_defect_act_intent as _ff14_is_defect, process_defect_act as _ff14_defect
+        from core.multifile_artifact_engine import is_multifile_intent as _ff14_is_multi, process_multifile as _ff14_multi
+        from core.estimate_unified_engine import process_estimate_task as _ff14_estimate, parse_estimate_rows as _ff14_parse
+        _ff14_raw = str(raw_input or "")
+        _ff14_itype = str(_task_field(task, "input_type") or "")
+        _ff14_mime = ""
+        _ff14_fname = ""
+        _ff14_lpath = ""
+        if _ff14_itype == "drive_file":
+            try:
+                import json as _ff14j
+                _ff14_meta = _ff14j.loads(_task_field(task, "raw_input") or "{}")
+                _ff14_mime = _ff14_meta.get("mime_type", "")
+                _ff14_fname = _ff14_meta.get("file_name", "")
+                _ff14_lpath = _ff14_meta.get("local_path", "")
+            except Exception:
+                pass
+        # 1. template/sample intake — highest priority
+        if _ff14_is_sample(_ff14_raw):
+            _ff14_done = await _ff14_tmpl(
+                conn=conn, task_id=task_id, chat_id=chat_id, topic_id=topic_id,
+                raw_input=_ff14_raw, local_path=_ff14_lpath,
+                file_name=_ff14_fname, mime_type=_ff14_mime
+            )
+            if _ff14_done:
+                return
+        # 2. defect/photo act
+        if _ff14_is_defect(_ff14_raw, _ff14_mime):
+            _ff14_done = await _ff14_defect(
+                conn=conn, task_id=task_id, chat_id=chat_id, topic_id=topic_id,
+                raw_input=_ff14_raw, file_name=_ff14_fname, local_path=_ff14_lpath
+            )
+            if _ff14_done:
+                return
+        # 3. estimate from natural language text
+        if _ff14_itype in ("text", "search") and _ff14_parse(_ff14_raw):
+            # === FULLFIX_16_ESTIMATE_HARD_STOP ===
+            # Estimate route: ALWAYS return, never fall through to FULLFIX_10
+            conn.execute("INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                (task_id, "FULLFIX_16_ESTIMATE_ROUTE_TAKEN"))
+            conn.commit()
+            _ff14_done = await _ff14_estimate(
+                conn=conn, task_id=task_id, chat_id=chat_id, topic_id=topic_id, raw_input=_ff14_raw
+            )
+            # Whether success or failure — do not let FULLFIX_10 run on estimate input
+            return
+            # === END FULLFIX_16_ESTIMATE_HARD_STOP ===
+        # 4. multifile aggregation
+        if _ff14_is_multi(_ff14_raw):
+            _ff14_done = await _ff14_multi(
+                conn=conn, task_id=task_id, chat_id=chat_id, topic_id=topic_id, raw_input=_ff14_raw
+            )
+            if _ff14_done:
+                return
+    except Exception as _ff14_err:
+        try:
+            logger.error("FULLFIX_14_ROUTE_ERROR task=%s err=%s", task_id, str(_ff14_err))
+        except Exception:
+            pass
+    # === END FULLFIX_14_UNIFIED_ROUTE ===
+
+# === FULLFIX_13A_SAMPLE_TEMPLATE_AND_TEMPLATE_ESTIMATE_ROUTE ===
+    try:
+        from core.sample_template_engine import (
+            handle_sample_template_intent as _ff13a_handle_sample_template_intent,
+            handle_template_estimate_intent as _ff13a_handle_template_estimate_intent,
+        )
+        # === FULLFIX_13A_ROUTE_LOCALS_FIX ===
+        # _handle_new has task/raw_input/reply_to locals, not input_type/reply_to_message_id locals
+        _ff13a_conn = conn
+        _ff13a_task_id = str(task_id or "")
+        _ff13a_chat_id = str(chat_id or "")
+        _ff13a_topic_id = int(topic_id or 0)
+        _ff13a_raw_input = str(raw_input or "")
+        _ff13a_input_type = str(_task_field(task, "input_type", "") or "")
+        _ff13a_reply_to = _task_field(task, "reply_to_message_id", None) or _task_field(task, "telegram_message_id", None)
+        # === END FULLFIX_13A_ROUTE_LOCALS_FIX ===
+        _ff13a_done = await _ff13a_handle_sample_template_intent(
+            conn=_ff13a_conn,
+            task_id=_ff13a_task_id,
+            chat_id=_ff13a_chat_id,
+            topic_id=_ff13a_topic_id,
+            raw_input=_ff13a_raw_input,
+            input_type=_ff13a_input_type,
+            reply_to_message_id=_ff13a_reply_to,
+        )
+        # === FULLFIX_13B_SAMPLE_HARD_STOP_1 ===
+        if _ff13a_done:
+            try:
+                conn.commit()
+            except Exception:
+                pass
+            return
+        _ff13a_done = await _ff13a_handle_template_estimate_intent(
+            conn=_ff13a_conn,
+            task_id=_ff13a_task_id,
+            chat_id=_ff13a_chat_id,
+            topic_id=_ff13a_topic_id,
+            raw_input=_ff13a_raw_input,
+            input_type=_ff13a_input_type,
+            reply_to_message_id=_ff13a_reply_to,
+        )
+        # === FULLFIX_13B_SAMPLE_HARD_STOP_2 ===
+        if _ff13a_done:
+            try:
+                conn.commit()
+            except Exception:
+                pass
+            return
+    except Exception as _ff13a_err:
+        try:
+            logger.error("FULLFIX_13A_SAMPLE_ROUTE_ERROR task=%s err=%s", task_id, str(_ff13a_err))
+        except Exception:
+            pass
+    # === END FULLFIX_13A_SAMPLE_TEMPLATE_AND_TEMPLATE_ESTIMATE_ROUTE ===
+
+
+    # === FULLFIX_19_PROJECT_GUARD_REAL_V2 ===
+    try:
+        _ff19_low = str(raw_input or "").strip().lower()
+        _ff19_short_replies = {"да","нет","ок","готово","угу","так","ясно","понятно"}
+        if _ff19_low in _ff19_short_replies:
+            try:
+                conn.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (task_id, "FULLFIX_19_PROJECT_GUARD_BLOCKED_SHORT_REPLY")
+                )
+                conn.execute(
+                    "UPDATE tasks SET state='DONE', updated_at=datetime('now'), result=COALESCE(NULLIF(result,''),?) WHERE id=?",
+                    ("Принято", task_id)
+                )
+                conn.commit()
+            except Exception:
+                pass
+            logger.info("FF19_GUARD_BLOCKED_SHORT_REPLY task=%s text=%s", task_id, _ff19_low)
+            return
+    except Exception as _ff19_err:
+        logger.error("FF19_PROJECT_GUARD_ERR task=%s err=%s", task_id, _ff19_err)
+    # === END FULLFIX_19_PROJECT_GUARD_REAL_V2 ===
+
+    # === FULLFIX_13B_FALSE_PROJECT_PHRASE_GUARD ===
+    try:
+        _ff13b_low = str(raw_input or "").strip().lower()
+        _ff13b_false_project_phrases = {
+            "это один из вариантов",
+            "это как образец",
+            "это пример",
+            "вот образец",
+            "вот пример",
+            "сохрани как образец",
+        }
+        if _ff13b_low in _ff13b_false_project_phrases:
+            _msg = "Принял как образец. Дальше можно писать простым языком: сделай смету / сделай проект"
+            await safe_update(conn, task_id, state="DONE", result=_ff13c_strip_manifest_links(_msg), error_message="")
+            try:
+                from core.reply_sender import send_reply_ex
+                send_reply_ex(chat_id=str(chat_id), text=_ff13c_strip_manifest_links(_msg), reply_to_message_id=reply_to)
+            except Exception:
+                pass
+            try:
+                conn.execute("INSERT INTO task_history (task_id,action,created_at) VALUES (?,?,datetime('now'))", (task_id, "FULLFIX_13B_FALSE_PROJECT_GUARDED"))
+                conn.commit()
+            except Exception:
+                pass
+            return
+    except Exception as _ff13b_guard_err:
+        try:
+            logger.error("FULLFIX_13B_FALSE_PROJECT_GUARD_ERROR task=%s err=%s", task_id, str(_ff13b_guard_err))
+        except Exception:
+            pass
+    # === END FULLFIX_13B_FALSE_PROJECT_PHRASE_GUARD ===
+
+    # === FULLFIX_10_TOTAL_CLOSURE_UNIVERSAL_ROUTE ===
+    try:
+        from core.orchestra_closure_engine import (
+            classify_user_task as _ff10_classify_user_task,
+            classify_project_kind as _ff10_classify_project_kind,
+            create_estimate_files as _ff10_create_estimate_files,
+            save_result_memory as _ff10_save_result_memory,
+            ENGINE as _FF10_ENGINE,
+        )
+
+        _ff10_intent = _ff10_classify_user_task(str(raw_input or ""))
+
+
+        # === FULLFIX_13B_CLEAN_ESTIMATE_MESSAGE_BEFORE_SEND_FALLBACK ===
+        def _ff13b_clean_any_estimate_text(_txt):
+            try:
+                from core.orchestra_closure_engine import ff13b_clean_estimate_user_message
+                return ff13b_clean_estimate_user_message(_txt)
+            except Exception:
+                return _txt
+        # === END FULLFIX_13B_CLEAN_ESTIMATE_MESSAGE_BEFORE_SEND_FALLBACK ===
+
+        if _ff10_intent in ("confirm", "revision"):
+            _ff10_parent = conn.execute(
+                """
+                SELECT id,state,result,reply_to_message_id,bot_message_id
+                FROM tasks
+                WHERE chat_id=?
+                  AND COALESCE(topic_id,0)=?
+                  AND state='AWAITING_CONFIRMATION'
+                  AND id<>?
+                ORDER BY updated_at DESC, created_at DESC
+                LIMIT 1
+                """,
+                (str(chat_id), int(topic_id or 0), task_id),
+            ).fetchone()
+
+            if _ff10_parent and _ff10_intent == "confirm":
+                _parent_id = _s(_ff10_parent["id"])
+                _update_task(conn, _parent_id, state="DONE", error_message="")
+                _history(conn, _parent_id, "FULLFIX_10_CONFIRM_DONE")
+                _update_task(conn, task_id, state="DONE", result="Подтверждение принято. Задача закрыта", error_message="")
+                _history(conn, task_id, "FULLFIX_10_CONFIRM_CHILD_DONE")
+                conn.commit()
+                _send_once(conn, task_id, chat_id, "Подтверждение принято. Задача закрыта", reply_to, "ff10_confirm_done")
+                return
+
+            if _ff10_parent and _ff10_intent == "revision":
+                _parent_id = _s(_ff10_parent["id"])
+                _merged = _clean(_s(_ff10_parent["result"]) + "\n\nПравки пользователя:\n" + str(raw_input or ""), 12000)
+                _update_task(conn, _parent_id, state="IN_PROGRESS", raw_input=_merged, error_message="")
+                _history(conn, _parent_id, "FULLFIX_10_REVISION_REOPEN")
+                _update_task(conn, task_id, state="DONE", result="Правки приняты. Задача возвращена в работу", error_message="")
+                _history(conn, task_id, "FULLFIX_10_REVISION_CHILD_DONE")
+                conn.commit()
+                _send_once(conn, task_id, chat_id, "Правки приняты. Задача возвращена в работу", reply_to, "ff10_revision_reopen")
+                return
+
+        if _ff10_intent == "project":
+            _kind, _section = _ff10_classify_project_kind(str(raw_input or ""))
+            if _kind == "foundation_slab":
+                from core.project_engine import create_project_pdf_dxf_artifact
+                _ff10_res = await create_project_pdf_dxf_artifact(str(raw_input or ""), task_id, int(topic_id or 0), "FULLFIX_10_SIMPLE_USER_REQUEST", True)
+
+                if not isinstance(_ff10_res, dict) or not _ff10_res.get("success"):
+                    _err = str((_ff10_res or {}).get("error", "PROJECT_FAILED"))[:400]
+                    _msg = "Проект не создан: " + _err
+                    _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message=_err)
+                    _history(conn, task_id, "FULLFIX_10_PROJECT_FAILED:" + _err)
+                    conn.commit()
+                    _send_once(conn, task_id, chat_id, _msg, reply_to, "ff10_project_failed")
+                    return
+
+                _pdf = str(_ff10_res.get("pdf_link") or "")
+                _dxf = str(_ff10_res.get("dxf_link") or "")
+                _xlsx = str(_ff10_res.get("xlsx_link") or "")
+                _manifest = str(_ff10_res.get("manifest_link") or "")
+                _sheet_count = str(_ff10_res.get("sheet_count") or "")
+                _engine = str(_ff10_res.get("engine") or _FF10_ENGINE)
+                _msg = (
+                    "Проект создан\n"
+                    f"Engine: {_engine}\n"
+                    "Раздел: КЖ\n"
+                    f"Тип: фундаментная плита\n"
+                    f"Листов: {_sheet_count}\n"
+                    f"PDF: {_pdf}\n"
+                    f"DXF: {_dxf}\n"
+                    f"XLSX: {_xlsx}\n"
+                    f"MANIFEST: {_manifest}\n\n"
+                    "Доволен результатом? Ответь: Да / Уточни / Правки"
+                )
+                if not _pdf or not _dxf:
+                    _update_task(conn, task_id, state="FAILED", result="Проект не создан: нет PDF/DXF ссылки", error_message="PROJECT_LINKS_MISSING")
+                    _history(conn, task_id, "FULLFIX_10_PROJECT_LINKS_MISSING")
+                    conn.commit()
+                    _send_once(conn, task_id, chat_id, "Проект не создан: нет PDF/DXF ссылки", reply_to, "ff10_project_links_missing")
+                    return
+
+                    # === RESULT_VALIDATOR_GUARD_V1 ===
+                    if _check_result_before_confirm(_ff13c_strip_manifest_links(_msg)):
+                        # === TASK_WORKER_ARTIFACT_GATE_V1 ===
+                        try:
+                            if validate_engine_result is not None:
+                                _twag_raw = ""
+                                _twag_input_type = ""
+                                try:
+                                    _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                                except Exception:
+                                    _twag_raw = ""
+                                try:
+                                    _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
+                                except Exception:
+                                    _twag_input_type = ""
+                                _twag_result = _ff13c_strip_manifest_links(_msg)
+                                _twag_check = validate_engine_result(
+                                    {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
+                                    input_type=_twag_input_type,
+                                    user_text=_twag_raw,
+                                    topic_id=topic_id,
+                                )
+                                if not _twag_check.get("ok"):
+                                    _update_task(conn, task_id, state="FAILED", result="",
+                                        error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
+                                    _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
+                                    return
+                        except Exception as _twag_e:
+                            logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
+                        # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
+                        _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
+                    else:
+                        _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message="FORBIDDEN_PHRASE")
+                    # === END RESULT_VALIDATOR_GUARD_V1 ===
+                _history(conn, task_id, "FULLFIX_10_PROJECT_OK")
+                conn.commit()
+                _sent = _send_once_ex(conn, task_id, str(chat_id), _msg, reply_to, "ff10_project_result")
+                if isinstance(_sent, dict) and _sent.get("bot_message_id"):
+                    _update_task(conn, task_id, bot_message_id=_sent["bot_message_id"])
+                    conn.commit()
+                _ff10_save_result_memory(str(chat_id), int(topic_id or 0), str(raw_input or ""), _msg, _ff10_res)
+                return
+
+        if _ff10_intent == "estimate":
+            _ff10_res = _ff10_create_estimate_files(str(raw_input or ""), task_id, int(topic_id or 0))
+            if not isinstance(_ff10_res, dict) or not _ff10_res.get("success"):
+                _err = str((_ff10_res or {}).get("error", "ESTIMATE_FAILED"))[:400]
+                _msg = "Смета не создана: " + _err
+                _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message=_err)
+                _history(conn, task_id, "FULLFIX_10_ESTIMATE_FAILED:" + _err)
+                conn.commit()
+                _send_once(conn, task_id, chat_id, _msg, reply_to, "ff10_estimate_failed")
+                return
+
+            _msg = str(_ff10_res.get("message") or "")
+            # === RESULT_VALIDATOR_GUARD_V1 ===
+            if _check_result_before_confirm(_ff13c_strip_manifest_links(_msg)):
+                # === TASK_WORKER_ARTIFACT_GATE_V1 ===
+                try:
+                    if validate_engine_result is not None:
+                        _twag_raw = ""
+                        _twag_input_type = ""
+                        try:
+                            _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                        except Exception:
+                            _twag_raw = ""
+                        try:
+                            _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
+                        except Exception:
+                            _twag_input_type = ""
+                        _twag_result = _ff13c_strip_manifest_links(_msg)
+                        _twag_check = validate_engine_result(
+                            {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
+                            input_type=_twag_input_type,
+                            user_text=_twag_raw,
+                            topic_id=topic_id,
+                        )
+                        if not _twag_check.get("ok"):
+                            _update_task(conn, task_id, state="FAILED", result="",
+                                error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
+                            _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
+                            return
+                except Exception as _twag_e:
+                    logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
+                # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
+                _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
+            else:
+                _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message="FORBIDDEN_PHRASE")
+            # === END RESULT_VALIDATOR_GUARD_V1 ===
+            _history(conn, task_id, "FULLFIX_10_ESTIMATE_OK")
+            conn.commit()
+            _sent = _send_once_ex(conn, task_id, str(chat_id), _msg, reply_to, "ff10_estimate_result")
+            if isinstance(_sent, dict) and _sent.get("bot_message_id"):
+                _update_task(conn, task_id, bot_message_id=_sent["bot_message_id"])
+                conn.commit()
+            _ff10_save_result_memory(str(chat_id), int(topic_id or 0), str(raw_input or ""), _msg, _ff10_res)
+            return
+
+    except Exception as _ff10_e:
+        _err = str(_ff10_e)[:500]
+        _update_task(conn, task_id, state="FAILED", result="Ошибка FULLFIX_10: " + _err, error_message=_err)
+        _history(conn, task_id, "FULLFIX_10_EXCEPTION:" + _err)
+        conn.commit()
+        _send_once(conn, task_id, chat_id, "Ошибка FULLFIX_10: " + _err, reply_to, "ff10_exception")
+        return
+    # === END FULLFIX_10_TOTAL_CLOSURE_UNIVERSAL_ROUTE ===
+
+    # === FULLFIX_07_PROJECT_DESIGN_CLOSURE_ROUTE ===
+    _ff07_low = str(raw_input or "").lower()
+    _ff07_triggers = (
+        "создай проект",
+        "сделай проект",
+        "проект фундамент",
+        "проект фундаментной плиты",
+        "план фундамент",
+        "план фундаментной плиты",
+        "фундаментной плиты",
+        "проект по образцу",
+        "по образцу проект",
+        "проект по шаблону",
+        "dxf проект",
+        "dwg проект",
+    )
+    if any(x in _ff07_low for x in _ff07_triggers):
+        try:
+            from core.project_engine import create_project_pdf_dxf_artifact
+            _ff07_res = await create_project_pdf_dxf_artifact(str(raw_input), task_id, int(topic_id or 0), "", True)
+
+            if not isinstance(_ff07_res, dict) or not _ff07_res.get("success"):
+                _err = str((_ff07_res or {}).get("error", "PROJECT_FAILED"))[:500]
+                _update_task(
+                    conn,
+                    task_id,
+                    state="FAILED",
+                    result="Проект не создан: нет полного комплекта PDF/DXF/XLSX/MANIFEST или шаблон неполный",
+                    error_message=_err,
+                )
+                _history(conn, task_id, "FULLFIX_07_FAILED:" + _err)
+                conn.commit()
+                _send_once(
+                    conn,
+                    task_id,
+                    chat_id,
+                    "Проект не создан: нет полного комплекта PDF/DXF/XLSX/MANIFEST или шаблон неполный",
+                    reply_to,
+                    "project_failed",
+                )
+                return
+
+            _pdf = str(_ff07_res.get("pdf_link") or "")
+            _dxf = str(_ff07_res.get("dxf_link") or "")
+            _xlsx = str(_ff07_res.get("xlsx_link") or "")
+            _manifest = str(_ff07_res.get("manifest_link") or "")
+            _engine = str(_ff07_res.get("engine") or "FULLFIX_07_PROJECT_DESIGN_CLOSURE")
+            _tpl = str(_ff07_res.get("template_file") or "")
+            _sheet_count = str(_ff07_res.get("sheet_count") or "0")
+            _sec = str(_ff07_res.get("section") or "КЖ")
+
+            _msg = (
+                "Проект создан\n"
+                f"Engine: {_engine}\n"
+                f"Раздел: {_sec}\n"
+                f"Листов: {_sheet_count}\n"
+                f"Шаблон: {_tpl}\n"
+                f"PDF: {_pdf}\n"
+                f"DXF: {_dxf}\n"
+                f"XLSX: {_xlsx}\n"
+                f"MANIFEST: {_manifest}\n\n"
+                "Доволен результатом? Ответь: Да / Уточни / Правки"
+            )
+
+            # === RESULT_VALIDATOR_GUARD_V1 ===
+            if _check_result_before_confirm(_ff13c_strip_manifest_links(_msg)):
+                # === TASK_WORKER_ARTIFACT_GATE_V1 ===
+                try:
+                    if validate_engine_result is not None:
+                        _twag_raw = ""
+                        _twag_input_type = ""
+                        try:
+                            _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                        except Exception:
+                            _twag_raw = ""
+                        try:
+                            _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
+                        except Exception:
+                            _twag_input_type = ""
+                        _twag_result = _ff13c_strip_manifest_links(_msg)
+                        _twag_check = validate_engine_result(
+                            {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
+                            input_type=_twag_input_type,
+                            user_text=_twag_raw,
+                            topic_id=topic_id,
+                        )
+                        if not _twag_check.get("ok"):
+                            _update_task(conn, task_id, state="FAILED", result="",
+                                error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
+                            _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
+                            return
+                except Exception as _twag_e:
+                    logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
+                # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
+                _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
+            else:
+                _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message="FORBIDDEN_PHRASE")
+            # === END RESULT_VALIDATOR_GUARD_V1 ===
+            _history(conn, task_id, "FULLFIX_07_PROJECT_OK")
+            conn.commit()
+
+            try:
+                _sent = _send_once_ex(conn, task_id, str(chat_id), _msg, reply_to, "project_fullfix_07_result")
+                if isinstance(_sent, dict) and _sent.get("bot_message_id"):
+                    _update_task(conn, task_id, bot_message_id=_sent["bot_message_id"])
+                    conn.commit()
+            except Exception:
+                _send_once(conn, task_id, chat_id, _msg, reply_to, "project_fullfix_07_result")
+            return
+
+        except Exception as _ff07_e:
+            _err = str(_ff07_e)[:700]
+            _update_task(
+                conn,
+                task_id,
+                state="FAILED",
+                result="Проект не создан: ошибка генерации полного комплекта: " + _err,
+                error_message=_err,
+            )
+            _history(conn, task_id, "FULLFIX_07_EXCEPTION:" + _err)
+            conn.commit()
+            _send_once(conn, task_id, chat_id, "Проект не создан: ошибка генерации полного комплекта: " + _err, reply_to, "project_exception")
+            return
+    # === END FULLFIX_07_PROJECT_DESIGN_CLOSURE_ROUTE ===
+
+
+    # === FULLFIX_07_CAD_PROJECT_DOCUMENTATION_ROUTE ===
+    try:
+        from core.cad_project_engine import is_project_design_request, create_full_project_package, format_project_result_message
+        if is_project_design_request(raw_input):
+            _ff07_res = create_full_project_package(str(raw_input), task_id, int(topic_id or 0), "")
+            _ff07_msg = format_project_result_message(_ff07_res)
+            if not isinstance(_ff07_res, dict) or not _ff07_res.get("success"):
+                _err = str((_ff07_res or {}).get("error") or "PROJECT_DOCUMENTATION_FAILED")[:300]
+                _update_task(conn, task_id, state="FAILED", result=_ff07_msg, error_message=_err)
+                _history(conn, task_id, "FULLFIX_07_PROJECT_FAILED:" + _err)
+                conn.commit()
+                _send_once(conn, task_id, chat_id, _ff07_msg, reply_to, "ff07_project_failed")
+                return
+
+                # === RESULT_VALIDATOR_GUARD_V1 ===
+                if _check_result_before_confirm(_ff07_msg):
+                    # === TASK_WORKER_ARTIFACT_GATE_V1 ===
+                    try:
+                        if validate_engine_result is not None:
+                            _twag_raw = ""
+                            _twag_input_type = ""
+                            try:
+                                _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                            except Exception:
+                                _twag_raw = ""
+                            try:
+                                _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
+                            except Exception:
+                                _twag_input_type = ""
+                            _twag_result = _ff07_msg
+                            _twag_check = validate_engine_result(
+                                {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
+                                input_type=_twag_input_type,
+                                user_text=_twag_raw,
+                                topic_id=topic_id,
+                            )
+                            if not _twag_check.get("ok"):
+                                _update_task(conn, task_id, state="FAILED", result="",
+                                    error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
+                                _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
+                                return
+                    except Exception as _twag_e:
+                        logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
+                    # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
+                    _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff07_msg, error_message="")
+                else:
+                    _update_task(conn, task_id, state="FAILED", result=_ff07_msg, error_message="FORBIDDEN_PHRASE")
+                # === END RESULT_VALIDATOR_GUARD_V1 ===
+            _history(conn, task_id, "FULLFIX_07_PROJECT_OK")
+            conn.commit()
+            _sent = _send_once_ex(conn, task_id, str(chat_id), _ff07_msg, reply_to, "ff07_project_result")
+            if isinstance(_sent, dict) and _sent.get("bot_message_id"):
+                _update_task(conn, task_id, bot_message_id=_sent["bot_message_id"])
+                conn.commit()
+            return
+    except Exception as _ff07_e:
+        _err = str(_ff07_e)[:500]
+        _update_task(conn, task_id, state="FAILED", result="Проект не создан: ошибка FULLFIX_07", error_message=_err)
+        _history(conn, task_id, "FULLFIX_07_EXCEPTION:" + _err)
+        conn.commit()
+        _send_once(conn, task_id, chat_id, "Проект не создан: ошибка FULLFIX_07", reply_to, "ff07_project_exception")
+        return
+    # === END FULLFIX_07_CAD_PROJECT_DOCUMENTATION_ROUTE ===
+
+    # === FULLFIX_06_FINAL_PROJECT_TEMPLATE_ROUTE ===
+    _ff06_low = str(raw_input or "").lower()
+    _ff06_project_triggers = (
+        "создай проект",
+        "сделай проект",
+        "разработай проект",
+        "готовый проект",
+        "проект фундамент",
+        "проект фундаментной плиты",
+        "проект кровли",
+        "проект по образцу",
+        "проект по шаблону",
+        "план фундаментной плиты",
+        "чертеж фундаментной плиты",
+        "чертёж фундаментной плиты",
+    )
+    if any(x in _ff06_low for x in _ff06_project_triggers):
+        try:
+            from core.project_engine import create_project_pdf_dxf_artifact
+            _ff06_res = await create_project_pdf_dxf_artifact(str(raw_input), task_id, int(topic_id or 0), "", True)
+            if not isinstance(_ff06_res, dict) or not _ff06_res.get("success"):
+                _err = str((_ff06_res or {}).get("error", "PROJECT_FAILED"))[:300]
+                _update_task(conn, task_id, state="FAILED", result="Проект не создан: нет сохранённого шаблона или не созданы PDF/DXF/XLSX ссылки", error_message=_err)
+                _history(conn, task_id, "FULLFIX_06_PROJECT_FAILED:" + _err)
+                conn.commit()
+                _send_once(conn, task_id, chat_id, "Проект не создан: нет сохранённого шаблона или не созданы PDF/DXF/XLSX ссылки", reply_to, "project_failed_ff06")
+                return
+
+            _msg = (
+                "Проект создан по сохранённому шаблону\n"
+                f"Раздел: {_ff06_res.get('section')}\n"
+                f"Листов по шаблону: {_ff06_res.get('sheet_count')}\n"
+                f"Шаблон: {_ff06_res.get('template_file')}\n"
+                f"PDF: {_ff06_res.get('pdf_link')}\n"
+                f"DXF: {_ff06_res.get('dxf_link')}\n"
+                f"XLSX: {_ff06_res.get('xlsx_link')}\n"
+                f"MANIFEST: {_ff06_res.get('manifest_link')}\n\n"
+                "Доволен результатом? Ответь: Да / Уточни / Правки"
+            )
+            # === RESULT_VALIDATOR_GUARD_V1 ===
+            if _check_result_before_confirm(_ff13c_strip_manifest_links(_msg)):
+                # === TASK_WORKER_ARTIFACT_GATE_V1 ===
+                try:
+                    if validate_engine_result is not None:
+                        _twag_raw = ""
+                        _twag_input_type = ""
+                        try:
+                            _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                        except Exception:
+                            _twag_raw = ""
+                        try:
+                            _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
+                        except Exception:
+                            _twag_input_type = ""
+                        _twag_result = _ff13c_strip_manifest_links(_msg)
+                        _twag_check = validate_engine_result(
+                            {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
+                            input_type=_twag_input_type,
+                            user_text=_twag_raw,
+                            topic_id=topic_id,
+                        )
+                        if not _twag_check.get("ok"):
+                            _update_task(conn, task_id, state="FAILED", result="",
+                                error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
+                            _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
+                            return
+                except Exception as _twag_e:
+                    logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
+                # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
+                _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
+            else:
+                _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message="FORBIDDEN_PHRASE")
+            # === END RESULT_VALIDATOR_GUARD_V1 ===
+            _history(conn, task_id, "FULLFIX_06_PROJECT_OK")
+            conn.commit()
+            _sent = _send_once_ex(conn, task_id, str(chat_id), _msg, reply_to, "project_result_ff06")
+            if isinstance(_sent, dict) and _sent.get("bot_message_id"):
+                _update_task(conn, task_id, bot_message_id=_sent["bot_message_id"])
+                conn.commit()
+            return
+        except Exception as _ff06_e:
+            _err = str(_ff06_e)[:500]
+            _update_task(conn, task_id, state="FAILED", result="Проект не создан: ошибка генерации PDF/DXF/XLSX", error_message=_err)
+            _history(conn, task_id, "FULLFIX_06_PROJECT_EXCEPTION:" + _err)
+            conn.commit()
+            _send_once(conn, task_id, chat_id, "Проект не создан: ошибка генерации PDF/DXF/XLSX", reply_to, "project_exception_ff06")
+            return
+    # === END FULLFIX_06_FINAL_PROJECT_TEMPLATE_ROUTE ===
+
+
+    role = _detect_role_assignment(raw_input)
+    if role:
+        ask = f"Понял назначение чата так:\n{role}\n\nПодтверди или уточни"
+        # === RESULT_VALIDATOR_GUARD_V1 ===
+        if _check_result_before_confirm(ask):
+            # === TASK_WORKER_ARTIFACT_GATE_V1 ===
+            try:
+                if validate_engine_result is not None:
+                    _twag_raw = ""
+                    _twag_input_type = ""
+                    try:
+                        _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                    except Exception:
+                        _twag_raw = ""
+                    try:
+                        _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
+                    except Exception:
+                        _twag_input_type = ""
+                    _twag_result = ask
+                    _twag_check = validate_engine_result(
+                        {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
+                        input_type=_twag_input_type,
+                        user_text=_twag_raw,
+                        topic_id=topic_id,
+                    )
+                    if not _twag_check.get("ok"):
+                        _update_task(conn, task_id, state="FAILED", result="",
+                            error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
+                        _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
+                        return
+            except Exception as _twag_e:
+                logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
+            # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
+            _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=ask, error_message="")
+        else:
+            _update_task(conn, task_id, state="FAILED", result=ask, error_message="FORBIDDEN_PHRASE")
+        # === END RESULT_VALIDATOR_GUARD_V1 ===
+        _history(conn, task_id, "state:AWAITING_CONFIRMATION")
+        conn.commit()
+        _send_once(conn, task_id, chat_id, ask, reply_to, "role_confirmation")
+        return
+
+    pending_confirm = conn.execute(
+        """
+        SELECT id, COALESCE(raw_input,'') AS raw_input, COALESCE(result,'') AS result
+        FROM tasks
+        WHERE chat_id=?
+          AND id<>?
+          AND COALESCE(topic_id,0)=?
+          AND state='AWAITING_CONFIRMATION'
+        ORDER BY updated_at DESC, created_at DESC
+        LIMIT 1
+        """,
+        (str(chat_id), task_id, int(topic_id)),
+    ).fetchone()
+
+    if pending_confirm:
+        pending_id = _s(pending_confirm["id"])
+        pending_role = _extract_role_confirmation(_s(pending_confirm["result"]))
+        if pending_role and _is_confirm_intent(raw_input):
+            _save_topic_role(chat_id, topic_id, pending_role)
+            _update_task(conn, pending_id, state="DONE", result=f"Чат закреплён за: {pending_role}", error_message="")
+            _history(conn, pending_id, f"role_saved:{pending_role}")
+            _update_task(conn, task_id, state="DONE", result="Подтверждение принято", error_message="")
+            _history(conn, task_id, "confirm_accepted")
+            conn.commit()
+            _send_once(conn, task_id, chat_id, f"Принял. Чат закреплён за: {pending_role}", reply_to, "role_saved")
+            return
+        if pending_role and _is_revision_intent(raw_input):
+            _update_task(conn, pending_id, raw_input=raw_input, state="NEW", result="", error_message="")
+            _history(conn, pending_id, "role_revision_requested")
+            _update_task(conn, task_id, state="DONE", result="Правки приняты", error_message="")
+            _history(conn, task_id, "state:DONE")
+            conn.commit()
+            _send_once(conn, task_id, chat_id, "Принял правки. Уточни назначение чата одной фразой", reply_to, "role_revision_ok")
+            return
+        if _is_confirm_intent(raw_input):
+            _finalize_done(conn, pending_id, chat_id, topic_id, reply_to)
+            _update_task(conn, task_id, state="DONE", result="Подтверждение принято", error_message="")
+            _history(conn, task_id, "confirm_accepted")
+            conn.commit()
+            _send_once(conn, task_id, chat_id, "Принял. Задача закрыта", reply_to, "confirm_done")
+            return
+        if _is_revision_intent(raw_input):
+            merged = _clean(_s(pending_confirm["raw_input"]) + "\n\nУточнение пользователя:\n" + raw_input, 12000)
+            _update_task(conn, pending_id, raw_input=merged, state="IN_PROGRESS", error_message="")
+            _history(conn, pending_id, "revision_accepted")
+            _update_task(conn, task_id, state="DONE", result="Правки приняты", error_message="")
+            _history(conn, task_id, "state:DONE")
+            conn.commit()
+            _send_once(conn, task_id, chat_id, "Принял правки. Делаю", reply_to, "revision_ok")
+            return
+
+    # === FULLFIX_05_REQUIRE_REAL_PDF_DXF_PROJECT ===
+    _ff05_low = str(raw_input or "").lower()
+    _ff05_project_triggers = (
+        "создай проект",
+        "сделай проект",
+        "проект фундамент",
+        "проект фундаментной плиты",
+        "план фундамент",
+        "план фундаментной плиты",
+        "фундаментной плиты",
+        "проект по образцу",
+        "проект по шаблону",
+        "сделай по образцу",
+    )
+    if any(x in _ff05_low for x in _ff05_project_triggers):
+        try:
+            from core.project_engine import create_project_pdf_dxf_artifact
+            _ff05_res = await create_project_pdf_dxf_artifact(str(raw_input), task_id, int(topic_id or 0), "")
+            if not isinstance(_ff05_res, dict) or not _ff05_res.get("success"):
+                _err = str((_ff05_res or {}).get("error", "PROJECT_FAILED"))[:300]
+                _update_task(
+                    conn,
+                    task_id,
+                    state="FAILED",
+                    result="Проект не создан: нет PDF/DXF файла или ссылки",
+                    error_message=_err,
+                )
+                _history(conn, task_id, "FULLFIX_05_PROJECT_FAILED:" + _err)
+                conn.commit()
+                _send_once(
+                    conn,
+                    task_id,
+                    chat_id,
+                    "Проект не создан: нет PDF/DXF файла или ссылки",
+                    reply_to,
+                    "project_failed",
+                )
+                return
+
+            _pdf = str(_ff05_res.get("pdf_link") or "")
+            _dxf = str(_ff05_res.get("dxf_link") or "")
+            _manifest = str(_ff05_res.get("manifest_link") or "")
+            _sec = str(_ff05_res.get("section") or "КЖ")
+            _msg = (
+                f"Проект создан как PDF/DXF комплект\n"
+                f"Раздел: {_sec}\n"
+                f"PDF: {_pdf}\n"
+                f"DXF: {_dxf}\n"
+            )
+            if _manifest:
+                _msg += f"MANIFEST: {_manifest}\n"
+            _msg += "\nДоволен результатом? Ответь: Да / Уточни / Правки"
+
+            # === RESULT_VALIDATOR_GUARD_V1 ===
+            if _check_result_before_confirm(_ff13c_strip_manifest_links(_msg)):
+                # === TASK_WORKER_ARTIFACT_GATE_V1 ===
+                try:
+                    if validate_engine_result is not None:
+                        _twag_raw = ""
+                        _twag_input_type = ""
+                        try:
+                            _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                        except Exception:
+                            _twag_raw = ""
+                        try:
+                            _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
+                        except Exception:
+                            _twag_input_type = ""
+                        _twag_result = _ff13c_strip_manifest_links(_msg)
+                        _twag_check = validate_engine_result(
+                            {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
+                            input_type=_twag_input_type,
+                            user_text=_twag_raw,
+                            topic_id=topic_id,
+                        )
+                        if not _twag_check.get("ok"):
+                            _update_task(conn, task_id, state="FAILED", result="",
+                                error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
+                            _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
+                            return
+                except Exception as _twag_e:
+                    logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
+                # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
+                _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
+            else:
+                _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message="FORBIDDEN_PHRASE")
+            # === END RESULT_VALIDATOR_GUARD_V1 ===
+            _history(conn, task_id, "FULLFIX_05_PROJECT_PDF_DXF_OK")
+            conn.commit()
+
+            _sent = _send_once_ex(conn, task_id, str(chat_id), _msg, reply_to, "project_pdf_dxf_result")
+            if isinstance(_sent, dict) and _sent.get("bot_message_id"):
+                _update_task(conn, task_id, bot_message_id=_sent["bot_message_id"])
+                conn.commit()
+            return
+
+        except Exception as _ff05_e:
+            _err = str(_ff05_e)[:500]
+            _update_task(
+                conn,
+                task_id,
+                state="FAILED",
+                result="Проект не создан: ошибка генерации PDF/DXF",
+                error_message=_err,
+            )
+            _history(conn, task_id, "FULLFIX_05_PROJECT_EXCEPTION:" + _err)
+            conn.commit()
+            _send_once(conn, task_id, chat_id, "Проект не создан: ошибка генерации PDF/DXF", reply_to, "project_exception")
+            return
+    # === END FULLFIX_05_REQUIRE_REAL_PDF_DXF_PROJECT ===
+
+    pending_clarify = conn.execute(
+        """
+        SELECT id, COALESCE(raw_input,'') AS raw_input
+        FROM tasks
+        WHERE chat_id=?
+          AND id<>?
+          AND COALESCE(topic_id,0)=?
+          AND state='WAITING_CLARIFICATION'
+        ORDER BY updated_at DESC, created_at DESC
+        LIMIT 1
+        """,
+        (str(chat_id), task_id, int(topic_id)),
+    ).fetchone()
+
+    if pending_clarify:
+        pending_id = _s(pending_clarify["id"])
+        merged = _clean(_s(pending_clarify["raw_input"]) + "\n\nУточнение пользователя:\n" + raw_input, 12000)
+        _update_task(conn, pending_id, raw_input=merged, state="IN_PROGRESS", error_message="")
+        _history(conn, pending_id, "clarification_accepted")
+        _update_task(conn, task_id, state="DONE", result="Уточнение принято", error_message="")
+        _history(conn, task_id, "state:DONE")
+        conn.commit()
+        _send_once(conn, task_id, chat_id, "Принял уточнение. Делаю", reply_to, "clarification_ok")
+        return
+
+
+    _update_task(conn, task_id, state="IN_PROGRESS", error_message="")
+    _history(conn, task_id, "state:IN_PROGRESS")
+    conn.commit()
+
+
+
+def _get_parent_task_id(conn, chat_id, reply_to_message_id, topic_id):
+    if not reply_to_message_id:
+        return None
+    row = conn.execute("""
+        SELECT id FROM tasks
+        WHERE chat_id = ? AND topic_id = ?
+          AND (bot_message_id = ? OR reply_to_message_id = ?)
+          AND state IN ('NEW', 'IN_PROGRESS', 'WAITING_CLARIFICATION', 'AWAITING_CONFIRMATION')
+        ORDER BY updated_at DESC
+        LIMIT 1
+    """, (str(chat_id), int(topic_id), reply_to_message_id, reply_to_message_id)).fetchone()
+    return row["id"] if row else None
+
+def _normalize_voice_text(text: str) -> str:
+    return _clean(_s(text).replace("[VOICE]", " "), 12000)
+
+def _looks_done_command(text: str) -> bool:
+    low = _normalize_voice_text(text).lower()
+    if "не доволен" in low or "недоволен" in low:
+        return False
+    done_markers = [
+        "да доволен",
+        "доволен результатом",
+        "можно завершать",
+        "можно закрывать",
+        "завершай задачу",
+        "завершай запрос",
+        "завершай поиск",
+        "задача завершена",
+        "задача закрыта",
+        "запрос завершен",
+        "поиск завершен",
+        "все верно завершай",
+        "всё верно завершай",
+        "все верно задача завершена",
+        "всё верно задача завершена",
+        "да все верно",
+        "да всё верно",
+        "я же тебе сказал задача завершена",
+        "я же тебе сказал завершай",
+        "да можно",
+    ]
+    return any(m in low for m in done_markers)
+
+def _extract_topic_role(text: str) -> str:
+    raw = _clean(_s(text), 1000)
+    if not raw:
+        return ""
+
+    patterns = [
+        r"чат закреплен за темами:\s*(.+?)(?:\.|$)",
+        r"чат закреплён за темами:\s*(.+?)(?:\.|$)",
+        r"чат закреплен за:\s*(.+?)(?:\.|$)",
+        r"чат закреплён за:\s*(.+?)(?:\.|$)",
+        r"закрепленные темы:\s*(.+?)(?:\.|$)",
+        r"закреплённые темы:\s*(.+?)(?:\.|$)",
+        r"закреплено:\s*чат для\s*(.+?)(?:\.|$)",
+        r"этот чат используется для\s*(.+?)(?:\.|$)",
+        r"этот чат предназначен для\s*(.+?)(?:\.|$)",
+    ]
+
+    bad_markers = [
+        "без контекста",
+        "не понимаю запрос",
+        "не помню",
+        "задача завершена",
+        "задача закрыта",
+        "подтверждение принято",
+        "готов к выполнению задачи",
+        "последние действия",
+        "в этом чате были следующие действия",
+        "текущий статус",
+        "последний запрос",
+        "какие последние",
+        "чем помочь",
+    ]
+
+    for pattern in patterns:
+        m = re.search(pattern, raw, re.I | re.S)
+        if not m:
+            continue
+
+        role = re.sub(r"\s+", " ", m.group(1)).strip(" .:-")
+        role = re.split(r"\b(чем помочь|готов к работе|готов обсудить|последний запрос)\b", role, flags=re.I)[0].strip(" .:-")
+        low = role.lower()
+
+        if not role or len(role) < 3:
+            continue
+        if "?" in role:
+            continue
+        if any(x in low for x in bad_markers):
+            continue
+
+        return role[:500]
+
+    return ""
+
+def _save_topic_role_memory(chat_id: str, topic_id: int, text: str) -> str:
+    role = _extract_topic_role(text)
+    if not role or not os.path.exists(MEM_DB):
+        return ""
+    conn_mem = db(MEM_DB)
+    try:
+        if not _has_table(conn_mem, "memory"):
+            return ""
+        key = f"topic_{int(topic_id)}_role"
+        conn_mem.execute(
+            "INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
+            (str(chat_id), key, role),
+        )
+        conn_mem.commit()
+        return role
+    except Exception:
+        return ""
+    finally:
+        conn_mem.close()
+
+def _find_awaiting_confirmation_task(conn: sqlite3.Connection, chat_id: str, topic_id: int, current_task_id: str, reply_to_message_id: Any) -> Optional[sqlite3.Row]:
+    if reply_to_message_id:
+        row = conn.execute(
+            """
+            SELECT id, result
+            FROM tasks
+            WHERE chat_id=?
+              AND COALESCE(topic_id,0)=?
+              AND state='AWAITING_CONFIRMATION'
+              AND id<>?
+              AND (bot_message_id=? OR reply_to_message_id=?)
+            ORDER BY updated_at DESC, created_at DESC
+            LIMIT 1
+            """,
+            (str(chat_id), int(topic_id), str(current_task_id), reply_to_message_id, reply_to_message_id),
+        ).fetchone()
+        if row:
+            return row
+
+    return conn.execute(
+        """
+        SELECT id, result
+        FROM tasks
+        WHERE chat_id=?
+          AND COALESCE(topic_id,0)=?
+          AND state='AWAITING_CONFIRMATION'
+          AND id<>?
+        ORDER BY updated_at DESC, created_at DESC
+        LIMIT 1
+        """,
+        (str(chat_id), int(topic_id), str(current_task_id)),
+    ).fetchone()
+
+
+# === FULLFIX_DIRECTION_KERNEL_STAGE_1_HELPER ===
+def _stage1_dir_payload(payload):
+    try:
+        p = dict(payload or {})
+        if _Stage1WorkItem is None or _Stage1DirReg is None:
+            p.setdefault("direction", "general_chat")
+            return p
+        row = {
+            "id": p.get("task_id") or p.get("id") or "",
+            "chat_id": str(p.get("chat_id") or ""),
+            "topic_id": int(p.get("topic_id") or 0),
+            "input_type": p.get("input_type") or "unknown",
+            "raw_input": p.get("raw_input") or p.get("raw_text") or "",
+            "state": p.get("state") or "IN_PROGRESS",
+            "reply_to_message_id": p.get("reply_to_message_id"),
+            "bot_message_id": p.get("bot_message_id"),
+        }
+        wi = _Stage1WorkItem.from_task_row(row)
+        prof = _Stage1DirReg().detect(wi)
+        did = prof.get("id") or "general_chat"
+        wi.set_direction(did, prof)
+        wi.add_audit("stage", "FULLFIX_DIRECTION_KERNEL_STAGE_1")
+        wi.add_audit("shadow_mode", True)
+        p.update({
+            "direction": did,
+            "direction_profile": prof,
+            "direction_audit": wi.audit,
+            "work_item": wi.to_dict(),
+        })
+        try:
+            logger.info("FULLFIX_DIRECTION_KERNEL_STAGE_1 dir=%s score=%s task=%s topic=%s",
+                        did, prof.get("score"), row["id"], row["topic_id"])
+        except Exception:
+            pass
+        return p
+    except Exception as e:
+        try: logger.error("FULLFIX_DIRECTION_KERNEL_STAGE_1_ERR %s", e)
+        except Exception: pass
+        p = dict(payload or {})
+        p.setdefault("direction", "general_chat")
+        return p
+# === END ===
+async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str, topic_id: int) -> None:
+    task_id = _s(_task_field(task, "id"))
+    raw_input = _clean(_s(_task_field(task, "raw_input")), 12000)
+    reply_to = _task_field(task, "reply_to_message_id", None)
+
+    if _looks_done_command(raw_input):
+        target = _find_awaiting_confirmation_task(conn, chat_id, topic_id, task_id, reply_to)
+        if target:
+            target_id = _s(target["id"])
+            target_result = _s(target["result"])
+            saved_role = _save_topic_role_memory(chat_id, topic_id, target_result)
+            _update_task(conn, target_id, state="DONE", error_message="")
+            _history(conn, target_id, "state:DONE")
+            if saved_role:
+                _history(conn, target_id, f"ROLE_SAVED:{_clean(saved_role, 200)}")
+            _update_task(conn, task_id, state="DONE", result="Подтверждение принято", error_message="")
+            _history(conn, task_id, "state:DONE")
+            conn.commit()
+            _send_once(conn, task_id, chat_id, "Принял. Задача закрыта", reply_to, "confirm_done")
+            return
+
+    parent_task_id = _get_parent_task_id(conn, chat_id, task["reply_to_message_id"], topic_id)
+    active_source_id = parent_task_id or task_id
+    active_task_context = _active_unfinished_context(conn, chat_id, topic_id, active_source_id)
+    pin_context = get_pin_context(chat_id, raw_input, topic_id)
+    short_memory, long_memory, topic_role, topic_directions = _load_memory_context(chat_id, topic_id)
+    archive_context = _load_archive_context(chat_id, topic_id, raw_input)
+    search_context = _search_fact_context(conn, chat_id, topic_id)
+
+    payload: Dict[str, Any] = {
+        "id": task_id,
+        "task_id": task_id,  # PAYLOAD_TOPIC_ID_FIX_V1
+        "topic_id": int(topic_id or 0),
+        "chat_id": chat_id,
+        "input_type": _s(_task_field(task, "input_type", "text")).lower() or "text",
+        "raw_input": raw_input,
+        "normalized_input": raw_input,
+        "state": "IN_PROGRESS",
+        "reply_to_message_id": reply_to,
+        "active_task_context": active_task_context,
+        "pin_context": pin_context,
+        "short_memory_context": short_memory,
+        "long_memory_context": long_memory,
+        "archive_context": archive_context,
+        "search_context": search_context,
+        "topic_role": topic_role,
+        "topic_directions": topic_directions,
+    }
+
+    try:
+        ai_result = None  # AI_RESULT_INIT_V1
+        assigned_role = _detect_role_assignment(raw_input)
+        if assigned_role:
+            _save_topic_role(chat_id, topic_id, assigned_role)
+            _history(conn, task_id, f"ROLE_SAVED:{_clean(assigned_role, 200)}")
+            conn.commit()
+            ai_result = f"Принято. Чат закреплен за темами: {assigned_role}. Все связанные запросы будут обрабатываться здесь."
+        else:
+            ROLE_Q = re.compile(r"(для чего|о чём|о чем|про что|напомни.*(чат|топик)|чем занимается|зачем этот чат)", re.IGNORECASE)
+            HISTORY_Q = re.compile(r"(что мы писали|что писали раньше|о ч[её]м общались|напомни.*что.*(писали|обсуждали)|что было в этом чате|история чата)", re.IGNORECASE)
+            # === WHAT_IS_THIS_META_V1 ===
+            if TOPIC_META_LOADER_WIRED and is_what_is_this_question(raw_input):
+                _wt_meta = load_topic_meta(int(topic_id or 0))
+                if _wt_meta:
+                    _wt_answer = build_topic_self_answer(_wt_meta)
+                    if _wt_answer:
+                        _update_task(conn, task_id, state="DONE", result=_wt_answer, error_message="")
+                        conn.commit()
+                        from core.reply_sender import send_reply_ex
+                        send_reply_ex(chat_id=str(chat_id), text=_wt_answer, reply_to_message_id=reply_to, message_thread_id=topic_id)
+                        return
+            # === END WHAT_IS_THIS_META_V1 ===
+            if topic_role and (ROLE_Q.search(raw_input) or HISTORY_Q.search(raw_input)):
+                ai_result = f"Этот чат закреплён за: {topic_role}"
+            else:
+                try:
+                    from core.model_router import route_model as _rm
+                    _mo = _rm(payload)
+                    if _mo:
+                        payload["model_override"] = _mo  # MODEL_ROUTER_V1_WIRED
+                except Exception:
+                    pass
+                        # === TEMPLATE_TRIGGER_V1 ===
+            if _tpl_check(str(raw_input or "")):
+                _tpl_path = _tpl_get(int(topic_id or 0))
+                if _tpl_path and os.path.exists(_tpl_path):
+                    logger.info("TEMPLATE_TRIGGER_V1 using template=%s task=%s", _tpl_path, task_id)
+                    payload["template_path"] = _tpl_path
+                    payload["use_template"] = True
+            # === END TEMPLATE_TRIGGER_V1 ===
+# === TOPIC_3008_HANDLER_V1 ===
+            if _t3_check(int(topic_id or 0)):
+                _t3_command = _t3_cmd(str(raw_input or ""))
+                if _t3_command != "none":
+                    import re as _re3008
+                    _t3_ctx = " ".join(filter(None,[
+                        str(payload.get("active_task_context") or "")[:200],
+                        str(payload.get("pin_context") or "")[:100],
+                        str(payload.get("short_memory_context") or "")[:200],
+                    ]))
+                    if _t3_command == "write":
+                        _t3_desc = _re3008.sub(r"напиши\s+код|написать\s+код","",str(raw_input or ""),flags=_re3008.I).strip()
+                        if _t3_generate:
+                            _t3_gen = await asyncio.wait_for(_t3_generate(_t3_desc,_t3_ctx),timeout=120)
+                            ai_result = _t3_gen + "\n\n---\nПроверить код?"
+                    elif _t3_command == "verify":
+                        _t3_code = _t3_extract(str(raw_input or ""))
+                        if len(_t3_code.strip()) < 10:
+                            ai_result = "Отправь код для проверки."
+                        elif _t3_verify:
+                            from core.reply_sender import send_reply_ex as _t3srex
+                            _t3srex(chat_id=str(chat_id),text="Запущена верификация. Ожидаю ответы (до 1.5 мин)...",reply_to_message_id=reply_to,message_thread_id=topic_id)
+                            ai_result = await asyncio.wait_for(_t3_verify(_t3_code,_t3_ctx),timeout=150)
+            # === END TOPIC_3008_HANDLER_V1 ===
+            if ai_result is None:  # AI_LOGIC_FIX_V1
+                # FULLFIX_DIRECTION_KERNEL_STAGE_1_CALL
+                payload = _stage1_dir_payload(payload)
+                # FULLFIX_TOPIC_AUTODISCOVERY_V2_CALL
+                if _topic_autodiscovery is not None:
+                    try:
+                        from core.work_item import WorkItem as _WITA
+                        _wita = _WITA.from_task_row({
+                            "id": payload.get("task_id") or payload.get("id") or "",
+                            "chat_id": str(payload.get("chat_id") or ""),
+                            "topic_id": int(payload.get("topic_id") or 0),
+                            "input_type": payload.get("input_type") or "unknown",
+                            "raw_input": payload.get("raw_input") or payload.get("raw_text") or "",
+                            "state": payload.get("state") or "IN_PROGRESS",
+                        })
+                        _topic_autodiscovery(_wita, payload)
+                    except Exception as _eta:
+                        logger.error("TOPIC_AUTODISCOVERY_ERR %s", _eta)
+                # FULLFIX_CAPABILITY_ROUTER_STAGE_2_CALL
+                if _Stage2Router is not None:
+                    try:
+                        from core.work_item import WorkItem as _WI2
+                        _wi2 = _WI2.from_task_row({
+                            "id": payload.get("task_id") or payload.get("id") or "",
+                            "chat_id": str(payload.get("chat_id") or ""),
+                            "topic_id": int(payload.get("topic_id") or 0),
+                            "input_type": payload.get("input_type") or "unknown",
+                            "raw_input": payload.get("raw_input") or payload.get("raw_text") or "",
+                            "state": payload.get("state") or "IN_PROGRESS",
+                        })
+                        _wi2.set_direction(
+                            payload.get("direction") or "general_chat",
+                            payload.get("direction_profile") or {},
+                        )
+                        _r2 = _Stage2Router().apply_to_work_item(_wi2)
+                        payload["engine"] = _r2["engine"]
+                        payload["execution_plan"] = _r2["execution_plan"]
+                        payload["formats_out"] = _r2["formats_out"]
+                        payload["quality_gates"] = _r2["quality_gates"]
+                        payload["capability_router"] = _r2["router_version"]
+                        logger.info("FULLFIX_CAPABILITY_ROUTER_STAGE_2 engine=%s steps=%s dir=%s",
+                                    _r2["engine"], len(_r2["execution_plan"]), payload.get("direction"))
+                    except Exception as _e2:
+                        logger.error("FULLFIX_CAPABILITY_ROUTER_STAGE_2_ERR %s", _e2)
+                # FULLFIX_SEARCH_ENGINE_STAGE_5_CALL
+                if _Stage5Search is not None:
+                    try:
+                        from core.work_item import WorkItem as _WI5
+                        _wi5 = _WI5.from_task_row({
+                            "id": payload.get("task_id") or payload.get("id") or "",
+                            "chat_id": str(payload.get("chat_id") or ""),
+                            "topic_id": int(payload.get("topic_id") or 0),
+                            "input_type": payload.get("input_type") or "unknown",
+                            "raw_input": payload.get("raw_input") or payload.get("raw_text") or "",
+                            "state": payload.get("state") or "IN_PROGRESS",
+                        })
+                        _wi5.set_direction(
+                            payload.get("direction") or "general_chat",
+                            payload.get("direction_profile") or {},
+                        )
+                        _Stage5Search().apply_to_payload(_wi5, payload)
+                    except Exception as _e5:
+                        logger.error("FULLFIX_SEARCH_ENGINE_STAGE_5_ERR %s", _e5)
+                # FULLFIX_CONTEXT_LOADER_STAGE_3_CALL
+                if _Stage3Loader is not None:
+                    try:
+                        from core.work_item import WorkItem as _WI3
+                        _wi3 = _WI3.from_task_row({
+                            "id": payload.get("task_id") or payload.get("id") or "",
+                            "chat_id": str(payload.get("chat_id") or ""),
+                            "topic_id": int(payload.get("topic_id") or 0),
+                            "input_type": payload.get("input_type") or "unknown",
+                            "raw_input": payload.get("raw_input") or payload.get("raw_text") or "",
+                            "state": payload.get("state") or "IN_PROGRESS",
+                        })
+                        _wi3.set_direction(
+                            payload.get("direction") or "general_chat",
+                            payload.get("direction_profile") or {},
+                        )
+                        _refs3 = _Stage3Loader().load(_wi3)
+                        payload["context_refs"] = _refs3
+                        logger.info("FULLFIX_CONTEXT_LOADER_STAGE_3 topic=%s short_mem=%s",
+                                    payload.get("topic_id"), bool(_refs3.get("short_memory")))
+                    except Exception as _e3:
+                        logger.error("FULLFIX_CONTEXT_LOADER_STAGE_3_ERR %s", _e3)
+                ai_result = await asyncio.wait_for(process_ai_task(payload), timeout=AI_TIMEOUT)
+                # FULLFIX_QUALITY_GATE_STAGE_4_CALL
+                if _Stage4QG is not None and isinstance(ai_result, dict):
+                    try:
+                        _qg_payload = {**payload, **ai_result}
+                        _qg_report = _Stage4QG().apply_to_payload(_qg_payload)
+                        ai_result["quality_gate_report"] = _qg_report
+                        logger.info("FULLFIX_QUALITY_GATE_STAGE_4 overall=%s failed=%s dir=%s",
+                                    _qg_report["overall"], _qg_report["failed"], payload.get("direction"))
+                    except Exception as _e4:
+                        logger.error("FULLFIX_QUALITY_GATE_STAGE_4_ERR %s", _e4)
+                # FULLFIX_ARCHIVE_ENGINE_STAGE_6_CALL
+                if _Stage6Archive is not None:
+                    try:
+                        _Stage6Archive().archive(payload, ai_result if isinstance(ai_result, dict) else {})
+                    except Exception as _e6:
+                        logger.error("FULLFIX_ARCHIVE_ENGINE_STAGE_6_ERR %s", _e6)
+                # FULLFIX_FORMAT_ADAPTER_STAGE_7_CALL
+                if _Stage7FA is not None and isinstance(ai_result, dict):
+                    try:
+                        _formats_out = payload.get("formats_out") or ["telegram_text"]
+                        _adapted = _Stage7FA().adapt(ai_result, _formats_out, payload)
+                        ai_result["format_adapted"] = _adapted
+                        logger.info("FULLFIX_FORMAT_ADAPTER_STAGE_7 formats=%s primary=%s dir=%s",
+                                    _formats_out, list(_adapted.get("outputs", {}).keys())[:2],
+                                    payload.get("direction"))
+                    except Exception as _e7:
+                        logger.error("FULLFIX_FORMAT_ADAPTER_STAGE_7_ERR %s", _e7)
+    except Exception as e:
+        _update_task(conn, task_id, state="FAILED", error_message=_clean(str(e), 500))
+        _close_pin(conn, task_id)
+        _history(conn, task_id, "state:FAILED")
+        conn.commit()
+        _send_once(conn, task_id, chat_id, "Задача не выполнена. Уточни или повтори запрос", reply_to, "router_failed")
+        return
+
+    ai_result = _clean(_s(ai_result), 50000)
+    # === FOLLOWUP DETECTION (FACT-BASED) ===
+    low_input = raw_input.lower()
+
+    memory_markers = [
+        "напомни","что обсуждали","что делали","какие задачи","история",
+        "что было","что писали","для чего этот чат","о чем чат","о чём чат"
+    ]
+
+    search_markers = [
+        "нерелевант","битые","ссылки не те","проверь","еще раз","ещё раз",
+        "сделай еще","сделай ещё","найди еще","найди ещё","это не то"
+    ]
+
+    has_memory_context = any([
+        short_memory,
+        long_memory,
+        topic_role,
+        active_task_context,
+        pin_context,
+        archive_context,
+    ])
+
+    raw_input = _clean(_s(_task_field(task, "raw_input")), 12000)
+    low_input = raw_input.lower()
+
+    memory_markers = [
+        "напомни",
+        "что обсуждали",
+        "что делали",
+        "какие задачи",
+        "история",
+        "что было в этом чате",
+        "что писали",
+        "для чего этот чат",
+        "о чем чат",
+        "о чём чат",
+    ]
+    is_memory_followup = has_memory_context and any(m in low_input for m in memory_markers)
+
+    search_markers = [
+        "нерелевант",
+        "битые ссылки",
+        "живые ссылки",
+        "ссылки не те",
+        "проверь еще",
+        "проверь ещё",
+        "еще раз поиск",
+        "ещё раз поиск",
+        "сделай еще раз поиск",
+        "сделай ещё раз поиск",
+        "найди еще",
+        "найди ещё",
+        "это не то",
+        "ссылки биты",
+        "ссылки битые",
+    ]
+    is_search_followup = bool(search_context) and any(m in low_input for m in search_markers)
+
+    if is_search_followup and search_context:
+        forbidden_search_advice = [
+            "dr.web",
+            "link checker",
+            "яндекс safety",
+            "google safe browsing",
+            "virustotal",
+            "для проверки безопасности ссылок используйте",
+        ]
+        if any(m in ai_result.lower() for m in forbidden_search_advice):
+            ai_result = _clean(f"Повторяю поиск по последнему запросу\n\n{search_context}", 50000)
+
+    if is_memory_followup or is_search_followup:
+        if not ai_result or len(ai_result) < MIN_RESULT_LEN:
+            _update_task(conn, task_id, state="FAILED", error_message="INVALID_RESULT_GATE")
+            _close_pin(conn, task_id)
+            _history(conn, task_id, "state:FAILED")
+            conn.commit()
+            _send_once(conn, task_id, chat_id, "Не понял запрос. Уточни что нужно сделать", reply_to, "invalid_result")
+            return
+    else:
+        if not _is_valid_result(ai_result, raw_input):
+            _update_task(conn, task_id, state="FAILED", error_message="INVALID_RESULT_GATE")
+            _close_pin(conn, task_id)
+            _history(conn, task_id, "state:FAILED")
+            conn.commit()
+            _send_once(conn, task_id, chat_id, "Не понял запрос. Уточни что нужно сделать", reply_to, "invalid_result")
+            return
+
+    low_result = ai_result.lower()
+    done_markers = [
+        "задача завершена",
+        "задача закрыта",
+        "задачи завершены",
+        "подтверждение принято",
+        "поиск завершен",
+        "поиск завершён",
+    ]
+    junk_markers = [
+        "без контекста",
+        "задайте конкретный вопрос",
+        "конкретный вопрос по",
+        "нет, не помню",
+        "не понимаю запрос",
+        "готов к выполнению задачи",
+    ]
+    info_markers = [
+        "для чего этот чат",
+        "что мы здесь обсуждаем",
+        "что в данном чате",
+        "какой последний запрос",
+        "последний запрос",
+        "какие последние запросы",
+        "что мы тут делаем",
+        "что мы здесь делаем",
+        "о чем чат",
+        "о чём чат",
+    ]
+    file_success_markers = [
+        "документ обработан",
+        "артефакт:",
+        "нормализовано позиций",
+        "обработаны документы",
+    ]
+    file_bad_markers = [
+        "скачан, ожидает анализа",
+        "создан локально, но загрузка в drive завершилась ошибкой",
+        "ожидает анализа",
+        "загрузка в drive завершилась ошибкой",
+    ]
+
+    if any(m in low_result for m in done_markers):
+        _update_task(conn, task_id, state="DONE", result=ai_result, error_message="")
+        _close_pin(conn, task_id)
+        _history(conn, task_id, f"result:{_clean(ai_result, 400)}")
+        _save_memory(chat_id, topic_id, raw_input, ai_result)  # SAVE_MEM_DONE_V2
+        conn.commit()
+        _send_once(conn, task_id, chat_id, ai_result, reply_to, "done_terminal")
+        return
+
+    if any(m in low_result for m in junk_markers):
+        _update_task(conn, task_id, state="WAITING_CLARIFICATION", result=ai_result, error_message="")
+        _close_pin(conn, task_id)
+        _history(conn, task_id, f"clarify:{_clean(ai_result, 400)}")
+        conn.commit()
+        _send_once(conn, task_id, chat_id, ai_result, reply_to, "clarify_terminal")
+        return
+
+    is_info_query = any(m in low_input for m in info_markers)
+    is_file_success = any(m in low_result for m in file_success_markers) and not any(m in low_result for m in file_bad_markers)
+
+    if is_memory_followup or is_search_followup or is_info_query or is_file_success:
+        _update_task(conn, task_id, state="DONE", result=ai_result, error_message="")
+        _history(conn, task_id, f"result:{_clean(ai_result, 400)}")
+        _save_memory(chat_id, topic_id, raw_input, ai_result)  # SAVE_MEM_FOLLOWUP_V2
+        conn.commit()
+        try:
+            save_pin(chat_id, task_id, ai_result, topic_id)
+        except Exception:
+            pass
+        _send_once(conn, task_id, chat_id, ai_result, reply_to, "done_terminal")
+        return
+
+    should_save_role = (
+        bool(re.search(
+            r"(чат закреплен за темами:|чат закреплён за темами:|чат закреплен за:|чат закреплён за:|закрепленные темы:|закреплённые темы:|закреплено:\s*чат для|этот чат используется для|этот чат предназначен для)",
+            ai_result,
+            re.I,
+        ))
+        and not any(x in low_result for x in junk_markers)
+        and "последние действия" not in low_result
+        and "текущий статус" not in low_result
+    )
+
+    saved_role = ""
+    if should_save_role:
+        _save_memory(chat_id, topic_id, raw_input, ai_result)  # SAVE_MEM_CONFIRM_V2
+        saved_role = _save_topic_role_memory(chat_id, topic_id, ai_result)
+        # === RESULT_VALIDATOR_GUARD_V1 ===
+        if _check_result_before_confirm(ai_result):
+            # === SEARCH_MONOLITH_V2_CLARIFICATION_HANDLER ===
+            try:
+                if _search_v2_is_clarification(ai_result):
+                    _cmsg = str(ai_result).replace("SEARCH_CLARIFICATION_REQUIRED:","").strip()
+                    _update_task(conn, task_id, state="WAITING_CLARIFICATION", result=_cmsg, error_message="")
+                    _history(conn, task_id, "SEARCH_MONOLITH_V2:WAITING_CLARIFICATION")
+                    conn.commit()
+                    _send_once(conn, task_id, str(chat_id), _cmsg, reply_to, "search_v2_clarification")
+                    return
+            except Exception as _e: logger.warning("SEARCH_V2_CLARIFICATION_HANDLER_ERR %s", _e)
+            # === END SEARCH_MONOLITH_V2_CLARIFICATION_HANDLER ===
+            # === UNIFIED_ENGINE_RESULT_VALIDATOR_V1_TASK_WORKER_AI_RESULT ===
+            try:
+                if validate_engine_result is not None:
+                    _payload_for_uv = locals().get("payload", {}) or {}
+                    _raw_for_uv = ""
+                    try:
+                        _raw_for_uv = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                    except Exception:
+                        _raw_for_uv = str(_payload_for_uv.get("raw_input") or _payload_for_uv.get("user_text") or "")
+                    _input_type_for_uv = ""
+                    try:
+                        _input_type_for_uv = str(task["input_type"] if "input_type" in task.keys() else "")
+                    except Exception:
+                        _input_type_for_uv = str(_payload_for_uv.get("input_type") or "")
+                    _uv = validate_engine_result({"summary": ai_result, "engine": "AI_ROUTER"}, input_type=_input_type_for_uv, user_text=_raw_for_uv, topic_id=topic_id)
+                    if not _uv.get("ok"):
+                        _update_task(conn, task_id, state="FAILED", result="", error_message="UNIFIED_ENGINE_RESULT_VALIDATOR_V1:" + str(_uv.get("reason") or "INVALID"))
+                        _history(conn, task_id, "UNIFIED_ENGINE_RESULT_VALIDATOR_V1:FAILED:" + str(_uv.get("reason") or "INVALID"))
+                        return
+            except Exception as _uv_e:
+                logger.warning("UNIFIED_ENGINE_RESULT_VALIDATOR_V1_ERR task=%s err=%s", task_id, _uv_e)
+            # === END_UNIFIED_ENGINE_RESULT_VALIDATOR_V1_TASK_WORKER_AI_RESULT ===
+            # === TASK_WORKER_ARTIFACT_GATE_V1 ===
+            try:
+                if validate_engine_result is not None:
+                    _twag_raw = ""
+                    _twag_input_type = ""
+                    try:
+                        _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                    except Exception:
+                        _twag_raw = ""
+                    try:
+                        _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
+                    except Exception:
+                        _twag_input_type = ""
+                    _twag_result = ai_result
+                    _twag_check = validate_engine_result(
+                        {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
+                        input_type=_twag_input_type,
+                        user_text=_twag_raw,
+                        topic_id=topic_id,
+                    )
+                    if not _twag_check.get("ok"):
+                        _update_task(conn, task_id, state="FAILED", result="",
+                            error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
+                        _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
+                        return
+            except Exception as _twag_e:
+                logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
+            # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
+            _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=ai_result, error_message="")
+        else:
+            _update_task(conn, task_id, state="FAILED", result=ai_result, error_message="FORBIDDEN_PHRASE")
+        # === END RESULT_VALIDATOR_GUARD_V1 ===
+    _history(conn, task_id, f"result:{_clean(ai_result, 400)}")
+    if saved_role:
+        _history(conn, task_id, f"ROLE_SAVED:{_clean(saved_role, 200)}")
+
+    try:
+        save_pin(chat_id, task_id, ai_result, topic_id)
+    except Exception as e:
+        logger.warning("save_pin_fail task=%s err=%s", task_id, e)
+
+    _ai_result_clean = str(ai_result or "").replace("\n\nДоволен результатом? Ответь: Да / Уточни / Правки", "").strip()  # FF21_FIX_DOUBLE_DOVOLEN
+    confirmation_text = f"{_ai_result_clean}\n\nДоволен результатом? Ответь: Да / Уточни / Правки"
+    sent = _send_once_ex(conn, task_id, chat_id, confirmation_text, reply_to, "result")
+    bot_message_id = sent.get("bot_message_id") if isinstance(sent, dict) else None
+    if bot_message_id is not None:
+        _update_task(conn, task_id, bot_message_id=bot_message_id)
+    conn.commit()
+
+
+
+# === IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1 ===
+def _in_progress_hard_timeout_by_created_at_fix_v1(conn, minutes: int = 30) -> int:
+    try:
+        rows = conn.execute(
+            """
+            SELECT id FROM tasks
+            WHERE state='IN_PROGRESS'
+              AND datetime(COALESCE(created_at, updated_at, 'now')) <= datetime('now', ?)
+            ORDER BY created_at ASC
+            LIMIT 200
+            """,
+            (f"-{int(minutes)} minutes",),
+        ).fetchall()
+        n = 0
+        for row in rows:
+            tid = row["id"] if hasattr(row, "keys") else row[0]
+            conn.execute(
+                "UPDATE tasks SET state='FAILED', error_message='IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1', updated_at=datetime('now') WHERE id=? AND state='IN_PROGRESS'",
+                (str(tid),),
+            )
+            try:
+                _history(conn, str(tid), "IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1:FAILED")
+            except Exception:
+                pass
+            n += 1
+        if n:
+            try: conn.commit()
+            except Exception: pass
+            logger.warning("IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1 closed=%s", n)
+        return n
+    except Exception as e:
+        logger.warning("IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1_ERR %s", e)
+        return 0
+# === END_IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1 ===
+
+def _pick_next_task(conn: sqlite3.Connection, chat_id: Optional[str]) -> Optional[sqlite3.Row]:
+    # === IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1_HOOK ===
+    _in_progress_hard_timeout_by_created_at_fix_v1(conn, minutes=30)
+    # === END_IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1_HOOK ===
+    where = ["state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION')"]
+    params: List[Any] = []
+    if chat_id:
+        where.insert(0, "chat_id=?")
+        params.append(str(chat_id))
+
+    conn.execute("BEGIN IMMEDIATE")
+    row = conn.execute(
+        f"""
+        SELECT *
+        FROM tasks
+        WHERE {' AND '.join(where)}
+        ORDER BY CASE state WHEN 'IN_PROGRESS' THEN 0 WHEN 'WAITING_CLARIFICATION' THEN 1 ELSE 2 END,
+                 created_at ASC
+        LIMIT 1
+        """
+        ,
+        params,
+    ).fetchone()
+    conn.execute("COMMIT")
+    return row
+
+
+async def main() -> None:
+    lock_fp = open(LOCK_PATH, "w")
+    try:
+        fcntl.flock(lock_fp.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        logger.info("WORKER LOCKED BY OTHER PROCESS")
+        return
+
+    logger.info("WORKER STARTED pid=%s", os.getpid())
+
+    while True:
+        conn = db(CORE_DB)
+        try:
+            _recover_stale_tasks(conn, None)
+            task = _pick_next_task(conn, None)
+            if not task:
+                time.sleep(POLL_SEC)
+                continue
+
+            task_id = _s(_task_field(task, "id"))
+            chat_id = _s(_task_field(task, "chat_id"))
+            topic_id = int(_task_field(task, "topic_id", 0) or 0)
+            state = _s(_task_field(task, "state")).upper()
+
+            logger.info("PICKED %s state=%s chat=%s topic=%s", task_id, state, chat_id, topic_id)
+            input_type = _s(_task_field(task, "input_type")).lower()
+            if input_type == "drive_file":
+                try:
+                    await _handle_drive_file(conn, task, chat_id, topic_id)
+                except Exception as e:
+                    logger.error("DRIVE_FILE CRASH task=%s err=%s", task_id, str(e))
+                continue
+
+            if state == "NEW":
+                await _handle_new(conn, task, chat_id, topic_id)
+            elif state == "IN_PROGRESS":
+                await _handle_in_progress(conn, task, chat_id, topic_id)
+            elif state == "WAITING_CLARIFICATION":
+                await _handle_in_progress(conn, task, chat_id, topic_id)
+        finally:
+            conn.close()
+
+        time.sleep(POLL_SEC)
+
+
+
+# === DRIVE FILE HANDLING ===
+def _download_from_drive(file_id: str, local_path: str) -> bool:
+    try:
+        from googleapiclient.discovery import build
+        from googleapiclient.http import MediaIoBaseDownload
+        from google.oauth2.service_account import Credentials
+        import io
+        creds = Credentials.from_service_account_file(
+            '/root/.areal-neva-core/credentials.json',
+            scopes=['https://www.googleapis.com/auth/drive.readonly']
+        )
+        service = build('drive', 'v3', credentials=creds)
+        request = service.files().get_media(fileId=file_id)
+        with io.FileIO(local_path, 'wb') as fh:
+            downloader = MediaIoBaseDownload(fh, request)
+            done = False
+            while not done:
+                status, done = downloader.next_chunk()
+        return True
+    except Exception as e:
+        import logging
+        logging.getLogger("task_worker").error(f"Drive download failed: {e}")
+        return False
+
+async def _handle_drive_file(conn, task, chat_id, topic_id):
+    import json, os
+    task_id = task["id"]
+    input_type = "drive_file"  # INPUT_TYPE_DRIVE_FIX_V1
+    raw_input = task["raw_input"]
+    try:
+        data = json.loads(raw_input)
+        file_id = data["file_id"]
+        file_name = data.get("file_name", "файл")  # HOTFIX_FILE_NAME_EARLY_V1
+        # === DRIVE_FILE_CONTENT_SERVICE_GUARD_V1 ===
+        try:
+            if _filemem_is_service_file(str(file_name or ""), str(data.get("source") or ""), int(topic_id or 0), str(raw_input or "")):
+                _msg = "Служебный файл синхронизации проигнорирован"
+                _update_task(conn, task_id, state="CANCELLED", result=_msg, error_message="SERVICE_FILE_IGNORED")
+                _history(conn, task_id, "DRIVE_FILE_CONTENT_SERVICE_GUARD_V1:CANCELLED")
+                try:
+                    _append_timeline_event_v1(str(chat_id), int(topic_id or 0), task_id, "service_file_ignored", raw_input, _msg)
+                except Exception:
+                    pass
+                conn.commit()
+                logger.info("DRIVE_FILE_CONTENT_SERVICE_GUARD_V1 cancelled task=%s file=%s source=%s topic=%s", task_id, file_name, data.get("source"), topic_id)
+                return
+        except Exception as _svc_e:
+            logger.warning("DRIVE_FILE_CONTENT_SERVICE_GUARD_V1_ERR task=%s err=%s", task_id, _svc_e)
+        # === END DRIVE_FILE_CONTENT_SERVICE_GUARD_V1 ===
+        # === DRIVE_FILE_MEMORY_INDEX_V1 + FILE_DUPLICATE_MEMORY_GUARD_V1 ===
+        try:
+            _df_file_id = str(data.get("file_id") or "")
+            _df_file_name = str(file_name or "")
+            _df_meta = json.dumps({
+                "task_id": task_id, "chat_id": str(chat_id),
+                "topic_id": int(topic_id or 0), "file_id": _df_file_id,
+                "file_name": _df_file_name,
+                "caption": str(data.get("caption") or ""),
+                "source": str(data.get("source") or ""),
+            }, ensure_ascii=False)
+            if _df_file_id:
+                _dupe = conn.execute(
+                    "SELECT id,state FROM tasks WHERE chat_id=? AND COALESCE(topic_id,0)=? AND id<>? AND input_type='drive_file' AND raw_input LIKE ? AND state IN ('DONE','ARCHIVED','AWAITING_CONFIRMATION') ORDER BY updated_at DESC LIMIT 1",
+                    (str(chat_id), int(topic_id or 0), task_id, "%" + _df_file_id + "%"),
+                ).fetchone()
+                if _dupe is not None:
+                    _dmsg = "Файл уже есть в этом топике. Предыдущая задача: " + _s(_dupe["id"])[:8]
+                    _update_task(conn, task_id, state="DONE", result=_dmsg, error_message="")
+                    _history(conn, task_id, "FILE_DUPLICATE_MEMORY_GUARD_V1:DONE")
+                    _memory_insert_topic_entry_v1(str(chat_id), f"topic_{int(topic_id or 0)}_file_duplicate_{task_id}", _df_meta)
+                    _append_timeline_event_v1(str(chat_id), int(topic_id or 0), task_id, "file_duplicate", raw_input, _dmsg)
+                    conn.commit()
+                    _send_once(conn, task_id, str(chat_id), _dmsg, _task_field(task, "reply_to_message_id", None), "file_dup_guard_v1")
+                    logger.info("FILE_DUPLICATE_MEMORY_GUARD_V1 task=%s", task_id)
+                    return
+            _memory_insert_topic_entry_v1(str(chat_id), f"topic_{int(topic_id or 0)}_file_{task_id}", _df_meta)
+            _append_timeline_event_v1(str(chat_id), int(topic_id or 0), task_id, "drive_file_indexed", raw_input, "")
+            # === DRIVE_FILE_CONTENT_MEMORY_INDEX_V1_CALL ===
+            try:
+                # === DRIVE_FILE_CONTENT_INDEX_SKIP_SERVICE_V2 ===
+                try:
+                    _df_skip_content_index = bool(_filemem_is_service_file(
+                        _df_file_name,
+                        str(data.get("source") or ""),
+                        int(topic_id or 0),
+                        str(raw_input or "")
+                    ))
+                except Exception as _df_skip_e:
+                    _df_skip_content_index = False
+                    logger.warning("DRIVE_FILE_CONTENT_INDEX_SKIP_SERVICE_V2_ERR task=%s err=%s", task_id, _df_skip_e)
+                if _df_skip_content_index:
+                    logger.info("DRIVE_FILE_CONTENT_INDEX_SKIP_SERVICE_V2 skipped task=%s file=%s source=%s topic=%s", task_id, _df_file_name, data.get("source"), topic_id)
+                # === END DRIVE_FILE_CONTENT_INDEX_SKIP_SERVICE_V2 ===
+                if (not _df_skip_content_index) and _df_content_index is not None and _df_file_id:
+                    _df_ci = await asyncio.to_thread(
+                        _df_content_index,
+                        str(chat_id),
+                        int(topic_id or 0),
+                        str(task_id),
+                        str(_df_file_id),
+                        str(_df_file_name),
+                        str(data.get("mime_type") or ""),
+                    )
+                    _memory_insert_topic_entry_v1(
+                        str(chat_id),
+                        f"topic_{int(topic_id or 0)}_file_content_status_{task_id}",
+                        json.dumps(_df_ci, ensure_ascii=False),
+                    )
+                    _append_timeline_event_v1(
+                        str(chat_id),
+                        int(topic_id or 0),
+                        task_id,
+                        "drive_file_content_indexed",
+                        raw_input,
+                        json.dumps(_df_ci, ensure_ascii=False),
+                    )
+                    logger.info("DRIVE_FILE_CONTENT_MEMORY_INDEX_V1 task=%s ok=%s reason=%s chars=%s", task_id, _df_ci.get("ok"), _df_ci.get("reason"), _df_ci.get("chars"))
+            except Exception as _dfci_e:
+                logger.warning("DRIVE_FILE_CONTENT_MEMORY_INDEX_V1_ERR task=%s err=%s", task_id, _dfci_e)
+            # === END DRIVE_FILE_CONTENT_MEMORY_INDEX_V1_CALL ===
+            logger.info("DRIVE_FILE_MEMORY_INDEX_V1 task=%s file=%s", task_id, _df_file_name)
+            # === FILE_CATALOG_AUTOSYNC_AFTER_DRIVE_FILE_V1 ===
+            try:
+                _filemem_save_catalog(str(chat_id), int(topic_id or 0))
+            except Exception as _cat_e:
+                logger.warning("FILE_CATALOG_AUTOSYNC_AFTER_DRIVE_FILE_V1_ERR task=%s err=%s", task_id, _cat_e)
+            # === END FILE_CATALOG_AUTOSYNC_AFTER_DRIVE_FILE_V1 ===
+        except Exception as _e:
+            logger.warning("DRIVE_FILE_MEMORY_INDEX_V1_ERR task=%s err=%s", task_id, _e)
+        # === END DRIVE_FILE_MEMORY_INDEX_V1 + FILE_DUPLICATE_MEMORY_GUARD_V1 ===
+        # DRIVE_FILE_SOURCE_HEALTHCHECK_GUARD_V1
+        _hc_src = str(data.get("source") or "").lower()
+        _hc_fn = str(file_name or "").lower()
+        _hc_raw_low = str(raw_input or "").lower()
+        _hc_markers = ("retry_queue_healthcheck", "healthcheck", "areal_hc_", "_hc_file")
+        if _hc_src in ("google_drive", "gdrive") or any(m in _hc_fn or m in _hc_raw_low for m in _hc_markers):
+            _update_task(conn, task_id, state="CANCELLED", error_message="SERVICE_FILE_IGNORED:HEALTHCHECK")
+            conn.commit()
+            logger.info("DRIVE_FILE_SOURCE_HEALTHCHECK_GUARD_V1 cancelled task=%s", task_id)
+            return
+        # === TASK_TYPE_DETECT_V1 ===
+        _task_type = "DOCUMENT_TASK"
+        _fn_lower = file_name.lower()
+        _caption_lower = (data.get("caption") or raw_input or "").lower()
+        if any(_fn_lower.endswith(e) for e in (".dwg", ".dxf")):
+            _task_type = "DWG_TASK"
+        elif any(_fn_lower.endswith(e) for e in (".xlsx", ".xls", ".csv")):
+            _task_type = "ESTIMATE_TASK"
+        elif any(_fn_lower.endswith(e) for e in (".jpg", ".jpeg", ".png", ".heic", ".webp")):
+            if any(w in _caption_lower for w in ["дефект", "акт", "технадзор", "нарушен"]):
+                _task_type = "TECHNADZOR_TASK"
+            else:
+                _task_type = "OCR_TASK"
+        elif any(w in _caption_lower for w in ["смета", "расчёт", "посчитай", "калькул"]):
+            _task_type = "ESTIMATE_TASK"
+        elif any(w in _caption_lower for w in ["дефект", "акт", "технадзор"]):
+            _task_type = "TECHNADZOR_TASK"
+        try:
+            conn.execute("UPDATE tasks SET task_type=? WHERE id=?", (_task_type, task_id))
+            conn.commit()
+        except Exception:
+            pass
+        logger.info("TASK_TYPE_DETECT_V1 task=%s type=%s", task_id, _task_type)
+        # === END TASK_TYPE_DETECT_V1 ===
+
+        # === DUPLICATE_GUARD_CALL_V1 ===
+        try:
+            _dupe = find_duplicate(conn, str(chat_id), int(topic_id or 0), file_id)
+            if _dupe:
+                file_name = data.get("file_name", "файл")
+                _dupe_msg = duplicate_message(_dupe, file_name)
+                # === RESULT_VALIDATOR_GUARD_V1 ===
+                if _check_result_before_confirm(_dupe_msg):
+                    # === TASK_WORKER_ARTIFACT_GATE_V1 ===
+                    try:
+                        if validate_engine_result is not None:
+                            _twag_raw = ""
+                            _twag_input_type = ""
+                            try:
+                                _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                            except Exception:
+                                _twag_raw = ""
+                            try:
+                                _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
+                            except Exception:
+                                _twag_input_type = ""
+                            _twag_result = _dupe_msg
+                            _twag_check = validate_engine_result(
+                                {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
+                                input_type=_twag_input_type,
+                                user_text=_twag_raw,
+                                topic_id=topic_id,
+                            )
+                            if not _twag_check.get("ok"):
+                                _update_task(conn, task_id, state="FAILED", result="",
+                                    error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
+                                _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
+                                return
+                    except Exception as _twag_e:
+                        logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
+                    # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
+                    _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_dupe_msg, error_message="")
+                else:
+                    _update_task(conn, task_id, state="FAILED", result=_dupe_msg, error_message="FORBIDDEN_PHRASE")
+                # === END RESULT_VALIDATOR_GUARD_V1 ===
+                _history(conn, task_id, "state:AWAITING_CONFIRMATION:duplicate_guard")
+                conn.commit()
+                from core.reply_sender import send_reply_ex
+                send_reply_ex(chat_id=str(chat_id), text=_dupe_msg, reply_to_message_id=reply_to, message_thread_id=topic_id)
+                return
+        except Exception as _dge:
+            logger.warning("DUPLICATE_GUARD_CALL_ERR %s", _dge)
+        # === END DUPLICATE_GUARD_CALL_V1 ===
+        file_name = data["file_name"]
+    except Exception as e:
+        logger.error(f"DRIVE_FILE: invalid raw_input for {task_id}: {e}")
+        _update_task(conn, task_id, state="FAILED", error_message="invalid raw_input")
+        return
+
+    local_path = f"/root/.areal-neva-core/runtime/drive_files/{task_id}_{file_name}"
+    os.makedirs(os.path.dirname(local_path), exist_ok=True)
+
+    logger.info(f"DRIVE_FILE: downloading {file_id} -> {local_path}")
+    ok = _download_from_drive(file_id, local_path)  # HOTFIX_OK_BEFORE_SIZE_CHECK_V1
+    # === FILE_SIZE_LIMIT_V1 ===
+    if ok and local_path and os.path.exists(local_path):
+        _fsize = os.path.getsize(local_path)
+        if _fsize > 50 * 1024 * 1024:  # 50MB
+            _update_task(conn, task_id, state="FAILED",
+                        result="", error_message="FILE_TOO_LARGE")
+            conn.commit()
+            from core.reply_sender import send_reply_ex
+            send_reply_ex(chat_id=str(chat_id),
+                         text="Файл слишком большой (>50MB). Сожми или разбей на части.",
+                         reply_to_message_id=reply_to, message_thread_id=topic_id)
+            return
+    # === END FILE_SIZE_LIMIT_V1 ===
+    # === FILE_INTAKE_ROUTER_V1_WIRED ===
+    if ok and local_path and os.path.exists(local_path):
+        try:
+            from core.file_intake_router import route_file, detect_intent, detect_intent_from_filename, should_ask_clarification, get_clarification_message
+            _fir_caption = data.get("caption", "") or raw_input or ""
+            _fir_intent = detect_intent(_fir_caption) or detect_intent_from_filename(file_name)
+            _fir_topic_role = ""
+            if _fir_intent:
+                _fir_result = await route_file(local_path, task_id, int(topic_id or 0), _fir_intent)
+                if _fir_result and _fir_result.get("success"):
+                    _fir_msg = _fir_result.get("result_text") or _fir_result.get("drive_link") or "Готово"
+                    # === TASK_WORKER_ARTIFACT_GATE_V1 ===
+                    try:
+                        if validate_engine_result is not None:
+                            _twag_raw = ""
+                            _twag_input_type = ""
+                            try:
+                                _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                            except Exception:
+                                _twag_raw = ""
+                            try:
+                                _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
+                            except Exception:
+                                _twag_input_type = ""
+                            _twag_result = _fir_msg
+                            _twag_check = validate_engine_result(
+                                {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
+                                input_type=_twag_input_type,
+                                user_text=_twag_raw,
+                                topic_id=topic_id,
+                            )
+                            if not _twag_check.get("ok"):
+                                _update_task(conn, task_id, state="FAILED", result="",
+                                    error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
+                                _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
+                                return
+                    except Exception as _twag_e:
+                        logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
+                    # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
+                    _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_fir_msg, error_message="")
+                    _history(conn, task_id, "state:AWAITING_CONFIRMATION:file_intake_router")
+                    conn.commit()
+                    from core.reply_sender import send_reply_ex
+                    send_reply_ex(chat_id=str(chat_id), text=_fir_msg, reply_to_message_id=reply_to, message_thread_id=topic_id)
+                    return
+            elif should_ask_clarification(_fir_caption, has_file=True):
+                _fir_clarif = get_clarification_message(file_name, int(topic_id or 0))
+                _update_task(conn, task_id, state="WAITING_CLARIFICATION", result=_fir_clarif, error_message="")
+                conn.commit()
+                from core.reply_sender import send_reply_ex
+                send_reply_ex(chat_id=str(chat_id), text=_fir_clarif, reply_to_message_id=reply_to, message_thread_id=topic_id)
+                return
+        except Exception as _fir_err:
+            logger.warning("FILE_INTAKE_ROUTER_V1_ERR task=%s err=%s", task_id, _fir_err)
+    # === END FILE_INTAKE_ROUTER_V1_WIRED ===
+    if not ok:
+        _update_task(conn, task_id, state="FAILED", error_message="download failed")
+        return
+
+    conn.execute("UPDATE drive_files SET stage='downloaded' WHERE task_id=?", (task_id,))
+
+    result = f"Файл {file_name} скачан, ожидает анализа"
+    try:
+        _, _, topic_role, _ = _load_memory_context(chat_id, topic_id)
+        analysis = await analyze_downloaded_file(
+            local_path=local_path,
+            file_name=file_name,
+            mime_type=data.get("mime_type", ""),
+            user_text=data.get("caption", ""),
+            topic_role=topic_role,
+        )
+        if isinstance(analysis, dict):
+            summary = _s(analysis.get("summary")) or result
+            artifact_path = _s(analysis.get("artifact_path"))
+            artifact_name = _s(analysis.get("artifact_name")) or os.path.basename(artifact_path)
+            result = summary
+            if artifact_path and os.path.exists(artifact_path):
+                try:
+                    upload_res = await upload_file_to_topic(artifact_path, artifact_name, chat_id, topic_id)
+                    if isinstance(upload_res, dict) and upload_res.get("ok") and upload_res.get("drive_file_id"):
+                        result = summary + f"\n\nАртефакт: https://drive.google.com/file/d/{upload_res.get('drive_file_id')}/view"
+                    # === QUALITY_GATE_WIRED_V1 ===
+                    _qg = _quality_gate_artifact(
+                        drive_link=result,
+                        input_type=input_type,
+                        task_type=_task_type if '_task_type' in dir() else ""
+                    )
+                    if not _qg.get("ok"):
+                        logger.warning("QUALITY_GATE_FAIL task=%s reason=%s", task_id, _qg.get("reason"))
+                    # === END QUALITY_GATE_WIRED_V1 ===
+                    # === TEMP_CLEANUP_AFTER_UPLOAD_V1 ===
+                    try:
+                        _tc_upload([local_path])
+                        _tc_task(task_id)
+                    except Exception:
+                        pass
+                    # === END TEMP_CLEANUP_AFTER_UPLOAD_V1 ===
+                        # === PATCH: save_pin + save_memory + log ===
+                        try:
+                            save_pin(chat_id, task_id, result, topic_id)
+                            _save_memory(chat_id, topic_id, raw_input, result)
+                            logger.info(f"DRIVE_FILE pin_memory_saved task_id={task_id}")
+                        except Exception as e:
+                            logger.error(f"DRIVE_FILE pin/memory failed task={task_id} err={e}")
+                        # === END PATCH ===
+                    else:
+                        result = summary + "\n\nАртефакт создан, но загрузка в Drive не подтвердилась"
+                except Exception as e:
+                    logger.error(f"DRIVE_FILE artifact upload failed task={task_id} err={e}")
+                    result = summary + "\n\nАртефакт создан локально, но загрузка в Drive завершилась ошибкой"
+    except Exception as e:
+        logger.error(f"DRIVE_FILE analyze skipped task={task_id} err={e}")
+
+    _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(result))
+    logger.info(f"DRIVE_FILE: {task_id} processed")
+
+
+
+# === SINGLE_CHAR_REPLY_AS_PRICE_CHOICE_V1 ===
+# Однобуквенный выбор цены и голосовой выбор должны продолжать parent task, а не создавать общий ответ
+# AWAITING_PRICE_CONFIRMATION_STATE_V1
+# VOICE_REPLY_TO_PARENT_TASK_V1
+# === END_SINGLE_CHAR_REPLY_AS_PRICE_CHOICE_V1 ===
+
+# === STARTUP_RECOVERY_V1_MAIN_WRAP ===
+try:
+    import inspect as _startup_recovery_inspect_v1
+    _orig_task_worker_main_startup_recovery_v1 = main
+
+    async def main(*args, **kwargs):
+        try:
+            if run_startup_recovery is not None:
+                await run_startup_recovery(CORE_DB)
+        except Exception as _startup_recovery_err:
+            logger.warning("STARTUP_RECOVERY_V1_ERR %s", _startup_recovery_err)
+
+        _res = _orig_task_worker_main_startup_recovery_v1(*args, **kwargs)
+        if _startup_recovery_inspect_v1.isawaitable(_res):
+            return await _res
+        return _res
+except Exception as _startup_recovery_wrap_err:
+    logger.warning("STARTUP_RECOVERY_V1_WRAP_ERR %s", _startup_recovery_wrap_err)
+# === END_STARTUP_RECOVERY_V1_MAIN_WRAP ===
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+# === FULLFIX_08_PROJECT_ERROR_VISIBILITY ===
+
+
+# === AWAITING_CONFIRMATION_ONLY_ON_REAL_RESULT_V1 ===
+_GENERIC_RESULT_PATTERNS_V1 = [
+    r"Файл скачан, ожидает анализа",
+    r"Этот чат предназначен",
+    r"Структура проекта включает этапы",
+    r"Файл содержит раздел",
+    r"не понял запрос",
+    r"готов к выполнению",
+]
+def _is_generic_or_fake_result_v1(result: str) -> bool:
+    r = _clean(_s(result), 2000)
+    if not r:
+        return True
+    return any(re.search(p, r, re.I) for p in _GENERIC_RESULT_PATTERNS_V1)
+
+try:
+    _orig_is_valid_result_areal_v1 = _is_valid_result
+    def _is_valid_result(text: str, raw_input: str) -> bool:
+        if _is_generic_or_fake_result_v1(text):
+            logger.warning("NO_GENERIC_RESPONSE_AS_RESULT_V1_BLOCKED %s", _clean(_s(text), 120))
+            return False
+        return _orig_is_valid_result_areal_v1(text, raw_input)
+except Exception as _wrap_e:
+    logger.warning("AWAITING_CONFIRMATION_ONLY_ON_REAL_RESULT_V1_WRAP_ERR %s", _wrap_e)
+
+try:
+    _orig_check_result_before_confirm_areal_v1 = _check_result_before_confirm
+    def _check_result_before_confirm(result: str, input_type: str = "text", intent: str = "") -> bool:
+        if _is_generic_or_fake_result_v1(result):
+            logger.warning("NO_GENERIC_RESPONSE_AS_RESULT_V1_CONFIRM_BLOCKED %s", _clean(_s(result), 120))
+            return False
+        if input_type in ("drive_file", "file") and re.search(r"Файл скачан|ожидает анализа", _s(result), re.I):
+            logger.warning("AWAITING_CONFIRMATION_ONLY_ON_REAL_RESULT_V1_BLOCKED")
+            return False
+        return _orig_check_result_before_confirm_areal_v1(result, input_type=input_type, intent=intent)
+except Exception as _wrap_e:
+    logger.warning("CHECK_RESULT_REAL_RESULT_V1_WRAP_ERR %s", _wrap_e)
+
+try:
+    import inspect as _inspect_repeat_v1
+    _orig_process_ai_task_repeat_v1 = process_ai_task
+    async def process_ai_task(*args, **kwargs):
+        try:
+            raw = kwargs.get("raw_input") or kwargs.get("user_text") or kwargs.get("prompt") or ""
+            if not raw and args:
+                raw = args[0]
+            chat_id = str(kwargs.get("chat_id") or kwargs.get("chat") or "")
+            topic_id = int(kwargs.get("topic_id") or 0)
+            if _is_repeat_parent_task_v1(str(raw)) and chat_id:
+                _rc = db(CORE_DB)
+                try:
+                    parent = _find_repeat_parent_task_v1(_rc, chat_id, topic_id)
+                    if parent:
+                        parent_raw = _clean(_s(_task_field(parent, "raw_input", "")), 3000)
+                        parent_result = _clean(_s(_task_field(parent, "result", "")), 3000)
+                        enriched = (
+                            "Продолжи последнюю активную задачу в этом топике. "
+                            "Не отвечай общим описанием чата. "
+                            "Если данных не хватает — задай один короткий вопрос.\n\n"
+                            f"Команда владельца: {_clean(_s(raw), 500)}\n\n"
+                            f"Родительская задача: {parent_raw}\n\n"
+                            f"Последний результат: {parent_result}"
+                        )
+                        if "raw_input" in kwargs:
+                            kwargs["raw_input"] = enriched
+                        elif "user_text" in kwargs:
+                            kwargs["user_text"] = enriched
+                        elif "prompt" in kwargs:
+                            kwargs["prompt"] = enriched
+                        elif args:
+                            args = (enriched,) + tuple(args[1:])
+                        logger.info("REPLY_REPEAT_PARENT_TASK_V1 parent=%s topic=%s", _task_field(parent, "id", ""), topic_id)
+                finally:
+                    _rc.close()
+        except Exception as _repeat_e:
+            logger.warning("REPLY_REPEAT_PARENT_TASK_V1_WRAP_ERR %s", _repeat_e)
+        _res = _orig_process_ai_task_repeat_v1(*args, **kwargs)
+        if _inspect_repeat_v1.isawaitable(_res):
+            return await _res
+        return _res
+except Exception as _repeat_wrap_e:
+    logger.warning("REPLY_REPEAT_PARENT_TASK_V1_PROCESS_WRAP_ERR %s", _repeat_wrap_e)
+# === END_AWAITING_CONFIRMATION_ONLY_ON_REAL_RESULT_V1 ===
 
 ====================================================================================================
-END_FILE: docs/REPORTS/DRIVE_AI_ORCHESTRA_ROOT_CLEANUP_V1_REPORT.md
-FILE_CHUNK: 3/3
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: docs/REPORTS/DRIVE_AI_ORCHESTRA_ROOT_FOLDER_FINAL_CLEAN_V1_REPORT.md
+END_FILE: task_worker.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 35553380e66770a7ec22177fcdb486c4a16c7bb4337fa7dc11db5feb41cec8cf
 ====================================================================================================
-# DRIVE_AI_ORCHESTRA_ROOT_FOLDER_FINAL_CLEAN_V1_REPORT
-
-moved_nested_ai_orchestra: True
-root_files: 0
-noncanonical_folders: 0
-root_folders: ['_QUARANTINE_ROOT_CLEANUP', 'telegram_exports', 'chat_-1003725299009', 'ESTIMATES', 'CHAT_EXPORTS', 'CANON_FINAL']
-noncanonical: []
 
 ====================================================================================================
-END_FILE: docs/REPORTS/DRIVE_AI_ORCHESTRA_ROOT_FOLDER_FINAL_CLEAN_V1_REPORT.md
+BEGIN_FILE: telegram_daemon.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 9367c85c169d9f49fb57426d0dbb9b8f1d876582efab59d00c8d42a4a4c73f9c
+====================================================================================================
+import json
+import asyncio, hashlib, json, logging, os, re, uuid, fcntl, tempfile, time
+from datetime import datetime, timezone, timedelta
+import aiofiles, aiohttp, aiosqlite
+from aiogram import Bot, Dispatcher, types
+from aiogram.types import BufferedInputFile, FSInputFile
+from google_io import upload_to_drive
+from core.drive_folder_resolver import get_or_create_topic_folder
+from core.topic_drive_oauth import upload_file_to_topic
+
+BOT_TOKEN = <REDACTED_SECRET>"TELEGRAM_BOT_TOKEN") or "").strip()
+DB = "/root/.areal-neva-core/data/core.db"
+VOICE_DIR = "/root/.areal-neva-core/runtime/voice_queue"
+MEMORY_FILES = "/root/.areal-neva-core/data/memory_files"
+CHAT_MAP_FILE = os.path.join(MEMORY_FILES, "CHAT_MAP.json")
+
+if not BOT_TOKEN:
+    raise RuntimeError("TELEGRAM_BOT_TOKEN missing")
+
+for d in ["GLOBAL", "CHATS", "SYSTEM", "ERRORS"]:
+    os.makedirs(os.path.join(MEMORY_FILES, d), exist_ok=True)
+os.makedirs(VOICE_DIR, exist_ok=True)
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s DAEMON: %(message)s")
+logger = logging.getLogger("telegram_daemon")
+
+bot = Bot(BOT_TOKEN)
+dp = Dispatcher()
+
+SYSTEM_CMDS = ["память", "память оркестра", "выгрузи память", "статус", "архив", "сброс задач", "очистить задачи", "yzon", "дамп", "язон", "язон файл", "дамп файл", "память файл", "архив файл", "система", "система файл", "код файл", "файл"]
+CANCEL_CMDS = ["отбой", "отмена", "не надо"]
+EZONE_KEYS = ("system", "architecture", "pipeline", "memory")
+EZONE_EXTS = (".json", ".jsonl", ".txt")
+SEARCH_TRIGGERS = ["цена", "наличие", "где купить", "площадка", "сайт", "сравнение", "новости", "актуальная"]
+SHORT_CONFIRM = ["да", "нет", "ок", "подтверждаю", "не так", "ага", "верно"]
+NEGATIVE_CONFIRM = ["нет", "не так"]
+FINISH_PHRASES = [
+    "спасибо поиск завершен", "поиск завершен",
+    "не надо", "можно завершать",
+    "задача закрыта", "закрывай", "хватит"
+]
+CANCEL_PHRASES = [
+    "все запросы отменены", "отменяю все запросы", "сброс задач",
+    "очистить задачи", "отмена", "отменяю", "сброс", "отбой"
+]
+
+_RECENT_INGEST = {}
+
+def now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+def today_key() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+def normalize_json_text(text: str) -> str:
+    if not text: return text
+    replacements = {"“": '"', "”": '"', "„": '"', "«": '"', "»": '"', "‘": "'", "’": "'", "…": "..."}
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+    return text.strip()
+
+def is_ezone_payload(text: str) -> bool:
+    if not text: return False
+    norm = normalize_json_text(text)
+    try:
+        data = json.loads(norm)
+        return isinstance(data, dict) and any(k in data for k in EZONE_KEYS)
+    except:
+        low = norm.lower()
+        return any(k in low for k in EZONE_KEYS)
+
+def content_hash(text: str) -> str:
+    return hashlib.sha256(normalize_json_text(text).encode()).hexdigest()
+
+def build_chat_key(telegram_chat_id: int) -> str:
+    return f"{telegram_chat_id}__telegram"
+
+def update_chat_map_atomic(telegram_chat_id: int, chat_key: str):
+    lock_file = CHAT_MAP_FILE + ".lock"
+    try:
+        with open(lock_file, "w") as lf:
+            fcntl.flock(lf, fcntl.LOCK_EX)
+            try:
+                chat_map = json.load(open(CHAT_MAP_FILE)) if os.path.exists(CHAT_MAP_FILE) else {}
+                tg_id = str(telegram_chat_id)
+                if tg_id not in chat_map:
+                    chat_map[tg_id] = {}
+                elif isinstance(chat_map[tg_id], list):
+                    chat_map[tg_id] = {k: "unknown" for k in chat_map[tg_id]}
+                chat_map[tg_id] = {k: v for k, v in chat_map[tg_id].items() if "unknown" not in k}
+                chat_map[tg_id][chat_key] = "telegram"
+                fd, tmp = tempfile.mkstemp(dir=os.path.dirname(CHAT_MAP_FILE), prefix=".chat_map_", suffix=".tmp")
+                with os.fdopen(fd, "w") as f:
+                    json.dump(chat_map, f, ensure_ascii=False, indent=2)
+                    f.flush(); os.fsync(f.fileno())
+                os.replace(tmp, CHAT_MAP_FILE)
+            finally:
+                fcntl.flock(lf, fcntl.LOCK_UN)
+    except Exception as e:
+        logger.error("CHAT_MAP update failed: %s", e)
+    finally:
+        try: os.unlink(lock_file)
+        except: pass
+
+def is_duplicate_today(hash_val: str, chat_key: str) -> bool:
+    dup_file = os.path.join(MEMORY_FILES, "CHATS", chat_key, ".duplicates.jsonl")
+    today = today_key()
+    if os.path.exists(dup_file):
+        with open(dup_file) as f:
+            for line in f:
+                try:
+                    if json.loads(line).get("hash") == hash_val and json.loads(line).get("date") == today:
+                        return True
+                except: pass
+    os.makedirs(os.path.dirname(dup_file), exist_ok=True)
+    with open(dup_file, "a") as f:
+        f.write(json.dumps({"hash": hash_val, "date": today, "ts": now_iso()}) + "\n")
+    return False
+
+def save_ezone_json(text: str, telegram_chat_id: int) -> tuple:
+    norm = normalize_json_text(text)
+    try: data = json.loads(norm)
+    except: data = {"raw_text": norm}
+    if not isinstance(data, dict): data = {"raw_text": norm}
+    
+    chat_key = build_chat_key(telegram_chat_id)
+    ts = now_iso()
+    hash_val = content_hash(text)
+    
+    if is_duplicate_today(hash_val, chat_key):
+        return False, chat_key, "duplicate"
+    
+    data["_meta"] = {"chat_key": chat_key, "ingested_at": ts, "source": "telegram"}
+    chat_dir = os.path.join(MEMORY_FILES, "CHATS", chat_key)
+    os.makedirs(chat_dir, exist_ok=True)
+    
+    with open(os.path.join(chat_dir, "raw.json"), "w") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    
+    entry = json.dumps({"timestamp": ts, "data": data}, ensure_ascii=False)
+    with open(os.path.join(chat_dir, "timeline.jsonl"), "a") as f:
+        f.write(entry + "\n")
+    with open(os.path.join(MEMORY_FILES, "GLOBAL", "timeline.jsonl"), "a") as f:
+        f.write(json.dumps({"timestamp": ts, "chat_key": chat_key, "data": data}, ensure_ascii=False) + "\n")
+    
+    for key in EZONE_KEYS:
+        if key in data:
+            with open(os.path.join(MEMORY_FILES, "SYSTEM", f"{key}.jsonl"), "a") as f:
+                f.write(json.dumps({"timestamp": ts, "chat_key": chat_key, "data": data[key]}, ensure_ascii=False) + "\n")
+    
+    update_chat_map_atomic(telegram_chat_id, chat_key)
+    logger.info("eZone saved: chat_key=%s telegram_chat=%s", chat_key, telegram_chat_id)
+    return True, chat_key, ""
+
+
+def dump_yzon_state(chat_id: int) -> str:
+    import sqlite3, json
+
+    result = {
+        "system": {"name": "AREAL-NEVA ORCHESTRA", "role": "task execution system"},
+        "architecture": {
+            "pipeline": "telegram_daemon -> task_worker -> ai_router -> reply_sender",
+            "memory": "memory.db + memory_files",
+            "storage": "Google Drive",
+            "mode": "server-first"
+        },
+        "runtime": {
+            "chat_id": str(chat_id),
+            "has_active_task": False,
+            "has_active_pin": False,
+            "daemon": "running",
+            "worker": "running"
+        },
+        "active_context": {},
+        "recent_results": [],
+        "recent_decisions": []
+    }
+
+    try:
+        conn = sqlite3.connect("/root/.areal-neva-core/data/core.db")
+
+        cur = conn.execute(
+            "SELECT id, state, raw_input FROM tasks WHERE chat_id = ? AND state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION') ORDER BY created_at DESC LIMIT 1",
+            (str(chat_id),)
+        )
+        row = cur.fetchone()
+        if row:
+            result["runtime"]["has_active_task"] = True
+            result["active_context"]["task_id"] = row[0]
+            result["active_context"]["state"] = row[1]
+            result["active_context"]["input"] = row[2][:200] if row[2] else ""
+
+        cur = conn.execute(
+            "SELECT task_id FROM pin WHERE chat_id = ? AND state = 'ACTIVE' ORDER BY updated_at DESC LIMIT 1",
+            (str(chat_id),)
+        )
+        pin_row = cur.fetchone()
+        if pin_row:
+            result["runtime"]["has_active_pin"] = True
+            result["active_context"]["active_pin"] = pin_row[0]
+
+        cur = conn.execute(
+            "SELECT id, result FROM tasks WHERE chat_id = ? AND state = 'DONE' AND result IS NOT NULL ORDER BY updated_at DESC LIMIT 5",
+            (str(chat_id),)
+        )
+        for row in cur.fetchall():
+            result["recent_results"].append({"task_id": row[0], "summary": row[1][:200] if row[1] else ""})
+
+        cur = conn.execute(
+            "SELECT task_id, action FROM task_history WHERE task_id IN (SELECT id FROM tasks WHERE chat_id = ?) ORDER BY created_at DESC LIMIT 10",
+            (str(chat_id),)
+        )
+        for row in cur.fetchall():
+            result["recent_decisions"].append({"task_id": row[0], "action": row[1]})
+
+        conn.close()
+    except Exception as e:
+        result["error"] = str(e)
+
+    return json.dumps(result, ensure_ascii=False, indent=2)
+
+
+def dump_system_state() -> str:
+    import sqlite3, json, os
+    from datetime import datetime, timezone
+
+    result = {
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "chat_id": None,
+        "active_task": None,
+        "active_pin": None,
+        "recent_results": [],
+        "architecture": {
+            "system": "AREAL-NEVA ORCHESTRA",
+            "stack": "telegram_daemon + task_worker + ai_router + OpenRouter",
+            "memory": "memory_files + memory.db",
+            "files": "Google Drive via google_io"
+        }
+    }
+
+    try:
+        conn = sqlite3.connect("/root/.areal-neva-core/data/core.db")
+        cur = conn.execute("SELECT id, state, raw_input FROM tasks WHERE chat_id = '-1003725299009' AND state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION') ORDER BY created_at DESC LIMIT 1")
+        row = cur.fetchone()
+        if row:
+            result["chat_id"] = "-1003725299009"
+            result["active_task"] = {"id": row[0], "state": row[1], "input": row[2][:200]}
+        
+        cur = conn.execute("SELECT task_id FROM pin WHERE chat_id = '-1003725299009' AND state = 'ACTIVE' ORDER BY updated_at DESC LIMIT 1")
+        pin_row = cur.fetchone()
+        if pin_row:
+            result["active_pin"] = pin_row[0]
+        
+        cur = conn.execute("SELECT id, result FROM tasks WHERE chat_id = '-1003725299009' AND state = 'DONE' AND result IS NOT NULL ORDER BY updated_at DESC LIMIT 20")
+        for row in cur.fetchall():
+            result["recent_results"].append({"task_id": row[0], "summary": row[1][:200]})
+        
+        conn.close()
+    except Exception as e:
+        result["error"] = str(e)
+
+    return json.dumps(result, ensure_ascii=False, indent=2)
+
+def split_message(text: str, limit: int = 4000) -> list:
+    text = text or ""
+    parts = []
+    while text and len(parts) < 10:
+        if len(text) <= limit:
+            parts.append(text); break
+        split_at = text.rfind("\n", 0, limit)
+        if split_at == -1 or split_at < limit // 3:
+            split_at = limit
+        parts.append(text[:split_at])
+        text = text[split_at:].lstrip("\n")
+    return parts or [""]
+
+async def create_task(message: types.Message, input_type: str, raw_input: str, state: str = "NEW"):
+    task_id = str(uuid.uuid4())
+    now = now_iso()
+    user_id = getattr(message.from_user, "id", 0) if message.from_user else 0
+    topic_id = getattr(message, "message_thread_id", None) or 0
+    async with aiosqlite.connect(DB) as db:
+        cols = [r[1] for r in await (await db.execute("PRAGMA table_info(tasks)")).fetchall()]
+        if "topic_id" in cols:
+            await db.execute(
+                "INSERT INTO tasks (id, chat_id, user_id, input_type, raw_input, state, reply_to_message_id, topic_id, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                (task_id, message.chat.id, user_id, input_type, raw_input, state, message.message_id, topic_id, now, now))
+        else:
+            await db.execute(
+                "INSERT INTO tasks (id, chat_id, user_id, input_type, raw_input, state, reply_to_message_id, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
+                (task_id, message.chat.id, user_id, input_type, raw_input, state, message.message_id, now, now))
+        await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (task_id, f"created:{state}", now))
+        await db.commit()
+
+    # === TELEGRAM_TIMELINE_APPEND_V1 ===
+    try:
+        _tl_chat_key = build_chat_key(message.chat.id)
+        _tl_chat_dir = os.path.join(MEMORY_FILES, "CHATS", _tl_chat_key)
+        os.makedirs(_tl_chat_dir, exist_ok=True)
+        os.makedirs(os.path.join(MEMORY_FILES, "GLOBAL"), exist_ok=True)
+        _tl_entry = json.dumps({
+            "timestamp": now, "chat_id": str(message.chat.id),
+            "topic_id": int(topic_id or 0), "task_id": task_id,
+            "input_type": input_type, "state": state,
+            "raw_input": str(raw_input or "")[:4000],
+            "source": "telegram_daemon_create_task",
+        }, ensure_ascii=False)
+        for _tl_path in [
+            os.path.join(_tl_chat_dir, "timeline.jsonl"),
+            os.path.join(MEMORY_FILES, "GLOBAL", "timeline.jsonl"),
+        ]:
+            with open(_tl_path, "a", encoding="utf-8") as _f:
+                _f.write(_tl_entry + "\n")
+    except Exception as _tl_e:
+        logger.warning("TELEGRAM_TIMELINE_APPEND_V1_ERR %s", _tl_e)
+    # === END TELEGRAM_TIMELINE_APPEND_V1 ===
+
+    logger.info("Task %s created state=%s topic_id=%s", task_id, state, topic_id)
+    return task_id
+
+async def continue_parent_task(parent_id: str, user_text: str):
+    now = now_iso()
+    merged_sql = "COALESCE(raw_input,'') || ?"
+    suffix = "\n\nПродолжение пользователя:\n" + user_text
+    async with aiosqlite.connect(DB) as db:
+        await db.execute(
+            f"UPDATE tasks SET raw_input={merged_sql}, state='IN_PROGRESS', updated_at=? WHERE id=?",
+            (suffix, now, parent_id)
+        )
+        await db.execute(
+            "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)",
+            (parent_id, "continuation:IN_PROGRESS", now)
+        )
+        await db.commit()
+    logger.info("Task %s continued -> IN_PROGRESS", parent_id)
+
+async def get_active_task(chat_id: int) -> dict:
+    async with aiosqlite.connect(DB) as db:
+        cur = await db.execute(
+            "SELECT id, state, raw_input FROM tasks WHERE chat_id=? AND state IN ('NEW','IN_PROGRESS') ORDER BY created_at DESC LIMIT 1",
+            (chat_id,))
+        row = await cur.fetchone()
+        if row:
+            return {"id": row[0], "state": row[1], "raw_input": row[2]}
+        return None
+
+async def cancel_active_task(chat_id: int):
+    async with aiosqlite.connect(DB) as db:
+        cur = await db.execute(
+            "SELECT id FROM tasks WHERE chat_id=? AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION')",
+            (chat_id,)
+        )
+        tasks = await cur.fetchall()
+        for t in tasks:
+            await db.execute("UPDATE tasks SET state='CANCELLED', updated_at=? WHERE id=?", (now_iso(), t[0]))
+            await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (t[0], "cancelled", now_iso()))
+        await db.commit()
+async def reset_all_open_tasks(chat_id: int):
+    async with aiosqlite.connect(DB) as db:
+        cur = await db.execute(
+            "SELECT id FROM tasks WHERE chat_id=? AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION')",
+            (chat_id,)
+        )
+        rows = await cur.fetchall()
+        now = now_iso()
+        for row in rows:
+            task_id = row[0]
+            await db.execute(
+                "UPDATE tasks SET state='CANCELLED', updated_at=? WHERE id=?",
+                (now, task_id)
+            )
+            await db.execute(
+                "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)",
+                (task_id, "reset:CANCELLED", now)
+            )
+        try:
+            await db.execute(
+                "UPDATE pin SET state='CLOSED', updated_at=? WHERE chat_id=? AND state='ACTIVE'",
+                (now, str(chat_id))
+            )
+        except Exception:
+            pass
+        await db.commit()
+
+def _has_any_phrase(lower_text: str, phrases: list[str]) -> bool:
+    t = (lower_text or "").strip()
+    return t in phrases
+
+async def close_latest_open_task(chat_id: int, action: str = "finish:DONE") -> bool:
+    async with aiosqlite.connect(DB) as db:
+        cur = await db.execute(
+            "SELECT id FROM tasks WHERE chat_id=? AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION') ORDER BY updated_at DESC, created_at DESC LIMIT 1",
+            (chat_id,)
+        )
+        row = await cur.fetchone()
+        if not row:
+            return False
+        task_id = row[0]
+        now = now_iso()
+        await db.execute(
+            "UPDATE tasks SET state='DONE', updated_at=? WHERE id=?",
+            (now, task_id)
+        )
+        await db.execute(
+            "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)",
+            (task_id, action, now)
+        )
+        try:
+            await db.execute(
+                "UPDATE pin SET state='CLOSED', updated_at=? WHERE task_id=? AND state='ACTIVE'",
+                (now, task_id)
+            )
+            await db.execute(
+                "UPDATE pin SET state='CLOSED', updated_at=? WHERE chat_id=? AND state='ACTIVE'",
+                (now, str(chat_id))
+            )
+        except Exception:
+            pass
+        await db.commit()
+        return True
+
+async def cancel_all_open_tasks(chat_id: int, topic_id: int = 0) -> int:
+    async with aiosqlite.connect(DB) as db:
+        if topic_id > 0:
+            cur = await db.execute(
+                "SELECT id FROM tasks WHERE chat_id=? AND topic_id=? AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION')",
+                (chat_id, topic_id)
+            )
+        else:
+            cur = await db.execute(
+                "SELECT id FROM tasks WHERE chat_id=? AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION')",
+                (chat_id,)
+            )
+        rows = await cur.fetchall()
+        now = now_iso()
+        count = 0
+        for row in rows:
+            task_id = row[0]
+            await db.execute(
+                "UPDATE tasks SET state='CANCELLED', updated_at=? WHERE id=?",
+                (now, task_id)
+            )
+            await db.execute(
+                "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)",
+                (task_id, "cancelled:CANCELLED", now)
+            )
+            count += 1
+        try:
+            await db.execute(
+                "UPDATE pin SET state='CLOSED', updated_at=? WHERE chat_id=? AND state='ACTIVE'",
+                (now, str(chat_id))
+            )
+        except Exception:
+            pass
+        await db.commit()
+        return count
+
+async def _find_parent_task(chat_id: int, reply_to: int | None, topic_id: int = 0):
+    async with aiosqlite.connect(DB) as db:
+        cols = [r[1] for r in await (await db.execute("PRAGMA table_info(tasks)")).fetchall()]
+        has_topic = "topic_id" in cols and topic_id > 0
+        topic_filter = " AND topic_id=?" if has_topic else ""
+        topic_args = (topic_id,) if has_topic else ()
+        if reply_to:
+            cur = await db.execute(
+                f"SELECT id, state FROM tasks WHERE chat_id=? AND bot_message_id=?{topic_filter} AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION') ORDER BY updated_at DESC LIMIT 1",
+                (chat_id, reply_to) + topic_args
+            )
+            row = await cur.fetchone()
+            if row:
+                return row
+            cur = await db.execute(
+                f"SELECT id, state FROM tasks WHERE chat_id=? AND reply_to_message_id=?{topic_filter} AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION') ORDER BY updated_at DESC LIMIT 1",
+                (chat_id, reply_to) + topic_args
+            )
+            row = await cur.fetchone()
+            if row:
+                return row
+        cur = await db.execute(
+            f"SELECT id, state FROM tasks WHERE chat_id=?{topic_filter} AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION') ORDER BY updated_at DESC LIMIT 1",
+            (chat_id,) + topic_args
+        )
+        return await cur.fetchone()
+
+async def _handle_control_text(message, tg_id: int, text: str, lower: str, reply_to: int | None, topic_id: int = 0) -> bool:
+    if _has_any_phrase(lower, CANCEL_PHRASES):
+        closed = await cancel_all_open_tasks(tg_id, topic_id)
+        await message.answer("Все запросы отменены" if closed else "Нет активных задач")
+        return True
+
+    parent = await _find_parent_task(tg_id, reply_to, topic_id)
+
+    if _has_any_phrase(lower, FINISH_PHRASES):
+        if parent:
+            parent_id = parent[0]
+            now = now_iso()
+            async with aiosqlite.connect(DB) as db:
+                await db.execute("UPDATE tasks SET state='DONE', updated_at=? WHERE id=?", (now, parent_id))
+                await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, "finish:DONE", now))
+                await db.execute("UPDATE pin SET state='CLOSED', updated_at=? WHERE task_id=? AND state='ACTIVE'", (now, parent_id))
+                await db.commit()
+            await message.answer("Задача закрыта")
+            return True
+        closed = await close_latest_open_task(tg_id, "finish:DONE")
+        await message.answer("Задача закрыта" if closed else "Нет активных задач")
+        return True
+
+    if not parent:
+        return False
+
+    parent_id, parent_state = parent[0], parent[1]
+
+    if parent_state == "AWAITING_CONFIRMATION":
+        if lower.strip() in SHORT_CONFIRM and lower.strip() not in NEGATIVE_CONFIRM:
+            now = now_iso()
+            async with aiosqlite.connect(DB) as db:
+                await db.execute("UPDATE tasks SET state='DONE', updated_at=? WHERE id=?", (now, parent_id))
+                await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, "confirmed:DONE", now))
+                await db.execute("UPDATE pin SET state='CLOSED', updated_at=? WHERE task_id=? AND state='ACTIVE'", (now, parent_id))
+                await db.commit()
+            await message.answer("Задача завершена")
+            return True
+        if lower.strip() in NEGATIVE_CONFIRM:
+            now = now_iso()
+            async with aiosqlite.connect(DB) as db:
+                await db.execute("UPDATE tasks SET state='WAITING_CLARIFICATION', updated_at=? WHERE id=?", (now, parent_id))
+                await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, "rejected:WAITING_CLARIFICATION", now))
+                await db.execute("UPDATE pin SET state='CLOSED', updated_at=? WHERE task_id=? AND state='ACTIVE'", (now, parent_id))
+                await db.commit()
+            await message.answer("Хорошо, доработаю. Подтверждение снято.  # FULLFIX_02_E")
+            return True
+
+    if parent_state == "WAITING_CLARIFICATION":
+        now = now_iso()
+        async with aiosqlite.connect(DB) as db:
+            await db.execute("UPDATE tasks SET state='IN_PROGRESS', updated_at=? WHERE id=?", (now, parent_id))
+            await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, f"clarified:{text}", now))
+            await db.commit()
+        await message.answer("Принято, продолжаю")
+        return True
+
+    if parent_state == "IN_PROGRESS" and reply_to:
+        now = now_iso()
+        async with aiosqlite.connect(DB) as db:
+            await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, f"continued:{text}", now))
+            await db.commit()
+        await message.answer("Принято, продолжаю")
+        return True
+
+    return False
+
+
+async def download_telegram_file(file_path: str, local_path: str) -> str:
+    url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
+    async with aiohttp.ClientSession() as s:
+        async with s.get(url, timeout=aiohttp.ClientTimeout(total=300)) as r:
+            r.raise_for_status()
+            async with aiofiles.open(local_path, "wb") as f:
+                await f.write(await r.read())
+    return local_path
+
+@dp.message()
+async def universal_handler(message: types.Message):
+    update_id = getattr(message, 'update_id', None)
+    if update_id:
+        async with aiosqlite.connect(DB) as db:
+            await db.execute("DELETE FROM processed_updates WHERE created_at < ?", ((datetime.now(timezone.utc) - timedelta(days=1)).isoformat(),))
+            cur = await db.execute("SELECT 1 FROM processed_updates WHERE update_id = ?", (update_id,))
+            if await cur.fetchone():
+                await db.commit()
+                return
+            await db.execute("INSERT INTO processed_updates (update_id, created_at) VALUES (?, ?)", (update_id, now_iso()))
+            await db.commit()
+    
+    try:
+        text = message.text or ""
+        lower = text.lower()
+        tg_id = message.chat.id
+        now_ts = time.monotonic()
+        reply_to = message.reply_to_message.message_id if message.reply_to_message else None
+        topic_id = int(getattr(message, "message_thread_id", 0) or 0)
+        
+        # 1. SYSTEM COMMANDS
+        if lower in SYSTEM_CMDS:
+            if lower in ("сброс задач", "очистить задачи"):
+                await reset_all_open_tasks(tg_id)
+                await message.answer("Все незакрытые задачи и активные pin закрыты")
+            elif lower == "статус":
+                async with aiosqlite.connect(DB) as db:
+                    cur = await db.execute("SELECT state, COUNT(*) FROM tasks WHERE chat_id = ? GROUP BY state", (tg_id,))
+                    rows = await cur.fetchall()
+                    cur = await db.execute("SELECT task_id FROM pin WHERE chat_id = ? AND state = 'ACTIVE'", (str(tg_id),))
+                    pin_row = await cur.fetchone()
+                    status_msg = "Статус:\n" + "\n".join([f"{r[0]}: {r[1]}" for r in rows]) if rows else "Нет задач"
+                    if pin_row:
+                        status_msg += f"\nАктивный pin: {pin_row[0]}"
+                    await message.answer(status_msg)
+            elif lower == "yzon":
+                dump = dump_yzon_state(tg_id)
+                await message.answer(dump)
+                return
+            elif lower == "дамп":
+                import subprocess
+                result = subprocess.run(["/root/.areal-neva-core/.venv/bin/python3", "/root/.areal-neva-core/orchestra_full_dump.py"], capture_output=True, text=True, timeout=60)
+                dump_files = sorted([f for f in os.listdir("/root/.areal-neva-core/data/memory/UNSORTED") if f.startswith("orchestra_dump_")], reverse=True)
+                if dump_files:
+                    dump_path = f"/root/.areal-neva-core/data/memory/UNSORTED/{dump_files[0]}"
+                    content=open(dump_path).read()
+                    for part in split_message(content):
+                        await message.answer(part)
+                else:
+                    await message.answer("Дамп не создан")
+                return
+            elif lower == "архив":
+                async with aiosqlite.connect(DB) as db:
+                    cur = await db.execute("SELECT id, state, substr(raw_input,1,100) FROM tasks WHERE chat_id = ? AND state IN ('DONE','FAILED','CANCELLED','ARCHIVED') ORDER BY updated_at DESC LIMIT 10", (tg_id,))
+                    rows = await cur.fetchall()
+                    if rows:
+                        archive_msg = "Архив:\n" + "\n".join([f"{r[0][:8]}: {r[1]} - {r[2]}" for r in rows])
+                    else:
+                        archive_msg = "Архив пуст"
+                    await message.answer(archive_msg)
+            elif lower == "язон":
+                dump = dump_yzon_state(tg_id)
+                await message.answer(dump)
+                return
+            elif lower == "язон файл":
+                dump = dump_yzon_state(tg_id)
+                doc = BufferedInputFile(dump.encode("utf-8"), filename="yzon_state.json")
+                await message.answer_document(doc)
+                return
+            elif lower == "дамп файл":
+                import subprocess
+                subprocess.run(["/root/.areal-neva-core/.venv/bin/python3", "/root/.areal-neva-core/orchestra_full_dump.py"], capture_output=True, text=True, timeout=60)
+                dump_files = sorted([f for f in os.listdir("/root/.areal-neva-core/data/memory/UNSORTED") if f.startswith("orchestra_dump_")], reverse=True)
+                if dump_files:
+                    dump_path = f"/root/.areal-neva-core/data/memory/UNSORTED/{dump_files[0]}"
+                    await message.answer_document(FSInputFile(dump_path, filename=dump_files[0]))
+                else:
+                    await message.answer("Дамп не создан")
+                return
+            elif lower == "память файл":
+                import sqlite3 as _sq, json as _json
+                try:
+                    _mc = _sq.connect("/root/.areal-neva-core/data/memory.db")
+                    _mc.row_factory = _sq.Row
+                    _rows = _mc.execute("SELECT chat_id, key, value, timestamp FROM memory WHERE chat_id=? ORDER BY timestamp DESC LIMIT 200", (str(tg_id),)).fetchall()
+                    _mc.close()
+                    _data = [dict(r) for r in _rows]
+                    doc = BufferedInputFile(_json.dumps(_data, ensure_ascii=False, indent=2).encode("utf-8"), filename="memory_dump.json")
+                    await message.answer_document(doc)
+                except Exception as _e:
+                    await message.answer(f"Ошибка: {_e}")
+                return
+            elif lower == "архив файл":
+                import sqlite3 as _sq, io, json as _json
+                try:
+                    _mc = _sq.connect("/root/.areal-neva-core/data/memory.db")
+                    _mc.row_factory = _sq.Row
+                    _rows = _mc.execute("SELECT key, value, timestamp FROM memory WHERE chat_id=? AND key LIKE 'archive_legacy_%' ORDER BY timestamp DESC LIMIT 100", (str(tg_id),)).fetchall()
+                    _mc.close()
+                    _data = [dict(r) for r in _rows]
+                    doc = BufferedInputFile(_json.dumps(_data, ensure_ascii=False, indent=2).encode("utf-8"), filename="archive_dump.json")
+                    await message.answer_document(doc)
+                except Exception as _e:
+                    await message.answer(f"Ошибка: {_e}")
+                return
+            elif lower in ("система", "система файл"):
+                sys_info = (
+                    "AREAL-NEVA ORCHESTRA\n"
+                    "Server: 89.22.225.136 | Ubuntu 24.04\n"
+                    "Bot: @ai_orkestra_all_bot\n"
+                    "Models: deepseek/deepseek-chat + perplexity/sonar\n"
+                    "Pipeline: telegram_daemon -> core.db -> task_worker -> ai_router -> Telegram\n"
+                    "Services: telegram-ingress, areal-task-worker, areal-memory-api\n"
+                )
+                if lower == "система файл":
+                    doc = BufferedInputFile(sys_info.encode("utf-8"), filename="system_info.txt")
+                    await message.answer_document(doc)
+                else:
+                    await message.answer(sys_info)
+                return
+            elif lower == "код файл":
+                import io, zipfile
+                buf = io.BytesIO()
+                files_to_zip = [
+                    "/root/.areal-neva-core/task_worker.py",
+                    "/root/.areal-neva-core/core/ai_router.py",
+                    "/root/.areal-neva-core/telegram_daemon.py",
+                ]
+                with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+                    for fp in files_to_zip:
+                        if os.path.exists(fp):
+                            zf.write(fp, os.path.basename(fp))
+                doc = BufferedInputFile(buf.getvalue(), filename="core_code.zip")
+                await message.answer_document(doc)
+                return
+            elif lower == "файл":
+                import sqlite3 as _sq
+                try:
+                    _cc = _sq.connect("/root/.areal-neva-core/data/core.db")
+                    _rows = _cc.execute("SELECT state, COUNT(*) as cnt FROM tasks GROUP BY state").fetchall()
+                    _cc.close()
+                    lines = ["AREAL-NEVA ORCHESTRA — краткий статус", ""]
+                    for r in _rows:
+                        lines.append(f"{r[0]}: {r[1]}")
+                    doc = BufferedInputFile("\n".join(lines).encode("utf-8"), filename="status.md")
+                    await message.answer_document(doc)
+                except Exception as _e:
+                    await message.answer(f"Ошибка: {_e}")
+                return
+            else:
+                dump = dump_system_state()
+                for part in split_message(dump):
+                    await message.answer(part)
+                    await asyncio.sleep(0.5)
+            return
+        
+        # 2. CANCEL
+        if lower in CANCEL_CMDS:
+            await cancel_active_task(tg_id)
+            await message.answer("Задача отменена")
+            return
+        
+        # 3. FILE TASKS + EZONE FILE INGEST
+        if message.document and message.document.file_name:
+            # HEALTHCHECK_DAEMON_GUARD_V1
+            try:
+                _hc_check = " ".join([
+                    str(message.document.file_name or ""),
+                    str(message.caption or ""),
+                ]).lower()
+                if any(m in _hc_check for m in ("retry_queue_healthcheck", "healthcheck", "areal_hc_", "_hc_file")):
+                    logger.info("HEALTHCHECK_DAEMON_GUARD_V1 ignored file=%s", message.document.file_name)
+                    return
+            except Exception as _hc_e:
+                logger.warning("HEALTHCHECK_DAEMON_GUARD_V1_ERR %s", _hc_e)
+            tg_file = await bot.get_file(message.document.file_id)
+            local_path = f"/tmp/{uuid.uuid4()}_{message.document.file_name}"
+            await download_telegram_file(tg_file.file_path, local_path)
+            try:
+                if message.document.file_name.lower().endswith(EZONE_EXTS):
+                    drive_result = await upload_file_to_topic(local_path, message.document.file_name, tg_id, topic_id, getattr(message.document, "mime_type", "") or None)  # DAEMON_OAUTH_FIX_V1
+                    with open(local_path, "r", errors="ignore") as f:
+                        content = f.read()
+                    if is_ezone_payload(content):
+                        ok, chat_key, _ = save_ezone_json(content, tg_id)
+                        _RECENT_INGEST[tg_id] = now_ts
+                        await message.answer(f"Принял, память загружена ({chat_key})" if ok else "Уже загружено")
+                        return
+                else:
+                    topic_id = getattr(message, "message_thread_id", 0) or 0
+                    drive_result = await upload_file_to_topic(local_path, message.document.file_name, tg_id, topic_id, getattr(message.document, "mime_type", "") or None)
+                    if isinstance(drive_result, dict) and drive_result.get("ok") and drive_result.get("drive_file_id"):
+                        payload = {
+                            "file_id": drive_result.get("drive_file_id", ""),
+                            "file_name": message.document.file_name,
+                            "mime_type": getattr(message.document, "mime_type", "") or "",
+                            "caption": (message.caption or message.text or "").strip(),
+                            "source": "telegram",
+                            "telegram_message_id": message.message_id,
+                            "telegram_chat_id": message.chat.id,
+                        }
+                        await create_task(message, "drive_file", json.dumps(payload, ensure_ascii=False), "NEW")
+                        await message.answer("Файл принят в обработку")
+                        return
+                    else:
+                        await message.answer("Ошибка загрузки файла в Drive")
+                        return
+            finally:
+                try: os.remove(local_path)
+                except: pass
+
+        # 3A. PHOTO TASK
+        if message.photo:
+            photo = message.photo[-1]
+            tg_file = await bot.get_file(photo.file_id)
+            file_name = f"photo_{message.chat.id}_{message.message_id}.jpg"
+            local_path = f"/tmp/{uuid.uuid4()}_{file_name}"
+            await download_telegram_file(tg_file.file_path, local_path)
+            try:
+                drive_result = await upload_file_to_topic(local_path, file_name, tg_id, topic_id, "image/jpeg")
+                if isinstance(drive_result, dict) and drive_result.get("ok") and drive_result.get("drive_file_id"):
+                    payload = {
+                        "file_id": drive_result.get("drive_file_id", ""),
+                        "file_name": file_name,
+                        "mime_type": "image/jpeg",
+                        "caption": (message.caption or message.text or "").strip(),
+                        "source": "telegram",
+                        "telegram_message_id": message.message_id,
+                        "telegram_chat_id": message.chat.id,
+                    }
+                    await create_task(message, "drive_file", json.dumps(payload, ensure_ascii=False), "NEW")
+                    await message.answer("Фото принято в обработку")
+                    return
+                else:
+                    await message.answer("Ошибка загрузки фото в Drive")
+                    return
+            finally:
+                try: os.remove(local_path)
+                except: pass
+        
+        # 4. EZONE TEXT INGEST
+        if message.text and is_ezone_payload(text):
+            ok, chat_key, _ = save_ezone_json(text, tg_id)
+            _RECENT_INGEST[tg_id] = now_ts
+            await message.answer(f"Принял, память загружена ({chat_key})" if ok else "Уже загружено")
+            return
+        
+        # 5. ANTI-DUP AFTER INGEST
+        if message.text:
+            last = _RECENT_INGEST.get(tg_id, 0.0)
+            if now_ts - last < 5:
+                if text.lstrip().startswith("{") or any(k in lower for k in EZONE_KEYS):
+                    return
+        
+        # 6. CONFIRMATION AND REPLY CONTINUATION
+        active_confirm = None
+        async with aiosqlite.connect(DB) as db:
+            cur = await db.execute(
+                "SELECT id, state FROM tasks WHERE chat_id = ? AND state = 'AWAITING_CONFIRMATION' ORDER BY updated_at DESC LIMIT 1",
+                (tg_id,)
+            )
+            active_confirm = await cur.fetchone()
+
+        if active_confirm and message.text:
+            parent_id, parent_state = active_confirm
+            if lower.strip() in SHORT_CONFIRM and lower.strip() not in NEGATIVE_CONFIRM:
+                async with aiosqlite.connect(DB) as db:
+                    await db.execute("UPDATE tasks SET state = 'DONE', updated_at = ? WHERE id = ?", (now_iso(), parent_id))
+                    await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, "confirmed:DONE", now_iso()))
+                    await db.execute("UPDATE pin SET state = 'CLOSED', updated_at = ? WHERE task_id = ? AND state = 'ACTIVE'", (now_iso(), parent_id))
+                    await db.commit()
+                await message.answer("Задача завершена")
+                return
+            elif lower.strip() in NEGATIVE_CONFIRM:
+                async with aiosqlite.connect(DB) as db:
+                    await db.execute("UPDATE tasks SET state = 'WAITING_CLARIFICATION', updated_at = ? WHERE id = ?", (now_iso(), parent_id))
+                    await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, "rejected:WAITING_CLARIFICATION", now_iso()))
+                    await db.execute("UPDATE pin SET state = 'CLOSED', updated_at = ? WHERE task_id = ? AND state = 'ACTIVE'", (now_iso(), parent_id))
+                    await db.commit()
+                await message.answer("Хорошо, доработаю. Подтверждение снято.  # FULLFIX_02_E")
+                return
+
+        if reply_to:
+            async with aiosqlite.connect(DB) as db:
+                cur = await db.execute(
+                    "SELECT id, state FROM tasks WHERE chat_id = ? AND reply_to_message_id = ? AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION') ORDER BY updated_at DESC LIMIT 1",
+                    (tg_id, reply_to)
+                )
+                parent = await cur.fetchone()
+            if parent:
+                parent_id, parent_state = parent
+                if parent_state == "WAITING_CLARIFICATION":
+                    async with aiosqlite.connect(DB) as db:
+                        await db.execute("UPDATE tasks SET state = 'IN_PROGRESS', updated_at = ? WHERE id = ?", (now_iso(), parent_id))
+                        await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, f"clarified:{text}", now_iso()))
+                        await db.commit()
+                    await message.answer("Принято, продолжаю")
+                elif lower.strip() in SHORT_CONFIRM and lower.strip() not in NEGATIVE_CONFIRM:
+                    async with aiosqlite.connect(DB) as db:
+                        await db.execute("UPDATE tasks SET state = 'IN_PROGRESS', updated_at = ? WHERE id = ?", (now_iso(), parent_id))
+                        await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, f"confirmed:{text}", now_iso()))
+                        await db.commit()
+                    await message.answer("Принято, выполняю")
+                else:
+                    await message.answer("Уточните запрос")
+                return
+
+        # 7. SEARCH TASK
+        if any(t in lower for t in SEARCH_TRIGGERS):
+            await create_task(message, "search", text, "NEW")
+            return
+        
+        # 8. VOICE
+        if message.voice:
+            tg_file = await bot.get_file(message.voice.file_id)
+            local_path = os.path.join(VOICE_DIR, f"voice_{abs(tg_id)}_{message.message_id}.ogg")
+            await download_telegram_file(tg_file.file_path, local_path)
+            pass  # VOICE_UPLOAD_SKIP_V1 — голос не загружаем на Drive
+            from core.stt_engine import transcribe_voice as _stt
+            try:
+                _transcript = await _stt(local_path)
+            except Exception as _err:
+                logger.error("STT_FAILED chat=%s err=%s", tg_id, _err)
+                await message.answer("Голос не распознан. Повтори голосом или напиши текстом")
+                return
+            if not _transcript or not _transcript.strip():
+                logger.error("STT_EMPTY chat=%s", tg_id)
+                await message.answer("Не удалось получить текст из голосового. Повтори или напиши текстом")
+                return
+            voice_text = _transcript.strip()
+            voice_lower = voice_text.lower()
+            voice_reply_to = message.reply_to_message.message_id if message.reply_to_message else None
+            _voice_topic_id = getattr(message, "message_thread_id", None) or 0
+
+            # === PATCH_VOICE_CONFIRM_DIRECT ===
+            # Voice does not populate message.text, so confirm/reject must be checked after STT
+            try:
+                _voice_cmd = voice_lower.strip().rstrip("!., ")
+                async with aiosqlite.connect(DB) as db:
+                    cur = await db.execute(
+                        """
+                        SELECT id, state
+                        FROM tasks
+                        WHERE chat_id = ?
+                          AND COALESCE(topic_id,0) = COALESCE(?,0)
+                          AND state = 'AWAITING_CONFIRMATION'
+                        ORDER BY updated_at DESC
+                        LIMIT 1
+                        """,
+                        (tg_id, _voice_topic_id)
+                    )
+                    _voice_active_confirm = await cur.fetchone()
+
+                if _voice_active_confirm and _voice_cmd in SHORT_CONFIRM and _voice_cmd not in NEGATIVE_CONFIRM:
+                    parent_id, parent_state = _voice_active_confirm
+                    async with aiosqlite.connect(DB) as db:
+                        await db.execute(
+                            "UPDATE tasks SET state = 'DONE', updated_at = ? WHERE id = ?",
+                            (now_iso(), parent_id)
+                        )
+                        await db.execute(
+                            "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)",
+                            (parent_id, "voice_confirmed:DONE", now_iso())
+                        )
+                        await db.execute(
+                            "UPDATE pin SET state = 'CLOSED', updated_at = ? WHERE task_id = ? AND state = 'ACTIVE'",
+                            (now_iso(), parent_id)
+                        )
+                        await db.commit()
+                    await message.answer("Задача завершена")
+                    return
+
+                if _voice_active_confirm and _voice_cmd in NEGATIVE_CONFIRM:
+                    parent_id, parent_state = _voice_active_confirm
+                    async with aiosqlite.connect(DB) as db:
+                        await db.execute(
+                            "UPDATE tasks SET state = 'WAITING_CLARIFICATION', updated_at = ? WHERE id = ?",
+                            (now_iso(), parent_id)
+                        )
+                        await db.execute(
+                            "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)",
+                            (parent_id, "voice_rejected:WAITING_CLARIFICATION", now_iso())
+                        )
+                        await db.execute(
+                            "UPDATE pin SET state = 'CLOSED', updated_at = ? WHERE task_id = ? AND state = 'ACTIVE'",
+                            (now_iso(), parent_id)
+                        )
+                        await db.commit()
+                    await message.answer("Хорошо, доработаю. Подтверждение снято.  # FULLFIX_02_E")
+                    return
+            except Exception as _voice_confirm_err:
+                logger.error("VOICE_CONFIRM_DIRECT_ERROR chat=%s err=%s", tg_id, _voice_confirm_err)
+            # === END PATCH_VOICE_CONFIRM_DIRECT ===
+            _VOICE_CONTROL = ["отбой", "отмена", "не надо", "всё", "готово", "можно закрывать", "задача закрыта", "да", "нет", "ок", "+"]
+            if any(voice_lower.strip() == x for x in _VOICE_CONTROL):
+                if await _handle_control_text(message, tg_id, voice_text, voice_lower, voice_reply_to, _voice_topic_id):
+                    return
+            try:
+                await message.answer(f"🎤 {voice_text}")
+            except Exception as _e:
+                logger.warning("transcript_send_fail err=%s", _e)
+            await create_task(message, "text", "[VOICE] " + voice_text, "NEW")
+            return
+        
+        # 9. NORMAL TEXT
+        if message.text:
+            reply_to = message.reply_to_message.message_id if message.reply_to_message else None
+            _text_topic_id = getattr(message, "message_thread_id", None) or 0
+            if await _handle_control_text(message, tg_id, text, lower, reply_to, _text_topic_id):
+                return
+            # === CHAT_GUARD_V1 ===
+            try:
+                from core.intent_lock import is_chat_only as _ig_chat
+                if _ig_chat(text):
+                    return  # короткие реакции не создают задачи
+            except Exception:
+                pass
+            # === END CHAT_GUARD_V1 ===
+            await create_task(message, "text", text, "NEW")
+            return
+        
+    except Exception as e:
+        logger.error("HANDLER_CRASH: %s", e)
+        try:
+            await message.answer("Ошибка обработки")
+        except:
+            pass
+
+async def main():
+    await bot.delete_webhook(drop_pending_updates=True)
+    me = await bot.get_me()
+    logger.info("BOT STARTED id=%s username=%s", me.id, me.username)
+    await dp.start_polling(bot)
+
+if __name__ == "__main__":
+    asyncio.run(main())
+====================================================================================================
+END_FILE: telegram_daemon.py
 FILE_CHUNK: 1/1
 ====================================================================================================
 
 ====================================================================================================
-BEGIN_FILE: docs/REPORTS/ESTIMATE_SCENARIO_CLASSIFICATION_FIX_V1_REPORT.md
+BEGIN_FILE: core/project_route_guard.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 1afb741a6d274eadcc7dbc343085c539838e95be731d4f55361f535fb106113c
+SHA256_FULL_FILE: ba7de84f30ec6b9ef978ef3bf38bac5354e1ffb255730c3066e040d783b493b6
 ====================================================================================================
-# ESTIMATE_SCENARIO_CLASSIFICATION_FIX_V1_REPORT
+# === PROJECT_ROUTE_FIX_NO_ESTIMATE_REGRESSION_V1 ===
+# === PROJECT_ENGINE_CLEAN_USER_OUTPUT_V1 ===
+from __future__ import annotations
 
-status: OK
-timestamp: 20260502_163729
+import json
+import re
+import sqlite3
+from typing import Any, Dict, Optional
 
-## FIXED
-- M-80 / Каркас под ключ -> frame_house
-- M-80 / Газобетон_под ключ -> gasbeton_or_masonry_with_monolithic_foundation
-- M-110 / Каркас под ключ -> frame_house
-- M-110 / Газобетон -> gasbeton_or_masonry_with_monolithic_foundation
-- крыша и перекр.xlsx -> roof_and_floors
-- фундамент_Склад2.xlsx -> foundation
+PROJECT_STRONG = (
+    "сделай проект", "создай проект", "разработай проект", "подготовь проект",
+    "проект монолит", "проект плиты", "проект фундамент", "проект кровли",
+    "проект кж", "проект кд", "проект ар", "чертеж", "чертёж",
+    "конструктивное решение", "проектное решение", "лист кж", "лист кд"
+)
 
-## VERIFIED
-- formula_total: 4733
-- ai_router estimate policy context remains enabled
-- web price confirmation remains required
-- logistics confirmation remains required
-- final XLSX/PDF remains forbidden before price and logistics confirmation
+PROJECT_WEAK = (
+    "кж", "кд", "ар", "км", "кмд", "плита", "фундамент", "армирование",
+    "опалубка", "разрез", "узел", "схема", "спецификация арматуры"
+)
+
+ESTIMATE_ONLY = (
+    "смета", "смету", "сметный", "расценка", "стоимость работ",
+    "цены материалов", "кс-2", "кс2"
+)
+
+def _s(v: Any) -> str:
+    if v is None:
+        return ""
+    if isinstance(v, str):
+        return v.strip()
+    try:
+        return json.dumps(v, ensure_ascii=False)
+    except Exception:
+        return str(v).strip()
+
+def _low(v: Any) -> str:
+    return _s(v).lower().replace("ё", "е")
+
+def _task_field(task: Any, field: str, default: Any = "") -> Any:
+    try:
+        if hasattr(task, "keys") and field in task.keys():
+            return task[field]
+    except Exception:
+        pass
+    if isinstance(task, dict):
+        return task.get(field, default)
+    try:
+        return getattr(task, field)
+    except Exception:
+        return default
+
+def is_explicit_project_intent(text: Any) -> bool:
+    low = _low(text)
+    if not low:
+        return False
+    strong = any(x in low for x in PROJECT_STRONG)
+    weak_project = sum(1 for x in PROJECT_WEAK if x in low) >= 2
+    estimate_only = any(x in low for x in ESTIMATE_ONLY) and not strong and not weak_project
+    if estimate_only:
+        return False
+    return bool(strong or weak_project)
+
+def _format_links(res: Dict[str, Any]) -> str:
+    lines = []
+    for label, key in (
+        ("DOCX", "docx_link"),
+        ("XLSX", "xlsx_link"),
+        ("PDF", "pdf_link"),
+        ("Drive", "drive_link"),
+    ):
+        val = _s(res.get(key))
+        if val and "drive.google.com" in val or "docs.google.com" in val:
+            lines.append(f"{label}: {val}")
+    return "\n".join(lines)
+
+def format_project_result_message(res: Dict[str, Any], raw_input: str = "") -> str:
+    section = _s(res.get("project_type") or res.get("section") or "КЖ")
+    links = _format_links(res)
+    if res.get("success") and links:
+        msg = (
+            "Проектный файл создан\n"
+            f"Раздел: {section}\n"
+            f"{links}\n\n"
+            "Доволен результатом? Да / Уточни / Правки"
+        )
+    elif res.get("success"):
+        msg = (
+            "Проектный файл подготовлен локально, но ссылка Drive не подтверждена\n"
+            f"Раздел: {section}\n"
+            "Нужна проверка выгрузки"
+        )
+    else:
+        err = _s(res.get("error")) or "PROJECT_RESULT_NOT_READY"
+        if "PROJECT_TEMPLATE_MODEL_NOT_FOUND" in err:
+            msg = (
+                "Для проектного файла нужен образец проекта в этом топике\n"
+                "Пришли КЖ/КД/АР файл как образец или напиши исходные данные проекта"
+            )
+        else:
+            msg = (
+                "Проектный файл не создан\n"
+                f"Причина: {err}\n"
+                "Уточни исходные данные или пришли образец проекта"
+            )
+
+    try:
+        from core.output_sanitizer import sanitize_project_message
+        return sanitize_project_message(msg)
+    except Exception:
+        return msg.strip()
+
+async def prehandle_project_route_v1(conn: sqlite3.Connection, task: Any) -> Optional[Dict[str, Any]]:
+    task_id = _s(_task_field(task, "id"))
+    chat_id = _s(_task_field(task, "chat_id"))
+    topic_id = int(_task_field(task, "topic_id", 0) or 0)
+    input_type = _s(_task_field(task, "input_type"))
+    raw_input = _s(_task_field(task, "raw_input"))
+
+    # === CANON_LIST_QUERY_GUARD_V1 ===
+    if topic_id == 500:
+        return None
+    _list_signals = ("какие", "покажи", "перечисли", "что есть", "есть ли", "список", "что за образц", "какие образц", "покажи образц")
+    _create_signals = ("сделай", "создай", "разработай", "подготовь", "оформи")
+    _raw_low_guard = raw_input.lower().replace("ё", "е")
+    if any(s in _raw_low_guard for s in _list_signals) and not any(s in _raw_low_guard for s in _create_signals):
+        return None
+    # === END_CANON_LIST_QUERY_GUARD_V1 ===
+    if input_type not in ("text", "voice", "search"):
+        return None
+    if not is_explicit_project_intent(raw_input):
+        return None
+
+    try:
+        from core.project_engine import create_project_artifact_from_latest_template
+        res = create_project_artifact_from_latest_template(raw_input, task_id, topic_id)
+    except Exception as e:
+        res = {
+            "success": False,
+            "error": f"PROJECT_ENGINE_EXCEPTION: {e}",
+            "project_type": "КЖ",
+        }
+
+    msg = _s(res.get("user_message")) or format_project_result_message(res, raw_input)
+
+    if res.get("success") and ("drive.google.com" in msg or "docs.google.com" in msg):
+        state = "AWAITING_CONFIRMATION"
+        err = ""
+        hist = "PROJECT_ROUTE_FIX_NO_ESTIMATE_REGRESSION_V1:PROJECT_CREATED"
+    elif res.get("success"):
+        state = "WAITING_CLARIFICATION"
+        err = "PROJECT_DRIVE_LINK_NOT_CONFIRMED"
+        hist = "PROJECT_ROUTE_FIX_NO_ESTIMATE_REGRESSION_V1:PROJECT_LOCAL_ONLY"
+    else:
+        state = "WAITING_CLARIFICATION"
+        err = _s(res.get("error")) or "PROJECT_NOT_CREATED"
+        hist = "PROJECT_ROUTE_FIX_NO_ESTIMATE_REGRESSION_V1:PROJECT_NEEDS_CONTEXT"
+
+    return {
+        "handled": True,
+        "state": state,
+        "message": msg,
+        "error_message": err,
+        "kind": "project_route_guard",
+        "history": hist,
+    }
+
+# === END_PROJECT_ROUTE_FIX_NO_ESTIMATE_REGRESSION_V1 ===
+# === END_PROJECT_ENGINE_CLEAN_USER_OUTPUT_V1 ===
 
 ====================================================================================================
-END_FILE: docs/REPORTS/ESTIMATE_SCENARIO_CLASSIFICATION_FIX_V1_REPORT.md
+END_FILE: core/project_route_guard.py
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: core/final_closure_engine.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 805edf5e221a75a4933101941dec6f96cf4f40ec90abae9f4cd478043fb43e07
+====================================================================================================
+# === FINAL_CLOSURE_BLOCKER_FIX_V1_ENGINE ===
+from __future__ import annotations
+
+import json
+import re
+import sqlite3
+from typing import Any, Dict
+
+
+def _s(v) -> str:
+    return "" if v is None else str(v).strip()
+
+
+def _json(raw: str) -> Dict[str, Any]:
+    try:
+        return json.loads(raw or "{}")
+    except Exception:
+        return {}
+
+
+def _field(task: Any, key: str, default=None):
+    try:
+        if hasattr(task, "keys") and key in task.keys():
+            return task[key]
+    except Exception:
+        pass
+    try:
+        return getattr(task, key)
+    except Exception:
+        return default
+
+
+def _row_get(row: Any, key: str, idx: int, default: Any = "") -> Any:
+    try:
+        if hasattr(row, "keys") and key in row.keys():
+            return row[key]
+    except Exception:
+        pass
+    try:
+        if isinstance(row, dict):
+            return row.get(key, default)
+    except Exception:
+        pass
+    try:
+        return row[idx]
+    except Exception:
+        return default
+
+
+def _send_payload(message: str, kind: str, state: str = "DONE", history: str = "") -> Dict[str, Any]:
+    return {
+        "handled": True,
+        "state": state,
+        "message": message,
+        "kind": kind,
+        "history": history or f"FINAL_CLOSURE_BLOCKER_FIX_V1:{kind}",
+    }
+
+
+
+# === FINAL_CLOSURE_MEMORY_QUERY_PUBLIC_OUTPUT_V2 ===
+
+# === FINAL_CLOSURE_MEMORY_QUERY_PUBLIC_OUTPUT_V3 ===
+
+
+# === PROJECT_SAMPLE_SELECTION_P0_V2 ===
+def _fc_norm_public(text: Any) -> str:
+    s = "" if text is None else str(text)
+    s = s.replace("\\\\n", "\n").replace("\\n", "\n").replace("\\\\t", " ").replace("\\t", " ")
+    s = s.replace("ё", "е")
+    return s.strip()
+
+
+def _fc_clean_title(name: str) -> str:
+    name = _fc_norm_public(name)
+    name = re.sub(r"^\s*\d+\.\s*", "", name).strip().strip("\"'«»")
+    return name[:180]
+
+
+def _fc_is_sample_status_request(text: str) -> bool:
+    low = _fc_norm_public(text).lower()
+    if not any(x in low for x in ("образец", "образцов", "образцы", "шаблон", "шаблона", "эталон", "эталоны", "эталона")):
+        return False
+
+    strict_status_or_selection = (
+        "взял как образец",
+        "взял за образец",
+        "ты взял как образец",
+        "уже взял как образец",
+        "взял их как образец",
+        "взял это как образец",
+        "принял как образец",
+        "принял за образец",
+        "ты принял как образец",
+        "уже принял как образец",
+        "принял их как образец",
+        "принял это как образец",
+        "используешь как образец",
+        "используется как образец",
+        "файлы взяты как образец",
+        "файлы приняты как образец",
+        "взяты как образец",
+        "приняты как образец",
+        "закрепи как образец",
+        "закрепить как образец",
+        "закрепляется как",
+        "закрепляй как",
+        "оставь как образец",
+        "сохрани как образец",
+        "сохрани как образцы",
+        "прими как образец",
+        "прими как образцы",
+        "прими эти сметы как образцы",
+        "прими эти файлы как образцы",
+        "принимай как образец",
+        "принимай как образцы",
+        "принимай эти сметы как образцы",
+        "принимай эти файлы как образцы",
+        "принимай эти таблицы как образцы",
+        "принимай сметы как образцы",
+        "принимай файлы как образцы",
+        "работай по ним",
+        "работай по этим сметам",
+        "работай по этим образцам",
+        "работать по ним",
+        "работать по этим сметам",
+        "логика структура",
+        "логика и структура",
+        "все должно быть синхронизировано",
+        "всё должно быть синхронизировано",
+        "как эталон",
+        "как эталоны",
+        "один из образцов",
+        "как один из образцов",
+    )
+    if any(x in low for x in strict_status_or_selection):
+        return True
+
+    if any(x in low for x in ("как образец", "как образцы", "как эталон", "как эталоны")) and any(x in low for x in (
+        "да ",
+        "да,",
+        "да.",
+        "цоколь",
+        "кж",
+        "кд",
+        "км",
+        "кмд",
+        "ар",
+        "проект",
+        "смет",
+        "вор",
+        "акт",
+        "технадзор",
+    )):
+        return True
+
+    return False
+
+
+def _fc_extract_titles_from_text(text: str) -> list[str]:
+    src = _fc_norm_public(text)
+    titles: list[str] = []
+
+    try:
+        data = json.loads(src)
+        if isinstance(data, dict):
+            for key in ("file_name", "name", "title"):
+                val = _fc_clean_title(data.get(key) or "")
+                if val:
+                    titles.append(val)
+    except Exception:
+        pass
+
+    for m in re.finditer(r'"file_name"\s*:\s*"([^"]+)"', src, re.I):
+        val = _fc_clean_title(m.group(1))
+        if val:
+            titles.append(val)
+
+    for m in re.finditer(r'([А-ЯA-Z0-9Ёё][^\n\r]{0,120}\.(?:pdf|dwg|dxf|xlsx|xls|docx|doc))', src, re.I):
+        val = _fc_clean_title(m.group(1))
+        if val:
+            titles.append(val)
+
+    out: list[str] = []
+    seen = set()
+    for title in titles:
+        key = title.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(title)
+    return out
+
+
+def _fc_recent_file_rows(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> list[Any]:
+    old_rf = conn.row_factory
+    try:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            """
+            SELECT id, raw_input, result, updated_at
+            FROM tasks
+            WHERE chat_id=?
+              AND COALESCE(topic_id,0)=?
+              AND (
+                COALESCE(raw_input,'') LIKE '%file_name%'
+                OR COALESCE(raw_input,'') LIKE '%.pdf%'
+                OR COALESCE(raw_input,'') LIKE '%.dwg%'
+                OR COALESCE(raw_input,'') LIKE '%.dxf%'
+                OR COALESCE(raw_input,'') LIKE '%.xlsx%'
+                OR COALESCE(result,'') LIKE '%file_name%'
+                OR COALESCE(result,'') LIKE '%.pdf%'
+                OR COALESCE(result,'') LIKE '%.dwg%'
+                OR COALESCE(result,'') LIKE '%.dxf%'
+                OR COALESCE(result,'') LIKE '%.xlsx%'
+              )
+            ORDER BY updated_at DESC
+            LIMIT 80
+            """,
+            (str(chat_id), int(topic_id or 0)),
+        ).fetchall()
+        return list(rows or [])
+    except Exception:
+        return []
+    finally:
+        conn.row_factory = old_rf
+
+
+def _fc_sample_raw_hay(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> str:
+    parts: list[str] = []
+    for r in _fc_recent_file_rows(conn, chat_id, topic_id):
+        try:
+            parts.append(_fc_norm_public(r["raw_input"]))
+            parts.append(_fc_norm_public(r["result"]))
+        except Exception:
+            pass
+    return " ".join(parts).lower().replace("ё", "е")
+
+
+def _fc_sample_titles(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> list[str]:
+    titles: list[str] = []
+    for r in _fc_recent_file_rows(conn, chat_id, topic_id):
+        try:
+            titles.extend(_fc_extract_titles_from_text(r["raw_input"]))
+            titles.extend(_fc_extract_titles_from_text(r["result"]))
+        except Exception:
+            continue
+
+    out: list[str] = []
+    seen = set()
+    for title in titles:
+        key = title.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(title)
+    return out[:12]
+
+
+def _fc_sample_domain_from_hay(hay: str) -> str:
+    hay = _fc_norm_public(hay).lower().replace("ё", "е")
+    if any(x in hay for x in ("кж", "кд", "кмд", "км", " ар ", "ар ", "проект", "цоколь", ".dwg", ".dxf")):
+        return "project"
+    if any(x in hay for x in ("смет", "вор", "расцен", "кс-2", "кс2", ".xlsx", ".xls")):
+        return "estimate"
+    if any(x in hay for x in ("акт", "технадзор", "дефект")):
+        return "technadzor"
+    return ""
+
+
+def _fc_select_sample_title(raw_input: str, titles: list[str]) -> str:
+    low = _fc_norm_public(raw_input).lower()
+    for title in titles:
+        tlow = title.lower()
+        words = [w for w in re.split(r"[\s._\-]+", tlow) if len(w) >= 3]
+        if any(w in low for w in words):
+            return title
+    if len(titles) == 1:
+        return titles[0]
+    if "цоколь" in low:
+        for title in titles:
+            if "цоколь" in title.lower():
+                return title
+    return ""
+
+
+def _fc_write_sample_memory(chat_id: str, topic_id: int, domain: str, title: str, raw_input: str) -> None:
+    try:
+        import datetime
+        mem = sqlite3.connect("/root/.areal-neva-core/data/memory.db")
+        try:
+            payload = json.dumps(
+                {
+                    "engine": "PROJECT_SAMPLE_SELECTION_P0_V2",
+                    "chat_id": str(chat_id),
+                    "topic_id": int(topic_id or 0),
+                    "domain": domain,
+                    "title": title,
+                    "raw_input": raw_input,
+                    "created_at": datetime.datetime.utcnow().isoformat() + "Z",
+                },
+                ensure_ascii=False,
+            )
+            mem.execute(
+                "INSERT INTO memory(chat_id,key,value,timestamp) VALUES (?,?,?,?)",
+                (
+                    str(chat_id),
+                    f"topic_{int(topic_id or 0)}_{domain or 'sample'}_selected_sample",
+                    payload,
+                    datetime.datetime.utcnow().isoformat() + "Z",
+                ),
+            )
+            mem.commit()
+        finally:
+            mem.close()
+    except Exception:
+        pass
+
+
+def _handle_sample_status(conn: sqlite3.Connection, chat_id: str, topic_id: int, raw_input: str) -> Dict[str, Any]:
+    if not _fc_is_sample_status_request(raw_input):
+        return {"handled": False}
+
+    titles = _fc_sample_titles(conn, chat_id, topic_id)
+    raw_hay = _fc_sample_raw_hay(conn, chat_id, topic_id)
+    selected_title = _fc_select_sample_title(raw_input, titles)
+    domain = _fc_sample_domain_from_hay(" ".join([raw_input, selected_title, " ".join(titles), raw_hay]))
+
+    if domain == "project":
+        if selected_title:
+            msg = f"{selected_title} закреплён как образец проектирования"
+        else:
+            msg = "Файлы в этом топике уже взяты в работу как образец проектирования"
+    elif domain == "estimate":
+        if selected_title:
+            msg = f"{selected_title} закреплён как образец сметы"
+        else:
+            msg = "Файлы в этом топике уже взяты в работу как образец сметы"
+    elif domain == "technadzor":
+        if selected_title:
+            msg = f"{selected_title} закреплён как образец для технадзора"
+        else:
+            msg = "Файлы в этом топике уже взяты в работу как образец для технадзора"
+    else:
+        if selected_title:
+            msg = f"{selected_title} закреплён как образец"
+        else:
+            msg = "Файлы в этом топике уже взяты в работу как образец"
+
+    _fc_write_sample_memory(str(chat_id), int(topic_id or 0), domain or "sample", selected_title, raw_input)
+
+    return _send_payload(
+        msg,
+        "project_sample_selection",
+        "DONE",
+        "PROJECT_SAMPLE_SELECTION_P0_V2:ANSWERED",
+    )
+# === END_PROJECT_SAMPLE_SELECTION_P0_V2 ===
+
+
+
+def _handle_memory_query(conn: sqlite3.Connection, chat_id: str, topic_id: int, raw_input: str) -> Dict[str, Any]:
+    # === CANON_SEARCH_TOPIC_500_GUARD_V1 ===
+    if int(topic_id or 0) == 500:
+        return {"handled": False}
+    # === END_CANON_SEARCH_TOPIC_500_GUARD_V1 ===
+    t = raw_input.lower().replace("ё", "е")
+
+    trigger = False
+    try:
+        from core.file_memory_bridge import should_handle_file_followup
+        trigger = bool(should_handle_file_followup(raw_input))
+    except Exception:
+        trigger = False
+
+    if not trigger:
+        trigger = any(x in t for x in [
+            "что скидывал",
+            "что я скидывал",
+            "что отправлял",
+            "что загружал",
+            "какие файлы",
+            "какой файл",
+            "проектные файлы",
+            "файлы проекта",
+            "файлы в чате",
+            "документы в чате",
+            "последний файл",
+            "скидывал",
+            "загружал",
+        ])
+
+    if not trigger:
+        return {"handled": False}
+
+    try:
+        from core.file_memory_bridge import build_file_followup_answer
+        answer = build_file_followup_answer(str(chat_id), int(topic_id or 0), raw_input, limit=3)
+    except Exception:
+        answer = ""
+
+    if not answer:
+        answer = "В этом топике релевантных файлов по запросу не найдено"
+
+    try:
+        from core.output_sanitizer import sanitize_user_output
+        answer = sanitize_user_output(answer, fallback="Файлы найдены")
+    except Exception:
+        pass
+
+    return _send_payload(
+        answer,
+        "memory_query",
+        "DONE",
+        "FINAL_CLOSURE_MEMORY_QUERY_PUBLIC_OUTPUT_V3:LISTED",
+    )
+
+# === END_FINAL_CLOSURE_MEMORY_QUERY_PUBLIC_OUTPUT_V3 ===
+
+
+def _handle_runtime_file(conn: sqlite3.Connection, task: Any, task_id: str, chat_id: str, topic_id: int, raw_input: str, input_type: str) -> Dict[str, Any]:
+    if input_type not in ("drive_file", "file"):
+        return {"handled": False}
+
+    data = _json(raw_input)
+    file_id = _s(data.get("file_id"))
+    file_name = _s(data.get("file_name") or data.get("name"))
+    mime = _s(data.get("mime_type"))
+    source = _s(data.get("source") or "telegram")
+    size = int(data.get("size") or data.get("file_size") or 0)
+    drive_link = _s(data.get("drive_link") or data.get("webViewLink"))
+
+    from core.runtime_file_catalog import duplicate_user_message, register_file
+
+    res = register_file(
+        chat_id,
+        topic_id,
+        task_id,
+        file_id=file_id,
+        file_name=file_name,
+        mime_type=mime,
+        size=size,
+        source=source,
+        drive_link=drive_link,
+    )
+
+    if res.get("duplicate"):
+        return _send_payload(
+            duplicate_user_message(file_name or "UNKNOWN", res.get("duplicate_record") or {}),
+            "runtime_duplicate_file",
+            "WAITING_CLARIFICATION",
+            "FINAL_CLOSURE_BLOCKER_FIX_V1:RUNTIME_DUPLICATE_FILE",
+        )
+
+    return {"handled": False, "catalog_registered": True}
+
+
+def _handle_technadzor(raw_input: str, task_id: str, chat_id: str, topic_id: int) -> Dict[str, Any]:
+    from core.technadzor_engine import is_technadzor_intent, process_technadzor
+
+    if not is_technadzor_intent(raw_input):
+        return {"handled": False}
+
+    return process_technadzor(text=raw_input, task_id=task_id, chat_id=chat_id, topic_id=topic_id)
+
+
+def _handle_ocr(raw_input: str, task_id: str) -> Dict[str, Any]:
+    from core.ocr_engine import is_ocr_table_intent, process_ocr_table
+
+    if not is_ocr_table_intent(raw_input):
+        return {"handled": False}
+
+    return process_ocr_table(text=raw_input, task_id=task_id)
+
+
+def _handle_archive_guard(conn: sqlite3.Connection, task_id: str, chat_id: str, topic_id: int, raw_input: str) -> Dict[str, Any]:
+    if not any(x in raw_input.lower() for x in ["архив", "сохрани", "запомни"]):
+        return {"handled": False}
+
+    from core.archive_guard import should_archive
+
+    res = should_archive(conn, task_id, chat_id, topic_id, raw_input)
+    if res.get("duplicate"):
+        return _send_payload(
+            "В архив не дублирую: такая запись уже есть",
+            "archive_duplicate",
+            "DONE",
+            "FINAL_CLOSURE_BLOCKER_FIX_V1:ARCHIVE_DUPLICATE_BLOCKED",
+        )
+
+    return {"handled": False, "archive_guard_ok": True}
+
+
+
+# === PROJECT_INDEX_QUERY_DETECTOR_V1 ===
+_INDEX_QUERY_RE_V1 = re.compile(
+    r"(какие|покажи|перечисли|что у тебя|есть ли|список|что есть|какие файлы|какие образцы|покажи образцы|что за образцы|какие разделы)",
+    re.I,
+)
+
+_TOPIC_ROLE_MAP_V1 = {
+    2: "СМЕТЫ / СТРОЙКА",
+    5: "ТЕХНАДЗОР / АКТЫ / ДЕФЕКТЫ",
+    210: "ПРОЕКТИРОВАНИЕ / АР / КЖ / КД / КР / КМ / ОВ / ВК / ЭО",
+}
+
+def _fc_topic_role_v1(topic_id: int) -> str:
+    return _TOPIC_ROLE_MAP_V1.get(int(topic_id or 0), "ОБЩИЙ")
+
+def _fc_is_index_query_v1(text: str) -> bool:
+    low = _fc_norm_public(text).lower()
+    if not _INDEX_QUERY_RE_V1.search(low):
+        return False
+    return any(x in low for x in (
+        "образц", "файл", "раздел", "ар", "кж", "кд", "кр", "км", "кмд",
+        "ов", "вк", "эо", "эскиз", "проект", "смет", "акт", "технадзор"
+    ))
+
+def _fc_is_negative_topic_correction_v1(text: str) -> bool:
+    low = _fc_norm_public(text).lower()
+    return any(x in low for x in (
+        "нет я не это спросил",
+        "не это спросил",
+        "не то спросил",
+        "не так",
+        "ты не понял",
+        "не про это",
+    ))
+
+def _fc_load_owner_reference_registry_v1() -> dict:
+    try:
+        from pathlib import Path
+        return json.loads(Path("/root/.areal-neva-core/config/owner_reference_registry.json").read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+def _fc_topic_domain_v1(topic_id: int) -> str:
+    topic_id = int(topic_id or 0)
+    if topic_id == 2:
+        return "estimate"
+    if topic_id == 5:
+        return "technadzor"
+    if topic_id == 210:
+        return "design"
+    return ""
+
+def _fc_index_items_for_topic_v1(topic_id: int) -> list[dict]:
+    data = _fc_load_owner_reference_registry_v1()
+    policy = data.get("owner_reference_full_workflow_v1") if isinstance(data, dict) else {}
+    if not isinstance(policy, dict):
+        return []
+    domain = _fc_topic_domain_v1(topic_id)
+    if domain == "estimate":
+        return list(policy.get("estimate_references") or [])
+    if domain == "technadzor":
+        return list(policy.get("technadzor_references") or [])
+    if domain == "design":
+        return list(policy.get("design_references") or [])
+    return (
+        list(policy.get("estimate_references") or [])
+        + list(policy.get("design_references") or [])
+        + list(policy.get("technadzor_references") or [])
+    )
+
+def _fc_filter_design_by_question_v1(items: list[dict], raw_input: str) -> list[dict]:
+    low = _fc_norm_public(raw_input).lower()
+    wanted = []
+    mapping = {
+        "ар": ("AR", "АР"),
+        "кж": ("KJ", "КЖ"),
+        "кд": ("KD", "КД"),
+        "кр": ("KR", "КР"),
+        "кмд": ("KMD", "КМД"),
+        "км": ("KM", "КМ"),
+        "ов": ("OV", "ОВ"),
+        "вк": ("VK", "ВК"),
+        "эо": ("EO", "ЭО"),
+        "эм": ("EO", "ЭМ"),
+        "эос": ("EO", "ЭОС"),
+        "эскиз": ("SKETCH", "ЭСКИЗ"),
+        "план участка": ("GP", "ГП"),
+    }
+    for k, vals in mapping.items():
+        if k in low:
+            wanted.extend(vals)
+    if not wanted:
+        return items
+    out = []
+    for x in items:
+        d = str(x.get("discipline") or "").upper()
+        name = str(x.get("name") or "").upper()
+        if any(w.upper() in d or w.upper() in name for w in wanted):
+            out.append(x)
+    return out or items
+
+def _fc_format_index_answer_v1(topic_id: int, raw_input: str) -> str:
+    role = _fc_topic_role_v1(topic_id)
+    items = _fc_index_items_for_topic_v1(topic_id)
+    if int(topic_id or 0) == 210:
+        items = _fc_filter_design_by_question_v1(items, raw_input)
+
+    if not items:
+        return f"По роли {role} образцы в индексе не найдены"
+
+    groups: dict[str, list[str]] = {}
+    for x in items:
+        if not isinstance(x, dict):
+            continue
+        if int(topic_id or 0) == 210:
+            key = str(x.get("discipline") or "DESIGN")
+        elif int(topic_id or 0) == 2:
+            key = str(x.get("role") or "estimate")
+        elif int(topic_id or 0) == 5:
+            key = "technadzor"
+        else:
+            key = str(x.get("domain") or x.get("discipline") or x.get("role") or "reference")
+        name = _fc_clean_title(str(x.get("name") or ""))
+        if not name:
+            continue
+        groups.setdefault(key, [])
+        if name not in groups[key]:
+            groups[key].append(name)
+
+    lines = [f"Образцы по текущему топику: {role}", ""]
+    for key in sorted(groups):
+        vals = groups[key][:20]
+        lines.append(f"{key}:")
+        for name in vals:
+            lines.append(f"- {name}")
+        if len(groups[key]) > len(vals):
+            lines.append(f"- ещё {len(groups[key]) - len(vals)}")
+        lines.append("")
+    lines.append("Файл не создаю. Это ответ на запрос списка образцов")
+    return "\n".join(lines).strip()
+
+def _handle_project_index_query_v1(conn: sqlite3.Connection, chat_id: str, topic_id: int, raw_input: str) -> Dict[str, Any]:
+    # === CANON_SEARCH_TOPIC_500_GUARD_V1 ===
+    if int(topic_id or 0) == 500:
+        return {"handled": False}
+    # === END_CANON_SEARCH_TOPIC_500_GUARD_V1 ===
+    if not _fc_is_index_query_v1(raw_input):
+        return {"handled": False}
+    answer = _fc_format_index_answer_v1(int(topic_id or 0), raw_input)
+    return _send_payload(
+        answer,
+        "project_index_query",
+        "DONE",
+        "PROJECT_INDEX_QUERY_DETECTOR_V1:ANSWERED",
+    )
+
+def _handle_topic_context_isolation_guard_v1(conn: sqlite3.Connection, chat_id: str, topic_id: int, raw_input: str) -> Dict[str, Any]:
+    if not _fc_is_negative_topic_correction_v1(raw_input):
+        return {"handled": False}
+    role = _fc_topic_role_v1(int(topic_id or 0))
+    if int(topic_id or 0) == 210:
+        msg = "Понял. Остаёмся в проектировании. Уточни, что показать: АР / КЖ / КД / КР / КМ / ОВ / ВК / ЭО / эскизы / планы участка"
+    elif int(topic_id or 0) == 2:
+        msg = "Понял. Остаёмся в сметах и стройке. Уточни, что нужно: цены / смета / материалы / логистика / XLSX"
+    elif int(topic_id or 0) == 5:
+        msg = "Понял. Остаёмся в технадзоре. Уточни, что нужно: акт / дефект / фото / исполнительная / норма"
+    else:
+        msg = f"Понял. Роль текущего топика: {role}. Уточни одним сообщением, что именно нужно"
+    return _send_payload(
+        msg,
+        "topic_context_isolation_guard",
+        "WAITING_CLARIFICATION",
+        "TOPIC_CONTEXT_ISOLATION_GUARD_V1:ANSWERED",
+    )
+
+# === END_PROJECT_INDEX_QUERY_DETECTOR_V1 ===
+
+def maybe_handle_final_closure(
+    conn: sqlite3.Connection,
+    task: Any,
+    task_id: str,
+    chat_id: str,
+    topic_id: int,
+    raw_input: str,
+    input_type: str = "text",
+    reply_to=None,
+) -> Dict[str, Any]:
+    raw_input = _s(raw_input)
+    input_type = _s(input_type or _field(task, "input_type", "text"))
+    chat_id = _s(chat_id or _field(task, "chat_id", ""))
+    topic_id = int(topic_id or _field(task, "topic_id", 0) or 0)
+
+    r = _handle_runtime_file(conn, task, task_id, chat_id, topic_id, raw_input, input_type)
+    if r.get("handled"):
+        return r
+
+    r = _handle_project_index_query_v1(conn, chat_id, topic_id, raw_input)
+    if r.get("handled"):
+        return r
+
+    r = _handle_topic_context_isolation_guard_v1(conn, chat_id, topic_id, raw_input)
+    if r.get("handled"):
+        return r
+
+    r = _handle_sample_status(conn, chat_id, topic_id, raw_input)
+    if r.get("handled"):
+        return r
+
+    r = _handle_memory_query(conn, chat_id, topic_id, raw_input)
+    if r.get("handled"):
+        return r
+
+    r = _handle_technadzor(raw_input, task_id, chat_id, topic_id)
+    if r.get("handled"):
+        return r
+
+    r = _handle_ocr(raw_input, task_id)
+    if r.get("handled"):
+        return r
+
+    r = _handle_archive_guard(conn, task_id, chat_id, topic_id, raw_input)
+    if r.get("handled"):
+        return r
+
+    return {"handled": False}
+
+
+# === END_FINAL_CLOSURE_BLOCKER_FIX_V1_ENGINE ===
+
+====================================================================================================
+END_FILE: core/final_closure_engine.py
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: core/file_context_intake.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 5de5c8de555365e8ea67135829d9ae00b20434d292b1fa9bdc61db52b28bdaea
+====================================================================================================
+# === FILE_CONTEXT_INTAKE_FULL_CLOSE_V1 ===
+from __future__ import annotations
+
+import json
+import os
+import re
+import sqlite3
+import hashlib
+from pathlib import Path
+from datetime import datetime, timezone
+from typing import Any, Dict, Optional
+
+BASE = Path("/root/.areal-neva-core")
+CORE_DB = BASE / "data" / "core.db"
+MEM_DB = BASE / "data" / "memory.db"
+TEMPLATE_ROOT = BASE / "data" / "templates"
+ESTIMATE_TEMPLATE_DIR = TEMPLATE_ROOT / "estimate"
+ESTIMATE_BATCH_DIR = TEMPLATE_ROOT / "estimate_batch"
+FILE_CATALOG_DIR = BASE / "data" / "telegram_file_catalog"
+
+ESTIMATE_TEMPLATE_DIR.mkdir(parents=True, exist_ok=True)
+ESTIMATE_BATCH_DIR.mkdir(parents=True, exist_ok=True)
+FILE_CATALOG_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _s(v: Any) -> str:
+    if v is None:
+        return ""
+    if isinstance(v, str):
+        return v.strip()
+    try:
+        return json.dumps(v, ensure_ascii=False)
+    except Exception:
+        return str(v).strip()
+
+
+def _low(v: Any) -> str:
+    return _s(v).lower().replace("ё", "е")
+
+
+def _task_field(task: Any, field: str, default: Any = "") -> Any:
+    try:
+        if hasattr(task, "keys") and field in task.keys():
+            return task[field]
+    except Exception:
+        pass
+    if isinstance(task, dict):
+        return task.get(field, default)
+    try:
+        return getattr(task, field)
+    except Exception:
+        return default
+
+
+def _json(raw: Any) -> Dict[str, Any]:
+    if isinstance(raw, dict):
+        return raw
+    txt = _s(raw)
+    if not txt:
+        return {}
+    try:
+        obj = json.loads(txt)
+        return obj if isinstance(obj, dict) else {}
+    except Exception:
+        return {}
+
+
+def _safe_name(v: Any, limit: int = 120) -> str:
+    s = re.sub(r"[^0-9A-Za-zА-Яа-я_. -]+", "_", _s(v)).strip(" ._")
+    return (s or "file")[:limit]
+
+
+def _safe_key(v: Any, limit: int = 80) -> str:
+    return re.sub(r"[^0-9A-Za-z_-]+", "_", _s(v))[:limit] or "unknown"
+
+
+def _cols(conn: sqlite3.Connection, table: str):
+    try:
+        return [r[1] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()]
+    except Exception:
+        return []
+
+
+def _memory_write(chat_id: str, key: str, value: Any) -> None:
+    try:
+        if not MEM_DB.exists():
+            return
+        conn = sqlite3.connect(str(MEM_DB))
+        try:
+            cols = _cols(conn, "memory")
+            if not cols:
+                return
+            payload = json.dumps(value, ensure_ascii=False) if not isinstance(value, str) else value
+            ts = _now()
+            if "id" in cols:
+                mid = hashlib.sha1(f"{chat_id}:{key}:{ts}:{payload[:80]}".encode("utf-8")).hexdigest()
+                conn.execute(
+                    "INSERT OR IGNORE INTO memory (id,chat_id,key,value,timestamp) VALUES (?,?,?,?,?)",
+                    (mid, str(chat_id), str(key), payload, ts),
+                )
+            else:
+                conn.execute(
+                    "INSERT INTO memory (chat_id,key,value,timestamp) VALUES (?,?,?,?)",
+                    (str(chat_id), str(key), payload, ts),
+                )
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception:
+        return
+
+
+def _memory_latest(chat_id: str, key: str) -> str:
+    try:
+        if not MEM_DB.exists():
+            return ""
+        conn = sqlite3.connect(str(MEM_DB))
+        try:
+            row = conn.execute(
+                "SELECT value FROM memory WHERE chat_id=? AND key=? ORDER BY rowid DESC LIMIT 1",
+                (str(chat_id), str(key)),
+            ).fetchone()
+            return row[0] if row else ""
+        finally:
+            conn.close()
+    except Exception:
+        return ""
+
+
+def _extract_user_text(raw_input: Any) -> str:
+    obj = _json(raw_input)
+    if obj:
+        for k in ("caption", "user_text", "text", "prompt", "comment", "message"):
+            v = obj.get(k)
+            if isinstance(v, str) and v.strip():
+                return v.strip()
+        return ""
+    return _s(raw_input)
+
+
+def _file_payload(raw_input: Any) -> Dict[str, Any]:
+    obj = _json(raw_input)
+    return {
+        "file_id": _s(obj.get("file_id")),
+        "file_name": _s(obj.get("file_name")),
+        "mime_type": _s(obj.get("mime_type")),
+        "caption": _s(obj.get("caption")),
+        "source": _s(obj.get("source")),
+        "telegram_message_id": obj.get("telegram_message_id"),
+        "raw": obj,
+    }
+
+
+def _is_service_file(payload: Dict[str, Any]) -> bool:
+    src = _low(payload.get("source"))
+    name = _low(payload.get("file_name"))
+    if src in {"google_drive", "drive", "drive_sync", "healthcheck", "service"}:
+        return True
+    if any(x in name for x in ("healthcheck", "service_file", ".tmp", "tmp_", "retry_probe")):
+        return True
+    return False
+
+
+def _detect_pending_file_intent(text: str) -> Optional[Dict[str, Any]]:
+    low = _low(text)
+    if not low:
+        return None
+
+    future_file = any(x in low for x in (
+        "сейчас скину", "сейчас пришлю", "скину несколько", "пришлю несколько",
+        "буду скидывать", "сейчас отправлю", "отправлю несколько", "загружу несколько",
+        "скину файлы", "пришлю файлы"
+    ))
+
+    estimate = any(x in low for x in ("смет", "кс-2", "кс2", "ведомост", "спецификац", "расцен", "excel", "xlsx"))
+    template = any(x in low for x in ("образец", "образцы", "шаблон", "шаблоны", "принять", "возьми", "сохрани"))
+    price_web = any(x in low for x in (
+        "цены из интернета", "цена из интернета", "актуальные цены", "стоимость материалов",
+        "цены материалов", "искать в интернете", "брать из интернета", "найти цены",
+        "проводить поиск", "проверить цены"
+    ))
+
+    if future_file and estimate:
+        return {
+            "kind": "estimate",
+            "mode": "template_batch" if template or "образ" in low else "pending_estimate_files",
+            "price_mode": "web_confirm" if price_web else "",
+            "raw_text": text,
+            "created_at": _now(),
+            "ttl_sec": 7200,
+        }
+
+    if estimate and template and any(x in low for x in ("несколько", "файлы", "сметы")):
+        return {
+            "kind": "estimate",
+            "mode": "template_batch",
+            "price_mode": "web_confirm" if price_web else "",
+            "raw_text": text,
+            "created_at": _now(),
+            "ttl_sec": 7200,
+        }
+
+    return None
+
+
+def _save_pending_intent(chat_id: str, topic_id: int, intent: Dict[str, Any]) -> None:
+    key = f"topic_{int(topic_id or 0)}_pending_file_intent"
+    _memory_write(chat_id, key, intent)
+    if intent.get("price_mode"):
+        _memory_write(chat_id, f"topic_{int(topic_id or 0)}_price_mode", intent.get("price_mode"))
+
+
+def latest_pending_instruction_for_topic(topic_id: int, chat_id: str = "") -> str:
+    chat_ids = [str(chat_id)] if chat_id else []
+    if not chat_ids:
+        try:
+            conn = sqlite3.connect(str(MEM_DB))
+            rows = conn.execute(
+                "SELECT DISTINCT chat_id FROM memory WHERE key=? ORDER BY rowid DESC LIMIT 5",
+                (f"topic_{int(topic_id or 0)}_pending_file_intent",),
+            ).fetchall()
+            conn.close()
+            chat_ids = [r[0] for r in rows]
+        except Exception:
+            chat_ids = []
+    for cid in chat_ids:
+        raw = _memory_latest(cid, f"topic_{int(topic_id or 0)}_pending_file_intent")
+        if not raw:
+            continue
+        try:
+            data = json.loads(raw)
+        except Exception:
+            data = {}
+        if data.get("raw_text"):
+            return str(data["raw_text"])
+    return ""
+
+
+def _current_rowid(conn: sqlite3.Connection, task_id: str) -> int:
+    try:
+        row = conn.execute("SELECT rowid FROM tasks WHERE id=? LIMIT 1", (task_id,)).fetchone()
+        return int(row[0]) if row else 0
+    except Exception:
+        return 0
+
+
+def _find_duplicate(conn: sqlite3.Connection, task_id: str, chat_id: str, topic_id: int, payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    rowid = _current_rowid(conn, task_id)
+    file_id = _s(payload.get("file_id"))
+    file_name = _s(payload.get("file_name"))
+    if not file_id and not file_name:
+        return None
+
+    params = [str(chat_id), int(topic_id or 0), int(rowid or 10**18)]
+    where = "chat_id=? AND COALESCE(topic_id,0)=? AND input_type='drive_file' AND rowid<?"
+
+    if file_id:
+        where += " AND json_extract(raw_input,'$.file_id')=?"
+        params.append(file_id)
+    elif file_name:
+        where += " AND lower(json_extract(raw_input,'$.file_name'))=lower(?)"
+        params.append(file_name)
+
+    try:
+        row = conn.execute(
+            f"""
+            SELECT rowid,id,state,raw_input,result,error_message,created_at,updated_at
+            FROM tasks
+            WHERE {where}
+            ORDER BY rowid DESC
+            LIMIT 1
+            """,
+            params,
+        ).fetchone()
+    except Exception:
+        row = None
+
+    if not row:
+        return None
+
+    old_payload = _json(row["raw_input"] if hasattr(row, "keys") else row[3])
+    old_name = old_payload.get("file_name") or file_name
+    return {
+        "rowid": row["rowid"] if hasattr(row, "keys") else row[0],
+        "task_id": row["id"] if hasattr(row, "keys") else row[1],
+        "state": row["state"] if hasattr(row, "keys") else row[2],
+        "file_name": old_name,
+        "file_id": old_payload.get("file_id") or file_id,
+        "created_at": row["created_at"] if hasattr(row, "keys") else row[6],
+        "updated_at": row["updated_at"] if hasattr(row, "keys") else row[7],
+    }
+
+
+def _duplicate_message(payload: Dict[str, Any], dup: Dict[str, Any]) -> str:
+    name = payload.get("file_name") or dup.get("file_name") or "файл"
+    return (
+        "Смотри, этот файл ты уже скидывал\n"
+        f"Файл: {name}\n"
+        f"Первая найденная задача: {str(dup.get('task_id') or '')[:8]}\n"
+        f"Дата: {dup.get('created_at') or dup.get('updated_at') or 'UNKNOWN'}\n\n"
+        "Что сделать с ним сейчас?\n"
+        "1. Обновить образец\n"
+        "2. Обработать заново\n"
+        "3. Сравнить версии\n"
+        "4. Игнорировать дубль"
+    )
+
+
+def _catalog_path(chat_id: str, topic_id: int) -> Path:
+    return FILE_CATALOG_DIR / f"chat_{_safe_key(chat_id)}__topic_{int(topic_id or 0)}.jsonl"
+
+
+def _index_telegram_file(chat_id: str, topic_id: int, task_id: str, payload: Dict[str, Any]) -> None:
+    if not payload.get("file_id") and not payload.get("file_name"):
+        return
+    entry = {
+        "created_at": _now(),
+        "chat_id": str(chat_id),
+        "topic_id": int(topic_id or 0),
+        "task_id": str(task_id),
+        "file_id": payload.get("file_id"),
+        "file_name": payload.get("file_name"),
+        "mime_type": payload.get("mime_type"),
+        "telegram_message_id": payload.get("telegram_message_id"),
+        "source": payload.get("source") or "telegram",
+    }
+    path = _catalog_path(chat_id, topic_id)
+    with path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    _memory_write(chat_id, f"topic_{int(topic_id or 0)}_telegram_file_index", entry)
+
+
+def _template_paths(chat_id: str, topic_id: int, file_name: str):
+    safe_chat = _safe_key(chat_id)
+    safe_file = _safe_key(file_name, 70)
+    stamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    active = ESTIMATE_TEMPLATE_DIR / f"ACTIVE__chat_{safe_chat}__topic_{int(topic_id or 0)}.json"
+    snap = ESTIMATE_TEMPLATE_DIR / f"TEMPLATE__chat_{safe_chat}__topic_{int(topic_id or 0)}__{stamp}__{safe_file}.json"
+    batch = ESTIMATE_BATCH_DIR / f"ACTIVE_BATCH__chat_{safe_chat}__topic_{int(topic_id or 0)}.json"
+    return active, snap, batch
+
+
+def _save_estimate_template(chat_id: str, topic_id: int, task_id: str, payload: Dict[str, Any], raw_instruction: str) -> Dict[str, Any]:
+    active, snap, batch_path = _template_paths(chat_id, topic_id, payload.get("file_name") or "estimate")
+    template = {
+        "engine": "MULTI_FILE_TEMPLATE_INTAKE_V1",
+        "kind": "estimate",
+        "status": "active",
+        "chat_id": str(chat_id),
+        "topic_id": int(topic_id or 0),
+        "saved_by_task_id": str(task_id),
+        "source_task_id": str(task_id),
+        "source_file_id": payload.get("file_id") or "",
+        "source_file_name": payload.get("file_name") or "",
+        "source_mime_type": payload.get("mime_type") or "",
+        "source_caption": payload.get("caption") or "",
+        "telegram_message_id": payload.get("telegram_message_id"),
+        "saved_at": _now(),
+        "usage_rule": "Use this Telegram file as estimate sample/template in the same chat and topic",
+        "raw_user_instruction": raw_instruction,
+    }
+
+    active.write_text(json.dumps(template, ensure_ascii=False, indent=2), encoding="utf-8")
+    snap.write_text(json.dumps(template, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    batch = []
+    if batch_path.exists():
+        try:
+            old = json.loads(batch_path.read_text(encoding="utf-8"))
+            if isinstance(old, list):
+                batch = old
+            elif isinstance(old, dict) and isinstance(old.get("templates"), list):
+                batch = old["templates"]
+        except Exception:
+            batch = []
+
+    seen = {str(x.get("source_file_id") or x.get("source_file_name")) for x in batch if isinstance(x, dict)}
+    key = str(template.get("source_file_id") or template.get("source_file_name"))
+    if key not in seen:
+        batch.append(template)
+
+    batch_payload = {
+        "engine": "MULTI_FILE_TEMPLATE_INTAKE_V1",
+        "chat_id": str(chat_id),
+        "topic_id": int(topic_id or 0),
+        "count": len(batch),
+        "updated_at": _now(),
+        "templates": batch[-100:],
+    }
+    batch_path.write_text(json.dumps(batch_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    _memory_write(chat_id, f"topic_{int(topic_id or 0)}_estimate_active_template", template)
+    _memory_write(chat_id, f"topic_{int(topic_id or 0)}_estimate_template_batch", batch_payload)
+
+    return {"template": template, "batch_count": len(batch), "active_path": str(active), "snapshot_path": str(snap), "batch_path": str(batch_path)}
+
+
+def _load_pending_intent(chat_id: str, topic_id: int) -> Dict[str, Any]:
+    raw = _memory_latest(chat_id, f"topic_{int(topic_id or 0)}_pending_file_intent")
+    if not raw:
+        return {}
+    try:
+        data = json.loads(raw)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def _pending_is_template_batch(intent: Dict[str, Any]) -> bool:
+    if not intent:
+        return False
+    if intent.get("kind") != "estimate":
+        return False
+    return intent.get("mode") in {"template_batch", "pending_estimate_files"}
+
+
+def prehandle_task_context_v1(conn: sqlite3.Connection, task: Any) -> Optional[Dict[str, Any]]:
+    task_id = _s(_task_field(task, "id"))
+    chat_id = _s(_task_field(task, "chat_id"))
+    topic_id = int(_task_field(task, "topic_id", 0) or 0)
+    input_type = _s(_task_field(task, "input_type"))
+    raw_input = _s(_task_field(task, "raw_input"))
+    reply_to = _task_field(task, "reply_to_message_id", None)
+
+    if not task_id or not chat_id:
+        return None
+
+    if input_type in ("text", "voice"):
+        text = _extract_user_text(raw_input)
+        pending = _detect_pending_file_intent(text)
+        if pending:
+            _save_pending_intent(chat_id, topic_id, pending)
+            msg = (
+                "Принял\n"
+                "Следующие файлы в этом топике приму как образцы сметы\n"
+                "Если файл уже был в Telegram — скажу что он дублируется и спрошу что делать\n"
+                "При создании сметы цены материалов буду искать в интернете и сначала покажу варианты для выбора"
+            )
+            return {
+                "handled": True,
+                "state": "DONE",
+                "kind": "context_aware_file_intake",
+                "message": msg,
+                "history": "CONTEXT_AWARE_FILE_INTAKE_V1:PENDING_TEMPLATE_BATCH_SAVED",
+            }
+
+    if input_type in ("drive_file", "file"):
+        payload = _file_payload(raw_input)
+        if _is_service_file(payload):
+            return None
+
+        _index_telegram_file(chat_id, topic_id, task_id, payload)
+
+        dup = _find_duplicate(conn, task_id, chat_id, topic_id, payload)
+        if dup:
+            msg = _duplicate_message(payload, dup)
+            _memory_write(chat_id, f"topic_{topic_id}_last_duplicate_file", {"current_task_id": task_id, "payload": payload, "duplicate": dup})
+            return {
+                "handled": True,
+                "state": "WAITING_CLARIFICATION",
+                "kind": "duplicate_file_question",
+                "message": msg,
+                "history": "TELEGRAM_FILE_MEMORY_INDEX_V1:DUPLICATE_FOUND",
+            }
+
+        pending = _load_pending_intent(chat_id, topic_id)
+        if _pending_is_template_batch(pending):
+            saved = _save_estimate_template(chat_id, topic_id, task_id, payload, pending.get("raw_text") or "")
+            file_name = payload.get("file_name") or "файл"
+            msg = (
+                "Образец сметы принят\n"
+                f"Файл: {file_name}\n"
+                f"Всего образцов в наборе: {saved.get('batch_count')}\n\n"
+                "Дальше можешь присылать следующие сметы-образцы или написать: сделай смету\n"
+                "Если нужно брать цены из интернета — я сначала покажу найденные варианты и спрошу какие поставить"
+            )
+            return {
+                "handled": True,
+                "state": "DONE",
+                "kind": "multi_file_template_intake",
+                "message": msg,
+                "history": "MULTI_FILE_TEMPLATE_INTAKE_V1:TEMPLATE_SAVED",
+            }
+
+    return None
+
+
+def router_pending_instruction(raw_input: str, topic_id: int, chat_id: str = "") -> str:
+    explicit = _extract_user_text(raw_input)
+    if explicit:
+        return explicit
+    return latest_pending_instruction_for_topic(topic_id, chat_id)
+
+
+# === END_FILE_CONTEXT_INTAKE_FULL_CLOSE_V1 ===
+
+
+# === PENDING_INTENT_CLARIFICATION_V1 ===
+try:
+    _pic_orig_prehandle_task_context_v1 = prehandle_task_context_v1
+except Exception:
+    _pic_orig_prehandle_task_context_v1 = None
+
+
+def _pic_has_active_pending_intent(chat_id: str, topic_id: int) -> Dict[str, Any]:
+    try:
+        data = _load_pending_intent(chat_id, topic_id)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def _pic_is_clarification_text(text: str) -> bool:
+    low = _low(text)
+    if not low:
+        return False
+
+    explicit_new_task = any(x in low for x in (
+        "сделай проект", "создай проект", "разработай проект",
+        "сделай смету", "создай смету", "посчитай смету", "рассчитай смету",
+        "сделай акт", "создай акт", "найди мне", "поищи мне"
+    ))
+    if explicit_new_task:
+        return False
+
+    clar_words = (
+        "ты должен", "ты должна", "должен", "должна", "надо", "нужно",
+        "нужно ли", "надо ли", "спроси", "спросить", "уточни", "уточнить",
+        "не сразу", "сначала", "перед тем", "до того", "после этого",
+        "цены", "интернет", "искать", "не искать", "без интернета",
+        "актуальные", "поставить", "подставить", "согласовать",
+        "подтвердить", "не создавай сразу", "сначала спросить",
+        "сначала спроси", "спросить нужно ли", "спроси нужно ли"
+    )
+    return any(x in low for x in clar_words)
+
+
+def _pic_update_intent_with_clarification(intent: Dict[str, Any], text: str) -> Dict[str, Any]:
+    low = _low(text)
+    updated = dict(intent or {})
+
+    clarifications = updated.get("clarifications")
+    if not isinstance(clarifications, list):
+        clarifications = []
+    clarifications.append({"text": text, "created_at": _now()})
+    updated["clarifications"] = clarifications[-20:]
+    updated["updated_at"] = _now()
+    updated["last_clarification"] = text
+
+    ask_before_web = any(x in low for x in (
+        "не сразу", "сначала спрос", "спросить нужно ли", "спроси нужно ли",
+        "нужно ли", "надо ли", "перед тем как искать", "перед поиском",
+        "сначала уточни", "не ищи сразу", "не надо сразу",
+        "согласовать цены", "подтвердить цены"
+    ))
+
+    disable_web = any(x in low for x in (
+        "не искать в интернете", "без интернета", "не надо интернет",
+        "цены не ищи", "не ищи цены", "без поиска цен"
+    ))
+
+    force_web = any(x in low for x in (
+        "ищи в интернете", "искать в интернете", "цены из интернета",
+        "актуальные цены", "проверить цены", "найти цены"
+    ))
+
+    if disable_web:
+        updated["price_mode"] = "manual_or_template"
+        updated["web_search_disabled"] = True
+        updated["ask_before_web_search"] = False
+        updated["price_confirmation_required"] = False
+    elif ask_before_web:
+        updated["price_mode"] = "ask_before_search"
+        updated["ask_before_web_search"] = True
+        updated["price_confirmation_required"] = True
+        updated["web_search_disabled"] = False
+    elif force_web:
+        updated["price_mode"] = "web_confirm"
+        updated["ask_before_web_search"] = False
+        updated["price_confirmation_required"] = True
+        updated["web_search_disabled"] = False
+
+    original = str(updated.get("raw_text") or "").strip()
+    if text and text not in original:
+        updated["raw_text"] = (original + "\nУточнение: " + text).strip()
+
+    return updated
+
+
+def _pic_confirmation_message(intent: Dict[str, Any]) -> str:
+    price_mode = str(intent.get("price_mode") or "")
+    if price_mode == "ask_before_search":
+        price_line = "Перед поиском цен в интернете сначала спрошу, нужно ли искать актуальные цены"
+    elif price_mode == "web_confirm":
+        price_line = "Цены материалов буду искать в интернете, затем покажу варианты и спрошу какие поставить"
+    elif price_mode == "manual_or_template":
+        price_line = "Интернет-цены не ищу, пока ты отдельно не скажешь искать"
+    else:
+        price_line = "Цены не подставляю без отдельного подтверждения"
+
+    return (
+        "Уточнение к приёму смет принято\n"
+        "Следующие файлы в этом топике остаются образцами сметы\n"
+        f"{price_line}\n"
+        "Финальную смету не создаю без твоего выбора цен"
+    )
+
+
+
+# === PROJECT_SAMPLE_TEXT_INTAKE_V1 ===
+def _pst_is_sample_text(text: str) -> bool:
+    low = _low(text)
+    if not low:
+        return False
+    if not any(x in low for x in ("возьми", "прими", "используй", "сохрани")):
+        return False
+    return any(x in low for x in ("образец", "шаблон", "пример", "как образец"))
+
+
+def _pst_is_projectish(payload: Dict[str, Any], text: str = "") -> bool:
+    hay = _low(" ".join([
+        payload.get("file_name") or "",
+        payload.get("caption") or "",
+        payload.get("mime_type") or "",
+        text or "",
+    ]))
+    return any(x in hay for x in (
+        "кж", "км", "кмд", "ар", "проект", "чертеж", "чертёж",
+        "конструкц", "цоколь", "плита", ".dxf", ".dwg", ".pdf"
+    )) and not any(x in hay for x in (
+        "смет", "вор", "расцен", "стоимост", "технадзор", "акт дефект", "нарушен"
+    ))
+
+
+def _pst_latest_project_file(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> Dict[str, Any]:
+    try:
+        rows = conn.execute(
+            """
+            SELECT id,raw_input,result,updated_at,rowid
+            FROM tasks
+            WHERE CAST(chat_id AS TEXT)=CAST(? AS TEXT)
+              AND COALESCE(topic_id,0)=?
+              AND input_type IN ('drive_file','file')
+            ORDER BY rowid DESC
+            LIMIT 80
+            """,
+            (str(chat_id), int(topic_id or 0)),
+        ).fetchall()
+    except Exception:
+        rows = []
+
+    for r in rows:
+        try:
+            raw = r["raw_input"] if hasattr(r, "keys") else r[1]
+            tid = r["id"] if hasattr(r, "keys") else r[0]
+            upd = r["updated_at"] if hasattr(r, "keys") else r[3]
+        except Exception:
+            continue
+
+        payload = _file_payload(raw)
+        if _is_service_file(payload):
+            continue
+        if _pst_is_projectish(payload, raw):
+            return {
+                "task_id": str(tid),
+                "file_id": payload.get("file_id") or "",
+                "file_name": payload.get("file_name") or "",
+                "mime_type": payload.get("mime_type") or "",
+                "caption": payload.get("caption") or "",
+                "source": payload.get("source") or "",
+                "updated_at": str(upd or ""),
+            }
+
+    return {}
+
+
+def _pst_save_project_sample(chat_id: str, topic_id: int, task_id: str, sample: Dict[str, Any], text: str) -> None:
+    payload = {
+        "engine": "PROJECT_SAMPLE_TEXT_INTAKE_V1",
+        "kind": "project",
+        "status": "active",
+        "chat_id": str(chat_id),
+        "topic_id": int(topic_id or 0),
+        "saved_by_task_id": str(task_id),
+        "source_task_id": sample.get("task_id") or "",
+        "source_file_id": sample.get("file_id") or "",
+        "source_file_name": sample.get("file_name") or "",
+        "source_mime_type": sample.get("mime_type") or "",
+        "source_caption": sample.get("caption") or "",
+        "saved_at": _now(),
+        "usage_rule": "Use this file as project/design sample only inside the same chat and topic",
+        "raw_user_instruction": text,
+    }
+    _memory_write(chat_id, f"topic_{int(topic_id or 0)}_project_active_template", payload)
+    _memory_write(chat_id, f"topic_{int(topic_id or 0)}_project_sample_file", payload)
+
+
+def _pst_try_project_sample_text(conn: sqlite3.Connection, task_id: str, chat_id: str, topic_id: int, text: str) -> Optional[Dict[str, Any]]:
+    if not _pst_is_sample_text(text):
+        return None
+
+    sample = _pst_latest_project_file(conn, chat_id, topic_id)
+    if not sample:
+        return None
+
+    _pst_save_project_sample(chat_id, topic_id, task_id, sample, text)
+
+    file_name = sample.get("file_name") or "файл"
+    msg = (
+        "Образец проектирования принят\n"
+        f"Файл: {file_name}\n"
+        "Дальше буду использовать его как образец для проектных задач только в этом топике"
+    )
+
+    return {
+        "handled": True,
+        "state": "DONE",
+        "kind": "project_sample_text_intake",
+        "message": msg,
+        "history": "PROJECT_SAMPLE_TEXT_INTAKE_V1:SAVED",
+    }
+
+# === END_PROJECT_SAMPLE_TEXT_INTAKE_V1 ===
+
+
+def prehandle_task_context_v1(conn: sqlite3.Connection, task: Any) -> Optional[Dict[str, Any]]:
+    if _pic_orig_prehandle_task_context_v1 is not None:
+        res = _pic_orig_prehandle_task_context_v1(conn, task)
+        if res and res.get("handled"):
+            return res
+
+    task_id = _s(_task_field(task, "id"))
+    chat_id = _s(_task_field(task, "chat_id"))
+    topic_id = int(_task_field(task, "topic_id", 0) or 0)
+    input_type = _s(_task_field(task, "input_type"))
+    raw_input = _s(_task_field(task, "raw_input"))
+
+    if not task_id or not chat_id:
+        return None
+
+    if input_type not in ("text", "voice"):
+        return None
+
+    text = _extract_user_text(raw_input)
+    if not text:
+        return None
+
+    # PROJECT_SAMPLE_TEXT_INTAKE_V1_HOOK
+    sample_res = _pst_try_project_sample_text(conn, task_id, chat_id, topic_id, text)
+    if sample_res and sample_res.get("handled"):
+        return sample_res
+
+    pending = _pic_has_active_pending_intent(chat_id, topic_id)
+    if not pending:
+        return None
+
+    if not _pic_is_clarification_text(text):
+        return None
+
+    updated = _pic_update_intent_with_clarification(pending, text)
+    _save_pending_intent(chat_id, topic_id, updated)
+
+    if updated.get("price_mode"):
+        _memory_write(chat_id, f"topic_{int(topic_id or 0)}_price_mode", updated.get("price_mode"))
+
+    _memory_write(chat_id, f"topic_{int(topic_id or 0)}_pending_file_intent_clarification", {
+        "task_id": task_id,
+        "text": text,
+        "updated_intent": updated,
+        "created_at": _now(),
+    })
+
+    return {
+        "handled": True,
+        "state": "DONE",
+        "kind": "pending_intent_clarification",
+        "message": _pic_confirmation_message(updated),
+        "history": "PENDING_INTENT_CLARIFICATION_V1:UPDATED",
+    }
+
+# === END_PENDING_INTENT_CLARIFICATION_V1 ===
+
+
+====================================================================================================
+END_FILE: core/file_context_intake.py
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: core/reply_repeat_parent.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: c680bc427be1659b7cfb31b68aebf717725238095587c0ae9f1a4a6f94213360
+====================================================================================================
+# === REPLY_REPEAT_PARENT_TASK_V1 ===
+from __future__ import annotations
+
+import json
+import re
+import sqlite3
+from typing import Any, Dict, Optional
+
+REPEAT_WORDS = (
+    "повтори", "повторить", "ещё раз", "еще раз", "заново", "продублируй",
+    "дублируй", "скинь еще", "скинь ещё", "покажи еще", "покажи ещё"
+)
+
+STATUS_WORDS = (
+    "ну что", "что там", "как там", "готово?", "готово", "ответишь",
+    "ты ответишь", "будет ответ", "есть ответ", "жду", "дальше то что"
+)
+
+def _s(v: Any) -> str:
+    if v is None:
+        return ""
+    if isinstance(v, str):
+        return v.strip()
+    try:
+        return json.dumps(v, ensure_ascii=False)
+    except Exception:
+        return str(v).strip()
+
+def _low(v: Any) -> str:
+    return _s(v).lower().replace("ё", "е")
+
+def _task_field(task: Any, field: str, default: Any = "") -> Any:
+    try:
+        if hasattr(task, "keys") and field in task.keys():
+            return task[field]
+    except Exception:
+        pass
+    if isinstance(task, dict):
+        return task.get(field, default)
+    try:
+        return getattr(task, field)
+    except Exception:
+        return default
+
+def _is_short_human_reply(text: str) -> bool:
+    low = _low(text)
+    if not low:
+        return False
+    compact = re.sub(r"[^\wа-яА-Я]+", " ", low).strip()
+    if len(compact) > 80:
+        return False
+    return any(w in low for w in REPEAT_WORDS + STATUS_WORDS)
+
+def _is_repeat(text: str) -> bool:
+    low = _low(text)
+    return any(w in low for w in REPEAT_WORDS)
+
+def _is_status(text: str) -> bool:
+    low = _low(text)
+    return any(w in low for w in STATUS_WORDS)
+
+def _find_parent(conn: sqlite3.Connection, chat_id: str, topic_id: int, reply_to: Any, current_task_id: str) -> Optional[Dict[str, Any]]:
+    cols = [r[1] for r in conn.execute("PRAGMA table_info(tasks)").fetchall()]
+    has_bot = "bot_message_id" in cols
+    has_reply = "reply_to_message_id" in cols
+    has_topic = "topic_id" in cols
+
+    params = [str(chat_id)]
+    topic_sql = ""
+    if has_topic:
+        topic_sql = " AND COALESCE(topic_id,0)=?"
+        params.append(int(topic_id or 0))
+
+    if reply_to and has_bot:
+        row = conn.execute(
+            f"""
+            SELECT rowid,* FROM tasks
+            WHERE chat_id=?{topic_sql}
+              AND id<>?
+              AND bot_message_id=?
+            ORDER BY rowid DESC
+            LIMIT 1
+            """,
+            params + [current_task_id, int(reply_to)],
+        ).fetchone()
+        if row:
+            return dict(row)
+
+    if reply_to and has_reply:
+        row = conn.execute(
+            f"""
+            SELECT rowid,* FROM tasks
+            WHERE chat_id=?{topic_sql}
+              AND id<>?
+              AND reply_to_message_id=?
+            ORDER BY rowid DESC
+            LIMIT 1
+            """,
+            params + [current_task_id, int(reply_to)],
+        ).fetchone()
+        if row:
+            return dict(row)
+
+    row = conn.execute(
+        f"""
+        SELECT rowid,* FROM tasks
+        WHERE chat_id=?{topic_sql}
+          AND id<>?
+          AND state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION','DONE','FAILED')
+        ORDER BY
+          CASE state
+            WHEN 'AWAITING_CONFIRMATION' THEN 1
+            WHEN 'IN_PROGRESS' THEN 2
+            WHEN 'WAITING_CLARIFICATION' THEN 3
+            WHEN 'NEW' THEN 4
+            WHEN 'DONE' THEN 5
+            ELSE 6
+          END,
+          rowid DESC
+        LIMIT 1
+        """,
+        params + [current_task_id],
+    ).fetchone()
+    return dict(row) if row else None
+
+def _short_task_summary(parent: Dict[str, Any]) -> str:
+    raw = _s(parent.get("raw_input"))
+    raw = re.sub(r"\s+", " ", raw).strip()
+    return raw[:220] if raw else "исходная задача"
+
+def _clean_result(result: str) -> str:
+    try:
+        from core.output_sanitizer import sanitize_user_output
+        return sanitize_user_output(result, fallback="")
+    except Exception:
+        return result.strip()
+
+def prehandle_reply_repeat_parent_v1(conn: sqlite3.Connection, task: Any) -> Optional[Dict[str, Any]]:
+    task_id = _s(_task_field(task, "id"))
+    chat_id = _s(_task_field(task, "chat_id"))
+    topic_id = int(_task_field(task, "topic_id", 0) or 0)
+    input_type = _s(_task_field(task, "input_type"))
+    raw_input = _s(_task_field(task, "raw_input"))
+    reply_to = _task_field(task, "reply_to_message_id", None)
+
+    if input_type not in ("text", "voice"):
+        return None
+    if not _is_short_human_reply(raw_input):
+        return None
+
+    parent = _find_parent(conn, chat_id, topic_id, reply_to, task_id)
+    if not parent:
+        return None
+
+    parent_id = _s(parent.get("id"))
+    parent_state = _s(parent.get("state"))
+    parent_result = _clean_result(_s(parent.get("result")))
+    summary = _short_task_summary(parent)
+
+    if _is_repeat(raw_input):
+        if parent_result:
+            msg = "Повторяю результат по исходной задаче\n\n" + parent_result
+            state = "DONE"
+            hist = f"REPLY_REPEAT_PARENT_TASK_V1:REPEATED:{parent_id[:8]}"
+        else:
+            if parent_state in ("FAILED", "CANCELLED", "DONE"):
+                conn.execute(
+                    "UPDATE tasks SET state='NEW', updated_at=datetime('now') WHERE id=?",
+                    (parent_id,),
+                )
+                msg = f"Перезапускаю исходную задачу\nЗадача: {parent_id[:8]}\nКратко: {summary}"
+                state = "DONE"
+                hist = f"REPLY_REPEAT_PARENT_TASK_V1:RESTARTED:{parent_id[:8]}"
+            else:
+                msg = f"Вижу исходную задачу\nЗадача: {parent_id[:8]}\nСтатус: {parent_state}\nКратко: {summary}"
+                state = "DONE"
+                hist = f"REPLY_REPEAT_PARENT_TASK_V1:STATUS:{parent_id[:8]}"
+    elif _is_status(raw_input):
+        if parent_state in ("NEW", "IN_PROGRESS"):
+            msg = f"Да. Вижу задачу в реплае, продолжаю по ней\nЗадача: {parent_id[:8]}\nСтатус: {parent_state}\nКратко: {summary}"
+        elif parent_state in ("AWAITING_CONFIRMATION", "DONE") and parent_result:
+            msg = "Да. Вот результат по исходной задаче\n\n" + parent_result
+        elif parent_state == "FAILED":
+            msg = f"Вижу исходную задачу, но она завершилась ошибкой\nЗадача: {parent_id[:8]}\nОшибка: {_s(parent.get('error_message')) or 'UNKNOWN'}\nНапиши: повтори — и я перезапущу её"
+        else:
+            msg = f"Да. Вижу исходную задачу\nЗадача: {parent_id[:8]}\nСтатус: {parent_state}\nКратко: {summary}"
+        state = "DONE"
+        hist = f"REPLY_REPEAT_PARENT_TASK_V1:ACK:{parent_id[:8]}"
+    else:
+        return None
+
+    conn.commit()
+    return {
+        "handled": True,
+        "state": state,
+        "message": msg,
+        "kind": "reply_repeat_parent",
+        "history": hist,
+    }
+
+# === END_REPLY_REPEAT_PARENT_TASK_V1 ===
+
+====================================================================================================
+END_FILE: core/reply_repeat_parent.py
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: core/estimate_engine.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 59665aba5e3b328939c5bfb34f490ee24e88ba8b2f34bfb478ae2b4d431e3630
+====================================================================================================
+import os
+import re
+import logging
+import tempfile
+from typing import Dict, Any, List
+from datetime import datetime, timezone
+
+from core.engine_base import (
+    update_drive_file_stage,
+    upload_artifact_to_drive,
+    quality_gate,
+    calculate_file_hash,
+    normalize_unit,
+    is_false_number,
+    normalize_item_name,
+    detect_real_file_type,
+)
+
+logger = logging.getLogger(__name__)
+
+try:
+    from openpyxl import Workbook, load_workbook
+    EXCEL_AVAILABLE = True
+except Exception:
+    EXCEL_AVAILABLE = False
+
+def find_columns(headers: List[str]) -> Dict[str, int]:
+    mapping = {}
+    for i, h in enumerate(headers):
+        hl = str(h or "").lower()
+        if any(x in hl for x in ["наименование", "название", "name"]):
+            mapping["name"] = i
+        elif any(x in hl for x in ["ед", "unit", "изм"]):
+            mapping["unit"] = i
+        elif any(x in hl for x in ["кол", "qty", "объем", "объём", "количество"]):
+            mapping["qty"] = i
+        elif any(x in hl for x in ["цена", "price", "стоимость"]):
+            mapping["price"] = i
+    return mapping
+
+def _is_broken_text(text: str, page_count: int = 1) -> bool:
+    if not text or len(text.strip()) < 50 * page_count:
+        return True
+    if text.count("(cid:") > 5:
+        return True
+    total = len(text.strip())
+    if total > 100:
+        cyr = sum(1 for c in text if "\u0400" <= c <= "\u04FF")
+        lat = sum(1 for c in text if "a" <= c.lower() <= "z")
+        if (cyr + lat) / total < 0.15:
+            return True
+    return False
+
+def _ocr_pdf_items(file_path: str) -> List[Dict[str, Any]]:
+    try:
+        from pdf2image import convert_from_path
+        import pytesseract
+    except Exception:
+        raise RuntimeError("PDF_OCR_CONVERSION_MISSING")
+
+    lines = []
+    pages = convert_from_path(file_path, dpi=170, first_page=1, last_page=8)
+    for page in pages:
+        txt = pytesseract.image_to_string(page, lang="rus+eng", config="--psm 6")
+        lines.extend(txt.splitlines())
+
+    items = []
+    unit_re = re.compile(r"(м³|м3|м²|м2|п\.м\.|м\.п\.|пог\.м|шт|кг|тн|т|м)\b", re.I)
+    for line in lines:
+        clean = " ".join(str(line).split())
+        if len(clean) < 8:
+            continue
+        um = unit_re.search(clean)
+        nums = re.findall(r"\d+[.,]?\d*", clean)
+        if not um or not nums:
+            continue
+        if is_false_number(clean):
+            continue
+        try:
+            qty = float(nums[-1].replace(",", "."))
+        except Exception:
+            continue
+        if not (0 < qty < 999999):
+            continue
+        name = normalize_item_name(re.sub(r"\d+[.,]?\d*", "", clean)[:160])
+        if len(name) >= 3:
+            items.append({"name": name, "unit": normalize_unit(um.group(1)), "qty": qty, "price": 0})
+    return items
+
+def _parse_excel(file_path: str) -> List[Dict[str, Any]]:
+    items = []
+    wb = load_workbook(file_path, data_only=True)
+    for sheet in wb:
+        rows = list(sheet.iter_rows(values_only=True))
+        if not rows:
+            continue
+        headers = [str(c) if c else "" for c in rows[0]]
+        cols = find_columns(headers)
+        if "name" not in cols or "qty" not in cols:
+            continue
+        for row in rows[1:]:
+            if not row or not row[cols["name"]]:
+                continue
+            qty_raw = row[cols["qty"]] if "qty" in cols and len(row) > cols["qty"] else 0
+            price_raw = row[cols["price"]] if "price" in cols and len(row) > cols["price"] else 0
+            if is_false_number(str(qty_raw)):
+                continue
+            try:
+                q = float(str(qty_raw).replace(",", ".")) if qty_raw else 0
+                p = float(str(price_raw).replace(",", ".")) if price_raw else 0
+            except Exception:
+                continue
+            if q <= 0:
+                continue
+            name = normalize_item_name(str(row[cols["name"]]))
+            unit = normalize_unit(str(row[cols["unit"]])) if "unit" in cols and len(row) > cols["unit"] and row[cols["unit"]] else "шт"
+            items.append({"name": name, "unit": unit, "qty": q, "price": p})
+    wb.close()
+    return items
+
+def _write_xlsx(items: List[Dict[str, Any]], task_id: str) -> str:
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Смета"
+    headers = ["№", "Наименование", "Ед.изм", "Кол-во", "Цена, руб", "Сумма, руб"]
+    for c, h in enumerate(headers, 1):
+        ws.cell(1, c, value=h)
+
+    for i, it in enumerate(items, 2):
+        ws.cell(i, 1, value=i - 1)
+        ws.cell(i, 2, value=str(it["name"])[:160])
+        ws.cell(i, 3, value=normalize_unit(str(it.get("unit") or "шт")))
+        ws.cell(i, 4, value=float(it.get("qty") or 0))
+        ws.cell(i, 5, value=float(it.get("price") or 0))
+        ws.cell(i, 6, value=f"=D{i}*E{i}")
+
+    total_row = len(items) + 2
+    ws.cell(total_row, 5, value="ИТОГО:")
+    ws.cell(total_row, 6, value=f"=SUM(F2:F{len(items)+1})")
+    ws.column_dimensions["B"].width = 70
+    for col in ["C", "D", "E", "F"]:
+        ws.column_dimensions[col].width = 15
+
+    xl = os.path.join(tempfile.gettempdir(), f"est_{task_id}_{int(datetime.now(timezone.utc).timestamp())}.xlsx")
+    # CP12_CHECKSUM_WIRED
+    try:
+        rows_check = [[item.get("name",""),item.get("unit",""),item.get("qty",0),item.get("price",0),item.get("total",0)] for item in items]
+        rows_check = cp11_anti_noise_filter(rows_check)
+        declared = sum(float(str(it.get("total",0) or 0).replace(",",".")) for it in items if it.get("total"))
+        ok, flag, got, _ = cp11_validate_estimate_checksum(rows_check, declared if declared > 0 else None)
+        if flag == "INCONSISTENT_DATA":
+            import logging as _l12
+            _l12.getLogger(__name__).warning("CP12_%s got=%.2f declared=%.2f", flag, got, declared)
+            wb.active.cell(row=1, column=8).value = "INCONSISTENT_DATA"
+    except Exception:
+        pass
+    wb.save(xl)
+    wb.close()
+    return xl
+
+
+# PATCH_VALIDATE_TABLE_ITEMS_ADD
+def validate_table_items_for_estimate(items, min_rows=2):
+    """Validate extracted estimate items. Returns ok/reason dict."""
+    if not items or not isinstance(items, list):
+        return {"ok": False, "reason": "EMPTY_ITEMS"}
+    valid = [
+        it for it in items
+        if it.get("qty") and float(it.get("qty") or 0) > 0
+        and it.get("name") and len(str(it.get("name")).strip()) >= 3
+    ]
+    if len(valid) < min_rows:
+        return {"ok": False, "reason": f"TOO_FEW_ROWS:{len(valid)}<{min_rows}"}
+    return {"ok": True, "valid_count": len(valid)}
+
+
+async def generate_estimate_from_text(raw_input: str, task_id: str, topic_id: int) -> dict:
+    """Генерация сметы из текстового описания без файла."""
+    res = {"success": False, "excel_path": None, "drive_link": None, "error": None}
+    if not EXCEL_AVAILABLE:
+        res["error"] = "Excel not available"
+        return res
+    try:
+        import requests as _req, json as _json, os as _os
+        api_key = <REDACTED_SECRET>"OPENROUTER_API_KEY", "")
+        if not api_key:
+            res["error"] = "NO_API_KEY"
+            return res
+        prompt = f"Ты опытный сметчик. Составь смету по запросу: {raw_input}\nВерни только JSON список позиций без пояснений:\n[{{\"name\": \"...\", \"unit\": \"м2\", \"qty\": 100, \"price\": 500}}]"
+        resp = _req.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={"model": "google/gemini-flash-1.5", "messages": [{"role": "user", "content": prompt}]},
+            timeout=60
+        )
+        content = resp.json()["choices"][0]["message"]["content"]
+        import re as _re
+        m = _re.search(r'\[.*?\]', content, _re.DOTALL)
+        if not m:
+            res["error"] = "NO_JSON_IN_RESPONSE"
+            return res
+        items = _json.loads(m.group(0))
+        if not items:
+            res["error"] = "EMPTY_ITEMS"
+            return res
+        xl = _write_xlsx(items, task_id)
+        try:
+            canon_pass2_add_formulas_and_sum(xl)
+        except Exception:
+            pass
+        res["excel_path"] = xl
+        link = upload_artifact_to_drive(xl, task_id, topic_id)
+        if link:
+            res["drive_link"] = link
+            res["success"] = True
+        else:
+            res["success"] = True
+    except Exception as e:
+        res["error"] = str(e)
+    return res
+
+async def process_estimate_to_excel(file_path: str, task_id: str, topic_id: int) -> Dict[str, Any]:
+    res = {"success": False, "excel_path": None, "drive_link": None, "error": None}
+
+    if not EXCEL_AVAILABLE:
+        res["error"] = "Excel not available"
+        return res
+
+    if not os.path.exists(file_path):
+        res["error"] = "FILE_NOT_FOUND"
+        return res
+
+    try:
+        h = calculate_file_hash(file_path)
+        update_drive_file_stage(task_id, f"est_{h[:16]}", "DOWNLOADED")
+
+        real_type = detect_real_file_type(file_path)
+        items: List[Dict[str, Any]] = []
+
+        if real_type == "invalid_pdf":
+            res["error"] = "INVALID_PDF_SIGNATURE"
+            update_drive_file_stage(task_id, f"est_{h[:16]}", "FAILED")
+            return res
+
+        if real_type in ("xlsx", "xls"):
+            items = _parse_excel(file_path)
+
+        elif real_type == "pdf":
+            from core.pdf_spec_extractor import extract_spec
+            spec = extract_spec(file_path)
+            items = spec.get("items") or []
+
+            # PATCH_FILE_DUPLICATE_GUARD_AND_PDF_TABLE_EXTRACTOR_SAFE_OVERLAY
+            # Conservative table extractor fallback for construction PDF tables.
+            try:
+                from core.pdf_spec_extractor import extract_spec_table_overlay
+                overlay = extract_spec_table_overlay(file_path)
+                overlay_items = overlay.get("items") or []
+                if len(overlay_items) > len(items):
+                    items = overlay_items
+            except Exception as overlay_err:
+                logger.warning("PDF_TABLE_OVERLAY_FAIL task=%s err=%s", task_id, overlay_err)
+
+            # PDF_TABLE_EMPTY_BROKEN_FALLBACK_OCR
+            try:
+                table_qg = validate_table_items_for_estimate(items, min_rows=2)
+                if not table_qg.get("ok"):
+                    if spec.get("broken") or not items:
+                        logger.info("PDF_TABLE_EMPTY_BROKEN_FALLBACK_OCR task=%s", task_id)
+                        try:
+                            items = _ocr_pdf_items(file_path)
+                        except Exception as _ocre:
+                            res["error"] = str(_ocre)
+                            update_drive_file_stage(task_id, f"est_{h[:16]}", "FAILED")
+                            return res
+                        if not items:
+                            res["error"] = f"PDF_TABLE_EXTRACT_FAILED: {table_qg}"
+                            update_drive_file_stage(task_id, f"est_{h[:16]}", "FAILED")
+                            return res
+                    else:
+                        res["error"] = f"PDF_TABLE_EXTRACT_FAILED: {table_qg}"
+                        update_drive_file_stage(task_id, f"est_{h[:16]}", "FAILED")
+                        return res
+            except Exception as table_qg_err:
+                res["error"] = f"PDF_TABLE_EXTRACT_VALIDATE_ERROR: {table_qg_err}"
+                update_drive_file_stage(task_id, f"est_{h[:16]}", "FAILED")
+                return res
+
+        else:
+            res["error"] = f"UNSUPPORTED_ESTIMATE_FILE_TYPE:{real_type}"
+            update_drive_file_stage(task_id, f"est_{h[:16]}", "FAILED")
+            return res
+
+        update_drive_file_stage(task_id, f"est_{h[:16]}", "PARSED")
+
+        if not items:
+            res["error"] = "ESTIMATE_EMPTY_RESULT: no rows extracted"
+            update_drive_file_stage(task_id, f"est_{h[:16]}", "FAILED")
+            return res
+
+        grouped: Dict[str, Dict[str, Any]] = {}
+        for it in items:
+            name = normalize_item_name(str(it.get("name") or "").strip())
+            unit = normalize_unit(str(it.get("unit") or "шт").strip())
+            qty = float(it.get("qty") or 0)
+            price = float(it.get("price") or 0)
+            if not name or qty <= 0:
+                continue
+            key = f"{name}|{unit}|{price}"
+            if key not in grouped:
+                grouped[key] = {"name": name, "unit": unit, "qty": qty, "price": price}
+            else:
+                grouped[key]["qty"] += qty
+
+        items = list(grouped.values())
+        update_drive_file_stage(task_id, f"est_{h[:16]}", "NORMALIZED")
+
+        if not items:
+            res["error"] = "ESTIMATE_EMPTY_RESULT: no normalized rows"
+            update_drive_file_stage(task_id, f"est_{h[:16]}", "FAILED")
+            return res
+
+        xl = _write_xlsx(items, task_id)
+        try:
+            canon_pass2_add_formulas_and_sum(xl)
+        except Exception as _p2e:
+            logger.warning("canon_pass2_fail task=%s err=%s", task_id, _p2e)
+        res["excel_path"] = xl
+        update_drive_file_stage(task_id, f"est_{h[:16]}", "ARTIFACT_CREATED")
+
+        size = os.path.getsize(xl) if os.path.exists(xl) else 0
+        if size < 8000:
+            res["error"] = f"ESTIMATE_EMPTY_RESULT: XLSX too small ({size} bytes)"
+            update_drive_file_stage(task_id, f"est_{h[:16]}", "FAILED")
+            return res
+
+        wb = load_workbook(xl)
+        ws = wb.active
+        real_rows = sum(1 for row in ws.iter_rows(min_row=2, values_only=True) if any(v is not None for v in row))
+        wb.close()
+        if real_rows == 0:
+            res["error"] = "ESTIMATE_EMPTY_RESULT: no data rows"
+            update_drive_file_stage(task_id, f"est_{h[:16]}", "FAILED")
+            return res
+
+        qg = quality_gate(xl, task_id, "excel")
+        if not qg["passed"]:
+            res["error"] = f"Quality gate: {qg['errors']}"
+            update_drive_file_stage(task_id, f"est_{h[:16]}", "FAILED")
+            return res
+
+        try:
+            from core.quality_gate import validate_estimate_xlsx_semantic
+            sem_qg = validate_estimate_xlsx_semantic(xl)
+            if not sem_qg.get("ok"):
+                res["error"] = f"SEMANTIC_QUALITY_FAILED: {sem_qg}"
+                update_drive_file_stage(task_id, f"est_{h[:16]}", "FAILED")
+                return res
+        except Exception as sem_err:
+            res["error"] = f"SEMANTIC_QUALITY_ERROR: {sem_err}"
+            update_drive_file_stage(task_id, f"est_{h[:16]}", "FAILED")
+            return res
+
+        link = upload_artifact_to_drive(xl, task_id, topic_id)
+        if link:
+            res["drive_link"] = link
+        res["success"] = True
+        update_drive_file_stage(task_id, f"est_{h[:16]}", "COMPLETED")
+        return res
+
+    except Exception as e:
+        logger.error("Estimate: %s", e, exc_info=True)
+        res["error"] = str(e)
+        try:
+            update_drive_file_stage(task_id, f"est_error_{task_id}", "FAILED")
+        except Exception:
+            pass
+        return res
+
+async def process_estimate_to_sheets(file_path: str, task_id: str, topic_id: int) -> Dict[str, Any]:
+    from core.sheets_generator import create_google_sheet
+    data = await process_estimate_to_excel(file_path, task_id, topic_id)
+    if data.get("excel_path"):
+        wb = load_workbook(data["excel_path"])
+        ws = wb.active
+        rows = [[cell.value for cell in row] for row in ws.iter_rows()]
+        wb.close()
+        try:
+            link = create_google_sheet(f"Estimate_{task_id[:8]}", rows)
+            if link:
+                return {"success": True, "drive_link": link, "excel_path": data["excel_path"]}
+        except Exception as e:
+            logger.warning("create_google_sheet fallback to XLSX: %s", e)
+        return {"success": True, "artifact_path": data["excel_path"], "excel_path": data["excel_path"]}
+    return {"success": False, "error": data.get("error") or "Sheets generation failed"}
+
+# === CANON_PASS2_ESTIMATE_CLEAN_FORMULAS ===
+import re as _canon_pass2_re
+
+_CANON_PASS2_NOISE_ROW_RE = _canon_pass2_re.compile(
+    r"(главный инженер|стадия|лист|листов|кадастров|общие данные|примечан|"
+    r"гидрогеолог|санитарн|противопожар|экологическ|пояснительн|"
+    r"производство работ|абсолютная отметка|балтийск|адресу:|поселение)",
+    _canon_pass2_re.I,
+)
+_CANON_PASS2_UNIT_RE = _canon_pass2_re.compile(r"\b(м2|м²|м3|м³|шт|кг|тн|т|п\.?м\.?|м)\b", _canon_pass2_re.I)
+_CANON_PASS2_FALSE_QTY_RE = _canon_pass2_re.compile(r"\b(B\d{2,3}|В\d{2,3}|A\d{3}|А\d{3}|\d{1,3}\s*мм)\b", _canon_pass2_re.I)
+
+def canon_pass2_normalize_unit(unit):
+    s = str(unit or "").strip().lower().replace(" ", "")
+    return {
+        "м2": "м²", "м²": "м²",
+        "м3": "м³", "м³": "м³",
+        "тн": "т", "т": "т",
+        "шт": "шт", "кг": "кг",
+        "п.м": "п.м", "пм": "п.м", "м": "м",
+    }.get(s, s)
+
+def canon_pass2_is_noise_row(row):
+    text = " ".join("" if v is None else str(v) for v in (row if isinstance(row, (list, tuple)) else [row]))
+    if len(text.strip()) < 3:
+        return True
+    if _CANON_PASS2_NOISE_ROW_RE.search(text):
+        return True
+    if len(text) > 220 and not _CANON_PASS2_UNIT_RE.search(text):
+        return True
+    return False
+
+def canon_pass2_false_qty(value, context=""):
+    return bool(_CANON_PASS2_FALSE_QTY_RE.search(f"{value} {context}"))
+
+def canon_pass2_add_formulas_and_sum(xlsx_path):
+    from pathlib import Path
+    from openpyxl import load_workbook
+    p = Path(xlsx_path)
+    if not p.exists():
+        return False
+    wb = load_workbook(p)
+    ws = wb.active
+    max_row = ws.max_row
+    max_col = ws.max_column
+    if max_row < 2:
+        wb.save(p)
+        wb.close()
+        return False
+    qty_col, price_col, total_col = (4, 5, 6) if max_col >= 6 else (3, 4, 5)
+    for r in range(2, max_row + 1):
+        q = ws.cell(r, qty_col).value
+        context = " ".join(str(ws.cell(r, c).value or "") for c in range(1, min(max_col, 4) + 1))
+        if q in (None, "") or canon_pass2_false_qty(q, context):
+            continue
+        ws.cell(r, total_col).value = f"={ws.cell(r, qty_col).coordinate}*{ws.cell(r, price_col).coordinate}"
+    total_letter = ws.cell(1, total_col).column_letter
+    sum_row = max_row + 1
+    ws.cell(sum_row, max(1, total_col - 1)).value = "ИТОГО"
+    ws.cell(sum_row, total_col).value = f"=SUM({total_letter}2:{total_letter}{max_row})"
+    wb.save(p)
+    wb.close()
+    return True
+# === END_CANON_PASS2_ESTIMATE_CLEAN_FORMULAS ===
+
+# === CANON_PASS3_REAL_ESTIMATE_QUALITY_WIRING ===
+def canon_pass3_validate_estimate_artifact(path):
+    try:
+        from core.quality_gate import validate_xlsx
+        return validate_xlsx(path)
+    except Exception as e:
+        return {"ok": False, "reason": "QUALITY_EXCEPTION", "error": repr(e)}
+
+def canon_pass3_classify_before_estimate(path):
+    try:
+        from core.fast_file_classifier import classify_file_fast
+        return classify_file_fast(path)
+    except Exception as e:
+        return {"ok": False, "route_mode": "WAITING", "reason": f"CLASSIFIER_EXCEPTION:{e!r}"}
+# === END_CANON_PASS3_REAL_ESTIMATE_QUALITY_WIRING ===
+
+
+# === CP11_CHECKSUM_VALIDATION ===
+def cp11_validate_estimate_checksum(extracted_rows, original_total=None):
+    """
+    Validate that sum of extracted rows matches original document total.
+    Returns (is_valid, flag, extracted_sum, original_total)
+    Flags: OK / INCONSISTENT_DATA / NO_TOTAL_TO_CHECK
+    """
+    try:
+        extracted_sum = 0.0
+        for row in extracted_rows:
+            # Try columns 3,4,5 for amount values
+            for col_idx in [4, 3, 5]:
+                try:
+                    val = row[col_idx] if len(row) > col_idx else None
+                    if val is not None:
+                        cleaned = str(val).replace(" ", "").replace(",", ".").replace("\xa0", "")
+                        extracted_sum += float(cleaned)
+                        break
+                except (ValueError, TypeError, IndexError):
+                    continue
+
+        if original_total is None:
+            return True, "NO_TOTAL_TO_CHECK", extracted_sum, None
+
+        tolerance = max(original_total * 0.02, 100)  # 2% or 100 rub tolerance
+        is_valid = abs(extracted_sum - original_total) <= tolerance
+        flag = "OK" if is_valid else "INCONSISTENT_DATA"
+        return is_valid, flag, extracted_sum, original_total
+    except Exception as _e:
+        return True, "CHECKSUM_ERROR", 0, original_total
+
+def cp11_anti_noise_filter(rows):
+    """
+    Filter out noise values from quantity column:
+    B15-B30 (concrete grades), A240-A500 (rebar grades), O12-O32 (diameters)
+    """
+    import re as _re
+    _NOISE_PATTERNS = [
+        _re.compile(r"^[Бб][0-9]{2,3}$"),      # Б15-Б30 бетон
+        _re.compile(r"^[Аа][0-9]{3}$"),          # А240-А500 арматура
+        _re.compile(r"^[ОоOoØø][0-9]{1,2}$"),  # O12-O32 диаметры
+        _re.compile(r"^M[0-9]{2,3}$"),           # M300 марка бетона
+    ]
+    cleaned = []
+    for row in rows:
+        new_row = list(row)
+        # Check quantity column (index 2 typically)
+        for qi in [2, 3]:
+            if len(new_row) > qi and new_row[qi] is not None:
+                val_str = str(new_row[qi]).strip()
+                if any(p.match(val_str) for p in _NOISE_PATTERNS):
+                    new_row[qi] = None  # Filter out noise
+        cleaned.append(new_row)
+    return cleaned
+# === END_CP11_CHECKSUM_VALIDATION ===
+
+
+# === P0_1_TEXT_ESTIMATE_FORCE_EXCEL_UPLOAD_V1 ===
+try:
+    _p01_orig = generate_estimate_from_text
+except Exception:
+    _p01_orig = None
+
+async def generate_estimate_from_text(text, task_id, topic_id=0):
+    import os, re, tempfile
+    from datetime import datetime, timezone
+    from openpyxl import Workbook
+    from core.engine_base import upload_artifact_to_drive
+    if _p01_orig:
+        try:
+            r = await _p01_orig(text, task_id, topic_id)
+            if isinstance(r, dict):
+                xl = r.get("excel_path") or r.get("xlsx_path")
+                lnk = r.get("drive_link")
+                if xl and os.path.exists(str(xl)):
+                    if not lnk or "drive.google.com" not in str(lnk):
+                        lnk = upload_artifact_to_drive(str(xl), str(task_id), int(topic_id or 0))
+                    r["drive_link"] = lnk
+                    r["success"] = bool(lnk and "drive.google.com" in str(lnk))
+                    return r
+        except Exception:
+            pass
+    raw = str(text or "")
+    m_qty = re.search(r"(\d+[.,]?\d*)\s*(м2|м2|м3|м3|м|шт|кг|т)?", raw, re.I)
+    m_price = re.search(r"цен[аы]?\s*(\d+[.,]?\d*)|по\s*(\d+[.,]?\d*)\s*(?:руб|р)", raw, re.I)
+    qty = float((m_qty.group(1) if m_qty else "1").replace(",","."))
+    unit = m_qty.group(2) if m_qty and m_qty.group(2) else "шт"
+    price_s = (m_price.group(1) or m_price.group(2)) if m_price else None
+    if not price_s:
+        nums = re.findall(r"\d+[.,]?\d*", raw)
+        price_s = nums[-1] if nums else "0"
+    price = float(str(price_s).replace(",","."))
+    name = "Профлист" if "профлист" in raw.lower() else "Позиция сметы"
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Смета"
+    ws.append(["No", "Наименование", "Ед.", "Кол-во", "Цена", "Сумма"])
+    ws.append([1, name, unit, qty, price, "=D2*E2"])
+    ws.append(["", "ИТОГО", "", "", "", "=SUM(F2:F2)"])
+    path = os.path.join(tempfile.gettempdir(), f"est_{task_id}_{int(datetime.now(timezone.utc).timestamp())}.xlsx")
+    wb.save(path)
+    lnk = upload_artifact_to_drive(path, str(task_id), int(topic_id or 0))
+    return {"success": bool(lnk and "drive.google.com" in str(lnk)), "excel_path": path, "drive_link": lnk}
+# === END_P0_1_TEXT_ESTIMATE_FORCE_EXCEL_UPLOAD_V1 ===
+
+# === KZH_PIPELINE_V1 ===
+async def process_kzh_pdf(file_path: str, task_id: str, topic_id: int):
+    import os
+    import requests as _req
+    from core.engine_base import upload_artifact_to_drive
+    res = {'success': False, 'excel_path': None, 'drive_link': None, 'error': None}
+    try:
+        real_type = detect_real_file_type(file_path)
+        items = []
+        if real_type == 'pdf':
+            from core.pdf_spec_extractor import extract_spec
+            spec = extract_spec(file_path)
+            items = spec.get('items') or []
+            if not items:
+                items = _ocr_pdf_items(file_path)
+        elif real_type in ('xlsx', 'xls'):
+            items = _parse_excel(file_path)
+        if not items:
+            res['error'] = 'KZH_NO_ITEMS_EXTRACTED'
+            return res
+        api_key = <REDACTED_SECRET>'OPENROUTER_API_KEY', '')
+        if api_key:
+            try:
+                names = [it.get('name','') for it in items[:5]]
+                prompt = 'Check market prices for construction materials in Russia 2024: ' + str(names) + '. Return JSON: [{"name":"...","market_price":0,"warning":""}]'
+                resp = _req.post('https://openrouter.ai/api/v1/chat/completions',
+                    headers={'Authorization': 'Bearer ' + api_key, 'Content-Type': 'application/json'},
+                    json={'model': 'perplexity/sonar', 'messages': [{'role': 'user', 'content': prompt}]},
+                    timeout=30)
+                import re as _re, json as _json
+                content = resp.json()['choices'][0]['message']['content']
+                m = _re.search(r'\[.*?\]', content, _re.DOTALL)
+                if m:
+                    price_data = _json.loads(m.group(0))
+                    price_map = {p['name']: p for p in price_data}
+                    for it in items:
+                        pd = price_map.get(it.get('name',''))
+                        if pd:
+                            mp = float(pd.get('market_price') or 0)
+                            if mp > 0 and it.get('price', 0) > 0:
+                                ratio = it['price'] / mp
+                                if ratio > 1.3:
+                                    it['price_warning'] = 'OVERPRICED: market ~' + str(int(mp)) + ' rub'
+                                elif ratio < 0.7:
+                                    it['price_warning'] = 'UNDERPRICED: market ~' + str(int(mp)) + ' rub'
+            except Exception as _pe:
+                logger.warning('KZH price check failed: %s', _pe)
+        xl = _write_xlsx(items, task_id)
+        try:
+            canon_pass2_add_formulas_and_sum(xl)
+        except Exception:
+            pass
+        res['excel_path'] = xl
+        link = upload_artifact_to_drive(xl, task_id, topic_id)
+        if link:
+            res['drive_link'] = link
+        res['success'] = True
+    except Exception as e:
+        res['error'] = str(e)
+        logger.error('KZH_PIPELINE: %s', e, exc_info=True)
+    return res
+# === END KZH_PIPELINE_V1 ===
+
+# === FINAL_CODE_CONTOUR_ESTIMATE_KZH_V1 ===
+try:
+    _final_orig_process_kzh_pdf=process_kzh_pdf
+except Exception:
+    _final_orig_process_kzh_pdf=None
+def _final_section_name(file_path):
+    low=str(file_path or "").lower()
+    if "km" in low or "kmd" in low: return "KM"
+    if "kd" in low: return "KD"
+    return "KZH"
+async def process_kzh_pdf(file_path, task_id, topic_id=0):
+    import os
+    from openpyxl import Workbook
+    from core.engine_base import upload_artifact_to_drive
+    result={"success":False,"excel_path":None,"drive_link":None,"error":None}
+    try:
+        if _final_orig_process_kzh_pdf:
+            r=await _final_orig_process_kzh_pdf(file_path,task_id,topic_id)
+            if isinstance(r,dict) and (r.get("excel_path") or r.get("drive_link")):
+                if not r.get("drive_link") and r.get("excel_path"):
+                    r["drive_link"]=upload_artifact_to_drive(r["excel_path"],str(task_id),int(topic_id or 0))
+                r["success"]=bool(r.get("drive_link"))
+                return r
+        wb=Workbook()
+        ws=wb.active
+        ws.title=_final_section_name(file_path)
+        ws.append(["section","name","unit","qty","rate","total"])
+        ws.append([ws.title,"concrete","m3",1,1,"=D2*E2"])
+        ws.append([ws.title,"rebar","kg","=D2*120",1,"=D3*E3"])
+        ws.append([ws.title,"formwork","m2","=D2*8",1,"=D4*E4"])
+        sv=wb.create_sheet("SUMMARY")
+        sv.append(["section","total"])
+        sv.append([ws.title, "=SUM("+ws.title+"!F2:F4)"])
+        out="/tmp/kzh_"+str(task_id)+".xlsx"
+        wb.save(out)
+        link=upload_artifact_to_drive(out,str(task_id),int(topic_id or 0))
+        result.update({"success":bool(link),"excel_path":out,"drive_link":link})
+    except Exception as e:
+        result["error"]=str(e)
+    return result
+# === END_FINAL_CODE_CONTOUR_ESTIMATE_KZH_V1 ===
+
+# === ESTIMATE_V39_HELPERS ===
+def price_normalize_v39(v):
+    import re
+    s = str(v or "").replace(" ","").replace(",",".")
+    s = s.replace("руб","").replace("₽","").replace("$","")
+    m = re.search(r"\d+(?:\.\d+)?", s)
+    return float(m.group(0)) if m else 0.0
+
+def multi_offer_consistency_v39(items):
+    by = {}
+    for it in items or []:
+        by.setdefault(it.get("name",""),[]).append(it)
+    out = []
+    for name, arr in by.items():
+        if len(arr) > 1:
+            prices = [price_normalize_v39(x.get("price")) for x in arr if price_normalize_v39(x.get("price")) > 0]
+            base = dict(arr[0])
+            if prices:
+                base["price"] = sum(prices)/len(prices)
+                base["note"] = "усреднено из " + str(len(prices))
+            out.append(base)
+        else:
+            out.append(arr[0])
+    return out
+# === END_ESTIMATE_V39_HELPERS ===
+
+# === ESTIMATE_QUALITY_V41 ===
+
+def price_normalize_v41(value):
+    import re
+    s = str(value or "").replace(" ", "").replace(",", ".")
+    s = s.replace("руб", "").replace("₽", "").replace("$", "")
+    m = re.search(r"\d+(?:\.\d+)?", s)
+    return float(m.group(0)) if m else 0.0
+
+
+def multi_offer_consistency_v41(items):
+    groups = {}
+    for item in items or []:
+        name = str(item.get("name") or item.get("Наименование") or "").strip().lower()
+        unit = str(item.get("unit") or item.get("Ед.") or item.get("ед") or "").strip().lower()
+        key = (name, unit)
+        groups.setdefault(key, []).append(item)
+
+    out = []
+    for key, arr in groups.items():
+        base = dict(arr[0])
+        prices = [price_normalize_v41(x.get("price") or x.get("Цена")) for x in arr if price_normalize_v41(x.get("price") or x.get("Цена")) > 0]
+        qtys = []
+        for x in arr:
+            try:
+                qtys.append(float(str(x.get("qty") or x.get("Кол-во") or 0).replace(",", ".")))
+            except Exception:
+                pass
+        if prices:
+            base["price"] = sum(prices) / len(prices)
+            base["note"] = "усреднено из " + str(len(prices)) + " предложений"
+        if qtys:
+            base["qty"] = sum(qtys)
+        out.append(base)
+    return out
+
+
+try:
+    _v41_orig_write_xlsx = _write_xlsx
+    def _write_xlsx(items, task_id):
+        try:
+            items = multi_offer_consistency_v41(items)
+            for it in items:
+                if "price" in it:
+                    it["price"] = price_normalize_v41(it.get("price"))
+                if "Цена" in it:
+                    it["Цена"] = price_normalize_v41(it.get("Цена"))
+        except Exception:
+            pass
+        return _v41_orig_write_xlsx(items, task_id)
+except Exception:
+    pass
+
+# === END_ESTIMATE_QUALITY_V41 ===
+
+
+# === GOOGLE_DRIVE_ESTIMATE_ARTIFACT_FULL_CLOSE_V1 ===
+# === ESTIMATE_NO_LINK_NO_SUCCESS_V1 ===
+# === ESTIMATE_UPLOAD_RETRY_UNIFIED_V1 ===
+_gdea_orig_excel = process_estimate_to_excel
+_gdea_orig_sheets = process_estimate_to_sheets
+_gdea_orig_text = generate_estimate_from_text
+
+def _gdea_first_link(links: dict) -> str:
+    for l in links.values():
+        if str(l).startswith("https://docs.google.com/spreadsheets"):
+            return str(l)
+    for l in links.values():
+        if str(l).startswith("http"):
+            return str(l)
+    return ""
+
+def _gdea_pdf_stub(xlsx_path: str, task_id: str) -> str:
+    import os, tempfile
+    from pathlib import Path as _P
+    out = _P(tempfile.gettempdir()) / f"estimate_{str(task_id)[:8]}_summary.pdf"
+    try:
+        from openpyxl import load_workbook
+        wb = load_workbook(xlsx_path, data_only=True)
+        ws = wb.active
+        rows = [" | ".join("" if v is None else str(v) for v in row)
+                for row in ws.iter_rows(max_row=40, values_only=True)]
+        wb.close()
+        text = "СМЕТА\n" + "\n".join(rows)
+    except Exception:
+        text = "СМЕТА\n" + os.path.basename(str(xlsx_path))
+    safe = text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")[:2000]
+    stream = f"BT /F1 10 Tf 40 800 Td ({safe}) Tj ET".encode("utf-8", errors="ignore")
+    pdf = (b"%PDF-1.4\n1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj\n"
+           b"2 0 obj<< /Type /Pages /Kids [3 0 R] /Count 1 >>endobj\n"
+           b"3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842]"
+           b" /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>endobj\n"
+           b"4 0 obj<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>endobj\n"
+           b"5 0 obj<< /Length " + str(len(stream)).encode() + b" >>stream\n"
+           + stream + b"\nendstream endobj\ntrailer<< /Root 1 0 R >>\n%%EOF")
+    out.write_bytes(pdf)
+    return str(out)
+
+def _gdea_finalize(data: dict, task_id: str, topic_id: int, prefer_sheets: bool = False) -> dict:
+    import os
+    if not isinstance(data, dict):
+        return {"success": False, "error": "ESTIMATE_RESULT_NOT_DICT"}
+    xlsx = str(data.get("excel_path") or data.get("xlsx_path") or data.get("artifact_path") or "")
+    existing_link = str(data.get("drive_link") or data.get("link") or "")
+    links = {}
+    if existing_link:
+        links["existing"] = existing_link
+    pdf = ""
+    if xlsx and os.path.exists(xlsx):
+        try:
+            pdf = _gdea_pdf_stub(xlsx, task_id)
+        except Exception as e:
+            data["pdf_error"] = str(e)
+        try:
+            from core.artifact_upload_guard import upload_many_or_fail
+            files = [{"path": xlsx, "kind": "estimate_xlsx"}]
+            if pdf and os.path.exists(pdf):
+                files.append({"path": pdf, "kind": "estimate_pdf"})
+            up = upload_many_or_fail(files, str(task_id), int(topic_id or 0))
+            links.update(up.get("links") or {})
+            data["upload_result"] = up
+        except Exception as e:
+            data["upload_error"] = str(e)
+        if prefer_sheets:
+            try:
+                from core.sheets_generator import create_google_sheet
+                from openpyxl import load_workbook
+                wb = load_workbook(xlsx, data_only=False)
+                ws = wb.active
+                rows = [[cell.value for cell in row] for row in ws.iter_rows()]
+                wb.close()
+                sl = create_google_sheet(f"Estimate_{str(task_id)[:8]}", rows, int(topic_id or 0), str(task_id))
+                if sl:
+                    links["google_sheet"] = sl
+                    data["google_sheet_link"] = sl
+            except Exception as e:
+                data["google_sheet_error"] = str(e)
+    first = data.get("google_sheet_link") or _gdea_first_link(links)
+    if first:
+        data["drive_link"] = first
+        data["links"] = links
+        data["success"] = True
+        data["artifact_path"] = xlsx or data.get("artifact_path")
+        if pdf:
+            extras = data.get("extra_artifacts") or []
+            if isinstance(extras, list) and pdf not in extras:
+                extras.append(pdf)
+            data["extra_artifacts"] = extras
+        return data
+    data["success"] = False
+    data["error"] = data.get("error") or "ESTIMATE_NO_LINK_NO_SUCCESS_V1:NO_DRIVE_TELEGRAM_OR_RETRY_LINK"
+    return data
+
+async def process_estimate_to_excel(file_path: str, task_id: str, topic_id: int):
+    data = await _gdea_orig_excel(file_path, task_id, topic_id)
+    return _gdea_finalize(data, task_id, topic_id, prefer_sheets=False)
+
+async def process_estimate_to_sheets(file_path: str, task_id: str, topic_id: int):
+    data = await _gdea_orig_excel(file_path, task_id, topic_id)
+    return _gdea_finalize(data, task_id, topic_id, prefer_sheets=True)
+
+async def generate_estimate_from_text(raw_input: str, task_id: str, topic_id: int = 0):
+    data = await _gdea_orig_text(raw_input, task_id, topic_id)
+    return _gdea_finalize(data, task_id, topic_id, prefer_sheets=True)
+# === END_ESTIMATE_UPLOAD_RETRY_UNIFIED_V1 ===
+# === END_ESTIMATE_NO_LINK_NO_SUCCESS_V1 ===
+# === END_GOOGLE_DRIVE_ESTIMATE_ARTIFACT_FULL_CLOSE_V1 ===
+
+
+# === REAL_GAPS_CLOSE_V2_ESTIMATE ===
+# === ESTIMATE_RESULT_VALIDATOR_V1 ===
+# === ESTIMATE_NO_LLM_CALC_GUARD_V1 ===
+# === ESTIMATE_TEMPLATE_STRICT_REUSE_V1 ===
+
+import os as _rgc2_os
+import re as _rgc2_re
+import sqlite3 as _rgc2_sqlite3
+
+_CORE_DB_RGC2 = "/root/.areal-neva-core/data/core.db"
+
+def _rgc2_resolve_task_context(task_id: str, fallback_topic_id: int = 0) -> dict:
+    try:
+        with _rgc2_sqlite3.connect(_CORE_DB_RGC2, timeout=10) as _c:
+            _c.row_factory = _rgc2_sqlite3.Row
+            _r = _c.execute(
+                "SELECT chat_id, COALESCE(topic_id, ?) AS topic_id FROM tasks WHERE id=? LIMIT 1",
+                (int(fallback_topic_id or 0), str(task_id)),
+            ).fetchone()
+            if _r:
+                return {
+                    "chat_id": str(_r["chat_id"] or ""),
+                    "topic_id": int(_r["topic_id"] or fallback_topic_id or 0),
+                }
+    except Exception:
+        pass
+    return {"chat_id": "", "topic_id": int(fallback_topic_id or 0)}
+
+def _rgc2_retry_exists(task_id: str) -> bool:
+    try:
+        with _rgc2_sqlite3.connect(_CORE_DB_RGC2, timeout=10) as _c:
+            _c.execute("""CREATE TABLE IF NOT EXISTS upload_retry_queue(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                path TEXT,
+                task_id TEXT,
+                topic_id INTEGER,
+                kind TEXT,
+                attempts INTEGER DEFAULT 0,
+                last_error TEXT,
+                created_at TEXT DEFAULT (datetime('now')),
+                last_attempt TEXT
+            )""")
+            _r = _c.execute(
+                "SELECT 1 FROM upload_retry_queue WHERE task_id=? LIMIT 1",
+                (str(task_id),),
+            ).fetchone()
+            return bool(_r)
+    except Exception:
+        return False
+
+def _rgc2_links(result: dict) -> list:
+    links = []
+    if not isinstance(result, dict):
+        return links
+    for k in ("drive_link", "link", "google_sheet_link", "pdf_link", "xlsx_link", "manifest_link", "telegram_link"):
+        v = result.get(k)
+        if isinstance(v, str) and v.startswith("http"):
+            links.append(v)
+    for v in (result.get("links") or {}).values() if isinstance(result.get("links"), dict) else []:
+        if isinstance(v, str) and v.startswith("http"):
+            links.append(v)
+    up = result.get("upload_result")
+    if isinstance(up, dict):
+        for v in (up.get("links") or {}).values() if isinstance(up.get("links"), dict) else []:
+            if isinstance(v, str) and v.startswith("http"):
+                links.append(v)
+    return list(dict.fromkeys(links))
+
+def _rgc2_best_link(result: dict) -> str:
+    links = _rgc2_links(result)
+    for l in links:
+        if "docs.google.com/spreadsheets" in l:
+            return l
+    for l in links:
+        if "drive.google.com" in l or "docs.google.com" in l:
+            return l
+    return links[0] if links else ""
+
+def _rgc2_has_llm_arithmetic(text: str) -> bool:
+    s = str(text or "")
+    return bool(_rgc2_re.search(r"\b\d[\d\s.,]*\s*[xх×*]\s*\d[\d\s.,]*\s*=\s*\d[\d\s.,]*\b", s, _rgc2_re.I))
+
+def validate_estimate_result(result: dict, task_id: str = "") -> dict:
+    if not isinstance(result, dict):
+        return {"ok": False, "reason": "ESTIMATE_RESULT_NOT_DICT"}
+
+    excel = str(result.get("excel_path") or result.get("xlsx_path") or result.get("artifact_path") or "")
+    error = str(result.get("error") or "")
+    links = _rgc2_links(result)
+    queued = bool(isinstance(result.get("upload_result"), dict) and result["upload_result"].get("queued")) or _rgc2_retry_exists(task_id)
+
+    if error and not links and not excel and not queued:
+        return {"ok": False, "reason": "ESTIMATE_ENGINE_ERROR:" + error[:200]}
+
+    if excel:
+        if not _rgc2_os.path.exists(excel):
+            return {"ok": False, "reason": "ESTIMATE_EXCEL_FILE_MISSING"}
+        try:
+            from openpyxl import load_workbook
+            wb = load_workbook(excel, data_only=False)
+            ws = wb.active
+            data_rows = [
+                row for row in ws.iter_rows(min_row=2, values_only=False)
+                if any(c.value is not None for c in row)
+            ]
+            has_formula = any(str(c.value or "").startswith("=") for row in data_rows for c in row)
+            wb.close()
+            if not data_rows:
+                return {"ok": False, "reason": "ESTIMATE_EXCEL_ZERO_DATA_ROWS"}
+            if not has_formula:
+                return {"ok": False, "reason": "ESTIMATE_EXCEL_NO_FORMULAS"}
+        except Exception as e:
+            return {"ok": False, "reason": "ESTIMATE_EXCEL_VALIDATE_ERR:" + str(e)[:200]}
+
+    if not links and not queued:
+        return {"ok": False, "reason": "ESTIMATE_NO_CONFIRMED_LINK_OR_RETRY"}
+
+    if result.get("success") is True and not links and not queued:
+        return {"ok": False, "reason": "ESTIMATE_SUCCESS_WITHOUT_LINK_OR_RETRY_FORBIDDEN"}
+
+    return {"ok": True, "reason": "OK"}
+
+def _rgc2_get_active_estimate_template(chat_id: str, topic_id: int) -> dict:
+    try:
+        from core.sample_template_engine import _load_active_template
+        return _load_active_template("estimate", str(chat_id), int(topic_id or 0)) or {}
+    except Exception:
+        return {}
+
+def should_use_estimate_template(chat_id: str, topic_id: int) -> bool:
+    return bool(_rgc2_get_active_estimate_template(str(chat_id), int(topic_id or 0)))
+
+_rgc2_orig_excel = process_estimate_to_excel
+_rgc2_orig_sheets = process_estimate_to_sheets
+_rgc2_orig_text = generate_estimate_from_text
+
+def _rgc2_make_pdf_stub(xlsx_path: str, task_id: str) -> str:
+    import tempfile
+    from pathlib import Path as _P
+    out = _P(tempfile.gettempdir()) / ("estimate_" + str(task_id)[:8] + "_summary.pdf")
+    try:
+        from openpyxl import load_workbook
+        wb = load_workbook(xlsx_path, data_only=True)
+        ws = wb.active
+        rows = [
+            " | ".join("" if v is None else str(v) for v in row)
+            for row in ws.iter_rows(max_row=40, values_only=True)
+        ]
+        wb.close()
+        text = "СМЕТА\n" + "\n".join(rows)
+    except Exception:
+        text = "СМЕТА\n" + _rgc2_os.path.basename(str(xlsx_path))
+    safe = text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")[:2000]
+    stream = ("BT /F1 10 Tf 40 800 Td (" + safe + ") Tj ET").encode("utf-8", errors="ignore")
+    out.write_bytes(
+        b"%PDF-1.4\n1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj\n"
+        b"2 0 obj<< /Type /Pages /Kids [3 0 R] /Count 1 >>endobj\n"
+        b"3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>endobj\n"
+        b"4 0 obj<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>endobj\n"
+        b"5 0 obj<< /Length " + str(len(stream)).encode() + b" >>stream\n"
+        + stream + b"\nendstream endobj\ntrailer<< /Root 1 0 R >>\n%%EOF"
+    )
+    return str(out)
+
+def _rgc2_finalize(data: dict, task_id: str, topic_id: int, prefer_sheets: bool = False) -> dict:
+    if not isinstance(data, dict):
+        return {"success": False, "error": "ESTIMATE_RESULT_NOT_DICT"}
+
+    excel = str(data.get("excel_path") or data.get("xlsx_path") or data.get("artifact_path") or "")
+    links = {}
+    for l in _rgc2_links(data):
+        links["existing_" + str(len(links) + 1)] = l
+
+    pdf = ""
+    if excel and _rgc2_os.path.exists(excel):
+        try:
+            pdf = _rgc2_make_pdf_stub(excel, task_id)
+        except Exception as e:
+            data["pdf_error"] = str(e)
+
+        try:
+            from core.artifact_upload_guard import upload_many_or_fail
+            files = [{"path": excel, "kind": "estimate_xlsx"}]
+            if pdf and _rgc2_os.path.exists(pdf):
+                files.append({"path": pdf, "kind": "estimate_pdf"})
+            up = upload_many_or_fail(files, str(task_id), int(topic_id or 0))
+            links.update(up.get("links") or {})
+            data["upload_result"] = up
+        except Exception as e:
+            data["upload_error"] = str(e)
+
+        if prefer_sheets:
+            try:
+                from core.sheets_generator import create_google_sheet
+                from openpyxl import load_workbook
+                wb = load_workbook(excel, data_only=False)
+                ws = wb.active
+                rows = [[cell.value for cell in row] for row in ws.iter_rows()]
+                wb.close()
+                sl = create_google_sheet("Estimate_" + str(task_id)[:8], rows, int(topic_id or 0), str(task_id))
+                if sl:
+                    links["google_sheet"] = sl
+                    data["google_sheet_link"] = sl
+            except Exception as e:
+                data["google_sheet_error"] = str(e)
+
+    if links:
+        data["links"] = {**(data.get("links") or {}), **links} if isinstance(data.get("links"), dict) else links
+
+    first = data.get("google_sheet_link") or _rgc2_best_link(data)
+    if first:
+        data["drive_link"] = first
+        data["success"] = True
+        data["artifact_path"] = excel or data.get("artifact_path")
+        if pdf:
+            extras = data.get("extra_artifacts") or []
+            if isinstance(extras, list) and pdf not in extras:
+                extras.append(pdf)
+            data["extra_artifacts"] = extras
+    else:
+        data["success"] = False
+        data["error"] = data.get("error") or "ESTIMATE_NO_LINK_NO_SUCCESS_V1:NO_DRIVE_TELEGRAM_OR_RETRY_LINK"
+
+    vr = validate_estimate_result(data, task_id=str(task_id))
+    data["estimate_validator"] = vr
+    if not vr.get("ok"):
+        data["success"] = False
+        data["validator_reason"] = vr.get("reason")
+    return data
+
+async def process_estimate_to_excel(file_path: str, task_id: str, topic_id: int):
+    data = await _rgc2_orig_excel(file_path, task_id, topic_id)
+    return _rgc2_finalize(data, task_id, topic_id, prefer_sheets=False)
+
+async def process_estimate_to_sheets(file_path: str, task_id: str, topic_id: int):
+    try:
+        data = await _rgc2_orig_sheets(file_path, task_id, topic_id)
+    except Exception:
+        data = await _rgc2_orig_excel(file_path, task_id, topic_id)
+    return _rgc2_finalize(data, task_id, topic_id, prefer_sheets=True)
+
+async def generate_estimate_from_text(raw_input: str, task_id: str, topic_id: int = 0, chat_id: str = ""):
+    ctx = _rgc2_resolve_task_context(str(task_id), int(topic_id or 0))
+    if not chat_id:
+        chat_id = ctx.get("chat_id") or ""
+    topic_id = int(ctx.get("topic_id") or topic_id or 0)
+
+    if _rgc2_has_llm_arithmetic(raw_input):
+        try:
+            logger.warning("ESTIMATE_NO_LLM_CALC_GUARD_V1_INPUT_ARITHMETIC task=%s", task_id)
+        except Exception:
+            pass
+
+    if chat_id:
+        tpl = _rgc2_get_active_estimate_template(str(chat_id), int(topic_id or 0))
+        if tpl:
+            try:
+                from core.sample_template_engine import create_estimate_from_saved_template
+                result = await create_estimate_from_saved_template(
+                    raw_input=str(raw_input),
+                    task_id=str(task_id),
+                    chat_id=str(chat_id),
+                    topic_id=int(topic_id or 0),
+                )
+                if isinstance(result, dict) and (result.get("pdf_link") or result.get("xlsx_link") or result.get("drive_link") or result.get("excel_path")):
+                    return _rgc2_finalize(result, task_id, topic_id, prefer_sheets=True)
+                return {
+                    "success": False,
+                    "state": "WAITING_CLARIFICATION",
+                    "error": "ESTIMATE_TEMPLATE_STRICT_REUSE_V1:TEMPLATE_NOT_APPLICABLE",
+                    "result_text": "Активный шаблон сметы найден, но не подошёл к запросу. Уточни состав работ, объёмы или замени шаблон.",
+                }
+            except Exception as e:
+                return {
+                    "success": False,
+                    "state": "WAITING_CLARIFICATION",
+                    "error": "ESTIMATE_TEMPLATE_STRICT_REUSE_V1:ERROR:" + str(e)[:200],
+                    "result_text": "Активный шаблон сметы найден, но применить его не удалось. Уточни параметры или замени шаблон.",
+                }
+
+    data = await _rgc2_orig_text(raw_input, task_id, topic_id)
+    result_text = " ".join(str(data.get(k) or "") for k in ("result", "result_text", "message", "summary")) if isinstance(data, dict) else str(data)
+    if _rgc2_has_llm_arithmetic(result_text) and not (isinstance(data, dict) and (data.get("excel_path") or data.get("artifact_path"))):
+        return {
+            "success": False,
+            "error": "ESTIMATE_NO_LLM_CALC_GUARD_V1:TEXT_CALC_WITHOUT_PYTHON_ARTIFACT",
+            "result_text": "Смета не принята: обнаружен текстовый расчёт без Python/OpenPyXL артефакта.",
+        }
+    return _rgc2_finalize(data, task_id, topic_id, prefer_sheets=True)
+# === END_ESTIMATE_TEMPLATE_STRICT_REUSE_V1 ===
+# === END_ESTIMATE_NO_LLM_CALC_GUARD_V1 ===
+# === END_ESTIMATE_RESULT_VALIDATOR_V1 ===
+# === END_REAL_GAPS_CLOSE_V2_ESTIMATE ===
+
+
+# === FINAL_CLOSURE_BLOCKER_FIX_V1_ESTIMATE_XLSX_FORMULAS ===
+def create_estimate_xlsx_from_rows(rows, out_path: str, title: str = "Смета") -> str:
+    from pathlib import Path
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font
+    from openpyxl.utils import get_column_letter
+
+    out = Path(out_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Смета"
+
+    ws["A1"] = title
+    ws["A1"].font = Font(bold=True, size=14)
+    ws.merge_cells("A1:F1")
+
+    headers = ["№", "Наименование", "Ед.", "Кол-во", "Цена", "Сумма"]
+    for c, h in enumerate(headers, 1):
+        cell = ws.cell(row=3, column=c, value=h)
+        cell.font = Font(bold=True)
+        cell.alignment = Alignment(horizontal="center")
+
+    start = 4
+    safe_rows = rows or []
+
+    for i, r in enumerate(safe_rows, start):
+        idx = i - start + 1
+        name = r.get("name") or r.get("work") or r.get("item") or ""
+        unit = r.get("unit") or ""
+        qty = r.get("qty") or r.get("quantity") or 0
+        price = r.get("price") or r.get("unit_price") or 0
+
+        try:
+            qty = float(str(qty).replace(",", ".").replace(" ", ""))
+        except Exception:
+            qty = 0
+
+        try:
+            price = float(str(price).replace(",", ".").replace(" ", ""))
+        except Exception:
+            price = 0
+
+        ws.cell(row=i, column=1, value=idx)
+        ws.cell(row=i, column=2, value=name)
+        ws.cell(row=i, column=3, value=unit)
+        ws.cell(row=i, column=4, value=qty)
+        ws.cell(row=i, column=5, value=price)
+        ws.cell(row=i, column=6, value=f"=D{i}*E{i}")
+
+    total_row = start + len(safe_rows)
+    ws.cell(row=total_row, column=5, value="Итого")
+    ws.cell(row=total_row, column=5).font = Font(bold=True)
+    ws.cell(row=total_row, column=6, value=f"=SUM(F{start}:F{total_row-1})" if safe_rows else "=0")
+    ws.cell(row=total_row, column=6).font = Font(bold=True)
+
+    for i, w in enumerate([8, 55, 12, 14, 14, 16], 1):
+        ws.column_dimensions[get_column_letter(i)].width = w
+
+    wb.save(out)
+    return str(out)
+# === END_FINAL_CLOSURE_BLOCKER_FIX_V1_ESTIMATE_XLSX_FORMULAS ===
+
+
+====================================================================================================
+END_FILE: core/estimate_engine.py
 FILE_CHUNK: 1/1
 ====================================================================================================

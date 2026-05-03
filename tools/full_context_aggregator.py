@@ -60,6 +60,16 @@ GENERATED_PREFIXES = (
     "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_",
 )
 
+# === FULL_CONTEXT_NOISE_EXCLUDE_V1 ===
+# One-time operational logs are excluded from model context parts
+# Canon, handoffs, NOT_CLOSED, code, configs and useful reports remain included fully
+NOISE_PATH_FRAGMENTS = (
+    "DRIVE_AI_ORCHESTRA_ROOT_CLEANUP",
+    "DRIVE_AI_ORCHESTRA_ROOT_FOLDER_FINAL_CLEAN",
+    "CLAUDE_BOOTSTRAP_PENDING_PUSH",
+)
+# === END_FULL_CONTEXT_NOISE_EXCLUDE_V1 ===
+
 PRIORITY_PREFIXES = [
     "docs/HANDOFFS/LATEST_HANDOFF",
     "docs/REPORTS/NOT_CLOSED",
@@ -170,6 +180,8 @@ def classify_path(rel: str) -> tuple[str, str]:
 
     if is_generated_output(rel):
         return "excluded_generated_output", "generated output avoids self-ingestion"
+    if any(x in rel for x in NOISE_PATH_FRAGMENTS):
+        return "excluded_noise_report", "operational one-time report excluded from model context"
     if any(x in parts for x in SKIP_DIR_PARTS):
         return "excluded_dir", "runtime/cache/git dir"
     if name in SECRET_PATH_PARTS:
@@ -551,7 +563,7 @@ def ensure_secret_patterns() -> None:
             r"\b[0-9]{8,10}:[A-Za-z0-9_\-]{30,}\b",
             r"1//[A-Za-z0-9_\-]{20,}",
             r'"private_key"\s*:\s*"[^"]+',
-            r"(OPENROUTER_API_KEY|TELEGRAM_BOT_TOKEN|GROQ_API_KEY|GITHUB_TOKEN)\s*=\s*[^<\s]+",
+            r"(?:OPENROUTER_API_KEY|TELEGRAM_BOT_TOKEN|GROQ_API_KEY|GITHUB_TOKEN)\s*=\s*[^<\s]+",
             "",
         ]),
         encoding="utf-8",

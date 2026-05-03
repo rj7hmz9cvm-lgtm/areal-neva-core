@@ -1,12 +1,12 @@
 {
-  "generated_at_utc": "2026-05-03T09:38:37.253359+00:00",
-  "git_sha_before_commit": "f78f74d5aeee627b64b7644a495a729ba8d56a98",
+  "generated_at_utc": "2026-05-03T10:06:29.923210+00:00",
+  "git_sha_before_commit": "a57325c6341abf3a627bed7ecf628fd7b89310ad",
   "part_max_bytes": 400000,
   "content_chunk_bytes": 340000,
   "total_records": 297,
-  "included_full_files": 271,
-  "excluded_records": 26,
-  "parts_count": 11,
+  "included_full_files": 268,
+  "excluded_records": 29,
+  "parts_count": 7,
   "raw_main": "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main",
   "outputs": {
     "model_bootstrap": "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md",
@@ -22,11 +22,7 @@
       "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_004.md",
       "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_005.md",
       "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_006.md",
-      "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_007.md",
-      "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_008.md",
-      "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_009.md",
-      "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_010.md",
-      "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_011.md"
+      "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_007.md"
     ]
   },
   "files": [
@@ -302,30 +298,30 @@
     },
     {
       "path": "docs/REPORTS/CLAUDE_BOOTSTRAP_PENDING_PUSH.md",
-      "mode": "full",
-      "reason": "tracked text",
-      "size_bytes": 696,
-      "sha256": "fa8fea80b8bc689b4d21b15a4bc5e76ec03b7cd77bc048378338a1cb8348ddeb",
-      "chars": 696,
-      "chunks": 1
+      "mode": "excluded_noise_report",
+      "reason": "operational one-time report excluded from model context",
+      "size_bytes": 720,
+      "sha256": "",
+      "chars": 0,
+      "chunks": 0
     },
     {
       "path": "docs/REPORTS/DRIVE_AI_ORCHESTRA_ROOT_CLEANUP_V1_REPORT.md",
-      "mode": "full",
-      "reason": "tracked text",
+      "mode": "excluded_noise_report",
+      "reason": "operational one-time report excluded from model context",
       "size_bytes": 944035,
-      "sha256": "3d56855de23129e0ca521ea2ac0b162d5eaee8c443ca4796b9f0b0a32be7d779",
-      "chars": 943503,
-      "chunks": 3
+      "sha256": "",
+      "chars": 0,
+      "chunks": 0
     },
     {
       "path": "docs/REPORTS/DRIVE_AI_ORCHESTRA_ROOT_FOLDER_FINAL_CLEAN_V1_REPORT.md",
-      "mode": "full",
-      "reason": "tracked text",
+      "mode": "excluded_noise_report",
+      "reason": "operational one-time report excluded from model context",
       "size_bytes": 273,
-      "sha256": "35553380e66770a7ec22177fcdb486c4a16c7bb4337fa7dc11db5feb41cec8cf",
-      "chars": 273,
-      "chunks": 1
+      "sha256": "",
+      "chars": 0,
+      "chunks": 0
     },
     {
       "path": "docs/REPORTS/ESTIMATE_SCENARIO_CLASSIFICATION_FIX_V1_REPORT.md",
@@ -2014,9 +2010,9 @@
       "path": "tools/full_context_aggregator.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 26520,
-      "sha256": "362029375c3a7d1a17f5e6998413963a28cb01a293fbcee90485d4b03a2f240d",
-      "chars": 26235,
+      "size_bytes": 27060,
+      "sha256": "c1f6db060f3bf8e9af10e2ce725bcd53a1409e37abe277eb605e543f4f500a0e",
+      "chars": 26775,
       "chunks": 1
     },
     {
@@ -2509,7 +2505,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_MANIFEST.json",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 80154,
+      "size_bytes": 83914,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -2617,7 +2613,7 @@
       "path": "docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 26707,
+      "size_bytes": 28929,
       "sha256": "",
       "chars": 0,
       "chunks": 0
