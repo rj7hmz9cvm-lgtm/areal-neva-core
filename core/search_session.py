@@ -183,7 +183,7 @@ class ResultRanker:
     def instruction(self): return "Ранжирование: CHEAPEST, MOST_RELIABLE, BEST_VALUE, FASTEST, RISK_CHEAP, REJECTED"
 
 class SearchOutputFormatter:
-    TABLE_HEADER = "Поставщик | Площадка | Тип | Город | Цена | Наличие | Доставка | TCO | Риски | Статус"
+    TABLE_HEADER = "Поставщик | Площадка | Тип | Город | Цена | Наличие | Доставка | TCO | Trust Score | Риски | Статус | Ссылка | checked_at"
     def build_prompt(self, session, queries, sources):
         return f"""SEARCH_MONOLITH_V2_FULL
 ЦЕЛЬ: {session.goal}
@@ -383,3 +383,35 @@ try:
 except Exception:
     pass
 # === END_REAL_SEARCH_QUALITY_LOGIC_V1 ===
+
+
+# === PROJECT_SEARCH_FINAL_REGEX_AND_HEADER_FIX_SEARCH_FORMATTER ===
+try:
+    _SS_FINAL_HEADER = "Поставщик | Площадка | Тип | Город | Цена | Наличие | Доставка | TCO | Trust Score | Риски | Статус | Ссылка | checked_at"
+    SearchOutputFormatter.TABLE_HEADER = _SS_FINAL_HEADER
+    _ss_orig_ensure = SearchOutputFormatter.ensure
+
+    def _ss_ensure_final(self, text, risk):
+        text = _ss_orig_ensure(self, text, risk)
+        lines = text.splitlines() if text else []
+        first = lines[0] if lines else ""
+
+        if "Поставщик" in first and ("Trust Score" not in first or "checked_at" not in first):
+            rest = "\n".join(lines[1:]) if len(lines) > 1 else ""
+            text = _SS_FINAL_HEADER + ("\n" + rest if rest else "")
+
+        if _SS_FINAL_HEADER not in text:
+            text = _SS_FINAL_HEADER + "\n" + text
+
+        if "checked_at" not in text.lower():
+            text += f"\n\nchecked_at: {_utc()}"
+
+        if "Trust Score:" not in text:
+            text += f"\n\nTrust Score: {risk.get('trust_score')}"
+
+        return text
+
+    SearchOutputFormatter.ensure = _ss_ensure_final
+except Exception:
+    pass
+# === END_PROJECT_SEARCH_FINAL_REGEX_AND_HEADER_FIX_SEARCH_FORMATTER ===

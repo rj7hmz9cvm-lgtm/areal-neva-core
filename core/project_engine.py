@@ -348,7 +348,7 @@ def extract_template_model_from_text(text: str, file_name: str = "", user_text: 
     for _pt_src in ((file_name or ""), (user_text or ""), (text or "")[:500]):
         _pt_upper = _pt_src.upper()
         for mark in _MARKS_PRI:
-            if _re_pte.search(rf"(^|[^А-ЯA-Z0-9]){_re_pte.escape(mark)}([^А-ЯA-Z0-9]|$)", _pt_upper):
+            if _re_pte.search(rf"(^|[^А-ЯA-Zа-яa-z]){_re_pte.escape(mark)}([^А-ЯA-Zа-яa-z]|$)", _pt_upper):
                 project_type = mark
                 break
         if project_type != "UNKNOWN":
@@ -2807,3 +2807,25 @@ try:
 except Exception:
     pass
 # === END_PROJECT_ENGINE_CLEAN_USER_OUTPUT_V1 ===
+
+
+# === PROJECT_SEARCH_FINAL_REGEX_AND_HEADER_FIX_SECTION_DETECTOR ===
+_PE_MARKS_FINAL = ("кмд", "кд", "кж", "км", "кр", "ар", "ов", "вк", "эом", "сс", "гп", "пз", "тх", "см")
+
+def _project_section_mark_final(src: str):
+    up = str(src or "").upper().replace("Ё", "Е")
+    for mark in _PE_MARKS_FINAL:
+        m = mark.upper()
+        if re.search(rf"(^|[^А-ЯA-Zа-яa-z]){re.escape(m)}([^А-ЯA-Zа-яa-z]|$)", up):
+            return mark
+    return None
+
+def detect_section(file_name: str, text: str = ""):
+    m = _project_section_mark_final(file_name)
+    if m:
+        return m
+    return _project_section_mark_final(text)
+
+def _detect_section(file_name: str, text: str = ""):
+    return detect_section(file_name, text)
+# === END_PROJECT_SEARCH_FINAL_REGEX_AND_HEADER_FIX_SECTION_DETECTOR ===

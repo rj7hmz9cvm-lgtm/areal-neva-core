@@ -560,7 +560,41 @@ def _fm_is_sample_status_query(text: str) -> bool:
 
 
 
+
+# === WEB_SEARCH_FILE_CONTEXT_BYPASS_FINAL ===
+def _fm_is_web_search_intent(text: str) -> bool:
+    low = str(text or "").lower().replace("ё", "е")
+    low = re.sub(r"^\[voice\]\s*", "", low, flags=re.I).strip()
+    if not low:
+        return False
+
+    file_only = (
+        "найди файл", "найди документ", "найди таблицу", "найди смету",
+        "где файл", "где документ", "где таблица",
+        "используй как образец", "использовать как образец",
+        "открой файл", "обработай файл", "обработать файл",
+    )
+    if any(x in low for x in file_only):
+        return False
+
+    web = (
+        "в интернете", "интернет", "сайт", "сайты", "ссылку", "ссылки", "ссылка",
+        "телеграм", "telegram", "канал", "каналы", "бот", "боты",
+        "топ ", "топовые", "лучшие", "ведущие", "рейтинг",
+        "поиск", "поищи", "найди", "найти",
+        "в россии", "в спб", "в москве", "по всей", "по стране",
+        "instagram", "инстаграм", "youtube", "ютуб", "vk ", "вк ",
+        "визуалы", "оформлены", "соцсети", "страницы",
+        "цены", "поставщики", "магазины", "наличие",
+    )
+    return any(x in low for x in web)
+# === END_WEB_SEARCH_FILE_CONTEXT_BYPASS_FINAL ===
+
 def build_file_followup_answer(chat_id: str, topic_id: int, user_text: str, limit: int = 3) -> Optional[str]:
+    # === WEB_SEARCH_FILE_CONTEXT_BYPASS_FINAL_CALL ===
+    if int(topic_id or 0) == 500 or _fm_is_web_search_intent(user_text):
+        return None
+    # === END_WEB_SEARCH_FILE_CONTEXT_BYPASS_FINAL_CALL ===
     if _fm_is_take_sample_command(user_text) or _fm_is_sample_status_query(user_text):
         return None
 

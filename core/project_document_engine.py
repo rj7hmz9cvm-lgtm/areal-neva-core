@@ -35,6 +35,12 @@ NORMS_MAP = {
     "гп": ["СП 42.13330.2016", "ГОСТ 21.508-2020"],
 }
 
+
+# === PROJECT_DOCUMENT_KD_SECTION_MAP_FINAL ===
+SECTION_MAP.setdefault("кд", "КД — Конструктивная документация")
+NORMS_MAP.setdefault("кд", ["ГОСТ 21.101-2020", "ГОСТ 21.501-2018"])
+# === END_PROJECT_DOCUMENT_KD_SECTION_MAP_FINAL ===
+
 def _clean(v: Any, limit: int = 20000) -> str:
     s = "" if v is None else str(v)
     s = s.replace("\r", "\n")
@@ -75,20 +81,27 @@ def _extract_text(path: str, file_name: str = "") -> str:
         return f"TEXT_PARSE_ERROR: {e}"
 
 def _detect_section(file_name: str, user_text: str, text: str) -> str:
-    hay = f"{file_name}\n{user_text}\n{text[:5000]}".lower()
-    up = hay.upper()
-    for key in ("кж", "кмд", "км", "кр", "ар", "ов", "вк", "эом", "гп", "пз"):
-        if key in hay or re.search(rf"(^|[^А-ЯA-Z0-9]){key.upper()}([^А-ЯA-Z0-9]|$)", up):
+    # === PDE_SECTION_DETECT_FINAL ===
+    hay = (file_name or "") + "\n" + (user_text or "") + "\n" + (text or "")[:5000]
+    hay = hay.lower()
+    up = hay.upper().replace("Ё", "Е")
+
+    for key in ("кмд", "кд", "кж", "км", "кр", "ар", "ов", "вк", "эом", "гп", "пз"):
+        if re.search(rf"(^|[^А-Яа-яA-Za-z]){re.escape(key.upper())}([^А-Яа-яA-Za-z]|$)", up):
             return key
+
     if any(x in hay for x in ("фундамент", "плита", "бетон", "арматур", "монолит")):
         return "кж"
+    if any(x in hay for x in ("строп", "кровл", "дерев", "обрешет")):
+        return "кд"
     if any(x in hay for x in ("архитектур", "планиров", "фасад", "разрез")):
         return "ар"
     if any(x in hay for x in ("отоплен", "вентиляц")):
         return "ов"
-    if any(x in hay for x in ("водоснаб", "канализац", "вк")):
+    if any(x in hay for x in ("водоснаб", "канализац")):
         return "вк"
     return "кр"
+    # === END_PDE_SECTION_DETECT_FINAL ===
 
 def _extract_design_items(text: str) -> List[Dict[str, str]]:
     patterns = [
