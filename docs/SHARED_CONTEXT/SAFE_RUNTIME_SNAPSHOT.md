@@ -1,8 +1,8 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-03T06:15:08.392231+00:00
+generated_at_utc: 2026-05-03T06:45:10.909338+00:00
 git_branch: main
-git_head_short: f543e87
-git_head_full: f543e87b9ca5474f1bf9705723a55cd9c27c98a8
+git_head_short: e1b2e4e
+git_head_full: e1b2e4e3a8e650d9c3acd6ab0d134c20d2644dea
 
 ## SERVICES
 - areal-task-worker: active
@@ -11,18 +11,31 @@ git_head_full: f543e87b9ca5474f1bf9705723a55cd9c27c98a8
 - areal-claude-bootstrap-aggregator.timer: active
 
 ## CORE_DB_STATE_COUNTS
-- FAILED|2843
+- FAILED|2845
 - CANCELLED|762
-- DONE|449
+- DONE|452
 - ARCHIVED|381
-- NEW|2
-- IN_PROGRESS|1
-- OPEN_TASKS|3
+- AWAITING_CONFIRMATION|1
+- OPEN_TASKS|1
 
 ## LATEST_TASKS_SAFE
-- 60e8c22a-3a9c-4498-be7e-1dc25476130f|500|text|NEW|[VOICE] Ну что ты, нашел мне кабель, который я у тебя спрашивал или нет?|None|2026-05-03T06:10:20.813036+00:00
-- a45866a1-2810-4578-b9d3-dd6234efa8ff|210|text|NEW|Мне нужно проект плиты монолитной 18-24 под ангар|None|2026-05-03T06:08:38.593989+00:00
-- 4cf9e6e5-047a-446c-b225-e9db15ea2ab6|500|text|IN_PROGRESS|Найди|None|2026-05-03 06:06:25
+- 9c69da3c-c3c8-47ea-b2d2-5d9670fc320c|500|search|DONE|Найди  кабель ВВГнг-LS 3×2.5 в СПб, бухта или метр, минимум 4 разных магазина, д|Файлы в этом топике уже есть. Нашёл релевантное:
+
+1. Файл
+ Ссылки:
+ - https://st|2026-05-03 06:18:47
+- c0eec3cf-7146-4c65-84a6-eff47c904cac|2|text|DONE|Да сделай|Активный контекст найден
+Задача: c0eec3cf-7146-4c65-84a6-eff47c904cac
+Статус: NE|2026-05-03 06:18:09
+- a526edb7-68c5-41cb-971e-7cc868a4f893|2|text|FAILED|Сделай предварительную смету коробки дома 10×12 м, 2 этажа, газобетон, монолитна|Проектный файл не создан
+Причина: DOCX_CREATE_FAILED: 'str' object has no attrib|2026-05-03 06:17:57
+- 60e8c22a-3a9c-4498-be7e-1dc25476130f|500|text|DONE|[VOICE] Ну что ты, нашел мне кабель, который я у тебя спрашивал или нет?|Да. Вот результат по исходной задаче
+
+Этот чат — ВЕБ ПОИСК. Направление: интерне|2026-05-03 06:16:52
+- a45866a1-2810-4578-b9d3-dd6234efa8ff|210|text|AWAITING_CONFIRMATION|Мне нужно проект плиты монолитной 18-24 под ангар|Проектный файл создан
+Раздел: АР
+https://docs.google.com/document/d/1cIajKAZAwcu|2026-05-03 06:16:50
+- 4cf9e6e5-047a-446c-b225-e9db15ea2ab6|500|text|FAILED|Найди|None|2026-05-03 06:16:43
 - 34e1c697-31a9-4754-a7fd-69b3d83dd7fb|500|text|DONE|Для чего этот чат?|Этот чат — ВЕБ ПОИСК. Направление: интернет-поиск товаров и информации.|2026-05-03 06:06:08
 - 9251e774-dd91-47ba-a0c0-0fe8224e6e70|500|search|DONE|Найди цену кабеля ВВГнг-LS 3×2.5 в СПб, бухта или метр, минимум 4 разных магазин|Файлы в этом топике уже есть. Нашёл релевантное:
 
@@ -39,39 +52,31 @@ https://docs.google.com/document/d/18CJ-VD-y_8h|2026-05-03 06:04:31
 - 306ac12b-8a4b-41f0-9d4b-de6842210989|2|text|DONE|[VOICE] Я тебе задал вопрос, ты уточнил, я тебе ответил. Дальше что?|Уточнение к приёму смет принято
 Следующие файлы в этом топике остаются образцами|2026-05-02 21:02:03
 - 540f1575-9d37-404c-b3bf-b73f9d4d2d30|2|text|FAILED|[VOICE] Ну так и что по итогу с моим вопросом?|None|2026-05-02 21:01:49
-- 8c2bbfd5-d270-440a-8780-389ded2b6e68|210|text|DONE|нет я не это спросил|Уточнение к приёму смет принято
-Следующие файлы в этом топике остаются образцами|2026-05-02 20:45:34
-- 230335dc-7d77-4818-b064-be9cb867d966|210|text|DONE|Какие проектные образцы у тебя есть? Покажи по разделам АР, КЖ, КД|Проектный файл создан
-Раздел: АР
-https://docs.google.com/document/d/1W7o5DHznaqo|2026-05-02 20:44:58
-- ccc68e94-2ab2-47e4-8d6e-93269ee3f3a7|0|text|DONE|Принимай эти сметы как образцы и работай по ним|Принял
-Следующие файлы в этом топике приму как образцы сметы
-Если файл уже был в|2026-05-02 20:43:31
 
 ## MEMORY_DB_COUNTS
-- MEMORY_ROWS|5527
+- MEMORY_ROWS|5535
 
 ## LATEST_MEMORY_SAFE
-- topic_500_search_session_-1003725299009|{"chat_id": "-1003725299009", "topic_id": 500, "goal": "Найди", "criteria": {"category": "GENERAL", "target": "Найди"}, |2026-05-03T06:14:58.599116+00:00
-- topic_500_archive_4cf9e6e5|{"task_id": "4cf9e6e5-047a-446c-b225-e9db15ea2ab6", "chat_id": "-1003725299009", "topic_id": 500, "direction": "internet|2026-05-03T06:06:25.256031
-- topic_500_archive_9251e774|{"task_id": "9251e774-dd91-47ba-a0c0-0fe8224e6e70", "chat_id": "-1003725299009", "topic_id": 500, "direction": "file_tec|2026-05-03T06:05:42.480515
-- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 49, "updated_at": "2026-05-03T05:47:14.965675+00:00", "files": [|2026-05-03T05:47:14.966095+00:00
-- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 12, "updated_at": "2026-05-03T05:47:14.925392+00:00", "files": [{"|2026-05-03T05:47:14.925845+00:00
-- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-03T05:47:14.904865+00:00", "files": [{"|2026-05-03T05:47:14.905608+00:00
-- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-03T05:47:14.858050+00:00
-- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "s|2026-05-03T05:47:14.857886+00:00
-- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-03T05:47:14.857432+00:00
-- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-03T05:47:14.857356+00:00
-- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-03T05:47:14.857302+00:00
-- topic_2_file_234e52f8-3ce8-4f2f-99c3-7cc22265a151|{"task_id": "234e52f8-3ce8-4f2f-99c3-7cc22265a151", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-03T05:47:14.857248+00:00
+- topic_500_archive_9c69da3c|{"task_id": "9c69da3c-c3c8-47ea-b2d2-5d9670fc320c", "chat_id": "-1003725299009", "topic_id": 500, "direction": "file_tec|2026-05-03T06:18:47.685761
+- topic_2_dialog_ACTIVE_DIALOG_STATE_V1:SHORT_CONTROL_ACTIVE_TASK|{"handled": true, "state": "DONE", "result": "Активный контекст найден\nЗадача: c0eec3cf-7146-4c65-84a6-eff47c904cac\nСт|2026-05-03T06:18:09.865465+00:00
+- topic_2_archive_a526edb7|{"task_id": "a526edb7-68c5-41cb-971e-7cc868a4f893", "chat_id": "-1003725299009", "topic_id": 2, "direction": "estimates"|2026-05-03T06:17:24.336899
+- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 50, "updated_at": "2026-05-03T06:17:15.034933+00:00", "files": [|2026-05-03T06:17:15.035508+00:00
+- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 12, "updated_at": "2026-05-03T06:17:14.978164+00:00", "files": [{"|2026-05-03T06:17:14.978643+00:00
+- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-03T06:17:14.947926+00:00", "files": [{"|2026-05-03T06:17:14.948438+00:00
+- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-03T06:17:14.892602+00:00
+- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "s|2026-05-03T06:17:14.892424+00:00
+- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-03T06:17:14.892081+00:00
+- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-03T06:17:14.891909+00:00
+- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-03T06:17:14.891757+00:00
+- topic_2_file_234e52f8-3ce8-4f2f-99c3-7cc22265a151|{"task_id": "234e52f8-3ce8-4f2f-99c3-7cc22265a151", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "s|2026-05-03T06:17:14.891613+00:00
 
 ## SEARCH_SESSIONS
-- topic_500_search_session_-1003725299009|{"chat_id": "-1003725299009", "topic_id": 500, "goal": "Найди", "criteria": {"category": "GENERAL", "target": "Найди"}, "clarifications": ["Найди", "Найди", "Найди", "Найди", "Найд|2026-05-03T06:14:58.599116+00:00
+- topic_500_search_session_-1003725299009|{"chat_id": "-1003725299009", "topic_id": 500, "goal": "Найди", "criteria": {"category": "GENERAL", "target": "Найди"}, "clarifications": ["Найди", "Найди", "Найди", "Найди", "Найд|2026-05-03T06:16:42.448346+00:00
 
 ## TIMELINE_INFO
 - path=/root/.areal-neva-core/data/memory_files/CHATS/-1003725299009__telegram/timeline.jsonl
-- bytes=690639
-- mtime_utc=2026-05-03T06:10:20.817199+00:00
+- bytes=693091
+- mtime_utc=2026-05-03T06:18:47.687462+00:00
 
 ## GIT_STATUS_SAFE
 M docs/REPORTS/CLAUDE_BOOTSTRAP_PENDING_PUSH.md
@@ -79,8 +84,8 @@ M docs/REPORTS/CLAUDE_BOOTSTRAP_PENDING_PUSH.md
 
 ## FILES_MANIFEST_SAFE
 - docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md|bytes=168322|sha256=0640b8349254cfb36f1143c1f195715014e2ca1b1b428943847fd1fd80d9d8fe
-- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md|bytes=38706|sha256=4c6bc98047d706adf72369d2b6961b9ded30e9fa5a17a08862c31a56b9fd99ae
-- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md|bytes=2013|sha256=55fe8dbfdca589f6af75476d0e8ae491f5df0e3ab2cfdde77c551e384ccdc557
+- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md|bytes=38524|sha256=04cc14e2b3d7bdf44a7bdc907d6b2c17c48d7915229f185900c59f25c8a3a87e
+- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md|bytes=2013|sha256=9b2034528ca9b3d494a3ffd95f94392ceff3ca217f53d25cfc52272324abae1e
 - docs/CANON_FINAL/00_INDEX.md|bytes=808|sha256=999acb6bfdd6c7215f11d76342ea1b9f8cdf5715418064acb3716f33999c8af6
 - docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md|bytes=41018|sha256=dbd5f683361eafc258ab0822056f6c33f751e5581998dc420f79395d14863177
 - docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md|bytes=6714|sha256=1a439843e1eb214745752720c85b49adc48f1823765982960ce7b1e285947d84
