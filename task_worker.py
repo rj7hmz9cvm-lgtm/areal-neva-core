@@ -1537,12 +1537,14 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
             "сделай", "делай", "создай", "сформируй", "подготовь", "разработай",
             "оформи", "выгрузи", "сохрани", "нарисуй", "собери"
         )
+        # === CREATE_PROJECT_CPP_WORDS_FIX_V1 ===
         _cpp_project_words = (
             "проект", "кж", "кд", "км", "кмд", "ар",
-            "фундамент", "фундаментн", "плита", "плиты", "плиту",
+            "фундамент", "фундаментн",
             "армирован", "арматур", "конструктив", "чертеж", "чертёж",
             "dxf", "dwg", "узел", "узлы", "спецификац"
         )
+        # === END_CREATE_PROJECT_CPP_WORDS_FIX_V1 ===
         _cpp_followup_words = (
             "я тебе скидывал", "уже скидывал", "где файл", "где проект",
             "что дальше", "дальше то что", "ты сделал", "что мы делали",
@@ -1686,11 +1688,10 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
             "какие последние", "покажи прошл", "найди прошл", "помнишь"
         )
 
-        # === CEP_PROJECT_EXCLUSION_V1 ===
+        # === CEP_PROJECT_EXCLUSION_V2 ===
         _cep_project_words = (
             "проект", "кж", "кд", "км", "кмд", "ар",
-            "фундамент", "фундаментн", "плита", "плиты", "плиту",
-            "армирован", "арматур", "dxf", "dwg", "чертеж", "чертёж", "конструктив",
+            "фундамент", "фундаментн", "армирован", "арматур", "dxf", "dwg", "чертеж", "чертёж", "конструктив",
         )
         _cep_is_create_estimate = (
             any(w in _cep_low for w in _cep_create_words)
@@ -1698,7 +1699,7 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
             and not any(w in _cep_low for w in _cep_followup_words)
             and not any(w in _cep_low for w in _cep_project_words)
         )
-        # === END_CEP_PROJECT_EXCLUSION_V1 ===
+        # === END_CEP_PROJECT_EXCLUSION_V2 ===
 
         if _cep_is_create_estimate:
             from core.estimate_engine import generate_estimate_from_text

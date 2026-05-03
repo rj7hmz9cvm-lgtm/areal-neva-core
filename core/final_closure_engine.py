@@ -360,6 +360,10 @@ def _handle_sample_status(conn: sqlite3.Connection, chat_id: str, topic_id: int,
 
 
 def _handle_memory_query(conn: sqlite3.Connection, chat_id: str, topic_id: int, raw_input: str) -> Dict[str, Any]:
+    # === CANON_SEARCH_TOPIC_500_GUARD_V1 ===
+    if int(topic_id or 0) == 500:
+        return {"handled": False}
+    # === END_CANON_SEARCH_TOPIC_500_GUARD_V1 ===
     t = raw_input.lower().replace("ё", "е")
 
     trigger = False
@@ -630,6 +634,10 @@ def _fc_format_index_answer_v1(topic_id: int, raw_input: str) -> str:
     return "\n".join(lines).strip()
 
 def _handle_project_index_query_v1(conn: sqlite3.Connection, chat_id: str, topic_id: int, raw_input: str) -> Dict[str, Any]:
+    # === CANON_SEARCH_TOPIC_500_GUARD_V1 ===
+    if int(topic_id or 0) == 500:
+        return {"handled": False}
+    # === END_CANON_SEARCH_TOPIC_500_GUARD_V1 ===
     if not _fc_is_index_query_v1(raw_input):
         return {"handled": False}
     answer = _fc_format_index_answer_v1(int(topic_id or 0), raw_input)

@@ -117,6 +117,15 @@ async def prehandle_project_route_v1(conn: sqlite3.Connection, task: Any) -> Opt
     input_type = _s(_task_field(task, "input_type"))
     raw_input = _s(_task_field(task, "raw_input"))
 
+    # === CANON_LIST_QUERY_GUARD_V1 ===
+    if topic_id == 500:
+        return None
+    _list_signals = ("какие", "покажи", "перечисли", "что есть", "есть ли", "список", "что за образц", "какие образц", "покажи образц")
+    _create_signals = ("сделай", "создай", "разработай", "подготовь", "оформи")
+    _raw_low_guard = raw_input.lower().replace("ё", "е")
+    if any(s in _raw_low_guard for s in _list_signals) and not any(s in _raw_low_guard for s in _create_signals):
+        return None
+    # === END_CANON_LIST_QUERY_GUARD_V1 ===
     if input_type not in ("text", "voice", "search"):
         return None
     if not is_explicit_project_intent(raw_input):
