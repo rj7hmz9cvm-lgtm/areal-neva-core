@@ -1807,25 +1807,59 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
     except Exception as _cep_e:
         logger.warning("CREATE_ESTIMATE_PRIORITY_NO_ROLLBACK_V1_ERR task=%s err=%s", task_id, _cep_e)
     # === END_CREATE_ESTIMATE_PRIORITY_NO_ROLLBACK_V1 ===
-    # === THREE_CONTOURS_FINAL_SOURCE_LOCK_V1_WORKER_HOOK ===
+        # === STROYKA_TOPIC2_SOURCE_LOCK_PRIORITY_FIX_V1_WORKER_HOOK ===
     try:
         if int(topic_id or 0) == 2:
-            from core.sample_template_engine import handle_template_estimate_intent as _final_three_contours_estimate_handler
-            if await _final_three_contours_estimate_handler(
-                conn,
-                task_id,
-                str(chat_id),
-                int(topic_id or 0),
-                raw_input,
-                input_type,
-                reply_to,
-            ):
-                logger.info("THREE_CONTOURS_FINAL_SOURCE_LOCK_V1 estimate handled task=%s topic=%s", task_id, topic_id)
-                return
-    except Exception as _final_three_contours_err:
-        logger.error("THREE_CONTOURS_FINAL_SOURCE_LOCK_V1_WORKER_ERR task=%s err=%s", task_id, _final_three_contours_err)
+            _stc1_raw = str(raw_input or "")
+            try:
+                _stc1_cols = [r[1] for r in conn.execute("PRAGMA table_info(task_history)").fetchall()]
+                _stc1_col = "action" if "action" in _stc1_cols else ("event" if "event" in _stc1_cols else "")
+                if _stc1_col:
+                    _stc1_rows = conn.execute(
+                        f"SELECT {_stc1_col} FROM task_history WHERE task_id=? AND {_stc1_col} LIKE 'clarified:%' ORDER BY rowid ASC LIMIT 30",
+                        (task_id,),
+                    ).fetchall()
+                    _stc1_clar = []
+                    for _r in _stc1_rows:
+                        _v = str(_r[0] or "")
+                        if ":" in _v:
+                            _stc1_clar.append(_v.split(":", 1)[1].strip())
+                    if _stc1_clar:
+                        _stc1_merged = _stc1_raw + "\n\nУточнения пользователя:\n" + "\n".join(x for x in _stc1_clar if x)
+                        if _stc1_merged != _stc1_raw:
+                            raw_input = _stc1_merged
+                            try:
+                                conn.execute("UPDATE tasks SET raw_input=?, updated_at=datetime('now') WHERE id=?", (raw_input, task_id))
+                                conn.commit()
+                                _history(conn, task_id, "STROYKA_TOPIC2_SOURCE_LOCK_PRIORITY_FIX_V1:clarifications_merged")
+                            except Exception as _e:
+                                logger.warning("STROYKA_TOPIC2_SOURCE_LOCK_PRIORITY_FIX_V1_MERGE_DB_ERR %s", _e)
+            except Exception as _e:
+                logger.warning("STROYKA_TOPIC2_SOURCE_LOCK_PRIORITY_FIX_V1_MERGE_ERR %s", _e)
 
-    # === END_THREE_CONTOURS_FINAL_SOURCE_LOCK_V1_WORKER_HOOK ===
+            _stc1_low = str(raw_input or "").lower().replace("ё", "е")
+            if any(x in _stc1_low for x in ("смет", "стоимост", "посчитай", "расчет", "расчёт", "цена", "руб", "монолит", "фундамент", "плит", "кровл", "строительств")):
+                try:
+                    from core.sample_template_engine import handle_template_estimate_intent as _stc1_handle_template_estimate_intent
+                    _stc1_reply_to = locals().get("reply_to", None) or locals().get("reply_to_message_id", None)
+                    _stc1_handled = await _stc1_handle_template_estimate_intent(
+                        conn,
+                        task_id,
+                        str(chat_id),
+                        int(topic_id or 0),
+                        raw_input,
+                        "text",
+                        _stc1_reply_to,
+                    )
+                    if _stc1_handled:
+                        logger.info("STROYKA_TOPIC2_SOURCE_LOCK_PRIORITY_FIX_V1 handled task=%s topic=%s", task_id, topic_id)
+                        return
+                except Exception as _e:
+                    logger.warning("STROYKA_TOPIC2_SOURCE_LOCK_PRIORITY_FIX_V1_HANDLE_ERR %s", _e)
+    except Exception as _e:
+        logger.warning("STROYKA_TOPIC2_SOURCE_LOCK_PRIORITY_FIX_V1_WORKER_ERR %s", _e)
+    # === END_STROYKA_TOPIC2_SOURCE_LOCK_PRIORITY_FIX_V1_WORKER_HOOK ===
+
     # === FILE_TECH_CONTOUR_FOLLOWUP_V2 ===
     try:
         _ft_low = str(raw_input or "").strip()

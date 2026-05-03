@@ -1878,3 +1878,73 @@ async def handle_template_estimate_intent(
 
 # === END_THREE_CONTOURS_FINAL_SOURCE_LOCK_V1 ===
 
+# === STROYKA_TOPIC2_SOURCE_LOCK_PRIORITY_FIX_V1 ===
+# Final priority override for topic_2:
+# - smeta/foundation/slab/roof/cost requests are estimate intents
+# - input_type search is allowed for estimate template path
+# - template is format only, calculation source is current raw_input
+# - if rows are not parseable, fallback to stroyka canon is allowed
+
+_stc1_orig_detect_estimate_intent = detect_estimate_intent
+_stc1_orig_handle_template_estimate_intent = handle_template_estimate_intent
+
+def detect_estimate_intent(raw_input: Any) -> bool:
+    low = _low(raw_input)
+    if not low:
+        return False
+    strong_estimate = (
+        "смет", "стоимост", "посчитай", "расчет", "расчёт",
+        "цена", "руб", "работ", "материал", "монолит",
+        "фундамент", "плит", "кровл", "строительств"
+    )
+    return any(x in low for x in strong_estimate) or _stc1_orig_detect_estimate_intent(raw_input)
+
+async def handle_template_estimate_intent(
+    conn,
+    task_id: str,
+    chat_id: str,
+    topic_id: int,
+    raw_input,
+    input_type: str,
+    reply_to_message_id=None,
+) -> bool:
+    if conn is None:
+        return False
+
+    if int(topic_id or 0) == 2:
+        if str(input_type or "text") not in ("text", "voice", "search"):
+            return False
+
+        if not detect_estimate_intent(raw_input):
+            return False
+
+        res = await create_estimate_from_saved_template(
+            str(raw_input or ""),
+            task_id,
+            str(chat_id),
+            int(topic_id or 0),
+        )
+
+        if res.get("success"):
+            msg = res.get("message") or res.get("result_text") or "Смета создана по образцу"
+            bot_id = _send_reply(str(chat_id), msg, reply_to_message_id)
+            _update_task(conn, task_id, "AWAITING_CONFIRMATION", msg, "", bot_id)
+            _task_history_insert(conn, task_id, "STROYKA_TOPIC2_SOURCE_LOCK_PRIORITY_FIX_V1:template_estimate_ok")
+            return True
+
+        err = str(res.get("error") or "")
+        _task_history_insert(conn, task_id, f"STROYKA_TOPIC2_SOURCE_LOCK_PRIORITY_FIX_V1:fallback:{err}")
+        return False
+
+    return await _stc1_orig_handle_template_estimate_intent(
+        conn,
+        task_id,
+        chat_id,
+        topic_id,
+        raw_input,
+        input_type,
+        reply_to_message_id,
+    )
+
+# === END_STROYKA_TOPIC2_SOURCE_LOCK_PRIORITY_FIX_V1 ===
+
