@@ -1,10 +1,10 @@
 # ORCHESTRA_FULL_CONTEXT
 
-generated_at_utc: 2026-05-03T10:23:42.286449+00:00
-git_sha_before_commit: 875b3f9e5f53a13b3b4d1eca6d3c1bbde885b61b
+generated_at_utc: 2026-05-03T10:25:53.701263+00:00
+git_sha_before_commit: 9dec339fd50517a8fa344fca3eb1ac0c085650e0
 parts_count: 7
-included_full_files: 267
-excluded_records: 26
+included_full_files: 268
+excluded_records: 25
 
 OPERATING_PROTOCOL:
 MODE: FACT_ONLY / ZERO_ASSUMPTIONS / GITHUB_SSOT / CANON_LOCK

@@ -1,11 +1,11 @@
 {
-  "generated_at_utc": "2026-05-03T10:23:42.284685+00:00",
-  "git_sha_before_commit": "875b3f9e5f53a13b3b4d1eca6d3c1bbde885b61b",
+  "generated_at_utc": "2026-05-03T10:25:53.699868+00:00",
+  "git_sha_before_commit": "9dec339fd50517a8fa344fca3eb1ac0c085650e0",
   "part_max_bytes": 400000,
   "content_chunk_bytes": 340000,
   "total_records": 293,
-  "included_full_files": 267,
-  "excluded_records": 26,
+  "included_full_files": 268,
+  "excluded_records": 25,
   "parts_count": 7,
   "raw_main": "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main",
   "outputs": {
@@ -2017,12 +2017,12 @@
     },
     {
       "path": "tools/context_aggregator.py",
-      "mode": "read_error",
-      "reason": "[Errno 2] No such file or directory: '/root/.areal-neva-core/tools/context_aggregator.py'",
-      "size_bytes": 0,
-      "sha256": "",
-      "chars": 0,
-      "chunks": 0
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 499,
+      "sha256": "069bfcbd7cb905f16621726e8c56d54aea8340b8513d405d9fc6c6df655c2a36",
+      "chars": 499,
+      "chunks": 1
     },
     {
       "path": "tools/claude_bootstrap_aggregator.py",
@@ -2505,7 +2505,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_MANIFEST.json",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 83352,
+      "size_bytes": 82287,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -2568,7 +2568,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_007.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 276208,
+      "size_bytes": 275112,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -2577,7 +2577,7 @@
       "path": "docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 28515,
+      "size_bytes": 28511,
       "sha256": "",
       "chars": 0,
       "chunks": 0

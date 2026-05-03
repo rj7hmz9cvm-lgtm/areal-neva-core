@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-03T10:23:42.063374+00:00
-git_sha_before_commit: 875b3f9e5f53a13b3b4d1eca6d3c1bbde885b61b
+generated_at_utc: 2026-05-03T10:25:53.561421+00:00
+git_sha_before_commit: 9dec339fd50517a8fa344fca3eb1ac0c085650e0
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,8 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: inactive
 
 ## GIT_LOG_30
+9dec339 RESTORE_CONTEXT_AGGREGATOR_V1: restore accidentally deleted wrapper
+ab8ce04 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 875b3f9 FULL_CONTEXT_NOISE_EXCLUDE_V1: noise excluded, secret scan self-match fix
 a57325c FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 f78f74d FULL_CONTEXT_AGGREGATOR_V1: publish unified full context
@@ -38,36 +40,16 @@ f325533 CLAUDE_BOOTSTRAP_CONTEXT_AUTO_V3: canon locked refresh
 d3000b9 CLAUDE_BOOTSTRAP_CONTEXT_AUTO_V3: canon locked refresh
 7128444 CLAUDE_BOOTSTRAP_CONTEXT_AUTO_V3: canon locked refresh
 5197667 P0_LIVE_BUGS_CLOSE_V1: close project index price choice pdf output and search quality
-8b2b936 CLAUDE_BOOTSTRAP_CONTEXT_AUTO_V3: canon locked refresh
-c911c80 CLAUDE_BOOTSTRAP_CONTEXT_AUTO_V3: canon locked refresh
 
 ## GIT_SHOW_STAT_HEAD
-commit 875b3f9e5f53a13b3b4d1eca6d3c1bbde885b61b
+commit 9dec339fd50517a8fa344fca3eb1ac0c085650e0
 Author: Ila <ilakuznecov@mac.local>
-Date:   Sun May 3 13:21:06 2026 +0300
+Date:   Sun May 3 13:24:29 2026 +0300
 
-    FULL_CONTEXT_NOISE_EXCLUDE_V1: noise excluded, secret scan self-match fix
+    RESTORE_CONTEXT_AGGREGATOR_V1: restore accidentally deleted wrapper
 
- docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md    |    10 +-
- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md |     2 +-
- docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |    10 +-
- docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |    10 +-
- docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |    14 +-
- .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |    58 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |  5592 ++++-
- .../ORCHESTRA_FULL_CONTEXT_PART_002.md             | 10615 +++++-----
- .../ORCHESTRA_FULL_CONTEXT_PART_003.md             | 20547 ++++++++++---------
- .../ORCHESTRA_FULL_CONTEXT_PART_004.md             | 16206 ++++++++-------
- .../ORCHESTRA_FULL_CONTEXT_PART_005.md             | 17321 ++++++++--------
- .../ORCHESTRA_FULL_CONTEXT_PART_006.md             | 12684 ++++++++----
- .../ORCHESTRA_FULL_CONTEXT_PART_007.md             | 15193 +++++++-------
- .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |  8359 --------
- .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |  9129 --------
- .../ORCHESTRA_FULL_CONTEXT_PART_010.md             |  9355 ---------
- .../ORCHESTRA_FULL_CONTEXT_PART_011.md             |  6994 -------
- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       |    98 +-
- tools/full_context_aggregator.py                   |    14 +-
- 19 files changed, 54036 insertions(+), 78175 deletions(-)
+ tools/context_aggregator.py | 17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
 
 ## GIT_CHANGED_FILES_10
 .gitignore
