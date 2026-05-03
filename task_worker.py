@@ -4553,7 +4553,7 @@ try:
             logger.warning("STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1_GATE_SIGNATURE_ERR %s", last_type_err)
         return False
 
-    async def _handle_in_progress(conn, task):
+    async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
         try:
             task_id = str(_st2_pm_row_get(task, "id", ""))
             chat_id = str(_st2_pm_row_get(task, "chat_id", ""))
@@ -4792,7 +4792,7 @@ def _top2_ob_build_context(conn, task_id, chat_id, topic_id, raw):
 
     return "\n\n".join(parts).strip(), parent_id
 
-async def _handle_in_progress(conn, task):
+async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
     task_id = _top2_ob_s(_top2_ob_row(task, "id"))
     chat_id = _top2_ob_row(task, "chat_id")
     topic_id = int(_top2_ob_row(task, "topic_id", 0) or 0)
