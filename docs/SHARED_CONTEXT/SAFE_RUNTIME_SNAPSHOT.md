@@ -1,15 +1,16 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-03T09:17:45.566104+00:00
-git_sha_before_commit: 6d24f1ed47e4dea5d37798cee290f261ef205620
+generated_at_utc: 2026-05-03T09:38:37.091234+00:00
+git_sha_before_commit: f78f74d5aeee627b64b7644a495a729ba8d56a98
 git_branch: main
 
 ## SERVICES
 - areal-task-worker: active
 - telegram-ingress: active
 - areal-memory-api: active
-- areal-claude-bootstrap-aggregator.timer: inactive
+- areal-claude-bootstrap-aggregator.timer: active
 
 ## GIT_LOG_30
+f78f74d FULL_CONTEXT_AGGREGATOR_V1: publish unified full context
 6d24f1e CLAUDE_BOOTSTRAP_CONTEXT_AUTO_V3: canon locked refresh
 b93e411 CLAUDE_BOOTSTRAP_CONTEXT_AUTO_V3: canon locked refresh
 4c5af54 CANON_ROUTE_FIX_V2: topic500 isolation, list-query guard, estimate plita unblock
@@ -39,27 +40,64 @@ d3000b9 CLAUDE_BOOTSTRAP_CONTEXT_AUTO_V3: canon locked refresh
 c911c80 CLAUDE_BOOTSTRAP_CONTEXT_AUTO_V3: canon locked refresh
 88c2635 TAIL_CLOSE_THREE_MISSING_V1: close search markers media group and startup recovery
 b7d3a47 AREAL_REFERENCE_FULL_MONOLITH_V1: close owner reference policy index archive and guards
-5045ef9 CLAUDE_BOOTSTRAP_CONTEXT_AUTO_V3: canon locked refresh
 
 ## GIT_SHOW_STAT_HEAD
-commit 6d24f1ed47e4dea5d37798cee290f261ef205620
-Author: root <root@graceful-olive.ptr.network>
-Date:   Sun May 3 11:45:14 2026 +0300
+commit f78f74d5aeee627b64b7644a495a729ba8d56a98
+Author: Ila <ilakuznecov@mac.local>
+Date:   Sun May 3 12:28:39 2026 +0300
 
-    CLAUDE_BOOTSTRAP_CONTEXT_AUTO_V3: canon locked refresh
+    FULL_CONTEXT_AGGREGATOR_V1: publish unified full context
 
- docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md    | 40 +++++++++++-----------
- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md |  2 +-
- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 34 +++++++++---------
- 3 files changed, 38 insertions(+), 38 deletions(-)
+ .gitignore                                         |     4 +
+ docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md    |  7389 +------------
+ docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md |    69 +-
+ docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |    86 +
+ docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |  3995 +-------
+ docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |    49 +
+ .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  2581 +++++
+ .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |  4971 +++++++++
+ .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |  5956 +++++++++++
+ .../ORCHESTRA_FULL_CONTEXT_PART_003.md             | 10267 +++++++++++++++++++
+ .../ORCHESTRA_FULL_CONTEXT_PART_004.md             |  7903 ++++++++++++++
+ .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |  8656 ++++++++++++++++
+ .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |  3651 +++++++
+ .../ORCHESTRA_FULL_CONTEXT_PART_007.md             |  8233 +++++++++++++++
+ .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |  8359 +++++++++++++++
+ .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |  9129 +++++++++++++++++
+ .../ORCHESTRA_FULL_CONTEXT_PART_010.md             |  9355 +++++++++++++++++
+ .../ORCHESTRA_FULL_CONTEXT_PART_011.md             |  6994 +++++++++++++
+ docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       |   753 +-
+ tools/claude_bootstrap_aggregator.py               |   605 +-
+ tools/context_aggregator.py                        |   156 +-
+ tools/full_context_aggregator.py                   |   739 ++
+ 22 files changed, 87365 insertions(+), 12535 deletions(-)
 
 ## GIT_CHANGED_FILES_10
+.gitignore
 core/final_closure_engine.py
 core/project_route_guard.py
 docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md
 docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
+docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md
+docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md
+docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md
+docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_MANIFEST.json
+docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_001.md
+docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_002.md
+docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_003.md
+docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_004.md
+docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_005.md
+docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_006.md
+docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_007.md
+docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_008.md
+docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_009.md
+docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_010.md
+docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_011.md
 docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md
 task_worker.py
+tools/claude_bootstrap_aggregator.py
+tools/context_aggregator.py
+tools/full_context_aggregator.py
 
 ## CORE_DB_STATE_COUNTS
 - FAILED|2846
