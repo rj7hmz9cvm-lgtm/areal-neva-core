@@ -243,6 +243,20 @@ def _is_bad_estimate_result(text: str) -> bool:
         "state: finished",
         "задача закрыта по запросу",
     )
+    # === FULL_STROYKA_DISABLE_OLD_ESTIMATE_RECALL_FINAL_BAD_MARKERS ===
+    stale_links = (
+        "задачи за последние 24 часа",
+        "создание сметы: профлист",
+        "итоговая сумма: 55000",
+        "1capn1ikkxwypbxhny5caokqrsxbgzho",
+        "1glcscpl3d91elveo_m11ezwh_uu5b4vm",
+        "1pu77xrzhmpobus1pfximwdwckrgje1tn",
+        "смета уже есть",
+        "использовать существующую или пересчитать",
+    )
+    if any(x in t for x in stale_links):
+        return True
+    # === END_FULL_STROYKA_DISABLE_OLD_ESTIMATE_RECALL_FINAL_BAD_MARKERS ===
     return any(x in t for x in bad)
 
 
@@ -668,25 +682,14 @@ async def _send_document(chat_id: str, file_path: str, caption: str, reply_to: O
 
 
 def _latest_estimate_result(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> Optional[sqlite3.Row]:
-    try:
-        rows = conn.execute(
-            """
-            SELECT * FROM tasks
-            WHERE chat_id=? AND COALESCE(topic_id,0)=?
-              AND result IS NOT NULL
-              AND state IN ('AWAITING_CONFIRMATION','DONE','ARCHIVED')
-            ORDER BY updated_at DESC
-            LIMIT 25
-            """,
-            (str(chat_id), int(topic_id or 0)),
-        ).fetchall()
-        for row in rows:
-            if _has_real_estimate_artifact(_s(_row_get(row, "result", ""))):
-                return row
-        return None
-    except Exception:
-        return None
+    """
+    FULL_STROYKA_DISABLE_OLD_ESTIMATE_RECALL_FINAL
 
+    Old DONE/ARCHIVED estimate reuse is forbidden for topic_2.
+    Reason: it reused stale VOR/proflist artifacts and spammed old Drive links instead of processing current task.
+    New estimate requests must be processed from current raw_input only.
+    """
+    return None
 
 def _latest_estimate_task(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> Optional[sqlite3.Row]:
     try:

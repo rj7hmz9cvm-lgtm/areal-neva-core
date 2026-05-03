@@ -3676,13 +3676,12 @@ def _pick_next_task(conn: sqlite3.Connection, chat_id: Optional[str]) -> Optiona
         SELECT *
         FROM tasks
         WHERE {' AND '.join(where)}
-        ORDER BY CASE state WHEN 'IN_PROGRESS' THEN 0 WHEN 'WAITING_CLARIFICATION' THEN 1 ELSE 2 END,
+        ORDER BY CASE state WHEN 'IN_PROGRESS' THEN 0 WHEN  THEN 1 ELSE 2 END,
                  created_at ASC
         LIMIT 1
         """
         ,
-        params,
-    ).fetchone()
+        params).fetchone()
     conn.execute("COMMIT")
     return row
 
