@@ -812,3 +812,11 @@ grep -nE "def handle_voice_confirm|def voice_confirm|VOICE_CONFIRM_AWAITING_V1|v
 - проверить topic_2: "В" и "вариант 2" после выбора цены должны создать XLSX/PDF
 - проверить price search: минимум 2 разных домена или пометка об одном источнике
 - проверить topic isolation: topic_2 не должен показывать КЖ/АР файлы topic_210 без прямого запроса
+
+## FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3
+status: INSTALLED_NOT_VERIFIED
+needs_live_test:
+- topic_2: "смету дома 10×12 газобетон монолит 2 этажа 120 км коробка"
+- expected: template selected, correct sheet selected, template prices + online prices with sources + price choice menu
+- reply: "средняя плюс 10% да сделай"
+- expected: same estimate task continues, XLSX/PDF created from template, Drive or Telegram fallback links returned

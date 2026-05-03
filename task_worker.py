@@ -1308,6 +1308,14 @@ def _ff13c_strip_manifest_links(text):
 
 
 async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str, topic_id: int) -> None:
+    # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_HOOK ===
+    try:
+        from core.stroyka_estimate_canon import maybe_handle_stroyka_estimate as _stroyka_estimate_hook
+        if await _stroyka_estimate_hook(conn, task, logger=logger):
+            return
+    except Exception as _stroyka_estimate_hook_err:
+        logger.exception("FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_HOOK_ERR %s", _stroyka_estimate_hook_err)
+    # === END_FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_HOOK ===
     # === REMAINING_TECH_CONTOUR_CLOSE_V1_WIRED ===
     # P0 guard order:
     # 1. reply repeat parent

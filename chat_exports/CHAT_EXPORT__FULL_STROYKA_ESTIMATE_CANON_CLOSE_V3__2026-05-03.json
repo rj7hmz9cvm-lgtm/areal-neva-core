@@ -1,0 +1,23 @@
+{
+  "chat_id": "current_chat",
+  "exported_at": "2026-05-03T11:39:41Z",
+  "source_platform": "chatgpt",
+  "source_model": "GPT-5.5 Thinking",
+  "system": "AREAL-NEVA ORCHESTRA",
+  "architecture": "additive patch, topic_2 estimate hook",
+  "pipeline": "topic_2 text/voice -> stroyka_estimate_canon -> dynamic Drive template -> sheet selection -> template prices + online prices -> user price choice -> confirmation -> Python XLSX/PDF -> Drive/Telegram -> memory/archive",
+  "memory": "topic_2_estimate_pending_* and topic_2_estimate_last",
+  "integrations": "OpenRouter online model, Google Drive OAuth, Telegram fallback",
+  "files": ["core/stroyka_estimate_canon.py", "task_worker.py", "tools/secret_scan.sh", "data/templates/estimate/deprecated"],
+  "services": ["areal-task-worker"],
+  "env": ["OPENROUTER_API_KEY", "OPENROUTER_MODEL_ONLINE", "TELEGRAM_BOT_TOKEN", "GDRIVE OAuth vars"],
+  "db": "core.db tasks, memory.db memory",
+  "logic": "VOR disabled; dynamic templates; M80/M110 sheet selection; prices from template and internet; user price choice; confirmation before XLSX/PDF; revisions continue same task",
+  "decisions": "additive patch only; no regression; no other topics touched",
+  "solutions": "new module plus hook before REMAINING_TECH_CONTOUR_CLOSE_V1_WIRED",
+  "code": "installed by FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3",
+  "errors": [],
+  "state": "INSTALLED_NOT_VERIFIED",
+  "limits": "live Telegram test required",
+  "pending": "live test and verification"
+}

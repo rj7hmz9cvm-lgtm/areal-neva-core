@@ -306,3 +306,19 @@ topic_961=АВТО ЗАПЧАСТИ | topic_3008=КОДЫ МОЗГОВ | topic_4
 | DRIVE_AI_ORCHESTRA_ROOT_CLEANUP_V1 | 4f0b15b | VERIFIED ✅ |
 | DRIVE_AI_ORCHESTRA_ROOT_FOLDER_FINAL_CLEAN_V1 | 226769c | VERIFIED ✅ |
 | AREAL_REFERENCE_FULL_MONOLITH_V1 | current | VERIFIED ✅ |
+
+## FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 — INSTALLED_NOT_VERIFIED
+- additive patch only
+- core/stroyka_estimate_canon.py added/replaced
+- task_worker.py hook only
+- topic_id=2 only
+- VOR_кирпичная_кладка_ИСПРАВЛЕНО.xlsx moved to deprecated estimate template archive, not destroyed
+- dynamic Drive templates folder enabled: parentId 19Z3acDgPub4nV55mad5mb8ju63FsqoG9
+- М-80/М-110 sheet selection enabled: Каркас под ключ vs Газобетон/Газобетон_под ключ
+- prices from selected template sheet are shown next to online prices
+- user price choice supported: median/average, minimum, maximum, specific source, manual price
+- markup/discount/reserve percent supported from confirmation text
+- final XLSX/PDF forbidden before price and logistics confirmation
+- XLSX is created from selected XLSX template with added AREAL_CALC sheet and formulas
+- Python calculates, LLM does not calculate final numbers
+- VERIFIED requires live Telegram test

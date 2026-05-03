@@ -11,7 +11,7 @@ FOUND=0
 while IFS= read -r line; do
   [[ "$line" =~ ^\+ ]] || continue
   while IFS= read -r pattern; do
-    if echo "$line" | grep -qE "$pattern"; then
+    if echo "$line" | grep -qE -- "$pattern"; then
       echo "SECRET FOUND: $pattern"
       FOUND=1
     fi
