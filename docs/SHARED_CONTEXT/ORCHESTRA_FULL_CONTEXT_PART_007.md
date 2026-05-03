@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_007
-generated_at_utc: 2026-05-03T10:06:29.922532+00:00
-git_sha_before_commit: a57325c6341abf3a627bed7ecf628fd7b89310ad
+generated_at_utc: 2026-05-03T10:23:42.283883+00:00
+git_sha_before_commit: 875b3f9e5f53a13b3b4d1eca6d3c1bbde885b61b
 part: 7/7
 
 
@@ -760,7 +760,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: tools/full_context_aggregator.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: c1f6db060f3bf8e9af10e2ce725bcd53a1409e37abe277eb605e543f4f500a0e
+SHA256_FULL_FILE: e6de077acb1cae9c83f0b6f62580e92487de476b1e86ac6b5e2b86638cb535ef
 ====================================================================================================
 #!/usr/bin/env python3
 # === FULL_CONTEXT_AGGREGATOR_V1 ===
@@ -1327,7 +1327,7 @@ def ensure_secret_patterns() -> None:
             r"\b[0-9]{8,10}:[A-Za-z0-9_\-]{30,}\b",
             r"1//[A-Za-z0-9_\-]{20,}",
             r'"private_key"\s*:\s*"[^"]+',
-            r"(OPENROUTER_API_KEY|TELEGRAM_BOT_TOKEN|GROQ_API_KEY|GITHUB_TOKEN)\s*=\s*[^<\s]+",
+            r"(?:OPENROUTER_API_KEY|TELEGRAM_BOT_TOKEN|GROQ_API_KEY|GITHUB_TOKEN)\s*=\s*[^<\s]+",
             "",
         ]),
         encoding="utf-8",
@@ -1516,34 +1516,6 @@ if __name__ == "__main__":
 
 ====================================================================================================
 END_FILE: tools/full_context_aggregator.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: tools/context_aggregator.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 069bfcbd7cb905f16621726e8c56d54aea8340b8513d405d9fc6c6df655c2a36
-====================================================================================================
-#!/usr/bin/env python3
-# === CONTEXT_AGGREGATOR_WRAPPER_V1 ===
-from __future__ import annotations
-import subprocess
-import sys
-from pathlib import Path
-
-BASE = Path("/root/.areal-neva-core")
-
-def main() -> None:
-    print("CONTEXT_AGGREGATOR_WRAPPER_V1 -> full_context_aggregator.py")
-    p = subprocess.run([sys.executable, str(BASE / "tools/full_context_aggregator.py")], cwd=str(BASE))
-    sys.exit(p.returncode)
-
-if __name__ == "__main__":
-    main()
-# === END_CONTEXT_AGGREGATOR_WRAPPER_V1 ===
-
-====================================================================================================
-END_FILE: tools/context_aggregator.py
 FILE_CHUNK: 1/1
 ====================================================================================================
 
