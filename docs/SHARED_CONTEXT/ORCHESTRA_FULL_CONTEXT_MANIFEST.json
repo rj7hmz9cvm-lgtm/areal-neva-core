@@ -1,0 +1,2581 @@
+{
+  "generated_at_utc": "2026-05-03T09:17:45.730737+00:00",
+  "git_sha_before_commit": "6d24f1ed47e4dea5d37798cee290f261ef205620",
+  "part_max_bytes": 400000,
+  "content_chunk_bytes": 340000,
+  "total_records": 283,
+  "included_full_files": 271,
+  "excluded_records": 12,
+  "parts_count": 11,
+  "raw_main": "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main",
+  "outputs": {
+    "model_bootstrap": "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md",
+    "claude_alias": "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md",
+    "one_shared": "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md",
+    "runtime": "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
+    "full_context_index": "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md",
+    "manifest": "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_MANIFEST.json",
+    "parts": [
+      "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_001.md",
+      "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_002.md",
+      "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_003.md",
+      "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_004.md",
+      "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_005.md",
+      "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_006.md",
+      "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_007.md",
+      "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_008.md",
+      "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_009.md",
+      "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_010.md",
+      "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_011.md"
+    ]
+  },
+  "files": [
+    {
+      "path": "docs/HANDOFFS/LATEST_HANDOFF.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 15724,
+      "sha256": "ddca1b3513c29f6dbcd12e42d21e6b52a182b80be13aa083d17ffeca8fb13cf4",
+      "chars": 12706,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/NOT_CLOSED.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 37180,
+      "sha256": "ccba2c9f7bff1eeda072acf7153815ff3d0a7db0d0fb4d3cb47771679dc049d1",
+      "chars": 28425,
+      "chunks": 1
+    },
+    {
+      "path": "docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 41018,
+      "sha256": "dbd5f683361eafc258ab0822056f6c33f751e5581998dc420f79395d14863177",
+      "chars": 30715,
+      "chunks": 1
+    },
+    {
+      "path": "docs/CANON_FINAL/00_INDEX.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 808,
+      "sha256": "999acb6bfdd6c7215f11d76342ea1b9f8cdf5715418064acb3716f33999c8af6",
+      "chars": 636,
+      "chunks": 1
+    },
+    {
+      "path": "docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 6714,
+      "sha256": "1a439843e1eb214745752720c85b49adc48f1823765982960ce7b1e285947d84",
+      "chars": 6694,
+      "chunks": 1
+    },
+    {
+      "path": "docs/CANON_FINAL/ESTIMATE_TEMPLATE_M80_M110_CANON.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 9869,
+      "sha256": "2c94bccb75dca28ff1c647504fda78617aad615810173020528bd8437a1f58b5",
+      "chars": 6520,
+      "chunks": 1
+    },
+    {
+      "path": "docs/CANON_FINAL/OWNER_REFERENCE_FULL_WORKFLOW_CANON.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 810,
+      "sha256": "763debb0a4f9ea13734110d15b6eb84615c2be5668d739eecdd4494efab4b4f8",
+      "chars": 566,
+      "chunks": 1
+    },
+    {
+      "path": "docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 9846,
+      "sha256": "e9b63408cbfdd13c05ed9b174f3380d5067493e3815318661c81b30ba13be440",
+      "chars": 7298,
+      "chunks": 1
+    },
+    {
+      "path": "docs/ARCHITECTURE/SEARCH_MONOLITH_V1.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 16952,
+      "sha256": "26676725c7608d217d6f9162526748875a7647f92320f64a5a0e10b5fd0afa28",
+      "chars": 10506,
+      "chunks": 1
+    },
+    {
+      "path": "docs/ARCHITECTURE/ARCHIVE_ENGINE_V1.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 748,
+      "sha256": "6b4da89ee9ac98aaaa4ec18912a92d528412854a153d1e9aff3c0143921f38e7",
+      "chars": 630,
+      "chunks": 1
+    },
+    {
+      "path": "docs/ARCHITECTURE/CAPABILITY_ROUTER_V1.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 931,
+      "sha256": "4f8bbfba0fb6ef11a0f2652ac2c4e07df431eed62fa58a6a79872e845ac0fa24",
+      "chars": 797,
+      "chunks": 1
+    },
+    {
+      "path": "docs/ARCHITECTURE/CONTEXT_LOADER_V1.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 932,
+      "sha256": "36c86df2ab15d071f9b9911211e700c11492ceef29fbb367dc8524071fe784e0",
+      "chars": 785,
+      "chunks": 1
+    },
+    {
+      "path": "docs/ARCHITECTURE/DIRECTION_REGISTRY_V1.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3718,
+      "sha256": "a925153f4a1bf59f251dbc90d573ef8636355c055b9e8a2d4d31e7077201b66e",
+      "chars": 2974,
+      "chunks": 1
+    },
+    {
+      "path": "docs/ARCHITECTURE/FORMAT_ADAPTER_V1.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 990,
+      "sha256": "ddf6fd17f9bdd3d891d6c6fa97799b171a3fa5b33c35e8c5dc1b21e1eb75c8cf",
+      "chars": 869,
+      "chunks": 1
+    },
+    {
+      "path": "docs/ARCHITECTURE/PERSONAL_DATA_ECOSYSTEM_CANON_V1.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 17871,
+      "sha256": "55eb932cf3130a530715ff6fced02e7d109a26473261300f3790541becc95520",
+      "chars": 10774,
+      "chunks": 1
+    },
+    {
+      "path": "docs/ARCHITECTURE/QUALITY_GATE_V1.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1097,
+      "sha256": "3f818c414e6815b0b0a47ff2ca5b0409b142fff9601aaef455eb6fcc8849c873",
+      "chars": 984,
+      "chunks": 1
+    },
+    {
+      "path": "docs/ARCHITECTURE/SEARCH_ENGINE_V1.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 977,
+      "sha256": "8c22100308e3a1f91970ab1f4e101147a9cb6a860cf5850fcd036fc8d56d4c5b",
+      "chars": 856,
+      "chunks": 1
+    },
+    {
+      "path": "docs/ARCHITECTURE/STAGE_1_DIRECTION_KERNEL_PROPOSAL.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 5017,
+      "sha256": "b7a37b4b1a70cc4e5afb1801734e8cfcbdefeabbd3c5f30ebfe73ebe426de730",
+      "chars": 3944,
+      "chunks": 1
+    },
+    {
+      "path": "docs/ARCHITECTURE/STAGE_1_DIRECTION_REGISTRY_V1_PROPOSAL.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 975,
+      "sha256": "329382532613dda6359b05bf93cfad7939d85fadd34f24cabf5150bcb35ddf10",
+      "chars": 933,
+      "chunks": 1
+    },
+    {
+      "path": "docs/ARCHITECTURE/STAGE_1_PRE_SNAPSHOT_20260430_230217.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1546,
+      "sha256": "e3d37e8a91504154a319ccdf9dd49dd0e6a39fc9f1823eb894f4ff27174f8888",
+      "chars": 1360,
+      "chunks": 1
+    },
+    {
+      "path": "docs/ARCHITECTURE/STAGE_1_WORKITEM_V1_PROPOSAL.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2145,
+      "sha256": "5f8e470f2a8db6ad54e60b2f67029167d49badb0f30101b9a593553a412d5ebd",
+      "chars": 2097,
+      "chunks": 1
+    },
+    {
+      "path": "docs/ARCHITECTURE/WORKITEM_V1.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 4055,
+      "sha256": "6c2148c50b7b0a888ce74b4c3f6843273322b5cd0538ade54b425987c71fbeff",
+      "chars": 3070,
+      "chunks": 1
+    },
+    {
+      "path": "docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 7393,
+      "sha256": "097209d23a01f15125b0711a85458f986e97eed44f8fb603f354df1e3b495171",
+      "chars": 5249,
+      "chunks": 1
+    },
+    {
+      "path": "docs/HANDOFFS/HANDOFF_2026-04-30_all_stages_done.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1882,
+      "sha256": "b943164ef4218d56e4e0035385a7305b5d001a605263a62c7a825e6052da221a",
+      "chars": 1640,
+      "chunks": 1
+    },
+    {
+      "path": "docs/HANDOFFS/HANDOFF_2026-04-30_evening.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1214,
+      "sha256": "104c9e553e22c961a554c6b404f5323bd27d66490a1fcbff0e530b3d9386bb05",
+      "chars": 977,
+      "chunks": 1
+    },
+    {
+      "path": "docs/HANDOFFS/HANDOFF_2026-04-30_stage1_done.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 975,
+      "sha256": "8fa900d5328f256bc3f33a90bd8810aadb3a20ea2deb140eccb6a07a2e70c036",
+      "chars": 843,
+      "chunks": 1
+    },
+    {
+      "path": "docs/HANDOFFS/SESSION_EXPORT_CHATGPT_2026-04-30_FULLFIX_13_15_CURRENT.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 11199,
+      "sha256": "5790b7c6f58ca31d50fc0aad5e1f691d31e6af6774fa7695f6b8b12735b24d91",
+      "chars": 11157,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/AREAL_REFERENCE_FULL_MONOLITH_V1_REPORT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 421,
+      "sha256": "c7bbe40bc6d5bc2d938e81400151a0f2cdacf9d5be8538f0f1c25c7843f0aac0",
+      "chars": 421,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/AREAL_REVIEW_CHECKLIST.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1044,
+      "sha256": "88eeb6bf28decadbddd9083ab82ccd26a16f1bd9560ca9f1d7158f6f8b40805c",
+      "chars": 1044,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/CANON_CLOSURE_PLAN.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 8520,
+      "sha256": "70cf6069d4770d09d3c8e552d4a4458e994cdd00bd3b480642421d096611e80c",
+      "chars": 6513,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/CLAUDE_BOOTSTRAP_PENDING_PUSH.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 696,
+      "sha256": "fa8fea80b8bc689b4d21b15a4bc5e76ec03b7cd77bc048378338a1cb8348ddeb",
+      "chars": 696,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/DRIVE_AI_ORCHESTRA_ROOT_CLEANUP_V1_REPORT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 944035,
+      "sha256": "3d56855de23129e0ca521ea2ac0b162d5eaee8c443ca4796b9f0b0a32be7d779",
+      "chars": 943503,
+      "chunks": 3
+    },
+    {
+      "path": "docs/REPORTS/DRIVE_AI_ORCHESTRA_ROOT_FOLDER_FINAL_CLEAN_V1_REPORT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 273,
+      "sha256": "35553380e66770a7ec22177fcdb486c4a16c7bb4337fa7dc11db5feb41cec8cf",
+      "chars": 273,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/ESTIMATE_SCENARIO_CLASSIFICATION_FIX_V1_REPORT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 729,
+      "sha256": "1afb741a6d274eadcc7dbc343085c539838e95be731d4f55361f535fb106113c",
+      "chars": 652,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4_REPORT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 164958,
+      "sha256": "b76f4c3e00df6223377f6d13a6d018929f168607b220bb98447a4d22764afde1",
+      "chars": 147764,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/FILE_MEMORY_DOMAIN_LINK_TITLE_P0_V5_REPORT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 661,
+      "sha256": "2a4f5022a2dab3a3ed4c7446efab2e4b7d2aa7d2d144fcbb44ebb1a1322b660d",
+      "chars": 650,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/FILE_MEMORY_PUBLIC_OUTPUT_AND_PROJECT_SAMPLE_P0_V4_REPORT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 932,
+      "sha256": "ab42037c5c48b1b71e99dd799b5bb612c1471da814a4bdb48c148fc6d5ff294b",
+      "chars": 902,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/FINAL_CLOSURE_BLOCKER_FIX_V1_REPORT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 854,
+      "sha256": "c9fa48854ea32cc1360148e701baad7af4519400111e33d72b9d45c12364e28f",
+      "chars": 849,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/FINAL_SESSION_CODE_TAIL_VERIFY_REPORT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3339,
+      "sha256": "b817ec56c5e8a6ff96d06d9fab36640d4c73632c09d4b23d3dbd5ec956d8584d",
+      "chars": 3339,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/FULL_CANON_CODE_GAP_AUDIT.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 11891,
+      "sha256": "0302cabfa44efc6e1d6d12afff621fd4dae2c909cd8f9c30163384e04b97ad44",
+      "chars": 11891,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/LIVE_CANON_TEST_REPORT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 411,
+      "sha256": "233c04b737866a657bfff00a36dc408926baa0195cb659ab19cba62d1126dfe4",
+      "chars": 411,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/LIVE_TECH_CONTOUR_VERIFY_REPORT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 29162,
+      "sha256": "7ed475eebaf6b9528172bea9ba4b6b52b58677b8d3d8fe69d547ef0c8b1ce432",
+      "chars": 25154,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/MASTER_CLOSURE_PLAN.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 12503,
+      "sha256": "9c69321fb5fb8d1c04b99175a9074b7db4bc461c187d42f957e5e4dac0e582a2",
+      "chars": 9486,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/P0_LIVE_BUGS_CLOSE_V1_REPORT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 673,
+      "sha256": "3d58cbef945bf24bd8f35c2caecf859ee78a00cb60adf0b86a9b8610361a76cf",
+      "chars": 673,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/PENDING_INTENT_BACKFILL_REPORT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 6510,
+      "sha256": "fb859b06f97a4ce6d3dfe96ed5d7a0e99fea5733a247fd6791a339c3e8d94a67",
+      "chars": 5166,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/PROJECT_SAMPLE_SELECTION_P0_V2_REPORT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 508,
+      "sha256": "bdcedafe5ae26619ce0950b26dfc89de7c8d5dd41006378ef6ab620eba92205d",
+      "chars": 447,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/PROJECT_SAMPLE_STATUS_P0_V1_REPORT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 662,
+      "sha256": "81d58af50d944fdaf6ba07ddd22043f4b3e5ab9e795ee2238a78cfba6c14eaa8",
+      "chars": 638,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/SAMPLE_ACCEPT_DIALOG_CONTEXT_FIX_V1_REPORT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 821,
+      "sha256": "375e8e3cc565cd2ebdd1e8e0bc683181452b79c634dccae9ebe8d542849f18ac",
+      "chars": 677,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/TAIL_CLOSE_THREE_MISSING_V1_REPORT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 367,
+      "sha256": "de0843aef4a0acfd99a12e87501c572960f9ddbbb73537d3fa309ec8760bcb40",
+      "chars": 367,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/TELEGRAM_FILE_MEMORY_BACKFILL_REPORT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1255,
+      "sha256": "c31f61cf63146237d0870951d8357f9bcf25c1ac383c9fa4122a22cb429b79e8",
+      "chars": 1255,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/TELEGRAM_HISTORY_FULL_BACKFILL_REPORT.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 104,
+      "sha256": "517e9df492879feb843277627519f5e63df131c02f114445655c3feb52610e05",
+      "chars": 104,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/areal-claude-bootstrap-aggregator.service.before.20260502_121121.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 339,
+      "sha256": "63fbbe06a0c89bd7aaf5b13858fcdbfaf5e10869a08acdec2240302a2ee3f1a2",
+      "chars": 339,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/areal-claude-bootstrap-aggregator.service.before.20260502_121422.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 339,
+      "sha256": "63fbbe06a0c89bd7aaf5b13858fcdbfaf5e10869a08acdec2240302a2ee3f1a2",
+      "chars": 339,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/.gitkeep",
+      "mode": "excluded_non_text",
+      "reason": "suffix not allowlisted",
+      "size_bytes": 0,
+      "sha256": "",
+      "chars": 0,
+      "chunks": 0
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT_FULL_MAX__NEURON_SOFT_VPN_TECH_CHAT__2026-04-24.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3,
+      "sha256": "f1945cd6c19e56b3c1c78943ef5ec18116907a4ca1efc40a57d48ab1db7adfc5",
+      "chars": 1,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT_SYSTEM_PROMPT__UNIVERSAL__2026-04-26.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3071,
+      "sha256": "45d9c5c358e2d42606153642b42789773024f224070c9dfccb0fe501d5cc855c",
+      "chars": 2212,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__-1003725299009__.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2200,
+      "sha256": "34886362362f7336bc753549c74a6f0a6a3c831b06f853b4d43ee1191d1b04f8",
+      "chars": 1860,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__-1003725299009__2026-04-23.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 6276,
+      "sha256": "b342559abe3a9073214db20c4fdf4eed24bc6fd880933e093614d1210bdf3cb4",
+      "chars": 6232,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__-1003725299009__GPT-5.4__2026-04-23.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2349,
+      "sha256": "f07e8d83600cb8d65fb03bb4c89f2eae6dee232a9bf988ed958948e8ba9a9758",
+      "chars": 2347,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__AI_Orchestra__2026-04-25.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1560,
+      "sha256": "76fa9e7a765801b225f4298ecbc166b3083f0e588f7b8a692289623fedde399a",
+      "chars": 1558,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA-DEV__2026-04-26.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 14023,
+      "sha256": "d652768a63711c5415818cdba781d897ab57871bc53960e8cb8861adcc11912b",
+      "chars": 14023,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__AREAL-NEVA-ORCHESTRA__2026-04-26.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 4769,
+      "sha256": "27babf22a8449ad745f3f70c447d3d93229e5d8e661a6d82506391ae407ab642",
+      "chars": 3606,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__AREAL_NEVA_CORE__2026-04-27.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 5588,
+      "sha256": "f7c028aa51b0f23f40a0be9bf0651b78a01afbfdb4cca171602df05ae02ee903",
+      "chars": 4175,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__AREAL_NEVA_EXPORT_RULE_FINAL_SAFE__2026-04-29.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 4936,
+      "sha256": "46f8d602b38aed55864705bd43eb6628cf6440dd53adc7465e6199718e839a56",
+      "chars": 4936,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR__2026-04-29.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 9327,
+      "sha256": "62561af47ee2627fb5d014f93bed2baf2f7a5fb1bc89ff905260468f59ebb0e6",
+      "chars": 9327,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR__2026-04-29__GPT_DIRECT.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 9354,
+      "sha256": "33ef31ff146aaf4de273ce4167be1563f4b80c5339bddac4cb844e1c9eec6716",
+      "chars": 9354,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_CANON_AND_TECH_CONTOUR__2026-04-27.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3,
+      "sha256": "f1945cd6c19e56b3c1c78943ef5ec18116907a4ca1efc40a57d48ab1db7adfc5",
+      "chars": 1,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_CANON_CLOSE__2026-04-28.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 9135,
+      "sha256": "459ca409e6d4251c8a59b69c556d9a3e9022a41046cf05b10be68c1f250bfab4",
+      "chars": 8941,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_CLAUDE_ANALYSIS__2026-04-26.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 8972,
+      "sha256": "85e37aae2a8bbda2509e5e002c31c1516c3917dac8f9e21044a5063a1390bc11",
+      "chars": 8970,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_CURRENT_CHAT__2026-04-25.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3,
+      "sha256": "f1945cd6c19e56b3c1c78943ef5ec18116907a4ca1efc40a57d48ab1db7adfc5",
+      "chars": 1,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_TECH_CONTOUR_CHAT__2026-04-24.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 10627,
+      "sha256": "b03264115264bda9ab91e50965f0051c8c426118c4224ba5570a5e0b3d124cf1",
+      "chars": 10397,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_TECH_CONTOUR_CHAT__2026-04-27.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 10174,
+      "sha256": "8161954bcafa594961a27820a8b8addedaddb991b7d7569190148d0f451d7006",
+      "chars": 10170,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_TECH_CONTOUR_FINAL__.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 21064,
+      "sha256": "6ba3c6088bc2347a9f4396b27627eaa92b79651872fa38be30e74926ea081320",
+      "chars": 20783,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_TECH_CONTOUR__.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 16136,
+      "sha256": "1d6f9e361b655e521e4074d5fd82487bf3fa69971e7dbadec1602a6bf3a409d2",
+      "chars": 15913,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_TECH_CONTOUR__2026-04-24.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 21045,
+      "sha256": "f46653c518b9cbfd26e1754402cc11262ffdb5681b32e37db82607a4670d43e7",
+      "chars": 20764,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA__2026-04-26.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 7287,
+      "sha256": "df34f345514d57b076255c3f84be053e30d50f5a7cc5588d634e9b3164ef9985",
+      "chars": 7144,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__AREAL_NEVA_TECH_CLOSURE_27_04_2026__2026-04-27.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 9613,
+      "sha256": "3f641f19ea6778de66ac18f097a0d18b5377bf16641110d62b1096d83aadd1fc",
+      "chars": 9477,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__Areal_Neva_Core_Emergency_Fix__2026-04-25.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2291,
+      "sha256": "65367a959a294c9c82e1f3311ba3b06099c1816e131f44d20a11b45ce0630593",
+      "chars": 2289,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__Areal_Neva_Core_Stabilization__2026-04-27.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2389,
+      "sha256": "4c54a12584ccc202a6a9fcd720ce2401be76dae8aa95c8a132ed553262dea326",
+      "chars": 2320,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__Asimov_Laws_and_Bio__2026-04-27.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3341,
+      "sha256": "ac00db5c570b167d5cf63f9a3857e8314201a64678ccfc676f0bb32e53097122",
+      "chars": 2573,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__CHATGPT_GEMINI_AGGREGATOR_V2_FINAL__2026-04-29.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 5820,
+      "sha256": "99416eff2ef57fa634ba501724b6b9d91fed87bf947b9f71067a67701e429e37",
+      "chars": 5615,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__CHATGPT_GITHUB_EXPORT_RULES_CANON__2026-04-29.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 7811,
+      "sha256": "6f12bf00015c78cec8894917330edbb940f77152ff86c3cae05ea34955879fa4",
+      "chars": 7798,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__CLAUDE_SESSION__2026-04-27.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 6196,
+      "sha256": "8126d4fb738afd84a85721c9a27e2f2675dbb6129804c4bef0ae0d0c49f959d5",
+      "chars": 6105,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__CURRENT_CHAT_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 9615,
+      "sha256": "0f11a3a37b07c7cb2b606af386f71643ac3a983703abf7fad46b99f3628e5816",
+      "chars": 9595,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__DOKAT_3__.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2146,
+      "sha256": "35c8ef105c76cc9744e4c9c074474a8f58899185b60d86dd339d4edef6c3c36e",
+      "chars": 2062,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__FULLFIX_01__2026-04-30.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1737,
+      "sha256": "1148900390409f6ef959a588f7e8d2f5f559af6243f522e634de65e28b91b2b1",
+      "chars": 1534,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__NEURON_SOFT_VPN_TECH_CHAT__2026-04-24.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 10028,
+      "sha256": "d88b2b208c41797b5c369eb349ffaee6bd48921e07ddb33721ff6c3bb5e71285",
+      "chars": 9924,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__NEURON_SOFT_VPN_TECH_CHAT__2026-04-24__DOKAT_4.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3,
+      "sha256": "f1945cd6c19e56b3c1c78943ef5ec18116907a4ca1efc40a57d48ab1db7adfc5",
+      "chars": 1,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__NEURON_SOFT_VPN_TECH_CHAT__2026-04-27.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 11735,
+      "sha256": "2e0b019e2e76b76e68b53c28d3a14e6363ed018b8e599c8ae086d6684e995be9",
+      "chars": 11680,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__ORCHESTRA__2026-04-23.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 7516,
+      "sha256": "5962b1557d4458a261c933f0afa9c80505a4a48fac9d94fe8f9077e428ad22ae",
+      "chars": 7514,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__TECH_CONTOUR__GPT-5.5__2026-04-24.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3342,
+      "sha256": "f114a2b86a58f207eaf26ea733c95074c31c7a895c65428885ac1f6ad60309a4",
+      "chars": 3340,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__TOPIC_3008__GPT-5.3__2026-04-23.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3151,
+      "sha256": "6bccf42e649ceffa216aefb6117b672ffefdaa7e794914c7cee93574dd02357d",
+      "chars": 3149,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__UNKNOWN_CHAT__.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3,
+      "sha256": "f1945cd6c19e56b3c1c78943ef5ec18116907a4ca1efc40a57d48ab1db7adfc5",
+      "chars": 1,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__UNKNOWN_CHAT__2026-04-20.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3,
+      "sha256": "f1945cd6c19e56b3c1c78943ef5ec18116907a4ca1efc40a57d48ab1db7adfc5",
+      "chars": 1,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__UNKNOWN__.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 16005,
+      "sha256": "8653bc695ad23d206022f120cdf4c4e204871a04f34aef6fbf4d27012b85e061",
+      "chars": 16003,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__UNKNOWN__2026-04-25.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3,
+      "sha256": "f1945cd6c19e56b3c1c78943ef5ec18116907a4ca1efc40a57d48ab1db7adfc5",
+      "chars": 1,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__areal-neva-core-claude__2026-04-20.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 8353,
+      "sha256": "a2cbedff5ebb8137d3643d4078c8cab2ff11680f775f363bb1a21805d68393af",
+      "chars": 8181,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__areal-neva-core__2026-04-27.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 7529,
+      "sha256": "961130fdd7f731598696e3afe226c875cab484089fe4c93450fb3fbd8d1bc4d5",
+      "chars": 7529,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__areal-neva-orchestra-dev__2026-04-29.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3967,
+      "sha256": "c669b92dcea070f78a044fbb0732dbaf38d549be814bfc94ea7b5d422443528a",
+      "chars": 3681,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__areal_neva__2026-04-23.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 5451,
+      "sha256": "5041f18a62cd71ba76ae3465b70110c58910a3ca3c1323c8f2a0034c82061920",
+      "chars": 4750,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__claude_full_restore_01_05_2026__2026-05-01.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2814,
+      "sha256": "587d2828b6b841dac9139c193a713e98c8a0bccfc5011f1b0422acc52e644dc7",
+      "chars": 2490,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__claude_orchestra__2026-04-30_evening.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3754,
+      "sha256": "c3f50812c15a211e50a2350f5916e917e5bcc4db0d21bcb23e19ed32dd66fffd",
+      "chars": 2953,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__claude_session_01_05_2026_FIXES__2026-05-01.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3533,
+      "sha256": "9b9612745e73cd4dafbc64fccf05823cc22a88edb0f99d9661ebb115b94b5c22",
+      "chars": 2973,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__claude_session_29_04_2026__2026-04-29.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3388,
+      "sha256": "bfb57e11d657b3bae5df3f09d3b4355f29f1706ced1b15bd81c4305a83ac9939",
+      "chars": 3035,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__claude_session_29_04_2026_v2__2026-04-29.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1334,
+      "sha256": "daa4ba0443e9fac1ff0842ef376e7be95ae893128908720a0e8e859a24dd9edd",
+      "chars": 1110,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__claude_session_29_04_2026_v3__2026-04-29.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2207,
+      "sha256": "ee06dacc65448b748034d32d24276fde1fe70edaa84b194d017f93e23601da64",
+      "chars": 1773,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__claude_session_29_04_2026_v4__2026-04-29.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2227,
+      "sha256": "02c66460abc20112a90d6b0e1aa723d5bc4d9748bcdeb06796bfbb8a8ee68983",
+      "chars": 1802,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__claude_session_29_04_2026_v5__2026-04-29.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2262,
+      "sha256": "50322e4673f34525a8f9dd9d9340e25fcb19cd799bd928e9fc7dad51374eb08c",
+      "chars": 2068,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__claude_session_30_04_2026_FINAL__2026-04-30.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3247,
+      "sha256": "7581dd230cfb4e31dcc42afcb45c084ea5069f142628cbbeb98220d26bd815bd",
+      "chars": 2859,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__claude_session_30_04_2026_final__2026-04-30.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3275,
+      "sha256": "9d9a6413946071b18dead80d5e3e3c967092b0ea741a7d87971f4fc4b2787517",
+      "chars": 2896,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__claude_session_30_04_2026_v2__2026-04-30.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2116,
+      "sha256": "be1be754218a969a632469249c5371ce25591ab5f1604e16fb31953e69bcf565",
+      "chars": 1832,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__claude_session_30_04_2026_v3__2026-04-30.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1466,
+      "sha256": "e894f4f9ff692216ad4f3d1ac7cd5acda722a974965a76a60f0a23c1b2df4b07",
+      "chars": 1142,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__github_ssot_technical_orchestra__2026-04-29.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 14491,
+      "sha256": "601e59d54b1f6c1380ddf09a665fecccd8369cf4f3973ff616252ca844a4a83f",
+      "chars": 11626,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/HANDOFF__CLAUDE_TO_NEXT_AI__2026-04-27.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2511,
+      "sha256": "0e296e4868864602a55902aa28577033bf9a7a7531a4f125f94275529408538e",
+      "chars": 2442,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/README.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 301,
+      "sha256": "8b26ad697db3033319a6b8c9325a1b0d3699b4f4ab4bf5737933f7cbf7fc863e",
+      "chars": 187,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/ZAPROS_DLY_AI_AGENTOV_2026-04-27.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1708,
+      "sha256": "36bf345fa1f47863ccecd10e2c19246fb1fca79dcf8ef64b9a93d373397f3e33",
+      "chars": 1652,
+      "chunks": 1
+    },
+    {
+      "path": "config/directions.yaml",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 17124,
+      "sha256": "47e82fed54578b491775c7717e09542b35ecfa317ff3cdb067ea8c99dfeb90f2",
+      "chars": 16265,
+      "chunks": 1
+    },
+    {
+      "path": "config/estimate_template_registry.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 175735,
+      "sha256": "813628e662cc10d221a470368e0329ca38fe8b23ba0aa72f442af26606f54628",
+      "chars": 158541,
+      "chunks": 1
+    },
+    {
+      "path": "config/owner_reference_registry.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 118418,
+      "sha256": "9c30429f4a333023450a0bc614f55d0e1449877063cc7ecb7953e347f93714fc",
+      "chars": 115120,
+      "chunks": 1
+    },
+    {
+      "path": "task_worker.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 200142,
+      "sha256": "26cb58a7f8ea21d73572638e92c0063cf445c0eacf2d3e6d5bdd279d371d0d61",
+      "chars": 191412,
+      "chunks": 1
+    },
+    {
+      "path": "task_worker.py.broken.1776789848",
+      "mode": "excluded_non_text",
+      "reason": "suffix not allowlisted",
+      "size_bytes": 52535,
+      "sha256": "",
+      "chars": 0,
+      "chunks": 0
+    },
+    {
+      "path": "task_worker.py.broken.20260421_105819",
+      "mode": "excluded_non_text",
+      "reason": "suffix not allowlisted",
+      "size_bytes": 34706,
+      "sha256": "",
+      "chars": 0,
+      "chunks": 0
+    },
+    {
+      "path": "telegram_daemon.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 50299,
+      "sha256": "9367c85c169d9f49fb57426d0dbb9b8f1d876582efab59d00c8d42a4a4c73f9c",
+      "chars": 48918,
+      "chunks": 1
+    },
+    {
+      "path": "core/project_route_guard.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 6714,
+      "sha256": "ba7de84f30ec6b9ef978ef3bf38bac5354e1ffb255730c3066e040d783b493b6",
+      "chars": 5956,
+      "chunks": 1
+    },
+    {
+      "path": "core/final_closure_engine.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 25784,
+      "sha256": "805edf5e221a75a4933101941dec6f96cf4f40ec90abae9f4cd478043fb43e07",
+      "chars": 23366,
+      "chunks": 1
+    },
+    {
+      "path": "core/file_context_intake.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 30508,
+      "sha256": "5de5c8de555365e8ea67135829d9ae00b20434d292b1fa9bdc61db52b28bdaea",
+      "chars": 28291,
+      "chunks": 1
+    },
+    {
+      "path": "core/reply_repeat_parent.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 7302,
+      "sha256": "c680bc427be1659b7cfb31b68aebf717725238095587c0ae9f1a4a6f94213360",
+      "chars": 6807,
+      "chunks": 1
+    },
+    {
+      "path": "core/estimate_engine.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 52697,
+      "sha256": "59665aba5e3b328939c5bfb34f490ee24e88ba8b2f34bfb478ae2b4d431e3630",
+      "chars": 51722,
+      "chunks": 1
+    },
+    {
+      "path": "core/project_engine.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 115094,
+      "sha256": "e2ee8fe53b5df893b9150a1db1aef9825b5ac3bc1c293b52555ae580b9ca006d",
+      "chars": 108647,
+      "chunks": 1
+    },
+    {
+      "path": "core/file_intake_router.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 40136,
+      "sha256": "5b7c3a7d32f7ffe71ef7b9a6a22d362c4941f50a57ab6f0fbe7707f87aebf739",
+      "chars": 38003,
+      "chunks": 1
+    },
+    {
+      "path": "core/ai_router.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 23574,
+      "sha256": "4f995fbc96b0559804ae0b6e7c0047ef9e030923d8513259b18463004b89d8eb",
+      "chars": 18843,
+      "chunks": 1
+    },
+    {
+      "path": "core/ai_router.py.broken.1776789848",
+      "mode": "excluded_non_text",
+      "reason": "suffix not allowlisted",
+      "size_bytes": 14250,
+      "sha256": "",
+      "chars": 0,
+      "chunks": 0
+    },
+    {
+      "path": "core/__init__.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "chars": 0,
+      "chunks": 1
+    },
+    {
+      "path": "core/active_dialog_state.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 9454,
+      "sha256": "35e86af58d10e00979f331b0ec69c905597f26583ae97bc756413888989df1a6",
+      "chars": 8767,
+      "chunks": 1
+    },
+    {
+      "path": "core/archive_distributor.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 7805,
+      "sha256": "27d2d0630d027aeeb85fccc7c64c2907e804ba96faf7eae9be72c49f32230cb8",
+      "chars": 7151,
+      "chunks": 1
+    },
+    {
+      "path": "core/archive_engine.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2684,
+      "sha256": "04fdd1d0f6927a38b62f869f0a020b30b8cc81d798083d607f1a86d3c61c6e1e",
+      "chars": 2621,
+      "chunks": 1
+    },
+    {
+      "path": "core/archive_guard.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1719,
+      "sha256": "369b05cb9ddf9aaa9f7b05828f3752848557f9e062d44f74b5f5f290723dc64c",
+      "chars": 1719,
+      "chunks": 1
+    },
+    {
+      "path": "core/artifact_pipeline.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 30709,
+      "sha256": "8a24a5f0b2a24de8e2f209a5f38c436fdf96cd5426b67bca8502d056038d6ab4",
+      "chars": 29408,
+      "chunks": 1
+    },
+    {
+      "path": "core/artifact_upload_guard.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 5073,
+      "sha256": "3cf8290fd123e4a629b65742f93811b6a157d1d05bb63ad6532d3f931bf43b48",
+      "chars": 5073,
+      "chunks": 1
+    },
+    {
+      "path": "core/audit_log.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1078,
+      "sha256": "46ff0af7219a7e5548d4d189ecadce73909cb9ff63c0e3c64ea62933fa1976b3",
+      "chars": 1036,
+      "chunks": 1
+    },
+    {
+      "path": "core/cad_project_engine.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 46029,
+      "sha256": "3f977d0eaa15dbc87b099c9dcbdd3b605aa0b0e848d84f3fbcc3c7a02a5cad84",
+      "chars": 42605,
+      "chunks": 1
+    },
+    {
+      "path": "core/capability_router.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3839,
+      "sha256": "1aee1e85df8d7f5455453865a1ac6b6c8e443edeb29e71de1cda0a58adfcfeec",
+      "chars": 3839,
+      "chunks": 1
+    },
+    {
+      "path": "core/capability_router_dispatch.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1313,
+      "sha256": "5289c229f54cd10f2a8a2c42c36b5ceadbaf5e717d8473c4c354d3a390b9ae49",
+      "chars": 1231,
+      "chunks": 1
+    },
+    {
+      "path": "core/chat_exports_policy.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1423,
+      "sha256": "5dba229a50fdb45fd5e3c6537274316caad7f37759487be75e2c97cad258c4d0",
+      "chars": 1322,
+      "chunks": 1
+    },
+    {
+      "path": "core/constraint_engine.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3101,
+      "sha256": "e8ffe41c2f52aef2692c65e65c8b59713ab45ba46f13cbffee21118e00d60382",
+      "chars": 2919,
+      "chunks": 1
+    },
+    {
+      "path": "core/context_loader.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3090,
+      "sha256": "b2e7c83efbb7cd1e9893212919ed790834ccaef025265a92c0b40faf6898e8e5",
+      "chars": 2968,
+      "chunks": 1
+    },
+    {
+      "path": "core/data_classification.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2865,
+      "sha256": "94b1f8b88f75ccb2d032ff2f77790acb7884c5f9e6ec7e7ad0f9277824d6d4bf",
+      "chars": 2456,
+      "chunks": 1
+    },
+    {
+      "path": "core/defect_act_engine.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 8285,
+      "sha256": "ef8ae207b552886b90aed1104beb8171ccb8159e19e4d1b05796d867afbb1817",
+      "chars": 7814,
+      "chunks": 1
+    },
+    {
+      "path": "core/direction_registry.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 4413,
+      "sha256": "9a97f853b4f786ce481776317e043e44c142dbf4ada231f8e027bc19d3c64e23",
+      "chars": 4397,
+      "chunks": 1
+    },
+    {
+      "path": "core/document_engine.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2586,
+      "sha256": "3ccafce81ca7ed0c744d41e2ca489c2ee4208ecbb1d17b278c03fee1a072f588",
+      "chars": 2586,
+      "chunks": 1
+    },
+    {
+      "path": "core/drive_content_indexer.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 7785,
+      "sha256": "86a8da0033f275d1ba30d0be51cfc639a9dbc68b75b7e2a5ac2dbec3d0f0cd59",
+      "chars": 7785,
+      "chunks": 1
+    },
+    {
+      "path": "core/drive_folder_resolver.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1195,
+      "sha256": "74da8dc00bdbf6caea745c54e55bb20c0fb180092f6feb58a2135924fbfcc21f",
+      "chars": 1195,
+      "chunks": 1
+    },
+    {
+      "path": "core/drive_service_account_uploader.py",
+      "mode": "excluded_secret_path",
+      "reason": "secret path fragment",
+      "size_bytes": 3935,
+      "sha256": "",
+      "chars": 0,
+      "chunks": 0
+    },
+    {
+      "path": "core/duplicate_guard.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1625,
+      "sha256": "674c881d7bc3af021c821051940aebf69d78a44129626e36b5d68be8f7690403",
+      "chars": 1483,
+      "chunks": 1
+    },
+    {
+      "path": "core/dwg_engine.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 21126,
+      "sha256": "52d4a88254ff45a37f7535763c22e5ca09d2bcd1490a60c7e9d770b0833b1859",
+      "chars": 20109,
+      "chunks": 1
+    },
+    {
+      "path": "core/engine_base.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 12298,
+      "sha256": "345250b62008f2101d0cc10e959bbceeff15a9e83a007be5433e260a6ed52267",
+      "chars": 12153,
+      "chunks": 1
+    },
+    {
+      "path": "core/engine_contract.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 6377,
+      "sha256": "85fc94fcfbe47b0e453578cac50d039866b345267967ecd3ea582aa1363517cc",
+      "chars": 6228,
+      "chunks": 1
+    },
+    {
+      "path": "core/error_explainer.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 4021,
+      "sha256": "f755b92831a8a7da82c026a47f695c7b77634c9ffe1d500a374b6d2f5c1d01e4",
+      "chars": 2901,
+      "chunks": 1
+    },
+    {
+      "path": "core/estimate_template_policy.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 4095,
+      "sha256": "f35f6db459149ccd2a55c1dacf9ba678e4cd9322f4c79654921370a4cb70766f",
+      "chars": 3964,
+      "chunks": 1
+    },
+    {
+      "path": "core/estimate_unified_engine.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 13288,
+      "sha256": "81e97fc4ac12fb6e0940a4dd7f3586b1c84d283716d5980c67e9e84c60e51d08",
+      "chars": 12876,
+      "chunks": 1
+    },
+    {
+      "path": "core/file_memory_bridge.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 26992,
+      "sha256": "04d856062a536f7bdd1fd6c744a73f5baf8c47afaef5a419594ebb5a527b1ccc",
+      "chars": 24457,
+      "chunks": 1
+    },
+    {
+      "path": "core/format_adapter.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3461,
+      "sha256": "50720f3f7a5ac2adf560cebad26c55b30ee7960f8c4342b979b87b642278df5b",
+      "chars": 3461,
+      "chunks": 1
+    },
+    {
+      "path": "core/format_registry.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3475,
+      "sha256": "0988b92f892724365eb8295a79890020ede1ed2e23b4b926d4e0b521b60c20f4",
+      "chars": 3319,
+      "chunks": 1
+    },
+    {
+      "path": "core/gemini_vision.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3034,
+      "sha256": "e056a9a4879b2d23d90f692e5d7fd9688ead6f5712dfd988ffb9c69154952556",
+      "chars": 2865,
+      "chunks": 1
+    },
+    {
+      "path": "core/inbox_aggregator.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2548,
+      "sha256": "4f00c0de763ef010a2e21e069b3d2d50544a369d197794b8553f10497852b9bc",
+      "chars": 2227,
+      "chunks": 1
+    },
+    {
+      "path": "core/intake_offer_actions.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2025,
+      "sha256": "55e7ffaf306b754eea93dd1c991a9c8825d2c2699e7afc35a68d30539f87c266",
+      "chars": 1512,
+      "chunks": 1
+    },
+    {
+      "path": "core/intent_lock.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1998,
+      "sha256": "3f5d1f6710cad506021f81c1cc3d01339844ce911f1cf014302eb4617afe3451",
+      "chars": 1761,
+      "chunks": 1
+    },
+    {
+      "path": "core/link_validator.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 911,
+      "sha256": "577ad1be885ee9b99bb995beb70cebf2cd3b05de549fe629c7e29281925b14df",
+      "chars": 864,
+      "chunks": 1
+    },
+    {
+      "path": "core/memory_api_server.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3664,
+      "sha256": "fd6a4c4d644b60e13f2c6e5522bcc90560f7085518611ef1c71493655f3b0c91",
+      "chars": 3635,
+      "chunks": 1
+    },
+    {
+      "path": "core/memory_client.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 6911,
+      "sha256": "41305beffcda29f9bcf3589042acdc90f1fdfa993c8b37145563294d3d8a3e3e",
+      "chars": 6917,
+      "chunks": 1
+    },
+    {
+      "path": "core/memory_filter.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1915,
+      "sha256": "d3b5270ebb8311130f237cc944d3bb41e1cefe3c0631897ad30397e3566ea1c4",
+      "chars": 1676,
+      "chunks": 1
+    },
+    {
+      "path": "core/memory_scope_enforcer.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1271,
+      "sha256": "1ad3202d5e736fadb2eea60a191c7433e4126a7a77e1e967ebe0cb2ca60d9979",
+      "chars": 1269,
+      "chunks": 1
+    },
+    {
+      "path": "core/model_router.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2156,
+      "sha256": "3bd35408543d9c5c7cfb015f07ac4973900d78c3795cf474c3070df5f902eab3",
+      "chars": 1837,
+      "chunks": 1
+    },
+    {
+      "path": "core/multi_file_intake.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2300,
+      "sha256": "92e2ebf23035247666c8332803406752e64dd33c962e920f6c196c6ee134b438",
+      "chars": 2300,
+      "chunks": 1
+    },
+    {
+      "path": "core/multifile_artifact_engine.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 6297,
+      "sha256": "a1ea9e3f49b53d653957ca6cafb7d10334684ad3cec47169100d49e461db4c67",
+      "chars": 6189,
+      "chunks": 1
+    },
+    {
+      "path": "core/normative_db.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2543,
+      "sha256": "69abc4653a63b4e2b4b2c3f1d1ce30cb19f5be909558d8dbb4a402384b9b5f03",
+      "chars": 2373,
+      "chunks": 1
+    },
+    {
+      "path": "core/normative_engine.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 4804,
+      "sha256": "fed2c1c790caeb5495bdc047dddcf722b63f8d339736a84030a84e17d5ce9aa7",
+      "chars": 3399,
+      "chunks": 1
+    },
+    {
+      "path": "core/normative_source_engine.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1789,
+      "sha256": "570992de13fccd6bac9fbd100d64c2a766772eb0158450b267b5a576ff722467",
+      "chars": 1787,
+      "chunks": 1
+    },
+    {
+      "path": "core/ocr_engine.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1710,
+      "sha256": "08aeb8f3e25b091f13412d0352b24189e3cf9dd7af3d0c2640e448e4f7ca30b9",
+      "chars": 1561,
+      "chunks": 1
+    },
+    {
+      "path": "core/ocr_table_engine.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 4958,
+      "sha256": "5cd90f31ee3cb4af0edd0d1fd334a6c4c8e6b7c08a3011d0694d651bd13163fb",
+      "chars": 4777,
+      "chunks": 1
+    },
+    {
+      "path": "core/orchestra_closure_engine.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 32717,
+      "sha256": "eb1b21fbc11d24b0c6c57a1498cb817cc182dd47320265bb5fbb51f65482da34",
+      "chars": 30258,
+      "chunks": 1
+    },
+    {
+      "path": "core/orchestra_context.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2227,
+      "sha256": "d2e491ea92d7efee7b6ca49db7193b624739f3ff95041300dc48ef4db2a80ff2",
+      "chars": 2087,
+      "chunks": 1
+    },
+    {
+      "path": "core/output_decision.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3069,
+      "sha256": "91edab27bd5fa1befb487d6f402a1ff182ee0a3cc6fffdc4a2c3d7df90f4bc6d",
+      "chars": 2706,
+      "chunks": 1
+    },
+    {
+      "path": "core/output_sanitizer.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 5107,
+      "sha256": "826e700334c797ffbd39b80779b85607519c2e631b9e56388ad6c8f5ad378bcb",
+      "chars": 4946,
+      "chunks": 1
+    },
+    {
+      "path": "core/owner_reference_policy.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 7739,
+      "sha256": "64adbdd55173fb91d590ec72ad3c2c1d2bb6d0a7f96f2be44be2132d01f6a463",
+      "chars": 5797,
+      "chunks": 1
+    },
+    {
+      "path": "core/pdf_cyrillic.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2793,
+      "sha256": "fdbc9f2c30ae49a59d9ac57eb0b0d02fa6a779b9b06dc241ebf58fc77a8ce976",
+      "chars": 2793,
+      "chunks": 1
+    },
+    {
+      "path": "core/pdf_spec_extractor.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 7193,
+      "sha256": "09a018898c6bf6640092a5df1297d9ab31e9ff6bd1633ca61593c1aa4815a024",
+      "chars": 7066,
+      "chunks": 1
+    },
+    {
+      "path": "core/pin_manager.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2603,
+      "sha256": "612acafe7a005144bbd67b00fe54ac90c166aa76dafd8badcedc5f9a89812dfa",
+      "chars": 2537,
+      "chunks": 1
+    },
+    {
+      "path": "core/price_enrichment.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 26993,
+      "sha256": "026d3158999adddddfcf44ccba981ea9661609e4d3a586f67db2c769d2955753",
+      "chars": 25035,
+      "chunks": 1
+    },
+    {
+      "path": "core/price_normalization.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1974,
+      "sha256": "fc9e7bcb645b740c554e5c520a9bcb363423efd452b9aacaec42081701e70230",
+      "chars": 1806,
+      "chunks": 1
+    },
+    {
+      "path": "core/project_document_engine.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 11262,
+      "sha256": "c2e2ff931d18cc30c4f2eb1a8253ac42180dd934157317b0efbba9500ae14421",
+      "chars": 10401,
+      "chunks": 1
+    },
+    {
+      "path": "core/quality_gate.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3682,
+      "sha256": "197e2eb768d13fd8e8b17e6a2e6aed9a5a57c949d8f9bf688ea0b327273058ba",
+      "chars": 3682,
+      "chunks": 1
+    },
+    {
+      "path": "core/reply_sender.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2987,
+      "sha256": "5816e007c6b77fd91f1209cc84235929a1a715b4e0e6c2eb96c6161be40a3fbd",
+      "chars": 2994,
+      "chunks": 1
+    },
+    {
+      "path": "core/result_validator.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2158,
+      "sha256": "ca84125f221e6513690b0621e77e88565bc0ccb3d31d35e3cc4a35284b831b3a",
+      "chars": 1866,
+      "chunks": 1
+    },
+    {
+      "path": "core/runtime_file_catalog.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3730,
+      "sha256": "bdaad8671e3f13ae67e37d3af0905ee451e987fb2c20d65ef3e506a88caf952a",
+      "chars": 3620,
+      "chunks": 1
+    },
+    {
+      "path": "core/sample_template_engine.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 48342,
+      "sha256": "071b5e0676767bbfa729e120e04185b9e9ee103b01016e3b36e85b65ef80a898",
+      "chars": 45896,
+      "chunks": 1
+    },
+    {
+      "path": "core/search_engine.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2127,
+      "sha256": "1f35cefd94b014de6ca4eeb0cfd8802ce0f9275e7ea160c7fe43f70a288e94d6",
+      "chars": 2127,
+      "chunks": 1
+    },
+    {
+      "path": "core/search_quality.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2985,
+      "sha256": "c182a04e79562dc61000856b85d8cd1ac774011ebfcd85972418db2b08982cae",
+      "chars": 2649,
+      "chunks": 1
+    },
+    {
+      "path": "core/search_session.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 21999,
+      "sha256": "96c60087361c4aa2ddda4858e28cfebc9d0ce74e21d0d61e50b347583482c0a5",
+      "chars": 20676,
+      "chunks": 1
+    },
+    {
+      "path": "core/sheets_generator.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3187,
+      "sha256": "c81446527b4f3d281a6839303da115164fdc1d9f1ec3f0cbd58ed9f8da4a6112",
+      "chars": 3189,
+      "chunks": 1
+    },
+    {
+      "path": "core/sheets_route.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1791,
+      "sha256": "6f8fdc9ca242696660b7d018166ccec46738a0ccfdf0baf929cf4d85f42d2f00",
+      "chars": 1739,
+      "chunks": 1
+    },
+    {
+      "path": "core/source_dedup.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2007,
+      "sha256": "e5f2c40dc2ffb3c4c4fdfeaa1c27cd4622c0d33c6c10b363118cb90cb265baef",
+      "chars": 1930,
+      "chunks": 1
+    },
+    {
+      "path": "core/stt_engine.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2144,
+      "sha256": "e550c9da651398927e0657a29952285a9da43dc611a4bd82e9a78b5de7e36e1a",
+      "chars": 2144,
+      "chunks": 1
+    },
+    {
+      "path": "core/stt_engine.py.backup_2026-04-11_19-29-47",
+      "mode": "excluded_non_text",
+      "reason": "suffix not allowlisted",
+      "size_bytes": 1696,
+      "sha256": "",
+      "chars": 0,
+      "chunks": 0
+    },
+    {
+      "path": "core/technadzor_engine.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2667,
+      "sha256": "83770ad37151d8c2ca8fe962229a067528e90e58b452ef92b41e490022b4cad7",
+      "chars": 2366,
+      "chunks": 1
+    },
+    {
+      "path": "core/telegram_artifact_fallback.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1745,
+      "sha256": "4a26f39caf63a874a8b6f186ef3b2ce95745637edd8d21d9e8e7230b14ba4b99",
+      "chars": 1727,
+      "chunks": 1
+    },
+    {
+      "path": "core/temp_cleanup.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1078,
+      "sha256": "2b7b91b8f6ba3a13518d234d8c24a426b85854300ae56a458fae4c6bcdb06194",
+      "chars": 1053,
+      "chunks": 1
+    },
+    {
+      "path": "core/template_engine_v1.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 4210,
+      "sha256": "03b9f6dca63b13fc8584f33acc32498fc893c9dfe06a92b5d1c0e467d04eddfc",
+      "chars": 3894,
+      "chunks": 1
+    },
+    {
+      "path": "core/template_intake_engine.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 5998,
+      "sha256": "2f648e1b331a0532cd5ada22935d47ef2b2d81860d0239e0cde9275f3702eddf",
+      "chars": 5803,
+      "chunks": 1
+    },
+    {
+      "path": "core/template_manager.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 6644,
+      "sha256": "3a9747ea77b9eedd43404491616b056af960b0fa4cdb72331f4b0ce6c3fc9cce",
+      "chars": 6640,
+      "chunks": 1
+    },
+    {
+      "path": "core/template_workflow.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 14886,
+      "sha256": "e45401c7e1af73eed9f615dcc6455b2a91d36b5898b1729a81e61c960702b9eb",
+      "chars": 14377,
+      "chunks": 1
+    },
+    {
+      "path": "core/topic_3008_engine.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 7266,
+      "sha256": "f6f9c29ce8def6ac922df7e40ad352a08586d5070eaa1d984e2ed9dc0dab51c0",
+      "chars": 6756,
+      "chunks": 1
+    },
+    {
+      "path": "core/topic_autodiscovery.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 8070,
+      "sha256": "d0d1b4283ee522045919246760eaac8dd0db474767f03ff0cd346aac7ae73994",
+      "chars": 7650,
+      "chunks": 1
+    },
+    {
+      "path": "core/topic_drive_oauth.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3542,
+      "sha256": "3c6cc8e97808691ba2bea11a14de2cf5a0de4bb0b2821afd7bb80f82228848b0",
+      "chars": 3562,
+      "chunks": 1
+    },
+    {
+      "path": "core/topic_meta_loader.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3166,
+      "sha256": "081afc9cc3266e754882d8c6fce4db2ebb8d191a72aebc19c120afdb1fbb8dec",
+      "chars": 2432,
+      "chunks": 1
+    },
+    {
+      "path": "core/universal_file_engine.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 6472,
+      "sha256": "a19ee184aae5b7ddad4f2e625de87685894cd3141252bbb507d5b11c363c9fdd",
+      "chars": 6333,
+      "chunks": 1
+    },
+    {
+      "path": "core/universal_file_handler.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 13032,
+      "sha256": "10f50019c01f6a903296f3616568273fe69b0910481c12cc1105b19fec8ee2a7",
+      "chars": 12587,
+      "chunks": 1
+    },
+    {
+      "path": "core/upload_retry_queue.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 8159,
+      "sha256": "c84118ed90d2faa43ddc5a8f1c63e8767639e25641c2b6ebc4c1ca38570171c2",
+      "chars": 8061,
+      "chunks": 1
+    },
+    {
+      "path": "core/web_engine.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 260,
+      "sha256": "60ae8879713e63665e3b98acb78976ad8f6522694bb018b072daed8bd67c8912",
+      "chars": 260,
+      "chunks": 1
+    },
+    {
+      "path": "core/work_item.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 6071,
+      "sha256": "ec6ecd21b8594924d8b0bdd0bde9e53d00e69485f45b88db8f7aedb11624f2f3",
+      "chars": 6071,
+      "chunks": 1
+    },
+    {
+      "path": "tools/full_context_aggregator.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 26520,
+      "sha256": "362029375c3a7d1a17f5e6998413963a28cb01a293fbcee90485d4b03a2f240d",
+      "chars": 26235,
+      "chunks": 1
+    },
+    {
+      "path": "tools/context_aggregator.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 499,
+      "sha256": "069bfcbd7cb905f16621726e8c56d54aea8340b8513d405d9fc6c6df655c2a36",
+      "chars": 499,
+      "chunks": 1
+    },
+    {
+      "path": "tools/claude_bootstrap_aggregator.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 564,
+      "sha256": "c2f2cd0625c8961b4638a63547ed4c7b3c505ec64a1017f11ccc1a837a42cbda",
+      "chars": 564,
+      "chunks": 1
+    },
+    {
+      "path": "tools/areal_reference_full_monolith_v1.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 16051,
+      "sha256": "c571186116ab07d575b430586287bd9a0ab372cfb60fc106d6445d8c6ef35297",
+      "chars": 15404,
+      "chunks": 1
+    },
+    {
+      "path": "tools/drive_ai_orchestra_root_cleanup_v1.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 15410,
+      "sha256": "a15c2c05d0617a95bf3892e3dd7d85c3daefc4a2594b5a96fc7bea3f65032f87",
+      "chars": 15366,
+      "chunks": 1
+    },
+    {
+      "path": "tools/dwg_converter_healthcheck.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1151,
+      "sha256": "c69921875c85f57c4825a5c904e331b4e292e547b5262d206ca88f987ca8f854",
+      "chars": 1151,
+      "chunks": 1
+    },
+    {
+      "path": "tools/estimate_top_templates_logistics_canon_v4.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 26593,
+      "sha256": "7b41927a49d37b6f8be75db07e21c5f3eea770fa4ea71e5482465318e70af7c8",
+      "chars": 22711,
+      "chunks": 1
+    },
+    {
+      "path": "tools/final_session_code_tail_verify.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 11989,
+      "sha256": "7cd72b9a9b65a65ec55a53196a1a6b8fbdc7c8f57485fe391c1b42374adc7aa4",
+      "chars": 11778,
+      "chunks": 1
+    },
+    {
+      "path": "tools/live_canon_test_runner.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2598,
+      "sha256": "4086fa3c6738a509a59a1901c1c5628394a66b03c0001f3298eadefac488b033",
+      "chars": 2565,
+      "chunks": 1
+    },
+    {
+      "path": "tools/live_tech_contour_verify.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 12716,
+      "sha256": "2403577feb80f4ce69d57be3363e08c6df898876d487211bb91929367d68a7f1",
+      "chars": 12447,
+      "chunks": 1
+    },
+    {
+      "path": "tools/pending_intent_backfill.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 4747,
+      "sha256": "35f4cc391a3f2c169f50adb7d9fd0d10605bc602d8eade0263858eb354ead369",
+      "chars": 4747,
+      "chunks": 1
+    },
+    {
+      "path": "tools/secret_scan.sh",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 653,
+      "sha256": "856289e8e62f28a33a5f18e89281d9e2ea7d4e2a719ea885fd98ad2fdf8bd822",
+      "chars": 584,
+      "chunks": 1
+    },
+    {
+      "path": "tools/telegram_drive_memory_sync.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 5839,
+      "sha256": "709499280bfa62924330e117bdbca8807d1247ea2cd7ee5d2dfdd15e74e5689c",
+      "chars": 5839,
+      "chunks": 1
+    },
+    {
+      "path": "tools/telegram_file_memory_backfill.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 11671,
+      "sha256": "e0490e5da460851785a7eb8c54aafc42289af24399375c39e3218c3f09aa55fe",
+      "chars": 11671,
+      "chunks": 1
+    },
+    {
+      "path": "tools/telegram_history_full_backfill.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3158,
+      "sha256": "d03b26f2a1f6c79a6e4120c028c1e29082e0bcd5cad0681d3c273d783ee4496f",
+      "chars": 3158,
+      "chunks": 1
+    },
+    {
+      "path": "tools/upload_retry_unified_worker.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2948,
+      "sha256": "45992958e34bc05b156972d97caab2e3aa948f9c9e7a728ab008c5363cdb4df4",
+      "chars": 2948,
+      "chunks": 1
+    },
+    {
+      "path": ".gitignore",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 633,
+      "sha256": "27f77ed6e29ab513436857a58d17609602acec48a503a0629e587302adb7b4e3",
+      "chars": 633,
+      "chunks": 1
+    },
+    {
+      "path": "ORCHESTRA_BASE_CORE_OPENROUTER_WORKING_2026-04-11.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 4435,
+      "sha256": "410a003b00b8a0d4cb71e8249ce2fba39ddf21ae76a26bc32d5ea370b0ab2517",
+      "chars": 4211,
+      "chunks": 1
+    },
+    {
+      "path": "ORCHESTRA_BASE_CORE_OPENROUTER_WORKING_2026-04-11.memory.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 7443,
+      "sha256": "1b7e37c5f348dc06d787b53bca85926fe19a115a15de5cedbfab783df29fe41d",
+      "chars": 7278,
+      "chunks": 1
+    },
+    {
+      "path": "README.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 592,
+      "sha256": "b294b43738d41e1cc39c2e221ea9722e9605bae039a6f966e950e33b139ba3d7",
+      "chars": 405,
+      "chunks": 1
+    },
+    {
+      "path": "auto_memory_dump.sh",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 175,
+      "sha256": "51c8b3cb64183d2a3f41cf82b53daa4e234bac3e9aa4540958cecc5a1db39cb6",
+      "chars": 175,
+      "chunks": 1
+    },
+    {
+      "path": "data/norms/normative_index.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1164,
+      "sha256": "8d7a9162925e029c6590e632f7514e7d3bfda171a96ffc9b2c7d2de06f277448",
+      "chars": 817,
+      "chunks": 1
+    },
+    {
+      "path": "data/project_templates/PROJECT_TEMPLATE_MODEL__АР_manual.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2089,
+      "sha256": "805aeb52360d047d9cb6b06fef54cab4177aa5bf6e9797a462f58be3735a398e",
+      "chars": 1961,
+      "chunks": 1
+    },
+    {
+      "path": "data/project_templates/PROJECT_TEMPLATE_MODEL__АР_repaired.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1632,
+      "sha256": "756930a51f0ac08eb66c6253ff4fe99247a1fa2153b56e9dcbff2a515328fca3",
+      "chars": 1190,
+      "chunks": 1
+    },
+    {
+      "path": "data/project_templates/PROJECT_TEMPLATE_MODEL__АР_smoke.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2060,
+      "sha256": "bedd84f1787a2381a8bd97ca6b9af30e39f4e4f69f2a8849e018e72a4e4dcf72",
+      "chars": 1812,
+      "chunks": 1
+    },
+    {
+      "path": "data/project_templates/PROJECT_TEMPLATE_MODEL__КД_manual.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 8945,
+      "sha256": "72496cf6a372720635bd37bce2ac77ab69a6260db9100ce75fb3871e84f810c3",
+      "chars": 6285,
+      "chunks": 1
+    },
+    {
+      "path": "data/project_templates/PROJECT_TEMPLATE_MODEL__КД_repaired.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1734,
+      "sha256": "d6924cc53adc5cb0d1edc58d3fd6165cbdf7c084b6e32f22e63f7524790a81d3",
+      "chars": 1214,
+      "chunks": 1
+    },
+    {
+      "path": "data/project_templates/PROJECT_TEMPLATE_MODEL__КЖ_repaired.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1395,
+      "sha256": "82db86c234139cb30b4ad8578ff08eb29f94521ed89ec761a3d26f0d0d5a65fa",
+      "chars": 1010,
+      "chunks": 1
+    },
+    {
+      "path": "data/templates/.gitkeep",
+      "mode": "excluded_non_text",
+      "reason": "suffix not allowlisted",
+      "size_bytes": 0,
+      "sha256": "",
+      "chars": 0,
+      "chunks": 0
+    },
+    {
+      "path": "data/templates/364b2395-0744-4a88-80a8-6e87c282aa3d.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 359,
+      "sha256": "adcc187000a810f61ee9a17325a2d2ac5449bb8ef840f253121634f8897ffd27",
+      "chars": 346,
+      "chunks": 1
+    },
+    {
+      "path": "data/templates/bab630ba-7e3f-4c43-88ff-3e917e5c6279.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 440,
+      "sha256": "079024dae167be51495505f479c057e9e7e1848d9ae077c4287d618c8418f642",
+      "chars": 413,
+      "chunks": 1
+    },
+    {
+      "path": "data/templates/d5d1fbca-e848-4e36-b297-d12312cc5217.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 309,
+      "sha256": "d5c22742c734298e06a8fd5cdff777b21a1df1df2e192bba477b2b16da158f06",
+      "chars": 309,
+      "chunks": 1
+    },
+    {
+      "path": "data/templates/ee10abce-9662-4797-825e-096188f40a4e.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 359,
+      "sha256": "486eb146b39b89d7619166c2e3b99a531ab687709a2b111bcd64d5ed90105c47",
+      "chars": 346,
+      "chunks": 1
+    },
+    {
+      "path": "data/templates/estimate/ACTIVE__chat_-1003725299009__topic_2.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 870,
+      "sha256": "2751853a7fec499884e42f27a565e5d1374b91b8c0c7aaec43cecba88b3128f3",
+      "chars": 770,
+      "chunks": 1
+    },
+    {
+      "path": "data/templates/estimate/ACTIVE__chat_-1003725299009__topic_3008.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1434,
+      "sha256": "225b637da9991f976ece0bfe4c6d0a4eca022ecb9bb09fa84104e63fb6bdca92",
+      "chars": 1140,
+      "chunks": 1
+    },
+    {
+      "path": "data/templates/estimate/TEMPLATE__chat_-1003725299009__topic_2__20260430_100323.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 870,
+      "sha256": "2751853a7fec499884e42f27a565e5d1374b91b8c0c7aaec43cecba88b3128f3",
+      "chars": 770,
+      "chunks": 1
+    },
+    {
+      "path": "data/templates/estimate/TEMPLATE__chat_-1003725299009__topic_3008__20260501_083807.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1434,
+      "sha256": "225b637da9991f976ece0bfe4c6d0a4eca022ecb9bb09fa84104e63fb6bdca92",
+      "chars": 1140,
+      "chunks": 1
+    },
+    {
+      "path": "data/templates/index.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1747,
+      "sha256": "4fefe3e44a76c132b89c1186ecc62d498869ba8185064756cfe43da0f0726914",
+      "chars": 1694,
+      "chunks": 1
+    },
+    {
+      "path": "data/topics/0/meta.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 237,
+      "sha256": "99110904300dc66aa8fe5e9cc9aa1de41ba518ca5ce020af0cb0e2c4fb0739f8",
+      "chars": 219,
+      "chunks": 1
+    },
+    {
+      "path": "data/topics/11/meta.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 254,
+      "sha256": "04c69440018c5cb2105f1624418040b5c4dac9a5da55f0ac5b07727ed5a103e0",
+      "chars": 231,
+      "chunks": 1
+    },
+    {
+      "path": "data/topics/2/meta.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 236,
+      "sha256": "51744f466380c4b2398e4e6b98c21d35fa9435a905eb9c53b308aa6a8d8836ca",
+      "chars": 218,
+      "chunks": 1
+    },
+    {
+      "path": "data/topics/210/meta.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 260,
+      "sha256": "ce50915df1bdab1a3baf419fea40ed5b9dfc1f6d009a4daecf0b4e7fcb36110a",
+      "chars": 235,
+      "chunks": 1
+    },
+    {
+      "path": "data/topics/3008/meta.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 255,
+      "sha256": "997992e041d0f6ac8ad7dd83631d2eef51a26013445370bc050ff361e3f29c0e",
+      "chars": 234,
+      "chunks": 1
+    },
+    {
+      "path": "data/topics/4569/meta.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 248,
+      "sha256": "a436174d9ec1dfc8e15f469fc81c061d7b8bbef1538638faefd32fec954e9343",
+      "chars": 226,
+      "chunks": 1
+    },
+    {
+      "path": "data/topics/5/meta.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 252,
+      "sha256": "7ee48f4af7bf89f492bef00163145e6ee01981b768f38dd4c30e35b8e3311bf6",
+      "chars": 232,
+      "chunks": 1
+    },
+    {
+      "path": "data/topics/500/meta.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 247,
+      "sha256": "fe567370b38840c0c5b5625ad07f3c7bc8473beeaccca3d54386fed17599275c",
+      "chars": 228,
+      "chunks": 1
+    },
+    {
+      "path": "data/topics/6104/meta.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 249,
+      "sha256": "1e7f11136e5ddd7e984c3cbc17affc50d1c3f2f207ceecd341a32c7cf3a95e58",
+      "chars": 227,
+      "chunks": 1
+    },
+    {
+      "path": "data/topics/794/meta.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 267,
+      "sha256": "cac974b2d8a0b3bf5dc1955a1fae4c6385a6a02fa96e5efcca1346cfc03db928",
+      "chars": 238,
+      "chunks": 1
+    },
+    {
+      "path": "data/topics/961/meta.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 257,
+      "sha256": "c1b720f5d6b47a31456f65ecdf73132c8522479962158c9e97bbdc93b9697d25",
+      "chars": 234,
+      "chunks": 1
+    },
+    {
+      "path": "docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md",
+      "mode": "excluded_generated_output",
+      "reason": "generated output avoids self-ingestion",
+      "size_bytes": 4747,
+      "sha256": "",
+      "chars": 0,
+      "chunks": 0
+    },
+    {
+      "path": "docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md",
+      "mode": "excluded_generated_output",
+      "reason": "generated output avoids self-ingestion",
+      "size_bytes": 438,
+      "sha256": "",
+      "chars": 0,
+      "chunks": 0
+    },
+    {
+      "path": "docs/SHARED_CONTEXT/DWG_CONVERTER_STATUS.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 305,
+      "sha256": "c1575faa9c30f7376fc965272741bac01693c844705a64e8b4ab6813ad0e4e73",
+      "chars": 305,
+      "chunks": 1
+    },
+    {
+      "path": "docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md",
+      "mode": "excluded_generated_output",
+      "reason": "generated output avoids self-ingestion",
+      "size_bytes": 4747,
+      "sha256": "",
+      "chars": 0,
+      "chunks": 0
+    },
+    {
+      "path": "docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
+      "mode": "excluded_generated_output",
+      "reason": "generated output avoids self-ingestion",
+      "size_bytes": 26672,
+      "sha256": "",
+      "chars": 0,
+      "chunks": 0
+    },
+    {
+      "path": "drive_ingest.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 4479,
+      "sha256": "fc2d949b93663d288b6ba9821521647603bce65ebd5c01a8e92b2e78835dda01",
+      "chars": 4435,
+      "chunks": 1
+    },
+    {
+      "path": "google_io.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2640,
+      "sha256": "1b50fb7199b536664b84bd4b1e951d9fca8cd2cf7686fef52661b2cef238097a",
+      "chars": 2670,
+      "chunks": 1
+    },
+    {
+      "path": "media_group.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2600,
+      "sha256": "c4a87d6b4ef1ceaea9aa1a54756ca672556f15e332e7ea451dce42f028aa7429",
+      "chars": 2600,
+      "chunks": 1
+    },
+    {
+      "path": "memory_api_server.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2958,
+      "sha256": "c162918a0af1c8e9aa0cea11bf94f965df343a3baaecf2e271510c3165c882aa",
+      "chars": 2965,
+      "chunks": 1
+    },
+    {
+      "path": "monitor_jobs.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 4626,
+      "sha256": "d23f420339e9f337d43bf2e5317c8973c177fbb5b49e2989227687599eae3fe5",
+      "chars": 4578,
+      "chunks": 1
+    },
+    {
+      "path": "orchestra_full_dump.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3958,
+      "sha256": "55f3ba1c3563113477e0309cc42bebac27d745df740db976381bf451c615ac86",
+      "chars": 3958,
+      "chunks": 1
+    },
+    {
+      "path": "requirements.txt",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 75,
+      "sha256": "cac264fdbc5bb280bb7821291845def7368cb8fef9d10d0d723d5552f71b936f",
+      "chars": 75,
+      "chunks": 1
+    },
+    {
+      "path": "runtime/.gitkeep",
+      "mode": "excluded_non_text",
+      "reason": "suffix not allowlisted",
+      "size_bytes": 0,
+      "sha256": "",
+      "chars": 0,
+      "chunks": 0
+    },
+    {
+      "path": "startup_recovery.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2476,
+      "sha256": "4e7fe4f628468d9a5d5757aa33c8da5df76ccb0f0c3a6dbb56ed05d4f12161cf",
+      "chars": 2476,
+      "chunks": 1
+    }
+  ]
+}

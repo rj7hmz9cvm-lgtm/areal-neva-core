@@ -37,3 +37,7 @@ data/templates/estimate_logic/
 data/templates/reference_monolith/
 data/templates/design_logic/
 data/price_quotes/
+.secret_patterns
+tools/*.bak_*
+docs/SHARED_CONTEXT/*.bak_*
+core/*.bak_*
