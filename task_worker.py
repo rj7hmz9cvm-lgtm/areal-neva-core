@@ -4317,6 +4317,295 @@ async def _handle_in_progress(conn, task):
 # === END_THREE_CONTOURS_FULL_CONTEXT_NO_REPEAT_CLARIFY_V1_WORKER_WRAPPER ===
 
 
+
+# === STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1 ===
+# Must be placed BEFORE asyncio.run(main())
+# Fixes:
+# - topic_2 must not fall into FILE_TECH_CONTOUR_FOLLOWUP_V2 for estimate/template questions
+# - topic_2 must not repeat old task result when full technical context is available
+# - topic_2 must route complete construction estimate TЗ into formula/template source gate once
+try:
+    _st2_pm_orig_handle_in_progress_v1 = _handle_in_progress
+
+    def _st2_pm_row_get(row, key, default=None):
+        try:
+            return row[key]
+        except Exception:
+            try:
+                idx_map = {
+                    "id": 0,
+                    "chat_id": 1,
+                    "user_id": 2,
+                    "input_type": 3,
+                    "raw_input": 4,
+                    "state": 5,
+                    "result": 6,
+                    "error_message": 7,
+                    "reply_to_message_id": 8,
+                    "created_at": 9,
+                    "updated_at": 10,
+                    "bot_message_id": 11,
+                    "topic_id": 12,
+                    "task_type": 13,
+                }
+                i = idx_map.get(key)
+                if i is not None:
+                    return row[i]
+            except Exception:
+                pass
+        return default
+
+    def _st2_pm_clean_voice(text: str) -> str:
+        try:
+            return re.sub(r"^\s*\[VOICE\]\s*", "", str(text or ""), flags=re.I).strip()
+        except Exception:
+            return str(text or "").strip()
+
+    def _st2_pm_low(text: str) -> str:
+        return _st2_pm_clean_voice(text).lower().replace("ё", "е")
+
+    def _st2_pm_reply_to(task):
+        try:
+            return _st2_pm_row_get(task, "reply_to_message_id", None)
+        except Exception:
+            return None
+
+    def _st2_pm_send_done(conn, task_id: str, chat_id: str, text: str, reply_to=None, kind: str = "stroyka_topic2_premain"):
+        _update_task(conn, task_id, state="DONE", result=str(text or ""), error_message="")
+        _history(conn, task_id, f"STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1:{kind}")
+        try:
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            _send_once_ex(conn, task_id, str(chat_id), str(text or ""), reply_to, kind)
+        except Exception:
+            try:
+                _send_once(conn, task_id, str(chat_id), str(text or ""), reply_to, kind)
+            except Exception as _send_err:
+                logger.warning("STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1_SEND_ERR %s", _send_err)
+
+    def _st2_pm_template_source_text(chat_id: str, topic_id: int) -> str:
+        import json as _json
+        from pathlib import Path as _Path
+        safe_chat = re.sub(r"[^0-9A-Za-z_-]+", "_", str(chat_id))[:80]
+        active = _Path("/root/.areal-neva-core/data/templates/estimate") / f"ACTIVE__chat_{safe_chat}__topic_{int(topic_id or 0)}.json"
+        if not active.exists():
+            active = _Path("/root/.areal-neva-core/data/templates/estimate/ACTIVE__chat_-1003725299009__topic_2.json")
+        data = {}
+        try:
+            data = _json.loads(active.read_text(encoding="utf-8"))
+        except Exception:
+            data = {}
+        source_name = str(data.get("source_file_name") or "М-110.xlsx")
+        folder_name = str(data.get("source_folder_name") or "ESTIMATES/templates")
+        all_tpl = []
+        try:
+            for x in data.get("all_templates") or []:
+                name = str(x.get("file_name") or "").strip()
+                if name:
+                    all_tpl.append(name)
+        except Exception:
+            pass
+        if not all_tpl:
+            all_tpl = ["Ареал Нева.xlsx", "М-80.xlsx", "М-110.xlsx", "фундамент_Склад2.xlsx", "крыша и перекр.xlsx"]
+        return (
+            "Да. Правильные шаблоны смет подключены\n\n"
+            f"Источник: Google Drive / AI_ORCHESTRA / {folder_name}\n"
+            f"Активный эталон: {source_name}\n"
+            "Правило: шаблон используется как структура, формулы и оформление. Расчёт берётся только из текущего ТЗ\n\n"
+            "Доступные шаблоны:\n- " + "\n- ".join(all_tpl[:10]) + "\n\n"
+            "Для топика СТРОЙКА больше не должен срабатывать поиск случайных файлов технадзора вместо сметного шаблона"
+        )
+
+    def _st2_pm_is_template_question(text: str) -> bool:
+        low = _st2_pm_low(text)
+        if not low:
+            return False
+        create_words = ("сделай", "создай", "сформируй", "подготовь", "составь", "посчитай", "рассчитай")
+        template_words = ("шаблон", "образец", "эталон", "правильн", "откуда", "на чем основыва", "на чём основыва", "что ты туп")
+        if any(w in low for w in create_words):
+            return False
+        return any(w in low for w in template_words)
+
+    def _st2_pm_is_estimate_related(text: str) -> bool:
+        low = _st2_pm_low(text)
+        if not low:
+            return False
+        estimate_words = (
+            "смет", "стоимост", "посчитай", "рассчитай", "расчет", "расчёт",
+            "цена", "руб", "итого", "ндс", "работ", "материал",
+            "строительств", "дом", "барн", "бар хаус", "barn", "каркас",
+            "газобетон", "фундамент", "плит", "монолит", "кровл", "фальц",
+            "имитация бруса", "отделка", "этаж", "высота", "размер"
+        )
+        return any(w in low for w in estimate_words)
+
+    def _st2_pm_is_control_only(text: str) -> bool:
+        low = _st2_pm_low(text)
+        return low in {
+            "задача завершена",
+            "завершена",
+            "готово",
+            "закрой",
+            "закрыть",
+            "отмена",
+            "отбой",
+            "все задачи отменены",
+            "всё задачи отменены",
+            "сейчас все задачи отменены",
+            "сейчас всё задачи отменены",
+        }
+
+    def _st2_pm_history_col(conn) -> str:
+        try:
+            cols = [r[1] for r in conn.execute("PRAGMA table_info(task_history)").fetchall()]
+            if "action" in cols:
+                return "action"
+            if "event" in cols:
+                return "event"
+        except Exception:
+            pass
+        return ""
+
+    def _st2_pm_build_full_context(conn, task_id: str, chat_id: str, topic_id: int, raw: str) -> tuple[str, str]:
+        parts = []
+        cur = _st2_pm_clean_voice(raw)
+        if cur:
+            parts.append("Текущее сообщение:\n" + cur)
+
+        parent_id = ""
+        try:
+            row = conn.execute(
+                """
+                SELECT id, raw_input
+                FROM tasks
+                WHERE chat_id=?
+                  AND COALESCE(topic_id,0)=?
+                  AND id<>?
+                  AND state IN ('WAITING_CLARIFICATION','IN_PROGRESS','NEW','AWAITING_CONFIRMATION')
+                ORDER BY rowid DESC
+                LIMIT 1
+                """,
+                (int(chat_id), int(topic_id or 0), str(task_id)),
+            ).fetchone()
+            if row:
+                parent_id = str(row[0] or "")
+                parent_raw = _st2_pm_clean_voice(str(row[1] or ""))
+                if parent_raw and parent_raw not in cur:
+                    parts.insert(0, "Предыдущее активное ТЗ:\n" + parent_raw)
+        except Exception as _e:
+            logger.warning("STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1_PARENT_CTX_ERR %s", _e)
+
+        try:
+            col = _st2_pm_history_col(conn)
+            if col:
+                ids = [str(task_id)]
+                if parent_id:
+                    ids.append(parent_id)
+                qs = ",".join("?" for _ in ids)
+                rows = conn.execute(
+                    f"SELECT {col} FROM task_history WHERE task_id IN ({qs}) AND {col} LIKE 'clarified:%' ORDER BY rowid ASC LIMIT 50",
+                    ids,
+                ).fetchall()
+                clar = []
+                for r in rows:
+                    v = str(r[0] or "")
+                    if ":" in v:
+                        c = v.split(":", 1)[1].strip()
+                        if c and c not in clar:
+                            clar.append(c)
+                if clar:
+                    parts.append("Уточнения пользователя:\n" + "\n".join(clar))
+        except Exception as _e:
+            logger.warning("STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1_CLAR_CTX_ERR %s", _e)
+
+        return "\n\n".join(x for x in parts if x.strip()), parent_id
+
+    async def _st2_pm_call_full_context_gate(conn, task_id: str, chat_id: str, topic_id: int, full_context: str, input_type: str, reply_to):
+        try:
+            from core.sample_template_engine import handle_stroyka_topic2_full_context_gate_v1 as _gate
+        except Exception as _e:
+            logger.warning("STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1_GATE_IMPORT_ERR %s", _e)
+            return False
+
+        calls = [
+            (conn, task_id, str(chat_id), int(topic_id or 0), full_context, str(input_type or "text"), reply_to),
+            (conn, task_id, str(chat_id), int(topic_id or 0), full_context, "text", reply_to),
+            (conn, task_id, str(chat_id), int(topic_id or 0), full_context),
+        ]
+        last_type_err = None
+        for args in calls:
+            try:
+                res = await _gate(*args)
+                if res is True:
+                    return True
+                if isinstance(res, dict) and (res.get("handled") or res.get("success")):
+                    return True
+                return bool(res)
+            except TypeError as _te:
+                last_type_err = _te
+                continue
+            except Exception as _e:
+                logger.warning("STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1_GATE_ERR %s", _e)
+                return False
+        if last_type_err:
+            logger.warning("STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1_GATE_SIGNATURE_ERR %s", last_type_err)
+        return False
+
+    async def _handle_in_progress(conn, task):
+        try:
+            task_id = str(_st2_pm_row_get(task, "id", ""))
+            chat_id = str(_st2_pm_row_get(task, "chat_id", ""))
+            topic_id = int(_st2_pm_row_get(task, "topic_id", 0) or 0)
+            raw_input = str(_st2_pm_row_get(task, "raw_input", "") or "")
+            input_type = str(_st2_pm_row_get(task, "input_type", "text") or "text")
+            reply_to = _st2_pm_reply_to(task)
+
+            if topic_id == 2:
+                if _st2_pm_is_control_only(raw_input):
+                    _st2_pm_send_done(conn, task_id, chat_id, "Задача в СТРОЙКЕ закрыта", reply_to, "stroyka_control_close")
+                    return
+
+                if _st2_pm_is_template_question(raw_input):
+                    _st2_pm_send_done(conn, task_id, chat_id, _st2_pm_template_source_text(chat_id, topic_id), reply_to, "stroyka_template_source_answer")
+                    return
+
+                if _st2_pm_is_estimate_related(raw_input):
+                    full_context, parent_id = _st2_pm_build_full_context(conn, task_id, chat_id, topic_id, raw_input)
+                    handled = await _st2_pm_call_full_context_gate(
+                        conn,
+                        task_id,
+                        chat_id,
+                        topic_id,
+                        full_context or raw_input,
+                        input_type,
+                        reply_to,
+                    )
+                    if handled:
+                        try:
+                            if parent_id and parent_id != task_id:
+                                conn.execute(
+                                    "UPDATE tasks SET state='DONE', result=?, error_message='', updated_at=datetime('now') WHERE id=?",
+                                    ("Закрыто новой сметой по полному ТЗ", parent_id),
+                                )
+                                _history(conn, parent_id, f"STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1:superseded_by:{task_id}")
+                                conn.commit()
+                        except Exception as _e:
+                            logger.warning("STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1_PARENT_CLOSE_ERR %s", _e)
+                        logger.info("STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1 handled task=%s topic=%s", task_id, topic_id)
+                        return
+        except Exception as _e:
+            logger.warning("STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1_ERR %s", _e)
+
+        return await _st2_pm_orig_handle_in_progress_v1(conn, task)
+
+except Exception as _st2_pm_wrap_err:
+    logger.warning("STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1_WRAP_ERR %s", _st2_pm_wrap_err)
+
+# === END_STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1 ===
+
+
 if __name__ == "__main__":
     asyncio.run(main())
 
