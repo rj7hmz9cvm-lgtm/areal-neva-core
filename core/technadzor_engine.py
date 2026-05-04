@@ -2614,3 +2614,26 @@ async def _p6h_process_photo_async(file_path, file_name, task_id, chat_id, topic
 
 _P6H2_LOG.info("P6H_TOPIC5_OBJECT_REGISTRY_INSPECTION_CHAIN_20260504_INSTALLED")
 # === END_P6H_PART_3 ===
+
+# ─── P6H_EXTERNAL_VISION_GUARD_V1 ──────────────────────────────────────────
+# CANON: TECHNADZOR_DOMAIN_LOGIC_CANON_V2 §33
+# EXTERNAL_PHOTO_ANALYSIS_ALLOWED = False by default
+# Vision запускается только после явного разрешения владельца
+
+_P6H_EXTERNAL_VISION_ALLOWED = False
+
+_p6h_vision_orig = _p6f_tnz_vision_via_openrouter  # сохраняем оригинал
+
+async def _p6f_tnz_vision_via_openrouter(local_path):  # noqa: F811
+    if not _P6H_EXTERNAL_VISION_ALLOWED:
+        _P6H2_LOG.warning("EXTERNAL_VISION_BLOCKED path=%s EXTERNAL_PHOTO_ANALYSIS_ALLOWED=False", local_path)
+        return {}, "EXTERNAL_PHOTO_ANALYSIS_BLOCKED"
+    return await _p6h_vision_orig(local_path)
+
+def _p6h_allow_external_vision():
+    global _P6H_EXTERNAL_VISION_ALLOWED
+    _P6H_EXTERNAL_VISION_ALLOWED = True
+    _P6H2_LOG.info("EXTERNAL_VISION_ALLOWED_SET owner_approved=True")
+
+_P6H2_LOG.info("P6H_EXTERNAL_VISION_GUARD_V1_INSTALLED allowed=%s", _P6H_EXTERNAL_VISION_ALLOWED)
+# ─── END P6H_EXTERNAL_VISION_GUARD_V1 ──────────────────────────────────────

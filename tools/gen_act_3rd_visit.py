@@ -328,3 +328,88 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+
+# ─── P6H_VISION_RESIZE_V1 ───────────────────────────────────────────────────
+# Append-only override.
+# Оригиналы нетронуты. Temp только в /tmp. Model не меняется.
+# Если resize не получился → STOP, оригинал 8MB не отправляется.
+# Если Vision падает → показать vstatus → STOP, без fallback.
+
+import hashlib as _p6h_hashlib
+import tempfile as _p6h_tempfile
+
+
+def prepare_image_for_openrouter_vision(src_path: str) -> Path:
+    from PIL import Image as _PIL
+    src = Path(src_path)
+    h = _p6h_hashlib.md5(src_path.encode()).hexdigest()[:8]
+    tmp = Path(_p6h_tempfile.gettempdir()) / f"tnz_v_{h}.jpg"
+    with _PIL.open(src) as img:
+        img = img.convert("RGB")
+        w, ht = img.size
+        if max(w, ht) > 1600:
+            ratio = 1600 / max(w, ht)
+            img = img.resize((int(w * ratio), int(ht * ratio)), _PIL.LANCZOS)
+        img.save(str(tmp), "JPEG", quality=75, optimize=True)
+    return tmp
+
+
+async def run_single_vision(local_path: str, fname: str, photo_no: int, total: int) -> list[dict]:
+    global _vision_sem
+    async with _vision_sem:
+        orig_size = Path(local_path).stat().st_size if Path(local_path).exists() else 0
+
+        try:
+            tmp = prepare_image_for_openrouter_vision(local_path)
+        except Exception as e:
+            print(f"    [{photo_no}/{total}] {fname}: ✗ resize STOP: {e}")
+            return []
+
+        resized_size = tmp.stat().st_size
+        model = (os.getenv("OPENROUTER_VISION_MODEL") or "google/gemini-2.5-flash")
+        print(f"    [{photo_no}/{total}] {fname}: orig={orig_size//1024}KB resized={resized_size//1024}KB model={model}", flush=True)
+
+        from core.technadzor_engine import _p6f_tnz_vision_via_openrouter
+        vision, vstatus = await _p6f_tnz_vision_via_openrouter(str(tmp))
+
+        try:
+            tmp.unlink()
+        except Exception:
+            pass
+
+        if vstatus not in ("OK", "PARTIAL"):
+            print(f"    [{photo_no}/{total}] {fname}: ✗ vstatus={vstatus} — STOP")
+            return []
+
+        defects = (vision.get("defects") or []) if isinstance(vision, dict) else []
+        summary = (vision.get("summary") or "") if isinstance(vision, dict) else ""
+        if not defects and summary:
+            defects = [{"title": "Замечание по фото", "description": summary[:500]}]
+        for d in defects:
+            d["file_name"] = fname
+            d["photo_no"] = photo_no
+        ok_str = "✓" if defects else "·"
+        print(f"    [{photo_no}/{total}] {fname}: {ok_str} {len(defects)} замеч.", flush=True)
+        return defects
+
+# ─── END P6H_VISION_RESIZE_V1 ────────────────────────────────────────────────
+
+# ─── P6H_VISION_GUARD_STANDALONE_V1 ─────────────────────────────────────────
+# CANON: TECHNADZOR_DOMAIN_LOGIC_CANON_V2 §33
+# Standalone-скрипт не должен запускать Vision без явного разрешения владельца
+
+_GEN_ACT_VISION_ALLOWED = os.getenv("EXTERNAL_PHOTO_ANALYSIS_ALLOWED", "").strip().lower() in ("1", "true", "yes")
+
+if _GEN_ACT_VISION_ALLOWED:
+    print("INFO: EXTERNAL_PHOTO_ANALYSIS_ALLOWED=True — Vision включён", flush=True)
+    try:
+        from core.technadzor_engine import _p6h_allow_external_vision
+        _p6h_allow_external_vision()
+    except Exception as _e:
+        print(f"WARN: _p6h_allow_external_vision failed: {_e}", flush=True)
+else:
+    print("INFO: EXTERNAL_PHOTO_ANALYSIS_ALLOWED=False (default) — Vision заблокирован по канону §33", flush=True)
+    print("INFO: Для включения Vision установить в .env: EXTERNAL_PHOTO_ANALYSIS_ALLOWED=true", flush=True)
+    print("INFO: Скрипт продолжит работу без Vision — разбор по голосу/тексту/документам", flush=True)
+# ─── END P6H_VISION_GUARD_STANDALONE_V1 ──────────────────────────────────────

@@ -469,8 +469,8 @@ TechnadzorTask =
 - OpenRouter `google/gemini-2.5-flash` → 403 "Blocked by Google"
 - Причина: Google блокирует конкретный аккаунт/ключ через OpenRouter
 - PDF с пустыми разделами был сгенерирован и загружен на Drive (структура правильная)
-- **Нужно:** сменить Vision модель на нон-Google (например `openai/gpt-4o` или `anthropic/claude-3-5-sonnet`) или использовать Google AI Studio напрямую
-- В `.env` добавить: `OPENROUTER_VISION_MODEL=openai/gpt-4o-mini` (дешёвле) или `openai/gpt-4o`
+- **СТАТУС:** Vision заблокирован по канону §1.5 — OpenAI и Anthropic запрещены как провайдеры. OpenRouter+Google блокирует аккаунт (403). Смена модели без явного решения владельца запрещена.
+- **EXTERNAL_PHOTO_ANALYSIS_ALLOWED = False** — фото наружу не отправлять без явного разрешения владельца (TECHNADZOR_DOMAIN_LOGIC_CANON_V2 §33)
 
 **Файлы выезда уже скачаны:**
 - `data/memory_files/technadzor_index_cache/IMG_5320.JPG` ... `IMG_5381.JPG` (61 фото)
