@@ -415,3 +415,195 @@ try:
 except Exception:
     pass
 # === END_PROJECT_SEARCH_FINAL_REGEX_AND_HEADER_FIX_SEARCH_FORMATTER ===
+
+# === P5_SEARCH_SESSION_VOICE_STALE_CLOSE_20260504_V1 ===
+# Runtime overlay only
+# Scope:
+# - normalize [VOICE] search text before new-goal detection
+# - close stale Rockwool/building session when new product/auto/electronics search arrives
+# - prevent previous session target from contaminating online prompt
+# - no DB schema changes, no forbidden files, no systemd unit changes
+
+try:
+    SEARCH_PROFILES.setdefault("ELECTRONICS", ["Ozon", "Wildberries", "Яндекс Маркет", "DNS", "М.Видео", "Эльдорадо", "Avito", "AliExpress", "официальные магазины"])
+except Exception:
+    pass
+
+_P5_SEARCH_STOP_WORDS = {
+    "найди", "найти", "поиск", "поищи", "подбери", "купить", "цена", "стоимость",
+    "дешевле", "самый", "самая", "новый", "новое", "нужен", "нужна", "мне",
+    "проведи", "соответственно", "если", "такое", "есть", "сообщи", "там",
+    "самый", "крутой", "большой", "самого", "самую"
+}
+
+_P5_ELECTRONICS_WORDS = (
+    "iphone", "айфон", "pixel", "google pixel", "телефон", "смартфон",
+    "samsung", "galaxy", "xiaomi", "redmi", "honor", "huawei", "pro max", "xl"
+)
+
+_P5_AUTO_EXTRA_WORDS = (
+    "сайлентблок", "саленблок", "сальник", "пыльник", "ваз", "2110", "2114",
+    "жигули", "лада", "приора", "гранта", "калина", "нива", "автозапчаст"
+)
+
+def _p5_norm_text(text):
+    s = _clean(text, 4000)
+    s = re.sub(r"^\s*\[voice\]\s*", "", s, flags=re.I)
+    s = re.sub(r"^\s*(voice|голос|голосовое)\s*[:\-]\s*", "", s, flags=re.I)
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
+
+def _p5_low(text):
+    return _p5_norm_text(text).lower().replace("ё", "е")
+
+def _p5_words(text):
+    low = _p5_low(text)
+    return set(
+        w for w in re.findall(r"[а-яa-z0-9]{3,}", low)
+        if w not in _P5_SEARCH_STOP_WORDS
+    )
+
+def _p5_category(low):
+    if any(x in low for x in _P5_AUTO_EXTRA_WORDS):
+        return "AUTO_PARTS"
+    if any(x in low for x in _P5_ELECTRONICS_WORDS):
+        return "ELECTRONICS"
+    if any(w in low for w in AUTO_WORDS):
+        return "AUTO_PARTS"
+    if any(w in low for w in BUILDING_WORDS):
+        return "BUILDING_SUPPLY"
+    if any(w in low for w in CLASSIFIED_WORDS):
+        return "CLASSIFIEDS"
+    return "GENERAL"
+
+try:
+    _p5_orig_detect_category = CriteriaExtractor.detect_category
+    def _p5_detect_category(self, low):
+        cat = _p5_category(str(low or ""))
+        if cat:
+            return cat
+        return _p5_orig_detect_category(self, low)
+    CriteriaExtractor.detect_category = _p5_detect_category
+except Exception:
+    pass
+
+try:
+    _p5_orig_extract_target = CriteriaExtractor.extract_target
+    def _p5_extract_target(self, text):
+        t = _p5_norm_text(text)
+        t = re.sub(r"^(найди|найти|поищи|поиск|сколько стоит|цена на|стоимость|подбери|проведи поиск|мне нужен|мне нужна|нужен|нужна)\s+", "", t, flags=re.I)
+        return re.sub(r"\s+", " ", t).strip()[:220]
+    CriteriaExtractor.extract_target = _p5_extract_target
+except Exception:
+    pass
+
+def _p5_is_explicit_new_search(text):
+    low = _p5_low(text)
+    if not low:
+        return False
+    markers = (
+        "найди", "найти", "поищи", "поиск", "подбери", "проведи поиск",
+        "мне нужен", "мне нужна", "нужен ", "нужна ", "дешевле", "купить"
+    )
+    if low.startswith(markers):
+        return True
+    if any(x in low for x in _P5_ELECTRONICS_WORDS + _P5_AUTO_EXTRA_WORDS) and any(x in low for x in ("найди", "поиск", "дешевле", "купить", "цена", "стоимость", "нужен", "нужна")):
+        return True
+    return False
+
+def _p5_should_force_new_goal(user_text, existing, extracted):
+    new_norm = _p5_norm_text(user_text)
+    low = new_norm.lower().replace("ё", "е")
+    if not _p5_is_explicit_new_search(new_norm):
+        return False
+
+    old_goal = str(getattr(existing, "goal", "") or "")
+    old_target = str((getattr(existing, "criteria", {}) or {}).get("target") or old_goal)
+    old_low = old_target.lower().replace("ё", "е")
+    new_target = str((extracted or {}).get("target") or new_norm)
+    old_cat = str((getattr(existing, "criteria", {}) or {}).get("category") or "")
+    new_cat = str((extracted or {}).get("category") or _p5_category(low) or "")
+
+    if "rockwool" in old_low or "light buds" in old_low or "light batts" in old_low or "каменная вата" in old_low:
+        if any(x in low for x in _P5_AUTO_EXTRA_WORDS + _P5_ELECTRONICS_WORDS):
+            return True
+
+    if old_cat and new_cat and old_cat != new_cat:
+        return True
+
+    old_words = _p5_words(old_target)
+    new_words = _p5_words(new_target)
+    if old_words and new_words:
+        overlap = len(old_words & new_words)
+        ratio = overlap / max(1, min(len(old_words), len(new_words)))
+        if overlap == 0 or ratio < 0.35:
+            return True
+
+    return False
+
+try:
+    _p5_orig_is_new_search_goal = SearchMonolithV2._is_new_search_goal
+    def _p5_is_new_search_goal(self, user_text, existing, extracted):
+        if _p5_should_force_new_goal(user_text, existing, extracted):
+            return True
+        return _p5_orig_is_new_search_goal(self, _p5_norm_text(user_text), existing, extracted)
+    SearchMonolithV2._is_new_search_goal = _p5_is_new_search_goal
+except Exception:
+    pass
+
+try:
+    _p5_orig_run_search = SearchMonolithV2.run
+    async def _p5_run_search(self, payload, user_text, online_call, online_model, base_system_prompt=""):
+        payload = dict(payload or {})
+        original_text = _clean(user_text, 4000)
+        normalized_text = _p5_norm_text(original_text)
+        chat_id = str(payload.get("chat_id") or "")
+        topic_id = int(payload.get("topic_id") or 0)
+
+        extracted = self.extractor.extract(normalized_text)
+        existing = self.sessions.get(chat_id, topic_id)
+
+        if existing and _p5_should_force_new_goal(normalized_text, existing, extracted):
+            try:
+                old_goal = getattr(existing, "goal", "")
+                existing.status = "CLOSED"
+                self.sessions.save(existing)
+                logger.info(
+                    "P5_SEARCH_SESSION_VOICE_STALE_CLOSE closed_old_session chat=%s topic=%s old_goal=%s new_goal=%s",
+                    chat_id, topic_id, old_goal, normalized_text
+                )
+            except Exception as e:
+                logger.warning("P5_SEARCH_SESSION_VOICE_STALE_CLOSE_ERR %s", e)
+
+        payload["raw_input"] = normalized_text
+        payload["normalized_input"] = normalized_text
+
+        async def _p5_online_call(model, messages):
+            clean_messages = []
+            for m in messages or []:
+                mm = dict(m or {})
+                content = str(mm.get("content") or "")
+                if "rockwool" in content.lower() or "light buds" in content.lower() or "light batts" in content.lower() or "каменная вата" in content.lower():
+                    if any(x in normalized_text.lower().replace("ё", "е") for x in _P5_AUTO_EXTRA_WORDS + _P5_ELECTRONICS_WORDS):
+                        content = re.sub(r".*(Rockwool|ROCKWOOL|Light Buds|Light Batts|каменная вата).*\n?", "", content, flags=re.I)
+                        content += "\nАКТУАЛЬНЫЙ ЗАПРОС ПОЛЬЗОВАТЕЛЯ: " + normalized_text
+                mm["content"] = content
+                clean_messages.append(mm)
+            return await online_call(model, clean_messages)
+
+        return await _p5_orig_run_search(self, payload, normalized_text, _p5_online_call, online_model, base_system_prompt)
+    SearchMonolithV2.run = _p5_run_search
+except Exception:
+    pass
+
+try:
+    _p5_orig_formatter_build_prompt = SearchOutputFormatter.build_prompt
+    def _p5_build_prompt(self, session, queries, sources):
+        if session and getattr(session, "goal", None):
+            session.goal = _p5_norm_text(session.goal)
+        return _p5_orig_formatter_build_prompt(self, session, queries, sources)
+    SearchOutputFormatter.build_prompt = _p5_build_prompt
+except Exception:
+    pass
+
+# === END_P5_SEARCH_SESSION_VOICE_STALE_CLOSE_20260504_V1 ===
