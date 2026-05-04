@@ -75,20 +75,23 @@ def _task_history_insert(conn, task_id: str, action: str) -> None:
         pass
 
 
-def _send_reply(chat_id: str, text: str, reply_to_message_id: Optional[int] = None) -> Optional[int]:
+
+def _send_reply(chat_id: str, text: str, reply_to_message_id: Optional[int] = None, topic_id: int = 0) -> Optional[int]:  # TOPIC2_REPLY_THREAD_FIX_V1
     try:
         from core.reply_sender import send_reply_ex
-        res = send_reply_ex(
-            chat_id=str(chat_id),
-            text=text,
-            reply_to_message_id=reply_to_message_id,
-        )
+        kwargs = {
+            "chat_id": str(chat_id),
+            "text": text,
+            "reply_to_message_id": reply_to_message_id,
+        }
+        if int(topic_id or 0) > 0:
+            kwargs["message_thread_id"] = int(topic_id or 0)  # TOPIC2_REPLY_THREAD_FIX_V1
+        res = send_reply_ex(**kwargs)
         if isinstance(res, dict):
             return res.get("bot_message_id")
     except Exception:
         return None
     return None
-
 
 def _update_task(conn, task_id: str, state: str, result: str = "", error_message: str = "", bot_message_id: Optional[int] = None) -> None:
     try:
@@ -2576,11 +2579,14 @@ def _t2sp_update(conn, task_id: str, state: str, result: str, error: str = "", b
     except Exception:
         pass
 
-def _t2sp_send(chat_id: str, text: str, reply_to_message_id=None) -> _t2sp_Any:
+
+def _t2sp_send(chat_id: str, text: str, reply_to_message_id=None, topic_id: int = 0) -> _t2sp_Any:  # TOPIC2_REPLY_THREAD_FIX_V1
     try:
         fn = globals().get("_send_reply")
         if callable(fn):
-            return fn(str(chat_id), text, reply_to_message_id)
+            bot_id = fn(str(chat_id), text, reply_to_message_id, topic_id=int(topic_id or 0))
+            if bot_id:
+                return bot_id
     except Exception:
         pass
     try:
@@ -2590,6 +2596,8 @@ def _t2sp_send(chat_id: str, text: str, reply_to_message_id=None) -> _t2sp_Any:
             payload = {"chat_id": str(chat_id), "text": text}
             if reply_to_message_id:
                 payload["reply_to_message_id"] = int(reply_to_message_id)
+            if int(topic_id or 0) > 0:
+                payload["message_thread_id"] = int(topic_id or 0)  # TOPIC2_REPLY_THREAD_FIX_V1
             r = _t2sp_requests.post(f"https://api.telegram.org/bot{token}/sendMessage", json=payload, timeout=20)
             data = r.json()
             if data.get("ok") and isinstance(data.get("result"), dict):
@@ -3128,7 +3136,7 @@ async def handle_topic2_one_big_formula_pipeline_v1(
     missing = _t2sp_missing_questions(full_text)
     if missing:
         msg = "Не хватает данных для сметы: " + ", ".join(missing)
-        bot_id = _t2sp_send(str(chat_id), msg, reply_to_message_id)
+        bot_id = _t2sp_send(str(chat_id), msg, reply_to_message_id, topic_id=int(topic_id or 0))  # TOPIC2_REPLY_THREAD_FIX_V1
         _t2sp_update(conn, str(task_id), "WAITING_CLARIFICATION", msg, "", bot_id)
         _t2sp_history(conn, str(task_id), _T2SP_MARKER + ":missing:" + "|".join(missing))
         return True
@@ -3166,7 +3174,7 @@ async def handle_topic2_one_big_formula_pipeline_v1(
             msg_lines.append("PDF: не создан, XLSX основной артефакт")
 
         msg = "\n".join(msg_lines)
-        bot_id = _t2sp_send(str(chat_id), msg, reply_to_message_id)
+        bot_id = _t2sp_send(str(chat_id), msg, reply_to_message_id, topic_id=int(topic_id or 0))  # TOPIC2_REPLY_THREAD_FIX_V1
         _t2sp_update(conn, str(task_id), "AWAITING_CONFIRMATION", msg, "", bot_id)
         _t2sp_history(conn, str(task_id), _T2SP_MARKER + ":formula_template_artifact_created")
         return True
@@ -3174,7 +3182,7 @@ async def handle_topic2_one_big_formula_pipeline_v1(
     except Exception as e:
         err = _T2SP_MARKER + ":" + type(e).__name__ + ":" + _t2sp_s(e)[:500]
         msg = "Ошибка создания формульной сметы: " + err
-        bot_id = _t2sp_send(str(chat_id), msg, reply_to_message_id)
+        bot_id = _t2sp_send(str(chat_id), msg, reply_to_message_id, topic_id=int(topic_id or 0))  # TOPIC2_REPLY_THREAD_FIX_V1
         _t2sp_update(conn, str(task_id), "FAILED", msg, err, bot_id)
         _t2sp_history(conn, str(task_id), err)
         return True
@@ -4088,11 +4096,12 @@ def _t2real_upload(path: str, task_id: str, topic_id: int) -> str:
         pass
     return ""
 
-def _t2real_send(chat_id: str, text: str, reply_to=None) -> _t2real_Any:
+
+def _t2real_send(chat_id: str, text: str, reply_to=None, topic_id: int = 0) -> _t2real_Any:  # TOPIC2_REPLY_THREAD_FIX_V1
     fn = globals().get("_t2sp_send")
     if callable(fn):
         try:
-            return fn(str(chat_id), str(text), reply_to)
+            return fn(str(chat_id), str(text), reply_to, topic_id=int(topic_id or 0))
         except Exception:
             pass
     return None
@@ -4150,7 +4159,7 @@ async def handle_topic2_one_big_formula_pipeline_v1(
         msg = "Не вижу размеры объекта в текущем ТЗ. Пришли размер в формате 12х8 или ответь реплаем на исходное ТЗ"
         _t2real_update(conn, str(task_id), "WAITING_CLARIFICATION", msg, "DIMENSIONS_NOT_FOUND")
         _t2real_history(conn, str(task_id), _T2REAL_MARKER + ":DIMENSIONS_NOT_FOUND")
-        _t2real_send(str(chat_id), msg, reply_to_message_id)
+        _t2real_send(str(chat_id), msg, reply_to_message_id, topic_id=int(topic_id or 0))  # TOPIC2_REPLY_THREAD_FIX_V1
         return True
 
     rows = _t2real_build_rows(params)
@@ -4158,7 +4167,7 @@ async def handle_topic2_one_big_formula_pipeline_v1(
         msg = f"Смета не создана: распознано строк {len(rows)}, минимум 5. Причина: недостаточно данных из ТЗ. Артефакты не созданы"
         _t2real_update(conn, str(task_id), "FAILED", msg, f"ROWS_TOO_FEW:{len(rows)}")  # TOPIC2_FULL_CLOSE_V1
         _t2real_history(conn, str(task_id), _T2REAL_MARKER + ":ROWS_NOT_BUILT")
-        _t2real_send(str(chat_id), msg, reply_to_message_id)
+        _t2real_send(str(chat_id), msg, reply_to_message_id, topic_id=int(topic_id or 0))  # TOPIC2_REPLY_THREAD_FIX_V1
         return True
 
     safe = _t2real_re.sub(r"[^0-9A-Za-z_-]+", "_", str(task_id))[:48]
@@ -4198,7 +4207,7 @@ async def handle_topic2_one_big_formula_pipeline_v1(
         msg = "Смета создана локально, но не загружена в Drive. Проверь Google Drive upload"
         _t2real_update(conn, str(task_id), "FAILED", msg, "DRIVE_UPLOAD_FAILED")
         _t2real_history(conn, str(task_id), _T2REAL_MARKER + ":DRIVE_UPLOAD_FAILED")
-        _t2real_send(str(chat_id), msg, reply_to_message_id)
+        _t2real_send(str(chat_id), msg, reply_to_message_id, topic_id=int(topic_id or 0))  # TOPIC2_REPLY_THREAD_FIX_V1
         return True
 
     section_names = []
@@ -4230,7 +4239,8 @@ async def handle_topic2_one_big_formula_pipeline_v1(
 
     _t2real_update(conn, str(task_id), "AWAITING_CONFIRMATION", msg, "")
     _t2real_history(conn, str(task_id), _T2REAL_MARKER + f":OK_ROWS_{len(rows)}_TOTAL_{int(total)}")
-    _t2real_send(str(chat_id), msg, reply_to_message_id)
+    _t2real_history(conn, str(task_id), f"TOPIC2_REPLY_THREAD_FIX_V1:SENT_TO_TOPIC_{int(topic_id or 0)}")
+    _t2real_send(str(chat_id), msg, reply_to_message_id, topic_id=int(topic_id or 0))  # TOPIC2_REPLY_THREAD_FIX_V1
     return True
 
 # === END_TOPIC2_REAL_ESTIMATE_FROM_TZ_V2 ===
