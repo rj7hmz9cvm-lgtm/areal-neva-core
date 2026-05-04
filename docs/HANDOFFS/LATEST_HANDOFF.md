@@ -449,16 +449,20 @@ TechnadzorTask =
 - `runtime/technadzor` — не существует на сервере
 - Google Docs как текущий готовый формат — не реализован
 
-### Следующий шаг — P6H_PART_4 (не написан)
-Реализация новых сущностей в коде:
+### P6H_PART_4 — INSTALLED (05.05.2026)
 
-| Файл | Что добавить |
-|---|---|
-| `core/technadzor_engine.py` | `visit_buffer_add`, `visit_buffer_flush`, `process_drive_folder_batch`, `_batch_vision_aggregate` |
-| `task_worker.py` | хук topic_5: фото → буфер; триггер → flush; Drive URL → batch |
+| Файл | Патч | Коммит |
+|---|---|---|
+| `core/technadzor_engine.py` | P6H_PART_4_VISIT_BUFFER_V1: `visit_buffer_add`, `visit_buffer_flush`, `visit_buffer_count`, `set_active_folder`, `get_active_folder`, `process_drive_folder_batch` | `d90b5ad` |
+| `task_worker.py` | P6H_PART_4_TASK_WORKER_HOOK_V1: topic_5 mode — фото→буфер+ack, Drive folder URL→set_active_folder, «сделай разбор»→flush+inject→technadzor, [VOICE]→annotate last material | `ff753aa` |
+| `core/stt_engine.py` | P6H_STT_HALLUCINATION_GUARD_V1: Groq Whisper фантомы (≤6 символов, "субтитры", "Олег" и т.п.) → `STT_HALLUCINATION_REJECTED` | `ff753aa` |
 
-Статус: **CANON_APPROVED_PENDING_IMPLEMENTATION**
-Запрещённые файлы не трогать.
+**Буфер:** `data/technadzor/buf_{chat_id}_{topic_id}.json` — persistent JSON, изолирован по chat_id+topic_id.
+**Активная папка:** `data/technadzor/active_folder_{chat_id}_{topic_id}.json`.
+
+**Статус:** INSTALLED_NOT_LIVE_TESTED — py_compile OK, сервисы не перезапускались.
+**Vision:** EXTERNAL_PHOTO_ANALYSIS_ALLOWED=False (по умолчанию). Без явного разрешения владельца — не запускать.
+**Не реализовано в этой сессии:** `_batch_vision_aggregate` (Vision заблокирован, нет смысла).
 
 ### Standalone скрипт gen_act_3rd_visit.py — НАПИСАН, Vision не работает
 
