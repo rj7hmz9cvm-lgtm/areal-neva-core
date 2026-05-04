@@ -1378,7 +1378,7 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
     # P0 guard: price confirmation, context-aware file intake, Telegram duplicate file memory
     try:
         from core.price_enrichment import prehandle_price_task_v1 as _ftc_price_prehandle
-        _ftc_price = await _ftc_price_prehandle(conn, task)
+        _ftc_price = await _ftc_price_prehandle(conn, task) if int(topic_id or 0) == 2 else None  # TOPIC2_PRICE_ONLY_V1
         if _ftc_price and _ftc_price.get("handled"):
             _ftc_tid = _s(_task_field(task, "id", ""))
             _ftc_chat = _s(_task_field(task, "chat_id", ""))
@@ -1402,7 +1402,7 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
         from core.file_context_intake import prehandle_task_context_v1 as _ftc_file_prehandle
         # === CANON_ROUTE_FIX_V3_TOPIC500_ISOLATION ===
         _ftc_topic_id = int(_task_field(task, "topic_id", 0) or 0)
-        _ftc_file = _ftc_file_prehandle(conn, task) if _ftc_topic_id != 500 else None
+        _ftc_file = _ftc_file_prehandle(conn, task) if _ftc_topic_id not in (2, 210, 500) else None  # TOPIC_ROUTE_ISOLATION_FULL_V1
         # === END_CANON_ROUTE_FIX_V3_TOPIC500_ISOLATION ===
         if _ftc_file and _ftc_file.get("handled"):
             _ftc_tid = _s(_task_field(task, "id", ""))
@@ -1568,7 +1568,7 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
             and not any(w in _cpp_low for w in _cpp_followup_words)
         )
 
-        if _cpp_is_create_project:
+        if int(topic_id or 0) == 210 and _cpp_is_create_project:  # TOPIC210_PROJECT_ONLY_V1
             _history(conn, task_id, "CREATE_PROJECT_PRIORITY_NO_ROLLBACK_V1:ROUTE_PROJECT_ENGINE")
 
             from core.project_engine import create_project_pdf_dxf_artifact
@@ -1712,7 +1712,7 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
         )
         # === END_CEP_PROJECT_EXCLUSION_V2 ===
 
-        if _cep_is_create_estimate:
+        if int(topic_id or 0) == 2 and _cep_is_create_estimate:  # TOPIC2_ESTIMATE_ONLY_V1
             from core.estimate_engine import generate_estimate_from_text
 
             _history(conn, task_id, "CREATE_ESTIMATE_PRIORITY_NO_ROLLBACK_V1:ROUTE_ESTIMATE_ENGINE")
@@ -1863,7 +1863,7 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
     # === FILE_TECH_CONTOUR_FOLLOWUP_V2 ===
     try:
         _ft_low = str(raw_input or "").strip()
-        if int(topic_id or 0) not in (500, 210) and _filemem_should_followup(_ft_low):  # TOPIC_ISOLATION_V1
+        if int(topic_id or 0) not in (2, 500, 210) and _filemem_should_followup(_ft_low):  # TOPIC_ROUTE_ISOLATION_FULL_V1
             _ft_answer = _filemem_build_answer(str(chat_id), int(topic_id or 0), _ft_low)
             if _ft_answer:
                 _update_task(conn, task_id, state="DONE", result=_ft_answer, error_message="")
