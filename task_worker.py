@@ -4314,7 +4314,7 @@ async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
     except Exception as _e:
         logger.warning("THREE_CONTOURS_FULL_CONTEXT_NO_REPEAT_CLARIFY_V1_WRAPPER_ERR %s", _e)
 
-    return await _tcfc1_orig_handle_in_progress_worker(conn, task)
+    return await _tcfc1_orig_handle_in_progress_worker(conn, task, chat_id, topic_id)  # HOTFIX_HANDLE_IN_PROGRESS_WRAPPER_CHAIN_V1
 
 # === END_THREE_CONTOURS_FULL_CONTEXT_NO_REPEAT_CLARIFY_V1_WORKER_WRAPPER ===
 
@@ -4600,7 +4600,7 @@ try:
         except Exception as _e:
             logger.warning("STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1_ERR %s", _e)
 
-        return await _st2_pm_orig_handle_in_progress_v1(conn, task)
+        return await _st2_pm_orig_handle_in_progress_v1(conn, task, chat_id, topic_id)  # HOTFIX_HANDLE_IN_PROGRESS_WRAPPER_CHAIN_V1
 
 except Exception as _st2_pm_wrap_err:
     logger.warning("STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1_WRAP_ERR %s", _st2_pm_wrap_err)
@@ -4904,7 +4904,7 @@ async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
             _top2_ob_send(conn, task_id, chat_id, err, reply_to, "topic2_guard_error")
             return
 
-    return await _TOP2_ONE_BIG_ORIG_HANDLE_IN_PROGRESS_V1(conn, task)
+    return await _TOP2_ONE_BIG_ORIG_HANDLE_IN_PROGRESS_V1(conn, task, chat_id, topic_id)  # HOTFIX_HANDLE_IN_PROGRESS_WRAPPER_CHAIN_V1
 # === END_TOPIC2_ONE_BIG_FINAL_PIPELINE_V1_WORKER_GUARD ===
 
 
