@@ -132,7 +132,7 @@ def parse_project_request(raw_input: str, template_hint: str = "") -> Dict[str, 
     if any(x in low for x in ["кров", "строп", "кд"]):
         section = "КД"
         project_kind = "roof"
-    if any(x in low for x in ["ар ", "архитект", "планиров"]):
+    if any(x in low for x in [" ар ", "ар.", "архитект", "планиров", "фасад"]):  # SECTION_DETECTION_FIX_V1
         section = "АР"
         project_kind = "architectural"
 

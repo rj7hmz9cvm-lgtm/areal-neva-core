@@ -3679,3 +3679,545 @@ async def handle_topic2_one_big_formula_pipeline_v1(
         return True
 
 # === END_TOPIC2_TEMPLATE_XLSX_PDF_STRICT_OUTPUT_V1 ===
+
+# === TOPIC2_REAL_ESTIMATE_FROM_TZ_V2 ===
+# Fix:
+# - topic_2 estimate must never return empty zero rows when the user gave object dimensions and construction data
+# - current user TЗ has priority over old memory/template artifacts
+# - inaccessible Drive template must not create fake empty estimate
+# - output XLSX/PDF must contain real calculated rows, totals, readable Cyrillic PDF
+
+import re as _t2real_re
+import json as _t2real_json
+from pathlib import Path as _t2real_Path
+from datetime import datetime as _t2real_datetime
+from typing import Any as _t2real_Any, Dict as _t2real_Dict, List as _t2real_List
+
+_T2REAL_MARKER = "TOPIC2_REAL_ESTIMATE_FROM_TZ_V2"
+_T2REAL_BASE = _t2real_Path("/root/.areal-neva-core")
+_T2REAL_OUT = _T2REAL_BASE / "outputs" / "topic2_real_estimates"
+_T2REAL_OUT.mkdir(parents=True, exist_ok=True)
+
+def _t2real_s(v: _t2real_Any) -> str:
+    return "" if v is None else str(v)
+
+def _t2real_low(v: _t2real_Any) -> str:
+    return _t2real_s(v).lower().replace("ё", "е").strip()
+
+def _t2real_num(v: _t2real_Any, default: float = 0.0) -> float:
+    try:
+        return float(str(v).replace(",", "."))
+    except Exception:
+        return float(default)
+
+def _t2real_clean_voice(text: str) -> str:
+    return _t2real_re.sub(r"^\s*\[VOICE\]\s*", "", _t2real_s(text), flags=_t2real_re.I).strip()
+
+def _t2real_add_parent_context(conn, task_id: str, chat_id: str, topic_id: int, raw_input: str) -> str:
+    parts = [_t2real_clean_voice(raw_input)]
+    try:
+        row = conn.execute(
+            """
+            SELECT raw_input
+            FROM tasks
+            WHERE chat_id=?
+              AND COALESCE(topic_id,0)=?
+              AND id<>?
+              AND state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION','FAILED','DONE')
+            ORDER BY rowid DESC
+            LIMIT 1
+            """,
+            (str(chat_id), int(topic_id or 0), str(task_id)),
+        ).fetchone()
+        if row and row[0]:
+            prev = _t2real_clean_voice(row[0])
+            if prev and prev not in "\n".join(parts):
+                parts.append(prev)
+    except Exception:
+        pass
+
+    try:
+        rows = conn.execute(
+            """
+            SELECT action
+            FROM task_history
+            WHERE task_id=?
+              AND action LIKE 'clarified:%'
+            ORDER BY rowid DESC
+            LIMIT 20
+            """,
+            (str(task_id),),
+        ).fetchall()
+        for r in rows:
+            v = _t2real_s(r[0])
+            if v.startswith("clarified:"):
+                v = v.split(":", 1)[1].strip()
+                if v and v not in "\n".join(parts):
+                    parts.append(v)
+    except Exception:
+        pass
+
+    return "\n\n".join(x for x in parts if x.strip()).strip()
+
+def _t2real_parse_params(text: str) -> _t2real_Dict[str, _t2real_Any]:
+    low = _t2real_low(text)
+    dims = []
+    for m in _t2real_re.finditer(r"(\d{1,3}(?:[,.]\d+)?)\s*(?:x|х|×|на)\s*(\d{1,3}(?:[,.]\d+)?)", low):
+        a = _t2real_num(m.group(1))
+        b = _t2real_num(m.group(2))
+        if a > 0 and b > 0:
+            dims.append((a, b, a * b))
+    if dims:
+        dims.sort(key=lambda x: x[2], reverse=True)
+        length, width, area = dims[0]
+    else:
+        length, width, area = 0.0, 0.0, 0.0
+
+    floors = 1
+    m = _t2real_re.search(r"(\d{1,2})\s*(?:этаж|этажа|этажей)", low)
+    if m:
+        floors = max(1, int(_t2real_num(m.group(1), 1)))
+
+    height = 3.0
+    m = _t2real_re.search(r"высот[аы]?\s*(\d{1,2}(?:[,.]\d+)?)\s*(?:м|метр)", low)
+    if m:
+        height = max(2.4, _t2real_num(m.group(1), 3.0))
+
+    slab_mm = 200.0
+    m = _t2real_re.search(r"(?:плит[ауы]?|фундамент).{0,60}?(\d{2,3})\s*мм", low)
+    if not m:
+        m = _t2real_re.search(r"толщин[аы]?\s*(\d{2,3})\s*мм", low)
+    if m:
+        slab_mm = max(100.0, _t2real_num(m.group(1), 200.0))
+
+    insulation_mm = 150.0
+    m = _t2real_re.search(r"утепл.{0,60}?(\d{2,3})\s*мм", low)
+    if m:
+        insulation_mm = max(50.0, _t2real_num(m.group(1), 150.0))
+
+    distance_km = 0.0
+    m = _t2real_re.search(r"(?:удален|удалён|доставк|логист|расстоян).{0,80}?(\d{1,4})\s*(?:км|километр)", low)
+    if not m:
+        m = _t2real_re.search(r"(\d{1,4})\s*(?:км|километр)", low)
+    if m:
+        distance_km = _t2real_num(m.group(1), 0.0)
+
+    if "каркас" in low:
+        wall_type = "каркас"
+    elif "газобет" in low:
+        wall_type = "газобетон"
+    elif "кирпич" in low:
+        wall_type = "кирпич"
+    elif "дерев" in low or "брус" in low:
+        wall_type = "дерево"
+    else:
+        wall_type = "не указан"
+
+    if "барн" in low or "bar house" in low or "barn" in low:
+        style = "барнхаус"
+    elif "ангар" in low:
+        style = "ангар"
+    elif "склад" in low:
+        style = "склад"
+    else:
+        style = "дом"
+
+    perimeter = 2 * (length + width) if length and width else 0.0
+    wall_area = perimeter * height * floors * 0.85 if perimeter else 0.0
+    roof_area = area * 1.18 if area else 0.0
+
+    return {
+        "length": length,
+        "width": width,
+        "area": area,
+        "perimeter": perimeter,
+        "floors": floors,
+        "height": height,
+        "slab_mm": slab_mm,
+        "slab_m": slab_mm / 1000.0,
+        "insulation_mm": insulation_mm,
+        "distance_km": distance_km,
+        "wall_type": wall_type,
+        "style": style,
+        "wall_area": wall_area,
+        "roof_area": roof_area,
+    }
+
+def _t2real_money(v: float) -> float:
+    return round(float(v or 0.0), 2)
+
+def _t2real_row(section: str, name: str, unit: str, qty: float, work: float, material: float) -> _t2real_Dict[str, _t2real_Any]:
+    qty = round(float(qty or 0.0), 3)
+    total_work = qty * float(work or 0.0)
+    total_material = qty * float(material or 0.0)
+    return {
+        "section": section,
+        "name": name,
+        "unit": unit,
+        "qty": qty,
+        "work_price": _t2real_money(work),
+        "material_price": _t2real_money(material),
+        "work_total": _t2real_money(total_work),
+        "material_total": _t2real_money(total_material),
+        "total": _t2real_money(total_work + total_material),
+    }
+
+def _t2real_build_rows(params: _t2real_Dict[str, _t2real_Any]) -> _t2real_List[_t2real_Dict[str, _t2real_Any]]:
+    area = float(params.get("area") or 0)
+    perimeter = float(params.get("perimeter") or 0)
+    wall_area = float(params.get("wall_area") or 0)
+    roof_area = float(params.get("roof_area") or 0)
+    slab_m = float(params.get("slab_m") or 0.2)
+    insulation_m = float(params.get("insulation_mm") or 150) / 1000.0
+    distance_km = float(params.get("distance_km") or 0)
+    floors = int(params.get("floors") or 1)
+    wall_type = str(params.get("wall_type") or "")
+
+    if area <= 0 or perimeter <= 0:
+        return []
+
+    concrete_m3 = area * slab_m * 1.12
+    rebar_kg = area * (23.0 if slab_m <= 0.22 else 31.0)
+    sand_m3 = area * 0.20
+    eps_m3 = area * 0.10
+    formwork_m2 = perimeter * 0.45
+
+    rows = [
+        _t2real_row("Фундамент", "Разработка грунта под плиту с планировкой", "м3", area * 0.35, 900, 0),
+        _t2real_row("Фундамент", "Песчаная подготовка с послойным уплотнением", "м3", sand_m3, 850, 1450),
+        _t2real_row("Фундамент", "Геотекстиль под основание", "м2", area * 1.10, 120, 85),
+        _t2real_row("Фундамент", "Утепление основания XPS 100 мм", "м3", eps_m3, 2600, 14500),
+        _t2real_row("Фундамент", "Опалубка плиты по периметру", "м2", formwork_m2, 1450, 900),
+        _t2real_row("Фундамент", "Армирование плиты А500С", "кг", rebar_kg, 55, 86),
+        _t2real_row("Фундамент", f"Бетонирование плиты {int(params.get('slab_mm') or 200)} мм, бетон В25", "м3", concrete_m3, 3200, 7200),
+        _t2real_row("Фундамент", "Подача бетона автобетононасосом", "смена", 1, 26000, 0),
+        _t2real_row("Фундамент", "Гидроизоляция торцов и отсечная гидроизоляция", "м2", perimeter * 0.40, 950, 420),
+    ]
+
+    if wall_type == "каркас":
+        rows += [
+            _t2real_row("Стены", "Каркас наружных стен", "м2", wall_area, 1850, 2300),
+            _t2real_row("Стены", f"Утепление стен {int(params.get('insulation_mm') or 150)} мм", "м3", wall_area * insulation_m, 2800, 7800),
+            _t2real_row("Стены", "Пароизоляция и ветрозащита стен", "м2", wall_area * 2, 220, 95),
+            _t2real_row("Стены", "Обшивка стен листовыми материалами", "м2", wall_area * 2, 650, 780),
+        ]
+    elif wall_type == "газобетон":
+        rows += [
+            _t2real_row("Стены", "Кладка наружных стен из газобетона", "м3", wall_area * 0.30, 3800, 8200),
+            _t2real_row("Стены", "Армирование кладки и перемычки", "п.м", perimeter * floors, 450, 520),
+        ]
+    else:
+        rows += [
+            _t2real_row("Стены", "Наружные стены по принятому конструктиву", "м2", wall_area, 2200, 2600),
+        ]
+
+    if floors > 1:
+        rows.append(_t2real_row("Перекрытия", "Межэтажное перекрытие", "м2", area * (floors - 1), 2300, 3100))
+
+    rows += [
+        _t2real_row("Кровля", "Стропильная система / несущий каркас кровли", "м2", roof_area, 1450, 1850),
+        _t2real_row("Кровля", "Кровельное покрытие с доборными элементами", "м2", roof_area, 1250, 2100),
+        _t2real_row("Кровля", "Мембраны, контробрешётка, обрешётка", "м2", roof_area, 780, 650),
+        _t2real_row("Проёмы", "Окна и наружные двери, базовый комплект", "компл", 1, 35000, max(120000, area * 2200)),
+        _t2real_row("Отделка", "Черновая внутренняя отделка по контуру", "м2", area * floors, 1650, 1250),
+    ]
+
+    if distance_km > 0:
+        rows.append(_t2real_row("Логистика", f"Доставка материалов и выезд бригады, удалённость {int(distance_km)} км", "рейс", max(1, round(distance_km / 50, 1)), 12000, distance_km * 180))
+    else:
+        rows.append(_t2real_row("Логистика", "Логистика базовая", "компл", 1, 18000, 22000))
+
+    subtotal = sum(float(r["total"]) for r in rows)
+    rows.append(_t2real_row("Накладные расходы", "Организация работ, снабжение, расходные материалы", "компл", 1, subtotal * 0.10, 0))
+
+    return [r for r in rows if float(r.get("qty") or 0) > 0 and float(r.get("total") or 0) > 0]
+
+def _t2real_write_xlsx(path: str, rows: _t2real_List[_t2real_Dict[str, _t2real_Any]], params: _t2real_Dict[str, _t2real_Any], raw_context: str) -> None:
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Смета"
+
+    headers = ["№", "Раздел", "Наименование работ/материалов", "Ед.", "Кол-во", "Работа/ед", "Материал/ед", "Итого работа", "Итого материалы", "Итого"]
+    ws.append(["СМЕТА ПО ТЕКУЩЕМУ ТЗ"])
+    ws.append([f"Engine: {_T2REAL_MARKER}"])
+    ws.append([f"Объект: {params.get('style')} {params.get('length')}x{params.get('width')} м, площадь {round(float(params.get('area') or 0), 2)} м2"])
+    ws.append([f"Фундамент: плита {int(params.get('slab_mm') or 0)} мм"])
+    ws.append([f"Стены: {params.get('wall_type')}, утепление {int(params.get('insulation_mm') or 0)} мм"])
+    ws.append([f"Удалённость: {int(params.get('distance_km') or 0)} км"])
+    ws.append([])
+    ws.append(headers)
+
+    header_row = ws.max_row
+    for cell in ws[header_row]:
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill("solid", fgColor="D9EAF7")
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+    for i, r in enumerate(rows, 1):
+        new_row = ws.max_row + 1
+        ws.append([
+            i, r["section"], r["name"], r["unit"], r["qty"],
+            r["work_price"], r["material_price"],
+            f"=E{new_row}*F{new_row}",
+            f"=E{new_row}*G{new_row}",
+            f"=H{new_row}+I{new_row}",
+        ])
+
+    total_row = ws.max_row + 1
+    ws.append(["", "", "", "", "", "", "ИТОГО", f"=SUM(H{header_row+1}:H{total_row-1})", f"=SUM(I{header_row+1}:I{total_row-1})", f"=SUM(J{header_row+1}:J{total_row-1})"])
+    nds_row = ws.max_row + 1
+    ws.append(["", "", "", "", "", "", "НДС 20%", "", "", f"=J{total_row}*0.2"])
+    ws.append(["", "", "", "", "", "", "С НДС", "", "", f"=J{total_row}+J{nds_row}"])
+
+    for row in ws.iter_rows(min_row=header_row, max_row=ws.max_row):
+        for cell in row:
+            cell.alignment = Alignment(vertical="top", wrap_text=True)
+            cell.border = Border(left=Side(style="thin"), right=Side(style="thin"), top=Side(style="thin"), bottom=Side(style="thin"))
+
+    widths = {"A": 6, "B": 18, "C": 55, "D": 10, "E": 12, "F": 14, "G": 16, "H": 16, "I": 18, "J": 16}
+    for col, width in widths.items():
+        ws.column_dimensions[col].width = width
+
+    wi = wb.create_sheet("AREAL_INPUT")
+    wi.append(["raw_context"])
+    wi.append([raw_context])
+    wi.append(["params_json"])
+    wi.append([_t2real_json.dumps(params, ensure_ascii=False)])
+
+    wb.save(path)
+
+def _t2real_write_pdf(path: str, rows: _t2real_List[_t2real_Dict[str, _t2real_Any]], params: _t2real_Dict[str, _t2real_Any]) -> None:
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+
+    try:
+        from core.pdf_cyrillic import register_cyrillic_fonts, FONT_REGULAR
+        register_cyrillic_fonts()
+        font_name = FONT_REGULAR
+    except Exception:
+        font_name = "Helvetica"
+
+    doc = SimpleDocTemplate(path, pagesize=landscape(A4), leftMargin=20, rightMargin=20, topMargin=20, bottomMargin=20)
+    styles = getSampleStyleSheet()
+    normal = ParagraphStyle("AREAL_NORMAL", parent=styles["Normal"], fontName=font_name, fontSize=8, leading=10)
+    title = ParagraphStyle("AREAL_TITLE", parent=styles["Title"], fontName=font_name, fontSize=14, leading=16)
+
+    total = sum(float(r.get("total") or 0) for r in rows)
+    nds = total * 0.2
+    grand = total + nds
+
+    story = [
+        Paragraph("Смета по текущему техническому заданию", title),
+        Paragraph(f"Engine: {_T2REAL_MARKER}", normal),
+        Paragraph(f"Объект: {params.get('style')} {params.get('length')}x{params.get('width')} м, площадь {round(float(params.get('area') or 0), 2)} м²", normal),
+        Paragraph(f"Фундамент: плита {int(params.get('slab_mm') or 0)} мм | Стены: {params.get('wall_type')} | Утепление: {int(params.get('insulation_mm') or 0)} мм | Удалённость: {int(params.get('distance_km') or 0)} км", normal),
+        Spacer(1, 8),
+    ]
+
+    data = [["№", "Раздел", "Наименование", "Ед.", "Кол-во", "Работа/ед", "Материал/ед", "Итого"]]
+    for i, r in enumerate(rows, 1):
+        data.append([
+            str(i),
+            Paragraph(_t2real_s(r["section"]), normal),
+            Paragraph(_t2real_s(r["name"]), normal),
+            _t2real_s(r["unit"]),
+            _t2real_s(r["qty"]),
+            f"{float(r['work_price']):,.0f}".replace(",", " "),
+            f"{float(r['material_price']):,.0f}".replace(",", " "),
+            f"{float(r['total']):,.0f}".replace(",", " "),
+        ])
+
+    data.append(["", "", "", "", "", "", "ИТОГО", f"{total:,.0f}".replace(",", " ")])
+    data.append(["", "", "", "", "", "", "НДС 20%", f"{nds:,.0f}".replace(",", " ")])
+    data.append(["", "", "", "", "", "", "С НДС", f"{grand:,.0f}".replace(",", " ")])
+
+    table = Table(data, colWidths=[25, 85, 300, 45, 50, 70, 80, 80], repeatRows=1)
+    table.setStyle(TableStyle([
+        ("FONTNAME", (0,0), (-1,-1), font_name),
+        ("FONTSIZE", (0,0), (-1,-1), 7),
+        ("BACKGROUND", (0,0), (-1,0), colors.lightgrey),
+        ("GRID", (0,0), (-1,-1), 0.25, colors.grey),
+        ("VALIGN", (0,0), (-1,-1), "TOP"),
+        ("ALIGN", (0,0), (0,-1), "CENTER"),
+        ("ALIGN", (3,1), (-1,-1), "RIGHT"),
+    ]))
+    story.append(table)
+    story.append(Spacer(1, 8))
+    story.append(Paragraph("Не входит: подготовка участка, стройгородок, бытовки, отмостка, дренаж, ливневая канализация, вывоз мусора, наружные сети и всё что не указано явно", normal))
+    doc.build(story)
+
+def _t2real_upload(path: str, task_id: str, topic_id: int) -> str:
+    for name in ("_t2sp_upload_link", "_upload"):
+        fn = globals().get(name)
+        if callable(fn):
+            try:
+                return _t2real_s(fn(path, task_id, topic_id))
+            except TypeError:
+                try:
+                    return _t2real_s(fn(path, task_id))
+                except Exception:
+                    pass
+            except Exception:
+                pass
+    try:
+        from core.engine_base import upload_artifact_to_drive
+        res = upload_artifact_to_drive(path, str(task_id), int(topic_id or 0))
+        if isinstance(res, dict):
+            for k in ("webViewLink", "drive_link", "link", "url"):
+                if res.get(k):
+                    return str(res[k])
+        if isinstance(res, str):
+            return res
+    except Exception:
+        pass
+    return ""
+
+def _t2real_send(chat_id: str, text: str, reply_to=None) -> _t2real_Any:
+    fn = globals().get("_t2sp_send")
+    if callable(fn):
+        try:
+            return fn(str(chat_id), str(text), reply_to)
+        except Exception:
+            pass
+    return None
+
+def _t2real_update(conn, task_id: str, state: str, result: str, error: str = "", bot_id=None) -> None:
+    fn = globals().get("_t2sp_update")
+    if callable(fn):
+        try:
+            fn(conn, str(task_id), str(state), str(result), str(error), bot_id)
+            return
+        except TypeError:
+            try:
+                fn(conn, str(task_id), str(state), str(result), str(error))
+                return
+            except Exception:
+                pass
+        except Exception:
+            pass
+    conn.execute(
+        "UPDATE tasks SET state=?, result=?, error_message=?, updated_at=datetime('now') WHERE id=?",
+        (str(state), str(result), str(error), str(task_id)),
+    )
+    conn.commit()
+
+def _t2real_history(conn, task_id: str, action: str) -> None:
+    fn = globals().get("_t2sp_history")
+    if callable(fn):
+        try:
+            fn(conn, str(task_id), str(action))
+            return
+        except Exception:
+            pass
+    try:
+        conn.execute("INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))", (str(task_id), str(action)))
+        conn.commit()
+    except Exception:
+        pass
+
+async def handle_topic2_one_big_formula_pipeline_v1(
+    conn,
+    task_id: str,
+    chat_id: str,
+    topic_id: int,
+    raw_input,
+    input_type: str = "text",
+    reply_to_message_id=None,
+) -> bool:
+    if int(topic_id or 0) != 2:
+        return False
+
+    ctx = _t2real_add_parent_context(conn, str(task_id), str(chat_id), int(topic_id or 0), _t2real_s(raw_input))
+    params = _t2real_parse_params(ctx)
+
+    if float(params.get("area") or 0) <= 0:
+        msg = "Не вижу размеры объекта в текущем ТЗ. Пришли размер в формате 12х8 или ответь реплаем на исходное ТЗ"
+        _t2real_update(conn, str(task_id), "WAITING_CLARIFICATION", msg, "DIMENSIONS_NOT_FOUND")
+        _t2real_history(conn, str(task_id), _T2REAL_MARKER + ":DIMENSIONS_NOT_FOUND")
+        _t2real_send(str(chat_id), msg, reply_to_message_id)
+        return True
+
+    rows = _t2real_build_rows(params)
+    if not rows:
+        msg = "Смета не создана: не удалось собрать расчётные позиции из текущего ТЗ"
+        _t2real_update(conn, str(task_id), "FAILED", msg, "ROWS_NOT_BUILT")
+        _t2real_history(conn, str(task_id), _T2REAL_MARKER + ":ROWS_NOT_BUILT")
+        _t2real_send(str(chat_id), msg, reply_to_message_id)
+        return True
+
+    safe = _t2real_re.sub(r"[^0-9A-Za-z_-]+", "_", str(task_id))[:48]
+    xlsx_path = str(_T2REAL_OUT / f"estimate_{safe}.xlsx")
+    pdf_path = str(_T2REAL_OUT / f"estimate_{safe}.pdf")
+    manifest_path = str(_T2REAL_OUT / f"estimate_{safe}.manifest.json")
+
+    _t2real_write_xlsx(xlsx_path, rows, params, ctx)
+    _t2real_write_pdf(pdf_path, rows, params)
+
+    total = round(sum(float(r.get("total") or 0) for r in rows), 2)
+    nds = round(total * 0.2, 2)
+    grand = round(total + nds, 2)
+
+    manifest = {
+        "engine": _T2REAL_MARKER,
+        "task_id": str(task_id),
+        "chat_id": str(chat_id),
+        "topic_id": int(topic_id or 0),
+        "source_rule": "CURRENT_TZ_FIRST_PARENT_REPLY_CONTEXT_ONLY",
+        "params": params,
+        "rows_count": len(rows),
+        "total": total,
+        "nds_20": nds,
+        "grand_total": grand,
+        "xlsx_path": xlsx_path,
+        "pdf_path": pdf_path,
+        "created_at": _t2real_datetime.utcnow().isoformat(),
+    }
+    _t2real_Path(manifest_path).write_text(_t2real_json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    xlsx_link = _t2real_upload(xlsx_path, str(task_id), int(topic_id or 0))
+    pdf_link = _t2real_upload(pdf_path, str(task_id), int(topic_id or 0))
+    manifest_link = _t2real_upload(manifest_path, str(task_id), int(topic_id or 0))
+
+    if not xlsx_link or not pdf_link:
+        msg = "Смета создана локально, но не загружена в Drive. Проверь Google Drive upload"
+        _t2real_update(conn, str(task_id), "FAILED", msg, "DRIVE_UPLOAD_FAILED")
+        _t2real_history(conn, str(task_id), _T2REAL_MARKER + ":DRIVE_UPLOAD_FAILED")
+        _t2real_send(str(chat_id), msg, reply_to_message_id)
+        return True
+
+    section_names = []
+    for r in rows:
+        if r["section"] not in section_names:
+            section_names.append(r["section"])
+
+    msg = (
+        "Смета готова по текущему ТЗ\n"
+        f"Engine: {_T2REAL_MARKER}\n"
+        f"Объект: {params.get('style')} {params.get('length')}x{params.get('width')} м\n"
+        f"Площадь: {round(float(params.get('area') or 0), 2)} м²\n"
+        f"Фундамент: плита {int(params.get('slab_mm') or 0)} мм\n"
+        f"Стены: {params.get('wall_type')}\n"
+        f"Утепление: {int(params.get('insulation_mm') or 0)} мм\n"
+        f"Удалённость: {int(params.get('distance_km') or 0)} км\n\n"
+        "Разделы:\n- " + "\n- ".join(section_names) + "\n\n"
+        f"Позиций: {len(rows)}\n"
+        f"Итого: {total:,.0f} руб\n".replace(",", " ")
+        + f"НДС 20%: {nds:,.0f} руб\n".replace(",", " ")
+        + f"С НДС: {grand:,.0f} руб\n\n".replace(",", " ")
+        + f"📊 Excel: {xlsx_link}\n"
+        + f"📄 PDF: {pdf_link}\n"
+        + (f"🧾 Manifest: {manifest_link}\n" if manifest_link else "")
+        + "\nДоволен результатом? Да / Уточни / Правки"
+    )
+
+    _t2real_update(conn, str(task_id), "AWAITING_CONFIRMATION", msg, "")
+    _t2real_history(conn, str(task_id), _T2REAL_MARKER + f":OK_ROWS_{len(rows)}_TOTAL_{int(total)}")
+    _t2real_send(str(chat_id), msg, reply_to_message_id)
+    return True
+
+# === END_TOPIC2_REAL_ESTIMATE_FROM_TZ_V2 ===
