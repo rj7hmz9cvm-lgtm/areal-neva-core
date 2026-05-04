@@ -1402,7 +1402,7 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
         from core.file_context_intake import prehandle_task_context_v1 as _ftc_file_prehandle
         # === CANON_ROUTE_FIX_V3_TOPIC500_ISOLATION ===
         _ftc_topic_id = int(_task_field(task, "topic_id", 0) or 0)
-        _ftc_file = _ftc_file_prehandle(conn, task) if _ftc_topic_id not in (2, 210, 500) else None  # TOPIC_ROUTE_ISOLATION_FULL_V1
+        _ftc_file = _ftc_file_prehandle(conn, task) if _ftc_topic_id not in (500, 210) else None  # TOPIC_ROUTE_ISOLATION_FULL_V2
         # === END_CANON_ROUTE_FIX_V3_TOPIC500_ISOLATION ===
         if _ftc_file and _ftc_file.get("handled"):
             _ftc_tid = _s(_task_field(task, "id", ""))
