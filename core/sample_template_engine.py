@@ -3809,7 +3809,7 @@ def _t2real_parse_params(text: str) -> _t2real_Dict[str, _t2real_Any]:
     elif "кирпич" in low:
         wall_type = "кирпич"
     elif "дерев" in low or "брус" in low:
-        wall_type = "дерево"
+        wall_type = "каркас"  # TOPIC2_FULL_CLOSE_V1: дерево/брус = каркасный сценарий
     else:
         wall_type = "не указан"
 
@@ -3872,6 +3872,17 @@ def _t2real_build_rows(params: _t2real_Dict[str, _t2real_Any]) -> _t2real_List[_
     distance_km = float(params.get("distance_km") or 0)
     floors = int(params.get("floors") or 1)
     wall_type = str(params.get("wall_type") or "")
+    if wall_type in ("каркас", "дерево", "дерев", "брус"):
+        _t2real_scenario = "каркас"
+        _t2real_scenario_label = "Каркас под ключ (М-110.xlsx)"
+    elif wall_type == "газобетон":
+        _t2real_scenario = "газобетон"
+        _t2real_scenario_label = "Газобетон (М-110.xlsx)"
+    else:
+        _t2real_scenario = "каркас"
+        _t2real_scenario_label = "Каркас под ключ (М-110.xlsx) — дефолт"
+    params["scenario"] = _t2real_scenario
+    params["scenario_label"] = _t2real_scenario_label
 
     if area <= 0 or perimeter <= 0:
         return []
@@ -4143,9 +4154,9 @@ async def handle_topic2_one_big_formula_pipeline_v1(
         return True
 
     rows = _t2real_build_rows(params)
-    if not rows:
-        msg = "Смета не создана: не удалось собрать расчётные позиции из текущего ТЗ"
-        _t2real_update(conn, str(task_id), "FAILED", msg, "ROWS_NOT_BUILT")
+    if not rows or len(rows) < 5:
+        msg = f"Смета не создана: распознано строк {len(rows)}, минимум 5. Причина: недостаточно данных из ТЗ. Артефакты не созданы"
+        _t2real_update(conn, str(task_id), "FAILED", msg, f"ROWS_TOO_FEW:{len(rows)}")  # TOPIC2_FULL_CLOSE_V1
         _t2real_history(conn, str(task_id), _T2REAL_MARKER + ":ROWS_NOT_BUILT")
         _t2real_send(str(chat_id), msg, reply_to_message_id)
         return True
@@ -4202,6 +4213,8 @@ async def handle_topic2_one_big_formula_pipeline_v1(
         f"Площадь: {round(float(params.get('area') or 0), 2)} м²\n"
         f"Фундамент: плита {int(params.get('slab_mm') or 0)} мм\n"
         f"Стены: {params.get('wall_type')}\n"
+        f"Эталон: М-110.xlsx\n"
+        f"Сценарий: {params.get('scenario_label', 'Каркас под ключ (М-110.xlsx)')}\n"  # TOPIC2_FULL_CLOSE_V1
         f"Утепление: {int(params.get('insulation_mm') or 0)} мм\n"
         f"Удалённость: {int(params.get('distance_km') or 0)} км\n\n"
         "Разделы:\n- " + "\n- ".join(section_names) + "\n\n"
