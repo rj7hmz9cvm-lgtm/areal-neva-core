@@ -345,3 +345,14 @@ topic_961=АВТО ЗАПЧАСТИ | topic_3008=КОДЫ МОЗГОВ | topic_4
 - worker restart: 2026-05-04 20:49:21 MSK
 - markers loaded in log: P6F_*_INSTALLED + P6G_*_INSTALLED ✅
 - smoke test: «нормальную смету ещё раз, снова сделай» → is_revision=True ✅
+
+## P6G_CLEAN_OLD_TOPIC500_CONTAMINATION — VERIFIED 2026-05-04
+
+| Action | Target | Status |
+|---|---|---|
+| SQL UPDATE result | tasks.rowid=4883 (topic_id=500, task_id=ceafeca1-fa42-4e66-8499-40955c393d0c) | DONE ✅ |
+| INSERT task_history | id=59608, action=P6G_CLEAN_OLD_TOPIC500_CONTAMINATION | DONE ✅ |
+| Task preserved | NOT deleted, state=DONE | OK |
+| Reason | Pre-P6E4 contamination: «статусё» → «зелёная металлочерепица Монтеррей» в result. Replaced with служебный очищенный текст по канону. |
+| Backup | data/db_backups/P6G_CLEAN_OLD_TOPIC500_CONTAMINATION_20260504_210544_core.sqlite (sqlite3 .backup) |
+| Push | this commit |
