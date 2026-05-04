@@ -3277,77 +3277,97 @@ def _t2fix_load_active_template():
     except Exception:
         return {}
 
-def _t2fix_drive_service():
+
+def _t2fix_drive_service(*args, **kwargs):
+    # === TOPIC2_DRIVE_AUTH_SINGLE_SOURCE_V1 ===
     try:
-        from dotenv import load_dotenv
-        load_dotenv(str(_T2FIX_BASE / ".env"), override=False)
-        from google.oauth2.credentials import Credentials
-        from google.auth.transport.requests import Request
-        from googleapiclient.discovery import build
+        import google_io
+        service = google_io.get_drive_service()
+    except Exception as e:
+        raise RuntimeError(f"DRIVE_TEMPLATE_DOWNLOAD_FAILED:GOOGLE_IO_SERVICE_ERROR:{e}") from e
 
-        client_id = _t2fix_os.getenv("GDRIVE_CLIENT_ID", "")
-        client_secret = _t2fix_os.getenv("GDRIVE_CLIENT_SECRET", "")
-        refresh_token = _t2fix_os.getenv("GDRIVE_REFRESH_TOKEN", "")
-        if not (client_id and client_secret and refresh_token):
-            return None
+    if service is None:
+        raise RuntimeError("DRIVE_TEMPLATE_DOWNLOAD_FAILED:GOOGLE_IO_SERVICE_NONE")
 
-        creds = Credentials(
-            token=None,
-            refresh_token=refresh_token,
-            token_uri="https://oauth2.googleapis.com/token",
-            client_id=client_id,
-            client_secret=client_secret,
-            scopes=["https://www.googleapis.com/auth/drive"],
+    return service
+    # === END_TOPIC2_DRIVE_AUTH_SINGLE_SOURCE_V1 ===
+
+
+def _t2fix_download_drive_file(file_id=None, out_path=None, mime_type=None, file_name=None, *args, **kwargs):
+    # === TOPIC2_DRIVE_AUTH_SINGLE_SOURCE_V1 ===
+    from pathlib import Path
+    import tempfile
+    import re
+
+    if isinstance(file_id, dict):
+        src = file_id
+        file_id = (
+            src.get("source_file_id")
+            or src.get("file_id")
+            or src.get("drive_file_id")
+            or src.get("id")
         )
-        creds.refresh(Request())
-        return build("drive", "v3", credentials=creds, cache_discovery=False)
-    except Exception:
-        return None
+        mime_type = mime_type or src.get("source_mime_type") or src.get("mime_type")
+        file_name = file_name or src.get("source_file_name") or src.get("file_name") or src.get("name")
 
-def _t2fix_download_drive_file(file_id, file_name):
+    file_id = str(file_id or kwargs.get("file_id") or kwargs.get("source_file_id") or "").strip()
     if not file_id:
-        return ""
-    _T2FIX_CACHE.mkdir(parents=True, exist_ok=True)
+        raise RuntimeError("DRIVE_TEMPLATE_DOWNLOAD_FAILED:EMPTY_FILE_ID")
 
-    safe_name = _t2fix_re.sub(r"[^0-9A-Za-zА-Яа-я_.-]+", "_", file_name or file_id)[:160]
-    if not safe_name.lower().endswith((".xlsx", ".xlsm", ".xls")):
-        safe_name = safe_name + ".xlsx"
-
-    cached = _T2FIX_CACHE / safe_name
-    if cached.exists() and cached.stat().st_size > 1000:
-        return str(cached)
-
-    svc = _t2fix_drive_service()
-    if svc is None:
-        return ""
+    service = _t2fix_drive_service()
 
     try:
-        meta = svc.files().get(fileId=str(file_id), fields="id,name,mimeType,size", supportsAllDrives=True).execute()
-        mime = str(meta.get("mimeType") or "")
-        out = cached
+        meta = service.files().get(
+            fileId=file_id,
+            fields="id,name,mimeType,size,webViewLink",
+            supportsAllDrives=True,
+        ).execute()
+    except Exception as e:
+        raise RuntimeError(f"DRIVE_TEMPLATE_DOWNLOAD_FAILED:METADATA:{file_id}:{e}") from e
 
-        if mime == "application/vnd.google-apps.spreadsheet":
-            request = svc.files().export_media(
-                fileId=str(file_id),
+    real_name = str(meta.get("name") or file_name or f"drive_{file_id}")
+    real_mime = str(meta.get("mimeType") or mime_type or "")
+
+    if out_path is None:
+        safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", real_name)[:120] or f"drive_{file_id}"
+        if real_mime == "application/vnd.google-apps.spreadsheet" and not safe.lower().endswith(".xlsx"):
+            safe += ".xlsx"
+        out_path = Path(tempfile.gettempdir()) / safe
+    else:
+        out_path = Path(out_path)
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        from googleapiclient.http import MediaIoBaseDownload
+
+        if real_mime == "application/vnd.google-apps.spreadsheet":
+            request = service.files().export_media(
+                fileId=file_id,
                 mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
+            if out_path.suffix.lower() != ".xlsx":
+                out_path = out_path.with_suffix(".xlsx")
         else:
-            request = svc.files().get_media(fileId=str(file_id), supportsAllDrives=True)
+            request = service.files().get_media(
+                fileId=file_id,
+                supportsAllDrives=True,
+            )
 
-        from googleapiclient.http import MediaIoBaseDownload
-        fh = _t2fix_io.FileIO(str(out), "wb")
-        downloader = MediaIoBaseDownload(fh, request)
-        done = False
-        while not done:
-            _, done = downloader.next_chunk()
-        fh.close()
+        with open(out_path, "wb") as fh:
+            downloader = MediaIoBaseDownload(fh, request)
+            done = False
+            while not done:
+                _status, done = downloader.next_chunk()
 
-        if out.exists() and out.stat().st_size > 1000:
-            return str(out)
-    except Exception:
-        return ""
+    except Exception as e:
+        raise RuntimeError(f"DRIVE_TEMPLATE_DOWNLOAD_FAILED:DOWNLOAD_OR_EXPORT:{file_id}:{real_mime}:{e}") from e
 
-    return ""
+    if not out_path.exists() or out_path.stat().st_size <= 64:
+        raise RuntimeError(f"DRIVE_TEMPLATE_DOWNLOAD_FAILED:EMPTY_OUTPUT:{file_id}:{out_path}")
+
+    return str(out_path)
+    # === END_TOPIC2_DRIVE_AUTH_SINGLE_SOURCE_V1 ===
 
 def _t2fix_find_template_file(meta):
     candidates = []
@@ -3622,6 +3642,17 @@ async def handle_topic2_one_big_formula_pipeline_v1(
             _t2fix_send(chat_id, topic_id, msg, reply_to_message_id)
             return True
 
+
+        # === TOPIC2_ZERO_ROWS_FAIL_VISIBLE_V1 ===
+        try:
+            _t2fix_zero_rows_value = len(rows or [])
+            if isinstance(_t2fix_zero_rows_value, (list, tuple, dict, set)):
+                _t2fix_zero_rows_value = len(_t2fix_zero_rows_value)
+        except Exception:
+            _t2fix_zero_rows_value = None
+        if _t2fix_zero_rows_value is not None and int(_t2fix_zero_rows_value or 0) <= 0:
+            raise RuntimeError("DRIVE_TEMPLATE_DOWNLOAD_FAILED:ZERO_RECOGNIZED_ROWS")
+        # === END_TOPIC2_ZERO_ROWS_FAIL_VISIBLE_V1 ===
         msg = (
             "Смета пересобрана по эталонному XLSX-шаблону\n"
             f"Engine: {_T2FIX_MARKER}\n"
