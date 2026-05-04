@@ -6367,3 +6367,603 @@ async def handle_topic2_one_big_formula_pipeline_v1(conn=None, task=None, chat_i
             return await _P6E2_ORIG_HANDLE_TOPIC2_ONE_BIG(conn, tid, str(chat_id or ""), int(topic_id or 0), raw_input or full_context or "", kwargs.get("input_type") or "text", _p6e2_row(task, "reply_to_message_id", None))
     return False
 # === END_P6E2_IMAGE_PLAN_ROOM_ESTIMATE_FULL_CLOSE_20260504_V1 ===
+
+
+# === P6F_PHOTO_CV_OPENROUTER_VISION_V2 ===
+# FACT: photo CV via OpenRouter Vision ONLY.
+# Forbidden: direct Google API, GOOGLE_API_KEY, core.gemini_vision.
+# Same canonical path as core/artifact_pipeline.py::_vision_image:
+#   OPENROUTER_API_KEY + OPENROUTER_BASE_URL + model google/gemini-2.5-flash + chat/completions + image_url base64.
+import json as _p6f_pcv_json
+import re as _p6f_pcv_re
+import os as _p6f_pcv_os
+import base64 as _p6f_pcv_base64
+import logging as _p6f_pcv_logging
+
+_P6F_PCV_LOG = _p6f_pcv_logging.getLogger("sample_template_engine")
+
+_P6F_PCV_PROMPT = (
+    "Ты строительный аналитик. На фото — план дома или объекта. "
+    "Верни СТРОГО JSON без пояснений со схемой:\n"
+    "{\n"
+    "  \"dims\": [width_m, length_m],\n"
+    "  \"floors\": int,\n"
+    "  \"rooms\": [{\"name\": str, \"area_m2\": float}],\n"
+    "  \"windows\": int,\n"
+    "  \"doors\": int,\n"
+    "  \"terrace\": bool,\n"
+    "  \"confidence\": \"HIGH\"|\"MEDIUM\"|\"LOW\",\n"
+    "  \"notes\": str\n"
+    "}\n"
+    "Если размер не виден на чертеже или в штампе — confidence=LOW и dims=[0,0]. Не выдумывай. "
+    "Если помещения не подписаны — rooms=[]. "
+    "Если окна или двери не различимы — windows=0 / doors=0 (а не догадка)."
+)
+
+def _p6f_pcv_extract_json(text):
+    if not text:
+        return None
+    s = str(text).strip()
+    if s.startswith("```"):
+        s = _p6f_pcv_re.sub(r"^```(?:json)?\s*", "", s)
+        s = _p6f_pcv_re.sub(r"\s*```\s*$", "", s)
+    m = _p6f_pcv_re.search(r"\{[\s\S]*\}", s)
+    if m:
+        s = m.group(0)
+    try:
+        return _p6f_pcv_json.loads(s)
+    except Exception:
+        return None
+
+def _p6f_pcv_normalize(data):
+    if not isinstance(data, dict):
+        return None
+    try:
+        dims = data.get("dims") or [0, 0]
+        if not (isinstance(dims, (list, tuple)) and len(dims) == 2):
+            return None
+        w = float(dims[0] or 0)
+        l = float(dims[1] or 0)
+        floors = int(data.get("floors") or 1)
+        rooms = data.get("rooms") or []
+        if not isinstance(rooms, list):
+            rooms = []
+        clean_rooms = []
+        for r in rooms:
+            if isinstance(r, dict):
+                clean_rooms.append({
+                    "name": str(r.get("name", "") or "")[:80],
+                    "area_m2": float(r.get("area_m2", 0) or 0),
+                })
+        windows = int(data.get("windows") or 0)
+        doors = int(data.get("doors") or 0)
+        terrace = bool(data.get("terrace"))
+        confidence = str(data.get("confidence", "LOW") or "LOW").upper()
+        if confidence not in ("HIGH", "MEDIUM", "LOW"):
+            confidence = "LOW"
+        needs_clarification = (w <= 0 or l <= 0 or w > 100 or l > 100 or confidence == "LOW")
+        return {
+            "dims": (w, l),
+            "floors": max(1, floors),
+            "rooms": clean_rooms,
+            "windows": windows,
+            "doors": doors,
+            "terrace": terrace,
+            "confidence": confidence,
+            "needs_clarification": needs_clarification,
+            "source": "OPENROUTER_GEMINI_VISION",
+            "notes": str(data.get("notes", "") or "")[:500],
+        }
+    except Exception as e:
+        _P6F_PCV_LOG.warning("P6F_PCV_NORMALIZE_ERR %s", e)
+        return None
+
+async def _p6f_pcv_analyze_via_openrouter(local_path, caption):
+    if not local_path or not _p6f_pcv_os.path.exists(str(local_path)):
+        return None, "PATH_MISSING"
+    api_key = (_p6f_pcv_os.getenv("OPENROUTER_API_KEY") or "").strip()
+    if not api_key:
+        return None, "NO_OPENROUTER_KEY"
+    base_url = (_p6f_pcv_os.getenv("OPENROUTER_BASE_URL") or "https://openrouter.ai/api/v1").strip().rstrip("/")
+    model = (_p6f_pcv_os.getenv("OPENROUTER_VISION_MODEL") or "google/gemini-2.5-flash").strip()
+
+    ext = _p6f_pcv_os.path.splitext(str(local_path))[1].lower().lstrip(".") or "jpeg"
+    mime = "image/jpeg" if ext in ("jpg", "jpeg") else "image/{}".format(ext)
+
+    try:
+        with open(str(local_path), "rb") as f:
+            b64 = _p6f_pcv_base64.b64encode(f.read()).decode("utf-8")
+    except Exception as e:
+        _P6F_PCV_LOG.warning("P6F_PCV_READ_ERR path=%s err=%s", local_path, e)
+        return None, "READ_ERR"
+
+    prompt = _P6F_PCV_PROMPT
+    if caption:
+        prompt = prompt + "\n\nДополнительный контекст из подписи пользователя:\n" + str(caption)[:2000]
+
+    body = {
+        "model": model,
+        "messages": [{
+            "role": "user",
+            "content": [
+                {"type": "text", "text": prompt},
+                {"type": "image_url", "image_url": {"url": "data:" + mime + ";base64," + b64}},
+            ],
+        }],
+        "temperature": 0.1,
+    }
+    headers = {
+        "Authorization": "Bearer " + api_key,
+        "Content-Type": "application/json",
+    }
+
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=httpx.Timeout(180.0, connect=30.0)) as client:
+            r = await client.post(base_url + "/chat/completions", headers=headers, json=body)
+            r.raise_for_status()
+            data = r.json()
+        content = data["choices"][0]["message"]["content"]
+        if isinstance(content, list):
+            content = "\n".join(x.get("text", "") if isinstance(x, dict) else str(x) for x in content)
+    except Exception as e:
+        _P6F_PCV_LOG.warning("P6F_PCV_OPENROUTER_CALL_ERR path=%s err=%s:%s", local_path, type(e).__name__, str(e)[:300])
+        return None, "OPENROUTER_CALL_ERR"
+
+    parsed = _p6f_pcv_extract_json(content)
+    if not parsed:
+        _P6F_PCV_LOG.warning("P6F_PCV_NO_JSON sample=%s", str(content)[:200])
+        return None, "NO_JSON"
+    plan = _p6f_pcv_normalize(parsed)
+    if not plan:
+        return None, "NORMALIZE_FAILED"
+    _P6F_PCV_LOG.info(
+        "P6F_PCV_OPENROUTER_OK path=%s dims=%s floors=%s rooms=%d windows=%d doors=%d conf=%s",
+        local_path, plan["dims"], plan["floors"], len(plan["rooms"]),
+        plan["windows"], plan["doors"], plan["confidence"],
+    )
+    return plan, "OK"
+
+try:
+    _P6F_PCV_ORIG_HANDLER = handle_topic2_image_estimate_p6e2
+    if not getattr(_P6F_PCV_ORIG_HANDLER, "_p6f_pcv_v2_wrapped", False):
+        async def handle_topic2_image_estimate_p6e2(conn, task=None, chat_id=None, topic_id=None, raw_input=None, full_context=None, local_path="", file_name="", mime_type="", task_id=None, **kwargs):
+            if int(topic_id or 0) != 2:
+                return False
+            if task is None:
+                task = {}
+            tid = _p6e2_s(task_id or _p6e2_row(task, "id", ""))
+            if not tid:
+                return False
+            raw = _p6e2_s(raw_input if raw_input is not None else _p6e2_row(task, "raw_input", ""), 100000)
+            payload = _p6e2_json_maybe(raw)
+            caption = _p6e2_s(payload.get("caption") or full_context or raw, 50000)
+            fn = _p6e2_s(file_name or payload.get("file_name") or payload.get("name") or "")
+            mt = _p6e2_s(mime_type or payload.get("mime_type") or "")
+            if not (_p6e2_is_image(fn, mt, local_path) and _p6e2_estimate_like(caption)):
+                return False
+            lp = _p6e2_find_local_path(tid, fn, local_path or payload.get("local_path") or payload.get("file_path") or "")
+
+            plan, reason = await _p6f_pcv_analyze_via_openrouter(lp, caption)
+
+            if plan is None or plan.get("needs_clarification"):
+                why = reason if plan is None else "LOW_CONFIDENCE_OR_NO_DIMS"
+                msg = "Не вижу размер на фото или подпись неполная. Пришли размер в формате 7.8х9.0 м или фото плана крупнее"
+                conn.execute(
+                    "UPDATE tasks SET state='WAITING_CLARIFICATION', result=?, error_message=?, updated_at=datetime('now') WHERE id=?",
+                    (msg, "P6F_PCV_NEEDS_CLARIFICATION_" + why, tid),
+                )
+                conn.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (tid, "P6F_PCV_OPENROUTER_VISION_NEEDS_CLARIFICATION:" + why),
+                )
+                conn.commit()
+                return True
+
+            rows = _p6e2_build_rows(plan)
+            xlsx = _p6e2_create_xlsx(tid, plan, rows)
+            txt = _p6e2_create_pdf_text(tid, plan, rows)
+            total = sum(float(r["total"] or 0) for r in rows)
+
+            rooms_lines = "\n".join(
+                "  - {} ({} м²)".format(r.get("name", "?"), r.get("area_m2", 0))
+                for r in plan.get("rooms", [])[:20]
+            ) or "  (помещения не распознаны, требуется ручная проверка)"
+            windows_line = "Окна: {}".format(plan["windows"]) if plan["windows"] > 0 else "Окна: не распознаны, требуется ручная проверка"
+            doors_line = "Двери: {}".format(plan["doors"]) if plan["doors"] > 0 else "Двери: не распознаны, требуется ручная проверка"
+            model_used = _p6f_pcv_os.getenv("OPENROUTER_VISION_MODEL", "google/gemini-2.5-flash")
+
+            result = "\n".join([
+                "✅ Смета по фото/плану сформирована",
+                "Источник плана: OpenRouter Vision (model={}, confidence={})".format(model_used, plan.get("confidence", "?")),
+                "Файл: {}".format(fn or "image"),
+                "Размер: {}x{} м".format(plan["dims"][0], plan["dims"][1]),
+                "Этажей: {}".format(plan["floors"]),
+                "Площадь застройки: {:.2f} м²".format(plan["dims"][0] * plan["dims"][1]),
+                "Расчётная площадь: {:.2f} м²".format(plan["dims"][0] * plan["dims"][1] * max(1, plan["floors"])),
+                "Помещений распознано: {}".format(len(plan.get("rooms", []))),
+                rooms_lines,
+                windows_line,
+                doors_line,
+                "Терраса: {}".format("да" if plan["terrace"] else "нет"),
+                "Позиций в смете: {}".format(len(rows)),
+                "Итого: {:,.0f} руб".format(total).replace(",", " "),
+                "НДС 20%: {:,.0f} руб".format(total * 0.2).replace(",", " "),
+                "С НДС: {:,.0f} руб".format(total * 1.2).replace(",", " "),
+                "",
+                "Excel: {}".format(xlsx),
+                "TXT/PDF-source: {}".format(txt),
+            ])
+            conn.execute(
+                "UPDATE tasks SET state='DONE', result=?, error_message='', updated_at=datetime('now') WHERE id=?",
+                (result, tid),
+            )
+            conn.execute(
+                "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                (tid, "P6F_PCV_OPENROUTER_VISION_DONE_CONF_{}_ROWS_{}".format(plan.get("confidence", "?"), len(rows))),
+            )
+            conn.commit()
+            return True
+        handle_topic2_image_estimate_p6e2._p6f_pcv_v2_wrapped = True
+        _P6F_PCV_LOG.info("P6F_PHOTO_CV_OPENROUTER_VISION_V2_INSTALLED")
+except Exception as _e:
+    _P6F_PCV_LOG.exception("P6F_PCV_V2_INSTALL_ERR %s", _e)
+# === END_P6F_PHOTO_CV_OPENROUTER_VISION_V2 ===
+
+
+# === P6F_TOPIC2_TZ_PARAM_LOCK_AND_SUFFICIENT_GATE_V1 ===
+# FACT: extracts building params strictly from current raw_input,
+# locks them with absolute priority over memory/template/archive,
+# and provides _p6f_tz_is_sufficient() so that orchestra does NOT
+# stop estimate flow when TZ already has enough data.
+import re as _p6f_tz_re
+import logging as _p6f_tz_logging
+
+_P6F_TZ_LOG = _p6f_tz_logging.getLogger("sample_template_engine")
+
+_P6F_TZ_DIM_RE = _p6f_tz_re.compile(r"(\d+(?:[.,]\d+)?)\s*[xх×]\s*(\d+(?:[.,]\d+)?)")
+_P6F_TZ_AREA_RE = _p6f_tz_re.compile(r"площад[ьи]?\s*[:=]?\s*(\d+(?:[.,]\d+)?)\s*м[²2]?", _p6f_tz_re.IGNORECASE)
+_P6F_TZ_FLOOR_RE = _p6f_tz_re.compile(r"(\d+)\s*эта|(\d+)-?этаж", _p6f_tz_re.IGNORECASE)
+_P6F_TZ_DIST_RE = _p6f_tz_re.compile(r"(\d+)\s*км", _p6f_tz_re.IGNORECASE)
+_P6F_TZ_MM_NEAR_RE = _p6f_tz_re.compile(r"(\d+)\s*мм")
+
+def _p6f_tz_extract_mm_near(text, keyword, max_distance=60):
+    """Find first '<digits> мм' within max_distance chars after first occurrence of keyword."""
+    if not text or not keyword:
+        return None
+    low = text.lower().replace("ё", "е")
+    idx = low.find(keyword)
+    if idx < 0:
+        return None
+    chunk = text[idx:idx + max_distance]
+    m = _P6F_TZ_MM_NEAR_RE.search(chunk)
+    if not m:
+        return None
+    try:
+        v = int(m.group(1))
+        if 50 <= v <= 1000:
+            return v
+    except Exception:
+        pass
+    return None
+
+_P6F_TZ_OBJECT_WORDS = ("барнхаус", "коттедж", "баня", "гараж", "склад", "ангар", "пристройка", "терраса", "хозблок", "дом")
+_P6F_TZ_WALL_WORDS = ("каркас", "газобетон", "газоблок", "брус", "бревно", "кирпич", "арболит", "керамоблок", "монолит")
+_P6F_TZ_FOUNDATION_WORDS = ("монолитная плита", "плита", "сваи", "ленточн", "столбчат", "ростверк", "утеплённая плита", "утепленная плита")
+_P6F_TZ_ROOF_WORDS = ("металлочерепица", "клик-фальц", "фальц", "профнастил", "мягкая кровля", "ондулин", "мембран", "гибкая черепица")
+_P6F_TZ_FACADE_WORDS = ("имитация бруса", "клик-фальц фасад", "штукатурка", "сайдинг", "вагонка", "плитка фасадная", "блок-хаус")
+
+def _p6f_tz_low(s):
+    return str(s or "").lower().replace("ё", "е")
+
+def _p6f_tz_extract_params(raw_input):
+    if not raw_input:
+        return {}
+    text = str(raw_input)
+    low = _p6f_tz_low(text)
+    out = {}
+
+    m = _P6F_TZ_DIM_RE.search(text)
+    if m:
+        try:
+            w = float(m.group(1).replace(",", "."))
+            l = float(m.group(2).replace(",", "."))
+            if 2 <= w <= 100 and 2 <= l <= 100:
+                out["dimensions"] = (w, l)
+                out["area_m2"] = round(w * l, 2)
+        except Exception:
+            pass
+
+    m = _P6F_TZ_AREA_RE.search(low)
+    if m and "area_m2" not in out:
+        try:
+            out["area_m2"] = float(m.group(1).replace(",", "."))
+        except Exception:
+            pass
+
+    m = _P6F_TZ_FLOOR_RE.search(low)
+    if m:
+        v = m.group(1) or m.group(2)
+        if v:
+            try:
+                out["floors"] = int(v)
+            except Exception:
+                pass
+
+    for kw in ("утепление стен", "утепл стен", "утеплитель стен", "стены"):
+        v = _p6f_tz_extract_mm_near(text, kw, max_distance=40)
+        if v:
+            out["wall_insulation_mm"] = v
+            break
+    for kw in ("утепление кровли", "утепл кровл", "утеплитель кровли", "кровля", "кровли", "кровле"):
+        v = _p6f_tz_extract_mm_near(text, kw, max_distance=60)
+        if v:
+            out["roof_insulation_mm"] = v
+            break
+
+    m = _P6F_TZ_DIST_RE.search(low)
+    if m:
+        try:
+            out["distance_km"] = int(m.group(1))
+        except Exception:
+            pass
+
+    for w in _P6F_TZ_OBJECT_WORDS:
+        if w in low:
+            out["object_type"] = w
+            break
+    for w in _P6F_TZ_WALL_WORDS:
+        if w in low:
+            out["wall_type"] = w
+            break
+    for w in _P6F_TZ_FOUNDATION_WORDS:
+        if w in low:
+            out["foundation_type"] = w
+            break
+    for w in _P6F_TZ_ROOF_WORDS:
+        if w in low:
+            out["roof_type"] = w
+            break
+    for w in _P6F_TZ_FACADE_WORDS:
+        if w in low:
+            out["facade_type"] = w
+            break
+
+    return out
+
+def _p6f_tz_is_sufficient(raw_input_or_params):
+    if isinstance(raw_input_or_params, dict):
+        params = raw_input_or_params
+    else:
+        params = _p6f_tz_extract_params(raw_input_or_params)
+    has_object = bool(params.get("object_type"))
+    has_size = bool(params.get("dimensions") or params.get("area_m2"))
+    has_main_structure = bool(
+        params.get("foundation_type") or params.get("wall_type") or params.get("roof_type")
+    )
+    return has_object and has_size and (has_main_structure or params.get("dimensions"))
+
+def _p6f_tz_format_acceptance_block(params, prices_status=None):
+    if not params:
+        return ""
+    confirmed = []
+    if params.get("object_type"): confirmed.append("- объект: " + str(params["object_type"]))
+    if params.get("dimensions"):
+        d = params["dimensions"]
+        confirmed.append("- размеры: {}x{} м".format(d[0], d[1]))
+    if params.get("area_m2"): confirmed.append("- площадь: {} м²".format(params["area_m2"]))
+    if params.get("floors"): confirmed.append("- этажей: " + str(params["floors"]))
+    if params.get("foundation_type"): confirmed.append("- фундамент: " + str(params["foundation_type"]))
+    if params.get("wall_type"): confirmed.append("- стены: " + str(params["wall_type"]))
+    if params.get("wall_insulation_mm"): confirmed.append("- утепление стен: {} мм".format(params["wall_insulation_mm"]))
+    if params.get("roof_type"): confirmed.append("- кровля: " + str(params["roof_type"]))
+    if params.get("roof_insulation_mm"): confirmed.append("- утепление кровли: {} мм".format(params["roof_insulation_mm"]))
+    if params.get("facade_type"): confirmed.append("- фасад: " + str(params["facade_type"]))
+    if params.get("distance_km"): confirmed.append("- удалённость: {} км".format(params["distance_km"]))
+
+    needs = []
+    if not params.get("foundation_type") and (params.get("object_type") or params.get("dimensions")):
+        needs.append("- тип фундамента (принято по шаблону)")
+    if not params.get("roof_type") and params.get("dimensions"):
+        needs.append("- тип кровли (принято по шаблону)")
+    if not params.get("facade_type") and params.get("wall_type"):
+        needs.append("- тип фасады (принято по шаблону)")
+    if not params.get("distance_km"):
+        needs.append("- удалённость (логистика ориентировочная)")
+    if params.get("wall_insulation_mm") and not params.get("wall_insulation_brand"):
+        needs.append("- марка/плотность утеплителя стен (NEEDS_CONFIRMATION)")
+    if not params.get("windows_count"):
+        needs.append("- количество окон (NEEDS_MANUAL_CHECK)")
+    if not params.get("doors_count"):
+        needs.append("- количество дверей (NEEDS_MANUAL_CHECK)")
+
+    parts = []
+    if confirmed:
+        parts.append("Принято из ТЗ:\n" + "\n".join(confirmed))
+    if needs:
+        parts.append("Требует уточнения (взято по шаблону):\n" + "\n".join(needs))
+    if prices_status:
+        parts.append("Статус цен: " + str(prices_status))
+    return "\n\n".join(parts)
+# === END_P6F_TOPIC2_TZ_PARAM_LOCK_AND_SUFFICIENT_GATE_V1 ===
+
+
+# === P6F_PRICE_SOURCE_LABELS_V1 ===
+import re as _p6f_psl_re
+
+_P6F_PSL_LIVE_DOMAINS = (
+    "ozon.ru", "wildberries", "wb.ru", "avito.ru", "leroymerlin", "petrovich",
+    "vseinstrumenti", "stroyland", "tdsf.ru", "drom.ru", "exist.ru", "emex.ru", "2gis",
+)
+
+def _p6f_psl_low(s):
+    return str(s or "").lower().replace("ё", "е")
+
+def _p6f_psl_classify_line(line):
+    low = _p6f_psl_low(line)
+    has_url = "http://" in low or "https://" in low
+    has_supplier = any(d in low for d in _P6F_PSL_LIVE_DOMAINS)
+    has_checked = "checked_at" in low or "проверено" in low or "дата проверки" in low
+    has_template = "шаблон" in low or "м-110" in low or "м-80" in low or "fallback" in low
+    has_user = "указано пользователем" in low or "указано вручную" in low or "user_assumption" in low
+    if has_user:
+        return "USER_ASSUMPTION"
+    if has_url and (has_supplier or has_checked):
+        return "LIVE_CONFIRMED"
+    if has_url:
+        return "PARTIAL_LIVE"
+    if has_template:
+        return "TEMPLATE_FALLBACK_PRICE"
+    return ""
+
+def _p6f_psl_label_prices(text):
+    if not text:
+        return text
+    s = str(text)
+    out = []
+    for line in s.splitlines():
+        low = line.lower()
+        is_price_line = (("руб" in low or "₽" in line) and any(c.isdigit() for c in line))
+        if is_price_line:
+            label = _p6f_psl_classify_line(line)
+            if label and ("[" + label + "]") not in line:
+                line = line + "  [" + label + "]"
+        out.append(line)
+    return "\n".join(out)
+# === END_P6F_PRICE_SOURCE_LABELS_V1 ===
+
+
+# === P6F_WEB_PRICE_LIVE_VERIFY_V1 ===
+# FACT: real price line verifier. LIVE_CONFIRMED requires URL + supplier + price + checked_at.
+# Without all four → downgrade to PARTIAL_LIVE / TEMPLATE_FALLBACK_PRICE / USER_ASSUMPTION.
+import re as _p6f_wpv_re
+from datetime import datetime as _p6f_wpv_dt
+
+_P6F_WPV_URL_RE = _p6f_wpv_re.compile(r"https?://[^\s)\"\'<>]+")
+_P6F_WPV_PRICE_RE = _p6f_wpv_re.compile(r"(\d{1,3}(?:[   ]?\d{3})*(?:[.,]\d+)?)\s*(?:руб|₽|р\.|RUB)", _p6f_wpv_re.IGNORECASE)
+_P6F_WPV_DATE_RE = _p6f_wpv_re.compile(r"(20\d{2}[-./]\d{1,2}[-./]\d{1,2}|\d{1,2}[-./]\d{1,2}[-./]20\d{2})")
+
+_P6F_WPV_KNOWN_SUPPLIERS = {
+    "ozon.ru": "Ozon",
+    "wildberries.ru": "Wildberries",
+    "wb.ru": "Wildberries",
+    "avito.ru": "Avito",
+    "leroymerlin.ru": "Leroy Merlin",
+    "petrovich.ru": "Petrovich",
+    "vseinstrumenti.ru": "ВсеИнструменты",
+    "stroyland.ru": "Stroyland",
+    "tdsf.ru": "ТД СтройФорум",
+    "drom.ru": "Drom",
+    "exist.ru": "Exist",
+    "emex.ru": "Emex",
+    "2gis.ru": "2GIS",
+    "yandex.market": "Yandex Market",
+    "market.yandex": "Yandex Market",
+}
+
+def _p6f_wpv_extract_supplier(url):
+    if not url:
+        return ""
+    low = url.lower()
+    for domain, name in _P6F_WPV_KNOWN_SUPPLIERS.items():
+        if domain in low:
+            return name
+    m = _p6f_wpv_re.search(r"https?://(?:www\.)?([^/]+)/?", url)
+    return m.group(1) if m else ""
+
+def _p6f_wpv_extract_price(text):
+    m = _P6F_WPV_PRICE_RE.search(str(text or ""))
+    if not m:
+        return None
+    try:
+        s = m.group(1).replace(" ", "").replace(" ", "").replace(" ", "").replace(",", ".")
+        return float(s)
+    except Exception:
+        return None
+
+def _p6f_wpv_verify_price_line(line):
+    """
+    Returns dict:
+      {price, url, supplier, checked_at, status, raw_line}
+    status ∈ LIVE_CONFIRMED | PARTIAL_LIVE | TEMPLATE_FALLBACK_PRICE | USER_ASSUMPTION | UNKNOWN
+    """
+    if not line:
+        return {"raw_line": line, "status": "UNKNOWN"}
+    text = str(line)
+    low = text.lower().replace("ё", "е")
+
+    if "указано пользователем" in low or "указано вручную" in low or "user_assumption" in low:
+        return {"raw_line": text, "status": "USER_ASSUMPTION"}
+
+    price = _p6f_wpv_extract_price(text)
+    url_match = _P6F_WPV_URL_RE.search(text)
+    url = url_match.group(0) if url_match else ""
+    supplier = _p6f_wpv_extract_supplier(url) if url else ""
+
+    date_match = _P6F_WPV_DATE_RE.search(text)
+    has_checked_at = bool(date_match) or "checked_at" in low or "проверено" in low or "дата проверки" in low
+
+    if "шаблон" in low or "м-110" in low or "м-80" in low or "fallback" in low:
+        return {
+            "raw_line": text, "status": "TEMPLATE_FALLBACK_PRICE",
+            "price": price, "url": url, "supplier": supplier,
+            "checked_at": _p6f_wpv_dt.utcnow().isoformat() + "Z" if has_checked_at else "",
+        }
+
+    if price and url and supplier and has_checked_at:
+        return {
+            "raw_line": text, "status": "LIVE_CONFIRMED",
+            "price": price, "url": url, "supplier": supplier,
+            "checked_at": _p6f_wpv_dt.utcnow().isoformat() + "Z" if not date_match else date_match.group(1),
+        }
+
+    if price and url:
+        return {
+            "raw_line": text, "status": "PARTIAL_LIVE",
+            "price": price, "url": url, "supplier": supplier or "unknown",
+            "checked_at": _p6f_wpv_dt.utcnow().isoformat() + "Z",
+            "note": "missing supplier or checked_at",
+        }
+
+    if price and not url:
+        return {
+            "raw_line": text, "status": "TEMPLATE_FALLBACK_PRICE",
+            "price": price, "url": "", "supplier": "",
+            "note": "no URL — assumed template/fallback price",
+        }
+
+    return {"raw_line": text, "status": "UNKNOWN"}
+
+def _p6f_wpv_verify_text_block(text):
+    """Process multi-line price text. Returns (annotated_text, summary_dict)."""
+    if not text:
+        return text, {"total_lines": 0, "live_confirmed": 0, "partial": 0, "fallback": 0, "user": 0}
+    out_lines = []
+    summary = {"total_lines": 0, "live_confirmed": 0, "partial": 0, "fallback": 0, "user": 0, "unknown": 0}
+    for line in str(text).splitlines():
+        low = line.lower()
+        is_price = ("руб" in low or "₽" in line) and any(c.isdigit() for c in line)
+        if not is_price:
+            out_lines.append(line)
+            continue
+        v = _p6f_wpv_verify_price_line(line)
+        status = v.get("status", "UNKNOWN")
+        summary["total_lines"] += 1
+        if status == "LIVE_CONFIRMED":
+            summary["live_confirmed"] += 1
+        elif status == "PARTIAL_LIVE":
+            summary["partial"] += 1
+        elif status == "TEMPLATE_FALLBACK_PRICE":
+            summary["fallback"] += 1
+        elif status == "USER_ASSUMPTION":
+            summary["user"] += 1
+        else:
+            summary["unknown"] += 1
+        if "[" + status + "]" not in line:
+            extra = ""
+            if status == "LIVE_CONFIRMED" and v.get("checked_at"):
+                extra = " checked_at=" + str(v["checked_at"])[:19]
+            line = line + "  [" + status + extra + "]"
+        out_lines.append(line)
+    return "\n".join(out_lines), summary
+# === END_P6F_WEB_PRICE_LIVE_VERIFY_V1 ===

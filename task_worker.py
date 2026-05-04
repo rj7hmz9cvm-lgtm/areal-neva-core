@@ -7228,6 +7228,770 @@ for _p6e4_send_name in ("_send_once_ex", "send_once_ex", "_send_task_result", "s
 _p6e4_logging.getLogger("WORKER").info("P6E4_LIVE_ROUTE_GUARD_INSTALLED")
 # === END_P6E4_LIVE_ROUTE_FULL_CLOSE_IMAGE_SEARCH_CATALOG_20260504_V1 ===
 
+# === P6F_P6E67_REPLY_REVISION_STRICT_ARTIFACT_GATE_20260504_V1 ===
+# FACT: revision binding + anti-fake DONE + /root cleaner
+# Inserted before __main__ guard so wrappers actually load at runtime
+import re as _p6e67_re
+import inspect as _p6e67_inspect
+import logging as _p6e67_logging
+
+_P6E67_REVISION_WORDS = (
+    "пришли", "отправь", "скинь", "дай", "pdf", "пдф", "xlsx", "excel", "эксель", "txt",
+    "ссылку", "ссылки", "drive", "расчет", "расчёт", "комнат", "помещ", "окн", "окон",
+    "двер", "площад", "переделай", "доработай", "исправь", "правк", "нормально", "не так"
+)
+
+_P6E67_ARTIFACT_WORDS = (
+    "pdf", "пдф", "xlsx", "excel", "эксель", "txt", "ссылку", "ссылки", "drive", "расчет", "расчёт"
+)
+
+_P6E67_BAD_RESULT = (
+    "что строим", "дом, ангар, склад", "фундамент или кровлю", "какой объект", "уточните что строим"
+)
+
+def _p6e67_log():
+    try:
+        return logger
+    except Exception:
+        return _p6e67_logging.getLogger("task_worker")
+
+def _p6e67_s(v, limit=60000):
+    try:
+        return str(v or "").strip()[:limit]
+    except Exception:
+        return ""
+
+def _p6e67_low(v, limit=60000):
+    return _p6e67_s(v, limit).lower().replace("ё", "е")
+
+def _p6e67_row(row, key, default=None):
+    try:
+        if hasattr(row, "keys") and key in row.keys():
+            return row[key]
+    except Exception:
+        pass
+    try:
+        return row[key]
+    except Exception:
+        return default
+
+def _p6e67_hist(conn, task_id, action):
+    try:
+        _history(conn, str(task_id), str(action))
+        conn.commit()
+    except Exception as e:
+        _p6e67_log().warning("P6E67_HIST_ERR task=%s action=%s err=%s", task_id, action, e)
+
+def _p6e67_is_revision(raw):
+    low = _p6e67_low(raw)
+    return bool(low and any(x in low for x in _P6E67_REVISION_WORDS))
+
+def _p6e67_wants_artifacts(raw):
+    low = _p6e67_low(raw)
+    return bool(low and any(x in low for x in _P6E67_ARTIFACT_WORDS))
+
+def _p6e67_is_estimate(row):
+    if int(_p6e67_row(row, "topic_id", 0) or 0) != 2:
+        return False
+    txt = _p6e67_low(
+        _p6e67_s(_p6e67_row(row, "raw_input", ""), 120000) + " " +
+        _p6e67_s(_p6e67_row(row, "result", ""), 120000) + " " +
+        _p6e67_s(_p6e67_row(row, "input_type", ""))
+    )
+    return any(x in txt for x in ("смет", "стоимость", "расчет", "расчёт", "площад", "кровл", "фундамент", "каркас"))
+
+def _p6e67_clean(text):
+    text = _p6e67_s(text, 70000)
+    text = _p6e67_re.sub(r"/root/\.areal-neva-core/\S+", "[локальный путь скрыт]", text)
+    text = _p6e67_re.sub(r"/root/\S+", "[локальный путь скрыт]", text)
+    return text
+
+def _p6e67_find_parent(conn, task):
+    chat_id = _p6e67_s(_p6e67_row(task, "chat_id", ""))
+    topic_id = int(_p6e67_row(task, "topic_id", 0) or 0)
+    task_id = _p6e67_s(_p6e67_row(task, "id", ""))
+    reply_to = _p6e67_row(task, "reply_to_message_id", None)
+    try:
+        reply_to = int(reply_to) if reply_to not in (None, "", 0, "0") else None
+    except Exception:
+        reply_to = None
+
+    if not chat_id or topic_id != 2:
+        return None, "NO_SCOPE"
+
+    if reply_to:
+        row = conn.execute("""
+            SELECT * FROM tasks
+            WHERE chat_id=? AND COALESCE(topic_id,0)=? AND id<>?
+              AND (bot_message_id=? OR reply_to_message_id=?)
+              AND state IN ('DONE','AWAITING_CONFIRMATION','RESULT_READY','FAILED','IN_PROGRESS','WAITING_CLARIFICATION')
+            ORDER BY rowid DESC LIMIT 1
+        """, (chat_id, topic_id, task_id, reply_to, reply_to)).fetchone()
+        if row and _p6e67_is_estimate(row):
+            return row, "EXACT_REPLY_LINK"
+
+    row = conn.execute("""
+        SELECT * FROM tasks
+        WHERE chat_id=? AND COALESCE(topic_id,0)=? AND id<>?
+          AND state IN ('DONE','AWAITING_CONFIRMATION','RESULT_READY','FAILED','IN_PROGRESS','WAITING_CLARIFICATION')
+          AND (
+            raw_input LIKE '%смет%' OR result LIKE '%смет%'
+            OR raw_input LIKE '%стоимость%' OR result LIKE '%стоимость%'
+            OR raw_input LIKE '%кровл%' OR result LIKE '%кровл%'
+            OR raw_input LIKE '%фундамент%' OR result LIKE '%фундамент%'
+          )
+        ORDER BY rowid DESC LIMIT 1
+    """, (chat_id, topic_id, task_id)).fetchone()
+
+    if row and _p6e67_is_estimate(row):
+        return row, "LAST_DONE_ESTIMATE_FALLBACK"
+
+    return None, "NOT_FOUND"
+
+def _p6e67_merge_parent(conn, parent, current, source):
+    parent_id = _p6e67_s(_p6e67_row(parent, "id", ""))
+    current_id = _p6e67_s(_p6e67_row(current, "id", ""))
+    parent_raw = _p6e67_s(_p6e67_row(parent, "raw_input", ""), 180000)
+    current_raw = _p6e67_s(_p6e67_row(current, "raw_input", ""), 50000)
+    marker = "P6E67_REVISION_FROM_TASK={}".format(current_id)
+
+    if marker not in parent_raw:
+        parent_raw = (parent_raw.rstrip() + "\n\n---\nREVISION_CONTEXT\nsource={}\n{}\n{}\n".format(source, marker, current_raw))[:230000]
+
+    _update_task(conn, parent_id, state="IN_PROGRESS", raw_input=parent_raw, result="", error_message="")
+    _update_task(conn, current_id, state="CANCELLED", result="P6E67_MERGED_TO_PARENT_TASK {}".format(parent_id), error_message="P6E67_MERGED_TO_PARENT")
+    _p6e67_hist(conn, parent_id, "P6E67_PARENT_REVIVED_AS_REVISION_SOURCE:{}".format(source))
+    _p6e67_hist(conn, parent_id, "P6E67_REVISION_TEXT_MERGED_FROM_TASK:{}".format(current_id))
+    _p6e67_hist(conn, current_id, "P6E67_CURRENT_TASK_CANCELLED_MERGED_TO_PARENT:{}".format(parent_id))
+    conn.commit()
+    _p6e67_log().info("P6E67_MERGED current=%s parent=%s source=%s", current_id, parent_id, source)
+    return True
+
+async def _p6e67_try_merge(conn, task):
+    raw = _p6e67_s(_p6e67_row(task, "raw_input", ""), 70000)
+    if int(_p6e67_row(task, "topic_id", 0) or 0) != 2:
+        return False
+    if not _p6e67_is_revision(raw):
+        return False
+
+    parent, source = _p6e67_find_parent(conn, task)
+    if not parent:
+        _p6e67_hist(conn, _p6e67_row(task, "id", ""), "P6E67_PARENT_NOT_FOUND")
+        return False
+
+    return _p6e67_merge_parent(conn, parent, task, source)
+
+def _p6e67_has_revision_history(conn, task_id):
+    try:
+        return conn.execute("""
+            SELECT 1 FROM task_history
+            WHERE task_id=? AND action LIKE 'P6E67_REVISION_TEXT_MERGED_FROM_TASK:%'
+            LIMIT 1
+        """, (str(task_id),)).fetchone() is not None
+    except Exception:
+        return False
+
+def _p6e67_artifact_links_ok(text):
+    low = _p6e67_low(text, 70000)
+    if "/root/" in low or "[локальный путь скрыт]" in low:
+        return False, "ROOT_OR_HIDDEN_LOCAL_PATH"
+
+    has_pdf = bool(_p6e67_re.search(r"(https?://\S+|telegram://\S+)\S*\.pdf\b", low) or "pdf: https://" in low or "pdf: telegram://" in low)
+    has_xlsx = bool(_p6e67_re.search(r"(https?://\S+|telegram://\S+)\S*\.xlsx\b", low) or "excel: https://" in low or "xlsx: https://" in low or "excel: telegram://" in low or "xlsx: telegram://" in low)
+    has_txt = bool(_p6e67_re.search(r"(https?://\S+|telegram://\S+)\S*\.txt\b", low) or "txt: https://" in low or "txt: telegram://" in low)
+
+    if not has_pdf:
+        return False, "PDF_LINK_MISSING"
+    if not has_xlsx:
+        return False, "XLSX_LINK_MISSING"
+    if not has_txt:
+        return False, "TXT_LINK_MISSING"
+
+    return True, "ARTIFACT_LINKS_OK"
+
+def _p6e67_block_final(conn, task_id, text):
+    clean = _p6e67_clean(text)
+    low = _p6e67_low(clean)
+    if _p6e67_has_revision_history(conn, task_id) and any(x in low for x in _P6E67_BAD_RESULT):
+        return True, "P6E67_BLOCK_GENERIC_QUESTION", clean
+
+    row = conn.execute("SELECT raw_input,topic_id FROM tasks WHERE id=? LIMIT 1", (str(task_id),)).fetchone()
+    if row and int(_p6e67_row(row, "topic_id", 0) or 0) == 2:
+        raw = _p6e67_s(_p6e67_row(row, "raw_input", ""), 230000)
+        if _p6e67_has_revision_history(conn, task_id) and _p6e67_wants_artifacts(raw):
+            ok, reason = _p6e67_artifact_links_ok(clean)
+            if not ok:
+                return True, "P6E67_BLOCK_ARTIFACT_GATE_" + reason, clean
+
+    return False, "", clean
+
+try:
+    _P6E67_ORIG_UPDATE_TASK = _update_task
+    if not getattr(_P6E67_ORIG_UPDATE_TASK, "_p6e67_v1_wrapped", False):
+        def _update_task(conn, task_id, **kwargs):
+            if "result" in kwargs:
+                kwargs["result"] = _p6e67_clean(kwargs.get("result"))
+            if kwargs.get("state") in ("DONE","AWAITING_CONFIRMATION","RESULT_READY") and "result" in kwargs:
+                blocked, reason, clean = _p6e67_block_final(conn, task_id, kwargs.get("result"))
+                kwargs["result"] = clean
+                if blocked:
+                    kwargs["state"] = "IN_PROGRESS"
+                    kwargs["error_message"] = reason
+                    try:
+                        _history(conn, str(task_id), reason + "_ON_UPDATE")
+                    except Exception as e:
+                        _p6e67_log().warning("P6E67_UPDATE_HISTORY_ERR task=%s err=%s", task_id, e)
+            return _P6E67_ORIG_UPDATE_TASK(conn, task_id, **kwargs)
+        _update_task._p6e67_v1_wrapped = True
+except Exception as e:
+    _p6e67_log().exception("P6E67_WRAP_UPDATE_ERR %s", e)
+
+try:
+    _P6E67_ORIG_SEND_ONCE = _send_once
+    if not getattr(_P6E67_ORIG_SEND_ONCE, "_p6e67_v1_wrapped", False):
+        def _send_once(conn, task_id, chat_id, text, reply_to=None, kind="result"):
+            blocked, reason, clean = _p6e67_block_final(conn, task_id, text)
+            if blocked:
+                _update_task(conn, str(task_id), state="IN_PROGRESS", error_message=reason)
+                _p6e67_hist(conn, task_id, reason + "_BEFORE_SEND")
+                return False
+            return _P6E67_ORIG_SEND_ONCE(conn, task_id, chat_id, clean, reply_to, kind)
+        _send_once._p6e67_v1_wrapped = True
+except Exception as e:
+    _p6e67_log().exception("P6E67_WRAP_SEND_ONCE_ERR %s", e)
+
+try:
+    _P6E67_ORIG_SEND_ONCE_EX = _send_once_ex
+    if not getattr(_P6E67_ORIG_SEND_ONCE_EX, "_p6e67_v1_wrapped", False):
+        def _send_once_ex(conn, task_id, chat_id, text, reply_to=None, kind="result", *args, **kwargs):
+            blocked, reason, clean = _p6e67_block_final(conn, task_id, text)
+            if blocked:
+                _update_task(conn, str(task_id), state="IN_PROGRESS", error_message=reason)
+                _p6e67_hist(conn, task_id, reason + "_BEFORE_SEND_EX")
+                return False
+            return _P6E67_ORIG_SEND_ONCE_EX(conn, task_id, chat_id, clean, reply_to, kind, *args, **kwargs)
+        _send_once_ex._p6e67_v1_wrapped = True
+except Exception as e:
+    _p6e67_log().exception("P6E67_WRAP_SEND_ONCE_EX_ERR %s", e)
+
+try:
+    _P6E67_ORIG_HANDLE_NEW = _handle_new
+    if not getattr(_P6E67_ORIG_HANDLE_NEW, "_p6e67_v1_wrapped", False):
+        async def _handle_new(conn, task, *args, **kwargs):
+            if await _p6e67_try_merge(conn, task):
+                return True
+            res = _P6E67_ORIG_HANDLE_NEW(conn, task, *args, **kwargs)
+            return await res if _p6e67_inspect.isawaitable(res) else res
+        _handle_new._p6e67_v1_wrapped = True
+except Exception as e:
+    _p6e67_log().exception("P6E67_WRAP_HANDLE_NEW_ERR %s", e)
+
+try:
+    _P6E67_ORIG_HANDLE_IN_PROGRESS = _handle_in_progress
+    if not getattr(_P6E67_ORIG_HANDLE_IN_PROGRESS, "_p6e67_v1_wrapped", False):
+        async def _handle_in_progress(conn, task, *args, **kwargs):
+            if await _p6e67_try_merge(conn, task):
+                return True
+            res = _P6E67_ORIG_HANDLE_IN_PROGRESS(conn, task, *args, **kwargs)
+            return await res if _p6e67_inspect.isawaitable(res) else res
+        _handle_in_progress._p6e67_v1_wrapped = True
+except Exception as e:
+    _p6e67_log().exception("P6E67_WRAP_HANDLE_IN_PROGRESS_ERR %s", e)
+
+_p6e67_log().info("P6F_P6E67_REPLY_REVISION_STRICT_ARTIFACT_GATE_20260504_V1_INSTALLED")
+# === END_P6F_P6E67_REPLY_REVISION_STRICT_ARTIFACT_GATE_20260504_V1 ===
+
+# === P6F_TOPIC500_SANITIZER_TASK_WORKER_BIND_20260504_V1 ===
+# FACT: wraps process_ai_task in task_worker scope to apply
+# core.ai_router._p6f_ts_sanitize_payload before search call.
+try:
+    _P6F_TS_TW_ORIG_PROCESS_AI_TASK = process_ai_task
+    if not getattr(_P6F_TS_TW_ORIG_PROCESS_AI_TASK, "_p6f_ts_wrapped", False):
+        async def process_ai_task(payload):
+            try:
+                from core.ai_router import _p6f_ts_sanitize_payload as _p6f_ts_san
+                payload = _p6f_ts_san(payload)
+            except Exception as _p6f_ts_e:
+                try:
+                    logger.warning("P6F_TS_TW_SANITIZE_ERR %s", _p6f_ts_e)
+                except Exception:
+                    pass
+            return await _P6F_TS_TW_ORIG_PROCESS_AI_TASK(payload)
+        process_ai_task._p6f_ts_wrapped = True
+        try:
+            logger.info("P6F_TOPIC500_SANITIZER_TASK_WORKER_BIND_INSTALLED")
+        except Exception:
+            pass
+except Exception as _p6f_ts_install_e:
+    try:
+        logger.exception("P6F_TS_TW_BIND_INSTALL_ERR %s", _p6f_ts_install_e)
+    except Exception:
+        pass
+# === END_P6F_TOPIC500_SANITIZER_TASK_WORKER_BIND_20260504_V1 ===
+
+# === P6F_MEMORY_WRITE_GATE_AND_RESPONSE_LOGIC_V1 ===
+# FACT: memory write filter + raw JSON detector + STALE_TIMEOUT guard
+# + sufficient-TZ override of generic "что строим" clarification.
+import re as _p6f_mwr_re
+import json as _p6f_mwr_json
+import logging as _p6f_mwr_logging
+
+_P6F_MWR_LOG = _p6f_mwr_logging.getLogger("task_worker")
+
+_P6F_MWR_BAD_RESULT_FOR_MEMORY = (
+    "traceback", "syntaxerror", "importerror", "attributeerror", "nameerror",
+    "что строим", "уточните что строим", "p6e67_block",
+    "/root/", "[локальный путь скрыт]",
+    "anthropic_block", "openai_block", "openrouter_call_err",
+    "needs_clarification_pcv", "stale_timeout",
+)
+
+def _p6f_mwr_should_skip_memory(raw_input, result):
+    low_r = str(result or "").lower().replace("ё", "е")
+    low_in = str(raw_input or "").lower().replace("ё", "е")
+    if not low_r or len(low_r.strip()) < 30:
+        return True, "RESULT_TOO_SHORT"
+    if any(b in low_r for b in _P6F_MWR_BAD_RESULT_FOR_MEMORY):
+        return True, "RESULT_CONTAINS_GARBAGE_OR_ERROR"
+    if low_r.startswith("{") and low_r.rstrip().endswith("}"):
+        try:
+            j = _p6f_mwr_json.loads(result)
+            if isinstance(j, dict):
+                return True, "RESULT_IS_RAW_JSON"
+        except Exception:
+            pass
+    return False, "OK"
+
+try:
+    _P6F_MWR_ORIG_SAVE_MEMORY = _save_memory
+    if not getattr(_P6F_MWR_ORIG_SAVE_MEMORY, "_p6f_mwr_wrapped", False):
+        def _save_memory(chat_id, topic_id, raw_input, result):
+            skip, reason = _p6f_mwr_should_skip_memory(raw_input, result)
+            if skip:
+                try:
+                    _P6F_MWR_LOG.info(
+                        "P6F_MWR_MEMORY_WRITE_SKIPPED chat=%s topic=%s reason=%s",
+                        chat_id, topic_id, reason,
+                    )
+                except Exception:
+                    pass
+                return None
+            return _P6F_MWR_ORIG_SAVE_MEMORY(chat_id, topic_id, raw_input, result)
+        _save_memory._p6f_mwr_wrapped = True
+        _P6F_MWR_LOG.info("P6F_MEMORY_WRITE_GATE_INSTALLED")
+except Exception as _e:
+    try:
+        _P6F_MWR_LOG.exception("P6F_MWR_INSTALL_ERR %s", _e)
+    except Exception:
+        pass
+
+
+def _p6f_rl_looks_like_raw_json(text):
+    if not text:
+        return False
+    s = str(text).strip()
+    if not s.startswith("{") and not s.startswith("["):
+        return False
+    if not (s.endswith("}") or s.endswith("]")):
+        return False
+    try:
+        j = _p6f_mwr_json.loads(s)
+        return isinstance(j, (dict, list))
+    except Exception:
+        return False
+
+def _p6f_rl_has_internal_paths(text):
+    if not text:
+        return False
+    low = str(text).lower()
+    return any(p in low for p in ("/root/", "/tmp/", "[локальный путь скрыт]"))
+
+def _p6f_rl_clean_for_user(text):
+    if not text:
+        return text
+    s = str(text)
+    s = _p6f_mwr_re.sub(r"/root/\.areal-neva-core/\S+", "[путь скрыт]", s)
+    s = _p6f_mwr_re.sub(r"/root/\S+", "[путь скрыт]", s)
+    s = _p6f_mwr_re.sub(r"/tmp/\S+", "[tmp путь скрыт]", s)
+    return s
+
+try:
+    _P6F_RL_ORIG_SEND_ONCE_EX = _send_once_ex
+    if not getattr(_P6F_RL_ORIG_SEND_ONCE_EX, "_p6f_rl_wrapped", False):
+        def _send_once_ex(conn, task_id, chat_id, text, reply_to=None, kind="result", *args, **kwargs):
+            t = _p6f_rl_clean_for_user(text)
+            if _p6f_rl_looks_like_raw_json(t):
+                t = "Внутренняя ошибка форматирования ответа. Запрос принят. Если нужен файл — уточни ещё раз"
+                try:
+                    _P6F_MWR_LOG.warning("P6F_RL_RAW_JSON_BLOCKED task=%s", task_id)
+                except Exception:
+                    pass
+            return _P6F_RL_ORIG_SEND_ONCE_EX(conn, task_id, chat_id, t, reply_to, kind, *args, **kwargs)
+        _send_once_ex._p6f_rl_wrapped = True
+        _P6F_MWR_LOG.info("P6F_RESPONSE_LOGIC_RAW_JSON_GATE_INSTALLED")
+except Exception as _e:
+    try:
+        _P6F_MWR_LOG.exception("P6F_RL_INSTALL_ERR %s", _e)
+    except Exception:
+        pass
+
+
+# Sufficient-TZ override: if topic_2 raw_input has enough TZ data, do NOT
+# allow generic "что строим"-style clarification to be sent — it indicates
+# orchestra ignored the existing TZ. We catch it on result-update path.
+def _p6f_stz_topic2_has_enough_tz(raw_input):
+    try:
+        from core.sample_template_engine import _p6f_tz_is_sufficient
+        return bool(_p6f_tz_is_sufficient(raw_input))
+    except Exception:
+        return False
+
+_P6F_STZ_GENERIC_QUESTIONS = (
+    "что строим", "из чего строим", "где находится", "уточните что",
+    "дом, ангар, склад", "фундамент или кровлю", "какой объект",
+)
+
+def _p6f_stz_should_block_generic_question(raw_input, text, topic_id):
+    if int(topic_id or 0) != 2:
+        return False
+    if not text:
+        return False
+    low = str(text).lower().replace("ё", "е")
+    if not any(g in low for g in _P6F_STZ_GENERIC_QUESTIONS):
+        return False
+    return _p6f_stz_topic2_has_enough_tz(raw_input)
+
+try:
+    _P6F_STZ_ORIG_UPDATE_TASK = _update_task
+    if not getattr(_P6F_STZ_ORIG_UPDATE_TASK, "_p6f_stz_wrapped", False):
+        def _update_task(conn, task_id, **kwargs):
+            try:
+                if "result" in kwargs and kwargs.get("state") in ("AWAITING_CONFIRMATION", "WAITING_CLARIFICATION", "DONE"):
+                    res = kwargs.get("result", "") or ""
+                    row = conn.execute("SELECT raw_input,topic_id FROM tasks WHERE id=? LIMIT 1", (str(task_id),)).fetchone()
+                    if row is not None:
+                        try:
+                            raw = row["raw_input"] if hasattr(row, "keys") else row[0]
+                            tid = row["topic_id"] if hasattr(row, "keys") else row[1]
+                        except Exception:
+                            raw, tid = None, None
+                        if _p6f_stz_should_block_generic_question(raw, res, tid):
+                            kwargs["state"] = "IN_PROGRESS"
+                            kwargs["error_message"] = "P6F_STZ_BLOCK_GENERIC_QUESTION_TZ_SUFFICIENT"
+                            try:
+                                _history(conn, str(task_id), "P6F_STZ_BLOCKED_GENERIC_QUESTION_BECAUSE_TZ_SUFFICIENT")
+                            except Exception:
+                                pass
+            except Exception as _e:
+                try:
+                    _P6F_MWR_LOG.warning("P6F_STZ_UPDATE_TASK_ERR %s", _e)
+                except Exception:
+                    pass
+            return _P6F_STZ_ORIG_UPDATE_TASK(conn, task_id, **kwargs)
+        _update_task._p6f_stz_wrapped = True
+        _P6F_MWR_LOG.info("P6F_TZ_SUFFICIENT_GENERIC_QUESTION_GATE_INSTALLED")
+except Exception as _e:
+    try:
+        _P6F_MWR_LOG.exception("P6F_STZ_INSTALL_ERR %s", _e)
+    except Exception:
+        pass
+
+
+# Topic_210 — Drive lookup skeleton via existing google_io.
+# FACT: project_engine.py has helpers for "Образцы проектов",
+# PROJECT_DESIGN_REFERENCES, PROJECT_ARTIFACTS, _manifests folders.
+# We add a router that, for topic_210 with project intent, surfaces
+# Drive references instead of falling into estimate/general routes.
+_P6F_T210_PROJECT_INTENT_WORDS = (
+    "проект", "образец", "образц", "рендер", "ар ", "кж ", "кд ",
+    "dwg", "pln", "чертёж", "чертеж", "пакет проект", "спецификация",
+)
+
+def _p6f_t210_is_project_intent(raw_input):
+    if not raw_input:
+        return False
+    low = str(raw_input).lower()
+    return any(w in low for w in _P6F_T210_PROJECT_INTENT_WORDS)
+
+async def _p6f_t210_try_drive_references(conn, task):
+    """
+    Skeleton for topic_210 Drive references router.
+    Currently returns False — full Drive folder scan implemented separately
+    in project_engine.py (lines ~3093-3127). This skeleton ensures the hook
+    point exists and is testable; a follow-up live test will trigger
+    expansion based on actual Drive folder IDs.
+    """
+    try:
+        topic_id = int(task["topic_id"] if hasattr(task, "keys") else task[5] if len(task) > 5 else 0) if task else 0
+    except Exception:
+        return False
+    if topic_id != 210:
+        return False
+    try:
+        raw = task["raw_input"] if hasattr(task, "keys") else (task[3] if len(task) > 3 else "")
+    except Exception:
+        return False
+    if not _p6f_t210_is_project_intent(raw):
+        return False
+    try:
+        from core import project_engine
+        marker_func = getattr(project_engine, "_final_project_find_folder_by_name_v1", None)
+        if marker_func is None:
+            _P6F_MWR_LOG.info("P6F_T210_NO_DRIVE_HELPER_AVAILABLE_HOOK_NOOP")
+        else:
+            _P6F_MWR_LOG.info("P6F_T210_DRIVE_HELPER_PRESENT_HOOK_READY")
+    except Exception as _e:
+        try:
+            _P6F_MWR_LOG.warning("P6F_T210_HOOK_ERR %s", _e)
+        except Exception:
+            pass
+    return False
+
+try:
+    _P6F_T210_LOG = _p6f_mwr_logging.getLogger("task_worker")
+    _P6F_T210_LOG.info("P6F_TOPIC210_PROJECT_DRIVE_HOOK_REGISTERED")
+except Exception:
+    pass
+# === END_P6F_MEMORY_WRITE_GATE_AND_RESPONSE_LOGIC_V1 ===
+
+# === P6F_TOPIC210_DRIVE_RESOLVER_REAL_V1 ===
+# FACT: real Drive folder lookup for topic_210 project references.
+# Uses existing core.project_engine helpers:
+#   _final_project_find_folder_by_name_v1 (any folder by exact name)
+#   _final_project_list_folder_v1 (list files in folder by id)
+#   _final_project_section_from_name_v1 (classify file as АР/КЖ/КД/КМ/КМД/ЭСКИЗ)
+#   _final_project_section_from_request_v1 (classify user request)
+#   _FINAL_PROJECT_SAMPLES_FOLDER_ID = "1kcJbrn7XMcov__Z1JdWhKlJMZd7GUkgP" (Образцы проектов)
+import logging as _p6f_t210_logging
+
+_P6F_T210_LOG = _p6f_t210_logging.getLogger("task_worker")
+
+def _p6f_t210_request_words(raw_input):
+    low = str(raw_input or "").lower().replace("ё", "е")
+    return any(w in low for w in (
+        "проект", "образец", "образц", "рендер", "ар ", "кж", "кд",
+        "dwg", "pln", "чертеж", "пакет проект", "спецификац",
+    ))
+
+def _p6f_t210_drive_link(file_id):
+    return "https://drive.google.com/file/d/{}/view".format(file_id) if file_id else ""
+
+def _p6f_t210_kind_from_mime(mime):
+    if not mime:
+        return "FILE"
+    m = str(mime).lower()
+    if "pdf" in m:
+        return "PDF"
+    if "wordprocessingml" in m or "msword" in m:
+        return "DOCX"
+    if "spreadsheetml" in m or "excel" in m:
+        return "XLSX"
+    if "image" in m:
+        return "IMAGE"
+    if "vnd.google-apps.folder" in m:
+        return "FOLDER"
+    if "dwg" in m or "autocad" in m:
+        return "DWG"
+    return "FILE"
+
+def _p6f_t210_collect_drive_references(raw_input):
+    """
+    Returns list of dicts:
+      [{name, section, link, mime, kind, source_folder}, ...]
+    Up to 7 most relevant.
+    """
+    try:
+        from core.project_engine import (
+            _final_project_find_folder_by_name_v1 as _find_folder,
+            _final_project_list_folder_v1 as _list_folder,
+            _final_project_section_from_name_v1 as _classify_file,
+            _final_project_section_from_request_v1 as _classify_request,
+            _FINAL_PROJECT_SAMPLES_FOLDER_ID as _SAMPLES_ID,
+        )
+    except Exception as e:
+        _P6F_T210_LOG.warning("P6F_T210_PROJECT_ENGINE_IMPORT_ERR %s", e)
+        return []
+
+    out = []
+    section_request = _classify_request(raw_input or "")
+
+    samples = _list_folder(_SAMPLES_ID) if _SAMPLES_ID else []
+    for f in samples:
+        name = f.get("name", "")
+        sec = _classify_file(name)
+        if section_request not in ("UNKNOWN", "") and sec != section_request and sec != "UNKNOWN":
+            continue
+        out.append({
+            "name": name,
+            "section": sec,
+            "link": _p6f_t210_drive_link(f.get("id")),
+            "mime": f.get("mimeType", ""),
+            "kind": _p6f_t210_kind_from_mime(f.get("mimeType")),
+            "source_folder": "Образцы проектов",
+        })
+        if len(out) >= 7:
+            break
+
+    if len(out) < 7:
+        for folder_name in ("PROJECT_DESIGN_REFERENCES", "_manifests"):
+            try:
+                fid = _find_folder(folder_name)
+            except Exception:
+                fid = ""
+            if not fid:
+                continue
+            files = _list_folder(fid)
+            for f in files:
+                if len(out) >= 7:
+                    break
+                name = f.get("name", "")
+                sec = _classify_file(name)
+                if section_request not in ("UNKNOWN", "") and sec != section_request and sec != "UNKNOWN":
+                    continue
+                out.append({
+                    "name": name,
+                    "section": sec,
+                    "link": _p6f_t210_drive_link(f.get("id")),
+                    "mime": f.get("mimeType", ""),
+                    "kind": _p6f_t210_kind_from_mime(f.get("mimeType")),
+                    "source_folder": folder_name,
+                })
+
+    return out
+
+def _p6f_t210_format_references_message(raw_input, refs):
+    if not refs:
+        return ("По topic_210 запрос распознан как проектный, но в Drive папках "
+                "(Образцы проектов / PROJECT_DESIGN_REFERENCES / _manifests) "
+                "нет подходящих файлов или Drive недоступен. Уточни секцию (АР/КЖ/КД/КМ/КМД).")
+    try:
+        from core.project_engine import _final_project_section_from_request_v1
+        section = _final_project_section_from_request_v1(raw_input or "")
+    except Exception:
+        section = "UNKNOWN"
+    head = "Проектные ссылки из Drive (topic_210)"
+    if section and section != "UNKNOWN":
+        head = head + " — секция: " + section
+    lines = [head, ""]
+    for i, r in enumerate(refs, 1):
+        lines.append("{}. [{}] {} ({})".format(i, r["section"], r["name"], r["kind"]))
+        if r.get("source_folder"):
+            lines.append("   Папка: {}".format(r["source_folder"]))
+        if r.get("link"):
+            lines.append("   {}".format(r["link"]))
+    return "\n".join(lines)
+
+async def _p6f_t210_handle_project_request(conn, task):
+    try:
+        topic_id = int(_p6e67_row(task, "topic_id", 0) or 0)
+    except Exception:
+        return False
+    if topic_id != 210:
+        return False
+    raw = _p6e67_s(_p6e67_row(task, "raw_input", ""), 60000)
+    if not _p6f_t210_request_words(raw):
+        return False
+    task_id = _p6e67_s(_p6e67_row(task, "id", ""))
+    chat_id = _p6e67_s(_p6e67_row(task, "chat_id", "-1003725299009"))
+    reply_to = _p6e67_row(task, "reply_to_message_id", None)
+
+    refs = _p6f_t210_collect_drive_references(raw)
+    msg = _p6f_t210_format_references_message(raw, refs)
+
+    try:
+        _send_once_ex(conn, task_id, chat_id, msg, reply_to, "result")
+    except Exception as e:
+        _P6F_T210_LOG.warning("P6F_T210_SEND_ERR %s", e)
+    try:
+        _update_task(conn, task_id, state="DONE", result=msg, error_message="")
+        _history(conn, task_id, "P6F_T210_PROJECT_DRIVE_REFS_RETURNED:{}".format(len(refs)))
+        conn.commit()
+    except Exception as e:
+        _P6F_T210_LOG.warning("P6F_T210_UPDATE_ERR %s", e)
+    return True
+
+# Wire into existing handle_new wrapping chain (after P6E67 merge attempt)
+try:
+    _P6F_T210_ORIG_HANDLE_NEW = _handle_new
+    if not getattr(_P6F_T210_ORIG_HANDLE_NEW, "_p6f_t210_wrapped", False):
+        async def _handle_new(conn, task, *args, **kwargs):
+            try:
+                if await _p6f_t210_handle_project_request(conn, task):
+                    return True
+            except Exception as e:
+                _P6F_T210_LOG.warning("P6F_T210_HANDLE_NEW_ERR %s", e)
+            res = _P6F_T210_ORIG_HANDLE_NEW(conn, task, *args, **kwargs)
+            import inspect as _ins
+            return await res if _ins.isawaitable(res) else res
+        _handle_new._p6f_t210_wrapped = True
+        _P6F_T210_LOG.info("P6F_TOPIC210_DRIVE_RESOLVER_REAL_V1_INSTALLED")
+except Exception as e:
+    _P6F_T210_LOG.exception("P6F_T210_INSTALL_ERR %s", e)
+# === END_P6F_TOPIC210_DRIVE_RESOLVER_REAL_V1 ===
+
+
+# === P6F_DRIVE_ARTIFACT_HISTORY_GATE_V1 ===
+# FACT: extends P6E67 artifact gate. If user requested PDF/XLSX/TXT and
+# task does not have history marker proving real Drive upload OR Telegram
+# sendDocument confirmation — DONE is blocked.
+def _p6f_dah_has_upload_history(conn, task_id):
+    try:
+        row = conn.execute(
+            """
+            SELECT 1 FROM task_history
+            WHERE task_id=? AND (
+                action LIKE 'DRIVE_UPLOAD_OK%'
+                OR action LIKE 'TELEGRAM_ARTIFACT_FALLBACK_SENT%'
+                OR action LIKE 'P6F_PCV_OPENROUTER_VISION_DONE%'
+                OR action LIKE 'UPLOAD_OK%'
+                OR action LIKE 'DRIVE_RETRY_UPLOAD_OK%'
+                OR action LIKE 'TG_FALLBACK%'
+                OR action LIKE 'P6F_T210_PROJECT_DRIVE_REFS_RETURNED%'
+            )
+            LIMIT 1
+            """,
+            (str(task_id),),
+        ).fetchone()
+        return row is not None
+    except Exception:
+        return False
+
+def _p6f_dah_user_wants_artifact(raw_input):
+    low = str(raw_input or "").lower().replace("ё", "е")
+    return any(w in low for w in ("pdf", "пдф", "xlsx", "excel", "эксель", "txt",
+                                    "ссылк", "drive", "файл", "артефакт", "акт docx"))
+
+try:
+    _P6F_DAH_ORIG_UPDATE_TASK = _update_task
+    if not getattr(_P6F_DAH_ORIG_UPDATE_TASK, "_p6f_dah_wrapped", False):
+        def _update_task(conn, task_id, **kwargs):
+            try:
+                if kwargs.get("state") == "DONE":
+                    row = conn.execute(
+                        "SELECT raw_input,topic_id FROM tasks WHERE id=? LIMIT 1",
+                        (str(task_id),),
+                    ).fetchone()
+                    if row is not None:
+                        try:
+                            raw = row["raw_input"] if hasattr(row, "keys") else row[0]
+                        except Exception:
+                            raw = ""
+                        if _p6f_dah_user_wants_artifact(raw) and not _p6f_dah_has_upload_history(conn, task_id):
+                            kwargs["state"] = "IN_PROGRESS"
+                            kwargs["error_message"] = "P6F_DAH_BLOCK_DONE_NO_UPLOAD_HISTORY"
+                            try:
+                                _history(conn, str(task_id), "P6F_DAH_BLOCKED_DONE_NO_UPLOAD_OR_TG_HISTORY")
+                            except Exception:
+                                pass
+            except Exception:
+                pass
+            return _P6F_DAH_ORIG_UPDATE_TASK(conn, task_id, **kwargs)
+        _update_task._p6f_dah_wrapped = True
+        _P6F_T210_LOG.info("P6F_DRIVE_ARTIFACT_HISTORY_GATE_V1_INSTALLED")
+except Exception as e:
+    _P6F_T210_LOG.exception("P6F_DAH_INSTALL_ERR %s", e)
+# === END_P6F_DRIVE_ARTIFACT_HISTORY_GATE_V1 ===
+
 if __name__ == "__main__":
     asyncio.run(main())
 # === END_P6D_MAIN_AFTER_ALL_RUNTIME_OVERLAYS_20260504_V1 ===

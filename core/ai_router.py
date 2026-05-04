@@ -558,3 +558,95 @@ Return what is found and write:
 "Найдено меньше 3 прямых поставщиков, нужен повторный поиск по расширенным площадкам"
 
 """
+
+
+# === P6F_TOPIC500_CONTEXT_SANITIZER_V1 ===
+# FACT: removes old supplier tables / Trust Score / TCO / "НЕ ПОДТВЕРЖДЕНО" / "ЭТАП N"
+# / naked [1][2][3] markers from search context BEFORE Perplexity call.
+# Exposed as _p6f_ts_sanitize_payload(payload) — used by callers via append-wraps.
+import re as _p6f_ts_re
+import logging as _p6f_ts_logging
+
+_P6F_TS_LOG = _p6f_ts_logging.getLogger("ai_router")
+
+_P6F_TS_NOISE_PATTERNS = [
+    r"(?im)^\s*Trust\s*Score[^\n]*\n?",
+    r"(?im)^\s*TCO[^\n]*\n?",
+    r"(?im)^\s*НЕ\s*ПОДТВЕРЖД[^\n]*\n?",
+    r"(?im)^\s*ЭТАП\s*\d+[^\n]*\n?",
+    r"(?im)^\s*Risk\s*Score[^\n]*\n?",
+    r"(?im)^\s*Review\s*Trust[^\n]*\n?",
+    r"(?im)^\s*\|[^\n]*Поставщик[^\n]*\|[^\n]*\n?",
+    r"(?im)^\s*\|[^\n]*Цена[^\n]*\|[^\n]*Источник[^\n]*\n?",
+    r"(?<![a-zA-Z0-9.])\[\d+\](?![\(\:])",
+]
+
+_P6F_TS_SUPPLIER_TABLE = _p6f_ts_re.compile(
+    r"(?ims)\n\s*\|.*?Поставщик.*?\|\s*\n(\s*\|[-: ]+\|.*\n)?(\s*\|.*\n){1,40}",
+)
+
+def _p6f_ts_sanitize_text(text):
+    if not text:
+        return ""
+    s = str(text)
+    s = _P6F_TS_SUPPLIER_TABLE.sub("\n", s)
+    for p in _P6F_TS_NOISE_PATTERNS:
+        s = _p6f_ts_re.sub(p, "", s)
+    s = _p6f_ts_re.sub(r"\n{3,}", "\n\n", s).strip()
+    return s
+
+def _p6f_ts_is_search_topic(payload):
+    try:
+        return int((payload or {}).get("topic_id", 0) or 0) == 500
+    except Exception:
+        return False
+
+def _p6f_ts_sanitize_payload(payload):
+    """
+    Returns a NEW dict (shallow copy) with sanitized search_context and user_text
+    for topic_500 procurement search. Other topics pass through unchanged.
+    """
+    if not isinstance(payload, dict):
+        return payload
+    if not _p6f_ts_is_search_topic(payload):
+        return payload
+    out = dict(payload)
+    if "search_context" in out and out["search_context"]:
+        before_len = len(str(out["search_context"]))
+        out["search_context"] = _p6f_ts_sanitize_text(out["search_context"])
+        after_len = len(str(out["search_context"]))
+        if before_len != after_len:
+            _P6F_TS_LOG.info(
+                "P6F_TS_SANITIZED_SEARCH_CONTEXT topic=500 chat=%s before=%d after=%d removed=%d",
+                out.get("chat_id"), before_len, after_len, before_len - after_len,
+            )
+    for key in ("raw_input", "normalized_input", "user_text"):
+        if key in out and out[key] and isinstance(out[key], str):
+            out[key] = _p6f_ts_sanitize_text(out[key])
+    return out
+
+try:
+    _P6F_TS_LOG.info("P6F_TOPIC500_CONTEXT_SANITIZER_V1_LOADED")
+except Exception:
+    pass
+# === END_P6F_TOPIC500_CONTEXT_SANITIZER_V1 ===
+
+# === P6F_TOPIC500_SANITIZER_AI_ROUTER_BIND_20260504_V1 ===
+# FACT: wraps process_ai_task at module level so callers that re-import
+# inside functions (e.g., sample_template_engine line 5132) pick up the
+# sanitized version on every call.
+try:
+    _P6F_TS_AR_ORIG_PROCESS_AI_TASK = process_ai_task
+    if not getattr(_P6F_TS_AR_ORIG_PROCESS_AI_TASK, "_p6f_ts_ar_wrapped", False):
+        async def _p6f_ts_ar_wrapped_process_ai_task(payload):
+            try:
+                payload = _p6f_ts_sanitize_payload(payload)
+            except Exception as _e:
+                _P6F_TS_LOG.warning("P6F_TS_AR_SANITIZE_ERR %s", _e)
+            return await _P6F_TS_AR_ORIG_PROCESS_AI_TASK(payload)
+        _p6f_ts_ar_wrapped_process_ai_task._p6f_ts_ar_wrapped = True
+        process_ai_task = _p6f_ts_ar_wrapped_process_ai_task
+        _P6F_TS_LOG.info("P6F_TOPIC500_SANITIZER_AI_ROUTER_BIND_INSTALLED")
+except Exception as _e:
+    _P6F_TS_LOG.exception("P6F_TS_AR_BIND_INSTALL_ERR %s", _e)
+# === END_P6F_TOPIC500_SANITIZER_AI_ROUTER_BIND_20260504_V1 ===
