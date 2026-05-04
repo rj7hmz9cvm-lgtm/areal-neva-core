@@ -5326,6 +5326,245 @@ async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):  # TOPIC
 # === END_TOPIC500_PRE_SEND_VALIDATOR_AND_STARTUP_RECOVERY_HARD_GUARD_V1 ===
 
 
+
+
+# === P0_RUNTIME_ROUTE_GUARD_TOPIC2_TOPIC500_20260504_V1 ===
+# Runtime guard installed before asyncio.run(main())
+# Scope:
+# - topic_500 search/product requests must never enter estimate/project routes
+# - topic_2 current estimate TZ must use current raw input direct estimate route
+# - no forbidden files, no DB schema changes, no systemd unit changes
+
+try:
+    _P0_RUNTIME_ORIG_HANDLE_IN_PROGRESS_20260504 = _handle_in_progress
+except Exception:
+    _P0_RUNTIME_ORIG_HANDLE_IN_PROGRESS_20260504 = None
+
+def _p0_runtime_row_get_20260504(row, key, default=None):
+    try:
+        return row[key]
+    except Exception:
+        try:
+            return getattr(row, key)
+        except Exception:
+            return default
+
+def _p0_runtime_s_20260504(v, limit=50000):
+    try:
+        if v is None:
+            return ""
+        return str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+def _p0_runtime_history_20260504(conn, task_id, action):
+    try:
+        _history(conn, str(task_id), str(action))
+        return
+    except Exception:
+        pass
+    try:
+        conn.execute(
+            "INSERT INTO task_history(task_id, action, created_at) VALUES (?, ?, datetime('now'))",
+            (str(task_id), str(action)),
+        )
+    except Exception:
+        pass
+
+def _p0_runtime_update_20260504(conn, task_id, state=None, result=None, error_message=None, bot_message_id=None):
+    try:
+        kwargs = {}
+        if state is not None:
+            kwargs["state"] = state
+        if result is not None:
+            kwargs["result"] = result
+        if error_message is not None:
+            kwargs["error_message"] = error_message
+        if bot_message_id is not None:
+            kwargs["bot_message_id"] = bot_message_id
+        if kwargs:
+            _update_task(conn, str(task_id), **kwargs)
+            return
+    except Exception:
+        pass
+
+    sets = []
+    vals = []
+    if state is not None:
+        sets.append("state=?")
+        vals.append(str(state))
+    if result is not None:
+        sets.append("result=?")
+        vals.append(str(result))
+    if error_message is not None:
+        sets.append("error_message=?")
+        vals.append(str(error_message))
+    if bot_message_id is not None:
+        sets.append("bot_message_id=?")
+        vals.append(int(bot_message_id))
+    sets.append("updated_at=datetime('now')")
+    vals.append(str(task_id))
+    conn.execute(f"UPDATE tasks SET {', '.join(sets)} WHERE id=?", vals)
+
+def _p0_runtime_is_topic500_search_20260504(raw_input, input_type):
+    low = _p0_runtime_s_20260504(raw_input, 12000).lower()
+    itype = _p0_runtime_s_20260504(input_type, 50).lower()
+    if not low:
+        return False
+    if any(x in low for x in ("задача закрыта", "закрой задачу", "отменяй", "отмена", "завершена", "заверши")):
+        return False
+    if itype == "search":
+        return True
+    markers = (
+        "найди", "поиск", "цена", "стоимость", "дешевле", "купить", "ссылка", "ссылки",
+        "магазин", "поставщик", "маркет", "маркетплейс", "авито", "avito", "ozon",
+        "wildberries", "яндекс", "google pixel", "iphone", "телефон", "кабель",
+        "вата", "утеплитель", "товар", "варианты"
+    )
+    return any(m in low for m in markers)
+
+def _p0_runtime_is_bad_search_result_20260504(text):
+    low = _p0_runtime_s_20260504(text, 20000).lower()
+    if not low:
+        return True
+    bad = (
+        "смета готова",
+        "предварительная смета готова",
+        "xlsx:",
+        "pdf:",
+        "engine: topic2",
+        "engine: estimate",
+        "ареал нева.xlsx",
+        "м-110.xlsx",
+        "позиций: 1. итого: 0.00",
+        "фундамент",
+        "кровля",
+        "монолитная плита",
+    )
+    if any(x in low for x in bad):
+        return True
+    if "http://" not in low and "https://" not in low and "цена" not in low and "руб" not in low and "₽" not in low:
+        return True
+    return False
+
+def _p0_runtime_is_topic2_current_estimate_20260504(raw_input):
+    import re as _p0_re
+    low = _p0_runtime_s_20260504(raw_input, 12000).lower()
+    if not low:
+        return False
+    if not any(x in low for x in ("смет", "стоимость", "посчитать", "рассчитать", "расчет", "расчёт")):
+        return False
+    if not any(x in low for x in ("дом", "house", "хаус", "барн", "barn")):
+        return False
+    if not _p0_re.search(r"\d+(?:[,.]\d+)?\s*(?:на|x|х|×|\*)\s*\d+(?:[,.]\d+)?", low):
+        return False
+    if not any(x in low for x in ("фундамент", "плита", "свая", "ленточ")):
+        return False
+    if not any(x in low for x in ("стен", "каркас", "дерев", "брус", "газобетон", "кирпич")):
+        return False
+    return True
+
+async def _p0_runtime_topic500_direct_search_20260504(conn, task, chat_id, topic_id):
+    task_id = _p0_runtime_s_20260504(_p0_runtime_row_get_20260504(task, "id", ""))
+    raw_input = _p0_runtime_s_20260504(_p0_runtime_row_get_20260504(task, "raw_input", ""), 12000)
+    reply_to = _p0_runtime_row_get_20260504(task, "reply_to_message_id", None)
+
+    payload = {
+        "id": task_id,
+        "task_id": task_id,
+        "topic_id": 500,
+        "chat_id": str(chat_id),
+        "input_type": "search",
+        "raw_input": raw_input,
+        "normalized_input": raw_input,
+        "state": "IN_PROGRESS",
+        "reply_to_message_id": reply_to,
+        "active_task_context": "",
+        "pin_context": "",
+        "short_memory_context": "",
+        "long_memory_context": "",
+        "archive_context": "",
+        "search_context": "",
+        "topic_role": "ВЕБ ПОИСК",
+        "topic_directions": "internet_search",
+        "direction": "internet_search",
+        "engine": "search_supplier",
+    }
+
+    _p0_runtime_history_20260504(conn, task_id, "P0_RUNTIME_TOPIC500_DIRECT_SEARCH_ROUTE_V1")
+    try:
+        _p0_runtime_update_20260504(conn, task_id, state="IN_PROGRESS", error_message="")
+        conn.commit()
+    except Exception:
+        pass
+
+    try:
+        result = await asyncio.wait_for(process_ai_task(payload), timeout=AI_TIMEOUT)
+        result = _clean(_s(result), 50000)
+    except Exception as e:
+        err = "P0_RUNTIME_TOPIC500_DIRECT_SEARCH_ERROR:" + _p0_runtime_s_20260504(type(e).__name__ + ":" + str(e), 500)
+        _p0_runtime_update_20260504(conn, task_id, state="FAILED", result="", error_message=err)
+        _p0_runtime_history_20260504(conn, task_id, err)
+        conn.commit()
+        _send_once_ex(conn, task_id, str(chat_id), "Поиск не выполнен. Повтори запрос или уточни товар и регион", reply_to, "p0_topic500_error")
+        return
+
+    if _p0_runtime_is_bad_search_result_20260504(result):
+        err = "P0_RUNTIME_TOPIC500_BAD_ROUTE_BLOCKED"
+        _p0_runtime_update_20260504(conn, task_id, state="FAILED", result=result, error_message=err)
+        _p0_runtime_history_20260504(conn, task_id, err)
+        conn.commit()
+        _send_once_ex(conn, task_id, str(chat_id), "Поиск ушёл не в тот маршрут и заблокирован. Повтори запрос в этом топике", reply_to, "p0_topic500_bad_route")
+        return
+
+    _p0_runtime_update_20260504(conn, task_id, state="DONE", result=result, error_message="")
+    _p0_runtime_history_20260504(conn, task_id, "P0_RUNTIME_TOPIC500_SEARCH_DONE_V1")
+    try:
+        _save_memory(str(chat_id), 500, raw_input, result)
+    except Exception:
+        pass
+
+    sent = _send_once_ex(conn, task_id, str(chat_id), result, reply_to, "p0_topic500_search_result")
+    try:
+        bot_message_id = sent.get("bot_message_id") if isinstance(sent, dict) else None
+        if bot_message_id is not None:
+            _p0_runtime_update_20260504(conn, task_id, bot_message_id=bot_message_id)
+    except Exception:
+        pass
+    conn.commit()
+    return
+
+async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
+    task_id = _p0_runtime_s_20260504(_p0_runtime_row_get_20260504(task, "id", ""))
+    raw_input = _p0_runtime_s_20260504(_p0_runtime_row_get_20260504(task, "raw_input", ""), 12000)
+    input_type = _p0_runtime_s_20260504(_p0_runtime_row_get_20260504(task, "input_type", "text"), 50)
+    if chat_id is None:
+        chat_id = _p0_runtime_row_get_20260504(task, "chat_id", None)
+    if topic_id is None:
+        topic_id = _p0_runtime_row_get_20260504(task, "topic_id", 0)
+    try:
+        topic_id = int(topic_id or 0)
+    except Exception:
+        topic_id = 0
+
+    if topic_id == 500 and _p0_runtime_is_topic500_search_20260504(raw_input, input_type):
+        return await _p0_runtime_topic500_direct_search_20260504(conn, task, chat_id, topic_id)
+
+    if topic_id == 2 and _p0_runtime_is_topic2_current_estimate_20260504(raw_input):
+        _p0_runtime_history_20260504(conn, task_id, "P0_RUNTIME_TOPIC2_CURRENT_TZ_DIRECT_ROUTE_V1")
+        try:
+            return await _fc_20260504_call_topic2_engine(conn, task, chat_id, topic_id)
+        except Exception as e:
+            _p0_runtime_history_20260504(conn, task_id, "P0_RUNTIME_TOPIC2_DIRECT_ROUTE_ERROR:" + _p0_runtime_s_20260504(type(e).__name__ + ":" + str(e), 500))
+            raise
+
+    if _P0_RUNTIME_ORIG_HANDLE_IN_PROGRESS_20260504:
+        return await _P0_RUNTIME_ORIG_HANDLE_IN_PROGRESS_20260504(conn, task, chat_id, topic_id)
+    return None
+
+# === END_P0_RUNTIME_ROUTE_GUARD_TOPIC2_TOPIC500_20260504_V1 ===
+
+
 if __name__ == "__main__":
     asyncio.run(main())
 
