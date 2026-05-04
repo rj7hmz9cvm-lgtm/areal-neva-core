@@ -7009,6 +7009,225 @@ async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
 # === END_P6D_IMAGE_ESTIMATE_TECHNADZOR_PHOTO_FULL_CLOSE_20260504_V1 ===
 
 # === P6D_MAIN_AFTER_ALL_RUNTIME_OVERLAYS_20260504_V1 ===
+
+# === P6E4_LIVE_ROUTE_FULL_CLOSE_IMAGE_SEARCH_CATALOG_20260504_V1 ===
+import os as _p6e4_os
+import json as _p6e4_json
+import glob as _p6e4_glob
+import inspect as _p6e4_inspect
+import logging as _p6e4_logging
+import asyncio as _p6e4_asyncio
+
+def _p6e4_val(obj, key, default=None):
+    try:
+        if isinstance(obj, dict):
+            return obj.get(key, default)
+        return obj[key]
+    except Exception:
+        try:
+            return getattr(obj, key, default)
+        except Exception:
+            return default
+
+def _p6e4_payload(task):
+    raw = _p6e4_val(task, "raw_input", "") or ""
+    if isinstance(raw, dict):
+        return raw
+    try:
+        data = _p6e4_json.loads(raw)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+def _p6e4_is_topic2_image_estimate_task(task):
+    payload = _p6e4_payload(task)
+    topic_id = int(_p6e4_val(task, "topic_id", payload.get("topic_id") or 0) or 0)
+    input_type = str(_p6e4_val(task, "input_type", "") or "").lower()
+    mime = str(payload.get("mime_type") or _p6e4_val(task, "mime_type", "") or "").lower()
+    file_name = str(payload.get("file_name") or _p6e4_val(task, "file_name", "") or "").lower()
+    raw = str(_p6e4_val(task, "raw_input", "") or "")
+    caption = str(payload.get("caption") or raw)
+    text = (caption + " " + file_name + " " + mime).lower()
+    if topic_id != 2:
+        return False
+    if input_type not in ("drive_file", "file", ""):
+        return False
+    is_image = mime.startswith("image/") or file_name.endswith((".jpg", ".jpeg", ".png", ".webp"))
+    wants_estimate = any(x in text for x in ("смет", "расчет", "расчёт", "стоимость", "посчитай", "estimate"))
+    return bool(is_image and wants_estimate)
+
+def _p6e4_find_or_download_file(task):
+    payload = _p6e4_payload(task)
+    task_id = str(_p6e4_val(task, "id", "") or "")
+    file_name = str(payload.get("file_name") or "image.jpg")
+    matches = _p6e4_glob.glob(f"/root/.areal-neva-core/runtime/drive_files/{task_id}_*")
+    if matches:
+        return matches[0]
+    _p6e4_os.makedirs("/root/.areal-neva-core/runtime/drive_files", exist_ok=True)
+    file_id = str(payload.get("file_id") or "")
+    out = f"/root/.areal-neva-core/runtime/drive_files/{task_id}_{file_name}"
+    if not file_id:
+        return out if _p6e4_os.path.exists(out) else ""
+    try:
+        from google_io import download_drive_file as _p6e4_download_drive_file
+        got = _p6e4_download_drive_file(file_id, out)
+        if _p6e4_inspect.isawaitable(got):
+            loop = _p6e4_asyncio.get_event_loop()
+            loop.run_until_complete(got)
+        return out if _p6e4_os.path.exists(out) else ""
+    except Exception as exc:
+        _p6e4_logging.getLogger("WORKER").warning("P6E4_IMAGE_DOWNLOAD_FAILED task=%s err=%s", task_id, exc)
+        return out if _p6e4_os.path.exists(out) else ""
+
+async def _p6e4_run_topic2_image_estimate(conn, task):
+    task_id = str(_p6e4_val(task, "id", "") or "")
+    payload = _p6e4_payload(task)
+    raw = str(_p6e4_val(task, "raw_input", "") or "")
+    caption = str(payload.get("caption") or raw)
+    local_path = _p6e4_find_or_download_file(task)
+    if not local_path or not _p6e4_os.path.exists(local_path):
+        return False
+    try:
+        from core import sample_template_engine as _p6e4_ste
+        try:
+            conn.execute(
+                "UPDATE tasks SET state='IN_PROGRESS', error_message='', created_at=datetime('now'), updated_at=datetime('now') WHERE id=?",
+                (task_id,),
+            )
+            conn.execute(
+                "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                (task_id, "P6E4_TOPIC2_IMAGE_ESTIMATE_STARTED"),
+            )
+            conn.commit()
+        except Exception:
+            pass
+        res = _p6e4_ste.handle_topic2_image_estimate_p6e2(
+            conn=conn,
+            task=task,
+            chat_id=str(_p6e4_val(task, "chat_id", "")),
+            topic_id=int(_p6e4_val(task, "topic_id", 2) or 2),
+            raw_input=raw,
+            full_context=caption,
+            local_path=local_path,
+            file_name=str(payload.get("file_name") or _p6e4_os.path.basename(local_path)),
+            mime_type=str(payload.get("mime_type") or "image/jpeg"),
+        )
+        if _p6e4_inspect.isawaitable(res):
+            res = await res
+        try:
+            conn.execute(
+                "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                (task_id, "P6E4_TOPIC2_IMAGE_ESTIMATE_DONE"),
+            )
+            conn.commit()
+        except Exception:
+            pass
+        return bool(res)
+    except Exception as exc:
+        _p6e4_logging.getLogger("WORKER").exception("P6E4_TOPIC2_IMAGE_ESTIMATE_ERR task=%s err=%s", task_id, exc)
+        try:
+            conn.execute(
+                "UPDATE tasks SET state='FAILED', error_message=?, updated_at=datetime('now') WHERE id=?",
+                (f"P6E4_TOPIC2_IMAGE_ESTIMATE_ERR:{exc}", task_id),
+            )
+            conn.commit()
+        except Exception:
+            pass
+        return False
+
+def _p6e4_get_conn_task(args, kwargs):
+    conn = kwargs.get("conn")
+    task = kwargs.get("task")
+    for obj in args:
+        if conn is None and hasattr(obj, "execute") and hasattr(obj, "commit"):
+            conn = obj
+        if task is None and (_p6e4_val(obj, "id", None) is not None or _p6e4_val(obj, "raw_input", None) is not None):
+            task = obj
+    return conn, task
+
+def _p6e4_wrap_drive_handler(name):
+    orig = globals().get(name)
+    if not orig or getattr(orig, "_p6e4_wrapped", False):
+        return
+    if _p6e4_inspect.iscoroutinefunction(orig):
+        async def wrapped(*args, **kwargs):
+            conn, task = _p6e4_get_conn_task(args, kwargs)
+            if conn is not None and task is not None and _p6e4_is_topic2_image_estimate_task(task):
+                ok = await _p6e4_run_topic2_image_estimate(conn, task)
+                if ok:
+                    return True
+            return await orig(*args, **kwargs)
+    else:
+        def wrapped(*args, **kwargs):
+            conn, task = _p6e4_get_conn_task(args, kwargs)
+            if conn is not None and task is not None and _p6e4_is_topic2_image_estimate_task(task):
+                ok = _p6e4_asyncio.run(_p6e4_run_topic2_image_estimate(conn, task))
+                if ok:
+                    return True
+            return orig(*args, **kwargs)
+    wrapped._p6e4_wrapped = True
+    globals()[name] = wrapped
+
+for _p6e4_name in (
+    "_handle_drive_file_task",
+    "handle_drive_file_task",
+    "_process_drive_file_task",
+    "process_drive_file_task",
+    "_handle_file_task",
+    "handle_file_task",
+):
+    _p6e4_wrap_drive_handler(_p6e4_name)
+
+def _p6e4_sanitize_catalog_text(text):
+    if not isinstance(text, str):
+        return text
+    if "Файлы в этом топике уже есть" not in text:
+        return text
+    bad_tokens = ('{"task_id"', '"timestamp"', '"file_id"', '"file_name"', "],", "[{", "}]")
+    lines = []
+    seen = set()
+    for line in text.splitlines():
+        s = line.strip()
+        if not s:
+            if lines and lines[-1] != "":
+                lines.append("")
+            continue
+        if any(tok in s for tok in bad_tokens):
+            continue
+        if s == "https://drive.google.com/drive/folders":
+            continue
+        if s in seen:
+            continue
+        seen.add(s)
+        lines.append(line.rstrip())
+    cleaned = "\n".join(lines).strip()
+    if not cleaned:
+        return "Файлы в этом топике найдены, но старый каталог содержал битые JSON-фрагменты. Каталог очищен, повтори запрос"
+    return cleaned
+
+def _p6e4_wrap_send(name):
+    orig = globals().get(name)
+    if not orig or getattr(orig, "_p6e4_wrapped", False):
+        return
+    if _p6e4_inspect.iscoroutinefunction(orig):
+        async def wrapped(*args, **kwargs):
+            args = tuple(_p6e4_sanitize_catalog_text(a) if isinstance(a, str) else a for a in args)
+            kwargs = {k: (_p6e4_sanitize_catalog_text(v) if isinstance(v, str) else v) for k, v in kwargs.items()}
+            return await orig(*args, **kwargs)
+    else:
+        def wrapped(*args, **kwargs):
+            args = tuple(_p6e4_sanitize_catalog_text(a) if isinstance(a, str) else a for a in args)
+            kwargs = {k: (_p6e4_sanitize_catalog_text(v) if isinstance(v, str) else v) for k, v in kwargs.items()}
+            return orig(*args, **kwargs)
+    wrapped._p6e4_wrapped = True
+    globals()[name] = wrapped
+
+for _p6e4_send_name in ("_send_once_ex", "send_once_ex", "_send_task_result", "send_task_result"):
+    _p6e4_wrap_send(_p6e4_send_name)
+
+_p6e4_logging.getLogger("WORKER").info("P6E4_LIVE_ROUTE_GUARD_INSTALLED")
+# === END_P6E4_LIVE_ROUTE_FULL_CLOSE_IMAGE_SEARCH_CATALOG_20260504_V1 ===
+
 if __name__ == "__main__":
     asyncio.run(main())
 # === END_P6D_MAIN_AFTER_ALL_RUNTIME_OVERLAYS_20260504_V1 ===

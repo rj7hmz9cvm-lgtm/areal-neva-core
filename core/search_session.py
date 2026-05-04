@@ -1384,3 +1384,184 @@ try:
 except Exception:
     pass
 # === END_P6E2_SEARCH_CURRENT_QUERY_HARD_NO_STALE_NO_ESTIMATE_POLLUTION_20260504_V1 ===
+
+# === P6E4_GENERAL_SEARCH_NO_DOMAIN_CONTAMINATION_20260504_V1 ===
+import os as _p6e4_os
+import re as _p6e4_re
+import json as _p6e4_json
+import urllib.request as _p6e4_urllib_request
+import inspect as _p6e4_inspect
+import asyncio as _p6e4_asyncio
+import logging as _p6e4_logging
+
+_P6E4_AUTO_TERMS = ("саленблок", "сайлентблок", "сальник", "ваз", "жигули", "2110", "авто", "машин", "пыльник", "шрус", "рычаг", "стойка")
+_P6E4_BUILD_TERMS = ("смет", "бетон", "арматур", "фундамент", "кровл", "технадзор", "стро", "дом", "плита", "каркас", "клик-фальц", "утепл", "rockwool", "минват")
+_P6E4_BUILD_RESULT_TERMS = ("rockwool", "роквул", "минват", "утеплител", "термодом", "строймат", "базальт", "кровл", "бетон", "арматур")
+_P6E4_AUTO_RESULT_TERMS = ("сайлентблок", "саленблок", "сальник", "ваз", "2110", "lada", "vaz", "автозапчаст", "шрус", "пыльник")
+
+def _p6e4_env_load_once():
+    if getattr(_p6e4_env_load_once, "_done", False):
+        return
+    for path in ("/root/.areal-neva-core/.env", ".env"):
+        try:
+            if not _p6e4_os.path.exists(path):
+                continue
+            for line in open(path, "r", encoding="utf-8", errors="ignore"):
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, v = line.split("=", 1)
+                k = k.strip()
+                v = v.strip().strip('"').strip("'")
+                if k and k not in _p6e4_os.environ:
+                    _p6e4_os.environ[k] = v
+        except Exception:
+            pass
+    _p6e4_env_load_once._done = True
+
+def _p6e4_val(obj, key, default=None):
+    try:
+        if isinstance(obj, dict):
+            return obj.get(key, default)
+        return obj[key]
+    except Exception:
+        try:
+            return getattr(obj, key, default)
+        except Exception:
+            return default
+
+def _p6e4_extract_query(args, kwargs):
+    for k in ("query", "prompt", "raw_input", "user_input", "text"):
+        if isinstance(kwargs.get(k), str) and kwargs.get(k).strip():
+            return kwargs.get(k).strip()
+    for obj in args:
+        if isinstance(obj, str) and obj.strip():
+            return obj.strip()
+        raw = _p6e4_val(obj, "raw_input", None)
+        if isinstance(raw, str) and raw.strip():
+            return raw.strip()
+        inp = _p6e4_val(obj, "input", None)
+        if isinstance(inp, str) and inp.strip():
+            return inp.strip()
+    return ""
+
+def _p6e4_norm(s):
+    return _p6e4_re.sub(r"\s+", " ", str(s or "").lower()).strip()
+
+def _p6e4_is_auto_query(q):
+    t = _p6e4_norm(q)
+    return any(x in t for x in _P6E4_AUTO_TERMS)
+
+def _p6e4_is_build_query(q):
+    t = _p6e4_norm(q)
+    return any(x in t for x in _P6E4_BUILD_TERMS)
+
+def _p6e4_is_too_vague(q):
+    t = _p6e4_norm(q)
+    return len(t) < 8 or t in ("я тебя про что спрашивал?", "я тебя про что спрашивал", "дальше что?", "дальше что")
+
+def _p6e4_contaminated(q, result):
+    qt = _p6e4_norm(q)
+    rt = _p6e4_norm(result)
+    if _p6e4_is_auto_query(qt):
+        return any(x in rt for x in _P6E4_BUILD_RESULT_TERMS) and not any(x in rt for x in _P6E4_AUTO_RESULT_TERMS)
+    if not _p6e4_is_build_query(qt):
+        return any(x in rt for x in ("rockwool", "роквул", "термодом", "минват"))
+    return False
+
+def _p6e4_general_online_search(q):
+    _p6e4_env_load_once()
+    if _p6e4_is_too_vague(q):
+        return "По текущему сообщению нет самостоятельного поискового запроса. Старый результат не использую"
+    api_key = _p6e4_os.getenv("OPENROUTER_API_KEY", "")
+    if not api_key:
+        return ""
+    base = (_p6e4_os.getenv("OPENROUTER_BASE_URL") or "https://openrouter.ai/api/v1").rstrip("/")
+    model = _p6e4_os.getenv("OPENROUTER_MODEL_ONLINE") or _p6e4_os.getenv("ONLINE_MODEL") or "perplexity/sonar"
+    domain_rule = "Автозапчасти/товары/услуги/строительство определяй только по текущему запросу"
+    if _p6e4_is_auto_query(q):
+        domain_rule = "Это поиск автозапчастей. Ищи только автозапчасти и совместимые детали. Стройматериалы запрещены"
+    elif _p6e4_is_build_query(q):
+        domain_rule = "Это строительный/сметный поиск. Ищи стройматериалы, работы, поставщиков или нормы по текущему запросу"
+    prompt = (
+        "Ты универсальный поисковый агент. Работай по текущему запросу, без старой памяти и без доменной подмены.\n"
+        f"{domain_rule}.\n"
+        "Верни кратко по-русски: найдено, таблица вариантов, цена/наличие/город/ссылка, лучший вариант, что проверить.\n"
+        "Если точных данных нет — так и напиши, не подменяй товар другим доменом.\n\n"
+        f"Текущий запрос: {q}"
+    )
+    body = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": "You are a fresh web/product search agent. Use only the current user query. Never reuse stale construction results for non-construction searches."},
+            {"role": "user", "content": prompt},
+        ],
+        "temperature": 0.1,
+        "max_tokens": 1800,
+    }
+    req = _p6e4_urllib_request.Request(
+        base + "/chat/completions",
+        data=_p6e4_json.dumps(body).encode("utf-8"),
+        headers={
+            "Authorization": "Bearer " + api_key,
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://github.com/rj7hmz9cvm-lgtm/areal-neva-core",
+            "X-Title": "AREAL-NEVA-ORCHESTRA",
+        },
+        method="POST",
+    )
+    try:
+        with _p6e4_urllib_request.urlopen(req, timeout=90) as resp:
+            data = _p6e4_json.loads(resp.read().decode("utf-8", errors="ignore"))
+        return str(data["choices"][0]["message"]["content"]).strip()
+    except Exception as exc:
+        _p6e4_logging.getLogger("ai_router").warning("P6E4_GENERAL_SEARCH_ERR query=%r err=%s", q[:120], exc)
+        return ""
+
+def _p6e4_wrap_search_func(name):
+    orig = globals().get(name)
+    if not orig or getattr(orig, "_p6e4_wrapped", False):
+        return
+    if _p6e4_inspect.iscoroutinefunction(orig):
+        async def wrapped(*args, **kwargs):
+            q = _p6e4_extract_query(args, kwargs)
+            if q and not _p6e4_is_build_query(q):
+                fresh = await _p6e4_asyncio.to_thread(_p6e4_general_online_search, q)
+                if fresh:
+                    return fresh
+            res = await orig(*args, **kwargs)
+            if q and _p6e4_contaminated(q, res):
+                fresh = await _p6e4_asyncio.to_thread(_p6e4_general_online_search, q)
+                if fresh:
+                    return fresh
+            return res
+    else:
+        def wrapped(*args, **kwargs):
+            q = _p6e4_extract_query(args, kwargs)
+            if q and not _p6e4_is_build_query(q):
+                fresh = _p6e4_general_online_search(q)
+                if fresh:
+                    return fresh
+            res = orig(*args, **kwargs)
+            if q and _p6e4_contaminated(q, res):
+                fresh = _p6e4_general_online_search(q)
+                if fresh:
+                    return fresh
+            return res
+    wrapped._p6e4_wrapped = True
+    globals()[name] = wrapped
+
+for _p6e4_func_name in (
+    "run_search_session",
+    "search_current_query",
+    "handle_search_query",
+    "handle_search",
+    "run_search",
+    "execute_search",
+    "search_session",
+    "run",
+):
+    _p6e4_wrap_search_func(_p6e4_func_name)
+
+_p6e4_logging.getLogger("ai_router").info("P6E4_GENERAL_SEARCH_GUARD_INSTALLED")
+# === END_P6E4_GENERAL_SEARCH_NO_DOMAIN_CONTAMINATION_20260504_V1 ===
