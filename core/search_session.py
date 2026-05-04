@@ -607,3 +607,710 @@ except Exception:
     pass
 
 # === END_P5_SEARCH_SESSION_VOICE_STALE_CLOSE_20260504_V1 ===
+
+
+# === P6_GLOBAL_SEARCH_SESSION_HARD_ISOLATION_20260504_V1 ===
+# Scope:
+# - every explicit new search starts a clean session
+# - vague follow-up may use previous session only when it is really vague
+# - stale topic_500 sessions cannot contaminate new auto/electronics/building search
+# - output is supplier/result contract, not estimate, not old context
+# - no DB schema changes
+
+try:
+    SEARCH_PROFILES.setdefault("ELECTRONICS", ["Ozon", "Wildberries", "Яндекс Маркет", "DNS", "М.Видео", "Эльдорадо", "Avito", "AliExpress", "официальные магазины"])
+    SEARCH_PROFILES.setdefault("AUTO_PARTS", ["ZZap", "Exist", "Emex", "Drom", "Auto.ru", "EuroAuto", "Avito", "разборки", "Telegram"])
+    SEARCH_PROFILES.setdefault("BUILDING_SUPPLY", ["Петрович", "Лемана", "ВсеИнструменты", "Ozon", "Wildberries", "Яндекс Маркет", "Avito", "2ГИС", "официальные поставщики"])
+except Exception:
+    pass
+
+_P6_SEARCH_STOP_WORDS = {
+    "найди", "найти", "поиск", "поищи", "подбери", "купить", "цена", "стоимость",
+    "дешевле", "самый", "самая", "новый", "новое", "нужен", "нужна", "мне",
+    "проведи", "соответственно", "если", "такое", "есть", "сообщи", "там",
+    "варианты", "вариант", "хорошие", "хороший", "пожалуйста"
+}
+
+_P6_AUTO_WORDS = (
+    "сайлентблок", "саленблок", "сальник", "пыльник", "ваз", "2110", "2114",
+    "жигули", "лада", "приора", "гранта", "калина", "нива", "автозапчаст",
+    "запчаст", "oem", "артикул", "drom", "exist", "emex", "zzap"
+)
+
+_P6_ELECTRONICS_WORDS = (
+    "iphone", "айфон", "pixel", "google pixel", "телефон", "смартфон",
+    "samsung", "galaxy", "xiaomi", "redmi", "honor", "huawei", "pro max", "xl"
+)
+
+_P6_BUILD_WORDS = (
+    "rockwool", "роквул", "light batts", "light buds", "каменная вата", "утеплитель",
+    "бетон", "арматура", "цемент", "профлист", "металлочерепица", "клик-фальц",
+    "фальц", "кирпич", "газобетон", "доска", "брус", "петрович", "лемана"
+)
+
+def _p6_norm_text(text):
+    s = _clean(text, 4000)
+    s = re.sub(r"^\s*\[voice\]\s*", "", s, flags=re.I)
+    s = re.sub(r"^\s*(voice|голос|голосовое)\s*[:\-]\s*", "", s, flags=re.I)
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
+
+def _p6_low(text):
+    return _p6_norm_text(text).lower().replace("ё", "е")
+
+def _p6_words(text):
+    low = _p6_low(text)
+    return set(
+        w for w in re.findall(r"[а-яa-z0-9]{3,}", low)
+        if w not in _P6_SEARCH_STOP_WORDS
+    )
+
+def _p6_category_from_low(low):
+    if any(x in low for x in _P6_AUTO_WORDS):
+        return "AUTO_PARTS"
+    if any(x in low for x in _P6_ELECTRONICS_WORDS):
+        return "ELECTRONICS"
+    if any(x in low for x in _P6_BUILD_WORDS):
+        return "BUILDING_SUPPLY"
+    if any(w in low for w in AUTO_WORDS):
+        return "AUTO_PARTS"
+    if any(w in low for w in BUILDING_WORDS):
+        return "BUILDING_SUPPLY"
+    if any(w in low for w in CLASSIFIED_WORDS):
+        return "CLASSIFIEDS"
+    return "GENERAL"
+
+def _p6_is_explicit_new_search(text):
+    low = _p6_low(text)
+    if not low:
+        return False
+    if any(x in low for x in ("найди", "найти", "поищи", "поиск", "подбери", "купить", "дешевле", "цена", "стоимость", "мне нужен", "мне нужна", "нужен ", "нужна ")):
+        return True
+    return any(x in low for x in _P6_AUTO_WORDS + _P6_ELECTRONICS_WORDS + _P6_BUILD_WORDS)
+
+def _p6_is_vague_followup(text):
+    low = _p6_low(text)
+    if not low:
+        return False
+    if _p6_is_explicit_new_search(text):
+        return False
+    return len(low) <= 120 and any(x in low for x in (
+        "то что", "то, что", "предыдущ", "прошл", "я тебя про что", "выполни поиск",
+        "продолжи", "дальше", "что там", "ну что"
+    ))
+
+def _p6_target(text):
+    t = _p6_norm_text(text)
+    t = re.sub(
+        r"^(найди|найти|поищи|поиск|сколько стоит|цена на|стоимость|подбери|проведи поиск|мне нужен|мне нужна|нужен|нужна)\s+",
+        "",
+        t,
+        flags=re.I,
+    )
+    return re.sub(r"\s+", " ", t).strip()[:260]
+
+def _p6_same_goal(old_text, new_text):
+    ow = _p6_words(old_text)
+    nw = _p6_words(new_text)
+    if not ow or not nw:
+        return False
+    overlap = len(ow & nw)
+    return overlap > 0 and (overlap / max(1, min(len(ow), len(nw)))) >= 0.35
+
+def _p6_force_new_session(user_text, existing, extracted):
+    if not existing:
+        return True
+    if _p6_is_vague_followup(user_text):
+        return False
+    if _p6_is_explicit_new_search(user_text):
+        old_goal = str(getattr(existing, "goal", "") or "")
+        old_target = str((getattr(existing, "criteria", {}) or {}).get("target") or old_goal)
+        old_cat = str((getattr(existing, "criteria", {}) or {}).get("category") or "")
+        new_cat = str((extracted or {}).get("category") or _p6_category_from_low(_p6_low(user_text)) or "")
+        if old_cat and new_cat and old_cat != new_cat:
+            return True
+        if not _p6_same_goal(old_target, user_text):
+            return True
+    return False
+
+try:
+    def _p6_detect_category(self, low):
+        return _p6_category_from_low(str(low or ""))
+    CriteriaExtractor.detect_category = _p6_detect_category
+
+    def _p6_extract_target(self, text):
+        return _p6_target(text)
+    CriteriaExtractor.extract_target = _p6_extract_target
+except Exception:
+    pass
+
+def _p6_patch_criteria(criteria, text):
+    c = dict(criteria or {})
+    low = _p6_low(text)
+    c["category"] = _p6_category_from_low(low)
+    c["target"] = _p6_target(text)
+    if not c.get("region"):
+        if any(x in low for x in ("санкт-петербург", "спб", "питер", "ленобласть")):
+            c["region"] = "Санкт-Петербург / Ленобласть"
+        elif c["category"] in ("AUTO_PARTS", "ELECTRONICS", "GENERAL", "CLASSIFIEDS"):
+            c["region"] = "Россия / доставка"
+    return {k: v for k, v in c.items() if v not in ("", None, [], {})}
+
+try:
+    _p6_orig_query_expand = QueryExpander.expand
+    def _p6_expand(self, session):
+        c = session.criteria or {}
+        target = str(c.get("target") or session.goal or "")
+        region = str(c.get("region") or "")
+        category = str(c.get("category") or "GENERAL")
+        sources = SEARCH_PROFILES.get(category, SEARCH_PROFILES.get("GENERAL", []))
+        base = " ".join(x for x in [
+            target,
+            str(c.get("oem_or_article") or ""),
+            str(c.get("condition") or ""),
+            str(c.get("budget") or ""),
+        ] if x).strip()
+        q = [
+            base,
+            f"{base} {region}".strip(),
+            f"{base} купить {region}".strip(),
+            f"{base} цена наличие {region}".strip(),
+            f"{base} доставка {region}".strip(),
+        ]
+        if category == "AUTO_PARTS":
+            q += [f"{base} zzap", f"{base} exist", f"{base} emex", f"{base} drom", f"{base} avito"]
+        elif category == "ELECTRONICS":
+            q += [f"{base} ozon", f"{base} wildberries", f"{base} яндекс маркет", f"{base} avito", f"{base} dns"]
+        elif category == "BUILDING_SUPPLY":
+            q += [f"{base} петрович", f"{base} лемана", f"{base} всеинструменты", f"{base} avito", f"{base} 2гис"]
+        for src in sources:
+            q.append(f"{base} {src} {region}".strip())
+        out, seen = [], set()
+        for x in q:
+            x = re.sub(r"\s+", " ", str(x)).strip()
+            k = x.lower()
+            if x and k not in seen:
+                seen.add(k)
+                out.append(x)
+        return out[:16]
+    QueryExpander.expand = _p6_expand
+except Exception:
+    pass
+
+try:
+    _p6_orig_plan_sources = SourcePlanner.plan
+    def _p6_plan_sources(self, category):
+        category = str(category or "GENERAL")
+        return SEARCH_PROFILES.get(category, SEARCH_PROFILES.get("GENERAL", ["официальные сайты", "маркетплейсы", "Avito", "2ГИС"]))
+    SourcePlanner.plan = _p6_plan_sources
+except Exception:
+    pass
+
+try:
+    def _p6_build_prompt(self, session, queries, sources):
+        c = session.criteria or {}
+        return f"""P6_GLOBAL_SEARCH_SESSION_HARD_ISOLATION_ACTIVE
+АКТУАЛЬНЫЙ ЗАПРОС: {session.goal}
+КАТЕГОРИЯ: {c.get('category','GENERAL')}
+ЦЕЛЬ: {c.get('target', session.goal)}
+РЕГИОН: {c.get('region','Россия / доставка')}
+ПЛОЩАДКИ: {", ".join(sources)}
+ПОИСКОВЫЕ ФОРМУЛИРОВКИ:
+{chr(10).join("- " + q for q in queries)}
+
+ЖЁСТКИЕ ПРАВИЛА:
+1. Используй только АКТУАЛЬНЫЙ ЗАПРОС
+2. Не используй старые цели, старые товары, Rockwool/каменная вата, если их нет в актуальном запросе
+3. Не составляй смету
+4. Не создавай XLSX/PDF
+5. Не выдавай общие советы
+6. Нужны реальные варианты покупки или честно напиши, что подтверждённых вариантов нет
+7. Каждая строка должна иметь ссылку
+8. Если цена/телефон/наличие не видны — так и пиши
+
+ФОРМАТ:
+Найдено: <N> вариантов
+
+| № | Поставщик | Площадка | Товар | Город/регион | Цена | Наличие | Доставка | Телефон | Ссылка | Риск |
+|---|-----------|----------|-------|--------------|------|---------|----------|---------|--------|------|
+
+Лучший вариант:
+<одна строка>
+
+Проверить звонком:
+1. актуальная цена
+2. наличие
+3. доставка
+4. НДС/счёт
+5. точная модель/артикул/совместимость
+
+Отброшено:
+- <кратко, если есть>
+""".strip()
+    SearchOutputFormatter.build_prompt = _p6_build_prompt
+except Exception:
+    pass
+
+try:
+    _p6_orig_ensure = SearchOutputFormatter.ensure
+    def _p6_ensure(self, text, risk):
+        t = _clean(text, 12000)
+        bad = ("смета готова", "предварительная смета готова", "xlsx:", "pdf:", "engine:", "м-110.xlsx", "ареал нева.xlsx")
+        if any(x in t.lower().replace("ё", "е") for x in bad):
+            return "Поиск заблокирован: маршрут вернул сметный результат вместо поиска"
+        if "Найдено:" not in t and "| № |" not in t:
+            t = "Найдено: результат требует проверки\n\n" + t
+        if "Проверить звонком:" not in t:
+            t += "\n\nПроверить звонком:\n1. актуальная цена\n2. наличие\n3. доставка\n4. НДС/счёт\n5. точная модель/артикул/совместимость"
+        return _clean(t, 12000)
+    SearchOutputFormatter.ensure = _p6_ensure
+except Exception:
+    pass
+
+try:
+    async def _p6_run_search(self, payload, user_text, online_call, online_model, base_system_prompt=""):
+        payload = dict(payload or {})
+        chat_id = str(payload.get("chat_id") or "")
+        topic_id = int(payload.get("topic_id") or 0)
+        normalized = _p6_norm_text(user_text)
+        existing = self.sessions.get(chat_id, topic_id)
+        extracted = _p6_patch_criteria(self.extractor.extract(normalized), normalized)
+
+        if existing and _p6_is_vague_followup(normalized):
+            goal = str(getattr(existing, "goal", "") or normalized)
+            merged = dict(getattr(existing, "criteria", {}) or {})
+            for k, v in extracted.items():
+                if k not in ("target", "category") and v not in ("", None, [], {}):
+                    merged[k] = v
+            session = existing
+            session.clarifications.append(normalized)
+            session.criteria = merged
+        else:
+            if existing and _p6_force_new_session(normalized, existing, extracted):
+                try:
+                    existing.status = "CLOSED"
+                    self.sessions.save(existing)
+                    logger.info("P6_GLOBAL_SEARCH_SESSION_CLOSED_OLD chat=%s topic=%s old_goal=%s new_goal=%s", chat_id, topic_id, existing.goal, normalized)
+                except Exception as e:
+                    logger.warning("P6_GLOBAL_SEARCH_SESSION_CLOSE_ERR %s", e)
+            session = SearchSession(chat_id=str(chat_id), topic_id=int(topic_id or 0), goal=normalized, criteria=extracted)
+
+        session.criteria = _p6_patch_criteria(session.criteria, session.goal)
+        session.status = "IN_PROGRESS"
+        sources = self.planner.plan(str(session.criteria.get("category") or "GENERAL"))
+        queries = self.expander.expand(session)
+        session.sources = sources
+        session.queries = queries
+        self.sessions.save(session)
+
+        prompt = self.formatter.build_prompt(session, queries, sources)
+        system = (base_system_prompt or "") + "\nP6_GLOBAL_SEARCH_SESSION_ACTIVE\nCURRENT_QUERY_ONLY\nNO_ESTIMATE_NO_XLSX_NO_PDF"
+        raw = await online_call(online_model, [{"role": "system", "content": system}, {"role": "user", "content": prompt}])
+        risk = self.risk.score_text(raw)
+        final = self.formatter.ensure(raw, risk)
+
+        qlow = _p6_low(session.goal)
+        flow = final.lower().replace("ё", "е")
+        stale_pairs = (
+            ("rockwool", ("сальник", "сайлент", "саленблок", "iphone", "pixel", "телефон", "2110", "2114")),
+            ("каменная вата", ("сальник", "сайлент", "саленблок", "iphone", "pixel", "телефон", "2110", "2114")),
+            ("light batts", ("сальник", "сайлент", "саленблок", "iphone", "pixel", "телефон", "2110", "2114")),
+            ("термодом", ("сальник", "сайлент", "саленблок", "iphone", "pixel", "телефон", "2110", "2114")),
+        )
+        for stale, actual_markers in stale_pairs:
+            if stale in flow and stale not in qlow and any(x in qlow for x in actual_markers):
+                final = "Поиск заблокирован: ответ содержит старый товар из другой поисковой сессии. Повтори запрос одной строкой с товаром и регионом"
+                break
+
+        session.status = "AWAITING_CONFIRMATION"
+        session.best_suppliers = [{"summary": final[:1500], "risk": risk, "checked_at": _utc()}]
+        self.sessions.save(session)
+        logger.info("P6_GLOBAL_SEARCH_SESSION_DONE chat=%s topic=%s category=%s chars=%s", chat_id, topic_id, session.criteria.get("category"), len(final))
+        return final
+
+    SearchMonolithV2.run = _p6_run_search
+except Exception:
+    pass
+
+# === END_P6_GLOBAL_SEARCH_SESSION_HARD_ISOLATION_20260504_V1 ===
+
+# === P6B_SEARCH_SESSION_NO_STALE_CONTEXT_FINAL_20260504_V1 ===
+# Runtime overlay only
+# Scope:
+# - final SearchMonolithV2.run override
+# - current query only for explicit new product/auto/electronics searches
+# - stale Rockwool/building session cannot contaminate auto/electronics prompts
+# - no DB schema changes, no forbidden files, no systemd unit changes
+
+_P6B_STALE_WORDS = (
+    "rockwool", "rockwool light", "light buds", "light batts", "лайт баттс",
+    "каменная вата", "минвата", "утеплитель", "термодом", "minvata",
+    "www-minvata", "petrovich", "петрович", "лемана", "стройматериал"
+)
+
+_P6B_ELECTRONICS_WORDS = (
+    "iphone", "айфон", "pixel", "google pixel", "телефон", "смартфон",
+    "samsung", "galaxy", "xiaomi", "redmi", "honor", "huawei", "pro max", "xl"
+)
+
+_P6B_AUTO_WORDS = (
+    "сайлентблок", "саленблок", "сальник", "пыльник", "ваз", "2110", "2114",
+    "жигули", "лада", "приора", "гранта", "калина", "нива", "автозапчаст",
+    "шрус", "рычаг", "суппорт", "колодки", "стойка", "амортизатор"
+)
+
+_P6B_SEARCH_VERBS = (
+    "найди", "найти", "поищи", "поиск", "подбери", "проведи поиск",
+    "мне нужен", "мне нужна", "нужен", "нужна", "дешевле", "купить",
+    "цена", "стоимость", "сколько стоит"
+)
+
+_P6B_STOP_WORDS = {
+    "найди", "найти", "поиск", "поищи", "подбери", "купить", "цена", "стоимость",
+    "дешевле", "самый", "самая", "новый", "новое", "нужен", "нужна", "мне",
+    "проведи", "соответственно", "если", "такое", "есть", "сообщи", "там",
+    "самого", "самую", "большой", "крутой", "для", "всех", "интернет", "площадках"
+}
+
+def _p6b_norm(text):
+    s = _clean(text, 4000)
+    s = re.sub(r"^\s*\[voice\]\s*", "", s, flags=re.I)
+    s = re.sub(r"^\s*(voice|голос|голосовое)\s*[:\-]\s*", "", s, flags=re.I)
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
+
+def _p6b_low(text):
+    return _p6b_norm(text).lower().replace("ё", "е")
+
+def _p6b_words(text):
+    low = _p6b_low(text)
+    return {
+        w for w in re.findall(r"[а-яa-z0-9]{3,}", low)
+        if w not in _P6B_STOP_WORDS
+    }
+
+def _p6b_category(text):
+    low = _p6b_low(text)
+    if any(x in low for x in _P6B_AUTO_WORDS):
+        return "AUTO_PARTS"
+    if any(x in low for x in _P6B_ELECTRONICS_WORDS):
+        return "ELECTRONICS"
+    if any(x in low for x in AUTO_WORDS):
+        return "AUTO_PARTS"
+    if any(x in low for x in BUILDING_WORDS):
+        return "BUILDING_SUPPLY"
+    if any(x in low for x in CLASSIFIED_WORDS):
+        return "CLASSIFIEDS"
+    return "GENERAL"
+
+def _p6b_explicit_new_search(text):
+    low = _p6b_low(text)
+    if not low:
+        return False
+    if any(low.startswith(v) for v in _P6B_SEARCH_VERBS):
+        return True
+    if any(x in low for x in _P6B_AUTO_WORDS + _P6B_ELECTRONICS_WORDS) and any(v in low for v in _P6B_SEARCH_VERBS):
+        return True
+    return False
+
+def _p6b_force_new(existing, current_text, extracted):
+    if not existing:
+        return False
+    if not _p6b_explicit_new_search(current_text):
+        return False
+
+    old_goal = str(getattr(existing, "goal", "") or "")
+    old_criteria = getattr(existing, "criteria", {}) or {}
+    old_target = str(old_criteria.get("target") or old_goal)
+    old_low = old_target.lower().replace("ё", "е")
+
+    new_cat = str((extracted or {}).get("category") or _p6b_category(current_text) or "")
+    old_cat = str(old_criteria.get("category") or "")
+
+    if any(x in old_low for x in _P6B_STALE_WORDS) and new_cat in ("AUTO_PARTS", "ELECTRONICS"):
+        return True
+
+    if old_cat and new_cat and old_cat != new_cat:
+        return True
+
+    old_words = _p6b_words(old_target)
+    new_words = _p6b_words(current_text)
+    if old_words and new_words:
+        overlap = len(old_words & new_words)
+        ratio = overlap / max(1, min(len(old_words), len(new_words)))
+        if overlap == 0 or ratio < 0.30:
+            return True
+
+    return False
+
+def _p6b_scrub_stale_from_text(content, current_text):
+    s = str(content or "")
+    cur_low = _p6b_low(current_text)
+    current_is_building = _p6b_category(current_text) == "BUILDING_SUPPLY"
+    if current_is_building:
+        return s
+
+    if not any(x in s.lower().replace("ё", "е") for x in _P6B_STALE_WORDS):
+        return s
+
+    clean_lines = []
+    for line in s.splitlines():
+        low = line.lower().replace("ё", "е")
+        if any(x in low for x in _P6B_STALE_WORDS):
+            continue
+        clean_lines.append(line)
+
+    out = "\n".join(clean_lines).strip()
+    out += "\n\nАКТУАЛЬНЫЙ ЗАПРОС ПОЛЬЗОВАТЕЛЯ, ЕДИНСТВЕННЫЙ ИСТОЧНИК ПОИСКА: " + _p6b_norm(current_text)
+    return out
+
+def _p6b_target(text):
+    t = _p6b_norm(text)
+    t = re.sub(
+        r"^(найди|найти|поищи|поиск|сколько стоит|цена на|стоимость|подбери|проведи поиск|мне нужен|мне нужна|нужен|нужна)\s+",
+        "",
+        t,
+        flags=re.I,
+    )
+    return re.sub(r"\s+", " ", t).strip()[:220]
+
+try:
+    _p6b_orig_detect_category = CriteriaExtractor.detect_category
+    def _p6b_detect_category(self, low):
+        return _p6b_category(str(low or ""))
+    CriteriaExtractor.detect_category = _p6b_detect_category
+except Exception:
+    pass
+
+try:
+    _p6b_orig_extract_target = CriteriaExtractor.extract_target
+    def _p6b_extract_target(self, text):
+        return _p6b_target(text)
+    CriteriaExtractor.extract_target = _p6b_extract_target
+except Exception:
+    pass
+
+async def _p6b_run_search_final(self, payload, user_text, online_call, online_model, base_system_prompt=""):
+    payload = dict(payload or {})
+    chat_id = str(payload.get("chat_id") or "")
+    topic_id = int(payload.get("topic_id") or 0)
+    normalized = _p6b_norm(user_text or payload.get("raw_input") or payload.get("normalized_input") or "")
+    if not normalized:
+        normalized = _p6b_norm(user_text)
+
+    extracted = self.extractor.extract(normalized)
+    extracted["category"] = _p6b_category(normalized)
+    extracted["target"] = _p6b_target(normalized)
+
+    if not extracted.get("region"):
+        extracted["region"] = "Санкт-Петербург / РФ"
+
+    existing = self.sessions.get(chat_id, topic_id)
+
+    if existing and _p6b_force_new(existing, normalized, extracted):
+        try:
+            existing.status = "CLOSED"
+            self.sessions.save(existing)
+            logger.info(
+                "P6B_SEARCH_SESSION_CLOSED_STALE chat=%s topic=%s old_goal=%s new_goal=%s",
+                chat_id,
+                topic_id,
+                getattr(existing, "goal", ""),
+                normalized,
+            )
+        except Exception as e:
+            logger.warning("P6B_SEARCH_SESSION_CLOSE_ERR %s", e)
+        existing = None
+
+    if existing and not _p6b_explicit_new_search(normalized):
+        session = existing
+        session.clarifications.append(normalized)
+        safe_update = dict(session.criteria or {})
+        for k, v in (extracted or {}).items():
+            if v in ("", None, [], {}):
+                continue
+            if k in ("region", "quantity", "budget", "condition", "ral", "thickness_mm", "oem_or_article"):
+                safe_update[k] = v
+        session.criteria = safe_update
+    else:
+        session = SearchSession(chat_id=str(chat_id), topic_id=int(topic_id or 0), goal=normalized, criteria=extracted)
+
+    session.status = "IN_PROGRESS"
+    sources = self.planner.plan(str(session.criteria.get("category") or "GENERAL"))
+    queries = self.expander.expand(session)
+
+    if session.criteria.get("category") == "AUTO_PARTS":
+        sources = ["Exist", "Emex", "ZZap", "Drom", "Auto.ru", "EuroAuto", "Avito", "разборки", "официальные каталоги"]
+    elif session.criteria.get("category") == "ELECTRONICS":
+        sources = ["Ozon", "Wildberries", "Яндекс Маркет", "DNS", "М.Видео", "Эльдорадо", "Avito", "AliExpress", "официальные магазины"]
+
+    session.sources = sources
+    session.queries = queries
+    self.sessions.save(session)
+
+    prompt = self.formatter.build_prompt(session, queries, sources)
+    prompt = _p6b_scrub_stale_from_text(prompt, normalized)
+
+    system = "\n".join([
+        base_system_prompt or "",
+        "P6B_SEARCH_SESSION_NO_STALE_CONTEXT_FINAL_ACTIVE",
+        "CURRENT_QUERY_ONLY",
+        "USE ONLY CURRENT USER QUERY AND CURRENT CRITERIA",
+        "IGNORE OLD SEARCH SESSIONS, OLD SUPPLIERS, OLD MEMORY, OLD BUILDING MATERIAL CONTEXT",
+        "FORBIDDEN: estimate, смета, XLSX, PDF, проектные расчёты",
+        self.tco.instruction(),
+        self.ranker.instruction(),
+    ])
+
+    async def _p6b_online_call(model, messages):
+        clean_messages = []
+        for m in messages or []:
+            mm = dict(m or {})
+            mm["content"] = _p6b_scrub_stale_from_text(mm.get("content") or "", normalized)
+            clean_messages.append(mm)
+        joined = "\n".join(str(x.get("content") or "") for x in clean_messages)
+        jlow = joined.lower().replace("ё", "е")
+        if _p6b_category(normalized) in ("AUTO_PARTS", "ELECTRONICS"):
+            if any(x in jlow for x in _P6B_STALE_WORDS):
+                raise RuntimeError("P6B_STALE_CONTEXT_BLOCKED_BEFORE_ONLINE_CALL")
+        return await online_call(model, clean_messages)
+
+    raw = await _p6b_online_call(
+        online_model,
+        [
+            {"role": "system", "content": system},
+            {"role": "user", "content": prompt},
+        ],
+    )
+
+    if _p6b_category(normalized) in ("AUTO_PARTS", "ELECTRONICS"):
+        rlow = str(raw or "").lower().replace("ё", "е")
+        if any(x in rlow for x in _P6B_STALE_WORDS):
+            raw = "Подтверждённых вариантов по актуальному запросу не получено без загрязнения старым контекстом. Повтори запрос с артикулом/OEM или точной моделью"
+
+    risk = self.risk.score_text(str(raw or ""))
+    final = self.formatter.ensure(str(raw or ""), risk)
+    session.status = "AWAITING_CONFIRMATION"
+    session.best_suppliers = [{"summary": final[:1500], "risk": risk, "checked_at": _utc()}]
+    self.sessions.save(session)
+    logger.info(
+        "P6B_SEARCH_SESSION_DONE chat=%s topic=%s category=%s chars=%s",
+        chat_id,
+        topic_id,
+        session.criteria.get("category"),
+        len(final),
+    )
+    return final
+
+try:
+    SearchMonolithV2.run = _p6b_run_search_final
+except Exception:
+    pass
+
+try:
+    _p6b_orig_formatter_prompt = SearchOutputFormatter.build_prompt
+    def _p6b_build_prompt(self, session, queries, sources):
+        if session and getattr(session, "goal", None):
+            session.goal = _p6b_norm(session.goal)
+        text = _p6b_orig_formatter_prompt(self, session, queries, sources)
+        return _p6b_scrub_stale_from_text(text, getattr(session, "goal", "") if session else "")
+    SearchOutputFormatter.build_prompt = _p6b_build_prompt
+except Exception:
+    pass
+
+# === END_P6B_SEARCH_SESSION_NO_STALE_CONTEXT_FINAL_20260504_V1 ===
+
+# === P6C_SEARCH_CURRENT_QUERY_ONLY_NO_STALE_CONTEXT_20260504_V1 ===
+import re as _p6c_re
+
+def _p6c_clean_text_20260504(text, limit=4000):
+    try:
+        s = _clean(text, limit)
+    except Exception:
+        s = str(text or "")[:limit]
+    s = _p6c_re.sub(r"^\s*\[VOICE\]\s*", "", s, flags=_p6c_re.I)
+    s = _p6c_re.sub(r"^\s*(voice|голос|голосовое)\s*[:\-]\s*", "", s, flags=_p6c_re.I)
+    s = _p6c_re.sub(r"\s+", " ", s).strip()
+    return s[:limit]
+
+def _p6c_low_20260504(text):
+    return _p6c_clean_text_20260504(text).lower().replace("ё", "е")
+
+def _p6c_category_20260504(text):
+    low = _p6c_low_20260504(text)
+    if any(x in low for x in ("сайлентблок", "саленблок", "сальник", "пыльник", "ваз", "2110", "2114", "лада", "жигули", "автозапчаст", "drom", "exist", "emex", "zzap")):
+        return "AUTO_PARTS", "drom, exist, emex, zzap, avito, профильные магазины автозапчастей"
+    if any(x in low for x in ("iphone", "айфон", "pixel", "google pixel", "телефон", "смартфон", "samsung", "galaxy", "xiaomi", "redmi", "honor", "huawei")):
+        return "ELECTRONICS", "ozon, wildberries, яндекс маркет, dns, мвидео, эльдорадо, avito, официальные магазины"
+    if any(x in low for x in ("вата", "утеплитель", "rockwool", "light batts", "light buds", "бетон", "арматур", "пиломатериал")):
+        return "BUILDING_SUPPLY", "петрович, лемана про, всеинструменты, профильные поставщики, avito"
+    return "GENERAL", "официальные сайты, маркетплейсы, avito, профильные магазины"
+
+def _p6c_messages_20260504(query):
+    q = _p6c_clean_text_20260504(query, 2500)
+    cat, sources = _p6c_category_20260504(q)
+    system = (
+        "Ты выполняешь только товарный интернет-поиск по текущему запросу пользователя. "
+        "Не используй старые задачи, память, архив, прошлые товары и прошлые ответы. "
+        "Нужны реальные варианты покупки, цены, наличие, доставка и прямые ссылки."
+    )
+    user = (
+        "Текущий запрос пользователя:\n"
+        f"{q}\n\n"
+        f"Категория: {cat}\n"
+        f"Где проверять: {sources}\n\n"
+        "Ответ строго таблицей:\n"
+        "№ | Площадка/поставщик | Товар | Город/регион | Цена | Наличие | Доставка | Телефон | Прямая ссылка | Риск\n"
+        "Минимум 3 варианта, если они реально существуют. Если подтверждённых вариантов нет, так и напиши."
+    )
+    return [{"role": "system", "content": system}, {"role": "user", "content": user}]
+
+try:
+    _p6c_prev_run_20260504 = SearchMonolithV2.run
+
+    async def _p6c_run_20260504(self, payload, user_text, online_call, online_model, base_system_prompt=""):
+        payload = dict(payload or {})
+        query = _p6c_clean_text_20260504(user_text or payload.get("raw_input") or payload.get("normalized_input") or "", 3000)
+        chat_id = str(payload.get("chat_id") or "")
+        topic_id = int(payload.get("topic_id") or 0)
+
+        try:
+            existing = self.sessions.get(chat_id, topic_id)
+            if existing:
+                existing.status = "CLOSED"
+                self.sessions.save(existing)
+        except Exception:
+            pass
+
+        payload["raw_input"] = query
+        payload["normalized_input"] = query
+        payload["active_task_context"] = ""
+        payload["pin_context"] = ""
+        payload["short_memory_context"] = ""
+        payload["long_memory_context"] = ""
+        payload["archive_context"] = ""
+        payload["search_context"] = ""
+
+        raw = await online_call(online_model, _p6c_messages_20260504(query))
+        try:
+            final = _clean(raw, 12000)
+        except Exception:
+            final = str(raw or "")[:12000]
+        if not final.strip():
+            final = "Подтверждённых вариантов по текущему запросу не найдено"
+        try:
+            logger.info("P6C_SEARCH_CURRENT_QUERY_ONLY_DONE chat=%s topic=%s chars=%s", chat_id, topic_id, len(final))
+        except Exception:
+            pass
+        return final
+
+    SearchMonolithV2.run = _p6c_run_20260504
+except Exception:
+    pass
+
+try:
+    def run_search_monolith_v2(payload, user_text, online_call, online_model, base_system_prompt=""):
+        return _MONOLITH.run(payload, user_text, online_call, online_model, base_system_prompt)
+except Exception:
+    pass
+# === END_P6C_SEARCH_CURRENT_QUERY_ONLY_NO_STALE_CONTEXT_20260504_V1 ===

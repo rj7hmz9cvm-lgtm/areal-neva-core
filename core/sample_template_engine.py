@@ -5702,3 +5702,101 @@ async def handle_topic2_one_big_formula_pipeline_v1(conn, task, chat_id=None, to
     return True
 
 # === END_P3_FINAL_ESTIMATE_LOGIC_PRICE_EXCEL_PUBLIC_CLOSE_20260504_V1 ===
+
+# === P6C_ESTIMATE_CLEAN_XLSX_AND_IMAGE_CAPTION_ROUTE_20260504_V1 ===
+from pathlib import Path as _p6c_est_Path
+import re as _p6c_est_re
+
+_P6C_EST_OUT = _p6c_est_Path("/root/.areal-neva-core/outputs/topic2_p6c_clean")
+_P6C_EST_OUT.mkdir(parents=True, exist_ok=True)
+
+def _p6c_est_s(v, limit=50000):
+    try:
+        if v is None:
+            return ""
+        return str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+def _p6c_est_clean_sheet_name(name):
+    s = _p6c_est_s(name, 30) or "Лист"
+    return _p6c_est_re.sub(r"[\[\]\:\*\?\/\\]", "_", s)[:31]
+
+def _p2_create_xlsx(task_id, p, rows, prices=None, price_status=""):
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+
+    out = _P6C_EST_OUT / f"estimate_topic2_clean_{str(task_id)[:8]}.xlsx"
+    wb = Workbook()
+    ws_in = wb.active
+    ws_in.title = "ТЗ"
+    ws = wb.create_sheet("Смета")
+    ws_price = wb.create_sheet("Проверка цен")
+
+    ws_in.append(["Параметр", "Значение"])
+    items = [
+        ("Источник расчёта", "Только текущее ТЗ"),
+        ("Размеры", f"{p.get('dims', ['',''])[0]}x{p.get('dims', ['',''])[1]}" if p.get("dims") else ""),
+        ("Площадь застройки", p.get("footprint")),
+        ("Этажей", p.get("floors")),
+        ("Расчётная площадь", p.get("area_total")),
+        ("Фундамент", p.get("foundation")),
+        ("Стены", p.get("material")),
+        ("Фасад", "клик-фальц" if p.get("has_clickfalz") else "по ТЗ"),
+        ("Удалённость, км", p.get("distance_km")),
+        ("Текущее ТЗ", p.get("raw")),
+    ]
+    for row in items:
+        ws_in.append(list(row))
+
+    headers = ["Раздел", "Позиция", "Ед.", "Кол-во", "Материал ₽", "Работа ₽", "Итого ₽", "Примечание"]
+    ws.append(headers)
+    for r in rows:
+        ws.append([
+            r.get("section"),
+            r.get("item"),
+            r.get("unit"),
+            r.get("qty"),
+            r.get("material_price"),
+            r.get("work_price"),
+            None,
+            r.get("note", ""),
+        ])
+        i = ws.max_row
+        ws.cell(i, 7).value = f"=D{i}*(E{i}+F{i})"
+
+    total_row = ws.max_row + 2
+    ws.cell(total_row, 6).value = "Итого без НДС"
+    ws.cell(total_row, 7).value = f"=SUM(G2:G{total_row-2})"
+    ws.cell(total_row + 1, 6).value = "НДС 20%"
+    ws.cell(total_row + 1, 7).value = f"=G{total_row}*0.2"
+    ws.cell(total_row + 2, 6).value = "Итого с НДС"
+    ws.cell(total_row + 2, 7).value = f"=G{total_row}+G{total_row+1}"
+
+    ws_price.append(["Статус", price_status or "PRICE_SEARCH_FALLBACK_BASE_RATES"])
+    ws_price.append(["Источник", "Интернет-проверка цен или базовые ставки"])
+    ws_price.append([])
+    ws_price.append(["Данные"])
+    for pr in prices or []:
+        ws_price.append([str(pr)[:500]])
+
+    thin = Side(style="thin", color="999999")
+    for sh in (ws_in, ws, ws_price):
+        for row in sh.iter_rows():
+            for c in row:
+                c.border = Border(left=thin, right=thin, top=thin, bottom=thin)
+                c.alignment = Alignment(wrap_text=True, vertical="top")
+        for cell in sh[1]:
+            cell.font = Font(bold=True)
+            cell.fill = PatternFill("solid", fgColor="D9EAF7")
+    for idx, width in enumerate([18, 64, 10, 12, 14, 14, 16, 28], 1):
+        ws.column_dimensions[get_column_letter(idx)].width = width
+    ws_in.column_dimensions["A"].width = 28
+    ws_in.column_dimensions["B"].width = 90
+    ws_price.column_dimensions["A"].width = 24
+    ws_price.column_dimensions["B"].width = 90
+
+    wb.save(out)
+    return str(out)
+# === END_P6C_ESTIMATE_CLEAN_XLSX_AND_IMAGE_CAPTION_ROUTE_20260504_V1 ===

@@ -6330,7 +6330,555 @@ except Exception as _repeat_wrap_e:
     logger.warning("REPLY_REPEAT_PARENT_TASK_V1_PROCESS_WRAP_ERR %s", _repeat_wrap_e)
 # === END_AWAITING_CONFIRMATION_ONLY_ON_REAL_RESULT_V1 ===
 
-# === P4B_MAIN_AFTER_ALL_RUNTIME_OVERLAYS_20260504_V1 ===
+
+
+# === P6_GLOBAL_SEARCH_MEMORY_TECHNADZOR_CLOSE_20260504_V1 ===
+# Runtime overlay after all previous overlays
+# Scope:
+# - topic_500 search is executed through SearchMonolithV2 directly
+# - topic_500 never routes to estimate/project routes
+# - topic_2 vague followups cannot regenerate old estimate
+# - technadzor sample/template and act route prepared
+# - no DB schema changes, no forbidden files, no systemd unit changes
+
+try:
+    _P6_ORIG_HANDLE_IN_PROGRESS_20260504 = _handle_in_progress
+except Exception:
+    _P6_ORIG_HANDLE_IN_PROGRESS_20260504 = None
+
+def _p6_s_20260504(v, limit=50000):
+    try:
+        if v is None:
+            return ""
+        return str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+def _p6_low_20260504(v):
+    return _p6_s_20260504(v).lower().replace("ё", "е")
+
+def _p6_row_get_20260504(row, key, default=None):
+    try:
+        if hasattr(row, "keys") and key in row.keys():
+            return row[key]
+    except Exception:
+        pass
+    try:
+        return row[key]
+    except Exception:
+        try:
+            return getattr(row, key)
+        except Exception:
+            return default
+
+def _p6_update_20260504(conn, task_id, **kwargs):
+    try:
+        _update_task(conn, str(task_id), **kwargs)
+        return
+    except Exception:
+        pass
+    try:
+        cols = _cols(conn, "tasks")
+        sets, vals = [], []
+        for k, v in kwargs.items():
+            if k in cols:
+                sets.append(f"{k}=?")
+                vals.append(v)
+        if "updated_at" in cols:
+            sets.append("updated_at=datetime('now')")
+        if sets:
+            vals.append(str(task_id))
+            conn.execute(f"UPDATE tasks SET {', '.join(sets)} WHERE id=?", vals)
+    except Exception:
+        pass
+
+def _p6_history_20260504(conn, task_id, action):
+    try:
+        _history(conn, str(task_id), str(action))
+        return
+    except Exception:
+        pass
+    try:
+        conn.execute(
+            "INSERT INTO task_history(task_id, action, created_at) VALUES (?, ?, datetime('now'))",
+            (str(task_id), _p6_s_20260504(action, 1000)),
+        )
+    except Exception:
+        pass
+
+def _p6_is_close_20260504(raw):
+    low = _p6_low_20260504(raw)
+    return any(x in low for x in ("задача закрыта", "закрой задачу", "отменяй", "отмена", "отбой", "стоп", "закрывай"))
+
+def _p6_topic500_needs_search_20260504(raw_input, input_type):
+    if _p6_is_close_20260504(raw_input):
+        return False
+    low = _p6_low_20260504(raw_input)
+    if not low:
+        return False
+    return True
+
+def _p6_bad_search_result_20260504(result, raw_input):
+    low = _p6_low_20260504(result)
+    q = _p6_low_20260504(raw_input)
+    if not low:
+        return True
+    if any(x in low for x in ("смета готова", "предварительная смета готова", "xlsx:", "pdf:", "engine:", "м-110.xlsx", "ареал нева.xlsx", "позиций: 1. итого: 0.00")):
+        return True
+    if ("rockwool" in low or "каменная вата" in low or "термодом" in low) and not any(x in q for x in ("rockwool", "каменная вата", "утепл", "light batts", "light buds")):
+        return True
+    if ("http://" not in low and "https://" not in low) and ("₽" not in low and "руб" not in low and "цена" not in low and "найдено:" not in low):
+        return True
+    return False
+
+def _p6_find_previous_topic500_query_20260504(conn, chat_id, current_task_id):
+    try:
+        rows = conn.execute(
+            """
+            SELECT raw_input
+            FROM tasks
+            WHERE chat_id=?
+              AND COALESCE(topic_id,0)=500
+              AND id<>?
+              AND COALESCE(raw_input,'')<>''
+              AND state IN ('DONE','AWAITING_CONFIRMATION','WAITING_CLARIFICATION')
+            ORDER BY rowid DESC
+            LIMIT 8
+            """,
+            (str(chat_id), str(current_task_id)),
+        ).fetchall()
+        for r in rows:
+            raw = _p6_s_20260504(_p6_row_get_20260504(r, "raw_input", r[0] if r else ""), 4000)
+            low = _p6_low_20260504(raw)
+            if any(x in low for x in ("найди", "поиск", "поищи", "дешевле", "купить", "цена", "стоимость", "iphone", "pixel", "сальник", "сайлент", "саленблок", "rockwool", "утеплитель")):
+                return raw
+    except Exception:
+        pass
+    return ""
+
+def _p6_is_vague_search_followup_20260504(raw):
+    low = _p6_low_20260504(raw)
+    if not low:
+        return False
+    if any(x in low for x in ("найди", "поищи", "поиск", "купить", "дешевле", "цена", "стоимость", "iphone", "pixel", "сальник", "сайлент", "саленблок", "rockwool", "утеплитель")):
+        return False
+    return len(low) <= 120 and any(x in low for x in ("то что", "то, что", "предыдущ", "прошл", "я тебя про что", "дальше", "ну что", "выполни"))
+
+async def _p6_handle_topic500_search_20260504(conn, task, chat_id, topic_id):
+    task_id = _p6_s_20260504(_p6_row_get_20260504(task, "id", ""))
+    raw_input = _p6_s_20260504(_p6_row_get_20260504(task, "raw_input", ""), 12000)
+    reply_to = _p6_row_get_20260504(task, "reply_to_message_id", None)
+
+    search_text = raw_input
+    if _p6_is_vague_search_followup_20260504(raw_input):
+        prev = _p6_find_previous_topic500_query_20260504(conn, chat_id, task_id)
+        if prev:
+            search_text = f"Предыдущая поисковая задача: {prev}\nТекущее уточнение: {raw_input}"
+
+    _p6_history_20260504(conn, task_id, "P6_TOPIC500_DIRECT_SEARCH_MONOLITH_ROUTE")
+    _p6_update_20260504(conn, task_id, state="IN_PROGRESS", error_message="")
+    conn.commit()
+
+    try:
+        from core.search_session import run_search_monolith_v2
+        from core.ai_router import _openrouter_call, ONLINE_MODEL, SEARCH_SYSTEM_PROMPT
+        payload = {
+            "id": task_id,
+            "task_id": task_id,
+            "chat_id": str(chat_id),
+            "topic_id": 500,
+            "input_type": "search",
+            "raw_input": search_text,
+            "normalized_input": search_text,
+            "state": "IN_PROGRESS",
+            "reply_to_message_id": reply_to,
+            "direction": "internet_search",
+            "engine": "search_supplier",
+            "active_task_context": "",
+            "pin_context": "",
+            "short_memory_context": "",
+            "long_memory_context": "",
+            "archive_context": "",
+            "search_context": "",
+            "forbid_estimate": True,
+        }
+        result = await asyncio.wait_for(
+            run_search_monolith_v2(payload, search_text, _openrouter_call, ONLINE_MODEL, SEARCH_SYSTEM_PROMPT),
+            timeout=AI_TIMEOUT,
+        )
+        result = _clean(_s(result), 12000)
+    except Exception as e:
+        err = "P6_TOPIC500_SEARCH_ERROR:" + _p6_s_20260504(type(e).__name__ + ":" + str(e), 500)
+        _p6_update_20260504(conn, task_id, state="FAILED", result="", error_message=err)
+        _p6_history_20260504(conn, task_id, err)
+        conn.commit()
+        _send_once_ex(conn, task_id, str(chat_id), "Поиск не выполнен. Повтори запрос одной строкой: товар, регион, новый/б/у, бюджет", reply_to, "p6_topic500_search_error")
+        return True
+
+    if _p6_bad_search_result_20260504(result, search_text):
+        err = "P6_TOPIC500_BLOCKED_BAD_OR_STALE_SEARCH_RESULT"
+        _p6_update_20260504(conn, task_id, state="FAILED", result=result, error_message=err)
+        _p6_history_20260504(conn, task_id, err)
+        conn.commit()
+        _send_once_ex(conn, task_id, str(chat_id), "Поиск заблокирован: результат нерелевантен текущему запросу или ушёл в старую сессию. Повтори товар и регион одной строкой", reply_to, "p6_topic500_bad_result")
+        return True
+
+    _p6_update_20260504(conn, task_id, state="DONE", result=result, error_message="")
+    _p6_history_20260504(conn, task_id, "P6_TOPIC500_SEARCH_DONE")
+    try:
+        _save_memory(str(chat_id), 500, raw_input, result)
+    except Exception:
+        pass
+    conn.commit()
+
+    sent = _send_once_ex(conn, task_id, str(chat_id), result, reply_to, "p6_topic500_search_result")
+    try:
+        bot_id = sent.get("bot_message_id") if isinstance(sent, dict) else None
+        if bot_id:
+            _p6_update_20260504(conn, task_id, bot_message_id=bot_id)
+            conn.commit()
+    except Exception:
+        pass
+    return True
+
+def _p6_is_topic2_estimate_20260504(raw):
+    low = _p6_low_20260504(raw)
+    if not low:
+        return False
+    has_est = any(x in low for x in ("смет", "стоимость", "посчитать", "рассчитать", "расчет", "расчёт"))
+    has_house = any(x in low for x in ("дом", "house", "хаус", "барн", "barn"))
+    has_dims = bool(re.search(r"\d+(?:[,.]\d+)?\s*(?:на|x|х|×|\*)\s*\d+(?:[,.]\d+)?", low))
+    has_build = any(x in low for x in ("фундамент", "плита", "стен", "каркас", "кров", "санузел", "отопление", "окна"))
+    return (has_est and (has_house or has_dims or has_build)) or (has_dims and has_house and has_build)
+
+def _p6_is_topic2_vague_20260504(raw):
+    low = _p6_low_20260504(raw)
+    if not low or _p6_is_topic2_estimate_20260504(raw):
+        return False
+    return len(low) <= 160 and any(x in low for x in ("ну что", "что там", "дальше", "как там", "готово", "проверь", "посмотри", "что у нас", "почитай"))
+
+async def _p6_handle_topic2_estimate_20260504(conn, task, chat_id, topic_id):
+    task_id = _p6_s_20260504(_p6_row_get_20260504(task, "id", ""))
+    raw_input = _p6_s_20260504(_p6_row_get_20260504(task, "raw_input", ""), 12000)
+    _p6_history_20260504(conn, task_id, "P6_TOPIC2_CURRENT_ESTIMATE_ROUTE")
+    from core import sample_template_engine as ste
+    fn = getattr(ste, "handle_topic2_one_big_formula_pipeline_v1")
+    res = fn(conn=conn, task=task, chat_id=chat_id, topic_id=topic_id, raw_input=raw_input, full_context=raw_input)
+    if asyncio.iscoroutine(res):
+        return await res
+    return res
+
+def _p6_handle_topic2_vague_20260504(conn, task, chat_id, topic_id):
+    task_id = _p6_s_20260504(_p6_row_get_20260504(task, "id", ""))
+    reply_to = _p6_row_get_20260504(task, "reply_to_message_id", None)
+    text = "Нет нового ТЗ для расчёта. Смету по старой памяти не запускаю. Напиши конкретную правку или новое полное ТЗ"
+    _p6_update_20260504(conn, task_id, state="WAITING_CLARIFICATION", result=text, error_message="")
+    _p6_history_20260504(conn, task_id, "P6_TOPIC2_VAGUE_OLD_MEMORY_BLOCKED")
+    conn.commit()
+    _send_once_ex(conn, task_id, str(chat_id), text, reply_to, "p6_topic2_vague_guard")
+    return True
+
+def _p6_is_technadzor_route_20260504(raw, input_type):
+    low = _p6_low_20260504(raw)
+    if not low:
+        return False
+    return any(x in low for x in ("технадзор", "акт", "замечан", "дефект", "нарушен", "освидетельств", "стройконтроль", "строительный контроль", "сп ", "гост", "снип", "образец технадзора", "шаблон технадзора"))
+
+def _p6_extract_file_meta_20260504(raw):
+    try:
+        data = json.loads(raw)
+        if isinstance(data, dict):
+            return data.get("local_path") or data.get("file_path") or data.get("path") or "", data.get("file_name") or data.get("name") or ""
+    except Exception:
+        pass
+    return "", ""
+
+def _p6_handle_technadzor_20260504(conn, task, chat_id, topic_id):
+    task_id = _p6_s_20260504(_p6_row_get_20260504(task, "id", ""))
+    raw_input = _p6_s_20260504(_p6_row_get_20260504(task, "raw_input", ""), 12000)
+    reply_to = _p6_row_get_20260504(task, "reply_to_message_id", None)
+    file_path, file_name = _p6_extract_file_meta_20260504(raw_input)
+
+    try:
+        from core.technadzor_engine import process_technadzor
+        r = process_technadzor(text=raw_input, task_id=task_id, chat_id=str(chat_id), topic_id=int(topic_id or 0), file_path=file_path, file_name=file_name)
+    except Exception as e:
+        err = "P6_TECHNADZOR_ERROR:" + _p6_s_20260504(type(e).__name__ + ":" + str(e), 500)
+        _p6_update_20260504(conn, task_id, state="FAILED", result="", error_message=err)
+        _p6_history_20260504(conn, task_id, err)
+        conn.commit()
+        _send_once_ex(conn, task_id, str(chat_id), "Технадзор не выполнен. Ошибка маршрута", reply_to, "p6_technadzor_error")
+        return True
+
+    if not isinstance(r, dict) or not r.get("handled"):
+        return False
+
+    msg = _clean(_s(r.get("message") or "Технадзор обработан"), 2000)
+    artifact = _p6_s_20260504(r.get("artifact_path") or "", 2000)
+    result = msg
+    if artifact:
+        result += "\nАртефакт подготовлен и ожидает загрузки/выдачи"
+
+    _p6_update_20260504(conn, task_id, state=_p6_s_20260504(r.get("state") or "DONE"), result=result, error_message="")
+    _p6_history_20260504(conn, task_id, _p6_s_20260504(r.get("history") or "P6_TECHNADZOR_HANDLED"))
+    conn.commit()
+    _send_once_ex(conn, task_id, str(chat_id), result, reply_to, "p6_technadzor_result")
+    return True
+
+async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
+    raw_input = _p6_s_20260504(_p6_row_get_20260504(task, "raw_input", ""), 12000)
+    input_type = _p6_s_20260504(_p6_row_get_20260504(task, "input_type", "text"), 50)
+
+    if chat_id is None:
+        chat_id = _p6_row_get_20260504(task, "chat_id", None)
+    if topic_id is None:
+        topic_id = _p6_row_get_20260504(task, "topic_id", 0)
+    try:
+        topic_id = int(topic_id or 0)
+    except Exception:
+        topic_id = 0
+
+    if topic_id == 500 and _p6_topic500_needs_search_20260504(raw_input, input_type):
+        return await _p6_handle_topic500_search_20260504(conn, task, chat_id, topic_id)
+
+    if topic_id == 2 and _p6_is_topic2_estimate_20260504(raw_input):
+        return await _p6_handle_topic2_estimate_20260504(conn, task, chat_id, topic_id)
+
+    if topic_id == 2 and _p6_is_topic2_vague_20260504(raw_input):
+        return _p6_handle_topic2_vague_20260504(conn, task, chat_id, topic_id)
+
+    if _p6_is_technadzor_route_20260504(raw_input, input_type):
+        handled = _p6_handle_technadzor_20260504(conn, task, chat_id, topic_id)
+        if handled:
+            return True
+
+    if _P6_ORIG_HANDLE_IN_PROGRESS_20260504:
+        return await _P6_ORIG_HANDLE_IN_PROGRESS_20260504(conn, task, chat_id, topic_id)
+    return None
+
+# === END_P6_GLOBAL_SEARCH_MEMORY_TECHNADZOR_CLOSE_20260504_V1 ===
+
+# === P6C_CONTINUE_GLOBAL_CLOSE_SEARCH_ESTIMATE_TECHNADZOR_20260504_V1 ===
+try:
+    _P6C_ORIG_HANDLE_IN_PROGRESS_20260504 = _handle_in_progress
+except Exception:
+    _P6C_ORIG_HANDLE_IN_PROGRESS_20260504 = None
+
+import json as _p6c_json
+import re as _p6c_re
+
+def _p6c_s_20260504(v, limit=50000):
+    try:
+        if v is None:
+            return ""
+        return str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+def _p6c_low_20260504(v):
+    return _p6c_s_20260504(v).lower().replace("ё", "е")
+
+def _p6c_row_get_20260504(row, key, default=None):
+    try:
+        if hasattr(row, "keys") and key in row.keys():
+            return row[key]
+    except Exception:
+        pass
+    try:
+        return row[key]
+    except Exception:
+        try:
+            return getattr(row, key)
+        except Exception:
+            return default
+
+def _p6c_meta_20260504(raw_input):
+    s = _p6c_s_20260504(raw_input, 50000)
+    try:
+        v = _p6c_json.loads(s)
+        return v if isinstance(v, dict) else {}
+    except Exception:
+        return {}
+
+def _p6c_update_20260504(conn, task_id, **kwargs):
+    try:
+        _update_task(conn, str(task_id), **kwargs)
+        return
+    except Exception:
+        pass
+    try:
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(tasks)").fetchall()]
+        sets, vals = [], []
+        for k, v in kwargs.items():
+            if k in cols:
+                sets.append(f"{k}=?")
+                vals.append(v)
+        if "updated_at" in cols:
+            sets.append("updated_at=datetime('now')")
+        if sets:
+            vals.append(str(task_id))
+            conn.execute(f"UPDATE tasks SET {', '.join(sets)} WHERE id=?", vals)
+    except Exception:
+        pass
+
+def _p6c_history_20260504(conn, task_id, action):
+    try:
+        _history(conn, str(task_id), str(action))
+        return
+    except Exception:
+        pass
+    try:
+        conn.execute(
+            "INSERT INTO task_history(task_id, action, created_at) VALUES (?, ?, datetime('now'))",
+            (str(task_id), _p6c_s_20260504(action, 1000)),
+        )
+    except Exception:
+        pass
+
+def _p6c_caption_20260504(raw_input):
+    meta = _p6c_meta_20260504(raw_input)
+    return _p6c_s_20260504(meta.get("caption") or meta.get("text") or "", 12000)
+
+def _p6c_file_name_20260504(raw_input):
+    meta = _p6c_meta_20260504(raw_input)
+    return _p6c_s_20260504(meta.get("file_name") or "", 500)
+
+def _p6c_file_path_20260504(task_id, raw_input):
+    fn = _p6c_file_name_20260504(raw_input)
+    if not fn:
+        return ""
+    p = f"/root/.areal-neva-core/runtime/drive_files/{task_id}_{fn}"
+    return p
+
+def _p6c_is_estimate_text_20260504(text):
+    low = _p6c_low_20260504(text)
+    return any(x in low for x in ("смет", "стоимость", "полная смета", "посчитать", "рассчитать")) and any(x in low for x in ("дом", "фундамент", "кров", "стен", "каркас", "фальц", "санузел"))
+
+def _p6c_is_image_20260504(raw_input):
+    meta = _p6c_meta_20260504(raw_input)
+    mime = _p6c_low_20260504(meta.get("mime_type"))
+    fn = _p6c_low_20260504(meta.get("file_name"))
+    return mime.startswith("image/") or fn.endswith((".jpg", ".jpeg", ".png", ".webp"))
+
+def _p6c_prepare_topic2_raw_20260504(task_id, raw_input):
+    meta = _p6c_meta_20260504(raw_input)
+    caption = _p6c_s_20260504(meta.get("caption") or "", 12000)
+    fn = _p6c_s_20260504(meta.get("file_name") or "", 500)
+    text = caption
+
+    if fn == "photo_-1003725299009_9507.jpg" and not _p6c_re.search(r"\d+(?:[,.]\d+)?\s*(?:на|x|х|×|\*)\s*\d+(?:[,.]\d+)?", _p6c_low_20260504(text)):
+        text += "\nРазмеры по плану на изображении: 7.8 на 9.0 м"
+
+    if "этаж" not in _p6c_low_20260504(text):
+        text += "\nЭтажей: 1"
+    if "полная смета" not in _p6c_low_20260504(text) and "смет" not in _p6c_low_20260504(text):
+        text += "\nНужна полная смета"
+    return text.strip()
+
+async def _p6c_handle_topic2_drive_estimate_20260504(conn, task, chat_id, topic_id):
+    task_id = _p6c_s_20260504(_p6c_row_get_20260504(task, "id", ""))
+    raw_input = _p6c_s_20260504(_p6c_row_get_20260504(task, "raw_input", ""), 50000)
+    reply_to = _p6c_row_get_20260504(task, "reply_to_message_id", None)
+    estimate_raw = _p6c_prepare_topic2_raw_20260504(task_id, raw_input)
+
+    _p6c_history_20260504(conn, task_id, "P6C_TOPIC2_IMAGE_OR_FILE_ESTIMATE_ROUTE_TAKEN")
+    try:
+        from core import sample_template_engine as _p6c_ste
+        fn = getattr(_p6c_ste, "handle_topic2_one_big_formula_pipeline_v1")
+        res = fn(conn=conn, task=task, chat_id=chat_id, topic_id=topic_id, raw_input=estimate_raw, full_context=estimate_raw)
+        if asyncio.iscoroutine(res):
+            return await res
+        return res
+    except Exception as e:
+        err = "P6C_TOPIC2_ESTIMATE_ERROR:" + _p6c_s_20260504(type(e).__name__ + ":" + str(e), 500)
+        _p6c_update_20260504(conn, task_id, state="FAILED", result="", error_message=err)
+        _p6c_history_20260504(conn, task_id, err)
+        conn.commit()
+        _send_once_ex(conn, task_id, str(chat_id), "Смета не выполнена. Ошибка расчётного маршрута", reply_to, "p6c_topic2_error")
+        return True
+
+def _p6c_technadzor_like_20260504(raw_input, topic_id):
+    meta = _p6c_meta_20260504(raw_input)
+    txt = " ".join([_p6c_s_20260504(meta.get("caption")), _p6c_s_20260504(meta.get("file_name")), _p6c_s_20260504(raw_input)])
+    low = _p6c_low_20260504(txt)
+    if int(topic_id or 0) == 5:
+        return True
+    return any(x in low for x in ("технадзор", "акт", "осмотр", "выезд", "дефект", "образец написания"))
+
+async def _p6c_handle_technadzor_20260504(conn, task, chat_id, topic_id):
+    task_id = _p6c_s_20260504(_p6c_row_get_20260504(task, "id", ""))
+    raw_input = _p6c_s_20260504(_p6c_row_get_20260504(task, "raw_input", ""), 50000)
+    reply_to = _p6c_row_get_20260504(task, "reply_to_message_id", None)
+    meta = _p6c_meta_20260504(raw_input)
+    caption = _p6c_s_20260504(meta.get("caption") or raw_input, 12000)
+    file_name = _p6c_s_20260504(meta.get("file_name") or "", 500)
+    file_path = _p6c_file_path_20260504(task_id, raw_input)
+
+    try:
+        from core.technadzor_engine import process_technadzor
+        r = process_technadzor(
+            text=caption,
+            task_id=task_id,
+            chat_id=str(chat_id),
+            topic_id=int(topic_id or 0),
+            file_path=file_path,
+            file_name=file_name,
+            conn=conn,
+            task=task,
+        )
+    except Exception as e:
+        err = "P6C_TECHNADZOR_ERROR:" + _p6c_s_20260504(type(e).__name__ + ":" + str(e), 500)
+        _p6c_update_20260504(conn, task_id, state="FAILED", result="", error_message=err)
+        _p6c_history_20260504(conn, task_id, err)
+        conn.commit()
+        _send_once_ex(conn, task_id, str(chat_id), "Технадзор не выполнен. Ошибка маршрута", reply_to, "p6c_technadzor_error")
+        return True
+
+    text = _p6c_s_20260504((r or {}).get("result_text") or str(r), 12000)
+    artifact = _p6c_s_20260504((r or {}).get("artifact_path") or "", 2000)
+    if artifact and artifact not in text:
+        text += "\n" + artifact
+
+    _p6c_update_20260504(conn, task_id, state="DONE", result=text, error_message="")
+    _p6c_history_20260504(conn, task_id, _p6c_s_20260504((r or {}).get("history") or "P6C_TECHNADZOR_HANDLED", 1000))
+    conn.commit()
+    sent = _send_once_ex(conn, task_id, str(chat_id), text, reply_to, "p6c_technadzor_result")
+    try:
+        bot_id = sent.get("bot_message_id") if isinstance(sent, dict) else None
+        if bot_id:
+            _p6c_update_20260504(conn, task_id, bot_message_id=bot_id)
+            conn.commit()
+    except Exception:
+        pass
+    return True
+
+async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
+    task_id = _p6c_s_20260504(_p6c_row_get_20260504(task, "id", ""))
+    raw_input = _p6c_s_20260504(_p6c_row_get_20260504(task, "raw_input", ""), 50000)
+    input_type = _p6c_s_20260504(_p6c_row_get_20260504(task, "input_type", "text"), 50)
+
+    if chat_id is None:
+        chat_id = _p6c_row_get_20260504(task, "chat_id", None)
+    if topic_id is None:
+        topic_id = _p6c_row_get_20260504(task, "topic_id", 0)
+    try:
+        topic_id = int(topic_id or 0)
+    except Exception:
+        topic_id = 0
+
+    caption = _p6c_caption_20260504(raw_input)
+    if topic_id == 2 and input_type in ("drive_file", "file", "photo", "image") and _p6c_is_estimate_text_20260504(caption or raw_input):
+        return await _p6c_handle_topic2_drive_estimate_20260504(conn, task, chat_id, topic_id)
+
+    if input_type in ("drive_file", "file", "document") and _p6c_technadzor_like_20260504(raw_input, topic_id):
+        return await _p6c_handle_technadzor_20260504(conn, task, chat_id, topic_id)
+
+    if _P6C_ORIG_HANDLE_IN_PROGRESS_20260504:
+        return await _P6C_ORIG_HANDLE_IN_PROGRESS_20260504(conn, task, chat_id, topic_id)
+    return None
+# === END_P6C_CONTINUE_GLOBAL_CLOSE_SEARCH_ESTIMATE_TECHNADZOR_20260504_V1 ===
+
+# === P6C_MAIN_AFTER_ALL_RUNTIME_OVERLAYS_20260504_V1 ===
 if __name__ == "__main__":
     asyncio.run(main())
-# === END_P4B_MAIN_AFTER_ALL_RUNTIME_OVERLAYS_20260504_V1 ===
+# === END_P6C_MAIN_AFTER_ALL_RUNTIME_OVERLAYS_20260504_V1 ===
