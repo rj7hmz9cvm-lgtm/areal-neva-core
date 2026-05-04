@@ -460,7 +460,29 @@ TechnadzorTask =
 Статус: **CANON_APPROVED_PENDING_IMPLEMENTATION**
 Запрещённые файлы не трогать.
 
+### Standalone скрипт gen_act_3rd_visit.py — НАПИСАН, Vision не работает
+
+Скрипт: `tools/gen_act_3rd_visit.py`
+Назначение: скачать 61 фото из Drive `1sS1A6iHQHUwjqZGF43wdyRjoLwwAHPse` → Vision → PDF акт 3-го выезда
+
+**Проблема Vision (04.05.2026):**
+- OpenRouter `google/gemini-2.5-flash` → 403 "Blocked by Google"
+- Причина: Google блокирует конкретный аккаунт/ключ через OpenRouter
+- PDF с пустыми разделами был сгенерирован и загружен на Drive (структура правильная)
+- **Нужно:** сменить Vision модель на нон-Google (например `openai/gpt-4o` или `anthropic/claude-3-5-sonnet`) или использовать Google AI Studio напрямую
+- В `.env` добавить: `OPENROUTER_VISION_MODEL=openai/gpt-4o-mini` (дешёвле) или `openai/gpt-4o`
+
+**Файлы выезда уже скачаны:**
+- `data/memory_files/technadzor_index_cache/IMG_5320.JPG` ... `IMG_5381.JPG` (61 фото)
+- Можно сразу перезапустить скрипт после смены модели
+
+**Объект:** ангар Киевское шоссе, акт № 04-05/26, третий выезд 04.05.2026
+**Предыдущий акт:** № 12-03/26 от 12.03.2026
+**Ссылка на папку фото:** https://drive.google.com/drive/folders/1sS1A6iHQHUwjqZGF43wdyRjoLwwAHPse
+
 ### Коммиты этой сессии
 - `d838855` — TECHNADZOR_DOMAIN_LOGIC_CANON.md (разделы 1–24)
 - `e36b320` — разделы 25–28 (пути передачи, модель задачи, буфер, язык)
 - `2be1bb3` — разделы 29–33 (ActiveTechnadzorFolder, VisitMaterial, VisitPackage, COLLECTING, команды)
+- `9e9c330` — LATEST_HANDOFF обновлён с решениями сессии
+- текущий коммит — gen_act_3rd_visit.py + итог сессии
