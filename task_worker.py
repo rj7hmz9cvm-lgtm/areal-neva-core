@@ -8562,7 +8562,7 @@ async def _p6h4tw_handle_topic5(conn, task, args, kwargs):
             _p6h4tw_ack_done(conn, task, chat_id, msg, "P6H4TW_SHOW_FOLDER")
             return True
 
-        # Flush + route to technadzor
+        # Flush + call process_technadzor directly (Row object carries stale raw_input)
         if any(t in raw_low for t in _P6H4TW_FLUSH_TRIGGERS):
             try:
                 from core.technadzor_engine import visit_buffer_flush as _p6h4tw_flush
@@ -8589,16 +8589,28 @@ async def _p6h4tw_handle_topic5(conn, task, args, kwargs):
                     lines.append(line)
                 package_text = "\n".join(lines)
                 tid = _s(_task_field(task, "id", ""))
-                conn.execute(
-                    "UPDATE tasks SET raw_input=?, input_type='text', updated_at=datetime('now') WHERE id=?",
-                    (package_text, tid),
+                reply = _task_field(task, "reply_to_message_id", None)
+                _history(conn, tid, f"P6H4TW_VISIT_FLUSH:count={len(materials)}")
+                from core.technadzor_engine import process_technadzor as _p6h4tw_pte
+                r = _p6h4tw_pte(
+                    text=package_text,
+                    task_id=tid,
+                    chat_id=str(chat_id),
+                    topic_id=5,
+                    conn=conn,
                 )
-                conn.commit()
-                _history(conn, tid, f"P6H4TW_VISIT_FLUSH_INJECT:count={len(materials)}")
-                _P6H4TW_LOG.info("P6H4TW_FLUSH_INJECTED chat=%s count=%s", chat_id, len(materials))
+                if isinstance(r, dict) and r.get("ok"):
+                    msg = _s(r.get("result_text") or "Разбор выезда сформирован")
+                    if r.get("artifact_path"):
+                        msg += "\nАртефакт готов к выдаче"
+                    _update_task(conn, tid, state="DONE", result=msg, error_message="")
+                    _history(conn, tid, r.get("history", "P6H4TW_VISIT_PACKAGE_DONE"))
+                    conn.commit()
+                    _send_once_ex(conn, tid, str(chat_id), msg, reply, "p6h4tw_visit_package_result")
+                    return True
             except Exception as _e:
                 _P6H4TW_LOG.warning("P6H4TW_FLUSH_ERR %s", _e)
-            return False  # pass to original with updated raw_input
+            return False
 
         # Voice annotation: bind to last buffered material
         if raw_str.startswith("[VOICE]"):
