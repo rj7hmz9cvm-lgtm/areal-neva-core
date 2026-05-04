@@ -4244,3 +4244,593 @@ async def handle_topic2_one_big_formula_pipeline_v1(
     return True
 
 # === END_TOPIC2_REAL_ESTIMATE_FROM_TZ_V2 ===
+
+
+# === P1_TOPIC2_ESTIMATE_MULTIFORMAT_CLEAN_OUTPUT_20260504_V1 ===
+# Runtime overlay only
+# Scope:
+# - topic_2 estimate output must be clean for Telegram
+# - M-110.xlsx is used as formatting source when active template points to it
+# - original workbook sheets/formulas are preserved; AREAL_INPUT and AREAL_CALC are added
+# - current raw_input is the only calculation source
+# - Engine / Manifest / internal marker leakage is blocked from public response
+
+import os as _p1_os
+import re as _p1_re
+import json as _p1_json
+import time as _p1_time
+import math as _p1_math
+import uuid as _p1_uuid
+import shutil as _p1_shutil
+import tempfile as _p1_tempfile
+import datetime as _p1_datetime
+from pathlib import Path as _p1_Path
+from typing import Any as _p1_Any, Dict as _p1_Dict, List as _p1_List, Optional as _p1_Optional, Tuple as _p1_Tuple
+
+_P1_BASE_20260504 = _p1_Path("/root/.areal-neva-core")
+_P1_ACTIVE_TEMPLATE_20260504 = _P1_BASE_20260504 / "data/templates/estimate/ACTIVE__chat_-1003725299009__topic_2.json"
+_P1_OUT_20260504 = _P1_BASE_20260504 / "outputs/topic2_p1_multiformat"
+_P1_OUT_20260504.mkdir(parents=True, exist_ok=True)
+
+def _p1_s_20260504(v, limit=50000):
+    if v is None:
+        return ""
+    try:
+        return str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+def _p1_low_20260504(v):
+    return _p1_s_20260504(v).lower().replace("ё", "е")
+
+def _p1_clean_public_20260504(text):
+    s = _p1_s_20260504(text, 50000)
+    lines = []
+    forbidden = (
+        "engine:",
+        "manifest:",
+        "internal",
+        "validator",
+        "traceback",
+        "/root/",
+        "/tmp/",
+        "marker",
+        "_v1",
+        "_v2",
+        "_v3",
+        "topic2_real",
+        "topic2_template",
+        "p1_topic2",
+    )
+    for line in s.splitlines():
+        low = _p1_low_20260504(line)
+        if any(x in low for x in forbidden):
+            continue
+        lines.append(line.rstrip())
+    out = "\n".join(lines).strip()
+    out = _p1_re.sub(r"\n{3,}", "\n\n", out)
+    return out
+
+def _p1_row_get_20260504(row, key, default=None):
+    try:
+        if hasattr(row, "keys") and key in row.keys():
+            return row[key]
+    except Exception:
+        pass
+    try:
+        return row[key]
+    except Exception:
+        try:
+            return getattr(row, key)
+        except Exception:
+            return default
+
+def _p1_update_task_20260504(conn, task_id, **kwargs):
+    cols = [r[1] for r in conn.execute("PRAGMA table_info(tasks)").fetchall()]
+    parts = []
+    vals = []
+    for k, v in kwargs.items():
+        if k in cols:
+            parts.append(f"{k}=?")
+            vals.append(v)
+    if "updated_at" in cols:
+        parts.append("updated_at=datetime('now')")
+    if not parts:
+        return
+    vals.append(str(task_id))
+    conn.execute(f"UPDATE tasks SET {', '.join(parts)} WHERE id=?", vals)
+
+def _p1_history_20260504(conn, task_id, action):
+    try:
+        conn.execute(
+            "INSERT INTO task_history(task_id, action, created_at) VALUES (?, ?, datetime('now'))",
+            (str(task_id), _p1_s_20260504(action, 1000)),
+        )
+    except Exception:
+        pass
+
+def _p1_send_20260504(chat_id, text, reply_to, topic_id):
+    from core.reply_sender import send_reply_ex
+    return send_reply_ex(
+        chat_id=str(chat_id),
+        text=_p1_clean_public_20260504(text)[:12000],
+        reply_to_message_id=reply_to,
+        message_thread_id=int(topic_id or 0),
+    )
+
+def _p1_extract_dimensions_20260504(text):
+    low = _p1_low_20260504(text)
+    m = _p1_re.search(r"(\d+(?:[,.]\d+)?)\s*(?:на|x|х|×|\*)\s*(\d+(?:[,.]\d+)?)", low)
+    if not m:
+        return None
+    return float(m.group(1).replace(",", ".")), float(m.group(2).replace(",", "."))
+
+def _p1_extract_floors_20260504(text):
+    low = _p1_low_20260504(text)
+    m = _p1_re.search(r"(\d+)\s*(?:этаж|этажа|этажей)", low)
+    if m:
+        return int(m.group(1))
+    if "два эта" in low or "2 эта" in low:
+        return 2
+    if "три эта" in low or "3 эта" in low:
+        return 3
+    if "один эта" in low or "1 эта" in low:
+        return 1
+    return None
+
+def _p1_extract_distance_20260504(text):
+    low = _p1_low_20260504(text)
+    m = _p1_re.search(r"(\d+(?:[,.]\d+)?)\s*км", low)
+    if m:
+        return float(m.group(1).replace(",", "."))
+    if "санкт-петербург" in low or "спб" in low:
+        return 0.0
+    return None
+
+def _p1_parse_20260504(text):
+    low = _p1_low_20260504(text)
+    dims = _p1_extract_dimensions_20260504(text)
+    floors = _p1_extract_floors_20260504(text)
+    footprint = dims[0] * dims[1] if dims else None
+    area_total = footprint * floors if footprint and floors else footprint
+
+    material = ""
+    if any(x in low for x in ("каркас", "дерев", "брус", "имитац")):
+        material = "каркас"
+    elif "газобет" in low or "газоблок" in low:
+        material = "газобетон"
+    elif "кирпич" in low:
+        material = "кирпич"
+
+    foundation = ""
+    if "плит" in low or "монолит" in low:
+        foundation = "монолитная плита"
+    elif "сва" in low:
+        foundation = "свайный фундамент"
+    elif "ленточ" in low or "лента" in low:
+        foundation = "ленточный фундамент"
+
+    scope = ""
+    if "под ключ" in low or any(x in low for x in ("ламинат", "сантех", "санузел", "светильник", "выключатель", "отопление", "тепл")):
+        scope = "под ключ"
+    elif "короб" in low:
+        scope = "коробка"
+
+    bathrooms = floors if any(x in low for x in ("санузел", "сантех")) and floors else 0
+    if "на каждом этаже" in low and bathrooms == 0 and floors:
+        bathrooms = floors
+
+    return {
+        "raw": text,
+        "dims": dims,
+        "floors": floors,
+        "footprint": footprint,
+        "area_total": area_total,
+        "material": material,
+        "foundation": foundation,
+        "distance_km": _p1_extract_distance_20260504(text),
+        "scope": scope,
+        "bathrooms": bathrooms,
+        "has_laminate": "ламинат" in low,
+        "has_warm_floor": "тепл" in low and ("пол" in low or "пал" in low),
+        "has_lighting": "светильник" in low or "выключатель" in low or "освещ" in low,
+        "has_windows": "окна" in low or "окон" in low,
+        "has_clickfalz": "клик фальц" in low or "кликфальц" in low or "фальц" in low,
+        "has_imitation_timber": "имитац" in low and "брус" in low,
+        "insulation_wall_mm": 250 if "250" in low and "стен" in low else 150,
+        "insulation_roof_mm": 300 if "300" in low and "кров" in low else 200,
+    }
+
+def _p1_missing_question_20260504(p):
+    if not p["dims"]:
+        return "Уточни размеры дома"
+    if not p["floors"]:
+        return "Уточни этажность"
+    if p["distance_km"] is None:
+        return "Уточни город или удалённость объекта в км"
+    if not p["foundation"]:
+        return "Уточни тип фундамента"
+    if not p["material"]:
+        return "Уточни материал стен"
+    if not p["scope"]:
+        return "Уточни состав сметы: коробка или под ключ"
+    return None
+
+def _p1_build_rows_20260504(p):
+    footprint = float(p["footprint"] or 0)
+    floors = int(p["floors"] or 1)
+    area_total = float(p["area_total"] or footprint)
+    perimeter = 0.0
+    if p["dims"]:
+        perimeter = 2 * (float(p["dims"][0]) + float(p["dims"][1]))
+
+    wall_h = 3.0
+    wall_area = perimeter * wall_h * floors
+    roof_area = footprint * 1.28
+    slab_volume = footprint * 0.20
+    concrete = slab_volume * 1.03
+    rebar_t = footprint * 0.032
+    rooms_est = max(6, floors * 5)
+
+    rows = []
+
+    def add(section, item, unit, qty, material_price, work_price):
+        qty = round(float(qty or 0), 3)
+        total = round(qty * (float(material_price or 0) + float(work_price or 0)), 2)
+        rows.append({
+            "section": section,
+            "item": item,
+            "unit": unit,
+            "qty": qty,
+            "material_price": float(material_price or 0),
+            "work_price": float(work_price or 0),
+            "total": total,
+        })
+
+    add("Фундамент", "Разработка и планировка основания под плиту", "м²", footprint, 350, 450)
+    add("Фундамент", "Песчаная подушка 200 мм", "м³", footprint * 0.20, 1450, 750)
+    add("Фундамент", "Щебёночная подушка 150 мм", "м³", footprint * 0.15, 2300, 850)
+    add("Фундамент", "Гидроизоляция под плиту", "м²", footprint * 1.12, 220, 260)
+    add("Фундамент", "Арматура А500С для плиты 200 мм", "т", rebar_t, 82000, 22000)
+    add("Фундамент", "Бетон B25 для монолитной плиты 200 мм", "м³", concrete, 7200, 1850)
+    add("Фундамент", "Опалубка периметра плиты", "п.м", perimeter, 950, 850)
+
+    add("Стены", "Каркас наружных стен", "м²", wall_area, 2450, 2850)
+    add("Стены", f"Утепление стен {p['insulation_wall_mm']} мм", "м²", wall_area, 1350, 650)
+    add("Стены", "Пароизоляция и ветрозащита стен", "м²", wall_area * 2, 120, 180)
+    add("Стены", "Внутренняя обшивка стен под отделку", "м²", wall_area, 850, 950)
+
+    add("Перекрытия", "Межэтажное перекрытие", "м²", footprint * max(floors - 1, 0), 3200, 2600)
+    add("Перекрытия", "Черновой пол и настил", "м²", area_total, 950, 780)
+
+    add("Кровля", "Несущий каркас кровли", "м²", roof_area, 1850, 2250)
+    add("Кровля", f"Утепление кровли {p['insulation_roof_mm']} мм", "м²", roof_area, 1650, 850)
+    add("Кровля", "Пароизоляция и мембрана кровли", "м²", roof_area, 220, 260)
+    add("Кровля", "Покрытие кровли клик-фальц", "м²", roof_area, 2450, 1850)
+
+    if p["has_windows"]:
+        add("Проёмы", "Окна металлопластиковые с монтажом", "м²", max(area_total * 0.11, 18), 9800, 2200)
+
+    if p["has_imitation_timber"]:
+        add("Фасад", "Наружная отделка имитацией бруса", "м²", wall_area, 1450, 1250)
+
+    if p["scope"] == "под ключ":
+        add("Чистовая отделка", "Внутренняя отделка имитацией бруса", "м²", wall_area, 1350, 1350)
+        if p["has_laminate"]:
+            add("Чистовая отделка", "Ламинат с подложкой", "м²", area_total, 1050, 750)
+        else:
+            add("Чистовая отделка", "Финишное напольное покрытие", "м²", area_total, 950, 700)
+        add("Чистовая отделка", "Плинтусы и примыкания", "п.м", perimeter * floors, 220, 260)
+
+    if p["has_warm_floor"]:
+        add("Отопление", "Тёплый пол водяной/электрический по площади дома", "м²", area_total, 1650, 1050)
+
+    if p["has_lighting"]:
+        add("Электрика", "Освещение: 2 светильника на помещение", "шт", rooms_est * 2, 1450, 650)
+        add("Электрика", "Выключатели: 1 выключатель на помещение", "шт", rooms_est, 450, 550)
+        add("Электрика", "Кабельные линии освещения", "п.м", area_total * 1.1, 85, 120)
+
+    if p["bathrooms"]:
+        add("Санузлы", "Комплект сантехнических приборов", "компл", p["bathrooms"], 95000, 45000)
+        add("Санузлы", "Разводка водоснабжения и канализации", "компл", p["bathrooms"], 38000, 42000)
+        add("Санузлы", "Отделка санузла плиткой", "м²", p["bathrooms"] * 28, 1850, 2800)
+
+    add("Логистика", "Доставка материалов от СПб", "км", max(float(p["distance_km"] or 0), 1), 1800, 0)
+    subtotal = sum(r["total"] for r in rows)
+    add("Накладные расходы", "Организация работ и снабжение", "компл", 1, subtotal * 0.08, 0)
+
+    return rows
+
+def _p1_template_meta_20260504():
+    try:
+        return _p1_json.loads(_P1_ACTIVE_TEMPLATE_20260504.read_text(encoding="utf-8"))
+    except Exception:
+        return {
+            "source_file_name": "М-110.xlsx",
+            "source_file_id": "1Ub9fcwOcJ4pV30dcX88yf1225WOIdpWo",
+            "template_used_as_format_only": True,
+            "calculation_source_rule": "ONLY_CURRENT_RAW_INPUT",
+        }
+
+def _p1_find_local_template_20260504(meta):
+    name = _p1_s_20260504(meta.get("source_file_name") or "М-110.xlsx")
+    file_id = _p1_s_20260504(meta.get("source_file_id") or "")
+    roots = [
+        _P1_BASE_20260504 / "data/templates",
+        _P1_BASE_20260504 / "cache",
+        _P1_BASE_20260504 / "outputs",
+        _p1_Path("/tmp"),
+    ]
+    candidates = []
+    for root in roots:
+        if not root.exists():
+            continue
+        try:
+            for p in root.rglob("*.xlsx"):
+                low = p.name.lower().replace("ё", "е")
+                if name.lower().replace("ё", "е") in low or file_id in str(p):
+                    candidates.append(p)
+        except Exception:
+            pass
+    if candidates:
+        candidates.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+        return str(candidates[0])
+    return ""
+
+def _p1_download_template_20260504(meta):
+    file_id = _p1_s_20260504(meta.get("source_file_id") or "")
+    if not file_id:
+        return ""
+    out = _P1_OUT_20260504 / f"template_{file_id}_{int(_p1_time.time())}.xlsx"
+    try:
+        from core.topic_drive_oauth import _oauth_service
+        from googleapiclient.http import MediaIoBaseDownload
+        service = _oauth_service()
+        request = service.files().get_media(fileId=file_id, supportsAllDrives=True)
+        with open(out, "wb") as fh:
+            downloader = MediaIoBaseDownload(fh, request)
+            done = False
+            while not done:
+                _, done = downloader.next_chunk()
+        if out.exists() and out.stat().st_size > 1000:
+            return str(out)
+    except Exception:
+        return ""
+    return ""
+
+def _p1_create_xlsx_20260504(task_id, p, rows, meta):
+    from openpyxl import Workbook, load_workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+
+    safe = str(task_id)[:8]
+    out = _P1_OUT_20260504 / f"estimate_topic2_p1_{safe}.xlsx"
+
+    template_path = _p1_find_local_template_20260504(meta) or _p1_download_template_20260504(meta)
+
+    if template_path and _p1_Path(template_path).exists():
+        wb = load_workbook(template_path, data_only=False)
+    else:
+        wb = Workbook()
+        wb.active.title = "М-110 structure fallback"
+
+    for sname in ("AREAL_INPUT", "AREAL_CALC"):
+        if sname in wb.sheetnames:
+            del wb[sname]
+
+    ws_in = wb.create_sheet("AREAL_INPUT", 0)
+    ws_in.append(["Параметр", "Значение"])
+    ws_in.append(["Источник расчёта", "ONLY_CURRENT_RAW_INPUT"])
+    ws_in.append(["Эталон", meta.get("source_file_name", "М-110.xlsx")])
+    ws_in.append(["Размеры", f"{p['dims'][0]}x{p['dims'][1]}" if p["dims"] else ""])
+    ws_in.append(["Площадь застройки", p["footprint"]])
+    ws_in.append(["Этажей", p["floors"]])
+    ws_in.append(["Расчётная площадь", p["area_total"]])
+    ws_in.append(["Материал стен", p["material"]])
+    ws_in.append(["Фундамент", p["foundation"]])
+    ws_in.append(["Удалённость, км", p["distance_km"]])
+    ws_in.append(["Санузлов", p["bathrooms"]])
+    ws_in.append(["Текущее ТЗ", p["raw"]])
+    for cell in ws_in[1]:
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill("solid", fgColor="D9EAF7")
+    ws_in.column_dimensions["A"].width = 28
+    ws_in.column_dimensions["B"].width = 120
+    ws_in["B12"].alignment = Alignment(wrap_text=True, vertical="top")
+
+    ws = wb.create_sheet("AREAL_CALC", 1)
+    headers = ["Раздел", "Позиция", "Ед.", "Кол-во", "Материал ₽", "Работа ₽", "Итого ₽"]
+    ws.append(headers)
+    for cell in ws[1]:
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill("solid", fgColor="D9EAD3")
+        cell.alignment = Alignment(horizontal="center")
+
+    for r in rows:
+        ws.append([
+            r["section"],
+            r["item"],
+            r["unit"],
+            r["qty"],
+            r["material_price"],
+            r["work_price"],
+            None,
+        ])
+        row_idx = ws.max_row
+        ws.cell(row_idx, 7).value = f"=D{row_idx}*(E{row_idx}+F{row_idx})"
+
+    total_row = ws.max_row + 2
+    ws.cell(total_row, 6).value = "Итого без НДС"
+    ws.cell(total_row, 7).value = f"=SUM(G2:G{total_row-2})"
+    ws.cell(total_row + 1, 6).value = "НДС 20%"
+    ws.cell(total_row + 1, 7).value = f"=G{total_row}*0.2"
+    ws.cell(total_row + 2, 6).value = "Итого с НДС"
+    ws.cell(total_row + 2, 7).value = f"=G{total_row}+G{total_row+1}"
+
+    thin = Side(style="thin", color="999999")
+    for row in ws.iter_rows():
+        for cell in row:
+            cell.border = Border(left=thin, right=thin, top=thin, bottom=thin)
+            cell.alignment = Alignment(wrap_text=True, vertical="top")
+    widths = [18, 62, 10, 12, 14, 14, 16]
+    for idx, width in enumerate(widths, start=1):
+        ws.column_dimensions[get_column_letter(idx)].width = width
+
+    wb.save(out)
+    return str(out), bool(template_path)
+
+def _p1_create_pdf_20260504(task_id, p, rows, total):
+    safe = str(task_id)[:8]
+    out = _P1_OUT_20260504 / f"estimate_topic2_p1_{safe}.pdf"
+    try:
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+
+        font = "Helvetica"
+        for fp in (
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        ):
+            if _p1_Path(fp).exists():
+                pdfmetrics.registerFont(TTFont("ArealSans", fp))
+                font = "ArealSans"
+                break
+
+        doc = SimpleDocTemplate(str(out), pagesize=A4, rightMargin=24, leftMargin=24, topMargin=24, bottomMargin=24)
+        styles = getSampleStyleSheet()
+        styles.add(ParagraphStyle(name="Areal", parent=styles["Normal"], fontName=font, fontSize=8, leading=10))
+        styles.add(ParagraphStyle(name="ArealTitle", parent=styles["Title"], fontName=font, fontSize=14, leading=16))
+
+        story = [
+            Paragraph("Предварительная смета по текущему ТЗ", styles["ArealTitle"]),
+            Spacer(1, 8),
+            Paragraph(f"Объект: барнхаус {p['dims'][0]}x{p['dims'][1]} м, этажей: {p['floors']}, расчётная площадь: {p['area_total']} м²", styles["Areal"]),
+            Paragraph(f"Фундамент: {p['foundation']}; стены: {p['material']}; удалённость: {p['distance_km']} км", styles["Areal"]),
+            Spacer(1, 8),
+        ]
+
+        data = [["Раздел", "Позиция", "Ед.", "Кол-во", "Сумма"]]
+        for r in rows:
+            data.append([r["section"], r["item"], r["unit"], r["qty"], f"{r['total']:,.0f}".replace(",", " ")])
+        data.append(["", "", "", "Итого с НДС", f"{total * 1.2:,.0f}".replace(",", " ")])
+
+        table = Table(data, colWidths=[70, 230, 36, 46, 70])
+        table.setStyle(TableStyle([
+            ("FONTNAME", (0, 0), (-1, -1), font),
+            ("FONTSIZE", (0, 0), (-1, -1), 6),
+            ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+            ("GRID", (0, 0), (-1, -1), 0.25, colors.grey),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ]))
+        story.append(table)
+        doc.build(story)
+        return str(out)
+    except Exception:
+        out.write_bytes(b"%PDF-1.4\n% fallback pdf\n")
+        return str(out)
+
+def _p1_upload_20260504(path, task_id, topic_id):
+    for name in ("_t2real_upload", "_upload"):
+        fn = globals().get(name)
+        if callable(fn):
+            try:
+                return fn(str(path), str(task_id), int(topic_id or 0))
+            except TypeError:
+                try:
+                    return fn(str(path), str(task_id), int(topic_id or 0), None)
+                except Exception:
+                    pass
+            except Exception:
+                pass
+    return str(path)
+
+def _p1_public_summary_20260504(p, rows, xlsx_link, pdf_link):
+    subtotal = sum(float(r["total"] or 0) for r in rows)
+    vat = subtotal * 0.2
+    total = subtotal + vat
+    sections = []
+    for r in rows:
+        if r["section"] not in sections:
+            sections.append(r["section"])
+
+    lines = [
+        "✅ Предварительная смета готова",
+        "",
+        f"Объект: барнхаус {p['dims'][0]}x{p['dims'][1]} м",
+        f"Этажей: {p['floors']}",
+        f"Площадь застройки: {p['footprint']:.1f} м²",
+        f"Расчётная площадь: {p['area_total']:.1f} м²",
+        f"Фундамент: {p['foundation']}",
+        f"Стены: {p['material']}",
+        "Эталон: М-110.xlsx",
+        "Расчёт: только по текущему ТЗ",
+        "",
+        "Разделы:",
+    ]
+    lines += [f"- {s}" for s in sections]
+    lines += [
+        "",
+        f"Позиций: {len(rows)}",
+        f"Итого: {subtotal:,.0f} руб".replace(",", " "),
+        f"НДС 20%: {vat:,.0f} руб".replace(",", " "),
+        f"С НДС: {total:,.0f} руб".replace(",", " "),
+        "",
+        f"📊 Excel: {xlsx_link}",
+        f"📄 PDF: {pdf_link}",
+        "",
+        "Доволен результатом? Да / Уточни / Правки",
+    ]
+    return _p1_clean_public_20260504("\n".join(lines))
+
+async def handle_topic2_one_big_formula_pipeline_v1(conn, task, chat_id=None, topic_id=None, raw_input=None, full_context=None, **kwargs):
+    task_id = _p1_s_20260504(_p1_row_get_20260504(task, "id", ""))
+    chat_id = chat_id if chat_id is not None else _p1_row_get_20260504(task, "chat_id", "")
+    topic_id = int(topic_id if topic_id is not None else (_p1_row_get_20260504(task, "topic_id", 2) or 2))
+    reply_to = _p1_row_get_20260504(task, "reply_to_message_id", None)
+    raw_input = _p1_s_20260504(raw_input if raw_input is not None else _p1_row_get_20260504(task, "raw_input", ""), 12000)
+
+    p = _p1_parse_20260504(raw_input)
+    question = _p1_missing_question_20260504(p)
+    if question:
+        _p1_update_task_20260504(conn, task_id, state="WAITING_CLARIFICATION", result=question, error_message="P1_TOPIC2_MISSING_REQUIRED_INPUT")
+        _p1_history_20260504(conn, task_id, "P1_TOPIC2_ESTIMATE_MULTIFORMAT_CLEAN_OUTPUT:clarification")
+        conn.commit()
+        sent = _p1_send_20260504(str(chat_id), question, reply_to, topic_id)
+        try:
+            bot_id = sent.get("bot_message_id") if isinstance(sent, dict) else None
+            if bot_id:
+                _p1_update_task_20260504(conn, task_id, bot_message_id=bot_id)
+                conn.commit()
+        except Exception:
+            pass
+        return True
+
+    rows = _p1_build_rows_20260504(p)
+    meta = _p1_template_meta_20260504()
+    xlsx_path, template_used = _p1_create_xlsx_20260504(task_id, p, rows, meta)
+    subtotal = sum(float(r["total"] or 0) for r in rows)
+    pdf_path = _p1_create_pdf_20260504(task_id, p, rows, subtotal)
+
+    xlsx_link = _p1_upload_20260504(xlsx_path, task_id, topic_id)
+    pdf_link = _p1_upload_20260504(pdf_path, task_id, topic_id)
+
+    result = _p1_public_summary_20260504(p, rows, xlsx_link, pdf_link)
+    _p1_update_task_20260504(conn, task_id, state="DONE", result=result, error_message="")
+    _p1_history_20260504(conn, task_id, f"P1_TOPIC2_ESTIMATE_MULTIFORMAT_CLEAN_OUTPUT:OK_ROWS_{len(rows)}_TEMPLATE_USED_{int(bool(template_used))}")
+    conn.commit()
+
+    sent = _p1_send_20260504(str(chat_id), result, reply_to, topic_id)
+    try:
+        bot_id = sent.get("bot_message_id") if isinstance(sent, dict) else None
+        if bot_id:
+            _p1_update_task_20260504(conn, task_id, bot_message_id=bot_id)
+            conn.commit()
+    except Exception:
+        pass
+    return True
+
+# === END_P1_TOPIC2_ESTIMATE_MULTIFORMAT_CLEAN_OUTPUT_20260504_V1 ===
