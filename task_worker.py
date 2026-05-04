@@ -5565,6 +5565,339 @@ async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
 # === END_P0_RUNTIME_ROUTE_GUARD_TOPIC2_TOPIC500_20260504_V1 ===
 
 
+
+# === P2_FINAL_SEARCH_AND_ESTIMATE_CLOSE_20260504_V1 ===
+# Runtime overlay before asyncio.run(main)
+# Scope:
+# - topic_500 internet search keeps topic memory and previous task context
+# - topic_500 must never emit estimate/PDF/XLSX route garbage
+# - topic_2 estimate must call latest sample_template_engine overlay
+# - no schema changes, no forbidden files, no systemd changes
+
+try:
+    _P2_ORIG_HANDLE_IN_PROGRESS_20260504 = _handle_in_progress
+except Exception:
+    _P2_ORIG_HANDLE_IN_PROGRESS_20260504 = None
+
+import re as _p2_tw_re
+import json as _p2_tw_json
+import datetime as _p2_tw_dt
+
+def _p2_tw_s(v, limit=50000):
+    try:
+        if v is None:
+            return ""
+        return str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+def _p2_tw_low(v):
+    return _p2_tw_s(v).lower().replace("ё", "е")
+
+def _p2_tw_get(row, key, default=None):
+    try:
+        if hasattr(row, "keys") and key in row.keys():
+            return row[key]
+    except Exception:
+        pass
+    try:
+        return row[key]
+    except Exception:
+        try:
+            return getattr(row, key)
+        except Exception:
+            return default
+
+def _p2_tw_history(conn, task_id, action):
+    try:
+        _history(conn, str(task_id), _p2_tw_s(action, 1000))
+        return
+    except Exception:
+        pass
+    try:
+        conn.execute(
+            "INSERT INTO task_history(task_id, action, created_at) VALUES (?, ?, datetime('now'))",
+            (str(task_id), _p2_tw_s(action, 1000)),
+        )
+    except Exception:
+        pass
+
+def _p2_tw_update(conn, task_id, **kwargs):
+    try:
+        _update_task(conn, str(task_id), **kwargs)
+        return
+    except Exception:
+        pass
+    try:
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(tasks)").fetchall()]
+        sets = []
+        vals = []
+        for k, v in kwargs.items():
+            if k in cols:
+                sets.append(f"{k}=?")
+                vals.append(v)
+        if "updated_at" in cols:
+            sets.append("updated_at=datetime('now')")
+        if sets:
+            vals.append(str(task_id))
+            conn.execute(f"UPDATE tasks SET {', '.join(sets)} WHERE id=?", vals)
+    except Exception:
+        pass
+
+def _p2_tw_is_close_command(raw):
+    low = _p2_tw_low(raw)
+    return any(x in low for x in (
+        "задача закрыта", "закрой задачу", "закрывай", "отменяй", "отмена", "заверши", "завершена"
+    ))
+
+def _p2_tw_is_search_intent(raw, input_type):
+    low = _p2_tw_low(raw)
+    itype = _p2_tw_low(input_type)
+    if not low or _p2_tw_is_close_command(low):
+        return False
+    if itype == "search":
+        return True
+    return any(x in low for x in (
+        "найди", "найти", "поиск", "поищи", "цена", "стоимость", "дешевле",
+        "купить", "ссылка", "ссылки", "магазин", "поставщик", "маркет",
+        "маркетплейс", "авито", "avito", "ozon", "wildberries", "яндекс",
+        "google pixel", "iphone", "samsung", "телефон", "смартфон",
+        "вата", "rockwool", "роквул", "утеплитель", "товар", "варианты",
+        "предыдущ", "то что я тебе писал", "то, что я тебе писал"
+    ))
+
+def _p2_tw_is_followup_search(raw):
+    low = _p2_tw_low(raw)
+    return any(x in low for x in (
+        "предыдущ", "последн", "то что", "то, что", "я тебе писал", "тот запрос",
+        "этот товар", "тот товар", "по нему", "по ней", "по этому", "выполни поиск",
+        "сделай поиск", "проверь ещё", "проверь еще"
+    ))
+
+def _p2_tw_has_concrete_product(raw):
+    low = _p2_tw_low(raw)
+    return any(x in low for x in (
+        "google pixel", "pixel", "iphone", "samsung", "rockwool", "роквул",
+        "вата", "утеплитель", "телефон", "смартфон", "кабель", "модель", "артикул"
+    )) and any(ch.isdigit() for ch in low)
+
+def _p2_tw_topic500_context(conn, chat_id, current_task_id):
+    try:
+        rows = conn.execute(
+            """
+            SELECT id, raw_input, result, state, updated_at
+            FROM tasks
+            WHERE chat_id=?
+              AND COALESCE(topic_id,0)=500
+              AND id<>?
+              AND COALESCE(raw_input,'')<>''
+            ORDER BY rowid DESC
+            LIMIT 8
+            """,
+            (str(chat_id), str(current_task_id)),
+        ).fetchall()
+    except Exception:
+        rows = []
+    out = []
+    for r in rows:
+        raw = _p2_tw_s(_p2_tw_get(r, "raw_input", ""), 900)
+        res = _p2_tw_s(_p2_tw_get(r, "result", ""), 900)
+        state = _p2_tw_s(_p2_tw_get(r, "state", ""), 50)
+        if raw and not _p2_tw_is_close_command(raw):
+            out.append({"raw": raw, "result": res, "state": state})
+    return out
+
+def _p2_tw_resolve_query(raw, ctx):
+    raw_s = _p2_tw_s(raw, 2000)
+    if not ctx:
+        return raw_s
+    if _p2_tw_is_followup_search(raw_s) or not _p2_tw_has_concrete_product(raw_s):
+        for item in ctx:
+            prev = item.get("raw") or ""
+            if _p2_tw_has_concrete_product(prev) and not _p2_tw_is_followup_search(prev):
+                return (
+                    "Новая команда пользователя: " + raw_s + "\n"
+                    "Предыдущая товарная задача topic_500: " + prev + "\n"
+                    "Выполни именно интернет-поиск по предыдущей товарной задаче с учетом новой команды"
+                )
+    return raw_s
+
+def _p2_tw_clean_search_result(text):
+    s = _p2_tw_s(text, 50000)
+    lines = []
+    forbidden = (
+        "engine:", "manifest:", "/root/", "/tmp/", "traceback",
+        "xlsx:", "pdf:", "смета готова", "предварительная смета",
+        "монолитная плита", "фундамент:", "эталон: м-110", "позиций: 1. итого: 0.00",
+        "не могу перейти", "я не могу выполнить поиск"
+    )
+    for line in s.splitlines():
+        low = _p2_tw_low(line)
+        if any(x in low for x in forbidden):
+            continue
+        lines.append(line.rstrip())
+    out = "\n".join(lines).strip()
+    out = _p2_tw_re.sub(r"\n{3,}", "\n\n", out)
+    return out[:50000]
+
+def _p2_tw_bad_search_result(text):
+    low = _p2_tw_low(text)
+    if not low or len(low) < 80:
+        return True
+    if any(x in low for x in (
+        "смета готова", "предварительная смета", "xlsx:", "pdf:", "монолитная плита",
+        "фундамент:", "м-110.xlsx", "позиций: 1. итого: 0.00"
+    )):
+        return True
+    has_price = bool(_p2_tw_re.search(r"(\d[\d\s]{1,10}\s*(?:₽|руб|р\.|руб\.))", low))
+    has_url = "http://" in low or "https://" in low
+    has_supplier = any(x in low for x in (
+        "поставщик", "магазин", "маркет", "авито", "avito", "ozon", "wildberries",
+        "дилер", "склад", "налич"
+    ))
+    return not (has_price and (has_url or has_supplier))
+
+async def _p2_tw_call_search(conn, task, chat_id, topic_id):
+    task_id = _p2_tw_s(_p2_tw_get(task, "id", ""))
+    raw_input = _p2_tw_s(_p2_tw_get(task, "raw_input", ""), 12000)
+    reply_to = _p2_tw_get(task, "reply_to_message_id", None)
+    ctx = _p2_tw_topic500_context(conn, chat_id, task_id)
+    query = _p2_tw_resolve_query(raw_input, ctx)
+
+    prompt = (
+        "Выполни реальный интернет-поиск товара/поставщика.\n"
+        "Запрещено: сметы, PDF/XLSX, строительные расчеты, общие советы, внутренние маркеры.\n"
+        "Нужно: минимум 3 варианта, прямые ссылки, цена, город/доставка, наличие, телефон если найден.\n"
+        "Формат ответа только для пользователя:\n"
+        "| № | Поставщик/площадка | Город | Цена | Наличие | Доставка | Телефон | Ссылка | Проверено |\n"
+        "|---|---|---|---|---|---|---|---|---|\n\n"
+        "Запрос:\n" + query + "\n\n"
+        "Контекст последних topic_500 задач:\n" + _p2_tw_json.dumps(ctx[:5], ensure_ascii=False)
+    )
+
+    payload = {
+        "id": task_id,
+        "task_id": task_id,
+        "chat_id": str(chat_id),
+        "topic_id": 500,
+        "input_type": "search",
+        "raw_input": prompt,
+        "normalized_input": query,
+        "state": "IN_PROGRESS",
+        "reply_to_message_id": reply_to,
+        "active_task_context": "",
+        "pin_context": "",
+        "short_memory_context": "",
+        "long_memory_context": "",
+        "archive_context": _p2_tw_json.dumps(ctx[:5], ensure_ascii=False),
+        "search_context": "",
+        "topic_role": "ИНТЕРНЕТ ПОИСК",
+        "topic_directions": "товары, поставщики, цены, ссылки",
+        "direction": "internet_search",
+        "engine": "search_supplier",
+    }
+
+    _p2_tw_history(conn, task_id, "P2_SEARCH_MEMORY_ROUTE_TAKEN")
+    _p2_tw_update(conn, task_id, state="IN_PROGRESS", error_message="")
+    conn.commit()
+
+    try:
+        result = await asyncio.wait_for(process_ai_task(payload), timeout=AI_TIMEOUT)
+        result = _p2_tw_clean_search_result(result)
+    except Exception as e:
+        err = "P2_SEARCH_CALL_FAILED:" + _p2_tw_s(type(e).__name__ + ":" + str(e), 500)
+        _p2_tw_update(conn, task_id, state="FAILED", result="", error_message=err)
+        _p2_tw_history(conn, task_id, err)
+        conn.commit()
+        _send_once_ex(conn, task_id, str(chat_id), "Поиск не выполнен. Повтори запрос с названием товара и регионом", reply_to, "p2_search_failed")
+        return True
+
+    if _p2_tw_bad_search_result(result):
+        retry_prompt = (
+            "СТРОГИЙ ПОВТОР ПОИСКА. Предыдущий ответ невалиден.\n"
+            "Верни только товарные предложения с ценами и ссылками. Не смета. Не PDF. Не XLSX.\n\n"
+            + prompt
+        )
+        payload["raw_input"] = retry_prompt
+        try:
+            retry = await asyncio.wait_for(process_ai_task(payload), timeout=AI_TIMEOUT)
+            retry = _p2_tw_clean_search_result(retry)
+            if not _p2_tw_bad_search_result(retry):
+                result = retry
+        except Exception:
+            pass
+
+    if _p2_tw_bad_search_result(result):
+        err = "P2_SEARCH_BAD_RESULT_BLOCKED"
+        _p2_tw_update(conn, task_id, state="FAILED", result=result, error_message=err)
+        _p2_tw_history(conn, task_id, err)
+        conn.commit()
+        _send_once_ex(conn, task_id, str(chat_id), "Поиск заблокирован: результат не содержит валидных цен и товарных ссылок", reply_to, "p2_search_bad_result")
+        return True
+
+    _p2_tw_update(conn, task_id, state="DONE", result=result, error_message="")
+    _p2_tw_history(conn, task_id, "P2_SEARCH_DONE")
+    try:
+        _save_memory(str(chat_id), 500, raw_input, result)
+    except Exception:
+        pass
+
+    sent = _send_once_ex(conn, task_id, str(chat_id), result, reply_to, "p2_search_result")
+    try:
+        bot_id = sent.get("bot_message_id") if isinstance(sent, dict) else None
+        if bot_id:
+            _p2_tw_update(conn, task_id, bot_message_id=bot_id)
+    except Exception:
+        pass
+    conn.commit()
+    return True
+
+def _p2_tw_is_topic2_estimate(raw):
+    low = _p2_tw_low(raw)
+    if not any(x in low for x in ("смет", "посчитать", "рассчитать", "расчет", "расчёт", "стоимость")):
+        return False
+    return any(x in low for x in ("дом", "house", "барн", "barn", "хаус")) and bool(_p2_tw_re.search(r"\d+(?:[,.]\d+)?\s*(?:на|x|х|×|\*)\s*\d+", low))
+
+async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
+    task_id = _p2_tw_s(_p2_tw_get(task, "id", ""))
+    raw_input = _p2_tw_s(_p2_tw_get(task, "raw_input", ""), 12000)
+    input_type = _p2_tw_s(_p2_tw_get(task, "input_type", "text"), 50)
+
+    if chat_id is None:
+        chat_id = _p2_tw_get(task, "chat_id", None)
+    if topic_id is None:
+        topic_id = _p2_tw_get(task, "topic_id", 0)
+    try:
+        topic_id = int(topic_id or 0)
+    except Exception:
+        topic_id = 0
+
+    if topic_id == 500 and _p2_tw_is_search_intent(raw_input, input_type):
+        return await _p2_tw_call_search(conn, task, chat_id, topic_id)
+
+    if topic_id == 2 and _p2_tw_is_topic2_estimate(raw_input):
+        _p2_tw_history(conn, task_id, "P2_TOPIC2_LATEST_ESTIMATE_ENGINE_ROUTE")
+        try:
+            from core import sample_template_engine as _p2_ste
+            return await _p2_ste.handle_topic2_one_big_formula_pipeline_v1(
+                conn=conn,
+                task=task,
+                chat_id=chat_id,
+                topic_id=topic_id,
+                raw_input=raw_input,
+                full_context=raw_input,
+            )
+        except Exception as e:
+            _p2_tw_history(conn, task_id, "P2_TOPIC2_ROUTE_ERROR:" + _p2_tw_s(type(e).__name__ + ":" + str(e), 500))
+            raise
+
+    if _P2_ORIG_HANDLE_IN_PROGRESS_20260504:
+        return await _P2_ORIG_HANDLE_IN_PROGRESS_20260504(conn, task, chat_id, topic_id)
+    return None
+
+# === END_P2_FINAL_SEARCH_AND_ESTIMATE_CLOSE_20260504_V1 ===
+
+
 if __name__ == "__main__":
     asyncio.run(main())
 
