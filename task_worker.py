@@ -4907,6 +4907,190 @@ async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
     return await _TOP2_ONE_BIG_ORIG_HANDLE_IN_PROGRESS_V1(conn, task, chat_id, topic_id)  # HOTFIX_HANDLE_IN_PROGRESS_WRAPPER_CHAIN_V1
 # === END_TOPIC2_ONE_BIG_FINAL_PIPELINE_V1_WORKER_GUARD ===
 
+# === FINAL_TOPIC2_TOPIC5_TOPIC500_CLOSE_20260504_V1 ===
+# Final runtime guard:
+# - topic_2 full estimate TZ must use current raw input, not revived stale estimate memory
+# - topic_500 search result must be finalized to DONE after reply_sent/result
+# - wrapper chain must keep chat_id/topic_id arity intact
+
+_FINAL_CLOSE_ORIG_HANDLE_IN_PROGRESS_20260504 = _handle_in_progress
+
+def _fc_20260504_task_get(task, key, default=None):
+    try:
+        return task[key]
+    except Exception:
+        try:
+            return getattr(task, key)
+        except Exception:
+            return default
+
+def _fc_20260504_to_int(v, default=0):
+    try:
+        return int(v or 0)
+    except Exception:
+        return default
+
+def _fc_20260504_history(conn, task_id, action):
+    try:
+        _history(conn, str(task_id), str(action))
+    except Exception:
+        try:
+            conn.execute(
+                "INSERT INTO task_history(task_id, action, created_at) VALUES (?, ?, datetime('now'))",
+                (str(task_id), str(action)),
+            )
+            conn.commit()
+        except Exception:
+            pass
+
+def _fc_20260504_latest_history_result(conn, task_id):
+    try:
+        row = conn.execute(
+            """
+            SELECT action
+            FROM task_history
+            WHERE task_id=? AND action LIKE 'result:%'
+            ORDER BY rowid DESC
+            LIMIT 1
+            """,
+            (str(task_id),),
+        ).fetchone()
+        if not row:
+            return ""
+        val = row[0] if not isinstance(row, dict) else row.get("action")
+        val = str(val or "")
+        if val.startswith("result:"):
+            val = val[len("result:"):].strip()
+        return val
+    except Exception:
+        return ""
+
+def _fc_20260504_is_full_topic2_estimate_tz(text):
+    import re
+    low = str(text or "").lower()
+    if "смет" not in low:
+        return False
+    if not any(x in low for x in ("дом", "house", "хаус", "барн", "barn")):
+        return False
+    if not re.search(r"\b\d+(?:[,.]\d+)?\s*(?:на|x|х|\*)\s*\d+(?:[,.]\d+)?\b", low):
+        return False
+    if not any(x in low for x in ("фундамент", "плита", "свая", "ленточ")):
+        return False
+    if not any(x in low for x in ("стен", "каркас", "дерев", "брус", "газобетон")):
+        return False
+    return True
+
+async def _fc_20260504_call_topic2_engine(conn, task, chat_id, topic_id):
+    import inspect
+    from core import sample_template_engine as ste
+
+    fn = getattr(ste, "handle_topic2_one_big_formula_pipeline_v1")
+    task_id = _fc_20260504_task_get(task, "id", "")
+    raw_input = _fc_20260504_task_get(task, "raw_input", "") or ""
+    full_context = str(raw_input or "")
+
+    params = inspect.signature(fn).parameters
+    values = {
+        "conn": conn,
+        "connection": conn,
+        "task": task,
+        "row": task,
+        "task_row": task,
+        "task_id": task_id,
+        "id": task_id,
+        "chat_id": chat_id,
+        "topic_id": topic_id,
+        "raw_input": raw_input,
+        "text": raw_input,
+        "user_text": raw_input,
+        "full_context": full_context,
+        "context": full_context,
+    }
+
+    accepts_var_kw = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values())
+    kwargs = values if accepts_var_kw else {name: values[name] for name in params if name in values}
+
+    try:
+        res = fn(**kwargs)
+        if inspect.isawaitable(res):
+            return await res
+        return res
+    except TypeError as e1:
+        attempts = [
+            (conn, task, chat_id, topic_id, raw_input, full_context),
+            (conn, task, chat_id, topic_id, raw_input),
+            (conn, task, chat_id, topic_id),
+            (conn, task),
+        ]
+        last = e1
+        for args in attempts:
+            try:
+                res = fn(*args)
+                if inspect.isawaitable(res):
+                    return await res
+                return res
+            except TypeError as e2:
+                last = e2
+                continue
+        raise last
+
+def _fc_20260504_finalize_topic500_if_result(conn, task, chat_id=None, topic_id=None):
+    task_id = _fc_20260504_task_get(task, "id", "")
+    if not task_id:
+        return
+    row = conn.execute(
+        "SELECT state, result FROM tasks WHERE id=? LIMIT 1",
+        (str(task_id),),
+    ).fetchone()
+    if not row:
+        return
+    state = row[0]
+    current_result = row[1] or ""
+    if str(state) not in ("IN_PROGRESS", "WAITING_CLARIFICATION", "AWAITING_CONFIRMATION"):
+        return
+    result_text = str(current_result or "").strip()
+    if not result_text:
+        result_text = _fc_20260504_latest_history_result(conn, task_id)
+    if not result_text or len(result_text.strip()) < 20:
+        return
+    conn.execute(
+        """
+        UPDATE tasks
+        SET state='DONE',
+            result=?,
+            error_message='',
+            updated_at=datetime('now')
+        WHERE id=? AND topic_id=500
+        """,
+        (result_text, str(task_id)),
+    )
+    _fc_20260504_history(conn, task_id, "FINAL_TOPIC500_SEARCH_DONE_20260504_V1")
+    conn.commit()
+
+async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
+    task_id = _fc_20260504_task_get(task, "id", "")
+    raw_input = str(_fc_20260504_task_get(task, "raw_input", "") or "")
+    if chat_id is None:
+        chat_id = _fc_20260504_task_get(task, "chat_id", None)
+    if topic_id is None:
+        topic_id = _fc_20260504_task_get(task, "topic_id", 0)
+    topic_id = _fc_20260504_to_int(topic_id)
+
+    if topic_id == 2 and _fc_20260504_is_full_topic2_estimate_tz(raw_input):
+        _fc_20260504_history(conn, task_id, "FINAL_TOPIC2_CURRENT_TZ_DIRECT_ROUTE_20260504_V1")
+        try:
+            return await _fc_20260504_call_topic2_engine(conn, task, chat_id, topic_id)
+        except Exception as e:
+            _fc_20260504_history(conn, task_id, f"FINAL_TOPIC2_DIRECT_ROUTE_FAILED_20260504_V1:{type(e).__name__}:{e}")
+            raise
+
+    res = await _FINAL_CLOSE_ORIG_HANDLE_IN_PROGRESS_20260504(conn, task, chat_id, topic_id)
+
+    if topic_id == 500:
+        _fc_20260504_finalize_topic500_if_result(conn, task, chat_id, topic_id)
+
+    return res
+# === END_FINAL_TOPIC2_TOPIC5_TOPIC500_CLOSE_20260504_V1 ===
 
 if __name__ == "__main__":
     asyncio.run(main())
