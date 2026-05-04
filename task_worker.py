@@ -1863,7 +1863,7 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
     # === FILE_TECH_CONTOUR_FOLLOWUP_V2 ===
     try:
         _ft_low = str(raw_input or "").strip()
-        if int(topic_id or 0) != 500 and _filemem_should_followup(_ft_low):  # SEARCH_TOPIC500_FTCF_ISOLATION_V1
+        if int(topic_id or 0) not in (500, 210) and _filemem_should_followup(_ft_low):  # TOPIC_ISOLATION_V1
             _ft_answer = _filemem_build_answer(str(chat_id), int(topic_id or 0), _ft_low)
             if _ft_answer:
                 _update_task(conn, task_id, state="DONE", result=_ft_answer, error_message="")

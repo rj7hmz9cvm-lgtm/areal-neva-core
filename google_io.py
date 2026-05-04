@@ -8,7 +8,7 @@ from google.auth.transport.requests import Request
 
 logger = logging.getLogger("google_io")
 
-SCOPES = ['https://www.googleapis.com/auth/drive.file']
+SCOPES = ['https://www.googleapis.com/auth/drive']
 CREDS_FILE = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', '/root/.areal-neva-core/credentials.json')
 PARENT_FOLDER_ID = os.getenv('GDRIVE_PARENT_ID', '')
 
