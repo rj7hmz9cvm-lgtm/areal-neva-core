@@ -10,20 +10,15 @@ async def transcribe_voice(path: str) -> str:
         raise RuntimeError(f"voice file not found: {path}")
 
     groq_key = (os.getenv("GROQ_API_KEY") or "").strip()
-    openai_key = (os.getenv("OPENAI_API_KEY") or "").strip()
 
-    logger.info("STT env check groq=%s openai=%s", bool(groq_key), bool(openai_key))
+    logger.info("STT env check groq=%s", bool(groq_key))
 
-    if groq_key:
-        url = "https://api.groq.com/openai/v1/audio/transcriptions"
-        headers = {"Authorization": f"Bearer {groq_key}"}
-        model = "whisper-large-v3-turbo"
-    elif openai_key:
-        url = "https://api.openai.com/v1/audio/transcriptions"
-        headers = {"Authorization": f"Bearer {openai_key}"}
-        model = "gpt-4o-mini-transcribe"
-    else:
-        raise RuntimeError("STT API key missing: set GROQ_API_KEY or OPENAI_API_KEY")
+    if not groq_key:
+        raise RuntimeError("STT_GROQ_API_KEY_MISSING")
+
+    url = "https://api.groq.com/openai/v1/audio/transcriptions"
+    headers = {"Authorization": f"Bearer {groq_key}"}
+    model = "whisper-large-v3-turbo"
 
     size = os.path.getsize(path)
     logger.info("STT start file=%s size=%s model=%s", path, size, model)
@@ -46,7 +41,7 @@ async def transcribe_voice(path: str) -> str:
 
             if r.status != 200:
                 logger.error("STT body=%s", body[:500])
-                raise RuntimeError(f"STT HTTP {r.status}: {body[:300]}")
+                raise RuntimeError(f"STT_GROQ_FAILED: {r.status} {body[:300]}")
 
             try:
                 js = json.loads(body)
