@@ -3180,3 +3180,471 @@ async def handle_topic2_one_big_formula_pipeline_v1(
         return True
 # === END_TOPIC2_ONE_BIG_FINAL_PIPELINE_V1_SAMPLE_ENGINE ===
 
+
+# === TOPIC2_TEMPLATE_XLSX_PDF_STRICT_OUTPUT_V1 ===
+# Strict topic_2 estimate generator:
+# - topic_2 only
+# - active XLSX template is mandatory
+# - no synthetic fixed sections
+# - PDF uses registered Cyrillic fonts
+# - XLSX keeps source workbook sheets/formulas and adds AREAL_INPUT sheet
+
+import io as _t2fix_io
+import os as _t2fix_os
+import re as _t2fix_re
+import json as _t2fix_json
+import shutil as _t2fix_shutil
+import tempfile as _t2fix_tempfile
+from pathlib import Path as _t2fix_Path
+from datetime import datetime as _t2fix_datetime, timezone as _t2fix_timezone
+
+_T2FIX_BASE = _t2fix_Path("/root/.areal-neva-core")
+_T2FIX_ACTIVE_TEMPLATE = _T2FIX_BASE / "data/templates/estimate/ACTIVE__chat_-1003725299009__topic_2.json"
+_T2FIX_CACHE = _T2FIX_BASE / "data/templates/estimate/cache"
+_T2FIX_OUT = _T2FIX_BASE / "outputs/topic2_strict_template_estimates"
+_T2FIX_MARKER = "TOPIC2_TEMPLATE_XLSX_PDF_STRICT_OUTPUT_V1"
+
+def _t2fix_s(v):
+    return "" if v is None else str(v)
+
+def _t2fix_low(v):
+    return _t2fix_s(v).lower().replace("ё", "е").strip()
+
+def _t2fix_now():
+    return _t2fix_datetime.now(_t2fix_timezone.utc).isoformat()
+
+def _t2fix_is_estimate_text(text):
+    low = _t2fix_low(text)
+    if not low:
+        return False
+    return any(x in low for x in (
+        "смет", "стоимост", "расчет", "расчёт", "посчитай", "цена", "руб",
+        "работ", "материал", "фундамент", "плит", "бетон", "арматур",
+        "стен", "кровл", "дом", "барн", "бар хаус", "barn", "м2", "м²", "м3", "м³"
+    ))
+
+def _t2fix_history(conn, task_id, action):
+    try:
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(task_history)").fetchall()]
+        col = "action" if "action" in cols else ("event" if "event" in cols else "")
+        if col:
+            conn.execute(
+                f"INSERT INTO task_history (task_id,{col},created_at) VALUES (?,?,datetime('now'))",
+                (str(task_id), str(action)[:1000]),
+            )
+            conn.commit()
+    except Exception:
+        pass
+
+def _t2fix_update(conn, task_id, state, result="", error=""):
+    try:
+        conn.execute(
+            "UPDATE tasks SET state=?, result=?, error_message=?, updated_at=datetime('now') WHERE id=?",
+            (str(state), str(result or ""), str(error or ""), str(task_id)),
+        )
+        conn.commit()
+    except Exception:
+        pass
+
+def _t2fix_send(chat_id, topic_id, text, reply_to_message_id=None):
+    try:
+        from core.reply_sender import send_reply_ex
+        res = send_reply_ex(
+            chat_id=str(chat_id),
+            text=str(text),
+            reply_to_message_id=reply_to_message_id,
+            message_thread_id=int(topic_id or 0),
+        )
+        if isinstance(res, dict):
+            return res.get("bot_message_id")
+    except Exception:
+        pass
+    return None
+
+def _t2fix_public_link(path, task_id, topic_id):
+    try:
+        from core.engine_base import upload_artifact_to_drive
+        link = upload_artifact_to_drive(str(path), str(task_id), int(topic_id or 0))
+        return str(link or "")
+    except Exception:
+        return ""
+
+def _t2fix_load_active_template():
+    if not _T2FIX_ACTIVE_TEMPLATE.exists():
+        return {}
+    try:
+        return _t2fix_json.loads(_T2FIX_ACTIVE_TEMPLATE.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+def _t2fix_drive_service():
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(str(_T2FIX_BASE / ".env"), override=False)
+        from google.oauth2.credentials import Credentials
+        from google.auth.transport.requests import Request
+        from googleapiclient.discovery import build
+
+        client_id = _t2fix_os.getenv("GDRIVE_CLIENT_ID", "")
+        client_secret = _t2fix_os.getenv("GDRIVE_CLIENT_SECRET", "")
+        refresh_token = _t2fix_os.getenv("GDRIVE_REFRESH_TOKEN", "")
+        if not (client_id and client_secret and refresh_token):
+            return None
+
+        creds = Credentials(
+            token=None,
+            refresh_token=refresh_token,
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=client_id,
+            client_secret=client_secret,
+            scopes=["https://www.googleapis.com/auth/drive"],
+        )
+        creds.refresh(Request())
+        return build("drive", "v3", credentials=creds, cache_discovery=False)
+    except Exception:
+        return None
+
+def _t2fix_download_drive_file(file_id, file_name):
+    if not file_id:
+        return ""
+    _T2FIX_CACHE.mkdir(parents=True, exist_ok=True)
+
+    safe_name = _t2fix_re.sub(r"[^0-9A-Za-zА-Яа-я_.-]+", "_", file_name or file_id)[:160]
+    if not safe_name.lower().endswith((".xlsx", ".xlsm", ".xls")):
+        safe_name = safe_name + ".xlsx"
+
+    cached = _T2FIX_CACHE / safe_name
+    if cached.exists() and cached.stat().st_size > 1000:
+        return str(cached)
+
+    svc = _t2fix_drive_service()
+    if svc is None:
+        return ""
+
+    try:
+        meta = svc.files().get(fileId=str(file_id), fields="id,name,mimeType,size", supportsAllDrives=True).execute()
+        mime = str(meta.get("mimeType") or "")
+        out = cached
+
+        if mime == "application/vnd.google-apps.spreadsheet":
+            request = svc.files().export_media(
+                fileId=str(file_id),
+                mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        else:
+            request = svc.files().get_media(fileId=str(file_id), supportsAllDrives=True)
+
+        from googleapiclient.http import MediaIoBaseDownload
+        fh = _t2fix_io.FileIO(str(out), "wb")
+        downloader = MediaIoBaseDownload(fh, request)
+        done = False
+        while not done:
+            _, done = downloader.next_chunk()
+        fh.close()
+
+        if out.exists() and out.stat().st_size > 1000:
+            return str(out)
+    except Exception:
+        return ""
+
+    return ""
+
+def _t2fix_find_template_file(meta):
+    candidates = []
+    for k in ("local_path", "source_local_path", "xlsx_path", "template_path", "cache_path"):
+        v = str((meta or {}).get(k) or "")
+        if v:
+            candidates.append(v)
+
+    source_name = str((meta or {}).get("source_file_name") or "")
+    source_id = str((meta or {}).get("source_file_id") or (meta or {}).get("file_id") or "")
+
+    for p in _T2FIX_CACHE.glob("*"):
+        pl = p.name.lower()
+        if source_id and source_id.lower() in pl and p.suffix.lower() in (".xlsx", ".xlsm", ".xls"):
+            candidates.append(str(p))
+        if source_name and p.name == source_name:
+            candidates.append(str(p))
+
+    for c in candidates:
+        p = _t2fix_Path(c)
+        if p.exists() and p.stat().st_size > 1000:
+            return str(p)
+
+    downloaded = _t2fix_download_drive_file(source_id, source_name)
+    if downloaded:
+        return downloaded
+
+    return ""
+
+def _t2fix_parse_user_rows(text):
+    rows = []
+    src = _t2fix_s(text)
+    chunks = _t2fix_re.split(r"[\n;]+", src)
+    rx = _t2fix_re.compile(
+        r"(?P<name>[^:\n;]{2,80}?)\s+"
+        r"(?P<qty>\d+(?:[,.]\d+)?)\s*"
+        r"(?P<unit>м2|м²|м3|м³|м\.?п|п\.?м|м\b|шт|кг|т|тонн)\b"
+        r"(?:.*?(?:по|цена|стоимость)\s*(?P<price>\d+(?:[,.]\d+)?))?",
+        _t2fix_re.I,
+    )
+    for ch in chunks:
+        ch = ch.strip()
+        if not ch:
+            continue
+        m = rx.search(ch)
+        if not m:
+            continue
+        qty = float(m.group("qty").replace(",", "."))
+        price = float(m.group("price").replace(",", ".")) if m.group("price") else 0.0
+        unit = m.group("unit").replace("м2", "м²").replace("м3", "м³").replace("м.п", "п.м")
+        rows.append({
+            "name": m.group("name").strip(" :-,")[:120],
+            "qty": qty,
+            "unit": unit,
+            "price": price,
+            "total": round(qty * price, 2),
+            "source": ch[:240],
+        })
+    return rows
+
+def _t2fix_write_input_sheet(xlsx_path, raw_text, rows, meta):
+    from openpyxl import load_workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+
+    wb = load_workbook(str(xlsx_path))
+    if "AREAL_INPUT" in wb.sheetnames:
+        del wb["AREAL_INPUT"]
+    ws = wb.create_sheet("AREAL_INPUT", 0)
+
+    thin = Side(style="thin")
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+    fill = PatternFill(start_color="D9EAF7", end_color="D9EAF7", fill_type="solid")
+
+    ws["A1"] = "AREAL_INPUT"
+    ws["A1"].font = Font(bold=True, size=14)
+    ws["A2"] = "Правило"
+    ws["B2"] = "Эталонная книга сохранена без удаления листов и формул. Новые исходные данные записаны отдельно"
+    ws["A3"] = "Источник шаблона"
+    ws["B3"] = str(meta.get("source_file_name") or "")
+    ws["A4"] = "Создано"
+    ws["B4"] = _t2fix_now()
+    ws["A6"] = "Исходное ТЗ"
+    ws["B6"] = raw_text[:5000]
+
+    start = 9
+    headers = ["№", "Наименование", "Ед", "Кол-во", "Цена", "Сумма", "Источник"]
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(start, col, h)
+        cell.font = Font(bold=True)
+        cell.fill = fill
+        cell.border = border
+        cell.alignment = Alignment(horizontal="center")
+
+    for i, r in enumerate(rows, 1):
+        vals = [
+            i,
+            r.get("name", ""),
+            r.get("unit", ""),
+            r.get("qty", ""),
+            r.get("price", ""),
+            r.get("total", ""),
+            r.get("source", ""),
+        ]
+        for col, val in enumerate(vals, 1):
+            cell = ws.cell(start + i, col, val)
+            cell.border = border
+
+    widths = [6, 44, 10, 12, 14, 14, 80]
+    for idx, width in enumerate(widths, 1):
+        ws.column_dimensions[chr(64 + idx)].width = width
+
+    wb.save(str(xlsx_path))
+    wb.close()
+
+def _t2fix_pdf_from_xlsx(xlsx_path, pdf_path, raw_text, rows, meta):
+    from openpyxl import load_workbook
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+    from reportlab.lib import colors
+    from reportlab.lib.units import mm
+    from core.pdf_cyrillic import register_cyrillic_fonts, make_styles
+
+    register_cyrillic_fonts()
+    styles = make_styles()
+
+    doc = SimpleDocTemplate(
+        str(pdf_path),
+        pagesize=landscape(A4),
+        leftMargin=8 * mm,
+        rightMargin=8 * mm,
+        topMargin=8 * mm,
+        bottomMargin=8 * mm,
+    )
+
+    story = []
+    story.append(Paragraph("Смета по эталонному XLSX-шаблону", styles["header"]))
+    story.append(Paragraph(f"Шаблон: {meta.get('source_file_name') or 'UNKNOWN'}", styles["normal"]))
+    story.append(Paragraph("Фикс: PDF формируется с кириллическим шрифтом, XLSX сохраняет исходные листы и формулы", styles["small"]))
+    story.append(Spacer(1, 5 * mm))
+
+    story.append(Paragraph("Исходное ТЗ", styles["bold"]))
+    story.append(Paragraph(raw_text[:2500].replace("\n", "<br/>"), styles["small"]))
+    story.append(Spacer(1, 5 * mm))
+
+    if rows:
+        data = [["№", "Наименование", "Ед", "Кол-во", "Цена", "Сумма"]]
+        for i, r in enumerate(rows[:80], 1):
+            data.append([
+                str(i),
+                str(r.get("name", ""))[:80],
+                str(r.get("unit", "")),
+                str(r.get("qty", "")),
+                str(r.get("price", "")),
+                str(r.get("total", "")),
+            ])
+        table = Table(data, repeatRows=1, colWidths=[10*mm, 115*mm, 18*mm, 25*mm, 25*mm, 28*mm])
+        table.setStyle(TableStyle([
+            ("FONTNAME", (0, 0), (-1, -1), "CyrRegular"),
+            ("FONTSIZE", (0, 0), (-1, -1), 7),
+            ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+            ("GRID", (0, 0), (-1, -1), 0.25, colors.grey),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ]))
+        story.append(Paragraph("Распознанные позиции из текущего ТЗ", styles["bold"]))
+        story.append(table)
+        story.append(PageBreak())
+    else:
+        story.append(Paragraph("Автоматически распознанных строк с количеством/единицей/ценой нет. Синтетические разделы не создавались", styles["bold"]))
+        story.append(PageBreak())
+
+    try:
+        wb = load_workbook(str(xlsx_path), data_only=True, read_only=True)
+    except Exception:
+        wb = load_workbook(str(xlsx_path), data_only=False, read_only=True)
+
+    for ws in wb.worksheets[:8]:
+        story.append(Paragraph(f"Лист: {ws.title}", styles["bold"]))
+        data = []
+        max_rows = min(ws.max_row or 1, 45)
+        max_cols = min(ws.max_column or 1, 10)
+        for row in ws.iter_rows(min_row=1, max_row=max_rows, max_col=max_cols, values_only=True):
+            vals = [("" if v is None else str(v))[:80] for v in row]
+            if any(v.strip() for v in vals):
+                data.append(vals)
+        if data:
+            col_width = max(20, int(260 / max(1, len(data[0])))) * mm
+            table = Table(data, repeatRows=1, colWidths=[col_width for _ in data[0]])
+            table.setStyle(TableStyle([
+                ("FONTNAME", (0, 0), (-1, -1), "CyrRegular"),
+                ("FONTSIZE", (0, 0), (-1, -1), 6),
+                ("GRID", (0, 0), (-1, -1), 0.2, colors.grey),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ]))
+            story.append(table)
+        else:
+            story.append(Paragraph("Пустой лист или значения не рассчитаны", styles["small"]))
+        story.append(PageBreak())
+    wb.close()
+
+    doc.build(story)
+
+async def handle_topic2_one_big_formula_pipeline_v1(
+    conn,
+    task_id: str,
+    chat_id: str,
+    topic_id: int,
+    raw_input,
+    input_type: str = "text",
+    reply_to_message_id=None,
+) -> bool:
+    if int(topic_id or 0) != 2:
+        return False
+
+    raw_text = _t2fix_s(raw_input).strip()
+    if not _t2fix_is_estimate_text(raw_text):
+        return False
+
+    try:
+        meta = _t2fix_load_active_template()
+        if not meta:
+            msg = "Смета не создана: активный эталон topic_2 не найден"
+            _t2fix_update(conn, task_id, "WAITING_CLARIFICATION", msg, "ACTIVE_TEMPLATE_NOT_FOUND")
+            _t2fix_history(conn, task_id, _T2FIX_MARKER + ":active_template_not_found")
+            _t2fix_send(chat_id, topic_id, msg, reply_to_message_id)
+            return True
+
+        template_path = _t2fix_find_template_file(meta)
+        if not template_path:
+            msg = "Смета не создана: XLSX эталон не скачан и не найден в cache"
+            _t2fix_update(conn, task_id, "WAITING_CLARIFICATION", msg, "TEMPLATE_XLSX_NOT_FOUND")
+            _t2fix_history(conn, task_id, _T2FIX_MARKER + ":template_xlsx_not_found")
+            _t2fix_send(chat_id, topic_id, msg, reply_to_message_id)
+            return True
+
+        _T2FIX_OUT.mkdir(parents=True, exist_ok=True)
+        safe = _t2fix_re.sub(r"[^A-Za-z0-9_-]+", "_", str(task_id))[:36]
+        out_xlsx = _T2FIX_OUT / f"estimate_topic2_strict_{safe}.xlsx"
+        out_pdf = _T2FIX_OUT / f"estimate_topic2_strict_{safe}.pdf"
+        manifest = _T2FIX_OUT / f"estimate_topic2_strict_{safe}.manifest.json"
+
+        _t2fix_shutil.copy2(str(template_path), str(out_xlsx))
+
+        rows = _t2fix_parse_user_rows(raw_text)
+        _t2fix_write_input_sheet(out_xlsx, raw_text, rows, meta)
+        _t2fix_pdf_from_xlsx(out_xlsx, out_pdf, raw_text, rows, meta)
+
+        pdf_link = _t2fix_public_link(out_pdf, task_id, topic_id)
+        xlsx_link = _t2fix_public_link(out_xlsx, task_id, topic_id)
+
+        man = {
+            "engine": _T2FIX_MARKER,
+            "task_id": str(task_id),
+            "chat_id": str(chat_id),
+            "topic_id": int(topic_id or 0),
+            "template_file": meta.get("source_file_name"),
+            "template_path": str(template_path),
+            "xlsx_path": str(out_xlsx),
+            "pdf_path": str(out_pdf),
+            "pdf_link": pdf_link,
+            "xlsx_link": xlsx_link,
+            "rows_parsed_from_current_task": rows,
+            "rule": "NO_SYNTHETIC_FIXED_SECTIONS_TEMPLATE_WORKBOOK_PRESERVED",
+            "created_at": _t2fix_now(),
+        }
+        manifest.write_text(_t2fix_json.dumps(man, ensure_ascii=False, indent=2), encoding="utf-8")
+        manifest_link = _t2fix_public_link(manifest, task_id, topic_id)
+
+        if not pdf_link or not xlsx_link:
+            msg = "Смета создана локально, но Drive upload не вернул ссылки"
+            _t2fix_update(conn, task_id, "FAILED", msg, "DRIVE_UPLOAD_FAILED")
+            _t2fix_history(conn, task_id, _T2FIX_MARKER + ":drive_upload_failed")
+            _t2fix_send(chat_id, topic_id, msg, reply_to_message_id)
+            return True
+
+        msg = (
+            "Смета пересобрана по эталонному XLSX-шаблону\n"
+            f"Engine: {_T2FIX_MARKER}\n"
+            f"Эталон: {meta.get('source_file_name') or 'UNKNOWN'}\n"
+            "Фиксировано: PDF с кириллицей, XLSX сохраняет исходные листы и формулы, синтетические разделы не создаются\n"
+            f"Распознано строк из текущего ТЗ: {len(rows)}\n\n"
+            f"📊 Excel: {xlsx_link}\n"
+            f"📄 PDF: {pdf_link}\n"
+            + (f"🧾 Manifest: {manifest_link}\n" if manifest_link else "")
+            + "\nДоволен результатом? Да / Уточни / Правки"
+        )
+
+        _t2fix_update(conn, task_id, "AWAITING_CONFIRMATION", msg, "")
+        _t2fix_history(conn, task_id, _T2FIX_MARKER + ":strict_template_estimate_created")
+        _t2fix_send(chat_id, topic_id, msg, reply_to_message_id)
+        return True
+
+    except Exception as e:
+        err = _T2FIX_MARKER + ":" + type(e).__name__ + ":" + _t2fix_s(e)[:500]
+        msg = "Ошибка создания сметы по эталону: " + err
+        _t2fix_update(conn, task_id, "FAILED", msg, err)
+        _t2fix_history(conn, task_id, err)
+        _t2fix_send(chat_id, topic_id, msg, reply_to_message_id)
+        return True
+
+# === END_TOPIC2_TEMPLATE_XLSX_PDF_STRICT_OUTPUT_V1 ===

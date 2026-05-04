@@ -2231,210 +2231,212 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
             pass
     # === END FULLFIX_13B_FALSE_PROJECT_PHRASE_GUARD ===
 
-    # === FULLFIX_10_TOTAL_CLOSURE_UNIVERSAL_ROUTE ===
-    try:
-        from core.orchestra_closure_engine import (
-            classify_user_task as _ff10_classify_user_task,
-            classify_project_kind as _ff10_classify_project_kind,
-            create_estimate_files as _ff10_create_estimate_files,
-            save_result_memory as _ff10_save_result_memory,
-            ENGINE as _FF10_ENGINE,
-        )
+    if int(topic_id or 0) != 500:  # TOPIC500_FULLFIX10_BYPASS_V1
+        # === FULLFIX_10_TOTAL_CLOSURE_UNIVERSAL_ROUTE ===
+        try:
+            from core.orchestra_closure_engine import (
+                classify_user_task as _ff10_classify_user_task,
+                classify_project_kind as _ff10_classify_project_kind,
+                create_estimate_files as _ff10_create_estimate_files,
+                save_result_memory as _ff10_save_result_memory,
+                ENGINE as _FF10_ENGINE,
+            )
 
-        _ff10_intent = _ff10_classify_user_task(str(raw_input or ""))
+            _ff10_intent = _ff10_classify_user_task(str(raw_input or ""))
 
 
-        # === FULLFIX_13B_CLEAN_ESTIMATE_MESSAGE_BEFORE_SEND_FALLBACK ===
-        def _ff13b_clean_any_estimate_text(_txt):
-            try:
-                from core.orchestra_closure_engine import ff13b_clean_estimate_user_message
-                return ff13b_clean_estimate_user_message(_txt)
-            except Exception:
-                return _txt
-        # === END FULLFIX_13B_CLEAN_ESTIMATE_MESSAGE_BEFORE_SEND_FALLBACK ===
+            # === FULLFIX_13B_CLEAN_ESTIMATE_MESSAGE_BEFORE_SEND_FALLBACK ===
+            def _ff13b_clean_any_estimate_text(_txt):
+                try:
+                    from core.orchestra_closure_engine import ff13b_clean_estimate_user_message
+                    return ff13b_clean_estimate_user_message(_txt)
+                except Exception:
+                    return _txt
+            # === END FULLFIX_13B_CLEAN_ESTIMATE_MESSAGE_BEFORE_SEND_FALLBACK ===
 
-        if _ff10_intent in ("confirm", "revision"):
-            _ff10_parent = conn.execute(
-                """
-                SELECT id,state,result,reply_to_message_id,bot_message_id
-                FROM tasks
-                WHERE chat_id=?
-                  AND COALESCE(topic_id,0)=?
-                  AND state='AWAITING_CONFIRMATION'
-                  AND id<>?
-                ORDER BY updated_at DESC, created_at DESC
-                LIMIT 1
-                """,
-                (str(chat_id), int(topic_id or 0), task_id),
-            ).fetchone()
+            if _ff10_intent in ("confirm", "revision"):
+                _ff10_parent = conn.execute(
+                    """
+                    SELECT id,state,result,reply_to_message_id,bot_message_id
+                    FROM tasks
+                    WHERE chat_id=?
+                      AND COALESCE(topic_id,0)=?
+                      AND state='AWAITING_CONFIRMATION'
+                      AND id<>?
+                    ORDER BY updated_at DESC, created_at DESC
+                    LIMIT 1
+                    """,
+                    (str(chat_id), int(topic_id or 0), task_id),
+                ).fetchone()
 
-            if _ff10_parent and _ff10_intent == "confirm":
-                _parent_id = _s(_ff10_parent["id"])
-                _update_task(conn, _parent_id, state="DONE", error_message="")
-                _history(conn, _parent_id, "FULLFIX_10_CONFIRM_DONE")
-                _update_task(conn, task_id, state="DONE", result="Подтверждение принято. Задача закрыта", error_message="")
-                _history(conn, task_id, "FULLFIX_10_CONFIRM_CHILD_DONE")
-                conn.commit()
-                _send_once(conn, task_id, chat_id, "Подтверждение принято. Задача закрыта", reply_to, "ff10_confirm_done")
-                return
-
-            if _ff10_parent and _ff10_intent == "revision":
-                _parent_id = _s(_ff10_parent["id"])
-                _merged = _clean(_s(_ff10_parent["result"]) + "\n\nПравки пользователя:\n" + str(raw_input or ""), 12000)
-                _update_task(conn, _parent_id, state="IN_PROGRESS", raw_input=_merged, error_message="")
-                _history(conn, _parent_id, "FULLFIX_10_REVISION_REOPEN")
-                _update_task(conn, task_id, state="DONE", result="Правки приняты. Задача возвращена в работу", error_message="")
-                _history(conn, task_id, "FULLFIX_10_REVISION_CHILD_DONE")
-                conn.commit()
-                _send_once(conn, task_id, chat_id, "Правки приняты. Задача возвращена в работу", reply_to, "ff10_revision_reopen")
-                return
-
-        if _ff10_intent == "project":
-            _kind, _section = _ff10_classify_project_kind(str(raw_input or ""))
-            if _kind == "foundation_slab":
-                from core.project_engine import create_project_pdf_dxf_artifact
-                _ff10_res = await create_project_pdf_dxf_artifact(str(raw_input or ""), task_id, int(topic_id or 0), "FULLFIX_10_SIMPLE_USER_REQUEST", True)
-
-                if not isinstance(_ff10_res, dict) or not _ff10_res.get("success"):
-                    _err = str((_ff10_res or {}).get("error", "PROJECT_FAILED"))[:400]
-                    _msg = "Проект не создан: " + _err
-                    _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message=_err)
-                    _history(conn, task_id, "FULLFIX_10_PROJECT_FAILED:" + _err)
+                if _ff10_parent and _ff10_intent == "confirm":
+                    _parent_id = _s(_ff10_parent["id"])
+                    _update_task(conn, _parent_id, state="DONE", error_message="")
+                    _history(conn, _parent_id, "FULLFIX_10_CONFIRM_DONE")
+                    _update_task(conn, task_id, state="DONE", result="Подтверждение принято. Задача закрыта", error_message="")
+                    _history(conn, task_id, "FULLFIX_10_CONFIRM_CHILD_DONE")
                     conn.commit()
-                    _send_once(conn, task_id, chat_id, _msg, reply_to, "ff10_project_failed")
+                    _send_once(conn, task_id, chat_id, "Подтверждение принято. Задача закрыта", reply_to, "ff10_confirm_done")
                     return
 
-                _pdf = str(_ff10_res.get("pdf_link") or "")
-                _dxf = str(_ff10_res.get("dxf_link") or "")
-                _xlsx = str(_ff10_res.get("xlsx_link") or "")
-                _manifest = str(_ff10_res.get("manifest_link") or "")
-                _sheet_count = str(_ff10_res.get("sheet_count") or "")
-                _engine = str(_ff10_res.get("engine") or _FF10_ENGINE)
-                _msg = (
-                    "Проект создан\n"
-                    f"Engine: {_engine}\n"
-                    "Раздел: КЖ\n"
-                    f"Тип: фундаментная плита\n"
-                    f"Листов: {_sheet_count}\n"
-                    f"PDF: {_pdf}\n"
-                    f"DXF: {_dxf}\n"
-                    f"XLSX: {_xlsx}\n"
-                    f"MANIFEST: {_manifest}\n\n"
-                    "Доволен результатом? Ответь: Да / Уточни / Правки"
-                )
-                if not _pdf or not _dxf:
-                    _update_task(conn, task_id, state="FAILED", result="Проект не создан: нет PDF/DXF ссылки", error_message="PROJECT_LINKS_MISSING")
-                    _history(conn, task_id, "FULLFIX_10_PROJECT_LINKS_MISSING")
+                if _ff10_parent and _ff10_intent == "revision":
+                    _parent_id = _s(_ff10_parent["id"])
+                    _merged = _clean(_s(_ff10_parent["result"]) + "\n\nПравки пользователя:\n" + str(raw_input or ""), 12000)
+                    _update_task(conn, _parent_id, state="IN_PROGRESS", raw_input=_merged, error_message="")
+                    _history(conn, _parent_id, "FULLFIX_10_REVISION_REOPEN")
+                    _update_task(conn, task_id, state="DONE", result="Правки приняты. Задача возвращена в работу", error_message="")
+                    _history(conn, task_id, "FULLFIX_10_REVISION_CHILD_DONE")
                     conn.commit()
-                    _send_once(conn, task_id, chat_id, "Проект не создан: нет PDF/DXF ссылки", reply_to, "ff10_project_links_missing")
+                    _send_once(conn, task_id, chat_id, "Правки приняты. Задача возвращена в работу", reply_to, "ff10_revision_reopen")
                     return
 
-                    # === RESULT_VALIDATOR_GUARD_V1 ===
-                    if _check_result_before_confirm(_ff13c_strip_manifest_links(_msg)):
-                        # === TASK_WORKER_ARTIFACT_GATE_V1 ===
-                        try:
-                            if validate_engine_result is not None:
-                                _twag_raw = ""
-                                _twag_input_type = ""
-                                try:
-                                    _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
-                                except Exception:
+            if _ff10_intent == "project":
+                _kind, _section = _ff10_classify_project_kind(str(raw_input or ""))
+                if _kind == "foundation_slab":
+                    from core.project_engine import create_project_pdf_dxf_artifact
+                    _ff10_res = await create_project_pdf_dxf_artifact(str(raw_input or ""), task_id, int(topic_id or 0), "FULLFIX_10_SIMPLE_USER_REQUEST", True)
+
+                    if not isinstance(_ff10_res, dict) or not _ff10_res.get("success"):
+                        _err = str((_ff10_res or {}).get("error", "PROJECT_FAILED"))[:400]
+                        _msg = "Проект не создан: " + _err
+                        _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message=_err)
+                        _history(conn, task_id, "FULLFIX_10_PROJECT_FAILED:" + _err)
+                        conn.commit()
+                        _send_once(conn, task_id, chat_id, _msg, reply_to, "ff10_project_failed")
+                        return
+
+                    _pdf = str(_ff10_res.get("pdf_link") or "")
+                    _dxf = str(_ff10_res.get("dxf_link") or "")
+                    _xlsx = str(_ff10_res.get("xlsx_link") or "")
+                    _manifest = str(_ff10_res.get("manifest_link") or "")
+                    _sheet_count = str(_ff10_res.get("sheet_count") or "")
+                    _engine = str(_ff10_res.get("engine") or _FF10_ENGINE)
+                    _msg = (
+                        "Проект создан\n"
+                        f"Engine: {_engine}\n"
+                        "Раздел: КЖ\n"
+                        f"Тип: фундаментная плита\n"
+                        f"Листов: {_sheet_count}\n"
+                        f"PDF: {_pdf}\n"
+                        f"DXF: {_dxf}\n"
+                        f"XLSX: {_xlsx}\n"
+                        f"MANIFEST: {_manifest}\n\n"
+                        "Доволен результатом? Ответь: Да / Уточни / Правки"
+                    )
+                    if not _pdf or not _dxf:
+                        _update_task(conn, task_id, state="FAILED", result="Проект не создан: нет PDF/DXF ссылки", error_message="PROJECT_LINKS_MISSING")
+                        _history(conn, task_id, "FULLFIX_10_PROJECT_LINKS_MISSING")
+                        conn.commit()
+                        _send_once(conn, task_id, chat_id, "Проект не создан: нет PDF/DXF ссылки", reply_to, "ff10_project_links_missing")
+                        return
+
+                        # === RESULT_VALIDATOR_GUARD_V1 ===
+                        if _check_result_before_confirm(_ff13c_strip_manifest_links(_msg)):
+                            # === TASK_WORKER_ARTIFACT_GATE_V1 ===
+                            try:
+                                if validate_engine_result is not None:
                                     _twag_raw = ""
-                                try:
-                                    _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
-                                except Exception:
                                     _twag_input_type = ""
-                                _twag_result = _ff13c_strip_manifest_links(_msg)
-                                _twag_check = validate_engine_result(
-                                    {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
-                                    input_type=_twag_input_type,
-                                    user_text=_twag_raw,
-                                    topic_id=topic_id,
-                                )
-                                if not _twag_check.get("ok"):
-                                    _update_task(conn, task_id, state="FAILED", result="",
-                                        error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
-                                    _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
-                                    return
-                        except Exception as _twag_e:
-                            logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
-                        # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
-                        _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
-                    else:
-                        _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message="FORBIDDEN_PHRASE")
-                    # === END RESULT_VALIDATOR_GUARD_V1 ===
-                _history(conn, task_id, "FULLFIX_10_PROJECT_OK")
+                                    try:
+                                        _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                                    except Exception:
+                                        _twag_raw = ""
+                                    try:
+                                        _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
+                                    except Exception:
+                                        _twag_input_type = ""
+                                    _twag_result = _ff13c_strip_manifest_links(_msg)
+                                    _twag_check = validate_engine_result(
+                                        {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
+                                        input_type=_twag_input_type,
+                                        user_text=_twag_raw,
+                                        topic_id=topic_id,
+                                    )
+                                    if not _twag_check.get("ok"):
+                                        _update_task(conn, task_id, state="FAILED", result="",
+                                            error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
+                                        _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
+                                        return
+                            except Exception as _twag_e:
+                                logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
+                            # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
+                            _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
+                        else:
+                            _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message="FORBIDDEN_PHRASE")
+                        # === END RESULT_VALIDATOR_GUARD_V1 ===
+                    _history(conn, task_id, "FULLFIX_10_PROJECT_OK")
+                    conn.commit()
+                    _sent = _send_once_ex(conn, task_id, str(chat_id), _msg, reply_to, "ff10_project_result")
+                    if isinstance(_sent, dict) and _sent.get("bot_message_id"):
+                        _update_task(conn, task_id, bot_message_id=_sent["bot_message_id"])
+                        conn.commit()
+                    _ff10_save_result_memory(str(chat_id), int(topic_id or 0), str(raw_input or ""), _msg, _ff10_res)
+                    return
+
+            if _ff10_intent == "estimate":
+                _ff10_res = _ff10_create_estimate_files(str(raw_input or ""), task_id, int(topic_id or 0))
+                if not isinstance(_ff10_res, dict) or not _ff10_res.get("success"):
+                    _err = str((_ff10_res or {}).get("error", "ESTIMATE_FAILED"))[:400]
+                    _msg = "Смета не создана: " + _err
+                    _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message=_err)
+                    _history(conn, task_id, "FULLFIX_10_ESTIMATE_FAILED:" + _err)
+                    conn.commit()
+                    _send_once(conn, task_id, chat_id, _msg, reply_to, "ff10_estimate_failed")
+                    return
+
+                _msg = str(_ff10_res.get("message") or "")
+                # === RESULT_VALIDATOR_GUARD_V1 ===
+                if _check_result_before_confirm(_ff13c_strip_manifest_links(_msg)):
+                    # === TASK_WORKER_ARTIFACT_GATE_V1 ===
+                    try:
+                        if validate_engine_result is not None:
+                            _twag_raw = ""
+                            _twag_input_type = ""
+                            try:
+                                _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                            except Exception:
+                                _twag_raw = ""
+                            try:
+                                _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
+                            except Exception:
+                                _twag_input_type = ""
+                            _twag_result = _ff13c_strip_manifest_links(_msg)
+                            _twag_check = validate_engine_result(
+                                {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
+                                input_type=_twag_input_type,
+                                user_text=_twag_raw,
+                                topic_id=topic_id,
+                            )
+                            if not _twag_check.get("ok"):
+                                _update_task(conn, task_id, state="FAILED", result="",
+                                    error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
+                                _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
+                                return
+                    except Exception as _twag_e:
+                        logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
+                    # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
+                    _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
+                else:
+                    _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message="FORBIDDEN_PHRASE")
+                # === END RESULT_VALIDATOR_GUARD_V1 ===
+                _history(conn, task_id, "FULLFIX_10_ESTIMATE_OK")
                 conn.commit()
-                _sent = _send_once_ex(conn, task_id, str(chat_id), _msg, reply_to, "ff10_project_result")
+                _sent = _send_once_ex(conn, task_id, str(chat_id), _msg, reply_to, "ff10_estimate_result")
                 if isinstance(_sent, dict) and _sent.get("bot_message_id"):
                     _update_task(conn, task_id, bot_message_id=_sent["bot_message_id"])
                     conn.commit()
                 _ff10_save_result_memory(str(chat_id), int(topic_id or 0), str(raw_input or ""), _msg, _ff10_res)
                 return
 
-        if _ff10_intent == "estimate":
-            _ff10_res = _ff10_create_estimate_files(str(raw_input or ""), task_id, int(topic_id or 0))
-            if not isinstance(_ff10_res, dict) or not _ff10_res.get("success"):
-                _err = str((_ff10_res or {}).get("error", "ESTIMATE_FAILED"))[:400]
-                _msg = "Смета не создана: " + _err
-                _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message=_err)
-                _history(conn, task_id, "FULLFIX_10_ESTIMATE_FAILED:" + _err)
-                conn.commit()
-                _send_once(conn, task_id, chat_id, _msg, reply_to, "ff10_estimate_failed")
-                return
-
-            _msg = str(_ff10_res.get("message") or "")
-            # === RESULT_VALIDATOR_GUARD_V1 ===
-            if _check_result_before_confirm(_ff13c_strip_manifest_links(_msg)):
-                # === TASK_WORKER_ARTIFACT_GATE_V1 ===
-                try:
-                    if validate_engine_result is not None:
-                        _twag_raw = ""
-                        _twag_input_type = ""
-                        try:
-                            _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
-                        except Exception:
-                            _twag_raw = ""
-                        try:
-                            _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
-                        except Exception:
-                            _twag_input_type = ""
-                        _twag_result = _ff13c_strip_manifest_links(_msg)
-                        _twag_check = validate_engine_result(
-                            {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
-                            input_type=_twag_input_type,
-                            user_text=_twag_raw,
-                            topic_id=topic_id,
-                        )
-                        if not _twag_check.get("ok"):
-                            _update_task(conn, task_id, state="FAILED", result="",
-                                error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
-                            _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
-                            return
-                except Exception as _twag_e:
-                    logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
-                # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
-                _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
-            else:
-                _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message="FORBIDDEN_PHRASE")
-            # === END RESULT_VALIDATOR_GUARD_V1 ===
-            _history(conn, task_id, "FULLFIX_10_ESTIMATE_OK")
+        except Exception as _ff10_e:
+            _err = str(_ff10_e)[:500]
+            _update_task(conn, task_id, state="FAILED", result="Ошибка FULLFIX_10: " + _err, error_message=_err)
+            _history(conn, task_id, "FULLFIX_10_EXCEPTION:" + _err)
             conn.commit()
-            _sent = _send_once_ex(conn, task_id, str(chat_id), _msg, reply_to, "ff10_estimate_result")
-            if isinstance(_sent, dict) and _sent.get("bot_message_id"):
-                _update_task(conn, task_id, bot_message_id=_sent["bot_message_id"])
-                conn.commit()
-            _ff10_save_result_memory(str(chat_id), int(topic_id or 0), str(raw_input or ""), _msg, _ff10_res)
+            _send_once(conn, task_id, chat_id, "Ошибка FULLFIX_10: " + _err, reply_to, "ff10_exception")
             return
+        # === END FULLFIX_10_TOTAL_CLOSURE_UNIVERSAL_ROUTE ===
 
-    except Exception as _ff10_e:
-        _err = str(_ff10_e)[:500]
-        _update_task(conn, task_id, state="FAILED", result="Ошибка FULLFIX_10: " + _err, error_message=_err)
-        _history(conn, task_id, "FULLFIX_10_EXCEPTION:" + _err)
-        conn.commit()
-        _send_once(conn, task_id, chat_id, "Ошибка FULLFIX_10: " + _err, reply_to, "ff10_exception")
-        return
-    # === END FULLFIX_10_TOTAL_CLOSURE_UNIVERSAL_ROUTE ===
 
     # === FULLFIX_07_PROJECT_DESIGN_CLOSURE_ROUTE ===
     _ff07_low = str(raw_input or "").lower()
@@ -4833,6 +4835,8 @@ async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
                 return
 
             full_context, parent_id = _top2_ob_build_context(conn, task_id, chat_id, topic_id, raw_input)
+            if raw_input and str(raw_input).strip() and str(raw_input).strip() not in str(full_context or ""):
+                full_context = (str(raw_input).strip() + "\n\n" + str(full_context or "")).strip()  # TOPIC2_CURRENT_RAW_CONTEXT_FIRST_V1
 
             if _top2_ob_is_vague(raw_input) and not _top2_ob_estimate_like(full_context):
                 msg = "Нового полного ТЗ для сметы в сообщении нет. Старую смету из памяти не поднимаю"
