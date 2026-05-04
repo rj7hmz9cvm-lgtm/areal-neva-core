@@ -5092,6 +5092,240 @@ async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
     return res
 # === END_FINAL_TOPIC2_TOPIC5_TOPIC500_CLOSE_20260504_V1 ===
 
+
+
+# === TOPIC500_PRE_SEND_VALIDATOR_AND_STARTUP_RECOVERY_HARD_GUARD_V1 ===
+# Final guard layer:
+# 1) validates topic_500 procurement output before sending
+# 2) prevents startup/stale recovery from reprocessing topic_500 tasks after reply_sent
+# 3) kills duplicate result loops for topic_500
+
+import re as _t500_psv_re
+
+def _t500_psv_row_get(row, key, default=None):
+    try:
+        return row[key]
+    except Exception:
+        try:
+            return getattr(row, key)
+        except Exception:
+            return default
+
+def _t500_psv_history(conn, task_id: str, action: str) -> None:
+    try:
+        _history(conn, str(task_id), str(action))
+        return
+    except Exception:
+        pass
+    try:
+        conn.execute(
+            "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+            (str(task_id), str(action)),
+        )
+    except Exception:
+        pass
+
+def _t500_psv_update_done(conn, task_id: str, result_text: str = "") -> None:
+    try:
+        _update_task(conn, str(task_id), state="DONE", result=str(result_text or ""), error_message="")
+        return
+    except Exception:
+        pass
+    try:
+        conn.execute(
+            "UPDATE tasks SET state='DONE', result=?, error_message='', updated_at=datetime('now') WHERE id=?",
+            (str(result_text or ""), str(task_id)),
+        )
+    except Exception:
+        pass
+
+def _t500_psv_update_failed(conn, task_id: str, result_text: str, error_message: str) -> None:
+    try:
+        _update_task(conn, str(task_id), state="FAILED", result=str(result_text or ""), error_message=str(error_message))
+        return
+    except Exception:
+        pass
+    try:
+        conn.execute(
+            "UPDATE tasks SET state='FAILED', result=?, error_message=?, updated_at=datetime('now') WHERE id=?",
+            (str(result_text or ""), str(error_message), str(task_id)),
+        )
+    except Exception:
+        pass
+
+def _t500_psv_latest_history_result(conn, task_id: str) -> str:
+    try:
+        row = conn.execute(
+            "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'result:%' ORDER BY rowid DESC LIMIT 1",
+            (str(task_id),),
+        ).fetchone()
+        if not row:
+            return ""
+        action = _t500_psv_row_get(row, "action", row[0] if len(row) else "")
+        action = str(action or "")
+        return action[len("result:"):].strip() if action.startswith("result:") else action.strip()
+    except Exception:
+        return ""
+
+def _t500_psv_has_reply_sent(conn, task_id: str) -> bool:
+    try:
+        row = conn.execute(
+            "SELECT 1 FROM task_history WHERE task_id=? AND action LIKE 'reply_sent:%' ORDER BY rowid DESC LIMIT 1",
+            (str(task_id),),
+        ).fetchone()
+        return bool(row)
+    except Exception:
+        return False
+
+def _t500_psv_validate_procurement_result(text: str):
+    s = str(text or "").strip()
+    urls = _t500_psv_re.findall(r"https?://[^\s\]\)>,]+", s)
+    unique_urls = []
+    for u in urls:
+        if u not in unique_urls:
+            unique_urls.append(u)
+
+    has_min_urls = len(unique_urls) >= 3
+    has_bare_refs = bool(_t500_psv_re.search(r"(?<!https://)(?<!http://)\[[0-9]{1,2}\](?!\s*\(?https?://)", s))
+    has_price = bool(_t500_psv_re.search(r"(\d[\d\s]{1,10}\s*(?:₽|руб|р\.|руб\.))|цена\s+не\s+указана", s, _t500_psv_re.I))
+    has_phone = bool(_t500_psv_re.search(r"(\+7|8)\s*[\(\- ]?\d{3}[\)\- ]?\s*\d{3}[\- ]?\d{2}[\- ]?\d{2}|телефон\s+не\s+найден", s, _t500_psv_re.I))
+    has_supplier = bool(_t500_psv_re.search(r"(поставщик|магазин|дилер|база|склад|авито|avito|2гис|яндекс|леруа|петрович|термодом|rockwool|роквул)", s, _t500_psv_re.I))
+    only_unconfirmed = s.upper().strip() in {"НЕ ПОДТВЕРЖДЕНО", "НЕ ПОДТВЕРЖДЕНО."}
+
+    if not has_min_urls:
+        return False, "SEARCH_OUTPUT_INVALID_NO_DIRECT_LINKS"
+    if has_bare_refs:
+        return False, "SEARCH_OUTPUT_INVALID_BARE_REFS"
+    if not has_supplier:
+        return False, "SEARCH_OUTPUT_INVALID_NO_SUPPLIER"
+    if not has_price:
+        return False, "SEARCH_OUTPUT_INVALID_NO_PRICE"
+    if not has_phone:
+        return False, "SEARCH_OUTPUT_INVALID_NO_PHONE"
+    if only_unconfirmed:
+        return False, "SEARCH_OUTPUT_INVALID_UNCONFIRMED_ONLY"
+    return True, "OK"
+
+try:
+    _T500_PSV_ORIG_SEND_ONCE_EX = _send_once_ex
+except Exception:
+    _T500_PSV_ORIG_SEND_ONCE_EX = None
+
+def _send_once_ex(conn, task_id, chat_id, text, reply_to, kind):  # TOPIC500_PRE_SEND_VALIDATOR_AND_STARTUP_RECOVERY_HARD_GUARD_V1
+    try:
+        row = conn.execute("SELECT topic_id FROM tasks WHERE id=?", (str(task_id),)).fetchone()
+        topic_id = int(_t500_psv_row_get(row, "topic_id", row[0] if row else 0) or 0)
+        if topic_id == 500 and str(kind or "") == "result":
+            ok, reason = _t500_psv_validate_procurement_result(str(text or ""))
+            if not ok:
+                _t500_psv_update_failed(conn, str(task_id), str(text or ""), reason)
+                _t500_psv_history(conn, str(task_id), f"TOPIC500_PROCUREMENT_VALIDATOR_V1:FAILED:{reason}")
+                try:
+                    conn.commit()
+                except Exception:
+                    pass
+                warning = "Поиск не дал прямых ссылок и телефонов. Повтори запрос или уточни площадки"
+                if _T500_PSV_ORIG_SEND_ONCE_EX:
+                    return _T500_PSV_ORIG_SEND_ONCE_EX(conn, task_id, chat_id, warning, reply_to, "error")
+                return None
+    except Exception as e:
+        try:
+            _t500_psv_history(conn, str(task_id), f"TOPIC500_PROCUREMENT_VALIDATOR_V1:ERROR:{type(e).__name__}")
+            conn.commit()
+        except Exception:
+            pass
+
+    if _T500_PSV_ORIG_SEND_ONCE_EX:
+        return _T500_PSV_ORIG_SEND_ONCE_EX(conn, task_id, chat_id, text, reply_to, kind)
+    return None
+
+def _t500_psv_repair_sent_in_progress(conn) -> None:
+    try:
+        rows = conn.execute(
+            """
+            SELECT id, topic_id, state, COALESCE(result,'') AS result
+            FROM tasks
+            WHERE topic_id=500
+              AND state IN ('IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION')
+            """
+        ).fetchall()
+    except Exception:
+        return
+
+    for row in rows:
+        task_id = str(_t500_psv_row_get(row, "id", ""))
+        if not task_id:
+            continue
+        if not _t500_psv_has_reply_sent(conn, task_id):
+            continue
+        current_result = str(_t500_psv_row_get(row, "result", "") or "")
+        latest_result = _t500_psv_latest_history_result(conn, task_id) or current_result
+        _t500_psv_update_done(conn, task_id, latest_result)
+        _t500_psv_history(conn, task_id, "STARTUP_RECOVERY_REPLY_SENT_GUARD_V1:DONE_SKIP_RECOVERY")
+    try:
+        conn.commit()
+    except Exception:
+        pass
+
+def _t500_psv_duplicate_loop_guard(conn, task_id: str) -> bool:
+    try:
+        row = conn.execute("SELECT topic_id FROM tasks WHERE id=?", (str(task_id),)).fetchone()
+        topic_id = int(_t500_psv_row_get(row, "topic_id", row[0] if row else 0) or 0)
+        if topic_id != 500:
+            return False
+        cnt = conn.execute(
+            """
+            SELECT COUNT(*)
+            FROM task_history
+            WHERE task_id=?
+              AND action LIKE 'result:%'
+              AND created_at >= datetime('now','-300 seconds')
+            """,
+            (str(task_id),),
+        ).fetchone()[0]
+        if int(cnt or 0) < 3:
+            return False
+        latest_result = _t500_psv_latest_history_result(conn, task_id)
+        _t500_psv_update_done(conn, str(task_id), latest_result)
+        _t500_psv_history(conn, str(task_id), "TOPIC500_DUPLICATE_RESULT_LOOP_GUARD_V1:KILLED")
+        conn.commit()
+        return True
+    except Exception:
+        return False
+
+try:
+    _T500_PSV_ORIG_RECOVER_STALE_TASKS = _recover_stale_tasks
+except Exception:
+    _T500_PSV_ORIG_RECOVER_STALE_TASKS = None
+
+def _recover_stale_tasks(conn, *args, **kwargs):  # TOPIC500_PRE_SEND_VALIDATOR_AND_STARTUP_RECOVERY_HARD_GUARD_V1
+    _t500_psv_repair_sent_in_progress(conn)
+    if _T500_PSV_ORIG_RECOVER_STALE_TASKS:
+        res = _T500_PSV_ORIG_RECOVER_STALE_TASKS(conn, *args, **kwargs)
+        _t500_psv_repair_sent_in_progress(conn)
+        return res
+    return None
+
+try:
+    _T500_PSV_ORIG_HANDLE_IN_PROGRESS = _handle_in_progress
+except Exception:
+    _T500_PSV_ORIG_HANDLE_IN_PROGRESS = None
+
+async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):  # TOPIC500_PRE_SEND_VALIDATOR_AND_STARTUP_RECOVERY_HARD_GUARD_V1
+    try:
+        task_id = str(_t500_psv_row_get(task, "id", ""))
+        if task_id and _t500_psv_duplicate_loop_guard(conn, task_id):
+            return
+        _t500_psv_repair_sent_in_progress(conn)
+    except Exception:
+        pass
+    if _T500_PSV_ORIG_HANDLE_IN_PROGRESS:
+        return await _T500_PSV_ORIG_HANDLE_IN_PROGRESS(conn, task, chat_id, topic_id)
+    return None
+
+# === END_TOPIC500_PRE_SEND_VALIDATOR_AND_STARTUP_RECOVERY_HARD_GUARD_V1 ===
+
+
 if __name__ == "__main__":
     asyncio.run(main())
 
