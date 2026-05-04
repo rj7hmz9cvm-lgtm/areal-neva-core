@@ -650,3 +650,48 @@ try:
 except Exception as _e:
     _P6F_TS_LOG.exception("P6F_TS_AR_BIND_INSTALL_ERR %s", _e)
 # === END_P6F_TOPIC500_SANITIZER_AI_ROUTER_BIND_20260504_V1 ===
+
+
+# === P6G_PAYLOAD_SANITIZER_EXTENDED_FIELDS_V1 ===
+# FACT: extends P6F_TS_sanitize_payload to clean MORE fields where stale
+# context can leak: memory_context, archive_context, full_context, history,
+# context, pin_context, parent_context.
+import logging as _p6g_pse_logging
+_P6G_PSE_LOG = _p6g_pse_logging.getLogger("ai_router")
+
+_P6G_PSE_EXTRA_FIELDS = (
+    "memory_context", "archive_context", "full_context", "history",
+    "context", "pin_context", "parent_context",
+)
+
+try:
+    _P6G_PSE_ORIG_SANITIZE = _p6f_ts_sanitize_payload
+    if not getattr(_P6G_PSE_ORIG_SANITIZE, "_p6g_pse_wrapped", False):
+        def _p6f_ts_sanitize_payload(payload):
+            out = _P6G_PSE_ORIG_SANITIZE(payload)
+            if not isinstance(out, dict):
+                return out
+            try:
+                topic_id = int((out or {}).get("topic_id", 0) or 0)
+            except Exception:
+                topic_id = 0
+            if topic_id != 500:
+                return out
+            cleaned_count = 0
+            for f in _P6G_PSE_EXTRA_FIELDS:
+                if f in out and out[f] and isinstance(out[f], str):
+                    before = len(out[f])
+                    out[f] = _p6f_ts_sanitize_text(out[f])
+                    after = len(out[f])
+                    if before != after:
+                        cleaned_count += 1
+            if cleaned_count:
+                _P6G_PSE_LOG.info(
+                    "P6G_PSE_EXTRA_FIELDS_CLEANED topic=500 fields_changed=%d", cleaned_count,
+                )
+            return out
+        _p6f_ts_sanitize_payload._p6g_pse_wrapped = True
+        _P6G_PSE_LOG.info("P6G_PAYLOAD_SANITIZER_EXTENDED_FIELDS_V1_INSTALLED")
+except Exception as _e:
+    _P6G_PSE_LOG.exception("P6G_PSE_INSTALL_ERR %s", _e)
+# === END_P6G_PAYLOAD_SANITIZER_EXTENDED_FIELDS_V1 ===

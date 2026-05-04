@@ -7992,6 +7992,241 @@ except Exception as e:
     _P6F_T210_LOG.exception("P6F_DAH_INSTALL_ERR %s", e)
 # === END_P6F_DRIVE_ARTIFACT_HISTORY_GATE_V1 ===
 
+# === P6G_PARENT_RELEVANCE_SCORER_V1 ===
+# FACT: improves P6E67 fallback parent finder.
+# Without this, "LAST_DONE_ESTIMATE_FALLBACK" picks newest by rowid only —
+# which can grab wrong parent if multiple recent estimates exist.
+# Now: score candidates by keyword overlap with current revision text.
+# Higher score wins. Below threshold → NOT_FOUND (no blind fallback).
+import re as _p6g_prs_re
+import logging as _p6g_prs_logging
+
+_P6G_PRS_LOG = _p6g_prs_logging.getLogger("task_worker")
+
+def _p6g_prs_keywords(text, limit=300):
+    if not text:
+        return set()
+    low = str(text).lower().replace("ё", "е")
+    words = _p6g_prs_re.findall(r"[а-яa-z0-9]{3,}", low)
+    return set(words[:limit])
+
+def _p6g_prs_score_candidate(current_raw, candidate_raw, candidate_result, candidate_age_seconds=0):
+    cur_kw = _p6g_prs_keywords(current_raw)
+    cand_kw = _p6g_prs_keywords(candidate_raw + " " + candidate_result)
+    if not cur_kw or not cand_kw:
+        return 0
+    overlap = len(cur_kw & cand_kw)
+    base = overlap * 10
+    if "смет" in cur_kw and "смет" in cand_kw:
+        base += 30
+    if "проект" in cur_kw and "проект" in cand_kw:
+        base += 30
+    for sz in ("12.0", "12х8", "12x8", "10х12", "10х10", "8х10"):
+        if sz in str(current_raw or "").lower() and sz in str(candidate_raw or "").lower():
+            base += 50
+            break
+    age_penalty = min(int(candidate_age_seconds // 600), 30)
+    return max(0, base - age_penalty)
+
+def _p6g_prs_find_best_parent(conn, current_task, min_score=15):
+    """
+    Replaces blind LAST_DONE_ESTIMATE_FALLBACK with scored selection.
+    Returns (row, source_label) or (None, "NO_RELEVANT_PARENT").
+    """
+    chat_id = _p6e67_s(_p6e67_row(current_task, "chat_id", ""))
+    topic_id = int(_p6e67_row(current_task, "topic_id", 0) or 0)
+    task_id = _p6e67_s(_p6e67_row(current_task, "id", ""))
+    raw = _p6e67_s(_p6e67_row(current_task, "raw_input", ""), 30000)
+    if not chat_id or topic_id != 2:
+        return None, "NO_SCOPE"
+    try:
+        rows = conn.execute(
+            """
+            SELECT *,
+                   CAST((julianday('now') - julianday(updated_at)) * 86400 AS INTEGER) AS age_seconds
+            FROM tasks
+            WHERE chat_id=? AND COALESCE(topic_id,0)=? AND id<>?
+              AND state IN ('DONE','AWAITING_CONFIRMATION','RESULT_READY','FAILED')
+              AND (
+                raw_input LIKE '%смет%' OR result LIKE '%смет%'
+                OR raw_input LIKE '%стоимость%' OR result LIKE '%стоимость%'
+                OR raw_input LIKE '%кровл%' OR result LIKE '%кровл%'
+                OR raw_input LIKE '%фундамент%' OR result LIKE '%фундамент%'
+              )
+            ORDER BY rowid DESC LIMIT 30
+            """,
+            (chat_id, topic_id, task_id),
+        ).fetchall()
+    except Exception as e:
+        _P6G_PRS_LOG.warning("P6G_PRS_QUERY_ERR %s", e)
+        return None, "QUERY_ERR"
+    if not rows:
+        return None, "NO_CANDIDATES"
+    best = None
+    best_score = 0
+    for r in rows:
+        try:
+            cand_raw = _p6e67_s(_p6e67_row(r, "raw_input", ""), 30000)
+            cand_res = _p6e67_s(_p6e67_row(r, "result", ""), 30000)
+            try:
+                age = int(_p6e67_row(r, "age_seconds", 0) or 0)
+            except Exception:
+                age = 0
+            score = _p6g_prs_score_candidate(raw, cand_raw, cand_res, age)
+            if score > best_score:
+                best = r
+                best_score = score
+        except Exception:
+            continue
+    if best and best_score >= min_score:
+        _P6G_PRS_LOG.info(
+            "P6G_PRS_BEST_PARENT current=%s parent=%s score=%d",
+            task_id, _p6e67_row(best, "id", ""), best_score,
+        )
+        return best, "RELEVANCE_SCORED:{}".format(best_score)
+    _P6G_PRS_LOG.info("P6G_PRS_NO_RELEVANT_PARENT current=%s top_score=%d", task_id, best_score)
+    return None, "NO_RELEVANT_PARENT_SCORE_{}".format(best_score)
+
+# Wrap _p6e67_find_parent to use scorer for fallback path
+try:
+    _P6G_PRS_ORIG_FIND_PARENT = _p6e67_find_parent
+    if not getattr(_P6G_PRS_ORIG_FIND_PARENT, "_p6g_prs_wrapped", False):
+        def _p6e67_find_parent(conn, task):
+            row, source = _P6G_PRS_ORIG_FIND_PARENT(conn, task)
+            if row is not None and source == "EXACT_REPLY_LINK":
+                return row, source
+            scored, scored_source = _p6g_prs_find_best_parent(conn, task, min_score=15)
+            if scored is not None:
+                return scored, scored_source
+            return row, source if row is not None else (None, scored_source)
+        _p6e67_find_parent._p6g_prs_wrapped = True
+        _P6G_PRS_LOG.info("P6G_PARENT_RELEVANCE_SCORER_V1_INSTALLED")
+except Exception as _e:
+    _P6G_PRS_LOG.exception("P6G_PRS_INSTALL_ERR %s", _e)
+# === END_P6G_PARENT_RELEVANCE_SCORER_V1 ===
+
+
+# === P6G_MEMORY_JANITOR_V1 ===
+# FACT: cleanup helper for memory.db that removes records previously written
+# with garbage values (что строим / traceback / /root / less than 30 chars).
+# Run on each DONE event via a wrap of _save_memory.
+import os as _p6g_mj_os
+import sqlite3 as _p6g_mj_sqlite
+
+_P6G_MJ_LOG = _p6g_prs_logging.getLogger("task_worker")
+_P6G_MJ_DB = "/root/.areal-neva-core/data/memory.db"
+
+_P6G_MJ_BAD_VALUE_PATTERNS = (
+    "что строим",
+    "traceback",
+    "syntaxerror",
+    "/root/.areal-neva-core",
+    "[локальный путь скрыт]",
+    "p6e67_block",
+    "p6f_dah_block",
+    "stale_timeout",
+)
+
+def _p6g_mj_run_periodic(max_per_run=200):
+    """
+    Removes records with bad values from memory.db.
+    Returns number removed. Safe: won't touch role markers.
+    """
+    if not _p6g_mj_os.path.exists(_P6G_MJ_DB):
+        return 0
+    removed = 0
+    try:
+        c = _p6g_mj_sqlite.connect(_P6G_MJ_DB, timeout=10)
+        try:
+            for pat in _P6G_MJ_BAD_VALUE_PATTERNS:
+                cur = c.execute(
+                    "DELETE FROM memory WHERE key NOT LIKE '%_role' AND lower(value) LIKE ? LIMIT ?",
+                    ("%" + pat + "%", max_per_run),
+                )
+                removed += cur.rowcount or 0
+            c.commit()
+        finally:
+            c.close()
+    except Exception as e:
+        _P6G_MJ_LOG.warning("P6G_MJ_RUN_ERR %s", e)
+    if removed:
+        _P6G_MJ_LOG.info("P6G_MJ_REMOVED %d bad memory records", removed)
+    return removed
+
+# Hook: run janitor lazily after every Nth DONE
+_P6G_MJ_DONE_COUNTER = [0]
+_P6G_MJ_RUN_EVERY = 10
+
+try:
+    _P6G_MJ_ORIG_SAVE_MEMORY_AFTER_GATE = _save_memory
+    if not getattr(_P6G_MJ_ORIG_SAVE_MEMORY_AFTER_GATE, "_p6g_mj_wrapped", False):
+        def _save_memory(chat_id, topic_id, raw_input, result):
+            r = _P6G_MJ_ORIG_SAVE_MEMORY_AFTER_GATE(chat_id, topic_id, raw_input, result)
+            try:
+                _P6G_MJ_DONE_COUNTER[0] += 1
+                if _P6G_MJ_DONE_COUNTER[0] % _P6G_MJ_RUN_EVERY == 0:
+                    _p6g_mj_run_periodic()
+            except Exception:
+                pass
+            return r
+        _save_memory._p6g_mj_wrapped = True
+        _P6G_MJ_LOG.info("P6G_MEMORY_JANITOR_V1_INSTALLED")
+except Exception as _e:
+    _P6G_MJ_LOG.exception("P6G_MJ_INSTALL_ERR %s", _e)
+# === END_P6G_MEMORY_JANITOR_V1 ===
+
+
+# === P6G_STALE_EXPLAINER_V1 ===
+# FACT: when STALE_TIMEOUT triggers, attach human-readable cause if task was
+# stuck due to a P6F gate. Helps debugging and gives user a real reason
+# instead of cryptic STALE_TIMEOUT.
+_P6G_SE_LOG = _p6g_prs_logging.getLogger("task_worker")
+
+_P6G_SE_REASON_MAP = {
+    "P6E67_BLOCK_ARTIFACT_GATE_PDF_LINK_MISSING": "Запрошен PDF, но Drive ссылка не получена. Повторите запрос или укажите конкретный объект",
+    "P6E67_BLOCK_ARTIFACT_GATE_XLSX_LINK_MISSING": "Запрошен Excel, но XLSX не сгенерирован. Повторите запрос",
+    "P6E67_BLOCK_ARTIFACT_GATE_TXT_LINK_MISSING": "Запрошен TXT, но TXT не подготовлен. Повторите запрос",
+    "P6E67_BLOCK_ARTIFACT_GATE_ROOT_OR_HIDDEN_LOCAL_PATH": "Артефакт сформирован, но содержит локальный путь — Drive upload требуется",
+    "P6E67_BLOCK_GENERIC_QUESTION": "Бот пытался задать общий уточняющий вопрос вместо ответа. ТЗ присутствует — повторите запрос",
+    "P6F_DAH_BLOCK_DONE_NO_UPLOAD_HISTORY": "Запрошен файл, но загрузка на Drive/Telegram не зарегистрирована в истории. Повторите запрос или попросите конкретный артефакт",
+    "P6F_STZ_BLOCK_GENERIC_QUESTION_TZ_SUFFICIENT": "ТЗ присутствует — бот не должен спрашивать «что строим». Повторите запрос",
+    "P6F_PCV_NEEDS_CLARIFICATION_LOW_CONFIDENCE_OR_NO_DIMS": "Vision не разобрал размеры на фото. Пришлите размер текстом или фото плана крупнее",
+}
+
+try:
+    _P6G_SE_ORIG_UPDATE = _update_task
+    if not getattr(_P6G_SE_ORIG_UPDATE, "_p6g_se_wrapped", False):
+        def _update_task(conn, task_id, **kwargs):
+            try:
+                if kwargs.get("state") == "FAILED" and (kwargs.get("error_message") or "").strip() == "STALE_TIMEOUT":
+                    row = conn.execute(
+                        "SELECT error_message FROM tasks WHERE id=? LIMIT 1",
+                        (str(task_id),),
+                    ).fetchone()
+                    if row is not None:
+                        try:
+                            existing_err = row["error_message"] if hasattr(row, "keys") else row[0]
+                        except Exception:
+                            existing_err = ""
+                        existing_err = str(existing_err or "")
+                        for marker, hint in _P6G_SE_REASON_MAP.items():
+                            if marker in existing_err:
+                                kwargs["error_message"] = "STALE_TIMEOUT_AFTER_{}: {}".format(marker, hint)
+                                try:
+                                    _history(conn, str(task_id), "P6G_STALE_EXPLAINED:{}".format(marker))
+                                except Exception:
+                                    pass
+                                _P6G_SE_LOG.info("P6G_STALE_EXPLAINED task=%s marker=%s", task_id, marker)
+                                break
+            except Exception as _e:
+                _P6G_SE_LOG.warning("P6G_SE_UPDATE_ERR %s", _e)
+            return _P6G_SE_ORIG_UPDATE(conn, task_id, **kwargs)
+        _update_task._p6g_se_wrapped = True
+        _P6G_SE_LOG.info("P6G_STALE_EXPLAINER_V1_INSTALLED")
+except Exception as _e:
+    _P6G_SE_LOG.exception("P6G_SE_INSTALL_ERR %s", _e)
+# === END_P6G_STALE_EXPLAINER_V1 ===
+
 if __name__ == "__main__":
     asyncio.run(main())
 # === END_P6D_MAIN_AFTER_ALL_RUNTIME_OVERLAYS_20260504_V1 ===
