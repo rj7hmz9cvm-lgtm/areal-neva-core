@@ -6243,9 +6243,6 @@ async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
 
 # === END_P3_FINAL_ROUTE_HARD_LOCK_SEARCH_ESTIMATE_20260504_V1 ===
 
-if __name__ == "__main__":
-    asyncio.run(main())
-
 # === FULLFIX_08_PROJECT_ERROR_VISIBILITY ===
 
 
@@ -6332,3 +6329,8 @@ try:
 except Exception as _repeat_wrap_e:
     logger.warning("REPLY_REPEAT_PARENT_TASK_V1_PROCESS_WRAP_ERR %s", _repeat_wrap_e)
 # === END_AWAITING_CONFIRMATION_ONLY_ON_REAL_RESULT_V1 ===
+
+# === P4B_MAIN_AFTER_ALL_RUNTIME_OVERLAYS_20260504_V1 ===
+if __name__ == "__main__":
+    asyncio.run(main())
+# === END_P4B_MAIN_AFTER_ALL_RUNTIME_OVERLAYS_20260504_V1 ===
