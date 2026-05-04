@@ -8403,7 +8403,7 @@ import json as _p6h4tw_json
 import re as _p6h4tw_re
 import inspect as _p6h4tw_inspect
 
-_P6H4TW_LOG = _p6h4tw_logging.getLogger("p6h4_task_worker_hook")
+_P6H4TW_LOG = _p6h4tw_logging.getLogger("task_worker")
 
 _P6H4TW_DRIVE_FOLDER_RE = _p6h4tw_re.compile(
     r"https://drive\.google\.com/drive/folders/([A-Za-z0-9_-]+)"
@@ -8561,6 +8561,54 @@ async def _p6h4tw_handle_topic5(conn, task, args, kwargs):
                 _P6H4TW_LOG.warning("P6H4TW_SHOW_FOLDER_ERR %s", _e)
             _p6h4tw_ack_done(conn, task, chat_id, msg, "P6H4TW_SHOW_FOLDER")
             return True
+
+        # Drive folder batch load: сканирует папку → добавляет все файлы в буфер
+        _P6H4TW_BATCH_TRIGGERS = (
+            "загрузи все файлы", "возьми файлы из папки", "прочитай папку",
+            "обработай папку", "разбор по папке", "акт по папке",
+            "загрузи папку", "возьми из папки",
+        )
+        _P6H4TW_BATCH_AND_FLUSH = ("разбор по папке", "акт по папке")
+        if any(t in raw_low for t in _P6H4TW_BATCH_TRIGGERS):
+            try:
+                from core.technadzor_engine import get_active_folder as _p6h4tw_gf2
+                from core.technadzor_engine import process_drive_folder_batch as _p6h4tw_batch
+                m_drive2 = _P6H4TW_DRIVE_FOLDER_RE.search(raw_str)
+                if m_drive2:
+                    _batch_fid = m_drive2.group(1)
+                    _batch_fname = ""
+                    try:
+                        from core.topic_drive_oauth import get_drive_service as _p6h4tw_drv2
+                        svc2 = _p6h4tw_drv2(chat_id=str(chat_id), topic_id=5)
+                        _batch_fname = svc2.files().get(fileId=_batch_fid, fields="name").execute().get("name", "")
+                    except Exception:
+                        pass
+                else:
+                    af2 = _p6h4tw_gf2(str(chat_id), 5)
+                    _batch_fid = af2.get("folder_id", "")
+                    _batch_fname = af2.get("folder_name", "")
+                if not _batch_fid:
+                    _p6h4tw_ack_done(
+                        conn, task, chat_id,
+                        "Не найдена активная папка. Пришли ссылку на папку Drive.",
+                        "P6H4TW_BATCH_NO_FOLDER",
+                    )
+                    return True
+                added = _p6h4tw_batch(str(chat_id), 5, _batch_fid, _batch_fname)
+                _P6H4TW_LOG.info("P6H4TW_BATCH_LOADED chat=%s folder=%s added=%s", chat_id, _batch_fid, added)
+                do_flush_now = any(t in raw_low for t in _P6H4TW_BATCH_AND_FLUSH)
+                if not do_flush_now:
+                    _p6h4tw_ack_done(
+                        conn, task, chat_id,
+                        f"Принял. Файлы из папки добавлены в пакет выезда: {added} шт. Vision не запускаю без разрешения владельца. Скажи «сделай разбор» когда готово.",
+                        "P6H4TW_BATCH_LOADED",
+                    )
+                    return True
+                # do_flush_now: immediately flush + process
+                raw_low = "сделай разбор"  # re-enter flush branch below
+            except Exception as _e:
+                _P6H4TW_LOG.warning("P6H4TW_BATCH_ERR %s", _e)
+                return False
 
         # Flush + call process_technadzor directly (Row object carries stale raw_input)
         if any(t in raw_low for t in _P6H4TW_FLUSH_TRIGGERS):
