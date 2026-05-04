@@ -5897,6 +5897,351 @@ async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
 
 # === END_P2_FINAL_SEARCH_AND_ESTIMATE_CLOSE_20260504_V1 ===
 
+# === P3_FINAL_ROUTE_HARD_LOCK_SEARCH_ESTIMATE_20260504_V1 ===
+# Runtime overlay before asyncio.run(main())
+# Scope:
+# - topic_500 always routes to internet search, never to estimate/project routes
+# - topic_2 estimate-like input always routes to current-input estimate engine
+# - topic_2 vague followups never generate estimates from old memory
+# - no DB schema changes, no forbidden files, no systemd changes
+
+try:
+    _P3_ORIG_HANDLE_IN_PROGRESS_20260504 = _handle_in_progress
+except Exception:
+    _P3_ORIG_HANDLE_IN_PROGRESS_20260504 = None
+
+def _p3_s_20260504(v, limit=50000):
+    try:
+        if v is None:
+            return ""
+        return str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+def _p3_low_20260504(v):
+    return _p3_s_20260504(v).lower().replace("ё", "е")
+
+def _p3_row_get_20260504(row, key, default=None):
+    try:
+        if hasattr(row, "keys") and key in row.keys():
+            return row[key]
+    except Exception:
+        pass
+    try:
+        return row[key]
+    except Exception:
+        try:
+            return getattr(row, key)
+        except Exception:
+            return default
+
+def _p3_update_20260504(conn, task_id, **kwargs):
+    try:
+        _update_task(conn, str(task_id), **kwargs)
+        return
+    except Exception:
+        pass
+    try:
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(tasks)").fetchall()]
+        sets, vals = [], []
+        for k, v in kwargs.items():
+            if k in cols:
+                sets.append(f"{k}=?")
+                vals.append(v)
+        if "updated_at" in cols:
+            sets.append("updated_at=datetime('now')")
+        if sets:
+            vals.append(str(task_id))
+            conn.execute(f"UPDATE tasks SET {', '.join(sets)} WHERE id=?", vals)
+    except Exception:
+        pass
+
+def _p3_history_20260504(conn, task_id, action):
+    try:
+        _history(conn, str(task_id), str(action))
+        return
+    except Exception:
+        pass
+    try:
+        conn.execute(
+            "INSERT INTO task_history(task_id, action, created_at) VALUES (?, ?, datetime('now'))",
+            (str(task_id), _p3_s_20260504(action, 1000)),
+        )
+    except Exception:
+        pass
+
+def _p3_is_close_command_20260504(raw_input):
+    low = _p3_low_20260504(raw_input)
+    return any(x in low for x in (
+        "задача закрыта", "закрой задачу", "отменяй", "отмена", "отбой",
+        "заверши", "закрывай", "стоп"
+    ))
+
+def _p3_topic500_search_needed_20260504(raw_input, input_type):
+    if _p3_is_close_command_20260504(raw_input):
+        return False
+    low = _p3_low_20260504(raw_input)
+    if not low:
+        return False
+    return True
+
+def _p3_topic500_vague_20260504(raw_input):
+    low = _p3_low_20260504(raw_input)
+    if len(low) <= 90 and any(x in low for x in ("то что", "предыдущ", "прошл", "телефон", "выполни поиск", "то, что")):
+        return True
+    return False
+
+def _p3_find_previous_topic500_query_20260504(conn, chat_id, topic_id, current_task_id):
+    try:
+        rows = conn.execute(
+            """
+            SELECT raw_input
+            FROM tasks
+            WHERE chat_id=?
+              AND COALESCE(topic_id,0)=500
+              AND id<>?
+              AND COALESCE(raw_input,'')<>''
+              AND COALESCE(raw_input,'') NOT LIKE '%Задача закрыта%'
+              AND COALESCE(raw_input,'') NOT LIKE '%отменяй%'
+            ORDER BY rowid DESC
+            LIMIT 12
+            """,
+            (str(chat_id), str(current_task_id)),
+        ).fetchall()
+        for row in rows:
+            raw = _p3_s_20260504(_p3_row_get_20260504(row, "raw_input", row[0] if row else ""), 4000)
+            low = _p3_low_20260504(raw)
+            if any(x in low for x in (
+                "найди", "поиск", "дешевле", "купить", "цена", "стоимость",
+                "iphone", "pixel", "телефон", "ozon", "wildberries", "авито", "avito",
+                "поставщик", "каменная вата", "утеплитель"
+            )):
+                return raw
+    except Exception:
+        pass
+    return ""
+
+def _p3_bad_search_result_20260504(text):
+    low = _p3_low_20260504(text)
+    if not low:
+        return True
+    bad = (
+        "смета готова",
+        "предварительная смета готова",
+        "xlsx:",
+        "pdf:",
+        "engine:",
+        "м-110.xlsx",
+        "ареал нева.xlsx",
+        "позиций: 1. итого: 0.00",
+        "фундамент:",
+        "монолитная плита",
+        "лист эталона",
+    )
+    if any(x in low for x in bad):
+        return True
+    if ("http://" not in low and "https://" not in low) and ("₽" not in low and "руб" not in low and "цена" not in low):
+        return True
+    return False
+
+async def _p3_handle_topic500_search_20260504(conn, task, chat_id, topic_id):
+    task_id = _p3_s_20260504(_p3_row_get_20260504(task, "id", ""))
+    raw_input = _p3_s_20260504(_p3_row_get_20260504(task, "raw_input", ""), 12000)
+    reply_to = _p3_row_get_20260504(task, "reply_to_message_id", None)
+
+    previous = _p3_find_previous_topic500_query_20260504(conn, chat_id, topic_id, task_id) if _p3_topic500_vague_20260504(raw_input) else ""
+    search_text = raw_input
+    if previous:
+        search_text = (
+            "Выполни интернет-поиск по предыдущей товарной задаче с учётом текущего уточнения.\n"
+            f"Текущее сообщение: {raw_input}\n"
+            f"Предыдущая товарная задача: {previous}\n"
+        )
+
+    prompt = (
+        "РЕЖИМ: ИНТЕРНЕТ-ПОИСК ТОВАРА. НЕ СОСТАВЛЯЙ СМЕТУ. НЕ СОЗДАВАЙ XLSX/PDF.\n"
+        "Нужно найти реальные варианты покупки по запросу пользователя.\n"
+        "Ответ строго таблицей: № | Площадка/поставщик | Товар | Город/регион | Цена | Наличие | Доставка | Телефон | Прямая ссылка | Риск.\n"
+        "Минимум 3 варианта, если они существуют. Если вариантов нет — прямо напиши, что подтверждённых вариантов нет.\n\n"
+        f"Запрос:\n{search_text}"
+    )
+
+    payload = {
+        "id": task_id,
+        "task_id": task_id,
+        "topic_id": 500,
+        "chat_id": str(chat_id),
+        "input_type": "search",
+        "raw_input": prompt,
+        "normalized_input": prompt,
+        "state": "IN_PROGRESS",
+        "reply_to_message_id": reply_to,
+        "active_task_context": previous,
+        "pin_context": "",
+        "short_memory_context": previous,
+        "long_memory_context": "",
+        "archive_context": "",
+        "search_context": previous,
+        "topic_role": "ВЕБ ПОИСК",
+        "topic_directions": "internet_search",
+        "direction": "internet_search",
+        "engine": "search_supplier",
+        "forbid_estimate": True,
+    }
+
+    _p3_history_20260504(conn, task_id, "P3_TOPIC500_HARD_SEARCH_ROUTE_TAKEN")
+    _p3_update_20260504(conn, task_id, state="IN_PROGRESS", error_message="")
+    conn.commit()
+
+    try:
+        result = await asyncio.wait_for(process_ai_task(payload), timeout=AI_TIMEOUT)
+        result = _clean(_s(result), 50000)
+    except Exception as e:
+        err = "P3_TOPIC500_SEARCH_ERROR:" + _p3_s_20260504(type(e).__name__ + ":" + str(e), 500)
+        _p3_update_20260504(conn, task_id, state="FAILED", result="", error_message=err)
+        _p3_history_20260504(conn, task_id, err)
+        conn.commit()
+        _send_once_ex(conn, task_id, str(chat_id), "Поиск не выполнен. Повтори запрос с названием товара и регионом", reply_to, "p3_topic500_error")
+        return
+
+    if _p3_bad_search_result_20260504(result):
+        err = "P3_TOPIC500_BLOCKED_NON_SEARCH_RESULT"
+        _p3_update_20260504(conn, task_id, state="FAILED", result=result, error_message=err)
+        _p3_history_20260504(conn, task_id, err)
+        conn.commit()
+        _send_once_ex(conn, task_id, str(chat_id), "Поиск заблокирован: маршрут вернул не поисковый результат. Повтори запрос товаром и регионом", reply_to, "p3_topic500_bad_route")
+        return
+
+    _p3_update_20260504(conn, task_id, state="DONE", result=result, error_message="")
+    _p3_history_20260504(conn, task_id, "P3_TOPIC500_SEARCH_DONE")
+    try:
+        _save_memory(str(chat_id), 500, raw_input, result)
+    except Exception:
+        pass
+    conn.commit()
+
+    sent = _send_once_ex(conn, task_id, str(chat_id), result, reply_to, "p3_topic500_search_result")
+    try:
+        bot_id = sent.get("bot_message_id") if isinstance(sent, dict) else None
+        if bot_id:
+            _p3_update_20260504(conn, task_id, bot_message_id=bot_id)
+            conn.commit()
+    except Exception:
+        pass
+    return
+
+def _p3_topic2_estimate_like_20260504(raw_input):
+    low = _p3_low_20260504(raw_input)
+    if not low:
+        return False
+    has_est_word = any(x in low for x in ("смет", "стоимость", "посчитать", "рассчитать", "расчет", "расчёт"))
+    has_house = any(x in low for x in ("дом", "house", "хаус", "барн", "barn"))
+    has_dims = bool(re.search(r"\d+(?:[,.]\d+)?\s*(?:на|x|х|×|\*)\s*\d+(?:[,.]\d+)?", low))
+    has_build = any(x in low for x in ("фундамент", "плита", "стен", "каркас", "кров", "санузел", "отопление", "окна"))
+    return (has_est_word and (has_house or has_dims or has_build)) or (has_dims and has_house and has_build)
+
+def _p3_topic2_vague_followup_20260504(raw_input):
+    low = _p3_low_20260504(raw_input)
+    if not low:
+        return False
+    if _p3_topic2_estimate_like_20260504(raw_input):
+        return False
+    return len(low) <= 160 and any(x in low for x in (
+        "ну что", "что там", "дальше", "как там", "готово", "проверь", "посмотри",
+        "что у нас", "что дальше", "почитай", "у меня же есть"
+    ))
+
+def _p3_find_last_topic2_context_20260504(conn, chat_id, current_task_id):
+    try:
+        row = conn.execute(
+            """
+            SELECT id, state, raw_input, result, error_message
+            FROM tasks
+            WHERE chat_id=?
+              AND COALESCE(topic_id,0)=2
+              AND id<>?
+            ORDER BY rowid DESC
+            LIMIT 1
+            """,
+            (str(chat_id), str(current_task_id)),
+        ).fetchone()
+        if not row:
+            return None
+        return row
+    except Exception:
+        return None
+
+async def _p3_handle_topic2_current_estimate_20260504(conn, task, chat_id, topic_id):
+    task_id = _p3_s_20260504(_p3_row_get_20260504(task, "id", ""))
+    raw_input = _p3_s_20260504(_p3_row_get_20260504(task, "raw_input", ""), 12000)
+    _p3_history_20260504(conn, task_id, "P3_TOPIC2_CURRENT_INPUT_ESTIMATE_ROUTE_TAKEN")
+    try:
+        from core import sample_template_engine as _p3_ste
+        fn = getattr(_p3_ste, "handle_topic2_one_big_formula_pipeline_v1")
+        res = fn(conn=conn, task=task, chat_id=chat_id, topic_id=topic_id, raw_input=raw_input, full_context=raw_input)
+        if asyncio.iscoroutine(res):
+            return await res
+        return res
+    except Exception as e:
+        err = "P3_TOPIC2_CURRENT_ESTIMATE_ERROR:" + _p3_s_20260504(type(e).__name__ + ":" + str(e), 500)
+        _p3_update_20260504(conn, task_id, state="FAILED", result="", error_message=err)
+        _p3_history_20260504(conn, task_id, err)
+        conn.commit()
+        _send_once_ex(conn, task_id, str(chat_id), "Смета не выполнена. Ошибка расчётного маршрута", _p3_row_get_20260504(task, "reply_to_message_id", None), "p3_topic2_error")
+        return True
+
+def _p3_handle_topic2_vague_20260504(conn, task, chat_id, topic_id):
+    task_id = _p3_s_20260504(_p3_row_get_20260504(task, "id", ""))
+    reply_to = _p3_row_get_20260504(task, "reply_to_message_id", None)
+    last = _p3_find_last_topic2_context_20260504(conn, chat_id, task_id)
+    if last:
+        state = _p3_s_20260504(_p3_row_get_20260504(last, "state", ""))
+        raw = _clean(_p3_s_20260504(_p3_row_get_20260504(last, "raw_input", ""), 600), 600)
+        result = _clean(_p3_s_20260504(_p3_row_get_20260504(last, "result", ""), 1200), 1200)
+        text = (
+            "По текущему сообщению нет нового ТЗ для расчёта, смету по старой памяти не запускаю.\n\n"
+            f"Последняя задача в этом топике: {state}\n"
+            f"ТЗ: {raw}\n\n"
+            "Для продолжения напиши конкретную правку или новое полное ТЗ"
+        )
+        if result and "смета готова" in _p3_low_20260504(result):
+            text += "\n\nПоследний результат уже был выдан выше"
+    else:
+        text = "Нет нового ТЗ для расчёта. Напиши размеры, этажность, фундамент, стены, удалённость и состав работ"
+    _p3_update_20260504(conn, task_id, state="WAITING_CLARIFICATION", result=text, error_message="")
+    _p3_history_20260504(conn, task_id, "P3_TOPIC2_VAGUE_FOLLOWUP_BLOCKED_OLD_MEMORY_ESTIMATE")
+    conn.commit()
+    _send_once_ex(conn, task_id, str(chat_id), text, reply_to, "p3_topic2_vague_guard")
+    return True
+
+async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
+    task_id = _p3_s_20260504(_p3_row_get_20260504(task, "id", ""))
+    raw_input = _p3_s_20260504(_p3_row_get_20260504(task, "raw_input", ""), 12000)
+    input_type = _p3_s_20260504(_p3_row_get_20260504(task, "input_type", "text"), 50)
+
+    if chat_id is None:
+        chat_id = _p3_row_get_20260504(task, "chat_id", None)
+    if topic_id is None:
+        topic_id = _p3_row_get_20260504(task, "topic_id", 0)
+    try:
+        topic_id = int(topic_id or 0)
+    except Exception:
+        topic_id = 0
+
+    if topic_id == 500 and _p3_topic500_search_needed_20260504(raw_input, input_type):
+        return await _p3_handle_topic500_search_20260504(conn, task, chat_id, topic_id)
+
+    if topic_id == 2 and _p3_topic2_estimate_like_20260504(raw_input):
+        return await _p3_handle_topic2_current_estimate_20260504(conn, task, chat_id, topic_id)
+
+    if topic_id == 2 and _p3_topic2_vague_followup_20260504(raw_input):
+        return _p3_handle_topic2_vague_20260504(conn, task, chat_id, topic_id)
+
+    if _P3_ORIG_HANDLE_IN_PROGRESS_20260504:
+        return await _P3_ORIG_HANDLE_IN_PROGRESS_20260504(conn, task, chat_id, topic_id)
+    return None
+
+# === END_P3_FINAL_ROUTE_HARD_LOCK_SEARCH_ESTIMATE_20260504_V1 ===
 
 if __name__ == "__main__":
     asyncio.run(main())
