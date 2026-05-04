@@ -6878,7 +6878,137 @@ async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
     return None
 # === END_P6C_CONTINUE_GLOBAL_CLOSE_SEARCH_ESTIMATE_TECHNADZOR_20260504_V1 ===
 
-# === P6C_MAIN_AFTER_ALL_RUNTIME_OVERLAYS_20260504_V1 ===
+
+
+# === P6D_IMAGE_ESTIMATE_TECHNADZOR_PHOTO_FULL_CLOSE_20260504_V1 ===
+try:
+    _P6D_ORIG_HANDLE_IN_PROGRESS_20260504 = _handle_in_progress
+except Exception:
+    _P6D_ORIG_HANDLE_IN_PROGRESS_20260504 = None
+
+def _p6d_s_20260504(v, limit=50000):
+    try:
+        if v is None:
+            return ""
+        return str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+def _p6d_low_20260504(v):
+    return _p6d_s_20260504(v).lower().replace("ё", "е")
+
+def _p6d_row_20260504(row, key, default=None):
+    try:
+        if hasattr(row, "keys") and key in row.keys():
+            return row[key]
+    except Exception:
+        pass
+    try:
+        return row[key]
+    except Exception:
+        return default
+
+def _p6d_json_20260504(v):
+    if isinstance(v, dict):
+        return v
+    try:
+        return json.loads(_p6d_s_20260504(v, 200000))
+    except Exception:
+        return {}
+
+def _p6d_is_image_20260504(payload):
+    name = _p6d_low_20260504(payload.get("file_name") or "")
+    mime = _p6d_low_20260504(payload.get("mime_type") or "")
+    return mime.startswith("image/") or any(name.endswith(x) for x in (".jpg", ".jpeg", ".png", ".webp", ".heic", ".tif", ".tiff", ".bmp"))
+
+def _p6d_is_topic2_image_estimate_20260504(task, topic_id):
+    if int(topic_id or 0) != 2:
+        return False
+    if _p6d_low_20260504(_p6d_row_20260504(task, "input_type", "")) != "drive_file":
+        return False
+    raw = _p6d_s_20260504(_p6d_row_20260504(task, "raw_input", ""), 200000)
+    payload = _p6d_json_20260504(raw)
+    if not _p6d_is_image_20260504(payload):
+        return False
+    text = _p6d_low_20260504(raw + " " + _p6d_s_20260504(payload.get("caption"), 12000))
+    return any(x in text for x in (
+        "смет", "полная смета", "стоимость", "расчет", "расчёт", "посчитать",
+        "дом", "барн", "house", "фундамент", "плита", "каркас", "кровля",
+        "стены", "отделка", "санузел", "террас"
+    ))
+
+def _p6d_local_file_20260504(task_id, payload):
+    fn = _p6d_s_20260504(payload.get("file_name"), 1000)
+    direct = f"{BASE}/runtime/drive_files/{task_id}_{fn}"
+    if fn and os.path.exists(direct):
+        return direct
+    try:
+        import glob
+        hits = glob.glob(f"{BASE}/runtime/drive_files/{task_id}_*")
+        if hits:
+            return hits[0]
+    except Exception:
+        pass
+    return direct
+
+async def _p6d_handle_topic2_image_estimate_20260504(conn, task, chat_id, topic_id):
+    task_id = _p6d_s_20260504(_p6d_row_20260504(task, "id", ""), 200)
+    raw = _p6d_s_20260504(_p6d_row_20260504(task, "raw_input", ""), 200000)
+    payload = _p6d_json_20260504(raw)
+    payload["task_id"] = task_id
+    local_path = _p6d_local_file_20260504(task_id, payload)
+
+    try:
+        from core import sample_template_engine as _p6d_ste
+        fn = getattr(_p6d_ste, "handle_topic2_image_estimate_pipeline_p6d")
+        _history(conn, task_id, "P6D_TOPIC2_IMAGE_ESTIMATE_ROUTE_TAKEN")
+        _update_task(conn, task_id, state="IN_PROGRESS", error_message="")
+        conn.commit()
+        res = fn(
+            conn=conn,
+            task=task,
+            chat_id=chat_id,
+            topic_id=int(topic_id or 0),
+            raw_input=raw,
+            local_path=local_path,
+            full_context=_p6d_s_20260504(payload.get("caption"), 12000),
+        )
+        if asyncio.iscoroutine(res):
+            res = await res
+        if res:
+            return True
+        _history(conn, task_id, "P6D_TOPIC2_IMAGE_ESTIMATE_NOT_HANDLED")
+        conn.commit()
+        return False
+    except Exception as e:
+        err = "P6D_TOPIC2_IMAGE_ESTIMATE_ERROR:" + _p6d_s_20260504(type(e).__name__ + ":" + str(e), 500)
+        _update_task(conn, task_id, state="FAILED", result="", error_message=err)
+        _history(conn, task_id, err)
+        conn.commit()
+        _send_once_ex(conn, task_id, str(chat_id), "Смета по фото не выполнена. Ошибка маршрута распознавания изображения", _p6d_row_20260504(task, "reply_to_message_id", None), "p6d_image_estimate_error")
+        return True
+
+async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
+    if chat_id is None:
+        chat_id = _p6d_row_20260504(task, "chat_id", None)
+    if topic_id is None:
+        topic_id = _p6d_row_20260504(task, "topic_id", 0)
+    try:
+        topic_id = int(topic_id or 0)
+    except Exception:
+        topic_id = 0
+
+    if _p6d_is_topic2_image_estimate_20260504(task, topic_id):
+        handled = await _p6d_handle_topic2_image_estimate_20260504(conn, task, chat_id, topic_id)
+        if handled:
+            return True
+
+    if _P6D_ORIG_HANDLE_IN_PROGRESS_20260504:
+        return await _P6D_ORIG_HANDLE_IN_PROGRESS_20260504(conn, task, chat_id, topic_id)
+    return None
+# === END_P6D_IMAGE_ESTIMATE_TECHNADZOR_PHOTO_FULL_CLOSE_20260504_V1 ===
+
+# === P6D_MAIN_AFTER_ALL_RUNTIME_OVERLAYS_20260504_V1 ===
 if __name__ == "__main__":
     asyncio.run(main())
-# === END_P6C_MAIN_AFTER_ALL_RUNTIME_OVERLAYS_20260504_V1 ===
+# === END_P6D_MAIN_AFTER_ALL_RUNTIME_OVERLAYS_20260504_V1 ===

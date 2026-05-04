@@ -838,3 +838,73 @@ try:
 except Exception:
     pass
 # === END_CONTEXT_AWARE_FILE_INTAKE_V1_DB_LOOKUP ===
+
+
+# === P6D_FILE_INTAKE_IMAGE_ESTIMATE_KWARGS_CLOSE_20260504_V1 ===
+try:
+    _p6d_orig_route_file_20260504 = route_file
+except Exception:
+    _p6d_orig_route_file_20260504 = None
+
+def _p6d_fi_s(v, limit=50000):
+    try:
+        if v is None:
+            return ""
+        return str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+def _p6d_fi_low(v):
+    return _p6d_fi_s(v).lower().replace("ё", "е")
+
+def _p6d_fi_is_image(path, mime=""):
+    low = _p6d_fi_low(str(path) + " " + str(mime))
+    return low.startswith("image/") or any(x in low for x in (".jpg", ".jpeg", ".png", ".webp", ".heic", ".tif", ".tiff", ".bmp"))
+
+def _p6d_fi_is_estimate_text(raw):
+    low = _p6d_fi_low(raw)
+    return any(x in low for x in (
+        "смет", "стоимость", "расчет", "расчёт", "полная смета", "дом",
+        "фундамент", "плита", "каркас", "кровля", "стены", "отделка", "санузел"
+    ))
+
+async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *args, **kwargs):
+    import inspect
+    fp = _p6d_fi_s(file_path, 3000)
+    raw_input = _p6d_fi_s(kwargs.get("raw_input") or kwargs.get("caption") or kwargs.get("user_text") or kwargs.get("prompt") or "", 12000)
+    mime_type = _p6d_fi_s(kwargs.get("mime_type") or "", 500)
+    final_intent = _p6d_fi_s(intent or kwargs.get("intent") or "", 100)
+
+    if int(topic_id or 0) == 2 and _p6d_fi_is_image(fp, mime_type) and _p6d_fi_is_estimate_text(raw_input):
+        try:
+            from core import sample_template_engine as _ste
+            fake_task = {"id": str(task_id), "raw_input": raw_input, "topic_id": int(topic_id or 0), "input_type": "drive_file"}
+            res = _ste.handle_topic2_image_estimate_pipeline_p6d(
+                conn=kwargs.get("conn"),
+                task=fake_task,
+                chat_id=kwargs.get("chat_id"),
+                topic_id=int(topic_id or 0),
+                raw_input=raw_input,
+                local_path=fp,
+                full_context=raw_input,
+            )
+            if inspect.isawaitable(res):
+                res = await res
+            if res:
+                return {"success": True, "intent": "estimate", "engine": "P6D_IMAGE_ESTIMATE_FROM_PHOTO_FULL_CLOSE_20260504_V1", "text": "image estimate handled"}
+        except Exception as e:
+            return {"success": False, "error": "P6D_IMAGE_ESTIMATE_ROUTE_FAILED:" + str(e)[:500]}
+
+    if _p6d_orig_route_file_20260504 is None:
+        return {"success": False, "error": "P6D_ORIGINAL_ROUTE_FILE_MISSING"}
+
+    try:
+        res = _p6d_orig_route_file_20260504(fp, task_id, topic_id, final_intent or intent, fmt, *args, **kwargs)
+    except TypeError:
+        clean_kwargs = {k: v for k, v in kwargs.items() if k not in ("raw_input", "caption", "user_text", "prompt", "mime_type", "conn", "chat_id")}
+        res = _p6d_orig_route_file_20260504(fp, task_id, topic_id, final_intent or intent, fmt, *args, **clean_kwargs)
+
+    if inspect.isawaitable(res):
+        res = await res
+    return res
+# === END_P6D_FILE_INTAKE_IMAGE_ESTIMATE_KWARGS_CLOSE_20260504_V1 ===

@@ -5800,3 +5800,140 @@ def _p2_create_xlsx(task_id, p, rows, prices=None, price_status=""):
     wb.save(out)
     return str(out)
 # === END_P6C_ESTIMATE_CLEAN_XLSX_AND_IMAGE_CAPTION_ROUTE_20260504_V1 ===
+
+
+# === P6D_IMAGE_ESTIMATE_FROM_PHOTO_FULL_CLOSE_20260504_V1 ===
+import json as _p6d_img_json
+import re as _p6d_img_re
+import inspect as _p6d_img_inspect
+from pathlib import Path as _p6d_img_Path
+
+_P6D_IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".webp", ".heic", ".tif", ".tiff", ".bmp")
+
+def _p6d_img_s(v, limit=50000):
+    try:
+        if v is None:
+            return ""
+        return str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+def _p6d_img_low(v):
+    return _p6d_img_s(v).lower().replace("ё", "е")
+
+def _p6d_img_json_maybe(v):
+    if isinstance(v, dict):
+        return v
+    try:
+        return _p6d_img_json.loads(_p6d_img_s(v, 200000))
+    except Exception:
+        return {}
+
+def _p6d_img_is_image(file_name="", mime_type="", file_path=""):
+    low = _p6d_img_low(" ".join([file_name, mime_type, file_path]))
+    return low.startswith("image/") or any(low.endswith(x) or x in low for x in _P6D_IMAGE_EXTS)
+
+def _p6d_img_estimate_like(text):
+    low = _p6d_img_low(text)
+    if not low:
+        return False
+    return any(x in low for x in (
+        "смет", "стоимость", "расчет", "расчёт", "посчитать", "полная смета",
+        "дом", "барн", "house", "фундамент", "плита", "каркас", "кровля",
+        "стены", "отделка", "санузел", "террас", "клик", "фальц"
+    ))
+
+async def _p6d_img_vision_text(file_path, caption=""):
+    fp = _p6d_img_s(file_path, 2000)
+    cap = _p6d_img_s(caption, 8000)
+    if not fp or not _p6d_img_Path(fp).exists():
+        return ""
+    prompt = (
+        "Распознай строительный план/фото для расчёта сметы. "
+        "Верни только факты: габариты дома, площади помещений, общую площадь, этажность, подписи, размеры в метрах, террасы, санузлы, стены, кровлю. "
+        "Не придумывай отсутствующие размеры. Если размер не читается — так и напиши. "
+        f"ТЗ пользователя: {cap}"
+    )
+    chunks = []
+    try:
+        from core.gemini_vision import analyze_image_file
+        try:
+            res = analyze_image_file(fp, prompt)
+        except TypeError:
+            res = analyze_image_file(fp, None)
+        if _p6d_img_inspect.isawaitable(res):
+            res = await res
+        if res:
+            chunks.append("VISION:\n" + _p6d_img_s(res, 12000))
+    except Exception as e:
+        chunks.append("VISION_ERROR:" + _p6d_img_s(type(e).__name__ + ":" + str(e), 500))
+    try:
+        import pytesseract
+        from PIL import Image
+        txt = pytesseract.image_to_string(Image.open(fp), lang="rus+eng")
+        if txt:
+            chunks.append("OCR:\n" + _p6d_img_s(txt, 12000))
+    except Exception as e:
+        chunks.append("OCR_ERROR:" + _p6d_img_s(type(e).__name__ + ":" + str(e), 500))
+    return "\n\n".join(chunks).strip()
+
+def _p6d_img_has_dims(text):
+    low = _p6d_img_low(text)
+    if _p6d_img_re.search(r"\d+(?:[,.]\d+)?\s*(?:на|x|х|×|\*)\s*\d+(?:[,.]\d+)?", low):
+        return True
+    if _p6d_img_re.search(r"(?:габарит|размер|дом)\D{0,30}\d+(?:[,.]\d+)?\D{0,10}\d+(?:[,.]\d+)?", low):
+        return True
+    return False
+
+def _p6d_img_build_raw(caption, vision_text):
+    cap = _p6d_img_s(caption, 12000)
+    vis = _p6d_img_s(vision_text, 16000)
+    raw = (cap + "\n\nРАСПОЗНАНО С ФОТО:\n" + vis).strip()
+    raw = _p6d_img_re.sub(r"\b(\d+)\s*[xх×]\s*(\d+)\b", r"\1 на \2", raw, flags=_p6d_img_re.I)
+    raw = _p6d_img_re.sub(r"\s+", " ", raw).strip()
+    return raw
+
+async def handle_topic2_image_estimate_pipeline_p6d(conn, task, chat_id=None, topic_id=None, raw_input=None, local_path="", full_context=""):
+    payload = _p6d_img_json_maybe(raw_input if raw_input is not None else (task["raw_input"] if hasattr(task, "keys") and "raw_input" in task.keys() else ""))
+    caption = _p6d_img_s(payload.get("caption") or full_context or raw_input, 12000)
+    file_name = _p6d_img_s(payload.get("file_name"), 1000)
+    mime_type = _p6d_img_s(payload.get("mime_type"), 1000)
+    task_id = _p6d_img_s(payload.get("task_id") or (task["id"] if hasattr(task, "keys") and "id" in task.keys() else ""), 200)
+
+    if not _p6d_img_is_image(file_name, mime_type, local_path):
+        return False
+    if not _p6d_img_estimate_like(caption):
+        return False
+
+    vision_text = await _p6d_img_vision_text(local_path, caption)
+    merged_raw = _p6d_img_build_raw(caption, vision_text)
+
+    if not _p6d_img_has_dims(merged_raw):
+        msg = (
+            "Не могу корректно посчитать смету по фото: габариты/площади с изображения не распознаны.\n"
+            "Нужно прислать фото/план крупнее или текстом указать габариты дома, этажность и площадь"
+        )
+        try:
+            cols = [r[1] for r in conn.execute("PRAGMA table_info(tasks)").fetchall()]
+            sets = ["state='WAITING_CLARIFICATION'", "result=?", "error_message='P6D_IMAGE_DIMS_NOT_RECOGNIZED'", "updated_at=datetime('now')"]
+            conn.execute("UPDATE tasks SET " + ",".join(sets) + " WHERE id=?", (msg, task_id))
+            conn.execute("INSERT INTO task_history(task_id,action,created_at) VALUES (?,?,datetime('now'))", (task_id, "P6D_IMAGE_DIMS_NOT_RECOGNIZED"))
+            conn.commit()
+        except Exception:
+            pass
+        return True
+
+    fn = globals().get("handle_topic2_one_big_formula_pipeline_v1")
+    if not callable(fn):
+        raise RuntimeError("TOPIC2_ESTIMATE_PIPELINE_NOT_FOUND")
+
+    res = fn(conn=conn, task=task, chat_id=chat_id, topic_id=topic_id, raw_input=merged_raw, full_context=merged_raw)
+    if _p6d_img_inspect.isawaitable(res):
+        res = await res
+    try:
+        conn.execute("INSERT INTO task_history(task_id,action,created_at) VALUES (?,?,datetime('now'))", (task_id, "P6D_IMAGE_ESTIMATE_PIPELINE_DONE"))
+        conn.commit()
+    except Exception:
+        pass
+    return True if res is None else bool(res)
+# === END_P6D_IMAGE_ESTIMATE_FROM_PHOTO_FULL_CLOSE_20260504_V1 ===
