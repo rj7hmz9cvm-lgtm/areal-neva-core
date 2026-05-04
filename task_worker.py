@@ -8389,3 +8389,257 @@ async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
         return await _P6E2_ORIG_HANDLE_IN_PROGRESS_20260504(conn, task, chat_id, topic_id)
     return None
 # === END_P6E2_TASK_WORKER_FINAL_ROUTE_BEFORE_TECHNADZOR_FALLBACK_20260504_V1 ===
+
+
+# === P6H_PART_4_TASK_WORKER_HOOK_V1 ===
+# FACT: topic_5 = COLLECTING_VISIT_MATERIALS mode.
+# Photos/files → visit_buffer (не создают отдельные акты).
+# Drive folder link → set_active_folder.
+# "сделай разбор/акт" → flush buffer → route to technadzor engine.
+# Voice "[VOICE]" → annotate last buffered material.
+# Vision не запускается без EXTERNAL_PHOTO_ANALYSIS_ALLOWED=true.
+import logging as _p6h4tw_logging
+import json as _p6h4tw_json
+import re as _p6h4tw_re
+import inspect as _p6h4tw_inspect
+
+_P6H4TW_LOG = _p6h4tw_logging.getLogger("p6h4_task_worker_hook")
+
+_P6H4TW_DRIVE_FOLDER_RE = _p6h4tw_re.compile(
+    r"https://drive\.google\.com/drive/folders/([A-Za-z0-9_-]+)"
+)
+
+_P6H4TW_ACTIVE_FOLDER_TRIGGERS = (
+    "работаем по этой папке", "установи папку", "активная папка это",
+    "drive.google.com/drive/folders/",
+)
+
+_P6H4TW_SHOW_FOLDER_TRIGGERS = (
+    "покажи активную папку", "какая активная папка", "какая папка",
+    "текущая папка", "покажи папку",
+)
+
+_P6H4TW_FLUSH_TRIGGERS = (
+    "сделай акт", "собери акт", "сделай разбор", "сделай анализ",
+    "собери разбор", "разберись", "сделай отчет", "сделай отчёт",
+    "начни анализ", "сформируй акт",
+)
+
+
+def _p6h4tw_low(v):
+    return str(v or "").lower().replace("ё", "е")
+
+
+def _p6h4tw_get_topic_id(args, kwargs):
+    try:
+        if args and len(args) >= 2:
+            return int(args[1] or 0)
+    except Exception:
+        pass
+    try:
+        return int(kwargs.get("topic_id", 0) or 0)
+    except Exception:
+        return 0
+
+
+def _p6h4tw_get_chat_id(task, args, kwargs):
+    try:
+        if args and len(args) >= 1:
+            return str(args[0])
+    except Exception:
+        pass
+    try:
+        return str(kwargs.get("chat_id", ""))
+    except Exception:
+        pass
+    return _s(_task_field(task, "chat_id", ""))
+
+
+def _p6h4tw_parse_raw(task):
+    raw = _s(_task_field(task, "raw_input", ""))
+    try:
+        return _p6h4tw_json.loads(raw), raw
+    except Exception:
+        return {}, raw
+
+
+def _p6h4tw_ack_done(conn, task, chat_id, msg, kind):
+    tid = _s(_task_field(task, "id", ""))
+    reply = _task_field(task, "reply_to_message_id", None)
+    _send_once_ex(conn, tid, str(chat_id), msg, reply, kind)
+    _update_task(conn, tid, state="DONE", result=msg, error_message="")
+    _history(conn, tid, kind + ":DONE")
+
+
+async def _p6h4tw_handle_topic5(conn, task, args, kwargs):
+    chat_id = _p6h4tw_get_chat_id(task, args, kwargs)
+    topic_id_val = _p6h4tw_get_topic_id(args, kwargs)
+    if topic_id_val != 5:
+        return False
+
+    meta, raw_str = _p6h4tw_parse_raw(task)
+    input_type = _p6h4tw_low(_task_field(task, "input_type", ""))
+    raw_low = _p6h4tw_low(raw_str)
+
+    # ─── Photo / file → buffer ────────────────────────────────────────────────
+    if input_type == "drive_file":
+        source = meta.get("source", "")
+        mime = _p6h4tw_low(meta.get("mime_type", ""))
+        fname = meta.get("file_name", "")
+        drive_fid = meta.get("file_id", "")
+        drive_url = meta.get("drive_url", "") or meta.get("webViewLink", "")
+        is_photo = mime.startswith("image/") or fname.lower().endswith((".jpg", ".jpeg", ".png", ".webp", ".heic"))
+        is_doc = "pdf" in mime or fname.lower().endswith((".pdf", ".xlsx", ".xls", ".docx", ".doc"))
+        if source == "telegram" or is_photo or is_doc:
+            ftype = "PHOTO" if is_photo else "PDF" if "pdf" in mime else "DOCUMENT"
+            material = {
+                "source": source or "telegram",
+                "file_type": ftype,
+                "file_name": fname,
+                "drive_file_id": drive_fid,
+                "drive_url": drive_url,
+                "caption": meta.get("caption", ""),
+                "include_in_act": True,
+                "include_in_report": True,
+            }
+            try:
+                from core.technadzor_engine import visit_buffer_add as _p6h4tw_buf_add
+                count = _p6h4tw_buf_add(str(chat_id), 5, material)
+                _p6h4tw_ack_done(
+                    conn, task, chat_id,
+                    f"Добавлено в пакет ({count} шт.). Когда готово — скажи «сделай разбор».",
+                    "P6H4TW_PHOTO_BUFFERED",
+                )
+                return True
+            except Exception as _e:
+                _P6H4TW_LOG.warning("P6H4TW_BUF_ADD_ERR %s", _e)
+                return False
+
+    # ─── Text commands ────────────────────────────────────────────────────────
+    if input_type == "text":
+        # Folder link / trigger → set_active_folder
+        m_drive = _P6H4TW_DRIVE_FOLDER_RE.search(raw_str)
+        if m_drive or any(t in raw_low for t in _P6H4TW_ACTIVE_FOLDER_TRIGGERS):
+            folder_id = m_drive.group(1) if m_drive else ""
+            folder_name = ""
+            if folder_id:
+                try:
+                    from core.topic_drive_oauth import get_drive_service as _p6h4tw_drv
+                    svc = _p6h4tw_drv(chat_id=str(chat_id), topic_id=5)
+                    info = svc.files().get(fileId=folder_id, fields="name").execute()
+                    folder_name = info.get("name", "")
+                except Exception:
+                    pass
+            try:
+                from core.technadzor_engine import set_active_folder as _p6h4tw_sf
+                _p6h4tw_sf(str(chat_id), 5, {
+                    "folder_id": folder_id,
+                    "folder_name": folder_name,
+                    "source_text": raw_str[:500],
+                })
+                reply_text = f"Активная папка установлена: {folder_name or folder_id or '(из текста)'}."
+                _p6h4tw_ack_done(conn, task, chat_id, reply_text, "P6H4TW_ACTIVE_FOLDER_SET")
+                return True
+            except Exception as _e:
+                _P6H4TW_LOG.warning("P6H4TW_SET_FOLDER_ERR %s", _e)
+                return False
+
+        # Show active folder
+        if any(t in raw_low for t in _P6H4TW_SHOW_FOLDER_TRIGGERS):
+            try:
+                from core.technadzor_engine import get_active_folder as _p6h4tw_gf
+                af = _p6h4tw_gf(str(chat_id), 5)
+                if af:
+                    name = af.get("folder_name") or af.get("folder_id", "(нет имени)")
+                    fid = af.get("folder_id", "")
+                    link = f"https://drive.google.com/drive/folders/{fid}" if fid else "—"
+                    msg = f"Активная папка: {name}\n{link}"
+                else:
+                    msg = "Активная папка не установлена. Пришли ссылку на папку."
+            except Exception as _e:
+                msg = "Ошибка при чтении активной папки"
+                _P6H4TW_LOG.warning("P6H4TW_SHOW_FOLDER_ERR %s", _e)
+            _p6h4tw_ack_done(conn, task, chat_id, msg, "P6H4TW_SHOW_FOLDER")
+            return True
+
+        # Flush + route to technadzor
+        if any(t in raw_low for t in _P6H4TW_FLUSH_TRIGGERS):
+            try:
+                from core.technadzor_engine import visit_buffer_flush as _p6h4tw_flush
+                from core.technadzor_engine import visit_buffer_count as _p6h4tw_count
+                count = _p6h4tw_count(str(chat_id), 5)
+                if count == 0:
+                    _p6h4tw_ack_done(
+                        conn, task, chat_id,
+                        "Буфер пуст — сначала пришли фото или файлы.",
+                        "P6H4TW_FLUSH_EMPTY",
+                    )
+                    return True
+                materials = _p6h4tw_flush(str(chat_id), 5)
+                lines = ["VISIT_PACKAGE:"]
+                for i, m in enumerate(materials, 1):
+                    fn = m.get("file_name", f"файл {i}")
+                    url = m.get("drive_url", "")
+                    note = (m.get("caption", "") or m.get("voice_comment", "") or "").strip()
+                    line = f"  {i}. {fn}"
+                    if url:
+                        line += f" {url}"
+                    if note:
+                        line += f" — {note}"
+                    lines.append(line)
+                package_text = "\n".join(lines)
+                tid = _s(_task_field(task, "id", ""))
+                conn.execute(
+                    "UPDATE tasks SET raw_input=?, input_type='text', updated_at=datetime('now') WHERE id=?",
+                    (package_text, tid),
+                )
+                conn.commit()
+                _history(conn, tid, f"P6H4TW_VISIT_FLUSH_INJECT:count={len(materials)}")
+                _P6H4TW_LOG.info("P6H4TW_FLUSH_INJECTED chat=%s count=%s", chat_id, len(materials))
+            except Exception as _e:
+                _P6H4TW_LOG.warning("P6H4TW_FLUSH_ERR %s", _e)
+            return False  # pass to original with updated raw_input
+
+        # Voice annotation: bind to last buffered material
+        if raw_str.startswith("[VOICE]"):
+            import os as _p6h4tw_os
+            _bpath = f"/root/.areal-neva-core/data/technadzor/buf_{chat_id}_5.json"
+            try:
+                if _p6h4tw_os.path.exists(_bpath):
+                    with open(_bpath, "r", encoding="utf-8") as _bf:
+                        _bd = _p6h4tw_json.load(_bf)
+                    mats = _bd.get("materials", [])
+                    if mats:
+                        voice_txt = raw_str[7:].strip()
+                        mats[-1]["voice_comment"] = voice_txt
+                        _bd["materials"] = mats
+                        with open(_bpath, "w", encoding="utf-8") as _bf:
+                            _p6h4tw_json.dump(_bd, _bf, ensure_ascii=False, indent=2)
+                        _p6h4tw_ack_done(
+                            conn, task, chat_id,
+                            "Комментарий привязан к последнему файлу.",
+                            "P6H4TW_VOICE_ANNOTATED",
+                        )
+                        return True
+            except Exception as _e:
+                _P6H4TW_LOG.warning("P6H4TW_VOICE_ANNOTATE_ERR %s", _e)
+
+    return False
+
+
+try:
+    _P6H4TW_ORIG_HANDLE_NEW = _handle_new
+    if not getattr(_P6H4TW_ORIG_HANDLE_NEW, "_p6h4tw_wrapped", False):
+        async def _handle_new(conn, task, *args, **kwargs):
+            try:
+                if await _p6h4tw_handle_topic5(conn, task, args, kwargs):
+                    return True
+            except Exception as _p6h4tw_err:
+                _P6H4TW_LOG.warning("P6H4TW_HANDLE_NEW_ERR %s", _p6h4tw_err)
+            res = _P6H4TW_ORIG_HANDLE_NEW(conn, task, *args, **kwargs)
+            return await res if _p6h4tw_inspect.isawaitable(res) else res
+        _handle_new._p6h4tw_wrapped = True
+        _P6H4TW_LOG.info("P6H_PART_4_TASK_WORKER_HOOK_V1_INSTALLED")
+except Exception as _p6h4tw_install_err:
+    _P6H4TW_LOG.exception("P6H4TW_INSTALL_ERR %s", _p6h4tw_install_err)
+# === END_P6H_PART_4_TASK_WORKER_HOOK_V1 ===

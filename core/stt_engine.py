@@ -53,6 +53,18 @@ async def transcribe_voice(path: str) -> str:
     if not text:
         raise RuntimeError("STT returned empty transcript")
 
+    # === P6H_STT_HALLUCINATION_GUARD_V1 ===
+    _stt_hall_patterns = (
+        "субтитры", "субтитр", "titl", "продолжение следует",
+        "конец видео", "спасибо за просмотр", "подписывайтесь",
+        "thank you", "amara.org", "translated by", "caption",
+    )
+    _stt_low = text.lower()
+    if len(text) <= 6 or any(p in _stt_low for p in _stt_hall_patterns):
+        logger.warning("STT_HALLUCINATION_GUARD: rejected=%r", text[:80])
+        raise RuntimeError(f"STT_HALLUCINATION_REJECTED: {text[:60]!r}")
+    # === END_P6H_STT_HALLUCINATION_GUARD_V1 ===
+
     logger.info("STT ok transcript_len=%s", len(text))
 
     try:
