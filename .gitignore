@@ -48,3 +48,9 @@ data/project_templates/
 data/templates/estimate/
 data/templates/estimate/cache/
 *.tar.gz
+
+# P6H_TOPIC5 — runtime-generated technadzor data (regenerated on demand)
+data/templates/technadzor/ACTIVE__*.json
+data/templates/technadzor/objects/
+data/memory_files/technadzor_index_cache/
+outputs/technadzor_p6h/

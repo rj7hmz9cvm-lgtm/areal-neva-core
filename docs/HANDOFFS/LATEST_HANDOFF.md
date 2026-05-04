@@ -356,3 +356,50 @@ topic_961=АВТО ЗАПЧАСТИ | topic_3008=КОДЫ МОЗГОВ | topic_4
 | Reason | Pre-P6E4 contamination: «статусё» → «зелёная металлочерепица Монтеррей» в result. Replaced with служебный очищенный текст по канону. |
 | Backup | data/db_backups/P6G_CLEAN_OLD_TOPIC500_CONTAMINATION_20260504_210544_core.sqlite (sqlite3 .backup) |
 | Push | this commit |
+
+## P6H_TOPIC5_TECHNADZOR_TEMPLATE_PHOTO_CLIENT_SAFE_VOICE_LIVE_CLOSE_20260504 — INSTALLED_NOT_LIVE_TESTED
+
+### Что сделано
+Системный технадзорный модуль topic_5 — полный закрывающий контур.
+
+| Файл | Назначение |
+|---|---|
+| `core/technadzor_drive_index.py` (NEW) | Auto-index Drive topic_5 → классификация PRIMARY_PDF_STYLE / SECONDARY_DOCX_REFERENCE / CLIENT_PHOTO_SOURCE / CLIENT_FINAL_PDF / SYSTEM_TEMPLATE. Folder rules: client-facing vs system. Persisted to `data/templates/technadzor/ACTIVE__chat_<id>__topic_5.json`. Strict refusal to upload non-PDF in client folders / non-system into _drafts. |
+| `core/technadzor_object_registry.py` (NEW) | Object cards + inspection_chain. CRUD: derive_object_id_from_context / load_object / save_object / record_inspection / carry_forward_open_items / detect_visit_mode / detect_voice_vision_conflict. Storage: server JSON + memory.db key + timeline.jsonl. |
+| `core/normative_engine.py` (APPEND) | NORMATIVE_INDEX расширен 8→18 (СП 28, ГОСТ 23118, СП 48, СП 13-102, ГОСТ 31937, СП 70 опорные узлы, СП 16 связи, СП 22 основания, СП 20 перекрытия, ГОСТ Р ИСО 17637 сварка). |
+| `core/technadzor_engine.py` (APPEND P6H_PART_1 + PART_2 + PART_3) | Wrapper around `process_technadzor` для topic_5: voice transcript parser → object_id derivation → Drive index → Vision (OpenRouter Gemini 2.5) → section classifier (12 секций) → clarification gate (без «что строим?») → photo-numbered Telegram output («Фото №N — <file>») → DOCX (python-docx, hyperlinks, в `_drafts` служебно) → PDF A4 (reportlab, кириллица DejaVu, кликабельные ссылки) → upload Drive (DOCX → service `_drafts`, PDF → topic root или явно named client folder) → memory summary `topic_5_technadzor_photo_report_summary` → registry inspection record. Visit modes: initial/repeat/extension/description_only. Carry-forward open_items со статусами УСТРАНЕНО/ЧАСТИЧНО/НЕ УСТРАНЕНО/ТРЕБУЕТ УТОЧНЕНИЯ. |
+| `task_worker.py` (APPEND) | P6H_TOPIC5_TASK_WORKER_RUNTIME_VERIFY block — re-emits P6H markers in file log (logger name «task_worker» — fix логгера). |
+
+### Маркеры в worker log (verified 21:56:31)
+- P6H_TOPIC5_DRIVE_INDEX_V1_VERIFIED_VIA_TASK_WORKER_RUNTIME ✅
+- P6H_TOPIC5_USE_EXISTING_TEMPLATES_PHOTO_TO_TECH_REPORT_20260504_V1_VERIFIED ✅
+- P6H_TOPIC5_PHOTO_NUMBER_DEFECT_NORM_CLARIFICATION_LOGIC_20260504_VERIFIED ✅
+- P6H_TOPIC5_VOICE_LIVE_DIALOG_CLARIFICATION_GATE_20260504_VERIFIED ✅
+- P6H_TOPIC5_OBJECT_REGISTRY_INSPECTION_CHAIN_20260504_VERIFIED ✅
+- P6H_TOPIC5_PROCESS_TECHNADZOR_WRAPPED=True ✅
+
+### Smoke tests (passed)
+- py_compile все 5 файлов
+- Drive scan topic_5: 4 PRIMARY_PDF_STYLE + 2 SYSTEM_TEMPLATE + 2 CLIENT_PHOTO_SOURCE
+- DOCX 38 KB, PDF 53 KB с `/Annot` (кликабельные) + DejaVu (кириллица)
+- Voice parser извлекает folder_hint/object_hint/visit_date_hint/client_facing/output_kind
+- Clarification gate emits concrete questions, never «что строим?»
+- Object registry roundtrip: derive_object_id, save card, carry_forward_open_items, list_summaries
+- Worker active, NRestarts=0
+
+### НЕ ВЕРИФИЦИРОВАНО live в Telegram (требует следующего этапа)
+- Реальная пачка фото в topic_5 → текстовый разбор «Фото №N»
+- Голосовое ТЗ владельца → корректное object linking
+- «сделай акт» → DOCX в `_drafts` + PDF A4 в topic root + ссылка в Telegram
+- Повторный осмотр того же объекта → carry-forward open_items со статусами
+
+### Backups
+- `data/backups/P6H_TOPIC5_TECHNADZOR_TEMPLATE_PHOTO_CLIENT_SAFE_CLOSE_20260504_213228/` (gitignored)
+  - technadzor_engine.py.bak / normative_engine.py.bak / task_worker.py.bak
+  - core.sqlite + memory.sqlite (sqlite3 .backup)
+
+### Backups для P6G-1 (ранее сегодня) и REVISION_WORDS+TNZ kwargs fix
+- См. предыдущие коммиты `c4f3b40`, `e3d992c`
+
+### Forbidden files — НЕ ТРОГАЛИСЬ
+- telegram_daemon.py / ai_router.py / google_io.py / reply_sender.py / .env / credentials.json

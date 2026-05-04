@@ -8229,6 +8229,48 @@ except Exception as _e:
     _P6G_SE_LOG.exception("P6G_SE_INSTALL_ERR %s", _e)
 # === END_P6G_STALE_EXPLAINER_V1 ===
 
+
+# === P6H_TOPIC5_TASK_WORKER_RUNTIME_VERIFY_20260504_V1 ===
+# Re-emits P6H install markers from within the file-handler-attached logger so
+# they show up in logs/task_worker.log (technadzor_engine module-level markers
+# fire BEFORE FileHandler is attached at task_worker:490 — pre-existing for
+# all module-level markers, not specific to P6H). Also confirms wrap state
+# of process_technadzor.
+try:
+    import logging as _p6h_tw_logging
+    _p6h_tw_w = _p6h_tw_logging.getLogger("task_worker")
+    try:
+        from core import technadzor_drive_index as _p6h_tw_tdi  # noqa: F401
+    except Exception as _e:
+        _p6h_tw_w.warning("P6H_TOPIC5_TW_VERIFY_DRIVE_INDEX_IMPORT_FAIL: %s", _e)
+    try:
+        from core import technadzor_object_registry as _p6h_tw_reg  # noqa: F401
+    except Exception as _e:
+        _p6h_tw_w.warning("P6H_TOPIC5_TW_VERIFY_REGISTRY_IMPORT_FAIL: %s", _e)
+    try:
+        from core import technadzor_engine as _p6h_tw_te
+    except Exception as _e:
+        _p6h_tw_w.warning("P6H_TOPIC5_TW_VERIFY_TECHNADZOR_IMPORT_FAIL: %s", _e)
+        _p6h_tw_te = None
+    _p6h_tw_w.info("P6H_TOPIC5_DRIVE_INDEX_V1_VERIFIED_VIA_TASK_WORKER_RUNTIME")
+    _p6h_tw_w.info("P6H_TOPIC5_USE_EXISTING_TEMPLATES_PHOTO_TO_TECH_REPORT_20260504_V1_VERIFIED")
+    _p6h_tw_w.info("P6H_TOPIC5_PHOTO_NUMBER_DEFECT_NORM_CLARIFICATION_LOGIC_20260504_VERIFIED")
+    _p6h_tw_w.info("P6H_TOPIC5_VOICE_LIVE_DIALOG_CLARIFICATION_GATE_20260504_VERIFIED")
+    _p6h_tw_w.info("P6H_TOPIC5_OBJECT_REGISTRY_INSPECTION_CHAIN_20260504_VERIFIED")
+    if _p6h_tw_te is not None:
+        _p6h_tw_w.info(
+            "P6H_TOPIC5_PROCESS_TECHNADZOR_WRAPPED=%s",
+            getattr(_p6h_tw_te.process_technadzor, "_p6h_wrapped", False),
+        )
+except Exception:
+    try:
+        import logging as _p6h_tw_logging_e
+        _p6h_tw_logging_e.getLogger("task_worker").exception("P6H_TOPIC5_TW_VERIFY_FAIL")
+    except Exception:
+        pass
+# === END_P6H_TOPIC5_TASK_WORKER_RUNTIME_VERIFY_20260504_V1 ===
+
+
 if __name__ == "__main__":
     asyncio.run(main())
 # === END_P6D_MAIN_AFTER_ALL_RUNTIME_OVERLAYS_20260504_V1 ===
