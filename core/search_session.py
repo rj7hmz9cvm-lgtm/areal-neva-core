@@ -1314,3 +1314,73 @@ try:
 except Exception:
     pass
 # === END_P6C_SEARCH_CURRENT_QUERY_ONLY_NO_STALE_CONTEXT_20260504_V1 ===
+
+# === P6E2_SEARCH_CURRENT_QUERY_HARD_NO_STALE_NO_ESTIMATE_POLLUTION_20260504_V1 ===
+import re as _p6e2_search_re
+
+def _p6e2_search_s(v, limit=5000):
+    try:
+        if v is None:
+            return ""
+        return str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+def _p6e2_search_low(v):
+    return _p6e2_search_s(v).lower().replace("ё", "е")
+
+def _p6e2_search_category(q):
+    low = _p6e2_search_low(q)
+    if any(x in low for x in ("ваз", "2110", "2114", "сайлент", "саленблок", "сальник", "пыльник", "автозапчаст", "drom", "exist", "emex", "zzap")):
+        return "AUTO_PARTS", "drom, exist, emex, zzap, avito, auto.ru, профильные магазины"
+    if any(x in low for x in ("iphone", "айфон", "pixel", "телефон", "смартфон", "samsung", "xiaomi", "honor", "ноутбук")):
+        return "ELECTRONICS", "ozon, wildberries, яндекс маркет, dns, мвидео, avito, официальные магазины"
+    if any(x in low for x in ("бетон", "арматур", "пиломатериал", "утеплитель", "rockwool", "плита", "стройматериал")):
+        return "BUILDING_SUPPLY", "петрович, лемана про, всеинструменты, профильные поставщики, avito"
+    return "GENERAL", "официальные сайты, маркетплейсы, avito, профильные поставщики"
+
+def _p6e2_search_messages(q):
+    cat, sources = _p6e2_search_category(q)
+    user = f"""АКТУАЛЬНЫЙ ЗАПРОС:
+{_p6e2_search_s(q, 2500)}
+
+Категория: {cat}
+Искать только по текущему запросу
+Площадки: {sources}
+
+Верни только чистую выдачу поставщиков/вариантов:
+Поставщик | Площадка | Город | Цена | Наличие | Доставка | Ссылка | Проверено
+Запрещено возвращать старые товары, сметы, Excel, PDF, строительные позиции из другого запроса"""
+    return [{"role": "system", "content": "CURRENT_QUERY_ONLY. NO_STALE_CONTEXT. NO_ESTIMATE_OUTPUT. NO_INTERNAL_MARKERS."}, {"role": "user", "content": user}]
+
+try:
+    _P6E2_ORIG_SEARCH_RUN = SearchMonolithV2.run
+    async def _p6e2_search_run(self, payload, user_text, online_call, online_model, base_system_prompt=""):
+        payload = dict(payload or {})
+        q = _p6e2_search_s(user_text or payload.get("raw_input") or payload.get("normalized_input") or "", 5000)
+        payload["raw_input"] = q
+        payload["normalized_input"] = q
+        payload["pin_context"] = ""
+        payload["short_memory_context"] = ""
+        payload["long_memory_context"] = ""
+        payload["archive_context"] = ""
+        payload["search_context"] = ""
+        raw = await online_call(online_model, _p6e2_search_messages(q))
+        final = _p6e2_search_s(raw, 12000)
+        stale = ("rockwool", "каменная вата", "термодом", "утеплитель")
+        qlow = _p6e2_search_low(q)
+        flow = _p6e2_search_low(final)
+        if any(x in flow and x not in qlow for x in stale) and any(x in qlow for x in ("ваз", "2110", "2114", "сайлент", "саленблок", "сальник", "iphone", "pixel", "телефон")):
+            final = "Поиск заблокирован: ответ содержит старый товар из другой поисковой сессии. Повтори запрос одной строкой с товаром и регионом"
+        if not final:
+            final = "Подтверждённых вариантов по текущему запросу не найдено"
+        try:
+            import logging
+            logging.getLogger("ai_router").info("P6E2_SEARCH_CURRENT_QUERY_DONE chars=%s", len(final))
+        except Exception:
+            pass
+        return final
+    SearchMonolithV2.run = _p6e2_search_run
+except Exception:
+    pass
+# === END_P6E2_SEARCH_CURRENT_QUERY_HARD_NO_STALE_NO_ESTIMATE_POLLUTION_20260504_V1 ===

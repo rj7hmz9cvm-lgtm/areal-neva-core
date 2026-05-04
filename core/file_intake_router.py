@@ -908,3 +908,52 @@ async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *
         res = await res
     return res
 # === END_P6D_FILE_INTAKE_IMAGE_ESTIMATE_KWARGS_CLOSE_20260504_V1 ===
+
+# === P6E2_FILE_INTAKE_ROUTE_FILE_KWARGS_AND_IMAGE_ESTIMATE_20260504_V1 ===
+try:
+    _P6E2_ORIG_ROUTE_FILE_20260504 = route_file
+except Exception:
+    _P6E2_ORIG_ROUTE_FILE_20260504 = None
+
+def _p6e2_fi_s(v, limit=50000):
+    try:
+        if v is None:
+            return ""
+        return str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+def _p6e2_fi_low(v):
+    return _p6e2_fi_s(v).lower().replace("ё", "е")
+
+def _p6e2_fi_is_image(path="", mime_type="", file_name=""):
+    low = _p6e2_fi_low(" ".join([path or "", mime_type or "", file_name or ""]))
+    return low.startswith("image/") or any(x in low for x in (".jpg", ".jpeg", ".png", ".webp", ".heic", ".tif", ".tiff", ".bmp"))
+
+def _p6e2_fi_estimate_like(text):
+    low = _p6e2_fi_low(text)
+    return any(x in low for x in ("смет", "расчет", "расчёт", "посчитай", "стоимость", "полная смета"))
+
+async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *args, **kwargs):
+    raw_input = _p6e2_fi_s(kwargs.get("raw_input") or kwargs.get("caption") or kwargs.get("user_text") or kwargs.get("prompt") or "", 100000)
+    mime_type = _p6e2_fi_s(kwargs.get("mime_type") or "")
+    file_name = _p6e2_fi_s(kwargs.get("file_name") or kwargs.get("name") or "")
+    conn = kwargs.get("conn")
+    chat_id = kwargs.get("chat_id")
+    if int(topic_id or 0) == 2 and _p6e2_fi_is_image(file_path, mime_type, file_name) and _p6e2_fi_estimate_like(raw_input):
+        try:
+            from core.sample_template_engine import handle_topic2_image_estimate_p6e2
+            if conn is not None:
+                fake_task = {"id": str(task_id), "raw_input": raw_input, "input_type": "drive_file", "topic_id": int(topic_id or 0), "chat_id": chat_id}
+                ok = await handle_topic2_image_estimate_p6e2(conn=conn, task=fake_task, chat_id=chat_id, topic_id=topic_id, raw_input=raw_input, local_path=file_path, file_name=file_name, mime_type=mime_type)
+                if ok:
+                    return {"success": True, "intent": "estimate", "result_text": "Смета по фото сформирована"}
+        except Exception as e:
+            return {"success": False, "error": "P6E2_IMAGE_ESTIMATE_ROUTE_FAILED:" + str(e)[:500]}
+    if _P6E2_ORIG_ROUTE_FILE_20260504:
+        clean = dict(kwargs)
+        for k in ("raw_input", "caption", "user_text", "prompt", "mime_type", "conn", "chat_id", "file_name", "name"):
+            clean.pop(k, None)
+        return await _P6E2_ORIG_ROUTE_FILE_20260504(file_path, task_id, topic_id, intent, fmt, *args, **clean)
+    return {"success": False, "error": "P6E2_ORIGINAL_ROUTE_FILE_MISSING"}
+# === END_P6E2_FILE_INTAKE_ROUTE_FILE_KWARGS_AND_IMAGE_ESTIMATE_20260504_V1 ===

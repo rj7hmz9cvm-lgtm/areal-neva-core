@@ -5937,3 +5937,433 @@ async def handle_topic2_image_estimate_pipeline_p6d(conn, task, chat_id=None, to
         pass
     return True if res is None else bool(res)
 # === END_P6D_IMAGE_ESTIMATE_FROM_PHOTO_FULL_CLOSE_20260504_V1 ===
+
+# === P6E2_IMAGE_PLAN_ROOM_ESTIMATE_FULL_CLOSE_20260504_V1 ===
+import os as _p6e2_os
+import re as _p6e2_re
+import json as _p6e2_json
+import math as _p6e2_math
+import html as _p6e2_html
+import zipfile as _p6e2_zipfile
+from pathlib import Path as _p6e2_Path
+from datetime import datetime as _p6e2_datetime
+
+_P6E2_BASE = _p6e2_Path("/root/.areal-neva-core")
+_P6E2_OUT = _P6E2_BASE / "outputs" / "topic2_p6e_image_estimate"
+_P6E2_OUT.mkdir(parents=True, exist_ok=True)
+
+_P6E2_IMG_EXTS = (".jpg", ".jpeg", ".png", ".webp", ".heic", ".tif", ".tiff", ".bmp")
+
+def _p6e2_s(v, limit=50000):
+    try:
+        if v is None:
+            return ""
+        return str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+def _p6e2_low(v):
+    return _p6e2_s(v).lower().replace("ё", "е")
+
+def _p6e2_row(row, key, default=None):
+    try:
+        if hasattr(row, "keys") and key in row.keys():
+            return row[key]
+    except Exception:
+        pass
+    try:
+        return row[key]
+    except Exception:
+        return default
+
+def _p6e2_json_maybe(v):
+    if isinstance(v, dict):
+        return v
+    try:
+        data = _p6e2_json.loads(_p6e2_s(v, 200000))
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+def _p6e2_is_image(file_name="", mime_type="", file_path=""):
+    low = _p6e2_low(" ".join([file_name, mime_type, file_path]))
+    return low.startswith("image/") or any(x in low for x in _P6E2_IMG_EXTS)
+
+def _p6e2_estimate_like(text):
+    low = _p6e2_low(text)
+    return any(x in low for x in ("смет", "расчет", "расчёт", "посчитай", "стоимость", "цена", "сколько стоит", "полная смета"))
+
+def _p6e2_find_local_path(task_id, file_name, local_path=""):
+    if local_path and _p6e2_Path(local_path).exists():
+        return str(local_path)
+    if file_name:
+        p = _P6E2_BASE / "runtime" / "drive_files" / f"{task_id}_{file_name}"
+        if p.exists():
+            return str(p)
+    hits = list((_P6E2_BASE / "runtime" / "drive_files").glob(f"{task_id}_*"))
+    return str(hits[0]) if hits else ""
+
+async def _p6e2_ocr_image(path):
+    text = ""
+    try:
+        from PIL import Image
+        img = Image.open(path)
+        try:
+            img = img.convert("RGB")
+        except Exception:
+            pass
+        try:
+            import pytesseract
+            for lang in ("rus+eng", "eng", "rus"):
+                try:
+                    t = pytesseract.image_to_string(img, lang=lang)
+                    if t and len(t) > len(text):
+                        text = t
+                except Exception:
+                    pass
+        except Exception:
+            pass
+    except Exception:
+        pass
+    return _p6e2_s(text, 20000)
+
+def _p6e2_numbers(text):
+    out = []
+    for a, b in _p6e2_re.findall(r"(\d+(?:[,.]\d+)?)\s*(?:x|х|×|\*|на)\s*(\d+(?:[,.]\d+)?)", _p6e2_low(text)):
+        try:
+            out.append((float(a.replace(",", ".")), float(b.replace(",", "."))))
+        except Exception:
+            pass
+    return out
+
+def _p6e2_parse_plan(caption, ocr_text):
+    text = "\n".join([_p6e2_s(caption, 20000), _p6e2_s(ocr_text, 20000)])
+    low = _p6e2_low(text)
+    dims = _p6e2_numbers(text)
+    main_dim = dims[0] if dims else (0.0, 0.0)
+    if "размеры по плану" in low and dims:
+        main_dim = dims[-1]
+    floors = 2 if any(x in low for x in ("2 эта", "два эта", "двухэтаж", "2-этаж")) else 1
+    height = 0.0
+    m = _p6e2_re.search(r"высот[а-я\s]*(\d+(?:[,.]\d+)?)\s*м", low)
+    if m:
+        try:
+            height = float(m.group(1).replace(",", "."))
+        except Exception:
+            height = 0.0
+    foundation = "монолитная плита" if "плит" in low else ""
+    frame = "каркас" if "каркас" in low else ""
+    facade = "клик-фальц" if any(x in low for x in ("клик фальц", "клик-фальц", "фальц")) else ""
+    terrace = any(x in low for x in ("террас", "терас"))
+    terrace_area = 0.0
+    for a, b in dims[1:]:
+        if a * b < main_dim[0] * main_dim[1]:
+            terrace_area = max(terrace_area, a * b)
+    windows = len(_p6e2_re.findall(r"\bокн[оа]\b|\bокна\b|\bwindow\b", low))
+    doors = len(_p6e2_re.findall(r"\bдвер[ьи]\b|\bдверь\b|\bdoor\b", low))
+    rooms = []
+    room_words = (
+        "кухня", "гостиная", "спальня", "санузел", "ванная", "душевая",
+        "холл", "коридор", "прихожая", "котельная", "техпомещение",
+        "гардероб", "кабинет", "детская", "мастер"
+    )
+    for rw in room_words:
+        if rw in low:
+            area = 0.0
+            pat = rf"{rw}[^\n\r]{{0,40}}?(\d+(?:[,.]\d+)?)\s*(?:м2|м²|кв)"
+            mm = _p6e2_re.search(pat, low)
+            if mm:
+                try:
+                    area = float(mm.group(1).replace(",", "."))
+                except Exception:
+                    area = 0.0
+            rooms.append({"name": rw, "area": area})
+    if not rooms:
+        rooms = [{"name": "Общая площадь этажа", "area": round(main_dim[0] * main_dim[1], 2) if main_dim[0] and main_dim[1] else 0.0}]
+    return {
+        "text": text,
+        "dims": main_dim,
+        "all_dims": dims,
+        "floors": floors,
+        "height": height,
+        "foundation": foundation,
+        "frame": frame,
+        "facade": facade,
+        "terrace": terrace,
+        "terrace_area": terrace_area,
+        "windows": windows,
+        "doors": doors,
+        "rooms": rooms,
+        "needs_clarification": not bool(main_dim[0] and main_dim[1]),
+    }
+
+def _p6e2_rate(section, name, unit):
+    low = _p6e2_low(section + " " + name + " " + unit)
+    if "плит" in low or "бетон" in low:
+        return 9500
+    if "песчан" in low:
+        return 1800
+    if "каркас" in low or "стен" in low:
+        return 8500
+    if "кров" in low:
+        return 6200
+    if "фальц" in low or "фасад" in low:
+        return 5400
+    if "окн" in low:
+        return 35000
+    if "двер" in low:
+        return 18000
+    if "сануз" in low or "кафель" in low:
+        return 42000
+    if "элект" in low or "свет" in low:
+        return 9500
+    if "отоп" in low or "тепл" in low:
+        return 7500
+    if "террас" in low:
+        return 12500
+    if "отдел" in low or "имитац" in low or "покраск" in low:
+        return 6500
+    if "логист" in low:
+        return 1
+    if "наклад" in low:
+        return 1
+    return 0
+
+def _p6e2_build_rows(p):
+    a, b = p["dims"]
+    footprint = round(a * b, 2)
+    total_area = round(footprint * max(1, p["floors"]), 2)
+    height = p["height"] or 3.0
+    perimeter = round((a + b) * 2, 2) if a and b else 0.0
+    wall_area = round(perimeter * height * max(1, p["floors"]), 2) if perimeter else 0.0
+    rows = []
+
+    def add(section, name, unit, qty, note=""):
+        qty = round(float(qty or 0), 3)
+        price = _p6e2_rate(section, name, unit)
+        if price <= 0:
+            note = (note + "; " if note else "") + "цена не подтверждена, требуется уточнение"
+        total = round(qty * price, 2)
+        rows.append({
+            "section": section,
+            "name": name,
+            "unit": unit,
+            "qty": qty,
+            "price": price,
+            "total": total,
+            "source": "текущее ТЗ + OCR фото; цена базовая" if price else "требуется уточнение",
+            "note": note,
+        })
+
+    if footprint:
+        add("Фундамент", "Монолитная плита", "м²", footprint, "толщина/армирование — по ТЗ или уточнить")
+        add("Фундамент", "Песчаная подушка 300 мм с выпуском 1 м", "м²", round((a + 2) * (b + 2), 2), "выпуск принят только если указан в ТЗ")
+    if wall_area:
+        add("Стены", "Каркас наружных стен", "м²", wall_area, "высота взята из ТЗ/OCR либо 3 м по умолчанию")
+        if p["facade"]:
+            add("Фасад", "Клик-фальц по фасаду", "м²", wall_area, "указано в ТЗ")
+    if footprint:
+        add("Перекрытия", "Межэтажное перекрытие", "м²", footprint if p["floors"] > 1 else 0, "только при 2 этажах")
+        add("Кровля", "Кровля барнхаус", "м²", round(footprint * 1.18, 2), "коэффициент кровли базовый")
+        add("Чистовая отделка", "Внутренняя отделка по площади", "м²", total_area, "учитывается только если указана отделка")
+        add("Электрика", "Базовая электрика по помещениям", "м²", total_area, "если светильники указаны — уточнять по комнатам")
+        add("Отопление", "Тёплые полы / отопление", "м²", total_area, "тип отопления из ТЗ")
+    for r in p["rooms"]:
+        if r.get("area", 0) > 0:
+            add("Помещения", f"{r['name']} — отделка", "м²", r["area"], "посчитано отдельно по помещению")
+        else:
+            add("Помещения", f"{r['name']} — требуется площадь", "м²", 0, "помещение распознано, площадь не видна")
+    if p["windows"]:
+        add("Проёмы", "Окна", "шт", p["windows"], "количество распознано по тексту/OCR")
+    else:
+        add("Проёмы", "Окна", "шт", 0, "количество окон не распознано")
+    if p["doors"]:
+        add("Проёмы", "Двери", "шт", p["doors"], "количество распознано по тексту/OCR")
+    if p["terrace"]:
+        add("Терраса", "Терраса на металлических сваях и террасной доске", "м²", p["terrace_area"] or 0, "если площадь террасы не видна — требуется уточнение")
+    add("Логистика", "Логистика от СПб", "компл", 1, "20/70/100 км учитывать из ТЗ")
+    subtotal_now = sum(float(x["total"] or 0) for x in rows)
+    add("Накладные расходы", "Накладные расходы", "компл", round(subtotal_now * 0.12, 2), "12% от прямых затрат")
+    return rows
+
+def _p6e2_xlsx_col(n):
+    s = ""
+    while n:
+        n, r = divmod(n - 1, 26)
+        s = chr(65 + r) + s
+    return s
+
+def _p6e2_cell(v):
+    if isinstance(v, (int, float)) and not isinstance(v, bool):
+        return f"<v>{v}</v>"
+    txt = _p6e2_html.escape(_p6e2_s(v, 32000))
+    return f'<is><t xml:space="preserve">{txt}</t></is>'
+
+def _p6e2_sheet_xml(rows):
+    out = ['<?xml version="1.0" encoding="UTF-8" standalone="yes"?>']
+    out.append('<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>')
+    for r_idx, row in enumerate(rows, 1):
+        out.append(f'<row r="{r_idx}">')
+        for c_idx, val in enumerate(row, 1):
+            cell_ref = f"{_p6e2_xlsx_col(c_idx)}{r_idx}"
+            t = "" if isinstance(val, (int, float)) and not isinstance(val, bool) else ' t="inlineStr"'
+            out.append(f'<c r="{cell_ref}"{t}>{_p6e2_cell(val)}</c>')
+        out.append("</row>")
+    out.append("</sheetData></worksheet>")
+    return "".join(out)
+
+def _p6e2_create_xlsx(task_id, p, rows):
+    path = _P6E2_OUT / f"estimate_image_{str(task_id)[:8]}.xlsx"
+    meta_rows = [
+        ["Параметр", "Значение"],
+        ["Размер", f"{p['dims'][0]} x {p['dims'][1]} м"],
+        ["Этажей", p["floors"]],
+        ["Площадь застройки", round(p["dims"][0] * p["dims"][1], 2)],
+        ["Расчётная площадь", round(p["dims"][0] * p["dims"][1] * max(1, p["floors"]), 2)],
+        ["Фундамент", p["foundation"] or "UNKNOWN"],
+        ["Стены", p["frame"] or "UNKNOWN"],
+        ["Фасад", p["facade"] or "UNKNOWN"],
+        ["Окна", p["windows"]],
+        ["Двери", p["doors"]],
+        ["Терраса", "да" if p["terrace"] else "нет"],
+    ]
+    estimate_rows = [["Раздел", "Позиция", "Ед", "Кол-во", "Цена", "Сумма", "Источник", "Примечание"]]
+    for r in rows:
+        estimate_rows.append([r["section"], r["name"], r["unit"], r["qty"], r["price"], r["total"], r["source"], r["note"]])
+    total = sum(float(r["total"] or 0) for r in rows)
+    estimate_rows += [["", "", "", "", "Итого", total, "", ""], ["", "", "", "", "НДС 20%", round(total * 0.2, 2), "", ""], ["", "", "", "", "С НДС", round(total * 1.2, 2), "", ""]]
+    rooms_rows = [["Помещение", "Площадь", "Статус"]]
+    for r in p["rooms"]:
+        rooms_rows.append([r.get("name", ""), r.get("area", 0), "распознано" if r.get("area", 0) else "площадь не видна"])
+    prices_rows = [["Правило", "Значение"], ["Интернет-поиск", "не выполняется внутри image-патча; если цена не подтверждена — базовая ставка или уточнение"], ["Запрет мусора", "без старых поисковых сессий и без чужих смет"]]
+    content_types = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet3.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet4.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>"""
+    rels = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>"""
+    workbook = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="ТЗ" sheetId="1" r:id="rId1"/><sheet name="Смета" sheetId="2" r:id="rId2"/><sheet name="Помещения" sheetId="3" r:id="rId3"/><sheet name="Цены" sheetId="4" r:id="rId4"/></sheets></workbook>"""
+    workbook_rels = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet3.xml"/><Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet4.xml"/></Relationships>"""
+    with _p6e2_zipfile.ZipFile(path, "w", _p6e2_zipfile.ZIP_DEFLATED) as z:
+        z.writestr("[Content_Types].xml", content_types)
+        z.writestr("_rels/.rels", rels)
+        z.writestr("xl/workbook.xml", workbook)
+        z.writestr("xl/_rels/workbook.xml.rels", workbook_rels)
+        z.writestr("xl/worksheets/sheet1.xml", _p6e2_sheet_xml(meta_rows))
+        z.writestr("xl/worksheets/sheet2.xml", _p6e2_sheet_xml(estimate_rows))
+        z.writestr("xl/worksheets/sheet3.xml", _p6e2_sheet_xml(rooms_rows))
+        z.writestr("xl/worksheets/sheet4.xml", _p6e2_sheet_xml(prices_rows))
+    return str(path)
+
+def _p6e2_create_pdf_text(task_id, p, rows):
+    path = _P6E2_OUT / f"estimate_image_{str(task_id)[:8]}.txt"
+    total = sum(float(r["total"] or 0) for r in rows)
+    lines = [
+        "ПРЕДВАРИТЕЛЬНАЯ СМЕТА ПО ФОТО / ПЛАНУ",
+        f"Дата: {_p6e2_datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        f"Размер: {p['dims'][0]} x {p['dims'][1]} м",
+        f"Этажей: {p['floors']}",
+        f"Площадь застройки: {round(p['dims'][0] * p['dims'][1], 2)} м²",
+        f"Расчётная площадь: {round(p['dims'][0] * p['dims'][1] * max(1, p['floors']), 2)} м²",
+        f"Позиций: {len(rows)}",
+        f"Итого: {total:,.0f} руб".replace(",", " "),
+        f"НДС 20%: {total * 0.2:,.0f} руб".replace(",", " "),
+        f"С НДС: {total * 1.2:,.0f} руб".replace(",", " "),
+        "",
+        "Непонятные параметры оставлены с нулевым количеством или базовой ставкой с пометкой",
+    ]
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return str(path)
+
+async def handle_topic2_image_estimate_p6e2(conn, task=None, chat_id=None, topic_id=None, raw_input=None, full_context=None, local_path="", file_name="", mime_type="", task_id=None, **kwargs):
+    if int(topic_id or 0) != 2:
+        return False
+    if task is None:
+        task = {}
+    tid = _p6e2_s(task_id or _p6e2_row(task, "id", ""))
+    if not tid:
+        return False
+    raw = _p6e2_s(raw_input if raw_input is not None else _p6e2_row(task, "raw_input", ""), 100000)
+    payload = _p6e2_json_maybe(raw)
+    caption = _p6e2_s(payload.get("caption") or full_context or raw, 50000)
+    fn = _p6e2_s(file_name or payload.get("file_name") or payload.get("name") or "")
+    mt = _p6e2_s(mime_type or payload.get("mime_type") or "")
+    if not (_p6e2_is_image(fn, mt, local_path) and _p6e2_estimate_like(caption)):
+        return False
+    lp = _p6e2_find_local_path(tid, fn, local_path or payload.get("local_path") or payload.get("file_path") or "")
+    ocr = await _p6e2_ocr_image(lp) if lp else ""
+    plan = _p6e2_parse_plan(caption, ocr)
+    if plan["needs_clarification"]:
+        msg = "Не вижу размеры объекта на фото/в ТЗ. Пришли размер в формате 7.8х9.0 или фото крупнее"
+        conn.execute("UPDATE tasks SET state='WAITING_CLARIFICATION', result=?, error_message='P6E2_IMAGE_DIMS_NOT_RECOGNIZED', updated_at=datetime('now') WHERE id=?", (msg, tid))
+        conn.execute("INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))", (tid, "P6E2_IMAGE_DIMS_NOT_RECOGNIZED"))
+        conn.commit()
+        return True
+    rows = _p6e2_build_rows(plan)
+    xlsx = _p6e2_create_xlsx(tid, plan, rows)
+    txt = _p6e2_create_pdf_text(tid, plan, rows)
+    total = sum(float(r["total"] or 0) for r in rows)
+    result = "\n".join([
+        "✅ Смета по фото/плану сформирована",
+        f"Файл: {fn or 'image'}",
+        f"Размер: {plan['dims'][0]}x{plan['dims'][1]} м",
+        f"Этажей: {plan['floors']}",
+        f"Площадь застройки: {round(plan['dims'][0] * plan['dims'][1], 2)} м²",
+        f"Расчётная площадь: {round(plan['dims'][0] * plan['dims'][1] * max(1, plan['floors']), 2)} м²",
+        f"Помещений распознано: {len(plan['rooms'])}",
+        f"Окна: {plan['windows']}",
+        f"Двери: {plan['doors']}",
+        f"Терраса: {'да' if plan['terrace'] else 'нет'}",
+        f"Позиций: {len(rows)}",
+        f"Итого: {total:,.0f} руб".replace(",", " "),
+        f"НДС 20%: {total * 0.2:,.0f} руб".replace(",", " "),
+        f"С НДС: {total * 1.2:,.0f} руб".replace(",", " "),
+        "",
+        f"Excel: {xlsx}",
+        f"TXT/PDF-source: {txt}",
+        "Если часть помещений/окон/дверей не видна — она помечена как требующая уточнения",
+    ])
+    conn.execute("UPDATE tasks SET state='DONE', result=?, error_message='', updated_at=datetime('now') WHERE id=?", (result, tid))
+    conn.execute("INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))", (tid, f"P6E2_IMAGE_ESTIMATE_DONE_ROWS_{len(rows)}"))
+    conn.commit()
+    return True
+
+try:
+    _P6E2_ORIG_HANDLE_TOPIC2_ONE_BIG = handle_topic2_one_big_formula_pipeline_v1
+except Exception:
+    _P6E2_ORIG_HANDLE_TOPIC2_ONE_BIG = None
+
+async def handle_topic2_one_big_formula_pipeline_v1(conn=None, task=None, chat_id=None, topic_id=None, raw_input=None, full_context=None, local_path="", file_name="", mime_type="", task_id=None, **kwargs):
+    if task is None and task_id:
+        task = {"id": str(task_id), "raw_input": raw_input or "", "input_type": kwargs.get("input_type") or "text", "topic_id": int(topic_id or 0), "chat_id": chat_id}
+    if task is None:
+        task = {}
+    try:
+        handled_img = await handle_topic2_image_estimate_p6e2(
+            conn=conn,
+            task=task,
+            chat_id=chat_id,
+            topic_id=topic_id,
+            raw_input=raw_input,
+            full_context=full_context,
+            local_path=local_path,
+            file_name=file_name,
+            mime_type=mime_type,
+            task_id=task_id,
+            **kwargs,
+        )
+        if handled_img:
+            return True
+    except Exception as e:
+        tid = _p6e2_s(task_id or _p6e2_row(task, "id", ""))
+        if conn is not None and tid:
+            err = "P6E2_IMAGE_ESTIMATE_ERROR:" + _p6e2_s(type(e).__name__ + ":" + str(e), 500)
+            conn.execute("UPDATE tasks SET state='FAILED', result=?, error_message=?, updated_at=datetime('now') WHERE id=?", (err, err, tid))
+            conn.execute("INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))", (tid, err))
+            conn.commit()
+            return True
+        raise
+    if _P6E2_ORIG_HANDLE_TOPIC2_ONE_BIG:
+        try:
+            return await _P6E2_ORIG_HANDLE_TOPIC2_ONE_BIG(conn=conn, task=task, chat_id=chat_id, topic_id=topic_id, raw_input=raw_input, full_context=full_context, **kwargs)
+        except TypeError:
+            tid = _p6e2_s(task_id or _p6e2_row(task, "id", ""))
+            return await _P6E2_ORIG_HANDLE_TOPIC2_ONE_BIG(conn, tid, str(chat_id or ""), int(topic_id or 0), raw_input or full_context or "", kwargs.get("input_type") or "text", _p6e2_row(task, "reply_to_message_id", None))
+    return False
+# === END_P6E2_IMAGE_PLAN_ROOM_ESTIMATE_FULL_CLOSE_20260504_V1 ===

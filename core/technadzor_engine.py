@@ -386,3 +386,148 @@ def process_technadzor(text: str = "", task_id: str = "", chat_id: str = "", top
         "history": "P6C_TECHNADZOR_ACT_CREATED",
     }
 # === END_P6C_TECHNADZOR_CONN_COMPAT_TEMPLATE_ACT_CLOSE_20260504_V1 ===
+
+# === P6E2_TECHNADZOR_FOLDER_AWARE_NO_DRIVE_POLLUTION_20260504_V1 ===
+import json as _p6e2_te_json
+import re as _p6e2_te_re
+from pathlib import Path as _p6e2_te_Path
+from datetime import datetime as _p6e2_te_datetime
+
+_P6E2_TE_BASE = _p6e2_te_Path("/root/.areal-neva-core")
+_P6E2_TE_OUT = _P6E2_TE_BASE / "outputs" / "technadzor"
+_P6E2_TE_TPL = _P6E2_TE_BASE / "data" / "templates" / "technadzor"
+_P6E2_TE_OUT.mkdir(parents=True, exist_ok=True)
+_P6E2_TE_TPL.mkdir(parents=True, exist_ok=True)
+
+def _p6e2_te_s(v, limit=50000):
+    try:
+        if v is None:
+            return ""
+        return str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+def _p6e2_te_low(v):
+    return _p6e2_te_s(v).lower().replace("ё", "е")
+
+def _p6e2_te_is_template(text, file_name=""):
+    low = _p6e2_te_low(text + " " + file_name)
+    return any(x in low for x in ("как образец", "образец написания", "прими это как факт", "возьми это как образец", "шаблон акта"))
+
+def _p6e2_te_extract_links(text):
+    return _p6e2_te_re.findall(r"https?://\S+", _p6e2_te_s(text, 50000))
+
+def _p6e2_te_read_file(path):
+    p = _p6e2_te_Path(_p6e2_te_s(path))
+    if not p.exists():
+        return ""
+    try:
+        if p.suffix.lower() == ".txt":
+            return p.read_text(encoding="utf-8", errors="ignore")[:50000]
+        if p.suffix.lower() == ".docx":
+            import docx
+            d = docx.Document(str(p))
+            return "\n".join(x.text for x in d.paragraphs)[:50000]
+        if p.suffix.lower() == ".pdf":
+            try:
+                import fitz
+                doc = fitz.open(str(p))
+                return "\n".join(page.get_text("text") for page in doc)[:50000]
+            except Exception:
+                return ""
+    except Exception:
+        return ""
+    return ""
+
+def _p6e2_te_tpl_path(chat_id, topic_id):
+    return _P6E2_TE_TPL / f"ACTIVE__chat_{chat_id}__topic_{int(topic_id or 0)}.json"
+
+def _p6e2_te_save_template(chat_id, topic_id, task_id, body, file_name, file_path, links):
+    data = {
+        "engine": "P6E2_TECHNADZOR_FOLDER_AWARE_NO_DRIVE_POLLUTION_20260504_V1",
+        "chat_id": str(chat_id),
+        "topic_id": int(topic_id or 0),
+        "task_id": str(task_id),
+        "file_name": _p6e2_te_s(file_name),
+        "file_path": _p6e2_te_s(file_path),
+        "drive_links_seen": links,
+        "saved_at": _p6e2_te_datetime.utcnow().isoformat() + "Z",
+        "template_text": _p6e2_te_s(body, 30000),
+    }
+    p = _p6e2_te_tpl_path(chat_id, topic_id)
+    p.write_text(_p6e2_te_json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    return str(p)
+
+def _p6e2_te_load_template(chat_id, topic_id):
+    p = _p6e2_te_tpl_path(chat_id, topic_id)
+    if not p.exists():
+        return {}
+    try:
+        return _p6e2_te_json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+def is_technadzor_intent(text: str = "", file_name: str = "") -> bool:
+    low = _p6e2_te_low(text + " " + file_name)
+    return any(x in low for x in ("технадзор", "акт", "осмотр", "выезд", "дефект", "замечан", "нарушен", "образец написания", "как образец", "прими это как факт"))
+
+def process_technadzor(text: str = "", task_id: str = "", chat_id: str = "", topic_id: int = 0, file_path: str = "", file_name: str = "", **kwargs):
+    raw = _p6e2_te_s(text, 50000)
+    extracted = _p6e2_te_read_file(file_path)
+    combined = "\n".join(x for x in (raw, extracted) if x).strip()
+    links = _p6e2_te_extract_links(combined)
+    task_id = _p6e2_te_s(task_id or kwargs.get("task_id") or kwargs.get("id") or "technadzor")
+    chat_id = _p6e2_te_s(chat_id or kwargs.get("chat_id") or "")
+    try:
+        topic_id = int(topic_id or kwargs.get("topic_id") or 0)
+    except Exception:
+        topic_id = 0
+    file_name = _p6e2_te_s(file_name or kwargs.get("file_name") or kwargs.get("name") or "")
+    file_path = _p6e2_te_s(file_path or kwargs.get("local_path") or "")
+
+    if _p6e2_te_is_template(raw, file_name):
+        tpl = _p6e2_te_save_template(chat_id, topic_id, task_id, combined, file_name, file_path, links)
+        return {
+            "ok": True,
+            "handled": True,
+            "status": "DONE",
+            "state": "DONE",
+            "result_text": f"Образец технадзора принят и сохранён\nФайл: {file_name or 'без файла'}\nШаблон: active topic_{topic_id}\nDrive-ссылки учтены: {len(links)}",
+            "message": "Образец технадзора принят и сохранён",
+            "artifact_path": tpl,
+            "history": "P6E2_TECHNADZOR_TEMPLATE_SAVED",
+        }
+
+    if not is_technadzor_intent(combined, file_name):
+        return {"ok": False, "handled": False, "reason": "NOT_TECHNADZOR"}
+
+    tpl = _p6e2_te_load_template(chat_id, topic_id)
+    tpl_note = "использован сохранённый образец" if tpl else "сохранённый образец не найден"
+    out = _P6E2_TE_OUT / f"TECHNADZOR_ACT__{str(task_id)[:8]}.txt"
+    body = "\n".join([
+        "АКТ ОСМОТРА ПО ФАКТУ ВЫЕЗДА",
+        "",
+        f"Дата формирования: {_p6e2_te_datetime.now().strftime('%d.%m.%Y %H:%M')}",
+        f"Файл: {file_name or 'без файла'}",
+        f"Источник: topic_{topic_id}",
+        f"Шаблон: {tpl_note}",
+        f"Drive-ссылки в исходных данных: {len(links)}",
+        "",
+        "Исходные данные:",
+        combined[:15000] if combined else "UNKNOWN",
+        "",
+        "Вывод технического надзора:",
+        "Документ сформирован по текущим данным и сохранён локально без записи мусора в Google Drive",
+    ])
+    out.write_text(body + "\n", encoding="utf-8")
+    return {
+        "ok": True,
+        "handled": True,
+        "status": "DONE",
+        "state": "DONE",
+        "result_text": f"Акт технадзора сформирован\nФайл: {file_name or 'без файла'}\nАртефакт: {out}",
+        "message": "Акт технадзора сформирован",
+        "artifact_path": str(out),
+        "history": "P6E2_TECHNADZOR_ACT_CREATED",
+    }
+# === END_P6E2_TECHNADZOR_FOLDER_AWARE_NO_DRIVE_POLLUTION_20260504_V1 ===

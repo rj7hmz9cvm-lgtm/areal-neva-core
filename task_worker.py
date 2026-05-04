@@ -7012,3 +7012,118 @@ async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
 if __name__ == "__main__":
     asyncio.run(main())
 # === END_P6D_MAIN_AFTER_ALL_RUNTIME_OVERLAYS_20260504_V1 ===
+
+# === P6E2_TASK_WORKER_FINAL_ROUTE_BEFORE_TECHNADZOR_FALLBACK_20260504_V1 ===
+try:
+    _P6E2_ORIG_HANDLE_IN_PROGRESS_20260504 = _handle_in_progress
+except Exception:
+    _P6E2_ORIG_HANDLE_IN_PROGRESS_20260504 = None
+
+def _p6e2_tw_s(v, limit=50000):
+    try:
+        if v is None:
+            return ""
+        return str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+def _p6e2_tw_low(v):
+    return _p6e2_tw_s(v).lower().replace("ё", "е")
+
+def _p6e2_tw_row(row, key, default=None):
+    try:
+        if hasattr(row, "keys") and key in row.keys():
+            return row[key]
+    except Exception:
+        pass
+    try:
+        return row[key]
+    except Exception:
+        return default
+
+def _p6e2_tw_json(raw):
+    try:
+        data = json.loads(_p6e2_tw_s(raw, 200000))
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+def _p6e2_tw_is_image(meta, raw):
+    low = _p6e2_tw_low(" ".join([_p6e2_tw_s(meta.get("file_name")), _p6e2_tw_s(meta.get("mime_type")), raw]))
+    return low.startswith("image/") or any(x in low for x in (".jpg", ".jpeg", ".png", ".webp", ".heic", ".tif", ".tiff", ".bmp"))
+
+def _p6e2_tw_estimate_like(text):
+    low = _p6e2_tw_low(text)
+    return any(x in low for x in ("смет", "расчет", "расчёт", "посчитай", "стоимость", "полная смета"))
+
+def _p6e2_tw_local_path(task_id, meta):
+    fn = _p6e2_tw_s(meta.get("file_name"))
+    lp = _p6e2_tw_s(meta.get("local_path") or meta.get("file_path") or "")
+    if lp and os.path.exists(lp):
+        return lp
+    if fn:
+        p = f"/root/.areal-neva-core/runtime/drive_files/{task_id}_{fn}"
+        if os.path.exists(p):
+            return p
+    try:
+        import glob
+        hits = glob.glob(f"/root/.areal-neva-core/runtime/drive_files/{task_id}_*")
+        return hits[0] if hits else ""
+    except Exception:
+        return ""
+
+async def _p6e2_tw_handle_topic2_image_estimate(conn, task, chat_id, topic_id):
+    task_id = _p6e2_tw_s(_p6e2_tw_row(task, "id", ""))
+    raw = _p6e2_tw_s(_p6e2_tw_row(task, "raw_input", ""), 100000)
+    meta = _p6e2_tw_json(raw)
+    caption = _p6e2_tw_s(meta.get("caption") or raw, 50000)
+    reply_to = _p6e2_tw_row(task, "reply_to_message_id", None)
+    if not (int(topic_id or 0) == 2 and _p6e2_tw_is_image(meta, raw) and _p6e2_tw_estimate_like(caption)):
+        return False
+    try:
+        from core.sample_template_engine import handle_topic2_image_estimate_p6e2
+        lp = _p6e2_tw_local_path(task_id, meta)
+        _history(conn, task_id, "P6E2_TOPIC2_IMAGE_ESTIMATE_ROUTE_TAKEN")
+        ok = await handle_topic2_image_estimate_p6e2(
+            conn=conn,
+            task=task,
+            chat_id=chat_id,
+            topic_id=topic_id,
+            raw_input=raw,
+            full_context=caption,
+            local_path=lp,
+            file_name=_p6e2_tw_s(meta.get("file_name")),
+            mime_type=_p6e2_tw_s(meta.get("mime_type")),
+        )
+        if ok:
+            try:
+                row = conn.execute("SELECT result,state FROM tasks WHERE id=?", (task_id,)).fetchone()
+                result = _p6e2_tw_s(row["result"] if hasattr(row, "keys") else row[0], 12000) if row else "Смета по фото обработана"
+                _send_once_ex(conn, task_id, str(chat_id), result, reply_to, "p6e2_topic2_image_estimate_result")
+            except Exception as e:
+                _history(conn, task_id, "P6E2_SEND_RESULT_ERR:" + _p6e2_tw_s(e, 300))
+            return True
+        return False
+    except Exception as e:
+        err = "P6E2_TOPIC2_IMAGE_ESTIMATE_ERROR:" + _p6e2_tw_s(type(e).__name__ + ":" + str(e), 500)
+        conn.execute("UPDATE tasks SET state='FAILED', result=?, error_message=?, updated_at=datetime('now') WHERE id=?", (err, err, task_id))
+        conn.execute("INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))", (task_id, err))
+        conn.commit()
+        _send_once_ex(conn, task_id, str(chat_id), "Смета по фото не выполнена. Ошибка расчётного маршрута", reply_to, "p6e2_topic2_image_estimate_error")
+        return True
+
+async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
+    if chat_id is None:
+        chat_id = _p6e2_tw_row(task, "chat_id", None)
+    if topic_id is None:
+        topic_id = _p6e2_tw_row(task, "topic_id", 0)
+    try:
+        topic_id = int(topic_id or 0)
+    except Exception:
+        topic_id = 0
+    if await _p6e2_tw_handle_topic2_image_estimate(conn, task, chat_id, topic_id):
+        return True
+    if _P6E2_ORIG_HANDLE_IN_PROGRESS_20260504:
+        return await _P6E2_ORIG_HANDLE_IN_PROGRESS_20260504(conn, task, chat_id, topic_id)
+    return None
+# === END_P6E2_TASK_WORKER_FINAL_ROUTE_BEFORE_TECHNADZOR_FALLBACK_20260504_V1 ===
