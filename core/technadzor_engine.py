@@ -599,8 +599,11 @@ def _p6f_tnz_norm_block(text):
 try:
     _P6F_TNZ_ORIG_PROCESS = process_technadzor
     if not getattr(_P6F_TNZ_ORIG_PROCESS, "_p6f_tnz_wrapped", False):
-        def process_technadzor(text="", task_id="", chat_id="", topic_id=0, file_path="", file_name=""):
-            res = _P6F_TNZ_ORIG_PROCESS(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id, file_path=file_path, file_name=file_name)
+        def process_technadzor(text="", task_id="", chat_id="", topic_id=0, file_path="", file_name="", **kwargs):
+            try:
+                res = _P6F_TNZ_ORIG_PROCESS(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs)
+            except TypeError:
+                res = _P6F_TNZ_ORIG_PROCESS(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id, file_path=file_path, file_name=file_name)
             try:
                 if isinstance(res, dict) and res.get("ok") and res.get("handled"):
                     raw_msg = res.get("message") or ""

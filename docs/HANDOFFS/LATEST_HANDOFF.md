@@ -329,3 +329,19 @@ topic_961=АВТО ЗАПЧАСТИ | topic_3008=КОДЫ МОЗГОВ | topic_4
 - Старый ошибочный result не отдаётся пользователю как готовая смета
 - Команды "доделай", "где смета", "смету в Excel", "ну что", "да сделай" поднимают последнюю валидную сметную задачу за 7 дней
 - Продолжение идёт через STROYKA V3: шаблон, лист, цены из шаблона, интернет-цены, выбор цены, подтверждение, XLSX/PDF
+
+## P6F_REVISION_WORDS_EXTEND_AND_TNZ_KWARGS_FIX_V2 — INSTALLED 2026-05-04 20:49 MSK
+
+### task_worker.py
+- `_P6E67_REVISION_WORDS` extended 24→36 words (added: «нормальн», «снова», «сделай», «ещё/еще раз», «заново», «повтори», «по новой», «сначала», «новой», «опять», «сделать», «переделать»)
+- Reason: live-test rowid 5257 «снова сделай нормально» проскочил мимо revision-detection до фикса
+
+### core/technadzor_engine.py
+- `process_technadzor` wrapper signature: добавлен `**kwargs` + try/except TypeError fallback
+- Reason: моя P6F-регрессия — `task_worker.py:6826` зовёт `process_technadzor(text=..., conn=conn, task=task)` с лишними kwargs, прежний wrapper падал TypeError
+
+### Verify
+- python3 -m py_compile: OK
+- worker restart: 2026-05-04 20:49:21 MSK
+- markers loaded in log: P6F_*_INSTALLED + P6G_*_INSTALLED ✅
+- smoke test: «нормальную смету ещё раз, снова сделай» → is_revision=True ✅
