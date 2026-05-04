@@ -2637,3 +2637,136 @@ def _p6h_allow_external_vision():
 
 _P6H2_LOG.info("P6H_EXTERNAL_VISION_GUARD_V1_INSTALLED allowed=%s", _P6H_EXTERNAL_VISION_ALLOWED)
 # ─── END P6H_EXTERNAL_VISION_GUARD_V1 ──────────────────────────────────────
+
+# ─── P6H_PART_4_VISIT_BUFFER_V1 ────────────────────────────────────────────
+# CANON: TECHNADZOR_DOMAIN_LOGIC_CANON_V2
+# ActiveTechnadzorFolder / VisitMaterial / visit_buffer_add / visit_buffer_flush
+
+import os as _p6h4_os
+import json as _p6h4_json
+import time as _p6h4_time
+import logging as _p6h4_logging
+
+_P6H4_LOG = _p6h4_logging.getLogger("task_worker")
+
+_P6H4_BASE = _p6h4_os.path.join(
+    _p6h4_os.path.dirname(_p6h4_os.path.dirname(_p6h4_os.path.abspath(__file__))),
+    "data", "technadzor"
+)
+
+
+def _p6h4_ensure():
+    _p6h4_os.makedirs(_P6H4_BASE, exist_ok=True)
+
+
+def _p6h4_buf_path(chat_id, topic_id):
+    _p6h4_ensure()
+    return _p6h4_os.path.join(_P6H4_BASE, f"buf_{chat_id}_{topic_id}.json")
+
+
+def _p6h4_folder_path(chat_id, topic_id):
+    _p6h4_ensure()
+    return _p6h4_os.path.join(_P6H4_BASE, f"active_folder_{chat_id}_{topic_id}.json")
+
+
+def visit_buffer_add(chat_id, topic_id, material: dict) -> int:
+    """Append VisitMaterial to persistent buffer. Returns new total count."""
+    path = _p6h4_buf_path(str(chat_id), int(topic_id))
+    try:
+        with open(path, "r", encoding="utf-8") as _f:
+            buf = _p6h4_json.load(_f)
+    except Exception:
+        buf = {"materials": [], "created_at": _p6h4_time.time()}
+    if "material_id" not in material:
+        material["material_id"] = f"{int(_p6h4_time.time() * 1000)}"
+    material.setdefault("added_at", _p6h4_time.time())
+    buf["materials"].append(material)
+    buf["updated_at"] = _p6h4_time.time()
+    with open(path, "w", encoding="utf-8") as _f:
+        _p6h4_json.dump(buf, _f, ensure_ascii=False, indent=2)
+    count = len(buf["materials"])
+    _P6H4_LOG.info("P6H4_VISIT_BUFFER_ADD chat=%s topic=%s count=%s", chat_id, topic_id, count)
+    return count
+
+
+def visit_buffer_flush(chat_id, topic_id) -> list:
+    """Return all buffered VisitMaterials and clear buffer."""
+    path = _p6h4_buf_path(str(chat_id), int(topic_id))
+    try:
+        with open(path, "r", encoding="utf-8") as _f:
+            buf = _p6h4_json.load(_f)
+        materials = buf.get("materials", [])
+        _p6h4_os.remove(path)
+        _P6H4_LOG.info("P6H4_VISIT_BUFFER_FLUSH chat=%s topic=%s count=%s", chat_id, topic_id, len(materials))
+        return materials
+    except Exception:
+        _P6H4_LOG.info("P6H4_VISIT_BUFFER_FLUSH_EMPTY chat=%s topic=%s", chat_id, topic_id)
+        return []
+
+
+def visit_buffer_count(chat_id, topic_id) -> int:
+    path = _p6h4_buf_path(str(chat_id), int(topic_id))
+    try:
+        with open(path, "r", encoding="utf-8") as _f:
+            buf = _p6h4_json.load(_f)
+        return len(buf.get("materials", []))
+    except Exception:
+        return 0
+
+
+def set_active_folder(chat_id, topic_id, folder_data: dict):
+    path = _p6h4_folder_path(str(chat_id), int(topic_id))
+    folder_data["set_at"] = _p6h4_time.time()
+    with open(path, "w", encoding="utf-8") as _f:
+        _p6h4_json.dump(folder_data, _f, ensure_ascii=False, indent=2)
+    _P6H4_LOG.info(
+        "P6H4_ACTIVE_FOLDER_SET chat=%s topic=%s name=%s",
+        chat_id, topic_id, folder_data.get("folder_name", "?"),
+    )
+
+
+def get_active_folder(chat_id, topic_id) -> dict:
+    path = _p6h4_folder_path(str(chat_id), int(topic_id))
+    try:
+        with open(path, "r", encoding="utf-8") as _f:
+            return _p6h4_json.load(_f)
+    except Exception:
+        return {}
+
+
+def process_drive_folder_batch(chat_id, topic_id, folder_id: str, folder_name: str = "") -> int:
+    """Scan Drive folder, add all files as VisitMaterials. Returns count added."""
+    added = 0
+    try:
+        from core.topic_drive_oauth import get_drive_service as _p6h4_get_drive
+        svc = _p6h4_get_drive(chat_id=str(chat_id), topic_id=int(topic_id))
+        items = svc.files().list(
+            q=f"'{folder_id}' in parents and trashed=false",
+            fields="files(id,name,mimeType,webViewLink)",
+            pageSize=200,
+        ).execute().get("files", [])
+        for item in items:
+            mime = item.get("mimeType", "")
+            if "folder" in mime:
+                continue
+            ftype = "PHOTO" if mime.startswith("image/") else "PDF" if "pdf" in mime else "OTHER"
+            mat = {
+                "source": "DRIVE",
+                "file_type": ftype,
+                "file_name": item.get("name", ""),
+                "drive_url": item.get("webViewLink", ""),
+                "drive_file_id": item.get("id", ""),
+                "include_in_act": True,
+                "include_in_report": True,
+                "group_label": folder_name or "",
+            }
+            visit_buffer_add(str(chat_id), int(topic_id), mat)
+            added += 1
+        _P6H4_LOG.info("P6H4_DRIVE_FOLDER_BATCH chat=%s topic=%s folder=%s added=%s", chat_id, topic_id, folder_id, added)
+    except Exception as _p6h4_batch_err:
+        _P6H4_LOG.warning("P6H4_DRIVE_FOLDER_BATCH_ERR %s", _p6h4_batch_err)
+    return added
+
+
+_P6H4_LOG.info("P6H_PART_4_VISIT_BUFFER_V1_INSTALLED")
+# ─── END P6H_PART_4_VISIT_BUFFER_V1 ─────────────────────────────────────────
