@@ -41,3 +41,10 @@ data/price_quotes/
 tools/*.bak_*
 docs/SHARED_CONTEXT/*.bak_*
 core/*.bak_*
+
+# CODE_AND_SYSTEM_CLOSE_20260504_NO_LIVE_TEST_V1 runtime/generated data
+data/db_backups/
+data/project_templates/
+data/templates/estimate/
+data/templates/estimate/cache/
+*.tar.gz
