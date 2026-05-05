@@ -10468,6 +10468,202 @@ except Exception:
     pass
 # === END_TOPIC_ISOLATION_P6C_TECHNADZOR_STRICT_GUARD_V1 ===
 
+
+# === FIX_TOPIC5_DRIVE_FILE_FULL_CANON_GUARD_V1 ===
+try:
+    import json as _t5df_json
+    import time as _t5df_time
+    import logging as _t5df_logging
+
+    _T5DF_LOG = _t5df_logging.getLogger("task_worker")
+    _T5DF_ORIG_HANDLE_NEW = _handle_new
+
+    def _t5df_s(v, limit=20000):
+        return "" if v is None else str(v).strip()[:limit]
+
+    def _t5df_low(v):
+        return _t5df_s(v).lower().replace("ё", "е")
+
+    def _t5df_row(row, key, default=""):
+        try:
+            if hasattr(row, "keys") and key in row.keys():
+                return row[key]
+        except Exception:
+            pass
+        return default
+
+    def _t5df_load_meta(raw):
+        try:
+            d = _t5df_json.loads(_t5df_s(raw, 80000))
+        except Exception:
+            return {}
+        if not isinstance(d, dict):
+            return {}
+
+        name = _t5df_s(d.get("file_name") or d.get("name") or "")
+        mime = _t5df_low(d.get("mime_type") or "")
+        ext = name.lower().rsplit(".", 1)[-1] if "." in name else ""
+
+        if "image" in mime or ext in ("jpg", "jpeg", "png", "webp", "heic"):
+            file_type = "PHOTO"
+        elif "pdf" in mime or ext == "pdf":
+            file_type = "PDF"
+        elif "word" in mime or ext in ("doc", "docx"):
+            file_type = "DOCX"
+        elif "sheet" in mime or ext in ("xls", "xlsx", "csv"):
+            file_type = "XLSX"
+        else:
+            file_type = "OTHER"
+
+        return {
+            "source": "TELEGRAM",
+            "file_type": file_type,
+            "file_name": name,
+            "mime_type": mime,
+            "source_drive_file_id": _t5df_s(d.get("file_id") or d.get("drive_file_id") or ""),
+            "telegram_message_id": _t5df_s(d.get("telegram_message_id") or d.get("message_id") or ""),
+            "reply_to_message_id": _t5df_s(d.get("telegram_message_id") or d.get("message_id") or ""),
+            "owner_comment": _t5df_s(d.get("caption") or ""),
+            "include_in_report": True,
+            "include_in_act": True,
+            "status": "PENDING",
+            "added_at": _t5df_time.time(),
+        }
+
+    def _t5df_find_material(buf, meta):
+        for m in buf.get("materials", []):
+            if meta.get("telegram_message_id") and _t5df_s(m.get("telegram_message_id")) == meta.get("telegram_message_id"):
+                return m
+            if meta.get("file_name") and _t5df_s(m.get("file_name")) == meta.get("file_name"):
+                return m
+        return None
+
+    def _t5df_copy_to_active_folder(src_id, name, folder_id):
+        from core.topic_drive_oauth import _oauth_service
+        svc = _oauth_service()
+        qname = _t5df_s(name).replace("'", "\\'")
+        found = svc.files().list(
+            q=f"'{folder_id}' in parents and name='{qname}' and trashed=false",
+            fields="files(id,name,webViewLink)",
+            pageSize=5,
+        ).execute().get("files", [])
+        if found:
+            fid = found[0]["id"]
+            return fid, found[0].get("webViewLink") or f"https://drive.google.com/file/d/{fid}/view?usp=drivesdk"
+
+        copied = svc.files().copy(
+            fileId=src_id,
+            body={"name": name, "parents": [folder_id]},
+            fields="id,name,webViewLink",
+        ).execute()
+        fid = copied["id"]
+        return fid, copied.get("webViewLink") or f"https://drive.google.com/file/d/{fid}/view?usp=drivesdk"
+
+    def _t5df_upsert_material(chat_id, meta):
+        active = _t5fc_active(chat_id)
+        buf = _t5fc_buf(chat_id)
+
+        mat = _t5df_find_material(buf, meta)
+        if not mat:
+            mat = dict(meta)
+            mat["material_id"] = f"m_{meta.get('telegram_message_id') or int(_t5df_time.time())}"
+            buf.setdefault("materials", []).append(mat)
+
+        mat["active_folder_id"] = _t5df_s(active.get("folder_id"))
+        mat["active_folder_name"] = _t5df_s(active.get("folder_name"))
+        mat["updated_at"] = _t5df_time.time()
+
+        if active.get("folder_id") and mat.get("source_drive_file_id") and not mat.get("drive_file_id"):
+            try:
+                fid, url = _t5df_copy_to_active_folder(mat["source_drive_file_id"], mat["file_name"], active["folder_id"])
+                mat["drive_file_id"] = fid
+                mat["drive_url"] = url
+                mat["status"] = "LINKED"
+            except Exception as e:
+                mat["copy_error"] = f"{type(e).__name__}: {_t5df_s(e, 300)}"
+                mat["status"] = "COPY_FAILED"
+
+        try:
+            _t5fc_enrich_materials(buf)
+        except Exception as e:
+            _T5DF_LOG.warning("FIX_TOPIC5_DRIVE_FILE_FULL_CANON_ENRICH_ERR %s", e)
+
+        _t5fc_jsave(_t5fc_buf_path(chat_id), buf)
+        return active, buf, mat
+
+    async def _handle_new(conn, task, *args, **kwargs):
+        task_id = _t5df_s(_t5df_row(task, "id"))
+        chat_id = _t5df_s(_t5df_row(task, "chat_id", args[0] if len(args) > 0 else ""))
+        topic_id = int(_t5df_row(task, "topic_id", args[1] if len(args) > 1 else 0) or 0)
+        input_type = _t5df_s(_t5df_row(task, "input_type", ""))
+        reply_to = _t5df_s(_t5df_row(task, "reply_to_message_id", ""))
+        raw = _t5df_s(_t5df_row(task, "raw_input", ""))
+
+        if topic_id == 5 and input_type in ("drive_file", "file", "document"):
+            meta = _t5df_load_meta(raw)
+            if meta and meta.get("file_name"):
+                caption = _t5df_s(meta.get("owner_comment") or "")
+                try:
+                    if caption and _t5fc_context_like(caption):
+                        _t5fc_save_context(chat_id, caption)
+                except Exception as e:
+                    _T5DF_LOG.warning("FIX_TOPIC5_DRIVE_FILE_FULL_CANON_CAPTION_CONTEXT_ERR %s", e)
+
+                active, buf, mat = _t5df_upsert_material(chat_id, meta)
+                ctx = buf.get("package_context", {})
+                folder_id = _t5df_s(active.get("folder_id"))
+                folder_name = _t5df_s(active.get("folder_name") or "не установлена")
+                object_name = _t5df_s(ctx.get("object_address") or ctx.get("object_name") or active.get("object_address") or active.get("object_name") or "UNKNOWN")
+                visit_basis = _t5df_s(ctx.get("visit_basis") or active.get("visit_basis") or "UNKNOWN")
+                source_request = _t5df_s(ctx.get("source_request") or active.get("source_request") or "UNKNOWN")
+                count = len(buf.get("materials", []))
+
+                if not folder_id:
+                    msg = "\n".join([
+                        "Файл принят в пакет технадзора, но активная папка не установлена",
+                        f"Файл: {meta.get('file_name')}",
+                        f"Тип: {meta.get('file_type')}",
+                        f"Объект / адрес: {object_name}",
+                        f"Основание: {visit_basis}",
+                        f"Источник заявки: {source_request}",
+                        f"Материалов в пакете: {count}",
+                        "К какой папке отнести материалы?",
+                    ])
+                    _t5fc_done(conn, task_id, chat_id, reply_to, msg, "topic5_drive_file_waiting_folder", "DONE")
+                    return
+
+                msg = "\n".join([
+                    "Файл принят в полный контур технадзора",
+                    f"Файл: {meta.get('file_name')}",
+                    f"Тип: {meta.get('file_type')}",
+                    f"Объект / адрес: {object_name}",
+                    f"Основание: {visit_basis}",
+                    f"Источник заявки: {source_request}",
+                    f"Папка: {folder_name}",
+                    f"https://drive.google.com/drive/folders/{folder_id}",
+                    f"Материалов в пакете: {count}",
+                    "Акт не формирую без команды: Сделай акт",
+                ])
+
+                if mat.get("copy_error"):
+                    msg += f"\nDrive copy error: {mat.get('copy_error')}"
+
+                _t5fc_done(conn, task_id, chat_id, reply_to, msg, "topic5_drive_file_full_canon_buffered", "DONE")
+                return
+
+        res = _T5DF_ORIG_HANDLE_NEW(conn, task, *args, **kwargs)
+        return await res if hasattr(res, "__await__") else res
+
+    _handle_new._topic5_drive_file_full_canon_guard_v1 = True
+    _T5DF_LOG.info("FIX_TOPIC5_DRIVE_FILE_FULL_CANON_GUARD_V1_INSTALLED")
+
+except Exception as _t5df_err:
+    try:
+        logging.getLogger("task_worker").exception("FIX_TOPIC5_DRIVE_FILE_FULL_CANON_GUARD_V1_INSTALL_ERR %s", _t5df_err)
+    except Exception:
+        pass
+# === END_FIX_TOPIC5_DRIVE_FILE_FULL_CANON_GUARD_V1 ===
+
 # === MOVE_MAIN_ENTRYPOINT_TO_END_V1 ===
 # All runtime patches (P6E2, P6H4TW, CANON_CLOSE, FULL_CANON_CLOSE) must be installed
 # before the event loop starts. Previously asyncio.run(main()) at line 8944 blocked them.
