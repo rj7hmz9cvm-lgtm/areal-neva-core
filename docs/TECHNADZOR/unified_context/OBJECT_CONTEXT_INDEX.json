@@ -1,0 +1,127 @@
+{
+  "version": "OBJECT_CONTEXT_INDEX_V1",
+  "updated_at": "2026-05-05",
+  "status": "ACTIVE",
+  "objects": [
+    {
+      "object_id": "KIEVSKOE_95",
+      "object_name": "Ангар Киевское шоссе",
+      "drive_folder_name": "Выезд ангар Киевское ш",
+      "drive_root": "1s2y5l2mJFTb7P90XVokErXYVzmoH-VtD",
+      "profile": "METAL_FRAME",
+      "tags": [
+        "OBJECT_CONTEXT",
+        "FOLLOWUP_INSPECTION_CHAIN",
+        "OWNER_STYLE_REFERENCE",
+        "METAL_FRAME_PROFILE",
+        "NEXT_INSPECTION_REFERENCE"
+      ],
+      "inspection_chain": [
+        {
+          "date": "12.03.2026",
+          "act_no": "12-03/26",
+          "status": "DRIVE_VERIFIED",
+          "drive_file": "Акт осмотра 12-03-26.pdf",
+          "drive_file_id": "1Cy-HJNW4Q7Us4iP7tVgjV_g5vIBWgv6D"
+        },
+        {
+          "date": "08.04.2026",
+          "act_no": null,
+          "status": "DRIVE_VERIFIED",
+          "drive_file": "Акто_смотра_по_факту_выезда_киевское_шоссе_08_04_26.pdf",
+          "drive_file_id": "14RvWCtH-_Bj3Jqo_vAOl3v70Z3AjYLAq",
+          "note": "duplicate_pdfs_found: 3 copies on Drive, content identical"
+        },
+        {
+          "date": "04.05.2026",
+          "act_no": "04-05/26",
+          "status": "DRIVE_VERIFIED",
+          "note": "61 photos downloaded to data/memory_files/technadzor_index_cache/IMG_5320.JPG..IMG_5381.JPG",
+          "photos_folder": "1sS1A6iHQHUwjqZGF43wdyRjoLwwAHPse",
+          "vision_status": "VISION_BLOCKED",
+          "act_created": false,
+          "act_blocker": "Vision blocked, owner decision required"
+        }
+      ],
+      "context_file": "docs/TECHNADZOR/unified_context/KIEVSKOE_95_OBJECT_CONTEXT.md"
+    },
+    {
+      "object_id": "SUSANINO",
+      "object_name": "Сусанино. Технадзор",
+      "drive_folder_name": "Сусанино. Технадзор",
+      "drive_root": "1s2y5l2mJFTb7P90XVokErXYVzmoH-VtD",
+      "profile": "GENERAL",
+      "tags": [
+        "OBJECT_CONTEXT",
+        "PROBLEM_OBJECT_CASE",
+        "BAD_PRACTICE_SIGNALS",
+        "CLIENT_CHAOS_INPUT_PATTERN"
+      ],
+      "inspection_chain": [
+        {
+          "date": "31.01.2025",
+          "act_no": null,
+          "status": "DRIVE_VERIFIED",
+          "note": "duplicate_PDF_detected"
+        }
+      ],
+      "leakage_rules": [
+        "use only inside own object context",
+        "not clean owner style canon",
+        "no defect leakage to other objects",
+        "photo sources: Фото Илья + Фото от заказчиков"
+      ],
+      "context_file": "docs/TECHNADZOR/unified_context/SUSANINO_OBJECT_CONTEXT.md"
+    },
+    {
+      "object_id": "NOVICHKOVO",
+      "object_name": "КП Новичково Александр",
+      "drive_folder_name": "КП _Новичково_ Александр",
+      "drive_root": "1s2y5l2mJFTb7P90XVokErXYVzmoH-VtD",
+      "profile": "FRAME_HOUSE",
+      "tags": [
+        "OBJECT_CONTEXT",
+        "FRAME_HOUSE_PROFILE",
+        "OWNER_STYLE_REFERENCE"
+      ],
+      "inspection_chain": [
+        {
+          "date": "12.02.2025",
+          "act_no": null,
+          "status": "DRIVE_VERIFIED",
+          "note": "windows / frame posts / OSB / rough floor / floor clearance / semi-dry screed base"
+        }
+      ],
+      "also_known_as": "Щеглово",
+      "context_file": "docs/TECHNADZOR/unified_context/NOVICHKOVO_OBJECT_CONTEXT.md"
+    },
+    {
+      "object_id": "PERSONAL_DOCS",
+      "object_name": "Документы личные работа НЕ ОРКЕСТР",
+      "drive_folder_name": "Документы личные работа НЕ ОРКЕСТР",
+      "drive_root": "1s2y5l2mJFTb7P90XVokErXYVzmoH-VtD",
+      "profile": "STYLE_PROFILE_ONLY",
+      "tags": [
+        "OWNER_ACT_STYLE_PROFILE_SOURCE",
+        "NOT_ACTIVE_OBJECT",
+        "NOT_CLIENT_FOLDER"
+      ],
+      "use_only_for": "OWNER_ACT_STYLE_PROFILE extraction",
+      "do_not_use_for": ["active technadzor", "object history", "defect reference"]
+    },
+    {
+      "object_id": "TEST_FOLDER",
+      "object_name": "тест надзор",
+      "drive_folder_id": "1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG",
+      "drive_root": "1s2y5l2mJFTb7P90XVokErXYVzmoH-VtD",
+      "profile": "TEST",
+      "tags": [
+        "TEST_ACTIVE_FOLDER",
+        "NOT_REFERENCE_SOURCE"
+      ],
+      "current_active": true,
+      "verified_task": "rowid_5276_DONE_2026-05-05",
+      "do_not_extract_style": true
+    }
+  ]
+}

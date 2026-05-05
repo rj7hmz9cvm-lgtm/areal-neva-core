@@ -1,0 +1,26 @@
+{
+  "version": "CHAT_EXPORT_TECHNADZOR_BINDING_V1",
+  "updated_at": "2026-05-05",
+  "status": "VERIFIED",
+
+  "exports": [
+    {
+      "source": "@tnz_msk",
+      "source_name": "Технадзор без Душнилова",
+      "author": "Павел Карабанов",
+      "type": "TELEGRAM_CHANNEL_EXPORT",
+      "role": "DOCUMENT_COMPOSITION_SKILL",
+      "cards_total": 324,
+      "cards_after_qa": 143,
+      "skill_file": "docs/TECHNADZOR/source_skills/tnz_msk/TECHNADZOR_DOCUMENT_COMPOSITION_SKILL_CLEAN.md",
+      "binding_file": "docs/TECHNADZOR/unified_context/TNZ_MSK_SKILL_BINDING.json",
+      "promotion_status": "SKILL_PACKAGE_CLEANED_NOT_CANON",
+      "what_it_provides": "образцы оформления, логика разделов, примеры формулировок",
+      "what_it_does_not_provide": ["normative base", "object history", "raw memory", "facts about inspected objects"]
+    }
+  ],
+
+  "usage_rules": {
+    "tnz_msk": "улучшение структуры документов и формулировок только; не нормативная база; не история объектов"
+  }
+}

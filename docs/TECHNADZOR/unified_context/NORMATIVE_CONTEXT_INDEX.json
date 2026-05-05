@@ -1,0 +1,117 @@
+{
+  "version": "NORMATIVE_CONTEXT_INDEX_V1",
+  "updated_at": "2026-05-05",
+  "status": "VERIFIED_FROM_OWNER_ACTS",
+  "note": "Нормы верифицированы из реальных актов владельца. Только те документы, которые присутствуют в normative_engine. Не изобретать пункты.",
+
+  "normative_documents": [
+    {
+      "code": "СП 16.13330.2017",
+      "title": "Стальные конструкции",
+      "profile": "METAL_FRAME",
+      "verified_in_acts": ["12-03/26", "08-04/26", "04-05/26"],
+      "in_normative_engine": true
+    },
+    {
+      "code": "СП 70.13330.2012",
+      "title": "Несущие и ограждающие конструкции",
+      "profile": "METAL_FRAME",
+      "verified_in_acts": ["12-03/26", "08-04/26", "04-05/26"],
+      "in_normative_engine": true
+    },
+    {
+      "code": "ГОСТ 23118-2019",
+      "title": "Конструкции стальные строительные",
+      "profile": "METAL_FRAME",
+      "verified_in_acts": ["12-03/26", "08-04/26", "04-05/26"],
+      "in_normative_engine": true
+    },
+    {
+      "code": "СП 28.13330.2017",
+      "title": "Защита строительных конструкций от коррозии",
+      "profile": "METAL_FRAME",
+      "verified_in_acts": ["12-03/26", "08-04/26", "04-05/26"],
+      "in_normative_engine": true
+    },
+    {
+      "code": "СП 22.13330.2016",
+      "title": "Основания зданий и сооружений",
+      "profile": "METAL_FRAME",
+      "verified_in_acts": ["12-03/26"],
+      "in_normative_engine": true
+    },
+    {
+      "code": "СП 45.13330.2017",
+      "title": "Земляные сооружения, основания и фундаменты",
+      "profile": "METAL_FRAME",
+      "verified_in_acts": ["12-03/26"],
+      "in_normative_engine": true
+    },
+    {
+      "code": "СП 63.13330.2018",
+      "title": "Бетонные и железобетонные конструкции",
+      "profile": "METAL_FRAME",
+      "verified_in_acts": ["12-03/26"],
+      "in_normative_engine": true
+    },
+    {
+      "code": "СП 17.13330.2017",
+      "title": "Кровли",
+      "profile": "METAL_FRAME",
+      "verified_in_acts": ["12-03/26", "08-04/26"],
+      "in_normative_engine": true
+    },
+    {
+      "code": "СП 50.13330.2012",
+      "title": "Тепловая защита зданий",
+      "profile": "METAL_FRAME",
+      "verified_in_acts": ["12-03/26"],
+      "in_normative_engine": true
+    },
+    {
+      "code": "СП 2.13130.2020",
+      "title": "Системы противопожарной защиты",
+      "profile": "METAL_FRAME",
+      "verified_in_acts": ["12-03/26"],
+      "in_normative_engine": true
+    },
+    {
+      "code": "ГОСТ Р 53295-2009",
+      "title": "Средства огнезащиты для стальных конструкций",
+      "profile": "METAL_FRAME",
+      "verified_in_acts": ["12-03/26"],
+      "in_normative_engine": true
+    },
+    {
+      "code": "ГОСТ 9.402-2004",
+      "title": "Покрытия лакокрасочные. Подготовка металлических поверхностей",
+      "profile": "METAL_FRAME",
+      "verified_in_acts": ["12-03/26", "08-04/26"],
+      "in_normative_engine": true
+    },
+    {
+      "code": "СП 20.13330.2016",
+      "title": "Нагрузки и воздействия",
+      "profile": "METAL_FRAME",
+      "verified_in_acts": [],
+      "in_normative_engine": true,
+      "note": "присутствует в normative_engine, не встречается явно в актах владельца"
+    },
+    {
+      "code": "ГОСТ Р ИСО 17637",
+      "title": "Контроль неразрушающий. Визуальный контроль соединений, выполненных сваркой плавлением",
+      "profile": "METAL_FRAME",
+      "verified_in_acts": [],
+      "in_normative_engine": true,
+      "note": "присутствует в normative_engine, не встречается явно в актах владельца"
+    },
+    {
+      "code": "ГОСТ 30971",
+      "title": "Швы монтажные узлов примыкания оконных блоков к стеновым проёмам",
+      "profile": "FRAME_HOUSE",
+      "verified_in_acts": [],
+      "in_normative_engine": false,
+      "note": "NOT_PRESENT_IN_NORMATIVE_ENGINE — кандидат для будущего добавления (Новичково)"
+    }
+  ]
+}

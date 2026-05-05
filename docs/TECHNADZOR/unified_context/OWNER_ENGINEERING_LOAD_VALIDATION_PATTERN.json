@@ -1,0 +1,25 @@
+{
+  "version": "OWNER_ENGINEERING_LOAD_VALIDATION_PATTERN_V1",
+  "updated_at": "2026-05-05",
+  "status": "SOURCE_FROM_OWNER_CONVERSATION",
+  "source_note": "Данные из текущей переписки с владельцем (2026-05-05). Не найдены в GitHub, chat_exports, CANON_FINAL, SHARED_CONTEXT.",
+
+  "pattern": {
+    "reference_load_kg_m2": 600,
+    "check_load_kg_m2": 1500,
+    "logic": "Если конструктив выдерживает 1500 кг/м² при норме 600 кг/м² — запас прочности подтверждён"
+  },
+
+  "usage": {
+    "type": "OWNER_ENGINEERING_APPROACH",
+    "not_normative": true,
+    "not_cite_as_sp_gost": true,
+    "apply_only_when": "владелец явно обозначил этот паттерн для текущего объекта"
+  },
+
+  "verification": {
+    "source": "owner_conversation_session_20260505",
+    "repo_search": "NOT_FOUND",
+    "normative_engine_match": "NOT_APPLICABLE"
+  }
+}

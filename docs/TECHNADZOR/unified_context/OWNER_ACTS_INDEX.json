@@ -1,0 +1,82 @@
+{
+  "version": "OWNER_ACTS_INDEX_V1",
+  "updated_at": "2026-05-05",
+  "status": "DRIVE_VERIFIED",
+  "author": "Кузнецов Илья Владимирович",
+  "note": "Все акты прочитаны с Drive в рамках текущей сессии",
+
+  "acts": [
+    {
+      "act_no": "12-03/26",
+      "date": "12.03.2026",
+      "object": "Ангар Киевское 95",
+      "object_id": "KIEVSKOE_95",
+      "drive_file": "Акт осмотра 12-03-26.docx",
+      "drive_file_id": "1DqcQmlCSLZIANsKhgwEV2pzbxKetT8ry",
+      "drive_pdf_id": "1Cy-HJNW4Q7Us4iP7tVgjV_g5vIBWgv6D",
+      "drive_folder": "Документы личные работа НЕ ОРКЕСТР",
+      "drive_folder_id": "1sTMg-2cJpWmjJLEj-4Y80brWl5e70AZk",
+      "visit_no": 1,
+      "text_read": true,
+      "status": "DRIVE_VERIFIED"
+    },
+    {
+      "act_no": "08-04/26",
+      "date": "08.04.2026",
+      "object": "Ангар Киевское 95",
+      "object_id": "KIEVSKOE_95",
+      "drive_file": "Акто смотра по факту выезда киевское шоссе 08.04.26.docx",
+      "drive_file_id": "1XFQcUbsilV_IQBGZ2NOMlNE2SMwhVjHB",
+      "drive_pdf_id": "14RvWCtH-_Bj3Jqo_vAOl3v70Z3AjYLAq",
+      "drive_folder": "Документы личные работа НЕ ОРКЕСТР",
+      "drive_folder_id": "1sTMg-2cJpWmjJLEj-4Y80brWl5e70AZk",
+      "visit_no": 2,
+      "text_read": true,
+      "status": "DRIVE_VERIFIED",
+      "note": "duplicate_pdfs_found: 3 копии на Drive, содержание идентично"
+    },
+    {
+      "act_no": "04-05/26",
+      "date": "04.05.2026",
+      "object": "Ангар Киевское 95",
+      "object_id": "KIEVSKOE_95",
+      "drive_file": "Акт осмотра ангара Киевское 95 04-05-2026",
+      "drive_file_id": "1HujRC3jiF7A9X3WkkUkLjLfEUSov1d0gjPlghA7Gt7k",
+      "drive_file_type": "Google Doc",
+      "drive_folder": "Документы личные работа НЕ ОРКЕСТР",
+      "drive_folder_id": "1sTMg-2cJpWmjJLEj-4Y80brWl5e70AZk",
+      "visit_no": 3,
+      "text_read": true,
+      "status": "DRIVE_VERIFIED",
+      "photos_folder_id": "1sS1A6iHQHUwjqZGF43wdyRjoLwwAHPse",
+      "photos_count": 61,
+      "photos_range": "IMG_5320.JPG — IMG_5381.JPG"
+    },
+    {
+      "act_no": null,
+      "date": "12.02.2025",
+      "object": "КП Новичково / Щеглово",
+      "object_id": "NOVICHKOVO",
+      "drive_file": "Акт осмотра Щеглово 12.02.25.pdf",
+      "drive_file_id": "1mqE0G-U5mB889IQMlh5e02UFFSkoADW9",
+      "drive_folder": "КП _Новичково_ Александр",
+      "drive_folder_id": "1CuVOcUtUbiaukbICP2_3A4BMQ9KxYCsa",
+      "visit_no": 1,
+      "text_read": true,
+      "status": "DRIVE_VERIFIED"
+    },
+    {
+      "act_no": null,
+      "date": "31.01.2025",
+      "object": "Сусанино",
+      "object_id": "SUSANINO",
+      "drive_file": "Акт осмотра Сусанино 31.01.25.pdf",
+      "drive_file_id": "1cEpy_Mrjr03J3dAgrCK_UZV_7Vqmu3vm",
+      "drive_folder": "Сусанино. Технадзор",
+      "visit_no": 1,
+      "text_read": true,
+      "status": "DRIVE_VERIFIED",
+      "note": "duplicate_PDF_detected"
+    }
+  ]
+}

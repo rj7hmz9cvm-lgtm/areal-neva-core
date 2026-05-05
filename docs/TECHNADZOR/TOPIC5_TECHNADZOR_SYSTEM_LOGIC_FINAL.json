@@ -1,0 +1,105 @@
+{
+  "version": "TOPIC5_TECHNADZOR_SYSTEM_LOGIC_FINAL_V1",
+  "updated_at": "2026-05-05",
+  "status": "FINAL_DOCUMENTED",
+  "topic": "topic_5",
+  "topic_name": "ТЕХНАДЗОР",
+  "main_principle": "Drive folder = work container. Telegram = owner explanation + control. Files = materials (not tasks). 61 photos = one visit = one act.",
+  "task_components": [
+    "OwnerInstruction",
+    "InputFiles",
+    "ActiveFolder",
+    "ObjectContext",
+    "PreviousActs"
+  ],
+  "material_paths": {
+    "PATH_A": "Drive folder → owner Telegram explanation → ActiveTechnadzorFolder → VisitPackage → one result",
+    "PATH_B": "Telegram files + voice → VisitBuffer → owner explanation → VisitPackage → one result"
+  },
+  "task_lifecycle": [
+    "owner creates/selects Drive folder",
+    "Оркестр opens ActiveTechnadzorFolder",
+    "owner uploads materials + explains via voice/text",
+    "Оркестр collects VisitMaterials (COLLECTING_VISIT_MATERIALS)",
+    "owner commands 'сделай разбор/акт/документ'",
+    "Оркестр assembles VisitPackage",
+    "ObjectContext loaded (history, previous acts)",
+    "Norms matched via normative_engine",
+    "One result output: text report / PDF / DOCX / XLSX",
+    "ObjectCard updated",
+    "Drive upload: final document only to topic folder"
+  ],
+  "drive_facts": {
+    "технадзор_root_id": "1s2y5l2mJFTb7P90XVokErXYVzmoH-VtD",
+    "технадзор_root_url": "https://drive.google.com/drive/folders/1s2y5l2mJFTb7P90XVokErXYVzmoH-VtD",
+    "topic_5_folder_id": "1yWIJdSrypH3BbIozCz-OAw1R6hmnMRHK",
+    "technadzor_system_id": "1vKQM0Z2qBmiKtgeyx95JaNEQAp5mJLOm",
+    "known_user_folders": [
+      "Сусанино. Технадзор",
+      "КП _Новичково_ Александр",
+      "Выезд ангар Киевское ш",
+      "Документы личные работа НЕ ОРКЕСТР",
+      "тест надзор"
+    ]
+  },
+  "system_folder_blacklist": [
+    "TECHNADZOR",
+    "ТЕХНАДЗОР",
+    "topic_5",
+    "_system",
+    "_tmp",
+    "_archive",
+    "_drafts",
+    "_templates",
+    "_manifests"
+  ],
+  "active_folder_state_file": "data/technadzor/active_folder_{chat_id}_{topic_id}.json",
+  "visit_buffer_file": "data/technadzor/buf_{chat_id}_{topic_id}.json",
+  "current_active_folder": {
+    "folder_id": "1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG",
+    "folder_name": "тест надзор",
+    "status": "TEST_ACTIVE_FOLDER",
+    "verified_task": "rowid_5276_DONE"
+  },
+  "remark_statuses": [
+    "новое замечание",
+    "подтверждено по фото",
+    "частично видно по фото",
+    "устранено",
+    "устранено частично",
+    "не устранено",
+    "требует доведения",
+    "не проверялось на текущем выезде",
+    "требует уточнения"
+  ],
+  "base_sections": [
+    "опорные узлы",
+    "сварные соединения",
+    "антикоррозионная защита",
+    "основание и водоотведение",
+    "крепления и узлы покрытия",
+    "связи / укосины / элементы жёсткости",
+    "бетонные и железобетонные конструкции",
+    "кровля / фасад / ограждающие конструкции",
+    "прочие замечания"
+  ],
+  "output_formats": ["PDF", "DOCX", "GoogleDocs", "TelegramText", "XLSX", "Appendix"],
+  "language_rules": {
+    "client_and_owner_output": "Russian only",
+    "code_internal": "English"
+  },
+  "vision_status": {
+    "EXTERNAL_PHOTO_ANALYSIS_ALLOWED": false,
+    "status": "VISION_BLOCKED_OWNER_DECISION_REQUIRED",
+    "reason": "OpenRouter Google 403 + no other Vision model authorized",
+    "fallback": "owner voice/text + previous acts + filenames/metadata"
+  },
+  "code_status": {
+    "visit_buffer": "VERIFIED",
+    "active_folder": "VERIFIED",
+    "folder_discovery": "LIVE_CLOSED_task5276",
+    "drive_batch_trigger": "INSTALLED_P6H4TW_BATCH_TRIGGER_V1",
+    "stt_hallucination_guard": "INSTALLED",
+    "vision_guard": "INSTALLED_EXTERNAL_PHOTO_ANALYSIS_ALLOWED_FALSE"
+  }
+}

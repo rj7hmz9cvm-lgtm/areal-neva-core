@@ -1,0 +1,81 @@
+{
+  "version": "TOPIC5_DOCUMENT_OUTPUT_CONTRACT_V1",
+  "updated_at": "2026-05-05",
+  "status": "CODE_AUDIT_DRAFT_NOT_LIVE_VERIFIED",
+  "source": "technadzor_engine.py audit + owner addendum 2026-05-05",
+
+  "output_types": [
+    {"type": "TEXT_REPORT", "status": "ACTIVE", "note": "рабочий путь"},
+    {"type": "PDF_ACT", "status": "NOT_IMPLEMENTED", "note": "local-check 2026-05-05: ModuleNotFoundError reportlab"},
+    {"type": "DOCX", "status": "NOT_IMPLEMENTED", "note": "local-check 2026-05-05: ModuleNotFoundError python-docx"},
+    {"type": "XLSX", "status": "UNVERIFIED"},
+    {"type": "GOOGLE_DOC", "status": "FUTURE_OPTIONAL_NOT_VERIFIED"},
+    {"type": "TELEGRAM_ONLY", "status": "ACTIVE", "note": "нет файла, только текст"}
+  ],
+
+  "document_statuses": [
+    "TELEGRAM_TEXT_REPORT_SENT",
+    "LOCAL_DRAFT_CREATED",
+    "DOCX_DRAFT_CREATED",
+    "PDF_GENERATION_NOT_IMPLEMENTED",
+    "DRIVE_UPLOAD_PENDING",
+    "DRIVE_UPLOAD_DONE",
+    "DRIVE_UPLOAD_FAILED",
+    "TELEGRAM_LINK_SENT",
+    "FALLBACK_SENT",
+    "CLIENT_DOCUMENT_DELIVERED"
+  ],
+
+  "done_rule": {
+    "done": "CLIENT_DOCUMENT_DELIVERED",
+    "not_done": [
+      "LOCAL_DRAFT_CREATED",
+      "DOCX_DRAFT_CREATED",
+      "DRIVE_UPLOAD_DONE without TELEGRAM_LINK_SENT"
+    ],
+    "conditions": [
+      "Document exists (PDF / DOCX / TEXT)",
+      "Uploaded to Drive (PDF/DOCX) OR text sent to Telegram (TEXT)",
+      "Owner/client received link or text in Telegram"
+    ]
+  },
+
+  "forbidden_patterns": [
+    "calling LOCAL_DRAFT_CREATED done",
+    "calling DOCX_DRAFT_CREATED done without Drive upload and Telegram link",
+    "claiming PDF generated without reportlab local-check",
+    "Drive upload without Telegram confirmation",
+    "sending /root/... path to client",
+    "placing DOCX in client_facing without explicit owner command"
+  ],
+
+  "delivery_chain": {
+    "entry": "task_worker._handle_in_progress",
+    "process": "process_technadzor (wrapper chain, 8 definitions)",
+    "build": "_p6h_build_* (text / docx / pdf)",
+    "drive_upload_fn": "technadzor_drive_index.upload_client_pdf_to_folder",
+    "drive_upload_fn_line": 383,
+    "drive_upload_fn_verified": true,
+    "fallback": "FALLBACK_SENT + error status in ObjectCard"
+  },
+
+  "packages_local_check_20260505": {
+    "reportlab": "NOT_INSTALLED",
+    "python_docx": "NOT_INSTALLED",
+    "dejavu_fonts": "PRESENT"
+  },
+
+  "file_naming": {
+    "docx_draft": "Черновик_акта_<объект>_<дата>.docx",
+    "pdf_final": "Акт_осмотра_<объект>_<дата>.pdf",
+    "xlsx_registry": "Реестр_замечаний_<объект>_<дата>.xlsx",
+    "date_format": "YYYYMMDD",
+    "object_name": "Russian name from ObjectCard"
+  },
+
+  "drive_placement": {
+    "client_facing_folder": "финальный PDF; DOCX только по явной команде владельца",
+    "topic5_system_folder": "служебные файлы, черновики, JSON манифесты",
+    "forbidden": "путь /root/... клиенту"
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "version": "TNZ_MSK_SKILL_BINDING_V1",
+  "updated_at": "2026-05-05",
+  "status": "VERIFIED",
+  "source_channel": "@tnz_msk",
+  "source_channel_name": "Технадзор без Душнилова",
+  "source_author": "Павел Карабанов",
+
+  "role": "DOCUMENT_COMPOSITION_SKILL",
+  "role_description": "Источник образцов заполнения документов и логики оформления актов технадзора",
+
+  "what_it_is": [
+    "образцы заполнения разделов актов",
+    "логика оформления замечаний",
+    "примеры формулировок",
+    "структура документов",
+    "паттерны работы с клиентом и подрядчиком"
+  ],
+
+  "what_it_is_not": [
+    "нормативная база (не СП/ГОСТ/ГОСТ Р)",
+    "история объектов (не object history)",
+    "raw memory системы",
+    "источник фактов об осмотренных объектах",
+    "замена normative_engine"
+  ],
+
+  "files": {
+    "raw": "docs/TECHNADZOR/source_skills/tnz_msk/TECHNADZOR_DOCUMENT_COMPOSITION_SKILL.md",
+    "clean": "docs/TECHNADZOR/source_skills/tnz_msk/TECHNADZOR_DOCUMENT_COMPOSITION_SKILL_CLEAN.md",
+    "clean_json": "docs/TECHNADZOR/source_skills/tnz_msk/TECHNADZOR_DOCUMENT_COMPOSITION_SKILL_CLEAN.json",
+    "linked_docs": "docs/TECHNADZOR/source_skills/tnz_msk/LINKED_DOCUMENTS_INDEX.json",
+    "source_index": "docs/TECHNADZOR/source_skills/tnz_msk/SOURCE_INDEX.json"
+  },
+
+  "qa_stats": {
+    "original_cards": 324,
+    "kept_after_qa": 143,
+    "rejected_noise": 181,
+    "needs_owner_review": 66
+  },
+
+  "promotion_status": "SKILL_PACKAGE_CLEANED_NOT_CANON",
+  "promotion_note": "Требует явного одобрения владельца перед повышением до CANON",
+
+  "normative_guard": "Только номер документа, если источник явно не указывает пункт. Не изобретать номера пунктов СП/ГОСТ.",
+
+  "usage_rule": "Использовать только для улучшения структуры и формулировок документов. Не использовать как источник нормативных требований или истории объектов."
+}

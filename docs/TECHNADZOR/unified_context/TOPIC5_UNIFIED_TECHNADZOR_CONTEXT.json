@@ -1,0 +1,44 @@
+{
+  "version": "TOPIC5_UNIFIED_TECHNADZOR_CONTEXT_V1",
+  "updated_at": "2026-05-05",
+  "status": "VERIFIED",
+
+  "context_files": {
+    "object_index": "docs/TECHNADZOR/unified_context/OBJECT_CONTEXT_INDEX.json",
+    "kievskoe_95": "docs/TECHNADZOR/unified_context/KIEVSKOE_95_OBJECT_CONTEXT.md",
+    "novichkovo": "docs/TECHNADZOR/unified_context/NOVICHKOVO_OBJECT_CONTEXT.md",
+    "susanino": "docs/TECHNADZOR/unified_context/SUSANINO_OBJECT_CONTEXT.md",
+    "owner_style_profile": "docs/TECHNADZOR/unified_context/OWNER_ACT_STYLE_PROFILE.md",
+    "owner_acts_index": "docs/TECHNADZOR/unified_context/OWNER_ACTS_INDEX.json",
+    "normative_index": "docs/TECHNADZOR/unified_context/NORMATIVE_CONTEXT_INDEX.json",
+    "tnz_msk_binding": "docs/TECHNADZOR/unified_context/TNZ_MSK_SKILL_BINDING.json",
+    "chat_export_binding": "docs/TECHNADZOR/unified_context/CHAT_EXPORT_TECHNADZOR_BINDING.json",
+    "load_validation_md": "docs/TECHNADZOR/unified_context/OWNER_ENGINEERING_LOAD_VALIDATION_PATTERN.md",
+    "load_validation_json": "docs/TECHNADZOR/unified_context/OWNER_ENGINEERING_LOAD_VALIDATION_PATTERN.json"
+  },
+
+  "system_docs": {
+    "system_logic_md": "docs/TECHNADZOR/TOPIC5_TECHNADZOR_SYSTEM_LOGIC_FINAL.md",
+    "system_logic_json": "docs/TECHNADZOR/TOPIC5_TECHNADZOR_SYSTEM_LOGIC_FINAL.json",
+    "output_contract_md": "docs/TECHNADZOR/TOPIC5_DOCUMENT_OUTPUT_CONTRACT.md",
+    "output_contract_json": "docs/TECHNADZOR/TOPIC5_DOCUMENT_OUTPUT_CONTRACT.json",
+    "runtime_rules": "docs/TECHNADZOR/TOPIC5_RUNTIME_USAGE_RULES.md",
+    "domain_canon": "docs/CANON_FINAL/TECHNADZOR_DOMAIN_LOGIC_CANON.md"
+  },
+
+  "objects": {
+    "KIEVSKOE_95": {"profile": "METAL_FRAME", "status": "ACTIVE_OBJECT", "inspections": 3},
+    "NOVICHKOVO": {"profile": "FRAME_HOUSE", "status": "ACTIVE_OBJECT", "inspections": 1},
+    "SUSANINO": {"profile": "GENERAL", "status": "PROBLEM_OBJECT_CASE", "inspections": 1}
+  },
+
+  "key_rules": [
+    "Facts only from verified Drive sources",
+    "Never invent normative clause numbers",
+    "No defect leakage between objects",
+    "@tnz_msk = composition skill only, not normative base, not object history",
+    "EXTERNAL_PHOTO_ANALYSIS_ALLOWED=False by default",
+    "LOCAL_DRAFT_CREATED != task done",
+    "CLIENT_DOCUMENT_DELIVERED = task done"
+  ]
+}
