@@ -8660,6 +8660,287 @@ except Exception as _t5f_err:
         pass
 # === END_FULLFIX_TOPIC5_FINAL_GATE_NO_CLARIFY_V3 ===
 
+# === FULLFIX_TOPIC5_CONTINUOUS_PACKET_V4 ===
+try:
+    import json as _t5p_json
+    import time as _t5p_time
+    import re as _t5p_re
+    from pathlib import Path as _T5P_Path
+
+    _T5P_DATA = _T5P_Path("/root/.areal-neva-core/data/technadzor")
+    _T5P_DATA.mkdir(parents=True, exist_ok=True)
+    _T5P_ORIG_HANDLE_NEW = _handle_new
+
+    def _t5p_s(v, limit=8000):
+        return "" if v is None else str(v).strip()[:limit]
+
+    def _t5p_low(v):
+        return _t5p_s(v).lower().replace("ё", "е")
+
+    def _t5p_clean(v):
+        return _t5p_re.sub(r"^\s*\[VOICE\]\s*", "", _t5p_s(v, 12000), flags=_t5p_re.I).strip()
+
+    def _t5p_row(row, key, default=""):
+        try:
+            if hasattr(row, "keys") and key in row.keys():
+                return row[key]
+        except Exception:
+            pass
+        return default
+
+    def _t5p_jload(path, default):
+        try:
+            if path.exists():
+                obj = _t5p_json.loads(path.read_text(encoding="utf-8"))
+                return obj if isinstance(obj, dict) else default
+        except Exception:
+            pass
+        return default
+
+    def _t5p_jsave(path, obj):
+        path.write_text(_t5p_json.dumps(obj, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    def _t5p_buf_path(chat_id):
+        return _T5P_DATA / f"buf_{chat_id}_5.json"
+
+    def _t5p_active_path(chat_id):
+        return _T5P_DATA / f"active_folder_{chat_id}_5.json"
+
+    def _t5p_active(chat_id):
+        af = _t5p_jload(_t5p_active_path(chat_id), {})
+        if _t5p_s(af.get("status", "OPEN")).upper() == "CLOSED":
+            return {}
+        return af if af.get("folder_id") else {}
+
+    def _t5p_buf(chat_id):
+        b = _t5p_jload(_t5p_buf_path(chat_id), {"source": "topic5_visit_buffer", "materials": [], "created_at": _t5p_time.time()})
+        if not isinstance(b.get("materials"), list):
+            b["materials"] = []
+        return b
+
+    def _t5p_save_buf(chat_id, b):
+        b["updated_at"] = _t5p_time.time()
+        _t5p_jsave(_t5p_buf_path(chat_id), b)
+
+    def _t5p_meta(raw):
+        try:
+            d = _t5p_json.loads(_t5p_s(raw, 40000))
+        except Exception:
+            return {}
+        if not isinstance(d, dict):
+            return {}
+        name = _t5p_s(d.get("file_name") or d.get("name"))
+        mime = _t5p_low(d.get("mime_type"))
+        if not (("image" in mime) or name.lower().endswith((".jpg", ".jpeg", ".png", ".webp", ".heic"))):
+            return {}
+        mid = _t5p_s(d.get("telegram_message_id") or d.get("message_id"))
+        return {
+            "file_name": name,
+            "source_drive_file_id": _t5p_s(d.get("file_id") or d.get("drive_file_id")),
+            "telegram_message_id": mid,
+            "reply_to_message_id": mid,
+        }
+
+    def _t5p_find_material(buf, mid="", name=""):
+        for m in buf.get("materials", []):
+            if mid and _t5p_s(m.get("telegram_message_id")) == _t5p_s(mid):
+                return m
+            if name and _t5p_s(m.get("file_name")) == _t5p_s(name):
+                return m
+        return None
+
+    def _t5p_copy(src_id, name, folder_id):
+        from core.topic_drive_oauth import _oauth_service
+        svc = _oauth_service()
+        qname = _t5p_s(name).replace("'", "\\'")
+        found = svc.files().list(
+            q=f"'{folder_id}' in parents and name='{qname}' and trashed=false",
+            fields="files(id,name,webViewLink)",
+            pageSize=5,
+        ).execute().get("files", [])
+        if found:
+            fid = found[0]["id"]
+            return fid, found[0].get("webViewLink") or f"https://drive.google.com/file/d/{fid}/view?usp=drivesdk"
+        copied = svc.files().copy(
+            fileId=src_id,
+            body={"name": name, "parents": [folder_id]},
+            fields="id,name,webViewLink",
+        ).execute()
+        fid = copied["id"]
+        return fid, copied.get("webViewLink") or f"https://drive.google.com/file/d/{fid}/view?usp=drivesdk"
+
+    def _t5p_upsert(chat_id, meta, comment=""):
+        af = _t5p_active(chat_id)
+        buf = _t5p_buf(chat_id)
+        m = _t5p_find_material(buf, meta.get("telegram_message_id"), meta.get("file_name"))
+        if not m:
+            m = {
+                "material_id": f"m_{meta.get('telegram_message_id')}_{int(_t5p_time.time())}",
+                "source": "TELEGRAM",
+                "file_type": "PHOTO",
+                "file_name": meta.get("file_name"),
+                "source_drive_file_id": meta.get("source_drive_file_id"),
+                "telegram_message_id": meta.get("telegram_message_id"),
+                "reply_to_message_id": meta.get("reply_to_message_id") or meta.get("telegram_message_id"),
+                "include_in_report": True,
+                "include_in_act": True,
+                "status": "PENDING",
+                "voice_comment": "",
+                "added_at": _t5p_time.time(),
+            }
+            buf["materials"].append(m)
+
+        m["active_folder_id"] = _t5p_s(af.get("folder_id"))
+        m["active_folder_name"] = _t5p_s(af.get("folder_name"))
+        m["updated_at"] = _t5p_time.time()
+
+        if af.get("folder_id") and m.get("source_drive_file_id") and not m.get("drive_file_id"):
+            fid, url = _t5p_copy(m["source_drive_file_id"], m["file_name"], af["folder_id"])
+            m["drive_file_id"] = fid
+            m["drive_url"] = url
+
+        if comment:
+            old = _t5p_s(m.get("voice_comment"), 5000)
+            c = _t5p_clean(comment)
+            if c and c not in old:
+                m["voice_comment"] = (old + "\n" + c).strip() if old else c
+                m["status"] = "COMMENTED"
+
+        _t5p_save_buf(chat_id, buf)
+        return len(buf.get("materials", [])), m
+
+    def _t5p_parent_meta(conn, chat_id, topic_id, reply_to):
+        rid = _t5p_s(reply_to)
+        buf = _t5p_buf(chat_id)
+        for m in buf.get("materials", []):
+            if _t5p_s(m.get("telegram_message_id")) == rid:
+                return {
+                    "file_name": m.get("file_name"),
+                    "source_drive_file_id": m.get("source_drive_file_id") or m.get("drive_file_id"),
+                    "telegram_message_id": m.get("telegram_message_id"),
+                    "reply_to_message_id": m.get("telegram_message_id"),
+                }
+        row = conn.execute(
+            "SELECT raw_input FROM tasks WHERE chat_id=? AND COALESCE(topic_id,0)=5 AND input_type='drive_file' AND raw_input LIKE ? ORDER BY rowid DESC LIMIT 1",
+            (str(chat_id), f'%{rid}%'),
+        ).fetchone()
+        return _t5p_meta(row["raw_input"]) if row else {}
+
+    def _t5p_comment_like(text):
+        low = _t5p_low(text)
+        return any(x in low for x in ("добав", "это фото", "эти фото", "свар", "оборудован", "замена", "вышло из строя", "наруш", "дефект"))
+
+    def _t5p_status_like(text):
+        low = _t5p_low(text)
+        return any(x in low for x in ("куда", "где", "папк", "статус", "что по итогу", "что по этим фото", "какие задачи", "понял"))
+
+    def _t5p_act_like(text):
+        low = _t5p_low(text)
+        return any(x in low for x in ("сделай акт", "сформируй акт", "создай акт", "подготовь акт", "собери акт"))
+
+    def _t5p_group_comment(chat_id, parent_mid, comment):
+        buf = _t5p_buf(chat_id)
+        try:
+            p = int(_t5p_s(parent_mid))
+        except Exception:
+            p = None
+        changed = []
+        for m in buf.get("materials", []):
+            mid = _t5p_s(m.get("telegram_message_id"))
+            same = mid == _t5p_s(parent_mid)
+            if p is not None:
+                try:
+                    same = same or abs(int(mid) - p) <= 3
+                except Exception:
+                    pass
+            if same:
+                old = _t5p_s(m.get("voice_comment"), 5000)
+                c = _t5p_clean(comment)
+                if c and c not in old:
+                    m["voice_comment"] = (old + "\n" + c).strip() if old else c
+                    m["status"] = "COMMENTED"
+                    m["updated_at"] = _t5p_time.time()
+                    changed.append(m.get("file_name"))
+        _t5p_save_buf(chat_id, buf)
+        return changed
+
+    def _t5p_status(chat_id):
+        af = _t5p_active(chat_id)
+        buf = _t5p_buf(chat_id)
+        ms = buf.get("materials", [])
+        lines = [
+            "Пакет технадзора активен",
+            f"Папка: {_t5p_s(af.get('folder_name') or 'не задана')}",
+        ]
+        if af.get("folder_id"):
+            lines.append(f"https://drive.google.com/drive/folders/{af.get('folder_id')}")
+        lines.append(f"Фото в пакете: {len(ms)} шт")
+        for i, m in enumerate(ms, 1):
+            line = f"{i}. {m.get('file_name')}"
+            if m.get("voice_comment"):
+                line += f" — {_t5p_s(m.get('voice_comment')).splitlines()[-1]}"
+            lines.append(line)
+        lines.append("Задача: фото лежат в активной папке и ждут пояснения или команды: Сделай акт")
+        return "\n".join(lines)
+
+    def _t5p_done(conn, task_id, chat_id, reply_to, text, kind):
+        sent = _send_once_ex(conn, str(task_id), str(chat_id), _t5p_s(text, 3500), int(reply_to) if _t5p_s(reply_to).isdigit() else None, kind)
+        upd = {"state": "DONE", "result": _t5p_s(text, 50000), "error_message": ""}
+        if isinstance(sent, dict) and (sent.get("bot_message_id") or sent.get("message_id")):
+            upd["bot_message_id"] = sent.get("bot_message_id") or sent.get("message_id")
+        _update_task(conn, str(task_id), **upd)
+        try:
+            _history(conn, str(task_id), kind)
+        except Exception:
+            pass
+        conn.commit()
+
+    async def _handle_new(conn, task, *args, **kwargs):
+        task_id = _t5p_s(_t5p_row(task, "id"))
+        chat_id = _t5p_s(_t5p_row(task, "chat_id", args[0] if args else ""))
+        topic_id = int(_t5p_row(task, "topic_id", args[1] if len(args) > 1 else 0) or 0)
+
+        if topic_id != 5:
+            return await _T5P_ORIG_HANDLE_NEW(conn, task, *args, **kwargs)
+
+        raw = _t5p_s(_t5p_row(task, "raw_input"))
+        input_type = _t5p_s(_t5p_row(task, "input_type"))
+        reply_to = _t5p_s(_t5p_row(task, "reply_to_message_id"))
+        clean = _t5p_clean(raw)
+
+        meta = _t5p_meta(raw)
+        if input_type in ("drive_file", "file", "document") and meta:
+            count, mat = _t5p_upsert(chat_id, meta, "")
+            msg = f"Фото принято в пакет технадзора: {count} шт\nПапка: {mat.get('active_folder_name')}\nhttps://drive.google.com/drive/folders/{mat.get('active_folder_id')}\nАкт не формирую без команды: Сделай акт"
+            _t5p_done(conn, task_id, chat_id, reply_to, msg, "topic5_photo_buffered_continuous")
+            return
+
+        if input_type in ("text", "voice", "") and _t5p_act_like(clean):
+            return await _T5P_ORIG_HANDLE_NEW(conn, task, *args, **kwargs)
+
+        if input_type in ("text", "voice", "") and reply_to and _t5p_comment_like(clean):
+            parent = _t5p_parent_meta(conn, chat_id, topic_id, reply_to)
+            if parent:
+                _t5p_upsert(chat_id, parent, "")
+                changed = _t5p_group_comment(chat_id, parent.get("telegram_message_id"), clean)
+                msg = f"Пояснение принято к фото: {', '.join(changed)}\nВ пакете технадзора: {len(_t5p_buf(chat_id).get('materials', []))} шт\nАкт не формирую без команды: Сделай акт"
+                _t5p_done(conn, task_id, chat_id, reply_to, msg, "topic5_reply_comment_continuous")
+                return
+
+        if input_type in ("text", "voice", "") and (_t5p_status_like(clean) or _t5p_buf(chat_id).get("materials")):
+            _t5p_done(conn, task_id, chat_id, reply_to, _t5p_status(chat_id), "topic5_package_status_continuous")
+            return
+
+        return await _T5P_ORIG_HANDLE_NEW(conn, task, *args, **kwargs)
+
+    _handle_new._topic5_continuous_packet_v4 = True
+except Exception as _t5p_err:
+    try:
+        logging.getLogger("task_worker").exception("FULLFIX_TOPIC5_CONTINUOUS_PACKET_V4_INSTALL_ERR %s", _t5p_err)
+    except Exception:
+        pass
+# === END_FULLFIX_TOPIC5_CONTINUOUS_PACKET_V4 ===
+
 if __name__ == "__main__":
     asyncio.run(main())
 # === END_P6D_MAIN_AFTER_ALL_RUNTIME_OVERLAYS_20260504_V1 ===
