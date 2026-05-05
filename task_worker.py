@@ -10664,6 +10664,304 @@ except Exception as _t5df_err:
         pass
 # === END_FIX_TOPIC5_DRIVE_FILE_FULL_CANON_GUARD_V1 ===
 
+
+# === FIX_TOPIC5_FILES_REQUIRE_OWNER_INSTRUCTION_V1 ===
+try:
+    import json as _t5fq_json
+    import time as _t5fq_time
+    import logging as _t5fq_logging
+
+    _T5FQ_LOG = _t5fq_logging.getLogger("task_worker")
+    _T5FQ_ORIG_HANDLE_NEW = _handle_new
+
+    def _t5fq_s(v, limit=20000):
+        return "" if v is None else str(v).strip()[:limit]
+
+    def _t5fq_low(v):
+        return _t5fq_s(v).lower().replace("ё", "е")
+
+    def _t5fq_row(row, key, default=""):
+        try:
+            if hasattr(row, "keys") and key in row.keys():
+                return row[key]
+        except Exception:
+            pass
+        return default
+
+    def _t5fq_meta(raw):
+        try:
+            d = _t5fq_json.loads(_t5fq_s(raw, 80000))
+        except Exception:
+            return {}
+        if not isinstance(d, dict):
+            return {}
+
+        name = _t5fq_s(d.get("file_name") or d.get("name") or "")
+        if not name:
+            return {}
+
+        mime = _t5fq_low(d.get("mime_type") or "")
+        ext = name.lower().rsplit(".", 1)[-1] if "." in name else ""
+
+        if "image" in mime or ext in ("jpg", "jpeg", "png", "webp", "heic"):
+            file_type = "PHOTO"
+        elif "pdf" in mime or ext == "pdf":
+            file_type = "PDF"
+        elif "word" in mime or ext in ("doc", "docx"):
+            file_type = "DOCX"
+        elif "sheet" in mime or ext in ("xls", "xlsx", "csv"):
+            file_type = "XLSX"
+        else:
+            file_type = "OTHER"
+
+        return {
+            "source": "TELEGRAM",
+            "file_type": file_type,
+            "file_name": name,
+            "mime_type": mime,
+            "source_drive_file_id": _t5fq_s(d.get("file_id") or d.get("drive_file_id") or ""),
+            "telegram_message_id": _t5fq_s(d.get("telegram_message_id") or d.get("message_id") or ""),
+            "reply_to_message_id": _t5fq_s(d.get("telegram_message_id") or d.get("message_id") or ""),
+            "owner_comment": _t5fq_s(d.get("caption") or ""),
+            "include_in_report": True,
+            "include_in_act": True,
+            "status": "PENDING_OWNER_INSTRUCTION",
+            "needs_owner_instruction": True,
+            "added_at": _t5fq_time.time(),
+        }
+
+    def _t5fq_has_instruction(text):
+        low = _t5fq_low(text)
+        return bool(low) and any(x in low for x in (
+            "к акту", "в акт", "сделай", "сформируй", "создай", "подготовь",
+            "проверь", "проверить", "разбор", "замечан", "дефект", "наруш",
+            "отнеси", "добавь", "в эту папку", "к этому объекту", "этот же объект",
+            "свар", "оборудован", "замена", "вышло из строя", "это фото", "эти фото",
+            "это файл", "эти файлы", "это документы", "эти документы"
+        ))
+
+    def _t5fq_find(buf, meta):
+        for m in buf.get("materials", []):
+            if meta.get("telegram_message_id") and _t5fq_s(m.get("telegram_message_id")) == meta.get("telegram_message_id"):
+                return m
+            if meta.get("file_name") and _t5fq_s(m.get("file_name")) == meta.get("file_name"):
+                return m
+        return None
+
+    def _t5fq_copy_to_folder(src_id, name, folder_id):
+        from core.topic_drive_oauth import _oauth_service
+        svc = _oauth_service()
+        qname = _t5fq_s(name).replace("'", "\\'")
+        found = svc.files().list(
+            q=f"'{folder_id}' in parents and name='{qname}' and trashed=false",
+            fields="files(id,name,webViewLink)",
+            pageSize=5,
+        ).execute().get("files", [])
+        if found:
+            fid = found[0]["id"]
+            return fid, found[0].get("webViewLink") or f"https://drive.google.com/file/d/{fid}/view?usp=drivesdk"
+
+        copied = svc.files().copy(
+            fileId=src_id,
+            body={"name": name, "parents": [folder_id]},
+            fields="id,name,webViewLink",
+        ).execute()
+        fid = copied["id"]
+        return fid, copied.get("webViewLink") or f"https://drive.google.com/file/d/{fid}/view?usp=drivesdk"
+
+    def _t5fq_upsert_pending(chat_id, meta):
+        active = _t5fc_active(chat_id)
+        buf = _t5fc_buf(chat_id)
+
+        mat = _t5fq_find(buf, meta)
+        if not mat:
+            mat = dict(meta)
+            mat["material_id"] = f"m_{meta.get('telegram_message_id') or int(_t5fq_time.time())}"
+            buf.setdefault("materials", []).append(mat)
+
+        mat["source"] = mat.get("source") or "TELEGRAM"
+        mat["file_type"] = mat.get("file_type") or meta.get("file_type")
+        mat["source_drive_file_id"] = mat.get("source_drive_file_id") or meta.get("source_drive_file_id")
+        mat["active_folder_id"] = _t5fq_s(active.get("folder_id"))
+        mat["active_folder_name"] = _t5fq_s(active.get("folder_name"))
+        mat["status"] = "PENDING_OWNER_INSTRUCTION"
+        mat["needs_owner_instruction"] = True
+        mat["updated_at"] = _t5fq_time.time()
+
+        _t5fc_jsave(_t5fc_buf_path(chat_id), buf)
+        return active, buf, mat
+
+    def _t5fq_pending(buf):
+        return [
+            m for m in buf.get("materials", [])
+            if m.get("needs_owner_instruction") or m.get("status") == "PENDING_OWNER_INSTRUCTION"
+        ]
+
+    def _t5fq_apply_instruction_to_pending(chat_id, text):
+        active = _t5fc_active(chat_id)
+        buf = _t5fc_buf(chat_id)
+        pending = _t5fq_pending(buf)
+        if not pending:
+            return 0, active, buf
+
+        clean = _t5fq_s(text, 5000)
+
+        for m in pending:
+            old = _t5fq_s(m.get("owner_comment") or m.get("voice_comment") or "")
+            if clean and clean not in old:
+                m["owner_comment"] = (old + "\n" + clean).strip() if old else clean
+
+            if active.get("folder_id") and m.get("source_drive_file_id") and not m.get("drive_file_id"):
+                try:
+                    fid, url = _t5fq_copy_to_folder(m["source_drive_file_id"], m["file_name"], active["folder_id"])
+                    m["drive_file_id"] = fid
+                    m["drive_url"] = url
+                except Exception as e:
+                    m["copy_error"] = f"{type(e).__name__}: {_t5fq_s(e, 300)}"
+
+            m["active_folder_id"] = _t5fq_s(active.get("folder_id"))
+            m["active_folder_name"] = _t5fq_s(active.get("folder_name"))
+            m["needs_owner_instruction"] = False
+            m["status"] = "OWNER_INSTRUCTION_LINKED"
+            m["updated_at"] = _t5fq_time.time()
+
+        try:
+            _t5fc_save_context(chat_id, clean)
+        except Exception as e:
+            _T5FQ_LOG.warning("FIX_TOPIC5_FILES_REQUIRE_OWNER_INSTRUCTION_CONTEXT_ERR %s", e)
+
+        try:
+            _t5fc_enrich_materials(buf)
+        except Exception as e:
+            _T5FQ_LOG.warning("FIX_TOPIC5_FILES_REQUIRE_OWNER_INSTRUCTION_ENRICH_ERR %s", e)
+
+        _t5fc_jsave(_t5fc_buf_path(chat_id), buf)
+        return len(pending), active, buf
+
+    def _t5fq_question(meta, active, buf):
+        ctx = buf.get("package_context", {})
+        object_name = _t5fq_s(
+            ctx.get("object_address")
+            or ctx.get("object_name")
+            or active.get("object_address")
+            or active.get("object_name")
+            or "не задан"
+        )
+        folder_name = _t5fq_s(active.get("folder_name") or "не установлена")
+        return "\n".join([
+            "Файл получил и сохранил в буфер технадзора",
+            f"Файл: {meta.get('file_name')}",
+            f"Тип: {meta.get('file_type')}",
+            f"Текущий объект: {object_name}",
+            f"Текущая папка: {folder_name}",
+            f"Материалов в буфере: {len(buf.get('materials', []))}",
+            "Что это за материалы, к какому объекту/папке их отнести и что с ними сделать?",
+        ])
+
+    def _t5fq_send(conn, task_id, chat_id, reply_to, text, kind, state):
+        sent = _send_once_ex(
+            conn,
+            str(task_id),
+            str(chat_id),
+            _t5fq_s(text, 3500),
+            int(reply_to) if _t5fq_s(reply_to).isdigit() else None,
+            kind,
+        )
+        upd = {"state": state, "result": _t5fq_s(text, 50000), "error_message": ""}
+        if isinstance(sent, dict) and (sent.get("bot_message_id") or sent.get("message_id")):
+            upd["bot_message_id"] = sent.get("bot_message_id") or sent.get("message_id")
+        _update_task(conn, str(task_id), **upd)
+        try:
+            _history(conn, str(task_id), kind)
+        except Exception:
+            pass
+        conn.commit()
+
+    async def _handle_new(conn, task, *args, **kwargs):
+        task_id = _t5fq_s(_t5fq_row(task, "id"))
+        chat_id = _t5fq_s(_t5fq_row(task, "chat_id", args[0] if len(args) > 0 else ""))
+        topic_id = int(_t5fq_row(task, "topic_id", args[1] if len(args) > 1 else 0) or 0)
+        input_type = _t5fq_s(_t5fq_row(task, "input_type", ""))
+        reply_to = _t5fq_s(_t5fq_row(task, "reply_to_message_id", ""))
+        raw = _t5fq_s(_t5fq_row(task, "raw_input", ""))
+
+        if topic_id == 5 and input_type in ("drive_file", "file", "document"):
+            meta = _t5fq_meta(raw)
+            if meta and meta.get("file_name"):
+                caption = _t5fq_s(meta.get("owner_comment") or "")
+
+                if not _t5fq_has_instruction(caption):
+                    active, buf, mat = _t5fq_upsert_pending(chat_id, meta)
+                    _t5fq_send(
+                        conn,
+                        task_id,
+                        chat_id,
+                        reply_to,
+                        _t5fq_question(meta, active, buf),
+                        "topic5_file_wait_owner_instruction",
+                        "WAITING_CLARIFICATION",
+                    )
+                    return
+
+                active, buf, mat = _t5fq_upsert_pending(chat_id, meta)
+                count, active, buf = _t5fq_apply_instruction_to_pending(chat_id, caption)
+                _t5fq_send(
+                    conn,
+                    task_id,
+                    chat_id,
+                    reply_to,
+                    "\n".join([
+                        "Файл принят с пояснением владельца",
+                        f"Файл: {meta.get('file_name')}",
+                        f"Тип: {meta.get('file_type')}",
+                        f"Пояснение: {caption}",
+                        f"Связано файлов: {count}",
+                        "Акт не формирую без команды: Сделай акт",
+                    ]),
+                    "topic5_file_with_owner_instruction",
+                    "DONE",
+                )
+                return
+
+        if topic_id == 5 and input_type in ("text", "voice", ""):
+            clean = raw
+            try:
+                clean = _t5fc_clean_voice(raw)
+            except Exception:
+                pass
+
+            if _t5fq_has_instruction(clean):
+                count, active, buf = _t5fq_apply_instruction_to_pending(chat_id, clean)
+                if count > 0:
+                    _t5fq_send(
+                        conn,
+                        task_id,
+                        chat_id,
+                        reply_to,
+                        "\n".join([
+                            "Пояснение владельца принято к ожидающим материалам",
+                            f"Связано файлов: {count}",
+                            f"Материалов в буфере: {len(buf.get('materials', []))}",
+                            "Акт не формирую без команды: Сделай акт",
+                        ]),
+                        "topic5_pending_files_instruction_linked",
+                        "DONE",
+                    )
+                    return
+
+        res = _T5FQ_ORIG_HANDLE_NEW(conn, task, *args, **kwargs)
+        return await res if hasattr(res, "__await__") else res
+
+    _handle_new._topic5_files_require_owner_instruction_v1 = True
+    _T5FQ_LOG.info("FIX_TOPIC5_FILES_REQUIRE_OWNER_INSTRUCTION_V1_INSTALLED")
+
+except Exception as _t5fq_err:
+    try:
+        logging.getLogger("task_worker").exception("FIX_TOPIC5_FILES_REQUIRE_OWNER_INSTRUCTION_V1_INSTALL_ERR %s", _t5fq_err)
+    except Exception:
+        pass
+# === END_FIX_TOPIC5_FILES_REQUIRE_OWNER_INSTRUCTION_V1 ===
+
 # === MOVE_MAIN_ENTRYPOINT_TO_END_V1 ===
 # All runtime patches (P6E2, P6H4TW, CANON_CLOSE, FULL_CANON_CLOSE) must be installed
 # before the event loop starts. Previously asyncio.run(main()) at line 8944 blocked them.
