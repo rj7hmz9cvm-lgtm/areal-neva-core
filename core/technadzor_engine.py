@@ -2770,3 +2770,226 @@ def process_drive_folder_batch(chat_id, topic_id, folder_id: str, folder_name: s
 
 _P6H4_LOG.info("P6H_PART_4_VISIT_BUFFER_V1_INSTALLED")
 # ─── END P6H_PART_4_VISIT_BUFFER_V1 ─────────────────────────────────────────
+
+
+# === P6H4TW_BATCH_TRIGGER_V1 ===
+# FIX: original P6H_PART_4 hook in task_worker.py is after asyncio.run() and never fires.
+# This wrapper hooks process_technadzor here (before asyncio.run()), intercepting all topic_5 calls.
+# Handles: photo/file buffering, Drive folder batch load, visit buffer flush to process_technadzor.
+# EXTERNAL_PHOTO_ANALYSIS_ALLOWED=False: no Vision without explicit owner permission.
+import logging as _p6h4tw_v1_log_mod
+import os as _p6h4tw_v1_os
+import re as _p6h4tw_v1_re
+
+_P6H4TW_V1_LOG = _p6h4tw_v1_log_mod.getLogger("task_worker")
+_P6H4TW_V1_DRIVE_RE = _p6h4tw_v1_re.compile(
+    r"https://drive\.google\.com/drive/folders/([A-Za-z0-9_-]+)"
+)
+_P6H4TW_V1_BATCH_TRIGGERS = (
+    "загрузи все файлы из папки", "загрузи все файлы",
+    "возьми файлы из папки", "прочитай папку",
+    "обработай папку", "сделай разбор по папке", "сделай акт по папке",
+    "разбор по папке", "акт по папке",
+    "загрузи папку", "возьми из папки",
+)
+_P6H4TW_V1_BATCH_AND_FLUSH = (
+    "сделай разбор по папке", "сделай акт по папке",
+    "разбор по папке", "акт по папке",
+)
+_P6H4TW_V1_FLUSH_TRIGGERS = (
+    "сделай акт", "собери акт", "сделай разбор", "сделай анализ",
+    "собери разбор", "разберись", "сделай отчет", "сделай отчёт",
+    "начни анализ", "сформируй акт",
+)
+_P6H4TW_V1_ACTIVE_FOLDER_TRIGGERS = (
+    "работаем по этой папке", "установи папку", "активная папка это",
+    "drive.google.com/drive/folders/",
+)
+_P6H4TW_V1_SHOW_FOLDER_TRIGGERS = (
+    "покажи активную папку", "какая активная папка", "какая папка",
+    "текущая папка", "покажи папку",
+)
+
+
+def _p6h4tw_v1_low(v):
+    return str(v or "").lower().replace("ё", "е")
+
+
+try:
+    _p6h4tw_v1_orig = process_technadzor
+    if not getattr(_p6h4tw_v1_orig, "_p6h4tw_v1_wrapped", False):
+
+        def process_technadzor(text="", task_id="", chat_id="", topic_id=0, file_path="", file_name="", **kwargs):  # noqa: F811
+            if int(topic_id or 0) != 5:
+                return _p6h4tw_v1_orig(
+                    text=text, task_id=task_id, chat_id=chat_id,
+                    topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs
+                )
+
+            chat_str = str(chat_id)
+            txt_low = _p6h4tw_v1_low(text)
+
+            # ── Photo / Drive file → buffer (no Vision) ──────────────────────
+            if file_path or file_name:
+                fn = file_name or _p6h4tw_v1_os.path.basename(file_path or "")
+                fn_low = fn.lower()
+                is_photo = fn_low.endswith((".jpg", ".jpeg", ".png", ".webp", ".heic"))
+                ftype = "PHOTO" if is_photo else "PDF" if fn_low.endswith(".pdf") else "DOCUMENT"
+                material = {
+                    "source": "telegram",
+                    "file_type": ftype,
+                    "file_name": fn,
+                    "drive_file_id": "",
+                    "drive_url": file_path or "",
+                    "caption": text or "",
+                    "include_in_act": True,
+                    "include_in_report": True,
+                }
+                try:
+                    count = visit_buffer_add(chat_str, 5, material)
+                    _P6H4TW_V1_LOG.info(
+                        "P6H4TW_V1_PHOTO_BUFFERED chat=%s count=%s fn=%s", chat_str, count, fn
+                    )
+                    return {
+                        "ok": True,
+                        "result_text": f"Добавлено в пакет ({count} шт.). Когда готово — скажи «сделай разбор».",
+                        "history": "P6H4TW_V1_PHOTO_BUFFERED",
+                    }
+                except Exception as _e:
+                    _P6H4TW_V1_LOG.warning("P6H4TW_V1_BUF_ADD_ERR %s", _e)
+                    return _p6h4tw_v1_orig(
+                        text=text, task_id=task_id, chat_id=chat_id,
+                        topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs
+                    )
+
+            # ── Drive folder URL / set active folder ─────────────────────────
+            m_drive = _P6H4TW_V1_DRIVE_RE.search(text or "")
+            if m_drive or any(t in txt_low for t in _P6H4TW_V1_ACTIVE_FOLDER_TRIGGERS):
+                folder_id = m_drive.group(1) if m_drive else ""
+                folder_name = ""
+                if folder_id:
+                    try:
+                        from core.topic_drive_oauth import get_drive_service as _p6h4tw_v1_gds
+                        svc = _p6h4tw_v1_gds(chat_id=chat_str, topic_id=5)
+                        folder_name = (
+                            svc.files().get(fileId=folder_id, fields="name").execute().get("name", "")
+                        )
+                    except Exception:
+                        pass
+                try:
+                    set_active_folder(chat_str, 5, {
+                        "folder_id": folder_id,
+                        "folder_name": folder_name,
+                        "source_text": (text or "")[:500],
+                    })
+                    return {
+                        "ok": True,
+                        "result_text": f"Активная папка установлена: {folder_name or folder_id or '(из текста)'}.",
+                        "history": "P6H4TW_V1_ACTIVE_FOLDER_SET",
+                    }
+                except Exception as _e:
+                    _P6H4TW_V1_LOG.warning("P6H4TW_V1_SET_FOLDER_ERR %s", _e)
+
+            # ── Show active folder ────────────────────────────────────────────
+            if any(t in txt_low for t in _P6H4TW_V1_SHOW_FOLDER_TRIGGERS):
+                try:
+                    af = get_active_folder(chat_str, 5)
+                    if af:
+                        name = af.get("folder_name") or af.get("folder_id", "(нет имени)")
+                        fid = af.get("folder_id", "")
+                        link = f"https://drive.google.com/drive/folders/{fid}" if fid else "—"
+                        msg = f"Активная папка: {name}\n{link}"
+                    else:
+                        msg = "Активная папка не установлена. Пришли ссылку на папку."
+                    return {"ok": True, "result_text": msg, "history": "P6H4TW_V1_SHOW_FOLDER"}
+                except Exception as _e:
+                    _P6H4TW_V1_LOG.warning("P6H4TW_V1_SHOW_FOLDER_ERR %s", _e)
+
+            # ── Drive folder batch load ───────────────────────────────────────
+            if any(t in txt_low for t in _P6H4TW_V1_BATCH_TRIGGERS):
+                try:
+                    m_drive2 = _P6H4TW_V1_DRIVE_RE.search(text or "")
+                    if m_drive2:
+                        batch_fid = m_drive2.group(1)
+                        batch_fname = ""
+                        try:
+                            from core.topic_drive_oauth import get_drive_service as _p6h4tw_v1_gds2
+                            svc2 = _p6h4tw_v1_gds2(chat_id=chat_str, topic_id=5)
+                            batch_fname = (
+                                svc2.files().get(fileId=batch_fid, fields="name").execute().get("name", "")
+                            )
+                        except Exception:
+                            pass
+                    else:
+                        af2 = get_active_folder(chat_str, 5) or {}
+                        batch_fid = af2.get("folder_id", "")
+                        batch_fname = af2.get("folder_name", "")
+                    if not batch_fid:
+                        return {
+                            "ok": True,
+                            "result_text": "Не найдена активная папка. Пришли ссылку на папку Drive.",
+                            "history": "P6H4TW_V1_BATCH_NO_FOLDER",
+                        }
+                    added = process_drive_folder_batch(chat_str, 5, batch_fid, batch_fname)
+                    _P6H4TW_V1_LOG.info(
+                        "P6H4TW_V1_BATCH_LOADED chat=%s folder=%s added=%s", chat_str, batch_fid, added
+                    )
+                    do_flush = any(t in txt_low for t in _P6H4TW_V1_BATCH_AND_FLUSH)
+                    if not do_flush:
+                        return {
+                            "ok": True,
+                            "result_text": (
+                                f"Принял. Файлы из папки добавлены в пакет выезда: {added} шт. "
+                                "Vision не запускаю без разрешения владельца. Скажи «сделай разбор» когда готово."
+                            ),
+                            "history": "P6H4TW_V1_BATCH_LOADED",
+                        }
+                    txt_low = "сделай разбор"  # fall through to flush
+                except Exception as _e:
+                    _P6H4TW_V1_LOG.warning("P6H4TW_V1_BATCH_ERR %s", _e)
+
+            # ── Flush buffer → process_technadzor ────────────────────────────
+            if any(t in txt_low for t in _P6H4TW_V1_FLUSH_TRIGGERS):
+                try:
+                    count = visit_buffer_count(chat_str, 5)
+                    if count == 0:
+                        return {
+                            "ok": True,
+                            "result_text": "Буфер пуст — сначала пришли фото или файлы.",
+                            "history": "P6H4TW_V1_FLUSH_EMPTY",
+                        }
+                    materials = visit_buffer_flush(chat_str, 5)
+                    lines = ["Технический надзор. Акт по материалам выезда:", "VISIT_PACKAGE:"]
+                    for i, m in enumerate(materials, 1):
+                        fn2 = m.get("file_name", f"файл {i}")
+                        url2 = m.get("drive_url", "")
+                        note2 = (m.get("caption", "") or m.get("voice_comment", "") or "").strip()
+                        line = f"  {i}. {fn2}"
+                        if url2:
+                            line += f" {url2}"
+                        if note2:
+                            line += f" — {note2}"
+                        lines.append(line)
+                    package_text = "\n".join(lines)
+                    _P6H4TW_V1_LOG.info(
+                        "P6H4TW_V1_FLUSH chat=%s count=%s", chat_str, len(materials)
+                    )
+                    return _p6h4tw_v1_orig(
+                        text=package_text, task_id=task_id, chat_id=chat_id,
+                        topic_id=topic_id, file_path="", file_name="", **kwargs
+                    )
+                except Exception as _e:
+                    _P6H4TW_V1_LOG.warning("P6H4TW_V1_FLUSH_ERR %s", _e)
+
+            # ── Default pass-through ──────────────────────────────────────────
+            return _p6h4tw_v1_orig(
+                text=text, task_id=task_id, chat_id=chat_id,
+                topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs
+            )
+
+        process_technadzor._p6h4tw_v1_wrapped = True
+        _p6h4tw_v1_orig._p6h4tw_v1_wrapped = True
+        _P6H4TW_V1_LOG.info("P6H4TW_BATCH_TRIGGER_V1_INSTALLED")
+except Exception as _p6h4tw_v1_err:
+    _P6H4TW_V1_LOG.exception("P6H4TW_V1_INSTALL_ERR %s", _p6h4tw_v1_err)
+# === END_P6H4TW_BATCH_TRIGGER_V1 ===
