@@ -9860,3 +9860,596 @@ except Exception as _t5c_install_error:
         pass
 # === END_FULLFIX_TOPIC5_CANON_CLOSE_ACTIVE_FOLDER_NO_DUP_ACTS_V1 ===
 
+
+# === FULLFIX_TOPIC5_FULL_CANON_CLOSE_V1 ===
+try:
+    import json as _t5fc_json
+    import re as _t5fc_re
+    import time as _t5fc_time
+    import datetime as _t5fc_dt
+    import textwrap as _t5fc_textwrap
+    import logging as _t5fc_logging
+    from pathlib import Path as _T5FC_Path
+
+    _T5FC_LOG = _t5fc_logging.getLogger("task_worker")
+    _T5FC_BASE = _T5FC_Path("/root/.areal-neva-core")
+    _T5FC_DATA = _T5FC_BASE / "data" / "technadzor"
+    _T5FC_OUT = _T5FC_BASE / "outputs" / "technadzor"
+    _T5FC_OBJ = _T5FC_BASE / "data" / "templates" / "technadzor" / "objects"
+    _T5FC_DATA.mkdir(parents=True, exist_ok=True)
+    _T5FC_OUT.mkdir(parents=True, exist_ok=True)
+    _T5FC_OBJ.mkdir(parents=True, exist_ok=True)
+
+    _T5FC_ORIG_HANDLE_NEW = _handle_new
+
+    def _t5fc_s(v, limit=50000):
+        return "" if v is None else str(v).strip()[:limit]
+
+    def _t5fc_low(v):
+        return _t5fc_s(v).lower().replace("ё", "е")
+
+    def _t5fc_clean_voice(v):
+        return _t5fc_re.sub(r"^\s*\[VOICE\]\s*", "", _t5fc_s(v, 50000), flags=_t5fc_re.I).strip()
+
+    def _t5fc_row(row, key, default=""):
+        try:
+            if hasattr(row, "keys") and key in row.keys():
+                return row[key]
+        except Exception:
+            pass
+        return default
+
+    def _t5fc_slug(s):
+        s = _t5fc_low(s)
+        s = _t5fc_re.sub(r"[^a-zа-я0-9]+", "_", s)
+        s = _t5fc_re.sub(r"_+", "_", s).strip("_")
+        return s[:80] or "unknown_object"
+
+    def _t5fc_jload(path, default):
+        try:
+            if path.exists():
+                obj = _t5fc_json.loads(path.read_text(encoding="utf-8"))
+                return obj if isinstance(obj, dict) else default
+        except Exception:
+            pass
+        return default
+
+    def _t5fc_jsave(path, obj):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(_t5fc_json.dumps(obj, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    def _t5fc_buf_path(chat_id):
+        return _T5FC_DATA / f"buf_{chat_id}_5.json"
+
+    def _t5fc_active_path(chat_id):
+        return _T5FC_DATA / f"active_folder_{chat_id}_5.json"
+
+    def _t5fc_buf(chat_id):
+        b = _t5fc_jload(_t5fc_buf_path(chat_id), {"source": "topic5_visit_buffer", "materials": [], "created_at": _t5fc_time.time()})
+        if not isinstance(b.get("materials"), list):
+            b["materials"] = []
+        if not isinstance(b.get("package_context"), dict):
+            b["package_context"] = {}
+        if not isinstance(b.get("observations"), list):
+            b["observations"] = []
+        if not isinstance(b.get("defect_cards"), list):
+            b["defect_cards"] = []
+        return b
+
+    def _t5fc_active(chat_id):
+        a = _t5fc_jload(_t5fc_active_path(chat_id), {})
+        if not isinstance(a.get("owner_instructions"), list):
+            a["owner_instructions"] = []
+        return a
+
+    def _t5fc_extract_address(text):
+        t = _t5fc_clean_voice(text)
+        patterns = [
+            r"([А-Яа-яA-Za-z0-9\-\s]*Ропшин[А-Яа-яA-Za-z0-9\-\s]*шоссе\s*\d+[А-Яа-яA-Za-z0-9\-\/]*)",
+            r"(?:адрес|по адресу|находится на|объект находится на|на)\s+([А-Яа-яA-Za-z0-9\-\s]+?(?:шоссе|улица|ул\.|проспект|пр\.|дорога|линия|наб\.|переулок)\s*\d+[А-Яа-яA-Za-z0-9\-\/]*)",
+        ]
+        for p in patterns:
+            m = _t5fc_re.search(p, t, flags=_t5fc_re.I)
+            if m:
+                return _t5fc_s(m.group(1), 300)
+        return ""
+
+    def _t5fc_context_like(text):
+        low = _t5fc_low(text)
+        return any(x in low for x in (
+            "объект",
+            "адрес",
+            "ропшин",
+            "шоссе",
+            "основание",
+            "авито",
+            "заказчик",
+            "заявк",
+            "выезд",
+            "запиши",
+            "к этому же акту",
+            "этому же акту",
+            "к этому акту",
+            "этому акту",
+            "к акту",
+            "в этот акт",
+            "в этот же акт",
+        ))
+
+    def _t5fc_act_like(text):
+        low = _t5fc_low(text)
+        return any(x in low for x in (
+            "сделай акт",
+            "сформируй акт",
+            "создай акт",
+            "подготовь акт",
+            "собери акт",
+            "делай акт",
+            "сделай документ",
+            "сформируй документ",
+            "сделай разбор",
+            "сформируй разбор",
+        ))
+
+    def _t5fc_source_and_basis(text):
+        low = _t5fc_low(text)
+        out = {}
+        if "авито" in low:
+            out["source_request"] = "Авито"
+            out["visit_basis"] = "запрос заказчика через Авито"
+        elif "заказчик" in low or "заявк" in low:
+            out["visit_basis"] = "запрос заказчика"
+        return out
+
+    def _t5fc_classify_comment(comment):
+        low = _t5fc_low(comment)
+        if any(x in low for x in ("свар", "шов", "провар")):
+            return ("сварные соединения", "сварные соединения", "плохие сварные соединения")
+        if any(x in low for x in ("оборудован", "вышло из строя", "замена")):
+            return ("прочие замечания", "старое оборудование", "оборудование вышло из строя, рекомендуется замена")
+        if any(x in low for x in ("корроз", "ржав")):
+            return ("антикоррозионная защита", "коррозия", "признаки коррозии / нарушение защитного покрытия")
+        return ("прочие замечания", "замечание владельца", _t5fc_s(comment, 500))
+
+    def _t5fc_norms(text):
+        try:
+            from core.normative_engine import search_norms_sync, format_norms_for_act
+            ns = search_norms_sync(text or "", limit=5)
+            return ns, format_norms_for_act(ns) if ns else "норма не подтверждена"
+        except Exception as e:
+            return [], f"норма не подтверждена: {type(e).__name__}"
+
+    def _t5fc_enrich_materials(buf):
+        defects = []
+        for i, m in enumerate(buf.get("materials", []), 1):
+            c = _t5fc_s(m.get("owner_comment") or m.get("voice_comment") or "")
+            if c:
+                group, node, defect = _t5fc_classify_comment(c)
+                m["owner_comment"] = c
+                m["group_label"] = m.get("group_label") or group
+                m["section_hint"] = m.get("section_hint") or group
+                m["defect_hint"] = m.get("defect_hint") or defect
+                m["status"] = "LINKED"
+                norms_raw, norms_text = _t5fc_norms(c)
+                defects.append({
+                    "photo_no": i,
+                    "file_name": m.get("file_name", ""),
+                    "source": m.get("source", "TELEGRAM"),
+                    "node_location": node,
+                    "what_visible": "Автоматический визуальный анализ фото не выполнялся, так как Vision заблокирован. Вывод основан на пояснении владельца и метаданных файла",
+                    "defect_remark": defect,
+                    "why_bad": "Требует проверки на объекте и фиксации в акте технического надзора",
+                    "possible_consequences": "Требуется оценка влияния дефекта при очном осмотре",
+                    "what_to_fix": "Выполнить устранение замечания по проектному решению и требованиям применимых норм",
+                    "what_to_check_on_site": "Проверить фактическое состояние узла, объём дефекта, качество устранения и соответствие проекту",
+                    "normative_reference": norms_text,
+                    "norm_status": "PARTIAL" if norms_raw else "NOT_FOUND",
+                    "remark_status": "новое замечание",
+                    "confirmation_source": "OWNER_VOICE_OR_TEXT",
+                    "owner_question": None,
+                })
+        buf["defect_cards"] = defects
+        return defects
+
+    def _t5fc_save_object_context(chat_id, ctx, active, buf, act_link=""):
+        object_name = _t5fc_s(ctx.get("object_address") or ctx.get("object_name") or active.get("object_name") or active.get("folder_name") or "UNKNOWN")
+        object_id = _t5fc_slug(object_name)
+        card_path = _T5FC_OBJ / f"{object_id}.json"
+
+        card = _t5fc_jload(card_path, {
+            "object_id": object_id,
+            "object_name": object_name,
+            "client_name": "",
+            "object_folder_url": "",
+            "client_facing_folder_url": "",
+            "service_folder_url": "",
+            "inspection_chain": [],
+            "previous_acts": [],
+            "current_open_items": [],
+            "closed_items": [],
+            "unresolved_items": [],
+            "recommendations": [],
+            "last_visit_date": "",
+            "last_act_no": "",
+            "last_pdf_link": "",
+            "created_at": int(_t5fc_time.time()),
+            "updated_at": int(_t5fc_time.time()),
+        })
+
+        card["chat_id"] = str(chat_id)
+        card["object_name"] = object_name
+        card["object_folder_url"] = active.get("drive_folder_url") or (f"https://drive.google.com/drive/folders/{active.get('folder_id')}" if active.get("folder_id") else "")
+        card["service_folder_url"] = card["object_folder_url"]
+        card["updated_at"] = int(_t5fc_time.time())
+
+        _t5fc_jsave(card_path, card)
+        return object_id, card_path
+
+    def _t5fc_save_context(chat_id, raw_text):
+        clean = _t5fc_clean_voice(raw_text)
+        active = _t5fc_active(chat_id)
+        buf = _t5fc_buf(chat_id)
+        ctx = buf.setdefault("package_context", {})
+
+        address = _t5fc_extract_address(clean)
+        if address:
+            ctx["object_address"] = address
+            ctx["object_name"] = address
+            active["object_name"] = address
+            active["object_address"] = address
+
+        sb = _t5fc_source_and_basis(clean)
+        for k, v in sb.items():
+            ctx[k] = v
+            active[k] = v
+
+        ctx["last_owner_instruction"] = clean
+        ctx["updated_at"] = _t5fc_time.time()
+
+        obs = {
+            "source": "OWNER_VOICE_OR_TEXT",
+            "author": "OWNER",
+            "author_role": "owner",
+            "material_type": "voice_or_text",
+            "object": ctx.get("object_address") or active.get("object_name") or active.get("folder_name") or "",
+            "date": _t5fc_dt.datetime.now().strftime("%Y-%m-%d"),
+            "claim": clean,
+            "linked_files": [m.get("file_name", "") for m in buf.get("materials", [])],
+            "confirmed": "yes",
+            "contradiction": False,
+            "needs_owner_question": False,
+        }
+
+        observations = buf.setdefault("observations", [])
+        if clean and all(o.get("claim") != clean for o in observations):
+            observations.append(obs)
+
+        owner_instructions = buf.setdefault("owner_instructions", [])
+        if clean and clean not in owner_instructions:
+            owner_instructions.append(clean)
+        buf["owner_instructions"] = owner_instructions[-50:]
+
+        active_instr = active.setdefault("owner_instructions", [])
+        if clean and clean not in active_instr:
+            active_instr.append(clean)
+        active["owner_instructions"] = active_instr[-50:]
+        active["last_update"] = _t5fc_dt.datetime.now().isoformat(timespec="seconds")
+        active["status"] = active.get("status") or "OPEN"
+
+        defects = _t5fc_enrich_materials(buf)
+        object_id, card_path = _t5fc_save_object_context(chat_id, ctx, active, buf)
+
+        buf["package_context"] = ctx
+        buf["updated_at"] = _t5fc_time.time()
+        _t5fc_jsave(_t5fc_buf_path(chat_id), buf)
+        _t5fc_jsave(_t5fc_active_path(chat_id), active)
+
+        return {
+            "ctx": ctx,
+            "active": active,
+            "buf": buf,
+            "object_id": object_id,
+            "object_card_path": str(card_path),
+            "defect_count": len(defects),
+        }
+
+    def _t5fc_make_text_report(chat_id, task_id):
+        active = _t5fc_active(chat_id)
+        buf = _t5fc_buf(chat_id)
+        ctx = buf.setdefault("package_context", {})
+        defects = _t5fc_enrich_materials(buf)
+
+        object_name = _t5fc_s(ctx.get("object_address") or ctx.get("object_name") or active.get("object_name") or active.get("folder_name") or "UNKNOWN")
+        visit_basis = _t5fc_s(ctx.get("visit_basis") or active.get("visit_basis") or "UNKNOWN")
+        source_request = _t5fc_s(ctx.get("source_request") or active.get("source_request") or "UNKNOWN")
+        folder_id = _t5fc_s(active.get("folder_id"))
+        folder_name = _t5fc_s(active.get("folder_name") or "UNKNOWN")
+        now = _t5fc_dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        lines = [
+            "АКТ / РАЗБОР ТЕХНИЧЕСКОГО НАДЗОРА",
+            "",
+            f"Дата формирования: {now}",
+            f"Объект / адрес: {object_name}",
+            f"Активная папка: {folder_name}",
+            f"Ссылка на папку: https://drive.google.com/drive/folders/{folder_id}" if folder_id else "Ссылка на папку: UNKNOWN",
+            f"Основание выезда: {visit_basis}",
+            f"Источник заявки: {source_request}",
+            "",
+            "1. Техническое задание владельца",
+        ]
+
+        instr = buf.get("owner_instructions") or active.get("owner_instructions") or []
+        if instr:
+            for i, item in enumerate(instr, 1):
+                lines.append(f"{i}. {item}")
+        else:
+            lines.append("UNKNOWN")
+
+        lines += [
+            "",
+            "2. Материалы фотофиксации",
+        ]
+
+        mats = buf.get("materials", [])
+        if mats:
+            for i, m in enumerate(mats, 1):
+                lines.append(f"{i}. {m.get('file_name', '')}")
+                if m.get("drive_url"):
+                    lines.append(f"   Файл: {m.get('drive_url')}")
+                if m.get("owner_comment") or m.get("voice_comment"):
+                    lines.append(f"   Пояснение владельца: {m.get('owner_comment') or m.get('voice_comment')}")
+                if m.get("group_label"):
+                    lines.append(f"   Раздел: {m.get('group_label')}")
+        else:
+            lines.append("Материалы отсутствуют")
+
+        lines += [
+            "",
+            "3. Карточки наблюдений",
+        ]
+
+        obs = buf.get("observations") or []
+        if obs:
+            for i, o in enumerate(obs, 1):
+                lines.append(f"{i}. Источник: {o.get('source')}; Автор: {o.get('author_role')}; Наблюдение: {o.get('claim')}")
+        else:
+            lines.append("UNKNOWN")
+
+        lines += [
+            "",
+            "4. Карточки замечаний / дефектов",
+        ]
+
+        if defects:
+            for i, d in enumerate(defects, 1):
+                lines += [
+                    f"{i}. Фото: {d.get('file_name')}",
+                    f"   Узел / место: {d.get('node_location')}",
+                    f"   Что видно / источник вывода: {d.get('what_visible')}",
+                    f"   Замечание: {d.get('defect_remark')}",
+                    f"   Почему плохо: {d.get('why_bad')}",
+                    f"   Возможные последствия: {d.get('possible_consequences')}",
+                    f"   Что исправить: {d.get('what_to_fix')}",
+                    f"   Что проверить на объекте: {d.get('what_to_check_on_site')}",
+                    f"   Нормативная ссылка: {d.get('normative_reference')}",
+                    f"   Статус нормы: {d.get('norm_status')}",
+                    f"   Статус замечания: {d.get('remark_status')}",
+                ]
+        else:
+            lines.append("По текущему пакету нет пояснений владельца, достаточных для формирования DefectCard")
+
+        lines += [
+            "",
+            "5. Связь с предыдущими актами",
+            "Предыдущие акты по этому объекту автоматически не сопоставлены в текущем пакете. Если предыдущий акт найден отдельно, содержание требует ручной сверки",
+            "",
+            "6. Vision guard",
+            "Автоматический визуальный анализ фото не выполнялся, так как Vision заблокирован. Выводы основаны на пояснениях владельца, доступных именах файлов, метаданных и нормативном поиске",
+            "",
+            "7. Итог",
+            "Материалы, адрес объекта, основание выезда, пояснения владельца, карточки наблюдений и карточки замечаний объединены в один пакет технадзора",
+        ]
+
+        safe_obj = _t5fc_slug(object_name)
+        stamp = _t5fc_dt.datetime.now().strftime("%Y%m%d_%H%M%S")
+        txt_path = _T5FC_OUT / f"Акт_осмотра_{safe_obj}_{stamp}.txt"
+        txt_path.write_text("\n".join(lines), encoding="utf-8")
+        return txt_path, "\n".join(lines), defects
+
+    def _t5fc_make_pdf(txt, pdf_path):
+        from reportlab.pdfgen import canvas
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        from reportlab.lib.pagesizes import A4
+
+        font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+        pdfmetrics.registerFont(TTFont("DejaVuSans", font_path))
+
+        c = canvas.Canvas(str(pdf_path), pagesize=A4)
+        w, h = A4
+        x = 36
+        y = h - 36
+        c.setFont("DejaVuSans", 9)
+
+        for raw_line in txt.splitlines():
+            wrapped = _t5fc_textwrap.wrap(raw_line, width=105) or [""]
+            for line in wrapped:
+                if y < 36:
+                    c.showPage()
+                    c.setFont("DejaVuSans", 9)
+                    y = h - 36
+                c.drawString(x, y, line)
+                y -= 12
+        c.save()
+        return pdf_path
+
+    def _t5fc_upload_to_active_folder(file_path, folder_id, mime_type):
+        from core.topic_drive_oauth import _oauth_service
+        from googleapiclient.http import MediaFileUpload
+
+        svc = _oauth_service()
+        media = MediaFileUpload(str(file_path), mimetype=mime_type, resumable=False)
+        created = svc.files().create(
+            body={"name": file_path.name, "parents": [folder_id]},
+            media_body=media,
+            fields="id,name,webViewLink",
+        ).execute()
+        fid = created.get("id")
+        return {
+            "drive_file_id": fid,
+            "webViewLink": created.get("webViewLink") or (f"https://drive.google.com/file/d/{fid}/view?usp=drivesdk" if fid else ""),
+        }
+
+    def _t5fc_record_inspection(chat_id, task_id, pdf_link, defects):
+        active = _t5fc_active(chat_id)
+        buf = _t5fc_buf(chat_id)
+        ctx = buf.get("package_context", {})
+        object_name = _t5fc_s(ctx.get("object_address") or active.get("object_name") or active.get("folder_name") or "UNKNOWN")
+        object_id = _t5fc_slug(object_name)
+
+        try:
+            from core.technadzor_object_registry import record_inspection
+            record_inspection(
+                object_id=object_id,
+                chat_id=str(chat_id),
+                act_no=f"{_t5fc_dt.datetime.now().strftime('%d-%m/%y')}-{_t5fc_s(task_id)[:6]}",
+                date_str=_t5fc_dt.datetime.now().strftime("%Y-%m-%d"),
+                mode="initial",
+                pdf_link=pdf_link,
+                docx_link="",
+                source_photo_folder=f"https://drive.google.com/drive/folders/{active.get('folder_id')}" if active.get("folder_id") else "",
+                findings=defects,
+                open_items=defects,
+                closed_items=[],
+                new_items=defects,
+                owner_observation="\n".join(buf.get("owner_instructions") or active.get("owner_instructions") or []),
+                conflict_flags=[],
+                object_name=object_name,
+                object_folder_url=f"https://drive.google.com/drive/folders/{active.get('folder_id')}" if active.get("folder_id") else "",
+                service_folder_url=f"https://drive.google.com/drive/folders/{active.get('folder_id')}" if active.get("folder_id") else "",
+            )
+            return True
+        except Exception as e:
+            _T5FC_LOG.warning("FULLFIX_TOPIC5_FULL_CANON_RECORD_INSPECTION_ERR %s", e)
+            return False
+
+    def _t5fc_done(conn, task_id, chat_id, reply_to, text, kind, state="DONE"):
+        sent = _send_once_ex(
+            conn,
+            str(task_id),
+            str(chat_id),
+            _t5fc_s(text, 3500),
+            int(reply_to) if _t5fc_s(reply_to).isdigit() else None,
+            kind,
+        )
+        upd = {"state": state, "result": _t5fc_s(text, 50000), "error_message": "" if state == "DONE" else _t5fc_s(text, 1000)}
+        if isinstance(sent, dict) and (sent.get("bot_message_id") or sent.get("message_id")):
+            upd["bot_message_id"] = sent.get("bot_message_id") or sent.get("message_id")
+        _update_task(conn, str(task_id), **upd)
+        try:
+            _history(conn, str(task_id), kind)
+        except Exception:
+            pass
+        conn.commit()
+
+    async def _handle_new(conn, task, *args, **kwargs):
+        task_id = _t5fc_s(_t5fc_row(task, "id"))
+        chat_id = _t5fc_s(_t5fc_row(task, "chat_id", args[0] if len(args) > 0 else ""))
+        topic_id = int(_t5fc_row(task, "topic_id", args[1] if len(args) > 1 else 0) or 0)
+
+        if topic_id != 5:
+            res = _T5FC_ORIG_HANDLE_NEW(conn, task, *args, **kwargs)
+            return await res if hasattr(res, "__await__") else res
+
+        raw = _t5fc_s(_t5fc_row(task, "raw_input"))
+        input_type = _t5fc_s(_t5fc_row(task, "input_type"))
+        reply_to = _t5fc_s(_t5fc_row(task, "reply_to_message_id"))
+        clean = _t5fc_clean_voice(raw)
+
+        if input_type in ("text", "voice", "") and _t5fc_context_like(clean) and not _t5fc_act_like(clean):
+            saved = _t5fc_save_context(chat_id, clean)
+            ctx = saved["ctx"]
+            msg = "\n".join([
+                "Контекст технадзора принят к текущему акту",
+                f"Объект / адрес: {_t5fc_s(ctx.get('object_address') or ctx.get('object_name') or 'UNKNOWN')}",
+                f"Основание выезда: {_t5fc_s(ctx.get('visit_basis') or 'UNKNOWN')}",
+                f"Источник заявки: {_t5fc_s(ctx.get('source_request') or 'UNKNOWN')}",
+                f"Фото в пакете: {len(saved['buf'].get('materials', []))} шт",
+                f"DefectCard: {saved.get('defect_count', 0)}",
+                f"ObjectCard: {saved.get('object_id')}",
+                "Акт не формирую без команды: Сделай акт",
+            ])
+            _t5fc_done(conn, task_id, chat_id, reply_to, msg, "topic5_full_canon_context_saved", "DONE")
+            return
+
+        if input_type in ("text", "voice", "") and _t5fc_act_like(clean):
+            _t5fc_save_context(chat_id, clean) if _t5fc_context_like(clean) else None
+            active = _t5fc_active(chat_id)
+            folder_id = _t5fc_s(active.get("folder_id"))
+            if not folder_id:
+                _t5fc_done(conn, task_id, chat_id, reply_to, "Акт не сформирован: активная папка технадзора не установлена", "topic5_full_canon_act_no_folder", "FAILED")
+                return
+
+            txt_path, txt_body, defects = _t5fc_make_text_report(chat_id, task_id)
+            pdf_path = txt_path.with_suffix(".pdf")
+            drive_link = ""
+            uploaded_kind = ""
+
+            try:
+                _t5fc_make_pdf(txt_body, pdf_path)
+                uploaded = _t5fc_upload_to_active_folder(pdf_path, folder_id, "application/pdf")
+                drive_link = uploaded.get("webViewLink") or ""
+                uploaded_kind = "PDF"
+            except Exception as e:
+                _T5FC_LOG.warning("FULLFIX_TOPIC5_FULL_CANON_PDF_UPLOAD_ERR %s", e)
+                try:
+                    uploaded = _t5fc_upload_to_active_folder(txt_path, folder_id, "text/plain")
+                    drive_link = uploaded.get("webViewLink") or ""
+                    uploaded_kind = "TEXT"
+                except Exception as e2:
+                    msg = f"Акт не доставлен: DRIVE_UPLOAD_FAILED {type(e2).__name__}"
+                    _t5fc_done(conn, task_id, chat_id, reply_to, msg, "topic5_full_canon_delivery_failed", "FAILED")
+                    return
+
+            _t5fc_record_inspection(chat_id, task_id, drive_link, defects)
+
+            buf = _t5fc_buf(chat_id)
+            buf["last_full_canon_act"] = {
+                "task_id": task_id,
+                "created_at": _t5fc_time.time(),
+                "file": txt_path.name,
+                "pdf": pdf_path.name if pdf_path.exists() else "",
+                "uploaded_kind": uploaded_kind,
+                "drive_link": drive_link,
+                "defect_count": len(defects),
+            }
+            _t5fc_jsave(_t5fc_buf_path(chat_id), buf)
+
+            ctx = buf.get("package_context", {})
+            msg = "\n".join([
+                "Акт сформирован по полному контуру технадзора",
+                f"Формат: {uploaded_kind}",
+                f"Объект: {_t5fc_s(ctx.get('object_address') or ctx.get('object_name') or active.get('object_name') or active.get('folder_name') or 'UNKNOWN')}",
+                f"Основание: {_t5fc_s(ctx.get('visit_basis') or active.get('visit_basis') or 'UNKNOWN')}",
+                f"Фото: {len(buf.get('materials', []))} шт",
+                f"DefectCard: {len(defects)}",
+                f"Ссылка: {drive_link}",
+                f"Папка: https://drive.google.com/drive/folders/{folder_id}",
+            ])
+            _t5fc_done(conn, task_id, chat_id, reply_to, msg, "topic5_full_canon_act_delivered", "DONE")
+            return
+
+        res = _T5FC_ORIG_HANDLE_NEW(conn, task, *args, **kwargs)
+        return await res if hasattr(res, "__await__") else res
+
+    _handle_new._topic5_full_canon_close_v1 = True
+    _T5FC_LOG.info("FULLFIX_TOPIC5_FULL_CANON_CLOSE_V1_INSTALLED")
+
+except Exception as _t5fc_err:
+    try:
+        logging.getLogger("task_worker").exception("FULLFIX_TOPIC5_FULL_CANON_CLOSE_V1_INSTALL_ERR %s", _t5fc_err)
+    except Exception:
+        pass
+# === END_FULLFIX_TOPIC5_FULL_CANON_CLOSE_V1 ===
+
