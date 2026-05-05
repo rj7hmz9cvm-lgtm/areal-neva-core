@@ -3299,3 +3299,77 @@ def create_project_artifact_from_latest_template(user_text: str, task_id: str, t
     return result
 
 # === END_THREE_CONTOURS_FINAL_SOURCE_LOCK_V1 ===
+
+# === PHOTO_RECOGNITION_TOPIC210_RUNTIME_BINDING_V1 ===
+try:
+    _photo_210_orig_process_project_file = process_project_file
+
+    async def process_project_file(file_path: str, task_id: str, topic_id: int, raw_input: str = "") -> Dict[str, Any]:
+        from pathlib import Path as _PhotoPath
+        import json as _photo_json
+        import tempfile as _photo_tempfile
+        from core.photo_recognition_engine import is_image_file, process_photo_recognition
+
+        fp = str(file_path or "")
+        fn = _PhotoPath(fp).name
+
+        try:
+            tid = int(topic_id or 0)
+        except Exception:
+            tid = 0
+
+        if tid == 210 and is_image_file(file_name=fn, file_path=fp):
+            card = process_photo_recognition(
+                topic_id=210,
+                file_name=fn,
+                file_path=fp,
+                owner_comment=str(raw_input or ""),
+                source="TELEGRAM",
+                project_context_hint=str(raw_input or ""),
+            )
+
+            out_dir = _PhotoPath(_photo_tempfile.gettempdir()) / "areal_project_image_cards"
+            out_dir.mkdir(parents=True, exist_ok=True)
+
+            safe_task = str(task_id or "project_image")[:16]
+            artifact = out_dir / f"PROJECT_IMAGE_CARD__{safe_task}.json"
+            artifact.write_text(_photo_json.dumps(card, ensure_ascii=False, indent=2), encoding="utf-8")
+
+            return {
+                "success": True,
+                "section": detect_section(fn, raw_input) or "UNKNOWN",
+                "artifact_path": str(artifact),
+                "project_image_card": card,
+                "status": "PROJECT_IMAGE_CARD_CREATED_NO_VISION_ANALYSIS",
+                "error": None,
+                "message": "Изображение принято как проектный материал. Визуальный анализ не выполнялся без разрешённой Vision-модели",
+            }
+
+        return await _photo_210_orig_process_project_file(
+            file_path=file_path,
+            task_id=task_id,
+            topic_id=topic_id,
+            raw_input=raw_input,
+        )
+except Exception:
+    pass
+# === END_PHOTO_RECOGNITION_TOPIC210_RUNTIME_BINDING_V1 ===
+
+
+# === LOAD_CALCULATION_INPUT_BASED_BINDING_V1 ===
+def calc_loads_input_based(
+    permanent_kpa=None,
+    temporary_kpa=None,
+    snow_kpa=None,
+    wind_kpa=None,
+    source_text: str = "",
+):
+    from core.load_calculation_engine import calculate_loads_fact_only
+    return calculate_loads_fact_only(
+        permanent_kpa=permanent_kpa,
+        temporary_kpa=temporary_kpa,
+        snow_kpa=snow_kpa,
+        wind_kpa=wind_kpa,
+        source_text=source_text,
+    )
+# === END_LOAD_CALCULATION_INPUT_BASED_BINDING_V1 ===

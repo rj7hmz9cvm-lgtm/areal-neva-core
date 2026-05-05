@@ -3193,3 +3193,81 @@ try:
 except Exception as _p6h4fd_err:
     _P6H4FD_LOG.exception("P6H4FD_INSTALL_ERR %s", _p6h4fd_err)
 # === END_P6H4FD_FOLDER_DISCOVERY_V1 ===
+
+# === PHOTO_RECOGNITION_TOPIC5_RUNTIME_BINDING_V1 ===
+try:
+    _photo_t5_orig_process_technadzor = process_technadzor
+
+    def process_technadzor(
+        text: str = "",
+        task_id: str = "",
+        chat_id: str = "",
+        topic_id: int = 0,
+        file_path: str = "",
+        file_name: str = "",
+        **kwargs,
+    ):
+        from core.photo_recognition_engine import is_image_file, process_photo_recognition
+
+        clean_kwargs = dict(kwargs)
+        for key in (
+            "text", "raw_input", "task_id", "id", "chat_id", "topic_id",
+            "file_path", "local_path", "file_name", "name",
+        ):
+            clean_kwargs.pop(key, None)
+
+        raw_text = str(text or kwargs.get("raw_input") or "")
+        fp = str(file_path or kwargs.get("local_path") or "")
+        fn = str(file_name or kwargs.get("file_name") or kwargs.get("name") or "")
+        resolved_task_id = str(task_id or kwargs.get("task_id") or kwargs.get("id") or "")
+        resolved_chat_id = str(chat_id or kwargs.get("chat_id") or "")
+
+        try:
+            tid = int(topic_id or kwargs.get("topic_id") or 0)
+        except Exception:
+            tid = 0
+
+        photo_result = None
+        if tid == 5 and is_image_file(file_name=fn, file_path=fp):
+            photo_result = process_photo_recognition(
+                topic_id=5,
+                file_name=fn,
+                file_path=fp,
+                owner_comment=raw_text,
+                source="TELEGRAM",
+            )
+
+            if not raw_text.strip():
+                return {
+                    "ok": True,
+                    "handled": True,
+                    "status": "WAITING_CLARIFICATION",
+                    "state": "WAITING_CLARIFICATION",
+                    "kind": "technadzor_photo_material",
+                    "message": "Фото принято как материал технадзора. Укажи, к какому замечанию или разделу его отнести",
+                    "result_text": "Фото принято как материал технадзора. Укажи, к какому замечанию или разделу его отнести",
+                    "photo_recognition": photo_result,
+                    "history": "PHOTO_RECOGNITION_TOPIC5_RUNTIME_BINDING_V1:WAITING_OWNER_COMMENT",
+                }
+
+        result = _photo_t5_orig_process_technadzor(
+            text=raw_text,
+            task_id=resolved_task_id,
+            chat_id=resolved_chat_id,
+            topic_id=tid,
+            file_path=fp,
+            file_name=fn,
+            **clean_kwargs,
+        )
+
+        if photo_result and isinstance(result, dict):
+            result["photo_recognition"] = photo_result
+            result["photo_recognition_status"] = photo_result.get("status")
+            result["history"] = str(result.get("history") or "") + "|PHOTO_RECOGNITION_TOPIC5_RUNTIME_BINDING_V1"
+            if "message" not in result and "result_text" not in result:
+                result["message"] = "Фото принято и связано с технадзорным материалом"
+
+        return result
+except Exception:
+    pass
+# === END_PHOTO_RECOGNITION_TOPIC5_RUNTIME_BINDING_V1 ===
