@@ -2993,3 +2993,178 @@ try:
 except Exception as _p6h4tw_v1_err:
     _P6H4TW_V1_LOG.exception("P6H4TW_V1_INSTALL_ERR %s", _p6h4tw_v1_err)
 # === END_P6H4TW_BATCH_TRIGGER_V1 ===
+
+# === P6H4FD_FOLDER_DISCOVERY_V1 ===
+import re as _p6h4fd_re
+import logging as _p6h4fd_log_mod
+
+_P6H4FD_LOG = _p6h4fd_log_mod.getLogger("technadzor_engine.p6h4fd")
+
+_P6H4FD_FOLDER_INTENTS = (
+    "папка",
+    "новая папка",
+    "создана папка",
+    "создал папку",
+    "обнаружь папку",
+    "найди папку",
+    "папка называется",
+    "работаем по папке",
+    "текущая папка",
+    "прими папку",
+    "туда складывать",
+    "туда загружать",
+    "все материалы туда",
+)
+
+# Matches "папк[у/а/и] <name>" — captures up to 60 chars until punctuation or end
+_P6H4FD_NAME_RE = _p6h4fd_re.compile(
+    r"(?:папк[уаи]|папка)\s+([А-Яа-яёЁA-Za-z0-9][А-Яа-яёЁA-Za-z0-9 \-_]{0,60}?)(?:[,.\n!?]|$)",
+    _p6h4fd_re.IGNORECASE,
+)
+
+
+def _p6h4fd_extract_name(text: str) -> str:
+    m = _P6H4FD_NAME_RE.search(text)
+    if m:
+        return m.group(1).strip()
+    return ""
+
+
+def _p6h4fd_norm(s: str) -> str:
+    return " ".join(s.lower().replace("ё", "е").split())
+
+
+def _p6h4fd_match_score(candidate: str, folder_name: str) -> int:
+    c = _p6h4fd_norm(candidate)
+    f = _p6h4fd_norm(folder_name)
+    if not c:
+        return 0
+    if c == f:
+        return 100
+    if c in f or f in c:
+        return 80
+    cw = set(c.split())
+    fw = set(f.split())
+    overlap = len(cw & fw)
+    return overlap * 10 if overlap else 0
+
+
+try:
+    _p6h4fd_orig_pt = process_technadzor
+    if not getattr(_p6h4fd_orig_pt, "_p6h4fd_wrapped", False):
+
+        def process_technadzor(  # noqa: F811
+            text="", task_id="", chat_id="", topic_id=0,
+            file_path="", file_name="", **kwargs
+        ):
+            if int(topic_id or 0) != 5:
+                return _p6h4fd_orig_pt(
+                    text=text, task_id=task_id, chat_id=chat_id,
+                    topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs
+                )
+
+            txt_low = (text or "").lower().replace("ё", "е")
+            if not any(t in txt_low for t in _P6H4FD_FOLDER_INTENTS):
+                return _p6h4fd_orig_pt(
+                    text=text, task_id=task_id, chat_id=chat_id,
+                    topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs
+                )
+
+            # — folder/context intent: fresh Drive lookup by name —
+            try:
+                candidate = _p6h4fd_extract_name(text or "")
+                chat_str = str(chat_id or "")
+                _P6H4FD_LOG.info(
+                    "P6H4FD_DISCOVERY_START candidate=%r chat=%s", candidate, chat_str
+                )
+
+                from core.technadzor_drive_index import _resolve_topic_folder, _service as _p6h4fd_svc
+
+                svc = _p6h4fd_svc()
+                topic5_fid = _resolve_topic_folder(svc, chat_str, 5)
+
+                if not topic5_fid:
+                    _P6H4FD_LOG.warning("P6H4FD_NO_TOPIC5_FOLDER chat=%s", chat_str)
+                    return {
+                        "ok": False,
+                        "handled": False,
+                        "result_text": "",
+                        "message": "",
+                        "history": "P6H4FD_V1:NO_TOPIC5_FOLDER",
+                    }
+
+                # list all subfolders inside topic_5 Drive folder
+                res = svc.files().list(
+                    q=(
+                        f"'{topic5_fid}' in parents"
+                        " and mimeType='application/vnd.google-apps.folder'"
+                        " and trashed=false"
+                    ),
+                    fields="files(id,name,createdTime,modifiedTime)",
+                    orderBy="createdTime desc",
+                    pageSize=50,
+                ).execute()
+                folders = res.get("files", [])
+                _P6H4FD_LOG.info(
+                    "P6H4FD_SUBFOLDER_COUNT count=%s topic5_fid=%s", len(folders), topic5_fid
+                )
+
+                if not folders:
+                    return {
+                        "ok": False,
+                        "handled": False,
+                        "result_text": "",
+                        "message": "",
+                        "history": "P6H4FD_V1:NO_SUBFOLDERS",
+                    }
+
+                # fuzzy match; if no candidate → take newest (already sorted desc)
+                best = None
+                best_score = 0
+                if candidate:
+                    for f in folders:
+                        score = _p6h4fd_match_score(candidate, f.get("name", ""))
+                        if score > best_score:
+                            best_score = score
+                            best = f
+
+                if best is None or best_score == 0:
+                    # no name to match or no match found — take newest
+                    best = folders[0]
+
+                fid = best["id"]
+                fname = best.get("name", "")
+                link = f"https://drive.google.com/drive/folders/{fid}"
+
+                set_active_folder(chat_str, 5, {
+                    "folder_id": fid,
+                    "folder_name": fname,
+                    "source_text": (text or "")[:500],
+                })
+                msg = f"Нашёл папку «{fname}» и установил её как активную.\n{link}"
+                _P6H4FD_LOG.info(
+                    "P6H4FD_SET_ACTIVE folder_id=%s name=%r score=%s chat=%s",
+                    fid, fname, best_score, chat_str,
+                )
+                return {
+                    "ok": True,
+                    "handled": True,
+                    "result_text": msg,
+                    "message": msg,
+                    "history": f"P6H4FD_V1:SET_ACTIVE:{fid}",
+                }
+
+            except Exception as _e:
+                _P6H4FD_LOG.warning("P6H4FD_ERR %s", _e)
+                # on error fall through to lower wrapper
+                return _p6h4fd_orig_pt(
+                    text=text, task_id=task_id, chat_id=chat_id,
+                    topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs
+                )
+
+        process_technadzor._p6h4fd_wrapped = True
+        _p6h4fd_orig_pt._p6h4fd_wrapped = True
+        _P6H4FD_LOG.info("P6H4FD_FOLDER_DISCOVERY_V1_INSTALLED")
+except Exception as _p6h4fd_err:
+    _P6H4FD_LOG.exception("P6H4FD_INSTALL_ERR %s", _p6h4fd_err)
+# === END_P6H4FD_FOLDER_DISCOVERY_V1 ===

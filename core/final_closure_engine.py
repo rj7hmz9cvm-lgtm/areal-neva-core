@@ -720,3 +720,58 @@ def maybe_handle_final_closure(
 
 
 # === END_FINAL_CLOSURE_BLOCKER_FIX_V1_ENGINE ===
+
+# === P6H4TW_FCE_TOPIC5_ROUTE_FIX_V1 ===
+_P6H4TW_FCE_FOLDER_INTENTS = (
+    "папка",
+    "новая папка",
+    "создана папка",
+    "создал папку",
+    "обнаружь папку",
+    "найди папку",
+    "папка называется",
+    "работаем по папке",
+    "текущая папка",
+    "прими папку",
+    "туда складывать",
+    "туда загружать",
+    "все материалы туда",
+)
+
+_p6h4tw_fce_orig_handle_technadzor = _handle_technadzor
+
+
+def _handle_technadzor(raw_input: str, task_id: str, chat_id: str, topic_id: int) -> Dict[str, Any]:  # noqa: F811
+    _low = (raw_input or "").lower().replace("ё", "е")
+    _is_folder_intent = any(t in _low for t in _P6H4TW_FCE_FOLDER_INTENTS)
+
+    if int(topic_id or 0) == 5 and _is_folder_intent:
+        try:
+            from core.technadzor_engine import process_technadzor as _p6h4tw_fce_pt
+            r = _p6h4tw_fce_pt(
+                text=raw_input, task_id=task_id, chat_id=chat_id, topic_id=topic_id
+            )
+            if isinstance(r, dict):
+                if r.get("ok") and not r.get("handled"):
+                    r = dict(r)
+                    r["handled"] = True
+                    r["message"] = r.get("result_text") or r.get("message") or ""
+                elif not r.get("ok") and not r.get("handled"):
+                    r = dict(r)
+                    r["handled"] = False
+                return r
+        except Exception as _e:
+            import logging as _l
+            _l.getLogger("task_worker").warning("P6H4TW_FCE_ERR %s", _e)
+        # folder resolver failed or returned nothing — ask owner instead of AI fallback
+        return {
+            "handled": True,
+            "ok": True,
+            "state": "WAITING_CLARIFICATION",
+            "message": "Не удалось найти папку на Drive. Пришли ссылку на папку или уточни точное название.",
+            "history": "P6H4TW_FCE_V1:FOLDER_NOT_FOUND",
+        }
+
+    return _p6h4tw_fce_orig_handle_technadzor(raw_input, task_id, chat_id, topic_id)
+
+# === END_P6H4TW_FCE_TOPIC5_ROUTE_FIX_V1 ===
