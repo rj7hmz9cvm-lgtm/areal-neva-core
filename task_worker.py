@@ -8735,3 +8735,459 @@ try:
 except Exception:
     pass
 # === END_FULLFIX_TOPIC5_TECHNADZOR_CANON_CONTOUR_V2_WORKER ===
+
+# === FULLFIX_TOPIC5_CANON_CLOSE_ACTIVE_FOLDER_NO_DUP_ACTS_V1 ===
+try:
+    import re as _t5c_re
+    import json as _t5c_json
+    import time as _t5c_time
+    import uuid as _t5c_uuid
+    import datetime as _t5c_datetime
+    from pathlib import Path as _t5c_Path
+
+    _T5C_ORIG_HANDLE_NEW = _handle_new
+    _T5C_BASE = _t5c_Path("/root/.areal-neva-core")
+    _T5C_DATA = _T5C_BASE / "data" / "technadzor"
+    _T5C_OUT = _T5C_BASE / "outputs" / "technadzor"
+    _T5C_DATA.mkdir(parents=True, exist_ok=True)
+    _T5C_OUT.mkdir(parents=True, exist_ok=True)
+
+    def _t5c_s(v, limit=50000):
+        try:
+            if v is None:
+                return ""
+            return str(v).strip()[:limit]
+        except Exception:
+            return ""
+
+    def _t5c_low(v):
+        return _t5c_s(v).lower().replace("ё", "е")
+
+    def _t5c_row(task, key, default=None):
+        try:
+            return task[key]
+        except Exception:
+            return getattr(task, key, default)
+
+    def _t5c_json_load(raw):
+        try:
+            d = _t5c_json.loads(_t5c_s(raw))
+            return d if isinstance(d, dict) else {}
+        except Exception:
+            return {}
+
+    def _t5c_clean_voice(raw):
+        text = _t5c_s(raw, 20000)
+        if text.upper().startswith("[VOICE]"):
+            text = text[7:].strip()
+        return text
+
+    def _t5c_is_photo_meta(meta):
+        fn = _t5c_s(meta.get("file_name") or meta.get("name"))
+        mt = _t5c_s(meta.get("mime_type"))
+        return fn.lower().endswith((".jpg", ".jpeg", ".png", ".webp", ".heic")) or mt.startswith("image/")
+
+    def _t5c_msg_id(meta):
+        for k in ("telegram_message_id", "reply_to_message_id"):
+            v = _t5c_s(meta.get(k))
+            if v:
+                return v
+        fn = _t5c_s(meta.get("file_name"))
+        m = _t5c_re.search(r"_(\d+)\.(jpg|jpeg|png|webp|heic)$", fn, _t5c_re.I)
+        return m.group(1) if m else ""
+
+    def _t5c_active_folder(chat_id):
+        p = _T5C_DATA / f"active_folder_{chat_id}_5.json"
+        try:
+            d = _t5c_json.loads(p.read_text(encoding="utf-8"))
+            if d.get("folder_id") and _t5c_s(d.get("status", "OPEN")).upper() != "CLOSED":
+                return d
+        except Exception:
+            pass
+        return {}
+
+    def _t5c_buf_path(chat_id):
+        return _T5C_DATA / f"buf_{chat_id}_5.json"
+
+    def _t5c_load_buf(chat_id):
+        p = _t5c_buf_path(chat_id)
+        try:
+            d = _t5c_json.loads(p.read_text(encoding="utf-8"))
+            if isinstance(d, dict):
+                d.setdefault("materials", [])
+                return d
+        except Exception:
+            pass
+        return {"source": "topic5_visit_buffer", "materials": [], "created_at": _t5c_time.time()}
+
+    def _t5c_save_buf(chat_id, buf):
+        buf["updated_at"] = _t5c_time.time()
+        _t5c_buf_path(chat_id).write_text(_t5c_json.dumps(buf, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    def _t5c_drive_service():
+        from core import topic_drive_oauth as _tdo
+        return _tdo._oauth_service()
+
+    def _t5c_drive_find_by_name(service, folder_id, name):
+        safe = _t5c_s(name).replace("'", "\\'")
+        resp = service.files().list(
+            q=f"name = '{safe}' and '{folder_id}' in parents and trashed = false",
+            spaces="drive",
+            fields="files(id,name,webViewLink,createdTime)",
+            orderBy="createdTime",
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True,
+            pageSize=10,
+        ).execute()
+        files = resp.get("files", [])
+        return files[0] if files else {}
+
+    def _t5c_copy_drive_to_active(meta, chat_id):
+        af = _t5c_active_folder(chat_id)
+        active_id = _t5c_s(af.get("folder_id"))
+        if not active_id:
+            return meta
+
+        file_id = _t5c_s(meta.get("file_id") or meta.get("drive_file_id") or meta.get("id"))
+        file_name = _t5c_s(meta.get("file_name") or meta.get("name"))
+        if not file_id or not file_name:
+            return meta
+
+        try:
+            svc = _t5c_drive_service()
+            existing = _t5c_drive_find_by_name(svc, active_id, file_name)
+            if existing:
+                meta["active_drive_file_id"] = existing.get("id", "")
+                meta["active_drive_url"] = existing.get("webViewLink", "")
+                meta["active_folder_id"] = active_id
+                meta["active_folder_name"] = _t5c_s(af.get("folder_name"))
+                return meta
+
+            res = svc.files().copy(
+                fileId=file_id,
+                body={"name": file_name, "parents": [active_id]},
+                fields="id,webViewLink,parents",
+                supportsAllDrives=True,
+            ).execute()
+            meta["active_drive_file_id"] = res.get("id", "")
+            meta["active_drive_url"] = res.get("webViewLink", "")
+            meta["active_folder_id"] = active_id
+            meta["active_folder_name"] = _t5c_s(af.get("folder_name"))
+        except Exception as e:
+            meta["active_copy_error"] = _t5c_s(e, 500)
+
+        return meta
+
+    def _t5c_material_from_meta(meta, chat_id, comment=""):
+        meta = _t5c_copy_drive_to_active(dict(meta), chat_id)
+        af = _t5c_active_folder(chat_id)
+
+        src_id = _t5c_s(meta.get("file_id") or meta.get("drive_file_id") or meta.get("id"))
+        active_id = _t5c_s(meta.get("active_drive_file_id") or src_id)
+        fn = _t5c_s(meta.get("file_name") or meta.get("name"))
+        mid = _t5c_msg_id(meta)
+        clean = _t5c_clean_voice(comment)
+
+        return {
+            "material_id": str(_t5c_uuid.uuid4()),
+            "source": "TELEGRAM",
+            "file_type": "PHOTO",
+            "file_name": fn,
+            "source_drive_file_id": src_id,
+            "drive_file_id": active_id,
+            "drive_url": _t5c_s(meta.get("active_drive_url") or meta.get("drive_url") or meta.get("webViewLink") or (f"https://drive.google.com/file/d/{active_id}/view?usp=drivesdk" if active_id else "")),
+            "telegram_message_id": mid,
+            "reply_to_message_id": mid,
+            "source_task_id": _t5c_s(meta.get("_task_id")),
+            "active_folder_id": _t5c_s(af.get("folder_id")),
+            "active_folder_name": _t5c_s(af.get("folder_name")),
+            "include_in_report": True,
+            "include_in_act": True,
+            "status": "LINKED" if clean else "PENDING",
+            "voice_comment": clean,
+            "copy_error": _t5c_s(meta.get("active_copy_error")),
+            "added_at": _t5c_time.time(),
+            "updated_at": _t5c_time.time(),
+        }
+
+    def _t5c_upsert_material(chat_id, material):
+        buf = _t5c_load_buf(chat_id)
+        mid = _t5c_s(material.get("telegram_message_id"))
+        fn = _t5c_s(material.get("file_name"))
+        target = None
+
+        for old in buf.get("materials", []):
+            if (mid and _t5c_s(old.get("telegram_message_id")) == mid) or (fn and _t5c_s(old.get("file_name")) == fn):
+                target = old
+                break
+
+        if target is None:
+            buf["materials"].append(material)
+        else:
+            old_comment = _t5c_s(target.get("voice_comment"), 20000)
+            new_comment = _t5c_s(material.get("voice_comment"), 20000)
+            target.update({k: v for k, v in material.items() if v not in ("", None)})
+            if old_comment and new_comment and new_comment not in old_comment:
+                target["voice_comment"] = old_comment + "\n" + new_comment
+            elif old_comment and not new_comment:
+                target["voice_comment"] = old_comment
+
+        _t5c_save_buf(chat_id, buf)
+        return len(buf.get("materials", []))
+
+    def _t5c_find_parent_photo(conn, chat_id, topic_id, reply_to):
+        rid = _t5c_s(reply_to)
+        if not rid:
+            return {}
+
+        rows = conn.execute(
+            """
+            SELECT rowid,id,raw_input,reply_to_message_id
+            FROM tasks
+            WHERE chat_id=?
+              AND topic_id=?
+              AND input_type='drive_file'
+            ORDER BY rowid DESC
+            LIMIT 300
+            """,
+            (_t5c_s(chat_id), int(topic_id or 0)),
+        ).fetchall()
+
+        for row in rows:
+            meta = _t5c_json_load(row["raw_input"] if hasattr(row, "keys") else row[2])
+            if not _t5c_is_photo_meta(meta):
+                continue
+            row_reply = _t5c_s(row["reply_to_message_id"] if hasattr(row, "keys") else row[3])
+            meta["_task_id"] = _t5c_s(row["id"] if hasattr(row, "keys") else row[1])
+            ids = {row_reply, _t5c_s(meta.get("telegram_message_id")), _t5c_msg_id(meta)}
+            if rid in ids:
+                return meta
+
+        parent = conn.execute(
+            """
+            SELECT reply_to_message_id
+            FROM tasks
+            WHERE chat_id=?
+              AND topic_id=?
+              AND CAST(bot_message_id AS TEXT)=?
+            ORDER BY rowid DESC
+            LIMIT 1
+            """,
+            (_t5c_s(chat_id), int(topic_id or 0), rid),
+        ).fetchone()
+
+        parent_reply = _t5c_s(parent["reply_to_message_id"] if parent and hasattr(parent, "keys") else (parent[0] if parent else ""))
+        if parent_reply and parent_reply != rid:
+            return _t5c_find_parent_photo(conn, chat_id, topic_id, parent_reply)
+
+        return {}
+
+    def _t5c_explicit_act(text):
+        low = _t5c_low(text)
+        neg = any(x in low for x in (
+            "не делай акт",
+            "не надо акт",
+            "не нужно акт",
+            "не формируй акт",
+            "не должен был сделать акт",
+            "не должен делать акт",
+            "акт не для каждого",
+            "не для каждого из",
+            "принять к сведению",
+            "принять это к сведению",
+            "прими к сведению",
+            "прими это к сведению",
+        ))
+        pos = any(x in low for x in (
+            "сделай акт",
+            "сформируй акт",
+            "собери акт",
+            "готовь акт",
+            "акт по этим фото",
+            "акт по фото",
+            "сделай документ",
+            "сформируй документ",
+        ))
+        return pos and not neg
+
+    def _t5c_folder_question(text):
+        low = _t5c_low(text)
+        return "папк" in low and any(x in low for x in ("видишь", "какая", "где", "тест надзор", "актив", "ссылка"))
+
+    def _t5c_safe_photo_talk(text):
+        low = _t5c_low(text)
+        return any(x in low for x in (
+            "фото",
+            "фотограф",
+            "с ними",
+            "по ним",
+            "эти",
+            "этими",
+            "понял задачу",
+            "задача понятна",
+            "принять к сведению",
+            "принять это к сведению",
+            "нарушение",
+            "факт нарушения",
+        ))
+
+    async def _t5c_upload_file(path, name, chat_id, topic_id, mime):
+        from core.topic_drive_oauth import upload_file_to_topic
+        return await upload_file_to_topic(str(path), name, str(chat_id), int(topic_id or 0), mime)
+
+    async def _t5c_make_single_act(chat_id, topic_id, task_id, command_text):
+        buf = _t5c_load_buf(chat_id)
+        materials = list(buf.get("materials", []))
+        if not materials:
+            return {"ok": False, "text": "В пакете технадзора нет фото. Сначала пришли фото или ответь голосом на фото"}
+
+        ts = _t5c_datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_tid = _t5c_s(task_id)[:8] or ts
+        txt_path = _T5C_OUT / f"АКТ_ТЕХНАДЗОРА__{safe_tid}_{ts}.txt"
+
+        lines = [
+            "АКТ ТЕХНИЧЕСКОГО НАДЗОРА",
+            "",
+            f"Дата: {_t5c_datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            f"Задача: {task_id}",
+            f"Chat: {chat_id}",
+            f"Topic: {topic_id}",
+            "",
+            "Основание:",
+            _t5c_clean_voice(command_text) or "Осмотр материалов из Telegram",
+            "",
+            "Материалы:",
+        ]
+
+        for i, m in enumerate(materials, 1):
+            lines.append(f"{i}. {m.get('file_name','')}")
+            if m.get("voice_comment"):
+                lines.append(f"   Пояснение: {m.get('voice_comment')}")
+            if m.get("drive_url"):
+                lines.append(f"   Фото: {m.get('drive_url')}")
+
+        lines += [
+            "",
+            "Результат:",
+            "Факт нарушения принят к сведению по приложенным фото и пояснениям.",
+            "",
+            "Статус:",
+            "Акт сформирован одним документом по пакету фото.",
+        ]
+
+        txt_path.write_text("\n".join(lines), encoding="utf-8")
+        uploaded = await _t5c_upload_file(txt_path, txt_path.name, chat_id, topic_id, "text/plain")
+
+        archive_path = _T5C_DATA / f"buf_{chat_id}_5.DONE_{safe_tid}_{ts}.json"
+        buf["closed_by_task_id"] = task_id
+        buf["closed_at"] = _t5c_time.time()
+        buf["act_file"] = txt_path.name
+        buf["upload_result"] = uploaded
+        archive_path.write_text(_t5c_json.dumps(buf, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        try:
+            _t5c_buf_path(chat_id).unlink()
+        except Exception:
+            pass
+
+        link = _t5c_s(uploaded.get("webViewLink") or (f"https://drive.google.com/file/d/{uploaded.get('drive_file_id')}/view?usp=drivesdk" if uploaded.get("drive_file_id") else ""))
+        folder = _t5c_s(uploaded.get("active_folder_id") or uploaded.get("folder_id"))
+
+        return {
+            "ok": True,
+            "text": f"Акт сформирован одним документом\n{link}\nПапка: https://drive.google.com/drive/folders/{folder}",
+            "upload": uploaded,
+        }
+
+    def _t5c_done(conn, task_id, chat_id, reply_to, text, kind):
+        sent = _send_once_ex(conn, str(task_id), str(chat_id), _t5c_s(text, 3500), int(reply_to) if _t5c_s(reply_to).isdigit() else None, kind)
+        try:
+            if isinstance(sent, dict) and sent.get("message_id"):
+                conn.execute("UPDATE tasks SET bot_message_id=? WHERE id=?", (int(sent.get("message_id")), str(task_id)))
+        except Exception:
+            pass
+
+        conn.execute(
+            "UPDATE tasks SET state='DONE', result=?, error_message='', updated_at=datetime('now') WHERE id=?",
+            (_t5c_s(text, 12000), str(task_id)),
+        )
+
+        try:
+            _history(conn, str(task_id), kind)
+        except Exception:
+            pass
+
+        conn.commit()
+
+    async def _handle_new(conn, task, *args, **kwargs):
+        task_id = _t5c_s(_t5c_row(task, "id", ""))
+        chat_id = _t5c_s(_t5c_row(task, "chat_id", args[0] if len(args) > 0 else ""))
+        topic_id = int(_t5c_row(task, "topic_id", args[1] if len(args) > 1 else 0) or 0)
+
+        if topic_id != 5:
+            return await _T5C_ORIG_HANDLE_NEW(conn, task, *args, **kwargs)
+
+        raw = _t5c_s(_t5c_row(task, "raw_input", ""))
+        input_type = _t5c_s(_t5c_row(task, "input_type", ""))
+        reply_to = _t5c_s(_t5c_row(task, "reply_to_message_id", ""))
+        clean = _t5c_clean_voice(raw)
+        meta = _t5c_json_load(raw)
+
+        if _t5c_low(clean) == "статус":
+            return await _T5C_ORIG_HANDLE_NEW(conn, task, *args, **kwargs)
+
+        if _t5c_folder_question(clean):
+            af = _t5c_active_folder(chat_id)
+            buf = _t5c_load_buf(chat_id)
+            count = len(buf.get("materials", []))
+            if af.get("folder_id"):
+                msg = f"Активная папка технадзора: {af.get('folder_name') or af.get('folder_id')}\nhttps://drive.google.com/drive/folders/{af.get('folder_id')}\nВ пакете фото: {count} шт"
+            else:
+                msg = "Активная папка технадзора не установлена"
+            _t5c_done(conn, task_id, chat_id, reply_to, msg, "topic5_active_folder_status")
+            return
+
+        if input_type == "drive_file" and _t5c_is_photo_meta(meta):
+            material = _t5c_material_from_meta(meta, chat_id, "")
+            count = _t5c_upsert_material(chat_id, material)
+            msg = f"Фото принято в пакет технадзора: {count} шт. Активная папка: {material.get('active_folder_name') or material.get('active_folder_id')}"
+            if material.get("copy_error"):
+                msg += f"\nDrive copy error: {material.get('copy_error')}"
+            _t5c_done(conn, task_id, chat_id, reply_to, msg, "topic5_photo_buffered_active_folder")
+            return
+
+        if input_type in ("text", "voice", "") and reply_to and not _t5c_explicit_act(clean):
+            parent = _t5c_find_parent_photo(conn, chat_id, topic_id, reply_to)
+            if parent:
+                material = _t5c_material_from_meta(parent, chat_id, clean)
+                count = _t5c_upsert_material(chat_id, material)
+                msg = f"Пояснение принято к фото: {material.get('file_name')}. В пакете технадзора: {count} шт. Акт не формирую без отдельной команды"
+                if material.get("copy_error"):
+                    msg += f"\nDrive copy error: {material.get('copy_error')}"
+                _t5c_done(conn, task_id, chat_id, reply_to, msg, "topic5_reply_photo_comment_bound")
+                return
+
+        if input_type in ("text", "voice", "") and _t5c_explicit_act(clean):
+            act = await _t5c_make_single_act(chat_id, topic_id, task_id, clean)
+            _t5c_done(conn, task_id, chat_id, reply_to, act.get("text", "Акт не сформирован"), "topic5_single_act_result")
+            return
+
+        if input_type in ("text", "voice", "") and _t5c_safe_photo_talk(clean):
+            buf = _t5c_load_buf(chat_id)
+            count = len(buf.get("materials", []))
+            if count:
+                msg = f"Задача понятна. В пакете технадзора {count} фото. Жду пояснение к фото или явную команду: Сделай акт"
+            else:
+                msg = "В пакете технадзора нет фото. Ответь голосом прямо на фото или пришли фото заново"
+            _t5c_done(conn, task_id, chat_id, reply_to, msg, "topic5_safe_photo_talk_no_act")
+            return
+
+        return await _T5C_ORIG_HANDLE_NEW(conn, task, *args, **kwargs)
+
+    _handle_new._topic5_canon_close_v1 = True
+except Exception as _t5c_install_error:
+    try:
+        logging.getLogger("task_worker").exception("FULLFIX_TOPIC5_CANON_CLOSE_ACTIVE_FOLDER_NO_DUP_ACTS_V1_INSTALL_ERR %s", _t5c_install_error)
+    except Exception:
+        pass
+# === END_FULLFIX_TOPIC5_CANON_CLOSE_ACTIVE_FOLDER_NO_DUP_ACTS_V1 ===
