@@ -3079,8 +3079,19 @@ try:
                 )
 
                 from core.technadzor_drive_index import (
-                    _resolve_topic_folder, _service as _p6h4fd_svc, is_system_folder
+                    _resolve_topic_folder, _service as _p6h4fd_svc
                 )
+
+                # names that are containers/roots — never a valid result
+                _P6H4FD_NEVER_RESULT = frozenset({
+                    "technadzor", "технадзор", "topic_5",
+                    "_orchestra_work", "_system", "_tmp", "_archive",
+                    "_drafts", "_templates", "_manifests",
+                    "_system", "_templates", "_drafts", "_manifests",
+                })
+
+                def _p6h4fd_is_container(name):
+                    return (name or "").strip().lower() in _P6H4FD_NEVER_RESULT
 
                 svc = _p6h4fd_svc()
                 topic5_fid = _resolve_topic_folder(svc, chat_str, 5)
@@ -3088,10 +3099,11 @@ try:
                 if not topic5_fid:
                     _P6H4FD_LOG.warning("P6H4FD_NO_TOPIC5_FOLDER chat=%s", chat_str)
                     return {
-                        "ok": False,
-                        "handled": False,
-                        "result_text": "",
-                        "message": "",
+                        "ok": True,
+                        "handled": True,
+                        "state": "WAITING_CLARIFICATION",
+                        "result_text": "Не нашёл папку технадзора на Drive. Пришли ссылку на папку.",
+                        "message": "Не нашёл папку технадзора на Drive. Пришли ссылку на папку.",
                         "history": "P6H4FD_V1:NO_TOPIC5_FOLDER",
                     }
 
@@ -3108,34 +3120,38 @@ try:
                     ).execute()
                     return r.get("files", [])
 
-                # topic_5 structure: topic_5/TECHNADZOR(system)/тест надзор(client)
-                # get level-1 subfolders, separate system from client
+                # level1: direct children of topic_5
+                # find TECHNADZOR/ТЕХНАДЗОР container, use it as search root
                 level1 = _p6h4fd_list_subfolders(topic5_fid)
-                client_folders = [f for f in level1 if not is_system_folder(f.get("name", ""))]
-                system_folders = [f for f in level1 if is_system_folder(f.get("name", ""))]
+                container = next(
+                    (f for f in level1 if _p6h4fd_is_container(f.get("name", ""))), None
+                )
+                search_root_fid = container["id"] if container else topic5_fid
 
-                # if no client folders at level-1, go one level deeper into system folder
-                if not client_folders and system_folders:
-                    level2 = _p6h4fd_list_subfolders(system_folders[0]["id"])
-                    client_folders = [f for f in level2 if not is_system_folder(f.get("name", ""))]
-                    if not client_folders:
-                        client_folders = level2  # fallback: take everything
+                # get user folders from search root, exclude containers
+                raw_candidates = _p6h4fd_list_subfolders(search_root_fid)
+                folders = [f for f in raw_candidates if not _p6h4fd_is_container(f.get("name", ""))]
 
-                folders = client_folders or level1
                 _P6H4FD_LOG.info(
-                    "P6H4FD_SUBFOLDER_COUNT client=%s topic5_fid=%s", len(folders), topic5_fid
+                    "P6H4FD_CANDIDATES count=%s root=%s", len(folders), search_root_fid
                 )
 
                 if not folders:
+                    msg_nf = (
+                        f"Не нашёл пользовательских папок внутри ТЕХНАДЗОР."
+                        + (f" Ищу папку «{candidate}»." if candidate else "")
+                        + " Уточни точное название или пришли ссылку."
+                    )
                     return {
-                        "ok": False,
-                        "handled": False,
-                        "result_text": "",
-                        "message": "",
-                        "history": "P6H4FD_V1:NO_SUBFOLDERS",
+                        "ok": True,
+                        "handled": True,
+                        "state": "WAITING_CLARIFICATION",
+                        "result_text": msg_nf,
+                        "message": msg_nf,
+                        "history": "P6H4FD_V1:NO_USER_FOLDERS",
                     }
 
-                # fuzzy match; if no candidate → take newest (already sorted desc)
+                # exact match first, then fuzzy, then newest
                 best = None
                 best_score = 0
                 if candidate:
@@ -3146,7 +3162,7 @@ try:
                             best = f
 
                 if best is None or best_score == 0:
-                    # no candidate or no match — take newest
+                    # no candidate or no match — take newest, still must not be container
                     best = folders[0]
 
                 fid = best["id"]
