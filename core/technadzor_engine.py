@@ -3078,34 +3078,18 @@ try:
                     "P6H4FD_DISCOVERY_START candidate=%r chat=%s", candidate, chat_str
                 )
 
-                from core.technadzor_drive_index import (
-                    _resolve_topic_folder, _service as _p6h4fd_svc
-                )
+                from core.technadzor_drive_index import _service as _p6h4fd_svc
 
-                # names that are containers/roots — never a valid result
+                # system/container names — never a valid active folder result
                 _P6H4FD_NEVER_RESULT = frozenset({
-                    "technadzor", "технадзор", "topic_5",
-                    "_orchestra_work", "_system", "_tmp", "_archive",
-                    "_drafts", "_templates", "_manifests",
-                    "_system", "_templates", "_drafts", "_manifests",
+                    "technadzor", "технадзор", "topic_5", "_orchestra_work",
+                    "_system", "_tmp", "_archive", "_drafts", "_templates", "_manifests",
                 })
 
                 def _p6h4fd_is_container(name):
                     return (name or "").strip().lower() in _P6H4FD_NEVER_RESULT
 
                 svc = _p6h4fd_svc()
-                topic5_fid = _resolve_topic_folder(svc, chat_str, 5)
-
-                if not topic5_fid:
-                    _P6H4FD_LOG.warning("P6H4FD_NO_TOPIC5_FOLDER chat=%s", chat_str)
-                    return {
-                        "ok": True,
-                        "handled": True,
-                        "state": "WAITING_CLARIFICATION",
-                        "result_text": "Не нашёл папку технадзора на Drive. Пришли ссылку на папку.",
-                        "message": "Не нашёл папку технадзора на Drive. Пришли ссылку на папку.",
-                        "history": "P6H4FD_V1:NO_TOPIC5_FOLDER",
-                    }
 
                 def _p6h4fd_list_subfolders(parent_fid):
                     r = svc.files().list(
@@ -3120,32 +3104,41 @@ try:
                     ).execute()
                     return r.get("files", [])
 
-                # level1: direct children of topic_5
-                # find TECHNADZOR/ТЕХНАДЗОР container, use it as search root
-                level1 = _p6h4fd_list_subfolders(topic5_fid)
-                container = next(
-                    (f for f in level1 if _p6h4fd_is_container(f.get("name", ""))), None
-                )
-                search_root_fid = container["id"] if container else topic5_fid
+                # Step A: search inside correct user ТЕХНАДЗОР root
+                _TECHNADZOR_ROOT_FID = "1s2y5l2mJFTb7P90XVokErXYVzmoH-VtD"
+                raw_a = _p6h4fd_list_subfolders(_TECHNADZOR_ROOT_FID)
+                folders = [f for f in raw_a if not _p6h4fd_is_container(f.get("name", ""))]
+                _P6H4FD_LOG.info("P6H4FD_ROOT_SEARCH count=%s", len(folders))
 
-                # get user folders from search root, exclude containers
-                raw_candidates = _p6h4fd_list_subfolders(search_root_fid)
-                folders = [f for f in raw_candidates if not _p6h4fd_is_container(f.get("name", ""))]
-
-                _P6H4FD_LOG.info(
-                    "P6H4FD_CANDIDATES count=%s root=%s", len(folders), search_root_fid
-                )
+                # Step D: fallback — Drive-wide exact name search
+                if not folders and candidate:
+                    _safe = candidate.replace("'", "\\'")
+                    _gr = svc.files().list(
+                        q=(
+                            f"name='{_safe}'"
+                            " and mimeType='application/vnd.google-apps.folder'"
+                            " and trashed=false"
+                        ),
+                        fields="files(id,name,createdTime,modifiedTime)",
+                        orderBy="createdTime desc",
+                        pageSize=10,
+                    ).execute()
+                    folders = [
+                        f for f in _gr.get("files", [])
+                        if not _p6h4fd_is_container(f.get("name", ""))
+                    ]
+                    _P6H4FD_LOG.info("P6H4FD_GLOBAL_SEARCH count=%s candidate=%r", len(folders), candidate)
 
                 if not folders:
                     msg_nf = (
-                        f"Не нашёл пользовательских папок внутри ТЕХНАДЗОР."
-                        + (f" Ищу папку «{candidate}»." if candidate else "")
-                        + " Уточни точное название или пришли ссылку."
+                        "Папку не нашёл"
+                        + (f" «{candidate}»" if candidate else "")
+                        + ". Укажи точное название или пришли ссылку."
                     )
                     return {
                         "ok": True,
                         "handled": True,
-                        "state": "WAITING_CLARIFICATION",
+                        "state": "DONE",
                         "result_text": msg_nf,
                         "message": msg_nf,
                         "history": "P6H4FD_V1:NO_USER_FOLDERS",
@@ -3162,7 +3155,6 @@ try:
                             best = f
 
                 if best is None or best_score == 0:
-                    # no candidate or no match — take newest, still must not be container
                     best = folders[0]
 
                 fid = best["id"]
