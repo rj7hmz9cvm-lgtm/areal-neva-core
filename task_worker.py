@@ -10452,6 +10452,22 @@ except Exception as _t5fc_err:
         pass
 # === END_FULLFIX_TOPIC5_FULL_CANON_CLOSE_V1 ===
 
+# === TOPIC_ISOLATION_P6C_TECHNADZOR_STRICT_GUARD_V1 ===
+# Prevent P6C from routing drive_file from non-topic_5 topics (e.g. topic_210)
+# into technadzor path based on keyword match alone.
+try:
+    _p6c_tnz_like_orig_strict = _p6c_technadzor_like_20260504
+
+    def _p6c_technadzor_like_20260504(raw_input, topic_id):
+        if int(topic_id or 0) not in (0, 5):
+            return False
+        return _p6c_tnz_like_orig_strict(raw_input, topic_id)
+
+    _p6c_technadzor_like_20260504._strict_topic_guard_v1 = True
+except Exception:
+    pass
+# === END_TOPIC_ISOLATION_P6C_TECHNADZOR_STRICT_GUARD_V1 ===
+
 # === MOVE_MAIN_ENTRYPOINT_TO_END_V1 ===
 # All runtime patches (P6E2, P6H4TW, CANON_CLOSE, FULL_CANON_CLOSE) must be installed
 # before the event loop starts. Previously asyncio.run(main()) at line 8944 blocked them.
