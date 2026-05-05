@@ -11189,3 +11189,133 @@ except Exception as _p6hg_install_err:
         pass
 # === END_FIX_P6H4TW_VOICE_ANNOTATE_ACT_GUARD_V1 ===
 
+# === DRIVE_FILE_NO_INTENT_OFFER_V1 ===
+# topic_2: файл без явной команды → показать меню действий вместо сырого OCR
+import logging as _dfnio_log_mod
+_DFNIO_LOG = _dfnio_log_mod.getLogger("task_worker")
+
+try:
+    _dfnio_orig_handle_drive_file = _handle_drive_file
+except Exception:
+    _dfnio_orig_handle_drive_file = None
+
+async def _handle_drive_file(conn, task, chat_id, topic_id):
+    try:
+        import json as _dfnio_json
+        _tid = str(task["id"]) if hasattr(task, "keys") else str(task[0])
+        _raw = str(task["raw_input"]) if hasattr(task, "keys") else ""
+        _topic = int(topic_id or 0)
+        if _topic == 2:
+            try:
+                _data = _dfnio_json.loads(_raw)
+            except Exception:
+                _data = {}
+            _caption = str(_data.get("caption") or "").strip()
+            _fname = str(_data.get("file_name") or "").strip()
+            # Check if no intent using existing _ioa_needs logic
+            _no_intent = _ioa_needs(_raw, _caption)
+            if _no_intent:
+                _offer = (
+                    f"Принял файл «{_fname}». Что нужно сделать?\n\n"
+                    "1️⃣ Смета — извлечь позиции, посчитать объёмы, создать Excel\n"
+                    "2️⃣ Описание — описать содержимое документа\n"
+                    "3️⃣ Таблица — вытащить таблицы из файла в Excel\n"
+                    "4️⃣ Шаблон — сохранить как образец для будущих задач\n"
+                    "5️⃣ Анализ — технический анализ (КЖ/АР/КД)\n\n"
+                    "Напиши номер или опиши задачу."
+                )
+                _reply_to = task["reply_to_message_id"] if hasattr(task, "keys") and "reply_to_message_id" in task.keys() else None
+                conn.execute(
+                    "UPDATE tasks SET state='WAITING_CLARIFICATION', result=?, error_message='DRIVE_FILE_NO_INTENT_OFFER_V1', updated_at=datetime('now') WHERE id=?",
+                    (_offer, _tid)
+                )
+                conn.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (_tid, "DRIVE_FILE_NO_INTENT_OFFER_V1:menu_shown")
+                )
+                conn.commit()
+                _send_once_ex(conn, _tid, str(chat_id), _offer, _reply_to, "drive_file_no_intent_offer")
+                return
+    except Exception as _dfnio_err:
+        _DFNIO_LOG.warning("DRIVE_FILE_NO_INTENT_OFFER_V1_ERR: %s", _dfnio_err)
+    if _dfnio_orig_handle_drive_file:
+        return await _dfnio_orig_handle_drive_file(conn, task, chat_id, topic_id)
+# === END_DRIVE_FILE_NO_INTENT_OFFER_V1 ===
+
+# === FIX_P6E2_TW_ESTIMATE_LIKE_EXTEND_V1 ===
+# Extend _p6e2_tw_estimate_like to match extended ESTIMATE_WORDS canon
+def _p6e2_tw_estimate_like(text):
+    low = _p6e2_tw_low(text)
+    return any(x in low for x in (
+        "смет", "расчет", "расчёт", "посчитай", "посчитать",
+        "рассчитать", "стоимост", "стоить", "стоит",
+        "сколько стоит", "сколько будет", "нужна смета",
+        "нужен расчет", "нужен расчёт", "полная смета",
+    ))
+# === END_FIX_P6E2_TW_ESTIMATE_LIKE_EXTEND_V1 ===
+
+# === TOPIC500_ESTIMATE_ISOLATION_GUARD_V1 ===
+# topic_500 = internet search only. Must NEVER enter estimate/project pipeline.
+# Wraps FULLFIX_14 parse_estimate_rows to block topic_500 + topic_5 + topic_210 from estimate route.
+import logging as _t5eig_log_mod
+_T5EIG_LOG = _t5eig_log_mod.getLogger("task_worker")
+
+try:
+    from core.estimate_unified_engine import parse_estimate_rows as _t5eig_orig_parse
+    def _t5eig_safe_parse(text, topic_id=0):
+        _blocked = (500, 5, 210, 3008)
+        if int(topic_id or 0) in _blocked:
+            return []
+        return _t5eig_orig_parse(text)
+    import core.estimate_unified_engine as _t5eig_mod
+    _t5eig_mod.parse_estimate_rows = _t5eig_safe_parse
+    _T5EIG_LOG.info("TOPIC500_ESTIMATE_ISOLATION_GUARD_V1 installed")
+except Exception as _t5eig_e:
+    _T5EIG_LOG.warning("TOPIC500_ESTIMATE_ISOLATION_GUARD_V1 INSTALL ERR: %s", _t5eig_e)
+# === END_TOPIC500_ESTIMATE_ISOLATION_GUARD_V1 ===
+
+# === TOPIC5_PHOTO_ACT_CONFIRMATION_TIMEOUT_FIX_V1 ===
+# topic_5 photo acts stuck in AWAITING_CONFIRMATION → CONFIRMATION_TIMEOUT
+# Root cause: each photo creates own act, waits for confirmation that never comes.
+# Fix: topic_5 drive_file photo tasks that stayed AWAITING_CONFIRMATION > 5 min
+#      should be silently archived (photos go to buffer, not standalone acts).
+import logging as _t5patf_log_mod
+import threading as _t5patf_threading
+_T5PATF_LOG = _t5patf_log_mod.getLogger("task_worker")
+
+def _t5patf_archive_stale_photo_acts():
+    try:
+        import sqlite3 as _t5patf_sqlite
+        import time as _t5patf_time
+        conn2 = _t5patf_sqlite.connect("/root/.areal-neva-core/data/core.db")
+        conn2.row_factory = _t5patf_sqlite.Row
+        rows = conn2.execute("""
+            SELECT id FROM tasks
+            WHERE topic_id=5
+              AND input_type='drive_file'
+              AND state='AWAITING_CONFIRMATION'
+              AND error_message NOT LIKE '%CONFIRMATION_TIMEOUT%'
+              AND (julianday('now') - julianday(updated_at)) * 86400 > 300
+        """).fetchall()
+        for r in rows:
+            conn2.execute(
+                "UPDATE tasks SET state='FAILED', error_message='CONFIRMATION_TIMEOUT' WHERE id=?",
+                (r["id"],)
+            )
+            conn2.execute(
+                "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                (r["id"], "T5_PHOTO_ACT_STALE_ARCHIVED_V1")
+            )
+        if rows:
+            conn2.commit()
+            _T5PATF_LOG.info("T5_PHOTO_ACT_STALE_ARCHIVED_V1: archived %d stale photo acts", len(rows))
+        conn2.close()
+    except Exception as _t5patf_e:
+        _T5PATF_LOG.warning("T5_PHOTO_ACT_STALE_ARCHIVE_ERR: %s", _t5patf_e)
+
+try:
+    _t5patf_archive_stale_photo_acts()
+except Exception:
+    pass
+# === END_TOPIC5_PHOTO_ACT_CONFIRMATION_TIMEOUT_FIX_V1 ===
+

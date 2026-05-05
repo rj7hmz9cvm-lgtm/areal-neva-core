@@ -1608,3 +1608,118 @@ ESTIMATE_WORDS = tuple(set(ESTIMATE_WORDS) | {
     "сколько стоит", "сколько будет", "нужна смета", "нужен расчет", "нужен расчёт",
 })
 # === END_FIX_ESTIMATE_WORDS_EXTEND_V1 ===
+
+# === BUILD_ESTIMATE_ITEMS_11_SECTIONS_V1 ===
+# Canon: 11 sections per ESTIMATE_TEMPLATE_M80_M110_CANON
+# Фундамент / Каркас / Стены / Перекрытия / Кровля / Окна-двери /
+# Внешняя отделка / Внутренняя отделка / Инженерные коммуникации / Логистика / Накладные
+_bei11_orig = _build_estimate_items
+
+def _build_estimate_items(parsed, price_text, choice):
+    dims = parsed.get("dimensions") or parsed.get("dims") or (10.0, 10.0)
+    try:
+        a, b = float(dims[0]), float(dims[1])
+    except Exception:
+        a, b = 10.0, 10.0
+    area_floor = float(parsed.get("area_floor") or (a * b))
+    floors = int(parsed.get("floors") or 1)
+    height = float(parsed.get("height") or 3.0)
+    perimeter = 2 * (a + b)
+    distance = float(parsed.get("distance_km") or 0)
+    material = str(parsed.get("material") or "каркас").lower()
+    scope = str(parsed.get("scope") or "коробка").lower()
+    rooms = parsed.get("rooms") or []
+    windows = int(parsed.get("windows") or max(int(area_floor * floors / 10), 4))
+    doors = int(parsed.get("doors") or max(floors * 2, 2))
+
+    wall_area = round(perimeter * height * floors, 2)
+    total_area = round(area_floor * floors, 2)
+    roof_area = round(area_floor * 1.25, 2)
+    foundation_volume = round(area_floor * 0.25, 2)
+    rebar_qty = round(foundation_volume * 0.08, 3)
+    trips = max(math.ceil(distance / 40), 1) if distance > 0 else 1
+
+    def _p(keywords):
+        v = _choose_value(_numbers_from_price_text(price_text, keywords), choice)
+        return v if v and v > 0 else 0
+
+    p_concrete  = _p(("бетон", "в25", "в30"))
+    p_rebar     = _p(("арматур", "а500"))
+    p_wall_mat  = _p(("газобетон", "кирпич", "керамоблок", "каркас", "брус", "стен"))
+    p_wall_work = _p(("работ", "кладк", "монолит", "каркас", "сборк"))
+    p_roof      = _p(("кровл", "металлочерепица", "профнастил", "фальц", "мембран"))
+    p_window    = _p(("окн", "window", "остеклен"))
+    p_door      = _p(("двер", "door"))
+    p_facade    = _p(("фасад", "штукатурк", "мокрый фасад", "клинкер", "цсп", "имитац"))
+    p_interior  = _p(("внутренн", "штукатурк", "гкл", "гипсокартон", "отделк"))
+    p_floor     = _p(("ламинат", "плитка", "стяжк", "пол", "напольн"))
+    p_electro   = _p(("электрик", "проводк", "кабел", "электро"))
+    p_plumb     = _p(("водоснабж", "канализац", "сантех", "трубопров"))
+    p_heat      = _p(("отоплен", "теплый пол", "радиатор", "котел"))
+    p_delivery  = _p(("достав", "рейс", "манипулятор", "кран", "транспорт"))
+
+    def row(section, name, unit, qty, price, note=""):
+        qty = round(float(qty or 0), 3)
+        price_val = round(float(price or 0), 2)
+        note_out = note if price_val > 0 else ("цена не подтверждена, требует уточнения" + (f" / {note}" if note else ""))
+        return {"section": section, "name": name, "unit": unit, "qty": qty, "price": price_val, "note": note_out}
+
+    items = []
+
+    # 1. Фундамент
+    items.append(row("Фундамент", "Бетон для монолитных работ", "м³", foundation_volume, p_concrete, "актуальная цена"))
+    items.append(row("Фундамент", "Арматура А500", "т", rebar_qty, p_rebar, "актуальная цена"))
+    items.append(row("Фундамент", "Опалубка периметра плиты", "п.м", perimeter, p_wall_work * 0.3 if p_wall_work else 0, "работы"))
+
+    # 2. Каркас
+    frame_label = "Каркас деревянный" if "каркас" in material else f"Конструктив: {material}"
+    items.append(row("Каркас", frame_label, "м²", wall_area, p_wall_work, "работы по конструктиву"))
+
+    # 3. Стены
+    items.append(row("Стены", f"Материал стен: {material}", "м³", round(wall_area * 0.30, 2), p_wall_mat, "материал"))
+    items.append(row("Стены", "Утепление и пароизоляция", "м²", wall_area, p_wall_mat * 0.2 if p_wall_mat else 0, "теплоконтур"))
+
+    # 4. Перекрытия
+    inter_floor_area = area_floor * max(floors - 1, 0)
+    items.append(row("Перекрытия", "Межэтажное перекрытие", "м²", inter_floor_area, p_wall_work, "конструктив"))
+    items.append(row("Перекрытия", "Черновой пол (настил)", "м²", total_area, p_wall_work * 0.4 if p_wall_work else 0, "основание"))
+
+    # 5. Кровля
+    items.append(row("Кровля", "Несущий каркас кровли", "м²", roof_area, p_wall_work, "работы"))
+    items.append(row("Кровля", "Кровельное покрытие", "м²", roof_area, p_roof, "материал + монтаж"))
+
+    # 6. Окна, двери
+    items.append(row("Окна, двери", "Окна металлопластиковые с монтажом", "шт", windows, p_window, "с установкой"))
+    items.append(row("Окна, двери", "Двери с установкой", "шт", doors, p_door, "с установкой"))
+
+    # 7. Внешняя отделка
+    items.append(row("Внешняя отделка", "Фасадная отделка", "м²", wall_area, p_facade, "материал + работы"))
+
+    # 8. Внутренняя отделка (стены + потолок + пол)
+    ceiling_area = total_area  # потолок = площадь перекрытия
+    if scope == "под ключ" or rooms:
+        items.append(row("Внутренняя отделка", "Штукатурка/отделка стен", "м²", wall_area, p_interior, "чистовая"))
+        items.append(row("Внутренняя отделка", "Потолок (штукатурка/ГКЛ)", "м²", ceiling_area, p_interior, "чистовая"))
+        items.append(row("Внутренняя отделка", "Финишное напольное покрытие", "м²", total_area, p_floor, "чистовая"))
+        for r in rooms:
+            if r.get("area", 0) > 0:
+                items.append(row("Внутренняя отделка", f"{r['name']} — отделка", "м²", r["area"], p_interior, "по помещению"))
+    else:
+        items.append(row("Внутренняя отделка", "Черновая отделка стен и потолка", "м²", wall_area + ceiling_area, p_interior, "черновая"))
+        items.append(row("Внутренняя отделка", "Стяжка пола", "м²", total_area, p_floor, "черновая"))
+
+    # 9. Инженерные коммуникации
+    items.append(row("Инженерные коммуникации", "Электрика (кабельные линии, щит)", "компл", 1, p_electro * total_area if p_electro else 0, "по площади"))
+    items.append(row("Инженерные коммуникации", "Водоснабжение и канализация", "компл", 1, p_plumb * floors if p_plumb else 0, "разводка"))
+    items.append(row("Инженерные коммуникации", "Отопление", "м²", total_area, p_heat, "по площади"))
+
+    # 10. Логистика
+    items.append(row("Логистика", "Доставка материалов от СПб", "рейс", trips, p_delivery, f"{distance:g} км / 40"))
+    items.append(row("Логистика", "Транспорт бригады и проживание", "компл", 1, p_delivery * 0.3 if p_delivery else 0, "при удалённости > 50 км"))
+
+    # 11. Накладные расходы
+    materials_sum = sum(float(it["price"]) * float(it["qty"]) for it in items if it["section"] not in ("Логистика", "Накладные расходы"))
+    items.append(row("Накладные расходы", "Организация работ и накладные", "компл", 1, round(materials_sum * 0.07, 2), "7% от материалов и работ"))
+
+    return items
+# === END_BUILD_ESTIMATE_ITEMS_11_SECTIONS_V1 ===
