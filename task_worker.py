@@ -1430,12 +1430,12 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
         _fcv1 = _fcv1_handle(
             conn=conn,
             task=task,
-            task_id=str(task_id),
+            task_id=str(_task_field(task, "id", "")),
             chat_id=str(chat_id),
             topic_id=int(topic_id or 0),
-            raw_input=raw_input,
-            input_type=input_type,
-            reply_to=reply_to,
+            raw_input=str(_task_field(task, "raw_input", "")),
+            input_type=str(_task_field(task, "input_type", "text")),
+            reply_to=_task_field(task, "reply_to_message_id", None),
         )
         if isinstance(_fcv1, dict) and _fcv1.get("handled"):
             _fcv1_msg = str(_fcv1.get("message") or "").strip()
