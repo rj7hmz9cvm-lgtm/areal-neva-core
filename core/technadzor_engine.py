@@ -3078,7 +3078,9 @@ try:
                     "P6H4FD_DISCOVERY_START candidate=%r chat=%s", candidate, chat_str
                 )
 
-                from core.technadzor_drive_index import _resolve_topic_folder, _service as _p6h4fd_svc
+                from core.technadzor_drive_index import (
+                    _resolve_topic_folder, _service as _p6h4fd_svc, is_system_folder
+                )
 
                 svc = _p6h4fd_svc()
                 topic5_fid = _resolve_topic_folder(svc, chat_str, 5)
@@ -3093,20 +3095,35 @@ try:
                         "history": "P6H4FD_V1:NO_TOPIC5_FOLDER",
                     }
 
-                # list all subfolders inside topic_5 Drive folder
-                res = svc.files().list(
-                    q=(
-                        f"'{topic5_fid}' in parents"
-                        " and mimeType='application/vnd.google-apps.folder'"
-                        " and trashed=false"
-                    ),
-                    fields="files(id,name,createdTime,modifiedTime)",
-                    orderBy="createdTime desc",
-                    pageSize=50,
-                ).execute()
-                folders = res.get("files", [])
+                def _p6h4fd_list_subfolders(parent_fid):
+                    r = svc.files().list(
+                        q=(
+                            f"'{parent_fid}' in parents"
+                            " and mimeType='application/vnd.google-apps.folder'"
+                            " and trashed=false"
+                        ),
+                        fields="files(id,name,createdTime,modifiedTime)",
+                        orderBy="createdTime desc",
+                        pageSize=50,
+                    ).execute()
+                    return r.get("files", [])
+
+                # topic_5 structure: topic_5/TECHNADZOR(system)/тест надзор(client)
+                # get level-1 subfolders, separate system from client
+                level1 = _p6h4fd_list_subfolders(topic5_fid)
+                client_folders = [f for f in level1 if not is_system_folder(f.get("name", ""))]
+                system_folders = [f for f in level1 if is_system_folder(f.get("name", ""))]
+
+                # if no client folders at level-1, go one level deeper into system folder
+                if not client_folders and system_folders:
+                    level2 = _p6h4fd_list_subfolders(system_folders[0]["id"])
+                    client_folders = [f for f in level2 if not is_system_folder(f.get("name", ""))]
+                    if not client_folders:
+                        client_folders = level2  # fallback: take everything
+
+                folders = client_folders or level1
                 _P6H4FD_LOG.info(
-                    "P6H4FD_SUBFOLDER_COUNT count=%s topic5_fid=%s", len(folders), topic5_fid
+                    "P6H4FD_SUBFOLDER_COUNT client=%s topic5_fid=%s", len(folders), topic5_fid
                 )
 
                 if not folders:
@@ -3129,7 +3146,7 @@ try:
                             best = f
 
                 if best is None or best_score == 0:
-                    # no name to match or no match found — take newest
+                    # no candidate or no match — take newest
                     best = folders[0]
 
                 fid = best["id"]
