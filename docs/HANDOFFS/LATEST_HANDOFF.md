@@ -1,4 +1,4 @@
-# LATEST_HANDOFF — 30.04.2026 05:40 MSK FINAL
+# LATEST_HANDOFF — 05.05.2026 09:06 MSK
 
 ## СЕРВЕР
 IP: 89.22.225.136 | Base: /root/.areal-neva-core
@@ -489,4 +489,49 @@ TechnadzorTask =
 - `e36b320` — разделы 25–28 (пути передачи, модель задачи, буфер, язык)
 - `2be1bb3` — разделы 29–33 (ActiveTechnadzorFolder, VisitMaterial, VisitPackage, COLLECTING, команды)
 - `9e9c330` — LATEST_HANDOFF обновлён с решениями сессии
-- текущий коммит — gen_act_3rd_visit.py + итог сессии
+- `4bc1f09` — fix(stt): убрать OpenAI fallback → только Groq whisper-large-v3-turbo
+- `a5cae41` — P6H4TW batch trigger logger fix + process_drive_folder_batch trigger
+- `38270c6` — P6H4TW_BATCH_TRIGGER_V1: fix dead hook — wrapper перенесён в technadzor_engine.py
+
+---
+
+## СЕССИЯ 05.05.2026 — P6H4TW_BATCH_TRIGGER_V1
+
+### Проблема (диагностировано 05.05.2026)
+`P6H_PART_4` hook в `task_worker.py` (строка 8394) стоит **после** `asyncio.run(main())` (строка 8275).
+При нормальном запуске воркер блокируется в `asyncio.run()`. Код P6H4TW выполняется только после остановки воркера → wrapper на `_handle_new` никогда не устанавливался.
+`P6H_PART_4_TASK_WORKER_HOOK_V1_INSTALLED` появлялось только в LOCKED-процессе (немедленно выходит).
+
+### Исправление
+`P6H4TW_BATCH_TRIGGER_V1` — новая обёртка appended в `core/technadzor_engine.py` (конец файла).
+`process_technadzor` импортируется и оборачивается до `asyncio.run()`. Все topic_5 задачи проходят через неё.
+
+| Файл | Патч | Коммит |
+|---|---|---|
+| `core/technadzor_engine.py` | P6H4TW_BATCH_TRIGGER_V1: wrap process_technadzor | `38270c6` |
+
+### Подтверждено
+```
+python3 -c "from core import technadzor_engine as te; print(getattr(te.process_technadzor, '_p6h4tw_v1_wrapped', False))"
+→ True
+```
+Сервисы: active ✅
+
+### P6H_TOPIC5_PROCESS_TECHNADZOR_WRAPPED=False в логе
+Это НОРМАЛЬНО. P6H4TW_V1 оборачивает P6H. На верхнем уровне `_p6h_wrapped` не виден.
+Реальное состояние: `_p6h4tw_v1_wrapped=True`.
+
+### CODE CLOSED (topic_5 контур)
+- topic_5 photo/file buffer ✅
+- active folder set/get ✅
+- Drive folder batch trigger ✅ (P6H4TW_BATCH_TRIGGER_V1)
+- flush to process_technadzor ✅
+- external Vision guarded optional (EXTERNAL_PHOTO_ANALYSIS_ALLOWED=False) ✅
+- STT hallucination guard ✅
+- без Vision: owner comments + filenames + previous acts + clarification
+
+### LIVE SMOKE PENDING
+- Telegram: реальное фото в topic_5 → буфер → "сделай разбор"
+- Drive folder URL → "загрузи папку" → "сделай акт"
+- topic_2 реальный запрос
+- topic_500 реальный поиск
