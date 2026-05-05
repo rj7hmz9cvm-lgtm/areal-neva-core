@@ -1,10 +1,10 @@
 # NORMATIVE ENGINE — SHARED CONTEXT (topic_5 + topic_210)
 
-version: NORMATIVE_ENGINE_SHARED_CONTEXT_V1
+version: NORMATIVE_ENGINE_SHARED_CONTEXT_V2
 updated_at: 2026-05-05
 status: VERIFIED_FROM_CODE
-source_1: core/normative_engine.py — git HEAD 2deb7c8
-source_2: core/project_engine.py NORMS_MAP — git HEAD 2deb7c8
+source_1: core/normative_engine.py — git HEAD 73b4946 (P6H5+P6H6 committed)
+source_2: core/project_engine.py NORMS_MAP — git HEAD 73b4946
 note: Только нормы из committed кода. Не изобретать новые нормы. Не добавлять пункты.
 
 ---
@@ -15,7 +15,11 @@ note: Только нормы из committed кода. Не изобретать
 normative_engine.py — SHARED
   keyword-based search_norms_sync(text)
   Используется: topic_5 (технадзор) + topic_210 (проектирование)
-  Committed: 18 записей (HEAD 2deb7c8)
+  Committed: 59 записей (HEAD 73b4946)
+    — base 8 (NORMATIVE_ENGINE_SAFE_V1)
+    — P6H extension 10 (P6H_NORMATIVE_INDEX_EXTRA_V1)
+    — P6H5 expansion 36 (P6H5_NORMATIVE_FULL_EXPAND_V1) ← теперь COMMITTED
+    — P6H6 loads 5 (P6H6_LOADS_V1) ← теперь COMMITTED
 
 project_engine.py NORMS_MAP — topic_210 ONLY
   section-based NORMS_MAP[section] → list of norm_ids
@@ -144,13 +148,29 @@ FULL расчёт несущей способности: НЕ ЗАКРЫТ
 
 ---
 
-## 5. P6H5 dirty block — NOT committed
+## 5. P6H5 + P6H6 — COMMITTED (73b4946)
 
-`core/normative_engine.py` содержит +283 строки незафиксированных изменений (P6H5).
-Статус: `PENDING_COMMIT — owner decision required`
+`core/normative_engine.py` — оба блока зафиксированы в коммите 73b4946.
+Статус: `COMMITTED`
 
-P6H5 частично дублирует NORMS_MAP (ОВ, ВК, ЭОМ) и добавляет охрану труда / ИД / бетонные смеси.
-Committed источник для ОВ/ВК/ЭОМ — только `project_engine.py NORMS_MAP`.
+**P6H5_NORMATIVE_FULL_EXPAND_V1** (36 норм):
+- ИД / журналы: РД-11-02-2006, РД-11-05-2007, СП 11-110-99
+- Бетонные смеси: ГОСТ 7473-2010, ГОСТ 18105-2018, ГОСТ 26633-2015
+- Газобетон / кладка: ГОСТ 31360-2007, СП 339.1325800.2017, СП 15.13330.2020
+- КМ: СП 294.1325800.2017, ГОСТ 27772-2015, СП 260.1325800.2016
+- ГКЛ: СП 163.1325800.2014, ГОСТ 6266-2018
+- Фасады / окна: СП 50.13330.2012, СП 293.1325800.2017, ГОСТ 30674-99
+- ОВ: СП 60.13330.2020, СП 73.13330.2016, СП 61.13330.2012
+- ВК: СП 30.13330.2020, СП 31.13330.2021, СП 32.13330.2018
+- ЭОМ: ПУЭ (7-е изд.), СП 256.1325800.2016, ГОСТ Р 50571-4-41-2022
+- Пожарная безопасность: 123-ФЗ, СП 1.13130.2020, СП 2.13130.2020
+- Охрана труда: СНиП 12-03-2001, СНиП 12-04-2002, Приказ №336н/№883н, ГОСТ 12.0.004-2015, ГОСТ 12.4.011-89, СП 49.13330.2010
+
+**P6H6_LOADS_V1** (5 записей — СП 20.13330.2017):
+снеговые, ветровые, постоянные, временные, сочетания нагрузок
+
+P6H5 частично дублирует NORMS_MAP (ОВ, ВК, ЭОМ) — оба источника теперь committed.
+smoke 11/11 PASS при commit.
 
 ---
 
@@ -171,13 +191,12 @@ Committed источник для ОВ/ВК/ЭОМ — только `project_eng
    - Не изобретать новые СП/ГОСТ
    - Не придумывать пункты нормативов
    - Confidence=PARTIAL у всех committed записей
-   - Нормы из P6H5 dirty не использовать как committed факты
 
 4. Нагрузки:
-   - calc_loads() закрывает только снег/ветер по СП 20
-   - Полный расчёт несущей способности НЕ закрыт
-   - При составлении акта topic_5: фиксировать только то,
-     что подтверждено committed нормами (СП 20, СП 16, СП 63, СП 22)
+   - Нормативная привязка по всем видам нагрузок: ЗАКРЫТА (P6H6, СП 20)
+   - calc_loads() в project_engine: только снег/ветер по районам
+   - Автоматический расчёт постоянных/временных/сочетаний нагрузок: НЕ РЕАЛИЗОВАН
+   - Статус: PARTIAL_CALC — нормы есть, расчётная логика отсутствует
 ```
 
 ---
