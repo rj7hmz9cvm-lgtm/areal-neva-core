@@ -1,0 +1,133 @@
+{
+  "chat_id": "gpt_topic5_full_close_2026_05_05",
+  "chat_name": "GPT_TOPIC5_FULL_CLOSE",
+  "exported_at": "2026-05-05T09:30:00Z",
+  "source_model": "GPT-5.5 Thinking",
+  "system": "AREAL-NEVA ORCHESTRA / NEURON SOFT VPN. Server-first Telegram orchestration. Server 89.22.225.136, base path /root/.areal-neva-core, GitHub SSOT rj7hmz9cvm-lgtm/areal-neva-core main. Telegram topics include topic_5 ТЕХНАДЗОР, topic_2 СТРОЙКА, topic_500 ВЕБ ПОИСК. Google Drive is storage layer. Telegram is control/interface layer. Current session was about full close validation and bug fixing for technadzor, stroyka, live search, Drive folders, Vision policy, memory/context and response logic.",
+  "architecture": "Core pipeline discussed and used: Telegram -> telegram_daemon.py -> core.db -> task_worker.py -> domain engines / ai_router -> reply_sender -> Telegram. Drive uses Google Drive OAuth and topic-aware upload_file_to_topic for artifacts. Topic_5 technadzor flow target: ActiveTechnadzorFolder -> VisitMaterial -> VisitPackage -> process_technadzor -> one text report or one act. External Vision is owner-gated optional and must not run by default. DeepSeek via OpenRouter is normal text logic, Perplexity Sonar via OpenRouter is live web search only, Groq Whisper is STT, Google Drive API OAuth is only file/folder layer.",
+  "pipeline": "Task lifecycle canon remains NEW -> IN_PROGRESS -> AWAITING_CONFIRMATION / WAITING_CLARIFICATION -> DONE / FAILED / CANCELLED / ARCHIVED. For folder/context commands in topic_5, the handler must not fall through to generic AI. It must return handled=True for processed folder commands. If folder discovery cannot find a folder, it must return a concrete user clarification inside the folder handler and avoid INVALID_RESULT_GATE / generic AI fallback.",
+  "files": [
+    "docs/HANDOFFS/LATEST_HANDOFF.md -> confirmed updated by commit f2e119f with P6H4TW_BATCH_TRIGGER_V1 state",
+    "core/technadzor_engine.py -> P6H_PART_4 visit buffer, active folder, process_drive_folder_batch, P6H4TW_BATCH_TRIGGER_V1 wrapper, later folder resolver patches",
+    "task_worker.py -> topic_5 hook, FCE hook affected by task_id/raw_input/input_type/reply_to UnboundLocalError before _task_field fix",
+    "core/stt_engine.py -> OpenAI fallback removed earlier; Groq Whisper only; Whisper hallucination guard added",
+    "docs/CANON_FINAL/TECHNADZOR_DOMAIN_LOGIC_CANON.md -> V2 addendum with ActiveTechnadzorFolder / VisitMaterial / VisitPackage and EXTERNAL_PHOTO_ANALYSIS_ALLOWED=False",
+    "chat_exports/CHAT_EXPORT__GPT_TOPIC5_FULL_CLOSE__2026-05-05.json -> this export"
+  ],
+  "code": "Python, SQLite, systemd, Telegram bot, Google Drive OAuth, OpenRouter, Groq Whisper. Critical live code facts: P6H4TW hook originally appended after asyncio.run(main()) in task_worker.py and did not execute in live worker. It was moved/wrapped through core/technadzor_engine.py so process_technadzor is wrapped before worker loop. Folder resolver still needs correction: it selected stale old folder, then system TECHNADZOR root, instead of user folder 'тест надзор'.",
+  "patches": [
+    "4bc1f09 -> fix(stt): remove direct OpenAI fallback; only Groq whisper-large-v3-turbo",
+    "5910e1e -> docs: TECHNADZOR_DOMAIN_LOGIC_CANON_V2 addendum with ActiveTechnadzorFolder, VisitMaterial, VisitPackage, EXTERNAL_PHOTO_ANALYSIS_ALLOWED guard",
+    "8f177d3 -> P6H_EXTERNAL_VISION_GUARD_V1, external Vision blocked without explicit owner approval",
+    "d90b5ad -> P6H_PART_4_VISIT_BUFFER_V1: visit_buffer_add, visit_buffer_flush, visit_buffer_count, set/get_active_folder, process_drive_folder_batch",
+    "ff753aa -> P6H_PART_4 task_worker hook for topic_5 and STT hallucination guard",
+    "6463220 -> P6H4TW flush calls process_technadzor directly instead of stale Row path",
+    "a5cae41 -> P6H4TW batch trigger + logger fix; Drive folder batch triggers added",
+    "38270c6 -> P6H4TW_BATCH_TRIGGER_V1 moved/wrapped in technadzor_engine.py to fix dead hook after asyncio.run",
+    "f2e119f -> docs/HANDOFFS/LATEST_HANDOFF.md updated with P6H4TW_BATCH_TRIGGER_V1 installed and CODE CLOSED / LIVE SMOKE PENDING",
+    "94e2252 -> attempted fix: search client folders inside system subfolder TECHNADZOR; observed as wrong because it resolved TECHNADZOR not user folder",
+    "FCE hook task_worker UnboundLocalError fix approved: use _task_field(task, ...) for id/raw_input/input_type/reply_to instead of unassigned locals; status in this chat: allowed, but live final commit not confirmed here"
+  ],
+  "commands": [
+    "GitHub fetch_commit f2e119f verified LATEST_HANDOFF update",
+    "Google Drive get_file_metadata 1K2sJuMbXWt4xZWxFR8pXXPg1342Qu28j verified old folder 'Выезд 8 апреля 2026' under 'фото'",
+    "Google Drive search 'тест надзор' verified folder 1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG",
+    "Google Drive get_file_metadata 1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG verified new folder 'тест надзор' parent 1s2y5l2mJFTb7P90XVokErXYVzmoH-VtD",
+    "Google Drive get_file_metadata 1s2y5l2mJFTb7P90XVokErXYVzmoH-VtD verified user root 'ТЕХНАДЗОР'",
+    "Google Drive get_file_metadata 1vKQM0Z2qBmiKtgeyx95JaNEQAp5mJLOm verified system folder 'TECHNADZOR'",
+    "Google Drive list_folder 1vKQM0Z2qBmiKtgeyx95JaNEQAp5mJLOm showed only two DOCX files and no user folders",
+    "Google Drive list_folder personal docs folder 1sTMg-2cJpWmjJLEj-4Y80brWl5e70AZk showed 3 files in root"
+  ],
+  "db": "Observed task rows from user-provided server output: task 5274 DONE returned wrong folder TECHNADZOR; task 5275 FAILED with INVALID_RESULT_GATE and result text 'Не нашёл пользовательских папок внутри ТЕХНАДЗОР...' after folder discovery failed. Core DB path remains /root/.areal-neva-core/data/core.db. No DB schema change was approved in this chat.",
+  "memory": "Topic-scoped memory/context rules remain mandatory. For topic_5, active folder state, VisitMaterial metadata, VisitPackage summary and owner instructions should be saved without debug/errors. This session confirmed stale active folder must be ignored when user says 'создана новая папка / папка называется / работаем по папке'.",
+  "services": [
+    "areal-task-worker -> user-provided output after patches showed active after restart",
+    "telegram-ingress -> previously active in handoff, not revalidated by this model in server shell",
+    "areal-memory-api -> previously active in handoff, not revalidated by this model in server shell"
+  ],
+  "canons": [
+    "EXTERNAL_PHOTO_ANALYSIS_ALLOWED=False by default",
+    "Vision is owner-gated optional, not a blocker for main technadzor flow",
+    "No OpenAI / GPT / gpt-4o-mini fallback, no direct Google Gemini Vision, no model change without explicit owner command",
+    "Google Drive OAuth is file/folder layer only",
+    "topic_5: one visit/material package = one report or one act, not one act per photo",
+    "TECHNADZOR / ТЕХНАДЗОР roots are search containers, not ActiveTechnadzorFolder targets",
+    "Client-facing folders must contain only clean client materials; service files must stay separate",
+    "Personal docs folder 1sTMg-2cJpWmjJLEj-4Y80brWl5e70AZk is owner source/docs storage and should stay flat/clean for now"
+  ],
+  "decisions": [
+    "Do not change Vision model to Llama/Pixtral/OpenAI; close Vision as owner-gated optional feature",
+    "Full close means main flows must work without external Vision",
+    "For topic_5 folder commands, correct answer is A: orchestra must find folder by name in Drive itself, not ask owner for URL by default",
+    "Folder/context intent must bypass generic AI only for folder/context commands, not for every topic_5 message",
+    "FCE hook fix must use _task_field because it is generic and works with sqlite3.Row/object task; not hardcode",
+    "Do not globally convert WAITING_CLARIFICATION to DONE; only folder-discovery service reply can return handled=True/state DONE to avoid generic reprocessing",
+    "Global Drive search may be fallback only after correct root search fails; it must exclude system folders"
+  ],
+  "errors": [
+    "Claude repeatedly treated Vision as mandatory and proposed changing model; corrected: Vision owner-gated optional",
+    "OpenRouter Gemini Vision returned 403/502; not to be solved by model switch in full close",
+    "P6H_PART_4 hook placed after asyncio.run(main()) never executed in live worker; fixed by wrapper in technadzor_engine.py, documented f2e119f",
+    "Bot returned stale old folder 'Выезд 8 апреля 2026' instead of new 'тест надзор' folder",
+    "Resolver then selected system TECHNADZOR folder instead of child user folder",
+    "Resolver searched wrong root: TECHNADZOR id 1vKQM0Z2qBmiKtgeyx95JaNEQAp5mJLOm instead of user root ТЕХНАДЗОР id 1s2y5l2mJFTb7P90XVokErXYVzmoH-VtD",
+    "FCE hook UnboundLocalError: task_id/raw_input/input_type/reply_to referenced before assignment in task_worker.py around the hook area",
+    "topic_500 internet search reported by owner as not working; no successful live Sonar proof in this chat",
+    "INVALID_RESULT_GATE on folder clarification is secondary effect from handler result/lifecycle contract"
+  ],
+  "solutions": [
+    "Use _task_field(task, 'id'/'raw_input'/'input_type'/'reply_to_message_id') in FCE hook before local variable assignment",
+    "Add/keep folder-context route terms in topic_5: папка, новая папка, создана папка, найди папку, папка называется, работаем по папке, текущая папка, прими папку, туда складывать, туда загружать, все материалы туда",
+    "Folder resolver order: Drive URL -> fresh lookup in user root ТЕХНАДЗОР -> exact/fuzzy child match -> global strict fallback -> concrete clarification",
+    "Extract target_folder_name from 'создана папка тест надзор...' as 'тест надзор'",
+    "Exclude TECHNADZOR, ТЕХНАДЗОР, topic_5, _orchestra_work, _system, _tmp, _archive, _drafts, _templates, _manifests from active folder candidates",
+    "Correct expected folder: name 'тест надзор', id 1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG, URL https://drive.google.com/drive/folders/1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG",
+    "Service folder TECHNADZOR id 1vKQM0Z2qBmiKtgeyx95JaNEQAp5mJLOm must not be ActiveTechnadzorFolder",
+    "If folder not found, folder handler returns handled=True with concrete question and does not fall into generic AI"
+  ],
+  "state": "Current session state: topic_5 code has major pieces installed but live smoke exposed folder discovery/root mapping bugs. Current breakpoint is fixing topic_5 active folder resolution so 'создана папка тест надзор' maps to folder 1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG under user root ТЕХНАДЗОР. topic_500 internet search is reported not working and needs dedicated ROOT_CAUSE after topic_5 smoke.",
+  "what_working": [
+    "GitHub access works and f2e119f handoff was verified",
+    "Google Drive connector can list/get folders and confirmed current folder IDs",
+    "Personal docs folder exists and contains 3 files, no service junk observed",
+    "P6H4TW wrapper existence was documented in handoff as _p6h4tw_v1_wrapped=True",
+    "External Vision guard canon and code commits exist in GitHub history"
+  ],
+  "what_broken": [
+    "topic_5 folder resolver selected stale or system folder instead of new user folder",
+    "wrong root mapping: service TECHNADZOR used for user folder search",
+    "folder clarification can become FAILED|INVALID_RESULT_GATE instead of clean handled reply",
+    "FCE hook was reported to fail with UnboundLocalError before task field extraction fix",
+    "topic_500 internet search does not work according to owner; not verified fixed"
+  ],
+  "what_not_done": [
+    "Live Telegram smoke for topic_5 is not passed yet",
+    "topic_5 Drive folder by name smoke must pass with folder_id 1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG",
+    "topic_500 live Sonar search needs root cause and smoke with real sources",
+    "topic_2 stroyka estimate gates were claimed installed earlier but not live verified in this chat",
+    "Full end-to-end act creation without external Vision still needs successful live test after folder resolver is fixed"
+  ],
+  "current_breakpoint": "Fix topic_5 folder discovery: use user root ТЕХНАДЗОР id 1s2y5l2mJFTb7P90XVokErXYVzmoH-VtD, extract target 'тест надзор', exclude system folders, return handled=True/state DONE for service folder reply, restart worker, smoke phrase 'создана папка тест надзор. Ее надо принять сейчас для проверки работоспособности.' Expected URL https://drive.google.com/drive/folders/1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG",
+  "root_causes": [
+    "Dead hook root cause -> P6H hook appended after asyncio.run(main()), documented and fixed via technadzor_engine wrapper",
+    "Current folder bug root cause -> resolver searches service TECHNADZOR / stale active folder instead of fresh lookup in user root ТЕХНАДЗОР",
+    "FCE error root cause -> local variables referenced before assignment in task_worker hook",
+    "INVALID_RESULT_GATE root cause for folder clarification -> service handler result/state contract falls back into generic validation"
+  ],
+  "verification": [
+    "Google Drive folder 'тест надзор' verified by connector: id 1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG, parent 1s2y5l2mJFTb7P90XVokErXYVzmoH-VtD",
+    "Google Drive root 'ТЕХНАДЗОР' verified by connector: id 1s2y5l2mJFTb7P90XVokErXYVzmoH-VtD",
+    "Google Drive service folder 'TECHNADZOR' verified by connector: id 1vKQM0Z2qBmiKtgeyx95JaNEQAp5mJLOm, contained only DOCX files in this check",
+    "Old wrong folder 'Выезд 8 апреля 2026' verified: id 1K2sJuMbXWt4xZWxFR8pXXPg1342Qu28j under parent 'фото'",
+    "GitHub commit f2e119f verified: LATEST_HANDOFF updated with P6H4TW_BATCH_TRIGGER_V1 details"
+  ],
+  "limits": [
+    "No secrets, tokens, .env values or credentials exported",
+    "Do not edit .env, models, Vision route, OpenRouter route, Drive route unless explicitly approved",
+    "Backup first before file edits: cp <file> <file>.bak",
+    "No direct external Vision upload without explicit owner permission",
+    "No silent fallback to GPT/OpenAI/Anthropic/Grok",
+    "Do not use service/system folders as active client/user folders",
+    "This export is GitHub CLEAN; it does not include private secrets or full server runtime dumps"
+  ]
+}
