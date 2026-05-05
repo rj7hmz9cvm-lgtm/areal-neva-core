@@ -8941,8 +8941,7 @@ except Exception as _t5p_err:
         pass
 # === END_FULLFIX_TOPIC5_CONTINUOUS_PACKET_V4 ===
 
-if __name__ == "__main__":
-    asyncio.run(main())
+# moved to end of file — all runtime patches must install before asyncio.run(main())
 # === END_P6D_MAIN_AFTER_ALL_RUNTIME_OVERLAYS_20260504_V1 ===
 
 # === P6E2_TASK_WORKER_FINAL_ROUTE_BEFORE_TECHNADZOR_FALLBACK_20260504_V1 ===
@@ -10452,4 +10451,11 @@ except Exception as _t5fc_err:
     except Exception:
         pass
 # === END_FULLFIX_TOPIC5_FULL_CANON_CLOSE_V1 ===
+
+# === MOVE_MAIN_ENTRYPOINT_TO_END_V1 ===
+# All runtime patches (P6E2, P6H4TW, CANON_CLOSE, FULL_CANON_CLOSE) must be installed
+# before the event loop starts. Previously asyncio.run(main()) at line 8944 blocked them.
+if __name__ == "__main__":
+    asyncio.run(main())
+# === END_MOVE_MAIN_ENTRYPOINT_TO_END_V1 ===
 
