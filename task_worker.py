@@ -1438,14 +1438,16 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
             reply_to=_task_field(task, "reply_to_message_id", None),
         )
         if isinstance(_fcv1, dict) and _fcv1.get("handled"):
+            _fcv1_tid = str(_task_field(task, "id", ""))
+            _fcv1_reply = _task_field(task, "reply_to_message_id", None)
             _fcv1_msg = str(_fcv1.get("message") or "").strip()
             _fcv1_state = str(_fcv1.get("state") or "DONE").strip()
             _fcv1_kind = str(_fcv1.get("kind") or "final_closure_blocker_fix_v1").strip()
             if _fcv1_msg:
-                _fcv1_send = _send_once_ex(conn, str(task_id), str(chat_id), _fcv1_msg, reply_to, _fcv1_kind)
+                _fcv1_send = _send_once_ex(conn, _fcv1_tid, str(chat_id), _fcv1_msg, _fcv1_reply, _fcv1_kind)
                 _fcv1_bot = _fcv1_send.get("bot_message_id") if isinstance(_fcv1_send, dict) else None
-                _update_task(conn, str(task_id), state=_fcv1_state, result=_fcv1_msg, bot_message_id=_fcv1_bot, error_message="")
-                _history(conn, str(task_id), _fcv1.get("history", "FINAL_CLOSURE_BLOCKER_FIX_V1:HANDLED"))
+                _update_task(conn, _fcv1_tid, state=_fcv1_state, result=_fcv1_msg, bot_message_id=_fcv1_bot, error_message="")
+                _history(conn, _fcv1_tid, _fcv1.get("history", "FINAL_CLOSURE_BLOCKER_FIX_V1:HANDLED"))
                 conn.commit()
                 return
     except Exception as _fcv1_err:
