@@ -1,0 +1,1024 @@
+{
+  "schema": "TNZ_MSK_LINKED_DOCUMENTS_INDEX_V1",
+  "source": "@tnz_msk",
+  "scanned_at": "2026-05-05T07:49:28.093641+00:00",
+  "downloaded_count": 6,
+  "downloaded_paths": [
+    "/root/.areal-neva-core/data/memory_files/TEHNADZOR/source_skills/tnz_msk/downloaded_docs/ГОСТ Р 72509-2026.pdf",
+    "/root/.areal-neva-core/data/memory_files/TEHNADZOR/source_skills/tnz_msk/downloaded_docs/0001202512310019.pdf",
+    "/root/.areal-neva-core/data/memory_files/TEHNADZOR/source_skills/tnz_msk/downloaded_docs/Чек-лист по окнам.pdf",
+    "/root/.areal-neva-core/data/memory_files/TEHNADZOR/source_skills/tnz_msk/downloaded_docs/checklist_priemka_white_box.pdf",
+    "/root/.areal-neva-core/data/memory_files/TEHNADZOR/source_skills/tnz_msk/downloaded_docs/cheklist_priemka_kvartiry_v_betone_kirillitsa.pdf",
+    "/root/.areal-neva-core/data/memory_files/TEHNADZOR/source_skills/tnz_msk/downloaded_docs/ВСН 53-86 Утратил силу.pdf"
+  ],
+  "linked_urls": [
+    "https://donstroy.moscow/owners/keys/",
+    "https://ds-fest.ru/",
+    "https://framerfest.ru/",
+    "https://markets.house/",
+    "https://max.ru/tnz_msk",
+    "https://poly.cam/",
+    "https://t.me/+26x9OiOEawphMDdi",
+    "https://t.me/KarabanovPV",
+    "https://t.me/developers_policy/8029",
+    "https://t.me/glebgrinfeld/668",
+    "https://t.me/neural_ntw",
+    "https://t.me/neural_ntw/175",
+    "https://t.me/parket_expert",
+    "https://t.me/tnz_msk",
+    "https://t.me/tnz_msk/116",
+    "https://t.me/tnz_msk/2899",
+    "https://t.me/tnz_msk/3290",
+    "https://t.me/tnz_msk/3391",
+    "https://t.me/tnz_msk/3436",
+    "https://t.me/tnz_msk/3606",
+    "https://t.me/tnz_msk/3635",
+    "https://t.me/tnz_msk/3654",
+    "https://t.me/tnz_msk/3785",
+    "https://t.me/tnz_msk/4",
+    "https://t.me/tnz_msk?livestream",
+    "https://telegra.ph/Svetlyachkam-na-zavist-06-14",
+    "https://telegra.ph/Svetlyachkam-na-zavist-part-2-08-05",
+    "https://telegra.ph/U-nas-promerzanie--D-12-19",
+    "https://vk.com/clip-216130923_456240215",
+    "https://www.gosuslugi.ru/snet/6895ec2c06836073af0da543",
+    "https://www.youtube.com/watch?v=7kZHpvqMqRM",
+    "https://www.youtube.com/watch?v=A4sMjYyN7FM",
+    "https://www.youtube.com/watch?v=HGQU1ZdylT0",
+    "https://www.youtube.com/watch?v=LWE3TCS8njs",
+    "https://www.youtube.com/watch?v=Vt7w9kjG460",
+    "https://www.youtube.com/watch?v=i4yUN8YANJs",
+    "https://www.youtube.com/watch?v=vhXxJp1MS6E",
+    "https://yandex.ru/adv/edu/materials/registraciya-blogerov-ot-10000-podpischikov?ysclid=mdfrqderhy804916339",
+    "https://yandex.ru/maps/?um=constructor%3Af35f7f3f5f880a78b46c473eca916075f563f6eaf036006f7519a3f3f3751e89&source=constructorLink",
+    "https://yandex.ru/video/touch/preview/17284700974743076036"
+  ],
+  "document_messages": [
+    {
+      "message_id": 4059,
+      "date": "2026-05-01T09:44:47+00:00",
+      "source_ref": "https://t.me/tnz_msk/4059",
+      "file_name": "IMG_5198.MOV"
+    },
+    {
+      "message_id": 4058,
+      "date": "2026-05-01T09:44:47+00:00",
+      "source_ref": "https://t.me/tnz_msk/4058",
+      "file_name": "IMG_5200.MOV"
+    },
+    {
+      "message_id": 4036,
+      "date": "2026-04-24T12:33:58+00:00",
+      "source_ref": "https://t.me/tnz_msk/4036",
+      "file_name": "IMG_4848.MOV"
+    },
+    {
+      "message_id": 4023,
+      "date": "2026-04-20T09:48:36+00:00",
+      "source_ref": "https://t.me/tnz_msk/4023",
+      "file_name": "IMG_4666.MOV"
+    },
+    {
+      "message_id": 4021,
+      "date": "2026-04-16T10:53:00+00:00",
+      "source_ref": "https://t.me/tnz_msk/4021",
+      "file_name": "IMG_4381.MOV"
+    },
+    {
+      "message_id": 4005,
+      "date": "2026-04-11T23:16:43+00:00",
+      "source_ref": "https://t.me/tnz_msk/4005",
+      "file_name": "IMG_5079.MP4"
+    },
+    {
+      "message_id": 4004,
+      "date": "2026-04-11T23:16:43+00:00",
+      "source_ref": "https://t.me/tnz_msk/4004",
+      "file_name": "IMG_5078.MOV"
+    },
+    {
+      "message_id": 3998,
+      "date": "2026-04-09T08:40:29+00:00",
+      "source_ref": "https://t.me/tnz_msk/3998",
+      "file_name": "IMG_4172.MP4"
+    },
+    {
+      "message_id": 3992,
+      "date": "2026-04-05T10:04:13+00:00",
+      "source_ref": "https://t.me/tnz_msk/3992",
+      "file_name": "IMG_1448.mp4"
+    },
+    {
+      "message_id": 3988,
+      "date": "2026-04-02T20:51:08+00:00",
+      "source_ref": "https://t.me/tnz_msk/3988",
+      "file_name": "IMG_1642.MP4"
+    },
+    {
+      "message_id": 3978,
+      "date": "2026-04-01T09:16:29+00:00",
+      "source_ref": "https://t.me/tnz_msk/3978",
+      "file_name": "IMG_3415.MOV"
+    },
+    {
+      "message_id": 3977,
+      "date": "2026-04-01T09:16:29+00:00",
+      "source_ref": "https://t.me/tnz_msk/3977",
+      "file_name": "IMG_3421.MOV"
+    },
+    {
+      "message_id": 3971,
+      "date": "2026-04-01T07:36:09+00:00",
+      "source_ref": "https://t.me/tnz_msk/3971",
+      "file_name": "IMG_3860.MP4"
+    },
+    {
+      "message_id": 3965,
+      "date": "2026-03-31T21:05:06+00:00",
+      "source_ref": "https://t.me/tnz_msk/3965",
+      "file_name": "IMG_1570.MP4"
+    },
+    {
+      "message_id": 3943,
+      "date": "2026-03-20T15:06:37+00:00",
+      "source_ref": "https://t.me/tnz_msk/3943",
+      "file_name": "IMG_3518.MOV"
+    },
+    {
+      "message_id": 3929,
+      "date": "2026-03-10T19:44:38+00:00",
+      "source_ref": "https://t.me/tnz_msk/3929",
+      "file_name": "video_2026-03-10_22-40-41.mp4"
+    },
+    {
+      "message_id": 3903,
+      "date": "2026-02-21T10:11:56+00:00",
+      "source_ref": "https://t.me/tnz_msk/3903",
+      "file_name": "IMG_2455.MP4"
+    },
+    {
+      "message_id": 3901,
+      "date": "2026-02-20T16:46:09+00:00",
+      "source_ref": "https://t.me/tnz_msk/3901",
+      "file_name": "ГОСТ Р 72509-2026.pdf"
+    },
+    {
+      "message_id": 3895,
+      "date": "2026-02-18T04:05:04+00:00",
+      "source_ref": "https://t.me/tnz_msk/3895",
+      "file_name": "IMG_2370.MP4"
+    },
+    {
+      "message_id": 3893,
+      "date": "2026-02-17T15:11:09+00:00",
+      "source_ref": "https://t.me/tnz_msk/3893",
+      "file_name": "IMG_2365.MP4"
+    },
+    {
+      "message_id": 3892,
+      "date": "2026-02-17T12:38:38+00:00",
+      "source_ref": "https://t.me/tnz_msk/3892",
+      "file_name": "IMG_2355.MOV"
+    },
+    {
+      "message_id": 3891,
+      "date": "2026-02-17T04:57:01+00:00",
+      "source_ref": "https://t.me/tnz_msk/3891",
+      "file_name": "Бот.mp4"
+    },
+    {
+      "message_id": 3890,
+      "date": "2026-02-13T13:26:36+00:00",
+      "source_ref": "https://t.me/tnz_msk/3890",
+      "file_name": "IMG_2239.MP4"
+    },
+    {
+      "message_id": 3883,
+      "date": "2026-02-08T15:44:09+00:00",
+      "source_ref": "https://t.me/tnz_msk/3883",
+      "file_name": "IMG_2135.MP4"
+    },
+    {
+      "message_id": 3865,
+      "date": "2026-02-05T14:25:43+00:00",
+      "source_ref": "https://t.me/tnz_msk/3865",
+      "file_name": "IMG_2034.MP4"
+    },
+    {
+      "message_id": 3864,
+      "date": "2026-02-05T14:25:43+00:00",
+      "source_ref": "https://t.me/tnz_msk/3864",
+      "file_name": "IMG_2035.MP4"
+    },
+    {
+      "message_id": 3844,
+      "date": "2026-01-23T15:48:47+00:00",
+      "source_ref": "https://t.me/tnz_msk/3844",
+      "file_name": "IMG_1542.MP4"
+    },
+    {
+      "message_id": 3840,
+      "date": "2026-01-22T12:52:31+00:00",
+      "source_ref": "https://t.me/tnz_msk/3840",
+      "file_name": "IMG_1471.MP4"
+    },
+    {
+      "message_id": 3836,
+      "date": "2026-01-22T09:56:29+00:00",
+      "source_ref": "https://t.me/tnz_msk/3836",
+      "file_name": "IMG_1454.MP4"
+    },
+    {
+      "message_id": 3833,
+      "date": "2026-01-20T07:49:01+00:00",
+      "source_ref": "https://t.me/tnz_msk/3833",
+      "file_name": "1113 (1)(1).mp4"
+    },
+    {
+      "message_id": 3817,
+      "date": "2026-01-14T10:10:10+00:00",
+      "source_ref": "https://t.me/tnz_msk/3817",
+      "file_name": "IMG_1195.MOV"
+    },
+    {
+      "message_id": 3807,
+      "date": "2026-01-05T09:30:54+00:00",
+      "source_ref": "https://t.me/tnz_msk/3807",
+      "file_name": "0001202512310019.pdf"
+    },
+    {
+      "message_id": 3784,
+      "date": "2025-12-23T15:12:48+00:00",
+      "source_ref": "https://t.me/tnz_msk/3784",
+      "file_name": "IMG_0527.MP4"
+    },
+    {
+      "message_id": 3751,
+      "date": "2025-12-08T15:32:00+00:00",
+      "source_ref": "https://t.me/tnz_msk/3751",
+      "file_name": "IMG_9952.MP4"
+    },
+    {
+      "message_id": 3749,
+      "date": "2025-12-08T15:32:00+00:00",
+      "source_ref": "https://t.me/tnz_msk/3749",
+      "file_name": "IMG_9949.MP4"
+    },
+    {
+      "message_id": 3748,
+      "date": "2025-12-08T15:32:00+00:00",
+      "source_ref": "https://t.me/tnz_msk/3748",
+      "file_name": "IMG_9948.MP4"
+    },
+    {
+      "message_id": 3747,
+      "date": "2025-12-08T15:32:00+00:00",
+      "source_ref": "https://t.me/tnz_msk/3747",
+      "file_name": "IMG_9944.MP4"
+    },
+    {
+      "message_id": 3746,
+      "date": "2025-12-08T15:32:00+00:00",
+      "source_ref": "https://t.me/tnz_msk/3746",
+      "file_name": "IMG_9947.MP4"
+    },
+    {
+      "message_id": 3743,
+      "date": "2025-12-07T08:10:45+00:00",
+      "source_ref": "https://t.me/tnz_msk/3743",
+      "file_name": "IMG_9831.MP4"
+    },
+    {
+      "message_id": 3740,
+      "date": "2025-12-06T11:16:23+00:00",
+      "source_ref": "https://t.me/tnz_msk/3740",
+      "file_name": "IMG_9862.MP4"
+    },
+    {
+      "message_id": 3735,
+      "date": "2025-12-04T08:41:01+00:00",
+      "source_ref": "https://t.me/tnz_msk/3735",
+      "file_name": "IMG_9750.MP4"
+    },
+    {
+      "message_id": 3730,
+      "date": "2025-11-29T15:29:42+00:00",
+      "source_ref": "https://t.me/tnz_msk/3730",
+      "file_name": "IMG_9618.MOV"
+    },
+    {
+      "message_id": 3729,
+      "date": "2025-11-29T15:29:42+00:00",
+      "source_ref": "https://t.me/tnz_msk/3729",
+      "file_name": "IMG_9617.MOV"
+    },
+    {
+      "message_id": 3728,
+      "date": "2025-11-29T15:29:42+00:00",
+      "source_ref": "https://t.me/tnz_msk/3728",
+      "file_name": "IMG_9615.MOV"
+    },
+    {
+      "message_id": 3714,
+      "date": "2025-11-28T12:14:17+00:00",
+      "source_ref": "https://t.me/tnz_msk/3714",
+      "file_name": "IMG_9573.MP4"
+    },
+    {
+      "message_id": 3710,
+      "date": "2025-11-26T12:22:21+00:00",
+      "source_ref": "https://t.me/tnz_msk/3710",
+      "file_name": "Чек-лист по окнам.pdf"
+    },
+    {
+      "message_id": 3694,
+      "date": "2025-11-24T18:30:19+00:00",
+      "source_ref": "https://t.me/tnz_msk/3694",
+      "file_name": "IMG_9373.MP4"
+    },
+    {
+      "message_id": 3693,
+      "date": "2025-11-24T18:30:19+00:00",
+      "source_ref": "https://t.me/tnz_msk/3693",
+      "file_name": "IMG_9374.MP4"
+    },
+    {
+      "message_id": 3691,
+      "date": "2025-11-24T16:58:33+00:00",
+      "source_ref": "https://t.me/tnz_msk/3691",
+      "file_name": "record.ogg"
+    },
+    {
+      "message_id": 3690,
+      "date": "2025-11-24T16:58:33+00:00",
+      "source_ref": "https://t.me/tnz_msk/3690",
+      "file_name": "record.mp4"
+    },
+    {
+      "message_id": 3675,
+      "date": "2025-11-20T16:47:01+00:00",
+      "source_ref": "https://t.me/tnz_msk/3675",
+      "file_name": "IMG_9159.MP4"
+    },
+    {
+      "message_id": 3657,
+      "date": "2025-11-17T15:33:27+00:00",
+      "source_ref": "https://t.me/tnz_msk/3657",
+      "file_name": "IMG_8898.MOV"
+    },
+    {
+      "message_id": 3656,
+      "date": "2025-11-17T15:33:27+00:00",
+      "source_ref": "https://t.me/tnz_msk/3656",
+      "file_name": "IMG_8899.MOV"
+    },
+    {
+      "message_id": 3630,
+      "date": "2025-11-07T14:37:49+00:00",
+      "source_ref": "https://t.me/tnz_msk/3630",
+      "file_name": "19700121_1234_690d225fb42481919d3aa09139f5e817.mp4"
+    },
+    {
+      "message_id": 3629,
+      "date": "2025-11-06T09:58:26+00:00",
+      "source_ref": "https://t.me/tnz_msk/3629",
+      "file_name": "IMG_8340.MOV"
+    },
+    {
+      "message_id": 3628,
+      "date": "2025-11-06T09:58:26+00:00",
+      "source_ref": "https://t.me/tnz_msk/3628",
+      "file_name": "IMG_8360.MOV"
+    },
+    {
+      "message_id": 3625,
+      "date": "2025-11-06T09:58:26+00:00",
+      "source_ref": "https://t.me/tnz_msk/3625",
+      "file_name": "IMG_8351.MOV"
+    },
+    {
+      "message_id": 3623,
+      "date": "2025-11-06T09:58:26+00:00",
+      "source_ref": "https://t.me/tnz_msk/3623",
+      "file_name": "IMG_8329.MOV"
+    },
+    {
+      "message_id": 3622,
+      "date": "2025-11-06T08:10:44+00:00",
+      "source_ref": "https://t.me/tnz_msk/3622",
+      "file_name": "IMG_8345.MOV"
+    },
+    {
+      "message_id": 3621,
+      "date": "2025-11-05T18:41:26+00:00",
+      "source_ref": "https://t.me/tnz_msk/3621",
+      "file_name": "video_2025-11-05_21-40-44.mp4"
+    },
+    {
+      "message_id": 3604,
+      "date": "2025-11-03T09:45:12+00:00",
+      "source_ref": "https://t.me/tnz_msk/3604",
+      "file_name": "IMG_8161.MP4"
+    },
+    {
+      "message_id": 3589,
+      "date": "2025-10-28T11:59:37+00:00",
+      "source_ref": "https://t.me/tnz_msk/3589",
+      "file_name": "IMG_8035.MOV"
+    },
+    {
+      "message_id": 3588,
+      "date": "2025-10-28T11:59:37+00:00",
+      "source_ref": "https://t.me/tnz_msk/3588",
+      "file_name": "IMG_8010.MOV"
+    },
+    {
+      "message_id": 3587,
+      "date": "2025-10-28T11:59:37+00:00",
+      "source_ref": "https://t.me/tnz_msk/3587",
+      "file_name": "IMG_8037.MP4"
+    },
+    {
+      "message_id": 3586,
+      "date": "2025-10-28T11:59:37+00:00",
+      "source_ref": "https://t.me/tnz_msk/3586",
+      "file_name": "IMG_8038.MP4"
+    },
+    {
+      "message_id": 3585,
+      "date": "2025-10-27T16:28:38+00:00",
+      "source_ref": "https://t.me/tnz_msk/3585",
+      "file_name": "IMG_7990.MOV"
+    },
+    {
+      "message_id": 3581,
+      "date": "2025-10-26T04:45:04+00:00",
+      "source_ref": "https://t.me/tnz_msk/3581",
+      "file_name": "sora_video_1761427768738.mp4"
+    },
+    {
+      "message_id": 3580,
+      "date": "2025-10-25T04:16:01+00:00",
+      "source_ref": "https://t.me/tnz_msk/3580",
+      "file_name": "ScreenRecorderProject96.mp4"
+    },
+    {
+      "message_id": 3579,
+      "date": "2025-10-24T16:00:05+00:00",
+      "source_ref": "https://t.me/tnz_msk/3579",
+      "file_name": "IMG_7820.MP4"
+    },
+    {
+      "message_id": 3576,
+      "date": "2025-10-24T15:58:30+00:00",
+      "source_ref": "https://t.me/tnz_msk/3576",
+      "file_name": "IMG_7820.MP4"
+    },
+    {
+      "message_id": 3571,
+      "date": "2025-10-24T03:39:01+00:00",
+      "source_ref": "https://t.me/tnz_msk/3571",
+      "file_name": "checklist_priemka_white_box.pdf"
+    },
+    {
+      "message_id": 3563,
+      "date": "2025-10-22T13:51:42+00:00",
+      "source_ref": "https://t.me/tnz_msk/3563",
+      "file_name": "IMG_7621.MOV"
+    },
+    {
+      "message_id": 3562,
+      "date": "2025-10-22T13:51:42+00:00",
+      "source_ref": "https://t.me/tnz_msk/3562",
+      "file_name": "IMG_7620.MOV"
+    },
+    {
+      "message_id": 3561,
+      "date": "2025-10-22T13:51:42+00:00",
+      "source_ref": "https://t.me/tnz_msk/3561",
+      "file_name": "IMG_7646.MP4"
+    },
+    {
+      "message_id": 3559,
+      "date": "2025-10-22T04:06:58+00:00",
+      "source_ref": "https://t.me/tnz_msk/3559",
+      "file_name": "cheklist_priemka_kvartiry_v_betone_kirillitsa.pdf"
+    },
+    {
+      "message_id": 3547,
+      "date": "2025-10-20T16:58:36+00:00",
+      "source_ref": "https://t.me/tnz_msk/3547",
+      "file_name": "IMG_7494.MP4"
+    },
+    {
+      "message_id": 3539,
+      "date": "2025-10-20T10:15:40+00:00",
+      "source_ref": "https://t.me/tnz_msk/3539",
+      "file_name": "IMG_7437.MOV"
+    },
+    {
+      "message_id": 3537,
+      "date": "2025-10-18T09:48:03+00:00",
+      "source_ref": "https://t.me/tnz_msk/3537",
+      "file_name": "IMG_7318.MP4"
+    },
+    {
+      "message_id": 3536,
+      "date": "2025-10-17T14:52:29+00:00",
+      "source_ref": "https://t.me/tnz_msk/3536",
+      "file_name": "IMG_7341.MP4"
+    },
+    {
+      "message_id": 3521,
+      "date": "2025-10-15T14:50:27+00:00",
+      "source_ref": "https://t.me/tnz_msk/3521",
+      "file_name": "IMG_7247.MOV"
+    },
+    {
+      "message_id": 3520,
+      "date": "2025-10-15T14:50:27+00:00",
+      "source_ref": "https://t.me/tnz_msk/3520",
+      "file_name": "IMG_7248.MOV"
+    },
+    {
+      "message_id": 3519,
+      "date": "2025-10-15T14:50:27+00:00",
+      "source_ref": "https://t.me/tnz_msk/3519",
+      "file_name": "IMG_7246.MP4"
+    },
+    {
+      "message_id": 3492,
+      "date": "2025-10-08T13:35:45+00:00",
+      "source_ref": "https://t.me/tnz_msk/3492",
+      "file_name": "IMG_4490.MOV"
+    },
+    {
+      "message_id": 3491,
+      "date": "2025-10-08T04:59:01+00:00",
+      "source_ref": "https://t.me/tnz_msk/3491",
+      "file_name": "watermark-removed-20251008_0035_01k709amyafkka83bp7j708xxn.mp4"
+    },
+    {
+      "message_id": 3487,
+      "date": "2025-10-06T04:28:01+00:00",
+      "source_ref": "https://t.me/tnz_msk/3487",
+      "file_name": "video_2025-10-06_00-15-54.mp4"
+    },
+    {
+      "message_id": 3486,
+      "date": "2025-10-05T17:29:36+00:00",
+      "source_ref": "https://t.me/tnz_msk/3486",
+      "file_name": "IMG_6893.MP4"
+    },
+    {
+      "message_id": 3485,
+      "date": "2025-10-05T14:08:47+00:00",
+      "source_ref": "https://t.me/tnz_msk/3485",
+      "file_name": "IMG_6882.MP4"
+    },
+    {
+      "message_id": 3484,
+      "date": "2025-10-05T09:13:04+00:00",
+      "source_ref": "https://t.me/tnz_msk/3484",
+      "file_name": "20251005_1211_01k6st6fgee749rtfghjefsra1.mp4"
+    },
+    {
+      "message_id": 3483,
+      "date": "2025-10-03T14:20:47+00:00",
+      "source_ref": "https://t.me/tnz_msk/3483",
+      "file_name": "IMG_6817.MP4"
+    },
+    {
+      "message_id": 3482,
+      "date": "2025-10-01T20:27:52+00:00",
+      "source_ref": "https://t.me/tnz_msk/3482",
+      "file_name": "20251001_2327_01k6gq89y0fpkamh6ycr0txqhs.mp4"
+    },
+    {
+      "message_id": 3481,
+      "date": "2025-10-01T19:47:49+00:00",
+      "source_ref": "https://t.me/tnz_msk/3481",
+      "file_name": "20251001_2246_01k6gmxkw2f4fvn46zhbm80y56.mp4"
+    },
+    {
+      "message_id": 3479,
+      "date": "2025-09-30T21:58:56+00:00",
+      "source_ref": "https://t.me/tnz_msk/3479",
+      "file_name": "IMG_7556.MP4"
+    },
+    {
+      "message_id": 3475,
+      "date": "2025-09-29T04:33:01+00:00",
+      "source_ref": "https://t.me/tnz_msk/3475",
+      "file_name": "Новый проект.mp4"
+    },
+    {
+      "message_id": 3471,
+      "date": "2025-09-24T16:24:24+00:00",
+      "source_ref": "https://t.me/tnz_msk/3471",
+      "file_name": "IMG_6579.MP4"
+    },
+    {
+      "message_id": 3466,
+      "date": "2025-09-19T09:23:17+00:00",
+      "source_ref": "https://t.me/tnz_msk/3466",
+      "file_name": "IMG_6370.MP4"
+    },
+    {
+      "message_id": 3442,
+      "date": "2025-09-13T08:53:50+00:00",
+      "source_ref": "https://t.me/tnz_msk/3442",
+      "file_name": "IMG_6006.MP4"
+    },
+    {
+      "message_id": 3441,
+      "date": "2025-09-13T08:53:50+00:00",
+      "source_ref": "https://t.me/tnz_msk/3441",
+      "file_name": "IMG_6005.MP4"
+    },
+    {
+      "message_id": 3425,
+      "date": "2025-08-29T09:02:09+00:00",
+      "source_ref": "https://t.me/tnz_msk/3425",
+      "file_name": "IMG_5435.MOV"
+    },
+    {
+      "message_id": 3424,
+      "date": "2025-08-28T10:14:26+00:00",
+      "source_ref": "https://t.me/tnz_msk/3424",
+      "file_name": "IMG_5368.MP4"
+    },
+    {
+      "message_id": 3422,
+      "date": "2025-08-27T13:19:15+00:00",
+      "source_ref": "https://t.me/tnz_msk/3422",
+      "file_name": "IMG_5337.MP4"
+    },
+    {
+      "message_id": 3417,
+      "date": "2025-08-27T13:19:15+00:00",
+      "source_ref": "https://t.me/tnz_msk/3417",
+      "file_name": "IMG_5329.MOV"
+    },
+    {
+      "message_id": 3416,
+      "date": "2025-08-27T09:01:51+00:00",
+      "source_ref": "https://t.me/tnz_msk/3416",
+      "file_name": "IMG_5302.MP4"
+    },
+    {
+      "message_id": 3401,
+      "date": "2025-08-22T18:56:35+00:00",
+      "source_ref": "https://t.me/tnz_msk/3401",
+      "file_name": "IMG_5811.MP4"
+    },
+    {
+      "message_id": 3398,
+      "date": "2025-08-21T11:51:07+00:00",
+      "source_ref": "https://t.me/tnz_msk/3398",
+      "file_name": "IMG_4981.MOV"
+    },
+    {
+      "message_id": 3387,
+      "date": "2025-08-14T15:59:15+00:00",
+      "source_ref": "https://t.me/tnz_msk/3387",
+      "file_name": "IMG_4764.MP4"
+    },
+    {
+      "message_id": 3377,
+      "date": "2025-08-13T07:50:12+00:00",
+      "source_ref": "https://t.me/tnz_msk/3377",
+      "file_name": "IMG_4715.MOV"
+    },
+    {
+      "message_id": 3375,
+      "date": "2025-08-12T20:21:21+00:00",
+      "source_ref": "https://t.me/tnz_msk/3375",
+      "file_name": "IMG_6243.MOV"
+    },
+    {
+      "message_id": 3367,
+      "date": "2025-08-10T20:18:55+00:00",
+      "source_ref": "https://t.me/tnz_msk/3367",
+      "file_name": "IMG_4661.MP4"
+    },
+    {
+      "message_id": 3356,
+      "date": "2025-08-08T12:49:54+00:00",
+      "source_ref": "https://t.me/tnz_msk/3356",
+      "file_name": "IMG_4469.MOV"
+    },
+    {
+      "message_id": 3353,
+      "date": "2025-08-07T20:00:39+00:00",
+      "source_ref": "https://t.me/tnz_msk/3353",
+      "file_name": "video_2025-08-07_21-50-56.mp4"
+    },
+    {
+      "message_id": 3352,
+      "date": "2025-08-07T17:35:18+00:00",
+      "source_ref": "https://t.me/tnz_msk/3352",
+      "file_name": "IMG_4386.MP4"
+    },
+    {
+      "message_id": 3344,
+      "date": "2025-08-07T17:35:18+00:00",
+      "source_ref": "https://t.me/tnz_msk/3344",
+      "file_name": "IMG_4365.MOV"
+    },
+    {
+      "message_id": 3334,
+      "date": "2025-08-07T06:49:54+00:00",
+      "source_ref": "https://t.me/tnz_msk/3334",
+      "file_name": "IMG_4386.MP4"
+    },
+    {
+      "message_id": 3316,
+      "date": "2025-08-03T12:35:23+00:00",
+      "source_ref": "https://t.me/tnz_msk/3316",
+      "file_name": "IMG_0125.MP4"
+    },
+    {
+      "message_id": 3315,
+      "date": "2025-08-02T12:55:18+00:00",
+      "source_ref": "https://t.me/tnz_msk/3315",
+      "file_name": "IMG_4218.MOV"
+    },
+    {
+      "message_id": 3313,
+      "date": "2025-08-02T12:55:18+00:00",
+      "source_ref": "https://t.me/tnz_msk/3313",
+      "file_name": "IMG_4213.MOV"
+    },
+    {
+      "message_id": 3312,
+      "date": "2025-08-02T12:55:18+00:00",
+      "source_ref": "https://t.me/tnz_msk/3312",
+      "file_name": "IMG_4210.MOV"
+    },
+    {
+      "message_id": 3311,
+      "date": "2025-08-02T12:55:18+00:00",
+      "source_ref": "https://t.me/tnz_msk/3311",
+      "file_name": "IMG_4209.MOV"
+    },
+    {
+      "message_id": 3310,
+      "date": "2025-08-02T12:55:18+00:00",
+      "source_ref": "https://t.me/tnz_msk/3310",
+      "file_name": "IMG_4205.MOV"
+    },
+    {
+      "message_id": 3309,
+      "date": "2025-08-01T19:48:54+00:00",
+      "source_ref": "https://t.me/tnz_msk/3309",
+      "file_name": "video_2025-08-01_22-47-43.mp4"
+    },
+    {
+      "message_id": 3302,
+      "date": "2025-08-01T08:43:01+00:00",
+      "source_ref": "https://t.me/tnz_msk/3302",
+      "file_name": "polycam.mp4"
+    },
+    {
+      "message_id": 3291,
+      "date": "2025-07-26T21:10:26+00:00",
+      "source_ref": "https://t.me/tnz_msk/3291",
+      "file_name": "IMG_2715.MP4"
+    },
+    {
+      "message_id": 3282,
+      "date": "2025-07-25T10:53:59+00:00",
+      "source_ref": "https://t.me/tnz_msk/3282",
+      "file_name": "IMG_3851.MP4"
+    },
+    {
+      "message_id": 3271,
+      "date": "2025-07-24T09:23:23+00:00",
+      "source_ref": "https://t.me/tnz_msk/3271",
+      "file_name": "IMG_3811.MOV"
+    },
+    {
+      "message_id": 3258,
+      "date": "2025-07-18T08:25:12+00:00",
+      "source_ref": "https://t.me/tnz_msk/3258",
+      "file_name": "IMG_3419.MOV"
+    },
+    {
+      "message_id": 3242,
+      "date": "2025-07-15T07:43:13+00:00",
+      "source_ref": "https://t.me/tnz_msk/3242",
+      "file_name": "IMG_3158.MP4"
+    },
+    {
+      "message_id": 3231,
+      "date": "2025-07-11T14:20:47+00:00",
+      "source_ref": "https://t.me/tnz_msk/3231",
+      "file_name": "IMG_2811.MP4"
+    },
+    {
+      "message_id": 3227,
+      "date": "2025-07-10T11:31:02+00:00",
+      "source_ref": "https://t.me/tnz_msk/3227",
+      "file_name": "IMG_2695.MOV"
+    },
+    {
+      "message_id": 3202,
+      "date": "2025-07-05T15:56:37+00:00",
+      "source_ref": "https://t.me/tnz_msk/3202",
+      "file_name": "IMG_2463.MP4"
+    },
+    {
+      "message_id": 3201,
+      "date": "2025-07-05T15:56:37+00:00",
+      "source_ref": "https://t.me/tnz_msk/3201",
+      "file_name": "IMG_2465.MP4"
+    },
+    {
+      "message_id": 3200,
+      "date": "2025-07-05T15:56:36+00:00",
+      "source_ref": "https://t.me/tnz_msk/3200",
+      "file_name": "IMG_2464.MP4"
+    },
+    {
+      "message_id": 3199,
+      "date": "2025-07-04T18:24:36+00:00",
+      "source_ref": "https://t.me/tnz_msk/3199",
+      "file_name": "IMG_2400.MP4"
+    },
+    {
+      "message_id": 3198,
+      "date": "2025-07-04T14:26:38+00:00",
+      "source_ref": "https://t.me/tnz_msk/3198",
+      "file_name": "IMG_2406.MOV"
+    },
+    {
+      "message_id": 3186,
+      "date": "2025-07-02T15:22:26+00:00",
+      "source_ref": "https://t.me/tnz_msk/3186",
+      "file_name": "IMG_2264.MOV"
+    },
+    {
+      "message_id": 3184,
+      "date": "2025-07-01T20:39:15+00:00",
+      "source_ref": "https://t.me/tnz_msk/3184",
+      "file_name": "Видео WhatsApp 2025-06-30 в 15.51.31_6dd6737c.mp4"
+    },
+    {
+      "message_id": 3183,
+      "date": "2025-06-30T10:53:23+00:00",
+      "source_ref": "https://t.me/tnz_msk/3183",
+      "file_name": "IMG_9935.MOV"
+    },
+    {
+      "message_id": 3182,
+      "date": "2025-06-30T10:00:13+00:00",
+      "source_ref": "https://t.me/tnz_msk/3182",
+      "file_name": "IMG_1576.MP4"
+    },
+    {
+      "message_id": 3180,
+      "date": "2025-06-30T08:13:00+00:00",
+      "source_ref": "https://t.me/tnz_msk/3180",
+      "file_name": "IMG_2110.MP4"
+    },
+    {
+      "message_id": 3179,
+      "date": "2025-06-30T07:16:23+00:00",
+      "source_ref": "https://t.me/tnz_msk/3179",
+      "file_name": "IMG_2107.MP4"
+    },
+    {
+      "message_id": 3166,
+      "date": "2025-06-27T14:03:03+00:00",
+      "source_ref": "https://t.me/tnz_msk/3166",
+      "file_name": "IMG_2048.MP4"
+    },
+    {
+      "message_id": 3136,
+      "date": "2025-06-19T14:31:25+00:00",
+      "source_ref": "https://t.me/tnz_msk/3136",
+      "file_name": "IMG_1460.MOV"
+    },
+    {
+      "message_id": 3134,
+      "date": "2025-06-19T10:15:20+00:00",
+      "source_ref": "https://t.me/tnz_msk/3134",
+      "file_name": "IMG_1598.MP4"
+    },
+    {
+      "message_id": 3130,
+      "date": "2025-06-19T10:15:20+00:00",
+      "source_ref": "https://t.me/tnz_msk/3130",
+      "file_name": "IMG_1440.MOV"
+    },
+    {
+      "message_id": 3128,
+      "date": "2025-06-18T08:03:32+00:00",
+      "source_ref": "https://t.me/tnz_msk/3128",
+      "file_name": "IMG_1565.MP4"
+    },
+    {
+      "message_id": 3117,
+      "date": "2025-06-14T15:35:50+00:00",
+      "source_ref": "https://t.me/tnz_msk/3117",
+      "file_name": "IMG_1406.MP4"
+    },
+    {
+      "message_id": 3112,
+      "date": "2025-06-10T08:20:34+00:00",
+      "source_ref": "https://t.me/tnz_msk/3112",
+      "file_name": "IMG_1191.MP4"
+    },
+    {
+      "message_id": 3111,
+      "date": "2025-06-08T07:42:30+00:00",
+      "source_ref": "https://t.me/tnz_msk/3111",
+      "file_name": "IMG_1130.MP4"
+    },
+    {
+      "message_id": 3086,
+      "date": "2025-05-30T11:10:00+00:00",
+      "source_ref": "https://t.me/tnz_msk/3086",
+      "file_name": "AIIN.mp4"
+    },
+    {
+      "message_id": 3084,
+      "date": "2025-05-29T20:46:59+00:00",
+      "source_ref": "https://t.me/tnz_msk/3084",
+      "file_name": "record.ogg"
+    },
+    {
+      "message_id": 3083,
+      "date": "2025-05-29T16:17:46+00:00",
+      "source_ref": "https://t.me/tnz_msk/3083",
+      "file_name": "record.mp4"
+    },
+    {
+      "message_id": 3077,
+      "date": "2025-05-28T04:09:01+00:00",
+      "source_ref": "https://t.me/tnz_msk/3077",
+      "file_name": "ВСН 53-86 Утратил силу.pdf"
+    },
+    {
+      "message_id": 3072,
+      "date": "2025-05-25T12:09:34+00:00",
+      "source_ref": "https://t.me/tnz_msk/3072",
+      "file_name": "IMG_0537.MOV"
+    },
+    {
+      "message_id": 3070,
+      "date": "2025-05-25T12:09:34+00:00",
+      "source_ref": "https://t.me/tnz_msk/3070",
+      "file_name": "IMG_0547.MOV"
+    },
+    {
+      "message_id": 3067,
+      "date": "2025-05-25T12:09:34+00:00",
+      "source_ref": "https://t.me/tnz_msk/3067",
+      "file_name": "IMG_0546.MOV"
+    },
+    {
+      "message_id": 3063,
+      "date": "2025-05-24T05:31:01+00:00",
+      "source_ref": "https://t.me/tnz_msk/3063",
+      "file_name": "IMG_0477.MP4"
+    },
+    {
+      "message_id": 3062,
+      "date": "2025-05-24T05:31:01+00:00",
+      "source_ref": "https://t.me/tnz_msk/3062",
+      "file_name": "IMG_0476.MP4"
+    },
+    {
+      "message_id": 3050,
+      "date": "2025-05-21T16:29:46+00:00",
+      "source_ref": "https://t.me/tnz_msk/3050",
+      "file_name": "IMG_3938.MOV"
+    },
+    {
+      "message_id": 3037,
+      "date": "2025-05-19T08:44:00+00:00",
+      "source_ref": "https://t.me/tnz_msk/3037",
+      "file_name": "IMG_0223.MP4"
+    },
+    {
+      "message_id": 3034,
+      "date": "2025-05-14T17:17:37+00:00",
+      "source_ref": "https://t.me/tnz_msk/3034",
+      "file_name": "video_2025-05-15_00-14-14.mp4"
+    },
+    {
+      "message_id": 3033,
+      "date": "2025-05-14T10:51:51+00:00",
+      "source_ref": "https://t.me/tnz_msk/3033",
+      "file_name": "IMG_9931.MOV"
+    },
+    {
+      "message_id": 3031,
+      "date": "2025-05-13T07:07:25+00:00",
+      "source_ref": "https://t.me/tnz_msk/3031",
+      "file_name": "IMG_9914.MOV"
+    }
+  ]
+}
