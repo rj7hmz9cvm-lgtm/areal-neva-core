@@ -3450,3 +3450,199 @@ def process_technadzor(text: str = "", task_id: str = "", chat_id: str = "", top
 
     return _P7_T5_ORIG_PROCESS_TECHNADZOR(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs)
 # === END_P7_TOPIC5_REPLY_VOICE_BINDING_V1 ===
+
+# === PATCH_TOPIC5_VISITBUFFER_LAST_WRAPPER_V1 ===
+# Canon: topic_5 file = VisitMaterial, not act. Reply voice/text = owner comment.
+import sqlite3 as _p7d_sqlite3
+import json as _p7d_json
+import time as _p7d_time
+import uuid as _p7d_uuid
+from pathlib import Path as _p7d_Path
+
+_P7D_ORIG_PROCESS_TECHNADZOR = process_technadzor
+_P7D_DB = "/root/.areal-neva-core/data/core.db"
+_P7D_DATA = _p7d_Path("/root/.areal-neva-core/data/technadzor")
+
+def _p7d_s(v, limit=50000):
+    return "" if v is None else str(v).strip()[:limit]
+
+def _p7d_low(v):
+    return _p7d_s(v).lower().replace("ё", "е")
+
+def _p7d_json_load(raw):
+    try:
+        d = _p7d_json.loads(_p7d_s(raw))
+        return d if isinstance(d, dict) else {}
+    except Exception:
+        return {}
+
+def _p7d_task(task_id):
+    if not task_id:
+        return {}
+    conn = _p7d_sqlite3.connect(_P7D_DB)
+    try:
+        r = conn.execute(
+            "SELECT id,chat_id,input_type,raw_input,reply_to_message_id,topic_id FROM tasks WHERE id=? LIMIT 1",
+            (_p7d_s(task_id),)
+        ).fetchone()
+    finally:
+        conn.close()
+    if not r:
+        return {}
+    return {"id":r[0],"chat_id":_p7d_s(r[1]),"input_type":_p7d_s(r[2]),"raw_input":_p7d_s(r[3]),"reply_to_message_id":_p7d_s(r[4]),"topic_id":int(r[5] or 0)}
+
+def _p7d_active(chat_id):
+    try:
+        d = _p7d_json.loads((_P7D_DATA / f"active_folder_{chat_id}_5.json").read_text(encoding="utf-8"))
+        return d if isinstance(d, dict) else {}
+    except Exception:
+        return {}
+
+def _p7d_buf_path(chat_id):
+    _P7D_DATA.mkdir(parents=True, exist_ok=True)
+    return _P7D_DATA / f"buf_{chat_id}_5.json"
+
+def _p7d_load_buf(chat_id):
+    p = _p7d_buf_path(chat_id)
+    try:
+        d = _p7d_json.loads(p.read_text(encoding="utf-8"))
+        d.setdefault("materials", [])
+        return d
+    except Exception:
+        return {"materials": [], "source": "PATCH_TOPIC5_VISITBUFFER_LAST_WRAPPER_V1", "created_at": _p7d_time.time()}
+
+def _p7d_save_buf(chat_id, buf):
+    buf["updated_at"] = _p7d_time.time()
+    _p7d_buf_path(chat_id).write_text(_p7d_json.dumps(buf, ensure_ascii=False, indent=2), encoding="utf-8")
+
+def _p7d_is_flush(text):
+    low = _p7d_low(text)
+    return any(x in low for x in ("сделай акт","собери акт","сформируй акт","сделай разбор","собери разбор","сделай анализ","сделай отчет","сделай отчёт"))
+
+def _p7d_is_file_payload(d, file_name=""):
+    fn = _p7d_s(file_name or d.get("file_name") or d.get("name"))
+    return bool(fn or d.get("telegram_message_id") or d.get("file_id") or d.get("drive_file_id"))
+
+def _p7d_find_source(chat_id, msg_id):
+    mid = _p7d_s(msg_id)
+    if not mid:
+        return {}
+    conn = _p7d_sqlite3.connect(_P7D_DB)
+    try:
+        rows = conn.execute(
+            "SELECT raw_input,reply_to_message_id,id FROM tasks WHERE chat_id=? AND topic_id=5 AND input_type='drive_file' ORDER BY rowid DESC LIMIT 500",
+            (_p7d_s(chat_id),)
+        ).fetchall()
+    finally:
+        conn.close()
+    for raw, reply_to, tid in rows:
+        d = _p7d_json_load(raw)
+        fn = _p7d_s(d.get("file_name") or d.get("name"))
+        ids = {_p7d_s(reply_to), _p7d_s(d.get("telegram_message_id")), _p7d_s(d.get("message_id"))}
+        if mid in ids or f"_{mid}." in fn:
+            d["_source_task_id"] = tid
+            return d
+    return {}
+
+def _p7d_material(chat_id, d, reply_id=""):
+    af = _p7d_active(chat_id)
+    fn = _p7d_s(d.get("file_name") or d.get("name"))
+    fid = _p7d_s(d.get("drive_file_id") or d.get("file_id") or d.get("id"))
+    mid = _p7d_s(d.get("telegram_message_id") or d.get("message_id") or reply_id)
+    url = _p7d_s(d.get("drive_url") or d.get("webViewLink") or (f"https://drive.google.com/file/d/{fid}/view" if fid else ""))
+    low_fn = fn.lower()
+    ftype = "PHOTO" if low_fn.endswith((".jpg",".jpeg",".png",".webp",".heic")) else "PDF" if low_fn.endswith(".pdf") else "DOCUMENT"
+    return {
+        "material_id": str(_p7d_uuid.uuid4()),
+        "source": "TELEGRAM",
+        "file_type": ftype,
+        "file_name": fn,
+        "drive_url": url,
+        "drive_file_id": fid,
+        "telegram_message_id": mid,
+        "reply_to_message_id": _p7d_s(reply_id or mid),
+        "active_folder_id": _p7d_s(af.get("folder_id")),
+        "active_folder_name": _p7d_s(af.get("folder_name")),
+        "added_at": _p7d_time.time(),
+        "include_in_report": True,
+        "include_in_act": True,
+        "status": "PENDING",
+    }
+
+def _p7d_upsert(chat_id, material):
+    buf = _p7d_load_buf(chat_id)
+    mid = _p7d_s(material.get("telegram_message_id"))
+    fn = _p7d_s(material.get("file_name"))
+    target = None
+    for m in buf["materials"]:
+        if (mid and _p7d_s(m.get("telegram_message_id")) == mid) or (fn and _p7d_s(m.get("file_name")) == fn):
+            target = m
+            break
+    if target is None:
+        buf["materials"].append(material)
+        target = material
+    else:
+        target.update({k:v for k,v in material.items() if v not in ("", None)})
+    _p7d_save_buf(chat_id, buf)
+    return target, len(buf["materials"])
+
+def _p7d_bind(chat_id, reply_id, comment):
+    src = _p7d_find_source(chat_id, reply_id)
+    if not src:
+        return None, 0
+    target, count = _p7d_upsert(chat_id, _p7d_material(chat_id, src, reply_id))
+    is_voice = _p7d_s(comment).upper().startswith("[VOICE]")
+    field = "voice_comment" if is_voice else "owner_comment"
+    clean = _p7d_s(comment)
+    if clean.upper().startswith("[VOICE]"):
+        clean = clean[7:].strip()
+    prev = _p7d_s(target.get(field), 20000)
+    target[field] = (prev + "\n" + clean).strip() if prev and clean not in prev else clean
+    target["status"] = "LINKED"
+    target["linked_reply_to_message_id"] = _p7d_s(reply_id)
+    target["updated_at"] = _p7d_time.time()
+    buf = _p7d_load_buf(chat_id)
+    for m in buf["materials"]:
+        if _p7d_s(m.get("telegram_message_id")) == _p7d_s(target.get("telegram_message_id")):
+            m.update(target)
+            break
+    _p7d_save_buf(chat_id, buf)
+    return target, count
+
+def process_technadzor(text: str = "", task_id: str = "", chat_id: str = "", topic_id: int = 0, file_path: str = "", file_name: str = "", **kwargs):
+    if int(topic_id or 0) != 5:
+        return _P7D_ORIG_PROCESS_TECHNADZOR(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs)
+
+    task = _p7d_task(task_id)
+    chat = _p7d_s(chat_id or task.get("chat_id"))
+    raw = _p7d_s(text or task.get("raw_input"))
+    data = _p7d_json_load(raw)
+    input_type = _p7d_s(task.get("input_type"))
+    reply_id = _p7d_s(task.get("reply_to_message_id"))
+
+    if (input_type == "drive_file" or _p7d_is_file_payload(data, file_name)) and not _p7d_is_flush(raw):
+        mat = _p7d_material(chat, data, data.get("telegram_message_id") or reply_id)
+        target, count = _p7d_upsert(chat, mat)
+        return {
+            "ok": True,
+            "handled": True,
+            "state": "DONE",
+            "status": "DONE",
+            "result_text": f"Фото/файл принят в пакет выезда: {count} шт. Активная папка: {target.get('active_folder_name') or target.get('active_folder_id')}",
+            "history": "PATCH_TOPIC5_VISITBUFFER_FILE_BUFFERED",
+        }
+
+    if input_type in ("text","voice") and reply_id and raw and not _p7d_is_flush(raw):
+        linked, count = _p7d_bind(chat, reply_id, raw)
+        if linked:
+            return {
+                "ok": True,
+                "handled": True,
+                "state": "DONE",
+                "status": "DONE",
+                "result_text": f"Пояснение привязано к материалу: {linked.get('file_name','')}. Материалов в пакете: {count}",
+                "history": "PATCH_TOPIC5_VISITBUFFER_REPLY_BOUND",
+            }
+
+    return _P7D_ORIG_PROCESS_TECHNADZOR(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs)
+# === END_PATCH_TOPIC5_VISITBUFFER_LAST_WRAPPER_V1 ===
