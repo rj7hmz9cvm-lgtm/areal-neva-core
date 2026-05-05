@@ -1,4 +1,43 @@
-# LATEST_HANDOFF — 05.05.2026 09:06 MSK
+# LATEST_HANDOFF — 05.05.2026 10:20 MSK
+
+## СЕССИЯ 05.05.2026 — FOLDER DISCOVERY LIVE CLOSED
+
+### Патчи
+| Коммит | Файл | Что |
+|---|---|---|
+| f1d6763 | final_closure_engine.py | P6H4TW_FCE_TOPIC5_ROUTE_FIX_V1: bypass is_technadzor_intent для folder/context intent в topic_5 |
+| f1d6763 | technadzor_engine.py | P6H4FD_FOLDER_DISCOVERY_V1: поиск папки по имени на Drive, set_active_folder |
+| e1aa647 | task_worker.py | FCE hook: заменить unbound task_id/raw_input/input_type/reply_to на _task_field() при вызове |
+| 8bf752e | task_worker.py | FCE hook send path: _fcv1_tid/_fcv1_reply через _task_field чтобы не падало после handled=True |
+| 94e2252 | technadzor_engine.py | поиск внутри system subfolder TECHNADZOR — ОТМЕНЁН следующим |
+| 0a5c766 | technadzor_engine.py | исключить системные папки из кандидатов результата |
+| 48b1e55 | technadzor_engine.py | ФИНАЛЬНЫЙ: искать в root ТЕХНАДЗОР (1s2y5l2mJFTb7P90XVokErXYVzmoH-VtD), fallback Drive-wide search, state=DONE |
+
+### Контрольный кейс — PASSED ✅
+```
+raw_input: создана папка тест надзор. Ее надо принять сейчас для проверки работоспособности
+task: 5276 DONE
+result: Нашёл папку «тест надзор» и установил её как активную.
+        https://drive.google.com/drive/folders/1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG
+folder_id: 1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG ✅
+```
+
+### Архитектура folder discovery
+- Trigger: topic_id=5 + folder/context intent (список из 13 фраз в FCE + P6H4FD)
+- FCE (_handle_technadzor): bypass is_technadzor_intent → вызов process_technadzor напрямую
+- P6H4FD wrapper: поиск в ТЕХНАДЗОР root (1s2y5l2mJFTb7P90XVokErXYVzmoH-VtD) → фильтр системных → fuzzy match → set_active_folder
+- Fallback: Drive-wide exact name search если root пуст
+- Системные папки (TECHNADZOR, ТЕХНАДЗОР, topic_5, _system и др.) НИКОГДА не становятся active folder
+
+### Drive структура (verified)
+- topic_5 folder: 1yWIJdSrypH3BbIozCz-OAw1R6hmnMRHK
+- TECHNADZOR (system, пустой): 1vKQM0Z2qBmiKtgeyx95JaNEQAp5mJLOm
+- ТЕХНАДЗОР root (user folders здесь): 1s2y5l2mJFTb7P90XVokErXYVzmoH-VtD
+- тест надзор (user project): 1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG
+
+---
+
+# LATEST_HANDOFF — 05.05.2026 09:06 MSK (предыдущая сессия)
 
 ## СЕРВЕР
 IP: 89.22.225.136 | Base: /root/.areal-neva-core
