@@ -11110,3 +11110,82 @@ except Exception as _t5ce_install_err:
         pass
 # === END_TOPIC5_CANON_CLOSE_EXTEND_V1 ===
 
+# === DRIVE_FILE_AUTO_DELIVER_V2 ===
+# Extension: deliver any non-empty AWAITING_CONFIRMATION result (not just Drive-linked ones).
+# Previously: only tasks with drive.google.com/docs.google.com in result were delivered.
+# Fix: topic_2 document result (no Drive link due to upload failure) also needs delivery.
+try:
+    import logging as _dfad2_log
+    _DFAD2_LOG = _dfad2_log.getLogger("task_worker")
+    _dfad2_orig_handle_drive_file = _handle_drive_file
+
+    async def _handle_drive_file(conn, task, chat_id, topic_id):
+        await _dfad2_orig_handle_drive_file(conn, task, chat_id, topic_id)
+        try:
+            task_id = _s(_task_field(task, "id", ""))
+            if not task_id:
+                return
+            row = conn.execute(
+                "SELECT state, result, bot_message_id, reply_to_message_id FROM tasks WHERE id=?",
+                (task_id,)
+            ).fetchone()
+            if not row:
+                return
+            if row["state"] == "AWAITING_CONFIRMATION" and not row["bot_message_id"]:
+                result_text = _s(row["result"])
+                if result_text and len(result_text) > 10:
+                    reply_to = row["reply_to_message_id"]
+                    _send_once_ex(conn, task_id, str(chat_id), result_text, reply_to, "drive_file_auto_deliver_v2")
+                    _update_task(conn, task_id, state="DONE", error_message="")
+                    conn.commit()
+                    _DFAD2_LOG.info("DRIVE_FILE_AUTO_DELIVER_V2 sent task=%s topic=%s", task_id, topic_id)
+        except Exception as _dfad2_err:
+            _DFAD2_LOG.warning("DRIVE_FILE_AUTO_DELIVER_V2_ERR %s", _dfad2_err)
+
+    _DFAD2_LOG.info("DRIVE_FILE_AUTO_DELIVER_V2_INSTALLED")
+except Exception as _dfad2_install_err:
+    try:
+        logging.getLogger("task_worker").exception("DRIVE_FILE_AUTO_DELIVER_V2_INSTALL_ERR %s", _dfad2_install_err)
+    except Exception:
+        pass
+# === END_DRIVE_FILE_AUTO_DELIVER_V2 ===
+
+# === FIX_P6H4TW_VOICE_ANNOTATE_ACT_GUARD_V1 ===
+# P6H4TW voice_annotate is a catch-all: any [VOICE] + non-empty buffer → annotate last file.
+# "[VOICE] Нужно добавить в папку и сделать финальный акт" was annotated instead of triggering act.
+# Fix: if voice is act-like → skip voice_annotate, fall through to FULL_CANON_CLOSE.
+try:
+    import logging as _p6hg_log
+    _P6HG_LOG = _p6hg_log.getLogger("task_worker")
+    _p6hg_orig_handle_topic5 = _p6h4tw_handle_topic5
+
+    async def _p6h4tw_handle_topic5(conn, task, args, kwargs):
+        try:
+            # Guard: act-like voice → skip voice_annotate, let FULL_CANON_CLOSE handle
+            _p6hg_raw = ""
+            try:
+                _p6hg_raw = str(task["raw_input"]) if "raw_input" in (task.keys() if hasattr(task, "keys") else dir(task)) else ""
+            except Exception:
+                pass
+            if _p6hg_raw.startswith("[VOICE]"):
+                _p6hg_voice = _p6hg_raw[7:].strip()
+                _p6hg_is_act = False
+                try:
+                    _p6hg_is_act = _t5fc_act_like(_p6hg_voice)
+                except Exception:
+                    pass
+                if _p6hg_is_act:
+                    _P6HG_LOG.info("FIX_P6H4TW_VOICE_ANNOTATE_ACT_GUARD_V1 skipping voice_annotate for act command")
+                    return False  # fall through to FULL_CANON_CLOSE
+        except Exception as _p6hg_guard_err:
+            _P6HG_LOG.warning("FIX_P6H4TW_VOICE_ANNOTATE_ACT_GUARD_V1_ERR %s", _p6hg_guard_err)
+        return await _p6hg_orig_handle_topic5(conn, task, args, kwargs)
+
+    _P6HG_LOG.info("FIX_P6H4TW_VOICE_ANNOTATE_ACT_GUARD_V1_INSTALLED")
+except Exception as _p6hg_install_err:
+    try:
+        logging.getLogger("task_worker").exception("FIX_P6H4TW_VOICE_ANNOTATE_ACT_GUARD_V1_INSTALL_ERR %s", _p6hg_install_err)
+    except Exception:
+        pass
+# === END_FIX_P6H4TW_VOICE_ANNOTATE_ACT_GUARD_V1 ===
+

@@ -784,3 +784,24 @@ def prehandle_task_context_v1(conn: sqlite3.Connection, task: Any) -> Optional[D
 
 # === END_PENDING_INTENT_CLARIFICATION_V1 ===
 
+# === FIX_PIC_CLARIFICATION_FRESH_REQUEST_V1 ===
+# _pic_is_clarification_text fires on "актуальн*" and "интернет*" — both clar_words.
+# But "сколько будет стоить" / "мне надо посчитать" are fresh requests, not clarifications.
+_fpcfr_orig = _pic_is_clarification_text
+
+def _pic_is_clarification_text(text: str) -> bool:
+    low = _low(text)
+    if not low:
+        return False
+    fresh_request = any(x in low for x in (
+        "сколько будет стоить", "сколько стоит", "посчитать работу",
+        "мне надо посчитать", "нужно посчитать", "помоги посчитать",
+        "помоги рассчитать", "нужна смета", "нужна полная смета",
+        "добрый день", "привет", "здравствуй",
+        "можешь ли", "сможешь ли", "сможешь или нет",
+    ))
+    if fresh_request:
+        return False
+    return _fpcfr_orig(text)
+# === END_FIX_PIC_CLARIFICATION_FRESH_REQUEST_V1 ===
+

@@ -692,3 +692,19 @@ async def analyze_downloaded_file(local_path: str, file_name: str, mime_type: st
         }
     return None
     # === END_UNIVERSAL_FILE_ENGINE_FALLBACK_V1 ===
+
+# === FIX_DOMAIN_FLAGS_TOPIC_ROLE_ESTIMATE_BLEED_V1 ===
+# topic_role for topic_2 = "Топик: СТРОЙКА | Направление: estimates"
+# The word "estimate" in topic_role made estimate=True for EVERY file in topic_2.
+# Fix: classify estimate only from file_name, mime_type, user_text — not topic_role.
+_fdf_orig_domain_flags = _domain_flags
+
+def _domain_flags(file_name: str, mime_type: str = "", user_text: str = "", topic_role: str = "") -> Dict[str, bool]:
+    hay_no_role = f"{file_name}\n{mime_type}\n{user_text}".lower()
+    estimate = any(x in hay_no_role for x in (
+        "смет", "расчёт", "расчет", "вор", "ведомость объем", "ведомость объём",
+        "estimate", "xlsx", "xls", "csv"
+    ))
+    orig = _fdf_orig_domain_flags(file_name, mime_type, user_text, topic_role)
+    return {"estimate": estimate, "tech": orig["tech"], "project": orig["project"]}
+# === END_FIX_DOMAIN_FLAGS_TOPIC_ROLE_ESTIMATE_BLEED_V1 ===

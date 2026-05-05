@@ -1599,3 +1599,12 @@ if __name__ == "__main__":
     print(json.dumps(shadow_check(), ensure_ascii=False, indent=2))
 
 # === END_FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
+
+# === FIX_ESTIMATE_WORDS_EXTEND_V1 ===
+# "посчитать" / "стоить" / "стоит" are missing from ESTIMATE_WORDS
+# so "посчитать работу, сколько будет стоить" never matches → voice falls through
+ESTIMATE_WORDS = tuple(set(ESTIMATE_WORDS) | {
+    "посчитать", "рассчитать", "стоить", "стоит", "стоимост",
+    "сколько стоит", "сколько будет", "нужна смета", "нужен расчет", "нужен расчёт",
+})
+# === END_FIX_ESTIMATE_WORDS_EXTEND_V1 ===
