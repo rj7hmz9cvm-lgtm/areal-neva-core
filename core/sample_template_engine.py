@@ -6967,3 +6967,155 @@ def _p6f_wpv_verify_text_block(text):
         out_lines.append(line)
     return "\n".join(out_lines), summary
 # === END_P6F_WEB_PRICE_LIVE_VERIFY_V1 ===
+
+# === P6E2_CANON_PRICE_FLOW_V1 ===
+# Replaces hardcoded prices in p6e2 with canonical flow:
+# OCR+parse → choose_template → online prices → pending → user confirms → XLSX/PDF/Drive
+import logging as _p6e2cpf_logging
+_P6E2CPF_LOG = _p6e2cpf_logging.getLogger("p6e2_canon_price_flow_v1")
+
+try:
+    _p6e2cpf_orig = handle_topic2_image_estimate_p6e2
+except Exception:
+    _p6e2cpf_orig = None
+
+async def handle_topic2_image_estimate_p6e2(conn, task=None, chat_id=None, topic_id=None, raw_input=None, full_context=None, local_path="", file_name="", mime_type="", task_id=None, **kwargs):
+    if int(topic_id or 0) != 2:
+        if _p6e2cpf_orig:
+            return await _p6e2cpf_orig(conn, task=task, chat_id=chat_id, topic_id=topic_id, raw_input=raw_input, full_context=full_context, local_path=local_path, file_name=file_name, mime_type=mime_type, task_id=task_id, **kwargs)
+        return False
+    try:
+        from core.stroyka_estimate_canon import (
+            choose_template as _cpf_choose,
+            download_template_xlsx as _cpf_dl_tpl,
+            extract_template_prices as _cpf_extract,
+            _search_prices_online as _cpf_search,
+            _price_confirmation_text as _cpf_confirm,
+            _memory_save as _cpf_memsave,
+            _update_task_safe as _cpf_upd,
+            _now as _cpf_now,
+            _history_safe as _cpf_hist,
+        )
+    except Exception as _imp_e:
+        _P6E2CPF_LOG.warning("P6E2_CANON_IMPORT_ERR: %s", _imp_e)
+        if _p6e2cpf_orig:
+            return await _p6e2cpf_orig(conn, task=task, chat_id=chat_id, topic_id=topic_id, raw_input=raw_input, full_context=full_context, local_path=local_path, file_name=file_name, mime_type=mime_type, task_id=task_id, **kwargs)
+        return False
+    try:
+        if task is None:
+            task = {}
+        tid = _p6e2_s(task_id or _p6e2_row(task, "id", ""))
+        if not tid:
+            if _p6e2cpf_orig:
+                return await _p6e2cpf_orig(conn, task=task, chat_id=chat_id, topic_id=topic_id, raw_input=raw_input, full_context=full_context, local_path=local_path, file_name=file_name, mime_type=mime_type, task_id=task_id, **kwargs)
+            return False
+        raw = _p6e2_s(raw_input if raw_input is not None else _p6e2_row(task, "raw_input", ""), 100000)
+        payload = _p6e2_json_maybe(raw)
+        caption = _p6e2_s(payload.get("caption") or full_context or raw, 50000)
+        fn = _p6e2_s(file_name or payload.get("file_name") or payload.get("name") or "")
+        mt = _p6e2_s(mime_type or payload.get("mime_type") or "")
+        if not (_p6e2_is_image(fn, mt, local_path) and _p6e2_estimate_like(caption)):
+            if _p6e2cpf_orig:
+                return await _p6e2cpf_orig(conn, task=task, chat_id=chat_id, topic_id=topic_id, raw_input=raw_input, full_context=full_context, local_path=local_path, file_name=file_name, mime_type=mime_type, task_id=task_id, **kwargs)
+            return False
+        chat_id_s = str(chat_id or _p6e2_row(task, "chat_id", "") or "")
+        topic_id_i = int(topic_id or 2)
+        lp = _p6e2_find_local_path(tid, fn, local_path or payload.get("local_path") or payload.get("file_path") or "")
+        ocr = await _p6e2_ocr_image(lp) if lp else ""
+        plan = _p6e2_parse_plan(caption, ocr)
+        if plan["needs_clarification"]:
+            msg = "Не вижу размеры объекта на фото/в ТЗ. Пришли размер в формате 7.8х9.0 или фото крупнее"
+            conn.execute("UPDATE tasks SET state='WAITING_CLARIFICATION', result=?, error_message='P6E2_CANON_DIMS_NOT_RECOGNIZED', updated_at=datetime('now') WHERE id=?", (msg, tid))
+            conn.execute("INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))", (tid, "P6E2_CANON_DIMS_NOT_RECOGNIZED"))
+            conn.commit()
+            return True
+        a, b = plan["dims"]
+        raw_low = _p6e2_low(str(caption) + " " + str(ocr))
+        if plan.get("frame"):
+            material = "каркас"
+        elif any(x in raw_low for x in ("газобетон", "газоблок", "газобет")):
+            material = "газобетон"
+        elif any(x in raw_low for x in ("кирпич", "керамоблок")):
+            material = "кирпич"
+        elif "монолит" in raw_low:
+            material = "монолит"
+        else:
+            material = "каркас"
+        scope = "под ключ" if any(x in raw_low for x in ("под ключ", "ламинат", "сантех", "санузел", "отделк")) else "коробка"
+        parsed = {
+            "object": "дом",
+            "material": material,
+            "dims": (float(a), float(b)),
+            "floors": int(plan.get("floors") or 1),
+            "foundation": plan.get("foundation") or "монолитная плита",
+            "distance_km": 0,
+            "scope": scope,
+            "height": float(plan.get("height") or 3.0),
+            "rooms": plan.get("rooms") or [],
+            "windows": int(plan.get("windows") or 0),
+            "doors": int(plan.get("doors") or 0),
+            "terrace": bool(plan.get("terrace")),
+            "terrace_area": float(plan.get("terrace_area") or 0),
+            "source": "photo_plan_ocr",
+        }
+        template = _cpf_choose(parsed)
+        tpl_path = _cpf_dl_tpl(template)
+        template_prices, sheet_name = _cpf_extract(tpl_path, parsed)
+        online_prices = await _cpf_search(parsed, template, sheet_name)
+        pending = {
+            "version": "P6E2_CANON_PRICE_FLOW_V1",
+            "status": "WAITING_PRICE_CONFIRMATION",
+            "task_id": tid,
+            "chat_id": chat_id_s,
+            "topic_id": topic_id_i,
+            "parsed": parsed,
+            "template": template,
+            "sheet_name": sheet_name,
+            "template_prices": template_prices,
+            "online_prices": online_prices,
+            "created_at": _cpf_now(),
+        }
+        _cpf_memsave(chat_id_s, f"topic_2_estimate_pending_{tid}", pending)
+        confirm_text = _cpf_confirm(parsed, template, sheet_name, template_prices, online_prices)
+        _cpf_upd(conn, tid, state="WAITING_CLARIFICATION", result=confirm_text)
+        _cpf_hist(conn, tid, "P6E2_CANON_PRICE_FLOW_V1:prices_shown")
+        return True
+    except Exception as _ex:
+        _P6E2CPF_LOG.warning("P6E2_CANON_PRICE_FLOW_V1_ERR: %s", _ex, exc_info=True)
+        if _p6e2cpf_orig:
+            return await _p6e2cpf_orig(conn, task=task, chat_id=chat_id, topic_id=topic_id, raw_input=raw_input, full_context=full_context, local_path=local_path, file_name=file_name, mime_type=mime_type, task_id=task_id, **kwargs)
+        return False
+# === END_P6E2_CANON_PRICE_FLOW_V1 ===
+
+# === P6E2_ESTIMATE_LIKE_TOPIC2_PHOTO_EXTEND_V1 ===
+# topic_2 photos often lack "смета" keyword — builder sends dims + material.
+# Any photo with construction params in topic_2 = implicit estimate request.
+def _p6e2_estimate_like(text):
+    low = _p6e2_low(text)
+    if any(x in low for x in (
+        "смет", "расчет", "расчёт", "посчитай", "стоимость", "цена",
+        "сколько стоит", "полная смета", "посчитать", "рассчитать",
+        "стоить", "стоит", "нужна смета", "нужен расчет", "сколько будет",
+    )):
+        return True
+    has_dims = bool(_p6e2_re.search(
+        r"\d+[.,]?\d*\s*(?:x|х|×|\*|на)\s*\d+|\d+[.,]?\d*\s*м\b|\bвысот",
+        low,
+    ))
+    has_material = any(x in low for x in (
+        "каркас", "газобетон", "кирпич", "монолит", "арболит", "брус",
+        "фундамент", "кровл", "перекрыт", "металлочереп", "профнастил",
+        "фальц", "клик", "сэндвич", "цсп",
+    ))
+    has_object = any(x in low for x in (
+        "дом", "ангар", "склад", "коттедж", "здани", "строен",
+        "постройк", "баня", "гараж", "объект",
+    ))
+    has_construction = any(x in low for x in (
+        "высота", "этаж", "площадь", "периметр", "стен", "плита",
+        "подушк", "технологи", "лента", "свай",
+    ))
+    if (has_dims or has_material) and (has_object or has_construction):
+        return True
+    return False
+# === END_P6E2_ESTIMATE_LIKE_TOPIC2_PHOTO_EXTEND_V1 ===
