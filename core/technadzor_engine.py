@@ -3450,3 +3450,218 @@ def process_technadzor(text: str = "", task_id: str = "", chat_id: str = "", top
 
     return _P7_T5_ORIG_PROCESS_TECHNADZOR(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs)
 # === END_P7_TOPIC5_REPLY_VOICE_BINDING_V1 ===
+
+# === PATCH_TOPIC5_REPLY_BOTMSG_TO_RECENT_PHOTOS_V1 ===
+# topic_5: bot reply / voice reply must bind to recent Telegram photos as VisitMaterials, not generate act
+import sqlite3 as _p7e_sqlite3
+import json as _p7e_json
+import time as _p7e_time
+import uuid as _p7e_uuid
+from pathlib import Path as _p7e_Path
+
+_P7E_ORIG_PROCESS_TECHNADZOR = process_technadzor
+_P7E_DB = "/root/.areal-neva-core/data/core.db"
+_P7E_DATA = _p7e_Path("/root/.areal-neva-core/data/technadzor")
+
+def _p7e_s(v, n=30000):
+    return "" if v is None else str(v).strip()[:n]
+
+def _p7e_low(v):
+    return _p7e_s(v).lower().replace("ё", "е")
+
+def _p7e_j(raw):
+    try:
+        d = _p7e_json.loads(_p7e_s(raw))
+        return d if isinstance(d, dict) else {}
+    except Exception:
+        return {}
+
+def _p7e_task(task_id):
+    if not task_id:
+        return {}
+    con = _p7e_sqlite3.connect(_P7E_DB)
+    try:
+        r = con.execute(
+            "SELECT rowid,id,chat_id,input_type,raw_input,reply_to_message_id,bot_message_id,topic_id FROM tasks WHERE id=? LIMIT 1",
+            (_p7e_s(task_id),)
+        ).fetchone()
+    finally:
+        con.close()
+    if not r:
+        return {}
+    return {"rowid":r[0],"id":r[1],"chat_id":_p7e_s(r[2]),"input_type":_p7e_s(r[3]),"raw_input":_p7e_s(r[4]),"reply_to_message_id":_p7e_s(r[5]),"bot_message_id":_p7e_s(r[6]),"topic_id":int(r[7] or 0)}
+
+def _p7e_parent_by_bot(chat_id, bot_msg_id):
+    if not bot_msg_id:
+        return {}
+    con = _p7e_sqlite3.connect(_P7E_DB)
+    try:
+        r = con.execute(
+            "SELECT rowid,id,input_type,raw_input,reply_to_message_id,bot_message_id FROM tasks WHERE chat_id=? AND topic_id=5 AND bot_message_id=? ORDER BY rowid DESC LIMIT 1",
+            (_p7e_s(chat_id), _p7e_s(bot_msg_id))
+        ).fetchone()
+    finally:
+        con.close()
+    if not r:
+        return {}
+    return {"rowid":r[0],"id":r[1],"input_type":_p7e_s(r[2]),"raw_input":_p7e_s(r[3]),"reply_to_message_id":_p7e_s(r[4]),"bot_message_id":_p7e_s(r[5])}
+
+def _p7e_active(chat_id):
+    try:
+        d = _p7e_json.loads((_P7E_DATA / f"active_folder_{chat_id}_5.json").read_text(encoding="utf-8"))
+        return d if isinstance(d, dict) else {}
+    except Exception:
+        return {}
+
+def _p7e_buf_path(chat_id):
+    _P7E_DATA.mkdir(parents=True, exist_ok=True)
+    return _P7E_DATA / f"buf_{chat_id}_5.json"
+
+def _p7e_load_buf(chat_id):
+    p = _p7e_buf_path(chat_id)
+    try:
+        d = _p7e_json.loads(p.read_text(encoding="utf-8"))
+        d.setdefault("materials", [])
+        return d
+    except Exception:
+        return {"materials": [], "source": "topic5_visit_buffer", "created_at": _p7e_time.time()}
+
+def _p7e_save_buf(chat_id, buf):
+    buf["updated_at"] = _p7e_time.time()
+    _p7e_buf_path(chat_id).write_text(_p7e_json.dumps(buf, ensure_ascii=False, indent=2), encoding="utf-8")
+
+def _p7e_is_photo(d):
+    fn = _p7e_s(d.get("file_name") or d.get("name"))
+    return fn.lower().endswith((".jpg",".jpeg",".png",".webp",".heic"))
+
+def _p7e_drive_rows(chat_id, before_rowid):
+    con = _p7e_sqlite3.connect(_P7E_DB)
+    try:
+        rows = con.execute(
+            "SELECT rowid,id,raw_input,reply_to_message_id FROM tasks WHERE chat_id=? AND topic_id=5 AND input_type='drive_file' AND rowid<? ORDER BY rowid DESC LIMIT 80",
+            (_p7e_s(chat_id), int(before_rowid or 10**12))
+        ).fetchall()
+    finally:
+        con.close()
+    out = []
+    for rowid, tid, raw, reply_to in rows:
+        d = _p7e_j(raw)
+        if _p7e_is_photo(d):
+            d["_rowid"] = rowid
+            d["_task_id"] = tid
+            d["_reply_to"] = _p7e_s(reply_to)
+            out.append(d)
+    return out
+
+def _p7e_sources(chat_id, before_rowid, reply_id, text):
+    rows = _p7e_drive_rows(chat_id, before_rowid)
+    rid = _p7e_s(reply_id)
+
+    direct = []
+    for d in rows:
+        fn = _p7e_s(d.get("file_name"))
+        ids = {_p7e_s(d.get("telegram_message_id")), _p7e_s(d.get("_reply_to"))}
+        if rid and (rid in ids or f"_{rid}." in fn):
+            direct.append(d)
+    if direct:
+        return direct[:1]
+
+    parent = _p7e_parent_by_bot(chat_id, rid)
+    if parent and parent.get("input_type") == "drive_file":
+        pd = _p7e_j(parent.get("raw_input"))
+        if _p7e_is_photo(pd):
+            pd["_task_id"] = parent.get("id")
+            return [pd]
+
+    low = _p7e_low(text)
+    if "[voice]" in low or any(x in low for x in ("фото","файл","наруш","замеч","описан","принять","сведение","акт")):
+        return list(reversed(rows[:10]))
+
+    return []
+
+def _p7e_clear_flush(text):
+    low = _p7e_low(text)
+    if any(x in low for x in ("не надо", "не нужно", "не должен", "не для каждого")):
+        return False
+    return low.startswith(("[voice] сделай акт", "[voice] сформируй акт", "сделай акт", "сформируй акт", "собери акт", "сделай разбор", "собери разбор"))
+
+def _p7e_mat(chat_id, d):
+    af = _p7e_active(chat_id)
+    fn = _p7e_s(d.get("file_name") or d.get("name"))
+    fid = _p7e_s(d.get("drive_file_id") or d.get("file_id") or d.get("id"))
+    mid = _p7e_s(d.get("telegram_message_id") or d.get("_reply_to"))
+    return {
+        "material_id": str(_p7e_uuid.uuid4()),
+        "source": "TELEGRAM",
+        "file_type": "PHOTO",
+        "file_name": fn,
+        "drive_file_id": fid,
+        "drive_url": _p7e_s(d.get("drive_url") or d.get("webViewLink") or (f"https://drive.google.com/file/d/{fid}/view?usp=drivesdk" if fid else "")),
+        "telegram_message_id": mid,
+        "reply_to_message_id": mid,
+        "source_task_id": _p7e_s(d.get("_task_id")),
+        "active_folder_id": _p7e_s(af.get("folder_id")),
+        "active_folder_name": _p7e_s(af.get("folder_name")),
+        "include_in_report": True,
+        "include_in_act": True,
+        "status": "PENDING",
+        "added_at": _p7e_time.time(),
+    }
+
+def _p7e_upsert(chat_id, material):
+    buf = _p7e_load_buf(chat_id)
+    mid = _p7e_s(material.get("telegram_message_id"))
+    fn = _p7e_s(material.get("file_name"))
+    target = None
+    for m in buf["materials"]:
+        if (mid and _p7e_s(m.get("telegram_message_id")) == mid) or (fn and _p7e_s(m.get("file_name")) == fn):
+            target = m
+            break
+    if target is None:
+        buf["materials"].append(material)
+        target = material
+    else:
+        target.update({k:v for k,v in material.items() if v not in ("", None)})
+    _p7e_save_buf(chat_id, buf)
+    return target, len(buf["materials"])
+
+def _p7e_bind_many(chat_id, sources, text):
+    clean = _p7e_s(text)
+    if clean.upper().startswith("[VOICE]"):
+        clean = clean[7:].strip()
+    count = 0
+    for d in sources:
+        target, _ = _p7e_upsert(chat_id, _p7e_mat(chat_id, d))
+        prev = _p7e_s(target.get("voice_comment"), 20000)
+        target["voice_comment"] = (prev + "\n" + clean).strip() if prev and clean not in prev else clean
+        target["status"] = "LINKED"
+        target["updated_at"] = _p7e_time.time()
+        _p7e_upsert(chat_id, target)
+        count += 1
+    return count
+
+def process_technadzor(text: str = "", task_id: str = "", chat_id: str = "", topic_id: int = 0, file_path: str = "", file_name: str = "", **kwargs):
+    if int(topic_id or 0) != 5:
+        return _P7E_ORIG_PROCESS_TECHNADZOR(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs)
+
+    task = _p7e_task(task_id)
+    chat = _p7e_s(chat_id or task.get("chat_id"))
+    raw = _p7e_s(text or task.get("raw_input"))
+    input_type = _p7e_s(task.get("input_type"))
+    reply_id = _p7e_s(task.get("reply_to_message_id"))
+    rowid = int(task.get("rowid") or 10**12)
+
+    if input_type == "drive_file":
+        d = _p7e_j(raw)
+        if _p7e_is_photo(d):
+            _, n = _p7e_upsert(chat, _p7e_mat(chat, d))
+            return {"ok": True, "handled": True, "state": "DONE", "result_text": f"Фото принято в пакет технадзора: {n} шт. Акт не формирую без отдельной команды.", "history": "PATCH_TOPIC5_FILE_TO_VISITBUFFER"}
+
+    if input_type in ("text","voice") and raw and not _p7e_clear_flush(raw):
+        src = _p7e_sources(chat, rowid, reply_id, raw)
+        if src:
+            n = _p7e_bind_many(chat, src, raw)
+            return {"ok": True, "handled": True, "state": "DONE", "result_text": f"Пояснение принято к фото: {n} шт. Акт не формирую без отдельной команды.", "history": "PATCH_TOPIC5_REPLY_BOTMSG_BOUND_TO_PHOTOS"}
+
+    return _P7E_ORIG_PROCESS_TECHNADZOR(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs)
+# === END_PATCH_TOPIC5_REPLY_BOTMSG_TO_RECENT_PHOTOS_V1 ===
