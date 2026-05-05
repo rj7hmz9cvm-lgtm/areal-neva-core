@@ -95,3 +95,58 @@ def _upload_file_sync(file_path: str, file_name: str, chat_id: str, topic_id: in
 
 async def upload_file_to_topic(file_path: str, file_name: str, chat_id: str, topic_id: int, mime_type: Optional[str] = None) -> Dict[str, Any]:
     return await asyncio.to_thread(_upload_file_sync, file_path, file_name, str(chat_id), int(topic_id or 0), mime_type)
+
+
+# === P7_TOPIC5_ACTIVE_FOLDER_UPLOAD_V1 ===
+# topic_5 object materials must upload into ActiveTechnadzorFolder, not generic topic_5 root.
+import json as _p7_t5_json
+import time as _p7_t5_time
+from pathlib import Path as _p7_t5_Path
+
+_P7_T5_ORIG_UPLOAD_FILE_SYNC = _upload_file_sync
+_P7_T5_BASE = _p7_t5_Path("/root/.areal-neva-core/data/technadzor")
+
+def _p7_t5_active_folder_path(chat_id, topic_id):
+    return _P7_T5_BASE / f"active_folder_{chat_id}_{int(topic_id or 0)}.json"
+
+def _p7_t5_load_active_folder(chat_id, topic_id):
+    if int(topic_id or 0) != 5:
+        return {}
+    p = _p7_t5_active_folder_path(str(chat_id), 5)
+    try:
+        data = _p7_t5_json.loads(p.read_text(encoding="utf-8"))
+        if data.get("folder_id") and str(data.get("status", "OPEN")).upper() != "CLOSED":
+            return data
+    except Exception:
+        return {}
+    return {}
+
+def _upload_file_sync(file_path: str, file_name: str, chat_id: str, topic_id: int, mime_type: Optional[str] = None) -> Dict[str, Any]:
+    if int(topic_id or 0) == 5:
+        af = _p7_t5_load_active_folder(str(chat_id), 5)
+        active_folder_id = str(af.get("folder_id") or "").strip()
+        if active_folder_id:
+            service = _oauth_service()
+            media = MediaFileUpload(file_path, mimetype=mime_type, resumable=True)
+            meta = {
+                "name": file_name,
+                "parents": [active_folder_id],
+            }
+            res = service.files().create(
+                body=meta,
+                media_body=media,
+                fields="id,parents,webViewLink",
+                supportsAllDrives=True,
+            ).execute()
+            return {
+                "ok": True,
+                "drive_file_id": res.get("id"),
+                "folder_id": active_folder_id,
+                "active_folder_id": active_folder_id,
+                "active_folder_name": af.get("folder_name", ""),
+                "webViewLink": res.get("webViewLink", ""),
+                "topic5_active_folder_upload": True,
+                "uploaded_at": _p7_t5_time.time(),
+            }
+    return _P7_T5_ORIG_UPLOAD_FILE_SYNC(file_path, file_name, chat_id, topic_id, mime_type)
+# === END_P7_TOPIC5_ACTIVE_FOLDER_UPLOAD_V1 ===

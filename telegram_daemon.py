@@ -279,16 +279,21 @@ async def create_task(message: types.Message, input_type: str, raw_input: str, s
     now = now_iso()
     user_id = getattr(message.from_user, "id", 0) if message.from_user else 0
     topic_id = getattr(message, "message_thread_id", None) or 0
+    # === P7_TOPIC5_REAL_REPLY_TARGET_V1 ===
+    # Store Telegram reply target, not current message id.
+    # No-reply messages keep their own message_id, preserving old parent lookup.
+    reply_target_id = message.reply_to_message.message_id if message.reply_to_message else message.message_id
+    # === END_P7_TOPIC5_REAL_REPLY_TARGET_V1 ===
     async with aiosqlite.connect(DB) as db:
         cols = [r[1] for r in await (await db.execute("PRAGMA table_info(tasks)")).fetchall()]
         if "topic_id" in cols:
             await db.execute(
                 "INSERT INTO tasks (id, chat_id, user_id, input_type, raw_input, state, reply_to_message_id, topic_id, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
-                (task_id, message.chat.id, user_id, input_type, raw_input, state, message.message_id, topic_id, now, now))
+                (task_id, message.chat.id, user_id, input_type, raw_input, state, reply_target_id, topic_id, now, now))
         else:
             await db.execute(
                 "INSERT INTO tasks (id, chat_id, user_id, input_type, raw_input, state, reply_to_message_id, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
-                (task_id, message.chat.id, user_id, input_type, raw_input, state, message.message_id, now, now))
+                (task_id, message.chat.id, user_id, input_type, raw_input, state, reply_target_id, now, now))
         await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (task_id, f"created:{state}", now))
         await db.commit()
 

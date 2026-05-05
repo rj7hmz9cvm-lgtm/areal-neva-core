@@ -3271,3 +3271,182 @@ try:
 except Exception:
     pass
 # === END_PHOTO_RECOGNITION_TOPIC5_RUNTIME_BINDING_V1 ===
+
+
+# === P7_TOPIC5_REPLY_VOICE_BINDING_V1 ===
+# Binds Telegram text/voice reply to the VisitMaterial created from the replied photo/file.
+import json as _p7_t5_json
+import re as _p7_t5_re
+import time as _p7_t5_time
+from pathlib import Path as _p7_t5_Path
+
+_P7_T5_ORIG_PROCESS_TECHNADZOR = process_technadzor
+_P7_T5_DATA = _p7_t5_Path("/root/.areal-neva-core/data/technadzor")
+
+def _p7_t5_s(v, limit=20000):
+    try:
+        return "" if v is None else str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+def _p7_t5_low(v):
+    return _p7_t5_s(v).lower().replace("ё", "е")
+
+def _p7_t5_task_get(task, key, default=None):
+    if task is None:
+        return default
+    try:
+        if isinstance(task, dict):
+            return task.get(key, default)
+        return task[key]
+    except Exception:
+        return getattr(task, key, default)
+
+def _p7_t5_parse_payload(text):
+    raw = _p7_t5_s(text, 50000)
+    try:
+        obj = _p7_t5_json.loads(raw)
+        return obj if isinstance(obj, dict) else {"text": raw}
+    except Exception:
+        return {"text": raw}
+
+def _p7_t5_buf_path(chat_id):
+    _P7_T5_DATA.mkdir(parents=True, exist_ok=True)
+    return _P7_T5_DATA / f"buf_{chat_id}_5.json"
+
+def _p7_t5_active_folder(chat_id):
+    p = _P7_T5_DATA / f"active_folder_{chat_id}_5.json"
+    try:
+        obj = _p7_t5_json.loads(p.read_text(encoding="utf-8"))
+        return obj if isinstance(obj, dict) else {}
+    except Exception:
+        return {}
+
+def _p7_t5_load_buf(chat_id):
+    p = _p7_t5_buf_path(chat_id)
+    try:
+        obj = _p7_t5_json.loads(p.read_text(encoding="utf-8"))
+        if isinstance(obj, dict):
+            obj.setdefault("materials", [])
+            return obj
+    except Exception:
+        pass
+    return {"materials": [], "created_at": _p7_t5_time.time()}
+
+def _p7_t5_save_buf(chat_id, buf):
+    p = _p7_t5_buf_path(chat_id)
+    buf["updated_at"] = _p7_t5_time.time()
+    p.write_text(_p7_t5_json.dumps(buf, ensure_ascii=False, indent=2), encoding="utf-8")
+
+def _p7_t5_msg_id_from_name(name):
+    m = _p7_t5_re.search(r"_([0-9]{3,})\.[A-Za-z0-9]+$", _p7_t5_s(name))
+    return m.group(1) if m else ""
+
+def _p7_t5_add_material(chat_id, material):
+    buf = _p7_t5_load_buf(chat_id)
+    mid = _p7_t5_s(material.get("telegram_message_id"))
+    fname = _p7_t5_s(material.get("file_name"))
+    for old in buf.get("materials", []):
+        if mid and _p7_t5_s(old.get("telegram_message_id")) == mid:
+            old.update({k: v for k, v in material.items() if v not in ("", None)})
+            _p7_t5_save_buf(chat_id, buf)
+            return len(buf.get("materials", [])), old
+        if fname and _p7_t5_s(old.get("file_name")) == fname:
+            old.update({k: v for k, v in material.items() if v not in ("", None)})
+            _p7_t5_save_buf(chat_id, buf)
+            return len(buf.get("materials", [])), old
+    buf["materials"].append(material)
+    _p7_t5_save_buf(chat_id, buf)
+    return len(buf.get("materials", [])), material
+
+def _p7_t5_bind_comment(chat_id, reply_to_message_id, comment, is_voice=False):
+    reply_id = _p7_t5_s(reply_to_message_id)
+    if not reply_id:
+        return None
+    comment = _p7_t5_s(comment, 8000)
+    if not comment:
+        return None
+
+    buf = _p7_t5_load_buf(chat_id)
+    for m in buf.get("materials", []):
+        ids = {
+            _p7_t5_s(m.get("telegram_message_id")),
+            _p7_t5_s(m.get("reply_to_message_id")),
+            _p7_t5_msg_id_from_name(m.get("file_name")),
+        }
+        if reply_id in ids:
+            field = "voice_comment" if is_voice else "owner_comment"
+            prev = _p7_t5_s(m.get(field))
+            m[field] = (prev + "\n" + comment).strip() if prev and comment not in prev else comment
+            m["status"] = "LINKED"
+            m["linked_reply_to_message_id"] = reply_id
+            m["updated_at"] = _p7_t5_time.time()
+            _p7_t5_save_buf(chat_id, buf)
+            return m
+    return None
+
+def _p7_t5_is_flush_command(text):
+    low = _p7_t5_low(text)
+    return any(x in low for x in (
+        "сделай акт", "собери акт", "сделай разбор", "сделай анализ",
+        "собери разбор", "сформируй акт", "сделай отчет", "сделай отчёт"
+    ))
+
+def process_technadzor(text: str = "", task_id: str = "", chat_id: str = "", topic_id: int = 0, file_path: str = "", file_name: str = "", **kwargs):
+    if int(topic_id or 0) != 5:
+        return _P7_T5_ORIG_PROCESS_TECHNADZOR(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs)
+
+    chat = _p7_t5_s(chat_id or _p7_t5_task_get(kwargs.get("task"), "chat_id", ""))
+    payload = _p7_t5_parse_payload(text)
+    task = kwargs.get("task")
+    reply_to = payload.get("telegram_reply_to_message_id") or _p7_t5_task_get(task, "reply_to_message_id", "")
+    current_msg = payload.get("telegram_message_id") or _p7_t5_msg_id_from_name(file_name)
+    comment = payload.get("transcript") or payload.get("text") or text
+    is_voice = _p7_t5_low(comment).startswith("[voice]") or _p7_t5_low(payload.get("input_type", "")) == "voice"
+    comment_clean = _p7_t5_re.sub(r"^\s*\[VOICE\]\s*", "", _p7_t5_s(comment), flags=_p7_t5_re.I)
+
+    if (file_path or file_name) and not _p7_t5_is_flush_command(comment_clean):
+        af = _p7_t5_active_folder(chat)
+        fn = _p7_t5_s(file_name or payload.get("file_name") or payload.get("name") or "")
+        low_fn = fn.lower()
+        ftype = "PHOTO" if low_fn.endswith((".jpg", ".jpeg", ".png", ".webp", ".heic")) else "PDF" if low_fn.endswith(".pdf") else "DOCUMENT"
+        material = {
+            "source": "TELEGRAM",
+            "file_type": ftype,
+            "file_name": fn,
+            "telegram_message_id": _p7_t5_s(current_msg),
+            "reply_to_message_id": _p7_t5_s(reply_to),
+            "drive_file_id": _p7_t5_s(payload.get("drive_file_id")),
+            "drive_url": _p7_t5_s(payload.get("drive_url") or payload.get("webViewLink") or file_path),
+            "active_folder_id": _p7_t5_s(af.get("folder_id")),
+            "active_folder_name": _p7_t5_s(af.get("folder_name")),
+            "caption": _p7_t5_s(payload.get("caption") or comment_clean),
+            "include_in_act": True,
+            "include_in_report": True,
+            "status": "PENDING",
+            "added_at": _p7_t5_time.time(),
+        }
+        count, _ = _p7_t5_add_material(chat, material)
+        return {
+            "ok": True,
+            "handled": True,
+            "state": "DONE",
+            "result_text": f"Фото/файл принят в пакет выезда: {count} шт. Активная папка: {material.get('active_folder_name') or material.get('active_folder_id')}.",
+            "message": "Фото/файл принят в пакет выезда",
+            "history": "P7_TOPIC5_MATERIAL_BUFFERED_WITH_ACTIVE_FOLDER",
+        }
+
+    if reply_to and comment_clean and not _p7_t5_is_flush_command(comment_clean):
+        linked = _p7_t5_bind_comment(chat, reply_to, comment_clean, is_voice=is_voice)
+        if linked:
+            return {
+                "ok": True,
+                "handled": True,
+                "state": "DONE",
+                "result_text": f"Пояснение привязано к фото: {linked.get('file_name', '')}",
+                "message": "Пояснение привязано к фото",
+                "history": "P7_TOPIC5_REPLY_VOICE_BOUND_TO_MATERIAL",
+            }
+
+    return _P7_T5_ORIG_PROCESS_TECHNADZOR(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs)
+# === END_P7_TOPIC5_REPLY_VOICE_BINDING_V1 ===
