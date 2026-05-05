@@ -10969,3 +10969,144 @@ if __name__ == "__main__":
     asyncio.run(main())
 # === END_MOVE_MAIN_ENTRYPOINT_TO_END_V1 ===
 
+
+# === DRIVE_FILE_AUTO_DELIVER_V1 ===
+# Fix: _handle_drive_file sets AWAITING_CONFIRMATION without sending Telegram reply.
+# After 30 min → CONFIRMATION_TIMEOUT → FAILED with no bot_message_id.
+# Patch: after processing, if result has Drive link → send reply + set DONE immediately.
+try:
+    import logging as _dfad_log
+    _DFAD_LOG = _dfad_log.getLogger("task_worker")
+    _dfad_orig_handle_drive_file = _handle_drive_file
+
+    async def _handle_drive_file(conn, task, chat_id, topic_id):
+        await _dfad_orig_handle_drive_file(conn, task, chat_id, topic_id)
+        try:
+            task_id = _s(_task_field(task, "id", ""))
+            if not task_id:
+                return
+            row = conn.execute(
+                "SELECT state, result, bot_message_id, reply_to_message_id FROM tasks WHERE id=?",
+                (task_id,)
+            ).fetchone()
+            if not row:
+                return
+            if row["state"] == "AWAITING_CONFIRMATION" and not row["bot_message_id"]:
+                result_text = _s(row["result"])
+                if "drive.google.com" in result_text or "docs.google.com" in result_text:
+                    try:
+                        reply_to = row["reply_to_message_id"]
+                        _send_once_ex(conn, task_id, str(chat_id), result_text, reply_to, "drive_file_auto_deliver_v1")
+                        _update_task(conn, task_id, state="DONE", error_message="")
+                        conn.commit()
+                        _DFAD_LOG.info("DRIVE_FILE_AUTO_DELIVER_V1 sent task=%s topic=%s", task_id, topic_id)
+                    except Exception as _dfad_send_err:
+                        _DFAD_LOG.warning("DRIVE_FILE_AUTO_DELIVER_V1_SEND_ERR %s", _dfad_send_err)
+        except Exception as _dfad_err:
+            _DFAD_LOG.warning("DRIVE_FILE_AUTO_DELIVER_V1_ERR %s", _dfad_err)
+
+    _DFAD_LOG.info("DRIVE_FILE_AUTO_DELIVER_V1_INSTALLED")
+except Exception as _dfad_install_err:
+    try:
+        logging.getLogger("task_worker").exception("DRIVE_FILE_AUTO_DELIVER_V1_INSTALL_ERR %s", _dfad_install_err)
+    except Exception:
+        pass
+# === END_DRIVE_FILE_AUTO_DELIVER_V1 ===
+
+
+# === TOPIC5_CANON_CLOSE_EXTEND_V1 ===
+# Fix 1: context message (address/object/basis) + pending files → link pending files
+#         before FULL_CANON_CLOSE saves context and sends reply.
+# Fix 2: extend _t5fc_act_like with infinitive forms (сделать разбор, финальный акт, etc.)
+# Fix 3: topic_500 drive_file → redirect to topic_2 instead of AWAITING_CONFIRMATION.
+try:
+    import logging as _t5ce_log
+    _T5CE_LOG = _t5ce_log.getLogger("task_worker")
+    _T5CE_ORIG_HANDLE_NEW = _handle_new
+
+    # Extend act triggers (infinitive + extended forms not in original _t5fc_act_like)
+    _t5ce_orig_act_like = _t5fc_act_like
+
+    def _t5fc_act_like(text):
+        if _t5ce_orig_act_like(text):
+            return True
+        low = _t5fc_low(text)
+        return any(x in low for x in (
+            "сделать акт", "сформировать акт", "создать акт", "подготовить акт",
+            "сделать разбор", "сделать отчет", "сделать отчёт", "сделать анализ",
+            "финальный акт", "финальный разбор", "итоговый акт", "итоговый разбор",
+            "готовь разбор", "собери пакет", "закрой выезд", "закрыть выезд",
+        ))
+
+    def _t5ce_has_substantive_context(text):
+        if _t5fq_has_instruction(text):
+            return True
+        try:
+            if _t5fc_extract_address(text):
+                return True
+        except Exception:
+            pass
+        try:
+            if _t5fc_source_and_basis(text):
+                return True
+        except Exception:
+            pass
+        return False
+
+    async def _handle_new(conn, task, *args, **kwargs):
+        try:
+            task_id = _t5fc_s(_t5fc_row(task, "id"))
+            chat_id = _t5fc_s(_t5fc_row(task, "chat_id", args[0] if len(args) > 0 else ""))
+            topic_id = int(_t5fc_row(task, "topic_id", args[1] if len(args) > 1 else 0) or 0)
+            input_type = _t5fc_s(_t5fc_row(task, "input_type", ""))
+            reply_to = _t5fc_s(_t5fc_row(task, "reply_to_message_id", ""))
+            raw = _t5fc_s(_t5fc_row(task, "raw_input", ""))
+
+            # Fix 3: topic_500 drive_file redirect
+            if topic_id == 500 and input_type in ("drive_file", "file", "document"):
+                try:
+                    import json as _t5ce_json
+                    _meta = _t5ce_json.loads(raw) if raw.startswith("{") else {}
+                    _fname = _t5fc_s(_meta.get("file_name") or _meta.get("name") or "")
+                except Exception:
+                    _fname = ""
+                msg = "\n".join(filter(None, [
+                    "Файл получен в топик интернет-поиска",
+                    f"Файл: {_fname}" if _fname else None,
+                    "Поиск по файлам не выполняю.",
+                    "Если это смета или чертёж — пришли в топик Стройка (topic_2).",
+                    "Для поиска поставщиков — напиши текстовый запрос.",
+                ]))
+                _t5fc_done(conn, task_id, chat_id, reply_to, msg, "topic500_drive_file_redirect_v1", "DONE")
+                return
+
+            # Fix 1: topic_5 text/voice context + pending files linking
+            if topic_id == 5 and input_type in ("text", "voice", ""):
+                clean = _t5fc_clean_voice(raw)
+                if _t5fc_context_like(clean) and _t5ce_has_substantive_context(clean):
+                    try:
+                        buf = _t5fc_buf(chat_id)
+                        pending = _t5fq_pending(buf)
+                        if pending:
+                            _t5fq_apply_instruction_to_pending(chat_id, clean)
+                            _T5CE_LOG.info("TOPIC5_CANON_CLOSE_EXTEND_V1 linked %d pending files chat=%s", len(pending), chat_id)
+                    except Exception as _t5ce_link_err:
+                        _T5CE_LOG.warning("TOPIC5_CANON_CLOSE_EXTEND_V1_LINK_ERR %s", _t5ce_link_err)
+                    # Fall through — FULL_CANON_CLOSE sends the reply with updated object_name
+
+        except Exception as _t5ce_guard_err:
+            _T5CE_LOG.warning("TOPIC5_CANON_CLOSE_EXTEND_V1_GUARD_ERR %s", _t5ce_guard_err)
+
+        res = _T5CE_ORIG_HANDLE_NEW(conn, task, *args, **kwargs)
+        return await res if hasattr(res, "__await__") else res
+
+    _handle_new._topic5_canon_close_extend_v1 = True
+    _T5CE_LOG.info("TOPIC5_CANON_CLOSE_EXTEND_V1_INSTALLED")
+
+except Exception as _t5ce_install_err:
+    try:
+        logging.getLogger("task_worker").exception("TOPIC5_CANON_CLOSE_EXTEND_V1_INSTALL_ERR %s", _t5ce_install_err)
+    except Exception:
+        pass
+# === END_TOPIC5_CANON_CLOSE_EXTEND_V1 ===
+
