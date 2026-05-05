@@ -8705,3 +8705,33 @@ try:
 except Exception as _p6h4tw_install_err:
     _P6H4TW_LOG.exception("P6H4TW_INSTALL_ERR %s", _p6h4tw_install_err)
 # === END_P6H_PART_4_TASK_WORKER_HOOK_V1 ===
+
+# === FULLFIX_TOPIC5_TECHNADZOR_CANON_CONTOUR_V2_WORKER ===
+try:
+    _T5V2_ORIG_P6F_DAH_USER_WANTS_ARTIFACT = _p6f_dah_user_wants_artifact
+
+    def _p6f_dah_user_wants_artifact(raw_input):
+        s = "" if raw_input is None else str(raw_input).lower().replace("ё", "е")
+
+        negated = any(x in s for x in (
+            "не делай акт",
+            "не надо акт",
+            "не нужно акт",
+            "не формируй акт",
+            "не должен был сделать акт",
+            "не должен делать акт",
+            "акт не для каждого",
+            "не для каждого из",
+            "принять это к сведению",
+            "прими это к сведению",
+            "принять к сведению",
+            "прими к сведению",
+        ))
+
+        if negated:
+            return False
+
+        return _T5V2_ORIG_P6F_DAH_USER_WANTS_ARTIFACT(raw_input)
+except Exception:
+    pass
+# === END_FULLFIX_TOPIC5_TECHNADZOR_CANON_CONTOUR_V2_WORKER ===

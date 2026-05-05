@@ -3450,3 +3450,437 @@ def process_technadzor(text: str = "", task_id: str = "", chat_id: str = "", top
 
     return _P7_T5_ORIG_PROCESS_TECHNADZOR(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs)
 # === END_P7_TOPIC5_REPLY_VOICE_BINDING_V1 ===
+
+# === FULLFIX_TOPIC5_TECHNADZOR_CANON_CONTOUR_V2_TECHNADZOR ===
+import json as _t5v2_json
+import sqlite3 as _t5v2_sqlite3
+import time as _t5v2_time
+import uuid as _t5v2_uuid
+from pathlib import Path as _t5v2_Path
+
+_T5V2_ORIG_PROCESS_TECHNADZOR = process_technadzor
+_T5V2_DB = "/root/.areal-neva-core/data/core.db"
+_T5V2_DATA = _t5v2_Path("/root/.areal-neva-core/data/technadzor")
+_T5V2_DATA.mkdir(parents=True, exist_ok=True)
+
+def _t5v2_s(v, limit=50000):
+    try:
+        if v is None:
+            return ""
+        return str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+def _t5v2_low(v):
+    return _t5v2_s(v).lower().replace("ё", "е")
+
+def _t5v2_json_load(raw):
+    try:
+        d = _t5v2_json.loads(_t5v2_s(raw))
+        return d if isinstance(d, dict) else {}
+    except Exception:
+        return {}
+
+def _t5v2_get(obj, key, default=""):
+    try:
+        if isinstance(obj, dict):
+            return obj.get(key, default)
+        return obj[key]
+    except Exception:
+        return getattr(obj, key, default)
+
+def _t5v2_task(task_id, kwargs):
+    task = kwargs.get("task")
+    if task:
+        return {
+            "id": _t5v2_s(_t5v2_get(task, "id", task_id)),
+            "chat_id": _t5v2_s(_t5v2_get(task, "chat_id", kwargs.get("chat_id", ""))),
+            "topic_id": int(_t5v2_get(task, "topic_id", kwargs.get("topic_id", 0)) or 0),
+            "reply_to_message_id": _t5v2_s(_t5v2_get(task, "reply_to_message_id", "")),
+            "bot_message_id": _t5v2_s(_t5v2_get(task, "bot_message_id", "")),
+            "input_type": _t5v2_s(_t5v2_get(task, "input_type", "")),
+            "raw_input": _t5v2_s(_t5v2_get(task, "raw_input", "")),
+        }
+
+    if not task_id:
+        return {}
+
+    con = _t5v2_sqlite3.connect(_T5V2_DB)
+    try:
+        r = con.execute(
+            "SELECT id,chat_id,topic_id,reply_to_message_id,bot_message_id,input_type,raw_input FROM tasks WHERE id=? LIMIT 1",
+            (_t5v2_s(task_id),)
+        ).fetchone()
+    finally:
+        con.close()
+
+    if not r:
+        return {}
+
+    return {
+        "id": _t5v2_s(r[0]),
+        "chat_id": _t5v2_s(r[1]),
+        "topic_id": int(r[2] or 0),
+        "reply_to_message_id": _t5v2_s(r[3]),
+        "bot_message_id": _t5v2_s(r[4]),
+        "input_type": _t5v2_s(r[5]),
+        "raw_input": _t5v2_s(r[6]),
+    }
+
+def _t5v2_is_photo_meta(meta):
+    fn = _t5v2_s(meta.get("file_name") or meta.get("name"))
+    mt = _t5v2_s(meta.get("mime_type"))
+    return fn.lower().endswith((".jpg", ".jpeg", ".png", ".webp", ".heic")) or mt.startswith("image/")
+
+def _t5v2_msg_id(meta):
+    for k in ("telegram_message_id", "_reply_to_message_id", "reply_to_message_id"):
+        v = _t5v2_s(meta.get(k))
+        if v:
+            return v
+    fn = _t5v2_s(meta.get("file_name"))
+    import re as _re
+    m = _re.search(r"_(\d+)\.(?:jpg|jpeg|png|webp|heic)$", fn, _re.I)
+    return m.group(1) if m else ""
+
+def _t5v2_photo_rows(chat_id, topic_id=5):
+    con = _t5v2_sqlite3.connect(_T5V2_DB)
+    try:
+        rows = con.execute(
+            """
+            SELECT rowid,id,raw_input,reply_to_message_id,created_at
+            FROM tasks
+            WHERE chat_id=?
+              AND topic_id=?
+              AND input_type='drive_file'
+            ORDER BY rowid DESC
+            LIMIT 300
+            """,
+            (_t5v2_s(chat_id), int(topic_id or 0))
+        ).fetchall()
+    finally:
+        con.close()
+
+    out = []
+    for rowid, tid, raw, reply_to, created_at in rows:
+        meta = _t5v2_json_load(raw)
+        if not _t5v2_is_photo_meta(meta):
+            continue
+        meta["_rowid"] = int(rowid)
+        meta["_task_id"] = _t5v2_s(tid)
+        meta["_reply_to_message_id"] = _t5v2_s(reply_to)
+        meta["_created_at"] = _t5v2_s(created_at)
+        out.append(meta)
+    return out
+
+def _t5v2_parent_reply_by_bot(chat_id, topic_id, bot_message_id):
+    if not bot_message_id:
+        return ""
+    con = _t5v2_sqlite3.connect(_T5V2_DB)
+    try:
+        r = con.execute(
+            """
+            SELECT reply_to_message_id
+            FROM tasks
+            WHERE chat_id=?
+              AND topic_id=?
+              AND CAST(bot_message_id AS TEXT)=?
+            ORDER BY rowid DESC
+            LIMIT 1
+            """,
+            (_t5v2_s(chat_id), int(topic_id or 0), _t5v2_s(bot_message_id))
+        ).fetchone()
+    finally:
+        con.close()
+    return _t5v2_s(r[0]) if r else ""
+
+def _t5v2_find_anchor_photo(chat_id, topic_id, reply_to_message_id):
+    rid = _t5v2_s(reply_to_message_id)
+    if not rid:
+        return {}
+
+    rows = _t5v2_photo_rows(chat_id, topic_id)
+
+    for meta in rows:
+        ids = {
+            _t5v2_s(meta.get("_reply_to_message_id")),
+            _t5v2_s(meta.get("telegram_message_id")),
+            _t5v2_msg_id(meta),
+        }
+        if rid in ids:
+            return meta
+
+    parent_reply = _t5v2_parent_reply_by_bot(chat_id, topic_id, rid)
+    if parent_reply and parent_reply != rid:
+        for meta in rows:
+            ids = {
+                _t5v2_s(meta.get("_reply_to_message_id")),
+                _t5v2_s(meta.get("telegram_message_id")),
+                _t5v2_msg_id(meta),
+            }
+            if parent_reply in ids:
+                return meta
+
+    return {}
+
+def _t5v2_group_requested(text):
+    low = _t5v2_low(text)
+    return any(x in low for x in (
+        "этими фото",
+        "эти фото",
+        "этих фото",
+        "все фото",
+        "всеми фото",
+        "несколько фото",
+        "три фото",
+        "фотографии",
+        "с ними",
+        "по ним",
+        "их",
+        "фото",
+        "пакет",
+    ))
+
+def _t5v2_select_photo_group(chat_id, topic_id, anchor, text):
+    if not anchor:
+        return []
+
+    if not _t5v2_group_requested(text):
+        return [anchor]
+
+    rows = _t5v2_photo_rows(chat_id, topic_id)
+
+    try:
+        anchor_rowid = int(anchor.get("_rowid") or 0)
+    except Exception:
+        anchor_rowid = 0
+
+    try:
+        anchor_msg = int(_t5v2_msg_id(anchor) or 0)
+    except Exception:
+        anchor_msg = 0
+
+    selected = []
+    for meta in rows:
+        try:
+            rowid = int(meta.get("_rowid") or 0)
+        except Exception:
+            rowid = 0
+
+        try:
+            msg = int(_t5v2_msg_id(meta) or 0)
+        except Exception:
+            msg = 0
+
+        same_row_cluster = bool(anchor_rowid and abs(rowid - anchor_rowid) <= 10)
+        same_msg_cluster = bool(anchor_msg and msg and abs(msg - anchor_msg) <= 20)
+
+        if same_row_cluster and same_msg_cluster:
+            selected.append(meta)
+
+    selected = sorted(selected, key=lambda m: int(m.get("_rowid") or 0))
+    return selected or [anchor]
+
+def _t5v2_active_folder(chat_id):
+    try:
+        if "get_active_folder" in globals():
+            af = get_active_folder(str(chat_id), 5)
+            if isinstance(af, dict):
+                return af
+    except Exception:
+        pass
+
+    try:
+        p = _T5V2_DATA / f"active_folder_{chat_id}_5.json"
+        d = _t5v2_json.loads(p.read_text(encoding="utf-8"))
+        return d if isinstance(d, dict) else {}
+    except Exception:
+        return {}
+
+def _t5v2_buf_path(chat_id):
+    return _T5V2_DATA / f"buf_{chat_id}_5.json"
+
+def _t5v2_load_buf(chat_id):
+    p = _t5v2_buf_path(chat_id)
+    try:
+        d = _t5v2_json.loads(p.read_text(encoding="utf-8"))
+        if isinstance(d, dict):
+            d.setdefault("materials", [])
+            return d
+    except Exception:
+        pass
+    return {"source": "topic5_visit_buffer", "materials": [], "created_at": _t5v2_time.time()}
+
+def _t5v2_save_buf(chat_id, buf):
+    buf["updated_at"] = _t5v2_time.time()
+    _t5v2_buf_path(chat_id).write_text(_t5v2_json.dumps(buf, ensure_ascii=False, indent=2), encoding="utf-8")
+
+def _t5v2_material(chat_id, meta, comment=""):
+    af = _t5v2_active_folder(chat_id)
+    fid = _t5v2_s(meta.get("drive_file_id") or meta.get("file_id") or meta.get("id"))
+    fn = _t5v2_s(meta.get("file_name") or meta.get("name"))
+    mid = _t5v2_msg_id(meta)
+    clean = _t5v2_s(comment, 20000)
+
+    if clean.upper().startswith("[VOICE]"):
+        clean = clean[7:].strip()
+
+    return {
+        "material_id": str(_t5v2_uuid.uuid4()),
+        "source": "TELEGRAM",
+        "file_type": "PHOTO",
+        "file_name": fn,
+        "drive_file_id": fid,
+        "drive_url": _t5v2_s(meta.get("drive_url") or meta.get("webViewLink") or (f"https://drive.google.com/file/d/{fid}/view?usp=drivesdk" if fid else "")),
+        "telegram_message_id": mid,
+        "reply_to_message_id": mid,
+        "source_task_id": _t5v2_s(meta.get("_task_id")),
+        "active_folder_id": _t5v2_s(af.get("folder_id")),
+        "active_folder_name": _t5v2_s(af.get("folder_name")),
+        "include_in_report": True,
+        "include_in_act": True,
+        "status": "LINKED" if clean else "PENDING",
+        "voice_comment": clean,
+        "added_at": _t5v2_time.time(),
+        "updated_at": _t5v2_time.time(),
+    }
+
+def _t5v2_upsert_material(chat_id, material):
+    buf = _t5v2_load_buf(chat_id)
+    mid = _t5v2_s(material.get("telegram_message_id"))
+    fn = _t5v2_s(material.get("file_name"))
+
+    target = None
+    for old in buf.get("materials", []):
+        if (mid and _t5v2_s(old.get("telegram_message_id")) == mid) or (fn and _t5v2_s(old.get("file_name")) == fn):
+            target = old
+            break
+
+    if target is None:
+        buf["materials"].append(material)
+    else:
+        old_comment = _t5v2_s(target.get("voice_comment"), 20000)
+        new_comment = _t5v2_s(material.get("voice_comment"), 20000)
+        target.update({k: v for k, v in material.items() if v not in ("", None)})
+
+        if old_comment and new_comment and new_comment not in old_comment:
+            target["voice_comment"] = old_comment + "\n" + new_comment
+        elif old_comment and not new_comment:
+            target["voice_comment"] = old_comment
+
+    _t5v2_save_buf(chat_id, buf)
+    return len(buf.get("materials", []))
+
+def _t5v2_bind_photos(chat_id, photos, comment):
+    count = 0
+    for meta in photos:
+        count = _t5v2_upsert_material(chat_id, _t5v2_material(chat_id, meta, comment))
+    return count
+
+def _t5v2_positive_act(text):
+    low = _t5v2_low(text)
+
+    negated = any(x in low for x in (
+        "не делай акт",
+        "не надо акт",
+        "не нужно акт",
+        "не формируй акт",
+        "не должен был сделать акт",
+        "не должен делать акт",
+        "акт не для каждого",
+        "не для каждого из",
+        "принять к сведению",
+        "принять это к сведению",
+        "прими к сведению",
+        "прими это к сведению",
+    ))
+
+    positive = any(x in low for x in (
+        "сделай акт",
+        "сформируй акт",
+        "собери акт",
+        "готовь акт",
+        "акт по этим фото",
+        "сделай разбор",
+        "сформируй документ",
+    ))
+
+    return positive and not negated
+
+def _t5v2_buffer_summary(chat_id):
+    buf = _t5v2_load_buf(chat_id)
+    mats = buf.get("materials", [])
+
+    lines = []
+    for i, m in enumerate(mats, 1):
+        lines.append(f"Фото №{i}: {m.get('file_name','')}")
+        if m.get("voice_comment"):
+            lines.append(f"Пояснение: {m.get('voice_comment')}")
+        if m.get("drive_url"):
+            lines.append(f"Ссылка: {m.get('drive_url')}")
+
+    return "\n".join(lines), len(mats)
+
+def process_technadzor(text: str = "", task_id: str = "", chat_id: str = "", topic_id: int = 0, file_path: str = "", file_name: str = "", **kwargs):
+    task = _t5v2_task(task_id, kwargs)
+
+    try:
+        tid = int(topic_id or task.get("topic_id") or kwargs.get("topic_id") or 0)
+    except Exception:
+        tid = 0
+
+    if tid != 5:
+        return _T5V2_ORIG_PROCESS_TECHNADZOR(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs)
+
+    chat = _t5v2_s(chat_id or task.get("chat_id") or kwargs.get("chat_id"))
+    raw = _t5v2_s(text or task.get("raw_input"))
+    input_type = _t5v2_s(task.get("input_type"))
+    reply_to = _t5v2_s(task.get("reply_to_message_id"))
+
+    if input_type == "drive_file":
+        meta = _t5v2_json_load(raw)
+        if _t5v2_is_photo_meta(meta):
+            count = _t5v2_upsert_material(chat, _t5v2_material(chat, meta, ""))
+            return {
+                "ok": True,
+                "handled": True,
+                "state": "DONE",
+                "status": "DONE",
+                "result_text": f"Фото принято в пакет технадзора: {count} шт. Акт не формирую без отдельной команды.",
+                "message": "Фото принято в пакет технадзора",
+                "history": "FULLFIX_TOPIC5_PHOTO_TO_VISITBUFFER",
+            }
+
+    if input_type in ("text", "voice", "") and reply_to and raw and not _t5v2_positive_act(raw):
+        anchor = _t5v2_find_anchor_photo(chat, 5, reply_to)
+        if anchor:
+            photos = _t5v2_select_photo_group(chat, 5, anchor, raw)
+            count = _t5v2_bind_photos(chat, photos, raw)
+            names = ", ".join(_t5v2_s(p.get("file_name")) for p in photos if p.get("file_name"))
+            return {
+                "ok": True,
+                "handled": True,
+                "state": "DONE",
+                "status": "DONE",
+                "result_text": f"Пояснение принято к фото: {len(photos)} шт. В пакете технадзора: {count} шт. Акт не формирую без отдельной команды.\nФайлы: {names}",
+                "message": "Пояснение принято к фото",
+                "history": "FULLFIX_TOPIC5_REPLY_TO_PHOTO_BOUND",
+            }
+
+    if input_type in ("text", "voice", "") and _t5v2_positive_act(raw):
+        summary, n = _t5v2_buffer_summary(chat)
+        if n <= 0:
+            return {
+                "ok": True,
+                "handled": True,
+                "state": "DONE",
+                "status": "DONE",
+                "result_text": "В пакете технадзора нет фото. Сначала пришли фото или ответь голосом на фото.",
+                "message": "В пакете технадзора нет фото",
+                "history": "FULLFIX_TOPIC5_ACT_NO_MATERIALS",
+            }
+
+        enriched = raw + "\n\nПакет фото технадзора:\n" + summary
+        return _T5V2_ORIG_PROCESS_TECHNADZOR(text=enriched, task_id=task_id, chat_id=chat, topic_id=5, file_path=file_path, file_name=file_name, **kwargs)
+
+    return _T5V2_ORIG_PROCESS_TECHNADZOR(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs)
+# === END_FULLFIX_TOPIC5_TECHNADZOR_CANON_CONTOUR_V2_TECHNADZOR ===
