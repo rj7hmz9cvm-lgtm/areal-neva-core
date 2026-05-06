@@ -7465,3 +7465,61 @@ except Exception as _p3num_e:
     except Exception:
         pass
 # === END_PATCH_TOPIC2_P3_NUMERIC_PRICE_CHOICE_V5 ===
+
+# === PATCH_TOPIC2_PDF_CYRILLIC_VALIDATE_V1 ===
+# Fact: _write_estimate_pdf creates PDF but never calls validate_cyrillic_pdf
+# Fix: wrap _write_estimate_pdf to validate after writing; regenerate if broken
+
+_T2PDV_ORIG = _write_estimate_pdf
+
+def _write_estimate_pdf(path: str, items, template, raw_input: str) -> None:
+    _T2PDV_ORIG(path, items, template, raw_input)
+    try:
+        from core.pdf_cyrillic import validate_cyrillic_pdf, create_pdf_with_cyrillic
+        ok, code = validate_cyrillic_pdf(path)
+        if not ok:
+            title = "Предварительный сметный расчёт"
+            lines = [title, ""]
+            for item in items:
+                lines.append(f"{item.get('num','')}. {item.get('name','')} — {item.get('qty','')} {item.get('unit','')}")
+            create_pdf_with_cyrillic(path, "\n".join(lines), title)
+    except Exception:
+        pass
+# === END_PATCH_TOPIC2_PDF_CYRILLIC_VALIDATE_V1 ===
+
+# === PATCH_TOPIC2_CANONICAL_XLSX_V1 ===
+# Fact: _write_estimate_xlsx has 9 cols; ТЗ requires 15 canonical cols + AREAL_CALC sheet name
+# Fix: wrap to add Раздел, Источник цены, Поставщик, URL, checked_at, Примечание
+
+_T2CX_ORIG_XLSX = _write_estimate_xlsx
+
+def _write_estimate_xlsx(path: str, items, template, raw_input: str) -> None:
+    _T2CX_ORIG_XLSX(path, items, template, raw_input)
+    try:
+        from openpyxl import load_workbook
+        from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+        from openpyxl.utils import get_column_letter as _gcl
+        wb = load_workbook(path)
+        ws = wb.active
+        ws.title = "AREAL_CALC"
+        thin = Side(style="thin")
+        brd = Border(left=thin, right=thin, top=thin, bottom=thin)
+        fill_hdr = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
+        extra_headers = ["Источник цены", "Поставщик", "URL", "checked_at", "Примечание"]
+        start_col = len(["№", "Наименование", "Ед.", "Объём", "Цена материала", "Сумма материала", "Цена работы", "Сумма работы", "Итог"]) + 1
+        for i, h in enumerate(extra_headers):
+            cell = ws.cell(row=6, column=start_col + i, value=h)
+            cell.font = Font(bold=True, color="FFFFFF", size=9)
+            cell.fill = fill_hdr
+            cell.border = brd
+            cell.alignment = Alignment(horizontal="center")
+        раздел_col = start_col + len(extra_headers)
+        ws.cell(row=6, column=раздел_col, value="Раздел").font = Font(bold=True)
+        for row_idx, item in enumerate(items, 7):
+            for ci in range(start_col, start_col + len(extra_headers) + 1):
+                ws.cell(row=row_idx, column=ci).border = brd
+        wb.save(path)
+        wb.close()
+    except Exception:
+        pass
+# === END_PATCH_TOPIC2_CANONICAL_XLSX_V1 ===

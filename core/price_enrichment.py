@@ -727,3 +727,54 @@ async def _build_estimate_from_cache(conn, task, cache, mode):
 
 # === END_PATCH_TOPIC2_PRICE_AUTO_V1 ===
 
+# === PATCH_TOPIC2_CLEAN_RESULT_V1 ===
+# Fact: result message contains MANIFEST link and may contain /root paths
+# Fix: strip MANIFEST line from user-facing message; replace local paths with Drive links only
+
+_T2CR_ORIG_BUILD = _build_estimate_from_cache
+
+async def _build_estimate_from_cache(conn, task, cache, mode):
+    result = await _T2CR_ORIG_BUILD(conn, task, cache, mode)
+    if result and result.get("state") in ("AWAITING_CONFIRMATION", "WAITING_CLARIFICATION"):
+        msg = result.get("message") or ""
+        cleaned = []
+        for line in msg.splitlines():
+            low = line.lower()
+            if "manifest" in low or "/root/" in line or line.startswith("/root"):
+                continue
+            cleaned.append(line)
+        while cleaned and not cleaned[-1].strip():
+            cleaned.pop()
+        result["message"] = "\n".join(cleaned)
+    return result
+
+# === END_PATCH_TOPIC2_CLEAN_RESULT_V1 ===
+
+# === PATCH_TOPIC2_PRICE_AUTO_REVERT_V1 ===
+# Fact: PATCH_TOPIC2_PRICE_AUTO_V1 auto-set web_confirm for all topic_2 estimates
+# which caused all estimates to be handled by simplified _build_estimate_from_cache,
+# bypassing the full P2/P3 pipeline (handle_topic2_one_big_formula_pipeline_v1)
+# Fix: new prehandle_price_task_v1 that only intercepts when BOTH conditions are true:
+#   1. price cache exists for this chat/topic (meaning price menu was already shown)
+#   2. user's input contains a price choice (1/2/3/4/а/б/в/г/etc)
+# Fresh estimates now fall through to full pipeline via _handle_in_progress
+
+_PTPA_REVERT_V1 = prehandle_price_task_v1
+
+async def prehandle_price_task_v1(conn, task):
+    topic_id = int(_task_field(task, "topic_id", 0) or 0)
+    if topic_id == 2:
+        chat_id = _s(_task_field(task, "chat_id"))
+        raw = _s(_task_field(task, "raw_input"))
+        itype = _s(_task_field(task, "input_type"))
+        if itype in ("text", "voice"):
+            cache_file = _cache_path(chat_id, topic_id)
+            has_cache = cache_file.exists()
+            has_choice = bool(_detect_price_choice(raw))
+            if has_cache and has_choice:
+                return await _PTPA_REVERT_V1(conn, task)
+        return None
+    return await _PTPA_REVERT_V1(conn, task)
+
+# === END_PATCH_TOPIC2_PRICE_AUTO_REVERT_V1 ===
+

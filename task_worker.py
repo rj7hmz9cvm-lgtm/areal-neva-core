@@ -14200,5 +14200,96 @@ if _T2FER_ORIG_HANDLE_DRIVE_FILE and not getattr(_T2FER_ORIG_HANDLE_DRIVE_FILE, 
 _T2FER_LOG.info("PATCH_TOPIC2_FRESH_ESTIMATE_ROUTE_GUARD_V1 installed")
 # === END_PATCH_TOPIC2_FRESH_ESTIMATE_ROUTE_GUARD_V1 ===
 
+# === PATCH_TOPIC2_FULL_PIPELINE_ROUTE_V1 ===
+# Fact: NEW topic_2 estimate tasks processed by simplified v2, bypassing full P2/P3 pipeline
+# Fix: route NEW topic_2 fresh estimates directly to _handle_in_progress (P2/P3 full pipeline)
+# which calls handle_topic2_one_big_formula_pipeline_v1 with all 11 sections, AREAL_CALC, etc.
+
+import inspect as _t2fp_inspect
+
+_T2FP_ORIG_HANDLE_NEW = globals().get("_handle_new")
+_T2FP_ORIG_HANDLE_IN_PROGRESS = globals().get("_handle_in_progress")
+
+_T2FP_ESTIMATE_WORDS = (
+    "смет", "кп", "расчет", "расчёт", "стоимост", "монолит",
+    "бетон", "арматур", "фундамент", "перекрыт", "кровля", "стен",
+    "гидроизол", "утеплен", "засыпк", "свай", "плит", "лестниц",
+    "строит", " дом ", "ангар", "склад", "гараж", "баня",
+    "м³", "м3", "м²", "м2", " шт", " тн", "п.м",
+)
+
+_T2FP_SHORT_CONTROL = frozenset((
+    "да","ок","окей","хорошо","верно","подтверждаю","делай","согласен",
+    "нет","отмена","отбой","завершить","всё",
+    "статус","что сейчас","где результат","что там","ну что","что по задаче",
+    "1","2","3","4","а","б","в","г","а)","б)","в)","г)",
+))
+
+def _t2fp_is_fresh_estimate(task):
+    try:
+        itype = str(_t2fer_get(task, "input_type", "") or "")
+        if itype in ("photo", "image", "file", "drive_file", "document"):
+            return True
+        raw = str(_t2fer_get(task, "raw_input", "") or "").lower().replace("ё", "е")
+        return any(x in raw for x in _T2FP_ESTIMATE_WORDS)
+    except Exception:
+        return False
+
+def _t2fp_is_short(task):
+    try:
+        raw = str(_t2fer_get(task, "raw_input", "") or "")
+        raw = re.sub(r"[\[VOICE\]\s]+", " ", raw.lower().replace("ё", "е")).strip(" .,!?:;")
+        return raw in _T2FP_SHORT_CONTROL or len(raw) <= 6
+    except Exception:
+        return False
+
+if _T2FP_ORIG_HANDLE_NEW and not getattr(_T2FP_ORIG_HANDLE_NEW, "_t2fp_wrapped", False):
+    async def _handle_new(conn, task, *args, **kwargs):
+        task_id = str(_t2fer_get(task, "id", "") or "")
+        try:
+            topic_id_v = int(_t2fer_get(task, "topic_id", 0) or 0)
+        except Exception:
+            topic_id_v = 0
+
+        if topic_id_v == 2 and _t2fp_is_fresh_estimate(task) and not _t2fp_is_short(task):
+            chat_id_v = str(_t2fer_get(task, "chat_id", "") or "")
+            try:
+                _update_task(conn, task_id, state="IN_PROGRESS", error_message="")
+                conn.commit()
+            except Exception:
+                pass
+            try:
+                t = {}
+                try:
+                    for k in task.keys():
+                        t[k] = task[k]
+                except Exception:
+                    try:
+                        t = dict(task)
+                    except Exception:
+                        pass
+                t["state"] = "IN_PROGRESS"
+                h_ip = globals().get("_handle_in_progress")
+                if h_ip:
+                    res = h_ip(conn, t, chat_id_v, topic_id_v)
+                    if _t2fp_inspect.isawaitable(res):
+                        return await res
+                    return res
+            except Exception as _t2fp_e:
+                try:
+                    logger.warning("T2FP_FULL_PIPELINE_ERR task=%s err=%s", task_id, _t2fp_e)
+                except Exception:
+                    pass
+
+        res = _T2FP_ORIG_HANDLE_NEW(conn, task, *args, **kwargs)
+        if _t2fp_inspect.isawaitable(res):
+            return await res
+        return res
+
+    _handle_new._t2fp_wrapped = True
+    logger.info("PATCH_TOPIC2_FULL_PIPELINE_ROUTE_V1 installed")
+
+# === END_PATCH_TOPIC2_FULL_PIPELINE_ROUTE_V1 ===
+
 if __name__ == "__main__":
     asyncio.run(main())
