@@ -1,0 +1,167 @@
+{
+  "schema_version": "1.0",
+  "export_kind": "CLEAN",
+  "exported_at": "2026-05-07T00:55:00+03:00",
+  "source_model": "Claude Code (Anthropic Sonnet 4.6 + Opus 4.7)",
+  "session_window": {
+    "start": "2026-05-06T22:47:00+03:00",
+    "end": "2026-05-07T01:00:00+03:00"
+  },
+  "chat_id": "<REDACTED>",
+  "topics_in_scope": [2, 5, 500],
+  "topics_explicitly_skipped": [210],
+  "system": {
+    "host": "graceful-olive.ptr.network",
+    "base_path": "/root/.areal-neva-core",
+    "python": "3.12",
+    "venv": "/root/.areal-neva-core/.venv/bin/python3"
+  },
+  "architecture_summary": {
+    "active_services": [
+      "areal-task-worker",
+      "telegram-ingress",
+      "areal-memory-api",
+      "areal-drive-ingest",
+      "areal-monitor-jobs",
+      "areal-upload-retry"
+    ],
+    "main_modules": [
+      "task_worker.py",
+      "core/topic2_estimate_final_close_v2.py",
+      "core/stroyka_estimate_canon.py",
+      "core/sample_template_engine.py",
+      "core/pdf_cyrillic.py",
+      "core/price_enrichment.py",
+      "core/topic_drive_oauth.py"
+    ],
+    "stroyka_old_route": "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 in core/stroyka_estimate_canon.py:1178 — hooked at task_worker.py:1313 — produces non-canonical 6-section template summary",
+    "stroyka_canonical_route": "topic2_estimate_final_close_v2.handle_topic2_estimate_final_close — invoked through _t2fer_run_final_estimate (task_worker.py:14176)"
+  },
+  "patches_applied_in_session": [
+    {
+      "commit": "d1f20a0",
+      "ts": "2026-05-06T22:31:00+03:00",
+      "name": "MEGA_GUARDS_V1",
+      "kind": "append-wrappers (six)",
+      "files": ["task_worker.py", "core/stroyka_estimate_canon.py"],
+      "live_test_result": "5 of 6 wrappers did not fire — pattern unreliable"
+    },
+    {
+      "commit": "c7c8755",
+      "ts": "2026-05-06T23:50:00+03:00",
+      "name": "PATCH_TOPIC2_INLINE_FIX_20260506_V1",
+      "kind": "body-edit (five)",
+      "files": ["task_worker.py"],
+      "live_test_result": "V5/V6C_PRICE_REJECTED markers fired (D works); FRESH_ESTIMATE_DISPATCHED did not fire (parent found via _find_parent route bypassed terminal guard branch)"
+    }
+  ],
+  "patches_in_progress": [
+    {
+      "name": "PATCH_TOPIC2_FULL_CANONICAL_CLOSE_ONEPASS_V1",
+      "status": "BACKUP_DONE_CODE_NOT_APPLIED",
+      "backups": [
+        "task_worker.py.bak.PATCH_TOPIC2_FULL_CANONICAL_CLOSE_ONEPASS_V1",
+        "core/topic2_estimate_final_close_v2.py.bak.PATCH_TOPIC2_FULL_CANONICAL_CLOSE_ONEPASS_V1",
+        "core/stroyka_estimate_canon.py.bak.PATCH_TOPIC2_FULL_CANONICAL_CLOSE_ONEPASS_V1",
+        "core/search_engine.py.bak.PATCH_TOPIC2_FULL_CANONICAL_CLOSE_ONEPASS_V1",
+        "core/search_session.py.bak.PATCH_TOPIC2_FULL_CANONICAL_CLOSE_ONEPASS_V1",
+        "core/search_quality.py.bak.PATCH_TOPIC2_FULL_CANONICAL_CLOSE_ONEPASS_V1"
+      ]
+    }
+  ],
+  "canon_files_added": [
+    "docs/CANON_FINAL/TOPIC_500_UNIVERSAL_SEARCH_CANON.md",
+    "docs/CANON_FINAL/TOPIC_2_CANONICAL_ESTIMATE_CONTRACT.md"
+  ],
+  "handoffs_added_or_updated": [
+    "docs/HANDOFFS/HANDOFF_20260507_SESSION_CLOSE.md",
+    "docs/HANDOFFS/LATEST_HANDOFF.md (synced from session_close)"
+  ],
+  "templates_cached_locally": [
+    {"name": "М-80.xlsx", "file_id": "1yt-RJsGRhO13zmPKNAn6bMuGrpXY7kWp", "size_bytes": 403589, "sheets": ["Каркас под ключ", "Газобетон_под ключ"]},
+    {"name": "М-110.xlsx", "file_id": "1Ub9fcwOcJ4pV30dcX88yf1225WOIdpWo", "size_bytes": 12494, "sheets": ["смета", "template_meta"]},
+    {"name": "Ареал Нева.xlsx", "file_id": "1DQw2qgMHtq2SqgJJP-93eIArpj1hnNNm", "size_bytes": 151108, "sheets": ["смета"]},
+    {"name": "фундамент_Склад2.xlsx", "file_id": "1KuoSI4OI7gJoIBPVqBQGXtQnolXKMiDp", "size_bytes": 15910, "sheets": ["смета"]},
+    {"name": "крыша и перекр.xlsx", "file_id": "16YecwnJ9umnVprFu9V77UCV6cPrYbNh3", "size_bytes": 58430, "sheets": ["расчет кровли"]}
+  ],
+  "templates_cache_path": "data/templates/estimate/cache/",
+  "templates_drive_folder_id": "19Z3acDgPub4nV55mad5mb8ju63FsqoG9",
+  "deprecated_templates": [
+    {"name": "ВОР_кирпичная_кладка_ИСПРАВЛЕНО.xlsx", "score_rule": -9999, "reason": "deprecated, must never win selection"}
+  ],
+  "drive_targets": {
+    "AI_ORCHESTRA": "13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB",
+    "topic_2_folder": "1F4qRGBCqjPZIjvkREwiPrQOOrfuRXVjA",
+    "ESTIMATES": "1fqw-fuUoM0HxHkgL_ZRxE3KFboDvwxsm"
+  },
+  "what_was_defined_this_session": [
+    "5 estimate templates with file_id mapped",
+    "AREAL_CALC 15-column structure with formulas",
+    "11 canonical estimate sections including interior by rooms",
+    "Template scoring rules (object/material/area to template)",
+    "Sheet selection rules per template",
+    "DONE contract markers list for topic_2",
+    "Final Telegram response format for topic_2",
+    "Old output blocker patterns (Эталон / Лист эталона / Выбор цены / Каркас под ключ / Разделы)",
+    "Cache rule for templates: Drive is SSOT, cache is runtime mirror",
+    "topic_500 redefined as universal adaptive search with 16 modes (procurement is one)",
+    "Cross-topic usage of search as a tool",
+    "Wrapper pattern reliability rule: append-wrappers in tail of file fail when target is already wrapped"
+  ],
+  "what_is_open": {
+    "topic_2": [
+      "PATCH_TOPIC2_FULL_CANONICAL_CLOSE_ONEPASS_V1 not applied (backups ready)",
+      "_p2_create_xlsx in sample_template_engine.py still 8 columns vs 15 required",
+      "Free-text TZ without ready table: engine cannot decompose into 11 sections",
+      "Live price enrichment not connected to canonical engine"
+    ],
+    "topic_500": [
+      "Adaptive output by intent (16 modes) not implemented — all queries go through procurement-style table",
+      "Forbidden patterns blocker (no-source answers, fake links) not active"
+    ],
+    "topic_5": [
+      "INVALID_RESULT_GATE: 16 cases of акт без артефакта last 7 days"
+    ],
+    "memory": [
+      "MEMORY_QUERY_GUARD_V1 does not catch 'что обсуждали' / 'какие задачи' — they enter estimate route and hit P6E67 terminal",
+      "Archive context not wired into engine for memory questions"
+    ]
+  },
+  "memory_records_added_to_claude_persistent_memory": [
+    "areal_canon_swod_20260506.md (updated topic_500 section)",
+    "areal_topic500_universal_search.md (new)",
+    "areal_topic2_templates.md (was added earlier in session)",
+    "areal_session_20260506_07_summary.md (new)",
+    "areal_canon_refs.md / areal_patch_order.md / areal_topic_registry.md / areal_verification_rules.md / areal_lifecycle_timeouts.md / areal_memory_three_layers.md / areal_user_response_cleanliness.md / areal_reply_parent_lookup.md / areal_wrapper_pattern_unreliable.md / areal_handoff_topic2_20260506.md (added earlier)"
+  ],
+  "harness_settings_changed": {
+    "global_settings_path": "~/.claude/settings.json",
+    "added_allow_patterns": [
+      "Bash(sqlite3 -readonly:*)",
+      "Bash(systemctl is-active:*)",
+      "Bash(systemctl show:*)",
+      "Bash(systemctl list-units:*)",
+      "Bash(git log:*)",
+      "Bash(git status:*)",
+      "Bash(git show:*)",
+      "Bash(git diff:*)",
+      "Bash(git branch:*)",
+      "Bash(git rev-list:*)",
+      "Bash(git remote:*)",
+      "Bash(git ls-files:*)",
+      "Bash(python3 -m py_compile:*)",
+      "Bash(head:*)",
+      "Bash(find:*)",
+      "Bash(file:*)",
+      "Bash(stat:*)"
+    ]
+  },
+  "forbidden_files_touched": [],
+  "forbidden_guard_at_export": "CLEAN",
+  "next_session_priority": [
+    "Apply PATCH_TOPIC2_FULL_CANONICAL_CLOSE_ONEPASS_V1 (backups ready) — main blocker",
+    "Wire adaptive output for topic_500 by 16 modes",
+    "MEMORY_QUERY_GUARD_V1 for status/memory questions",
+    "INVALID_RESULT_GATE topic_5 — акт без артефакта"
+  ]
+}
