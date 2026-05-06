@@ -3885,13 +3885,82 @@ def process_technadzor(text: str = "", task_id: str = "", chat_id: str = "", top
     return _T5V2_ORIG_PROCESS_TECHNADZOR(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs)
 # === END_FULLFIX_TOPIC5_TECHNADZOR_CANON_CONTOUR_V2_TECHNADZOR ===
 
-# === P6H_VISION_ENV_GATE_V1 ===
-# Enables external Vision if owner set EXTERNAL_PHOTO_ANALYSIS_ALLOWED=1/true in env.
-# _p6h_allow_external_vision() exists but was never called at startup.
-try:
-    import os as _p6h_veg_os
-    if _p6h_veg_os.getenv("EXTERNAL_PHOTO_ANALYSIS_ALLOWED", "").strip().lower() in {"1", "true", "yes", "on"}:
-        _p6h_allow_external_vision()
-except Exception:
-    pass
-# === END_P6H_VISION_ENV_GATE_V1 ===
+# === P6H_VISION_BLOCKED_FALLBACK_V1 ===
+# CANON §17: когда Vision заблокирован — строить акт из текста/голоса владельца
+# + метаданных файла + предыдущих актов, не останавливаться.
+# Сообщение в документе: "Визуальный анализ фото не выполнялся..."
+import logging as _p6hvbf_log
+_P6HVBF_LOG = _p6hvbf_log.getLogger("technadzor_engine")
+
+_P6HVBF_ORIG = p6f_tnz_handle_photo_act_real
+
+async def p6f_tnz_handle_photo_act_real(file_path, file_name, task_id, chat_id, topic_id, user_text=""):  # noqa: F811
+    vision, vstatus = await _p6f_tnz_vision_via_openrouter(file_path)
+    if vision is None and vstatus == "EXTERNAL_PHOTO_ANALYSIS_BLOCKED":
+        # Canon §17: Vision blocked → build act from owner text + file metadata
+        _P6HVBF_LOG.info("P6HVBF_VISION_BLOCKED_FALLBACK file=%s user_text_len=%s", file_name, len(user_text or ""))
+        vision = {
+            "summary": (
+                "Автоматический визуальный анализ фото не выполнялся, так как Vision заблокирован. "
+                "Выводы основаны на предыдущих актах, пояснениях владельца и доступных именах/метаданных файлов."
+            ),
+            "defects": [],
+            "confidence": "LOW",
+            "_vision_blocked": True,
+        }
+        if user_text and str(user_text).strip():
+            vision["summary"] += "\n\nПояснение владельца: " + str(user_text).strip()
+        if file_name:
+            vision["summary"] += "\n\nФайл: " + str(file_name)
+        vstatus = "BLOCKED_FALLBACK"
+    # delegate to original with resolved vision
+    # re-enter original logic but skip first vision call
+    if vision is None:
+        return await _P6HVBF_ORIG(file_path, file_name, task_id, chat_id, topic_id, user_text)
+    # replicate original body with already-resolved vision
+    import os as _p6hvbf_os
+    from datetime import datetime as _p6hvbf_dt
+    norms_text = (vision.get("summary", "") or "") + " " + str(user_text or "")
+    confirmed_norms, _ = _p6f_tnz_norms_block(norms_text)
+    docx_lines = _p6f_tnz_build_docx_lines(vision, confirmed_norms, file_name, task_id)
+    ts = _p6hvbf_dt.now().strftime("%Y%m%d_%H%M%S")
+    safe = (str(task_id or ts)[:8] or ts).replace("/", "_").replace("\\", "_")
+    out_dir = "/root/.areal-neva-core/outputs/technadzor_acts"
+    _p6hvbf_os.makedirs(out_dir, exist_ok=True)
+    docx_path = "{}/TECHNADZOR_ACT_PHOTO__{}_{}.docx".format(out_dir, safe, ts)
+    written = _p6tz_make_docx(docx_path, docx_lines)
+    if not written:
+        return {
+            "ok": False, "handled": True, "kind": "technadzor_photo_act",
+            "state": "FAILED",
+            "message": "Ошибка создания DOCX акта",
+            "history": "P6HVBF_DOCX_WRITE_FAIL",
+        }
+    drive_link, ustatus = await _p6f_tnz_upload_to_topic(
+        docx_path, _p6hvbf_os.path.basename(docx_path), chat_id or "-1003725299009", topic_id or 5
+    )
+    defects_count = len(vision.get("defects") or [])
+    norms_count = len(confirmed_norms)
+    public_lines = [
+        "Акт технического надзора сформирован (Vision заблокирован — анализ по тексту владельца)",
+        "Файл: " + str(file_name or ""),
+        "Дефектов в тексте: {}".format(defects_count),
+        "Нормативных ссылок: {}".format(norms_count) if norms_count else "Нормативная база: норма не подтверждена",
+    ]
+    if drive_link:
+        public_lines.append("Drive DOCX: " + str(drive_link))
+    return {
+        "ok": bool(drive_link),
+        "handled": True,
+        "kind": "technadzor_photo_act",
+        "message": "\n".join(public_lines),
+        "state": "DONE" if drive_link else "AWAITING_CONFIRMATION",
+        "drive_link": drive_link or "",
+        "history": "P6HVBF:vision={},defects={},norms={},upload={}".format(
+            vstatus, defects_count, norms_count, "OK" if drive_link else "FAIL"
+        ),
+    }
+
+p6f_tnz_handle_photo_act_real._p6hvbf_wrapped = True
+_P6HVBF_LOG.info("P6H_VISION_BLOCKED_FALLBACK_V1_INSTALLED")
+# === END_P6H_VISION_BLOCKED_FALLBACK_V1 ===
