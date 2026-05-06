@@ -14456,5 +14456,86 @@ if _TMG_ORIG and not getattr(_TMG_ORIG, "_tmg_wrapped", False):
 
 # === END_PATCH_TOPIC2_STATUS_META_GUARD_V1 ===
 
+# === PATCH_TOPIC2_WC_LOOP_GUARD_V1 ===
+# Fix: task in WAITING_CLARIFICATION (bot already asked a question) being re-picked
+# and re-routed to full pipeline → loop asking same question.
+# Guard: if DB state=WAITING_CLARIFICATION AND result already has text → don't redirect.
+import logging as _wcg_log
+import inspect as _wcg_inspect
+_WCG_LOG = _wcg_log.getLogger("task_worker")
+
+_WCG_ORIG = globals().get("_t2fer_run_final_estimate")
+
+if _WCG_ORIG and not getattr(_WCG_ORIG, "_wcg_wrapped", False):
+    async def _t2fer_run_final_estimate(conn, task, reason):
+        try:
+            topic_id_v = int(_t2fer_get(task, "topic_id", 0) or 0)
+        except Exception:
+            topic_id_v = 0
+
+        if topic_id_v == 2:
+            task_id = _t2fer_s(_t2fer_get(task, "id", ""))
+            try:
+                db_row = conn.execute(
+                    "SELECT state, result FROM tasks WHERE id=? LIMIT 1", (task_id,)
+                ).fetchone()
+                if db_row:
+                    db_state = str(db_row[0] or "").upper()
+                    db_result = str(db_row[1] or "").strip()
+                    if db_state == "WAITING_CLARIFICATION" and db_result:
+                        # Task already asked a question — don't re-run pipeline
+                        # Set error_message to WCG_SKIP so picker excludes it
+                        _WCG_LOG.info("WCG_SKIP_LOOP task=%s already_asked=%r", task_id, db_result[:60])
+                        try:
+                            conn.execute(
+                                "UPDATE tasks SET error_message='WCG_SKIP_WAITING_CLARIFICATION', updated_at=datetime('now') WHERE id=? AND state='WAITING_CLARIFICATION'",
+                                (task_id,),
+                            )
+                            conn.commit()
+                        except Exception:
+                            pass
+                        return True
+            except Exception:
+                pass
+
+        res = _WCG_ORIG(conn, task, reason)
+        if _wcg_inspect.isawaitable(res):
+            return await res
+        return res
+
+    _t2fer_run_final_estimate._wcg_wrapped = True
+    _WCG_LOG.info("PATCH_TOPIC2_WC_LOOP_GUARD_V1 installed")
+
+# === END_PATCH_TOPIC2_WC_LOOP_GUARD_V1 ===
+
+# === PATCH_TOPIC2_WC_PICKER_EXCLUDE_V1 ===
+# Exclude WCG_SKIP tasks from picker — WAITING_CLARIFICATION tasks where bot
+# already asked a question should not be re-picked until user replies.
+# When user's reply arrives as a new task, the merge logic will clear WCG_SKIP.
+import logging as _wcpe_log
+_WCPE_LOG = _wcpe_log.getLogger("task_worker")
+
+_WCPE_ORIG_PICK = globals().get("_pick_next_task")
+if _WCPE_ORIG_PICK and not getattr(_WCPE_ORIG_PICK, "_wcpe_wrapped", False):
+    def _pick_next_task(conn, chat_id=None):
+        row = _WCPE_ORIG_PICK(conn, chat_id)
+        if row is None:
+            return None
+        try:
+            err = str(row["error_message"] or "" if hasattr(row, "__getitem__") else "")
+            if "WCG_SKIP_WAITING_CLARIFICATION" in err:
+                _WCPE_LOG.debug("WCPE_SKIP_PICK task=%s", row["id"])
+                return None
+        except Exception:
+            pass
+        return row
+    _pick_next_task._wcpe_wrapped = True
+    _WCPE_LOG.info("PATCH_TOPIC2_WC_PICKER_EXCLUDE_V1 installed")
+
+# Clear WCG_SKIP when user's reply arrives (task state transitions to IN_PROGRESS)
+# This happens automatically via _update_task which clears error_message.
+
+# === END_PATCH_TOPIC2_WC_PICKER_EXCLUDE_V1 ===
+
 if __name__ == "__main__":
     asyncio.run(main())
