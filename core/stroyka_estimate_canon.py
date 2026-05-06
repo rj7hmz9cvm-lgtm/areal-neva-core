@@ -1784,3 +1784,44 @@ async def maybe_handle_stroyka_estimate(conn, task, logger=None):
 
 _SEC_LOG.info("FIX_STROYKA_CONTEXT_ENRICH_BEFORE_PARSE_V1 installed")
 # === END_FIX_STROYKA_CONTEXT_ENRICH_BEFORE_PARSE_V1 ===
+
+# === FIX_EXTRACT_SCOPE_IMPLICIT_V1 ===
+# _extract_scope only matched literal "под ключ" / "коробка".
+# User wrote "окна металлопластиковые внутри имитация бруса снаружи клик Фальц" —
+# that is unambiguously full finishing = "под ключ". No need to ask.
+_sec_orig_extract_scope = _extract_scope
+
+def _extract_scope(text: str) -> str:
+    result = _sec_orig_extract_scope(text)
+    if result:
+        return result
+    t = _low(text)
+    has_interior = any(x in t for x in (
+        "имитация бруса", "гкл", "штукатур", "шпаклев", "плитк", "ламинат",
+        "внутренн отделк", "внутри", "потолок", "полы", "стяжк",
+    ))
+    has_exterior = any(x in t for x in (
+        "снаружи", "фасад", "клик", "фальц", "сайдинг", "внешн отделк",
+    ))
+    has_windows = "окна" in t or "двери" in t or "оконн" in t
+    has_engineering = any(x in t for x in ("электрик", "водоснабж", "канализ", "отопл", "вентил"))
+    if has_interior or has_exterior or has_windows or has_engineering:
+        return "под ключ"
+    return ""
+# === END_FIX_EXTRACT_SCOPE_IMPLICIT_V1 ===
+
+# === FIX_EXTRACT_DIMENSIONS_NA_V1 ===
+# _extract_dimensions regex only matched x/х/×/*. "18 на 8" → None.
+# Fix: add "на" as separator.
+import re as _edi_re
+_edi_orig_extract_dimensions = _extract_dimensions
+
+def _extract_dimensions(text: str) -> Optional[Tuple[float, float]]:
+    result = _edi_orig_extract_dimensions(text)
+    if result:
+        return result
+    m = _edi_re.search(r"(\d+(?:[.,]\d+)?)\s+на\s+(\d+(?:[.,]\d+)?)", _low(text))
+    if m:
+        return float(m.group(1).replace(",", ".")), float(m.group(2).replace(",", "."))
+    return None
+# === END_FIX_EXTRACT_DIMENSIONS_NA_V1 ===
