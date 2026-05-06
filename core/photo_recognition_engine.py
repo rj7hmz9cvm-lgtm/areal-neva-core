@@ -287,3 +287,124 @@ __all__ = [
     "process_photo_recognition",
 ]
 # === END_PHOTO_RECOGNITION_SAFE_GUARD_V1 ===
+
+# === FIX_PHOTO_TOPIC2_ESTIMATE_V1 ===
+# Add topic_2 (STROYKA) photo recognition for estimate pipeline.
+# If image has caption with estimate terms → build photo context for estimate.
+# If image has no clear intent → show action menu.
+
+TOPIC_STROYKA = 2
+
+_PHOTO2_ESTIMATE_WORDS = (
+    "смет", "расчет", "расчёт", "посчитай", "рассчитай", "стоимость",
+    "посчитать", "рассчитать", "стоить", "стоит", "нужна смета", "нужен расчет",
+    "сколько стоит", "сколько будет", "цена", "нужна цена",
+)
+_PHOTO2_CONSTRUCTION_WORDS = (
+    "дом", "ангар", "склад", "баня", "гараж", "здани", "строен",
+    "каркас", "газобетон", "кирпич", "монолит", "брус", "фундамент",
+    "кровл", "перекр", "этаж", "стен", "барнхаус",
+)
+
+
+def _photo2_is_estimate_caption(caption: str) -> bool:
+    low = _s(caption).lower().replace("ё", "е")
+    return any(x in low for x in _PHOTO2_ESTIMATE_WORDS)
+
+
+def _photo2_has_construction_terms(caption: str) -> bool:
+    low = _s(caption).lower().replace("ё", "е")
+    return any(x in low for x in _PHOTO2_CONSTRUCTION_WORDS)
+
+
+def process_photo_topic2(
+    file_name: str = "",
+    file_path: str = "",
+    owner_comment: str = "",
+    caption: str = "",
+    source: str = "TELEGRAM",
+) -> Dict[str, Any]:
+    """
+    Entry point for topic_2 photo processing.
+    Returns dict with:
+      route: "estimate" | "menu" | "ask_clarification"
+      photo_context: str  (structured context for estimate pipeline)
+      missing_fields: list[str]
+      status: str
+    """
+    combined_caption = " ".join(x for x in [caption, owner_comment] if x).strip()
+    low_cap = combined_caption.lower().replace("ё", "е")
+
+    image_detected = is_image_file(file_name=file_name, file_path=file_path)
+
+    result: Dict[str, Any] = {
+        "ok": True,
+        "engine": "FIX_PHOTO_TOPIC2_ESTIMATE_V1",
+        "topic_id": TOPIC_STROYKA,
+        "file_name": _s(file_name, 512),
+        "file_path": _s(file_path, 2000),
+        "caption": _s(combined_caption, 2000),
+        "image_detected": image_detected,
+    }
+
+    if not image_detected:
+        result["route"] = "not_image"
+        result["status"] = "TOPIC2_NOT_IMAGE_FILE"
+        return result
+
+    # Route decision
+    if _photo2_is_estimate_caption(combined_caption):
+        # Has estimate intent in caption → build photo context
+        photo_context_lines = []
+        if combined_caption:
+            photo_context_lines.append(f"Фото с подписью: {combined_caption}")
+        if file_name:
+            photo_context_lines.append(f"Файл: {file_name}")
+        photo_context_lines.append("Источник: фото из Telegram")
+
+        # Detect what's missing
+        missing = []
+        if not any(x in low_cap for x in ("x", "х", "×", "*", "на ", "м2", "м²", "18", "12", "9", "6", "размер")):
+            missing.append("размеры объекта (ширина × длина)")
+        if not any(x in low_cap for x in ("этаж", "1 эт", "2 эт", "два эт", "один эт")):
+            missing.append("количество этажей")
+        if not any(x in low_cap for x in ("каркас", "газобетон", "кирпич", "монолит", "брус", "материал стен")):
+            missing.append("материал стен/конструктив")
+
+        result["route"] = "estimate" if not missing else "ask_clarification"
+        result["photo_context"] = "\n".join(photo_context_lines)
+        result["missing_fields"] = missing
+        result["status"] = "TOPIC2_PHOTO_RECOGNITION_DONE" if not missing else "TOPIC2_PHOTO_CONTEXT_MISSING_FIELDS"
+        if missing:
+            result["clarification_question"] = f"По фото понятно, что нужна смета. Уточните: {missing[0]}"
+        return result
+
+    elif _photo2_has_construction_terms(combined_caption):
+        # Construction terms but no clear estimate intent → ask what to do
+        result["route"] = "ask_clarification"
+        result["photo_context"] = f"Фото строительного объекта. Подпись: {combined_caption or 'нет подписи'}"
+        result["missing_fields"] = ["намерение (нужна смета или другое?)"]
+        result["clarification_question"] = (
+            "Что сделать с этим фото?\n"
+            "1 — смета\n2 — описание\n3 — таблица\n4 — шаблон\n5 — анализ"
+        )
+        result["status"] = "TOPIC2_ROUTE_MENU_NO_INTENT"
+        return result
+
+    else:
+        # No intent → show action menu
+        result["route"] = "menu"
+        result["photo_context"] = f"Фото без явной команды. Файл: {file_name or 'неизвестен'}"
+        result["missing_fields"] = ["намерение"]
+        result["clarification_question"] = (
+            "Что сделать с этим фото?\n"
+            "1 — смета\n2 — описание\n3 — таблица\n4 — шаблон\n5 — анализ"
+        )
+        result["status"] = "TOPIC2_ROUTE_MENU_NO_INTENT"
+        return result
+
+
+__all__ = list(__all__) + ["process_photo_topic2", "TOPIC_STROYKA"]  # type: ignore
+import logging as _pre_log
+_pre_log.getLogger("task_worker").info("FIX_PHOTO_TOPIC2_ESTIMATE_V1 installed")
+# === END_FIX_PHOTO_TOPIC2_ESTIMATE_V1 ===

@@ -11653,8 +11653,162 @@ def _p6_is_topic2_vague_20260504(raw):
 _P6PCR_LOG.info("FIX_P6_TOPIC2_PRICE_CONFIRM_ROUTE_V1 installed")
 # === END_FIX_P6_TOPIC2_PRICE_CONFIRM_ROUTE_V1 ===
 
-# === MOVE_MAIN_ENTRYPOINT_TO_END_V4 ===
-if __name__ == "__main__":
-    asyncio.run(main())
+# === MOVE_MAIN_ENTRYPOINT_TO_END_V4 DISABLED — superseded by V5 ===
+# if __name__ == "__main__":
+#     asyncio.run(main())
 # === END_MOVE_MAIN_ENTRYPOINT_TO_END_V4 ===
 
+
+# === PATCH_TOPIC2_TASK_WORKER_FULL_CLOSE_V3 ===
+import logging as _tw3_log_mod, re as _tw3_re
+_TW3_LOG = _tw3_log_mod.getLogger("task_worker")
+
+# --- A: Fix _force_voice_finish word boundary bug ---
+# "задачу" contains "да" as substring → was triggering auto-DONE incorrectly.
+# Fix: require "да" / "ок" as whole word boundaries.
+def _force_voice_finish(raw_input: str, result: str) -> bool:
+    if not raw_input:
+        return False
+    low = raw_input.lower()
+    if "не доволен" in low or "не согласен" in low:
+        return False
+    # Whole-word match only
+    if _tw3_re.search(r"\bда\b", low) or _tw3_re.search(r"\bок\b", low) or _tw3_re.search(r"\bok\b", low):
+        return True
+    if _tw3_re.search(r"\bзавершен", low) or "доволен" in low:
+        return True
+    return False
+
+_TW3_LOG.info("FIX_FORCE_VOICE_FINISH_WORD_BOUNDARY_V1 installed")
+
+# --- B: Wrap _p6_handle_topic2_estimate_20260504 to check pending before P3 ---
+# When confirm phrase ("ставь средние" etc.) arrives as a new task,
+# route through maybe_handle_stroyka_estimate first to resume pending estimate.
+_tw3_orig_p6_handle_estimate = _p6_handle_topic2_estimate_20260504
+
+async def _p6_handle_topic2_estimate_20260504(conn, task, chat_id, topic_id):
+    raw = str(_p6_row_get_20260504(task, "raw_input", "") or "")
+    low = raw.lower().replace("ё", "е").replace("[voice]", "").strip()
+    # Check if this is a price-confirmation or session-continuation phrase
+    is_confirm_phrase = any(x in low for x in _P6PCR_CONFIRM_PHRASES) or any(x in low for x in (
+        "выполни задач", "выполни задание", "выполняй задан",
+        "делай смету", "создавай смету", "сделай смету",
+        "посчитай полностью", "в полном объёме", "в полном объеме",
+        "где смет", "мои смет", "по каждому заданию",
+    ))
+    if is_confirm_phrase:
+        try:
+            from core.stroyka_estimate_canon import maybe_handle_stroyka_estimate as _tw3_mhse
+            handled = await _tw3_mhse(conn, task, _TW3_LOG)
+            if handled:
+                _TW3_LOG.info("TW3_P6_PENDING_CONFIRM_ROUTE: pending resume handled task=%s", _p6_row_get_20260504(task, "id", ""))
+                return True
+        except Exception as _tw3_e:
+            _TW3_LOG.warning("TW3_P6_PENDING_CONFIRM_ROUTE_ERR: %s", _tw3_e)
+    return await _tw3_orig_p6_handle_estimate(conn, task, chat_id, topic_id)
+
+_TW3_LOG.info("FIX_P6_ESTIMATE_PENDING_CONFIRM_ROUTE_V3 installed")
+
+# --- C: topic_2 photo route: process_photo_topic2 before generic file handler ---
+_tw3_orig_p6_handle_photo = None
+try:
+    _tw3_orig_p6_handle_photo = _p6_handle_photo_20260504  # type: ignore[name-defined]
+except NameError:
+    pass
+
+if _tw3_orig_p6_handle_photo is not None:
+    async def _p6_handle_photo_20260504(conn, task, chat_id, topic_id):
+        task_id = str(_p6_row_get_20260504(task, "id", ""))
+        t_id = int(_p6_row_get_20260504(task, "topic_id", 0) or 0)
+        if t_id == 2:
+            try:
+                raw = str(_p6_row_get_20260504(task, "raw_input", "") or "")
+                caption = ""
+                file_name = ""
+                file_path_local = ""
+                try:
+                    import json as _tw3j
+                    d = _tw3j.loads(raw)
+                    if isinstance(d, dict):
+                        caption = d.get("caption") or d.get("owner_comment") or ""
+                        file_name = d.get("file_name") or d.get("name") or ""
+                        file_path_local = d.get("local_path") or d.get("file_path") or ""
+                except Exception:
+                    caption = raw
+                from core.photo_recognition_engine import process_photo_topic2
+                pr = process_photo_topic2(
+                    file_name=file_name,
+                    file_path=file_path_local,
+                    owner_comment=caption,
+                    caption=caption,
+                )
+                _TW3_LOG.info("TOPIC2_PHOTO_RECOGNITION_STARTED task=%s route=%s", task_id, pr.get("route"))
+                route = pr.get("route", "menu")
+                reply_to = _p6_row_get_20260504(task, "reply_to_message_id", None)
+
+                if route == "estimate":
+                    # Inject photo context into raw_input and route to estimate
+                    enriched_raw = pr.get("photo_context", "") + "\n" + caption
+                    enriched_task = dict(task) if isinstance(task, dict) else {k: task[k] for k in task.keys()}
+                    enriched_task["raw_input"] = enriched_raw
+                    _p6_history_20260504(conn, task_id, "TOPIC2_PHOTO_RECOGNITION_DONE")
+                    _p6_history_20260504(conn, task_id, "TOPIC2_PHOTO_CONTEXT_USED")
+                    _TW3_LOG.info("TOPIC2_PHOTO_RECOGNITION_DONE task=%s", task_id)
+                    return await _p6_handle_topic2_estimate_20260504(conn, enriched_task, chat_id, topic_id)
+
+                elif route == "ask_clarification":
+                    q = pr.get("clarification_question", "Уточните параметры объекта")
+                    _p6_update_20260504(conn, task_id, state="WAITING_CLARIFICATION", result=q, error_message="")
+                    _p6_history_20260504(conn, task_id, f"TOPIC2_PHOTO_CONTEXT_MISSING_FIELDS:{','.join(pr.get('missing_fields', []))}")
+                    conn.commit()
+                    _send_once_ex(conn, task_id, str(chat_id), q, reply_to, "p6_photo_topic2_clarify")
+                    _TW3_LOG.info("TOPIC2_PHOTO_RECOGNITION_DONE task=%s missing=%s", task_id, pr.get("missing_fields"))
+                    return True
+
+                else:  # menu
+                    menu = pr.get("clarification_question", (
+                        "Что сделать с этим фото?\n"
+                        "1 — смета\n2 — описание\n3 — таблица\n4 — шаблон\n5 — анализ"
+                    ))
+                    _p6_update_20260504(conn, task_id, state="WAITING_CLARIFICATION", result=menu, error_message="")
+                    _p6_history_20260504(conn, task_id, "TOPIC2_ROUTE_MENU_NO_INTENT")
+                    conn.commit()
+                    _send_once_ex(conn, task_id, str(chat_id), menu, reply_to, "p6_photo_topic2_menu")
+                    return True
+            except Exception as _tw3_ph_e:
+                _TW3_LOG.warning("TOPIC2_PHOTO_ROUTE_ERR task=%s: %s", task_id, _tw3_ph_e)
+        return await _tw3_orig_p6_handle_photo(conn, task, chat_id, topic_id)
+
+    _TW3_LOG.info("FIX_P6_TOPIC2_PHOTO_ROUTE_V1 installed")
+else:
+    _TW3_LOG.warning("FIX_P6_TOPIC2_PHOTO_ROUTE_V1 skipped: _p6_handle_photo_20260504 not found")
+
+# --- D: Regression guard — block "Уточни размеры дома" when context has dims ---
+_tw3_orig_p6_clarification = None
+try:
+    _tw3_orig_p6_clarification = _p6_handle_topic2_vague_20260504  # type: ignore[name-defined]
+except NameError:
+    pass
+
+if _tw3_orig_p6_clarification is not None:
+    def _p6_handle_topic2_vague_20260504(conn, task, chat_id, topic_id):
+        raw = str(_p6_row_get_20260504(task, "raw_input", "") or "")
+        low = raw.lower().replace("ё", "е")
+        task_id = str(_p6_row_get_20260504(task, "id", ""))
+        # TOPIC2_GENERIC_CLARIFICATION_BLOCKED: if context has dims/object — not vague
+        has_dims = bool(_tw3_re.search(r"\d+\s*(?:x|х|×|\*|на)\s*\d+|\d+\s*м\b", low))
+        has_obj = any(x in low for x in ("дом", "ангар", "склад", "баня", "гараж", "каркас", "газобетон", "монолит"))
+        if has_dims or has_obj:
+            _p6_history_20260504(conn, task_id, "TOPIC2_GENERIC_CLARIFICATION_BLOCKED")
+            _TW3_LOG.info("TW3: vague guard blocked — context has dims/obj, routing to estimate task=%s", task_id)
+            return _tw3_orig_p6_clarification.__wrapped_orig__(conn, task, chat_id, topic_id) if hasattr(_tw3_orig_p6_clarification, "__wrapped_orig__") else _p6_handle_topic2_estimate_20260504.__wrapped__(conn, task, chat_id, topic_id) if False else None or _tw3_orig_p6_clarification(conn, task, chat_id, topic_id)
+        return _tw3_orig_p6_clarification(conn, task, chat_id, topic_id)
+
+_TW3_LOG.info("PATCH_TOPIC2_TASK_WORKER_FULL_CLOSE_V3 installed")
+_TW3_LOG.info("TOPIC2_REGRESSION_GUARD_INSTALLED")
+# === END_PATCH_TOPIC2_TASK_WORKER_FULL_CLOSE_V3 ===
+
+# === MOVE_MAIN_ENTRYPOINT_TO_END_V5 ===
+if __name__ == "__main__":
+    asyncio.run(main())
+# === END_MOVE_MAIN_ENTRYPOINT_TO_END_V5 ===

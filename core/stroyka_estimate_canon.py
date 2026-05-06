@@ -1861,3 +1861,180 @@ def _pending_is_fresh(pending, max_seconds: int = 600) -> bool:
 
 _SPC_LOG.info("FIX_STROYKA_PRICE_CONFIRM_EXTEND_V1 installed")
 # === END_FIX_STROYKA_PRICE_CONFIRM_EXTEND_V1 ===
+
+# === PATCH_TOPIC2_STROYKA_ESTIMATE_CANON_FULL_CLOSE_V3 ===
+import logging as _stv3_log_mod, re as _stv3_re, hashlib as _stv3_hash
+_STV3_LOG = _stv3_log_mod.getLogger("task_worker")
+
+# --- A: is_stroyka_estimate_candidate recognizes confirm phrases ---
+_stv3_orig_candidate = is_stroyka_estimate_candidate
+
+def is_stroyka_estimate_candidate(task):
+    if _stv3_orig_candidate(task):
+        return True
+    if int(_row_get(task, "topic_id", 0) or 0) != TOPIC_ID_STROYKA:
+        return False
+    input_type = _low(_row_get(task, "input_type", ""))
+    if input_type in ("photo", "file", "drive_file", "image", "document"):
+        return False
+    raw = _low(_row_get(task, "raw_input", ""))
+    if not raw:
+        return False
+    if _is_confirm(raw):
+        return True
+    # session lookup phrases
+    if any(x in raw for x in (
+        "где смет", "мои смет", "по каждому заданию", "по каждой задач",
+        "выполни задач", "выполни задание", "делай смету", "посчитай полностью",
+        "в полном объёме", "в полном объеме", "сделай смету", "выполняй",
+        "новое тз", "другое задание", "второе задание",
+    )):
+        return True
+    return False
+
+# --- B: parse_price_choice — mark unconfirmed when no explicit price word ---
+_stv3_orig_ppc = parse_price_choice
+_STV3_EXPLICIT_PRICE_WORDS = (
+    "миним", "максим", "средн", "медиан", "ручн", "конкрет",
+    "ссылк", "вариант а", "вариант б", "вариант в", "вариант г",
+    "вариант 1", "вариант 2", "вариант 3", "вариант 4",
+    "а)", "б)", "в)", "г)", "самые дешев", "шаблон",
+    "ставь", "беру", "средние цены", "минимальн цены", "шаблонн",
+)
+
+def parse_price_choice(text: str) -> Dict[str, Any]:
+    result = _stv3_orig_ppc(text)
+    t = _low(str(text or "")).replace("[voice]", "").strip()
+    explicit = any(x in t for x in _STV3_EXPLICIT_PRICE_WORDS)
+    result = dict(result)
+    result["confirmed"] = explicit
+    if not explicit:
+        result["choice"] = "NONE"
+    return result
+
+# --- C: _generate_and_send — require explicit price choice before XLSX/PDF ---
+_stv3_orig_gas = _generate_and_send
+
+async def _generate_and_send(conn, task, pending, confirm_text, logger=None):
+    choice = parse_price_choice(confirm_text)
+    task_id = _s(_row_get(task, "id"))
+    chat_id = _s(_row_get(task, "chat_id"))
+    topic_id = int(_row_get(task, "topic_id", 0) or 0)
+    reply_to = _row_get(task, "reply_to_message_id", None) or _row_get(task, "message_id", None)
+
+    if not choice.get("confirmed") or choice.get("choice") == "NONE":
+        # No explicit price choice — ask user
+        msg = (
+            "Выберите уровень цен для сметы:\n\n"
+            "1 — минимальные (самые дешёвые из найденных)\n"
+            "2 — средние (медианные рыночные)\n"
+            "3 — надёжный поставщик\n"
+            "4 — ручные (укажу сам)\n\n"
+            "Ответьте: 1 / 2 / 3 / 4 или: минимальные / средние / максимальные / ручные\n"
+            "или 'ставь средние' / 'ставь минимальные' / 'ставь шаблонные'"
+        )
+        send_res = await _send_text(chat_id, msg, reply_to, topic_id)
+        kwargs = {"state": "WAITING_CLARIFICATION", "result": msg}
+        if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+            kwargs["bot_message_id"] = send_res.get("bot_message_id")
+        _update_task_safe(conn, task_id, **kwargs)
+        # Keep pending alive, mark that choice was requested
+        pending_updated = dict(pending)
+        pending_updated["price_choice_requested"] = True
+        pending_updated["price_choice_requested_at"] = _now()
+        pend_key = f"topic_2_estimate_pending_{pending.get('task_id', task_id)}"
+        _memory_save(chat_id, pend_key, pending_updated)
+        _history_safe(conn, task_id, "TOPIC2_PRICE_CHOICE_REQUESTED")
+        return True
+
+    # Explicit choice confirmed — proceed to generate
+    _history_safe(conn, task_id, f"TOPIC2_PRICE_CHOICE_CONFIRMED:{choice.get('choice')}")
+    result = await _stv3_orig_gas(conn, task, pending, confirm_text, logger=logger)
+    return result
+
+# --- D: _create_pdf — use DejaVuSans for proper Cyrillic ---
+_stv3_orig_create_pdf = _create_pdf
+
+def _create_pdf(task_id: str, text: str) -> str:
+    pdf_path = os.path.join(tempfile.gettempdir(), f"stroyka_est_{task_id[:8]}_{int(time.time())}.pdf")
+    try:
+        from core.pdf_cyrillic import create_pdf_with_cyrillic, validate_cyrillic_pdf
+        title = "Смета по строительному объекту"
+        ok = create_pdf_with_cyrillic(pdf_path, text, title)
+        if ok:
+            valid, code = validate_cyrillic_pdf(pdf_path)
+            if not valid:
+                _STV3_LOG.warning("PDF_CYRILLIC_BROKEN after create_pdf_with_cyrillic: %s", code)
+                # Try stv3_orig fallback
+                return _stv3_orig_create_pdf(task_id, text)
+            _STV3_LOG.info("TOPIC2_PDF_CYRILLIC_OK: %s", pdf_path)
+            return pdf_path
+        return _stv3_orig_create_pdf(task_id, text)
+    except Exception as _pde:
+        _STV3_LOG.warning("_create_pdf DejaVu patch err: %s", _pde)
+        return _stv3_orig_create_pdf(task_id, text)
+
+# --- E: context_hash helper for session isolation ---
+def _stv3_context_hash(raw_input: str, source_file_id: str = "") -> str:
+    src = str(raw_input or "").strip()[:2000] + "|" + str(source_file_id or "")
+    return _stv3_hash.sha256(src.encode("utf-8", errors="replace")).hexdigest()[:16]
+
+# --- F: DONE contract guard — validate all checkpoints ---
+_stv3_orig_update_task_safe = _update_task_safe
+
+def _update_task_safe(conn, task_id, **kwargs):
+    new_state = kwargs.get("state", "")
+    if new_state == "DONE":
+        # Check task is topic_2
+        try:
+            row = conn.execute(
+                "SELECT topic_id, result FROM tasks WHERE id=?", (task_id,)
+            ).fetchone()
+            if row and int(row[0] or 0) == TOPIC_ID_STROYKA:
+                result = _s(row[1] or "")
+                low_r = result.lower()
+                # DONE is only valid if there are Drive links and price was confirmed
+                has_excel = "drive.google.com" in low_r and ("xlsx" in low_r or "excel" in low_r or "📊" in result)
+                has_pdf = "drive.google.com" in low_r and ("pdf" in low_r or "📄" in result)
+                # Check history for price_choice_confirmed
+                hist = conn.execute(
+                    "SELECT action FROM task_history WHERE task_id=? ORDER BY created_at",
+                    (task_id,),
+                ).fetchall()
+                hist_actions = [_s(h[0]) for h in hist]
+                price_confirmed = any("TOPIC2_PRICE_CHOICE_CONFIRMED" in a for a in hist_actions)
+                estimate_generated = any("estimate_generated" in a or "FINAL_DONE" in a or "P3_TOPIC2_FINAL" in a for a in hist_actions)
+
+                if not estimate_generated:
+                    _STV3_LOG.warning(
+                        "TOPIC2_DONE_CONTRACT_CHECK: DONE blocked for %s — no estimate_generated", task_id
+                    )
+                    conn.execute(
+                        "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                        (task_id, "TOPIC2_DONE_BLOCKED_REASON:no_estimate_generated"),
+                    )
+                    # Allow but log — don't hard-block to avoid loops
+                elif not price_confirmed:
+                    _STV3_LOG.warning(
+                        "TOPIC2_DONE_CONTRACT_CHECK: DONE blocked for %s — no price_choice_confirmed", task_id
+                    )
+                    conn.execute(
+                        "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                        (task_id, "TOPIC2_DONE_BLOCKED_REASON:no_price_choice_confirmed"),
+                    )
+                    # Override: set AWAITING_CONFIRMATION instead of DONE
+                    kwargs = dict(kwargs)
+                    kwargs["state"] = "AWAITING_CONFIRMATION"
+                    _STV3_LOG.info("TOPIC2_BAD_DONE_BLOCKED: changed DONE→AWAITING_CONFIRMATION for %s", task_id)
+                else:
+                    conn.execute(
+                        "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                        (task_id, "TOPIC2_DONE_CONTRACT_OK"),
+                    )
+                    _STV3_LOG.info("TOPIC2_DONE_CONTRACT_OK: %s", task_id)
+        except Exception as _dg_e:
+            _STV3_LOG.warning("DONE_GATE_ERR %s: %s", task_id, _dg_e)
+    return _stv3_orig_update_task_safe(conn, task_id, **kwargs)
+
+_STV3_LOG.info("PATCH_TOPIC2_STROYKA_ESTIMATE_CANON_FULL_CLOSE_V3 installed")
+# === END_PATCH_TOPIC2_STROYKA_ESTIMATE_CANON_FULL_CLOSE_V3 ===

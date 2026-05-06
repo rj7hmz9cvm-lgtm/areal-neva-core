@@ -7201,3 +7201,225 @@ async def handle_topic2_one_big_formula_pipeline_v1(conn, task, chat_id=None, to
 
 _P1FIX_LOG.info("FIX_P1_CONTEXT_ENRICH_AND_SCOPE_V1 installed")
 # === END_FIX_P1_CONTEXT_ENRICH_AND_SCOPE_V1 ===
+
+# === PATCH_TOPIC2_P3_PRICE_CHOICE_GATE_V1 ===
+# P3 pipeline (handle_topic2_one_big_formula_pipeline_v1) was calling
+# _p3e_update(state="DONE") directly without user price confirmation.
+# Also: _p3e_summary generates "✅ Предварительная смета готова" with
+# "Выбор цены: median" silently. Fix: wrap to show price choice dialog first.
+import logging as _p3pcg_log_mod, hashlib as _p3pcg_hash
+_P3PCG_LOG = _p3pcg_log_mod.getLogger("task_worker")
+
+_p3pcg_orig_handle = handle_topic2_one_big_formula_pipeline_v1
+
+_P3PCG_EXPLICIT_PRICE_WORDS = (
+    "миним", "максим", "средн", "медиан", "ручн", "конкрет",
+    "ссылк", "вариант а", "вариант б", "вариант в", "вариант г",
+    "вариант 1", "вариант 2", "вариант 3", "вариант 4",
+    "а)", "б)", "в)", "г)", "самые дешев", "шаблон",
+    "ставь", "беру",
+)
+
+def _p3pcg_has_explicit_price(text: str) -> bool:
+    t = str(text or "").lower().replace("ё", "е").replace("[voice]", "").strip()
+    return any(x in t for x in _P3PCG_EXPLICIT_PRICE_WORDS)
+
+def _p3pcg_mem_save(chat_id: str, key: str, value) -> None:
+    import sqlite3 as _sq, json as _js
+    try:
+        mem_db = "/root/.areal-neva-core/data/memory.db"
+        con = _sq.connect(mem_db, timeout=10)
+        try:
+            con.execute(
+                "INSERT OR REPLACE INTO memory(chat_id, key, value, timestamp) "
+                "VALUES(?, ?, ?, datetime('now'))",
+                (str(chat_id), str(key), _js.dumps(value, ensure_ascii=False)),
+            )
+            con.commit()
+        finally:
+            con.close()
+    except Exception:
+        pass
+
+def _p3pcg_mem_latest(chat_id: str, key: str):
+    import sqlite3 as _sq, json as _js
+    try:
+        mem_db = "/root/.areal-neva-core/data/memory.db"
+        con = _sq.connect(mem_db, timeout=10)
+        try:
+            row = con.execute(
+                "SELECT value FROM memory WHERE chat_id=? AND key=? ORDER BY rowid DESC LIMIT 1",
+                (str(chat_id), str(key)),
+            ).fetchone()
+            return _js.loads(row[0]) if row else None
+        finally:
+            con.close()
+    except Exception:
+        return None
+
+def _p3pcg_context_hash(raw: str, file_id: str = "") -> str:
+    src = str(raw or "").strip()[:2000] + "|" + str(file_id or "")
+    return _p3pcg_hash.sha256(src.encode("utf-8", errors="replace")).hexdigest()[:16]
+
+async def handle_topic2_one_big_formula_pipeline_v1(
+    conn=None, task=None, chat_id=None, topic_id=None,
+    raw_input=None, full_context=None, **kwargs
+):
+    # Extract identifiers
+    task_id = ""
+    if task is not None:
+        try:
+            task_id = str(task["id"] if hasattr(task, "keys") and "id" in task.keys() else (task.get("id") if isinstance(task, dict) else getattr(task, "id", "")))
+        except Exception:
+            pass
+    chat_id_s = str(chat_id or "")
+    topic_id_i = int(topic_id or 0)
+    raw_s = str(raw_input or full_context or "")
+    reply_to = None
+    if task is not None:
+        try:
+            reply_to = task["reply_to_message_id"] if hasattr(task, "keys") else (task.get("reply_to_message_id") if isinstance(task, dict) else getattr(task, "reply_to_message_id", None))
+        except Exception:
+            pass
+
+    ctx_hash = _p3pcg_context_hash(raw_s, kwargs.get("file_id", ""))
+    pend_key = f"topic_2_estimate_pending_{task_id}"
+
+    # Check if this is a price-choice reply for a P3 pending estimate
+    existing_pend = _p3pcg_mem_latest(chat_id_s, pend_key)
+    if not existing_pend:
+        # Try any pending for this chat/topic
+        try:
+            import sqlite3 as _sq3, json as _p3pj
+            con = _sq3.connect("/root/.areal-neva-core/data/memory.db", timeout=10)
+            try:
+                row = con.execute(
+                    "SELECT key, value FROM memory WHERE chat_id=? AND key LIKE 'topic_2_estimate_pending_%' ORDER BY timestamp DESC LIMIT 1",
+                    (chat_id_s,),
+                ).fetchone()
+                if row:
+                    existing_pend = _p3pj.loads(row[1] or "{}")
+                    existing_pend["_memory_key"] = row[0]
+            finally:
+                con.close()
+        except Exception:
+            pass
+
+    if existing_pend and existing_pend.get("status") == "WAITING_PRICE_CONFIRMATION":
+        # Check freshness (24h)
+        import datetime as _p3dt
+        created_at_s = existing_pend.get("created_at", "")
+        try:
+            ca = _p3dt.datetime.fromisoformat(created_at_s.replace("Z", "+00:00"))
+            now_u = _p3dt.datetime.now(_p3dt.timezone.utc)
+            age = (now_u - ca).total_seconds()
+        except Exception:
+            age = 0
+        if age < 86400:
+            # Has explicit price choice?
+            if _p3pcg_has_explicit_price(raw_s):
+                # Let original handle (it will generate XLSX/PDF)
+                _P3PCG_LOG.info("P3PCG: price confirmed, delegating to orig handle task=%s", task_id)
+                if conn:
+                    try:
+                        conn.execute(
+                            "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                            (task_id, f"TOPIC2_PRICE_CHOICE_CONFIRMED:{_p3pcg_has_explicit_price}"),
+                        )
+                        conn.commit()
+                    except Exception:
+                        pass
+                return await _p3pcg_orig_handle(conn=conn, task=task, chat_id=chat_id, topic_id=topic_id, raw_input=raw_input, full_context=full_context, **kwargs)
+            else:
+                # No explicit price — show price choice dialog
+                msg = (
+                    "Выберите уровень цен для сметы:\n\n"
+                    "1 — минимальные (самые дешёвые)\n"
+                    "2 — средние (медианные)\n"
+                    "3 — надёжный поставщик\n"
+                    "4 — ручные\n\n"
+                    "Ответьте: 1 / 2 / 3 / 4 или: минимальные / средние / максимальные"
+                )
+                if conn and task_id:
+                    conn.execute(
+                        "UPDATE tasks SET state='WAITING_CLARIFICATION', result=?, updated_at=datetime('now') WHERE id=?",
+                        (msg, task_id),
+                    )
+                    conn.execute(
+                        "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                        (task_id, "TOPIC2_PRICE_CHOICE_REQUESTED"),
+                    )
+                    conn.commit()
+                try:
+                    import asyncio as _p3aio
+                    from core.stroyka_estimate_canon import _send_text as _p3_send_text
+                    await _p3_send_text(chat_id_s, msg, reply_to, topic_id_i)
+                except Exception:
+                    pass
+                _P3PCG_LOG.info("P3PCG: price choice requested task=%s ctx=%s", task_id, ctx_hash)
+                return True
+
+    # --- New request (no pending) ---
+    # Log session identity markers before running P3
+    if conn and task_id:
+        try:
+            conn.execute(
+                "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                (task_id, f"TOPIC2_ESTIMATE_CONTEXT_HASH:{ctx_hash}"),
+            )
+            conn.execute(
+                "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                (task_id, "TOPIC2_PRICE_ENRICHMENT_STARTED"),
+            )
+            conn.commit()
+        except Exception:
+            pass
+
+    # Call original P3 — but intercept DONE to insert price gate
+    try:
+        result = await _p3pcg_orig_handle(
+            conn=conn, task=task, chat_id=chat_id, topic_id=topic_id,
+            raw_input=raw_input, full_context=full_context, **kwargs
+        )
+    except Exception as _p3e:
+        _P3PCG_LOG.warning("P3PCG: orig_handle error: %s", _p3e)
+        raise
+
+    # After P3 runs: if state is DONE but price_choice_confirmed is missing,
+    # rewrite to AWAITING_CONFIRMATION
+    if conn and task_id:
+        try:
+            row = conn.execute(
+                "SELECT state FROM tasks WHERE id=?", (task_id,)
+            ).fetchone()
+            if row and row[0] == "DONE":
+                hist = conn.execute(
+                    "SELECT action FROM task_history WHERE task_id=? ORDER BY created_at",
+                    (task_id,),
+                ).fetchall()
+                hist_actions = [str(h[0]) for h in hist]
+                price_ok = any("TOPIC2_PRICE_CHOICE_CONFIRMED" in a for a in hist_actions)
+                if not price_ok:
+                    conn.execute(
+                        "UPDATE tasks SET state='AWAITING_CONFIRMATION', updated_at=datetime('now') WHERE id=? AND state='DONE'",
+                        (task_id,),
+                    )
+                    conn.execute(
+                        "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                        (task_id, "TOPIC2_BAD_DONE_BLOCKED:no_price_choice_confirmed"),
+                    )
+                    conn.commit()
+                    _P3PCG_LOG.warning("P3PCG: DONE→AWAITING_CONFIRMATION for %s (no price confirmed)", task_id)
+            if conn and task_id:
+                conn.execute(
+                    "INSERT OR IGNORE INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (task_id, "TOPIC2_PRICE_ENRICHMENT_DONE"),
+                )
+                conn.commit()
+        except Exception:
+            pass
+
+    return result
+
+_P3PCG_LOG.info("PATCH_TOPIC2_P3_PRICE_CHOICE_GATE_V1 installed")
+# === END_PATCH_TOPIC2_P3_PRICE_CHOICE_GATE_V1 ===
