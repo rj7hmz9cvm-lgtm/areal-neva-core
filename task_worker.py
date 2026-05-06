@@ -11493,8 +11493,91 @@ _P6E67FIX_LOG.info("FIX_P6E67_FIND_PARENT_NO_DONE_FAILED_V1 installed")
 # === END_FIX_P6E67_FIND_PARENT_NO_DONE_FAILED_V1 ===
 
 # === MOVE_MAIN_ENTRYPOINT_TO_END_V3 ===
-# asyncio.run(main()) — ABSOLUTE LAST LINE. V1 and V2 superseded.
+# SUPERSEDED by V4 — see end of file
+# if __name__ == "__main__":
+#     asyncio.run(main())
+# === END_MOVE_MAIN_ENTRYPOINT_TO_END_V3 ===
+# V3 superseded by V4 below — asyncio.run moved after FIX_TOP2_BUILD_CONTEXT_HISTORY_V1
+# if __name__ == "__main__":
+#     asyncio.run(main())
+
+# === FIX_TOP2_BUILD_CONTEXT_HISTORY_V1 ===
+# Root cause: _top2_ob_build_context only searched active (live) parents.
+# DONE/FAILED/CANCELLED tasks were excluded → thin voice got no history context
+# → _top2_ob_estimate_like(full_context) = False → "vague_no_memory_revive" or
+# P3 saw no dims → "Уточни размеры дома".
+#
+# Fix: extend _top2_ob_build_context to also pull best historical raw_input
+# from DONE/FAILED/CANCELLED tasks within 7 days as read-only ТЗ context.
+# CANCELLED P6E67_MERGED tasks are especially valuable (contain full spec).
+import logging as _t2bch_log_mod
+_T2BCH_LOG = _t2bch_log_mod.getLogger("task_worker")
+
+_t2bch_orig_build_context = _top2_ob_build_context
+
+
+def _top2_ob_build_context(conn, task_id, chat_id, topic_id, raw):
+    context_str, parent_id = _t2bch_orig_build_context(conn, task_id, chat_id, topic_id, raw)
+
+    # Already found a live parent with content — done
+    if parent_id:
+        return context_str, parent_id
+
+    # Try to find best historical raw_input from completed/failed/cancelled tasks
+    try:
+        rows = conn.execute("""
+            SELECT raw_input, error_message, state FROM tasks
+            WHERE chat_id=? AND COALESCE(topic_id,0)=?
+              AND id<>?
+              AND state IN ('DONE','FAILED','CANCELLED')
+              AND updated_at >= datetime('now','-7 days')
+              AND input_type <> 'search'
+              AND (
+                raw_input LIKE '%дом%' OR raw_input LIKE '%каркас%' OR
+                raw_input LIKE '%газобетон%' OR raw_input LIKE '%монолит%' OR
+                raw_input LIKE '%фундамент%' OR raw_input LIKE '%кровл%' OR
+                raw_input LIKE '%ангар%' OR raw_input LIKE '%склад%' OR
+                raw_input LIKE '%высота%' OR raw_input LIKE '%этаж%' OR
+                raw_input LIKE '%на 8%' OR raw_input LIKE '%на 6%' OR
+                raw_input LIKE '%на 10%' OR raw_input LIKE '%на 12%'
+              )
+            ORDER BY updated_at DESC LIMIT 10
+        """, (str(chat_id), int(topic_id or 0), str(task_id))).fetchall()
+
+        best_raw, best_score = "", 0
+        for row in rows:
+            ri = str(row[0] or "")
+            low = ri.lower().replace("ё", "е")
+            score = 0
+            if any(x in low for x in ("дом", "ангар", "склад", "баня")): score += 20
+            if any(x in low for x in ("каркас", "газобетон", "монолит", "кирпич")): score += 20
+            import re as _t2re
+            if _t2re.search(r"\d+\s*(?:на|x|х)\s*\d+", low): score += 25
+            if _t2re.search(r"\d+\s*км", low): score += 10
+            if any(x in low for x in ("монолит", "плита", "лента")): score += 10
+            # CANCELLED P6E67 tasks are gold — full spec was there
+            if "P6E67_MERGED" in str(row[1] or ""): score += 15
+            if score > best_score:
+                best_score, best_raw = score, ri
+
+        if best_score >= 20 and best_raw.strip():
+            _T2BCH_LOG.info("FIX_TOP2_BUILD_CONTEXT_HISTORY_V1: injecting history ctx score=%d", best_score)
+            history_part = "Историческое ТЗ (из завершённых задач):\n" + best_raw.strip()
+            if context_str:
+                context_str = context_str + "\n\n" + history_part
+            else:
+                context_str = history_part
+    except Exception as _t2bch_e:
+        _T2BCH_LOG.warning("FIX_TOP2_BUILD_CONTEXT_HISTORY_V1 err: %s", _t2bch_e)
+
+    return context_str, parent_id
+
+
+_T2BCH_LOG.info("FIX_TOP2_BUILD_CONTEXT_HISTORY_V1 installed")
+# === END_FIX_TOP2_BUILD_CONTEXT_HISTORY_V1 ===
+
+# === MOVE_MAIN_ENTRYPOINT_TO_END_V4 ===
 if __name__ == "__main__":
     asyncio.run(main())
-# === END_MOVE_MAIN_ENTRYPOINT_TO_END_V3 ===
+# === END_MOVE_MAIN_ENTRYPOINT_TO_END_V4 ===
 
