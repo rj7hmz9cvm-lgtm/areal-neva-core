@@ -1,0 +1,128 @@
+{
+  "chat_id": "current_chat",
+  "chat_name": "topic2_stroyka_price_choice_patch",
+  "exported_at": "2026-05-06T09:52:19+02:00",
+  "source_model": "GPT-5.5 Thinking",
+  "system": "AREAL-NEVA ORCHESTRA. Server-first Telegram orchestration system. GitHub SSOT repository rj7hmz9cvm-lgtm/areal-neva-core. Active server facts in this chat: base path /root/.areal-neva-core, DB /root/.areal-neva-core/data/core.db, worker log /root/.areal-neva-core/logs/task_worker.log, services areal-task-worker, telegram-ingress, areal-memory-api.",
+  "architecture": "Telegram topic_2 STROYKA -> telegram_daemon.py -> core.db tasks/task_history -> task_worker.py -> core/stroyka_estimate_canon.py and core/sample_template_engine.py -> XLSX/PDF/Drive output -> Telegram reply. Canon read in this chat says AI_ORCHESTRA/chat_-1003725299009/topic_2 is the Drive topic folder structure for STROYKA artifacts; GitHub chat export must be saved only under chat_exports/.",
+  "pipeline": "Expected task lifecycle for topic_2 estimate: NEW -> IN_PROGRESS -> WAITING_CLARIFICATION for price choice if needed -> explicit price confirmation -> generate XLSX and PDF -> upload Drive -> Telegram links -> DONE/AWAITING_CONFIRMATION only after valid result. Current live logs show this lifecycle is not fully closed after price confirmation because the price selection is bound but final XLSX/PDF generation is not confirmed.",
+  "files": [
+    "chat_exports/CHAT_EXPORT__topic2_stroyka_price_choice_patch__2026-05-06.json -> GitHub-clean export created by this operation",
+    "/root/.areal-neva-core/task_worker.py -> topic_2 routing, price-choice binding, task lifecycle hooks",
+    "/root/.areal-neva-core/core/stroyka_estimate_canon.py -> STROYKA estimate canon, price choice, XLSX/PDF generation wrappers",
+    "/root/.areal-neva-core/core/sample_template_engine.py -> topic_2 template/P3 estimate pipeline, price gate hooks",
+    "/root/.areal-neva-core/core/photo_recognition_engine.py -> topic_2 photo recognition route referenced by diagnostics",
+    "/root/.areal-neva-core/core/pdf_cyrillic.py -> PDF Cyrillic font support and validation referenced by diagnostics",
+    "/root/.areal-neva-core/data/core.db -> runtime task state and task_history",
+    "/root/.areal-neva-core/logs/task_worker.log -> live worker proof source"
+  ],
+  "code": "Python, SQLite, systemd, Telegram bot pipeline, Google Drive OAuth upload path, openpyxl/reportlab/pdf_cyrillic mentioned in diagnostics. No .env, credentials, sessions, google_io.py, memory.db schema, ai_router.py, telegram_daemon.py, reply_sender.py, or systemd unit file changes were requested or permitted in the current patch scope.",
+  "patches": [
+    "PATCH_TOPIC2_PRICE_CHOICE_BIND_AND_FINALIZE_V4 -> task_worker.py + core/stroyka_estimate_canon.py + core/sample_template_engine.py -> status: applied_by_terminal; terminal output: READY_TRUE; active_price_menu_available OK; no_recent_done_without_price_choice_confirmed OK",
+    "PATCH_TOPIC2_PRICE_CHOICE_BIND_AND_FINALIZE_V5 -> task_worker.py + core/stroyka_estimate_canon.py + core/sample_template_engine.py -> status: applied_by_terminal; terminal output: READY_TRUE; price_choice_confirm_marker_seen_or_waiting_for_new_reply OK; no_recent_done_without_price_choice_confirmed OK",
+    "PATCH_TOPIC2_PRICE_CHOICE_FINAL_GENERATE_V6 -> status: drafted_in_chat_only; no terminal output confirming application in this chat export window",
+    "PATCH_TOPIC2_TASK_WORKER_FULL_CLOSE_V3 -> task_worker.py -> status: installed before this export; live log marker exists; photo route warning says skipped because _p6_handle_photo_20260504 not found",
+    "PATCH_TOPIC2_STROYKA_ESTIMATE_CANON_FULL_CLOSE_V3 -> core/stroyka_estimate_canon.py -> status: installed before this export; live log marker exists",
+    "PATCH_TOPIC2_P3_PRICE_CHOICE_GATE_V1 -> core/sample_template_engine.py -> status: installed before this export; live log marker exists",
+    "FIX_P6E67_FIND_PARENT_NO_DONE_FAILED_V1 -> task_worker.py -> status: installed; live log marker exists",
+    "FIX_P6_TOPIC2_PRICE_CONFIRM_ROUTE_V1 -> task_worker.py -> status: installed; live log marker exists"
+  ],
+  "commands": [
+    "Diagnostic command queried git status, forbidden file diff, task_worker imports, entrypoint tail, price-flow code windows, py_compile, service status, topic_2 tasks/history, and worker logs",
+    "Terminal output confirmed git short SHA 91b2753 before patches V4/V5",
+    "Terminal output confirmed services active: areal-task-worker, telegram-ingress, areal-memory-api",
+    "Terminal output confirmed py_compile OK before V4/V5",
+    "V4 command performed backup, patch files, compile, DB runtime repair without schema change, restart, canon guard, topic_2 status, history, logs",
+    "V5 command performed backup, patch files, compile, DB runtime requeue without schema change, restart, canon guard, topic_2 status, history, logs"
+  ],
+  "db": "Observed topic_2 facts from terminal outputs: f1ef9fab-e364-46ac-b0da-ab8ae5c85a21 is the Зеленогорск КП task. It repeatedly showed TOPIC2_PRICE_CHOICE_REQUESTED and P6E67_PARENT_NOT_FOUND, then failed by timeout, then V4 reopened it to WAITING_CLARIFICATION, then V5 bound price choice median to it. ceac25be-a380-419c-9eec-a7b69b97da44 became DONE with result 'Выбор цены принят и привязан к сметной задаче: f1ef9fab-e364-46ac-b0da-ab8ae5c85a21'. edcf944b and 9b0626 were changed from DONE to AWAITING_CONFIRMATION because legacy DONE lacked TOPIC2_PRICE_CHOICE_CONFIRMED. V5 final current state still shows f1ef9fab in WAITING_CLARIFICATION with a price menu, not with Excel/PDF result.",
+  "memory": "No direct memory.db dump was requested or provided in the last diagnostic. Canon prohibits memory.db schema changes without direct permission. V4/V5 diagnostics mention DB runtime repair/requeue without schema changes only.",
+  "services": [
+    "areal-task-worker: active in terminal outputs after restart",
+    "telegram-ingress: active in terminal outputs after restart",
+    "areal-memory-api: active in terminal outputs after restart"
+  ],
+  "canons": [
+    "GitHub chat export canonical path: chat_exports/CHAT_EXPORT__<SAFE_NAME>__YYYY-MM-DD.json only",
+    "Google Drive artifact structure from canon: AI_ORCHESTRA/chat_-1003725299009/topic_2 for STROYKA topic artifacts",
+    "Patch order: diagnostics -> backup -> patch -> py_compile -> restart -> logs -> DB verify -> GitHub export/push when requested",
+    "Forbidden during this stage: .env, credentials, sessions, google_io.py, memory.db schema, ai_router.py, telegram_daemon.py, reply_sender.py, systemd unit files, DB schema changes without direct permission",
+    "INSTALLED is not VERIFIED; VERIFIED requires live terminal/Telegram proof",
+    "Python calculates estimate numbers; LLM must not calculate final numbers",
+    "XLSX/PDF must not be final before explicit price choice confirmation and artifact creation proof"
+  ],
+  "decisions": [
+    "Use GitHub API export path because current assistant has GitHub connector push/admin access and chat export protocol allows GitHub API variant",
+    "Do not write export to docs/HANDOFFS or docs/REPORTS because CHAT_EXPORT_PROTOCOL says GitHub chat exports go only to chat_exports/",
+    "Do not claim V6 installed because no terminal output confirms V6 application",
+    "Do not touch forbidden files or DB schema because user explicitly prohibited those changes",
+    "Current factual next fix target is final generation after price-choice binding, not another price menu"
+  ],
+  "errors": [
+    "Earlier patch attempt PATCH_TOPIC2_PRICE_CHOICE_BIND_AND_FINALIZE_V2 caused IndentationError in task_worker.py after an if statement near line 11812; user restored from Git HEAD and COMPILE_OK returned",
+    "After V4, f1ef9fab was reopened but later hit IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1 and remained without generated artifacts",
+    "After V5, ceac25be DONE only says price choice was accepted and bound to f1ef9fab; f1ef9fab still shows a price menu rather than generated XLSX/PDF",
+    "Photo route warning in logs: FIX_P6_TOPIC2_PHOTO_ROUTE_V1 skipped: _p6_handle_photo_20260504 not found",
+    "Legacy DONE estimate tasks edcf944b and 9b0626 had median result without TOPIC2_PRICE_CHOICE_CONFIRMED and were quarantined to AWAITING_CONFIRMATION by V4"
+  ],
+  "solutions": [
+    "V4 fixed/guarded recent DONE without price confirmation: terminal canon guard bad_done=0",
+    "V5 bound numeric reply '2' to f1ef9fab and inserted TOPIC2_PRICE_CHOICE_CONFIRMED:median in task_history",
+    "V5 requeued numeric reply task ceac25be and recorded PATCH_TOPIC2_PRICE_CHOICE_BIND_V5_BOUND_TO:f1ef9fab",
+    "Remaining required solution: after TOPIC2_PRICE_CHOICE_CONFIRMED, force parent f1ef9fab through estimate generation, prevent repeated price menu, and require XLSX/PDF/Drive markers before final DONE"
+  ],
+  "state": "As of the latest terminal output, price choice binding is partially working, but topic_2 STROYKA estimate finalization is not fully working because f1ef9fab is still WAITING_CLARIFICATION with a price menu after TOPIC2_PRICE_CHOICE_CONFIRMED:median and no XLSX/PDF Drive artifact is shown.",
+  "what_working": [
+    "GitHub repository access works; repo permissions include push/admin",
+    "CHAT_EXPORT_PROTOCOL was read and requires chat_exports path",
+    "Services are active after V4/V5 restarts",
+    "py_compile passed after V4/V5",
+    "V5 created history marker TOPIC2_PRICE_CHOICE_CONFIRMED:median for f1ef9fab",
+    "V5 bound ceac25be to f1ef9fab and marked ceac25be DONE with acceptance text",
+    "V4 canon guard reports no_recent_done_without_price_choice_confirmed OK",
+    "V5 canon guard reports no_recent_done_without_price_choice_confirmed OK"
+  ],
+  "what_broken": [
+    "Final generation after price choice is not proven: no latest Excel/PDF/Drive links for f1ef9fab in terminal output",
+    "f1ef9fab remains WAITING_CLARIFICATION with price menu after confirmation marker, meaning repeated menu loop is still present or generation did not start/finish",
+    "ceac25be DONE is only a binding acknowledgement, not a completed estimate artifact",
+    "Photo recognition route for topic_2 is not fully wired according to log warning: _p6_handle_photo_20260504 not found",
+    "Old STROYKA tasks show STALE_TIMEOUT / EXECUTION_TIMEOUT history and are not cleanly closed as successful estimates"
+  ],
+  "what_not_done": [
+    "V6 final generation patch was drafted in chat but not confirmed installed by terminal output in this export window",
+    "No verified XLSX artifact marker TOPIC2_XLSX_CREATED for current f1ef9fab task in the latest output",
+    "No verified PDF artifact marker TOPIC2_PDF_CREATED for current f1ef9fab task in the latest output",
+    "No verified Drive upload markers TOPIC2_DRIVE_UPLOAD_XLSX_OK and TOPIC2_DRIVE_UPLOAD_PDF_OK for current f1ef9fab task in the latest output",
+    "No verified Telegram delivery marker for current final estimate artifact in latest output",
+    "No live proof that PDF Cyrillic output is valid for the current generated estimate because current estimate was not generated"
+  ],
+  "current_breakpoint": "Next exact breakpoint: apply and verify a narrow topic_2 V6 patch that, after TOPIC2_PRICE_CHOICE_CONFIRMED:median, requeues parent f1ef9fab into IN_PROGRESS, blocks repeated price-menu output, forces _generate_and_send / P3 final generation with confirmed price context, and accepts success only when XLSX/PDF Drive links or explicit artifact history markers appear.",
+  "root_causes": [
+    "Price choice replies were previously treated as new/vague tasks; evidence: repeated TOPIC2_PRICE_CHOICE_REQUESTED and P6E67_PARENT_NOT_FOUND on f1ef9fab after user replied 2",
+    "Numeric price reply binding was missing until V5; evidence: V5 created TOPIC2_PRICE_CHOICE_CONFIRMED:median and PATCH_TOPIC2_PRICE_CHOICE_BIND_V5_FROM_TASK:ceac25be for f1ef9fab",
+    "Final generation is still not proven after binding; evidence: latest CURRENT_TOPIC2 shows f1ef9fab WAITING_CLARIFICATION with price menu and ceac25be DONE with only binding acknowledgement",
+    "Legacy estimates were allowed to DONE without explicit price confirmation; evidence: V4 changed edcf944b and 9b0626 to AWAITING_CONFIRMATION with PATCH_TOPIC2_LEGACY_BAD_DONE_BLOCKED_NO_PRICE_CONFIRM",
+    "Topic_2 photo route is incomplete; evidence: worker log says FIX_P6_TOPIC2_PHOTO_ROUTE_V1 skipped: _p6_handle_photo_20260504 not found"
+  ],
+  "verification": [
+    "ONE_SHARED_CONTEXT read from GitHub main: confirms topic_2=STROYKA, Python calculates, LLM does not calculate, and patch order diagnostics->backup->patch->compile->restart->logs->DB verify->Git push->final verify",
+    "CHAT_EXPORT_PROTOCOL read from GitHub main: confirms GitHub chat export path is chat_exports/ and file name format CHAT_EXPORT__<chat_name>__<YYYY-MM-DD>.json",
+    "Terminal V4 output: PATCH_TOPIC2_PRICE_CHOICE_BIND_AND_FINALIZE_V4_READY_TRUE",
+    "Terminal V4 output: bad_done_quarantined=2 and price_menu_reopened=f1ef9fab-e364-46ac-b0da-ab8ae5c85a21",
+    "Terminal V5 output: PATCH_TOPIC2_PRICE_CHOICE_BIND_AND_FINALIZE_V5_READY_TRUE",
+    "Terminal V5 output: requeued_numeric_reply_task=ceac25be-a380-419c-9eec-a7b69b97da44",
+    "Terminal V5 history: f1ef9fab TOPIC2_PRICE_CHOICE_CONFIRMED:median and PATCH_TOPIC2_PRICE_CHOICE_BIND_V5_FROM_TASK:ceac25be",
+    "Terminal V5 current topic2: f1ef9fab WAITING_CLARIFICATION with price menu; ceac25be DONE with binding acknowledgement",
+    "Terminal logs after V5: PATCH_TOPIC2_PRICE_CHOICE_BIND_V5_GENERATED parent=f1ef9fab choice=median"
+  ],
+  "limits": [
+    "Do not write chat export outside chat_exports/ in GitHub",
+    "Do not overwrite existing chat export files",
+    "Do not include secrets; redact any token-like value if encountered",
+    "Do not touch .env, credentials, sessions, google_io.py, memory.db schema, ai_router.py, telegram_daemon.py, reply_sender.py, systemd unit files for this stage",
+    "Do not change DB schema without direct permission",
+    "Do not claim VERIFIED without live terminal/Telegram proof",
+    "Do not mark V6 as applied until terminal output confirms backup, patch, py_compile, restart, queue/status check, logs, and canon guard"
+  ]
+}
