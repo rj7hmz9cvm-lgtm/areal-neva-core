@@ -3964,3 +3964,148 @@ async def p6f_tnz_handle_photo_act_real(file_path, file_name, task_id, chat_id, 
 p6f_tnz_handle_photo_act_real._p6hvbf_wrapped = True
 _P6HVBF_LOG.info("P6H_VISION_BLOCKED_FALLBACK_V1_INSTALLED")
 # === END_P6H_VISION_BLOCKED_FALLBACK_V1 ===
+
+# === P6_ACT_MATERIAL_FILTER_V1 ===
+# Canon §4/§5: в акт только реальные фото + пояснения к дефектам.
+# Фильтрует буфер перед тем как enriched-текст попадёт в LLM:
+# - исключает PDF/XLSX/DOCX (образцы, старые акты, таблицы)
+# - удаляет служебные команды из voice_comment
+# - передаёт объект/адрес/основание из active_folder в заголовок акта
+import logging as _p6amf_log
+import re as _p6amf_re
+
+_P6AMF_LOG = _p6amf_log.getLogger("technadzor_engine")
+
+_P6AMF_SERVICE_PATTERNS = [
+    "сделай акт", "делай акт", "оформи акт", "собери акт", "готовь акт",
+    "формируй акт", "сделать акт", "финальный акт",
+    "добавь в папку", "добавить в папку", "добавить в эту папку",
+    "не в тот чат", "не туда", "ошибочно",
+    "это тест", "тест надзор", "проверка связи",
+    "ты добавил", "добавил все", "ты все добавил",
+    "какой адрес", "какой у него адрес",
+    "дай мне нормы", "дай нормы",
+]
+
+_P6AMF_NON_PHOTO_EXT = (".xlsx", ".xls", ".pdf", ".docx", ".doc", ".pptx")
+_P6AMF_NON_PHOTO_TYPES = ("PDF", "XLSX", "XLS", "DOCX", "DOC", "OTHER")
+
+def _p6amf_is_service_comment(text):
+    if not text:
+        return False
+    low = str(text).lower().strip()
+    return any(p in low for p in _P6AMF_SERVICE_PATTERNS)
+
+def _p6amf_is_real_photo(m):
+    """True only for real photo materials that belong in the act."""
+    ft = str(m.get("file_type", "PHOTO")).upper()
+    if ft in _P6AMF_NON_PHOTO_TYPES:
+        return False
+    fn = str(m.get("file_name", "")).lower()
+    if any(fn.endswith(ext) for ext in _P6AMF_NON_PHOTO_EXT):
+        return False
+    if m.get("include_in_act") is False:
+        return False
+    return True
+
+def _p6amf_clean_comment(text):
+    """Return comment if substantive, empty string if service command."""
+    if _p6amf_is_service_comment(text):
+        return ""
+    return str(text or "").strip()
+
+def _p6amf_build_enriched(raw, active_folder, materials):
+    """Build structured enriched text for act LLM call."""
+    obj = active_folder.get("object_name") or active_folder.get("folder_name") or ""
+    addr = active_folder.get("object_address") or obj
+    basis = active_folder.get("visit_basis") or ""
+    src = active_folder.get("source_request") or ""
+    instructions = active_folder.get("owner_instructions") or []
+
+    # Filter to real photos only
+    photos = [m for m in materials if _p6amf_is_real_photo(m)]
+    # Excluded non-photo files (for reference note only)
+    excluded = [m for m in materials if not _p6amf_is_real_photo(m)]
+
+    lines = ["КОМАНДА: Сформировать акт технического надзора", ""]
+    if obj:
+        lines.append(f"ОБЪЕКТ: {obj}")
+    if addr and addr != obj:
+        lines.append(f"АДРЕС: {addr}")
+    if basis:
+        lines.append(f"ОСНОВАНИЕ: {basis}")
+    if src:
+        lines.append(f"ИСТОЧНИК ЗАЯВКИ: {src}")
+    lines.append("")
+
+    if instructions:
+        lines.append("ИНСТРУКЦИИ ВЛАДЕЛЬЦА:")
+        # Skip command-like instructions
+        for ins in instructions:
+            if not _p6amf_is_service_comment(ins):
+                lines.append("— " + str(ins).strip())
+        lines.append("")
+
+    lines.append(f"ФОТОМАТЕРИАЛЫ ОБЪЕКТА ({len(photos)} шт.):")
+    for i, m in enumerate(photos, 1):
+        fn = m.get("file_name", "")
+        lines.append(f"Фото №{i}: {fn}")
+        vc = _p6amf_clean_comment(m.get("voice_comment", ""))
+        if vc:
+            lines.append(f"  Пояснение: {vc}")
+        du = m.get("drive_url", "")
+        if du:
+            lines.append(f"  Ссылка: {du}")
+    lines.append("")
+
+    if excluded:
+        lines.append(f"Справочные файлы (не входят в фотофиксацию): {', '.join(m.get('file_name','') for m in excluded)}")
+        lines.append("")
+
+    return "\n".join(lines)
+
+# Wrap process_technadzor to intercept act command path
+_P6AMF_ORIG_PT = process_technadzor
+
+def process_technadzor(text="", task_id="", chat_id="", topic_id=0, file_path="", file_name="", **kwargs):  # noqa: F811
+    try:
+        tid = int(topic_id or (kwargs.get("topic_id") or 0))
+    except Exception:
+        tid = 0
+    if tid != 5:
+        return _P6AMF_ORIG_PT(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id,
+                               file_path=file_path, file_name=file_name, **kwargs)
+
+    # Only intercept act command path
+    raw = str(text or "").strip()
+    if not _t5v2_positive_act(raw):
+        return _P6AMF_ORIG_PT(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id,
+                               file_path=file_path, file_name=file_name, **kwargs)
+
+    try:
+        chat = str(chat_id or "")
+        buf = _t5v2_load_buf(chat)
+        materials = buf.get("materials", [])
+        if not materials:
+            return _P6AMF_ORIG_PT(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id,
+                                   file_path=file_path, file_name=file_name, **kwargs)
+
+        active_folder = get_active_folder(chat, 5) or {}
+        enriched = _p6amf_build_enriched(raw, active_folder, materials)
+
+        photo_count = len([m for m in materials if _p6amf_is_real_photo(m)])
+        excluded_count = len(materials) - photo_count
+        _P6AMF_LOG.info(
+            "P6AMF_ACT_FILTER chat=%s photos=%s excluded=%s obj=%s",
+            chat, photo_count, excluded_count, active_folder.get("object_name", "")
+        )
+        return _P6AMF_ORIG_PT(text=enriched, task_id=task_id, chat_id=chat, topic_id=5,
+                               file_path=file_path, file_name=file_name, **kwargs)
+    except Exception as _e:
+        _P6AMF_LOG.exception("P6AMF_ERR %s", _e)
+        return _P6AMF_ORIG_PT(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id,
+                               file_path=file_path, file_name=file_name, **kwargs)
+
+process_technadzor._p6amf_wrapped = True
+_P6AMF_LOG.info("P6_ACT_MATERIAL_FILTER_V1_INSTALLED")
+# === END_P6_ACT_MATERIAL_FILTER_V1 ===
