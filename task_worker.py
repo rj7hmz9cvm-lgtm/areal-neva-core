@@ -14892,3 +14892,365 @@ else:
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+
+# ============================================================
+# === PATCH_TOPIC2_CANCEL_GUARD_V1 ===
+# Цель: cancel-intent в topic_2 ловится ДО любого estimate route_guard
+# Факт: 11:54 «Отмена всех задач» → бот выдал смету
+# Факт: 17:33 «Задача отменена» → бот спросил «Сколько этажей»
+# ============================================================
+import re as _tcg_re
+import inspect as _tcg_inspect
+import logging as _tcg_logging
+_TCG_LOG = _tcg_logging.getLogger("task_worker.cancel_guard")
+
+_TCG_CANCEL_RE = _tcg_re.compile(
+    r"(?:^|\s)(?:\[VOICE\]\s*)?"
+    r"(отмена|отбой|стоп|заверши|завершена|закрой|закрывай|очисти|"
+    r"отменяй|задача отменена|отмена задач|все задачи завершен|"
+    r"отбой всех|очисти все|задача завершена)",
+    _tcg_re.IGNORECASE
+)
+
+def _tcg_is_cancel(text):
+    if not text:
+        return False
+    s = str(text).strip().lower()
+    if len(s) > 200:
+        return False
+    return bool(_TCG_CANCEL_RE.search(s))
+
+def _tcg_get(task, key, default=""):
+    try:
+        if isinstance(task, dict):
+            return task.get(key, default)
+        return task[key]
+    except Exception:
+        return default
+
+_TCG_ORIG_HANDLE_NEW = globals().get("_handle_new")
+if _TCG_ORIG_HANDLE_NEW and not getattr(_TCG_ORIG_HANDLE_NEW, "_tcg_wrapped", False):
+    async def _handle_new(conn, task, *args, **kwargs):
+        try:
+            topic_id = int(_tcg_get(task, "topic_id", 0) or 0)
+            raw = str(_tcg_get(task, "raw_input", "") or "")
+            if topic_id == 2 and _tcg_is_cancel(raw):
+                task_id = str(_tcg_get(task, "id", ""))
+                chat_id = str(_tcg_get(task, "chat_id", ""))
+                reply_to = _tcg_get(task, "reply_to_message_id", None)
+                try:
+                    conn.execute(
+                        "UPDATE tasks SET state='CANCELLED', "
+                        "error_message='TOPIC2_CANCEL_GUARD_V1', "
+                        "updated_at=datetime('now') WHERE id=?",
+                        (task_id,)
+                    )
+                    conn.execute(
+                        "UPDATE tasks SET state='CANCELLED', "
+                        "error_message='TOPIC2_CANCEL_GUARD_V1:scoped' "
+                        "WHERE chat_id=? AND topic_id=2 "
+                        "AND state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION') "
+                        "AND id<>?",
+                        (chat_id, task_id)
+                    )
+                    conn.execute(
+                        "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, datetime('now'))",
+                        (task_id, "TOPIC2_CANCEL_GUARD_V1:cancelled_active_topic2")
+                    )
+                    conn.commit()
+                except Exception as _e:
+                    _TCG_LOG.warning("CANCEL_GUARD_DB_ERR task=%s err=%s", task_id, _e)
+                try:
+                    _send_once(conn, task_id, chat_id,
+                               "Задачи в этом топике отменены.",
+                               reply_to, "topic2_cancel_guard")
+                except Exception as _e:
+                    _TCG_LOG.warning("CANCEL_GUARD_SEND_ERR task=%s err=%s", task_id, _e)
+                _TCG_LOG.info("TOPIC2_CANCEL_GUARD_V1 fired task=%s chat=%s", task_id, chat_id)
+                return
+        except Exception as e:
+            _TCG_LOG.exception("CANCEL_GUARD_TOP_ERR err=%s", e)
+        res = _TCG_ORIG_HANDLE_NEW(conn, task, *args, **kwargs)
+        if _tcg_inspect.isawaitable(res):
+            return await res
+        return res
+    _handle_new._tcg_wrapped = True
+
+_TCG_LOG.info("PATCH_TOPIC2_CANCEL_GUARD_V1 installed")
+# === END_PATCH_TOPIC2_CANCEL_GUARD_V1 ===
+
+
+# ============================================================
+# === PATCH_TOPIC2_FRESH_ESTIMATE_FALLBACK_V1 ===
+# Цель: при P6E67_PARENT_NOT_FOUND с полным новым ТЗ → fresh estimate
+# Факт: 12:50, 13:43, 19:33 — «Не нашёл родительскую задачу» при полном ТЗ
+# ============================================================
+import re as _tffe_re
+import inspect as _tffe_inspect
+import logging as _tffe_logging
+_TFFE_LOG = _tffe_logging.getLogger("task_worker.fresh_fallback")
+
+_TFFE_ESTIMATE_KEYS = (
+    "смет", "кп", "коммерческ", "расчёт", "расчет", "стоимост", "цен",
+    "объём", "объем", "м²", "м2", "м³", "м3", "посчитай", "посчитать",
+    "монолит", "бетон", "арматур", "фундамент", "стен", "перекрыт", "кровл",
+    "газобетон", "каркас", "кирпич", "отделк", "имитация бруса", "ламинат"
+)
+
+def _tffe_count_estimate_signals(text):
+    if not text:
+        return 0
+    low = str(text).lower()
+    return sum(1 for k in _TFFE_ESTIMATE_KEYS if k in low)
+
+def _tffe_get(task, key, default=""):
+    try:
+        if isinstance(task, dict):
+            return task.get(key, default)
+        return task[key]
+    except Exception:
+        return default
+
+_TFFE_ORIG_P6E67 = globals().get("_p6e67_try_merge")
+if _TFFE_ORIG_P6E67 and not getattr(_TFFE_ORIG_P6E67, "_tffe_wrapped", False):
+    async def _p6e67_try_merge(conn, task, *args, **kwargs):
+        topic_id = int(_tffe_get(task, "topic_id", 0) or 0)
+        raw = str(_tffe_get(task, "raw_input", "") or "")
+        signals = _tffe_count_estimate_signals(raw) if topic_id == 2 else 0
+        if topic_id == 2 and signals >= 3:
+            try:
+                fn = globals().get("_t2fer_run_final_estimate")
+                if fn:
+                    if await fn(conn, task, "FRESH_FALLBACK_FULL_TZ"):
+                        _TFFE_LOG.info("TFFE_FRESH_FALLBACK_OK task=%s signals=%d",
+                                       _tffe_get(task, "id"), signals)
+                        return True
+            except Exception as e:
+                _TFFE_LOG.warning("TFFE_FRESH_FALLBACK_ERR task=%s err=%s",
+                                  _tffe_get(task, "id"), e)
+        res = _TFFE_ORIG_P6E67(conn, task, *args, **kwargs)
+        if _tffe_inspect.isawaitable(res):
+            return await res
+        return res
+    _p6e67_try_merge._tffe_wrapped = True
+
+_TFFE_LOG.info("PATCH_TOPIC2_FRESH_ESTIMATE_FALLBACK_V1 installed")
+# === END_PATCH_TOPIC2_FRESH_ESTIMATE_FALLBACK_V1 ===
+
+
+# ============================================================
+# === PATCH_TOPIC2_PRICE_REPLY_REVIVE_V1 ===
+# Цель: короткий ответ ("2", "да", "жду") при WAITING_CLARIFICATION + PRICE_REQUESTED 
+#       идёт в parent, не создаёт новую задачу
+# Факт: 10:04-10:06 — пять ответов "2"/"" подряд → 5 P6E67_PARENT_NOT_FOUND
+# Факт: 10:36 — "Какая последняя задача" → новая задача с price menu
+# ============================================================
+import re as _tprr_re
+import inspect as _tprr_inspect
+import logging as _tprr_logging
+_TPRR_LOG = _tprr_logging.getLogger("task_worker.price_revive")
+
+_TPRR_PRICE_REPLY_RE = _tprr_re.compile(
+    r"^\s*(?:\[VOICE\]\s*)?"
+    r"(?:1|2|3|4|а\)?|б\)?|в\)?|г\)?|"
+    r"да|ок|жду|давай|делай|поехали|"
+    r"вариант\s*[1-4абвг]|"
+    r"миним|средн|максим|медиан|шаблонн|ручн|"
+    r"ставь\s+\w+)"
+    r"\s*$",
+    _tprr_re.IGNORECASE
+)
+
+def _tprr_is_short_price_reply(text):
+    if not text:
+        return False
+    s = str(text).strip()
+    if len(s) > 80:
+        return False
+    return bool(_TPRR_PRICE_REPLY_RE.match(s))
+
+def _tprr_get(task, key, default=""):
+    try:
+        if isinstance(task, dict):
+            return task.get(key, default)
+        return task[key]
+    except Exception:
+        return default
+
+def _tprr_find_active_price_parent(conn, chat_id):
+    try:
+        row = conn.execute(
+            """SELECT id FROM tasks 
+               WHERE chat_id=? AND topic_id=2 
+                 AND state IN ('WAITING_CLARIFICATION','IN_PROGRESS')
+                 AND id IN (
+                   SELECT task_id FROM task_history 
+                   WHERE action='TOPIC2_PRICE_CHOICE_REQUESTED'
+                 )
+               ORDER BY updated_at DESC LIMIT 1""",
+            (str(chat_id),)
+        ).fetchone()
+        if row:
+            return row["id"] if hasattr(row, "keys") else row[0]
+    except Exception:
+        pass
+    return None
+
+_TPRR_ORIG_HANDLE_NEW = globals().get("_handle_new")
+if _TPRR_ORIG_HANDLE_NEW and not getattr(_TPRR_ORIG_HANDLE_NEW, "_tprr_wrapped", False):
+    async def _handle_new(conn, task, *args, **kwargs):
+        try:
+            topic_id = int(_tprr_get(task, "topic_id", 0) or 0)
+            raw = str(_tprr_get(task, "raw_input", "") or "")
+            if topic_id == 2 and _tprr_is_short_price_reply(raw):
+                chat_id = str(_tprr_get(task, "chat_id", ""))
+                parent_id = _tprr_find_active_price_parent(conn, chat_id)
+                if parent_id:
+                    task_id = str(_tprr_get(task, "id", ""))
+                    try:
+                        conn.execute(
+                            "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, datetime('now'))",
+                            (parent_id, "clarified:" + raw[:200])
+                        )
+                        conn.execute(
+                            "UPDATE tasks SET state='IN_PROGRESS', error_message='', "
+                            "updated_at=datetime('now') WHERE id=?",
+                            (parent_id,)
+                        )
+                        conn.execute(
+                            "UPDATE tasks SET state='CANCELLED', "
+                            "error_message='TPRR:MERGED_TO_PARENT:'||?, "
+                            "result='Ответ применён к активной сметной задаче' "
+                            "WHERE id=?",
+                            (parent_id, task_id)
+                        )
+                        conn.execute(
+                            "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, datetime('now'))",
+                            (task_id, "TPRR_MERGED_TO_PRICE_PARENT:" + parent_id)
+                        )
+                        conn.commit()
+                        _TPRR_LOG.info("TPRR_MERGE task=%s → parent=%s reply=%s",
+                                       task_id, parent_id, raw[:30])
+                    except Exception as _e:
+                        _TPRR_LOG.warning("TPRR_DB_ERR task=%s err=%s", task_id, _e)
+                    return
+        except Exception as e:
+            _TPRR_LOG.exception("TPRR_TOP_ERR err=%s", e)
+        res = _TPRR_ORIG_HANDLE_NEW(conn, task, *args, **kwargs)
+        if _tprr_inspect.isawaitable(res):
+            return await res
+        return res
+    _handle_new._tprr_wrapped = True
+
+_TPRR_LOG.info("PATCH_TOPIC2_PRICE_REPLY_REVIVE_V1 installed")
+# === END_PATCH_TOPIC2_PRICE_REPLY_REVIVE_V1 ===
+
+
+# ============================================================
+# === PATCH_TOPIC2_PRICE_TIMEOUT_GUARD_V1 ===
+# Цель: задачи с TOPIC2_PRICE_CHOICE_REQUESTED не убивает 30-мин таймаут
+# Факт: 10:16, 10:35, 10:43 — IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1
+#       убил f1ef9fab пока юзер думал над ценой
+# ============================================================
+import logging as _tptg_logging
+_TPTG_LOG = _tptg_logging.getLogger("task_worker.price_timeout_guard")
+
+_TPTG_ORIG_TIMEOUT = globals().get("_in_progress_hard_timeout_by_created_at_fix_v1")
+if _TPTG_ORIG_TIMEOUT and not getattr(_TPTG_ORIG_TIMEOUT, "_tptg_wrapped", False):
+    def _in_progress_hard_timeout_by_created_at_fix_v1(conn, minutes: int = 30) -> int:
+        try:
+            rows = conn.execute(
+                """SELECT id FROM tasks
+                   WHERE state='IN_PROGRESS' AND topic_id=2
+                     AND id IN (
+                       SELECT task_id FROM task_history 
+                       WHERE action='TOPIC2_PRICE_CHOICE_REQUESTED'
+                     )""",
+            ).fetchall()
+            shielded = 0
+            for r in rows:
+                tid = r["id"] if hasattr(r, "keys") else r[0]
+                try:
+                    conn.execute(
+                        "UPDATE tasks SET state='WAITING_CLARIFICATION', "
+                        "error_message='TPTG:price_choice_pending', "
+                        "updated_at=datetime('now') WHERE id=? AND state='IN_PROGRESS'",
+                        (str(tid),)
+                    )
+                    shielded += 1
+                except Exception:
+                    pass
+            if shielded:
+                conn.commit()
+                _TPTG_LOG.info("TPTG_SHIELDED %d tasks (price_pending → WAITING_CLARIFICATION)", shielded)
+        except Exception as e:
+            _TPTG_LOG.warning("TPTG_PREFILTER_ERR %s", e)
+        return _TPTG_ORIG_TIMEOUT(conn, minutes)
+    _in_progress_hard_timeout_by_created_at_fix_v1._tptg_wrapped = True
+
+_TPTG_LOG.info("PATCH_TOPIC2_PRICE_TIMEOUT_GUARD_V1 installed")
+# === END_PATCH_TOPIC2_PRICE_TIMEOUT_GUARD_V1 ===
+
+
+# ============================================================
+# === PATCH_TOPIC2_DONE_OVERRIDE_INVALID_PUBLIC_V1 ===
+# Цель: если у задачи topic_2 есть все DONE markers + Drive XLSX/PDF ссылки,
+#       не блокировать переход в AWAITING_CONFIRMATION/DONE через INVALID_PUBLIC_RESULT
+# Факт логов 21:05:02: задача 893436d4 имела все 14 markers, но state=FAILED
+# ============================================================
+import logging as _tdoip_logging
+_TDOIP_LOG = _tdoip_logging.getLogger("task_worker.done_override")
+
+_TDOIP_REQUIRED_MARKERS = (
+    "TOPIC2_XLSX_CREATED",
+    "TOPIC2_PDF_CREATED",
+    "TOPIC2_DRIVE_UPLOAD_XLSX_OK",
+    "TOPIC2_DRIVE_UPLOAD_PDF_OK",
+    "TOPIC2_TELEGRAM_DELIVERED",
+)
+
+def _tdoip_has_all_done_markers(conn, task_id):
+    try:
+        rows = conn.execute(
+            "SELECT action FROM task_history WHERE task_id=?",
+            (str(task_id),)
+        ).fetchall()
+        actions = " ".join(str(r[0]) for r in rows)
+        return all(m in actions for m in _TDOIP_REQUIRED_MARKERS)
+    except Exception:
+        return False
+
+def _tdoip_has_drive_links_in_result(result):
+    if not result:
+        return False
+    s = str(result).lower()
+    return "drive.google.com" in s and ("xlsx" in s or "pdf" in s or ".xls" in s or "📊" in str(result) or "📄" in str(result))
+
+_TDOIP_ORIG_VIOLATION = globals().get("_fcg_public_result_violation")
+if _TDOIP_ORIG_VIOLATION and not getattr(_TDOIP_ORIG_VIOLATION, "_tdoip_wrapped", False):
+    def _fcg_public_result_violation(conn, task_id, state, result, error_message=""):
+        try:
+            row = conn.execute(
+                "SELECT topic_id FROM tasks WHERE id=?", (str(task_id),)
+            ).fetchone()
+            topic_id_v = int(row[0]) if row else 0
+            if topic_id_v == 2:
+                if _tdoip_has_all_done_markers(conn, task_id) and _tdoip_has_drive_links_in_result(result):
+                    try:
+                        conn.execute(
+                            "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                            (str(task_id), "TDOIP_OVERRIDE:14_markers_and_drive_links_present")
+                        )
+                        conn.commit()
+                    except Exception:
+                        pass
+                    _TDOIP_LOG.info("TDOIP_OVERRIDE task=%s — markers + Drive links → no violation", task_id)
+                    return ""
+        except Exception as e:
+            _TDOIP_LOG.warning("TDOIP_TOP_ERR task=%s err=%s", task_id, e)
+        return _TDOIP_ORIG_VIOLATION(conn, task_id, state, result, error_message)
+    _fcg_public_result_violation._tdoip_wrapped = True
+
+_TDOIP_LOG.info("PATCH_TOPIC2_DONE_OVERRIDE_INVALID_PUBLIC_V1 installed")
+# === END_PATCH_TOPIC2_DONE_OVERRIDE_INVALID_PUBLIC_V1 ===

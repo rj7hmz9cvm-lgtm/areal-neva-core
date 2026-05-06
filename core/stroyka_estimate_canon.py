@@ -2303,3 +2303,107 @@ def _create_xlsx_from_template(task_id, parsed, template, template_path, sheet_n
 
 _SC15_LOG.info("PATCH_STROYKA_XLSX_15_COLS_V1 installed")
 # === END_PATCH_STROYKA_XLSX_15_COLS_V1 ===
+
+
+# ============================================================
+# === PATCH_STROYKA_PARENT_AWARE_MISSING_QUESTION_V1 ===
+# Цель: _missing_question учитывает parent.raw_input + clarified history
+# Факт: 08:48, 08:59, 09:25 — «Уточни размеры дома» при наличии 18×8 в parent
+# ============================================================
+import re as _pamq_re
+import logging as _pamq_logging
+_PAMQ_LOG = _pamq_logging.getLogger("stroyka.parent_aware_missing")
+
+_PAMQ_DIM_RE = _pamq_re.compile(r"(\d{1,3})\s*[xх*на]+\s*(\d{1,3})", _pamq_re.IGNORECASE)
+_PAMQ_FLOORS_RE = _pamq_re.compile(r"(\d+)\s*этаж|этаж\w*\s*(\d+)", _pamq_re.IGNORECASE)
+_PAMQ_OBJ_WORDS = ("дом", "ангар", "склад", "гараж", "баня", "коробк", "фундамент", "кровл")
+_PAMQ_MAT_WORDS = ("каркас", "газобетон", "кирпич", "керамоблок", "монолит", "арболит", "брус", "сип")
+
+def _pamq_collect_full_context(conn, task):
+    chunks = []
+    try:
+        if isinstance(task, dict):
+            chunks.append(str(task.get("raw_input") or ""))
+            chunks.append(str(task.get("caption") or ""))
+        else:
+            try:
+                chunks.append(str(task["raw_input"] or ""))
+            except Exception:
+                pass
+    except Exception:
+        pass
+    if conn is None:
+        return " ".join(chunks).lower()
+    try:
+        tid = task.get("id") if isinstance(task, dict) else None
+        try:
+            parent_id = task.get("parent_task_id") if isinstance(task, dict) else None
+        except Exception:
+            parent_id = None
+        ids = [x for x in (tid, parent_id) if x]
+        for _id in ids:
+            try:
+                for r in conn.execute(
+                    "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'clarified:%'",
+                    (_id,)
+                ).fetchall():
+                    chunks.append(str(r[0]).replace("clarified:", ""))
+                row = conn.execute(
+                    "SELECT raw_input, caption FROM tasks WHERE id=?", (_id,)
+                ).fetchone()
+                if row:
+                    chunks.append(str(row[0] or ""))
+                    chunks.append(str(row[1] or ""))
+            except Exception:
+                pass
+    except Exception as e:
+        _PAMQ_LOG.debug("PAMQ_DB_ERR err=%s", e)
+    return " ".join(chunks).lower()
+
+def _pamq_has_dimensions(text):
+    return bool(_PAMQ_DIM_RE.search(text or ""))
+
+def _pamq_has_object(text):
+    return any(w in (text or "") for w in _PAMQ_OBJ_WORDS)
+
+def _pamq_has_floors(text):
+    return bool(_PAMQ_FLOORS_RE.search(text or "")) or "одноэтажн" in (text or "") or "двухэтажн" in (text or "")
+
+def _pamq_has_material(text):
+    return any(w in (text or "") for w in _PAMQ_MAT_WORDS)
+
+_PAMQ_ORIG_MISSING = globals().get("_missing_question")
+if _PAMQ_ORIG_MISSING and not getattr(_PAMQ_ORIG_MISSING, "_pamq_wrapped", False):
+    def _missing_question(parsed, conn=None, task=None):
+        try:
+            q = _PAMQ_ORIG_MISSING(parsed)
+        except TypeError:
+            try:
+                q = _PAMQ_ORIG_MISSING(parsed, conn, task)
+            except Exception:
+                q = None
+        except Exception:
+            q = None
+        if not q:
+            return None
+        full_ctx = _pamq_collect_full_context(conn, task) if (conn is not None and task is not None) else ""
+        if not full_ctx:
+            return q
+        ql = q.lower()
+        if "размер" in ql and _pamq_has_dimensions(full_ctx):
+            _PAMQ_LOG.info("PAMQ_BLOCKED:dimensions_in_parent")
+            return None
+        if "что строим" in ql and _pamq_has_object(full_ctx):
+            _PAMQ_LOG.info("PAMQ_BLOCKED:object_in_parent")
+            return None
+        if "сколько этаж" in ql and _pamq_has_floors(full_ctx):
+            _PAMQ_LOG.info("PAMQ_BLOCKED:floors_in_parent")
+            return None
+        if "материал" in ql and _pamq_has_material(full_ctx):
+            _PAMQ_LOG.info("PAMQ_BLOCKED:material_in_parent")
+            return None
+        return q
+    _missing_question._pamq_wrapped = True
+
+_PAMQ_LOG.info("PATCH_STROYKA_PARENT_AWARE_MISSING_QUESTION_V1 installed")
+# === END_PATCH_STROYKA_PARENT_AWARE_MISSING_QUESTION_V1 ===
