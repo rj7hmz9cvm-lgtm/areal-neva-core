@@ -3884,3 +3884,14 @@ def process_technadzor(text: str = "", task_id: str = "", chat_id: str = "", top
 
     return _T5V2_ORIG_PROCESS_TECHNADZOR(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs)
 # === END_FULLFIX_TOPIC5_TECHNADZOR_CANON_CONTOUR_V2_TECHNADZOR ===
+
+# === P6H_VISION_ENV_GATE_V1 ===
+# Enables external Vision if owner set EXTERNAL_PHOTO_ANALYSIS_ALLOWED=1/true in env.
+# _p6h_allow_external_vision() exists but was never called at startup.
+try:
+    import os as _p6h_veg_os
+    if _p6h_veg_os.getenv("EXTERNAL_PHOTO_ANALYSIS_ALLOWED", "").strip().lower() in {"1", "true", "yes", "on"}:
+        _p6h_allow_external_vision()
+except Exception:
+    pass
+# === END_P6H_VISION_ENV_GATE_V1 ===
