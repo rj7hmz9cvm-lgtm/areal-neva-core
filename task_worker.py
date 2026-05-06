@@ -11430,14 +11430,9 @@ def _p6e2_tw_estimate_like(text):
 # === END_FIX_P6E2_TW_ESTIMATE_LIKE_FULL_CONSTRUCTION_V1 ===
 
 # === MOVE_MAIN_ENTRYPOINT_TO_END_V2 ===
-# asyncio.run(main()) must be ABSOLUTE LAST LINE of file.
-# All module-level patches above (DRIVE_FILE_AUTO_DELIVER, TOPIC5_CANON_CLOSE_EXTEND,
-# DRIVE_FILE_AUTO_DELIVER_V2, FIX_P6H4TW_VOICE_ANNOTATE, DRIVE_FILE_NO_INTENT_OFFER,
-# FIX_P6E2_TW_ESTIMATE_LIKE_EXTEND, TOPIC500_ESTIMATE_ISOLATION_GUARD,
-# TOPIC5_PHOTO_ACT_CONFIRMATION_TIMEOUT_FIX, FIX_SEND_ONCE_EX_MESSAGE_THREAD_ID,
-# FIX_P6E2_TW_ESTIMATE_LIKE_FULL_CONSTRUCTION) must be installed before event loop starts.
-if __name__ == "__main__":
-    asyncio.run(main())
+# SUPERSEDED by V3 at bottom of file — more patches were appended after this block.
+# if __name__ == "__main__":
+#     asyncio.run(main())  # DO NOT ENABLE — see V3 below
 # === END_MOVE_MAIN_ENTRYPOINT_TO_END_V2 ===
 
 # === FIX_P6E67_FIND_PARENT_NO_DONE_FAILED_V1 ===
@@ -11496,4 +11491,10 @@ def _p6e67_find_parent(conn, task):
 
 _P6E67FIX_LOG.info("FIX_P6E67_FIND_PARENT_NO_DONE_FAILED_V1 installed")
 # === END_FIX_P6E67_FIND_PARENT_NO_DONE_FAILED_V1 ===
+
+# === MOVE_MAIN_ENTRYPOINT_TO_END_V3 ===
+# asyncio.run(main()) — ABSOLUTE LAST LINE. V1 and V2 superseded.
+if __name__ == "__main__":
+    asyncio.run(main())
+# === END_MOVE_MAIN_ENTRYPOINT_TO_END_V3 ===
 
