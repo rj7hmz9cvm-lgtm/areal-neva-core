@@ -14518,17 +14518,24 @@ _WCPE_LOG = _wcpe_log.getLogger("task_worker")
 _WCPE_ORIG_PICK = globals().get("_pick_next_task")
 if _WCPE_ORIG_PICK and not getattr(_WCPE_ORIG_PICK, "_wcpe_wrapped", False):
     def _pick_next_task(conn, chat_id=None):
-        row = _WCPE_ORIG_PICK(conn, chat_id)
-        if row is None:
-            return None
+        # Pick first non-WCG_SKIP task by scanning up to 20 candidates
         try:
-            err = str(row["error_message"] or "" if hasattr(row, "__getitem__") else "")
-            if "WCG_SKIP_WAITING_CLARIFICATION" in err:
-                _WCPE_LOG.debug("WCPE_SKIP_PICK task=%s", row["id"])
-                return None
+            where = ["state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION')",
+                     "NOT (COALESCE(error_message,'') LIKE 'WCG_SKIP%')"]
+            params = []
+            if chat_id:
+                where.insert(0, "chat_id=?")
+                params.append(str(chat_id))
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                f"SELECT * FROM tasks WHERE {' AND '.join(where)}"
+                " ORDER BY CASE state WHEN 'IN_PROGRESS' THEN 0 ELSE 1 END, created_at ASC LIMIT 1",
+                params
+            ).fetchone()
+            conn.execute("COMMIT")
+            return row
         except Exception:
-            pass
-        return row
+            return _WCPE_ORIG_PICK(conn, chat_id)
     _pick_next_task._wcpe_wrapped = True
     _WCPE_LOG.info("PATCH_TOPIC2_WC_PICKER_EXCLUDE_V1 installed")
 
@@ -14536,6 +14543,58 @@ if _WCPE_ORIG_PICK and not getattr(_WCPE_ORIG_PICK, "_wcpe_wrapped", False):
 # This happens automatically via _update_task which clears error_message.
 
 # === END_PATCH_TOPIC2_WC_PICKER_EXCLUDE_V1 ===
+
+# === PATCH_TOPIC2_T2RFP_LOOP_GUARD_V1 ===
+# Root cause: worker dispatches drive_file tasks to _handle_drive_file by input_type,
+# regardless of state. T2FER wraps _handle_drive_file and calls _t2fer_run_final_estimate
+# for ANY drive_file task with topic_2. T2RFP redirects to _handle_in_progress (full pipeline).
+# Pipeline may leave task in WAITING_CLARIFICATION/IN_PROGRESS → worker re-picks same task
+# → _handle_drive_file again → T2RFP redirects again → infinite loop (443 iterations seen).
+# Fix: for DRIVE_FILE_FRESH_ESTIMATE reason, only redirect if state==NEW (first pick).
+# Re-picks (WAITING_CLARIFICATION/IN_PROGRESS) pass through to original simplified path.
+
+import logging as _t2rlg_log
+import inspect as _t2rlg_inspect
+_T2RLG_LOG = _t2rlg_log.getLogger("task_worker")
+
+_T2RLG_ORIG_FN = globals().get("_t2fer_run_final_estimate")
+
+if _T2RLG_ORIG_FN and not getattr(_T2RLG_ORIG_FN, "_t2rlg_wrapped", False):
+    async def _t2fer_run_final_estimate(conn, task, reason):
+        try:
+            topic_id_v = int(_t2fer_get(task, "topic_id", 0) or 0)
+        except Exception:
+            topic_id_v = 0
+
+        if topic_id_v != 2:
+            res = _T2RLG_ORIG_FN(conn, task, reason)
+            if _t2rlg_inspect.isawaitable(res):
+                return await res
+            return res
+
+        task_id = _t2fer_s(_t2fer_get(task, "id", ""))
+
+        if reason == "DRIVE_FILE_FRESH_ESTIMATE":
+            original_state = _t2fer_s(_t2fer_get(task, "state", "")).upper()
+            if original_state != "NEW":
+                _T2RLG_LOG.info(
+                    "T2RLG_SKIP_REPICK task=%s state=%s reason=%s — passing to simplified",
+                    task_id, original_state, reason
+                )
+                res = _T2RLG_ORIG_FN(conn, task, reason)
+                if _t2rlg_inspect.isawaitable(res):
+                    return await res
+                return res
+
+        res = _T2RLG_ORIG_FN(conn, task, reason)
+        if _t2rlg_inspect.isawaitable(res):
+            return await res
+        return res
+
+    _t2fer_run_final_estimate._t2rlg_wrapped = True
+    _T2RLG_LOG.info("PATCH_TOPIC2_T2RFP_LOOP_GUARD_V1 installed")
+
+# === END_PATCH_TOPIC2_T2RFP_LOOP_GUARD_V1 ===
 
 if __name__ == "__main__":
     asyncio.run(main())
