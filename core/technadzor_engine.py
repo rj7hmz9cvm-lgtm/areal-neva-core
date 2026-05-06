@@ -3896,7 +3896,7 @@ _P6HVBF_ORIG = p6f_tnz_handle_photo_act_real
 
 async def p6f_tnz_handle_photo_act_real(file_path, file_name, task_id, chat_id, topic_id, user_text=""):  # noqa: F811
     vision, vstatus = await _p6f_tnz_vision_via_openrouter(file_path)
-    if vision is None and vstatus == "EXTERNAL_PHOTO_ANALYSIS_BLOCKED":
+    if vstatus == "EXTERNAL_PHOTO_ANALYSIS_BLOCKED":
         # Canon §17: Vision blocked → build act from owner text + file metadata
         _P6HVBF_LOG.info("P6HVBF_VISION_BLOCKED_FALLBACK file=%s user_text_len=%s", file_name, len(user_text or ""))
         vision = {
