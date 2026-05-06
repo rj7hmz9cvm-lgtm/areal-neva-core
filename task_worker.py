@@ -14357,5 +14357,104 @@ if _T2RFP_ORIG and not getattr(_T2RFP_ORIG, "_t2rfp_wrapped", False):
 
 # === END_PATCH_TOPIC2_REDIRECT_FINAL_TO_FULL_PIPELINE_V2 ===
 
+# === PATCH_TOPIC2_STATUS_META_GUARD_V1 ===
+# §5: status/meta queries ("статус", "ну что там", "где результат") must NOT trigger estimate.
+# Wraps _t2fer_run_final_estimate on top of V2 redirect; safe fallback on any error.
+import logging as _tmg_log
+import inspect as _tmg_inspect
+_TMG_LOG = _tmg_log.getLogger("task_worker")
+
+_TMG_STATUS_PHRASES = frozenset((
+    "статус", "текущий статус", "какой статус",
+    "где результат", "ну что там", "что там", "что сейчас",
+    "что по задаче", "как дела с задачей", "когда будет готово",
+    "ну что", "что делаешь", "что происходит",
+))
+
+def _tmg_is_status_query(task) -> bool:
+    try:
+        raw = str(_t2fer_get(task, "raw_input", "") or "")
+        raw = raw.replace("[VOICE]", "").lower().replace("ё", "е").strip(" .,!?:;")
+        if len(raw) > 80:
+            return False
+        tokens = raw.split()
+        if len(tokens) > 5:
+            return False
+        return any(phrase in raw for phrase in _TMG_STATUS_PHRASES)
+    except Exception:
+        return False
+
+def _tmg_get_status_text(conn, chat_id: str) -> str:
+    try:
+        row = conn.execute(
+            "SELECT state, result, updated_at FROM tasks WHERE chat_id=? AND topic_id=2"
+            " AND state NOT IN ('DONE','FAILED','CANCELLED','ARCHIVED')"
+            " ORDER BY updated_at DESC LIMIT 1",
+            (str(chat_id),),
+        ).fetchone()
+        if not row:
+            return "Активных задач по разделу СТРОЙКА нет."
+        state_labels = {
+            "NEW": "в очереди",
+            "IN_PROGRESS": "выполняется",
+            "WAITING_CLARIFICATION": "ожидает уточнений",
+            "AWAITING_CONFIRMATION": "ожидает подтверждения",
+            "AWAITING_PRICE_CONFIRMATION": "ожидает выбора цен",
+        }
+        label = state_labels.get(str(row[0]), str(row[0]))
+        preview = str(row[1] or "")[:200].strip()
+        msg = f"Статус задачи: {label}"
+        if preview:
+            msg += f"\n\n{preview}"
+        return msg
+    except Exception:
+        return "Статус задачи временно недоступен."
+
+_TMG_ORIG = globals().get("_t2fer_run_final_estimate")
+if _TMG_ORIG and not getattr(_TMG_ORIG, "_tmg_wrapped", False):
+    async def _t2fer_run_final_estimate(conn, task, reason):
+        try:
+            topic_id_v = int(_t2fer_get(task, "topic_id", 0) or 0)
+        except Exception:
+            topic_id_v = 0
+
+        if topic_id_v == 2 and _tmg_is_status_query(task):
+            task_id = _t2fer_s(_t2fer_get(task, "id", ""))
+            chat_id_v = str(_t2fer_get(task, "chat_id", "") or "")
+            _TMG_LOG.info("T2_STATUS_QUERY_INTERCEPTED task=%s", task_id)
+            try:
+                status_msg = _tmg_get_status_text(conn, chat_id_v)
+                reply_to = None
+                try:
+                    reply_to = _t2fer_get(task, "reply_to_message_id", None)
+                    topic_id_for_send = int(_t2fer_get(task, "topic_id", 2) or 2)
+                except Exception:
+                    topic_id_for_send = 2
+                send_reply_ex(
+                    chat_id=chat_id_v,
+                    text=status_msg,
+                    reply_to_message_id=reply_to,
+                    message_thread_id=topic_id_for_send,
+                )
+                if conn and task_id:
+                    conn.execute(
+                        "UPDATE tasks SET state='DONE', result=?, updated_at=datetime('now') WHERE id=?",
+                        (status_msg, task_id),
+                    )
+                    conn.commit()
+            except Exception as _tmg_e:
+                _TMG_LOG.warning("T2_STATUS_REPLY_ERR task=%s err=%s", task_id, _tmg_e)
+            return True
+
+        res = _TMG_ORIG(conn, task, reason)
+        if _tmg_inspect.isawaitable(res):
+            return await res
+        return res
+
+    _t2fer_run_final_estimate._tmg_wrapped = True
+    _TMG_LOG.info("PATCH_TOPIC2_STATUS_META_GUARD_V1 installed")
+
+# === END_PATCH_TOPIC2_STATUS_META_GUARD_V1 ===
+
 if __name__ == "__main__":
     asyncio.run(main())

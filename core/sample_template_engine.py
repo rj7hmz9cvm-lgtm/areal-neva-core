@@ -7523,3 +7523,227 @@ def _write_estimate_xlsx(path: str, items, template, raw_input: str) -> None:
     except Exception:
         pass
 # === END_PATCH_TOPIC2_CANONICAL_XLSX_V1 ===
+
+# === PATCH_TOPIC2_TEMPLATE_SELECT_CANON_V1 ===
+# §12: canonical template selection by material + area
+# Replaces _final_estimate_score_template_v1 with area-aware logic.
+# Safe: fallback score=100 on any error; Deprecated ВОР_ → score=-999
+import re as _tsc_re
+import logging as _tsc_log
+_TSC_LOG = _tsc_log.getLogger("sample_template_engine")
+
+def _final_estimate_score_template_v1(file_name: str, raw_input: str = "") -> int:
+    try:
+        fname = str(file_name or "").lower().replace("ё", "е")
+        raw = str(raw_input or "").lower().replace("ё", "е")
+
+        if not fname.endswith((".xlsx", ".xls")):
+            return -1
+        if "вор_" in fname or "исправлено" in fname:
+            return -999
+
+        # Extract area from raw_input
+        area = 0.0
+        m = _tsc_re.search(r'(\d+(?:[.,]\d+)?)\s*(?:м2|м²|кв\.?\s*м|квадрат)', raw)
+        if m:
+            try:
+                area = float(m.group(1).replace(",", "."))
+            except Exception:
+                pass
+
+        is_karkас = any(x in raw for x in ("каркас", "sip", "сип", "брус", "бревно"))
+        is_concrete = any(x in raw for x in ("газобетон", "кирпич", "керамоблок", "монолит", "арболит", "газоблок", "пеноблок"))
+        is_storage = any(x in raw for x in ("ангар", "склад", "хранилищ"))
+        is_foundation_only = (
+            any(x in raw for x in ("фундамент", "плита", "сваи"))
+            and not any(x in raw for x in ("дом", "здание", "строительство", "этаж", "кровля"))
+        )
+        is_roof_only = (
+            any(x in raw for x in ("кровля", "крыша", "перекры"))
+            and not any(x in raw for x in ("дом", "строительство", "фундамент"))
+        )
+
+        if is_storage or is_foundation_only:
+            if any(x in fname for x in ("фундамент", "склад", "storage")):
+                return 950
+            if "ареал" in fname or "нева" in fname:
+                return 400
+            return 200
+
+        if is_roof_only:
+            if any(x in fname for x in ("крыш", "кров", "перекр")):
+                return 950
+            return 200
+
+        if is_karkас:
+            if "м-110" in fname or "м110" in fname:
+                return 900 if area > 100 else 600
+            if "м-80" in fname or "м80" in fname:
+                return 900 if (area > 0 and area <= 100) else 600
+            if "ареал" in fname or "нева" in fname:
+                return 300
+            return 100
+
+        if is_concrete:
+            if "ареал" in fname or "нева" in fname:
+                return 950
+            if "м-110" in fname or "м110" in fname:
+                return 400
+            if "м-80" in fname or "м80" in fname:
+                return 350
+            return 200
+
+        # Default → Ареал Нева
+        if "ареал" in fname or "нева" in fname:
+            return 800
+        if "м-110" in fname or "м110" in fname:
+            return 500
+        if "м-80" in fname or "м80" in fname:
+            return 450
+        return 200
+    except Exception:
+        return 100
+
+_TSC_LOG.info("PATCH_TOPIC2_TEMPLATE_SELECT_CANON_V1 installed")
+# === END_PATCH_TOPIC2_TEMPLATE_SELECT_CANON_V1 ===
+
+# === PATCH_TOPIC2_CANONICAL_XLSX_15COL_V2 ===
+# §18: canonical 15-column AREAL_CALC XLSX
+# Wraps _p2_create_xlsx; fallback to original on any exception → zero regression risk
+import logging as _p2xl15_log
+import datetime as _p2xl15_dt
+_P2XL15_LOG = _p2xl15_log.getLogger("sample_template_engine")
+_P2XL15_ORIG = _p2_create_xlsx
+
+def _p2_create_xlsx(task_id, p, rows, prices=None, price_status=""):
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        from openpyxl.utils import get_column_letter
+
+        out = _P6C_EST_OUT / f"estimate_topic2_canon_{str(task_id)[:8]}.xlsx"
+        wb = Workbook()
+        ws_in = wb.active
+        ws_in.title = "ТЗ"
+        ws = wb.create_sheet("AREAL_CALC", 1)
+        ws_price = wb.create_sheet("Проверка цен")
+
+        # ТЗ sheet
+        ws_in.append(["Параметр", "Значение"])
+        for row in [
+            ("Источник расчёта", "Только текущее ТЗ"),
+            ("Размеры", f"{p.get('dims',['',''])[0]}x{p.get('dims',['',''])[1]}" if p.get("dims") else ""),
+            ("Площадь застройки", p.get("footprint")),
+            ("Этажей", p.get("floors")),
+            ("Расчётная площадь", p.get("area_total")),
+            ("Фундамент", p.get("foundation")),
+            ("Стены", p.get("material")),
+            ("Удалённость, км", p.get("distance_km")),
+            ("Статус цен", price_status or "TEMPLATE_ONLY"),
+            ("Текущее ТЗ", p.get("raw")),
+        ]:
+            ws_in.append(list(row))
+
+        # Build price lookup by item name
+        price_lookup = {}
+        for pr in (prices or []):
+            try:
+                name = str(pr.get("name") or pr.get("item") or "").strip().lower()
+                if name:
+                    price_lookup[name] = pr
+            except Exception:
+                pass
+        today = _p2xl15_dt.date.today().isoformat()
+
+        # 15 canonical columns
+        ws.append([
+            "№", "Раздел", "Наименование", "Ед. изм.", "Кол-во",
+            "Цена работ", "Стоимость работ",
+            "Цена материалы", "Стоимость материалы",
+            "Всего", "Источник цены", "Поставщик", "URL", "checked_at", "Примечание"
+        ])
+
+        row_num = 2
+        for idx, r in enumerate(rows, 1):
+            item_key = str(r.get("item") or "").strip().lower()
+            pr_data = price_lookup.get(item_key, {})
+            supplier = str(pr_data.get("supplier") or "").strip() or "—"
+            url = str(pr_data.get("url") or "").strip() or ""
+            checked_at = str(pr_data.get("checked_at") or today)
+            if pr_data.get("url"):
+                src = "LIVE_CONFIRMED"
+            elif pr_data:
+                src = "PARTIAL"
+            else:
+                src = "TEMPLATE_ONLY"
+
+            ws.append([
+                idx,
+                r.get("section"),
+                r.get("item"),
+                r.get("unit"),
+                r.get("qty"),
+                r.get("work_price"),
+                None,
+                r.get("material_price"),
+                None,
+                None,
+                src,
+                supplier,
+                url,
+                checked_at,
+                r.get("note", ""),
+            ])
+            ws.cell(row_num, 7).value = f"=E{row_num}*F{row_num}"
+            ws.cell(row_num, 9).value = f"=E{row_num}*H{row_num}"
+            ws.cell(row_num, 10).value = f"=G{row_num}+I{row_num}"
+            row_num += 1
+
+        data_end = row_num - 1
+        ws.cell(row_num + 1, 9, "Итого без НДС")
+        ws.cell(row_num + 1, 10).value = f"=SUM(J2:J{data_end})"
+        ws.cell(row_num + 2, 9, "НДС 20%")
+        ws.cell(row_num + 2, 10).value = f"=J{row_num+1}*0.2"
+        ws.cell(row_num + 3, 9, "Итого с НДС")
+        ws.cell(row_num + 3, 10).value = f"=J{row_num+1}+J{row_num+2}"
+
+        # Price check sheet
+        ws_price.append(["Статус", price_status or "TEMPLATE_ONLY"])
+        ws_price.append(["Источник", "Интернет-проверка цен или базовые ставки"])
+        ws_price.append([])
+        ws_price.append(["Позиция", "Цена", "Ед.", "Поставщик", "URL", "checked_at", "Статус"])
+        for pr in (prices or []):
+            ws_price.append([
+                str(pr.get("name") or pr.get("item") or "")[:100],
+                pr.get("price") or pr.get("live_avg") or "",
+                str(pr.get("unit") or "")[:20],
+                str(pr.get("supplier") or "")[:80],
+                str(pr.get("url") or "")[:200],
+                str(pr.get("checked_at") or today)[:30],
+                str(pr.get("status") or "")[:30],
+            ])
+
+        thin = Side(style="thin", color="999999")
+        for sh in (ws_in, ws, ws_price):
+            for row in sh.iter_rows():
+                for c in row:
+                    c.border = Border(left=thin, right=thin, top=thin, bottom=thin)
+                    c.alignment = Alignment(wrap_text=True, vertical="top")
+            for cell in sh[1]:
+                cell.font = Font(bold=True)
+                cell.fill = PatternFill("solid", fgColor="D9EAF7")
+
+        for idx, width in enumerate([6,18,50,10,10,14,18,14,20,18,18,24,40,14,28], 1):
+            ws.column_dimensions[get_column_letter(idx)].width = width
+        ws_in.column_dimensions["A"].width = 28
+        ws_in.column_dimensions["B"].width = 90
+
+        wb.save(out)
+        _P2XL15_LOG.info("PATCH_TOPIC2_CANONICAL_XLSX_15COL_V2 saved %s rows → %s", len(rows), out)
+        return str(out)
+    except Exception as _xl15_e:
+        _P2XL15_LOG.warning("PATCH_TOPIC2_CANONICAL_XLSX_15COL_V2 FAILED (%s) — fallback to orig", _xl15_e)
+        return _P2XL15_ORIG(task_id, p, rows, prices=prices, price_status=price_status)
+
+_P2XL15_LOG.info("PATCH_TOPIC2_CANONICAL_XLSX_15COL_V2 installed")
+# === END_PATCH_TOPIC2_CANONICAL_XLSX_15COL_V2 ===
