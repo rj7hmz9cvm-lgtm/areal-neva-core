@@ -1825,3 +1825,39 @@ def _extract_dimensions(text: str) -> Optional[Tuple[float, float]]:
         return float(m.group(1).replace(",", ".")), float(m.group(2).replace(",", "."))
     return None
 # === END_FIX_EXTRACT_DIMENSIONS_NA_V1 ===
+
+# === FIX_STROYKA_PRICE_CONFIRM_EXTEND_V1 ===
+# CONTINUATION_WORDS / _is_confirm missed:
+# "ставь средние", "ставь минимальные", "выполни задачу", "собирай", "делай"
+# → user replies to price choice dialog but system creates new vague task.
+# Also: _pending_is_fresh 600s is too short (user may reply after 10+ min).
+import logging as _spc_log_mod
+_SPC_LOG = _spc_log_mod.getLogger("task_worker")
+
+_spc_orig_is_confirm = _is_confirm
+_spc_orig_pending_is_fresh = _pending_is_fresh
+
+
+def _is_confirm(text: str) -> bool:
+    if _spc_orig_is_confirm(text):
+        return True
+    t = _low(text).replace("[voice]", "").strip()
+    return any(x in t for x in (
+        "ставь средн", "ставь минимальн", "ставь максимальн",
+        "ставь шаблон", "ставь ручн",
+        "выполни задачу", "выполняй", "собирай", "делай смету",
+        "создавай", "генерируй", "запускай",
+        "беру средн", "беру минимальн", "беру шаблон",
+        "согласен", "согласна", "принято", "поехали",
+        "средние цены", "минимальные цены", "шаблонные цены",
+        "средн", "минимальн",
+    ))
+
+
+def _pending_is_fresh(pending, max_seconds: int = 600) -> bool:
+    # Extend to 24h — user may reply after a long time
+    return _spc_orig_pending_is_fresh(pending, max(max_seconds, 86400))
+
+
+_SPC_LOG.info("FIX_STROYKA_PRICE_CONFIRM_EXTEND_V1 installed")
+# === END_FIX_STROYKA_PRICE_CONFIRM_EXTEND_V1 ===

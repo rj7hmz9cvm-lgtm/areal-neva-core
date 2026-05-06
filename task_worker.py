@@ -11618,6 +11618,41 @@ def _p6_is_topic2_vague_20260504(raw):
 _P6FIX_LOG.info("FIX_P6_TOPIC2_ESTIMATE_VAGUE_V1 installed")
 # === END_FIX_P6_TOPIC2_ESTIMATE_VAGUE_V1 ===
 
+# === FIX_P6_TOPIC2_PRICE_CONFIRM_ROUTE_V1 ===
+# "ставь средние" / "выполни задачу" / "собирай" after price choice dialog
+# was not recognised as estimate continuation → P6 sent it to vague guard.
+# Fix: detect price-confirm phrases and route to estimate pipeline so that
+# stroyka_estimate_canon._is_confirm picks it up and resumes pending estimate.
+import logging as _p6pcr_log_mod
+_P6PCR_LOG = _p6pcr_log_mod.getLogger("task_worker")
+
+_p6pcr_orig_estimate = _p6_is_topic2_estimate_20260504
+_p6pcr_orig_vague = _p6_is_topic2_vague_20260504
+
+_P6PCR_CONFIRM_PHRASES = (
+    "ставь средн", "ставь минимальн", "ставь максимальн", "ставь шаблон",
+    "выполни задачу", "выполняй", "собирай", "делай смету", "создавай",
+    "средние цены", "минимальные цены", "шаблонные цены",
+    "беру средн", "беру минимальн", "согласен", "согласна", "поехали",
+)
+
+
+def _p6_is_topic2_estimate_20260504(raw):
+    if _p6pcr_orig_estimate(raw):
+        return True
+    low = str(raw or "").lower().replace("ё", "е")
+    return any(x in low for x in _P6PCR_CONFIRM_PHRASES)
+
+
+def _p6_is_topic2_vague_20260504(raw):
+    if _p6_is_topic2_estimate_20260504(raw):
+        return False
+    return _p6pcr_orig_vague(raw)
+
+
+_P6PCR_LOG.info("FIX_P6_TOPIC2_PRICE_CONFIRM_ROUTE_V1 installed")
+# === END_FIX_P6_TOPIC2_PRICE_CONFIRM_ROUTE_V1 ===
+
 # === MOVE_MAIN_ENTRYPOINT_TO_END_V4 ===
 if __name__ == "__main__":
     asyncio.run(main())
