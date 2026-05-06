@@ -7841,3 +7841,275 @@ async def _p2_price_search(p, rows, chat_id=None, topic_id=None):
 
 _P2PCI_LOG.info("PATCH_TOPIC2_PRICE_SEARCH_CHAT_ISOLATION_V1 installed")
 # === END_PATCH_TOPIC2_PRICE_SEARCH_CHAT_ISOLATION_V1 ===
+
+# === PATCH_TOPIC2_P6D_RECURSION_FIX_V1 ===
+# Root cause: handle_topic2_image_estimate_pipeline_p6d line 5926 calls
+# globals().get("handle_topic2_one_big_formula_pipeline_v1") which at runtime
+# returns the P3-wrapped version → P3 → P1FIX → P6E2 → P6D → P3 → infinite recursion.
+# Fix: re-wrap P6D to use _p3pcg_orig_handle (pre-P3, captured before P3 installed).
+# _p3pcg_orig_handle = P1FIX wrapper → P6E2 wrapper → (no image params) → pre-P6E2 pipeline.
+# No recursion: P6E2 skips photo branch when file_name/mime_type/local_path are empty.
+import logging as _p6drec_logging
+import inspect as _p6drec_inspect
+_P6DREC_LOG = _p6drec_logging.getLogger("sample_template_engine")
+
+_P6DREC_PRE_P3 = globals().get("_p3pcg_orig_handle")
+
+if _P6DREC_PRE_P3 and callable(_P6DREC_PRE_P3):
+    _P6DREC_ORIG_P6D = handle_topic2_image_estimate_pipeline_p6d
+
+    async def handle_topic2_image_estimate_pipeline_p6d(
+        conn, task, chat_id=None, topic_id=None, raw_input=None, local_path="", full_context=""
+    ):
+        payload = _p6d_img_json_maybe(
+            raw_input if raw_input is not None
+            else (task["raw_input"] if hasattr(task, "keys") and "raw_input" in task.keys() else "")
+        )
+        caption = _p6d_img_s(payload.get("caption") or full_context or raw_input, 12000)
+        file_name = _p6d_img_s(payload.get("file_name"), 1000)
+        mime_type = _p6d_img_s(payload.get("mime_type"), 1000)
+        task_id = _p6d_img_s(
+            payload.get("task_id") or (task["id"] if hasattr(task, "keys") and "id" in task.keys() else ""), 200
+        )
+
+        if not _p6d_img_is_image(file_name, mime_type, local_path):
+            return False
+        if not _p6d_img_estimate_like(caption):
+            return False
+
+        vision_text = await _p6d_img_vision_text(local_path, caption)
+        merged_raw = _p6d_img_build_raw(caption, vision_text)
+
+        if not _p6d_img_has_dims(merged_raw):
+            msg = (
+                "Не могу корректно посчитать смету по фото: габариты/площади с изображения не распознаны.\n"
+                "Нужно прислать фото/план крупнее или текстом указать габариты дома, этажность и площадь"
+            )
+            try:
+                sets = ["state='WAITING_CLARIFICATION'", "result=?",
+                        "error_message='P6D_IMAGE_DIMS_NOT_RECOGNIZED'", "updated_at=datetime('now')"]
+                conn.execute("UPDATE tasks SET " + ",".join(sets) + " WHERE id=?", (msg, task_id))
+                conn.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES (?,?,datetime('now'))",
+                    (task_id, "P6D_IMAGE_DIMS_NOT_RECOGNIZED")
+                )
+                conn.commit()
+            except Exception:
+                pass
+            return True
+
+        # Use pre-P3 reference — avoids P3 → P6E2 → P6D infinite recursion
+        fn = _P6DREC_PRE_P3
+        if not callable(fn):
+            raise RuntimeError("P6D_RECURSION_FIX_PRE_P3_NOT_CALLABLE")
+
+        res = fn(conn=conn, task=task, chat_id=chat_id, topic_id=topic_id,
+                 raw_input=merged_raw, full_context=merged_raw)
+        if _p6drec_inspect.isawaitable(res):
+            res = await res
+        try:
+            conn.execute(
+                "INSERT INTO task_history(task_id,action,created_at) VALUES (?,?,datetime('now'))",
+                (task_id, "P6D_IMAGE_ESTIMATE_PIPELINE_DONE")
+            )
+            conn.commit()
+        except Exception:
+            pass
+        return True if res is None else bool(res)
+
+    _P6DREC_LOG.info("PATCH_TOPIC2_P6D_RECURSION_FIX_V1 installed")
+else:
+    _P6DREC_LOG.warning("PATCH_TOPIC2_P6D_RECURSION_FIX_V1 skipped: _p3pcg_orig_handle not found")
+# === END_PATCH_TOPIC2_P6D_RECURSION_FIX_V1 ===
+
+# === PATCH_TOPIC2_P2_XLSX_15_COLS_CANONICAL_V1 ===
+# Root cause: active _p2_create_xlsx (used by _p3e_create_xlsx → full pipeline)
+# has 8 columns. Spec requires 15 canonical columns + sheet AREAL_CALC.
+# Fix: re-define _p2_create_xlsx with 15 columns:
+#   №, Раздел, Наименование работ, Ед. изм., Кол-во,
+#   Цена материала ₽, Сумма материала ₽, Цена работы ₽, Сумма работы ₽, Итого ₽,
+#   Источник цены, Поставщик, URL, Дата проверки, Примечание
+# Formulas: G=E*F, I=E*H, J=G+I; НДС block at bottom; sheet name AREAL_CALC.
+# prices list (from price_enrichment) matched to rows by keyword for supplier/url/checked_at.
+import logging as _p2xl15_log
+import re as _p2xl15_re
+_P2XL15_LOG = _p2xl15_log.getLogger("sample_template_engine")
+
+def _p2xl15_match_price(row, prices):
+    """Match row to price entry; return (source, supplier, url, checked_at)."""
+    if not prices:
+        return "", "", "", ""
+    item_low = str(row.get("item", "")).lower().replace("ё", "е")
+    item_words = [w for w in _p2xl15_re.split(r'\W+', item_low) if len(w) > 3]
+    best = None
+    best_score = 0
+    for pr in prices:
+        if not isinstance(pr, dict):
+            continue
+        name_low = str(pr.get("name", "") or pr.get("item", "")).lower().replace("ё", "е")
+        score = sum(1 for w in item_words if w in name_low)
+        if score > best_score:
+            best_score = score
+            best = pr
+    if best and best_score > 0:
+        src = str(best.get("status", "") or "LIVE_CONFIRMED")
+        sup = str(best.get("supplier", "") or "")[:120]
+        url = str(best.get("url", "") or "")[:300]
+        cat = str(best.get("checked_at", "") or "")[:30]
+        return src, sup, url, cat
+    return "", "", "", ""
+
+def _p2_create_xlsx(task_id, p, rows, prices=None, price_status=""):
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+
+    out = _P6C_EST_OUT / f"estimate_topic2_canon_{str(task_id)[:8]}.xlsx"
+    wb = Workbook()
+
+    # ── Sheet 1: AREAL_CALC (main 15-col estimate) ──
+    ws = wb.active
+    ws.title = "AREAL_CALC"
+
+    thin = Side(style="thin", color="AAAAAA")
+    brd = Border(left=thin, right=thin, top=thin, bottom=thin)
+    hdr_fill = PatternFill("solid", fgColor="1F4E79")
+    sub_fill = PatternFill("solid", fgColor="D6E4F0")
+    total_fill = PatternFill("solid", fgColor="FFF2CC")
+
+    headers = [
+        "№", "Раздел", "Наименование работ", "Ед. изм.", "Кол-во",
+        "Цена материала, ₽", "Сумма материала, ₽",
+        "Цена работы, ₽", "Сумма работы, ₽",
+        "Итого, ₽",
+        "Источник цены", "Поставщик", "URL", "Дата проверки", "Примечание",
+    ]
+    col_widths = [5, 18, 52, 9, 10, 18, 18, 18, 18, 18, 14, 24, 36, 16, 28]
+
+    ws.append(headers)
+    for ci, (h, w) in enumerate(zip(headers, col_widths), 1):
+        cell = ws.cell(1, ci)
+        cell.font = Font(bold=True, color="FFFFFF", size=10)
+        cell.fill = hdr_fill
+        cell.border = brd
+        cell.alignment = Alignment(horizontal="center", wrap_text=True, vertical="center")
+        ws.column_dimensions[get_column_letter(ci)].width = w
+    ws.row_dimensions[1].height = 30
+
+    data_start = 2
+    for idx, r in enumerate(rows, 1):
+        src, sup, url, cat = _p2xl15_match_price(r, prices or [])
+        note = r.get("note", "") or ""
+        if src and not note:
+            note = src
+        row_num = ws.max_row + 1
+        ws.append([
+            idx,
+            r.get("section", ""),
+            r.get("item", ""),
+            r.get("unit", ""),
+            r.get("qty") or 0,
+            r.get("material_price") or None,
+            None,   # G = E*F formula
+            r.get("work_price") or None,
+            None,   # I = E*H formula
+            None,   # J = G+I formula
+            src,
+            sup,
+            url,
+            cat,
+            note,
+        ])
+        i = ws.max_row
+        ws.cell(i, 7).value = f"=E{i}*F{i}"
+        ws.cell(i, 9).value = f"=E{i}*H{i}"
+        ws.cell(i, 10).value = f"=G{i}+I{i}"
+        for ci in range(1, 16):
+            c = ws.cell(i, ci)
+            c.border = brd
+            c.alignment = Alignment(wrap_text=True, vertical="top")
+
+    # НДС block
+    last_data = ws.max_row
+    tr = last_data + 2
+    ws.cell(tr, 9).value = "Итого без НДС, ₽"
+    ws.cell(tr, 9).font = Font(bold=True)
+    ws.cell(tr, 9).fill = total_fill
+    ws.cell(tr, 10).value = f"=SUM(J{data_start}:J{last_data})"
+    ws.cell(tr, 10).font = Font(bold=True)
+    ws.cell(tr, 10).fill = total_fill
+
+    ws.cell(tr + 1, 9).value = "НДС 20%, ₽"
+    ws.cell(tr + 1, 9).font = Font(bold=True)
+    ws.cell(tr + 1, 10).value = f"=J{tr}*0.2"
+
+    ws.cell(tr + 2, 9).value = "Итого с НДС, ₽"
+    ws.cell(tr + 2, 9).font = Font(bold=True)
+    ws.cell(tr + 2, 9).fill = total_fill
+    ws.cell(tr + 2, 10).value = f"=J{tr}+J{tr+1}"
+    ws.cell(tr + 2, 10).font = Font(bold=True)
+    ws.cell(tr + 2, 10).fill = total_fill
+
+    for extra_r in (tr, tr + 1, tr + 2):
+        for ci in (9, 10):
+            ws.cell(extra_r, ci).border = brd
+            ws.cell(extra_r, ci).alignment = Alignment(horizontal="right")
+
+    # Freeze header row
+    ws.freeze_panes = "A2"
+
+    # ── Sheet 2: ТЗ (input params) ──
+    ws_tz = wb.create_sheet("ТЗ")
+    ws_tz.append(["Параметр", "Значение"])
+    ws_tz.cell(1, 1).font = Font(bold=True)
+    ws_tz.cell(1, 2).font = Font(bold=True)
+    tz_items = [
+        ("Источник расчёта", "Только текущее ТЗ"),
+        ("Объект", p.get("scope", "")),
+        ("Размеры",
+         f"{p['dims'][0]}x{p['dims'][1]} м" if p.get("dims") and len(p["dims"]) == 2 else ""),
+        ("Площадь застройки", p.get("footprint", "")),
+        ("Этажей", p.get("floors", "")),
+        ("Расчётная площадь", p.get("area_total", "")),
+        ("Фундамент", p.get("foundation", "")),
+        ("Стены", p.get("material", "")),
+        ("Фасад", "клик-фальц" if p.get("has_clickfalz") else "по ТЗ"),
+        ("Удалённость, км", p.get("distance_km", "")),
+        ("Регион", p.get("region", "") or p.get("city", "")),
+        ("Полное ТЗ", str(p.get("raw", ""))[:1000]),
+    ]
+    for row in tz_items:
+        ws_tz.append(list(row))
+    ws_tz.column_dimensions["A"].width = 26
+    ws_tz.column_dimensions["B"].width = 90
+    for row in ws_tz.iter_rows():
+        for c in row:
+            c.border = brd
+            c.alignment = Alignment(wrap_text=True, vertical="top")
+
+    # ── Sheet 3: Проверка цен ──
+    ws_pr = wb.create_sheet("Проверка цен")
+    ws_pr.append(["Статус поиска", price_status or "PRICE_SEARCH_FALLBACK_BASE_RATES"])
+    ws_pr.append([])
+    ws_pr.append(["Наименование", "Поставщик", "Цена", "URL", "Дата", "Статус"])
+    for pr in (prices or []):
+        if isinstance(pr, dict):
+            ws_pr.append([
+                pr.get("name", "")[:200],
+                pr.get("supplier", "")[:120],
+                pr.get("price", ""),
+                pr.get("url", "")[:300],
+                pr.get("checked_at", "")[:30],
+                pr.get("status", ""),
+            ])
+        else:
+            ws_pr.append([str(pr)[:400]])
+    ws_pr.column_dimensions["A"].width = 40
+    ws_pr.column_dimensions["B"].width = 24
+    ws_pr.column_dimensions["D"].width = 40
+
+    wb.save(out)
+    return out
+
+_P2XL15_LOG.info("PATCH_TOPIC2_P2_XLSX_15_COLS_CANONICAL_V1 installed")
+# === END_PATCH_TOPIC2_P2_XLSX_15_COLS_CANONICAL_V1 ===

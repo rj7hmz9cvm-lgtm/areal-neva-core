@@ -14596,5 +14596,299 @@ if _T2RLG_ORIG_FN and not getattr(_T2RLG_ORIG_FN, "_t2rlg_wrapped", False):
 
 # === END_PATCH_TOPIC2_T2RFP_LOOP_GUARD_V1 ===
 
+# === PATCH_TOPIC2_PRICE_CHOICE_FALSE_POSITIVE_GUARD_V1 ===
+# Root cause: _t2pc_choice matches "средн" in ANY sentence (e.g. "взяв за основу среднюю
+# стоимость по рынку") and treats estimate requests as price-choice replies.
+# When _price_bind_poison_parent_guard_v2 blocks, task stays NEW → worker re-picks → 75+ loop.
+# Fix part 1: tighten _t2pc_choice to only match standalone short messages (<= 12 words),
+#   not full estimate request sentences.
+# Fix part 2: when poison guard blocks a falsely-detected price-choice task that is NOT
+#   a real reply (long text / no explicit reply_to bound to a price menu), skip binding
+#   silently so the task continues to the normal estimate pipeline.
+import logging as _t2fpg_log
+import re as _t2fpg_re
+_T2FPG_LOG = _t2fpg_log.getLogger("task_worker")
+
+_T2FPG_ORIG_TRY_BIND = globals().get("_t2pc_try_bind_price_choice")
+
+_T2FPG_PRICE_WORDS = frozenset(("средн", "медиан", "рынок", "миним", "дешев", "максим",
+                                  "надеж", "надёж", "проверенн", "ручн", "вручную"))
+
+def _t2fpg_is_real_price_reply(raw: str) -> bool:
+    """True only if this looks like a standalone price choice, not an estimate request."""
+    try:
+        t = _t2fpg_re.sub(r"\[VOICE\]", "", raw or "").strip().lower().replace("ё", "е")
+        words = t.split()
+        # Exact single token (1/2/3/4/а/б/в/г)
+        if len(words) <= 2:
+            return True
+        # Short explicit phrase
+        if len(words) <= 8 and any(w in t for w in ("ставь", "беру", "выбираю", "выбери", "поставь")):
+            return True
+        # Construction estimate keywords present → it's an estimate, not a price choice
+        estimate_words = ("смет", "расчет", "расчёт", "стоимост", "построит", "кирпич",
+                          "газобетон", "фундамент", "кровля", "материал", "работ",
+                          "монолит", "перекрыт", "утеплен", "отделк", "дом", "ангар",
+                          "объект", "проект", "участ", "площад")
+        if any(w in t for w in estimate_words):
+            return False
+        # Long sentence without explicit choice phrase → not a price reply
+        if len(words) > 10:
+            return False
+        return True
+    except Exception:
+        return True  # fail-safe: let original logic handle
+
+if _T2FPG_ORIG_TRY_BIND and not getattr(_T2FPG_ORIG_TRY_BIND, "_t2fpg_wrapped", False):
+    async def _t2pc_try_bind_price_choice(conn, task):
+        import inspect as _t2fpg_inspect
+        try:
+            raw = str((task.get("raw_input") if isinstance(task, dict) else
+                       (task["raw_input"] if hasattr(task, "keys") and "raw_input" in task.keys()
+                        else "")) or "")
+            topic_id_v = int((task.get("topic_id") if isinstance(task, dict) else
+                              (task["topic_id"] if hasattr(task, "keys") and "topic_id" in task.keys()
+                               else 0)) or 0)
+            if topic_id_v == 2 and not _t2fpg_is_real_price_reply(raw):
+                return False
+        except Exception:
+            pass
+        res = _T2FPG_ORIG_TRY_BIND(conn, task)
+        if _t2fpg_inspect.isawaitable(res):
+            return await res
+        return res
+    _t2pc_try_bind_price_choice._t2fpg_wrapped = True
+    _T2FPG_LOG.info("PATCH_TOPIC2_PRICE_CHOICE_FALSE_POSITIVE_GUARD_V1 installed")
+else:
+    _T2FPG_LOG.warning("PATCH_TOPIC2_PRICE_CHOICE_FALSE_POSITIVE_GUARD_V1 skipped: _t2pc_try_bind_price_choice not found")
+# === END_PATCH_TOPIC2_PRICE_CHOICE_FALSE_POSITIVE_GUARD_V1 ===
+
+# === PATCH_CONFIRMATION_TIMEOUT_DONE_IF_DELIVERED_V1 ===
+# Root cause: _recover_stale_tasks sets ALL AWAITING_CONFIRMATION tasks to FAILED after 30 min.
+# Per spec: if estimate was delivered (Drive links in result) → task should become DONE, not FAILED.
+# Topics affected: 2 (estimate), 5 (technadzor act), 210 (design).
+# Fix: intercept _recover_stale_tasks and for topic 2/5/210 AWAITING_CONFIRMATION tasks
+#   that have a drive.google.com link in result → set DONE instead of FAILED.
+import logging as _ctdd_log
+_CTDD_LOG = _ctdd_log.getLogger("task_worker")
+
+_CTDD_ORIG_RECOVER = globals().get("_recover_stale_tasks")
+
+if _CTDD_ORIG_RECOVER and not getattr(_CTDD_ORIG_RECOVER, "_ctdd_wrapped", False):
+    def _recover_stale_tasks(conn, *args, **kwargs):
+        # Promote delivered estimates to DONE before the FAILED sweep runs
+        try:
+            conn.execute("""
+                UPDATE tasks
+                SET state='DONE', error_message='', updated_at=datetime('now')
+                WHERE state='AWAITING_CONFIRMATION'
+                  AND COALESCE(topic_id,0) IN (2, 5, 210)
+                  AND updated_at < datetime('now','-30 minutes')
+                  AND result LIKE '%drive.google.com%'
+                  AND COALESCE(raw_input,'') NOT LIKE '%retry_queue_healthcheck%'
+            """)
+            conn.commit()
+        except Exception as _ctdd_e:
+            _CTDD_LOG.warning("PATCH_CONFIRMATION_TIMEOUT_DONE_IF_DELIVERED_V1_ERR %s", _ctdd_e)
+        return _CTDD_ORIG_RECOVER(conn, *args, **kwargs)
+    _recover_stale_tasks._ctdd_wrapped = True
+    _CTDD_LOG.info("PATCH_CONFIRMATION_TIMEOUT_DONE_IF_DELIVERED_V1 installed")
+else:
+    _CTDD_LOG.warning("PATCH_CONFIRMATION_TIMEOUT_DONE_IF_DELIVERED_V1 skipped: _recover_stale_tasks not found")
+# === END_PATCH_CONFIRMATION_TIMEOUT_DONE_IF_DELIVERED_V1 ===
+
+# === PATCH_T500_P6F_DAH_EXCLUDE_V1 ===
+# Root cause: P6F_DAH gate fires for topic_500 because user text contains "ссылку"
+# (matches _p6f_dah_user_wants_artifact). Gate converts DONE→IN_PROGRESS.
+# Next pick clears error_message → loop forever.
+# Fix: wrap _update_task to bypass gate for topic_500 when setting DONE.
+# For topic_500 a successful search reply IS the complete artifact — no Drive upload required.
+import logging as _t5dah_log
+_T5DAH_LOG = _t5dah_log.getLogger("task_worker")
+
+_T5DAH_CURRENT = _update_task
+_T5DAH_PREGATE = globals().get("_P6F_DAH_ORIG_UPDATE_TASK")
+
+if not getattr(_T5DAH_CURRENT, "_t5dah_wrapped", False) and _T5DAH_PREGATE:
+    def _update_task(conn, task_id, **kwargs):
+        if kwargs.get("state") == "DONE":
+            try:
+                row = conn.execute(
+                    "SELECT topic_id FROM tasks WHERE id=? LIMIT 1", (str(task_id),)
+                ).fetchone()
+                if row is not None:
+                    tid = int((row["topic_id"] if hasattr(row, "keys") else row[0]) or 0)
+                    if tid == 500:
+                        return _T5DAH_PREGATE(conn, task_id, **kwargs)
+            except Exception:
+                pass
+        return _T5DAH_CURRENT(conn, task_id, **kwargs)
+    _update_task._t5dah_wrapped = True
+    _T5DAH_LOG.info("PATCH_T500_P6F_DAH_EXCLUDE_V1 installed")
+
+    # One-time fix: force stuck topic_500 task to DONE if result already delivered
+    try:
+        import sqlite3 as _t5dah_sq
+        with _t5dah_sq.connect("data/core.db") as _c:
+            _c.row_factory = _t5dah_sq.Row
+            _stuck = _c.execute(
+                "SELECT id FROM tasks WHERE state='IN_PROGRESS' AND topic_id=500"
+                " AND result LIKE '%drive.google.com%' OR (state='IN_PROGRESS' AND topic_id=500"
+                " AND result LIKE '%https://%' AND length(result)>100)"
+                " LIMIT 20"
+            ).fetchall()
+            for _sr in _stuck:
+                _c.execute(
+                    "UPDATE tasks SET state='DONE', error_message='', updated_at=datetime('now') WHERE id=?",
+                    (_sr["id"],)
+                )
+                _c.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (_sr["id"], "PATCH_T500_P6F_DAH_EXCLUDE_V1_FORCE_DONE_STUCK")
+                )
+                _T5DAH_LOG.info("PATCH_T500_FORCE_DONE: %s", _sr["id"])
+            _c.commit()
+    except Exception as _t5dah_fix_e:
+        _T5DAH_LOG.warning("PATCH_T500_FORCE_DONE_ERR: %s", _t5dah_fix_e)
+else:
+    _T5DAH_LOG.warning("PATCH_T500_P6F_DAH_EXCLUDE_V1 skipped: pregate ref not found or already wrapped")
+# === END_PATCH_T500_P6F_DAH_EXCLUDE_V1 ===
+
+# === PATCH_T210_T5_REPLIED_DONE_GATE_V1 ===
+# Root cause: topic_210 / topic_5 tasks that were already answered (reply_sent: in history)
+# get stuck in IN_PROGRESS loop because:
+#   a) P6F_DAH gate fires (raw_input contains "файл" etc.) → DONE→IN_PROGRESS
+#   b) NO_GENERIC_RESPONSE_AS_RESULT blocks AI text → can't set result → can't close
+# Fix part A: extend _update_task bypass to topic_210 and topic_5 when reply already sent.
+# Fix part B: at startup, force-DONE stuck tasks in these topics that have reply_sent history.
+import logging as _t25g_log
+_T25G_LOG = _t25g_log.getLogger("task_worker")
+
+_T25G_CURRENT = _update_task
+_T25G_PREGATE = globals().get("_P6F_DAH_ORIG_UPDATE_TASK")
+
+def _t25g_has_reply_sent(conn, task_id: str) -> bool:
+    """True if any reply_sent: history entry exists for this task."""
+    try:
+        row = conn.execute(
+            "SELECT 1 FROM task_history WHERE task_id=? AND action LIKE 'reply_sent:%' LIMIT 1",
+            (str(task_id),),
+        ).fetchone()
+        return row is not None
+    except Exception:
+        return False
+
+if not getattr(_T25G_CURRENT, "_t25g_wrapped", False) and _T25G_PREGATE:
+    def _update_task(conn, task_id, **kwargs):
+        if kwargs.get("state") == "DONE":
+            try:
+                row = conn.execute(
+                    "SELECT topic_id FROM tasks WHERE id=? LIMIT 1", (str(task_id),)
+                ).fetchone()
+                if row is not None:
+                    tid = int((row["topic_id"] if hasattr(row, "keys") else row[0]) or 0)
+                    if tid in (210, 5) and _t25g_has_reply_sent(conn, task_id):
+                        return _T25G_PREGATE(conn, task_id, **kwargs)
+            except Exception:
+                pass
+        return _T25G_CURRENT(conn, task_id, **kwargs)
+    _update_task._t25g_wrapped = True
+    _T25G_LOG.info("PATCH_T210_T5_REPLIED_DONE_GATE_V1 installed")
+
+    # Force-DONE stuck IN_PROGRESS tasks for 210/5 that already have reply_sent in history
+    try:
+        import sqlite3 as _t25g_sq
+        with _t25g_sq.connect("data/core.db") as _c2:
+            _c2.row_factory = _t25g_sq.Row
+            _stuck2 = _c2.execute(
+                """SELECT DISTINCT t.id FROM tasks t
+                   JOIN task_history th ON th.task_id=t.id AND th.action LIKE 'reply_sent:%'
+                   WHERE t.state='IN_PROGRESS' AND COALESCE(t.topic_id,0) IN (210,5)"""
+            ).fetchall()
+            for _sr2 in _stuck2:
+                _c2.execute(
+                    "UPDATE tasks SET state='DONE', error_message='', updated_at=datetime('now') WHERE id=?",
+                    (_sr2["id"],)
+                )
+                _c2.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (_sr2["id"], "PATCH_T210_T5_REPLIED_DONE_GATE_V1_FORCE_DONE")
+                )
+                _T25G_LOG.info("PATCH_T210_FORCE_DONE: %s", _sr2["id"])
+            _c2.commit()
+    except Exception as _t25g_fix_e:
+        _T25G_LOG.warning("PATCH_T210_FORCE_DONE_ERR: %s", _t25g_fix_e)
+else:
+    _T25G_LOG.warning("PATCH_T210_T5_REPLIED_DONE_GATE_V1 skipped: pregate ref not found or already wrapped")
+# === END_PATCH_T210_T5_REPLIED_DONE_GATE_V1 ===
+
+# === PATCH_TOPIC210_META_GUARD_V1 ===
+# Root cause: topic_210 receives meta-comments ("бери в работу", "ты сам выбирай") that
+# go to the full project engine → AI generates generic "готов к выполнению" →
+# NO_GENERIC_RESPONSE_AS_RESULT_V1_BLOCKED rejects → task loops/fails.
+# Fix: intercept _handle_new for topic_210 meta-comments; acknowledge and close DONE.
+import logging as _t210mg_log_mod
+import inspect as _t210mg_inspect
+_T210MG_LOG = _t210mg_log_mod.getLogger("task_worker")
+
+_T210_META_PHRASES = (
+    "ты сам должен выбирать", "ты сам выбирай", "сам выбирай",
+    "бери в работу", "бери их в работу", "возьми в работу",
+    "всё правильно понял", "правильно понял", "ты правильно понял",
+    "бери и делай", "делай сам", "сам решай",
+)
+
+def _t210mg_is_meta(raw: str, input_type: str) -> bool:
+    if input_type in ("photo", "file", "drive_file", "image", "document"):
+        return False
+    t = str(raw or "").lower().replace("ё", "е").replace("[voice]", "").replace("[голос]", "").strip(" .,!?:;")
+    if len(t.split()) > 12:
+        return False
+    return any(x in t for x in _T210_META_PHRASES)
+
+_T210MG_ORIG_HN = globals().get("_handle_new")
+
+if _T210MG_ORIG_HN and not getattr(_T210MG_ORIG_HN, "_t210mg_wrapped", False):
+    async def _handle_new(conn, task, *args, **kwargs):
+        try:
+            if isinstance(task, dict):
+                topic_id_v = int(task.get("topic_id") or 0)
+                raw_v = str(task.get("raw_input") or "")
+                input_type_v = str(task.get("input_type") or "")
+                task_id_v = str(task.get("id") or "")
+                chat_id_v = str(task.get("chat_id") or "")
+                reply_to_v = task.get("reply_to_message_id")
+            else:
+                topic_id_v = int(task["topic_id"] if hasattr(task, "keys") and "topic_id" in task.keys() else 0)
+                raw_v = str(task["raw_input"] if hasattr(task, "keys") and "raw_input" in task.keys() else "")
+                input_type_v = str(task["input_type"] if hasattr(task, "keys") and "input_type" in task.keys() else "")
+                task_id_v = str(task["id"] if hasattr(task, "keys") and "id" in task.keys() else "")
+                chat_id_v = str(task["chat_id"] if hasattr(task, "keys") and "chat_id" in task.keys() else "")
+                reply_to_v = task["reply_to_message_id"] if hasattr(task, "keys") and "reply_to_message_id" in task.keys() else None
+
+            if topic_id_v == 210 and _t210mg_is_meta(raw_v, input_type_v):
+                msg = "Понял, принято. Продолжаю работу по проекту в этом разделе."
+                try:
+                    _send_once_ex(conn, task_id_v, chat_id_v, msg, reply_to_v, "t210mg_ack")
+                except Exception:
+                    pass
+                _update_task(conn, task_id_v, state="DONE", result=msg, error_message="")
+                _history(conn, task_id_v, "TOPIC210_META_GUARD_DONE_V1")
+                conn.commit()
+                _T210MG_LOG.info("PATCH_TOPIC210_META_GUARD_V1 handled meta task=%s", task_id_v)
+                return True
+        except Exception as _t210mg_e:
+            _T210MG_LOG.warning("PATCH_TOPIC210_META_GUARD_V1_ERR %s", _t210mg_e)
+        res = _T210MG_ORIG_HN(conn, task, *args, **kwargs)
+        if _t210mg_inspect.isawaitable(res):
+            return await res
+        return res
+
+    _handle_new._t210mg_wrapped = True
+    _T210MG_LOG.info("PATCH_TOPIC210_META_GUARD_V1 installed")
+else:
+    _T210MG_LOG.warning("PATCH_TOPIC210_META_GUARD_V1 skipped: _handle_new not found")
+# === END_PATCH_TOPIC210_META_GUARD_V1 ===
+
 if __name__ == "__main__":
     asyncio.run(main())

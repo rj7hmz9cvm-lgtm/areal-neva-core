@@ -2160,3 +2160,146 @@ async def maybe_handle_stroyka_estimate(conn, task, logger=None):
 
 _T2CG_LOG.info("PATCH_TOPIC2_CANCEL_GUARD_AND_SOURCE_ISOLATION_V1 installed")
 # === END_PATCH_TOPIC2_CANCEL_GUARD_AND_SOURCE_ISOLATION_V1 ===
+
+# === PATCH_STROYKA_META_CONFIRM_GUARD_V1 ===
+# Root cause: "Ничего менять не надо" → FIX_STROYKA_CONTEXT_ENRICH injects old estimate context
+# → pipeline treats it as new estimate → loop.
+# Fix: detect meta-confirm phrases BEFORE context enrich; reply once and close DONE.
+import logging as _mcg_log_mod
+_MCG_LOG = _mcg_log_mod.getLogger("task_worker")
+
+_MCG_META_PHRASES = (
+    "ничего менять не надо", "ничего не меняй", "не надо менять",
+    "не нужно менять", "не меняй ничего", "без изменений", "оставь как есть",
+    "всё устраивает", "все устраивает",
+    "всё хорошо", "все хорошо", "всё верно", "все верно",
+    "всё правильно", "все правильно",
+    "не трогай", "ничего не трогай", "изменений нет",
+    "всё нравится", "все нравится",
+)
+
+_mcg_orig_maybe = maybe_handle_stroyka_estimate
+
+async def maybe_handle_stroyka_estimate(conn, task, logger=None):
+    raw = _low(_row_get(task, "raw_input", ""))
+    # Strip injected REVISION_CONTEXT before checking
+    if "---" in raw:
+        raw = raw.split("---")[0].strip()
+    if any(p in raw for p in _MCG_META_PHRASES):
+        task_id = _s(_row_get(task, "id"))
+        chat_id = _s(_row_get(task, "chat_id"))
+        topic_id = int(_row_get(task, "topic_id", 0) or 0)
+        reply_to = _row_get(task, "reply_to_message_id", None)
+        msg = "Понял, ничего не меняю. Если понадоблюсь — напишите."
+        try:
+            send_res = await _send_text(chat_id, msg, reply_to, topic_id)
+        except Exception:
+            send_res = {}
+        kwargs = {"state": "DONE", "result": msg}
+        if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+            kwargs["bot_message_id"] = send_res.get("bot_message_id")
+        _update_task_safe(conn, task_id, **kwargs)
+        _history_safe(conn, task_id, "TOPIC2_META_CONFIRM_NO_CHANGE_GUARD_V1")
+        _MCG_LOG.info("PATCH_STROYKA_META_CONFIRM_GUARD_V1 blocked meta-confirm task=%s", task_id)
+        return True
+    return await _mcg_orig_maybe(conn, task, logger)
+
+_MCG_LOG.info("PATCH_STROYKA_META_CONFIRM_GUARD_V1 installed")
+# === END_PATCH_STROYKA_META_CONFIRM_GUARD_V1 ===
+
+# === PATCH_STROYKA_REPLY_CHAIN_V1 ===
+# Root cause: reply_to_message_id=2 is the Telegram forum topic root marker, not a real message.
+# Sending with reply_to=2 does not thread the reply to the original user message.
+# Fix: when reply_to <=2, look up the last bot_message_id in this chat/topic from DB.
+import logging as _src_log_mod
+_SRC_LOG = _src_log_mod.getLogger("task_worker")
+
+_src_orig_gas_v1 = _generate_and_send
+
+async def _generate_and_send(conn, task, pending, confirm_text, logger=None):
+    try:
+        reply_raw = _row_get(task, "reply_to_message_id", None)
+        r_int = int(reply_raw) if reply_raw is not None else 0
+        if r_int <= 2:
+            c_id = _s(_row_get(task, "chat_id"))
+            t_id = int(_row_get(task, "topic_id", 0) or 0)
+            task_id_v = _s(_row_get(task, "id"))
+            row = conn.execute(
+                """SELECT bot_message_id FROM tasks
+                   WHERE CAST(chat_id AS TEXT)=? AND COALESCE(topic_id,0)=? AND id!=?
+                   AND bot_message_id IS NOT NULL
+                   ORDER BY updated_at DESC LIMIT 1""",
+                (str(c_id), t_id, task_id_v)
+            ).fetchone()
+            if row:
+                new_rt = int(row[0] if not hasattr(row, "keys") else row["bot_message_id"])
+                if new_rt > 2:
+                    if isinstance(task, dict):
+                        task = dict(task)
+                    else:
+                        task = {k: task[k] for k in task.keys()}
+                    task["reply_to_message_id"] = new_rt
+                    _SRC_LOG.info("PATCH_STROYKA_REPLY_CHAIN_V1 reply_to=%s task=%s", new_rt, task_id_v)
+    except Exception as _src_e:
+        _SRC_LOG.warning("PATCH_STROYKA_REPLY_CHAIN_V1_ERR %s", _src_e)
+    return await _src_orig_gas_v1(conn, task, pending, confirm_text, logger=logger)
+
+_SRC_LOG.info("PATCH_STROYKA_REPLY_CHAIN_V1 installed")
+# === END_PATCH_STROYKA_REPLY_CHAIN_V1 ===
+
+# === PATCH_STROYKA_XLSX_15_COLS_V1 ===
+# Root cause: _create_xlsx_from_template generates 11 columns instead of canonical 15.
+# Spec requires: Источник цены, Поставщик, URL, Дата проверки (cols 12-15).
+# Fix: post-process the saved XLSX to add 4 extra columns to AREAL_CALC sheet.
+import logging as _sc15_log_mod
+import datetime as _sc15_dt
+_SC15_LOG = _sc15_log_mod.getLogger("task_worker")
+
+_sc15_orig_xlsx = _create_xlsx_from_template
+
+def _create_xlsx_from_template(task_id, parsed, template, template_path, sheet_name, price_text, choice):
+    path, items, py_total = _sc15_orig_xlsx(task_id, parsed, template, template_path, sheet_name, price_text, choice)
+    try:
+        from openpyxl import load_workbook
+        from openpyxl.styles import Font, Alignment as _SC15Align
+
+        wb = load_workbook(path)
+        if "AREAL_CALC" not in wb.sheetnames:
+            wb.close()
+            return path, items, py_total
+        ws = wb["AREAL_CALC"]
+
+        HDR_ROW = 7
+        if ws.cell(HDR_ROW, 12).value is not None:
+            wb.close()
+            return path, items, py_total  # already extended
+
+        _bold = Font(bold=True)
+        for idx, h in enumerate(["Источник цены", "Поставщик", "URL", "Дата проверки"], 12):
+            c = ws.cell(HDR_ROW, idx, h)
+            c.font = _bold
+            c.alignment = _SC15Align(wrap_text=True)
+
+        for col_letter, width in [("L", 20), ("M", 22), ("N", 35), ("O", 16)]:
+            ws.column_dimensions[col_letter].width = width
+
+        date_str = _sc15_dt.datetime.now().strftime("%d.%m.%Y")
+        src_label = "Perplexity" if price_text and len(str(price_text)) > 20 else "—"
+
+        row_idx = HDR_ROW + 1
+        while ws.cell(row_idx, 3).value is not None:
+            ws.cell(row_idx, 12, src_label)
+            ws.cell(row_idx, 13, "—")
+            ws.cell(row_idx, 14, "—")
+            ws.cell(row_idx, 15, date_str)
+            row_idx += 1
+
+        wb.save(path)
+        wb.close()
+        _SC15_LOG.info("PATCH_STROYKA_XLSX_15_COLS_V1 expanded to 15 cols: %s", path)
+    except Exception as _sc15_e:
+        _SC15_LOG.warning("PATCH_STROYKA_XLSX_15_COLS_V1_ERR %s", _sc15_e)
+    return path, items, py_total
+
+_SC15_LOG.info("PATCH_STROYKA_XLSX_15_COLS_V1 installed")
+# === END_PATCH_STROYKA_XLSX_15_COLS_V1 ===
