@@ -14291,5 +14291,71 @@ if _T2FP_ORIG_HANDLE_NEW and not getattr(_T2FP_ORIG_HANDLE_NEW, "_t2fp_wrapped",
 
 # === END_PATCH_TOPIC2_FULL_PIPELINE_ROUTE_V1 ===
 
+# === PATCH_TOPIC2_REDIRECT_FINAL_TO_FULL_PIPELINE_V2 ===
+# Root cause: PATCH_TOPIC2_FRESH_ESTIMATE_ROUTE_GUARD_V1 intercepts topic_2 tasks via
+# _handle_drive_file and _p6e67_try_merge, routing them to _t2fer_run_final_estimate
+# (simplified v2 path → handle_topic2_estimate_final_close → "Позиций: 1").
+# Fix: wrap _t2fer_run_final_estimate so topic_2 calls go to full P2/P3 pipeline instead.
+import logging as _t2rfp_log
+import inspect as _t2rfp_inspect
+_T2RFP_LOG = _t2rfp_log.getLogger("task_worker")
+
+_T2RFP_ORIG = globals().get("_t2fer_run_final_estimate")
+
+if _T2RFP_ORIG and not getattr(_T2RFP_ORIG, "_t2rfp_wrapped", False):
+    async def _t2fer_run_final_estimate(conn, task, reason):
+        try:
+            topic_id_v = int(_t2fer_get(task, "topic_id", 0) or 0)
+        except Exception:
+            topic_id_v = 0
+
+        if topic_id_v != 2:
+            res = _T2RFP_ORIG(conn, task, reason)
+            if _t2rfp_inspect.isawaitable(res):
+                return await res
+            return res
+
+        task_id = _t2fer_s(_t2fer_get(task, "id", ""))
+        _T2RFP_LOG.info("T2RFP_REDIRECT task=%s reason=%s → full pipeline", task_id, reason)
+
+        try:
+            chat_id_v = str(_t2fer_get(task, "chat_id", "") or "")
+            try:
+                _update_task(conn, task_id, state="IN_PROGRESS", error_message="")
+                conn.commit()
+            except Exception:
+                pass
+
+            t = {}
+            try:
+                for k in task.keys():
+                    t[k] = task[k]
+            except Exception:
+                try:
+                    t = dict(task)
+                except Exception:
+                    pass
+            t["state"] = "IN_PROGRESS"
+
+            h_ip = globals().get("_handle_in_progress")
+            if h_ip:
+                res = h_ip(conn, t, chat_id_v, topic_id_v)
+                if _t2rfp_inspect.isawaitable(res):
+                    await res
+                _T2RFP_LOG.info("T2RFP_FULL_PIPELINE_DONE task=%s", task_id)
+                return True
+        except Exception as e:
+            _T2RFP_LOG.warning("T2RFP_FULL_PIPELINE_ERR task=%s err=%s — fallback to simplified", task_id, e)
+
+        res = _T2RFP_ORIG(conn, task, reason)
+        if _t2rfp_inspect.isawaitable(res):
+            return await res
+        return res
+
+    _t2fer_run_final_estimate._t2rfp_wrapped = True
+    _T2RFP_LOG.info("PATCH_TOPIC2_REDIRECT_FINAL_TO_FULL_PIPELINE_V2 installed")
+
+# === END_PATCH_TOPIC2_REDIRECT_FINAL_TO_FULL_PIPELINE_V2 ===
+
 if __name__ == "__main__":
     asyncio.run(main())
