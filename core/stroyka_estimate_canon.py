@@ -2038,3 +2038,125 @@ def _update_task_safe(conn, task_id, **kwargs):
 
 _STV3_LOG.info("PATCH_TOPIC2_STROYKA_ESTIMATE_CANON_FULL_CLOSE_V3 installed")
 # === END_PATCH_TOPIC2_STROYKA_ESTIMATE_CANON_FULL_CLOSE_V3 ===
+
+
+# === PATCH_TOPIC2_PRICE_CHOICE_NUMERIC_PARSE_V4 ===
+_T2PCP_ORIG_PARSE_PRICE_CHOICE_V4 = parse_price_choice
+
+def parse_price_choice(text: str) -> Dict[str, Any]:
+    result = dict(_T2PCP_ORIG_PARSE_PRICE_CHOICE_V4(text))
+    t = _low(str(text or "")).replace("[voice]", "").strip()
+    t = re.sub(r"\s+", " ", t).strip(" .,!?:;()[]{}")
+    exact = {
+        "1": "minimum", "а": "minimum", "a": "minimum", "а)": "minimum", "a)": "minimum",
+        "2": "median", "б": "median", "b": "median", "б)": "median", "b)": "median",
+        "3": "maximum", "в": "maximum", "v": "maximum", "в)": "maximum", "v)": "maximum",
+        "4": "manual", "г": "manual", "g": "manual", "г)": "manual", "g)": "manual",
+    }
+    confirmed = False
+    if t in exact:
+        result["choice"] = exact[t]
+        confirmed = True
+    elif any(x in t for x in ("миним", "дешев", "дешёв", "самые низкие", "ставь миним")):
+        result["choice"] = "minimum"
+        confirmed = True
+    elif any(x in t for x in ("средн", "медиан", "рынок", "ставь сред", "беру сред", "средние цены")):
+        result["choice"] = "median"
+        confirmed = True
+    elif any(x in t for x in ("максим", "надеж", "надёж", "проверенн", "ставь максим")):
+        result["choice"] = "maximum"
+        confirmed = True
+    elif any(x in t for x in ("ручн", "вручную", "сам укажу", "мои цены", "своя")):
+        result["choice"] = "manual"
+        confirmed = True
+    else:
+        confirmed = bool(result.get("confirmed"))
+
+    result["confirmed"] = confirmed
+    if not confirmed:
+        result["choice"] = "NONE"
+    return result
+
+try:
+    _STV3_LOG.info("PATCH_TOPIC2_PRICE_CHOICE_NUMERIC_PARSE_V4 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_PRICE_CHOICE_NUMERIC_PARSE_V4 ===
+
+# === PATCH_TOPIC2_NUMERIC_PRICE_CHOICE_PARSE_V5 ===
+try:
+    _t2num_prev_parse_price_choice_v5 = parse_price_choice
+    def parse_price_choice(text: str):
+        res = dict(_t2num_prev_parse_price_choice_v5(text))
+        t = _low(str(text or "")).replace("[voice]", "").strip()
+        t = re.sub(r"\s+", " ", t).strip(" .,!?:;()[]{}")
+        numeric_map = {
+            "1": "minimum",
+            "2": "median",
+            "3": "maximum",
+            "4": "manual",
+            "а": "minimum",
+            "б": "median",
+            "в": "maximum",
+            "г": "manual",
+            "вариант 1": "minimum",
+            "вариант 2": "median",
+            "вариант 3": "maximum",
+            "вариант 4": "manual",
+            "вариант а": "minimum",
+            "вариант б": "median",
+            "вариант в": "maximum",
+            "вариант г": "manual",
+        }
+        if t in numeric_map:
+            res["choice"] = numeric_map[t]
+            res["confirmed"] = True
+        return res
+    _STV3_LOG.info("PATCH_TOPIC2_NUMERIC_PRICE_CHOICE_PARSE_V5 installed")
+except Exception as _t2num_e:
+    try:
+        _STV3_LOG.warning("PATCH_TOPIC2_NUMERIC_PRICE_CHOICE_PARSE_V5_ERR %s", _t2num_e)
+    except Exception:
+        pass
+# === END_PATCH_TOPIC2_NUMERIC_PRICE_CHOICE_PARSE_V5 ===
+
+# === PATCH_TOPIC2_CANCEL_GUARD_AND_SOURCE_ISOLATION_V1 ===
+import logging as _t2cg_log
+_T2CG_LOG = _t2cg_log.getLogger("task_worker")
+
+_T2CG_CANCEL_WORDS = (
+    "отмена", "отмени", "отменить", "очисти", "очистить",
+    "удали все задачи", "закрой все задачи", "отмени все задачи",
+    "cancel all", "все задачи отменены",
+)
+
+_t2cg_orig_candidate = is_stroyka_estimate_candidate
+
+def is_stroyka_estimate_candidate(task):
+    raw = _low(_row_get(task, "raw_input", ""))
+    # Strip REVISION_CONTEXT for the check
+    if "---" in raw and "revision_context" in raw.lower():
+        raw = raw[:raw.lower().find("revision_context")].strip()
+    if any(x in raw for x in _T2CG_CANCEL_WORDS):
+        return False
+    return _t2cg_orig_candidate(task)
+
+_t2cg_orig_maybe_handle = maybe_handle_stroyka_estimate
+
+async def maybe_handle_stroyka_estimate(conn, task, logger=None):
+    raw = _s(_row_get(task, "raw_input", ""))
+    if "\n---\nREVISION_CONTEXT" in raw:
+        clean_raw = raw.split("\n---\nREVISION_CONTEXT")[0].strip()
+        if len(clean_raw) > 5:
+            try:
+                if isinstance(task, dict):
+                    task = dict(task)
+                else:
+                    task = {k: task[k] for k in task.keys()}
+                task["raw_input"] = clean_raw
+            except Exception:
+                pass
+    return await _t2cg_orig_maybe_handle(conn, task, logger=logger)
+
+_T2CG_LOG.info("PATCH_TOPIC2_CANCEL_GUARD_AND_SOURCE_ISOLATION_V1 installed")
+# === END_PATCH_TOPIC2_CANCEL_GUARD_AND_SOURCE_ISOLATION_V1 ===

@@ -7423,3 +7423,45 @@ async def handle_topic2_one_big_formula_pipeline_v1(
 
 _P3PCG_LOG.info("PATCH_TOPIC2_P3_PRICE_CHOICE_GATE_V1 installed")
 # === END_PATCH_TOPIC2_P3_PRICE_CHOICE_GATE_V1 ===
+
+
+# === PATCH_TOPIC2_P3_PRICE_CHOICE_NUMERIC_PARSE_V4 ===
+try:
+    _P3PCG_ORIG_HAS_EXPLICIT_PRICE_V4 = _p3pcg_has_explicit_price
+
+    def _p3pcg_has_explicit_price(text: str) -> bool:
+        t = str(text or "").lower().replace("ё", "е").replace("[voice]", "").strip()
+        t = __import__("re").sub(r"\s+", " ", t).strip(" .,!?:;()[]{}")
+        if t in ("1", "2", "3", "4", "а", "б", "в", "г", "a", "b", "v", "g", "а)", "б)", "в)", "г)"):
+            return True
+        if any(x in t for x in (
+            "миним", "дешев", "дешёв", "самые низкие",
+            "средн", "медиан", "рынок",
+            "максим", "надеж", "надёж", "проверенн",
+            "ручн", "вручную", "сам укажу", "мои цены", "своя",
+            "ставь", "беру",
+        )):
+            return True
+        return _P3PCG_ORIG_HAS_EXPLICIT_PRICE_V4(text)
+
+    _P3PCG_LOG.info("PATCH_TOPIC2_P3_PRICE_CHOICE_NUMERIC_PARSE_V4 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_P3_PRICE_CHOICE_NUMERIC_PARSE_V4 ===
+
+# === PATCH_TOPIC2_P3_NUMERIC_PRICE_CHOICE_V5 ===
+try:
+    _p3num_prev_has_explicit_price_v5 = _p3pcg_has_explicit_price
+    def _p3pcg_has_explicit_price(text: str) -> bool:
+        t = str(text or "").lower().replace("ё", "е").replace("[voice]", "").strip()
+        t = __import__("re").sub(r"\s+", " ", t).strip(" .,!?:;()[]{}")
+        if t in ("1", "2", "3", "4", "а", "б", "в", "г", "вариант 1", "вариант 2", "вариант 3", "вариант 4", "вариант а", "вариант б", "вариант в", "вариант г"):
+            return True
+        return _p3num_prev_has_explicit_price_v5(text)
+    _P3PCG_LOG.info("PATCH_TOPIC2_P3_NUMERIC_PRICE_CHOICE_V5 installed")
+except Exception as _p3num_e:
+    try:
+        _P3PCG_LOG.warning("PATCH_TOPIC2_P3_NUMERIC_PRICE_CHOICE_V5_ERR %s", _p3num_e)
+    except Exception:
+        pass
+# === END_PATCH_TOPIC2_P3_NUMERIC_PRICE_CHOICE_V5 ===

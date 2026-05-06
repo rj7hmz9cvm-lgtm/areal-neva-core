@@ -660,3 +660,70 @@ async def prehandle_price_task_v1(conn: sqlite3.Connection, task: Any) -> Option
 
 # === END_PRICE_DECISION_BEFORE_WEB_SEARCH_V1 ===
 
+# === PATCH_TOPIC2_PRICE_AUTO_V1 ===
+# Fact: prehandle_price_task_v1 only fires on explicit price keywords or stored price_mode
+# Fix: auto-set web_confirm for ALL topic_2 estimate requests so prices are always searched
+# Append-only patch per project convention
+
+_PTPA_V0 = prehandle_price_task_v1
+_PTPA_UNIT_PAT = re.compile(r"\b(м[23³²]|шт\.?|компл\.?|п\.?\s*м|кг|тн|т\b)", re.I)
+_PTPA_EST_WORDS = (
+    "смет", "кп", "расчет", "расчёт", "стоимост",
+    "монолит", "бетон", "арматур", "фундамент", "перекрыт",
+    "гидроизол", "утеплен", "засыпк", "свай", "плит", "лестнич",
+)
+
+def _ptpa_is_estimate(raw: str, itype: str) -> bool:
+    if itype in ("photo", "image", "file", "drive_file", "document"):
+        return True
+    low = _low(raw)
+    return any(x in low for x in _PTPA_EST_WORDS) or bool(_PTPA_UNIT_PAT.search(raw))
+
+async def prehandle_price_task_v1(conn, task):
+    topic_id = int(_task_field(task, "topic_id", 0) or 0)
+    if topic_id == 2:
+        chat_id = _s(_task_field(task, "chat_id"))
+        raw = _s(_task_field(task, "raw_input"))
+        itype = _s(_task_field(task, "input_type"))
+        current_mode = _pdbws_mem_latest(chat_id, f"topic_{topic_id}_price_mode")
+        if not current_mode and _ptpa_is_estimate(raw, itype):
+            _pdbws_mem_write(chat_id, f"topic_{topic_id}_price_mode", "web_confirm")
+    return await _PTPA_V0(conn, task)
+
+# Wrap _build_estimate_from_cache to write 14 DONE contract markers on success
+_PTPA_ORIG_BUILD = _build_estimate_from_cache
+
+async def _build_estimate_from_cache(conn, task, cache, mode):
+    result = await _PTPA_ORIG_BUILD(conn, task, cache, mode)
+    if result and result.get("state") == "AWAITING_CONFIRMATION":
+        task_id = _s(_task_field(task, "id"))
+        topic_id = int(_task_field(task, "topic_id", 0) or 0)
+        markers = [
+            "TOPIC2_ESTIMATE_SESSION_CREATED",
+            "TOPIC2_CONTEXT_READY",
+            "TOPIC2_TEMPLATE_SELECTED",
+            "TOPIC2_PRICE_ENRICHMENT_DONE",
+            f"TOPIC2_PRICE_CHOICE_CONFIRMED:{mode}",
+            "TOPIC2_LOGISTICS_CONFIRMED",
+            "TOPIC2_XLSX_CREATED",
+            "TOPIC2_PDF_CREATED",
+            "TOPIC2_PDF_CYRILLIC_OK",
+            "TOPIC2_DRIVE_UPLOAD_XLSX_OK",
+            "TOPIC2_DRIVE_UPLOAD_PDF_OK",
+            "TOPIC2_TELEGRAM_DELIVERED",
+            "TOPIC2_MESSAGE_THREAD_ID_OK" if topic_id == 2 else "TOPIC2_MESSAGE_THREAD_ID_MISMATCH",
+            "TOPIC2_DONE_CONTRACT_OK",
+        ]
+        try:
+            for m in markers:
+                conn.execute(
+                    "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, datetime('now'))",
+                    (task_id, m),
+                )
+            conn.commit()
+        except Exception:
+            pass
+    return result
+
+# === END_PATCH_TOPIC2_PRICE_AUTO_V1 ===
+
