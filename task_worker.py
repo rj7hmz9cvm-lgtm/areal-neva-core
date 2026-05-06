@@ -11319,3 +11319,113 @@ except Exception:
     pass
 # === END_TOPIC5_PHOTO_ACT_CONFIRMATION_TIMEOUT_FIX_V1 ===
 
+# === FIX_SEND_ONCE_EX_MESSAGE_THREAD_ID_V1 ===
+# Root cause: _send_once_ex → send_reply_ex without message_thread_id → topic_0.
+# Fix: ContextVar carries topic_id through the call chain to send_reply_ex/send_reply.
+# _send_once_ex auto-looks up topic_id from DB if caller did not supply it.
+import contextvars as _fsoex_cv
+import logging as _fsoex_logging
+
+_FSOEX_LOG = _fsoex_logging.getLogger("task_worker")
+_fsoex_thread_id_var = _fsoex_cv.ContextVar("_fsoex_thread_id", default=None)
+
+# Wrap send_reply_ex at module level to inject message_thread_id from ContextVar
+_fsoex_orig_send_reply_ex = send_reply_ex
+
+def send_reply_ex(*args, **kwargs):
+    if not kwargs.get("message_thread_id"):
+        _t = _fsoex_thread_id_var.get()
+        if _t:
+            kwargs["message_thread_id"] = _t
+    return _fsoex_orig_send_reply_ex(*args, **kwargs)
+
+# Wrap send_reply the same way
+_fsoex_orig_send_reply = send_reply
+
+def send_reply(*args, **kwargs):
+    if not kwargs.get("message_thread_id"):
+        _t = _fsoex_thread_id_var.get()
+        if _t:
+            kwargs["message_thread_id"] = _t
+    return _fsoex_orig_send_reply(*args, **kwargs)
+
+# Wrap _send_once_ex: accept message_thread_id/topic_id, auto-lookup from DB, set ContextVar
+_fsoex_orig_send_once_ex = _send_once_ex
+
+def _send_once_ex(conn, task_id, chat_id, text, reply_to=None, kind="result", *args, **kwargs):
+    _thread = kwargs.pop("message_thread_id", None) or kwargs.pop("topic_id", None)
+    if not _thread and conn is not None and task_id:
+        try:
+            _r = conn.execute("SELECT topic_id FROM tasks WHERE id=?", (str(task_id),)).fetchone()
+            if _r and _r[0]:
+                _thread = int(_r[0]) or None
+        except Exception as _fe:
+            _FSOEX_LOG.debug("FIX_SOE_LOOKUP_ERR task=%s err=%s", task_id, _fe)
+    if _thread:
+        _tok = _fsoex_thread_id_var.set(int(_thread))
+        try:
+            return _fsoex_orig_send_once_ex(conn, task_id, chat_id, text, reply_to, kind, *args, **kwargs)
+        finally:
+            _fsoex_thread_id_var.reset(_tok)
+    return _fsoex_orig_send_once_ex(conn, task_id, chat_id, text, reply_to, kind, *args, **kwargs)
+
+# Wrap _send_once the same way
+_fsoex_orig_send_once = _send_once
+
+def _send_once(conn, task_id, chat_id, text, reply_to=None, kind="result"):
+    _thread = None
+    if conn is not None and task_id:
+        try:
+            _r = conn.execute("SELECT topic_id FROM tasks WHERE id=?", (str(task_id),)).fetchone()
+            if _r and _r[0]:
+                _thread = int(_r[0]) or None
+        except Exception:
+            pass
+    if _thread:
+        _tok = _fsoex_thread_id_var.set(int(_thread))
+        try:
+            return _fsoex_orig_send_once(conn, task_id, chat_id, text, reply_to, kind)
+        finally:
+            _fsoex_thread_id_var.reset(_tok)
+    return _fsoex_orig_send_once(conn, task_id, chat_id, text, reply_to, kind)
+
+_FSOEX_LOG.info("FIX_SEND_ONCE_EX_MESSAGE_THREAD_ID_V1 installed")
+# === END_FIX_SEND_ONCE_EX_MESSAGE_THREAD_ID_V1 ===
+
+# === FIX_P6E2_TW_ESTIMATE_LIKE_FULL_CONSTRUCTION_V1 ===
+# Replaces FIX_P6E2_TW_ESTIMATE_LIKE_EXTEND_V1 — adds construction params.
+# "Высота 3,6 м каркас фундамент монолитная плита" → True without "смета".
+import re as _p6e2_fec_re
+
+def _p6e2_tw_estimate_like(text):
+    low = _p6e2_tw_low(text)
+    if any(x in low for x in (
+        "смет", "расчет", "расчёт", "посчитай", "посчитать",
+        "рассчитать", "стоимост", "стоить", "стоит",
+        "сколько стоит", "сколько будет", "нужна смета",
+        "нужен расчет", "нужен расчёт", "полная смета",
+    )):
+        return True
+    has_dims = bool(_p6e2_fec_re.search(
+        r"\d+[.,]?\d*\s*(?:x|х|×|\*|на)\s*\d+|\d+[.,]?\d*\s*м\b|\bвысот",
+        low,
+    ))
+    has_material = any(x in low for x in (
+        "каркас", "газобетон", "кирпич", "монолит", "арболит", "брус",
+        "фундамент", "кровл", "перекрыт", "металлочереп", "профнастил",
+        "фальц", "клик", "сэндвич", "цсп", "минват", "роквул",
+    ))
+    has_object = any(x in low for x in (
+        "дом", "ангар", "склад", "коттедж", "здани", "строен",
+        "постройк", "баня", "гараж", "объект",
+    ))
+    has_construction = any(x in low for x in (
+        "высота", "этаж", "площадь", "периметр", "стен", "плита",
+        "подушк", "технологи", "лента", "свай", "окна", "двери",
+        "наружн", "внутренн",
+    ))
+    if (has_dims or has_material) and (has_object or has_construction):
+        return True
+    return False
+# === END_FIX_P6E2_TW_ESTIMATE_LIKE_FULL_CONSTRUCTION_V1 ===
+
