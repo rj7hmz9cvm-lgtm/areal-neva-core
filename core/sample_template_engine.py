@@ -7119,3 +7119,85 @@ def _p6e2_estimate_like(text):
         return True
     return False
 # === END_P6E2_ESTIMATE_LIKE_TOPIC2_PHOTO_EXTEND_V1 ===
+
+# === FIX_P1_CONTEXT_ENRICH_AND_SCOPE_V1 ===
+# Two fixes for handle_topic2_one_big_formula_pipeline_v1:
+# 1. Thin input (no dims/object) → inject rich history from DB before _p1_parse
+# 2. Implicit "под ключ" detection: окна/имитация/снаружи/клик/фальц/двери
+import logging as _p1fix_log_mod
+import re as _p1fix_re
+_P1FIX_LOG = _p1fix_log_mod.getLogger("task_worker")
+
+
+def _p1fix_raw_is_thin(raw: str) -> bool:
+    low = raw.lower().replace("ё", "е")
+    has_dims = bool(_p1fix_re.search(r"\d+\s*(?:на|x|х|×|\*)\s*\d+", low))
+    has_object = any(x in low for x in ("дом", "ангар", "склад", "баня", "гараж", "здани"))
+    return not has_dims and not has_object
+
+
+def _p1fix_get_context(conn, chat_id, topic_id: int) -> str:
+    try:
+        rows = conn.execute("""
+            SELECT raw_input FROM tasks
+            WHERE chat_id=? AND COALESCE(topic_id,0)=?
+              AND updated_at >= datetime('now','-7 days')
+              AND (
+                raw_input LIKE '%дом%' OR raw_input LIKE '%каркас%' OR
+                raw_input LIKE '%газобетон%' OR raw_input LIKE '%монолит%' OR
+                raw_input LIKE '%фундамент%' OR raw_input LIKE '%высота%' OR
+                raw_input LIKE '%этаж%' OR raw_input LIKE '%кровл%'
+              )
+            ORDER BY updated_at DESC LIMIT 10
+        """, (str(chat_id), int(topic_id or 0))).fetchall()
+        best, best_score = "", 0
+        for row in rows:
+            raw = str(row[0] or "")
+            low = raw.lower().replace("ё", "е")
+            score = 0
+            if any(x in low for x in ("дом", "ангар", "склад")): score += 20
+            if any(x in low for x in ("каркас", "газобетон", "монолит", "кирпич")): score += 20
+            if _p1fix_re.search(r"\d+\s*(?:на|x|х)\s*\d+", low): score += 25
+            if _p1fix_re.search(r"\d+\s*км", low): score += 15
+            if any(x in low for x in ("монолит", "плита", "лента", "сва")): score += 10
+            if score > best_score:
+                best_score, best = score, raw
+        return best if best_score >= 20 else ""
+    except Exception:
+        return ""
+
+
+# Patch _p1_parse_20260504 to detect implicit "под ключ"
+_p1fix_orig_parse = _p1_parse_20260504
+
+def _p1_parse_20260504(text):
+    p = _p1fix_orig_parse(text)
+    if not p.get("scope"):
+        low = text.lower().replace("ё", "е")
+        if any(x in low for x in (
+            "окна", "двери", "оконн", "имитац", "внутри", "снаружи",
+            "клик", "фальц", "сайдинг", "фасад", "отделк",
+            "электрик", "водоснабж", "канализ", "отопл",
+        )):
+            p = dict(p)
+            p["scope"] = "под ключ"
+    return p
+
+
+# Wrap handle_topic2_one_big_formula_pipeline_v1 to inject context
+_p1fix_orig_handle = handle_topic2_one_big_formula_pipeline_v1
+
+async def handle_topic2_one_big_formula_pipeline_v1(conn, task, chat_id=None, topic_id=None, raw_input=None, **kwargs):
+    ri = raw_input if raw_input is not None else _p1_row_get_20260504(task, "raw_input", "")
+    ri = _p1_s_20260504(ri, 12000)
+    if _p1fix_raw_is_thin(ri):
+        _chat = str(chat_id if chat_id is not None else _p1_row_get_20260504(task, "chat_id", ""))
+        _topic = int(topic_id if topic_id is not None else (_p1_row_get_20260504(task, "topic_id", 2) or 2))
+        rich = _p1fix_get_context(conn, _chat, _topic)
+        if rich and rich.strip() != ri.strip():
+            _P1FIX_LOG.info("FIX_P1_CONTEXT_ENRICH: thin input — injecting history")
+            raw_input = rich + "\n" + ri
+    return await _p1fix_orig_handle(conn, task, chat_id=chat_id, topic_id=topic_id, raw_input=raw_input, **kwargs)
+
+_P1FIX_LOG.info("FIX_P1_CONTEXT_ENRICH_AND_SCOPE_V1 installed")
+# === END_FIX_P1_CONTEXT_ENRICH_AND_SCOPE_V1 ===
