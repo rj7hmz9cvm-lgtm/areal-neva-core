@@ -11576,6 +11576,48 @@ def _top2_ob_build_context(conn, task_id, chat_id, topic_id, raw):
 _T2BCH_LOG.info("FIX_TOP2_BUILD_CONTEXT_HISTORY_V1 installed")
 # === END_FIX_TOP2_BUILD_CONTEXT_HISTORY_V1 ===
 
+# === FIX_P6_TOPIC2_ESTIMATE_VAGUE_V1 ===
+# _p6_is_topic2_estimate_20260504 missed "посчитай" (without "ть").
+# _p6_is_topic2_vague_20260504 triggered on "посмотри" even in estimate requests.
+# "посчитай вот этот дом все данные у тебя есть" → vague=True → "Нет ТЗ".
+import logging as _p6fix_log_mod
+_P6FIX_LOG = _p6fix_log_mod.getLogger("task_worker")
+
+_p6fix_orig_estimate = _p6_is_topic2_estimate_20260504
+_p6fix_orig_vague = _p6_is_topic2_vague_20260504
+
+
+def _p6_is_topic2_estimate_20260504(raw):
+    if _p6fix_orig_estimate(raw):
+        return True
+    low = str(raw or "").lower().replace("ё", "е")
+    has_calc = any(x in low for x in (
+        "посчитай", "рассчитай", "нужна смета", "нужен расчет",
+        "сколько стоит", "сколько будет", "цена", "стоимост",
+    ))
+    has_obj = any(x in low for x in (
+        "дом", "ангар", "склад", "баня", "гараж", "house", "хаус",
+    ))
+    has_ref = any(x in low for x in (
+        "данные у тебя", "у тебя есть", "все данные", "как описано",
+        "как у меня", "вот этот", "этот дом", "этот объект",
+    ))
+    if has_calc and (has_obj or has_ref):
+        return True
+    if has_ref and has_obj:
+        return True
+    return False
+
+
+def _p6_is_topic2_vague_20260504(raw):
+    if _p6_is_topic2_estimate_20260504(raw):
+        return False
+    return _p6fix_orig_vague(raw)
+
+
+_P6FIX_LOG.info("FIX_P6_TOPIC2_ESTIMATE_VAGUE_V1 installed")
+# === END_FIX_P6_TOPIC2_ESTIMATE_VAGUE_V1 ===
+
 # === MOVE_MAIN_ENTRYPOINT_TO_END_V4 ===
 if __name__ == "__main__":
     asyncio.run(main())
