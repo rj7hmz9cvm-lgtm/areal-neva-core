@@ -7747,3 +7747,97 @@ def _p2_create_xlsx(task_id, p, rows, prices=None, price_status=""):
 
 _P2XL15_LOG.info("PATCH_TOPIC2_CANONICAL_XLSX_15COL_V2 installed")
 # === END_PATCH_TOPIC2_CANONICAL_XLSX_15COL_V2 ===
+
+# === PATCH_TOPIC2_PRICE_SEARCH_CHAT_ISOLATION_V1 ===
+# Fix: _p2_price_search hardcodes chat_id="-1003725299009" and topic_id=500
+# which routes price queries through wrong chat context.
+# Fix: wrap to use actual task's chat_id if available via module-level context.
+import logging as _p2pci_log
+_P2PCI_LOG = _p2pci_log.getLogger("sample_template_engine")
+
+# Thread-local storage for current task context during price search
+import threading as _p2pci_threading
+_P2PCI_CTX = _p2pci_threading.local()
+
+def _p2pci_set_ctx(chat_id: str, topic_id: int = 2):
+    _P2PCI_CTX.chat_id = str(chat_id or "")
+    _P2PCI_CTX.topic_id = int(topic_id or 2)
+
+def _p2pci_get_ctx():
+    return (
+        getattr(_P2PCI_CTX, "chat_id", "") or "-1003725299009",
+        getattr(_P2PCI_CTX, "topic_id", 2) or 2,
+    )
+
+_P2PCI_ORIG_SEARCH = _p2_price_search
+
+async def _p2_price_search(p, rows, chat_id=None, topic_id=None):
+    try:
+        ctx_chat, ctx_topic = _p2pci_get_ctx()
+        real_chat = str(chat_id or ctx_chat or "-1003725299009")
+        real_topic = int(topic_id or ctx_topic or 2)
+
+        key_items = []
+        import re as _p2pci_re, json as _p2pci_json
+        for r in rows:
+            if r["section"] in ("Фундамент", "Кровля", "Фасад", "Отопление", "Санузлы", "Проёмы"):
+                key_items.append(r["item"])
+        key_items = key_items[:12]
+        if not key_items:
+            return [], "PRICE_SEARCH_NO_KEY_ITEMS"
+
+        prompt = (
+            "Проверь актуальные ориентировочные цены по Санкт-Петербургу и Ленобласти для сметы частного дома.\n"
+            "Верни кратко JSON массив prices: item, price, unit, supplier, url, checked_at. "
+            "Если цены не найдены, верни пустой массив [].\n"
+            "Нельзя возвращать смету, PDF, XLSX, внутренние маркеры.\n\n"
+            "Позиции:\n" + "\n".join(key_items)
+        )
+        try:
+            from core.ai_router import process_ai_task as _p2pci_ai
+            payload = {
+                "id": f"price_check_{real_chat}",
+                "task_id": f"price_check_{real_chat}",
+                "chat_id": real_chat,
+                "topic_id": 500,
+                "input_type": "search",
+                "raw_input": prompt,
+                "normalized_input": prompt,
+                "state": "IN_PROGRESS",
+                "direction": "internet_search",
+                "engine": "search_supplier",
+                "topic_role": "price_check",
+            }
+            import asyncio as _p2pci_aio
+            txt = await _p2pci_aio.wait_for(_p2pci_ai(payload), timeout=120)
+            txt = str(txt or "")[:12000]
+        except Exception:
+            return [], "PRICE_SEARCH_FAILED_FALLBACK_BASE_RATES"
+
+        prices = []
+        try:
+            m = _p2pci_re.search(r"(\[.*?\])", txt, _p2pci_re.S)
+            if m:
+                arr = _p2pci_json.loads(m.group(1))
+                if isinstance(arr, list):
+                    for x in arr[:20]:
+                        if isinstance(x, dict):
+                            prices.append(x)
+        except Exception:
+            pass
+        if not prices:
+            for line in txt.splitlines():
+                if _p2pci_re.search(r"\d[\d\s]{2,}\s*(?:руб|₽)", line, _p2pci_re.I):
+                    prices.append({"raw": line.strip()[:500]})
+                if len(prices) >= 12:
+                    break
+
+        status = "PRICE_SEARCH_OK" if prices else "PRICE_SEARCH_EMPTY_FALLBACK"
+        _P2PCI_LOG.info("PATCH_TOPIC2_PRICE_SEARCH_CHAT_ISOLATION_V1 chat=%s items=%d status=%s", real_chat, len(prices), status)
+        return prices, status
+    except Exception as _p2pci_e:
+        _P2PCI_LOG.warning("P2PCI_ERR: %s — fallback", _p2pci_e)
+        return await _P2PCI_ORIG_SEARCH(p, rows)
+
+_P2PCI_LOG.info("PATCH_TOPIC2_PRICE_SEARCH_CHAT_ISOLATION_V1 installed")
+# === END_PATCH_TOPIC2_PRICE_SEARCH_CHAT_ISOLATION_V1 ===

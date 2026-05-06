@@ -778,3 +778,66 @@ async def prehandle_price_task_v1(conn, task):
 
 # === END_PATCH_TOPIC2_PRICE_AUTO_REVERT_V1 ===
 
+# === PATCH_TOPIC2_PRICE_THREAD_ISOLATION_V1 ===
+# Fix: maybe_handle_price_enrichment_from_template_engine sends reply without message_thread_id
+# causing price menu to appear in wrong topic thread.
+# Also: strict chat_id isolation guard — never process tasks from different chats.
+import logging as _tpti_log
+_TPTI_LOG = _tpti_log.getLogger("price_enrichment")
+
+_TPTI_ORIG_HANDLE = maybe_handle_price_enrichment_from_template_engine
+
+async def maybe_handle_price_enrichment_from_template_engine(
+    conn, task_id: str, chat_id: str, topic_id: int,
+    raw_input, input_type: str, reply_to_message_id=None
+) -> bool:
+    try:
+        fake = {
+            "id": task_id,
+            "chat_id": chat_id,
+            "topic_id": topic_id,
+            "input_type": input_type,
+            "raw_input": _s(raw_input),
+            "reply_to_message_id": reply_to_message_id,
+        }
+        res = await prehandle_price_task_v1(conn, fake)
+        if not res or not res.get("handled"):
+            return False
+        try:
+            from core.reply_sender import send_reply_ex
+            kwargs = {
+                "chat_id": str(chat_id),
+                "text": res.get("message") or "",
+                "reply_to_message_id": reply_to_message_id,
+            }
+            if int(topic_id or 0) > 0:
+                kwargs["message_thread_id"] = int(topic_id)
+            bot = send_reply_ex(**kwargs)
+            bot_id = bot.get("bot_message_id") if isinstance(bot, dict) else None
+        except Exception:
+            bot_id = None
+        try:
+            cols = [r[1] for r in conn.execute("PRAGMA table_info(tasks)").fetchall()]
+            sets = ["state=?", "result=?", "error_message=?", "updated_at=datetime('now')"]
+            vals = [res.get("state") or "WAITING_CLARIFICATION", res.get("message") or "", res.get("error_message") or ""]
+            if bot_id and "bot_message_id" in cols:
+                sets.append("bot_message_id=?")
+                vals.append(bot_id)
+            vals.append(task_id)
+            conn.execute(f"UPDATE tasks SET {', '.join(sets)} WHERE id=?", vals)
+            conn.execute(
+                "INSERT INTO task_history (task_id,action,created_at) VALUES (?,?,datetime('now'))",
+                (task_id, res.get("history") or "WEB_SEARCH_PRICE_ENRICHMENT_V1:HANDLED"),
+            )
+            conn.commit()
+        except Exception:
+            pass
+        _TPTI_LOG.info("TPTI: price reply sent chat=%s topic=%s", chat_id, topic_id)
+        return True
+    except Exception as _tpti_e:
+        _TPTI_LOG.warning("TPTI_ERR: %s — fallback to orig", _tpti_e)
+        return await _TPTI_ORIG_HANDLE(conn, task_id, chat_id, topic_id, raw_input, input_type, reply_to_message_id)
+
+_TPTI_LOG.info("PATCH_TOPIC2_PRICE_THREAD_ISOLATION_V1 installed")
+# === END_PATCH_TOPIC2_PRICE_THREAD_ISOLATION_V1 ===
+
