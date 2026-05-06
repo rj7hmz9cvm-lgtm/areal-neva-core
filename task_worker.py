@@ -11440,3 +11440,60 @@ if __name__ == "__main__":
     asyncio.run(main())
 # === END_MOVE_MAIN_ENTRYPOINT_TO_END_V2 ===
 
+# === FIX_P6E67_FIND_PARENT_NO_DONE_FAILED_V1 ===
+# Bug: _p6e67_find_parent allowed DONE/FAILED parent tasks for EXACT_REPLY_LINK.
+# Result: user replies to completed estimate → new estimate merged into old DONE task → dropped.
+# Fix: replace _p6e67_find_parent with version that excludes DONE/FAILED from all match paths.
+import logging as _p6e67fix_logging
+_P6E67FIX_LOG = _p6e67fix_logging.getLogger("task_worker")
+
+_p6e67fix_orig_find_parent = _p6e67_find_parent
+
+def _p6e67_find_parent(conn, task):
+    chat_id = _p6e67_s(_p6e67_row(task, "chat_id", ""))
+    topic_id = int(_p6e67_row(task, "topic_id", 0) or 0)
+    task_id = _p6e67_s(_p6e67_row(task, "id", ""))
+    reply_to = _p6e67_row(task, "reply_to_message_id", None)
+    try:
+        reply_to = int(reply_to) if reply_to not in (None, "", 0, "0") else None
+    except Exception:
+        reply_to = None
+
+    if not chat_id or topic_id != 2:
+        return None, "NO_SCOPE"
+
+    # EXACT_REPLY_LINK — only active/open parents (not DONE/FAILED).
+    # A completed estimate should not absorb a new request.
+    if reply_to:
+        row = conn.execute("""
+            SELECT * FROM tasks
+            WHERE chat_id=? AND COALESCE(topic_id,0)=? AND id<>?
+              AND (bot_message_id=? OR reply_to_message_id=?)
+              AND state IN ('IN_PROGRESS','AWAITING_CONFIRMATION','RESULT_READY','WAITING_CLARIFICATION')
+            ORDER BY rowid DESC LIMIT 1
+        """, (chat_id, topic_id, task_id, reply_to, reply_to)).fetchone()
+        if row and _p6e67_is_estimate(row):
+            return row, "EXACT_REPLY_LINK"
+
+    # LAST_ACTIVE_ESTIMATE_FALLBACK — same: only open parents.
+    row = conn.execute("""
+        SELECT * FROM tasks
+        WHERE chat_id=? AND COALESCE(topic_id,0)=? AND id<>?
+          AND state IN ('IN_PROGRESS','AWAITING_CONFIRMATION','RESULT_READY','WAITING_CLARIFICATION')
+          AND (
+            raw_input LIKE '%смет%' OR result LIKE '%смет%'
+            OR raw_input LIKE '%стоимость%' OR result LIKE '%стоимость%'
+            OR raw_input LIKE '%кровл%' OR result LIKE '%кровл%'
+            OR raw_input LIKE '%фундамент%' OR result LIKE '%фундамент%'
+          )
+        ORDER BY rowid DESC LIMIT 1
+    """, (chat_id, topic_id, task_id)).fetchone()
+
+    if row and _p6e67_is_estimate(row):
+        return row, "LAST_ACTIVE_ESTIMATE_FALLBACK"
+
+    return None, "NOT_FOUND"
+
+_P6E67FIX_LOG.info("FIX_P6E67_FIND_PARENT_NO_DONE_FAILED_V1 installed")
+# === END_FIX_P6E67_FIND_PARENT_NO_DONE_FAILED_V1 ===
+
