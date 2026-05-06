@@ -7472,6 +7472,17 @@ def _p6e67_merge_parent(conn, parent, current, source):
     return True
 
 async def _p6e67_try_merge(conn, task):
+    # === PATCH_TOPIC2_INLINE_FIX_20260506_V1 STATE_GUARD ===
+    # bail out fast if task already in terminal state — fixes infinite P6E67 loop on cancelled tasks
+    try:
+        _pifx_tid_pre = str(_p6e67_row(task, "id", "") or "")
+        if _pifx_tid_pre:
+            _pifx_st_row = conn.execute("SELECT state FROM tasks WHERE id=?", (_pifx_tid_pre,)).fetchone()
+            if _pifx_st_row and str(_pifx_st_row[0] or "").upper() in ("CANCELLED", "FAILED", "DONE", "ARCHIVED"):
+                return False
+    except Exception:
+        pass
+    # === END_PATCH_TOPIC2_INLINE_FIX_20260506_V1 STATE_GUARD ===
     raw = _p6e67_s(_p6e67_row(task, "raw_input", ""), 70000)
     if int(_p6e67_row(task, "topic_id", 0) or 0) != 2:
         return False
@@ -7481,6 +7492,29 @@ async def _p6e67_try_merge(conn, task):
     parent, source = _p6e67_find_parent(conn, task)
     if not parent:
         _p6e67_tid = str(_p6e67_row(task, "id", "") or "")
+        # === PATCH_TOPIC2_INLINE_FIX_20260506_V1 FRESH_ESTIMATE_BEFORE_TERMINAL ===
+        # if user sent a full estimate TZ (signals>=3), dispatch directly instead of terminal-guard
+        try:
+            _pifx_raw_low = str(_p6e67_row(task, "raw_input", "") or "").lower()
+            _pifx_keys = ("смет","расчёт","расчет","фундамент","стен","перекрыт","кровл","газобетон","монолит","бетон","арматур","каркас","имитация бруса","ламинат","кирпич","отделк","м²","м2","м³","м3","посчитай")
+            _pifx_signals = sum(1 for k in _pifx_keys if k in _pifx_raw_low)
+            if _pifx_signals >= 3:
+                _pifx_fn = globals().get("_t2fer_run_final_estimate")
+                if _pifx_fn:
+                    _pifx_res = await _pifx_fn(conn, task, "INLINE_FIX_FRESH_TZ")
+                    if _pifx_res:
+                        try:
+                            conn.execute(
+                                "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                                (_p6e67_tid, "PATCH_TOPIC2_INLINE_FIX_20260506_V1:FRESH_ESTIMATE_DISPATCHED:" + str(_pifx_signals)),
+                            )
+                            conn.commit()
+                        except Exception:
+                            pass
+                        return True
+        except Exception:
+            pass
+        # === END_PATCH_TOPIC2_INLINE_FIX_20260506_V1 FRESH_ESTIMATE_BEFORE_TERMINAL ===
         _p6e67_raw = str(_p6e67_row(task, "raw_input", "") or "")
         _p6e67_reply_to = _p6e67_row(task, "reply_to_message_id", None)
         _p6e67_hist(conn, _p6e67_tid, "P6E67_PARENT_NOT_FOUND")
@@ -12394,6 +12428,21 @@ async def _t2v5_try_bind_price_choice(conn, task):
         return False
 
     raw = _t2v5_s(_t2v5_row(task, "raw_input", ""))
+    # === PATCH_TOPIC2_INLINE_FIX_20260506_V1 V5_EXPLICIT_TOKEN_REQUIRED ===
+    # block long messages and messages without explicit price-token from being treated as price reply
+    _pifx_v5_low = str(raw or "").strip().lower()
+    _pifx_v5_explicit = ("1","2","3","4","а","б","в","г","миним","средн","медиан","максим","надёж","надеж","ручн","вариант")
+    if len(_pifx_v5_low) > 80 or not any(t in _pifx_v5_low for t in _pifx_v5_explicit):
+        try:
+            conn.execute(
+                "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                (str(task_id), "PATCH_TOPIC2_INLINE_FIX_20260506_V1:V5_PRICE_REJECTED:no_explicit_token_or_long"),
+            )
+            conn.commit()
+        except Exception:
+            pass
+        return False
+    # === END_PATCH_TOPIC2_INLINE_FIX_20260506_V1 V5_EXPLICIT_TOKEN_REQUIRED ===
     key, choice = _t2v5_price_choice(raw)
     source_text = raw
 
@@ -12744,6 +12793,20 @@ async def _t2v6c_try_generate_after_price(conn, task):
         return False
 
     raw = _t2v6c_s(_t2v6c_row(task, "raw_input", ""))
+    # === PATCH_TOPIC2_INLINE_FIX_20260506_V1 V6C_EXPLICIT_TOKEN_REQUIRED ===
+    _pifx_v6_low = str(raw or "").strip().lower()
+    _pifx_v6_explicit = ("1","2","3","4","а","б","в","г","миним","средн","медиан","максим","надёж","надеж","ручн","вариант")
+    if len(_pifx_v6_low) > 80 or not any(t in _pifx_v6_low for t in _pifx_v6_explicit):
+        try:
+            conn.execute(
+                "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                (str(task_id), "PATCH_TOPIC2_INLINE_FIX_20260506_V1:V6C_PRICE_REJECTED:no_explicit_token_or_long"),
+            )
+            conn.commit()
+        except Exception:
+            pass
+        return False
+    # === END_PATCH_TOPIC2_INLINE_FIX_20260506_V1 V6C_EXPLICIT_TOKEN_REQUIRED ===
     key, choice = _t2v6c_choice(raw)
     if not key:
         key, choice = _t2v6c_latest_clarified_choice(conn, task_id)
@@ -13538,6 +13601,36 @@ if _FCG_ORIG_UPDATE_TASK and not getattr(_FCG_ORIG_UPDATE_TASK, "_fcg_wrapped", 
         result = kwargs.get("result", args[1] if len(args) >= 2 else None)
         err = kwargs.get("error_message", args[2] if len(args) >= 3 else "")
         violation = _fcg_public_result_violation(conn, task_id, state, result, err)
+        # === PATCH_TOPIC2_INLINE_FIX_20260506_V1 UPDATE_BYPASS_VIOLATION ===
+        # if all 5 critical DONE markers present + result has Drive link → don't block update
+        if violation:
+            try:
+                _pifx_required = (
+                    "TOPIC2_XLSX_CREATED",
+                    "TOPIC2_PDF_CREATED",
+                    "TOPIC2_DRIVE_UPLOAD_XLSX_OK",
+                    "TOPIC2_DRIVE_UPLOAD_PDF_OK",
+                    "TOPIC2_TELEGRAM_DELIVERED",
+                )
+                _pifx_rows = conn.execute(
+                    "SELECT action FROM task_history WHERE task_id=?", (str(task_id),)
+                ).fetchall()
+                _pifx_actions = " ".join(str(r[0]) for r in _pifx_rows)
+                _pifx_all_markers = all(m in _pifx_actions for m in _pifx_required)
+                _pifx_has_drive = bool(result) and "drive.google.com" in str(result).lower()
+                if _pifx_all_markers and _pifx_has_drive:
+                    try:
+                        conn.execute(
+                            "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                            (str(task_id), "PATCH_TOPIC2_INLINE_FIX_20260506_V1:UPDATE_BYPASS_VIOLATION:5_markers_drive_ok"),
+                        )
+                        conn.commit()
+                    except Exception:
+                        pass
+                    violation = ""
+            except Exception:
+                pass
+        # === END_PATCH_TOPIC2_INLINE_FIX_20260506_V1 UPDATE_BYPASS_VIOLATION ===
         if violation:
             a = list(args)
             if len(a) >= 1:
@@ -15254,3 +15347,17 @@ if _TDOIP_ORIG_VIOLATION and not getattr(_TDOIP_ORIG_VIOLATION, "_tdoip_wrapped"
 
 _TDOIP_LOG.info("PATCH_TOPIC2_DONE_OVERRIDE_INVALID_PUBLIC_V1 installed")
 # === END_PATCH_TOPIC2_DONE_OVERRIDE_INVALID_PUBLIC_V1 ===
+
+
+# ============================================================
+# === PATCH_TOPIC2_INLINE_FIX_20260506_V1 SUPERSEDES_NOTE ===
+# Inline fixes applied directly in function bodies above:
+#   - _p6e67_try_merge:  (1) state guard at top — stops infinite loop on CANCELLED/FAILED/DONE
+#                        (2) fresh estimate dispatch in `if not parent` block — full-TZ → estimate
+#   - _update_task FCG wrapper: bypass INVALID_PUBLIC_RESULT if 5 critical DONE markers + Drive link in result
+#   - _t2v5_/_t2v6c_ price bind: explicit token required (no long messages, no fallback to history)
+#
+# Wrappers below (PATCH_TOPIC2_CANCEL_GUARD_V1 / FRESH_ESTIMATE_FALLBACK_V1 / PRICE_REPLY_REVIVE_V1 /
+#   PRICE_TIMEOUT_GUARD_V1 / DONE_OVERRIDE_INVALID_PUBLIC_V1) are SUPERSEDED_BY_INLINE_FIX_20260506_V1.
+# Kept inert (they wrap functions that are already inline-fixed). To remove: delete lines ~14898-15256.
+# ============================================================
