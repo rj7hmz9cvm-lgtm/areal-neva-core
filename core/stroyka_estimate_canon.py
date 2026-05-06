@@ -1723,3 +1723,64 @@ def _build_estimate_items(parsed, price_text, choice):
 
     return items
 # === END_BUILD_ESTIMATE_ITEMS_11_SECTIONS_V1 ===
+
+# === FIX_STROYKA_CONTEXT_ENRICH_BEFORE_PARSE_V1 ===
+# Root cause: _missing_question only sees current raw_input.
+# When user sends thin voice ("Сделаешь мне смету?") bot asks "Что строим?"
+# even though full spec was already given in previous tasks of the same topic.
+# Canon rule: ask only for MISSING data — if history has full spec, use it.
+import logging as _sec_log_mod
+
+_SEC_LOG = _sec_log_mod.getLogger("task_worker")
+
+
+def _sec_raw_is_thin(raw: str) -> bool:
+    p = _parse_request(raw)
+    return not p.get("object") and not p.get("dimensions") and not p.get("material")
+
+
+def _sec_get_rich_context(conn, chat_id: str, topic_id: int) -> str:
+    try:
+        rows = conn.execute("""
+            SELECT raw_input FROM tasks
+            WHERE chat_id=? AND COALESCE(topic_id,0)=?
+              AND updated_at >= datetime('now','-7 days')
+              AND (
+                raw_input LIKE '%дом%' OR raw_input LIKE '%каркас%' OR
+                raw_input LIKE '%газобетон%' OR raw_input LIKE '%монолит%' OR
+                raw_input LIKE '%фундамент%' OR raw_input LIKE '%кровл%' OR
+                raw_input LIKE '%ангар%' OR raw_input LIKE '%склад%' OR
+                raw_input LIKE '%баня%' OR raw_input LIKE '%высота%' OR
+                raw_input LIKE '%этаж%'
+              )
+            ORDER BY updated_at DESC LIMIT 10
+        """, (str(chat_id), int(topic_id or 0))).fetchall()
+        best, best_score = "", 0
+        for row in rows:
+            raw = str(row[0] or "")
+            score = _estimate_raw_score(raw)
+            if score > best_score:
+                best_score, best = score, raw
+        return best if best_score >= 20 else ""
+    except Exception:
+        return ""
+
+
+_sec_orig_maybe_handle = maybe_handle_stroyka_estimate
+
+
+async def maybe_handle_stroyka_estimate(conn, task, logger=None):
+    raw_input = _s(_row_get(task, "raw_input", ""))
+    if _sec_raw_is_thin(raw_input):
+        chat_id = _s(_row_get(task, "chat_id", ""))
+        topic_id = int(_row_get(task, "topic_id", 0) or 0)
+        rich = _sec_get_rich_context(conn, chat_id, topic_id)
+        if rich and rich.strip() != raw_input.strip():
+            _SEC_LOG.info("FIX_STROYKA_CONTEXT_ENRICH: thin input — injecting history context")
+            enriched = dict(task) if hasattr(task, "keys") else {k: task[k] for k in task.keys()}
+            enriched["raw_input"] = rich + "\n" + raw_input
+            return await _sec_orig_maybe_handle(conn, enriched, logger)
+    return await _sec_orig_maybe_handle(conn, task, logger)
+
+_SEC_LOG.info("FIX_STROYKA_CONTEXT_ENRICH_BEFORE_PARSE_V1 installed")
+# === END_FIX_STROYKA_CONTEXT_ENRICH_BEFORE_PARSE_V1 ===
