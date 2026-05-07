@@ -305,6 +305,12 @@ def _is_bad_estimate_result(text: str) -> bool:
         return True
     if "engine:" in t or "manifest:" in t:
         return True
+    # === TOPIC2_FINAL_GAPS_V5B_RAW_JSON_GUARD ===
+    if t.strip().startswith("{") and any(_k in t for _k in ('"state":', '"topic_id":', '"task_id":', '"result":', '"action":')):
+        return True
+    if _ibr_re.search(r'"state"\s*:\s*"(?:failed|in_progress|done|pending|waiting)', t):
+        return True
+    # === END_TOPIC2_FINAL_GAPS_V5B_RAW_JSON_GUARD ===
     # === END_TOPIC2_FINAL_GAPS_V5_REGEX_FORBIDDEN ===
     return False
 
@@ -1005,7 +1011,7 @@ async def _search_prices_online(parsed: Dict[str, Any], template: Dict[str, Any]
                     except Exception:
                         pass
                 _offers = await asyncio.wait_for(_per_item_search(_pi_name, _pi_unit), timeout=25)
-                _valid_offers = [_o for _o in (_offers or []) if _o.get("price")]
+                _valid_offers = [_o for _o in (_offers or []) if _o.get("price") and (_o.get("supplier") or _o.get("url")) and _o.get("status")]
                 if conn is not None and task_id is not None:
                     try:
                         if _valid_offers:
@@ -1401,17 +1407,37 @@ async def _generate_and_send(conn: sqlite3.Connection, task: Any, pending: Dict[
 
     try:
         _xlsx_verify_total = 0.0
+        _xlsx_itogo_val = None
         from openpyxl import load_workbook as _t2v_lwb
         import sys as _t2v_sys
         _t2v_sys.setrecursionlimit(5000)
         _t2v_wb = _t2v_lwb(xlsx_path, data_only=True, read_only=True)
         if "AREAL_CALC" in _t2v_wb.sheetnames:
             _t2v_ws = _t2v_wb["AREAL_CALC"]
-            for _t2v_row in list(_t2v_ws.iter_rows(min_row=2, values_only=True)):
+            _t2v_all_rows = list(_t2v_ws.iter_rows(min_row=1, values_only=True))
+            # 1. Try canonical total row: find "ИТОГО без НДС" in col I (index 8), read col J (index 9)
+            for _t2v_r in _t2v_all_rows:
                 try:
-                    _xlsx_verify_total += float(_t2v_row[4] or 0) * float(_t2v_row[7] or 0)
-                except (TypeError, ValueError, IndexError):
+                    if len(_t2v_r) > 8 and str(_t2v_r[8] or "").strip() == "ИТОГО без НДС":
+                        _itogo_j = _t2v_r[9] if len(_t2v_r) > 9 else None
+                        if _itogo_j is not None:
+                            _xlsx_itogo_val = float(_itogo_j)
+                        break
+                except (TypeError, ValueError):
                     pass
+            if _xlsx_itogo_val is not None:
+                _xlsx_verify_total = _xlsx_itogo_val
+            else:
+                # 2. Fall back: sum col J ("Всего руб", index 9) per data row; E×H if J is None (formula not cached)
+                for _t2v_row in _t2v_all_rows[1:]:
+                    try:
+                        _j_val = _t2v_row[9] if len(_t2v_row) > 9 else None
+                        if _j_val is not None:
+                            _xlsx_verify_total += float(_j_val)
+                        else:
+                            _xlsx_verify_total += float(_t2v_row[4] or 0) * float(_t2v_row[7] or 0)
+                    except (TypeError, ValueError, IndexError):
+                        pass
         _t2v_wb.close()
         _xlsx_verify_total = round(_xlsx_verify_total, 2)
         _pdf_total = round(py_total, 2)
