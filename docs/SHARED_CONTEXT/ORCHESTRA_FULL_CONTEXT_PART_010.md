@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_010
-generated_at_utc: 2026-05-07T15:57:26.230105+00:00
-git_sha_before_commit: 62d85b864b760c7aaa7b72360d2dafb02076f6c4
+generated_at_utc: 2026-05-07T16:36:57.701338+00:00
+git_sha_before_commit: 48f9858805392d105d729c61ce32c7e1b6587bd9
 part: 10/17
 
 
 ====================================================================================================
 BEGIN_FILE: core/sample_template_engine.py
 FILE_CHUNK: 1/2
-SHA256_FULL_FILE: e1d367547a2d362914ef6e747007a379e44a7b04d27031d8155f389c2fb9e926
+SHA256_FULL_FILE: afed00e027068743fbef3ed9c07c0187d1a3de653ba6b8b59ac88a2396f70f13
 ====================================================================================================
 # === FULLFIX_13A_SAMPLE_FILE_INTENT_AND_TEMPLATE_ESTIMATE ===
 import os
@@ -7339,7 +7339,7 @@ async def handle_topic2_one_big_formula_pipeline_v1(
                     try:
                         conn.execute(
                             "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
-                            (task_id, f"TOPIC2_PRICE_CHOICE_CONFIRMED:{_p3pcg_has_explicit_price}"),
+                            (task_id, "TOPIC2_PRICE_CHOICE_CONFIRMED:confirmed"),
                         )
                         conn.commit()
                     except Exception:
@@ -7887,6 +7887,7 @@ if _P6DREC_PRE_P3 and callable(_P6DREC_PRE_P3):
             payload.get("task_id") or (task["id"] if hasattr(task, "keys") and "id" in task.keys() else ""), 200
         )
 
+        if not _p6d_img_is_image(file_name, mime_type, local_path):
 
 ====================================================================================================
 END_FILE: core/sample_template_engine.py
@@ -7896,9 +7897,8 @@ FILE_CHUNK: 1/2
 ====================================================================================================
 BEGIN_FILE: core/sample_template_engine.py
 FILE_CHUNK: 2/2
-SHA256_FULL_FILE: e1d367547a2d362914ef6e747007a379e44a7b04d27031d8155f389c2fb9e926
+SHA256_FULL_FILE: afed00e027068743fbef3ed9c07c0187d1a3de653ba6b8b59ac88a2396f70f13
 ====================================================================================================
-        if not _p6d_img_is_image(file_name, mime_type, local_path):
             return False
         if not _p6d_img_estimate_like(caption):
             return False

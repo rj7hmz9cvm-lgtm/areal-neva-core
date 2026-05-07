@@ -1,7 +1,7 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-05-07T15:57:26.315639+00:00
-GIT_SHA: 62d85b864b760c7aaa7b72360d2dafb02076f6c4
+GENERATED_AT: 2026-05-07T16:36:57.777748+00:00
+GIT_SHA: 48f9858805392d105d729c61ce32c7e1b6587bd9
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -9,7 +9,7 @@ ROLE: Сметы
 DIRECTIONS_BOUND: estimates
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
 ACTIVE_TASKS: 0
-FAILED_LAST_24H: 11
+FAILED_LAST_24H: 9
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 12
@@ -25,6 +25,9 @@ FAILED_LAST_24H: 11
 - 8212f685 | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
+- 48f9858|docs(handoff): update latest handoff after topic2 and aggregator guard
+- c0300fb|fix(topic2): close 4 code gaps — enrichment markers, cyrillic marker, function-object bug, FCG bypass
+- 2ece9eb|fix(topic2): close 3 live bugs — poison loop terminate, recursion restore, FCG done bypass
 - 62d85b8|fix(topic2): V5B — price source quality gate, raw JSON guard, canonical totals col J
 - 168ce5e|fix(topic2): close final V5 code gaps for prices guards totals
 - 983ced8|fix(topic2): close 3 remaining V4 gaps (repeat/negative/pdf_missing_question)
@@ -52,9 +55,6 @@ FAILED_LAST_24H: 11
 - 7b4a634|fix(topic2): fix P6 estimate/vague detection for implicit estimate requests
 - b466fa9|fix(topic2): inject historical DONE/FAILED/CANCELLED context into estimate pipeline
 - 4d43c1a|fix(sample_template_engine): context enrich + implicit scope for thin topic2 inputs
-- f28a106|fix(topic2/topic500): extend estimate pipeline, offer menu for drive_file, fix search result blocking
-- 2ea6754|fix(topic2): extend estimate detection for construction photos + search result fix
-- 967c48f|fix(topic_2/topic_5): close logic gaps in smeta, voice, and act routing
 
 ## MARKERS_LAST_24H
 - created:NEW
@@ -75,18 +75,18 @@ FAILED_LAST_24H: 11
 - clarified:Все задачи завершены
 - clarified:Отбой всех задач
 - clarified:отмена всех задач
-- TOPIC2_ESTIMATE_FINAL_CLOSE_V2:ESTIMATE_ARTIFACTS_CREATED
-- TOPIC2_ESTIMATE_SESSION_CREATED
-- TOPIC2_CONTEXT_READY
-- TOPIC2_XLSX_CREATED
-- TOPIC2_PDF_CREATED
-- TOPIC2_PDF_CYRILLIC_OK
-- TOPIC2_DRIVE_UPLOAD_XLSX_OK
-- TOPIC2_DRIVE_UPLOAD_PDF_OK
-- TOPIC2_TELEGRAM_DELIVERED
-- TOPIC2_MESSAGE_THREAD_ID_OK
-- TOPIC2_DONE_CONTRACT_OK
-- PATCH_TOPIC2_FRESH_ESTIMATE_ROUTE_GUARD_V1:DRIVE_FILE_FRESH_ESTIMATE
+- PRICE_BIND_POISON_PARENT_GUARD_V2_BLOCKED_V4:LATEST_PRICE_MENU_FALLBACK
+- P6E67_PARENT_REVIVED_AS_REVISION_SOURCE:LAST_ACTIVE_ESTIMATE_FALLBACK
+- P6E67_REVISION_TEXT_MERGED_FROM_TASK:0aca9e91-ebfe-49c7-839f-9c17b9efefa4
+- P6E67_CURRENT_TASK_CANCELLED_MERGED_TO_PARENT:a71dd753-bc6a-4944-8499-5bcadba90c
+- PRICE_BIND_POISON_PARENT_GUARD_V2_BLOCKED_V4:EXACT_REPLY_PRICE_MENU
+- P6E2_TOPIC2_IMAGE_ESTIMATE_ROUTE_TAKEN
+- P6E67_PARENT_NOT_FOUND
+- P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION
+- state:FAILED
+- reply_sent:stale_failed
+- reply_sent:full_contour_direct_tender
+- FULL_CONSTRUCTION_FILE_CONTOUR_CANON_GUARD_V1:DIRECT_TENDER_ESTIMATE_GENERATED
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210

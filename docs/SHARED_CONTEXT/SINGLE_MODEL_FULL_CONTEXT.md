@@ -1,7 +1,7 @@
 # SINGLE_MODEL_FULL_CONTEXT
 
-GENERATED_AT: 2026-05-07T15:57:26.599413+00:00
-GIT_SHA: 62d85b864b760c7aaa7b72360d2dafb02076f6c4
+GENERATED_AT: 2026-05-07T16:36:58.054833+00:00
+GIT_SHA: 48f9858805392d105d729c61ce32c7e1b6587bd9
 PURPOSE: Один файл с полным контекстом проекта для любой модели
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 
@@ -22,7 +22,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 | topic_id | name | status | active | failed_24h |
 |----------|------|--------|--------|------------|
 | 0 | COMMON | UNKNOWN | 0 | 0 |
-| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 0 | 11 |
+| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 0 | 9 |
 | 5 | TEKHNADZOR | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
 | 11 | VIDEO | UNKNOWN | 0 | 0 |
 | 210 | PROEKTIROVANIE | INSTALLED_NOT_VERIFIED | 0 | 5 |
@@ -85,11 +85,11 @@ owner_reference_registry: loaded=True items=11
 # 2. LATEST_HANDOFF
 ================================================================================
 
-# LATEST HANDOFF — 2026-05-07 ~20:00 MSK
-**HEAD**: `168ce5e` — fix(topic2): close final V5 code gaps for prices guards totals  
-**Предыдущий HEAD**: `983ced8`  
-**Воркер**: active  
-**GitHub**: pushed (168ce5e visible)  
+# LATEST HANDOFF — 2026-05-07 ~19:35 MSK
+**HEAD**: `c0300fb` — fix(topic2): close 4 code gaps — enrichment markers, cyrillic marker, function-object bug, FCG bypass  
+**Предыдущий HEAD**: `2ece9eb`  
+**Воркер**: active (pid=2070144)  
+**GitHub**: pushed (c0300fb visible)  
 **Детальный handoff**: `HANDOFF_20260507_V4_GAP_CLOSE.md`
 
 ---
@@ -153,9 +153,32 @@ TOPIC2_DONE_CONTRACT_OK
 
 ---
 
+## BUGFIX3 — `2ece9eb` (3 live bugs from DB diagnostics)
+
+| Патч | Файл | Что |
+|------|------|-----|
+| PATCH_PRICE_BIND_LOOP_TERMINATE_V1 | task_worker.py (append) | Если PRICE_BIND_POISON ≥3 раз для LATEST_PRICE_MENU_FALLBACK → FAILED немедленно |
+| PATCH_RECURSION_LIMIT_RESTORE | stroyka_estimate_canon.py (body) | try/finally восстанавливает sys.getrecursionlimit() после openpyxl |
+| PATCH_FCG_DONE_CONTRACT_BYPASS_V1 | task_worker.py (append) | TOPIC2_DONE_CONTRACT_OK в history → bypass FCG violation check |
+
+Все три патча подтверждены в логе: `PATCH_PRICE_BIND_LOOP_TERMINATE_V1 installed`, `PATCH_FCG_DONE_CONTRACT_BYPASS_V1 installed`
+
+---
+
+## GAP_CLOSE4 — `c0300fb` (4 code gaps from audit)
+
+| Патч | Файл | Что |
+|------|------|-----|
+| PATCH-GAP1 | stroyka_estimate_canon.py | TOPIC2_PRICE_ENRICHMENT_STARTED + DONE в _search_prices_online |
+| PATCH-GAP2 | stroyka_estimate_canon.py | TOPIC2_PDF_CYRILLIC_ATTEMPTED → TOPIC2_PDF_CYRILLIC_OK |
+| PATCH-GAP3 | sample_template_engine.py | fix {_p3pcg_has_explicit_price} → "confirmed" (function-object bug) |
+| PATCH-GAP4 | task_worker.py | FCG bypass: DONE_CONTRACT_OK → AC_GATE_OK |
+
+---
+
 ## OPEN CONTOURS (не закрыто)
 
-1. **Live-verify topic_2** — задача с полным ТЗ в Telegram, проверить маркеры V5
+1. **Live-verify topic_2** — задача с полным ТЗ в Telegram, проверить полную цепочку маркеров
 2. **topic_500 adaptive output** — 16 режимов не реализованы
 3. **MEMORY_QUERY_GUARD_V1** — «что обсуждали» → попадает в estimate route
 4. **`_parse_price_sources` quality** — матчинг ключевых слов требует мониторинга
@@ -3914,8 +3937,8 @@ I canno
 ```
 # topic_0 COMMON
 
-GENERATED_AT: 2026-05-07T15:57:26.286573+00:00
-GIT_SHA: 62d85b864b760c7aaa7b72360d2dafb02076f6c4
+GENERATED_AT: 2026-05-07T16:36:57.750788+00:00
+GIT_SHA: 48f9858805392d105d729c61ce32c7e1b6587bd9
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 0
@@ -3992,7 +4015,7 @@ STATUS: SYNCED_LOCAL
 ## TOPIC_2_STROYKA
 
 STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE: 0  FAILED_24H: 11
+ACTIVE: 0  FAILED_24H: 9
 DIRECTIONS_BOUND: Сметы
 
 ### LAST_FAILED (5)
@@ -4784,8 +4807,8 @@ def _write_xlsx(path: Path, items: List[Dict[str, Any]], source_text: str, photo
 ```
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-05-07T15:57:26.315639+00:00
-GIT_SHA: 62d85b864b760c7aaa7b72360d2dafb02076f6c4
+GENERATED_AT: 2026-05-07T16:36:57.777748+00:00
+GIT_SHA: 48f9858805392d105d729c61ce32c7e1b6587bd9
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -4793,7 +4816,7 @@ ROLE: Сметы
 DIRECTIONS_BOUND: estimates
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
 ACTIVE_TASKS: 0
-FAILED_LAST_24H: 11
+FAILED_LAST_24H: 9
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 12
@@ -4809,6 +4832,9 @@ FAILED_LAST_24H: 11
 - 8212f685 | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
+- 48f9858|docs(handoff): update latest handoff after topic2 and aggregator guard
+- c0300fb|fix(topic2): close 4 code gaps — enrichment markers, cyrillic marker, function-object bug, FCG bypass
+- 2ece9eb|fix(topic2): close 3 live bugs — poison loop terminate, recursion restore, FCG done bypass
 - 62d85b8|fix(topic2): V5B — price source quality gate, raw JSON guard, canonical totals col J
 - 168ce5e|fix(topic2): close final V5 code gaps for prices guards totals
 - 983ced8|fix(topic2): close 3 remaining V4 gaps (repeat/negative/pdf_missing_question)
@@ -4836,9 +4862,6 @@ FAILED_LAST_24H: 11
 - 7b4a634|fix(topic2): fix P6 estimate/vague detection for implicit estimate requests
 - b466fa9|fix(topic2): inject historical DONE/FAILED/CANCELLED context into estimate pipeline
 - 4d43c1a|fix(sample_template_engine): context enrich + implicit scope for thin topic2 inputs
-- f28a106|fix(topic2/topic500): extend estimate pipeline, offer menu for drive_file, fix search result blocking
-- 2ea6754|fix(topic2): extend estimate detection for construction photos + search result fix
-- 967c48f|fix(topic_2/topic_5): close logic gaps in smeta, voice, and act routing
 
 ## MARKERS_LAST_24H
 - created:NEW
@@ -4859,18 +4882,18 @@ FAILED_LAST_24H: 11
 - clarified:Все задачи завершены
 - clarified:Отбой всех задач
 - clarified:отмена всех задач
-- TOPIC2_ESTIMATE_FINAL_CLOSE_V2:ESTIMATE_ARTIFACTS_CREATED
-- TOPIC2_ESTIMATE_SESSION_CREATED
-- TOPIC2_CONTEXT_READY
-- TOPIC2_XLSX_CREATED
-- TOPIC2_PDF_CREATED
-- TOPIC2_PDF_CYRILLIC_OK
-- TOPIC2_DRIVE_UPLOAD_XLSX_OK
-- TOPIC2_DRIVE_UPLOAD_PDF_OK
-- TOPIC2_TELEGRAM_DELIVERED
-- TOPIC2_MESSAGE_THREAD_ID_OK
-- TOPIC2_DONE_CONTRACT_OK
-- PATCH_TOPIC2_FRESH_ESTIMATE_ROUTE_GUARD_V1:DRIVE_FILE_FRESH_ESTIMATE
+- PRICE_BIND_POISON_PARENT_GUARD_V2_BLOCKED_V4:LATEST_PRICE_MENU_FALLBACK
+- P6E67_PARENT_REVIVED_AS_REVISION_SOURCE:LAST_ACTIVE_ESTIMATE_FALLBACK
+- P6E67_REVISION_TEXT_MERGED_FROM_TASK:0aca9e91-ebfe-49c7-839f-9c17b9efefa4
+- P6E67_CURRENT_TASK_CANCELLED_MERGED_TO_PARENT:a71dd753-bc6a-4944-8499-5bcadba90c
+- PRICE_BIND_POISON_PARENT_GUARD_V2_BLOCKED_V4:EXACT_REPLY_PRICE_MENU
+- P6E2_TOPIC2_IMAGE_ESTIMATE_ROUTE_TAKEN
+- P6E67_PARENT_NOT_FOUND
+- P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION
+- state:FAILED
+- reply_sent:stale_failed
+- reply_sent:full_contour_direct_tender
+- FULL_CONSTRUCTION_FILE_CONTOUR_CANON_GUARD_V1:DIRECT_TENDER_ESTIMATE_GENERATED
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210
@@ -5521,8 +5544,8 @@ _P6H5_NORMATIVE_EXPAND = [
 ```
 # topic_5 TEKHNADZOR
 
-GENERATED_AT: 2026-05-07T15:57:26.355461+00:00
-GIT_SHA: 62d85b864b760c7aaa7b72360d2dafb02076f6c4
+GENERATED_AT: 2026-05-07T16:36:57.805524+00:00
+GIT_SHA: 48f9858805392d105d729c61ce32c7e1b6587bd9
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 5
@@ -5655,8 +5678,8 @@ DIRECTIONS_BOUND: Видео
 ```
 # topic_11 VIDEO
 
-GENERATED_AT: 2026-05-07T15:57:26.383828+00:00
-GIT_SHA: 62d85b864b760c7aaa7b72360d2dafb02076f6c4
+GENERATED_AT: 2026-05-07T16:36:57.828672+00:00
+GIT_SHA: 48f9858805392d105d729c61ce32c7e1b6587bd9
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 11
@@ -6269,8 +6292,8 @@ def _normalize_sheet_register(template: Dict[str, Any], data: Dict[str, Any]) ->
 ```
 # topic_210 PROEKTIROVANIE
 
-GENERATED_AT: 2026-05-07T15:57:26.418313+00:00
-GIT_SHA: 62d85b864b760c7aaa7b72360d2dafb02076f6c4
+GENERATED_AT: 2026-05-07T16:36:57.856336+00:00
+GIT_SHA: 48f9858805392d105d729c61ce32c7e1b6587bd9
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 210
@@ -6863,8 +6886,8 @@ except Exception:
 ```
 # topic_500 VEB_POISK
 
-GENERATED_AT: 2026-05-07T15:57:26.449828+00:00
-GIT_SHA: 62d85b864b760c7aaa7b72360d2dafb02076f6c4
+GENERATED_AT: 2026-05-07T16:36:57.893088+00:00
+GIT_SHA: 48f9858805392d105d729c61ce32c7e1b6587bd9
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 500
@@ -6903,8 +6926,6 @@ FAILED_LAST_24H: 2
 
 ## MARKERS_LAST_24H
 - created:NEW
-- reply_sent:final_closure_blocker_fix_v1
-- P6E2_TECHNADZOR_ACT_CREATED;P6F_TNZ_CLEANED_OUTPUT
 - state:IN_PROGRESS
 - P6_TOPIC500_DIRECT_SEARCH_MONOLITH_ROUTE
 - P6_TOPIC500_SEARCH_DONE
@@ -6990,8 +7011,8 @@ DIRECTIONS_BOUND: Сервер DevOps
 ```
 # topic_794 DEVOPS
 
-GENERATED_AT: 2026-05-07T15:57:26.477757+00:00
-GIT_SHA: 62d85b864b760c7aaa7b72360d2dafb02076f6c4
+GENERATED_AT: 2026-05-07T16:36:57.924981+00:00
+GIT_SHA: 48f9858805392d105d729c61ce32c7e1b6587bd9
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 794
@@ -7086,8 +7107,8 @@ DIRECTIONS_BOUND: Автозапчасти
 ```
 # topic_961 AVTOZAPCHASTI
 
-GENERATED_AT: 2026-05-07T15:57:26.507770+00:00
-GIT_SHA: 62d85b864b760c7aaa7b72360d2dafb02076f6c4
+GENERATED_AT: 2026-05-07T16:36:57.955816+00:00
+GIT_SHA: 48f9858805392d105d729c61ce32c7e1b6587bd9
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 961
@@ -7179,8 +7200,8 @@ DIRECTIONS_BOUND: Мозги оркестра
 ```
 # topic_3008 KODY_MOZGOV
 
-GENERATED_AT: 2026-05-07T15:57:26.537316+00:00
-GIT_SHA: 62d85b864b760c7aaa7b72360d2dafb02076f6c4
+GENERATED_AT: 2026-05-07T16:36:57.988330+00:00
+GIT_SHA: 48f9858805392d105d729c61ce32c7e1b6587bd9
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 3008
@@ -7283,8 +7304,8 @@ DIRECTIONS_BOUND: CRM лиды
 ```
 # topic_4569 CRM_LEADS
 
-GENERATED_AT: 2026-05-07T15:57:26.565455+00:00
-GIT_SHA: 62d85b864b760c7aaa7b72360d2dafb02076f6c4
+GENERATED_AT: 2026-05-07T16:36:58.016832+00:00
+GIT_SHA: 48f9858805392d105d729c61ce32c7e1b6587bd9
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 4569
@@ -7392,8 +7413,8 @@ DIRECTIONS_BOUND: Поиск работы
 ```
 # topic_6104 JOB_SEARCH
 
-GENERATED_AT: 2026-05-07T15:57:26.592802+00:00
-GIT_SHA: 62d85b864b760c7aaa7b72360d2dafb02076f6c4
+GENERATED_AT: 2026-05-07T16:36:58.046264+00:00
+GIT_SHA: 48f9858805392d105d729c61ce32c7e1b6587bd9
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 6104

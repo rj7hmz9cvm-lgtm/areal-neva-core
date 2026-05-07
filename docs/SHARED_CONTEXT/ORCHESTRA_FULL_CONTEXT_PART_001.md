@@ -1,19 +1,19 @@
 # ORCHESTRA_FULL_CONTEXT_PART_001
-generated_at_utc: 2026-05-07T15:57:26.221951+00:00
-git_sha_before_commit: 62d85b864b760c7aaa7b72360d2dafb02076f6c4
+generated_at_utc: 2026-05-07T16:36:57.693135+00:00
+git_sha_before_commit: 48f9858805392d105d729c61ce32c7e1b6587bd9
 part: 1/17
 
 
 ====================================================================================================
 BEGIN_FILE: docs/HANDOFFS/LATEST_HANDOFF.md
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 0ad48f0151d7e51658c5029d65cc906a653b5844c8435715b6bc90b2910481fc
+SHA256_FULL_FILE: 6055466cc704c055471589870045b1b3e02c9f65f022bc0df114ee471a5de45a
 ====================================================================================================
-# LATEST HANDOFF — 2026-05-07 ~20:00 MSK
-**HEAD**: `168ce5e` — fix(topic2): close final V5 code gaps for prices guards totals  
-**Предыдущий HEAD**: `983ced8`  
-**Воркер**: active  
-**GitHub**: pushed (168ce5e visible)  
+# LATEST HANDOFF — 2026-05-07 ~19:35 MSK
+**HEAD**: `c0300fb` — fix(topic2): close 4 code gaps — enrichment markers, cyrillic marker, function-object bug, FCG bypass  
+**Предыдущий HEAD**: `2ece9eb`  
+**Воркер**: active (pid=2070144)  
+**GitHub**: pushed (c0300fb visible)  
 **Детальный handoff**: `HANDOFF_20260507_V4_GAP_CLOSE.md`
 
 ---
@@ -77,9 +77,32 @@ TOPIC2_DONE_CONTRACT_OK
 
 ---
 
+## BUGFIX3 — `2ece9eb` (3 live bugs from DB diagnostics)
+
+| Патч | Файл | Что |
+|------|------|-----|
+| PATCH_PRICE_BIND_LOOP_TERMINATE_V1 | task_worker.py (append) | Если PRICE_BIND_POISON ≥3 раз для LATEST_PRICE_MENU_FALLBACK → FAILED немедленно |
+| PATCH_RECURSION_LIMIT_RESTORE | stroyka_estimate_canon.py (body) | try/finally восстанавливает sys.getrecursionlimit() после openpyxl |
+| PATCH_FCG_DONE_CONTRACT_BYPASS_V1 | task_worker.py (append) | TOPIC2_DONE_CONTRACT_OK в history → bypass FCG violation check |
+
+Все три патча подтверждены в логе: `PATCH_PRICE_BIND_LOOP_TERMINATE_V1 installed`, `PATCH_FCG_DONE_CONTRACT_BYPASS_V1 installed`
+
+---
+
+## GAP_CLOSE4 — `c0300fb` (4 code gaps from audit)
+
+| Патч | Файл | Что |
+|------|------|-----|
+| PATCH-GAP1 | stroyka_estimate_canon.py | TOPIC2_PRICE_ENRICHMENT_STARTED + DONE в _search_prices_online |
+| PATCH-GAP2 | stroyka_estimate_canon.py | TOPIC2_PDF_CYRILLIC_ATTEMPTED → TOPIC2_PDF_CYRILLIC_OK |
+| PATCH-GAP3 | sample_template_engine.py | fix {_p3pcg_has_explicit_price} → "confirmed" (function-object bug) |
+| PATCH-GAP4 | task_worker.py | FCG bypass: DONE_CONTRACT_OK → AC_GATE_OK |
+
+---
+
 ## OPEN CONTOURS (не закрыто)
 
-1. **Live-verify topic_2** — задача с полным ТЗ в Telegram, проверить маркеры V5
+1. **Live-verify topic_2** — задача с полным ТЗ в Telegram, проверить полную цепочку маркеров
 2. **topic_500 adaptive output** — 16 режимов не реализованы
 3. **MEMORY_QUERY_GUARD_V1** — «что обсуждали» → попадает в estimate route
 4. **`_parse_price_sources` quality** — матчинг ключевых слов требует мониторинга
