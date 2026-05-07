@@ -1410,35 +1410,39 @@ async def _generate_and_send(conn: sqlite3.Connection, task: Any, pending: Dict[
         _xlsx_itogo_val = None
         from openpyxl import load_workbook as _t2v_lwb
         import sys as _t2v_sys
+        _t2v_old_limit = _t2v_sys.getrecursionlimit()
         _t2v_sys.setrecursionlimit(5000)
-        _t2v_wb = _t2v_lwb(xlsx_path, data_only=True, read_only=True)
-        if "AREAL_CALC" in _t2v_wb.sheetnames:
-            _t2v_ws = _t2v_wb["AREAL_CALC"]
-            _t2v_all_rows = list(_t2v_ws.iter_rows(min_row=1, values_only=True))
-            # 1. Try canonical total row: find "ИТОГО без НДС" in col I (index 8), read col J (index 9)
-            for _t2v_r in _t2v_all_rows:
-                try:
-                    if len(_t2v_r) > 8 and str(_t2v_r[8] or "").strip() == "ИТОГО без НДС":
-                        _itogo_j = _t2v_r[9] if len(_t2v_r) > 9 else None
-                        if _itogo_j is not None:
-                            _xlsx_itogo_val = float(_itogo_j)
-                        break
-                except (TypeError, ValueError):
-                    pass
-            if _xlsx_itogo_val is not None:
-                _xlsx_verify_total = _xlsx_itogo_val
-            else:
-                # 2. Fall back: sum col J ("Всего руб", index 9) per data row; E×H if J is None (formula not cached)
-                for _t2v_row in _t2v_all_rows[1:]:
+        try:
+            _t2v_wb = _t2v_lwb(xlsx_path, data_only=True, read_only=True)
+            if "AREAL_CALC" in _t2v_wb.sheetnames:
+                _t2v_ws = _t2v_wb["AREAL_CALC"]
+                _t2v_all_rows = list(_t2v_ws.iter_rows(min_row=1, values_only=True))
+                # 1. Try canonical total row: find "ИТОГО без НДС" in col I (index 8), read col J (index 9)
+                for _t2v_r in _t2v_all_rows:
                     try:
-                        _j_val = _t2v_row[9] if len(_t2v_row) > 9 else None
-                        if _j_val is not None:
-                            _xlsx_verify_total += float(_j_val)
-                        else:
-                            _xlsx_verify_total += float(_t2v_row[4] or 0) * float(_t2v_row[7] or 0)
-                    except (TypeError, ValueError, IndexError):
+                        if len(_t2v_r) > 8 and str(_t2v_r[8] or "").strip() == "ИТОГО без НДС":
+                            _itogo_j = _t2v_r[9] if len(_t2v_r) > 9 else None
+                            if _itogo_j is not None:
+                                _xlsx_itogo_val = float(_itogo_j)
+                            break
+                    except (TypeError, ValueError):
                         pass
-        _t2v_wb.close()
+                if _xlsx_itogo_val is not None:
+                    _xlsx_verify_total = _xlsx_itogo_val
+                else:
+                    # 2. Fall back: sum col J ("Всего руб", index 9) per data row; E×H if J is None (formula not cached)
+                    for _t2v_row in _t2v_all_rows[1:]:
+                        try:
+                            _j_val = _t2v_row[9] if len(_t2v_row) > 9 else None
+                            if _j_val is not None:
+                                _xlsx_verify_total += float(_j_val)
+                            else:
+                                _xlsx_verify_total += float(_t2v_row[4] or 0) * float(_t2v_row[7] or 0)
+                        except (TypeError, ValueError, IndexError):
+                            pass
+            _t2v_wb.close()
+        finally:
+            _t2v_sys.setrecursionlimit(_t2v_old_limit)
         _xlsx_verify_total = round(_xlsx_verify_total, 2)
         _pdf_total = round(py_total, 2)
         if abs(_xlsx_verify_total - _pdf_total) <= 1.0:
