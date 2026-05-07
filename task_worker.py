@@ -7631,12 +7631,25 @@ try:
                 blocked, reason, clean = _p6e67_block_final(conn, task_id, kwargs.get("result"))
                 kwargs["result"] = clean
                 if blocked:
-                    kwargs["state"] = "IN_PROGRESS"
-                    kwargs["error_message"] = reason
                     try:
-                        _history(conn, str(task_id), reason + "_ON_UPDATE")
-                    except Exception as e:
-                        _p6e67_log().warning("P6E67_UPDATE_HISTORY_ERR task=%s err=%s", task_id, e)
+                        _p6e67_t2_row = conn.execute("SELECT topic_id FROM tasks WHERE id=?", (str(task_id),)).fetchone()
+                        _p6e67_t2_tid = int(_p6e67_t2_row[0] or 0) if _p6e67_t2_row else 0
+                    except Exception:
+                        _p6e67_t2_tid = 0
+                    if _p6e67_t2_tid == 2:
+                        kwargs["state"] = "FAILED"
+                        kwargs["error_message"] = "TOPIC2_FORBIDDEN_FINAL_RESULT_BLOCKED:" + reason
+                        try:
+                            _history(conn, str(task_id), "TOPIC2_FORBIDDEN_FINAL_RESULT_BLOCKED:" + reason)
+                        except Exception as e:
+                            _p6e67_log().warning("P6E67_UPDATE_HISTORY_ERR task=%s err=%s", task_id, e)
+                    else:
+                        kwargs["state"] = "IN_PROGRESS"
+                        kwargs["error_message"] = reason
+                        try:
+                            _history(conn, str(task_id), reason + "_ON_UPDATE")
+                        except Exception as e:
+                            _p6e67_log().warning("P6E67_UPDATE_HISTORY_ERR task=%s err=%s", task_id, e)
             return _P6E67_ORIG_UPDATE_TASK(conn, task_id, **kwargs)
         _update_task._p6e67_v1_wrapped = True
 except Exception as e:
@@ -9210,6 +9223,17 @@ async def _p6e2_tw_handle_topic2_image_estimate(conn, task, chat_id, topic_id):
     reply_to = _p6e2_tw_row(task, "reply_to_message_id", None)
     if not (int(topic_id or 0) == 2 and _p6e2_tw_is_image(meta, raw) and _p6e2_tw_estimate_like(caption)):
         return False
+    try:
+        from core.stroyka_estimate_canon import maybe_handle_stroyka_estimate as _p6e2_canon_fn
+        import logging as _p6e2_logmod
+        _history(conn, task_id, "TOPIC2_CANONICAL_PHOTO_ROUTE_FIRST:attempting")
+        canonical_ok = await _p6e2_canon_fn(conn, task, _p6e2_logmod.getLogger("task_worker"))
+        if canonical_ok:
+            _history(conn, task_id, "TOPIC2_CANONICAL_PHOTO_ROUTE_FIRST:handled")
+            return True
+        _history(conn, task_id, "TOPIC2_CANONICAL_PHOTO_ROUTE_FIRST:fallback_to_p6e2")
+    except Exception as _p6e2_ce:
+        _history(conn, task_id, "TOPIC2_CANONICAL_PHOTO_ROUTE_FIRST:err:" + _p6e2_tw_s(str(_p6e2_ce), 200))
     try:
         from core.sample_template_engine import handle_topic2_image_estimate_p6e2
         lp = _p6e2_tw_local_path(task_id, meta)

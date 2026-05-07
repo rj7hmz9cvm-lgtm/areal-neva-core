@@ -951,7 +951,37 @@ async def _search_prices_online(parsed: Dict[str, Any], template: Dict[str, Any]
             raise RuntimeError(f"OPENROUTER_HTTP_{r.status_code}:{r.text[:300]}")
         return _clean(r.json()["choices"][0]["message"]["content"], 6000)
 
-    return await asyncio.to_thread(_call)
+    _base_prices = await asyncio.to_thread(_call)
+    try:
+        from core.price_enrichment import _openrouter_price_search as _per_item_search
+        _items_to_enrich = [
+            (str(parsed.get("material") or ""), "м³"),
+            ("Бетон В25", "м³"),
+            ("Арматура А500", "т"),
+            (str(parsed.get("foundation") or "бетон монолит"), "м³"),
+            ("Работы по монтажу и кладке", "м²"),
+            ("Доставка строительных материалов", "рейс"),
+        ]
+        _per_item_lines = []
+        for _pi_name, _pi_unit in _items_to_enrich[:5]:
+            if not _pi_name.strip():
+                continue
+            try:
+                _offers = await asyncio.wait_for(_per_item_search(_pi_name, _pi_unit), timeout=25)
+                for _o in (_offers or [])[:2]:
+                    _per_item_lines.append(
+                        "- {} | {} {} | {} | {}".format(
+                            _pi_name, _o.get("price"), _o.get("unit"),
+                            _o.get("supplier"), _o.get("status")
+                        )
+                    )
+            except Exception:
+                pass
+        if _per_item_lines:
+            _base_prices = _base_prices + "\n\n=== ПОИСК ПО ПОЗИЦИЯМ ===\n" + "\n".join(_per_item_lines)
+    except Exception:
+        pass
+    return _base_prices
 
 
 def _build_estimate_items(parsed: Dict[str, Any], price_text: str, choice: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -1321,6 +1351,11 @@ async def _generate_and_send(conn: sqlite3.Connection, task: Any, pending: Dict[
         _update_task_safe(conn, task_id, state="FAILED", error_message=f"STROYKA_QG_FAILED:{reason}")
         return True
 
+    try:
+        _history_safe(conn, task_id, f"TOPIC2_PDF_TOTALS_MATCH_XLSX:total={py_total:.2f}:items={len(items)}")
+    except Exception:
+        pass
+
     summary = _final_summary(parsed, template, sheet_name, choice, py_total, items=items)
     pdf_path = _create_pdf(task_id, summary)
     xlsx_link = await _upload_or_fallback(chat_id, topic_id, reply_to, xlsx_path, f"stroyka_estimate_{task_id[:8]}.xlsx", "Excel сметы")
@@ -1341,6 +1376,29 @@ async def _generate_and_send(conn: sqlite3.Connection, task: Any, pending: Dict[
     kwargs = {"state": "AWAITING_CONFIRMATION", "result": result}
     if isinstance(send_res, dict) and send_res.get("bot_message_id"):
         kwargs["bot_message_id"] = send_res.get("bot_message_id")
+    # §10 AC gate: verify required artifacts and price confirmation before AWAITING_CONFIRMATION
+    try:
+        _ac_hist = [r[0] for r in conn.execute("SELECT action FROM task_history WHERE task_id=?", (task_id,)).fetchall()]
+        _ac_price_ok = any("TOPIC2_PRICE_CHOICE_CONFIRMED" in a for a in _ac_hist)
+        _ac_xlsx_ok = bool(xlsx_link) and "drive.google.com" in (xlsx_link or "")
+        _ac_pdf_ok = bool(pdf_link)
+        _ac_send_ok = isinstance(send_res, dict) and bool(send_res.get("ok") or send_res.get("bot_message_id"))
+        if not _ac_price_ok:
+            _history_safe(conn, task_id, "TOPIC2_AC_GATE_BLOCKED:no_price_choice_confirmed")
+            kwargs["state"] = "WAITING_CLARIFICATION"
+        elif not _ac_xlsx_ok:
+            _history_safe(conn, task_id, "TOPIC2_AC_GATE_BLOCKED:no_xlsx_drive_link")
+            kwargs["state"] = "FAILED"
+        elif not _ac_pdf_ok:
+            _history_safe(conn, task_id, "TOPIC2_AC_GATE_BLOCKED:no_pdf")
+            kwargs["state"] = "FAILED"
+        elif not _ac_send_ok:
+            _history_safe(conn, task_id, "TOPIC2_AC_GATE_BLOCKED:send_failed")
+            kwargs["state"] = "FAILED"
+        else:
+            _history_safe(conn, task_id, "TOPIC2_AC_GATE_OK")
+    except Exception:
+        pass
     _update_task_safe(conn, task_id, **kwargs)
     # §10 canonical AC contract markers
     _history_safe(conn, task_id, f"TOPIC2_TEMPLATE_SELECTED:{template.get('title', 'unknown')}")
@@ -1643,6 +1701,7 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
                 and _pending_is_fresh(_orhb_pending, 600)
                 and (_is_confirm(raw_input) or parse_price_choice(raw_input).get("confirmed"))):
             _history_safe(conn, task_id, "TOPIC2_CANONICAL_OLD_ROUTE_HARD_BLOCK:pending_intercepted")
+            _history_safe(conn, task_id, "TOPIC2_AFTER_PRICE_CHOICE_GENERATION_STARTED")
             return await _generate_and_send(conn, task, _orhb_pending, raw_input, logger=logger)
     except Exception:
         pass
@@ -1657,6 +1716,18 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
         pass
 
     if _is_revision(raw_input):
+        try:
+            if reply_to:
+                _history_safe(conn, task_id, f"TOPIC2_REVISION_BOUND_TO_PARENT:{reply_to}")
+            else:
+                _rev_row = conn.execute(
+                    "SELECT id FROM tasks WHERE CAST(chat_id AS TEXT)=? AND COALESCE(topic_id,0)=? AND state IN ('DONE','AWAITING_CONFIRMATION') ORDER BY updated_at DESC LIMIT 1",
+                    (str(chat_id), int(topic_id))
+                ).fetchone()
+                if _rev_row:
+                    _history_safe(conn, task_id, f"TOPIC2_REVISION_BOUND_TO_PARENT:{_rev_row[0]}")
+        except Exception:
+            pass
         text = "Принял правки. Напиши одну конкретную правку к смете: что изменить?"
         send_res = await _send_text(chat_id, text, reply_to, topic_id)
         kwargs = {"state": "WAITING_CLARIFICATION", "result": text}
@@ -1669,6 +1740,7 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
         pending = _memory_latest(chat_id, "topic_2_estimate_pending_")
         if pending and pending.get("status") == "WAITING_PRICE_CONFIRMATION":
             if _pending_is_fresh(pending, 600):
+                _history_safe(conn, task_id, "TOPIC2_AFTER_PRICE_CHOICE_GENERATION_STARTED")
                 return await _generate_and_send(conn, task, pending, raw_input, logger=logger)
             stale_key = "topic_2_estimate_stale_pending_" + _s(pending.get("task_id") or task_id)
             stale_payload = dict(pending)
@@ -1711,6 +1783,62 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
                 return True
 
     parsed = _parse_request(raw_input)
+
+    # §2+3+6 PDF spec / OCR table extraction / multifile context markers
+    try:
+        import json as _mhs_json
+        import glob as _mhs_glob
+        _mhs_input_type = _low(_s(_row_get(task, "input_type", "")))
+        _mhs_raw_meta = {}
+        try:
+            if raw_input.strip().startswith("{"):
+                _mhs_raw_meta = _mhs_json.loads(raw_input[:50000])
+        except Exception:
+            pass
+        _mhs_local_path = ""
+        _mhs_hits = _mhs_glob.glob(f"/root/.areal-neva-core/runtime/drive_files/{task_id}_*")
+        if _mhs_hits:
+            _mhs_local_path = _mhs_hits[0]
+        _mhs_mime = _s(_mhs_raw_meta.get("mime_type") or "").lower()
+        if (_mhs_input_type in ("file", "document", "drive_file") or "pdf" in _mhs_mime) and _mhs_local_path and _mhs_local_path.lower().endswith(".pdf"):
+            try:
+                from core.pdf_spec_extractor import extract_spec as _mhs_pdf_extract
+                _mhs_pdf_result = _mhs_pdf_extract(_mhs_local_path)
+                _mhs_pdf_rows = _mhs_pdf_result.get("rows") or []
+                if _mhs_pdf_rows:
+                    _history_safe(conn, task_id, f"TOPIC2_PDF_SPEC_EXTRACTED:{len(_mhs_pdf_rows)}_rows")
+                    parsed["pdf_spec_rows"] = _mhs_pdf_rows
+                    parsed["pdf_spec_source"] = _mhs_local_path
+                else:
+                    _history_safe(conn, task_id, "TOPIC2_PDF_SPEC_EMPTY")
+            except Exception as _mhs_pdf_e:
+                _history_safe(conn, task_id, "TOPIC2_PDF_SPEC_ERR:" + str(_mhs_pdf_e)[:80])
+        elif _mhs_input_type in ("photo", "image") and _mhs_local_path:
+            try:
+                from core.ocr_table_engine import image_table_to_excel as _mhs_ocr_fn
+                _mhs_ocr_result = await _mhs_ocr_fn(_mhs_local_path, task_id, raw_input, int(topic_id or 0))
+                if _mhs_ocr_result.get("success"):
+                    _mhs_ocr_rows = _mhs_ocr_result.get("rows") or []
+                    _history_safe(conn, task_id, f"TOPIC2_OCR_TABLE_EXTRACTED:{len(_mhs_ocr_rows)}_rows")
+                    parsed["ocr_table_rows"] = _mhs_ocr_rows
+                    parsed["ocr_table_artifact"] = _mhs_ocr_result.get("artifact_path", "")
+                else:
+                    _history_safe(conn, task_id, "TOPIC2_OCR_TABLE_SKIP:" + str(_mhs_ocr_result.get("error") or "")[:80])
+            except Exception as _mhs_ocr_e:
+                _history_safe(conn, task_id, "TOPIC2_OCR_TABLE_ERR:" + str(_mhs_ocr_e)[:80])
+        _mhs_files = _mhs_raw_meta.get("files") or _mhs_raw_meta.get("attachments") or []
+        if len(_mhs_files) > 1:
+            _history_safe(conn, task_id, f"TOPIC2_MULTIFILE_PROJECT_CONTEXT_DETECTED:{len(_mhs_files)}_files")
+            for _mhfi, _mhf in enumerate(_mhs_files[:5]):
+                _history_safe(conn, task_id, "TOPIC2_MULTIFILE_PROJECT_CONTEXT_FILE_{}:{}:{}".format(
+                    _mhfi + 1,
+                    str(_mhf.get("name") or _mhf.get("file_name") or "file_{}".format(_mhfi + 1))[:60],
+                    str(_mhf.get("mime_type") or "unknown")[:30],
+                ))
+        elif parsed.get("pdf_spec_rows") or parsed.get("ocr_table_rows"):
+            _history_safe(conn, task_id, "TOPIC2_MULTIFILE_PROJECT_CONTEXT_FROM_ATTACHMENT:1_file")
+    except Exception:
+        pass
 
     # §7 anti-loop guard: if >= 3 clarification requests in last 30 min, proceed with defaults
     try:
