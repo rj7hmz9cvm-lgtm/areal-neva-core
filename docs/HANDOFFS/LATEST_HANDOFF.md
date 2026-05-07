@@ -1,8 +1,8 @@
-# LATEST HANDOFF — 2026-05-07 ~19:48 MSK
-**HEAD**: `0c15037` — feat(topic500): adaptive output by intent mode (9 modes, V1)  
-**Предыдущий HEAD**: `c0300fb`  
+# LATEST HANDOFF — 2026-05-07 ~20:00 MSK
+**HEAD**: `0d6a9a4` — fix(memory): ARCHIVE_DUPLICATE_GUARD_V1 + topic500 search pollution guard  
+**Предыдущий HEAD**: `0c15037`  
 **Воркер**: active  
-**GitHub**: pushed (0c15037 visible)  
+**GitHub**: pushed (0d6a9a4 visible)  
 **Детальный handoff**: `HANDOFF_20260507_V4_GAP_CLOSE.md`
 
 ---
@@ -107,11 +107,27 @@ TOPIC2_DONE_CONTRACT_OK
 
 ---
 
+## MEMORY DEDUP — `0d6a9a4`
+
+**GAP-5: ARCHIVE_DUPLICATE_GUARD_V1**
+- memory.db: добавлен `UNIQUE INDEX ON memory(chat_id, key)` — дубли блокируются на уровне БД
+- task_worker.py lines 1076/1080/1084/3150: `INSERT INTO` → `INSERT OR REPLACE INTO`
+- memory_api_server.py `/memory POST`: upsert по (chat_id, key) вместо plain INSERT
+- memory_api_server.py `init_db()`: создаёт UNIQUE INDEX при старте
+- До фикса: 694 дубля topic_500_task_summary, 7726 строк → 5184 после dedup
+
+**GAP-6: PATCH_TOPIC500_SEARCH_POLLUTION_GUARD_V1**
+- Wrapper вокруг `_save_memory` для topic_500: результат > 300 символов → сохраняется truncated summary
+- Предотвращает засорение long_memory_context таблицами поставщиков
+
+---
+
 ## OPEN CONTOURS (не закрыто)
 
 1. **Live-verify topic_2** — задача с полным ТЗ в Telegram, проверить полную цепочку маркеров
 2. **Live-verify topic_500** — проверить adaptive output: normative/factual запрос → правильный формат
-3. **`_parse_price_sources` quality** — матчинг ключевых слов требует мониторинга
+3. **inbox_aggregator стабы** — IMAP/Telethon/Profi.ru коннекторы (P2, будущий канал)
+4. **`_parse_price_sources` quality** — матчинг ключевых слов требует мониторинга
 
 ---
 
