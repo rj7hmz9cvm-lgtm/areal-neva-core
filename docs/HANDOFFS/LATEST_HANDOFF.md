@@ -1,107 +1,100 @@
-# HANDOFF — 2026-05-07 SESSION CLOSE
-**Сессия**: 2026-05-06 22:47 → 2026-05-07 ~01:00 MSK
-**Текущий HEAD**: `c7c8755` (до push'а этой сессии)
-**Сервер**: 89.22.225.136, areal-task-worker active
+# LATEST HANDOFF — 2026-05-07 10:45 MSK
+**HEAD**: `ccab9ed` — PATCH_TOPIC2_FULL_CLOSE_RUNTIME_V3  
+**Воркер**: active, PID 3485017  
+**GitHub**: pushed (055157b + ccab9ed visible)  
+**Детальный handoff**: `HANDOFF_20260507_RUNTIME_V2_V3_FULL_CLOSE.md`  
 
-## ЧТО ЗАКОММИЧЕНО В MAIN
+---
 
-### `d1f20a0` (06.05 22:31) — mega-guards V1 (append-wrappers)
-6 wrappers в конец task_worker.py: CANCEL_GUARD · FRESH_ESTIMATE_FALLBACK · PRICE_REPLY_REVIVE · PRICE_TIMEOUT_GUARD · DONE_OVERRIDE_INVALID_PUBLIC · STROYKA_PARENT_AWARE_MISSING_QUESTION.
+## СТАТУС ТОПИКОВ
 
-**Live-test factual conclusion**: 5 из 6 НЕ срабатывают. Append-wrapper в конце файла не цепляет код-путь, если функция уже обёрнута раньше. Документировано в session memory.
+| Топик | Состояние | Примечание |
+|-------|-----------|------------|
+| topic_2 СТРОИКА | INSTALLED (не VERIFIED) | V2+V3 applied, live-replay pending |
+| topic_5 ТЕХНАДЗОР | Stable | 57 DONE / 52 FAILED за 7д |
+| topic_500 ПОИСК | Partial | базово работает, 16 режимов НЕ реализованы |
+| topic_210 PROJECT | Active | без изменений в этой сессии |
 
-### `c7c8755` (06.05 23:50) — INLINE_FIX V1 (body edits)
-- `_p6e67_try_merge`: state guard + fresh estimate dispatch перед terminal guard
-- FCG `_update_task` wrapper: bypass INVALID_PUBLIC_RESULT при 5 markers + Drive link
-- `_t2v5_/_t2v6c_` price-bind: explicit token required, max raw 80 chars
-- V1 wrappers (14898-15256) помечены SUPERSEDED
+---
 
-**Live-test (replay 3 задач cf15cc9b/f1ef9fab/71adbe24)**:
-- ✅ Маркер `V5/V6C_PRICE_REJECTED:no_explicit_token_or_long` появился (D работает — длинные тексты не считаются price-choice)
-- ⚠️ Маркер `FRESH_ESTIMATE_DISPATCHED` НЕ появился — `_find_parent` нашёл parent для cf15cc9b, ушло в P6E67_MERGED, а не в terminal guard
+## ЧТО ПРИМЕНЕНО В ЭТОЙ СЕССИИ (commits)
 
-## КРИТИЧЕСКАЯ ПРОБЛЕМА — НЕ ЗАКРЫТА
+### `ad829c4` — ONEPASS_V1 (partial patch)
+- `_final_summary` → §9 формат (убраны Эталон:/Лист эталона:)
+- `load_workbook` → `setrecursionlimit(5000)` guard
+- P6D рекурсия исправлена → `_P6DREC_PRE_P3`
+- FCG: +5 паттернов блокировки старого вывода
 
-**`FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3`** (`core/stroyka_estimate_canon.py:1178`) — старый route, перехватывает раньше V2 в `_handle_new` через hook на task_worker.py:1313. Выдаёт пользователю старый формат:
+### `055157b` — RUNTIME_V2
+- `_create_xlsx_from_template`: 15 cols, shutil.copy, section colors
+- `_generate_and_send`: §10 thirteen AC markers
+- `task_worker._handle_in_progress`: CANONICAL_REROUTE_V2
+
+### `ccab9ed` — RUNTIME_V3 (9 требований)
+1. Per-row price sources: `_parse_price_sources` + `_match_price_source`
+2. Price gate в теле `_generate_and_send`
+3. `TOPIC2_DRIVE_TOPIC_FOLDER_OK` marker
+4. `_strip_telegram_output()` — hard cleaner
+5. Old route hard block: pending check ДО `is_stroyka_estimate_candidate`
+6. Multi-format intake: photo/drive_file allowed с ESTIMATE_WORDS caption
+7. Anti-loop: ≥3 clarifications → proceed with defaults
+8. Logistics markers: DISTANCE_KM + per-item
+9. DONE contract: `TOPIC2_EXPLICIT_CONFIRM` required
+
+---
+
+## ОЖИДАЕМАЯ ПОСЛЕДОВАТЕЛЬНОСТЬ МАРКЕРОВ (верификация topic_2)
+
 ```
-✅ Предварительная смета готова
-
-Объект: дом
-Эталон: М-80.xlsx
-Лист эталона: Каркас под ключ
-Выбор цены: median
-Разделы:
-- Фундамент
-- Стены
-- Перекрытия
-- Кровля
-- Логистика
-- Накладные расходы
+TOPIC2_PRICE_CHOICE_CONFIRMED:median
+TOPIC2_CANONICAL_OLD_ROUTE_HARD_BLOCK:pending_intercepted
+TOPIC2_TEMPLATE_SELECTED:<name>
+TOPIC2_XLSX_CANON_COLUMNS_OK:15
+TOPIC2_DRIVE_TOPIC_FOLDER_OK
+TOPIC2_LOGISTICS_DISTANCE_KM:<n>
+TOPIC2_TELEGRAM_DELIVERED:<msg_id>
+FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:estimate_generated
+TOPIC2_EXPLICIT_CONFIRM:from_user_done_command
+TOPIC2_DONE_CONTRACT_OK
 ```
 
-Это **не canonical** (только 6 разделов из 11, 8-колоночный XLSX вместо 15, без AREAL_CALC, без template-based copy).
+---
 
-## ЧТО ОПРЕДЕЛИЛИ ЗА СЕССИЮ (новые каноны)
+## OPEN CONTOURS (не закрыто)
 
-1. `TOPIC_500_UNIVERSAL_SEARCH_CANON.md` — universal adaptive search (16 режимов), procurement — один из них
-2. `TOPIC_2_CANONICAL_ESTIMATE_CONTRACT.md` — 5 шаблонов / 15-col AREAL_CALC / 11 секций / scoring / sheet selection / DONE contract / final response format
-3. **5 шаблонов скачаны** локально в `data/templates/estimate/cache/`:
-   - М-80.xlsx (403kb, sheets «Каркас под ключ» + «Газобетон_под ключ»)
-   - М-110.xlsx (12kb)
-   - Ареал Нева.xlsx (151kb)
-   - фундамент_Склад2.xlsx (16kb)
-   - крыша и перекр.xlsx (58kb)
+1. **Live-verify topic_2** — задача с полным ТЗ в Telegram → проверить маркеры
+2. **topic_500 adaptive output** — 16 режимов не реализованы
+3. **MEMORY_QUERY_GUARD_V1** — «что обсуждали» → попадает в estimate route
+4. **`_parse_price_sources` quality** — матчинг ключевых слов требует мониторинга
 
-## ЧТО НЕ ЗАКРЫТО
+---
 
-### topic_2 STROYKA — главное
-- **`PATCH_TOPIC2_FULL_CANONICAL_CLOSE_ONEPASS_V1`** не применён. Backups сделаны, кода нет.
-  Должен реализовать:
-  - Заменить `_make_artifacts` в V2 на template-based + AREAL_CALC 15 cols
-  - Canonical guard в `_handle_new` (line 1310) ДО V3 hook (line 1313)
-  - Old output blocker в FCG `_update_task`
-  - Drive download on-demand (cache first)
-  - 11 секций с интерьером (санузел/кухня/спальня + ИК-полы/имитация бруса)
-  - Live price enrichment через `core/price_enrichment.py` + Perplexity
-  - PDF через `core/pdf_cyrillic.py` (`create_pdf_with_cyrillic` + `validate_cyrillic_pdf`)
-  - Clean Telegram format по контракту §9 TOPIC_2_CANONICAL
-- `_p2_create_xlsx` (sample_template_engine.py) — 8 колонок vs 15
-- Свободный текст ТЗ (без готовой таблицы) — engine не умеет разложить на секции
-- Уточнение параметров может зацикливаться
+## ДИАГНОСТИКА С НУЛЯ
 
-### topic_500 SEARCH
-- Базовая procurement-таблица работает («Поставщик|Площадка|Цена|Ссылка|Проверено»)
-- НЕ реализована adaptive output по intent — все идёт через procurement формат
-- НЕ реализованы режимы: normative · download · technical · news · comparison · local · factual
-- Forbidden patterns blocker отсутствует
-
-### topic_5 ТЕХНАДЗОР
-- Стабилен (57 DONE / 52 FAILED за 7д)
-- 16 INVALID_RESULT_GATE — акт без артефакта
-- Блокер `ddfc12b1` закрыт
-
-### Memory / archive
-- `MEMORY_QUERY_GUARD_V1` не перехватывает «что обсуждали», «какие задачи были» → попадают в estimate route → P6E67 terminal
-- Archive context для memory-вопросов не подключён к engine
-
-## ФАЙЛЫ ИЗМЕНЁННЫЕ В ЭТОЙ СЕССИИ
-- `task_worker.py` (commit `c7c8755`)
-- Backup'ы для следующей итерации:
-  - `*.bak.PATCH_INLINE_FIX_20260506`
-  - `*.bak.PATCH_TOPIC2_FULL_CANONICAL_CLOSE_ONEPASS_V1`
-- `~/.claude/settings.json` (allowlist расширен — global)
-
-## КОМАНДЫ ДЛЯ СЛЕДУЮЩЕЙ СЕССИИ
 ```bash
-cd /root/.areal-neva-core
-git log --oneline | head -3                # должен видеть c7c8755 и/или session-close commit
-ls data/templates/estimate/cache/          # 5 шаблонов в кэше
-sqlite3 -readonly data/core.db "SELECT state,COUNT(*) FROM tasks WHERE topic_id=2 AND created_at >= datetime('now','-24 hours') GROUP BY state;"
-journalctl -u areal-task-worker --since '5 minutes ago' --no-pager
+# 1. Воркер жив?
+systemctl is-active areal-task-worker
+
+# 2. Последние коммиты
+git -C /root/.areal-neva-core log --oneline | head -5
+
+# 3. Последняя topic_2 задача
+sqlite3 -readonly /root/.areal-neva-core/data/core.db \
+  "SELECT id, state, substr(result,1,80), updated_at FROM tasks
+   WHERE COALESCE(topic_id,0)=2 ORDER BY updated_at DESC LIMIT 3;"
+
+# 4. Маркеры задачи
+sqlite3 -readonly /root/.areal-neva-core/data/core.db \
+  "SELECT action, created_at FROM task_history WHERE task_id='TASK_ID' ORDER BY created_at;"
+
+# 5. Шаблоны в кэше
+ls /root/.areal-neva-core/data/templates/estimate/cache/
 ```
 
-## ПРИОРИТЕТ СЛЕДУЮЩЕЙ СЕССИИ
-1. **Реализовать PATCH_TOPIC2_FULL_CANONICAL_CLOSE_ONEPASS_V1** — главный блокер
-2. Адаптивный output для topic_500 по 16 режимам
-3. MEMORY_QUERY_GUARD_V1 для статусных запросов
-4. INVALID_RESULT_GATE топик_5 — акт без артефакта
+---
+
+## CANON REFS
+
+- `docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md` — читать перед любым патчем
+- `docs/CANON_FINAL/TOPIC_2_CANONICAL_ESTIMATE_CONTRACT.md` — §4 15 cols, §9 format, §10 markers, §11 blockers
+- `docs/HANDOFFS/HANDOFF_20260507_RUNTIME_V2_V3_FULL_CLOSE.md` — детальный разбор этой сессии
