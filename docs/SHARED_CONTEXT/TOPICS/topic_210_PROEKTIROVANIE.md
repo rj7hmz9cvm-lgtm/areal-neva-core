@@ -1,7 +1,7 @@
 # topic_210 PROEKTIROVANIE
 
-GENERATED_AT: 2026-05-07T17:27:00.543428+00:00
-GIT_SHA: e90165df32d2efe9394e1f77e0eebc6dd32003d0
+GENERATED_AT: 2026-05-07T17:30:02.476570+00:00
+GIT_SHA: 8c640a786fb4072c73fcbf7c4d7351b48dfd19ea
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 210
@@ -32,7 +32,6 @@ FAILED_LAST_24H: 5
 
 ## MARKERS_LAST_24H
 - created:NEW
-- WEB_SEARCH_PRICE_ENRICHMENT_V1:HANDLED
 - result:Для решения проблемы подтопления подвального этажа из-за высокого уровня 
 - reply_sent:result
 - result:Для решения проблемы подтопления подвального этажа необходимо выполнить с
@@ -41,6 +40,7 @@ FAILED_LAST_24H: 5
 - FULL_CONSTRUCTION_FILE_CONTOUR_CANON_GUARD_V1:UPDATE_BLOCKED:NO_VALID_ARTIFACT
 - FULL_CONSTRUCTION_FILE_CONTOUR_CANON_GUARD_V1:NO_VALID_ARTIFACT
 - reply_sent:full_contour_guard_failed
+- WEB_SEARCH_PRICE_ENRICHMENT_V1:HANDLED
 - result:Для составления сметы с использованием средних цен необходимо уточнить:
 
 
