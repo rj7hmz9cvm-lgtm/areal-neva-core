@@ -5543,8 +5543,9 @@ def _p0_runtime_is_topic500_search_20260504(raw_input, input_type):
 
 def _p0_runtime_is_bad_search_result_20260504(text):
     low = _p0_runtime_s_20260504(text, 20000).lower()
-    if not low:
+    if not low or len(low.strip()) < 80:
         return True
+    # Block estimate/construction artifacts leaking into search results
     bad = (
         "смета готова",
         "предварительная смета готова",
@@ -5555,14 +5556,16 @@ def _p0_runtime_is_bad_search_result_20260504(text):
         "ареал нева.xlsx",
         "м-110.xlsx",
         "позиций: 1. итого: 0.00",
-        "фундамент",
-        "кровля",
-        "монолитная плита",
     )
     if any(x in low for x in bad):
         return True
-    if "http://" not in low and "https://" not in low and "цена" not in low and "руб" not in low and "₽" not in low:
-        return True
+    # PATCH_TOPIC500_ADAPTIVE_FILTER_V1: procurement mode requires URL or price;
+    # normative/factual/technical/download/news modes only require substantive content (>80 chars, already checked above)
+    _procurement_signals = ("поставщик", "avito", "авито", "ozon", "озон", "wildberries", "найдено:", "купить", "цена материала", "стоимость материала")
+    _is_procurement_result = any(x in low for x in _procurement_signals)
+    if _is_procurement_result:
+        if "http://" not in low and "https://" not in low and "цена" not in low and "руб" not in low and "₽" not in low:
+            return True
     return False
 
 def _p0_runtime_is_topic2_current_estimate_20260504(raw_input):
@@ -6539,14 +6542,21 @@ def _p6_topic500_needs_search_20260504(raw_input, input_type):
 def _p6_bad_search_result_20260504(result, raw_input):
     low = _p6_low_20260504(result)
     q = _p6_low_20260504(raw_input)
-    if not low:
+    if not low or len(low.strip()) < 80:
         return True
+    # Block estimate artifacts leaking into search
     if any(x in low for x in ("смета готова", "предварительная смета готова", "xlsx:", "pdf:", "engine:", "м-110.xlsx", "ареал нева.xlsx", "позиций: 1. итого: 0.00")):
         return True
+    # Block stale supplier data irrelevant to query
     if ("rockwool" in low or "каменная вата" in low or "термодом" in low) and not any(x in q for x in ("rockwool", "каменная вата", "утепл", "light batts", "light buds")):
         return True
-    if ("http://" not in low and "https://" not in low) and ("₽" not in low and "руб" not in low and "цена" not in low and "найдено:" not in low):
-        return True
+    # PATCH_TOPIC500_ADAPTIVE_FILTER_V1: only require URL/price for procurement-style results;
+    # normative/factual/technical modes return substantive text without prices — allow if >80 chars
+    _procurement_signals = ("поставщик", "avito", "авито", "ozon", "озон", "wildberries", "найдено:", "купить", "цена материала")
+    _is_procurement_result = any(x in _procurement_signals for x in low.split()) or any(x in low for x in _procurement_signals)
+    if _is_procurement_result:
+        if ("http://" not in low and "https://" not in low) and ("₽" not in low and "руб" not in low and "цена" not in low and "найдено:" not in low):
+            return True
     return False
 
 def _p6_find_previous_topic500_query_20260504(conn, chat_id, current_task_id):
