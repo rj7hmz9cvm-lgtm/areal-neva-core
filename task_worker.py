@@ -1073,15 +1073,15 @@ def _save_memory(chat_id: str, topic_id: int, raw_input: str, result: str) -> No
             conn.execute("CREATE TABLE IF NOT EXISTS memory (chat_id TEXT, key TEXT, value TEXT, timestamp TEXT)")
         prefix = f"topic_{int(topic_id)}_"
         conn.execute(
-            "INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
+            "INSERT OR REPLACE INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
             (str(chat_id), f"{prefix}assistant_output", _clean(result, 50000)),
         )
         conn.execute(
-            "INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
+            "INSERT OR REPLACE INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
             (str(chat_id), f"{prefix}task_summary", _clean(result, 20000) if len(result) >= MIN_RESULT_LEN else ""),
         )
         conn.execute(
-            "INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
+            "INSERT OR REPLACE INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
             (str(chat_id), f"{prefix}user_input", _clean(raw_input, 500)),
         )
         conn.commit()
@@ -3147,7 +3147,7 @@ def _save_topic_role_memory(chat_id: str, topic_id: int, text: str) -> str:
             return ""
         key = f"topic_{int(topic_id)}_role"
         conn_mem.execute(
-            "INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
+            "INSERT OR REPLACE INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
             (str(chat_id), key, role),
         )
         conn_mem.commit()
@@ -15635,6 +15635,37 @@ if _T500AO_ORIG and not getattr(_T500AO_ORIG, "_t500ao_wrapped", False):
 else:
     _T500AO_LOG.warning("PATCH_TOPIC500_ADAPTIVE_OUTPUT_V1 skipped: _p0_runtime_topic500_direct_search_20260504 not found")
 # === END_PATCH_TOPIC500_ADAPTIVE_OUTPUT_V1 ===
+
+
+# === PATCH_TOPIC500_MEMORY_DEDUP_V1 + PATCH_TOPIC500_SEARCH_POLLUTION_GUARD_V1 ===
+# GAP-5: memory.db had no UNIQUE on (chat_id, key) → INSERT INTO created duplicates.
+#         Fixed: UNIQUE INDEX added to DB, INSERT OR REPLACE in task_worker.py body.
+# GAP-6: _save_memory for topic_500 stored full supplier tables in long_memory_context →
+#         next prompts received garbage context. Fix: truncate to 300 chars summary only.
+import logging as _t500mem_logging
+_T500MEM_LOG = _t500mem_logging.getLogger("task_worker")
+
+_T500MEM_ORIG_SAVE = globals().get("_save_memory")
+if _T500MEM_ORIG_SAVE and not getattr(_T500MEM_ORIG_SAVE, "_t500mem_wrapped", False):
+    def _save_memory(chat_id, topic_id, raw_input, result):
+        try:
+            _t500mem_tid = int(topic_id or 0)
+            if _t500mem_tid == 500 and isinstance(result, str) and len(result) > 300:
+                _t500mem_summary = result[:300].rsplit("\n", 1)[0] + "…"
+                _T500MEM_LOG.info(
+                    "PATCH_TOPIC500_SEARCH_POLLUTION_GUARD_V1 truncated result=%d->300 chat=%s",
+                    len(result), str(chat_id)
+                )
+                result = _t500mem_summary
+        except Exception as _t500mem_e:
+            _T500MEM_LOG.warning("PATCH_TOPIC500_SEARCH_POLLUTION_GUARD_V1 err: %s", _t500mem_e)
+        return _T500MEM_ORIG_SAVE(chat_id, topic_id, raw_input, result)
+    _save_memory._t500mem_wrapped = True
+    _T500MEM_LOG.info("PATCH_TOPIC500_MEMORY_DEDUP_V1 installed (DB UNIQUE INDEX + INSERT OR REPLACE)")
+    _T500MEM_LOG.info("PATCH_TOPIC500_SEARCH_POLLUTION_GUARD_V1 installed")
+else:
+    _T500MEM_LOG.warning("PATCH_TOPIC500_MEMORY_DEDUP_V1 skipped: _save_memory not found")
+# === END_PATCH_TOPIC500_MEMORY_DEDUP_V1 ===
 
 if __name__ == "__main__":
     asyncio.run(main())

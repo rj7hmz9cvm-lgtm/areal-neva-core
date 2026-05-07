@@ -42,6 +42,8 @@ def _ensure_table():
             )
         """)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_memory_chat_topic ON memory(chat_id, topic_id)")
+        # ARCHIVE_DUPLICATE_GUARD_V1: enforce uniqueness on (chat_id, key)
+        conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_memory_chat_key_unique ON memory(chat_id, key)")
         conn.commit()
         conn.close()
 
@@ -52,10 +54,22 @@ def _save(chat_id, key, value, topic_id=0, scope="topic"):
     rid = str(uuid.uuid4())
     with _lock:
         conn = _db()
-        conn.execute(
-            "INSERT OR REPLACE INTO memory(id,chat_id,key,value,timestamp,topic_id,scope) VALUES(?,?,?,?,?,?,?)",
-            (rid, str(chat_id), str(key), str(value), ts, int(topic_id), str(scope))
-        )
+        # ARCHIVE_DUPLICATE_GUARD_V1: upsert by (chat_id, key) — never create duplicates
+        existing = conn.execute(
+            "SELECT id FROM memory WHERE chat_id=? AND key=?",
+            (str(chat_id), str(key))
+        ).fetchone()
+        if existing:
+            rid = existing[0] or rid
+            conn.execute(
+                "UPDATE memory SET value=?, timestamp=?, topic_id=?, scope=? WHERE chat_id=? AND key=?",
+                (str(value), ts, int(topic_id), str(scope), str(chat_id), str(key))
+            )
+        else:
+            conn.execute(
+                "INSERT INTO memory(id,chat_id,key,value,timestamp,topic_id,scope) VALUES(?,?,?,?,?,?,?)",
+                (rid, str(chat_id), str(key), str(value), ts, int(topic_id), str(scope))
+            )
         conn.commit()
         conn.close()
     return rid
