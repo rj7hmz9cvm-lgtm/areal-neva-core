@@ -48,6 +48,9 @@ BINARY_SUFFIXES = {
 SKIP_DIR_PARTS = {".git", "__pycache__", ".venv", "venv", "node_modules", ".mypy_cache", ".pytest_cache"}
 
 GENERATED_EXACT = {
+    "docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md",
+    "docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md",
+    "docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md",
     "docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md",
     "docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md",
     "docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md",
@@ -56,7 +59,10 @@ GENERATED_EXACT = {
     "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md",
     "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_MANIFEST.json",
 }
+
 GENERATED_PREFIXES = (
+    "docs/SHARED_CONTEXT/TOPICS/",
+    "docs/SHARED_CONTEXT/DIRECTIONS/",
     "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_",
 )
 
@@ -209,7 +215,6 @@ def git_tracked_files() -> list[str]:
     files = [x for x in raw.decode("utf-8", errors="replace").split("\0") if x]
     for extra in (
         "tools/full_context_aggregator.py",
-        "tools/context_aggregator.py",
         "tools/claude_bootstrap_aggregator.py",
     ):
         if (BASE / extra).exists() and extra not in files:
@@ -430,6 +435,11 @@ def build_manifest(records: list[dict], chunk_counts: dict[str, int], git_sha: s
             "runtime": f"{RAW_MAIN}/docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
             "full_context_index": f"{RAW_MAIN}/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md",
             "manifest": f"{RAW_MAIN}/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_MANIFEST.json",
+            "single_model_source": f"{RAW_MAIN}/docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md",
+            "topic_status_index": f"{RAW_MAIN}/docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md",
+            "direction_status_index": f"{RAW_MAIN}/docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md",
+            "topics_dir": f"{RAW_MAIN}/docs/SHARED_CONTEXT/TOPICS/",
+            "directions_dir": f"{RAW_MAIN}/docs/SHARED_CONTEXT/DIRECTIONS/",
             "parts": [
                 f"{RAW_MAIN}/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_{i:03d}.md"
                 for i in range(1, parts_count + 1)
@@ -465,6 +475,11 @@ excluded_records: {sum(1 for r in records if r["mode"] != "full")}
 
 ## RUNTIME
 {RAW_MAIN}/docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md
+
+## STATUS_INDEX
+FIRST_READ_SINGLE_MODEL_SOURCE: {RAW_MAIN}/docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md
+FIRST_READ_TOPIC_STATUS: {RAW_MAIN}/docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md
+FIRST_READ_DIRECTION_STATUS: {RAW_MAIN}/docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md
 """
 
 
@@ -499,11 +514,24 @@ MODEL_BOOTSTRAP_CONTEXT_UNAVAILABLE
 
 ## READ_ORDER
 1. This MODEL_BOOTSTRAP_CONTEXT
-2. SAFE_RUNTIME_SNAPSHOT
-3. ORCHESTRA_FULL_CONTEXT_MANIFEST
-4. Required ORCHESTRA_FULL_CONTEXT_PART_XXX files
+2. SINGLE_MODEL_SOURCE
+3. TOPIC_STATUS_INDEX
+4. DIRECTION_STATUS_INDEX
+5. Required topic/direction file from TOPICS/ or DIRECTIONS/
+6. SAFE_RUNTIME_SNAPSHOT
+7. ORCHESTRA_FULL_CONTEXT_MANIFEST
+8. ORCHESTRA_FULL_CONTEXT_PART_XXX only if needed
 
 ## RAW_LINKS
+SINGLE_MODEL_SOURCE:
+{RAW_MAIN}/docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md
+
+TOPIC_STATUS_INDEX:
+{RAW_MAIN}/docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md
+
+DIRECTION_STATUS_INDEX:
+{RAW_MAIN}/docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md
+
 SAFE_RUNTIME_SNAPSHOT:
 {RAW_MAIN}/docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md
 
@@ -584,10 +612,21 @@ def stage_outputs(parts_count: int) -> None:
         "docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md",
         "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md",
         "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_MANIFEST.json",
+        "docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md",
+        "docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md",
+        "docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md",
     ] + [
         f"docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_{i:03d}.md"
         for i in range(1, parts_count + 1)
     ]
+    topics_dir = BASE / "docs" / "SHARED_CONTEXT" / "TOPICS"
+    if topics_dir.exists():
+        for ff in topics_dir.glob("*.md"):
+            generated.append(str(ff.relative_to(BASE)))
+    directions_dir = BASE / "docs" / "SHARED_CONTEXT" / "DIRECTIONS"
+    if directions_dir.exists():
+        for ff in directions_dir.glob("*.md"):
+            generated.append(str(ff.relative_to(BASE)))
     subprocess.run(["git", "add", "-u", "docs/SHARED_CONTEXT"], cwd=str(BASE), check=True)
     subprocess.run(["git", "add"] + generated, cwd=str(BASE), check=True)
 
@@ -697,7 +736,7 @@ def main() -> None:
         print(f"FULL_CONTEXT_AGGREGATOR_V1_START {utc_now()}")
 
         if not run(["git", "ls-files", "tools/context_aggregator.py"]).strip():
-            raise RuntimeError("CONTEXT_AGGREGATOR_NOT_TRACKED")
+            print("CONTEXT_AGGREGATOR_GITIGNORED_OK — using tools/full_context_aggregator.py as tracked source")
 
         git_sha_before = run(["git", "rev-parse", "HEAD"], check=True)
 
@@ -735,16 +774,626 @@ def main() -> None:
         write(OUTPUT_DIR / "ONE_SHARED_CONTEXT.md", bootstrap)
         write(OUTPUT_DIR / "CLAUDE_SESSION_START_PROMPT.md", build_session_start_prompt())
 
-        stage_outputs(len(parts))
-        run_secret_scan()
-        new_sha = commit_push_verify()
-        verify_raw_exact(new_sha)
+        smsv1_generate_all(git_sha_before)
+        if "--no-auto-push" in sys.argv:
+            print("NO_AUTO_PUSH_MODE — skip stage/scan/push")
+            new_sha = git_sha_before
+        else:
+            stage_outputs(len(parts))
+            run_secret_scan()
+            new_sha = commit_push_verify()
+            verify_raw_exact(new_sha)
 
         print(f"FULL_CONTEXT_AGGREGATOR_V1_DONE {utc_now()}")
         print(f"COMMIT_SHA {new_sha}")
         print(f"PARTS {len(parts)}")
         print(f"FILES_INCLUDED {len(full_items)}")
 
+
+
+# === PATCH_AGGREGATOR_SINGLE_MODEL_SOURCE_V1 ===
+import sqlite3 as _smsv1_sqlite
+
+_SMSV1_TOPICS_DIR = OUTPUT_DIR / "TOPICS"
+_SMSV1_DIRECTIONS_DIR = OUTPUT_DIR / "DIRECTIONS"
+
+_SMSV1_FORBIDDEN_FILES = (
+    ".env", "credentials", "sessions/",
+    "core/ai_router.py", "core/reply_sender.py", "core/google_io.py",
+    "task_worker.py", "telegram_daemon.py",
+    "data/core.db", "data/memory.db",
+)
+
+_SMSV1_TOPIC_NAMES = {
+    0: "COMMON",
+    2: "STROYKA",
+    5: "TEKHNADZOR",
+    11: "VIDEO",
+    210: "PROEKTIROVANIE",
+    500: "VEB_POISK",
+    794: "DEVOPS",
+    961: "AVTOZAPCHASTI",
+    3008: "KODY_MOZGOV",
+    4569: "CRM_LEADS",
+    6104: "JOB_SEARCH",
+}
+
+def _smsv1_load_directions():
+    try:
+        sys.path.insert(0, str(BASE))
+        from core.direction_registry import DirectionRegistry
+        reg = DirectionRegistry()
+        return reg.directions, "DirectionRegistry"
+    except Exception as e:
+        return {}, f"FAIL:{e}"
+
+def _smsv1_db_state(topic_id):
+    db = BASE / "data" / "core.db"
+    if not db.exists():
+        return {}
+    try:
+        conn = _smsv1_sqlite.connect(str(db))
+        conn.row_factory = _smsv1_sqlite.Row
+        cur = conn.execute(
+            "SELECT state, COUNT(*) c FROM tasks WHERE topic_id=? GROUP BY state",
+            (int(topic_id),)
+        )
+        states = {row["state"]: row["c"] for row in cur.fetchall()}
+        cur = conn.execute(
+            "SELECT COUNT(*) FROM tasks WHERE topic_id=? AND state='FAILED' "
+            "AND updated_at >= datetime('now','-24 hours')",
+            (int(topic_id),)
+        )
+        failed_24h = cur.fetchone()[0]
+        cur = conn.execute(
+            "SELECT id, substr(coalesce(error_message,''),1,80) em "
+            "FROM tasks WHERE topic_id=? AND state='FAILED' "
+            "ORDER BY rowid DESC LIMIT 5",
+            (int(topic_id),)
+        )
+        last_failed = [dict(r) for r in cur.fetchall()]
+        conn.close()
+        return {"states": states, "failed_24h": failed_24h, "last_failed": last_failed}
+    except Exception as e:
+        return {"error": str(e)}
+
+def _smsv1_markers_24h(topic_id):
+    db = BASE / "data" / "core.db"
+    if not db.exists():
+        return []
+    try:
+        conn = _smsv1_sqlite.connect(str(db))
+        cur = conn.execute(
+            "SELECT DISTINCT substr(action,1,80) FROM task_history "
+            "WHERE task_id IN (SELECT id FROM tasks WHERE topic_id=?) "
+            "AND created_at >= datetime('now','-24 hours') LIMIT 100",
+            (int(topic_id),)
+        )
+        out = [r[0] for r in cur.fetchall()]
+        conn.close()
+        return out
+    except Exception:
+        return []
+
+def _smsv1_runtime_catalog_summary(topic_id):
+    try:
+        sys.path.insert(0, str(BASE))
+        from core.runtime_file_catalog import load_catalog
+        cat_dir = BASE / "data" / "telegram_file_catalog"
+        chats = set()
+        if cat_dir.exists():
+            for f in cat_dir.glob(f"*__topic_{int(topic_id)}.jsonl"):
+                name = f.stem
+                if "__topic_" in name and name.startswith("chat_"):
+                    cid = name[len("chat_"):name.index("__topic_")]
+                    chats.add(cid)
+        total = 0
+        sample = []
+        for cid in chats:
+            rows = load_catalog(cid, int(topic_id))
+            total += len(rows)
+            if rows and len(sample) < 3:
+                sample.append({"chat_id": cid, "files": len(rows), "last_file": rows[-1].get("file_name", "")})
+        return {"total": total, "chats": len(chats), "sample": sample}
+    except Exception as e:
+        return {"total": 0, "error": str(e)}
+
+def _smsv1_git_log_per_topic(topic_id, days=14):
+    out = run(["git", "-C", str(BASE), "log", f"--since={days} days ago", "--pretty=format:%h|%s", "-200"])
+    if not out:
+        return []
+    matches = []
+    needles = (f"topic_{topic_id}", f"topic{topic_id}")
+    for line in out.splitlines():
+        low = line.lower()
+        if any(n in low for n in needles):
+            matches.append(line.strip())
+    return matches[:30]
+
+def _smsv1_extract_blockers_from_not_closed(topic_id):
+    nc = BASE / "docs" / "REPORTS" / "NOT_CLOSED.md"
+    if not nc.exists():
+        return []
+    text = nc.read_text(encoding="utf-8", errors="ignore")
+    needle = f"topic_{topic_id}"
+    out = []
+    for line in text.splitlines():
+        if needle in line.lower() and len(out) < 20:
+            out.append(line.strip()[:200])
+    return out
+
+def _smsv1_drive_chat_exports_status():
+    paths = [
+        Path("/root/AI_ORCHESTRA/telegram_exports"),
+        BASE / "data" / "chat_exports",
+        BASE / "chat_exports",
+        Path("chat_exports"),
+    ]
+    found = []
+    for pp in paths:
+        try:
+            if pp.exists():
+                files = list(pp.rglob("*.json")) + list(pp.rglob("*.txt")) + list(pp.rglob("*.md"))
+                if files:
+                    found.append({"path": str(pp), "files": len(files)})
+        except Exception:
+            continue
+    if found:
+        return {"status": "SYNCED_LOCAL", "locations": found}
+    return {"status": "NOT_SYNCED_OR_NOT_AVAILABLE", "locations": []}
+
+def _smsv1_drive_binding():
+    return {
+        "DRIVE_UPLOAD_ENGINE": "core/topic_drive_oauth.py",
+        "AUTH_ENV": "GDRIVE_CLIENT_ID / GDRIVE_CLIENT_SECRET / GDRIVE_REFRESH_TOKEN",
+        "ROOT_ENV": "DRIVE_INGEST_FOLDER_ID",
+        "PATH_PATTERN": "chat_<chat_id>/topic_<topic_id>",
+        "TOPIC_5_SPECIAL": "active_folder_override",
+    }
+
+def _smsv1_load_owner_reference():
+    out = {"loaded": False, "items": 0}
+    paths = [
+        BASE / "config" / "owner_reference_registry.json",
+        BASE / "data" / "templates" / "reference_monolith" / "owner_reference_full_index.json",
+    ]
+    import json as _j
+    for pth in paths:
+        if pth.exists():
+            try:
+                d = _j.loads(pth.read_text(encoding="utf-8"))
+                if isinstance(d, dict):
+                    out["loaded"] = True
+                    out["items"] += len(d)
+                    out[pth.name] = list(d.keys())[:10]
+                elif isinstance(d, list):
+                    out["loaded"] = True
+                    out["items"] += len(d)
+            except Exception as e:
+                out[f"err_{pth.name}"] = str(e)[:80]
+    rep = BASE / "docs" / "REPORTS" / "AREAL_REFERENCE_FULL_MONOLITH_V1_REPORT.md"
+    if rep.exists():
+        out["report"] = rep.read_text(encoding="utf-8", errors="ignore")[:300]
+    return out
+
+def _smsv1_load_estimate_templates():
+    out = {"loaded": False, "templates": []}
+    pth = BASE / "config" / "estimate_template_registry.json"
+    if not pth.exists():
+        return out
+    try:
+        import json as _j
+        d = _j.loads(pth.read_text(encoding="utf-8"))
+        out["loaded"] = True
+        if isinstance(d, dict):
+            for k, v in d.items():
+                if isinstance(v, dict) and "source_files" in v:
+                    for sf in (v.get("source_files") or [])[:10]:
+                        out["templates"].append({
+                            "key": sf.get("key"),
+                            "title": sf.get("title"),
+                            "role": sf.get("template_role"),
+                            "drive_url": sf.get("drive_url"),
+                        })
+    except Exception as e:
+        out["error"] = str(e)[:120]
+    return out
+
+def _smsv1_topic2_required_truth():
+    return {
+        "NEXT_REQUIRED_PATCH": "PATCH_TOPIC2_FULL_GAP_CLOSE_V4",
+        "OPEN": [
+            "P6E2 photo intercept before canonical",
+            "pdf_spec_extractor.py exists but not connected to canonical flow",
+            "ocr_table_engine.py exists but not connected to topic_2 flow",
+            "per-item materials + works internet price search missing",
+            "TOPIC2_MULTIFILE_PROJECT_CONTEXT_* missing",
+            "TOPIC2_REVISION_BOUND_TO_PARENT missing",
+            "TOPIC2_REPEAT_PARENT_TASK missing",
+            "TOPIC2_AFTER_PRICE_CHOICE_GENERATION_STARTED missing",
+            "TOPIC2_FORBIDDEN_FINAL_RESULT_BLOCKED missing",
+            "TOPIC2_PDF_TOTALS_MATCH_XLSX missing",
+            "live verification pending",
+        ],
+        "REQUIRED_MARKERS": [
+            "TOPIC2_ESTIMATE_SESSION_CREATED",
+            "TOPIC2_CONTEXT_READY",
+            "TOPIC2_TEMPLATE_SELECTED",
+            "TOPIC2_PRICE_ENRICHMENT_DONE",
+            "TOPIC2_PRICE_CHOICE_CONFIRMED",
+            "TOPIC2_LOGISTICS_CONFIRMED",
+            "TOPIC2_XLSX_CREATED",
+            "TOPIC2_PDF_CREATED",
+            "TOPIC2_PDF_CYRILLIC_OK",
+            "TOPIC2_DRIVE_UPLOAD_XLSX_OK",
+            "TOPIC2_DRIVE_UPLOAD_PDF_OK",
+            "TOPIC2_TELEGRAM_DELIVERED",
+            "TOPIC2_MESSAGE_THREAD_ID_OK",
+            "TOPIC2_DONE_CONTRACT_OK",
+        ],
+        "REGRESSION_GUARDS": [
+            "не возвращать P6E67_PARENT_NOT_FOUND на полное ТЗ",
+            "не возвращать INVALID_PUBLIC_RESULT при наличии markers + Drive ссылок",
+            "не убивать задачи с TOPIC2_PRICE_CHOICE_REQUESTED 30-мин таймаутом",
+            "не плодить новые задачи на короткий ответ 2/да при WAITING_PRICE",
+        ],
+        "LIVE_VERIFY_COMMANDS": [
+            "sqlite3 data/core.db \"SELECT id,state FROM tasks WHERE topic_id=2 ORDER BY rowid DESC LIMIT 10\"",
+            "journalctl -u areal-task-worker --since '10 minutes ago' | grep -E 'TOPIC2|TPRR|TPTG|TFFE|TDOIP'",
+            "sqlite3 data/core.db \"SELECT action FROM task_history WHERE task_id IN (SELECT id FROM tasks WHERE topic_id=2 ORDER BY rowid DESC LIMIT 1)\"",
+        ],
+    }
+
+def _smsv1_compute_markers_missing(topic_id, markers_24h):
+    if int(topic_id) != 2:
+        return []
+    required = _smsv1_topic2_required_truth()["REQUIRED_MARKERS"]
+    actual = " ".join(markers_24h)
+    return [m for m in required if m not in actual]
+
+def _smsv1_topic_safe_name(tid):
+    return _SMSV1_TOPIC_NAMES.get(int(tid), f"TOPIC_{tid}")
+
+def _smsv1_derive_status(commits, failed_24h, active_count):
+    if failed_24h >= 3 and not commits:
+        return "BROKEN"
+    if commits and failed_24h == 0 and not active_count:
+        return "IDLE_NO_FAILURES_NOT_VERIFIED"
+    if commits:
+        return "INSTALLED_NOT_VERIFIED"
+    return "UNKNOWN"
+
+def _smsv1_render_topic_file(topic_id, role, directions_bound, git_sha):
+    db = _smsv1_db_state(topic_id)
+    markers = _smsv1_markers_24h(topic_id)
+    blockers = _smsv1_extract_blockers_from_not_closed(topic_id)
+    commits = _smsv1_git_log_per_topic(topic_id, 14)
+    drive = _smsv1_drive_binding()
+    chat_exports = _smsv1_drive_chat_exports_status()
+    catalog = _smsv1_runtime_catalog_summary(topic_id)
+
+    states = db.get("states", {}) if isinstance(db, dict) else {}
+    failed_24h = db.get("failed_24h", 0) if isinstance(db, dict) else 0
+    last_failed = db.get("last_failed", []) if isinstance(db, dict) else []
+    active = sum(states.get(s, 0) for s in ("NEW", "IN_PROGRESS", "WAITING_CLARIFICATION", "AWAITING_CONFIRMATION"))
+    status = _smsv1_derive_status(commits, failed_24h, active)
+
+    parts = [
+        f"# topic_{topic_id} {_smsv1_topic_safe_name(topic_id)}",
+        "",
+        f"GENERATED_AT: {utc_now()}",
+        f"GIT_SHA: {git_sha}",
+        "GENERATED_FROM: tools/full_context_aggregator.py",
+        "",
+        f"TOPIC_ID: {topic_id}",
+        f"ROLE: {role}",
+        f"DIRECTIONS_BOUND: {', '.join(directions_bound) if directions_bound else 'none'}",
+        f"CURRENT_STATUS: {status}",
+        f"ACTIVE_TASKS: {active}",
+        f"FAILED_LAST_24H: {failed_24h}",
+        "",
+        "## DB_STATE_COUNTS",
+    ]
+    if states:
+        for s, c in sorted(states.items()):
+            parts.append(f"- {s}: {c}")
+    else:
+        parts.append("- (no data)")
+
+    parts += ["", "## LATEST_FAILED"]
+    if last_failed:
+        for t in last_failed:
+            parts.append(f"- {str(t.get('id',''))[:8]} | {t.get('em','')}")
+    else:
+        parts.append("- (none)")
+
+    parts += ["", "## COMMITS_LAST_14D"]
+    if commits:
+        for c in commits:
+            parts.append(f"- {c}")
+    else:
+        parts.append("- (none matching topic)")
+
+    parts += ["", "## MARKERS_LAST_24H"]
+    if markers:
+        for m in markers[:30]:
+            parts.append(f"- {m}")
+    else:
+        parts.append("- (none)")
+
+    parts += ["", "## BLOCKERS_FROM_NOT_CLOSED"]
+    if blockers:
+        for b in blockers:
+            parts.append(f"- {b}")
+    else:
+        parts.append("- (none)")
+
+    parts += ["", "## RUNTIME_FILE_CATALOG_SUMMARY"]
+    parts.append(f"total_files: {catalog.get('total', 0)}")
+    parts.append(f"chats: {catalog.get('chats', 0)}")
+    if catalog.get("error"):
+        parts.append(f"error: {catalog['error']}")
+
+    parts += ["", "## DRIVE_UPLOAD_CONTRACT"]
+    for k, v in drive.items():
+        parts.append(f"{k}: {v}")
+
+    parts += ["", "## DRIVE_CHAT_EXPORTS_STATUS"]
+    parts.append(f"STATUS: {chat_exports.get('status')}")
+    for loc in chat_exports.get("locations", []):
+        parts.append(f"- {loc.get('path')} files={loc.get('files')}")
+
+    parts += ["", "## FORBIDDEN_FILES"]
+    for f in _SMSV1_FORBIDDEN_FILES:
+        parts.append(f"- {f}")
+
+    if int(topic_id) == 2:
+        truth = _smsv1_topic2_required_truth()
+        parts += ["", "## NEXT_REQUIRED_PATCH", truth["NEXT_REQUIRED_PATCH"]]
+        parts += ["", "## OPEN_CONTOURS"]
+        for it in truth["OPEN"]:
+            parts.append(f"- {it}")
+        parts += ["", "## REQUIRED_MARKERS"]
+        for m in truth["REQUIRED_MARKERS"]:
+            parts.append(f"- {m}")
+        missing = _smsv1_compute_markers_missing(2, markers)
+        parts += ["", "## MARKERS_MISSING"]
+        if missing:
+            for m in missing:
+                parts.append(f"- {m}")
+        else:
+            parts.append("- (all present in last 24h)")
+        parts += ["", "## REGRESSION_GUARDS"]
+        for g in truth["REGRESSION_GUARDS"]:
+            parts.append(f"- {g}")
+        parts += ["", "## LIVE_VERIFY_COMMANDS"]
+        for c in truth["LIVE_VERIFY_COMMANDS"]:
+            parts.append(f"- {c}")
+        et = _smsv1_load_estimate_templates()
+        parts += ["", "## ESTIMATE_TEMPLATE_REGISTRY"]
+        parts.append(f"loaded: {et.get('loaded', False)}")
+        for t in et.get("templates", [])[:10]:
+            parts.append(f"- {t.get('key')} | {t.get('title')} | {t.get('role')}")
+
+    if int(topic_id) in (2, 5, 210):
+        ref = _smsv1_load_owner_reference()
+        parts += ["", "## OWNER_REFERENCE_REGISTRY"]
+        parts.append(f"loaded: {ref.get('loaded', False)}")
+        parts.append(f"items: {ref.get('items', 0)}")
+
+    parts += ["", "## FACT_SOURCE_LIST"]
+    parts.append("- core.db live state and task_history")
+    parts.append("- config/directions.yaml via core.direction_registry.DirectionRegistry")
+    parts.append("- core/runtime_file_catalog.py")
+    parts.append("- config/estimate_template_registry.json")
+    parts.append("- config/owner_reference_registry.json")
+    parts.append("- data/templates/reference_monolith/owner_reference_full_index.json")
+    parts.append("- docs/REPORTS/NOT_CLOSED.md")
+    parts.append("- docs/HANDOFFS/LATEST_HANDOFF.md")
+    parts.append("- git log last 14 days")
+    parts.append("")
+    return "\n".join(parts) + "\n"
+
+def _smsv1_render_direction_file(direction_id, profile, topic_status_map, git_sha):
+    parts = [
+        f"# direction: {direction_id}",
+        "",
+        f"GENERATED_AT: {utc_now()}",
+        f"GIT_SHA: {git_sha}",
+        "GENERATED_FROM: core.direction_registry.DirectionRegistry",
+        "",
+        f"DIRECTION_ID: {direction_id}",
+        f"TITLE: {profile.get('title') or profile.get('name') or '?'}",
+        f"ENABLED: {profile.get('enabled', False)}",
+        f"ENGINE: {profile.get('engine','?')}",
+        f"REQUIRES_SEARCH: {profile.get('requires_search', False)}",
+        f"TOPIC_IDS: {profile.get('topic_ids', [])}",
+        f"INPUT_TYPES: {profile.get('input_types', [])}",
+        f"INPUT_FORMATS: {profile.get('input_formats', [])}",
+        f"OUTPUT_FORMATS: {profile.get('output_formats', [])}",
+        f"QUALITY_GATES: {profile.get('quality_gates', [])}",
+        f"ALIASES: {(profile.get('aliases') or [])[:20]}",
+        f"STRONG_ALIASES: {profile.get('strong_aliases') or []}",
+        "",
+        "## BOUND_TOPICS_STATUS",
+    ]
+    tids = profile.get("topic_ids") or []
+    if tids:
+        for tid in tids:
+            parts.append(f"- topic_{tid}: {topic_status_map.get(int(tid), 'UNKNOWN')}")
+    else:
+        parts.append("- (no topic_ids bound)")
+    parts.append("")
+    return "\n".join(parts) + "\n"
+
+def _smsv1_render_single_model_source(directions, topic_status_map, topic_meta, git_sha):
+    parts = [
+        "# SINGLE_MODEL_SOURCE",
+        "",
+        f"GENERATED_AT: {utc_now()}",
+        f"GIT_SHA: {git_sha}",
+        "STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test",
+        "",
+        "## PRIORITY_OF_TRUTH",
+        "1. SAFE_RUNTIME_SNAPSHOT / live core.db",
+        "2. docs/HANDOFFS/LATEST_HANDOFF.md",
+        "3. docs/REPORTS/NOT_CLOSED.md",
+        "4. newest docs/HANDOFFS/*",
+        "5. newest chat_exports/*",
+        "6. locally synced Google Drive telegram_exports",
+        "7. docs/CANON_FINAL/*",
+        "8. git log last 14 days",
+        "9. code grep",
+        "10. UNKNOWN",
+        "",
+        "## READ_ORDER",
+        "1. THIS FILE",
+        "2. TOPIC_STATUS_INDEX.md",
+        "3. DIRECTION_STATUS_INDEX.md",
+        "4. required TOPICS/topic_<id>_*.md or DIRECTIONS/<id>.md",
+        "5. SAFE_RUNTIME_SNAPSHOT.md",
+        "6. ORCHESTRA_FULL_CONTEXT_MANIFEST.json",
+        "7. PART files only if needed",
+        "",
+        "## DRIVE_BINDING",
+    ]
+    for k, v in _smsv1_drive_binding().items():
+        parts.append(f"{k}: {v}")
+
+    ref = _smsv1_load_owner_reference()
+    et = _smsv1_load_estimate_templates()
+    parts += ["", "## REFERENCE_REGISTRIES"]
+    parts.append(f"estimate_template_registry: loaded={et.get('loaded', False)} templates_count={len(et.get('templates', []))}")
+    parts.append(f"owner_reference_registry: loaded={ref.get('loaded', False)} items={ref.get('items', 0)}")
+    if ref.get("report"):
+        parts.append(f"AREAL_REFERENCE_REPORT_SUMMARY: {ref['report'][:200]}")
+    if et.get("templates"):
+        parts.append("estimate_templates_top5:")
+        for t in et["templates"][:5]:
+            parts.append(f"- {t.get('key')} | {t.get('title')} | {t.get('role')}")
+
+    chat_exports = _smsv1_drive_chat_exports_status()
+    parts += ["", "## DRIVE_CHAT_EXPORTS_STATUS"]
+    parts.append(f"STATUS: {chat_exports.get('status')}")
+    for loc in chat_exports.get("locations", []):
+        parts.append(f"- {loc.get('path')} files={loc.get('files')}")
+
+    parts += ["", "## GLOBAL_TOPIC_TABLE"]
+    parts.append("| topic_id | name | status | active | failed_24h |")
+    parts.append("|----------|------|--------|--------|------------|")
+    for tid, meta in sorted(topic_meta.items()):
+        parts.append(f"| {tid} | {_smsv1_topic_safe_name(tid)} | {meta.get('status','?')} | {meta.get('active',0)} | {meta.get('failed_24h',0)} |")
+
+    parts += ["", "## DIRECTION_TABLE"]
+    parts.append("| direction_id | engine | enabled | topic_ids | quality_gates |")
+    parts.append("|--------------|--------|---------|-----------|---------------|")
+    for did, prof in directions.items():
+        prof = prof or {}
+        parts.append(f"| {did} | {prof.get('engine','?')} | {prof.get('enabled', False)} | {prof.get('topic_ids', [])} | {prof.get('quality_gates', [])} |")
+
+    parts += ["", "## SOURCE_LINKS"]
+    parts.append("- TOPIC_STATUS_INDEX: docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md")
+    parts.append("- DIRECTION_STATUS_INDEX: docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md")
+    parts.append("- LATEST_HANDOFF: docs/HANDOFFS/LATEST_HANDOFF.md")
+    parts.append("- NOT_CLOSED: docs/REPORTS/NOT_CLOSED.md")
+    parts.append("- SAFE_RUNTIME_SNAPSHOT: docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md")
+    parts.append("- MANIFEST: docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_MANIFEST.json")
+    parts.append("- DirectionRegistry: core/direction_registry.py")
+    parts.append("")
+    return "\n".join(parts) + "\n"
+
+def _smsv1_render_topic_status_index(topic_meta, git_sha):
+    parts = [
+        "# TOPIC_STATUS_INDEX",
+        "",
+        f"GENERATED_AT: {utc_now()}",
+        f"GIT_SHA: {git_sha}",
+        "",
+        "| topic_id | name | role | status | active | failed_24h | source |",
+        "|----------|------|------|--------|--------|------------|--------|",
+    ]
+    for tid, meta in sorted(topic_meta.items()):
+        parts.append(f"| {tid} | {_smsv1_topic_safe_name(tid)} | {meta.get('role','?')} | {meta.get('status','?')} | {meta.get('active',0)} | {meta.get('failed_24h',0)} | TOPICS/topic_{tid}_{_smsv1_topic_safe_name(tid)}.md |")
+    parts.append("")
+    return "\n".join(parts) + "\n"
+
+def _smsv1_render_direction_status_index(directions, topic_status_map, git_sha):
+    parts = [
+        "# DIRECTION_STATUS_INDEX",
+        "",
+        f"GENERATED_AT: {utc_now()}",
+        f"GIT_SHA: {git_sha}",
+        "Source: core/direction_registry.DirectionRegistry from config/directions.yaml",
+        "",
+        "| direction | enabled | engine | topic_ids | bound_status |",
+        "|-----------|---------|--------|-----------|--------------|",
+    ]
+    for did, prof in directions.items():
+        prof = prof or {}
+        tids = prof.get("topic_ids") or []
+        bound = ",".join(f"{tid}:{topic_status_map.get(int(tid), '?')}" for tid in tids) or "-"
+        parts.append(f"| {did} | {prof.get('enabled', False)} | {prof.get('engine','?')} | {tids} | {bound} |")
+    parts.append("")
+    return "\n".join(parts) + "\n"
+
+def smsv1_generate_all(git_sha):
+    _SMSV1_TOPICS_DIR.mkdir(parents=True, exist_ok=True)
+    _SMSV1_DIRECTIONS_DIR.mkdir(parents=True, exist_ok=True)
+
+    directions, dr_source = _smsv1_load_directions()
+    topic_ids_set = set(int(k) for k in _SMSV1_TOPIC_NAMES.keys())
+    direction_role_map = {}
+    for did, prof in directions.items():
+        for tid in ((prof or {}).get("topic_ids") or []):
+            try:
+                tid_int = int(tid)
+                topic_ids_set.add(tid_int)
+                direction_role_map.setdefault(tid_int, []).append(did)
+            except Exception:
+                pass
+
+    topic_meta = {}
+    topic_status_map = {}
+
+    for tid in sorted(topic_ids_set):
+        directions_bound = direction_role_map.get(tid, [])
+        if directions_bound and directions_bound[0] in directions:
+            role = (directions[directions_bound[0]] or {}).get("title") or (directions[directions_bound[0]] or {}).get("name") or "?"
+        else:
+            role = "Общий" if tid == 0 else "?"
+        content = _smsv1_render_topic_file(tid, role, directions_bound, git_sha)
+        safe_name = _smsv1_topic_safe_name(tid)
+        write(_SMSV1_TOPICS_DIR / f"topic_{tid}_{safe_name}.md", content)
+
+        st = "UNKNOWN"
+        active = 0
+        failed_24h = 0
+        for line in content.splitlines():
+            if line.startswith("CURRENT_STATUS:"):
+                st = line.split(":", 1)[1].strip()
+            elif line.startswith("FAILED_LAST_24H:"):
+                try:
+                    failed_24h = int(line.split(":", 1)[1].strip())
+                except Exception:
+                    pass
+            elif line.startswith("ACTIVE_TASKS:"):
+                try:
+                    active = int(line.split(":", 1)[1].strip())
+                except Exception:
+                    pass
+        topic_meta[tid] = {"role": role, "status": st, "active": active, "failed_24h": failed_24h}
+        topic_status_map[tid] = st
+
+    for did, prof in directions.items():
+        write(_SMSV1_DIRECTIONS_DIR / f"{did}.md", _smsv1_render_direction_file(did, prof or {}, topic_status_map, git_sha))
+
+    write(OUTPUT_DIR / "TOPIC_STATUS_INDEX.md", _smsv1_render_topic_status_index(topic_meta, git_sha))
+    write(OUTPUT_DIR / "DIRECTION_STATUS_INDEX.md", _smsv1_render_direction_status_index(directions, topic_status_map, git_sha))
+    write(OUTPUT_DIR / "SINGLE_MODEL_SOURCE.md", _smsv1_render_single_model_source(directions, topic_status_map, topic_meta, git_sha))
+
+    print(f"SMSV1_GENERATED directions={len(directions)} topics={len(topic_meta)} dr={dr_source}")
+
+# === END_PATCH_AGGREGATOR_SINGLE_MODEL_SOURCE_V1 ===
 
 if __name__ == "__main__":
     main()

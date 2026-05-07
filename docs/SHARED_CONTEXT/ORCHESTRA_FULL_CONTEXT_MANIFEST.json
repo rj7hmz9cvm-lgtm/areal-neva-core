@@ -1,12 +1,12 @@
 {
-  "generated_at_utc": "2026-05-03T10:25:53.699868+00:00",
-  "git_sha_before_commit": "9dec339fd50517a8fa344fca3eb1ac0c085650e0",
+  "generated_at_utc": "2026-05-07T15:15:30.436012+00:00",
+  "git_sha_before_commit": "983ced8149ebd4c84be0c2926296ad19722d0d88",
   "part_max_bytes": 400000,
   "content_chunk_bytes": 340000,
-  "total_records": 293,
-  "included_full_files": 268,
-  "excluded_records": 25,
-  "parts_count": 7,
+  "total_records": 359,
+  "included_full_files": 333,
+  "excluded_records": 26,
+  "parts_count": 17,
   "raw_main": "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main",
   "outputs": {
     "model_bootstrap": "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md",
@@ -15,6 +15,11 @@
     "runtime": "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
     "full_context_index": "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md",
     "manifest": "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_MANIFEST.json",
+    "single_model_source": "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md",
+    "topic_status_index": "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md",
+    "direction_status_index": "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md",
+    "topics_dir": "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/TOPICS/",
+    "directions_dir": "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/DIRECTIONS/",
     "parts": [
       "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_001.md",
       "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_002.md",
@@ -22,7 +27,17 @@
       "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_004.md",
       "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_005.md",
       "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_006.md",
-      "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_007.md"
+      "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_007.md",
+      "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_008.md",
+      "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_009.md",
+      "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_010.md",
+      "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_011.md",
+      "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_012.md",
+      "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_013.md",
+      "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_014.md",
+      "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_015.md",
+      "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_016.md",
+      "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_017.md"
     ]
   },
   "files": [
@@ -30,18 +45,36 @@
       "path": "docs/HANDOFFS/LATEST_HANDOFF.md",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 15724,
-      "sha256": "ddca1b3513c29f6dbcd12e42d21e6b52a182b80be13aa083d17ffeca8fb13cf4",
-      "chars": 12706,
+      "size_bytes": 4802,
+      "sha256": "1459a4064974ae5e487a321a36d8670e2344d84ce066fed44ce5e0f6427353b3",
+      "chars": 4259,
       "chunks": 1
     },
     {
       "path": "docs/REPORTS/NOT_CLOSED.md",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 37180,
-      "sha256": "ccba2c9f7bff1eeda072acf7153815ff3d0a7db0d0fb4d3cb47771679dc049d1",
-      "chars": 28425,
+      "size_bytes": 37996,
+      "sha256": "4c1a7e7f6a1b85b568ec833114368ad6463d59c3feb4a30b983826a10a6dee4a",
+      "chars": 29154,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/NOT_CLOSED_20260504_ORCHESTRA_MASTER_CLOSE.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3722,
+      "sha256": "68a17e25b0535b7ad8454766a2ed7671fe855bd58fd6263a15a6b8f1831d4ecf",
+      "chars": 3669,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/NOT_CLOSED_20260506_TOPIC2_STROYKA.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 5585,
+      "sha256": "a0accdca9e91b19cd70781341cf08c6f5bfe63b44090027dd9fe76fda69aa9a0",
+      "chars": 5515,
       "chunks": 1
     },
     {
@@ -87,6 +120,33 @@
       "size_bytes": 810,
       "sha256": "763debb0a4f9ea13734110d15b6eb84615c2be5668d739eecdd4494efab4b4f8",
       "chars": 566,
+      "chunks": 1
+    },
+    {
+      "path": "docs/CANON_FINAL/TECHNADZOR_DOMAIN_LOGIC_CANON.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 73177,
+      "sha256": "c87cf6fccbec4def0ef3c9c5a9aca213a1c926615fbfb0bda4c4ca51ada57e4f",
+      "chars": 45006,
+      "chunks": 1
+    },
+    {
+      "path": "docs/CANON_FINAL/TOPIC_2_CANONICAL_ESTIMATE_CONTRACT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 7748,
+      "sha256": "103509646b362d86b5f02a04860f699084f11c2f4447b6803b220aad0593f257",
+      "chars": 5808,
+      "chunks": 1
+    },
+    {
+      "path": "docs/CANON_FINAL/TOPIC_500_UNIVERSAL_SEARCH_CANON.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 4548,
+      "sha256": "063372c428bbf2e42b2406dbe2061a789e44d74678b08c12db0af5693f329735",
+      "chars": 3646,
       "chunks": 1
     },
     {
@@ -261,12 +321,75 @@
       "chunks": 1
     },
     {
+      "path": "docs/HANDOFFS/HANDOFF_20260504_ORCHESTRA_MASTER_CLOSE.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 4946,
+      "sha256": "854df572268f14444021497eb475fef053f289d71a82cbd3175008a65a6813ad",
+      "chars": 4945,
+      "chunks": 1
+    },
+    {
+      "path": "docs/HANDOFFS/HANDOFF_20260505_TNZ_MSK_DOCUMENT_SKILL_EXTRACTION.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1759,
+      "sha256": "59d30fce9b7d02ccd9b1d8fe601aab22298c4c1f9ebf864d8726f1306df20ecd",
+      "chars": 1757,
+      "chunks": 1
+    },
+    {
+      "path": "docs/HANDOFFS/HANDOFF_20260505_TNZ_MSK_SKILL_PACKAGE_QA.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1417,
+      "sha256": "b6435ea5e4f3e1eb3ba237549bb60dc92b0e30f7a25d7e63be23593312376b74",
+      "chars": 1393,
+      "chunks": 1
+    },
+    {
+      "path": "docs/HANDOFFS/HANDOFF_20260506_TOPIC2_STROYKA_PRICE_FLOW.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 4476,
+      "sha256": "669ef757e158345277c2b32846a3f47e42ff20e204468dcf1b2c2417424f17fd",
+      "chars": 4436,
+      "chunks": 1
+    },
+    {
+      "path": "docs/HANDOFFS/HANDOFF_20260507_RUNTIME_V2_V3_FULL_CLOSE.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 16856,
+      "sha256": "d5df2433b201f973d457e5e6af150d39db5c9285e7b99214debd4dfb10eb77ce",
+      "chars": 14483,
+      "chunks": 1
+    },
+    {
+      "path": "docs/HANDOFFS/HANDOFF_20260507_SESSION_CLOSE.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 6421,
+      "sha256": "dc8a8555245f4e703fe1c5e60173b977811ec7f681d2a7713dac596e8db322a9",
+      "chars": 4974,
+      "chunks": 1
+    },
+    {
       "path": "docs/HANDOFFS/SESSION_EXPORT_CHATGPT_2026-04-30_FULLFIX_13_15_CURRENT.json",
       "mode": "full",
       "reason": "tracked text",
       "size_bytes": 11199,
       "sha256": "5790b7c6f58ca31d50fc0aad5e1f691d31e6af6774fa7695f6b8b12735b24d91",
       "chars": 11157,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/ALL_THREE_DIRECTIONS_ABSOLUTE_CODE_CLOSE_V1_REPORT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1249,
+      "sha256": "a0b45f76910f3947da57374617e22726ee05cfa4e0914a178e50c4d04773bcef",
+      "chars": 1249,
       "chunks": 1
     },
     {
@@ -387,6 +510,15 @@
       "chunks": 1
     },
     {
+      "path": "docs/REPORTS/IN_PROGRESS_20260506_TOPIC2_STROYKA.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2538,
+      "sha256": "18365cd26cf1b4059a889996cceb9dd4f5b8b4afd5c1c667d7890c228df47997",
+      "chars": 2464,
+      "chunks": 1
+    },
+    {
       "path": "docs/REPORTS/LIVE_CANON_TEST_REPORT.md",
       "mode": "full",
       "reason": "tracked text",
@@ -459,6 +591,24 @@
       "chunks": 1
     },
     {
+      "path": "docs/REPORTS/STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1_REPORT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 857,
+      "sha256": "8a87792047c970f1650efc114a73d8169478f550db9e4f197821d40d7b17bfe5",
+      "chars": 857,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/STROYKA_TOPIC2_SOURCE_LOCK_PRIORITY_FIX_V1_REPORT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1008,
+      "sha256": "a909a36369614ef40bea3d6d8fa1999d41de7e6c47045e09bf001d9f308b7f38",
+      "chars": 1008,
+      "chunks": 1
+    },
+    {
       "path": "docs/REPORTS/TAIL_CLOSE_THREE_MISSING_V1_REPORT.md",
       "mode": "full",
       "reason": "tracked text",
@@ -483,6 +633,69 @@
       "size_bytes": 104,
       "sha256": "517e9df492879feb843277627519f5e63df131c02f114445655c3feb52610e05",
       "chars": 104,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/THREE_CONTOURS_FINAL_SOURCE_LOCK_V1_REPORT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1810,
+      "sha256": "516b5a546bba07042d1252326e3e756a9ed25de60ed9074e5473ecefdaf80e1e",
+      "chars": 1725,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/THREE_CONTOURS_FULL_CONTEXT_NO_REPEAT_CLARIFY_V1_REPORT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 960,
+      "sha256": "8e34d5bb75c8a9ca58a0c16d170cf97d983e432c35b5c86790f3813be6cc4ed4",
+      "chars": 945,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/THREE_STAGES_CANON_AND_STATUS.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 9296,
+      "sha256": "4038d7e4cd28987ea78743394f0d31482ce2800c710749aa500e92055a4754f0",
+      "chars": 6958,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/THREE_STAGES_CODE_CLOSE_FINAL_STRICT_V1_REPORT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1166,
+      "sha256": "49f40600a51d349441384d69b793768dc58067990f560d56f4dfa9ff86ba6516",
+      "chars": 1166,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/TNZ_MSK_DOCUMENT_SKILL_EXTRACTION_REPORT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1686,
+      "sha256": "f69d1b65c71a024045ef5f5a88166211915a526197abcd733e56961d4b879be7",
+      "chars": 1638,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/TNZ_MSK_SKILL_PACKAGE_QA_REPORT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1528,
+      "sha256": "f1b614ea8eb99c63ba3bb9b23937206501c43b520f94be06ebed9a4379ea0c83",
+      "chars": 1418,
+      "chunks": 1
+    },
+    {
+      "path": "docs/REPORTS/TOPIC2_ONE_BIG_FINAL_PIPELINE_V1_HOTFIX_TEMPLATE_ACCESS_V2_REPORT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 710,
+      "sha256": "8154b0c715a43bf122eeead6d35e9694ca42dfc5cb242b39729af83b6c7d81e6",
+      "chars": 710,
       "chunks": 1
     },
     {
@@ -765,6 +978,15 @@
       "chunks": 1
     },
     {
+      "path": "chat_exports/CHAT_EXPORT__CLAUDE_CODE_TOPIC2_CANONICAL_SESSION__2026-05-07.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 7877,
+      "sha256": "ed0a45335f8085f46fdd2182628f578cd65f294c29d7cb6926e1913d9c0b7d69",
+      "chars": 7641,
+      "chunks": 1
+    },
+    {
       "path": "chat_exports/CHAT_EXPORT__CLAUDE_SESSION__2026-04-27.txt",
       "mode": "full",
       "reason": "tracked text",
@@ -798,6 +1020,24 @@
       "size_bytes": 1737,
       "sha256": "1148900390409f6ef959a588f7e8d2f5f559af6243f522e634de65e28b91b2b1",
       "chars": 1534,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3__2026-05-03.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1484,
+      "sha256": "4235c45c3e77d5e08bb658aa2ccb12c0407678835e4c9ca674153560700f4538",
+      "chars": 1484,
+      "chunks": 1
+    },
+    {
+      "path": "chat_exports/CHAT_EXPORT__GPT_TOPIC5_FULL_CLOSE__2026-05-05.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 14702,
+      "sha256": "6381e25908185473f3c73e73191a03511d217bba915c333d2215b7e0b2eeaa67",
+      "chars": 14141,
       "chunks": 1
     },
     {
@@ -1044,6 +1284,15 @@
       "chunks": 1
     },
     {
+      "path": "chat_exports/CHAT_EXPORT__topic2_stroyka_price_choice_patch__2026-05-06.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 4495,
+      "sha256": "7e2f4a7975ace1b61b4c072701a28f9bd14e3d8e15b9dd615e74bb261c6a6f21",
+      "chars": 4495,
+      "chunks": 1
+    },
+    {
       "path": "chat_exports/HANDOFF__CLAUDE_TO_NEXT_AI__2026-04-27.txt",
       "mode": "full",
       "reason": "tracked text",
@@ -1101,10 +1350,10 @@
       "path": "task_worker.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 200142,
-      "sha256": "26cb58a7f8ea21d73572638e92c0063cf445c0eacf2d3e6d5bdd279d371d0d61",
-      "chars": 191412,
-      "chunks": 1
+      "size_bytes": 695133,
+      "sha256": "4aaa9d675a3775b082fa5b933fb07b2c374e836529096694589cecaf47210237",
+      "chars": 661903,
+      "chunks": 3
     },
     {
       "path": "task_worker.py.broken.1776789848",
@@ -1128,36 +1377,36 @@
       "path": "telegram_daemon.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 50299,
-      "sha256": "9367c85c169d9f49fb57426d0dbb9b8f1d876582efab59d00c8d42a4a4c73f9c",
-      "chars": 48918,
+      "size_bytes": 50637,
+      "sha256": "f771a4f4dcb22b9c87a2660e78a3b362aeb4fcdcba47609ea236d49efdde5115",
+      "chars": 49256,
       "chunks": 1
     },
     {
       "path": "core/project_route_guard.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 6714,
-      "sha256": "ba7de84f30ec6b9ef978ef3bf38bac5354e1ffb255730c3066e040d783b493b6",
-      "chars": 5956,
+      "size_bytes": 6749,
+      "sha256": "8c39df6c221a56c2de08e994e37b2e45ca02a9de20d2647695d46606159bfb46",
+      "chars": 5991,
       "chunks": 1
     },
     {
       "path": "core/final_closure_engine.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 25784,
-      "sha256": "805edf5e221a75a4933101941dec6f96cf4f40ec90abae9f4cd478043fb43e07",
-      "chars": 23366,
+      "size_bytes": 28001,
+      "sha256": "350fb46557559a9d01adfd07b790ca2c001dd3b58fd0ad8e8dfad71f286ac24f",
+      "chars": 25360,
       "chunks": 1
     },
     {
       "path": "core/file_context_intake.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 30508,
-      "sha256": "5de5c8de555365e8ea67135829d9ae00b20434d292b1fa9bdc61db52b28bdaea",
-      "chars": 28291,
+      "size_bytes": 31607,
+      "sha256": "10a131931e3071fc6f06da8d8f0bd72e5964cda3b4f13ed47f1a63bc0b52fb00",
+      "chars": 29150,
       "chunks": 1
     },
     {
@@ -1182,27 +1431,27 @@
       "path": "core/project_engine.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 115094,
-      "sha256": "e2ee8fe53b5df893b9150a1db1aef9825b5ac3bc1c293b52555ae580b9ca006d",
-      "chars": 108647,
+      "size_bytes": 137667,
+      "sha256": "78d74f019c8b179cf8eb33cc618b4099de55b4ae08b382209ad58ab00af35e98",
+      "chars": 130410,
       "chunks": 1
     },
     {
       "path": "core/file_intake_router.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 40136,
-      "sha256": "5b7c3a7d32f7ffe71ef7b9a6a22d362c4941f50a57ab6f0fbe7707f87aebf739",
-      "chars": 38003,
+      "size_bytes": 46018,
+      "sha256": "cc90687dbd7f88ca7b05507b9279cbdc19a1bc27cb0b2449c753ac37c7ff1e6b",
+      "chars": 43730,
       "chunks": 1
     },
     {
       "path": "core/ai_router.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 23574,
-      "sha256": "4f995fbc96b0559804ae0b6e7c0047ef9e030923d8513259b18463004b89d8eb",
-      "chars": 18843,
+      "size_bytes": 30925,
+      "sha256": "7c5a85800f035842fcd179daf52546522c9c5592891d9f1b6790beaf5143c69d",
+      "chars": 25763,
       "chunks": 1
     },
     {
@@ -1263,9 +1512,9 @@
       "path": "core/artifact_pipeline.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 30709,
-      "sha256": "8a24a5f0b2a24de8e2f209a5f38c436fdf96cd5426b67bca8502d056038d6ab4",
-      "chars": 29408,
+      "size_bytes": 31698,
+      "sha256": "102fd4ccfe0880b0a831991f3fa9b45a968bf34f21d11c04fb785a7ab5f557e3",
+      "chars": 30325,
       "chunks": 1
     },
     {
@@ -1290,9 +1539,9 @@
       "path": "core/cad_project_engine.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 46029,
-      "sha256": "3f977d0eaa15dbc87b099c9dcbdd3b605aa0b0e848d84f3fbcc3c7a02a5cad84",
-      "chars": 42605,
+      "size_bytes": 46081,
+      "sha256": "6024e82541f8e08b15909858aa28306a471adeffab216b8fc3b23b819b273edc",
+      "chars": 42650,
       "chunks": 1
     },
     {
@@ -1470,9 +1719,9 @@
       "path": "core/file_memory_bridge.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 26992,
-      "sha256": "04d856062a536f7bdd1fd6c744a73f5baf8c47afaef5a419594ebb5a527b1ccc",
-      "chars": 24457,
+      "size_bytes": 28762,
+      "sha256": "029b9005621f00c7241f1e615030528b3cc68658f4463c1b3aa6fa13aba6940b",
+      "chars": 25847,
       "chunks": 1
     },
     {
@@ -1536,6 +1785,15 @@
       "size_bytes": 911,
       "sha256": "577ad1be885ee9b99bb995beb70cebf2cd3b05de549fe629c7e29281925b14df",
       "chars": 864,
+      "chunks": 1
+    },
+    {
+      "path": "core/load_calculation_engine.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 4310,
+      "sha256": "8172ab80e4219323dcafad29f3914f6e963888cffd7831d358f3621eb5411dad",
+      "chars": 3797,
       "chunks": 1
     },
     {
@@ -1614,9 +1872,9 @@
       "path": "core/normative_engine.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 4804,
-      "sha256": "fed2c1c790caeb5495bdc047dddcf722b63f8d339736a84030a84e17d5ce9aa7",
-      "chars": 3399,
+      "size_bytes": 44368,
+      "sha256": "355ac95be8b8f06c6adca69858b21865560a36941156094be6bd91dc207aeb8e",
+      "chars": 29336,
       "chunks": 1
     },
     {
@@ -1695,9 +1953,9 @@
       "path": "core/pdf_cyrillic.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 2793,
-      "sha256": "fdbc9f2c30ae49a59d9ac57eb0b0d02fa6a779b9b06dc241ebf58fc77a8ce976",
-      "chars": 2793,
+      "size_bytes": 5153,
+      "sha256": "c7d82ac54474065917afc3433342f2511a3402d75cdbd7c20cf7a3f1e91cc4dc",
+      "chars": 5145,
       "chunks": 1
     },
     {
@@ -1707,6 +1965,15 @@
       "size_bytes": 7193,
       "sha256": "09a018898c6bf6640092a5df1297d9ab31e9ff6bd1633ca61593c1aa4815a024",
       "chars": 7066,
+      "chunks": 1
+    },
+    {
+      "path": "core/photo_recognition_engine.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 14479,
+      "sha256": "58209d81c02af460887d992f0d10d7d160b89cf6663d39550dcda6a897b1d558",
+      "chars": 13793,
       "chunks": 1
     },
     {
@@ -1722,9 +1989,9 @@
       "path": "core/price_enrichment.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 26993,
-      "sha256": "026d3158999adddddfcf44ccba981ea9661609e4d3a586f67db2c769d2955753",
-      "chars": 25035,
+      "size_bytes": 35071,
+      "sha256": "7d01c8c0410577a0676a6c992a0b17d56fe26e4b7c6400581e471484c13603bd",
+      "chars": 32989,
       "chunks": 1
     },
     {
@@ -1740,9 +2007,9 @@
       "path": "core/project_document_engine.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 11262,
-      "sha256": "c2e2ff931d18cc30c4f2eb1a8253ac42180dd934157317b0efbba9500ae14421",
-      "chars": 10401,
+      "size_bytes": 11810,
+      "sha256": "365b6bf581651a80f5f9fb153265e84f6a3d02d770d5e1ec8f191d85588aa116",
+      "chars": 10877,
       "chunks": 1
     },
     {
@@ -1785,18 +2052,18 @@
       "path": "core/sample_template_engine.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 48342,
-      "sha256": "071b5e0676767bbfa729e120e04185b9e9ee103b01016e3b36e85b65ef80a898",
-      "chars": 45896,
-      "chunks": 1
+      "size_bytes": 350254,
+      "sha256": "e1d367547a2d362914ef6e747007a379e44a7b04d27031d8155f389c2fb9e926",
+      "chars": 327153,
+      "chunks": 2
     },
     {
       "path": "core/search_engine.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 2127,
-      "sha256": "1f35cefd94b014de6ca4eeb0cfd8802ce0f9275e7ea160c7fe43f70a288e94d6",
-      "chars": 2127,
+      "size_bytes": 8046,
+      "sha256": "cd8e56b848f77750e2934e99e4e8eff0c1b0d1d908d27a1939cce5e28348ba56",
+      "chars": 7830,
       "chunks": 1
     },
     {
@@ -1812,9 +2079,9 @@
       "path": "core/search_session.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 21999,
-      "sha256": "96c60087361c4aa2ddda4858e28cfebc9d0ce74e21d0d61e50b347583482c0a5",
-      "chars": 20676,
+      "size_bytes": 76700,
+      "sha256": "f07740fc973009823dbdb790b5dd67f5e3d17dd52d16bf0fde1baabea43fbb8f",
+      "chars": 69349,
       "chunks": 1
     },
     {
@@ -1845,12 +2112,21 @@
       "chunks": 1
     },
     {
+      "path": "core/stroyka_estimate_canon.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 129117,
+      "sha256": "d83749a9374c4f7ee8db39645e93bb3969279b31337f34ddca5acd4e96d80456",
+      "chars": 118988,
+      "chunks": 1
+    },
+    {
       "path": "core/stt_engine.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 2144,
-      "sha256": "e550c9da651398927e0657a29952285a9da43dc611a4bd82e9a78b5de7e36e1a",
-      "chars": 2144,
+      "size_bytes": 2467,
+      "sha256": "5a82d4d66baa07c5459aaece34a432de65b7d157840669f08efe5a9a6b1fe6bd",
+      "chars": 2393,
       "chunks": 1
     },
     {
@@ -1863,12 +2139,39 @@
       "chunks": 0
     },
     {
+      "path": "core/technadzor_document_skill.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 12099,
+      "sha256": "7f86800da7b61771bec0e581bb3facd3ffa0f34a47ac55e87ca8fca8f3f1c74a",
+      "chars": 9619,
+      "chunks": 1
+    },
+    {
+      "path": "core/technadzor_drive_index.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 18303,
+      "sha256": "31118a4e5fa521f992b026001a821ecf8cea7570e3185a3ed6b89d59a3143c77",
+      "chars": 18279,
+      "chunks": 1
+    },
+    {
       "path": "core/technadzor_engine.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 2667,
-      "sha256": "83770ad37151d8c2ca8fe962229a067528e90e58b452ef92b41e490022b4cad7",
-      "chars": 2366,
+      "size_bytes": 185781,
+      "sha256": "fa9dd48fb9045b96f2e80d28c538af261067cfaaeb949324cbd4bfa924ac5654",
+      "chars": 169959,
+      "chunks": 1
+    },
+    {
+      "path": "core/technadzor_object_registry.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 14894,
+      "sha256": "b003e7b28c05758383c40e493308bafd72abc8deb716bb2a31f8f0357af8134c",
+      "chars": 14364,
       "chunks": 1
     },
     {
@@ -1878,6 +2181,15 @@
       "size_bytes": 1745,
       "sha256": "4a26f39caf63a874a8b6f186ef3b2ce95745637edd8d21d9e8e7230b14ba4b99",
       "chars": 1727,
+      "chunks": 1
+    },
+    {
+      "path": "core/telegram_source_skill_extractor.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 8973,
+      "sha256": "2f9e18163498265ad703ced0637bf33a83779fdfc4b7304974bb64d091a5f797",
+      "chars": 8467,
       "chunks": 1
     },
     {
@@ -1926,6 +2238,15 @@
       "chunks": 1
     },
     {
+      "path": "core/topic2_estimate_final_close_v2.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 33040,
+      "sha256": "ab11358d2c512dae32809993bf22f01bb3516b9528642b1470024f925a0fa123",
+      "chars": 31631,
+      "chunks": 1
+    },
+    {
       "path": "core/topic_3008_engine.py",
       "mode": "full",
       "reason": "tracked text",
@@ -1947,9 +2268,9 @@
       "path": "core/topic_drive_oauth.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 3542,
-      "sha256": "3c6cc8e97808691ba2bea11a14de2cf5a0de4bb0b2821afd7bb80f82228848b0",
-      "chars": 3562,
+      "size_bytes": 5770,
+      "sha256": "09e67527599b711f23e665802e1beed93944060a64a3674da0459bdafdd00513",
+      "chars": 5790,
       "chunks": 1
     },
     {
@@ -2010,18 +2331,9 @@
       "path": "tools/full_context_aggregator.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 27062,
-      "sha256": "e6de077acb1cae9c83f0b6f62580e92487de476b1e86ac6b5e2b86638cb535ef",
-      "chars": 26777,
-      "chunks": 1
-    },
-    {
-      "path": "tools/context_aggregator.py",
-      "mode": "full",
-      "reason": "tracked text",
-      "size_bytes": 499,
-      "sha256": "069bfcbd7cb905f16621726e8c56d54aea8340b8513d405d9fc6c6df655c2a36",
-      "chars": 499,
+      "size_bytes": 53672,
+      "sha256": "0bfae1034c64c482aec296b2ffee787f4d9220389da09af27ee047bfae323c1b",
+      "chars": 53249,
       "chunks": 1
     },
     {
@@ -2070,12 +2382,30 @@
       "chunks": 1
     },
     {
+      "path": "tools/extract_tnz_msk_document_skill.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 18307,
+      "sha256": "8087be31e961487f7661690181841850967aa0c551bed91a25eed4a6a3d27bed",
+      "chars": 17877,
+      "chunks": 1
+    },
+    {
       "path": "tools/final_session_code_tail_verify.py",
       "mode": "full",
       "reason": "tracked text",
       "size_bytes": 11989,
       "sha256": "7cd72b9a9b65a65ec55a53196a1a6b8fbdc7c8f57485fe391c1b42374adc7aa4",
       "chars": 11778,
+      "chunks": 1
+    },
+    {
+      "path": "tools/gen_act_3rd_visit.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 20555,
+      "sha256": "83687b2e49384e5c1f23f7eab1ee2db3efe54ca062e11d57c4262ae47d16b4ae",
+      "chars": 16037,
       "chunks": 1
     },
     {
@@ -2109,9 +2439,18 @@
       "path": "tools/secret_scan.sh",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 653,
-      "sha256": "856289e8e62f28a33a5f18e89281d9e2ea7d4e2a719ea885fd98ad2fdf8bd822",
-      "chars": 584,
+      "size_bytes": 656,
+      "sha256": "dc26b49a001a2793e2485dd66e1b00b1fbb3156d0ff8104cee75180701ea2df6",
+      "chars": 587,
+      "chunks": 1
+    },
+    {
+      "path": "tools/stroyka_final_guard.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2569,
+      "sha256": "8914fffeab4b81a8d793659cf0bbb86fa3ee1f3eb4fa401e4308afc4d4f36f39",
+      "chars": 2505,
       "chunks": 1
     },
     {
@@ -2154,9 +2493,18 @@
       "path": ".gitignore",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 633,
-      "sha256": "27f77ed6e29ab513436857a58d17609602acec48a503a0629e587302adb7b4e3",
-      "chars": 633,
+      "size_bytes": 1030,
+      "sha256": "de30dbfb6949c2563d160fa0c789e682f7c2dfeae5a334f556fd3d61563446b1",
+      "chars": 1028,
+      "chunks": 1
+    },
+    {
+      "path": "HANDOFFS/HANDOFF_20260505_TOPIC5_TECHNADZOR_SYSTEM_LOGIC_FINAL.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3604,
+      "sha256": "ae77a21f57e7cddbc7efba61939715989164697849258605e6ada6ea474ba3cf",
+      "chars": 3057,
       "chunks": 1
     },
     {
@@ -2304,15 +2652,6 @@
       "chunks": 1
     },
     {
-      "path": "data/templates/estimate/ACTIVE__chat_-1003725299009__topic_2.json",
-      "mode": "full",
-      "reason": "tracked text",
-      "size_bytes": 870,
-      "sha256": "2751853a7fec499884e42f27a565e5d1374b91b8c0c7aaec43cecba88b3128f3",
-      "chars": 770,
-      "chunks": 1
-    },
-    {
       "path": "data/templates/estimate/ACTIVE__chat_-1003725299009__topic_3008.json",
       "mode": "full",
       "reason": "tracked text",
@@ -2337,6 +2676,15 @@
       "size_bytes": 1434,
       "sha256": "225b637da9991f976ece0bfe4c6d0a4eca022ecb9bb09fa84104e63fb6bdca92",
       "chars": 1140,
+      "chunks": 1
+    },
+    {
+      "path": "data/templates/estimate/deprecated/DEPRECATED__ACTIVE__chat_-1003725299009__topic_2__VOR_20260503.original.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1036,
+      "sha256": "f58425288c17d830efcab61e9238e10842f7d55434c1f35a8249f262001212c2",
+      "chars": 936,
       "chunks": 1
     },
     {
@@ -2448,6 +2796,15 @@
       "chunks": 1
     },
     {
+      "path": "docs/CHAT_EXPORTS/CHAT_EXPORT__2026-05-05_TECHNADZOR_FOLDER_DISCOVERY_FULL_CLOSE.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 7851,
+      "sha256": "8ea8e43903c6fe9dfa1ea078db41f8b928807d6652aa966afee4e1634da49ea1",
+      "chars": 7663,
+      "chunks": 1
+    },
+    {
       "path": "docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
@@ -2505,7 +2862,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_MANIFEST.json",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 82287,
+      "size_bytes": 82272,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -2568,7 +2925,16 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_007.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 275112,
+      "size_bytes": 276210,
+      "sha256": "",
+      "chars": 0,
+      "chunks": 0
+    },
+    {
+      "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_008.md",
+      "mode": "excluded_generated_output",
+      "reason": "generated output avoids self-ingestion",
+      "size_bytes": 323484,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -2577,10 +2943,253 @@
       "path": "docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 28511,
+      "size_bytes": 27258,
       "sha256": "",
       "chars": 0,
       "chunks": 0
+    },
+    {
+      "path": "docs/TECHNADZOR/NORMATIVE_ENGINE_SHARED_CONTEXT.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3958,
+      "sha256": "9011f21b0b01ee1ac4003c659691ab5e1f7cae2cdde825f9eb706352568f28a0",
+      "chars": 3339,
+      "chunks": 1
+    },
+    {
+      "path": "docs/TECHNADZOR/NORMATIVE_ENGINE_SHARED_CONTEXT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 11528,
+      "sha256": "fbe4915ea50f48d499b50d5e242969fe82790379f9887fbfe5a08c6aff1cb1cd",
+      "chars": 8111,
+      "chunks": 1
+    },
+    {
+      "path": "docs/TECHNADZOR/TOPIC5_DOCUMENT_OUTPUT_CONTRACT.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3046,
+      "sha256": "557b97c8c932bb7c5228ff7049330426530dca78340f4cddab5435c59e290633",
+      "chars": 2868,
+      "chunks": 1
+    },
+    {
+      "path": "docs/TECHNADZOR/TOPIC5_DOCUMENT_OUTPUT_CONTRACT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 4811,
+      "sha256": "edff2931c8896b02651a0175466d81c5659f3ebc155ccfa5f9a60b6ddc44480d",
+      "chars": 3559,
+      "chunks": 1
+    },
+    {
+      "path": "docs/TECHNADZOR/TOPIC5_RUNTIME_USAGE_RULES.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3184,
+      "sha256": "4093ded0ac87b42cc50beb5578095a4ae85e9bc4ec5ec7f5ddb5ead599618fa3",
+      "chars": 2477,
+      "chunks": 1
+    },
+    {
+      "path": "docs/TECHNADZOR/TOPIC5_TECHNADZOR_SYSTEM_LOGIC_FINAL.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 4234,
+      "sha256": "e3bf441983629d033eb5d781360ea364c905fd229134d0ec3f2ed943a9080fa4",
+      "chars": 3678,
+      "chunks": 1
+    },
+    {
+      "path": "docs/TECHNADZOR/TOPIC5_TECHNADZOR_SYSTEM_LOGIC_FINAL.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 16792,
+      "sha256": "59b575c0ccca40bac5fb41a2907fc7d2801f4032826805668f594db34284d49c",
+      "chars": 12003,
+      "chunks": 1
+    },
+    {
+      "path": "docs/TECHNADZOR/TOPIC5_TECHNADZOR_SYSTEM_LOGIC_FINAL_REPORT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3722,
+      "sha256": "3fa5aa20e7d214e993ed3cdd8e92f54c81539f60605513169901b9ace0eb726f",
+      "chars": 3046,
+      "chunks": 1
+    },
+    {
+      "path": "docs/TECHNADZOR/source_skills/tnz_msk/LINKED_DOCUMENTS_INDEX.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 29853,
+      "sha256": "5f685fff1da97501adca5e14d8c99bddcd01f846778f99d1485eae20baaaa6e4",
+      "chars": 29767,
+      "chunks": 1
+    },
+    {
+      "path": "docs/TECHNADZOR/source_skills/tnz_msk/SOURCE_INDEX.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 105344,
+      "sha256": "64adb6f42d95261884ffea8950affac4b4b134750a417e397449e804b004ca28",
+      "chars": 105344,
+      "chunks": 1
+    },
+    {
+      "path": "docs/TECHNADZOR/source_skills/tnz_msk/TECHNADZOR_DOCUMENT_COMPOSITION_SKILL.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 502645,
+      "sha256": "0eca894e675f9d508538a858e2fd0be6fbfd63c2e14bd59959647a3924232260",
+      "chars": 360576,
+      "chunks": 2
+    },
+    {
+      "path": "docs/TECHNADZOR/source_skills/tnz_msk/TECHNADZOR_DOCUMENT_COMPOSITION_SKILL.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 26719,
+      "sha256": "17fb79ca77eb180ff6535f3861cb8a18d8678e07cd156fc3216266d9a7f7698d",
+      "chars": 19336,
+      "chunks": 1
+    },
+    {
+      "path": "docs/TECHNADZOR/source_skills/tnz_msk/TECHNADZOR_DOCUMENT_COMPOSITION_SKILL_CLEAN.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 255282,
+      "sha256": "445537ea04edf04a0a9afed28126109deebd8c7b40bcc1c60bbc91cfeb5d6d40",
+      "chars": 178985,
+      "chunks": 1
+    },
+    {
+      "path": "docs/TECHNADZOR/source_skills/tnz_msk/TECHNADZOR_DOCUMENT_COMPOSITION_SKILL_CLEAN.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 56407,
+      "sha256": "aea28a7cd22f1b86a1847985dd3233d6a2384fdcd4958e1b6a135d480f02f344",
+      "chars": 38617,
+      "chunks": 1
+    },
+    {
+      "path": "docs/TECHNADZOR/unified_context/CHAT_EXPORT_TECHNADZOR_BINDING.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1152,
+      "sha256": "6ce1bb1b8c43bd4482d0445b2812d1e149a7aeb0ace4730fc9e89c5448eaab83",
+      "chars": 986,
+      "chunks": 1
+    },
+    {
+      "path": "docs/TECHNADZOR/unified_context/KIEVSKOE_95_OBJECT_CONTEXT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3893,
+      "sha256": "d3f1a5dee883c4a60d28a33a74110ecd8f965222684406a2926c8516b68503cb",
+      "chars": 2579,
+      "chunks": 1
+    },
+    {
+      "path": "docs/TECHNADZOR/unified_context/NORMATIVE_CONTEXT_INDEX.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 4596,
+      "sha256": "2c7b5742fb0026fa9f83304555e023b54bd124b5ac7533891863d71a108db58a",
+      "chars": 3803,
+      "chunks": 1
+    },
+    {
+      "path": "docs/TECHNADZOR/unified_context/NOVICHKOVO_OBJECT_CONTEXT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2246,
+      "sha256": "c062aad5fcbf0c914dc912e91dcabf9b79c0b5d9472250f2b28050255538f6bb",
+      "chars": 1469,
+      "chunks": 1
+    },
+    {
+      "path": "docs/TECHNADZOR/unified_context/OBJECT_CONTEXT_INDEX.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 4509,
+      "sha256": "bbea98064115698eba64413e8ba81f1321b981e29543a5d0b540239d3945db69",
+      "chars": 4251,
+      "chunks": 1
+    },
+    {
+      "path": "docs/TECHNADZOR/unified_context/OWNER_ACTS_INDEX.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3241,
+      "sha256": "c7f5ebc3c46543bf29f9f1e0817bb19ebdf58ebbbff7af545a9b39b3c905649c",
+      "chars": 2855,
+      "chunks": 1
+    },
+    {
+      "path": "docs/TECHNADZOR/unified_context/OWNER_ACT_STYLE_PROFILE.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 11985,
+      "sha256": "36eb574b3a9cec8affd1257072c1c55af122466a39c54fdd4b632d8e4ea98dce",
+      "chars": 7236,
+      "chunks": 1
+    },
+    {
+      "path": "docs/TECHNADZOR/unified_context/OWNER_ENGINEERING_LOAD_VALIDATION_PATTERN.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 994,
+      "sha256": "a035058672d3d45471c48cb6538ee1c7bae4093c744e60c02b62ed638d82ecc1",
+      "chars": 830,
+      "chunks": 1
+    },
+    {
+      "path": "docs/TECHNADZOR/unified_context/OWNER_ENGINEERING_LOAD_VALIDATION_PATTERN.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1962,
+      "sha256": "ef6aa1c82705bc2021957516aa840810f2ee5b0676ef6d727045986391f71171",
+      "chars": 1243,
+      "chunks": 1
+    },
+    {
+      "path": "docs/TECHNADZOR/unified_context/SUSANINO_OBJECT_CONTEXT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 1667,
+      "sha256": "5533a4323e4718fcef1b73c640505eac236a9aaf270e8cad7f10fe6eebfd8885",
+      "chars": 1090,
+      "chunks": 1
+    },
+    {
+      "path": "docs/TECHNADZOR/unified_context/TNZ_MSK_SKILL_BINDING.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2417,
+      "sha256": "9eba8f8c276a2296c6c5c31922498c230d05d022c3ca62198f7ce88a63ffce87",
+      "chars": 1836,
+      "chunks": 1
+    },
+    {
+      "path": "docs/TECHNADZOR/unified_context/TOPIC5_UNIFIED_TECHNADZOR_CONTEXT.json",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 2286,
+      "sha256": "21368526186ad3c98097b1bdf13f4aff2749e3f4f2f3e398774256bb1ff6e4b9",
+      "chars": 2286,
+      "chunks": 1
+    },
+    {
+      "path": "docs/TECHNADZOR/unified_context/TOPIC5_UNIFIED_TECHNADZOR_CONTEXT.md",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 3404,
+      "sha256": "60919abdfb30b2d0f0d92d154245b8ed7759f7813e33baf1ea5fd843ca4cacde",
+      "chars": 2637,
+      "chunks": 1
     },
     {
       "path": "drive_ingest.py",
@@ -2595,9 +3204,9 @@
       "path": "google_io.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 2640,
-      "sha256": "1b50fb7199b536664b84bd4b1e951d9fca8cd2cf7686fef52661b2cef238097a",
-      "chars": 2670,
+      "size_bytes": 2635,
+      "sha256": "249afef2e01c094f31e0eb4d8480d70a3ee9d62aaa51c2f82e6a435dca607faa",
+      "chars": 2665,
       "chunks": 1
     },
     {
@@ -2658,9 +3267,9 @@
       "path": "startup_recovery.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 2476,
-      "sha256": "4e7fe4f628468d9a5d5757aa33c8da5df76ccb0f0c3a6dbb56ed05d4f12161cf",
-      "chars": 2476,
+      "size_bytes": 6562,
+      "sha256": "7e7fdcd42ee1c354538a2d78c2f53bf00a49b6a845a8474fcc3f9c66bb983112",
+      "chars": 6143,
       "chunks": 1
     }
   ]

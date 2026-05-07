@@ -1,3 +1,1789 @@
+# ORCHESTRA_FULL_CONTEXT_PART_011
+generated_at_utc: 2026-05-07T15:15:30.428226+00:00
+git_sha_before_commit: 983ced8149ebd4c84be0c2926296ad19722d0d88
+part: 11/17
+
+
+====================================================================================================
+BEGIN_FILE: core/search_session.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: f07740fc973009823dbdb790b5dd67f5e3d17dd52d16bf0fde1baabea43fbb8f
+====================================================================================================
+# === SEARCH_MONOLITH_V2_FULL ===
+from __future__ import annotations
+import json, logging, os, re, sqlite3, time
+from dataclasses import dataclass, field, asdict
+from datetime import datetime, timezone
+from typing import Any, Callable, Dict, List, Optional
+
+logger = logging.getLogger("search_session")
+BASE = "/root/.areal-neva-core"
+MEM_DB = f"{BASE}/data/memory.db"
+SEARCH_SESSION_VERSION = "SEARCH_MONOLITH_V2_FULL"
+SESSION_TTL_SEC = 7200
+MAX_CLARIFICATIONS = 3
+RED_FLAGS = ("цена=1","1 руб","договорная","под заказ","нет телефона","нет адреса","только предоплата","без адреса","нет даты","предоплата 100%")
+SEARCH_PROFILES = {
+    "BUILDING_SUPPLY": ["Ozon","Wildberries","Яндекс Маркет","Петрович","Лемана","ВсеИнструменты","заводы","Avito","VK","Telegram"],
+    "AUTO_PARTS": ["OEM cross","Exist","Emex","ZZap","Drom","Auto.ru","EuroAuto","Avito","разборки","Telegram"],
+    "CLASSIFIEDS": ["Avito","Юла","VK","Telegram чаты","2ГИС"],
+    "GENERAL": ["официальные сайты","маркетплейсы","Avito","2ГИС"],
+}
+BUILDING_WORDS = ("металлочереп","монтеррей","профлист","утепл","бетон","арматур","цемент","фанер","доска","брус","кровл","кирпич","газобетон","строй","петрович","лемана","всеинструменты","материал")
+AUTO_WORDS = ("oem","артикул","запчаст","суппорт","диск","колод","рычаг","стойк","двигател","коробк","бампер","фара","drom","дром","exist","emex","zzap","авто","машин","разбор")
+CLASSIFIED_WORDS = ("авито","avito","юла","б/у","бу","объявлен","частник")
+
+def _utc(): return datetime.now(timezone.utc).isoformat()
+def _clean(text, limit=12000):
+    if text is None: return ""
+    if not isinstance(text, str):
+        try: text = json.dumps(text, ensure_ascii=False)
+        except: text = str(text)
+    return re.sub(r"\n{3,}","\n\n",re.sub(r"[ \t]+"," ",text.replace("\r","\n"))).strip()[:limit]
+def _safe_int(v, default=0):
+    try: return int(v or 0)
+    except: return default
+
+@dataclass
+class SearchSession:
+    chat_id: str; topic_id: int; goal: str
+    criteria: Dict[str,Any] = field(default_factory=dict)
+    clarifications: List[str] = field(default_factory=list)
+    queries: List[str] = field(default_factory=list)
+    sources: List[str] = field(default_factory=list)
+    best_suppliers: List[Dict[str,Any]] = field(default_factory=list)
+    rejected: List[Dict[str,Any]] = field(default_factory=list)
+    status: str = "ACTIVE"
+    created_at_ts: float = field(default_factory=time.time)
+    updated_at: str = field(default_factory=_utc)
+    def to_dict(self):
+        d = asdict(self); d["version"] = SEARCH_SESSION_VERSION; return d
+    @staticmethod
+    def from_dict(data):
+        return SearchSession(chat_id=str(data.get("chat_id") or ""), topic_id=_safe_int(data.get("topic_id")), goal=str(data.get("goal") or ""), criteria=dict(data.get("criteria") or {}), clarifications=list(data.get("clarifications") or []), queries=list(data.get("queries") or []), sources=list(data.get("sources") or []), best_suppliers=list(data.get("best_suppliers") or []), rejected=list(data.get("rejected") or []), status=str(data.get("status") or "ACTIVE"), created_at_ts=float(data.get("created_at_ts") or time.time()), updated_at=str(data.get("updated_at") or _utc()))
+
+class SearchSessionManager:
+    def __init__(self, db_path=MEM_DB):
+        self.db_path = db_path; self._ensure()
+    def _conn(self):
+        c = sqlite3.connect(self.db_path, timeout=20); c.row_factory = sqlite3.Row; return c
+    def _ensure(self):
+        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+        with self._conn() as c:
+            c.execute("CREATE TABLE IF NOT EXISTS memory (id TEXT PRIMARY KEY, chat_id TEXT, key TEXT, value TEXT, timestamp TEXT)")
+            c.execute("CREATE INDEX IF NOT EXISTS idx_mem_search ON memory(chat_id,key)")
+            c.commit()
+    def key(self, chat_id, topic_id): return f"topic_{int(topic_id)}_search_session_{chat_id}"
+    def get(self, chat_id, topic_id):
+        try:
+            with self._conn() as c:
+                row = c.execute("SELECT value FROM memory WHERE chat_id=? AND key=? ORDER BY timestamp DESC LIMIT 1", (str(chat_id), self.key(chat_id, topic_id))).fetchone()
+            if not row: return None
+            s = SearchSession.from_dict(json.loads(row["value"]))
+            if s.status == "CLOSED" or time.time() - float(s.created_at_ts or 0) > SESSION_TTL_SEC: return None
+            return s
+        except Exception as e: logger.warning("SEARCH_V2_GET_ERR %s", e); return None
+    def save(self, s):
+        s.updated_at = _utc()
+        k = self.key(s.chat_id, s.topic_id)
+        v = json.dumps(s.to_dict(), ensure_ascii=False)[:50000]
+        with self._conn() as c:
+            c.execute("DELETE FROM memory WHERE chat_id=? AND key=?", (s.chat_id, k))
+            c.execute("INSERT OR REPLACE INTO memory (id,chat_id,key,value,timestamp) VALUES (?,?,?,?,?)", (f"{s.chat_id}:{k}", s.chat_id, k, v, _utc()))
+            c.commit()
+    def get_or_create(self, chat_id, topic_id, goal, criteria=None):
+        s = self.get(chat_id, topic_id)
+        if s:
+            if goal and goal != s.goal: s.clarifications.append(goal)
+            if criteria: s.criteria.update({k:v for k,v in criteria.items() if v not in ("",None,[],{})})
+            self.save(s); return s
+        s = SearchSession(chat_id=str(chat_id), topic_id=int(topic_id or 0), goal=goal, criteria=criteria or {})
+        self.save(s); return s
+    def close(self, chat_id, topic_id):
+        s = self.get(chat_id, topic_id)
+        if s: s.status = "CLOSED"; self.save(s)
+
+class CriteriaExtractor:
+    def extract(self, text):
+        t = _clean(text, 4000); low = t.lower(); c = {}
+        c["category"] = self.detect_category(low)
+        c["target"] = self.extract_target(t)
+        r = re.search(r"(санкт-петербург|спб|питер|ленобласть|москва|мск|казань|екатеринбург|новосибирск)", low)
+        if r: c["region"] = r.group(0)
+        q = re.search(r"(\d+(?:[,.]\d+)?)\s*(шт|м2|м²|м3|м³|кг|т|пог\.?\s*м|п\.м|лист|упак|м\b)", low)
+        if q: c["quantity"] = q.group(0)
+        p = re.search(r"(?:до|не дороже|бюджет|максимум|за)\s*(\d[\d\s]{2,})\s*(?:руб|₽)?", low)
+        if p: c["budget"] = p.group(1).replace(" ","")
+        if "б/у" in low or re.search(r"\bбу\b", low): c["condition"] = "used"
+        elif "нов" in low: c["condition"] = "new"
+        ral = re.search(r"\bral\s*[\- ]?(\d{4})\b", low)
+        if ral: c["ral"] = "RAL " + ral.group(1)
+        th = re.search(r"(\d[,.]\d{1,2})\s*мм", low)
+        if th: c["thickness_mm"] = th.group(1).replace(",",".")
+        oem = re.search(r"\b([A-ZА-Я0-9]{4,}[-/ ]?[A-ZА-Я0-9]{2,})\b", t, re.I)
+        if c["category"] == "AUTO_PARTS" and oem: c["oem_or_article"] = oem.group(1)
+        return {k:v for k,v in c.items() if v not in ("",None,[],{})}
+    def detect_category(self, low):
+        if any(w in low for w in AUTO_WORDS): return "AUTO_PARTS"
+        if any(w in low for w in BUILDING_WORDS): return "BUILDING_SUPPLY"
+        if any(w in low for w in CLASSIFIED_WORDS): return "CLASSIFIEDS"
+        return "GENERAL"
+    def extract_target(self, text):
+        t = _clean(text, 500)
+        t = re.sub(r"^\[voice\]\s*","",t,flags=re.I)
+        t = re.sub(r"^(найди|найти|поищи|поиск|сколько стоит|цена на|стоимость|подбери)\s+","",t,flags=re.I)
+        return re.sub(r"\s+"," ",t).strip()[:220]
+
+class ClarificationEngine:
+    def ask(self, session):
+        c = session.criteria; q = []
+        if not c.get("target") or len(str(c.get("target"))) < 4: q.append("что именно искать")
+        if c.get("category") == "AUTO_PARTS":
+            if not c.get("oem_or_article"): q.append("OEM/артикул или машина/год/кузов")
+            if not c.get("condition"): q.append("новое, контрактное или б/у")
+            if not c.get("region"): q.append("город или доставка по РФ")
+        elif c.get("category") == "BUILDING_SUPPLY":
+            if not c.get("region"): q.append("город/район доставки")
+            if "металлочереп" in str(c.get("target","")).lower() and not (c.get("ral") and c.get("thickness_mm")): q.append("толщина, RAL и покрытие")
+            if not (c.get("quantity") or c.get("budget")): q.append("объём или бюджет")
+        else:
+            if not c.get("region"): q.append("город или доставка")
+        already = len(session.clarifications)
+        if already >= MAX_CLARIFICATIONS: return None
+        q = q[:max(0, MAX_CLARIFICATIONS - already)]
+        if not q: return None
+        return "SEARCH_CLARIFICATION_REQUIRED:\n" + "\n".join(f"{i+1}. {x}" for i,x in enumerate(q))
+
+class QueryExpander:
+    def expand(self, session):
+        goal = session.goal or session.criteria.get("target","")
+        cat = session.criteria.get("category","GENERAL")
+        region = session.criteria.get("region","")
+        sources = SEARCH_PROFILES.get(cat, SEARCH_PROFILES["GENERAL"])
+        base_parts = [goal]
+        for k in ("ral","thickness_mm","oem_or_article","quantity","condition","budget"):
+            if session.criteria.get(k): base_parts.append(str(session.criteria[k]))
+        base = " ".join(base_parts).strip()
+        queries = [base, f"{base} {region}".strip(), f"{base} купить {region}".strip(), f"{base} цена наличие {region}".strip(), f"{base} доставка {region}".strip()]
+        for src in sources: queries.append(f"{base} {src} {region}".strip())
+        seen = set(); out = []
+        for q in queries:
+            q = re.sub(r"\s+"," ",q).strip()
+            if q and q.lower() not in seen: seen.add(q.lower()); out.append(q)
+        return out[:14]
+
+class SourcePlanner:
+    def plan(self, category): return SEARCH_PROFILES.get(category, SEARCH_PROFILES["GENERAL"])
+
+class RiskScorer:
+    def score_text(self, text):
+        low = text.lower()
+        flags = [f for f in RED_FLAGS if f in low]
+        has_src = "http" in low or "source_url" in low
+        has_date = re.search(r"\b202[4-9]\b", low)
+        if has_src and has_date and not flags: status,trust = "CONFIRMED",80
+        elif has_src and not flags: status,trust = "PARTIAL",60
+        elif flags: status,trust = "RISK",35
+        else: status,trust = "UNVERIFIED",40
+        return {"status":status,"trust_score":trust,"red_flags":flags}
+
+class TcoCalculator:
+    def instruction(self): return "TCO = цена + доставка + комиссия + добор + риск; если данных нет — НЕ ПОДТВЕРЖДЕНО"
+
+class ResultRanker:
+    def instruction(self): return "Ранжирование: CHEAPEST, MOST_RELIABLE, BEST_VALUE, FASTEST, RISK_CHEAP, REJECTED"
+
+class SearchOutputFormatter:
+    TABLE_HEADER = "Поставщик | Площадка | Тип | Город | Цена | Наличие | Доставка | TCO | Trust Score | Риски | Статус | Ссылка | checked_at"
+    def build_prompt(self, session, queries, sources):
+        return f"""SEARCH_MONOLITH_V2_FULL
+ЦЕЛЬ: {session.goal}
+КРИТЕРИИ: {json.dumps(session.criteria,ensure_ascii=False)}
+ПЛОЩАДКИ: {", ".join(sources)}
+ФОРМУЛИРОВКИ:\n{chr(10).join("- "+q for q in queries)}
+ВЫВОД: {self.TABLE_HEADER}
+После таблицы: 1.Что брать и почему 2.Что проверить звонком 3.Что отброшено 4.Данные не подтверждены
+ПРАВИЛА: Не выдумывать цены/телефоны/адреса. Без source_url/даты — статус не выше PARTIAL. Красные флаги: {", ".join(RED_FLAGS)}""".strip()
+    def ensure(self, text, risk):
+        text = _clean(text, 12000)
+        if self.TABLE_HEADER not in text: text = self.TABLE_HEADER + "\n" + text
+        for h in ("1. Что брать и почему","2. Что проверить звонком","3. Что отброшено","4. Данные не подтверждены"):
+            if h not in text: text += f"\n\n{h}\nНЕ ПОДТВЕРЖДЕНО"
+        text += f"\n\nRiskScorer: {risk.get('status')} | Trust: {risk.get('trust_score')} | flags: {', '.join(risk.get('red_flags') or []) or 'нет'}"
+        return text
+
+class SearchMonolithV2:
+    def __init__(self):
+        self.sessions = SearchSessionManager(); self.extractor = CriteriaExtractor()
+        self.clarifier = ClarificationEngine(); self.expander = QueryExpander()
+        self.planner = SourcePlanner(); self.risk = RiskScorer()
+        self.tco = TcoCalculator(); self.ranker = ResultRanker(); self.formatter = SearchOutputFormatter()
+    def has_active_session(self, chat_id, topic_id): return self.sessions.get(chat_id, topic_id) is not None
+
+    # === SEARCH_SESSION_ISOLATION_FIX_V1 ===
+    def _is_new_search_goal(self, user_text, existing, extracted):
+        low = _clean(user_text, 1000).lower()
+        new_markers = ("найди ", "найти ", "поищи ", "поиск ", "подбери ", "сколько стоит ", "цена на ", "стоимость ")
+        if not any(low.startswith(m) for m in new_markers):
+            return False
+
+        old_target = str((existing.criteria or {}).get("target") or existing.goal or "").lower()
+        new_target = str((extracted or {}).get("target") or user_text or "").lower()
+        old_cat = str((existing.criteria or {}).get("category") or "")
+        new_cat = str((extracted or {}).get("category") or "")
+
+        if old_cat and new_cat and old_cat != new_cat:
+            return True
+
+        old_words = set(w for w in re.findall(r"[а-яa-z0-9]{4,}", old_target) if w not in ("найди","найти","поищи","поиск","купить","цена","стоимость"))
+        new_words = set(w for w in re.findall(r"[а-яa-z0-9]{4,}", new_target) if w not in ("найди","найти","поищи","поиск","купить","цена","стоимость"))
+
+        if old_words and new_words:
+            overlap = len(old_words & new_words)
+            if overlap == 0:
+                return True
+            if overlap / max(1, min(len(old_words), len(new_words))) < 0.35:
+                return True
+
+        return False
+
+    async def run(self, payload, user_text, online_call, online_model, base_system_prompt=""):
+        chat_id = str(payload.get("chat_id") or ""); topic_id = int(payload.get("topic_id") or 0)
+        user_text = _clean(user_text, 4000)
+        existing = self.sessions.get(chat_id, topic_id)
+        extracted = self.extractor.extract(user_text)
+
+        if existing and self._is_new_search_goal(user_text, existing, extracted):
+            try:
+                existing.status = "CLOSED"
+                self.sessions.save(existing)
+                logger.info("SEARCH_SESSION_ISOLATION_FIX_V1 closed_old_session chat=%s topic=%s old_goal=%s new_goal=%s", chat_id, topic_id, existing.goal, user_text)
+            except Exception as e:
+                logger.warning("SEARCH_SESSION_ISOLATION_FIX_V1_CLOSE_ERR %s", e)
+            session = SearchSession(chat_id=str(chat_id), topic_id=int(topic_id or 0), goal=user_text, criteria=extracted)
+            self.sessions.save(session)
+        elif existing:
+            # === SEARCH_SESSION_CLARIFICATION_PRESERVE_FIX_V1 ===
+            existing.clarifications.append(user_text)
+            _keep = dict(existing.criteria or {})
+            _safe_update_keys = ("region", "quantity", "budget", "condition", "ral", "thickness_mm", "oem_or_article")
+            for k, v in (extracted or {}).items():
+                if v in ("", None, [], {}):
+                    continue
+                if k in ("category", "target"):
+                    if not _keep.get(k):
+                        _keep[k] = v
+                    continue
+                if k in _safe_update_keys:
+                    _keep[k] = v
+            existing.criteria = _keep
+            logger.info("SEARCH_SESSION_CLARIFICATION_PRESERVE_FIX_V1 preserved category=%s target=%s", existing.criteria.get("category"), existing.criteria.get("target"))
+            session = existing
+            # === END SEARCH_SESSION_CLARIFICATION_PRESERVE_FIX_V1 ===
+        else:
+            session = self.sessions.get_or_create(chat_id, topic_id, user_text, extracted)
+    # === END SEARCH_SESSION_ISOLATION_FIX_V1 ===
+        ask = self.clarifier.ask(session)
+        if ask: session.status = "WAITING_CLARIFICATION"; self.sessions.save(session); return ask
+        session.status = "IN_PROGRESS"
+        sources = self.planner.plan(str(session.criteria.get("category") or "GENERAL"))
+        queries = self.expander.expand(session)
+        session.sources = sources; session.queries = queries; self.sessions.save(session)
+        prompt = self.formatter.build_prompt(session, queries, sources)
+        system = (base_system_prompt or "") + "\nSEARCH_MONOLITH_V2_FULL_ACTIVE\n" + self.tco.instruction() + "\n" + self.ranker.instruction()
+        raw = await online_call(online_model, [{"role":"system","content":system},{"role":"user","content":prompt}])
+        risk = self.risk.score_text(raw)
+        final = self.formatter.ensure(raw, risk)
+        session.status = "AWAITING_CONFIRMATION"
+        session.best_suppliers = [{"summary":final[:1500],"risk":risk,"checked_at":_utc()}]
+        self.sessions.save(session); return final
+
+_MONOLITH = SearchMonolithV2()
+def has_active_search_session(chat_id, topic_id): return _MONOLITH.has_active_session(str(chat_id), int(topic_id or 0))
+def is_search_clarification_output(text): return _clean(text, 200).startswith("SEARCH_CLARIFICATION_REQUIRED:")
+async def run_search_monolith_v2(payload, user_text, online_call, online_model, base_system_prompt=""): return await _MONOLITH.run(payload, user_text, online_call, online_model, base_system_prompt)
+def get_session(chat_id, topic_id): s = _MONOLITH.sessions.get(str(chat_id), int(topic_id or 0)); return s.to_dict() if s else None
+def close_session(chat_id, topic_id): _MONOLITH.sessions.close(str(chat_id), int(topic_id or 0))
+def extract_criteria(text): return CriteriaExtractor().extract(text)
+SEARCH_PRESETS = SEARCH_PROFILES
+# === END SEARCH_MONOLITH_V2_FULL ===
+
+
+# === REAL_SEARCH_QUALITY_LOGIC_V1 ===
+_NEGATIVE_DOMAINS_V1 = ("avito.ru", "dzen.ru", "zen.yandex.ru")
+
+def _negative_selection_v1(results):
+    # NEGATIVE_SELECTION_V1
+    out = []
+    for r in results or []:
+        url = ""
+        try:
+            url = str(r.get("url") or r.get("link") or "")
+        except Exception:
+            url = str(r or "")
+        if any(nd in url.lower() for nd in _NEGATIVE_DOMAINS_V1):
+            continue
+        out.append(r)
+    return out
+
+def _stale_context_guard_v1(payload):
+    # STALE_CONTEXT_GUARD_V1
+    try:
+        ts = None
+        if isinstance(payload, dict):
+            ts = payload.get("search_context_timestamp") or payload.get("checked_at")
+        if not ts:
+            return payload
+        from datetime import datetime, timezone, timedelta
+        ctx_time = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+        if ctx_time.tzinfo is None:
+            ctx_time = ctx_time.replace(tzinfo=timezone.utc)
+        if datetime.now(timezone.utc) - ctx_time > timedelta(hours=24):
+            if isinstance(payload, dict):
+                payload = dict(payload)
+                payload["search_context"] = None
+                payload["stale_context_dropped"] = True
+        return payload
+    except Exception:
+        return payload
+
+def _availability_check_v1(result):
+    # AVAILABILITY_CHECK_V1
+    try:
+        url = str(result.get("url") or result.get("link") or "")
+        title = str(result.get("title") or result.get("name") or "")
+        return bool(url or title)
+    except Exception:
+        return bool(result)
+
+try:
+    _orig_run_search_monolith_v2_quality_v1 = run_search_monolith_v2
+    async def run_search_monolith_v2(*args, **kwargs):
+        import inspect
+        if "payload" in kwargs and isinstance(kwargs["payload"], dict):
+            kwargs["payload"] = _stale_context_guard_v1(kwargs["payload"])
+        res = _orig_run_search_monolith_v2_quality_v1(*args, **kwargs)
+        if inspect.isawaitable(res):
+            res = await res
+        if isinstance(res, list):
+            return [r for r in _negative_selection_v1(res) if _availability_check_v1(r)]
+        if isinstance(res, dict):
+            for key in ("results", "items", "offers"):
+                if isinstance(res.get(key), list):
+                    res[key] = [r for r in _negative_selection_v1(res[key]) if _availability_check_v1(r)]
+        return res
+except Exception:
+    pass
+
+try:
+    _orig_run_quality_v1 = run
+    async def run(*args, **kwargs):
+        import inspect
+        if "payload" in kwargs and isinstance(kwargs["payload"], dict):
+            kwargs["payload"] = _stale_context_guard_v1(kwargs["payload"])
+        res = _orig_run_quality_v1(*args, **kwargs)
+        if inspect.isawaitable(res):
+            res = await res
+        if isinstance(res, list):
+            return [r for r in _negative_selection_v1(res) if _availability_check_v1(r)]
+        if isinstance(res, dict):
+            for key in ("results", "items", "offers"):
+                if isinstance(res.get(key), list):
+                    res[key] = [r for r in _negative_selection_v1(res[key]) if _availability_check_v1(r)]
+        return res
+except Exception:
+    pass
+# === END_REAL_SEARCH_QUALITY_LOGIC_V1 ===
+
+
+# === PROJECT_SEARCH_FINAL_REGEX_AND_HEADER_FIX_SEARCH_FORMATTER ===
+try:
+    _SS_FINAL_HEADER = "Поставщик | Площадка | Тип | Город | Цена | Наличие | Доставка | TCO | Trust Score | Риски | Статус | Ссылка | checked_at"
+    SearchOutputFormatter.TABLE_HEADER = _SS_FINAL_HEADER
+    _ss_orig_ensure = SearchOutputFormatter.ensure
+
+    def _ss_ensure_final(self, text, risk):
+        text = _ss_orig_ensure(self, text, risk)
+        lines = text.splitlines() if text else []
+        first = lines[0] if lines else ""
+
+        if "Поставщик" in first and ("Trust Score" not in first or "checked_at" not in first):
+            rest = "\n".join(lines[1:]) if len(lines) > 1 else ""
+            text = _SS_FINAL_HEADER + ("\n" + rest if rest else "")
+
+        if _SS_FINAL_HEADER not in text:
+            text = _SS_FINAL_HEADER + "\n" + text
+
+        if "checked_at" not in text.lower():
+            text += f"\n\nchecked_at: {_utc()}"
+
+        if "Trust Score:" not in text:
+            text += f"\n\nTrust Score: {risk.get('trust_score')}"
+
+        return text
+
+    SearchOutputFormatter.ensure = _ss_ensure_final
+except Exception:
+    pass
+# === END_PROJECT_SEARCH_FINAL_REGEX_AND_HEADER_FIX_SEARCH_FORMATTER ===
+
+# === P5_SEARCH_SESSION_VOICE_STALE_CLOSE_20260504_V1 ===
+# Runtime overlay only
+# Scope:
+# - normalize [VOICE] search text before new-goal detection
+# - close stale Rockwool/building session when new product/auto/electronics search arrives
+# - prevent previous session target from contaminating online prompt
+# - no DB schema changes, no forbidden files, no systemd unit changes
+
+try:
+    SEARCH_PROFILES.setdefault("ELECTRONICS", ["Ozon", "Wildberries", "Яндекс Маркет", "DNS", "М.Видео", "Эльдорадо", "Avito", "AliExpress", "официальные магазины"])
+except Exception:
+    pass
+
+_P5_SEARCH_STOP_WORDS = {
+    "найди", "найти", "поиск", "поищи", "подбери", "купить", "цена", "стоимость",
+    "дешевле", "самый", "самая", "новый", "новое", "нужен", "нужна", "мне",
+    "проведи", "соответственно", "если", "такое", "есть", "сообщи", "там",
+    "самый", "крутой", "большой", "самого", "самую"
+}
+
+_P5_ELECTRONICS_WORDS = (
+    "iphone", "айфон", "pixel", "google pixel", "телефон", "смартфон",
+    "samsung", "galaxy", "xiaomi", "redmi", "honor", "huawei", "pro max", "xl"
+)
+
+_P5_AUTO_EXTRA_WORDS = (
+    "сайлентблок", "саленблок", "сальник", "пыльник", "ваз", "2110", "2114",
+    "жигули", "лада", "приора", "гранта", "калина", "нива", "автозапчаст"
+)
+
+def _p5_norm_text(text):
+    s = _clean(text, 4000)
+    s = re.sub(r"^\s*\[voice\]\s*", "", s, flags=re.I)
+    s = re.sub(r"^\s*(voice|голос|голосовое)\s*[:\-]\s*", "", s, flags=re.I)
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
+
+def _p5_low(text):
+    return _p5_norm_text(text).lower().replace("ё", "е")
+
+def _p5_words(text):
+    low = _p5_low(text)
+    return set(
+        w for w in re.findall(r"[а-яa-z0-9]{3,}", low)
+        if w not in _P5_SEARCH_STOP_WORDS
+    )
+
+def _p5_category(low):
+    if any(x in low for x in _P5_AUTO_EXTRA_WORDS):
+        return "AUTO_PARTS"
+    if any(x in low for x in _P5_ELECTRONICS_WORDS):
+        return "ELECTRONICS"
+    if any(w in low for w in AUTO_WORDS):
+        return "AUTO_PARTS"
+    if any(w in low for w in BUILDING_WORDS):
+        return "BUILDING_SUPPLY"
+    if any(w in low for w in CLASSIFIED_WORDS):
+        return "CLASSIFIEDS"
+    return "GENERAL"
+
+try:
+    _p5_orig_detect_category = CriteriaExtractor.detect_category
+    def _p5_detect_category(self, low):
+        cat = _p5_category(str(low or ""))
+        if cat:
+            return cat
+        return _p5_orig_detect_category(self, low)
+    CriteriaExtractor.detect_category = _p5_detect_category
+except Exception:
+    pass
+
+try:
+    _p5_orig_extract_target = CriteriaExtractor.extract_target
+    def _p5_extract_target(self, text):
+        t = _p5_norm_text(text)
+        t = re.sub(r"^(найди|найти|поищи|поиск|сколько стоит|цена на|стоимость|подбери|проведи поиск|мне нужен|мне нужна|нужен|нужна)\s+", "", t, flags=re.I)
+        return re.sub(r"\s+", " ", t).strip()[:220]
+    CriteriaExtractor.extract_target = _p5_extract_target
+except Exception:
+    pass
+
+def _p5_is_explicit_new_search(text):
+    low = _p5_low(text)
+    if not low:
+        return False
+    markers = (
+        "найди", "найти", "поищи", "поиск", "подбери", "проведи поиск",
+        "мне нужен", "мне нужна", "нужен ", "нужна ", "дешевле", "купить"
+    )
+    if low.startswith(markers):
+        return True
+    if any(x in low for x in _P5_ELECTRONICS_WORDS + _P5_AUTO_EXTRA_WORDS) and any(x in low for x in ("найди", "поиск", "дешевле", "купить", "цена", "стоимость", "нужен", "нужна")):
+        return True
+    return False
+
+def _p5_should_force_new_goal(user_text, existing, extracted):
+    new_norm = _p5_norm_text(user_text)
+    low = new_norm.lower().replace("ё", "е")
+    if not _p5_is_explicit_new_search(new_norm):
+        return False
+
+    old_goal = str(getattr(existing, "goal", "") or "")
+    old_target = str((getattr(existing, "criteria", {}) or {}).get("target") or old_goal)
+    old_low = old_target.lower().replace("ё", "е")
+    new_target = str((extracted or {}).get("target") or new_norm)
+    old_cat = str((getattr(existing, "criteria", {}) or {}).get("category") or "")
+    new_cat = str((extracted or {}).get("category") or _p5_category(low) or "")
+
+    if "rockwool" in old_low or "light buds" in old_low or "light batts" in old_low or "каменная вата" in old_low:
+        if any(x in low for x in _P5_AUTO_EXTRA_WORDS + _P5_ELECTRONICS_WORDS):
+            return True
+
+    if old_cat and new_cat and old_cat != new_cat:
+        return True
+
+    old_words = _p5_words(old_target)
+    new_words = _p5_words(new_target)
+    if old_words and new_words:
+        overlap = len(old_words & new_words)
+        ratio = overlap / max(1, min(len(old_words), len(new_words)))
+        if overlap == 0 or ratio < 0.35:
+            return True
+
+    return False
+
+try:
+    _p5_orig_is_new_search_goal = SearchMonolithV2._is_new_search_goal
+    def _p5_is_new_search_goal(self, user_text, existing, extracted):
+        if _p5_should_force_new_goal(user_text, existing, extracted):
+            return True
+        return _p5_orig_is_new_search_goal(self, _p5_norm_text(user_text), existing, extracted)
+    SearchMonolithV2._is_new_search_goal = _p5_is_new_search_goal
+except Exception:
+    pass
+
+try:
+    _p5_orig_run_search = SearchMonolithV2.run
+    async def _p5_run_search(self, payload, user_text, online_call, online_model, base_system_prompt=""):
+        payload = dict(payload or {})
+        original_text = _clean(user_text, 4000)
+        normalized_text = _p5_norm_text(original_text)
+        chat_id = str(payload.get("chat_id") or "")
+        topic_id = int(payload.get("topic_id") or 0)
+
+        extracted = self.extractor.extract(normalized_text)
+        existing = self.sessions.get(chat_id, topic_id)
+
+        if existing and _p5_should_force_new_goal(normalized_text, existing, extracted):
+            try:
+                old_goal = getattr(existing, "goal", "")
+                existing.status = "CLOSED"
+                self.sessions.save(existing)
+                logger.info(
+                    "P5_SEARCH_SESSION_VOICE_STALE_CLOSE closed_old_session chat=%s topic=%s old_goal=%s new_goal=%s",
+                    chat_id, topic_id, old_goal, normalized_text
+                )
+            except Exception as e:
+                logger.warning("P5_SEARCH_SESSION_VOICE_STALE_CLOSE_ERR %s", e)
+
+        payload["raw_input"] = normalized_text
+        payload["normalized_input"] = normalized_text
+
+        async def _p5_online_call(model, messages):
+            clean_messages = []
+            for m in messages or []:
+                mm = dict(m or {})
+                content = str(mm.get("content") or "")
+                if "rockwool" in content.lower() or "light buds" in content.lower() or "light batts" in content.lower() or "каменная вата" in content.lower():
+                    if any(x in normalized_text.lower().replace("ё", "е") for x in _P5_AUTO_EXTRA_WORDS + _P5_ELECTRONICS_WORDS):
+                        content = re.sub(r".*(Rockwool|ROCKWOOL|Light Buds|Light Batts|каменная вата).*\n?", "", content, flags=re.I)
+                        content += "\nАКТУАЛЬНЫЙ ЗАПРОС ПОЛЬЗОВАТЕЛЯ: " + normalized_text
+                mm["content"] = content
+                clean_messages.append(mm)
+            return await online_call(model, clean_messages)
+
+        return await _p5_orig_run_search(self, payload, normalized_text, _p5_online_call, online_model, base_system_prompt)
+    SearchMonolithV2.run = _p5_run_search
+except Exception:
+    pass
+
+try:
+    _p5_orig_formatter_build_prompt = SearchOutputFormatter.build_prompt
+    def _p5_build_prompt(self, session, queries, sources):
+        if session and getattr(session, "goal", None):
+            session.goal = _p5_norm_text(session.goal)
+        return _p5_orig_formatter_build_prompt(self, session, queries, sources)
+    SearchOutputFormatter.build_prompt = _p5_build_prompt
+except Exception:
+    pass
+
+# === END_P5_SEARCH_SESSION_VOICE_STALE_CLOSE_20260504_V1 ===
+
+
+# === P6_GLOBAL_SEARCH_SESSION_HARD_ISOLATION_20260504_V1 ===
+# Scope:
+# - every explicit new search starts a clean session
+# - vague follow-up may use previous session only when it is really vague
+# - stale topic_500 sessions cannot contaminate new auto/electronics/building search
+# - output is supplier/result contract, not estimate, not old context
+# - no DB schema changes
+
+try:
+    SEARCH_PROFILES.setdefault("ELECTRONICS", ["Ozon", "Wildberries", "Яндекс Маркет", "DNS", "М.Видео", "Эльдорадо", "Avito", "AliExpress", "официальные магазины"])
+    SEARCH_PROFILES.setdefault("AUTO_PARTS", ["ZZap", "Exist", "Emex", "Drom", "Auto.ru", "EuroAuto", "Avito", "разборки", "Telegram"])
+    SEARCH_PROFILES.setdefault("BUILDING_SUPPLY", ["Петрович", "Лемана", "ВсеИнструменты", "Ozon", "Wildberries", "Яндекс Маркет", "Avito", "2ГИС", "официальные поставщики"])
+except Exception:
+    pass
+
+_P6_SEARCH_STOP_WORDS = {
+    "найди", "найти", "поиск", "поищи", "подбери", "купить", "цена", "стоимость",
+    "дешевле", "самый", "самая", "новый", "новое", "нужен", "нужна", "мне",
+    "проведи", "соответственно", "если", "такое", "есть", "сообщи", "там",
+    "варианты", "вариант", "хорошие", "хороший", "пожалуйста"
+}
+
+_P6_AUTO_WORDS = (
+    "сайлентблок", "саленблок", "сальник", "пыльник", "ваз", "2110", "2114",
+    "жигули", "лада", "приора", "гранта", "калина", "нива", "автозапчаст",
+    "запчаст", "oem", "артикул", "drom", "exist", "emex", "zzap"
+)
+
+_P6_ELECTRONICS_WORDS = (
+    "iphone", "айфон", "pixel", "google pixel", "телефон", "смартфон",
+    "samsung", "galaxy", "xiaomi", "redmi", "honor", "huawei", "pro max", "xl"
+)
+
+_P6_BUILD_WORDS = (
+    "rockwool", "роквул", "light batts", "light buds", "каменная вата", "утеплитель",
+    "бетон", "арматура", "цемент", "профлист", "металлочерепица", "клик-фальц",
+    "фальц", "кирпич", "газобетон", "доска", "брус", "петрович", "лемана"
+)
+
+def _p6_norm_text(text):
+    s = _clean(text, 4000)
+    s = re.sub(r"^\s*\[voice\]\s*", "", s, flags=re.I)
+    s = re.sub(r"^\s*(voice|голос|голосовое)\s*[:\-]\s*", "", s, flags=re.I)
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
+
+def _p6_low(text):
+    return _p6_norm_text(text).lower().replace("ё", "е")
+
+def _p6_words(text):
+    low = _p6_low(text)
+    return set(
+        w for w in re.findall(r"[а-яa-z0-9]{3,}", low)
+        if w not in _P6_SEARCH_STOP_WORDS
+    )
+
+def _p6_category_from_low(low):
+    if any(x in low for x in _P6_AUTO_WORDS):
+        return "AUTO_PARTS"
+    if any(x in low for x in _P6_ELECTRONICS_WORDS):
+        return "ELECTRONICS"
+    if any(x in low for x in _P6_BUILD_WORDS):
+        return "BUILDING_SUPPLY"
+    if any(w in low for w in AUTO_WORDS):
+        return "AUTO_PARTS"
+    if any(w in low for w in BUILDING_WORDS):
+        return "BUILDING_SUPPLY"
+    if any(w in low for w in CLASSIFIED_WORDS):
+        return "CLASSIFIEDS"
+    return "GENERAL"
+
+def _p6_is_explicit_new_search(text):
+    low = _p6_low(text)
+    if not low:
+        return False
+    if any(x in low for x in ("найди", "найти", "поищи", "поиск", "подбери", "купить", "дешевле", "цена", "стоимость", "мне нужен", "мне нужна", "нужен ", "нужна ")):
+        return True
+    return any(x in low for x in _P6_AUTO_WORDS + _P6_ELECTRONICS_WORDS + _P6_BUILD_WORDS)
+
+def _p6_is_vague_followup(text):
+    low = _p6_low(text)
+    if not low:
+        return False
+    if _p6_is_explicit_new_search(text):
+        return False
+    return len(low) <= 120 and any(x in low for x in (
+        "то что", "то, что", "предыдущ", "прошл", "я тебя про что", "выполни поиск",
+        "продолжи", "дальше", "что там", "ну что"
+    ))
+
+def _p6_target(text):
+    t = _p6_norm_text(text)
+    t = re.sub(
+        r"^(найди|найти|поищи|поиск|сколько стоит|цена на|стоимость|подбери|проведи поиск|мне нужен|мне нужна|нужен|нужна)\s+",
+        "",
+        t,
+        flags=re.I,
+    )
+    return re.sub(r"\s+", " ", t).strip()[:260]
+
+def _p6_same_goal(old_text, new_text):
+    ow = _p6_words(old_text)
+    nw = _p6_words(new_text)
+    if not ow or not nw:
+        return False
+    overlap = len(ow & nw)
+    return overlap > 0 and (overlap / max(1, min(len(ow), len(nw)))) >= 0.35
+
+def _p6_force_new_session(user_text, existing, extracted):
+    if not existing:
+        return True
+    if _p6_is_vague_followup(user_text):
+        return False
+    if _p6_is_explicit_new_search(user_text):
+        old_goal = str(getattr(existing, "goal", "") or "")
+        old_target = str((getattr(existing, "criteria", {}) or {}).get("target") or old_goal)
+        old_cat = str((getattr(existing, "criteria", {}) or {}).get("category") or "")
+        new_cat = str((extracted or {}).get("category") or _p6_category_from_low(_p6_low(user_text)) or "")
+        if old_cat and new_cat and old_cat != new_cat:
+            return True
+        if not _p6_same_goal(old_target, user_text):
+            return True
+    return False
+
+try:
+    def _p6_detect_category(self, low):
+        return _p6_category_from_low(str(low or ""))
+    CriteriaExtractor.detect_category = _p6_detect_category
+
+    def _p6_extract_target(self, text):
+        return _p6_target(text)
+    CriteriaExtractor.extract_target = _p6_extract_target
+except Exception:
+    pass
+
+def _p6_patch_criteria(criteria, text):
+    c = dict(criteria or {})
+    low = _p6_low(text)
+    c["category"] = _p6_category_from_low(low)
+    c["target"] = _p6_target(text)
+    if not c.get("region"):
+        if any(x in low for x in ("санкт-петербург", "спб", "питер", "ленобласть")):
+            c["region"] = "Санкт-Петербург / Ленобласть"
+        elif c["category"] in ("AUTO_PARTS", "ELECTRONICS", "GENERAL", "CLASSIFIEDS"):
+            c["region"] = "Россия / доставка"
+    return {k: v for k, v in c.items() if v not in ("", None, [], {})}
+
+try:
+    _p6_orig_query_expand = QueryExpander.expand
+    def _p6_expand(self, session):
+        c = session.criteria or {}
+        target = str(c.get("target") or session.goal or "")
+        region = str(c.get("region") or "")
+        category = str(c.get("category") or "GENERAL")
+        sources = SEARCH_PROFILES.get(category, SEARCH_PROFILES.get("GENERAL", []))
+        base = " ".join(x for x in [
+            target,
+            str(c.get("oem_or_article") or ""),
+            str(c.get("condition") or ""),
+            str(c.get("budget") or ""),
+        ] if x).strip()
+        q = [
+            base,
+            f"{base} {region}".strip(),
+            f"{base} купить {region}".strip(),
+            f"{base} цена наличие {region}".strip(),
+            f"{base} доставка {region}".strip(),
+        ]
+        if category == "AUTO_PARTS":
+            q += [f"{base} zzap", f"{base} exist", f"{base} emex", f"{base} drom", f"{base} avito"]
+        elif category == "ELECTRONICS":
+            q += [f"{base} ozon", f"{base} wildberries", f"{base} яндекс маркет", f"{base} avito", f"{base} dns"]
+        elif category == "BUILDING_SUPPLY":
+            q += [f"{base} петрович", f"{base} лемана", f"{base} всеинструменты", f"{base} avito", f"{base} 2гис"]
+        for src in sources:
+            q.append(f"{base} {src} {region}".strip())
+        out, seen = [], set()
+        for x in q:
+            x = re.sub(r"\s+", " ", str(x)).strip()
+            k = x.lower()
+            if x and k not in seen:
+                seen.add(k)
+                out.append(x)
+        return out[:16]
+    QueryExpander.expand = _p6_expand
+except Exception:
+    pass
+
+try:
+    _p6_orig_plan_sources = SourcePlanner.plan
+    def _p6_plan_sources(self, category):
+        category = str(category or "GENERAL")
+        return SEARCH_PROFILES.get(category, SEARCH_PROFILES.get("GENERAL", ["официальные сайты", "маркетплейсы", "Avito", "2ГИС"]))
+    SourcePlanner.plan = _p6_plan_sources
+except Exception:
+    pass
+
+try:
+    def _p6_build_prompt(self, session, queries, sources):
+        c = session.criteria or {}
+        return f"""P6_GLOBAL_SEARCH_SESSION_HARD_ISOLATION_ACTIVE
+АКТУАЛЬНЫЙ ЗАПРОС: {session.goal}
+КАТЕГОРИЯ: {c.get('category','GENERAL')}
+ЦЕЛЬ: {c.get('target', session.goal)}
+РЕГИОН: {c.get('region','Россия / доставка')}
+ПЛОЩАДКИ: {", ".join(sources)}
+ПОИСКОВЫЕ ФОРМУЛИРОВКИ:
+{chr(10).join("- " + q for q in queries)}
+
+ЖЁСТКИЕ ПРАВИЛА:
+1. Используй только АКТУАЛЬНЫЙ ЗАПРОС
+2. Не используй старые цели, старые товары, Rockwool/каменная вата, если их нет в актуальном запросе
+3. Не составляй смету
+4. Не создавай XLSX/PDF
+5. Не выдавай общие советы
+6. Нужны реальные варианты покупки или честно напиши, что подтверждённых вариантов нет
+7. Каждая строка должна иметь ссылку
+8. Если цена/телефон/наличие не видны — так и пиши
+
+ФОРМАТ:
+Найдено: <N> вариантов
+
+| № | Поставщик | Площадка | Товар | Город/регион | Цена | Наличие | Доставка | Телефон | Ссылка | Риск |
+|---|-----------|----------|-------|--------------|------|---------|----------|---------|--------|------|
+
+Лучший вариант:
+<одна строка>
+
+Проверить звонком:
+1. актуальная цена
+2. наличие
+3. доставка
+4. НДС/счёт
+5. точная модель/артикул/совместимость
+
+Отброшено:
+- <кратко, если есть>
+""".strip()
+    SearchOutputFormatter.build_prompt = _p6_build_prompt
+except Exception:
+    pass
+
+try:
+    _p6_orig_ensure = SearchOutputFormatter.ensure
+    def _p6_ensure(self, text, risk):
+        t = _clean(text, 12000)
+        bad = ("смета готова", "предварительная смета готова", "xlsx:", "pdf:", "engine:", "м-110.xlsx", "ареал нева.xlsx")
+        if any(x in t.lower().replace("ё", "е") for x in bad):
+            return "Поиск заблокирован: маршрут вернул сметный результат вместо поиска"
+        if "Найдено:" not in t and "| № |" not in t:
+            t = "Найдено: результат требует проверки\n\n" + t
+        if "Проверить звонком:" not in t:
+            t += "\n\nПроверить звонком:\n1. актуальная цена\n2. наличие\n3. доставка\n4. НДС/счёт\n5. точная модель/артикул/совместимость"
+        return _clean(t, 12000)
+    SearchOutputFormatter.ensure = _p6_ensure
+except Exception:
+    pass
+
+try:
+    async def _p6_run_search(self, payload, user_text, online_call, online_model, base_system_prompt=""):
+        payload = dict(payload or {})
+        chat_id = str(payload.get("chat_id") or "")
+        topic_id = int(payload.get("topic_id") or 0)
+        normalized = _p6_norm_text(user_text)
+        existing = self.sessions.get(chat_id, topic_id)
+        extracted = _p6_patch_criteria(self.extractor.extract(normalized), normalized)
+
+        if existing and _p6_is_vague_followup(normalized):
+            goal = str(getattr(existing, "goal", "") or normalized)
+            merged = dict(getattr(existing, "criteria", {}) or {})
+            for k, v in extracted.items():
+                if k not in ("target", "category") and v not in ("", None, [], {}):
+                    merged[k] = v
+            session = existing
+            session.clarifications.append(normalized)
+            session.criteria = merged
+        else:
+            if existing and _p6_force_new_session(normalized, existing, extracted):
+                try:
+                    existing.status = "CLOSED"
+                    self.sessions.save(existing)
+                    logger.info("P6_GLOBAL_SEARCH_SESSION_CLOSED_OLD chat=%s topic=%s old_goal=%s new_goal=%s", chat_id, topic_id, existing.goal, normalized)
+                except Exception as e:
+                    logger.warning("P6_GLOBAL_SEARCH_SESSION_CLOSE_ERR %s", e)
+            session = SearchSession(chat_id=str(chat_id), topic_id=int(topic_id or 0), goal=normalized, criteria=extracted)
+
+        session.criteria = _p6_patch_criteria(session.criteria, session.goal)
+        session.status = "IN_PROGRESS"
+        sources = self.planner.plan(str(session.criteria.get("category") or "GENERAL"))
+        queries = self.expander.expand(session)
+        session.sources = sources
+        session.queries = queries
+        self.sessions.save(session)
+
+        prompt = self.formatter.build_prompt(session, queries, sources)
+        system = (base_system_prompt or "") + "\nP6_GLOBAL_SEARCH_SESSION_ACTIVE\nCURRENT_QUERY_ONLY\nNO_ESTIMATE_NO_XLSX_NO_PDF"
+        raw = await online_call(online_model, [{"role": "system", "content": system}, {"role": "user", "content": prompt}])
+        risk = self.risk.score_text(raw)
+        final = self.formatter.ensure(raw, risk)
+
+        qlow = _p6_low(session.goal)
+        flow = final.lower().replace("ё", "е")
+        stale_pairs = (
+            ("rockwool", ("сальник", "сайлент", "саленблок", "iphone", "pixel", "телефон", "2110", "2114")),
+            ("каменная вата", ("сальник", "сайлент", "саленблок", "iphone", "pixel", "телефон", "2110", "2114")),
+            ("light batts", ("сальник", "сайлент", "саленблок", "iphone", "pixel", "телефон", "2110", "2114")),
+            ("термодом", ("сальник", "сайлент", "саленблок", "iphone", "pixel", "телефон", "2110", "2114")),
+        )
+        for stale, actual_markers in stale_pairs:
+            if stale in flow and stale not in qlow and any(x in qlow for x in actual_markers):
+                final = "Поиск заблокирован: ответ содержит старый товар из другой поисковой сессии. Повтори запрос одной строкой с товаром и регионом"
+                break
+
+        session.status = "AWAITING_CONFIRMATION"
+        session.best_suppliers = [{"summary": final[:1500], "risk": risk, "checked_at": _utc()}]
+        self.sessions.save(session)
+        logger.info("P6_GLOBAL_SEARCH_SESSION_DONE chat=%s topic=%s category=%s chars=%s", chat_id, topic_id, session.criteria.get("category"), len(final))
+        return final
+
+    SearchMonolithV2.run = _p6_run_search
+except Exception:
+    pass
+
+# === END_P6_GLOBAL_SEARCH_SESSION_HARD_ISOLATION_20260504_V1 ===
+
+# === P6B_SEARCH_SESSION_NO_STALE_CONTEXT_FINAL_20260504_V1 ===
+# Runtime overlay only
+# Scope:
+# - final SearchMonolithV2.run override
+# - current query only for explicit new product/auto/electronics searches
+# - stale Rockwool/building session cannot contaminate auto/electronics prompts
+# - no DB schema changes, no forbidden files, no systemd unit changes
+
+_P6B_STALE_WORDS = (
+    "rockwool", "rockwool light", "light buds", "light batts", "лайт баттс",
+    "каменная вата", "минвата", "утеплитель", "термодом", "minvata",
+    "www-minvata", "petrovich", "петрович", "лемана", "стройматериал"
+)
+
+_P6B_ELECTRONICS_WORDS = (
+    "iphone", "айфон", "pixel", "google pixel", "телефон", "смартфон",
+    "samsung", "galaxy", "xiaomi", "redmi", "honor", "huawei", "pro max", "xl"
+)
+
+_P6B_AUTO_WORDS = (
+    "сайлентблок", "саленблок", "сальник", "пыльник", "ваз", "2110", "2114",
+    "жигули", "лада", "приора", "гранта", "калина", "нива", "автозапчаст",
+    "шрус", "рычаг", "суппорт", "колодки", "стойка", "амортизатор"
+)
+
+_P6B_SEARCH_VERBS = (
+    "найди", "найти", "поищи", "поиск", "подбери", "проведи поиск",
+    "мне нужен", "мне нужна", "нужен", "нужна", "дешевле", "купить",
+    "цена", "стоимость", "сколько стоит"
+)
+
+_P6B_STOP_WORDS = {
+    "найди", "найти", "поиск", "поищи", "подбери", "купить", "цена", "стоимость",
+    "дешевле", "самый", "самая", "новый", "новое", "нужен", "нужна", "мне",
+    "проведи", "соответственно", "если", "такое", "есть", "сообщи", "там",
+    "самого", "самую", "большой", "крутой", "для", "всех", "интернет", "площадках"
+}
+
+def _p6b_norm(text):
+    s = _clean(text, 4000)
+    s = re.sub(r"^\s*\[voice\]\s*", "", s, flags=re.I)
+    s = re.sub(r"^\s*(voice|голос|голосовое)\s*[:\-]\s*", "", s, flags=re.I)
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
+
+def _p6b_low(text):
+    return _p6b_norm(text).lower().replace("ё", "е")
+
+def _p6b_words(text):
+    low = _p6b_low(text)
+    return {
+        w for w in re.findall(r"[а-яa-z0-9]{3,}", low)
+        if w not in _P6B_STOP_WORDS
+    }
+
+def _p6b_category(text):
+    low = _p6b_low(text)
+    if any(x in low for x in _P6B_AUTO_WORDS):
+        return "AUTO_PARTS"
+    if any(x in low for x in _P6B_ELECTRONICS_WORDS):
+        return "ELECTRONICS"
+    if any(x in low for x in AUTO_WORDS):
+        return "AUTO_PARTS"
+    if any(x in low for x in BUILDING_WORDS):
+        return "BUILDING_SUPPLY"
+    if any(x in low for x in CLASSIFIED_WORDS):
+        return "CLASSIFIEDS"
+    return "GENERAL"
+
+def _p6b_explicit_new_search(text):
+    low = _p6b_low(text)
+    if not low:
+        return False
+    if any(low.startswith(v) for v in _P6B_SEARCH_VERBS):
+        return True
+    if any(x in low for x in _P6B_AUTO_WORDS + _P6B_ELECTRONICS_WORDS) and any(v in low for v in _P6B_SEARCH_VERBS):
+        return True
+    return False
+
+def _p6b_force_new(existing, current_text, extracted):
+    if not existing:
+        return False
+    if not _p6b_explicit_new_search(current_text):
+        return False
+
+    old_goal = str(getattr(existing, "goal", "") or "")
+    old_criteria = getattr(existing, "criteria", {}) or {}
+    old_target = str(old_criteria.get("target") or old_goal)
+    old_low = old_target.lower().replace("ё", "е")
+
+    new_cat = str((extracted or {}).get("category") or _p6b_category(current_text) or "")
+    old_cat = str(old_criteria.get("category") or "")
+
+    if any(x in old_low for x in _P6B_STALE_WORDS) and new_cat in ("AUTO_PARTS", "ELECTRONICS"):
+        return True
+
+    if old_cat and new_cat and old_cat != new_cat:
+        return True
+
+    old_words = _p6b_words(old_target)
+    new_words = _p6b_words(current_text)
+    if old_words and new_words:
+        overlap = len(old_words & new_words)
+        ratio = overlap / max(1, min(len(old_words), len(new_words)))
+        if overlap == 0 or ratio < 0.30:
+            return True
+
+    return False
+
+def _p6b_scrub_stale_from_text(content, current_text):
+    s = str(content or "")
+    cur_low = _p6b_low(current_text)
+    current_is_building = _p6b_category(current_text) == "BUILDING_SUPPLY"
+    if current_is_building:
+        return s
+
+    if not any(x in s.lower().replace("ё", "е") for x in _P6B_STALE_WORDS):
+        return s
+
+    clean_lines = []
+    for line in s.splitlines():
+        low = line.lower().replace("ё", "е")
+        if any(x in low for x in _P6B_STALE_WORDS):
+            continue
+        clean_lines.append(line)
+
+    out = "\n".join(clean_lines).strip()
+    out += "\n\nАКТУАЛЬНЫЙ ЗАПРОС ПОЛЬЗОВАТЕЛЯ, ЕДИНСТВЕННЫЙ ИСТОЧНИК ПОИСКА: " + _p6b_norm(current_text)
+    return out
+
+def _p6b_target(text):
+    t = _p6b_norm(text)
+    t = re.sub(
+        r"^(найди|найти|поищи|поиск|сколько стоит|цена на|стоимость|подбери|проведи поиск|мне нужен|мне нужна|нужен|нужна)\s+",
+        "",
+        t,
+        flags=re.I,
+    )
+    return re.sub(r"\s+", " ", t).strip()[:220]
+
+try:
+    _p6b_orig_detect_category = CriteriaExtractor.detect_category
+    def _p6b_detect_category(self, low):
+        return _p6b_category(str(low or ""))
+    CriteriaExtractor.detect_category = _p6b_detect_category
+except Exception:
+    pass
+
+try:
+    _p6b_orig_extract_target = CriteriaExtractor.extract_target
+    def _p6b_extract_target(self, text):
+        return _p6b_target(text)
+    CriteriaExtractor.extract_target = _p6b_extract_target
+except Exception:
+    pass
+
+async def _p6b_run_search_final(self, payload, user_text, online_call, online_model, base_system_prompt=""):
+    payload = dict(payload or {})
+    chat_id = str(payload.get("chat_id") or "")
+    topic_id = int(payload.get("topic_id") or 0)
+    normalized = _p6b_norm(user_text or payload.get("raw_input") or payload.get("normalized_input") or "")
+    if not normalized:
+        normalized = _p6b_norm(user_text)
+
+    extracted = self.extractor.extract(normalized)
+    extracted["category"] = _p6b_category(normalized)
+    extracted["target"] = _p6b_target(normalized)
+
+    if not extracted.get("region"):
+        extracted["region"] = "Санкт-Петербург / РФ"
+
+    existing = self.sessions.get(chat_id, topic_id)
+
+    if existing and _p6b_force_new(existing, normalized, extracted):
+        try:
+            existing.status = "CLOSED"
+            self.sessions.save(existing)
+            logger.info(
+                "P6B_SEARCH_SESSION_CLOSED_STALE chat=%s topic=%s old_goal=%s new_goal=%s",
+                chat_id,
+                topic_id,
+                getattr(existing, "goal", ""),
+                normalized,
+            )
+        except Exception as e:
+            logger.warning("P6B_SEARCH_SESSION_CLOSE_ERR %s", e)
+        existing = None
+
+    if existing and not _p6b_explicit_new_search(normalized):
+        session = existing
+        session.clarifications.append(normalized)
+        safe_update = dict(session.criteria or {})
+        for k, v in (extracted or {}).items():
+            if v in ("", None, [], {}):
+                continue
+            if k in ("region", "quantity", "budget", "condition", "ral", "thickness_mm", "oem_or_article"):
+                safe_update[k] = v
+        session.criteria = safe_update
+    else:
+        session = SearchSession(chat_id=str(chat_id), topic_id=int(topic_id or 0), goal=normalized, criteria=extracted)
+
+    session.status = "IN_PROGRESS"
+    sources = self.planner.plan(str(session.criteria.get("category") or "GENERAL"))
+    queries = self.expander.expand(session)
+
+    if session.criteria.get("category") == "AUTO_PARTS":
+        sources = ["Exist", "Emex", "ZZap", "Drom", "Auto.ru", "EuroAuto", "Avito", "разборки", "официальные каталоги"]
+    elif session.criteria.get("category") == "ELECTRONICS":
+        sources = ["Ozon", "Wildberries", "Яндекс Маркет", "DNS", "М.Видео", "Эльдорадо", "Avito", "AliExpress", "официальные магазины"]
+
+    session.sources = sources
+    session.queries = queries
+    self.sessions.save(session)
+
+    prompt = self.formatter.build_prompt(session, queries, sources)
+    prompt = _p6b_scrub_stale_from_text(prompt, normalized)
+
+    system = "\n".join([
+        base_system_prompt or "",
+        "P6B_SEARCH_SESSION_NO_STALE_CONTEXT_FINAL_ACTIVE",
+        "CURRENT_QUERY_ONLY",
+        "USE ONLY CURRENT USER QUERY AND CURRENT CRITERIA",
+        "IGNORE OLD SEARCH SESSIONS, OLD SUPPLIERS, OLD MEMORY, OLD BUILDING MATERIAL CONTEXT",
+        "FORBIDDEN: estimate, смета, XLSX, PDF, проектные расчёты",
+        self.tco.instruction(),
+        self.ranker.instruction(),
+    ])
+
+    async def _p6b_online_call(model, messages):
+        clean_messages = []
+        for m in messages or []:
+            mm = dict(m or {})
+            mm["content"] = _p6b_scrub_stale_from_text(mm.get("content") or "", normalized)
+            clean_messages.append(mm)
+        joined = "\n".join(str(x.get("content") or "") for x in clean_messages)
+        jlow = joined.lower().replace("ё", "е")
+        if _p6b_category(normalized) in ("AUTO_PARTS", "ELECTRONICS"):
+            if any(x in jlow for x in _P6B_STALE_WORDS):
+                raise RuntimeError("P6B_STALE_CONTEXT_BLOCKED_BEFORE_ONLINE_CALL")
+        return await online_call(model, clean_messages)
+
+    raw = await _p6b_online_call(
+        online_model,
+        [
+            {"role": "system", "content": system},
+            {"role": "user", "content": prompt},
+        ],
+    )
+
+    if _p6b_category(normalized) in ("AUTO_PARTS", "ELECTRONICS"):
+        rlow = str(raw or "").lower().replace("ё", "е")
+        if any(x in rlow for x in _P6B_STALE_WORDS):
+            raw = "Подтверждённых вариантов по актуальному запросу не получено без загрязнения старым контекстом. Повтори запрос с артикулом/OEM или точной моделью"
+
+    risk = self.risk.score_text(str(raw or ""))
+    final = self.formatter.ensure(str(raw or ""), risk)
+    session.status = "AWAITING_CONFIRMATION"
+    session.best_suppliers = [{"summary": final[:1500], "risk": risk, "checked_at": _utc()}]
+    self.sessions.save(session)
+    logger.info(
+        "P6B_SEARCH_SESSION_DONE chat=%s topic=%s category=%s chars=%s",
+        chat_id,
+        topic_id,
+        session.criteria.get("category"),
+        len(final),
+    )
+    return final
+
+try:
+    SearchMonolithV2.run = _p6b_run_search_final
+except Exception:
+    pass
+
+try:
+    _p6b_orig_formatter_prompt = SearchOutputFormatter.build_prompt
+    def _p6b_build_prompt(self, session, queries, sources):
+        if session and getattr(session, "goal", None):
+            session.goal = _p6b_norm(session.goal)
+        text = _p6b_orig_formatter_prompt(self, session, queries, sources)
+        return _p6b_scrub_stale_from_text(text, getattr(session, "goal", "") if session else "")
+    SearchOutputFormatter.build_prompt = _p6b_build_prompt
+except Exception:
+    pass
+
+# === END_P6B_SEARCH_SESSION_NO_STALE_CONTEXT_FINAL_20260504_V1 ===
+
+# === P6C_SEARCH_CURRENT_QUERY_ONLY_NO_STALE_CONTEXT_20260504_V1 ===
+import re as _p6c_re
+
+def _p6c_clean_text_20260504(text, limit=4000):
+    try:
+        s = _clean(text, limit)
+    except Exception:
+        s = str(text or "")[:limit]
+    s = _p6c_re.sub(r"^\s*\[VOICE\]\s*", "", s, flags=_p6c_re.I)
+    s = _p6c_re.sub(r"^\s*(voice|голос|голосовое)\s*[:\-]\s*", "", s, flags=_p6c_re.I)
+    s = _p6c_re.sub(r"\s+", " ", s).strip()
+    return s[:limit]
+
+def _p6c_low_20260504(text):
+    return _p6c_clean_text_20260504(text).lower().replace("ё", "е")
+
+def _p6c_category_20260504(text):
+    low = _p6c_low_20260504(text)
+    if any(x in low for x in ("сайлентблок", "саленблок", "сальник", "пыльник", "ваз", "2110", "2114", "лада", "жигули", "автозапчаст", "drom", "exist", "emex", "zzap")):
+        return "AUTO_PARTS", "drom, exist, emex, zzap, avito, профильные магазины автозапчастей"
+    if any(x in low for x in ("iphone", "айфон", "pixel", "google pixel", "телефон", "смартфон", "samsung", "galaxy", "xiaomi", "redmi", "honor", "huawei")):
+        return "ELECTRONICS", "ozon, wildberries, яндекс маркет, dns, мвидео, эльдорадо, avito, официальные магазины"
+    if any(x in low for x in ("вата", "утеплитель", "rockwool", "light batts", "light buds", "бетон", "арматур", "пиломатериал")):
+        return "BUILDING_SUPPLY", "петрович, лемана про, всеинструменты, профильные поставщики, avito"
+    return "GENERAL", "официальные сайты, маркетплейсы, avito, профильные магазины"
+
+def _p6c_messages_20260504(query):
+    q = _p6c_clean_text_20260504(query, 2500)
+    cat, sources = _p6c_category_20260504(q)
+    system = (
+        "Ты выполняешь только товарный интернет-поиск по текущему запросу пользователя. "
+        "Не используй старые задачи, память, архив, прошлые товары и прошлые ответы. "
+        "Нужны реальные варианты покупки, цены, наличие, доставка и прямые ссылки."
+    )
+    user = (
+        "Текущий запрос пользователя:\n"
+        f"{q}\n\n"
+        f"Категория: {cat}\n"
+        f"Где проверять: {sources}\n\n"
+        "Ответ строго таблицей:\n"
+        "№ | Площадка/поставщик | Товар | Город/регион | Цена | Наличие | Доставка | Телефон | Прямая ссылка | Риск\n"
+        "Минимум 3 варианта, если они реально существуют. Если подтверждённых вариантов нет, так и напиши."
+    )
+    return [{"role": "system", "content": system}, {"role": "user", "content": user}]
+
+try:
+    _p6c_prev_run_20260504 = SearchMonolithV2.run
+
+    async def _p6c_run_20260504(self, payload, user_text, online_call, online_model, base_system_prompt=""):
+        payload = dict(payload or {})
+        query = _p6c_clean_text_20260504(user_text or payload.get("raw_input") or payload.get("normalized_input") or "", 3000)
+        chat_id = str(payload.get("chat_id") or "")
+        topic_id = int(payload.get("topic_id") or 0)
+
+        try:
+            existing = self.sessions.get(chat_id, topic_id)
+            if existing:
+                existing.status = "CLOSED"
+                self.sessions.save(existing)
+        except Exception:
+            pass
+
+        payload["raw_input"] = query
+        payload["normalized_input"] = query
+        payload["active_task_context"] = ""
+        payload["pin_context"] = ""
+        payload["short_memory_context"] = ""
+        payload["long_memory_context"] = ""
+        payload["archive_context"] = ""
+        payload["search_context"] = ""
+
+        raw = await online_call(online_model, _p6c_messages_20260504(query))
+        try:
+            final = _clean(raw, 12000)
+        except Exception:
+            final = str(raw or "")[:12000]
+        if not final.strip():
+            final = "Подтверждённых вариантов по текущему запросу не найдено"
+        try:
+            logger.info("P6C_SEARCH_CURRENT_QUERY_ONLY_DONE chat=%s topic=%s chars=%s", chat_id, topic_id, len(final))
+        except Exception:
+            pass
+        return final
+
+    SearchMonolithV2.run = _p6c_run_20260504
+except Exception:
+    pass
+
+try:
+    def run_search_monolith_v2(payload, user_text, online_call, online_model, base_system_prompt=""):
+        return _MONOLITH.run(payload, user_text, online_call, online_model, base_system_prompt)
+except Exception:
+    pass
+# === END_P6C_SEARCH_CURRENT_QUERY_ONLY_NO_STALE_CONTEXT_20260504_V1 ===
+
+# === P6E2_SEARCH_CURRENT_QUERY_HARD_NO_STALE_NO_ESTIMATE_POLLUTION_20260504_V1 ===
+import re as _p6e2_search_re
+
+def _p6e2_search_s(v, limit=5000):
+    try:
+        if v is None:
+            return ""
+        return str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+def _p6e2_search_low(v):
+    return _p6e2_search_s(v).lower().replace("ё", "е")
+
+def _p6e2_search_category(q):
+    low = _p6e2_search_low(q)
+    if any(x in low for x in ("ваз", "2110", "2114", "сайлент", "саленблок", "сальник", "пыльник", "автозапчаст", "drom", "exist", "emex", "zzap")):
+        return "AUTO_PARTS", "drom, exist, emex, zzap, avito, auto.ru, профильные магазины"
+    if any(x in low for x in ("iphone", "айфон", "pixel", "телефон", "смартфон", "samsung", "xiaomi", "honor", "ноутбук")):
+        return "ELECTRONICS", "ozon, wildberries, яндекс маркет, dns, мвидео, avito, официальные магазины"
+    if any(x in low for x in ("бетон", "арматур", "пиломатериал", "утеплитель", "rockwool", "плита", "стройматериал")):
+        return "BUILDING_SUPPLY", "петрович, лемана про, всеинструменты, профильные поставщики, avito"
+    return "GENERAL", "официальные сайты, маркетплейсы, avito, профильные поставщики"
+
+def _p6e2_search_messages(q):
+    cat, sources = _p6e2_search_category(q)
+    user = f"""АКТУАЛЬНЫЙ ЗАПРОС:
+{_p6e2_search_s(q, 2500)}
+
+Категория: {cat}
+Искать только по текущему запросу
+Площадки: {sources}
+
+Верни только чистую выдачу поставщиков/вариантов:
+Поставщик | Площадка | Город | Цена | Наличие | Доставка | Ссылка | Проверено
+Запрещено возвращать старые товары, сметы, Excel, PDF, строительные позиции из другого запроса"""
+    return [{"role": "system", "content": "CURRENT_QUERY_ONLY. NO_STALE_CONTEXT. NO_ESTIMATE_OUTPUT. NO_INTERNAL_MARKERS."}, {"role": "user", "content": user}]
+
+try:
+    _P6E2_ORIG_SEARCH_RUN = SearchMonolithV2.run
+    async def _p6e2_search_run(self, payload, user_text, online_call, online_model, base_system_prompt=""):
+        payload = dict(payload or {})
+        q = _p6e2_search_s(user_text or payload.get("raw_input") or payload.get("normalized_input") or "", 5000)
+        payload["raw_input"] = q
+        payload["normalized_input"] = q
+        payload["pin_context"] = ""
+        payload["short_memory_context"] = ""
+        payload["long_memory_context"] = ""
+        payload["archive_context"] = ""
+        payload["search_context"] = ""
+        raw = await online_call(online_model, _p6e2_search_messages(q))
+        final = _p6e2_search_s(raw, 12000)
+        stale = ("rockwool", "каменная вата", "термодом", "утеплитель")
+        qlow = _p6e2_search_low(q)
+        flow = _p6e2_search_low(final)
+        if any(x in flow and x not in qlow for x in stale) and any(x in qlow for x in ("ваз", "2110", "2114", "сайлент", "саленблок", "сальник", "iphone", "pixel", "телефон")):
+            final = "Поиск заблокирован: ответ содержит старый товар из другой поисковой сессии. Повтори запрос одной строкой с товаром и регионом"
+        if not final:
+            final = "Подтверждённых вариантов по текущему запросу не найдено"
+        try:
+            import logging
+            logging.getLogger("ai_router").info("P6E2_SEARCH_CURRENT_QUERY_DONE chars=%s", len(final))
+        except Exception:
+            pass
+        return final
+    SearchMonolithV2.run = _p6e2_search_run
+except Exception:
+    pass
+# === END_P6E2_SEARCH_CURRENT_QUERY_HARD_NO_STALE_NO_ESTIMATE_POLLUTION_20260504_V1 ===
+
+# === P6E4_GENERAL_SEARCH_NO_DOMAIN_CONTAMINATION_20260504_V1 ===
+import os as _p6e4_os
+import re as _p6e4_re
+import json as _p6e4_json
+import urllib.request as _p6e4_urllib_request
+import inspect as _p6e4_inspect
+import asyncio as _p6e4_asyncio
+import logging as _p6e4_logging
+
+_P6E4_AUTO_TERMS = ("саленблок", "сайлентблок", "сальник", "ваз", "жигули", "2110", "авто", "машин", "пыльник", "шрус", "рычаг", "стойка")
+_P6E4_BUILD_TERMS = ("смет", "бетон", "арматур", "фундамент", "кровл", "технадзор", "стро", "дом", "плита", "каркас", "клик-фальц", "утепл", "rockwool", "минват")
+_P6E4_BUILD_RESULT_TERMS = ("rockwool", "роквул", "минват", "утеплител", "термодом", "строймат", "базальт", "кровл", "бетон", "арматур")
+_P6E4_AUTO_RESULT_TERMS = ("сайлентблок", "саленблок", "сальник", "ваз", "2110", "lada", "vaz", "автозапчаст", "шрус", "пыльник")
+
+def _p6e4_env_load_once():
+    if getattr(_p6e4_env_load_once, "_done", False):
+        return
+    for path in ("/root/.areal-neva-core/.env", ".env"):
+        try:
+            if not _p6e4_os.path.exists(path):
+                continue
+            for line in open(path, "r", encoding="utf-8", errors="ignore"):
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, v = line.split("=", 1)
+                k = k.strip()
+                v = v.strip().strip('"').strip("'")
+                if k and k not in _p6e4_os.environ:
+                    _p6e4_os.environ[k] = v
+        except Exception:
+            pass
+    _p6e4_env_load_once._done = True
+
+def _p6e4_val(obj, key, default=None):
+    try:
+        if isinstance(obj, dict):
+            return obj.get(key, default)
+        return obj[key]
+    except Exception:
+        try:
+            return getattr(obj, key, default)
+        except Exception:
+            return default
+
+def _p6e4_extract_query(args, kwargs):
+    for k in ("query", "prompt", "raw_input", "user_input", "text"):
+        if isinstance(kwargs.get(k), str) and kwargs.get(k).strip():
+            return kwargs.get(k).strip()
+    for obj in args:
+        if isinstance(obj, str) and obj.strip():
+            return obj.strip()
+        raw = _p6e4_val(obj, "raw_input", None)
+        if isinstance(raw, str) and raw.strip():
+            return raw.strip()
+        inp = _p6e4_val(obj, "input", None)
+        if isinstance(inp, str) and inp.strip():
+            return inp.strip()
+    return ""
+
+def _p6e4_norm(s):
+    return _p6e4_re.sub(r"\s+", " ", str(s or "").lower()).strip()
+
+def _p6e4_is_auto_query(q):
+    t = _p6e4_norm(q)
+    return any(x in t for x in _P6E4_AUTO_TERMS)
+
+def _p6e4_is_build_query(q):
+    t = _p6e4_norm(q)
+    return any(x in t for x in _P6E4_BUILD_TERMS)
+
+def _p6e4_is_too_vague(q):
+    t = _p6e4_norm(q)
+    return len(t) < 8 or t in ("я тебя про что спрашивал?", "я тебя про что спрашивал", "дальше что?", "дальше что")
+
+def _p6e4_contaminated(q, result):
+    qt = _p6e4_norm(q)
+    rt = _p6e4_norm(result)
+    if _p6e4_is_auto_query(qt):
+        return any(x in rt for x in _P6E4_BUILD_RESULT_TERMS) and not any(x in rt for x in _P6E4_AUTO_RESULT_TERMS)
+    if not _p6e4_is_build_query(qt):
+        return any(x in rt for x in ("rockwool", "роквул", "термодом", "минват"))
+    return False
+
+def _p6e4_general_online_search(q):
+    _p6e4_env_load_once()
+    if _p6e4_is_too_vague(q):
+        return "По текущему сообщению нет самостоятельного поискового запроса. Старый результат не использую"
+    api_key = <REDACTED_SECRET>"OPENROUTER_API_KEY", "")
+    if not api_key:
+        return ""
+    base = (_p6e4_os.getenv("OPENROUTER_BASE_URL") or "https://openrouter.ai/api/v1").rstrip("/")
+    model = _p6e4_os.getenv("OPENROUTER_MODEL_ONLINE") or _p6e4_os.getenv("ONLINE_MODEL") or "perplexity/sonar"
+    domain_rule = "Автозапчасти/товары/услуги/строительство определяй только по текущему запросу"
+    if _p6e4_is_auto_query(q):
+        domain_rule = "Это поиск автозапчастей. Ищи только автозапчасти и совместимые детали. Стройматериалы запрещены"
+    elif _p6e4_is_build_query(q):
+        domain_rule = "Это строительный/сметный поиск. Ищи стройматериалы, работы, поставщиков или нормы по текущему запросу"
+    prompt = (
+        "Ты универсальный поисковый агент. Работай по текущему запросу, без старой памяти и без доменной подмены.\n"
+        f"{domain_rule}.\n"
+        "Верни кратко по-русски: найдено, таблица вариантов, цена/наличие/город/ссылка, лучший вариант, что проверить.\n"
+        "Если точных данных нет — так и напиши, не подменяй товар другим доменом.\n\n"
+        f"Текущий запрос: {q}"
+    )
+    body = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": "You are a fresh web/product search agent. Use only the current user query. Never reuse stale construction results for non-construction searches."},
+            {"role": "user", "content": prompt},
+        ],
+        "temperature": 0.1,
+        "max_tokens": 1800,
+    }
+    req = _p6e4_urllib_request.Request(
+        base + "/chat/completions",
+        data=_p6e4_json.dumps(body).encode("utf-8"),
+        headers={
+            "Authorization": "Bearer " + api_key,
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://github.com/rj7hmz9cvm-lgtm/areal-neva-core",
+            "X-Title": "AREAL-NEVA-ORCHESTRA",
+        },
+        method="POST",
+    )
+    try:
+        with _p6e4_urllib_request.urlopen(req, timeout=90) as resp:
+            data = _p6e4_json.loads(resp.read().decode("utf-8", errors="ignore"))
+        return str(data["choices"][0]["message"]["content"]).strip()
+    except Exception as exc:
+        _p6e4_logging.getLogger("ai_router").warning("P6E4_GENERAL_SEARCH_ERR query=%r err=%s", q[:120], exc)
+        return ""
+
+def _p6e4_wrap_search_func(name):
+    orig = globals().get(name)
+    if not orig or getattr(orig, "_p6e4_wrapped", False):
+        return
+    if _p6e4_inspect.iscoroutinefunction(orig):
+        async def wrapped(*args, **kwargs):
+            q = _p6e4_extract_query(args, kwargs)
+            if q and not _p6e4_is_build_query(q):
+                fresh = await _p6e4_asyncio.to_thread(_p6e4_general_online_search, q)
+                if fresh:
+                    return fresh
+            res = await orig(*args, **kwargs)
+            if q and _p6e4_contaminated(q, res):
+                fresh = await _p6e4_asyncio.to_thread(_p6e4_general_online_search, q)
+                if fresh:
+                    return fresh
+            return res
+    else:
+        def wrapped(*args, **kwargs):
+            q = _p6e4_extract_query(args, kwargs)
+            if q and not _p6e4_is_build_query(q):
+                fresh = _p6e4_general_online_search(q)
+                if fresh:
+                    return fresh
+            res = orig(*args, **kwargs)
+            if q and _p6e4_contaminated(q, res):
+                fresh = _p6e4_general_online_search(q)
+                if fresh:
+                    return fresh
+            return res
+    wrapped._p6e4_wrapped = True
+    globals()[name] = wrapped
+
+for _p6e4_func_name in (
+    "run_search_session",
+    "search_current_query",
+    "handle_search_query",
+    "handle_search",
+    "run_search",
+    "execute_search",
+    "search_session",
+    "run",
+):
+    _p6e4_wrap_search_func(_p6e4_func_name)
+
+_p6e4_logging.getLogger("ai_router").info("P6E4_GENERAL_SEARCH_GUARD_INSTALLED")
+# === END_P6E4_GENERAL_SEARCH_NO_DOMAIN_CONTAMINATION_20260504_V1 ===
+
+====================================================================================================
+END_FILE: core/search_session.py
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: core/sheets_generator.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: c81446527b4f3d281a6839303da115164fdc1d9f1ec3f0cbd58ed9f8da4a6112
+====================================================================================================
+# === GOOGLE_SHEETS_NATIVE_EXPORT_V1 ===
+from __future__ import annotations
+import logging
+import os
+import re
+from typing import Any, List, Optional
+
+logger = logging.getLogger(__name__)
+
+def _safe_title(title: str) -> str:
+    t = re.sub(r"[\r\n\t]+", " ", str(title or "Estimate")).strip()
+    return re.sub(r"[\\/]+", "_", t)[:90] or "Estimate"
+
+def _creds():
+    from dotenv import load_dotenv
+    load_dotenv("/root/.areal-neva-core/.env", override=False)
+    from google.oauth2.credentials import Credentials
+    from google.auth.transport.requests import Request
+    creds = Credentials(
+        None,
+        refresh_token=<REDACTED_SECRET>"GDRIVE_REFRESH_TOKEN"],
+        token_uri="https://oauth2.googleapis.com/token",
+        client_id=os.environ["GDRIVE_CLIENT_ID"],
+        client_secret=<REDACTED_SECRET>"GDRIVE_CLIENT_SECRET"],
+        scopes=["https://www.googleapis.com/auth/drive","https://www.googleapis.com/auth/spreadsheets"],
+    )
+    creds.refresh(Request())
+    return creds
+
+def create_google_sheet(title: str, rows: List[List[Any]], topic_id: int = 0, task_id: str = "") -> Optional[str]:
+    try:
+        from googleapiclient.discovery import build
+        creds = _creds()
+        drive = build("drive", "v3", credentials=creds, cache_discovery=False)
+        sheets = build("sheets", "v4", credentials=creds, cache_discovery=False)
+        sheet = sheets.spreadsheets().create(
+            body={"properties": {"title": _safe_title(title)}, "sheets": [{"properties": {"title": "Смета"}}]},
+            fields="spreadsheetId,spreadsheetUrl",
+        ).execute()
+        sid = sheet.get("spreadsheetId")
+        if not sid:
+            return None
+        values = [["" if v is None else v for v in (row if isinstance(row, list) else [row])] for row in (rows or [])][:5000]
+        if values:
+            sheets.spreadsheets().values().update(
+                spreadsheetId=sid, range="Смета!A1",
+                valueInputOption="USER_ENTERED", body={"values": values},
+            ).execute()
+        try:
+            from core.engine_base import get_drive_topic_folder_id
+            folder_id = get_drive_topic_folder_id(int(topic_id or 0))
+            if folder_id:
+                meta = drive.files().get(fileId=sid, fields="parents").execute()
+                old = ",".join(meta.get("parents") or [])
+                drive.files().update(fileId=sid, addParents=folder_id, removeParents=old, fields="id").execute()
+        except Exception as me:
+            logger.warning("SHEETS_MOVE_ERR task=%s err=%s", task_id, me)
+        try:
+            drive.permissions().create(fileId=sid, body={"role": "reader", "type": "anyone"}, fields="id").execute()
+        except Exception:
+            pass
+        link = drive.files().get(fileId=sid, fields="webViewLink").execute().get("webViewLink") \
+               or f"https://docs.google.com/spreadsheets/d/{sid}/edit"
+        logger.info("GOOGLE_SHEETS_NATIVE_EXPORT_V1_OK task=%s link=%s", task_id, link)
+        return link
+    except Exception as e:
+        logger.warning("GOOGLE_SHEETS_NATIVE_EXPORT_V1_ERR task=%s err=%s", task_id, e)
+        return None
+# === END_GOOGLE_SHEETS_NATIVE_EXPORT_V1 ===
+
+====================================================================================================
+END_FILE: core/sheets_generator.py
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: core/sheets_route.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 6f8fdc9ca242696660b7d018166ccec46738a0ccfdf0baf929cf4d85f42d2f00
+====================================================================================================
+# === SHEETS_ROUTE_V1 ===
+import os, logging
+logger = logging.getLogger(__name__)
+CREDENTIALS_PATH = "/root/.areal-neva-core/credentials.json"
+
+def is_sheets_requested(text: str) -> bool:
+    # === SHEETS_INTENT_DETECT_V1 ===
+    t = (text or "").lower()
+    return any(k in t for k in ["таблиц", "sheets", "гугл таблиц", "google sheets"])
+
+async def create_estimate_sheet(rows: list, title: str, chat_id: str, topic_id: int) -> dict:
+    if not os.path.exists(CREDENTIALS_PATH):
+        return {"success": False, "url": "", "error": "SHEETS_CREDENTIALS_MISSING"}
+    try:
+        from google.oauth2 import service_account
+        from googleapiclient.discovery import build
+        creds = service_account.Credentials.from_service_account_file(
+            CREDENTIALS_PATH,
+            scopes=["https://www.googleapis.com/auth/spreadsheets"]
+        )
+        svc = build("sheets", "v4", credentials=creds)
+        sheet = svc.spreadsheets().create(body={"properties": {"title": title}}).execute()
+        sid = sheet["spreadsheetId"]
+        url = f"https://docs.google.com/spreadsheets/d/{sid}/edit"
+        header = [["№", "Наименование", "Ед.", "Кол-во", "Цена, руб.", "Сумма, руб."]]
+        data_rows = header + [[i+1, r.get("name",""), r.get("unit",""), r.get("qty",0),
+                                r.get("price",0), r.get("total",0)] for i, r in enumerate(rows)]
+        svc.spreadsheets().values().update(
+            spreadsheetId=sid, range="A1",
+            valueInputOption="RAW",
+            body={"values": data_rows}
+        ).execute()
+        return {"success": True, "url": url, "sheet_id": sid}
+    except Exception as e:
+        return {"success": False, "url": "", "error": str(e)}
+# === END SHEETS_ROUTE_V1 ===
+
+====================================================================================================
+END_FILE: core/sheets_route.py
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: core/source_dedup.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: e5f2c40dc2ffb3c4c4fdfeaa1c27cd4622c0d33c6c10b363118cb90cb265baef
+====================================================================================================
+# === SOURCE_DEDUPLICATION_V1 ===
+import hashlib, logging
+logger = logging.getLogger(__name__)
+
+def _sig(item: dict) -> str:
+    key = f"{item.get('url','')}|{item.get('supplier','')}|{item.get('price','')}"
+    return hashlib.md5(key.encode()).hexdigest()
+
+def dedup_offers(offers: list) -> list:
+    seen = set()
+    result = []
+    for o in offers:
+        s = _sig(o)
+        if s not in seen:
+            seen.add(s)
+            result.append(o)
+    return result
+
+def dedup_search_results(results: list, key_field: str = "url") -> list:
+    seen = set()
+    clean = []
+    for r in results:
+        k = str(r.get(key_field) or r)[:200]
+        if k not in seen:
+            seen.add(k)
+            clean.append(r)
+    return clean
+
+# TIME_RELEVANCE — фильтр по свежести
+def filter_by_time_relevance(items: list, date_field: str = "date", max_days: int = 30) -> list:
+    from datetime import datetime, timezone, timedelta
+    cutoff = datetime.now(timezone.utc) - timedelta(days=max_days)
+    result = []
+    for item in items:
+        raw_date = item.get(date_field)
+        if not raw_date:
+            result.append(item)
+            continue
+        try:
+            ts = datetime.fromisoformat(str(raw_date).replace("Z", "+00:00"))
+            if ts >= cutoff:
+                result.append(item)
+        except Exception:
+            result.append(item)
+    return result
+
+# REGION_PRIORITY — приоритет по региону
+_PRIORITY_REGIONS = ["санкт-петербург", "спб", "москва", "мск", "ленинградская"]
+
+def sort_by_region(offers: list, preferred_regions: list = None) -> list:
+    regions = [r.lower() for r in (preferred_regions or _PRIORITY_REGIONS)]
+    def region_score(o):
+        city = str(o.get("city", "")).lower()
+        for i, r in enumerate(regions):
+            if r in city:
+                return i
+        return len(regions)
+    return sorted(offers, key=region_score)
+# === END SOURCE_DEDUPLICATION_V1 ===
+
+====================================================================================================
+END_FILE: core/source_dedup.py
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: core/stroyka_estimate_canon.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: d83749a9374c4f7ee8db39645e93bb3969279b31337f34ddca5acd4e96d80456
+====================================================================================================
 # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
 from __future__ import annotations
 
@@ -265,19 +2051,6 @@ def _is_bad_estimate_result(text: str) -> bool:
         "docx_create_failed",
         "state: finished",
         "задача закрыта по запросу",
-        # === TOPIC2_FINAL_GAPS_V5_FORBIDDEN_PHRASES ===
-        "файл скачан",
-        "ожидает анализа",
-        "выбор принят",
-        "проверяю доступные файлы",
-        "структура проекта включает",
-        "файл содержит проект",
-        "уточните запрос",
-        "что строим",
-        "не нашёл родительскую задачу",
-        "не вижу размеры объекта",
-        "позиция по присланному фото",
-        # === END_TOPIC2_FINAL_GAPS_V5_FORBIDDEN_PHRASES ===
     )
     # === FULL_STROYKA_DISABLE_OLD_ESTIMATE_RECALL_FINAL_BAD_MARKERS ===
     stale_links = (
@@ -293,20 +2066,7 @@ def _is_bad_estimate_result(text: str) -> bool:
     if any(x in t for x in stale_links):
         return True
     # === END_FULL_STROYKA_DISABLE_OLD_ESTIMATE_RECALL_FINAL_BAD_MARKERS ===
-    if any(x in t for x in bad):
-        return True
-    # === TOPIC2_FINAL_GAPS_V5_REGEX_FORBIDDEN ===
-    import re as _ibr_re
-    if _ibr_re.search(r'позиций:\s*1(?:\s|$)', t):
-        return True
-    if "/root/" in t or "/tmp/" in t:
-        return True
-    if "revision_context" in t or "traceback (most" in t:
-        return True
-    if "engine:" in t or "manifest:" in t:
-        return True
-    # === END_TOPIC2_FINAL_GAPS_V5_REGEX_FORBIDDEN ===
-    return False
+    return any(x in t for x in bad)
 
 
 def _has_real_estimate_artifact(text: str) -> bool:
@@ -775,7 +2535,7 @@ async def _send_text(chat_id: str, text: str, reply_to: Optional[int], topic_id:
 
 
 async def _send_document(chat_id: str, file_path: str, caption: str, reply_to: Optional[int], topic_id: int) -> bool:
-    token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+    token = <REDACTED_SECRET>"TELEGRAM_BOT_TOKEN", "").strip()
     if not token or not os.path.exists(file_path):
         return False
     data = {"chat_id": str(chat_id), "caption": _clean(caption, 900)}
@@ -938,8 +2698,8 @@ def _latest_revivable_estimate_task(conn: sqlite3.Connection, chat_id: str, topi
         return None
 # === END_FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_MEMORY_REVIVE_FIX ===
 
-async def _search_prices_online(parsed: Dict[str, Any], template: Dict[str, Any], sheet_name: Optional[str], conn=None, task_id=None) -> str:
-    api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
+async def _search_prices_online(parsed: Dict[str, Any], template: Dict[str, Any], sheet_name: Optional[str]) -> str:
+    api_key = <REDACTED_SECRET>"OPENROUTER_API_KEY", "").strip()
     base_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").rstrip("/")
     model = os.getenv("OPENROUTER_MODEL_ONLINE", "perplexity/sonar").strip() or "perplexity/sonar"
     if not api_key:
@@ -982,7 +2742,6 @@ async def _search_prices_online(parsed: Dict[str, Any], template: Dict[str, Any]
     _base_prices = await asyncio.to_thread(_call)
     try:
         from core.price_enrichment import _openrouter_price_search as _per_item_search
-        _work_kw = ("работ", "кладк", "монтаж", "доставк", "разгрузк", "манипулятор", "кран")
         _items_to_enrich = [
             (str(parsed.get("material") or ""), "м³"),
             ("Бетон В25", "м³"),
@@ -996,27 +2755,8 @@ async def _search_prices_online(parsed: Dict[str, Any], template: Dict[str, Any]
             if not _pi_name.strip():
                 continue
             try:
-                _pi_low = _pi_name.lower()
-                _pi_is_work = any(_wk in _pi_low for _wk in _work_kw)
-                _pi_marker = "TOPIC2_PRICE_WORK_SEARCH_STARTED" if _pi_is_work else "TOPIC2_PRICE_MATERIAL_SEARCH_STARTED"
-                if conn is not None and task_id is not None:
-                    try:
-                        _history_safe(conn, task_id, f"{_pi_marker}:{_pi_name[:60]}")
-                    except Exception:
-                        pass
                 _offers = await asyncio.wait_for(_per_item_search(_pi_name, _pi_unit), timeout=25)
-                _valid_offers = [_o for _o in (_offers or []) if _o.get("price")]
-                if conn is not None and task_id is not None:
-                    try:
-                        if _valid_offers:
-                            _o0 = _valid_offers[0]
-                            _history_safe(conn, task_id, "TOPIC2_PRICE_SOURCE_FOUND:{}:{}:{}".format(
-                                _pi_name[:40], str(_o0.get("supplier") or "")[:40], str(_o0.get("status") or "")[:20]))
-                        else:
-                            _history_safe(conn, task_id, f"TOPIC2_PRICE_SOURCE_MISSING:{_pi_name[:60]}")
-                    except Exception:
-                        pass
-                for _o in _valid_offers[:2]:
+                for _o in (_offers or [])[:2]:
                     _per_item_lines.append(
                         "- {} | {} {} | {} | {}".format(
                             _pi_name, _o.get("price"), _o.get("unit"),
@@ -1231,7 +2971,7 @@ async def _upload_or_fallback(chat_id: str, topic_id: int, reply_to: Optional[in
     except Exception:
         pass
 
-    token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+    token = <REDACTED_SECRET>"TELEGRAM_BOT_TOKEN", "").strip()
     if token and os.path.exists(file_path):
         data = {"chat_id": str(chat_id), "caption": _clean(caption, 900)}
         if reply_to:
@@ -1400,30 +3140,9 @@ async def _generate_and_send(conn: sqlite3.Connection, task: Any, pending: Dict[
         return True
 
     try:
-        _xlsx_verify_total = 0.0
-        from openpyxl import load_workbook as _t2v_lwb
-        import sys as _t2v_sys
-        _t2v_sys.setrecursionlimit(5000)
-        _t2v_wb = _t2v_lwb(xlsx_path, data_only=True, read_only=True)
-        if "AREAL_CALC" in _t2v_wb.sheetnames:
-            _t2v_ws = _t2v_wb["AREAL_CALC"]
-            for _t2v_row in list(_t2v_ws.iter_rows(min_row=2, values_only=True)):
-                try:
-                    _xlsx_verify_total += float(_t2v_row[4] or 0) * float(_t2v_row[7] or 0)
-                except (TypeError, ValueError, IndexError):
-                    pass
-        _t2v_wb.close()
-        _xlsx_verify_total = round(_xlsx_verify_total, 2)
-        _pdf_total = round(py_total, 2)
-        if abs(_xlsx_verify_total - _pdf_total) <= 1.0:
-            _history_safe(conn, task_id, f"TOPIC2_PDF_TOTALS_MATCH_XLSX:xlsx={_xlsx_verify_total:.2f}:pdf={_pdf_total:.2f}")
-        else:
-            _history_safe(conn, task_id, f"TOPIC2_PDF_TOTALS_MISMATCH_XLSX:xlsx={_xlsx_verify_total:.2f}:pdf={_pdf_total:.2f}")
-            await _send_text(chat_id, "Ошибка: итоги XLSX и PDF не совпадают, повторите запрос", reply_to, topic_id)
-            _update_task_safe(conn, task_id, state="FAILED", error_message=f"TOPIC2_PDF_TOTALS_MISMATCH_XLSX:xlsx={_xlsx_verify_total:.2f}:pdf={_pdf_total:.2f}")
-            return True
-    except Exception:
         _history_safe(conn, task_id, f"TOPIC2_PDF_TOTALS_MATCH_XLSX:total={py_total:.2f}:items={len(items)}")
+    except Exception:
+        pass
 
     summary = _final_summary(parsed, template, sheet_name, choice, py_total, items=items)
     pdf_path = _create_pdf(task_id, summary)
@@ -1446,13 +3165,6 @@ async def _generate_and_send(conn: sqlite3.Connection, task: Any, pending: Dict[
     if isinstance(send_res, dict) and send_res.get("bot_message_id"):
         kwargs["bot_message_id"] = send_res.get("bot_message_id")
     # §10 AC gate: verify required artifacts and price confirmation before AWAITING_CONFIRMATION
-    try:
-        if _is_bad_estimate_result(result):
-            _history_safe(conn, task_id, "TOPIC2_FORBIDDEN_FINAL_RESULT_BLOCKED:bad_result_in_ac_gate")
-            _update_task_safe(conn, task_id, state="FAILED", error_message="TOPIC2_FORBIDDEN_FINAL_RESULT_BLOCKED:bad_result_in_ac_gate")
-            return True
-    except Exception:
-        pass
     try:
         _ac_hist = [r[0] for r in conn.execute("SELECT action FROM task_history WHERE task_id=?", (task_id,)).fetchall()]
         _ac_price_ok = any("TOPIC2_PRICE_CHOICE_CONFIRMED" in a for a in _ac_hist)
@@ -1893,13 +3605,11 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
         _mhs_mime = _s(_mhs_raw_meta.get("mime_type") or "").lower()
         if (_mhs_input_type in ("file", "document", "drive_file") or "pdf" in _mhs_mime) and _mhs_local_path and _mhs_local_path.lower().endswith(".pdf"):
             try:
-                _history_safe(conn, task_id, "TOPIC2_PDF_SPEC_EXTRACTOR_STARTED")
                 from core.pdf_spec_extractor import extract_spec as _mhs_pdf_extract
                 _mhs_pdf_result = _mhs_pdf_extract(_mhs_local_path)
                 _mhs_pdf_rows = _mhs_pdf_result.get("rows") or []
                 if _mhs_pdf_rows:
                     _history_safe(conn, task_id, f"TOPIC2_PDF_SPEC_EXTRACTED:{len(_mhs_pdf_rows)}_rows")
-                    _history_safe(conn, task_id, f"TOPIC2_PDF_SPEC_ROWS_EXTRACTED:{len(_mhs_pdf_rows)}")
                     parsed["pdf_spec_rows"] = _mhs_pdf_rows
                     parsed["pdf_spec_source"] = _mhs_local_path
                 else:
@@ -1908,13 +3618,11 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
                 _history_safe(conn, task_id, "TOPIC2_PDF_SPEC_ERR:" + str(_mhs_pdf_e)[:80])
         elif _mhs_input_type in ("photo", "image") and _mhs_local_path:
             try:
-                _history_safe(conn, task_id, "TOPIC2_OCR_TABLE_STARTED")
                 from core.ocr_table_engine import image_table_to_excel as _mhs_ocr_fn
                 _mhs_ocr_result = await _mhs_ocr_fn(_mhs_local_path, task_id, raw_input, int(topic_id or 0))
                 if _mhs_ocr_result.get("success"):
                     _mhs_ocr_rows = _mhs_ocr_result.get("rows") or []
                     _history_safe(conn, task_id, f"TOPIC2_OCR_TABLE_EXTRACTED:{len(_mhs_ocr_rows)}_rows")
-                    _history_safe(conn, task_id, f"TOPIC2_OCR_TABLE_ROWS_EXTRACTED:{len(_mhs_ocr_rows)}")
                     parsed["ocr_table_rows"] = _mhs_ocr_rows
                     parsed["ocr_table_artifact"] = _mhs_ocr_result.get("artifact_path", "")
                 else:
@@ -1923,17 +3631,13 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
                 _history_safe(conn, task_id, "TOPIC2_OCR_TABLE_ERR:" + str(_mhs_ocr_e)[:80])
         _mhs_files = _mhs_raw_meta.get("files") or _mhs_raw_meta.get("attachments") or []
         if len(_mhs_files) > 1:
-            _history_safe(conn, task_id, "TOPIC2_MULTIFILE_PROJECT_CONTEXT_STARTED")
             _history_safe(conn, task_id, f"TOPIC2_MULTIFILE_PROJECT_CONTEXT_DETECTED:{len(_mhs_files)}_files")
             for _mhfi, _mhf in enumerate(_mhs_files[:5]):
-                _history_safe(conn, task_id, "TOPIC2_MULTIFILE_PROJECT_CONTEXT_FILE_ADDED:{}".format(
-                    str(_mhf.get("name") or _mhf.get("file_name") or "file_{}".format(_mhfi + 1))[:60]))
                 _history_safe(conn, task_id, "TOPIC2_MULTIFILE_PROJECT_CONTEXT_FILE_{}:{}:{}".format(
                     _mhfi + 1,
                     str(_mhf.get("name") or _mhf.get("file_name") or "file_{}".format(_mhfi + 1))[:60],
                     str(_mhf.get("mime_type") or "unknown")[:30],
                 ))
-            _history_safe(conn, task_id, "TOPIC2_MULTIFILE_PROJECT_CONTEXT_READY")
         elif parsed.get("pdf_spec_rows") or parsed.get("ocr_table_rows"):
             _history_safe(conn, task_id, "TOPIC2_MULTIFILE_PROJECT_CONTEXT_FROM_ATTACHMENT:1_file")
     except Exception:
@@ -1970,7 +3674,7 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
     template_prices, sheet_name = extract_template_prices(template_path, parsed)
 
     try:
-        online_prices = await _search_prices_online(parsed, template, sheet_name, conn=conn, task_id=task_id)
+        online_prices = await _search_prices_online(parsed, template, sheet_name)
     except Exception as e:
         if logger:
             logger.warning("FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_PRICE_SEARCH_ERR %s", e)
@@ -2859,3 +4563,834 @@ if _PAMQ_ORIG_MISSING and not getattr(_PAMQ_ORIG_MISSING, "_pamq_wrapped", False
 
 _PAMQ_LOG.info("PATCH_STROYKA_PARENT_AWARE_MISSING_QUESTION_V1 installed")
 # === END_PATCH_STROYKA_PARENT_AWARE_MISSING_QUESTION_V1 ===
+
+====================================================================================================
+END_FILE: core/stroyka_estimate_canon.py
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: core/stt_engine.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 5a82d4d66baa07c5459aaece34a432de65b7d157840669f08efe5a9a6b1fe6bd
+====================================================================================================
+import os
+import aiohttp
+import logging
+import json
+
+logger = logging.getLogger(__name__)
+
+async def transcribe_voice(path: str) -> str:
+    if not os.path.exists(path):
+        raise RuntimeError(f"voice file not found: {path}")
+
+    groq_key = (os.getenv("GROQ_API_KEY") or "").strip()
+
+    logger.info("STT env check groq=%s", bool(groq_key))
+
+    if not groq_key:
+        raise RuntimeError("STT_GROQ_API_KEY_MISSING")
+
+    url = "https://api.groq.com/openai/v1/audio/transcriptions"
+    headers = {"Authorization": f"Bearer {groq_key}"}
+    model = "whisper-large-v3-turbo"
+
+    size = os.path.getsize(path)
+    logger.info("STT start file=%s size=%s model=%s", path, size, model)
+
+    data = aiohttp.FormData()
+    data.add_field("model", model)
+    data.add_field("response_format", "json")
+
+    with open(path, "rb") as f:
+        data.add_field("file", f, filename=os.path.basename(path), content_type="audio/ogg")
+        async with aiohttp.ClientSession() as s:
+            r = await s.post(
+                url,
+                headers=headers,
+                data=data,
+                timeout=aiohttp.ClientTimeout(total=300)
+            )
+            body = await r.text()
+            logger.info("STT http_status=%s", r.status)
+
+            if r.status != 200:
+                logger.error("STT body=%s", body[:500])
+                raise RuntimeError(f"STT_GROQ_FAILED: {r.status} {body[:300]}")
+
+            try:
+                js = json.loads(body)
+            except Exception:
+                raise RuntimeError(f"STT bad json: {body[:300]}")
+
+    text = (js.get("text") or "").strip()
+
+    if not text:
+        raise RuntimeError("STT returned empty transcript")
+
+    # === P6H_STT_HALLUCINATION_GUARD_V1 ===
+    _stt_hall_patterns = (
+        "субтитры", "субтитр", "titl", "продолжение следует",
+        "конец видео", "спасибо за просмотр", "подписывайтесь",
+        "thank you", "amara.org", "translated by", "caption",
+    )
+    _stt_low = text.lower()
+    if len(text) <= 6 or any(p in _stt_low for p in _stt_hall_patterns):
+        logger.warning("STT_HALLUCINATION_GUARD: rejected=%r", text[:80])
+        raise RuntimeError(f"STT_HALLUCINATION_REJECTED: {text[:60]!r}")
+    # === END_P6H_STT_HALLUCINATION_GUARD_V1 ===
+
+    logger.info("STT ok transcript_len=%s", len(text))
+
+    try:
+        os.remove(path)
+    except Exception:
+        pass
+
+    return text
+
+====================================================================================================
+END_FILE: core/stt_engine.py
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: core/technadzor_document_skill.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 7f86800da7b61771bec0e581bb3facd3ffa0f34a47ac55e87ca8fca8f3f1c74a
+====================================================================================================
+#!/usr/bin/env python3
+# === TECHNADZOR_DOCUMENT_SKILL_V1 ===
+# Converts source records from telegram_source_skill_extractor into skill cards.
+# Rejects noise. Classifies useful document-composition logic.
+# All extracted rules must keep source reference.
+from __future__ import annotations
+
+import hashlib
+import logging
+import re
+from typing import Any
+
+logger = logging.getLogger("technadzor_document_skill")
+
+SKILL_CATEGORIES = (
+    "act_structure",
+    "report_structure",
+    "defect_description_logic",
+    "photo_to_defect_linking",
+    "evidence_handling",
+    "normative_reference_handling",
+    "recommendation_logic",
+    "conclusion_logic",
+    "file_workflow",
+    "document_workflow",
+    "client_facing_language",
+    "contractor_statement_handling",
+    "owner_statement_handling",
+    "telegram_source_work_signal",
+    "rabota_poisk_reusable_pattern",
+    "unknown",
+)
+
+# Patterns → category
+_CATEGORY_PATTERNS: list[tuple[str, list[str]]] = [
+    ("act_structure", [
+        "акт", "форма акта", "состав акта", "разделы акта", "приложение к акту",
+        "акт освидетельствования", "акт скрытых", "акт приёмки", "акт проверки",
+    ]),
+    ("report_structure", [
+        "отчёт", "отчет", "заключение", "техническое заключение", "разделы отчёта",
+        "структура отчёта", "состав отчёта",
+    ]),
+    ("defect_description_logic", [
+        "дефект", "нарушение", "замечание", "несоответствие", "отклонение",
+        "трещин", "скол", "раковин", "расслоен", "коррозия",
+        "как описать", "формулировка дефекта", "описание дефекта",
+    ]),
+    ("photo_to_defect_linking", [
+        "фото", "фотофиксация", "привязка фото", "фото к дефекту",
+        "фото к акту", "фотоматериал", "приложение фото",
+    ]),
+    ("evidence_handling", [
+        "доказательство", "факт", "подтверждение", "доказательная база",
+        "источник данных", "обоснование", "исполнительная документация",
+    ]),
+    ("normative_reference_handling", [
+        "снип", "гост", "сп ", "нормати", "требования нормативов",
+        "ссылка на норму", "нормативный документ", "регламент",
+    ]),
+    ("recommendation_logic", [
+        "рекомендация", "предписание", "устранить", "необходимо устранить",
+        "рекомендуется", "следует", "требуется", "провести работы",
+    ]),
+    ("conclusion_logic", [
+        "вывод", "заключение", "итог", "резюме", "категория состояния",
+        "техническое состояние", "ограниченно работоспособ", "аварийн",
+    ]),
+    ("file_workflow", [
+        "pdf", "docx", "xlsx", "dwg", "файл", "загрузка файла",
+        "прикрепить файл", "скачать", "отправить файл", "формат файла",
+    ]),
+    ("document_workflow", [
+        "документооборот", "пакет документов", "комплект",
+        "исполнительная документация", "журнал работ", "акт скрытых",
+        "приёмка документов",
+    ]),
+    ("client_facing_language", [
+        "заказчик", "собственник", "владелец", "клиент", "застройщик",
+        "как написать заказчику", "для заказчика", "язык документа",
+    ]),
+    ("contractor_statement_handling", [
+        "подрядчик", "генподрядчик", "субподрядчик", "исполнитель",
+        "ответ подрядчика", "позиция подрядчика",
+    ]),
+    ("owner_statement_handling", [
+        "застройщик", "инвестор", "позиция застройщика",
+        "ответ застройщика", "письмо застройщика",
+    ]),
+    ("telegram_source_work_signal", [
+        "вакансия", "требуется", "нужен специалист", "ищем технадзор",
+        "ищем инженера", "найдём", "предложение работы",
+    ]),
+    ("rabota_poisk_reusable_pattern", [
+        "заказ", "тендер", "объявление", "контракт", "выбор подрядчика",
+        "объект ищет", "нужен технадзор", "проведём отбор",
+    ]),
+]
+
+TOPIC5_VALUE_KEYWORDS = [
+    "акт", "дефект", "технадзор", "заключение", "предписание",
+    "приёмка", "отчёт", "фото", "норматив", "документ",
+    "рекомендация", "вывод", "замечание",
+]
+
+NOISE_MARKERS = [
+    "реклама", "продам", "куплю", "скидка", "акция",
+    "заработок", "кредит без отказа", "займ", "только сегодня",
+    "подпишись", "переходи по ссылке", "выиграли",
+]
+
+
+def _card_id(source_ref: str, message_id: int | str) -> str:
+    raw = f"{source_ref}::{message_id}"
+    return "SK_" + hashlib.md5(raw.encode()).hexdigest()[:12].upper()
+
+
+def classify_category(text: str) -> str:
+    low = text.lower()
+    for category, patterns in _CATEGORY_PATTERNS:
+        if any(p in low for p in patterns):
+            return category
+    return "unknown"
+
+
+def extract_rule_from_text(text: str, category: str) -> str:
+    sentences = re.split(r"[.\n!?]+", text)
+    useful = []
+    for sent in sentences:
+        s = sent.strip()
+        if len(s) < 20:
+            continue
+        low = s.lower()
+        if any(kw in low for kw in TOPIC5_VALUE_KEYWORDS):
+            useful.append(s)
+        if len(useful) >= 3:
+            break
+    if useful:
+        return ". ".join(useful[:3])
+    # fallback: first substantial sentence
+    for sent in sentences:
+        s = sent.strip()
+        if len(s) >= 30:
+            return s[:300]
+    return text[:300].strip()
+
+
+def why_useful(category: str) -> str:
+    mapping = {
+        "act_structure": "Позволяет выстраивать структуру акта технадзора: разделы, приложения, обязательные поля",
+        "report_structure": "Определяет состав технического отчёта/заключения по объекту",
+        "defect_description_logic": "Формирует навык точной формулировки дефектов для актов и предписаний",
+        "photo_to_defect_linking": "Описывает правило привязки фотоматериалов к конкретным дефектам в документе",
+        "evidence_handling": "Показывает как формировать доказательную базу — факты, источники, исполнительная документация",
+        "normative_reference_handling": "Обучает правильному указанию нормативных ссылок (СП/ГОСТ/СНиП) в актах",
+        "recommendation_logic": "Задаёт логику формулировки предписаний и рекомендаций по устранению",
+        "conclusion_logic": "Показывает структуру вывода/заключения о техническом состоянии",
+        "file_workflow": "Описывает правила работы с файлами (PDF/DOCX/XLSX) при формировании пакета документов",
+        "document_workflow": "Определяет порядок формирования и передачи комплекта исполнительной документации",
+        "client_facing_language": "Задаёт профессиональный язык документов, обращённых к заказчику/собственнику",
+        "contractor_statement_handling": "Показывает как фиксировать позицию подрядчика в документах",
+        "owner_statement_handling": "Показывает как фиксировать позицию застройщика/инвестора",
+        "telegram_source_work_signal": "Сигнал о возможной работе/заказе — полезен для маршрутизации в topic_6104",
+        "rabota_poisk_reusable_pattern": "Паттерн для поиска заказов/вакансий через Telegram-источник (тема RABOTA_POISK)",
+        "unknown": "Категория не определена — требует ручной проверки владельца",
+    }
+    return mapping.get(category, "")
+
+
+def is_noise(text: str) -> bool:
+    low = (text or "").lower()
+    if any(n in low for n in NOISE_MARKERS):
+        return True
+    if len(text.strip()) < 20:
+        return True
+    return False
+
+
+def has_practical_value(text: str) -> bool:
+    low = text.lower()
+    return any(kw in low for kw in TOPIC5_VALUE_KEYWORDS)
+
+
+def build_skill_card(record: dict) -> dict | None:
+    text = record.get("text", "")
+    source_ref = record.get("source_ref", "")
+    message_id = record.get("message_id", "")
+
+    if not source_ref:
+        logger.debug("rejected: no source_ref msg=%s", message_id)
+        return None
+
+    if is_noise(text):
+        logger.debug("rejected: noise msg=%s", message_id)
+        return None
+
+    if not has_practical_value(text) and not record.get("file_name") and not record.get("links"):
+        logger.debug("rejected: no practical value msg=%s", message_id)
+        return None
+
+    category = classify_category(text)
+    extracted_rule = extract_rule_from_text(text, category)
+
+    needs_review = (
+        category == "unknown"
+        or len(extracted_rule) < 30
+        or not has_practical_value(text)
+    )
+
+    tags = [category]
+    if record.get("file_name"):
+        tags.append("has_document")
+    if record.get("links"):
+        tags.append("has_links")
+    if record.get("media_type") == "photo":
+        tags.append("has_photo")
+
+    return {
+        "id": _card_id(source_ref, message_id),
+        "source": record.get("source", "@tnz_msk"),
+        "source_ref": source_ref,
+        "message_id": message_id,
+        "message_date": record.get("message_date", ""),
+        "category": category,
+        "title": f"{category}: {extracted_rule[:60]}",
+        "source_excerpt": text[:400],
+        "extracted_rule": extracted_rule,
+        "why_useful_for_topic_5": why_useful(category),
+        "source_links": record.get("links", []),
+        "source_files": ([record["file_name"]] if record.get("file_name") else []),
+        "confidence": "low" if needs_review else "medium",
+        "needs_owner_review": needs_review,
+        "tags": tags,
+    }
+
+
+def process_records(records: list[dict]) -> dict:
+    cards: list[dict] = []
+    rejected = 0
+    for rec in records:
+        card = build_skill_card(rec)
+        if card:
+            cards.append(card)
+        else:
+            rejected += 1
+
+    by_category: dict[str, list] = {}
+    for card in cards:
+        by_category.setdefault(card["category"], []).append(card)
+
+    return {
+        "total_input": len(records),
+        "extracted": len(cards),
+        "rejected_noise": rejected,
+        "categories": list(by_category.keys()),
+        "cards": cards,
+        "by_category": by_category,
+    }
+# === END_TECHNADZOR_DOCUMENT_SKILL_V1 ===
+
+====================================================================================================
+END_FILE: core/technadzor_document_skill.py
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: core/technadzor_drive_index.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 31118a4e5fa521f992b026001a821ecf8cea7570e3185a3ed6b89d59a3143c77
+====================================================================================================
+# === P6H_TOPIC5_TECHNADZOR_TEMPLATE_PHOTO_CLIENT_SAFE_CLOSE_20260504 / DRIVE_INDEX_V1 ===
+# Auto-discovery of topic_5 (technadzor) Drive folder contents as style/content
+# references — without manual "прими как образец" commands.
+#
+# Layered classification (file role):
+#   PRIMARY_PDF_STYLE         — PDF in topic root or in non-system subfolders (real client acts; main style)
+#   SECONDARY_DOCX_REFERENCE  — DOCX in service subfolders (TECHNADZOR / _drafts / _system / _templates)
+#   CLIENT_PHOTO_SOURCE       — image/* in topic root or any non-system folder (work-object photos)
+#   CLIENT_FINAL_PDF          — PDF artifacts produced earlier (kept in client folders)
+#   SYSTEM_TEMPLATE           — DOCX/JSON/manifests in service subfolders
+#   OTHER                     — anything else (audio, etc.)
+#
+# Folder classification:
+#   SYSTEM   — name in {_system, _templates, _drafts, _manifests, _archive, _tmp, TECHNADZOR}
+#   CLIENT   — anything else (work-object/customer-facing folders)
+#
+# Index is persisted to:
+#   data/templates/technadzor/ACTIVE__chat_<chat_id>__topic_<topic_id>.json
+# (filename uses literal chat_id with leading dash, matching existing convention)
+#
+# In-memory cache TTL = 5 minutes.
+from __future__ import annotations
+
+import io
+import json
+import os
+import time
+import logging
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+LOG = logging.getLogger("task_worker")
+
+_CACHE_TTL_SECONDS = 300
+_CACHE: Dict[Tuple[str, int], Tuple[float, Dict[str, Any]]] = {}
+
+_BASE = Path(__file__).resolve().parent.parent
+_LOCAL_INDEX_DIR = _BASE / "data" / "templates" / "technadzor"
+_LOCAL_INDEX_DIR.mkdir(parents=True, exist_ok=True)
+_DOWNLOAD_DIR = _BASE / "data" / "memory_files" / "technadzor_index_cache"
+_DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+# Folder names treated as SYSTEM (no client artifacts allowed)
+SYSTEM_FOLDER_NAMES = {
+    "_system", "_templates", "_drafts", "_manifests", "_archive", "_tmp",
+    "technadzor",  # case-insensitive match against TECHNADZOR
+}
+
+
+def is_system_folder(name: str) -> bool:
+    """True if the folder is internal/service. Match case-insensitive."""
+    if not name:
+        return False
+    return name.strip().lower() in SYSTEM_FOLDER_NAMES
+
+
+def is_client_facing_folder(name: str) -> bool:
+    """True if the folder is client-facing (object/customer/visit folder)."""
+    if not name:
+        return False
+    return not is_system_folder(name)
+
+
+def _service():
+    from core.topic_drive_oauth import _oauth_service
+    return _oauth_service()
+
+
+def _root_folder_id() -> str:
+    from core.topic_drive_oauth import _root_folder_id as r
+    return r()
+
+
+def _find_child(svc, parent_id: str, name: str) -> Optional[str]:
+    safe_name = name.replace("'", "\\'")
+    res = svc.files().list(
+        q=f"'{parent_id}' in parents and name='{safe_name}' and trashed=false",
+        fields="files(id,name,mimeType)",
+        pageSize=10,
+    ).execute()
+    files = res.get("files", [])
+    return files[0]["id"] if files else None
+
+
+def _ensure_subfolder(svc, parent_id: str, name: str) -> str:
+    fid = _find_child(svc, parent_id, name)
+    if fid:
+        return fid
+    body = {
+        "name": name,
+        "mimeType": "application/vnd.google-apps.folder",
+        "parents": [parent_id],
+    }
+    created = svc.files().create(body=body, fields="id").execute()
+    return created["id"]
+
+
+def _list_folder(svc, folder_id: str, page_size: int = 200) -> List[Dict[str, Any]]:
+    items: List[Dict[str, Any]] = []
+    page_token = <REDACTED_SECRET>
+    while True:
+        res = svc.files().list(
+            q=f"'{folder_id}' in parents and trashed=false",
+            fields="nextPageToken, files(id,name,mimeType,modifiedTime,createdTime,size,webViewLink,parents)",
+            orderBy="modifiedTime desc",
+            pageSize=page_size,
+            pageToken=<REDACTED_SECRET>
+        ).execute()
+        items.extend(res.get("files", []))
+        page_token = <REDACTED_SECRET>"nextPageToken")
+        if not page_token:
+            break
+    return items
+
+
+def classify_technadzor_drive_file(file: Dict[str, Any], parent_folder_name: str = "") -> str:
+    """Classify a Drive file by role (returns one of the role strings)."""
+    mt = file.get("mimeType", "") or ""
+    name = (file.get("name") or "").lower()
+    parent = (parent_folder_name or "").strip().lower()
+    parent_is_system = parent in SYSTEM_FOLDER_NAMES
+
+    # PDF
+    if mt == "application/pdf":
+        if parent_is_system:
+            return "SYSTEM_TEMPLATE"
+        if name.startswith("act") or "акт" in name or "осмотр" in name:
+            # PDF in non-system folder with act-like name → primary style
+            return "PRIMARY_PDF_STYLE"
+        # PDF in client folder, generic — most likely a final client PDF artifact
+        return "CLIENT_FINAL_PDF"
+
+    # DOCX
+    if mt == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        if parent_is_system:
+            return "SYSTEM_TEMPLATE"
+        return "SECONDARY_DOCX_REFERENCE"
+
+    # Image
+    if mt.startswith("image/"):
+        if parent_is_system:
+            return "SYSTEM_TEMPLATE"
+        return "CLIENT_PHOTO_SOURCE"
+
+    # JSON / manifests / system
+    if mt in ("application/json",) or name.endswith((".json", ".log", ".bak", ".tmp")):
+        return "SYSTEM_TEMPLATE"
+
+    # Audio (voice notes)
+    if mt.startswith("audio/") or mt == "application/ogg":
+        return "OTHER"
+
+    return "OTHER"
+
+
+def _resolve_topic_folder(svc, chat_id: str, topic_id: int) -> Optional[str]:
+    root = _root_folder_id()
+    chat_folder = _find_child(svc, root, f"chat_{chat_id}")
+    if not chat_folder:
+        return None
+    return _find_child(svc, chat_folder, f"topic_{int(topic_id)}")
+
+
+def _local_index_path(chat_id: str, topic_id: int) -> Path:
+    fname = f"ACTIVE__chat_{chat_id}__topic_{int(topic_id)}.json"
+    return _LOCAL_INDEX_DIR / fname
+
+
+def _drive_url(file: Dict[str, Any]) -> str:
+    fid = file.get("id", "")
+    if file.get("webViewLink"):
+        return file["webViewLink"]
+    if file.get("mimeType") == "application/vnd.google-apps.folder":
+        return f"https://drive.google.com/drive/folders/{fid}"
+    return f"https://drive.google.com/file/d/{fid}/view"
+
+
+def scan_topic5_drive_templates(chat_id: str, topic_id: int = 5, force: bool = False) -> Dict[str, Any]:
+    """Scan Drive topic_<id> contents and return classified listing.
+
+    Cached for 5 min. Pass force=True to refresh.
+    """
+    key = (str(chat_id), int(topic_id))
+    now = time.time()
+    if not force and key in _CACHE:
+        ts, cached = _CACHE[key]
+        if now - ts < _CACHE_TTL_SECONDS:
+            return cached
+
+    svc = _service()
+    topic_fid = _resolve_topic_folder(svc, chat_id, topic_id)
+    result: Dict[str, Any] = {
+        "chat_id": str(chat_id),
+        "topic_id": int(topic_id),
+        "topic_folder_id": topic_fid,
+        "topic_folder_link": (
+            f"https://drive.google.com/drive/folders/{topic_fid}"
+            if topic_fid else None
+        ),
+        "files": [],
+        "folders_system": [],
+        "folders_client": [],
+        "by_role": {},
+        "primary_pdf_style": [],
+        "secondary_docx_reference": [],
+        "client_photo_source": [],
+        "client_final_pdf": [],
+        "system_template": [],
+        "other": [],
+        "ok": False,
+        "error": None,
+        "scanned_at": int(now),
+    }
+
+    if not topic_fid:
+        result["error"] = f"topic folder chat_{chat_id}/topic_{topic_id} not found"
+        _CACHE[key] = (now, result)
+        return result
+
+    try:
+        # Walk topic root
+        root_items = _list_folder(svc, topic_fid)
+        all_records: List[Dict[str, Any]] = []
+        sub_folder_walk: List[Tuple[str, str]] = []  # (folder_id, folder_name)
+        for it in root_items:
+            if it.get("mimeType") == "application/vnd.google-apps.folder":
+                if is_system_folder(it["name"]):
+                    result["folders_system"].append({
+                        "id": it["id"], "name": it["name"],
+                        "drive_url": _drive_url(it),
+                    })
+                else:
+                    result["folders_client"].append({
+                        "id": it["id"], "name": it["name"],
+                        "drive_url": _drive_url(it),
+                    })
+                sub_folder_walk.append((it["id"], it["name"]))
+            else:
+                role = classify_technadzor_drive_file(it, parent_folder_name="")
+                rec = _build_record(it, role, parent_folder_name="", chat_id=chat_id, topic_id=topic_id)
+                all_records.append(rec)
+
+        # Walk one level of subfolders (do not recurse deeper to keep it cheap)
+        for sub_fid, sub_name in sub_folder_walk:
+            sub_items = _list_folder(svc, sub_fid)
+            for it in sub_items:
+                if it.get("mimeType") == "application/vnd.google-apps.folder":
+                    # nested sub-subfolder — record name only, do not recurse
+                    continue
+                role = classify_technadzor_drive_file(it, parent_folder_name=sub_name)
+                rec = _build_record(it, role, parent_folder_name=sub_name, chat_id=chat_id, topic_id=topic_id)
+                all_records.append(rec)
+
+        result["files"] = all_records
+        for rec in all_records:
+            role = rec["role"]
+            bucket = role.lower()
+            if bucket == "primary_pdf_style":
+                result["primary_pdf_style"].append(rec)
+            elif bucket == "secondary_docx_reference":
+                result["secondary_docx_reference"].append(rec)
+            elif bucket == "client_photo_source":
+                result["client_photo_source"].append(rec)
+            elif bucket == "client_final_pdf":
+                result["client_final_pdf"].append(rec)
+            elif bucket == "system_template":
+                result["system_template"].append(rec)
+            else:
+                result["other"].append(rec)
+            result["by_role"].setdefault(role, 0)
+            result["by_role"][role] += 1
+
+        result["ok"] = True
+    except Exception as exc:
+        result["error"] = repr(exc)
+        LOG.exception("P6H_TOPIC5_DRIVE_INDEX_SCAN_FAIL chat=%s topic=%s", chat_id, topic_id)
+
+    _CACHE[key] = (now, result)
+    return result
+
+
+def _build_record(file: Dict[str, Any], role: str, parent_folder_name: str, chat_id: str, topic_id: int) -> Dict[str, Any]:
+    parent_lower = (parent_folder_name or "").strip().lower()
+    parent_is_system = parent_lower in SYSTEM_FOLDER_NAMES
+    return {
+        "file_id": file.get("id"),
+        "file_name": file.get("name"),
+        "mime_type": file.get("mimeType"),
+        "drive_url": _drive_url(file),
+        "folder_name": parent_folder_name or "<root>",
+        "role": role,
+        "client_facing": (not parent_is_system),
+        "created_time": file.get("createdTime"),
+        "modified_time": file.get("modifiedTime"),
+        "size": file.get("size"),
+    }
+
+
+def build_technadzor_template_index(chat_id: str = "-1003725299009", topic_id: int = 5, force: bool = True) -> Dict[str, Any]:
+    """Build full topic_5 index, persist to local JSON, return the index dict.
+
+    Persistent path:
+        data/templates/technadzor/ACTIVE__chat_<chat_id>__topic_<topic_id>.json
+    """
+    idx = scan_topic5_drive_templates(chat_id, topic_id, force=force)
+    payload = {
+        "chat_id": idx.get("chat_id"),
+        "topic_id": idx.get("topic_id"),
+        "topic_folder_id": idx.get("topic_folder_id"),
+        "topic_folder_link": idx.get("topic_folder_link"),
+        "scanned_at": idx.get("scanned_at"),
+        "ok": idx.get("ok"),
+        "error": idx.get("error"),
+        "by_role": idx.get("by_role"),
+        "folders_system": idx.get("folders_system"),
+        "folders_client": idx.get("folders_client"),
+        "files": idx.get("files"),
+        "primary_pdf_style": idx.get("primary_pdf_style"),
+        "secondary_docx_reference": idx.get("secondary_docx_reference"),
+        "client_photo_source": idx.get("client_photo_source"),
+        "client_final_pdf": idx.get("client_final_pdf"),
+        "system_template": idx.get("system_template"),
+        "other": idx.get("other"),
+        "marker": "P6H_TOPIC5_USE_EXISTING_TEMPLATES_PHOTO_TO_TECH_REPORT_20260504_V1",
+        "updated_at": int(time.time()),
+    }
+    try:
+        path = _local_index_path(str(chat_id), int(topic_id))
+        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        payload["local_index_path"] = str(path)
+    except Exception as exc:
+        LOG.exception("P6H_TOPIC5_DRIVE_INDEX_PERSIST_FAIL chat=%s topic=%s err=%s", chat_id, topic_id, exc)
+    return payload
+
+
+def get_active_index(chat_id: str = "-1003725299009", topic_id: int = 5) -> Optional[Dict[str, Any]]:
+    """Read persisted index from disk, if present."""
+    p = _local_index_path(str(chat_id), int(topic_id))
+    if not p.exists():
+        return None
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
+def primary_template_meta(idx: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Most recent PRIMARY_PDF_STYLE record. Falls back to most recent CLIENT_FINAL_PDF."""
+    if idx.get("primary_pdf_style"):
+        return idx["primary_pdf_style"][0]
+    if idx.get("client_final_pdf"):
+        return idx["client_final_pdf"][0]
+    return None
+
+
+def secondary_template_meta(idx: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    if idx.get("secondary_docx_reference"):
+        return idx["secondary_docx_reference"][0]
+    return None
+
+
+def ensure_service_subfolder(chat_id: str, topic_id: int, name: str = "_drafts") -> Optional[str]:
+    """Create/return id for a SERVICE subfolder (system, never client-facing).
+
+    Refuses to create folders with non-system names.
+    """
+    if not is_system_folder(name):
+        raise ValueError(f"Refusing to create non-system folder via service path: {name}")
+    svc = _service()
+    topic_fid = _resolve_topic_folder(svc, chat_id, topic_id)
+    if not topic_fid:
+        return None
+    return _ensure_subfolder(svc, topic_fid, name)
+
+
+def upload_to_service_subfolder(local_path: Path, dst_name: str, chat_id: str, topic_id: int, subfolder: str = "_drafts") -> Optional[Dict[str, Any]]:
+    """Upload artifact to topic_<id>/<service-subfolder>/. Subfolder MUST be system."""
+    if not is_system_folder(subfolder):
+        raise ValueError(f"Refusing to upload to non-system subfolder: {subfolder}")
+    return _upload_to_folder(local_path, dst_name, chat_id, topic_id, subfolder, allow_client=False)
+
+
+def upload_client_pdf_to_folder(local_path: Path, dst_name: str, chat_id: str, topic_id: int, target_folder_name: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """Upload final client PDF.
+
+    If target_folder_name is provided AND it's a non-system (client-facing) folder,
+    upload there. Otherwise upload to topic root.
+
+    Refuses anything that isn't .pdf — by spec, client folders accept only photos and final PDFs.
+    """
+    if not str(local_path).lower().endswith(".pdf"):
+        raise ValueError(f"Refusing to upload non-PDF to client folder: {local_path}")
+    return _upload_to_folder(local_path, dst_name, chat_id, topic_id, target_folder_name, allow_client=True)
+
+
+def _upload_to_folder(local_path: Path, dst_name: str, chat_id: str, topic_id: int, target_folder_name: Optional[str], allow_client: bool) -> Optional[Dict[str, Any]]:
+    try:
+        from googleapiclient.http import MediaFileUpload
+        svc = _service()
+        topic_fid = _resolve_topic_folder(svc, chat_id, topic_id)
+        if not topic_fid:
+            return None
+
+        if target_folder_name:
+            if is_system_folder(target_folder_name):
+                target_id = _ensure_subfolder(svc, topic_fid, target_folder_name)
+            else:
+                if not allow_client:
+                    raise ValueError(f"Client folder upload not allowed via service path: {target_folder_name}")
+                # find existing client folder, do NOT auto-create client folders
+                target_id = _find_child(svc, topic_fid, target_folder_name)
+                if not target_id:
+                    LOG.warning("P6H_TOPIC5_CLIENT_FOLDER_NOT_FOUND name=%s — uploading to topic root", target_folder_name)
+                    target_id = topic_fid
+        else:
+            target_id = topic_fid
+
+        body = {"name": dst_name, "parents": [target_id]}
+        mime = None
+        ln = str(local_path).lower()
+        if ln.endswith(".docx"):
+            mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        elif ln.endswith(".pdf"):
+            mime = "application/pdf"
+        elif ln.endswith(".xlsx"):
+            mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        elif ln.endswith(".json"):
+            mime = "application/json"
+        media = MediaFileUpload(str(local_path), mimetype=mime, resumable=False)
+        created = svc.files().create(body=body, media_body=media, fields="id,webViewLink,parents").execute()
+        return {"id": created["id"], "link": created.get("webViewLink"), "parent_id": target_id, "target_folder_name": target_folder_name}
+    except Exception:
+        LOG.exception("P6H_TOPIC5_DRIVE_UPLOAD_FAIL name=%s topic=%s sub=%s", dst_name, topic_id, target_folder_name)
+        return None
+
+
+def download_to_local(file_id: str, dst_filename: str) -> Optional[Path]:
+    """Download a Drive file to local cache. Returns path or None."""
+    try:
+        from googleapiclient.http import MediaIoBaseDownload
+        svc = _service()
+        dst = _DOWNLOAD_DIR / dst_filename
+        req = svc.files().get_media(fileId=file_id)
+        with io.FileIO(dst, "wb") as buf:
+            dl = MediaIoBaseDownload(buf, req)
+            done = False
+            while not done:
+                _, done = dl.next_chunk()
+        return dst
+    except Exception:
+        LOG.exception("P6H_TOPIC5_DRIVE_INDEX_DOWNLOAD_FAIL fid=%s", file_id)
+        return None
+
+
+try:
+    LOG.info("P6H_TOPIC5_DRIVE_INDEX_V1_INSTALLED")
+except Exception:
+    pass
+# === END_P6H_TOPIC5_DRIVE_INDEX_V1 ===
+
+====================================================================================================
+END_FILE: core/technadzor_drive_index.py
+FILE_CHUNK: 1/1
+====================================================================================================

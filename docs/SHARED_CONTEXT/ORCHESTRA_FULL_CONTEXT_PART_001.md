@@ -1,322 +1,112 @@
 # ORCHESTRA_FULL_CONTEXT_PART_001
-generated_at_utc: 2026-05-03T10:25:53.689291+00:00
-git_sha_before_commit: 9dec339fd50517a8fa344fca3eb1ac0c085650e0
-part: 1/7
+generated_at_utc: 2026-05-07T15:15:30.418414+00:00
+git_sha_before_commit: 983ced8149ebd4c84be0c2926296ad19722d0d88
+part: 1/17
 
 
 ====================================================================================================
 BEGIN_FILE: docs/HANDOFFS/LATEST_HANDOFF.md
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: ddca1b3513c29f6dbcd12e42d21e6b52a182b80be13aa083d17ffeca8fb13cf4
+SHA256_FULL_FILE: 1459a4064974ae5e487a321a36d8670e2344d84ce066fed44ce5e0f6427353b3
 ====================================================================================================
-# LATEST_HANDOFF — 30.04.2026 05:40 MSK FINAL
-
-## СЕРВЕР
-IP: 89.22.225.136 | Base: /root/.areal-neva-core
-Services: areal-task-worker ACTIVE | telegram-ingress ACTIVE | areal-memory-api ACTIVE
-
-## ВСЕ ПАТЧИ СЕССИИ 30.04.2026 — ФИНАЛЬНЫЙ СТАТУС
-
-| Патч | Файл | Статус |
-|---|---|---|
-| PATCH_FILE_INTAKE_NEEDS_CONTEXT_V3_MINIMAL | task_worker.py | VERIFIED ✅ |
-| PATCH_DRIVE_GUARD_BEFORE_DOWNLOAD_V1 | task_worker.py | VERIFIED ✅ |
-| PATCH_WORKER_PICK_BEFORE_STALE_V1 | task_worker.py | VERIFIED ✅ |
-| PATCH_FIX_PFIN3_MENU_SHADOW_V1 | task_worker.py | VERIFIED ✅ |
-| PATCH_FILE_CHOICE_PRIORITY_V1 | task_worker.py | VERIFIED ✅ |
-| PATCH_FILE_PARENT_STRICT_OPEN_ONLY_V1 | task_worker.py | VERIFIED ✅ |
-| PATCH_ENGINE_BASE_RESTORE_SA_UPLOAD_V1 | core/engine_base.py | VERIFIED ✅ |
-| PATCH_DRIVE_DIRECT_OAUTH_V1 | core/engine_base.py | VERIFIED ✅ |
-| PATCH_DRIVE_UPLOAD_AND_TG_FALLBACK_V1 | task_worker.py | VERIFIED ✅ |
-| PATCH_DOWNLOAD_OAUTH_V1 | task_worker.py | INSTALLED |
-| PATCH_SOURCE_GUARD_V1 | task_worker.py | INSTALLED |
-| PATCH_FILE_ERROR_RETRY_V1 | task_worker.py | INSTALLED |
-| PATCH_DRIVE_BOTMSG_SAVE_V1 | task_worker.py | INSTALLED |
-| PATCH_DRIVE_DOWNLOAD_FAIL_MSG_V1 | task_worker.py | INSTALLED |
-| PATCH_CRASH_BOTMSG_V1 | task_worker.py | INSTALLED |
-| PATCH_RETRY_TG_MSG_V1 | task_worker.py | INSTALLED |
-| PATCH_RETRY_TOPIC_FOLDER_V1 | core/upload_retry_queue.py | VERIFIED ✅ |
-| PATCH_HC_NO_UPLOAD | core/upload_retry_queue.py | INSTALLED |
-| PATCH_DAEMON_OAUTH_OVERRIDE_V1 | systemd telegram-ingress | VERIFIED ✅ |
-| PATCH_DAEMON_USE_OAUTH_V1 | telegram_daemon.py | INSTALLED |
-| PATCH_VOICE_OAUTH_V1 | telegram_daemon.py | INSTALLED |
-| PATCH_SCOPE_FULL_V1 | core/topic_drive_oauth.py + drive_folder_resolver.py + google_io.py | VERIFIED ✅ |
-| PATCH_DUPLICATE_GUARD_V1 | task_worker.py | INSTALLED |
-| PATCH_MULTI_FILE_INTAKE_V1 | task_worker.py | INSTALLED |
-| PATCH_LINK_INTAKE_NEEDS_CONTEXT_V1 | task_worker.py | INSTALLED |
-| §0.11 САМОПРОВЕРКА AI | docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md | VERIFIED ✅ |
-| Stale tasks cleanup | data/core.db | DONE ✅ |
-
-## VERIFIED LIVE TESTS (30.04.2026)
-
-- drive_file NEW → NEEDS_CONTEXT → меню по topic_id ✅
-- reply/voice choice → FILE_CHOICE_PARSED → IN_PROGRESS ✅
-- estimate engine → локальный artifact ✅
-- Drive upload через OAuth → UPLOAD_OK ✅
-- Telegram fallback при упавшем Drive ✅
-- upload_retry_queue → cron 10min → восстанавливает Drive ✅
-- retry загружает в topic папку (не INGEST) ✅
-- OAuth scope=drive → PATCH_SCOPE_FULL_V1 → invalid_scope исчез ✅
-- daemon OAuth через override.conf ✅
-- daemon использует upload_file_to_topic (не upload_to_drive) ✅
-- voice upload через OAuth ✅
-- engine_base.py восстановлен ✅
-- FILE_PARENT_STRICT работает ✅
-- topic_id=0 не цепляет чужие задачи ✅
-
-## КЛЮЧЕВЫЕ РЕШЕНИЯ СЕССИИ (хронология)
-
-1. **OAuth app в Production** — refresh_token не протухает
-2. **engine_base.py восстановлен** из bak (был удалён)
-3. **Direct OAuth** заменил Service Account (storageQuotaExceeded)
-4. **Telegram fallback** если Drive упал
-5. **upload_retry_queue** — cron 10min восстанавливает Drive из TG
-6. **retry в topic папку** — не INGEST корень
-7. **healthcheck через list API** — не upload (избегаем INGEST загрязнения)
-8. **Source guard** — файлы не из telegram → CANCELLED
-9. **File error retry** — reply на ошибку → перезапуск файла
-10. **Расширенный retry** — поиск по bot_message_id + reply_to + telegram_message_id
-11. **Crash bot_message_id save** — при крашe сохранять id для retry
-12. **Daemon OAuth override** — добавлены OAuth переменные в systemd
-13. **Daemon use OAuth** — заменил upload_to_drive на upload_file_to_topic
-14. **Voice OAuth** — voice через upload_file_to_topic
-15. **Scope full drive** — заменил drive.file на drive в 3 файлах (РЕШИЛ invalid_scope)
-
-## АРХИТЕКТУРА (финальная)
-
-### Drive Upload Chain
-```
-Telegram message → daemon → upload_file_to_topic (OAuth, scope=drive) → topic папка
-                                          ↓ если упал
-                          create_task drive_file → task_worker
-                                          ↓
-                              _handle_drive_file → analyze
-                                          ↓
-                          engine_base.upload_artifact_to_drive (OAuth)
-                                          ↓ если упал
-                          Telegram sendDocument fallback
-                                          ↓ TELEGRAM_ARTIFACT_FALLBACK_SENT
-                          cron upload_retry_queue (10min)
-                                          ↓ Drive alive?
-                          скачать из TG → загрузить в topic папку → DRIVE_RETRY_UPLOAD_OK
-```
-
-### Folder Structure
-```
-AI_ORCHESTRA/
-├── chat_-1003725299009/
-│   ├── topic_0/   (ЧАТ ЗАДАЧ)
-│   ├── topic_2/   (СТРОЙКА)
-│   ├── topic_5/   (ТЕХНАДЗОР)
-│   ├── topic_210/ (ПРОЕКТИРОВАНИЕ)
-│   └── ...
-```
-
-При создании нового топика папка создаётся автоматически через `_ensure_folder`.
-
-### Retry Logic
-1. Reply на сообщение бота с ошибкой → ищет parent task по:
-   - bot_message_id == reply_to
-   - reply_to_message_id == reply_to
-   - raw_input.telegram_message_id == reply_to
-2. Если parent FAILED/AWAITING_CONFIRMATION/CANCELLED + result содержит "ошибка/не удалась"
-3. Переводит parent в NEW → worker обрабатывает заново
-
-### Source Guard
-- source=telegram → обработка
-- source=google_drive → CANCELLED (системный мусор)
-- source=other → CANCELLED
-
-## CRON JOBS
-
-```
-*/10 * * * * core/upload_retry_queue.py — retry Drive upload из TG
-*/30 * * * * tools/context_aggregator.py — обновление контекста
-```
-
-## НЕ ЗАКРЫТО — P1
-
-- Голосовой confirm при AWAITING_CONFIRMATION (telegram_daemon.py:601)
-- Live-тест полного цикла после PATCH_SCOPE_FULL_V1
-- Live-тест PATCH_FILE_ERROR_RETRY_V1 с реальным reply
-- Live-тест PATCH_CRASH_BOTMSG_V1
-- DUPLICATE_GUARD live-тест
-- MULTI_FILE_INTAKE live-тест
-- LINK_INTAKE live-тест
-
-## НЕ ЗАКРЫТО — P2
-
-- Смета PDF → Excel → Drive end-to-end
-- КЖ PDF pipeline
-- project_engine end-to-end
-- Gemini vision
-- Excel формулы =C2*D2 / =SUM
-- Нормы СП/ГОСТ
-- Multi-file один артефакт
-- Memory/pin перед меню
-- Google Sheets интеграция
-- Шаблоны end-to-end
-- MODEL_ROUTER, FALLBACK_CHAIN
-- STT "Олег" — Whisper галлюцинирует имя
-
-## КРИТИЧЕСКИЕ УРОКИ СЕССИИ
-
-1. **Service Account НЕ работает с My Drive** — нужен только OAuth
-2. **Refresh token зависит от scope при выдаче** — если код просит scope шире/уже чем токен, падает invalid_scope
-3. **systemd Environment не наследуется автоматически** — нужен override.conf для каждого сервиса
-4. **bot_message_id критичен для retry** — без него reply не находит parent
-5. **AI router цепляет stale задачи** — старые AWAITING_CONFIRMATION загрязняют контекст
-6. **drive_ingest подхватывает healthcheck файлы** — поэтому healthcheck через list API
-
-
-## ОБНОВЛЕНИЕ 30.04.2026 10:00
-
-### Новые баги выявлены в сессии (live наблюдение)
-
-**BUG_CONFIRM_UNFINISHED** — AWAITING_CONFIRMATION без реального результата
-- task_worker.py строки 2068-2075
-- ТЗ: PATCH_CONFIRM_ONLY_ON_DONE_V1 в NOT_CLOSED
-
-**BUG_TEMPLATE_NO_STRUCT** — шаблон = OCR текст вместо структурной модели
-- core/artifact_pipeline.py — intent игнорируется
-- core/template_manager.py — не используется
-- ТЗ: PATCH_TEMPLATE_INTENT_V1 в NOT_CLOSED
-
-### Факт из live БД topic=210
-АР/КД/КЖ PDF файлы обрабатывались как "document" → OCR текст → "Сводка по документу"
-Пользователь ожидал: структурную модель проекта с составом листов, марками, параметрами
-
-## ОБНОВЛЕНИЕ 30.04.2026 10:30 — FULLFIX_01_CANON_CLOSE_CORE VERIFIED
-
-### Патчи VERIFIED live-тестом:
-
-| Патч | Файл | Статус |
-|---|---|---|
-| PATCH_TEMPLATE_MODEL_EXTRACTOR_V1 | core/project_engine.py | VERIFIED ✅ |
-| PATCH_PROJECT_TEMPLATE_STORAGE_V1 | core/template_manager.py | VERIFIED ✅ |
-| PATCH_TEMPLATE_INTENT_BRANCH_V1 | core/artifact_pipeline.py | VERIFIED ✅ |
-| PATCH_CONFIRM_ONLY_ON_DONE_V1 | task_worker.py строки 2073+ | VERIFIED ✅ |
-| PATCH_CONFIRM_GUARD_C_V1 | task_worker.py строка 1711 | VERIFIED ✅ |
-
-### Live-тест 30.04 10:09
-
-```
-Файл: ПРОЕКТ КД кровля 5.pdf → topic_id=210
-Task: 2a249e66-8399-4994-8211-dcad82496f18
-State: AWAITING_CONFIRMATION
-Result: PROJECT_TEMPLATE_MODEL создан
-Раздел: АР
-Структура: план, расчет, Фасады, Разрез, План
-Размеры мм: 940, 730, 2025, 16940, 10730, 360, 2001...
-```
-
-### Что закрыто FULLFIX_01:
-- PDF проекта → PROJECT_TEMPLATE_MODEL (не OCR summary) ✅
-- AWAITING_CONFIRMATION только при валидном результате ✅
-- "Доволен результатом?" не показывается при ошибке/пустом result ✅
-- template_manager сохраняет модель в data/project_templates/ ✅
-
-### Что осталось не идеальным (следующий проход):
-- project_type определяется неточно (КД файл определён как АР)
-- Состав листов (0) — марки листов не всегда извлекаются
-- Голосовой confirm при AWAITING_CONFIRMATION — не закрыт
+# LATEST HANDOFF — 2026-05-07 17:50 MSK
+**HEAD**: `2353fc3` — fix(topic2): close remaining project/pdf/photo/price/artifact gaps V4  
+**Предыдущий HEAD**: `b46bba5` (docs handoff)  
+**Воркер**: active  
+**GitHub**: pushed (2353fc3 visible)  
+**Детальный handoff**: `HANDOFF_20260507_V4_GAP_CLOSE.md`  
 
 ---
-# HANDOFF 30.04.2026 — FULLFIX_02 SESSION
 
-## STATE
-- areal-task-worker: active | telegram-ingress: active | areal-memory-api: active
-- DB ORDER: использовать ORDER BY rowid DESC
+## СТАТУС ТОПИКОВ
 
-## VERIFIED THIS SESSION
-- FULLFIX_02_BC: project_type КД из filename ✅, sheet_register fallback ✅
-- FULLFIX_01: PROJECT_TEMPLATE_MODEL создан ✅
-
-## INSTALLED, AWAITING LIVE TEST
-- FULLFIX_02_DA: neg bind + false confirm guard + voice negative
-- FULLFIX_02_E: negative confirm all paths (NOT YET RUN)
-
-## CRITICAL NEXT ACTIONS
-1. Запустить FULLFIX_02_E
-2. Live: "переделай" → "Хорошо, доработаю"
-3. Live: голос "да" при AWAITING_CONFIRMATION → DONE
-4. Live: estimate PDF → xlsx → Drive
-# HANDOFF 01.05.2026 — ПОЛНАЯ СЕССИЯ ВОССТАНОВЛЕНИЯ
-
-## СЕРВЕР
-IP: 89.22.225.136 | Base: /root/.areal-neva-core
-Services: areal-task-worker ACTIVE restarts=0 | telegram-ingress ACTIVE restarts=0 | areal-memory-api ACTIVE
-
-## ЧТО БЫЛО СЛОМАНО И ПОЧИНЕНО
-
-| Патч | Файл | Проблема | Статус |
-|---|---|---|---|
-| AI_LOGIC_FIX_V1 | task_worker.py | if/else перевёрнут — AI не вызывался | VERIFIED ✅ |
-| AI_RESULT_INIT_V1 | task_worker.py | UnboundLocalError ai_result | VERIFIED ✅ |
-| SAVE_MEM_ALL_DONE_PATHS_V2 | task_worker.py | _save_memory не вызывалась | VERIFIED ✅ |
-| DAEMON_OAUTH_FIX_V1 | telegram_daemon.py | upload_to_drive→upload_file_to_topic | VERIFIED ✅ |
-| INPUT_TYPE_DRIVE_FIX_V1 | task_worker.py | input_type not defined в drive_file | VERIFIED ✅ |
-| SCOPE_FULL_V2 | topic_drive_oauth.py + drive_folder_resolver.py | drive.file→drive | VERIFIED ✅ |
-| PORT_FIX_V1 | archive_engine.py | порт 8765→8091 | VERIFIED ✅ |
-| MEMORY_API_SERVER_V1 | core/memory_api_server.py | файл отсутствовал | VERIFIED ✅ |
-| IMPORT_FIX_V1 | core/topic_autodiscovery.py | from reply_sender→from core.reply_sender | VERIFIED ✅ |
-| ZOMBIE_UNITS_REMOVED | systemd | 4 unit-файла удалены навсегда | VERIFIED ✅ |
-| TOPIC_META_LOADER_V1 | task_worker.py | топики знают себя | VERIFIED ✅ |
-| HOTFIX_FILE_NAME_EARLY_V1 | task_worker.py | file_name до TASK_TYPE_DETECT | VERIFIED ✅ |
-
-## СОСТОЯНИЕ БД
-- FAILED: 2811 (исторические, не мешают)
-- CANCELLED: 543
-- ARCHIVED: 381
-- DONE: 348
-- AWAITING_CONFIRMATION: 19
-
-## ПАМЯТЬ
-- memory.db: 969 архивных записей по топикам
-- save_memory_ok работает с 16:00 01.05.2026
-- archive_distributor: ok=True
-
-## ТОПИКИ (все 11 настроены)
-topic_0=ЛИДЫ АМО | topic_2=СТРОЙКА | topic_5=ТЕХНАДЗОР | topic_11=ВИДЕОКОНТЕНТ
-topic_210=ПРОЕКТИРОВАНИЕ | topic_500=ВЕБ ПОИСК | topic_794=НЕЙРОНКИ СОФТ ВПН ВПС
-topic_961=АВТО ЗАПЧАСТИ | topic_3008=КОДЫ МОЗГОВ | topic_4569=ЛИДЫ РЕКЛАМА | topic_6104=РАБОТА ПОИСК
-
-## LIVE TESTS PASSED
-- СТРОЙКА: вспомнил сметы за 24ч с Drive ссылками ✅
-- ТЕХНАДЗОР: вспомнил архивные функции чата ✅
-- КОДЫ МОЗГОВ: ответил по контексту ✅
-- Drive: ALIVE, retry queue чист ✅
-
-## НЕ ЗАКРЫТО
-- Voice confirm при AWAITING_CONFIRMATION
-- Estimate PDF→Excel→Drive live-тест
-- Technadzor фото→акт live-тест
-- detect_intent() 1 arg warning
+| Топик | Состояние | Примечание |
+|-------|-----------|------------|
+| topic_2 СТРОИКА | INSTALLED (не VERIFIED) | V4 applied, live-replay pending |
+| topic_5 ТЕХНАДЗОР | Stable | без изменений |
+| topic_500 ПОИСК | Partial | 16 режимов НЕ реализованы |
+| topic_210 PROJECT | Active | без изменений |
 
 ---
-## ПРАВИЛО ПЕРЕД ПАТЧЕМ (добавлено 02.05.2026)
 
-**ОБЯЗАТЕЛЬНО перед любым патчем затрагивающим result/msg/ответ пользователю:**
-1. curl GitHub raw текущего файла
-2. Найти все места формирования result/msg
-3. Сравнить с каноном — что должно показываться пользователю
-4. Только потом писать якорь и replace
-5. Не писать патч из памяти
+## ЧТО ПРИМЕНЕНО В ЭТОЙ СЕССИИ — `2353fc3`
 
-Причина: CLEAN_RESULT_TEXT_V1 — обнаружили что Engine:/MANIFEST:/системные ключи
-попадали в ответ пользователю из sample_template_engine.py строки 533-545,
-потому что не прочитали текущий код перед патчем.
+### PATCH_TOPIC2_FULL_GAP_CLOSE_V4 — 10 body edits
 
-## СЕССИЯ 02.05.2026
+| # | Файл | Где | Что |
+|---|------|-----|-----|
+| 1 | task_worker.py | `_p6e2_tw_handle_topic2_image_estimate` | Canonical engine first → P6E2 fallback. Маркер: `TOPIC2_CANONICAL_PHOTO_ROUTE_FIRST` |
+| 2 | stroyka_estimate_canon.py | `maybe_handle_stroyka_estimate` после `_parse_request` | PDF spec extraction via `pdf_spec_extractor.extract_spec`. Маркер: `TOPIC2_PDF_SPEC_EXTRACTED` |
+| 3 | stroyka_estimate_canon.py | `maybe_handle_stroyka_estimate` после `_parse_request` | OCR table extraction via `ocr_table_engine.image_table_to_excel`. Маркер: `TOPIC2_OCR_TABLE_EXTRACTED` |
+| 4 | stroyka_estimate_canon.py | `_search_prices_online` | Per-item search via `price_enrichment._openrouter_price_search` (5 позиций) |
+| 5 | stroyka_estimate_canon.py | `maybe_handle_stroyka_estimate` | `TOPIC2_AFTER_PRICE_CHOICE_GENERATION_STARTED` перед обоими `_generate_and_send` |
+| 6 | stroyka_estimate_canon.py | `maybe_handle_stroyka_estimate` после `_parse_request` | `TOPIC2_MULTIFILE_PROJECT_CONTEXT_*` маркеры |
+| 7 | stroyka_estimate_canon.py | `maybe_handle_stroyka_estimate` revision block | `TOPIC2_REVISION_BOUND_TO_PARENT` parent-binding |
+| 8 | task_worker.py | P6E67 `_update_task` wrapper | topic_2 blocked → `state=FAILED` + `TOPIC2_FORBIDDEN_FINAL_RESULT_BLOCKED` (было IN_PROGRESS) |
+| 9 | stroyka_estimate_canon.py | `_generate_and_send` после quality gate | `TOPIC2_PDF_TOTALS_MATCH_XLSX` маркер |
+| 10 | stroyka_estimate_canon.py | `_generate_and_send` перед `_update_task_safe` | AC gate (`TOPIC2_AC_GATE_OK` / `TOPIC2_AC_GATE_BLOCKED:*`) |
 
-| Patch | Commit | Status |
-|---|---:|---|
-| ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4 | e370c53 | VERIFIED ✅ |
-| ESTIMATE_SCENARIO_CLASSIFICATION_FIX_V1 | 04378dc | VERIFIED ✅ |
-| SAMPLE_ACCEPT_DIALOG_CONTEXT_FIX_V1 | 3d148d9 | VERIFIED ✅ |
-| DRIVE_AI_ORCHESTRA_ROOT_CLEANUP_V1 | 4f0b15b | VERIFIED ✅ |
-| DRIVE_AI_ORCHESTRA_ROOT_FOLDER_FINAL_CLEAN_V1 | 226769c | VERIFIED ✅ |
-| AREAL_REFERENCE_FULL_MONOLITH_V1 | current | VERIFIED ✅ |
+---
+
+## ОЖИДАЕМАЯ ПОСЛЕДОВАТЕЛЬНОСТЬ МАРКЕРОВ (верификация topic_2 после V4)
+
+```
+TOPIC2_CANONICAL_PHOTO_ROUTE_FIRST:attempting          # если фото
+TOPIC2_CANONICAL_PHOTO_ROUTE_FIRST:handled             # или fallback_to_p6e2
+TOPIC2_PDF_SPEC_EXTRACTED:<N>_rows                     # если PDF
+TOPIC2_OCR_TABLE_EXTRACTED:<N>_rows                    # если фото с таблицей
+TOPIC2_PRICE_CHOICE_CONFIRMED:median
+TOPIC2_CANONICAL_OLD_ROUTE_HARD_BLOCK:pending_intercepted
+TOPIC2_AFTER_PRICE_CHOICE_GENERATION_STARTED
+TOPIC2_TEMPLATE_SELECTED:<name>
+TOPIC2_XLSX_CANON_COLUMNS_OK:15
+TOPIC2_PDF_TOTALS_MATCH_XLSX:total=<N>:items=<N>
+TOPIC2_DRIVE_TOPIC_FOLDER_OK
+TOPIC2_LOGISTICS_DISTANCE_KM:<n>
+TOPIC2_AC_GATE_OK
+TOPIC2_TELEGRAM_DELIVERED:<msg_id>
+FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:estimate_generated
+TOPIC2_EXPLICIT_CONFIRM:from_user_done_command
+TOPIC2_DONE_CONTRACT_OK
+```
+
+---
+
+## OPEN CONTOURS (не закрыто)
+
+1. **Live-verify topic_2** — задача с полным ТЗ в Telegram, проверить маркеры + CANONICAL_PHOTO_ROUTE_FIRST
+2. **topic_500 adaptive output** — 16 режимов не реализованы
+3. **MEMORY_QUERY_GUARD_V1** — «что обсуждали» → попадает в estimate route
+4. **`_parse_price_sources` quality** — матчинг ключевых слов требует мониторинга
+
+---
+
+## ДИАГНОСТИКА С НУЛЯ
+
+```bash
+# 1. Воркер жив?
+systemctl is-active areal-task-worker
+
+# 2. Последние коммиты
+git -C /root/.areal-neva-core log --oneline | head -5
+
+# 3. Последняя topic_2 задача
+sqlite3 -readonly /root/.areal-neva-core/data/core.db \
+  "SELECT id, state, substr(result,1,80), updated_at FROM tasks
+   WHERE COALESCE(topic_id,0)=2 ORDER BY updated_at DESC LIMIT 3;"
+
+# 4. Маркеры задачи
+sqlite3 -readonly /root/.areal-neva-core/data/core.db \
+  "SELECT action, created_at FROM task_history WHERE task_id='TASK_ID' ORDER BY created_at;"
+```
+
+---
+
+## CANON REFS
+
+- `docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md`
+- `docs/CANON_FINAL/TOPIC_2_CANONICAL_ESTIMATE_CONTRACT.md`
+- `docs/HANDOFFS/LATEST_HANDOFF.md` (этот файл)
 
 ====================================================================================================
 END_FILE: docs/HANDOFFS/LATEST_HANDOFF.md
@@ -326,7 +116,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: docs/REPORTS/NOT_CLOSED.md
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: ccba2c9f7bff1eeda072acf7153815ff3d0a7db0d0fb4d3cb47771679dc049d1
+SHA256_FULL_FILE: 4c1a7e7f6a1b85b568ec833114368ad6463d59c3feb4a30b983826a10a6dee4a
 ====================================================================================================
 # AREAL-NEVA ORCHESTRA — ПОЛНЫЙ ПЛАН ЗАКРЫТИЯ КАНОНА
 # Версия: 30.04.2026 10:30 | Режим: FACT-ONLY
@@ -1143,8 +933,322 @@ grep -nE "def handle_voice_confirm|def voice_confirm|VOICE_CONFIRM_AWAITING_V1|v
 - проверить price search: минимум 2 разных домена или пометка об одном источнике
 - проверить topic isolation: topic_2 не должен показывать КЖ/АР файлы topic_210 без прямого запроса
 
+## FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3
+status: INSTALLED_NOT_VERIFIED
+needs_live_test:
+- topic_2: "смету дома 10×12 газобетон монолит 2 этажа 120 км коробка"
+- expected: template selected, correct sheet selected, template prices + online prices with sources + price choice menu
+- reply: "средняя плюс 10% да сделай"
+- expected: same estimate task continues, XLSX/PDF created from template, Drive or Telegram fallback links returned
+
+## FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_MEMORY_REVIVE_FIX
+status: INSTALLED_NOT_VERIFIED
+needs_live_test:
+- topic_2: "Доделай мне нормально эту задачу"
+- expected: bot finds previous valid estimate task raw_input, does not repeat old file-menu/result, starts STROYKA V3 price confirmation flow
+
 ====================================================================================================
 END_FILE: docs/REPORTS/NOT_CLOSED.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/REPORTS/NOT_CLOSED_20260504_ORCHESTRA_MASTER_CLOSE.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 68a17e25b0535b7ad8454766a2ed7671fe855bd58fd6263a15a6b8f1831d4ecf
+====================================================================================================
+# NOT_CLOSED_20260504_ORCHESTRA_MASTER_CLOSE
+
+Mode: FACT ONLY
+Date: 2026-05-04
+Source: current ChatGPT/server session, terminal outputs, GitHub main branch verification
+
+---
+
+## Confirmed closed in current session
+
+```text
+88c36e3 TOPIC2_REPLY_THREAD_FIX_V1
+bf6cece TOPIC500_PRE_SEND_VALIDATOR_AND_STARTUP_RECOVERY_HARD_GUARD_V1
+dc2f770 FINAL_TOPIC2_TOPIC5_TOPIC500_CLOSE_20260504_V1
+```
+
+Confirmed runtime state:
+
+```text
+areal-task-worker active
+telegram-ingress active
+areal-memory-api active
+rowid 5214 topic_id=2   DONE
+rowid 5215 topic_id=500 DONE
+rowid 5216 topic_id=5   DONE
+```
+
+Closed facts:
+
+```text
+TOPIC2_REPLY_THREAD_FIX_V1 installed in core/sample_template_engine.py
+send_reply_ex receives message_thread_id for topic_id > 0
+_t2sp_send and _t2real_send pass topic_id
+fallback Telegram API passes message_thread_id
+TOPIC500 duplicate/stale/startup-recovery guards installed in task_worker.py
+5214/5215/5216 current tasks closed in DB
+context_aggregator.py restored after temporary deletion status
+```
+
+---
+
+## P0 not closed / not proven
+
+```text
+1. TOPIC2_TZ_PARAM_LOCK_V1 not confirmed in current final code checks
+2. wall_insulation_mm=250 not confirmed as separate field
+3. roof_insulation_mm=300 not confirmed as separate field
+4. distance_km=50 reflected in result, but raw_input absolute override block not confirmed
+5. wall_type=каркас reflected in result, but strict raw_input lock block not confirmed
+6. TOPIC500_CONTEXT_SANITIZER_V1 not confirmed in current ai_router.py
+7. clean topic_500 live-test after patches not performed
+8. topic_500 result quality not proven against a new request with direct URLs/phones/prices
+9. topic_500 validator has markers, but no live proof that invalid result is blocked before Telegram send
+10. server git working tree contained untracked runtime/data files
+```
+
+---
+
+## P1 functional contour not closed
+
+```text
+1. Internet prices for topic_2 estimate not implemented/proven
+2. Estimate currently uses template M-110.xlsx / generated assumptions, not confirmed live supplier prices per line
+3. Price source labels not proven: LIVE_CONFIRMED / TEMPLATE_FALLBACK_PRICE / USER_ASSUMPTION
+4. Material clarification gate not implemented/proven
+5. System does not yet prove it asks for insulation type/brand/density when needed before final estimate
+```
+
+---
+
+## Required next patch set
+
+### Patch A — `core/sample_template_engine.py`
+
+```text
+Install/confirm TOPIC2_TZ_PARAM_LOCK_V1
+Parse wall insulation from current raw_input near утепл*
+Parse roof insulation from current raw_input near кровля
+Store wall_insulation_mm and roof_insulation_mm separately
+Parse distance_km from current raw_input and forbid memory/template overwrite
+Force wooden/beam/frame/barn words to wall_type=каркас and material=каркас
+Show both wall and roof insulation in final user result
+Write params to manifest for verification
+```
+
+### Patch B — `core/ai_router.py`
+
+```text
+Install TOPIC500_CONTEXT_SANITIZER_V1 on user_text before ONLINE_MODEL call
+Remove old supplier tables from context
+Remove Trust Score/TCO/НЕ ПОДТВЕРЖДЕНО/ЭТАП N fragments
+Remove naked [1]/[2]/[3] source markers without URL
+Ensure current user query remains intact
+```
+
+### Patch C — live verification after A/B
+
+```text
+Fresh topic_2 estimate request
+Fresh topic_500 procurement search request
+Check logs for Traceback/TypeError/SyntaxError
+Check DB state for DONE/AWAITING_CONFIRMATION without STALE_TIMEOUT
+Check Telegram target topic for topic_2 message
+Check topic_500 output contains 3 direct https URLs, prices, phones or phone-not-found markers
+```
+
+---
+
+## Canonical related file
+
+```text
+docs/HANDOFFS/HANDOFF_20260504_ORCHESTRA_MASTER_CLOSE.md
+```
+
+====================================================================================================
+END_FILE: docs/REPORTS/NOT_CLOSED_20260504_ORCHESTRA_MASTER_CLOSE.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/REPORTS/NOT_CLOSED_20260506_TOPIC2_STROYKA.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: a0accdca9e91b19cd70781341cf08c6f5bfe63b44090027dd9fe76fda69aa9a0
+====================================================================================================
+# NOT CLOSED 2026-05-06 — TOPIC2 STROYKA
+
+Mode: FACT ONLY
+Source: live terminal outputs supplied in current chat
+Scope: topic_id=2 only
+
+## Not closed by supplied live output
+
+### P0 — Final estimate generation after price bind is not verified
+
+Facts:
+
+- V5 guard printed `PATCH_TOPIC2_PRICE_CHOICE_BIND_AND_FINALIZE_V5_READY_TRUE`
+- History contains `TOPIC2_PRICE_CHOICE_CONFIRMED:median` for parent `f1ef9fab-e364-46ac-b0da-ab8ae5c85a21`
+- Runtime log contains `PATCH_TOPIC2_PRICE_CHOICE_BIND_V5_GENERATED parent=f1ef9fab-e364-46ac-b0da-ab8ae5c85a21 choice=median`
+- Final DB output still shows parent `f1ef9fab-e364-46ac-b0da-ab8ae5c85a21` in `WAITING_CLARIFICATION`
+- Final supplied output does not show `TOPIC2_XLSX_CREATED`
+- Final supplied output does not show `TOPIC2_PDF_CREATED`
+- Final supplied output does not show `TOPIC2_DRIVE_UPLOAD_XLSX_OK`
+- Final supplied output does not show `TOPIC2_DRIVE_UPLOAD_PDF_OK`
+- Final supplied output does not show `TOPIC2_TELEGRAM_DELIVERED`
+- Final supplied output does not show `TOPIC2_DONE_CONTRACT_OK`
+
+Required closure:
+
+```text
+After TOPIC2_PRICE_CHOICE_CONFIRMED:median on parent f1ef9fab-e364-46ac-b0da-ab8ae5c85a21,
+the engine must continue to final XLSX/PDF generation and delivery.
+```
+
+Acceptance:
+
+```text
+parent task state becomes DONE or AWAITING_CONFIRMATION only with artifact links
+history contains TOPIC2_XLSX_CREATED
+history contains TOPIC2_PDF_CREATED
+history contains TOPIC2_PDF_CYRILLIC_OK
+history contains TOPIC2_DRIVE_UPLOAD_XLSX_OK
+history contains TOPIC2_DRIVE_UPLOAD_PDF_OK
+history contains TOPIC2_TELEGRAM_DELIVERED
+history contains TOPIC2_DONE_CONTRACT_OK
+Telegram result contains valid Excel and PDF links
+```
+
+### P0 — Topic2 keeps reasking price menu on non-estimate status question
+
+Facts:
+
+- Task `ceac25be-a380-419c-9eec-a7b69b97da44` raw input was `[VOICE] Какая у тебя последняя задача? Ответь мне!`
+- It reached `WAITING_CLARIFICATION` and showed price choice menu before V5 requeue
+- History shows repeated `TOPIC2_PRICE_CHOICE_REQUESTED` on that task
+- This is not a direct estimate task text
+
+Required closure:
+
+```text
+Topic2 status/meta questions must answer current active task status, not show price menu.
+Only explicit price replies 1/2/3/4 or price words must bind to active price menu.
+```
+
+Acceptance:
+
+```text
+"Какая последняя задача?" returns current task/status summary
+it does not create a new price menu
+it does not bind price choice unless raw input contains explicit price choice
+```
+
+### P0 — Old bad DONE estimates quarantined, but not regenerated
+
+Facts:
+
+- V4 output: `bad_done_quarantined= 2`
+- DB output shows:
+  - `edcf944b-d386-43c7-8da6-f040f98e5272 | AWAITING_CONFIRMATION | PATCH_TOPIC2_LEGACY_BAD_DONE_BLOCKED_NO_PRICE_CONFIRM`
+  - `9b0626f1-eb6f-4b92-ba6a-9e28cb26be31 | AWAITING_CONFIRMATION | PATCH_TOPIC2_LEGACY_BAD_DONE_BLOCKED_NO_PRICE_CONFIRM`
+- No final artifact markers were shown for these tasks after quarantine
+
+Required closure:
+
+```text
+Legacy bad DONE estimates must either be regenerated after explicit price confirmation or remain blocked with clear user-visible state.
+They must not be counted as complete final estimates.
+```
+
+Acceptance:
+
+```text
+No legacy task remains in AWAITING_CONFIRMATION with median result and no confirmed price/artifact markers
+```
+
+### P1 — Photo recognition estimate contour not verified in current live output
+
+Facts:
+
+- Code markers show `core/photo_recognition_engine.py`
+- Log earlier showed `FIX_P6_TOPIC2_PHOTO_ROUTE_V1 skipped: _p6_handle_photo_20260504 not found`
+- Existing old photo tasks showed results, but final current patch output did not verify new photo→estimate→XLSX/PDF/Drive flow
+
+Required closure:
+
+```text
+Photo in topic_2 with estimate intent must route to photo recognition, then price choice, then XLSX/PDF/Drive artifact generation.
+```
+
+Acceptance:
+
+```text
+TOPIC2_PHOTO_RECOGNITION_DONE
+TOPIC2_PHOTO_CONTEXT_USED
+TOPIC2_PRICE_CHOICE_REQUESTED or TOPIC2_PRICE_CHOICE_CONFIRMED
+TOPIC2_XLSX_CREATED
+TOPIC2_PDF_CREATED
+TOPIC2_DRIVE_UPLOAD_XLSX_OK
+TOPIC2_DRIVE_UPLOAD_PDF_OK
+```
+
+### P1 — Internet price enrichment is not verified in final current output
+
+Facts:
+
+- User requirement: estimate pricing must use internet price check
+- Code markers show `core/price_enrichment.py`
+- Earlier history contains `FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:prices_shown`
+- Final current output did not show fresh price enrichment markers leading into final artifact generation
+
+Required closure:
+
+```text
+Estimate flow must perform price search/enrichment before price choice and final generation.
+```
+
+Acceptance:
+
+```text
+TOPIC2_PRICE_ENRICHMENT_STARTED
+TOPIC2_PRICE_ENRICHMENT_DONE
+price menu shown with internet/template price context
+confirmed price choice applied to generated XLSX/PDF
+```
+
+## Forbidden next actions
+
+- Do not patch `.env`
+- Do not patch credentials or sessions
+- Do not patch `google_io.py`
+- Do not patch `memory.db` schema
+- Do not patch `ai_router.py`
+- Do not patch `telegram_daemon.py`
+- Do not patch `reply_sender.py`
+- Do not patch systemd unit files
+- Do not change DB schema without explicit permission
+- Do not rewrite core architecture
+
+## Next diagnostic required before code patch
+
+```text
+Show parent task f1ef9fab-e364-46ac-b0da-ab8ae5c85a21 after V5:
+- task row
+- task_history actions after 07:42:41
+- memory pending estimate keys for topic_2
+- code window where V5 calls generation after price bind
+- log around PATCH_TOPIC2_PRICE_CHOICE_BIND_V5_GENERATED
+- artifact output folders for this task
+```
+
+====================================================================================================
+END_FILE: docs/REPORTS/NOT_CLOSED_20260506_TOPIC2_STROYKA.md
 FILE_CHUNK: 1/1
 ====================================================================================================
 
@@ -2200,6 +2304,1862 @@ counts: {"estimate_files": 6, "design_files": 231, "technadzor_files": 1, "formu
 
 ====================================================================================================
 END_FILE: docs/CANON_FINAL/OWNER_REFERENCE_FULL_WORKFLOW_CANON.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/CANON_FINAL/TECHNADZOR_DOMAIN_LOGIC_CANON.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: c87cf6fccbec4def0ef3c9c5a9aca213a1c926615fbfb0bda4c4ca51ada57e4f
+====================================================================================================
+# TECHNADZOR_DOMAIN_LOGIC_CANON
+# Канон системы технического надзора — логика работы и структура документов
+
+version: TECHNADZOR_DOMAIN_LOGIC_CANON_V1
+updated_at: 2026-05-04
+status: ACTIVE_CANON
+topic: topic_5 / ТЕХНАДЗОР
+author: Кузнецов Илья Владимирович
+
+---
+
+## Общая логика системы
+
+Цель системы — не "фото → ответ", а полноценное ведение технадзора по объектам.
+
+```
+Входные материалы
+→ понимание объекта и задачи
+→ сбор истории объекта
+→ нормализация всех материалов в карточки фактов
+→ анализ дефектов
+→ сверка с нормами и предыдущими актами
+→ уточнение, если данных не хватает
+→ текстовый технадзорный разбор или акт
+→ сохранение истории объекта для следующих осмотров
+```
+
+---
+
+## 1. Входные материалы
+
+Оркестр принимает как вход:
+
+- фото (одно или пачка)
+- папку с фото (Drive folder)
+- голос владельца
+- текст владельца
+- PDF акты (предыдущие или текущие)
+- DOCX шаблоны / черновики / замечания
+- XLSX реестры замечаний
+- скриншоты переписок
+- сообщения заказчика или подрядчика
+- проектную и исполнительную документацию
+
+**Главный принцип:** любой вход сначала разбирается как источник информации, а не сразу превращается в акт.
+
+---
+
+## 2. Определение контекста
+
+Перед любым действием оркестр обязан понять:
+
+- какой объект
+- какая папка объекта на Drive
+- какая дата выезда
+- это новый осмотр или продолжение старого
+- есть ли предыдущие акты
+- какие фото относятся к текущему выезду
+- кто автор информации: владелец / заказчик / подрядчик / документ / фото
+- нужен текстовый разбор или акт
+- куда можно сохранять результат
+
+Если объект, папка, режим или задача не ясны — оркестр задаёт **один конкретный вопрос**.
+
+---
+
+## 3. Карточка объекта
+
+По каждому объекту ведётся карточка (ObjectCard):
+
+```
+object_id           — уникальный идентификатор объекта
+object_name         — название объекта
+object_folder_url   — ссылка на Drive папку объекта
+client_folder_url   — клиентская папка
+service_folder_url  — служебная папка
+inspection_chain[]  — цепочка осмотров
+previous_acts[]     — список предыдущих актов
+current_open_items[]— открытые замечания
+closed_items[]      — закрытые замечания
+unresolved_items[]  — неустранённые замечания
+recommendations[]   — рекомендации
+last_visit_date     — дата последнего выезда
+last_act_no         — номер последнего акта
+```
+
+**Смысл:** следующий осмотр не начинается с нуля, а продолжает историю объекта.
+
+---
+
+## 4. Режимы работы
+
+Оркестр выбирает один из режимов:
+
+| Режим | Условие |
+|---|---|
+| `INITIAL_INSPECTION` | Объект новый, актов нет |
+| `FOLLOWUP_INSPECTION` | Есть один предыдущий акт |
+| `NEXT_INSPECTION` | Есть несколько актов, это третий и далее |
+| `ADDENDUM` | Нужно дополнить существующий акт |
+| `PHOTO_TECH_REPORT` | Только технический разбор без акта |
+| `CLARIFICATION_REQUIRED` | Не хватает данных для продолжения |
+
+---
+
+## 5. Карточка наблюдения (ObservationCard)
+
+Все материалы переводятся в единую карточку наблюдения:
+
+```
+ObservationCard:
+  источник          — OWNER_VOICE / OWNER_TEXT / PHOTO_EVIDENCE /
+                      PREVIOUS_ACT / CLIENT_TEXT / CONTRACTOR_TEXT /
+                      PROJECT_DOCUMENT / EXECUTIVE_DOCUMENT
+  автор             — владелец / заказчик / подрядчик
+  тип материала     — фото / голос / текст / документ
+  объект            — object_id
+  дата              — дата материала
+  что утверждается  — суть наблюдения
+  к какому фото/документу относится
+  подтверждено      — да / нет / частично
+  противоречие      — есть / нет
+  нужно уточнение   — да / нет
+```
+
+**Правило источников:**
+- `OWNER_VOICE` / `OWNER_TEXT` — высокий приоритет, но не заменяет техническую проверку
+- `CLIENT_TEXT` / `CONTRACTOR_TEXT` — заявление, не доказанный факт; формулировки: "по информации заказчика", "по информации подрядчика", "требуется фотофиксация результата"
+- Запрещено писать "устранено" только со слов подрядчика без фотоподтверждения
+
+---
+
+## 6. Карточка дефекта (DefectCard)
+
+Ядро системы. Из DefectCard строится текстовый разбор, акт, таблица замечаний, история объекта.
+
+```
+DefectCard:
+  фото_no           — порядковый номер фото в выезде
+  file_name         — реальное имя файла (IMG_4020.JPG, не Telegram ID)
+  source            — PHOTO_EVIDENCE / OWNER_VOICE / PREVIOUS_ACT
+  узел_место        — конкретный конструктивный элемент
+  что_видно         — фактическое описание без фантазии
+  дефект            — что именно не так
+  почему_плохо      — техническая причина
+  последствия       — что будет если не устранить
+  что_исправить     — конкретное действие
+  что_проверить     — что измерить / вскрыть / запросить у подрядчика
+  норма             — СП / ГОСТ / "норма не подтверждена"
+  статус_нормы      — CONFIRMED / PARTIAL / NOT_FOUND
+  статус_замечания  — см. раздел 12
+  нужна_проверка    — флаг ручной проверки
+  вопрос_владельцу  — если нужно уточнение
+```
+
+---
+
+## 7. Анализ фото
+
+Фото анализируются как материалы осмотра, а не как случайные картинки.
+
+По каждому фото оркестр формирует DefectCard в формате:
+
+```
+Фото №N — IMG_XXXX.JPG
+
+Что видно:
+[фактическое описание без фантазии]
+
+Узел / место:
+[конкретный элемент, если определяется]
+
+Выявленное замечание:
+[что именно не так]
+
+Почему это плохо:
+[техническая причина]
+
+Возможные последствия:
+[к чему может привести]
+
+Что нужно сделать:
+[конкретное действие]
+
+Что проверить на объекте:
+[что измерить, вскрыть, запросить]
+
+Нормативная отсылка:
+[СП / ГОСТ / "норма не подтверждена"]
+
+Статус:
+[подтверждено по фото / частично видно / требует уточнения]
+```
+
+Если фото неясное — не выдумывать. Писать "по фото однозначно не определяется" и задавать конкретный вопрос.
+
+---
+
+## 8. Анализ папки с фото (Drive folder)
+
+Если дана папка с фото:
+
+- найти все изображения
+- сохранить **реальные имена файлов** (IMG_4020.JPG, не Telegram ID)
+- сохранить порядок
+- обрабатывать пачками по 10–11 фото
+- группировать результаты по секциям, не по порядку фото
+- формировать **один общий разбор или один общий акт**
+- не делать отдельный акт на каждое фото
+
+Пример разбивки по батчам:
+```
+batch 1: IMG_5320 – IMG_5330  (11 фото)
+batch 2: IMG_5331 – IMG_5341  (11 фото)
+batch 3: IMG_5342 – IMG_5352  (11 фото)
+...
+```
+
+При ошибке части фото — продолжить остальные, проблемные вынести в "требует уточнения".
+Если анализ долгий — дать промежуточный ответ в Telegram:
+> "Принял. Нашёл папку, предыдущие акты и 61 фото. Начинаю технадзорный разбор."
+
+---
+
+## 9. Голос владельца
+
+Голос владельца = полноценное техническое задание.
+
+Из голоса нужно извлекать:
+- объект, папку, дату
+- что обнаружено владельцем (→ `owner_observation`)
+- что включить / не включать
+- нужен акт или разбор
+- куда класть результат
+- какие фото использовать
+
+Голос имеет **высокий приоритет**, но не заменяет техническую проверку.
+
+Если голос противоречит фото или документам — оркестр **не выбирает молча**, а уточняет.
+
+---
+
+## 10. Предыдущие акты
+
+Если по объекту есть предыдущие акты:
+
+- прочитать PDF / DOCX
+- извлечь: замечания, рекомендации, нормы, фотофиксацию, открытые замечания
+- сравнить с текущими фото и указаниями владельца
+
+Новый акт должен **отвечать на вопросы:**
+- что было выявлено раньше
+- что проверялось сейчас
+- что устранено / устранено частично / не устранено
+- что появилось новое
+- что требует доведения
+- что не проверялось на текущем выезде
+
+**Новый акт не пишется с нуля если есть история объекта.**
+
+---
+
+## 11. Статусы замечаний
+
+```
+НОВОЕ              — выявлено впервые на текущем выезде
+ПОДТВЕРЖДЕНО       — подтверждено по фото текущего выезда
+ЧАСТИЧНО_ВИДНО     — по фото частично определяется
+УСТРАНЕНО          — устранено, подтверждено по фото
+УСТРАНЕНО_ЧАСТИЧНО — устранено не полностью
+НЕ_УСТРАНЕНО       — не устранено, подтверждено по фото
+ТРЕБУЕТ_ДОВЕДЕНИЯ  — работы начаты, не завершены
+НЕ_ПРОВЕРЯЛОСЬ     — не попало в фото текущего выезда
+ТРЕБУЕТ_УТОЧНЕНИЯ  — недостаточно данных
+```
+
+Без статуса follow-up акт считается **неполным**.
+
+---
+
+## 12. Нормативная логика
+
+Оркестр ищет нормативную базу по каждому дефекту.
+
+**Запрещено выдумывать нормы.**
+
+| Ситуация | Действие |
+|---|---|
+| Найден документ и пункт | Указать документ и пункт |
+| Найден только документ | Указать документ без пункта |
+| Ничего не найдено | "норма не подтверждена" |
+| Дефект очевиден, норма не найдена | Дать техническое замечание и рекомендацию без нормы |
+
+**Базовая нормативная база:**
+- СП 16.13330 — стальные конструкции
+- СП 70.13330 — несущие и ограждающие конструкции
+- СП 28.13330 — защита строительных конструкций от коррозии
+- ГОСТ 23118 — конструкции стальные строительные
+- СП 48.13330 — организация строительства
+- СП 13-102 — обследование несущих строительных конструкций
+- ГОСТ 31937 — обследование и мониторинг технического состояния
+- СП 63.13330 — бетонные и железобетонные конструкции
+- СП 22.13330 — основания зданий и сооружений
+
+---
+
+## 13. Группировка дефектов
+
+Замечания группируются **по смыслу дефектов**, а не по порядку фото.
+
+**Базовые разделы:**
+```
+2.1 Опорные узлы колонн
+    подливка, опирание, зазоры, анкера, опорные плиты, контакт с основанием
+
+2.2 Сварные соединения
+    непровар, поры, прожоги, наплывы, отсутствие зачистки, некачественный шов
+
+2.3 Антикоррозионная защита
+    отсутствие покрытия, повреждение, коррозия, незащищённые швы, открытый металл
+
+2.4 Основание и водоотведение
+    замачивание, отсутствие уклонов, загрязнение основания, риск осадок
+
+2.5 Узлы крепления элементов покрытия
+    болтовые соединения, крепления прогонов, смещение элементов, отсутствие затяжки
+
+2.6 Связи, укосины, элементы жёсткости
+    неправильное примыкание, отсутствие жёсткости, деформация, некачественный монтаж
+
+2.7 Бетонные и железобетонные конструкции
+    трещины, сколы, раковины, отсутствие защитного слоя, дефекты бетонирования
+
+2.8 Кровля / фасад / ограждающие конструкции
+    примыкания, герметизация, крепёж, водоотведение, повреждения покрытия
+
+2.9 Прочие замечания
+    всё, что не попало в основные разделы
+```
+
+**Для других профилей объектов (бетон, кровля, инженерные сети) секции меняются через конфиг профиля**, а не переписыванием логики.
+
+---
+
+## 14. Логика последствий
+
+По каждому дефекту оркестр объясняет последствия. Примеры:
+
+| Дефект | Последствия |
+|---|---|
+| Плохое опирание колонны | Неравномерная передача нагрузки, деформация, снижение надёжности узла |
+| Дефект сварки | Снижение несущей способности, развитие трещин, потеря жёсткости |
+| Отсутствие антикоррозионной защиты | Развитие коррозии, уменьшение сечения элемента, сокращение срока службы |
+| Замачивание основания | Коррозия опорных элементов, ухудшение работы грунта, локальные просадки |
+| Неправильный крепёж | Ослабление соединения, вибрация, смещение, аварийное развитие дефекта |
+
+---
+
+## 15. Логика рекомендаций
+
+Рекомендации — конкретные, без общих фраз.
+
+**Запрещено:** "устранить нарушение"
+
+**Правильно:**
+- зачистить сварной шов до металлического блеска
+- выполнить повторную сварку дефектного участка
+- восстановить антикоррозионное покрытие
+- выполнить подливку опорного узла без пустот
+- проверить затяжку болтовых соединений и зафиксировать
+- выполнить фотофиксацию после устранения
+- предоставить исполнительную документацию
+- подтвердить соответствие проектному решению
+- обеспечить отвод воды от основания
+- выполнить повторный осмотр после исправления
+
+---
+
+## 16. Уточнения
+
+Если данных не хватает — оркестр задаёт **конкретный вопрос с привязкой к фото, объекту или акту**.
+
+**Правильно:**
+- "Это фото до устранения или после?"
+- "Этот узел — опорная часть колонны или крепление покрытия?"
+- "Это замечание включать в акт или оставить как рабочее?"
+- "Текущий документ делать как третий осмотр или как отдельное дополнение?"
+- "Эти фото к тому же объекту или к новому?"
+- "Нужно ли фиксировать это как неустранённое из прошлого акта?"
+- "Чистовой PDF положить в клиентскую папку объекта?"
+
+**Запрещено:**
+- "что строим"
+- "что это"
+- "пришлите шаблон"
+- "пришлите всё заново"
+- общий вопрос без привязки к конкретному фото, объекту или акту
+
+---
+
+## 17. Текстовый технадзорный разбор (PHOTO_TECH_REPORT)
+
+Структура ответа если акт не нужен:
+
+```
+Технический осмотр по фото
+
+Объект: [название]
+Дата / выезд: [дата]
+Основание: [по фото текущего выезда / по голосовому ТЗ / с учётом предыдущих актов]
+Режим: [первичный / повторный / технический разбор]
+Использованные материалы: [фото, голос, документы]
+
+Фото №1 — IMG_XXXX
+
+  Что видно: ...
+  Замечание: ...
+  Почему опасно: ...
+  Как исправить: ...
+  Что проверить: ...
+  Нормативная отсылка: ...
+  Статус: ...
+
+[Фото №2 — ...]
+
+Итоговый вывод:
+  1. Критичные замечания: ...
+  2. Замечания, требующие устранения: ...
+  3. Замечания, требующие уточнения: ...
+  4. Что необходимо сделать: ...
+  5. Что проверить после устранения: ...
+  6. Следующий шаг: нужен ли акт
+```
+
+---
+
+## 18. Структура акта осмотра
+
+Если нужен акт — оформляется как документ технадзора владельца:
+
+```
+АКТ ОСМОТРА ОБЪЕКТА № ДД.ММ/ГГ
+
+Методом визуального неразрушающего контроля
+
+Дата осмотра: [дата]
+Место осмотра: [адрес]
+Объект осмотра: [описание объекта]
+Метод обследования: визуальный неразрушающий контроль с выездом на объект
+Представитель подрядчика: [имя]
+Технический специалист: Кузнецов Илья Владимирович
+Ссылка на фотоматериалы: [Drive ссылка]
+
+На момент проведения осмотра проектная, рабочая и исполнительная
+документация на объект [представлена / не представлена].
+
+1. Общие сведения
+   Цель, метод, что проверялось.
+
+2. Сводка по предыдущим актам (если есть)
+   Какие акты были. Открытые замечания. Статус исполнения.
+
+3. Основание текущего осмотра
+   "Текущий осмотр выполнен в развитие акта № ... от ..."
+
+4. Установлено по факту осмотра
+
+   4.1 [Название секции]
+       [Описание дефекта]
+       Нормативная отсылка: [СП/ГОСТ]
+       Фотоматериалы: IMG_4020.JPG, IMG_4021.JPG, IMG_4022.JPG
+
+   4.2 [Следующая секция]
+       ...
+
+5. Рекомендовано к устранению
+   1. [Конкретное действие]
+   2. ...
+
+6. Возможные последствия при отсутствии устранения
+   [Описание]
+
+7. Таблица замечаний
+   № | фото | узел/место | нарушение | последствия | что сделать | норматив | статус
+
+   Для повторного осмотра:
+   № | замечание | по предыдущему акту | текущее состояние | статус | фото | норматив | что сделать
+
+8. Заключение
+   - Устранено: ...
+   - Не устранено: ...
+   - Требует доведения: ...
+   - Новые замечания: ...
+   - Что проверить на следующем осмотре: ...
+
+Технический специалист: Кузнецов Илья Владимирович
+Дата: [дата]
+```
+
+---
+
+## 19. Имена файлов
+
+**Финальный PDF:**
+```
+Акт_осмотра_<объект>_<дата>.pdf
+Пример: Акт_осмотра_ангар_Киевское_шоссе_04_05_2026.pdf
+```
+
+**DOCX черновик (только служебно):**
+```
+Черновик_акта_<объект>_<дата>.docx
+```
+
+**Запрещено в имени клиентского PDF:**
+- UUID / task_id
+- `/root` или системные пути
+- `smoke`, `debug`, `tmp`, `draft`
+
+---
+
+## 20. Клиентские и служебные материалы
+
+**Клиентская папка — только:**
+- фото объекта (оригиналы от владельца, не трогать)
+- итоговый PDF акта
+
+**Служебная папка / `_drafts` — только:**
+- DOCX черновики
+- JSON индексы
+- manifests, logs, кэши
+- object registry
+- временные файлы
+
+**Клиентскую папку нельзя засорять служебными файлами.**
+
+**Фото клиента запрещено:**
+- переименовывать
+- перемещать без команды владельца
+- удалять
+- сжимать
+
+---
+
+## 21. Идемпотентность
+
+Система не должна дублировать фото, акты, записи памяти, object registry.
+
+Для каждого фото хранить:
+```
+drive_file_id     — уникальный ID файла на Drive
+file_name         — реальное имя файла
+source_folder_id  — ID папки источника
+inspection_date   — дата осмотра
+indexed_at        — время индексации
+```
+
+Если фото уже индексировано — не копировать, не переименовывать, использовать существующую запись.
+Если папка уже создана — не создавать дубль с похожим именем.
+
+---
+
+## 22. Расширяемость на другие профили
+
+Ядро системы универсально:
+
+```
+InputItem → ObservationCard → DefectCard → GroupedReport → TextReport / Act
+```
+
+Для других направлений меняется **только профиль**:
+
+| Параметр | Металлокаркас | Другой профиль |
+|---|---|---|
+| Секции | Опорные узлы, сварка, коррозия... | Профиль объекта |
+| Нормативная база | СП 16, СП 70, ГОСТ 23118 | Нормы по направлению |
+| Vision prompt | "найди дефекты стальных конструкций" | По типу объекта |
+| Типовые дефекты | Перечень по металлокаркасу | По профилю |
+
+**Профили для будущего расширения:** бетон, кровля, фасад, инженерные сети, электрика, отделка.
+
+---
+
+## 23. Запрещено в любом документе системы
+
+- JSON, внутренние ID, task_id, /root пути, traceback
+- "я не знаю", "пришлите всё заново"
+- выдуманные нормы
+- выдуманные дефекты
+- пустые общие фразы
+- акт без фотофиксации
+- акт без вывода и рекомендаций
+- акт без статуса замечаний при повторном осмотре
+- "устранено" только со слов подрядчика
+
+---
+
+## 24. Итоговый принцип
+
+```
+Любой материал по объекту
+→ понять источник и контекст
+→ извлечь факты и заявления
+→ отделить доказанное от неподтверждённого
+→ собрать дефекты в DefectCard
+→ сверить с историей объекта
+→ проверить нормы
+→ задать точные вопросы при пробелах
+→ выдать технадзорный разбор или акт
+→ сохранить историю для следующего осмотра
+```
+
+Оркестр работает как **помощник технадзора** — понимает, что скинули, зачем, какой документ нужен, есть ли история объекта, и выдаёт документ в стиле реальных актов владельца.
+
+---
+
+## 25. Пути передачи материалов (два равноправных пути)
+
+Владелец передаёт материалы одним из двух путей:
+
+### Путь A — напрямую в Google Drive
+- Сам создаёт папку объекта или выезда
+- Сам загружает фото, PDF, DOCX, XLSX, видео
+- Затем в Telegram голосом или текстом поясняет:
+  - что это за папка и объект
+  - какая дата выезда
+  - что он увидел
+  - что нужно сделать
+  - нужен разбор или акт
+
+### Путь B — через Telegram
+- Скидывает одно или несколько фото/файлов
+- Сразу голосом или текстом поясняет:
+  - к какому объекту относятся файлы
+  - какое нарушение показано
+  - какие замечания нужно написать
+  - что включить в акт
+
+**Оба пути равноправны. Логика обработки одинакова для обоих.**
+
+---
+
+## 26. Модель задачи технадзора
+
+**Файл сам по себе — не задача.**
+
+```
+TechnadzorTask =
+  OwnerInstruction (голос или текст владельца)
+  + InputFiles     (фото, PDF, DOCX — из Drive или Telegram)
+  + ObjectContext  (карточка объекта, история, предыдущие акты)
+  + PreviousActs   (если есть)
+```
+
+После сборки задачи:
+
+```
+TechnadzorTask
+→ ObservationCards (нормализация всех источников)
+→ DefectCards      (атомарные дефекты по фото и голосу)
+→ grouped sections (2.1 Опорные, 2.2 Сварка, ...)
+→ один текстовый разбор или один акт
+```
+
+**Правила сборки задачи:**
+
+1. Если файлы уже лежат на Drive — найти папку по словам владельца, не требовать повторной загрузки.
+2. Если файлы пришли через Telegram — агрегировать несколько файлов в один контекст, не делать отдельную задачу на каждое фото.
+3. Если владелец пишет пояснение после нескольких фото — связать пояснение со всей последней пачкой фото.
+4. Если владелец пишет пояснения между группами фото — разделить фото на группы по пояснениям:
+   ```
+   фото 1–3 → "это сварка"       → секция "Сварные соединения"
+   фото 4–7 → "это опорные узлы" → секция "Опорные узлы"
+   ```
+5. Если голос описывает папку ("я загрузил папку сегодняшнего выезда") — связать голос с Drive-папкой по имени или дате, не по URL.
+
+---
+
+## 27. Буфер выезда и агрегация фото
+
+### Буфер выезда (Telegram-путь)
+Когда фото приходят через Telegram по одному или пачками:
+- каждое фото добавляется в буфер текущего выезда
+- сопроводительный текст или голос добавляется как `owner_comment` к последним фото
+- буфер хранится локально: `data/memory_files/chat_{id}/topic_5/visit_buffer.json`
+
+```json
+{
+  "photos": [
+    {
+      "file_name": "IMG_5320.JPG",
+      "owner_comment": "опорный узел, видна щель",
+      "added_at": 1234567890
+    }
+  ],
+  "owner_instructions": ["загрузил папку выезда, опорные узлы и сварка"],
+  "object_id": "angaar_kievskoe"
+}
+```
+
+Когда владелец даёт триггер ("сделай разбор", "сделай акт", "подведи итог"):
+- буфер сбрасывается
+- все фото обрабатываются как одна задача
+- результат — один разбор или один акт
+
+### Пакетная обработка (Drive-путь)
+Когда дана ссылка на папку или папка найдена по голосу:
+- найти все фото в папке
+- скачать пачками по 10–11
+- Vision на каждую пачку → DefectCards
+- агрегировать все DefectCards
+- один общий вывод
+
+### Запрещено
+- делать 61 акт из 61 фото
+- обрабатывать фото без owner_comment или owner_instruction, если контекст нужен
+- терять пояснение владельца
+- просить повторно загрузить файлы, которые уже есть на Drive или в буфере
+
+### Уточнение при неясной связи
+Если оркестр не понял связь файлов и пояснений — задаёт конкретный вопрос:
+- "Фото IMG_5320–IMG_5325 относятся к опорным узлам?"
+- "Эти фото включать в акт или только в рабочий разбор?"
+- "Это новый объект или продолжение объекта ангар Киевское шоссе?"
+- "Это фото до устранения или после?"
+
+---
+
+## 28. Язык вывода и именования
+
+### Правило
+**Код — английский. Всё, что видит владелец или заказчик — только русский.**
+
+### Запрещено на английском
+- названия клиентских файлов
+- текст актов и технических разборов
+- Telegram-ответы
+- названия Drive-папок для клиента
+- описания дефектов, рекомендации, выводы
+- таблицы акта, подписи к фото
+- служебные пояснения владельцу
+
+### Разрешён английский только внутри кода
+- имена функций и классов
+- внутренние enum и константы
+- технические маркеры патчей
+- служебные переменные
+
+### Примеры правильных имён клиентских файлов
+```
+Акт_осмотра_ангар_Киевское_шоссе_04_05_2026.pdf
+Технический_разбор_ангар_Киевское_шоссе_04_05_2026.pdf
+Черновик_акта_ангар_Киевское_шоссе_04_05_2026.docx
+```
+
+### Примеры запрещённых имён
+```
+inspection_report.pdf
+defect_report.pdf
+technadzor_summary.pdf
+photo_analysis.pdf
+batch_report.pdf
+```
+
+### Примеры правильных Telegram-ответов
+```
+Принял. Нашёл папку выезда, 61 фото и предыдущие акты. Начинаю технадзорный разбор.
+✓ Принял фото #1 — IMG_5320.JPG
+Не удалось проанализировать фото. Пришли крупнее или опиши дефект текстом.
+```
+
+### Примеры запрещённых Telegram-ответов
+```
+Accepted. Found inspection folder and starting batch analysis.
+Detected support node issue. Need to verify gap.
+```
+
+---
+
+## 29. ActiveTechnadzorFolder — активная рабочая папка
+
+Оркестр поддерживает сущность текущей рабочей папки для topic_5.
+
+```
+ActiveTechnadzorFolder:
+  chat_id              — id чата
+  topic_id             — всегда 5
+  object_name          — название объекта
+  visit_date           — дата выезда
+  drive_folder_url     — ссылка на Drive-папку
+  drive_folder_id      — id папки на Drive
+  folder_name          — имя папки
+  client_facing        — True / False / None (не определено)
+  mode_hint            — initial / repeat / extension
+  active_since         — время открытия
+  last_update          — время последнего обновления
+  owner_instructions   — список пояснений владельца
+  status               — OPEN / COLLECTING / READY_TO_PROCESS / CLOSED
+```
+
+Пока `ActiveTechnadzorFolder` открыта:
+- все следующие фото относятся к ней
+- все следующие документы относятся к ней
+- все голосовые и текстовые пояснения относятся к ней
+- команда "сделай разбор/акт" работает именно по ней
+
+`ActiveTechnadzorFolder` не заменяет `ObjectCard`. Это разные сущности:
+- `ObjectCard` — постоянная история объекта по всем выездам
+- `ActiveTechnadzorFolder` — сессионный контекст текущего рабочего сбора
+
+---
+
+## 30. Команды управления активной папкой
+
+Оркестр обязан понимать следующие команды владельца:
+
+**Открыть / выбрать папку:**
+- "работаем по этой папке"
+- "открыть папку"
+- "это текущий объект"
+- "это текущий выезд"
+
+**Информация:**
+- "показать активную папку"
+- "что сейчас активно"
+
+**Сменить / закрыть:**
+- "сменить папку"
+- "это другой объект"
+- "это другой выезд"
+- "закрыть сбор материалов"
+- "очистить буфер текущей папки"
+
+**Результат:**
+- "сделай разбор"
+- "сделай акт"
+- "сделай документ"
+
+**Управление материалами:**
+- "добавить эти фото к замечанию [название]"
+- "это не включать в акт"
+- "это включить в акт"
+- "это замечание заказчика"
+- "это замечание подрядчика"
+- "это мои замечания как технадзора"
+
+При смене объекта или папки — не смешивать материалы. Текущий сбор приостанавливается или закрывается.
+
+---
+
+## 31. COLLECTING_VISIT_MATERIALS — режим накопления
+
+До команды "сделай разбор / акт / документ" оркестр находится в режиме:
+
+```
+COLLECTING_VISIT_MATERIALS
+```
+
+В этом режиме оркестр:
+- принимает фото, документы, видео
+- принимает голосовые и текстовые пояснения
+- связывает пояснения с последними файлами
+- обновляет `ActiveTechnadzorFolder`
+- **не создаёт финальный документ без команды владельца**
+
+Правильные короткие ответы в режиме накопления:
+```
+Принял, добавил 3 фото к замечанию «опорные узлы»
+Принял, 5 фото связал с разделом «сварные соединения»
+Запомнил: это фото не включать в акт
+Активная папка: Выезд ангар Киевское ш 04.05.2026
+Принял пояснение и связал с последними фото
+```
+
+Запрещено в режиме накопления:
+- делать акт или разбор на каждое отдельное фото
+- отправлять 10 отчётов на 10 фото
+- терять голосовые пояснения
+- терять связь "фото → замечание"
+- смешивать материалы разных папок
+
+---
+
+## 32. VisitMaterial — материал выезда
+
+Атомарная единица сбора в рамках одного выезда.
+
+```
+VisitMaterial:
+  material_id          — внутренний id
+  source               — TELEGRAM / DRIVE
+  file_type            — PHOTO / VIDEO / PDF / DOCX / XLSX / TEXT / VOICE / OTHER
+  file_name            — реальное имя файла
+  drive_url            — ссылка на Drive (если есть)
+  telegram_message_id  — id сообщения в Telegram (если пришло через TG)
+  added_at             — время добавления
+  owner_comment        — пояснение владельца к этому материалу
+  group_label          — к какой группе/замечанию относится
+  include_in_report    — True / False
+  include_in_act       — True / False
+  defect_hint          — краткое описание дефекта от владельца
+  section_hint         — подсказка по разделу (опорные узлы / сварка / ...)
+  status               — PENDING / LINKED / EXCLUDED / PROCESSED
+```
+
+Правило связи пояснений с материалами:
+- Если владелец пишет комментарий **после** пачки фото → комментарий связывается со всей последней пачкой
+- Если владелец пишет комментарии **между** группами фото → каждая группа получает свой комментарий
+- Если комментарий пришёл **до** фото → сохраняется как pending и связывается со следующей пачкой
+
+---
+
+## 33. VisitPackage — пакет выезда
+
+Когда владелец даёт команду "сделай разбор / акт / документ", оркестр собирает `VisitPackage`.
+
+```
+VisitPackage:
+  active_folder        — ActiveTechnadzorFolder
+  object_name          — название объекта
+  visit_date           — дата выезда
+  previous_acts        — список предыдущих актов по объекту
+  photos               — список VisitMaterial (file_type=PHOTO)
+  videos               — список VisitMaterial (file_type=VIDEO)
+  documents            — список VisitMaterial (PDF / DOCX / XLSX)
+  owner_instructions   — все голосовые и текстовые ТЗ владельца
+  client_comments      — заявления заказчика
+  contractor_comments  — заявления подрядчика
+  material_groups      — сгруппированные материалы по замечаниям
+  excluded_materials   — материалы, исключённые из результата
+  requested_output     — act / text_report / document / table
+```
+
+После сборки `VisitPackage` — единая схема обработки:
+
+```
+VisitPackage
+→ ObservationCards (нормализация всех источников)
+→ DefectCards      (анализ по фото, голосу, документам)
+→ grouped sections (группировка по смыслу дефектов)
+→ один текстовый разбор или один документ
+```
+
+`VisitPackage` собирается **один раз** по команде владельца. До команды — режим `COLLECTING_VISIT_MATERIALS`.
+
+---
+
+# TECHNADZOR_DOMAIN_LOGIC_CANON_V2
+version: TECHNADZOR_DOMAIN_LOGIC_CANON_V2
+updated_at: 2026-05-05
+source_id: topic5_full_operational_logic_final
+extends: TECHNADZOR_DOMAIN_LOGIC_CANON_V1
+supersedes: NONE
+status: ADDENDUM_NOT_REPLACEMENT
+
+## 1. Главная модель работы
+
+Google Drive = место хранения файлов и рабочий контейнер объекта / выезда
+
+Telegram topic_5 = живой интерфейс управления:
+- голосовые пояснения владельца
+- текстовые пояснения владельца
+- команды
+- уточнения
+- привязка фото к замечаниям
+- привязка файлов к объекту
+- команда на итоговый результат
+
+Файлы сами по себе не являются задачей.
+
+Задача = активная папка + файлы + пояснения владельца + объект + история объекта + команда на результат.
+
+Правильная схема:
+
+```
+Владелец создаёт или выбирает папку на Google Drive
+→ в Telegram говорит, что это за папка, объект, дата, что он увидел и что нужно сделать
+→ оркестр открывает ActiveTechnadzorFolder
+→ все следующие материалы и пояснения связывает с этой папкой
+→ копит материалы
+→ по команде "сделай разбор / акт / документ" собирает один общий результат
+```
+
+---
+
+## 2. Где хранятся материалы
+
+topic_5 = общая рабочая папка технадзора для владельца и оркестра.
+
+Внутри topic_5 могут быть:
+
+**A. Папки объектов / выездов** — рабочие или клиентские папки по конкретному объекту.
+Пример: `topic_5 / Выезд ангар Киевское ш`
+
+**B. Подпапки фото** — фото текущего выезда.
+Пример: `topic_5 / Выезд ангар Киевское ш / фото / Выезд 04.05.2026`
+
+**C. Служебные папки** — только для оркестра и владельца:
+`topic_5 / TECHNADZOR`, `_templates`, `_drafts`, `_system`, `_manifests`, `_archive`, `_tmp`
+
+**D. Локальные служебные папки сервера (подтверждённые):**
+`data/templates/technadzor`, `data/templates/technadzor/objects`,
+`data/memory_files/chat_<chat_id>/topic_5`, `/tmp` (временные локальные артефакты)
+
+Пути `outputs/technadzor` и `runtime/technadzor` — статус UNKNOWN до подтверждения live-файлом или кодом.
+
+---
+
+## 3. Клиентские и служебные папки
+
+**Client-facing папка** = папка, которую можно показать или отправить заказчику.
+
+В client-facing папке **разрешено** хранить:
+- исходные фото объекта
+- чистовой итоговый документ
+- чистовой PDF акта
+- чистые приложения к акту
+- материалы, которые владелец явно разрешил показать заказчику
+
+В client-facing папке **запрещено** хранить:
+- черновики, DOCX draft (без отдельной команды владельца), JSON, manifests, logs, debug, temp, cache
+- task_id файлы, object registry, runtime files, smoke/test files
+- внутренние файлы оркестра, файлы с /root путями
+- случайные технические документы
+
+Служебные материалы хранятся вне клиентской папки:
+рабочие DOCX, черновики, индексы, кэши, object registry, временные и технические файлы.
+
+DOCX не запрещён вообще — DOCX запрещён в клиентской папке, если это рабочий черновик или служебная версия.
+Если владелец явно попросил дать заказчику Word/DOCX/редактируемый документ — можно, но только по отдельной команде.
+По умолчанию заказчику отдаётся чистовой PDF или иной явно согласованный формат.
+
+---
+
+## 4. Два равноправных пути передачи материалов
+
+**Путь A — напрямую в Google Drive:**
+- владелец создаёт папку объекта/выезда, загружает материалы
+- потом в Telegram говорит голосом или текстом: что за папка, объект, дата, что увидел, замечания, нужен акт или разбор
+- оркестр находит папку, берёт материалы, не просит повторно загрузить, использует пояснение как ТЗ
+
+**Путь B — через Telegram:**
+- владелец скидывает фото/файлы в topic_5, поясняет голосом или текстом
+- оркестр агрегирует файлы в текущий сбор, НЕ делает отдельную задачу на каждое фото, НЕ делает отдельный акт на каждое фото
+- связывает пояснение с последними файлами
+- при необходимости копирует материалы в активную Drive-папку
+- если активная папка не задана — задаёт конкретный вопрос
+
+---
+
+## 5. ActiveTechnadzorFolder — поля
+
+```
+chat_id
+topic_id          = 5
+object_name
+visit_date
+drive_folder_url
+drive_folder_id
+folder_name
+client_facing     flag
+mode_hint
+active_since
+last_update
+owner_instructions
+status
+```
+
+Пока ActiveTechnadzorFolder активна:
+- все следующие фото, документы, голосовые пояснения, текстовые замечания относятся к ней
+- команды "сделай разбор / акт / документ" работают по ней
+
+---
+
+## 6. Команды управления активной папкой
+
+Оркестр понимает:
+- открыть папку / работаем по этой папке / это текущий объект / это текущий выезд
+- показать активную папку
+- сменить папку / закрыть сбор / очистить буфер текущей папки
+- сделать разбор / сделать акт / сделать документ
+- добавить эти фото к замечанию
+- это не включать в акт / это включить в акт
+- это замечание заказчика / подрядчика / мои замечания как технадзора
+
+Если активная папка не задана и пришли материалы:
+- есть последняя папка → "Отнести эти материалы к текущей папке '...'?"
+- нет папки → "К какой папке/объекту отнести эти материалы?"
+
+---
+
+## 7. Режим COLLECTING_VISIT_MATERIALS
+
+До команды "сделай разбор/акт/документ" оркестр в режиме COLLECTING_VISIT_MATERIALS:
+- принимает фото, документы, видео, голосовые пояснения, текстовые замечания
+- связывает замечания с файлами
+- НЕ создаёт финальный документ без команды владельца
+
+Правильные короткие ответы в режиме накопления:
+- "Принял, добавил 3 фото к замечанию 'опорные узлы'"
+- "Принял, эти 5 фото связал с разделом 'сварные соединения'"
+- "Запомнил: это фото не включать в акт"
+- "Активная папка: ..."
+- "Принял пояснение и связал его с последними фото"
+
+Запрещено:
+- делать акт/задачу/ответ на каждое фото
+- отправлять 10 отчётов на 10 фото
+- терять голосовые пояснения или связь "фото → замечание"
+- смешивать разные папки
+- спрашивать "что строим?"
+- просить повторно файлы, если они уже есть на Drive или в Telegram
+
+---
+
+## 8. VisitMaterial — поля
+
+```
+material_id
+source             TELEGRAM / DRIVE
+file_type          PHOTO / VIDEO / PDF / DOCX / XLSX / TEXT / VOICE / OTHER
+file_name
+drive_url
+telegram_message_id
+added_at
+owner_comment
+group_label
+include_in_report  true/false
+include_in_act     true/false
+defect_hint
+section_hint
+status
+```
+
+Пример 1: владелец скинул фото 1–3, сказал "это опорные узлы, плохо выполнена подливка"
+→ group=опорные узлы, defect_hint=плохая подливка, files=фото 1–3
+
+Пример 2: владелец скинул фото 4–7, написал "это сварные швы, надо проверить качество"
+→ group=сварные соединения, defect_hint=проверить качество, files=фото 4–7
+
+Если замечание пришло после нескольких фото → связать с последней пачкой.
+Если замечания между пачками → разделить материалы на группы по порядку.
+
+---
+
+## 9. VisitPackage — поля
+
+```
+active_folder
+object_name
+visit_date
+previous_acts
+photos
+videos
+documents
+owner_instructions
+client_comments
+contractor_comments
+material_groups
+excluded_materials
+requested_output
+```
+
+Схема после сборки:
+```
+VisitPackage → ObservationCard → DefectCard → grouped sections → один результат
+```
+
+---
+
+## 10. ObservationCard — поля и роли источника
+
+Поля: источник, автор, роль автора, тип материала, объект, дата, что утверждается, к каким файлам относится, подтверждено/нет, есть ли противоречие, нужен ли вопрос владельцу.
+
+Роли источника: OWNER / CLIENT / CONTRACTOR / DOCUMENT / PHOTO / PREVIOUS_ACT / UNKNOWN
+
+---
+
+## 11. DefectCard — поля
+
+```
+фото №, имя файла, источник, узел/место, что видно, дефект/замечание,
+почему плохо, возможные последствия, что исправить, что проверить на объекте,
+нормативная отсылка, статус нормы, статус замечания, источник подтверждения,
+вопрос владельцу (если нужен)
+```
+
+Иерархия источников:
+- Голос/текст владельца = техническое ТЗ
+- Фото = визуальное подтверждение
+- Предыдущий акт = история объекта
+- Сообщение заказчика = заявление заказчика (не доказанный факт)
+- Сообщение подрядчика = заявление подрядчика (не доказанный факт)
+- Проект/исполнительная документация = основание для проверки
+
+Запрещено писать "устранено" только со слов заказчика или подрядчика.
+
+---
+
+## 12. Противоречия
+
+- Владелец сказал одно, фото показывает другое → задать уточнение
+- Подрядчик пишет "устранено", фото не подтверждает → "устранение по фото не подтверждено"
+- Предыдущий акт фиксирует дефект, текущих фото по узлу нет → "не проверялось на текущем выезде"
+- Заказчик сообщает факт без материалов → "по информации заказчика, требуется проверка"
+- Подрядчик заявляет о выполнении работ → "по информации подрядчика, требуется фотофиксация и проверка на объекте"
+
+---
+
+## 13. Статусы замечаний
+
+- новое замечание
+- подтверждено по фото
+- частично видно по фото
+- устранено
+- устранено частично
+- не устранено
+- требует доведения
+- не проверялось на текущем выезде
+- требует уточнения
+
+---
+
+## 14. Нормативная логика
+
+- Найден документ и пункт → указать оба
+- Найден только документ → указать без пункта
+- Ничего не найдено → "норма не подтверждена"
+
+Запрещено выдумывать пункты СП/ГОСТ.
+
+Если дефект технически очевиден, норма не найдена: описать замечание, последствия, рекомендации, в нормативе указать "норма не подтверждена".
+
+---
+
+## 15. Группировка дефектов
+
+Группировать по смыслу, не по порядку фото.
+
+Базовые разделы:
+- опорные узлы
+- сварные соединения
+- антикоррозионная защита
+- основание и водоотведение
+- крепления и узлы покрытия
+- связи / укосины / элементы жёсткости
+- бетонные и железобетонные конструкции
+- кровля / фасад / ограждающие конструкции
+- прочие замечания
+
+Секции адаптируются через профиль объекта — не хардкодятся под ангар.
+
+---
+
+## 16. Пачки фото
+
+- Не делать отдельный акт/ответ на каждое фото
+- Один выезд = один разбор или один документ
+- 61 фото = материалы одного выезда ≠ 61 акт
+- Фото — приложения/доказательства внутри одного результата
+
+Batch = организация очереди и группировка материалов внутри оркестра.
+Batch НЕ означает внешний Vision.
+Batch НЕ означает один API request с несколькими фото.
+Vision — optional и только после явного разрешения владельца (EXTERNAL_PHOTO_ANALYSIS_ALLOWED=true).
+
+---
+
+## 17. Прогресс при длинной обработке
+
+Запрещено молчать до таймаута.
+
+Примеры:
+- "Принял. Нашёл активную папку, материалы и предыдущие акты. Начинаю технадзорный разбор"
+- "Обработано 20 из 61 фото"
+
+---
+
+## 18. Предыдущие акты и история объекта
+
+Если акты есть:
+- новый документ не пишется с нуля
+- учитываются прошлые замечания со статусами
+- должен быть раздел "Связь с предыдущими актами"
+- фиксируется: что было ранее, что проверяется сейчас, что устранено/не устранено/новое
+
+Если PDF предыдущего акта не распарсился: не выдумывать, писать "предыдущий акт найден, содержание требует ручной сверки".
+
+Если актов нет: создать первичную историю объекта.
+
+---
+
+## 19. Формат результата
+
+- Только разбор → чистый русский текст, без лишних файлов
+- Документ → формат по команде владельца (current_supported: PDF / DOCX / XLSX / текст в Telegram)
+- Акт → один акт по выезду, не по каждому фото
+- Документ для заказчика → только чистовой русский, без task_id, /root, JSON, debug, английских названий
+
+---
+
+## 20. Возможные итоговые форматы
+
+current_supported: PDF, DOCX/Word, XLSX, текстовый разбор в Telegram, таблица/реестр замечаний, приложение к акту.
+future_optional: Google Docs (не реализован в текущем коде — не указывать как доступный).
+
+Главное: формат по задаче и назначению документа. Один жёсткий формат не хардкодить.
+
+---
+
+## 21. Имена клиентских файлов
+
+Клиентские и пользовательские файлы называются по-русски.
+
+Правильно:
+- `Акт_осмотра_ангар_Киевское_шоссе_04_05_2026.pdf`
+- `Технический_разбор_ангар_Киевское_шоссе_04_05_2026.pdf`
+- `Реестр_замечаний_ангар_Киевское_шоссе_04_05_2026.xlsx`
+- `Черновик_акта_ангар_Киевское_шоссе_04_05_2026.docx`
+
+Запрещено в клиентском имени: task_id, uuid, smoke, tmp, runtime, debug, английские технические названия.
+
+---
+
+## 22. Язык вывода
+
+Всё, что видит владелец или заказчик — русский язык:
+Telegram-ответы, акты, разборы, имена клиентских файлов, таблицы, рекомендации, описания дефектов, подписи к фото, выводы.
+
+Английский — только внутри кода: функции, классы, enum, маркеры, переменные, служебные структуры.
+
+---
+
+## 23. Роль голоса владельца
+
+Голос владельца = полноценное техническое ТЗ.
+
+Извлекать: объект, папку, дату, что обнаружено, что включить/не включать, нужен акт или разбор, куда класть результат, какие фото использовать, что проверить по нормам.
+
+Если голос противоречит фото или документам: уточнить у владельца, не выбирать молча.
+
+---
+
+## 24. Тексты заказчика и подрядчика
+
+Учитывать как заявления, не как доказанный факт.
+
+Правильные формулировки:
+- "по информации заказчика"
+- "по информации подрядчика"
+- "подтверждение по фото отсутствует"
+- "требуется проверка на объекте"
+- "требуется фотофиксация результата"
+
+Запрещено писать "устранено" только со слов подрядчика.
+
+---
+
+## 25. Если активная папка не задана
+
+Спросить: "К какой папке/объекту отнести эти материалы?"
+Если есть последний активный объект: "Отнести эти материалы к текущей папке '...'?"
+
+---
+
+## 26. Смена объекта или папки
+
+Если владелец говорит "работаем по новой папке / другой объект / другой выезд":
+- закрыть/приостановить текущий сбор
+- открыть новую ActiveTechnadzorFolder
+- не смешивать материалы разных объектов
+- не переносить старые материалы без команды
+
+---
+
+## 27. Структура текстового технадзорного разбора
+
+- объект
+- дата / выезд
+- основание анализа
+- какие материалы использованы
+- режим осмотра
+- замечания по фото
+- последствия
+- рекомендации
+- нормы
+- что требует уточнения
+- итоговый вывод
+- нужен ли акт
+
+---
+
+## 28. Структура акта осмотра
+
+АКТ ОСМОТРА ОБЪЕКТА №, дата, место, объект, метод обследования, технический специалист, основание осмотра, связь с предыдущими актами (если есть), общие сведения, установлено по факту осмотра, разделы 2.1/2.2/2.3, нормативные отсылки, фотоматериалы, рекомендации, последствия, таблица замечаний, заключение, подпись.
+
+---
+
+## 29. Таблица замечаний
+
+Первичный осмотр:
+`№ | фото | узел/место | нарушение | последствия | что сделать | норматив | статус`
+
+Повторный осмотр:
+`№ | замечание | что было по пред. акту | текущее состояние | статус | фото тек. осмотра | норматив | что сделать`
+
+---
+
+## 30. Первичный осмотр
+
+- создать первичную историю объекта
+- зафиксировать все дефекты, дать рекомендации, указать последствия
+- зафиксировать открытые замечания
+- сохранить как основу для следующих осмотров
+
+---
+
+## 31. Повторный / следующий осмотр
+
+- не писать документ с нуля
+- продолжать историю
+- сравнивать старые замечания с текущими материалами
+- давать статус каждому замечанию
+- добавлять новые замечания
+- формировать вывод по динамике устранения
+
+---
+
+## 32. Расширяемость через профили
+
+Ядро одно:
+```
+InputMaterials → VisitPackage → ObservationCard → DefectCard → GroupedDefects → TextReport/Act/Document
+```
+
+Меняются только профили: металлокаркас / бетон / кровля / фасад / инженерные сети / электрика / отделка.
+
+Профиль задаёт: секции, нормы, типовые дефекты, структуру документа.
+Профиль может задавать optional vision prompt, но Vision запускается только при EXTERNAL_PHOTO_ANALYSIS_ALLOWED=true и явном разрешении владельца.
+
+---
+
+## 33. Guard внешнего анализа фото
+
+EXTERNAL_PHOTO_ANALYSIS_ALLOWED = False по умолчанию.
+
+Без явного разрешения владельца запрещено:
+- OpenRouter Vision
+- Google Gemini Vision
+- OpenAI Vision
+- любой внешний Vision API
+- отправка оригиналов фото наружу
+- отправка сжатых копий фото наружу
+- model fallback по Vision
+- смена Vision-модели без команды владельца
+
+Если фото пришли без разрешения на внешний Vision:
+- сохранить и привязать материалы к активной папке
+- использовать голос/текст владельца
+- использовать предыдущие акты
+- использовать документы
+- если данных не хватает — задать конкретный вопрос
+- фото наружу не отправлять
+
+---
+
+## 33a. Drive canonical layer
+
+Любая запись в Drive — только через канонический topic-aware слой:
+
+```
+core/topic_drive_oauth.py
+upload_file_to_topic
+AI_ORCHESTRA/chat_<chat_id>/topic_<topic_id>/
+```
+
+Запрещено:
+- flat folders (без chat_id / topic_id)
+- upload в корень AI_ORCHESTRA
+- служебные файлы в client-facing папку
+- JSON / logs / debug / manifests / runtime в client-facing папку
+
+---
+
+## 34. Итоговая рабочая схема
+
+```
+Владелец → создаёт/выбирает Drive-папку
+→ в Telegram: "работаем по этой папке, объект ..., все материалы сюда"
+→ Оркестр: открывает ActiveTechnadzorFolder
+→ Владелец: загружает фото/документы через Drive или Telegram, поясняет голосом/текстом
+→ Оркестр: копит VisitMaterial, связывает пояснения с файлами, НЕ делает документы на каждое фото
+→ Владелец: "сделай разбор" / "сделай акт" / "сделай документ"
+→ Оркестр: собирает VisitPackage → анализирует → выдаёт один общий результат
+```
+
+---
+
+## 34. Главный принцип
+
+```
+Google Drive папка = контейнер работы
+Telegram           = пояснение и управление
+Фото/файлы         = материалы
+Голос/текст владельца = техническое ТЗ и привязка замечаний
+Оркестр            = связывает файлы с замечаниями и объектом
+Финал              = один разбор или один документ по всей задаче
+```
+
+---
+
+## 35. Разрешение конфликта §20 vs Vision resize
+
+**§20 TECHNADZOR_DOMAIN_LOGIC_CANON_V1:** "Фото клиента запрещено: сжимать"
+
+**P6H_VISION_RESIZE_V1** создаёт уменьшенную копию фото перед отправкой во внешний Vision API.
+
+**Разрешение:**
+
+Правило §20 означает: нельзя сжимать и сохранять оригинал клиентского фото в изменённом виде.
+
+Resize перед Vision **допустим** при одновременном выполнении всех условий:
+1. `EXTERNAL_PHOTO_ANALYSIS_ALLOWED = True` — владелец явно разрешил внешний Vision
+2. Resize создаёт **временную копию** в `/tmp` — не на Drive, не в data/
+3. Временная копия **удаляется сразу** после Vision-вызова (try/unlink)
+4. Оригинал фото **не изменяется** и **не удаляется**
+5. Сжатая копия **нигде не сохраняется** постоянно
+
+Если хоть одно условие нарушено — resize запрещён.
+
+Если `EXTERNAL_PHOTO_ANALYSIS_ALLOWED = False` (по умолчанию) — resize не вызывается вообще, §20 не нарушается.
+
+====================================================================================================
+END_FILE: docs/CANON_FINAL/TECHNADZOR_DOMAIN_LOGIC_CANON.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/CANON_FINAL/TOPIC_2_CANONICAL_ESTIMATE_CONTRACT.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 103509646b362d86b5f02a04860f699084f11c2f4447b6803b220aad0593f257
+====================================================================================================
+# TOPIC_2 STROYKA — CANONICAL ESTIMATE CONTRACT
+Версия: v1 | Дата: 2026-05-07 | Статус: CANON_LOCK
+
+## §1. Шаблоны (Drive folder `19Z3acDgPub4nV55mad5mb8ju63FsqoG9`)
+
+| Имя | file_id |
+|---|---|
+| `М-80.xlsx` | `1yt-RJsGRhO13zmPKNAn6bMuGrpXY7kWp` |
+| `М-110.xlsx` | `1Ub9fcwOcJ4pV30dcX88yf1225WOIdpWo` |
+| `Ареал Нева.xlsx` | `1DQw2qgMHtq2SqgJJP-93eIArpj1hnNNm` |
+| `фундамент_Склад2.xlsx` | `1KuoSI4OI7gJoIBPVqBQGXtQnolXKMiDp` |
+| `крыша и перекр.xlsx` | `16YecwnJ9umnVprFu9V77UCV6cPrYbNh3` |
+
+**DEPRECATED** (score=-9999): `ВОР_кирпичная_кладка_ИСПРАВЛЕНО.xlsx`
+
+### Cache rule
+`data/templates/estimate/cache/` — runtime mirror. Drive — SSOT.
+- если кэш валиден → use cache
+- если кэш отсутствует/повреждён → download from Drive по file_id, save в кэш
+- если Drive недоступен и кэш валиден → use cache + marker `TOPIC2_TEMPLATE_CACHE_USED`
+- если оба недоступны → FAILED `TOPIC2_TEMPLATE_UNAVAILABLE`
+
+## §2. Template scoring rules
+- ангар/склад/фундамент → `фундамент_Склад2.xlsx`
+- кровля → `крыша и перекр.xlsx`
+- каркас + площадь >100 м² → `М-110.xlsx`
+- каркас + ≤100 м² → `М-80.xlsx`
+- газобетон/кирпич/керамоблок/монолит/арболит → `Ареал Нева.xlsx`
+- брус → `Ареал Нева.xlsx`
+- default → `Ареал Нева.xlsx`
+
+## §3. Sheet selection
+- каркас → лист с «каркас»
+- газобетон/кирпич/керамоблок/монолит → лист с «газобетон»
+- кровля → лист с «кров» или «перекр»
+- ангар/склад/фундамент → лист с «смет», «фундамент» или «склад»
+- fallback → первый лист + marker `TOPIC2_TEMPLATE_SHEET_FALLBACK`
+
+## §4. AREAL_CALC sheet — 15 колонок
+1. №
+2. Раздел
+3. Наименование
+4. Ед изм
+5. Кол-во
+6. Цена работ
+7. Стоимость работ
+8. Цена материалов
+9. Стоимость материалов
+10. Всего
+11. Источник цены
+12. Поставщик
+13. URL
+14. checked_at
+15. Примечание
+
+### Формулы
+- Стоимость работ = Кол-во × Цена работ
+- Стоимость материалов = Кол-во × Цена материалов
+- Всего = Стоимость работ + Стоимость материалов
+- Final totals только через SUM
+
+### Forbidden XLSX
+8-колоночный старый формат: Раздел/Позиция/Ед/Кол/Материал/Работа/Итого/Примечание. Если меньше 15 колонок → state не AC, error `TOPIC2_XLSX_CANON_COLUMNS_MISSING_V1`.
+
+## §5. 11 секций сметы
+1. Фундамент
+2. Стены / каркас
+3. Перекрытия
+4. Кровля
+5. Окна и двери
+6. Внешняя отделка
+7. Внутренняя отделка
+8. Инженерные коммуникации
+9. Логистика
+10. Накладные расходы
+11. НДС и итоги
+
+### Под ключ → интерьер по комнатам
+- **санузел**: гидроизоляция, плитка пол/стены, сантехкомплект
+- **кухня**: фартук-плитка, усил.розетки, чистовой пол
+- **спальня/гостиная/кабинет**: ламинат+подложка, плинтус, розетки/выключатели, световые точки
+- **«тёплый пол / ИК»** → ИК-полы строки
+- **«имитация бруса»** → имитация бруса стены
+- **клик-фальц/сайдинг/штукатурка/фасад** → отдельные строки материал+работа
+- **окна Rehau/профиль/количество** → окна материал + установка
+
+## §6. Price source statuses
+- LIVE_CONFIRMED
+- PARTIAL
+- UNVERIFIED
+- TEMPLATE_ONLY
+- MANUAL
+- PRICE_MISSING
+
+«Средние цены из интернета» → live enrichment через Perplexity, не template median. Без `TOPIC2_PRICE_CHOICE_CONFIRMED` нельзя выводить «median».
+
+### Required price markers
+`TOPIC2_PRICE_ENRICHMENT_STARTED` · `TOPIC2_PRICE_ENRICHMENT_DONE` · `TOPIC2_PRICE_SOURCE_FOUND` · `TOPIC2_PRICE_SOURCE_MISSING` · `TOPIC2_PRICE_CHOICE_CONFIRMED:<choice>`
+
+## §7. PDF
+- `core/pdf_cyrillic.py` — `create_pdf_with_cyrillic` + `validate_cyrillic_pdf`
+- Должен содержать: object, material, template, sheet, pricing mode, logistics, rows summary, totals, VAT, links, clean Cyrillic
+- Forbidden: broken Cyrillic, /root paths, empty summary, mismatch с XLSX
+- Markers: `TOPIC2_PDF_CREATED` · `TOPIC2_PDF_CYRILLIC_OK` · `TOPIC2_PDF_TOTALS_MATCH_XLSX`
+
+## §8. Drive output
+- AI_ORCHESTRA: `13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB`
+- topic_2 folder: `1F4qRGBCqjPZIjvkREwiPrQOOrfuRXVjA`
+- ESTIMATES: `1fqw-fuUoM0HxHkgL_ZRxE3KFboDvwxsm`
+- MANIFEST — внутренний, не показывать пользователю
+- Markers: `TOPIC2_DRIVE_UPLOAD_XLSX_OK` · `TOPIC2_DRIVE_UPLOAD_PDF_OK` · `TOPIC2_DRIVE_TOPIC_FOLDER_OK` · `TOPIC2_DRIVE_LINKS_SAVED`
+
+## §9. Final user response (Telegram format)
+```
+✅ Смета готова
+
+Объект: ...   Материал: ...   Площадь: ...   Этажность: ...   Регион: ...
+Шаблон: ...   Лист: ...   Цены: ...   Логистика: ...
+
+Итого:
+  Материалы: ...
+  Работы: ...
+  Логистика: ...
+  Накладные: ...
+  Без НДС: ...
+  НДС: ...
+  С НДС: ...
+
+Excel: <link>
+PDF: <link>
+
+Подтверди или пришли правки
+```
+
+### Forbidden in final response
+- «Эталон: М-80.xlsx» как блок
+- «Выбор цены: median» без CONFIRMED
+- MANIFEST
+- Engine
+- /root, /tmp
+- REVISION_CONTEXT
+- raw JSON
+- старая 6-секционная сводка
+
+## §10. DONE contract — markers перед AC
+- `TOPIC2_TEMPLATE_SELECTED:<name>`
+- `TOPIC2_TEMPLATE_FILE_ID:<id>`
+- `TOPIC2_TEMPLATE_CACHE_USED` или `TOPIC2_TEMPLATE_DRIVE_DOWNLOADED`
+- `TOPIC2_TEMPLATE_SHEET_SELECTED:<sheet>`
+- `TOPIC2_XLSX_TEMPLATE_COPY_OK`
+- `TOPIC2_XLSX_ROWS_WRITTEN:<n>`
+- `TOPIC2_XLSX_FORMULAS_OK`
+- `TOPIC2_XLSX_CANON_COLUMNS_OK`
+- `TOPIC2_PDF_CREATED`
+- `TOPIC2_PDF_CYRILLIC_OK`
+- `TOPIC2_DRIVE_UPLOAD_XLSX_OK`
+- `TOPIC2_DRIVE_UPLOAD_PDF_OK`
+- `TOPIC2_TELEGRAM_DELIVERED`
+
+DONE — только после явного «да» от пользователя.
+
+## §11. Canonical route priority
+Для topic_id=2 estimate intent:
+1. cancel/status/meta guards
+2. file/photo context extraction
+3. canonical engine (`topic2_estimate_final_close_v2` / stroyka canonical с 15-col output)
+4. **старый template summary route — блокировать**
+5. generic LLM fallback запрещён для финала сметы
+
+Если старый route произвёл результат → marker `TOPIC2_OLD_TEMPLATE_ROUTE_BLOCKED_V1`, переотправка через canonical (или FAILED `TOPIC2_CANONICAL_ENGINE_FAILED_AFTER_OLD_ROUTE_BLOCK_V1`).
+
+### Old output blocker — паттерны
+- «Эталон:»
+- «Лист эталона:»
+- «Выбор цены:»
+- «Каркас под ключ»
+- «Разделы:»
+- «НДС 20%»
+- «Предварительная смета готова» если нет canonical markers
+
+====================================================================================================
+END_FILE: docs/CANON_FINAL/TOPIC_2_CANONICAL_ESTIMATE_CONTRACT.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/CANON_FINAL/TOPIC_500_UNIVERSAL_SEARCH_CANON.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 063372c428bbf2e42b2406dbe2061a789e44d74678b08c12db0af5693f329735
+====================================================================================================
+# TOPIC_500 — UNIVERSAL ADAPTIVE INTERNET SEARCH CANON
+Версия: v1 | Дата: 2026-05-07 | Статус: CANON_LOCK
+
+## §1. Core rule
+topic_500 — это универсальный адаптивный интернет-поиск, не «цифровой снабженец». Procurement-логика (Avito/Ozon/TCO/seller risk) — ОДИН из режимов, не дефолт.
+
+## §2. 16 поддерживаемых типов задач
+1. Факт-поиск
+2. Source verification
+3. Price/product/marketplace search (procurement)
+4. Service/contractor search
+5. Legal/normative — ГОСТ/СП/СНиП
+6. Construction technology
+7. Technical documentation
+8. Software/app/download links
+9. News/recent changes
+10. Company/person/organization lookup
+11. Forums (4PDA / appstorrent / apkpure / trashbox)
+12. Travel/local/maps
+13. Comparison
+14. Troubleshooting
+15. Image/reference/example
+16. General web answer with sources
+
+## §3. Search flow
+1. Read user request
+2. Detect search intent
+3. Detect domain
+4. Classify mode (procurement / factual / normative / technical / download / local / news / comparison / open-research)
+5. Choose strategy ПО intent (NOT before)
+6. Search web with required breadth
+7. Verify sources
+8. Deduplicate
+9. Return по формату intent
+
+## §4. Procurement mode — триггеры
+buy / купить / найти где купить · price / цена / стоимость · supplier / поставщик · material / стройматериал · product / товар · marketplace · Avito / Ozon / Wildberries / Drom / Auto.ru · contractor / услуга · spare part / запчасть · OEM / SKU / RAL / thickness / dimensions
+
+### Procurement output (только в этом режиме)
+- item · region · offers · price · seller/supplier · url · checked_at · source_status · delivery/pickup если найдено · risk если уместно · TCO если уместно · recommendation
+
+## §5. Output формат для остальных режимов
+
+### Factual
+- ответ
+- sources
+- что подтверждено
+- что неуверенно
+- date / checked_at если важна свежесть
+
+### Normative
+- document/norm name
+- clause если найдена
+- applicability
+- source link
+- checked_at
+- краткий вывод
+
+### Download/App
+- ОДНА best ссылка если просили одну
+- platform compatibility
+- source safety status
+- почему именно эта
+- НЕ list если не просили list
+
+### Technical
+- cause / fix / command / version
+- official docs preferred
+- forum sources разрешены когда явно просили (4PDA / appstorrent / apkpure / trashbox)
+- cite source / checked_at
+
+### News/Recent
+- latest confirmed facts
+- timeline если нужен
+- source links
+- checked_at
+- НЕ старый кэш без свежего поиска
+
+### Service/Local
+- relevant providers/locations
+- region
+- contact/link если найдено
+- rating/reviews если найдено
+- риски если уместно
+
+## §6. Adaptive result count
+- «дай одну ссылку» → ОДИН best
+- «сравни» → достаточно для comparison
+- «исследование» → структурированное summary с selected sources
+- procurement → 3-10 offers по доступному качеству
+- exact factual → концентрированный ответ + supporting sources
+
+## §7. Forbidden
+- fake links
+- invented prices
+- invented source names
+- supplier поля кроме procurement mode
+- marketplace-only кроме marketplace mode
+- generic «посмотрите в интернете»
+- answer без source когда нужна freshness/verification
+- смешивание topic_2 estimate output в topic_500
+- смешивание topic_210 project output в topic_500
+- смешивание topic_5 technadzor output в topic_500
+
+## §8. Cross-topic usage (search как инструмент)
+- topic_2 STROYKA — search для prices/materials/suppliers/logistics/норм
+- topic_210 PROJECTING — search для норм/technical references/standards
+- topic_5 TECHNADZOR — search для ГОСТ/СП/СНиП когда локального канона не хватает
+- topic_500 — выделенный универсальный
+
+## §9. Final rule
+topic_500 = universal adaptive internet search.
+Supplier / price / TCO logic — один из режимов.
+
+====================================================================================================
+END_FILE: docs/CANON_FINAL/TOPIC_500_UNIVERSAL_SEARCH_CANON.md
 FILE_CHUNK: 1/1
 ====================================================================================================
 
@@ -4348,6 +6308,926 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 
 ====================================================================================================
+BEGIN_FILE: docs/HANDOFFS/HANDOFF_20260504_ORCHESTRA_MASTER_CLOSE.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 854df572268f14444021497eb475fef053f289d71a82cbd3175008a65a6813ad
+====================================================================================================
+# HANDOFF_20260504_ORCHESTRA_MASTER_CLOSE
+
+Mode: FACT ONLY
+Date: 2026-05-04
+Source: current ChatGPT/server session, terminal outputs, GitHub main branch verification
+
+---
+
+## 1. GitHub visibility
+
+Repository: `rj7hmz9cvm-lgtm/areal-neva-core`
+Branch: `main`
+
+GitHub main branch currently shows history through 2026-05-04.
+
+Latest verified visible commits:
+
+```text
+88c36e3 TOPIC2_REPLY_THREAD_FIX_V1: send topic2 estimates to original Telegram thread
+bf6cece TOPIC500_PRE_SEND_VALIDATOR_AND_STARTUP_RECOVERY_HARD_GUARD_V1: pre-send procurement validator and startup recovery hard guard
+dc2f770 FINAL_TOPIC2_TOPIC5_TOPIC500_CLOSE_20260504_V1: close topic2 current TZ route and topic500 search output contract
+75c8af2 HOTFIX_HANDLE_IN_PROGRESS_WRAPPER_CHAIN_V1: fix handle_in_progress wrapper arity
+6f93ff4 TOPIC2_FULL_CLOSE_V1: map wood to frame scenario and block empty estimates
+bc58444 COMBINED_TOPIC2_AND_TOPIC210_CLOSE_V1: real topic2 estimate and cad section fix
+c9ce862 TOPIC2_DRIVE_AUTH_SINGLE_SOURCE_V1: use google_io drive auth and fail empty estimate
+a5cdb89 TOPIC2_ESTIMATE_AND_TOPIC500_SEARCH_FULLFIX_V1: strict template estimate pdf and bypass search misroute
+711b6c9 TOPIC_ROUTE_ISOLATION_FULL_V2: allow topic2 file prehandle and keep 210_500 isolated
+40f139d TOPIC_ROUTE_ISOLATION_FULL_V1: isolate topic_2_210_500 handlers
+```
+
+Conclusion: GitHub history from 2026-04-30 through 2026-05-04 is visible. No confirmed history loss in this session.
+
+---
+
+## 2. Runtime verified from terminal outputs
+
+Services after final patch:
+
+```text
+areal-task-worker active
+telegram-ingress active
+areal-memory-api active
+```
+
+Current task set after repairs:
+
+```text
+rowid 5216 topic_id=5   state=DONE
+rowid 5215 topic_id=500 state=DONE
+rowid 5214 topic_id=2   state=DONE
+```
+
+Task 5214 fact:
+
+```text
+Engine: TOPIC2_REAL_ESTIMATE_FROM_TZ_V2
+Object: barnhouse 12.0x8.0 m
+Area: 96.0 m²
+Foundation: slab 200 mm
+Walls: frame
+Template: M-110.xlsx
+Rows: 20
+Total: 3,616,536 RUB
+VAT 20%: 723,307 RUB
+Total with VAT: 4,339,843 RUB
+Drive links returned for Excel, PDF, manifest
+```
+
+Task 5215 fact:
+
+```text
+TOPIC500_PRE_SEND_VALIDATOR_AND_STARTUP_RECOVERY_HARD_GUARD_V1:5215_DONE_FROM_LAST_RESULT
+FINAL_TOPIC500_SEARCH_DONE_20260504_V1
+state=DONE
+```
+
+Task 5216 fact:
+
+```text
+Chat identified as TECHNADZOR
+Direction: technical supervision, inspection acts, defects, SP/GOST
+state=DONE
+```
+
+---
+
+## 3. Installed and verified by code markers
+
+### `core/sample_template_engine.py`
+
+Confirmed after commit `88c36e3`:
+
+```text
+TOPIC2_REPLY_THREAD_FIX_V1 is present
+_send_reply accepts topic_id
+send_reply_ex receives message_thread_id when topic_id > 0
+_t2sp_send accepts topic_id
+fallback Telegram API receives message_thread_id when topic_id > 0
+_t2sp_send direct call sites updated with topic_id
+_t2real_send accepts topic_id
+_t2real_send call sites updated with topic_id
+history marker added: TOPIC2_REPLY_THREAD_FIX_V1:SENT_TO_TOPIC_{topic_id}
+py_compile passed
+services active after restart
+```
+
+Status: `TOPIC2_REPLY_THREAD_FIX_V1` installed and pushed.
+
+### `task_worker.py`
+
+Confirmed after commit `bf6cece`:
+
+```text
+TOPIC500_PRE_SEND_VALIDATOR_AND_STARTUP_RECOVERY_HARD_GUARD_V1 present
+TOPIC500_PROCUREMENT_VALIDATOR_V1 marker present
+STARTUP_RECOVERY_REPLY_SENT_GUARD_V1 marker present
+TOPIC500_DUPLICATE_RESULT_LOOP_GUARD_V1 marker present
+_send_once_ex wrapper uses exact positional signature: conn, task_id, chat_id, text, reply_to, kind
+py_compile passed
+services active after restart
+```
+
+Status: topic_500 stale/duplicate/startup-recovery protection installed and pushed.
+
+### `core/ai_router.py`
+
+Confirmed from current GitHub file:
+
+```text
+SEARCH_SYSTEM_PROMPT override TOPIC500_SEARCH_OUTPUT_CONTRACT_20260504_V1 is present
+```
+
+Status: search output prompt override installed.
+
+---
+
+## 4. Regression status
+
+Confirmed historical regression:
+
+```text
+TypeError: _handle_in_progress() missing 2 required positional arguments: chat_id and topic_id
+```
+
+Current confirmed state after later patches:
+
+```text
+areal-task-worker active
+telegram-ingress active
+areal-memory-api active
+No current traceback shown in the final live log window after TOPIC2_REPLY_THREAD_FIX_V1 restart
+```
+
+Conclusion: no currently confirmed active worker crash after latest verified restart.
+
+---
+
+## 5. Closed in this session
+
+```text
+1. Worker arity crash chain fixed and pushed
+2. topic_500 stuck IN_PROGRESS after reply_sent/result repaired for task 5215
+3. topic_500 duplicate result loop guard installed
+4. topic_500 pre-send procurement validator marker installed
+5. startup recovery hard guard installed
+6. task 5215 repaired to DONE from last result
+7. task 5214 reprocessed and DONE with estimate result
+8. task 5216 completed as technadzor chat identity answer
+9. tools/context_aggregator.py restored after temporary deletion state
+10. topic_2 estimate reply path patched with message_thread_id propagation
+11. commit 88c36e3 pushed to GitHub
+```
+
+====================================================================================================
+END_FILE: docs/HANDOFFS/HANDOFF_20260504_ORCHESTRA_MASTER_CLOSE.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/HANDOFFS/HANDOFF_20260505_TNZ_MSK_DOCUMENT_SKILL_EXTRACTION.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 59d30fce9b7d02ccd9b1d8fe601aab22298c4c1f9ebf864d8726f1306df20ecd
+====================================================================================================
+# HANDOFF: TNZ_MSK DOCUMENT SKILL EXTRACTION
+Date: 2026-05-05
+Task: TELEGRAM_SOURCE_SKILL_EXTRACTION_TNZ_MSK_V1
+Status: COMPLETED
+
+## What Was Done
+- Read @tnz_msk via authorized Telethon session (read-only)
+- Scanned 1000 messages
+- Extracted 324 skill cards across 12 categories
+- Rejected 647 noise records
+- Built topic_5 technadzor document composition skill package
+- Created reusable RABOTA_POISK Telegram source analysis pattern
+
+## New Files Created
+- core/telegram_source_skill_extractor.py
+- core/technadzor_document_skill.py
+- tools/extract_tnz_msk_document_skill.py
+- data/memory_files/TEHNADZOR/source_skills/tnz_msk/TECHNADZOR_DOCUMENT_COMPOSITION_SKILL.md
+- data/memory_files/TEHNADZOR/source_skills/tnz_msk/TECHNADZOR_DOCUMENT_COMPOSITION_SKILL.json
+- data/memory_files/TEHNADZOR/source_skills/tnz_msk/SOURCE_INDEX.json
+- data/memory_files/TEHNADZOR/source_skills/tnz_msk/LINKED_DOCUMENTS_INDEX.json
+- docs/REPORTS/TNZ_MSK_DOCUMENT_SKILL_EXTRACTION_REPORT.md
+- docs/HANDOFFS/HANDOFF_20260505_TNZ_MSK_DOCUMENT_SKILL_EXTRACTION.md
+
+## Uncommitted / Untouched
+- core/normative_engine.py — modified (P6H5 norm expansion), staged separately by user
+
+## Skill Categories Extracted
+- photo_to_defect_linking
+- unknown
+- client_facing_language
+- defect_description_logic
+- act_structure
+- recommendation_logic
+- normative_reference_handling
+- conclusion_logic
+- file_workflow
+- rabota_poisk_reusable_pattern
+- report_structure
+- contractor_statement_handling
+
+## Next Steps
+- Owner review of `needs_owner_review=true` cards
+- Promotion of validated skills to technadzor_engine prompt context
+- Reuse RABOTA_POISK pattern for topic_6104 channel scan
+- Consider scheduling periodic re-scan of @tnz_msk (new posts only, delta scan)
+
+## Commit
+pending
+
+====================================================================================================
+END_FILE: docs/HANDOFFS/HANDOFF_20260505_TNZ_MSK_DOCUMENT_SKILL_EXTRACTION.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/HANDOFFS/HANDOFF_20260505_TNZ_MSK_SKILL_PACKAGE_QA.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: b6435ea5e4f3e1eb3ba237549bb60dc92b0e30f7a25d7e63be23593312376b74
+====================================================================================================
+# HANDOFF: TNZ_MSK SKILL PACKAGE QA
+Date: 2026-05-05
+Task: TNZ_MSK_SKILL_PACKAGE_QA_AND_TOPIC5_BIND_V1
+Status: COMPLETED
+
+## What Was Done
+- Read existing TECHNADZOR_DOCUMENT_COMPOSITION_SKILL.json (no Telegram re-scan)
+- Applied QA filter: hard noise list + positive signal check + normative guard
+- 324 original → 143 kept, 181 rejected
+- 66 cards flagged needs_owner_review=true
+- 0 cards had invented norm section numbers cleaned
+
+## New Files Created
+- docs/TECHNADZOR/source_skills/tnz_msk/TECHNADZOR_DOCUMENT_COMPOSITION_SKILL_CLEAN.md
+- docs/TECHNADZOR/source_skills/tnz_msk/TECHNADZOR_DOCUMENT_COMPOSITION_SKILL_CLEAN.json
+- docs/REPORTS/TNZ_MSK_SKILL_PACKAGE_QA_REPORT.md
+- docs/HANDOFFS/HANDOFF_20260505_TNZ_MSK_SKILL_PACKAGE_QA.md
+- tools/qa_clean_tnz_msk_skill.py
+
+## Files NOT Modified
+- CANON_FINAL/* — untouched ✅
+- core/normative_engine.py — untouched ✅
+- task_worker.py / ai_router.py / telegram_daemon.py — untouched ✅
+- .env / sessions — untouched ✅
+- TECHNADZOR_DOCUMENT_COMPOSITION_SKILL.json (original) — preserved ✅
+
+## Status
+SKILL_PACKAGE_CLEANED_NOT_CANON
+Owner must review 66 flagged cards and approve before topic_5 integration.
+
+## Next Steps
+- Owner reviews needs_owner_review=true cards manually
+- Approved skill rules → integrate into technadzor_engine prompt context as skill layer
+- topic_6104 RABOTA_POISK: reuse scan pattern with job/order signal keywords
+
+====================================================================================================
+END_FILE: docs/HANDOFFS/HANDOFF_20260505_TNZ_MSK_SKILL_PACKAGE_QA.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/HANDOFFS/HANDOFF_20260506_TOPIC2_STROYKA_PRICE_FLOW.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 669ef757e158345277c2b32846a3f47e42ff20e204468dcf1b2c2417424f17fd
+====================================================================================================
+# HANDOFF 2026-05-06 — TOPIC2 STROYKA PRICE FLOW
+
+Mode: FACT ONLY
+Source: live terminal outputs supplied in current chat
+Scope: topic_id=2 only
+No code, DB schema, .env, credentials, sessions, google_io.py, memory.db schema, ai_router.py, telegram_daemon.py, reply_sender.py, systemd unit files changed by this document
+
+## Verified by live output
+
+- Repository HEAD before patch sequence: 91b2753c8e3ab92380064adc57481769e835a03a
+- Services shown active: areal-task-worker, telegram-ingress, areal-memory-api
+- `py_compile` after restore and later patch runs returned `COMPILE_OK`
+- Worker restarted and log showed `WORKER STARTED`
+- `PATCH_TOPIC2_PRICE_CHOICE_BIND_AND_FINALIZE_V4_READY_TRUE` was printed by guard
+- `PATCH_TOPIC2_PRICE_CHOICE_BIND_AND_FINALIZE_V5_READY_TRUE` was printed by guard
+- Runtime log showed `PATCH_TOPIC2_PRICE_CHOICE_BIND_AND_FINALIZE_V5 installed`
+- Runtime log showed `PATCH_TOPIC2_NUMERIC_PRICE_CHOICE_PARSE_V5 installed`
+- Runtime log showed `PATCH_TOPIC2_PRICE_CHOICE_BIND_V5_GENERATED parent=f1ef9fab-e364-46ac-b0da-ab8ae5c85a21 choice=median`
+
+## Done in the current topic2 stage
+
+### PATCH_TOPIC2_PRICE_CHOICE_BIND_AND_FINALIZE_V4
+
+Observed output:
+
+```text
+PATCH_TOPIC2_PRICE_CHOICE_BIND_AND_FINALIZE_V4_READY_TRUE
+bad_done_quarantined= 2
+price_menu_reopened= f1ef9fab-e364-46ac-b0da-ab8ae5c85a21
+OK marker_task_worker.py
+OK marker_stroyka_estimate_canon.py
+OK marker_sample_template_engine.py
+OK py_compile
+OK service_active
+OK active_price_menu_available
+OK no_recent_done_without_price_confirmed
+```
+
+Effects shown by DB output:
+
+```text
+edcf944b-d386-43c7-8da6-f040f98e5272 -> AWAITING_CONFIRMATION
+9b0626f1-eb6f-4b92-ba6a-9e28cb26be31 -> AWAITING_CONFIRMATION
+f1ef9fab-e364-46ac-b0da-ab8ae5c85a21 -> WAITING_CLARIFICATION
+```
+
+History markers shown:
+
+```text
+PATCH_TOPIC2_LEGACY_BAD_DONE_BLOCKED_NO_PRICE_CONFIRM
+PATCH_TOPIC2_PRICE_MENU_REOPENED_FOR_BINDING
+```
+
+### PATCH_TOPIC2_PRICE_CHOICE_BIND_AND_FINALIZE_V5
+
+Observed output:
+
+```text
+PATCH_TOPIC2_PRICE_CHOICE_BIND_AND_FINALIZE_V5_READY_TRUE
+requeued_numeric_reply_task= ceac25be-a380-419c-9eec-a7b69b97da44
+OK price_choice_confirm_marker_seen_or_waiting_for_new_reply :: confirmed=1 bound=3
+OK no_recent_done_without_price_choice_confirmed :: bad_done=0
+```
+
+DB output after V5:
+
+```text
+f1ef9fab-e364-46ac-b0da-ab8ae5c85a21 | WAITING_CLARIFICATION
+ceac25be-a380-419c-9eec-a7b69b97da44 | DONE | Выбор цены принят и привязан к сметной задаче: f1ef9fab-e364-46ac-b0da-ab8ae5c85a21
+```
+
+History markers after V5:
+
+```text
+f1ef9fab-e364-46ac-b0da-ab8ae5c85a21 | TOPIC2_PRICE_CHOICE_CONFIRMED:median
+f1ef9fab-e364-46ac-b0da-ab8ae5c85a21 | PATCH_TOPIC2_PRICE_CHOICE_BIND_V5_FROM_TASK:ceac25be-a380-419c-9eec-a7b69b97da44
+ceac25be-a380-419c-9eec-a7b69b97da44 | PATCH_TOPIC2_PRICE_CHOICE_BIND_V5_BOUND_TO:f1ef9fab-e364-46ac-b0da-ab8ae5c85a21
+ceac25be-a380-419c-9eec-a7b69b97da44 | PATCH_TOPIC2_PRICE_CHOICE_BIND_V5_REQUEUED_EXISTING_NUMERIC_REPLY
+```
+
+## Current live state from last supplied output
+
+```text
+03a77200-99e8-4729-b432-0f2b954ea9ec | CANCELLED
+f1ef9fab-e364-46ac-b0da-ab8ae5c85a21 | WAITING_CLARIFICATION
+ceac25be-a380-419c-9eec-a7b69b97da44 | DONE
+9b0626f1-eb6f-4f13-8330-2332b053d5cb equivalent not present in final output
+9b0626f1-eb6f-4b92-ba6a-9e28cb26be31 | AWAITING_CONFIRMATION
+edcf944b-d386-43c7-8da6-f040f98e5272 | AWAITING_CONFIRMATION
+49ab3505-3259-4565-8256-d2953fe49c18 | FAILED | STALE_TIMEOUT
+1fa24885-5ba3-4123-bb65-2283fcbd74bf | FAILED | STALE_TIMEOUT
+49668e5e-fda0-4310-8e78-ef89dd160edd | FAILED | STALE_TIMEOUT
+```
+
+## Canon status
+
+- Price choice binding is installed and guard passed for V5
+- Numeric reply `2` was bound to parent estimate task `f1ef9fab-e364-46ac-b0da-ab8ae5c85a21`
+- Recent DONE without price confirmation was blocked by guard in supplied machine check
+- Final estimate artifact generation after bound price choice is not verified in supplied output
+- Excel/PDF/Drive artifact markers were not shown in final supplied output
+
+## Next factual breakpoint
+
+Need live verification that parent task `f1ef9fab-e364-46ac-b0da-ab8ae5c85a21` proceeds after `TOPIC2_PRICE_CHOICE_CONFIRMED:median` to:
+
+```text
+TOPIC2_XLSX_CREATED
+TOPIC2_PDF_CREATED
+TOPIC2_PDF_CYRILLIC_OK
+TOPIC2_DRIVE_UPLOAD_XLSX_OK
+TOPIC2_DRIVE_UPLOAD_PDF_OK
+TOPIC2_TELEGRAM_DELIVERED
+TOPIC2_DONE_CONTRACT_OK
+```
+
+If these markers are absent, the next patch must target final generation after price bind, not price bind itself
+
+====================================================================================================
+END_FILE: docs/HANDOFFS/HANDOFF_20260506_TOPIC2_STROYKA_PRICE_FLOW.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/HANDOFFS/HANDOFF_20260507_RUNTIME_V2_V3_FULL_CLOSE.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: d5df2433b201f973d457e5e6af150d39db5c9285e7b99214debd4dfb10eb77ce
+====================================================================================================
+# HANDOFF — 2026-05-07 RUNTIME_V2 + RUNTIME_V3 FULL CLOSE
+**Сессия**: 2026-05-07 10:00 → 10:45 MSK  
+**HEAD**: `ccab9ed` fix(topic2): PATCH_TOPIC2_FULL_CLOSE_RUNTIME_V3  
+**Предыдущий HEAD перед сессией**: `ad829c4` (ONEPASS_V1)  
+**Сервер**: areal-task-worker active, PID 3485017  
+**Статус**: INSTALLED — VERIFIED только после live-replay в Telegram  
+
+---
+
+## ЧТО БЫЛО ПОЛУЧЕНО КАК ТЗ (все требования подряд)
+
+### ТЗ-1: PATCH_TOPIC2_FULL_CLOSE_RUNTIME_V2 (11 пунктов)
+Получено в начале сессии как "полное ТЗ не закрыто, дальше без паузы":
+
+1. AREAL_CALC 15 columns + formulas
+2. adaptive samples: copy workbook, preserve sheets, add/update AREAL_CALC
+3. 11 sections + interior by rooms
+4. block old V3 route with reroute to canonical (not only FCG guard)
+5. price_enrichment with source_status/supplier/url/checked_at
+6. logistics section
+7. PDF via pdf_cyrillic with totals match XLSX
+8. Drive Excel/PDF only, MANIFEST internal
+9. clean Telegram §9
+10. AC contract markers gate
+11. DONE only after explicit confirm
+
+### ТЗ-2: PATCH_TOPIC2_FULL_CLOSE_RUNTIME_V3 (9 пунктов)
+Получено как "принято как strong code patch, но полное ТЗ кодом не закрыто":
+
+1. price_enrichment: supplier/url/checked_at/status per row, не просто Perplexity/TEMPLATE_ONLY
+2. price choice gate: запрет median без TOPIC2_PRICE_CHOICE_CONFIRMED
+3. Drive topic_2 contract: TOPIC2_DRIVE_TOPIC_FOLDER_OK + XLSX/PDF only to user, MANIFEST internal
+4. Telegram cleaner: hard strip Engine/MANIFEST/root/tmp/raw JSON/REVISION_CONTEXT
+5. Old route hard block именно в maybe_handle_stroyka_estimate → _generate_and_send path
+6. multi-format intake proof in code: photo/drive_file/PDF/XLSX/text/voice
+7. missing gate anti-loop
+8. logistics markers
+9. DONE contract: TOPIC2_DONE_CONTRACT_OK только после явного "да"
+
+---
+
+## ЧТО ЗАКОММИЧЕНО (хронология)
+
+### `ad829c4` — PATCH_TOPIC2_FULL_CANONICAL_CLOSE_ONEPASS_V1
+Принято как "PARTIAL PATCH: old-output cleanup + recursion fix".  
+Файлы: `core/stroyka_estimate_canon.py`, `core/sample_template_engine.py`, `task_worker.py`
+
+- `stroyka_estimate_canon.py`: `_final_summary` → §9 формат, убраны «Эталон сметы:»/«Лист эталона:»
+- `sample_template_engine.py:5926`: P6D рекурсия → `_P6DREC_PRE_P3` вместо globals
+- `task_worker.py`: FCG добавлены паттерны «Эталон: »/«Лист эталона: »/«✅ Предварительная смета готова»/«НДС 20%:»
+- Recursion fix: `load_workbook` обёрнут `setrecursionlimit(5000)` в `_create_xlsx_from_template` и `_quality_gate_xlsx`
+
+---
+
+### `055157b` — PATCH_TOPIC2_FULL_CLOSE_RUNTIME_V2
+Файлы: `core/stroyka_estimate_canon.py`, `task_worker.py`
+
+**`core/stroyka_estimate_canon.py`**:
+
+#### `_create_xlsx_from_template` (строка ~980)
+- `shutil.copy(template_path, tmp_copy)` — копия шаблона перед load_workbook (preserve original)
+- Убраны forbidden metadata rows: больше нет `ws.append(["Предварительная смета"])` и т.д.
+- Headers: 15 canonical columns §4 (было 11)
+  ```
+  №, Раздел, Наименование, Ед.изм., Кол-во,
+  Цена работ руб, Стоимость работ руб,
+  Цена материалов руб, Стоимость материалов руб, Всего руб,
+  Источник цены, Поставщик, URL, Дата проверки, Примечание
+  ```
+- Section-colored rows: PatternFill по палитре 11 цветов
+- Totals: ИТОГО без НДС / НДС 20% / С НДС с PatternFill
+- col 11 = "Perplexity" / "TEMPLATE_ONLY" (глобально, одно на все строки — заменено в V3)
+
+#### `_generate_and_send` (строка ~1200)
+- §10 canonical AC contract markers (13 маркеров):
+  `TOPIC2_TEMPLATE_SELECTED`, `TOPIC2_TEMPLATE_FILE_ID`,
+  `TOPIC2_TEMPLATE_CACHE_USED`/`TOPIC2_TEMPLATE_DRIVE_DOWNLOADED`,
+  `TOPIC2_TEMPLATE_SHEET_SELECTED`, `TOPIC2_XLSX_TEMPLATE_COPY_OK`,
+  `TOPIC2_XLSX_ROWS_WRITTEN:<n>`, `TOPIC2_XLSX_FORMULAS_OK`,
+  `TOPIC2_XLSX_CANON_COLUMNS_OK:15`, `TOPIC2_PDF_CREATED`,
+  `TOPIC2_PDF_CYRILLIC_ATTEMPTED`, `TOPIC2_DRIVE_UPLOAD_XLSX_OK`,
+  `TOPIC2_DRIVE_UPLOAD_PDF_OK`, `TOPIC2_TELEGRAM_DELIVERED`
+
+**`task_worker.py`**:
+
+#### `_handle_in_progress` (строка ~4939)
+- `PATCH_TOPIC2_CANONICAL_REROUTE_V2`: перед старым pipeline → `maybe_handle_stroyka_estimate`
+- Если canonical вернул True → `TOPIC2_CANONICAL_REROUTE_V2:CANONICAL_HANDLED`, return
+- Если False → `TOPIC2_CANONICAL_REROUTE_V2:FALLBACK_TO_OLD_PIPELINE`, продолжить old pipeline
+
+---
+
+### `ccab9ed` — PATCH_TOPIC2_FULL_CLOSE_RUNTIME_V3
+Файлы: `core/stroyka_estimate_canon.py`, `task_worker.py`
+
+**`core/stroyka_estimate_canon.py`**:
+
+#### Новые helper-функции (после `_numbers_from_price_text`, строка ~664)
+
+```python
+def _parse_price_sources(price_text: str) -> List[Dict[str, Any]]:
+```
+Парсит Perplexity pipe-delimited ответ (формат `Позиция | цена | единица | регион | источник | ссылка | checked_at`).
+Возвращает список `{keywords, position, supplier, url, checked_at, status}`.
+
+```python
+def _match_price_source(sources, item_name, item_section) -> Dict:
+```
+Матчит позицию сметы к источнику по ключевым словам. Возвращает `{supplier, url, checked_at, status}`.
+
+```python
+def _strip_telegram_output(text: str) -> str:
+```
+Hard strip перед отправкой в Telegram:
+- Lines starting with `Engine:`, `MANIFEST:`
+- Lines starting with `/root/`, `/tmp/`
+- Raw JSON blobs (строки `{...}` / `[...]` длиннее 20 символов)
+- `Traceback (most recent...`
+- Блоки `REVISION_CONTEXT`
+- Collapse triple newlines
+
+#### `_create_xlsx_from_template` (изменение)
+- `_ps_sources = _parse_price_sources(price_text)` вместо глобального `price_source`
+- Для каждой строки: `_ps = _match_price_source(_ps_sources, it["name"], it["section"])`
+- cols 11-14 per row: `_ps["status"]`, `_ps["supplier"]`, `_ps["url"]`, `_ps["checked_at"]`
+
+#### `is_stroyka_estimate_candidate` (строка ~583, §6)
+```python
+if input_type in ("photo", "file", "drive_file", "image", "document"):
+    _mfi_cap = _low(_row_get(task, "raw_input", ""))
+    if _mfi_cap and any(x in _mfi_cap for x in ESTIMATE_WORDS):
+        return True
+    return False
+```
+Вместо безусловного `return False`. Разрешает photo/drive_file/document если caption содержит ESTIMATE_WORDS.
+
+#### `maybe_handle_stroyka_estimate` (оригинал, строка ~1517, §5 + §7)
+
+§5 Old route hard block (добавлено ДО `is_stroyka_estimate_candidate`):
+```python
+_orhb_pending = _memory_latest(chat_id, "topic_2_estimate_pending_")
+if (_orhb_pending and status=="WAITING_PRICE_CONFIRMATION"
+        and _pending_is_fresh(..., 600)
+        and (_is_confirm(raw_input) or parse_price_choice(raw_input).get("confirmed"))):
+    _history_safe(conn, task_id, "TOPIC2_CANONICAL_OLD_ROUTE_HARD_BLOCK:pending_intercepted")
+    return await _generate_and_send(...)
+```
+
+§7 Anti-loop guard (вместо прямого вызова `_missing_question`):
+```python
+_alg_count = conn.execute(
+    "SELECT COUNT(*) FROM task_history th JOIN tasks t ON th.task_id=t.id
+     WHERE t.chat_id=? AND topic_id=? AND th.action LIKE '%:clarification%'
+     AND th.created_at >= datetime('now','-30 minutes')"
+).fetchone()[0]
+if _alg_count < 3:
+    question = _missing_question(parsed)
+    if question: ... send WAITING_CLARIFICATION ... return True
+else:
+    _history_safe(conn, task_id, f"TOPIC2_MISSING_GATE_ANTILOOP:count={_alg_count}_proceeding_with_defaults")
+```
+
+#### `_generate_and_send` (оригинал, строка ~1201, §2 + §3 + §4 + §8)
+
+§2 Price choice gate (в начале тела функции):
+```python
+_pc_hist = [r[0] for r in conn.execute("SELECT action FROM task_history WHERE task_id=?", (task_id,)).fetchall()]
+if not any("TOPIC2_PRICE_CHOICE_CONFIRMED" in a for a in _pc_hist):
+    await _send_text(chat_id, "Выберите уровень цен: 1 / 2 / 3 / 4", ...)
+    _update_task_safe(conn, task_id, state="WAITING_CLARIFICATION", ...)
+    return True
+```
+
+§8 Logistics markers (после `_create_xlsx_from_template`):
+```python
+_history_safe(conn, task_id, f"TOPIC2_LOGISTICS_DISTANCE_KM:{_log_dist:g}")
+for _lit in items:
+    if _lit["section"] == "Логистика":
+        _history_safe(conn, task_id, f"TOPIC2_LOGISTICS_ITEM:{name}:qty={qty}:price={price}")
+```
+
+§3 Drive folder marker (после upload):
+```python
+if xlsx_link and "drive.google.com" in xlsx_link:
+    _history_safe(conn, task_id, "TOPIC2_DRIVE_TOPIC_FOLDER_OK")
+```
+
+§4 Telegram cleaner (перед send_text):
+```python
+result = _strip_telegram_output(summary + f"\n\nExcel: {xlsx_link}\nPDF: {pdf_link}\n\nПодтверди или пришли правки")
+```
+
+#### `_update_task_safe` (строка ~2062, §9 DONE contract)
+Добавлено к существующим проверкам:
+```python
+explicit_confirm = any("TOPIC2_EXPLICIT_CONFIRM" in a for a in hist_actions)
+...
+elif not explicit_confirm:
+    kwargs["state"] = "AWAITING_CONFIRMATION"  # блокируем DONE
+    _history_safe(..., "TOPIC2_DONE_BLOCKED_REASON:no_explicit_confirm")
+```
+
+**`task_worker.py`**:
+
+#### `_looks_done_command` handler (строка ~3244, §9)
+```python
+if int(topic_id or 0) == 2:
+    conn.execute("INSERT INTO task_history ... VALUES(?,?,datetime('now'))",
+                 (target_id, "TOPIC2_EXPLICIT_CONFIRM:from_user_done_command"))
+```
+Пишет маркер ДО `_update_task(conn, target_id, state="DONE", ...)`.
+
+---
+
+## СОСТОЯНИЕ КОДА — ПОЛНАЯ КАРТА ЦЕПОЧЕК
+
+### `maybe_handle_stroyka_estimate` — chain
+```
+task_worker._handle_new (line 1315)
+  → maybe_handle_stroyka_estimate (MCG wrapper, line 2260)  ← активная версия
+    → _mcg_orig_maybe (T2CG wrapper, line 2223)
+      → _t2cg_orig_maybe_handle (SEC wrapper, line 1849)
+        → _sec_orig_maybe_handle (original, line 1517)  ← основная логика
+```
+
+### `_generate_and_send` — chain
+```
+maybe_handle_stroyka_estimate (line ~1553)
+  → _generate_and_send (REPLY_CHAIN_FIX, line 2252)
+    → _src_orig_gas_v1 (V3/PRICE_CHOICE, line 1993)  ← проверяет confirmed
+      → _stv3_orig_gas (original, line 1201)  ← §2 §3 §4 §8 логика
+```
+
+### `parse_price_choice` — chain
+```
+V5 (line 2163) → V4 (line 2123) → V1 (line 614)
+"2" → confirmed=True, choice="median" ✓
+"да" → confirmed=False, choice="NONE" → V3 wrapper asks again ✓
+```
+
+### `_create_pdf` — chain
+```
+_create_pdf (V3 wrapper, line 1991)  ← использует pdf_cyrillic
+  → _stv3_orig_create_pdf (original, line 1046)  ← reportlab fallback
+```
+
+### `_update_task_safe` — chain
+```
+_update_task_safe (V3 DONE gate, line 2062)
+  → _stv3_orig_update_task_safe (original)
+```
+
+---
+
+## ВЕРИФИКАЦИЯ — ЧТО ПРОВЕРИТЬ ПОСЛЕ LIVE-TEST
+
+### Маркеры в task_history (sqlite3 read-only):
+```sql
+SELECT action FROM task_history WHERE task_id='<id>' ORDER BY created_at;
+```
+
+Ожидаемая последовательность для успешной сметы:
+```
+TOPIC2_PRICE_CHOICE_REQUESTED
+TOPIC2_PRICE_CHOICE_CONFIRMED:median
+TOPIC2_CANONICAL_OLD_ROUTE_HARD_BLOCK:pending_intercepted  (или CANONICAL_REROUTE_V2:CANONICAL_HANDLED)
+TOPIC2_TEMPLATE_SELECTED:<name>
+TOPIC2_TEMPLATE_FILE_ID:<id>
+TOPIC2_TEMPLATE_CACHE_USED (или TOPIC2_TEMPLATE_DRIVE_DOWNLOADED)
+TOPIC2_TEMPLATE_SHEET_SELECTED:<sheet>
+TOPIC2_XLSX_TEMPLATE_COPY_OK
+TOPIC2_XLSX_ROWS_WRITTEN:<n>
+TOPIC2_XLSX_FORMULAS_OK
+TOPIC2_XLSX_CANON_COLUMNS_OK:15
+TOPIC2_PDF_CREATED:1
+TOPIC2_PDF_CYRILLIC_ATTEMPTED
+TOPIC2_DRIVE_TOPIC_FOLDER_OK
+TOPIC2_DRIVE_UPLOAD_XLSX_OK
+TOPIC2_DRIVE_UPLOAD_PDF_OK
+TOPIC2_TELEGRAM_DELIVERED:<msg_id>
+TOPIC2_LOGISTICS_DISTANCE_KM:<n>
+TOPIC2_LOGISTICS_ITEM:Доставка материалов от СПб:qty=1:price=<n>
+FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:estimate_generated
+TOPIC2_EXPLICIT_CONFIRM:from_user_done_command
+TOPIC2_DONE_CONTRACT_OK
+```
+
+### Проверка XLSX:
+- Лист "AREAL_CALC" — первый лист
+- 15 колонок (headers row 1)
+- Нет строк "Предварительная смета" / "Эталон" / "Лист эталона"
+- col 11 = статус (found / template_only / no_data) — разный по строкам
+- col 12 = поставщик (из Perplexity если найден)
+- col 13 = URL
+- col 14 = дата проверки
+
+### Проверка Telegram:
+- Нет `/root/`, `/tmp/` в тексте
+- Нет `Engine:`, `MANIFEST:`
+- Нет сырых JSON-объектов
+- Нет `REVISION_CONTEXT`
+- Есть ссылки `drive.google.com/file/d/...`
+
+---
+
+## ЧТО НЕ ЗАКРЫТО (open contours)
+
+### topic_2 STROYKA
+- **VERIFIED** — live-replay с полным ТЗ не проводился в этой сессии
+- `_parse_price_sources` матчинг — ключи из Perplexity могут не совпадать с именами позиций (требует мониторинга)
+- `maybe_handle_stroyka_estimate` original vs latest: оба имеют `if not is_stroyka_estimate_candidate(task): return False` — у latest (MCG, line 2260) этой проверки нет, но внутри вызывает chain который проходит через original
+
+### topic_500 SEARCH
+- Базово работает
+- 16 режимов поиска — НЕ реализованы (только procurement-style)
+- Forbidden patterns blocker — НЕ блокируется
+
+### MEMORY_QUERY_GUARD_V1
+- Не реализован
+- «что обсуждали» / «какие задачи были» → попадают в estimate route
+
+---
+
+## КОМАНДЫ ДЛЯ СЛЕДУЮЩЕЙ СЕССИИ
+
+```bash
+# Статус воркера
+systemctl status areal-task-worker --no-pager
+
+# Последние коммиты
+git log --oneline | head -5
+
+# Live-диагностика последней topic_2 задачи
+sqlite3 -readonly /root/.areal-neva-core/data/core.db \
+  "SELECT t.id, t.state, t.updated_at FROM tasks t WHERE COALESCE(t.topic_id,0)=2 ORDER BY t.updated_at DESC LIMIT 3;"
+
+# Маркеры последней задачи
+sqlite3 -readonly /root/.areal-neva-core/data/core.db \
+  "SELECT action, created_at FROM task_history WHERE task_id='<id>' ORDER BY created_at;"
+
+# Логи
+journalctl -u areal-task-worker --no-pager -n 50
+
+# Проверить шаблоны в кэше
+ls /root/.areal-neva-core/data/templates/estimate/cache/
+```
+
+---
+
+## ФАЙЛЫ ИЗМЕНЕНЫ В ЭТОЙ СЕССИИ
+
+| Файл | Изменения |
+|------|-----------|
+| `core/stroyka_estimate_canon.py` | `_parse_price_sources`, `_match_price_source`, `_strip_telegram_output` (новые), `_create_xlsx_from_template` (15 cols, shutil.copy, per-row source), `_generate_and_send` (§2§3§4§8), `is_stroyka_estimate_candidate` (§6), `maybe_handle_stroyka_estimate` (§5§7), `_update_task_safe` (§9 explicit_confirm) |
+| `task_worker.py` | `_handle_in_progress` CANONICAL_REROUTE_V2 (V2), `_looks_done_command` handler TOPIC2_EXPLICIT_CONFIRM (V3) |
+
+## БЭКАПЫ
+
+```
+core/stroyka_estimate_canon.py.bak.RUNTIME_V2_20260507_101747
+core/stroyka_estimate_canon.py.bak.RUNTIME_V3_20260507_102847
+task_worker.py.bak.RUNTIME_V2_20260507_101747
+task_worker.py.bak.RUNTIME_V3_20260507_102847
+```
+
+---
+
+## ПРАВИЛА ПАТЧИНГА (строго соблюдать)
+
+1. **Только body-edits** — НЕ append-wrapper в конец файла (ненадёжно, задокументировано)
+2. **8 шагов**: diag → analysis → describe+wait → bak → patch → py_compile → restart → journal
+3. **Запрещённые файлы**: `.env`, `credentials.json`, `ai_router.py`, `reply_sender.py`, `google_io.py`, `telegram_daemon.py`
+4. **Перед патчем**: читать `docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md` + этот handoff
+5. **INSTALLED ≠ VERIFIED**: только маркер в task_history = доказательство
+6. **Push dance**: `mv tools/context_aggregator.py /tmp/ && git push && mv /tmp/context_aggregator.py.bak tools/context_aggregator.py`
+
+====================================================================================================
+END_FILE: docs/HANDOFFS/HANDOFF_20260507_RUNTIME_V2_V3_FULL_CLOSE.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/HANDOFFS/HANDOFF_20260507_SESSION_CLOSE.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: dc8a8555245f4e703fe1c5e60173b977811ec7f681d2a7713dac596e8db322a9
+====================================================================================================
+# HANDOFF — 2026-05-07 SESSION CLOSE
+**Сессия**: 2026-05-06 22:47 → 2026-05-07 ~01:00 MSK
+**Текущий HEAD**: `c7c8755` (до push'а этой сессии)
+**Сервер**: 89.22.225.136, areal-task-worker active
+
+## ЧТО ЗАКОММИЧЕНО В MAIN
+
+### `d1f20a0` (06.05 22:31) — mega-guards V1 (append-wrappers)
+6 wrappers в конец task_worker.py: CANCEL_GUARD · FRESH_ESTIMATE_FALLBACK · PRICE_REPLY_REVIVE · PRICE_TIMEOUT_GUARD · DONE_OVERRIDE_INVALID_PUBLIC · STROYKA_PARENT_AWARE_MISSING_QUESTION.
+
+**Live-test factual conclusion**: 5 из 6 НЕ срабатывают. Append-wrapper в конце файла не цепляет код-путь, если функция уже обёрнута раньше. Документировано в session memory.
+
+### `c7c8755` (06.05 23:50) — INLINE_FIX V1 (body edits)
+- `_p6e67_try_merge`: state guard + fresh estimate dispatch перед terminal guard
+- FCG `_update_task` wrapper: bypass INVALID_PUBLIC_RESULT при 5 markers + Drive link
+- `_t2v5_/_t2v6c_` price-bind: explicit token required, max raw 80 chars
+- V1 wrappers (14898-15256) помечены SUPERSEDED
+
+**Live-test (replay 3 задач cf15cc9b/f1ef9fab/71adbe24)**:
+- ✅ Маркер `V5/V6C_PRICE_REJECTED:no_explicit_token_or_long` появился (D работает — длинные тексты не считаются price-choice)
+- ⚠️ Маркер `FRESH_ESTIMATE_DISPATCHED` НЕ появился — `_find_parent` нашёл parent для cf15cc9b, ушло в P6E67_MERGED, а не в terminal guard
+
+## КРИТИЧЕСКАЯ ПРОБЛЕМА — НЕ ЗАКРЫТА
+
+**`FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3`** (`core/stroyka_estimate_canon.py:1178`) — старый route, перехватывает раньше V2 в `_handle_new` через hook на task_worker.py:1313. Выдаёт пользователю старый формат:
+```
+✅ Предварительная смета готова
+
+Объект: дом
+Эталон: М-80.xlsx
+Лист эталона: Каркас под ключ
+Выбор цены: median
+Разделы:
+- Фундамент
+- Стены
+- Перекрытия
+- Кровля
+- Логистика
+- Накладные расходы
+```
+
+Это **не canonical** (только 6 разделов из 11, 8-колоночный XLSX вместо 15, без AREAL_CALC, без template-based copy).
+
+## ЧТО ОПРЕДЕЛИЛИ ЗА СЕССИЮ (новые каноны)
+
+1. `TOPIC_500_UNIVERSAL_SEARCH_CANON.md` — universal adaptive search (16 режимов), procurement — один из них
+2. `TOPIC_2_CANONICAL_ESTIMATE_CONTRACT.md` — 5 шаблонов / 15-col AREAL_CALC / 11 секций / scoring / sheet selection / DONE contract / final response format
+3. **5 шаблонов скачаны** локально в `data/templates/estimate/cache/`:
+   - М-80.xlsx (403kb, sheets «Каркас под ключ» + «Газобетон_под ключ»)
+   - М-110.xlsx (12kb)
+   - Ареал Нева.xlsx (151kb)
+   - фундамент_Склад2.xlsx (16kb)
+   - крыша и перекр.xlsx (58kb)
+
+## ЧТО НЕ ЗАКРЫТО
+
+### topic_2 STROYKA — главное
+- **`PATCH_TOPIC2_FULL_CANONICAL_CLOSE_ONEPASS_V1`** не применён. Backups сделаны, кода нет.
+  Должен реализовать:
+  - Заменить `_make_artifacts` в V2 на template-based + AREAL_CALC 15 cols
+  - Canonical guard в `_handle_new` (line 1310) ДО V3 hook (line 1313)
+  - Old output blocker в FCG `_update_task`
+  - Drive download on-demand (cache first)
+  - 11 секций с интерьером (санузел/кухня/спальня + ИК-полы/имитация бруса)
+  - Live price enrichment через `core/price_enrichment.py` + Perplexity
+  - PDF через `core/pdf_cyrillic.py` (`create_pdf_with_cyrillic` + `validate_cyrillic_pdf`)
+  - Clean Telegram format по контракту §9 TOPIC_2_CANONICAL
+- `_p2_create_xlsx` (sample_template_engine.py) — 8 колонок vs 15
+- Свободный текст ТЗ (без готовой таблицы) — engine не умеет разложить на секции
+- Уточнение параметров может зацикливаться
+
+### topic_500 SEARCH
+- Базовая procurement-таблица работает («Поставщик|Площадка|Цена|Ссылка|Проверено»)
+- НЕ реализована adaptive output по intent — все идёт через procurement формат
+- НЕ реализованы режимы: normative · download · technical · news · comparison · local · factual
+- Forbidden patterns blocker отсутствует
+
+### topic_5 ТЕХНАДЗОР
+- Стабилен (57 DONE / 52 FAILED за 7д)
+- 16 INVALID_RESULT_GATE — акт без артефакта
+- Блокер `ddfc12b1` закрыт
+
+### Memory / archive
+- `MEMORY_QUERY_GUARD_V1` не перехватывает «что обсуждали», «какие задачи были» → попадают в estimate route → P6E67 terminal
+- Archive context для memory-вопросов не подключён к engine
+
+## ФАЙЛЫ ИЗМЕНЁННЫЕ В ЭТОЙ СЕССИИ
+- `task_worker.py` (commit `c7c8755`)
+- Backup'ы для следующей итерации:
+  - `*.bak.PATCH_INLINE_FIX_20260506`
+  - `*.bak.PATCH_TOPIC2_FULL_CANONICAL_CLOSE_ONEPASS_V1`
+- `~/.claude/settings.json` (allowlist расширен — global)
+
+## КОМАНДЫ ДЛЯ СЛЕДУЮЩЕЙ СЕССИИ
+```bash
+cd /root/.areal-neva-core
+git log --oneline | head -3                # должен видеть c7c8755 и/или session-close commit
+ls data/templates/estimate/cache/          # 5 шаблонов в кэше
+sqlite3 -readonly data/core.db "SELECT state,COUNT(*) FROM tasks WHERE topic_id=2 AND created_at >= datetime('now','-24 hours') GROUP BY state;"
+journalctl -u areal-task-worker --since '5 minutes ago' --no-pager
+```
+
+## ПРИОРИТЕТ СЛЕДУЮЩЕЙ СЕССИИ
+1. **Реализовать PATCH_TOPIC2_FULL_CANONICAL_CLOSE_ONEPASS_V1** — главный блокер
+2. Адаптивный output для topic_500 по 16 режимам
+3. MEMORY_QUERY_GUARD_V1 для статусных запросов
+4. INVALID_RESULT_GATE топик_5 — акт без артефакта
+
+====================================================================================================
+END_FILE: docs/HANDOFFS/HANDOFF_20260507_SESSION_CLOSE.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
 BEGIN_FILE: docs/HANDOFFS/SESSION_EXPORT_CHATGPT_2026-04-30_FULLFIX_13_15_CURRENT.json
 FILE_CHUNK: 1/1
 SHA256_FULL_FILE: 5790b7c6f58ca31d50fc0aad5e1f691d31e6af6774fa7695f6b8b12735b24d91
@@ -4590,6 +7470,56 @@ SHA256_FULL_FILE: 5790b7c6f58ca31d50fc0aad5e1f691d31e6af6774fa7695f6b8b12735b24d
 
 ====================================================================================================
 END_FILE: docs/HANDOFFS/SESSION_EXPORT_CHATGPT_2026-04-30_FULLFIX_13_15_CURRENT.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/REPORTS/ALL_THREE_DIRECTIONS_ABSOLUTE_CODE_CLOSE_V1_REPORT.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: a0b45f76910f3947da57374617e22726ee05cfa4e0914a178e50c4d04773bcef
+====================================================================================================
+# ALL_THREE_DIRECTIONS_ABSOLUTE_CODE_CLOSE_V1_REPORT
+
+STATUS: CODE_CLOSED_ALL_THREE_DIRECTIONS
+
+Patched or preserved:
+- core/project_route_guard.py
+- core/project_engine.py
+- docs/REPORTS/THREE_STAGES_CANON_AND_STATUS.md
+
+Code closures:
+- topic_2 / smeta: ESTIMATE_PRIORITY_FIX_V1
+- topic_210 / projects: SHEETS_NORMALIZE_V1
+- topic_210 / projects: PROJECT_TEMPLATE_MEMORY_CATALOG_SYNC_ABSOLUTE_V1
+- topic_210 / projects: PROJECT_TEMPLATE_MEMORY_CATALOG_SYNC_ABSOLUTE_HOOK_V1
+- topic_210 / projects: CANON_LIST_QUERY_GUARD_V1 preserved
+- topic_500 / search: FILE_TECH_CONTOUR_FOLLOWUP_V2 preserved
+- topic_500 / search: SEARCH_TOPIC500_FTCF_ISOLATION_V1 preserved
+
+Forbidden files not patched:
+- task_worker.py
+- telegram_daemon.py
+- core/reply_sender.py
+- google_io.py
+- core/ai_router.py
+- systemd units
+- Drive/OAuth
+- memory.db schema
+- core.db schema
+- .env
+- credentials
+- sessions
+
+Runtime artifacts:
+- /root/.areal-neva-core/data/project_templates/PROJECT_TEMPLATE_MODEL__MEMORY_CATALOG_INDEX.json
+- /root/.areal-neva-core/data/project_templates/PROJECT_TEMPLATE_MODEL__*_memory_catalog.json when missing sections exist
+
+Known untracked ignored by owner directive:
+- data/db_backups/
+- docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_008.md
+
+====================================================================================================
+END_FILE: docs/REPORTS/ALL_THREE_DIRECTIONS_ABSOLUTE_CODE_CLOSE_V1_REPORT.md
 FILE_CHUNK: 1/1
 ====================================================================================================
 
@@ -4959,5553 +7889,5 @@ timestamp: 20260502_163729
 
 ====================================================================================================
 END_FILE: docs/REPORTS/ESTIMATE_SCENARIO_CLASSIFICATION_FIX_V1_REPORT.md
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: docs/REPORTS/ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4_REPORT.md
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: b76f4c3e00df6223377f6d13a6d018929f168607b220bb98447a4d22764afde1
-====================================================================================================
-# ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4_REPORT
-
-status: OK
-updated_at: 2026-05-02T13:37:39.354912+00:00
-canon: docs/CANON_FINAL/ESTIMATE_TEMPLATE_M80_M110_CANON.md
-registry: config/estimate_template_registry.json
-formula_index: data/templates/estimate_logic/estimate_template_formula_index.json
-
-## CLOSED
-- top estimate templates resolved from Drive
-- XLSX formulas extracted
-- universal material logic registered
-- web price confirmation registered
-- logistics and overhead clarification registered
-- direct sqlite memory write completed
-- ai_router context hook enabled
-
-## RAW_POLICY
-```json
-{
-  "version": "ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4",
-  "status": "ACTIVE_CANON",
-  "updated_at": "2026-05-02T13:37:39.354912+00:00",
-  "purpose": "Use top estimate files as scalable estimate calculation logic templates with mandatory logistics and web price confirmation",
-  "source_files": [
-    {
-      "key": "M80",
-      "title": "М-80.xlsx",
-      "template_role": "full_house_estimate_template",
-      "description": "Эталон полной сметы М-80",
-      "file_id": "1yt-RJsGRhO13zmPKNAn6bMuGrpXY7kWp",
-      "drive_url": "https://docs.google.com/spreadsheets/d/1yt-RJsGRhO13zmPKNAn6bMuGrpXY7kWp/edit?usp=drivesdk&ouid=110231323399920032425&rtpof=true&sd=true",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "modifiedTime": "2025-12-02T09:12:35.000Z",
-      "parents": [
-        "13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB"
-      ],
-      "formula_total": 1670,
-      "formula_samples": [
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "E1",
-          "formula": "=E2+E3+E4+E5+E6+E7+E8"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "E2",
-          "formula": "=I40"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "E3",
-          "formula": "=I63"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "E4",
-          "formula": "=I102"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "E5",
-          "formula": "=I121"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "E6",
-          "formula": "=I158"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "E7",
-          "formula": "=I230"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "E8",
-          "formula": "=I264"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "F12",
-          "formula": "=E12*D12"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "H12",
-          "formula": "=D12*G12"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "I12",
-          "formula": "=F12+H12"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "F13",
-          "formula": "=E13*D13"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "F14",
-          "formula": "=E14*D14"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "H14",
-          "formula": "=D14*G14"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "I14",
-          "formula": "=F14+H14"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "D15",
-          "formula": "=D14/2"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "F15",
-          "formula": "=E15*D15"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "H15",
-          "formula": "=D15*G15"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "I15",
-          "formula": "=F15+H15"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "F16",
-          "formula": "=E16*D16"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "H16",
-          "formula": "=D16*G16"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "I16",
-          "formula": "=F16+H16"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "D17",
-          "formula": "=D14+D16"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "F17",
-          "formula": "=E17*D17"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "H17",
-          "formula": "=D17*G17"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "I17",
-          "formula": "=F17+H17"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "F18",
-          "formula": "=E18*D18"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "H18",
-          "formula": "=D18*G18"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "I18",
-          "formula": "=F18+H18"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "F19",
-          "formula": "=E19*D19"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "H19",
-          "formula": "=D19*G19"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "I19",
-          "formula": "=F19+H19"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "F20",
-          "formula": "=E20*D20"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "H20",
-          "formula": "=D20*G20"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "I20",
-          "formula": "=F20+H20"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "F21",
-          "formula": "=E21*D21"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "H21",
-          "formula": "=D21*G21"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "I21",
-          "formula": "=F21+H21"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "F22",
-          "formula": "=E22*D22"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "H22",
-          "formula": "=D22*G22"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "I22",
-          "formula": "=F22+H22"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "F23",
-          "formula": "=E23*D23"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "H23",
-          "formula": "=D23*G23"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "I23",
-          "formula": "=F23+H23"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "F24",
-          "formula": "=E24*D24"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "H24",
-          "formula": "=D24*G24"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "I24",
-          "formula": "=F24+H24"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "F25",
-          "formula": "=E25*D25"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "F26",
-          "formula": "=E26*D26"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "H26",
-          "formula": "=D26*G26"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "E1",
-          "formula": "=E2+E3+E4+E5+E6+E7+E8"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "E2",
-          "formula": "=I58"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "E3",
-          "formula": "=I112"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "E4",
-          "formula": "=I156"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "E5",
-          "formula": "=I175"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "E6",
-          "formula": "=I205"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "E7",
-          "formula": "=I257"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "E8",
-          "formula": "=I291"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "F12",
-          "formula": "=E12*D12"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "H12",
-          "formula": "=D12*G12"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "I12",
-          "formula": "=F12+H12"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "F13",
-          "formula": "=E13*D13"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "H13",
-          "formula": "=D13*G13"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "I13",
-          "formula": "=F13+H13"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "D14",
-          "formula": "=D13"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "F14",
-          "formula": "=E14*D14"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "H14",
-          "formula": "=D14*G14"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "I14",
-          "formula": "=F14+H14"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "F15",
-          "formula": "=E15*D15"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "H15",
-          "formula": "=D15*G15"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "I15",
-          "formula": "=F15+H15"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "D16",
-          "formula": "=138+48"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "F16",
-          "formula": "=E16*D16"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "H16",
-          "formula": "=D16*G16"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "I16",
-          "formula": "=F16+H16"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "D17",
-          "formula": "=ROUNDUP(D15*0.2*1.4,)"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "F17",
-          "formula": "=E17*D17"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "H17",
-          "formula": "=D17*G17"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "I17",
-          "formula": "=F17+H17"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "F18",
-          "formula": "=E18*D18"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "H18",
-          "formula": "=D18*G18"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "I18",
-          "formula": "=F18+H18"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "D19",
-          "formula": "=D17"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "F19",
-          "formula": "=E19*D19"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "H19",
-          "formula": "=D19*G19"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "I19",
-          "formula": "=F19+H19"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "D20",
-          "formula": "=ROUNDUP(D15*0.1*1.2,)"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "F20",
-          "formula": "=E20*D20"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "H20",
-          "formula": "=D20*G20"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "I20",
-          "formula": "=F20+H20"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "F21",
-          "formula": "=E21*D21"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "H21",
-          "formula": "=D21*G21"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "I21",
-          "formula": "=F21+H21"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "D22",
-          "formula": "=D20"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "F22",
-          "formula": "=E22*D22"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "H22",
-          "formula": "=D22*G22"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "I22",
-          "formula": "=F22+H22"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "F23",
-          "formula": "=E23*D23"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "F24",
-          "formula": "=E24*D24"
-        },
-        {
-          "sheet": "Газобетон_под ключ",
-          "cell": "H24",
-          "formula": "=D24*G24"
-        }
-      ],
-      "sheets": [
-        {
-          "sheet_name": "Каркас под ключ",
-          "scenario": "frame_house",
-          "sections": [
-            "Фундамент",
-            "Каркас",
-            "Кровля",
-            "Окна, двери",
-            "Внешняя отделка",
-            "Внутренняя отделка",
-            "Инженерные коммуникации"
-          ],
-          "header_rows": [
-            9,
-            41,
-            64,
-            103,
-            122,
-            159,
-            231
-          ],
-          "total_rows": [
-            {
-              "row": 38,
-              "text": "Итого работа: 177630.50303999998"
-            },
-            {
-              "row": 39,
-              "text": "Итого материалы: 187078.848"
-            },
-            {
-              "row": 40,
-              "text": "Итого фундамент: 364709.35104"
-            },
-            {
-              "row": 61,
-              "text": "Итого работа: 421719.7464864"
-            },
-            {
-              "row": 62,
-              "text": "Итого материалы: 370590.989583808"
-            },
-            {
-              "row": 63,
-              "text": "Итого каркас : 792310.736070208"
-            },
-            {
-              "row": 100,
-              "text": "Итого работа: 489854.65233"
-            },
-            {
-              "row": 101,
-              "text": "Итого материалы: 594110.925088848"
-            },
-            {
-              "row": 102,
-              "text": "Итого кровля: 1083965.577418848"
-            },
-            {
-              "row": 119,
-              "text": "Итого работа: 157905"
-            },
-            {
-              "row": 120,
-              "text": "Итого материалы: 677320.8"
-            },
-            {
-              "row": 121,
-              "text": "Итого окна, двери: 835225.8"
-            },
-            {
-              "row": 156,
-              "text": "Итого работа: 339034.9049999999"
-            },
-            {
-              "row": 157,
-              "text": "Итого материалы: 327018.077824976"
-            },
-            {
-              "row": 158,
-              "text": "Итого внешняя отделка: 666052.9828249759"
-            },
-            {
-              "row": 228,
-              "text": "Итого работа: 819488.08396"
-            },
-            {
-              "row": 229,
-              "text": "Итого материалы: 918336.176296875"
-            },
-            {
-              "row": 230,
-              "text": "Итого внутренняя отделка: 1737824.2602568748"
-            },
-            {
-              "row": 262,
-              "text": "Итого работа: 207549.06"
-            },
-            {
-              "row": 263,
-              "text": "Итого материалы: 323128.186"
-            },
-            {
-              "row": 264,
-              "text": "Итого инженерные коммуникации: 530677.246"
-            },
-            {
-              "row": 266,
-              "text": "Итого РАБОТЫ: 2405632.8908164"
-            },
-            {
-              "row": 267,
-              "text": "Итого МАТЕРИАЛЫ: 3074455.816794507"
-            },
-            {
-              "row": 268,
-              "text": "ИТОГО СМЕТНАЯ СТОИМОСТЬ: 6010765.953610907"
-            }
-          ],
-          "material_rows": 130,
-          "work_rows": 96,
-          "logistics_rows": 17,
-          "sample_rows": [
-            {
-              "row": 9,
-              "name": "Наименование",
-              "unit": "Ед. изм.",
-              "qty": "Кол-во",
-              "work_price": "Работа",
-              "material_price": "Материалы"
-            },
-            {
-              "row": 12,
-              "name": "Вынос осей в натуру",
-              "unit": "м2",
-              "qty": "95.4",
-              "work_price": "100",
-              "material_price": "0"
-            },
-            {
-              "row": 14,
-              "name": "Укладка канализационной трубы в грунт",
-              "unit": "мп",
-              "qty": "20",
-              "work_price": "800",
-              "material_price": "0"
-            },
-            {
-              "row": 15,
-              "name": "Труба канализационная Ostendorf d110x2000 мм для наружной канализации",
-              "unit": "шт",
-              "qty": "10",
-              "work_price": "0",
-              "material_price": "670"
-            },
-            {
-              "row": 16,
-              "name": "Труба канализационная Ostendorf d110x1000 мм для наружной канализации",
-              "unit": "шт",
-              "qty": "3",
-              "work_price": "0",
-              "material_price": "400"
-            },
-            {
-              "row": 17,
-              "name": "Теплоизоляция для труб стенофлекс 114х13х2000 мм",
-              "unit": "мп",
-              "qty": "23",
-              "work_price": "0",
-              "material_price": "118"
-            },
-            {
-              "row": 18,
-              "name": "Комплект тройников, отводов, уголков для наружной канализации.",
-              "unit": "к-т",
-              "qty": "1",
-              "work_price": "0",
-              "material_price": "3500"
-            },
-            {
-              "row": 19,
-              "name": "Укладка закладной трубы в грунт под электрокабель",
-              "unit": "мп",
-              "qty": "15",
-              "work_price": "400",
-              "material_price": "0"
-            },
-            {
-              "row": 20,
-              "name": "Кабель NVO ВБШвнг(А) LS 5х2.5 20 м",
-              "unit": "шт",
-              "qty": "1",
-              "work_price": "0",
-              "material_price": "6600"
-            },
-            {
-              "row": 21,
-              "name": "Труба двустенная гофрированная ПНД/ПВД d63/52",
-              "unit": "мп",
-              "qty": "15",
-              "work_price": "0",
-              "material_price": "114"
-            },
-            {
-              "row": 22,
-              "name": "Укладка трубы ХВС в грунт на глубину 1,5м.",
-              "unit": "мп",
-              "qty": "10",
-              "work_price": "1000",
-              "material_price": "0"
-            },
-            {
-              "row": 23,
-              "name": "Труба двустенная гофрированная ПНД/ПВД d63/52",
-              "unit": "мп",
-              "qty": "20",
-              "work_price": "0",
-              "material_price": "114"
-            },
-            {
-              "row": 24,
-              "name": "Труба ПНД (ПЭ-100) для систем водоснабжения премиум синяя 32 мм",
-              "unit": "мп",
-              "qty": "20",
-              "work_price": "0",
-              "material_price": "81"
-            },
-            {
-              "row": 26,
-              "name": "Разметка свайного поля, забивка свай, установка оголовков",
-              "unit": "шт",
-              "qty": "31",
-              "work_price": "2000",
-              "material_price": "0"
-            },
-            {
-              "row": 27,
-              "name": "Свая винтовая d108 мм h2500 мм",
-              "unit": "шт",
-              "qty": "31",
-              "work_price": "0",
-              "material_price": "2632"
-            },
-            {
-              "row": 28,
-              "name": "Оголовок для сваи винтовой d108 мм",
-              "unit": "шт",
-              "qty": "31",
-              "work_price": "0",
-              "material_price": "260"
-            },
-            {
-              "row": 29,
-              "name": "Обвязка свай по гидроизоляции",
-              "unit": "мп",
-              "qty": "72.72",
-              "work_price": "750",
-              "material_price": "0"
-            },
-            {
-              "row": 30,
-              "name": "Гидроизоляция Линокром ХПП Технониколь черный 15 кв.м",
-              "unit": "рул",
-              "qty": "1",
-              "work_price": "0",
-              "material_price": "1900"
-            },
-            {
-              "row": 31,
-              "name": "Брус сух 150х150",
-              "unit": "м3",
-              "qty": "1.9634399999999999",
-              "work_price": "0",
-              "material_price": "22000"
-            },
-            {
-              "row": 32,
-              "name": "Крепеж и расходные материалы по разделу",
-              "unit": "к-т",
-              "qty": "31",
-              "work_price": "0",
-              "material_price": "200"
-            },
-            {
-              "row": 33,
-              "name": "Антисептирование конструкционной доски в 2 слоя",
-              "unit": "м2",
-              "qty": "1.9634399999999999",
-              "work_price": "200",
-              "material_price": "0"
-            },
-            {
-              "row": 34,
-              "name": "Антисептик Neomid 450 огнебиозащитный I группа красный 10 кг",
-              "unit": "шт",
-              "qty": "1",
-              "work_price": "0",
-              "material_price": "2800"
-            },
-            {
-              "row": 35,
-              "name": "Погрузо-разгрузочные работы",
-              "unit": "усл",
-              "qty": "1",
-              "work_price": "6000",
-              "material_price": "0"
-            },
-            {
-              "row": 36,
-              "name": "Транспортные расходы",
-              "unit": "",
-              "qty": "0.1",
-              "work_price": "",
-              "material_price": ""
-            },
-            {
-              "row": 37,
-              "name": "Накладные расходы",
-              "unit": "",
-              "qty": "0.08",
-              "work_price": "",
-              "material_price": ""
-            },
-            {
-              "row": 41,
-              "name": "Наименование",
-              "unit": "Ед. изм.",
-              "qty": "Кол-во",
-              "work_price": "Работа",
-              "material_price": "Материалы"
-            },
-            {
-              "row": 44,
-              "name": "Монтаж лаг цокольного перекрытия вкл террасы, крыльца",
-              "unit": "м2",
-              "qty": "91.7",
-              "work_price": "1000",
-              "material_price": "0"
-            },
-            {
-              "row": 45,
-              "name": "доска с/к 40х200",
-              "unit": "м3",
-              "qty": "2.2008",
-              "work_price": "0",
-              "material_price": "24300"
-            },
-            {
-              "row": 46,
-              "name": "Устройство каркаса стен/перегородок",
-              "unit": "м2",
-              "qty": "157.62825",
-              "work_price": "1000",
-              "material_price": "0"
-            },
-            {
-              "row": 47,
-              "name": "Монтаж стоек и балок террасы",
-              "unit": "мп",
-              "qty": "8.8",
-              "work_price": "800",
-              "material_price": "0"
-            },
-            {
-              "row": 48,
-              "name": "доска с/к 40х150",
-              "unit": "м3",
-              "qty": "4.4977464000000005",
-              "work_price": "0",
-              "material_price": "24300"
-            },
-            {
-              "row": 49,
-              "name": "доска с/к 40х100",
-              "unit": "м3",
-              "qty": "0.2945808",
-              "work_price": "0",
-              "material_price": "24300"
-            },
-            {
-              "row": 50,
-              "name": "бру с/с 150х150",
-              "unit": "м3",
-              "qty": "0.26999999999999996",
-              "work_price": "0",
-              "material_price": "30000"
-            },
-            {
-              "row": 51,
-              "name": "Монтаж баллок перекрытия",
-              "unit": "м2",
-              "qty": "0",
-              "work_price": "1000",
-              "material_price": "0"
-            },
-            {
-              "row": 52,
-              "name": "доска с/к 40х150",
-              "unit": "м3",
-              "qty": "0",
-              "work_price": "0",
-              "material_price": "24300"
-            }
-          ],
-          "formula_count": 799,
-          "formula_samples": [
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "E1",
-              "formula": "=E2+E3+E4+E5+E6+E7+E8"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "E2",
-              "formula": "=I40"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "E3",
-              "formula": "=I63"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "E4",
-              "formula": "=I102"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "E5",
-              "formula": "=I121"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "E6",
-              "formula": "=I158"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "E7",
-              "formula": "=I230"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "E8",
-              "formula": "=I264"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "F12",
-              "formula": "=E12*D12"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "H12",
-              "formula": "=D12*G12"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "I12",
-              "formula": "=F12+H12"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "F13",
-              "formula": "=E13*D13"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "F14",
-              "formula": "=E14*D14"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "H14",
-              "formula": "=D14*G14"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "I14",
-              "formula": "=F14+H14"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "D15",
-              "formula": "=D14/2"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "F15",
-              "formula": "=E15*D15"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "H15",
-              "formula": "=D15*G15"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "I15",
-              "formula": "=F15+H15"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "F16",
-              "formula": "=E16*D16"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "H16",
-              "formula": "=D16*G16"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "I16",
-              "formula": "=F16+H16"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "D17",
-              "formula": "=D14+D16"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "F17",
-              "formula": "=E17*D17"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "H17",
-              "formula": "=D17*G17"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "I17",
-              "formula": "=F17+H17"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "F18",
-              "formula": "=E18*D18"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "H18",
-              "formula": "=D18*G18"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "I18",
-              "formula": "=F18+H18"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "F19",
-              "formula": "=E19*D19"
-            }
-          ],
-          "row_count": 285
-        },
-        {
-          "sheet_name": "Газобетон_под ключ",
-          "scenario": "gasbeton_or_masonry_with_monolithic_foundation",
-          "sections": [
-            "Фундамент",
-            "Стены",
-            "Кровля",
-            "Окна, двери",
-            "Внешняя отделка",
-            "Внутренняя отделка",
-            "Инженерные коммуникации"
-          ],
-          "header_rows": [
-            9,
-            59,
-            113,
-            157,
-            176,
-            206,
-            258
-          ],
-          "total_rows": [
-            {
-              "row": 56,
-              "text": "Итого работа: 371647.66"
-            },
-            {
-              "row": 57,
-              "text": "Итого материалы: 564147.06331776"
-            },
-            {
-              "row": 58,
-              "text": "Итого фундамент: 935794.72331776"
-            },
-            {
-              "row": 110,
-              "text": "Итого работа: 436810.7232500001"
-            },
-            {
-              "row": 111,
-              "text": "Итого материалы: 611460.929728"
-            },
-            {
-              "row": 112,
-              "text": "Итого каркас : 1048271.652978"
-            },
-            {
-              "row": 154,
-              "text": "Итого работа: 618251.94353"
-            },
-            {
-              "row": 155,
-              "text": "Итого материалы: 681975.5442550561"
-            },
-            {
-              "row": 156,
-              "text": "Итого кровля: 1300227.4877850562"
-            },
-            {
-              "row": 173,
-              "text": "Итого работа: 157905"
-            },
-            {
-              "row": 174,
-              "text": "Итого материалы: 677320.8"
-            },
-            {
-              "row": 175,
-              "text": "Итого окна, двери: 835225.8"
-            },
-            {
-              "row": 203,
-              "text": "Итого работа: 293332.36899999995"
-            },
-            {
-              "row": 204,
-              "text": "Итого материалы: 252704.802632"
-            },
-            {
-              "row": 205,
-              "text": "Итого внешняя отделка: 546037.171632"
-            },
-            {
-              "row": 255,
-              "text": "Итого работа: 613355.61856"
-            },
-            {
-              "row": 256,
-              "text": "Итого материалы: 619625.761125"
-            },
-            {
-              "row": 257,
-              "text": "Итого внутренняя отделка: 1232981.379685"
-            },
-            {
-              "row": 289,
-              "text": "Итого работа: 207549.06"
-            },
-            {
-              "row": 290,
-              "text": "Итого материалы: 323128.186"
-            },
-            {
-              "row": 291,
-              "text": "Итого инженерные коммуникации: 530677.246"
-            },
-            {
-              "row": 293,
-              "text": "Итого РАБОТЫ: 2698852.37434"
-            },
-            {
-              "row": 294,
-              "text": "Итого МАТЕРИАЛЫ: 3730363.087057816"
-            },
-            {
-              "row": 295,
-              "text": "ИТОГО СМЕТНАЯ СТОИМОСТЬ: 6429215.4613978155"
-            }
-          ],
-          "material_rows": 156,
-          "work_rows": 99,
-          "logistics_rows": 23,
-          "sample_rows": [
-            {
-              "row": 9,
-              "name": "Наименование",
-              "unit": "Ед. изм.",
-              "qty": "Кол-во",
-              "work_price": "Работа",
-              "material_price": "Материалы"
-            },
-            {
-              "row": 12,
-              "name": "Вынос осей в натуру",
-              "unit": "м2",
-              "qty": "95.4",
-              "work_price": "80",
-              "material_price": "0"
-            },
-            {
-              "row": 13,
-              "name": "Земляные работы, сопровождение работы экскаватора",
-              "unit": "см",
-              "qty": "1",
-              "work_price": "12000",
-              "material_price": "0"
-            },
-            {
-              "row": 14,
-              "name": "Аренда экскаватора",
-              "unit": "см",
-              "qty": "1",
-              "work_price": "0",
-              "material_price": "22000"
-            },
-            {
-              "row": 15,
-              "name": "Доработка грунта вручную",
-              "unit": "м2",
-              "qty": "138",
-              "work_price": "150",
-              "material_price": "0"
-            },
-            {
-              "row": 16,
-              "name": "Настил геотекстиля по основанию и стенам котлована (Геотекстиль 300 г/кв.м иглопробивной)",
-              "unit": "м2",
-              "qty": "186",
-              "work_price": "80",
-              "material_price": "60"
-            },
-            {
-              "row": 17,
-              "name": "Устройство песчаной подготовки т 200 мм с уплотнением.",
-              "unit": "м3",
-              "qty": "39",
-              "work_price": "800",
-              "material_price": "0"
-            },
-            {
-              "row": 18,
-              "name": "Аренда виброплиты (трамбовка)",
-              "unit": "сут",
-              "qty": "4",
-              "work_price": "0",
-              "material_price": "2500"
-            },
-            {
-              "row": 19,
-              "name": "Песок карьерный",
-              "unit": "м3",
-              "qty": "39",
-              "work_price": "0",
-              "material_price": "900"
-            },
-            {
-              "row": 20,
-              "name": "Устройство щебеночной подготовки т 100 мм с уплотнением.",
-              "unit": "м3",
-              "qty": "17",
-              "work_price": "800",
-              "material_price": "0"
-            },
-            {
-              "row": 21,
-              "name": "Аренда виброплиты (трамбовка)",
-              "unit": "сут",
-              "qty": "4",
-              "work_price": "0",
-              "material_price": "2500"
-            },
-            {
-              "row": 22,
-              "name": "Щебень фр 20-40",
-              "unit": "м3",
-              "qty": "17",
-              "work_price": "0",
-              "material_price": "1880"
-            },
-            {
-              "row": 24,
-              "name": "Укладка канализационной трубы в грунт",
-              "unit": "мп",
-              "qty": "20",
-              "work_price": "900",
-              "material_price": "0"
-            },
-            {
-              "row": 25,
-              "name": "Труба канализационная Ostendorf d110x2000 мм для наружной канализации",
-              "unit": "шт",
-              "qty": "10",
-              "work_price": "0",
-              "material_price": "670"
-            },
-            {
-              "row": 26,
-              "name": "Труба канализационная Ostendorf d110x1000 мм для наружной канализации",
-              "unit": "шт",
-              "qty": "3",
-              "work_price": "0",
-              "material_price": "400"
-            },
-            {
-              "row": 27,
-              "name": "Теплоизоляция для труб стенофлекс 114х13х2000 мм",
-              "unit": "мп",
-              "qty": "23",
-              "work_price": "0",
-              "material_price": "118"
-            },
-            {
-              "row": 28,
-              "name": "Комплект тройников, отводов, уголков для наружной канализации.",
-              "unit": "к-т",
-              "qty": "1",
-              "work_price": "0",
-              "material_price": "3500"
-            },
-            {
-              "row": 29,
-              "name": "Укладка закладной трубы в грунт под электрокабель",
-              "unit": "мп",
-              "qty": "15",
-              "work_price": "400",
-              "material_price": "0"
-            },
-            {
-              "row": 30,
-              "name": "Кабель NVO ВБШвнг(А) LS 5х2.5 20 м",
-              "unit": "шт",
-              "qty": "1",
-              "work_price": "0",
-              "material_price": "6600"
-            },
-            {
-              "row": 31,
-              "name": "Труба двустенная гофрированная ПНД/ПВД d63/52",
-              "unit": "мп",
-              "qty": "15",
-              "work_price": "0",
-              "material_price": "114"
-            },
-            {
-              "row": 32,
-              "name": "Укладка трубы ХВС в грунт на глубину 1,5м.",
-              "unit": "мп",
-              "qty": "10",
-              "work_price": "850",
-              "material_price": "0"
-            },
-            {
-              "row": 33,
-              "name": "Труба двустенная гофрированная ПНД/ПВД d63/52",
-              "unit": "мп",
-              "qty": "20",
-              "work_price": "0",
-              "material_price": "114"
-            },
-            {
-              "row": 34,
-              "name": "Труба ПНД (ПЭ-100) для систем водоснабжения премиум синяя 32 мм",
-              "unit": "мп",
-              "qty": "20",
-              "work_price": "0",
-              "material_price": "81"
-            },
-            {
-              "row": 35,
-              "name": "Настил технической пленки",
-              "unit": "м2",
-              "qty": "120",
-              "work_price": "50",
-              "material_price": "40"
-            },
-            {
-              "row": 37,
-              "name": "Устройство опалубки",
-              "unit": "мп",
-              "qty": "40.7",
-              "work_price": "1100",
-              "material_price": "0"
-            },
-            {
-              "row": 38,
-              "name": "Доска 50х150(100)х6000 мм е/в",
-              "unit": "м3",
-              "qty": "1.8315000000000001",
-              "work_price": "0",
-              "material_price": "17500"
-            },
-            {
-              "row": 39,
-              "name": "Устройство арматурного каркаса",
-              "unit": "м2",
-              "qty": "95.4",
-              "work_price": "1200",
-              "material_price": "0"
-            },
-            {
-              "row": 40,
-              "name": "Арматура металлическая д.12 А500",
-              "unit": "т",
-              "qty": "2.0331648",
-              "work_price": "0",
-              "material_price": "70000"
-            },
-            {
-              "row": 41,
-              "name": "Арматура металлическая д.8 А500",
-              "unit": "т",
-              "qty": "0.22364812800000003",
-              "work_price": "0",
-              "material_price": "73000"
-            },
-            {
-              "row": 42,
-              "name": "Пеноплэкс Фундамент 100х585х1185",
-              "unit": "шт",
-              "qty": "5",
-              "work_price": "0",
-              "material_price": "709"
-            },
-            {
-              "row": 43,
-              "name": "Проволока вязальная 1,2мм",
-              "unit": "кг",
-              "qty": "50",
-              "work_price": "0",
-              "material_price": "160"
-            },
-            {
-              "row": 44,
-              "name": "Фиксаторы арматуры гориз.уп 250 шт",
-              "unit": "уп",
-              "qty": "3",
-              "work_price": "0",
-              "material_price": "1456"
-            },
-            {
-              "row": 45,
-              "name": "Бетонирование монолитной плиты с вибрированием",
-              "unit": "м3",
-              "qty": "21",
-              "work_price": "2000",
-              "material_price": "0"
-            },
-            {
-              "row": 46,
-              "name": "Бетон В20 W8 с доставкой*",
-              "unit": "м3",
-              "qty": "21",
-              "work_price": "0",
-              "material_price": "6500"
-            },
-            {
-              "row": 47,
-              "name": "глубинный вибратор",
-              "unit": "сут",
-              "qty": "1",
-              "work_price": "0",
-              "material_price": "1500"
-            }
-          ],
-          "formula_count": 871,
-          "formula_samples": [
-            {
-              "sheet": "Газобетон_под ключ",
-              "cell": "E1",
-              "formula": "=E2+E3+E4+E5+E6+E7+E8"
-            },
-            {
-              "sheet": "Газобетон_под ключ",
-              "cell": "E2",
-              "formula": "=I58"
-            },
-            {
-              "sheet": "Газобетон_под ключ",
-              "cell": "E3",
-              "formula": "=I112"
-            },
-            {
-              "sheet": "Газобетон_под ключ",
-              "cell": "E4",
-              "formula": "=I156"
-            },
-            {
-              "sheet": "Газобетон_под ключ",
-              "cell": "E5",
-              "formula": "=I175"
-            },
-            {
-              "sheet": "Газобетон_под ключ",
-              "cell": "E6",
-              "formula": "=I205"
-            },
-            {
-              "sheet": "Газобетон_под ключ",
-              "cell": "E7",
-              "formula": "=I257"
-            },
-            {
-              "sheet": "Газобетон_под ключ",
-              "cell": "E8",
-              "formula": "=I291"
-            },
-            {
-              "sheet": "Газобетон_под ключ",
-              "cell": "F12",
-              "formula": "=E12*D12"
-            },
-            {
-              "sheet": "Газобетон_под ключ",
-              "cell": "H12",
-              "formula": "=D12*G12"
-            },
-            {
-              "sheet": "Газобетон_под ключ",
-              "cell": "I12",
-              "formula": "=F12+H12"
-            },
-            {
-              "sheet": "Газобетон_под ключ",
-              "cell": "F13",
-              "formula": "=E13*D13"
-            },
-            {
-              "sheet": "Газобетон_под ключ",
-              "cell": "H13",
-              "formula": "=D13*G13"
-            },
-            {
-              "sheet": "Газобетон_под ключ",
-              "cell": "I13",
-              "formula": "=F13+H13"
-            },
-            {
-              "sheet": "Газобетон_под ключ",
-              "cell": "D14",
-              "formula": "=D13"
-            },
-            {
-              "sheet": "Газобетон_под ключ",
-              "cell": "F14",
-              "formula": "=E14*D14"
-            },
-            {
-              "sheet": "Газобетон_под ключ",
-              "cell": "H14",
-              "formula": "=D14*G14"
-            },
-            {
-              "sheet": "Газобетон_под ключ",
-              "cell": "I14",
-              "formula": "=F14+H14"
-            },
-            {
-              "sheet": "Газобетон_под ключ",
-              "cell": "F15",
-              "formula": "=E15*D15"
-            },
-            {
-              "sheet": "Газобетон_под ключ",
-              "cell": "H15",
-              "formula": "=D15*G15"
-            },
-            {
-              "sheet": "Газобетон_под ключ",
-              "cell": "I15",
-              "formula": "=F15+H15"
-            },
-            {
-              "sheet": "Газобетон_под ключ",
-              "cell": "D16",
-              "formula": "=138+48"
-            },
-            {
-              "sheet": "Газобетон_под ключ",
-              "cell": "F16",
-              "formula": "=E16*D16"
-            },
-            {
-              "sheet": "Газобетон_под ключ",
-              "cell": "H16",
-              "formula": "=D16*G16"
-            },
-            {
-              "sheet": "Газобетон_под ключ",
-              "cell": "I16",
-              "formula": "=F16+H16"
-            },
-            {
-              "sheet": "Газобетон_под ключ",
-              "cell": "D17",
-              "formula": "=ROUNDUP(D15*0.2*1.4,)"
-            },
-            {
-              "sheet": "Газобетон_под ключ",
-              "cell": "F17",
-              "formula": "=E17*D17"
-            },
-            {
-              "sheet": "Газобетон_под ключ",
-              "cell": "H17",
-              "formula": "=D17*G17"
-            },
-            {
-              "sheet": "Газобетон_под ключ",
-              "cell": "I17",
-              "formula": "=F17+H17"
-            },
-            {
-              "sheet": "Газобетон_под ключ",
-              "cell": "F18",
-              "formula": "=E18*D18"
-            }
-          ],
-          "row_count": 312
-        }
-      ]
-    },
-    {
-      "key": "M110",
-      "title": "М-110.xlsx",
-      "template_role": "full_house_estimate_template",
-      "description": "Эталон полной сметы М-110",
-      "file_id": "1Ub9fcwOcJ4pV30dcX88yf1225WOIdpWo",
-      "drive_url": "https://docs.google.com/spreadsheets/d/1Ub9fcwOcJ4pV30dcX88yf1225WOIdpWo/edit?usp=drivesdk&ouid=110231323399920032425&rtpof=true&sd=true",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "modifiedTime": "2025-05-15T06:18:08.000Z",
-      "parents": [
-        "13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB"
-      ],
-      "formula_total": 1647,
-      "formula_samples": [
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "E1",
-          "formula": "=E2+E3+E4+E5+E6+E7+E8"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "E2",
-          "formula": "=I40"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "E3",
-          "formula": "=I63"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "E4",
-          "formula": "=I102"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "E5",
-          "formula": "=I121"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "E6",
-          "formula": "=I158"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "E7",
-          "formula": "=I230"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "E8",
-          "formula": "=I264"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "F12",
-          "formula": "=E12*D12"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "H12",
-          "formula": "=D12*G12"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "I12",
-          "formula": "=F12+H12"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "F13",
-          "formula": "=E13*D13"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "F14",
-          "formula": "=E14*D14"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "H14",
-          "formula": "=D14*G14"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "I14",
-          "formula": "=F14+H14"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "D15",
-          "formula": "=D14/2"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "F15",
-          "formula": "=E15*D15"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "H15",
-          "formula": "=D15*G15"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "I15",
-          "formula": "=F15+H15"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "F16",
-          "formula": "=E16*D16"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "H16",
-          "formula": "=D16*G16"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "I16",
-          "formula": "=F16+H16"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "D17",
-          "formula": "=D14+D16"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "F17",
-          "formula": "=E17*D17"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "H17",
-          "formula": "=D17*G17"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "I17",
-          "formula": "=F17+H17"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "F18",
-          "formula": "=E18*D18"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "H18",
-          "formula": "=D18*G18"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "I18",
-          "formula": "=F18+H18"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "F19",
-          "formula": "=E19*D19"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "H19",
-          "formula": "=D19*G19"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "I19",
-          "formula": "=F19+H19"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "F20",
-          "formula": "=E20*D20"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "H20",
-          "formula": "=D20*G20"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "I20",
-          "formula": "=F20+H20"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "F21",
-          "formula": "=E21*D21"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "H21",
-          "formula": "=D21*G21"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "I21",
-          "formula": "=F21+H21"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "F22",
-          "formula": "=E22*D22"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "H22",
-          "formula": "=D22*G22"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "I22",
-          "formula": "=F22+H22"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "F23",
-          "formula": "=E23*D23"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "H23",
-          "formula": "=D23*G23"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "I23",
-          "formula": "=F23+H23"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "F24",
-          "formula": "=E24*D24"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "H24",
-          "formula": "=D24*G24"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "I24",
-          "formula": "=F24+H24"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "F25",
-          "formula": "=E25*D25"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "F26",
-          "formula": "=E26*D26"
-        },
-        {
-          "sheet": "Каркас под ключ",
-          "cell": "H26",
-          "formula": "=D26*G26"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "E1",
-          "formula": "=E2+E3+E4+E5+E6+E7+E8"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "E2",
-          "formula": "=I58"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "E3",
-          "formula": "=I110"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "E4",
-          "formula": "=I154"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "E5",
-          "formula": "=I173"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "E6",
-          "formula": "=I203"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "E7",
-          "formula": "=I255"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "E8",
-          "formula": "=I289"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "F12",
-          "formula": "=E12*D12"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "H12",
-          "formula": "=D12*G12"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "I12",
-          "formula": "=F12+H12"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "F13",
-          "formula": "=E13*D13"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "H13",
-          "formula": "=D13*G13"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "I13",
-          "formula": "=F13+H13"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "D14",
-          "formula": "=D13"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "F14",
-          "formula": "=E14*D14"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "H14",
-          "formula": "=D14*G14"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "I14",
-          "formula": "=F14+H14"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "F15",
-          "formula": "=E15*D15"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "H15",
-          "formula": "=D15*G15"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "I15",
-          "formula": "=F15+H15"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "D16",
-          "formula": "=155+50"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "F16",
-          "formula": "=E16*D16"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "H16",
-          "formula": "=D16*G16"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "I16",
-          "formula": "=F16+H16"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "D17",
-          "formula": "=ROUNDUP(D15*0.2*1.4,)"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "F17",
-          "formula": "=E17*D17"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "H17",
-          "formula": "=D17*G17"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "I17",
-          "formula": "=F17+H17"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "F18",
-          "formula": "=E18*D18"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "H18",
-          "formula": "=D18*G18"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "I18",
-          "formula": "=F18+H18"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "D19",
-          "formula": "=D17"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "F19",
-          "formula": "=E19*D19"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "H19",
-          "formula": "=D19*G19"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "I19",
-          "formula": "=F19+H19"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "D20",
-          "formula": "=ROUNDUP(D15*0.1*1.2,)"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "F20",
-          "formula": "=E20*D20"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "H20",
-          "formula": "=D20*G20"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "I20",
-          "formula": "=F20+H20"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "F21",
-          "formula": "=E21*D21"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "H21",
-          "formula": "=D21*G21"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "I21",
-          "formula": "=F21+H21"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "D22",
-          "formula": "=D20"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "F22",
-          "formula": "=E22*D22"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "H22",
-          "formula": "=D22*G22"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "I22",
-          "formula": "=F22+H22"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "F23",
-          "formula": "=E23*D23"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "F24",
-          "formula": "=E24*D24"
-        },
-        {
-          "sheet": "Газобетон",
-          "cell": "H24",
-          "formula": "=D24*G24"
-        }
-      ],
-      "sheets": [
-        {
-          "sheet_name": "Каркас под ключ",
-          "scenario": "frame_house",
-          "sections": [
-            "Фундамент",
-            "Каркас",
-            "Кровля",
-            "Окна, двери",
-            "Внешняя отделка",
-            "Внутренняя отделка",
-            "Инженерные коммуникации"
-          ],
-          "header_rows": [
-            9,
-            41,
-            64,
-            103,
-            122,
-            159,
-            231
-          ],
-          "total_rows": [
-            {
-              "row": 38,
-              "text": "Итого работа: 186528.8088"
-            },
-            {
-              "row": 39,
-              "text": "Итого материалы: 186206.46000000002"
-            },
-            {
-              "row": 40,
-              "text": "Итого фундамент: 372735.2688"
-            },
-            {
-              "row": 61,
-              "text": "Итого работа: 477629.94104"
-            },
-            {
-              "row": 62,
-              "text": "Итого материалы: 437064.3309088"
-            },
-            {
-              "row": 63,
-              "text": "Итого каркас : 914694.2719488"
-            },
-            {
-              "row": 100,
-              "text": "Итого работа: 529936.4"
-            },
-            {
-              "row": 101,
-              "text": "Итого материалы: 628855.6559680001"
-            },
-            {
-              "row": 102,
-              "text": "Итого кровля: 1158792.055968"
-            },
-            {
-              "row": 119,
-              "text": "Итого работа: 177210"
-            },
-            {
-              "row": 120,
-              "text": "Итого материалы: 713674"
-            },
-            {
-              "row": 121,
-              "text": "Итого окна, двери: 890884"
-            },
-            {
-              "row": 156,
-              "text": "Итого работа: 391133.64"
-            },
-            {
-              "row": 157,
-              "text": "Итого материалы: 438006.42710880004"
-            },
-            {
-              "row": 158,
-              "text": "Итого внешняя отделка: 829140.0671088"
-            },
-            {
-              "row": 228,
-              "text": "Итого работа: 966280.5451999999"
-            },
-            {
-              "row": 229,
-              "text": "Итого материалы: 1080968.6829375"
-            },
-            {
-              "row": 230,
-              "text": "Итого внутренняя отделка: 2047249.2281375001"
-            },
-            {
-              "row": 262,
-              "text": "Итого работа: 230232"
-            },
-            {
-              "row": 263,
-              "text": "Итого материалы: 346375"
-            },
-            {
-              "row": 264,
-              "text": "Итого инженерные коммуникации: 576607"
-            },
-            {
-              "row": 266,
-              "text": "Итого РАБОТЫ: 2728719.33504"
-            },
-            {
-              "row": 267,
-              "text": "Итого МАТЕРИАЛЫ: 3484775.5569231003"
-            },
-            {
-              "row": 268,
-              "text": "ИТОГО СМЕТНАЯ СТОИМОСТЬ: 6790101.8919631"
-            }
-          ],
-          "material_rows": 130,
-          "work_rows": 96,
-          "logistics_rows": 17,
-          "sample_rows": [
-            {
-              "row": 9,
-              "name": "Наименование",
-              "unit": "Ед. изм.",
-              "qty": "Кол-во",
-              "work_price": "Работа",
-              "material_price": "Материалы"
-            },
-            {
-              "row": 12,
-              "name": "Вынос осей в натуру",
-              "unit": "м2",
-              "qty": "112",
-              "work_price": "100",
-              "material_price": "0"
-            },
-            {
-              "row": 14,
-              "name": "Укладка канализационной трубы в грунт",
-              "unit": "мп",
-              "qty": "28",
-              "work_price": "800",
-              "material_price": "0"
-            },
-            {
-              "row": 15,
-              "name": "Труба канализационная Ostendorf d110x2000 мм для наружной канализации",
-              "unit": "шт",
-              "qty": "14",
-              "work_price": "0",
-              "material_price": "670"
-            },
-            {
-              "row": 16,
-              "name": "Труба канализационная Ostendorf d110x1000 мм для наружной канализации",
-              "unit": "шт",
-              "qty": "3",
-              "work_price": "0",
-              "material_price": "400"
-            },
-            {
-              "row": 17,
-              "name": "Теплоизоляция для труб стенофлекс 114х13х2000 мм",
-              "unit": "мп",
-              "qty": "31",
-              "work_price": "0",
-              "material_price": "118"
-            },
-            {
-              "row": 18,
-              "name": "Комплект тройников, отводов, уголков для наружной канализации.",
-              "unit": "к-т",
-              "qty": "1",
-              "work_price": "0",
-              "material_price": "3500"
-            },
-            {
-              "row": 19,
-              "name": "Укладка закладной трубы в грунт под электрокабель",
-              "unit": "мп",
-              "qty": "15",
-              "work_price": "400",
-              "material_price": "0"
-            },
-            {
-              "row": 20,
-              "name": "Кабель NVO ВБШвнг(А) LS 5х2.5 20 м",
-              "unit": "шт",
-              "qty": "1",
-              "work_price": "0",
-              "material_price": "6600"
-            },
-            {
-              "row": 21,
-              "name": "Труба двустенная гофрированная ПНД/ПВД d63/52",
-              "unit": "мп",
-              "qty": "15",
-              "work_price": "0",
-              "material_price": "114"
-            },
-            {
-              "row": 22,
-              "name": "Укладка трубы ХВС в грунт на глубину 1,5м.",
-              "unit": "мп",
-              "qty": "10",
-              "work_price": "1000",
-              "material_price": "0"
-            },
-            {
-              "row": 23,
-              "name": "Труба двустенная гофрированная ПНД/ПВД d63/52",
-              "unit": "мп",
-              "qty": "20",
-              "work_price": "0",
-              "material_price": "114"
-            },
-            {
-              "row": 24,
-              "name": "Труба ПНД (ПЭ-100) для систем водоснабжения премиум синяя 32 мм",
-              "unit": "мп",
-              "qty": "20",
-              "work_price": "0",
-              "material_price": "81"
-            },
-            {
-              "row": 26,
-              "name": "Разметка свайного поля, забивка свай, установка оголовков",
-              "unit": "шт",
-              "qty": "28",
-              "work_price": "2000",
-              "material_price": "0"
-            },
-            {
-              "row": 27,
-              "name": "Свая винтовая d108 мм h2500 мм",
-              "unit": "шт",
-              "qty": "28",
-              "work_price": "0",
-              "material_price": "2632"
-            },
-            {
-              "row": 28,
-              "name": "Оголовок для сваи винтовой d108 мм",
-              "unit": "шт",
-              "qty": "28",
-              "work_price": "0",
-              "material_price": "260"
-            },
-            {
-              "row": 29,
-              "name": "Обвязка свай по гидроизоляции",
-              "unit": "мп",
-              "qty": "80.9",
-              "work_price": "750",
-              "material_price": "0"
-            },
-            {
-              "row": 30,
-              "name": "Гидроизоляция Линокром ХПП Технониколь черный 15 кв.м",
-              "unit": "рул",
-              "qty": "1",
-              "work_price": "0",
-              "material_price": "1900"
-            },
-            {
-              "row": 31,
-              "name": "Брус сух 150х150",
-              "unit": "м3",
-              "qty": "2.1843",
-              "work_price": "0",
-              "material_price": "22000"
-            },
-            {
-              "row": 32,
-              "name": "Крепеж и расходные материалы по разделу",
-              "unit": "к-т",
-              "qty": "28",
-              "work_price": "0",
-              "material_price": "200"
-            },
-            {
-              "row": 33,
-              "name": "Антисептирование конструкционной доски в 2 слоя",
-              "unit": "м2",
-              "qty": "2.1843",
-              "work_price": "200",
-              "material_price": "0"
-            },
-            {
-              "row": 34,
-              "name": "Антисептик Neomid 450 огнебиозащитный I группа красный 10 кг",
-              "unit": "шт",
-              "qty": "1",
-              "work_price": "0",
-              "material_price": "2800"
-            },
-            {
-              "row": 35,
-              "name": "Погрузо-разгрузочные работы",
-              "unit": "усл",
-              "qty": "1",
-              "work_price": "6000",
-              "material_price": "0"
-            },
-            {
-              "row": 36,
-              "name": "Транспортные расходы",
-              "unit": "",
-              "qty": "0.1",
-              "work_price": "",
-              "material_price": ""
-            },
-            {
-              "row": 37,
-              "name": "Накладные расходы",
-              "unit": "",
-              "qty": "0.08",
-              "work_price": "",
-              "material_price": ""
-            },
-            {
-              "row": 41,
-              "name": "Наименование",
-              "unit": "Ед. изм.",
-              "qty": "Кол-во",
-              "work_price": "Работа",
-              "material_price": "Материалы"
-            },
-            {
-              "row": 44,
-              "name": "Монтаж лаг цокольного перекрытия вкл террасы, крыльца",
-              "unit": "м2",
-              "qty": "109",
-              "work_price": "1000",
-              "material_price": "0"
-            },
-            {
-              "row": 45,
-              "name": "доска с/к 40х200",
-              "unit": "м3",
-              "qty": "2.616",
-              "work_price": "0",
-              "material_price": "24300"
-            },
-            {
-              "row": 46,
-              "name": "Устройство каркаса стен/перегородок",
-              "unit": "м2",
-              "qty": "180.135",
-              "work_price": "1000",
-              "material_price": "0"
-            },
-            {
-              "row": 47,
-              "name": "Монтаж стоек и балок террасы",
-              "unit": "мп",
-              "qty": "9",
-              "work_price": "800",
-              "material_price": "0"
-            },
-            {
-              "row": 48,
-              "name": "доска с/к 40х150",
-              "unit": "м3",
-              "qty": "5.0454",
-              "work_price": "0",
-              "material_price": "24300"
-            },
-            {
-              "row": 49,
-              "name": "доска с/к 40х100",
-              "unit": "м3",
-              "qty": "0.768",
-              "work_price": "0",
-              "material_price": "24300"
-            },
-            {
-              "row": 50,
-              "name": "бру с/с 150х150",
-              "unit": "м3",
-              "qty": "0.26999999999999996",
-              "work_price": "0",
-              "material_price": "30000"
-            },
-            {
-              "row": 51,
-              "name": "Монтаж баллок перекрытия",
-              "unit": "м2",
-              "qty": "0",
-              "work_price": "1000",
-              "material_price": "0"
-            },
-            {
-              "row": 52,
-              "name": "доска с/к 40х150",
-              "unit": "м3",
-              "qty": "0",
-              "work_price": "0",
-              "material_price": "24300"
-            }
-          ],
-          "formula_count": 791,
-          "formula_samples": [
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "E1",
-              "formula": "=E2+E3+E4+E5+E6+E7+E8"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "E2",
-              "formula": "=I40"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "E3",
-              "formula": "=I63"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "E4",
-              "formula": "=I102"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "E5",
-              "formula": "=I121"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "E6",
-              "formula": "=I158"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "E7",
-              "formula": "=I230"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "E8",
-              "formula": "=I264"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "F12",
-              "formula": "=E12*D12"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "H12",
-              "formula": "=D12*G12"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "I12",
-              "formula": "=F12+H12"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "F13",
-              "formula": "=E13*D13"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "F14",
-              "formula": "=E14*D14"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "H14",
-              "formula": "=D14*G14"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "I14",
-              "formula": "=F14+H14"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "D15",
-              "formula": "=D14/2"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "F15",
-              "formula": "=E15*D15"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "H15",
-              "formula": "=D15*G15"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "I15",
-              "formula": "=F15+H15"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "F16",
-              "formula": "=E16*D16"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "H16",
-              "formula": "=D16*G16"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "I16",
-              "formula": "=F16+H16"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "D17",
-              "formula": "=D14+D16"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "F17",
-              "formula": "=E17*D17"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "H17",
-              "formula": "=D17*G17"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "I17",
-              "formula": "=F17+H17"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "F18",
-              "formula": "=E18*D18"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "H18",
-              "formula": "=D18*G18"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "I18",
-              "formula": "=F18+H18"
-            },
-            {
-              "sheet": "Каркас под ключ",
-              "cell": "F19",
-              "formula": "=E19*D19"
-            }
-          ],
-          "row_count": 285
-        },
-        {
-          "sheet_name": "Газобетон",
-          "scenario": "gasbeton_or_masonry_with_monolithic_foundation",
-          "sections": [
-            "Фундамент",
-            "Стены",
-            "Кровля",
-            "Окна, двери",
-            "Внешняя отделка",
-            "Внутренняя отделка",
-            "Инженерные коммуникации"
-          ],
-          "header_rows": [
-            9,
-            59,
-            111,
-            155,
-            174,
-            204,
-            256
-          ],
-          "total_rows": [
-            {
-              "row": 56,
-              "text": "Итого работа: 423924.316"
-            },
-            {
-              "row": 57,
-              "text": "Итого материалы: 633049.0299328001"
-            },
-            {
-              "row": 58,
-              "text": "Итого фундамент: 1056973.3459328"
-            },
-            {
-              "row": 108,
-              "text": "Итого работа: 556830.175"
-            },
-            {
-              "row": 109,
-              "text": "Итого материалы: 742975.012384"
-            },
-            {
-              "row": 110,
-              "text": "Итого стены : 1299805.187384"
-            },
-            {
-              "row": 152,
-              "text": "Итого работа: 529936.4"
-            },
-            {
-              "row": 153,
-              "text": "Итого материалы: 628855.6559680001"
-            },
-            {
-              "row": 154,
-              "text": "Итого кровля: 1158792.055968"
-            },
-            {
-              "row": 171,
-              "text": "Итого работа: 182710"
-            },
-            {
-              "row": 172,
-              "text": "Итого материалы: 743834"
-            },
-            {
-              "row": 173,
-              "text": "Итого окна, двери: 926544"
-            },
-            {
-              "row": 201,
-              "text": "Итого работа: 305167.64"
-            },
-            {
-              "row": 202,
-              "text": "Итого материалы: 318469.1861888"
-            },
-            {
-              "row": 203,
-              "text": "Итого внешняя отделка: 623636.8261888"
-            },
-            {
-              "row": 253,
-              "text": "Итого работа: 683979.2252"
-            },
-            {
-              "row": 254,
-              "text": "Итого материалы: 697688.6923125"
-            },
-            {
-              "row": 255,
-              "text": "Итого внутренняя отделка: 1381667.9175125"
-            },
-            {
-              "row": 287,
-              "text": "Итого работа: 230232"
-            },
-            {
-              "row": 288,
-              "text": "Итого материалы: 346375"
-            },
-            {
-              "row": 289,
-              "text": "Итого инженерные коммуникации: 576607"
-            },
-            {
-              "row": 291,
-              "text": "Итого РАБОТЫ: 2912779.7562"
-            },
-            {
-              "row": 292,
-              "text": "Итого МАТЕРИАЛЫ: 4111246.5767861004"
-            },
-            {
-              "row": 293,
-              "text": "ИТОГО СМЕТНАЯ СТОИМОСТЬ: 7024026.332986101"
-            }
-          ],
-          "material_rows": 154,
-          "work_rows": 99,
-          "logistics_rows": 23,
-          "sample_rows": [
-            {
-              "row": 9,
-              "name": "Наименование",
-              "unit": "Ед. изм.",
-              "qty": "Кол-во",
-              "work_price": "Работа",
-              "material_price": "Материалы"
-            },
-            {
-              "row": 12,
-              "name": "Вынос осей в натуру",
-              "unit": "м2",
-              "qty": "112",
-              "work_price": "80",
-              "material_price": "0"
-            },
-            {
-              "row": 13,
-              "name": "Земляные работы, сопровождение работы экскаватора",
-              "unit": "см",
-              "qty": "1",
-              "work_price": "12000",
-              "material_price": "0"
-            },
-            {
-              "row": 14,
-              "name": "Аренда экскаватора",
-              "unit": "см",
-              "qty": "1",
-              "work_price": "0",
-              "material_price": "22000"
-            },
-            {
-              "row": 15,
-              "name": "Доработка грунта вручную",
-              "unit": "м2",
-              "qty": "155",
-              "work_price": "150",
-              "material_price": "0"
-            },
-            {
-              "row": 16,
-              "name": "Настил геотекстиля по основанию и стенам котлована (Геотекстиль 300 г/кв.м иглопробивной)",
-              "unit": "м2",
-              "qty": "205",
-              "work_price": "80",
-              "material_price": "60"
-            },
-            {
-              "row": 17,
-              "name": "Устройство песчаной подготовки т 200 мм с уплотнением.",
-              "unit": "м3",
-              "qty": "44",
-              "work_price": "800",
-              "material_price": "0"
-            },
-            {
-              "row": 18,
-              "name": "Аренда виброплиты (трамбовка)",
-              "unit": "сут",
-              "qty": "4",
-              "work_price": "0",
-              "material_price": "2500"
-            },
-            {
-              "row": 19,
-              "name": "Песок карьерный",
-              "unit": "м3",
-              "qty": "44",
-              "work_price": "0",
-              "material_price": "900"
-            },
-            {
-              "row": 20,
-              "name": "Устройство щебеночной подготовки т 100 мм с уплотнением.",
-              "unit": "м3",
-              "qty": "19",
-              "work_price": "800",
-              "material_price": "0"
-            },
-            {
-              "row": 21,
-              "name": "Аренда виброплиты (трамбовка)",
-              "unit": "сут",
-              "qty": "4",
-              "work_price": "0",
-              "material_price": "2500"
-            },
-            {
-              "row": 22,
-              "name": "Щебень фр 20-40",
-              "unit": "м3",
-              "qty": "19",
-              "work_price": "0",
-              "material_price": "1880"
-            },
-            {
-              "row": 24,
-              "name": "Укладка канализационной трубы в грунт",
-              "unit": "мп",
-              "qty": "28",
-              "work_price": "900",
-              "material_price": "0"
-            },
-            {
-              "row": 25,
-              "name": "Труба канализационная Ostendorf d110x2000 мм для наружной канализации",
-              "unit": "шт",
-              "qty": "10",
-              "work_price": "0",
-              "material_price": "670"
-            },
-            {
-              "row": 26,
-              "name": "Труба канализационная Ostendorf d110x1000 мм для наружной канализации",
-              "unit": "шт",
-              "qty": "3",
-              "work_price": "0",
-              "material_price": "400"
-            },
-            {
-              "row": 27,
-              "name": "Теплоизоляция для труб стенофлекс 114х13х2000 мм",
-              "unit": "мп",
-              "qty": "31",
-              "work_price": "0",
-              "material_price": "118"
-            },
-            {
-              "row": 28,
-              "name": "Комплект тройников, отводов, уголков для наружной канализации.",
-              "unit": "к-т",
-              "qty": "1",
-              "work_price": "0",
-              "material_price": "3500"
-            },
-            {
-              "row": 29,
-              "name": "Укладка закладной трубы в грунт под электрокабель",
-              "unit": "мп",
-              "qty": "15",
-              "work_price": "400",
-              "material_price": "0"
-            },
-            {
-              "row": 30,
-              "name": "Кабель NVO ВБШвнг(А) LS 5х2.5 20 м",
-              "unit": "шт",
-              "qty": "1",
-              "work_price": "0",
-              "material_price": "6600"
-            },
-            {
-              "row": 31,
-              "name": "Труба двустенная гофрированная ПНД/ПВД d63/52",
-              "unit": "мп",
-              "qty": "15",
-              "work_price": "0",
-              "material_price": "114"
-            },
-            {
-              "row": 32,
-              "name": "Укладка трубы ХВС в грунт на глубину 1,5м.",
-              "unit": "мп",
-              "qty": "10",
-              "work_price": "850",
-              "material_price": "0"
-            },
-            {
-              "row": 33,
-              "name": "Труба двустенная гофрированная ПНД/ПВД d63/52",
-              "unit": "мп",
-              "qty": "20",
-              "work_price": "0",
-              "material_price": "114"
-            },
-            {
-              "row": 34,
-              "name": "Труба ПНД (ПЭ-100) для систем водоснабжения премиум синяя 32 мм",
-              "unit": "мп",
-              "qty": "20",
-              "work_price": "0",
-              "material_price": "81"
-            },
-            {
-              "row": 35,
-              "name": "Настил технической пленки",
-              "unit": "м2",
-              "qty": "140",
-              "work_price": "50",
-              "material_price": "40"
-            },
-            {
-              "row": 37,
-              "name": "Устройство опалубки",
-              "unit": "мп",
-              "qty": "42.58",
-              "work_price": "1100",
-              "material_price": "0"
-            },
-            {
-              "row": 38,
-              "name": "Доска 50х150(100)х6000 мм е/в",
-              "unit": "м3",
-              "qty": "1.9160999999999997",
-              "work_price": "0",
-              "material_price": "17500"
-            },
-            {
-              "row": 39,
-              "name": "Устройство арматурного каркаса",
-              "unit": "м2",
-              "qty": "112",
-              "work_price": "1200",
-              "material_price": "0"
-            },
-            {
-              "row": 40,
-              "name": "Арматура металлическая д.12 А500",
-              "unit": "т",
-              "qty": "2.386944",
-              "work_price": "0",
-              "material_price": "70000"
-            },
-            {
-              "row": 41,
-              "name": "Арматура металлическая д.8 А500",
-              "unit": "т",
-              "qty": "0.26256384000000005",
-              "work_price": "0",
-              "material_price": "73000"
-            },
-            {
-              "row": 42,
-              "name": "Пеноплэкс Фундамент 100х585х1185",
-              "unit": "шт",
-              "qty": "3",
-              "work_price": "0",
-              "material_price": "709"
-            },
-            {
-              "row": 43,
-              "name": "Проволока вязальная 1,2мм",
-              "unit": "кг",
-              "qty": "59",
-              "work_price": "0",
-              "material_price": "160"
-            },
-            {
-              "row": 44,
-              "name": "Фиксаторы арматуры гориз.уп 250 шт",
-              "unit": "уп",
-              "qty": "3",
-              "work_price": "0",
-              "material_price": "1456"
-            },
-            {
-              "row": 45,
-              "name": "Бетонирование монолитной плиты с вибрированием",
-              "unit": "м3",
-              "qty": "25",
-              "work_price": "2000",
-              "material_price": "0"
-            },
-            {
-              "row": 46,
-              "name": "Бетон В20 W8 с доставкой*",
-              "unit": "м3",
-              "qty": "25",
-              "work_price": "0",
-              "material_price": "6500"
-            },
-            {
-              "row": 47,
-              "name": "глубинный вибратор",
-              "unit": "сут",
-              "qty": "1",
-              "work_price": "0",
-              "material_price": "1500"
-            }
-          ],
-          "formula_count": 856,
-          "formula_samples": [
-            {
-              "sheet": "Газобетон",
-              "cell": "E1",
-              "formula": "=E2+E3+E4+E5+E6+E7+E8"
-            },
-            {
-              "sheet": "Газобетон",
-              "cell": "E2",
-              "formula": "=I58"
-            },
-            {
-              "sheet": "Газобетон",
-              "cell": "E3",
-              "formula": "=I110"
-            },
-            {
-              "sheet": "Газобетон",
-              "cell": "E4",
-              "formula": "=I154"
-            },
-            {
-              "sheet": "Газобетон",
-              "cell": "E5",
-              "formula": "=I173"
-            },
-            {
-              "sheet": "Газобетон",
-              "cell": "E6",
-              "formula": "=I203"
-            },
-            {
-              "sheet": "Газобетон",
-              "cell": "E7",
-              "formula": "=I255"
-            },
-            {
-              "sheet": "Газобетон",
-              "cell": "E8",
-              "formula": "=I289"
-            },
-            {
-              "sheet": "Газобетон",
-              "cell": "F12",
-              "formula": "=E12*D12"
-            },
-            {
-              "sheet": "Газобетон",
-              "cell": "H12",
-              "formula": "=D12*G12"
-            },
-            {
-              "sheet": "Газобетон",
-              "cell": "I12",
-              "formula": "=F12+H12"
-            },
-            {
-              "sheet": "Газобетон",
-              "cell": "F13",
-              "formula": "=E13*D13"
-            },
-            {
-              "sheet": "Газобетон",
-              "cell": "H13",
-              "formula": "=D13*G13"
-            },
-            {
-              "sheet": "Газобетон",
-              "cell": "I13",
-              "formula": "=F13+H13"
-            },
-            {
-              "sheet": "Газобетон",
-              "cell": "D14",
-              "formula": "=D13"
-            },
-            {
-              "sheet": "Газобетон",
-              "cell": "F14",
-              "formula": "=E14*D14"
-            },
-            {
-              "sheet": "Газобетон",
-              "cell": "H14",
-              "formula": "=D14*G14"
-            },
-            {
-              "sheet": "Газобетон",
-              "cell": "I14",
-              "formula": "=F14+H14"
-            },
-            {
-              "sheet": "Газобетон",
-              "cell": "F15",
-              "formula": "=E15*D15"
-            },
-            {
-              "sheet": "Газобетон",
-              "cell": "H15",
-              "formula": "=D15*G15"
-            },
-            {
-              "sheet": "Газобетон",
-              "cell": "I15",
-              "formula": "=F15+H15"
-            },
-            {
-              "sheet": "Газобетон",
-              "cell": "D16",
-              "formula": "=155+50"
-            },
-            {
-              "sheet": "Газобетон",
-              "cell": "F16",
-              "formula": "=E16*D16"
-            },
-            {
-              "sheet": "Газобетон",
-              "cell": "H16",
-              "formula": "=D16*G16"
-            },
-            {
-              "sheet": "Газобетон",
-              "cell": "I16",
-              "formula": "=F16+H16"
-            },
-            {
-              "sheet": "Газобетон",
-              "cell": "D17",
-              "formula": "=ROUNDUP(D15*0.2*1.4,)"
-            },
-            {
-              "sheet": "Газобетон",
-              "cell": "F17",
-              "formula": "=E17*D17"
-            },
-            {
-              "sheet": "Газобетон",
-              "cell": "H17",
-              "formula": "=D17*G17"
-            },
-            {
-              "sheet": "Газобетон",
-              "cell": "I17",
-              "formula": "=F17+H17"
-            },
-            {
-              "sheet": "Газобетон",
-              "cell": "F18",
-              "formula": "=E18*D18"
-            }
-          ],
-          "row_count": 310
-        }
-      ]
-    },
-    {
-      "key": "ROOF_FLOORS",
-      "title": "крыша и перекр.xlsx",
-      "template_role": "roof_and_floor_estimate_template",
-      "description": "Эталон расчёта кровли и перекрытий",
-      "file_id": "16YecwnJ9umnVprFu9V77UCV6cPrYbNh3",
-      "drive_url": "https://docs.google.com/spreadsheets/d/16YecwnJ9umnVprFu9V77UCV6cPrYbNh3/edit?usp=drivesdk&ouid=110231323399920032425&rtpof=true&sd=true",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "modifiedTime": "2025-03-14T11:17:00.000Z",
-      "parents": [
-        "13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB"
-      ],
-      "formula_total": 136,
-      "formula_samples": [
-        {
-          "sheet": "расчет кровли",
-          "cell": "F5",
-          "formula": "=E5*D5"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "H5",
-          "formula": "=G5*D5"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "I5",
-          "formula": "=F5+H5"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "D6",
-          "formula": "=11.27+0.19+0.052+0.011+0.031"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "F6",
-          "formula": "=E6*D6"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "H6",
-          "formula": "=G6*D6"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "I6",
-          "formula": "=F6+H6"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "F7",
-          "formula": "=E7*D7"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "H7",
-          "formula": "=G7*D7"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "I7",
-          "formula": "=F7+H7"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "D8",
-          "formula": "=D5"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "F8",
-          "formula": "=E8*D8"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "H8",
-          "formula": "=G8*D8"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "I8",
-          "formula": "=F8+H8"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "D9",
-          "formula": "=D5"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "F9",
-          "formula": "=E9*D9"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "H9",
-          "formula": "=G9*D9"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "I9",
-          "formula": "=F9+H9"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "D10",
-          "formula": "=D5"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "F10",
-          "formula": "=E10*D10"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "H10",
-          "formula": "=G10*D10"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "I10",
-          "formula": "=F10+H10"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "D11",
-          "formula": "=D5"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "F11",
-          "formula": "=E11*D11"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "H11",
-          "formula": "=G11*D11"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "I11",
-          "formula": "=F11+H11"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "F13",
-          "formula": "=E13*D13"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "H13",
-          "formula": "=D13*G13"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "I13",
-          "formula": "=F13+H13"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "F14",
-          "formula": "=E14*D14"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "H14",
-          "formula": "=D14*G14"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "I14",
-          "formula": "=F14+H14"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "F15",
-          "formula": "=E15*D15"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "H15",
-          "formula": "=D15*G15"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "I15",
-          "formula": "=F15+H15"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "F16",
-          "formula": "=D16*E16"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "H16",
-          "formula": "=D16*G16"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "I16",
-          "formula": "=F16+H16"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "L16",
-          "formula": "=4.3+1.92+0.48+0.012"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "N16",
-          "formula": "=L16/0.05*2"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "O16",
-          "formula": "=L16/0.2*2"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "P16",
-          "formula": "=O16+N16"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "D17",
-          "formula": "=D16"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "F17",
-          "formula": "=D17*E17"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "H17",
-          "formula": "=D17*G17"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "I17",
-          "formula": "=F17+H17"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "L17",
-          "formula": "=0.027+0.023+0.034+0.01+0.014+0.021+0.017+0.016+0.032+0.087+0.054+0.034+0.047+0.16+0.032+0.032+0.016+0.02+1.76+0.41+0.041"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "N17",
-          "formula": "=L17/0.05*2"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "O17",
-          "formula": "=L17/0.2*2"
-        },
-        {
-          "sheet": "расчет кровли",
-          "cell": "P17",
-          "formula": "=O17+N17"
-        }
-      ],
-      "sheets": [
-        {
-          "sheet_name": "расчет кровли",
-          "scenario": "roof_and_floors",
-          "sections": [
-            "Кровля"
-          ],
-          "header_rows": [
-            1
-          ],
-          "total_rows": [
-            {
-              "row": 30,
-              "text": "Итого работа: 2236634.6100000003"
-            },
-            {
-              "row": 31,
-              "text": "Итого материалы: 0"
-            },
-            {
-              "row": 32,
-              "text": "Итого кровля: 2236634.6100000003"
-            }
-          ],
-          "material_rows": 1,
-          "work_rows": 24,
-          "logistics_rows": 1,
-          "sample_rows": [
-            {
-              "row": 1,
-              "name": "Наименование",
-              "unit": "Ед. изм.",
-              "qty": "Кол-во",
-              "work_price": "Работа",
-              "material_price": "Материалы"
-            },
-            {
-              "row": 5,
-              "name": "Устройство чердачного перекрытия",
-              "unit": "м2",
-              "qty": "191",
-              "work_price": "1000",
-              "material_price": "0"
-            },
-            {
-              "row": 6,
-              "name": "Антисептирование пиломатериалов с 4х сторон",
-              "unit": "м3",
-              "qty": "11.553999999999998",
-              "work_price": "2800",
-              "material_price": "0"
-            },
-            {
-              "row": 7,
-              "name": "Монтаж пароизоляции с проклейкой швов",
-              "unit": "м2",
-              "qty": "170",
-              "work_price": "220",
-              "material_price": "0"
-            },
-            {
-              "row": 8,
-              "name": "Монтаж обрешетки под утеплитель шаг 200",
-              "unit": "м2",
-              "qty": "191",
-              "work_price": "380",
-              "material_price": "0"
-            },
-            {
-              "row": 9,
-              "name": "Монтаж утепления 200 мм",
-              "unit": "м2",
-              "qty": "191",
-              "work_price": "600",
-              "material_price": "0"
-            },
-            {
-              "row": 10,
-              "name": "Монтаж гидро-ветрозащиты",
-              "unit": "м2",
-              "qty": "191",
-              "work_price": "220",
-              "material_price": "0"
-            },
-            {
-              "row": 11,
-              "name": "Монтаж разряженой обрешетки шаг 400",
-              "unit": "м2",
-              "qty": "191",
-              "work_price": "360",
-              "material_price": "0"
-            },
-            {
-              "row": 13,
-              "name": "Укладка мауэрлата по гидроизоляции",
-              "unit": "мп",
-              "qty": "78",
-              "work_price": "850",
-              "material_price": "0"
-            },
-            {
-              "row": 14,
-              "name": "Монтаж стропильной системы",
-              "unit": "м2",
-              "qty": "280",
-              "work_price": "1400",
-              "material_price": "0"
-            },
-            {
-              "row": 15,
-              "name": "Монтаж опорных стоек, каркасов стропильной системы",
-              "unit": "к-т",
-              "qty": "1",
-              "work_price": "20000",
-              "material_price": "0"
-            },
-            {
-              "row": 16,
-              "name": "Монтаж кровельной мембраны",
-              "unit": "м2",
-              "qty": "280",
-              "work_price": "250",
-              "material_price": "0"
-            },
-            {
-              "row": 17,
-              "name": "Монтаж контробрешетки",
-              "unit": "м2",
-              "qty": "280",
-              "work_price": "360",
-              "material_price": "0"
-            },
-            {
-              "row": 18,
-              "name": "Монтаж обрешётки шаг 350 мм",
-              "unit": "м2",
-              "qty": "280",
-              "work_price": "360",
-              "material_price": "0"
-            },
-            {
-              "row": 19,
-              "name": "Монтаж Металлочерепицы",
-              "unit": "м2",
-              "qty": "280",
-              "work_price": "850",
-              "material_price": "0"
-            },
-            {
-              "row": 20,
-              "name": "Монтаж доборных элементов",
-              "unit": "мп",
-              "qty": "231",
-              "work_price": "550",
-              "material_price": "0"
-            },
-            {
-              "row": 21,
-              "name": "Монтаж крюка длинного",
-              "unit": "шт",
-              "qty": "110",
-              "work_price": "300",
-              "material_price": "0"
-            },
-            {
-              "row": 22,
-              "name": "Монтаж вентвыходов на кровле",
-              "unit": "к-т",
-              "qty": "6",
-              "work_price": "8500",
-              "material_price": "0"
-            },
-            {
-              "row": 23,
-              "name": "Отделка лобовой доски (доской крашеной в заводских условиях)",
-              "unit": "мп",
-              "qty": "78",
-              "work_price": "800",
-              "material_price": "0"
-            },
-            {
-              "row": 24,
-              "name": "Подшивка потолка крыльца, террасы, свесов (доской крашеной в заводских условиях)",
-              "unit": "м2",
-              "qty": "118",
-              "work_price": "1200",
-              "material_price": "0"
-            },
-            {
-              "row": 25,
-              "name": "Монтаж водосточной системы",
-              "unit": "мп",
-              "qty": "104.63",
-              "work_price": "900",
-              "material_price": "0"
-            },
-            {
-              "row": 26,
-              "name": "Монтаж снегозадержания",
-              "unit": "мп",
-              "qty": "6",
-              "work_price": "1200",
-              "material_price": "0"
-            },
-            {
-              "row": 27,
-              "name": "Антисептирование пиломатериалов",
-              "unit": "м3",
-              "qty": "15.7",
-              "work_price": "3000",
-              "material_price": "0"
-            },
-            {
-              "row": 28,
-              "name": "Погрузо-разгрузочные работы",
-              "unit": "усл",
-              "qty": "2",
-              "work_price": "10000",
-              "material_price": "0"
-            },
-            {
-              "row": 29,
-              "name": "Накладные расходы",
-              "unit": "",
-              "qty": "0.05",
-              "work_price": "",
-              "material_price": ""
-            }
-          ],
-          "formula_count": 136,
-          "formula_samples": [
-            {
-              "sheet": "расчет кровли",
-              "cell": "F5",
-              "formula": "=E5*D5"
-            },
-            {
-              "sheet": "расчет кровли",
-              "cell": "H5",
-              "formula": "=G5*D5"
-            },
-            {
-              "sheet": "расчет кровли",
-              "cell": "I5",
-              "formula": "=F5+H5"
-            },
-            {
-              "sheet": "расчет кровли",
-              "cell": "D6",
-              "formula": "=11.27+0.19+0.052+0.011+0.031"
-            },
-            {
-              "sheet": "расчет кровли",
-              "cell": "F6",
-              "formula": "=E6*D6"
-            },
-            {
-              "sheet": "расчет кровли",
-              "cell": "H6",
-              "formula": "=G6*D6"
-            },
-            {
-              "sheet": "расчет кровли",
-              "cell": "I6",
-              "formula": "=F6+H6"
-            },
-            {
-              "sheet": "расчет кровли",
-              "cell": "F7",
-              "formula": "=E7*D7"
-            },
-            {
-              "sheet": "расчет кровли",
-              "cell": "H7",
-              "formula": "=G7*D7"
-            },
-            {
-              "sheet": "расчет кровли",
-              "cell": "I7",
-              "formula": "=F7+H7"
-            },
-            {
-              "sheet": "расчет кровли",
-              "cell": "D8",
-              "formula": "=D5"
-            },
-            {
-              "sheet": "расчет кровли",
-              "cell": "F8",
-              "formula": "=E8*D8"
-            },
-            {
-              "sheet": "расчет кровли",
-              "cell": "H8",
-              "formula": "=G8*D8"
-            },
-            {
-              "sheet": "расчет кровли",
-              "cell": "I8",
-              "formula": "=F8+H8"
-            },
-            {
-              "sheet": "расчет кровли",
-              "cell": "D9",
-              "formula": "=D5"
-            },
-            {
-              "sheet": "расчет кровли",
-              "cell": "F9",
-              "formula": "=E9*D9"
-            },
-            {
-              "sheet": "расчет кровли",
-              "cell": "H9",
-              "formula": "=G9*D9"
-            },
-            {
-              "sheet": "расчет кровли",
-              "cell": "I9",
-              "formula": "=F9+H9"
-            },
-            {
-              "sheet": "расчет кровли",
-              "cell": "D10",
-              "formula": "=D5"
-            },
-            {
-              "sheet": "расчет кровли",
-              "cell": "F10",
-              "formula": "=E10*D10"
-            },
-            {
-              "sheet": "расчет кровли",
-              "cell": "H10",
-              "formula": "=G10*D10"
-            },
-            {
-              "sheet": "расчет кровли",
-              "cell": "I10",
-              "formula": "=F10+H10"
-            },
-            {
-              "sheet": "расчет кровли",
-              "cell": "D11",
-              "formula": "=D5"
-            },
-            {
-              "sheet": "расчет кровли",
-              "cell": "F11",
-              "formula": "=E11*D11"
-            },
-            {
-              "sheet": "расчет кровли",
-              "cell": "H11",
-              "formula": "=G11*D11"
-            },
-            {
-              "sheet": "расчет кровли",
-              "cell": "I11",
-              "formula": "=F11+H11"
-            },
-            {
-              "sheet": "расчет кровли",
-              "cell": "F13",
-              "formula": "=E13*D13"
-            },
-            {
-              "sheet": "расчет кровли",
-              "cell": "H13",
-              "formula": "=D13*G13"
-            },
-            {
-              "sheet": "расчет кровли",
-              "cell": "I13",
-              "formula": "=F13+H13"
-            },
-            {
-              "sheet": "расчет кровли",
-              "cell": "F14",
-              "formula": "=E14*D14"
-            }
-          ],
-          "row_count": 747
-        }
-      ]
-    },
-    {
-      "key": "FOUNDATION_WAREHOUSE",
-      "title": "фундамент_Склад2.xlsx",
-      "template_role": "foundation_estimate_template",
-      "description": "Эталон расчёта фундамента",
-      "file_id": "1KuoSI4OI7gJoIBPVqBQGXtQnolXKMiDp",
-      "drive_url": "https://docs.google.com/spreadsheets/d/1KuoSI4OI7gJoIBPVqBQGXtQnolXKMiDp/edit?usp=drivesdk&ouid=110231323399920032425&rtpof=true&sd=true",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "modifiedTime": "2025-05-27T08:01:58.000Z",
-      "parents": [
-        "13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB"
-      ],
-      "formula_total": 88,
-      "formula_samples": [
-        {
-          "sheet": "смета",
-          "cell": "F4",
-          "formula": "=E4*D4"
-        },
-        {
-          "sheet": "смета",
-          "cell": "F5",
-          "formula": "=E5*D5"
-        },
-        {
-          "sheet": "смета",
-          "cell": "H5",
-          "formula": "=D5*G5"
-        },
-        {
-          "sheet": "смета",
-          "cell": "I5",
-          "formula": "=F5+H5"
-        },
-        {
-          "sheet": "смета",
-          "cell": "D6",
-          "formula": "=ROUNDUP((680*0.62)/200,0)"
-        },
-        {
-          "sheet": "смета",
-          "cell": "F6",
-          "formula": "=E6*D6"
-        },
-        {
-          "sheet": "смета",
-          "cell": "H6",
-          "formula": "=D6*G6"
-        },
-        {
-          "sheet": "смета",
-          "cell": "I6",
-          "formula": "=F6+H6"
-        },
-        {
-          "sheet": "смета",
-          "cell": "D7",
-          "formula": "=D6"
-        },
-        {
-          "sheet": "смета",
-          "cell": "F7",
-          "formula": "=E7*D7"
-        },
-        {
-          "sheet": "смета",
-          "cell": "H7",
-          "formula": "=D7*G7"
-        },
-        {
-          "sheet": "смета",
-          "cell": "I7",
-          "formula": "=F7+H7"
-        },
-        {
-          "sheet": "смета",
-          "cell": "F8",
-          "formula": "=E8*D8"
-        },
-        {
-          "sheet": "смета",
-          "cell": "H8",
-          "formula": "=D8*G8"
-        },
-        {
-          "sheet": "смета",
-          "cell": "I8",
-          "formula": "=F8+H8"
-        },
-        {
-          "sheet": "смета",
-          "cell": "F9",
-          "formula": "=E9*D9"
-        },
-        {
-          "sheet": "смета",
-          "cell": "H9",
-          "formula": "=D9*G9"
-        },
-        {
-          "sheet": "смета",
-          "cell": "I9",
-          "formula": "=F9+H9"
-        },
-        {
-          "sheet": "смета",
-          "cell": "F10",
-          "formula": "=E10*D10"
-        },
-        {
-          "sheet": "смета",
-          "cell": "H10",
-          "formula": "=D10*G10"
-        },
-        {
-          "sheet": "смета",
-          "cell": "I10",
-          "formula": "=F10+H10"
-        },
-        {
-          "sheet": "смета",
-          "cell": "D11",
-          "formula": "=114+493"
-        },
-        {
-          "sheet": "смета",
-          "cell": "F11",
-          "formula": "=E11*D11"
-        },
-        {
-          "sheet": "смета",
-          "cell": "H11",
-          "formula": "=G11*D11"
-        },
-        {
-          "sheet": "смета",
-          "cell": "I11",
-          "formula": "=F11+H11"
-        },
-        {
-          "sheet": "смета",
-          "cell": "F12",
-          "formula": "=E12*D12"
-        },
-        {
-          "sheet": "смета",
-          "cell": "H12",
-          "formula": "=G12*D12"
-        },
-        {
-          "sheet": "смета",
-          "cell": "I12",
-          "formula": "=F12+H12"
-        },
-        {
-          "sheet": "смета",
-          "cell": "F13",
-          "formula": "=E13*D13"
-        },
-        {
-          "sheet": "смета",
-          "cell": "H13",
-          "formula": "=G13*D13"
-        },
-        {
-          "sheet": "смета",
-          "cell": "I13",
-          "formula": "=F13+H13"
-        },
-        {
-          "sheet": "смета",
-          "cell": "F14",
-          "formula": "=E14*D14"
-        },
-        {
-          "sheet": "смета",
-          "cell": "H14",
-          "formula": "=G14*D14"
-        },
-        {
-          "sheet": "смета",
-          "cell": "I14",
-          "formula": "=F14+H14"
-        },
-        {
-          "sheet": "смета",
-          "cell": "F15",
-          "formula": "=E15*D15"
-        },
-        {
-          "sheet": "смета",
-          "cell": "H15",
-          "formula": "=G15*D15"
-        },
-        {
-          "sheet": "смета",
-          "cell": "I15",
-          "formula": "=F15+H15"
-        },
-        {
-          "sheet": "смета",
-          "cell": "D16",
-          "formula": "=ROUNDUP(171.2*1.1,)"
-        },
-        {
-          "sheet": "смета",
-          "cell": "F16",
-          "formula": "=E16*D16"
-        },
-        {
-          "sheet": "смета",
-          "cell": "H16",
-          "formula": "=G16*D16"
-        },
-        {
-          "sheet": "смета",
-          "cell": "I16",
-          "formula": "=F16+H16"
-        },
-        {
-          "sheet": "смета",
-          "cell": "F17",
-          "formula": "=E17*D17"
-        },
-        {
-          "sheet": "смета",
-          "cell": "H17",
-          "formula": "=D17*G17"
-        },
-        {
-          "sheet": "смета",
-          "cell": "I17",
-          "formula": "=F17+H17"
-        },
-        {
-          "sheet": "смета",
-          "cell": "F18",
-          "formula": "=E18*D18"
-        },
-        {
-          "sheet": "смета",
-          "cell": "F19",
-          "formula": "=E19*D19"
-        },
-        {
-          "sheet": "смета",
-          "cell": "H19",
-          "formula": "=G19*D19"
-        },
-        {
-          "sheet": "смета",
-          "cell": "I19",
-          "formula": "=F19+H19"
-        },
-        {
-          "sheet": "смета",
-          "cell": "F20",
-          "formula": "=E20*D20"
-        },
-        {
-          "sheet": "смета",
-          "cell": "F21",
-          "formula": "=E21*D21"
-        }
-      ],
-      "sheets": [
-        {
-          "sheet_name": "смета",
-          "scenario": "foundation",
-          "sections": [
-            "Фундамент"
-          ],
-          "header_rows": [
-            1
-          ],
-          "total_rows": [
-            {
-              "row": 33,
-              "text": "Итого работа: 2915677.0762500004"
-            },
-            {
-              "row": 35,
-              "text": "Итого материалы: 84240"
-            },
-            {
-              "row": 36,
-              "text": "Итого фундамент: 3116917.0762500004"
-            }
-          ],
-          "material_rows": 6,
-          "work_rows": 17,
-          "logistics_rows": 0,
-          "sample_rows": [
-            {
-              "row": 1,
-              "name": "Наименование",
-              "unit": "Ед. изм.",
-              "qty": "Кол-во",
-              "work_price": "Работа",
-              "material_price": "Материалы"
-            },
-            {
-              "row": 5,
-              "name": "Вынос осей в натуру",
-              "unit": "см",
-              "qty": "1",
-              "work_price": "18000",
-              "material_price": "0"
-            },
-            {
-              "row": 6,
-              "name": "Земляные работы, сопровождение работы экскаватора",
-              "unit": "см",
-              "qty": "3",
-              "work_price": "10000",
-              "material_price": "0"
-            },
-            {
-              "row": 7,
-              "name": "Аренда экскаватора",
-              "unit": "см",
-              "qty": "3",
-              "work_price": "0",
-              "material_price": "24000"
-            },
-            {
-              "row": 8,
-              "name": "Доработка грунта вручную",
-              "unit": "м2",
-              "qty": "680",
-              "work_price": "50",
-              "material_price": "0"
-            },
-            {
-              "row": 10,
-              "name": "Настил геотекстиля",
-              "unit": "м2",
-              "qty": "608",
-              "work_price": "80",
-              "material_price": "0"
-            },
-            {
-              "row": 11,
-              "name": "Отсыпка основания щебнем и песком с формированием откосов под ребра жесткости",
-              "unit": "м3",
-              "qty": "607",
-              "work_price": "850",
-              "material_price": "0"
-            },
-            {
-              "row": 12,
-              "name": "Настил п/э пленки",
-              "unit": "м2",
-              "qty": "606",
-              "work_price": "80",
-              "material_price": "0"
-            },
-            {
-              "row": 14,
-              "name": "Монтаж опалубки",
-              "unit": "мп",
-              "qty": "108.46",
-              "work_price": "1100",
-              "material_price": "0"
-            },
-            {
-              "row": 15,
-              "name": "Устройство арматурного каркаса",
-              "unit": "м2",
-              "qty": "507.23",
-              "work_price": "1300",
-              "material_price": "0"
-            },
-            {
-              "row": 16,
-              "name": "Бетонирование с уплотнением",
-              "unit": "м3",
-              "qty": "189",
-              "work_price": "2000",
-              "material_price": "0"
-            },
-            {
-              "row": 17,
-              "name": "Аренда бетононасоса",
-              "unit": "см",
-              "qty": "2",
-              "work_price": "0",
-              "material_price": "31000"
-            },
-            {
-              "row": 19,
-              "name": "Монтаж анкерных групп",
-              "unit": "шт",
-              "qty": "23",
-              "work_price": "6500",
-              "material_price": "0"
-            },
-            {
-              "row": 21,
-              "name": "Устройство ростверка поверх фундаментной плиты (опалубка, арматура, бетонирование)",
-              "unit": "мп",
-              "qty": "86.257",
-              "work_price": "2800",
-              "material_price": "0"
-            },
-            {
-              "row": 22,
-              "name": "Аренда бетононасоса",
-              "unit": "см",
-              "qty": "1",
-              "work_price": "0",
-              "material_price": "31000"
-            },
-            {
-              "row": 24,
-              "name": "Устройство обмазочной гидроизоляции в 2 слоя торца плиты с ребрами жесткости и внешней стороны ростверка",
-              "unit": "м2",
-              "qty": "121.14304999999999",
-              "work_price": "350",
-              "material_price": "0"
-            },
-            {
-              "row": 25,
-              "name": "Утепление торца плиты с ребрами жесткости и внешней стороны ростверка ЭППс 100 мм",
-              "unit": "м2",
-              "qty": "121.14304999999999",
-              "work_price": "400",
-              "material_price": "0"
-            },
-            {
-              "row": 27,
-              "name": "Монтаж опалубки",
-              "unit": "мп",
-              "qty": "30",
-              "work_price": "1100",
-              "material_price": "0"
-            },
-            {
-              "row": 28,
-              "name": "Устройство арматурного каркаса",
-              "unit": "м2",
-              "qty": "108",
-              "work_price": "1200",
-              "material_price": "0"
-            },
-            {
-              "row": 29,
-              "name": "Бетонирование с уплотнением",
-              "unit": "м3",
-              "qty": "24",
-              "work_price": "2000",
-              "material_price": "0"
-            },
-            {
-              "row": 30,
-              "name": "Аренда бетононасоса",
-              "unit": "см",
-              "qty": "1",
-              "work_price": "0",
-              "material_price": "31000"
-            },
-            {
-              "row": 31,
-              "name": "Крепеж и расходные материалы по разделу",
-              "unit": "к-т",
-              "qty": "702",
-              "work_price": "0",
-              "material_price": "120"
-            },
-            {
-              "row": 32,
-              "name": "Накладные расходы",
-              "unit": "",
-              "qty": "0.1",
-              "work_price": "",
-              "material_price": ""
-            }
-          ],
-          "formula_count": 88,
-          "formula_samples": [
-            {
-              "sheet": "смета",
-              "cell": "F4",
-              "formula": "=E4*D4"
-            },
-            {
-              "sheet": "смета",
-              "cell": "F5",
-              "formula": "=E5*D5"
-            },
-            {
-              "sheet": "смета",
-              "cell": "H5",
-              "formula": "=D5*G5"
-            },
-            {
-              "sheet": "смета",
-              "cell": "I5",
-              "formula": "=F5+H5"
-            },
-            {
-              "sheet": "смета",
-              "cell": "D6",
-              "formula": "=ROUNDUP((680*0.62)/200,0)"
-            },
-            {
-              "sheet": "смета",
-              "cell": "F6",
-              "formula": "=E6*D6"
-            },
-            {
-              "sheet": "смета",
-              "cell": "H6",
-              "formula": "=D6*G6"
-            },
-            {
-              "sheet": "смета",
-              "cell": "I6",
-              "formula": "=F6+H6"
-            },
-            {
-              "sheet": "смета",
-              "cell": "D7",
-              "formula": "=D6"
-            },
-            {
-              "sheet": "смета",
-              "cell": "F7",
-              "formula": "=E7*D7"
-            },
-            {
-              "sheet": "смета",
-              "cell": "H7",
-              "formula": "=D7*G7"
-            },
-            {
-              "sheet": "смета",
-              "cell": "I7",
-              "formula": "=F7+H7"
-            },
-            {
-              "sheet": "смета",
-              "cell": "F8",
-              "formula": "=E8*D8"
-            },
-            {
-              "sheet": "смета",
-              "cell": "H8",
-              "formula": "=D8*G8"
-            },
-            {
-              "sheet": "смета",
-              "cell": "I8",
-              "formula": "=F8+H8"
-            },
-            {
-              "sheet": "смета",
-              "cell": "F9",
-              "formula": "=E9*D9"
-            },
-            {
-              "sheet": "смета",
-              "cell": "H9",
-              "formula": "=D9*G9"
-            },
-            {
-              "sheet": "смета",
-              "cell": "I9",
-              "formula": "=F9+H9"
-            },
-            {
-              "sheet": "смета",
-              "cell": "F10",
-              "formula": "=E10*D10"
-            },
-            {
-              "sheet": "смета",
-              "cell": "H10",
-              "formula": "=D10*G10"
-            },
-            {
-              "sheet": "смета",
-              "cell": "I10",
-              "formula": "=F10+H10"
-            },
-            {
-              "sheet": "смета",
-              "cell": "D11",
-              "formula": "=114+493"
-            },
-            {
-              "sheet": "смета",
-              "cell": "F11",
-              "formula": "=E11*D11"
-            },
-            {
-              "sheet": "смета",
-              "cell": "H11",
-              "formula": "=G11*D11"
-            },
-            {
-              "sheet": "смета",
-              "cell": "I11",
-              "formula": "=F11+H11"
-            },
-            {
-              "sheet": "смета",
-              "cell": "F12",
-              "formula": "=E12*D12"
-            },
-            {
-              "sheet": "смета",
-              "cell": "H12",
-              "formula": "=G12*D12"
-            },
-            {
-              "sheet": "смета",
-              "cell": "I12",
-              "formula": "=F12+H12"
-            },
-            {
-              "sheet": "смета",
-              "cell": "F13",
-              "formula": "=E13*D13"
-            },
-            {
-              "sheet": "смета",
-              "cell": "H13",
-              "formula": "=G13*D13"
-            }
-          ],
-          "row_count": 50
-        }
-      ]
-    },
-    {
-      "key": "AREAL_NEVA",
-      "title": "Ареал Нева.xlsx",
-      "template_role": "general_company_estimate_template",
-      "description": "Общий эталон сметной структуры Ареал-Нева",
-      "file_id": "1DQw2qgMHtq2SqgJJP-93eIArpj1hnNNm",
-      "drive_url": "https://docs.google.com/spreadsheets/d/1DQw2qgMHtq2SqgJJP-93eIArpj1hnNNm/edit?usp=drivesdk&ouid=110231323399920032425&rtpof=true&sd=true",
-      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "modifiedTime": "2026-05-02T12:04:37.000Z",
-      "parents": [
-        "13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB"
-      ],
-      "formula_total": 1192,
-      "formula_samples": [
-        {
-          "sheet": "смета",
-          "cell": "H1",
-          "formula": "=SUM(H2:I9)"
-        },
-        {
-          "sheet": "смета",
-          "cell": "H2",
-          "formula": "=L59"
-        },
-        {
-          "sheet": "смета",
-          "cell": "H3",
-          "formula": "=L88"
-        },
-        {
-          "sheet": "смета",
-          "cell": "H4",
-          "formula": "=L108"
-        },
-        {
-          "sheet": "смета",
-          "cell": "H5",
-          "formula": "=L134"
-        },
-        {
-          "sheet": "смета",
-          "cell": "H6",
-          "formula": "=L175"
-        },
-        {
-          "sheet": "смета",
-          "cell": "H7",
-          "formula": "=L190"
-        },
-        {
-          "sheet": "смета",
-          "cell": "H8",
-          "formula": "=L228"
-        },
-        {
-          "sheet": "смета",
-          "cell": "H9",
-          "formula": "=L256"
-        },
-        {
-          "sheet": "смета",
-          "cell": "F13",
-          "formula": "=E13*D13"
-        },
-        {
-          "sheet": "смета",
-          "cell": "H13",
-          "formula": "=G13*E13"
-        },
-        {
-          "sheet": "смета",
-          "cell": "I13",
-          "formula": "=H13*D13"
-        },
-        {
-          "sheet": "смета",
-          "cell": "K13",
-          "formula": "=J13*D13"
-        },
-        {
-          "sheet": "смета",
-          "cell": "L13",
-          "formula": "=K13+I13"
-        },
-        {
-          "sheet": "смета",
-          "cell": "D14",
-          "formula": "=_xlfn.CEILING.MATH(D13*1.2/30,)"
-        },
-        {
-          "sheet": "смета",
-          "cell": "F14",
-          "formula": "=E14*D14"
-        },
-        {
-          "sheet": "смета",
-          "cell": "H14",
-          "formula": "=G14*E14"
-        },
-        {
-          "sheet": "смета",
-          "cell": "I14",
-          "formula": "=H14*D14"
-        },
-        {
-          "sheet": "смета",
-          "cell": "K14",
-          "formula": "=J14*D14"
-        },
-        {
-          "sheet": "смета",
-          "cell": "L14",
-          "formula": "=K14+I14"
-        },
-        {
-          "sheet": "смета",
-          "cell": "M14",
-          "formula": "=D14*3.6*15/1000"
-        },
-        {
-          "sheet": "смета",
-          "cell": "D15",
-          "formula": "=21.1+10.48+92.15"
-        },
-        {
-          "sheet": "смета",
-          "cell": "F15",
-          "formula": "=E15*D15"
-        },
-        {
-          "sheet": "смета",
-          "cell": "H15",
-          "formula": "=G15*E15"
-        },
-        {
-          "sheet": "смета",
-          "cell": "I15",
-          "formula": "=H15*D15"
-        },
-        {
-          "sheet": "смета",
-          "cell": "K15",
-          "formula": "=J15*D15"
-        },
-        {
-          "sheet": "смета",
-          "cell": "L15",
-          "formula": "=K15+I15"
-        },
-        {
-          "sheet": "смета",
-          "cell": "D16",
-          "formula": "=88+20"
-        },
-        {
-          "sheet": "смета",
-          "cell": "F16",
-          "formula": "=E16*D16"
-        },
-        {
-          "sheet": "смета",
-          "cell": "H16",
-          "formula": "=G16*E16"
-        },
-        {
-          "sheet": "смета",
-          "cell": "I16",
-          "formula": "=H16*D16"
-        },
-        {
-          "sheet": "смета",
-          "cell": "K16",
-          "formula": "=J16*D16"
-        },
-        {
-          "sheet": "смета",
-          "cell": "L16",
-          "formula": "=K16+I16"
-        },
-        {
-          "sheet": "смета",
-          "cell": "M16",
-          "formula": "=D16*25/1000"
-        },
-        {
-          "sheet": "смета",
-          "cell": "F17",
-          "formula": "=E17*D17"
-        },
-        {
-          "sheet": "смета",
-          "cell": "H17",
-          "formula": "=G17*E17"
-        },
-        {
-          "sheet": "смета",
-          "cell": "I17",
-          "formula": "=H17*D17"
-        },
-        {
-          "sheet": "смета",
-          "cell": "K17",
-          "formula": "=J17*D17"
-        },
-        {
-          "sheet": "смета",
-          "cell": "L17",
-          "formula": "=K17+I17"
-        },
-        {
-          "sheet": "смета",
-          "cell": "F18",
-          "formula": "=E18*D18"
-        },
-        {
-          "sheet": "смета",
-          "cell": "H18",
-          "formula": "=G18*E18"
-        },
-        {
-          "sheet": "смета",
-          "cell": "I18",
-          "formula": "=H18*D18"
-        },
-        {
-          "sheet": "смета",
-          "cell": "K18",
-          "formula": "=J18*D18"
-        },
-        {
-          "sheet": "смета",
-          "cell": "L18",
-          "formula": "=K18+I18"
-        },
-        {
-          "sheet": "смета",
-          "cell": "F19",
-          "formula": "=E19*D19"
-        },
-        {
-          "sheet": "смета",
-          "cell": "H19",
-          "formula": "=G19*E19"
-        },
-        {
-          "sheet": "смета",
-          "cell": "I19",
-          "formula": "=H19*D19"
-        },
-        {
-          "sheet": "смета",
-          "cell": "K19",
-          "formula": "=J19*D19"
-        },
-        {
-          "sheet": "смета",
-          "cell": "L19",
-          "formula": "=K19+I19"
-        },
-        {
-          "sheet": "смета",
-          "cell": "D20",
-          "formula": "=D15*4*1.15/1000"
-        }
-      ],
-      "sheets": [
-        {
-          "sheet_name": "смета",
-          "scenario": "gasbeton_or_masonry_with_monolithic_foundation",
-          "sections": [
-            "Кровля",
-            "Окна, двери",
-            "Внешняя отделка"
-          ],
-          "header_rows": [
-            10,
-            60,
-            89,
-            109,
-            135,
-            176,
-            191,
-            229
-          ],
-          "total_rows": [
-            {
-              "row": 58,
-              "text": "Итого материалы: 1680034.1595788796"
-            },
-            {
-              "row": 59,
-              "text": "Итого стены, перегородки: 3241241.2684789114"
-            },
-            {
-              "row": 87,
-              "text": "Итого материалы: 1090794.738551488"
-            },
-            {
-              "row": 88,
-              "text": "Итого перекрытие: 1769547.369441491"
-            },
-            {
-              "row": 107,
-              "text": "Итого материалы: 102555.32"
-            },
-            {
-              "row": 108,
-              "text": "Итого Монолитная лестница: 215046.5296"
-            },
-            {
-              "row": 133,
-              "text": "Итого материалы: 653804.812"
-            },
-            {
-              "row": 134,
-              "text": "Итого Плита покрытия: 1112208.3857600002"
-            },
-            {
-              "row": 174,
-              "text": "Итого материалы: 1341914.6016"
-            },
-            {
-              "row": 175,
-              "text": "Итого крыша: 2323433.1369439997"
-            },
-            {
-              "row": 189,
-              "text": "Итого материалы: 746966.3"
-            },
-            {
-              "row": 190,
-              "text": "Итого Окна, двери: 906743.5"
-            },
-            {
-              "row": 227,
-              "text": "Итого материалы: 1888361.2"
-            },
-            {
-              "row": 228,
-              "text": "Итого внешняя отделка: 3125622.04768"
-            },
-            {
-              "row": 255,
-              "text": "Итого материалы: 569074.08"
-            },
-            {
-              "row": 256,
-              "text": "Итого Внутренняя черновая отделка: 1392456.54324"
-            },
-            {
-              "row": 258,
-              "text": "Итого РАБОТЫ: 6012793.569414035"
-            },
-            {
-              "row": 259,
-              "text": "Итого МАТЕРИАЛЫ: 8073505.2117303675"
-            },
-            {
-              "row": 260,
-              "text": "ИТОГО СМЕТНАЯ СТОИМОСТЬ: 14086298.781144403"
-            }
-          ],
-          "material_rows": 194,
-          "work_rows": 78,
-          "logistics_rows": 18,
-          "sample_rows": [
-            {
-              "row": 10,
-              "name": "Наименование",
-              "unit": "Ед. изм.",
-              "qty": "Кол-во",
-              "work_price": "Себестоимость работ",
-              "material_price": "коэф на работы"
-            },
-            {
-              "row": 13,
-              "name": "Устройство отсечной гидроизоляции основания стен",
-              "unit": "мп",
-              "qty": "52",
-              "work_price": "100",
-              "material_price": "2"
-            },
-            {
-              "row": 14,
-              "name": "Гидроизоляция Линокром ХПП Технониколь черный 15 кв.м",
-              "unit": "рул",
-              "qty": "3",
-              "work_price": "",
-              "material_price": "2"
-            },
-            {
-              "row": 15,
-              "name": "Кладка стен из газобетона, вкл парапет",
-              "unit": "м3",
-              "qty": "123.73",
-              "work_price": "3000",
-              "material_price": "2.2"
-            },
-            {
-              "row": 16,
-              "name": "Цементно-песчаная смесь ЦПС-300 25 кг.",
-              "unit": "шт",
-              "qty": "108",
-              "work_price": "",
-              "material_price": "2"
-            },
-            {
-              "row": 17,
-              "name": "БЛОК 625X400X250",
-              "unit": "м3",
-              "qty": "98",
-              "work_price": "",
-              "material_price": "2"
-            },
-            {
-              "row": 18,
-              "name": "БЛОК 625X300X250",
-              "unit": "м3",
-              "qty": "12",
-              "work_price": "",
-              "material_price": "2"
-            },
-            {
-              "row": 19,
-              "name": "БЛОК 625X250X250",
-              "unit": "м3",
-              "qty": "24",
-              "work_price": "",
-              "material_price": "2"
-            },
-            {
-              "row": 20,
-              "name": "Арматура А3 А240 8мм рифленая",
-              "unit": "т",
-              "qty": "0.569158",
-              "work_price": "",
-              "material_price": "2"
-            },
-            {
-              "row": 21,
-              "name": "Клей для газобетона 25 кг",
-              "unit": "шт",
-              "qty": "154",
-              "work_price": "",
-              "material_price": "2"
-            },
-            {
-              "row": 22,
-              "name": "Кладка перегородок из газобетона",
-              "unit": "м3",
-              "qty": "13.72",
-              "work_price": "6500",
-              "material_price": "2"
-            },
-            {
-              "row": 23,
-              "name": "Цементно-песчаная смесь ЦПС-300 25 кг.",
-              "unit": "шт",
-              "qty": "7",
-              "work_price": "",
-              "material_price": "2"
-            },
-            {
-              "row": 24,
-              "name": "БЛОК 625X150X250",
-              "unit": "м3",
-              "qty": "16",
-              "work_price": "",
-              "material_price": "2"
-            },
-            {
-              "row": 25,
-              "name": "Арматура класс А3 500С 8мм рифленая",
-              "unit": "т",
-              "qty": "0.07948600000000001",
-              "work_price": "",
-              "material_price": "2"
-            },
-            {
-              "row": 26,
-              "name": "Клей для газобетона 25 кг",
-              "unit": "шт",
-              "qty": "17",
-              "work_price": "",
-              "material_price": "2"
-            },
-            {
-              "row": 27,
-              "name": "Аренда крана",
-              "unit": "см",
-              "qty": "3",
-              "work_price": "27000",
-              "material_price": "1.15"
-            },
-            {
-              "row": 28,
-              "name": "Устройство ж/б колонн",
-              "unit": "мп",
-              "qty": "8.75",
-              "work_price": "1300",
-              "material_price": "2"
-            },
-            {
-              "row": 29,
-              "name": "Арматура металлическая д.12 А500",
-              "unit": "т",
-              "qty": "0.041503500000000006",
-              "work_price": "",
-              "material_price": "2"
-            },
-            {
-              "row": 30,
-              "name": "Арматура металлическая д.8 А240",
-              "unit": "т",
-              "qty": "0.028151999999999996",
-              "work_price": "",
-              "material_price": "2"
-            },
-            {
-              "row": 31,
-              "name": "Проволока вязальная 1,2мм",
-              "unit": "кг",
-              "qty": "2",
-              "work_price": "",
-              "material_price": "2"
-            },
-            {
-              "row": 32,
-              "name": "Пескобетон (ЦПС М300) 40 кг",
-              "unit": "шт",
-              "qty": "32",
-              "work_price": "",
-              "material_price": ""
-            },
-            {
-              "row": 33,
-              "name": "Доска обрезная 40*150(100/200)*6000мм е/в",
-              "unit": "м3",
-              "qty": "0.4725",
-              "work_price": "",
-              "material_price": "2"
-            },
-            {
-              "row": 34,
-              "name": "Устройство армопояса парапета",
-              "unit": "мп",
-              "qty": "75.93",
-              "work_price": "900",
-              "material_price": "2"
-            },
-            {
-              "row": 35,
-              "name": "Арматура металлическая д.12 А500",
-              "unit": "т",
-              "qty": "0.16182201599999999",
-              "work_price": "",
-              "material_price": "2"
-            },
-            {
-              "row": 36,
-              "name": "Арматура металлическая д.8 А500",
-              "unit": "т",
-              "qty": "0.06998215",
-              "work_price": "",
-              "material_price": "2"
-            },
-            {
-              "row": 37,
-              "name": "Проволока вязальная 1,2мм",
-              "unit": "кг",
-              "qty": "4",
-              "work_price": "",
-              "material_price": "2"
-            },
-            {
-              "row": 38,
-              "name": "Бетон В25 W6",
-              "unit": "м3",
-              "qty": "4",
-              "work_price": "",
-              "material_price": "2"
-            },
-            {
-              "row": 39,
-              "name": "Доска обрезная 40*150*6000мм е/в хв/п",
-              "unit": "м3",
-              "qty": "0.9111600000000001",
-              "work_price": "",
-              "material_price": "2"
-            },
-            {
-              "row": 40,
-              "name": "Устройство перемычки/ армопояс из U блоков",
-              "unit": "мп",
-              "qty": "36.1",
-              "work_price": "1000",
-              "material_price": "2"
-            },
-            {
-              "row": 41,
-              "name": "U-блок 300 300х250х500мм",
-              "unit": "шт",
-              "qty": "7",
-              "work_price": "",
-              "material_price": "2"
-            },
-            {
-              "row": 42,
-              "name": "U-блок 400 400х250х500мм",
-              "unit": "шт",
-              "qty": "66",
-              "work_price": "",
-              "material_price": "2"
-            },
-            {
-              "row": 43,
-              "name": "Арматура металлическая д.12 А500",
-              "unit": "т",
-              "qty": "0.15387263999999998",
-              "work_price": "",
-              "material_price": "2"
-            },
-            {
-              "row": 44,
-              "name": "Арматура металлическая д.8 А500",
-              "unit": "т",
-              "qty": "0.059411",
-              "work_price": "",
-              "material_price": "2"
-            },
-            {
-              "row": 45,
-              "name": "Проволока вязальная 1,2мм",
-              "unit": "кг",
-              "qty": "4",
-              "work_price": "",
-              "material_price": "2"
-            },
-            {
-              "row": 46,
-              "name": "Пескобетон (ЦПС М300) 40 кг",
-              "unit": "шт",
-              "qty": "36",
-              "work_price": "",
-              "material_price": ""
-            }
-          ],
-          "formula_count": 1192,
-          "formula_samples": [
-            {
-              "sheet": "смета",
-              "cell": "H1",
-              "formula": "=SUM(H2:I9)"
-            },
-            {
-              "sheet": "смета",
-              "cell": "H2",
-              "formula": "=L59"
-            },
-            {
-              "sheet": "смета",
-              "cell": "H3",
-              "formula": "=L88"
-            },
-            {
-              "sheet": "смета",
-              "cell": "H4",
-              "formula": "=L108"
-            },
-            {
-              "sheet": "смета",
-              "cell": "H5",
-              "formula": "=L134"
-            },
-            {
-              "sheet": "смета",
-              "cell": "H6",
-              "formula": "=L175"
-            },
-            {
-              "sheet": "смета",
-              "cell": "H7",
-              "formula": "=L190"
-            },
-            {
-              "sheet": "смета",
-              "cell": "H8",
-              "formula": "=L228"
-            },
-            {
-              "sheet": "смета",
-              "cell": "H9",
-              "formula": "=L256"
-            },
-            {
-              "sheet": "смета",
-              "cell": "F13",
-              "formula": "=E13*D13"
-            },
-            {
-              "sheet": "смета",
-              "cell": "H13",
-              "formula": "=G13*E13"
-            },
-            {
-              "sheet": "смета",
-              "cell": "I13",
-              "formula": "=H13*D13"
-            },
-            {
-              "sheet": "смета",
-              "cell": "K13",
-              "formula": "=J13*D13"
-            },
-            {
-              "sheet": "смета",
-              "cell": "L13",
-              "formula": "=K13+I13"
-            },
-            {
-              "sheet": "смета",
-              "cell": "D14",
-              "formula": "=_xlfn.CEILING.MATH(D13*1.2/30,)"
-            },
-            {
-              "sheet": "смета",
-              "cell": "F14",
-              "formula": "=E14*D14"
-            },
-            {
-              "sheet": "смета",
-              "cell": "H14",
-              "formula": "=G14*E14"
-            },
-            {
-              "sheet": "смета",
-              "cell": "I14",
-              "formula": "=H14*D14"
-            },
-            {
-              "sheet": "смета",
-              "cell": "K14",
-              "formula": "=J14*D14"
-            },
-            {
-              "sheet": "смета",
-              "cell": "L14",
-              "formula": "=K14+I14"
-            },
-            {
-              "sheet": "смета",
-              "cell": "M14",
-              "formula": "=D14*3.6*15/1000"
-            },
-            {
-              "sheet": "смета",
-              "cell": "D15",
-              "formula": "=21.1+10.48+92.15"
-            },
-            {
-              "sheet": "смета",
-              "cell": "F15",
-              "formula": "=E15*D15"
-            },
-            {
-              "sheet": "смета",
-              "cell": "H15",
-              "formula": "=G15*E15"
-            },
-            {
-              "sheet": "смета",
-              "cell": "I15",
-              "formula": "=H15*D15"
-            },
-            {
-              "sheet": "смета",
-              "cell": "K15",
-              "formula": "=J15*D15"
-            },
-            {
-              "sheet": "смета",
-              "cell": "L15",
-              "formula": "=K15+I15"
-            },
-            {
-              "sheet": "смета",
-              "cell": "D16",
-              "formula": "=88+20"
-            },
-            {
-              "sheet": "смета",
-              "cell": "F16",
-              "formula": "=E16*D16"
-            },
-            {
-              "sheet": "смета",
-              "cell": "H16",
-              "formula": "=G16*E16"
-            }
-          ],
-          "row_count": 274
-        }
-      ]
-    }
-  ],
-  "canonical_columns": [
-    "№ п/п",
-    "Наименование",
-    "Ед. изм.",
-    "Кол-во",
-    "Работа Цена",
-    "Работа Стоимость",
-    "Материалы Цена",
-    "Материалы Стоимость",
-    "Всего",
-    "Примечание"
-  ],
-  "canonical_sections": [
-    "Фундамент",
-    "Каркас",
-    "Стены",
-    "Перекрытия",
-    "Кровля",
-    "Окна, двери",
-    "Внешняя отделка",
-    "Внутренняя отделка",
-    "Инженерные коммуникации",
-    "Логистика",
-    "Накладные расходы"
-  ],
-  "universal_material_groups": {
-    "стены": [
-      "кирпич",
-      "газобетон",
-      "керамоблок",
-      "арболит",
-      "монолит",
-      "каркас",
-      "брус"
-    ],
-    "фундамент": [
-      "монолитная плита",
-      "лента",
-      "сваи",
-      "ростверк",
-      "утеплённая плита",
-      "складской фундамент"
-    ],
-    "кровля": [
-      "металлочерепица",
-      "профнастил",
-      "гибкая черепица",
-      "фальц",
-      "мембрана",
-      "стропильная система"
-    ],
-    "перекрытия": [
-      "деревянные балки",
-      "монолит",
-      "плиты",
-      "металлические балки"
-    ],
-    "утепление": [
-      "минвата",
-      "роквул",
-      "пеноплэкс",
-      "pir",
-      "эковата"
-    ],
-    "отделка": [
-      "имитация бруса",
-      "штукатурка",
-      "плитка",
-      "гкл",
-      "цсп",
-      "фасадная доска"
-    ],
-    "инженерия": [
-      "электрика",
-      "водоснабжение",
-      "канализация",
-      "отопление",
-      "вентиляция"
-    ],
-    "логистика": [
-      "доставка",
-      "разгрузка",
-      "манипулятор",
-      "кран",
-      "проживание",
-      "транспорт бригады",
-      "удалённость"
-    ]
-  },
-  "formula_policy": [
-    "Топовые сметы являются эталонами логики расчёта, а не прайс-листами",
-    "Новые сметы считаются по такой же структуре: разделы, строки, колонки, формулы, итоги, примечания, исключения",
-    "Материал может быть любым: кирпич, газобетон, каркас, монолит, кровля, перекрытия, отделка, инженерия",
-    "При замене материала сохраняется расчётная логика: количество × цена = сумма; работа + материалы = всего; разделы = итоги; финальный итог = сумма разделов",
-    "Каркасный сценарий, газобетон/монолитная плита, кровля/перекрытия и фундамент считаются как разные сценарии и не смешиваются",
-    "Если объёмов не хватает — оркестр спрашивает только недостающие объёмы",
-    "Если пользователь прислал файл как образец — сначала принять как образец, а не запускать поиск цен"
-  ],
-  "price_confirmation_flow": [
-    "Интернет-цены материалов и техники не подставляются молча",
-    "Для финальной сметы оркестр ищет актуальные цены по материалам, технике, доставке и разгрузке",
-    "По каждой позиции показывает: источник, цена, единица, дата/регион, ссылка",
-    "Оркестр предлагает среднюю/медианную цену без явных выбросов",
-    "Пользователь выбирает: средняя / минимальная / максимальная / конкретная ссылка / ручная цена",
-    "Пользователь может добавить наценку, запас, скидку, поправку по позиции, разделу или всей смете",
-    "До подтверждения цен финальный XLSX/PDF не выпускается",
-    "После подтверждения цены пересчитываются по формулам шаблона"
-  ],
-  "logistics_policy": [
-    "Перед финальной сметой оркестр обязан запросить локацию объекта или расстояние от города",
-    "Стоимость объекта рядом с городом и объекта за 200 км не может быть одинаковой",
-    "Оркестр обязан учитывать доставку материалов, транспорт бригады, разгрузку, манипулятор/кран, проживание, удалённость, дорожные условия",
-    "Если логистика неизвестна — оркестр задаёт один короткий вопрос: город/населённый пункт или расстояние от города, подъезд для грузовой техники, нужна ли разгрузка/манипулятор",
-    "Логистика считается отдельным блоком сметы или отдельным коэффициентом, но не смешивается молча с ценами материалов",
-    "Перед финальным результатом оркестр показывает логистические допущения и спрашивает подтверждение"
-  ],
-  "runtime_rule": "ai_router injects this context through core.estimate_template_policy.build_estimate_template_context"
-}
-```
-
-====================================================================================================
-END_FILE: docs/REPORTS/ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4_REPORT.md
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: docs/REPORTS/FILE_MEMORY_DOMAIN_LINK_TITLE_P0_V5_REPORT.md
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 2a4f5022a2dab3a3ed4c7446efab2e4b7d2aa7d2d144fcbb44ebb1a1322b660d
-====================================================================================================
-# FILE_MEMORY_DOMAIN_LINK_TITLE_P0_V5_REPORT
-
-generated_at: 2026-05-02T13:28:20+03:00
-
-status: OK
-
-fixed:
-- _fm_item_domain: file_name has priority before mixed hay/value search
-- _fm_public_links: public links are taken only from item["links"], not from value/summary/result/raw_input blobs
-- _fm_public_title: leading numeric prefix removed from file_name
-
-verified:
-- КЖ/КД/КМ/КМД/АР/project file names classify as project
-- smeta/VOR file names classify as estimate
-- links from unrelated blob text are not shown
-- leading "4. " removed from title
-- telegram_daemon.py not modified
-- no live Telegram run
-- worker active without fatal tracebacks
-
-====================================================================================================
-END_FILE: docs/REPORTS/FILE_MEMORY_DOMAIN_LINK_TITLE_P0_V5_REPORT.md
 FILE_CHUNK: 1/1
 ====================================================================================================

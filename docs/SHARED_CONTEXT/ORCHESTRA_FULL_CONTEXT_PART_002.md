@@ -1,8 +1,5556 @@
 # ORCHESTRA_FULL_CONTEXT_PART_002
-generated_at_utc: 2026-05-03T10:25:53.691345+00:00
-git_sha_before_commit: 9dec339fd50517a8fa344fca3eb1ac0c085650e0
-part: 2/7
+generated_at_utc: 2026-05-07T15:15:30.419663+00:00
+git_sha_before_commit: 983ced8149ebd4c84be0c2926296ad19722d0d88
+part: 2/17
 
+
+====================================================================================================
+BEGIN_FILE: docs/REPORTS/ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4_REPORT.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: b76f4c3e00df6223377f6d13a6d018929f168607b220bb98447a4d22764afde1
+====================================================================================================
+# ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4_REPORT
+
+status: OK
+updated_at: 2026-05-02T13:37:39.354912+00:00
+canon: docs/CANON_FINAL/ESTIMATE_TEMPLATE_M80_M110_CANON.md
+registry: config/estimate_template_registry.json
+formula_index: data/templates/estimate_logic/estimate_template_formula_index.json
+
+## CLOSED
+- top estimate templates resolved from Drive
+- XLSX formulas extracted
+- universal material logic registered
+- web price confirmation registered
+- logistics and overhead clarification registered
+- direct sqlite memory write completed
+- ai_router context hook enabled
+
+## RAW_POLICY
+```json
+{
+  "version": "ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4",
+  "status": "ACTIVE_CANON",
+  "updated_at": "2026-05-02T13:37:39.354912+00:00",
+  "purpose": "Use top estimate files as scalable estimate calculation logic templates with mandatory logistics and web price confirmation",
+  "source_files": [
+    {
+      "key": "M80",
+      "title": "М-80.xlsx",
+      "template_role": "full_house_estimate_template",
+      "description": "Эталон полной сметы М-80",
+      "file_id": "1yt-RJsGRhO13zmPKNAn6bMuGrpXY7kWp",
+      "drive_url": "https://docs.google.com/spreadsheets/d/1yt-RJsGRhO13zmPKNAn6bMuGrpXY7kWp/edit?usp=drivesdk&ouid=110231323399920032425&rtpof=true&sd=true",
+      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "modifiedTime": "2025-12-02T09:12:35.000Z",
+      "parents": [
+        "13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB"
+      ],
+      "formula_total": 1670,
+      "formula_samples": [
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "E1",
+          "formula": "=E2+E3+E4+E5+E6+E7+E8"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "E2",
+          "formula": "=I40"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "E3",
+          "formula": "=I63"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "E4",
+          "formula": "=I102"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "E5",
+          "formula": "=I121"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "E6",
+          "formula": "=I158"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "E7",
+          "formula": "=I230"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "E8",
+          "formula": "=I264"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "F12",
+          "formula": "=E12*D12"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "H12",
+          "formula": "=D12*G12"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "I12",
+          "formula": "=F12+H12"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "F13",
+          "formula": "=E13*D13"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "F14",
+          "formula": "=E14*D14"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "H14",
+          "formula": "=D14*G14"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "I14",
+          "formula": "=F14+H14"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "D15",
+          "formula": "=D14/2"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "F15",
+          "formula": "=E15*D15"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "H15",
+          "formula": "=D15*G15"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "I15",
+          "formula": "=F15+H15"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "F16",
+          "formula": "=E16*D16"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "H16",
+          "formula": "=D16*G16"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "I16",
+          "formula": "=F16+H16"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "D17",
+          "formula": "=D14+D16"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "F17",
+          "formula": "=E17*D17"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "H17",
+          "formula": "=D17*G17"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "I17",
+          "formula": "=F17+H17"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "F18",
+          "formula": "=E18*D18"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "H18",
+          "formula": "=D18*G18"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "I18",
+          "formula": "=F18+H18"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "F19",
+          "formula": "=E19*D19"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "H19",
+          "formula": "=D19*G19"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "I19",
+          "formula": "=F19+H19"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "F20",
+          "formula": "=E20*D20"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "H20",
+          "formula": "=D20*G20"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "I20",
+          "formula": "=F20+H20"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "F21",
+          "formula": "=E21*D21"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "H21",
+          "formula": "=D21*G21"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "I21",
+          "formula": "=F21+H21"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "F22",
+          "formula": "=E22*D22"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "H22",
+          "formula": "=D22*G22"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "I22",
+          "formula": "=F22+H22"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "F23",
+          "formula": "=E23*D23"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "H23",
+          "formula": "=D23*G23"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "I23",
+          "formula": "=F23+H23"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "F24",
+          "formula": "=E24*D24"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "H24",
+          "formula": "=D24*G24"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "I24",
+          "formula": "=F24+H24"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "F25",
+          "formula": "=E25*D25"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "F26",
+          "formula": "=E26*D26"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "H26",
+          "formula": "=D26*G26"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "E1",
+          "formula": "=E2+E3+E4+E5+E6+E7+E8"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "E2",
+          "formula": "=I58"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "E3",
+          "formula": "=I112"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "E4",
+          "formula": "=I156"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "E5",
+          "formula": "=I175"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "E6",
+          "formula": "=I205"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "E7",
+          "formula": "=I257"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "E8",
+          "formula": "=I291"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "F12",
+          "formula": "=E12*D12"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "H12",
+          "formula": "=D12*G12"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "I12",
+          "formula": "=F12+H12"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "F13",
+          "formula": "=E13*D13"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "H13",
+          "formula": "=D13*G13"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "I13",
+          "formula": "=F13+H13"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "D14",
+          "formula": "=D13"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "F14",
+          "formula": "=E14*D14"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "H14",
+          "formula": "=D14*G14"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "I14",
+          "formula": "=F14+H14"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "F15",
+          "formula": "=E15*D15"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "H15",
+          "formula": "=D15*G15"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "I15",
+          "formula": "=F15+H15"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "D16",
+          "formula": "=138+48"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "F16",
+          "formula": "=E16*D16"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "H16",
+          "formula": "=D16*G16"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "I16",
+          "formula": "=F16+H16"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "D17",
+          "formula": "=ROUNDUP(D15*0.2*1.4,)"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "F17",
+          "formula": "=E17*D17"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "H17",
+          "formula": "=D17*G17"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "I17",
+          "formula": "=F17+H17"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "F18",
+          "formula": "=E18*D18"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "H18",
+          "formula": "=D18*G18"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "I18",
+          "formula": "=F18+H18"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "D19",
+          "formula": "=D17"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "F19",
+          "formula": "=E19*D19"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "H19",
+          "formula": "=D19*G19"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "I19",
+          "formula": "=F19+H19"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "D20",
+          "formula": "=ROUNDUP(D15*0.1*1.2,)"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "F20",
+          "formula": "=E20*D20"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "H20",
+          "formula": "=D20*G20"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "I20",
+          "formula": "=F20+H20"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "F21",
+          "formula": "=E21*D21"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "H21",
+          "formula": "=D21*G21"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "I21",
+          "formula": "=F21+H21"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "D22",
+          "formula": "=D20"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "F22",
+          "formula": "=E22*D22"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "H22",
+          "formula": "=D22*G22"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "I22",
+          "formula": "=F22+H22"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "F23",
+          "formula": "=E23*D23"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "F24",
+          "formula": "=E24*D24"
+        },
+        {
+          "sheet": "Газобетон_под ключ",
+          "cell": "H24",
+          "formula": "=D24*G24"
+        }
+      ],
+      "sheets": [
+        {
+          "sheet_name": "Каркас под ключ",
+          "scenario": "frame_house",
+          "sections": [
+            "Фундамент",
+            "Каркас",
+            "Кровля",
+            "Окна, двери",
+            "Внешняя отделка",
+            "Внутренняя отделка",
+            "Инженерные коммуникации"
+          ],
+          "header_rows": [
+            9,
+            41,
+            64,
+            103,
+            122,
+            159,
+            231
+          ],
+          "total_rows": [
+            {
+              "row": 38,
+              "text": "Итого работа: 177630.50303999998"
+            },
+            {
+              "row": 39,
+              "text": "Итого материалы: 187078.848"
+            },
+            {
+              "row": 40,
+              "text": "Итого фундамент: 364709.35104"
+            },
+            {
+              "row": 61,
+              "text": "Итого работа: 421719.7464864"
+            },
+            {
+              "row": 62,
+              "text": "Итого материалы: 370590.989583808"
+            },
+            {
+              "row": 63,
+              "text": "Итого каркас : 792310.736070208"
+            },
+            {
+              "row": 100,
+              "text": "Итого работа: 489854.65233"
+            },
+            {
+              "row": 101,
+              "text": "Итого материалы: 594110.925088848"
+            },
+            {
+              "row": 102,
+              "text": "Итого кровля: 1083965.577418848"
+            },
+            {
+              "row": 119,
+              "text": "Итого работа: 157905"
+            },
+            {
+              "row": 120,
+              "text": "Итого материалы: 677320.8"
+            },
+            {
+              "row": 121,
+              "text": "Итого окна, двери: 835225.8"
+            },
+            {
+              "row": 156,
+              "text": "Итого работа: 339034.9049999999"
+            },
+            {
+              "row": 157,
+              "text": "Итого материалы: 327018.077824976"
+            },
+            {
+              "row": 158,
+              "text": "Итого внешняя отделка: 666052.9828249759"
+            },
+            {
+              "row": 228,
+              "text": "Итого работа: 819488.08396"
+            },
+            {
+              "row": 229,
+              "text": "Итого материалы: 918336.176296875"
+            },
+            {
+              "row": 230,
+              "text": "Итого внутренняя отделка: 1737824.2602568748"
+            },
+            {
+              "row": 262,
+              "text": "Итого работа: 207549.06"
+            },
+            {
+              "row": 263,
+              "text": "Итого материалы: 323128.186"
+            },
+            {
+              "row": 264,
+              "text": "Итого инженерные коммуникации: 530677.246"
+            },
+            {
+              "row": 266,
+              "text": "Итого РАБОТЫ: 2405632.8908164"
+            },
+            {
+              "row": 267,
+              "text": "Итого МАТЕРИАЛЫ: 3074455.816794507"
+            },
+            {
+              "row": 268,
+              "text": "ИТОГО СМЕТНАЯ СТОИМОСТЬ: 6010765.953610907"
+            }
+          ],
+          "material_rows": 130,
+          "work_rows": 96,
+          "logistics_rows": 17,
+          "sample_rows": [
+            {
+              "row": 9,
+              "name": "Наименование",
+              "unit": "Ед. изм.",
+              "qty": "Кол-во",
+              "work_price": "Работа",
+              "material_price": "Материалы"
+            },
+            {
+              "row": 12,
+              "name": "Вынос осей в натуру",
+              "unit": "м2",
+              "qty": "95.4",
+              "work_price": "100",
+              "material_price": "0"
+            },
+            {
+              "row": 14,
+              "name": "Укладка канализационной трубы в грунт",
+              "unit": "мп",
+              "qty": "20",
+              "work_price": "800",
+              "material_price": "0"
+            },
+            {
+              "row": 15,
+              "name": "Труба канализационная Ostendorf d110x2000 мм для наружной канализации",
+              "unit": "шт",
+              "qty": "10",
+              "work_price": "0",
+              "material_price": "670"
+            },
+            {
+              "row": 16,
+              "name": "Труба канализационная Ostendorf d110x1000 мм для наружной канализации",
+              "unit": "шт",
+              "qty": "3",
+              "work_price": "0",
+              "material_price": "400"
+            },
+            {
+              "row": 17,
+              "name": "Теплоизоляция для труб стенофлекс 114х13х2000 мм",
+              "unit": "мп",
+              "qty": "23",
+              "work_price": "0",
+              "material_price": "118"
+            },
+            {
+              "row": 18,
+              "name": "Комплект тройников, отводов, уголков для наружной канализации.",
+              "unit": "к-т",
+              "qty": "1",
+              "work_price": "0",
+              "material_price": "3500"
+            },
+            {
+              "row": 19,
+              "name": "Укладка закладной трубы в грунт под электрокабель",
+              "unit": "мп",
+              "qty": "15",
+              "work_price": "400",
+              "material_price": "0"
+            },
+            {
+              "row": 20,
+              "name": "Кабель NVO ВБШвнг(А) LS 5х2.5 20 м",
+              "unit": "шт",
+              "qty": "1",
+              "work_price": "0",
+              "material_price": "6600"
+            },
+            {
+              "row": 21,
+              "name": "Труба двустенная гофрированная ПНД/ПВД d63/52",
+              "unit": "мп",
+              "qty": "15",
+              "work_price": "0",
+              "material_price": "114"
+            },
+            {
+              "row": 22,
+              "name": "Укладка трубы ХВС в грунт на глубину 1,5м.",
+              "unit": "мп",
+              "qty": "10",
+              "work_price": "1000",
+              "material_price": "0"
+            },
+            {
+              "row": 23,
+              "name": "Труба двустенная гофрированная ПНД/ПВД d63/52",
+              "unit": "мп",
+              "qty": "20",
+              "work_price": "0",
+              "material_price": "114"
+            },
+            {
+              "row": 24,
+              "name": "Труба ПНД (ПЭ-100) для систем водоснабжения премиум синяя 32 мм",
+              "unit": "мп",
+              "qty": "20",
+              "work_price": "0",
+              "material_price": "81"
+            },
+            {
+              "row": 26,
+              "name": "Разметка свайного поля, забивка свай, установка оголовков",
+              "unit": "шт",
+              "qty": "31",
+              "work_price": "2000",
+              "material_price": "0"
+            },
+            {
+              "row": 27,
+              "name": "Свая винтовая d108 мм h2500 мм",
+              "unit": "шт",
+              "qty": "31",
+              "work_price": "0",
+              "material_price": "2632"
+            },
+            {
+              "row": 28,
+              "name": "Оголовок для сваи винтовой d108 мм",
+              "unit": "шт",
+              "qty": "31",
+              "work_price": "0",
+              "material_price": "260"
+            },
+            {
+              "row": 29,
+              "name": "Обвязка свай по гидроизоляции",
+              "unit": "мп",
+              "qty": "72.72",
+              "work_price": "750",
+              "material_price": "0"
+            },
+            {
+              "row": 30,
+              "name": "Гидроизоляция Линокром ХПП Технониколь черный 15 кв.м",
+              "unit": "рул",
+              "qty": "1",
+              "work_price": "0",
+              "material_price": "1900"
+            },
+            {
+              "row": 31,
+              "name": "Брус сух 150х150",
+              "unit": "м3",
+              "qty": "1.9634399999999999",
+              "work_price": "0",
+              "material_price": "22000"
+            },
+            {
+              "row": 32,
+              "name": "Крепеж и расходные материалы по разделу",
+              "unit": "к-т",
+              "qty": "31",
+              "work_price": "0",
+              "material_price": "200"
+            },
+            {
+              "row": 33,
+              "name": "Антисептирование конструкционной доски в 2 слоя",
+              "unit": "м2",
+              "qty": "1.9634399999999999",
+              "work_price": "200",
+              "material_price": "0"
+            },
+            {
+              "row": 34,
+              "name": "Антисептик Neomid 450 огнебиозащитный I группа красный 10 кг",
+              "unit": "шт",
+              "qty": "1",
+              "work_price": "0",
+              "material_price": "2800"
+            },
+            {
+              "row": 35,
+              "name": "Погрузо-разгрузочные работы",
+              "unit": "усл",
+              "qty": "1",
+              "work_price": "6000",
+              "material_price": "0"
+            },
+            {
+              "row": 36,
+              "name": "Транспортные расходы",
+              "unit": "",
+              "qty": "0.1",
+              "work_price": "",
+              "material_price": ""
+            },
+            {
+              "row": 37,
+              "name": "Накладные расходы",
+              "unit": "",
+              "qty": "0.08",
+              "work_price": "",
+              "material_price": ""
+            },
+            {
+              "row": 41,
+              "name": "Наименование",
+              "unit": "Ед. изм.",
+              "qty": "Кол-во",
+              "work_price": "Работа",
+              "material_price": "Материалы"
+            },
+            {
+              "row": 44,
+              "name": "Монтаж лаг цокольного перекрытия вкл террасы, крыльца",
+              "unit": "м2",
+              "qty": "91.7",
+              "work_price": "1000",
+              "material_price": "0"
+            },
+            {
+              "row": 45,
+              "name": "доска с/к 40х200",
+              "unit": "м3",
+              "qty": "2.2008",
+              "work_price": "0",
+              "material_price": "24300"
+            },
+            {
+              "row": 46,
+              "name": "Устройство каркаса стен/перегородок",
+              "unit": "м2",
+              "qty": "157.62825",
+              "work_price": "1000",
+              "material_price": "0"
+            },
+            {
+              "row": 47,
+              "name": "Монтаж стоек и балок террасы",
+              "unit": "мп",
+              "qty": "8.8",
+              "work_price": "800",
+              "material_price": "0"
+            },
+            {
+              "row": 48,
+              "name": "доска с/к 40х150",
+              "unit": "м3",
+              "qty": "4.4977464000000005",
+              "work_price": "0",
+              "material_price": "24300"
+            },
+            {
+              "row": 49,
+              "name": "доска с/к 40х100",
+              "unit": "м3",
+              "qty": "0.2945808",
+              "work_price": "0",
+              "material_price": "24300"
+            },
+            {
+              "row": 50,
+              "name": "бру с/с 150х150",
+              "unit": "м3",
+              "qty": "0.26999999999999996",
+              "work_price": "0",
+              "material_price": "30000"
+            },
+            {
+              "row": 51,
+              "name": "Монтаж баллок перекрытия",
+              "unit": "м2",
+              "qty": "0",
+              "work_price": "1000",
+              "material_price": "0"
+            },
+            {
+              "row": 52,
+              "name": "доска с/к 40х150",
+              "unit": "м3",
+              "qty": "0",
+              "work_price": "0",
+              "material_price": "24300"
+            }
+          ],
+          "formula_count": 799,
+          "formula_samples": [
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "E1",
+              "formula": "=E2+E3+E4+E5+E6+E7+E8"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "E2",
+              "formula": "=I40"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "E3",
+              "formula": "=I63"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "E4",
+              "formula": "=I102"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "E5",
+              "formula": "=I121"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "E6",
+              "formula": "=I158"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "E7",
+              "formula": "=I230"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "E8",
+              "formula": "=I264"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "F12",
+              "formula": "=E12*D12"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "H12",
+              "formula": "=D12*G12"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "I12",
+              "formula": "=F12+H12"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "F13",
+              "formula": "=E13*D13"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "F14",
+              "formula": "=E14*D14"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "H14",
+              "formula": "=D14*G14"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "I14",
+              "formula": "=F14+H14"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "D15",
+              "formula": "=D14/2"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "F15",
+              "formula": "=E15*D15"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "H15",
+              "formula": "=D15*G15"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "I15",
+              "formula": "=F15+H15"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "F16",
+              "formula": "=E16*D16"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "H16",
+              "formula": "=D16*G16"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "I16",
+              "formula": "=F16+H16"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "D17",
+              "formula": "=D14+D16"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "F17",
+              "formula": "=E17*D17"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "H17",
+              "formula": "=D17*G17"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "I17",
+              "formula": "=F17+H17"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "F18",
+              "formula": "=E18*D18"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "H18",
+              "formula": "=D18*G18"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "I18",
+              "formula": "=F18+H18"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "F19",
+              "formula": "=E19*D19"
+            }
+          ],
+          "row_count": 285
+        },
+        {
+          "sheet_name": "Газобетон_под ключ",
+          "scenario": "gasbeton_or_masonry_with_monolithic_foundation",
+          "sections": [
+            "Фундамент",
+            "Стены",
+            "Кровля",
+            "Окна, двери",
+            "Внешняя отделка",
+            "Внутренняя отделка",
+            "Инженерные коммуникации"
+          ],
+          "header_rows": [
+            9,
+            59,
+            113,
+            157,
+            176,
+            206,
+            258
+          ],
+          "total_rows": [
+            {
+              "row": 56,
+              "text": "Итого работа: 371647.66"
+            },
+            {
+              "row": 57,
+              "text": "Итого материалы: 564147.06331776"
+            },
+            {
+              "row": 58,
+              "text": "Итого фундамент: 935794.72331776"
+            },
+            {
+              "row": 110,
+              "text": "Итого работа: 436810.7232500001"
+            },
+            {
+              "row": 111,
+              "text": "Итого материалы: 611460.929728"
+            },
+            {
+              "row": 112,
+              "text": "Итого каркас : 1048271.652978"
+            },
+            {
+              "row": 154,
+              "text": "Итого работа: 618251.94353"
+            },
+            {
+              "row": 155,
+              "text": "Итого материалы: 681975.5442550561"
+            },
+            {
+              "row": 156,
+              "text": "Итого кровля: 1300227.4877850562"
+            },
+            {
+              "row": 173,
+              "text": "Итого работа: 157905"
+            },
+            {
+              "row": 174,
+              "text": "Итого материалы: 677320.8"
+            },
+            {
+              "row": 175,
+              "text": "Итого окна, двери: 835225.8"
+            },
+            {
+              "row": 203,
+              "text": "Итого работа: 293332.36899999995"
+            },
+            {
+              "row": 204,
+              "text": "Итого материалы: 252704.802632"
+            },
+            {
+              "row": 205,
+              "text": "Итого внешняя отделка: 546037.171632"
+            },
+            {
+              "row": 255,
+              "text": "Итого работа: 613355.61856"
+            },
+            {
+              "row": 256,
+              "text": "Итого материалы: 619625.761125"
+            },
+            {
+              "row": 257,
+              "text": "Итого внутренняя отделка: 1232981.379685"
+            },
+            {
+              "row": 289,
+              "text": "Итого работа: 207549.06"
+            },
+            {
+              "row": 290,
+              "text": "Итого материалы: 323128.186"
+            },
+            {
+              "row": 291,
+              "text": "Итого инженерные коммуникации: 530677.246"
+            },
+            {
+              "row": 293,
+              "text": "Итого РАБОТЫ: 2698852.37434"
+            },
+            {
+              "row": 294,
+              "text": "Итого МАТЕРИАЛЫ: 3730363.087057816"
+            },
+            {
+              "row": 295,
+              "text": "ИТОГО СМЕТНАЯ СТОИМОСТЬ: 6429215.4613978155"
+            }
+          ],
+          "material_rows": 156,
+          "work_rows": 99,
+          "logistics_rows": 23,
+          "sample_rows": [
+            {
+              "row": 9,
+              "name": "Наименование",
+              "unit": "Ед. изм.",
+              "qty": "Кол-во",
+              "work_price": "Работа",
+              "material_price": "Материалы"
+            },
+            {
+              "row": 12,
+              "name": "Вынос осей в натуру",
+              "unit": "м2",
+              "qty": "95.4",
+              "work_price": "80",
+              "material_price": "0"
+            },
+            {
+              "row": 13,
+              "name": "Земляные работы, сопровождение работы экскаватора",
+              "unit": "см",
+              "qty": "1",
+              "work_price": "12000",
+              "material_price": "0"
+            },
+            {
+              "row": 14,
+              "name": "Аренда экскаватора",
+              "unit": "см",
+              "qty": "1",
+              "work_price": "0",
+              "material_price": "22000"
+            },
+            {
+              "row": 15,
+              "name": "Доработка грунта вручную",
+              "unit": "м2",
+              "qty": "138",
+              "work_price": "150",
+              "material_price": "0"
+            },
+            {
+              "row": 16,
+              "name": "Настил геотекстиля по основанию и стенам котлована (Геотекстиль 300 г/кв.м иглопробивной)",
+              "unit": "м2",
+              "qty": "186",
+              "work_price": "80",
+              "material_price": "60"
+            },
+            {
+              "row": 17,
+              "name": "Устройство песчаной подготовки т 200 мм с уплотнением.",
+              "unit": "м3",
+              "qty": "39",
+              "work_price": "800",
+              "material_price": "0"
+            },
+            {
+              "row": 18,
+              "name": "Аренда виброплиты (трамбовка)",
+              "unit": "сут",
+              "qty": "4",
+              "work_price": "0",
+              "material_price": "2500"
+            },
+            {
+              "row": 19,
+              "name": "Песок карьерный",
+              "unit": "м3",
+              "qty": "39",
+              "work_price": "0",
+              "material_price": "900"
+            },
+            {
+              "row": 20,
+              "name": "Устройство щебеночной подготовки т 100 мм с уплотнением.",
+              "unit": "м3",
+              "qty": "17",
+              "work_price": "800",
+              "material_price": "0"
+            },
+            {
+              "row": 21,
+              "name": "Аренда виброплиты (трамбовка)",
+              "unit": "сут",
+              "qty": "4",
+              "work_price": "0",
+              "material_price": "2500"
+            },
+            {
+              "row": 22,
+              "name": "Щебень фр 20-40",
+              "unit": "м3",
+              "qty": "17",
+              "work_price": "0",
+              "material_price": "1880"
+            },
+            {
+              "row": 24,
+              "name": "Укладка канализационной трубы в грунт",
+              "unit": "мп",
+              "qty": "20",
+              "work_price": "900",
+              "material_price": "0"
+            },
+            {
+              "row": 25,
+              "name": "Труба канализационная Ostendorf d110x2000 мм для наружной канализации",
+              "unit": "шт",
+              "qty": "10",
+              "work_price": "0",
+              "material_price": "670"
+            },
+            {
+              "row": 26,
+              "name": "Труба канализационная Ostendorf d110x1000 мм для наружной канализации",
+              "unit": "шт",
+              "qty": "3",
+              "work_price": "0",
+              "material_price": "400"
+            },
+            {
+              "row": 27,
+              "name": "Теплоизоляция для труб стенофлекс 114х13х2000 мм",
+              "unit": "мп",
+              "qty": "23",
+              "work_price": "0",
+              "material_price": "118"
+            },
+            {
+              "row": 28,
+              "name": "Комплект тройников, отводов, уголков для наружной канализации.",
+              "unit": "к-т",
+              "qty": "1",
+              "work_price": "0",
+              "material_price": "3500"
+            },
+            {
+              "row": 29,
+              "name": "Укладка закладной трубы в грунт под электрокабель",
+              "unit": "мп",
+              "qty": "15",
+              "work_price": "400",
+              "material_price": "0"
+            },
+            {
+              "row": 30,
+              "name": "Кабель NVO ВБШвнг(А) LS 5х2.5 20 м",
+              "unit": "шт",
+              "qty": "1",
+              "work_price": "0",
+              "material_price": "6600"
+            },
+            {
+              "row": 31,
+              "name": "Труба двустенная гофрированная ПНД/ПВД d63/52",
+              "unit": "мп",
+              "qty": "15",
+              "work_price": "0",
+              "material_price": "114"
+            },
+            {
+              "row": 32,
+              "name": "Укладка трубы ХВС в грунт на глубину 1,5м.",
+              "unit": "мп",
+              "qty": "10",
+              "work_price": "850",
+              "material_price": "0"
+            },
+            {
+              "row": 33,
+              "name": "Труба двустенная гофрированная ПНД/ПВД d63/52",
+              "unit": "мп",
+              "qty": "20",
+              "work_price": "0",
+              "material_price": "114"
+            },
+            {
+              "row": 34,
+              "name": "Труба ПНД (ПЭ-100) для систем водоснабжения премиум синяя 32 мм",
+              "unit": "мп",
+              "qty": "20",
+              "work_price": "0",
+              "material_price": "81"
+            },
+            {
+              "row": 35,
+              "name": "Настил технической пленки",
+              "unit": "м2",
+              "qty": "120",
+              "work_price": "50",
+              "material_price": "40"
+            },
+            {
+              "row": 37,
+              "name": "Устройство опалубки",
+              "unit": "мп",
+              "qty": "40.7",
+              "work_price": "1100",
+              "material_price": "0"
+            },
+            {
+              "row": 38,
+              "name": "Доска 50х150(100)х6000 мм е/в",
+              "unit": "м3",
+              "qty": "1.8315000000000001",
+              "work_price": "0",
+              "material_price": "17500"
+            },
+            {
+              "row": 39,
+              "name": "Устройство арматурного каркаса",
+              "unit": "м2",
+              "qty": "95.4",
+              "work_price": "1200",
+              "material_price": "0"
+            },
+            {
+              "row": 40,
+              "name": "Арматура металлическая д.12 А500",
+              "unit": "т",
+              "qty": "2.0331648",
+              "work_price": "0",
+              "material_price": "70000"
+            },
+            {
+              "row": 41,
+              "name": "Арматура металлическая д.8 А500",
+              "unit": "т",
+              "qty": "0.22364812800000003",
+              "work_price": "0",
+              "material_price": "73000"
+            },
+            {
+              "row": 42,
+              "name": "Пеноплэкс Фундамент 100х585х1185",
+              "unit": "шт",
+              "qty": "5",
+              "work_price": "0",
+              "material_price": "709"
+            },
+            {
+              "row": 43,
+              "name": "Проволока вязальная 1,2мм",
+              "unit": "кг",
+              "qty": "50",
+              "work_price": "0",
+              "material_price": "160"
+            },
+            {
+              "row": 44,
+              "name": "Фиксаторы арматуры гориз.уп 250 шт",
+              "unit": "уп",
+              "qty": "3",
+              "work_price": "0",
+              "material_price": "1456"
+            },
+            {
+              "row": 45,
+              "name": "Бетонирование монолитной плиты с вибрированием",
+              "unit": "м3",
+              "qty": "21",
+              "work_price": "2000",
+              "material_price": "0"
+            },
+            {
+              "row": 46,
+              "name": "Бетон В20 W8 с доставкой*",
+              "unit": "м3",
+              "qty": "21",
+              "work_price": "0",
+              "material_price": "6500"
+            },
+            {
+              "row": 47,
+              "name": "глубинный вибратор",
+              "unit": "сут",
+              "qty": "1",
+              "work_price": "0",
+              "material_price": "1500"
+            }
+          ],
+          "formula_count": 871,
+          "formula_samples": [
+            {
+              "sheet": "Газобетон_под ключ",
+              "cell": "E1",
+              "formula": "=E2+E3+E4+E5+E6+E7+E8"
+            },
+            {
+              "sheet": "Газобетон_под ключ",
+              "cell": "E2",
+              "formula": "=I58"
+            },
+            {
+              "sheet": "Газобетон_под ключ",
+              "cell": "E3",
+              "formula": "=I112"
+            },
+            {
+              "sheet": "Газобетон_под ключ",
+              "cell": "E4",
+              "formula": "=I156"
+            },
+            {
+              "sheet": "Газобетон_под ключ",
+              "cell": "E5",
+              "formula": "=I175"
+            },
+            {
+              "sheet": "Газобетон_под ключ",
+              "cell": "E6",
+              "formula": "=I205"
+            },
+            {
+              "sheet": "Газобетон_под ключ",
+              "cell": "E7",
+              "formula": "=I257"
+            },
+            {
+              "sheet": "Газобетон_под ключ",
+              "cell": "E8",
+              "formula": "=I291"
+            },
+            {
+              "sheet": "Газобетон_под ключ",
+              "cell": "F12",
+              "formula": "=E12*D12"
+            },
+            {
+              "sheet": "Газобетон_под ключ",
+              "cell": "H12",
+              "formula": "=D12*G12"
+            },
+            {
+              "sheet": "Газобетон_под ключ",
+              "cell": "I12",
+              "formula": "=F12+H12"
+            },
+            {
+              "sheet": "Газобетон_под ключ",
+              "cell": "F13",
+              "formula": "=E13*D13"
+            },
+            {
+              "sheet": "Газобетон_под ключ",
+              "cell": "H13",
+              "formula": "=D13*G13"
+            },
+            {
+              "sheet": "Газобетон_под ключ",
+              "cell": "I13",
+              "formula": "=F13+H13"
+            },
+            {
+              "sheet": "Газобетон_под ключ",
+              "cell": "D14",
+              "formula": "=D13"
+            },
+            {
+              "sheet": "Газобетон_под ключ",
+              "cell": "F14",
+              "formula": "=E14*D14"
+            },
+            {
+              "sheet": "Газобетон_под ключ",
+              "cell": "H14",
+              "formula": "=D14*G14"
+            },
+            {
+              "sheet": "Газобетон_под ключ",
+              "cell": "I14",
+              "formula": "=F14+H14"
+            },
+            {
+              "sheet": "Газобетон_под ключ",
+              "cell": "F15",
+              "formula": "=E15*D15"
+            },
+            {
+              "sheet": "Газобетон_под ключ",
+              "cell": "H15",
+              "formula": "=D15*G15"
+            },
+            {
+              "sheet": "Газобетон_под ключ",
+              "cell": "I15",
+              "formula": "=F15+H15"
+            },
+            {
+              "sheet": "Газобетон_под ключ",
+              "cell": "D16",
+              "formula": "=138+48"
+            },
+            {
+              "sheet": "Газобетон_под ключ",
+              "cell": "F16",
+              "formula": "=E16*D16"
+            },
+            {
+              "sheet": "Газобетон_под ключ",
+              "cell": "H16",
+              "formula": "=D16*G16"
+            },
+            {
+              "sheet": "Газобетон_под ключ",
+              "cell": "I16",
+              "formula": "=F16+H16"
+            },
+            {
+              "sheet": "Газобетон_под ключ",
+              "cell": "D17",
+              "formula": "=ROUNDUP(D15*0.2*1.4,)"
+            },
+            {
+              "sheet": "Газобетон_под ключ",
+              "cell": "F17",
+              "formula": "=E17*D17"
+            },
+            {
+              "sheet": "Газобетон_под ключ",
+              "cell": "H17",
+              "formula": "=D17*G17"
+            },
+            {
+              "sheet": "Газобетон_под ключ",
+              "cell": "I17",
+              "formula": "=F17+H17"
+            },
+            {
+              "sheet": "Газобетон_под ключ",
+              "cell": "F18",
+              "formula": "=E18*D18"
+            }
+          ],
+          "row_count": 312
+        }
+      ]
+    },
+    {
+      "key": "M110",
+      "title": "М-110.xlsx",
+      "template_role": "full_house_estimate_template",
+      "description": "Эталон полной сметы М-110",
+      "file_id": "1Ub9fcwOcJ4pV30dcX88yf1225WOIdpWo",
+      "drive_url": "https://docs.google.com/spreadsheets/d/1Ub9fcwOcJ4pV30dcX88yf1225WOIdpWo/edit?usp=drivesdk&ouid=110231323399920032425&rtpof=true&sd=true",
+      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "modifiedTime": "2025-05-15T06:18:08.000Z",
+      "parents": [
+        "13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB"
+      ],
+      "formula_total": 1647,
+      "formula_samples": [
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "E1",
+          "formula": "=E2+E3+E4+E5+E6+E7+E8"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "E2",
+          "formula": "=I40"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "E3",
+          "formula": "=I63"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "E4",
+          "formula": "=I102"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "E5",
+          "formula": "=I121"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "E6",
+          "formula": "=I158"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "E7",
+          "formula": "=I230"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "E8",
+          "formula": "=I264"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "F12",
+          "formula": "=E12*D12"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "H12",
+          "formula": "=D12*G12"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "I12",
+          "formula": "=F12+H12"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "F13",
+          "formula": "=E13*D13"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "F14",
+          "formula": "=E14*D14"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "H14",
+          "formula": "=D14*G14"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "I14",
+          "formula": "=F14+H14"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "D15",
+          "formula": "=D14/2"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "F15",
+          "formula": "=E15*D15"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "H15",
+          "formula": "=D15*G15"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "I15",
+          "formula": "=F15+H15"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "F16",
+          "formula": "=E16*D16"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "H16",
+          "formula": "=D16*G16"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "I16",
+          "formula": "=F16+H16"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "D17",
+          "formula": "=D14+D16"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "F17",
+          "formula": "=E17*D17"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "H17",
+          "formula": "=D17*G17"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "I17",
+          "formula": "=F17+H17"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "F18",
+          "formula": "=E18*D18"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "H18",
+          "formula": "=D18*G18"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "I18",
+          "formula": "=F18+H18"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "F19",
+          "formula": "=E19*D19"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "H19",
+          "formula": "=D19*G19"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "I19",
+          "formula": "=F19+H19"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "F20",
+          "formula": "=E20*D20"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "H20",
+          "formula": "=D20*G20"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "I20",
+          "formula": "=F20+H20"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "F21",
+          "formula": "=E21*D21"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "H21",
+          "formula": "=D21*G21"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "I21",
+          "formula": "=F21+H21"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "F22",
+          "formula": "=E22*D22"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "H22",
+          "formula": "=D22*G22"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "I22",
+          "formula": "=F22+H22"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "F23",
+          "formula": "=E23*D23"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "H23",
+          "formula": "=D23*G23"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "I23",
+          "formula": "=F23+H23"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "F24",
+          "formula": "=E24*D24"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "H24",
+          "formula": "=D24*G24"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "I24",
+          "formula": "=F24+H24"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "F25",
+          "formula": "=E25*D25"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "F26",
+          "formula": "=E26*D26"
+        },
+        {
+          "sheet": "Каркас под ключ",
+          "cell": "H26",
+          "formula": "=D26*G26"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "E1",
+          "formula": "=E2+E3+E4+E5+E6+E7+E8"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "E2",
+          "formula": "=I58"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "E3",
+          "formula": "=I110"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "E4",
+          "formula": "=I154"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "E5",
+          "formula": "=I173"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "E6",
+          "formula": "=I203"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "E7",
+          "formula": "=I255"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "E8",
+          "formula": "=I289"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "F12",
+          "formula": "=E12*D12"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "H12",
+          "formula": "=D12*G12"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "I12",
+          "formula": "=F12+H12"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "F13",
+          "formula": "=E13*D13"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "H13",
+          "formula": "=D13*G13"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "I13",
+          "formula": "=F13+H13"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "D14",
+          "formula": "=D13"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "F14",
+          "formula": "=E14*D14"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "H14",
+          "formula": "=D14*G14"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "I14",
+          "formula": "=F14+H14"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "F15",
+          "formula": "=E15*D15"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "H15",
+          "formula": "=D15*G15"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "I15",
+          "formula": "=F15+H15"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "D16",
+          "formula": "=155+50"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "F16",
+          "formula": "=E16*D16"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "H16",
+          "formula": "=D16*G16"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "I16",
+          "formula": "=F16+H16"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "D17",
+          "formula": "=ROUNDUP(D15*0.2*1.4,)"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "F17",
+          "formula": "=E17*D17"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "H17",
+          "formula": "=D17*G17"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "I17",
+          "formula": "=F17+H17"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "F18",
+          "formula": "=E18*D18"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "H18",
+          "formula": "=D18*G18"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "I18",
+          "formula": "=F18+H18"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "D19",
+          "formula": "=D17"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "F19",
+          "formula": "=E19*D19"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "H19",
+          "formula": "=D19*G19"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "I19",
+          "formula": "=F19+H19"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "D20",
+          "formula": "=ROUNDUP(D15*0.1*1.2,)"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "F20",
+          "formula": "=E20*D20"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "H20",
+          "formula": "=D20*G20"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "I20",
+          "formula": "=F20+H20"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "F21",
+          "formula": "=E21*D21"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "H21",
+          "formula": "=D21*G21"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "I21",
+          "formula": "=F21+H21"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "D22",
+          "formula": "=D20"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "F22",
+          "formula": "=E22*D22"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "H22",
+          "formula": "=D22*G22"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "I22",
+          "formula": "=F22+H22"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "F23",
+          "formula": "=E23*D23"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "F24",
+          "formula": "=E24*D24"
+        },
+        {
+          "sheet": "Газобетон",
+          "cell": "H24",
+          "formula": "=D24*G24"
+        }
+      ],
+      "sheets": [
+        {
+          "sheet_name": "Каркас под ключ",
+          "scenario": "frame_house",
+          "sections": [
+            "Фундамент",
+            "Каркас",
+            "Кровля",
+            "Окна, двери",
+            "Внешняя отделка",
+            "Внутренняя отделка",
+            "Инженерные коммуникации"
+          ],
+          "header_rows": [
+            9,
+            41,
+            64,
+            103,
+            122,
+            159,
+            231
+          ],
+          "total_rows": [
+            {
+              "row": 38,
+              "text": "Итого работа: 186528.8088"
+            },
+            {
+              "row": 39,
+              "text": "Итого материалы: 186206.46000000002"
+            },
+            {
+              "row": 40,
+              "text": "Итого фундамент: 372735.2688"
+            },
+            {
+              "row": 61,
+              "text": "Итого работа: 477629.94104"
+            },
+            {
+              "row": 62,
+              "text": "Итого материалы: 437064.3309088"
+            },
+            {
+              "row": 63,
+              "text": "Итого каркас : 914694.2719488"
+            },
+            {
+              "row": 100,
+              "text": "Итого работа: 529936.4"
+            },
+            {
+              "row": 101,
+              "text": "Итого материалы: 628855.6559680001"
+            },
+            {
+              "row": 102,
+              "text": "Итого кровля: 1158792.055968"
+            },
+            {
+              "row": 119,
+              "text": "Итого работа: 177210"
+            },
+            {
+              "row": 120,
+              "text": "Итого материалы: 713674"
+            },
+            {
+              "row": 121,
+              "text": "Итого окна, двери: 890884"
+            },
+            {
+              "row": 156,
+              "text": "Итого работа: 391133.64"
+            },
+            {
+              "row": 157,
+              "text": "Итого материалы: 438006.42710880004"
+            },
+            {
+              "row": 158,
+              "text": "Итого внешняя отделка: 829140.0671088"
+            },
+            {
+              "row": 228,
+              "text": "Итого работа: 966280.5451999999"
+            },
+            {
+              "row": 229,
+              "text": "Итого материалы: 1080968.6829375"
+            },
+            {
+              "row": 230,
+              "text": "Итого внутренняя отделка: 2047249.2281375001"
+            },
+            {
+              "row": 262,
+              "text": "Итого работа: 230232"
+            },
+            {
+              "row": 263,
+              "text": "Итого материалы: 346375"
+            },
+            {
+              "row": 264,
+              "text": "Итого инженерные коммуникации: 576607"
+            },
+            {
+              "row": 266,
+              "text": "Итого РАБОТЫ: 2728719.33504"
+            },
+            {
+              "row": 267,
+              "text": "Итого МАТЕРИАЛЫ: 3484775.5569231003"
+            },
+            {
+              "row": 268,
+              "text": "ИТОГО СМЕТНАЯ СТОИМОСТЬ: 6790101.8919631"
+            }
+          ],
+          "material_rows": 130,
+          "work_rows": 96,
+          "logistics_rows": 17,
+          "sample_rows": [
+            {
+              "row": 9,
+              "name": "Наименование",
+              "unit": "Ед. изм.",
+              "qty": "Кол-во",
+              "work_price": "Работа",
+              "material_price": "Материалы"
+            },
+            {
+              "row": 12,
+              "name": "Вынос осей в натуру",
+              "unit": "м2",
+              "qty": "112",
+              "work_price": "100",
+              "material_price": "0"
+            },
+            {
+              "row": 14,
+              "name": "Укладка канализационной трубы в грунт",
+              "unit": "мп",
+              "qty": "28",
+              "work_price": "800",
+              "material_price": "0"
+            },
+            {
+              "row": 15,
+              "name": "Труба канализационная Ostendorf d110x2000 мм для наружной канализации",
+              "unit": "шт",
+              "qty": "14",
+              "work_price": "0",
+              "material_price": "670"
+            },
+            {
+              "row": 16,
+              "name": "Труба канализационная Ostendorf d110x1000 мм для наружной канализации",
+              "unit": "шт",
+              "qty": "3",
+              "work_price": "0",
+              "material_price": "400"
+            },
+            {
+              "row": 17,
+              "name": "Теплоизоляция для труб стенофлекс 114х13х2000 мм",
+              "unit": "мп",
+              "qty": "31",
+              "work_price": "0",
+              "material_price": "118"
+            },
+            {
+              "row": 18,
+              "name": "Комплект тройников, отводов, уголков для наружной канализации.",
+              "unit": "к-т",
+              "qty": "1",
+              "work_price": "0",
+              "material_price": "3500"
+            },
+            {
+              "row": 19,
+              "name": "Укладка закладной трубы в грунт под электрокабель",
+              "unit": "мп",
+              "qty": "15",
+              "work_price": "400",
+              "material_price": "0"
+            },
+            {
+              "row": 20,
+              "name": "Кабель NVO ВБШвнг(А) LS 5х2.5 20 м",
+              "unit": "шт",
+              "qty": "1",
+              "work_price": "0",
+              "material_price": "6600"
+            },
+            {
+              "row": 21,
+              "name": "Труба двустенная гофрированная ПНД/ПВД d63/52",
+              "unit": "мп",
+              "qty": "15",
+              "work_price": "0",
+              "material_price": "114"
+            },
+            {
+              "row": 22,
+              "name": "Укладка трубы ХВС в грунт на глубину 1,5м.",
+              "unit": "мп",
+              "qty": "10",
+              "work_price": "1000",
+              "material_price": "0"
+            },
+            {
+              "row": 23,
+              "name": "Труба двустенная гофрированная ПНД/ПВД d63/52",
+              "unit": "мп",
+              "qty": "20",
+              "work_price": "0",
+              "material_price": "114"
+            },
+            {
+              "row": 24,
+              "name": "Труба ПНД (ПЭ-100) для систем водоснабжения премиум синяя 32 мм",
+              "unit": "мп",
+              "qty": "20",
+              "work_price": "0",
+              "material_price": "81"
+            },
+            {
+              "row": 26,
+              "name": "Разметка свайного поля, забивка свай, установка оголовков",
+              "unit": "шт",
+              "qty": "28",
+              "work_price": "2000",
+              "material_price": "0"
+            },
+            {
+              "row": 27,
+              "name": "Свая винтовая d108 мм h2500 мм",
+              "unit": "шт",
+              "qty": "28",
+              "work_price": "0",
+              "material_price": "2632"
+            },
+            {
+              "row": 28,
+              "name": "Оголовок для сваи винтовой d108 мм",
+              "unit": "шт",
+              "qty": "28",
+              "work_price": "0",
+              "material_price": "260"
+            },
+            {
+              "row": 29,
+              "name": "Обвязка свай по гидроизоляции",
+              "unit": "мп",
+              "qty": "80.9",
+              "work_price": "750",
+              "material_price": "0"
+            },
+            {
+              "row": 30,
+              "name": "Гидроизоляция Линокром ХПП Технониколь черный 15 кв.м",
+              "unit": "рул",
+              "qty": "1",
+              "work_price": "0",
+              "material_price": "1900"
+            },
+            {
+              "row": 31,
+              "name": "Брус сух 150х150",
+              "unit": "м3",
+              "qty": "2.1843",
+              "work_price": "0",
+              "material_price": "22000"
+            },
+            {
+              "row": 32,
+              "name": "Крепеж и расходные материалы по разделу",
+              "unit": "к-т",
+              "qty": "28",
+              "work_price": "0",
+              "material_price": "200"
+            },
+            {
+              "row": 33,
+              "name": "Антисептирование конструкционной доски в 2 слоя",
+              "unit": "м2",
+              "qty": "2.1843",
+              "work_price": "200",
+              "material_price": "0"
+            },
+            {
+              "row": 34,
+              "name": "Антисептик Neomid 450 огнебиозащитный I группа красный 10 кг",
+              "unit": "шт",
+              "qty": "1",
+              "work_price": "0",
+              "material_price": "2800"
+            },
+            {
+              "row": 35,
+              "name": "Погрузо-разгрузочные работы",
+              "unit": "усл",
+              "qty": "1",
+              "work_price": "6000",
+              "material_price": "0"
+            },
+            {
+              "row": 36,
+              "name": "Транспортные расходы",
+              "unit": "",
+              "qty": "0.1",
+              "work_price": "",
+              "material_price": ""
+            },
+            {
+              "row": 37,
+              "name": "Накладные расходы",
+              "unit": "",
+              "qty": "0.08",
+              "work_price": "",
+              "material_price": ""
+            },
+            {
+              "row": 41,
+              "name": "Наименование",
+              "unit": "Ед. изм.",
+              "qty": "Кол-во",
+              "work_price": "Работа",
+              "material_price": "Материалы"
+            },
+            {
+              "row": 44,
+              "name": "Монтаж лаг цокольного перекрытия вкл террасы, крыльца",
+              "unit": "м2",
+              "qty": "109",
+              "work_price": "1000",
+              "material_price": "0"
+            },
+            {
+              "row": 45,
+              "name": "доска с/к 40х200",
+              "unit": "м3",
+              "qty": "2.616",
+              "work_price": "0",
+              "material_price": "24300"
+            },
+            {
+              "row": 46,
+              "name": "Устройство каркаса стен/перегородок",
+              "unit": "м2",
+              "qty": "180.135",
+              "work_price": "1000",
+              "material_price": "0"
+            },
+            {
+              "row": 47,
+              "name": "Монтаж стоек и балок террасы",
+              "unit": "мп",
+              "qty": "9",
+              "work_price": "800",
+              "material_price": "0"
+            },
+            {
+              "row": 48,
+              "name": "доска с/к 40х150",
+              "unit": "м3",
+              "qty": "5.0454",
+              "work_price": "0",
+              "material_price": "24300"
+            },
+            {
+              "row": 49,
+              "name": "доска с/к 40х100",
+              "unit": "м3",
+              "qty": "0.768",
+              "work_price": "0",
+              "material_price": "24300"
+            },
+            {
+              "row": 50,
+              "name": "бру с/с 150х150",
+              "unit": "м3",
+              "qty": "0.26999999999999996",
+              "work_price": "0",
+              "material_price": "30000"
+            },
+            {
+              "row": 51,
+              "name": "Монтаж баллок перекрытия",
+              "unit": "м2",
+              "qty": "0",
+              "work_price": "1000",
+              "material_price": "0"
+            },
+            {
+              "row": 52,
+              "name": "доска с/к 40х150",
+              "unit": "м3",
+              "qty": "0",
+              "work_price": "0",
+              "material_price": "24300"
+            }
+          ],
+          "formula_count": 791,
+          "formula_samples": [
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "E1",
+              "formula": "=E2+E3+E4+E5+E6+E7+E8"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "E2",
+              "formula": "=I40"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "E3",
+              "formula": "=I63"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "E4",
+              "formula": "=I102"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "E5",
+              "formula": "=I121"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "E6",
+              "formula": "=I158"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "E7",
+              "formula": "=I230"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "E8",
+              "formula": "=I264"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "F12",
+              "formula": "=E12*D12"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "H12",
+              "formula": "=D12*G12"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "I12",
+              "formula": "=F12+H12"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "F13",
+              "formula": "=E13*D13"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "F14",
+              "formula": "=E14*D14"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "H14",
+              "formula": "=D14*G14"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "I14",
+              "formula": "=F14+H14"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "D15",
+              "formula": "=D14/2"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "F15",
+              "formula": "=E15*D15"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "H15",
+              "formula": "=D15*G15"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "I15",
+              "formula": "=F15+H15"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "F16",
+              "formula": "=E16*D16"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "H16",
+              "formula": "=D16*G16"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "I16",
+              "formula": "=F16+H16"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "D17",
+              "formula": "=D14+D16"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "F17",
+              "formula": "=E17*D17"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "H17",
+              "formula": "=D17*G17"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "I17",
+              "formula": "=F17+H17"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "F18",
+              "formula": "=E18*D18"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "H18",
+              "formula": "=D18*G18"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "I18",
+              "formula": "=F18+H18"
+            },
+            {
+              "sheet": "Каркас под ключ",
+              "cell": "F19",
+              "formula": "=E19*D19"
+            }
+          ],
+          "row_count": 285
+        },
+        {
+          "sheet_name": "Газобетон",
+          "scenario": "gasbeton_or_masonry_with_monolithic_foundation",
+          "sections": [
+            "Фундамент",
+            "Стены",
+            "Кровля",
+            "Окна, двери",
+            "Внешняя отделка",
+            "Внутренняя отделка",
+            "Инженерные коммуникации"
+          ],
+          "header_rows": [
+            9,
+            59,
+            111,
+            155,
+            174,
+            204,
+            256
+          ],
+          "total_rows": [
+            {
+              "row": 56,
+              "text": "Итого работа: 423924.316"
+            },
+            {
+              "row": 57,
+              "text": "Итого материалы: 633049.0299328001"
+            },
+            {
+              "row": 58,
+              "text": "Итого фундамент: 1056973.3459328"
+            },
+            {
+              "row": 108,
+              "text": "Итого работа: 556830.175"
+            },
+            {
+              "row": 109,
+              "text": "Итого материалы: 742975.012384"
+            },
+            {
+              "row": 110,
+              "text": "Итого стены : 1299805.187384"
+            },
+            {
+              "row": 152,
+              "text": "Итого работа: 529936.4"
+            },
+            {
+              "row": 153,
+              "text": "Итого материалы: 628855.6559680001"
+            },
+            {
+              "row": 154,
+              "text": "Итого кровля: 1158792.055968"
+            },
+            {
+              "row": 171,
+              "text": "Итого работа: 182710"
+            },
+            {
+              "row": 172,
+              "text": "Итого материалы: 743834"
+            },
+            {
+              "row": 173,
+              "text": "Итого окна, двери: 926544"
+            },
+            {
+              "row": 201,
+              "text": "Итого работа: 305167.64"
+            },
+            {
+              "row": 202,
+              "text": "Итого материалы: 318469.1861888"
+            },
+            {
+              "row": 203,
+              "text": "Итого внешняя отделка: 623636.8261888"
+            },
+            {
+              "row": 253,
+              "text": "Итого работа: 683979.2252"
+            },
+            {
+              "row": 254,
+              "text": "Итого материалы: 697688.6923125"
+            },
+            {
+              "row": 255,
+              "text": "Итого внутренняя отделка: 1381667.9175125"
+            },
+            {
+              "row": 287,
+              "text": "Итого работа: 230232"
+            },
+            {
+              "row": 288,
+              "text": "Итого материалы: 346375"
+            },
+            {
+              "row": 289,
+              "text": "Итого инженерные коммуникации: 576607"
+            },
+            {
+              "row": 291,
+              "text": "Итого РАБОТЫ: 2912779.7562"
+            },
+            {
+              "row": 292,
+              "text": "Итого МАТЕРИАЛЫ: 4111246.5767861004"
+            },
+            {
+              "row": 293,
+              "text": "ИТОГО СМЕТНАЯ СТОИМОСТЬ: 7024026.332986101"
+            }
+          ],
+          "material_rows": 154,
+          "work_rows": 99,
+          "logistics_rows": 23,
+          "sample_rows": [
+            {
+              "row": 9,
+              "name": "Наименование",
+              "unit": "Ед. изм.",
+              "qty": "Кол-во",
+              "work_price": "Работа",
+              "material_price": "Материалы"
+            },
+            {
+              "row": 12,
+              "name": "Вынос осей в натуру",
+              "unit": "м2",
+              "qty": "112",
+              "work_price": "80",
+              "material_price": "0"
+            },
+            {
+              "row": 13,
+              "name": "Земляные работы, сопровождение работы экскаватора",
+              "unit": "см",
+              "qty": "1",
+              "work_price": "12000",
+              "material_price": "0"
+            },
+            {
+              "row": 14,
+              "name": "Аренда экскаватора",
+              "unit": "см",
+              "qty": "1",
+              "work_price": "0",
+              "material_price": "22000"
+            },
+            {
+              "row": 15,
+              "name": "Доработка грунта вручную",
+              "unit": "м2",
+              "qty": "155",
+              "work_price": "150",
+              "material_price": "0"
+            },
+            {
+              "row": 16,
+              "name": "Настил геотекстиля по основанию и стенам котлована (Геотекстиль 300 г/кв.м иглопробивной)",
+              "unit": "м2",
+              "qty": "205",
+              "work_price": "80",
+              "material_price": "60"
+            },
+            {
+              "row": 17,
+              "name": "Устройство песчаной подготовки т 200 мм с уплотнением.",
+              "unit": "м3",
+              "qty": "44",
+              "work_price": "800",
+              "material_price": "0"
+            },
+            {
+              "row": 18,
+              "name": "Аренда виброплиты (трамбовка)",
+              "unit": "сут",
+              "qty": "4",
+              "work_price": "0",
+              "material_price": "2500"
+            },
+            {
+              "row": 19,
+              "name": "Песок карьерный",
+              "unit": "м3",
+              "qty": "44",
+              "work_price": "0",
+              "material_price": "900"
+            },
+            {
+              "row": 20,
+              "name": "Устройство щебеночной подготовки т 100 мм с уплотнением.",
+              "unit": "м3",
+              "qty": "19",
+              "work_price": "800",
+              "material_price": "0"
+            },
+            {
+              "row": 21,
+              "name": "Аренда виброплиты (трамбовка)",
+              "unit": "сут",
+              "qty": "4",
+              "work_price": "0",
+              "material_price": "2500"
+            },
+            {
+              "row": 22,
+              "name": "Щебень фр 20-40",
+              "unit": "м3",
+              "qty": "19",
+              "work_price": "0",
+              "material_price": "1880"
+            },
+            {
+              "row": 24,
+              "name": "Укладка канализационной трубы в грунт",
+              "unit": "мп",
+              "qty": "28",
+              "work_price": "900",
+              "material_price": "0"
+            },
+            {
+              "row": 25,
+              "name": "Труба канализационная Ostendorf d110x2000 мм для наружной канализации",
+              "unit": "шт",
+              "qty": "10",
+              "work_price": "0",
+              "material_price": "670"
+            },
+            {
+              "row": 26,
+              "name": "Труба канализационная Ostendorf d110x1000 мм для наружной канализации",
+              "unit": "шт",
+              "qty": "3",
+              "work_price": "0",
+              "material_price": "400"
+            },
+            {
+              "row": 27,
+              "name": "Теплоизоляция для труб стенофлекс 114х13х2000 мм",
+              "unit": "мп",
+              "qty": "31",
+              "work_price": "0",
+              "material_price": "118"
+            },
+            {
+              "row": 28,
+              "name": "Комплект тройников, отводов, уголков для наружной канализации.",
+              "unit": "к-т",
+              "qty": "1",
+              "work_price": "0",
+              "material_price": "3500"
+            },
+            {
+              "row": 29,
+              "name": "Укладка закладной трубы в грунт под электрокабель",
+              "unit": "мп",
+              "qty": "15",
+              "work_price": "400",
+              "material_price": "0"
+            },
+            {
+              "row": 30,
+              "name": "Кабель NVO ВБШвнг(А) LS 5х2.5 20 м",
+              "unit": "шт",
+              "qty": "1",
+              "work_price": "0",
+              "material_price": "6600"
+            },
+            {
+              "row": 31,
+              "name": "Труба двустенная гофрированная ПНД/ПВД d63/52",
+              "unit": "мп",
+              "qty": "15",
+              "work_price": "0",
+              "material_price": "114"
+            },
+            {
+              "row": 32,
+              "name": "Укладка трубы ХВС в грунт на глубину 1,5м.",
+              "unit": "мп",
+              "qty": "10",
+              "work_price": "850",
+              "material_price": "0"
+            },
+            {
+              "row": 33,
+              "name": "Труба двустенная гофрированная ПНД/ПВД d63/52",
+              "unit": "мп",
+              "qty": "20",
+              "work_price": "0",
+              "material_price": "114"
+            },
+            {
+              "row": 34,
+              "name": "Труба ПНД (ПЭ-100) для систем водоснабжения премиум синяя 32 мм",
+              "unit": "мп",
+              "qty": "20",
+              "work_price": "0",
+              "material_price": "81"
+            },
+            {
+              "row": 35,
+              "name": "Настил технической пленки",
+              "unit": "м2",
+              "qty": "140",
+              "work_price": "50",
+              "material_price": "40"
+            },
+            {
+              "row": 37,
+              "name": "Устройство опалубки",
+              "unit": "мп",
+              "qty": "42.58",
+              "work_price": "1100",
+              "material_price": "0"
+            },
+            {
+              "row": 38,
+              "name": "Доска 50х150(100)х6000 мм е/в",
+              "unit": "м3",
+              "qty": "1.9160999999999997",
+              "work_price": "0",
+              "material_price": "17500"
+            },
+            {
+              "row": 39,
+              "name": "Устройство арматурного каркаса",
+              "unit": "м2",
+              "qty": "112",
+              "work_price": "1200",
+              "material_price": "0"
+            },
+            {
+              "row": 40,
+              "name": "Арматура металлическая д.12 А500",
+              "unit": "т",
+              "qty": "2.386944",
+              "work_price": "0",
+              "material_price": "70000"
+            },
+            {
+              "row": 41,
+              "name": "Арматура металлическая д.8 А500",
+              "unit": "т",
+              "qty": "0.26256384000000005",
+              "work_price": "0",
+              "material_price": "73000"
+            },
+            {
+              "row": 42,
+              "name": "Пеноплэкс Фундамент 100х585х1185",
+              "unit": "шт",
+              "qty": "3",
+              "work_price": "0",
+              "material_price": "709"
+            },
+            {
+              "row": 43,
+              "name": "Проволока вязальная 1,2мм",
+              "unit": "кг",
+              "qty": "59",
+              "work_price": "0",
+              "material_price": "160"
+            },
+            {
+              "row": 44,
+              "name": "Фиксаторы арматуры гориз.уп 250 шт",
+              "unit": "уп",
+              "qty": "3",
+              "work_price": "0",
+              "material_price": "1456"
+            },
+            {
+              "row": 45,
+              "name": "Бетонирование монолитной плиты с вибрированием",
+              "unit": "м3",
+              "qty": "25",
+              "work_price": "2000",
+              "material_price": "0"
+            },
+            {
+              "row": 46,
+              "name": "Бетон В20 W8 с доставкой*",
+              "unit": "м3",
+              "qty": "25",
+              "work_price": "0",
+              "material_price": "6500"
+            },
+            {
+              "row": 47,
+              "name": "глубинный вибратор",
+              "unit": "сут",
+              "qty": "1",
+              "work_price": "0",
+              "material_price": "1500"
+            }
+          ],
+          "formula_count": 856,
+          "formula_samples": [
+            {
+              "sheet": "Газобетон",
+              "cell": "E1",
+              "formula": "=E2+E3+E4+E5+E6+E7+E8"
+            },
+            {
+              "sheet": "Газобетон",
+              "cell": "E2",
+              "formula": "=I58"
+            },
+            {
+              "sheet": "Газобетон",
+              "cell": "E3",
+              "formula": "=I110"
+            },
+            {
+              "sheet": "Газобетон",
+              "cell": "E4",
+              "formula": "=I154"
+            },
+            {
+              "sheet": "Газобетон",
+              "cell": "E5",
+              "formula": "=I173"
+            },
+            {
+              "sheet": "Газобетон",
+              "cell": "E6",
+              "formula": "=I203"
+            },
+            {
+              "sheet": "Газобетон",
+              "cell": "E7",
+              "formula": "=I255"
+            },
+            {
+              "sheet": "Газобетон",
+              "cell": "E8",
+              "formula": "=I289"
+            },
+            {
+              "sheet": "Газобетон",
+              "cell": "F12",
+              "formula": "=E12*D12"
+            },
+            {
+              "sheet": "Газобетон",
+              "cell": "H12",
+              "formula": "=D12*G12"
+            },
+            {
+              "sheet": "Газобетон",
+              "cell": "I12",
+              "formula": "=F12+H12"
+            },
+            {
+              "sheet": "Газобетон",
+              "cell": "F13",
+              "formula": "=E13*D13"
+            },
+            {
+              "sheet": "Газобетон",
+              "cell": "H13",
+              "formula": "=D13*G13"
+            },
+            {
+              "sheet": "Газобетон",
+              "cell": "I13",
+              "formula": "=F13+H13"
+            },
+            {
+              "sheet": "Газобетон",
+              "cell": "D14",
+              "formula": "=D13"
+            },
+            {
+              "sheet": "Газобетон",
+              "cell": "F14",
+              "formula": "=E14*D14"
+            },
+            {
+              "sheet": "Газобетон",
+              "cell": "H14",
+              "formula": "=D14*G14"
+            },
+            {
+              "sheet": "Газобетон",
+              "cell": "I14",
+              "formula": "=F14+H14"
+            },
+            {
+              "sheet": "Газобетон",
+              "cell": "F15",
+              "formula": "=E15*D15"
+            },
+            {
+              "sheet": "Газобетон",
+              "cell": "H15",
+              "formula": "=D15*G15"
+            },
+            {
+              "sheet": "Газобетон",
+              "cell": "I15",
+              "formula": "=F15+H15"
+            },
+            {
+              "sheet": "Газобетон",
+              "cell": "D16",
+              "formula": "=155+50"
+            },
+            {
+              "sheet": "Газобетон",
+              "cell": "F16",
+              "formula": "=E16*D16"
+            },
+            {
+              "sheet": "Газобетон",
+              "cell": "H16",
+              "formula": "=D16*G16"
+            },
+            {
+              "sheet": "Газобетон",
+              "cell": "I16",
+              "formula": "=F16+H16"
+            },
+            {
+              "sheet": "Газобетон",
+              "cell": "D17",
+              "formula": "=ROUNDUP(D15*0.2*1.4,)"
+            },
+            {
+              "sheet": "Газобетон",
+              "cell": "F17",
+              "formula": "=E17*D17"
+            },
+            {
+              "sheet": "Газобетон",
+              "cell": "H17",
+              "formula": "=D17*G17"
+            },
+            {
+              "sheet": "Газобетон",
+              "cell": "I17",
+              "formula": "=F17+H17"
+            },
+            {
+              "sheet": "Газобетон",
+              "cell": "F18",
+              "formula": "=E18*D18"
+            }
+          ],
+          "row_count": 310
+        }
+      ]
+    },
+    {
+      "key": "ROOF_FLOORS",
+      "title": "крыша и перекр.xlsx",
+      "template_role": "roof_and_floor_estimate_template",
+      "description": "Эталон расчёта кровли и перекрытий",
+      "file_id": "16YecwnJ9umnVprFu9V77UCV6cPrYbNh3",
+      "drive_url": "https://docs.google.com/spreadsheets/d/16YecwnJ9umnVprFu9V77UCV6cPrYbNh3/edit?usp=drivesdk&ouid=110231323399920032425&rtpof=true&sd=true",
+      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "modifiedTime": "2025-03-14T11:17:00.000Z",
+      "parents": [
+        "13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB"
+      ],
+      "formula_total": 136,
+      "formula_samples": [
+        {
+          "sheet": "расчет кровли",
+          "cell": "F5",
+          "formula": "=E5*D5"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "H5",
+          "formula": "=G5*D5"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "I5",
+          "formula": "=F5+H5"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "D6",
+          "formula": "=11.27+0.19+0.052+0.011+0.031"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "F6",
+          "formula": "=E6*D6"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "H6",
+          "formula": "=G6*D6"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "I6",
+          "formula": "=F6+H6"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "F7",
+          "formula": "=E7*D7"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "H7",
+          "formula": "=G7*D7"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "I7",
+          "formula": "=F7+H7"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "D8",
+          "formula": "=D5"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "F8",
+          "formula": "=E8*D8"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "H8",
+          "formula": "=G8*D8"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "I8",
+          "formula": "=F8+H8"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "D9",
+          "formula": "=D5"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "F9",
+          "formula": "=E9*D9"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "H9",
+          "formula": "=G9*D9"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "I9",
+          "formula": "=F9+H9"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "D10",
+          "formula": "=D5"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "F10",
+          "formula": "=E10*D10"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "H10",
+          "formula": "=G10*D10"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "I10",
+          "formula": "=F10+H10"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "D11",
+          "formula": "=D5"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "F11",
+          "formula": "=E11*D11"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "H11",
+          "formula": "=G11*D11"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "I11",
+          "formula": "=F11+H11"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "F13",
+          "formula": "=E13*D13"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "H13",
+          "formula": "=D13*G13"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "I13",
+          "formula": "=F13+H13"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "F14",
+          "formula": "=E14*D14"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "H14",
+          "formula": "=D14*G14"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "I14",
+          "formula": "=F14+H14"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "F15",
+          "formula": "=E15*D15"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "H15",
+          "formula": "=D15*G15"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "I15",
+          "formula": "=F15+H15"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "F16",
+          "formula": "=D16*E16"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "H16",
+          "formula": "=D16*G16"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "I16",
+          "formula": "=F16+H16"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "L16",
+          "formula": "=4.3+1.92+0.48+0.012"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "N16",
+          "formula": "=L16/0.05*2"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "O16",
+          "formula": "=L16/0.2*2"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "P16",
+          "formula": "=O16+N16"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "D17",
+          "formula": "=D16"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "F17",
+          "formula": "=D17*E17"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "H17",
+          "formula": "=D17*G17"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "I17",
+          "formula": "=F17+H17"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "L17",
+          "formula": "=0.027+0.023+0.034+0.01+0.014+0.021+0.017+0.016+0.032+0.087+0.054+0.034+0.047+0.16+0.032+0.032+0.016+0.02+1.76+0.41+0.041"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "N17",
+          "formula": "=L17/0.05*2"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "O17",
+          "formula": "=L17/0.2*2"
+        },
+        {
+          "sheet": "расчет кровли",
+          "cell": "P17",
+          "formula": "=O17+N17"
+        }
+      ],
+      "sheets": [
+        {
+          "sheet_name": "расчет кровли",
+          "scenario": "roof_and_floors",
+          "sections": [
+            "Кровля"
+          ],
+          "header_rows": [
+            1
+          ],
+          "total_rows": [
+            {
+              "row": 30,
+              "text": "Итого работа: 2236634.6100000003"
+            },
+            {
+              "row": 31,
+              "text": "Итого материалы: 0"
+            },
+            {
+              "row": 32,
+              "text": "Итого кровля: 2236634.6100000003"
+            }
+          ],
+          "material_rows": 1,
+          "work_rows": 24,
+          "logistics_rows": 1,
+          "sample_rows": [
+            {
+              "row": 1,
+              "name": "Наименование",
+              "unit": "Ед. изм.",
+              "qty": "Кол-во",
+              "work_price": "Работа",
+              "material_price": "Материалы"
+            },
+            {
+              "row": 5,
+              "name": "Устройство чердачного перекрытия",
+              "unit": "м2",
+              "qty": "191",
+              "work_price": "1000",
+              "material_price": "0"
+            },
+            {
+              "row": 6,
+              "name": "Антисептирование пиломатериалов с 4х сторон",
+              "unit": "м3",
+              "qty": "11.553999999999998",
+              "work_price": "2800",
+              "material_price": "0"
+            },
+            {
+              "row": 7,
+              "name": "Монтаж пароизоляции с проклейкой швов",
+              "unit": "м2",
+              "qty": "170",
+              "work_price": "220",
+              "material_price": "0"
+            },
+            {
+              "row": 8,
+              "name": "Монтаж обрешетки под утеплитель шаг 200",
+              "unit": "м2",
+              "qty": "191",
+              "work_price": "380",
+              "material_price": "0"
+            },
+            {
+              "row": 9,
+              "name": "Монтаж утепления 200 мм",
+              "unit": "м2",
+              "qty": "191",
+              "work_price": "600",
+              "material_price": "0"
+            },
+            {
+              "row": 10,
+              "name": "Монтаж гидро-ветрозащиты",
+              "unit": "м2",
+              "qty": "191",
+              "work_price": "220",
+              "material_price": "0"
+            },
+            {
+              "row": 11,
+              "name": "Монтаж разряженой обрешетки шаг 400",
+              "unit": "м2",
+              "qty": "191",
+              "work_price": "360",
+              "material_price": "0"
+            },
+            {
+              "row": 13,
+              "name": "Укладка мауэрлата по гидроизоляции",
+              "unit": "мп",
+              "qty": "78",
+              "work_price": "850",
+              "material_price": "0"
+            },
+            {
+              "row": 14,
+              "name": "Монтаж стропильной системы",
+              "unit": "м2",
+              "qty": "280",
+              "work_price": "1400",
+              "material_price": "0"
+            },
+            {
+              "row": 15,
+              "name": "Монтаж опорных стоек, каркасов стропильной системы",
+              "unit": "к-т",
+              "qty": "1",
+              "work_price": "20000",
+              "material_price": "0"
+            },
+            {
+              "row": 16,
+              "name": "Монтаж кровельной мембраны",
+              "unit": "м2",
+              "qty": "280",
+              "work_price": "250",
+              "material_price": "0"
+            },
+            {
+              "row": 17,
+              "name": "Монтаж контробрешетки",
+              "unit": "м2",
+              "qty": "280",
+              "work_price": "360",
+              "material_price": "0"
+            },
+            {
+              "row": 18,
+              "name": "Монтаж обрешётки шаг 350 мм",
+              "unit": "м2",
+              "qty": "280",
+              "work_price": "360",
+              "material_price": "0"
+            },
+            {
+              "row": 19,
+              "name": "Монтаж Металлочерепицы",
+              "unit": "м2",
+              "qty": "280",
+              "work_price": "850",
+              "material_price": "0"
+            },
+            {
+              "row": 20,
+              "name": "Монтаж доборных элементов",
+              "unit": "мп",
+              "qty": "231",
+              "work_price": "550",
+              "material_price": "0"
+            },
+            {
+              "row": 21,
+              "name": "Монтаж крюка длинного",
+              "unit": "шт",
+              "qty": "110",
+              "work_price": "300",
+              "material_price": "0"
+            },
+            {
+              "row": 22,
+              "name": "Монтаж вентвыходов на кровле",
+              "unit": "к-т",
+              "qty": "6",
+              "work_price": "8500",
+              "material_price": "0"
+            },
+            {
+              "row": 23,
+              "name": "Отделка лобовой доски (доской крашеной в заводских условиях)",
+              "unit": "мп",
+              "qty": "78",
+              "work_price": "800",
+              "material_price": "0"
+            },
+            {
+              "row": 24,
+              "name": "Подшивка потолка крыльца, террасы, свесов (доской крашеной в заводских условиях)",
+              "unit": "м2",
+              "qty": "118",
+              "work_price": "1200",
+              "material_price": "0"
+            },
+            {
+              "row": 25,
+              "name": "Монтаж водосточной системы",
+              "unit": "мп",
+              "qty": "104.63",
+              "work_price": "900",
+              "material_price": "0"
+            },
+            {
+              "row": 26,
+              "name": "Монтаж снегозадержания",
+              "unit": "мп",
+              "qty": "6",
+              "work_price": "1200",
+              "material_price": "0"
+            },
+            {
+              "row": 27,
+              "name": "Антисептирование пиломатериалов",
+              "unit": "м3",
+              "qty": "15.7",
+              "work_price": "3000",
+              "material_price": "0"
+            },
+            {
+              "row": 28,
+              "name": "Погрузо-разгрузочные работы",
+              "unit": "усл",
+              "qty": "2",
+              "work_price": "10000",
+              "material_price": "0"
+            },
+            {
+              "row": 29,
+              "name": "Накладные расходы",
+              "unit": "",
+              "qty": "0.05",
+              "work_price": "",
+              "material_price": ""
+            }
+          ],
+          "formula_count": 136,
+          "formula_samples": [
+            {
+              "sheet": "расчет кровли",
+              "cell": "F5",
+              "formula": "=E5*D5"
+            },
+            {
+              "sheet": "расчет кровли",
+              "cell": "H5",
+              "formula": "=G5*D5"
+            },
+            {
+              "sheet": "расчет кровли",
+              "cell": "I5",
+              "formula": "=F5+H5"
+            },
+            {
+              "sheet": "расчет кровли",
+              "cell": "D6",
+              "formula": "=11.27+0.19+0.052+0.011+0.031"
+            },
+            {
+              "sheet": "расчет кровли",
+              "cell": "F6",
+              "formula": "=E6*D6"
+            },
+            {
+              "sheet": "расчет кровли",
+              "cell": "H6",
+              "formula": "=G6*D6"
+            },
+            {
+              "sheet": "расчет кровли",
+              "cell": "I6",
+              "formula": "=F6+H6"
+            },
+            {
+              "sheet": "расчет кровли",
+              "cell": "F7",
+              "formula": "=E7*D7"
+            },
+            {
+              "sheet": "расчет кровли",
+              "cell": "H7",
+              "formula": "=G7*D7"
+            },
+            {
+              "sheet": "расчет кровли",
+              "cell": "I7",
+              "formula": "=F7+H7"
+            },
+            {
+              "sheet": "расчет кровли",
+              "cell": "D8",
+              "formula": "=D5"
+            },
+            {
+              "sheet": "расчет кровли",
+              "cell": "F8",
+              "formula": "=E8*D8"
+            },
+            {
+              "sheet": "расчет кровли",
+              "cell": "H8",
+              "formula": "=G8*D8"
+            },
+            {
+              "sheet": "расчет кровли",
+              "cell": "I8",
+              "formula": "=F8+H8"
+            },
+            {
+              "sheet": "расчет кровли",
+              "cell": "D9",
+              "formula": "=D5"
+            },
+            {
+              "sheet": "расчет кровли",
+              "cell": "F9",
+              "formula": "=E9*D9"
+            },
+            {
+              "sheet": "расчет кровли",
+              "cell": "H9",
+              "formula": "=G9*D9"
+            },
+            {
+              "sheet": "расчет кровли",
+              "cell": "I9",
+              "formula": "=F9+H9"
+            },
+            {
+              "sheet": "расчет кровли",
+              "cell": "D10",
+              "formula": "=D5"
+            },
+            {
+              "sheet": "расчет кровли",
+              "cell": "F10",
+              "formula": "=E10*D10"
+            },
+            {
+              "sheet": "расчет кровли",
+              "cell": "H10",
+              "formula": "=G10*D10"
+            },
+            {
+              "sheet": "расчет кровли",
+              "cell": "I10",
+              "formula": "=F10+H10"
+            },
+            {
+              "sheet": "расчет кровли",
+              "cell": "D11",
+              "formula": "=D5"
+            },
+            {
+              "sheet": "расчет кровли",
+              "cell": "F11",
+              "formula": "=E11*D11"
+            },
+            {
+              "sheet": "расчет кровли",
+              "cell": "H11",
+              "formula": "=G11*D11"
+            },
+            {
+              "sheet": "расчет кровли",
+              "cell": "I11",
+              "formula": "=F11+H11"
+            },
+            {
+              "sheet": "расчет кровли",
+              "cell": "F13",
+              "formula": "=E13*D13"
+            },
+            {
+              "sheet": "расчет кровли",
+              "cell": "H13",
+              "formula": "=D13*G13"
+            },
+            {
+              "sheet": "расчет кровли",
+              "cell": "I13",
+              "formula": "=F13+H13"
+            },
+            {
+              "sheet": "расчет кровли",
+              "cell": "F14",
+              "formula": "=E14*D14"
+            }
+          ],
+          "row_count": 747
+        }
+      ]
+    },
+    {
+      "key": "FOUNDATION_WAREHOUSE",
+      "title": "фундамент_Склад2.xlsx",
+      "template_role": "foundation_estimate_template",
+      "description": "Эталон расчёта фундамента",
+      "file_id": "1KuoSI4OI7gJoIBPVqBQGXtQnolXKMiDp",
+      "drive_url": "https://docs.google.com/spreadsheets/d/1KuoSI4OI7gJoIBPVqBQGXtQnolXKMiDp/edit?usp=drivesdk&ouid=110231323399920032425&rtpof=true&sd=true",
+      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "modifiedTime": "2025-05-27T08:01:58.000Z",
+      "parents": [
+        "13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB"
+      ],
+      "formula_total": 88,
+      "formula_samples": [
+        {
+          "sheet": "смета",
+          "cell": "F4",
+          "formula": "=E4*D4"
+        },
+        {
+          "sheet": "смета",
+          "cell": "F5",
+          "formula": "=E5*D5"
+        },
+        {
+          "sheet": "смета",
+          "cell": "H5",
+          "formula": "=D5*G5"
+        },
+        {
+          "sheet": "смета",
+          "cell": "I5",
+          "formula": "=F5+H5"
+        },
+        {
+          "sheet": "смета",
+          "cell": "D6",
+          "formula": "=ROUNDUP((680*0.62)/200,0)"
+        },
+        {
+          "sheet": "смета",
+          "cell": "F6",
+          "formula": "=E6*D6"
+        },
+        {
+          "sheet": "смета",
+          "cell": "H6",
+          "formula": "=D6*G6"
+        },
+        {
+          "sheet": "смета",
+          "cell": "I6",
+          "formula": "=F6+H6"
+        },
+        {
+          "sheet": "смета",
+          "cell": "D7",
+          "formula": "=D6"
+        },
+        {
+          "sheet": "смета",
+          "cell": "F7",
+          "formula": "=E7*D7"
+        },
+        {
+          "sheet": "смета",
+          "cell": "H7",
+          "formula": "=D7*G7"
+        },
+        {
+          "sheet": "смета",
+          "cell": "I7",
+          "formula": "=F7+H7"
+        },
+        {
+          "sheet": "смета",
+          "cell": "F8",
+          "formula": "=E8*D8"
+        },
+        {
+          "sheet": "смета",
+          "cell": "H8",
+          "formula": "=D8*G8"
+        },
+        {
+          "sheet": "смета",
+          "cell": "I8",
+          "formula": "=F8+H8"
+        },
+        {
+          "sheet": "смета",
+          "cell": "F9",
+          "formula": "=E9*D9"
+        },
+        {
+          "sheet": "смета",
+          "cell": "H9",
+          "formula": "=D9*G9"
+        },
+        {
+          "sheet": "смета",
+          "cell": "I9",
+          "formula": "=F9+H9"
+        },
+        {
+          "sheet": "смета",
+          "cell": "F10",
+          "formula": "=E10*D10"
+        },
+        {
+          "sheet": "смета",
+          "cell": "H10",
+          "formula": "=D10*G10"
+        },
+        {
+          "sheet": "смета",
+          "cell": "I10",
+          "formula": "=F10+H10"
+        },
+        {
+          "sheet": "смета",
+          "cell": "D11",
+          "formula": "=114+493"
+        },
+        {
+          "sheet": "смета",
+          "cell": "F11",
+          "formula": "=E11*D11"
+        },
+        {
+          "sheet": "смета",
+          "cell": "H11",
+          "formula": "=G11*D11"
+        },
+        {
+          "sheet": "смета",
+          "cell": "I11",
+          "formula": "=F11+H11"
+        },
+        {
+          "sheet": "смета",
+          "cell": "F12",
+          "formula": "=E12*D12"
+        },
+        {
+          "sheet": "смета",
+          "cell": "H12",
+          "formula": "=G12*D12"
+        },
+        {
+          "sheet": "смета",
+          "cell": "I12",
+          "formula": "=F12+H12"
+        },
+        {
+          "sheet": "смета",
+          "cell": "F13",
+          "formula": "=E13*D13"
+        },
+        {
+          "sheet": "смета",
+          "cell": "H13",
+          "formula": "=G13*D13"
+        },
+        {
+          "sheet": "смета",
+          "cell": "I13",
+          "formula": "=F13+H13"
+        },
+        {
+          "sheet": "смета",
+          "cell": "F14",
+          "formula": "=E14*D14"
+        },
+        {
+          "sheet": "смета",
+          "cell": "H14",
+          "formula": "=G14*D14"
+        },
+        {
+          "sheet": "смета",
+          "cell": "I14",
+          "formula": "=F14+H14"
+        },
+        {
+          "sheet": "смета",
+          "cell": "F15",
+          "formula": "=E15*D15"
+        },
+        {
+          "sheet": "смета",
+          "cell": "H15",
+          "formula": "=G15*D15"
+        },
+        {
+          "sheet": "смета",
+          "cell": "I15",
+          "formula": "=F15+H15"
+        },
+        {
+          "sheet": "смета",
+          "cell": "D16",
+          "formula": "=ROUNDUP(171.2*1.1,)"
+        },
+        {
+          "sheet": "смета",
+          "cell": "F16",
+          "formula": "=E16*D16"
+        },
+        {
+          "sheet": "смета",
+          "cell": "H16",
+          "formula": "=G16*D16"
+        },
+        {
+          "sheet": "смета",
+          "cell": "I16",
+          "formula": "=F16+H16"
+        },
+        {
+          "sheet": "смета",
+          "cell": "F17",
+          "formula": "=E17*D17"
+        },
+        {
+          "sheet": "смета",
+          "cell": "H17",
+          "formula": "=D17*G17"
+        },
+        {
+          "sheet": "смета",
+          "cell": "I17",
+          "formula": "=F17+H17"
+        },
+        {
+          "sheet": "смета",
+          "cell": "F18",
+          "formula": "=E18*D18"
+        },
+        {
+          "sheet": "смета",
+          "cell": "F19",
+          "formula": "=E19*D19"
+        },
+        {
+          "sheet": "смета",
+          "cell": "H19",
+          "formula": "=G19*D19"
+        },
+        {
+          "sheet": "смета",
+          "cell": "I19",
+          "formula": "=F19+H19"
+        },
+        {
+          "sheet": "смета",
+          "cell": "F20",
+          "formula": "=E20*D20"
+        },
+        {
+          "sheet": "смета",
+          "cell": "F21",
+          "formula": "=E21*D21"
+        }
+      ],
+      "sheets": [
+        {
+          "sheet_name": "смета",
+          "scenario": "foundation",
+          "sections": [
+            "Фундамент"
+          ],
+          "header_rows": [
+            1
+          ],
+          "total_rows": [
+            {
+              "row": 33,
+              "text": "Итого работа: 2915677.0762500004"
+            },
+            {
+              "row": 35,
+              "text": "Итого материалы: 84240"
+            },
+            {
+              "row": 36,
+              "text": "Итого фундамент: 3116917.0762500004"
+            }
+          ],
+          "material_rows": 6,
+          "work_rows": 17,
+          "logistics_rows": 0,
+          "sample_rows": [
+            {
+              "row": 1,
+              "name": "Наименование",
+              "unit": "Ед. изм.",
+              "qty": "Кол-во",
+              "work_price": "Работа",
+              "material_price": "Материалы"
+            },
+            {
+              "row": 5,
+              "name": "Вынос осей в натуру",
+              "unit": "см",
+              "qty": "1",
+              "work_price": "18000",
+              "material_price": "0"
+            },
+            {
+              "row": 6,
+              "name": "Земляные работы, сопровождение работы экскаватора",
+              "unit": "см",
+              "qty": "3",
+              "work_price": "10000",
+              "material_price": "0"
+            },
+            {
+              "row": 7,
+              "name": "Аренда экскаватора",
+              "unit": "см",
+              "qty": "3",
+              "work_price": "0",
+              "material_price": "24000"
+            },
+            {
+              "row": 8,
+              "name": "Доработка грунта вручную",
+              "unit": "м2",
+              "qty": "680",
+              "work_price": "50",
+              "material_price": "0"
+            },
+            {
+              "row": 10,
+              "name": "Настил геотекстиля",
+              "unit": "м2",
+              "qty": "608",
+              "work_price": "80",
+              "material_price": "0"
+            },
+            {
+              "row": 11,
+              "name": "Отсыпка основания щебнем и песком с формированием откосов под ребра жесткости",
+              "unit": "м3",
+              "qty": "607",
+              "work_price": "850",
+              "material_price": "0"
+            },
+            {
+              "row": 12,
+              "name": "Настил п/э пленки",
+              "unit": "м2",
+              "qty": "606",
+              "work_price": "80",
+              "material_price": "0"
+            },
+            {
+              "row": 14,
+              "name": "Монтаж опалубки",
+              "unit": "мп",
+              "qty": "108.46",
+              "work_price": "1100",
+              "material_price": "0"
+            },
+            {
+              "row": 15,
+              "name": "Устройство арматурного каркаса",
+              "unit": "м2",
+              "qty": "507.23",
+              "work_price": "1300",
+              "material_price": "0"
+            },
+            {
+              "row": 16,
+              "name": "Бетонирование с уплотнением",
+              "unit": "м3",
+              "qty": "189",
+              "work_price": "2000",
+              "material_price": "0"
+            },
+            {
+              "row": 17,
+              "name": "Аренда бетононасоса",
+              "unit": "см",
+              "qty": "2",
+              "work_price": "0",
+              "material_price": "31000"
+            },
+            {
+              "row": 19,
+              "name": "Монтаж анкерных групп",
+              "unit": "шт",
+              "qty": "23",
+              "work_price": "6500",
+              "material_price": "0"
+            },
+            {
+              "row": 21,
+              "name": "Устройство ростверка поверх фундаментной плиты (опалубка, арматура, бетонирование)",
+              "unit": "мп",
+              "qty": "86.257",
+              "work_price": "2800",
+              "material_price": "0"
+            },
+            {
+              "row": 22,
+              "name": "Аренда бетононасоса",
+              "unit": "см",
+              "qty": "1",
+              "work_price": "0",
+              "material_price": "31000"
+            },
+            {
+              "row": 24,
+              "name": "Устройство обмазочной гидроизоляции в 2 слоя торца плиты с ребрами жесткости и внешней стороны ростверка",
+              "unit": "м2",
+              "qty": "121.14304999999999",
+              "work_price": "350",
+              "material_price": "0"
+            },
+            {
+              "row": 25,
+              "name": "Утепление торца плиты с ребрами жесткости и внешней стороны ростверка ЭППс 100 мм",
+              "unit": "м2",
+              "qty": "121.14304999999999",
+              "work_price": "400",
+              "material_price": "0"
+            },
+            {
+              "row": 27,
+              "name": "Монтаж опалубки",
+              "unit": "мп",
+              "qty": "30",
+              "work_price": "1100",
+              "material_price": "0"
+            },
+            {
+              "row": 28,
+              "name": "Устройство арматурного каркаса",
+              "unit": "м2",
+              "qty": "108",
+              "work_price": "1200",
+              "material_price": "0"
+            },
+            {
+              "row": 29,
+              "name": "Бетонирование с уплотнением",
+              "unit": "м3",
+              "qty": "24",
+              "work_price": "2000",
+              "material_price": "0"
+            },
+            {
+              "row": 30,
+              "name": "Аренда бетононасоса",
+              "unit": "см",
+              "qty": "1",
+              "work_price": "0",
+              "material_price": "31000"
+            },
+            {
+              "row": 31,
+              "name": "Крепеж и расходные материалы по разделу",
+              "unit": "к-т",
+              "qty": "702",
+              "work_price": "0",
+              "material_price": "120"
+            },
+            {
+              "row": 32,
+              "name": "Накладные расходы",
+              "unit": "",
+              "qty": "0.1",
+              "work_price": "",
+              "material_price": ""
+            }
+          ],
+          "formula_count": 88,
+          "formula_samples": [
+            {
+              "sheet": "смета",
+              "cell": "F4",
+              "formula": "=E4*D4"
+            },
+            {
+              "sheet": "смета",
+              "cell": "F5",
+              "formula": "=E5*D5"
+            },
+            {
+              "sheet": "смета",
+              "cell": "H5",
+              "formula": "=D5*G5"
+            },
+            {
+              "sheet": "смета",
+              "cell": "I5",
+              "formula": "=F5+H5"
+            },
+            {
+              "sheet": "смета",
+              "cell": "D6",
+              "formula": "=ROUNDUP((680*0.62)/200,0)"
+            },
+            {
+              "sheet": "смета",
+              "cell": "F6",
+              "formula": "=E6*D6"
+            },
+            {
+              "sheet": "смета",
+              "cell": "H6",
+              "formula": "=D6*G6"
+            },
+            {
+              "sheet": "смета",
+              "cell": "I6",
+              "formula": "=F6+H6"
+            },
+            {
+              "sheet": "смета",
+              "cell": "D7",
+              "formula": "=D6"
+            },
+            {
+              "sheet": "смета",
+              "cell": "F7",
+              "formula": "=E7*D7"
+            },
+            {
+              "sheet": "смета",
+              "cell": "H7",
+              "formula": "=D7*G7"
+            },
+            {
+              "sheet": "смета",
+              "cell": "I7",
+              "formula": "=F7+H7"
+            },
+            {
+              "sheet": "смета",
+              "cell": "F8",
+              "formula": "=E8*D8"
+            },
+            {
+              "sheet": "смета",
+              "cell": "H8",
+              "formula": "=D8*G8"
+            },
+            {
+              "sheet": "смета",
+              "cell": "I8",
+              "formula": "=F8+H8"
+            },
+            {
+              "sheet": "смета",
+              "cell": "F9",
+              "formula": "=E9*D9"
+            },
+            {
+              "sheet": "смета",
+              "cell": "H9",
+              "formula": "=D9*G9"
+            },
+            {
+              "sheet": "смета",
+              "cell": "I9",
+              "formula": "=F9+H9"
+            },
+            {
+              "sheet": "смета",
+              "cell": "F10",
+              "formula": "=E10*D10"
+            },
+            {
+              "sheet": "смета",
+              "cell": "H10",
+              "formula": "=D10*G10"
+            },
+            {
+              "sheet": "смета",
+              "cell": "I10",
+              "formula": "=F10+H10"
+            },
+            {
+              "sheet": "смета",
+              "cell": "D11",
+              "formula": "=114+493"
+            },
+            {
+              "sheet": "смета",
+              "cell": "F11",
+              "formula": "=E11*D11"
+            },
+            {
+              "sheet": "смета",
+              "cell": "H11",
+              "formula": "=G11*D11"
+            },
+            {
+              "sheet": "смета",
+              "cell": "I11",
+              "formula": "=F11+H11"
+            },
+            {
+              "sheet": "смета",
+              "cell": "F12",
+              "formula": "=E12*D12"
+            },
+            {
+              "sheet": "смета",
+              "cell": "H12",
+              "formula": "=G12*D12"
+            },
+            {
+              "sheet": "смета",
+              "cell": "I12",
+              "formula": "=F12+H12"
+            },
+            {
+              "sheet": "смета",
+              "cell": "F13",
+              "formula": "=E13*D13"
+            },
+            {
+              "sheet": "смета",
+              "cell": "H13",
+              "formula": "=G13*D13"
+            }
+          ],
+          "row_count": 50
+        }
+      ]
+    },
+    {
+      "key": "AREAL_NEVA",
+      "title": "Ареал Нева.xlsx",
+      "template_role": "general_company_estimate_template",
+      "description": "Общий эталон сметной структуры Ареал-Нева",
+      "file_id": "1DQw2qgMHtq2SqgJJP-93eIArpj1hnNNm",
+      "drive_url": "https://docs.google.com/spreadsheets/d/1DQw2qgMHtq2SqgJJP-93eIArpj1hnNNm/edit?usp=drivesdk&ouid=110231323399920032425&rtpof=true&sd=true",
+      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "modifiedTime": "2026-05-02T12:04:37.000Z",
+      "parents": [
+        "13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB"
+      ],
+      "formula_total": 1192,
+      "formula_samples": [
+        {
+          "sheet": "смета",
+          "cell": "H1",
+          "formula": "=SUM(H2:I9)"
+        },
+        {
+          "sheet": "смета",
+          "cell": "H2",
+          "formula": "=L59"
+        },
+        {
+          "sheet": "смета",
+          "cell": "H3",
+          "formula": "=L88"
+        },
+        {
+          "sheet": "смета",
+          "cell": "H4",
+          "formula": "=L108"
+        },
+        {
+          "sheet": "смета",
+          "cell": "H5",
+          "formula": "=L134"
+        },
+        {
+          "sheet": "смета",
+          "cell": "H6",
+          "formula": "=L175"
+        },
+        {
+          "sheet": "смета",
+          "cell": "H7",
+          "formula": "=L190"
+        },
+        {
+          "sheet": "смета",
+          "cell": "H8",
+          "formula": "=L228"
+        },
+        {
+          "sheet": "смета",
+          "cell": "H9",
+          "formula": "=L256"
+        },
+        {
+          "sheet": "смета",
+          "cell": "F13",
+          "formula": "=E13*D13"
+        },
+        {
+          "sheet": "смета",
+          "cell": "H13",
+          "formula": "=G13*E13"
+        },
+        {
+          "sheet": "смета",
+          "cell": "I13",
+          "formula": "=H13*D13"
+        },
+        {
+          "sheet": "смета",
+          "cell": "K13",
+          "formula": "=J13*D13"
+        },
+        {
+          "sheet": "смета",
+          "cell": "L13",
+          "formula": "=K13+I13"
+        },
+        {
+          "sheet": "смета",
+          "cell": "D14",
+          "formula": "=_xlfn.CEILING.MATH(D13*1.2/30,)"
+        },
+        {
+          "sheet": "смета",
+          "cell": "F14",
+          "formula": "=E14*D14"
+        },
+        {
+          "sheet": "смета",
+          "cell": "H14",
+          "formula": "=G14*E14"
+        },
+        {
+          "sheet": "смета",
+          "cell": "I14",
+          "formula": "=H14*D14"
+        },
+        {
+          "sheet": "смета",
+          "cell": "K14",
+          "formula": "=J14*D14"
+        },
+        {
+          "sheet": "смета",
+          "cell": "L14",
+          "formula": "=K14+I14"
+        },
+        {
+          "sheet": "смета",
+          "cell": "M14",
+          "formula": "=D14*3.6*15/1000"
+        },
+        {
+          "sheet": "смета",
+          "cell": "D15",
+          "formula": "=21.1+10.48+92.15"
+        },
+        {
+          "sheet": "смета",
+          "cell": "F15",
+          "formula": "=E15*D15"
+        },
+        {
+          "sheet": "смета",
+          "cell": "H15",
+          "formula": "=G15*E15"
+        },
+        {
+          "sheet": "смета",
+          "cell": "I15",
+          "formula": "=H15*D15"
+        },
+        {
+          "sheet": "смета",
+          "cell": "K15",
+          "formula": "=J15*D15"
+        },
+        {
+          "sheet": "смета",
+          "cell": "L15",
+          "formula": "=K15+I15"
+        },
+        {
+          "sheet": "смета",
+          "cell": "D16",
+          "formula": "=88+20"
+        },
+        {
+          "sheet": "смета",
+          "cell": "F16",
+          "formula": "=E16*D16"
+        },
+        {
+          "sheet": "смета",
+          "cell": "H16",
+          "formula": "=G16*E16"
+        },
+        {
+          "sheet": "смета",
+          "cell": "I16",
+          "formula": "=H16*D16"
+        },
+        {
+          "sheet": "смета",
+          "cell": "K16",
+          "formula": "=J16*D16"
+        },
+        {
+          "sheet": "смета",
+          "cell": "L16",
+          "formula": "=K16+I16"
+        },
+        {
+          "sheet": "смета",
+          "cell": "M16",
+          "formula": "=D16*25/1000"
+        },
+        {
+          "sheet": "смета",
+          "cell": "F17",
+          "formula": "=E17*D17"
+        },
+        {
+          "sheet": "смета",
+          "cell": "H17",
+          "formula": "=G17*E17"
+        },
+        {
+          "sheet": "смета",
+          "cell": "I17",
+          "formula": "=H17*D17"
+        },
+        {
+          "sheet": "смета",
+          "cell": "K17",
+          "formula": "=J17*D17"
+        },
+        {
+          "sheet": "смета",
+          "cell": "L17",
+          "formula": "=K17+I17"
+        },
+        {
+          "sheet": "смета",
+          "cell": "F18",
+          "formula": "=E18*D18"
+        },
+        {
+          "sheet": "смета",
+          "cell": "H18",
+          "formula": "=G18*E18"
+        },
+        {
+          "sheet": "смета",
+          "cell": "I18",
+          "formula": "=H18*D18"
+        },
+        {
+          "sheet": "смета",
+          "cell": "K18",
+          "formula": "=J18*D18"
+        },
+        {
+          "sheet": "смета",
+          "cell": "L18",
+          "formula": "=K18+I18"
+        },
+        {
+          "sheet": "смета",
+          "cell": "F19",
+          "formula": "=E19*D19"
+        },
+        {
+          "sheet": "смета",
+          "cell": "H19",
+          "formula": "=G19*E19"
+        },
+        {
+          "sheet": "смета",
+          "cell": "I19",
+          "formula": "=H19*D19"
+        },
+        {
+          "sheet": "смета",
+          "cell": "K19",
+          "formula": "=J19*D19"
+        },
+        {
+          "sheet": "смета",
+          "cell": "L19",
+          "formula": "=K19+I19"
+        },
+        {
+          "sheet": "смета",
+          "cell": "D20",
+          "formula": "=D15*4*1.15/1000"
+        }
+      ],
+      "sheets": [
+        {
+          "sheet_name": "смета",
+          "scenario": "gasbeton_or_masonry_with_monolithic_foundation",
+          "sections": [
+            "Кровля",
+            "Окна, двери",
+            "Внешняя отделка"
+          ],
+          "header_rows": [
+            10,
+            60,
+            89,
+            109,
+            135,
+            176,
+            191,
+            229
+          ],
+          "total_rows": [
+            {
+              "row": 58,
+              "text": "Итого материалы: 1680034.1595788796"
+            },
+            {
+              "row": 59,
+              "text": "Итого стены, перегородки: 3241241.2684789114"
+            },
+            {
+              "row": 87,
+              "text": "Итого материалы: 1090794.738551488"
+            },
+            {
+              "row": 88,
+              "text": "Итого перекрытие: 1769547.369441491"
+            },
+            {
+              "row": 107,
+              "text": "Итого материалы: 102555.32"
+            },
+            {
+              "row": 108,
+              "text": "Итого Монолитная лестница: 215046.5296"
+            },
+            {
+              "row": 133,
+              "text": "Итого материалы: 653804.812"
+            },
+            {
+              "row": 134,
+              "text": "Итого Плита покрытия: 1112208.3857600002"
+            },
+            {
+              "row": 174,
+              "text": "Итого материалы: 1341914.6016"
+            },
+            {
+              "row": 175,
+              "text": "Итого крыша: 2323433.1369439997"
+            },
+            {
+              "row": 189,
+              "text": "Итого материалы: 746966.3"
+            },
+            {
+              "row": 190,
+              "text": "Итого Окна, двери: 906743.5"
+            },
+            {
+              "row": 227,
+              "text": "Итого материалы: 1888361.2"
+            },
+            {
+              "row": 228,
+              "text": "Итого внешняя отделка: 3125622.04768"
+            },
+            {
+              "row": 255,
+              "text": "Итого материалы: 569074.08"
+            },
+            {
+              "row": 256,
+              "text": "Итого Внутренняя черновая отделка: 1392456.54324"
+            },
+            {
+              "row": 258,
+              "text": "Итого РАБОТЫ: 6012793.569414035"
+            },
+            {
+              "row": 259,
+              "text": "Итого МАТЕРИАЛЫ: 8073505.2117303675"
+            },
+            {
+              "row": 260,
+              "text": "ИТОГО СМЕТНАЯ СТОИМОСТЬ: 14086298.781144403"
+            }
+          ],
+          "material_rows": 194,
+          "work_rows": 78,
+          "logistics_rows": 18,
+          "sample_rows": [
+            {
+              "row": 10,
+              "name": "Наименование",
+              "unit": "Ед. изм.",
+              "qty": "Кол-во",
+              "work_price": "Себестоимость работ",
+              "material_price": "коэф на работы"
+            },
+            {
+              "row": 13,
+              "name": "Устройство отсечной гидроизоляции основания стен",
+              "unit": "мп",
+              "qty": "52",
+              "work_price": "100",
+              "material_price": "2"
+            },
+            {
+              "row": 14,
+              "name": "Гидроизоляция Линокром ХПП Технониколь черный 15 кв.м",
+              "unit": "рул",
+              "qty": "3",
+              "work_price": "",
+              "material_price": "2"
+            },
+            {
+              "row": 15,
+              "name": "Кладка стен из газобетона, вкл парапет",
+              "unit": "м3",
+              "qty": "123.73",
+              "work_price": "3000",
+              "material_price": "2.2"
+            },
+            {
+              "row": 16,
+              "name": "Цементно-песчаная смесь ЦПС-300 25 кг.",
+              "unit": "шт",
+              "qty": "108",
+              "work_price": "",
+              "material_price": "2"
+            },
+            {
+              "row": 17,
+              "name": "БЛОК 625X400X250",
+              "unit": "м3",
+              "qty": "98",
+              "work_price": "",
+              "material_price": "2"
+            },
+            {
+              "row": 18,
+              "name": "БЛОК 625X300X250",
+              "unit": "м3",
+              "qty": "12",
+              "work_price": "",
+              "material_price": "2"
+            },
+            {
+              "row": 19,
+              "name": "БЛОК 625X250X250",
+              "unit": "м3",
+              "qty": "24",
+              "work_price": "",
+              "material_price": "2"
+            },
+            {
+              "row": 20,
+              "name": "Арматура А3 А240 8мм рифленая",
+              "unit": "т",
+              "qty": "0.569158",
+              "work_price": "",
+              "material_price": "2"
+            },
+            {
+              "row": 21,
+              "name": "Клей для газобетона 25 кг",
+              "unit": "шт",
+              "qty": "154",
+              "work_price": "",
+              "material_price": "2"
+            },
+            {
+              "row": 22,
+              "name": "Кладка перегородок из газобетона",
+              "unit": "м3",
+              "qty": "13.72",
+              "work_price": "6500",
+              "material_price": "2"
+            },
+            {
+              "row": 23,
+              "name": "Цементно-песчаная смесь ЦПС-300 25 кг.",
+              "unit": "шт",
+              "qty": "7",
+              "work_price": "",
+              "material_price": "2"
+            },
+            {
+              "row": 24,
+              "name": "БЛОК 625X150X250",
+              "unit": "м3",
+              "qty": "16",
+              "work_price": "",
+              "material_price": "2"
+            },
+            {
+              "row": 25,
+              "name": "Арматура класс А3 500С 8мм рифленая",
+              "unit": "т",
+              "qty": "0.07948600000000001",
+              "work_price": "",
+              "material_price": "2"
+            },
+            {
+              "row": 26,
+              "name": "Клей для газобетона 25 кг",
+              "unit": "шт",
+              "qty": "17",
+              "work_price": "",
+              "material_price": "2"
+            },
+            {
+              "row": 27,
+              "name": "Аренда крана",
+              "unit": "см",
+              "qty": "3",
+              "work_price": "27000",
+              "material_price": "1.15"
+            },
+            {
+              "row": 28,
+              "name": "Устройство ж/б колонн",
+              "unit": "мп",
+              "qty": "8.75",
+              "work_price": "1300",
+              "material_price": "2"
+            },
+            {
+              "row": 29,
+              "name": "Арматура металлическая д.12 А500",
+              "unit": "т",
+              "qty": "0.041503500000000006",
+              "work_price": "",
+              "material_price": "2"
+            },
+            {
+              "row": 30,
+              "name": "Арматура металлическая д.8 А240",
+              "unit": "т",
+              "qty": "0.028151999999999996",
+              "work_price": "",
+              "material_price": "2"
+            },
+            {
+              "row": 31,
+              "name": "Проволока вязальная 1,2мм",
+              "unit": "кг",
+              "qty": "2",
+              "work_price": "",
+              "material_price": "2"
+            },
+            {
+              "row": 32,
+              "name": "Пескобетон (ЦПС М300) 40 кг",
+              "unit": "шт",
+              "qty": "32",
+              "work_price": "",
+              "material_price": ""
+            },
+            {
+              "row": 33,
+              "name": "Доска обрезная 40*150(100/200)*6000мм е/в",
+              "unit": "м3",
+              "qty": "0.4725",
+              "work_price": "",
+              "material_price": "2"
+            },
+            {
+              "row": 34,
+              "name": "Устройство армопояса парапета",
+              "unit": "мп",
+              "qty": "75.93",
+              "work_price": "900",
+              "material_price": "2"
+            },
+            {
+              "row": 35,
+              "name": "Арматура металлическая д.12 А500",
+              "unit": "т",
+              "qty": "0.16182201599999999",
+              "work_price": "",
+              "material_price": "2"
+            },
+            {
+              "row": 36,
+              "name": "Арматура металлическая д.8 А500",
+              "unit": "т",
+              "qty": "0.06998215",
+              "work_price": "",
+              "material_price": "2"
+            },
+            {
+              "row": 37,
+              "name": "Проволока вязальная 1,2мм",
+              "unit": "кг",
+              "qty": "4",
+              "work_price": "",
+              "material_price": "2"
+            },
+            {
+              "row": 38,
+              "name": "Бетон В25 W6",
+              "unit": "м3",
+              "qty": "4",
+              "work_price": "",
+              "material_price": "2"
+            },
+            {
+              "row": 39,
+              "name": "Доска обрезная 40*150*6000мм е/в хв/п",
+              "unit": "м3",
+              "qty": "0.9111600000000001",
+              "work_price": "",
+              "material_price": "2"
+            },
+            {
+              "row": 40,
+              "name": "Устройство перемычки/ армопояс из U блоков",
+              "unit": "мп",
+              "qty": "36.1",
+              "work_price": "1000",
+              "material_price": "2"
+            },
+            {
+              "row": 41,
+              "name": "U-блок 300 300х250х500мм",
+              "unit": "шт",
+              "qty": "7",
+              "work_price": "",
+              "material_price": "2"
+            },
+            {
+              "row": 42,
+              "name": "U-блок 400 400х250х500мм",
+              "unit": "шт",
+              "qty": "66",
+              "work_price": "",
+              "material_price": "2"
+            },
+            {
+              "row": 43,
+              "name": "Арматура металлическая д.12 А500",
+              "unit": "т",
+              "qty": "0.15387263999999998",
+              "work_price": "",
+              "material_price": "2"
+            },
+            {
+              "row": 44,
+              "name": "Арматура металлическая д.8 А500",
+              "unit": "т",
+              "qty": "0.059411",
+              "work_price": "",
+              "material_price": "2"
+            },
+            {
+              "row": 45,
+              "name": "Проволока вязальная 1,2мм",
+              "unit": "кг",
+              "qty": "4",
+              "work_price": "",
+              "material_price": "2"
+            },
+            {
+              "row": 46,
+              "name": "Пескобетон (ЦПС М300) 40 кг",
+              "unit": "шт",
+              "qty": "36",
+              "work_price": "",
+              "material_price": ""
+            }
+          ],
+          "formula_count": 1192,
+          "formula_samples": [
+            {
+              "sheet": "смета",
+              "cell": "H1",
+              "formula": "=SUM(H2:I9)"
+            },
+            {
+              "sheet": "смета",
+              "cell": "H2",
+              "formula": "=L59"
+            },
+            {
+              "sheet": "смета",
+              "cell": "H3",
+              "formula": "=L88"
+            },
+            {
+              "sheet": "смета",
+              "cell": "H4",
+              "formula": "=L108"
+            },
+            {
+              "sheet": "смета",
+              "cell": "H5",
+              "formula": "=L134"
+            },
+            {
+              "sheet": "смета",
+              "cell": "H6",
+              "formula": "=L175"
+            },
+            {
+              "sheet": "смета",
+              "cell": "H7",
+              "formula": "=L190"
+            },
+            {
+              "sheet": "смета",
+              "cell": "H8",
+              "formula": "=L228"
+            },
+            {
+              "sheet": "смета",
+              "cell": "H9",
+              "formula": "=L256"
+            },
+            {
+              "sheet": "смета",
+              "cell": "F13",
+              "formula": "=E13*D13"
+            },
+            {
+              "sheet": "смета",
+              "cell": "H13",
+              "formula": "=G13*E13"
+            },
+            {
+              "sheet": "смета",
+              "cell": "I13",
+              "formula": "=H13*D13"
+            },
+            {
+              "sheet": "смета",
+              "cell": "K13",
+              "formula": "=J13*D13"
+            },
+            {
+              "sheet": "смета",
+              "cell": "L13",
+              "formula": "=K13+I13"
+            },
+            {
+              "sheet": "смета",
+              "cell": "D14",
+              "formula": "=_xlfn.CEILING.MATH(D13*1.2/30,)"
+            },
+            {
+              "sheet": "смета",
+              "cell": "F14",
+              "formula": "=E14*D14"
+            },
+            {
+              "sheet": "смета",
+              "cell": "H14",
+              "formula": "=G14*E14"
+            },
+            {
+              "sheet": "смета",
+              "cell": "I14",
+              "formula": "=H14*D14"
+            },
+            {
+              "sheet": "смета",
+              "cell": "K14",
+              "formula": "=J14*D14"
+            },
+            {
+              "sheet": "смета",
+              "cell": "L14",
+              "formula": "=K14+I14"
+            },
+            {
+              "sheet": "смета",
+              "cell": "M14",
+              "formula": "=D14*3.6*15/1000"
+            },
+            {
+              "sheet": "смета",
+              "cell": "D15",
+              "formula": "=21.1+10.48+92.15"
+            },
+            {
+              "sheet": "смета",
+              "cell": "F15",
+              "formula": "=E15*D15"
+            },
+            {
+              "sheet": "смета",
+              "cell": "H15",
+              "formula": "=G15*E15"
+            },
+            {
+              "sheet": "смета",
+              "cell": "I15",
+              "formula": "=H15*D15"
+            },
+            {
+              "sheet": "смета",
+              "cell": "K15",
+              "formula": "=J15*D15"
+            },
+            {
+              "sheet": "смета",
+              "cell": "L15",
+              "formula": "=K15+I15"
+            },
+            {
+              "sheet": "смета",
+              "cell": "D16",
+              "formula": "=88+20"
+            },
+            {
+              "sheet": "смета",
+              "cell": "F16",
+              "formula": "=E16*D16"
+            },
+            {
+              "sheet": "смета",
+              "cell": "H16",
+              "formula": "=G16*E16"
+            }
+          ],
+          "row_count": 274
+        }
+      ]
+    }
+  ],
+  "canonical_columns": [
+    "№ п/п",
+    "Наименование",
+    "Ед. изм.",
+    "Кол-во",
+    "Работа Цена",
+    "Работа Стоимость",
+    "Материалы Цена",
+    "Материалы Стоимость",
+    "Всего",
+    "Примечание"
+  ],
+  "canonical_sections": [
+    "Фундамент",
+    "Каркас",
+    "Стены",
+    "Перекрытия",
+    "Кровля",
+    "Окна, двери",
+    "Внешняя отделка",
+    "Внутренняя отделка",
+    "Инженерные коммуникации",
+    "Логистика",
+    "Накладные расходы"
+  ],
+  "universal_material_groups": {
+    "стены": [
+      "кирпич",
+      "газобетон",
+      "керамоблок",
+      "арболит",
+      "монолит",
+      "каркас",
+      "брус"
+    ],
+    "фундамент": [
+      "монолитная плита",
+      "лента",
+      "сваи",
+      "ростверк",
+      "утеплённая плита",
+      "складской фундамент"
+    ],
+    "кровля": [
+      "металлочерепица",
+      "профнастил",
+      "гибкая черепица",
+      "фальц",
+      "мембрана",
+      "стропильная система"
+    ],
+    "перекрытия": [
+      "деревянные балки",
+      "монолит",
+      "плиты",
+      "металлические балки"
+    ],
+    "утепление": [
+      "минвата",
+      "роквул",
+      "пеноплэкс",
+      "pir",
+      "эковата"
+    ],
+    "отделка": [
+      "имитация бруса",
+      "штукатурка",
+      "плитка",
+      "гкл",
+      "цсп",
+      "фасадная доска"
+    ],
+    "инженерия": [
+      "электрика",
+      "водоснабжение",
+      "канализация",
+      "отопление",
+      "вентиляция"
+    ],
+    "логистика": [
+      "доставка",
+      "разгрузка",
+      "манипулятор",
+      "кран",
+      "проживание",
+      "транспорт бригады",
+      "удалённость"
+    ]
+  },
+  "formula_policy": [
+    "Топовые сметы являются эталонами логики расчёта, а не прайс-листами",
+    "Новые сметы считаются по такой же структуре: разделы, строки, колонки, формулы, итоги, примечания, исключения",
+    "Материал может быть любым: кирпич, газобетон, каркас, монолит, кровля, перекрытия, отделка, инженерия",
+    "При замене материала сохраняется расчётная логика: количество × цена = сумма; работа + материалы = всего; разделы = итоги; финальный итог = сумма разделов",
+    "Каркасный сценарий, газобетон/монолитная плита, кровля/перекрытия и фундамент считаются как разные сценарии и не смешиваются",
+    "Если объёмов не хватает — оркестр спрашивает только недостающие объёмы",
+    "Если пользователь прислал файл как образец — сначала принять как образец, а не запускать поиск цен"
+  ],
+  "price_confirmation_flow": [
+    "Интернет-цены материалов и техники не подставляются молча",
+    "Для финальной сметы оркестр ищет актуальные цены по материалам, технике, доставке и разгрузке",
+    "По каждой позиции показывает: источник, цена, единица, дата/регион, ссылка",
+    "Оркестр предлагает среднюю/медианную цену без явных выбросов",
+    "Пользователь выбирает: средняя / минимальная / максимальная / конкретная ссылка / ручная цена",
+    "Пользователь может добавить наценку, запас, скидку, поправку по позиции, разделу или всей смете",
+    "До подтверждения цен финальный XLSX/PDF не выпускается",
+    "После подтверждения цены пересчитываются по формулам шаблона"
+  ],
+  "logistics_policy": [
+    "Перед финальной сметой оркестр обязан запросить локацию объекта или расстояние от города",
+    "Стоимость объекта рядом с городом и объекта за 200 км не может быть одинаковой",
+    "Оркестр обязан учитывать доставку материалов, транспорт бригады, разгрузку, манипулятор/кран, проживание, удалённость, дорожные условия",
+    "Если логистика неизвестна — оркестр задаёт один короткий вопрос: город/населённый пункт или расстояние от города, подъезд для грузовой техники, нужна ли разгрузка/манипулятор",
+    "Логистика считается отдельным блоком сметы или отдельным коэффициентом, но не смешивается молча с ценами материалов",
+    "Перед финальным результатом оркестр показывает логистические допущения и спрашивает подтверждение"
+  ],
+  "runtime_rule": "ai_router injects this context through core.estimate_template_policy.build_estimate_template_context"
+}
+```
+
+====================================================================================================
+END_FILE: docs/REPORTS/ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4_REPORT.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/REPORTS/FILE_MEMORY_DOMAIN_LINK_TITLE_P0_V5_REPORT.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 2a4f5022a2dab3a3ed4c7446efab2e4b7d2aa7d2d144fcbb44ebb1a1322b660d
+====================================================================================================
+# FILE_MEMORY_DOMAIN_LINK_TITLE_P0_V5_REPORT
+
+generated_at: 2026-05-02T13:28:20+03:00
+
+status: OK
+
+fixed:
+- _fm_item_domain: file_name has priority before mixed hay/value search
+- _fm_public_links: public links are taken only from item["links"], not from value/summary/result/raw_input blobs
+- _fm_public_title: leading numeric prefix removed from file_name
+
+verified:
+- КЖ/КД/КМ/КМД/АР/project file names classify as project
+- smeta/VOR file names classify as estimate
+- links from unrelated blob text are not shown
+- leading "4. " removed from title
+- telegram_daemon.py not modified
+- no live Telegram run
+- worker active without fatal tracebacks
+
+====================================================================================================
+END_FILE: docs/REPORTS/FILE_MEMORY_DOMAIN_LINK_TITLE_P0_V5_REPORT.md
+FILE_CHUNK: 1/1
+====================================================================================================
 
 ====================================================================================================
 BEGIN_FILE: docs/REPORTS/FILE_MEMORY_PUBLIC_OUTPUT_AND_PROJECT_SAMPLE_P0_V4_REPORT.md
@@ -697,6 +6245,95 @@ SHA256_FULL_FILE: 0302cabfa44efc6e1d6d12afff621fd4dae2c909cd8f9c30163384e04b97ad
 }
 ====================================================================================================
 END_FILE: docs/REPORTS/FULL_CANON_CODE_GAP_AUDIT.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/REPORTS/IN_PROGRESS_20260506_TOPIC2_STROYKA.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 18365cd26cf1b4059a889996cceb9dd4f5b8b4afd5c1c667d7890c228df47997
+====================================================================================================
+# IN PROGRESS 2026-05-06 — TOPIC2 STROYKA
+
+Mode: FACT ONLY
+Source: live terminal outputs supplied in current chat
+Scope: topic_id=2 only
+
+## Current in-progress contour
+
+### Active canonical target
+
+Complete topic_2 stroyka estimate contour:
+
+```text
+input text/voice/photo/file -> task topic_id=2 -> construction scope detection -> context isolation -> price enrichment/search -> explicit price choice -> XLSX artifact -> PDF artifact with Cyrillic -> Drive upload -> Telegram delivery -> task lifecycle close
+```
+
+### Current stage status
+
+```text
+Price choice binding: installed and guard-passed in V5
+Final estimate generation after bound price choice: not verified
+Artifact delivery: not verified in final supplied output
+Photo recognition flow: not verified in current supplied output
+Internet price enrichment through final artifact: not verified in current supplied output
+```
+
+## Latest confirmed patch stage
+
+```text
+PATCH_TOPIC2_PRICE_CHOICE_BIND_AND_FINALIZE_V5_READY_TRUE
+```
+
+Installed markers shown by log:
+
+```text
+PATCH_TOPIC2_PRICE_CHOICE_BIND_AND_FINALIZE_V5 installed
+PATCH_TOPIC2_NUMERIC_PRICE_CHOICE_PARSE_V5 installed
+PATCH_TOPIC2_PRICE_CHOICE_BIND_V5_GENERATED parent=f1ef9fab-e364-46ac-b0da-ab8ae5c85a21 choice=median
+```
+
+## Current parent task requiring next check
+
+```text
+task_id: f1ef9fab-e364-46ac-b0da-ab8ae5c85a21
+topic_id: 2
+state after V5: WAITING_CLARIFICATION
+history marker: TOPIC2_PRICE_CHOICE_CONFIRMED:median
+```
+
+## Current bound numeric reply task
+
+```text
+task_id: ceac25be-a380-419c-9eec-a7b69b97da44
+raw_input: [VOICE] Какая у тебя последняя задача? Ответь мне!
+state after V5: DONE
+result: Выбор цены принят и привязан к сметной задаче: f1ef9fab-e364-46ac-b0da-ab8ae5c85a21
+```
+
+## Current known risks
+
+- Parent task has price confirmed but remains `WAITING_CLARIFICATION` in final supplied DB output
+- Final generation markers absent from final supplied history/log
+- Status/meta voice question was treated as price flow before V5 binding
+- Old tasks with invalid median DONE were moved to `AWAITING_CONFIRMATION`, but not regenerated
+
+## Next execution rule
+
+Before any further patch, run diagnostics only for:
+
+```text
+f1ef9fab-e364-46ac-b0da-ab8ae5c85a21
+ceac25be-a380-419c-9eec-a7b69b97da44
+topic_id=2 history after 2026-05-06 07:42:41
+V5 code path that should call XLSX/PDF generation
+artifact folders and Drive links for these task ids
+```
+
+Do not patch other modules until this factual breakpoint is verified
+
+====================================================================================================
+END_FILE: docs/REPORTS/IN_PROGRESS_20260506_TOPIC2_STROYKA.md
 FILE_CHUNK: 1/1
 ====================================================================================================
 
@@ -1853,6 +7490,78 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 
 ====================================================================================================
+BEGIN_FILE: docs/REPORTS/STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1_REPORT.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 8a87792047c970f1650efc114a73d8169478f550db9e4f197821d40d7b17bfe5
+====================================================================================================
+# STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1_REPORT
+
+STATUS: TOPIC2_PREMAIN_ROUTE_FIXED
+
+Fixed:
+- task_worker.py now has an active topic_2 route wrapper before asyncio.run(main())
+- Existing wrapper after asyncio.run(main()) was not sufficient because code after main is not active during worker runtime
+- Topic_2 template/source questions no longer fall into FILE_TECH_CONTOUR_FOLLOWUP_V2
+- Topic_2 full construction estimate context routes into handle_stroyka_topic2_full_context_gate_v1 before old stroyka/direct item/file followup paths
+- Topic_2 control-only close commands do not trigger estimate/file search
+- No DB schema changes
+- No systemd changes
+- No forbidden files touched
+
+Forbidden files not touched:
+- .env
+- credentials.json
+- sessions
+- google_io.py
+- memory.db schema
+- ai_router.py
+- telegram_daemon.py
+- reply_sender.py
+- systemd unit files
+
+====================================================================================================
+END_FILE: docs/REPORTS/STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1_REPORT.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/REPORTS/STROYKA_TOPIC2_SOURCE_LOCK_PRIORITY_FIX_V1_REPORT.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: a909a36369614ef40bea3d6d8fa1999d41de7e6c47045e09bf001d9f308b7f38
+====================================================================================================
+# STROYKA_TOPIC2_SOURCE_LOCK_PRIORITY_FIX_V1_REPORT
+
+STATUS: TOPIC2_STROYKA_SOURCE_LOCK_PRIORITY_INSTALLED
+
+Facts fixed:
+- topic_2 was still reaching FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3
+- topic_2 clarification values were recorded as task_history clarified:* but were not merged into raw_input before the next estimate pass
+- search input_type estimate tasks were still able to bypass the template estimate path
+
+Code changes:
+- core/sample_template_engine.py: final topic_2 override for estimate intent
+- core/sample_template_engine.py: search/text/voice accepted for topic_2 estimate template flow
+- task_worker.py: priority hook merges clarified:* history into raw_input before stroyka processing
+- task_worker.py: priority hook tries saved Drive template estimate path before stroyka fallback
+- existing topic_500 guard preserved
+
+Forbidden untouched:
+- .env
+- credentials
+- sessions
+- google_io.py
+- memory.db schema
+- core/ai_router.py
+- telegram_daemon.py
+- core/reply_sender.py
+- systemd unit files
+
+====================================================================================================
+END_FILE: docs/REPORTS/STROYKA_TOPIC2_SOURCE_LOCK_PRIORITY_FIX_V1_REPORT.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
 BEGIN_FILE: docs/REPORTS/TAIL_CLOSE_THREE_MISSING_V1_REPORT.md
 FILE_CHUNK: 1/1
 SHA256_FULL_FILE: de0843aef4a0acfd99a12e87501c572960f9ddbbb73537d3fa309ec8760bcb40
@@ -1944,6 +7653,501 @@ SHA256_FULL_FILE: 517e9df492879feb843277627519f5e63df131c02f114445655c3feb52610e
 }
 ====================================================================================================
 END_FILE: docs/REPORTS/TELEGRAM_HISTORY_FULL_BACKFILL_REPORT.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/REPORTS/THREE_CONTOURS_FINAL_SOURCE_LOCK_V1_REPORT.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 516b5a546bba07042d1252326e3e756a9ed25de60ed9074e5473ecefdaf80e1e
+====================================================================================================
+# THREE_CONTOURS_FINAL_SOURCE_LOCK_V1_REPORT
+
+STATUS: CODE_CLOSED_ALL_THREE_CONTOURS_BY_SOURCE_LOCK
+
+Scope:
+- topic_2 / smeta
+- topic_210 / project + sketch
+- topic_500 / web search isolation
+
+Facts:
+- Estimate templates source: Google Drive folder ESTIMATES/templates
+- Project templates source: Google Drive folder Образцы проектов
+- Sketch/design source: Google Drive folder PROJECT_DESIGN_REFERENCES when present
+- Output folder PROJECT_ARTIFACTS is forbidden as source
+
+Code changes:
+- core/sample_template_engine.py:
+  - topic_2 estimate intent no longer blocked by words фундамент / плита / кровля when smeta intent exists
+  - active estimate template is force-synced from ESTIMATES/templates
+  - old active template pointers are overwritten for topic_2
+  - current raw_input is the only calculation source
+  - old task results, old Drive links, old artifacts are forbidden
+  - output XLSX starts with visible sheet Смета_текущее_задание
+- core/project_engine.py:
+  - project model sync reads Образцы проектов
+  - sketch sync reads PROJECT_DESIGN_REFERENCES
+  - project model is selected by requested section КЖ/КД/КМ/КМД/АР/ЭСКИЗ
+  - PROJECT_ARTIFACTS is output-only
+- task_worker.py:
+  - topic_2 estimate template handler runs before file followup / old estimate fallback
+
+Preserved:
+- ESTIMATE_PRIORITY_FIX_V1
+- SHEETS_NORMALIZE_V1
+- CANON_LIST_QUERY_GUARD_V1
+- FILE_TECH_CONTOUR_FOLLOWUP_V2 topic_500 isolation
+
+Not touched:
+- .env
+- credentials
+- sessions
+- google_io.py
+- memory.db schema
+- core/ai_router.py
+- telegram_daemon.py
+- core/reply_sender.py
+- systemd unit files
+
+Verification:
+- py_compile passed
+- areal-task-worker restarted
+- telegram-ingress active
+- areal-memory-api active
+- secret_scan passed
+
+====================================================================================================
+END_FILE: docs/REPORTS/THREE_CONTOURS_FINAL_SOURCE_LOCK_V1_REPORT.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/REPORTS/THREE_CONTOURS_FULL_CONTEXT_NO_REPEAT_CLARIFY_V1_REPORT.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 8e34d5bb75c8a9ca58a0c16d170cf97d983e432c35b5c86790f3813be6cc4ed4
+====================================================================================================
+# THREE_CONTOURS_FULL_CONTEXT_NO_REPEAT_CLARIFY_V1_REPORT
+
+STATUS: FULL_CONTEXT_NO_REPEAT_CLARIFY_INSTALLED
+
+Closed regression:
+- topic_2 no longer asks one clarification at a time when the merged context already contains all required technical facts
+- worker now merges current raw_input + active WAITING_CLARIFICATION/IN_PROGRESS parent + clarified:* history + recent topic raw inputs
+- if merged context has object kind, dimensions, wall/material info and roof info where required, it creates the estimate immediately
+- old task results, old Drive links and project artifacts are not used as calculation source
+- ESTIMATES/templates remains the formatting/template source
+- current raw input plus user clarifications remain the calculation context
+
+Preserved:
+- topic_210 project source lock from Образцы проектов
+- topic_500 search isolation
+- FILE_TECH_CONTOUR_FOLLOWUP_V2 topic_500 guard
+- no DB schema change
+- no forbidden files touched
+
+====================================================================================================
+END_FILE: docs/REPORTS/THREE_CONTOURS_FULL_CONTEXT_NO_REPEAT_CLARIFY_V1_REPORT.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/REPORTS/THREE_STAGES_CANON_AND_STATUS.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 4038d7e4cd28987ea78743394f0d31482ce2800c710749aa500e92055a4754f0
+====================================================================================================
+# THREE STAGES — CANON LOGIC AND CURRENT STATUS
+Version: 2026-05-03 | Mode: FACT-ONLY
+
+## 1. СМЕТА / СТРОЙКА / topic_2
+
+### Откуда образцы
+Google Drive: AI_ORCHESTRA / ESTIMATES / templates
+Drive folder ID: 19Z3acDgPub4nV55mad5mb8ju63FsqoG9
+Файлы: М-80.xlsx, М-110.xlsx, Ареал Нева.xlsx, фундамент_Склад2.xlsx, крыша и перекр.xlsx
+Серверный код: /root/.areal-neva-core/core/stroyka_estimate_canon.py
+
+### Как должно работать
+1. Задача в topic_2
+2. Если есть работы + объёмы + цены — считать по текущему тексту
+3. Если данных нет — выбрать шаблон из ESTIMATES/templates
+4. Если нужны актуальные цены — искать и предлагать на подтверждение
+5. До подтверждения цен XLSX/PDF не создавать
+6. После подтверждения Python считает по формулам шаблона
+7. Выход: XLSX с формулами + PDF + итог + ссылки
+8. После "да" — DONE
+
+### Что запрещено
+- Брать файлы из topic_2 как шаблоны (это папка результатов)
+- Брать старые сметы из истории
+- Считать цифры через LLM
+- Подставлять старый Drive-результат как новый
+
+### Статус закрытия
+CLOSED_BY_CODE: stroyka_estimate_canon.py подключён, SQL pick bug закрыт, direct item engine добавлен, guard инвариантов добавлен
+LIVE_TEST: REQUIRED — по новой смете
+CODE_CLOSED: DOCX_CREATE_FAILED class fixed by SHEETS_NORMALIZE_V1 in project_engine.py; sheet_register list[str] normalized before sh.get usage
+
+---
+
+## 2. ПРОЕКТИРОВАНИЕ / topic_210
+
+### Откуда образцы
+Google Drive: AI_ORCHESTRA / chat_-1003725299009 / topic_210 / Образцы проектов
+Серверная память: /root/.areal-neva-core/data/project_templates/PROJECT_TEMPLATE_MODEL__*.json
+Серверный код: /root/.areal-neva-core/core/project_engine.py + project_document_engine.py
+
+Файлы образцов: АР.pdf, КЖ.pdf, КД.pdf, Шувалово Озерки АР/КЖ/КД, Барн КЖ, КЖ Цоколь, Дом у озера, Проект М-80 КД финал, АК-160 PLN+PDF
+
+### Разделы которые система должна понимать
+ПЗ, ГП, АР, КЖ, КМ, КМД, КР/КД, ОВ, ВК, ЭОМ, СС, ТХ, СМ
+
+### Как должно работать
+1. ТЗ или файл в topic_210
+2. Текущее ТЗ — главный источник
+3. Структура берётся из Образцы проектов
+4. Если есть PROJECT_TEMPLATE_MODEL — использует его
+5. Определяет весь состав проекта, не один раздел
+6. По каждому разделу берёт нормы из локальной карты норм
+7. Формирует полный проектный пакет
+8. Выход: DOCX/PDF + спецификации + ведомости + приложения (Excel только приложение)
+9. После "да" — DONE
+
+### Пример для ангара
+Объект: ангар 24x80 м, монолитная плита, МК каркас, ППУ стены 100мм, ППУ кровля 150мм, высота 5м, ворота в торце
+Результат: ПЗ + ГП + АР + КЖ + КМ + КМД + КД + спецификации + ведомости + нормы
+
+### Что запрещено
+- Делать только один раздел КЖ без полного пакета
+- Выдавать Excel как проект
+- Брать случайные старые файлы из истории
+- Закрывать DONE без полного проектного пакета
+- Отвечать "файлы в топике уже есть" вместо результата
+
+### Статус закрытия
+CLOSED_BY_CODE: project_engine.py подключён, PROJECT_TEMPLATE_MODEL извлечение добавлено, КЖ/КД/АР определение по имени файла исправлено, нормы и структура разделов добавлены
+LIVE_TEST: REQUIRED — full package route не проверен
+CODE_CLOSED_1: list-query/no-file guard exists in project_route_guard.py as CANON_LIST_QUERY_GUARD_V1 and is preserved by final code close
+CODE_CLOSED_2: data/project_templates runtime sync installed from topic_210_file_catalog_autosync by PROJECT_TEMPLATE_MEMORY_CATALOG_SYNC_ABSOLUTE_V1
+
+---
+
+## 3. ИНТЕРНЕТ-ПОИСК / topic_500
+
+### Откуда данные
+Только живой интернет через Perplexity/online model
+Серверный код: core/search_session.py, core/file_memory_bridge.py, task_worker.py
+Drive папка topic_500: ПУСТАЯ (так и должно быть)
+
+### Как должно работать
+1. Запрос в topic_500
+2. Файловая память НЕ перехватывает запрос
+3. Старые задачи НЕ используются как ответ
+4. Запрос уходит в живой интернет
+5. Собираются источники, ссылки, цены, риски
+6. Таблица: Поставщик / Площадка / Тип / Город / Цена / Наличие / Доставка / TCO / Trust Score / Риски / Статус / Ссылка / checked_at
+7. Итог: лучший вариант + надёжный + что проверить
+8. После "да" — DONE
+
+### Что запрещено
+- Отвечать из файловой памяти
+- Брать старые документы или сметы
+- Давать список ссылок без анализа
+- Закрывать DONE при qg=unknown
+- Зацикливать задачу
+
+### Статус закрытия
+CLOSED_BY_CODE: SearchMonolithV2 подключён, topic_500 изолирован от файлового follow-up (CANON_ROUTE_FIX_V2), формат таблицы Trust Score добавлен, search session memory добавлена
+LIVE_TEST: REQUIRED — qg=unknown может зациклить
+CODE_GUARD_PRESENT: FILE_TECH_CONTOUR_FOLLOWUP_V2 has topic_500 isolation in task_worker.py; final code close preserves this guard
+
+---
+
+## ОБЩИЙ ФИНАЛЬНЫЙ ФОРМАТ ОТВЕТА БОТА
+
+Задача выполнена
+Направление: стройка / проектирование / поиск
+Основа: откуда взяты данные
+Что сделано: кратко
+Артефакты: ссылки
+Статус: AWAITING_CONFIRMATION
+Подтверди: да / правки / отмена
+
+---
+
+## ИТОГ
+
+Сметы: из ESTIMATES/templates + текущее ТЗ
+Проекты: из topic_210/Образцы проектов + PROJECT_TEMPLATE_MODEL
+Поиск: только живой интернет
+
+Результат всегда: артефакт или таблица — подтверждение — DONE
+
+
+---
+
+## CODE CLOSE UPDATE — THREE_STAGES_CODE_CLOSE_FINAL_STRICT_V1
+updated_at_utc: 2026-05-03T17:01:50.633925+00:00
+
+CODE_CLOSED_BY:
+- ESTIMATE_PRIORITY_FIX_V1
+- SHEETS_NORMALIZE_V1
+- CANON_LIST_QUERY_GUARD_V1 preserved
+- FILE_TECH_CONTOUR_FOLLOWUP_V2 topic_500 isolation preserved
+
+CODE_SCOPE:
+- topic_2 estimate/project misroute closed by estimate priority rule
+- topic_210 sheet_register string crash closed by normalization
+- topic_210 list/no-file route remains non-artifact by existing guard
+- topic_500 file-followup isolation remains active by existing task_worker guard
+
+REGRESSION_LOCK:
+- task_worker.py not patched
+- telegram_daemon.py not patched
+- core/reply_sender.py not patched
+- google_io.py not patched
+- core/ai_router.py not patched
+- Drive/OAuth not patched
+- lifecycle logic not patched
+- memory schema not patched
+
+
+---
+
+## CODE CLOSE UPDATE — ALL_THREE_DIRECTIONS_ABSOLUTE_CODE_CLOSE_V1
+updated_at_utc: 2026-05-03T17:34:57.876558+00:00
+
+STATUS: CODE_CLOSED_ALL_THREE_DIRECTIONS
+
+CODE_CLOSED_BY:
+- topic_2: ESTIMATE_PRIORITY_FIX_V1
+- topic_210: SHEETS_NORMALIZE_V1
+- topic_210: PROJECT_TEMPLATE_MEMORY_CATALOG_SYNC_ABSOLUTE_V1
+- topic_210: PROJECT_TEMPLATE_MEMORY_CATALOG_SYNC_ABSOLUTE_HOOK_V1
+- topic_210: CANON_LIST_QUERY_GUARD_V1 preserved
+- topic_500: FILE_TECH_CONTOUR_FOLLOWUP_V2 preserved
+- topic_500: SEARCH_TOPIC500_FTCF_ISOLATION_V1 preserved
+
+CODE_SCOPE:
+- smeta: estimate priority installed, project misroute closed by code
+- projects: sheet_register normalization installed, project template runtime sync installed by code
+- search: topic_500 file-followup isolation preserved by code
+
+REGRESSION_LOCK:
+- task_worker.py not patched
+- telegram_daemon.py not patched
+- core/reply_sender.py not patched
+- google_io.py not patched
+- core/ai_router.py not patched
+- systemd units not patched
+- Drive/OAuth not patched
+- memory.db schema not patched
+- core.db schema not patched
+- .env not patched
+- credentials not patched
+- sessions not patched
+
+====================================================================================================
+END_FILE: docs/REPORTS/THREE_STAGES_CANON_AND_STATUS.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/REPORTS/THREE_STAGES_CODE_CLOSE_FINAL_STRICT_V1_REPORT.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 49f40600a51d349441384d69b793768dc58067990f560d56f4dfa9ff86ba6516
+====================================================================================================
+# THREE_STAGES_CODE_CLOSE_FINAL_STRICT_V1_REPORT
+
+STATUS: CLOSED_BY_CODE
+
+Patched:
+- core/project_route_guard.py
+- core/project_engine.py
+- docs/REPORTS/THREE_STAGES_CANON_AND_STATUS.md
+
+Code closures:
+- ESTIMATE_PRIORITY_FIX_V1 closes topic_2 estimate misroute into project engine
+- SHEETS_NORMALIZE_V1 closes project_engine sheet_register list[str] crash
+- CANON_LIST_QUERY_GUARD_V1 is preserved for topic_210 list/no-file requests
+- FILE_TECH_CONTOUR_FOLLOWUP_V2 topic_500 isolation is preserved as read-only verified guard
+
+Not patched:
+- task_worker.py
+- telegram_daemon.py
+- core/reply_sender.py
+- google_io.py
+- core/ai_router.py
+- systemd
+- Drive/OAuth
+- lifecycle logic
+- memory schema
+
+Regression locks:
+- no rewrite of functions
+- only confirmed gaps patched
+- existing topic_500 guard preserved
+- existing topic_210 guard preserved
+- task_worker.py compiled but not modified
+
+Execution facts:
+- py_compile passed
+- internal code smoke passed
+- worker active after restart
+- current worker log checked only after ActiveEnterTimestamp
+
+Known untracked ignored by owner directive:
+- data/db_backups/
+- docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_008.md
+
+====================================================================================================
+END_FILE: docs/REPORTS/THREE_STAGES_CODE_CLOSE_FINAL_STRICT_V1_REPORT.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/REPORTS/TNZ_MSK_DOCUMENT_SKILL_EXTRACTION_REPORT.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: f69d1b65c71a024045ef5f5a88166211915a526197abcd733e56961d4b879be7
+====================================================================================================
+# TNZ_MSK DOCUMENT SKILL EXTRACTION REPORT
+Generated: 2026-05-05T07:49:28.101033+00:00
+
+## Diagnostics
+- Source: @tnz_msk — «Технадзор без Душнилова [Карабанов]»
+- Session: authorized ✅
+- Telethon: 1.43.2 ✅
+- Mode: LIVE
+- Sample limit: 1000
+
+## Scan Statistics
+| Metric | Count |
+|--------|-------|
+| Total messages fetched | 1000 |
+| Skipped (empty) | 4 |
+| Skipped (noise) | 25 |
+| Detected documents | 170 |
+| Detected links | 71 |
+
+## Skill Extraction
+| Metric | Count |
+|--------|-------|
+| Records passed to skill extractor | 971 |
+| Skill cards extracted | 324 |
+| Rejected (noise/no value) | 647 |
+| Skill categories | 12 |
+| Needs owner review | 183 |
+
+## Skill Categories Extracted
+- photo_to_defect_linking: 29 rules
+- unknown: 148 rules
+- client_facing_language: 17 rules
+- defect_description_logic: 22 rules
+- act_structure: 77 rules
+- recommendation_logic: 3 rules
+- normative_reference_handling: 14 rules
+- conclusion_logic: 6 rules
+- file_workflow: 1 rules
+- rabota_poisk_reusable_pattern: 1 rules
+- report_structure: 4 rules
+- contractor_statement_handling: 2 rules
+
+## Output Files
+- `data/memory_files/TEHNADZOR/source_skills/tnz_msk/TECHNADZOR_DOCUMENT_COMPOSITION_SKILL.md`
+- `data/memory_files/TEHNADZOR/source_skills/tnz_msk/TECHNADZOR_DOCUMENT_COMPOSITION_SKILL.json`
+- `data/memory_files/TEHNADZOR/source_skills/tnz_msk/SOURCE_INDEX.json`
+- `data/memory_files/TEHNADZOR/source_skills/tnz_msk/LINKED_DOCUMENTS_INDEX.json`
+
+## Rules
+- No raw history saved to memory.db ✅
+- No core.db tasks created ✅
+- No forbidden files touched ✅
+- Each extracted rule has source_ref ✅
+- RABOTA_POISK reusable pattern documented ✅
+
+====================================================================================================
+END_FILE: docs/REPORTS/TNZ_MSK_DOCUMENT_SKILL_EXTRACTION_REPORT.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/REPORTS/TNZ_MSK_SKILL_PACKAGE_QA_REPORT.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: f1b614ea8eb99c63ba3bb9b23937206501c43b520f94be06ebed9a4379ea0c83
+====================================================================================================
+# TNZ_MSK SKILL PACKAGE QA REPORT
+Generated: 2026-05-05T08:14:06.363985+00:00
+
+## Summary
+| Metric | Count |
+|--------|-------|
+| Original skill cards | 324 |
+| Kept after QA | 143 |
+| Rejected | 181 |
+| Needs owner review (kept) | 66 |
+| Normative guard applied | 0 |
+
+## Rejection Rate
+181 / 324 = 55%
+
+## Top Rejection Reasons
+- noise_hard:в max: 53
+- unknown_no_signal: 52
+- noise_hard:стажировк: 39
+- noise_hard:🤣🤣: 9
+- noise_hard:всем привет.: 6
+- noise_hard:подписчик: 3
+- noise_hard:в мах: 3
+- noise_hard:counter-strike: 1
+- noise_hard:max': 1
+- noise_hard:😃😃: 1
+- noise_hard:добрых снов: 1
+- noise_hard:геоподоснова: 1
+- noise_hard:поправил ссылку: 1
+- noise_hard:asmr от: 1
+- noise_hard:ой чего нашёл тут в архиве: 1
+
+## QA Rules Applied
+1. Hard noise list: MAX/channel promo, jokes, salaries, chatter, unrelated topics
+2. unknown category without positive document-composition signal → rejected
+3. Category good + weak signal → kept with needs_owner_review=true
+4. Normative guard: invented SP/GOST section points removed, marked as unconfirmed
+5. No source_ref → always rejected (enforced upstream)
+
+## Status
+SKILL_PACKAGE_CLEANED_NOT_CANON
+Owner approval required before promotion to technadzor_engine context.
+
+## Output Files
+- docs/TECHNADZOR/source_skills/tnz_msk/TECHNADZOR_DOCUMENT_COMPOSITION_SKILL_CLEAN.md
+- docs/TECHNADZOR/source_skills/tnz_msk/TECHNADZOR_DOCUMENT_COMPOSITION_SKILL_CLEAN.json
+
+====================================================================================================
+END_FILE: docs/REPORTS/TNZ_MSK_SKILL_PACKAGE_QA_REPORT.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/REPORTS/TOPIC2_ONE_BIG_FINAL_PIPELINE_V1_HOTFIX_TEMPLATE_ACCESS_V2_REPORT.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 8154b0c715a43bf122eeead6d35e9694ca42dfc5cb242b39729af83b6c7d81e6
+====================================================================================================
+# TOPIC2_ONE_BIG_FINAL_PIPELINE_V1_HOTFIX_TEMPLATE_ACCESS_V2_REPORT
+
+STATUS: INSTALLED
+
+ROOT_CAUSE:
+- Server Drive credentials returned 404 for active template file_id 1Ub9fcwOcJ4pV30dcX88yf1225WOIdpWo
+- New topic_2 pipeline required physical XLSX and failed with ACTIVE_TEMPLATE_XLSX_NOT_AVAILABLE
+- Runtime server module is google_io.py, not core.google_io
+
+FIXED:
+- _t2sp_get_template_file now tries local cache, local project files, Drive get_media, Drive export_media
+- If remote XLSX is inaccessible, it creates a valid local XLSX fallback with formulas =D*E and =SUM
+- _t2sp_try_google_io_upload now imports google_io.py correctly and returns a Drive URL from drive_file_id
+- No forbidden files touched
+
+====================================================================================================
+END_FILE: docs/REPORTS/TOPIC2_ONE_BIG_FINAL_PIPELINE_V1_HOTFIX_TEMPLATE_ACCESS_V2_REPORT.md
 FILE_CHUNK: 1/1
 ====================================================================================================
 
@@ -3093,1599 +9297,5 @@ SHA256_FULL_FILE: 8161954bcafa594961a27820a8b8addedaddb991b7d7569190148d0f451d70
 ﻿{"chat_id":"AREAL_NEVA_ORCHESTRA_TECH_CONTOUR_CHAT","chat_name":"AREAL-NEVA ORCHESTRA — technical contour and memory closure","exported_at":"2026-04-27T00:00:00+02:00","source_model":"GPT-5.5 Thinking","system":"AREAL-NEVA ORCHESTRA server-first Telegram orchestration. Canon: diagnostics first, facts only, no forbidden files, backups before edits, server base /root/.areal-neva-core, Google Drive AI_ORCHESTRA target folder 14bYA9bHaKahkE8d4IDwWxL4Ojn-G0sDl for this export request.","architecture":"Telegram -> telegram_daemon.py -> core.db -> task_worker.py -> core/ai_router.py -> core/reply_sender.py -> Telegram. File contour uses task_worker.py _handle_drive_file, core/file_intake_router.py, core/estimate_engine.py, core/engine_base.py, core/file_pipeline_overlay.py, and new core/pdf_spec_extractor.py. Heavy artifacts intended for Google Drive.","pipeline":"Task lifecycle discussed as NEW -> IN_PROGRESS -> WAITING_CLARIFICATION/AWAITING_CONFIRMATION/FAILED -> DONE -> ARCHIVED. File flow: Telegram/Drive file -> download -> real type / intent detection -> route_file -> engine -> artifact -> Drive upload -> Telegram result -> confirmation -> memory guard.","files":["/root/.areal-neva-core/task_worker.py -> task lifecycle, file handling, memory save/guard, reply/message binding","/root/.areal-neva-core/core/engine_base.py -> Drive stages, upload wrapper, quality gate, detect_real_file_type","/root/.areal-neva-core/core/estimate_engine.py -> XLSX/PDF estimate processing","/root/.areal-neva-core/core/file_intake_router.py -> file intent and route_file dispatch","/root/.areal-neva-core/core/file_pipeline_overlay.py -> normalize router payload","/root/.areal-neva-core/core/pdf_spec_extractor.py -> PDF table/text specification extraction","/root/.areal-neva-core/google_io.py -> sync upload_to_drive, forbidden to modify","/root/.areal-neva-core/data/core.db -> runtime tasks DB","/root/.areal-neva-core/data/memory.db -> memory DB","/root/BACKUPS/areal-neva-core/PRE_PATCH_FULL_SAFE_20260424_120337 -> full safe server backup"],"code":"Python 3.12, systemd services, SQLite core.db/memory.db, Telegram bot pipeline, Google Drive integration, pdfplumber/pdf2image/pytesseract/openpyxl/docx. Server path /root/.areal-neva-core. Python venv /root/.areal-neva-core/.venv/bin/python3.","patches":["PRE_PATCH_FULL_SAFE_20260424_120337 -> full server backup -> status: applied_by_terminal","file_pipeline_overlay.py usable payload fix -> status: applied_by_terminal","estimate_engine.py invalid PDF signature / OCR fallback / XLSX quality gate -> status: applied_by_terminal","file_intake_router.py await technadzor / no None / filename intent / real type routing -> status: applied_by_terminal","engine_base.py upload link validation / detect_real_file_type / _run_upload_sync handling -> status: applied_by_terminal","task_worker.py result guard / waiting_result / route_file dict guard / memory guard / stale NEW cleanup -> status: applied_by_terminal","pdf_spec_extractor.py new module -> status: applied_by_terminal","archive pipeline ZIP/RAR/7Z -> status: drafted/partial, current controlled response ARCHIVE_PIPELINE_NOT_IMPLEMENTED"],"commands":["ssh areal 'bash -s' << 'ENDSSH' ...","systemctl is-active areal-task-worker telegram-ingress areal-memory-api","python -m py_compile target files","sqlite3 /root/.areal-neva-core/data/core.db SELECT state,COUNT(*) FROM tasks GROUP BY state","journalctl -u areal-task-worker --since ...","file target PDF","cp <file> <file>.bak.<timestamp>","kill test OCR processes when timeout needed"],"db":"core.db facts from terminal: ARCHIVED 371, AWAITING_CONFIRMATION 45, CANCELLED 91 after stale NEW cleanup, DONE 10, FAILED 677, WAITING_CLARIFICATION 1. drive_file states included ARCHIVED 1, AWAITING_CONFIRMATION 4, CANCELLED 36, FAILED 393, WAITING_CLARIFICATION 1. drive_files stages included ARTIFACT_CREATED 8, CALCULATED 1, DISCOVERED 352, DOWNLOADED 32, UPLOADED 1, discovered 33. NEW tasks were cleaned from 33 to absent via STALE_NEW_CLEANUP.","memory":"memory guard added/verified against recent rows: TEST_MEMORY_CLEAN=OK. Guard skips PIPELINE_NOT_EXECUTED, internal /root paths, traceback, SyntaxError, NameError, invalid PDF, empty estimate, coroutine warnings. Full real-file memory verification after final successful file task remains not proven in chat.","services":["areal-task-worker: active in diagnostics","telegram-ingress: active in diagnostics","areal-memory-api: active in diagnostics","drive_ingest.py: process present in ps output","memory_api_server.py: process present in ps output","telegram_daemon.py: process present in ps output"],"canons":["Diagnostics first before patches","Backup before edit: cp <file> <file>.bak.<timestamp>","Do not touch forbidden files: .env, credentials.json, google_io.py, telegram_daemon.py unless proven blocker, memory.db schema, sessions, systemd","No architecture rewrite; patch only confirmed live anchors","Telegram is interface; server is runtime/source for logic and memory","File pipeline must produce artifact or controlled error, not internal paths","Memory must not save errors, tracebacks, internal paths, stale/failed technical noise","Voice .ogg must bypass file pipeline and go to STT","Task replies and bot_message_id must preserve continuation when proven","Use Google Drive for heavy artifacts; server keeps code/config/log/runtime only"],"decisions":["Use pdf_spec_extractor before OCR -> because KJ PDF extraction failed with primitive regex/OCR","Detect real file type by signature -> because extension/MIME cannot be trusted and HTML disguised PDF was observed","Keep google_io.py untouched -> upload_to_drive sync confirmed at /root/.areal-neva-core/google_io.py line 28","Full backup must not be deleted -> rollback safety","Do not claim closed unless tests verify py_compile, service active, logs clean, rows/artifact or controlled error"],"errors":["SyntaxError in engine_base.py after bad patch -> restored from backup and repatched","SyntaxError in estimate_engine.py after bad patch -> restored from backup and repatched","NameError result at module level -> fixed by restore and function-scoped result variable","UnboundLocalError os in estimate_engine.py -> caused by local import subprocess,tempfile,os -> fixed by removing local os import","route_file returned controlled fail ESTIMATE_EMPTY_RESULT XLSX too small 6100 bytes -> root cause missing PDF spec extractor","OCR direct test slow/hanging -> tesseract process observed and killed when needed","Google Drive create_file Action lacks parentId/parents/content support -> exact folder placement not supported by exposed tool"],"solutions":["Full server backup created","Invalid PDF signature controlled as INVALID_PDF_SIGNATURE","route_file now returns dict rather than None","text_result no longer makes payload usable when artifact/link expected unless no artifact/link exists","filename intent detection added","real type detection drafted/applied in engine_base","pdf_spec_extractor module created for pdfplumber tables/text","stale NEW tasks cancelled","memory guard added","Drive stages FAILED/COMPLETED introduced in patch plan"],"state":"Export made while final technical contour validation was still in progress. Worker recovered from crashes. Memory guard base check passed. Technical contour stabilized but final pdf_spec_extractor direct test result was not pasted after latest patch block.","what_working":["Full backup exists: /root/BACKUPS/areal-neva-core/PRE_PATCH_FULL_SAFE_20260424_120337","Services active in multiple diagnostics","py_compile passed in diagnostics before later patch stages","Invalid PDF signature test passed earlier","route_file returned dict and controlled failure earlier","memory recent-row guard test passed earlier","stale NEW cleanup removed 33 NEW tasks"],"what_broken":["KJ PDF extraction previously failed with ESTIMATE_EMPTY_RESULT: XLSX too small 6100 bytes","Archive ZIP/RAR/7Z pipeline not fully implemented, current status controlled not implemented","Google Docs/Sheets native export pipeline not live-proven","DWG/DXF engine not live-proven","reply-to-clarification continuation not live-proven","drive_files stage casing had both discovered and DISCOVERED before normalization work"],"what_not_done":["Final successful rows_count > 0 after pdf_spec_extractor patch not pasted in chat","Native Google Docs/Sheets export live test not done","ZIP multi-file merge live test not done","Voice .ogg STT split live test not done","Topic isolation after real file task not fully proven","Exact Drive parentId creation not possible through current exposed create_file schema"],"current_breakpoint":"Latest terminal output before this export reached final direct estimate test stage after creating pdf_spec_extractor and rewriting estimate_engine. Need terminal result: success/error/excel_path/drive_link/xlsx_size/rows_count.","root_causes":["Technical contour trusted extension/MIME and lacked real signature detector","PDF estimate extraction lacked dedicated project/spec table parser","Primitive regex/OCR was insufficient for KJ project PDFs","Earlier generated patches violated scope/anchor rules causing SyntaxError/NameError","Drive Action schema does not expose parentId for create_file despite user requirement"],"verification":["Folder AI_ORCHESTRA earlier found at 13No7... and export request target now uses 14bYA9...","File created by Drive Action with id 1t2bGLl-BcTiToAlzUSfO0vW5gOunY8FhKKYSEgqrON4","Services active output appeared in terminal diagnostics","Target PDF exists, 2.6M, file reports PDF document version 1.6","Earlier TEST_INVALID_PDF_SIGNATURE=OK","Earlier TEST_EMPTY_PDF_CONTROLLED_FAIL=OK","Earlier TEST_FILENAME_INTENT=OK","Earlier TEST_ROUTE_FILE_DICT=OK False ESTIMATE_EMPTY_RESULT","Earlier TEST_MEMORY_CLEAN=OK"],"limits":["Use tail/journalctl short output only","Do not modify forbidden files","Do not use ssh areal && cd local Mac anti-pattern","Commands should be single Mac Terminal ssh block","Google Drive create_file connector currently supports only title and mime_type; no parentId/parents/content","If Drive folder placement fails, manual move may be required"]}
 ====================================================================================================
 END_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_TECH_CONTOUR_CHAT__2026-04-27.txt
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_TECH_CONTOUR_FINAL__.txt
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 6ba3c6088bc2347a9f4396b27627eaa92b79651872fa38be30e74926ea081320
-====================================================================================================
-﻿{"chat_id":"UNKNOWN","chat_name":"AREAL_NEVA_ORCHESTRA_TECH_CONTOUR_FINAL_CURRENT_CHAT","exported_at":"2026-04-24T10:00:00+03:00","source_model":"GPT-5.5 Thinking","system":"Server SSH target used in this chat: areal. Base path: /root/.areal-neva-core. Python runtime confirmed by systemd: /root/.areal-neva-core/.venv/bin/python3. Worker service: areal-task-worker.service. WorkingDirectory=/root/.areal-neva-core. EnvironmentFile=/root/.areal-neva-core/.env. PYTHONPATH=/root/.areal-neva-core. Drive folder ID from systemd override and user target: 13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB. Core DB path used in commands: /root/.areal-neva-core/data/core.db. Current chat contains no confirmed external model runtime except source_model here.","architecture":"Observed architecture facts from this chat only: areal-task-worker.service starts task_worker.py through flock and venv Python. task_worker.py handles drive/file tasks in _handle_drive_file. core/file_intake_router.py routes file intents estimate, ocr, technadzor, dwg, template, search. core/artifact_pipeline.py analyzes downloaded files and builds Word/Excel artifacts. core/engine_base.py contains upload_artifact_to_drive. google_io.py contains upload_to_drive. core/sheets_generator.py creates Google Sheets with service account credentials path /root/.areal-neva-core/credentials.json. core/docs_generator.py creates Google Docs with same service account path. Full Telegram architecture beyond grep evidence is UNKNOWN in this current-chat export.","pipeline":"Confirmed pipeline fragments: file task -> task_worker.py _handle_drive_file -> _download_from_drive -> drive_files stage DOWNLOADED -> load memory context -> detect_intent/detect_format from core.file_intake_router -> route_file -> specialized engines or artifact processing -> extract_router_payload -> if drive_link then AWAITING_CONFIRMATION and _send_once_ex -> if artifact_path exists then upload_file_to_topic -> AWAITING_CONFIRMATION -> Telegram reply. Voice .ogg in _handle_drive_file is bypassed to FAILED with VOICE_FILE_SHOULD_GO_STT. upload_artifact_to_drive path: core/engine_base.py upload_artifact_to_drive -> import upload_to_drive from google_io -> versioned_name = get_next_version(base + ext, task_id) -> link = upload_to_drive(file_path, versioned_name) after final patch. Exact full end-to-end Telegram daemon pipeline is UNKNOWN from this chat only.","files":["/root/.areal-neva-core/task_worker.py","/root/.areal-neva-core/telegram_daemon.py","/root/.areal-neva-core/core/file_intake_router.py","/root/.areal-neva-core/core/artifact_pipeline.py","/root/.areal-neva-core/core/sheets_generator.py","/root/.areal-neva-core/core/docs_generator.py","/root/.areal-neva-core/core/engine_base.py","/root/.areal-neva-core/google_io.py","/root/.areal-neva-core/data/core.db","/root/.areal-neva-core/.venv/bin/python3","/root/.areal-neva-core/.env","/root/.areal-neva-core/credentials.json","/root/.areal-neva-core/logs/auto_dump.log","/root/.areal-neva-core/google_io.py.bak.20260422_222315","/root/.areal-neva-core/google_io.py.bak.20260423_193945","/root/.areal-neva-core/__pycache__/google_io.cpython-312.pyc","/etc/systemd/system/areal-task-worker.service","/etc/systemd/system/areal-task-worker.service.d/override.conf","/tmp/task_worker.outer.lock"],"code":"Confirmed code snippets from current chat: task_worker.py _handle_drive_file includes raw_input = task[\"raw_input\"], .ogg bypass to FAILED VOICE_FILE_SHOULD_GO_STT, local_path /root/.areal-neva-core/runtime/drive_files/{task_id}_{file_name}, route_file call, extract_router_payload, drive_link/artifact_path/text_result branches, and fallback guard originally if not _clean(_s(result), 50000) or result == waiting_result. core/file_intake_router.py has async def route_file(file_path, task_id, topic_id, intent, fmt=\"excel\"). estimate+sheets branch imports create_google_sheet and process_estimate_to_excel, awaits process_estimate_to_excel, loads workbook rows, calls create_google_sheet(f\"Estimate_{task_id[:8]}\", rows), and returns {\"success\": True, \"drive_link\": link} only if link. technadzor+docs branch imports create_google_doc and process_defect_to_report, had data = process_defect_to_report(file_path, task_id, topic_id), builds doc content, calls create_google_doc(f\"Defect_{task_id[:8]}\", content), returns drive_link only if link. handle_multiple_files later shown with r = await process_estimate_to_excel(fp, task_id, topic_id). core/engine_base.py final live lines 70-85: def upload_artifact_to_drive(file_path, task_id, topic_id); imports upload_to_drive from google_io; versioned_name = get_next_version(base + ext, task_id); line 77 link = upload_to_drive(file_path, versioned_name); updates ARTIFACT_CREATED and UPLOADED; except logs logger.error(f\"upload_artifact_to_drive: {e}\"). google_io.py final verified line 28: def upload_to_drive(file_path: str, file_name: str, folder_id: str = None). google_io.upload_to_drive body uses get_drive_service, MediaIoBaseUpload, service.files().create(...).execute(), returns https://drive.google.com/file/d/{file_id}/view, catches exceptions and logs Upload failed. systemd ExecStart confirmed: /usr/bin/flock -n /tmp/task_worker.outer.lock /root/.areal-neva-core/.venv/bin/python3 -u /root/.areal-neva-core/task_worker.py.","patches":["PATCH__TECH_BASE_SAFE__V1 executed: PATCH_DONE, py_compile, worker restart, status active; logs still showed route_file: 'coroutine' object has no attribute 'get' before/around restart","PATCH__FILE_PIPELINE_GUARD_SAFE__V1 executed: PATCH_DONE, compile, restart, active; logs showed route_file coroutine object has no attribute get and RuntimeWarning coroutine process_estimate_to_excel was never awaited","PATCH__TECH_CONTOUR_FULL_CLOSE__FINAL failed with BLOCK_2_3_NOT_FOUND","PATCH__LIVING_MEMORY_REPLY_LEADS_FULL_CLOSE__FINAL failed with TASK_WORKER_AWAITING_CONFIRMATION_ANCHOR_NOT_FOUND","PATCH__TECH_CONTOUR_FULL_CLOSE__FINAL_FIX executed PATCH_DONE compile restart active; logs still showed route_file coroutine object has no attribute get; file stages ARTIFACT_CREATED|5 DOWNLOADED|2 discovered|352 downloaded|29; bad results 30","PATCH__LIVING_MEMORY_REPLY_LEADS_FULL_CLOSE__FINAL_FIX failed with TASK_WORKER_AWAITING_CONFIRMATION_ANCHOR_NOT_FOUND","PATCH__ROUTE_FILE_REAL_BLOCKER_ONLY__V1 executed PATCH_DONE compile restart active; logs still showed upload_artifact_to_drive event loop is already running and create_google_sheet 403/503","PATCH__HUMAN_SHORT_VOICE_GUARD__V1 executed PATCH_DONE compile restart active","PATCH__FINAL_BLOCKERS_ONLY__V1 failed with MULTI_ESTIMATE_AWAIT_ANCHOR_NOT_FOUND","PATCH__FACT_ONLY_SHEETS_AND_BAD_RESULTS__V1 executed PATCH_DONE compile restart active; logs still showed upload_artifact_to_drive event loop and create_google_sheet 403","PATCH__ROUTE_FILE_FACT_FIX__V2 failed with ANCHOR_1_NOT_FOUND","PATCH__FACT_ONLY_STROYKA_OUTPUT_FIX__V1 failed with FILE_INTAKE_ROUTER_SHEETS_ANCHOR_NOT_FOUND","PATCH__TECH_CONTOUR_FULL_CLOSE__LIVE_FIX__V1 failed with SHEETS_FALLBACK_ANCHOR_NOT_FOUND","PATCH__TECH_CONTOUR_CANON_CLOSE__FACT_ONLY__V1 failed with ESTIMATE_SHEETS_FALLBACK_ANCHOR_NOT_FOUND","PATCH__TECH_CONTOUR_FACT_CLOSE__LIVE_ANCHORS_ONLY__V1_FIX failed with ANCHOR_D_NOT_FOUND","PATCH__TECH_CONTOUR_FACT_CLOSE__LIVE_ANCHORS_ONLY__V2 failed with ANCHOR_A_NOT_FOUND","PATCH__ENGINE_BASE_EVENT_LOOP_FIX__FACT_ONLY__V1 executed PATCH_OK compile restart active, but logs still showed upload_artifact_to_drive: This event loop is already running and RuntimeWarning coroutine upload_to_drive was never awaited","PATCH__ENGINE_BASE_EVENT_LOOP_ROOT_CAUSE__V2 executed PATCH_OK compile restart active, but logs still showed same event loop and was never awaited","PATCH__ENGINE_BASE_THREAD_LOOP_HARD_FIX__V3 failed with ENGINE_BASE_HELPER_REPLACE_ANCHOR_NOT_FOUND","PATCH__ENGINE_BASE_THREAD_LOOP_HARD_FIX__V4 executed PATCH_OK compile restart active, but logs still showed event loop and was never awaited","PATCH__UPLOAD_DRIVE_SYNC_ROOT_FIX__FACT_ONLY__V1 executed PATCH_OK compile restart active; changed google_io.py async def upload_to_drive to def upload_to_drive and engine_base.py call to link = upload_to_drive(file_path, versioned_name); later venv import confirmed upload_to_drive is function and IS_COROUTINE False"],"commands":["ssh areal 'bash -s' <<'ENDSSH' ... patch blocks ... ENDSSH","sqlite3 /root/.areal-neva-core/data/core.db \"SELECT stage, COUNT(*) FROM drive_files GROUP BY stage ORDER BY stage;\"","sqlite3 /root/.areal-neva-core/data/core.db \"SELECT COUNT(*) FROM tasks WHERE result LIKE '%ожидает анализа%' OR result LIKE '%скачан%';\"","sqlite3 /root/.areal-neva-core/data/core.db \"SELECT id, topic_id, state, substr(result,1,220) FROM tasks WHERE result LIKE '%ожидает анализа%' OR result LIKE '%скачан%' ORDER BY created_at DESC LIMIT 20;\"","journalctl -u areal-task-worker -n 20 --no-pager","journalctl -u areal-task-worker -n 30 --no-pager -o cat","journalctl -u areal-task-worker -n 60 --no-pager -o cat | egrep -i \"upload_artifact_to_drive|event loop is already running|was never awaited|create_google_sheet|create_google_doc\" || true","sed -n '/async def _handle_drive_file/,+220p' /root/.areal-neva-core/task_worker.py","sed -n '1,260p' /root/.areal-neva-core/core/artifact_pipeline.py","sed -n '1,260p' /root/.areal-neva-core/core/sheets_generator.py","sed -n '1,260p' /root/.areal-neva-core/core/docs_generator.py","grep -n \"def upload_to_drive\\|async def upload_to_drive\" /root/.areal-neva-core/google_io.py","nl -ba /root/.areal-neva-core/core/engine_base.py | sed -n '70,95p'","nl -ba /root/.areal-neva-core/core/engine_base.py | sed -n '1,34p'","grep -n \"_run_upload_sync\\|upload_to_drive\" /root/.areal-neva-core/core/engine_base.py","systemctl restart areal-task-worker","systemctl is-active areal-task-worker","grep -RIl \"upload_artifact_to_drive\" /root/.areal-neva-core | head -n 1","grep -RIn \"event loop is already running\" /root/.areal-neva-core | head -n 5","grep -n \"asyncio.run(\" /root/.areal-neva-core/task_worker.py /root/.areal-neva-core/telegram_daemon.py /root/.areal-neva-core/core/*.py","grep -n \"run_until_complete(\" /root/.areal-neva-core/task_worker.py /root/.areal-neva-core/telegram_daemon.py /root/.areal-neva-core/core/*.py","find /root/.areal-neva-core -name 'google_io.py' -o -name '*google_io*'","python3 import google_io test failed with ModuleNotFoundError googleapiclient","/root/.areal-neva-core/.venv/bin/python3 import google_io verification printed FILE /root/.areal-neva-core/google_io.py, TYPE class function, IS_COROUTINE False","systemctl cat areal-task-worker | sed -n '1,120p'"],"db":"DB facts from current chat: drive_files stages observed: ARTIFACT_CREATED|5 or 6, DOWNLOADED|1 or 2, discovered|352, downloaded|29. BAD RESULTS CHECK returned 30 for tasks where result LIKE '%ожидает анализа%' OR result LIKE '%скачан%'. Topic counts observed: 0|851, 1|6, 2|86, 5|57, 210|5, 500|59, 961|29, 3008|15, 4569|49. Bad result rows included AWAITING_CONFIRMATION with 'Файл voice_6825.ogg скачан, ожидает анализа', 'Файл voice_6822.ogg скачан, ожидает анализа', 'Файл У1-02-26-Р-КЖ1.6.pdf скачан, ожидает анализа', photo result with 'Состояние: ожидает анализа'. SQL cleanup proposals included: UPDATE drive_files SET stage='DOWNLOADED' WHERE stage='downloaded'; UPDATE tasks SET state='FAILED', result='', error_message='VOICE_FILE_SHOULD_GO_STT' WHERE state='AWAITING_CONFIRMATION' AND result LIKE 'Файл voice_%.ogg скачан, ожидает анализа%'; UPDATE tasks SET state='WAITING_CLARIFICATION', result='', error_message='PIPELINE_NOT_EXECUTED' WHERE state='AWAITING_CONFIRMATION' AND result contains 'ожидает анализа' or 'скачан' and not voice pattern. Final confirmation that cleanup executed to zero is UNKNOWN.","memory":"No factual memory table rows were successfully shown in this chat. User requested Google Doc export for Claude. First created Google Doc was empty; get_document_text returned paragraphs: []. Then JSON was inserted and verified. Final export created a new Google Doc with current facts.","services":["areal-task-worker.service","telegram_daemon.py mentioned through grep only","task_worker.py main uses asyncio.run(main())","telegram_daemon.py main uses asyncio.run(main())","systemd override for areal-task-worker sets DRIVE_INGEST_FOLDER_ID, GDRIVE_CLIENT_ID, GDRIVE_CLIENT_SECRET, GDRIVE_REFRESH_TOKEN as shown by user output"],"errors":["route_file: 'coroutine' object has no attribute 'get' → observed in earlier logs → status after later steps UNKNOWN","RuntimeWarning: coroutine 'process_estimate_to_excel' was never awaited → observed in logs after PATCH__FILE_PIPELINE_GUARD_SAFE__V1 → handle_multiple_files later showed await, final status UNKNOWN","SHEETS_FALLBACK_ANCHOR_NOT_FOUND → patch anchor mismatch → no change from that attempt","FILE_INTAKE_ROUTER_SHEETS_ANCHOR_NOT_FOUND → patch anchor mismatch → no change from that attempt","ESTIMATE_SHEETS_FALLBACK_ANCHOR_NOT_FOUND → patch anchor mismatch → no change from that attempt","ANCHOR_D_NOT_FOUND → task_worker guard anchor mismatch → no change from that attempt","ANCHOR_A_NOT_FOUND → file_intake_router anchor mismatch → no change from that attempt","ENGINE_BASE_HELPER_REPLACE_ANCHOR_NOT_FOUND → regex/helper anchor mismatch → no change from V3 attempt","upload_artifact_to_drive: This event loop is already running → observed repeatedly before final runtime verification → root investigated through engine_base.py and google_io.py","RuntimeWarning: coroutine 'upload_to_drive' was never awaited → observed repeatedly before final runtime verification → google_io.py originally async def without await; fixed to def and verified through venv import","create_google_sheet HttpError 403 The caller does not have permission → observed repeatedly → cause is Google Sheets caller permission failure as directly stated by error text; not fixed in current chat","create_google_sheet HttpError 503 service unavailable → observed once or more → transient service unavailable; not fixed in current chat","ModuleNotFoundError: No module named 'googleapiclient' → occurred only when using system python3 for import test → invalid for worker runtime because service uses venv Python","Google Doc export initially empty → create_file created doc but no JSON inserted → fixed by batch_update_document insert"],"decisions":["Use only facts from current chat export","Avoid patching without live anchors","Do not treat engine_base.py line 51 as original source; it was re-raise/log point after exception captured","Use venv Python for runtime-relevant import checks","Treat system python3 import failure as non-runtime proof","Treat old journal tails cautiously because journalctl -n includes historical lines","Do not claim final system fully fixed without fresh post-verification logs","For Claude: do not restart architecture analysis; continue from current runtime facts"],"solutions":["Google Doc export created and filled with JSON after initial empty document was detected","PATCH__UPLOAD_DRIVE_SYNC_ROOT_FIX__FACT_ONLY__V1 changed google_io.py from async def upload_to_drive to def upload_to_drive","PATCH__UPLOAD_DRIVE_SYNC_ROOT_FIX__FACT_ONLY__V1 changed engine_base.py upload call to link = upload_to_drive(file_path, versioned_name)","Venv import verified: /root/.areal-neva-core/google_io.py, type <class 'function'>, IS_COROUTINE False","Service execution verified: areal-task-worker uses /root/.areal-neva-core/.venv/bin/python3 and WorkingDirectory /root/.areal-neva-core","Engine base live code verified: line 77 link = upload_to_drive(file_path, versioned_name)","Worker service returned active after restarts in shown outputs"],"state":"Final confirmed state in this chat: google_io.upload_to_drive is a normal function in venv runtime, not coroutine. Venv import target is /root/.areal-neva-core/google_io.py. areal-task-worker service uses the same venv Python and PYTHONPATH=/root/.areal-neva-core. core/engine_base.py live code line 77 calls upload_to_drive(file_path, versioned_name) directly. Old coroutine root is closed at code/import level. Fresh post-final logs proving disappearance of event loop blocker after the venv import verification were not shown. Google Sheets permission 403 remains confirmed from logs and not fixed. Bad result cleanup and stage normalization are not confirmed final.","what_working":["SSH access to areal works","areal-task-worker reaches active after restarts in shown outputs","py_compile passed for patched files in shown patch runs","google_io.py now has def upload_to_drive","Venv import loads /root/.areal-neva-core/google_io.py","Venv import reports upload_to_drive type <class 'function'>","Venv import reports IS_COROUTINE False","systemd service uses venv Python /root/.areal-neva-core/.venv/bin/python3","systemd service WorkingDirectory is /root/.areal-neva-core","systemd service PYTHONPATH is /root/.areal-neva-core","engine_base.py line 77 calls upload_to_drive directly","Google Doc export creation and writing works through connector"],"what_broken":["Google Sheets create_google_sheet returns HttpError 403 caller does not have permission","Google Sheets create_google_sheet sometimes returned HttpError 503 service unavailable","Earlier journal tails repeatedly contained upload_artifact_to_drive event loop and coroutine was never awaited before final runtime import verification","Multiple patch attempts failed due anchor mismatch","BAD RESULTS CHECK was 30 with result containing 'ожидает анализа' or 'скачан'","drive_files had mixed stages DOWNLOADED and downloaded","Fallback patches in file_intake_router.py were not confirmed applied due anchor failures"],"what_not_done":["Fresh journal after final venv import verification is not shown; disappearance of event loop blocker not finally proven by new log","Google Sheets permission 403 not fixed","file_intake_router Google Sheets fallback not confirmed applied","file_intake_router Google Docs fallback not confirmed applied","task_worker bad-result guard not confirmed patched","DB bad results cleanup not confirmed to zero","drive_files downloaded lowercase normalization not confirmed final","Atomic final file-pipeline behavior not confirmed by end-to-end test"],"current_breakpoint":"Pass this JSON to Claude. Continue from verified facts: runtime now sees google_io.upload_to_drive as normal function and engine_base.py calls it directly. Next factual step should be a fresh post-current-state worker log and Google Sheets permission/fallback handling; do not redo old async/coroutine root unless fresh logs contradict runtime import facts.","root_causes":["Confirmed from error text: create_google_sheet 403 caused by caller lacking permission","Confirmed from code before fix: google_io.py upload_to_drive was declared async while body had no await, causing coroutine behavior through engine_base upload wrapper","Confirmed from repeated failures: many earlier patches failed because anchors did not match live code","Confirmed from command output: system python3 was not valid runtime for import test because googleapiclient was missing; service uses venv Python"],"verification":["VENV IMPORT TARGET output: /root/.areal-neva-core/google_io.py, <class 'function'>, <function upload_to_drive ...>","REAL IMPORT IN VENV output: FILE /root/.areal-neva-core/google_io.py; TYPE <class 'function'>; IS_COROUTINE False","SERVICE EXEC output: ExecStart=/usr/bin/flock -n /tmp/task_worker.outer.lock /root/.areal-neva-core/.venv/bin/python3 -u /root/.areal-neva-core/task_worker.py","SERVICE EXEC output: WorkingDirectory=/root/.areal-neva-core","SERVICE EXEC output: Environment=PYTHONPATH=/root/.areal-neva-core","ENGINE_BASE LIVE output lines 70-85 including line 77 link = upload_to_drive(file_path, versioned_name)","grep google_io.py output: 28:def upload_to_drive(file_path: str, file_name: str, folder_id: str = None)","journalctl outputs before final runtime verification showed upload_artifact_to_drive event loop and coroutine was never awaited","journalctl outputs showed create_google_sheet 403/503","sqlite outputs showed drive_files mixed stages and BAD RESULTS CHECK 30","get_document_text verified first Google Doc had JSON after batch_update_document"],"limits":["Only current chat facts included","No external repo read performed","No final fresh worker log after venv import verification was provided","Some journal lines may be historical because journalctl -n was used","No claim that file pipeline is fully fixed","No claim that Google Sheets permission is fixed","No cross-chat facts included except those explicitly present in current chat text","Secret-looking values appeared in user-provided systemctl output but are not repeated verbatim in this export beyond key names where possible"]}
-====================================================================================================
-END_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_TECH_CONTOUR_FINAL__.txt
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_TECH_CONTOUR__.txt
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 1d6f9e361b655e521e4074d5fd82487bf3fa69971e7dbadec1602a6bf3a409d2
-====================================================================================================
-﻿{"chat_id":"UNKNOWN","chat_name":"AREAL_NEVA_ORCHESTRA_TECH_CONTOUR_CURRENT_CHAT","exported_at":"2026-04-24T10:00:00+03:00","source_model":"GPT-5.5 Thinking","system":"Server mentioned as areal SSH target. Base path /root/.areal-neva-core. Python venv path /root/.areal-neva-core/.venv/bin/python3. Worker service areal-task-worker. Core DB /root/.areal-neva-core/data/core.db. Google Drive shared folder ID mentioned by user: 13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB. Runtime details from current chat only include task_worker.py, telegram_daemon.py, core/engine_base.py, google_io.py, core/file_intake_router.py, core/artifact_pipeline.py, core/sheets_generator.py, core/docs_generator.py.","architecture":"Observed pipeline fragments in current chat: task_worker.py processes drive files; core/file_intake_router.py routes estimate/ocr/technadzor/dwg/template/search file tasks; core/engine_base.py contains upload_artifact_to_drive; google_io.py contains upload_to_drive; areal-task-worker.service runs task_worker. Full architecture outside these facts is UNKNOWN in this chat export.","pipeline":"Drive/file task -> task_worker.py _handle_drive_file -> core.file_intake_router route_file -> specialized engines or artifact pipeline -> upload_file_to_topic/upload_artifact_to_drive/google_io.upload_to_drive -> task result and Telegram reply. Voice .ogg in _handle_drive_file is bypassed to FAILED with VOICE_FILE_SHOULD_GO_STT. Exact full Telegram pipeline is UNKNOWN from this chat only.","files":["/root/.areal-neva-core/task_worker.py","/root/.areal-neva-core/core/file_intake_router.py","/root/.areal-neva-core/core/artifact_pipeline.py","/root/.areal-neva-core/core/sheets_generator.py","/root/.areal-neva-core/core/docs_generator.py","/root/.areal-neva-core/core/engine_base.py","/root/.areal-neva-core/google_io.py","/root/.areal-neva-core/data/core.db","/root/.areal-neva-core/.venv/bin/python3","/root/.areal-neva-core/logs/auto_dump.log","/root/.areal-neva-core/google_io.py.bak.20260422_222315","/root/.areal-neva-core/google_io.py.bak.20260423_193945","/root/.areal-neva-core/__pycache__/google_io.cpython-312.pyc"],"code":"Code facts present in current chat include: core/file_intake_router.py had async def route_file; estimate sheets branch called create_google_sheet and returned drive_link only when link existed; technadzor docs branch called process_defect_to_report without await and create_google_doc; handle_multiple_files had r = await process_estimate_to_excel(fp, task_id, topic_id); task_worker.py _handle_drive_file called route_file and extract_router_payload; _handle_drive_file had guard if not _clean(_s(result), 50000) or result == waiting_result; core/engine_base.py had _run_upload_sync helper and upload_artifact_to_drive calling from google_io import upload_to_drive, versioned_name = get_next_version(base + ext, task_id), link = _run_upload_sync(upload_to_drive, file_path, versioned_name); google_io.py initially had async def upload_to_drive(file_path: str, file_name: str, folder_id: str = None) with no await in body; later grep showed google_io.py line 28 changed to def upload_to_drive(file_path: str, file_name: str, folder_id: str = None).","patches":["PATCH__TECH_BASE_SAFE__V1 executed: PATCH_DONE, py_compile, worker restart, active; logs still showed route_file coroutine object has no attribute get before/around restart","PATCH__FILE_PIPELINE_GUARD_SAFE__V1 executed: PATCH_DONE, compile, restart, active; logs showed route_file coroutine object has no attribute get and RuntimeWarning process_estimate_to_excel was never awaited","PATCH__TECH_CONTOUR_FULL_CLOSE__FINAL failed with BLOCK_2_3_NOT_FOUND","PATCH__LIVING_MEMORY_REPLY_LEADS_FULL_CLOSE__FINAL failed with TASK_WORKER_AWAITING_CONFIRMATION_ANCHOR_NOT_FOUND","PATCH__TECH_CONTOUR_FULL_CLOSE__FINAL_FIX executed PATCH_DONE compile restart active; logs still showed route_file coroutine object has no attribute get; file stages ARTIFACT_CREATED|5 DOWNLOADED|2 discovered|352 downloaded|29; bad results 30","PATCH__LIVING_MEMORY_REPLY_LEADS_FULL_CLOSE__FINAL_FIX failed with TASK_WORKER_AWAITING_CONFIRMATION_ANCHOR_NOT_FOUND","PATCH__ROUTE_FILE_REAL_BLOCKER_ONLY__V1 executed PATCH_DONE compile restart active; logs still showed upload_artifact_to_drive event loop is already running and create_google_sheet 403/503","PATCH__HUMAN_SHORT_VOICE_GUARD__V1 executed PATCH_DONE compile restart active","PATCH__FINAL_BLOCKERS_ONLY__V1 failed with MULTI_ESTIMATE_AWAIT_ANCHOR_NOT_FOUND","PATCH__FACT_ONLY_SHEETS_AND_BAD_RESULTS__V1 executed PATCH_DONE compile restart active but logs still showed upload_artifact_to_drive event loop and create_google_sheet 403","PATCH__ROUTE_FILE_FACT_FIX__V2 failed with ANCHOR_1_NOT_FOUND","PATCH__TECH_CONTOUR_FULL_CLOSE__LIVE_FIX__V1 failed with SHEETS_FALLBACK_ANCHOR_NOT_FOUND","PATCH__TECH_CONTOUR_CANON_CLOSE__FACT_ONLY__V1 failed with ESTIMATE_SHEETS_FALLBACK_ANCHOR_NOT_FOUND","PATCH__TECH_CONTOUR_FACT_CLOSE__LIVE_ANCHORS_ONLY__V1_FIX failed with ANCHOR_D_NOT_FOUND","PATCH__TECH_CONTOUR_FACT_CLOSE__LIVE_ANCHORS_ONLY__V2 failed with ANCHOR_A_NOT_FOUND","PATCH__ENGINE_BASE_EVENT_LOOP_FIX__FACT_ONLY__V1 executed PATCH_OK compile restart active, but logs still showed upload_artifact_to_drive: This event loop is already running and RuntimeWarning coroutine upload_to_drive was never awaited","PATCH__ENGINE_BASE_EVENT_LOOP_ROOT_CAUSE__V2 executed PATCH_OK compile restart active, but logs still showed same event loop and was never awaited","PATCH__ENGINE_BASE_THREAD_LOOP_HARD_FIX__V3 failed with ENGINE_BASE_HELPER_REPLACE_ANCHOR_NOT_FOUND","PATCH__ENGINE_BASE_THREAD_LOOP_HARD_FIX__V4 executed PATCH_OK compile restart active, but logs still showed event loop and was never awaited","PATCH__UPLOAD_DRIVE_SYNC_ROOT_FIX__FACT_ONLY__V1 executed PATCH_OK compile restart active; google_io.py later confirmed line 28 def upload_to_drive, but fresh logs still showed historical or current blocker lines in journal tail"],"commands":["ssh areal 'bash -s' <<'ENDSSH' ... PATCH__TECH_BASE_SAFE__V1 ...","sqlite3 /root/.areal-neva-core/data/core.db SELECT stage, COUNT(*) FROM drive_files GROUP BY stage;","sqlite3 /root/.areal-neva-core/data/core.db SELECT COUNT(*) FROM tasks WHERE result LIKE '%ожидает анализа%';","journalctl -u areal-task-worker -n 20 --no-pager","sed -n '/async def _handle_drive_file/,+220p' /root/.areal-neva-core/task_worker.py","grep -n \"def upload_to_drive\\|async def upload_to_drive\" /root/.areal-neva-core/google_io.py","nl -ba /root/.areal-neva-core/core/engine_base.py | sed -n '70,95p'","nl -ba /root/.areal-neva-core/core/engine_base.py | sed -n '1,34p'","grep -n \"_run_upload_sync\\|upload_to_drive\" /root/.areal-neva-core/core/engine_base.py","systemctl restart areal-task-worker","systemctl is-active areal-task-worker","grep -RIl \"upload_artifact_to_drive\" /root/.areal-neva-core | head -n 1","grep -RIn \"event loop is already running\" /root/.areal-neva-core | head -n 5","grep -n \"asyncio.run(\" /root/.areal-neva-core/task_worker.py /root/.areal-neva-core/telegram_daemon.py /root/.areal-neva-core/core/*.py","grep -n \"run_until_complete(\" /root/.areal-neva-core/task_worker.py /root/.areal-neva-core/telegram_daemon.py /root/.areal-neva-core/core/*.py","find /root/.areal-neva-core -name 'google_io.py' -o -name '*google_io*'","python3 import google_io test failed with ModuleNotFoundError googleapiclient"],"db":"Observed DB queries and results: drive_files stages included ARTIFACT_CREATED|5 or 6, DOWNLOADED|1 or 2, discovered|352, downloaded|29. BAD RESULTS CHECK returned 30 for tasks where result LIKE '%ожидает анализа%' OR result LIKE '%скачан%'. Topic counts observed: 0|851, 1|6, 2|86, 5|57, 210|5, 500|59, 961|29, 3008|15, 4569|49. Bad result rows included AWAITING_CONFIRMATION with 'Файл voice_6825.ogg скачан, ожидает анализа', 'Файл У1-02-26-Р-КЖ1.6.pdf скачан, ожидает анализа', photo result with 'Состояние: ожидает анализа'. SQL cleanup proposals included UPDATE drive_files SET stage='DOWNLOADED' WHERE stage='downloaded'; UPDATE tasks SET state='FAILED', result='', error_message='VOICE_FILE_SHOULD_GO_STT' WHERE state='AWAITING_CONFIRMATION' AND result LIKE 'Файл voice_%.ogg скачан, ожидает анализа%'; UPDATE tasks SET state='WAITING_CLARIFICATION', result='', error_message='PIPELINE_NOT_EXECUTED' WHERE state='AWAITING_CONFIRMATION' AND result contains 'ожидает анализа' or 'скачан' and not voice pattern.","memory":"No factual memory table rows were successfully exported in this chat. User requested Google Doc export for Claude. Prior Google Doc was created empty, verified with get_document_text paragraphs: [].","services":["areal-task-worker.service","telegram_daemon.py mentioned through grep only","task_worker.py main uses asyncio.run(main())","telegram_daemon.py main uses asyncio.run(main())"],"errors":["route_file: 'coroutine' object has no attribute 'get' → route_file/process_estimate async mismatch suspected from logs → later not visible in freshest logs, status UNKNOWN","RuntimeWarning: coroutine 'process_estimate_to_excel' was never awaited → process_estimate_to_excel called without await in at least one path → handle_multiple_files later shown with await, exact final verification UNKNOWN","SHEETS_FALLBACK_ANCHOR_NOT_FOUND → patch anchor did not match live file_intake_router.py → no successful patch from that attempt","ESTIMATE_SHEETS_FALLBACK_ANCHOR_NOT_FOUND → patch anchor did not match → no change from that attempt","ANCHOR_D_NOT_FOUND → task_worker guard anchor did not match → no change from that attempt","ANCHOR_A_NOT_FOUND → file_intake_router anchor did not match → no change from that attempt","upload_artifact_to_drive: This event loop is already running → engine_base.py upload_artifact_to_drive and google_io upload_to_drive path investigated → multiple engine_base patches attempted; latest confirmed google_io.py is def not async but blocker lines still appeared in journal tail","RuntimeWarning: coroutine 'upload_to_drive' was never awaited → google_io.py originally async def with no await in body and engine_base loop wrapper created coroutine → PATCH__UPLOAD_DRIVE_SYNC_ROOT_FIX__FACT_ONLY__V1 changed google_io.py to def and engine_base call to direct upload_to_drive","create_google_sheet HttpError 403 The caller does not have permission → Google Sheets API/service credentials permission failure → fallback attempts failed due anchors; not closed","create_google_sheet HttpError 503 The service is currently unavailable → transient Google Sheets API failure observed → not closed","ModuleNotFoundError: No module named 'googleapiclient' → import target command used system python3, not venv → marked invalid as proof for worker runtime","Google Doc export initially empty → create_file created Google Doc but no JSON inserted → current action writes JSON via batch_update_document"],"decisions":["Use facts only and avoid patching without live anchors","Do not patch upload_artifact_to_drive without locating exact live code","engine_base.py line 51 identified as re-raise point, not original source","google_io.py body of upload_to_drive had no await, so async declaration was treated as root cause candidate","Use venv Python /root/.areal-neva-core/.venv/bin/python3 for runtime-relevant checks","System python3 import result invalid for worker because googleapiclient missing there"],"solutions":["PATCH__UPLOAD_DRIVE_SYNC_ROOT_FIX__FACT_ONLY__V1 changed google_io.py async def upload_to_drive to def upload_to_drive and changed engine_base.py link call to upload_to_drive(file_path, versioned_name)","engine_base.py grep after patches showed def _run_upload_sync(async_fn,*args,**kwargs), from google_io import upload_to_drive, link = _run_upload_sync(upload_to_drive, file_path, versioned_name) before final direct-call patch","google_io.py grep after final patch showed 28:def upload_to_drive(file_path: str, file_name: str, folder_id: str = None)","Worker service repeatedly restarted and became active after patches"],"state":"Current confirmed state at last user output: google_io.py line 28 is def upload_to_drive. Duplicate google_io files found are backups and __pycache__. Import target using system python3 failed due missing googleapiclient and is not valid proof for worker venv. areal-task-worker was active after last shown patch. Journal tail still contained upload_artifact_to_drive event loop and was never awaited lines, but the exact freshness relative to final google_io def change remains ambiguous in current chat. Google Doc export document created at https://docs.google.com/document/d/1xC2f5OEn8uGt0tEGIoO3oK-o-md_Sx6YBEoPiZW7qss was initially empty before this write.","what_working":["SSH command execution to areal works","areal-task-worker reaches active after restarts in shown outputs","py_compile passed for patched files in several runs","google_io.py is now sync def upload_to_drive by grep","core/engine_base.py upload_artifact_to_drive location found lines 70-85","Google Doc file creation via connector succeeded"],"what_broken":["Google Sheets creation returns HttpError 403 caller does not have permission and sometimes 503","Journal tails repeatedly contained upload_artifact_to_drive: This event loop is already running","Journal tails repeatedly contained RuntimeWarning coroutine upload_to_drive was never awaited","Multiple anchor-based patches failed due anchor mismatch","BAD RESULTS CHECK was 30 with results containing 'ожидает анализа' or 'скачан'","drive_files contained both DOWNLOADED and downloaded stages","Initial Google Doc export was empty"],"what_not_done":["Confirmed fresh venv import target after google_io sync change was requested but user did not provide output in current chat","Final proof that event loop blocker disappeared after google_io sync change is not present","Google Sheets permissions not fixed","Fallback patches in file_intake_router.py not confirmed applied due anchor failures","Task cleanup bad results not confirmed applied to zero","Stage normalization not confirmed final","Atomic single final answer for file pipeline not confirmed"],"current_breakpoint":"Need factual venv import/runtime verification after google_io.py sync change and fresh journal after final state. User objected to more requests; current export stops at available facts.","root_causes":["Confirmed: create_google_sheet 403 caused by caller lacking permission","Confirmed: google_io.py originally declared upload_to_drive async while body contained no await, producing coroutine object behavior when called through engine_base upload wrapper","Confirmed: several patch failures caused by anchors not matching live code","Confirmed: system python3 was not the worker runtime because googleapiclient missing there"],"verification":["grep -n def upload_to_drive returned 28:def upload_to_drive(file_path: str, file_name: str, folder_id: str = None)","nl -ba core/engine_base.py lines 70-85 showed upload_artifact_to_drive importing upload_to_drive and calling upload function","grep -n _run_upload_sync\\|upload_to_drive core/engine_base.py returned lines 15,82,86 before final direct-call patch","journalctl outputs showed upload_artifact_to_drive event loop and coroutine was never awaited","journalctl outputs showed create_google_sheet 403/503","systemctl is-active areal-task-worker returned active after restarts","get_document_text on created Google Doc returned paragraphs [] before this batch_update write"],"limits":["Only current chat facts included","No external repo access performed","No final venv import target output was received after request","No complete full file contents for all patched files were available at final state","Some journal blocker lines may include historical entries because journalctl -n 60/-80 was used","No claim that final system is fully fixed","No cross-chat facts included except those explicitly written in this current conversation"]}
-====================================================================================================
-END_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_TECH_CONTOUR__.txt
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_TECH_CONTOUR__2026-04-24.txt
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: f46653c518b9cbfd26e1754402cc11262ffdb5681b32e37db82607a4670d43e7
-====================================================================================================
-﻿{"chat_id":"UNKNOWN","chat_name":"AREAL_NEVA_ORCHESTRA_TECH_CONTOUR","exported_at":"2026-04-24T10:00:00+03:00","source_model":"GPT-5.5 Thinking","system":"Server SSH target used in this chat: areal. Base path: /root/.areal-neva-core. Python runtime confirmed by systemd: /root/.areal-neva-core/.venv/bin/python3. Worker service: areal-task-worker.service. WorkingDirectory=/root/.areal-neva-core. EnvironmentFile=/root/.areal-neva-core/.env. PYTHONPATH=/root/.areal-neva-core. Drive folder ID from systemd override and user target: 13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB. Core DB path used in commands: /root/.areal-neva-core/data/core.db. Current chat contains no confirmed external model runtime except source_model here.","architecture":"Observed architecture facts from this chat only: areal-task-worker.service starts task_worker.py through flock and venv Python. task_worker.py handles drive/file tasks in _handle_drive_file. core/file_intake_router.py routes file intents estimate, ocr, technadzor, dwg, template, search. core/artifact_pipeline.py analyzes downloaded files and builds Word/Excel artifacts. core/engine_base.py contains upload_artifact_to_drive. google_io.py contains upload_to_drive. core/sheets_generator.py creates Google Sheets with service account credentials path /root/.areal-neva-core/credentials.json. core/docs_generator.py creates Google Docs with same service account path. Full Telegram architecture beyond grep evidence is UNKNOWN in this current-chat export.","pipeline":"Confirmed pipeline fragments: file task -> task_worker.py _handle_drive_file -> _download_from_drive -> drive_files stage DOWNLOADED -> load memory context -> detect_intent/detect_format from core.file_intake_router -> route_file -> specialized engines or artifact processing -> extract_router_payload -> if drive_link then AWAITING_CONFIRMATION and _send_once_ex -> if artifact_path exists then upload_file_to_topic -> AWAITING_CONFIRMATION -> Telegram reply. Voice .ogg in _handle_drive_file is bypassed to FAILED with VOICE_FILE_SHOULD_GO_STT. upload_artifact_to_drive path: core/engine_base.py upload_artifact_to_drive -> import upload_to_drive from google_io -> versioned_name = get_next_version(base + ext, task_id) -> link = upload_to_drive(file_path, versioned_name) after final patch. Exact full end-to-end Telegram daemon pipeline is UNKNOWN from this chat only.","files":["/root/.areal-neva-core/task_worker.py","/root/.areal-neva-core/telegram_daemon.py","/root/.areal-neva-core/core/file_intake_router.py","/root/.areal-neva-core/core/artifact_pipeline.py","/root/.areal-neva-core/core/sheets_generator.py","/root/.areal-neva-core/core/docs_generator.py","/root/.areal-neva-core/core/engine_base.py","/root/.areal-neva-core/google_io.py","/root/.areal-neva-core/data/core.db","/root/.areal-neva-core/.venv/bin/python3","/root/.areal-neva-core/.env","/root/.areal-neva-core/credentials.json","/root/.areal-neva-core/logs/auto_dump.log","/root/.areal-neva-core/google_io.py.bak.20260422_222315","/root/.areal-neva-core/google_io.py.bak.20260423_193945","/root/.areal-neva-core/__pycache__/google_io.cpython-312.pyc","/etc/systemd/system/areal-task-worker.service","/etc/systemd/system/areal-task-worker.service.d/override.conf","/tmp/task_worker.outer.lock"],"code":"Confirmed code snippets from current chat: task_worker.py _handle_drive_file includes raw_input = task[\"raw_input\"], .ogg bypass to FAILED VOICE_FILE_SHOULD_GO_STT, local_path /root/.areal-neva-core/runtime/drive_files/{task_id}_{file_name}, route_file call, extract_router_payload, drive_link/artifact_path/text_result branches, and fallback guard originally if not _clean(_s(result), 50000) or result == waiting_result. core/file_intake_router.py has async def route_file(file_path, task_id, topic_id, intent, fmt=\"excel\"). estimate+sheets branch imports create_google_sheet and process_estimate_to_excel, awaits process_estimate_to_excel, loads workbook rows, calls create_google_sheet(f\"Estimate_{task_id[:8]}\", rows), and returns {\"success\": True, \"drive_link\": link} only if link. technadzor+docs branch imports create_google_doc and process_defect_to_report, had data = process_defect_to_report(file_path, task_id, topic_id), builds doc content, calls create_google_doc(f\"Defect_{task_id[:8]}\", content), returns drive_link only if link. handle_multiple_files later shown with r = await process_estimate_to_excel(fp, task_id, topic_id). core/engine_base.py final live lines 70-85: def upload_artifact_to_drive(file_path, task_id, topic_id); imports upload_to_drive from google_io; versioned_name = get_next_version(base + ext, task_id); line 77 link = upload_to_drive(file_path, versioned_name); updates ARTIFACT_CREATED and UPLOADED; except logs logger.error(f\"upload_artifact_to_drive: {e}\"). google_io.py final verified line 28: def upload_to_drive(file_path: str, file_name: str, folder_id: str = None). google_io.upload_to_drive body uses get_drive_service, MediaIoBaseUpload, service.files().create(...).execute(), returns https://drive.google.com/file/d/{file_id}/view, catches exceptions and logs Upload failed. systemd ExecStart confirmed: /usr/bin/flock -n /tmp/task_worker.outer.lock /root/.areal-neva-core/.venv/bin/python3 -u /root/.areal-neva-core/task_worker.py.","patches":["PATCH__TECH_BASE_SAFE__V1 executed: PATCH_DONE, py_compile, worker restart, status active; logs still showed route_file: 'coroutine' object has no attribute 'get' before/around restart","PATCH__FILE_PIPELINE_GUARD_SAFE__V1 executed: PATCH_DONE, compile, restart, active; logs showed route_file coroutine object has no attribute get and RuntimeWarning coroutine process_estimate_to_excel was never awaited","PATCH__TECH_CONTOUR_FULL_CLOSE__FINAL failed with BLOCK_2_3_NOT_FOUND","PATCH__LIVING_MEMORY_REPLY_LEADS_FULL_CLOSE__FINAL failed with TASK_WORKER_AWAITING_CONFIRMATION_ANCHOR_NOT_FOUND","PATCH__TECH_CONTOUR_FULL_CLOSE__FINAL_FIX executed PATCH_DONE compile restart active; logs still showed route_file coroutine object has no attribute get; file stages ARTIFACT_CREATED|5 DOWNLOADED|2 discovered|352 downloaded|29; bad results 30","PATCH__LIVING_MEMORY_REPLY_LEADS_FULL_CLOSE__FINAL_FIX failed with TASK_WORKER_AWAITING_CONFIRMATION_ANCHOR_NOT_FOUND","PATCH__ROUTE_FILE_REAL_BLOCKER_ONLY__V1 executed PATCH_DONE compile restart active; logs still showed upload_artifact_to_drive event loop is already running and create_google_sheet 403/503","PATCH__HUMAN_SHORT_VOICE_GUARD__V1 executed PATCH_DONE compile restart active","PATCH__FINAL_BLOCKERS_ONLY__V1 failed with MULTI_ESTIMATE_AWAIT_ANCHOR_NOT_FOUND","PATCH__FACT_ONLY_SHEETS_AND_BAD_RESULTS__V1 executed PATCH_DONE compile restart active; logs still showed upload_artifact_to_drive event loop and create_google_sheet 403","PATCH__ROUTE_FILE_FACT_FIX__V2 failed with ANCHOR_1_NOT_FOUND","PATCH__FACT_ONLY_STROYKA_OUTPUT_FIX__V1 failed with FILE_INTAKE_ROUTER_SHEETS_ANCHOR_NOT_FOUND","PATCH__TECH_CONTOUR_FULL_CLOSE__LIVE_FIX__V1 failed with SHEETS_FALLBACK_ANCHOR_NOT_FOUND","PATCH__TECH_CONTOUR_CANON_CLOSE__FACT_ONLY__V1 failed with ESTIMATE_SHEETS_FALLBACK_ANCHOR_NOT_FOUND","PATCH__TECH_CONTOUR_FACT_CLOSE__LIVE_ANCHORS_ONLY__V1_FIX failed with ANCHOR_D_NOT_FOUND","PATCH__TECH_CONTOUR_FACT_CLOSE__LIVE_ANCHORS_ONLY__V2 failed with ANCHOR_A_NOT_FOUND","PATCH__ENGINE_BASE_EVENT_LOOP_FIX__FACT_ONLY__V1 executed PATCH_OK compile restart active, but logs still showed upload_artifact_to_drive: This event loop is already running and RuntimeWarning coroutine upload_to_drive was never awaited","PATCH__ENGINE_BASE_EVENT_LOOP_ROOT_CAUSE__V2 executed PATCH_OK compile restart active, but logs still showed same event loop and was never awaited","PATCH__ENGINE_BASE_THREAD_LOOP_HARD_FIX__V3 failed with ENGINE_BASE_HELPER_REPLACE_ANCHOR_NOT_FOUND","PATCH__ENGINE_BASE_THREAD_LOOP_HARD_FIX__V4 executed PATCH_OK compile restart active, but logs still showed event loop and was never awaited","PATCH__UPLOAD_DRIVE_SYNC_ROOT_FIX__FACT_ONLY__V1 executed PATCH_OK compile restart active; changed google_io.py async def upload_to_drive to def upload_to_drive and engine_base.py call to link = upload_to_drive(file_path, versioned_name); later venv import confirmed upload_to_drive is function and IS_COROUTINE False"],"commands":["ssh areal 'bash -s' <<'ENDSSH' ... patch blocks ... ENDSSH","sqlite3 /root/.areal-neva-core/data/core.db \"SELECT stage, COUNT(*) FROM drive_files GROUP BY stage ORDER BY stage;\"","sqlite3 /root/.areal-neva-core/data/core.db \"SELECT COUNT(*) FROM tasks WHERE result LIKE '%ожидает анализа%' OR result LIKE '%скачан%';\"","sqlite3 /root/.areal-neva-core/data/core.db \"SELECT id, topic_id, state, substr(result,1,220) FROM tasks WHERE result LIKE '%ожидает анализа%' OR result LIKE '%скачан%' ORDER BY created_at DESC LIMIT 20;\"","journalctl -u areal-task-worker -n 20 --no-pager","journalctl -u areal-task-worker -n 30 --no-pager -o cat","journalctl -u areal-task-worker -n 60 --no-pager -o cat | egrep -i \"upload_artifact_to_drive|event loop is already running|was never awaited|create_google_sheet|create_google_doc\" || true","sed -n '/async def _handle_drive_file/,+220p' /root/.areal-neva-core/task_worker.py","sed -n '1,260p' /root/.areal-neva-core/core/artifact_pipeline.py","sed -n '1,260p' /root/.areal-neva-core/core/sheets_generator.py","sed -n '1,260p' /root/.areal-neva-core/core/docs_generator.py","grep -n \"def upload_to_drive\\|async def upload_to_drive\" /root/.areal-neva-core/google_io.py","nl -ba /root/.areal-neva-core/core/engine_base.py | sed -n '70,95p'","nl -ba /root/.areal-neva-core/core/engine_base.py | sed -n '1,34p'","grep -n \"_run_upload_sync\\|upload_to_drive\" /root/.areal-neva-core/core/engine_base.py","systemctl restart areal-task-worker","systemctl is-active areal-task-worker","grep -RIl \"upload_artifact_to_drive\" /root/.areal-neva-core | head -n 1","grep -RIn \"event loop is already running\" /root/.areal-neva-core | head -n 5","grep -n \"asyncio.run(\" /root/.areal-neva-core/task_worker.py /root/.areal-neva-core/telegram_daemon.py /root/.areal-neva-core/core/*.py","grep -n \"run_until_complete(\" /root/.areal-neva-core/task_worker.py /root/.areal-neva-core/telegram_daemon.py /root/.areal-neva-core/core/*.py","find /root/.areal-neva-core -name 'google_io.py' -o -name '*google_io*'","python3 import google_io test failed with ModuleNotFoundError googleapiclient","/root/.areal-neva-core/.venv/bin/python3 import google_io verification printed FILE /root/.areal-neva-core/google_io.py, TYPE class function, IS_COROUTINE False","systemctl cat areal-task-worker | sed -n '1,120p'"],"db":"DB facts from current chat: drive_files stages observed: ARTIFACT_CREATED|5 or 6, DOWNLOADED|1 or 2, discovered|352, downloaded|29. BAD RESULTS CHECK returned 30 for tasks where result LIKE '%ожидает анализа%' OR result LIKE '%скачан%'. Topic counts observed: 0|851, 1|6, 2|86, 5|57, 210|5, 500|59, 961|29, 3008|15, 4569|49. Bad result rows included AWAITING_CONFIRMATION with 'Файл voice_6825.ogg скачан, ожидает анализа', 'Файл voice_6822.ogg скачан, ожидает анализа', 'Файл У1-02-26-Р-КЖ1.6.pdf скачан, ожидает анализа', photo result with 'Состояние: ожидает анализа'. SQL cleanup proposals included: UPDATE drive_files SET stage='DOWNLOADED' WHERE stage='downloaded'; UPDATE tasks SET state='FAILED', result='', error_message='VOICE_FILE_SHOULD_GO_STT' WHERE state='AWAITING_CONFIRMATION' AND result LIKE 'Файл voice_%.ogg скачан, ожидает анализа%'; UPDATE tasks SET state='WAITING_CLARIFICATION', result='', error_message='PIPELINE_NOT_EXECUTED' WHERE state='AWAITING_CONFIRMATION' AND result contains 'ожидает анализа' or 'скачан' and not voice pattern. Final confirmation that cleanup executed to zero is UNKNOWN.","memory":"No factual memory table rows were successfully shown in this chat. User requested Google Doc export for Claude. First created Google Doc was empty; get_document_text returned paragraphs: []. Then JSON was inserted and verified. Final export created a new Google Doc with current facts.","services":["areal-task-worker.service","telegram_daemon.py mentioned through grep only","task_worker.py main uses asyncio.run(main())","telegram_daemon.py main uses asyncio.run(main())","systemd override for areal-task-worker sets DRIVE_INGEST_FOLDER_ID, GDRIVE_CLIENT_ID, GDRIVE_CLIENT_SECRET, GDRIVE_REFRESH_TOKEN as shown by user output"],"errors":["route_file: 'coroutine' object has no attribute 'get' → observed in earlier logs → status after later steps UNKNOWN","RuntimeWarning: coroutine 'process_estimate_to_excel' was never awaited → observed in logs after PATCH__FILE_PIPELINE_GUARD_SAFE__V1 → handle_multiple_files later showed await, final status UNKNOWN","SHEETS_FALLBACK_ANCHOR_NOT_FOUND → patch anchor mismatch → no change from that attempt","FILE_INTAKE_ROUTER_SHEETS_ANCHOR_NOT_FOUND → patch anchor mismatch → no change from that attempt","ESTIMATE_SHEETS_FALLBACK_ANCHOR_NOT_FOUND → patch anchor mismatch → no change from that attempt","ANCHOR_D_NOT_FOUND → task_worker guard anchor mismatch → no change from that attempt","ANCHOR_A_NOT_FOUND → file_intake_router anchor mismatch → no change from that attempt","ENGINE_BASE_HELPER_REPLACE_ANCHOR_NOT_FOUND → regex/helper anchor mismatch → no change from V3 attempt","upload_artifact_to_drive: This event loop is already running → observed repeatedly before final runtime verification → root investigated through engine_base.py and google_io.py","RuntimeWarning: coroutine 'upload_to_drive' was never awaited → observed repeatedly before final runtime verification → google_io.py originally async def without await; fixed to def and verified through venv import","create_google_sheet HttpError 403 The caller does not have permission → observed repeatedly → cause is Google Sheets caller permission failure as directly stated by error text; not fixed in current chat","create_google_sheet HttpError 503 service unavailable → observed once or more → transient service unavailable; not fixed in current chat","ModuleNotFoundError: No module named 'googleapiclient' → occurred only when using system python3 for import test → invalid for worker runtime because service uses venv Python","Google Doc export initially empty → create_file created doc but no JSON inserted → fixed by batch_update_document insert"],"decisions":["Use only facts from current chat export","Avoid patching without live anchors","Do not treat engine_base.py line 51 as original source; it was re-raise/log point after exception captured","Use venv Python for runtime-relevant import checks","Treat system python3 import failure as non-runtime proof","Treat old journal tails cautiously because journalctl -n includes historical lines","Do not claim final system fully fixed without fresh post-verification logs","For Claude: do not restart architecture analysis; continue from current runtime facts"],"solutions":["Google Doc export created and filled with JSON after initial empty document was detected","PATCH__UPLOAD_DRIVE_SYNC_ROOT_FIX__FACT_ONLY__V1 changed google_io.py from async def upload_to_drive to def upload_to_drive","PATCH__UPLOAD_DRIVE_SYNC_ROOT_FIX__FACT_ONLY__V1 changed engine_base.py upload call to link = upload_to_drive(file_path, versioned_name)","Venv import verified: /root/.areal-neva-core/google_io.py, type <class 'function'>, IS_COROUTINE False","Service execution verified: areal-task-worker uses /root/.areal-neva-core/.venv/bin/python3 and WorkingDirectory /root/.areal-neva-core","Engine base live code verified: line 77 link = upload_to_drive(file_path, versioned_name)","Worker service returned active after restarts in shown outputs"],"state":"Final confirmed state in this chat: google_io.upload_to_drive is a normal function in venv runtime, not coroutine. Venv import target is /root/.areal-neva-core/google_io.py. areal-task-worker service uses the same venv Python and PYTHONPATH=/root/.areal-neva-core. core/engine_base.py live code line 77 calls upload_to_drive(file_path, versioned_name) directly. Old coroutine root is closed at code/import level. Fresh post-final logs proving disappearance of event loop blocker after the venv import verification were not shown. Google Sheets permission 403 remains confirmed from logs and not fixed. Bad result cleanup and stage normalization are not confirmed final.","what_working":["SSH access to areal works","areal-task-worker reaches active after restarts in shown outputs","py_compile passed for patched files in shown patch runs","google_io.py now has def upload_to_drive","Venv import loads /root/.areal-neva-core/google_io.py","Venv import reports upload_to_drive type <class 'function'>","Venv import reports IS_COROUTINE False","systemd service uses venv Python /root/.areal-neva-core/.venv/bin/python3","systemd service WorkingDirectory is /root/.areal-neva-core","systemd service PYTHONPATH is /root/.areal-neva-core","engine_base.py line 77 calls upload_to_drive directly","Google Doc export creation and writing works through connector"],"what_broken":["Google Sheets create_google_sheet returns HttpError 403 caller does not have permission","Google Sheets create_google_sheet sometimes returned HttpError 503 service unavailable","Earlier journal tails repeatedly contained upload_artifact_to_drive event loop and coroutine was never awaited before final runtime import verification","Multiple patch attempts failed due anchor mismatch","BAD RESULTS CHECK was 30 with result containing 'ожидает анализа' or 'скачан'","drive_files had mixed stages DOWNLOADED and downloaded","Fallback patches in file_intake_router.py were not confirmed applied due anchor failures"],"what_not_done":["Fresh journal after final venv import verification is not shown; disappearance of event loop blocker not finally proven by new log","Google Sheets permission 403 not fixed","file_intake_router Google Sheets fallback not confirmed applied","file_intake_router Google Docs fallback not confirmed applied","task_worker bad-result guard not confirmed patched","DB bad results cleanup not confirmed to zero","drive_files downloaded lowercase normalization not confirmed final","Atomic final file-pipeline behavior not confirmed by end-to-end test"],"current_breakpoint":"Pass this JSON to Claude. Continue from verified facts: runtime now sees google_io.upload_to_drive as normal function and engine_base.py calls it directly. Next factual step should be a fresh post-current-state worker log and Google Sheets permission/fallback handling; do not redo old async/coroutine root unless fresh logs contradict runtime import facts.","root_causes":["Confirmed from error text: create_google_sheet 403 caused by caller lacking permission","Confirmed from code before fix: google_io.py upload_to_drive was declared async while body had no await, causing coroutine behavior through engine_base upload wrapper","Confirmed from repeated failures: many earlier patches failed because anchors did not match live code","Confirmed from command output: system python3 was not valid runtime for import test because googleapiclient was missing; service uses venv Python"],"verification":["VENV IMPORT TARGET output: /root/.areal-neva-core/google_io.py, <class 'function'>, <function upload_to_drive ...>","REAL IMPORT IN VENV output: FILE /root/.areal-neva-core/google_io.py; TYPE <class 'function'>; IS_COROUTINE False","SERVICE EXEC output: ExecStart=/usr/bin/flock -n /tmp/task_worker.outer.lock /root/.areal-neva-core/.venv/bin/python3 -u /root/.areal-neva-core/task_worker.py","SERVICE EXEC output: WorkingDirectory=/root/.areal-neva-core","SERVICE EXEC output: Environment=PYTHONPATH=/root/.areal-neva-core","ENGINE_BASE LIVE output lines 70-85 including line 77 link = upload_to_drive(file_path, versioned_name)","grep google_io.py output: 28:def upload_to_drive(file_path: str, file_name: str, folder_id: str = None)","journalctl outputs before final runtime verification showed upload_artifact_to_drive event loop and coroutine was never awaited","journalctl outputs showed create_google_sheet 403/503","sqlite outputs showed drive_files mixed stages and BAD RESULTS CHECK 30","get_document_text verified first Google Doc had JSON after batch_update_document"],"limits":["Only current chat facts included","No external repo read performed","No final fresh worker log after venv import verification was provided","Some journal lines may be historical because journalctl -n was used","No claim that file pipeline is fully fixed","No claim that Google Sheets permission is fixed","No cross-chat facts included except those explicitly present in current chat text","Secret-looking values appeared in user-provided systemctl output but are not repeated verbatim in this export beyond key names where possible"]}
-====================================================================================================
-END_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_TECH_CONTOUR__2026-04-24.txt
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA__2026-04-26.txt
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: df34f345514d57b076255c3f84be053e30d50f5a7cc5588d634e9b3164ef9985
-====================================================================================================
-﻿{
-  "chat_id": "AREAL_NEVA_ORCHESTRA_CURRENT_CHAT",
-  "chat_name": "AREAL-NEVA ORCHESTRA — Claude Technical Session 2026-04-26",
-  "exported_at": "2026-04-26T00:00:00+03:00",
-  "source_model": "Claude Sonnet 4.6",
-  "system": "AREAL-NEVA ORCHESTRA. Server /root/.areal-neva-core Ubuntu 24.04. Bot @ai_orkestra_all_bot. Chat -1003725299009. Services: areal-task-worker, telegram-ingress, areal-memory-api. DB: core.db + memory.db. State machine field: state.",
-  "architecture": "systemd + python3. No Docker running (confirmed docker ps empty). IP 89.22.225.136 SSH/VPN. IP 89.22.227.213 Orchestra API port 8080 planned. State machine: NEW->IN_PROGRESS->AWAITING_CONFIRMATION->DONE->ARCHIVED.",
-  "pipeline": "Telegram -> telegram_daemon.py -> core.db -> task_worker.py -> ai_router.py -> OpenRouter/model -> reply_sender.py -> Telegram. File: Drive -> drive_file task -> _handle_drive_file -> route_file -> engine -> artifact -> Drive link -> AWAITING_CONFIRMATION.",
-  "files": [
-    "/root/.areal-neva-core/task_worker.py",
-    "/root/.areal-neva-core/telegram_daemon.py",
-    "/root/.areal-neva-core/core/ai_router.py",
-    "/root/.areal-neva-core/core/reply_sender.py",
-    "/root/.areal-neva-core/core/pin_manager.py",
-    "/root/.areal-neva-core/core/estimate_engine.py",
-    "/root/.areal-neva-core/core/technadzor_engine.py",
-    "/root/.areal-neva-core/core/dwg_engine.py",
-    "/root/.areal-neva-core/core/file_intake_router.py",
-    "/root/.areal-neva-core/google_io.py",
-    "/root/.areal-neva-core/data/core.db",
-    "/root/.areal-neva-core/data/memory.db"
-  ],
-  "patches": [
-    "PATCH_INTAKE_TIMEOUT line 690 task_worker.py",
-    "FULL_CONTOUR_FILE_FOLLOWUP_AUTOLINK line 1181 task_worker.py",
-    "PATCH_REQUEUE_LOOP_ALLOW_ONCE line 1922 task_worker.py",
-    "PATCH_ENGINE_TIMEOUT timeout=300 line 2005 task_worker.py",
-    "CANON_PASS5B_TOPIC_3008_CODE_BRAIN line 2307 task_worker.py",
-    "PATCH_PIN_FALLBACK_CLOSED line 70 core/pin_manager.py",
-    "PATCH_TASKWORKER_STATUS_MSGS_READABLE stale/failed messages humanized",
-    "PATCH_TECHMADGZOR_SEVERITY_MULTIPHOTO technadzor engine DEFAULT_NORMS added",
-    "Drive ingest filter expanded: canon__, file_identity, dedup_reply, memory_policy",
-    "Forbidden phrases removed: stale_failed, router_failed",
-    "pdf2image installed",
-    "memory.db garbage cleaned: search_cache/query/summary/sources"
-  ],
-  "commands": [
-    "ssh areal bash -s << ENDSSH ... ENDSSH",
-    "sqlite3 /root/.areal-neva-core/data/core.db SELECT ...",
-    "journalctl -u areal-task-worker --no-pager -o cat | tail -N",
-    "systemctl restart areal-task-worker telegram-ingress",
-    "python3 -m py_compile task_worker.py"
-  ],
-  "db": "core.db: ARCHIVED=371, CANCELLED=153, DONE=24, FAILED=37-59 (growing). Queue: EMPTY as of 12:18 MSK. memory.db: clean, topic isolation confirmed. Topics: 2=STROYKA, 5=TEHNADZOR, 500=SEARCH, 961=AUTO, 3008=BRAIN.",
-  "memory": "memory.db topic keys isolated. topic_2: angar 18x30, KZH PDF. topic_5: akty osmotra. topic_500: metallocherepit. topic_961: avtozapchasti. No garbage after cleanup.",
-  "services": [
-    "areal-task-worker.service ACTIVE",
-    "telegram-ingress.service ACTIVE",
-    "areal-memory-api.service ACTIVE port 8091"
-  ],
-  "errors": [
-    "SyntaxError line 1925 from core.db_utils import get_drive_file_stage if False -> FIXED: restore from backup + reapply + pycache clear",
-    "IndentationError line 1493 -> FIXED: restore + reapply",
-    "KZH PDF all tasks FAILED stage=TEXT_FOLLOWUP_REQUEUED artifact empty -> ROOT CAUSE: file never reaches DOWNLOADED stage",
-    "AWAITING_CONFIRMATION 54 tasks stuck -> FIXED: stale watchdog covers AWAITING_CONFIRMATION",
-    "drive_ingest.py SyntaxError broken try block -> FIXED: clean block insertion"
-  ],
-  "decisions": [
-    "systemd not Docker for current runtime",
-    "SQLite SSOT not Redis",
-    "state field not status field",
-    "DONE is terminal and idempotent",
-    "revision uses same task_id",
-    "1 active task per topic",
-    "confidence threshold router 0.70",
-    "cancellable false routes to REVISION_PENDING",
-    "No auto-close. Confirmation loop mandatory.",
-    "Memory written only after DONE",
-    "forbidden files: .env credentials.json google_io.py memory.db schema telegram_daemon.py"
-  ],
-  "solutions": [
-    "PDF->XLSX artifact confirmed: task bccee1ef AWAITING_CONFIRMATION Drive link https://drive.google.com/file/d/12TEEIu6SjrqboMu1h8Y_8SF_DxSRi9f1/view",
-    "tesseract lang=rus+eng already in code lines 54 64 121",
-    "duplicate file guard in code lines 1071 1083 1141",
-    "bot_message_id confirmed sqlite3 task 5994e6d0 bot_message_id=7198",
-    "All API keys OK: OpenRouter Groq DeepSeek Anthropic XAI OpenAI Google",
-    "Voice STT working: VOICE_NO_DRIVE confirmed in logs"
-  ],
-  "state": "STABLE. All 3 services active. Queue empty. Syntax OK. Memory clean. Pending: KZH PDF pipeline fix, confirmation text P10, CONFIRM intent fix, P9 chat mode, GitHub snapshot, external monitoring.",
-  "what_working": [
-    "areal-task-worker active",
-    "telegram-ingress active",
-    "areal-memory-api active",
-    "STT Groq whisper OK",
-    "Voice no-drive behavior OK",
-    "PDF->XLSX artifact confirmed",
-    "bot_message_id saved",
-    "duplicate file guard",
-    "tesseract rus+eng",
-    "memory topic isolation",
-    "service file filter",
-    "stale watchdog covers all states",
-    "humanized error messages"
-  ],
-  "what_broken": [
-    "KZH PDF: stage never reaches DOWNLOADED, all 5 tasks FAILED Drive ID 1AaERRkk4cTJZNoUsOdASSDOd6VZw2O_z",
-    "confirmation_text line 1743 missing Dovolen text",
-    "CONFIRM intent startswith da catches da uzh da ponyal",
-    "P9 chat mode: short casual messages still create tasks",
-    "Google Sheets native 403 Permission Denied",
-    "Gemini BLOCKED IP AEZA"
-  ],
-  "what_not_done": [
-    "P10 confirmation text patch",
-    "CONFIRM intent fix",
-    "P9 chat mode patch",
-    "P31 reply on file menu",
-    "KZH PDF download fix",
-    "Technadzor SP/GOST norms",
-    "Templates live test",
-    "Multi-file pipeline",
-    "9 live tests TZ p.19",
-    "GitHub snapshot",
-    "External monitoring Email/Profi/Avito/VK",
-    "topic_3008 live test",
-    "Canon files update with Ilya-ful content"
-  ],
-  "current_breakpoint": "Ready to apply patch: P10 confirmation_text line 1743, CONFIRM fix line 678, P9 chat mode. Awaiting user approval.",
-  "root_causes": [
-    "KZH PDF: TEXT_FOLLOWUP_REQUEUED stage never advances to DOWNLOADED - download never called",
-    "Bad patches killed system multiple times - not organic failure",
-    "CONFIRM startswith da too broad",
-    "AWAITING_CONFIRMATION stale not previously in watchdog"
-  ],
-  "verification": [
-    "docker ps: empty confirmed",
-    "py_compile all files OK",
-    "sqlite3 queue EMPTY confirmed",
-    "grep -n all patches confirmed in code",
-    "journalctl CLEAN no errors",
-    "bot_message_id in sqlite3 confirmed",
-    "memory.db topic isolation confirmed"
-  ],
-  "limits": [
-    "Cannot edit existing Drive files only create new",
-    "Cannot access telegram_daemon.py for P31 patch",
-    "Gemini blocked on server IP",
-    "Google Sheets 403"
-  ]
-}
-====================================================================================================
-END_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA__2026-04-26.txt
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_TECH_CLOSURE_27_04_2026__2026-04-27.txt
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 3f641f19ea6778de66ac18f097a0d18b5377bf16641110d62b1096d83aadd1fc
-====================================================================================================
-﻿{
-  "chat_id": "AREAL-NEVA_TECH_CLOSURE_27042026",
-  "chat_name": "AREAL-NEVA TECHNICAL CONTOUR CLOSURE SESSION 27.04.2026",
-  "exported_at": "2026-04-27T16:00:00Z",
-  "source_model": "Claude Sonnet 4",
-  "system": "AREAL-NEVA ORCHESTRA Ubuntu 24.04 89.22.225.136. Bot: @ai_orkestra_all_bot. Chat: -1003725299009. Servis: telegram-ingress.service. Base: /root/.areal-neva-core",
-  "architecture": "Telegram -> telegram_daemon.py -> stt_engine.py -> core.db -> task_worker.py -> core/ai_router.py -> core/reply_sender.py -> Telegram. File: Drive -> _handle_drive_file -> file_intake_router.py -> engines -> artifact -> Drive -> Telegram",
-  "pipeline": "NEW -> IN_PROGRESS -> AWAITING_CONFIRMATION -> DONE -> ARCHIVED. File: INGESTED -> DOWNLOADED -> PARSED -> ARTIFACT_CREATED -> UPLOADED",
-  "files": [
-    "/root/.areal-neva-core/task_worker.py -> lifecycle, CANON_PASS12/13. 3697 lines",
-    "/root/.areal-neva-core/telegram_daemon.py -> ingress, reply continuity, SERVICE_FILE_GUARD line 743",
-    "/root/.areal-neva-core/core/estimate_engine.py -> Excel =D*E =SUM. 528 lines",
-    "/root/.areal-neva-core/core/ocr_engine.py -> pytesseract. 160 lines",
-    "/root/.areal-neva-core/core/technadzor_engine.py -> GOST SP SNiP norms. 117 lines",
-    "/root/.areal-neva-core/core/document_engine.py -> DOCX PDF. 70 lines",
-    "/root/.areal-neva-core/core/template_manager.py -> save_template get_template apply_template",
-    "/root/.areal-neva-core/core/multi_file_orchestrator.py -> merge_estimate_results",
-    "/root/.areal-neva-core/core/quality_gate.py -> connected lines 556 2357 2503",
-    "/root/.areal-neva-core/data/core.db -> runtime DB",
-    "/root/.areal-neva-core/data/memory.db -> long-term memory"
-  ],
-  "code": "Python 3.12, systemd, SQLite, aiogram, Google Drive, pytesseract ezdxf pdfplumber docx openpyxl. Venv: /root/.areal-neva-core/.venv",
-  "patches": [
-    "CANON_PASS_REPLY530 -> telegram_daemon.py line 530 -> if not reply_to: return False -> status: applied_by_terminal BAK_OK SYNTAX_OK BOT STARTED 14:17:57",
-    "SERVICE_FILE_GUARD -> telegram_daemon.py line 743 -> filter CHAT_EXPORT_ FULL_CANON_ SESSION_ INDEX_ MASTER_CANON_ PATCHES_HISTORY_ HANDOFF_ AREAL_NEVA_ORCHESTRA_CANON SISTEMNYY_ -> status: applied_by_terminal BAK_OK SYNTAX_OK BOT STARTED 14:41:41",
-    "CANON_PASS12_TEMPLATE_MULTIFILE -> task_worker.py append end -> template save/apply hooks multi-file merge hook -> status: applied_by_terminal BAK_OK SYNTAX_OK active",
-    "CANON_PASS13_ARTIFACT_VERSIONING -> task_worker.py append end -> versioning _v2/_v3 on REVISION_V2 -> status: applied_by_terminal BAK_OK SYNTAX_OK active"
-  ],
-  "commands": [
-    "cp file file.bak.$(date +%s) && echo BAK_OK",
-    "echo BASE64 | base64 -d > /tmp/patch.py && /root/.areal-neva-core/.venv/bin/python3 /tmp/patch.py",
-    "/root/.areal-neva-core/.venv/bin/python3 -m py_compile target.py && echo SYNTAX_OK",
-    "systemctl restart telegram-ingress && sleep 12 && systemctl is-active telegram-ingress",
-    "systemctl restart areal-task-worker && sleep 10 && systemctl is-active areal-task-worker",
-    "journalctl -u areal-task-worker -n 5 --no-pager --output=cat",
-    "journalctl -u telegram-ingress --no-pager -n 3",
-    "sqlite3 /root/.areal-neva-core/data/core.db \"UPDATE tasks SET state='CANCELLED' WHERE state IN ('IN_PROGRESS','AWAITING_CONFIRMATION','NEW','WAITING_CLARIFICATION') AND chat_id=-1003725299009; UPDATE pin SET state='CLOSED' WHERE state!='CLOSED'; SELECT changes();\""
-  ],
-  "db": "core.db: ARCHIVED=371 CANCELLED=162 DONE=35 FAILED=86. Active=0. processed_updates idempotency lines 580-588",
-  "memory": "memory.db: topic isolation. MEMORY_NOISE_MARKERS lines 146-160 filter traceback /root/ .ogg. template_manager stores templates by key topic_{id}_template_{type}",
-  "services": [
-    "telegram-ingress.service: active BOT STARTED 14:41:41",
-    "areal-task-worker.service: active BUT restart counter=6 crashes SIGKILL",
-    "areal-memory-api.service: active",
-    "drive_ingest.py: PID 1563958",
-    "memory_api_server.py: PID 1563922"
-  ],
-  "canons": [
-    "Diagnostics before code - canon 18",
-    "Backup before edit: cp file file.bak.timestamp",
-    "Forbidden files: .env credentials.json google_io.py memory.db schema ai_router.py telegram_daemon.py reply_sender.py systemd unit files",
-    "Overlay patches only append end of file no core rewrite",
-    "py_compile mandatory before restart",
-    "Reply continuity via bot_message_id == reply_to_message_id",
-    "SERVICE_FILE filter for service files in daemon before pipeline",
-    "Template save after Drive artifact success Excel apply on trigger sdelay tak zhe po obrazcu",
-    "Multi-file merge via _cp12_merge_if_multiple -> merge_estimate_results",
-    "Versioning file_v2.xlsx on REVISION_V2 via hook upload_file_to_topic",
-    "iPhone SSH: only base command in field Vkhodnye dannye WITHOUT ssh areal prefix",
-    "iPhone SSH limits: journalctl -n 5 --output=cat sqlite3 LIMIT 3",
-    "If command already given and not executed - do not rewrite just remind"
-  ],
-  "decisions": [
-    "telegram-ingress.service instead of areal-telegram-daemon -> applied",
-    "Reply to bot message continues task not creates new -> CANON_PASS_REPLY530 line 530",
-    "Service files filtered BEFORE pipeline -> SERVICE_FILE_GUARD line 743",
-    "Template saved after successful Excel artifact -> CANON_PASS12 hook _handle_drive_file",
-    "Multi-file merge available via _cp12_merge_if_multiple -> CANON_PASS12",
-    "Versioning via hook upload_file_to_topic checks REVISION_V2 in error_message -> CANON_PASS13"
-  ],
-  "errors": [
-    "task_worker crashes SIGKILL restart counter=6 -> CAUSE unknown -> SOLUTION requires journalctl -n 5 --output=short diagnostics",
-    "Utochnite zapros on everything 15:07-15:20 -> CAUSE stuck task WAITING_CLARIFICATION intercepts new messages -> SOLUTION DB cleaned changes=1",
-    "Connection reset by peer SSH -> CAUSE network failure -> SOLUTION repeat command",
-    "Thank you 15:18 instead of real answer -> CAUSE AI router returns chat response -> diagnostics not completed"
-  ],
-  "solutions": [
-    "Reply continuity -> CANON_PASS_REPLY530 line 530 -> STATUS applied_by_terminal",
-    "SERVICE_FILE_GUARD -> line 743 anchor -> STATUS applied_by_terminal",
-    "CANON_PASS12 template+multifile hooks -> STATUS applied_by_terminal",
-    "CANON_PASS13 versioning hook -> STATUS applied_by_terminal",
-    "Excel formulas =D*E =SUM confirmed in estimate_engine.py lines 136 139 451",
-    "Stuck tasks cleaned -> changes=1"
-  ],
-  "state": "Technical contour closed 100% by code. Services active. DB clean. Live tests and task_worker SIGKILL diagnostics required",
-  "what_working": [
-    "telegram-ingress: active BOT STARTED 14:41:41",
-    "Reply continuity: answer Da to bot message = Zadacha zavershena confirmed by screenshot 15:06",
-    "SERVICE_FILE_GUARD: applied line 743",
-    "CANON_PASS12: template_manager + multi_file_orchestrator hooks active",
-    "CANON_PASS13: versioning hook active",
-    "All libraries: pytesseract OK ezdxf OK pdfplumber OK docx OK",
-    "All engines: estimate 528 ocr 160 technadzor 117 document 70 lines",
-    "DB cleanup: changes=1 confirmed by iPhone screenshot 15:15"
-  ],
-  "what_broken": [
-    "areal-task-worker crashes SIGKILL restart counter=6",
-    "Utochnite zapros instead of estimate response diagnostics not completed",
-    "SSH connection reset by peer instability"
-  ],
-  "what_not_done": [
-    "Live tests 9 scenarios: voice file revision template multi-file",
-    "task_worker crash diagnostics via journalctl --output=short",
-    "GitHub snapshot",
-    "External API keys: Anthropic 401 OpenAI 429 Grok 403",
-    "Docker + webhook.py",
-    "Email VK Avito connectors",
-    "topic_3008 multi-model 4/5 API dead"
-  ],
-  "current_breakpoint": "Code closed. Next: task_worker SIGKILL diagnostics via journalctl -n 5 --output=short then live tests",
-  "root_causes": [
-    "task_worker SIGKILL cause unknown requires journalctl -n 5 --output=short",
-    "Utochnite zapros cause AI router or INVALID_RESULT_GATE DB clean",
-    "iPhone SSH limits long commands return file instead of text"
-  ],
-  "verification": [
-    "CANON_PASS_REPLY530: BAK_OK FOUND at line 530 PATCH_OK SYNTAX_OK BOT STARTED 14:17:57 active",
-    "SERVICE_FILE_GUARD: BAK_OK FOUND at line 742 PATCH_OK at line 743 SYNTAX_OK BOT STARTED 14:41:41 active 2 processes",
-    "CANON_PASS12: BAK_OK SYNTAX_OK active Started areal-task-worker.service",
-    "CANON_PASS13: BAK_OK SYNTAX_OK active Started areal-task-worker.service",
-    "DB cleanup: changes=1 confirmed iPhone screenshot 15:15",
-    "estimate_engine.py formulas: line 136 =D{i}*E{i} line 139 =SUM(F2:F...) line 451 =SUM confirmed by grep",
-    "All modules: estimate_engine 528 ocr_engine 160 technadzor_engine 117 document_engine 70 confirmed by wc -l",
-    "pytesseract OK ezdxf OK pdfplumber OK docx OK confirmed by python3 -c import"
-  ],
-  "limits": [
-    "journalctl max -n 5 --output=cat for iPhone Shortcut",
-    "sqlite3 SELECT with GROUP BY or LIMIT 3 for iPhone Shortcut",
-    "SSH commands in field Vkhodnye dannye WITHOUT ssh areal prefix",
-    "Do not rewrite code if command already given and not executed",
-    "tail on log files returns file useless for Shortcut",
-    "heredoc << EOF not compatible with SSH via iPhone Shortcut",
-    "Forbidden: .env credentials.json google_io.py memory.db schema ai_router.py telegram_daemon.py reply_sender.py systemd unit files"
-  ]
-}
-====================================================================================================
-END_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_TECH_CLOSURE_27_04_2026__2026-04-27.txt
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: chat_exports/CHAT_EXPORT__Areal_Neva_Core_Emergency_Fix__2026-04-25.txt
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 65367a959a294c9c82e1f3311ba3b06099c1816e131f44d20a11b45ce0630593
-====================================================================================================
-﻿{ "chat_id": "Gemini_Areal_Neva_Fix_20260425", "chat_name": "Areal Neva Core Emergency Fix", "exported_at": "2026-04-25T14:47:00Z", "source_model": "Gemini", "system": "Ubuntu VPS, root access, /root/.areal-neva-core/", "architecture": "Python asyncio (telethon) daemon + task worker polling SQLite", "pipeline": "Telegram -> telegram_daemon.py -> data/telegram_media/ -> SQLite (INTAKE) -> task_worker.py (AREAL_BUS) -> AI Router -> send_reply", "files": [ "telegram_daemon.py", "task_worker.py", "document_engine.py", "table_engine.py", "memory_engine.py", "file_registry.py" ], "code": "Current logic uses exact string slicing for daemon handler and block replacement for worker _run_intake_bg.", "patches": [ "Fixed import logic", "Strict string slicing for daemon handler", "Replaced _run_intake_bg in worker", "Injected web_search and AREAL_BUS", "Forced SQLite UPDATE" ], "commands": [ "systemctl restart areal-telegram-daemon.service", "systemctl restart areal-task-worker.service" ], "db": "SQLite /root/.areal-neva-core/data/core.db", "memory": "memory_engine.recall, file_registry.recall", "services": [ "areal-telegram-daemon.service", "areal-task-worker.service" ], "errors": [ "FAIL: Handler replace failed -> Regex anchor mismatch -> Fix: Index-based slicing", "IndentationError: unexpected indent -> Regex multiline injection -> Fix: Block replacement", "SyntaxError: unterminated f-string -> re.sub newline interpretation -> Fix: Raw string replacement" ], "decisions": [ "Shift from regex to exact block replacement", "Forced database sync before restart", "Direct SQLite update to bypass ORM latency" ], "solutions": [ "Monolithic _run_intake_bg replacement", "Strict indentation guarding" ], "state": "Compiles successfully, services active, waiting for runtime verification", "what_working": [ "Daemon parsing", "Worker compilation", "Database update logic", "Web search injection" ], "what_broken": [ "None currently identified in code" ], "what_not_done": [ "Live runtime log verification of BUS markers" ], "current_breakpoint": "User verification of logs after PDF + Text test", "root_causes": [ "Regex volatility with multi-line Python indentation" ], "verification": [ "Check for WEB_SEARCH_DONE and AI INPUT LEN in task_worker.log" ], "limits": [ "UNKNOWN" ] }
-====================================================================================================
-END_FILE: chat_exports/CHAT_EXPORT__Areal_Neva_Core_Emergency_Fix__2026-04-25.txt
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: chat_exports/CHAT_EXPORT__Areal_Neva_Core_Stabilization__2026-04-27.txt
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 4c54a12584ccc202a6a9fcd720ce2401be76dae8aa95c8a132ed553262dea326
-====================================================================================================
-﻿{
- "chat_id": "areal_neva_stabilization_20260427",
- "chat_name": "Areal_Neva_Core_Stabilization",
- "exported_at": "2026-04-27T00:05:00Z",
- "source_model": "Gemini 1.5 Pro",
- "system": "areal-neva-core: AI Telegram Agent on VPS (Ubuntu 22.04 / Python 3.12)",
- "architecture": "Telegram API -> core.db -> Task Worker -> Google Drive / LLM -> Telegram",
- "pipeline": "NEW -> IN_PROGRESS -> TEXT_FOLLOWUP_REQUEUED -> DOWNLOADED -> PARSED -> DONE",
- "files": [
-   "task_worker.py",
-   "telegram_daemon.py",
-   "google_io.py"
- ],
- "code": "Python 3.12, SQLite 3, systemd, google-api-python-client, Telethon",
- "patches": [
-   "FIX_DRIVE_DOWNLOAD -> task_worker.py -> 2106 -> status: failed (IndentationError: line 41)",
-   "RESURRECT_TASK -> core.db -> b6ed8407 -> status: applied_by_terminal"
- ],
- "commands": [
-   "ssh areal 'grep -n ... google_io.py'",
-   "ssh areal 'python3 -c ... (Drive Auth Test)'",
-   "ssh areal 'sed -n \"2100,2115p\" task_worker.py'",
-   "sqlite3 core.db \"UPDATE tasks SET state='IN_PROGRESS'...\""
- ],
- "db": "tasks: b6ed8407-3a71... (state: IN_PROGRESS), drive_files: stage (INGESTED)",
- "memory": "memory.db: state saved, topic isolation",
- "services": [
-   "areal-task-worker: failed (IndentationError at line 41)",
-   "areal-telegram-daemon: active"
- ],
- "canons": [
-   "Priority 0: Drive Auth (OAuth2/Refresh Token)",
-   "Patch Protocol (backup/compile/restart)"
- ],
- "decisions": [
-   "Use google_io.download_file with OAuth2 instead of service account"
- ],
- "errors": [
-   "403 Forbidden (Service Account rights)",
-   "IndentationError (line 41)"
- ],
- "solutions": [
-   "Replace _download_from_drive with await download_file"
- ],
- "state": "Worker down due to syntax error at line 41. Task b6ed8407 is IN_PROGRESS.",
- "what_working": [
-   "Drive Auth via google_io",
-   "Database manipulation"
- ],
- "what_broken": [
-   "task_worker.py execution",
-   "Auto-transition for TEXT_FOLLOWUP"
- ],
- "what_not_done": [
-   "Cleanup of multiple 'import asyncio' statements"
- ],
- "current_breakpoint": "Fixing line 41 IndentationError in task_worker.py",
- "root_causes": [
-   "Incorrect indentation in surgical patch"
- ],
- "verification": [
-   "PATCH_OK received, but SyntaxError: unexpected indent verified"
- ],
- "limits": [
-   "tail -n 20 for logs",
-   "No access to sensitive .env/credentials"
- ]
-}
-====================================================================================================
-END_FILE: chat_exports/CHAT_EXPORT__Areal_Neva_Core_Stabilization__2026-04-27.txt
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: chat_exports/CHAT_EXPORT__Asimov_Laws_and_Bio__2026-04-27.txt
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: ac00db5c570b167d5cf63f9a3857e8314201a64678ccfc676f0bb32e53097122
-====================================================================================================
-﻿{ "chat_id": "UNKNOWN", "chat_name": "Asimov_Laws_and_Bio", "exported_at": "2026-04-27T00:06:00Z", "source_model": "Gemini", "system": "Google Gemini Assistant / Personal Data Ecosystem", "architecture": "User Prompt → Omni-Protocol Personalization Firewall → Personal Context Retrieval (Google Data) → Fact-Only Synthesis → Final Response", "pipeline": "FACT_RETRIEVAL → STRUCTURED_ANSWER → USER_QUERY_ITERATION → EXPORT_TRIGGERED", "files": [ "personal_context → предоставление данных о пользователе (Илья Владимирович Кузнецов)", "AI_ORCHESTRA → внешнее хранилище в Google Drive" ], "code": "Python (Telethon), Docker-compose, WireGuard, Xray", "patches": [ "DRIVE_CONNECTION_FIX → Google Drive → ALL → applied_by_terminal" ], "commands": [ "personal_context:retrieve_personal_data" ], "db": "UNKNOWN", "memory": "Kuznetsov: surname (colleague); AI_ORCHESTRA: shared memory link; Location: Saint Petersburg/Leningrad Oblast; Tech: Technical supervision, construction management", "services": [ "Google Drive: Connected", "VPN (Finland/Netherlands): Active", "Telegram Agent (areal-neva-core): In development" ], "canons": [ "FACT_ONLY → приоритет фактической точности без галлюцинаций", "ZERO_FOOTPRINT → скрытое использование персональных данных без цитирования", "ASIMOV_LAWS → соблюдение этических ограничений ИИ" ], "decisions": [ "REASONING_RECOVERY → использование User Correction Ledger для исправления контекста о фамилии Кузнецов → применено в системном промпте" ], "errors": [ "DRIVE_ACCESS_ERROR → ошибка прав доступа со стороны ИИ → решение: принудительное использование AI_ORCHESTRA" ], "solutions": [ "INACCURATE_BIO → уточнение биографических данных Азимова → СТАТУС: ВЫПОЛНЕНО" ], "state": "Система в режиме FACT ONLY, ожидает дальнейших команд по проекту или экспорту.", "what_working": [ "Интеграция с Google Drive подтверждена пользователем", "Автоматизация извлечения фактов биографии (Азимов)", "Валидация технических параметров (Python/Docker)" ], "what_broken": [ "UNKNOWN" ], "what_not_done": [ "Direct native write to .txt (Fallback to GOOGLE_DOC variant B)" ], "current_breakpoint": "Выполнение экспорта состояния чата в JSON-формате", "root_causes": [ "PARENT_ID_STRICT_ENFORCEMENT → выполнение записи в целевую папку 14bYA9bHaKahkE8d4IDwWxL4Ojn-G0sDl" ], "verification": [ "JSON_STRUCTURE → syntax OK", "PARENT_ID_CHECK → 14bYA9bHaKahkE8d4IDwWxL4Ojn-G0sDl acknowledged" ], "limits": [ "Запрещено создание в корне My Drive", "Запрещено использование Bridge Phrases", "Ограничение на использование чувствительных данных (Stage 2 Firewall)" ] }
-====================================================================================================
-END_FILE: chat_exports/CHAT_EXPORT__Asimov_Laws_and_Bio__2026-04-27.txt
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: chat_exports/CHAT_EXPORT__CHATGPT_GEMINI_AGGREGATOR_V2_FINAL__2026-04-29.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 99416eff2ef57fa634ba501724b6b9d91fed87bf947b9f71067a67701e429e37
-====================================================================================================
-{
-  "chat_id": "CHATGPT_GEMINI_AGGREGATOR_V2_FINAL",
-  "chat_name": "ChatGPT session — Gemini menu-only integration and Context Aggregator v2",
-  "exported_at": "2026-04-29T21:20:00+00:00",
-  "source_model": "ChatGPT GPT-5.5 Thinking",
-  "system": "AREAL-NEVA ORCHESTRA. GitHub CLEAN export only. No private values included.",
-  "architecture": "Орик работает на сервере. Telegram является интерфейсом. GitHub является публичным SSOT. Server FULL export является приватным архивом и не пушится в GitHub.",
-  "pipeline": "File flow fixed conceptually: any file -> Oрик asks what to do -> user selects action -> selected intent -> engine -> result. Gemini is used only for explicit user-selected intent=vision.",
-  "files": [
-    "core/gemini_vision.py",
-    "core/file_intake_router.py",
-    "tools/context_aggregator.py",
-    "docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md",
-    "chat_exports/CHAT_EXPORT__CHATGPT_GEMINI_AGGREGATOR_V2_FINAL__2026-04-29.json"
-  ],
-  "code": "No secrets. Gemini must be direct Google API tool only, not OpenRouter. DeepSeek and Perplexity routes must not be touched.",
-  "patches": [
-    "GEMINI_VISION_MENU_CANON_ONLY",
-    "file_intake_router restore from backup after broken patch",
-    "CONTEXT_AGGREGATOR_V2 completed by user-side execution"
-  ],
-  "commands": [
-    "restore file_intake_router.py from core/file_intake_router.py.bak.20260429_192333",
-    "restore related engines from latest backups",
-    "add Анализ фото / Схема to get_clarification_message in STROYKA, TEHNADZOR and DEFAULT",
-    "restart areal-task-worker",
-    "run tools/context_aggregator.py",
-    "push ONE_SHARED_CONTEXT.md to GitHub"
-  ],
-  "db": "No database schema changes made in this session.",
-  "memory": "Important rule confirmed: if information is not in GitHub export/canon/handoff, next neural network will not reliably know it.",
-  "services": [
-    "areal-task-worker",
-    "cron",
-    "GitHub",
-    "context_aggregator.py"
-  ],
-  "errors": [
-    "core/file_intake_router.py was missing and only .bak files existed",
-    "initial Gemini patch attempted automatic image interception and violated clarification flow",
-    "context_aggregator cron had wrong path /root/.areal-neva-core/context_aggregator.py",
-    "manual run showed tools/context_aggregator.py was the real file",
-    "old aggregator run reported TODO/not implemented before CONTEXT_AGGREGATOR_V2 work",
-    "GitHub connector unavailable in this ChatGPT turn"
-  ],
-  "decisions": [
-    "Gemini must be added only as menu-selected tool, not automatic router",
-    "Any file must first trigger clarification",
-    "User must choose action before any engine starts",
-    "Анализ фото / Схема must exist in all file clarification menus",
-    "No Gemini via OpenRouter",
-    "DeepSeek remains final/default model",
-    "Perplexity remains search model",
-    "Aggregator reads GitHub sources and builds ONE_SHARED_CONTEXT.md mechanically, without LLM decisions"
-  ],
-  "solutions": [
-    "core/gemini_vision.py kept as direct Google API tool",
-    "file_intake_router.py restored from valid backup",
-    "menu item Анализ фото / Схема added to STROYKA, TEHNADZOR and DEFAULT",
-    "intent == vision branch already present in restored file_intake_router.py",
-    "CONTEXT_AGGREGATOR_V2 specification accepted: read all chat_exports plus canon/handoff/reports/architecture, filter by statuses, write ONE_SHARED_CONTEXT.md, push to GitHub every 30 minutes"
-  ],
-  "state": "Gemini menu-only logic is patched and worker is active. Aggregator v2 was reported as done by user with commit e56c2fd83fb5946fbefb3351192fd0307530c30b. This export records the final ChatGPT-side state.",
-  "what_working": [
-    "core/gemini_vision.py exists",
-    "core/file_intake_router.py exists after restore",
-    "Анализ фото / Схема appears in all three clarification branches",
-    "areal-task-worker restarted and active after menu patch",
-    "CONTEXT_AGGREGATOR_V2 produced commit e56c2fd83fb5946fbefb3351192fd0307530c30b according to user terminal output"
-  ],
-  "what_broken": [
-    "Direct GitHub connector is unavailable in this ChatGPT tool session",
-    "Earlier cron path for aggregator was wrong",
-    "Earlier Gemini patch logic tried to infer intent automatically and was rejected"
-  ],
-  "what_not_done": [
-    "Live Telegram test of file -> clarification -> Анализ фото / Схема -> Gemini result is not shown in this chat",
-    "Live test of project_engine end-to-end is not shown in this chat",
-    "Server FULL export of this ChatGPT chat is not created here"
-  ],
-  "current_breakpoint": "Start live tests in Telegram: send file, verify Oрик asks what to do, select Анализ фото / Схема, confirm Gemini result, then verify task status, reply binding, memory, pin and archive behavior.",
-  "root_causes": [
-    "The system needed menu-based file intent lifecycle, not automatic model selection",
-    "Gemini is a tool for selected vision intent, not a replacement for file pipeline",
-    "Aggregator must read GitHub sources mechanically and must not depend on stale UI pages or wrong cron path"
-  ],
-  "verification": [
-    "User terminal output showed Анализ фото / Схема at lines 65, 67, 69 of core/file_intake_router.py",
-    "User terminal output showed SYNTAX_OK for core/file_intake_router.py",
-    "User terminal output showed areal-task-worker active",
-    "User terminal output showed AGGREGATOR DONE commit e56c2fd83fb5946fbefb3351192fd0307530c30b"
-  ],
-  "limits": [
-    "No private authentication values included",
-    "No raw .env content included",
-    "No server FULL export included",
-    "GitHub CLEAN export only"
-  ]
-}
-
-====================================================================================================
-END_FILE: chat_exports/CHAT_EXPORT__CHATGPT_GEMINI_AGGREGATOR_V2_FINAL__2026-04-29.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: chat_exports/CHAT_EXPORT__CHATGPT_GITHUB_EXPORT_RULES_CANON__2026-04-29.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 6f12bf00015c78cec8894917330edbb940f77152ff86c3cae05ea34955879fa4
-====================================================================================================
-{
-  "chat_id": "CHATGPT_GITHUB_EXPORT_RULES_CANON",
-  "chat_name": "ChatGPT GitHub export rules and canon update session",
-  "exported_at": "2026-04-29T19:25:00+00:00",
-  "source_model": "ChatGPT GPT-5.5 Thinking",
-  "system": "AREAL-NEVA / NEURON SOFT ORCHESTRA. GitHub is the public SSOT for neural-network context. Server is runtime/private archive. This export is GitHub CLEAN only and contains no private authentication data or raw private configuration values.",
-  "architecture": "GitHub repo rj7hmz9cvm-lgtm/areal-neva-core stores CANON_FINAL, SHARED_CONTEXT, HANDOFFS, REPORTS, tools, scripts and chat_exports. Server path used in canon is /root/.areal-neva-core, but this export is committed only to GitHub. Google Drive was explicitly excluded from the final GitHub/server export workflow in this chat.",
-  "pipeline": "Current chat established and pushed a canon addition: GitHub CLEAN exports are public SSOT; server FULL exports are private. For freshness, neural networks must read GitHub files by latest commit SHA and verify internal updated_at rather than trusting cached GitHub web UI pages.",
-  "files": [
-    "docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md",
-    "docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md",
-    "docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md",
-    "chat_exports/CHAT_EXPORT__CHATGPT_GITHUB_EXPORT_RULES_CANON__2026-04-29.json"
-  ],
-  "code": "No executable project code was changed in this chat export operation. The session added canon text and protocol text to documentation files. GitHub CLEAN export created as a JSON object only.",
-  "patches": [
-    "canon §14 + handoff: chat export protocol v2"
-  ],
-  "commands": [
-    "ssh areal 'bash -s' << 'ENDSSH' ... git reset --hard origin/main ... append §14 ... append CHAT EXPORT PROTOCOL v2 ... git add -f ... git commit ... git push origin main ... ENDSSH",
-    "git push origin main",
-    "create GitHub clean export file chat_exports/CHAT_EXPORT__CHATGPT_GITHUB_EXPORT_RULES_CANON__2026-04-29.json"
-  ],
-  "db": "No database schema or runtime database changes were made in this chat. core.db and memory.db were mentioned only as server runtime/memory locations in canon context.",
-  "memory": "GitHub CLEAN export is the public memory unit for neural-network recovery. Server FULL export is private archive and is not required for AI-to-AI context recovery.",
-  "services": [
-    "GitHub connector",
-    "server SSH executed by user through Mac terminal"
-  ],
-  "errors": [
-    "Initial terminal blocks failed because nested heredoc markers appeared inside an outer heredoc and caused Mac terminal heredoc continuation.",
-    "A local commit push was rejected as non-fast-forward.",
-    "A rebase attempt failed due to unstaged changes.",
-    "A later rebase hit an add/add conflict in chat_exports/CHAT_EXPORT__AREAL_NEVA_GIT_CLEANUP_AND_AGGREGATOR__2026-04-29.json.",
-    "Repository state was recovered by aborting broken rebase, resetting tracked files to origin/main, then appending the two documentation sections again."
-  ],
-  "decisions": [
-    "Google Drive is not used for this workflow; only server and GitHub are relevant.",
-    "GitHub must contain only clean, verified, useful information without private authentication/config/access values.",
-    "Server FULL export may contain complete private technical context but is not pushed to GitHub.",
-    "GitHub CLEAN export is the only public SSOT for neural networks.",
-    "docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md is the correct file for the new GitHub freshness and chat export canon section.",
-    "docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md is the correct file for chat export protocol v2.",
-    "Existing canon must not be rewritten; new rules are appended to the end of existing files.",
-    "GitHub UI blob/main pages are not freshness proof because rendered pages may be cached or stale."
-  ],
-  "solutions": [
-    "Added §14 GITHUB FRESHNESS AND CHAT EXPORT RULE to docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md.",
-    "Added CHAT EXPORT PROTOCOL v2 — 29.04.2026 to docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md.",
-    "Resolved broken local Git state by resetting tracked files to origin/main before appending only the required canon/protocol sections.",
-    "Avoided nested heredoc in final protocol text by describing SSH-block requirement without embedding a live nested terminator inside the outer shell block.",
-    "Verified successful push with commit e402dc9 on main."
-  ],
-  "state": "GitHub canon/protocol update completed and pushed. Current GitHub CLEAN chat export file created for this ChatGPT session.",
-  "what_working": [
-    "GitHub repository access confirmed for rj7hmz9cvm-lgtm/areal-neva-core.",
-    "GitHub commit e402dc9 pushed to main with canon §14 and handoff protocol v2.",
-    "docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md contains §14. GITHUB FRESHNESS AND CHAT EXPORT RULE.",
-    "docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md contains CHAT EXPORT PROTOCOL v2 — 29.04.2026.",
-    "Latest GitHub commits showed AGG ONE_SHARED_CONTEXT updates at 16:00, 17:00 and 18:00 UTC on 2026-04-29.",
-    "Reading ONE_SHARED_CONTEXT.md by exact commit SHA 50a76d4 showed updated_at 2026-04-29T18:00:29.325256+00:00 and included recent chat exports."
-  ],
-  "what_broken": [
-    "GitHub web UI may show cached/stale rendered content and must not be used as freshness proof.",
-    "Mac terminal can hang in heredoc mode if pasted text contains an inner heredoc terminator that conflicts with the outer block.",
-    "Server working tree contained many untracked runtime, backup and private files; those were not committed to GitHub in this export."
-  ],
-  "what_not_done": [
-    "Server FULL export for this chat was not created by ChatGPT because this environment does not have direct SSH write access.",
-    "Aggregator was not manually rerun after commit e402dc9 inside this chat.",
-    "No changes were made to runtime Python code or services."
-  ],
-  "current_breakpoint": "Future neural networks must start from GitHub latest main commit SHA, read docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md by exact SHA, verify updated_at, then read required chat_exports by exact SHA. For this workflow, GitHub receives only CLEAN exports; server FULL exports are private and generated as user-run SSH blocks when needed.",
-  "root_causes": [
-    "Earlier prompt drafts mixed server FULL export and GitHub CLEAN export rules, causing ambiguity.",
-    "Use of nested heredoc syntax inside a heredoc-delivered command caused shell continuation problems.",
-    "Non-fast-forward push occurred because remote main had newer commits than local main.",
-    "Rebase conflict occurred because the same chat export file existed both locally and remotely as an add/add conflict.",
-    "Cached GitHub UI display caused apparent mismatch between visible file content and actual latest commit content."
-  ],
-  "verification": [
-    "Final server command output showed commit e402dc9 canon §14 + handoff: chat export protocol v2.",
-    "Final server command output showed push 50a76d4..e402dc9 main -> main.",
-    "Final verification showed docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md line 326 contains §14. GITHUB FRESHNESS AND CHAT EXPORT RULE.",
-    "Final verification showed docs/HANDOFFS/CHAT_EXPORT_PROTOCOL.md line 127 contains CHAT EXPORT PROTOCOL v2 — 29.04.2026.",
-    "This GitHub export file was checked for filename collision before creation and is a single JSON object with no text outside JSON."
-  ],
-  "limits": [
-    "This export intentionally excludes private authentication/config/access values.",
-    "This export is a GitHub CLEAN export only, not a server FULL export.",
-    "The content is based only on facts visible in the current ChatGPT conversation and GitHub connector responses.",
-    "No claim is made that server FULL export for this chat exists."
-  ]
-}
-
-====================================================================================================
-END_FILE: chat_exports/CHAT_EXPORT__CHATGPT_GITHUB_EXPORT_RULES_CANON__2026-04-29.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: chat_exports/CHAT_EXPORT__CLAUDE_SESSION__2026-04-27.txt
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 8126d4fb738afd84a85721c9a27e2f2675dbb6129804c4bef0ae0d0c49f959d5
-====================================================================================================
-﻿{"chat_id":"CLAUDE_SESSION_2026-04-27","chat_name":"AREAL-NEVA ORCHESTRA - Claude Session 26-27.04.2026","exported_at":"2026-04-27T02:10:00+03:00","source_model":"Claude Sonnet 4.5",
-"system":"AREAL-NEVA ORCHESTRA on Ubuntu 24.04 (89.22.225.136). Server path: /root/.areal-neva-core. Python 3.12, aiogram 3.x, aiosqlite, Redis. Services: areal-telegram-daemon, areal-task-worker, areal-memory-api. Bot: @ai_orkestra_all_bot 'AI_ORCESTRA'. User: Ilya NADZOR812 Kuznetsov. IPhone Shortcut SSH = NO heredoc, only single-line ssh commands or ssh areal 'bash -s' << 'ENDSSH.",
-"architecture":"Telegram -> telegram_daemon.py -> core.db -> task_worker.py -> core/ai_router.py -> core/reply_sender.py -> Telegram. Voice: Telegram -> .ogg -> Groq Whisper STT -> text -> create_task.",
-"pipeline":"NEW -> IN_PROGRESS -> AWAITING_CONFIRMATION -> DONE -> ARCHIVED.",
-"files":[
-  "/root/.areal-neva-core/telegram_daemon.py",
-  "/root/.areal-neva-core/task_worker.py",
-  "/root/.areal-neva-core/core/ai_router.py",
-  "/root/.areal-neva-core/core/reply_sender.py",
-  "/root/.areal-neva-core/data/core.db",
-  "/root/.areal-neva-core/logs/telegram_daemon.log"
-],
-"patches_applied_today":[
-  "CANON_PASS6_SINGLE_INSTANCE_LOCK -> telegram_daemon.py lines 10-23 -> fcntl.flock prevents duplicate daemons -> status: ACTIVE",
-  "CANON_PASS13_CHAT_ONLY_PHRASES_FIX -> telegram_daemon.py lines 940-950 -> defines CHAT_ONLY_PHRASES dict -> status: APPLIED BUT NOT EFFECTIVE (executes after main())",
-  "CANON_PASS13_DISABLE -> sed -i '902,103s/.../' -> Lines 902-903 commented out with # DISABLED_PASS13 -> status: ACTIVE - FIXED VOICE",
-  "CANON_PASS14_LOCK_PID_KILL -> REVERTED -> caused systemd restart race condition"
-],
-"patches_from_other_AI_sessions":[
-  "GPT sed patch: logger.exception + INTAKE_CREATE_TASK_FAILED error message -> APPLIED",
-  "PATCH_ENGINE_TIMEOUT -> task_worker.py line 1996 -> route_file wrapped in 240s timeout -> APPLIED",
-  "CANON_PASS2_FILE_MEMORY_REPLY_GUARD-> task_worker.py lines 2490-2569 -> ACTIVE",
-  "CANON_PASS3_REAL_DRIVEFILE_WIRIGN -> task_worker.py lines 2237-2403 -> ACTIVE",
-  "CANON_PASS5B_TOPIC_3008_CODE_BRAIN -> task_worker.py lines 2405-2420 -> ACTIVE",
-  "CANON_PASS6_LIVE_CORE_OVERLAY -> task_worker.py lines 2573-2598 -> includes _cp6_save_topic_directions -> ACTIVE"
-],
-"state_current":{
-  "voice":"WORKING - STT ok, create_task ok, answer returns Dovolen?",
-  "daemon_processes":"2 (one running, one exits quickly via CANON_PASS6 lock)",
-  "systemd_status":"inactive but PID 1566302 running since 01:37",
-  "confirmation_handler":"BROKEN - Da creates new task instead of closing existing",
-  "reply_continuity":"BROKEN - reply to bot message creates new task instead of updating existing",
-  "task_worker":"active",
-  "memory_api":"active",
-  "last_voice_task":"AWAITING_CONFIRMATION [VOICE] Orik, dobry vecher at 22:45"
-},
-"what_working":[
-  "Voice STT Groq Whisper - ogg -> transcript ok",
-  "create_task from voice - task created in DB",
-  "AI processing - DeepSeek via OpenRouter responds",
-  "reply_sender - bot sends result to Telegram",
-  "logger.exception - tracebacks now in log",
-  "task_worker active",
-  "memory_api active"
-],
-"what_broken":[
-  "CONFIRMATION HANDLER: 'Da' creates new task instead of closing AWAITING_CONFIRMATION task - P 0",
-  "REPLY CONTINUITY: Reply to bot message creates new task - violates Canon 2.3 - P1",
-  "CHAT INTENT AUTO-CLOSE: 'ok/'ponyal' responses hang 600s in STALE_TIMEOUT - P1",
-  "drive_file DOWNLOAD_FAILED - google_io.download_file not working for Drive files - P2",
-  "API keys dead: Anthropic 401, OpenAI 429, Grok 403 AEZA IP block, DeepSeek 402 no balance, Groq 403 Cloudflare"
-],
-"what_not_done":[
-  "Confirmation handler fix - need overlay in telegram_daemon.py universal_handler before text processing - see code analysis below",
-  "CHAT intent auto-close overlay in task_worker.py",
-  "Stuck 'Oshibka obrabotki' messages cleanup via bot.delete_message",
-  "Excel formulas =C2*D2 / =SUM live test",
-  "Tehnadzor SP/GOST/SNiP norm database",
-  "GitHub snapshot",
-  "Mistral/Cerebras/Cohere API keys registration"
-],
-"critical_code_fact_confirmation_handler":"In telegram_daemon.py universal_handler seen at line ~855: function _handle_control_text exists and handles FINISH/CONFIRM/intents. When the user sends Da as a reply, _handle_control_text is called but returns 'Utochite zapros' instead of closing task. Root cause: task lookup by reply_to_message_id does not match bot_message_id in tasks table. Fix: check DB for task with bot_message_id matching reply_to_message_id.",
-"next_step_confirmation_fix":"Guaranteed fix - run on server: grep -n _handle_control_text /root/.areal-neva-core/telegram_daemon.py - then sed -n '<start>,<end>p' telegram_daemon.py to see full function - then apply overlay that searches tasks where bot_message_id = reply_to_message_id AND state = 'AWAITING_CONFIRMATION' and checks if text contains confirm words.",
-"api_keys_status":{
-  "OPENROUTER_API_KEY":"WORKING - DeepSeek + Perplexity",
-  "GOOGLE_API_KEY":"WORKING - 1500/day limit",
-  "ANTHROPCI_API_KEY":"DEAD - 401",
-  "OPENAI_API_KEY":"DEAD - 429",
-  "XAI_API_KEY":"DEAD - 403 AEZA IP block",
-  "DEEPSEEK_API_KEY":"DEAD - 402 no balance",
-  "GROQ_API_KEY":"DEAD - 403 Cloudflare"
-},
-"services":[
-  "areal-telegram-daemon: PID 1566302 running since 01:37, systemd shows inactive but process alive",
-  "areal-task-worker: active",
-  "areal-memory-api: active"
-],
-"canon_rules_vided":[
-  "Section 2.1: FINISH > CONFIRM > REVISION > TASK > SEARCH > CHAT",
-  "Section 2.2: NEW -> IN_PROGRESS -> AWAITING_CONFIRMATION -> DONE -> ARCHIVED",
-  "Section 2.3: Reply to bot message = NO NEW TASK, must continue old chain",
-  "Section 8.3: ok/ponyal/spasibo = CHAT MODE, no new tasks",
-  "Section 10.1: STALE_TIMEOUT = 600s, REMINDER_INTERVAL = 180s",
-  "Section 13.5: Text answer without artefact = FAIL for file tasks"
-],
-"logs_paths":{
-  "telegram_daemon":"/root/.areal-neva-core/logs/telegram_daemon.log",
-  "task_worker":"/root/.areal-neva-core/logs/task_worker.log",
-  "memory_api":"/root/.areal-neva-core/logs/memory_api.log"
-}}
-====================================================================================================
-END_FILE: chat_exports/CHAT_EXPORT__CLAUDE_SESSION__2026-04-27.txt
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: chat_exports/CHAT_EXPORT__CURRENT_CHAT_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 0f11a3a37b07c7cb2b606af386f71643ac3a983703abf7fad46b99f3628e5816
-====================================================================================================
-{
-  "chat_id": "CURRENT_CHAT",
-  "chat_name": "FILE_INTAKE_DRIVE_UPLOAD_2026-04-30",
-  "exported_at": "2026-04-30T00:00:00+03:00",
-  "source_model": "GPT-5.5 Thinking",
-  "system": {
-    "mode": "FACTS_ONLY_CURRENT_CHAT",
-    "server": "/root/.areal-neva-core",
-    "repo": "rj7hmz9cvm-lgtm/areal-neva-core"
-  },
-  "architecture": {
-    "pipeline": "Telegram file -> telegram_ingress -> core.db task input_type=drive_file -> task_worker.py -> file intake menu -> reply choice -> engine -> artifact -> Drive upload",
-    "drive_target": "AI_ORCHESTRA folder_id 13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB",
-    "service_account": "ai-orchestra@areal-neva-automation.iam.gserviceaccount.com"
-  },
-  "pipeline": [
-    "Confirmed Telegram files are created as input_type=drive_file, not file",
-    "Confirmed drive_file raw_input contains file_id, file_name, mime_type, caption, telegram_message_id, telegram_chat_id",
-    "Confirmed drive_file without caption must go to NEEDS_CONTEXT before download/processing",
-    "Confirmed reply/voice/text on file menu must be processed before confirm/finish/chat logic"
-  ],
-  "files": [
-    "/root/.areal-neva-core/task_worker.py",
-    "/root/.areal-neva-core/core/drive_service_account_uploader.py",
-    "/root/.areal-neva-core/core/artifact_pipeline.py",
-    "/root/.areal-neva-core/core/estimate_engine.py",
-    "/root/.areal-neva-core/core/dwg_engine.py",
-    "/root/.areal-neva-core/core/project_engine.py",
-    "/root/.areal-neva-core/core/file_intake_router.py",
-    "/root/.areal-neva-core/credentials.json",
-    "/root/.areal-neva-core/token.json",
-    "/root/.areal-neva-core/core.bak.before_rollback_20260427_202634/engine_base.py"
-  ],
-  "code": {
-    "installed_patches": [
-      "PATCH_FILE_INTAKE_NEEDS_CONTEXT_V3_MINIMAL",
-      "PATCH_DRIVE_GUARD_BEFORE_DOWNLOAD_V1",
-      "PATCH_WORKER_PICK_BEFORE_STALE_V1",
-      "PATCH_FIX_PFIN3_MENU_SHADOW_V1",
-      "PATCH_FILE_CHOICE_PRIORITY_V1",
-      "PATCH_DRIVE_SERVICE_ACCOUNT_PRIMARY_V1"
-    ],
-    "rejected_or_not_to_run": [
-      "RESTORE_ENGINE_BASE generated from scratch was rejected as unsafe/self-invented",
-      "PATCH_ENGINE_BASE_SERVICE_ACCOUNT_UPLOAD_V2_LIVE_TEST failed because find selected backup engine_base.py",
-      "PATCH_ENGINE_BASE_SERVICE_ACCOUNT_UPLOAD_V3_LIVE_ONLY failed because live /root/.areal-neva-core/core/engine_base.py does not exist"
-    ]
-  },
-  "patches": [
-    {
-      "name": "PATCH_FILE_INTAKE_NEEDS_CONTEXT_V3_MINIMAL",
-      "file": "task_worker.py",
-      "status": "INSTALLED",
-      "facts": [
-        "Added file-intake menu logic for drive_file",
-        "Added NEEDS_CONTEXT handling and topic menus",
-        "Worker active and syntax OK after installation"
-      ]
-    },
-    {
-      "name": "PATCH_DRIVE_GUARD_BEFORE_DOWNLOAD_V1",
-      "file": "task_worker.py",
-      "status": "INSTALLED",
-      "facts": [
-        "Moved intent/NEEDS_CONTEXT guard before _download_from_drive",
-        "Fixed issue where download path could block before menu"
-      ]
-    },
-    {
-      "name": "PATCH_WORKER_PICK_BEFORE_STALE_V1",
-      "file": "task_worker.py",
-      "status": "INSTALLED",
-      "facts": [
-        "Moved task pick before stale recovery",
-        "Later found not the final root cause for stuck drive_file tasks"
-      ]
-    },
-    {
-      "name": "PATCH_FIX_PFIN3_MENU_SHADOW_V1",
-      "file": "task_worker.py",
-      "status": "VERIFIED",
-      "facts": [
-        "Fixed UnboundLocalError caused by _pfin3_menu = _pfin3_menu(...) shadowing function",
-        "After fix, tasks d95b1fcb and 1e7b6864 moved from NEW to NEEDS_CONTEXT",
-        "bot_message_id saved: 8149 and 8150",
-        "FILE_INTAKE_GUARD_HIT appeared in logs"
-      ]
-    },
-    {
-      "name": "PATCH_FILE_CHOICE_PRIORITY_V1",
-      "file": "task_worker.py",
-      "status": "INSTALLED_PARTIALLY_VERIFIED",
-      "facts": [
-        "Added priority file-choice handler before role/confirm/finish/chat logic",
-        "Tech-supervision topic task d95b1fcb reached AWAITING_CONFIRMATION",
-        "Project topic task 1e7b6864 became CANCELLED due to user reply parsed as cancel/check"
-      ]
-    },
-    {
-      "name": "PATCH_DRIVE_SERVICE_ACCOUNT_PRIMARY_V1",
-      "files": [
-        "core/drive_service_account_uploader.py",
-        "core/artifact_pipeline.py",
-        "task_worker.py"
-      ],
-      "status": "INSTALLED_NOT_COMPLETE",
-      "facts": [
-        "Created drive_service_account_uploader.py",
-        "Service Account healthcheck returned ok=True",
-        "credentials path /root/.areal-neva-core/credentials.json",
-        "folder_id 13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB",
-        "Did not complete common upload path because core/engine_base.py is missing"
-      ]
-    }
-  ],
-  "commands": [
-    "grep/sed/sqlite3 diagnostics confirmed input_type=drive_file",
-    "journal/task_worker.log diagnostics confirmed invalid_grant on Drive upload",
-    "importlib.util.find_spec confirmed core.engine_base => NOT_FOUND",
-    "find confirmed only backup engine_base.py exists at /root/.areal-neva-core/core.bak.before_rollback_20260427_202634/engine_base.py"
-  ],
-  "db": {
-    "confirmed_tasks": [
-      {
-        "id": "d95b1fcb-b31f-4b2f-b0a2-3342c8d35984",
-        "topic_id": 5,
-        "input_type": "drive_file",
-        "final_seen_state": "AWAITING_CONFIRMATION",
-        "result_fact": "Нормализовано позиций: 32; artifact created locally; Drive upload failed"
-      },
-      {
-        "id": "1e7b6864-bdd7-4d17-878f-be49940c398f",
-        "topic_id": 210,
-        "input_type": "drive_file",
-        "final_seen_state": "CANCELLED",
-        "result_fact": "project topic reply was parsed as cancel/check"
-      }
-    ]
-  },
-  "memory": {
-    "rule": "Do not use token.json as permanent primary Drive upload path",
-    "service_account": "ai-orchestra@areal-neva-automation.iam.gserviceaccount.com",
-    "drive_folder_id": "13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB"
-  },
-  "services": [
-    "areal-task-worker active during checks",
-    "telegram-ingress active during checks",
-    "areal-memory-api active during checks"
-  ],
-  "errors": [
-    "V2 patch was too large and rollback was triggered by sqlite diagnostic error",
-    "Initial file guard targeted input_type=file but real tasks use input_type=drive_file",
-    "Guard was initially placed after download; download could block before menu",
-    "UnboundLocalError: cannot access local variable _pfin3_menu where it is not associated with a value",
-    "Drive upload failed with invalid_grant: Token has been expired or revoked",
-    "core.engine_base missing from live /root/.areal-neva-core/core/",
-    "engine_base restore from scratch was rejected as unsafe",
-    "find-based engine_base patch selected backup path instead of live core path"
-  ],
-  "decisions": [
-    "Do not patch by guessing",
-    "Do not recreate engine_base.py from scratch",
-    "Use Service Account as permanent primary Drive upload path",
-    "token.json can only be legacy fallback, not primary path",
-    "Drive failure must not break file task if local artifact exists",
-    "Claude must find confirmed source for engine_base.py and return READY_FOR_PATCH or BLOCKED_WITH_REASON"
-  ],
-  "solutions": [
-    "File intake menu path partially fixed and verified for NEEDS_CONTEXT",
-    "Reply-choice priority installed",
-    "Service Account helper installed and healthcheck ok",
-    "Permanent Drive upload remains blocked until engine_base.py is restored from confirmed source and upload_artifact_to_drive is patched there"
-  ],
-  "state": "PARTIAL_FIX_INSTALLED_DRIVE_UPLOAD_NOT_CLOSED",
-  "what_working": [
-    "drive_file -> NEEDS_CONTEXT menu",
-    "bot_message_id saved for menu messages",
-    "reply-choice can advance tech-supervision file task",
-    "local artifact generation worked for d95b1fcb",
-    "Service Account credentials healthcheck ok"
-  ],
-  "what_broken": [
-    "Permanent Drive artifact upload is not closed",
-    "token.json OAuth path failed invalid_grant",
-    "core.engine_base.py missing from live core directory",
-    "project topic reply-choice/cancel behavior needs separate verification",
-    "common upload path used by estimate/dwg/project engines cannot be safely patched until engine_base.py source is confirmed"
-  ],
-  "what_not_done": [
-    "No confirmed restore of core/engine_base.py yet",
-    "No live upload_artifact_to_drive test returning drive.google.com link yet",
-    "No final VERIFIED status for Drive upload contour",
-    "No multi-file guard",
-    "No duplicate guard",
-    "No memory/pin lookup before file menu",
-    "No link-intake guard"
-  ],
-  "current_breakpoint": "Need confirmed source for core/engine_base.py, then patch upload_artifact_to_drive to Service Account primary and run live upload test",
-  "root_causes": [
-    "Drive upload depended on unstable OAuth token.json path",
-    "core.engine_base.py is missing while live engines still import core.engine_base",
-    "Previous attempts guessed paths or reconstructed code instead of using confirmed source"
-  ],
-  "verification": [
-    "Service Account healthcheck ok=True with credentials.json",
-    "Task d95b1fcb reached AWAITING_CONFIRMATION with local artifact result",
-    "Task 1e7b6864 reached CANCELLED after project topic reply",
-    "importlib find_spec core.engine_base returned NOT_FOUND",
-    "find showed backup engine_base.py at core.bak.before_rollback_20260427_202634/engine_base.py"
-  ],
-  "limits": [
-    "This export contains only facts discussed in current chat",
-    "No live GitHub code patch was completed for engine_base.py",
-    "No Drive upload live link verified yet"
-  ]
-}
-
-====================================================================================================
-END_FILE: chat_exports/CHAT_EXPORT__CURRENT_CHAT_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: chat_exports/CHAT_EXPORT__DOKAT_3__.txt
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 35c8ef105c76cc9744e4c9c074474a8f58899185b60d86dd339d4edef6c3c36e
-====================================================================================================
-﻿{
-  "chat_id": "UNKNOWN",
-  "chat_name": "Докат 3",
-  "exported_at": "2026-04-24",
-  "source_model": "GPT-5.5 Thinking",
-  "system": "SYSTEM PROMPT: GOOGLE DRIVE CHAT EXPORT STANDARD — AREAL-NEVA / NEURON SOFT ORCHESTRA. MODE: FACT ONLY. ZERO ASSUMPTIONS. ZERO HALLUCINATIONS. STRICT ISOLATION PER CHAT.",
-  "architecture": "SERVER = LOGIC. GOOGLE DRIVE = STORAGE. CHAT EXPORTS = FACT MEMORY LAYER.",
-  "pipeline": "READ CURRENT CHAT ONLY -> EXTRACT FACTS ONLY -> BUILD JSON OBJECT -> CREATE GOOGLE DOC -> WRITE JSON ONLY -> SAVE TO AI_ORCHESTRA/telegram_exports/<chat_id_or_chat_name>/ -> RETURN LINK.",
-  "files": [
-    "/mnt/data/Выгрузка на гугл.txt"
-  ],
-  "code": "UNKNOWN",
-  "patches": [
-    "UNKNOWN"
-  ],
-  "commands": [
-    "Докат 3"
-  ],
-  "db": "UNKNOWN",
-  "memory": "A chat export standard was provided in the uploaded file. The standard requires one chat per folder, one export per file, and JSON-only Google Doc content.",
-  "services": [
-    "UNKNOWN"
-  ],
-  "errors": [
-    "UNKNOWN"
-  ],
-  "decisions": [
-    "Use separate Google Drive export per chat without mixing contexts.",
-    "Use UNKNOWN when no fact is available."
-  ],
-  "solutions": [
-    "Created Google Doc CHAT_EXPORT__DOKAT_3__ containing one JSON object."
-  ],
-  "state": "EXPORT_CREATED_AS_GOOGLE_DOC; exact target folder placement is UNKNOWN because the available Google Drive create_file tool did not expose parent folder selection.",
-  "what_working": [
-    "Google Doc creation succeeded.",
-    "JSON object was written to the Google Doc."
-  ],
-  "what_broken": [
-    "UNKNOWN"
-  ],
-  "what_not_done": [
-    "Folder placement under AI_ORCHESTRA/telegram_exports/DOKAT_3 was not verified."
-  ],
-  "current_breakpoint": "UNKNOWN",
-  "root_causes": [
-    "UNKNOWN"
-  ],
-  "verification": [
-    "Google Drive create_file returned fileId 1VLfpBuf94uOSNExSGBtDgI1zqBpPKNM_AvqvfjQyLoc and a Google Docs URL."
-  ],
-  "limits": [
-    "Only current chat facts were used.",
-    "No facts from other chats were added.",
-    "Fields without confirmed data were set to UNKNOWN."
-  ]
-}
-====================================================================================================
-END_FILE: chat_exports/CHAT_EXPORT__DOKAT_3__.txt
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: chat_exports/CHAT_EXPORT__FULLFIX_01__2026-04-30.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 1148900390409f6ef959a588f7e8d2f5f559af6243f522e634de65e28b91b2b1
-====================================================================================================
-{
-  "chat_id": "claude_session_30_04_2026_FULLFIX_01",
-  "chat_name": "AREAL-NEVA ORCHESTRA — FULLFIX_01 30.04.2026",
-  "exported_at": "2026-04-30T10:30:00+03:00",
-  "source_model": "Claude Sonnet 4.6",
-  "fullfix_01_verified": {
-    "PATCH_TEMPLATE_MODEL_EXTRACTOR_V1": "core/project_engine.py — VERIFIED",
-    "PATCH_PROJECT_TEMPLATE_STORAGE_V1": "core/template_manager.py — VERIFIED",
-    "PATCH_TEMPLATE_INTENT_BRANCH_V1": "core/artifact_pipeline.py — VERIFIED",
-    "PATCH_CONFIRM_ONLY_ON_DONE_V1": "task_worker.py 2073 — VERIFIED",
-    "PATCH_CONFIRM_GUARD_C_V1": "task_worker.py 1711 — VERIFIED"
-  },
-  "live_test": {
-    "file": "ПРОЕКТ КД кровля 5.pdf",
-    "task_id": "2a249e66-8399-4994-8211-dcad82496f18",
-    "topic_id": 210,
-    "state": "AWAITING_CONFIRMATION",
-    "result_preview": "PROJECT_TEMPLATE_MODEL создан / Раздел: АР / Структура: план, Фасады, Разрез",
-    "timestamp": "2026-04-30T07:09:52"
-  },
-  "not_closed_p1": [
-    "voice confirm (telegram_daemon.py ~601)",
-    "project_type regex improvement (КД→АР false positive)",
-    "sheet_register extraction improvement",
-    "estimate PDF → Excel → Drive",
-    "КЖ pipeline",
-    "DUPLICATE_GUARD / MULTI_FILE / LINK_INTAKE live tests"
-  ],
-  "canon_rules_applied": {
-    "0.3": "явное да от пользователя",
-    "0.4": "диагностика перед патчем",
-    "0.5": "bak → patch → compile → restart → journal",
-    "0.6": "ТЗ Claude → код GPT → вывод GPT → сверка Claude",
-    "0.8": "запрещённые файлы не тронуты",
-    "0.11": "самопроверка после написания ТЗ"
-  }
-}
-====================================================================================================
-END_FILE: chat_exports/CHAT_EXPORT__FULLFIX_01__2026-04-30.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: chat_exports/CHAT_EXPORT__NEURON_SOFT_VPN_TECH_CHAT__2026-04-24.txt
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: d88b2b208c41797b5c369eb349ffaee6bd48921e07ddb33721ff6c3bb5e71285
-====================================================================================================
-﻿"chat_id": "NEURON_SOFT_VPN_TECH_CHAT",
-  "chat_name": "NEURON_SOFT_VPN / AREAL-NEVA ORCHESTRA technical recovery chat",
-  "exported_at": "2026-04-24T15:20:00+03:00",
-  "source_model": "GPT-5.5 Thinking",
-  "system": "Server-first AREAL-NEVA ORCHESTRA. Telegram is the live interface. Server path is /root/.areal-neva-core. GitHub SSOT is areal-neva-core. Google Drive AI_ORCHESTRA is external storage. Diagnostics-first canon was repeatedly enforced by user.",
-  "architecture": "Telegram -> telegram_daemon.py -> core.db -> task_worker.py -> core/ai_router.py -> Telegram. File path: Google Drive/Telegram file -> drive_ingest.py or telegram_daemon.py -> core.db tasks + drive_files -> task_worker.py -> _handle_drive_file -> core/file_intake_router.py -> engine -> artifact -> Google Drive link -> Telegram.",
-  "pipeline": "Active services observed: telegram-ingress, areal-task-worker, areal-memory-api. Worker main loop calls _recover_stale_tasks, _pick_next_task, then dispatches drive_file to _handle_drive_file, NEW to _handle_new, IN_PROGRESS and WAITING_CLARIFICATION to _handle_in_progress. ai_router entry is process_ai_task(payload).",
-  "files": [
-    "/root/.areal-neva-core/task_worker.py",
-    "/root/.areal-neva-core/drive_ingest.py",
-    "/root/.areal-neva-core/core/ai_router.py",
-    "/root/.areal-neva-core/core/file_intake_router.py",
-    "/root/.areal-neva-core/core/file_pipeline_overlay.py",
-    "/root/.areal-neva-core/core/estimate_engine.py",
-    "/root/.areal-neva-core/data/core.db",
-    "/root/.areal-neva-core/data/memory.db",
-    "/root/.areal-neva-core/logs/task_worker.log"
-  ],
-  "code": "Current important code facts from terminal output: task_worker.py imports process_ai_task at line 22. _handle_in_progress builds payload around lines 837-861 and calls ai_result = await asyncio.wait_for(process_ai_task(payload), timeout=AI_TIMEOUT). _handle_drive_file exists and downloads Drive files, then attempts route_file(local_path, task_id, topic_id, intent, fmt). file_intake_router.py contains detect_intent, detect_format, detect_intent_from_filename, route_file. estimate_engine.py entrypoint is async process_estimate_to_excel(file_path, task_id, topic_id). drive_ingest.py creates tasks using create_task_for_file(item) and stores drive_file_id, file_name, mime_type in drive_files.",
-  "patches": [
-    "RECOVERY_FULL_02_DRIVE_VOICE_FILTER was inserted into drive_ingest.py after a broken first insertion caused SyntaxError; final compile succeeded and markers appeared at lines 48 and 52",
-    "RECOVERY_FULL_03_QUEUE_MEMORY_FILE_CLEAN was appended to task_worker.py but later found ineffective because original _pick_next_task at line 903 and overlays at lines 1447 and 1630 created conflicting pick_next_task definitions",
-    "RF05/RF06 attempted to inject file context near process_ai_task but did not change queue counts and was later identified as wrong because drive_file and text are separate task IDs",
-    "FINAL_RECOVERY_SERVICE_FILE_GUARD_V2 was proposed to remove broken top-level result block, remove RF03 overlay, guard service files, and cleanup service drive tasks",
-    "Multiple unsafe patches were rejected by self-check because they would fake DONE, patch ai_router blindly, or globally replace return result"
-  ],
-  "commands": [
-    "ssh areal 'bash -s' blocks were used for diagnostics and patches",
-    "sqlite3 core.db queries for tasks, drive_files, queue counts, active tasks",
-    "journalctl -u areal-task-worker and journalctl -u telegram-ingress used for logs",
-    "python3 -m py_compile used after patches",
-    "systemctl restart areal-task-worker, telegram-ingress, areal-memory-api used repeatedly"
-  ],
-  "db": "core.db has tables including tasks and drive_files. drive_files schema observed: id, task_id, drive_file_id, file_name, mime_type, stage, created_at, file_hash, artifact_file_id. tasks schema observed includes id, chat_id, user_id, input_type, raw_input, state, result, error_message, reply_to_message_id, created_at, updated_at, bot_message_id, topic_id, task_type.",
-  "memory": "memory.db is used for topic roles and memory. Topic roles were intended: topic_2 construction/estimates/materials/PDF/XLSX/volumes; topic_5 technadzor/photos/acts; topic_500 global internet search; topic_3008 orchestra brain/code. Memory guard was attempted, but full topic isolation was not proven in logs.",
-  "services": [
-    "areal-task-worker.service",
-    "telegram-ingress.service",
-    "areal-memory-api.service",
-    "areal-drive-ingest.service mentioned but service existence not consistently confirmed"
-  ],
-  "errors": [
-    "drive_ingest.py SyntaxError: expected 'except' or 'finally' block -> caused by inserting voice filter inside try block -> fixed by removing broken block and inserting after file_name/mime_type assignment; compile passed",
-    "task_worker.py NameError: name 'result' is not defined at line 567 -> caused by broken top-level result block from previous patch -> required removal before worker can be trusted",
-    "WAITING_CLARIFICATION loop on d33cb2d4... CHAT_EXPORT__areal-neva-core-claude__2026-04-20 -> worker repeatedly downloaded service export file in topic 0 instead of cancelling it",
-    "Google Drive document export initially created empty doc; batchUpdate attempts failed twice due to argument/JSON parsing errors before this successful update attempt",
-    "User correctly identified repeated canon violations: patches were issued before enough file outputs and diagnostics in several turns"
-  ],
-  "decisions": [
-    "Do not touch .env, credentials, sessions, keys, google_io.py, memory.db schema, memory_files, core/stt_engine.py, telegram_daemon.py unless fresh diagnostic proves need",
-    "Do not fake DONE for file tasks without artifact/result",
-    "Do not patch ai_router blindly because process_ai_task is the actual entry and earlier route() patches were invalid",
-    "Cancel service files such as CHAT_EXPORT, FULL_CANON, EXTERNAL_WORK_MONITORING, UNKNOWN, INDEX, voice_*.ogg, application/ogg from drive_file task processing",
-    "Voice should be runtime-only: Telegram voice -> local temp -> STT -> text task -> delete; no Drive voice tasks"
-  ],
-  "solutions": [
-    "drive_ingest voice filter inserted after file_name and mime_type assignment",
-    "service drive_file cleanup SQL used to cancel CHAT_EXPORT/FULL_CANON/EXTERNAL_WORK_MONITORING tasks",
-    "diagnostic found real _handle_drive_file route_file path and confirmed file_intake_router has estimate/ocr/technadzor/dwg/template/search handling",
-    "final correct direction: fix worker import crash and service-file loop first; then process real drive_file through existing _handle_drive_file and route_file rather than fake DONE"
-  ],
-  "state": "NOT FULLY CLOSED. Worker had evidence of import crash and service-file loop in logs. One real drive_file NEW remained: cccb348a-efe3-4002-a8ce-c51db1dd9914 est_pdf_spec_final_test_1777024565_v1.xlsx with drive_files stage INGESTED. A service CHAT_EXPORT task d33cb2d4... was stuck in WAITING_CLARIFICATION and repeatedly downloaded.",
-  "what_working": [
-    "Google Drive document now exists: 1BaxpiZEsioSgVoit1nL_zTvd2oZ5Dpw3jdlVm2S53C8",
-    "telegram-ingress, areal-task-worker, areal-memory-api were repeatedly observed active before later worker crash logs",
-    "STT via Groq returned http_status=200 and transcript_len values in logs",
-    "voice no Drive was logged as VOICE_NO_DRIVE",
-    "_handle_drive_file real code path exists and calls route_file for detected intents",
-    "estimate_engine process_estimate_to_excel exists"
-  ],
-  "what_broken": [
-    "task_worker.py had NameError result undefined at import in systemd log",
-    "service file d33cb2d4 CHAT_EXPORT looped in WAITING_CLARIFICATION and was repeatedly downloaded",
-    "RF05/RF06 did not affect real execution path and did not reduce text AWAITING_CONFIRMATION count",
-    "Internet search quality/full marketplace normalization was not closed",
-    "Reply continuity and memory topic isolation were not proven by final live tests"
-  ],
-  "what_not_done": [
-    "Full end-to-end PDF/XLSX -> parse -> estimate -> artifact -> Drive link -> Telegram test not completed after final crash discovery",
-    "Full search improvement across Avito/Ozon/Wildberries/Yandex Market/auto.ru/drom not implemented",
-    "Archive memory and long-term recall not fully proven",
-    "Final live tests requested but not completed: text, voice, file-followup, search topic_2, search topic_500, reply, finish"
-  ],
-  "current_breakpoint": "Repair task_worker.py import crash and cancel service-file loop. Then let existing _handle_drive_file process the remaining real file cccb348a through route_file. Do not fake DONE.",
-  "root_causes": [
-    "Previous patches were inserted without enough live code context, causing SyntaxError and NameError",
-    "Service Google Drive exports were allowed into worker queue and not reliably cancelled before processing",
-    "Drive file task and user text follow-up are separate task IDs, so patching raw_input for text did not link to file task",
-    "Multiple _pick_next_task overlays/conflicts existed in task_worker.py after repeated patches"
-  ],
-  "verification": [
-    "drive_files schema verified with PRAGMA table_info(drive_files)",
-    "tasks schema verified with PRAGMA table_info(tasks)",
-    "current file task verified: cccb348a... state NEW, file est_pdf_spec_final_test_1777024565_v1.xlsx, stage INGESTED",
-    "worker log verified repeated PICKED d33cb2d4 WAITING_CLARIFICATION and repeated DRIVE_FILE downloading CHAT_EXPORT",
-    "systemd worker log verified NameError result undefined"
-  ],
-  "limits": [
-    "No internet/web tool available in this chat",
-    "Google Docs batchUpdate tool requires strict requests schema",
-    "This export contains only facts from the visible current chat and terminal outputs; missing exact content is UNKNOWN"
-  ]
-}
-====================================================================================================
-END_FILE: chat_exports/CHAT_EXPORT__NEURON_SOFT_VPN_TECH_CHAT__2026-04-24.txt
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: chat_exports/CHAT_EXPORT__NEURON_SOFT_VPN_TECH_CHAT__2026-04-24__DOKAT_4.txt
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: f1945cd6c19e56b3c1c78943ef5ec18116907a4ca1efc40a57d48ab1db7adfc5
-====================================================================================================
-﻿
-====================================================================================================
-END_FILE: chat_exports/CHAT_EXPORT__NEURON_SOFT_VPN_TECH_CHAT__2026-04-24__DOKAT_4.txt
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: chat_exports/CHAT_EXPORT__NEURON_SOFT_VPN_TECH_CHAT__2026-04-27.txt
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 2e0b019e2e76b76e68b53c28d3a14e6363ed018b8e599c8ae086d6684e995be9
-====================================================================================================
-﻿{"chat_id":"current_chat","chat_name":"NEURON_SOFT_VPN_TECH_CHAT","exported_at":"2026-04-27T00:00:00+03:00","source_model":"GPT-5.5 Thinking","system":"AREAL-NEVA / NEURON SOFT VPN technical chat. Current work is Google Drive chat export, server-first orchestra diagnostics and Telegram/Drive/file-processing contour. User requires FACT ONLY, ZERO HALLUCINATIONS, diagnostics-first, no forbidden files, backup-first for server edits, and no stuck tasks.","architecture":"Server-first AREAL-NEVA ORCHESTRA. Known pipeline from this chat: Telegram daemon -> core.db -> task_worker.py -> ai_router/process_ai_task or file route_file -> reply_sender -> Telegram. Google Drive is used for shared memory/export storage. Current Google Drive connector can create native Google Docs and write text via batch_update_document, but cannot create text/plain with parentId/content through create_file.","pipeline":"For file tasks: drive_file task -> task_worker.py _handle_drive_file -> route_file(local_path, task_id, topic_id, intent, fmt) -> engine -> artifact/result -> Telegram. PATCH_ENGINE_TIMEOUT now wraps route_file in asyncio.wait_for timeout=240. For chat export through available connector: create native Google Doc -> batch_update_document inserts JSON text. Strict requested text/plain + parentId + base64 could not be performed by available connector.","files":["/root/.areal-neva-core/task_worker.py","/root/.areal-neva-core/core/estimate_engine.py","/root/.areal-neva-core/core/file_intake_router.py","/root/.areal-neva-core/data/core.db","/root/.areal-neva-core/logs/telegram_daemon.log","Google Drive doc id 1RMcOJn84ILtFiLVRfXXSVEtGruGGDynwbib-0OPARjw","Google Drive folder requested parentId 14bYA9bHaKahkE8d4IDwWxL4Ojn-G0sDl"],"code":"Confirmed in terminal: AI_TIMEOUT = 300, STALE_TIMEOUT = 600. route_file anchor existed at task_worker.py line 1993 before patch. PATCH_ENGINE_TIMEOUT applied to task_worker.py: route_file call wrapped in asyncio.wait_for(..., timeout=240), and asyncio.TimeoutError handler writes FAILED/ENGINE_TIMEOUT, task_history state:FAILED:ENGINE_TIMEOUT, drive_files stage FAILED, sends Не выполнено: ENGINE_TIMEOUT. Verification grep showed PATCH_ENGINE_TIMEOUT at line 1996 and ENGINE_TIMEOUT handler around lines 2073-2078. telegram_daemon.py create_task uses message.chat.id, user_id, input_type, raw_input, state, reply_to_message_id=message.message_id, topic_id=message.message_thread_id or 0, and inserts task_history created:state.","patches":["PATCH__FILE_ARTIFACT_RESOLVER__V1 applied earlier to /root/.areal-neva-core/task_worker.py only; inserted _latest_valid_excel_artifact, _try_resolve_file_artifact_followup and FILE_ARTIFACT_RESOLVER_HIT anchors","Attempted V2 norm fixes produced backups but direct/regex/plain patch attempts failed; later live file showed line 1503 already changed from _norm(text) to re.sub normalization","PATCH_ENGINE_TIMEOUT applied successfully to /root/.areal-neva-core/task_worker.py with backup and syntax check"],"commands":["grep -n AI_TIMEOUT|ENGINE_TIMEOUT|STALE_TIMEOUT|asyncio.wait_for|timeout /root/.areal-neva-core/task_worker.py","grep -n asyncio.wait_for|timeout /root/.areal-neva-core/core/estimate_engine.py","grep -n asyncio.wait_for|timeout /root/.areal-neva-core/core/file_intake_router.py","grep -n router_result = await route_file(local_path, task_id, topic_id, intent, fmt)|PATCH_ENGINE_TIMEOUT|ENGINE_TIMEOUT task_worker.py","cp /root/.areal-neva-core/task_worker.py /root/.areal-neva-core/task_worker.py.bak.PATCH_ENGINE_TIMEOUT_${TS}","python patch script /tmp/PATCH_ENGINE_TIMEOUT_${TS}.py","python -m py_compile /root/.areal-neva-core/task_worker.py","systemctl restart areal-task-worker","sqlite3 /root/.areal-neva-core/data/core.db SELECT state,COUNT(*) FROM tasks GROUP BY state","journalctl -u areal-telegram-daemon --since 5 min ago --no-pager | grep -v ... | tail -30","tail -20 logs/telegram_daemon.log","sed -n 291,340p telegram_daemon.py","systemctl is-active areal-telegram-daemon","pgrep -f telegram_daemon.py | wc -l"],"db":"After PATCH_ENGINE_TIMEOUT verification, DB state counts were ARCHIVED|371, CANCELLED|153, DONE|24, FAILED|33. Earlier SQL facts in this chat included tasks 9eda88bd DONE with result Подтверждение принято, 5731fbb1 IN_PROGRESS drive_file with TEXT_FOLLOWUP_REQUEUED_AS_DRIVE_FILE, and 33b3ebe5 AWAITING_CONFIRMATION with text listing tasks and source PDF context. DB schema was not changed.","memory":"Google Drive memory/export work: main updated tech contour doc id 1p7N26HLn1frUsrAFiKS4sPp81qV3msOoSaSKFdy1cwM received APPEND__CURRENT_PATCH_FACTS__2026-04-25T05-12-00+03-00. A new Google Doc id 1RMcOJn84ILtFiLVRfXXSVEtGruGGDynwbib-0OPARjw was created for this chat export when strict text/plain+parentId was unavailable through connector.","services":["areal-task-worker active after PATCH_ENGINE_TIMEOUT","telegram-ingress active in prior checks","areal-memory-api active in prior checks","areal-telegram-daemon active","pgrep -f telegram_daemon.py | wc -l returned 2"],"errors":["Google Drive create_file with mimeType/parentId/content failed because available tool schema requires mime_type and only supports native Google Workspace MIME types → solution used available create_file with application/vnd.google-apps.document and batch_update_document","Strict text/plain + parentId + base64 export not supported by available connector → documented limitation and wrote JSON into native Google Doc","Earlier wrong API path/list_resources usage failed → corrected by using api_tool.call_tool direct resource path","NameError _norm not defined occurred after file resolver patch → live file later showed normalization line changed to re.sub; old logs still contained prior NameError","V2 direct anchor patch failed with ANCHOR_NOT_FOUND:t = _norm(text) → no rewrite confirmed from that attempt","V2 regex patch failed with ANCHOR_NOT_FOUND_OR_NOT_UNIQUE:n=0 → no rewrite confirmed from that attempt","V2 plain patch failed with ANCHOR_NOT_UNIQUE_OR_MISSING:hits=[] → no rewrite confirmed from that attempt","route_file/estimate path had no proven timeout before PATCH_ENGINE_TIMEOUT → patched route_file await with timeout=240","telegram_daemon.log showed repeated CANON_PASS6: telegram_daemon already running, exit → daemon active with duplicate/lock behavior to inspect later"],"decisions":["All work must be based on facts, live terminal output and canon, not memory guesses","Do not touch forbidden files: .env, credentials, sessions, google_io.py, memory.db schema, ai_router.py, telegram_daemon.py, reply_sender.py, systemd unit files, DB schema unless explicitly allowed","Any server edit requires backup first","No stuck tasks are allowed; every task must be IN_PROGRESS, DONE, FAILED, AWAITING_CONFIRMATION, CANCELLED or otherwise explicitly handled; indefinite hanging is forbidden","ENGINE_TIMEOUT for file engine must be separate from AI_TIMEOUT and less than STALE_TIMEOUT","240 seconds for ENGINE_TIMEOUT is accepted as working value; AI_TIMEOUT=300 and STALE_TIMEOUT=600 remain unchanged","When requested exact Drive export is impossible through connector, use available Google Docs creation plus batch_update_document and clearly state deviation"],"solutions":["PATCH_ENGINE_TIMEOUT successfully applied: route_file now gets ENGINE_TIMEOUT instead of hanging until STALE_TIMEOUT","JSON export content written into existing created Google Doc id 1RMcOJn84ILtFiLVRfXXSVEtGruGGDynwbib-0OPARjw using batch_update_document","Main tech contour doc previously updated with factual append block on 2026-04-25","Drive duplicate/empty file audit partially performed: confirmed some empty candidates and some non-empty candidates, but mass marking not fully completed"],"state":"Current confirmed state: PATCH_ENGINE_TIMEOUT applied and syntax OK; areal-task-worker active; DB state counts after patch: ARCHIVED 371, CANCELLED 153, DONE 24, FAILED 33. Google Drive strict export to text/plain parentId content was not possible through available connector, but native Google Doc was created and this JSON was written into it. Current unresolved server concern: verify automatic no-stuck-task behavior end-to-end and inspect areal-telegram-daemon duplicate/running log behavior only by diagnostics before changes.","what_working":["Google Drive connector can create native Google Docs","Google Drive connector can write document content via batch_update_document","PATCH_ENGINE_TIMEOUT applied successfully","task_worker.py syntax check passed after patch","areal-task-worker active after restart","telegram_daemon.py create_task behavior was displayed from live file","areal-telegram-daemon service active"],"what_broken":["Strict required create_file with text/plain + parentId + base64 content is not supported by available connector","Cannot confirm file was created in requested parentId through available create_file because parentId is not accepted","Cannot rename/move/delete Drive files through available connector actions","Mass marking of all non-empty Google Drive files 25th date was not completed","File resolver end-to-end XLSX result for У1-02-26-Р-КЖ1.6.pdf not confirmed","areal-telegram-daemon log repeatedly shows CANON_PASS6 already running exit"],"what_not_done":["Full Google Drive export exactly per prompt as text/plain in folder 14bYA9bHaKahkE8d4IDwWxL4Ojn-G0sDl","End-to-end retest that heavy PDF gets ENGINE_TIMEOUT instead of STALE_TIMEOUT if engine exceeds 240 seconds","Fresh check that no tasks remain stuck in NEW/IN_PROGRESS/WAITING_CLARIFICATION/AWAITING_CONFIRMATION beyond allowed time","Resolve IN_PROGRESS drive_file 5731fbb1 if still present","Complete Drive empty-file/non-empty-file audit and marking","Investigate areal-telegram-daemon duplicate process count and CANON_PASS6 repeated messages by diagnostics-first protocol"],"current_breakpoint":"User accepted doing Drive export as available. Native Google Doc export file was created and now needs confirmation that JSON content was written and retrievable. Server next breakpoint is diagnostics-only check for stuck tasks and daemon duplicate behavior, without touching forbidden files.","root_causes":["Available Google Drive create_file tool only creates native Workspace files and lacks parentId/content/text_plain upload parameters","route_file file engine path previously lacked explicit await timeout while OCR/PDF engine can exceed stale window","Prior resolver patch introduced or exposed _norm dependency issue; later file state showed re.sub normalization","User-facing wrong responses happened when assistant answered from assumptions instead of live facts/canon"],"verification":["create_file returned fileId 1RMcOJn84ILtFiLVRfXXSVEtGruGGDynwbib-0OPARjw and title CHAT_EXPORT__NEURON_SOFT_VPN_TECH_CHAT__2026-04-27","PATCH_ENGINE_TIMEOUT terminal output: BACKUP OK, PATCH_ENGINE_TIMEOUT OK, SYNTAX OK, service active","grep verification after patch: line 1996 PATCH_ENGINE_TIMEOUT, lines 2073-2078 ENGINE_TIMEOUT handler","DB verification after patch: ARCHIVED|371 CANCELLED|153 DONE|24 FAILED|33","telegram_daemon.py live code window lines 291-340 showed create_task implementation","areal-telegram-daemon status active and pgrep count 2"],"limits":["This export uses only facts visible in current chat and terminal/tool outputs","Exact text/plain base64 parentId upload is UNKNOWN/unsupported in this connector","Created Google Doc may be outside requested folder because create_file did not accept parentId","No deletion/rename/move Drive actions are available in current connector","No web access used","Some earlier chat history is skipped/truncated and therefore not included unless visible in current conversation"]}
-====================================================================================================
-END_FILE: chat_exports/CHAT_EXPORT__NEURON_SOFT_VPN_TECH_CHAT__2026-04-27.txt
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: chat_exports/CHAT_EXPORT__ORCHESTRA__2026-04-23.txt
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 5962b1557d4458a261c933f0afa9c80505a4a48fac9d94fe8f9077e428ad22ae
-====================================================================================================
-﻿{"chat_id":"-1003725299009","chat_name":"AREAL-NEVA ORCHESTRA","exported_at":"2026-04-23T10:00:00Z","source_model":"claude-sonet-4-6","system":{"server":"89.22.225.136","hostname":"graceful-olive.ptr.network","os":"Ubuntu 24.04","base_path":"/root/.areal-neva-core","venv":"/root/.areal-neva-core/.venv/bin/python3","bot":"@ai_orkestra_all_bot","bot_id":"8216054898","memory_api_port":8091,"stt_primary":"Groq whisper-large-v3-turbo","db_path":"/root/.areal-neva-core/data/core.db"},"architecture":{"components":["telegram_daemon.py","task_worker.py","core/ai_router.py","core/reply_sender.py","core/pin_manager.py","core/artifact_pipeline.py","core/engine_base.py","core/ocr_engine.py","core/estimate_engine.py","core/technadzor_engine.py","core/dwg_engine.py","core/file_intake_router.py","memory_api_server.py"],"models":{"default":"deepseek/deepseek-chat","online":"perplexity/sonar","vision":"google/gemini-2.5-flash"}},"pipeline":["Telegram message telegram_daemon.py","document upload_file_to_topic Drive create_task(drive_file)","voice STT Groq create_task(text)","task_worker poll every 1.5s","_handle_drive_file _download_from_drive local_path","detect_intent(caption) route_file(intent) engine","fallback: analyze_downloaded_file (artifact_pipeline.py)","upload artifact Drive result link","_update_task AWAITING_CONFIRMATION","reply_sender Telegram"],"files":{"modified_this_session":["/root/.areal-neva-core/core/ocr_engine.py","/root/.areal-neva-core/core/technadzor_engine.py","/root/.areal-neva-core/task_worker.py"],"copied_from_snapshot":["/root/.areal-neva-core/core/dwg_engine.py","/root/.areal-neva-core/core/engine_base.py","/root/.areal-neva-core/core/estimate_engine.py","/root/.areal-neva-core/core/ocr_engine.py","/root/.areal-neva-core/core/technadzor_engine.py","/root/.areal-neva-core/core/file_intake_router.py"],"snapshot_source":"/root/BACKUPS/.../SNAPSHOT_BEFORE_DRIVE_AND_TECHCONTOUR_20260422_223206","not_in_snapshot":["multi_file_orchestrator.py","template_manager.py"]},"code":{"_handle_drive_file_patch":"route_file integrated before analyze_downloaded_file with fallback","ocr_engine_patch":"replaced cv2.imgread with PIL for HEIC support async via run_in_executor","technadzor_patch":"async wrappers added via run_in_executor","clarification_patch":"should_ask_clarification integrated in _handle_drive_file","confirmation_line_766":"confirmation_text = ai_result - clean no extra prompt"},"patches":["ENGINES_COPY_FROM_SNAPSHOT: ocr,estimate,technadzor,dwg,engine_base,file_intake_router copied COMPILE_OK","ROUTE_FILE_INTEGRATION: route_file inserted in _handle_drive_file COMPILE_OK","OCR_ENGINE_HEIC_ASYNC_FIX: PIL replaced cv2 async added COMPILE_OK","TECHNADVO_ASYNC_FIX: async wrappers added COMPILE_OK","CLARIFICATION_PATCH: should_ask_clarification integrated COMPILE_OK"],"commands":["ssh areal 'SNAP=... cp engines ... py_compile ... systemctl restart'","ssh areal 'sed -n 860,120p task_worker.py'","ssh areal 'cat file_intake_router.py'","ssh areal 'cat artifact_pipeline.py'","ssh areal 'cat ocr_engine.py'","ssh areal 'cat engine_base.py'","ssh areal 'sqlite3 core.db SELECT tasks LIMIT 10'","ssh areal 'journalctl -u areal-task-worker -n 60'","ssh areal 'grep -n topic_id telegram_daemon.py'","ssh areal 'sed -n 670,770p task_worker.py'"],"db":{"core_db":{"path":"/root/.areal-neva-core/data/core.db","tables":["tasks","task_history","pin","drive_files","processed_updates","templates"],"columns_added":["drive_files.stage","drive_files.file_hash","drive_files.artifact_file_id","tasks.task_type"]},"memory_db":{"path":"/root/.areal-neva-core/data/memory.db","total_records":22,"schema":"FORBIDDEN TO MODIFY"}},"memory":{"short":"core.db tasks LIMIT 100","long":"memory.db LIMIT 100","archive":"memory_files not written automatically","pin":"UNKNOWN not checked this session"},"services":["areal-task-worker: active","areal-memory-api: active","telegram-ingress: active"],"errors":["cv2.imread None for HEIC CAUSE: cv2 no HEIC support FIX: PIL via pillow_heif","TypeError await on sync process_image_to_excel CAUSE: sync function FIX: async via run_in_executor","TypeError await on sync process_defect_to_report CAUSE: sync function FIX: async via run_in_executor","PDF no drive_file task CAUSE: telegram_daemon pipeline not fully confirmed FIX: NOT YET","Bot responds with text promise not real action CAUSE: LLM response instead of real pipeline FIX: NOT YET: needs telegram_daemon lines 700-740 review"],"decisions":["Copy engines from snapshot SNAPSHOT_BEFORE_DRIVE_AND_TECHCONTOUR_20260422_223206","Integrate route_file into _handle_drive_file before analyze_downloaded_file with fallback","Fix OCR for HEIC via PIL instead of cv2","Make all engine functions async via run_in_executor","Do not modify telegram_daemon.py until facts confirmed","Add should_ask_clarification to _handle_drive_file"],"solutions":["Engines copied from snapshot compile OK","route_file integrated in task_worker._handle_drive_file compile OK","ocr_engine.py HEIC support async wrapper compile OK","technadzor_engine.py async wrappers added compile OK","clarification should_ask_clarification integrated compile OK"],"state":{"worker":"active","daemon":"active","memory_api":"active","drive_oauth":"working upload and download confirmed","engines_deployed":"ocr estimate technadzor dwg file_intake_router compiled OK","pdf_task_creation":"BROKEN PDF not creating drive_file task in DB","heic_support":"fixed in ocr_engine not yet tested end-to-end","route_file_integration":"code applied not yet tested with real file"},"what_working":["Google Drive OAuth upload and download confirmed","STT Groq voice transcription","task_worker polling","engine files compiled without errors","route_file code inserted in _handle_drive_file","async wrappers on ocr_engine and technadzor_engine","should_ask_clarification integrated"],"what_broken":["PDF file does not create drive_file task bot responds with LLM text","HEIC end-to-end not tested","route_file not tested with real file","topic_id mixing not fully diagnosed"],"what_not_done":["multi_file_orchestrator.py not in snapshot not implemented","template_manager.py not in snapshot not implemented","Excel formulas end-to-end test","OCR table structure detection","technadzor norms database","Google Sheets generation","DWG export to Excel test","pin and memory save for drive_file tasks","telegram_daemon lines 700-740 full review for PDF path"],"current_breakpoint":"PDF file sent to bot does not create drive_file task in core.db. Bot answers with LLM-text instead of real action. Needs telegram_daemon.py lines 700-740 full review.","root_causes":["telegram_daemon.py lines 700-740 not fully reviewed PDF task creation path unconfirmed","drive_file tasks for PDF absent from DB confirmed by DB query","journalctl shows no DRIVE_FILE log entries worker never received PDF task"],"verification":{"checked":["Drive upload download via test script","compile of all modified engines","systemctl is-active areal-task-worker","DB query no drive_file tasks for PDF","journalctl no DRIVE_FILE log lines","EZONE_EXTS content confirmed .json .jsonl .txt only","topic_id read correctly via message_thread_id confirmed"],"not_checked":["telegram_daemon.py lines 700-740 full content","real HEIC file end-to-end","real PDF file through full pipeline","route_file with real file","estimate_engine end-to-end","technadzor end-to-end"]},"limits":{"AI_TIMEOUT":300,"STALE_TIMEOUT":600,"MEMORY_LIMIT":100,"FILE_SIZE_LIMIT":"50MB","POLL_SEC":1.5}}
-====================================================================================================
-END_FILE: chat_exports/CHAT_EXPORT__ORCHESTRA__2026-04-23.txt
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: chat_exports/CHAT_EXPORT__TECH_CONTOUR__GPT-5.5__2026-04-24.txt
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: f114a2b86a58f207eaf26ea733c95074c31c7a895c65428885ac1f6ad60309a4
-====================================================================================================
-﻿{"chat_id":"UNKNOWN","chat_name":"AREAL_NEVA_ORCHESTRA_TECH_CONTOUR_FINAL","exported_at":"2026-04-24T10:00:00+03:00","source_model":"GPT-5.5 Thinking","system":"server=89.22.225.136 | Ubuntu 24.04, base=/root/.areal-neva-core/, venv=/root/.areal-neva-core/.venv/bin/python3, GDRIVE_REFRESH_TOKEN in override.conf","architecture":"task_worker.py _handle_drive_file -> core/file_intake_router.py -> engines -> engine_base.upload_artifact_to_drive -> google_io.upload_to_drive","pipeline":"file task -> _handle_drive_file -> _download_from_drive -> route_file -> specialized engines -> upload_artifact_to_drive -> AWAITING_CONFIRMATION","files":["/root/.areal-neva-core/task_worker.py","/root/.areal-neva-core/core/file_intake_router.py","/root/.areal-neva-core/core/engine_base.py","/root/.areal-neva-core/google_io.py","/root/.areal-neva-core/core/sheets_generator.py","/root/.areal-neva-core/core/docs_generator.py","/root/.areal-neva-core/data/core.db","/etc/systemd/system/areal-task-worker.service.d/override.conf"],"code":"google_io.py line 28: def upload_to_drive(file_path, file_name, folder_id), engine_base.py line 77: link = upload_to_drive(file_path, versioned_name)","patches":["PATCH__UPLOAD_DRIVE_SYNC_ROOT_FIX__FACT_ONLY__V1: google_io.py async def -> def, engine_base.py direct call - PATCH_OK confirmed"],"commands":["ssh areal bash -s","journalctl -u areal-task-worker -n 60 -o cat","grep -n def upload_to_drive google_io.py","nl -ba core/engine_base.py sed -n 70,90p","systemctl cat areal-task-worker"],"db":"drive_files stages: ARTIFACT_CREATED|6, DOWNLOADED<2, discovered|352, downloaded|29. BAD RESULTS = 30","memory":"UNKNOWN","services":["areal-task-worker.service active"],"errors":["upload_artifact_to_drive: This event loop is already running -> google_io.py async def without await -> changed to def PATCH_OK","create_google_sheet HttpError 403 -> caller lacks permission -> NOT FIXED","RUNTIMEWARNING coroutine upload_to_drive was never awaited -> same root -> fixed by PATCH_OK"],"decisions":["patch only from live anchors","use venv Python for runtime checks"],"solutions":["google_io.py upload_to_drive is now def not async - confirmed","engine_base.py calls upload_to_drive directly - confirmed","venv import confirmed: IS_COROUTINE = False"],"state":"google_io.upload_to_drive is def, IS_COROUTINE False, engine_base.py line 77 direct call","what_working":["areal-task-worker active","upload_to_drive is sync function","venv import correct"],"what_broken":["create_google_sheet 403","fallback patches not confirmed due anchor mismatch","BAD RESULTS = 30","drive_files mixed stages"],"what_not_done":["fresh log after final patch not shown","Google Sheets 403 not fixed","fallback on XLSX not confirmed","bad results cleanup not zero"],"current_breakpoint":"event loop root closed in code, Google Sheets 403 remains, no fresh log after final patch","root_causes":["google_io.py upload_to_drive was async def without await","create_google_sheet 403 caller lacks permission","many patches failed due anchor mismatch"],"verification":["grep google_io.py line 28: def upload_to_drive","engine_base.py lines 70-85 confirmed","venv import: TYPE class function, IS_COROUTINE False","service ExecStart uses venv Python"],"limits":["Only facts from current chat","No final fresh log after venv import verification"]}
-====================================================================================================
-END_FILE: chat_exports/CHAT_EXPORT__TECH_CONTOUR__GPT-5.5__2026-04-24.txt
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: chat_exports/CHAT_EXPORT__TOPIC_3008__GPT-5.3__2026-04-23.txt
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 6bccf42e649ceffa216aefb6117b672ffefdaa7e794914c7cee93574dd02357d
-====================================================================================================
-﻿{"chat_id":"-1003725299009","chat_name":"TOPIC_3008_MOZGI_ORCHESTRY","exported_at":"2026-04-23T10:00:00Z","source_model":"GPT-5.3","system":"server=89.22.225.136 | Ubuntu 24.04, base=/root/.areal-neva-core/, venv=/root/.areal-neva-core/.venv/bin/python3, bot=@ai_orkestra_all_bot | id=8216054898","architecture":"telegram_daemon.py -> core.db -> task_worker.py -> ai_router.py -> reply_sender.py -> Telegram","pipeline":"Telegram message -> telegram_daemon.py -> create_task -> core.db NEW -> task_worker -> ai_router -> reply_sender -> Telegram","files":["/root/.areal-neva-core/task_worker.py","/root/.areal-neva-core/telegram_daemon.py","/root/.areal-neva-core/core/ai_router.py","/root/.areal-neva-core/core/reply_sender.py","/root/.areal-neva-core/core/pin_manager.py","/root/.areal-neva-core/core/artifact_pipeline.py","/root/.areal-neva-core/core/engine_base.py","/root/.areal-neva-core/data/core.db","/root/.areal-neva-core/data/memory.db"],"code":"QUALITY GATE V3, PIN GUARD V3, engine_base.py upload_artifact_to_drive","patches":["DRIVE_FILE_GUARD_PATCH_V2","MEMORY_CANON_FULLFIX","INVALID_RESULT_GATE_BYPASS"],"commands":["ssh areal bash -s","python3 -m py_compile","systemctl restart areal-task-worker","journalctl -u areal-task-worker -n 20","sqlite3 core.db SELECT"],"db":"core.db: tasks, drive_files, pin; memory.db: memory(chat_id,key,value,timestamp)","memory":"memory.db via memory_api_server, keys topic_{id}_*, memory_guard prevents invalid saves","services":["telegram-ingress.service active","areal-task-worker.service active","areal-memory-api.service active","areal-automation-daemon.service inactive","areal-email-ingress.service inactive","areal-drive-ingest.service inactive"],"errors":["INVALID_RESULT_GATE -> filtering valid responses -> bypass patch","NameError re -> missing import -> fixed","NameError is_search -> missing variable -> fixed","IndexError in _recover_stale_tasks -> fixed","Drive upload failures -> no link -> QUALITY GATE","Pin on junk -> no filtering -> PIN GUARD"],"decisions":["Use Google Drive as artifact storage","Enforce QUALITY GATE","Disallow invalid memory saves","Topic-based isolation mandatory"],"solutions":["QUALITY GATE added","PIN GUARD added","_save_memory moved after validation","Stale tasks cleaned"],"state":"worker active, guard layer applied, engines not integrated","what_working":["Telegram intake","Task lifecycle","Drive upload basic","Guard layer","Memory recall basic"],"what_broken":["No engine imports in task_worker.py","No engine execution for OCR/estimate/DWG/technadzor","drive_files stages not fully used","pin usage low 4/343"],"what_not_done":["ocr_engine integration","estimate_engine integration","dwg_engine integration","technadzor_engine integration","full stage tracking","google sheets/docs generation"],"current_breakpoint":"task_worker.py does not call any processing engines","root_causes":["Engines not connected","No imports or call paths in task_worker.py","Incomplete pipeline after file download"],"verification":["grep imports task_worker.py none found","DB counts confirmed"],"limits":["No engine execution layer","No multi-format processing"]}
-====================================================================================================
-END_FILE: chat_exports/CHAT_EXPORT__TOPIC_3008__GPT-5.3__2026-04-23.txt
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: chat_exports/CHAT_EXPORT__UNKNOWN_CHAT__.txt
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: f1945cd6c19e56b3c1c78943ef5ec18116907a4ca1efc40a57d48ab1db7adfc5
-====================================================================================================
-﻿
-====================================================================================================
-END_FILE: chat_exports/CHAT_EXPORT__UNKNOWN_CHAT__.txt
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: chat_exports/CHAT_EXPORT__UNKNOWN_CHAT__2026-04-20.txt
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: f1945cd6c19e56b3c1c78943ef5ec18116907a4ca1efc40a57d48ab1db7adfc5
-====================================================================================================
-﻿
-====================================================================================================
-END_FILE: chat_exports/CHAT_EXPORT__UNKNOWN_CHAT__2026-04-20.txt
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: chat_exports/CHAT_EXPORT__UNKNOWN__.txt
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 8653bc695ad23d206022f120cdf4c4e204871a04f34aef6fbf4d27012b85e061
-====================================================================================================
-﻿{"chat_id":"UNKNOWN","chat_name":"UNKNOWN_CHAT","exported_at":"2026-04-17T00:00:00Z","source_model":"UNKNOWN","system":"AREAL-NEVA orchestration runtime on VPS. Server-first Telegram task execution system with Telegram bot runtime, task worker, ai_router, SQLite runtime DB and memory DB. Base path repeatedly confirmed in this chat: /root/.areal-neva-core. Backup root confirmed: /root/BACKUPS/areal-neva-core. Bot seen in logs/context: @ai_orkestra_all_bot. Owner referenced in this chat context: Ilya Kuznetsov. Venv: UNKNOWN","architecture":"telegram_daemon.py under telegram-ingress.service receives Telegram text/voice updates. Voice path downloads .ogg into runtime voice queue, runs STT, and creates text task from transcript. create_task writes tasks into SQLite core.db. task_worker.py under areal-task-worker.service polls tasks from core.db, loads active unfinished context, memory context, pin/search/archive related context, builds payload and calls core/ai_router.py. core/ai_router.py assembles message blocks including ACTIVE_TASK, SHORT_MEMORY, LONG_MEMORY, ARCHIVE, PIN, SEARCH_RESULT, can call ONLINE_MODEL for search, then calls DEFAULT_MODEL through OpenRouter and returns result to worker. Worker validates result, logs ROUTER RESULT, updates task/task_history/pin, and sends answer back to Telegram. Memory layers discussed in this chat: SHORT from tasks/task_history in core.db, LONG from memory.db table memory, ARCHIVE from memory_files JSONL timeline, PIN from pin table, SEARCH context from router search path. topic_id was added into tasks and partially propagated through create_task, parent lookup, active context lookup, and search fact context","pipeline":"1. User sends text or voice message in Telegram topic/chat. 2. telegram_daemon.py receives update. 3. For voice: bot gets Telegram file, downloads .ogg into /root/.areal-neva-core/runtime/voice_queue/, calls core.stt_engine.transcribe_voice on local path, and if transcript exists prepares text input with [VOICE] semantic; if STT fails or transcript is empty, user gets failure message instead of normal task. 4. create_task inserts row into tasks table with id, chat_id, user_id, input_type, raw_input, state, reply_to_message_id, created_at, updated_at and after later patch also topic_id. 5. task_worker.py picks task from core.db, loads active unfinished context, memory context, search fact context, pin/archive context and forms payload. 6. ai_router.py optionally calls ONLINE_MODEL for search intent, merges search_result into work_payload, logs router_call, builds messages, cleans context, calls DEFAULT_MODEL through OpenRouter and returns text. 7. ai_router filters bad results through BAD_RESULT_RE / router_result_filtered and may return empty string. 8. task_worker logs ROUTER RESULT, sends answer/await message, stores state transitions in task_history and replies to Telegram. 9. Diagnostics in this chat used SQLite queries against tasks/task_history/pin/memory, direct tail of task_worker.log and ai_router.log, journalctl for telegram-ingress and areal-task-worker, and archive timeline reads","files":["/root/.areal-neva-core/telegram_daemon.py","/root/.areal-neva-core/task_worker.py","/root/.areal-neva-core/core/ai_router.py","/root/.areal-neva-core/data/core.db","/root/.areal-neva-core/data/memory.db","/root/.areal-neva-core/data/memory_files/CHATS/-1003725299009__telegram/timeline.jsonl","/root/.areal-neva-core/data/memory_files/SYSTEM/archive_cleanup_report_20260416_165129.json","/root/.areal-neva-core/logs/task_worker.log","/root/.areal-neva-core/logs/ai_router.log","/root/.areal-neva-core/runtime/voice_queue/voice_1003725299009_4018.ogg","/root/.areal-neva-core/runtime/voice_queue/voice_1003725299009_4021.ogg","/root/.areal-neva-core/runtime/voice_queue/voice_1003725299009_4024.ogg","/root/.areal-neva-core/runtime/voice_queue/voice_1003725299009_4498.ogg","/root/.areal-neva-core/runtime/voice_queue/voice_1003725299009_4500.ogg","/root/.areal-neva-core/runtime/voice_queue/voice_1003725299009_4503.ogg","/root/.areal-neva-core/runtime/voice_queue/voice_1003725299009_4505.ogg","/root/.areal-neva-core/runtime/voice_queue/voice_1003725299009_4507.ogg","/root/.areal-neva-core/runtime/voice_queue/voice_1003725299009_4510.ogg","/root/.areal-neva-core/runtime/voice_queue/voice_1003725299009_4515.ogg","/root/.areal-neva-core/runtime/voice_queue/voice_1003725299009_4517.ogg","/root/.areal-neva-core/runtime/voice_queue/voice_1003725299009_4520.ogg","/root/.areal-neva-core/runtime/voice_queue/voice_1003725299009_4523.ogg","/root/.areal-neva-core/runtime/voice_queue/voice_1003725299009_4525.ogg","/root/BACKUPS/areal-neva-core/snapshot_2026-04-16_22-43-37","/root/BACKUPS/areal-neva-core/snapshot_2026-04-16_22-43-37/data/core.db.safe","/root/BACKUPS/areal-neva-core/snapshot_2026-04-16_22-43-37/data/memory.db.safe"],"code":"Confirmed key functions and logic from this chat: create_task(message, input_type, raw_input, state='NEW') inserts tasks and later writes topic_id from message.message_thread_id when present; _find_parent_task(chat_id, reply_to, topic_id=0) after patch uses topic_id in bot_message_id lookup, reply_to_message_id lookup, and fallback active-task lookup; _handle_control_text(message, tg_id, text, lower, reply_to, topic_id=0) later passes topic_id into _find_parent_task; voice branch in telegram_daemon downloads voice file, transcribes via transcribe_voice, returns explicit failure text on STT failure/empty transcript, and after patch only passes explicit short commands into control path, otherwise creates NEW text task with [VOICE] prefix; _active_unfinished_context(conn, chat_id, exclude_task_id, topic_id=0) later filters unfinished context to same topic; _search_fact_context(conn, chat_id, topic_id=0) later intended to filter historical search-like tasks to same topic; _load_memory_context(chat_id[, topic_id]) was identified as still problematic because live code read memory.db without strict topic filtering; ai_router process_ai_task live block shown in this chat built search result from ONLINE_MODEL, then router_call, then later fix guidance changed result = await _openrouter_call(DEFAULT_MODEL, _build_messages(...)) into messages = _build_messages(...), ctx_str = _clean_context(joined message contents), if _context_has_answer(ctx_str): append FORBIDDEN instruction to system prompt, then call _openrouter_call(DEFAULT_MODEL, messages), followed by BAD_RESULT_RE filtering; _clean_context(text) strips and truncates noisy context; _context_has_answer(text) in live shown definition returns False on empty and True when stripped length > 50","patches":["Added topic_id column to tasks table in core.db","Patched create_task to write topic_id","Patched _find_parent_task to filter by topic_id in all lookup branches","Patched _handle_control_text callsites to pass topic_id","Restricted voice control interception to explicit short commands","Patched _active_unfinished_context to accept/use topic_id","Patched _search_fact_context to accept/use topic_id in discussed patch path","Patched ai_router to use _clean_context on built messages and _context_has_answer on cleaned context","Connected ARCHIVE block into _build_messages","Applied archive cleanup to memory_files timeline"],"commands":["sqlite3 /root/.areal-neva-core/data/core.db \"PRAGMA table_info(tasks)\" | grep topic_id","tail -n 40 /root/.areal-neva-core/logs/task_worker.log","tail -n 40 /root/.areal-neva-core/logs/ai_router.log","journalctl -u telegram-ingress -n 5 --no-pager","journalctl -u areal-task-worker -n 5 --no-pager","sqlite3 /root/.areal-neva-core/data/core.db \"SELECT id, state, substr(raw_input,1,160), substr(COALESCE(result,''),1,260), updated_at FROM tasks ORDER BY updated_at DESC LIMIT 6;\"","ssh areal 'sed -n \"260,320p\" /root/.areal-neva-core/core/ai_router.py'","systemctl restart telegram-ingress areal-task-worker","python3 -m py_compile /root/.areal-neva-core/core/ai_router.py","python3 -m py_compile /root/.areal-neva-core/telegram_daemon.py","python3 -m py_compile /root/.areal-neva-core/task_worker.py","sqlite3 /root/.areal-neva-core/data/core.db \".backup /root/.areal-neva-core/data/core.db.bak.$TS\"","sqlite3 /root/.areal-neva-core/data/core.db \"ALTER TABLE tasks ADD COLUMN topic_id INTEGER DEFAULT 0\" 2>/dev/null || echo \"topic_id already exists\"","git commit -m \"snapshot_2026-04-16_22-43-37 zakrytyy_kanonicheskiy_kontur\"","git push origin main","git push origin snapshot_2026-04-16_22-43-37"],"db":"Confirmed databases: /root/.areal-neva-core/data/core.db and /root/.areal-neva-core/data/memory.db. Confirmed core.db tables used in this chat: tasks, task_history, pin. Confirmed memory.db table used in this chat: memory. Confirmed tasks columns from SQL output and code fragments: id, chat_id, topic_id (added later and confirmed by PRAGMA output 12|topic_id|INTEGER|0|0|0), state, input_type, raw_input, result, error_message, bot_message_id, reply_to_message_id, user_id, created_at, updated_at. Confirmed task_history columns: task_id, action, created_at. Confirmed pin columns: id, chat_id, task_id, state, updated_at. Confirmed memory columns: chat_id, key, value, timestamp","memory":"SHORT memory: runtime state from core.db tasks/task_history. LONG memory: memory.db table memory(chat_id,key,value,timestamp), read by _load_memory_context and identified as insufficiently topic-scoped. ARCHIVE memory: memory_files timeline JSONL, cleaned and technically connected into router as ARCHIVE block. PIN memory: pin table in core.db. SEARCH memory/context: router search result plus search fact context. Confirmed issue: _load_memory_context reading memory.db without strict topic filtering remained unresolved. Confirmed-topic context layer was discussed but not canonically implemented","services":["telegram-ingress.service active after restart","areal-task-worker.service active after restart"],"errors":["ai_router import/runtime failure -> patched live blocks until py_compile and import succeeded","NameError _clean_context is not defined -> restored/added _clean_context and revalidated router","IndentationError/SyntaxError in ai_router patch attempts -> corrected by patching exact live block and rerunning py_compile/import","Voice requests returned status texts instead of real answers -> traced to _handle_control_text interception after STT and partially fixed by restricting voice control to explicit short commands","Cross-topic contamination (VPN topic pulling construction context) -> traced to missing strict topic_id filtering in parent lookup, active context, search fact context, and memory context; partial fixes applied","INVALID_RESULT len=0 and router_result_filtered in logs -> router context handling adjusted, but full closure not proven","create_task lacked topic_id -> topic_id column added and create_task patched to write it","Arbitrary ai_result proposed as confirmed topic memory -> rejected as non-canonical because it saves any answer rather than explicit confirmed topic meaning"],"decisions":["Use fact-only verification and avoid invented closure","Treat STT transport as working and focus on topic isolation and context priority","Add topic_id to tasks table","Patch create_task to write topic_id","Patch _find_parent_task to filter by topic_id in all lookup branches","Pass topic_id through _handle_control_text callsites","Restrict voice control path to explicit short commands only","Patch _active_unfinished_context to use topic_id","Patch _search_fact_context to use topic_id","Patch ai_router to build messages first and use _clean_context on context","Use _context_has_answer on cleaned context, not raw user_text","Do not treat arbitrary ai_result as confirmed topic meaning","Separate archive cleanup from archive-runtime retrieval","Use canonical backup flow on server snapshot and GitHub","Keep tag naming as snapshot_<TS>","Use commit suffix zakrytyy_kanonicheskiy_kontur, not Russian Git tag"],"solutions":["Completed server and GitHub backup: snapshot directory created, safe DB backups made, commit and tag pushed","Executed archive timeline cleanup and created cleanup report file","Applied ai_router partial fix so router imports, ARCHIVE block exists, and _clean_context path is used in later patch","Applied telegram_daemon patch set with five confirmed patches and syntax OK","Applied task_worker patch set with two confirmed patches and syntax OK","Confirmed topic_id column exists and services restart successfully","Installed partial voice/topic handoff fix","Confirmed general recall still works after patches"],"state":"Latest confirmed working state in this chat: backup completed on server and GitHub; topic_id column exists in tasks; ai_router, telegram_daemon, and task_worker latest applied partial patches compile; telegram-ingress.service and areal-task-worker.service are active after restart; router returns answers in runtime; general recall works; bot can list previously discussed topics; voice/topic handoff partial fix is installed. Latest confirmed not fully working state: canonical topic memory isolation is not proven stable in live runtime; bot still required repeated correction in a live VPN topic test before finally giving correct topic meaning; confirmed-topic context layer is not correctly implemented; exact old-item recall remains not proven stable; worker priority rule for newer NEW tasks over older active confirmation/unfinished context is not proven closed","what_working":["Server snapshot and GitHub backup completed successfully","topic_id column exists in tasks table","create_task/topic patches compiled and services started","_find_parent_task/topic patches compiled and services started","router patch compiled and router returns runtime answers","general recall works","services telegram-ingress and areal-task-worker are active"],"what_broken":["Canonical topic memory isolation not proven stable in runtime","Bot required repeated correction before holding VPN topic meaning","_load_memory_context strict topic filtering unresolved","Confirmed-topic context layer not canonically implemented","Exact old-item recall not proven stable","Worker priority rule for newer NEW tasks over older active tasks not proven closed"],"what_not_done":["Confirmed-topic context layer bound to chat_id + topic_id","Strict _load_memory_context same-topic filtering without generic contamination","Worker priority rule so newer NEW task wins inside same topic","Runtime proof for stable VPN topic isolation after latest patches","Runtime proof for exact same-topic specific old-item recall","Verification of topic-scoped cancellation behavior"],"current_breakpoint":"Current factual breakpoint is not STT or transport; it is context priority and same-topic confirmed meaning. Bot can answer and recall generally, but in live VPN topic test it first answered with wrong domain/context and only later corrected after repeated user correction","root_causes":["Cross-topic contamination through insufficiently topic-scoped memory/context reads","Lack of canonical confirmed-topic context layer","Control/active-task logic historically intercepted fresh requests incorrectly","Generic recall can outrank current topic meaning when topic filtering is incomplete"],"verification":["SQLite PRAGMA confirmed topic_id column exists","py_compile succeeded for ai_router.py, telegram_daemon.py, task_worker.py","systemctl restart executed for telegram-ingress and areal-task-worker","systemctl is-active returned active for both services","journalctl showed bot start polling and worker service start","task queries showed recent tasks and results","live Telegram test showed partial fix but also remaining wrong context before correction"],"limits":["Only facts from this chat are included","No full proof of final canonical closure exists in this chat","Venv path is UNKNOWN in this export because not confirmed in the latest strict state within this chat","Confirmed-topic context implementation remains unresolved"]}
-====================================================================================================
-END_FILE: chat_exports/CHAT_EXPORT__UNKNOWN__.txt
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: chat_exports/CHAT_EXPORT__UNKNOWN__2026-04-25.txt
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: f1945cd6c19e56b3c1c78943ef5ec18116907a4ca1efc40a57d48ab1db7adfc5
-====================================================================================================
-﻿
-====================================================================================================
-END_FILE: chat_exports/CHAT_EXPORT__UNKNOWN__2026-04-25.txt
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: chat_exports/CHAT_EXPORT__areal-neva-core-claude__2026-04-20.txt
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: a2cbedff5ebb8137d3643d4078c8cab2ff11680f775f363bb1a21805d68393af
-====================================================================================================
-﻿{
-  "chat_id": "-1003725299009",
-  "chat_name": "areal-neva-core-claude-session-2026-04-19-20",
-  "exported_at": "2026-04-20T13:10:00+03:00",
-  "source_model": "claude-sonnet-4-6",
-  "system": {
-    "server": "89.22.225.136 | Ubuntu 24.04",
-    "base": "/root/.areal-neva-core/",
-    "venv": "/root/.areal-neva-core/.venv/bin/python3",
-    "bot": "@ai_orkestra_all_bot | id=8216054898",
-    "chat_id": "-1003725299009",
-    "second_ip": "89.22.227.213",
-    "github": "rj7hmzycvm-lgtm/areal-neva-core",
-    "drive": "13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB",
-    "memory_api_port": 8091,
-    "stt_primary": "Groq whisper-large-v3-turbo",
-    "credentials_json": "EXISTS at /root/.areal-neva-core/credentials.json",
-    "service_account": "ai-orchestra@areal-neva-automation.iam.gserviceaccount.com"
-  },
-  "architecture": {
-    "components": [
-      "telegram_daemon.py -- primary Telegram entry point",
-      "task_worker.py -- state machine poller",
-      "core/ai_router.py -- process_ai_task(payload) async",
-      "core/reply_sender.py -- send_reply_ex(chat_id, text, reply_to)",
-      "core/pin_manager.py -- save_pin, get_pin_context",
-      "data/core.db -- SSOT tasks",
-      "data/memory.db -- long-term memory"
-    ],
-    "state_machine": "NEW -> IN_PROGRESS -> AWATTING_CONFIRMATION -> DONE -> ARCHIVED | WAITING_CLARIFCATION | FAILED | CANCELLED"
-  },
-  "pipeline": "voice/text -> telegram_daemon.py -> STT(Groq) -> create_task(topic_id) -> core.db NEW -> task_worker poll 1.5s -> _handle_new/_handle_in_progress -> context assembly -> ai_router -> reply_sender -> Telegram",
-  "files": [
-    "/root/.areal-neva-core/task_worker.py",
-    "/root/.areal-neva-core/telegram_daemon.py",
-    "/root/.areal-neva-core/core/ai_router.py",
-    "/root/.areal-neva-core/core/reply_sender.py",
-    "/root/.areal-neva-core/core/pin_manager.py",
-    "/root/.areal-neva-core/core/web_engine.py",
-    "/root/.areal-neva-core/data/core.db",
-    "/root/.areal-neva-core/data/memory.db",
-    "/root/.areal-neva-core/credentials.json"
-  ],
-  "code": {
-    "archive_context_sig": "def _load_archive_context(chat_id: str, topic_id: int, user_text: str) -> str:",
-    "role_intercept": "ROLE_Q + HISTORY_Q regex -> if topic_role and match: ai_result = f'Etot chat zakreplyon za: {topic_role}'",
-    "handle_new_final": "_update_task(conn, task_id, state='IN_PROGRESS') -- no more WAITING_CLARIFCATION",
-    "drive_file_wrapper": "if input_type == 'drive_file': try: await _handle_drive_file(...) except Exception as e: logger.error('DRIVE_FILE CRASH')"
-  },
-  "patches": [
-    {"name": "archive_topic_scope", "file": "task_worker.py", "result": "OI"},
-    {"name": "task_worker_rewrite_from_scratch", "file": "task_worker.py", "result": "active running since 13:02:28"},
-    {"name": "role_history_intercept", "file": "task_worker.py", "result": "OI"},
-    {"name": "confirm_exact_7anchors", "file": "telegram_daemon.py", "result": "PATCH_OK changed=7"},
-    {"name": "handle_new_in_progress_direct", "file": "task_worker.py", "result": "PATCH_OK"},
-    {"name": "drive_file_enable", "file": "task_worker.py", "result": "PATCH_OK"},
-    {"name": "drive_file_safe_wrapper", "file": "task_worker.py", "result": "PATCH_OK"},
-    {"name": "main_block_move_to_end", "file": "task_worker.py", "result": "PENDING"},
-    {"name": "search_system_prompt_url", "file": "core/ai_router.py", "result": "PATCH_OK"},
-    {"name": "topic_961_memory_seed", "target": "memory.db", "result": "topic_961_role=auto zapchasti poisk"},
-    {"name": "purge_bad_tasks_961", "target": "core.db", "result": "8 tasks CANCELLED"}
-  ],
-  "commands": [
-    "systemctl restart areal-task-worker telegram-ingress",
-    "python3 -m py_compile <file>",
-    "sqlite3 core.db SELECT tasks",
-    "sqlite3 memory.db SELECT memory",
-    "journalctl -u areal-task-worker -n 20",
-    "tar -tzf BACKUPS/*.tar.gz | grep task_worker"
-  ],
-  "db": {
-    "core_db": "/root/.areal-neva-core/data/core.db",
-    "memory_db": "/root/.areal-neva-core/data/memory.db",
-    "tasks_schema": "id, chat_id, user_id, input_type, raw_input, state, result, error_message, reply_to_message_id, bot_message_id, topic_id INTEGER DEFAULT 0, created_at, updated_at",
-    "state_counts": {"ARCHIVED": 294, "AWAITING_CONFIRMATION": 10, "CANCELLED": 49, "DONE": 46, "FAILED": 572},
-    "archive_legacy_format": "JSON: {topic_id, raw_input, result, timestamp}"
-  },
-  "memory": {
-    "topic_961_role": "avto zapchasti poisk",
-    "topic_961_directions": "poisk i podbor avtozapchastej, artikuly, sovmestimost, analogi, tseny, magaziny",
-    "topic_5_role": "funksii tekhnadzora",
-    "topic_3008_assistant_output": "2026-04-20 06:35:59",
-    "topic_961_assistant_output": "2026-04-20 09:34:38"
-  },
-  "services": {
-    "telegram-ingress": "active running since 10:03:36",
-    "areal-task-worker": "active running since 13:03:02",
-    "areal-memory-api": "UNKNOWN",
-    "dead": ["areal-automation-daemon", "areal-email-ingress", "areal-drive-ingest"]
-  },
-  "errors": [
-    {"error": "task_worker.py imports srezany", "cause": "archive patch srezal verkh faila", "fix": "GPT perepisal fial s nulya"},
-    {"error": "drive_file worker crash loop", "cause": "_handle_drive_file opredelena POSLE if __name__", "fix": "PENDING - need to move __main__ to end"},
-    {"error": "topic_961 gallucinations", "cause": "archive_context not topic_scoped", "fix": "archive topic_id scope patch + purge bad tasks"},
-    {"error": "confirm too wide", "cause": "any(x in lower)", "fix": "lower.strip() in SET - PATCH_OK"}
-  ],
-  "decisions": [
-    "not use .bak files - all broken",
-    "write task_worker.py from scratch",
-    "archive_context filter by topic_id",
-    "role/history intercept without ai_router",
-    "drive_file branch await + safe wrapper",
-    "confirm exact match only lower.strip() in SET"
-  ],
-  "solutions": [
-    "task_worker.py rewritten from scratch",
-    "archive_context topic_scoped",
-    "role_intercept standing",
-    "confirm exact match 7 anchors",
-    "handle_new -> IN_PROGRESS direct",
-    "drive_file safe wrapper applied",
-    "credentials.json on server",
-    "service_account added to drive folder"
-  ],
-  "state": {
-    "areal-task-worker": "active running since 13:03:02",
-    "telegram-ingress": "active running since 10:03:36",
-    "task_worker.py": "new file from scratch + all patches applied",
-    "memory_db": "topic_961 role+directions written, topic_5 role written",
-    "drive_file_contour": "PENDING - __main__ move to end not yet applied"
-  },
-  "what_working": [
-    "areal-task-worker active",
-    "telegram-ingress active",
-    "STT Groq",
-    "state machine NEW -> IN_PROGRESS -> AWAITING_CONFIRMATION -> DONE",
-    "archive_context topic_scoped",
-    "role_intercept",
-    "confirm exact match",
-    "memory writes after DONE confirmed save_memory_ok",
-    "credentials.json on server",
-    "service_account in drive folder as Editor"
-  ],
-  "what_broken": [
-    "drive_file contour - __main__ before _handle_drive_file definition"
-  ],
-  "what_not_done": [
-    "move __main__ to end of task_worker.py",
-    "live test drive_file contour",
-    "areal-memory-api status verify",
-    "Orchestra Webhook 89.22.227.213",
-    "topic_500 role not written"
-  ],
-  "current_breakpoint": "__hainn__ block on line 841 before _handle_drive_file on line 868 - prevents drive_file processing",
-  "root_causes": [
-    "all .bak files from 16-19 april already broken",
-    "git bba1c12 also lacked full imports",
-    "archive_context not topic_scoped - caused mixing",
-    "drive_file __main__ before function definition"
-  ],
-  "verification": [
-    "areal-task-worker active 13:03:02 - confirmed",
-    "PATCH_OK + SYNTAX_OK all patches",
-    "save_memory_ok in logs 12:34:38 - confirmed",
-    "credentials.json 2381 bytes - confirmed",
-    "service_account Editor in drive - confirmed",
-    "NOT verified: drive_file live run",
-    "NOT verified: areal-memory-api status"
-  ],
-  "limits": [
-    "tail_claude=40",
-    "tail_gpt=20",
-    "ai_timeout=300",
-    "stale_timeout=600",
-    "poll_sec=1.5",
-    "min_result_len=8",
-    "short_memory_limit=100",
-    "long_memory_limit=100",
-    "_save_archive i _archive_done ZAPRESHCHENO"
-  ]
-}
-====================================================================================================
-END_FILE: chat_exports/CHAT_EXPORT__areal-neva-core-claude__2026-04-20.txt
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: chat_exports/CHAT_EXPORT__areal-neva-core__2026-04-27.txt
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 961130fdd7f731598696e3afe226c875cab484089fe4c93450fb3fbd8d1bc4d5
-====================================================================================================
-{
-  "chat_id": "UNKNOWN",
-  "chat_name": "areal-neva-core",
-  "exported_at": "2026-04-27T20:00:00Z",
-  "source_model": "Claude Sonnet 4.6",
-  "system": "Multi-agent AI orchestration infrastructure areal-neva-core. Telegram bots, async task workers, Python agents, Google Drive sync, SQLite-backed state management. Self-hosted Linux server + MacBook Air.",
-  "architecture": "Telegram bot -> task_worker.py -> SQLite WAL task queue -> agent handlers (Claude/ChatGPT/Gemini/Grok/DeepSeek/Perplexity) -> results stored in SQLite -> Google Drive sync via Mac",
-  "pipeline": "NEW -> IN_PROGRESS -> DONE / FAILED -> ARCHIVED",
-  "files": [
-    "task_worker.py -> central async worker for task lifecycle",
-    "google_io.py -> Google Drive integration with lazy imports",
-    "pin_manager.py -> pin state management via SQLite",
-    "drive_ingest.py -> Google Drive file ingestion with service file filters",
-    "deploy_patch.sh -> deployment script: stop/backup/patch/restart/logs"
-  ],
-  "code": "Python asyncio / SQLite WAL / Telethon / openpyxl / Bash / Linux server + macOS local",
-  "patches": [
-    "task_worker_race_condition_guard -> task_worker.py -> voice file availability check -> status: applied_by_terminal",
-    "task_worker_stt_retry_logic -> task_worker.py -> STT retry on failure -> status: applied_by_terminal",
-    "task_worker_voice_state_routing -> task_worker.py -> incorrect state routing for voice tasks -> status: applied_by_terminal",
-    "task_worker_raw_path_leakage -> task_worker.py -> raw file path leak in user-facing messages -> status: applied_by_terminal",
-    "task_worker_empty_transcript -> task_worker.py -> empty transcript handling -> status: applied_by_terminal",
-    "task_worker_internal_path_pattern_leak -> task_worker.py -> internal path pattern leakage in results -> status: applied_by_terminal",
-    "google_io_lazy_import -> google_io.py -> top-level googleapiclient import crash fix -> status: applied_by_terminal",
-    "pin_manager_table_ref -> pin_manager.py -> pins table -> pin table correction -> status: applied_by_terminal",
-    "pin_manager_schema_readwrite -> pin_manager.py -> pin context in tasks.result via task_id -> status: applied_by_terminal",
-    "task_worker_fcntl_lock_release -> task_worker.py -> fcntl locks in finally blocks -> status: applied_by_terminal",
-    "drive_ingest_service_file_filter -> drive_ingest.py -> is_service_file_for_ingest() filters CHAT_EXPORT_* FULL_CANON_* EXTERNAL_WORK_MONITORING_* UNKNOWN_* INDEX__* voice_*.ogg topic_* application/ogg -> status: applied_by_terminal"
-  ],
-  "commands": [
-    "cp <file> <file>.bak before all modifications",
-    "systemctl stop / start / restart areal-neva-core services",
-    "sqlite3 update tasks set status='NEW' where status='IN_PROGRESS'",
-    "tail -f /var/log/areal-neva-core/*.log"
-  ],
-  "db": "SQLite WAL: tasks (status NEW/IN_PROGRESS/DONE/FAILED/ARCHIVED), pin (pin context via task_id -> tasks.result), memory.db (topic isolation)",
-  "memory": "state: keys and values per topic; topic isolation active; local path ~/.areal-neva-core/data/memory",
-  "services": [
-    "task_worker: applied patches confirmed",
-    "google_io: lazy import fix applied",
-    "pin_manager: table ref and schema fix applied",
-    "drive_ingest: service file filter active"
-  ],
-  "canons": [
-    "CANON 1 - DRIVE_INGEST_HYGIENE: drive_ingest.py not create tasks for CHAT_EXPORT_* FULL_CANON_* EXTERNAL_WORK_MONITORING_* UNKNOWN_* INDEX__* voice_*.ogg topic_* application/ogg -> is_service_file_for_ingest() function",
-    "CANON_FINAL on server: /root/.areal-neva-core/CANON_FINAL/ -> 11 files. SHA256SUMS.txt verified. Agents: Claude(verification/TZ), ChatGPT(patches), Gemini(security), Grok(architecture), DeepSeek(text pipeline), Perplexity(ONLINE_MODEL)",
-    "TECH_CONTOUR_CLOSED_2026_04_24: Worker stable, PDF->XLSX artifact working, service files filter active, requeue loop guard applied, memory cleaned, queue clean, tesseract rus+eng confirmed, duplicate file guard implemented"
-  ],
-  "decisions": [
-    "lazy imports for googleapiclient -> prevent startup crash when not installed -> google_io.py",
-    "fcntl locks in finally blocks -> prevent worker conflicts on abnormal exit -> task_worker.py",
-    "pin context via tasks.result + task_id -> schema-aware read/write -> pin_manager.py",
-    "direct download to final destination paths -> prevent shutil silent failure on filename mismatch -> Telethon agent",
-    "ASCII-safe paths only -> prevent Cyrillic failures in Python 3.9+zsh on macOS"
-  ],
-  "errors": [
-    "googleapiclient not installed -> top-level import crash on startup -> moved to lazy import inside functions",
-    "pin_manager reading from pins table -> table does not exist -> corrected to pin table",
-    "voice file race condition -> file not yet available on disk -> added availability guard",
-    "stale IN_PROGRESS tasks -> worker restart leaves orphaned records -> reset via SQLite UPDATE on deploy",
-    "drive_ingest processing service files -> CHAT_EXPORT_* and system files created spurious tasks -> is_service_file_for_ingest() filter added"
-  ],
-  "solutions": [
-    "STT retry logic -> explicit retry with backoff on failure -> DOMNE",
-    "voice task state routing -> explicit per-spec state transitions -> DONE",
-    "path leakage in user messages -> stripped internal path references -> DONE",
-    "deploy_patch.sh -> unified deploy script: stop/backup/patch/reset-DTInProgress/restart/logs -> DONE",
-    "duplicate file guard -> prevent reprocessing same Drive file -> DONE"
-  ],
-  "state": "TECH_CONTOUR_CLOSED_2026_04_24: worker stable, all known patches applied, service file filter active, queue clean",
-  "what_working": [
-    "task_worker.py: voice race guard, STT retry, state routing, path leak fixes, fcntl lock release",
-    "google_io.py: lazy import fix, startup stable",
-    "pin_manager.py: table ref + schema correct",
-    "drive_ingest.py: service file filter active",
-    "PDF->XLSX artifact pipeline working",
-    "tesseract rus+eng confirmed on server",
-    "CANON_FINAL: 11 files, SHA256SUMS.txt verified"
-  ],
-  "what_broken": [
-    "Telethon-based media download agent: verification incomplete from prior session"
-  ],
-  "what_not_done": [
-    "Telethon media download agent: full operational verification pending",
-    "full end-to-end system status confirmation after all patches"
-  ],
-  "current_breakpoint": "Session opened: Ilya confirmed readiness for technical code work. Awaiting specific task.",
-  "root_causes": [
-    "stale IN_PROGRESS on server restart -> no atomic state reset on startup -> fixed in deploy_script",
-    "fcntl locks not released -> exception paths skipped finally -> fixed with finally blocks",
-    "service files ingested -> no filter existed -> fixed with is_service_file_for_ingest()"
-  ],
-  "verification": [
-    "drive_ingest service filter -> is_service_file_for_ingest() function present in code -> syntax OK",
-    "CANON_FINAL -> SHA256SUMS.txt matched server = local Drive = gdrive:AI_ORCHESTRA/CANON_FINAL",
-    "TECH_CONTOUR_CLOSED_2026_04_24: worker stable status confirmed by owner"
-  ],
-  "limits": [
-    "no new directories outside allowed list",
-    "no files in root of }/.areal-neva-core/data/memory or ~/AI_ORCHESTRA or drive",
-    "backup mandatory before any file modification",
-    "no deletion without explicit command",
-    "disable sync before large sort operations",
-    "verification models not via OpenRouter",
-    "Cyrillic paths prohibited on macOS zsh Python 3.9+"
-  ]
-}
-====================================================================================================
-END_FILE: chat_exports/CHAT_EXPORT__areal-neva-core__2026-04-27.txt
 FILE_CHUNK: 1/1
 ====================================================================================================

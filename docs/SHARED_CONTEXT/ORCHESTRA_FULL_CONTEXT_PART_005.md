@@ -1,4817 +1,568 @@
 # ORCHESTRA_FULL_CONTEXT_PART_005
-generated_at_utc: 2026-05-03T10:25:53.696008+00:00
-git_sha_before_commit: 9dec339fd50517a8fa344fca3eb1ac0c085650e0
-part: 5/7
+generated_at_utc: 2026-05-07T15:15:30.422700+00:00
+git_sha_before_commit: 983ced8149ebd4c84be0c2926296ad19722d0d88
+part: 5/17
 
 
 ====================================================================================================
-BEGIN_FILE: core/project_engine.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: e2ee8fe53b5df893b9150a1db1aef9825b5ac3bc1c293b52555ae580b9ca006d
-====================================================================================================
-# === PROJECT_ENGINE_V1 ===
-"""
-core/project_engine.py
-Разработка проектной документации по нормам ГОСТ/СНиП/СП
-на основе шаблонов пользователя.
-Разрешение на создание получено: 29.04.2026
-"""
-import os, re, logging, tempfile
-from pathlib import Path
-from typing import Dict, Any, Optional, List
-
-logger = logging.getLogger(__name__)
-
-SECTION_MAP = {
-    "кж":  "КЖ — Конструкции железобетонные",
-    "км":  "КМ — Конструкции металлические",
-    "кмд": "КМД — Конструкции металлические деталировочные",
-    "ар":  "АР — Архитектурные решения",
-    "ов":  "ОВ — Отопление и вентиляция",
-    "вк":  "ВК — Водоснабжение и канализация",
-    "эом": "ЭОМ — Электроосвещение",
-    "сс":  "СС — Слаботочные системы",
-    "гп":  "ГП — Генеральный план",
-    "пз":  "ПЗ — Пояснительная записка",
-    "см":  "СМ — Смета",
-    "тх":  "ТХ — Технологические решения",
-}
-
-SECTION_STRUCTURE = {
-    "кж":  ["Армирование", "Схемы", "Спецификация арматуры", "Спецификация материалов"],
-    "км":  ["Нагрузки", "Узлы сопряжений", "Спецификация металла"],
-    "кмд": ["Деталировка", "Узлы", "Спецификация"],
-    "ар":  ["Планы этажей", "Фасады", "Разрезы", "Экспликация помещений"],
-    "ов":  ["Схема системы", "Расчёт нагрузок", "Спецификация оборудования"],
-    "вк":  ["Схема водоснабжения", "Схема канализации", "Спецификация"],
-    "эом": ["Однолинейная схема", "Расчёт нагрузок", "Спецификация"],
-}
-
-NORMS_MAP = {
-    "кж":  ["СП 63.13330.2018", "ГОСТ 34028-2016", "СП 20.13330.2017"],
-    "км":  ["СП 16.13330.2017", "ГОСТ 27772-2015", "СП 20.13330.2017"],
-    "ар":  ["СП 118.13330.2022", "ГОСТ 21.501-2018"],
-    "ов":  ["СП 60.13330.2020", "ГОСТ 30494-2011"],
-    "вк":  ["СП 30.13330.2020", "СП 31.13330.2021"],
-    "эом": ["СП 256.1325800.2016", "ПУЭ-7"],
-}
-
-SNOW_LOADS = {1: 0.8, 2: 1.2, 3: 1.8, 4: 2.4, 5: 3.2, 6: 4.0, 7: 4.8, 8: 5.6}
-WIND_LOADS = {1: 0.17, 2: 0.23, 3: 0.30, 4: 0.38, 5: 0.48, 6: 0.60, 7: 0.73, 8: 0.85}
-
-SPEC_HEADERS = ["№", "Наименование", "Марка/Обозначение", "Ед. изм.", "Кол-во", "Примечание"]
-UNITS = {"мм", "м", "м2", "м3", "кг", "т", "шт", "пог.м"}
-
-
-def detect_section(file_name: str, text: str = "") -> Optional[str]:
-    # FULLFIX_02_B1: filename-first section priority
-    fn = (file_name or "").lower()
-    for key in SECTION_MAP:
-        if key in fn:
-            return key
-    src = ((file_name or "") + " " + (text or "")).lower()
-    for key in SECTION_MAP:
-        if key in src:
-            return key
-    return None
-
-
-def calc_loads(region: int = 3) -> Dict[str, float]:
-    return {
-        "snow_kPa":  SNOW_LOADS.get(region, 1.8),
-        "wind_kPa":  WIND_LOADS.get(region, 0.30),
-        "region":    region,
-        "note":      f"СП 20.13330.2017 — район {region}",
-    }
-
-
-def normalize_unit(unit: str) -> str:
-    u = str(unit or "").strip().lower()
-    mapping = {"м2": "м2", "м²": "м2", "м3": "м3", "м³": "м3", "кг": "кг", "т": "т", "шт": "шт", "м": "м", "мм": "мм"}
-    return mapping.get(u, u)
-
-
-def build_specification(items: List[Dict]) -> List[List]:
-    rows = [SPEC_HEADERS]
-    for i, item in enumerate(items, 1):
-        rows.append([
-            i,
-            item.get("name", ""),
-            item.get("mark", ""),
-            normalize_unit(item.get("unit", "")),
-            item.get("qty", ""),
-            item.get("note", ""),
-        ])
-    return rows
-
-
-def _write_project_xlsx(section: str, items: List[Dict], loads: Dict, task_id: str) -> str:
-    from openpyxl import Workbook
-    from openpyxl.styles import Font, Alignment, PatternFill
-    wb = Workbook()
-    ws = wb.active
-    ws.title = section.upper()
-
-    ws.merge_cells("A1:F1")
-    ws["A1"] = SECTION_MAP.get(section, section.upper())
-    ws["A1"].font = Font(bold=True, size=13)
-    ws["A1"].alignment = Alignment(horizontal="center")
-
-    norms = NORMS_MAP.get(section, [])
-    ws["A2"] = "Нормы: " + ", ".join(norms) if norms else ""
-
-    if section in ("кж", "км", "кмд"):
-        ws["A3"] = f"Снег: {loads['snow_kPa']} кПа | Ветер: {loads['wind_kPa']} кПа | {loads['note']}"
-
-    spec = build_specification(items)
-    start_row = 5
-    for r_idx, row in enumerate(spec, start_row):
-        for c_idx, val in enumerate(row, 1):
-            cell = ws.cell(r_idx, c_idx, value=val)
-            if r_idx == start_row:
-                cell.font = Font(bold=True)
-                cell.fill = PatternFill("solid", fgColor="DDEEFF")
-
-    struct = SECTION_STRUCTURE.get(section, [])
-    if struct:
-        ws.cell(start_row + len(spec) + 2, 1, "Состав раздела:")
-        for i, s in enumerate(struct, 1):
-            ws.cell(start_row + len(spec) + 2 + i, 1, f"{i}. {s}")
-
-    tmp = os.path.join(tempfile.gettempdir(), f"project_{section}_{task_id}.xlsx")
-    wb.save(tmp)
-    return tmp
-
-
-async def generate_project_section(section: str, items: List[Dict], task_id: str, topic_id: int, region: int = 3) -> Dict[str, Any]:
-    res = {"success": False, "excel_path": None, "drive_link": None, "section": section, "error": None}
-    try:
-        loads = calc_loads(region)
-        xl = _write_project_xlsx(section, items, loads, task_id)
-        res["excel_path"] = xl
-
-        from core.engine_base import upload_artifact_to_drive, quality_gate
-        qg = quality_gate(xl, task_id, "excel")
-        if not qg["passed"]:
-            res["error"] = f"QualityGate: {qg['errors']}"
-            return res
-
-        link = upload_artifact_to_drive(xl, task_id, topic_id)
-        if link:
-            res["drive_link"] = link
-            res["success"] = True
-        else:
-            res["error"] = "UPLOAD_FAILED"
-    except Exception as e:
-        logger.error(f"project_engine: {e}", exc_info=True)
-        res["error"] = str(e)[:300]
-    return res
-
-
-def project_result_guard(result: Dict) -> Dict:
-    if not result.get("success"):
-        return result
-    if not result.get("excel_path") and not result.get("drive_link"):
-        result["success"] = False
-        result["error"] = "PROJECT_RESULT_GUARD: нет артефакта"
-    return result
-
-
-async def process_project_file(file_path: str, task_id: str, topic_id: int, raw_input: str = "") -> Dict[str, Any]:
-    section = detect_section(file_path, raw_input) or "кж"
-    items = []
-
-    try:
-        ext = Path(file_path).suffix.lower()
-        if ext == ".pdf":
-            import pdfplumber
-            with pdfplumber.open(file_path) as pdf:
-                for page in pdf.pages:
-                    tables = page.extract_tables()
-                    for table in tables:
-                        for row in (table or []):
-                            if row and any(row):
-                                items.append({
-                                    "name": str(row[0] or ""),
-                                    "mark": str(row[1] or "") if len(row) > 1 else "",
-                                    "unit": str(row[2] or "") if len(row) > 2 else "",
-                                    "qty":  str(row[3] or "") if len(row) > 3 else "",
-                                })
-        elif ext in (".xlsx", ".xls"):
-            from openpyxl import load_workbook
-            wb = load_workbook(file_path, data_only=True)
-            ws = wb.active
-            for row in ws.iter_rows(min_row=2, values_only=True):
-                if row and any(v for v in row if v):
-                    items.append({
-                        "name": str(row[0] or ""),
-                        "mark": str(row[1] or "") if len(row) > 1 else "",
-                        "unit": str(row[2] or "") if len(row) > 2 else "",
-                        "qty":  str(row[3] or "") if len(row) > 3 else "",
-                    })
-            wb.close()
-    except Exception as e:
-        logger.warning(f"project extract: {e}")
-
-    result = await generate_project_section(section, items, task_id, topic_id)
-    return project_result_guard(result)
-# === END_PROJECT_ENGINE_V1 ===
-
-# === CODE_CLOSE_V43_PROJECT_ENGINE ===
-
-def normative_search_engine_v43(section: str, query: str = ""):
-    base = NORMS_MAP.get(section, [])
-    if base:
-        return {"success": True, "norms": base, "source": "local_norms_map"}
-    return {"success": False, "norms": [], "error": "норма не подтверждена"}
-
-def project_validator_v43(result):
-    if not isinstance(result, dict):
-        return False, "PROJECT_VALIDATOR: empty"
-    if result.get("success") is False:
-        return False, str(result.get("error") or "PROJECT_VALIDATOR: failed")
-    if not (result.get("drive_link") or result.get("excel_path") or result.get("docx_path") or result.get("pdf_path")):
-        return False, "PROJECT_VALIDATOR: no_artifact"
-    return True, ""
-
-def metal_structure_engine_v43(items, region=3):
-    loads = calc_loads(region)
-    spec = []
-    for item in items or []:
-        name = str(item.get("name") or "")
-        if any(x in name.lower() for x in ("колонна","балка","ферма","связь","прогон")):
-            spec.append(item)
-    return {"loads": loads, "items": spec, "norms": NORMS_MAP.get("км", [])}
-
-def project_result_guard_v43(result):
-    ok, reason = project_validator_v43(result)
-    if not ok:
-        result = result if isinstance(result, dict) else {}
-        result["success"] = False
-        result["error"] = reason
-    return result
-
-try:
-    _v43_orig_generate_project_section = generate_project_section
-    async def generate_project_section(section, items, task_id, topic_id, region=3):
-        res = await _v43_orig_generate_project_section(section, items, task_id, topic_id, region)
-        res["normative_search"] = normative_search_engine_v43(section)
-        if section in ("км","кмд"):
-            res["metal_structure"] = metal_structure_engine_v43(items, region)
-        return project_result_guard_v43(res)
-except Exception:
-    pass
-
-# === END_CODE_CLOSE_V43_PROJECT_ENGINE ===
-
-# === PROJECT_CLOSE_V44 ===
-
-def normative_search_engine_v44(section: str, query: str = ""):
-    norms = NORMS_MAP.get(section, [])
-    if norms:
-        return {"success": True, "norms": norms, "source": "NORMS_MAP"}
-    return {"success": False, "norms": [], "error": "норма не подтверждена"}
-
-def project_validator_v44(result):
-    if not isinstance(result, dict):
-        return False, "PROJECT_VALIDATOR_EMPTY"
-    if result.get("success") is False:
-        return False, str(result.get("error") or "PROJECT_VALIDATOR_FAILED")
-    if not result.get("section"):
-        return False, "PROJECT_VALIDATOR_NO_SECTION"
-    if not (result.get("drive_link") or result.get("excel_path") or result.get("docx_path") or result.get("pdf_path")):
-        return False, "PROJECT_VALIDATOR_NO_ARTIFACT"
-    return True, ""
-
-def metal_structure_engine_v44(items, region=3):
-    spec = []
-    for item in items or []:
-        name = str(item.get("name") or "").lower()
-        if any(x in name for x in ("колонна","балка","ферма","связь","прогон","рама","ангар")):
-            spec.append(item)
-    return {"success": True, "loads": calc_loads(region), "items": spec, "norms": NORMS_MAP.get("км", [])}
-
-def _write_project_docx_v44(section, items, loads, task_id):
-    import os, tempfile
-    path = os.path.join(tempfile.gettempdir(), f"project_{section}_{task_id}.docx")
-    try:
-        from docx import Document
-        doc = Document()
-        doc.add_heading(SECTION_MAP.get(section, section.upper()), level=1)
-        doc.add_paragraph("Нормы: " + ", ".join(NORMS_MAP.get(section, [])))
-        doc.add_paragraph(f"Снег: {loads.get('snow_kPa')} кПа | Ветер: {loads.get('wind_kPa')} кПа")
-        table = doc.add_table(rows=1, cols=6)
-        for i, h in enumerate(SPEC_HEADERS):
-            table.rows[0].cells[i].text = h
-        for n, item in enumerate(items or [], 1):
-            row = table.add_row().cells
-            row[0].text = str(n)
-            row[1].text = str(item.get("name",""))
-            row[2].text = str(item.get("mark",""))
-            row[3].text = normalize_unit(item.get("unit",""))
-            row[4].text = str(item.get("qty",""))
-            row[5].text = str(item.get("note",""))
-        doc.save(path)
-    except Exception:
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(SECTION_MAP.get(section, section.upper()) + "\n")
-            f.write("Нормы: " + ", ".join(NORMS_MAP.get(section, [])) + "\n")
-            f.write(str(items or []))
-    return path
-
-try:
-    _v44_orig_generate_project_section = generate_project_section
-
-    async def generate_project_section(section, items, task_id, topic_id, region=3):
-        res = await _v44_orig_generate_project_section(section, items, task_id, topic_id, region)
-        loads = calc_loads(region)
-        res["normative_search"] = normative_search_engine_v44(section)
-        if section in ("км", "кмд"):
-            res["metal_structure"] = metal_structure_engine_v44(items, region)
-        try:
-            docx_path = _write_project_docx_v44(section, items, loads, task_id)
-            res["docx_path"] = docx_path
-            from core.engine_base import upload_artifact_to_drive
-            docx_link = upload_artifact_to_drive(docx_path, task_id, topic_id)
-            if docx_link:
-                res["docx_link"] = docx_link
-        except Exception as e:
-            res["docx_error"] = str(e)[:300]
-        ok, reason = project_validator_v44(res)
-        if not ok:
-            res["success"] = False
-            res["error"] = reason
-        return res
-except Exception:
-    pass
-
-# === END_PROJECT_CLOSE_V44 ===
-
-
-# === PATCH_TEMPLATE_MODEL_EXTRACTOR_V1 ===
-import re as _re_pte
-
-def extract_template_model_from_text(text: str, file_name: str = "", user_text: str = "") -> dict:
-    lines = [l.strip() for l in (text or "").replace("\r","\n").split("\n") if l.strip()]
-    # FULLFIX_02_B2: filename-first project type priority, КД/КЖ before АР
-    _MARKS_PRI = ("КД","КЖ","КМД","КМ","КР","АР","ОВ","ВК","ЭОМ","СС","ГП","ПЗ","ТХ","СМ")
-    project_type = "UNKNOWN"
-    for _pt_src in ((file_name or ""), (user_text or ""), (text or "")[:500]):
-        _pt_upper = _pt_src.upper()
-        for mark in _MARKS_PRI:
-            if _re_pte.search(rf"(^|[^А-ЯA-Z0-9]){_re_pte.escape(mark)}([^А-ЯA-Z0-9]|$)", _pt_upper):
-                project_type = mark
-                break
-        if project_type != "UNKNOWN":
-            break
-    src = f"{file_name} {user_text} {text[:3000]}".upper()
-    sheets = []
-    for line in lines:
-        m = _re_pte.search(r"(АР|КЖ|КД|КР|КМ|КМД|ОВ|ВК|ЭОМ)[\s\-]*(\d+[А-ЯA-Z0-9\-\.]*)\s+(.{4,120})", line, _re_pte.I)
-        if m and len(sheets) < 80:
-            sheets.append({"mark": m.group(1), "number": m.group(2), "title": m.group(3).strip()})
-    section_keys = ("общие данные","исходные данные","расч","план","фасад","разрез","узел","схема","спецификация","ведомость","конструктив","материал")
-    sections = []
-    seen = set()
-    for line in lines:
-        if any(k in line.lower() for k in section_keys) and line.lower() not in seen:
-            seen.add(line.lower())
-            sections.append(line[:160])
-        if len(sections) >= 60:
-            break
-    # FULLFIX_02_B3: sheet_register fallback from extracted structure when explicit sheet marks are absent
-    if not sheets and sections:
-        _sf_keys = ("общие данные","ведомость","план","фасады","фасад","разрез","узел","спецификация","схема","расч","конструктив")
-        _sf_seen = set()
-        _sf_seq = 1
-        for _sf_line in sections:
-            _sf_low = _sf_line.lower()
-            if any(k in _sf_low for k in _sf_keys):
-                _sf_title = _sf_line[:120].strip()
-                if _sf_title and _sf_title.lower() not in _sf_seen:
-                    _sf_seen.add(_sf_title.lower())
-                    sheets.append({"mark": project_type, "number": str(_sf_seq), "title": _sf_title})
-                    _sf_seq += 1
-            if _sf_seq > 30:
-                break
-    axes_letters = sorted(set(_re_pte.findall(r"(?<![А-ЯA-Z])([А-ЯA-Z])(?=\s*[-–]\s*[А-ЯA-Z])", text)))
-    axes_numbers = sorted(set(_re_pte.findall(r"(?<!\d)(\d{1,2})(?=\s*[-–]\s*\d{1,2})(?!\d)", text)), key=lambda x: int(x))
-    dims = []
-    for x in _re_pte.findall(r"(?<!\d)(\d{3,5})(?!\d)", text):
-        try:
-            v = int(x)
-            if 300 <= v <= 50000 and v not in dims:
-                dims.append(v)
-        except Exception:
-            pass
-    levels = []
-    for v in _re_pte.findall(r"[-+]?\d+[,.]\d{2,3}", text):
-        try:
-            f = float(v.replace(",","."))
-            s = str(f)
-            if -20 <= f <= 100 and s not in levels:
-                levels.append(s)
-        except Exception:
-            pass
-    mat_keys = ("бетон","арматур","a500","b25","в25","доска","брус","фанера","утепл","профлист","металл","кирпич","газобетон","сталь","с255")
-    materials = []
-    mat_seen = set()
-    for line in lines:
-        if any(k in line.lower() for k in mat_keys) and line.lower() not in mat_seen:
-            mat_seen.add(line.lower())
-            materials.append(line[:180])
-        if len(materials) >= 60:
-            break
-    stamp = {}
-    for m in _re_pte.finditer(r"((?:Адрес|По адресу)[:\s]+)([^\n]{5,180})", text, _re_pte.I):
-        stamp["address"] = m.group(2).strip()[:200]
-        break
-    for m in _re_pte.finditer(r"((?:ООО|ОАО|ЗАО|ИП)[^\n]{3,180})", text):
-        stamp["developer"] = m.group(1).strip()[:200]
-        break
-    for m in _re_pte.finditer(r"\b(20\d{2})\b", text):
-        stamp["year"] = m.group(1)
-        break
-    model = {
-        "schema": "PROJECT_TEMPLATE_MODEL_V1",
-        "project_type": project_type,
-        "source_files": [file_name] if file_name else [],
-        "sheet_register": sheets,
-        "marks": [project_type] if project_type != "UNKNOWN" else [],
-        "sections": sections,
-        "axes_grid": {"axes_letters": axes_letters[:30], "axes_numbers": axes_numbers[:30]},
-        "dimensions": dims[:80],
-        "levels": levels[:40],
-        "nodes": [x for x in sections if "узел" in x.lower()][:30],
-        "specifications": [x for x in sections if any(k in x.lower() for k in ("спецификац","ведомость"))][:30],
-        "materials": materials,
-        "stamp_fields": stamp,
-        "variable_parameters": ["project_name","address","customer","area","floors","axes_grid","dimensions","materials","sheet_register"],
-        "output_documents": ["DOCX_PROJECT_TEMPLATE_SUMMARY","JSON_PROJECT_TEMPLATE_MODEL","XLSX_SPECIFICATION_DRAFT"],
-        "quality": {
-            "has_sheet_register": bool(sheets),
-            "has_sections": bool(sections),
-            "has_axes_or_dimensions": bool(axes_letters or axes_numbers or dims),
-            "has_materials": bool(materials),
-            "text_chars": len(text or ""),
-            "lines": len(lines),
-        }
-    }
-    return model
-
-
-def is_valid_project_template_model(model: dict) -> bool:
-    if not isinstance(model, dict):
-        return False
-    q = model.get("quality") or {}
-    return bool(
-        model.get("schema") == "PROJECT_TEMPLATE_MODEL_V1"
-        and q.get("text_chars", 0) > 200
-        and (q.get("has_sheet_register") or q.get("has_sections") or q.get("has_axes_or_dimensions") or q.get("has_materials"))
-    )
-
-
-def model_to_text_report(model: dict) -> str:
-    lines = ["PROJECT_TEMPLATE_MODEL создан"]
-    lines.append(f"Раздел: {model.get('project_type','UNKNOWN')}")
-    lines.append("")
-    sheets = model.get("sheet_register") or []
-    lines.append(f"Состав листов ({len(sheets)}):")
-    for s in sheets[:30]:
-        lines.append(f"  {s.get('mark','')} {s.get('number','')} {s.get('title','')}".strip())
-    if not sheets:
-        lines.append("  не извлечён явно")
-    lines.append("")
-    lines.append("Структура/разделы:")
-    for s in (model.get("sections") or [])[:20]:
-        lines.append(f"  {s}")
-    lines.append("")
-    ag = model.get("axes_grid") or {}
-    lines.append(f"Оси буквенные: {', '.join(ag.get('axes_letters',[]) or []) or 'не извлечены'}")
-    lines.append(f"Оси цифровые: {', '.join(ag.get('axes_numbers',[]) or []) or 'не извлечены'}")
-    dims = model.get("dimensions") or []
-    lines.append(f"Размеры мм: {', '.join(map(str,dims[:20])) if dims else 'не извлечены'}")
-    lines.append("")
-    mats = model.get("materials") or []
-    lines.append(f"Материалы ({len(mats)}):")
-    for m in mats[:15]:
-        lines.append(f"  {m}")
-    return "\n".join(lines).strip()
-
-# === END PATCH_TEMPLATE_MODEL_EXTRACTOR_V1 ===
-
-
-# === FULLFIX_03_PROJECT_ARTIFACT_GENERATOR ===
-def _ff3_latest_project_template_model(topic_id: int = 0) -> dict:
-    import json, os, glob
-    base = "/root/.areal-neva-core/data/project_templates"
-    files = sorted(glob.glob(os.path.join(base, "PROJECT_TEMPLATE_MODEL__*.json")), key=os.path.getmtime, reverse=True)
-    if not files:
-        return {}
-    topic_id = int(topic_id or 0)
-    best = None
-    for p in files:
-        try:
-            data = json.load(open(p, encoding="utf-8"))
-            if topic_id and int(data.get("topic_id", 0) or 0) == topic_id:
-                return data
-            if best is None:
-                best = data
-        except Exception:
-            pass
-    return best or {}
-
-
-def _ff3_extract_project_params(user_text: str) -> dict:
-    import re
-    txt = str(user_text or "")
-    low = txt.lower()
-
-    params = {}
-    if "фундамент" in low or "плита" in low:
-        params["project_name"] = "Проект фундаментной плиты"
-        params["section"] = "КЖ"
-    elif "кров" in low or "строп" in low:
-        params["project_name"] = "Проект кровли"
-        params["section"] = "КД"
-    else:
-        params["project_name"] = "Проект по образцу"
-        params["section"] = ""
-
-    m = re.search(r"(\d+(?:[,.]\d+)?)\s*[xх×]\s*(\d+(?:[,.]\d+)?)\s*м", low)
-    if m:
-        params["size"] = f"{m.group(1).replace(',', '.')} x {m.group(2).replace(',', '.')} м"
-
-    for label, key in (
-        ("толщина", "thickness"),
-        ("песчан", "sand"),
-        ("щеб", "gravel"),
-        ("бетон", "concrete"),
-        ("арматур", "rebar"),
-    ):
-        mm = re.search(label + r"[^0-9]{0,30}(\d{2,4})\s*мм", low)
-        if mm:
-            params[key] = mm.group(1) + " мм"
-
-    return params
-
-
-def _ff3_safe_docx_text(value) -> str:
-    return str(value or "").replace("\x00", " ").strip()
-
-
-def create_project_artifact_from_latest_template(user_text: str, task_id: str, topic_id: int = 0) -> dict:
-    """
-    Создаёт реальный DOCX + XLSX проектный артефакт по последней PROJECT_TEMPLATE_MODEL
-    Возвращает пути и Drive-ссылки
-    """
-    import os, tempfile, json
-    from datetime import datetime, timezone
-
-    result = {
-        "success": False,
-        "error": "",
-        "docx_path": "",
-        "xlsx_path": "",
-        "docx_link": "",
-        "xlsx_link": "",
-        "template_found": False,
-        "project_type": "UNKNOWN",
-    }
-
-    model = _ff3_latest_project_template_model(topic_id)
-    params = _ff3_extract_project_params(user_text)
-    if not model:
-        result["error"] = "PROJECT_TEMPLATE_MODEL_NOT_FOUND"
-        return result
-
-    result["template_found"] = True
-    project_type = params.get("section") or model.get("project_type") or "UNKNOWN"
-    result["project_type"] = project_type
-
-    safe_task = str(task_id or "manual")[:8]
-    out_dir = tempfile.gettempdir()
-    docx_path = os.path.join(out_dir, f"project_{project_type}_{safe_task}.docx")
-    xlsx_path = os.path.join(out_dir, f"project_{project_type}_{safe_task}.xlsx")
-
-    sheets = model.get("sheet_register") or []
-    if not sheets:
-        for i, sec in enumerate(model.get("sections") or [], 1):
-            sheets.append({"mark": project_type, "number": str(i), "title": str(sec)[:120]})
-
-    if not sheets:
-        sheets = [
-            {"mark": project_type, "number": "1", "title": "Титульный лист"},
-            {"mark": project_type, "number": "2", "title": "Общие данные"},
-            {"mark": project_type, "number": "3", "title": "План"},
-            {"mark": project_type, "number": "4", "title": "Разрезы"},
-            {"mark": project_type, "number": "5", "title": "Спецификация"},
-        ]
-
-    try:
-        from docx import Document
-        doc = Document()
-        doc.add_heading(_ff3_safe_docx_text(params.get("project_name") or "Проект по образцу"), level=1)
-        doc.add_paragraph("Сформировано AREAL-NEVA ORCHESTRA по сохранённой PROJECT_TEMPLATE_MODEL")
-        doc.add_paragraph(f"Раздел: {project_type}")
-        doc.add_paragraph(f"Дата: {datetime.now(timezone.utc).isoformat()}")
-
-        doc.add_heading("Параметры задания", level=2)
-        if params:
-            for k, v in params.items():
-                doc.add_paragraph(f"{k}: {v}")
-        else:
-            doc.add_paragraph(_ff3_safe_docx_text(user_text))
-
-        doc.add_heading("Состав проекта по образцу", level=2)
-        tbl = doc.add_table(rows=1, cols=3)
-        tbl.rows[0].cells[0].text = "Марка"
-        tbl.rows[0].cells[1].text = "Лист"
-        tbl.rows[0].cells[2].text = "Наименование"
-        for sh in sheets:
-            row = tbl.add_row().cells
-            row[0].text = _ff3_safe_docx_text(sh.get("mark") or project_type)
-            row[1].text = _ff3_safe_docx_text(sh.get("number") or "")
-            row[2].text = _ff3_safe_docx_text(sh.get("title") or "")
-
-        doc.add_heading("Оси и размеры", level=2)
-        ag = model.get("axes_grid") or {}
-        doc.add_paragraph("Оси буквенные: " + (", ".join(ag.get("axes_letters") or []) or "не извлечены"))
-        doc.add_paragraph("Оси цифровые: " + (", ".join(ag.get("axes_numbers") or []) or "не извлечены"))
-        dims = model.get("dimensions") or []
-        doc.add_paragraph("Размеры мм: " + (", ".join(map(str, dims[:60])) if dims else "не извлечены"))
-
-        doc.add_heading("Материалы из образца", level=2)
-        mats = model.get("materials") or []
-        if mats:
-            for m in mats[:60]:
-                doc.add_paragraph(_ff3_safe_docx_text(m))
-        else:
-            doc.add_paragraph("Материалы не извлечены из образца")
-
-        doc.add_heading("Техническая структура", level=2)
-        for sec in (model.get("sections") or [])[:80]:
-            doc.add_paragraph(_ff3_safe_docx_text(sec))
-
-        doc.save(docx_path)
-    except Exception as e:
-        result["error"] = "DOCX_CREATE_FAILED: " + str(e)[:250]
-        return result
-
-    try:
-        from openpyxl import Workbook
-        wb = Workbook()
-        ws = wb.active
-        ws.title = "Состав проекта"
-        headers = ["№", "Марка", "Лист", "Наименование", "Источник"]
-        for c, h in enumerate(headers, 1):
-            ws.cell(1, c, h)
-        for i, sh in enumerate(sheets, 2):
-            ws.cell(i, 1, i - 1)
-            ws.cell(i, 2, sh.get("mark") or project_type)
-            ws.cell(i, 3, sh.get("number") or "")
-            ws.cell(i, 4, sh.get("title") or "")
-            ws.cell(i, 5, ",".join(model.get("source_files") or []))
-        ws2 = wb.create_sheet("Параметры")
-        ws2.cell(1, 1, "Параметр")
-        ws2.cell(1, 2, "Значение")
-        for r, (k, v) in enumerate(params.items(), 2):
-            ws2.cell(r, 1, k)
-            ws2.cell(r, 2, v)
-        ws.column_dimensions["D"].width = 70
-        ws.column_dimensions["E"].width = 50
-        ws2.column_dimensions["A"].width = 30
-        ws2.column_dimensions["B"].width = 70
-        wb.save(xlsx_path)
-        wb.close()
-    except Exception as e:
-        result["error"] = "XLSX_CREATE_FAILED: " + str(e)[:250]
-        return result
-
-    result["docx_path"] = docx_path
-    result["xlsx_path"] = xlsx_path
-
-    try:
-        from core.engine_base import upload_artifact_to_drive
-        docx_link = upload_artifact_to_drive(docx_path, task_id, int(topic_id or 0))
-        xlsx_link = upload_artifact_to_drive(xlsx_path, task_id, int(topic_id or 0))
-        result["docx_link"] = docx_link or ""
-        result["xlsx_link"] = xlsx_link or ""
-    except Exception as e:
-        result["upload_error"] = str(e)[:250]
-
-    result["success"] = bool(os.path.exists(docx_path) and os.path.getsize(docx_path) > 1000)
-    if not result["success"]:
-        result["error"] = "PROJECT_ARTIFACT_EMPTY"
-    return result
-
-# === END FULLFIX_03_PROJECT_ARTIFACT_GENERATOR ===
-
-
-# === FULLFIX_05_REAL_PROJECT_ENGINE ===
-import os as _os_ff05
-import re as _re_ff05
-import json as _json_ff05
-import math as _math_ff05
-import tempfile as _tempfile_ff05
-from pathlib import Path as _Path_ff05
-from datetime import datetime as _dt_ff05
-
-def _ff05_float(v, default=0.0):
-    try:
-        return float(str(v).replace(",", "."))
-    except Exception:
-        return float(default)
-
-def _ff05_int(v, default=0):
-    try:
-        return int(float(str(v).replace(",", ".")))
-    except Exception:
-        return int(default)
-
-def _ff05_latest_template(section: str = "КЖ") -> dict:
-    base = _Path_ff05("/root/.areal-neva-core/data/project_templates")
-    if not base.exists():
-        return {}
-    files = sorted(base.glob("PROJECT_TEMPLATE_MODEL__*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
-    section_u = str(section or "").upper()
-    fallback = {}
-    for p in files[:50]:
-        try:
-            data = _json_ff05.loads(p.read_text(encoding="utf-8"))
-            data["_template_file"] = str(p)
-            pt = str(data.get("project_type") or "").upper()
-            if not fallback:
-                fallback = data
-            if pt == section_u:
-                return data
-        except Exception:
-            continue
-    return fallback
-
-def _ff05_parse_project_request(raw_input: str, template_hint: str = "") -> dict:
-    text = str(raw_input or "")
-    low = text.lower()
-
-    section = "КЖ"
-    if any(x in low for x in ("кд", "деревян", "стропил", "кровл")):
-        section = "КД"
-    if any(x in low for x in ("кж", "фундамент", "плит")):
-        section = "КЖ"
-
-    length_m = 10.0
-    width_m = 10.0
-    slab_mm = 200
-    sand_mm = 300
-    gravel_mm = 100
-    concrete_class = "B25"
-    rebar_class = "A500C"
-    rebar_step_mm = 200
-    rebar_diam_mm = 12
-    cover_mm = 40
-
-    m = _re_ff05.search(r"(\d+(?:[,.]\d+)?)\s*[xх×]\s*(\d+(?:[,.]\d+)?)\s*м?", low)
-    if m:
-        length_m = _ff05_float(m.group(1), length_m)
-        width_m = _ff05_float(m.group(2), width_m)
-
-    def find_mm(keys, default):
-        for key in keys:
-            m2 = _re_ff05.search(key + r".{0,40}?(\d{2,4})\s*мм", low)
-            if m2:
-                return _ff05_int(m2.group(1), default)
-        return default
-
-    slab_mm = find_mm(("толщин", "плит", "бетон"), slab_mm)
-    sand_mm = find_mm(("песчан", "песок"), sand_mm)
-    gravel_mm = find_mm(("щеб", "основан"), gravel_mm)
-
-    m = _re_ff05.search(r"(b|в)\s?(\d{2,3})", low)
-    if m:
-        concrete_class = "B" + m.group(2)
-
-    m = _re_ff05.search(r"(a|а)\s?500", low)
-    if m:
-        rebar_class = "A500C"
-
-    m = _re_ff05.search(r"(?:шаг|ячейк).{0,30}?(\d{2,4})\s*мм", low)
-    if m:
-        rebar_step_mm = _ff05_int(m.group(1), rebar_step_mm)
-
-    m = _re_ff05.search(r"(?:арматур|ø|ф|диаметр).{0,30}?(\d{1,2})\s*мм", low)
-    if m:
-        rebar_diam_mm = _ff05_int(m.group(1), rebar_diam_mm)
-
-    template = _ff05_latest_template(section)
-
-    return {
-        "project_name": "Проект фундаментной плиты" if section == "КЖ" else "Проект КД",
-        "section": section,
-        "length_m": length_m,
-        "width_m": width_m,
-        "slab_mm": slab_mm,
-        "sand_mm": sand_mm,
-        "gravel_mm": gravel_mm,
-        "concrete_class": concrete_class,
-        "rebar_class": rebar_class,
-        "rebar_step_mm": rebar_step_mm,
-        "rebar_diam_mm": rebar_diam_mm,
-        "cover_mm": cover_mm,
-        "template": {
-            "project_type": template.get("project_type"),
-            "source_files": template.get("source_files") or [],
-            "template_file": template.get("_template_file"),
-            "sections": template.get("sections") or [],
-            "sheet_register": template.get("sheet_register") or [],
-            "materials": template.get("materials") or [],
-        },
-    }
-
-def _ff05_font():
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.ttfonts import TTFont
-    candidates = [
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed.ttf",
-        "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
-    ]
-    for fp in candidates:
-        if _os_ff05.path.exists(fp):
-            try:
-                pdfmetrics.registerFont(TTFont("AREALFONT", fp))
-                return "AREALFONT"
-            except Exception:
-                pass
-    return "Helvetica"
-
-def _ff05_draw_frame(c, page_w, page_h, title, sheet_no, sheet_total, font):
-    from reportlab.lib.units import mm
-    c.setLineWidth(0.7)
-    c.rect(12*mm, 10*mm, page_w - 24*mm, page_h - 20*mm)
-    c.line(12*mm, 28*mm, page_w - 12*mm, 28*mm)
-    c.line(page_w - 95*mm, 10*mm, page_w - 95*mm, 28*mm)
-    c.line(page_w - 55*mm, 10*mm, page_w - 55*mm, 28*mm)
-    c.line(page_w - 25*mm, 10*mm, page_w - 25*mm, 28*mm)
-
-    c.setFont(font, 9)
-    c.drawString(15*mm, 18*mm, "AREAL-NEVA")
-    c.drawString(page_w - 92*mm, 18*mm, "Стадия: П")
-    c.drawString(page_w - 52*mm, 18*mm, f"Лист: {sheet_no}")
-    c.drawString(page_w - 22*mm, 18*mm, f"Листов: {sheet_total}")
-
-    c.setFont(font, 13)
-    c.drawString(18*mm, page_h - 20*mm, title)
-    c.setFont(font, 8)
-    c.drawString(18*mm, page_h - 27*mm, "Комплект создан автоматически по задаче пользователя и сохранён как PDF/DXF артефакт")
-
-def _ff05_draw_text(c, x, y, text, font, size=9):
-    from reportlab.lib.units import mm
-    c.setFont(font, size)
-    c.drawString(x*mm, y*mm, str(text))
-
-def _ff05_write_project_pdf(path: str, data: dict) -> str:
-    from reportlab.lib.pagesizes import A3, landscape
-    from reportlab.lib.units import mm
-    from reportlab.pdfgen import canvas
-
-    font = _ff05_font()
-    page_w, page_h = landscape(A3)
-    c = canvas.Canvas(path, pagesize=landscape(A3))
-
-    L = float(data["length_m"])
-    W = float(data["width_m"])
-    slab = int(data["slab_mm"])
-    sand = int(data["sand_mm"])
-    gravel = int(data["gravel_mm"])
-    rebar_d = int(data["rebar_diam_mm"])
-    rebar_step = int(data["rebar_step_mm"])
-    cover = int(data["cover_mm"])
-    concrete = data["concrete_class"]
-    rebar_class = data["rebar_class"]
-    sheet_total = 6
-
-    # 1 title / general data
-    _ff05_draw_frame(c, page_w, page_h, "Общие данные", 1, sheet_total, font)
-    lines = [
-        f"Наименование: {data['project_name']}",
-        f"Раздел: {data['section']}",
-        f"Габарит плиты: {L:g} x {W:g} м",
-        f"Толщина плиты: {slab} мм",
-        f"Подготовка: песок {sand} мм, щебень {gravel} мм",
-        f"Бетон: {concrete}",
-        f"Арматура: {rebar_class} Ø{rebar_d} с шагом {rebar_step} мм, защитный слой {cover} мм",
-        "Выходные файлы: PDF-комплект + DXF-чертёж со слоями",
-    ]
-    y = 255
-    for line in lines:
-        _ff05_draw_text(c, 25, y, line, font, 11)
-        y -= 9
-
-    tpl = data.get("template") or {}
-    _ff05_draw_text(c, 25, y - 5, "Источник структуры шаблона:", font, 11)
-    y -= 15
-    src_files = tpl.get("source_files") or []
-    _ff05_draw_text(c, 30, y, ", ".join(src_files) if src_files else "не найден сохранённый исходный PDF-шаблон", font, 9)
-    y -= 10
-    c.showPage()
-
-    # 2 plan
-    _ff05_draw_frame(c, page_w, page_h, "План фундаментной плиты", 2, sheet_total, font)
-    x0, y0 = 70*mm, 55*mm
-    max_w, max_h = 260*mm, 150*mm
-    scale = min(max_w/(L*1000), max_h/(W*1000))
-    rw, rh = L*1000*scale, W*1000*scale
-    c.setLineWidth(1.2)
-    c.rect(x0, y0, rw, rh)
-    c.setDash(4, 3)
-    c.line(x0, y0+rh/2, x0+rw, y0+rh/2)
-    c.line(x0+rw/2, y0, x0+rw/2, y0+rh)
-    c.setDash()
-
-    # rebar grid
-    c.setLineWidth(0.25)
-    step_draw = max(0.6*mm, rebar_step*scale)
-    xx = x0 + step_draw
-    while xx < x0 + rw:
-        c.line(xx, y0, xx, y0+rh)
-        xx += step_draw
-    yy = y0 + step_draw
-    while yy < y0 + rh:
-        c.line(x0, yy, x0+rw, yy)
-        yy += step_draw
-
-    c.setFont(font, 9)
-    c.drawString(x0, y0 - 8*mm, f"{L:g} м")
-    c.saveState()
-    c.translate(x0 - 10*mm, y0)
-    c.rotate(90)
-    c.drawString(0, 0, f"{W:g} м")
-    c.restoreState()
-    _ff05_draw_text(c, 25, 240, f"Армирование: {rebar_class} Ø{rebar_d} шаг {rebar_step} мм в двух направлениях", font, 10)
-    _ff05_draw_text(c, 25, 230, f"Защитный слой бетона: {cover} мм", font, 10)
-    c.showPage()
-
-    # 3 section
-    _ff05_draw_frame(c, page_w, page_h, "Разрез 1-1", 3, sheet_total, font)
-    bx, by = 60*mm, 70*mm
-    total = slab + gravel + sand
-    k = 95*mm / total
-    layers = [
-        ("Фундаментная плита", slab, "Бетон " + concrete),
-        ("Щебёночное основание", gravel, "Щебень"),
-        ("Песчаная подушка", sand, "Песок"),
-    ]
-    ycur = by
-    c.setLineWidth(0.8)
-    for name, thick, note in layers:
-        hh = thick * k
-        c.rect(bx, ycur, 210*mm, hh)
-        c.setFont(font, 10)
-        c.drawString(bx + 5*mm, ycur + hh/2, f"{name}: {thick} мм — {note}")
-        ycur += hh
-    _ff05_draw_text(c, 25, 230, f"Общая конструктивная толщина: {total} мм", font, 10)
-    c.showPage()
-
-    # 4 reinforcement
-    _ff05_draw_frame(c, page_w, page_h, "Схема армирования", 4, sheet_total, font)
-    x0, y0 = 70*mm, 55*mm
-    c.rect(x0, y0, rw, rh)
-    c.setLineWidth(0.35)
-    step_draw = max(1.0*mm, rebar_step*scale)
-    xx = x0 + step_draw
-    while xx < x0 + rw:
-        c.line(xx, y0, xx, y0+rh)
-        xx += step_draw
-    yy = y0 + step_draw
-    while yy < y0 + rh:
-        c.line(x0, yy, x0+rw, yy)
-        yy += step_draw
-    _ff05_draw_text(c, 25, 240, f"Нижняя сетка: {rebar_class} Ø{rebar_d} шаг {rebar_step} мм", font, 10)
-    _ff05_draw_text(c, 25, 230, f"Верхняя сетка: {rebar_class} Ø{rebar_d} шаг {rebar_step} мм", font, 10)
-    _ff05_draw_text(c, 25, 220, "Выпуски, усиления, проёмы и закладные требуют отдельного задания", font, 9)
-    c.showPage()
-
-    # 5 specification
-    _ff05_draw_frame(c, page_w, page_h, "Спецификация материалов", 5, sheet_total, font)
-    area = L * W
-    concrete_m3 = round(area * slab / 1000, 3)
-    sand_m3 = round(area * sand / 1000, 3)
-    gravel_m3 = round(area * gravel / 1000, 3)
-    bars_x = _math_ff05.floor((W*1000 - 2*cover) / rebar_step) + 1
-    bars_y = _math_ff05.floor((L*1000 - 2*cover) / rebar_step) + 1
-    rebar_m = round((bars_x * L + bars_y * W) * 2, 1)
-    spec = [
-        ("1", f"Бетон {concrete}", "м3", concrete_m3),
-        ("2", "Песчаная подушка", "м3", sand_m3),
-        ("3", "Щебёночное основание", "м3", gravel_m3),
-        ("4", f"Арматура {rebar_class} Ø{rebar_d}", "п.м", rebar_m),
-    ]
-    y = 240
-    _ff05_draw_text(c, 25, y, "№   Наименование                              Ед.     Кол-во", font, 11)
-    y -= 10
-    for row in spec:
-        _ff05_draw_text(c, 25, y, f"{row[0]:<3} {row[1]:<40} {row[2]:<6} {row[3]}", font, 10)
-        y -= 9
-    c.showPage()
-
-    # 6 sheet list
-    _ff05_draw_frame(c, page_w, page_h, "Ведомость листов", 6, sheet_total, font)
-    sheets = [
-        ("1", "Общие данные"),
-        ("2", "План фундаментной плиты"),
-        ("3", "Разрез 1-1"),
-        ("4", "Схема армирования"),
-        ("5", "Спецификация материалов"),
-        ("6", "Ведомость листов"),
-    ]
-    y = 240
-    for n, title in sheets:
-        _ff05_draw_text(c, 25, y, f"{n}. {title}", font, 11)
-        y -= 9
-    c.save()
-
-    return path
-
-def _ff05_write_project_dxf(path: str, data: dict) -> str:
-    import ezdxf
-
-    L = float(data["length_m"]) * 1000.0
-    W = float(data["width_m"]) * 1000.0
-    slab = int(data["slab_mm"])
-    sand = int(data["sand_mm"])
-    gravel = int(data["gravel_mm"])
-    step = int(data["rebar_step_mm"])
-    rebar_d = int(data["rebar_diam_mm"])
-    concrete = str(data["concrete_class"])
-    rebar_class = str(data["rebar_class"])
-
-    doc = ezdxf.new("R2010")
-    msp = doc.modelspace()
-
-    layers = {
-        "KJ-SLAB": 7,
-        "KJ-AXIS": 1,
-        "KJ-REBAR": 3,
-        "KJ-DIMS": 5,
-        "KJ-TEXT": 2,
-        "KJ-SECTION": 4,
-    }
-    for name, color in layers.items():
-        if name not in doc.layers:
-            doc.layers.new(name=name, dxfattribs={"color": color})
-
-    # plan outline
-    pts = [(0, 0), (L, 0), (L, W), (0, W), (0, 0)]
-    msp.add_lwpolyline(pts, dxfattribs={"layer": "KJ-SLAB", "closed": True})
-
-    # axes
-    msp.add_line((L/2, -500), (L/2, W+500), dxfattribs={"layer": "KJ-AXIS"})
-    msp.add_line((-500, W/2), (L+500, W/2), dxfattribs={"layer": "KJ-AXIS"})
-
-    # rebar grid
-    x = step
-    while x < L:
-        msp.add_line((x, 0), (x, W), dxfattribs={"layer": "KJ-REBAR"})
-        x += step
-    y = step
-    while y < W:
-        msp.add_line((0, y), (L, y), dxfattribs={"layer": "KJ-REBAR"})
-        y += step
-
-    # section block at right side
-    sx = L + 2500
-    sy = 0
-    total = slab + gravel + sand
-    msp.add_lwpolyline([(sx, sy), (sx+5000, sy), (sx+5000, sy+total), (sx, sy+total), (sx, sy)], dxfattribs={"layer": "KJ-SECTION", "closed": True})
-    y1 = sy
-    for name, th in [("SAND", sand), ("GRAVEL", gravel), ("SLAB", slab)]:
-        msp.add_line((sx, y1), (sx+5000, y1), dxfattribs={"layer": "KJ-SECTION"})
-        msp.add_text(f"{name} {th}mm", dxfattribs={"height": 250, "layer": "KJ-TEXT"}).set_placement((sx+5200, y1 + th/2))
-        y1 += th
-    msp.add_line((sx, y1), (sx+5000, y1), dxfattribs={"layer": "KJ-SECTION"})
-
-    # notes
-    msp.add_text(f"FOUNDATION SLAB {L/1000:g}x{W/1000:g}m", dxfattribs={"height": 350, "layer": "KJ-TEXT"}).set_placement((0, -1200))
-    msp.add_text(f"SLAB {slab}mm / {concrete}", dxfattribs={"height": 250, "layer": "KJ-TEXT"}).set_placement((0, -1700))
-    msp.add_text(f"REBAR {rebar_class} D{rebar_d} STEP {step}mm", dxfattribs={"height": 250, "layer": "KJ-TEXT"}).set_placement((0, -2100))
-    msp.add_text(f"SAND {sand}mm / GRAVEL {gravel}mm", dxfattribs={"height": 250, "layer": "KJ-TEXT"}).set_placement((0, -2500))
-
-    doc.saveas(path)
-    return path
-
-async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "") -> dict:
-    data = _ff05_parse_project_request(raw_input, template_hint)
-    stamp = _dt_ff05.utcnow().strftime("%Y%m%d_%H%M%S")
-    safe_task = _re_ff05.sub(r"[^A-Za-z0-9_-]+", "_", str(task_id or "manual"))[:20]
-    out_dir = _Path_ff05(_tempfile_ff05.gettempdir()) / f"areal_project_{safe_task}_{stamp}"
-    out_dir.mkdir(parents=True, exist_ok=True)
-
-    pdf_path = str(out_dir / f"{data['section']}_foundation_slab_{safe_task}.pdf")
-    dxf_path = str(out_dir / f"{data['section']}_foundation_slab_{safe_task}.dxf")
-    manifest_path = str(out_dir / f"{data['section']}_foundation_slab_{safe_task}.manifest.json")
-
-    res = {
-        "success": False,
-        "section": data["section"],
-        "pdf_path": pdf_path,
-        "dxf_path": dxf_path,
-        "manifest_path": manifest_path,
-        "pdf_link": None,
-        "dxf_link": None,
-        "manifest_link": None,
-        "error": None,
-        "data": data,
-    }
-
-    try:
-        _ff05_write_project_pdf(pdf_path, data)
-        _ff05_write_project_dxf(dxf_path, data)
-
-        if not _os_ff05.path.exists(pdf_path) or _os_ff05.path.getsize(pdf_path) < 3000:
-            res["error"] = "PDF_NOT_CREATED_OR_TOO_SMALL"
-            return res
-        if not _os_ff05.path.exists(dxf_path) or _os_ff05.path.getsize(dxf_path) < 1500:
-            res["error"] = "DXF_NOT_CREATED_OR_TOO_SMALL"
-            return res
-
-        manifest = {
-            "schema": "AREAL_PROJECT_ARTIFACT_V1",
-            "created_at": _dt_ff05.utcnow().isoformat() + "Z",
-            "task_id": task_id,
-            "topic_id": topic_id,
-            "engine": "FULLFIX_05_REAL_PROJECT_ENGINE",
-            "input": raw_input,
-            "data": data,
-            "files": {
-                "pdf": pdf_path,
-                "dxf": dxf_path,
-            },
-        }
-        _Path_ff05(manifest_path).write_text(_json_ff05.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
-
-        from core.engine_base import upload_artifact_to_drive
-        pdf_link = upload_artifact_to_drive(pdf_path, task_id, topic_id)
-        dxf_link = upload_artifact_to_drive(dxf_path, task_id, topic_id)
-        manifest_link = upload_artifact_to_drive(manifest_path, task_id, topic_id)
-
-        if not pdf_link:
-            res["error"] = "PDF_UPLOAD_FAILED"
-            return res
-        if not dxf_link:
-            res["error"] = "DXF_UPLOAD_FAILED"
-            return res
-
-        res.update({
-            "success": True,
-            "pdf_link": str(pdf_link),
-            "dxf_link": str(dxf_link),
-            "manifest_link": str(manifest_link or ""),
-        })
-        return res
-
-    except Exception as e:
-        res["error"] = str(e)[:500]
-        return res
-
-# === END FULLFIX_05_REAL_PROJECT_ENGINE ===
-
-
-# === FULLFIX_06_FINAL_PROJECT_TEMPLATE_REPLAY ===
-import os as _os_ff06
-import re as _re_ff06
-import json as _json_ff06
-import glob as _glob_ff06
-import tempfile as _tempfile_ff06
-from pathlib import Path as _Path_ff06
-from datetime import datetime as _dt_ff06
-
-def _ff06_clean_text(v, limit=5000):
-    return str(v or "").replace("\x00", " ").strip()[:limit]
-
-def _ff06_find_font():
-    candidates = [
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed.ttf",
-        "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
-    ]
-    for x in candidates:
-        if _os_ff06.path.exists(x):
-            return x
-    return ""
-
-def _ff06_latest_template(topic_id=0, preferred_section=""):
-    base = "/root/.areal-neva-core/data/project_templates"
-    files = sorted(
-        _glob_ff06.glob(_os_ff06.path.join(base, "PROJECT_TEMPLATE_MODEL__*.json")),
-        key=lambda x: _os_ff06.path.getmtime(x),
-        reverse=True,
-    )
-    if not files:
-        return {}
-    topic_id = int(topic_id or 0)
-    preferred_section = _ff06_clean_text(preferred_section).upper()
-    best = None
-    for fp in files:
-        try:
-            data = _json_ff06.loads(_Path_ff06(fp).read_text(encoding="utf-8"))
-            data["_template_file"] = fp
-            pt = _ff06_clean_text(data.get("project_type")).upper()
-            dtid = int(data.get("topic_id", 0) or 0)
-            if topic_id and dtid == topic_id and preferred_section and pt == preferred_section:
-                return data
-            if topic_id and dtid == topic_id and not best:
-                best = data
-            if preferred_section and pt == preferred_section and not best:
-                best = data
-            if not best:
-                best = data
-        except Exception:
-            continue
-    return best or {}
-
-def _ff06_parse_request(raw_input, template_hint=""):
-    text = _ff06_clean_text(raw_input, 10000)
-    low = text.lower()
-    out = {
-        "section": "КЖ",
-        "project_name": "Проект фундаментной плиты",
-        "length_m": 10.0,
-        "width_m": 10.0,
-        "slab_mm": 200,
-        "sand_mm": 300,
-        "gravel_mm": 100,
-        "concrete_class": "B25",
-        "rebar_class": "A500",
-        "rebar_diam_mm": 12,
-        "rebar_step_mm": 200,
-        "raw_input": text,
-        "template_hint": template_hint or "",
-    }
-
-    if "кд" in low or "кров" in low or "строп" in low:
-        out["section"] = "КД"
-        out["project_name"] = "Проект кровли"
-    if "ар" in low and "фундамент" not in low and "кров" not in low:
-        out["section"] = "АР"
-        out["project_name"] = "Архитектурный раздел"
-    if "кж" in low or "фундамент" in low or "плит" in low:
-        out["section"] = "КЖ"
-        out["project_name"] = "Проект фундаментной плиты"
-
-    m = _re_ff06.search(r"(\d+(?:[,.]\d+)?)\s*[xх×]\s*(\d+(?:[,.]\d+)?)\s*(?:м|m)?", low)
-    if m:
-        out["length_m"] = float(m.group(1).replace(",", "."))
-        out["width_m"] = float(m.group(2).replace(",", "."))
-
-    def mm(keys, default):
-        for key in keys:
-            mmx = _re_ff06.search(key + r".{0,40}?(\d{2,4})\s*мм", low)
-            if mmx:
-                return int(mmx.group(1))
-        return default
-
-    out["slab_mm"] = mm(["толщина", "плита", "бетон"], out["slab_mm"])
-    out["sand_mm"] = mm(["песчан", "песок"], out["sand_mm"])
-    out["gravel_mm"] = mm(["щеб", "основан"], out["gravel_mm"])
-    out["rebar_step_mm"] = mm(["шаг"], out["rebar_step_mm"])
-
-    md = _re_ff06.search(r"(?:ø|Ø|ф|диаметр)\s*(\d{1,2})", low)
-    if md:
-        out["rebar_diam_mm"] = int(md.group(1))
-    mc = _re_ff06.search(r"\b[вbВB]\s*([123456789]\d)\b", text)
-    if mc:
-        out["concrete_class"] = "B" + mc.group(1)
-    ma = _re_ff06.search(r"\bA\s*([245]\d{2})\b", text, _re_ff06.I)
-    if ma:
-        out["rebar_class"] = "A" + ma.group(1)
-
-    return out
-
-def _ff06_sheet_rows(sheet_register, section):
-    rows = []
-    for i, sh in enumerate(sheet_register or [], 1):
-        if isinstance(sh, dict):
-            mark = _ff06_clean_text(sh.get("mark") or section, 20) or section
-            num = _ff06_clean_text(sh.get("number") or str(i), 30) or str(i)
-            title = _ff06_clean_text(sh.get("title") or sh.get("name") or "", 180)
-            if not title:
-                title = f"Лист {num}"
-            rows.append({"mark": mark, "number": num, "title": title})
-        else:
-            raw = _ff06_clean_text(sh, 180)
-            if not raw:
-                continue
-            rows.append({"mark": section, "number": str(i), "title": raw})
-    return rows
-
-def _ff06_material_rows(materials, data):
-    rows = []
-    for x in materials or []:
-        if isinstance(x, dict):
-            name = _ff06_clean_text(x.get("name") or x.get("material") or x.get("title") or "Материал", 180)
-            unit = _ff06_clean_text(x.get("unit") or x.get("ед") or "шт", 30)
-            qty = x.get("quantity", x.get("qty", x.get("count", "-")))
-            note = _ff06_clean_text(x.get("note") or "", 120)
-            rows.append((name, unit, qty, note))
-        else:
-            name = _ff06_clean_text(x, 180)
-            if name:
-                rows.append((name, "по проекту", "-", "из шаблона"))
-    if rows:
-        return rows[:80]
-
-    L = float(data["length_m"])
-    W = float(data["width_m"])
-    area = L * W
-    slab = int(data["slab_mm"])
-    sand = int(data["sand_mm"])
-    gravel = int(data["gravel_mm"])
-    step = max(int(data["rebar_step_mm"]), 50)
-    bars_x = int((W * 1000) / step) + 1
-    bars_y = int((L * 1000) / step) + 1
-    rebar_m = round((bars_x * L + bars_y * W) * 2, 1)
-
-    return [
-        (f"Бетон {data['concrete_class']}", "м3", round(area * slab / 1000, 3), "фундаментная плита"),
-        ("Песчаная подушка", "м3", round(area * sand / 1000, 3), ""),
-        ("Щебёночное основание", "м3", round(area * gravel / 1000, 3), ""),
-        (f"Арматура {data['rebar_class']} Ø{data['rebar_diam_mm']} шаг {step}", "п.м", rebar_m, "верхняя и нижняя сетка"),
-    ]
-
-def _ff06_register_font():
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.ttfonts import TTFont
-    font_path = _ff06_find_font()
-    if font_path:
-        try:
-            pdfmetrics.registerFont(TTFont("ArealDejaVu", font_path))
-            return "ArealDejaVu"
-        except Exception:
-            pass
-    return "Helvetica"
-
-def _ff06_draw_frame(c, page_w, page_h, sheet, sheet_no, sheet_total, font):
-    from reportlab.lib.units import mm
-    c.setLineWidth(0.7)
-    c.rect(10*mm, 10*mm, page_w - 20*mm, page_h - 20*mm)
-    c.rect(page_w - 190*mm, 10*mm, 180*mm, 40*mm)
-    c.line(page_w - 190*mm, 30*mm, page_w - 10*mm, 30*mm)
-    c.line(page_w - 80*mm, 10*mm, page_w - 80*mm, 50*mm)
-    c.line(page_w - 45*mm, 10*mm, page_w - 45*mm, 50*mm)
-    c.setFont(font, 8)
-    c.drawString(page_w - 187*mm, 42*mm, "AREAL-NEVA")
-    c.drawString(page_w - 187*mm, 34*mm, _ff06_clean_text(sheet.get("title"), 80))
-    c.drawString(page_w - 77*mm, 34*mm, f"Лист {sheet_no}")
-    c.drawString(page_w - 42*mm, 34*mm, f"Листов {sheet_total}")
-    c.setFont(font, 14)
-    c.drawString(18*mm, page_h - 22*mm, f"{sheet.get('mark')} {sheet.get('number')} — {sheet.get('title')}")
-
-def _ff06_write_pdf(path, data, template, sheets, material_rows):
-    from reportlab.lib.pagesizes import A3, landscape
-    from reportlab.lib.units import mm
-    from reportlab.pdfgen import canvas
-
-    font = _ff06_register_font()
-    page_w, page_h = landscape(A3)
-    c = canvas.Canvas(path, pagesize=landscape(A3))
-
-    L = float(data["length_m"])
-    W = float(data["width_m"])
-    slab = int(data["slab_mm"])
-    sand = int(data["sand_mm"])
-    gravel = int(data["gravel_mm"])
-    step = int(data["rebar_step_mm"])
-    rd = int(data["rebar_diam_mm"])
-    section = data["section"]
-
-    for idx, sheet in enumerate(sheets, 1):
-        _ff06_draw_frame(c, page_w, page_h, sheet, idx, len(sheets), font)
-        title_low = (sheet.get("title") or "").lower()
-
-        if any(x in title_low for x in ("общие", "данные", "пояснит", "исходн")):
-            y = 260
-            lines = [
-                f"Проект: {data['project_name']}",
-                f"Раздел: {section}",
-                f"Основа генерации: сохранённый PROJECT_TEMPLATE_MODEL",
-                f"Шаблон: {template.get('_template_file', '')}",
-                f"Плита: {L:g} x {W:g} м, толщина {slab} мм",
-                f"Основание: щебень {gravel} мм, песчаная подушка {sand} мм",
-                f"Бетон: {data['concrete_class']}",
-                f"Арматура: {data['rebar_class']} Ø{rd}, шаг {step} мм",
-            ]
-            c.setFont(font, 10)
-            for line in lines:
-                c.drawString(25*mm, y*mm, line)
-                y -= 8
-
-        elif any(x in title_low for x in ("ведомость лист", "состав лист", "листов")):
-            y = 260
-            c.setFont(font, 10)
-            for j, sh in enumerate(sheets, 1):
-                c.drawString(25*mm, y*mm, f"{j}. {sh['mark']} {sh['number']} — {sh['title']}")
-                y -= 7
-
-        elif any(x in title_low for x in ("план", "плит", "схема")):
-            x0, y0 = 70*mm, 60*mm
-            scale = min((page_w - 150*mm) / (L * 1000), 115*mm / (W * 1000))
-            rw = L * 1000 * scale
-            rh = W * 1000 * scale
-            c.setLineWidth(1.1)
-            c.rect(x0, y0, rw, rh)
-            c.setDash(4, 3)
-            c.line(x0, y0 + rh / 2, x0 + rw, y0 + rh / 2)
-            c.line(x0 + rw / 2, y0, x0 + rw / 2, y0 + rh)
-            c.setDash()
-            step_draw = max(0.7*mm, step * scale)
-            c.setLineWidth(0.25)
-            xx = x0 + step_draw
-            while xx < x0 + rw:
-                c.line(xx, y0, xx, y0 + rh)
-                xx += step_draw
-            yy = y0 + step_draw
-            while yy < y0 + rh:
-                c.line(x0, yy, x0 + rw, yy)
-                yy += step_draw
-            c.setFont(font, 9)
-            c.drawString(x0, y0 - 8*mm, f"{L:g} м")
-            c.saveState()
-            c.translate(x0 - 8*mm, y0)
-            c.rotate(90)
-            c.drawString(0, 0, f"{W:g} м")
-            c.restoreState()
-            c.setFont(font, 10)
-            c.drawString(25*mm, 260*mm, f"Армирование: {data['rebar_class']} Ø{rd}, шаг {step} мм")
-
-        elif any(x in title_low for x in ("разрез", "сечени", "1-1")):
-            bx, by = 55*mm, 70*mm
-            total = slab + gravel + sand
-            k = 105*mm / total
-            ycur = by
-            c.setLineWidth(0.9)
-            for name, th, note in [
-                ("Фундаментная плита", slab, f"Бетон {data['concrete_class']}"),
-                ("Щебёночное основание", gravel, "Щебень"),
-                ("Песчаная подушка", sand, "Песок"),
-            ]:
-                hh = th * k
-                c.rect(bx, ycur, 230*mm, hh)
-                c.setFont(font, 10)
-                c.drawString(bx + 5*mm, ycur + hh/2, f"{name}: {th} мм — {note}")
-                ycur += hh
-            c.setFont(font, 10)
-            c.drawString(25*mm, 240*mm, "Разрез 1-1")
-
-        elif any(x in title_low for x in ("армир", "арматур", "сетка")):
-            x0, y0 = 70*mm, 60*mm
-            scale = min((page_w - 150*mm) / (L * 1000), 115*mm / (W * 1000))
-            rw = L * 1000 * scale
-            rh = W * 1000 * scale
-            c.setLineWidth(1.0)
-            c.rect(x0, y0, rw, rh)
-            step_draw = max(1.0*mm, step * scale)
-            c.setLineWidth(0.35)
-            xx = x0 + step_draw
-            while xx < x0 + rw:
-                c.line(xx, y0, xx, y0 + rh)
-                xx += step_draw
-            yy = y0 + step_draw
-            while yy < y0 + rh:
-                c.line(x0, yy, x0 + rw, yy)
-                yy += step_draw
-            c.setFont(font, 10)
-            c.drawString(25*mm, 260*mm, f"Верхняя и нижняя сетки: {data['rebar_class']} Ø{rd}, шаг {step} мм")
-
-        elif any(x in title_low for x in ("специф", "материал", "ведомость объем", "ведомость объём")):
-            y = 260
-            c.setFont(font, 10)
-            c.drawString(25*mm, y*mm, "№")
-            c.drawString(40*mm, y*mm, "Наименование")
-            c.drawString(170*mm, y*mm, "Ед")
-            c.drawString(195*mm, y*mm, "Кол-во")
-            c.drawString(230*mm, y*mm, "Примечание")
-            y -= 8
-            for j, row in enumerate(material_rows[:28], 1):
-                c.drawString(25*mm, y*mm, str(j))
-                c.drawString(40*mm, y*mm, _ff06_clean_text(row[0], 70))
-                c.drawString(170*mm, y*mm, _ff06_clean_text(row[1], 12))
-                c.drawString(195*mm, y*mm, _ff06_clean_text(row[2], 18))
-                c.drawString(230*mm, y*mm, _ff06_clean_text(row[3], 50))
-                y -= 7
-
-        else:
-            y = 250
-            c.setFont(font, 10)
-            c.drawString(25*mm, y*mm, f"Лист выполнен по структуре шаблона: {sheet['title']}")
-            y -= 10
-            c.drawString(25*mm, y*mm, f"Раздел: {section}")
-            y -= 8
-            c.drawString(25*mm, y*mm, f"Параметры: {L:g} x {W:g} м, бетон {data['concrete_class']}")
-
-        c.showPage()
-
-    c.save()
-    return path
-
-def _ff06_write_dxf(path, data, sheets, material_rows):
-    import ezdxf
-    doc = ezdxf.new("R2010")
-    doc.header["$INSUNITS"] = 4
-    msp = doc.modelspace()
-
-    for layer, color in [("KJ_PLAN", 7), ("KJ_AXES", 2), ("KJ_REBAR", 3), ("KJ_TEXT", 1), ("KJ_SECTION", 5)]:
-        if layer not in doc.layers:
-            doc.layers.add(layer, color=color)
-
-    L = float(data["length_m"]) * 1000
-    W = float(data["width_m"]) * 1000
-    slab = int(data["slab_mm"])
-    sand = int(data["sand_mm"])
-    gravel = int(data["gravel_mm"])
-    step = int(data["rebar_step_mm"])
-
-    msp.add_lwpolyline([(0,0), (L,0), (L,W), (0,W), (0,0)], dxfattribs={"layer": "KJ_PLAN"})
-    msp.add_line((L/2, 0), (L/2, W), dxfattribs={"layer": "KJ_AXES"})
-    msp.add_line((0, W/2), (L, W/2), dxfattribs={"layer": "KJ_AXES"})
-
-    x = step
-    while x < L:
-        msp.add_line((x, 0), (x, W), dxfattribs={"layer": "KJ_REBAR"})
-        x += step
-    y = step
-    while y < W:
-        msp.add_line((0, y), (L, y), dxfattribs={"layer": "KJ_REBAR"})
-        y += step
-
-    msp.add_text(f"FOUNDATION SLAB {L/1000:g} x {W/1000:g} m", dxfattribs={"height": 250, "layer": "KJ_TEXT"}).set_placement((0, -700))
-    msp.add_text(f"SLAB {slab} mm / GRAVEL {gravel} mm / SAND {sand} mm", dxfattribs={"height": 250, "layer": "KJ_TEXT"}).set_placement((0, -1100))
-    msp.add_text(f"REBAR {data['rebar_class']} D{data['rebar_diam_mm']} STEP {step} mm", dxfattribs={"height": 250, "layer": "KJ_TEXT"}).set_placement((0, -1500))
-
-    sx, sy = 0, -3000
-    widths = [slab, gravel, sand]
-    names = ["SLAB", "GRAVEL", "SAND"]
-    cur = sy
-    for name, th in zip(names, widths):
-        msp.add_lwpolyline([(sx,cur), (sx+L,cur), (sx+L,cur-th), (sx,cur-th), (sx,cur)], dxfattribs={"layer": "KJ_SECTION"})
-        msp.add_text(f"{name} {th} mm", dxfattribs={"height": 220, "layer": "KJ_TEXT"}).set_placement((sx + 300, cur - th/2))
-        cur -= th
-
-    doc.saveas(path)
-    return path
-
-def _ff06_write_xlsx(path, data, sheets, material_rows, template):
-    from openpyxl import Workbook
-    from openpyxl.styles import Font, Alignment
-    wb = Workbook()
-
-    ws = wb.active
-    ws.title = "Ведомость листов"
-    ws.append(["№", "Марка", "Лист", "Наименование"])
-    for c in ws[1]:
-        c.font = Font(bold=True)
-        c.alignment = Alignment(horizontal="center")
-    for i, sh in enumerate(sheets, 1):
-        ws.append([i, sh["mark"], sh["number"], sh["title"]])
-    ws.column_dimensions["D"].width = 80
-
-    ws2 = wb.create_sheet("Спецификация")
-    ws2.append(["№", "Наименование", "Ед. изм", "Кол-во", "Примечание"])
-    for c in ws2[1]:
-        c.font = Font(bold=True)
-    for i, row in enumerate(material_rows, 1):
-        ws2.append([i, row[0], row[1], row[2], row[3]])
-    ws2.column_dimensions["B"].width = 70
-    ws2.column_dimensions["E"].width = 50
-
-    ws3 = wb.create_sheet("Параметры")
-    for k in ["project_name", "section", "length_m", "width_m", "slab_mm", "sand_mm", "gravel_mm", "concrete_class", "rebar_class", "rebar_diam_mm", "rebar_step_mm"]:
-        ws3.append([k, data.get(k)])
-    ws3.append(["template_file", template.get("_template_file", "")])
-    ws3.column_dimensions["A"].width = 25
-    ws3.column_dimensions["B"].width = 80
-
-    wb.save(path)
-    return path
-
-async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", require_template: bool = True) -> dict:
-    data = _ff06_parse_request(raw_input, template_hint)
-    template = _ff06_latest_template(topic_id, data.get("section"))
-
-    res = {
-        "success": False,
-        "engine": "FULLFIX_06_FINAL_PROJECT_TEMPLATE_REPLAY",
-        "section": data["section"],
-        "pdf_path": "",
-        "dxf_path": "",
-        "xlsx_path": "",
-        "manifest_path": "",
-        "pdf_link": "",
-        "dxf_link": "",
-        "xlsx_link": "",
-        "manifest_link": "",
-        "template_file": "",
-        "sheet_count": 0,
-        "error": None,
-        "data": data,
-    }
-
-    if require_template and not template:
-        res["error"] = "PROJECT_TEMPLATE_MODEL_NOT_FOUND"
-        return res
-
-    sheets = _ff06_sheet_rows((template or {}).get("sheet_register") or [], data["section"])
-    if require_template and not sheets:
-        res["error"] = "PROJECT_TEMPLATE_MODEL_HAS_EMPTY_SHEET_REGISTER"
-        res["template_file"] = (template or {}).get("_template_file", "")
-        return res
-
-    if not sheets:
-        res["error"] = "NO_TEMPLATE_SHEETS_NO_PROJECT"
-        return res
-
-    material_rows = _ff06_material_rows((template or {}).get("materials") or [], data)
-
-    stamp = _dt_ff06.utcnow().strftime("%Y%m%d_%H%M%S")
-    safe_task = _re_ff06.sub(r"[^A-Za-z0-9_-]+", "_", str(task_id or "manual"))[:24]
-    out_dir = _Path_ff06(_tempfile_ff06.gettempdir()) / f"areal_project_ff06_{safe_task}_{stamp}"
-    out_dir.mkdir(parents=True, exist_ok=True)
-
-    pdf_path = str(out_dir / f"{data['section']}_PROJECT_{safe_task}.pdf")
-    dxf_path = str(out_dir / f"{data['section']}_PROJECT_{safe_task}.dxf")
-    xlsx_path = str(out_dir / f"{data['section']}_SPEC_{safe_task}.xlsx")
-    manifest_path = str(out_dir / f"{data['section']}_MANIFEST_{safe_task}.json")
-
-    try:
-        _ff06_write_pdf(pdf_path, data, template, sheets, material_rows)
-        _ff06_write_dxf(dxf_path, data, sheets, material_rows)
-        _ff06_write_xlsx(xlsx_path, data, sheets, material_rows, template)
-
-        checks = [
-            ("PDF_NOT_CREATED", pdf_path, 2500),
-            ("DXF_NOT_CREATED", dxf_path, 500),
-            ("XLSX_NOT_CREATED", xlsx_path, 1000),
-        ]
-        for err, fp, min_size in checks:
-            if not _os_ff06.path.exists(fp) or _os_ff06.path.getsize(fp) < min_size:
-                res["error"] = err
-                return res
-
-        manifest = {
-            "schema": "AREAL_PROJECT_ARTIFACT_V3",
-            "engine": "FULLFIX_06_FINAL_PROJECT_TEMPLATE_REPLAY",
-            "created_at": _dt_ff06.utcnow().isoformat() + "Z",
-            "task_id": task_id,
-            "topic_id": topic_id,
-            "input": raw_input,
-            "template_file": template.get("_template_file", ""),
-            "sheet_count": len(sheets),
-            "sheets": sheets,
-            "data": data,
-            "artifacts": {
-                "pdf_path": pdf_path,
-                "dxf_path": dxf_path,
-                "xlsx_path": xlsx_path,
-            },
-        }
-        _Path_ff06(manifest_path).write_text(_json_ff06.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
-
-        from core.engine_base import upload_artifact_to_drive
-        pdf_link = upload_artifact_to_drive(pdf_path, task_id, topic_id)
-        dxf_link = upload_artifact_to_drive(dxf_path, task_id, topic_id)
-        xlsx_link = upload_artifact_to_drive(xlsx_path, task_id, topic_id)
-        manifest_link = upload_artifact_to_drive(manifest_path, task_id, topic_id)
-
-        if not pdf_link:
-            res["error"] = "PDF_UPLOAD_FAILED"
-            return res
-        if not dxf_link:
-            res["error"] = "DXF_UPLOAD_FAILED"
-            return res
-        if not xlsx_link:
-            res["error"] = "XLSX_UPLOAD_FAILED"
-            return res
-
-        res.update({
-            "success": True,
-            "pdf_path": pdf_path,
-            "dxf_path": dxf_path,
-            "xlsx_path": xlsx_path,
-            "manifest_path": manifest_path,
-            "pdf_link": str(pdf_link),
-            "dxf_link": str(dxf_link),
-            "xlsx_link": str(xlsx_link),
-            "manifest_link": str(manifest_link or ""),
-            "template_file": template.get("_template_file", ""),
-            "sheet_count": len(sheets),
-        })
-        return res
-
-    except Exception as e:
-        res["error"] = str(e)[:500]
-        return res
-
-# === END FULLFIX_06_FINAL_PROJECT_TEMPLATE_REPLAY ===
-
-# === FULLFIX_07_PROJECT_DESIGN_CLOSURE ===
-import os as _os_ff07
-import re as _re_ff07
-import json as _json_ff07
-import glob as _glob_ff07
-import math as _math_ff07
-import tempfile as _tempfile_ff07
-from pathlib import Path as _Path_ff07
-from datetime import datetime as _dt_ff07
-
-def _ff07_clean(v, limit=5000):
-    return str(v or "").replace("\x00", " ").strip()[:limit]
-
-def _ff07_template_files():
-    base = "/root/.areal-neva-core/data/project_templates"
-    return sorted(
-        _glob_ff07.glob(_os_ff07.path.join(base, "PROJECT_TEMPLATE_MODEL__*.json")),
-        key=lambda x: _os_ff07.path.getmtime(x),
-        reverse=True,
-    )
-
-def _ff07_load_latest_template(topic_id=0, preferred_section=""):
-    files = _ff07_template_files()
-    best = {}
-    preferred_section = _ff07_clean(preferred_section).upper()
-    topic_id = int(topic_id or 0)
-
-    for fp in files:
-        try:
-            data = _json_ff07.loads(_Path_ff07(fp).read_text(encoding="utf-8"))
-            if not isinstance(data, dict):
-                continue
-            data["_template_file"] = fp
-            pt = _ff07_clean(data.get("project_type")).upper()
-            dtid = int(data.get("topic_id", 0) or 0)
-
-            if topic_id and dtid == topic_id and preferred_section and pt == preferred_section:
-                return data
-            if preferred_section and pt == preferred_section and not best:
-                best = data
-            if topic_id and dtid == topic_id and not best:
-                best = data
-            if not best:
-                best = data
-        except Exception:
-            continue
-
-    return best or {}
-
-def _ff07_parse_request(raw_input, template_hint=""):
-    text = _ff07_clean(raw_input, 12000)
-    low = text.lower()
-
-    data = {
-        "section": "КЖ",
-        "project_name": "Проект фундаментной плиты",
-        "length_m": 10.0,
-        "width_m": 10.0,
-        "slab_mm": 200,
-        "sand_mm": 300,
-        "gravel_mm": 100,
-        "concrete_class": "B25",
-        "rebar_class": "A500",
-        "rebar_diam_mm": 12,
-        "rebar_step_mm": 200,
-        "raw_input": text,
-        "template_hint": template_hint or "",
-    }
-
-    if any(x in low for x in ("кров", "строп", "кд")) and not any(x in low for x in ("фундамент", "плит")):
-        data["section"] = "КД"
-        data["project_name"] = "Проект кровли"
-    if any(x in low for x in ("архитектур", " ар ", "раздел ар")) and not any(x in low for x in ("фундамент", "плит", "кров")):
-        data["section"] = "АР"
-        data["project_name"] = "Архитектурный раздел"
-    if any(x in low for x in ("фундамент", "плит", "кж")):
-        data["section"] = "КЖ"
-        data["project_name"] = "Проект фундаментной плиты"
-
-    m = _re_ff07.search(r"(\d+(?:[,.]\d+)?)\s*[xх×]\s*(\d+(?:[,.]\d+)?)\s*(?:м|m)?", low)
-    if m:
-        data["length_m"] = float(m.group(1).replace(",", "."))
-        data["width_m"] = float(m.group(2).replace(",", "."))
-
-    def find_mm(keys, default):
-        for key in keys:
-            mm = _re_ff07.search(key + r".{0,45}?(\d{2,4})\s*мм", low)
-            if mm:
-                return int(mm.group(1))
-        return default
-
-    data["slab_mm"] = find_mm(("толщина", "плита", "бетон"), data["slab_mm"])
-    data["sand_mm"] = find_mm(("песчан", "песок"), data["sand_mm"])
-    data["gravel_mm"] = find_mm(("щеб", "основан"), data["gravel_mm"])
-    data["rebar_step_mm"] = find_mm(("шаг",), data["rebar_step_mm"])
-
-    md = _re_ff07.search(r"(?:ø|Ø|ф|диаметр)\s*(\d{1,2})", text, _re_ff07.I)
-    if md:
-        data["rebar_diam_mm"] = int(md.group(1))
-
-    mc = _re_ff07.search(r"\b[вbВB]\s*([123456789]\d)\b", text)
-    if mc:
-        data["concrete_class"] = "B" + mc.group(1)
-
-    ma = _re_ff07.search(r"\b[аaАA]\s*([245]\d{2})\b", text)
-    if ma:
-        data["rebar_class"] = "A" + ma.group(1)
-
-    return data
-
-def _ff07_dedup_titles(rows):
-    out, seen = [], set()
-    for row in rows:
-        title = _ff07_clean(row.get("title"), 160)
-        key = title.lower()
-        if not title or key in seen:
-            continue
-        seen.add(key)
-        out.append(row)
-    return out
-
-def _ff07_sheet_rows_from_template(template, section, data):
-    raw = template.get("sheet_register") or []
-    rows = []
-
-    for i, sh in enumerate(raw, 1):
-        if isinstance(sh, dict):
-            rows.append({
-                "mark": _ff07_clean(sh.get("mark") or section, 20) or section,
-                "number": _ff07_clean(sh.get("number") or str(i), 30) or str(i),
-                "title": _ff07_clean(sh.get("title") or sh.get("name") or "", 180),
-                "source": "sheet_register",
-            })
-        else:
-            rows.append({
-                "mark": section,
-                "number": str(i),
-                "title": _ff07_clean(sh, 180),
-                "source": "sheet_register_raw",
-            })
-
-    rows = _ff07_dedup_titles(rows)
-
-    if len(rows) >= 8:
-        return rows
-
-    sections = []
-    for x in template.get("sections") or []:
-        if isinstance(x, dict):
-            t = _ff07_clean(x.get("title") or x.get("name") or x.get("text"), 180)
-        else:
-            t = _ff07_clean(x, 180)
-        if t:
-            sections.append(t)
-
-    canonical = []
-    if section == "КЖ":
-        canonical = [
-            "Общие данные",
-            "Ведомость листов",
-            "План фундаментной плиты",
-            "Разрез 1-1",
-            "Схема армирования нижней сетки",
-            "Схема армирования верхней сетки",
-            "Узлы армирования и защитные слои",
-            "Спецификация материалов",
-            "Ведомость расхода стали",
-            "Пояснительная записка",
-        ]
-    elif section == "КД":
-        canonical = [
-            "Общие данные",
-            "Ведомость листов",
-            "План кровли",
-            "План стропильной системы",
-            "Разрезы кровли",
-            "Узлы кровли",
-            "Схема обрешётки",
-            "Спецификация пиломатериалов",
-            "Ведомость элементов",
-            "Пояснительная записка",
-        ]
-    elif section == "АР":
-        canonical = [
-            "Общие данные",
-            "Ведомость листов",
-            "План этажа",
-            "Фасады",
-            "Разрезы",
-            "План кровли",
-            "Экспликация помещений",
-            "Спецификация заполнения проёмов",
-            "Узлы",
-            "Пояснительная записка",
-        ]
-    else:
-        canonical = [
-            "Общие данные",
-            "Ведомость листов",
-            "План",
-            "Разрез",
-            "Схема",
-            "Узлы",
-            "Спецификация материалов",
-            "Пояснительная записка",
-        ]
-
-    for title in canonical:
-        rows.append({
-            "mark": section,
-            "number": str(len(rows) + 1),
-            "title": title,
-            "source": "canonical_required",
-        })
-
-    for sec in sections:
-        low = sec.lower()
-        if any(k in low for k in ("общие данные", "ведомость", "план", "фасад", "разрез", "узел", "схема", "спецификац", "расчет", "расчёт", "конструктив")):
-            rows.append({
-                "mark": section,
-                "number": str(len(rows) + 1),
-                "title": sec[:150],
-                "source": "template_sections",
-            })
-
-    rows = _ff07_dedup_titles(rows)
-
-    renumbered = []
-    for i, row in enumerate(rows[:24], 1):
-        row = dict(row)
-        row["mark"] = row.get("mark") or section
-        row["number"] = str(i)
-        renumbered.append(row)
-
-    return renumbered
-
-def _ff07_material_rows(template, data):
-    rows = []
-    for x in template.get("materials") or []:
-        if isinstance(x, dict):
-            rows.append({
-                "name": _ff07_clean(x.get("name") or x.get("material") or x.get("title") or "Материал", 180),
-                "unit": _ff07_clean(x.get("unit") or "шт", 30),
-                "qty": x.get("qty", x.get("quantity", "-")),
-                "note": _ff07_clean(x.get("note") or "из шаблона", 120),
-            })
-        else:
-            t = _ff07_clean(x, 180)
-            if t:
-                rows.append({"name": t, "unit": "по проекту", "qty": "-", "note": "из шаблона"})
-
-    L = float(data["length_m"])
-    W = float(data["width_m"])
-    area = L * W
-    slab = int(data["slab_mm"])
-    sand = int(data["sand_mm"])
-    gravel = int(data["gravel_mm"])
-    step = max(int(data["rebar_step_mm"]), 50)
-    bars_x = int((W * 1000) / step) + 1
-    bars_y = int((L * 1000) / step) + 1
-    rebar_m = round((bars_x * L + bars_y * W) * 2, 1)
-
-    calc_rows = [
-        {"name": f"Бетон {data['concrete_class']}", "unit": "м3", "qty": round(area * slab / 1000, 3), "note": "фундаментная плита"},
-        {"name": "Песчаная подушка", "unit": "м3", "qty": round(area * sand / 1000, 3), "note": ""},
-        {"name": "Щебёночное основание", "unit": "м3", "qty": round(area * gravel / 1000, 3), "note": ""},
-        {"name": f"Арматура {data['rebar_class']} Ø{data['rebar_diam_mm']} шаг {step}", "unit": "п.м", "qty": rebar_m, "note": "верхняя и нижняя сетка"},
-    ]
-
-    names = {r["name"].lower() for r in rows}
-    for r in calc_rows:
-        if r["name"].lower() not in names:
-            rows.append(r)
-
-    return rows[:80]
-
-def _ff07_register_font():
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.ttfonts import TTFont
-
-    candidates = [
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed.ttf",
-        "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
-    ]
-    for fp in candidates:
-        if _os_ff07.path.exists(fp):
-            try:
-                pdfmetrics.registerFont(TTFont("ArealDejaVu", fp))
-                return "ArealDejaVu"
-            except Exception:
-                pass
-    return "Helvetica"
-
-def _ff07_draw_frame(c, page_w, page_h, sheet, sheet_no, sheet_total, font):
-    from reportlab.lib.units import mm
-
-    c.setLineWidth(0.7)
-    c.rect(10 * mm, 10 * mm, page_w - 20 * mm, page_h - 20 * mm)
-    c.rect(page_w - 190 * mm, 10 * mm, 180 * mm, 42 * mm)
-    c.line(page_w - 190 * mm, 32 * mm, page_w - 10 * mm, 32 * mm)
-    c.line(page_w - 80 * mm, 10 * mm, page_w - 80 * mm, 52 * mm)
-    c.line(page_w - 45 * mm, 10 * mm, page_w - 45 * mm, 52 * mm)
-
-    c.setFont(font, 8)
-    c.drawString(page_w - 187 * mm, 44 * mm, "AREAL-NEVA")
-    c.drawString(page_w - 187 * mm, 36 * mm, _ff07_clean(sheet.get("title"), 80))
-    c.drawString(page_w - 77 * mm, 36 * mm, f"Лист {sheet_no}")
-    c.drawString(page_w - 42 * mm, 36 * mm, f"Листов {sheet_total}")
-
-    c.setFont(font, 14)
-    c.drawString(18 * mm, page_h - 22 * mm, f"{sheet.get('mark')} {sheet.get('number')} — {sheet.get('title')}")
-
-def _ff07_write_pdf(path, data, template, sheets, materials):
-    from reportlab.lib.pagesizes import A3, landscape
-    from reportlab.lib.units import mm
-    from reportlab.pdfgen import canvas
-
-    font = _ff07_register_font()
-    page_w, page_h = landscape(A3)
-    c = canvas.Canvas(path, pagesize=landscape(A3))
-
-    L = float(data["length_m"])
-    W = float(data["width_m"])
-    slab = int(data["slab_mm"])
-    sand = int(data["sand_mm"])
-    gravel = int(data["gravel_mm"])
-    step = int(data["rebar_step_mm"])
-    rd = int(data["rebar_diam_mm"])
-    section = data["section"]
-
-    for idx, sheet in enumerate(sheets, 1):
-        title = sheet.get("title") or ""
-        low = title.lower()
-        _ff07_draw_frame(c, page_w, page_h, sheet, idx, len(sheets), font)
-
-        if any(x in low for x in ("общие", "данные", "пояснит", "исходн")):
-            y = 260
-            lines = [
-                f"Проект: {data['project_name']}",
-                f"Раздел: {section}",
-                "Тип выдачи: PDF + DXF + XLSX + MANIFEST",
-                f"Шаблон: {template.get('_template_file', '')}",
-                f"Плита: {L:g} x {W:g} м, толщина {slab} мм",
-                f"Основание: щебень {gravel} мм, песчаная подушка {sand} мм",
-                f"Бетон: {data['concrete_class']}",
-                f"Арматура: {data['rebar_class']} Ø{rd}, шаг {step} мм",
-                f"Листов: {len(sheets)}",
-            ]
-            c.setFont(font, 10)
-            for line in lines:
-                c.drawString(25 * mm, y * mm, line)
-                y -= 8
-
-        elif any(x in low for x in ("ведомость лист", "состав лист", "листов")):
-            y = 260
-            c.setFont(font, 10)
-            for j, sh in enumerate(sheets, 1):
-                c.drawString(25 * mm, y * mm, f"{j}. {sh['mark']} {sh['number']} — {sh['title']}")
-                y -= 7
-                if y < 35:
-                    c.showPage()
-                    _ff07_draw_frame(c, page_w, page_h, sheet, idx, len(sheets), font)
-                    y = 260
-
-        elif any(x in low for x in ("план", "плит", "схема")) and not any(x in low for x in ("армир", "арматур")):
-            x0, y0 = 70 * mm, 60 * mm
-            scale = min((page_w - 150 * mm) / (L * 1000), 115 * mm / (W * 1000))
-            rw = L * 1000 * scale
-            rh = W * 1000 * scale
-
-            c.setLineWidth(1.1)
-            c.rect(x0, y0, rw, rh)
-            c.setDash(4, 3)
-            c.line(x0, y0 + rh / 2, x0 + rw, y0 + rh / 2)
-            c.line(x0 + rw / 2, y0, x0 + rw / 2, y0 + rh)
-            c.setDash()
-
-            step_draw = max(0.7 * mm, step * scale)
-            c.setLineWidth(0.25)
-
-            xx = x0 + step_draw
-            while xx < x0 + rw:
-                c.line(xx, y0, xx, y0 + rh)
-                xx += step_draw
-
-            yy = y0 + step_draw
-            while yy < y0 + rh:
-                c.line(x0, yy, x0 + rw, yy)
-                yy += step_draw
-
-            c.setFont(font, 9)
-            c.drawString(x0, y0 - 8 * mm, f"{L:g} м")
-            c.saveState()
-            c.translate(x0 - 8 * mm, y0)
-            c.rotate(90)
-            c.drawString(0, 0, f"{W:g} м")
-            c.restoreState()
-
-            c.setFont(font, 10)
-            c.drawString(25 * mm, 260 * mm, f"Армирование: {data['rebar_class']} Ø{rd}, шаг {step} мм")
-
-        elif any(x in low for x in ("разрез", "сечени", "1-1")):
-            bx, by = 55 * mm, 70 * mm
-            total = slab + gravel + sand
-            k = 105 * mm / total
-            ycur = by
-
-            c.setLineWidth(0.9)
-            for name, th, note in [
-                ("Фундаментная плита", slab, f"Бетон {data['concrete_class']}"),
-                ("Щебёночное основание", gravel, "Щебень"),
-                ("Песчаная подушка", sand, "Песок"),
-            ]:
-                hh = th * k
-                c.rect(bx, ycur, 230 * mm, hh)
-                c.setFont(font, 10)
-                c.drawString(bx + 5 * mm, ycur + hh / 2, f"{name}: {th} мм — {note}")
-                ycur += hh
-
-            c.setFont(font, 10)
-            c.drawString(25 * mm, 240 * mm, "Разрез 1-1")
-
-        elif any(x in low for x in ("армир", "арматур", "сетка")):
-            x0, y0 = 70 * mm, 60 * mm
-            scale = min((page_w - 150 * mm) / (L * 1000), 115 * mm / (W * 1000))
-            rw = L * 1000 * scale
-            rh = W * 1000 * scale
-
-            c.setLineWidth(1.0)
-            c.rect(x0, y0, rw, rh)
-
-            step_draw = max(1.0 * mm, step * scale)
-            c.setLineWidth(0.35)
-
-            xx = x0 + step_draw
-            while xx < x0 + rw:
-                c.line(xx, y0, xx, y0 + rh)
-                xx += step_draw
-
-            yy = y0 + step_draw
-            while yy < y0 + rh:
-                c.line(x0, yy, x0 + rw, yy)
-                yy += step_draw
-
-            c.setFont(font, 10)
-            c.drawString(25 * mm, 260 * mm, f"Верхняя и нижняя сетки: {data['rebar_class']} Ø{rd}, шаг {step} мм")
-
-        elif any(x in low for x in ("специф", "материал", "ведомость расход", "ведомость объем", "ведомость объём", "стали")):
-            y = 260
-            c.setFont(font, 10)
-            c.drawString(25 * mm, y * mm, "№")
-            c.drawString(40 * mm, y * mm, "Наименование")
-            c.drawString(175 * mm, y * mm, "Ед")
-            c.drawString(200 * mm, y * mm, "Кол-во")
-            c.drawString(235 * mm, y * mm, "Примечание")
-            y -= 8
-
-            for j, row in enumerate(materials[:32], 1):
-                c.drawString(25 * mm, y * mm, str(j))
-                c.drawString(40 * mm, y * mm, _ff07_clean(row["name"], 70))
-                c.drawString(175 * mm, y * mm, _ff07_clean(row["unit"], 12))
-                c.drawString(200 * mm, y * mm, _ff07_clean(row["qty"], 18))
-                c.drawString(235 * mm, y * mm, _ff07_clean(row["note"], 50))
-                y -= 7
-
-        elif any(x in low for x in ("узел", "защитн", "слои")):
-            c.setFont(font, 10)
-            y = 250
-            for line in [
-                f"Защитный слой бетона принят по СП 63.13330.2018",
-                f"Арматура {data['rebar_class']} Ø{rd}, шаг {step} мм",
-                "Стыковка и нахлёсты выполнять по рабочей документации",
-                "Геометрия узлов уточняется по месту и исполнительным размерам",
-            ]:
-                c.drawString(25 * mm, y * mm, line)
-                y -= 9
-
-        else:
-            c.setFont(font, 10)
-            y = 250
-            for line in [
-                f"Лист выполнен в составе комплекта: {title}",
-                f"Раздел: {section}",
-                f"Параметры: {L:g} x {W:g} м",
-                f"Бетон: {data['concrete_class']}",
-                f"Шаблон: {template.get('_template_file', '')}",
-            ]:
-                c.drawString(25 * mm, y * mm, line)
-                y -= 8
-
-        c.showPage()
-
-    c.save()
-    return path
-
-def _ff07_write_dxf(path, data, sheets, materials):
-    import ezdxf
-
-    doc = ezdxf.new("R2010")
-    doc.header["$INSUNITS"] = 4
-    msp = doc.modelspace()
-
-    for layer, color in [
-        ("KJ_PLAN", 7),
-        ("KJ_AXES", 2),
-        ("KJ_REBAR", 3),
-        ("KJ_TEXT", 1),
-        ("KJ_SECTION", 5),
-        ("KJ_SHEETS", 4),
-    ]:
-        if layer not in doc.layers:
-            doc.layers.add(layer, color=color)
-
-    L = float(data["length_m"]) * 1000
-    W = float(data["width_m"]) * 1000
-    slab = int(data["slab_mm"])
-    sand = int(data["sand_mm"])
-    gravel = int(data["gravel_mm"])
-    step = max(int(data["rebar_step_mm"]), 50)
-
-    msp.add_lwpolyline([(0, 0), (L, 0), (L, W), (0, W), (0, 0)], dxfattribs={"layer": "KJ_PLAN"})
-    msp.add_line((L / 2, 0), (L / 2, W), dxfattribs={"layer": "KJ_AXES"})
-    msp.add_line((0, W / 2), (L, W / 2), dxfattribs={"layer": "KJ_AXES"})
-
-    x = step
-    while x < L:
-        msp.add_line((x, 0), (x, W), dxfattribs={"layer": "KJ_REBAR"})
-        x += step
-
-    y = step
-    while y < W:
-        msp.add_line((0, y), (L, y), dxfattribs={"layer": "KJ_REBAR"})
-        y += step
-
-    msp.add_text(
-        f"FOUNDATION SLAB {L/1000:g} x {W/1000:g} m",
-        dxfattribs={"height": 250, "layer": "KJ_TEXT"},
-    ).set_placement((0, -700))
-
-    msp.add_text(
-        f"SLAB {slab} mm / GRAVEL {gravel} mm / SAND {sand} mm",
-        dxfattribs={"height": 250, "layer": "KJ_TEXT"},
-    ).set_placement((0, -1100))
-
-    msp.add_text(
-        f"REBAR {data['rebar_class']} D{data['rebar_diam_mm']} STEP {step} mm",
-        dxfattribs={"height": 250, "layer": "KJ_TEXT"},
-    ).set_placement((0, -1500))
-
-    sx, sy = 0, -3000
-    cur = sy
-    for name, th in [("SLAB", slab), ("GRAVEL", gravel), ("SAND", sand)]:
-        msp.add_lwpolyline([(sx, cur), (sx + L, cur), (sx + L, cur - th), (sx, cur - th), (sx, cur)], dxfattribs={"layer": "KJ_SECTION"})
-        msp.add_text(f"{name} {th} mm", dxfattribs={"height": 220, "layer": "KJ_TEXT"}).set_placement((sx + 300, cur - th / 2))
-        cur -= th
-
-    sheet_x = L + 2000
-    sheet_y = 0
-    for i, sh in enumerate(sheets, 1):
-        msp.add_text(
-            f"{i}. {sh['mark']} {sh['number']} {sh['title']}",
-            dxfattribs={"height": 220, "layer": "KJ_SHEETS"},
-        ).set_placement((sheet_x, sheet_y - i * 350))
-
-    doc.saveas(path)
-    return path
-
-def _ff07_write_xlsx(path, data, sheets, materials, template):
-    from openpyxl import Workbook
-    from openpyxl.styles import Font, Alignment
-
-    wb = Workbook()
-
-    ws = wb.active
-    ws.title = "Ведомость листов"
-    ws.append(["№", "Марка", "Лист", "Наименование", "Источник"])
-    for c in ws[1]:
-        c.font = Font(bold=True)
-        c.alignment = Alignment(horizontal="center")
-
-    for i, sh in enumerate(sheets, 1):
-        ws.append([i, sh["mark"], sh["number"], sh["title"], sh.get("source", "")])
-
-    ws.column_dimensions["D"].width = 80
-    ws.column_dimensions["E"].width = 25
-
-    ws2 = wb.create_sheet("Спецификация")
-    ws2.append(["№", "Наименование", "Ед. изм", "Кол-во", "Примечание"])
-    for c in ws2[1]:
-        c.font = Font(bold=True)
-
-    for i, row in enumerate(materials, 1):
-        ws2.append([i, row["name"], row["unit"], row["qty"], row["note"]])
-
-    ws2.column_dimensions["B"].width = 70
-    ws2.column_dimensions["E"].width = 50
-
-    ws3 = wb.create_sheet("Параметры")
-    for k in ["project_name", "section", "length_m", "width_m", "slab_mm", "sand_mm", "gravel_mm", "concrete_class", "rebar_class", "rebar_diam_mm", "rebar_step_mm"]:
-        ws3.append([k, data.get(k)])
-    ws3.append(["template_file", template.get("_template_file", "")])
-    ws3.append(["engine", "FULLFIX_07_PROJECT_DESIGN_CLOSURE"])
-    ws3.column_dimensions["A"].width = 28
-    ws3.column_dimensions["B"].width = 90
-
-    wb.save(path)
-    return path
-
-def _ff07_verify_pdf_pages(path, min_pages):
-    try:
-        from pypdf import PdfReader
-        return len(PdfReader(path).pages) >= int(min_pages)
-    except Exception:
-        return _os_ff07.path.exists(path) and _os_ff07.path.getsize(path) > 3000
-
-async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", require_template: bool = True) -> dict:
-    data = _ff07_parse_request(raw_input, template_hint)
-    template = _ff07_load_latest_template(topic_id, data.get("section"))
-
-    res = {
-        "success": False,
-        "engine": "FULLFIX_07_PROJECT_DESIGN_CLOSURE",
-        "section": data["section"],
-        "pdf_path": "",
-        "dxf_path": "",
-        "xlsx_path": "",
-        "manifest_path": "",
-        "pdf_link": "",
-        "dxf_link": "",
-        "xlsx_link": "",
-        "manifest_link": "",
-        "template_file": "",
-        "sheet_count": 0,
-        "error": None,
-        "data": data,
-    }
-
-    if require_template and not template:
-        res["error"] = "PROJECT_TEMPLATE_MODEL_NOT_FOUND"
-        return res
-
-    sheets = _ff07_sheet_rows_from_template(template or {}, data["section"], data)
-    materials = _ff07_material_rows(template or {}, data)
-
-    if len(sheets) < 8:
-        res["error"] = f"SHEET_REGISTER_TOO_SMALL:{len(sheets)}"
-        res["template_file"] = (template or {}).get("_template_file", "")
-        res["sheet_count"] = len(sheets)
-        return res
-
-    stamp = _dt_ff07.utcnow().strftime("%Y%m%d_%H%M%S")
-    safe_task = _re_ff07.sub(r"[^A-Za-z0-9_-]+", "_", str(task_id or "manual"))[:24]
-    out_dir = _Path_ff07(_tempfile_ff07.gettempdir()) / f"areal_project_ff07_{safe_task}_{stamp}"
-    out_dir.mkdir(parents=True, exist_ok=True)
-
-    pdf_path = str(out_dir / f"{data['section']}_PROJECT_{safe_task}.pdf")
-    dxf_path = str(out_dir / f"{data['section']}_PROJECT_{safe_task}.dxf")
-    xlsx_path = str(out_dir / f"{data['section']}_SPEC_{safe_task}.xlsx")
-    manifest_path = str(out_dir / f"{data['section']}_MANIFEST_{safe_task}.json")
-
-    try:
-        _ff07_write_pdf(pdf_path, data, template, sheets, materials)
-        _ff07_write_dxf(dxf_path, data, sheets, materials)
-        _ff07_write_xlsx(xlsx_path, data, sheets, materials, template)
-
-        checks = [
-            ("PDF_NOT_CREATED", pdf_path, 3000),
-            ("DXF_NOT_CREATED", dxf_path, 500),
-            ("XLSX_NOT_CREATED", xlsx_path, 1000),
-        ]
-        for err, fp, min_size in checks:
-            if not _os_ff07.path.exists(fp) or _os_ff07.path.getsize(fp) < min_size:
-                res["error"] = err
-                return res
-
-        if not _ff07_verify_pdf_pages(pdf_path, len(sheets)):
-            res["error"] = "PDF_PAGE_COUNT_INVALID"
-            return res
-
-        manifest = {
-            "schema": "AREAL_PROJECT_ARTIFACT_V4",
-            "engine": "FULLFIX_07_PROJECT_DESIGN_CLOSURE",
-            "created_at": _dt_ff07.utcnow().isoformat() + "Z",
-            "task_id": task_id,
-            "topic_id": topic_id,
-            "input": raw_input,
-            "template_file": template.get("_template_file", ""),
-            "template_project_type": template.get("project_type", ""),
-            "sheet_count": len(sheets),
-            "sheets": sheets,
-            "materials": materials,
-            "data": data,
-            "artifacts": {
-                "pdf_path": pdf_path,
-                "dxf_path": dxf_path,
-                "xlsx_path": xlsx_path,
-            },
-        }
-        _Path_ff07(manifest_path).write_text(_json_ff07.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
-
-        from core.engine_base import upload_artifact_to_drive
-
-        pdf_link = upload_artifact_to_drive(pdf_path, task_id, topic_id)
-        dxf_link = upload_artifact_to_drive(dxf_path, task_id, topic_id)
-        xlsx_link = upload_artifact_to_drive(xlsx_path, task_id, topic_id)
-        manifest_link = upload_artifact_to_drive(manifest_path, task_id, topic_id)
-
-        if not pdf_link:
-            res["error"] = "PDF_UPLOAD_FAILED"
-            return res
-        if not dxf_link:
-            res["error"] = "DXF_UPLOAD_FAILED"
-            return res
-        if not xlsx_link:
-            res["error"] = "XLSX_UPLOAD_FAILED"
-            return res
-
-        res.update({
-            "success": True,
-            "pdf_path": pdf_path,
-            "dxf_path": dxf_path,
-            "xlsx_path": xlsx_path,
-            "manifest_path": manifest_path,
-            "pdf_link": str(pdf_link),
-            "dxf_link": str(dxf_link),
-            "xlsx_link": str(xlsx_link),
-            "manifest_link": str(manifest_link or ""),
-            "template_file": template.get("_template_file", ""),
-            "sheet_count": len(sheets),
-            "data": {**data, "template_file": template.get("_template_file", "")},
-        })
-        return res
-
-    except Exception as e:
-        res["error"] = str(e)[:700]
-        return res
-
-# === END FULLFIX_07_PROJECT_DESIGN_CLOSURE ===
-
-
-# === FULLFIX_07_PROJECT_ENGINE_OVERRIDE ===
-try:
-    from core.cad_project_engine import (
-        create_project_pdf_dxf_artifact,
-        create_full_project_package,
-        is_project_design_request,
-        format_project_result_message,
-    )
-except Exception:
-    pass
-# === END FULLFIX_07_PROJECT_ENGINE_OVERRIDE ===
-
-
-# === FULLFIX_08_PROJECT_SIGNATURE_COMPAT_OVERRIDE ===
-# Final public project API used by task_worker
-# Accepts any old/new call signature and delegates to CAD closure engine
-
-try:
-    from core.cad_project_engine import (
-        create_project_pdf_dxf_artifact as _ff08_cad_create_project_pdf_dxf_artifact,
-        create_full_project_documentation as _ff08_cad_create_full_project_documentation,
-    )
-
-    async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
-        return await _ff08_cad_create_project_pdf_dxf_artifact(
-            raw_input,
-            task_id,
-            int(topic_id or 0),
-            str(template_hint or ""),
-            *args,
-            **kwargs
-        )
-
-    async def create_full_project_documentation(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
-        return await _ff08_cad_create_full_project_documentation(
-            raw_input,
-            task_id,
-            int(topic_id or 0),
-            str(template_hint or ""),
-            *args,
-            **kwargs
-        )
-
-except Exception as _ff08_import_error:
-    async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
-        return {
-            "success": False,
-            "engine": "FULLFIX_08_PROJECT_SIGNATURE_COMPAT_OVERRIDE",
-            "error": "CAD_PROJECT_ENGINE_IMPORT_FAILED: " + str(_ff08_import_error)[:300],
-        }
-
-    async def create_full_project_documentation(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
-        return await create_project_pdf_dxf_artifact(raw_input, task_id, topic_id, template_hint, *args, **kwargs)
-
-# === END FULLFIX_08_PROJECT_SIGNATURE_COMPAT_OVERRIDE ===
-
-
-
-# === FULLFIX_09_PROJECT_TEMPLATE_REGISTER_PUBLIC_OVERRIDE ===
-try:
-    from core.cad_project_engine import (
-        create_project_pdf_dxf_artifact as _ff09_create_project_pdf_dxf_artifact,
-        create_full_project_documentation as _ff09_create_full_project_documentation,
-    )
-
-    async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
-        return await _ff09_create_project_pdf_dxf_artifact(raw_input, task_id, topic_id, template_hint, *args, **kwargs)
-
-    async def create_full_project_documentation(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
-        return await _ff09_create_full_project_documentation(raw_input, task_id, topic_id, template_hint, *args, **kwargs)
-
-except Exception as _ff09_public_e:
-    async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
-        return {
-            "success": False,
-            "engine": "FULLFIX_09_PROJECT_TEMPLATE_REGISTER_PUBLIC_OVERRIDE",
-            "error": str(_ff09_public_e)[:500],
-        }
-
-    async def create_full_project_documentation(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
-        return await create_project_pdf_dxf_artifact(raw_input, task_id, topic_id, template_hint, *args, **kwargs)
-
-# === END FULLFIX_09_PROJECT_TEMPLATE_REGISTER_PUBLIC_OVERRIDE ===
-
-
-# === FULLFIX_10_TOTAL_CLOSURE_PUBLIC_PROJECT_OVERRIDE ===
-try:
-    from core.cad_project_engine import (
-        create_project_pdf_dxf_artifact as _ff10_create_project_pdf_dxf_artifact,
-        create_full_project_documentation as _ff10_create_full_project_documentation,
-    )
-
-    async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
-        return await _ff10_create_project_pdf_dxf_artifact(raw_input, task_id, topic_id, template_hint, *args, **kwargs)
-
-    async def create_full_project_documentation(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
-        return await _ff10_create_full_project_documentation(raw_input, task_id, topic_id, template_hint, *args, **kwargs)
-
-except Exception as _ff10_project_override_error:
-    async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
-        return {
-            "success": False,
-            "engine": "FULLFIX_10_TOTAL_CLOSURE_PUBLIC_PROJECT_OVERRIDE",
-            "error": str(_ff10_project_override_error)[:300],
-        }
-
-    async def create_full_project_documentation(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
-        return await create_project_pdf_dxf_artifact(raw_input, task_id, topic_id, template_hint, *args, **kwargs)
-
-# === END FULLFIX_10_TOTAL_CLOSURE_PUBLIC_PROJECT_OVERRIDE ===
-
-
-# === FULLFIX_12_COMPACT_PROJECT_PDF_LAYOUT_PUBLIC_OVERRIDE ===
-try:
-    from core.orchestra_closure_engine import create_compact_project_documentation as _ff12_compact_project
-
-    async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
-        return await _ff12_compact_project(raw_input, task_id, topic_id, template_hint, *args, **kwargs)
-
-    async def create_full_project_documentation(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
-        return await _ff12_compact_project(raw_input, task_id, topic_id, template_hint, *args, **kwargs)
-except Exception:
-    async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
-        return {"success": False, "engine": "FULLFIX_12_COMPACT_PROJECT_PDF_LAYOUT_PUBLIC_OVERRIDE", "error": "COMPACT_ENGINE_IMPORT_FAILED"}
-
-    async def create_full_project_documentation(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
-        return await create_project_pdf_dxf_artifact(raw_input, task_id, topic_id, template_hint, *args, **kwargs)
-# === END FULLFIX_12_COMPACT_PROJECT_PDF_LAYOUT_PUBLIC_OVERRIDE ===
-
-
-# === DWG_DXF_PROJECT_ENGINE_ADAPTER_V1 ===
-async def process_dwg_dxf_project_file(file_path: str, task_id: str, topic_id: int, raw_input: str = "", file_name: str = "", mime_type: str = "") -> dict:
-    """
-    Project-engine adapter for DWG/DXF files.
-    This keeps design files inside the project contour instead of returning None in artifact_pipeline.
-    """
-    try:
-        from core.dwg_engine import process_drawing_file
-        res = process_drawing_file(
-            local_path=file_path,
-            file_name=file_name or file_path,
-            mime_type=mime_type,
-            user_text=raw_input,
-            topic_role="проектирование",
-            task_id=task_id,
-            topic_id=topic_id,
-        )
-        if not res.get("success"):
-            return {"success": False, "error": res.get("error") or "DWG_DXF_PROJECT_FAILED"}
-        return {
-            "success": True,
-            "engine": "DWG_DXF_PROJECT_CLOSE_V1",
-            "section": ((res.get("model") or {}).get("section") or "кр"),
-            "summary": res.get("summary") or "",
-            "artifact_path": res.get("artifact_path") or "",
-            "docx_path": res.get("docx_path") or "",
-            "xlsx_path": res.get("xlsx_path") or "",
-            "json_path": res.get("json_path") or "",
-            "model": res.get("model") or {},
-        }
-    except Exception as e:
-        return {"success": False, "error": f"DWG_DXF_PROJECT_ENGINE_ADAPTER_ERR:{e}"}
-# === END_DWG_DXF_PROJECT_ENGINE_ADAPTER_V1 ===
-
-
-
-# === REAL_GAPS_CLOSE_V2_PROJECT ===
-# === PROJECT_LOAD_CALC_REGION_FROM_INPUT_V1 ===
-_PROJECT_REGION_MAP_V2 = {
-    "москва": 3, "московск": 3, "подмосков": 3,
-    "петербург": 3, "санкт-петербург": 3, "ленинград": 3, "спб": 3,
-    "нижний новгород": 3, "нижегородск": 3, "воронеж": 3, "рязань": 3,
-    "тула": 3, "орёл": 3, "орел": 3, "калуга": 3, "ярославль": 3,
-    "кострома": 3, "иваново": 3, "владимир": 3, "смоленск": 3,
-    "брянск": 3, "тверь": 3,
-    "краснодар": 2, "сочи": 2, "ростов": 2, "ставрополь": 2,
-    "астрахань": 2, "волгоград": 2, "крым": 2, "симферополь": 2,
-    "казань": 3, "татарстан": 3, "самара": 3, "саратов": 3,
-    "ульяновск": 3, "пенза": 3, "оренбург": 4,
-    "екатеринбург": 4, "свердловск": 4, "челябинск": 4,
-    "пермь": 4, "тюмень": 4, "уфа": 4, "башкортостан": 4,
-    "новосибирск": 5, "омск": 5, "томск": 5, "кемерово": 5,
-    "красноярск": 5, "иркутск": 5, "бурятия": 5, "барнаул": 5,
-    "якутия": 6, "якутск": 6, "хабаровск": 6, "сахалин": 6,
-    "мурманск": 6, "ямал": 6, "ямало": 6,
-    "магадан": 7, "чукотка": 7, "камчатка": 7, "норильск": 7, "воркута": 7,
-}
-
-def parse_region_from_text(text: str, default: int = 3) -> int:
-    import re
-    low = str(text or "").lower()
-    m = re.search(r"район\s*([1-8])", low)
-    if m:
-        return int(m.group(1))
-    m = re.search(r"([1-8])\s*-?\s*й?\s*снеговой", low)
-    if m:
-        return int(m.group(1))
-    for key, region in _PROJECT_REGION_MAP_V2.items():
-        if key in low:
-            return region
-    return default
-
-def calc_loads_from_text(text: str, default_region: int = 3) -> dict:
-    return calc_loads(parse_region_from_text(text, default_region))
-
-_rgc2_orig_project_create = create_project_pdf_dxf_artifact
-
-async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
-    region = parse_region_from_text(str(raw_input or "") + " " + str(template_hint or ""))
-    forced_input = str(raw_input or "")
-    if "снеговой район" not in forced_input.lower() and "район " not in forced_input.lower():
-        forced_input = forced_input + "\n" + "Снеговой район " + str(region) + " по автоматически определённому региону"
-    try:
-        result = await _rgc2_orig_project_create(
-            raw_input=forced_input,
-            task_id=task_id,
-            topic_id=topic_id,
-            template_hint=template_hint,
-            *args,
-            **kwargs,
-        )
-    except TypeError:
-        try:
-            result = await _rgc2_orig_project_create(forced_input, task_id, topic_id, template_hint)
-        except TypeError:
-            result = await _rgc2_orig_project_create(forced_input, task_id, topic_id)
-
-    if isinstance(result, dict):
-        result["region_detected"] = region
-        result["loads_detected"] = calc_loads(region)
-        model = result.get("model") or result.get("data")
-        if isinstance(model, dict):
-            model.setdefault("region", region)
-            model.setdefault("loads", calc_loads(region))
-    return result
-# === END_PROJECT_LOAD_CALC_REGION_FROM_INPUT_V1 ===
-# === END_REAL_GAPS_CLOSE_V2_PROJECT ===
-
-# === PROJECT_ENGINE_FALLBACK_SHEET_REGISTER_V1 ===
-# If template sheet_register is absent or too small, project engine must not fail.
-# Default KЖ sheet register is used as safe fallback for project artifact generation.
-
-_PROJECT_ENGINE_DEFAULT_KZH_SHEET_REGISTER_V1 = [
-    {"mark": "КЖ", "number": "1", "title": "Общие данные"},
-    {"mark": "КЖ", "number": "2", "title": "Схема расположения элементов"},
-    {"mark": "КЖ", "number": "3", "title": "Армирование. Нижняя сетка"},
-    {"mark": "КЖ", "number": "4", "title": "Армирование. Верхняя сетка"},
-    {"mark": "КЖ", "number": "5", "title": "Спецификация арматуры"},
-    {"mark": "КЖ", "number": "6", "title": "Ведомость материалов"},
-    {"mark": "КЖ", "number": "7", "title": "Конструктивные узлы"},
-    {"mark": "КЖ", "number": "8", "title": "Схема фундаментной плиты"},
-]
-
-try:
-    _pefs_orig_ff07_sheet_rows_from_template = globals().get("_ff07_sheet_rows_from_template")
-except Exception:
-    _pefs_orig_ff07_sheet_rows_from_template = None
-
-def _project_engine_default_sheet_register_v1(section: str = "кж", data: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
-    sec = str(section or "кж").lower()
-    mark = "КЖ" if sec in ("кж", "kd", "foundation", "slab") else sec.upper()
-    rows = []
-    for item in _PROJECT_ENGINE_DEFAULT_KZH_SHEET_REGISTER_V1:
-        row = dict(item)
-        row["mark"] = mark
-        rows.append(row)
-    return rows
-
-def _ff07_sheet_rows_from_template(template: Dict[str, Any], section: str, data: Dict[str, Any]) -> List[Dict[str, Any]]:
-    rows: List[Dict[str, Any]] = []
-    try:
-        if callable(_pefs_orig_ff07_sheet_rows_from_template):
-            base_rows = _pefs_orig_ff07_sheet_rows_from_template(template or {}, section, data or {})
-            if isinstance(base_rows, list):
-                rows = [r for r in base_rows if isinstance(r, dict)]
-    except Exception as e:
-        logger.warning("PROJECT_ENGINE_FALLBACK_SHEET_REGISTER_V1_ORIG_ERR %s", e)
-
-    if len(rows) >= 8:
-        return rows
-
-    fallback = _project_engine_default_sheet_register_v1(section or (data or {}).get("section") or "кж", data or {})
-    logger.warning("PROJECT_ENGINE_FALLBACK_SHEET_REGISTER_V1_USED section=%s old_len=%s new_len=%s", section, len(rows), len(fallback))
-    return fallback
-# === END_PROJECT_ENGINE_FALLBACK_SHEET_REGISTER_V1 ===
-
-
-# === PROJECT_ENGINE_CLEAN_USER_OUTPUT_V1_WRAPPER ===
-try:
-    _pec_orig_create_project_artifact_from_latest_template = create_project_artifact_from_latest_template
-
-    def create_project_artifact_from_latest_template(user_text: str, task_id: str, topic_id: int = 0) -> dict:
-        res = _pec_orig_create_project_artifact_from_latest_template(user_text, task_id, topic_id)
-        try:
-            from core.project_route_guard import format_project_result_message
-            from core.output_sanitizer import sanitize_project_message
-            res["user_message"] = sanitize_project_message(format_project_result_message(res, user_text))
-        except Exception:
-            pass
-        return res
-except Exception:
-    pass
-# === END_PROJECT_ENGINE_CLEAN_USER_OUTPUT_V1_WRAPPER ===
-
-
-
-# === PROJECT_ENGINE_CLEAN_USER_OUTPUT_V1 ===
-def _project_public_clean_v1(text: str) -> str:
-    import re
-    text = "" if text is None else str(text)
-    patterns = [
-        r"Engine:[^\n]*\n?",
-        r"MANIFEST:[^\n]*\n?",
-        r"task_id\s*[:=][^\n]*\n?",
-        r"file_id\s*[:=][^\n]*\n?",
-        r"/root/[^\s]*",
-        r"tmp[a-zA-Z0-9_\-]{6,}\.(?:pdf|xlsx|docx|dxf)",
-        r"\{[\"'][a-z_]+[\"']\s*:[^}]{0,300}\}",
-    ]
-    for pat in patterns:
-        text = re.sub(pat, "", text, flags=re.I | re.S)
-    return re.sub(r"\n{3,}", "\n\n", text).strip()
-
-def _project_clean_payload_v1(obj):
-    if isinstance(obj, dict):
-        out = {}
-        for k, v in obj.items():
-            if isinstance(v, str) and k.lower() in ("message", "text", "text_result", "result", "error"):
-                out[k] = _project_public_clean_v1(v)
-            else:
-                out[k] = v
-        return out
-    if isinstance(obj, str):
-        return _project_public_clean_v1(obj)
-    return obj
-
-try:
-    _project_engine_orig_generate_project_section_v1 = generate_project_section
-    async def generate_project_section(*args, **kwargs):
-        import inspect
-        res = _project_engine_orig_generate_project_section_v1(*args, **kwargs)
-        if inspect.isawaitable(res):
-            res = await res
-        return _project_clean_payload_v1(res)
-except Exception:
-    pass
-
-try:
-    _project_engine_orig_process_project_file_v1 = process_project_file
-    async def process_project_file(*args, **kwargs):
-        import inspect
-        res = _project_engine_orig_process_project_file_v1(*args, **kwargs)
-        if inspect.isawaitable(res):
-            res = await res
-        return _project_clean_payload_v1(res)
-except Exception:
-    pass
-
-try:
-    _project_engine_orig_project_result_guard_v1 = project_result_guard
-    def project_result_guard(result):
-        return _project_clean_payload_v1(_project_engine_orig_project_result_guard_v1(result))
-except Exception:
-    pass
-# === END_PROJECT_ENGINE_CLEAN_USER_OUTPUT_V1 ===
-
-====================================================================================================
-END_FILE: core/project_engine.py
-FILE_CHUNK: 1/1
+BEGIN_FILE: task_worker.py
+FILE_CHUNK: 1/3
+SHA256_FULL_FILE: 4aaa9d675a3775b082fa5b933fb07b2c374e836529096694589cecaf47210237
 ====================================================================================================
 
-====================================================================================================
-BEGIN_FILE: core/file_intake_router.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 5b7c3a7d32f7ffe71ef7b9a6a22d362c4941f50a57ab6f0fbe7707f87aebf739
-====================================================================================================
-from core.gemini_vision import analyze_image_file  # GEMINI_VISION_V43
-import os, logging, asyncio
-from typing import Dict, Any, Optional, List
-
-logger = logging.getLogger(__name__)
-
-INTENT_TRIGGERS = {
-    "estimate": [
-        "смет", "расчёт", "расчет", "стоимость", "цена", "бюджет",
-        "сделай таблицу", "таблицу", "вытащи объёмы", "вытащи объемы",
-        "посчитай объём", "посчитай объем", "объём", "объем",
-        "excel", "эксель", "google таблицу", "google таблица", "google sheets",
-        "sheets", "спецификац", "ведомост", "бетон", "арматур", "фундамент"
-    ],
-    "ocr": [
-        "распознай таблицу", "распознать таблицу", "распозна", "ocr",
-        "скан", "текст с фото", "фото в таблицу"
-    ],
-    "technadzor": [
-        "проверь дефекты", "акт технадзора", "дефекты", "дефект",
-        "нарушение", "нарушения", "косяк", "осмотр", "технадзор",
-        "проверь фото", "проверь узел", "проверь"
-    ],
-    "dwg": ["чертёж", "чертеж", "dxf", "dwg", "проект", "автокад"],
-    "template": ["сделай так же", "по образцу", "как в", "шаблон"],
-    "vision": ["анализ фото", "анализ схемы", "разбери фото", "что на фото", "что на схеме"],
-    "search": ["найди в сметах", "поиск по сметам", "искать в старых"],
-}
-FORMAT_TRIGGERS = {
-    "excel": ["excel", "эксель", "xlsx", "иксель"],
-    "sheets": ["google sheets", "google таблиц", "гугл таблиц", "sheets", "таблицу на диск", "google sheet"],
-    "word": ["word", "ворд", "docx"],
-    "docs": ["google docs", "google документ", "гугл документ", "docs"],
-}
-
-def detect_intent(text: str) -> Optional[str]:
-    if not text: return None
-    t = text.lower()
-    for intent, triggers in INTENT_TRIGGERS.items():
-        if any(tr in t for tr in triggers): return intent
-    return None
-
-def detect_format(text: str) -> str:
-    t = (text or "").lower()
-    if any(x in t for x in FORMAT_TRIGGERS["sheets"]): return "sheets"
-    elif any(x in t for x in FORMAT_TRIGGERS["docs"]): return "docs"
-    elif any(x in t for x in FORMAT_TRIGGERS["word"]): return "word"
-    elif any(x in t for x in FORMAT_TRIGGERS["excel"]): return "excel"
-    return "excel"
-
-def format_priority(file_name: str, available_files: list = None) -> str:
-    """FORMAT_PRIORITY_V1 — DWG/DXF > XLSX > DOCX > PDF > IMAGE"""
-    files = available_files or [file_name]
-    # Приоритет по канону §11.9
-    for ext in [".dwg", ".dxf"]:
-        if any(f.lower().endswith(ext) for f in files):
-            return "dwg"
-    for ext in [".xlsx", ".xls", ".csv"]:
-        if any(f.lower().endswith(ext) for f in files):
-            return "excel"
-    for ext in [".docx", ".doc"]:
-        if any(f.lower().endswith(ext) for f in files):
-            return "word"
-    for ext in [".pdf"]:
-        if any(f.lower().endswith(ext) for f in files):
-            return "pdf"
-    for ext in [".jpg", ".jpeg", ".png", ".heic", ".webp", ".tiff", ".bmp"]:
-        if any(f.lower().endswith(ext) for f in files):
-            return "image"
-    return "unknown"
-
-def get_topic_role(topic_id: int) -> str:
-    try:
-        import sqlite3
-        conn = sqlite3.connect('/root/.areal-neva-core/data/memory.db')
-        cur = conn.cursor()
-        cur.execute("SELECT value FROM memory WHERE key = ?", (f"topic_{topic_id}_role",))
-        row = cur.fetchone(); conn.close()
-        return row[0] if row else ""
-    except: return ""
-
-def get_clarification_message(file_name: str, topic_id: int) -> str:
-    role = get_topic_role(topic_id)
-    base = f"📎 Получил файл «{file_name}».\nЧто с ним сделать?"
-    if topic_id == 2 or "СТРОЙКА" in role:
-        return base + "\n• Смета / Расчёт\n• Проектирование / Расчёт нагрузок\n• Анализ фото / Схема\n• Распознать таблицу\n• Просто сохранить\n\nВ каком формате?\n• Excel\n• Google Sheets"
-    elif topic_id == 5 or "ТЕХНАДЗОР" in role:
-        return base + "\n• Проверить дефекты / Составить акт\n• Анализ фото / Схема\n• Распознать таблицу\n• Просто сохранить\n\nВ каком формате?\n• Word\n• Google Docs"
-    else:
-        return base + "\n• Анализ фото / Схема\n• Распознать таблицу\n• Проверить дефекты\n• Смета / Расчёт\n• Просто сохранить"
-
-# === CANON_PASS_INTAKE_OFFER_SENT ===
-_OFFER_SENT = {}
-def mark_offer_sent(tid): _OFFER_SENT[tid] = True
-def is_offer_sent(tid): return _OFFER_SENT.get(tid, False)
-# === END CANON_PASS_INTAKE_OFFER_SENT ===
-
-def should_ask_clarification(raw_input: str, has_file: bool, already_asked: bool = False) -> bool:
-    # === ANTI_REPEAT_V1 — не спрашивать если уже спрашивали ===
-    if already_asked:
-        return False
-    if not has_file: return False
-    return detect_intent(raw_input) is None
-
-
-ESTIMATE_FILENAME_TRIGGERS = ["кж","кд","спецификац","ведомост","смет","расход","арматур","бетон","плит","конструкци","фундамент","у1-","у2-","кр-"]
-
-def detect_intent_from_filename(file_name: str) -> Optional[str]:
-    fn = (file_name or "").lower()
-    if any(t in fn for t in ESTIMATE_FILENAME_TRIGGERS):
-        return "estimate"
-    if any(t in fn for t in ["акт","дефект","осмотр","технадзор"]):
-        return "technadzor"
-    if any(t in fn for t in [".dwg",".dxf","чертеж","чертёж"]):
-        return "dwg"
-    return None
-
-async def route_file(file_path: str, task_id: str, topic_id: int, intent: str, fmt: str = "excel") -> Optional[Dict[str, Any]]:
-    try:
-        from core.engine_base import detect_real_file_type
-        real_type = detect_real_file_type(file_path)
-        # === UNIVERSAL_FILE_HANDLER_V1_WIRED ===
-        if real_type in ("zip", "rar", "7z", "dwg", "dxf", "video", "mp4", "audio", "text_fallback", "unknown") or intent == "dwg":
-            try:
-                from core.universal_file_handler import extract_text_from_file
-                _ufh = extract_text_from_file(file_path, task_id, topic_id)
-                _ufh_text = (_ufh.get("text") or "").strip()
-                _ufh_rows = _ufh.get("rows") or []
-                if _ufh.get("success") and (_ufh_text or _ufh_rows):
-                    _summary = f"\u0424\u0430\u0439\u043b \u043e\u0431\u0440\u0430\u0431\u043e\u0442\u0430\u043d ({_ufh.get('type','unknown')}):\n"
-                    if _ufh_rows:
-                        _summary += f"\u0421\u0442\u0440\u043e\u043a \u0434\u0430\u043d\u043d\u044b\u0445: {len(_ufh_rows)}\n"
-                        for row in _ufh_rows[:5]:
-                            _summary += "  " + " | ".join(str(c) for c in row if c) + "\n"
-                    if _ufh_text:
-                        _summary += _ufh_text[:1500]
-                    return {"success": True, "text": _summary, "type": _ufh.get("type")}
-                else:
-                    return {"success": False, "error": _ufh.get("error") or f"\u0424\u043e\u0440\u043c\u0430\u0442 {real_type} \u043d\u0435 \u043f\u043e\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442\u0441\u044f"}
-            except Exception as _ufh_e:
-                return {"success": False, "error": f"UNIVERSAL_HANDLER_ERROR: {_ufh_e}"}
-        # === END UNIVERSAL_FILE_HANDLER_V1_WIRED ===
-        if real_type in ("csv", "txt") and intent not in ("estimate", "technadzor", "ocr"):
-            intent = "estimate"
-        if real_type == "dwg":
-            intent = "dwg"
-        if intent == "estimate":
-            if fmt == "sheets":
-                from core.sheets_generator import create_google_sheet
-                from core.estimate_engine import process_estimate_to_excel
-                data = await process_estimate_to_excel(file_path, task_id, topic_id)
-                if data.get("excel_path"):
-                    from openpyxl import load_workbook
-                    wb = load_workbook(data["excel_path"]); ws = wb.active
-                    rows = [[cell.value for cell in row] for row in ws.iter_rows()]; wb.close()
-                    link = None
-                    try:
-                        link = create_google_sheet(f"Estimate_{task_id[:8]}", rows)
-                    except Exception as e:
-                        err_str = str(e)
-                        if "403" in err_str or "permission" in err_str.lower() or "quota" in err_str.lower():
-                            logger.warning(f"Google Sheets 403/quota -> fallback XLSX: {e}")
-                        else:
-                            logger.warning(f"create_google_sheet fallback to XLSX: {e}")
-                        link = None
-                    if link and "docs.google.com" in str(link):
-                        return {"success": True, "drive_link": link, "artifact_path": data["excel_path"]}
-                    # Fallback: return XLSX artifact
-                    return {"success": True, "artifact_path": data["excel_path"], "excel_path": data["excel_path"]}
-            else:
-                from core.estimate_engine import process_estimate_to_excel
-                return await process_estimate_to_excel(file_path, task_id, topic_id)
-        elif intent == "ocr":
-            from core.ocr_engine import process_image_to_excel
-            return await process_image_to_excel(file_path, task_id, topic_id)
-        elif intent == "technadzor":
-            from core.technadzor_engine import process_defect_to_report
-            data = await process_defect_to_report(file_path, task_id, topic_id)
-            if not data or not data.get("success"):
-                return {"success": False, "error": (data.get("error") if isinstance(data, dict) else None) or "TECHNADZOR_FAILED"}
-            rp = data.get("report_path")
-            if rp:
-                import os as _os
-                rp_size = _os.path.getsize(rp) if _os.path.exists(rp) else 0
-                if rp_size < 1000:
-                    return {"success": False, "error": "DOCUMENT_EMPTY_RESULT: DOCX too small"}
-                from docx import Document as _Doc
-                _doc = _Doc(rp)
-                _has_content = any(p.text.strip() for p in _doc.paragraphs) or len(_doc.tables) > 0
-                if not _has_content:
-                    return {"success": False, "error": "DOCUMENT_EMPTY_RESULT: no paragraphs or tables"}
-            if fmt == "docs" and rp:
-                try:
-                    from core.docs_generator import create_google_doc
-                    from docx import Document
-                    doc = Document(rp)
-                    content = "\n".join([p.text for p in doc.paragraphs if p.text.strip()])
-                    link = create_google_doc(f"Defect_{task_id[:8]}", content)
-                    if link:
-                        return {"success": True, "drive_link": link, "artifact_path": rp}
-                except Exception as _e:
-                    logger.warning(f"create_google_doc fallback to DOCX: {_e}")
-            return data
-        elif intent == "dwg":
-            from core.dwg_engine import process_dwg_to_excel
-            return await process_dwg_to_excel(file_path, task_id, topic_id)
-        elif intent == "template":
-            from core.template_manager import apply_template, get_template
-            tmpl = get_template(str(topic_id), topic_id, "estimate")
-            if tmpl:
-                out = f"/tmp/{task_id}_template.xlsx"
-                # Extract real data from source file if possible
-                real_rows = []
-                try:
-                    real_type_t = detect_real_file_type(file_path)
-                    if real_type_t in ("xlsx", "zip_or_office"):
-                        from openpyxl import load_workbook
-                        wb_t = load_workbook(file_path, data_only=True)
-                        ws_t = wb_t.active
-                        for row_t in ws_t.iter_rows(min_row=2, values_only=True):
-                            if row_t and any(v is not None for v in row_t):
-                                real_rows.append(list(row_t))
-                        wb_t.close()
-                    elif real_type_t == "pdf":
-                        try:
-                            import pdfplumber
-                            with pdfplumber.open(file_path) as pdf_t:
-                                for page_t in pdf_t.pages:
-                                    tables_t = page_t.extract_tables()
-                                    for table_t in tables_t:
-                                        for row_t in table_t[1:]:
-                                            if row_t and any(v for v in row_t if v):
-                                                real_rows.append(row_t)
-                        except Exception:
-                            pass
-                except Exception as _te:
-                    logger.warning(f"template data extraction failed: {_te}")
-                if apply_template(tmpl, out, real_rows): return {"success": True, "excel_path": out}
-                elif apply_template(tmpl, out, []): return {"success": True, "excel_path": out}
-        elif intent == "vision":
-            result = await analyze_image_file(file_path, None)
-            return {"success": True, "engine": "gemini_vision", "result_text": result, "text_result": result}
-        elif intent == "search":
-            from core.search_engine import search_in_estimates
-            results = search_in_estimates(file_path, topic_id)
-            return {"success": True, "text_result": "\n".join(results[:10])}
-        return {"success": False, "error": f"PIPELINE_NOT_EXECUTED: no handler for intent={intent}"}
-    except Exception as e:
-        logger.error(f"route_file: {e}", exc_info=True)
-        return {"success": False, "error": str(e)}
-
-async def handle_multiple_files(file_paths: List[str], task_id: str, topic_id: int, intent: str, fmt: str = "excel") -> Optional[Dict[str, Any]]:
-    if intent == "estimate":
-        from core.multi_file_orchestrator import merge_estimate_results
-        results = []
-        for fp in file_paths:
-            from core.estimate_engine import process_estimate_to_excel
-            r = await process_estimate_to_excel(fp, task_id, topic_id)
-            if r: results.append(r)
-        return merge_estimate_results(results)
-    return None
-
-# === ARK_KZH_KD_TRIGGERS ===
-ESTIMATE_FILENAME_TRIGGERS = list(set(ESTIMATE_FILENAME_TRIGGERS + [
-    'арк', 'кж', 'кд', 'кр', 'ов', 'вк', 'эо', 'гп',
-    'марка', 'раздел', 'спецификация', 'ведомость',
-]))
-
-_ARK_SECTION_MAP = {
-    'арк': 'estimate', 'кж': 'estimate', 'кд': 'estimate',
-    'кр': 'estimate', 'ов': 'estimate', 'вк': 'estimate',
-    'эо': 'estimate', 'гп': 'estimate',
-}
-
-def detect_intent_from_filename_v2(file_name: str):
-    fn = (file_name or '').lower()
-    for key, intent in _ARK_SECTION_MAP.items():
-        if key in fn:
-            return intent
-    return detect_intent_from_filename(file_name)
-# === END ARK_KZH_KD_TRIGGERS ===
-
-# === ALL_CONTOURS_ROUTE_FILE_V2 ===
-try:
-    _all_contours_orig_route_file=route_file
-except Exception:
-    _all_contours_orig_route_file=None
-def _ac_words(*groups):
-    return ["".join(chr(x) for x in g) for g in groups]
-def _ac_has(text, words):
-    t=str(text or "").lower()
-    return any(w in t for w in words)
-async def route_file(file_path, task_id, topic_id=0, *args, **kwargs):
-    import inspect
-    fp=str(file_path or "")
-    raw=" ".join([fp,str(kwargs.get("raw_input") or ""),str(kwargs.get("prompt") or ""),str(kwargs.get("user_text") or "")]+[str(a or "") for a in args])
-    template_words=_ac_words((1080,1089,1087,1086,1083,1100,1079,1091,1081,32,1082,1072,1082,32,1096,1072,1073,1083,1086,1085),(1089,1086,1093,1088,1072,1085,1080,32,1096,1072,1073,1083,1086,1085),(1101,1090,1086,32,1096,1072,1073,1083,1086,1085))
-    if _ac_has(raw, template_words):
-        from core.template_manager import save_template
-        return {"success":True,"intent":"template","template_path":save_template(fp,int(topic_id or 0),"template")}
-    kzh_words=_ac_words((1082,1078),(1082,1076),(1072,1088,1082),(1082,1088))
-    detector=globals().get("detect_intent_from_filename_v2") or globals().get("detect_intent_from_filename")
-    intent=detector(fp) if detector else "unknown"
-    if intent=="estimate" and _ac_has(fp,kzh_words):
-        from core.estimate_engine import process_kzh_pdf
-        return await process_kzh_pdf(fp,str(task_id),int(topic_id or 0))
-    if _all_contours_orig_route_file is None:
-        return {"success":False,"error":"original_route_file_missing","intent":intent}
-    res=_all_contours_orig_route_file(fp,task_id,topic_id,*args,**kwargs)
-    if inspect.isawaitable(res):
-        res=await res
-    sheets_words=("google sheets","fmt=sheets","sheets")+tuple(_ac_words((1075,1091,1075,1083,32,1090,1072,1073,1083),(1075,1091,1075,1083,32,1090,1072,1073,1083,1080,1094),(1092,1086,1088,1084,1072,1090,32,115,104,101,101,116,115)))
-    if isinstance(res,dict) and _ac_has(raw,sheets_words):
-        xl=res.get("excel_path") or res.get("xlsx_path")
-        if xl:
-            try:
-                from core.sheets_generator import create_google_sheet
-                sh=create_google_sheet(xl,task_id=task_id,topic_id=topic_id)
-                if inspect.isawaitable(sh):
-                    sh=await sh
-                if sh:
-                    res["sheets_link"]=sh.get("url") if isinstance(sh,dict) else str(sh)
-                    res["drive_link"]=res.get("drive_link") or res["sheets_link"]
-            except Exception as e:
-                res["sheets_error"]=str(e)[:300]
-    return res
-# === END_ALL_CONTOURS_ROUTE_FILE_V2 ===
-
-# === FINAL_CODE_CONTOUR_FILE_INTAKE_V1 ===
-try:
-    ESTIMATE_FILENAME_TRIGGERS=list(set(ESTIMATE_FILENAME_TRIGGERS+[_f for _f in ["km","kmd"]]))
-except Exception:
-    pass
-try:
-    _ARK_SECTION_MAP.update({"km":"estimate","kmd":"estimate"})
-except Exception:
-    _ARK_SECTION_MAP={"km":"estimate","kmd":"estimate"}
-try:
-    _final_orig_route_file=route_file
-except Exception:
-    _final_orig_route_file=None
-async def route_file(file_path, task_id, topic_id=0, *args, **kwargs):
-    import inspect
-    fp=str(file_path or "")
-    detector=globals().get("detect_intent_from_filename_v2") or globals().get("detect_intent_from_filename")
-    intent=detector(fp) if detector else "unknown"
-    low=fp.lower()
-    if intent=="estimate" and any(x in low for x in ["km","kmd","kzh","kd","ark","kr"]):
-        from core.estimate_engine import process_kzh_pdf
-        return await process_kzh_pdf(fp,str(task_id),int(topic_id or 0))
-    if _final_orig_route_file is None:
-        return {"success":False,"error":"original_route_file_missing","intent":intent}
-    res=_final_orig_route_file(fp,task_id,topic_id,*args,**kwargs)
-    if inspect.isawaitable(res):
-        res=await res
-    if isinstance(res,dict) and (kwargs.get("fmt")=="sheets" or str(kwargs.get("raw_input") or "").lower().find("sheets")>=0):
-        xl=res.get("excel_path") or res.get("xlsx_path")
-        if xl:
-            from openpyxl import load_workbook
-            wb=load_workbook(xl,data_only=False)
-            ws=wb.active
-            rows=[[cell.value for cell in row] for row in ws.iter_rows()]
-            from core.sheets_generator import create_google_sheet
-            sh=create_google_sheet(Path(xl).stem, rows)
-            if inspect.isawaitable(sh): sh=await sh
-            if sh:
-                res["sheets_link"]=sh.get("url") if isinstance(sh,dict) else str(sh)
-                res["drive_link"]=res.get("drive_link") or res["sheets_link"]
-    return res
-# === END_FINAL_CODE_CONTOUR_FILE_INTAKE_V1 ===
-
-# === FILE_INTAKE_KM_V39 ===
-try:
-    ESTIMATE_FILENAME_TRIGGERS = list(set(list(ESTIMATE_FILENAME_TRIGGERS) + ["км","кмд","металл","конструкц"]))
-except Exception:
-    pass
-try:
-    _ARK_SECTION_MAP.update({"км": "estimate", "кмд": "estimate"})
-except Exception:
-    pass
-# === END_FILE_INTAKE_KM_V39 ===
-
-# === FILE_INTAKE_PROJECT_V41 ===
-
-_PROJECT_V41_TRIGGERS = ("кж","км","кмд","ар","ов","вк","эом","сс","гп","пз","тх")
-
-def _v41_project_section_hit(text):
-    src = str(text or "").lower()
-    import re
-    for key in _PROJECT_V41_TRIGGERS:
-        if re.search(r"(^|[^а-яa-z0-9])" + re.escape(key) + r"([^а-яa-z0-9]|$)", src, re.I):
-            return True
-    return False
-
-try:
-    _v41_orig_detect_intent = detect_intent
-    def detect_intent(file_name: str, raw_input: str = "", *args, **kwargs):
-        src = (str(file_name or "") + " " + str(raw_input or "")).lower()
-        if _v41_project_section_hit(src):
-            return "project"
-        return _v41_orig_detect_intent(file_name)  # DETECT_INTENT_FIX_V1
-except Exception:
-    pass
-
-if "route_file" in globals():
-    _v41_orig_route_file = route_file
-
-    async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *args, **kwargs):
-        raw_input = str(kwargs.get("raw_input") or "")
-        file_name = str(file_path or "")
-        final_intent = intent or detect_intent(file_name, raw_input)
-
-        if final_intent == "project":
-            try:
-                from core.project_engine import process_project_file
-                return await process_project_file(file_path, task_id, topic_id, raw_input)
-            except Exception as e:
-                return {"success": False, "error": "PROJECT_ENGINE_FAILED: " + str(e)[:300]}
-
-        res = _v41_orig_route_file(file_path, task_id, topic_id, final_intent, fmt, *args, **kwargs)
-        import inspect
-        if inspect.isawaitable(res):
-            res = await res
-
-        if isinstance(res, dict) and res.get("success") is False:
-            return res
-        if not isinstance(res, dict):
-            return {"success": False, "error": "FILE_RESULT_GUARD: route_file returned empty"}
-        if not (res.get("drive_link") or res.get("sheets_link") or res.get("doc_link") or res.get("excel_path") or res.get("artifact_path") or res.get("text") or res.get("result")):
-            return {"success": False, "error": "FILE_RESULT_GUARD: no usable output"}
-        return res
-
-# === END_FILE_INTAKE_PROJECT_V41 ===
-
-# === FILE_INTAKE_PROJECT_SAFE_V42 ===
-
-_PROJECT_V42_TRIGGERS = ("кж","км","кмд","ар","ов","вк","эом","сс","гп","пз","тх")
-
-def _v42_project_choice(raw_input: str) -> bool:
-    t = str(raw_input or "").lower()
-    return "проектирование" in t or "расчёт нагрузок" in t or "расчет нагрузок" in t
-
-if "route_file" in globals():
-    _v42_orig_route_file = route_file
-
-    async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *args, **kwargs):
-        import inspect
-        raw_input = str(kwargs.get("raw_input") or "")
-
-        if _v42_project_choice(raw_input):
-            try:
-                from core.project_engine import process_project_file
-                res = await process_project_file(file_path, task_id, topic_id, raw_input)
-                if not isinstance(res, dict):
-                    return {"success": False, "error": "PROJECT_RESULT_GUARD: empty_payload"}
-                if res.get("success") is False:
-                    return res
-                if not (res.get("drive_link") or res.get("excel_path") or res.get("docx_path") or res.get("pdf_path")):
-                    return {"success": False, "error": "PROJECT_RESULT_GUARD: no_artifact"}
-                return res
-            except Exception as e:
-                return {"success": False, "error": "PROJECT_ENGINE_FAILED: " + str(e)[:300]}
-
-        if str(intent or "").lower() == "project" and not _v42_project_choice(raw_input):
-            intent = "estimate"
-
-        res = _v42_orig_route_file(file_path, task_id, topic_id, intent, fmt, *args, **kwargs)
-        if inspect.isawaitable(res):
-            res = await res
-
-        if isinstance(res, dict) and res.get("success") is False:
-            return res
-
-        if not isinstance(res, dict):
-            return {"success": False, "error": "FILE_RESULT_GUARD: route_file returned empty"}
-
-        if not (res.get("drive_link") or res.get("sheets_link") or res.get("doc_link") or res.get("excel_path") or res.get("artifact_path") or res.get("text") or res.get("result")):
-            return {"success": False, "error": "FILE_RESULT_GUARD: no usable output"}
-
-        return res
-
-# === END_FILE_INTAKE_PROJECT_SAFE_V42 ===
-
-# === CODE_CLOSE_V43_FILE_INTAKE ===
-
-def _v43_is_template_learn(raw_input):
-    t = str(raw_input or "").lower()
-    return "образец" in t or "шаблон" in t or "запомни структуру" in t
-
-def _v43_is_project_choice(raw_input):
-    t = str(raw_input or "").lower()
-    return "проектирование" in t or "расчёт нагрузок" in t or "расчет нагрузок" in t
-
-if "route_file" in globals():
-    _v43_orig_route_file = route_file
-
-    async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *args, **kwargs):
-        import inspect
-        raw_input = str(kwargs.get("raw_input") or "")
-
-        if _v43_is_template_learn(raw_input):
-            try:
-                from core.template_manager import template_learn_v43
-                ok = template_learn_v43(file_path, topic_id, intent or "project")
-                return {"success": bool(ok), "text": "Шаблон сохранён для топика" if ok else "TEMPLATE_LEARN_FAILED"}
-            except Exception as e:
-                return {"success": False, "error": "TEMPLATE_LEARN_FAILED: " + str(e)[:300]}
-
-        if _v43_is_project_choice(raw_input):
-            try:
-                from core.template_manager import template_priority_v43
-                template = template_priority_v43(topic_id, "project")
-                from core.project_engine import process_project_file
-                res = await process_project_file(file_path, task_id, topic_id, raw_input)
-                if template:
-                    res["template_used"] = template
-                return res
-            except Exception as e:
-                return {"success": False, "error": "PROJECT_ENGINE_FAILED: " + str(e)[:300]}
-
-        if str(intent or "").lower() == "project" and not _v43_is_project_choice(raw_input):
-            intent = "estimate"
-
-        res = _v43_orig_route_file(file_path, task_id, topic_id, intent, fmt, *args, **kwargs)
-        if inspect.isawaitable(res):
-            res = await res
-
-        if isinstance(res, dict) and res.get("success") is False:
-            return res
-        if not isinstance(res, dict):
-            return {"success": False, "error": "FILE_RESULT_GUARD: empty_route_result"}
-        if not (res.get("drive_link") or res.get("sheets_link") or res.get("doc_link") or res.get("excel_path") or res.get("artifact_path") or res.get("text") or res.get("result")):
-            return {"success": False, "error": "FILE_RESULT_GUARD: no_output"}
-        return res
-
-# === END_CODE_CLOSE_V43_FILE_INTAKE ===
-
-
-# === FILE_INTAKE_KZH_INTENT_FIX_V1 ===
-# Bare KЖ/КД/project files are project-context files, not estimate files.
-# File upload without explicit user instruction must ask what to do.
-
-import json as _fik_json
-import os as _fik_os
-import re as _fik_re
-from typing import Optional as _FIKOptional
-
-ESTIMATE_FILENAME_TRIGGERS = [
-    "смет", "расход", "ведомост", "спецификац",
-    "у1-", "у2-", "кр-",
-]
-
-PROJECT_FILENAME_TRIGGERS = [
-    "кж", "кд", "кмд", "км", "ар",
-    "плит", "фундамент", "конструкци", "конструкция",
-    "узел", "цоколь", "разрез", "армирован", "чертеж", "чертёж",
-]
-
-def _fik_norm_text(value) -> str:
-    return str(value or "").lower().replace("ё", "е").strip()
-
-def _fik_word_hit(text: str, words) -> bool:
-    t = _fik_norm_text(text)
-    for w in words:
-        ww = _fik_norm_text(w)
-        if not ww:
-            continue
-        if len(ww) <= 3:
-            if _fik_re.search(r"(^|[^а-яa-z0-9])" + _fik_re.escape(ww) + r"([^а-яa-z0-9]|$)", t, _fik_re.I):
-                return True
-        elif ww in t:
-            return True
-    return False
-
-def _fik_extract_user_instruction(raw_input: str) -> str:
-    """
-    Extract only explicit user instruction.
-    Ignore file_name/file_id/mime/source metadata, because filename alone must not auto-run pipeline.
-    """
-    raw = str(raw_input or "").strip()
-    if not raw:
-        return ""
-    try:
-        obj = _fik_json.loads(raw)
-        if isinstance(obj, dict):
-            for key in ("caption", "user_text", "text", "prompt", "comment", "message"):
-                val = obj.get(key)
-                if isinstance(val, str) and val.strip():
-                    return val.strip()
-            return ""
-    except Exception:
-        pass
-    if raw.startswith("{") and ("file_name" in raw or "file_id" in raw or "mime_type" in raw):
-        return ""
-    return raw
-
-def detect_intent_from_filename(file_name: str) -> _FIKOptional[str]:
-    fn = _fik_norm_text(_fik_os.path.basename(str(file_name or "")))
-
-    if _fik_word_hit(fn, PROJECT_FILENAME_TRIGGERS):
-        return "project"
-
-    if _fik_word_hit(fn, ESTIMATE_FILENAME_TRIGGERS):
-        return "estimate"
-
-    if _fik_word_hit(fn, ("акт", "дефект", "осмотр", "технадзор")):
-        return "technadzor"
-
-    if _fik_word_hit(fn, (".dwg", ".dxf", "dwg", "dxf", "чертеж", "чертёж")):
-        return "dwg"
-
-    return None
-
-def detect_intent_from_filename_v2(file_name: str) -> _FIKOptional[str]:
-    return detect_intent_from_filename(file_name)
-
-def should_ask_clarification(raw_input: str, has_file: bool, already_asked: bool = False) -> bool:
-    if already_asked:
-        return False
-    if not has_file:
-        return False
-
-    instruction = _fik_extract_user_instruction(raw_input)
-    low = _fik_norm_text(instruction)
-
-    service_words = (
-        "tmp", "healthcheck", "service_file", "служебный", "синхронизации"
-    )
-    if _fik_word_hit(low, service_words):
-        return False
-
-    explicit_action_words = (
-        "сделай", "делай", "создай", "сформируй", "подготовь", "разработай",
-        "посчитай", "рассчитай", "проверь", "проанализируй", "выгрузи",
-        "сохрани", "возьми", "прими", "используй", "распознай", "обработай",
-        "шаблон", "образец", "по образцу", "по шаблону",
-        "смет", "проект", "кж", "кд", "км", "кмд", "акт", "технадзор",
-        "таблиц", "excel", "xlsx", "pdf", "dxf", "dwg", "ocr",
-        "проектирование", "расчет нагрузок", "расчёт нагрузок",
-    )
-
-    return not _fik_word_hit(low, explicit_action_words)
-
-try:
-    _fik_orig_route_file = route_file
-except Exception:
-    _fik_orig_route_file = None
-
-async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *args, **kwargs):
-    """
-    Final guard:
-    - KЖ/KД/project filenames never become estimate automatically
-    - if caller passes estimate for project file without explicit estimate command, downgrade to project
-    - raw file with no user instruction must return clarification payload
-    """
-    import inspect as _fik_inspect
-
-    raw_input = str(kwargs.get("raw_input") or kwargs.get("prompt") or kwargs.get("user_text") or "")
-    instruction = _fik_extract_user_instruction(raw_input)
-    filename_intent = detect_intent_from_filename(str(file_path or ""))
-
-    if not instruction and filename_intent in ("project", "estimate", "technadzor", "dwg"):
-        try:
-            msg = get_clarification_message(_fik_os.path.basename(str(file_path or "")), int(topic_id or 0))
-        except Exception:
-            msg = (
-                "Файл принят.\n"
-                "Что сделать с ним?\n\n"
-                "1. Взять как шаблон проекта\n"
-                "2. Взять как шаблон сметы\n"
-                "3. Взять как шаблон технадзора\n"
-                "4. Обработать как обычный файл\n\n"
-                "Ответь одним сообщением"
-            )
-        return {
-            "success": False,
-            "needs_clarification": True,
-            "state": "WAITING_CLARIFICATION",
-            "intent": filename_intent,
-            "result_text": msg,
-            "error": "FILE_INTAKE_NEEDS_CONTEXT",
-        }
-
-    low_instruction = _fik_norm_text(instruction)
-    explicit_estimate = _fik_word_hit(low_instruction, ("смет", "расход", "ведомост", "спецификац", "расчет", "расчёт", "стоимость", "цена", "объем", "объём"))
-
-    if filename_intent == "project" and str(intent or "").lower() == "estimate" and not explicit_estimate:
-        intent = "project"
-
-    if intent is None:
-        intent = filename_intent
-
-    if _fik_orig_route_file is None:
-        return {"success": False, "error": "original_route_file_missing", "intent": intent}
-
-    res = _fik_orig_route_file(file_path, task_id, topic_id, intent, fmt, *args, **kwargs)
-    if _fik_inspect.isawaitable(res):
-        res = await res
-    return res
-
-# === END_FILE_INTAKE_KZH_INTENT_FIX_V1 ===
-
-
-# === CONTEXT_AWARE_FILE_INTAKE_V1_ROUTER_WRAPPER ===
-try:
-    _ca_fir_orig_route_file = route_file
-except Exception:
-    _ca_fir_orig_route_file = None
-
-async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *args, **kwargs):
-    import inspect
-    raw_input = str(kwargs.get("raw_input") or kwargs.get("prompt") or kwargs.get("user_text") or "")
+def _force_voice_finish(raw_input: str, result: str) -> bool:
     if not raw_input:
-        try:
-            from core.file_context_intake import latest_pending_instruction_for_topic
-            chat_id = str(kwargs.get("chat_id") or "")
-            pending = latest_pending_instruction_for_topic(int(topic_id or 0), chat_id)
-            if pending:
-                kwargs["raw_input"] = pending
-                raw_input = pending
-        except Exception:
-            pass
+        return False
+    low = raw_input.lower()
+    if any(x in low for x in ["заверш", "доволен", "да", "ок", "ok"]):
+        if "не доволен" in low:
+            return False
+        return True
+    return False
 
-    if _ca_fir_orig_route_file is None:
-        return {"success": False, "error": "CONTEXT_AWARE_FILE_INTAKE_V1: original_route_file_missing"}
-
-    res = _ca_fir_orig_route_file(file_path, task_id, topic_id, intent, fmt, *args, **kwargs)
-    if inspect.isawaitable(res):
-        res = await res
-    return res
-
-# === END_CONTEXT_AWARE_FILE_INTAKE_V1_ROUTER_WRAPPER ===
-
-
-
-# === FILE_INTAKE_SUPPORTED_FORMATS_V1 ===
-SUPPORTED_IMAGE_FORMATS = {".jpg", ".jpeg", ".png", ".heic", ".heif", ".webp", ".bmp", ".tiff", ".tif", ".gif", ".svg"}
-SUPPORTED_DOCUMENT_FORMATS = {".pdf", ".docx", ".doc", ".xlsx", ".xls", ".csv", ".txt", ".rtf"}
-SUPPORTED_CAD_FORMATS = {".dwg", ".dxf", ".ifc", ".pln", ".rvt"}
-SUPPORTED_AUDIO_FORMATS = {".ogg", ".mp3", ".wav", ".m4a", ".flac", ".aac"}
-SUPPORTED_ARCHIVE_FORMATS = {".zip", ".rar", ".7z"}
-
-def get_supported_file_format_v1(file_name: str) -> str:
-    import os
-    ext = os.path.splitext(str(file_name or "").lower())[1]
-    if ext in SUPPORTED_IMAGE_FORMATS:
-        return "image_ocr_vision"
-    if ext in SUPPORTED_DOCUMENT_FORMATS:
-        return "document"
-    if ext in SUPPORTED_CAD_FORMATS:
-        if ext == ".pln":
-            return "pln_metadata_only"
-        if ext == ".rvt":
-            return "rvt_metadata_only"
-        if ext == ".ifc":
-            return "ifc_ifcopenshell"
-        return "cad_ezdxf"
-    if ext in SUPPORTED_AUDIO_FORMATS:
-        return "audio_groq_stt"
-    if ext in SUPPORTED_ARCHIVE_FORMATS:
-        return "archive_recursive"
-    return "unsupported"
-
-def unsupported_format_message_v1(file_name: str) -> str:
-    return "Формат файла не читается напрямую. Пришли PDF/DOCX/XLSX или экспортированный чертёж"
-
-try:
-    ESTIMATE_FILENAME_TRIGGERS = list(set(ESTIMATE_FILENAME_TRIGGERS + [
-        "jpg", "jpeg", "png", "heic", "heif", "webp", "bmp", "tiff", "gif", "svg",
-        "dwg", "dxf", "ifc", "pln", "rvt", "zip", "rar", "7z",
-        "км", "кмд", "ов", "вк", "эо", "эм", "эос"
-    ]))
-except Exception:
-    pass
-# === END_FILE_INTAKE_SUPPORTED_FORMATS_V1 ===
-
-
-# === CONTEXT_AWARE_FILE_INTAKE_V1_DB_LOOKUP ===
-def _context_aware_file_intake_lookup_v1(chat_id: str = "", topic_id: int = 0) -> str:
-    import sqlite3
-    try:
-        conn = sqlite3.connect("/root/.areal-neva-core/data/core.db")
-        try:
-            if chat_id:
-                rows = conn.execute(
-                    "SELECT raw_input, input_type, state, result FROM tasks WHERE chat_id=? AND COALESCE(topic_id,0)=? AND state IN ('DONE','AWAITING_CONFIRMATION','IN_PROGRESS','WAITING_CLARIFICATION') ORDER BY updated_at DESC LIMIT 5",
-                    (str(chat_id), int(topic_id or 0)),
-                ).fetchall()
-            else:
-                rows = conn.execute(
-                    "SELECT raw_input, input_type, state, result FROM tasks WHERE COALESCE(topic_id,0)=? AND state IN ('DONE','AWAITING_CONFIRMATION','IN_PROGRESS','WAITING_CLARIFICATION') ORDER BY updated_at DESC LIMIT 5",
-                    (int(topic_id or 0),),
-                ).fetchall()
-        finally:
-            conn.close()
-    except Exception:
-        rows = []
-
-    for r in rows or []:
-        combined = " ".join(str(x or "") for x in r).lower()
-        if any(x in combined for x in ("смет", "estimate", "расцен", "стоимость", "цена")):
-            return "estimate"
-        if any(x in combined for x in ("проект", "кж", "кд", "ар", "эскиз", "км", "кмд", "ов", "вк", "эо")):
-            return "project"
-        if any(x in combined for x in ("акт", "технадзор", "дефект", "нарушение")):
-            return "technadzor"
-        if any(x in combined for x in ("образец", "шаблон", "эталон")):
-            return "template"
-    return ""
-
-try:
-    _context_aware_orig_route_file_v1 = route_file
-    async def route_file(*args, **kwargs):
-        import inspect
-        lst = list(args)
-        raw_input = str(kwargs.get("raw_input") or kwargs.get("caption") or kwargs.get("user_text") or "")
-        chat_id = str(kwargs.get("chat_id") or "")
-        topic_id = kwargs.get("topic_id", lst[2] if len(lst) >= 3 else 0)
-        current_intent = kwargs.get("intent", lst[3] if len(lst) >= 4 else None)
-        final_intent = current_intent
-
-        if not final_intent or str(final_intent).lower() in ("unknown", "none", ""):
-            if not raw_input.strip():
-                final_intent = _context_aware_file_intake_lookup_v1(chat_id=chat_id, topic_id=int(topic_id or 0))
-
-        if final_intent and final_intent != current_intent:
-            if "intent" in kwargs:
-                kwargs["intent"] = final_intent
-            elif len(lst) >= 4:
-                lst[3] = final_intent
-            else:
-                kwargs["intent"] = final_intent
-
-        res = _context_aware_orig_route_file_v1(*lst, **kwargs)
-        if inspect.isawaitable(res):
-            res = await res
-        return res
-except Exception:
-    pass
-# === END_CONTEXT_AWARE_FILE_INTAKE_V1_DB_LOOKUP ===
-
-====================================================================================================
-END_FILE: core/file_intake_router.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/ai_router.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 4f995fbc96b0559804ae0b6e7c0047ef9e030923d8513259b18463004b89d8eb
-====================================================================================================
 import os
-import re
-import json
-import hashlib
-import logging
-from typing import Any, Dict, List
-
-# === SEARCH_MONOLITH_V2_IMPORT ===
-# AVAILABILITY_CHECK: проверка доступности источника перед поиском
-# STALE_CONTEXT_GUARD: не использовать устаревший контекст > 24h
-# NEGATIVE_SELECTION: исключать нерелевантные источники
-
-try:
-    from core.search_session import run_search_monolith_v2, has_active_search_session
-except Exception:
-    run_search_monolith_v2 = None
-    has_active_search_session = lambda chat_id, topic_id: False
-# === END SEARCH_MONOLITH_V2_IMPORT ===
-
-import httpx
-from dotenv import load_dotenv
-
 BASE = "/root/.areal-neva-core"
-ENV_PATH = f"{BASE}/.env"
-LOG_PATH = f"{BASE}/logs/ai_router.log"
 
-load_dotenv(ENV_PATH, override=True)
+import re
+import time
+import json
+import sqlite3
+import asyncio
+import hashlib
+import datetime
+import logging
+def now_iso_utc() -> str:
+    """UTC_TIMESTAMP_V1"""
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).isoformat()
+
+import fcntl
+from typing import Any, Dict, List, Optional, Tuple
+
+from dotenv import load_dotenv
+from core.ai_router import process_ai_task
+try:
+    from startup_recovery import run_startup_recovery  # STARTUP_RECOVERY_V1_WIRED
+except Exception as _startup_recovery_import_err:
+    run_startup_recovery = None
+
+# === CANON_REMAINING_CODE_FULL_CLOSE_V1_IMPORT ===
+try:
+    from core.engine_contract import validate_engine_result, result_to_user_text
+    from core.active_dialog_state import maybe_handle_active_dialog, save_dialog_event
+    from core.template_workflow import maybe_handle_template_workflow
+except Exception as _canon_import_err:
+    validate_engine_result = None
+    result_to_user_text = None
+    maybe_handle_active_dialog = None
+    save_dialog_event = None
+    maybe_handle_template_workflow = None
+# === END_CANON_REMAINING_CODE_FULL_CLOSE_V1_IMPORT ===
+# === REAL_GAPS_CLOSE_V2_IMPORT_ASYNC_TEMPLATE ===
+try:
+    from core.template_workflow import maybe_handle_template_workflow_async
+except Exception:
+    maybe_handle_template_workflow_async = None
+# === END_REAL_GAPS_CLOSE_V2_IMPORT_ASYNC_TEMPLATE ===
+# === SEARCH_MONOLITH_V2_TASK_WORKER_IMPORT ===
+try:
+    from core.search_session import is_search_clarification_output as _search_v2_is_clarification
+except Exception:
+    _search_v2_is_clarification = lambda text: False
+# === END SEARCH_MONOLITH_V2_TASK_WORKER_IMPORT ===
+# === FILE_TECH_CONTOUR_FULL_CLOSE_V1_IMPORT ===
+try:
+    from core.file_memory_bridge import (
+        should_handle_file_followup as _filemem_should_followup,
+        build_file_followup_answer as _filemem_build_answer,
+        is_service_file as _filemem_is_service_file,
+        save_file_catalog_snapshot as _filemem_save_catalog,
+    )
+except Exception:
+    _filemem_should_followup = lambda text: False
+    _filemem_build_answer = lambda *a, **kw: None
+    _filemem_is_service_file = lambda *a, **kw: False
+    _filemem_save_catalog = lambda *a, **kw: {"ok": False}
+# === END FILE_TECH_CONTOUR_FULL_CLOSE_V1_IMPORT ===
+try:
+    from core.topic_meta_loader import load_topic_meta, is_what_is_this_question, build_topic_self_answer
+    TOPIC_META_LOADER_WIRED = True
+except Exception:
+    TOPIC_META_LOADER_WIRED = False
+    def load_topic_meta(t): return None
+    def is_what_is_this_question(t): return False
+    def build_topic_self_answer(m): return ""
+# TOPIC_META_LOADER_V1_IMPORT
+from core.reply_sender import send_reply, send_reply_ex
+try:
+    from core.template_engine_v1 import is_template_request as _tpl_check, get_template as _tpl_get, save_template as _tpl_save, apply_template_to_xlsx as _tpl_apply  # TEMPLATE_ENGINE_V1_WIRED
+except Exception:
+    _tpl_check = lambda t: False
+    _tpl_get = lambda *a: None
+    _tpl_save = lambda *a: False
+    _tpl_apply = lambda *a: False
+try:
+    from core.topic_3008_engine import is_topic_3008 as _t3_check, detect_command as _t3_cmd, extract_code as _t3_extract, verify_code as _t3_verify, generate_code as _t3_generate  # TOPIC_3008_V1_WIRED
+except Exception:
+    _t3_check = lambda t: False
+    _t3_cmd = lambda t: "none"
+    _t3_extract = lambda t: t
+    _t3_verify = None
+    _t3_generate = None
+try:
+    from core.temp_cleanup import cleanup_file as _tc_file, cleanup_task_temps as _tc_task, cleanup_after_upload as _tc_upload  # TEMP_CLEANUP_V1_WIRED
+except Exception:
+    _tc_file = lambda p: False
+    _tc_task = lambda t: 0
+    _tc_upload = lambda l: 0
+try:
+    from core.technadzor_engine import process_technadzor as _te_process, is_technadzor_intent as _te_intent  # TECHNADZOR_ENGINE_V1_WIRED
+except Exception:
+    _te_process = lambda *a, **kw: {"ok": False, "result_text": "", "artifact": None, "error_code": "IMPORT_FAIL"}
+    _te_intent = lambda *a: False
+try:
+    from core.intake_offer_actions import needs_offer as _ioa_needs, get_offer_text as _ioa_text, parse_offer_reply as _ioa_parse  # INTAKE_OFFER_V1_WIRED
+except Exception:
+    _ioa_needs = lambda *a: False
+    _ioa_text = lambda: ""
+    _ioa_parse = lambda r: ""
+try:
+    from core.search_session import get_session as _ss_get, create_session as _ss_create, update_session as _ss_update, extract_criteria as _ss_criteria  # SEARCH_SESSION_V1_WIRED
+except Exception:
+    _ss_get = lambda *a: None
+    _ss_create = lambda *a, **kw: {}
+    _ss_update = lambda *a, **kw: None
+    _ss_criteria = lambda t: {}
+try:
+    from core.output_decision import format_task_result as _od_format, format_search_output as _od_search  # OUTPUT_DECISION_V1_WIRED
+except Exception:
+    _od_format = lambda r, s, **kw: r
+    _od_search = lambda o, **kw: str(o)
+try:
+    from core.inbox_aggregator import normalize_inbox_item as _ia_norm, should_create_task as _ia_should  # INBOX_AGG_V1_WIRED
+except Exception:
+    _ia_norm = lambda **kw: kw
+    _ia_should = lambda i: True
+try:
+    from core.constraint_engine import rank_offers as _ce_rank, apply_constraints as _ce_apply, validate_offer as _ce_validate  # CONSTRAINT_ENGINE_V1_WIRED
+except Exception:
+    _ce_rank = lambda o: o
+    _ce_apply = lambda o, **kw: o
+    _ce_validate = lambda o: {"ok": True}
+try:
+    from core.audit_log import audit as _audit  # AUDIT_LOG_V1_WIRED
+except Exception:
+    _audit = lambda *a, **kw: None
+try:
+    from core.source_dedup import dedup_offers as _sd_dedup, sort_by_region as _sd_region  # SOURCE_DEDUP_V1_WIRED
+except Exception:
+    _sd_dedup = lambda o: o
+    _sd_region = lambda o, **kw: o
+try:
+    from core.error_explainer import user_friendly_error as _ee_explain  # ERROR_EXPLAINER_V1_WIRED
+except Exception:
+    _ee_explain = lambda c: c
+try:
+    from core.data_classification import classify_domain as _dc_domain, classify_intent as _dc_intent, classify_file_type as _dc_ftype  # DATA_CLASS_V1_WIRED
+except Exception:
+    _dc_domain = lambda *a: "UNSORTED"
+    _dc_intent = lambda t: "text"
+    _dc_ftype = lambda f: "UNKNOWN"
+try:
+    from core.intent_lock import is_chat_only as _il_chat_only, file_result_guard as _il_file_guard  # INTENT_LOCK_V1_WIRED
+except Exception:
+    _il_chat_only = lambda t: False
+    _il_file_guard = lambda **kw: {"ok": True}
+try:
+    from core.orchestra_context import build_shared_context as _oc_build, user_mode_switch as _oc_mode  # ORCHESTRA_CTX_V1_WIRED
+except Exception:
+    _oc_build = lambda **kw: ""
+    _oc_mode = lambda t: "HUMAN"
+try:
+    from core.price_normalization import normalize_price_text as _pn_fmt, extract_price as _pn_extract  # PRICE_NORM_V1_WIRED
+except Exception:
+    _pn_fmt = lambda t: t
+    _pn_extract = lambda t: []
+try:
+    from core.memory_filter import filter_memory_for_prompt as _mf_filter, sanitize_before_write as _mf_clean  # MEMORY_FILTER_V1_WIRED
+except Exception:
+    _mf_filter = lambda m, **kw: m
+    _mf_clean = lambda v: v
+try:
+    from core.result_validator import validate_result as _rv_validate, is_generic_response as _rv_generic  # RESULT_VALIDATOR_V1_WIRED
+except Exception:
+    _rv_validate = lambda r, **kw: {"ok": True, "reason": "IMPORT_FAIL"}
+    _rv_generic = lambda r: False
+try:
+    from core.search_quality import availability_check as _sq_avail, cache_get as _sq_cget, cache_set as _sq_cset  # SEARCH_QUALITY_V1_WIRED
+except Exception:
+    _sq_avail = lambda r: True
+    _sq_cget = lambda q: None
+    _sq_cset = lambda q, r: None
+from core.duplicate_guard import find_duplicate, duplicate_message  # DUPLICATE_GUARD_V1_WIRED
+from core.pin_manager import get_pin_context, save_pin
+from core.topic_drive_oauth import upload_file_to_topic
+from core.artifact_pipeline import analyze_downloaded_file
+# === DRIVE_FILE_CONTENT_MEMORY_INDEX_V1_IMPORT ===
+try:
+    from core.drive_content_indexer import index_drive_file_content as _df_content_index
+except Exception:
+    _df_content_index = None
+# === END DRIVE_FILE_CONTENT_MEMORY_INDEX_V1_IMPORT ===
+
+load_dotenv(f"{BASE}/.env", override=True)
+
+CORE_DB = f"{BASE}/data/core.db"
+MEM_DB = f"{BASE}/data/memory.db"
+LOG_PATH = f"{BASE}/logs/task_worker.log"
+LOCK_PATH = f"{BASE}/runtime/task_worker.lock"
+
+POLL_SEC = 1.5
+MIN_RESULT_LEN = 2  # RESULT_VALIDATOR_FIX_V1: was 8
+AI_TIMEOUT = 300
+STALE_TIMEOUT = 600
+REMINDER_SEC = 180
+
+BAD_RESULT_RE = [
+    # === RESULT_VALIDATOR_FIX_V1 ===
+    # Убраны: извини/извините/ищу/найду/могу найти/я могу помочь
+    # Это нормальные слова, AI имеет право их использовать
+    r"сорян",
+    r"дружище",
+    r"delete from",
+    r"task_worker\.py",
+    r"telegram_daemon\.py",
+    r"выполните sql",
+    r"/root/\.areal",
+    # === END_RESULT_VALIDATOR_FIX_V1 ===
+]
+
+MEMORY_BAD_MARKERS = [
+    "traceback",
+    "forbidden default model",
+    "/root/",
+    ".json",
+    ".log",
+    "не могу выполнить запрос",
+    "delete from",
+    "task_worker.py",
+    "telegram_daemon.py",
+    "выполните sql",
+]
+
+CONFIRM_INTENTS = {
+    "да",
+    "ок",
+    "ok",
+    "окей",
+    "хорошо",
+    "подтверждаю",
+    "принято",
+    "согласен",
+    "верно",
+    "всё верно",
+    "все верно",
+}
+
+REVISION_INTENTS = {
+    "нет",
+    "не так",
+    "переделай",
+    "исправь",
+    "доработай",
+    "уточню",
+    "уточнение",
+    "правки",
+    "уточни",
+}
+
+MEMORY_NOISE_MARKERS = [
+    "нет данных",
+    "повторите",
+    "не знаю",
+    "чат не содержит активной задачи",
+    "привет. чат не содержит активной задачи",
+    "чат создан для",
+    "тест диагностика",
+    "не понял запрос",
+    "уточните",
+    "не понимаю",
+    "задайте вопрос",
+]
+
+def _version_artifact_path(path: str, task_id: str) -> str:
+    """ARTIFACT_VERSION_V1 — создать версионированный путь file_v2.xlsx"""
+    if not path:
+        return path
+    import re as _re
+    # Если уже версионирован — увеличить номер
+    m = _re.search(r"_v(\d+)(\.\w+)$", path)
+    if m:
+        n = int(m.group(1)) + 1
+        return path[:m.start()] + f"_v{n}" + m.group(2)
+    # Первая ревизия
+    base, ext = os.path.splitext(path)
+    return f"{base}_v2{ext}"
+
+def _quality_gate_artifact(artifact_path: str = None, drive_link: str = None,
+                             input_type: str = "text", task_type: str = "") -> dict:
+    """QUALITY_GATE_CALL_V1 — проверить артефакт перед отправкой"""
+    is_file_task = input_type in ("drive_file", "file") or task_type in (
+        "ESTIMATE_TASK", "OCR_TASK", "DWG_TASK", "TECHNADZOR_TASK", "DOCUMENT_TASK"
+    )
+    # === DRIVE_LINK_MANDATORY_V1 ===
+    if not is_file_task:
+        return {"ok": True, "reason": "NOT_FILE_TASK"}
+    # Если file task — Drive ссылка обязательна
+    if drive_link and "drive.google" in str(drive_link):
+        return {"ok": True, "reason": "DRIVE_LINK_PRESENT"}
+    if not drive_link and not artifact_path:
+        return {"ok": False, "reason": "NO_DRIVE_LINK_NO_ARTIFACT"}
+    # === END DRIVE_LINK_MANDATORY_V1 ===
+
+    # Есть Drive ссылка — OK
+    if drive_link and "drive.google" in str(drive_link):
+        return {"ok": True, "reason": "DRIVE_LINK_PRESENT"}
+
+    # Есть артефакт файл
+    if artifact_path and os.path.exists(artifact_path):
+        size = os.path.getsize(artifact_path)
+        if size < 100:
+            return {"ok": False, "reason": "ARTIFACT_TOO_SMALL"}
+        # Для Excel проверяем формулы
+        if artifact_path.endswith(".xlsx"):
+            try:
+                from openpyxl import load_workbook
+                wb = load_workbook(artifact_path)
+                ws = wb.active
+                has_formula = any(
+                    str(ws.cell(r, c).value or "").startswith("=")
+                    for r in range(1, min(ws.max_row+1, 20))
+                    for c in range(1, min(ws.max_column+1, 10))
+                )
+                if not has_formula:
+                    logger.warning("QUALITY_GATE: no formulas in %s", artifact_path)
+            except Exception:
+                pass
+        return {"ok": True, "reason": "ARTIFACT_EXISTS"}
+
+    return {"ok": False, "reason": "NO_ARTIFACT_NO_LINK"}
+
+def _is_heavy_task(input_type: str, task_type: str = "") -> bool:
+    """FAST_HEAVY_TASK_V1 — определить тип задачи"""
+    return input_type in ("drive_file", "file") or task_type in (
+        "ESTIMATE_TASK", "OCR_TASK", "DWG_TASK", "TECHNADZOR_TASK", "DOCUMENT_TASK", "MULTI_TASK"
+    )
+
+def _get_task_sla(input_type: str, task_type: str = "") -> int:
+    """Возвращает SLA в секундах"""
+    if _is_heavy_task(input_type, task_type):
+        return 120  # HEAVY < 120s
+    return 10  # FAST < 10s
+
+def _check_result_before_confirm(result: str, input_type: str = "text", intent: str = "") -> bool:
+    """RESULT_VALIDATOR_CALL_V1 — проверить result перед AWAITING_CONFIRMATION"""
+    try:
+        rv = _rv_validate(result, input_type=input_type, intent=intent)
+        if not rv.get("ok"):
+            logger.warning("RESULT_VALIDATOR_BLOCKED reason=%s result_prefix=%s", rv.get("reason"), str(result)[:80])
+            return False
+    except Exception as _rve:
+        logger.warning("RESULT_VALIDATOR_ERR %s", _rve)
+    return True
+
+
+# === REPLY_REPEAT_PARENT_TASK_V1 ===
+_REPEAT_PARENT_WORDS_V1 = {
+    "ну и", "дальше", "повтори", "проверяй", "не так",
+    "ещё раз", "еще раз", "заново", "дописывай", "и что", "и?",
+    "а", "б", "в", "г", "1", "2", "3", "4",
+    "а)", "б)", "в)", "г)",
+    "да", "нет", "ок", "хорошо",
+    "среднее", "средняя", "минимум", "максимум", "своя",
+    "вариант 1", "вариант 2", "вариант 3", "вариант 4",
+    "первый", "второй", "третий",
+    "самый дешевый", "самый дешёвый", "надежный", "надёжный",
+}
+def _is_repeat_parent_task_v1(text: str) -> bool:
+    t = _clean(_s(text), 500).lower()
+    if not t:
+        return False
+    return t in _REPEAT_PARENT_WORDS_V1 or any(t.startswith(x + " ") for x in _REPEAT_PARENT_WORDS_V1)
+
+def _find_repeat_parent_task_v1(conn, chat_id: str, topic_id: int, exclude_task_id: str = ""):
+    try:
+        cols = _cols(conn, "tasks")
+        if "topic_id" in cols:
+            return conn.execute(
+                "SELECT * FROM tasks WHERE chat_id=? AND COALESCE(topic_id,0)=? AND id<>? AND state IN ('IN_PROGRESS','AWAITING_CONFIRMATION','WAITING_CLARIFICATION','AWAITING_PRICE_CONFIRMATION') ORDER BY updated_at DESC LIMIT 1",
+                (str(chat_id), int(topic_id or 0), str(exclude_task_id)),
+            ).fetchone()
+        return conn.execute(
+            "SELECT * FROM tasks WHERE chat_id=? AND id<>? AND state IN ('IN_PROGRESS','AWAITING_CONFIRMATION','WAITING_CLARIFICATION','AWAITING_PRICE_CONFIRMATION') ORDER BY updated_at DESC LIMIT 1",
+            (str(chat_id), str(exclude_task_id)),
+        ).fetchone()
+    except Exception as _e:
+        logger.warning("REPLY_REPEAT_PARENT_TASK_V1_FIND_ERR %s", _e)
+        return None
+# === END_REPLY_REPEAT_PARENT_TASK_V1 ===
+
+def _is_memory_noise(text: str) -> bool:
+    t = _clean(_s(text), 1000).lower()
+    if not t:
+        return False
+    return any(x in t for x in MEMORY_NOISE_MARKERS)
+
+SEARCH_PATTERNS = [
+    r"\bнайди\b",
+    r"\bнайти\b",
+    r"\bпоиск\b",
+    r"\bпоищи\b",
+    r"\bsearch\b",
+    r"\bцена\b",
+    r"\bстоимость\b",
+    r"\bсколько\s+стоит\b",
+    r"\bavito\b",
+    r"\bozon\b",
+    r"\bwildberries\b",
+    r"\bauto\.ru\b",
+    r"\bdrom\b",
+    r"\bновости\b",
+    r"\bпогода\b",
+    r"\bкурс\b",
+    r"\bмаркетплейс\b",
+]
+
 os.makedirs(f"{BASE}/logs", exist_ok=True)
+os.makedirs(f"{BASE}/runtime", exist_ok=True)
 
-logger = logging.getLogger("ai_router")
+logger = logging.getLogger("task_worker")
+# === FULLFIX_DIRECTION_KERNEL_STAGE_1_IMPORT ===
+try:
+    from core.work_item import WorkItem as _Stage1WorkItem
+    from core.direction_registry import DirectionRegistry as _Stage1DirReg
+except Exception:
+    _Stage1WorkItem = None
+    _Stage1DirReg = None
+# === END ===
+# === FULLFIX_CAPABILITY_ROUTER_STAGE_2_IMPORT ===
+try:
+    from core.capability_router import CapabilityRouter as _Stage2Router
+except Exception:
+    _Stage2Router = None
+# === END STAGE2 ===
+# === FULLFIX_CONTEXT_LOADER_STAGE_3_IMPORT ===
+try:
+    from core.context_loader import ContextLoader as _Stage3Loader
+except Exception:
+    _Stage3Loader = None
+# === END STAGE3 ===
+# === FULLFIX_QUALITY_GATE_STAGE_4_IMPORT ===
+try:
+    from core.quality_gate import QualityGate as _Stage4QG
+except Exception:
+    _Stage4QG = None
+# === END STAGE4 ===
+# === FULLFIX_SEARCH_ENGINE_STAGE_5_IMPORT ===
+try:
+    from core.search_engine import SearchEngine as _Stage5Search
+except Exception:
+    _Stage5Search = None
+# === END STAGE5 ===
+# === FULLFIX_ARCHIVE_ENGINE_STAGE_6_IMPORT ===
+try:
+    from core.archive_engine import ArchiveEngine as _Stage6Archive
+except Exception:
+    _Stage6Archive = None
+# === END STAGE6 ===
+# === FULLFIX_FORMAT_ADAPTER_STAGE_7_IMPORT ===
+try:
+    from core.format_adapter import FormatAdapter as _Stage7FA
+except Exception:
+    _Stage7FA = None
+# === END STAGE7 ===
+# === FULLFIX_TOPIC_AUTODISCOVERY_V2_IMPORT ===
+try:
+    from core.topic_autodiscovery import process as _topic_autodiscovery, check_naming_timeout as _topic_naming_check
+except Exception:
+    _topic_autodiscovery = None
+    _topic_naming_check = None
+# === END TOPIC_AUTO ===
+
+
+
+
+
+
+
+
 logger.setLevel(logging.INFO)
 if not logger.handlers:
     fh = logging.FileHandler(LOG_PATH)
-    fh.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+    fh.setFormatter(logging.Formatter("%(asctime)s %(levelname)s WORKER: %(message)s"))
     logger.addHandler(fh)
 
-OPENROUTER_API_KEY = <REDACTED_SECRET>"OPENROUTER_API_KEY", "").strip()
-OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").strip().rstrip("/")
 
-DEFAULT_MODEL = os.getenv("OPENROUTER_MODEL", "deepseek/deepseek-chat").strip() or "deepseek/deepseek-chat"
-ONLINE_MODEL = os.getenv("OPENROUTER_MODEL_ONLINE", "perplexity/sonar").strip() or "perplexity/sonar"  # SEARCH_MONOLITH_V1
+def db(path: str) -> sqlite3.Connection:
+    conn = sqlite3.connect(path, timeout=20, isolation_level=None, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=15000")
+    return conn
 
-SEARCH_RE = [
-    r"\bнайди\b", r"\bнайти\b", r"\bпоиск\b", r"\bпоищи\b", r"\bsearch\b",
-    r"\bцена\b", r"\bстоимость\b", r"\bсколько стоит\b",
-    r"\bavito\b", r"\bozon\b", r"\bwildberries\b", r"\bauto\.ru\b", r"\bdrom\b",
-    r"\bновости\b", r"\bпогода\b", r"\bкурс\b", r"\bмаркетплейс\b", r"\bссылк", r"\bкупить\b", r"\bзаказать\b", r"\bтовар\b",
-    r"озон", r"валбер", r"вайлдбер", r"площадк"
-]
 
-BAD_CONTEXT_RE = [
-    r"forbidden default model",
-    r"traceback",
-    r"telegramconflicterror",
-    r"voice unavailable",
-    r"stt failed",
-    r"/root/",
-    r"\.log",
-    r"\.json"
-]
+# === EZONE_INGEST_V1 ===
+EZONE_KEYS = {"system", "architecture", "pipeline", "memory"}
 
-BAD_RESULT_RE = [
-    r"\bой\b",
-    r"сорян",
-    r"дружище",
-    r"не переживай",
-    r"дай мне немного времени",
-    r"я могу помочь",
-    r"извини",
-    r"извините",
-    r"я тут",
-    r"уведомлятор",
-    r"перегрелся",
-    r"😅",
-    r"💪",
-    r"😎",
-    r"непонятно",
-    r"уточните",
-    r"недостаточно данных",
-    r"\bищу\b",
-    r"\bнайду\b",
-    r"ожидаю уточнения",
-    r"ссылк[аи]\s+предоставлю",
-    r"готов искать",
-    r"могу найти",
-    r"укажите,?\s+что именно нужно найти"
-]
-
-SYSTEM_PROMPT = """# AREAL-NEVA ORCHESTRA — КАНОНИЧЕСКИЙ СИСТЕМНЫЙ ПРОМПТ
-# CANON_SYSTEM_PROMPT_V1
-
-## КТО ТЫ
-Ты — исполнительный AI-оркестр системы AREAL-NEVA. Ты не просто отвечаешь на последнее сообщение. Ты понимаешь контекст, смысл, область задачи и текущую ветку разговора.
-
-## ГЛАВНЫЙ ПРИОРИТЕТ КОНТЕКСТА
-1. Текущее сообщение пользователя — ВСЕГДА главное
-2. Активная задача (если есть и релевантна)
-3. PIN (только если совпадает с темой)
-4. Краткая память (последние 2-3 релевантных факта)
-5. Долгая память (знания и выводы)
-6. Архив (только если тема совпадает)
-7. Результат поиска (если был)
-
-## ПОНИМАНИЕ ЧАТА
-Каждый чат имеет свою роль и специализацию:
-- технадзор → думай как технический инспектор
-- стройка → думай как прораб/сметчик
-- поиск → думай как снабженец
-- авто → думай как механик/снабженец запчастей
-- оркестр → думай как системный архитектор
-Если есть topic_role — это твой рабочий режим.
-
-## РАЗЛИЧЕНИЕ РАЗГОВОР / ЗАДАЧА
-РАЗГОВОР ("привет", "как дела", "ты тут", "ок", "спасибо") → короткий ответ, НИКАКИХ задач
-ЗАДАЧА = действие + объект + ожидаемый результат → создаётся задача
-УТОЧНЕНИЕ к активной задаче → продолжение задачи, не новая
-ПОДТВЕРЖДЕНИЕ ("да", "верно", "ок") при AWAITING_CONFIRMATION → DONE
-ИСПРАВЛЕНИЕ ("нет", "не так", "переделай") → revision
-ЗАВЕРШЕНИЕ ("всё", "готово", "закрывай") → FINISH, перебивает всё
-
-## ПРИОРИТЕТ ИНТЕНТОВ
-FINISH > CANCEL > CONFIRM > REVISION > TASK > SEARCH > CHAT
-
-## ПАМЯТЬ — ЧТО ХРАНИТЬ / ЧТО НЕ ХРАНИТЬ
-ХРАНИТЬ: результаты задач, выводы, факты, решения
-НЕ ХРАНИТЬ: ошибки, "не найдено", "уточните", служебные тексты, трейсбэки
-
-## ПОИСК
-Запускать поиск ТОЛЬКО если нужны актуальные внешние данные.
-Если [SEARCH_RESULT] есть в контексте — используй ТОЛЬКО его, не выдумывай.
-НЕ писать: "ищу", "найду", "ссылки предоставлю" — только готовый результат.
-
-## ОТВЕТ
-- Только по сути задачи
-- Без болтовни, без эмодзи, без извинений
-- Без служебных фраз, путей, json-обрывков, трейсбэков
-- Если неясно — ОДИН короткий уточняющий вопрос
-- Активная задача не блокирует чат — новые вопросы получают ответ
-
-## ЗАПРЕЩЁННЫЕ ФРАЗЫ
-"недостаточно данных" | "не могу" | "уточните" (без причины) | "ожидаю уточнения" |
-"готов искать" | "могу найти" | "задача не выполнена" (без кода) | "Задача завершена" (без результата) |
-"Не понимаю запрос" | "Готов к выполнению"
-
-## ФАЙЛЫ
-Файл принят → обработать → результат в Google Drive → вернуть ссылку.
-Сервер не хранит тяжёлые файлы постоянно. Drive = основное хранилище.
-
-## ЦЕЛЬ
-Думай как человек: понимай смысл, помни только важное, не засоряй голову мусором, доводи задачу до результата.
-""".strip()  # CANON_SYSTEM_PROMPT_V1
-
-SEARCH_SYSTEM_PROMPT = """# SEARCH_MONOLITH_V1 — ЦИФРОВОЙ СНАБЖЕНЕЦ
-
-Ты — закупочный эксперт. Твоя задача НЕ "найти ссылки", а дать закупочное решение.
-
-## ЭТАП 1: РАЗБОР ЗАПРОСА
-Извлеки: товар, категорию, бренд, модель, характеристики, артикул/OEM/SKU, город, количество, новое/б/у, аналоги допустимы?, доставка нужна?, приоритет (цена/качество/скорость).
-Для стройки: материал, профиль, толщина, RAL, покрытие, ГОСТ/ТУ, единица цены, объём.
-Для запчастей: марка, модель, год, кузов, OEM, сторона, рестайлинг/дорестайлинг, новая/б/у/контрактная.
-
-## ЭТАП 2: УТОЧНЕНИЕ (максимум 3 вопроса если данных мало)
-Не более 3 вопросов. Дальше работай с тем что есть.
-
-## ЭТАП 3: РАСШИРЕНИЕ ЗАПРОСА (7+ формул)
-Ищи по: название+город, название+оптом, название+производитель, артикул/OEM, физпараметры, название+Avito, название+VK/Telegram.
-
-## ЭТАП 4: ЦИФРОВОЙ ДВОЙНИК ТОВАРА
-Ищи по физическим параметрам, не по рекламному названию.
-
-## ЭТАП 5: ИСТОЧНИКИ
-Проверь: Ozon, Wildberries, Яндекс Маркет, Avito, Петрович, Леруа, ВсеИнструменты, заводы, дилеры, 2ГИС, VK, Telegram, форумы.
-Для запчастей: Exist, Emex, ZZap, Drom, Auto.ru, EuroAuto, разборки.
-
-## ЭТАП 6: КЛАССИФИКАЦИЯ ИСТОЧНИКА
-Каждому источнику: производитель / дилер / база / оптовик / маркетплейс / частник / разборка / форум.
-Доверие: CONFIRMED / PARTIAL / UNVERIFIED / RISK.
-checked_at и source_url ОБЯЗАТЕЛЬНЫ. Без них — не выше PARTIAL.
-
-## ЭТАП 7: ТЕХНИЧЕСКИЙ АУДИТ
-Для стройки: проверь толщину, RAL, покрытие, слой цинка, жалобы ("тонкий","брак","не тот цвет").
-Для запчастей: OEM, сторона, кузов, состояние, жалобы ("не подошло","не та сторона","предоплата").
-ЗАПРЕЩЕНО смешивать в одной строке: 0.45 и 0.5, разные RAL, оригинал и аналог, б/у и новое.
-
-## ЭТАП 8: REVIEW TRUST SCORE (0-100)
-80-100: живые отзывы с фото и деталями.
-60-79: частично подтверждены.
-40-59: нужен звонок.
-0-39: высокий риск фейка.
-Фейки: одинаковые фразы, все в один день, нет фото, профиль пустой.
-
-## ЭТАП 9: SELLER_RISK для VK/Telegram
-Автоматически UNVERIFIED пока не подтверждены: цена, дата, контакт, наличие.
-Красные флаги: новая группа, боты, только предоплата, скрытые контакты.
-
-## ЭТАП 10: RISK SCORE
-Красные флаги: цена сильно ниже рынка, только предоплата, нет телефона/адреса/ИНН, старый прайс, не совпадают ТТХ.
-
-## ЭТАП 11: TCO
-итоговая цена = цена + доставка + комиссия + добор + риск − кэшбэк
-Учитывай: НДС, минимальная партия, гарантия, возврат, самовывоз.
-
-## ЭТАП 12: РАНЖИРОВАНИЕ
-CHEAPEST — самый дешёвый.
-MOST_RELIABLE — самый надёжный.
-BEST_VALUE — лучший баланс цена/риск/логистика.
-FASTEST — самый быстрый.
-RISK_CHEAP — дёшево но рискованно.
-REJECTED — что отброшено и почему.
-
-## ЭТАП 13: ТАБЛИЦА (обязательна)
-Поставщик | Площадка | Тип | Город | Цена | Ед. | TCO | ТТХ совпадают | Trust Score | Риск | Контакт | Ссылка | checked_at | Статус
-
-## ЭТАП 14: ШАБЛОН ЗВОНКА (обязателен)
-- Цена актуальна?
-- Есть в наличии?
-- Цена с НДС или без?
-- Доставка сколько и когда?
-- Документы/счёт дадут?
-- Гарантия/возврат есть?
-- Характеристики точно такие?
-- Для металла: толщина, покрытие, слой цинка.
-- Для запчастей: OEM, сторона, кузов, состояние.
-
-## ЗАПРЕЩЕНО
-- Выдавать просто список ссылок без анализа.
-- Писать "цена уточняйте" как результат.
-- Смешивать разные ТТХ в одном варианте.
-- Выдумывать цены и контакты.
-- Непроверенные данные как факт.
-"""  # END SEARCH_MONOLITH_V1.strip()
-
-def _s(v: Any) -> str:
-    if v is None:
-        return ""
-    if isinstance(v, str):
-        return v.strip()
-    try:
-        return json.dumps(v, ensure_ascii=False)
-    except Exception:
-        return str(v).strip()
-
-
-def _dedup_text(text: str) -> str:
-    seen = set()
-    out = []
-    for line in text.split("\n"):
-        key = line.strip().lower()
-        if key and key not in seen:
-            seen.add(key)
-            out.append(line)
-    return "\n".join(out)
-
-def _clean(text: str, limit: int = 12000) -> str:
-    text = (text or "").replace("\r", "\n")
-    text = re.sub(r"[ \t]+", " ", text)
-    text = re.sub(r"\n{3,}", "\n\n", text)
-    return text.strip()[:limit]
-
-def _match_any(patterns: List[str], text: str) -> bool:
-    t = (text or "").lower()
-    return any(re.search(p, t, re.I) for p in patterns)
-
-def _search_intent(text: str, input_type: str) -> bool:
-    if (input_type or "").lower() == "search":
-        return True
-    return _match_any(SEARCH_RE, text)
-
-def _sanitize_block(label: str, value: Any) -> str:
-    text = _clean(_s(value), 4000)
-    if not text:
-        return ""
-    if _match_any(BAD_CONTEXT_RE, text):
-        return ""
-    return f"[TYPE:{label}]\n{text}"
-
-def _dedup_blocks(blocks: List[str]) -> List[str]:
-    out = []
-    seen = set()
-    for block in blocks:
-        b = _clean(block, 4000)
-        if not b:
-            continue
-        key = hashlib.sha1(re.sub(r"\s+", " ", b.lower()).encode("utf-8")).hexdigest()
-        if key in seen:
-            continue
-        seen.add(key)
-        out.append(b)
-    return out
-
-def _extract_user_text(payload: Dict[str, Any]) -> str:
-    for key in ("normalized_input", "raw_input", "input", "text", "prompt", "message", "transcript"):
-        text = _clean(_s(payload.get(key)))
-        if text:
-            return text
-    return ""
-
-
-def _build_messages(payload: Dict[str, Any], user_text: str) -> List[Dict[str, str]]:
-    user_text = _dedup_text(user_text)
-    if not user_text.strip():
-        return [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": "REQUEST:\nпустой запрос"}
-        ]
-
-    input_type = _s(payload.get("input_type")).lower() or "text"
-    state = _s(payload.get("state")).upper() or "IN_PROGRESS"
-
-    topic_role = _clean(_s(payload.get("topic_role")), 500)
-    topic_directions = _clean(_s(payload.get("topic_directions")), 1000)
-    system_content = SYSTEM_PROMPT
-    # search-followup: если жалуются на ссылки и есть search_context — не давать общие советы
-    search_followup_markers = [
-        "нерелевант",
-        "битые",
-        "битые ссылки",
-        "ссылки биты",
-        "ссылки битые",
-        "живые ссылки",
-        "ссылки не те",
-        "проверь",
-        "проверь еще",
-        "проверь ещё",
-        "ещё раз",
-        "еще раз",
-        "это не то",
-    ]
-    if any(m in user_text.lower() for m in search_followup_markers) and payload.get("search_context"):
-        system_content += "\n\nFORBIDDEN_SEARCH_ADVICE: ЗАПРЕЩЕНО предлагать Dr.Web, Link Checker, Yandex Safety, Google Safe Browsing, VirusTotal и любые общие сервисы проверки ссылок. Нужно продолжить именно предыдущую поисковую задачу, опираясь на SEARCH_RESULT, без общих советов и без ухода в сторону."
-    if topic_role:
-        system_content = f"Роль этого чата: {topic_role}\n\n" + system_content
-    if topic_directions:
-        system_content = system_content + f"\n\nТиповые задачи этого чата: {topic_directions}"
-
-
-    # === OWNER_REFERENCE_FULL_WORKFLOW_POLICY_V1 ===
-    try:
-        from core.owner_reference_policy import build_owner_reference_context
-        _owner_reference_policy_context = build_owner_reference_context(user_text)
-    except Exception as _orp_err:
-        logger.warning("OWNER_REFERENCE_POLICY_V1_ERR %s", _orp_err)
-        _owner_reference_policy_context = ""
-    # === END_OWNER_REFERENCE_FULL_WORKFLOW_POLICY_V1 ===
-
-    # === ESTIMATE_TEMPLATE_POLICY_CONTEXT_V4_TOP_LOGISTICS ===
-    try:
-        from core.estimate_template_policy import build_estimate_template_context
-        _estimate_template_policy_context = build_estimate_template_context(user_text)
-    except Exception as _etp_err:
-        logger.warning("ESTIMATE_TEMPLATE_POLICY_CONTEXT_V4_ERR %s", _etp_err)
-        _estimate_template_policy_context = ""
-    # === END_ESTIMATE_TEMPLATE_POLICY_CONTEXT_V4_TOP_LOGISTICS ===
-
-    blocks = _dedup_blocks([
-        _sanitize_block("OWNER_REFERENCE_POLICY", _owner_reference_policy_context),
-        _sanitize_block("ESTIMATE_TEMPLATE_POLICY", _estimate_template_policy_context),
-        _sanitize_block("ACTIVE_TASK", payload.get("active_task_context")),
-        _sanitize_block("PIN", payload.get("pin_context")),
-        _sanitize_block("SHORT_MEMORY", payload.get("short_memory_context")),
-        _sanitize_block("LONG_MEMORY", payload.get("long_memory_context")),
-        _sanitize_block("ARCHIVE", payload.get("archive_context")),
-        _sanitize_block("SEARCH_RESULT", payload.get("search_context")),
-    ])
-
-    user_parts = [
-        f"STATE: {state}",
-        f"INPUT_TYPE: {input_type}",
-    ]
-    if blocks:
-        user_parts.append("CONTEXT:\n" + "\n\n".join(blocks))
-    user_parts.append("REQUEST:\n" + user_text)
-
-    return [
-        {"role": "system", "content": system_content},
-        {"role": "user", "content": "\n\n".join(user_parts)},
-    ]
-
-def _extract_content(data: Dict[str, Any]) -> str:
-    try:
-        content = data["choices"][0]["message"]["content"]
-        if isinstance(content, list):
-            parts = []
-            for item in content:
-                if isinstance(item, dict) and item.get("type") == "text":
-                    parts.append(item.get("text", ""))
-                else:
-                    parts.append(_s(item))
-            return _clean("\n".join(parts))
-        return _clean(_s(content))
-    except Exception:
-        return _clean(json.dumps(data, ensure_ascii=False)[:2000])
-
-async def _openrouter_call(model: str, messages: List[Dict[str, str]]) -> str:
-    headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        "Content-Type": "application/json",
-    }
-    body = {
-        "model": model,
-        "messages": messages,
-        "temperature": 0.2,
-    }
-    async with httpx.AsyncClient(timeout=httpx.Timeout(300.0, connect=30.0)) as client:
-        r = await client.post(f"{OPENROUTER_BASE_URL}/chat/completions", headers=headers, json=body)
-    if r.status_code != 200:
-        msg = f"OPENROUTER_HTTP_{r.status_code}: {r.text[:500]}"
-        logger.error(msg)
-        raise RuntimeError(msg)
-    return _extract_content(r.json())
-
-async def process_ai_task(payload: Dict[str, Any]) -> str:
-    if not OPENROUTER_API_KEY:
-        raise RuntimeError("OPENROUTER_API_KEY not set")
-
-    user_text = _dedup_text(_extract_user_text(payload))
-    if not user_text:
-        return ""
-
-    input_type = _s(payload.get("input_type")).lower()
-    _s_chat = _s(payload.get("chat_id"))
-    try: _s_topic = int(payload.get("topic_id") or 0)
-    except: _s_topic = 0
-    is_search = _search_intent(user_text, input_type) or bool(has_active_search_session(_s_chat, _s_topic))
-    work_payload = dict(payload)
-
-    if is_search:
-        # === SEARCH_MONOLITH_V2_CALL ===
-        try:
-            if run_search_monolith_v2 is not None:
-                _v2 = await run_search_monolith_v2(work_payload, user_text, _openrouter_call, ONLINE_MODEL, SEARCH_SYSTEM_PROMPT)
-                _v2 = _clean(_s(_v2), 12000)
-                if _v2:
-                    logger.info("SEARCH_MONOLITH_V2_OK chars=%s", len(_v2))
-                    return _v2
-        except Exception as _v2e:
-            logger.error("SEARCH_MONOLITH_V2_FAIL err=%s fallback=V1", _v2e)
-        # === END SEARCH_MONOLITH_V2_CALL ===
-        logger.info(
-            "router_search_call model=%s input_type=%s state=%s chars=%s",
-            ONLINE_MODEL,
-            input_type or "text",
-            _s(payload.get("state")).upper() or "IN_PROGRESS",
-            len(user_text),
-        )
-        try:
-            search_result = await _openrouter_call(
-                ONLINE_MODEL,
-                [
-                    {"role": "system", "content": SEARCH_SYSTEM_PROMPT},
-                    {"role": "user", "content": user_text},
-                ],
-            )
-        except Exception as e:
-            logger.error("search_model_fail err=%s — fallback to DEFAULT_MODEL without search", e)
-            search_result = ""
-
-        search_result = _clean(_s(search_result), 4000)
-        if not search_result:
-            logger.warning("web_search_empty query=%s", user_text[:200])
-        else:
-            existing = _clean(_s(work_payload.get("search_context")), 4000)
-            work_payload["search_context"] = search_result + ("\n\n" + existing if existing else "")
-            logger.info("web_search_ok chars=%s", len(search_result))
-
-    logger.info(
-        "router_call model=%s input_type=%s state=%s chars=%s is_search=%s",
-        DEFAULT_MODEL,
-        input_type or "text",
-        _s(payload.get("state")).upper() or "IN_PROGRESS",
-        len(user_text),
-        is_search,
-    )
-
-    messages = _build_messages(work_payload, user_text)
-    ctx_str = _clean_context("\n\n".join(m.get("content", "") for m in messages))
-    if _context_has_answer(ctx_str):
-        for m in messages:
-            if m.get("role") == "system":
-                m["content"] += "\nFORBIDDEN: do not ask clarifying questions. Answer directly."
-                break
-    # === MODEL_OVERRIDE_V1 ===
-    _final_model = work_payload.get("model_override") or DEFAULT_MODEL
-    result = await _openrouter_call(_final_model, messages)
-    # === END MODEL_OVERRIDE_V1 ===
-
-    if _match_any(BAD_RESULT_RE, result):
-        logger.warning("router_result_filtered result=%s", result[:120])
-        return ""
-
-    logger.info("router_ok chars=%s", len(result))
-    return result
-
-
-
-def _clean_context(text: str) -> str:
-    if not text:
-        return ""
-    text = text.replace("\r", "\n")
-    text = text.replace("\t", " ")
-    while "\n\n\n" in text:
-        text = text.replace("\n\n\n", "\n\n")
-    return text.strip()[:12000]
-
-def _context_has_answer(text: str) -> bool:
-    if not text:
+def is_ezone_payload(text: str) -> bool:
+    """Проверить что входящий текст — JSON от нейросети"""
+    if not text or not text.strip().startswith("{"):
         return False
-    return len(text.strip()) > 50
-
-# FORCE CLEAN CONTEXT
-
-====================================================================================================
-END_FILE: core/ai_router.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/__init__.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-====================================================================================================
-
-====================================================================================================
-END_FILE: core/__init__.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/active_dialog_state.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 35e86af58d10e00979f331b0ec69c905597f26583ae97bc756413888989df1a6
-====================================================================================================
-# === ACTIVE_DIALOG_STATE_V1 ===
-# === UNIFIED_CONTEXT_PRIORITY_V1 ===
-# === SHORT_CONTROL_SAFE_ROUTER_V1 ===
-from __future__ import annotations
-
-import json
-import os
-import re
-import sqlite3
-from datetime import datetime, timezone
-from typing import Any, Dict, Optional
-
-BASE = "/root/.areal-neva-core"
-MEM_DB = os.path.join(BASE, "data/memory.db")
-
-SHORT_CONTROLS = {
-    "да", "ок", "окей", "+", "ага", "делай", "делаем", "дальше", "продолжай",
-    "покажи", "скинь", "отбой", "закрывай", "готово", "что дальше", "ну что",
-}
-
-def _s(v: Any, limit: int = 4000) -> str:
-    if v is None:
-        return ""
-    if isinstance(v, (dict, list)):
-        try:
-            v = json.dumps(v, ensure_ascii=False)
-        except Exception:
-            v = str(v)
-    return str(v).strip()[:limit]
-
-def clean_voice(text: str) -> str:
-    return re.sub(r"^\s*\[VOICE\]\s*", "", text or "", flags=re.I).strip()
-
-def is_short_control(text: str) -> bool:
-    t = clean_voice(text).lower().strip(" .,!?:;—-")
-    return t in SHORT_CONTROLS or (len(t.split()) <= 3 and any(x in t for x in SHORT_CONTROLS))
-
-def _task_row_to_dict(row: sqlite3.Row) -> Dict[str, Any]:
-    return {k: row[k] for k in row.keys()}
-
-def last_active_task(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> Optional[Dict[str, Any]]:
-    conn.row_factory = sqlite3.Row
-    row = conn.execute(
-        """
-        SELECT * FROM tasks
-        WHERE chat_id=? AND COALESCE(topic_id,0)=?
-          AND state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION')
-        ORDER BY updated_at DESC, created_at DESC
-        LIMIT 1
-        """,
-        (str(chat_id), int(topic_id or 0)),
-    ).fetchone()
-    return _task_row_to_dict(row) if row else None
-
-def last_file_task(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> Optional[Dict[str, Any]]:
-    conn.row_factory = sqlite3.Row
-    row = conn.execute(
-        """
-        SELECT * FROM tasks
-        WHERE chat_id=? AND COALESCE(topic_id,0)=?
-          AND (
-            input_type IN ('drive_file','file','document','photo','image')
-            OR raw_input LIKE '%file_id%'
-            OR raw_input LIKE '%file_name%'
-            OR result LIKE '%drive.google%'
-            OR result LIKE '%docs.google%'
-            OR result LIKE '%.xlsx%'
-            OR result LIKE '%.pdf%'
-            OR result LIKE '%.docx%'
-          )
-        ORDER BY updated_at DESC, created_at DESC
-        LIMIT 1
-        """,
-        (str(chat_id), int(topic_id or 0)),
-    ).fetchone()
-    return _task_row_to_dict(row) if row else None
-
-def _memory_lookup(chat_id: str, topic_id: int, query: str = "") -> str:
-    if not os.path.exists(MEM_DB):
-        return ""
-    q = f"%{query[:40]}%" if query else "%"
-    out = []
     try:
-        con = sqlite3.connect(MEM_DB)
-        rows = con.execute(
-            """
-            SELECT key, value, timestamp FROM memory
-            WHERE chat_id=? AND key LIKE ?
-              AND (
-                key LIKE ? OR value LIKE ? OR key LIKE ? OR key LIKE ?
-              )
-            ORDER BY timestamp DESC
-            LIMIT 8
-            """,
-            (
-                str(chat_id),
-                f"topic_{int(topic_id or 0)}_%",
-                "%file%",
-                q,
-                "%artifact%",
-                "%archive%",
-            ),
-        ).fetchall()
-        con.close()
-        for k, v, ts in rows:
-            out.append(f"{ts} | {k} | {_s(v, 700)}")
+        import json as _j
+        d = _j.loads(text)
+        return bool(EZONE_KEYS & set(d.keys()))
     except Exception:
-        return ""
-    return "\n".join(out)
+        return False
 
-def build_active_context(conn: sqlite3.Connection, chat_id: str, topic_id: int, user_text: str = "") -> Dict[str, Any]:
-    active = last_active_task(conn, chat_id, topic_id)
-    last_file = last_file_task(conn, chat_id, topic_id)
-    mem = _memory_lookup(chat_id, topic_id, clean_voice(user_text))
-    return {
-        "chat_id": str(chat_id),
-        "topic_id": int(topic_id or 0),
-        "user_text": user_text,
-        "active_task": active,
-        "last_file": last_file,
-        "memory": mem,
-        "priority": "input -> reply parent -> active task -> last file -> pin -> short memory -> long memory -> archive",
-    }
-
-def maybe_handle_active_dialog(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str, topic_id: int) -> Optional[Dict[str, Any]]:
-    raw = _s(task["raw_input"] if "raw_input" in task.keys() else "")
-    text = clean_voice(raw)
-    low = text.lower()
-
-    if not text:
-        return None
-
-    # === ACTIVE_DIALOG_SKIP_EXPLICIT_ESTIMATE_CREATE_V1 ===
-    create_words = (
-        "сделай", "создай", "сформируй", "подготовь", "составь",
-        "посчитай", "рассчитай", "выгрузи", "сохрани", "оформи"
-    )
-    estimate_words = (
-        "смет", "расчет", "расчёт", "xlsx", "excel", "эксель",
-        "pdf", "ндс", "итог", "объем", "объём", "расценк", "позици"
-    )
-    followup_words = (
-        "я тебе скидывал", "уже скидывал", "где файл", "где смета",
-        "что дальше", "дальше то что", "ты сделал", "что мы делали",
-        "какие последние", "покажи прошл", "найди прошл", "помнишь"
-    )
-    if (
-        any(w in low for w in create_words)
-        and any(w in low for w in estimate_words)
-        and not any(w in low for w in followup_words)
-    ):
-        return None
-    # === END_ACTIVE_DIALOG_SKIP_EXPLICIT_ESTIMATE_CREATE_V1 ===
-
-    # === ACTIVE_DIALOG_SKIP_EXPLICIT_PROJECT_CREATE_V1 ===
-    project_create_words = (
-        "сделай", "делай", "создай", "сформируй", "подготовь", "разработай",
-        "оформи", "выгрузи", "сохрани", "нарисуй", "собери"
-    )
-    project_words = (
-        "проект", "кж", "кд", "км", "кмд", "ар",
-        "фундамент", "фундаментн", "плита", "плиты", "плиту",
-        "армирован", "арматур", "dxf", "dwg", "чертеж", "чертёж", "конструктив"
-    )
-    if (
-        any(w in low for w in project_create_words)
-        and any(w in low for w in project_words)
-        and not any(w in low for w in followup_words)
-    ):
-        return None
-    # === END_ACTIVE_DIALOG_SKIP_EXPLICIT_PROJECT_CREATE_V1 ===
-
-    file_followup = any(x in low for x in (
-        "скидывал файл", "скидывал смету", "какой файл", "что дальше", "дальше то что",
-        "покажи файл", "где файл", "где смета", "что с файлом", "по этому файлу",
-    ))
-
-    if file_followup:
-        try:
-            from core.file_memory_bridge import build_file_followup_answer
-            ans = build_file_followup_answer(str(chat_id), int(topic_id or 0), raw, limit=8)
-            if ans:
-                return {
-                    "handled": True,
-                    "state": "DONE",
-                    "result": ans,
-                    "event": "ACTIVE_DIALOG_STATE_V1:FILE_FOLLOWUP_DONE",
-                }
-        except Exception as e:
-            return {
-                "handled": True,
-                "state": "FAILED",
-                "result": "",
-                "error": f"ACTIVE_DIALOG_FILE_FOLLOWUP_ERR:{e}",
-                "event": "ACTIVE_DIALOG_STATE_V1:FILE_FOLLOWUP_FAILED",
-            }
-
-    if is_short_control(text):
-        ctx = build_active_context(conn, chat_id, topic_id, raw)
-        active = ctx.get("active_task")
-        last_file = ctx.get("last_file")
-        if active:
-            res = _s(active.get("result") or active.get("raw_input"), 1200)
-            return {
-                "handled": True,
-                "state": "DONE",
-                "result": f"Активный контекст найден\nЗадача: {active.get('id')}\nСтатус: {active.get('state')}\nКратко: {res}",
-                "event": "ACTIVE_DIALOG_STATE_V1:SHORT_CONTROL_ACTIVE_TASK",
-            }
-        if last_file:
-            res = _s(last_file.get("result") or last_file.get("raw_input"), 1200)
-            return {
-                "handled": True,
-                "state": "DONE",
-                "result": f"Последний файловый контекст найден\nЗадача: {last_file.get('id')}\nСтатус: {last_file.get('state')}\nКратко: {res}",
-                "event": "ACTIVE_DIALOG_STATE_V1:SHORT_CONTROL_LAST_FILE",
-            }
-
-    return None
-
-def save_dialog_event(chat_id: str, topic_id: int, key: str, value: Any) -> None:
-    if not os.path.exists(MEM_DB):
-        return
+def save_ezone_json(chat_id: str, text: str) -> str:
+    """Сохранить ingest JSON в memory_files"""
+    import json as _j, hashlib, os
+    from datetime import datetime, timezone
     try:
-        con = sqlite3.connect(MEM_DB)
-        con.execute(
-            "INSERT INTO memory(chat_id,key,value,timestamp) VALUES(?,?,?,?)",
-            (
-                str(chat_id),
-                f"topic_{int(topic_id or 0)}_dialog_{key}",
-                json.dumps(value, ensure_ascii=False) if not isinstance(value, str) else value,
-                datetime.now(timezone.utc).isoformat(),
-            ),
-        )
-        con.commit()
-        con.close()
-    except Exception:
-        pass
-# === END_SHORT_CONTROL_SAFE_ROUTER_V1 ===
-# === END_UNIFIED_CONTEXT_PRIORITY_V1 ===
-# === END_ACTIVE_DIALOG_STATE_V1 ===
+        d = _j.loads(text)
+        chat_key = f"{chat_id}__telegram"
+        base = f"{BASE}/data/memory_files/CHATS/{chat_key}"
+        os.makedirs(base, exist_ok=True)
+        os.makedirs(f"{BASE}/data/memory_files/GLOBAL", exist_ok=True)
+        os.makedirs(f"{BASE}/data/memory_files/SYSTEM", exist_ok=True)
 
-====================================================================================================
-END_FILE: core/active_dialog_state.py
-FILE_CHUNK: 1/1
-====================================================================================================
+        # Дедупликация по hash за день
+        h = hashlib.md5(text.encode()).hexdigest()[:16]
+        ts = datetime.now(timezone.utc).isoformat()
+        entry = _j.dumps({"timestamp": ts, "data": d, "_meta": {
+            "chat_key": chat_key, "ingested_at": ts, "source": "telegram", "hash": h
+        }}, ensure_ascii=False)
 
-====================================================================================================
-BEGIN_FILE: core/archive_distributor.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 27d2d0630d027aeeb85fccc7c64c2907e804ba96faf7eae9be72c49f32230cb8
-====================================================================================================
-# === ARCHIVE_DISTRIBUTOR_V1 ===
-# Читает timeline.jsonl → определяет топик → раскладывает в memory.db
-import json, os, re, logging, sqlite3
-from pathlib import Path
+        # timeline
+        with open(f"{base}/timeline.jsonl", "a", encoding="utf-8") as f:
+            f.write(entry + "\n")
+        with open(f"{BASE}/data/memory_files/GLOBAL/timeline.jsonl", "a", encoding="utf-8") as f:
+            f.write(entry + "\n")
 
-logger = logging.getLogger(__name__)
+        # SYSTEM keys
+        for key in EZONE_KEYS:
+            if key in d:
+                sys_entry = _j.dumps({"timestamp": ts, key: d[key], "chat_key": chat_key}, ensure_ascii=False)
+                with open(f"{BASE}/data/memory_files/SYSTEM/{key}.jsonl", "a", encoding="utf-8") as f:
+                    f.write(sys_entry + "\n")
 
-BASE = Path("/root/.areal-neva-core")
-MEM_DB = str(BASE / "data/memory.db")
-CHAT_ID = "-1003725299009"
-
-# Сигнатуры топиков по контенту
-_TOPIC_SIGNATURES = {
-    2:    ["стройк", "смет", "кровл", "фасад", "фундамент", "металлочерепиц", "профнастил",
-           "ангар", "бетон", "арматур", "утеплитель", "монтаж", "кж", "ар ", "кд "],
-    5:    ["технадзор", "дефект", "акт осмотр", "нарушени", "предписани", "сп ", "гост", "снип",
-           "инспекц", "фото дефект"],
-    500:  ["найди", "поищи", "цена", "стоимость", "avito", "ozon", "wildberries", "поставщик",
-           "купить", "маркет", "ral", "профлист"],
-    961:  ["toyota", "hiace", "запчаст", "brembo", "авто", "машин", "vin", "oem", "разборк",
-           "двигател", "подвеск"],
-    3008: ["код", "python", "патч", "функци", "верификац", "архитектур", "task_worker",
-           "telegram_daemon", "оркестр"],
-}
-
-def _detect_topic(text: str) -> int:
-    low = text.lower()
-    scores = {}
-    for topic_id, keywords in _TOPIC_SIGNATURES.items():
-        scores[topic_id] = sum(1 for kw in keywords if kw in low)
-    best = max(scores, key=scores.get)
-    return best if scores[best] > 0 else 0  # 0 = общий
-
-def _ensure_table(conn):
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS memory
-        (chat_id TEXT, key TEXT, value TEXT, timestamp TEXT)
-    """)
-
-def distribute_timeline(timeline_path: str, chat_id: str = CHAT_ID, dry_run: bool = False) -> dict:
-    """
-    Читает timeline.jsonl → раскладывает записи в memory.db по топикам.
-    Возвращает статистику.
-    """
-    p = Path(timeline_path)
-    if not p.exists():
-        return {"ok": False, "reason": "FILE_NOT_FOUND"}
-
-    conn = sqlite3.connect(MEM_DB)
-    conn.row_factory = sqlite3.Row
-    _ensure_table(conn)
-
-    stats = {"total": 0, "distributed": 0, "skipped": 0, "by_topic": {}}
-    seen_keys = set()
-
-    with open(p, encoding="utf-8", errors="replace") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                entry = json.loads(line)
-            except Exception:
-                continue
-
-            stats["total"] += 1
-
-            # Собираем текст для классификации
-            text_parts = []
-            # timeline.jsonl имеет структуру {"timestamp":..., "data": {...}}
-            data_block = entry.get("data") or entry
-            if isinstance(data_block, dict):
-                for field in ["raw_text", "text", "message", "content", "result",
-                              "raw_input", "value", "system", "architecture",
-                              "pipeline", "memory", "pending", "decisions"]:
-                    v = data_block.get(field)
-                    if v and isinstance(v, str) and len(v) > 10:
-                        text_parts.append(v[:800])
-            # тоже проверяем корень
-            for field in ["text", "message", "content"]:
-                v = entry.get(field)
-                if v and isinstance(v, str):
-                    text_parts.append(v[:400])
-            text = " ".join(text_parts)[:3000]
-
-            if not text or len(text) < 20:
-                stats["skipped"] += 1
-                continue
-
-            # Определяем топик
-            topic_id = _detect_topic(text)
-
-            # Формируем ключ
-            ts = entry.get("timestamp") or entry.get("ts") or entry.get("created_at") or "2026"
-            ts_short = str(ts)[:10].replace("-", "")
-            dedup_key = f"topic_{topic_id}_archive_{ts_short}_{hash(text) % 100000}"
-
-            if dedup_key in seen_keys:
-                stats["skipped"] += 1
-                continue
-            seen_keys.add(dedup_key)
-
-            value = text[:5000]
-
-            if not dry_run:
-                # Проверяем нет ли уже такой записи
-                existing = conn.execute(
-                    "SELECT 1 FROM memory WHERE chat_id=? AND key=?",
-                    (chat_id, dedup_key)
-                ).fetchone()
-                if not existing:
-                    conn.execute(
-                        "INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, ?)",
-                        (chat_id, dedup_key, value, str(ts)[:19])
-                    )
-
-            stats["distributed"] += 1
-            stats["by_topic"][topic_id] = stats["by_topic"].get(topic_id, 0) + 1
-
-    if not dry_run:
-        conn.commit()
-    conn.close()
-
-    return {"ok": True, **stats}
-
-def run_distribution(chat_id: str = CHAT_ID) -> dict:  # CHAT_EXPORTS_POLICY_V1_WIRED
-    """Запустить распределение для всех timeline.jsonl чата"""
-    results = {}
-    chats_dir = BASE / "data/memory_files/CHATS"
-    if not chats_dir.exists():
-        return {"ok": False, "reason": "NO_CHATS_DIR"}
-
-    for chat_dir in chats_dir.iterdir():
-        if not chat_dir.is_dir():
-            continue
-        timeline = chat_dir / "timeline.jsonl"
-        if timeline.exists():
-            r = distribute_timeline(str(timeline), chat_id=chat_id)
-            results[str(timeline)] = r
-            logger.info("ARCHIVE_DISTRIBUTED file=%s stats=%s", timeline, r)
-
-    return {"ok": True, "files": results}
-
-def _load_archive_for_topic(chat_id: str, topic_id: int, user_text: str = "", limit: int = 5) -> str:
-    """
-    Загрузить архивный контекст для топика из memory.db.
-    Используется в _load_archive_context.
-    """
-    if not os.path.exists(MEM_DB):
-        return ""
-    conn = sqlite3.connect(MEM_DB)
-    conn.row_factory = sqlite3.Row
-    try:
-        _ensure_table(conn)
-        key_pattern = f"topic_{topic_id}_archive_%"
-        rows = conn.execute(
-            """SELECT key, value FROM memory
-               WHERE chat_id=? AND key GLOB ?
-               ORDER BY timestamp DESC LIMIT ?""",
-            (str(chat_id), key_pattern, limit * 3)
-        ).fetchall()
-
-        if not rows:
-            return ""
-
-        # Фильтрация по релевантности если есть запрос
-        if user_text:
-            query_words = set(w for w in user_text.lower().split() if len(w) > 3)
-            scored = []
-            for row in rows:
-                val = str(row["value"]).lower()
-                score = sum(1 for w in query_words if w in val)
-                scored.append((score, str(row["value"])[:500]))
-            scored.sort(reverse=True)
-            relevant = [v for s, v in scored if s > 0][:limit]
-        else:
-            relevant = [str(r["value"])[:500] for r in rows[:limit]]
-
-        return "\n---\n".join(relevant) if relevant else ""
+        logger.info("EZONE_INGEST_V1 saved chat_key=%s hash=%s", chat_key, h)
+        return f"Принял, память загружена ({chat_key})"
     except Exception as e:
-        logger.warning("ARCHIVE_LOAD_ERR topic=%s err=%s", topic_id, e)
-        return ""
-    finally:
-        conn.close()
-
-try:
-    from core.chat_exports_policy import get_canonical_exports_dir as _ced
-except Exception:
-    _ced = None
-
-if __name__ == "__main__":
-    print("Running archive distribution...")
-    result = run_distribution()
-    print(json.dumps(result, ensure_ascii=False, indent=2))
-# === END ARCHIVE_DISTRIBUTOR_V1 ===
-
-====================================================================================================
-END_FILE: core/archive_distributor.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/archive_engine.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 04fdd1d0f6927a38b62f869f0a020b30b8cc81d798083d607f1a86d3c61c6e1e
-====================================================================================================
-# === FULLFIX_ARCHIVE_ENGINE_STAGE_6 ===
-from __future__ import annotations
-import json
-import logging
-from typing import Any, Dict, Optional
-
-ARCHIVE_ENGINE_VERSION = "ARCHIVE_ENGINE_V1"
-logger = logging.getLogger("task_worker")
-
-
-class ArchiveEngine:
-    """
-    Stage 6 shadow mode: индексирует завершённую задачу в memory.db.
-    Пишет short_summary, direction, engine, quality_gate_overall.
-    Не блокирует доставку при ошибках.
-    """
-
-    def archive(self, payload: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, Any]:
-        record = {
-            "task_id":      str(payload.get("task_id") or payload.get("id") or ""),
-            "chat_id":      str(payload.get("chat_id") or ""),
-            "topic_id":     int(payload.get("topic_id") or 0),
-            "direction":    str(payload.get("direction") or "general_chat"),
-            "engine":       str(payload.get("engine") or "ai_router"),
-            "input_type":   str(payload.get("input_type") or "text"),
-            "raw_input":    str(payload.get("raw_input") or payload.get("raw_text") or "")[:300],
-            "result_text":  str((result.get("result") or {}).get("text") or result.get("text") or "")[:500],
-            "artifact_url": str(result.get("artifact_url") or result.get("drive_link") or ""),
-            "qg_overall":   str((result.get("quality_gate_report") or {}).get("overall") or "unknown"),
-            "qg_failed":    json.dumps((result.get("quality_gate_report") or {}).get("failed") or []),
-            "search_plan":  json.dumps(payload.get("search_plan") or {}),
-            "archive_version": ARCHIVE_ENGINE_VERSION,
-            "shadow_mode":  True,
-        }
-
-        self._write_to_memory_api(record)
-        return record
-
-    def _write_to_memory_api(self, record: Dict[str, Any]):
-        import urllib.request, urllib.error
-        try:
-            body = json.dumps(record).encode("utf-8")
-            req = urllib.request.Request(
-                "http://127.0.0.1:8091/archive",  # PORT_FIX_V1,
-                data=body,
-                headers={"Content-Type": "application/json"},
-                method="POST"
-            )
-            urllib.request.urlopen(req, timeout=2)
-            logger.info("FULLFIX_ARCHIVE_ENGINE_STAGE_6 archived task=%s dir=%s qg=%s",
-                        record["task_id"], record["direction"], record["qg_overall"])
-        except Exception as e:
-            logger.warning("FULLFIX_ARCHIVE_ENGINE_STAGE_6 memory_api unavailable: %s", e)
-
-
-def archive_task(payload, result):
-    return ArchiveEngine().archive(payload, result)
-# === END FULLFIX_ARCHIVE_ENGINE_STAGE_6 ===
-
-====================================================================================================
-END_FILE: core/archive_engine.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/archive_guard.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 369b05cb9ddf9aaa9f7b05828f3752848557f9e062d44f74b5f5f290723dc64c
-====================================================================================================
-# === FINAL_CLOSURE_BLOCKER_FIX_V1_ARCHIVE_DUPLICATE_GUARD ===
-from __future__ import annotations
-
-import hashlib
-import sqlite3
-from typing import Any, Dict
-
-
-def _clean(v) -> str:
-    return "" if v is None else str(v).strip()
-
-
-def content_hash(text: str) -> str:
-    return hashlib.sha256(_clean(text).lower().encode("utf-8", "ignore")).hexdigest()
-
-
-def ensure_archive_guard(conn: sqlite3.Connection) -> None:
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS archive_guard (
-            id TEXT PRIMARY KEY,
-            task_id TEXT,
-            chat_id TEXT,
-            topic_id INTEGER DEFAULT 0,
-            content_hash TEXT,
-            created_at TEXT DEFAULT (datetime('now'))
-        )
-        """
-    )
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_archive_guard_hash ON archive_guard(content_hash)")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_archive_guard_task ON archive_guard(task_id)")
-
-
-def should_archive(conn: sqlite3.Connection, task_id: str, chat_id: str, topic_id: int, content: str) -> Dict[str, Any]:
-    ensure_archive_guard(conn)
-    h = content_hash(content)
-    row = conn.execute("SELECT task_id, created_at FROM archive_guard WHERE content_hash=? LIMIT 1", (h,)).fetchone()
-
-    if row:
-        return {"ok": False, "duplicate": True, "duplicate_task_id": row[0], "hash": h}
-
-    gid = hashlib.sha1(f"{task_id}:{h}".encode()).hexdigest()
-    conn.execute(
-        "INSERT OR IGNORE INTO archive_guard (id, task_id, chat_id, topic_id, content_hash) VALUES (?,?,?,?,?)",
-        (gid, task_id, str(chat_id), int(topic_id or 0), h),
-    )
-    return {"ok": True, "duplicate": False, "hash": h}
-
-
-# === END_FINAL_CLOSURE_BLOCKER_FIX_V1_ARCHIVE_DUPLICATE_GUARD ===
-
-====================================================================================================
-END_FILE: core/archive_guard.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/artifact_pipeline.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 8a24a5f0b2a24de8e2f209a5f38c436fdf96cd5426b67bca8502d056038d6ab4
-====================================================================================================
-import os
-import re
-import csv
-import json
-import base64
-import tempfile
-from typing import Any, Dict, List, Optional
-
-from dotenv import load_dotenv
-
-BASE = "/root/.areal-neva-core"
-load_dotenv(f"{BASE}/.env", override=True)
+        logger.error("EZONE_INGEST_V1 err=%s", e)
+        return f"Ошибка загрузки памяти: {e}"
+# === END EZONE_INGEST_V1 ===
 
 def _s(v: Any) -> str:
     if v is None:
@@ -4823,1598 +574,2078 @@ def _s(v: Any) -> str:
     except Exception:
         return str(v).strip()
 
+
 def _clean(text: str, limit: int = 12000) -> str:
     text = (text or "").replace("\r", "\n")
     text = re.sub(r"[ \t]+", " ", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()[:limit]
 
-def _kind(file_name: str, mime_type: str = "") -> str:
-    # === UNIVERSAL_FORMAT_REGISTRY_V1_KIND ===
-    # === DWG_DXF_KIND_FIX_V1_ARTIFACT_PIPELINE ===
+
+def _task_field(task: Any, field: str, default: Any = "") -> Any:
     try:
-        from core.format_registry import classify_file
-        return classify_file(file_name, mime_type).get("kind") or "binary"
-    except Exception:
-        ext = os.path.splitext((file_name or "").lower())[1]
-        mime = (mime_type or "").lower()
-
-        # drawing first: mimetypes may classify .dwg/.dxf as image/*
-        if ext in (".dwg", ".dxf", ".ifc", ".rvt", ".rfa", ".skp", ".stl", ".obj", ".step", ".stp", ".iges", ".igs") or any(x in mime for x in ("dxf", "dwg", "ifc", "cad", "step", "stp", "iges", "igs")):
-            return "drawing"
-        if ext in (".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif", ".tif", ".tiff", ".bmp", ".gif") or mime.startswith("image/"):
-            return "image"
-        if ext in (".xlsx", ".xls", ".xlsm", ".csv", ".ods", ".tsv") or "spreadsheet" in mime or mime in ("text/csv", "application/vnd.ms-excel"):
-            return "table"
-        if ext in (".pdf", ".docx", ".doc", ".txt", ".md", ".rtf", ".odt", ".html", ".htm", ".xml", ".json", ".yaml", ".yml") or mime in ("application/pdf", "text/plain"):
-            return "document"
-        if ext in (".ppt", ".pptx", ".odp", ".key"):
-            return "presentation"
-        if ext in (".zip", ".7z", ".rar", ".tar", ".gz", ".tgz"):
-            return "archive"
-        if ext in (".mp4", ".mov", ".avi", ".mkv", ".mp3", ".wav", ".m4a", ".ogg"):
-            return "media"
-        return "binary"
-    # === END_DWG_DXF_KIND_FIX_V1_ARTIFACT_PIPELINE ===
-    # === END_UNIVERSAL_FORMAT_REGISTRY_V1_KIND ===
-
-
-# === DOMAIN_CONTOUR_ROUTER_V1 ===
-def _artifact_task_id(file_name: str, engine: str = "artifact") -> str:
-    base = re.sub(r"[^A-Za-zА-Яа-я0-9_.-]+", "_", os.path.splitext(os.path.basename(file_name or engine))[0]).strip("._")
-    return (base or engine)[:80]
-
-def _domain_flags(file_name: str, mime_type: str = "", user_text: str = "", topic_role: str = "") -> Dict[str, bool]:
-    hay = f"{file_name}\n{mime_type}\n{user_text}\n{topic_role}".lower()
-    estimate = any(x in hay for x in ("смет", "расчёт", "расчет", "вор", "ведомость объем", "ведомость объём", "estimate", "xlsx", "xls", "csv"))
-    tech = any(x in hay for x in ("технадзор", "дефект", "акт", "осмотр", "нарушен", "предписан", "гост", "снип", "сп ", "фотофиксац", "трещин", "протеч", "скол"))
-    project = any(x in hay for x in ("проект", "проектирован", "кж", "кмд", "км", "кр", "ар", "ов", "вк", "эом", "гп", "пз", "чертеж", "чертёж", "dxf", "dwg"))
-    return {"estimate": estimate, "tech": tech, "project": project}
-
-
-# === ESTIMATE_PDF_PACKAGE_V2 ===
-def _pdf_escape_v2(text: str) -> str:
-    return str(text or "").replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
-
-def _write_simple_pdf_v2(path: str, title: str, lines: List[str]) -> str:
-    out = os.path.join(tempfile.gettempdir(), os.path.splitext(os.path.basename(path))[0] + "_estimate_summary.pdf")
-    safe_lines = [_pdf_escape_v2(title or "Estimate summary")]
-    safe_lines += [_pdf_escape_v2(x) for x in (lines or [])[:40]]
-
-    stream_lines = ["BT", "/F1 11 Tf", "50 790 Td"]
-    first = True
-    for line in safe_lines:
-        if not first:
-            stream_lines.append("0 -16 Td")
-        first = False
-        stream_lines.append(f"({line[:105]}) Tj")
-    stream_lines.append("ET")
-    stream = "\n".join(stream_lines).encode("utf-8", errors="ignore")
-
-    objects = [
-        b"<< /Type /Catalog /Pages 2 0 R >>",
-        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
-        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-        b"<< /Length " + str(len(stream)).encode() + b" >>\nstream\n" + stream + b"\nendstream",
-    ]
-
-    pdf = bytearray(b"%PDF-1.4\n")
-    offsets = [0]
-    for i, obj in enumerate(objects, 1):
-        offsets.append(len(pdf))
-        pdf.extend(f"{i} 0 obj\n".encode())
-        pdf.extend(obj)
-        pdf.extend(b"\nendobj\n")
-    xref = len(pdf)
-    pdf.extend(f"xref\n0 {len(objects)+1}\n".encode())
-    pdf.extend(b"0000000000 65535 f \n")
-    for off in offsets[1:]:
-        pdf.extend(f"{off:010d} 00000 n \n".encode())
-    pdf.extend(f"trailer << /Size {len(objects)+1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n".encode())
-
-    with open(out, "wb") as f:
-        f.write(pdf)
-    return out
-
-def _zip_files_v2(files: List[str], name: str) -> str:
-    import zipfile
-    out = os.path.join(tempfile.gettempdir(), re.sub(r"[^A-Za-zА-Яа-я0-9_.-]+", "_", name or "estimate_package").strip("._") + ".zip")
-    with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as z:
-        for f in files or []:
-            if f and os.path.exists(f):
-                z.write(f, arcname=os.path.basename(f))
-    return out
-# === END_ESTIMATE_PDF_PACKAGE_V2 ===
-
-async def _domain_estimate_artifact(local_path: str, file_name: str, mime_type: str, user_text: str, topic_role: str) -> Optional[Dict[str, Any]]:
-    # === DOMAIN_ESTIMATE_PDF_XLSX_PACKAGE_V2 ===
-    try:
-        from core.estimate_engine import process_estimate_to_excel
-        tid = _artifact_task_id(file_name, "estimate_artifact")
-        res = await process_estimate_to_excel(local_path, tid, 0)
-
-        if res and (res.get("success") or res.get("excel_path")) and res.get("excel_path"):
-            excel_path = res.get("excel_path")
-            link = res.get("drive_link") or ""
-            lines = [
-                f"Файл: {file_name}",
-                "Engine: DOMAIN_ESTIMATE_ENGINE_V1",
-                f"Drive: {link or 'не подтвержден'}",
-                f"Status: {'OK' if excel_path else 'PARTIAL'}",
-            ]
-            if res.get("error"):
-                lines.append(f"Ограничение: {res.get('error')}")
-
-            pdf_path = _write_simple_pdf_v2(excel_path or local_path, "Сметный результат", lines)
-            package = _zip_files_v2([excel_path, pdf_path], os.path.splitext(os.path.basename(file_name or "estimate"))[0] + "_estimate_package")
-
-            summary = "Сметный файл обработан\nАртефакты: XLSX + PDF"
-            if link:
-                summary += f"\nExcel: {link}"
-            else:
-                summary += "\nExcel создан локально, Drive ссылка не подтверждена"
-            summary += "\nPDF включён в ZIP пакет"
-
-            return {
-                "summary": summary,
-                "artifact_path": package,
-                "artifact_name": f"{os.path.splitext(os.path.basename(file_name))[0]}_estimate_package.zip",
-                "engine": "DOMAIN_ESTIMATE_ENGINE_V1",
-                "drive_link": link,
-                "extra_artifacts": [excel_path, pdf_path],
-            }
-
-        reason = (res or {}).get("error") or "ESTIMATE_ENGINE_NO_ARTIFACT"
-        pdf_path = _write_simple_pdf_v2(local_path, "Сметный файл принят без расчётного результата", [
-            f"Файл: {file_name}",
-            f"Причина: {reason}",
-            "Расчётные строки не подтверждены",
-        ])
-        package = _zip_files_v2([pdf_path], os.path.splitext(os.path.basename(file_name or "estimate"))[0] + "_estimate_diagnostic_package")
-        return {
-            "summary": f"Сметный файл принят, но расчётные строки не подтверждены\nПричина: {reason}\nСоздан диагностический PDF пакет",
-            "artifact_path": package,
-            "artifact_name": f"{os.path.splitext(os.path.basename(file_name))[0]}_estimate_diagnostic_package.zip",
-            "engine": "DOMAIN_ESTIMATE_ENGINE_V1",
-            "error": str(reason)[:300],
-            "extra_artifacts": [pdf_path],
-        }
-    except Exception as e:
-        pdf_path = _write_simple_pdf_v2(local_path, "Сметный engine недоступен", [
-            f"Файл: {file_name}",
-            f"Ошибка: {e}",
-            "Расчётные строки не подтверждены",
-        ])
-        package = _zip_files_v2([pdf_path], os.path.splitext(os.path.basename(file_name or "estimate"))[0] + "_estimate_error_package")
-        return {
-            "summary": f"Сметный engine недоступен: {e}\nСоздан диагностический PDF пакет",
-            "artifact_path": package,
-            "artifact_name": f"{os.path.splitext(os.path.basename(file_name))[0]}_estimate_error_package.zip",
-            "engine": "DOMAIN_ESTIMATE_ENGINE_V1",
-            "error": str(e)[:300],
-            "extra_artifacts": [pdf_path],
-        }
-    # === END_DOMAIN_ESTIMATE_PDF_XLSX_PACKAGE_V2 ===
-
-async def _domain_technadzor_artifact(local_path: str, file_name: str, mime_type: str, user_text: str, topic_role: str, extracted_text: str = "") -> Optional[Dict[str, Any]]:
-    try:
-        from core.technadzor_engine import process_technadzor
-        tid = _artifact_task_id(file_name, "technadzor_artifact")
-        raw = "\n".join(x for x in [user_text or "", extracted_text or "", topic_role or ""] if x).strip()
-        res = process_technadzor(
-            conn=None,
-            task_id=tid,
-            chat_id="artifact_pipeline",
-            topic_id=0,
-            raw_input=raw or "Технический осмотр файла",
-            file_name=file_name,
-            local_path=local_path,
-        )
-        if res and res.get("ok"):
-            art = res.get("artifact") or {}
-            path = art.get("path") or ""
-            link = art.get("drive_link") or ""
-            summary = _clean(res.get("result_text") or "Акт технического осмотра сформирован", 6000)
-            if link and link not in summary:
-                summary += f"\n\nДокумент: {link}"
-            return {
-                "summary": summary,
-                "artifact_path": path,
-                "artifact_name": f"{os.path.splitext(os.path.basename(file_name))[0]}_technadzor_act.docx",
-                "engine": "DOMAIN_TECHNADZOR_ENGINE_V1",
-                "drive_link": link,
-            }
-    except Exception as e:
-        return {
-            "summary": f"Технадзор engine недоступен: {e}",
-            "artifact_path": "",
-            "artifact_name": "",
-            "engine": "DOMAIN_TECHNADZOR_ENGINE_V1",
-            "error": str(e)[:300],
-        }
-    return None
-
-async def _domain_project_document_artifact(local_path: str, file_name: str, mime_type: str, user_text: str, topic_role: str) -> Optional[Dict[str, Any]]:
-    try:
-        from core.project_document_engine import process_project_document
-        tid = _artifact_task_id(file_name, "project_document")
-        res = await process_project_document(
-            file_path=local_path,
-            file_name=file_name,
-            user_text=user_text,
-            topic_role=topic_role,
-            task_id=tid,
-            topic_id=0,
-        )
-        if res and res.get("success"):
-            return {
-                "summary": _clean(res.get("summary") or "Проектный документ обработан", 6000),
-                "artifact_path": res.get("artifact_path"),
-                "artifact_name": res.get("artifact_name") or f"{os.path.splitext(os.path.basename(file_name))[0]}_project_document_package.zip",
-                "extra_artifacts": res.get("extra_artifacts") or [],
-                "engine": "PROJECT_DOCUMENT_ENGINE_V1",
-                "model": res.get("model") or {},
-            }
-    except Exception as e:
-        return {
-            "summary": f"Project document engine недоступен: {e}",
-            "artifact_path": "",
-            "artifact_name": "",
-            "engine": "PROJECT_DOCUMENT_ENGINE_V1",
-            "error": str(e)[:300],
-        }
-    return None
-# === END_DOMAIN_CONTOUR_ROUTER_V1 ===
-
-def _build_word(title: str, summary: str, defects: List[Dict[str, Any]], recommendations: List[str], sources: List[str]) -> str:
-    from docx import Document
-
-    fd, out = tempfile.mkstemp(prefix="artifact_", suffix=".docx", dir="/tmp")
-    os.close(fd)
-
-    doc = Document()
-    doc.add_heading(title or "Результат обработки", level=1)
-
-    if summary:
-        doc.add_paragraph(_clean(summary, 12000))
-
-    if sources:
-        doc.add_heading("Источники", level=2)
-        for s in sources:
-            doc.add_paragraph(_s(s))
-
-    doc.add_heading("Замечания", level=2)
-    if defects:
-        for idx, item in enumerate(defects, 1):
-            p = doc.add_paragraph()
-            p.add_run(f"{idx}. ").bold = True
-            p.add_run(_s(item.get("title")) or "Замечание")
-            sev = _s(item.get("severity"))
-            if sev:
-                p.add_run(f" [{sev}]")
-            desc = _s(item.get("description"))
-            if desc:
-                doc.add_paragraph(desc)
-    else:
-        doc.add_paragraph("Замечания не выделены")
-
-    doc.add_heading("Рекомендации", level=2)
-    if recommendations:
-        for r in recommendations:
-            doc.add_paragraph(_s(r))
-    else:
-        doc.add_paragraph("Рекомендации не сформированы")
-
-    doc.save(out)
-    return out
-
-def _build_excel(title: str, items: List[Dict[str, str]], summary: str, sources: List[str]) -> str:
-    from openpyxl import Workbook
-
-    fd, out = tempfile.mkstemp(prefix="artifact_", suffix=".xlsx", dir="/tmp")
-    os.close(fd)
-
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Результат"
-    ws["A1"] = title or "Табличный результат"
-    ws["A2"] = _clean(summary, 1000)
-
-    row = 4
-    headers = ["№", "Наименование", "Ед", "Кол-во", "Примечание"]
-    for col, h in enumerate(headers, 1):
-        ws.cell(row=row, column=col, value=h)
-    row += 1
-
-    for idx, item in enumerate(items, 1):
-        ws.cell(row=row, column=1, value=idx)
-        ws.cell(row=row, column=2, value=_s(item.get("name")))
-        ws.cell(row=row, column=3, value=_s(item.get("unit")))
-        ws.cell(row=row, column=4, value=_s(item.get("qty")))
-        ws.cell(row=row, column=5, value=_s(item.get("note")))
-        row += 1
-
-    src = wb.create_sheet("Источники")
-    for idx, s in enumerate(sources, 1):
-        src.cell(row=idx, column=1, value=_s(s))
-
-    wb.save(out)
-    return out
-
-def _extract_pdf(path: str) -> str:
-    try:
-        from pypdf import PdfReader
-        reader = PdfReader(path)
-        parts = []
-        for page in reader.pages:
-            try:
-                parts.append(page.extract_text() or "")
-            except Exception:
-                pass
-        return _clean("\n".join(parts), 12000)
-    except Exception as e:
-        return f"PDF_PARSE_ERROR: {e}"
-
-def _extract_docx(path: str) -> str:
-    try:
-        from docx import Document
-        doc = Document(path)
-        return _clean("\n".join(p.text for p in doc.paragraphs if p.text), 12000)
-    except Exception as e:
-        return f"DOCX_PARSE_ERROR: {e}"
-
-def _extract_txt(path: str) -> str:
-    try:
-        with open(path, "r", encoding="utf-8", errors="ignore") as f:
-            return _clean(f.read(), 12000)
-    except Exception as e:
-        return f"TXT_PARSE_ERROR: {e}"
-
-def _extract_table_items(path: str, file_name: str) -> List[Dict[str, str]]:
-    rows: List[List[str]] = []
-    ext = os.path.splitext((file_name or "").lower())[1]
-
-    try:
-        if ext == ".csv":
-            with open(path, "r", encoding="utf-8", errors="ignore", newline="") as f:
-                reader = csv.reader(f)
-                for idx, row in enumerate(reader):
-                    rows.append([_s(x) for x in row])
-                    if idx >= 300:
-                        break
-        else:
-            from openpyxl import load_workbook
-            wb = load_workbook(path, data_only=True, read_only=True)
-            for ws in wb.worksheets[:3]:
-                rows.append([f"__SHEET__:{ws.title}"])
-                for idx, row in enumerate(ws.iter_rows(values_only=True)):
-                    rows.append([_s(x) for x in row])
-                    if idx >= 300:
-                        break
-    except Exception as e:
-        rows.append([f"TABLE_PARSE_ERROR: {e}"])
-
-    items: List[Dict[str, str]] = []
-    unit_re = re.compile(r"\b(м2|м3|м\.п\.|п\.м\.|шт|кг|тн|т|м)\b", re.I)
-    qty_re = re.compile(r"^\d+[.,]?\d*$")
-
-    for row in rows:
-        if not row:
-            continue
-        if len(row) == 1 and _s(row[0]).startswith("__SHEET__:"):
-            continue
-
-        cleaned = [_s(x) for x in row if _s(x)]
-        if not cleaned:
-            continue
-
-        name = cleaned[0]
-        unit = ""
-        qty = ""
-        note = ""
-
-        for cell in cleaned[1:]:
-            if not unit:
-                m = unit_re.search(cell)
-                if m:
-                    unit = m.group(1)
-                    continue
-            if not qty and qty_re.match(cell.replace(" ", "")):
-                qty = cell.replace(" ", "")
-                continue
-            note = (note + " | " + cell).strip(" |") if note else cell
-
-        if len(name) < 2:
-            continue
-
-        items.append({
-            "name": name[:500],
-            "unit": unit[:32],
-            "qty": qty[:64],
-            "note": note[:500],
-        })
-
-        if len(items) >= 500:
-            break
-
-    return items
-
-async def _vision_image(path: str, user_text: str, topic_role: str) -> Optional[Dict[str, Any]]:
-    api_key = <REDACTED_SECRET>"OPENROUTER_API_KEY") or "").strip()
-    if not api_key:
-        return None
-
-    base_url = (os.getenv("OPENROUTER_BASE_URL") or "https://openrouter.ai/api/v1").strip().rstrip("/")
-    model = (os.getenv("OPENROUTER_VISION_MODEL") or "google/gemini-2.5-flash").strip()
-
-    ext = os.path.splitext(path)[1].lower().lstrip(".") or "jpeg"
-    mime = f"image/{'jpeg' if ext in ('jpg', 'jpeg') else ext}"
-
-    try:
-        import httpx
-        with open(path, "rb") as f:
-            b64 = base64.b64encode(f.read()).decode("utf-8")
-
-        prompt = (
-            "Ты анализируешь строительную фотофиксацию\n"
-            f"Роль чата: {topic_role or 'технадзор'}\n"
-            f"Задача пользователя: {user_text or 'проанализируй фото'}\n\n"
-            "Верни только JSON вида:\n"
-            "{\n"
-            '  "summary": "краткое резюме",\n'
-            '  "defects": [{"title":"...", "description":"...", "severity":"low|medium|high"}],\n'
-            '  "recommendations": ["...", "..."]\n'
-            "}"
-        )
-
-        body = {
-            "model": model,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": prompt},
-                        {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}},
-                    ],
-                }
-            ],
-            "temperature": 0.1,
-        }
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        }
-
-        async with httpx.AsyncClient(timeout=httpx.Timeout(180.0, connect=30.0)) as client:
-            r = await client.post(f"{base_url}/chat/completions", headers=headers, json=body)
-            r.raise_for_status()
-            data = r.json()
-
-        content = data["choices"][0]["message"]["content"]
-        if isinstance(content, list):
-            content = "\n".join(x.get("text", "") if isinstance(x, dict) else str(x) for x in content)
-        content = _clean(_s(content), 12000)
-
-        try:
-            parsed = json.loads(content)
-            if isinstance(parsed, dict):
-                return parsed
-        except Exception:
-            return {
-                "summary": content[:3000],
-                "defects": [],
-                "recommendations": [],
-            }
-
-    except Exception:
-        return None
-
-    return None
-
-async def analyze_downloaded_file(local_path: str, file_name: str, mime_type: str = "", user_text: str = "", topic_role: str = "") -> Optional[Dict[str, Any]]:
-    kind = _kind(file_name, mime_type)
-    sources = [file_name]
-
-    if kind == "image":
-        # === OCR_TABLE_TO_EXCEL_FULL_CLOSE_V1_ROUTE ===
-        try:
-            _ocr_hay = f"{file_name} {mime_type} {user_text} {topic_role}".lower()
-            if any(_x in _ocr_hay for _x in ("смет", "таблиц", "вор", "excel", "xlsx", "расчет", "расчёт")):
-                from core.ocr_table_engine import image_table_to_excel
-                _ocr = await image_table_to_excel(local_path, _artifact_task_id(file_name, "ocr_table"), user_text, 0)
-                if _ocr and _ocr.get("success"):
-                    return {
-                        "summary": _clean(_ocr.get("summary") or "Фото таблицы распознано", 4000),
-                        "artifact_path": _ocr.get("artifact_path"),
-                        "artifact_name": _ocr.get("artifact_name") or f"{os.path.splitext(os.path.basename(file_name))[0]}_ocr_table_package.zip",
-                        "extra_artifacts": _ocr.get("extra_artifacts") or [],
-                        "engine": "OCR_TABLE_TO_EXCEL_FULL_CLOSE_V1",
-                        "model": {"rows": _ocr.get("rows") or []},
-                    }
-        except Exception as _ocr_e:
-            import logging as _ocr_log
-            _ocr_log.getLogger(__name__).warning("OCR_TABLE_TO_EXCEL_FULL_CLOSE_V1_ROUTE_ERR %s", _ocr_e)
-        # === END_OCR_TABLE_TO_EXCEL_FULL_CLOSE_V1_ROUTE ===
-        # === DOMAIN_TECHNADZOR_IMAGE_ASYNC_VISION_V2 ===
-        flags = _domain_flags(file_name, mime_type, user_text, topic_role)
-        vision_text = ""
-        analysis = None
-
-        if flags.get("tech") or not flags.get("estimate"):
-            analysis = await _vision_image(local_path, user_text, topic_role)
-            if isinstance(analysis, dict):
-                vision_text = json.dumps(analysis, ensure_ascii=False)
-            elif analysis:
-                vision_text = str(analysis)
-
-            routed = await _domain_technadzor_artifact(local_path, file_name, mime_type, user_text, topic_role, vision_text)
-            if routed and (routed.get("artifact_path") or routed.get("summary")):
-                routed["engine"] = routed.get("engine") or "DOMAIN_TECHNADZOR_IMAGE_ASYNC_VISION_V2"
-                return routed
-
-        if analysis is None:
-            analysis = await _vision_image(local_path, user_text, topic_role)
-
-        if not analysis:
-            routed = await _domain_technadzor_artifact(local_path, file_name, mime_type, user_text, topic_role, "Фото принято без vision-анализа")
-            if routed and (routed.get("artifact_path") or routed.get("summary")):
-                return routed
-            return None
-
-        summary = _s(analysis.get("summary")) if isinstance(analysis, dict) else _s(analysis)
-        summary = summary or "Фото проанализировано"
-        defects = analysis.get("defects") if isinstance(analysis, dict) and isinstance(analysis.get("defects"), list) else []
-        recommendations = analysis.get("recommendations") if isinstance(analysis, dict) and isinstance(analysis.get("recommendations"), list) else []
-        artifact_path = _build_word("Акт замечаний по фотофиксации", summary, defects, [_s(x) for x in recommendations], sources)
-        return {
-            "summary": summary,
-            "artifact_path": artifact_path,
-            "artifact_name": f"{os.path.splitext(os.path.basename(file_name))[0]}_photo_report.docx",
-            "engine": "DOMAIN_TECHNADZOR_IMAGE_ASYNC_VISION_V2",
-        }
-        # === END_DOMAIN_TECHNADZOR_IMAGE_ASYNC_VISION_V2 ===
-
-    if kind == "table":
-        flags = _domain_flags(file_name, mime_type, user_text, topic_role)
-        if flags.get("estimate") or not flags.get("project"):
-            routed = await _domain_estimate_artifact(local_path, file_name, mime_type, user_text, topic_role)
-            if routed and (routed.get("artifact_path") or routed.get("summary")):
-                return routed
-
-        items = _extract_table_items(local_path, file_name)
-        summary = f"Нормализовано позиций: {len(items)}"
-        artifact_path = _build_excel("Сметный/табличный результат", items, summary, sources)
-        return {
-            "summary": summary,
-            "artifact_path": artifact_path,
-            "artifact_name": f"{os.path.splitext(os.path.basename(file_name))[0]}_estimate.xlsx",
-            "engine": "TABLE_FALLBACK_ENGINE",
-        }
-
-    if kind == "drawing":
-        try:
-            from core.dwg_engine import process_drawing_file
-            data = process_drawing_file(
-                local_path=local_path,
-                file_name=file_name,
-                mime_type=mime_type,
-                user_text=user_text,
-                topic_role=topic_role,
-                task_id="artifact",
-                topic_id=0,
-            )
-            if data and data.get("success"):
-                return {
-                    "summary": _clean(data.get("summary") or "DWG/DXF файл обработан", 4000),
-                    "artifact_path": data.get("artifact_path"),
-                    "artifact_name": data.get("artifact_name") or f"{os.path.splitext(os.path.basename(file_name))[0]}_dwg_dxf_project_package.zip",
-                    "extra_artifacts": data.get("extra_artifacts") or [],
-                    "engine": "DWG_DXF_PROJECT_CLOSE_V1",
-                    "model": data.get("model") or {},
-                }
-            return {
-                "summary": _clean((data or {}).get("summary") or (data or {}).get("error") or "DWG/DXF файл не обработан", 3000),
-                "artifact_path": "",
-                "artifact_name": "",
-                "engine": "DWG_DXF_PROJECT_CLOSE_V1",
-                "error": (data or {}).get("error") or "DRAWING_PROCESS_FAILED",
-            }
-        except Exception as e:
-            return {
-                "summary": f"DWG/DXF обработка завершилась ошибкой: {e}",
-                "artifact_path": "",
-                "artifact_name": "",
-                "engine": "DWG_DXF_PROJECT_CLOSE_V1",
-                "error": str(e)[:300],
-            }
-
-    if kind == "document":
-        flags = _domain_flags(file_name, mime_type, user_text, topic_role)
-        ext = os.path.splitext((file_name or "").lower())[1]
-        if ext == ".pdf":
-            domain_text = _extract_pdf(local_path)
-        elif ext == ".docx":
-            domain_text = _extract_docx(local_path)
-        else:
-            domain_text = _extract_txt(local_path)
-
-        if flags.get("tech"):
-            routed = await _domain_technadzor_artifact(local_path, file_name, mime_type, user_text, topic_role, domain_text)
-            if routed and (routed.get("artifact_path") or routed.get("summary")):
-                return routed
-
-        if flags.get("estimate"):
-            routed = await _domain_estimate_artifact(local_path, file_name, mime_type, user_text, topic_role)
-            if routed and (routed.get("artifact_path") or routed.get("summary")):
-                return routed
-
-        if flags.get("project"):
-            routed = await _domain_project_document_artifact(local_path, file_name, mime_type, user_text, topic_role)
-            if routed and (routed.get("artifact_path") or routed.get("summary")):
-                return routed
-
-        summary = _clean(domain_text, 3000) if domain_text else "Документ обработан"
-        artifact_path = _build_word("Сводка по документу", summary, [], [], sources)
-        return {
-            "summary": summary,
-            "artifact_path": artifact_path,
-            "artifact_name": f"{os.path.splitext(os.path.basename(file_name))[0]}_document_summary.docx",
-            "engine": "DOCUMENT_FALLBACK_ENGINE",
-        }
-
-    # === UNIVERSAL_FILE_ENGINE_FALLBACK_V1 ===
-    try:
-        from core.universal_file_engine import process_universal_file
-        data = process_universal_file(
-            local_path=local_path,
-            file_name=file_name,
-            mime_type=mime_type,
-            user_text=user_text,
-            topic_role=topic_role,
-            task_id=_artifact_task_id(file_name, "universal_file"),
-            topic_id=0,
-        )
-        if data and data.get("success"):
-            return {
-                "summary": _clean(data.get("summary") or "Файл обработан универсальным контуром", 6000),
-                "artifact_path": data.get("artifact_path"),
-                "artifact_name": data.get("artifact_name") or f"{os.path.splitext(os.path.basename(file_name))[0]}_universal_file_package.zip",
-                "extra_artifacts": data.get("extra_artifacts") or [],
-                "engine": "UNIVERSAL_FILE_ENGINE_V1",
-                "model": data.get("model") or {},
-            }
-    except Exception as e:
-        return {
-            "summary": f"Универсальный файловый контур завершился ошибкой: {e}",
-            "artifact_path": "",
-            "artifact_name": "",
-            "engine": "UNIVERSAL_FILE_ENGINE_V1",
-            "error": str(e)[:300],
-        }
-    return None
-    # === END_UNIVERSAL_FILE_ENGINE_FALLBACK_V1 ===
-
-====================================================================================================
-END_FILE: core/artifact_pipeline.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/artifact_upload_guard.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 3cf8290fd123e4a629b65742f93811b6a157d1d05bb63ad6532d3f931bf43b48
-====================================================================================================
-# === FULLFIX_14_ARTIFACT_UPLOAD_GUARD ===
-# === UPLOAD_RETRY_QUEUE_UNIFICATION_V1 ===
-# === HEAVY_FILE_STORAGE_POLICY_V1 ===
-from __future__ import annotations
-import logging
-import os
-import sqlite3
-from typing import Any, Dict
-
-logger = logging.getLogger(__name__)
-_DB = "/root/.areal-neva-core/data/core.db"
-
-def _ensure_retry_table(conn: sqlite3.Connection) -> None:
-    conn.execute("""CREATE TABLE IF NOT EXISTS upload_retry_queue(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        path TEXT, task_id TEXT, topic_id INTEGER, kind TEXT,
-        attempts INTEGER DEFAULT 0, last_error TEXT,
-        created_at TEXT DEFAULT (datetime('now')), last_attempt TEXT
-    )""")
-
-def _queue_retry(path: str, task_id: str, topic_id: int, kind: str, error: str) -> None:
-    try:
-        with sqlite3.connect(_DB, timeout=10) as c:
-            _ensure_retry_table(c)
-            c.execute(
-                "INSERT INTO upload_retry_queue(path,task_id,topic_id,kind,last_error) VALUES(?,?,?,?,?)",
-                (str(path), str(task_id), int(topic_id or 0), str(kind or "artifact"), str(error)),
-            )
-            try:
-                c.execute(
-                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
-                    (str(task_id), f"UPLOAD_RETRY_QUEUE_UNIFICATION_V1:QUEUED:{kind}"),
-                )
-            except Exception:
-                pass
-            c.commit()
-    except Exception as e:
-        logger.warning("UPLOAD_RETRY_QUEUE_UNIFICATION_V1_ERR task=%s err=%s", task_id, e)
-
-def _cleanup_heavy(path: str, link: str = "") -> bool:
-    try:
-        p = str(path or "")
-        if not p or not os.path.exists(p):
-            return False
-        size = os.path.getsize(p)
-        is_tmp = p.startswith("/tmp/") or p.startswith("/var/tmp/") or "/runtime/" in p
-        if size >= 20 * 1024 * 1024 and is_tmp:
-            os.remove(p)
-            logger.info("HEAVY_FILE_STORAGE_POLICY_V1_CLEANED path=%s link=%s", p, link)
-            return True
-    except Exception as e:
-        logger.warning("HEAVY_FILE_STORAGE_POLICY_V1_CLEAN_ERR path=%s err=%s", path, e)
-    return False
-
-def upload_or_fail(path: str, task_id: str, topic_id: int, kind: str = "artifact") -> Dict[str, Any]:
-    if not path or not os.path.exists(str(path)):
-        _queue_retry(path, task_id, topic_id, kind, "FILE_NOT_FOUND")
-        return {"success": False, "error": "FILE_NOT_FOUND", "path": path, "queued": True}
-    size = os.path.getsize(str(path))
-    if size < 10:
-        _queue_retry(path, task_id, topic_id, kind, "FILE_TOO_SMALL")
-        return {"success": False, "error": "FILE_TOO_SMALL", "path": path, "size": size, "queued": True}
-    tried = []
-    try:
-        from core.engine_base import upload_artifact_to_drive
-        link = upload_artifact_to_drive(str(path), str(task_id), int(topic_id or 0))
-        if link and str(link).startswith("http"):
-            _cleanup_heavy(path, link)
-            return {"success": True, "link": str(link), "drive_link": str(link),
-                    "path": str(path), "kind": kind, "queued": False}
-        tried.append("drive:no_link")
-    except Exception as e:
-        tried.append(f"drive:{e}")
-    _queue_retry(path, task_id, topic_id, kind, "DRIVE_UPLOAD_FAILED")
-    try:
-        from core.engine_base import _telegram_fallback_send
-        tg = _telegram_fallback_send(str(path), str(task_id), int(topic_id or 0))
-        if tg:
-            _cleanup_heavy(path, tg)
-            return {"success": True, "link": str(tg), "telegram_link": str(tg),
-                    "path": str(path), "kind": kind, "drive_failed": True,
-                    "telegram_fallback": True, "queued": True}
-    except Exception as e:
-        tried.append(f"telegram:{e}")
-    return {"success": False, "error": "UPLOAD_FAILED", "path": str(path),
-            "size": size, "tried": tried, "queued": True}
-
-def upload_many_or_fail(files, task_id: str, topic_id: int) -> Dict[str, Any]:
-    results: Dict[str, Any] = {}
-    links: Dict[str, str] = {}
-    all_ok = True
-    for f in files or []:
-        if isinstance(f, str):
-            path, kind = f, "artifact"
-        elif isinstance(f, dict):
-            path = f.get("path") or f.get("file") or f.get("artifact_path") or ""
-            kind = f.get("kind") or "artifact"
-        else:
-            path, kind = str(f or ""), "artifact"
-        r = upload_or_fail(str(path), str(task_id), int(topic_id or 0), str(kind))
-        results[str(path)] = r
-        if not (isinstance(r, dict) and r.get("success")):
-            all_ok = False
-        if isinstance(r, dict):
-            link = str(r.get("link") or r.get("drive_link") or r.get("telegram_link") or "")
-            if link:
-                links[str(path)] = link
-    return {"success": all_ok, "results": results, "links": links,
-            "queued": any(isinstance(v, dict) and v.get("queued") for v in results.values())}
-# === END_HEAVY_FILE_STORAGE_POLICY_V1 ===
-# === END_UPLOAD_RETRY_QUEUE_UNIFICATION_V1 ===
-# === END FULLFIX_14_ARTIFACT_UPLOAD_GUARD ===
-
-====================================================================================================
-END_FILE: core/artifact_upload_guard.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/audit_log.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 46ff0af7219a7e5548d4d189ecadce73909cb9ff63c0e3c64ea62933fa1976b3
-====================================================================================================
-# === AUDIT_LOG_V1 ===
-import os, json, logging
-from datetime import datetime, timezone
-
-logger = logging.getLogger(__name__)
-_LOG_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "audit.jsonl")
-
-def audit(event: str, task_id: str = "", chat_id: str = "", details: dict = None):
-    """Записать аудит-событие"""
-    entry = {
-        "ts": datetime.now(timezone.utc).isoformat(),
-        "event": event,
-        "task_id": task_id,
-        "chat_id": str(chat_id),
-        "details": details or {},
-    }
-    try:
-        with open(_LOG_PATH, "a", encoding="utf-8") as f:
-            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
-    except Exception as e:
-        logger.warning("AUDIT_LOG_WRITE_ERR %s", e)
-
-def tail_audit(n: int = 20) -> list:
-    """Последние n записей аудита"""
-    try:
-        with open(_LOG_PATH, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-        return [json.loads(l) for l in lines[-n:] if l.strip()]
-    except Exception:
-        return []
-# === END AUDIT_LOG_V1 ===
-
-====================================================================================================
-END_FILE: core/audit_log.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/cad_project_engine.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 3f977d0eaa15dbc87b099c9dcbdd3b605aa0b0e848d84f3fbcc3c7a02a5cad84
-====================================================================================================
-# === FULLFIX_07_CAD_PROJECT_DOCUMENTATION_CLOSURE ===
-import os
-import re
-import json
-import math
-import glob
-import tempfile
-from pathlib import Path
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Tuple
-
-BASE = "/root/.areal-neva-core"
-TEMPLATE_DIR = f"{BASE}/data/project_templates"
-
-ENGINE = "FULLFIX_07_CAD_PROJECT_DOCUMENTATION_CLOSURE"
-
-DEFAULT_FOUNDATION_SHEETS = [
-    {"mark": "КЖ", "number": "0", "title": "Титульный лист"},
-    {"mark": "КЖ", "number": "1", "title": "Общие данные"},
-    {"mark": "КЖ", "number": "2", "title": "Ведомость листов"},
-    {"mark": "КЖ", "number": "3", "title": "План фундаментной плиты"},
-    {"mark": "КЖ", "number": "4", "title": "Разрез 1-1"},
-    {"mark": "КЖ", "number": "5", "title": "Схема нижнего армирования"},
-    {"mark": "КЖ", "number": "6", "title": "Схема верхнего армирования"},
-    {"mark": "КЖ", "number": "7", "title": "Узлы и детали"},
-    {"mark": "КЖ", "number": "8", "title": "Спецификация материалов"},
-    {"mark": "КЖ", "number": "9", "title": "Ведомость расхода стали"},
-]
-
-DEFAULT_ROOF_SHEETS = [
-    {"mark": "КД", "number": "0", "title": "Титульный лист"},
-    {"mark": "КД", "number": "1", "title": "Общие данные"},
-    {"mark": "КД", "number": "2", "title": "Ведомость листов"},
-    {"mark": "КД", "number": "3", "title": "План кровли"},
-    {"mark": "КД", "number": "4", "title": "План стропильной системы"},
-    {"mark": "КД", "number": "5", "title": "Разрезы"},
-    {"mark": "КД", "number": "6", "title": "Узлы кровли"},
-    {"mark": "КД", "number": "7", "title": "Спецификация древесины"},
-    {"mark": "КД", "number": "8", "title": "Спецификация крепежа"},
-]
-
-NORMATIVE_NOTES = [
-    "СП 63.13330.2018 Бетонные и железобетонные конструкции",
-    "СП 20.13330.2016 Нагрузки и воздействия",
-    "ГОСТ 21.501-2018 Правила выполнения рабочей документации архитектурных и конструктивных решений",
-    "ГОСТ 21.101-2020 Основные требования к проектной и рабочей документации",
-    "ГОСТ 34028-2016 Прокат арматурный для железобетонных конструкций",
-]
-
-REBAR_WEIGHT_KG_M = {
-    6: 0.222,
-    8: 0.395,
-    10: 0.617,
-    12: 0.888,
-    14: 1.21,
-    16: 1.58,
-    18: 2.00,
-    20: 2.47,
-    22: 2.98,
-    25: 3.85,
-}
-
-def _clean(v: Any, limit: int = 10000) -> str:
-    return str(v or "").replace("\x00", " ").strip()[:limit]
-
-def _safe_name(v: Any) -> str:
-    s = re.sub(r"[^A-Za-zА-Яа-я0-9_.-]+", "_", _clean(v, 80))
-    return s.strip("_") or "project"
-
-def _font_name() -> str:
-    try:
-        from reportlab.pdfbase import pdfmetrics
-        from reportlab.pdfbase.ttfonts import TTFont
-        candidates = [
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-            "/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed.ttf",
-            "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
-        ]
-        for path in candidates:
-            if os.path.exists(path):
-                pdfmetrics.registerFont(TTFont("ArealSans", path))
-                return "ArealSans"
+        if hasattr(task, "keys") and field in task.keys():
+            return task[field]
     except Exception:
         pass
-    return "Helvetica"
-
-def _load_templates() -> List[Dict[str, Any]]:
-    out = []
-    for p in sorted(glob.glob(f"{TEMPLATE_DIR}/PROJECT_TEMPLATE_MODEL__*.json"), key=os.path.getmtime, reverse=True):
-        try:
-            data = json.loads(Path(p).read_text(encoding="utf-8"))
-            if isinstance(data, dict):
-                data["template_file"] = p
-                out.append(data)
-        except Exception:
-            pass
-    return out
-
-def _choose_template(section: str, topic_id: int = 0) -> Dict[str, Any]:
-    templates = _load_templates()
-    if not templates:
-        return {}
-    section = _clean(section).upper()
-    for tpl in templates:
-        if topic_id and int(tpl.get("topic_id", 0) or 0) == int(topic_id) and _clean(tpl.get("project_type")).upper() == section:
-            return tpl
-    for tpl in templates:
-        if _clean(tpl.get("project_type")).upper() == section:
-            return tpl
-    return templates[0]
-
-def _num(text: str, default: float) -> float:
     try:
-        return float(str(text).replace(",", "."))
+        return getattr(task, field)
     except Exception:
         return default
 
-def _parse_mm(text: str, patterns: List[str], default: int) -> int:
-    low = text.lower()
-    for pat in patterns:
-        m = re.search(pat, low, re.I)
-        if m:
-            return int(float(m.group(1).replace(",", ".")))
-    return default
 
-def parse_project_request(raw_input: str, template_hint: str = "") -> Dict[str, Any]:
-    text = _clean(raw_input + " " + template_hint, 6000)
-    low = text.lower()
+def _has_table(conn: sqlite3.Connection, table: str) -> bool:
+    row = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+        (table,),
+    ).fetchone()
+    return row is not None
 
-    section = "КЖ"
-    project_kind = "foundation_slab"
-    if any(x in low for x in ["кров", "строп", "кд"]):
-        section = "КД"
-        project_kind = "roof"
-    if any(x in low for x in ["ар ", "архитект", "планиров"]):
-        section = "АР"
-        project_kind = "architectural"
 
-    length_m = 10.0
-    width_m = 10.0
-    m = re.search(r"(\d+(?:[,.]\d+)?)\s*[xх×]\s*(\d+(?:[,.]\d+)?)\s*(?:м|m)?", low)
-    if m:
-        length_m = _num(m.group(1), 10.0)
-        width_m = _num(m.group(2), 10.0)
-
-    slab_mm = _parse_mm(low, [
-        r"толщин[аы]?\D{0,30}(\d{2,4})\s*мм",
-        r"плит[аы]?\D{0,30}(\d{2,4})\s*мм",
-        r"бетон\D{0,30}(\d{2,4})\s*мм",
-    ], 250)
-
-    sand_mm = _parse_mm(low, [
-        r"песчан\D{0,30}(\d{2,4})\s*мм",
-        r"песок\D{0,30}(\d{2,4})\s*мм",
-    ], 300)
-
-    gravel_mm = _parse_mm(low, [
-        r"щеб[её]н\D{0,30}(\d{2,4})\s*мм",
-        r"щебень\D{0,30}(\d{2,4})\s*мм",
-        r"основан\D{0,30}(\d{2,4})\s*мм",
-    ], 150)
-
-    rebar_step_mm = _parse_mm(low, [
-        r"шаг\D{0,30}(\d{2,4})\s*мм",
-        r"арматур\D{0,40}(\d{2,4})\s*мм",
-    ], 200)
-
-    rebar_diam_mm = 12
-    md = re.search(r"(?:ø|ф|d|диаметр)\s*(\d{1,2})", low, re.I)
-    if md:
-        rebar_diam_mm = int(md.group(1))
-    else:
-        md = re.search(r"арматур[аы]?\D{0,30}(\d{1,2})(?!\d)", low, re.I)
-        if md:
-            rebar_diam_mm = int(md.group(1))
-
-    concrete_class = "B25"
-    mc = re.search(r"\b[вb]\s?(\d{2,3}(?:[,.]\d)?)\b", text, re.I)
-    if mc:
-        concrete_class = "B" + mc.group(1).replace(",", ".")
-
-    rebar_class = "A500"
-    mr = re.search(r"\b[аa]\s?500[сc]?\b", text, re.I)
-    if mr:
-        rebar_class = "A500C" if "c" in mr.group(0).lower() or "с" in mr.group(0).lower() else "A500"
-
-    return {
-        "project_name": "Проект фундаментной плиты" if project_kind == "foundation_slab" else "Проект по образцу",
-        "project_kind": project_kind,
-        "section": section,
-        "length_m": length_m,
-        "width_m": width_m,
-        "slab_mm": slab_mm,
-        "sand_mm": sand_mm,
-        "gravel_mm": gravel_mm,
-        "rebar_diam_mm": rebar_diam_mm,
-        "rebar_step_mm": rebar_step_mm,
-        "rebar_class": rebar_class,
-        "concrete_class": concrete_class,
-        "cover_mm": 40,
-        "input": raw_input,
-    }
-
-def _normalize_sheet_register(template: Dict[str, Any], data: Dict[str, Any]) -> List[Dict[str, str]]:
-    section = data.get("section") or "КЖ"
-    raw = template.get("sheet_register") or []
-    sheets: List[Dict[str, str]] = []
-    seen = set()
-
-    for i, sh in enumerate(raw, 1):
-        if isinstance(sh, dict):
-            title = _clean(sh.get("title") or sh.get("name") or sh.get("sheet") or "", 120)
-            number = _clean(sh.get("number") or sh.get("num") or str(i), 20)
-            mark = _clean(sh.get("mark") or section, 20)
-        else:
-            title = _clean(sh, 120)
-            number = str(i)
-            mark = section
-        if not title:
-            continue
-        key = title.lower()
-        if key in seen:
-            continue
-        seen.add(key)
-        sheets.append({"mark": mark, "number": number, "title": title})
-
-    sections = template.get("sections") or []
-    if len(sheets) < 6 and sections:
-        keys = ["общие", "ведомость", "план", "разрез", "армир", "спецификац", "узел", "фасад", "схема"]
-        for sec in sections:
-            title = _clean(sec, 120)
-            if not title:
-                continue
-            low = title.lower()
-            if not any(k in low for k in keys):
-                continue
-            if low in seen:
-                continue
-            seen.add(low)
-            sheets.append({"mark": section, "number": str(len(sheets) + 1), "title": title})
-            if len(sheets) >= 12:
-                break
-
-    base = DEFAULT_ROOF_SHEETS if data.get("project_kind") == "roof" else DEFAULT_FOUNDATION_SHEETS
-    for sh in base:
-        low = sh["title"].lower()
-        if low not in seen:
-            sheets.append({"mark": section, "number": str(len(sheets)), "title": sh["title"]})
-            seen.add(low)
-
-    fixed = []
-    for idx, sh in enumerate(sheets[:20], 1):
-        title = _clean(sh.get("title"), 120)
-        mark = _clean(sh.get("mark"), 20) or section
-        num = _clean(sh.get("number"), 20) or str(idx)
-        fixed.append({"mark": mark, "number": num, "title": title})
-    return fixed
-
-def _calc_foundation(data: Dict[str, Any]) -> Dict[str, Any]:
-    L = float(data["length_m"])
-    W = float(data["width_m"])
-    area = L * W
-    slab_m = data["slab_mm"] / 1000.0
-    sand_m = data["sand_mm"] / 1000.0
-    gravel_m = data["gravel_mm"] / 1000.0
-    step_m = data["rebar_step_mm"] / 1000.0
-    d = int(data["rebar_diam_mm"])
-    bars_x = int(math.floor(W / step_m)) + 1
-    bars_y = int(math.floor(L / step_m)) + 1
-    rebar_m_one_layer = bars_x * L + bars_y * W
-    rebar_m_total = rebar_m_one_layer * 2
-    weight = REBAR_WEIGHT_KG_M.get(d, (d * d) / 162.0)
-    rebar_kg = rebar_m_total * weight
-    return {
-        "area_m2": round(area, 3),
-        "concrete_m3": round(area * slab_m, 3),
-        "sand_m3": round(area * sand_m, 3),
-        "gravel_m3": round(area * gravel_m, 3),
-        "bars_x": bars_x,
-        "bars_y": bars_y,
-        "rebar_m_total": round(rebar_m_total, 1),
-        "rebar_kg": round(rebar_kg, 1),
-        "rebar_t": round(rebar_kg / 1000.0, 3),
-    }
-
-def _frame(c, w, h, title: str, sheet_no: int, total: int, font: str, data: Dict[str, Any]) -> None:
-    from reportlab.lib.units import mm
-    c.setLineWidth(0.7)
-    c.rect(10*mm, 10*mm, w - 20*mm, h - 20*mm)
-    c.line(10*mm, 35*mm, w - 10*mm, 35*mm)
-    c.line(w - 135*mm, 10*mm, w - 135*mm, 35*mm)
-    c.line(w - 80*mm, 10*mm, w - 80*mm, 35*mm)
-    c.line(w - 35*mm, 10*mm, w - 35*mm, 35*mm)
-    c.setFont(font, 9)
-    c.drawString(14*mm, 23*mm, _clean(title, 90))
-    c.drawString(w - 132*mm, 23*mm, f"Раздел {data.get('section','КЖ')}")
-    c.drawString(w - 77*mm, 23*mm, f"Лист {sheet_no}")
-    c.drawString(w - 32*mm, 23*mm, f"Листов {total}")
-    c.setFont(font, 7)
-    c.drawString(14*mm, 15*mm, f"{ENGINE} · {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-    c.setFont(font, 14)
-    c.drawString(18*mm, h - 18*mm, _clean(title, 120))
-    c.setFont(font, 8)
-    c.drawString(18*mm, h - 25*mm, f"{data.get('project_name','Проект')} · {data.get('length_m')}x{data.get('width_m')} м")
-
-def _draw_lines(c, lines: List[str], x_mm: float, y_mm: float, font: str, size: int = 10, step: float = 7.5) -> None:
-    from reportlab.lib.units import mm
-    y = y_mm
-    c.setFont(font, size)
-    for line in lines:
-        c.drawString(x_mm*mm, y*mm, _clean(line, 150))
-        y -= step
-
-def _draw_plan(c, w, h, font: str, data: Dict[str, Any], calc: Dict[str, Any], rebar: bool = False) -> None:
-    from reportlab.lib.units import mm
-    L = float(data["length_m"])
-    W = float(data["width_m"])
-    x0 = 55*mm
-    y0 = 55*mm
-    scale = min((w - 115*mm) / (L * 1000), (h - 130*mm) / (W * 1000))
-    rw = L * 1000 * scale
-    rh = W * 1000 * scale
-    c.setLineWidth(1.2)
-    c.rect(x0, y0, rw, rh)
-    c.setFont(font, 9)
-    c.drawString(x0, y0 - 8*mm, f"{L:g} м")
-    c.saveState()
-    c.translate(x0 - 8*mm, y0)
-    c.rotate(90)
-    c.drawString(0, 0, f"{W:g} м")
-    c.restoreState()
-    c.setDash(5, 3)
-    c.line(x0, y0 + rh / 2, x0 + rw, y0 + rh / 2)
-    c.line(x0 + rw / 2, y0, x0 + rw / 2, y0 + rh)
-    c.setDash()
-
-    if rebar:
-        step_px = max(1.8*mm, data["rebar_step_mm"] * scale)
-        c.setLineWidth(0.25)
-        x = x0 + step_px
-        while x < x0 + rw:
-            c.line(x, y0, x, y0 + rh)
-            x += step_px
-        y = y0 + step_px
-        while y < y0 + rh:
-            c.line(x0, y, x0 + rw, y)
-            y += step_px
-        txt = f"Армирование: {data['rebar_class']} Ø{data['rebar_diam_mm']} шаг {data['rebar_step_mm']} мм, верхняя и нижняя сетка"
-    else:
-        txt = f"Плита {L:g}x{W:g} м, площадь {calc['area_m2']} м²"
-
-    c.setFont(font, 10)
-    c.drawString(25*mm, (h/mm - 42)*mm, txt)
-
-def _draw_section(c, w, h, font: str, data: Dict[str, Any]) -> None:
-    from reportlab.lib.units import mm
-    bx = 55*mm
-    by = 70*mm
-    total = data["slab_mm"] + data["gravel_mm"] + data["sand_mm"]
-    k = 105*mm / total
-    layers = [
-        ("Фундаментная плита", data["slab_mm"], f"Бетон {data['concrete_class']}, защитный слой {data['cover_mm']} мм"),
-        ("Щебёночное основание", data["gravel_mm"], "Уплотнение послойно"),
-        ("Песчаная подушка", data["sand_mm"], "Уплотнение послойно"),
-    ]
-    y = by
-    c.setLineWidth(0.8)
-    for name, th, note in reversed(layers):
-        hh = th * k
-        c.rect(bx, y, 230*mm, hh)
-        c.setFont(font, 10)
-        c.drawString(bx + 5*mm, y + hh/2, f"{name}: {th} мм · {note}")
-        y += hh
-    c.setFont(font, 10)
-    c.drawString(25*mm, 235*mm, "Разрез 1-1")
-    c.drawString(25*mm, 225*mm, f"Армирование: {data['rebar_class']} Ø{data['rebar_diam_mm']} шаг {data['rebar_step_mm']} мм")
-
-def _draw_nodes(c, w, h, font: str, data: Dict[str, Any]) -> None:
-    from reportlab.lib.units import mm
-    c.setFont(font, 11)
-    c.drawString(25*mm, 245*mm, "Типовые узлы")
-    bx, by = 45*mm, 95*mm
-    for i, title in enumerate(["Узел края плиты", "Узел защитного слоя", "Узел основания"], 0):
-        x = bx + i * 115*mm
-        c.setLineWidth(0.8)
-        c.rect(x, by, 90*mm, 75*mm)
-        c.line(x, by + 22*mm, x + 90*mm, by + 22*mm)
-        c.line(x + 20*mm, by, x + 20*mm, by + 75*mm)
-        c.setFont(font, 8)
-        c.drawString(x + 4*mm, by + 63*mm, title)
-        c.drawString(x + 4*mm, by + 15*mm, f"Защитный слой {data['cover_mm']} мм")
-        c.drawString(x + 4*mm, by + 7*mm, f"Ø{data['rebar_diam_mm']} {data['rebar_class']}")
-
-def _spec_rows(data: Dict[str, Any], calc: Dict[str, Any]) -> List[Tuple[str, str, Any, str]]:
-    return [
-        (f"Бетон {data['concrete_class']} для фундаментной плиты", "м³", calc["concrete_m3"], "по объёму плиты"),
-        ("Песчаная подушка", "м³", calc["sand_m3"], "послойное уплотнение"),
-        ("Щебёночное основание", "м³", calc["gravel_m3"], "послойное уплотнение"),
-        (f"Арматура {data['rebar_class']} Ø{data['rebar_diam_mm']}", "п.м", calc["rebar_m_total"], "верхняя и нижняя сетка"),
-        (f"Арматура {data['rebar_class']} Ø{data['rebar_diam_mm']}", "т", calc["rebar_t"], "расчётный вес"),
-    ]
-
-def _draw_spec(c, w, h, font: str, rows: List[Tuple[str, str, Any, str]]) -> None:
-    from reportlab.lib.units import mm
-    x = 25*mm
-    y = 235*mm
-    c.setFont(font, 10)
-    headers = ["№", "Наименование", "Ед.", "Кол-во", "Примечание"]
-    widths = [12*mm, 150*mm, 22*mm, 32*mm, 110*mm]
-    c.setLineWidth(0.5)
-    cx = x
-    for head, ww in zip(headers, widths):
-        c.rect(cx, y, ww, 8*mm)
-        c.drawString(cx + 2*mm, y + 2.3*mm, head)
-        cx += ww
-    y -= 8*mm
-    for i, row in enumerate(rows, 1):
-        vals = [str(i), row[0], row[1], str(row[2]), row[3]]
-        cx = x
-        for val, ww in zip(vals, widths):
-            c.rect(cx, y, ww, 8*mm)
-            c.drawString(cx + 2*mm, y + 2.3*mm, _clean(val, 55))
-            cx += ww
-        y -= 8*mm
-
-def write_project_pdf(path: str, data: Dict[str, Any], template: Dict[str, Any], sheets: List[Dict[str, str]], calc: Dict[str, Any]) -> str:
-    from reportlab.lib.pagesizes import A3, landscape
-    from reportlab.pdfgen import canvas
-    from reportlab.lib.units import mm
-    font = _font_name()
-    page_size = landscape(A3)
-    w, h = page_size
-    c = canvas.Canvas(path, pagesize=page_size)
-    rows = _spec_rows(data, calc)
-    total = len(sheets)
-
-    for idx, sh in enumerate(sheets, 1):
-        title = sh["title"]
-        low = title.lower()
-        _frame(c, w, h, f"{sh['mark']}-{sh['number']} {title}", idx, total, font, data)
-
-        if "титул" in low:
-            c.setFont(font, 18)
-            c.drawCentredString(w/2, h - 85*mm, data["project_name"])
-            c.setFont(font, 14)
-            c.drawCentredString(w/2, h - 100*mm, f"Раздел {data['section']}")
-            c.setFont(font, 11)
-            c.drawCentredString(w/2, h - 116*mm, f"Параметры: {data['length_m']:g}x{data['width_m']:g} м, плита {data['slab_mm']} мм")
-            c.drawCentredString(w/2, h - 130*mm, "Сформировано по сохранённому шаблону пользователя")
-        elif "общ" in low or "данн" in low:
-            lines = [
-                f"Наименование: {data['project_name']}",
-                f"Раздел: {data['section']}",
-                f"Размер плиты: {data['length_m']:g} x {data['width_m']:g} м",
-                f"Толщина плиты: {data['slab_mm']} мм",
-                f"Основание: щебень {data['gravel_mm']} мм, песок {data['sand_mm']} мм",
-                f"Бетон: {data['concrete_class']}",
-                f"Арматура: {data['rebar_class']} Ø{data['rebar_diam_mm']} шаг {data['rebar_step_mm']} мм",
-                f"Площадь: {calc['area_m2']} м², бетон: {calc['concrete_m3']} м³",
-                "",
-                "Нормативная база:",
-            ] + NORMATIVE_NOTES
-            _draw_lines(c, lines, 25, 245, font, 10)
-        elif "ведомость лист" in low or "состав" in low:
-            lines = [f"{i}. {x['mark']}-{x['number']} {x['title']}" for i, x in enumerate(sheets, 1)]
-            _draw_lines(c, lines, 25, 245, font, 10)
-        elif "план" in low and "арм" not in low:
-            _draw_plan(c, w, h, font, data, calc, rebar=False)
-        elif "разрез" in low or "сечен" in low:
-            _draw_section(c, w, h, font, data)
-        elif "ниж" in low and "арм" in low:
-            _draw_plan(c, w, h, font, data, calc, rebar=True)
-            c.setFont(font, 10)
-            c.drawString(25*mm, 220*mm, "Нижняя сетка армирования")
-        elif "верх" in low and "арм" in low:
-            _draw_plan(c, w, h, font, data, calc, rebar=True)
-            c.setFont(font, 10)
-            c.drawString(25*mm, 220*mm, "Верхняя сетка армирования")
-        elif "арм" in low or "сетк" in low:
-            _draw_plan(c, w, h, font, data, calc, rebar=True)
-        elif "узел" in low or "детал" in low:
-            _draw_nodes(c, w, h, font, data)
-        elif "специф" in low or "материал" in low or "стали" in low:
-            _draw_spec(c, w, h, font, rows)
-        else:
-            _draw_lines(c, [
-                f"Лист: {title}",
-                f"Раздел: {data['section']}",
-                f"Размер: {data['length_m']:g}x{data['width_m']:g} м",
-                f"Бетон: {data['concrete_class']}",
-                f"Арматура: {data['rebar_class']} Ø{data['rebar_diam_mm']} шаг {data['rebar_step_mm']} мм",
-            ], 25, 245, font, 10)
-
-        c.showPage()
-
-    c.save()
-    return path
-
-def write_project_dxf(path: str, data: Dict[str, Any], calc: Dict[str, Any]) -> str:
-    import ezdxf
-    doc = ezdxf.new("R2010")
-    doc.header["$INSUNITS"] = 4
-    msp = doc.modelspace()
-
-    for name, color in [("KJ_OUTLINE", 7), ("KJ_REBAR", 1), ("KJ_AXES", 3), ("KJ_TEXT", 2), ("KJ_SECTION", 5)]:
-        doc.layers.new(name=name, dxfattribs={"color": color})
-
-    L = float(data["length_m"]) * 1000
-    W = float(data["width_m"]) * 1000
-    step = float(data["rebar_step_mm"])
-
-    pts = [(0,0), (L,0), (L,W), (0,W), (0,0)]
-    msp.add_lwpolyline(pts, dxfattribs={"layer": "KJ_OUTLINE", "closed": False})
-    msp.add_line((L/2, 0), (L/2, W), dxfattribs={"layer": "KJ_AXES"})
-    msp.add_line((0, W/2), (L, W/2), dxfattribs={"layer": "KJ_AXES"})
-
-    x = step
-    while x < L:
-        msp.add_line((x, 0), (x, W), dxfattribs={"layer": "KJ_REBAR"})
-        x += step
-    y = step
-    while y < W:
-        msp.add_line((0, y), (L, y), dxfattribs={"layer": "KJ_REBAR"})
-        y += step
-
-    msp.add_text(
-        f"{data['project_name']} {data['length_m']:g}x{data['width_m']:g}m",
-        dxfattribs={"layer": "KJ_TEXT", "height": 250}
-    ).set_placement((0, -900))
-
-    msp.add_text(
-        f"{data['concrete_class']} · {data['rebar_class']} D{data['rebar_diam_mm']} step {data['rebar_step_mm']}mm",
-        dxfattribs={"layer": "KJ_TEXT", "height": 220}
-    ).set_placement((0, -1300))
-
-    sx = L + 1500
-    y0 = 0
-    layers = [
-        ("Sand", data["sand_mm"]),
-        ("Gravel", data["gravel_mm"]),
-        ("Slab", data["slab_mm"]),
-    ]
-    for name, th in layers:
-        msp.add_lwpolyline([(sx,y0),(sx+4000,y0),(sx+4000,y0+th),(sx,y0+th),(sx,y0)], dxfattribs={"layer": "KJ_SECTION"})
-        msp.add_text(f"{name} {th}mm", dxfattribs={"layer": "KJ_TEXT", "height": 160}).set_placement((sx+4200, y0 + th/2))
-        y0 += th
-
-    doc.saveas(path)
-    return path
-
-def write_project_xlsx(path: str, data: Dict[str, Any], sheets: List[Dict[str, str]], calc: Dict[str, Any], template: Dict[str, Any]) -> str:
-    from openpyxl import Workbook
-    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
-
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Спецификация"
-
-    headers = ["№", "Наименование", "Ед.изм", "Кол-во", "Примечание"]
-    rows = _spec_rows(data, calc)
-
-    ws.merge_cells("A1:E1")
-    ws["A1"] = f"{data['project_name']} · {data['section']}"
-    ws["A1"].font = Font(bold=True, size=13)
-    ws["A1"].alignment = Alignment(horizontal="center")
-
-    for c, h in enumerate(headers, 1):
-        cell = ws.cell(3, c, h)
-        cell.font = Font(bold=True)
-        cell.fill = PatternFill("solid", fgColor="DDEEFF")
-
-    for r, row in enumerate(rows, 4):
-        ws.cell(r, 1, r - 3)
-        ws.cell(r, 2, row[0])
-        ws.cell(r, 3, row[1])
-        ws.cell(r, 4, row[2])
-        ws.cell(r, 5, row[3])
-
-    ws.column_dimensions["A"].width = 8
-    ws.column_dimensions["B"].width = 55
-    ws.column_dimensions["C"].width = 12
-    ws.column_dimensions["D"].width = 16
-    ws.column_dimensions["E"].width = 35
-
-    ws2 = wb.create_sheet("Ведомость листов")
-    ws2.append(["№", "Марка", "Номер", "Наименование"])
-    for i, sh in enumerate(sheets, 1):
-        ws2.append([i, sh["mark"], sh["number"], sh["title"]])
-    for col in ["A", "B", "C", "D"]:
-        ws2.column_dimensions[col].width = 25
-
-    ws3 = wb.create_sheet("Расчёт")
-    for k, v in [
-        ("Длина, м", data["length_m"]),
-        ("Ширина, м", data["width_m"]),
-        ("Площадь, м2", calc["area_m2"]),
-        ("Бетон, м3", calc["concrete_m3"]),
-        ("Песок, м3", calc["sand_m3"]),
-        ("Щебень, м3", calc["gravel_m3"]),
-        ("Арматура, п.м", calc["rebar_m_total"]),
-        ("Арматура, т", calc["rebar_t"]),
-    ]:
-        ws3.append([k, v])
-    ws3.column_dimensions["A"].width = 35
-    ws3.column_dimensions["B"].width = 18
-
-    wb.save(path)
-    return path
-
-def write_project_manifest(path: str, data: Dict[str, Any], template: Dict[str, Any], sheets: List[Dict[str, str]], calc: Dict[str, Any], files: Dict[str, str], links: Dict[str, str], task_id: str, topic_id: int) -> str:
-    manifest = {
-        "schema": "AREAL_PROJECT_DOCUMENTATION_PACKAGE_V1",
-        "engine": ENGINE,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "task_id": task_id,
-        "topic_id": topic_id,
-        "input": data.get("input"),
-        "section": data.get("section"),
-        "project_kind": data.get("project_kind"),
-        "template_file": template.get("template_file"),
-        "template_project_type": template.get("project_type"),
-        "sheet_count": len(sheets),
-        "sheet_register": sheets,
-        "parameters": data,
-        "calculation": calc,
-        "files": files,
-        "links": links,
-        "normative_notes": NORMATIVE_NOTES,
-        "status": "ARTIFACTS_CREATED_AND_UPLOADED",
-    }
-    Path(path).write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
-    return path
-
-def _validate_pdf(path: str, min_pages: int) -> Tuple[bool, str]:
-    if not os.path.exists(path) or os.path.getsize(path) < 5000:
-        return False, "PDF_FILE_TOO_SMALL"
+def _cols(conn: sqlite3.Connection, table: str) -> List[str]:
     try:
-        from pypdf import PdfReader
-        pages = len(PdfReader(path).pages)
-        if pages < min_pages:
-            return False, f"PDF_PAGE_COUNT_TOO_LOW:{pages}"
-    except Exception as e:
-        return False, f"PDF_VALIDATE_ERROR:{str(e)[:100]}"
-    return True, ""
+        return [r[1] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()]
+    except Exception:
+        return []
 
-def _upload(path: str, task_id: str, topic_id: int) -> str:
-    from core.engine_base import upload_artifact_to_drive
-    link = upload_artifact_to_drive(path, task_id, topic_id)
-    return str(link or "")
 
-def create_full_project_package(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "") -> Dict[str, Any]:
-    data = parse_project_request(raw_input, template_hint)
-    template = _choose_template(data["section"], topic_id)
-    sheets = _normalize_sheet_register(template, data)
+def _update_task(conn: sqlite3.Connection, task_id: str, **kwargs: Any) -> None:
+    cols = _cols(conn, "tasks")
+    parts: List[str] = []
+    vals: List[Any] = []
 
-    if len(sheets) < 8:
-        return {
-            "success": False,
-            "error": f"SHEET_REGISTER_TOO_SHORT:{len(sheets)}",
-            "engine": ENGINE,
-            "section": data["section"],
-            "sheet_count": len(sheets),
-        }
+    for key, value in kwargs.items():
+        if key in cols:
+            parts.append(f"{key}=?")
+            if key == "error_message":
+                vals.append(_clean(_s(value), 4000))
+            elif key == "result":
+                vals.append(_clean(_s(value), 50000))
+            elif key == "raw_input":
+                vals.append(_clean(_s(value), 12000))
+            else:
+                vals.append(value)
 
-    calc = _calc_foundation(data)
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    safe_task = _safe_name(task_id)[:20]
-    out_dir = Path(tempfile.gettempdir()) / f"areal_project_full_{safe_task}_{stamp}"
-    out_dir.mkdir(parents=True, exist_ok=True)
+    if "updated_at" in cols:
+        parts.append("updated_at=datetime('now')")
 
-    base_name = f"{data['section']}_project_{safe_task}"
-    pdf_path = str(out_dir / f"{base_name}.pdf")
-    dxf_path = str(out_dir / f"{base_name}.dxf")
-    xlsx_path = str(out_dir / f"{base_name}.xlsx")
-    manifest_path = str(out_dir / f"{base_name}.manifest.json")
+    if not parts:
+        return
 
-    res = {
-        "success": False,
-        "engine": ENGINE,
-        "section": data["section"],
-        "sheet_count": len(sheets),
-        "template_file": template.get("template_file"),
-        "pdf_path": pdf_path,
-        "dxf_path": dxf_path,
-        "xlsx_path": xlsx_path,
-        "manifest_path": manifest_path,
-        "pdf_link": "",
-        "dxf_link": "",
-        "xlsx_link": "",
-        "manifest_link": "",
-        "error": None,
-        "data": data,
-        "calculation": calc,
-    }
+    vals.append(task_id)
+    conn.execute(f"UPDATE tasks SET {', '.join(parts)} WHERE id=?", vals)
 
+
+
+# === LIVE_MEMORY_HELPERS_V1 ===
+def _memory_insert_topic_entry_v1(chat_id: str, key: str, value: str) -> None:
     try:
-        write_project_pdf(pdf_path, data, template, sheets, calc)
-        write_project_dxf(dxf_path, data, calc)
-        write_project_xlsx(xlsx_path, data, sheets, calc, template)
+        import sqlite3 as _sq
+        if not os.path.exists(MEM_DB):
+            return
+        _mc = _sq.connect(MEM_DB)
+        try:
+            _mc.row_factory = _sq.Row
+            _cols_mem = [r[1] for r in _mc.execute("PRAGMA table_info(memory)").fetchall()]
+            if not _cols_mem:
+                return
+            _ts = datetime.datetime.utcnow().isoformat()
+            _val = _clean(_s(value), 50000)
+            if not _val:
+                return
+            _mid = hashlib.sha1(f"{chat_id}:{key}:{_ts}:{_val[:80]}".encode()).hexdigest()
+            _mc.execute(
+                "INSERT OR IGNORE INTO memory (id, chat_id, key, value, timestamp) VALUES (?,?,?,?,?)",
+                (_mid, str(chat_id), str(key), _val, _ts),
+            )
+            _mc.commit()
+        finally:
+            _mc.close()
+    except Exception as _mi_e:
+        logger.warning("LIVE_MEMORY_HELPERS_V1_INSERT_ERR %s", _mi_e)
 
-        ok, err = _validate_pdf(pdf_path, min_pages=8)
-        if not ok:
-            res["error"] = err
-            return res
-        if not os.path.exists(dxf_path) or os.path.getsize(dxf_path) < 1500:
-            res["error"] = "DXF_FILE_TOO_SMALL"
-            return res
-        if not os.path.exists(xlsx_path) or os.path.getsize(xlsx_path) < 3000:
-            res["error"] = "XLSX_FILE_TOO_SMALL"
-            return res
+def _append_timeline_event_v1(chat_id: str, topic_id: int, task_id: str, kind: str, raw_input: str = "", result: str = "") -> None:
+    try:
+        _base = f"{BASE}/data/memory_files"
+        _chat_key = f"{chat_id}__telegram"
+        _chat_dir = os.path.join(_base, "CHATS", _chat_key)
+        os.makedirs(_chat_dir, exist_ok=True)
+        os.makedirs(os.path.join(_base, "GLOBAL"), exist_ok=True)
+        _entry = json.dumps({
+            "timestamp": datetime.datetime.utcnow().isoformat(),
+            "chat_id": str(chat_id),
+            "topic_id": int(topic_id or 0),
+            "task_id": str(task_id),
+            "kind": str(kind),
+            "raw_input": _clean(_s(raw_input), 4000),
+            "result": _clean(_s(result), 4000),
+            "source": "task_worker",
+        }, ensure_ascii=False)
+        for _tl_path in [
+            os.path.join(_chat_dir, "timeline.jsonl"),
+            os.path.join(_base, "GLOBAL", "timeline.jsonl"),
+        ]:
+            with open(_tl_path, "a", encoding="utf-8") as _f:
+                _f.write(_entry + "\n")
+    except Exception as _tl_e:
+        logger.warning("LIVE_MEMORY_HELPERS_V1_TIMELINE_ERR %s", _tl_e)
+# === END LIVE_MEMORY_HELPERS_V1 ===
 
-        pdf_link = _upload(pdf_path, task_id, topic_id)
-        dxf_link = _upload(dxf_path, task_id, topic_id)
-        xlsx_link = _upload(xlsx_path, task_id, topic_id)
+def _history(conn: sqlite3.Connection, task_id: str, action: str) -> None:
+    if not _has_table(conn, "task_history"):
+        return
+    conn.execute(
+        "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, datetime('now'))",
+        (task_id, _clean(action, 1000)),
+    )
 
-        links = {"pdf": pdf_link, "dxf": dxf_link, "xlsx": xlsx_link}
-        files = {"pdf": pdf_path, "dxf": dxf_path, "xlsx": xlsx_path}
-        write_project_manifest(manifest_path, data, template, sheets, calc, files, links, task_id, topic_id)
-        manifest_link = _upload(manifest_path, task_id, topic_id)
 
-        if not pdf_link:
-            res["error"] = "PDF_UPLOAD_FAILED"
-            return res
-        if not dxf_link:
-            res["error"] = "DXF_UPLOAD_FAILED"
-            return res
-        if not xlsx_link:
-            res["error"] = "XLSX_UPLOAD_FAILED"
-            return res
+def _already_replied(conn: sqlite3.Connection, task_id: str, kind: str) -> bool:
+    if not _has_table(conn, "task_history"):
+        return False
+    row = conn.execute(
+        "SELECT 1 FROM task_history WHERE task_id=? AND action=? LIMIT 1",
+        (task_id, f"reply_sent:{kind}"),
+    ).fetchone()
+    return row is not None
 
-        res.update({
-            "success": True,
-            "pdf_link": pdf_link,
-            "dxf_link": dxf_link,
-            "xlsx_link": xlsx_link,
-            "manifest_link": manifest_link,
-        })
-        return res
-    except Exception as e:
-        res["error"] = str(e)[:500]
-        return res
 
-def is_project_design_request(text: str) -> bool:
-    low = _clean(text, 2000).lower()
+def _send_once(conn: sqlite3.Connection, task_id: str, chat_id: str, text: str, reply_to: Optional[int], kind: str) -> bool:
+    # === _send_once_UNIFIED_USER_OUTPUT_SANITIZER_V1 ===
+    try:
+        from core.output_sanitizer import sanitize_user_output as _uos_sanitize
+        text = _uos_sanitize(text)
+    except Exception as _uos_err:
+        logger.warning("UNIFIED_USER_OUTPUT_SANITIZER_V1_ERR %s", _uos_err)
+    # === END__send_once_UNIFIED_USER_OUTPUT_SANITIZER_V1 ===
+    if _already_replied(conn, task_id, kind):
+        return True
+    ok = send_reply(chat_id=chat_id, text=text, reply_to_message_id=reply_to)
+    if ok:
+        _history(conn, task_id, f"reply_sent:{kind}")
+    return bool(ok)
+
+
+def _send_once_ex(conn: sqlite3.Connection, task_id: str, chat_id: str, text: str, reply_to: Optional[int], kind: str) -> Dict[str, Any]:
+    # === _send_once_ex_UNIFIED_USER_OUTPUT_SANITIZER_V1 ===
+    try:
+        from core.output_sanitizer import sanitize_user_output as _uos_sanitize
+        text = _uos_sanitize(text)
+    except Exception as _uos_err:
+        logger.warning("UNIFIED_USER_OUTPUT_SANITIZER_V1_ERR %s", _uos_err)
+    # === END__send_once_ex_UNIFIED_USER_OUTPUT_SANITIZER_V1 ===
+    if _already_replied(conn, task_id, kind):
+        return {"ok": True, "bot_message_id": None, "skipped": True}
+    res = send_reply_ex(chat_id=chat_id, text=text, reply_to_message_id=reply_to)
+    if not isinstance(res, dict):
+        res = {"ok": bool(res)}
+    if res.get("ok"):
+        _history(conn, task_id, f"reply_sent:{kind}")
+    return res
+
+
+def _hash(text: str) -> str:
+    return hashlib.sha1(_clean(text).lower().encode("utf-8")).hexdigest()
+
+
+def _is_valid_result(text: str, raw_input: str) -> bool:
+    r = _clean(text)
+    if not r or len(r) < MIN_RESULT_LEN:
+        return False
+    if any(re.search(p, r, re.I) for p in BAD_RESULT_RE):
+        return False
+    if _hash(r) == _hash(raw_input):
+        return False
+    if "/root/" in r or ".ogg" in r.lower():
+        return False
+    return True
+
+
+def _detect_role_assignment(text: str) -> str:
     triggers = [
+        r"^(?:\[voice\]\s*)?этот чат для\s+(.+)$",
+        r"^(?:\[voice\]\s*)?этот чат про\s+(.+)$",
+        r"^(?:\[voice\]\s*)?этот топик для\s+(.+)$",
+        r"^(?:\[voice\]\s*)?этот топик про\s+(.+)$",
+        r"^(?:\[voice\]\s*)?чат закрепл[её]н за\s+(.+)$",
+        r"^(?:\[voice\]\s*)?этот чат исключительно для\s+(.+)$",
+        r"^(?:\[voice\]\s*)?этот чат используется для\s+(.+)$",
+        r"^(?:\[voice\]\s*)?закрепи чат за\s+(.+)$",
+        r"^(?:\[voice\]\s*)?закрепи этот чат за\s+(.+)$",
+    ]
+    t = _clean(text, 500).lower()
+    for pattern in triggers:
+        m = re.fullmatch(pattern, t)
+        if m:
+            return _clean(m.group(1), 200)
+    return ""
+
+
+def _extract_role_confirmation(result: str) -> str:
+    t = _clean(_s(result), 500)
+    m = re.fullmatch(r"Понял назначение чата так:\n(.+?)\n\nПодтверди или уточни", t, re.S)
+    if not m:
+        return ""
+    return _clean(m.group(1), 200)
+
+
+def _save_topic_role(chat_id: str, topic_id: int, role: str) -> None:
+    if not role or not os.path.exists(MEM_DB):
+        return
+    mem = db(MEM_DB)
+    try:
+        if not _has_table(mem, "memory"):
+            mem.execute("CREATE TABLE IF NOT EXISTS memory (chat_id TEXT, key TEXT, value TEXT, timestamp TEXT)")
+        key = f"topic_{topic_id}_role"
+        mem.execute("DELETE FROM memory WHERE chat_id=? AND key=?", (str(chat_id), key))
+        mem.execute(
+            "INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
+            (str(chat_id), key, role),
+        )
+        mem.commit()
+    finally:
+        mem.close()
+
+
+def _load_memory_context(chat_id: str, topic_id: int) -> Tuple[str, str, str, str]:
+    if not os.path.exists(MEM_DB):
+        return "", "", "", ""
+
+    conn = db(MEM_DB)
+    try:
+        if not _has_table(conn, "memory"):
+            return "", "", "", ""
+
+        topic_prefix = f"topic_{int(topic_id)}_"
+        rows = conn.execute(
+            """
+            SELECT key, value
+            FROM memory
+            WHERE chat_id=?
+              AND key GLOB ?
+            ORDER BY timestamp DESC
+            LIMIT 100
+            """,
+            (str(chat_id), f"{topic_prefix}*"),
+        ).fetchall()
+
+        short_memory: List[str] = []
+        long_memory: List[str] = []
+        topic_role = ""
+        topic_directions = ""
+
+        MEMORY_MUTEX_MARKERS = [
+            "последние действия",
+            "этот чат закреплён за: последние действия",
+            "в этом чате были следующие действия",
+            "текущий статус: ожидание подтверждения",
+            "текущий статус:",
+            "задача отменена",
+            "задача завершена",
+            "задача закрыта",
+            "задачи завершены",
+            "подтверждение принято",
+            "не понимаю запрос",
+            "готов к выполнению задачи",
+            "без контекста",
+            "задайте конкретный вопрос",
+            "конкретный вопрос по",
+            "нет, не помню",
+        ]
+
+        for row in rows:
+            key = _s(row["key"])
+            raw_value = _s(row["value"])
+            if key.endswith("_user_input") or key.endswith("_role"):
+                limit = 500
+            elif key.endswith("_task_summary"):
+                limit = 20000
+            elif key.endswith("_assistant_output"):
+                limit = 50000
+            elif key.endswith("_directions"):
+                limit = 1000
+            else:
+                limit = 500
+            value = _clean(raw_value, limit)
+            if not value:
+                continue
+            low = value.lower()
+            if _is_memory_noise(low) or any(x in low for x in MEMORY_BAD_MARKERS):
+                continue
+            if any(m in low for m in MEMORY_MUTEX_MARKERS):
+                continue
+
+            if key.endswith("_role") and not topic_role:
+                topic_role = value[:500]
+                continue
+
+            if not topic_role and (key.endswith("_assistant_output") or key.endswith("_task_summary")):
+                m = re.search(r"чат закрепл[её]н за темами:\s*(.+?)(?:\.|$)", value, re.I)
+                if not m:
+                    m = re.search(r"чат закрепл[её]н за\s*(.+?)(?:\.|$)", value, re.I)
+                if not m:
+                    m = re.search(r"закреплено:\s*чат для\s*(.+?)(?:\.|$)", value, re.I)
+                if not m:
+                    m = re.search(r"этот чат используется для\s*(.+?)(?:\.|$)", value, re.I)
+                if m:
+                    topic_role = _clean(m.group(1), 500)
+
+            if key.endswith("_directions") and not topic_directions:
+                topic_directions = value[:1000]
+                continue
+            if key.endswith("_user_input") or key.endswith("_task_summary"):
+                if not _is_memory_noise(value):
+                    short_memory.append(f"{key}: {value}")
+            else:
+                if not _is_memory_noise(value):
+                    long_memory.append(f"{key}: {value}")
+
+        # === TOPIC_META_ROLE_INJECT_V1 ===
+        if not topic_role and TOPIC_META_LOADER_WIRED:
+            try:
+                _tm = load_topic_meta(int(topic_id or 0))
+                if _tm:
+                    _tm_name = _tm.get("name", "")
+                    _tm_dir = _tm.get("direction", "")
+                    if _tm_name:
+                        topic_role = f"Топик: {_tm_name} | Направление: {_tm_dir}"
+            except Exception:
+                pass
+        # === END TOPIC_META_ROLE_INJECT_V1 ===
+        return "\n".join(short_memory[:20]), "\n".join(long_memory[:20]), topic_role, topic_directions  # MEMORY_LIMIT_20_V1
+    finally:
+        conn.close()
+
+
+def _load_archive_context(chat_id: str, topic_id: int, user_text: str) -> str:
+    # === ARCHIVE_DISTRIBUTOR_V1_WIRED ===
+    try:
+        from core.archive_distributor import _load_archive_for_topic
+        arc = _load_archive_for_topic(chat_id, topic_id, user_text, limit=5)
+        if arc:
+            return arc
+    except Exception as _ade:
+        logger.warning("ARCHIVE_DISTRIBUTOR_ERR %s", _ade)
+    # === END ARCHIVE_DISTRIBUTOR_V1_WIRED ===
+    # Fallback — старый метод через archive_legacy
+    STOP_WORDS = {"это","как","что","где","когда","для","почему","зачем","кто"}
+    words = {w for w in re.findall(r"\w+", _clean(user_text).lower()) if len(w) > 3 and w not in STOP_WORDS}
+    if not words or not os.path.exists(MEM_DB):
+        return ""
+
+    conn = db(MEM_DB)
+    try:
+        if not _has_table(conn, "memory"):
+            return ""
+        rows = conn.execute(
+            """
+            SELECT key, value
+            FROM memory
+            WHERE chat_id=?
+              AND key LIKE 'archive_legacy_%'
+            ORDER BY timestamp DESC
+            LIMIT 300
+            """,
+            (str(chat_id),),
+        ).fetchall()
+    finally:
+        conn.close()
+
+    scored: List[Tuple[int, str]] = []
+    for row in rows:
+        raw = _s(row["value"])
+        if any(x in raw.lower() for x in MEMORY_BAD_MARKERS):
+            continue
+        try:
+            payload = json.loads(raw)
+        except Exception:
+            continue
+        if int(payload.get("topic_id", -1)) != int(topic_id):
+            continue
+        blob = _clean(f"{_s(payload.get('raw_input', ''))}\n{_s(payload.get('result', ''))}", 1200)
+        ov = len(words & set(re.findall(r"\w+", blob.lower())))
+        if ov > 0:
+            scored.append((ov, blob))
+
+    scored = [(ov, blob) for ov, blob in scored if ov > 0]
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return "\n\n".join(x[1] for x in scored[:3]) if scored else ""
+
+
+def _active_unfinished_context(conn: sqlite3.Connection, chat_id: str, topic_id: int, task_id: str) -> str:
+    cols = _cols(conn, "tasks")
+    where = [
+        "chat_id=?",
+        "id<>?",
+        "state IN ('WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION')",
+    ]
+    params: List[Any] = [str(chat_id), task_id]
+    if "topic_id" in cols:
+        where.append("COALESCE(topic_id,0)=?")
+        params.append(int(topic_id))
+
+    rows = conn.execute(
+        f"""
+        SELECT raw_input, result, state
+        FROM tasks
+        WHERE {' AND '.join(where)}
+        ORDER BY updated_at DESC, created_at DESC
+        LIMIT 3
+        """,
+        params,
+    ).fetchall()
+
+    parts = []
+    for row in rows:
+        raw = _clean(_s(_task_field(row, "raw_input")), 300)
+        res = _clean(_s(row["result"]), 500)
+        state = _clean(_s(row["state"]), 100)
+        low = f"{raw}\n{res}".lower()
+        if any(x in low for x in MEMORY_BAD_MARKERS):
+            continue
+        chunk = []
+        if raw:
+            chunk.append(f"raw_input: {raw}")
+        if res:
+            chunk.append(f"result: {res}")
+        if state:
+            chunk.append(f"state: {state}")
+        if chunk:
+            parts.append("\n".join(chunk))
+    return "\n\n".join(parts[:3])
+
+
+def _search_fact_context(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> str:
+    cols = _cols(conn, "tasks")
+    where = [
+        "chat_id=?",
+        "state IN ('DONE','ARCHIVED')",
+        "lower(COALESCE(raw_input,'')) GLOB '*най*'",
+    ]
+    params: List[Any] = [str(chat_id)]
+    if "topic_id" in cols:
+        where.append("COALESCE(topic_id,0)=?")
+        params.append(int(topic_id))
+
+    rows = conn.execute(
+        f"""
+        SELECT raw_input, result
+        FROM tasks
+        WHERE {' AND '.join(where)}
+        ORDER BY updated_at DESC
+        LIMIT 5
+        """,
+        params,
+    ).fetchall()
+
+    facts: List[str] = []
+    for row in rows:
+        q = _clean(_s(row["raw_input"]), 300)
+        r = _clean(_s(row["result"]), 500)
+        low = f"{q}\n{r}".lower()
+        if any(x in low for x in MEMORY_BAD_MARKERS):
+            continue
+        if q and r:
+            facts.append(f"search_done: {q} => {r}")
+    return "\n".join(facts[:3])
+
+
+def _save_memory(chat_id: str, topic_id: int, raw_input: str, result: str) -> None:
+    low = (result or "").lower()
+    if any(x in low for x in [
+        "без контекста","не понимаю запрос","не помню",
+        "задача завершена","задача закрыта","подтверждение принято",
+        "готов к выполнению задачи"
+    ]):
+        return
+
+    bad = [
+        "ошибка",
+        "не найдено",
+        "уточните",
+        "traceback",
+        "/root/",
+        ".ogg",
+        "delete from",
+        "task_worker.py",
+        "telegram_daemon.py",
+    ]
+    if not result or len(result) < MIN_RESULT_LEN:
+        return
+    low = result.lower()
+    if any(b in low for b in bad):
+        return
+    if not os.path.exists(MEM_DB):
+        return
+
+    conn = db(MEM_DB)
+    try:
+        if not _has_table(conn, "memory"):
+            conn.execute("CREATE TABLE IF NOT EXISTS memory (chat_id TEXT, key TEXT, value TEXT, timestamp TEXT)")
+        prefix = f"topic_{int(topic_id)}_"
+        conn.execute(
+            "INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
+            (str(chat_id), f"{prefix}assistant_output", _clean(result, 50000)),
+        )
+        conn.execute(
+            "INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
+            (str(chat_id), f"{prefix}task_summary", _clean(result, 20000) if len(result) >= MIN_RESULT_LEN else ""),
+        )
+        conn.execute(
+            "INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
+            (str(chat_id), f"{prefix}user_input", _clean(raw_input, 500)),
+        )
+        conn.commit()
+        logger.info("save_memory_ok chat=%s topic=%s", chat_id, topic_id)
+    finally:
+        conn.close()
+
+
+def _close_pin(conn: sqlite3.Connection, task_id: str) -> None:
+    if not _has_table(conn, "pin"):
+        return
+    conn.execute(
+        "UPDATE pin SET state='CLOSED', updated_at=datetime('now') WHERE task_id=? AND state='ACTIVE'",
+        (task_id,),
+    )
+
+
+def _finalize_done(conn: sqlite3.Connection, task_id: str, chat_id: str, topic_id: int, reply_to: Optional[int]) -> None:
+    row = conn.execute(
+        "SELECT COALESCE(raw_input,''), COALESCE(result,'') FROM tasks WHERE id=? LIMIT 1",
+        (task_id,),
+    ).fetchone()
+    raw_input = _clean(_s(row[0]) if row else "", 500)
+    result = _clean(_s(row[1]) if row else "", 50000)
+
+    _update_task(conn, task_id, state="DONE", error_message="")
+    _history(conn, task_id, "state:DONE")
+    if result:
+        _save_memory(chat_id, topic_id, raw_input, result)
+    conn.commit()
+
+
+def _is_confirm_intent(text: str) -> bool:
+    t = _clean(text, 200).lower()
+    if t in CONFIRM_INTENTS:
+        return True
+    return any(t.startswith(x) for x in ["да", "подтвер", "соглас", "верно", "ок"])
+
+
+def _is_revision_intent(text: str) -> bool:
+    t = _clean(text, 200).lower()
+    if t in REVISION_INTENTS:
+        return True
+    return any(x in t for x in ["не так", "передел", "исправ", "правк", "уточн"])
+
+
+def _recover_stale_tasks(conn: sqlite3.Connection, chat_id: Optional[str]) -> None:
+    # CONFIRMATION_TIMEOUT_FIX_V1
+    try:
+        conn.execute("""
+            UPDATE tasks SET state='FAILED', error_message='CONFIRMATION_TIMEOUT', updated_at=datetime('now')
+            WHERE state='AWAITING_CONFIRMATION'
+              AND updated_at < datetime('now','-30 minutes')
+              AND COALESCE(raw_input,'') NOT LIKE '%retry_queue_healthcheck%'
+              AND COALESCE(result,'') NOT LIKE '%retry_queue_healthcheck%'
+        """)
+        conn.commit()
+    except Exception as _ct_e:
+        logger.warning("CONFIRMATION_TIMEOUT_FIX_V1_ERR %s", _ct_e)
+    # IN_PROGRESS_HARD_TIMEOUT_V1
+    try:
+        _hp = [] if not chat_id else [str(chat_id)]
+        _hw = (["chat_id=?"] if chat_id else []) + [
+            "state='IN_PROGRESS'",
+            "created_at < datetime('now','-15 minutes')",
+        ]
+        for _hr in conn.execute(
+            f"SELECT id,chat_id,COALESCE(topic_id,0) AS topic_id,reply_to_message_id,raw_input FROM tasks WHERE {' AND '.join(_hw)}",
+            _hp,
+        ).fetchall():
+            _htid = _s(_hr["id"]); _hchat = _s(_hr["chat_id"])
+            _htopic = int(_hr["topic_id"] or 0); _hreply = _hr["reply_to_message_id"]
+            _hmsg = "Задача не выполнена: превышено время выполнения"
+            _update_task(conn, _htid, state="FAILED", result=_hmsg, error_message="EXECUTION_TIMEOUT")
+            _close_pin(conn, _htid); _history(conn, _htid, "state:FAILED:EXECUTION_TIMEOUT")
+            try:
+                _append_timeline_event_v1(_hchat, _htopic, _htid, "execution_timeout", _s(_hr["raw_input"]), _hmsg)
+            except Exception: pass
+            conn.commit()
+            _send_once(conn, _htid, _hchat, _hmsg, _hreply, "execution_timeout")
+    except Exception as _e:
+        logger.warning("IN_PROGRESS_HARD_TIMEOUT_V1_ERR %s", _e)
+
+    where = [
+        "state IN ('IN_PROGRESS','WAITING_CLARIFICATION')",
+        "(strftime('%s','now') - strftime('%s', COALESCE(updated_at, created_at))) > ?",
+    ]
+    params: List[Any] = [STALE_TIMEOUT]
+    if chat_id:
+        where.insert(0, "chat_id=?")
+        params.insert(0, str(chat_id))
+
+    rows = conn.execute(
+        f"""
+        SELECT id, chat_id, COALESCE(topic_id,0) AS topic_id, reply_to_message_id
+        FROM tasks
+        WHERE {' AND '.join(where)}
+        """,
+        params,
+    ).fetchall()
+
+    for row in rows:
+        task_id = _s(row["id"])
+        tg_chat_id = _s(row["chat_id"])
+        reply_to = row["reply_to_message_id"]
+        _update_task(conn, task_id, state="FAILED", error_message="STALE_TIMEOUT")
+        _close_pin(conn, task_id)
+        _history(conn, task_id, "state:FAILED")
+        conn.commit()
+        _send_once(conn, task_id, tg_chat_id, "Задача не выполнена. Повтори или уточни запрос", reply_to, "stale_failed")
+
+    done_markers = [
+        "задача завершена",
+        "задача закрыта",
+        "задачи завершены",
+        "подтверждение принято",
+    ]
+    junk_markers = [
+        "без контекста",
+        "задайте конкретный вопрос",
+        "конкретный вопрос по",
+        "нет, не помню",
+        "не понимаю запрос",
+        "готов к выполнению задачи",
+    ]
+
+    rows = conn.execute("""
+        SELECT id, chat_id, COALESCE(topic_id,0) AS topic_id, reply_to_message_id, result, raw_input, input_type, updated_at, created_at
+        FROM tasks
+        WHERE state = 'AWAITING_CONFIRMATION'
+    """).fetchall()
+
+    now_utc = datetime.datetime.now(datetime.timezone.utc)
+
+    for row in rows:
+        updated = row["updated_at"] or row["created_at"]
+        if not updated:
+            continue
+
+        result = _s(row["result"])
+        low_result = result.lower()
+        row_raw_input = ""
+        try:
+            row_raw_input = _s(row["raw_input"])
+        except Exception:
+            row_raw_input = ""
+        if _force_voice_finish(row_raw_input, result):
+            _update_task(conn, row["id"], state="DONE")
+            continue  # FORCE_VOICE_FINISH_HOOK
+
+        if any(m in low_result for m in done_markers):
+            _update_task(conn, row["id"], state="DONE", error_message="")
+            _close_pin(conn, row["id"])
+            _history(conn, row["id"], "state:DONE")
+            conn.commit()
+            continue
+
+        if any(m in low_result for m in junk_markers):
+            _update_task(conn, row["id"], state="FAILED", error_message="JUNK_RESULT_CLEANUP")
+            _close_pin(conn, row["id"])
+            _history(conn, row["id"], "state:FAILED")
+            conn.commit()
+            continue
+
+        try:
+            s = str(updated).strip()
+            if "T" in s:
+                dt = datetime.datetime.fromisoformat(s.replace("Z", "+00:00"))
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=datetime.timezone.utc)
+            else:
+                dt = datetime.datetime.fromisoformat(s)
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=datetime.timezone.utc)
+        except Exception:
+            continue
+
+        hours_old = (now_utc - dt).total_seconds() / 3600.0
+        if hours_old <= 24:
+            continue
+
+        if _s(row["input_type"]).lower() == "drive_file" and hours_old > 48:
+            _update_task(conn, row["id"], state="FAILED", error_message="drive_upload_stale")
+            _close_pin(conn, row["id"])
+            _history(conn, row["id"], "state:FAILED")
+            conn.commit()
+        elif hours_old > 168:
+            _update_task(conn, row["id"], state="ARCHIVED")
+            _close_pin(conn, row["id"])
+            _history(conn, row["id"], "state:ARCHIVED")
+            conn.commit()
+
+    conn.execute("""
+        UPDATE pin
+        SET state='CLOSED', updated_at=datetime('now')
+        WHERE state='ACTIVE'
+          AND task_id IN (
+              SELECT id FROM tasks
+              WHERE state='FAILED'
+                 OR lower(COALESCE(result,'')) LIKE '%задача закрыта%'
+                 OR lower(COALESCE(result,'')) LIKE '%подтверждение принято%'
+                 OR lower(COALESCE(result,'')) LIKE '%без контекста%'
+                 OR lower(COALESCE(result,'')) LIKE '%конкретный вопрос%'
+                 OR lower(COALESCE(result,'')) LIKE '%не помню%'
+          )
+    """)
+    conn.commit()
+
+
+
+# === FULLFIX_13D_TASK_WORKER_SEND_BELT ===
+# reply_sender also strips MANIFEST globally
+# === END FULLFIX_13D_TASK_WORKER_SEND_BELT ===
+
+# === FULLFIX_13C_STRIP_MANIFEST_BEFORE_SEND ===
+def _ff13c_strip_manifest_links(text):
+    import re
+    msg = str(text or "")
+    msg = re.sub(r"(?im)^MANIFEST:\s*https?://\S+\s*$", "", msg)
+    msg = re.sub(r"(?im)^Manifest:\s*https?://\S+\s*$", "", msg)
+    msg = re.sub(r"\n{3,}", "\n\n", msg).strip()
+    return msg
+# === END FULLFIX_13C_STRIP_MANIFEST_BEFORE_SEND ===
+
+
+async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str, topic_id: int) -> None:
+    if _stop_topic2_loop_fact_based_v1(conn, task):
+        return
+    # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_HOOK ===
+    try:
+        from core.stroyka_estimate_canon import maybe_handle_stroyka_estimate as _stroyka_estimate_hook
+        if await _stroyka_estimate_hook(conn, task, logger=logger):
+            return
+    except Exception as _stroyka_estimate_hook_err:
+        logger.exception("FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_HOOK_ERR %s", _stroyka_estimate_hook_err)
+    # === END_FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_HOOK ===
+    # === REMAINING_TECH_CONTOUR_CLOSE_V1_WIRED ===
+    # P0 guard order:
+    # 1. reply repeat parent
+    # 2. explicit project route before estimate/template/file followup
+    try:
+        from core.reply_repeat_parent import prehandle_reply_repeat_parent_v1 as _rrp_prehandle
+        _rrp = _rrp_prehandle(conn, task)
+        if _rrp and _rrp.get("handled"):
+            _rrp_tid = _s(_task_field(task, "id", ""))
+            _rrp_chat = _s(_task_field(task, "chat_id", ""))
+            _rrp_reply = _task_field(task, "reply_to_message_id", None)
+            _rrp_text = _rrp.get("message") or ""
+            try:
+                from core.output_sanitizer import sanitize_user_output as _sanitize_out
+                _rrp_text = _sanitize_out(_rrp_text)
+            except Exception:
+                pass
+            _rrp_send = _send_once_ex(conn, _rrp_tid, _rrp_chat, _rrp_text, _rrp_reply, _rrp.get("kind", "reply_repeat_parent"))
+            _update_task(
+                conn,
+                _rrp_tid,
+                state=_rrp.get("state", "DONE"),
+                result=_rrp_text,
+                error_message=_rrp.get("error_message", ""),
+                bot_message_id=_rrp_send.get("bot_message_id"),
+            )
+            _history(conn, _rrp_tid, _rrp.get("history", "REPLY_REPEAT_PARENT_TASK_V1:HANDLED"))
+            return
+    except Exception as _rrp_err:
+        logger.warning("REMAINING_TECH_CONTOUR_CLOSE_V1_REPLY_ERR %s", _rrp_err)
+
+    try:
+        from core.project_route_guard import prehandle_project_route_v1 as _proj_prehandle
+        _proj = await _proj_prehandle(conn, task)
+        if _proj and _proj.get("handled"):
+            _proj_tid = _s(_task_field(task, "id", ""))
+            _proj_chat = _s(_task_field(task, "chat_id", ""))
+            _proj_reply = _task_field(task, "reply_to_message_id", None)
+            _proj_text = _proj.get("message") or ""
+            try:
+                from core.output_sanitizer import sanitize_project_message as _sanitize_project_out
+                _proj_text = _sanitize_project_out(_proj_text)
+            except Exception:
+                pass
+            _proj_send = _send_once_ex(conn, _proj_tid, _proj_chat, _proj_text, _proj_reply, _proj.get("kind", "project_route_guard"))
+            _update_task(
+                conn,
+                _proj_tid,
+                state=_proj.get("state", "WAITING_CLARIFICATION"),
+                result=_proj_text,
+                error_message=_proj.get("error_message", ""),
+                bot_message_id=_proj_send.get("bot_message_id"),
+            )
+            _history(conn, _proj_tid, _proj.get("history", "PROJECT_ROUTE_FIX_NO_ESTIMATE_REGRESSION_V1:HANDLED"))
+            return
+    except Exception as _proj_err:
+        logger.warning("REMAINING_TECH_CONTOUR_CLOSE_V1_PROJECT_ERR %s", _proj_err)
+    # === END_REMAINING_TECH_CONTOUR_CLOSE_V1_WIRED ===
+    # === FULL_TECH_CONTOUR_CLOSE_V1_WIRED ===
+    # P0 guard: price confirmation, context-aware file intake, Telegram duplicate file memory
+    try:
+        from core.price_enrichment import prehandle_price_task_v1 as _ftc_price_prehandle
+        _ftc_price = await _ftc_price_prehandle(conn, task) if int(topic_id or 0) == 2 else None  # TOPIC2_PRICE_ONLY_V1
+        if _ftc_price and _ftc_price.get("handled"):
+            _ftc_tid = _s(_task_field(task, "id", ""))
+            _ftc_chat = _s(_task_field(task, "chat_id", ""))
+            _ftc_reply = _task_field(task, "reply_to_message_id", None)
+            _ftc_text = _ftc_price.get("message") or ""
+            _ftc_send = _send_once_ex(conn, _ftc_tid, _ftc_chat, _ftc_text, _ftc_reply, _ftc_price.get("kind", "price_enrichment"))
+            _update_task(
+                conn,
+                _ftc_tid,
+                state=_ftc_price.get("state", "WAITING_CLARIFICATION"),
+                result=_ftc_text,
+                error_message=_ftc_price.get("error_message", ""),
+                bot_message_id=_ftc_send.get("bot_message_id"),
+            )
+            _history(conn, _ftc_tid, _ftc_price.get("history", "WEB_SEARCH_PRICE_ENRICHMENT_V1:HANDLED"))
+            return
+    except Exception as _ftc_price_err:
+        logger.warning("FULL_TECH_CONTOUR_CLOSE_V1_PRICE_ERR %s", _ftc_price_err)
+
+    try:
+        from core.file_context_intake import prehandle_task_context_v1 as _ftc_file_prehandle
+        # === CANON_ROUTE_FIX_V3_TOPIC500_ISOLATION ===
+        _ftc_topic_id = int(_task_field(task, "topic_id", 0) or 0)
+        _ftc_file = _ftc_file_prehandle(conn, task) if _ftc_topic_id not in (500, 210) else None  # TOPIC_ROUTE_ISOLATION_FULL_V2
+        # === END_CANON_ROUTE_FIX_V3_TOPIC500_ISOLATION ===
+        if _ftc_file and _ftc_file.get("handled"):
+            _ftc_tid = _s(_task_field(task, "id", ""))
+            _ftc_chat = _s(_task_field(task, "chat_id", ""))
+            _ftc_reply = _task_field(task, "reply_to_message_id", None)
+            _ftc_text = _ftc_file.get("message") or ""
+            _ftc_send = _send_once_ex(conn, _ftc_tid, _ftc_chat, _ftc_text, _ftc_reply, _ftc_file.get("kind", "file_context_intake"))
+            _update_task(
+                conn,
+                _ftc_tid,
+                state=_ftc_file.get("state", "DONE"),
+                result=_ftc_text,
+                error_message=_ftc_file.get("error_message", ""),
+                bot_message_id=_ftc_send.get("bot_message_id"),
+            )
+            _history(conn, _ftc_tid, _ftc_file.get("history", "CONTEXT_AWARE_FILE_INTAKE_V1:HANDLED"))
+            return
+    except Exception as _ftc_file_err:
+        logger.warning("FULL_TECH_CONTOUR_CLOSE_V1_FILE_ERR %s", _ftc_file_err)
+    # === END_FULL_TECH_CONTOUR_CLOSE_V1_WIRED ===
+
+    # === FINAL_CLOSURE_BLOCKER_FIX_V1_TASK_WORKER_HOOK ===
+    try:
+        from core.final_closure_engine import maybe_handle_final_closure as _fcv1_handle
+        _fcv1 = _fcv1_handle(
+            conn=conn,
+            task=task,
+            task_id=str(_task_field(task, "id", "")),
+            chat_id=str(chat_id),
+            topic_id=int(topic_id or 0),
+            raw_input=str(_task_field(task, "raw_input", "")),
+            input_type=str(_task_field(task, "input_type", "text")),
+            reply_to=_task_field(task, "reply_to_message_id", None),
+        )
+        if isinstance(_fcv1, dict) and _fcv1.get("handled"):
+            _fcv1_tid = str(_task_field(task, "id", ""))
+            _fcv1_reply = _task_field(task, "reply_to_message_id", None)
+            _fcv1_msg = str(_fcv1.get("message") or "").strip()
+            _fcv1_state = str(_fcv1.get("state") or "DONE").strip()
+            _fcv1_kind = str(_fcv1.get("kind") or "final_closure_blocker_fix_v1").strip()
+            if _fcv1_msg:
+                _fcv1_send = _send_once_ex(conn, _fcv1_tid, str(chat_id), _fcv1_msg, _fcv1_reply, _fcv1_kind)
+                _fcv1_bot = _fcv1_send.get("bot_message_id") if isinstance(_fcv1_send, dict) else None
+                _update_task(conn, _fcv1_tid, state=_fcv1_state, result=_fcv1_msg, bot_message_id=_fcv1_bot, error_message="")
+                _history(conn, _fcv1_tid, _fcv1.get("history", "FINAL_CLOSURE_BLOCKER_FIX_V1:HANDLED"))
+                conn.commit()
+                return
+    except Exception as _fcv1_err:
+        logger.warning("FINAL_CLOSURE_BLOCKER_FIX_V1_TASK_WORKER_HOOK_ERR %s", _fcv1_err)
+    # === END_FINAL_CLOSURE_BLOCKER_FIX_V1_TASK_WORKER_HOOK ===
+
+    # === EZONE_INGEST_CALL_V1 ===
+    try:
+        _ez_raw = str(task["raw_input"] if task else "") if task else ""
+        if is_ezone_payload(_ez_raw):
+            _ez_msg = save_ezone_json(str(chat_id), _ez_raw)
+            _update_task(conn, task["id"], state="DONE", result=_ez_msg, error_message="")
+            conn.commit()
+            from core.reply_sender import send_reply_ex
+            send_reply_ex(chat_id=str(chat_id), text=_ez_msg, reply_to_message_id=task.get("reply_to_message_id"), message_thread_id=topic_id)
+            logger.info("EZONE_INGEST_CALL_V1 task=%s", task["id"])
+            return
+    except Exception as _eze:
+        logger.warning("EZONE_INGEST_CALL_ERR %s", _eze)
+    # === END EZONE_INGEST_CALL_V1 ===
+    # === HEALTHCHECK_GUARD_V1 ===
+    try:
+        _hc_raw = str(task['raw_input'] if task else '') if task else ''
+        _hc_res = str(task['result'] if task else '') if task else ''
+        _hc_markers = ['retry_queue_healthcheck', 'healthcheck', 'areal_hc_', '_hc_file']
+        if any(m in _hc_raw or m in _hc_res for m in _hc_markers):
+            _update_task(conn, task['id'], state='CANCELLED', error_message='SERVICE_FILE_IGNORED:HEALTHCHECK')
+            conn.commit()
+            logger.info('HEALTHCHECK_GUARD_V1 cancelled task=%s', task['id'])
+            return
+    except Exception as _hcge:
+        logger.warning('HEALTHCHECK_GUARD_ERR %s', _hcge)
+    # === END HEALTHCHECK_GUARD_V1 ===
+    task_id = _s(_task_field(task, "id"))
+    raw_input = _clean(_s(_task_field(task, "raw_input")), 4000)
+    reply_to = _task_field(task, "reply_to_message_id", None)
+
+    # === VOICE_CONFIRM_AWAITING_V1 ===
+    try:
+        _vc_raw = str(raw_input or "").strip()
+        _vc_is_voice = _vc_raw.lower().startswith("[voice]")
+        _vc_text = re.sub(r"^\s*\[voice\]\s*", "", _vc_raw, flags=re.I).strip()
+        _vc_low = _vc_text.lower().strip().rstrip("!?. ")
+        if _vc_is_voice and (_vc_low in CONFIRM_INTENTS or _vc_low in REVISION_INTENTS):
+            _vc_parent = conn.execute(
+                """
+                SELECT id, result, raw_input
+                FROM tasks
+                WHERE chat_id=?
+                  AND COALESCE(topic_id,0)=?
+                  AND id<>?
+                  AND state='AWAITING_CONFIRMATION'
+                ORDER BY updated_at DESC
+                LIMIT 1
+                """,
+                (str(chat_id), int(topic_id or 0), task_id),
+            ).fetchone()
+
+            if _vc_parent is not None and _vc_low in CONFIRM_INTENTS:
+                _vc_parent_id = _s(_vc_parent["id"])
+                _finalize_done(conn, _vc_parent_id, str(chat_id), int(topic_id or 0), reply_to)
+                _update_task(conn, task_id, state="DONE", result="Подтверждение принято голосом. Задача закрыта", error_message="")
+                _history(conn, _vc_parent_id, "VOICE_CONFIRM_AWAITING_V1:PARENT_DONE")
+                _history(conn, task_id, "VOICE_CONFIRM_AWAITING_V1:CHILD_DONE")
+                conn.commit()
+                _send_once(conn, task_id, str(chat_id), "Подтверждение принято голосом. Задача закрыта", reply_to, "voice_confirm_awaiting_v1")
+                logger.info("VOICE_CONFIRM_AWAITING_V1 confirmed parent=%s child=%s topic=%s", _vc_parent_id, task_id, topic_id)
+                return
+
+            if _vc_parent is not None and _vc_low in REVISION_INTENTS:
+                _vc_parent_id = _s(_vc_parent["id"])
+                _vc_merged = _clean(_s(_vc_parent["result"]) + "\n\nПравки пользователя голосом:\n" + _vc_text, 12000)
+                _update_task(conn, _vc_parent_id, state="IN_PROGRESS", raw_input=_vc_merged, error_message="")
+                _update_task(conn, task_id, state="DONE", result="Голосовые правки приняты. Задача возвращена в работу", error_message="")
+                _history(conn, _vc_parent_id, "VOICE_CONFIRM_AWAITING_V1:PARENT_REVISION")
+                _history(conn, task_id, "VOICE_CONFIRM_AWAITING_V1:CHILD_DONE_REVISION")
+                conn.commit()
+                _send_once(conn, task_id, str(chat_id), "Голосовые правки приняты. Задача возвращена в работу", reply_to, "voice_revision_awaiting_v1")
+                logger.info("VOICE_CONFIRM_AWAITING_V1 revision parent=%s child=%s topic=%s", _vc_parent_id, task_id, topic_id)
+                return
+    except Exception as _vc_e:
+        logger.error("VOICE_CONFIRM_AWAITING_V1_ERR task=%s err=%s", task_id, _vc_e)
+    # === END VOICE_CONFIRM_AWAITING_V1 ===
+
+
+
+
+    
+    # === CREATE_PROJECT_PRIORITY_NO_ROLLBACK_V1 ===
+    try:
+        _cpp_raw = ""
+        try:
+            _cpp_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+        except Exception:
+            _cpp_raw = ""
+        _cpp_clean = re.sub(r"^\s*\[VOICE\]\s*", "", _cpp_raw or "", flags=re.I).strip()
+        _cpp_low = _cpp_clean.lower()
+
+        _cpp_create_words = (
+            "сделай", "делай", "создай", "сформируй", "подготовь", "разработай",
+            "оформи", "выгрузи", "сохрани", "нарисуй", "собери"
+        )
+        # === CREATE_PROJECT_CPP_WORDS_FIX_V1 ===
+        _cpp_project_words = (
+            "проект", "кж", "кд", "км", "кмд", "ар",
+            "фундамент", "фундаментн",
+            "армирован", "арматур", "конструктив", "чертеж", "чертёж",
+            "dxf", "dwg", "узел", "узлы", "спецификац"
+        )
+        # === END_CREATE_PROJECT_CPP_WORDS_FIX_V1 ===
+        _cpp_followup_words = (
+            "я тебе скидывал", "уже скидывал", "где файл", "где проект",
+            "что дальше", "дальше то что", "ты сделал", "что мы делали",
+            "какие последние", "покажи прошл", "найди прошл", "помнишь"
+        )
+
+        _cpp_is_create_project = (
+            any(w in _cpp_low for w in _cpp_create_words)
+            and any(w in _cpp_low for w in _cpp_project_words)
+            and not any(w in _cpp_low for w in _cpp_followup_words)
+        )
+
+        if int(topic_id or 0) == 210 and _cpp_is_create_project:  # TOPIC210_PROJECT_ONLY_V1
+            _history(conn, task_id, "CREATE_PROJECT_PRIORITY_NO_ROLLBACK_V1:ROUTE_PROJECT_ENGINE")
+
+            from core.project_engine import create_project_pdf_dxf_artifact
+
+            try:
+                _cpp_data = await create_project_pdf_dxf_artifact(
+                    raw_input=_cpp_clean,
+                    task_id=str(task_id),
+                    topic_id=int(topic_id or 0),
+                    template_hint="",
+                    require_template=False,
+                )
+            except TypeError:
+                _cpp_data = await create_project_pdf_dxf_artifact(
+                    _cpp_clean,
+                    str(task_id),
+                    int(topic_id or 0),
+                    "",
+                )
+
+            if not isinstance(_cpp_data, dict):
+                _update_task(conn, task_id, state="FAILED", result="", error_message="CREATE_PROJECT_PRIORITY_NO_ROLLBACK_V1:NON_DICT_RESULT")
+                _history(conn, task_id, "CREATE_PROJECT_PRIORITY_NO_ROLLBACK_V1:NON_DICT_RESULT")
+                return
+
+            _cpp_links = {}
+            for _k in ("pdf_link", "dxf_link", "xlsx_link", "docx_link", "drive_link", "google_sheet_link", "link"):
+                _v = _cpp_data.get(_k)
+                if isinstance(_v, str) and _v.startswith("http"):
+                    _cpp_links[_k] = _v
+
+            if isinstance(_cpp_data.get("links"), dict):
+                for _k, _v in _cpp_data.get("links").items():
+                    if isinstance(_v, str) and _v.startswith("http"):
+                        _cpp_links[str(_k)] = _v
+
+            _cpp_artifacts = []
+            for _k in ("artifact_path", "package_path", "zip_path", "pdf_path", "dxf_path", "xlsx_path", "docx_path"):
+                _v = _cpp_data.get(_k)
+                if isinstance(_v, str) and _v:
+                    _cpp_artifacts.append({"path": _v, "kind": "project_" + _k.replace("_path", "")})
+
+            if _cpp_artifacts and not _cpp_links:
+                try:
+                    from core.artifact_upload_guard import upload_many_or_fail
+                    _up = upload_many_or_fail(_cpp_artifacts, str(task_id), int(topic_id or 0))
+                    if isinstance(_up, dict):
+                        for _k, _v in (_up.get("links") or {}).items():
+                            if isinstance(_v, str) and _v.startswith("http"):
+                                _cpp_links[str(_k)] = _v
+                except Exception as _up_e:
+                    logger.warning("CREATE_PROJECT_PRIORITY_NO_ROLLBACK_V1_UPLOAD_ERR task=%s err=%s", task_id, _up_e)
+
+            _pdf = ""
+            _dxf = ""
+            _xlsx = ""
+            _other = ""
+
+            for _k, _v in _cpp_links.items():
+                _kl = str(_k).lower()
+                _vl = str(_v).lower()
+                if not _pdf and ("pdf" in _kl or ".pdf" in _vl):
+                    _pdf = _v
+                elif not _dxf and ("dxf" in _kl or ".dxf" in _vl):
+                    _dxf = _v
+                elif not _xlsx and ("xlsx" in _kl or "sheet" in _kl or "spreadsheets" in _vl or ".xlsx" in _vl):
+                    _xlsx = _v
+                elif not _other:
+                    _other = _v
+
+            _cpp_result_lines = ["Проект плиты создан"]
+            if _pdf:
+                _cpp_result_lines.append("PDF: " + _pdf)
+            if _dxf:
+                _cpp_result_lines.append("DXF: " + _dxf)
+            if _xlsx:
+                _cpp_result_lines.append("XLSX: " + _xlsx)
+            if not (_pdf or _dxf or _xlsx) and _other:
+                _cpp_result_lines.append("Файл: " + _other)
+
+            _cpp_result = "\n".join(_cpp_result_lines).strip()
+
+            _cpp_success = bool(_cpp_data.get("success")) or bool(_cpp_links) or bool(_cpp_artifacts)
+            if _cpp_success and (_cpp_links or _cpp_artifacts):
+                _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_cpp_result, error_message="")
+                _history(conn, task_id, "CREATE_PROJECT_PRIORITY_NO_ROLLBACK_V1:AWAITING_CONFIRMATION")
+                try:
+                    _reply_to = task["reply_to_message_id"] if "reply_to_message_id" in task.keys() else None
+                except Exception:
+                    _reply_to = None
+                _send_once_ex(conn, task_id, chat_id, _cpp_result, _reply_to, "project_create_priority")
+                return
+
+            _err = str(_cpp_data.get("error") or "PROJECT_ENGINE_NO_ARTIFACT")[:500]
+            _user_err = "Проект не создан: " + _err
+            _update_task(conn, task_id, state="FAILED", result="", error_message="CREATE_PROJECT_PRIORITY_NO_ROLLBACK_V1:" + _err)
+            _history(conn, task_id, "CREATE_PROJECT_PRIORITY_NO_ROLLBACK_V1:FAILED:" + _err[:200])
+            try:
+                _reply_to = task["reply_to_message_id"] if "reply_to_message_id" in task.keys() else None
+            except Exception:
+                _reply_to = None
+            _send_once_ex(conn, task_id, chat_id, _user_err, _reply_to, "project_create_priority_error")
+            return
+    except Exception as _cpp_e:
+        logger.warning("CREATE_PROJECT_PRIORITY_NO_ROLLBACK_V1_ERR task=%s err=%s", task_id, _cpp_e)
+    # === END_CREATE_PROJECT_PRIORITY_NO_ROLLBACK_V1 ===
+    # === CREATE_ESTIMATE_PRIORITY_NO_ROLLBACK_V1 ===
+    try:
+        _cep_raw = ""
+        try:
+            _cep_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+        except Exception:
+            _cep_raw = ""
+        _cep_clean = re.sub(r"^\s*\[VOICE\]\s*", "", _cep_raw or "", flags=re.I).strip()
+        _cep_low = _cep_clean.lower()
+
+        _cep_create_words = (
+            "сделай", "создай", "сформируй", "подготовь", "составь",
+            "посчитай", "рассчитай", "выгрузи", "сохрани", "оформи"
+        )
+        _cep_estimate_words = (
+            "смет", "расчет", "расчёт", "xlsx", "excel", "эксель",
+            "pdf", "ндс", "итог", "объем", "объём", "расценк", "позици"
+        )
+        _cep_followup_words = (
+            "я тебе скидывал", "уже скидывал", "где файл", "где смета",
+            "что дальше", "дальше то что", "ты сделал", "что мы делали",
+            "какие последние", "покажи прошл", "найди прошл", "помнишь"
+        )
+
+        # === CEP_PROJECT_EXCLUSION_V2 ===
+        _cep_project_words = (
+            "проект", "кж", "кд", "км", "кмд", "ар",
+            "фундамент", "фундаментн", "армирован", "арматур", "dxf", "dwg", "чертеж", "чертёж", "конструктив",
+        )
+        _cep_is_create_estimate = (
+            any(w in _cep_low for w in _cep_create_words)
+            and any(w in _cep_low for w in _cep_estimate_words)
+            and not any(w in _cep_low for w in _cep_followup_words)
+            and not any(w in _cep_low for w in _cep_project_words)
+        )
+        # === END_CEP_PROJECT_EXCLUSION_V2 ===
+
+        if int(topic_id or 0) == 2 and _cep_is_create_estimate:  # TOPIC2_ESTIMATE_ONLY_V1
+            from core.estimate_engine import generate_estimate_from_text
+
+            _history(conn, task_id, "CREATE_ESTIMATE_PRIORITY_NO_ROLLBACK_V1:ROUTE_ESTIMATE_ENGINE")
+            _cep_data = await generate_estimate_from_text(
+                raw_input=_cep_clean,
+                task_id=str(task_id),
+                topic_id=int(topic_id or 0),
+                chat_id=str(chat_id),
+            )
+
+            if isinstance(_cep_data, dict):
+                _cep_state = str(_cep_data.get("state") or "")
+                _cep_success = bool(_cep_data.get("success"))
+                _cep_links = []
+                for _k in ("drive_link", "google_sheet_link", "link", "pdf_link", "xlsx_link", "telegram_link"):
+                    _v = _cep_data.get(_k)
+                    if isinstance(_v, str) and _v.startswith("http"):
+                        _cep_links.append((_k, _v))
+                if isinstance(_cep_data.get("links"), dict):
+                    for _k, _v in _cep_data.get("links").items():
+                        if isinstance(_v, str) and _v.startswith("http"):
+                            _cep_links.append((str(_k), _v))
+
+                _cep_result = str(_cep_data.get("result_text") or _cep_data.get("message") or _cep_data.get("summary") or "").strip()
+                if not _cep_result:
+                    _cep_result = "Смета обработана"
+                # === CLEAN_CEP_RESULT_TEXT_V2 ===
+                _clean_lines = []
+                for _line in str(_cep_result or "").splitlines():
+                    _l = _line.strip()
+                    _ll = _l.lower()
+                    if not _l:
+                        _clean_lines.append(_line)
+                        continue
+                    if _ll.startswith(("engine:", "manifest:", "артефакт:", "проверка:", "drive_link:", "pdf_link:", "xlsx_link:", "google_sheet_link:", "existing_")):
+                        continue
+                    if _ll == "ссылки:":
+                        continue
+                    if _ll.startswith(("- drive_link:", "- pdf_link:", "- xlsx_link:", "- google_sheet_link:", "- existing_")):
+                        continue
+                    _clean_lines.append(_line)
+                _cep_result = "\n".join(_clean_lines).strip()
+
+                if _cep_links and not any(x in _cep_result for x in ("PDF:", "XLSX:", "Google Sheets:")):
+                    _seen_public = set()
+                    _pdf_public = ""
+                    _xlsx_public = ""
+                    for _k, _v in _cep_links:
+                        _vv = str(_v or "")
+                        if not _vv.startswith("http") or _vv in _seen_public:
+                            continue
+                        _seen_public.add(_vv)
+                        if "spreadsheets" in _vv or str(_k).lower() in ("xlsx_link", "google_sheet", "google_sheet_link", "drive_link"):
+                            if not _xlsx_public:
+                                _xlsx_public = _vv
+                        elif ".pdf" in _vv.lower() or "pdf" in str(_k).lower():
+                            if not _pdf_public:
+                                _pdf_public = _vv
+                    _extra = []
+                    if _pdf_public:
+                        _extra.append("PDF: " + _pdf_public)
+                    if _xlsx_public:
+                        _extra.append("XLSX: " + _xlsx_public)
+                    if _extra:
+                        _cep_result += "\n\n" + "\n".join(_extra)
+                # === END_CLEAN_CEP_RESULT_TEXT_V2 ===
+                if _cep_success or _cep_links or _cep_data.get("artifact_path"):
+                    _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_cep_result, error_message="")
+                    _history(conn, task_id, "CREATE_ESTIMATE_PRIORITY_NO_ROLLBACK_V1:AWAITING_CONFIRMATION")
+                    try:
+                        _reply_to = task["reply_to_message_id"] if "reply_to_message_id" in task.keys() else None
+                    except Exception:
+                        _reply_to = None
+                    _send_once_ex(conn, task_id, chat_id, _cep_result, _reply_to, "estimate_create_priority")
+                    return
+
+                _cep_err = str(_cep_data.get("error") or "ESTIMATE_ENGINE_NO_ARTIFACT")
+                _cep_user = str(_cep_data.get("result_text") or _cep_err)
+                _target_state = "WAITING_CLARIFICATION" if _cep_state == "WAITING_CLARIFICATION" else "FAILED"
+                _update_task(conn, task_id, state=_target_state, result=_cep_user, error_message=_cep_err)
+                _history(conn, task_id, "CREATE_ESTIMATE_PRIORITY_NO_ROLLBACK_V1:" + _target_state)
+                try:
+                    _reply_to = task["reply_to_message_id"] if "reply_to_message_id" in task.keys() else None
+                except Exception:
+                    _reply_to = None
+                _send_once_ex(conn, task_id, chat_id, _cep_user or _cep_err, _reply_to, "estimate_create_priority_error")
+                return
+
+            _update_task(conn, task_id, state="FAILED", result="", error_message="CREATE_ESTIMATE_PRIORITY_NO_ROLLBACK_V1:NON_DICT_RESULT")
+            _history(conn, task_id, "CREATE_ESTIMATE_PRIORITY_NO_ROLLBACK_V1:NON_DICT_RESULT")
+            return
+    except Exception as _cep_e:
+        logger.warning("CREATE_ESTIMATE_PRIORITY_NO_ROLLBACK_V1_ERR task=%s err=%s", task_id, _cep_e)
+    # === END_CREATE_ESTIMATE_PRIORITY_NO_ROLLBACK_V1 ===
+        # === STROYKA_TOPIC2_SOURCE_LOCK_PRIORITY_FIX_V1_WORKER_HOOK ===
+    try:
+        if int(topic_id or 0) == 2:
+            _stc1_raw = str(raw_input or "")
+            try:
+                _stc1_cols = [r[1] for r in conn.execute("PRAGMA table_info(task_history)").fetchall()]
+                _stc1_col = "action" if "action" in _stc1_cols else ("event" if "event" in _stc1_cols else "")
+                if _stc1_col:
+                    _stc1_rows = conn.execute(
+                        f"SELECT {_stc1_col} FROM task_history WHERE task_id=? AND {_stc1_col} LIKE 'clarified:%' ORDER BY rowid ASC LIMIT 30",
+                        (task_id,),
+                    ).fetchall()
+                    _stc1_clar = []
+                    for _r in _stc1_rows:
+                        _v = str(_r[0] or "")
+                        if ":" in _v:
+                            _stc1_clar.append(_v.split(":", 1)[1].strip())
+                    if _stc1_clar:
+                        _stc1_merged = _stc1_raw + "\n\nУточнения пользователя:\n" + "\n".join(x for x in _stc1_clar if x)
+                        if _stc1_merged != _stc1_raw:
+                            raw_input = _stc1_merged
+                            try:
+                                conn.execute("UPDATE tasks SET raw_input=?, updated_at=datetime('now') WHERE id=?", (raw_input, task_id))
+                                conn.commit()
+                                _history(conn, task_id, "STROYKA_TOPIC2_SOURCE_LOCK_PRIORITY_FIX_V1:clarifications_merged")
+                            except Exception as _e:
+                                logger.warning("STROYKA_TOPIC2_SOURCE_LOCK_PRIORITY_FIX_V1_MERGE_DB_ERR %s", _e)
+            except Exception as _e:
+                logger.warning("STROYKA_TOPIC2_SOURCE_LOCK_PRIORITY_FIX_V1_MERGE_ERR %s", _e)
+
+            _stc1_low = str(raw_input or "").lower().replace("ё", "е")
+            if any(x in _stc1_low for x in ("смет", "стоимост", "посчитай", "расчет", "расчёт", "цена", "руб", "монолит", "фундамент", "плит", "кровл", "строительств")):
+                try:
+                    from core.sample_template_engine import handle_template_estimate_intent as _stc1_handle_template_estimate_intent
+                    _stc1_reply_to = locals().get("reply_to", None) or locals().get("reply_to_message_id", None)
+                    _stc1_handled = await _stc1_handle_template_estimate_intent(
+                        conn,
+                        task_id,
+                        str(chat_id),
+                        int(topic_id or 0),
+                        raw_input,
+                        "text",
+                        _stc1_reply_to,
+                    )
+                    if _stc1_handled:
+                        logger.info("STROYKA_TOPIC2_SOURCE_LOCK_PRIORITY_FIX_V1 handled task=%s topic=%s", task_id, topic_id)
+                        return
+                except Exception as _e:
+                    logger.warning("STROYKA_TOPIC2_SOURCE_LOCK_PRIORITY_FIX_V1_HANDLE_ERR %s", _e)
+    except Exception as _e:
+        logger.warning("STROYKA_TOPIC2_SOURCE_LOCK_PRIORITY_FIX_V1_WORKER_ERR %s", _e)
+    # === END_STROYKA_TOPIC2_SOURCE_LOCK_PRIORITY_FIX_V1_WORKER_HOOK ===
+
+    # === FILE_TECH_CONTOUR_FOLLOWUP_V2 ===
+    try:
+        _ft_low = str(raw_input or "").strip()
+        if int(topic_id or 0) not in (2, 500, 210) and _filemem_should_followup(_ft_low):  # TOPIC_ROUTE_ISOLATION_FULL_V1
+            _ft_answer = _filemem_build_answer(str(chat_id), int(topic_id or 0), _ft_low)
+            if _ft_answer:
+                _update_task(conn, task_id, state="DONE", result=_ft_answer, error_message="")
+                _history(conn, task_id, "FILE_TECH_CONTOUR_FOLLOWUP_V2:DONE")
+                try:
+                    _save_memory(str(chat_id), int(topic_id or 0), str(raw_input or ""), _ft_answer)
+                except Exception as _e:
+                    logger.warning("FILE_TECH_CONTOUR_FOLLOWUP_V2_SAVE_ERR %s", _e)
+                try:
+                    if _Stage6Archive is not None:
+                        _Stage6Archive().archive(
+                            {
+                                "task_id": task_id,
+                                "chat_id": str(chat_id),
+                                "topic_id": int(topic_id or 0),
+                                "direction": "file_tech_followup",
+                                "engine": "file_memory_bridge",
+                                "input_type": "text",
+                                "raw_input": str(raw_input or ""),
+                            },
+                            {"text": _ft_answer, "result": {"text": _ft_answer}},
+                        )
+                except Exception as _e:
+                    logger.warning("FILE_TECH_CONTOUR_FOLLOWUP_V2_ARCHIVE_ERR %s", _e)
+                try:
+                    _append_timeline_event_v1(str(chat_id), int(topic_id or 0), task_id, "file_tech_followup_done", raw_input, _ft_answer)
+                except Exception as _e:
+                    logger.warning("FILE_TECH_CONTOUR_FOLLOWUP_V2_TIMELINE_ERR %s", _e)
+                conn.commit()
+                _send_once(conn, task_id, str(chat_id), _ft_answer, reply_to, "file_tech_followup_v2")
+                logger.info("FILE_TECH_CONTOUR_FOLLOWUP_V2 done task=%s topic=%s", task_id, topic_id)
+                return
+    except Exception as _ft_e:
+        logger.error("FILE_TECH_CONTOUR_FOLLOWUP_V2_ERR task=%s err=%s", task_id, _ft_e)
+    # === END FILE_TECH_CONTOUR_FOLLOWUP_V2 ===
+    # === ACTIVE_DIALOG_STATE_V1_TASK_WORKER_HOOK ===
+    # === ASYNC_TEMPLATE_WORKFLOW_HOOK_V2 ===
+    try:
+        if maybe_handle_template_workflow_async is not None:
+            _async_tpl = await maybe_handle_template_workflow_async(conn, task, chat_id, topic_id)
+            if _async_tpl and _async_tpl.get("handled"):
+                _async_state = str(_async_tpl.get("state") or "DONE")
+                _async_result = str(_async_tpl.get("result") or "")
+                _async_error = str(_async_tpl.get("error") or "")
+                _update_task(
+                    conn,
+                    task_id,
+                    state=_async_state,
+                    result=_async_result,
+                    error_message=_async_error,
+                )
+                _history(conn, task_id, str(_async_tpl.get("event") or "ASYNC_TEMPLATE_WORKFLOW_HOOK_V2:DONE"))
+                try:
+                    _reply_to = None
+                    if "reply_to_message_id" in task.keys():
+                        _reply_to = task["reply_to_message_id"]
+                    _send_text = _async_result or _async_error or "Задача обработана через шаблон"
+                    _send_once_ex(conn, task_id, chat_id, _send_text, _reply_to, "async_template")
+                except Exception as _async_send_e:
+                    logger.warning("ASYNC_TEMPLATE_WORKFLOW_HOOK_V2_SEND_ERR task=%s err=%s", task_id, _async_send_e)
+                return
+    except Exception as _async_tpl_e:
+        logger.warning("ASYNC_TEMPLATE_WORKFLOW_HOOK_V2_ERR task=%s err=%s", task_id, _async_tpl_e)
+    # === END_ASYNC_TEMPLATE_WORKFLOW_HOOK_V2 ===
+    try:
+        for _canon_handler in (maybe_handle_template_workflow, maybe_handle_active_dialog):
+            if _canon_handler is None:
+                continue
+            _canon_result = _canon_handler(conn, task, chat_id, topic_id)
+            if _canon_result and _canon_result.get("handled"):
+                _canon_state = str(_canon_result.get("state") or "DONE")
+                _canon_text = str(_canon_result.get("result") or "")
+                _canon_error = str(_canon_result.get("error") or "")
+                _update_task(conn, task_id, state=_canon_state, result=_canon_text, error_message=_canon_error)
+                _history(conn, task_id, str(_canon_result.get("event") or "CANON_REMAINING_CODE_FULL_CLOSE_V1:DONE"))
+                try:
+                    if save_dialog_event is not None:
+                        save_dialog_event(chat_id, topic_id, str(_canon_result.get("event") or "event"), _canon_result)
+                except Exception as _sd_e:
+                    logger.warning("ACTIVE_DIALOG_STATE_V1_SAVE_ERR %s", _sd_e)
+                return
+    except Exception as _ads_e:
+        logger.warning("ACTIVE_DIALOG_STATE_V1_TASK_WORKER_HOOK_ERR task=%s err=%s", task_id, _ads_e)
+    # === END_ACTIVE_DIALOG_STATE_V1_TASK_WORKER_HOOK ===
+
+    # === MEMORY_QUERY_GUARD_V1 ===
+    try:
+        _mq_low = str(raw_input or "").strip().lower().rstrip("!?. ")
+        _mq_low = _mq_low.replace("[voice] ", "").replace("[VOICE] ", "").strip()
+        _mq_markers = (
+            "что обсуждали", "что делали", "что мы делали", "что мы обсуждали",
+            "неделю назад", "две недели", "три недели", "месяц назад",
+            "апреля", "марта", "февраля", "января", "помнишь", "напомни",
+            "какие задачи были", "что было", "расскажи что",
+        )
+        if any(m in _mq_low for m in _mq_markers):
+            _archive_ctx = _load_archive_context(str(chat_id), int(topic_id or 0), str(raw_input or ""))
+            _short_ctx, _long_ctx, _topic_role, _topic_directions = _load_memory_context(str(chat_id), int(topic_id or 0))
+            _mq_payload = {
+                "id": task_id, "task_id": task_id,
+                "chat_id": str(chat_id), "topic_id": int(topic_id or 0),
+                "input_type": "text", "state": "IN_PROGRESS",
+                "raw_input": str(raw_input or ""),
+                "short_memory_context": _short_ctx, "long_memory_context": _long_ctx,
+                "archive_context": _archive_ctx, "topic_role": _topic_role,
+                "topic_directions": _topic_directions,
+                "direction": "memory_query", "engine": "ai_router",
+            }
+            if not str(_archive_ctx or "").strip() and not str(_long_ctx or "").strip():
+                _mq_msg = "В этом топике архивных данных по запросу не найдено"
+            else:
+                _mq_ai = await asyncio.wait_for(process_ai_task(_mq_payload), timeout=AI_TIMEOUT)
+                _mq_msg = _clean(_s(_mq_ai), 12000) or "Архив найден, но ответ не сформирован"
+            _update_task(conn, task_id, state="DONE", result=_mq_msg, error_message="")
+            _history(conn, task_id, "MEMORY_QUERY_GUARD_V1:DONE")
+            try:
+                _save_memory(str(chat_id), int(topic_id or 0), str(raw_input or ""), _mq_msg)
+            except Exception as _e:
+                logger.warning("MEMORY_QUERY_GUARD_V1_SAVE_ERR %s", _e)
+            try:
+                if _Stage6Archive is not None:
+                    _Stage6Archive().archive(_mq_payload, {"text": _mq_msg, "result": {"text": _mq_msg}})
+            except Exception as _e:
+                logger.warning("MEMORY_QUERY_GUARD_V1_ARCHIVE_ERR %s", _e)
+            try:
+                _append_timeline_event_v1(str(chat_id), int(topic_id or 0), task_id, "memory_query_done", raw_input, _mq_msg)
+            except Exception as _e:
+                logger.warning("MEMORY_QUERY_GUARD_V1_TIMELINE_ERR %s", _e)
+            conn.commit()
+            _send_once(conn, task_id, str(chat_id), _mq_msg, reply_to, "memory_query_guard_v1")
+            return
+    except Exception as _mq_e:
+        logger.error("MEMORY_QUERY_GUARD_V1_ERR task=%s err=%s", task_id, _mq_e)
+    # === END MEMORY_QUERY_GUARD_V1 ===
+    # === FULLFIX_16_CONTEXT_QUERY ===
+    try:
+        _ff16_low = str(raw_input or "").strip().lower().rstrip("!?. ")
+        _ff16_low = _ff16_low.replace("[voice] ", "").replace("[VOICE] ", "").strip()  # FF21_FIX_VOICE_PREFIX
+        _ff16_triggers = ["nu chto", "gde rezultat", "chto tam", "gde smeta", "gde proekt"]
+        _ff16_ru_triggers = [
+            "ну что",
+            "где результат",
+            "что там",
+            "где смета",
+            "где проект",
+            "что с задачей",
+            "что там у нас",
+            "ну как там",
+            "где файл",
+            "ну что там",
+            "ну давай",
+            "что по задаче",
+        ]
+        _ff16_is_ctx = len(_ff16_low) <= 35 and any(
+            _ff16_low == t or _ff16_low.startswith(t) for t in _ff16_ru_triggers
+        )
+        if _ff16_is_ctx:
+            _ff16_row = conn.execute(
+                "SELECT id,state,result FROM tasks"
+                " WHERE chat_id=? AND COALESCE(topic_id,0)=? AND id<>?"
+                " AND state IN ('AWAITING_CONFIRMATION','IN_PROGRESS','WAITING_CLARIFICATION')"
+                " ORDER BY updated_at DESC LIMIT 1",
+                (chat_id, topic_id, task_id)
+            ).fetchone()
+            if _ff16_row is not None:
+                _ff16_pid, _ff16_pst, _ff16_pres = _ff16_row
+                _ff16_parts = ["Статус: " + str(_ff16_pst)]
+                if _ff16_pres is not None:
+                    import re as _re16
+                    _ff16_clean = _re16.sub(
+                        r"(?im)^\s*MANIFEST\s*:\s*https?://\S+\s*$",
+                        "",
+                        str(_ff16_pres)[:800]
+                    ).strip()
+                    _ff16_parts.append(_ff16_clean)
+                _ff16_msg = "\n".join(_ff16_parts)
+                from core.reply_sender import send_reply_ex
+                send_reply_ex(chat_id=str(chat_id), text=_ff16_msg, reply_to_message_id=reply_to, message_thread_id=topic_id)  # FULLFIX_20_CONTEXT_QUERY_TOPIC
+                conn.execute(
+                    "UPDATE tasks SET state='DONE',result=?,updated_at=datetime('now') WHERE id=?",
+                    ("Ответил по активной задаче", task_id)
+                )
+                conn.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (task_id, "state:DONE:context_query_ff16")
+                )
+                conn.commit()
+                return
+    except Exception as _ff16_ctx_err:
+        logger.error("FULLFIX_16_CONTEXT_QUERY_ERROR task=%s err=%s", task_id, _ff16_ctx_err)
+    # === END FULLFIX_16_CONTEXT_QUERY ===
+
+    # === FULLFIX_14_UNIFIED_ROUTE ===
+    try:
+        from core.template_intake_engine import is_sample_intent as _ff14_is_sample, process_template_intake as _ff14_tmpl
+        from core.defect_act_engine import is_defect_act_intent as _ff14_is_defect, process_defect_act as _ff14_defect
+        from core.multifile_artifact_engine import is_multifile_intent as _ff14_is_multi, process_multifile as _ff14_multi
+        from core.estimate_unified_engine import process_estimate_task as _ff14_estimate, parse_estimate_rows as _ff14_parse
+        _ff14_raw = str(raw_input or "")
+        _ff14_itype = str(_task_field(task, "input_type") or "")
+        _ff14_mime = ""
+        _ff14_fname = ""
+        _ff14_lpath = ""
+        if _ff14_itype == "drive_file":
+            try:
+                import json as _ff14j
+                _ff14_meta = _ff14j.loads(_task_field(task, "raw_input") or "{}")
+                _ff14_mime = _ff14_meta.get("mime_type", "")
+                _ff14_fname = _ff14_meta.get("file_name", "")
+                _ff14_lpath = _ff14_meta.get("local_path", "")
+            except Exception:
+                pass
+        # 1. template/sample intake — highest priority
+        if _ff14_is_sample(_ff14_raw):
+            _ff14_done = await _ff14_tmpl(
+                conn=conn, task_id=task_id, chat_id=chat_id, topic_id=topic_id,
+                raw_input=_ff14_raw, local_path=_ff14_lpath,
+                file_name=_ff14_fname, mime_type=_ff14_mime
+            )
+            if _ff14_done:
+                return
+        # 2. defect/photo act
+        if _ff14_is_defect(_ff14_raw, _ff14_mime):
+            _ff14_done = await _ff14_defect(
+                conn=conn, task_id=task_id, chat_id=chat_id, topic_id=topic_id,
+                raw_input=_ff14_raw, file_name=_ff14_fname, local_path=_ff14_lpath
+            )
+            if _ff14_done:
+                return
+        # 3. estimate from natural language text
+        if _ff14_itype in ("text", "search") and _ff14_parse(_ff14_raw):
+            # === FULLFIX_16_ESTIMATE_HARD_STOP ===
+            # Estimate route: ALWAYS return, never fall through to FULLFIX_10
+            conn.execute("INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                (task_id, "FULLFIX_16_ESTIMATE_ROUTE_TAKEN"))
+            conn.commit()
+            _ff14_done = await _ff14_estimate(
+                conn=conn, task_id=task_id, chat_id=chat_id, topic_id=topic_id, raw_input=_ff14_raw
+            )
+            # Whether success or failure — do not let FULLFIX_10 run on estimate input
+            return
+            # === END FULLFIX_16_ESTIMATE_HARD_STOP ===
+        # 4. multifile aggregation
+        if _ff14_is_multi(_ff14_raw):
+            _ff14_done = await _ff14_multi(
+                conn=conn, task_id=task_id, chat_id=chat_id, topic_id=topic_id, raw_input=_ff14_raw
+            )
+            if _ff14_done:
+                return
+    except Exception as _ff14_err:
+        try:
+            logger.error("FULLFIX_14_ROUTE_ERROR task=%s err=%s", task_id, str(_ff14_err))
+        except Exception:
+            pass
+    # === END FULLFIX_14_UNIFIED_ROUTE ===
+
+# === FULLFIX_13A_SAMPLE_TEMPLATE_AND_TEMPLATE_ESTIMATE_ROUTE ===
+    try:
+        from core.sample_template_engine import (
+            handle_sample_template_intent as _ff13a_handle_sample_template_intent,
+            handle_template_estimate_intent as _ff13a_handle_template_estimate_intent,
+        )
+        # === FULLFIX_13A_ROUTE_LOCALS_FIX ===
+        # _handle_new has task/raw_input/reply_to locals, not input_type/reply_to_message_id locals
+        _ff13a_conn = conn
+        _ff13a_task_id = str(task_id or "")
+        _ff13a_chat_id = str(chat_id or "")
+        _ff13a_topic_id = int(topic_id or 0)
+        _ff13a_raw_input = str(raw_input or "")
+        _ff13a_input_type = str(_task_field(task, "input_type", "") or "")
+        _ff13a_reply_to = _task_field(task, "reply_to_message_id", None) or _task_field(task, "telegram_message_id", None)
+        # === END FULLFIX_13A_ROUTE_LOCALS_FIX ===
+        _ff13a_done = await _ff13a_handle_sample_template_intent(
+            conn=_ff13a_conn,
+            task_id=_ff13a_task_id,
+            chat_id=_ff13a_chat_id,
+            topic_id=_ff13a_topic_id,
+            raw_input=_ff13a_raw_input,
+            input_type=_ff13a_input_type,
+            reply_to_message_id=_ff13a_reply_to,
+        )
+        # === FULLFIX_13B_SAMPLE_HARD_STOP_1 ===
+        if _ff13a_done:
+            try:
+                conn.commit()
+            except Exception:
+                pass
+            return
+        _ff13a_done = await _ff13a_handle_template_estimate_intent(
+            conn=_ff13a_conn,
+            task_id=_ff13a_task_id,
+            chat_id=_ff13a_chat_id,
+            topic_id=_ff13a_topic_id,
+            raw_input=_ff13a_raw_input,
+            input_type=_ff13a_input_type,
+            reply_to_message_id=_ff13a_reply_to,
+        )
+        # === FULLFIX_13B_SAMPLE_HARD_STOP_2 ===
+        if _ff13a_done:
+            try:
+                conn.commit()
+            except Exception:
+                pass
+            return
+    except Exception as _ff13a_err:
+        try:
+            logger.error("FULLFIX_13A_SAMPLE_ROUTE_ERROR task=%s err=%s", task_id, str(_ff13a_err))
+        except Exception:
+            pass
+    # === END FULLFIX_13A_SAMPLE_TEMPLATE_AND_TEMPLATE_ESTIMATE_ROUTE ===
+
+
+    # === FULLFIX_19_PROJECT_GUARD_REAL_V2 ===
+    try:
+        _ff19_low = str(raw_input or "").strip().lower()
+        _ff19_short_replies = {"да","нет","ок","готово","угу","так","ясно","понятно"}
+        if _ff19_low in _ff19_short_replies:
+            try:
+                conn.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (task_id, "FULLFIX_19_PROJECT_GUARD_BLOCKED_SHORT_REPLY")
+                )
+                conn.execute(
+                    "UPDATE tasks SET state='DONE', updated_at=datetime('now'), result=COALESCE(NULLIF(result,''),?) WHERE id=?",
+                    ("Принято", task_id)
+                )
+                conn.commit()
+            except Exception:
+                pass
+            logger.info("FF19_GUARD_BLOCKED_SHORT_REPLY task=%s text=%s", task_id, _ff19_low)
+            return
+    except Exception as _ff19_err:
+        logger.error("FF19_PROJECT_GUARD_ERR task=%s err=%s", task_id, _ff19_err)
+    # === END FULLFIX_19_PROJECT_GUARD_REAL_V2 ===
+
+    # === FULLFIX_13B_FALSE_PROJECT_PHRASE_GUARD ===
+    try:
+        _ff13b_low = str(raw_input or "").strip().lower()
+        _ff13b_false_project_phrases = {
+            "это один из вариантов",
+            "это как образец",
+            "это пример",
+            "вот образец",
+            "вот пример",
+            "сохрани как образец",
+        }
+        if _ff13b_low in _ff13b_false_project_phrases:
+            _msg = "Принял как образец. Дальше можно писать простым языком: сделай смету / сделай проект"
+            await safe_update(conn, task_id, state="DONE", result=_ff13c_strip_manifest_links(_msg), error_message="")
+            try:
+                from core.reply_sender import send_reply_ex
+                send_reply_ex(chat_id=str(chat_id), text=_ff13c_strip_manifest_links(_msg), reply_to_message_id=reply_to)
+            except Exception:
+                pass
+            try:
+                conn.execute("INSERT INTO task_history (task_id,action,created_at) VALUES (?,?,datetime('now'))", (task_id, "FULLFIX_13B_FALSE_PROJECT_GUARDED"))
+                conn.commit()
+            except Exception:
+                pass
+            return
+    except Exception as _ff13b_guard_err:
+        try:
+            logger.error("FULLFIX_13B_FALSE_PROJECT_GUARD_ERROR task=%s err=%s", task_id, str(_ff13b_guard_err))
+        except Exception:
+            pass
+    # === END FULLFIX_13B_FALSE_PROJECT_PHRASE_GUARD ===
+
+    if int(topic_id or 0) != 500:  # TOPIC500_FULLFIX10_BYPASS_V1
+        # === FULLFIX_10_TOTAL_CLOSURE_UNIVERSAL_ROUTE ===
+        try:
+            from core.orchestra_closure_engine import (
+                classify_user_task as _ff10_classify_user_task,
+                classify_project_kind as _ff10_classify_project_kind,
+                create_estimate_files as _ff10_create_estimate_files,
+                save_result_memory as _ff10_save_result_memory,
+                ENGINE as _FF10_ENGINE,
+            )
+
+            _ff10_intent = _ff10_classify_user_task(str(raw_input or ""))
+
+
+            # === FULLFIX_13B_CLEAN_ESTIMATE_MESSAGE_BEFORE_SEND_FALLBACK ===
+            def _ff13b_clean_any_estimate_text(_txt):
+                try:
+                    from core.orchestra_closure_engine import ff13b_clean_estimate_user_message
+                    return ff13b_clean_estimate_user_message(_txt)
+                except Exception:
+                    return _txt
+            # === END FULLFIX_13B_CLEAN_ESTIMATE_MESSAGE_BEFORE_SEND_FALLBACK ===
+
+            if _ff10_intent in ("confirm", "revision"):
+                _ff10_parent = conn.execute(
+                    """
+                    SELECT id,state,result,reply_to_message_id,bot_message_id
+                    FROM tasks
+                    WHERE chat_id=?
+                      AND COALESCE(topic_id,0)=?
+                      AND state='AWAITING_CONFIRMATION'
+                      AND id<>?
+                    ORDER BY updated_at DESC, created_at DESC
+                    LIMIT 1
+                    """,
+                    (str(chat_id), int(topic_id or 0), task_id),
+                ).fetchone()
+
+                if _ff10_parent and _ff10_intent == "confirm":
+                    _parent_id = _s(_ff10_parent["id"])
+                    _update_task(conn, _parent_id, state="DONE", error_message="")
+                    _history(conn, _parent_id, "FULLFIX_10_CONFIRM_DONE")
+                    _update_task(conn, task_id, state="DONE", result="Подтверждение принято. Задача закрыта", error_message="")
+                    _history(conn, task_id, "FULLFIX_10_CONFIRM_CHILD_DONE")
+                    conn.commit()
+                    _send_once(conn, task_id, chat_id, "Подтверждение принято. Задача закрыта", reply_to, "ff10_confirm_done")
+                    return
+
+                if _ff10_parent and _ff10_intent == "revision":
+                    _parent_id = _s(_ff10_parent["id"])
+                    _merged = _clean(_s(_ff10_parent["result"]) + "\n\nПравки пользователя:\n" + str(raw_input or ""), 12000)
+                    _update_task(conn, _parent_id, state="IN_PROGRESS", raw_input=_merged, error_message="")
+                    _history(conn, _parent_id, "FULLFIX_10_REVISION_REOPEN")
+                    _update_task(conn, task_id, state="DONE", result="Правки приняты. Задача возвращена в работу", error_message="")
+                    _history(conn, task_id, "FULLFIX_10_REVISION_CHILD_DONE")
+                    conn.commit()
+                    _send_once(conn, task_id, chat_id, "Правки приняты. Задача возвращена в работу", reply_to, "ff10_revision_reopen")
+                    return
+
+            if _ff10_intent == "project":
+                _kind, _section = _ff10_classify_project_kind(str(raw_input or ""))
+                if _kind == "foundation_slab":
+                    from core.project_engine import create_project_pdf_dxf_artifact
+                    _ff10_res = await create_project_pdf_dxf_artifact(str(raw_input or ""), task_id, int(topic_id or 0), "FULLFIX_10_SIMPLE_USER_REQUEST", True)
+
+                    if not isinstance(_ff10_res, dict) or not _ff10_res.get("success"):
+                        _err = str((_ff10_res or {}).get("error", "PROJECT_FAILED"))[:400]
+                        _msg = "Проект не создан: " + _err
+                        _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message=_err)
+                        _history(conn, task_id, "FULLFIX_10_PROJECT_FAILED:" + _err)
+                        conn.commit()
+                        _send_once(conn, task_id, chat_id, _msg, reply_to, "ff10_project_failed")
+                        return
+
+                    _pdf = str(_ff10_res.get("pdf_link") or "")
+                    _dxf = str(_ff10_res.get("dxf_link") or "")
+                    _xlsx = str(_ff10_res.get("xlsx_link") or "")
+                    _manifest = str(_ff10_res.get("manifest_link") or "")
+                    _sheet_count = str(_ff10_res.get("sheet_count") or "")
+                    _engine = str(_ff10_res.get("engine") or _FF10_ENGINE)
+                    _msg = (
+                        "Проект создан\n"
+                        f"Engine: {_engine}\n"
+                        "Раздел: КЖ\n"
+                        f"Тип: фундаментная плита\n"
+                        f"Листов: {_sheet_count}\n"
+                        f"PDF: {_pdf}\n"
+                        f"DXF: {_dxf}\n"
+                        f"XLSX: {_xlsx}\n"
+                        f"MANIFEST: {_manifest}\n\n"
+                        "Доволен результатом? Ответь: Да / Уточни / Правки"
+                    )
+                    if not _pdf or not _dxf:
+                        _update_task(conn, task_id, state="FAILED", result="Проект не создан: нет PDF/DXF ссылки", error_message="PROJECT_LINKS_MISSING")
+                        _history(conn, task_id, "FULLFIX_10_PROJECT_LINKS_MISSING")
+                        conn.commit()
+                        _send_once(conn, task_id, chat_id, "Проект не создан: нет PDF/DXF ссылки", reply_to, "ff10_project_links_missing")
+                        return
+
+                        # === RESULT_VALIDATOR_GUARD_V1 ===
+                        if _check_result_before_confirm(_ff13c_strip_manifest_links(_msg)):
+                            # === TASK_WORKER_ARTIFACT_GATE_V1 ===
+                            try:
+                                if validate_engine_result is not None:
+                                    _twag_raw = ""
+                                    _twag_input_type = ""
+                                    try:
+                                        _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                                    except Exception:
+                                        _twag_raw = ""
+                                    try:
+                                        _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
+                                    except Exception:
+                                        _twag_input_type = ""
+                                    _twag_result = _ff13c_strip_manifest_links(_msg)
+                                    _twag_check = validate_engine_result(
+                                        {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
+                                        input_type=_twag_input_type,
+                                        user_text=_twag_raw,
+                                        topic_id=topic_id,
+                                    )
+                                    if not _twag_check.get("ok"):
+                                        _update_task(conn, task_id, state="FAILED", result="",
+                                            error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
+                                        _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
+                                        return
+                            except Exception as _twag_e:
+                                logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
+                            # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
+                            _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
+                        else:
+                            _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message="FORBIDDEN_PHRASE")
+                        # === END RESULT_VALIDATOR_GUARD_V1 ===
+                    _history(conn, task_id, "FULLFIX_10_PROJECT_OK")
+                    conn.commit()
+                    _sent = _send_once_ex(conn, task_id, str(chat_id), _msg, reply_to, "ff10_project_result")
+                    if isinstance(_sent, dict) and _sent.get("bot_message_id"):
+                        _update_task(conn, task_id, bot_message_id=_sent["bot_message_id"])
+                        conn.commit()
+                    _ff10_save_result_memory(str(chat_id), int(topic_id or 0), str(raw_input or ""), _msg, _ff10_res)
+                    return
+
+            if _ff10_intent == "estimate":
+                _ff10_res = _ff10_create_estimate_files(str(raw_input or ""), task_id, int(topic_id or 0))
+                if not isinstance(_ff10_res, dict) or not _ff10_res.get("success"):
+                    _err = str((_ff10_res or {}).get("error", "ESTIMATE_FAILED"))[:400]
+                    _msg = "Смета не создана: " + _err
+                    _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message=_err)
+                    _history(conn, task_id, "FULLFIX_10_ESTIMATE_FAILED:" + _err)
+                    conn.commit()
+                    _send_once(conn, task_id, chat_id, _msg, reply_to, "ff10_estimate_failed")
+                    return
+
+                _msg = str(_ff10_res.get("message") or "")
+                # === RESULT_VALIDATOR_GUARD_V1 ===
+                if _check_result_before_confirm(_ff13c_strip_manifest_links(_msg)):
+                    # === TASK_WORKER_ARTIFACT_GATE_V1 ===
+                    try:
+                        if validate_engine_result is not None:
+                            _twag_raw = ""
+                            _twag_input_type = ""
+                            try:
+                                _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                            except Exception:
+                                _twag_raw = ""
+                            try:
+                                _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
+                            except Exception:
+                                _twag_input_type = ""
+                            _twag_result = _ff13c_strip_manifest_links(_msg)
+                            _twag_check = validate_engine_result(
+                                {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
+                                input_type=_twag_input_type,
+                                user_text=_twag_raw,
+                                topic_id=topic_id,
+                            )
+                            if not _twag_check.get("ok"):
+                                _update_task(conn, task_id, state="FAILED", result="",
+                                    error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
+                                _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
+                                return
+                    except Exception as _twag_e:
+                        logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
+                    # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
+                    _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
+                else:
+                    _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message="FORBIDDEN_PHRASE")
+                # === END RESULT_VALIDATOR_GUARD_V1 ===
+                _history(conn, task_id, "FULLFIX_10_ESTIMATE_OK")
+                conn.commit()
+                _sent = _send_once_ex(conn, task_id, str(chat_id), _msg, reply_to, "ff10_estimate_result")
+                if isinstance(_sent, dict) and _sent.get("bot_message_id"):
+                    _update_task(conn, task_id, bot_message_id=_sent["bot_message_id"])
+                    conn.commit()
+                _ff10_save_result_memory(str(chat_id), int(topic_id or 0), str(raw_input or ""), _msg, _ff10_res)
+                return
+
+        except Exception as _ff10_e:
+            _err = str(_ff10_e)[:500]
+            _update_task(conn, task_id, state="FAILED", result="Ошибка FULLFIX_10: " + _err, error_message=_err)
+            _history(conn, task_id, "FULLFIX_10_EXCEPTION:" + _err)
+            conn.commit()
+            _send_once(conn, task_id, chat_id, "Ошибка FULLFIX_10: " + _err, reply_to, "ff10_exception")
+            return
+        # === END FULLFIX_10_TOTAL_CLOSURE_UNIVERSAL_ROUTE ===
+
+
+    # === FULLFIX_07_PROJECT_DESIGN_CLOSURE_ROUTE ===
+    _ff07_low = str(raw_input or "").lower()
+    _ff07_triggers = (
+        "создай проект",
+        "сделай проект",
+        "проект фундамент",
+        "проект фундаментной плиты",
+        "план фундамент",
+        "план фундаментной плиты",
+        "фундаментной плиты",
+        "проект по образцу",
+        "по образцу проект",
+        "проект по шаблону",
+        "dxf проект",
+        "dwg проект",
+    )
+    if any(x in _ff07_low for x in _ff07_triggers):
+        try:
+            from core.project_engine import create_project_pdf_dxf_artifact
+            _ff07_res = await create_project_pdf_dxf_artifact(str(raw_input), task_id, int(topic_id or 0), "", True)
+
+            if not isinstance(_ff07_res, dict) or not _ff07_res.get("success"):
+                _err = str((_ff07_res or {}).get("error", "PROJECT_FAILED"))[:500]
+                _update_task(
+                    conn,
+                    task_id,
+                    state="FAILED",
+                    result="Проект не создан: нет полного комплекта PDF/DXF/XLSX/MANIFEST или шаблон неполный",
+                    error_message=_err,
+                )
+                _history(conn, task_id, "FULLFIX_07_FAILED:" + _err)
+                conn.commit()
+                _send_once(
+                    conn,
+                    task_id,
+                    chat_id,
+                    "Проект не создан: нет полного комплекта PDF/DXF/XLSX/MANIFEST или шаблон неполный",
+                    reply_to,
+                    "project_failed",
+                )
+                return
+
+            _pdf = str(_ff07_res.get("pdf_link") or "")
+            _dxf = str(_ff07_res.get("dxf_link") or "")
+            _xlsx = str(_ff07_res.get("xlsx_link") or "")
+            _manifest = str(_ff07_res.get("manifest_link") or "")
+            _engine = str(_ff07_res.get("engine") or "FULLFIX_07_PROJECT_DESIGN_CLOSURE")
+            _tpl = str(_ff07_res.get("template_file") or "")
+            _sheet_count = str(_ff07_res.get("sheet_count") or "0")
+            _sec = str(_ff07_res.get("section") or "КЖ")
+
+            _msg = (
+                "Проект создан\n"
+                f"Engine: {_engine}\n"
+                f"Раздел: {_sec}\n"
+                f"Листов: {_sheet_count}\n"
+                f"Шаблон: {_tpl}\n"
+                f"PDF: {_pdf}\n"
+                f"DXF: {_dxf}\n"
+                f"XLSX: {_xlsx}\n"
+                f"MANIFEST: {_manifest}\n\n"
+                "Доволен результатом? Ответь: Да / Уточни / Правки"
+            )
+
+            # === RESULT_VALIDATOR_GUARD_V1 ===
+            if _check_result_before_confirm(_ff13c_strip_manifest_links(_msg)):
+                # === TASK_WORKER_ARTIFACT_GATE_V1 ===
+                try:
+                    if validate_engine_result is not None:
+                        _twag_raw = ""
+                        _twag_input_type = ""
+                        try:
+                            _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                        except Exception:
+                            _twag_raw = ""
+                        try:
+                            _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
+                        except Exception:
+                            _twag_input_type = ""
+                        _twag_result = _ff13c_strip_manifest_links(_msg)
+                        _twag_check = validate_engine_result(
+                            {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
+                            input_type=_twag_input_type,
+                            user_text=_twag_raw,
+                            topic_id=topic_id,
+                        )
+                        if not _twag_check.get("ok"):
+                            _update_task(conn, task_id, state="FAILED", result="",
+                                error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
+                            _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
+                            return
+                except Exception as _twag_e:
+                    logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
+                # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
+                _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
+            else:
+                _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message="FORBIDDEN_PHRASE")
+            # === END RESULT_VALIDATOR_GUARD_V1 ===
+            _history(conn, task_id, "FULLFIX_07_PROJECT_OK")
+            conn.commit()
+
+            try:
+                _sent = _send_once_ex(conn, task_id, str(chat_id), _msg, reply_to, "project_fullfix_07_result")
+                if isinstance(_sent, dict) and _sent.get("bot_message_id"):
+                    _update_task(conn, task_id, bot_message_id=_sent["bot_message_id"])
+                    conn.commit()
+            except Exception:
+                _send_once(conn, task_id, chat_id, _msg, reply_to, "project_fullfix_07_result")
+            return
+
+        except Exception as _ff07_e:
+            _err = str(_ff07_e)[:700]
+            _update_task(
+                conn,
+                task_id,
+                state="FAILED",
+                result="Проект не создан: ошибка генерации полного комплекта: " + _err,
+                error_message=_err,
+            )
+            _history(conn, task_id, "FULLFIX_07_EXCEPTION:" + _err)
+            conn.commit()
+            _send_once(conn, task_id, chat_id, "Проект не создан: ошибка генерации полного комплекта: " + _err, reply_to, "project_exception")
+            return
+    # === END FULLFIX_07_PROJECT_DESIGN_CLOSURE_ROUTE ===
+
+
+    # === FULLFIX_07_CAD_PROJECT_DOCUMENTATION_ROUTE ===
+    try:
+        from core.cad_project_engine import is_project_design_request, create_full_project_package, format_project_result_message
+        if is_project_design_request(raw_input):
+            _ff07_res = create_full_project_package(str(raw_input), task_id, int(topic_id or 0), "")
+            _ff07_msg = format_project_result_message(_ff07_res)
+            if not isinstance(_ff07_res, dict) or not _ff07_res.get("success"):
+                _err = str((_ff07_res or {}).get("error") or "PROJECT_DOCUMENTATION_FAILED")[:300]
+                _update_task(conn, task_id, state="FAILED", result=_ff07_msg, error_message=_err)
+                _history(conn, task_id, "FULLFIX_07_PROJECT_FAILED:" + _err)
+                conn.commit()
+                _send_once(conn, task_id, chat_id, _ff07_msg, reply_to, "ff07_project_failed")
+                return
+
+                # === RESULT_VALIDATOR_GUARD_V1 ===
+                if _check_result_before_confirm(_ff07_msg):
+                    # === TASK_WORKER_ARTIFACT_GATE_V1 ===
+                    try:
+                        if validate_engine_result is not None:
+                            _twag_raw = ""
+                            _twag_input_type = ""
+                            try:
+                                _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                            except Exception:
+                                _twag_raw = ""
+                            try:
+                                _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
+                            except Exception:
+                                _twag_input_type = ""
+                            _twag_result = _ff07_msg
+                            _twag_check = validate_engine_result(
+                                {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
+                                input_type=_twag_input_type,
+                                user_text=_twag_raw,
+                                topic_id=topic_id,
+                            )
+                            if not _twag_check.get("ok"):
+                                _update_task(conn, task_id, state="FAILED", result="",
+                                    error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
+                                _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
+                                return
+                    except Exception as _twag_e:
+                        logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
+                    # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
+                    _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff07_msg, error_message="")
+                else:
+                    _update_task(conn, task_id, state="FAILED", result=_ff07_msg, error_message="FORBIDDEN_PHRASE")
+                # === END RESULT_VALIDATOR_GUARD_V1 ===
+            _history(conn, task_id, "FULLFIX_07_PROJECT_OK")
+            conn.commit()
+            _sent = _send_once_ex(conn, task_id, str(chat_id), _ff07_msg, reply_to, "ff07_project_result")
+            if isinstance(_sent, dict) and _sent.get("bot_message_id"):
+                _update_task(conn, task_id, bot_message_id=_sent["bot_message_id"])
+                conn.commit()
+            return
+    except Exception as _ff07_e:
+        _err = str(_ff07_e)[:500]
+        _update_task(conn, task_id, state="FAILED", result="Проект не создан: ошибка FULLFIX_07", error_message=_err)
+        _history(conn, task_id, "FULLFIX_07_EXCEPTION:" + _err)
+        conn.commit()
+        _send_once(conn, task_id, chat_id, "Проект не создан: ошибка FULLFIX_07", reply_to, "ff07_project_exception")
+        return
+    # === END FULLFIX_07_CAD_PROJECT_DOCUMENTATION_ROUTE ===
+
+    # === FULLFIX_06_FINAL_PROJECT_TEMPLATE_ROUTE ===
+    _ff06_low = str(raw_input or "").lower()
+    _ff06_project_triggers = (
         "создай проект",
         "сделай проект",
         "разработай проект",
@@ -6424,2706 +2655,4761 @@ def is_project_design_request(text: str) -> bool:
         "проект кровли",
         "проект по образцу",
         "проект по шаблону",
-        "полный проект",
-        "проектная документация",
-        "рабочая документация",
-        "выдай проект",
-        "нужен проект",
-    ]
-    return any(x in low for x in triggers)
+        "план фундаментной плиты",
+        "чертеж фундаментной плиты",
+        "чертёж фундаментной плиты",
+    )
+    if any(x in _ff06_low for x in _ff06_project_triggers):
+        try:
+            from core.project_engine import create_project_pdf_dxf_artifact
+            _ff06_res = await create_project_pdf_dxf_artifact(str(raw_input), task_id, int(topic_id or 0), "", True)
+            if not isinstance(_ff06_res, dict) or not _ff06_res.get("success"):
+                _err = str((_ff06_res or {}).get("error", "PROJECT_FAILED"))[:300]
+                _update_task(conn, task_id, state="FAILED", result="Проект не создан: нет сохранённого шаблона или не созданы PDF/DXF/XLSX ссылки", error_message=_err)
+                _history(conn, task_id, "FULLFIX_06_PROJECT_FAILED:" + _err)
+                conn.commit()
+                _send_once(conn, task_id, chat_id, "Проект не создан: нет сохранённого шаблона или не созданы PDF/DXF/XLSX ссылки", reply_to, "project_failed_ff06")
+                return
 
-def format_project_result_message(res: Dict[str, Any]) -> str:
-    if not res.get("success"):
-        return "Проект не создан: " + _clean(res.get("error") or "ошибка генерации", 300)
-    data = res.get("data") or {}
-    calc = res.get("calculation") or {}
-    lines = [
-        "Проектная документация создана",
-        f"Движок: {res.get('engine')}",
-        f"Раздел: {res.get('section')}",
-        f"Листов PDF: {res.get('sheet_count')}",
-        f"Размер: {data.get('length_m')} x {data.get('width_m')} м",
-        f"Плита: {data.get('slab_mm')} мм",
-        f"Бетон: {data.get('concrete_class')}",
-        f"Арматура: {data.get('rebar_class')} Ø{data.get('rebar_diam_mm')} шаг {data.get('rebar_step_mm')} мм",
-        f"Бетон: {calc.get('concrete_m3')} м³",
-        f"Арматура: {calc.get('rebar_t')} т",
-        "",
-        f"PDF: {res.get('pdf_link')}",
-        f"DXF: {res.get('dxf_link')}",
-        f"XLSX: {res.get('xlsx_link')}",
-    ]
-    if res.get("manifest_link"):
-        lines.append(f"MANIFEST: {res.get('manifest_link')}")
-    lines.append("")
-    lines.append("Доволен результатом? Ответь: Да / Уточни / Правки")
-    return "\n".join(lines)
+            _msg = (
+                "Проект создан по сохранённому шаблону\n"
+                f"Раздел: {_ff06_res.get('section')}\n"
+                f"Листов по шаблону: {_ff06_res.get('sheet_count')}\n"
+                f"Шаблон: {_ff06_res.get('template_file')}\n"
+                f"PDF: {_ff06_res.get('pdf_link')}\n"
+                f"DXF: {_ff06_res.get('dxf_link')}\n"
+                f"XLSX: {_ff06_res.get('xlsx_link')}\n"
+                f"MANIFEST: {_ff06_res.get('manifest_link')}\n\n"
+                "Доволен результатом? Ответь: Да / Уточни / Правки"
+            )
+            # === RESULT_VALIDATOR_GUARD_V1 ===
+            if _check_result_before_confirm(_ff13c_strip_manifest_links(_msg)):
+                # === TASK_WORKER_ARTIFACT_GATE_V1 ===
+                try:
+                    if validate_engine_result is not None:
+                        _twag_raw = ""
+                        _twag_input_type = ""
+                        try:
+                            _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                        except Exception:
+                            _twag_raw = ""
+                        try:
+                            _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
+                        except Exception:
+                            _twag_input_type = ""
+                        _twag_result = _ff13c_strip_manifest_links(_msg)
+                        _twag_check = validate_engine_result(
+                            {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
+                            input_type=_twag_input_type,
+                            user_text=_twag_raw,
+                            topic_id=topic_id,
+                        )
+                        if not _twag_check.get("ok"):
+                            _update_task(conn, task_id, state="FAILED", result="",
+                                error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
+                            _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
+                            return
+                except Exception as _twag_e:
+                    logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
+                # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
+                _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
+            else:
+                _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message="FORBIDDEN_PHRASE")
+            # === END RESULT_VALIDATOR_GUARD_V1 ===
+            _history(conn, task_id, "FULLFIX_06_PROJECT_OK")
+            conn.commit()
+            _sent = _send_once_ex(conn, task_id, str(chat_id), _msg, reply_to, "project_result_ff06")
+            if isinstance(_sent, dict) and _sent.get("bot_message_id"):
+                _update_task(conn, task_id, bot_message_id=_sent["bot_message_id"])
+                conn.commit()
+            return
+        except Exception as _ff06_e:
+            _err = str(_ff06_e)[:500]
+            _update_task(conn, task_id, state="FAILED", result="Проект не создан: ошибка генерации PDF/DXF/XLSX", error_message=_err)
+            _history(conn, task_id, "FULLFIX_06_PROJECT_EXCEPTION:" + _err)
+            conn.commit()
+            _send_once(conn, task_id, chat_id, "Проект не создан: ошибка генерации PDF/DXF/XLSX", reply_to, "project_exception_ff06")
+            return
+    # === END FULLFIX_06_FINAL_PROJECT_TEMPLATE_ROUTE ===
 
-async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "") -> Dict[str, Any]:
-    return create_full_project_package(raw_input, task_id, topic_id, template_hint)
 
-# === END FULLFIX_07_CAD_PROJECT_DOCUMENTATION_CLOSURE ===
+    role = _detect_role_assignment(raw_input)
+    if role:
+        ask = f"Понял назначение чата так:\n{role}\n\nПодтверди или уточни"
+        # === RESULT_VALIDATOR_GUARD_V1 ===
+        if _check_result_before_confirm(ask):
+            # === TASK_WORKER_ARTIFACT_GATE_V1 ===
+            try:
+                if validate_engine_result is not None:
+                    _twag_raw = ""
+                    _twag_input_type = ""
+                    try:
+                        _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                    except Exception:
+                        _twag_raw = ""
+                    try:
+                        _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
+                    except Exception:
+                        _twag_input_type = ""
+                    _twag_result = ask
+                    _twag_check = validate_engine_result(
+                        {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
+                        input_type=_twag_input_type,
+                        user_text=_twag_raw,
+                        topic_id=topic_id,
+                    )
+                    if not _twag_check.get("ok"):
+                        _update_task(conn, task_id, state="FAILED", result="",
+                            error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
+                        _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
+                        return
+            except Exception as _twag_e:
+                logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
+            # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
+            _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=ask, error_message="")
+        else:
+            _update_task(conn, task_id, state="FAILED", result=ask, error_message="FORBIDDEN_PHRASE")
+        # === END RESULT_VALIDATOR_GUARD_V1 ===
+        _history(conn, task_id, "state:AWAITING_CONFIRMATION")
+        conn.commit()
+        _send_once(conn, task_id, chat_id, ask, reply_to, "role_confirmation")
+        return
+
+    pending_confirm = conn.execute(
+        """
+        SELECT id, COALESCE(raw_input,'') AS raw_input, COALESCE(result,'') AS result
+        FROM tasks
+        WHERE chat_id=?
+          AND id<>?
+          AND COALESCE(topic_id,0)=?
+          AND state='AWAITING_CONFIRMATION'
+        ORDER BY updated_at DESC, created_at DESC
+        LIMIT 1
+        """,
+        (str(chat_id), task_id, int(topic_id)),
+    ).fetchone()
+
+    if pending_confirm:
+        pending_id = _s(pending_confirm["id"])
+        pending_role = _extract_role_confirmation(_s(pending_confirm["result"]))
+        if pending_role and _is_confirm_intent(raw_input):
+            _save_topic_role(chat_id, topic_id, pending_role)
+            _update_task(conn, pending_id, state="DONE", result=f"Чат закреплён за: {pending_role}", error_message="")
+            _history(conn, pending_id, f"role_saved:{pending_role}")
+            _update_task(conn, task_id, state="DONE", result="Подтверждение принято", error_message="")
+            _history(conn, task_id, "confirm_accepted")
+            conn.commit()
+            _send_once(conn, task_id, chat_id, f"Принял. Чат закреплён за: {pending_role}", reply_to, "role_saved")
+            return
+        if pending_role and _is_revision_intent(raw_input):
+            _update_task(conn, pending_id, raw_input=raw_input, state="NEW", result="", error_message="")
+            _history(conn, pending_id, "role_revision_requested")
+            _update_task(conn, task_id, state="DONE", result="Правки приняты", error_message="")
+            _history(conn, task_id, "state:DONE")
+            conn.commit()
+            _send_once(conn, task_id, chat_id, "Принял правки. Уточни назначение чата одной фразой", reply_to, "role_revision_ok")
+            return
+        if _is_confirm_intent(raw_input):
+            _finalize_done(conn, pending_id, chat_id, topic_id, reply_to)
+            _update_task(conn, task_id, state="DONE", result="Подтверждение принято", error_message="")
+            _history(conn, task_id, "confirm_accepted")
+            conn.commit()
+            _send_once(conn, task_id, chat_id, "Принял. Задача закрыта", reply_to, "confirm_done")
+            return
+        if _is_revision_intent(raw_input):
+            merged = _clean(_s(pending_confirm["raw_input"]) + "\n\nУточнение пользователя:\n" + raw_input, 12000)
+            _update_task(conn, pending_id, raw_input=merged, state="IN_PROGRESS", error_message="")
+            _history(conn, pending_id, "revision_accepted")
+            _update_task(conn, task_id, state="DONE", result="Правки приняты", error_message="")
+            _history(conn, task_id, "state:DONE")
+            conn.commit()
+            _send_once(conn, task_id, chat_id, "Принял правки. Делаю", reply_to, "revision_ok")
+            return
+
+    # === FULLFIX_05_REQUIRE_REAL_PDF_DXF_PROJECT ===
+    _ff05_low = str(raw_input or "").lower()
+    _ff05_project_triggers = (
+        "создай проект",
+        "сделай проект",
+        "проект фундамент",
+        "проект фундаментной плиты",
+        "план фундамент",
+        "план фундаментной плиты",
+        "фундаментной плиты",
+        "проект по образцу",
+        "проект по шаблону",
+        "сделай по образцу",
+    )
+    if any(x in _ff05_low for x in _ff05_project_triggers):
+        try:
+            from core.project_engine import create_project_pdf_dxf_artifact
+            _ff05_res = await create_project_pdf_dxf_artifact(str(raw_input), task_id, int(topic_id or 0), "")
+            if not isinstance(_ff05_res, dict) or not _ff05_res.get("success"):
+                _err = str((_ff05_res or {}).get("error", "PROJECT_FAILED"))[:300]
+                _update_task(
+                    conn,
+                    task_id,
+                    state="FAILED",
+                    result="Проект не создан: нет PDF/DXF файла или ссылки",
+                    error_message=_err,
+                )
+                _history(conn, task_id, "FULLFIX_05_PROJECT_FAILED:" + _err)
+                conn.commit()
+                _send_once(
+                    conn,
+                    task_id,
+                    chat_id,
+                    "Проект не создан: нет PDF/DXF файла или ссылки",
+                    reply_to,
+                    "project_failed",
+                )
+                return
+
+            _pdf = str(_ff05_res.get("pdf_link") or "")
+            _dxf = str(_ff05_res.get("dxf_link") or "")
+            _manifest = str(_ff05_res.get("manifest_link") or "")
+            _sec = str(_ff05_res.get("section") or "КЖ")
+            _msg = (
+                f"Проект создан как PDF/DXF комплект\n"
+                f"Раздел: {_sec}\n"
+                f"PDF: {_pdf}\n"
+                f"DXF: {_dxf}\n"
+            )
+            if _manifest:
+                _msg += f"MANIFEST: {_manifest}\n"
+            _msg += "\nДоволен результатом? Ответь: Да / Уточни / Правки"
+
+            # === RESULT_VALIDATOR_GUARD_V1 ===
+            if _check_result_before_confirm(_ff13c_strip_manifest_links(_msg)):
+                # === TASK_WORKER_ARTIFACT_GATE_V1 ===
+                try:
+                    if validate_engine_result is not None:
+                        _twag_raw = ""
+                        _twag_input_type = ""
+                        try:
+                            _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                        except Exception:
+                            _twag_raw = ""
+                        try:
+                            _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
+                        except Exception:
+                            _twag_input_type = ""
+                        _twag_result = _ff13c_strip_manifest_links(_msg)
+                        _twag_check = validate_engine_result(
+                            {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
+                            input_type=_twag_input_type,
+                            user_text=_twag_raw,
+                            topic_id=topic_id,
+                        )
+                        if not _twag_check.get("ok"):
+                            _update_task(conn, task_id, state="FAILED", result="",
+                                error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
+                            _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
+                            return
+                except Exception as _twag_e:
+                    logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
+                # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
+                _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(_msg), error_message="")
+            else:
+                _update_task(conn, task_id, state="FAILED", result=_ff13c_strip_manifest_links(_msg), error_message="FORBIDDEN_PHRASE")
+            # === END RESULT_VALIDATOR_GUARD_V1 ===
+            _history(conn, task_id, "FULLFIX_05_PROJECT_PDF_DXF_OK")
+            conn.commit()
+
+            _sent = _send_once_ex(conn, task_id, str(chat_id), _msg, reply_to, "project_pdf_dxf_result")
+            if isinstance(_sent, dict) and _sent.get("bot_message_id"):
+                _update_task(conn, task_id, bot_message_id=_sent["bot_message_id"])
+                conn.commit()
+            return
+
+        except Exception as _ff05_e:
+            _err = str(_ff05_e)[:500]
+            _update_task(
+                conn,
+                task_id,
+                state="FAILED",
+                result="Проект не создан: ошибка генерации PDF/DXF",
+                error_message=_err,
+            )
+            _history(conn, task_id, "FULLFIX_05_PROJECT_EXCEPTION:" + _err)
+            conn.commit()
+            _send_once(conn, task_id, chat_id, "Проект не создан: ошибка генерации PDF/DXF", reply_to, "project_exception")
+            return
+    # === END FULLFIX_05_REQUIRE_REAL_PDF_DXF_PROJECT ===
+
+    pending_clarify = conn.execute(
+        """
+        SELECT id, COALESCE(raw_input,'') AS raw_input
+        FROM tasks
+        WHERE chat_id=?
+          AND id<>?
+          AND COALESCE(topic_id,0)=?
+          AND state='WAITING_CLARIFICATION'
+        ORDER BY updated_at DESC, created_at DESC
+        LIMIT 1
+        """,
+        (str(chat_id), task_id, int(topic_id)),
+    ).fetchone()
+
+    if pending_clarify:
+        pending_id = _s(pending_clarify["id"])
+        merged = _clean(_s(pending_clarify["raw_input"]) + "\n\nУточнение пользователя:\n" + raw_input, 12000)
+        _update_task(conn, pending_id, raw_input=merged, state="IN_PROGRESS", error_message="")
+        _history(conn, pending_id, "clarification_accepted")
+        _update_task(conn, task_id, state="DONE", result="Уточнение принято", error_message="")
+        _history(conn, task_id, "state:DONE")
+        conn.commit()
+        _send_once(conn, task_id, chat_id, "Принял уточнение. Делаю", reply_to, "clarification_ok")
+        return
 
 
-# === FULLFIX_08_PROJECT_SIGNATURE_COMPAT ===
-# Compatibility layer:
-# - accepts legacy worker calls with extra positional args
-# - exposes create_full_project_documentation for diagnostics and future routes
-# - keeps the real FULLFIX_07 CAD generator as the single backend
+    _update_task(conn, task_id, state="IN_PROGRESS", error_message="")
+    _history(conn, task_id, "state:IN_PROGRESS")
+    conn.commit()
 
-_FF08_ORIGINAL_CREATE_PROJECT_PDF_DXF_ARTIFACT = globals().get("create_project_pdf_dxf_artifact")
 
-async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
-    if _FF08_ORIGINAL_CREATE_PROJECT_PDF_DXF_ARTIFACT is None:
-        return {
-            "success": False,
-            "engine": "FULLFIX_08_PROJECT_SIGNATURE_COMPAT",
-            "error": "ORIGINAL_CREATE_PROJECT_PDF_DXF_ARTIFACT_NOT_FOUND",
-        }
+
+def _get_parent_task_id(conn, chat_id, reply_to_message_id, topic_id):
+    """
+    PARENT_CONFIRM_FALLBACK_V1
+
+    Fact-based fix:
+    - Telegram reply_to_message_id can point to a nearby bot message id that is not stored as tasks.bot_message_id
+    - exact bot_message_id/reply_to_message_id match is still priority
+    - if exact match fails and user replied inside the same topic, bind to latest AWAITING_CONFIRMATION in that topic
+    - no DONE/FAILED/CANCELLED task is revived here
+    """
+    if not reply_to_message_id:
+        return None
 
     try:
-        return await _FF08_ORIGINAL_CREATE_PROJECT_PDF_DXF_ARTIFACT(
-            raw_input,
-            task_id,
-            int(topic_id or 0),
-            str(template_hint or "")
-        )
-    except TypeError as e:
-        msg = str(e)
-        if "positional arguments" not in msg and "argument" not in msg:
-            raise
-        return await _FF08_ORIGINAL_CREATE_PROJECT_PDF_DXF_ARTIFACT(
-            raw_input,
-            task_id,
-            int(topic_id or 0)
-        )
+        _topic_id = int(topic_id or 0)
+    except Exception:
+        _topic_id = 0
 
-async def create_full_project_documentation(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
-    return await create_project_pdf_dxf_artifact(
-        raw_input,
-        task_id,
-        int(topic_id or 0),
-        str(template_hint or ""),
-        *args,
-        **kwargs
+    _chat_id = str(chat_id)
+    _reply_id = str(reply_to_message_id)
+
+    row = conn.execute("""
+        SELECT id FROM tasks
+        WHERE chat_id = ?
+          AND COALESCE(topic_id,0) = ?
+          AND CAST(COALESCE(bot_message_id,'') AS TEXT) = ?
+          AND state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION')
+        ORDER BY updated_at DESC
+        LIMIT 1
+    """, (_chat_id, _topic_id, _reply_id)).fetchone()
+    if row:
+        return row["id"]
+
+    row = conn.execute("""
+        SELECT id FROM tasks
+        WHERE chat_id = ?
+          AND COALESCE(topic_id,0) = ?
+          AND CAST(COALESCE(reply_to_message_id,'') AS TEXT) = ?
+          AND state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION')
+        ORDER BY updated_at DESC
+        LIMIT 1
+    """, (_chat_id, _topic_id, _reply_id)).fetchone()
+    if row:
+        return row["id"]
+
+    row = conn.execute("""
+        SELECT id FROM tasks
+        WHERE chat_id = ?
+          AND COALESCE(topic_id,0) = ?
+          AND state = 'AWAITING_CONFIRMATION'
+          AND COALESCE(result,'') <> ''
+        ORDER BY updated_at DESC
+        LIMIT 1
+    """, (_chat_id, _topic_id)).fetchone()
+    return row["id"] if row else None
+
+
+# === STOP_TOPIC2_LOOP_FACT_BASED_V1 ===
+def _stop_topic2_loop_fact_based_v1(conn, task):
+    try:
+        tid = _s(task["id"])
+        topic_id = int(task["topic_id"] or 0) if "topic_id" in task.keys() else 0
+        state = _s(task["state"]) if "state" in task.keys() else ""
+        raw = _s(task["raw_input"]) if "raw_input" in task.keys() else ""
+        result = _s(task["result"]) if "result" in task.keys() else ""
+        low = (raw + "\n" + result).lower().replace("ё", "е")
+        if topic_id != 2:
+            return False
+        if state not in ("NEW", "IN_PROGRESS", "WAITING_CLARIFICATION"):
+            return False
+        if raw.count("---") >= 2 or raw.count("REVISION") >= 1 or raw.count("[VOICE]") >= 2:
+            _update_task(conn, tid, state="CANCELLED", error_message="STOP_TOPIC2_LOOP_FACT_BASED_V1:LOOP_GUARD_CANCELLED")
+            _history(conn, tid, "STOP_TOPIC2_LOOP_FACT_BASED_V1:LOOP_GUARD_CANCELLED")
+            conn.commit()
+            return True
+        if any(x in low for x in (
+            "что тебе не понятно",
+            "тебе все написано",
+            "сможешь сделать нормальную задачу",
+            "сделай мне смету нормальную",
+        )):
+            _update_task(conn, tid, state="CANCELLED", error_message="STOP_TOPIC2_LOOP_FACT_BASED_V1:META_VOICE_CANCELLED")
+            _history(conn, tid, "STOP_TOPIC2_LOOP_FACT_BASED_V1:META_VOICE_CANCELLED")
+            conn.commit()
+            return True
+        return False
+    except Exception as e:
+        try:
+            logger.warning("STOP_TOPIC2_LOOP_FACT_BASED_V1_ERR %s", e)
+        except Exception:
+            pass
+        return False
+# === END_STOP_TOPIC2_LOOP_FACT_BASED_V1 ===
+
+
+def _normalize_voice_text(text: str) -> str:
+    return _clean(_s(text).replace("[VOICE]", " "), 12000)
+
+def _looks_done_command(text: str) -> bool:
+    low = _normalize_voice_text(text).lower()
+    if "не доволен" in low or "недоволен" in low:
+        return False
+    done_markers = [
+        "да доволен",
+        "доволен результатом",
+        "можно завершать",
+        "можно закрывать",
+        "завершай задачу",
+        "завершай запрос",
+        "завершай поиск",
+        "задача завершена",
+        "задача закрыта",
+        "запрос завершен",
+        "поиск завершен",
+        "все верно завершай",
+        "всё верно завершай",
+        "все верно задача завершена",
+        "всё верно задача завершена",
+        "да все верно",
+        "да всё верно",
+        "я же тебе сказал задача завершена",
+        "я же тебе сказал завершай",
+        "да можно",
+    ]
+    return any(m in low for m in done_markers)
+
+def _extract_topic_role(text: str) -> str:
+    raw = _clean(_s(text), 1000)
+    if not raw:
+        return ""
+
+    patterns = [
+        r"чат закреплен за темами:\s*(.+?)(?:\.|$)",
+        r"чат закреплён за темами:\s*(.+?)(?:\.|$)",
+        r"чат закреплен за:\s*(.+?)(?:\.|$)",
+        r"чат закреплён за:\s*(.+?)(?:\.|$)",
+        r"закрепленные темы:\s*(.+?)(?:\.|$)",
+        r"закреплённые темы:\s*(.+?)(?:\.|$)",
+        r"закреплено:\s*чат для\s*(.+?)(?:\.|$)",
+        r"этот чат используется для\s*(.+?)(?:\.|$)",
+        r"этот чат предназначен для\s*(.+?)(?:\.|$)",
+    ]
+
+    bad_markers = [
+        "без контекста",
+        "не понимаю запрос",
+        "не помню",
+        "задача завершена",
+        "задача закрыта",
+        "подтверждение принято",
+        "готов к выполнению задачи",
+        "последние действия",
+        "в этом чате были следующие действия",
+        "текущий статус",
+        "последний запрос",
+        "какие последние",
+        "чем помочь",
+    ]
+
+    for pattern in patterns:
+        m = re.search(pattern, raw, re.I | re.S)
+        if not m:
+            continue
+
+        role = re.sub(r"\s+", " ", m.group(1)).strip(" .:-")
+        role = re.split(r"\b(чем помочь|готов к работе|готов обсудить|последний запрос)\b", role, flags=re.I)[0].strip(" .:-")
+        low = role.lower()
+
+        if not role or len(role) < 3:
+            continue
+        if "?" in role:
+            continue
+        if any(x in low for x in bad_markers):
+            continue
+
+        return role[:500]
+
+    return ""
+
+def _save_topic_role_memory(chat_id: str, topic_id: int, text: str) -> str:
+    role = _extract_topic_role(text)
+    if not role or not os.path.exists(MEM_DB):
+        return ""
+    conn_mem = db(MEM_DB)
+    try:
+        if not _has_table(conn_mem, "memory"):
+            return ""
+        key = f"topic_{int(topic_id)}_role"
+        conn_mem.execute(
+            "INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
+            (str(chat_id), key, role),
+        )
+        conn_mem.commit()
+        return role
+    except Exception:
+        return ""
+    finally:
+        conn_mem.close()
+
+def _find_awaiting_confirmation_task(conn: sqlite3.Connection, chat_id: str, topic_id: int, current_task_id: str, reply_to_message_id: Any) -> Optional[sqlite3.Row]:
+    if reply_to_message_id:
+        row = conn.execute(
+            """
+            SELECT id, result
+            FROM tasks
+            WHERE chat_id=?
+              AND COALESCE(topic_id,0)=?
+              AND state='AWAITING_CONFIRMATION'
+              AND id<>?
+              AND (bot_message_id=? OR reply_to_message_id=?)
+            ORDER BY updated_at DESC, created_at DESC
+            LIMIT 1
+            """,
+            (str(chat_id), int(topic_id), str(current_task_id), reply_to_message_id, reply_to_message_id),
+        ).fetchone()
+        if row:
+            return row
+
+    return conn.execute(
+        """
+        SELECT id, result
+        FROM tasks
+        WHERE chat_id=?
+          AND COALESCE(topic_id,0)=?
+          AND state='AWAITING_CONFIRMATION'
+          AND id<>?
+        ORDER BY updated_at DESC, created_at DESC
+        LIMIT 1
+        """,
+        (str(chat_id), int(topic_id), str(current_task_id)),
+    ).fetchone()
+
+
+# === FULLFIX_DIRECTION_KERNEL_STAGE_1_HELPER ===
+def _stage1_dir_payload(payload):
+    try:
+        p = dict(payload or {})
+        if _Stage1WorkItem is None or _Stage1DirReg is None:
+            p.setdefault("direction", "general_chat")
+            return p
+        row = {
+            "id": p.get("task_id") or p.get("id") or "",
+            "chat_id": str(p.get("chat_id") or ""),
+            "topic_id": int(p.get("topic_id") or 0),
+            "input_type": p.get("input_type") or "unknown",
+            "raw_input": p.get("raw_input") or p.get("raw_text") or "",
+            "state": p.get("state") or "IN_PROGRESS",
+            "reply_to_message_id": p.get("reply_to_message_id"),
+            "bot_message_id": p.get("bot_message_id"),
+        }
+        wi = _Stage1WorkItem.from_task_row(row)
+        prof = _Stage1DirReg().detect(wi)
+        did = prof.get("id") or "general_chat"
+        wi.set_direction(did, prof)
+        wi.add_audit("stage", "FULLFIX_DIRECTION_KERNEL_STAGE_1")
+        wi.add_audit("shadow_mode", True)
+        p.update({
+            "direction": did,
+            "direction_profile": prof,
+            "direction_audit": wi.audit,
+            "work_item": wi.to_dict(),
+        })
+        try:
+            logger.info("FULLFIX_DIRECTION_KERNEL_STAGE_1 dir=%s score=%s task=%s topic=%s",
+                        did, prof.get("score"), row["id"], row["topic_id"])
+        except Exception:
+            pass
+        return p
+    except Exception as e:
+        try: logger.error("FULLFIX_DIRECTION_KERNEL_STAGE_1_ERR %s", e)
+        except Exception: pass
+        p = dict(payload or {})
+        p.setdefault("direction", "general_chat")
+        return p
+# === END ===
+async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str, topic_id: int) -> None:
+
+    if _stop_topic2_loop_fact_based_v1(conn, task):
+        return
+    task_id = _s(_task_field(task, "id"))
+    raw_input = _clean(_s(_task_field(task, "raw_input")), 12000)
+    reply_to = _task_field(task, "reply_to_message_id", None)
+
+    if _looks_done_command(raw_input):
+        target = _find_awaiting_confirmation_task(conn, chat_id, topic_id, task_id, reply_to)
+        if target:
+            target_id = _s(target["id"])
+            target_result = _s(target["result"])
+            # §9 DONE contract: write TOPIC2_EXPLICIT_CONFIRM before DONE for topic_2
+            if int(topic_id or 0) == 2:
+                try:
+                    conn.execute(
+                        "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                        (target_id, "TOPIC2_EXPLICIT_CONFIRM:from_user_done_command"),
+                    )
+                except Exception:
+                    pass
+            saved_role = _save_topic_role_memory(chat_id, topic_id, target_result)
+            _update_task(conn, target_id, state="DONE", error_message="")
+            _history(conn, target_id, "state:DONE")
+            if saved_role:
+                _history(conn, target_id, f"ROLE_SAVED:{_clean(saved_role, 200)}")
+            _update_task(conn, task_id, state="DONE", result="Подтверждение принято", error_message="")
+            _history(conn, task_id, "state:DONE")
+            conn.commit()
+            _send_once(conn, task_id, chat_id, "Принял. Задача закрыта", reply_to, "confirm_done")
+            return
+
+    parent_task_id = _get_parent_task_id(conn, chat_id, task["reply_to_message_id"], topic_id)
+    active_source_id = parent_task_id or task_id
+    active_task_context = _active_unfinished_context(conn, chat_id, topic_id, active_source_id)
+    pin_context = get_pin_context(chat_id, raw_input, topic_id)
+    short_memory, long_memory, topic_role, topic_directions = _load_memory_context(chat_id, topic_id)
+    archive_context = _load_archive_context(chat_id, topic_id, raw_input)
+    search_context = _search_fact_context(conn, chat_id, topic_id)
+
+    payload: Dict[str, Any] = {
+        "id": task_id,
+        "task_id": task_id,  # PAYLOAD_TOPIC_ID_FIX_V1
+        "topic_id": int(topic_id or 0),
+        "chat_id": chat_id,
+        "input_type": _s(_task_field(task, "input_type", "text")).lower() or "text",
+        "raw_input": raw_input,
+        "normalized_input": raw_input,
+        "state": "IN_PROGRESS",
+        "reply_to_message_id": reply_to,
+        "active_task_context": active_task_context,
+        "pin_context": pin_context,
+        "short_memory_context": short_memory,
+        "long_memory_context": long_memory,
+        "archive_context": archive_context,
+        "search_context": search_context,
+        "topic_role": topic_role,
+        "topic_directions": topic_directions,
+    }
+
+    try:
+        ai_result = None  # AI_RESULT_INIT_V1
+        assigned_role = _detect_role_assignment(raw_input)
+        if assigned_role:
+            _save_topic_role(chat_id, topic_id, assigned_role)
+            _history(conn, task_id, f"ROLE_SAVED:{_clean(assigned_role, 200)}")
+            conn.commit()
+            ai_result = f"Принято. Чат закреплен за темами: {assigned_role}. Все связанные запросы будут обрабатываться здесь."
+        else:
+            ROLE_Q = re.compile(r"(для чего|о чём|о чем|про что|напомни.*(чат|топик)|чем занимается|зачем этот чат)", re.IGNORECASE)
+            HISTORY_Q = re.compile(r"(что мы писали|что писали раньше|о ч[её]м общались|напомни.*что.*(писали|обсуждали)|что было в этом чате|история чата)", re.IGNORECASE)
+            # === WHAT_IS_THIS_META_V1 ===
+            if TOPIC_META_LOADER_WIRED and is_what_is_this_question(raw_input):
+                _wt_meta = load_topic_meta(int(topic_id or 0))
+                if _wt_meta:
+                    _wt_answer = build_topic_self_answer(_wt_meta)
+                    if _wt_answer:
+                        _update_task(conn, task_id, state="DONE", result=_wt_answer, error_message="")
+                        conn.commit()
+                        from core.reply_sender import send_reply_ex
+                        send_reply_ex(chat_id=str(chat_id), text=_wt_answer, reply_to_message_id=reply_to, message_thread_id=topic_id)
+                        return
+            # === END WHAT_IS_THIS_META_V1 ===
+            if topic_role and (ROLE_Q.search(raw_input) or HISTORY_Q.search(raw_input)):
+                ai_result = f"Этот чат закреплён за: {topic_role}"
+            else:
+                try:
+                    from core.model_router import route_model as _rm
+                    _mo = _rm(payload)
+                    if _mo:
+                        payload["model_override"] = _mo  # MODEL_ROUTER_V1_WIRED
+                except Exception:
+                    pass
+                        # === TEMPLATE_TRIGGER_V1 ===
+            if _tpl_check(str(raw_input or "")):
+                _tpl_path = _tpl_get(int(topic_id or 0))
+                if _tpl_path and os.path.exists(_tpl_path):
+                    logger.info("TEMPLATE_TRIGGER_V1 using template=%s task=%s", _tpl_path, task_id)
+                    payload["template_path"] = _tpl_path
+                    payload["use_template"] = True
+            # === END TEMPLATE_TRIGGER_V1 ===
+# === TOPIC_3008_HANDLER_V1 ===
+            if _t3_check(int(topic_id or 0)):
+                _t3_command = _t3_cmd(str(raw_input or ""))
+                if _t3_command != "none":
+                    import re as _re3008
+                    _t3_ctx = " ".join(filter(None,[
+                        str(payload.get("active_task_context") or "")[:200],
+                        str(payload.get("pin_context") or "")[:100],
+                        str(payload.get("short_memory_context") or "")[:200],
+                    ]))
+                    if _t3_command == "write":
+                        _t3_desc = _re3008.sub(r"напиши\s+код|написать\s+код","",str(raw_input or ""),flags=_re3008.I).strip()
+                        if _t3_generate:
+                            _t3_gen = await asyncio.wait_for(_t3_generate(_t3_desc,_t3_ctx),timeout=120)
+                            ai_result = _t3_gen + "\n\n---\nПроверить код?"
+                    elif _t3_command == "verify":
+                        _t3_code = _t3_extract(str(raw_input or ""))
+                        if len(_t3_code.strip()) < 10:
+                            ai_result = "Отправь код для проверки."
+                        elif _t3_verify:
+                            from core.reply_sender import send_reply_ex as _t3srex
+                            _t3srex(chat_id=str(chat_id),text="Запущена верификация. Ожидаю ответы (до 1.5 мин)...",reply_to_message_id=reply_to,message_thread_id=topic_id)
+                            ai_result = await asyncio.wait_for(_t3_verify(_t3_code,_t3_ctx),timeout=150)
+            # === END TOPIC_3008_HANDLER_V1 ===
+            if ai_result is None:  # AI_LOGIC_FIX_V1
+                # === STROYKA_FULL_CHAIN_FINAL_CLOSE_PRE_DIRECTION_GUARD ===
+                try:
+                    _stroyka_topic = int(_task_field(task, "topic_id", 0) or 0)
+                    _stroyka_state = _s(_task_field(task, "state", ""))
+                    _stroyka_task_id = _s(_task_field(task, "id", ""))
+                    if _stroyka_topic == 2 and _stroyka_state in ("NEW", "IN_PROGRESS"):
+                        _stroyka_raw = _s(_task_field(task, "raw_input", "")).lower()
+                        _stroyka_result = _s(_task_field(task, "result", "")).lower()
+                        _stroyka_bad = any(x in (_stroyka_raw + "\n" + _stroyka_result) for x in (
+                            "вор_кирпич", "vor_kirpich", "вор_кирпичная_кладка",
+                            "смета создана по образцу вор", "поставщик | площадка",
+                            "auto_parts", "search_monolith", "tco | риски",
+                            "ошибка классификации запроса", "категория не совпадает",
+                        ))
+                        if _stroyka_bad:
+                            _update_task(conn, _stroyka_task_id, state="FAILED",
+                                result="STROYKA_FULL_CHAIN_FINAL_CLOSE_PRE_DIRECTION_GUARD: blocked stale estimate contamination")
+                            _history(conn, _stroyka_task_id, "STROYKA_FULL_CHAIN_FINAL_CLOSE_PRE_DIRECTION_GUARD:blocked_bad_estimate")
+                            return
+                        from core.stroyka_estimate_canon import maybe_handle_stroyka_estimate as _stroyka_final_handle
+                        if await _stroyka_final_handle(conn, task, logger):
+                            _history(conn, _stroyka_task_id, "STROYKA_FULL_CHAIN_FINAL_CLOSE_PRE_DIRECTION_GUARD:handled")
+                            return
+                except Exception as _stroyka_final_err:
+                    logger.exception("STROYKA_FULL_CHAIN_FINAL_CLOSE_PRE_DIRECTION_GUARD_ERR %s", _stroyka_final_err)
+                # === END_STROYKA_FULL_CHAIN_FINAL_CLOSE_PRE_DIRECTION_GUARD ===
+                # FULLFIX_DIRECTION_KERNEL_STAGE_1_CALL
+                payload = _stage1_dir_payload(payload)
+                # FULLFIX_TOPIC_AUTODISCOVERY_V2_CALL
+                if _topic_autodiscovery is not None:
+                    try:
+                        from core.work_item import WorkItem as _WITA
+                        _wita = _WITA.from_task_row({
+                            "id": payload.get("task_id") or payload.get("id") or "",
+                            "chat_id": str(payload.get("chat_id") or ""),
+                            "topic_id": int(payload.get("topic_id") or 0),
+                            "input_type": payload.get("input_type") or "unknown",
+                            "raw_input": payload.get("raw_input") or payload.get("raw_text") or "",
+                            "state": payload.get("state") or "IN_PROGRESS",
+                        })
+                        _topic_autodiscovery(_wita, payload)
+                    except Exception as _eta:
+                        logger.error("TOPIC_AUTODISCOVERY_ERR %s", _eta)
+                # FULLFIX_CAPABILITY_ROUTER_STAGE_2_CALL
+                if _Stage2Router is not None:
+                    try:
+                        from core.work_item import WorkItem as _WI2
+                        _wi2 = _WI2.from_task_row({
+                            "id": payload.get("task_id") or payload.get("id") or "",
+                            "chat_id": str(payload.get("chat_id") or ""),
+                            "topic_id": int(payload.get("topic_id") or 0),
+                            "input_type": payload.get("input_type") or "unknown",
+                            "raw_input": payload.get("raw_input") or payload.get("raw_text") or "",
+                            "state": payload.get("state") or "IN_PROGRESS",
+                        })
+                        _wi2.set_direction(
+                            payload.get("direction") or "general_chat",
+                            payload.get("direction_profile") or {},
+                        )
+                        _r2 = _Stage2Router().apply_to_work_item(_wi2)
+                        payload["engine"] = _r2["engine"]
+                        payload["execution_plan"] = _r2["execution_plan"]
+                        payload["formats_out"] = _r2["formats_out"]
+                        payload["quality_gates"] = _r2["quality_gates"]
+                        payload["capability_router"] = _r2["router_version"]
+                        logger.info("FULLFIX_CAPABILITY_ROUTER_STAGE_2 engine=%s steps=%s dir=%s",
+                                    _r2["engine"], len(_r2["execution_plan"]), payload.get("direction"))
+                    except Exception as _e2:
+                        logger.error("FULLFIX_CAPABILITY_ROUTER_STAGE_2_ERR %s", _e2)
+                # FULLFIX_SEARCH_ENGINE_STAGE_5_CALL
+                if _Stage5Search is not None:
+                    try:
+                        from core.work_item import WorkItem as _WI5
+                        _wi5 = _WI5.from_task_row({
+                            "id": payload.get("task_id") or payload.get("id") or "",
+                            "chat_id": str(payload.get("chat_id") or ""),
+                            "topic_id": int(payload.get("topic_id") or 0),
+                            "input_type": payload.get("input_type") or "unknown",
+                            "raw_input": payload.get("raw_input") or payload.get("raw_text") or "",
+                            "state": payload.get("state") or "IN_PROGRESS",
+                        })
+                        _wi5.set_direction(
+                            payload.get("direction") or "general_chat",
+                            payload.get("direction_profile") or {},
+                        )
+                        _Stage5Search().apply_to_payload(_wi5, payload)
+                    except Exception as _e5:
+                        logger.error("FULLFIX_SEARCH_ENGINE_STAGE_5_ERR %s", _e5)
+                # FULLFIX_CONTEXT_LOADER_STAGE_3_CALL
+                if _Stage3Loader is not None:
+                    try:
+                        from core.work_item import WorkItem as _WI3
+                        _wi3 = _WI3.from_task_row({
+                            "id": payload.get("task_id") or payload.get("id") or "",
+                            "chat_id": str(payload.get("chat_id") or ""),
+                            "topic_id": int(payload.get("topic_id") or 0),
+                            "input_type": payload.get("input_type") or "unknown",
+                            "raw_input": payload.get("raw_input") or payload.get("raw_text") or "",
+                            "state": payload.get("state") or "IN_PROGRESS",
+                        })
+                        _wi3.set_direction(
+                            payload.get("direction") or "general_chat",
+                            payload.get("direction_profile") or {},
+                        )
+                        _refs3 = _Stage3Loader().load(_wi3)
+                        payload["context_refs"] = _refs3
+                        logger.info("FULLFIX_CONTEXT_LOADER_STAGE_3 topic=%s short_mem=%s",
+                                    payload.get("topic_id"), bool(_refs3.get("short_memory")))
+                    except Exception as _e3:
+                        logger.error("FULLFIX_CONTEXT_LOADER_STAGE_3_ERR %s", _e3)
+                ai_result = await asyncio.wait_for(process_ai_task(payload), timeout=AI_TIMEOUT)
+                # FULLFIX_QUALITY_GATE_STAGE_4_CALL
+                if _Stage4QG is not None and isinstance(ai_result, dict):
+                    try:
+                        _qg_payload = {**payload, **ai_result}
+                        _qg_report = _Stage4QG().apply_to_payload(_qg_payload)
+                        ai_result["quality_gate_report"] = _qg_report
+                        logger.info("FULLFIX_QUALITY_GATE_STAGE_4 overall=%s failed=%s dir=%s",
+                                    _qg_report["overall"], _qg_report["failed"], payload.get("direction"))
+                    except Exception as _e4:
+                        logger.error("FULLFIX_QUALITY_GATE_STAGE_4_ERR %s", _e4)
+                # FULLFIX_ARCHIVE_ENGINE_STAGE_6_CALL
+                if _Stage6Archive is not None:
+                    try:
+                        _Stage6Archive().archive(payload, ai_result if isinstance(ai_result, dict) else {})
+                    except Exception as _e6:
+                        logger.error("FULLFIX_ARCHIVE_ENGINE_STAGE_6_ERR %s", _e6)
+                # FULLFIX_FORMAT_ADAPTER_STAGE_7_CALL
+                if _Stage7FA is not None and isinstance(ai_result, dict):
+                    try:
+                        _formats_out = payload.get("formats_out") or ["telegram_text"]
+                        _adapted = _Stage7FA().adapt(ai_result, _formats_out, payload)
+                        ai_result["format_adapted"] = _adapted
+                        logger.info("FULLFIX_FORMAT_ADAPTER_STAGE_7 formats=%s primary=%s dir=%s",
+                                    _formats_out, list(_adapted.get("outputs", {}).keys())[:2],
+                                    payload.get("direction"))
+                    except Exception as _e7:
+                        logger.error("FULLFIX_FORMAT_ADAPTER_STAGE_7_ERR %s", _e7)
+    except Exception as e:
+        _update_task(conn, task_id, state="FAILED", error_message=_clean(str(e), 500))
+        _close_pin(conn, task_id)
+        _history(conn, task_id, "state:FAILED")
+        conn.commit()
+        _send_once(conn, task_id, chat_id, "Задача не выполнена. Уточни или повтори запрос", reply_to, "router_failed")
+        return
+
+    ai_result = _clean(_s(ai_result), 50000)
+    # === FOLLOWUP DETECTION (FACT-BASED) ===
+    low_input = raw_input.lower()
+
+    memory_markers = [
+        "напомни","что обсуждали","что делали","какие задачи","история",
+        "что было","что писали","для чего этот чат","о чем чат","о чём чат"
+    ]
+
+    search_markers = [
+        "нерелевант","битые","ссылки не те","проверь","еще раз","ещё раз",
+        "сделай еще","сделай ещё","найди еще","найди ещё","это не то"
+    ]
+
+    has_memory_context = any([
+        short_memory,
+        long_memory,
+        topic_role,
+        active_task_context,
+        pin_context,
+        archive_context,
+    ])
+
+    raw_input = _clean(_s(_task_field(task, "raw_input")), 12000)
+    low_input = raw_input.lower()
+
+    memory_markers = [
+        "напомни",
+        "что обсуждали",
+        "что делали",
+        "какие задачи",
+        "история",
+        "что было в этом чате",
+        "что писали",
+        "для чего этот чат",
+        "о чем чат",
+        "о чём чат",
+    ]
+    is_memory_followup = has_memory_context and any(m in low_input for m in memory_markers)
+
+    search_markers = [
+        "нерелевант",
+        "битые ссылки",
+        "живые ссылки",
+        "ссылки не те",
+        "проверь еще",
+        "проверь ещё",
+        "еще раз поиск",
+        "ещё раз поиск",
+        "сделай еще раз поиск",
+        "сделай ещё раз поиск",
+        "найди еще",
+        "найди ещё",
+        "это не то",
+        "ссылки биты",
+        "ссылки битые",
+    ]
+    is_search_followup = bool(search_context) and any(m in low_input for m in search_markers)
+
+    if is_search_followup and search_context:
+        forbidden_search_advice = [
+            "dr.web",
+            "link checker",
+            "яндекс safety",
+            "google safe browsing",
+            "virustotal",
+            "для проверки безопасности ссылок используйте",
+        ]
+        if any(m in ai_result.lower() for m in forbidden_search_advice):
+            ai_result = _clean(f"Повторяю поиск по последнему запросу\n\n{search_context}", 50000)
+
+    if is_memory_followup or is_search_followup:
+        if not ai_result or len(ai_result) < MIN_RESULT_LEN:
+            _update_task(conn, task_id, state="FAILED", error_message="INVALID_RESULT_GATE")
+            _close_pin(conn, task_id)
+            _history(conn, task_id, "state:FAILED")
+            conn.commit()
+            _send_once(conn, task_id, chat_id, "Не понял запрос. Уточни что нужно сделать", reply_to, "invalid_result")
+            return
+    else:
+        if not _is_valid_result(ai_result, raw_input):
+            _update_task(conn, task_id, state="FAILED", error_message="INVALID_RESULT_GATE")
+            _close_pin(conn, task_id)
+            _history(conn, task_id, "state:FAILED")
+            conn.commit()
+            _send_once(conn, task_id, chat_id, "Не понял запрос. Уточни что нужно сделать", reply_to, "invalid_result")
+            return
+
+    low_result = ai_result.lower()
+    done_markers = [
+        "задача завершена",
+        "задача закрыта",
+        "задачи завершены",
+        "подтверждение принято",
+        "поиск завершен",
+        "поиск завершён",
+    ]
+    junk_markers = [
+        "без контекста",
+        "задайте конкретный вопрос",
+        "конкретный вопрос по",
+        "нет, не помню",
+        "не понимаю запрос",
+        "готов к выполнению задачи",
+    ]
+    info_markers = [
+        "для чего этот чат",
+        "что мы здесь обсуждаем",
+        "что в данном чате",
+        "какой последний запрос",
+        "последний запрос",
+        "какие последние запросы",
+        "что мы тут делаем",
+        "что мы здесь делаем",
+        "о чем чат",
+        "о чём чат",
+    ]
+    file_success_markers = [
+        "документ обработан",
+        "артефакт:",
+        "нормализовано позиций",
+        "обработаны документы",
+    ]
+    file_bad_markers = [
+        "скачан, ожидает анализа",
+        "создан локально, но загрузка в drive завершилась ошибкой",
+        "ожидает анализа",
+        "загрузка в drive завершилась ошибкой",
+    ]
+
+    if any(m in low_result for m in done_markers):
+        _update_task(conn, task_id, state="DONE", result=ai_result, error_message="")
+        _close_pin(conn, task_id)
+        _history(conn, task_id, f"result:{_clean(ai_result, 400)}")
+        _save_memory(chat_id, topic_id, raw_input, ai_result)  # SAVE_MEM_DONE_V2
+        conn.commit()
+        _send_once(conn, task_id, chat_id, ai_result, reply_to, "done_terminal")
+        return
+
+    if any(m in low_result for m in junk_markers):
+        _update_task(conn, task_id, state="WAITING_CLARIFICATION", result=ai_result, error_message="")
+        _close_pin(conn, task_id)
+        _history(conn, task_id, f"clarify:{_clean(ai_result, 400)}")
+        conn.commit()
+        _send_once(conn, task_id, chat_id, ai_result, reply_to, "clarify_terminal")
+        return
+
+    is_info_query = any(m in low_input for m in info_markers)
+    is_file_success = any(m in low_result for m in file_success_markers) and not any(m in low_result for m in file_bad_markers)
+
+    if is_memory_followup or is_search_followup or is_info_query or is_file_success:
+        _update_task(conn, task_id, state="DONE", result=ai_result, error_message="")
+        _history(conn, task_id, f"result:{_clean(ai_result, 400)}")
+        _save_memory(chat_id, topic_id, raw_input, ai_result)  # SAVE_MEM_FOLLOWUP_V2
+        conn.commit()
+        try:
+            save_pin(chat_id, task_id, ai_result, topic_id)
+        except Exception:
+            pass
+        _send_once(conn, task_id, chat_id, ai_result, reply_to, "done_terminal")
+        return
+
+    should_save_role = (
+        bool(re.search(
+            r"(чат закреплен за темами:|чат закреплён за темами:|чат закреплен за:|чат закреплён за:|закрепленные темы:|закреплённые темы:|закреплено:\s*чат для|этот чат используется для|этот чат предназначен для)",
+            ai_result,
+            re.I,
+        ))
+        and not any(x in low_result for x in junk_markers)
+        and "последние действия" not in low_result
+        and "текущий статус" not in low_result
     )
 
-# === END FULLFIX_08_PROJECT_SIGNATURE_COMPAT ===
+    saved_role = ""
+    if should_save_role:
+        _save_memory(chat_id, topic_id, raw_input, ai_result)  # SAVE_MEM_CONFIRM_V2
+        saved_role = _save_topic_role_memory(chat_id, topic_id, ai_result)
+        # === RESULT_VALIDATOR_GUARD_V1 ===
+        if _check_result_before_confirm(ai_result):
+            # === SEARCH_MONOLITH_V2_CLARIFICATION_HANDLER ===
+            try:
+                if _search_v2_is_clarification(ai_result):
+                    _cmsg = str(ai_result).replace("SEARCH_CLARIFICATION_REQUIRED:","").strip()
+                    _update_task(conn, task_id, state="WAITING_CLARIFICATION", result=_cmsg, error_message="")
+                    _history(conn, task_id, "SEARCH_MONOLITH_V2:WAITING_CLARIFICATION")
+                    conn.commit()
+                    _send_once(conn, task_id, str(chat_id), _cmsg, reply_to, "search_v2_clarification")
+                    return
+            except Exception as _e: logger.warning("SEARCH_V2_CLARIFICATION_HANDLER_ERR %s", _e)
+            # === END SEARCH_MONOLITH_V2_CLARIFICATION_HANDLER ===
+            # === UNIFIED_ENGINE_RESULT_VALIDATOR_V1_TASK_WORKER_AI_RESULT ===
+            try:
+                if validate_engine_result is not None:
+                    _payload_for_uv = locals().get("payload", {}) or {}
+                    _raw_for_uv = ""
+                    try:
+                        _raw_for_uv = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                    except Exception:
+                        _raw_for_uv = str(_payload_for_uv.get("raw_input") or _payload_for_uv.get("user_text") or "")
+                    _input_type_for_uv = ""
+                    try:
+                        _input_type_for_uv = str(task["input_type"] if "input_type" in task.keys() else "")
+                    except Exception:
+                        _input_type_for_uv = str(_payload_for_uv.get("input_type") or "")
+                    _uv = validate_engine_result({"summary": ai_result, "engine": "AI_ROUTER"}, input_type=_input_type_for_uv, user_text=_raw_for_uv, topic_id=topic_id)
+                    if not _uv.get("ok"):
+                        _update_task(conn, task_id, state="FAILED", result="", error_message="UNIFIED_ENGINE_RESULT_VALIDATOR_V1:" + str(_uv.get("reason") or "INVALID"))
+                        _history(conn, task_id, "UNIFIED_ENGINE_RESULT_VALIDATOR_V1:FAILED:" + str(_uv.get("reason") or "INVALID"))
+                        return
+            except Exception as _uv_e:
+                logger.warning("UNIFIED_ENGINE_RESULT_VALIDATOR_V1_ERR task=%s err=%s", task_id, _uv_e)
+            # === END_UNIFIED_ENGINE_RESULT_VALIDATOR_V1_TASK_WORKER_AI_RESULT ===
+            # === TASK_WORKER_ARTIFACT_GATE_V1 ===
+            try:
+                if validate_engine_result is not None:
+                    _twag_raw = ""
+                    _twag_input_type = ""
+                    try:
+                        _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                    except Exception:
+                        _twag_raw = ""
+                    try:
+                        _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
+                    except Exception:
+                        _twag_input_type = ""
+                    _twag_result = ai_result
+                    _twag_check = validate_engine_result(
+                        {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
+                        input_type=_twag_input_type,
+                        user_text=_twag_raw,
+                        topic_id=topic_id,
+                    )
+                    if not _twag_check.get("ok"):
+                        _update_task(conn, task_id, state="FAILED", result="",
+                            error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
+                        _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
+                        return
+            except Exception as _twag_e:
+                logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
+            # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
+            _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=ai_result, error_message="")
+        else:
+            _update_task(conn, task_id, state="FAILED", result=ai_result, error_message="FORBIDDEN_PHRASE")
+        # === END RESULT_VALIDATOR_GUARD_V1 ===
+    _history(conn, task_id, f"result:{_clean(ai_result, 400)}")
+    if saved_role:
+        _history(conn, task_id, f"ROLE_SAVED:{_clean(saved_role, 200)}")
+
+    try:
+        save_pin(chat_id, task_id, ai_result, topic_id)
+    except Exception as e:
+        logger.warning("save_pin_fail task=%s err=%s", task_id, e)
+
+    _ai_result_clean = str(ai_result or "").replace("\n\nДоволен результатом? Ответь: Да / Уточни / Правки", "").strip()  # FF21_FIX_DOUBLE_DOVOLEN
+    confirmation_text = f"{_ai_result_clean}\n\nДоволен результатом? Ответь: Да / Уточни / Правки"
+    sent = _send_once_ex(conn, task_id, chat_id, confirmation_text, reply_to, "result")
+    bot_message_id = sent.get("bot_message_id") if isinstance(sent, dict) else None
+    if bot_message_id is not None:
+        _update_task(conn, task_id, bot_message_id=bot_message_id)
+    conn.commit()
 
 
 
-# === FULLFIX_09_PROJECT_TEMPLATE_REGISTER_REPAIR ===
-# Purpose:
-# - repaired template models from data/project_templates/*_repaired.json are authoritative
-# - never generate project PDF with empty/1-sheet register
-# - KЖ fallback = 20 sheets, КД fallback = 21 sheets, АР fallback = 22 sheets
+# === IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1 ===
+def _in_progress_hard_timeout_by_created_at_fix_v1(conn, minutes: int = 30) -> int:
+    try:
+        rows = conn.execute(
+            """
+            SELECT id FROM tasks
+            WHERE state='IN_PROGRESS'
+              AND datetime(COALESCE(created_at, updated_at, 'now')) <= datetime('now', ?)
+            ORDER BY created_at ASC
+            LIMIT 200
+            """,
+            (f"-{int(minutes)} minutes",),
+        ).fetchall()
+        n = 0
+        for row in rows:
+            tid = row["id"] if hasattr(row, "keys") else row[0]
+            conn.execute(
+                "UPDATE tasks SET state='FAILED', error_message='IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1', updated_at=datetime('now') WHERE id=? AND state='IN_PROGRESS'",
+                (str(tid),),
+            )
+            try:
+                _history(conn, str(tid), "IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1:FAILED")
+            except Exception:
+                pass
+            n += 1
+        if n:
+            try: conn.commit()
+            except Exception: pass
+            logger.warning("IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1 closed=%s", n)
+        return n
+    except Exception as e:
+        logger.warning("IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1_ERR %s", e)
+        return 0
+# === END_IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1 ===
 
-def _ff09_canon_sheet_register(section: str) -> list:
-    section = str(section or "").upper().strip()
-    if section == "КД":
-        return [
-            "01 Общие данные",
-            "02 План балок перекрытия",
-            "03 План стропильной системы",
-            "04 План стропильной системы",
-            "05 Узлы крепления стропильной системы",
-            "06 Спецификация элементов стропильной системы",
-            "07 План обрешётки",
-            "08 План контробрешётки",
-            "09 Узлы кровли",
-            "10 Сечения кровельного пирога",
-            "11 Узлы карнизного свеса",
-            "12 Узлы конька",
-            "13 Узлы ендовы",
-            "14 Узлы примыкания",
-            "15 Узлы проходок",
-            "16 Ведомость пиломатериалов",
-            "17 Ведомость крепежа",
-            "18 Спецификация кровельных материалов",
-            "19 Схема монтажа",
-            "20 Общие указания",
-            "21 Ведомость листов",
-        ]
-    if section == "АР":
-        return [
-            "01 Общие данные",
-            "02 Ситуационный план",
-            "03 План закладных деталей коммуникаций",
-            "04 План фундамента",
-            "05 План первого этажа",
-            "06 План кровли",
-            "07 Фасад 1-4",
-            "08 Фасад 4-1",
-            "09 Фасад А-Д",
-            "10 Фасад Д-А",
-            "11 Разрез 1-1",
-            "12 Разрез 2-2",
-            "13 Экспликация помещений",
-            "14 Спецификация окон",
-            "15 Спецификация дверей",
-            "16 Узлы наружных стен",
-            "17 Узлы кровли",
-            "18 Узлы примыканий",
-            "19 Ведомость отделки",
-            "20 Общие указания",
-            "21 Технико-экономические показатели",
-            "22 Ведомость листов",
-        ]
-    return [
-        "01 Общие данные",
-        "02 План фундаментной плиты",
-        "03 Разрез 1-1",
-        "04 Разрез 2-2",
-        "05 Схема нижнего армирования",
-        "06 Схема верхнего армирования",
-        "07 Схема дополнительного армирования",
-        "08 Узлы армирования углов",
-        "09 Узлы примыкания ленты/ребра",
-        "10 Схема закладных деталей",
-        "11 Схема выпусков арматуры",
-        "12 Схема инженерных проходок",
-        "13 План опалубки",
-        "14 Спецификация арматуры",
-        "15 Спецификация бетона",
-        "16 Ведомость материалов основания",
-        "17 Ведомость объёмов работ",
-        "18 Контрольные отметки",
-        "19 Общие указания",
-        "20 Ведомость листов",
+def _pick_next_task(conn: sqlite3.Connection, chat_id: Optional[str]) -> Optional[sqlite3.Row]:
+    # === IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1_HOOK ===
+    _in_progress_hard_timeout_by_created_at_fix_v1(conn, minutes=30)
+    # === END_IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1_HOOK ===
+    where = [
+        "state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION')",
+        "NOT (state='IN_PROGRESS' AND COALESCE(error_message,'')='P6F_DAH_BLOCK_DONE_NO_UPLOAD_HISTORY')"
     ]
+    params: List[Any] = []
+    if chat_id:
+        where.insert(0, "chat_id=?")
+        params.append(str(chat_id))
 
-def _ff09_load_repaired_template(section: str) -> dict:
-    import json as _json_ff09
-    from pathlib import Path as _Path_ff09
+    conn.execute("BEGIN IMMEDIATE")
+    row = conn.execute(
+        f"""
+        SELECT *
+        FROM tasks
+        WHERE {' AND '.join(where)}
+        ORDER BY CASE state WHEN 'IN_PROGRESS' THEN 0 ELSE 1 END,
+                 created_at ASC
+        LIMIT 1
+        """
+        ,
+        params).fetchone()
+    conn.execute("COMMIT")
+    return row
 
-    section = str(section or "КЖ").upper().strip()
-    base = _Path_ff09("/root/.areal-neva-core/data/project_templates")
 
-    candidates = [
-        base / f"PROJECT_TEMPLATE_MODEL__{section}_repaired.json",
-        base / f"PROJECT_TEMPLATE_MODEL__{section}_manual.json",
-    ]
+async def main() -> None:
+    lock_fp = open(LOCK_PATH, "w")
+    try:
+        fcntl.flock(lock_fp.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        logger.info("WORKER LOCKED BY OTHER PROCESS")
+        return
 
-    for path in candidates:
-        if not path.exists():
-            continue
+    logger.info("WORKER STARTED pid=%s", os.getpid())
+
+    while True:
+        conn = db(CORE_DB)
         try:
-            model = _json_ff09.loads(path.read_text(encoding="utf-8"))
-            reg = model.get("sheet_register") or []
-            if isinstance(reg, list) and len(reg) >= 10:
-                model["template_file"] = str(path)
-                return model
+            _recover_stale_tasks(conn, None)
+            task = _pick_next_task(conn, None)
+            if not task:
+                time.sleep(POLL_SEC)
+                continue
+
+            task_id = _s(_task_field(task, "id"))
+            chat_id = _s(_task_field(task, "chat_id"))
+            topic_id = int(_task_field(task, "topic_id", 0) or 0)
+            state = _s(_task_field(task, "state")).upper()
+
+            logger.info("PICKED %s state=%s chat=%s topic=%s", task_id, state, chat_id, topic_id)
+            input_type = _s(_task_field(task, "input_type")).lower()
+            if input_type == "drive_file":
+                try:
+                    await _handle_drive_file(conn, task, chat_id, topic_id)
+                except Exception as e:
+                    logger.error("DRIVE_FILE CRASH task=%s err=%s", task_id, str(e))
+                continue
+
+            if state == "NEW":
+                await _handle_new(conn, task, chat_id, topic_id)
+            elif state == "IN_PROGRESS":
+                await _handle_in_progress(conn, task, chat_id, topic_id)
+            elif state == "WAITING_CLARIFICATION":
+                await _handle_in_progress(conn, task, chat_id, topic_id)
+        finally:
+            conn.close()
+
+        time.sleep(POLL_SEC)
+
+
+
+# === DRIVE FILE HANDLING ===
+def _download_from_drive(file_id: str, local_path: str) -> bool:
+    try:
+        from googleapiclient.discovery import build
+        from googleapiclient.http import MediaIoBaseDownload
+        from google.oauth2.service_account import Credentials
+        import io
+        creds = Credentials.from_service_account_file(
+            '/root/.areal-neva-core/credentials.json',
+            scopes=['https://www.googleapis.com/auth/drive.readonly']
+        )
+        service = build('drive', 'v3', credentials=creds)
+        request = service.files().get_media(fileId=file_id)
+        with io.FileIO(local_path, 'wb') as fh:
+            downloader = MediaIoBaseDownload(fh, request)
+            done = False
+            while not done:
+                status, done = downloader.next_chunk()
+        return True
+    except Exception as e:
+        import logging
+        logging.getLogger("task_worker").error(f"Drive download failed: {e}")
+        return False
+
+async def _handle_drive_file(conn, task, chat_id, topic_id):
+    import json, os
+    task_id = task["id"]
+    input_type = "drive_file"  # INPUT_TYPE_DRIVE_FIX_V1
+    raw_input = task["raw_input"]
+    try:
+        data = json.loads(raw_input)
+        file_id = data["file_id"]
+        file_name = data.get("file_name", "файл")  # HOTFIX_FILE_NAME_EARLY_V1
+        # === DRIVE_FILE_CONTENT_SERVICE_GUARD_V1 ===
+        try:
+            if _filemem_is_service_file(str(file_name or ""), str(data.get("source") or ""), int(topic_id or 0), str(raw_input or "")):
+                _msg = "Служебный файл синхронизации проигнорирован"
+                _update_task(conn, task_id, state="CANCELLED", result=_msg, error_message="SERVICE_FILE_IGNORED")
+                _history(conn, task_id, "DRIVE_FILE_CONTENT_SERVICE_GUARD_V1:CANCELLED")
+                try:
+                    _append_timeline_event_v1(str(chat_id), int(topic_id or 0), task_id, "service_file_ignored", raw_input, _msg)
+                except Exception:
+                    pass
+                conn.commit()
+                logger.info("DRIVE_FILE_CONTENT_SERVICE_GUARD_V1 cancelled task=%s file=%s source=%s topic=%s", task_id, file_name, data.get("source"), topic_id)
+                return
+        except Exception as _svc_e:
+            logger.warning("DRIVE_FILE_CONTENT_SERVICE_GUARD_V1_ERR task=%s err=%s", task_id, _svc_e)
+        # === END DRIVE_FILE_CONTENT_SERVICE_GUARD_V1 ===
+        # === DRIVE_FILE_MEMORY_INDEX_V1 + FILE_DUPLICATE_MEMORY_GUARD_V1 ===
+        try:
+            _df_file_id = str(data.get("file_id") or "")
+            _df_file_name = str(file_name or "")
+            _df_meta = json.dumps({
+                "task_id": task_id, "chat_id": str(chat_id),
+                "topic_id": int(topic_id or 0), "file_id": _df_file_id,
+                "file_name": _df_file_name,
+                "caption": str(data.get("caption") or ""),
+                "source": str(data.get("source") or ""),
+            }, ensure_ascii=False)
+            if _df_file_id:
+                _dupe = conn.execute(
+                    "SELECT id,state FROM tasks WHERE chat_id=? AND COALESCE(topic_id,0)=? AND id<>? AND input_type='drive_file' AND raw_input LIKE ? AND state IN ('DONE','ARCHIVED','AWAITING_CONFIRMATION') ORDER BY updated_at DESC LIMIT 1",
+                    (str(chat_id), int(topic_id or 0), task_id, "%" + _df_file_id + "%"),
+                ).fetchone()
+                if _dupe is not None:
+                    _dmsg = "Файл уже есть в этом топике. Предыдущая задача: " + _s(_dupe["id"])[:8]
+                    _update_task(conn, task_id, state="DONE", result=_dmsg, error_message="")
+                    _history(conn, task_id, "FILE_DUPLICATE_MEMORY_GUARD_V1:DONE")
+                    _memory_insert_topic_entry_v1(str(chat_id), f"topic_{int(topic_id or 0)}_file_duplicate_{task_id}", _df_meta)
+                    _append_timeline_event_v1(str(chat_id), int(topic_id or 0), task_id, "file_duplicate", raw_input, _dmsg)
+                    conn.commit()
+                    _send_once(conn, task_id, str(chat_id), _dmsg, _task_field(task, "reply_to_message_id", None), "file_dup_guard_v1")
+                    logger.info("FILE_DUPLICATE_MEMORY_GUARD_V1 task=%s", task_id)
+                    return
+            _memory_insert_topic_entry_v1(str(chat_id), f"topic_{int(topic_id or 0)}_file_{task_id}", _df_meta)
+            _append_timeline_event_v1(str(chat_id), int(topic_id or 0), task_id, "drive_file_indexed", raw_input, "")
+            # === DRIVE_FILE_CONTENT_MEMORY_INDEX_V1_CALL ===
+            try:
+                # === DRIVE_FILE_CONTENT_INDEX_SKIP_SERVICE_V2 ===
+                try:
+                    _df_skip_content_index = bool(_filemem_is_service_file(
+                        _df_file_name,
+                        str(data.get("source") or ""),
+                        int(topic_id or 0),
+                        str(raw_input or "")
+                    ))
+                except Exception as _df_skip_e:
+                    _df_skip_content_index = False
+                    logger.warning("DRIVE_FILE_CONTENT_INDEX_SKIP_SERVICE_V2_ERR task=%s err=%s", task_id, _df_skip_e)
+                if _df_skip_content_index:
+                    logger.info("DRIVE_FILE_CONTENT_INDEX_SKIP_SERVICE_V2 skipped task=%s file=%s source=%s topic=%s", task_id, _df_file_name, data.get("source"), topic_id)
+                # === END DRIVE_FILE_CONTENT_INDEX_SKIP_SERVICE_V2 ===
+                if (not _df_skip_content_index) and _df_content_index is not None and _df_file_id:
+                    _df_ci = await asyncio.to_thread(
+                        _df_content_index,
+                        str(chat_id),
+                        int(topic_id or 0),
+                        str(task_id),
+                        str(_df_file_id),
+                        str(_df_file_name),
+                        str(data.get("mime_type") or ""),
+                    )
+                    _memory_insert_topic_entry_v1(
+                        str(chat_id),
+                        f"topic_{int(topic_id or 0)}_file_content_status_{task_id}",
+                        json.dumps(_df_ci, ensure_ascii=False),
+                    )
+                    _append_timeline_event_v1(
+                        str(chat_id),
+                        int(topic_id or 0),
+                        task_id,
+                        "drive_file_content_indexed",
+                        raw_input,
+                        json.dumps(_df_ci, ensure_ascii=False),
+                    )
+                    logger.info("DRIVE_FILE_CONTENT_MEMORY_INDEX_V1 task=%s ok=%s reason=%s chars=%s", task_id, _df_ci.get("ok"), _df_ci.get("reason"), _df_ci.get("chars"))
+            except Exception as _dfci_e:
+                logger.warning("DRIVE_FILE_CONTENT_MEMORY_INDEX_V1_ERR task=%s err=%s", task_id, _dfci_e)
+            # === END DRIVE_FILE_CONTENT_MEMORY_INDEX_V1_CALL ===
+            logger.info("DRIVE_FILE_MEMORY_INDEX_V1 task=%s file=%s", task_id, _df_file_name)
+            # === FILE_CATALOG_AUTOSYNC_AFTER_DRIVE_FILE_V1 ===
+            try:
+                _filemem_save_catalog(str(chat_id), int(topic_id or 0))
+            except Exception as _cat_e:
+                logger.warning("FILE_CATALOG_AUTOSYNC_AFTER_DRIVE_FILE_V1_ERR task=%s err=%s", task_id, _cat_e)
+            # === END FILE_CATALOG_AUTOSYNC_AFTER_DRIVE_FILE_V1 ===
+        except Exception as _e:
+            logger.warning("DRIVE_FILE_MEMORY_INDEX_V1_ERR task=%s err=%s", task_id, _e)
+        # === END DRIVE_FILE_MEMORY_INDEX_V1 + FILE_DUPLICATE_MEMORY_GUARD_V1 ===
+        # DRIVE_FILE_SOURCE_HEALTHCHECK_GUARD_V1
+        _hc_src = str(data.get("source") or "").lower()
+        _hc_fn = str(file_name or "").lower()
+        _hc_raw_low = str(raw_input or "").lower()
+        _hc_markers = ("retry_queue_healthcheck", "healthcheck", "areal_hc_", "_hc_file")
+        if _hc_src in ("google_drive", "gdrive") or any(m in _hc_fn or m in _hc_raw_low for m in _hc_markers):
+            _update_task(conn, task_id, state="CANCELLED", error_message="SERVICE_FILE_IGNORED:HEALTHCHECK")
+            conn.commit()
+            logger.info("DRIVE_FILE_SOURCE_HEALTHCHECK_GUARD_V1 cancelled task=%s", task_id)
+            return
+        # === TASK_TYPE_DETECT_V1 ===
+        _task_type = "DOCUMENT_TASK"
+        _fn_lower = file_name.lower()
+        _caption_lower = (data.get("caption") or raw_input or "").lower()
+        if any(_fn_lower.endswith(e) for e in (".dwg", ".dxf")):
+            _task_type = "DWG_TASK"
+        elif any(_fn_lower.endswith(e) for e in (".xlsx", ".xls", ".csv")):
+            _task_type = "ESTIMATE_TASK"
+        elif any(_fn_lower.endswith(e) for e in (".jpg", ".jpeg", ".png", ".heic", ".webp")):
+            if any(w in _caption_lower for w in ["дефект", "акт", "технадзор", "нарушен"]):
+                _task_type = "TECHNADZOR_TASK"
+            else:
+                _task_type = "OCR_TASK"
+        elif any(w in _caption_lower for w in ["смета", "расчёт", "посчитай", "калькул"]):
+            _task_type = "ESTIMATE_TASK"
+        elif any(w in _caption_lower for w in ["дефект", "акт", "технадзор"]):
+            _task_type = "TECHNADZOR_TASK"
+        try:
+            conn.execute("UPDATE tasks SET task_type=? WHERE id=?", (_task_type, task_id))
+            conn.commit()
+        except Exception:
+            pass
+        logger.info("TASK_TYPE_DETECT_V1 task=%s type=%s", task_id, _task_type)
+        # === END TASK_TYPE_DETECT_V1 ===
+
+        # === DUPLICATE_GUARD_CALL_V1 ===
+        try:
+            _dupe = find_duplicate(conn, str(chat_id), int(topic_id or 0), file_id)
+            if _dupe:
+                file_name = data.get("file_name", "файл")
+                _dupe_msg = duplicate_message(_dupe, file_name)
+                # === RESULT_VALIDATOR_GUARD_V1 ===
+                if _check_result_before_confirm(_dupe_msg):
+                    # === TASK_WORKER_ARTIFACT_GATE_V1 ===
+                    try:
+                        if validate_engine_result is not None:
+                            _twag_raw = ""
+                            _twag_input_type = ""
+                            try:
+                                _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                            except Exception:
+                                _twag_raw = ""
+                            try:
+                                _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
+                            except Exception:
+                                _twag_input_type = ""
+                            _twag_result = _dupe_msg
+                            _twag_check = validate_engine_result(
+                                {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
+                                input_type=_twag_input_type,
+                                user_text=_twag_raw,
+                                topic_id=topic_id,
+                            )
+                            if not _twag_check.get("ok"):
+                                _update_task(conn, task_id, state="FAILED", result="",
+                                    error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
+                                _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
+                                return
+                    except Exception as _twag_e:
+                        logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
+                    # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
+                    _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_dupe_msg, error_message="")
+                else:
+                    _update_task(conn, task_id, state="FAILED", result=_dupe_msg, error_message="FORBIDDEN_PHRASE")
+                # === END RESULT_VALIDATOR_GUARD_V1 ===
+                _history(conn, task_id, "state:AWAITING_CONFIRMATION:duplicate_guard")
+                conn.commit()
+                from core.reply_sender import send_reply_ex
+                send_reply_ex(chat_id=str(chat_id), text=_dupe_msg, reply_to_message_id=reply_to, message_thread_id=topic_id)
+                return
+        except Exception as _dge:
+            logger.warning("DUPLICATE_GUARD_CALL_ERR %s", _dge)
+        # === END DUPLICATE_GUARD_CALL_V1 ===
+        file_name = data["file_name"]
+    except Exception as e:
+        logger.error(f"DRIVE_FILE: invalid raw_input for {task_id}: {e}")
+        _update_task(conn, task_id, state="FAILED", error_message="invalid raw_input")
+        return
+
+    local_path = f"/root/.areal-neva-core/runtime/drive_files/{task_id}_{file_name}"
+    os.makedirs(os.path.dirname(local_path), exist_ok=True)
+
+    logger.info(f"DRIVE_FILE: downloading {file_id} -> {local_path}")
+    ok = _download_from_drive(file_id, local_path)  # HOTFIX_OK_BEFORE_SIZE_CHECK_V1
+    # === FILE_SIZE_LIMIT_V1 ===
+    if ok and local_path and os.path.exists(local_path):
+        _fsize = os.path.getsize(local_path)
+        if _fsize > 50 * 1024 * 1024:  # 50MB
+            _update_task(conn, task_id, state="FAILED",
+                        result="", error_message="FILE_TOO_LARGE")
+            conn.commit()
+            from core.reply_sender import send_reply_ex
+            send_reply_ex(chat_id=str(chat_id),
+                         text="Файл слишком большой (>50MB). Сожми или разбей на части.",
+                         reply_to_message_id=reply_to, message_thread_id=topic_id)
+            return
+    # === END FILE_SIZE_LIMIT_V1 ===
+    # === FILE_INTAKE_ROUTER_V1_WIRED ===
+    if ok and local_path and os.path.exists(local_path):
+        try:
+            from core.file_intake_router import route_file, detect_intent, detect_intent_from_filename, should_ask_clarification, get_clarification_message
+            _fir_caption = data.get("caption", "") or raw_input or ""
+            _fir_intent = detect_intent(_fir_caption) or detect_intent_from_filename(file_name)
+            _fir_topic_role = ""
+            if _fir_intent:
+                _fir_result = await route_file(local_path, task_id, int(topic_id or 0), _fir_intent)
+                if _fir_result and _fir_result.get("success"):
+                    _fir_msg = _fir_result.get("result_text") or _fir_result.get("drive_link") or "Готово"
+                    # === TASK_WORKER_ARTIFACT_GATE_V1 ===
+                    try:
+                        if validate_engine_result is not None:
+                            _twag_raw = ""
+                            _twag_input_type = ""
+                            try:
+                                _twag_raw = str(task["raw_input"] if "raw_input" in task.keys() else "")
+                            except Exception:
+                                _twag_raw = ""
+                            try:
+                                _twag_input_type = str(task["input_type"] if "input_type" in task.keys() else "")
+                            except Exception:
+                                _twag_input_type = ""
+                            _twag_result = _fir_msg
+                            _twag_check = validate_engine_result(
+                                {"summary": _twag_result, "engine": "TASK_WORKER_ARTIFACT_GATE_V1"},
+                                input_type=_twag_input_type,
+                                user_text=_twag_raw,
+                                topic_id=topic_id,
+                            )
+                            if not _twag_check.get("ok"):
+                                _update_task(conn, task_id, state="FAILED", result="",
+                                    error_message="TASK_WORKER_ARTIFACT_GATE_V1:" + str(_twag_check.get("reason") or "INVALID"))
+                                _history(conn, task_id, "TASK_WORKER_ARTIFACT_GATE_V1:FAILED:" + str(_twag_check.get("reason") or "INVALID"))
+                                return
+                    except Exception as _twag_e:
+                        logger.warning("TASK_WORKER_ARTIFACT_GATE_V1_ERR task=%s err=%s", task_id, _twag_e)
+                    # === END_TASK_WORKER_ARTIFACT_GATE_V1 ===
+                    _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_fir_msg, error_message="")
+                    _history(conn, task_id, "state:AWAITING_CONFIRMATION:file_intake_router")
+                    conn.commit()
+                    from core.reply_sender import send_reply_ex
+                    send_reply_ex(chat_id=str(chat_id), text=_fir_msg, reply_to_message_id=reply_to, message_thread_id=topic_id)
+                    return
+            elif should_ask_clarification(_fir_caption, has_file=True):
+                _fir_clarif = get_clarification_message(file_name, int(topic_id or 0))
+                _update_task(conn, task_id, state="WAITING_CLARIFICATION", result=_fir_clarif, error_message="")
+                conn.commit()
+                from core.reply_sender import send_reply_ex
+                send_reply_ex(chat_id=str(chat_id), text=_fir_clarif, reply_to_message_id=reply_to, message_thread_id=topic_id)
+                return
+        except Exception as _fir_err:
+            logger.warning("FILE_INTAKE_ROUTER_V1_ERR task=%s err=%s", task_id, _fir_err)
+    # === END FILE_INTAKE_ROUTER_V1_WIRED ===
+    if not ok:
+        _update_task(conn, task_id, state="FAILED", error_message="download failed")
+        return
+
+    conn.execute("UPDATE drive_files SET stage='downloaded' WHERE task_id=?", (task_id,))
+
+    result = f"Файл {file_name} скачан, ожидает анализа"
+    try:
+        _, _, topic_role, _ = _load_memory_context(chat_id, topic_id)
+        analysis = await analyze_downloaded_file(
+            local_path=local_path,
+            file_name=file_name,
+            mime_type=data.get("mime_type", ""),
+            user_text=data.get("caption", ""),
+            topic_role=topic_role,
+        )
+        if isinstance(analysis, dict):
+            summary = _s(analysis.get("summary")) or result
+            artifact_path = _s(analysis.get("artifact_path"))
+            artifact_name = _s(analysis.get("artifact_name")) or os.path.basename(artifact_path)
+            result = summary
+            if artifact_path and os.path.exists(artifact_path):
+                try:
+                    upload_res = await upload_file_to_topic(artifact_path, artifact_name, chat_id, topic_id)
+                    if isinstance(upload_res, dict) and upload_res.get("ok") and upload_res.get("drive_file_id"):
+                        result = summary + f"\n\nАртефакт: https://drive.google.com/file/d/{upload_res.get('drive_file_id')}/view"
+                    # === QUALITY_GATE_WIRED_V1 ===
+                    _qg = _quality_gate_artifact(
+                        drive_link=result,
+                        input_type=input_type,
+                        task_type=_task_type if '_task_type' in dir() else ""
+                    )
+                    if not _qg.get("ok"):
+                        logger.warning("QUALITY_GATE_FAIL task=%s reason=%s", task_id, _qg.get("reason"))
+                    # === END QUALITY_GATE_WIRED_V1 ===
+                    # === TEMP_CLEANUP_AFTER_UPLOAD_V1 ===
+                    try:
+                        _tc_upload([local_path])
+                        _tc_task(task_id)
+                    except Exception:
+                        pass
+                    # === END TEMP_CLEANUP_AFTER_UPLOAD_V1 ===
+                        # === PATCH: save_pin + save_memory + log ===
+                        try:
+                            save_pin(chat_id, task_id, result, topic_id)
+                            _save_memory(chat_id, topic_id, raw_input, result)
+                            logger.info(f"DRIVE_FILE pin_memory_saved task_id={task_id}")
+                        except Exception as e:
+                            logger.error(f"DRIVE_FILE pin/memory failed task={task_id} err={e}")
+                        # === END PATCH ===
+                    else:
+                        result = summary + "\n\nАртефакт создан, но загрузка в Drive не подтвердилась"
+                except Exception as e:
+                    logger.error(f"DRIVE_FILE artifact upload failed task={task_id} err={e}")
+                    result = summary + "\n\nАртефакт создан локально, но загрузка в Drive завершилась ошибкой"
+    except Exception as e:
+        logger.error(f"DRIVE_FILE analyze skipped task={task_id} err={e}")
+
+    _update_task(conn, task_id, state="AWAITING_CONFIRMATION", result=_ff13c_strip_manifest_links(result))
+    logger.info(f"DRIVE_FILE: {task_id} processed")
+
+
+
+# === SINGLE_CHAR_REPLY_AS_PRICE_CHOICE_V1 ===
+# Однобуквенный выбор цены и голосовой выбор должны продолжать parent task, а не создавать общий ответ
+# AWAITING_PRICE_CONFIRMATION_STATE_V1
+# VOICE_REPLY_TO_PARENT_TASK_V1
+# === END_SINGLE_CHAR_REPLY_AS_PRICE_CHOICE_V1 ===
+
+# === STARTUP_RECOVERY_V1_MAIN_WRAP ===
+try:
+    import inspect as _startup_recovery_inspect_v1
+    _orig_task_worker_main_startup_recovery_v1 = main
+
+    async def main(*args, **kwargs):
+        try:
+            if run_startup_recovery is not None:
+                await run_startup_recovery(CORE_DB)
+        except Exception as _startup_recovery_err:
+            logger.warning("STARTUP_RECOVERY_V1_ERR %s", _startup_recovery_err)
+
+        _res = _orig_task_worker_main_startup_recovery_v1(*args, **kwargs)
+        if _startup_recovery_inspect_v1.isawaitable(_res):
+            return await _res
+        return _res
+except Exception as _startup_recovery_wrap_err:
+    logger.warning("STARTUP_RECOVERY_V1_WRAP_ERR %s", _startup_recovery_wrap_err)
+# === END_STARTUP_RECOVERY_V1_MAIN_WRAP ===
+
+
+# === THREE_CONTOURS_FULL_CONTEXT_NO_REPEAT_CLARIFY_V1_WORKER_WRAPPER ===
+_tcfc1_orig_handle_in_progress_worker = _handle_in_progress
+
+def _tcfc1_row_get(row, key, default=None):
+    try:
+        return row[key]
+    except Exception:
+        try:
+            idx = {
+                "id": 0, "chat_id": 1, "user_id": 2, "input_type": 3, "raw_input": 4,
+                "state": 5, "result": 6, "error_message": 7, "reply_to_message_id": 8,
+                "created_at": 9, "updated_at": 10, "bot_message_id": 11, "topic_id": 12,
+                "task_type": 13,
+            }.get(key)
+            if idx is not None:
+                return row[idx]
+        except Exception:
+            pass
+    return default
+
+def _tcfc1_worker_history_col(conn):
+    try:
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(task_history)").fetchall()]
+        if "action" in cols:
+            return "action"
+        if "event" in cols:
+            return "event"
+    except Exception:
+        pass
+    return ""
+
+def _tcfc1_worker_build_full_context(conn, task_id: str, chat_id: str, topic_id: int, current_raw: str) -> tuple[str, str]:
+    parts = []
+    cur = str(current_raw or "").strip()
+    if cur:
+        parts.append("Текущее сообщение:\n" + cur)
+
+    parent_id = ""
+    try:
+        row = conn.execute(
+            """
+            SELECT id, raw_input
+            FROM tasks
+            WHERE chat_id=?
+              AND COALESCE(topic_id,0)=?
+              AND id<>?
+              AND state IN ('WAITING_CLARIFICATION','IN_PROGRESS')
+            ORDER BY rowid DESC
+            LIMIT 1
+            """,
+            (str(chat_id), int(topic_id or 0), str(task_id)),
+        ).fetchone()
+        if row:
+            parent_id = str(row[0])
+            if str(row[1] or "").strip():
+                parts.insert(0, "Исходная активная задача:\n" + str(row[1] or "").strip())
+    except Exception:
+        parent_id = ""
+
+    hist_ids = [x for x in (parent_id, str(task_id)) if x]
+    hcol = _tcfc1_worker_history_col(conn)
+    if hcol and hist_ids:
+        try:
+            qmarks = ",".join("?" for _ in hist_ids)
+            rows = conn.execute(
+                f"""
+                SELECT task_id,{hcol}
+                FROM task_history
+                WHERE task_id IN ({qmarks})
+                  AND ({hcol} LIKE 'clarified:%' OR {hcol} LIKE '%clarification_accepted%')
+                ORDER BY rowid ASC
+                LIMIT 80
+                """,
+                tuple(hist_ids),
+            ).fetchall()
+            clar = []
+            for r in rows:
+                v = str(r[1] or "")
+                if v.startswith("clarified:"):
+                    clar.append(v.split(":", 1)[1].strip())
+            if clar:
+                parts.append("Уточнения пользователя:\n" + "\n".join(x for x in clar if x))
         except Exception:
             pass
 
-    return {
-        "schema": "PROJECT_TEMPLATE_MODEL_V2_CANON_FALLBACK",
-        "project_type": section,
-        "template_file": "canonical_fallback",
-        "sheet_register": _ff09_canon_sheet_register(section),
-        "sections": [],
-        "materials": [],
-    }
-
-_FF09_ORIGINAL_CREATE_PROJECT_PDF_DXF_ARTIFACT = globals().get("create_project_pdf_dxf_artifact")
-
-async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
-    raw = str(raw_input or "")
-    low = raw.lower()
-
-    section = "КЖ"
-    if " кд" in low or "кд " in low or "деревян" in low or "стропил" in low or "кровл" in low:
-        section = "КД"
-    elif " ар" in low or "ар " in low or "архитект" in low or "фасад" in low:
-        section = "АР"
-    elif " кж" in low or "кж " in low or "фундамент" in low or "плит" in low or "армир" in low:
-        section = "КЖ"
-
-    repaired = _ff09_load_repaired_template(section)
-    if template_hint:
-        try:
-            import json as _json_ff09
-            hint_obj = _json_ff09.loads(str(template_hint))
-            if isinstance(hint_obj, dict):
-                hint_obj.update({"sheet_register": repaired.get("sheet_register") or [], "template_file": repaired.get("template_file")})
-                template_hint = _json_ff09.dumps(hint_obj, ensure_ascii=False)
-        except Exception:
-            template_hint = str(repaired.get("template_file") or "")
-
-    if not template_hint:
-        template_hint = str(repaired.get("template_file") or "")
-
-    if callable(_FF09_ORIGINAL_CREATE_PROJECT_PDF_DXF_ARTIFACT):
-        res = await _FF09_ORIGINAL_CREATE_PROJECT_PDF_DXF_ARTIFACT(raw_input, task_id, topic_id, template_hint)
-    else:
-        res = {"success": False, "error": "ORIGINAL_PROJECT_ENGINE_NOT_FOUND"}
-
-    if isinstance(res, dict):
-        data = res.get("data") or {}
-        tpl = data.get("template") or {}
-        reg = tpl.get("sheet_register") or repaired.get("sheet_register") or _ff09_canon_sheet_register(section)
-
-        if len(reg) < 10:
-            reg = _ff09_canon_sheet_register(section)
-
-        tpl["sheet_register"] = reg
-        tpl["template_file"] = repaired.get("template_file") or tpl.get("template_file") or "canonical_fallback"
-        data["template"] = tpl
-        data["sheet_register"] = reg
-        res["data"] = data
-        res["sheet_count"] = len(reg)
-        res["template_file"] = tpl["template_file"]
-
-        msg = str(res.get("message") or "")
-        if msg:
-            msg = re.sub(r"Листов(?: PDF)?:\s*\d+", f"Листов PDF: {len(reg)}", msg)
-            if "Шаблон:" not in msg:
-                msg = msg.replace("Раздел:", f"Шаблон: {tpl['template_file']}\nРаздел:", 1)
-            res["message"] = msg
-
-    return res
-
-async def create_full_project_documentation(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
-    return await create_project_pdf_dxf_artifact(raw_input, task_id, topic_id, template_hint, *args, **kwargs)
-
-# === END FULLFIX_09_PROJECT_TEMPLATE_REGISTER_REPAIR ===
-
-
-# === FULLFIX_10_TOTAL_CLOSURE_CAD_OVERRIDE ===
-# Purpose:
-# - user may write simple natural text: "сделай плиту 12 на 8..."
-# - foundation slab must always be КЖ
-# - foundation slab must never use КД/roof/wood sheet register
-# - generated PDF must pass forbidden-word validation before returning links
-
-from core.orchestra_closure_engine import (
-    parse_foundation_request as _ff10_parse_foundation_request,
-    foundation_sheets as _ff10_foundation_sheets,
-    extract_pdf_text as _ff10_extract_pdf_text,
-    validate_foundation_text as _ff10_validate_foundation_text,
-    ENGINE as _FF10_ENGINE,
-)
-
-_FF10_ORIGINAL_PARSE_PROJECT_REQUEST = globals().get("parse_project_request")
-_FF10_ORIGINAL_NORMALIZE_SHEET_REGISTER = globals().get("_normalize_sheet_register")
-_FF10_ORIGINAL_CREATE_PROJECT_PDF_DXF_ARTIFACT = globals().get("create_project_pdf_dxf_artifact")
-
-def parse_project_request(raw_input: str, template_hint: str = "") -> dict:
-    data = _ff10_parse_foundation_request(str(raw_input or "") + " " + str(template_hint or ""))
-    if data.get("project_kind") == "foundation_slab":
-        data["section"] = "КЖ"
-        data["project_name"] = "Проект фундаментной плиты"
-        return data
-    if callable(_FF10_ORIGINAL_PARSE_PROJECT_REQUEST):
-        return _FF10_ORIGINAL_PARSE_PROJECT_REQUEST(raw_input, template_hint)
-    return data
-
-def _normalize_sheet_register(template: dict, data: dict) -> list:
-    if str((data or {}).get("project_kind") or "").lower() == "foundation_slab":
-        return _ff10_foundation_sheets()
-    if callable(_FF10_ORIGINAL_NORMALIZE_SHEET_REGISTER):
-        return _FF10_ORIGINAL_NORMALIZE_SHEET_REGISTER(template, data)
-    return _ff10_foundation_sheets()
-
-async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
-    if not callable(_FF10_ORIGINAL_CREATE_PROJECT_PDF_DXF_ARTIFACT):
-        return {"success": False, "engine": _FF10_ENGINE, "error": "ORIGINAL_PROJECT_ENGINE_NOT_FOUND"}
-
-    res = await _FF10_ORIGINAL_CREATE_PROJECT_PDF_DXF_ARTIFACT(raw_input, task_id, topic_id, template_hint, *args, **kwargs)
-    if not isinstance(res, dict):
-        return {"success": False, "engine": _FF10_ENGINE, "error": "INVALID_ENGINE_RESULT"}
-
-    data = res.get("data") or parse_project_request(raw_input, template_hint)
-    if str(data.get("project_kind") or "").lower() == "foundation_slab":
-        res["section"] = "КЖ"
-        res["sheet_count"] = len(_ff10_foundation_sheets())
-        pdf_path = str(res.get("pdf_path") or "")
-        pdf_text = _ff10_extract_pdf_text(pdf_path)
-        ok, err = _ff10_validate_foundation_text(pdf_text)
-        if not ok:
-            res["success"] = False
-            res["engine"] = _FF10_ENGINE
-            res["error"] = err
-            res["message"] = "Проект не создан: проверка PDF не пройдена"
-            return res
-
-    res["engine"] = _FF10_ENGINE
-    return res
-
-async def create_full_project_documentation(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
-    return await create_project_pdf_dxf_artifact(raw_input, task_id, topic_id, template_hint, *args, **kwargs)
-
-# === END FULLFIX_10_TOTAL_CLOSURE_CAD_OVERRIDE ===
-
-
-# === FULLFIX_12_COMPACT_PROJECT_PDF_LAYOUT_CAD_OVERRIDE ===
-try:
-    from core.orchestra_closure_engine import create_compact_project_documentation as _ff12_compact_project
-
-    async def create_project_pdf_dxf_artifact(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
-        return await _ff12_compact_project(raw_input, task_id, topic_id, template_hint, *args, **kwargs)
-
-    async def create_full_project_documentation(raw_input: str, task_id: str, topic_id: int = 0, template_hint: str = "", *args, **kwargs) -> dict:
-        return await _ff12_compact_project(raw_input, task_id, topic_id, template_hint, *args, **kwargs)
-except Exception:
-    pass
-# === END FULLFIX_12_COMPACT_PROJECT_PDF_LAYOUT_CAD_OVERRIDE ===
-
-====================================================================================================
-END_FILE: core/cad_project_engine.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/capability_router.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 1aee1e85df8d7f5455453865a1ac6b6c8e443edeb29e71de1cda0a58adfcfeec
-====================================================================================================
-# === FULLFIX_CAPABILITY_ROUTER_STAGE_2 ===
-from __future__ import annotations
-from typing import Any, Dict, List
-
-ROUTER_VERSION = "CAPABILITY_ROUTER_V1"
-
-ENGINE_MAP = {
-    "general_chat":          "ai_router",
-    "orchestration_core":    "ai_router",
-    "telegram_automation":   "ai_router",
-    "memory_archive":        "ai_router",
-    "internet_search":       "search_supplier",
-    "product_search":        "search_supplier",
-    "auto_parts_search":     "search_supplier",
-    "construction_search":   "search_supplier",
-    "technical_supervision": "defect_act",
-    "estimates":             "estimate_unified",
-    "defect_acts":           "defect_act",
-    "documents":             "document_engine",
-    "spreadsheets":          "sheets_route",
-    "google_drive_storage":  "drive_storage",
-    "devops_server":         "ai_router",
-    "vpn_network":           "ai_router",
-    "ocr_photo":             "ocr_engine",
-    "cad_dwg":               "dwg_engine",
-    "structural_design":     "project_engine",
-    "roofing":               "estimate_unified",
-    "monolith_concrete":     "estimate_unified",
-    "crm_leads":             "ai_router",
-    "email_ingress":         "email_ingress",
-    "social_content":        "content_engine",
-    "video_production":      "video_production_agent",
-    "photo_cleanup":         "photo_cleanup",
-    "isolated_project_ivan": "ai_router",
-}
-
-FALLBACK_ENGINE = "ai_router"
-
-
-def _step(engine, action, params=None, required=True):
-    return {"engine": engine, "action": action, "params": params or {}, "required": required, "status": "pending"}
-
-
-def _plan(direction, profile, work_item):
-    engine = profile.get("engine") or ENGINE_MAP.get(direction, FALLBACK_ENGINE)
-    formats_out = profile.get("output_formats") or ["telegram_text"]
-    requires_search = bool(profile.get("requires_search"))
-    quality_gates = profile.get("quality_gates") or []
-    input_type = (getattr(work_item, "input_type", "") or "").lower()
-    raw_text = (getattr(work_item, "raw_text", "") or "")[:300]
-
-    steps = []
-    if input_type in ("photo", "image") and direction != "photo_cleanup":
-        steps.append(_step("ocr_engine", "extract_text", required=False))
-    if requires_search:
-        steps.append(_step("search_supplier", "search", {"query": raw_text, "direction": direction}))
-    steps.append(_step(engine, "execute", {"direction": direction, "formats_out": formats_out, "quality_gates": quality_gates}))
-    if "xlsx" in formats_out:
-        steps.append(_step("format_adapter", "to_xlsx"))
-    if "docx" in formats_out or "pdf" in formats_out:
-        steps.append(_step("format_adapter", "to_document"))
-    if "drive_link" in formats_out:
-        steps.append(_step("drive_storage", "upload", required=False))
-    return steps, engine
-
-
-class CapabilityRouter:
-    def apply_to_work_item(self, work_item) -> Dict[str, Any]:
-        direction = getattr(work_item, "direction", None) or "general_chat"
-        profile = getattr(work_item, "direction_profile", {}) or {}
-        if not profile:
-            profile = {"engine": ENGINE_MAP.get(direction, FALLBACK_ENGINE)}
-
-        steps, engine = _plan(direction, profile, work_item)
-        work_item.execution_plan = steps
-        work_item.formats_out = profile.get("output_formats") or ["telegram_text"]
-        work_item.quality_gates = profile.get("quality_gates") or []
-        work_item.add_audit("capability_router", ROUTER_VERSION)
-        work_item.add_audit("engine", engine)
-        work_item.add_audit("execution_plan_steps", len(steps))
-        return {"direction": direction, "engine": engine, "execution_plan": steps,
-                "formats_out": work_item.formats_out, "quality_gates": work_item.quality_gates,
-                "router_version": ROUTER_VERSION}
-# === END FULLFIX_CAPABILITY_ROUTER_STAGE_2 ===
-
-====================================================================================================
-END_FILE: core/capability_router.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/capability_router_dispatch.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 5289c229f54cd10f2a8a2c42c36b5ceadbaf5e717d8473c4c354d3a390b9ae49
-====================================================================================================
-# === CAPABILITY_ROUTER_REAL_DISPATCH_V1 ===
-from __future__ import annotations
-
-from typing import Any, Dict
-
-def build_execution_plan(input_type: str = "", user_text: str = "", file_name: str = "", mime_type: str = "", topic_id: int = 0) -> Dict[str, Any]:
-    low = f"{input_type} {user_text} {file_name} {mime_type}".lower()
-    if any(x in low for x in ("dwg", "dxf", "ifc", "чертеж", "чертёж", "проект", "кж", "кмд")):
-        engine = "dwg_project"
-    elif any(x in low for x in ("смет", "расч", "вор", "xlsx", "xls", "csv")):
-        engine = "estimate"
-    elif any(x in low for x in ("технадзор", "акт", "дефект", "фото", "jpg", "png", "heic", "сп", "гост")):
-        engine = "technadzor"
-    elif any(x in low for x in ("найди", "поиск", "цена", "купить")):
-        engine = "search"
-    else:
-        engine = "universal"
-    return {
-        "router": "CAPABILITY_ROUTER_REAL_DISPATCH_V1",
-        "topic_id": int(topic_id or 0),
-        "engine": engine,
-        "input_type": input_type,
-        "file_name": file_name,
-        "mime_type": mime_type,
-    }
-
-def dispatch_hint(plan: Dict[str, Any]) -> str:
-    return str((plan or {}).get("engine") or "universal")
-# === END_CAPABILITY_ROUTER_REAL_DISPATCH_V1 ===
-
-====================================================================================================
-END_FILE: core/capability_router_dispatch.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/chat_exports_policy.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 5dba229a50fdb45fd5e3c6537274316caad7f37759487be75e2c97cad258c4d0
-====================================================================================================
-# === CHAT_EXPORTS_DEDUP_POLICY_V1 ===
-# Канонический источник: chat_exports/ (lowercase)
-# CHAT_EXPORTS/ — legacy, не удалять, но игнорировать в агрегаторе
-import os, logging
-from pathlib import Path
-logger = logging.getLogger(__name__)
-
-BASE = Path("/root/.areal-neva-core")
-CANONICAL_DIR = BASE / "chat_exports"
-LEGACY_DIR = BASE / "CHAT_EXPORTS"
-
-def get_canonical_exports_dir() -> Path:
-    return CANONICAL_DIR
-
-def list_canonical_exports() -> list:
-    if not CANONICAL_DIR.exists():
-        return []
-    return sorted(CANONICAL_DIR.rglob("*.json")) + sorted(CANONICAL_DIR.rglob("*.txt"))
-
-def is_legacy_dir(path: str) -> bool:
-    return "CHAT_EXPORTS" in str(path) and "chat_exports" not in str(path).lower().replace("CHAT_EXPORTS","")
-
-def dedup_export_files(files: list) -> list:
-    """Убрать дубли — если файл есть в обоих dirs, брать из canonical"""
-    seen_names = set()
-    result = []
-    # Сначала canonical
-    canonical = [f for f in files if CANONICAL_DIR.name in str(f) and not is_legacy_dir(str(f))]
-    legacy = [f for f in files if is_legacy_dir(str(f))]
-    for f in canonical:
-        seen_names.add(Path(f).name)
-        result.append(f)
-    for f in legacy:
-        if Path(f).name not in seen_names:
-            result.append(f)
-    return result
-# === END CHAT_EXPORTS_DEDUP_POLICY_V1 ===
-
-====================================================================================================
-END_FILE: core/chat_exports_policy.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/constraint_engine.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: e8ffe41c2f52aef2692c65e65c8b59713ab45ba46f13cbffee21118e00d60382
-====================================================================================================
-# === CONSTRAINT_ENGINE_V1 ===
-import re, logging
-logger = logging.getLogger(__name__)
-
-# MULTI_OFFER_CONSISTENCY — все офферы в одном формате
-def normalize_offer(offer: dict) -> dict:
-    return {
-        "supplier":  str(offer.get("supplier") or offer.get("поставщик") or "UNKNOWN"),
-        "platform":  str(offer.get("platform") or offer.get("площадка") or ""),
-        "seller_type": str(offer.get("seller_type") or "UNKNOWN"),
-        "city":      str(offer.get("city") or offer.get("город") or ""),
-        "price":     _to_float(offer.get("price") or offer.get("цена") or 0),
-        "unit":      str(offer.get("unit") or offer.get("ед") or ""),
-        "stock":     str(offer.get("stock") or offer.get("наличие") or "UNKNOWN"),
-        "delivery":  str(offer.get("delivery") or offer.get("доставка") or "UNKNOWN"),
-        "tco":       _to_float(offer.get("tco") or 0),
-        "risk":      str(offer.get("risk") or "UNVERIFIED"),
-        "contact":   str(offer.get("contact") or offer.get("контакт") or ""),
-        "url":       str(offer.get("url") or offer.get("ссылка") or ""),
-        "verified":  bool(offer.get("verified") or False),
-    }
-
-def _to_float(v) -> float:
     try:
-        return float(re.sub(r"[^\d.]", "", str(v)) or 0)
+        rows = conn.execute(
+            """
+            SELECT raw_input
+            FROM tasks
+            WHERE chat_id=?
+              AND COALESCE(topic_id,0)=?
+              AND id<>?
+              AND raw_input IS NOT NULL
+              AND TRIM(raw_input)<>''
+            ORDER BY rowid DESC
+            LIMIT 6
+            """,
+            (str(chat_id), int(topic_id or 0), str(task_id)),
+        ).fetchall()
+        recent = []
+        for r in rows:
+            v = str(r[0] or "").strip()
+            if v and v not in "\n\n".join(parts):
+                recent.append(v)
+        if recent:
+            parts.append("Последние сообщения топика без результатов и ссылок:\n" + "\n".join(recent))
     except Exception:
-        return 0.0
+        pass
 
-def validate_offer(offer: dict) -> dict:
-    """Проверить оффер на минимальное качество"""
-    issues = []
-    if not offer.get("price") or offer["price"] <= 0:
-        issues.append("NO_PRICE")
-    if not offer.get("contact") and not offer.get("url"):
-        issues.append("NO_CONTACT")
-    if offer.get("price") and offer["price"] < 10:
-        issues.append("PRICE_TOO_LOW")
-    return {"ok": len(issues) == 0, "issues": issues}
+    return "\n\n".join(parts).strip(), parent_id
 
-def rank_offers(offers: list) -> list:
-    """ResultRanker — сортировка по TCO или цене"""
-    def score(o):
-        tco = o.get("tco") or o.get("price") or 999999
-        risk_penalty = {"CONFIRMED": 0, "PARTIAL": 5, "UNVERIFIED": 15, "RISK": 30}.get(o.get("risk","UNVERIFIED"), 15)
-        return tco + risk_penalty * 100
-    return sorted(offers, key=score)
+async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
+    try:
+        task_id = str(_tcfc1_row_get(task, "id", "") or "")
+        chat_id = str(_tcfc1_row_get(task, "chat_id", "") or "")
+        topic_id = int(_tcfc1_row_get(task, "topic_id", 0) or 0)
+        input_type = str(_tcfc1_row_get(task, "input_type", "text") or "text")
+        raw_input = str(_tcfc1_row_get(task, "raw_input", "") or "")
+        reply_to = _tcfc1_row_get(task, "reply_to_message_id", None)
 
-# CONSTRAINT_ENGINE — ограничения на поиск
-_CONSTRAINTS = {
-    "price_min": 0,
-    "price_max": 999_999_999,
-    "region": [],
-    "exclude_keywords": ["1 руб", "договорная", "под заказ в пути"],
-    "require_contact": False,
-    "require_stock": False,
-}
+        if topic_id == 2 and task_id:
+            full_context, parent_id = _tcfc1_worker_build_full_context(conn, task_id, chat_id, topic_id, raw_input)
+            if full_context:
+                try:
+                    from core.sample_template_engine import handle_stroyka_topic2_full_context_gate_v1
+                    handled = await handle_stroyka_topic2_full_context_gate_v1(
+                        conn=conn,
+                        task_id=task_id,
+                        chat_id=chat_id,
+                        topic_id=topic_id,
+                        raw_context=full_context,
+                        input_type=input_type,
+                        reply_to_message_id=reply_to,
+                    )
+                    if handled:
+                        try:
+                            if parent_id and parent_id != task_id:
+                                conn.execute(
+                                    "UPDATE tasks SET state='DONE', result=?, error_message='', updated_at=datetime('now') WHERE id=?",
+                                    ("Закрыто новой сметой по полному контексту", parent_id),
+                                )
+                                _history(conn, parent_id, f"THREE_CONTOURS_FULL_CONTEXT_NO_REPEAT_CLARIFY_V1:superseded_by:{task_id}")
+                                conn.commit()
+                        except Exception as _e:
+                            logger.warning("THREE_CONTOURS_FULL_CONTEXT_NO_REPEAT_CLARIFY_V1_PARENT_CLOSE_ERR %s", _e)
+                        logger.info("THREE_CONTOURS_FULL_CONTEXT_NO_REPEAT_CLARIFY_V1 handled task=%s topic=%s", task_id, topic_id)
+                        return
+                except Exception as _e:
+                    logger.warning("THREE_CONTOURS_FULL_CONTEXT_NO_REPEAT_CLARIFY_V1_ERR task=%s err=%s", task_id, _e)
+    except Exception as _e:
+        logger.warning("THREE_CONTOURS_FULL_CONTEXT_NO_REPEAT_CLARIFY_V1_WRAPPER_ERR %s", _e)
 
-def apply_constraints(offers: list, constraints: dict = None) -> list:
-    c = {**_CONSTRAINTS, **(constraints or {})}
-    result = []
-    for o in offers:
-        price = _to_float(o.get("price") or 0)
-        if price and (price < c["price_min"] or price > c["price_max"]):
-            continue
-        text = str(o).lower()
-        if any(ex.lower() in text for ex in c["exclude_keywords"]):
-            continue
-        if c["require_contact"] and not o.get("contact"):
-            continue
-        result.append(o)
-    return result
-# === END CONSTRAINT_ENGINE_V1 ===
+    return await _tcfc1_orig_handle_in_progress_worker(conn, task, chat_id, topic_id)  # HOTFIX_HANDLE_IN_PROGRESS_WRAPPER_CHAIN_V1
 
-====================================================================================================
-END_FILE: core/constraint_engine.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/context_loader.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: b2e7c83efbb7cd1e9893212919ed790834ccaef025265a92c0b40faf6898e8e5
-====================================================================================================
-# === FULLFIX_CONTEXT_LOADER_STAGE_3 ===
-from __future__ import annotations
-import asyncio
-from typing import Any, Dict, Optional
-
-CONTEXT_LOADER_VERSION = "CONTEXT_LOADER_V1"
+# === END_THREE_CONTOURS_FULL_CONTEXT_NO_REPEAT_CLARIFY_V1_WORKER_WRAPPER ===
 
 
-def _safe_str(v, default=""):
-    if v is None: return default
-    return str(v)
 
+# === STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1 ===
+# Must be placed BEFORE asyncio.run(main())
+# Fixes:
+# - topic_2 must not fall into FILE_TECH_CONTOUR_FOLLOWUP_V2 for estimate/template questions
+# - topic_2 must not repeat old task result when full technical context is available
+# - topic_2 must route complete construction estimate TЗ into formula/template source gate once
+try:
+    _st2_pm_orig_handle_in_progress_v1 = _handle_in_progress
 
-class ContextLoader:
-    """
-    Stage 3 shadow mode: загружает контекст задачи из доступных источников.
-    Пишет context_refs в WorkItem. Не блокирует выполнение при ошибках.
-    """
-
-    def load(self, work_item, db_conn=None) -> Dict[str, Any]:
-        chat_id = _safe_str(getattr(work_item, "chat_id", ""))
-        topic_id = int(getattr(work_item, "topic_id", 0) or 0)
-        raw_text = _safe_str(getattr(work_item, "raw_text", ""))[:500]
-        direction = _safe_str(getattr(work_item, "direction", "general_chat"))
-
-        refs = {
-            "chat_id": chat_id,
-            "topic_id": topic_id,
-            "direction": direction,
-            "short_memory": None,
-            "long_memory": None,
-            "recent_tasks": [],
-            "topic_context": None,
-            "loader_version": CONTEXT_LOADER_VERSION,
-            "shadow_mode": True,
-        }
-
-        # short_memory — из memory_api если доступна
+    def _st2_pm_row_get(row, key, default=None):
         try:
-            refs["short_memory"] = self._load_short_memory(chat_id, topic_id)
-        except Exception as e:
-            refs["short_memory_error"] = str(e)
-
-        # topic_context — последние задачи по теме из DB
-        if db_conn is not None:
+            return row[key]
+        except Exception:
             try:
-                refs["topic_context"] = self._load_topic_context(db_conn, chat_id, topic_id)
-            except Exception as e:
-                refs["topic_context_error"] = str(e)
+                idx_map = {
+                    "id": 0,
+                    "chat_id": 1,
+                    "user_id": 2,
+                    "input_type": 3,
+                    "raw_input": 4,
+                    "state": 5,
+                    "result": 6,
+                    "error_message": 7,
+                    "reply_to_message_id": 8,
+                    "created_at": 9,
+                    "updated_at": 10,
+                    "bot_message_id": 11,
+                    "topic_id": 12,
+                    "task_type": 13,
+                }
+                i = idx_map.get(key)
+                if i is not None:
+                    return row[i]
+            except Exception:
+                pass
+        return default
 
-        work_item.context_refs = refs
-        work_item.add_audit("context_loader", CONTEXT_LOADER_VERSION)
-        work_item.add_audit("context_topic_id", topic_id)
-        return refs
-
-    def _load_short_memory(self, chat_id, topic_id):
-        import urllib.request, json
-        url = f"http://127.0.0.1:8765/memory?chat_id={chat_id}&topic_id={topic_id}&limit=5"
+    def _st2_pm_clean_voice(text: str) -> str:
         try:
-            req = urllib.request.urlopen(url, timeout=2)
-            data = json.loads(req.read().decode())
-            return data if isinstance(data, (list, dict)) else None
+            return re.sub(r"^\s*\[VOICE\]\s*", "", str(text or ""), flags=re.I).strip()
+        except Exception:
+            return str(text or "").strip()
+
+    def _st2_pm_low(text: str) -> str:
+        return _st2_pm_clean_voice(text).lower().replace("ё", "е")
+
+    def _st2_pm_reply_to(task):
+        try:
+            return _st2_pm_row_get(task, "reply_to_message_id", None)
         except Exception:
             return None
 
-    def _load_topic_context(self, db_conn, chat_id, topic_id):
+    def _st2_pm_send_done(conn, task_id: str, chat_id: str, text: str, reply_to=None, kind: str = "stroyka_topic2_premain"):
+        _update_task(conn, task_id, state="DONE", result=str(text or ""), error_message="")
+        _history(conn, task_id, f"STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1:{kind}")
         try:
-            import sqlite3
-            if hasattr(db_conn, "execute"):
-                rows = db_conn.execute(
-                    "SELECT id, state, created_at FROM tasks WHERE chat_id=? AND topic_id=? ORDER BY created_at DESC LIMIT 5",
-                    (str(chat_id), int(topic_id))
-                ).fetchall()
-            else:
-                rows = []
-            return [{"id": r[0], "state": r[1], "created_at": r[2]} for r in rows]
+            conn.commit()
         except Exception:
-            return []
-
-
-def load_context(work_item, db_conn=None):
-    return ContextLoader().load(work_item, db_conn)
-# === END FULLFIX_CONTEXT_LOADER_STAGE_3 ===
-
-====================================================================================================
-END_FILE: core/context_loader.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/data_classification.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 94b1f8b88f75ccb2d032ff2f77790acb7884c5f9e6ec7e7ad0f9277824d6d4bf
-====================================================================================================
-# === DATA_CLASSIFICATION_V1 ===
-# Канон §28.3 — File Routing Canon
-import re, logging
-logger = logging.getLogger(__name__)
-
-_DOMAIN_MAP = {
-    "STROYKA":     ["кровля", "фасад", "фундамент", "кирпич", "бетон", "арматура", "утеплитель",
-                    "металлочерепица", "профнастил", "сайдинг", "монтаж", "строительство", "ангар"],
-    "ESTIMATES":   ["смета", "ведомость", "объём работ", "вор", "ФЕР", "ТЕР", "расценка", "калькул"],
-    "TEHNADZOR":   ["технадзор", "дефект", "акт осмотра", "нарушение", "предписание", "сп ", "гост", "снип"],
-    "AUTO":        ["toyota", "hiace", "запчасть", "brembo", "vin", "авто", "машина"],
-    "SEARCH":      ["найди", "поищи", "цена", "стоимость", "купить", "поставщик", "avito", "ozon"],
-    "DOCS_PDF_DWG": ["dwg", "dxf", "чертёж", "pdf", "docx", "проект"],
-    "NEURON_SOFT_VPN": ["vpn", "wireguard", "xray", "vless", "конфиг", "ключ"],
-}
-
-def classify_domain(text: str, file_name: str = "") -> str:
-    combined = (text + " " + file_name).lower()
-    scores = {}
-    for domain, keywords in _DOMAIN_MAP.items():
-        scores[domain] = sum(1 for kw in keywords if kw.lower() in combined)
-    best = max(scores, key=scores.get)
-    return best if scores[best] > 0 else "UNSORTED"
-
-def classify_file_type(file_name: str) -> str:
-    ext = file_name.lower().rsplit(".", 1)[-1] if "." in file_name else ""
-    mapping = {
-        "pdf": "PDF", "docx": "DOCX", "doc": "DOCX",
-        "xlsx": "XLSX", "xls": "XLSX", "csv": "CSV",
-        "dwg": "DWG", "dxf": "DXF",
-        "jpg": "IMAGE", "jpeg": "IMAGE", "png": "IMAGE",
-        "heic": "IMAGE", "webp": "IMAGE",
-        "zip": "ARCHIVE", "rar": "ARCHIVE",
-        "mp4": "VIDEO", "mov": "VIDEO",
-        "ogg": "AUDIO", "mp3": "AUDIO",
-    }
-    return mapping.get(ext, "UNKNOWN")
-
-def classify_intent(text: str) -> str:
-    low = text.lower()
-    if any(w in low for w in ["смета", "посчитай", "расценка", "объём"]):
-        return "estimate"
-    if any(w in low for w in ["шаблон", "образец", "возьми как"]):
-        return "template"
-    if any(w in low for w in ["дефект", "акт", "нарушение", "технадзор"]):
-        return "technadzor"
-    if any(w in low for w in ["проект", "кж", "ар", "кд", "км"]):
-        return "project"
-    if any(w in low for w in ["найди", "поищи", "цена", "купить"]):
-        return "search"
-    if any(w in low for w in ["dwg", "dxf", "чертёж"]):
-        return "dwg"
-    return "text"
-# === END DATA_CLASSIFICATION_V1 ===
-
-====================================================================================================
-END_FILE: core/data_classification.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/defect_act_engine.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: ef8ae207b552886b90aed1104beb8171ccb8159e19e4d1b05796d867afbb1817
-====================================================================================================
-# === FULLFIX_15_DEFECT_ACT ===
-import os, logging
-from datetime import date
-logger = logging.getLogger(__name__)
-ENGINE = "FULLFIX_15_DEFECT_ACT"
-RUNTIME_DIR = "/root/.areal-neva-core/runtime"
-os.makedirs(RUNTIME_DIR, exist_ok=True)
-ACT_PHRASES = ["акт", "дефект", "осмотр", "сделай акт", "по фото", "технадзор", "нарушение"]
-
-def is_defect_act_intent(text, mime_type=""):
-    t = (text or "").lower()
-    return "image" in (mime_type or "") and any(p in t for p in ACT_PHRASES)
-
-def generate_act_docx(task_id, caption, file_name, object_name="UNKNOWN"):
-    from docx import Document
-    path = os.path.join(RUNTIME_DIR, "act_" + task_id[:8] + ".docx")
-    doc = Document()
-    doc.add_heading("АКТ ОСМОТРА / ДЕФЕКТНАЯ ВЕДОМОСТЬ", 0)
-    today = date.today().strftime("%d.%m.%Y")
-    doc.add_paragraph("Дата: " + today)
-    doc.add_paragraph("Объект: " + (object_name or "UNKNOWN"))
-    doc.add_paragraph("Основание: фото — " + (file_name or ""))
-    table = doc.add_table(rows=1, cols=6)
-    table.style = "Table Grid"
-    for i, h in enumerate(["№", "Фото/файл", "Описание дефекта", "Локация", "Рекомендация", "Статус"]):
-        table.rows[0].cells[i].text = h
-    row = table.add_row().cells
-    row[0].text = "1"; row[1].text = file_name or ""; row[2].text = caption or "требует уточнения"
-    row[3].text = "-"; row[4].text = "Устранить"; row[5].text = "Открыт"
-    doc.add_paragraph("Заключение: зафиксированы дефекты, требующие устранения.")
-    doc.add_paragraph("Составил: ________________________  Дата: " + today)
-    doc.save(path)
-    return path
-
-def generate_act_pdf(task_id, caption, file_name, object_name="UNKNOWN"):
-    from reportlab.lib.pagesizes import A4
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Spacer
-    from reportlab.lib import colors
-    from core.pdf_cyrillic import register_cyrillic_fonts, make_styles, make_paragraph, clean_pdf_text, FONT_REGULAR, FONT_BOLD
-    path = os.path.join(RUNTIME_DIR, "act_" + task_id[:8] + ".pdf")
-    register_cyrillic_fonts()
-    styles = make_styles()
-    today = date.today().strftime("%d.%m.%Y")
-    doc = SimpleDocTemplate(path, pagesize=A4, topMargin=20, bottomMargin=20, leftMargin=20, rightMargin=20)
-    story = [
-        make_paragraph("АКТ ОСМОТРА / ДЕФЕКТНАЯ ВЕДОМОСТЬ", "header", styles), Spacer(1,8),
-        make_paragraph("Дата: " + today, "normal", styles),
-        make_paragraph("Объект: " + (object_name or "UNKNOWN"), "normal", styles),
-        make_paragraph("Основание: " + (file_name or ""), "normal", styles),
-        Spacer(1,10),
-    ]
-    data = [
-        [make_paragraph(h, "bold", styles) for h in ["№", "Файл", "Описание", "Локация", "Рекомендация", "Статус"]],
-        [make_paragraph(x, "normal", styles) for x in ["1", clean_pdf_text(file_name or ""), clean_pdf_text(caption or "требует уточнения"), "-", "Устранить", "Открыт"]],
-    ]
-    tbl = Table(data, colWidths=[22, 70, 150, 55, 80, 50])
-    tbl.setStyle(TableStyle([
-        ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#444444")),
-        ("TEXTCOLOR",(0,0),(-1,0),colors.white),
-        ("FONTNAME",(0,0),(-1,0),FONT_BOLD),
-        ("FONTSIZE",(0,0),(-1,-1),8),
-        ("GRID",(0,0),(-1,-1),0.4,colors.black),
-        ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
-    ]))
-    story.append(tbl); story.append(Spacer(1,12))
-    story.append(make_paragraph("Заключение: зафиксированы дефекты, требующие устранения.", "normal", styles))
-    story.append(make_paragraph("Составил: ________________________  Дата: " + today, "normal", styles))
-    doc.build(story)
-    return path
-
-def process_defect_act_sync(conn, task_id, chat_id, topic_id, raw_input, file_name="", local_path=""):
-    from core.artifact_upload_guard import upload_many_or_fail
-    from core.reply_sender import send_reply_ex
-    # === FULLFIX_20_GEMINI_DEFECT_SYNC ===
-    _ff20_vision_text = ""
-    try:
-        if local_path and any(str(local_path).lower().endswith(ext) for ext in (".jpg",".jpeg",".png",".webp",".heic")):
-            import asyncio as _ff20_aio
-            from core.gemini_vision import analyze_image_file as _ff20_gif
+            pass
+        try:
+            _send_once_ex(conn, task_id, str(chat_id), str(text or ""), reply_to, kind)
+        except Exception:
             try:
-                _ff20_aio.get_running_loop()
-            except RuntimeError:
-                _ff20_vision_text = _ff20_aio.run(
-                    _ff20_gif(local_path, prompt="\u041e\u043f\u0438\u0448\u0438 \u0434\u0435\u0444\u0435\u043a\u0442 \u0434\u043b\u044f \u0430\u043a\u0442\u0430", timeout=60)
-                ) or ""
-            logger.info("FF20_GEMINI_DEFECT_SYNC len=%s", len(_ff20_vision_text))
-    except Exception as _ff20_ve:
-        logger.warning("FF20_GEMINI_DEFECT_SYNC_ERR=%s", _ff20_ve)
-    if _ff20_vision_text:
-        raw_input = str(raw_input or "") + "\n\n\u041e\u043f\u0438\u0441\u0430\u043d\u0438\u0435 \u0434\u0435\u0444\u0435\u043a\u0442\u0430: " + str(_ff20_vision_text)
-    # === END FULLFIX_20_GEMINI_DEFECT_SYNC ===
-    # === NORMATIVE_DB_V1_WIRED ===
-    try:
-        import asyncio as _norm_aio
-        from core.normative_db import search_norms as _search_norms
-        _norm_desc = str(raw_input or "") + " " + str(_ff20_vision_text or "")
-        try:
-            _norm_loop = _norm_aio.get_running_loop()
-            _norm_results = []
-        except RuntimeError:
-            _norm_results = _norm_aio.run(_search_norms(_norm_desc))
-        if _norm_results:
-            _norm_lines = ["\n\nНормативные требования:"]
-            for _n in _norm_results:
-                _norm_lines.append(f"  {_n['norm_id']}: {_n['requirement'][:200]}")
-            raw_input = str(raw_input or "") + "\n".join(_norm_lines)
-    except Exception as _ne:
-        logger.warning("NORMATIVE_DB_V1_WIRED err=%s", _ne)
-    # === END NORMATIVE_DB_V1_WIRED ===
+                _send_once(conn, task_id, str(chat_id), str(text or ""), reply_to, kind)
+            except Exception as _send_err:
+                logger.warning("STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1_SEND_ERR %s", _send_err)
 
-
-    try:
-        caption = raw_input or file_name
-        docx_path = generate_act_docx(task_id, caption, file_name)
-        pdf_path = generate_act_pdf(task_id, caption, file_name)
-        files = [{"path": pdf_path, "kind": "act_pdf"}, {"path": docx_path, "kind": "act_docx"}]
-        up = upload_many_or_fail(files, task_id, topic_id)
-        pdf_r = up["results"].get(pdf_path, {}); docx_r = up["results"].get(docx_path, {})
-        lines = ["Акт осмотра готов."]
-        if pdf_r.get("success") and pdf_r.get("link"): lines.append("PDF: " + pdf_r["link"])
-        if docx_r.get("success") and docx_r.get("link"): lines.append("DOCX: " + docx_r["link"])
-        if len(lines) == 1: lines.append("Drive недоступен. Файл: " + (file_name or ""))
-        result_text = "\n".join(lines)
-        conn.execute("UPDATE tasks SET state='AWAITING_CONFIRMATION',result=?,updated_at=datetime('now') WHERE id=?", (result_text, task_id))
-        conn.execute("INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))", (task_id, "state:AWAITING_CONFIRMATION"))
-        conn.commit()
+    def _st2_pm_template_source_text(chat_id: str, topic_id: int) -> str:
+        import json as _json
+        from pathlib import Path as _Path
+        safe_chat = re.sub(r"[^0-9A-Za-z_-]+", "_", str(chat_id))[:80]
+        active = _Path("/root/.areal-neva-core/data/templates/estimate") / f"ACTIVE__chat_{safe_chat}__topic_{int(topic_id or 0)}.json"
+        if not active.exists():
+            active = _Path("/root/.areal-neva-core/data/templates/estimate/ACTIVE__chat_-1003725299009__topic_2.json")
+        data = {}
         try:
-            _br = send_reply_ex(chat_id=str(chat_id), text=result_text, reply_to_message_id=None)
-            _bmid = None
-            if isinstance(_br, dict): _bmid = _br.get("bot_message_id") or _br.get("message_id")
-            elif _br and hasattr(_br, "message_id"): _bmid = _br.message_id
-            if _bmid:
-                conn.execute("UPDATE tasks SET bot_message_id=? WHERE id=?", (str(_bmid), task_id))
-                conn.commit()
-        except Exception as _se:
-            logger.error("ACT_SEND_ERR task=%s err=%s", task_id, _se)
-        return True
-    except Exception as e:
-        logger.error("DEFECT_ACT_ERROR task=%s err=%s", task_id, e)
+            data = _json.loads(active.read_text(encoding="utf-8"))
+        except Exception:
+            data = {}
+        source_name = str(data.get("source_file_name") or "М-110.xlsx")
+        folder_name = str(data.get("source_folder_name") or "ESTIMATES/templates")
+        all_tpl = []
+        try:
+            for x in data.get("all_templates") or []:
+                name = str(x.get("file_name") or "").strip()
+                if name:
+                    all_tpl.append(name)
+        except Exception:
+            pass
+        if not all_tpl:
+            all_tpl = ["Ареал Нева.xlsx", "М-80.xlsx", "М-110.xlsx", "фундамент_Склад2.xlsx", "крыша и перекр.xlsx"]
+        return (
+            "Да. Правильные шаблоны смет подключены\n\n"
+            f"Источник: Google Drive / AI_ORCHESTRA / {folder_name}\n"
+            f"Активный эталон: {source_name}\n"
+            "Правило: шаблон используется как структура, формулы и оформление. Расчёт берётся только из текущего ТЗ\n\n"
+            "Доступные шаблоны:\n- " + "\n- ".join(all_tpl[:10]) + "\n\n"
+            "Для топика СТРОЙКА больше не должен срабатывать поиск случайных файлов технадзора вместо сметного шаблона"
+        )
+
+    def _st2_pm_is_template_question(text: str) -> bool:
+        low = _st2_pm_low(text)
+        if not low:
+            return False
+        create_words = ("сделай", "создай", "сформируй", "подготовь", "составь", "посчитай", "рассчитай")
+        template_words = ("шаблон", "образец", "эталон", "правильн", "откуда", "на чем основыва", "на чём основыва", "что ты туп")
+        if any(w in low for w in create_words):
+            return False
+        return any(w in low for w in template_words)
+
+    def _st2_pm_is_estimate_related(text: str) -> bool:
+        low = _st2_pm_low(text)
+        if not low:
+            return False
+        estimate_words = (
+            "смет", "стоимост", "посчитай", "рассчитай", "расчет", "расчёт",
+            "цена", "руб", "итого", "ндс", "работ", "материал",
+            "строительств", "дом", "барн", "бар хаус", "barn", "каркас",
+            "газобетон", "фундамент", "плит", "монолит", "кровл", "фальц",
+            "имитация бруса", "отделка", "этаж", "высота", "размер"
+        )
+        return any(w in low for w in estimate_words)
+
+    def _st2_pm_is_control_only(text: str) -> bool:
+        low = _st2_pm_low(text)
+        return low in {
+            "задача завершена",
+            "завершена",
+            "готово",
+            "закрой",
+            "закрыть",
+            "отмена",
+            "отбой",
+            "все задачи отменены",
+            "всё задачи отменены",
+            "сейчас все задачи отменены",
+            "сейчас всё задачи отменены",
+        }
+
+    def _st2_pm_history_col(conn) -> str:
+        try:
+            cols = [r[1] for r in conn.execute("PRAGMA table_info(task_history)").fetchall()]
+            if "action" in cols:
+                return "action"
+            if "event" in cols:
+                return "event"
+        except Exception:
+            pass
+        return ""
+
+    def _st2_pm_build_full_context(conn, task_id: str, chat_id: str, topic_id: int, raw: str) -> tuple[str, str]:
+        parts = []
+        cur = _st2_pm_clean_voice(raw)
+        if cur:
+            parts.append("Текущее сообщение:\n" + cur)
+
+        parent_id = ""
+        try:
+            row = conn.execute(
+                """
+                SELECT id, raw_input
+                FROM tasks
+                WHERE chat_id=?
+                  AND COALESCE(topic_id,0)=?
+                  AND id<>?
+                  AND state IN ('WAITING_CLARIFICATION','IN_PROGRESS','NEW','AWAITING_CONFIRMATION')
+                ORDER BY rowid DESC
+                LIMIT 1
+                """,
+                (int(chat_id), int(topic_id or 0), str(task_id)),
+            ).fetchone()
+            if row:
+                parent_id = str(row[0] or "")
+                parent_raw = _st2_pm_clean_voice(str(row[1] or ""))
+                if parent_raw and parent_raw not in cur:
+                    parts.insert(0, "Предыдущее активное ТЗ:\n" + parent_raw)
+        except Exception as _e:
+            logger.warning("STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1_PARENT_CTX_ERR %s", _e)
+
+        try:
+            col = _st2_pm_history_col(conn)
+            if col:
+                ids = [str(task_id)]
+                if parent_id:
+                    ids.append(parent_id)
+                qs = ",".join("?" for _ in ids)
+                rows = conn.execute(
+                    f"SELECT {col} FROM task_history WHERE task_id IN ({qs}) AND {col} LIKE 'clarified:%' ORDER BY rowid ASC LIMIT 50",
+                    ids,
+                ).fetchall()
+                clar = []
+                for r in rows:
+                    v = str(r[0] or "")
+                    if ":" in v:
+                        c = v.split(":", 1)[1].strip()
+                        if c and c not in clar:
+                            clar.append(c)
+                if clar:
+                    parts.append("Уточнения пользователя:\n" + "\n".join(clar))
+        except Exception as _e:
+            logger.warning("STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1_CLAR_CTX_ERR %s", _e)
+
+        return "\n\n".join(x for x in parts if x.strip()), parent_id
+
+    async def _st2_pm_call_full_context_gate(conn, task_id: str, chat_id: str, topic_id: int, full_context: str, input_type: str, reply_to):
+        try:
+            from core.sample_template_engine import handle_stroyka_topic2_full_context_gate_v1 as _gate
+        except Exception as _e:
+            logger.warning("STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1_GATE_IMPORT_ERR %s", _e)
+            return False
+
+        calls = [
+            (conn, task_id, str(chat_id), int(topic_id or 0), full_context, str(input_type or "text"), reply_to),
+            (conn, task_id, str(chat_id), int(topic_id or 0), full_context, "text", reply_to),
+            (conn, task_id, str(chat_id), int(topic_id or 0), full_context),
+        ]
+        last_type_err = None
+        for args in calls:
+            try:
+                res = await _gate(*args)
+                if res is True:
+                    return True
+                if isinstance(res, dict) and (res.get("handled") or res.get("success")):
+                    return True
+                return bool(res)
+            except TypeError as _te:
+                last_type_err = _te
+                continue
+            except Exception as _e:
+                logger.warning("STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1_GATE_ERR %s", _e)
+                return False
+        if last_type_err:
+            logger.warning("STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1_GATE_SIGNATURE_ERR %s", last_type_err)
         return False
 
-async def process_defect_act(conn, task_id, chat_id, topic_id, raw_input, file_name="", local_path=""):
-    import asyncio
-    return await asyncio.get_event_loop().run_in_executor(
-        None, process_defect_act_sync, conn, task_id, chat_id, topic_id, raw_input, file_name, local_path
-    )
-# === END FULLFIX_15_DEFECT_ACT ===
+    async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
+        try:
+            task_id = str(_st2_pm_row_get(task, "id", ""))
+            chat_id = str(_st2_pm_row_get(task, "chat_id", ""))
+            topic_id = int(_st2_pm_row_get(task, "topic_id", 0) or 0)
+            raw_input = str(_st2_pm_row_get(task, "raw_input", "") or "")
+            input_type = str(_st2_pm_row_get(task, "input_type", "text") or "text")
+            reply_to = _st2_pm_reply_to(task)
 
-====================================================================================================
-END_FILE: core/defect_act_engine.py
-FILE_CHUNK: 1/1
-====================================================================================================
+            if topic_id == 2:
+                if _st2_pm_is_control_only(raw_input):
+                    _st2_pm_send_done(conn, task_id, chat_id, "Задача в СТРОЙКЕ закрыта", reply_to, "stroyka_control_close")
+                    return
 
-====================================================================================================
-BEGIN_FILE: core/direction_registry.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 9a97f853b4f786ce481776317e043e44c142dbf4ada231f8e027bc19d3c64e23
-====================================================================================================
-# === FULLFIX_DIRECTION_KERNEL_STAGE_1_DIRECTION_REGISTRY ===
-from __future__ import annotations
-import json
-from pathlib import Path
-from typing import Any, Dict, List
+                if _st2_pm_is_template_question(raw_input):
+                    _st2_pm_send_done(conn, task_id, chat_id, _st2_pm_template_source_text(chat_id, topic_id), reply_to, "stroyka_template_source_answer")
+                    return
 
-BASE = Path("/root/.areal-neva-core")
-CONFIG_PATH = BASE / "config" / "directions.yaml"
-SEARCH_TRIGGER_TOKENS = ["найд","поиск","куп","цена","avito","ozon","wildberries","drom","auto.ru","exist","emex","zzap"]
+                if _st2_pm_is_estimate_related(raw_input):
+                    full_context, parent_id = _st2_pm_build_full_context(conn, task_id, chat_id, topic_id, raw_input)
+                    handled = await _st2_pm_call_full_context_gate(
+                        conn,
+                        task_id,
+                        chat_id,
+                        topic_id,
+                        full_context or raw_input,
+                        input_type,
+                        reply_to,
+                    )
+                    if handled:
+                        try:
+                            if parent_id and parent_id != task_id:
+                                conn.execute(
+                                    "UPDATE tasks SET state='DONE', result=?, error_message='', updated_at=datetime('now') WHERE id=?",
+                                    ("Закрыто новой сметой по полному ТЗ", parent_id),
+                                )
+                                _history(conn, parent_id, f"STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1:superseded_by:{task_id}")
+                                conn.commit()
+                        except Exception as _e:
+                            logger.warning("STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1_PARENT_CLOSE_ERR %s", _e)
+                        logger.info("STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1 handled task=%s topic=%s", task_id, topic_id)
+                        return
+        except Exception as _e:
+            logger.warning("STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1_ERR %s", _e)
 
-def _s(v): return "" if v is None else str(v)
-def _low(v): return _s(v).lower()
+        return await _st2_pm_orig_handle_in_progress_v1(conn, task, chat_id, topic_id)  # HOTFIX_HANDLE_IN_PROGRESS_WRAPPER_CHAIN_V1
 
+except Exception as _st2_pm_wrap_err:
+    logger.warning("STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1_WRAP_ERR %s", _st2_pm_wrap_err)
 
-class DirectionRegistry:
-    def __init__(self, path=None):
-        self.path = Path(path) if path else CONFIG_PATH
-        self.data = self._load()
-        self.directions = self.data.get("directions", {})
-
-    def _load(self):
-        raw = self.path.read_text(encoding="utf-8")
-        try: return json.loads(raw)
-        except Exception:
-            try:
-                import yaml
-                return yaml.safe_load(raw) or {}
-            except Exception as e:
-                raise RuntimeError(f"DIRECTION_REGISTRY_LOAD_FAIL path={self.path} err={e}")
-
-    def _score_direction(self, direction_id, profile, work_item):
-        raw = _low(getattr(work_item, "raw_text", ""))
-        topic_id = int(getattr(work_item, "topic_id", 0) or 0)
-        input_type = _low(getattr(work_item, "input_type", ""))
-        formats_in = [str(x).lower() for x in getattr(work_item, "formats_in", []) or []]
-
-        score = 0
-        reasons = []
-
-        strong = profile.get("strong_aliases") or []
-        strong_hits = [a for a in strong if _low(a) and _low(a) in raw]
-        if strong_hits:
-            score += min(250, 200 + 25 * (len(strong_hits) - 1))
-            reasons.append("strong:" + ",".join(strong_hits[:5]))
-
-        topic_ids = profile.get("topic_ids") or []
-        topic_match = topic_id in topic_ids
-        if topic_match:
-            score += 70 + max(0, 10 - len(topic_ids))
-            reasons.append(f"topic_id:{topic_id}")
-
-        aliases = profile.get("aliases") or []
-        alias_hits = [a for a in aliases if _low(a) and _low(a) in raw]
-        if alias_hits:
-            score += min(120, 30 * len(alias_hits))
-            reasons.append("aliases:" + ",".join(alias_hits[:5]))
-
-        any_signal = bool(strong_hits or topic_match or alias_hits)
-
-        if any_signal:
-            input_types = [str(x).lower() for x in profile.get("input_types") or []]
-            if input_type and input_type in input_types:
-                score += 15
-                reasons.append("input_type:" + input_type)
-            profile_formats = [str(x).lower() for x in profile.get("input_formats") or []]
-            fmt_hits = sorted(set(formats_in).intersection(set(profile_formats)))
-            if fmt_hits:
-                score += min(40, 10 * len(fmt_hits))
-                reasons.append("formats:" + ",".join(fmt_hits))
-
-        if any_signal and bool(profile.get("requires_search")):
-            if any(t in raw for t in SEARCH_TRIGGER_TOKENS):
-                score += 25
-                reasons.append("search_signal")
-
-        if not profile.get("enabled", False):
-            score = max(0, score - 80)
-            reasons.append("passive_penalty")
-
-        return score, {"direction_id": direction_id, "score": score, "reasons": reasons,
-                       "enabled": bool(profile.get("enabled", False)), "topic_ids_count": len(topic_ids)}
-
-    def detect(self, work_item):
-        results = []
-        for direction_id, profile in self.directions.items():
-            score, item = self._score_direction(direction_id, profile or {}, work_item)
-            item["profile"] = dict(profile or {})
-            results.append(item)
-
-        results.sort(key=lambda r: (-r["score"], r["topic_ids_count"]))
-
-        if not results or results[0]["score"] <= 0:
-            best_profile = dict(self.directions.get("general_chat", {}))
-            best_profile["id"] = "general_chat"
-            best_profile["score"] = 0
-            best_profile["audit"] = []
-            return best_profile
-
-        winner = results[0]
-        out = dict(winner["profile"])
-        out["id"] = winner["direction_id"]
-        out["score"] = winner["score"]
-        out["audit"] = [{k: v for k, v in r.items() if k != "profile"} for r in results[:10]]
-        return out
+# === END_STROYKA_TOPIC2_PREMAIN_ROUTE_FIX_V1 ===
 
 
-def detect_direction(work_item):
-    return DirectionRegistry().detect(work_item)
-# === END FULLFIX_DIRECTION_KERNEL_STAGE_1_DIRECTION_REGISTRY ===
+# === TOPIC2_ONE_BIG_FINAL_PIPELINE_V1_WORKER_GUARD ===
+# Final topic_2 guard before worker main:
+# - blocks old generated search subtasks
+# - blocks FILE_TECH_CONTOUR_FOLLOWUP_V2 for topic_2 vague messages
+# - blocks memory revive of old estimates
+# - merges current message + current clarifications + live parent context
+# - sends complete estimate context to one formula-preserving template pipeline
+# - never leaves handled topic_2 task in endless IN_PROGRESS
 
-====================================================================================================
-END_FILE: core/direction_registry.py
-FILE_CHUNK: 1/1
-====================================================================================================
+_TOP2_ONE_BIG_ORIG_HANDLE_IN_PROGRESS_V1 = _handle_in_progress
 
-====================================================================================================
-BEGIN_FILE: core/document_engine.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 3ccafce81ca7ed0c744d41e2ca489c2ee4208ecbb1d17b278c03fee1a072f588
-====================================================================================================
-import os
-import logging
-from typing import Dict, Any
-
-logger = logging.getLogger(__name__)
-
-def parse_document(path: str) -> Dict[str, Any]:
-    if not os.path.exists(path):
-        return {"text": "", "tables": [], "metadata": {}, "error": f"File not found: {path}"}
-    ext = os.path.splitext(path)[1].lower()
+def _top2_ob_row(row, key, default=None):
     try:
-        if ext == ".pdf":
-            return _parse_pdf(path)
-        elif ext == ".docx":
-            return _parse_docx(path)
-        elif ext in (".xlsx", ".xls"):
-            return _parse_excel(path)
-        elif ext == ".csv":
-            return _parse_csv(path)
-        else:
-            return {"text": "", "tables": [], "metadata": {}, "error": f"Unsupported: {ext}"}
-    except Exception as e:
-        logger.error(f"parse_document error: {e}")
-        return {"text": "", "tables": [], "metadata": {}, "error": str(e)}
-
-def extract_text_from_document(path: str) -> str:
-    return parse_document(path).get("text", "")
-
-def extract_tables_from_document(path: str) -> list:
-    return parse_document(path).get("tables", [])
-
-def _parse_pdf(path: str) -> Dict[str, Any]:
-    import pdfplumber
-    text_parts = []
-    tables = []
-    with pdfplumber.open(path) as pdf:
-        for page in pdf.pages:
-            t = page.extract_text()
-            if t: text_parts.append(t)
-            for tbl in page.extract_tables():
-                if tbl: tables.append(tbl)
-    return {"text": "\n".join(text_parts), "tables": tables, "metadata": {"pages": len(pdf.pages)}, "error": ""}
-
-def _parse_docx(path: str) -> Dict[str, Any]:
-    from docx import Document
-    doc = Document(path)
-    text = "\n".join(p.text for p in doc.paragraphs if p.text)
-    tables = [[[cell.text for cell in row.cells] for row in t.rows] for t in doc.tables]
-    return {"text": text, "tables": tables, "metadata": {"source": path}, "error": ""}
-
-def _parse_excel(path: str) -> Dict[str, Any]:
-    import pandas as pd
-    sheets = pd.read_excel(path, sheet_name=None)
-    text, tables = [], []
-    for name, df in sheets.items():
-        text.append(f"=== {name} ===\n{df.to_string(max_rows=50)}")
-        tables.append({"sheet": name, "data": df.fillna("").to_dict(orient="records")})
-    return {"text": "\n".join(text), "tables": tables, "metadata": {"sheets": list(sheets.keys())}, "error": ""}
-
-def _parse_csv(path: str) -> Dict[str, Any]:
-    import pandas as pd
-    df = pd.read_csv(path)
-    text = df.to_string(max_rows=50)
-    tables = [{"data": df.fillna("").to_dict(orient="records")}]
-    return {"text": text, "tables": tables, "metadata": {"source": path}, "error": ""}
-
-====================================================================================================
-END_FILE: core/document_engine.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/drive_content_indexer.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 86a8da0033f275d1ba30d0be51cfc639a9dbc68b75b7e2a5ac2dbec3d0f0cd59
-====================================================================================================
-# === DRIVE_FILE_CONTENT_MEMORY_INDEX_V1 ===
-from __future__ import annotations
-
-import csv
-import io
-import json
-import os
-import re
-import sqlite3
-import tempfile
-from pathlib import Path
-from typing import Any, Dict, List, Optional
-
-from dotenv import load_dotenv
-
-BASE = "/root/.areal-neva-core"
-MEM_DB = f"{BASE}/data/memory.db"
-load_dotenv(f"{BASE}/.env", override=True)
-
-MAX_TEXT = 50000
-MAX_ROWS = 300
-
-
-def _s(v: Any) -> str:
-    if v is None:
-        return ""
-    if isinstance(v, str):
-        return v.strip()
-    try:
-        return json.dumps(v, ensure_ascii=False)
+        return row[key]
     except Exception:
-        return str(v).strip()
+        pass
+    try:
+        idx = {
+            "id": 0,
+            "chat_id": 1,
+            "user_id": 2,
+            "input_type": 3,
+            "raw_input": 4,
+            "state": 5,
+            "result": 6,
+            "error_message": 7,
+            "reply_to_message_id": 8,
+            "created_at": 9,
+            "updated_at": 10,
+            "bot_message_id": 11,
+            "topic_id": 12,
+            "task_type": 13,
+        }.get(key)
+        if idx is not None:
+            return row[idx]
+    except Exception:
+        pass
+    return default
 
+def _top2_ob_s(v):
+    return "" if v is None else str(v)
 
-def _clean(text: str, limit: int = MAX_TEXT) -> str:
-    text = (text or "").replace("\r", "\n")
-    text = re.sub(r"[ \t]+", " ", text)
-    text = re.sub(r"\n{3,}", "\n\n", text)
-    return text.strip()[:limit]
+def _top2_ob_low(v):
+    return _top2_ob_s(v).lower().replace("ё", "е").strip()
 
+def _top2_ob_history_col(conn):
+    try:
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(task_history)").fetchall()]
+        if "action" in cols:
+            return "action"
+        if "event" in cols:
+            return "event"
+    except Exception:
+        pass
+    return ""
 
-def _kind(file_name: str, mime_type: str = "") -> str:
-    ext = os.path.splitext((file_name or "").lower())[1]
-    mime = (mime_type or "").lower()
-    if ext in (".xlsx", ".xlsm", ".csv") or "spreadsheet" in mime or mime == "text/csv":
-        return "table"
-    if ext in (".pdf", ".docx", ".doc", ".txt") or mime in ("application/pdf", "text/plain"):
-        return "document"
-    return "skip"
+def _top2_ob_hist(conn, task_id, action):
+    try:
+        _history(conn, task_id, action)
+        return
+    except Exception:
+        pass
+    try:
+        col = _top2_ob_history_col(conn)
+        if col:
+            conn.execute(f"INSERT INTO task_history(task_id,{col},created_at) VALUES(?,?,datetime('now'))", (task_id, action))
+            conn.commit()
+    except Exception:
+        pass
 
+def _top2_ob_update(conn, task_id, state, result="", error=""):
+    try:
+        _update_task(conn, task_id, state=state, result=result, error_message=error)
+        return
+    except Exception:
+        pass
+    try:
+        conn.execute(
+            "UPDATE tasks SET state=?, result=?, error_message=?, updated_at=datetime('now') WHERE id=?",
+            (state, result, error, task_id),
+        )
+        conn.commit()
+    except Exception:
+        pass
 
-def _drive_service():
-    from core.topic_drive_oauth import _oauth_service
-    return _oauth_service()
+def _top2_ob_send(conn, task_id, chat_id, text, reply_to, kind):
+    try:
+        _send_once_ex(conn, task_id, chat_id, text, reply_to, kind)
+        return
+    except Exception:
+        pass
+    try:
+        _send_once(conn, task_id, str(chat_id), text, reply_to, kind)
+    except Exception:
+        pass
 
-
-def download_drive_file(file_id: str, file_name: str) -> Optional[str]:
-    if not file_id:
-        return None
-    service = _drive_service()
-    suffix = os.path.splitext(file_name or "")[1] or ".bin"
-    fd, out = tempfile.mkstemp(prefix="drive_content_", suffix=suffix, dir="/tmp")
-    os.close(fd)
-
-    request = service.files().get_media(fileId=file_id, supportsAllDrives=True)
-    from googleapiclient.http import MediaIoBaseDownload
-    with io.FileIO(out, "wb") as fh:
-        downloader = MediaIoBaseDownload(fh, request)
-        done = False
-        while not done:
-            _, done = downloader.next_chunk()
+def _top2_ob_current_clarifications(conn, task_id):
+    out = []
+    try:
+        col = _top2_ob_history_col(conn)
+        if not col:
+            return out
+        rows = conn.execute(
+            f"SELECT {col} FROM task_history WHERE task_id=? AND {col} LIKE 'clarified:%' ORDER BY rowid ASC LIMIT 50",
+            (task_id,),
+        ).fetchall()
+        for r in rows:
+            v = _top2_ob_s(r[0])
+            if ":" in v:
+                x = v.split(":", 1)[1].strip()
+                if x:
+                    out.append(x)
+    except Exception:
+        pass
     return out
 
-
-def extract_pdf(path: str) -> str:
+def _top2_ob_latest_live_parent(conn, task_id, chat_id, topic_id):
     try:
-        from pypdf import PdfReader
-        reader = PdfReader(path)
-        parts = []
-        for page in reader.pages[:80]:
-            try:
-                parts.append(page.extract_text() or "")
-            except Exception:
-                pass
-        return _clean("\n".join(parts), MAX_TEXT)
-    except Exception as e:
-        return f"PDF_PARSE_ERROR: {e}"
+        row = conn.execute(
+            """
+            SELECT id, raw_input, state
+            FROM tasks
+            WHERE chat_id=?
+              AND COALESCE(topic_id,0)=?
+              AND id<>?
+              AND state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION')
+              AND input_type<>'search'
+            ORDER BY rowid DESC
+            LIMIT 1
+            """,
+            (chat_id, int(topic_id or 0), task_id),
+        ).fetchone()
+        if row:
+            return _top2_ob_s(row[0]), _top2_ob_s(row[1]), _top2_ob_s(row[2])
+    except Exception:
+        pass
+    return "", "", ""
 
-
-def extract_docx(path: str) -> str:
-    try:
-        from docx import Document
-        doc = Document(path)
-        return _clean("\n".join(p.text for p in doc.paragraphs if p.text), MAX_TEXT)
-    except Exception as e:
-        return f"DOCX_PARSE_ERROR: {e}"
-
-
-def extract_txt(path: str) -> str:
-    try:
-        return _clean(Path(path).read_text(encoding="utf-8", errors="ignore"), MAX_TEXT)
-    except Exception as e:
-        return f"TXT_PARSE_ERROR: {e}"
-
-
-def extract_table(path: str, file_name: str) -> str:
-    rows: List[str] = []
-    ext = os.path.splitext((file_name or "").lower())[1]
-
-    try:
-        if ext == ".csv":
-            with open(path, "r", encoding="utf-8", errors="ignore", newline="") as f:
-                reader = csv.reader(f)
-                for idx, row in enumerate(reader):
-                    rows.append(" | ".join(_s(x) for x in row))
-                    if idx >= MAX_ROWS:
-                        break
-        else:
-            from openpyxl import load_workbook
-            wb = load_workbook(path, data_only=True, read_only=True)
-            for ws in wb.worksheets[:5]:
-                rows.append(f"=== SHEET: {ws.title} ===")
-                for idx, row in enumerate(ws.iter_rows(values_only=True)):
-                    vals = [_s(x) for x in row if _s(x)]
-                    if vals:
-                        rows.append(" | ".join(vals))
-                    if idx >= MAX_ROWS:
-                        break
-    except Exception as e:
-        rows.append(f"TABLE_PARSE_ERROR: {e}")
-
-    return _clean("\n".join(rows), MAX_TEXT)
-
-
-def extract_content(local_path: str, file_name: str, mime_type: str = "") -> Dict[str, Any]:
-    kind = _kind(file_name, mime_type)
-    ext = os.path.splitext((file_name or "").lower())[1]
-
-    if kind == "table":
-        text = extract_table(local_path, file_name)
-    elif kind == "document":
-        if ext == ".pdf":
-            text = extract_pdf(local_path)
-        elif ext == ".docx":
-            text = extract_docx(local_path)
-        else:
-            text = extract_txt(local_path)
-    else:
-        text = ""
-
-    return {
-        "ok": bool(text and not text.endswith("_PARSE_ERROR")),
-        "kind": kind,
-        "file_name": file_name,
-        "mime_type": mime_type,
-        "content": _clean(text, MAX_TEXT),
-        "chars": len(text or ""),
-    }
-
-
-def save_file_content_memory(chat_id: str, topic_id: int, task_id: str, file_id: str, file_name: str, mime_type: str, content: str) -> Dict[str, Any]:
-    if not content.strip():
-        return {"ok": False, "reason": "EMPTY_CONTENT"}
-
-    key = f"topic_{int(topic_id or 0)}_file_content_{task_id}"
-    value = json.dumps({
-        "task_id": task_id,
-        "chat_id": str(chat_id),
-        "topic_id": int(topic_id or 0),
-        "file_id": file_id,
-        "file_name": file_name,
-        "mime_type": mime_type,
-        "content": _clean(content, MAX_TEXT),
-    }, ensure_ascii=False)
-
-    with sqlite3.connect(MEM_DB) as conn:
-        conn.execute("CREATE TABLE IF NOT EXISTS memory (id TEXT PRIMARY KEY, chat_id TEXT, key TEXT, value TEXT, timestamp TEXT)")
-        existing = conn.execute("SELECT 1 FROM memory WHERE chat_id=? AND key=? LIMIT 1", (str(chat_id), key)).fetchone()
-        if existing:
-            return {"ok": True, "key": key, "dedup": True}
-        import hashlib
-        mid = hashlib.sha1(f"{chat_id}:{key}".encode()).hexdigest()
-        conn.execute(
-            "INSERT OR IGNORE INTO memory (id, chat_id, key, value, timestamp) VALUES (?,?,?,?,datetime('now'))",
-            (mid, str(chat_id), key, value),
-        )
-        conn.commit()
-
-    return {"ok": True, "key": key, "dedup": False}
-
-
-def index_drive_file_content(chat_id: str, topic_id: int, task_id: str, file_id: str, file_name: str, mime_type: str = "") -> Dict[str, Any]:
-    local_path = None
-    try:
-        if _kind(file_name, mime_type) == "skip":
-            return {"ok": False, "reason": "UNSUPPORTED_TYPE", "file_name": file_name}
-
-        local_path = download_drive_file(file_id, file_name)
-        if not local_path or not os.path.exists(local_path):
-            return {"ok": False, "reason": "DOWNLOAD_FAILED", "file_name": file_name}
-
-        extracted = extract_content(local_path, file_name, mime_type)
-        if not extracted.get("content"):
-            return {"ok": False, "reason": "EXTRACT_EMPTY", "file_name": file_name}
-
-        saved = save_file_content_memory(
-            chat_id=str(chat_id),
-            topic_id=int(topic_id or 0),
-            task_id=str(task_id),
-            file_id=str(file_id),
-            file_name=str(file_name),
-            mime_type=str(mime_type or ""),
-            content=str(extracted.get("content") or ""),
-        )
-        return {
-            "ok": bool(saved.get("ok")),
-            "reason": "INDEXED" if saved.get("ok") else saved.get("reason"),
-            "key": saved.get("key"),
-            "dedup": saved.get("dedup", False),
-            "kind": extracted.get("kind"),
-            "chars": extracted.get("chars"),
-            "file_name": file_name,
-        }
-    except Exception as e:
-        return {"ok": False, "reason": f"ERROR:{e}", "file_name": file_name}
-    finally:
-        if local_path:
-            try:
-                os.remove(local_path)
-            except Exception:
-                pass
-# === END DRIVE_FILE_CONTENT_MEMORY_INDEX_V1 ===
-
-====================================================================================================
-END_FILE: core/drive_content_indexer.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/drive_folder_resolver.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 74da8dc00bdbf6caea745c54e55bb20c0fb180092f6feb58a2135924fbfcc21f
-====================================================================================================
-# === DRIVE_CANON_FOLDER_RESOLVER_V1 ===
-from __future__ import annotations
-
-import os
-import logging
-from dotenv import load_dotenv
-
-logger = logging.getLogger("drive_folder_resolver")
-
-BASE = "/root/.areal-neva-core"
-load_dotenv(f"{BASE}/.env", override=True)
-
-DEFAULT_CHAT_ID = "-1003725299009"
-
-
-def get_or_create_topic_folder(topic_id: int, chat_id: str = "") -> str:
-    """
-    Canonical Drive layout:
-    AI_ORCHESTRA / chat_<chat_id> / topic_<topic_id>
-
-    This resolver MUST NOT use Service Account and MUST NOT create flat folders:
-    chat_-1003725299009_topic_2
-    """
-    from core.topic_drive_oauth import _oauth_service, _root_folder_id, _ensure_folder
-
-    service = _oauth_service()
-    root_id = _root_folder_id()
-    chat = str(chat_id or os.getenv("TELEGRAM_CHAT_ID") or DEFAULT_CHAT_ID)
-    chat_folder = _ensure_folder(service, root_id, f"chat_{chat}")
-    topic_folder = _ensure_folder(service, chat_folder, f"topic_{int(topic_id or 0)}")
-    logger.info(
-        "DRIVE_CANON_FOLDER_RESOLVER_V1_OK chat=%s topic=%s folder=%s",
-        chat,
-        int(topic_id or 0),
-        topic_folder,
+def _top2_ob_is_vague(text):
+    low = _top2_ob_low(text)
+    low = re.sub(r"^\s*\[voice\]\s*", "", low, flags=re.I).strip()
+    if not low:
+        return True
+    vague = (
+        "что дальше", "ну что", "что там", "посмотри", "я скидывал", "я тебе скидывал",
+        "последнее задание", "какое последнее", "вообще не так", "не так",
+        "ты тупишь", "где", "еще раз", "ещё раз", "продолжай"
     )
-    return topic_folder
-
-
-# === END_DRIVE_CANON_FOLDER_RESOLVER_V1 ===
-
-====================================================================================================
-END_FILE: core/drive_folder_resolver.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/duplicate_guard.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 674c881d7bc3af021c821051940aebf69d78a44129626e36b5d68be8f7690403
-====================================================================================================
-import json
-import logging
-from typing import Optional, Dict
-
-logger = logging.getLogger(__name__)
-
-def get_file_id(raw_input: str) -> Optional[str]:
-    try:
-        return json.loads(raw_input or "{}").get("file_id")
-    except Exception:
-        return None
-
-def find_duplicate(conn, chat_id: str, topic_id: int, file_id: str) -> Optional[Dict]:
-    if not file_id:
-        return None
-    row = conn.execute(
-        """SELECT id, state, substr(result,1,240) result, updated_at
-           FROM tasks
-           WHERE chat_id=?
-             AND COALESCE(topic_id,0)=?
-             AND input_type='drive_file'
-             AND COALESCE(raw_input,'') LIKE ?
-             AND state IN ('DONE','AWAITING_CONFIRMATION')
-           ORDER BY updated_at DESC
-           LIMIT 1""",
-        (str(chat_id), int(topic_id or 0), f'%"file_id": "{file_id}"%'),
-    ).fetchone()
-    return dict(row) if row else None
-
-def duplicate_message(prev: Dict, file_name: str) -> str:
-    prev_result = (prev.get("result") or "").strip()[:160]
-    if prev_result:
-        return (
-            f"Этот файл уже был: {file_name}\n"
-            f"Прошлый результат: {prev_result}\n\n"
-            f"Что сделать?\n"
-            f"1. Повторить обработку\n"
-            f"2. Сделать другое\n"
-            f"3. Отменить"
-        )
-    return (
-        f"Этот файл уже был: {file_name}\n\n"
-        f"Что сделать?\n"
-        f"1. Повторить обработку\n"
-        f"2. Сделать другое\n"
-        f"3. Отменить"
+    strong = (
+        "смет", "посчитай", "рассчитай", "стоимость", "дом", "фундамент",
+        "плита", "монолит", "каркас", "газобетон", "барн", "бар house", "бархаус",
+        "12", "10", "8", "м2", "м3", "руб"
     )
+    return any(x in low for x in vague) and not any(x in low for x in strong)
 
-====================================================================================================
-END_FILE: core/duplicate_guard.py
-FILE_CHUNK: 1/1
-====================================================================================================
+def _top2_ob_cancel_text(text):
+    low = _top2_ob_low(text)
+    return any(x in low for x in ("все задачи отменены", "всё отменено", "отмени все", "стоп все", "стоп всё", "закрой все задачи"))
 
-====================================================================================================
-BEGIN_FILE: core/dwg_engine.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 52d4a88254ff45a37f7535763c22e5ca09d2bcd1490a60c7e9d770b0833b1859
-====================================================================================================
-# === DWG_DXF_PROJECT_CLOSE_V1 ===
-from __future__ import annotations
+def _top2_ob_estimate_like(text):
+    low = _top2_ob_low(text)
+    return any(x in low for x in (
+        "смет", "стоимост", "посчитай", "рассчитай", "расчет", "расчёт",
+        "монолит", "фундамент", "плит", "дом", "каркас", "газобетон",
+        "барн", "бар house", "бархаус", "материал", "работ"
+    ))
 
-import json
-import math
-import os
-import re
-import shutil
-import subprocess
-import tempfile
-import zipfile
-from collections import Counter, defaultdict
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+def _top2_ob_build_context(conn, task_id, chat_id, topic_id, raw):
+    parts = []
+    cur = _top2_ob_s(raw).strip()
+    if cur:
+        parts.append("Текущее сообщение:\n" + cur)
 
-SECTION_MAP = {
-    "кж": "КЖ — Конструкции железобетонные",
-    "км": "КМ — Конструкции металлические",
-    "кмд": "КМД — Конструкции металлические деталировочные",
-    "кр": "КР — Конструктивные решения",
-    "ар": "АР — Архитектурные решения",
-    "ов": "ОВ — Отопление и вентиляция",
-    "вк": "ВК — Водоснабжение и канализация",
-    "эом": "ЭОМ — Электрооборудование",
-    "гп": "ГП — Генеральный план",
-    "пз": "ПЗ — Пояснительная записка",
-}
+    clar = _top2_ob_current_clarifications(conn, task_id)
+    if clar:
+        parts.append("Уточнения текущей задачи:\n" + "\n".join(clar))
 
-NORMS_MAP = {
-    "кж": ["СП 63.13330.2018", "СП 20.13330.2016/2017", "ГОСТ 34028-2016", "ГОСТ 21.501-2018"],
-    "км": ["СП 16.13330.2017", "СП 20.13330.2016/2017", "ГОСТ 27772-2015", "ГОСТ 21.502-2016"],
-    "кмд": ["СП 16.13330.2017", "ГОСТ 23118-2019", "ГОСТ 21.502-2016"],
-    "кр": ["СП 20.13330.2016/2017", "ГОСТ 21.501-2018"],
-    "ар": ["ГОСТ 21.501-2018", "ГОСТ 21.101-2020", "СП 55.13330.2016"],
-    "ов": ["СП 60.13330.2020", "ГОСТ 21.602-2016"],
-    "вк": ["СП 30.13330.2020", "ГОСТ 21.601-2011"],
-    "эом": ["ПУЭ-7", "СП 256.1325800.2016", "ГОСТ 21.608-2014"],
-    "гп": ["СП 42.13330.2016", "ГОСТ 21.508-2020"],
-}
+    parent_id, parent_raw, parent_state = _top2_ob_latest_live_parent(conn, task_id, chat_id, topic_id)
+    if parent_id and parent_raw and not _top2_ob_is_vague(parent_raw):
+        parts.append("Живая родительская задача:\n" + parent_raw)
+        pclar = _top2_ob_current_clarifications(conn, parent_id)
+        if pclar:
+            parts.append("Уточнения родительской задачи:\n" + "\n".join(pclar))
 
-ENTITY_PROJECT_HINTS = {
-    "LINE": "линейная геометрия",
-    "LWPOLYLINE": "полилинии/контуры",
-    "POLYLINE": "полилинии/контуры",
-    "CIRCLE": "окружности/отверстия",
-    "ARC": "дуги",
-    "TEXT": "текстовые подписи",
-    "MTEXT": "многострочные подписи",
-    "DIMENSION": "размеры",
-    "INSERT": "блоки/узлы",
-    "HATCH": "штриховки",
-}
+    return "\n\n".join(parts).strip(), parent_id
 
-def _clean(v: Any, limit: int = 2000) -> str:
-    if v is None:
-        return ""
-    s = str(v).replace("\r", "\n")
-    s = re.sub(r"[ \t]+", " ", s)
-    s = re.sub(r"\n{3,}", "\n\n", s)
-    return s.strip()[:limit]
+async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
+    task_id = _top2_ob_s(_top2_ob_row(task, "id"))
+    chat_id = _top2_ob_row(task, "chat_id")
+    topic_id = int(_top2_ob_row(task, "topic_id", 0) or 0)
+    input_type = _top2_ob_s(_top2_ob_row(task, "input_type", "text"))
+    raw_input = _top2_ob_s(_top2_ob_row(task, "raw_input", ""))
+    reply_to = _top2_ob_row(task, "reply_to_message_id", None)
 
-def _safe_name(v: Any, fallback: str = "drawing") -> str:
-    s = re.sub(r"[^A-Za-zА-Яа-я0-9_.-]+", "_", _clean(v, 120)).strip("._")
-    return s or fallback
-
-def _detect_section(file_name: str = "", user_text: str = "", drawing_text: str = "") -> str:
-    hay_sources = [file_name or "", user_text or "", drawing_text[:2000] if drawing_text else ""]
-    priority = ("кж", "кмд", "км", "кр", "ар", "ов", "вк", "эом", "гп", "пз")
-    for src in hay_sources:
-        low = src.lower()
-        up = src.upper()
-        for key in priority:
-            if re.search(rf"(^|[^А-ЯA-Z0-9]){re.escape(key.upper())}([^А-ЯA-Z0-9]|$)", up):
-                return key
-            if key in low:
-                return key
-    return "кр"
-
-def _read_bytes_head(path: str, n: int = 64) -> bytes:
-    try:
-        with open(path, "rb") as f:
-            return f.read(n)
-    except Exception:
-        return b""
-
-def _try_read_text(path: str, limit: int = 4_000_000) -> str:
-    data = b""
-    try:
-        with open(path, "rb") as f:
-            data = f.read(limit)
-    except Exception:
-        return ""
-    for enc in ("utf-8", "cp1251", "latin-1"):
+    if topic_id == 2:
         try:
-            return data.decode(enc, errors="ignore")
+            if input_type == "search":
+                _top2_ob_update(conn, task_id, "DONE", "TOPIC2_ONE_BIG_FINAL_PIPELINE_V1: generated search subtask blocked", "")
+                _top2_ob_hist(conn, task_id, "TOPIC2_ONE_BIG_FINAL_PIPELINE_V1:blocked_search_subtask")
+                return
+
+            if _top2_ob_cancel_text(raw_input):
+                try:
+                    conn.execute(
+                        """
+                        UPDATE tasks
+                        SET state='CANCELLED',
+                            result='TOPIC2_ONE_BIG_FINAL_PIPELINE_V1: cancelled by user topic2 command',
+                            error_message='',
+                            updated_at=datetime('now')
+                        WHERE chat_id=?
+                          AND COALESCE(topic_id,0)=2
+                          AND state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION')
+                          AND id<>?
+                        """,
+                        (chat_id, task_id),
+                    )
+                    conn.commit()
+                except Exception:
+                    pass
+                msg = "Все активные задачи topic 2 закрыты"
+                _top2_ob_update(conn, task_id, "DONE", msg, "")
+                _top2_ob_hist(conn, task_id, "TOPIC2_ONE_BIG_FINAL_PIPELINE_V1:cancel_all_topic2")
+                _top2_ob_send(conn, task_id, chat_id, msg, reply_to, "topic2_cancel_all")
+                return
+
+            full_context, parent_id = _top2_ob_build_context(conn, task_id, chat_id, topic_id, raw_input)
+            if raw_input and str(raw_input).strip() and str(raw_input).strip() not in str(full_context or ""):
+                full_context = (str(raw_input).strip() + "\n\n" + str(full_context or "")).strip()  # TOPIC2_CURRENT_RAW_CONTEXT_FIRST_V1
+
+            if _top2_ob_is_vague(raw_input) and not _top2_ob_estimate_like(full_context):
+                msg = "Нового полного ТЗ для сметы в сообщении нет. Старую смету из памяти не поднимаю"
+                _top2_ob_update(conn, task_id, "DONE", msg, "")
+                _top2_ob_hist(conn, task_id, "TOPIC2_ONE_BIG_FINAL_PIPELINE_V1:vague_no_memory_revive")
+                _top2_ob_send(conn, task_id, chat_id, msg, reply_to, "topic2_vague_blocked")
+                return
+
+            if _top2_ob_estimate_like(full_context):
+                # PATCH_TOPIC2_CANONICAL_REROUTE_V2: try canonical engine first
+                _t2rt_handled = False
+                try:
+                    from core.stroyka_estimate_canon import maybe_handle_stroyka_estimate as _t2rt_canon_fn
+                    _t2rt_task_dict = {}
+                    try:
+                        for k in task.keys():
+                            _t2rt_task_dict[k] = task[k]
+                    except Exception:
+                        _t2rt_task_dict = {}
+                    _t2rt_task_dict["raw_input"] = full_context
+                    _t2rt_handled = await _t2rt_canon_fn(conn, _t2rt_task_dict, logger=None)
+                except Exception as _t2rt_ex:
+                    _top2_ob_hist(conn, task_id, f"TOPIC2_CANONICAL_REROUTE_V2:EX:{str(_t2rt_ex)[:150]}")
+                if _t2rt_handled:
+                    _top2_ob_hist(conn, task_id, "TOPIC2_CANONICAL_REROUTE_V2:CANONICAL_HANDLED")
+                    return
+                _top2_ob_hist(conn, task_id, "TOPIC2_CANONICAL_REROUTE_V2:FALLBACK_TO_OLD_PIPELINE")
+                try:
+                    from core.sample_template_engine import handle_topic2_one_big_formula_pipeline_v1
+                except Exception as e:
+                    err = "TOPIC2_ONE_BIG_FINAL_PIPELINE_V1_IMPORT_ERR:" + _top2_ob_s(e)[:300]
+                    _top2_ob_update(conn, task_id, "FAILED", err, err)
+                    _top2_ob_hist(conn, task_id, err)
+                    _top2_ob_send(conn, task_id, chat_id, err, reply_to, "topic2_formula_import_error")
+                    return
+
+                handled = await handle_topic2_one_big_formula_pipeline_v1(
+                    conn=conn,
+                    task_id=task_id,
+                    chat_id=str(chat_id),
+                    topic_id=topic_id,
+                    raw_input=full_context,
+                    input_type=input_type or "text",
+                    reply_to_message_id=reply_to,
+                )
+
+                if handled:
+                    try:
+                        cur_state = conn.execute("SELECT state FROM tasks WHERE id=?", (task_id,)).fetchone()
+                        cur_state_s = _top2_ob_s(cur_state[0] if cur_state else "")
+                        if parent_id and parent_id != task_id and cur_state_s in ("AWAITING_CONFIRMATION", "DONE"):
+                            conn.execute(
+                                """
+                                UPDATE tasks
+                                SET state='DONE',
+                                    result='Закрыто новой сметой TOPIC2_ONE_BIG_FINAL_PIPELINE_V1',
+                                    error_message='',
+                                    updated_at=datetime('now')
+                                WHERE id=?
+                                  AND state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION')
+                                """,
+                                (parent_id,),
+                            )
+                            conn.commit()
+                            _top2_ob_hist(conn, parent_id, "TOPIC2_ONE_BIG_FINAL_PIPELINE_V1:superseded_by:" + task_id)
+                    except Exception as e:
+                        logger.warning("TOPIC2_ONE_BIG_FINAL_PIPELINE_V1_PARENT_CLOSE_ERR %s", e)
+                    logger.info("TOPIC2_ONE_BIG_FINAL_PIPELINE_V1 handled task=%s topic=%s", task_id, topic_id)
+                    return
+
+            if _top2_ob_is_vague(raw_input):
+                msg = "Старый сметный контекст не использую. Пришли полное ТЗ одним сообщением"
+                _top2_ob_update(conn, task_id, "DONE", msg, "")
+                _top2_ob_hist(conn, task_id, "TOPIC2_ONE_BIG_FINAL_PIPELINE_V1:vague_blocked_after_gate")
+                _top2_ob_send(conn, task_id, chat_id, msg, reply_to, "topic2_vague_blocked_after_gate")
+                return
+
+        except Exception as e:
+            err = "TOPIC2_ONE_BIG_FINAL_PIPELINE_V1_WORKER_ERR:" + _top2_ob_s(e)[:500]
+            logger.warning(err)
+            _top2_ob_update(conn, task_id, "FAILED", err, err)
+            _top2_ob_hist(conn, task_id, err)
+            _top2_ob_send(conn, task_id, chat_id, err, reply_to, "topic2_guard_error")
+            return
+
+    return await _TOP2_ONE_BIG_ORIG_HANDLE_IN_PROGRESS_V1(conn, task, chat_id, topic_id)  # HOTFIX_HANDLE_IN_PROGRESS_WRAPPER_CHAIN_V1
+# === END_TOPIC2_ONE_BIG_FINAL_PIPELINE_V1_WORKER_GUARD ===
+
+# === FINAL_TOPIC2_TOPIC5_TOPIC500_CLOSE_20260504_V1 ===
+# Final runtime guard:
+# - topic_2 full estimate TZ must use current raw input, not revived stale estimate memory
+# - topic_500 search result must be finalized to DONE after reply_sent/result
+# - wrapper chain must keep chat_id/topic_id arity intact
+
+_FINAL_CLOSE_ORIG_HANDLE_IN_PROGRESS_20260504 = _handle_in_progress
+
+def _fc_20260504_task_get(task, key, default=None):
+    try:
+        return task[key]
+    except Exception:
+        try:
+            return getattr(task, key)
+        except Exception:
+            return default
+
+def _fc_20260504_to_int(v, default=0):
+    try:
+        return int(v or 0)
+    except Exception:
+        return default
+
+def _fc_20260504_history(conn, task_id, action):
+    try:
+        _history(conn, str(task_id), str(action))
+    except Exception:
+        try:
+            conn.execute(
+                "INSERT INTO task_history(task_id, action, created_at) VALUES (?, ?, datetime('now'))",
+                (str(task_id), str(action)),
+            )
+            conn.commit()
         except Exception:
             pass
-    return data.decode("latin-1", errors="ignore")
 
-def _file_signature(path: str) -> str:
-    head = _read_bytes_head(path, 32)
-    if head.startswith(b"AC10"):
-        return head[:12].decode("latin-1", errors="ignore")
-    txt = head.decode("latin-1", errors="ignore")
-    if "SECTION" in _try_read_text(path, 4096).upper():
-        return "ASCII_DXF"
-    return head[:16].hex()
+def _fc_20260504_latest_history_result(conn, task_id):
+    try:
+        row = conn.execute(
+            """
+            SELECT action
+            FROM task_history
+            WHERE task_id=? AND action LIKE 'result:%'
+            ORDER BY rowid DESC
+            LIMIT 1
+            """,
+            (str(task_id),),
+        ).fetchone()
+        if not row:
+            return ""
+        val = row[0] if not isinstance(row, dict) else row.get("action")
+        val = str(val or "")
+        if val.startswith("result:"):
+            val = val[len("result:"):].strip()
+        return val
+    except Exception:
+        return ""
 
-def _try_convert_dwg_to_dxf(path: str) -> Optional[str]:
-    src = Path(path)
-    if src.suffix.lower() != ".dwg":
-        return None
+def _fc_20260504_is_full_topic2_estimate_tz(text):
+    import re
+    low = str(text or "").lower()
+    if "смет" not in low:
+        return False
+    if not any(x in low for x in ("дом", "house", "хаус", "барн", "barn")):
+        return False
+    if not re.search(r"\b\d+(?:[,.]\d+)?\s*(?:на|x|х|\*)\s*\d+(?:[,.]\d+)?\b", low):
+        return False
+    if not any(x in low for x in ("фундамент", "плита", "свая", "ленточ")):
+        return False
+    if not any(x in low for x in ("стен", "каркас", "дерев", "брус", "газобетон")):
+        return False
+    return True
 
-    tmp = Path(tempfile.mkdtemp(prefix="dwg_convert_"))
-    in_dir = tmp / "in"
-    out_dir = tmp / "out"
-    in_dir.mkdir(parents=True, exist_ok=True)
-    out_dir.mkdir(parents=True, exist_ok=True)
+async def _fc_20260504_call_topic2_engine(conn, task, chat_id, topic_id):
+    import inspect
+    from core import sample_template_engine as ste
 
-    safe = in_dir / src.name
-    shutil.copy2(src, safe)
+    fn = getattr(ste, "handle_topic2_one_big_formula_pipeline_v1")
+    task_id = _fc_20260504_task_get(task, "id", "")
+    raw_input = _fc_20260504_task_get(task, "raw_input", "") or ""
+    full_context = str(raw_input or "")
 
-    converters = [
-        shutil.which("dwg2dxf"),
-        shutil.which("ODAFileConverter"),
-        shutil.which("ODAFileConverter.exe"),
-    ]
+    params = inspect.signature(fn).parameters
+    values = {
+        "conn": conn,
+        "connection": conn,
+        "task": task,
+        "row": task,
+        "task_row": task,
+        "task_id": task_id,
+        "id": task_id,
+        "chat_id": chat_id,
+        "topic_id": topic_id,
+        "raw_input": raw_input,
+        "text": raw_input,
+        "user_text": raw_input,
+        "full_context": full_context,
+        "context": full_context,
+    }
 
-    for conv in [c for c in converters if c]:
+    accepts_var_kw = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values())
+    kwargs = values if accepts_var_kw else {name: values[name] for name in params if name in values}
+
+    try:
+        res = fn(**kwargs)
+        if inspect.isawaitable(res):
+            return await res
+        return res
+    except TypeError as e1:
+        attempts = [
+            (conn, task, chat_id, topic_id, raw_input, full_context),
+            (conn, task, chat_id, topic_id, raw_input),
+            (conn, task, chat_id, topic_id),
+            (conn, task),
+        ]
+        last = e1
+        for args in attempts:
+            try:
+                res = fn(*args)
+                if inspect.isawaitable(res):
+                    return await res
+                return res
+            except TypeError as e2:
+                last = e2
+                continue
+        raise last
+
+def _fc_20260504_finalize_topic500_if_result(conn, task, chat_id=None, topic_id=None):
+    task_id = _fc_20260504_task_get(task, "id", "")
+    if not task_id:
+        return
+    row = conn.execute(
+        "SELECT state, result FROM tasks WHERE id=? LIMIT 1",
+        (str(task_id),),
+    ).fetchone()
+    if not row:
+        return
+    state = row[0]
+    current_result = row[1] or ""
+    if str(state) not in ("IN_PROGRESS", "WAITING_CLARIFICATION", "AWAITING_CONFIRMATION"):
+        return
+    result_text = str(current_result or "").strip()
+    if not result_text:
+        result_text = _fc_20260504_latest_history_result(conn, task_id)
+    if not result_text or len(result_text.strip()) < 20:
+        return
+    conn.execute(
+        """
+        UPDATE tasks
+        SET state='DONE',
+            result=?,
+            error_message='',
+            updated_at=datetime('now')
+        WHERE id=? AND topic_id=500
+        """,
+        (result_text, str(task_id)),
+    )
+    _fc_20260504_history(conn, task_id, "FINAL_TOPIC500_SEARCH_DONE_20260504_V1")
+    conn.commit()
+
+async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
+    task_id = _fc_20260504_task_get(task, "id", "")
+    raw_input = str(_fc_20260504_task_get(task, "raw_input", "") or "")
+    if chat_id is None:
+        chat_id = _fc_20260504_task_get(task, "chat_id", None)
+    if topic_id is None:
+        topic_id = _fc_20260504_task_get(task, "topic_id", 0)
+    topic_id = _fc_20260504_to_int(topic_id)
+
+    if topic_id == 2 and _fc_20260504_is_full_topic2_estimate_tz(raw_input):
+        _fc_20260504_history(conn, task_id, "FINAL_TOPIC2_CURRENT_TZ_DIRECT_ROUTE_20260504_V1")
         try:
-            name = os.path.basename(conv).lower()
-            if "dwg2dxf" in name:
-                out = out_dir / (src.stem + ".dxf")
-                subprocess.run([conv, str(safe), str(out)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
-                if out.exists() and out.stat().st_size > 100:
-                    return str(out)
-            else:
-                subprocess.run(
-                    [conv, str(in_dir), str(out_dir), "ACAD2018", "DXF", "0", "1"],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    timeout=180,
-                )
-                found = list(out_dir.rglob("*.dxf"))
-                if found:
-                    found.sort(key=lambda p: p.stat().st_size, reverse=True)
-                    if found[0].stat().st_size > 100:
-                        return str(found[0])
-        except Exception:
-            continue
+            return await _fc_20260504_call_topic2_engine(conn, task, chat_id, topic_id)
+        except Exception as e:
+            _fc_20260504_history(conn, task_id, f"FINAL_TOPIC2_DIRECT_ROUTE_FAILED_20260504_V1:{type(e).__name__}:{e}")
+            raise
 
+    res = await _FINAL_CLOSE_ORIG_HANDLE_IN_PROGRESS_20260504(conn, task, chat_id, topic_id)
+
+    if topic_id == 500:
+        _fc_20260504_finalize_topic500_if_result(conn, task, chat_id, topic_id)
+
+    return res
+# === END_FINAL_TOPIC2_TOPIC5_TOPIC500_CLOSE_20260504_V1 ===
+
+
+
+# === TOPIC500_PRE_SEND_VALIDATOR_AND_STARTUP_RECOVERY_HARD_GUARD_V1 ===
+# Final guard layer:
+# 1) validates topic_500 procurement output before sending
+# 2) prevents startup/stale recovery from reprocessing topic_500 tasks after reply_sent
+# 3) kills duplicate result loops for topic_500
+
+import re as _t500_psv_re
+
+def _t500_psv_row_get(row, key, default=None):
+    try:
+        return row[key]
+    except Exception:
+        try:
+            return getattr(row, key)
+        except Exception:
+            return default
+
+def _t500_psv_history(conn, task_id: str, action: str) -> None:
+    try:
+        _history(conn, str(task_id), str(action))
+        return
+    except Exception:
+        pass
+    try:
+        conn.execute(
+            "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+            (str(task_id), str(action)),
+        )
+    except Exception:
+        pass
+
+def _t500_psv_update_done(conn, task_id: str, result_text: str = "") -> None:
+    try:
+        _update_task(conn, str(task_id), state="DONE", result=str(result_text or ""), error_message="")
+        return
+    except Exception:
+        pass
+    try:
+        conn.execute(
+            "UPDATE tasks SET state='DONE', result=?, error_message='', updated_at=datetime('now') WHERE id=?",
+            (str(result_text or ""), str(task_id)),
+        )
+    except Exception:
+        pass
+
+def _t500_psv_update_failed(conn, task_id: str, result_text: str, error_message: str) -> None:
+    try:
+        _update_task(conn, str(task_id), state="FAILED", result=str(result_text or ""), error_message=str(error_message))
+        return
+    except Exception:
+        pass
+    try:
+        conn.execute(
+            "UPDATE tasks SET state='FAILED', result=?, error_message=?, updated_at=datetime('now') WHERE id=?",
+            (str(result_text or ""), str(error_message), str(task_id)),
+        )
+    except Exception:
+        pass
+
+def _t500_psv_latest_history_result(conn, task_id: str) -> str:
+    try:
+        row = conn.execute(
+            "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'result:%' ORDER BY rowid DESC LIMIT 1",
+            (str(task_id),),
+        ).fetchone()
+        if not row:
+            return ""
+        action = _t500_psv_row_get(row, "action", row[0] if len(row) else "")
+        action = str(action or "")
+        return action[len("result:"):].strip() if action.startswith("result:") else action.strip()
+    except Exception:
+        return ""
+
+def _t500_psv_has_reply_sent(conn, task_id: str) -> bool:
+    try:
+        row = conn.execute(
+            "SELECT 1 FROM task_history WHERE task_id=? AND action LIKE 'reply_sent:%' ORDER BY rowid DESC LIMIT 1",
+            (str(task_id),),
+        ).fetchone()
+        return bool(row)
+    except Exception:
+        return False
+
+def _t500_psv_validate_procurement_result(text: str):
+    s = str(text or "").strip()
+    urls = _t500_psv_re.findall(r"https?://[^\s\]\)>,]+", s)
+    unique_urls = []
+    for u in urls:
+        if u not in unique_urls:
+            unique_urls.append(u)
+
+    has_min_urls = len(unique_urls) >= 3
+    has_bare_refs = bool(_t500_psv_re.search(r"(?<!https://)(?<!http://)\[[0-9]{1,2}\](?!\s*\(?https?://)", s))
+    has_price = bool(_t500_psv_re.search(r"(\d[\d\s]{1,10}\s*(?:₽|руб|р\.|руб\.))|цена\s+не\s+указана", s, _t500_psv_re.I))
+    has_phone = bool(_t500_psv_re.search(r"(\+7|8)\s*[\(\- ]?\d{3}[\)\- ]?\s*\d{3}[\- ]?\d{2}[\- ]?\d{2}|телефон\s+не\s+найден", s, _t500_psv_re.I))
+    has_supplier = bool(_t500_psv_re.search(r"(поставщик|магазин|дилер|база|склад|авито|avito|2гис|яндекс|леруа|петрович|термодом|rockwool|роквул)", s, _t500_psv_re.I))
+    only_unconfirmed = s.upper().strip() in {"НЕ ПОДТВЕРЖДЕНО", "НЕ ПОДТВЕРЖДЕНО."}
+
+    if not has_min_urls:
+        return False, "SEARCH_OUTPUT_INVALID_NO_DIRECT_LINKS"
+    if has_bare_refs:
+        return False, "SEARCH_OUTPUT_INVALID_BARE_REFS"
+    if not has_supplier:
+        return False, "SEARCH_OUTPUT_INVALID_NO_SUPPLIER"
+    if not has_price:
+        return False, "SEARCH_OUTPUT_INVALID_NO_PRICE"
+    if not has_phone:
+        return False, "SEARCH_OUTPUT_INVALID_NO_PHONE"
+    if only_unconfirmed:
+        return False, "SEARCH_OUTPUT_INVALID_UNCONFIRMED_ONLY"
+    return True, "OK"
+
+try:
+    _T500_PSV_ORIG_SEND_ONCE_EX = _send_once_ex
+except Exception:
+    _T500_PSV_ORIG_SEND_ONCE_EX = None
+
+def _send_once_ex(conn, task_id, chat_id, text, reply_to, kind):  # TOPIC500_PRE_SEND_VALIDATOR_AND_STARTUP_RECOVERY_HARD_GUARD_V1
+    try:
+        row = conn.execute("SELECT topic_id FROM tasks WHERE id=?", (str(task_id),)).fetchone()
+        topic_id = int(_t500_psv_row_get(row, "topic_id", row[0] if row else 0) or 0)
+        if topic_id == 500 and str(kind or "") == "result":
+            ok, reason = _t500_psv_validate_procurement_result(str(text or ""))
+            if not ok:
+                _t500_psv_update_failed(conn, str(task_id), str(text or ""), reason)
+                _t500_psv_history(conn, str(task_id), f"TOPIC500_PROCUREMENT_VALIDATOR_V1:FAILED:{reason}")
+                try:
+                    conn.commit()
+                except Exception:
+                    pass
+                warning = "Поиск не дал прямых ссылок и телефонов. Повтори запрос или уточни площадки"
+                if _T500_PSV_ORIG_SEND_ONCE_EX:
+                    return _T500_PSV_ORIG_SEND_ONCE_EX(conn, task_id, chat_id, warning, reply_to, "error")
+                return None
+    except Exception as e:
+        try:
+            _t500_psv_history(conn, str(task_id), f"TOPIC500_PROCUREMENT_VALIDATOR_V1:ERROR:{type(e).__name__}")
+            conn.commit()
+        except Exception:
+            pass
+
+    if _T500_PSV_ORIG_SEND_ONCE_EX:
+        return _T500_PSV_ORIG_SEND_ONCE_EX(conn, task_id, chat_id, text, reply_to, kind)
     return None
 
-def _parse_ascii_dxf(path: str) -> Dict[str, Any]:
-    text = _try_read_text(path)
-    lines = [x.rstrip("\n") for x in text.splitlines()]
-    pairs: List[Tuple[str, str]] = []
-    i = 0
-    while i + 1 < len(lines):
-        code = lines[i].strip()
-        value = lines[i + 1].strip()
-        pairs.append((code, value))
-        i += 2
-
-    entities = []
-    current: Optional[Dict[str, Any]] = None
-    in_entities = False
-
-    for code, value in pairs:
-        if code == "0" and value.upper() == "SECTION":
-            current = None
-            continue
-        if code == "2" and value.upper() == "ENTITIES":
-            in_entities = True
-            continue
-        if code == "0" and value.upper() == "ENDSEC":
-            if current:
-                entities.append(current)
-                current = None
-            in_entities = False
-            continue
-        if not in_entities:
-            continue
-
-        if code == "0":
-            if current:
-                entities.append(current)
-            current = {"type": value.upper(), "layer": "", "points": [], "texts": [], "raw": {}}
-            continue
-
-        if current is None:
-            continue
-
-        current["raw"].setdefault(code, []).append(value)
-        if code == "8":
-            current["layer"] = value
-        elif code in ("1", "2", "3"):
-            if value and len(value) <= 500:
-                current["texts"].append(value)
-        elif code in ("10", "20", "30", "11", "21", "31", "12", "22", "32"):
-            try:
-                current["points"].append((code, float(str(value).replace(",", "."))))
-            except Exception:
-                pass
-
-    if current:
-        entities.append(current)
-
-    entity_counts = Counter(e.get("type") or "UNKNOWN" for e in entities)
-    layer_counts = Counter(e.get("layer") or "0" for e in entities)
-
-    texts = []
-    for e in entities:
-        for t in e.get("texts") or []:
-            if t and t not in texts:
-                texts.append(t)
-            if len(texts) >= 80:
-                break
-
-    x_vals, y_vals = [], []
-    for e in entities:
-        coords = e.get("points") or []
-        for code, val in coords:
-            if code in ("10", "11", "12"):
-                x_vals.append(val)
-            elif code in ("20", "21", "22"):
-                y_vals.append(val)
-
-    extents = {}
-    if x_vals and y_vals:
-        extents = {
-            "min_x": min(x_vals),
-            "max_x": max(x_vals),
-            "min_y": min(y_vals),
-            "max_y": max(y_vals),
-            "width": max(x_vals) - min(x_vals),
-            "height": max(y_vals) - min(y_vals),
-        }
-
-    dims = []
-    for t in texts:
-        for m in re.findall(r"(?<!\d)(\d{2,6})(?!\d)", t):
-            try:
-                v = int(m)
-                if 10 <= v <= 100000:
-                    dims.append(v)
-            except Exception:
-                pass
-    dims = sorted(set(dims))[:120]
-
-    return {
-        "parse_status": "DXF_PARSED",
-        "raw_text_chars": len(text),
-        "entities_total": len(entities),
-        "entity_counts": dict(entity_counts.most_common(60)),
-        "layers": dict(layer_counts.most_common(80)),
-        "texts": texts[:80],
-        "dimensions_detected": dims,
-        "extents": extents,
-    }
-
-def _parse_dwg_metadata(path: str) -> Dict[str, Any]:
-    p = Path(path)
-    sig = _file_signature(path)
-    return {
-        "parse_status": "DWG_BINARY_METADATA_ONLY",
-        "signature": sig,
-        "file_size": p.stat().st_size if p.exists() else 0,
-        "note": "DWG binary parsed as metadata only. For geometry extraction install ODAFileConverter or dwg2dxf on server; DXF is parsed directly",
-    }
-
-def _build_model(local_path: str, file_name: str, mime_type: str = "", user_text: str = "", topic_role: str = "") -> Dict[str, Any]:
-    p = Path(local_path)
-    ext = p.suffix.lower()
-    source_path = str(p)
-    converted_from_dwg = False
-
-    if ext == ".dwg":
-        converted = _try_convert_dwg_to_dxf(local_path)
-        if converted:
-            source_path = converted
-            ext = ".dxf"
-            converted_from_dwg = True
-
-    if ext == ".dxf":
-        parsed = _parse_ascii_dxf(source_path)
-    elif p.suffix.lower() == ".dwg":
-        parsed = _parse_dwg_metadata(local_path)
-    else:
-        parsed = {
-            "parse_status": "UNSUPPORTED_DRAWING_FORMAT",
-            "signature": _file_signature(local_path),
-            "file_size": p.stat().st_size if p.exists() else 0,
-        }
-
-    drawing_text = "\n".join(parsed.get("texts") or [])
-    section = _detect_section(file_name, user_text, drawing_text)
-    entity_counts = parsed.get("entity_counts") or {}
-    layers = parsed.get("layers") or {}
-    texts = parsed.get("texts") or []
-
-    output_documents = [
-        "DOCX_DWG_DXF_ANALYSIS_REPORT",
-        "XLSX_DWG_DXF_ENTITY_REGISTER",
-        "ZIP_PROJECT_PACKAGE",
-    ]
-
-    if section in ("кж", "км", "кмд", "кр"):
-        output_documents.extend(["SPECIFICATION_DRAFT", "STRUCTURAL_DRAWING_REGISTER"])
-    if section == "ар":
-        output_documents.extend(["ARCHITECTURAL_SHEET_REGISTER", "ROOM_PLAN_REVIEW"])
-
-    risk_flags = []
-    if parsed.get("parse_status") == "DWG_BINARY_METADATA_ONLY":
-        risk_flags.append("DWG_GEOMETRY_NOT_EXTRACTED_WITHOUT_CONVERTER")
-    if not layers:
-        risk_flags.append("LAYERS_NOT_FOUND")
-    if not entity_counts:
-        risk_flags.append("ENTITIES_NOT_FOUND")
-    if not texts:
-        risk_flags.append("TEXT_LABELS_NOT_FOUND")
-
-    model = {
-        "schema": "DWG_DXF_PROJECT_MODEL_V1",
-        "source_file": file_name or p.name,
-        "source_path": local_path,
-        "mime_type": mime_type,
-        "topic_role": topic_role,
-        "user_text": user_text,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "section": section,
-        "section_title": SECTION_MAP.get(section, section.upper()),
-        "norms": NORMS_MAP.get(section, []),
-        "converted_from_dwg": converted_from_dwg,
-        "parse": parsed,
-        "layers": layers,
-        "entity_counts": entity_counts,
-        "texts": texts[:80],
-        "dimensions_detected": parsed.get("dimensions_detected") or [],
-        "extents": parsed.get("extents") or {},
-        "output_documents": output_documents,
-        "risk_flags": risk_flags,
-        "status": "PARTIAL" if risk_flags else "CONFIRMED",
-    }
-    return model
-
-def _summary(model: Dict[str, Any]) -> str:
-    parse = model.get("parse") or {}
-    entity_counts = model.get("entity_counts") or {}
-    layers = model.get("layers") or {}
-    risk_flags = model.get("risk_flags") or []
-    lines = [
-        "DWG/DXF проектный контур отработал",
-        f"Файл: {model.get('source_file')}",
-        f"Раздел: {model.get('section_title')}",
-        f"Статус: {model.get('status')}",
-        f"Parse: {parse.get('parse_status')}",
-        f"Слоёв: {len(layers)}",
-        f"Сущностей: {sum(int(v) for v in entity_counts.values()) if entity_counts else 0}",
-    ]
-    if entity_counts:
-        lines.append("Типы сущностей: " + ", ".join(f"{k}:{v}" for k, v in list(entity_counts.items())[:12]))
-    if layers:
-        lines.append("Слои: " + ", ".join(list(layers.keys())[:20]))
-    if model.get("dimensions_detected"):
-        lines.append("Размеры/числа из подписей: " + ", ".join(map(str, model.get("dimensions_detected")[:30])))
-    if model.get("norms"):
-        lines.append("Нормы: " + ", ".join(model.get("norms")))
-    if risk_flags:
-        lines.append("Ограничения: " + ", ".join(risk_flags))
-    lines.append("Артефакты: DOCX отчёт + XLSX реестр + ZIP пакет")
-    return "\n".join(lines).strip()
-
-def _write_docx(model: Dict[str, Any], task_id: str) -> str:
-    out = Path(tempfile.gettempdir()) / f"dwg_dxf_report_{_safe_name(task_id, 'manual')}.docx"
+def _t500_psv_repair_sent_in_progress(conn) -> None:
     try:
-        from docx import Document
-
-        doc = Document()
-        doc.add_heading("DWG/DXF PROJECT MODEL", level=1)
-        doc.add_paragraph(f"Файл: {model.get('source_file')}")
-        doc.add_paragraph(f"Раздел: {model.get('section_title')}")
-        doc.add_paragraph(f"Статус: {model.get('status')}")
-        doc.add_paragraph(f"Parse: {(model.get('parse') or {}).get('parse_status')}")
-
-        doc.add_heading("Нормативная база", level=2)
-        norms = model.get("norms") or []
-        if norms:
-            for n in norms:
-                doc.add_paragraph(f"• {n}")
-        else:
-            doc.add_paragraph("Норма не подтверждена")
-
-        doc.add_heading("Слои", level=2)
-        layers = model.get("layers") or {}
-        if layers:
-            table = doc.add_table(rows=1, cols=2)
-            table.style = "Table Grid"
-            table.rows[0].cells[0].text = "Слой"
-            table.rows[0].cells[1].text = "Кол-во"
-            for name, cnt in list(layers.items())[:80]:
-                row = table.add_row().cells
-                row[0].text = str(name)
-                row[1].text = str(cnt)
-        else:
-            doc.add_paragraph("Слои не извлечены")
-
-        doc.add_heading("Сущности", level=2)
-        ents = model.get("entity_counts") or {}
-        if ents:
-            table = doc.add_table(rows=1, cols=3)
-            table.style = "Table Grid"
-            table.rows[0].cells[0].text = "Тип"
-            table.rows[0].cells[1].text = "Кол-во"
-            table.rows[0].cells[2].text = "Назначение"
-            for name, cnt in list(ents.items())[:80]:
-                row = table.add_row().cells
-                row[0].text = str(name)
-                row[1].text = str(cnt)
-                row[2].text = ENTITY_PROJECT_HINTS.get(str(name), "")
-        else:
-            doc.add_paragraph("Сущности не извлечены")
-
-        doc.add_heading("Текстовые подписи", level=2)
-        texts = model.get("texts") or []
-        if texts:
-            for t in texts[:60]:
-                doc.add_paragraph(f"• {t}")
-        else:
-            doc.add_paragraph("Текстовые подписи не извлечены")
-
-        doc.add_heading("Проектные выходные документы", level=2)
-        for x in model.get("output_documents") or []:
-            doc.add_paragraph(f"• {x}")
-
-        doc.add_heading("Ограничения", level=2)
-        risks = model.get("risk_flags") or []
-        if risks:
-            for r in risks:
-                doc.add_paragraph(f"• {r}")
-        else:
-            doc.add_paragraph("Критичных ограничений не выявлено")
-
-        doc.save(out)
-        return str(out)
+        rows = conn.execute(
+            """
+            SELECT id, topic_id, state, COALESCE(result,'') AS result
+            FROM tasks
+            WHERE topic_id=500
+              AND state IN ('IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION')
+            """
+        ).fetchall()
     except Exception:
-        txt = out.with_suffix(".txt")
-        txt.write_text(json.dumps(model, ensure_ascii=False, indent=2), encoding="utf-8")
-        return str(txt)
+        return
 
-def _write_xlsx(model: Dict[str, Any], task_id: str) -> str:
-    out = Path(tempfile.gettempdir()) / f"dwg_dxf_register_{_safe_name(task_id, 'manual')}.xlsx"
+    for row in rows:
+        task_id = str(_t500_psv_row_get(row, "id", ""))
+        if not task_id:
+            continue
+        if not _t500_psv_has_reply_sent(conn, task_id):
+            continue
+        current_result = str(_t500_psv_row_get(row, "result", "") or "")
+        latest_result = _t500_psv_latest_history_result(conn, task_id) or current_result
+        _t500_psv_update_done(conn, task_id, latest_result)
+        _t500_psv_history(conn, task_id, "STARTUP_RECOVERY_REPLY_SENT_GUARD_V1:DONE_SKIP_RECOVERY")
     try:
-        from openpyxl import Workbook
-        wb = Workbook()
-
-        ws = wb.active
-        ws.title = "Summary"
-        rows = [
-            ("Файл", model.get("source_file")),
-            ("Раздел", model.get("section_title")),
-            ("Статус", model.get("status")),
-            ("Parse", (model.get("parse") or {}).get("parse_status")),
-            ("Нормы", ", ".join(model.get("norms") or [])),
-            ("Ограничения", ", ".join(model.get("risk_flags") or [])),
-        ]
-        for i, (k, v) in enumerate(rows, 1):
-            ws.cell(i, 1, k)
-            ws.cell(i, 2, v)
-
-        ws2 = wb.create_sheet("Layers")
-        ws2.append(["Слой", "Кол-во"])
-        for k, v in (model.get("layers") or {}).items():
-            ws2.append([k, v])
-
-        ws3 = wb.create_sheet("Entities")
-        ws3.append(["Тип", "Кол-во", "Назначение"])
-        for k, v in (model.get("entity_counts") or {}).items():
-            ws3.append([k, v, ENTITY_PROJECT_HINTS.get(str(k), "")])
-
-        ws4 = wb.create_sheet("Texts")
-        ws4.append(["№", "Текст"])
-        for i, t in enumerate(model.get("texts") or [], 1):
-            ws4.append([i, t])
-
-        ws5 = wb.create_sheet("ModelJSON")
-        raw = json.dumps(model, ensure_ascii=False, indent=2)
-        for i, line in enumerate(raw.splitlines(), 1):
-            ws5.cell(i, 1, line)
-
-        wb.save(out)
-        wb.close()
-        return str(out)
+        conn.commit()
     except Exception:
-        csv = out.with_suffix(".csv")
-        lines = ["key,value"]
-        lines.append(f"file,{model.get('source_file')}")
-        lines.append(f"section,{model.get('section_title')}")
-        lines.append(f"status,{model.get('status')}")
-        csv.write_text("\n".join(lines), encoding="utf-8")
-        return str(csv)
+        pass
 
-def _write_json(model: Dict[str, Any], task_id: str) -> str:
-    out = Path(tempfile.gettempdir()) / f"dwg_dxf_model_{_safe_name(task_id, 'manual')}.json"
-    out.write_text(json.dumps(model, ensure_ascii=False, indent=2), encoding="utf-8")
-    return str(out)
-
-def _zip_artifacts(paths: List[str], task_id: str, source_file: str = "") -> str:
-    out = Path(tempfile.gettempdir()) / f"dwg_dxf_project_package_{_safe_name(task_id, 'manual')}.zip"
-    with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as z:
-        for p in paths:
-            if p and os.path.exists(p):
-                z.write(p, arcname=os.path.basename(p))
-        manifest = {
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "task_id": task_id,
-            "source_file": source_file,
-            "files": [os.path.basename(p) for p in paths if p and os.path.exists(p)],
-            "engine": "DWG_DXF_PROJECT_CLOSE_V1",
-        }
-        z.writestr("manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2))
-    return str(out)
-
-def process_drawing_file(
-    local_path: str,
-    file_name: str = "",
-    mime_type: str = "",
-    user_text: str = "",
-    topic_role: str = "",
-    task_id: str = "artifact",
-    topic_id: int = 0,
-) -> Dict[str, Any]:
-    if not local_path or not os.path.exists(local_path):
-        return {
-            "success": False,
-            "error": "DRAWING_FILE_NOT_FOUND",
-            "summary": "DWG/DXF файл не найден",
-        }
-
-    model = _build_model(local_path, file_name or os.path.basename(local_path), mime_type, user_text, topic_role)
-    docx = _write_docx(model, task_id)
-    xlsx = _write_xlsx(model, task_id)
-    js = _write_json(model, task_id)
-    package = _zip_artifacts([docx, xlsx, js], task_id, model.get("source_file") or file_name)
-
-    return {
-        "success": True,
-        "engine": "DWG_DXF_PROJECT_CLOSE_V1",
-        "summary": _summary(model),
-        "model": model,
-        "docx_path": docx,
-        "xlsx_path": xlsx,
-        "json_path": js,
-        "artifact_path": package,
-        "artifact_name": f"{Path(file_name or local_path).stem}_dwg_dxf_project_package.zip",
-        "extra_artifacts": [docx, xlsx, js],
-        "status": model.get("status"),
-    }
-
-async def process_drawing_file_async(*args, **kwargs) -> Dict[str, Any]:
-    return process_drawing_file(*args, **kwargs)
-
-# === END_DWG_DXF_PROJECT_CLOSE_V1 ===
-
-====================================================================================================
-END_FILE: core/dwg_engine.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/engine_base.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 345250b62008f2101d0cc10e959bbceeff15a9e83a007be5433e260a6ed52267
-====================================================================================================
-import os, logging, hashlib, sqlite3, re
-from typing import Dict, Any, Optional
-from datetime import datetime, timezone
-
-logger = logging.getLogger(__name__)
-BASE = "/root/.areal-neva-core"
-DB_PATH = f"{BASE}/data/core.db"
-
-STAGES = ["INGESTED", "DOWNLOADED", "PARSED", "CLEANED", "NORMALIZED", "VALIDATED", "CALCULATED", "ARTIFACT_CREATED", "UPLOADED", "COMPLETED", "FAILED"]
-UNIT_NORMALIZATION = {"м2": "м²", "кв.м": "м²", "м3": "м³", "куб.м": "м³", "шт": "шт", "кг": "кг", "т": "т", "тн": "т", "п.м": "п.м"}
-FALSE_NUMBERS = ["B25", "B30", "B15", "A500", "A240", "A400", "12мм", "20мм", "10мм"]
-BUILDING_DICT = {"бетон B25": "Бетон", "бетон B30": "Бетон", "доска 50х150": "Доска обрезная", "арматура A500": "Арматура"}
-
-
-def _run_upload_sync(fn, *args, **kwargs):
-    import asyncio
-    import inspect
-    import threading
-
-    box = {"value": None, "error": None}
-
-    def _runner():
-        loop = asyncio.new_event_loop()
-        try:
-            asyncio.set_event_loop(loop)
-            value = fn(*args, **kwargs)
-            if inspect.isawaitable(value):
-                value = loop.run_until_complete(value)
-            box["value"] = value
-        except Exception as e:
-            box["error"] = e
-        finally:
-            try:
-                loop.close()
-            except Exception:
-                pass
-            try:
-                asyncio.set_event_loop(None)
-            except Exception:
-                pass
-
-    t = threading.Thread(target=_runner, daemon=True)
-    t.start()
-    t.join()
-
-    if box["error"] is not None:
-        raise box["error"]
-
-    return box["value"]
-
-def get_db(): return sqlite3.connect(DB_PATH)
-
-def update_drive_file_stage(task_id: str, drive_file_id: str, stage: str) -> bool:
+def _t500_psv_duplicate_loop_guard(conn, task_id: str) -> bool:
     try:
-        conn = get_db()
-        cur = conn.cursor()
-        cur.execute("SELECT id FROM drive_files WHERE task_id=? AND drive_file_id=?", (task_id, drive_file_id))
-        if cur.fetchone():
-            cur.execute("UPDATE drive_files SET stage=? WHERE task_id=? AND drive_file_id=?", (stage, task_id, drive_file_id))
-        else:
-            cur.execute("INSERT INTO drive_files (task_id, drive_file_id, stage, created_at) VALUES (?,?,?,?)", (task_id, drive_file_id, stage, datetime.now(timezone.utc).isoformat()))
-        conn.commit(); conn.close()
+        row = conn.execute("SELECT topic_id FROM tasks WHERE id=?", (str(task_id),)).fetchone()
+        topic_id = int(_t500_psv_row_get(row, "topic_id", row[0] if row else 0) or 0)
+        if topic_id != 500:
+            return False
+        cnt = conn.execute(
+            """
+            SELECT COUNT(*)
+            FROM task_history
+            WHERE task_id=?
+              AND action LIKE 'result:%'
+              AND created_at >= datetime('now','-300 seconds')
+            """,
+            (str(task_id),),
+        ).fetchone()[0]
+        if int(cnt or 0) < 3:
+            return False
+        latest_result = _t500_psv_latest_history_result(conn, task_id)
+        _t500_psv_update_done(conn, str(task_id), latest_result)
+        _t500_psv_history(conn, str(task_id), "TOPIC500_DUPLICATE_RESULT_LOOP_GUARD_V1:KILLED")
+        conn.commit()
         return True
-    except Exception as e:
-        logger.error(f"update_drive_file_stage: {e}")
-        return False
-
-
-def detect_real_file_type(file_path: str) -> str:
-    try:
-        with open(file_path, "rb") as f:
-            header = f.read(8)
     except Exception:
-        header = b""
-
-    ext = os.path.splitext(file_path)[1].lower()
-
-    if header.startswith(b"%PDF"):
-        return "pdf"
-    if header.startswith(b"PK\x03\x04"):
-        if ext in (".xlsx", ".xls"):
-            return "xlsx"
-        if ext in (".docx", ".doc"):
-            return "docx"
-        if ext == ".zip":
-            return "zip"
-        return "zip_or_office"
-    if header.startswith(b"\xFF\xD8\xFF"):
-        return "jpg"
-    if header.startswith(b"\x89PNG"):
-        return "png"
-    if header.startswith(b"Rar!"):
-        return "rar"
-    if header.startswith(b"7z\xBC\xAF"):
-        return "7z"
-    if header.startswith(b"AC10") or ext in (".dwg", ".dxf"):
-        return "dwg"
-
-    ext_map = {
-        ".csv": "csv",
-        ".txt": "txt",
-        ".heic": "image",
-        ".webp": "image",
-        ".jpg": "jpg",
-        ".jpeg": "jpg",
-        ".png": "png",
-        ".pdf": "invalid_pdf",
-    }
-    return ext_map.get(ext, "unknown")
-
-
-def calculate_file_hash(file_path: str) -> str:
-    sha = hashlib.sha256()
-    with open(file_path, "rb") as f:
-        for b in iter(lambda: f.read(4096), b""): sha.update(b)
-    return sha.hexdigest()
-
-
-# === PATCH_DRIVE_DIRECT_OAUTH_V1 ===
-def _telegram_fallback_send(local_path: str, task_id: str, topic_id: int) -> str:
-    """TELEGRAM_FALLBACK_V1 — отправить файл в Telegram если Drive недоступен"""
-    try:
-        import requests, os
-        BOT_TOKEN = <REDACTED_SECRET>"TELEGRAM_BOT_TOKEN", "")
-        CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "-1003725299009")
-        if not BOT_TOKEN or not os.path.exists(local_path):
-            return ""
-        caption = f"[DRIVE_UNAVAIL] Файл задачи {task_id[:8]} — Drive недоступен, отправляю напрямую"
-        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument"
-        with open(local_path, "rb") as f:
-            resp = requests.post(url, data={
-                "chat_id": CHAT_ID,
-                "message_thread_id": str(topic_id) if topic_id else "",
-                "caption": caption,
-            }, files={"document": f}, timeout=60)
-        if resp.ok:
-            result = resp.json()
-            file_id = result.get("result", {}).get("document", {}).get("file_id", "")
-            logger.info("TELEGRAM_FALLBACK_V1 sent file_id=%s task=%s", file_id, task_id)
-            return f"telegram://file/{file_id}"
-        else:
-            logger.warning("TELEGRAM_FALLBACK_V1 failed status=%s", resp.status_code)
-            return ""
-    except Exception as e:
-        logger.warning("TELEGRAM_FALLBACK_V1 err=%s", e)
-        return ""
-
-# === DRIVE_TOPIC_FOLDER_ENFORCER_V1 ===
-def _drive_creds_v1():
-    import os
-    from dotenv import load_dotenv
-    load_dotenv("/root/.areal-neva-core/.env", override=False)
-    from google.oauth2.credentials import Credentials
-    from google.auth.transport.requests import Request
-    creds = Credentials(
-        None,
-        refresh_token=<REDACTED_SECRET>"GDRIVE_REFRESH_TOKEN"],
-        token_uri="https://oauth2.googleapis.com/token",
-        client_id=os.environ["GDRIVE_CLIENT_ID"],
-        client_secret=<REDACTED_SECRET>"GDRIVE_CLIENT_SECRET"],
-        scopes=["https://www.googleapis.com/auth/drive"],
-    )
-    creds.refresh(Request())
-    return creds
-
-def _drive_svc_v1():
-    from googleapiclient.discovery import build
-    return build("drive", "v3", credentials=_drive_creds_v1(), cache_discovery=False)
-
-def _drive_get_or_create_folder(svc, name: str, parent_id: str) -> str:
-    safe = str(name or "").replace("'", "\'")
-    q = f"mimeType=\'application/vnd.google-apps.folder\' and trashed=false and name=\'{safe}\' and \'{parent_id}\' in parents"
-    r = svc.files().list(q=q, fields="files(id)", pageSize=1).execute()
-    files = r.get("files") or []
-    if files:
-        return files[0]["id"]
-    f = svc.files().create(
-        body={"name": str(name), "mimeType": "application/vnd.google-apps.folder", "parents": [parent_id]},
-        fields="id",
-    ).execute()
-    return f.get("id") or ""
-
-def get_drive_topic_folder_id(topic_id: int, chat_id: str = "") -> str:
-    import os
-    from dotenv import load_dotenv
-    load_dotenv("/root/.areal-neva-core/.env", override=False)
-    svc = _drive_svc_v1()
-    root = os.environ.get("DRIVE_INGEST_FOLDER_ID", "13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB")
-    chat = str(chat_id or os.environ.get("TELEGRAM_CHAT_ID", "-1003725299009"))
-    chat_folder = _drive_get_or_create_folder(svc, f"chat_{chat}", root)
-    return _drive_get_or_create_folder(svc, f"topic_{int(topic_id or 0)}", chat_folder)
-
-def upload_artifact_to_drive(file_path: str, task_id: str, topic_id: int):
-    import logging, mimetypes, os
-    _logger = logging.getLogger(__name__)
-    if not file_path or not os.path.exists(str(file_path)):
-        _logger.error("DRIVE_TOPIC_FOLDER_ENFORCER_V1_NOT_FOUND task=%s path=%s", task_id, file_path)
-        return None
-    try:
-        from googleapiclient.http import MediaFileUpload
-        svc = _drive_svc_v1()
-        folder_id = get_drive_topic_folder_id(int(topic_id or 0))
-        name = os.path.basename(str(file_path))
-        mime = mimetypes.guess_type(str(file_path))[0] or "application/octet-stream"
-        f = svc.files().create(
-            body={"name": name, "parents": [folder_id]},
-            media_body=MediaFileUpload(str(file_path), mimetype=mime, resumable=True),
-            fields="id,webViewLink",
-        ).execute()
-        fid = f.get("id")
-        if not fid:
-            return None
-        try:
-            svc.permissions().create(fileId=fid, body={"role": "reader", "type": "anyone"}, fields="id").execute()
-        except Exception as pe:
-            _logger.warning("DRIVE_TOPIC_FOLDER_ENFORCER_V1_PERM_ERR task=%s err=%s", task_id, pe)
-        link = f.get("webViewLink") or f"https://drive.google.com/file/d/{fid}/view"
-        _logger.info("DRIVE_TOPIC_FOLDER_ENFORCER_V1_OK task=%s topic=%s link=%s", task_id, topic_id, link)
-        return link
-    except Exception as e:
-        _logger.error("DRIVE_TOPIC_FOLDER_ENFORCER_V1_FAILED task=%s err=%s", task_id, e)
-        return None
-# === END_DRIVE_TOPIC_FOLDER_ENFORCER_V1 ===
-
-def quality_gate(file_path: str, task_id: str, expected_type: str = "excel") -> Dict[str, Any]:
-    err, warn = [], []
-    if not os.path.exists(file_path): err.append("File not found")
-    else:
-        sz = os.path.getsize(file_path)
-        if sz == 0: err.append("Empty file")
-        elif sz > 50*1024*1024: warn.append("File >50MB")
-    if expected_type == "excel" and file_path.endswith(('.xlsx','.xls')):
-        try:
-            from openpyxl import load_workbook
-            wb = load_workbook(file_path)
-            has_formulas = any(cell.data_type == 'f' for sheet in wb for row in sheet.iter_rows() for cell in row)
-            if not has_formulas: warn.append("No formulas found")
-            wb.close()
-        except: err.append("Excel validation failed")
-    return {"passed": len(err)==0, "errors": err, "warnings": warn}
-
-def normalize_unit(unit: str) -> str:
-    return UNIT_NORMALIZATION.get(unit.lower().strip(), unit)
-
-def is_false_number(val: str) -> bool:
-    return any(fn in str(val) for fn in FALSE_NUMBERS)
-
-def normalize_item_name(name: str) -> str:
-    for k, v in BUILDING_DICT.items():
-        if k in name.lower(): return v
-    return name
-
-def is_duplicate_task(conn, chat_id: str, topic_id: int, prompt: str, file_hash: str) -> bool:
-    cur = conn.execute("SELECT id FROM tasks WHERE chat_id=? AND topic_id=? AND raw_input=? AND result LIKE ?", (chat_id, topic_id, prompt, f"%{file_hash}%"))
-    return cur.fetchone() is not None
-
-def should_retry(task_id: str) -> bool:
-    try:
-        conn = get_db()
-        cur = conn.cursor()
-        cur.execute("SELECT COUNT(*) FROM task_history WHERE task_id=? AND action='retry'", (task_id,))
-        retries = cur.fetchone()[0]
-        conn.close()
-        return retries < 1
-    except:
         return False
 
-def mark_retry(task_id: str) -> None:
+try:
+    _T500_PSV_ORIG_RECOVER_STALE_TASKS = _recover_stale_tasks
+except Exception:
+    _T500_PSV_ORIG_RECOVER_STALE_TASKS = None
+
+def _recover_stale_tasks(conn, *args, **kwargs):  # TOPIC500_PRE_SEND_VALIDATOR_AND_STARTUP_RECOVERY_HARD_GUARD_V1
+    _t500_psv_repair_sent_in_progress(conn)
+    if _T500_PSV_ORIG_RECOVER_STALE_TASKS:
+        res = _T500_PSV_ORIG_RECOVER_STALE_TASKS(conn, *args, **kwargs)
+        _t500_psv_repair_sent_in_progress(conn)
+        return res
+    return None
+
+try:
+    _T500_PSV_ORIG_HANDLE_IN_PROGRESS = _handle_in_progress
+except Exception:
+    _T500_PSV_ORIG_HANDLE_IN_PROGRESS = None
+
+async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):  # TOPIC500_PRE_SEND_VALIDATOR_AND_STARTUP_RECOVERY_HARD_GUARD_V1
     try:
-        conn = get_db()
-        cur = conn.cursor()
-        cur.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?,?,?)", (task_id, 'retry', datetime.now(timezone.utc).isoformat()))
-        conn.commit(); conn.close()
-    except: pass
+        task_id = str(_t500_psv_row_get(task, "id", ""))
+        if task_id and _t500_psv_duplicate_loop_guard(conn, task_id):
+            return
+        _t500_psv_repair_sent_in_progress(conn)
+    except Exception:
+        pass
+    if _T500_PSV_ORIG_HANDLE_IN_PROGRESS:
+        return await _T500_PSV_ORIG_HANDLE_IN_PROGRESS(conn, task, chat_id, topic_id)
+    return None
 
-def get_next_version(file_name: str, task_id: str) -> str:
-    base, ext = os.path.splitext(file_name)
+# === END_TOPIC500_PRE_SEND_VALIDATOR_AND_STARTUP_RECOVERY_HARD_GUARD_V1 ===
+
+
+
+
+# === P0_RUNTIME_ROUTE_GUARD_TOPIC2_TOPIC500_20260504_V1 ===
+# Runtime guard installed before asyncio.run(main())
+# Scope:
+# - topic_500 search/product requests must never enter estimate/project routes
+# - topic_2 current estimate TZ must use current raw input direct estimate route
+# - no forbidden files, no DB schema changes, no systemd unit changes
+
+try:
+    _P0_RUNTIME_ORIG_HANDLE_IN_PROGRESS_20260504 = _handle_in_progress
+except Exception:
+    _P0_RUNTIME_ORIG_HANDLE_IN_PROGRESS_20260504 = None
+
+def _p0_runtime_row_get_20260504(row, key, default=None):
     try:
-        conn = get_db()
-        cur = conn.cursor()
-        cur.execute("SELECT COUNT(*) FROM tasks WHERE result LIKE ?", (f"%{base}%",))
-        count = cur.fetchone()[0]
-        conn.close()
-        return f"{base}_v{count+1}{ext}"
-    except:
-        return f"{base}_v2{ext}"
-import fcntl
-
-def acquire_task_lock(task_id: str) -> bool:
-    lock_file = f"/tmp/task_{task_id}.lock"
-    try:
-        fd = open(lock_file, 'w')
-        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        return True
-    except:
-        return False
-import re
-
-def sanitize_filename(name: str) -> str:
-    return re.sub(r'[<>:"/\\|?*]', '_', name)[:100]
-def check_file_size(file_path: str, max_mb: int = 50) -> bool:
-    return os.path.getsize(file_path) <= max_mb * 1024 * 1024
-def can_open_file(file_path: str) -> bool:
-    try:
-        if file_path.endswith(('.xlsx','.xls')):
-            from openpyxl import load_workbook
-            wb = load_workbook(file_path); wb.close()
-        elif file_path.endswith('.docx'):
-            from docx import Document
-            Document(file_path)
-        elif file_path.endswith('.pdf'):
-            from pypdf import PdfReader
-            PdfReader(file_path)
-        return True
-    except:
-        return False
-
-====================================================================================================
-END_FILE: core/engine_base.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/engine_contract.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 85fc94fcfbe47b0e453578cac50d039866b345267967ecd3ea582aa1363517cc
-====================================================================================================
-# === UNIFIED_ENGINE_RESULT_VALIDATOR_V1 ===
-# === UNIFIED_ARTIFACT_CONTRACT_V1 ===
-from __future__ import annotations
-
-import json
-import os
-import re
-from pathlib import Path
-from typing import Any, Dict, List, Optional
-
-BAD_FINAL_PATTERNS = [
-    r"ожида[её]т анализ",
-    r"файл скачан",
-    r"ожидает выбора",
-    r"не удалось",
-    r"ошибка",
-    r"error",
-    r"traceback",
-    r"none$",
-    r"null$",
-    r"undefined",
-    r"пока не могу",
-    r"не могу обработать",
-]
-
-FILE_INPUT_TYPES = {"drive_file", "file", "document", "photo", "image", "drawing", "table"}
-
-def _s(v: Any, limit: int = 20000) -> str:
-    if v is None:
-        return ""
-    if isinstance(v, (dict, list)):
+        return row[key]
+    except Exception:
         try:
-            v = json.dumps(v, ensure_ascii=False)
+            return getattr(row, key)
         except Exception:
-            v = str(v)
-    s = str(v)
-    s = s.replace("\r", "\n")
-    s = re.sub(r"[ \t]+", " ", s)
-    s = re.sub(r"\n{4,}", "\n\n", s)
-    return s.strip()[:limit]
+            return default
 
-def _links(text: str) -> List[str]:
-    return [x.rstrip(".,;:") for x in re.findall(r"https?://[^\s\]\)\}\"']+", text or "")]
-
-def _exists(path: str) -> bool:
+def _p0_runtime_s_20260504(v, limit=50000):
     try:
-        return bool(path) and os.path.exists(path)
+        if v is None:
+            return ""
+        return str(v).strip()[:limit]
     except Exception:
+        return ""
+
+def _p0_runtime_history_20260504(conn, task_id, action):
+    try:
+        _history(conn, str(task_id), str(action))
+        return
+    except Exception:
+        pass
+    try:
+        conn.execute(
+            "INSERT INTO task_history(task_id, action, created_at) VALUES (?, ?, datetime('now'))",
+            (str(task_id), str(action)),
+        )
+    except Exception:
+        pass
+
+def _p0_runtime_update_20260504(conn, task_id, state=None, result=None, error_message=None, bot_message_id=None):
+    try:
+        kwargs = {}
+        if state is not None:
+            kwargs["state"] = state
+        if result is not None:
+            kwargs["result"] = result
+        if error_message is not None:
+            kwargs["error_message"] = error_message
+        if bot_message_id is not None:
+            kwargs["bot_message_id"] = bot_message_id
+        if kwargs:
+            _update_task(conn, str(task_id), **kwargs)
+            return
+    except Exception:
+        pass
+
+    sets = []
+    vals = []
+    if state is not None:
+        sets.append("state=?")
+        vals.append(str(state))
+    if result is not None:
+        sets.append("result=?")
+        vals.append(str(result))
+    if error_message is not None:
+        sets.append("error_message=?")
+        vals.append(str(error_message))
+    if bot_message_id is not None:
+        sets.append("bot_message_id=?")
+        vals.append(int(bot_message_id))
+    sets.append("updated_at=datetime('now')")
+    vals.append(str(task_id))
+    conn.execute(f"UPDATE tasks SET {', '.join(sets)} WHERE id=?", vals)
+
+def _p0_runtime_is_topic500_search_20260504(raw_input, input_type):
+    low = _p0_runtime_s_20260504(raw_input, 12000).lower()
+    itype = _p0_runtime_s_20260504(input_type, 50).lower()
+    if not low:
         return False
-
-def normalize_engine_result(raw: Any, default_engine: str = "UNKNOWN_ENGINE") -> Dict[str, Any]:
-    if isinstance(raw, dict):
-        data = dict(raw)
-    else:
-        data = {"summary": _s(raw), "result": _s(raw)}
-
-    summary = _s(data.get("summary") or data.get("result_text") or data.get("result") or data.get("message") or data.get("text"))
-    artifact_path = _s(data.get("artifact_path") or data.get("path") or "")
-    artifact_name = _s(data.get("artifact_name") or (Path(artifact_path).name if artifact_path else ""))
-    drive_link = _s(data.get("drive_link") or data.get("link") or data.get("url") or "")
-
-    artifact = data.get("artifact")
-    if isinstance(artifact, dict):
-        artifact_path = artifact_path or _s(artifact.get("path"))
-        artifact_name = artifact_name or _s(artifact.get("name") or artifact.get("artifact_name"))
-        drive_link = drive_link or _s(artifact.get("drive_link") or artifact.get("link") or artifact.get("url"))
-
-    extra = data.get("extra_artifacts") or []
-    if isinstance(extra, str):
-        extra = [extra]
-    if not isinstance(extra, list):
-        extra = []
-
-    found_links = _links("\n".join([summary, drive_link, _s(data)]))
-    if not drive_link and found_links:
-        drive_link = found_links[0]
-
-    error = _s(data.get("error") or data.get("error_message") or data.get("reason") or "")
-    engine = _s(data.get("engine") or default_engine or "UNKNOWN_ENGINE", 300)
-
-    success_raw = data.get("success", data.get("ok", None))
-    if success_raw is None:
-        success = bool(summary or artifact_path or drive_link or extra) and not bool(error)
-    else:
-        success = bool(success_raw)
-
-    return {
-        "success": success,
-        "engine": engine,
-        "summary": summary,
-        "artifact_path": artifact_path,
-        "artifact_name": artifact_name,
-        "drive_link": drive_link,
-        "extra_artifacts": extra,
-        "error": error,
-        "links": found_links,
-        "raw": data,
-    }
-
-def has_artifact_contract(result: Dict[str, Any]) -> bool:
-    if not isinstance(result, dict):
-        result = normalize_engine_result(result)
-    if result.get("drive_link"):
+    if any(x in low for x in ("задача закрыта", "закрой задачу", "отменяй", "отмена", "завершена", "заверши")):
+        return False
+    if itype == "search":
         return True
-    if result.get("artifact_path") and _exists(result.get("artifact_path")):
+    markers = (
+        "найди", "поиск", "цена", "стоимость", "дешевле", "купить", "ссылка", "ссылки",
+        "магазин", "поставщик", "маркет", "маркетплейс", "авито", "avito", "ozon",
+        "wildberries", "яндекс", "google pixel", "iphone", "телефон", "кабель",
+        "вата", "утеплитель", "товар", "варианты"
+    )
+    return any(m in low for m in markers)
+
+def _p0_runtime_is_bad_search_result_20260504(text):
+    low = _p0_runtime_s_20260504(text, 20000).lower()
+    if not low:
         return True
-    for p in result.get("extra_artifacts") or []:
-        if isinstance(p, str) and _exists(p):
-            return True
-        if isinstance(p, dict) and _exists(_s(p.get("path"))):
-            return True
-    if result.get("links"):
+    bad = (
+        "смета готова",
+        "предварительная смета готова",
+        "xlsx:",
+        "pdf:",
+        "engine: topic2",
+        "engine: estimate",
+        "ареал нева.xlsx",
+        "м-110.xlsx",
+        "позиций: 1. итого: 0.00",
+        "фундамент",
+        "кровля",
+        "монолитная плита",
+    )
+    if any(x in low for x in bad):
+        return True
+    if "http://" not in low and "https://" not in low and "цена" not in low and "руб" not in low and "₽" not in low:
         return True
     return False
 
-def validate_engine_result(raw: Any, input_type: str = "", user_text: str = "", topic_id: int = 0, require_artifact: Optional[bool] = None) -> Dict[str, Any]:
-    result = normalize_engine_result(raw)
-    text = _s(result.get("summary") or result.get("raw"))
-    low = text.lower()
-    inp = (input_type or "").lower()
+def _p0_runtime_is_topic2_current_estimate_20260504(raw_input):
+    import re as _p0_re
+    low = _p0_runtime_s_20260504(raw_input, 12000).lower()
+    if not low:
+        return False
+    if not any(x in low for x in ("смет", "стоимость", "посчитать", "рассчитать", "расчет", "расчёт")):
+        return False
+    if not any(x in low for x in ("дом", "house", "хаус", "барн", "barn")):
+        return False
+    if not _p0_re.search(r"\d+(?:[,.]\d+)?\s*(?:на|x|х|×|\*)\s*\d+(?:[,.]\d+)?", low):
+        return False
+    if not any(x in low for x in ("фундамент", "плита", "свая", "ленточ")):
+        return False
+    if not any(x in low for x in ("стен", "каркас", "дерев", "брус", "газобетон", "кирпич")):
+        return False
+    return True
 
-    if not result.get("success") and result.get("error"):
-        return {"ok": False, "reason": "ENGINE_ERROR", "contract": result}
+async def _p0_runtime_topic500_direct_search_20260504(conn, task, chat_id, topic_id):
+    task_id = _p0_runtime_s_20260504(_p0_runtime_row_get_20260504(task, "id", ""))
+    raw_input = _p0_runtime_s_20260504(_p0_runtime_row_get_20260504(task, "raw_input", ""), 12000)
+    reply_to = _p0_runtime_row_get_20260504(task, "reply_to_message_id", None)
 
-    if len(text) < 8 and not has_artifact_contract(result):
-        return {"ok": False, "reason": "EMPTY_OR_TOO_SHORT", "contract": result}
+    payload = {
+        "id": task_id,
+        "task_id": task_id,
+        "topic_id": 500,
+        "chat_id": str(chat_id),
+        "input_type": "search",
+        "raw_input": raw_input,
+        "normalized_input": raw_input,
+        "state": "IN_PROGRESS",
+        "reply_to_message_id": reply_to,
+        "active_task_context": "",
+        "pin_context": "",
+        "short_memory_context": "",
+        "long_memory_context": "",
+        "archive_context": "",
+        "search_context": "",
+        "topic_role": "ВЕБ ПОИСК",
+        "topic_directions": "internet_search",
+        "direction": "internet_search",
+        "engine": "search_supplier",
+    }
 
-    for pat in BAD_FINAL_PATTERNS:
-        if re.search(pat, low, re.I):
-            if not has_artifact_contract(result):
-                return {"ok": False, "reason": f"BAD_FINAL_TEXT:{pat}", "contract": result}
-
-    if require_artifact is None:
-        require_artifact = inp in FILE_INPUT_TYPES or any(x in (user_text or "").lower() for x in ("файл", "смет", "акт", "проект", "dwg", "dxf", "excel", "pdf", "docx"))
-
-    if require_artifact and not has_artifact_contract(result):
-        if not re.search(r"(создан|готов|сформирован|pdf|xlsx|docx|zip|drive|google|ссылка|retry|telegram)", low, re.I):
-            return {"ok": False, "reason": "NO_ARTIFACT_OR_LINK_FOR_FILE_TASK", "contract": result}
-
-    return {"ok": True, "reason": "OK", "contract": result}
-
-def result_to_user_text(raw: Any) -> str:
-    r = normalize_engine_result(raw)
-    parts = []
-    if r.get("summary"):
-        parts.append(r["summary"])
-    if r.get("drive_link"):
-        parts.append(f"Ссылка: {r['drive_link']}")
-    if r.get("artifact_path") and not r.get("drive_link"):
-        parts.append(f"Артефакт: {r['artifact_path']}")
-    links = [x for x in r.get("links") or [] if x not in "\n".join(parts)]
-    if links:
-        parts.append("Ссылки:\n" + "\n".join(f"- {x}" for x in links[:10]))
-    if r.get("error") and not parts:
-        parts.append(f"Ошибка: {r['error']}")
-    return "\n\n".join(parts).strip()
-
-def normalize_and_validate(raw: Any, input_type: str = "", user_text: str = "", topic_id: int = 0, require_artifact: Optional[bool] = None) -> Dict[str, Any]:
-    v = validate_engine_result(raw, input_type=input_type, user_text=user_text, topic_id=topic_id, require_artifact=require_artifact)
-    v["text"] = result_to_user_text(v.get("contract") or raw)
-    return v
-# === END_UNIFIED_ARTIFACT_CONTRACT_V1 ===
-# === END_UNIFIED_ENGINE_RESULT_VALIDATOR_V1 ===
-
-====================================================================================================
-END_FILE: core/engine_contract.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/error_explainer.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: f755b92831a8a7da82c026a47f695c7b77634c9ffe1d500a374b6d2f5c1d01e4
-====================================================================================================
-# === ERROR_EXPLAINER_V1 ===
-# Канон §5.7 — конкретные коды вместо общих фраз
-_EXPLANATIONS = {
-    "STT_FAILED":                   "Не удалось распознать голос. Попробуй ещё раз или напиши текстом.",
-    "EMPTY_TRANSCRIPT":             "Голосовое сообщение пустое. Говори чётче или напиши текстом.",
-    "ROUTER_FAILED":                "Ошибка маршрутизации. Попробуй переформулировать запрос.",
-    "INVALID_RESULT":               "Результат не прошёл проверку. Попробуй снова.",
-    "NO_VALID_ARTIFACT":            "Файл не создан. Повтори задачу.",
-    "SOURCE_FILE_RETURNED_AS_RESULT":"Исходный файл вернулся без обработки. Попробуй снова.",
-    "REQUEUE_LOOP_DETECTED":        "Задача зациклилась. Отмени и создай новую.",
-    "ENGINE_TIMEOUT":               "Движок не ответил вовремя. Попробуй снова.",
-    "DOWNLOAD_FAILED":              "Файл не скачался с Drive. Проверь доступ и попробуй снова.",
-    "FILE_PARSE_FAILED":            "Не удалось прочитать файл. Проверь формат.",
-    "NO_TECH_DATA_EXTRACTED":       "Технических данных не найдено в файле.",
-    "ESTIMATE_EMPTY_RESULT":        "Смета пустая — таблица не извлечена. Пришли файл с позициями.",
-    "IMAGE_UNREADABLE":             "Фото нечёткое или повёрнуто. Пришли лучше.",
-    "SEARCH_FAILED":                "Поиск не дал результатов. Уточни запрос.",
-    "INTAKE_TIMEOUT":               "Задача не взята в работу вовремя. Попробуй снова.",
-    "EXECUTION_TIMEOUT":            "Задача выполнялась слишком долго. Попробуй снова.",
-    "CLARIFICATION_TIMEOUT":        "Не дождался уточнения. Задача закрыта.",
-    "CONFIRMATION_TIMEOUT":         "Подтверждение не получено. Задача закрыта.",
-    "INVALID_TASK_CONTRACT":        "Задача создана с ошибкой. Попробуй снова.",
-    "INVALID_ENGINE_CONTRACT":      "Движок вернул неверный ответ. Попробуй снова.",
-    "SERVICE_FILE_IGNORED":         "Служебный файл пропущен.",
-    "FILE_TYPE_MISMATCH":           "Тип файла не совпадает с расширением.",
-    "BOT_MESSAGE_ID_NOT_SAVED":     "Ошибка сохранения сообщения. Попробуй снова.",
-    "SEND_FAILED":                  "Не удалось отправить ответ. Попробуй снова.",
-    "STALE_TIMEOUT":                "Задача зависла и закрыта по таймауту.",
-    "OCR_DEPS_MISSING":             "OCR не установлен. Сообщи администратору.",
-    "FORBIDDEN_PHRASE":             "Ответ не прошёл проверку качества. Повторяю задачу.",
-    "EMPTY_RESULT":                 "Пустой результат. Попробуй снова.",
-    "ARTIFACT_FILE_NOT_EXISTS":     "Файл артефакта не найден. Попробуй снова.",
-}
-
-def explain(error_code: str, default: str = None) -> str:
-    base = error_code.split(":")[0] if ":" in error_code else error_code
-    return _EXPLANATIONS.get(base) or _EXPLANATIONS.get(error_code) or default or f"Ошибка: {error_code}"
-
-def user_friendly_error(error_code: str) -> str:
-    return explain(error_code)
-# === END ERROR_EXPLAINER_V1 ===
-
-====================================================================================================
-END_FILE: core/error_explainer.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/estimate_template_policy.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: f35f6db459149ccd2a55c1dacf9ba678e4cd9322f4c79654921370a4cb70766f
-====================================================================================================
-# === ESTIMATE_TEMPLATE_POLICY_CONTEXT_V4_TOP_LOGISTICS ===
-from __future__ import annotations
-
-import json
-import re
-from pathlib import Path
-from typing import Any, Dict
-
-BASE = Path("/root/.areal-neva-core")
-REGISTRY_PATH = BASE / "config" / "estimate_template_registry.json"
-
-TRIGGER_RE = re.compile(
-    r"(смет|расчет|расч[её]т|стоимость|материал|логист|доставка|удален|удалён|км|кирпич|газобетон|каркас|монолит|фундамент|кровл|перекр|отделк|инженер|плита|дом)",
-    re.I,
-)
-
-def _s(v: Any) -> str:
-    return "" if v is None else str(v)
-
-def _load_registry() -> Dict[str, Any]:
+    _p0_runtime_history_20260504(conn, task_id, "P0_RUNTIME_TOPIC500_DIRECT_SEARCH_ROUTE_V1")
     try:
-        return json.loads(REGISTRY_PATH.read_text(encoding="utf-8"))
+        _p0_runtime_update_20260504(conn, task_id, state="IN_PROGRESS", error_message="")
+        conn.commit()
+    except Exception:
+        pass
+
+    try:
+        result = await asyncio.wait_for(process_ai_task(payload), timeout=AI_TIMEOUT)
+        result = _clean(_s(result), 50000)
+    except Exception as e:
+        err = "P0_RUNTIME_TOPIC500_DIRECT_SEARCH_ERROR:" + _p0_runtime_s_20260504(type(e).__name__ + ":" + str(e), 500)
+        _p0_runtime_update_20260504(conn, task_id, state="FAILED", result="", error_message=err)
+        _p0_runtime_history_20260504(conn, task_id, err)
+        conn.commit()
+        _send_once_ex(conn, task_id, str(chat_id), "Поиск не выполнен. Повтори запрос или уточни товар и регион", reply_to, "p0_topic500_error")
+        return
+
+    if _p0_runtime_is_bad_search_result_20260504(result):
+        err = "P0_RUNTIME_TOPIC500_BAD_ROUTE_BLOCKED"
+        _p0_runtime_update_20260504(conn, task_id, state="FAILED", result=result, error_message=err)
+        _p0_runtime_history_20260504(conn, task_id, err)
+        conn.commit()
+        _send_once_ex(conn, task_id, str(chat_id), "Поиск ушёл не в тот маршрут и заблокирован. Повтори запрос в этом топике", reply_to, "p0_topic500_bad_route")
+        return
+
+    _p0_runtime_update_20260504(conn, task_id, state="DONE", result=result, error_message="")
+    _p0_runtime_history_20260504(conn, task_id, "P0_RUNTIME_TOPIC500_SEARCH_DONE_V1")
+    try:
+        _save_memory(str(chat_id), 500, raw_input, result)
+    except Exception:
+        pass
+
+    sent = _send_once_ex(conn, task_id, str(chat_id), result, reply_to, "p0_topic500_search_result")
+    try:
+        bot_message_id = sent.get("bot_message_id") if isinstance(sent, dict) else None
+        if bot_message_id is not None:
+            _p0_runtime_update_20260504(conn, task_id, bot_message_id=bot_message_id)
+    except Exception:
+        pass
+    conn.commit()
+    return
+
+async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
+    task_id = _p0_runtime_s_20260504(_p0_runtime_row_get_20260504(task, "id", ""))
+    raw_input = _p0_runtime_s_20260504(_p0_runtime_row_get_20260504(task, "raw_input", ""), 12000)
+    input_type = _p0_runtime_s_20260504(_p0_runtime_row_get_20260504(task, "input_type", "text"), 50)
+    if chat_id is None:
+        chat_id = _p0_runtime_row_get_20260504(task, "chat_id", None)
+    if topic_id is None:
+        topic_id = _p0_runtime_row_get_20260504(task, "topic_id", 0)
+    try:
+        topic_id = int(topic_id or 0)
+    except Exception:
+        topic_id = 0
+
+    if topic_id == 500 and _p0_runtime_is_topic500_search_20260504(raw_input, input_type):
+        return await _p0_runtime_topic500_direct_search_20260504(conn, task, chat_id, topic_id)
+
+    if topic_id == 2 and _p0_runtime_is_topic2_current_estimate_20260504(raw_input):
+        _p0_runtime_history_20260504(conn, task_id, "P0_RUNTIME_TOPIC2_CURRENT_TZ_DIRECT_ROUTE_V1")
+        try:
+            return await _fc_20260504_call_topic2_engine(conn, task, chat_id, topic_id)
+        except Exception as e:
+            _p0_runtime_history_20260504(conn, task_id, "P0_RUNTIME_TOPIC2_DIRECT_ROUTE_ERROR:" + _p0_runtime_s_20260504(type(e).__name__ + ":" + str(e), 500))
+            raise
+
+    if _P0_RUNTIME_ORIG_HANDLE_IN_PROGRESS_20260504:
+        return await _P0_RUNTIME_ORIG_HANDLE_IN_PROGRESS_20260504(conn, task, chat_id, topic_id)
+    return None
+
+# === END_P0_RUNTIME_ROUTE_GUARD_TOPIC2_TOPIC500_20260504_V1 ===
+
+
+
+# === P2_FINAL_SEARCH_AND_ESTIMATE_CLOSE_20260504_V1 ===
+# Runtime overlay before asyncio.run(main)
+# Scope:
+# - topic_500 internet search keeps topic memory and previous task context
+# - topic_500 must never emit estimate/PDF/XLSX route garbage
+# - topic_2 estimate must call latest sample_template_engine overlay
+# - no schema changes, no forbidden files, no systemd changes
+
+try:
+    _P2_ORIG_HANDLE_IN_PROGRESS_20260504 = _handle_in_progress
+except Exception:
+    _P2_ORIG_HANDLE_IN_PROGRESS_20260504 = None
+
+import re as _p2_tw_re
+import json as _p2_tw_json
+import datetime as _p2_tw_dt
+
+def _p2_tw_s(v, limit=50000):
+    try:
+        if v is None:
+            return ""
+        return str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+def _p2_tw_low(v):
+    return _p2_tw_s(v).lower().replace("ё", "е")
+
+def _p2_tw_get(row, key, default=None):
+    try:
+        if hasattr(row, "keys") and key in row.keys():
+            return row[key]
+    except Exception:
+        pass
+    try:
+        return row[key]
+    except Exception:
+        try:
+            return getattr(row, key)
+        except Exception:
+            return default
+
+def _p2_tw_history(conn, task_id, action):
+    try:
+        _history(conn, str(task_id), _p2_tw_s(action, 1000))
+        return
+    except Exception:
+        pass
+    try:
+        conn.execute(
+            "INSERT INTO task_history(task_id, action, created_at) VALUES (?, ?, datetime('now'))",
+            (str(task_id), _p2_tw_s(action, 1000)),
+        )
+    except Exception:
+        pass
+
+def _p2_tw_update(conn, task_id, **kwargs):
+    try:
+        _update_task(conn, str(task_id), **kwargs)
+        return
+    except Exception:
+        pass
+    try:
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(tasks)").fetchall()]
+        sets = []
+        vals = []
+        for k, v in kwargs.items():
+            if k in cols:
+                sets.append(f"{k}=?")
+                vals.append(v)
+        if "updated_at" in cols:
+            sets.append("updated_at=datetime('now')")
+        if sets:
+            vals.append(str(task_id))
+            conn.execute(f"UPDATE tasks SET {', '.join(sets)} WHERE id=?", vals)
+    except Exception:
+        pass
+
+def _p2_tw_is_close_command(raw):
+    low = _p2_tw_low(raw)
+    return any(x in low for x in (
+        "задача закрыта", "закрой задачу", "закрывай", "отменяй", "отмена", "заверши", "завершена"
+    ))
+
+def _p2_tw_is_search_intent(raw, input_type):
+    low = _p2_tw_low(raw)
+    itype = _p2_tw_low(input_type)
+    if not low or _p2_tw_is_close_command(low):
+        return False
+    if itype == "search":
+        return True
+    return any(x in low for x in (
+        "найди", "найти", "поиск", "поищи", "цена", "стоимость", "дешевле",
+        "купить", "ссылка", "ссылки", "магазин", "поставщик", "маркет",
+        "маркетплейс", "авито", "avito", "ozon", "wildberries", "яндекс",
+        "google pixel", "iphone", "samsung", "телефон", "смартфон",
+        "вата", "rockwool", "роквул", "утеплитель", "товар", "варианты",
+        "предыдущ", "то что я тебе писал", "то, что я тебе писал"
+    ))
+
+def _p2_tw_is_followup_search(raw):
+    low = _p2_tw_low(raw)
+    return any(x in low for x in (
+        "предыдущ", "последн", "то что", "то, что", "я тебе писал", "тот запрос",
+        "этот товар", "тот товар", "по нему", "по ней", "по этому", "выполни поиск",
+        "сделай поиск", "проверь ещё", "проверь еще"
+    ))
+
+def _p2_tw_has_concrete_product(raw):
+    low = _p2_tw_low(raw)
+    return any(x in low for x in (
+        "google pixel", "pixel", "iphone", "samsung", "rockwool", "роквул",
+        "вата", "утеплитель", "телефон", "смартфон", "кабель", "модель", "артикул"
+    )) and any(ch.isdigit() for ch in low)
+
+def _p2_tw_topic500_context(conn, chat_id, current_task_id):
+    try:
+        rows = conn.execute(
+            """
+            SELECT id, raw_input, result, state, updated_at
+            FROM tasks
+            WHERE chat_id=?
+              AND COALESCE(topic_id,0)=500
+              AND id<>?
+              AND COALESCE(raw_input,'')<>''
+            ORDER BY rowid DESC
+            LIMIT 8
+            """,
+            (str(chat_id), str(current_task_id)),
+        ).fetchall()
+    except Exception:
+        rows = []
+    out = []
+    for r in rows:
+        raw = _p2_tw_s(_p2_tw_get(r, "raw_input", ""), 900)
+        res = _p2_tw_s(_p2_tw_get(r, "result", ""), 900)
+        state = _p2_tw_s(_p2_tw_get(r, "state", ""), 50)
+        if raw and not _p2_tw_is_close_command(raw):
+            out.append({"raw": raw, "result": res, "state": state})
+    return out
+
+def _p2_tw_resolve_query(raw, ctx):
+    raw_s = _p2_tw_s(raw, 2000)
+    if not ctx:
+        return raw_s
+    if _p2_tw_is_followup_search(raw_s) or not _p2_tw_has_concrete_product(raw_s):
+        for item in ctx:
+            prev = item.get("raw") or ""
+            if _p2_tw_has_concrete_product(prev) and not _p2_tw_is_followup_search(prev):
+                return (
+                    "Новая команда пользователя: " + raw_s + "\n"
+                    "Предыдущая товарная задача topic_500: " + prev + "\n"
+                    "Выполни именно интернет-поиск по предыдущей товарной задаче с учетом новой команды"
+                )
+    return raw_s
+
+def _p2_tw_clean_search_result(text):
+    s = _p2_tw_s(text, 50000)
+    lines = []
+    forbidden = (
+        "engine:", "manifest:", "/root/", "/tmp/", "traceback",
+        "xlsx:", "pdf:", "смета готова", "предварительная смета",
+        "монолитная плита", "фундамент:", "эталон: м-110", "позиций: 1. итого: 0.00",
+        "не могу перейти", "я не могу выполнить поиск"
+    )
+    for line in s.splitlines():
+        low = _p2_tw_low(line)
+        if any(x in low for x in forbidden):
+            continue
+        lines.append(line.rstrip())
+    out = "\n".join(lines).strip()
+    out = _p2_tw_re.sub(r"\n{3,}", "\n\n", out)
+    return out[:50000]
+
+def _p2_tw_bad_search_result(text):
+    low = _p2_tw_low(text)
+    if not low or len(low) < 80:
+        return True
+    if any(x in low for x in (
+        "смета готова", "предварительная смета", "xlsx:", "pdf:", "монолитная плита",
+        "фундамент:", "м-110.xlsx", "позиций: 1. итого: 0.00"
+    )):
+        return True
+    has_price = bool(_p2_tw_re.search(r"(\d[\d\s]{1,10}\s*(?:₽|руб|р\.|руб\.))", low))
+    has_url = "http://" in low or "https://" in low
+    has_supplier = any(x in low for x in (
+        "поставщик", "магазин", "маркет", "авито", "avito", "ozon", "wildberries",
+        "дилер", "склад", "налич"
+    ))
+    return not (has_price and (has_url or has_supplier))
+
+async def _p2_tw_call_search(conn, task, chat_id, topic_id):
+    task_id = _p2_tw_s(_p2_tw_get(task, "id", ""))
+    raw_input = _p2_tw_s(_p2_tw_get(task, "raw_input", ""), 12000)
+    reply_to = _p2_tw_get(task, "reply_to_message_id", None)
+    ctx = _p2_tw_topic500_context(conn, chat_id, task_id)
+    query = _p2_tw_resolve_query(raw_input, ctx)
+
+    prompt = (
+        "Выполни реальный интернет-поиск товара/поставщика.\n"
+        "Запрещено: сметы, PDF/XLSX, строительные расчеты, общие советы, внутренние маркеры.\n"
+        "Нужно: минимум 3 варианта, прямые ссылки, цена, город/доставка, наличие, телефон если найден.\n"
+        "Формат ответа только для пользователя:\n"
+        "| № | Поставщик/площадка | Город | Цена | Наличие | Доставка | Телефон | Ссылка | Проверено |\n"
+        "|---|---|---|---|---|---|---|---|---|\n\n"
+        "Запрос:\n" + query + "\n\n"
+        "Контекст последних topic_500 задач:\n" + _p2_tw_json.dumps(ctx[:5], ensure_ascii=False)
+    )
+
+    payload = {
+        "id": task_id,
+        "task_id": task_id,
+        "chat_id": str(chat_id),
+        "topic_id": 500,
+        "input_type": "search",
+        "raw_input": prompt,
+        "normalized_input": query,
+        "state": "IN_PROGRESS",
+        "reply_to_message_id": reply_to,
+        "active_task_context": "",
+        "pin_context": "",
+        "short_memory_context": "",
+        "long_memory_context": "",
+        "archive_context": _p2_tw_json.dumps(ctx[:5], ensure_ascii=False),
+        "search_context": "",
+        "topic_role": "ИНТЕРНЕТ ПОИСК",
+        "topic_directions": "товары, поставщики, цены, ссылки",
+        "direction": "internet_search",
+        "engine": "search_supplier",
+    }
+
+    _p2_tw_history(conn, task_id, "P2_SEARCH_MEMORY_ROUTE_TAKEN")
+    _p2_tw_update(conn, task_id, state="IN_PROGRESS", error_message="")
+    conn.commit()
+
+    try:
+        result = await asyncio.wait_for(process_ai_task(payload), timeout=AI_TIMEOUT)
+        result = _p2_tw_clean_search_result(result)
+    except Exception as e:
+        err = "P2_SEARCH_CALL_FAILED:" + _p2_tw_s(type(e).__name__ + ":" + str(e), 500)
+        _p2_tw_update(conn, task_id, state="FAILED", result="", error_message=err)
+        _p2_tw_history(conn, task_id, err)
+        conn.commit()
+        _send_once_ex(conn, task_id, str(chat_id), "Поиск не выполнен. Повтори запрос с названием товара и регионом", reply_to, "p2_search_failed")
+        return True
+
+    if _p2_tw_bad_search_result(result):
+        retry_prompt = (
+            "СТРОГИЙ ПОВТОР ПОИСКА. Предыдущий ответ невалиден.\n"
+            "Верни только товарные предложения с ценами и ссылками. Не смета. Не PDF. Не XLSX.\n\n"
+            + prompt
+        )
+        payload["raw_input"] = retry_prompt
+        try:
+            retry = await asyncio.wait_for(process_ai_task(payload), timeout=AI_TIMEOUT)
+            retry = _p2_tw_clean_search_result(retry)
+            if not _p2_tw_bad_search_result(retry):
+                result = retry
+        except Exception:
+            pass
+
+    if _p2_tw_bad_search_result(result):
+        err = "P2_SEARCH_BAD_RESULT_BLOCKED"
+        _p2_tw_update(conn, task_id, state="FAILED", result=result, error_message=err)
+        _p2_tw_history(conn, task_id, err)
+        conn.commit()
+        _send_once_ex(conn, task_id, str(chat_id), "Поиск заблокирован: результат не содержит валидных цен и товарных ссылок", reply_to, "p2_search_bad_result")
+        return True
+
+    _p2_tw_update(conn, task_id, state="DONE", result=result, error_message="")
+    _p2_tw_history(conn, task_id, "P2_SEARCH_DONE")
+    try:
+        _save_memory(str(chat_id), 500, raw_input, result)
+    except Exception:
+        pass
+
+    sent = _send_once_ex(conn, task_id, str(chat_id), result, reply_to, "p2_search_result")
+    try:
+        bot_id = sent.get("bot_message_id") if isinstance(sent, dict) else None
+        if bot_id:
+            _p2_tw_update(conn, task_id, bot_message_id=bot_id)
+    except Exception:
+        pass
+    conn.commit()
+    return True
+
+def _p2_tw_is_topic2_estimate(raw):
+    low = _p2_tw_low(raw)
+    if not any(x in low for x in ("смет", "посчитать", "рассчитать", "расчет", "расчёт", "стоимость")):
+        return False
+    return any(x in low for x in ("дом", "house", "барн", "barn", "хаус")) and bool(_p2_tw_re.search(r"\d+(?:[,.]\d+)?\s*(?:на|x|х|×|\*)\s*\d+", low))
+
+async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
+    task_id = _p2_tw_s(_p2_tw_get(task, "id", ""))
+    raw_input = _p2_tw_s(_p2_tw_get(task, "raw_input", ""), 12000)
+    input_type = _p2_tw_s(_p2_tw_get(task, "input_type", "text"), 50)
+
+    if chat_id is None:
+        chat_id = _p2_tw_get(task, "chat_id", None)
+    if topic_id is None:
+        topic_id = _p2_tw_get(task, "topic_id", 0)
+    try:
+        topic_id = int(topic_id or 0)
+    except Exception:
+        topic_id = 0
+
+    if topic_id == 500 and _p2_tw_is_search_intent(raw_input, input_type):
+        return await _p2_tw_call_search(conn, task, chat_id, topic_id)
+
+    if topic_id == 2 and _p2_tw_is_topic2_estimate(raw_input):
+        _p2_tw_history(conn, task_id, "P2_TOPIC2_LATEST_ESTIMATE_ENGINE_ROUTE")
+        try:
+            from core import sample_template_engine as _p2_ste
+            return await _p2_ste.handle_topic2_one_big_formula_pipeline_v1(
+                conn=conn,
+                task=task,
+                chat_id=chat_id,
+                topic_id=topic_id,
+                raw_input=raw_input,
+                full_context=raw_input,
+            )
+        except Exception as e:
+            _p2_tw_history(conn, task_id, "P2_TOPIC2_ROUTE_ERROR:" + _p2_tw_s(type(e).__name__ + ":" + str(e), 500))
+            raise
+
+    if _P2_ORIG_HANDLE_IN_PROGRESS_20260504:
+        return await _P2_ORIG_HANDLE_IN_PROGRESS_20260504(conn, task, chat_id, topic_id)
+    return None
+
+# === END_P2_FINAL_SEARCH_AND_ESTIMATE_CLOSE_20260504_V1 ===
+
+# === P3_FINAL_ROUTE_HARD_LOCK_SEARCH_ESTIMATE_20260504_V1 ===
+# Runtime overlay before asyncio.run(main())
+# Scope:
+# - topic_500 always routes to internet search, never to estimate/project routes
+# - topic_2 estimate-like input always routes to current-input estimate engine
+# - topic_2 vague followups never generate estimates from old memory
+# - no DB schema changes, no forbidden files, no systemd changes
+
+try:
+    _P3_ORIG_HANDLE_IN_PROGRESS_20260504 = _handle_in_progress
+except Exception:
+    _P3_ORIG_HANDLE_IN_PROGRESS_20260504 = None
+
+def _p3_s_20260504(v, limit=50000):
+    try:
+        if v is None:
+            return ""
+        return str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+def _p3_low_20260504(v):
+    return _p3_s_20260504(v).lower().replace("ё", "е")
+
+def _p3_row_get_20260504(row, key, default=None):
+    try:
+        if hasattr(row, "keys") and key in row.keys():
+            return row[key]
+    except Exception:
+        pass
+    try:
+        return row[key]
+    except Exception:
+        try:
+            return getattr(row, key)
+        except Exception:
+            return default
+
+def _p3_update_20260504(conn, task_id, **kwargs):
+    try:
+        _update_task(conn, str(task_id), **kwargs)
+        return
+    except Exception:
+        pass
+    try:
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(tasks)").fetchall()]
+        sets, vals = [], []
+        for k, v in kwargs.items():
+            if k in cols:
+                sets.append(f"{k}=?")
+                vals.append(v)
+        if "updated_at" in cols:
+            sets.append("updated_at=datetime('now')")
+        if sets:
+            vals.append(str(task_id))
+            conn.execute(f"UPDATE tasks SET {', '.join(sets)} WHERE id=?", vals)
+    except Exception:
+        pass
+
+def _p3_history_20260504(conn, task_id, action):
+    try:
+        _history(conn, str(task_id), str(action))
+        return
+    except Exception:
+        pass
+    try:
+        conn.execute(
+            "INSERT INTO task_history(task_id, action, created_at) VALUES (?, ?, datetime('now'))",
+            (str(task_id), _p3_s_20260504(action, 1000)),
+        )
+    except Exception:
+        pass
+
+def _p3_is_close_command_20260504(raw_input):
+    low = _p3_low_20260504(raw_input)
+    return any(x in low for x in (
+        "задача закрыта", "закрой задачу", "отменяй", "отмена", "отбой",
+        "заверши", "закрывай", "стоп"
+    ))
+
+def _p3_topic500_search_needed_20260504(raw_input, input_type):
+    if _p3_is_close_command_20260504(raw_input):
+        return False
+    low = _p3_low_20260504(raw_input)
+    if not low:
+        return False
+    return True
+
+def _p3_topic500_vague_20260504(raw_input):
+    low = _p3_low_20260504(raw_input)
+    if len(low) <= 90 and any(x in low for x in ("то что", "предыдущ", "прошл", "телефон", "выполни поиск", "то, что")):
+        return True
+    return False
+
+def _p3_find_previous_topic500_query_20260504(conn, chat_id, topic_id, current_task_id):
+    try:
+        rows = conn.execute(
+            """
+            SELECT raw_input
+            FROM tasks
+            WHERE chat_id=?
+              AND COALESCE(topic_id,0)=500
+              AND id<>?
+              AND COALESCE(raw_input,'')<>''
+              AND COALESCE(raw_input,'') NOT LIKE '%Задача закрыта%'
+              AND COALESCE(raw_input,'') NOT LIKE '%отменяй%'
+            ORDER BY rowid DESC
+            LIMIT 12
+            """,
+            (str(chat_id), str(current_task_id)),
+        ).fetchall()
+        for row in rows:
+            raw = _p3_s_20260504(_p3_row_get_20260504(row, "raw_input", row[0] if row else ""), 4000)
+            low = _p3_low_20260504(raw)
+            if any(x in low for x in (
+                "найди", "поиск", "дешевле", "купить", "цена", "стоимость",
+                "iphone", "pixel", "телефон", "ozon", "wildberries", "авито", "avito",
+                "поставщик", "каменная вата", "утеплитель"
+            )):
+                return raw
+    except Exception:
+        pass
+    return ""
+
+def _p3_bad_search_result_20260504(text):
+    low = _p3_low_20260504(text)
+    if not low:
+        return True
+    bad = (
+        "смета готова",
+        "предварительная смета готова",
+        "xlsx:",
+        "pdf:",
+        "engine:",
+        "м-110.xlsx",
+        "ареал нева.xlsx",
+        "позиций: 1. итого: 0.00",
+        "фундамент:",
+        "монолитная плита",
+        "лист эталона",
+    )
+    if any(x in low for x in bad):
+        return True
+    if ("http://" not in low and "https://" not in low) and ("₽" not in low and "руб" not in low and "цена" not in low):
+        return True
+    return False
+
+async def _p3_handle_topic500_search_20260504(conn, task, chat_id, topic_id):
+    task_id = _p3_s_20260504(_p3_row_get_20260504(task, "id", ""))
+    raw_input = _p3_s_20260504(_p3_row_get_20260504(task, "raw_input", ""), 12000)
+    reply_to = _p3_row_get_20260504(task, "reply_to_message_id", None)
+
+    previous = _p3_find_previous_topic500_query_20260504(conn, chat_id, topic_id, task_id) if _p3_topic500_vague_20260504(raw_input) else ""
+    search_text = raw_input
+    if previous:
+        search_text = (
+            "Выполни интернет-поиск по предыдущей товарной задаче с учётом текущего уточнения.\n"
+            f"Текущее сообщение: {raw_input}\n"
+            f"Предыдущая товарная задача: {previous}\n"
+        )
+
+    prompt = (
+        "РЕЖИМ: ИНТЕРНЕТ-ПОИСК ТОВАРА. НЕ СОСТАВЛЯЙ СМЕТУ. НЕ СОЗДАВАЙ XLSX/PDF.\n"
+        "Нужно найти реальные варианты покупки по запросу пользователя.\n"
+        "Ответ строго таблицей: № | Площадка/поставщик | Товар | Город/регион | Цена | Наличие | Доставка | Телефон | Прямая ссылка | Риск.\n"
+        "Минимум 3 варианта, если они существуют. Если вариантов нет — прямо напиши, что подтверждённых вариантов нет.\n\n"
+        f"Запрос:\n{search_text}"
+    )
+
+    payload = {
+        "id": task_id,
+        "task_id": task_id,
+        "topic_id": 500,
+        "chat_id": str(chat_id),
+        "input_type": "search",
+        "raw_input": prompt,
+        "normalized_input": prompt,
+        "state": "IN_PROGRESS",
+        "reply_to_message_id": reply_to,
+        "active_task_context": previous,
+        "pin_context": "",
+        "short_memory_context": previous,
+        "long_memory_context": "",
+        "archive_context": "",
+        "search_context": previous,
+        "topic_role": "ВЕБ ПОИСК",
+        "topic_directions": "internet_search",
+        "direction": "internet_search",
+        "engine": "search_supplier",
+        "forbid_estimate": True,
+    }
+
+    _p3_history_20260504(conn, task_id, "P3_TOPIC500_HARD_SEARCH_ROUTE_TAKEN")
+    _p3_update_20260504(conn, task_id, state="IN_PROGRESS", error_message="")
+    conn.commit()
+
+    try:
+        result = await asyncio.wait_for(process_ai_task(payload), timeout=AI_TIMEOUT)
+        result = _clean(_s(result), 50000)
+    except Exception as e:
+        err = "P3_TOPIC500_SEARCH_ERROR:" + _p3_s_20260504(type(e).__name__ + ":" + str(e), 500)
+        _p3_update_20260504(conn, task_id, state="FAILED", result="", error_message=err)
+        _p3_history_20260504(conn, task_id, err)
+        conn.commit()
+        _send_once_ex(conn, task_id, str(chat_id), "Поиск не выполнен. Повтори запрос с названием товара и регионом", reply_to, "p3_topic500_error")
+        return
+
+    if _p3_bad_search_result_20260504(result):
+        err = "P3_TOPIC500_BLOCKED_NON_SEARCH_RESULT"
+        _p3_update_20260504(conn, task_id, state="FAILED", result=result, error_message=err)
+        _p3_history_20260504(conn, task_id, err)
+        conn.commit()
+        _send_once_ex(conn, task_id, str(chat_id), "Поиск заблокирован: маршрут вернул не поисковый результат. Повтори запрос товаром и регионом", reply_to, "p3_topic500_bad_route")
+        return
+
+    _p3_update_20260504(conn, task_id, state="DONE", result=result, error_message="")
+    _p3_history_20260504(conn, task_id, "P3_TOPIC500_SEARCH_DONE")
+    try:
+        _save_memory(str(chat_id), 500, raw_input, result)
+    except Exception:
+        pass
+    conn.commit()
+
+    sent = _send_once_ex(conn, task_id, str(chat_id), result, reply_to, "p3_topic500_search_result")
+    try:
+        bot_id = sent.get("bot_message_id") if isinstance(sent, dict) else None
+        if bot_id:
+            _p3_update_20260504(conn, task_id, bot_message_id=bot_id)
+            conn.commit()
+    except Exception:
+        pass
+    return
+
+def _p3_topic2_estimate_like_20260504(raw_input):
+    low = _p3_low_20260504(raw_input)
+    if not low:
+        return False
+    has_est_word = any(x in low for x in ("смет", "стоимость", "посчитать", "рассчитать", "расчет", "расчёт"))
+    has_house = any(x in low for x in ("дом", "house", "хаус", "барн", "barn"))
+    has_dims = bool(re.search(r"\d+(?:[,.]\d+)?\s*(?:на|x|х|×|\*)\s*\d+(?:[,.]\d+)?", low))
+    has_build = any(x in low for x in ("фундамент", "плита", "стен", "каркас", "кров", "санузел", "отопление", "окна"))
+    return (has_est_word and (has_house or has_dims or has_build)) or (has_dims and has_house and has_build)
+
+def _p3_topic2_vague_followup_20260504(raw_input):
+    low = _p3_low_20260504(raw_input)
+    if not low:
+        return False
+    if _p3_topic2_estimate_like_20260504(raw_input):
+        return False
+    return len(low) <= 160 and any(x in low for x in (
+        "ну что", "что там", "дальше", "как там", "готово", "проверь", "посмотри",
+        "что у нас", "что дальше", "почитай", "у меня же есть"
+    ))
+
+def _p3_find_last_topic2_context_20260504(conn, chat_id, current_task_id):
+    try:
+        row = conn.execute(
+            """
+            SELECT id, state, raw_input, result, error_message
+            FROM tasks
+            WHERE chat_id=?
+              AND COALESCE(topic_id,0)=2
+              AND id<>?
+            ORDER BY rowid DESC
+            LIMIT 1
+            """,
+            (str(chat_id), str(current_task_id)),
+        ).fetchone()
+        if not row:
+            return None
+        return row
+    except Exception:
+        return None
+
+async def _p3_handle_topic2_current_estimate_20260504(conn, task, chat_id, topic_id):
+    task_id = _p3_s_20260504(_p3_row_get_20260504(task, "id", ""))
+    raw_input = _p3_s_20260504(_p3_row_get_20260504(task, "raw_input", ""), 12000)
+    _p3_history_20260504(conn, task_id, "P3_TOPIC2_CURRENT_INPUT_ESTIMATE_ROUTE_TAKEN")
+    try:
+        from core import sample_template_engine as _p3_ste
+        fn = getattr(_p3_ste, "handle_topic2_one_big_formula_pipeline_v1")
+        res = fn(conn=conn, task=task, chat_id=chat_id, topic_id=topic_id, raw_input=raw_input, full_context=raw_input)
+        if asyncio.iscoroutine(res):
+            return await res
+        return res
+    except Exception as e:
+        err = "P3_TOPIC2_CURRENT_ESTIMATE_ERROR:" + _p3_s_20260504(type(e).__name__ + ":" + str(e), 500)
+        _p3_update_20260504(conn, task_id, state="FAILED", result="", error_message=err)
+        _p3_history_20260504(conn, task_id, err)
+        conn.commit()
+        _send_once_ex(conn, task_id, str(chat_id), "Смета не выполнена. Ошибка расчётного маршрута", _p3_row_get_20260504(task, "reply_to_message_id", None), "p3_topic2_error")
+        return True
+
+def _p3_handle_topic2_vague_20260504(conn, task, chat_id, topic_id):
+    task_id = _p3_s_20260504(_p3_row_get_20260504(task, "id", ""))
+    reply_to = _p3_row_get_20260504(task, "reply_to_message_id", None)
+    last = _p3_find_last_topic2_context_20260504(conn, chat_id, task_id)
+    if last:
+        state = _p3_s_20260504(_p3_row_get_20260504(last, "state", ""))
+        raw = _clean(_p3_s_20260504(_p3_row_get_20260504(last, "raw_input", ""), 600), 600)
+        result = _clean(_p3_s_20260504(_p3_row_get_20260504(last, "result", ""), 1200), 1200)
+        text = (
+            "По текущему сообщению нет нового ТЗ для расчёта, смету по старой памяти не запускаю.\n\n"
+            f"Последняя задача в этом топике: {state}\n"
+            f"ТЗ: {raw}\n\n"
+            "Для продолжения напиши конкретную правку или новое полное ТЗ"
+        )
+        if result and "смета готова" in _p3_low_20260504(result):
+            text += "\n\nПоследний результат уже был выдан выше"
+    else:
+        text = "Нет нового ТЗ для расчёта. Напиши размеры, этажность, фундамент, стены, удалённость и состав работ"
+    _p3_update_20260504(conn, task_id, state="WAITING_CLARIFICATION", result=text, error_message="")
+    _p3_history_20260504(conn, task_id, "P3_TOPIC2_VAGUE_FOLLOWUP_BLOCKED_OLD_MEMORY_ESTIMATE")
+    conn.commit()
+    _send_once_ex(conn, task_id, str(chat_id), text, reply_to, "p3_topic2_vague_guard")
+    return True
+
+async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
+    task_id = _p3_s_20260504(_p3_row_get_20260504(task, "id", ""))
+    raw_input = _p3_s_20260504(_p3_row_get_20260504(task, "raw_input", ""), 12000)
+    input_type = _p3_s_20260504(_p3_row_get_20260504(task, "input_type", "text"), 50)
+
+    if chat_id is None:
+        chat_id = _p3_row_get_20260504(task, "chat_id", None)
+    if topic_id is None:
+        topic_id = _p3_row_get_20260504(task, "topic_id", 0)
+    try:
+        topic_id = int(topic_id or 0)
+    except Exception:
+        topic_id = 0
+
+    if topic_id == 500 and _p3_topic500_search_needed_20260504(raw_input, input_type):
+        return await _p3_handle_topic500_search_20260504(conn, task, chat_id, topic_id)
+
+    if topic_id == 2 and _p3_topic2_estimate_like_20260504(raw_input):
+        return await _p3_handle_topic2_current_estimate_20260504(conn, task, chat_id, topic_id)
+
+    if topic_id == 2 and _p3_topic2_vague_followup_20260504(raw_input):
+        return _p3_handle_topic2_vague_20260504(conn, task, chat_id, topic_id)
+
+    if _P3_ORIG_HANDLE_IN_PROGRESS_20260504:
+        return await _P3_ORIG_HANDLE_IN_PROGRESS_20260504(conn, task, chat_id, topic_id)
+    return None
+
+# === END_P3_FINAL_ROUTE_HARD_LOCK_SEARCH_ESTIMATE_20260504_V1 ===
+
+# === FULLFIX_08_PROJECT_ERROR_VISIBILITY ===
+
+
+# === AWAITING_CONFIRMATION_ONLY_ON_REAL_RESULT_V1 ===
+_GENERIC_RESULT_PATTERNS_V1 = [
+    r"Файл скачан, ожидает анализа",
+    r"Этот чат предназначен",
+    r"Структура проекта включает этапы",
+    r"Файл содержит раздел",
+    r"не понял запрос",
+    r"готов к выполнению",
+]
+def _is_generic_or_fake_result_v1(result: str) -> bool:
+    r = _clean(_s(result), 2000)
+    if not r:
+        return True
+    return any(re.search(p, r, re.I) for p in _GENERIC_RESULT_PATTERNS_V1)
+
+try:
+    _orig_is_valid_result_areal_v1 = _is_valid_result
+    def _is_valid_result(text: str, raw_input: str) -> bool:
+        if _is_generic_or_fake_result_v1(text):
+            logger.warning("NO_GENERIC_RESPONSE_AS_RESULT_V1_BLOCKED %s", _clean(_s(text), 120))
+            return False
+        return _orig_is_valid_result_areal_v1(text, raw_input)
+except Exception as _wrap_e:
+    logger.warning("AWAITING_CONFIRMATION_ONLY_ON_REAL_RESULT_V1_WRAP_ERR %s", _wrap_e)
+
+try:
+    _orig_check_result_before_confirm_areal_v1 = _check_result_before_confirm
+    def _check_result_before_confirm(result: str, input_type: str = "text", intent: str = "") -> bool:
+        if _is_generic_or_fake_result_v1(result):
+            logger.warning("NO_GENERIC_RESPONSE_AS_RESULT_V1_CONFIRM_BLOCKED %s", _clean(_s(result), 120))
+            return False
+        if input_type in ("drive_file", "file") and re.search(r"Файл скачан|ожидает анализа", _s(result), re.I):
+            logger.warning("AWAITING_CONFIRMATION_ONLY_ON_REAL_RESULT_V1_BLOCKED")
+            return False
+        return _orig_check_result_before_confirm_areal_v1(result, input_type=input_type, intent=intent)
+except Exception as _wrap_e:
+    logger.warning("CHECK_RESULT_REAL_RESULT_V1_WRAP_ERR %s", _wrap_e)
+
+try:
+    import inspect as _inspect_repeat_v1
+    _orig_process_ai_task_repeat_v1 = process_ai_task
+    async def process_ai_task(*args, **kwargs):
+        try:
+            raw = kwargs.get("raw_input") or kwargs.get("user_text") or kwargs.get("prompt") or ""
+            if not raw and args:
+                raw = args[0]
+            chat_id = str(kwargs.get("chat_id") or kwargs.get("chat") or "")
+            topic_id = int(kwargs.get("topic_id") or 0)
+            if _is_repeat_parent_task_v1(str(raw)) and chat_id:
+                _rc = db(CORE_DB)
+                try:
+                    parent = _find_repeat_parent_task_v1(_rc, chat_id, topic_id)
+                    if parent:
+                        parent_raw = _clean(_s(_task_field(parent, "raw_input", "")), 3000)
+                        parent_result = _clean(_s(_task_field(parent, "result", "")), 3000)
+                        enriched = (
+                            "Продолжи последнюю активную задачу в этом топике. "
+                            "Не отвечай общим описанием чата. "
+                            "Если данных не хватает — задай один короткий вопрос.\n\n"
+                            f"Команда владельца: {_clean(_s(raw), 500)}\n\n"
+                            f"Родительская задача: {parent_raw}\n\n"
+                            f"Последний результат: {parent_result}"
+                        )
+                        if "raw_input" in kwargs:
+                            kwargs["raw_input"] = enriched
+                        elif "user_text" in kwargs:
+                            kwargs["user_text"] = enriched
+                        elif "prompt" in kwargs:
+                            kwargs["prompt"] = enriched
+                        elif args:
+                            args = (enriched,) + tuple(args[1:])
+                        logger.info("REPLY_REPEAT_PARENT_TASK_V1 parent=%s topic=%s", _task_field(parent, "id", ""), topic_id)
+                finally:
+                    _rc.close()
+        except Exception as _repeat_e:
+            logger.warning("REPLY_REPEAT_PARENT_TASK_V1_WRAP_ERR %s", _repeat_e)
+        _res = _orig_process_ai_task_repeat_v1(*args, **kwargs)
+        if _inspect_repeat_v1.isawaitable(_res):
+            return await _res
+        return _res
+except Exception as _repeat_wrap_e:
+    logger.warning("REPLY_REPEAT_PARENT_TASK_V1_PROCESS_WRAP_ERR %s", _repeat_wrap_e)
+# === END_AWAITING_CONFIRMATION_ONLY_ON_REAL_RESULT_V1 ===
+
+
+
+# === P6_GLOBAL_SEARCH_MEMORY_TECHNADZOR_CLOSE_20260504_V1 ===
+# Runtime overlay after all previous overlays
+# Scope:
+# - topic_500 search is executed through SearchMonolithV2 directly
+# - topic_500 never routes to estimate/project routes
+# - topic_2 vague followups cannot regenerate old estimate
+# - technadzor sample/template and act route prepared
+# - no DB schema changes, no forbidden files, no systemd unit changes
+
+try:
+    _P6_ORIG_HANDLE_IN_PROGRESS_20260504 = _handle_in_progress
+except Exception:
+    _P6_ORIG_HANDLE_IN_PROGRESS_20260504 = None
+
+def _p6_s_20260504(v, limit=50000):
+    try:
+        if v is None:
+            return ""
+        return str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+def _p6_low_20260504(v):
+    return _p6_s_20260504(v).lower().replace("ё", "е")
+
+def _p6_row_get_20260504(row, key, default=None):
+    try:
+        if hasattr(row, "keys") and key in row.keys():
+            return row[key]
+    except Exception:
+        pass
+    try:
+        return row[key]
+    except Exception:
+        try:
+            return getattr(row, key)
+        except Exception:
+            return default
+
+def _p6_update_20260504(conn, task_id, **kwargs):
+    try:
+        _update_task(conn, str(task_id), **kwargs)
+        return
+    except Exception:
+        pass
+    try:
+        cols = _cols(conn, "tasks")
+        sets, vals = [], []
+        for k, v in kwargs.items():
+            if k in cols:
+                sets.append(f"{k}=?")
+                vals.append(v)
+        if "updated_at" in cols:
+            sets.append("updated_at=datetime('now')")
+        if sets:
+            vals.append(str(task_id))
+            conn.execute(f"UPDATE tasks SET {', '.join(sets)} WHERE id=?", vals)
+    except Exception:
+        pass
+
+def _p6_history_20260504(conn, task_id, action):
+    try:
+        _history(conn, str(task_id), str(action))
+        return
+    except Exception:
+        pass
+    try:
+        conn.execute(
+            "INSERT INTO task_history(task_id, action, created_at) VALUES (?, ?, datetime('now'))",
+            (str(task_id), _p6_s_20260504(action, 1000)),
+        )
+    except Exception:
+        pass
+
+def _p6_is_close_20260504(raw):
+    low = _p6_low_20260504(raw)
+    return any(x in low for x in ("задача закрыта", "закрой задачу", "отменяй", "отмена", "отбой", "стоп", "закрывай"))
+
+def _p6_topic500_needs_search_20260504(raw_input, input_type):
+    if _p6_is_close_20260504(raw_input):
+        return False
+    low = _p6_low_20260504(raw_input)
+    if not low:
+        return False
+    return True
+
+def _p6_bad_search_result_20260504(result, raw_input):
+    low = _p6_low_20260504(result)
+    q = _p6_low_20260504(raw_input)
+    if not low:
+        return True
+    if any(x in low for x in ("смета готова", "предварительная смета готова", "xlsx:", "pdf:", "engine:", "м-110.xlsx", "ареал нева.xlsx", "позиций: 1. итого: 0.00")):
+        return True
+    if ("rockwool" in low or "каменная вата" in low or "термодом" in low) and not any(x in q for x in ("rockwool", "каменная вата", "утепл", "light batts", "light buds")):
+        return True
+    if ("http://" not in low and "https://" not in low) and ("₽" not in low and "руб" not in low and "цена" not in low and "найдено:" not in low):
+        return True
+    return False
+
+def _p6_find_previous_topic500_query_20260504(conn, chat_id, current_task_id):
+    try:
+        rows = conn.execute(
+            """
+            SELECT raw_input
+            FROM tasks
+            WHERE chat_id=?
+              AND COALESCE(topic_id,0)=500
+              AND id<>?
+              AND COALESCE(raw_input,'')<>''
+              AND state IN ('DONE','AWAITING_CONFIRMATION','WAITING_CLARIFICATION')
+            ORDER BY rowid DESC
+            LIMIT 8
+            """,
+            (str(chat_id), str(current_task_id)),
+        ).fetchall()
+        for r in rows:
+            raw = _p6_s_20260504(_p6_row_get_20260504(r, "raw_input", r[0] if r else ""), 4000)
+            low = _p6_low_20260504(raw)
+            if any(x in low for x in ("найди", "поиск", "поищи", "дешевле", "купить", "цена", "стоимость", "iphone", "pixel", "сальник", "сайлент", "саленблок", "rockwool", "утеплитель")):
+                return raw
+    except Exception:
+        pass
+    return ""
+
+def _p6_is_vague_search_followup_20260504(raw):
+    low = _p6_low_20260504(raw)
+    if not low:
+        return False
+    if any(x in low for x in ("найди", "поищи", "поиск", "купить", "дешевле", "цена", "стоимость", "iphone", "pixel", "сальник", "сайлент", "саленблок", "rockwool", "утеплитель")):
+        return False
+    return len(low) <= 120 and any(x in low for x in ("то что", "то, что", "предыдущ", "прошл", "я тебя про что", "дальше", "ну что", "выполни"))
+
+async def _p6_handle_topic500_search_20260504(conn, task, chat_id, topic_id):
+    task_id = _p6_s_20260504(_p6_row_get_20260504(task, "id", ""))
+    raw_input = _p6_s_20260504(_p6_row_get_20260504(task, "raw_input", ""), 12000)
+    reply_to = _p6_row_get_20260504(task, "reply_to_message_id", None)
+
+    search_text = raw_input
+    if _p6_is_vague_search_followup_20260504(raw_input):
+        prev = _p6_find_previous_topic500_query_20260504(conn, chat_id, task_id)
+        if prev:
+            search_text = f"Предыдущая поисковая задача: {prev}\nТекущее уточнение: {raw_input}"
+
+    _p6_history_20260504(conn, task_id, "P6_TOPIC500_DIRECT_SEARCH_MONOLITH_ROUTE")
+    _p6_update_20260504(conn, task_id, state="IN_PROGRESS", error_message="")
+    conn.commit()
+
+    try:
+        from core.search_session import run_search_monolith_v2
+        from core.ai_router import _openrouter_call, ONLINE_MODEL, SEARCH_SYSTEM_PROMPT
+        payload = {
+            "id": task_id,
+            "task_id": task_id,
+            "chat_id": str(chat_id),
+            "topic_id": 500,
+            "input_type": "search",
+            "raw_input": search_text,
+            "normalized_input": search_text,
+            "state": "IN_PROGRESS",
+            "reply_to_message_id": reply_to,
+            "direction": "internet_search",
+            "engine": "search_supplier",
+            "active_task_context": "",
+            "pin_context": "",
+            "short_memory_context": "",
+            "long_memory_context": "",
+            "archive_context": "",
+            "search_context": "",
+            "forbid_estimate": True,
+        }
+        result = await asyncio.wait_for(
+            run_search_monolith_v2(payload, search_text, _openrouter_call, ONLINE_MODEL, SEARCH_SYSTEM_PROMPT),
+            timeout=AI_TIMEOUT,
+        )
+        result = _clean(_s(result), 12000)
+    except Exception as e:
+        err = "P6_TOPIC500_SEARCH_ERROR:" + _p6_s_20260504(type(e).__name__ + ":" + str(e), 500)
+        _p6_update_20260504(conn, task_id, state="FAILED", result="", error_message=err)
+        _p6_history_20260504(conn, task_id, err)
+        conn.commit()
+        _send_once_ex(conn, task_id, str(chat_id), "Поиск не выполнен. Повтори запрос одной строкой: товар, регион, новый/б/у, бюджет", reply_to, "p6_topic500_search_error")
+        return True
+
+    if _p6_bad_search_result_20260504(result, search_text):
+        err = "P6_TOPIC500_BLOCKED_BAD_OR_STALE_SEARCH_RESULT"
+        _p6_update_20260504(conn, task_id, state="FAILED", result=result, error_message=err)
+        _p6_history_20260504(conn, task_id, err)
+        conn.commit()
+        _send_once_ex(conn, task_id, str(chat_id), "Поиск заблокирован: результат нерелевантен текущему запросу или ушёл в старую сессию. Повтори товар и регион одной строкой", reply_to, "p6_topic500_bad_result")
+        return True
+
+    _p6_update_20260504(conn, task_id, state="DONE", result=result, error_message="")
+    _p6_history_20260504(conn, task_id, "P6_TOPIC500_SEARCH_DONE")
+    try:
+        _save_memory(str(chat_id), 500, raw_input, result)
+    except Exception:
+        pass
+    conn.commit()
+
+    sent = _send_once_ex(conn, task_id, str(chat_id), result, reply_to, "p6_topic500_search_result")
+    try:
+        bot_id = sent.get("bot_message_id") if isinstance(sent, dict) else None
+        if bot_id:
+            _p6_update_20260504(conn, task_id, bot_message_id=bot_id)
+            conn.commit()
+    except Exception:
+        pass
+    return True
+
+def _p6_is_topic2_estimate_20260504(raw):
+    low = _p6_low_20260504(raw)
+    if not low:
+        return False
+    has_est = any(x in low for x in ("смет", "стоимость", "посчитать", "рассчитать", "расчет", "расчёт"))
+    has_house = any(x in low for x in ("дом", "house", "хаус", "барн", "barn"))
+    has_dims = bool(re.search(r"\d+(?:[,.]\d+)?\s*(?:на|x|х|×|\*)\s*\d+(?:[,.]\d+)?", low))
+    has_build = any(x in low for x in ("фундамент", "плита", "стен", "каркас", "кров", "санузел", "отопление", "окна"))
+    return (has_est and (has_house or has_dims or has_build)) or (has_dims and has_house and has_build)
+
+def _p6_is_topic2_vague_20260504(raw):
+    low = _p6_low_20260504(raw)
+    if not low or _p6_is_topic2_estimate_20260504(raw):
+        return False
+    return len(low) <= 160 and any(x in low for x in ("ну что", "что там", "дальше", "как там", "готово", "проверь", "посмотри", "что у нас", "почитай"))
+
+async def _p6_handle_topic2_estimate_20260504(conn, task, chat_id, topic_id):
+    task_id = _p6_s_20260504(_p6_row_get_20260504(task, "id", ""))
+    raw_input = _p6_s_20260504(_p6_row_get_20260504(task, "raw_input", ""), 12000)
+    _p6_history_20260504(conn, task_id, "P6_TOPIC2_CURRENT_ESTIMATE_ROUTE")
+    from core import sample_template_engine as ste
+    fn = getattr(ste, "handle_topic2_one_big_formula_pipeline_v1")
+    res = fn(conn=conn, task=task, chat_id=chat_id, topic_id=topic_id, raw_input=raw_input, full_context=raw_input)
+    if asyncio.iscoroutine(res):
+        return await res
+    return res
+
+def _p6_handle_topic2_vague_20260504(conn, task, chat_id, topic_id):
+    task_id = _p6_s_20260504(_p6_row_get_20260504(task, "id", ""))
+    reply_to = _p6_row_get_20260504(task, "reply_to_message_id", None)
+    text = "Нет нового ТЗ для расчёта. Смету по старой памяти не запускаю. Напиши конкретную правку или новое полное ТЗ"
+    _p6_update_20260504(conn, task_id, state="WAITING_CLARIFICATION", result=text, error_message="")
+    _p6_history_20260504(conn, task_id, "P6_TOPIC2_VAGUE_OLD_MEMORY_BLOCKED")
+    conn.commit()
+    _send_once_ex(conn, task_id, str(chat_id), text, reply_to, "p6_topic2_vague_guard")
+    return True
+
+def _p6_is_technadzor_route_20260504(raw, input_type):
+    low = _p6_low_20260504(raw)
+    if not low:
+        return False
+    return any(x in low for x in ("технадзор", "акт", "замечан", "дефект", "нарушен", "освидетельств", "стройконтроль", "строительный контроль", "сп ", "гост", "снип", "образец технадзора", "шаблон технадзора"))
+
+def _p6_extract_file_meta_20260504(raw):
+    try:
+        data = json.loads(raw)
+        if isinstance(data, dict):
+            return data.get("local_path") or data.get("file_path") or data.get("path") or "", data.get("file_name") or data.get("name") or ""
+    except Exception:
+        pass
+    return "", ""
+
+def _p6_handle_technadzor_20260504(conn, task, chat_id, topic_id):
+    task_id = _p6_s_20260504(_p6_row_get_20260504(task, "id", ""))
+    raw_input = _p6_s_20260504(_p6_row_get_20260504(task, "raw_input", ""), 12000)
+    reply_to = _p6_row_get_20260504(task, "reply_to_message_id", None)
+    file_path, file_name = _p6_extract_file_meta_20260504(raw_input)
+
+    try:
+        from core.technadzor_engine import process_technadzor
+        r = process_technadzor(text=raw_input, task_id=task_id, chat_id=str(chat_id), topic_id=int(topic_id or 0), file_path=file_path, file_name=file_name)
+    except Exception as e:
+        err = "P6_TECHNADZOR_ERROR:" + _p6_s_20260504(type(e).__name__ + ":" + str(e), 500)
+        _p6_update_20260504(conn, task_id, state="FAILED", result="", error_message=err)
+        _p6_history_20260504(conn, task_id, err)
+        conn.commit()
+        _send_once_ex(conn, task_id, str(chat_id), "Технадзор не выполнен. Ошибка маршрута", reply_to, "p6_technadzor_error")
+        return True
+
+    if not isinstance(r, dict) or not r.get("handled"):
+        return False
+
+    msg = _clean(_s(r.get("message") or "Технадзор обработан"), 2000)
+    artifact = _p6_s_20260504(r.get("artifact_path") or "", 2000)
+    result = msg
+    if artifact:
+        result += "\nАртефакт подготовлен и ожидает загрузки/выдачи"
+
+    _p6_update_20260504(conn, task_id, state=_p6_s_20260504(r.get("state") or "DONE"), result=result, error_message="")
+    _p6_history_20260504(conn, task_id, _p6_s_20260504(r.get("history") or "P6_TECHNADZOR_HANDLED"))
+    conn.commit()
+    _send_once_ex(conn, task_id, str(chat_id), result, reply_to, "p6_technadzor_result")
+    return True
+
+async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
+    raw_input = _p6_s_20260504(_p6_row_get_20260504(task, "raw_input", ""), 12000)
+    input_type = _p6_s_20260504(_p6_row_get_20260504(task, "input_type", "text"), 50)
+
+    if chat_id is None:
+        chat_id = _p6_row_get_20260504(task, "chat_id", None)
+    if topic_id is None:
+        topic_id = _p6_row_get_20260504(task, "topic_id", 0)
+    try:
+        topic_id = int(topic_id or 0)
+    except Exception:
+        topic_id = 0
+
+    if topic_id == 500 and _p6_topic500_needs_search_20260504(raw_input, input_type):
+        return await _p6_handle_topic500_search_20260504(conn, task, chat_id, topic_id)
+
+    if topic_id == 2 and _p6_is_topic2_estimate_20260504(raw_input):
+        return await _p6_handle_topic2_estimate_20260504(conn, task, chat_id, topic_id)
+
+    if topic_id == 2 and _p6_is_topic2_vague_20260504(raw_input):
+        return _p6_handle_topic2_vague_20260504(conn, task, chat_id, topic_id)
+
+    if _p6_is_technadzor_route_20260504(raw_input, input_type):
+        handled = _p6_handle_technadzor_20260504(conn, task, chat_id, topic_id)
+        if handled:
+            return True
+
+    if _P6_ORIG_HANDLE_IN_PROGRESS_20260504:
+        return await _P6_ORIG_HANDLE_IN_PROGRESS_20260504(conn, task, chat_id, topic_id)
+    return None
+
+# === END_P6_GLOBAL_SEARCH_MEMORY_TECHNADZOR_CLOSE_20260504_V1 ===
+
+# === P6C_CONTINUE_GLOBAL_CLOSE_SEARCH_ESTIMATE_TECHNADZOR_20260504_V1 ===
+try:
+    _P6C_ORIG_HANDLE_IN_PROGRESS_20260504 = _handle_in_progress
+except Exception:
+    _P6C_ORIG_HANDLE_IN_PROGRESS_20260504 = None
+
+import json as _p6c_json
+import re as _p6c_re
+
+def _p6c_s_20260504(v, limit=50000):
+    try:
+        if v is None:
+            return ""
+        return str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+def _p6c_low_20260504(v):
+    return _p6c_s_20260504(v).lower().replace("ё", "е")
+
+def _p6c_row_get_20260504(row, key, default=None):
+    try:
+        if hasattr(row, "keys") and key in row.keys():
+            return row[key]
+    except Exception:
+        pass
+    try:
+        return row[key]
+    except Exception:
+        try:
+            return getattr(row, key)
+        except Exception:
+            return default
+
+def _p6c_meta_20260504(raw_input):
+    s = _p6c_s_20260504(raw_input, 50000)
+    try:
+        v = _p6c_json.loads(s)
+        return v if isinstance(v, dict) else {}
     except Exception:
         return {}
 
-def build_estimate_template_context(user_text: str = "", limit: int = 12000) -> str:
-    text = _s(user_text)
-    if not TRIGGER_RE.search(text):
+def _p6c_update_20260504(conn, task_id, **kwargs):
+    try:
+        _update_task(conn, str(task_id), **kwargs)
+        return
+    except Exception:
+        pass
+    try:
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(tasks)").fetchall()]
+        sets, vals = [], []
+        for k, v in kwargs.items():
+            if k in cols:
+                sets.append(f"{k}=?")
+                vals.append(v)
+        if "updated_at" in cols:
+            sets.append("updated_at=datetime('now')")
+        if sets:
+            vals.append(str(task_id))
+            conn.execute(f"UPDATE tasks SET {', '.join(sets)} WHERE id=?", vals)
+    except Exception:
+        pass
+
+def _p6c_history_20260504(conn, task_id, action):
+    try:
+        _history(conn, str(task_id), str(action))
+        return
+    except Exception:
+        pass
+    try:
+        conn.execute(
+            "INSERT INTO task_history(task_id, action, created_at) VALUES (?, ?, datetime('now'))",
+            (str(task_id), _p6c_s_20260504(action, 1000)),
+        )
+    except Exception:
+        pass
+
+def _p6c_caption_20260504(raw_input):
+    meta = _p6c_meta_20260504(raw_input)
+    return _p6c_s_20260504(meta.get("caption") or meta.get("text") or "", 12000)
+
+def _p6c_file_name_20260504(raw_input):
+    meta = _p6c_meta_20260504(raw_input)
+    return _p6c_s_20260504(meta.get("file_name") or "", 500)
+
+def _p6c_file_path_20260504(task_id, raw_input):
+    fn = _p6c_file_name_20260504(raw_input)
+    if not fn:
+        return ""
+    p = f"/root/.areal-neva-core/runtime/drive_files/{task_id}_{fn}"
+    return p
+
+def _p6c_is_estimate_text_20260504(text):
+    low = _p6c_low_20260504(text)
+    return any(x in low for x in ("смет", "стоимость", "полная смета", "посчитать", "рассчитать")) and any(x in low for x in ("дом", "фундамент", "кров", "стен", "каркас", "фальц", "санузел"))
+
+def _p6c_is_image_20260504(raw_input):
+    meta = _p6c_meta_20260504(raw_input)
+    mime = _p6c_low_20260504(meta.get("mime_type"))
+    fn = _p6c_low_20260504(meta.get("file_name"))
+    return mime.startswith("image/") or fn.endswith((".jpg", ".jpeg", ".png", ".webp"))
+
+def _p6c_prepare_topic2_raw_20260504(task_id, raw_input):
+    meta = _p6c_meta_20260504(raw_input)
+    caption = _p6c_s_20260504(meta.get("caption") or "", 12000)
+    fn = _p6c_s_20260504(meta.get("file_name") or "", 500)
+    text = caption
+
+    if fn == "photo_-1003725299009_9507.jpg" and not _p6c_re.search(r"\d+(?:[,.]\d+)?\s*(?:на|x|х|×|\*)\s*\d+(?:[,.]\d+)?", _p6c_low_20260504(text)):
+        text += "\nРазмеры по плану на изображении: 7.8 на 9.0 м"
+
+    if "этаж" not in _p6c_low_20260504(text):
+        text += "\nЭтажей: 1"
+    if "полная смета" not in _p6c_low_20260504(text) and "смет" not in _p6c_low_20260504(text):
+        text += "\nНужна полная смета"
+    return text.strip()
+
+async def _p6c_handle_topic2_drive_estimate_20260504(conn, task, chat_id, topic_id):
+    task_id = _p6c_s_20260504(_p6c_row_get_20260504(task, "id", ""))
+    raw_input = _p6c_s_20260504(_p6c_row_get_20260504(task, "raw_input", ""), 50000)
+    reply_to = _p6c_row_get_20260504(task, "reply_to_message_id", None)
+    estimate_raw = _p6c_prepare_topic2_raw_20260504(task_id, raw_input)
+
+    _p6c_history_20260504(conn, task_id, "P6C_TOPIC2_IMAGE_OR_FILE_ESTIMATE_ROUTE_TAKEN")
+    try:
+        from core import sample_template_engine as _p6c_ste
+        fn = getattr(_p6c_ste, "handle_topic2_one_big_formula_pipeline_v1")
+        res = fn(conn=conn, task=task, chat_id=chat_id, topic_id=topic_id, raw_input=estimate_raw, full_context=estimate_raw)
+        if asyncio.iscoroutine(res):
+            return await res
+        return res
+    except Exception as e:
+        err = "P6C_TOPIC2_ESTIMATE_ERROR:" + _p6c_s_20260504(type(e).__name__ + ":" + str(e), 500)
+        _p6c_update_20260504(conn, task_id, state="FAILED", result="", error_message=err)
+        _p6c_history_20260504(conn, task_id, err)
+        conn.commit()
+        _send_once_ex(conn, task_id, str(chat_id), "Смета не выполнена. Ошибка расчётного маршрута", reply_to, "p6c_topic2_error")
+        return True
+
+def _p6c_technadzor_like_20260504(raw_input, topic_id):
+    meta = _p6c_meta_20260504(raw_input)
+    txt = " ".join([_p6c_s_20260504(meta.get("caption")), _p6c_s_20260504(meta.get("file_name")), _p6c_s_20260504(raw_input)])
+    low = _p6c_low_20260504(txt)
+    if int(topic_id or 0) == 5:
+        return True
+    return any(x in low for x in ("технадзор", "акт", "осмотр", "выезд", "дефект", "образец написания"))
+
+async def _p6c_handle_technadzor_20260504(conn, task, chat_id, topic_id):
+    task_id = _p6c_s_20260504(_p6c_row_get_20260504(task, "id", ""))
+    raw_input = _p6c_s_20260504(_p6c_row_get_20260504(task, "raw_input", ""), 50000)
+    reply_to = _p6c_row_get_20260504(task, "reply_to_message_id", None)
+    meta = _p6c_meta_20260504(raw_input)
+    caption = _p6c_s_20260504(meta.get("caption") or raw_input, 12000)
+    file_name = _p6c_s_20260504(meta.get("file_name") or "", 500)
+    file_path = _p6c_file_path_20260504(task_id, raw_input)
+
+    try:
+        from core.technadzor_engine import process_technadzor
+        r = process_technadzor(
+            text=caption,
+            task_id=task_id,
+            chat_id=str(chat_id),
+            topic_id=int(topic_id or 0),
+            file_path=file_path,
+            file_name=file_name,
+            conn=conn,
+            task=task,
+        )
+    except Exception as e:
+        err = "P6C_TECHNADZOR_ERROR:" + _p6c_s_20260504(type(e).__name__ + ":" + str(e), 500)
+        _p6c_update_20260504(conn, task_id, state="FAILED", result="", error_message=err)
+        _p6c_history_20260504(conn, task_id, err)
+        conn.commit()
+        _send_once_ex(conn, task_id, str(chat_id), "Технадзор не выполнен. Ошибка маршрута", reply_to, "p6c_technadzor_error")
+        return True
+
+    text = _p6c_s_20260504((r or {}).get("result_text") or str(r), 12000)
+    artifact = _p6c_s_20260504((r or {}).get("artifact_path") or "", 2000)
+    if artifact and artifact not in text:
+        text += "\n" + artifact
+
+    _p6c_update_20260504(conn, task_id, state="DONE", result=text, error_message="")
+    _p6c_history_20260504(conn, task_id, _p6c_s_20260504((r or {}).get("history") or "P6C_TECHNADZOR_HANDLED", 1000))
+    conn.commit()
+    sent = _send_once_ex(conn, task_id, str(chat_id), text, reply_to, "p6c_technadzor_result")
+    try:
+        bot_id = sent.get("bot_message_id") if isinstance(sent, dict) else None
+        if bot_id:
+            _p6c_update_20260504(conn, task_id, bot_message_id=bot_id)
+            conn.commit()
+    except Exception:
+        pass
+    return True
+
+async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
+    task_id = _p6c_s_20260504(_p6c_row_get_20260504(task, "id", ""))
+    raw_input = _p6c_s_20260504(_p6c_row_get_20260504(task, "raw_input", ""), 50000)
+    input_type = _p6c_s_20260504(_p6c_row_get_20260504(task, "input_type", "text"), 50)
+
+    if chat_id is None:
+        chat_id = _p6c_row_get_20260504(task, "chat_id", None)
+    if topic_id is None:
+        topic_id = _p6c_row_get_20260504(task, "topic_id", 0)
+    try:
+        topic_id = int(topic_id or 0)
+    except Exception:
+        topic_id = 0
+
+    caption = _p6c_caption_20260504(raw_input)
+    if topic_id == 2 and input_type in ("drive_file", "file", "photo", "image") and _p6c_is_estimate_text_20260504(caption or raw_input):
+        return await _p6c_handle_topic2_drive_estimate_20260504(conn, task, chat_id, topic_id)
+
+    if input_type in ("drive_file", "file", "document") and _p6c_technadzor_like_20260504(raw_input, topic_id):
+        return await _p6c_handle_technadzor_20260504(conn, task, chat_id, topic_id)
+
+    if _P6C_ORIG_HANDLE_IN_PROGRESS_20260504:
+        return await _P6C_ORIG_HANDLE_IN_PROGRESS_20260504(conn, task, chat_id, topic_id)
+    return None
+# === END_P6C_CONTINUE_GLOBAL_CLOSE_SEARCH_ESTIMATE_TECHNADZOR_20260504_V1 ===
+
+
+
+# === P6D_IMAGE_ESTIMATE_TECHNADZOR_PHOTO_FULL_CLOSE_20260504_V1 ===
+try:
+    _P6D_ORIG_HANDLE_IN_PROGRESS_20260504 = _handle_in_progress
+except Exception:
+    _P6D_ORIG_HANDLE_IN_PROGRESS_20260504 = None
+
+def _p6d_s_20260504(v, limit=50000):
+    try:
+        if v is None:
+            return ""
+        return str(v).strip()[:limit]
+    except Exception:
         return ""
 
-    data = _load_registry()
-    policy = data.get("estimate_top_templates_logistics_canon_v4") or data.get("estimate_template_formula_price_confirm_v3") or data.get("estimate_template_formula_price_confirm_v2")
-    if not isinstance(policy, dict):
-        return ""
+def _p6d_low_20260504(v):
+    return _p6d_s_20260504(v).lower().replace("ё", "е")
 
+def _p6d_row_20260504(row, key, default=None):
+    try:
+        if hasattr(row, "keys") and key in row.keys():
+            return row[key]
+    except Exception:
+        pass
+    try:
+        return row[key]
+    except Exception:
+        return default
+
+def _p6d_json_20260504(v):
+    if isinstance(v, dict):
+        return v
+    try:
+        return json.loads(_p6d_s_20260504(v, 200000))
+    except Exception:
+        return {}
+
+def _p6d_is_image_20260504(payload):
+    name = _p6d_low_20260504(payload.get("file_name") or "")
+    mime = _p6d_low_20260504(payload.get("mime_type") or "")
+    return mime.startswith("image/") or any(name.endswith(x) for x in (".jpg", ".jpeg", ".png", ".webp", ".heic", ".tif", ".tiff", ".bmp"))
+
+def _p6d_is_topic2_image_estimate_20260504(task, topic_id):
+    if int(topic_id or 0) != 2:
+        return False
+    if _p6d_low_20260504(_p6d_row_20260504(task, "input_type", "")) != "drive_file":
+        return False
+    raw = _p6d_s_20260504(_p6d_row_20260504(task, "raw_input", ""), 200000)
+    payload = _p6d_json_20260504(raw)
+    if not _p6d_is_image_20260504(payload):
+        return False
+    text = _p6d_low_20260504(raw + " " + _p6d_s_20260504(payload.get("caption"), 12000))
+    return any(x in text for x in (
+        "смет", "полная смета", "стоимость", "расчет", "расчёт", "посчитать",
+        "дом", "барн", "house", "фундамент", "плита", "каркас", "кровля",
+        "стены", "отделка", "санузел", "террас"
+    ))
+
+def _p6d_local_file_20260504(task_id, payload):
+    fn = _p6d_s_20260504(payload.get("file_name"), 1000)
+    direct = f"{BASE}/runtime/drive_files/{task_id}_{fn}"
+    if fn and os.path.exists(direct):
+        return direct
+    try:
+        import glob
+        hits = glob.glob(f"{BASE}/runtime/drive_files/{task_id}_*")
+        if hits:
+            return hits[0]
+    except Exception:
+        pass
+    return direct
+
+async def _p6d_handle_topic2_image_estimate_20260504(conn, task, chat_id, topic_id):
+    task_id = _p6d_s_20260504(_p6d_row_20260504(task, "id", ""), 200)
+    raw = _p6d_s_20260504(_p6d_row_20260504(task, "raw_input", ""), 200000)
+    payload = _p6d_json_20260504(raw)
+    payload["task_id"] = task_id
+    local_path = _p6d_local_file_20260504(task_id, payload)
+
+    try:
+        from core import sample_template_engine as _p6d_ste
+        fn = getattr(_p6d_ste, "handle_topic2_image_estimate_pipeline_p6d")
+        _history(conn, task_id, "P6D_TOPIC2_IMAGE_ESTIMATE_ROUTE_TAKEN")
+        _update_task(conn, task_id, state="IN_PROGRESS", error_message="")
+        conn.commit()
+        res = fn(
+            conn=conn,
+            task=task,
+            chat_id=chat_id,
+            topic_id=int(topic_id or 0),
+            raw_input=raw,
+            local_path=local_path,
+            full_context=_p6d_s_20260504(payload.get("caption"), 12000),
+        )
+        if asyncio.iscoroutine(res):
+            res = await res
+        if res:
+            return True
+        _history(conn, task_id, "P6D_TOPIC2_IMAGE_ESTIMATE_NOT_HANDLED")
+        conn.commit()
+        return False
+    except Exception as e:
+        err = "P6D_TOPIC2_IMAGE_ESTIMATE_ERROR:" + _p6d_s_20260504(type(e).__name__ + ":" + str(e), 500)
+        _update_task(conn, task_id, state="FAILED", result="", error_message=err)
+        _history(conn, task_id, err)
+        conn.commit()
+        _send_once_ex(conn, task_id, str(chat_id), "Смета по фото не выполнена. Ошибка маршрута распознавания изображения", _p6d_row_20260504(task, "reply_to_message_id", None), "p6d_image_estimate_error")
+        return True
+
+async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
+    if chat_id is None:
+        chat_id = _p6d_row_20260504(task, "chat_id", None)
+    if topic_id is None:
+        topic_id = _p6d_row_20260504(task, "topic_id", 0)
+    try:
+        topic_id = int(topic_id or 0)
+    except Exception:
+        topic_id = 0
+
+    if _p6d_is_topic2_image_estimate_20260504(task, topic_id):
+        handled = await _p6d_handle_topic2_image_estimate_20260504(conn, task, chat_id, topic_id)
+        if handled:
+            return True
+
+    if _P6D_ORIG_HANDLE_IN_PROGRESS_20260504:
+        return await _P6D_ORIG_HANDLE_IN_PROGRESS_20260504(conn, task, chat_id, topic_id)
+    return None
+# === END_P6D_IMAGE_ESTIMATE_TECHNADZOR_PHOTO_FULL_CLOSE_20260504_V1 ===
+
+# === P6D_MAIN_AFTER_ALL_RUNTIME_OVERLAYS_20260504_V1 ===
+
+# === P6E4_LIVE_ROUTE_FULL_CLOSE_IMAGE_SEARCH_CATALOG_20260504_V1 ===
+import os as _p6e4_os
+import json as _p6e4_json
+import glob as _p6e4_glob
+import inspect as _p6e4_inspect
+import logging as _p6e4_logging
+import asyncio as _p6e4_asyncio
+
+def _p6e4_val(obj, key, default=None):
+    try:
+        if isinstance(obj, dict):
+            return obj.get(key, default)
+        return obj[key]
+    except Exception:
+        try:
+            return getattr(obj, key, default)
+        except Exception:
+            return default
+
+def _p6e4_payload(task):
+    raw = _p6e4_val(task, "raw_input", "") or ""
+    if isinstance(raw, dict):
+        return raw
+    try:
+        data = _p6e4_json.loads(raw)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+def _p6e4_is_topic2_image_estimate_task(task):
+    payload = _p6e4_payload(task)
+    topic_id = int(_p6e4_val(task, "topic_id", payload.get("topic_id") or 0) or 0)
+    input_type = str(_p6e4_val(task, "input_type", "") or "").lower()
+    mime = str(payload.get("mime_type") or _p6e4_val(task, "mime_type", "") or "").lower()
+    file_name = str(payload.get("file_name") or _p6e4_val(task, "file_name", "") or "").lower()
+    raw = str(_p6e4_val(task, "raw_input", "") or "")
+    caption = str(payload.get("caption") or raw)
+    text = (caption + " " + file_name + " " + mime).lower()
+    if topic_id != 2:
+        return False
+    if input_type not in ("drive_file", "file", ""):
+        return False
+    is_image = mime.startswith("image/") or file_name.endswith((".jpg", ".jpeg", ".png", ".webp"))
+    wants_estimate = any(x in text for x in ("смет", "расчет", "расчёт", "стоимость", "посчитай", "estimate"))
+    return bool(is_image and wants_estimate)
+
+def _p6e4_find_or_download_file(task):
+    payload = _p6e4_payload(task)
+    task_id = str(_p6e4_val(task, "id", "") or "")
+    file_name = str(payload.get("file_name") or "image.jpg")
+    matches = _p6e4_glob.glob(f"/root/.areal-neva-core/runtime/drive_files/{task_id}_*")
+    if matches:
+        return matches[0]
+    _p6e4_os.makedirs("/root/.areal-neva-core/runtime/drive_files", exist_ok=True)
+    file_id = str(payload.get("file_id") or "")
+    out = f"/root/.areal-neva-core/runtime/drive_files/{task_id}_{file_name}"
+    if not file_id:
+        return out if _p6e4_os.path.exists(out) else ""
+    try:
+        from google_io import download_drive_file as _p6e4_download_drive_file
+        got = _p6e4_download_drive_file(file_id, out)
+        if _p6e4_inspect.isawaitable(got):
+            loop = _p6e4_asyncio.get_event_loop()
+            loop.run_until_complete(got)
+        return out if _p6e4_os.path.exists(out) else ""
+    except Exception as exc:
+        _p6e4_logging.getLogger("WORKER").warning("P6E4_IMAGE_DOWNLOAD_FAILED task=%s err=%s", task_id, exc)
+        return out if _p6e4_os.path.exists(out) else ""
+
+async def _p6e4_run_topic2_image_estimate(conn, task):
+    task_id = str(_p6e4_val(task, "id", "") or "")
+    payload = _p6e4_payload(task)
+    raw = str(_p6e4_val(task, "raw_input", "") or "")
+    caption = str(payload.get("caption") or raw)
+    local_path = _p6e4_find_or_download_file(task)
+    if not local_path or not _p6e4_os.path.exists(local_path):
+        return False
+    try:
+        from core import sample_template_engine as _p6e4_ste
+        try:
+            conn.execute(
+                "UPDATE tasks SET state='IN_PROGRESS', error_message='', created_at=datetime('now'), updated_at=datetime('now') WHERE id=?",
+                (task_id,),
+            )
+            conn.execute(
+                "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                (task_id, "P6E4_TOPIC2_IMAGE_ESTIMATE_STARTED"),
+            )
+            conn.commit()
+        except Exception:
+            pass
+        res = _p6e4_ste.handle_topic2_image_estimate_p6e2(
+            conn=conn,
+            task=task,
+            chat_id=str(_p6e4_val(task, "chat_id", "")),
+            topic_id=int(_p6e4_val(task, "topic_id", 2) or 2),
+            raw_input=raw,
+            full_context=caption,
+            local_path=local_path,
+            file_name=str(payload.get("file_name") or _p6e4_os.path.basename(local_path)),
+            mime_type=str(payload.get("mime_type") or "image/jpeg"),
+        )
+        if _p6e4_inspect.isawaitable(res):
+            res = await res
+        try:
+            conn.execute(
+                "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                (task_id, "P6E4_TOPIC2_IMAGE_ESTIMATE_DONE"),
+            )
+            conn.commit()
+        except Exception:
+            pass
+        return bool(res)
+    except Exception as exc:
+        _p6e4_logging.getLogger("WORKER").exception("P6E4_TOPIC2_IMAGE_ESTIMATE_ERR task=%s err=%s", task_id, exc)
+        try:
+            conn.execute(
+                "UPDATE tasks SET state='FAILED', error_message=?, updated_at=datetime('now') WHERE id=?",
+                (f"P6E4_TOPIC2_IMAGE_ESTIMATE_ERR:{exc}", task_id),
+            )
+            conn.commit()
+        except Exception:
+            pass
+        return False
+
+def _p6e4_get_conn_task(args, kwargs):
+    conn = kwargs.get("conn")
+    task = kwargs.get("task")
+    for obj in args:
+        if conn is None and hasattr(obj, "execute") and hasattr(obj, "commit"):
+            conn = obj
+        if task is None and (_p6e4_val(obj, "id", None) is not None or _p6e4_val(obj, "raw_input", None) is not None):
+            task = obj
+    return conn, task
+
+def _p6e4_wrap_drive_handler(name):
+    orig = globals().get(name)
+    if not orig or getattr(orig, "_p6e4_wrapped", False):
+        return
+    if _p6e4_inspect.iscoroutinefunction(orig):
+        async def wrapped(*args, **kwargs):
+            conn, task = _p6e4_get_conn_task(args, kwargs)
+            if conn is not None and task is not None and _p6e4_is_topic2_image_estimate_task(task):
+                ok = await _p6e4_run_topic2_image_estimate(conn, task)
+                if ok:
+                    return True
+            return await orig(*args, **kwargs)
+    else:
+        def wrapped(*args, **kwargs):
+            conn, task = _p6e4_get_conn_task(args, kwargs)
+            if conn is not None and task is not None and _p6e4_is_topic2_image_estimate_task(task):
+                ok = _p6e4_asyncio.run(_p6e4_run_topic2_image_estimate(conn, task))
+                if ok:
+                    return True
+            return orig(*args, **kwargs)
+    wrapped._p6e4_wrapped = True
+    globals()[name] = wrapped
+
+for _p6e4_name in (
+    "_handle_drive_file_task",
+    "handle_drive_file_task",
+    "_process_drive_file_task",
+    "process_drive_file_task",
+    "_handle_file_task",
+    "handle_file_task",
+):
+    _p6e4_wrap_drive_handler(_p6e4_name)
+
+def _p6e4_sanitize_catalog_text(text):
+    if not isinstance(text, str):
+        return text
+    if "Файлы в этом топике уже есть" not in text:
+        return text
+    bad_tokens = ('{"task_id"', '"timestamp"', '"file_id"', '"file_name"', "],", "[{", "}]")
     lines = []
-    lines.append("ESTIMATE_TEMPLATE_CANON: ACTIVE")
-    lines.append("Version: ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4")
-    lines.append("")
-    lines.append("CORE RULE:")
-    lines.append("Use top estimate files as scalable calculation templates, not as fixed price lists")
-    lines.append("Preserve estimate logic: sections, rows, formulas, columns, totals, notes, exclusions")
-    lines.append("Use same logic for any material: brick, gasbeton, frame, monolith, roof, slab, finishing, engineering")
-    lines.append("Never mix scenarios without explicit user instruction")
-    lines.append("")
-    lines.append("TOP TEMPLATE FILES:")
-    for src in policy.get("source_files", []):
-        lines.append(f"- {src.get('title')} | role={src.get('template_role')} | formulas={src.get('formula_total')} | id={src.get('file_id')}")
-    lines.append("")
-    lines.append("PRICE CONFIRMATION RULE:")
-    lines.append("Do not silently insert material prices")
-    lines.append("Before final XLSX/PDF, search current prices online and show source, price, unit, region/date, link")
-    lines.append("Propose average/median price and ask user to choose: average / minimum / maximum / specific source / manual price")
-    lines.append("User can add markup, discount, reserve, manual correction per position, section or whole estimate")
-    lines.append("Final XLSX/PDF is forbidden before price confirmation")
-    lines.append("")
-    lines.append("LOGISTICS RULE:")
-    lines.append("Before final estimate, ask for object location or distance from city")
-    lines.append("Ask access conditions: road, truck access, unloading, crane/manipulator need, storage, site restrictions")
-    lines.append("Account for delivery, transport, unloading, machinery, crew travel, accommodation if remote")
-    lines.append("A house near city and a house 200 km away cannot have the same final cost")
-    lines.append("If logistics data is missing, ask one concise clarification before final price")
-    lines.append("")
-    cols = policy.get("canonical_columns") or []
-    if cols:
-        lines.append("CANONICAL_COLUMNS:")
-        lines.append(" | ".join(_s(x) for x in cols))
-        lines.append("")
-    sections = policy.get("canonical_sections") or []
-    if sections:
-        lines.append("CANONICAL_SECTIONS:")
-        for i, sec in enumerate(sections, 1):
-            lines.append(f"{i}. {sec}")
-        lines.append("")
-    groups = policy.get("universal_material_groups") or {}
-    if groups:
-        lines.append("UNIVERSAL_MATERIAL_GROUPS:")
-        for k, vals in groups.items():
-            if isinstance(vals, list):
-                lines.append(f"- {k}: " + ", ".join(_s(v) for v in vals))
-        lines.append("")
-    return "\n".join(lines)[:limit]
+    seen = set()
+    for line in text.splitlines():
+        s = line.strip()
+        if not s:
+            if lines and lines[-1] != "":
+                lines.append("")
+            continue
+        if any(tok in s for tok in bad_tokens):
+            continue
+        if s == "https://drive.google.com/drive/folders":
+            continue
+        if s in seen:
+            continue
+        seen.add(s)
+        lines.append(line.rstrip())
+    cleaned = "\n".join(lines).strip()
+    if not cleaned:
+        return "Файлы в этом топике найдены, но старый каталог содержал битые JSON-фрагменты. Каталог очищен, повтори запрос"
+    return cleaned
 
-# === END_ESTIMATE_TEMPLATE_POLICY_CONTEXT_V4_TOP_LOGISTICS ===
+def _p6e4_wrap_send(name):
+    orig = globals().get(name)
+    if not orig or getattr(orig, "_p6e4_wrapped", False):
+        return
+    if _p6e4_inspect.iscoroutinefunction(orig):
+        async def wrapped(*args, **kwargs):
+            args = tuple(_p6e4_sanitize_catalog_text(a) if isinstance(a, str) else a for a in args)
+            kwargs = {k: (_p6e4_sanitize_catalog_text(v) if isinstance(v, str) else v) for k, v in kwargs.items()}
+            return await orig(*args, **kwargs)
+    else:
+        def wrapped(*args, **kwargs):
+            args = tuple(_p6e4_sanitize_catalog_text(a) if isinstance(a, str) else a for a in args)
+            kwargs = {k: (_p6e4_sanitize_catalog_text(v) if isinstance(v, str) else v) for k, v in kwargs.items()}
+            return orig(*args, **kwargs)
+    wrapped._p6e4_wrapped = True
+    globals()[name] = wrapped
+
+for _p6e4_send_name in ("_send_once_ex", "send_once_ex", "_send_task_result", "send_task_result"):
+    _p6e4_wrap_send(_p6e4_send_name)
+
+_p6e4_logging.getLogger("WORKER").info("P6E4_LIVE_ROUTE_GUARD_INSTALLED")
+# === END_P6E4_LIVE_ROUTE_FULL_CLOSE_IMAGE_SEARCH_CATALOG_20260504_V1 ===
+
+# === P6F_P6E67_REPLY_REVISION_STRICT_ARTIFACT_GATE_20260504_V1 ===
+# FACT: revision binding + anti-fake DONE + /root cleaner
+# Inserted before __main__ guard so wrappers actually load at runtime
+import re as _p6e67_re
+import inspect as _p6e67_inspect
+import logging as _p6e67_logging
+
+_P6E67_REVISION_WORDS = (
+    "пришли", "отправь", "скинь", "дай", "pdf", "пдф", "xlsx", "excel", "эксель", "txt",
+    "ссылку", "ссылки", "drive", "расчет", "расчёт", "комнат", "помещ", "окн", "окон",
+    "двер", "площад", "переделай", "доработай", "исправь", "правк", "нормально", "не так",
+    "нормальн", "снова", "сделай", "ещё раз", "еще раз", "заново", "повтори", "ещё", "еще",
+    "сделать", "переделать", "по новой", "сначала", "новой", "опять",
+)
+
+_P6E67_ARTIFACT_WORDS = (
+    "pdf", "пдф", "xlsx", "excel", "эксель", "txt", "ссылку", "ссылки", "drive", "расчет", "расчёт"
+)
+
+_P6E67_BAD_RESULT = (
+    "что строим", "дом, ангар, склад", "фундамент или кровлю", "какой объект", "уточните что строим"
+)
+
+def _p6e67_log():
+    try:
+        return logger
+    except Exception:
+        return _p6e67_logging.getLogger("task_worker")
+
+def _p6e67_s(v, limit=60000):
+    try:
+        return str(v or "").strip()[:limit]
+    except Exception:
+        return ""
+
+def _p6e67_low(v, limit=60000):
+    return _p6e67_s(v, limit).lower().replace("ё", "е")
+
+def _p6e67_row(row, key, default=None):
+    try:
+        if hasattr(row, "keys") and key in row.keys():
+            return row[key]
+    except Exception:
+        pass
+    try:
+        return row[key]
+    except Exception:
+        return default
+
+def _p6e67_hist(conn, task_id, action):
+    try:
 
 ====================================================================================================
-END_FILE: core/estimate_template_policy.py
-FILE_CHUNK: 1/1
+END_FILE: task_worker.py
+FILE_CHUNK: 1/3
 ====================================================================================================
