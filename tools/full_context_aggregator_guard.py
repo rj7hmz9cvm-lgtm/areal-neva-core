@@ -252,6 +252,41 @@ def run_aggregator() -> None:
         raise RuntimeError(f"FULL_CONTEXT_AGGREGATOR_FAILED:{p.returncode}")
 
 
+
+# === DIRTY_TRACKED_NONGENERATED_GUARD_V1 ===
+def dirty_tracked_nongenerated() -> list[str]:
+    out = run(["git", "status", "--porcelain"], check=True)
+    dirty: list[str] = []
+    for line in out.splitlines():
+        if not line:
+            continue
+        status = line[:2]
+        path = line[3:].strip()
+        if " -> " in path:
+            path = path.split(" -> ", 1)[1].strip()
+        if status.startswith("??"):
+            continue
+        if is_generated(path):
+            continue
+        if path in {
+            "tools/full_context_aggregator_guard.py",
+            "tools/full_context_aggregator_guard.sh",
+        }:
+            continue
+        dirty.append(f"{status} {path}")
+    return dirty
+
+
+def assert_clean_tracked_sources() -> None:
+    dirty = dirty_tracked_nongenerated()
+    if dirty:
+        raise RuntimeError(
+            "DIRTY_TRACKED_NONGENERATED_REFUSE_AGGREGATOR_RUN:\n"
+            + "\n".join(dirty[:200])
+        )
+# === END_DIRTY_TRACKED_NONGENERATED_GUARD_V1 ===
+
+
 def acquire_lock() -> Any:
     LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
     f = LOCK_PATH.open("w")
@@ -273,16 +308,21 @@ def main() -> int:
     old_fp = state.get("fingerprint")
 
     if "--status" in sys.argv:
+        dirty = dirty_tracked_nongenerated()
         print(f"CURRENT_FINGERPRINT={fp}")
         print(f"SAVED_FINGERPRINT={old_fp or 'NONE'}")
         print(f"CHANGED={fp != old_fp}")
         print(f"GIT_HEAD={payload.get('git_head')}")
+        print("DIRTY_TRACKED_NONGENERATED=" + (",".join(dirty) if dirty else "NONE"))
         return 0
 
     if "--init" in sys.argv:
+        assert_clean_tracked_sources()
         save_state(fp, payload)
         print(f"AGGREGATOR_GUARD_INIT_OK fingerprint={fp}")
         return 0
+
+    assert_clean_tracked_sources()
 
     force = "--force" in sys.argv
     if not force and old_fp == fp:
