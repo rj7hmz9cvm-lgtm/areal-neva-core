@@ -1,7 +1,7 @@
 # topic_5 TEKHNADZOR
 
-GENERATED_AT: 2026-05-07T16:36:57.805524+00:00
-GIT_SHA: 48f9858805392d105d729c61ce32c7e1b6587bd9
+GENERATED_AT: 2026-05-07T16:50:02.454735+00:00
+GIT_SHA: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 5
@@ -25,6 +25,8 @@ FAILED_LAST_24H: 0
 - 8093deb3 | INVALID_PUBLIC_RESULT
 
 ## COMMITS_LAST_14D
+- 3f53d3f|docs(handoff): update after topic500 adaptive output V1
+- 0c15037|feat(topic500): adaptive output by intent mode (9 modes, V1)
 - 48eed2e|fix(topic5): filter garbage from act — canon §4/§5 material filter
 - bb8e971|fix(topic5): fix vision-blocked condition — {} is not None
 - fb24e60|fix(topic5): vision-blocked fallback per canon §17 — DOCX from owner text
@@ -53,8 +55,6 @@ FAILED_LAST_24H: 0
 - 94c6b3f|P6H_TOPIC5_TECHNADZOR_TEMPLATE_PHOTO_CLIENT_SAFE_VOICE_LIVE_CLOSE_20260504: systemic technadzor module for topic_5 — INSTALLED_NOT_LIVE_TESTED
 - e3d992c|P6G_CLEAN_OLD_TOPIC500_CONTAMINATION_V1: SQL clean task 4883 contamination (point 1 of 5)
 - 949c379|P6F_FULL_CODE_CLOSE_REMAINING_CONTOURS_20260504_V1: close revision binding, topic500 sanitizer, photo CV via OpenRouter, TZ params, source labels, technadzor DOCX, project_210 drive, artifact gates
-- 709b28a|P3_FINAL_ROUTE_HARD_LOCK_SEARCH_ESTIMATE_20260504_V1: hard-lock topic500 search and topic2 current estimate route
-- 4f6af26|P2_FINAL_SEARCH_AND_ESTIMATE_CLOSE_20260504_V1: close topic500 search memory and topic2 final estimate logic
 
 ## MARKERS_LAST_24H
 - created:NEW

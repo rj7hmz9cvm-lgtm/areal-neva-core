@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_013
-generated_at_utc: 2026-05-07T16:36:57.704212+00:00
-git_sha_before_commit: 48f9858805392d105d729c61ce32c7e1b6587bd9
+generated_at_utc: 2026-05-07T16:50:02.338284+00:00
+git_sha_before_commit: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
 part: 13/17
 
 
@@ -1627,6 +1627,34 @@ if __name__ == "__main__":
 
 ====================================================================================================
 END_FILE: tools/full_context_aggregator.py
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: tools/context_aggregator.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 069bfcbd7cb905f16621726e8c56d54aea8340b8513d405d9fc6c6df655c2a36
+====================================================================================================
+#!/usr/bin/env python3
+# === CONTEXT_AGGREGATOR_WRAPPER_V1 ===
+from __future__ import annotations
+import subprocess
+import sys
+from pathlib import Path
+
+BASE = Path("/root/.areal-neva-core")
+
+def main() -> None:
+    print("CONTEXT_AGGREGATOR_WRAPPER_V1 -> full_context_aggregator.py")
+    p = subprocess.run([sys.executable, str(BASE / "tools/full_context_aggregator.py")], cwd=str(BASE))
+    sys.exit(p.returncode)
+
+if __name__ == "__main__":
+    main()
+# === END_CONTEXT_AGGREGATOR_WRAPPER_V1 ===
+
+====================================================================================================
+END_FILE: tools/context_aggregator.py
 FILE_CHUNK: 1/1
 ====================================================================================================
 

@@ -1,10 +1,10 @@
 {
-  "generated_at_utc": "2026-05-07T16:36:57.709232+00:00",
-  "git_sha_before_commit": "48f9858805392d105d729c61ce32c7e1b6587bd9",
+  "generated_at_utc": "2026-05-07T16:50:02.343941+00:00",
+  "git_sha_before_commit": "3f53d3f07cafd6e9b6fe379031106c7f96b74d26",
   "part_max_bytes": 400000,
   "content_chunk_bytes": 340000,
-  "total_records": 413,
-  "included_full_files": 335,
+  "total_records": 414,
+  "included_full_files": 336,
   "excluded_records": 78,
   "parts_count": 17,
   "raw_main": "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main",
@@ -46,9 +46,9 @@
       "path": "docs/HANDOFFS/LATEST_HANDOFF.md",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 5885,
-      "sha256": "6055466cc704c055471589870045b1b3e02c9f65f022bc0df114ee471a5de45a",
-      "chars": 5294,
+      "size_bytes": 7320,
+      "sha256": "6a0e2c0eaf685fb4cd269a5bd2cc33a111edcf2dcc8951fc336701692b40fed0",
+      "chars": 6242,
       "chunks": 1
     },
     {
@@ -1351,9 +1351,9 @@
       "path": "task_worker.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 699743,
-      "sha256": "20ea93d6f77570042e2245e02d2091a4fb20d9c1e2f4f6d9fd6e9297083c6603",
-      "chars": 666501,
+      "size_bytes": 707866,
+      "sha256": "86ed6c087df283b361ea0f2c203c78c2b24ed66a0f6db477a2e2fbb928c68325",
+      "chars": 672730,
       "chunks": 3
     },
     {
@@ -2338,6 +2338,15 @@
       "chunks": 1
     },
     {
+      "path": "tools/context_aggregator.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 499,
+      "sha256": "069bfcbd7cb905f16621726e8c56d54aea8340b8513d405d9fc6c6df655c2a36",
+      "chars": 499,
+      "chunks": 1
+    },
+    {
       "path": "tools/claude_bootstrap_aggregator.py",
       "mode": "full",
       "reason": "tracked text",
@@ -3142,7 +3151,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_MANIFEST.json",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 117175,
+      "size_bytes": 117983,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3151,7 +3160,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_001.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 362559,
+      "size_bytes": 363901,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3196,7 +3205,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_006.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 356486,
+      "size_bytes": 361096,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3232,7 +3241,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_010.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 363831,
+      "size_bytes": 363812,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3241,7 +3250,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_011.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 257117,
+      "size_bytes": 257741,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3259,7 +3268,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_013.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 396764,
+      "size_bytes": 378234,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3268,7 +3277,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_014.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 106161,
+      "size_bytes": 136689,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3304,7 +3313,7 @@
       "path": "docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 29809,
+      "size_bytes": 29350,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3313,7 +3322,7 @@
       "path": "docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 349506,
+      "size_bytes": 351030,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3322,7 +3331,7 @@
       "path": "docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 4954,
+      "size_bytes": 4953,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3358,7 +3367,7 @@
       "path": "docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 8614,
+      "size_bytes": 8893,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3385,7 +3394,7 @@
       "path": "docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 3780,
+      "size_bytes": 3685,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3430,7 +3439,7 @@
       "path": "docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 1309,
+      "size_bytes": 1308,
       "sha256": "",
       "chars": 0,
       "chunks": 0

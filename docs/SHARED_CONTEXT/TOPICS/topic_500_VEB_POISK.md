@@ -1,15 +1,15 @@
 # topic_500 VEB_POISK
 
-GENERATED_AT: 2026-05-07T16:36:57.893088+00:00
-GIT_SHA: 48f9858805392d105d729c61ce32c7e1b6587bd9
+GENERATED_AT: 2026-05-07T16:50:02.552960+00:00
+GIT_SHA: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 500
 ROLE: Интернет-поиск
 DIRECTIONS_BOUND: internet_search
-CURRENT_STATUS: INSTALLED_NOT_VERIFIED
+CURRENT_STATUS: IDLE_NO_FAILURES_NOT_VERIFIED
 ACTIVE_TASKS: 0
-FAILED_LAST_24H: 2
+FAILED_LAST_24H: 0
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 27
@@ -25,6 +25,8 @@ FAILED_LAST_24H: 2
 - a6e666e8 | IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1
 
 ## COMMITS_LAST_14D
+- 3f53d3f|docs(handoff): update after topic500 adaptive output V1
+- 0c15037|feat(topic500): adaptive output by intent mode (9 modes, V1)
 - f28a106|fix(topic2/topic500): extend estimate pipeline, offer menu for drive_file, fix search result blocking
 - 4aa44eb|fix: close canon contours for topic_5/topic_2/topic_500
 - e3d992c|P6G_CLEAN_OLD_TOPIC500_CONTAMINATION_V1: SQL clean task 4883 contamination (point 1 of 5)
@@ -40,15 +42,13 @@ FAILED_LAST_24H: 2
 
 ## MARKERS_LAST_24H
 - created:NEW
-- state:IN_PROGRESS
-- P6_TOPIC500_DIRECT_SEARCH_MONOLITH_ROUTE
-- P6_TOPIC500_SEARCH_DONE
-- reply_sent:p6_topic500_search_result
-- P6_TOPIC500_BLOCKED_BAD_OR_STALE_SEARCH_RESULT
-- reply_sent:p6_topic500_bad_result
 - MEMORY_QUERY_GUARD_V1:DONE
 - reply_sent:memory_query_guard_v1
+- state:IN_PROGRESS
+- P6_TOPIC500_DIRECT_SEARCH_MONOLITH_ROUTE
 - P6F_DAH_BLOCKED_DONE_NO_UPLOAD_OR_TG_HISTORY
+- P6_TOPIC500_SEARCH_DONE
+- reply_sent:p6_topic500_search_result
 - STARTUP_RECOVERY_REPLY_SENT_GUARD_V1:DONE_SKIP_RECOVERY
 - PATCH_T500_P6F_DAH_EXCLUDE_V1_FORCE_DONE_STUCK
 

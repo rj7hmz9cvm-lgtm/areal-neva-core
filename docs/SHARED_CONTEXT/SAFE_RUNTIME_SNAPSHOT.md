@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-07T16:36:57.561531+00:00
-git_sha_before_commit: 48f9858805392d105d729c61ce32c7e1b6587bd9
+generated_at_utc: 2026-05-07T16:50:02.194177+00:00
+git_sha_before_commit: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,9 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: inactive
 
 ## GIT_LOG_30
+3f53d3f docs(handoff): update after topic500 adaptive output V1
+0c15037 feat(topic500): adaptive output by intent mode (9 modes, V1)
+9841d5e FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 48f9858 docs(handoff): update latest handoff after topic2 and aggregator guard
 c0300fb fix(topic2): close 4 code gaps — enrichment markers, cyrillic marker, function-object bug, FCG bypass
 5111f33 fix(aggregator): refuse dirty tracked sources before guarded build
@@ -37,19 +40,18 @@ a054796 feat(topic2): canonical template selection, 15-col XLSX, status guard
 79ba839 fix(topic2): redirect simplified v2 path to full P2/P3 pipeline
 66a57e1 fix(topic2): route ALL estimates through full P2/P3 pipeline
 d9edd5d fix(topic2): auto price enrichment + DONE contract markers
-48eed2e fix(topic5): filter garbage from act — canon §4/§5 material filter
-bb8e971 fix(topic5): fix vision-blocked condition — {} is not None
-fb24e60 fix(topic5): vision-blocked fallback per canon §17 — DOCX from owner text
 
 ## GIT_SHOW_STAT_HEAD
-commit 48f9858805392d105d729c61ce32c7e1b6587bd9
+commit 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
 Author: Ila <ilakuznecov@mac.local>
-Date:   Thu May 7 19:36:55 2026 +0300
+Date:   Thu May 7 19:48:48 2026 +0300
 
-    docs(handoff): update latest handoff after topic2 and aggregator guard
+    docs(handoff): update after topic500 adaptive output V1
+    
+    Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 
- docs/HANDOFFS/LATEST_HANDOFF.md | 35 +++++++++++++++++++++++++++++------
- 1 file changed, 29 insertions(+), 6 deletions(-)
+ docs/HANDOFFS/LATEST_HANDOFF.md | 35 ++++++++++++++++++++++++++---------
+ 1 file changed, 26 insertions(+), 9 deletions(-)
 
 ## GIT_CHANGED_FILES_10
 core/sample_template_engine.py
@@ -123,6 +125,7 @@ docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md
 docs/SHARED_CONTEXT/TOPICS/topic_961_AVTOZAPCHASTI.md
 docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md
 task_worker.py
+tools/context_aggregator.py
 tools/full_context_aggregator.py
 tools/full_context_aggregator_guard.py
 tools/full_context_aggregator_guard.sh
@@ -262,11 +265,6 @@ P6E67_REVISION_FROM_TASK=ee39|P6E67_MERGED_TO_PARENT_TASK 893436d4-72d2-4bdf-b36
 - topic_210_file_fb6aadc5-b372-488a-aede-f3433a030e55|{"task_id": "fb6aadc5-b372-488a-aede-f3433a030e55", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-07T16:21:04.822675+00:00
 
 ## JOURNAL_AREAL_TASK_WORKER_60
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 7min 27.063s CPU time, 128.1M memory peak, 0B memory swap peak.
-Started areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
 areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
 areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
 areal-task-worker.service: Failed with result 'exit-code'.
@@ -321,6 +319,11 @@ Stopping areal-task-worker.service - Areal Task Worker...
 areal-task-worker.service: Deactivated successfully.
 Stopped areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Consumed 11.177s CPU time.
+Started areal-task-worker.service - Areal Task Worker.
+Stopping areal-task-worker.service - Areal Task Worker...
+areal-task-worker.service: Deactivated successfully.
+Stopped areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Consumed 10.691s CPU time.
 Started areal-task-worker.service - Areal Task Worker.
 
 ## JOURNAL_TELEGRAM_INGRESS_30

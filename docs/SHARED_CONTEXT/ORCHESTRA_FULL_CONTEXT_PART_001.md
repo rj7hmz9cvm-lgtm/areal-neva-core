@@ -1,19 +1,19 @@
 # ORCHESTRA_FULL_CONTEXT_PART_001
-generated_at_utc: 2026-05-07T16:36:57.693135+00:00
-git_sha_before_commit: 48f9858805392d105d729c61ce32c7e1b6587bd9
+generated_at_utc: 2026-05-07T16:50:02.327179+00:00
+git_sha_before_commit: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
 part: 1/17
 
 
 ====================================================================================================
 BEGIN_FILE: docs/HANDOFFS/LATEST_HANDOFF.md
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 6055466cc704c055471589870045b1b3e02c9f65f022bc0df114ee471a5de45a
+SHA256_FULL_FILE: 6a0e2c0eaf685fb4cd269a5bd2cc33a111edcf2dcc8951fc336701692b40fed0
 ====================================================================================================
-# LATEST HANDOFF — 2026-05-07 ~19:35 MSK
-**HEAD**: `c0300fb` — fix(topic2): close 4 code gaps — enrichment markers, cyrillic marker, function-object bug, FCG bypass  
-**Предыдущий HEAD**: `2ece9eb`  
-**Воркер**: active (pid=2070144)  
-**GitHub**: pushed (c0300fb visible)  
+# LATEST HANDOFF — 2026-05-07 ~19:48 MSK
+**HEAD**: `0c15037` — feat(topic500): adaptive output by intent mode (9 modes, V1)  
+**Предыдущий HEAD**: `c0300fb`  
+**Воркер**: active  
+**GitHub**: pushed (0c15037 visible)  
 **Детальный handoff**: `HANDOFF_20260507_V4_GAP_CLOSE.md`
 
 ---
@@ -24,7 +24,7 @@ SHA256_FULL_FILE: 6055466cc704c055471589870045b1b3e02c9f65f022bc0df114ee471a5de4
 |-------|-----------|------------|
 | topic_2 СТРОИКА | INSTALLED (не VERIFIED) | V5 applied, live-replay pending |
 | topic_5 ТЕХНАДЗОР | Stable | без изменений |
-| topic_500 ПОИСК | Partial | 16 режимов НЕ реализованы |
+| topic_500 ПОИСК | INSTALLED (не VERIFIED) | 9 режимов adaptive output, procurement дефолт |
 | topic_210 PROJECT | Active | без изменений |
 
 ---
@@ -100,12 +100,29 @@ TOPIC2_DONE_CONTRACT_OK
 
 ---
 
+## TOPIC500 ADAPTIVE OUTPUT — `0c15037`
+
+**PATCH_TOPIC500_ADAPTIVE_OUTPUT_V1** — wrapper вокруг `_p0_runtime_topic500_direct_search_20260504`
+
+| Режим | Триггер (ключевые слова) | Что меняется |
+|-------|--------------------------|--------------|
+| procurement | купить/цена/поставщик/Avito/Ozon | ничего (стандарт) |
+| normative | ГОСТ/СП/СНиП/норматив/стандарт | формат: название, пункт, применимость, ссылка |
+| technical | технология/монтаж/инструкция/как сделать | формат: метод, шаги, нормативы, источник |
+| download | скачать/APK/4PDA/программа | формат: одна ссылка, платформа, статус |
+| news | новость/изменения/актуально | формат: факты, дата, источник |
+| service | подрядчик/бригада/услуга/мастер | формат: название, контакт, ссылка, рейтинг |
+| comparison | сравни/что лучше/разница | формат: таблица сравнения |
+| troubleshooting | не работает/ошибка/как исправить | формат: причина, решение, шаги, docs |
+| factual | всё остальное | формат: ответ, источник, что подтверждено |
+
+---
+
 ## OPEN CONTOURS (не закрыто)
 
 1. **Live-verify topic_2** — задача с полным ТЗ в Telegram, проверить полную цепочку маркеров
-2. **topic_500 adaptive output** — 16 режимов не реализованы
-3. **MEMORY_QUERY_GUARD_V1** — «что обсуждали» → попадает в estimate route
-4. **`_parse_price_sources` quality** — матчинг ключевых слов требует мониторинга
+2. **Live-verify topic_500** — проверить adaptive output: normative/factual запрос → правильный формат
+3. **`_parse_price_sources` quality** — матчинг ключевых слов требует мониторинга
 
 ---
 

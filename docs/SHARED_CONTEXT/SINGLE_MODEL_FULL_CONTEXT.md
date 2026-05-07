@@ -1,7 +1,7 @@
 # SINGLE_MODEL_FULL_CONTEXT
 
-GENERATED_AT: 2026-05-07T16:36:58.054833+00:00
-GIT_SHA: 48f9858805392d105d729c61ce32c7e1b6587bd9
+GENERATED_AT: 2026-05-07T16:50:02.703042+00:00
+GIT_SHA: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
 PURPOSE: Один файл с полным контекстом проекта для любой модели
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 
@@ -26,7 +26,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 | 5 | TEKHNADZOR | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
 | 11 | VIDEO | UNKNOWN | 0 | 0 |
 | 210 | PROEKTIROVANIE | INSTALLED_NOT_VERIFIED | 0 | 5 |
-| 500 | VEB_POISK | INSTALLED_NOT_VERIFIED | 0 | 2 |
+| 500 | VEB_POISK | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
 | 794 | DEVOPS | UNKNOWN | 0 | 0 |
 | 961 | AVTOZAPCHASTI | UNKNOWN | 0 | 0 |
 | 3008 | KODY_MOZGOV | UNKNOWN | 0 | 0 |
@@ -85,11 +85,11 @@ owner_reference_registry: loaded=True items=11
 # 2. LATEST_HANDOFF
 ================================================================================
 
-# LATEST HANDOFF — 2026-05-07 ~19:35 MSK
-**HEAD**: `c0300fb` — fix(topic2): close 4 code gaps — enrichment markers, cyrillic marker, function-object bug, FCG bypass  
-**Предыдущий HEAD**: `2ece9eb`  
-**Воркер**: active (pid=2070144)  
-**GitHub**: pushed (c0300fb visible)  
+# LATEST HANDOFF — 2026-05-07 ~19:48 MSK
+**HEAD**: `0c15037` — feat(topic500): adaptive output by intent mode (9 modes, V1)  
+**Предыдущий HEAD**: `c0300fb`  
+**Воркер**: active  
+**GitHub**: pushed (0c15037 visible)  
 **Детальный handoff**: `HANDOFF_20260507_V4_GAP_CLOSE.md`
 
 ---
@@ -100,7 +100,7 @@ owner_reference_registry: loaded=True items=11
 |-------|-----------|------------|
 | topic_2 СТРОИКА | INSTALLED (не VERIFIED) | V5 applied, live-replay pending |
 | topic_5 ТЕХНАДЗОР | Stable | без изменений |
-| topic_500 ПОИСК | Partial | 16 режимов НЕ реализованы |
+| topic_500 ПОИСК | INSTALLED (не VERIFIED) | 9 режимов adaptive output, procurement дефолт |
 | topic_210 PROJECT | Active | без изменений |
 
 ---
@@ -176,12 +176,29 @@ TOPIC2_DONE_CONTRACT_OK
 
 ---
 
+## TOPIC500 ADAPTIVE OUTPUT — `0c15037`
+
+**PATCH_TOPIC500_ADAPTIVE_OUTPUT_V1** — wrapper вокруг `_p0_runtime_topic500_direct_search_20260504`
+
+| Режим | Триггер (ключевые слова) | Что меняется |
+|-------|--------------------------|--------------|
+| procurement | купить/цена/поставщик/Avito/Ozon | ничего (стандарт) |
+| normative | ГОСТ/СП/СНиП/норматив/стандарт | формат: название, пункт, применимость, ссылка |
+| technical | технология/монтаж/инструкция/как сделать | формат: метод, шаги, нормативы, источник |
+| download | скачать/APK/4PDA/программа | формат: одна ссылка, платформа, статус |
+| news | новость/изменения/актуально | формат: факты, дата, источник |
+| service | подрядчик/бригада/услуга/мастер | формат: название, контакт, ссылка, рейтинг |
+| comparison | сравни/что лучше/разница | формат: таблица сравнения |
+| troubleshooting | не работает/ошибка/как исправить | формат: причина, решение, шаги, docs |
+| factual | всё остальное | формат: ответ, источник, что подтверждено |
+
+---
+
 ## OPEN CONTOURS (не закрыто)
 
 1. **Live-verify topic_2** — задача с полным ТЗ в Telegram, проверить полную цепочку маркеров
-2. **topic_500 adaptive output** — 16 режимов не реализованы
-3. **MEMORY_QUERY_GUARD_V1** — «что обсуждали» → попадает в estimate route
-4. **`_parse_price_sources` quality** — матчинг ключевых слов требует мониторинга
+2. **Live-verify topic_500** — проверить adaptive output: normative/factual запрос → правильный формат
+3. **`_parse_price_sources` quality** — матчинг ключевых слов требует мониторинга
 
 ---
 
@@ -3937,8 +3954,8 @@ I canno
 ```
 # topic_0 COMMON
 
-GENERATED_AT: 2026-05-07T16:36:57.750788+00:00
-GIT_SHA: 48f9858805392d105d729c61ce32c7e1b6587bd9
+GENERATED_AT: 2026-05-07T16:50:02.393651+00:00
+GIT_SHA: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 0
@@ -4807,8 +4824,8 @@ def _write_xlsx(path: Path, items: List[Dict[str, Any]], source_text: str, photo
 ```
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-05-07T16:36:57.777748+00:00
-GIT_SHA: 48f9858805392d105d729c61ce32c7e1b6587bd9
+GENERATED_AT: 2026-05-07T16:50:02.421231+00:00
+GIT_SHA: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -4882,18 +4899,18 @@ FAILED_LAST_24H: 9
 - clarified:Все задачи завершены
 - clarified:Отбой всех задач
 - clarified:отмена всех задач
-- PRICE_BIND_POISON_PARENT_GUARD_V2_BLOCKED_V4:LATEST_PRICE_MENU_FALLBACK
-- P6E67_PARENT_REVIVED_AS_REVISION_SOURCE:LAST_ACTIVE_ESTIMATE_FALLBACK
-- P6E67_REVISION_TEXT_MERGED_FROM_TASK:0aca9e91-ebfe-49c7-839f-9c17b9efefa4
-- P6E67_CURRENT_TASK_CANCELLED_MERGED_TO_PARENT:a71dd753-bc6a-4944-8499-5bcadba90c
-- PRICE_BIND_POISON_PARENT_GUARD_V2_BLOCKED_V4:EXACT_REPLY_PRICE_MENU
-- P6E2_TOPIC2_IMAGE_ESTIMATE_ROUTE_TAKEN
-- P6E67_PARENT_NOT_FOUND
-- P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION
 - state:FAILED
 - reply_sent:stale_failed
 - reply_sent:full_contour_direct_tender
 - FULL_CONSTRUCTION_FILE_CONTOUR_CANON_GUARD_V1:DIRECT_TENDER_ESTIMATE_GENERATED
+- FULL_CONSTRUCTION_FILE_CONTOUR_CANON_GUARD_V1:UPDATE_BLOCKED:INVALID_PUBLIC_RESU
+- TOPIC2_ESTIMATE_FINAL_CLOSE_V2:ESTIMATE_ARTIFACTS_CREATED
+- TOPIC2_ESTIMATE_SESSION_CREATED
+- TOPIC2_CONTEXT_READY
+- TOPIC2_XLSX_CREATED
+- TOPIC2_PDF_CREATED
+- TOPIC2_PDF_CYRILLIC_OK
+- TOPIC2_DRIVE_UPLOAD_XLSX_OK
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210
@@ -5544,8 +5561,8 @@ _P6H5_NORMATIVE_EXPAND = [
 ```
 # topic_5 TEKHNADZOR
 
-GENERATED_AT: 2026-05-07T16:36:57.805524+00:00
-GIT_SHA: 48f9858805392d105d729c61ce32c7e1b6587bd9
+GENERATED_AT: 2026-05-07T16:50:02.454735+00:00
+GIT_SHA: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 5
@@ -5569,6 +5586,8 @@ FAILED_LAST_24H: 0
 - 8093deb3 | INVALID_PUBLIC_RESULT
 
 ## COMMITS_LAST_14D
+- 3f53d3f|docs(handoff): update after topic500 adaptive output V1
+- 0c15037|feat(topic500): adaptive output by intent mode (9 modes, V1)
 - 48eed2e|fix(topic5): filter garbage from act — canon §4/§5 material filter
 - bb8e971|fix(topic5): fix vision-blocked condition — {} is not None
 - fb24e60|fix(topic5): vision-blocked fallback per canon §17 — DOCX from owner text
@@ -5597,8 +5616,6 @@ FAILED_LAST_24H: 0
 - 94c6b3f|P6H_TOPIC5_TECHNADZOR_TEMPLATE_PHOTO_CLIENT_SAFE_VOICE_LIVE_CLOSE_20260504: systemic technadzor module for topic_5 — INSTALLED_NOT_LIVE_TESTED
 - e3d992c|P6G_CLEAN_OLD_TOPIC500_CONTAMINATION_V1: SQL clean task 4883 contamination (point 1 of 5)
 - 949c379|P6F_FULL_CODE_CLOSE_REMAINING_CONTOURS_20260504_V1: close revision binding, topic500 sanitizer, photo CV via OpenRouter, TZ params, source labels, technadzor DOCX, project_210 drive, artifact gates
-- 709b28a|P3_FINAL_ROUTE_HARD_LOCK_SEARCH_ESTIMATE_20260504_V1: hard-lock topic500 search and topic2 current estimate route
-- 4f6af26|P2_FINAL_SEARCH_AND_ESTIMATE_CLOSE_20260504_V1: close topic500 search memory and topic2 final estimate logic
 
 ## MARKERS_LAST_24H
 - created:NEW
@@ -5678,8 +5695,8 @@ DIRECTIONS_BOUND: Видео
 ```
 # topic_11 VIDEO
 
-GENERATED_AT: 2026-05-07T16:36:57.828672+00:00
-GIT_SHA: 48f9858805392d105d729c61ce32c7e1b6587bd9
+GENERATED_AT: 2026-05-07T16:50:02.485829+00:00
+GIT_SHA: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 11
@@ -6292,8 +6309,8 @@ def _normalize_sheet_register(template: Dict[str, Any], data: Dict[str, Any]) ->
 ```
 # topic_210 PROEKTIROVANIE
 
-GENERATED_AT: 2026-05-07T16:36:57.856336+00:00
-GIT_SHA: 48f9858805392d105d729c61ce32c7e1b6587bd9
+GENERATED_AT: 2026-05-07T16:50:02.521679+00:00
+GIT_SHA: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 210
@@ -6403,8 +6420,8 @@ items: 11
 
 ## TOPIC_500_VEB_POISK
 
-STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE: 0  FAILED_24H: 2
+STATUS: IDLE_NO_FAILURES_NOT_VERIFIED
+ACTIVE: 0  FAILED_24H: 0
 DIRECTIONS_BOUND: Интернет-поиск
 
 ### LAST_FAILED (5)
@@ -6886,16 +6903,16 @@ except Exception:
 ```
 # topic_500 VEB_POISK
 
-GENERATED_AT: 2026-05-07T16:36:57.893088+00:00
-GIT_SHA: 48f9858805392d105d729c61ce32c7e1b6587bd9
+GENERATED_AT: 2026-05-07T16:50:02.552960+00:00
+GIT_SHA: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 500
 ROLE: Интернет-поиск
 DIRECTIONS_BOUND: internet_search
-CURRENT_STATUS: INSTALLED_NOT_VERIFIED
+CURRENT_STATUS: IDLE_NO_FAILURES_NOT_VERIFIED
 ACTIVE_TASKS: 0
-FAILED_LAST_24H: 2
+FAILED_LAST_24H: 0
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 27
@@ -6911,6 +6928,8 @@ FAILED_LAST_24H: 2
 - a6e666e8 | IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1
 
 ## COMMITS_LAST_14D
+- 3f53d3f|docs(handoff): update after topic500 adaptive output V1
+- 0c15037|feat(topic500): adaptive output by intent mode (9 modes, V1)
 - f28a106|fix(topic2/topic500): extend estimate pipeline, offer menu for drive_file, fix search result blocking
 - 4aa44eb|fix: close canon contours for topic_5/topic_2/topic_500
 - e3d992c|P6G_CLEAN_OLD_TOPIC500_CONTAMINATION_V1: SQL clean task 4883 contamination (point 1 of 5)
@@ -6926,15 +6945,13 @@ FAILED_LAST_24H: 2
 
 ## MARKERS_LAST_24H
 - created:NEW
-- state:IN_PROGRESS
-- P6_TOPIC500_DIRECT_SEARCH_MONOLITH_ROUTE
-- P6_TOPIC500_SEARCH_DONE
-- reply_sent:p6_topic500_search_result
-- P6_TOPIC500_BLOCKED_BAD_OR_STALE_SEARCH_RESULT
-- reply_sent:p6_topic500_bad_result
 - MEMORY_QUERY_GUARD_V1:DONE
 - reply_sent:memory_query_guard_v1
+- state:IN_PROGRESS
+- P6_TOPIC500_DIRECT_SEARCH_MONOLITH_ROUTE
 - P6F_DAH_BLOCKED_DONE_NO_UPLOAD_OR_TG_HISTORY
+- P6_TOPIC500_SEARCH_DONE
+- reply_sent:p6_topic500_search_result
 - STARTUP_RECOVERY_REPLY_SENT_GUARD_V1:DONE_SKIP_RECOVERY
 - PATCH_T500_P6F_DAH_EXCLUDE_V1_FORCE_DONE_STUCK
 
@@ -7011,8 +7028,8 @@ DIRECTIONS_BOUND: Сервер DevOps
 ```
 # topic_794 DEVOPS
 
-GENERATED_AT: 2026-05-07T16:36:57.924981+00:00
-GIT_SHA: 48f9858805392d105d729c61ce32c7e1b6587bd9
+GENERATED_AT: 2026-05-07T16:50:02.580145+00:00
+GIT_SHA: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 794
@@ -7107,8 +7124,8 @@ DIRECTIONS_BOUND: Автозапчасти
 ```
 # topic_961 AVTOZAPCHASTI
 
-GENERATED_AT: 2026-05-07T16:36:57.955816+00:00
-GIT_SHA: 48f9858805392d105d729c61ce32c7e1b6587bd9
+GENERATED_AT: 2026-05-07T16:50:02.604479+00:00
+GIT_SHA: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 961
@@ -7200,8 +7217,8 @@ DIRECTIONS_BOUND: Мозги оркестра
 ```
 # topic_3008 KODY_MOZGOV
 
-GENERATED_AT: 2026-05-07T16:36:57.988330+00:00
-GIT_SHA: 48f9858805392d105d729c61ce32c7e1b6587bd9
+GENERATED_AT: 2026-05-07T16:50:02.634804+00:00
+GIT_SHA: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 3008
@@ -7304,8 +7321,8 @@ DIRECTIONS_BOUND: CRM лиды
 ```
 # topic_4569 CRM_LEADS
 
-GENERATED_AT: 2026-05-07T16:36:58.016832+00:00
-GIT_SHA: 48f9858805392d105d729c61ce32c7e1b6587bd9
+GENERATED_AT: 2026-05-07T16:50:02.661832+00:00
+GIT_SHA: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 4569
@@ -7413,8 +7430,8 @@ DIRECTIONS_BOUND: Поиск работы
 ```
 # topic_6104 JOB_SEARCH
 
-GENERATED_AT: 2026-05-07T16:36:58.046264+00:00
-GIT_SHA: 48f9858805392d105d729c61ce32c7e1b6587bd9
+GENERATED_AT: 2026-05-07T16:50:02.692772+00:00
+GIT_SHA: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 6104
