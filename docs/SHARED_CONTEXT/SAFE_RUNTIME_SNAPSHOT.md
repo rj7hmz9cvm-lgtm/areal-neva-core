@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-07T17:24:49.479320+00:00
-git_sha_before_commit: 551829d5a33270fde4d9355e2dae407da05e6fb3
+generated_at_utc: 2026-05-07T17:27:00.174177+00:00
+git_sha_before_commit: e90165df32d2efe9394e1f77e0eebc6dd32003d0
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,7 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: inactive
 
 ## GIT_LOG_30
+e90165d feat(aggregator): add current context quick start layer
 551829d FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 1b1078c docs(handoff): update after GAP-5 and GAP-6 memory fixes
 0d6a9a4 fix(memory): ARCHIVE_DUPLICATE_GUARD_V1 + topic500 search pollution guard
@@ -39,16 +40,15 @@ d1f20a0 fix(topic2): full mega-guards V1 — 6 guards закрытие topic_2 a
 9420d6a fix(topic2): stroyka meta-confirm guard + reply chain + xlsx 15 cols + topic210 meta guard
 58d33aa fix(topic2): stop T2RFP infinite redirect loop for drive_file re-picks
 b17bca2 fix(topic2): stop WAITING_CLARIFICATION pick loop
-2ef3f86 fix(topic2): price reply thread isolation + chat-aware price search
 
 ## GIT_SHOW_STAT_HEAD
-commit 551829d5a33270fde4d9355e2dae407da05e6fb3
+commit e90165df32d2efe9394e1f77e0eebc6dd32003d0
 Author: Ila <ilakuznecov@mac.local>
-Date:   Thu May 7 20:00:08 2026 +0300
+Date:   Thu May 7 20:25:06 2026 +0300
 
-    FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
+    feat(aggregator): add current context quick start layer
 
- docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md    |   6 +-
+ docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md    |  25 +-
  docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md |   2 +-
  .../SHARED_CONTEXT/DIRECTIONS/auto_parts_search.md |   4 +-
  docs/SHARED_CONTEXT/DIRECTIONS/cad_dwg.md          |   4 +-
@@ -79,43 +79,45 @@ Date:   Thu May 7 20:00:08 2026 +0300
  docs/SHARED_CONTEXT/DIRECTIONS/video_production.md |   4 +-
  docs/SHARED_CONTEXT/DIRECTIONS/vpn_network.md      |   4 +-
  docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md      |   4 +-
- docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |   6 +-
- docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |   6 +-
- docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  54 +++++------
- .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |  32 +++++--
+ docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |  25 +-
+ docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |  25 +-
+ docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |   5 +-
+ .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  45 +--
+ .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_004.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |  14 +--
- .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |  39 +++++++-
+ .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_007.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |  28 ++++--
+ .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_010.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_011.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_012.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_013.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_013.md             | 320 ++++++++++++++++++++-
  .../ORCHESTRA_FULL_CONTEXT_PART_014.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_015.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_016.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_017.md             |  19 +++-
- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       |  75 +++++++--------
- docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   | 103 ++++++++++++---------
+ .../ORCHESTRA_FULL_CONTEXT_PART_017.md             |   4 +-
+ docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 125 ++++++--
+ .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md | 195 +++++++++++++
+ docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  48 ++--
  docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |   6 +-
  docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |   4 +-
  .../TOPICS/topic_210_PROEKTIROVANIE.md             |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |  26 +++---
+ docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |   4 +-
  .../TOPICS/topic_3008_KODY_MOZGOV.md               |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |   5 +-
- docs/SHARED_CONTEXT/TOPICS/topic_5_TEKHNADZOR.md   |   6 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_5_TEKHNADZOR.md   |   4 +-
  .../SHARED_CONTEXT/TOPICS/topic_6104_JOB_SEARCH.md |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |   4 +-
  .../TOPICS/topic_961_AVTOZAPCHASTI.md              |   4 +-
- docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   6 +-
- 67 files changed, 362 insertions(+), 271 deletions(-)
+ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   4 +-
+ tools/full_context_aggregator.py                   | 314 +++++++++++++++++++-
+ 69 files changed, 1120 insertions(+), 243 deletions(-)
 
 ## GIT_CHANGED_FILES_10
 core/memory_api_server.py
@@ -175,6 +177,7 @@ docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_015.md
 docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_016.md
 docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_017.md
 docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md
+docs/SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md
 docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md
 docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md
@@ -192,7 +195,7 @@ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md
 memory_api_server.py
 task_worker.py
 tools/context_aggregator.py
-tools/full_context_aggregator_guard.py
+tools/full_context_aggregator.py
 
 ## CORE_DB_STATE_COUNTS
 - FAILED|2961
