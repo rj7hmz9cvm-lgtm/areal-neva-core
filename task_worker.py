@@ -15481,15 +15481,15 @@ if _FDCB_ORIG_UPDATE and not getattr(_FDCB_ORIG_UPDATE, "_fdcb_wrapped", False):
         if state in ("AWAITING_CONFIRMATION", "DONE", "FAILED"):
             try:
                 _fdcb_row = conn.execute(
-                    "SELECT 1 FROM task_history WHERE task_id=? AND action='TOPIC2_DONE_CONTRACT_OK' LIMIT 1",
+                    "SELECT 1 FROM task_history WHERE task_id=? AND action='TOPIC2_AC_GATE_OK' LIMIT 1",
                     (str(task_id),)
                 ).fetchone()
                 if _fdcb_row:
                     conn.execute(
                         "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
-                        (str(task_id), "PATCH_FCG_DONE_CONTRACT_BYPASS_V1:bypass")
+                        (str(task_id), "PATCH_FCG_DONE_CONTRACT_BYPASS_V1:bypass_ac_gate_ok")
                     )
-                    _FDCB_LOG.info("PATCH_FCG_DONE_CONTRACT_BYPASS_V1 bypass task=%s state=%s", task_id, state)
+                    _FDCB_LOG.info("PATCH_FCG_DONE_CONTRACT_BYPASS_V1 bypass_ac_gate_ok task=%s state=%s", task_id, state)
                     return _FCG_ORIG_UPDATE_TASK(conn, task_id, *args, **kwargs)
             except Exception as _fdcb_e:
                 _FDCB_LOG.warning("PATCH_FCG_DONE_CONTRACT_BYPASS_V1 err: %s", _fdcb_e)

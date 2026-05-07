@@ -7328,7 +7328,7 @@ async def handle_topic2_one_big_formula_pipeline_v1(
                     try:
                         conn.execute(
                             "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
-                            (task_id, f"TOPIC2_PRICE_CHOICE_CONFIRMED:{_p3pcg_has_explicit_price}"),
+                            (task_id, "TOPIC2_PRICE_CHOICE_CONFIRMED:confirmed"),
                         )
                         conn.commit()
                     except Exception:

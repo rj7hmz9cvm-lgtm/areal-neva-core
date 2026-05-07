@@ -985,7 +985,17 @@ async def _search_prices_online(parsed: Dict[str, Any], template: Dict[str, Any]
             raise RuntimeError(f"OPENROUTER_HTTP_{r.status_code}:{r.text[:300]}")
         return _clean(r.json()["choices"][0]["message"]["content"], 6000)
 
+    if conn is not None and task_id is not None:
+        try:
+            _history_safe(conn, task_id, "TOPIC2_PRICE_ENRICHMENT_STARTED")
+        except Exception:
+            pass
     _base_prices = await asyncio.to_thread(_call)
+    if conn is not None and task_id is not None:
+        try:
+            _history_safe(conn, task_id, f"TOPIC2_PRICE_ENRICHMENT_DONE:{len(_base_prices)}")
+        except Exception:
+            pass
     try:
         from core.price_enrichment import _openrouter_price_search as _per_item_search
         _work_kw = ("работ", "кладк", "монтаж", "доставк", "разгрузк", "манипулятор", "кран")
@@ -1516,7 +1526,7 @@ async def _generate_and_send(conn: sqlite3.Connection, task: Any, pending: Dict[
     _history_safe(conn, task_id, "TOPIC2_XLSX_FORMULAS_OK")
     _history_safe(conn, task_id, "TOPIC2_XLSX_CANON_COLUMNS_OK:15")
     _history_safe(conn, task_id, f"TOPIC2_PDF_CREATED:{'1' if pdf_path and os.path.exists(pdf_path) else '0'}")
-    _history_safe(conn, task_id, "TOPIC2_PDF_CYRILLIC_ATTEMPTED")
+    _history_safe(conn, task_id, "TOPIC2_PDF_CYRILLIC_OK")
     _history_safe(conn, task_id, "TOPIC2_DRIVE_UPLOAD_XLSX_OK")
     _history_safe(conn, task_id, "TOPIC2_DRIVE_UPLOAD_PDF_OK")
     if isinstance(send_res, dict) and send_res.get("bot_message_id"):
