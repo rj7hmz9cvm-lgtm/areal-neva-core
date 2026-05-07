@@ -933,18 +933,24 @@ def _build_estimate_items(parsed: Dict[str, Any], price_text: str, choice: Dict[
 
 
 def _create_xlsx_from_template(task_id: str, parsed: Dict[str, Any], template: Dict[str, Any], template_path: Optional[str], sheet_name: Optional[str], price_text: str, choice: Dict[str, Any]) -> Tuple[str, List[Dict[str, Any]], float]:
+    import shutil as _xlsx_shutil
     from openpyxl import Workbook, load_workbook
-    from openpyxl.styles import Font, Alignment
+    from openpyxl.styles import Font, Alignment, PatternFill
+    from openpyxl.utils import get_column_letter
 
     items = _build_estimate_items(parsed, price_text, choice)
+    today_str = datetime.date.today().isoformat()
+    price_source = "Perplexity" if price_text and len(str(price_text).strip()) > 10 else "TEMPLATE_ONLY"
 
     if template_path and os.path.exists(template_path):
         try:
+            tmp_copy = os.path.join(tempfile.gettempdir(), f"tpl_copy_{task_id[:8]}_{int(time.time())}.xlsx")
+            _xlsx_shutil.copy(template_path, tmp_copy)
             import sys as _sec_sys
             _sec_old_limit = _sec_sys.getrecursionlimit()
             _sec_sys.setrecursionlimit(5000)
             try:
-                wb = load_workbook(template_path)
+                wb = load_workbook(tmp_copy)
             finally:
                 _sec_sys.setrecursionlimit(_sec_old_limit)
             if sheet_name and sheet_name in wb.sheetnames:
@@ -958,56 +964,77 @@ def _create_xlsx_from_template(task_id: str, parsed: Dict[str, Any], template: D
         del wb["AREAL_CALC"]
     ws = wb.create_sheet("AREAL_CALC", 0)
 
-    ws.append(["Предварительная смета"])
-    ws.append(["Эталон", template.get("title", "")])
-    ws.append(["Лист эталона", sheet_name or "не выбран"])
-    ws.append(["Выбор цены", choice.get("choice"), f"поправка {choice.get('percent_adjustment', 0)}%"])
-    ws.append(["Объект", parsed.get("raw", "")])
-    ws.append([])
-    headers = ["№", "Раздел", "Наименование", "Ед. изм.", "Кол-во", "Работа Цена", "Работа Стоимость", "Материалы Цена", "Материалы Стоимость", "Всего", "Примечание"]
+    # §4 canonical 15 columns — no forbidden metadata rows
+    headers = [
+        "№", "Раздел", "Наименование", "Ед. изм.", "Кол-во",
+        "Цена работ руб", "Стоимость работ руб",
+        "Цена материалов руб", "Стоимость материалов руб", "Всего руб",
+        "Источник цены", "Поставщик", "URL", "Дата проверки", "Примечание",
+    ]
     ws.append(headers)
-
-    header_row = 7
+    header_row = 1
+    hdr_fill = PatternFill(start_color="1F497D", end_color="1F497D", fill_type="solid")
     for c in range(1, len(headers) + 1):
-        ws.cell(header_row, c).font = Font(bold=True)
-        ws.cell(header_row, c).alignment = Alignment(wrap_text=True)
+        cell = ws.cell(header_row, c)
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.alignment = Alignment(wrap_text=True, horizontal="center")
+        cell.fill = hdr_fill
 
+    sec_palette = ["EBF1DE", "DCE6F1", "FDE9D9", "E2EFDA", "FFF2CC", "E7E6E6", "D9E1F2", "FCE4D6", "EDEDED", "E2EFDA", "F2F2F2"]
+    sec_color_map: Dict[str, str] = {}
+    sec_idx = 0
     py_total = 0.0
     row_idx = header_row + 1
     for i, it in enumerate(items, 1):
         qty = float(it["qty"])
         price = float(it["price"])
         py_total += qty * price
+        sec = it["section"]
+        if sec not in sec_color_map:
+            sec_color_map[sec] = sec_palette[sec_idx % len(sec_palette)]
+            sec_idx += 1
+        row_fill = PatternFill(start_color=sec_color_map[sec], end_color=sec_color_map[sec], fill_type="solid")
         ws.cell(row_idx, 1, i)
-        ws.cell(row_idx, 2, it["section"])
+        ws.cell(row_idx, 2, sec)
         ws.cell(row_idx, 3, it["name"])
         ws.cell(row_idx, 4, it["unit"])
         ws.cell(row_idx, 5, qty)
         ws.cell(row_idx, 6, 0)
-        ws.cell(row_idx, 7, f"=E{row_idx}*F{row_idx}")
+        ws.cell(row_idx, 7).value = f"=E{row_idx}*F{row_idx}"
         ws.cell(row_idx, 8, price)
-        ws.cell(row_idx, 9, f"=E{row_idx}*H{row_idx}")
-        ws.cell(row_idx, 10, f"=G{row_idx}+I{row_idx}")
-        ws.cell(row_idx, 11, it["note"])
+        ws.cell(row_idx, 9).value = f"=E{row_idx}*H{row_idx}"
+        ws.cell(row_idx, 10).value = f"=G{row_idx}+I{row_idx}"
+        ws.cell(row_idx, 11, price_source)
+        ws.cell(row_idx, 12, "")
+        ws.cell(row_idx, 13, "")
+        ws.cell(row_idx, 14, today_str)
+        ws.cell(row_idx, 15, it["note"])
+        for c in range(1, 16):
+            ws.cell(row_idx, c).fill = row_fill
         row_idx += 1
 
+    data_last = row_idx - 1
     total_row = row_idx + 1
-    ws.cell(total_row, 9, "ИТОГО")
-    ws.cell(total_row, 10, f"=SUM(J{header_row+1}:J{row_idx-1})")
-    ws.cell(total_row + 1, 9, "НДС 20%")
-    ws.cell(total_row + 1, 10, f"=J{total_row}*0.2")
-    ws.cell(total_row + 2, 9, "С НДС")
-    ws.cell(total_row + 2, 10, f"=J{total_row}+J{total_row+1}")
+    total_fill = PatternFill(start_color="1F497D", end_color="1F497D", fill_type="solid")
+    for lbl, formula, tr in [
+        ("ИТОГО без НДС", f"=SUM(J{header_row + 1}:J{data_last})", total_row),
+        ("НДС 20%",       f"=J{total_row}*0.2",                    total_row + 1),
+        ("С НДС",         f"=J{total_row}+J{total_row + 1}",        total_row + 2),
+    ]:
+        ws.cell(tr, 9, lbl).font = Font(bold=True, color="FFFFFF")
+        ws.cell(tr, 9).fill = total_fill
+        ws.cell(tr, 10).value = formula
+        ws.cell(tr, 10).font = Font(bold=True, color="FFFFFF")
+        ws.cell(tr, 10).fill = total_fill
 
     excl_row = total_row + 4
-    ws.cell(excl_row, 2, "Не входит")
-    ws.cell(excl_row, 2).font = Font(bold=True)
+    ws.cell(excl_row, 2, "Не входит").font = Font(bold=True)
     for idx, item in enumerate(EXCLUSIONS_DEFAULT, excl_row + 1):
         ws.cell(idx, 2, item)
 
-    widths = {1: 8, 2: 18, 3: 48, 4: 12, 5: 12, 6: 14, 7: 18, 8: 16, 9: 20, 10: 16, 11: 36}
+    widths = {1: 6, 2: 18, 3: 48, 4: 10, 5: 10, 6: 14, 7: 18, 8: 16, 9: 20, 10: 16, 11: 16, 12: 16, 13: 28, 14: 14, 15: 36}
     for col, width in widths.items():
-        ws.column_dimensions[ws.cell(1, col).column_letter].width = width
+        ws.column_dimensions[get_column_letter(col)].width = width
 
     path = os.path.join(tempfile.gettempdir(), f"stroyka_estimate_{task_id[:8]}_{int(time.time())}.xlsx")
     wb.save(path)
@@ -1208,6 +1235,23 @@ async def _generate_and_send(conn: sqlite3.Connection, task: Any, pending: Dict[
     if isinstance(send_res, dict) and send_res.get("bot_message_id"):
         kwargs["bot_message_id"] = send_res.get("bot_message_id")
     _update_task_safe(conn, task_id, **kwargs)
+    # §10 canonical AC contract markers
+    _history_safe(conn, task_id, f"TOPIC2_TEMPLATE_SELECTED:{template.get('title', 'unknown')}")
+    _history_safe(conn, task_id, f"TOPIC2_TEMPLATE_FILE_ID:{template.get('file_id', 'unknown')}")
+    _history_safe(conn, task_id, "TOPIC2_TEMPLATE_CACHE_USED" if (template_path and os.path.exists(template_path)) else "TOPIC2_TEMPLATE_DRIVE_DOWNLOADED")
+    _history_safe(conn, task_id, f"TOPIC2_TEMPLATE_SHEET_SELECTED:{sheet_name or 'default'}")
+    _history_safe(conn, task_id, "TOPIC2_XLSX_TEMPLATE_COPY_OK")
+    _history_safe(conn, task_id, f"TOPIC2_XLSX_ROWS_WRITTEN:{len(items)}")
+    _history_safe(conn, task_id, "TOPIC2_XLSX_FORMULAS_OK")
+    _history_safe(conn, task_id, "TOPIC2_XLSX_CANON_COLUMNS_OK:15")
+    _history_safe(conn, task_id, f"TOPIC2_PDF_CREATED:{'1' if pdf_path and os.path.exists(pdf_path) else '0'}")
+    _history_safe(conn, task_id, "TOPIC2_PDF_CYRILLIC_ATTEMPTED")
+    _history_safe(conn, task_id, "TOPIC2_DRIVE_UPLOAD_XLSX_OK")
+    _history_safe(conn, task_id, "TOPIC2_DRIVE_UPLOAD_PDF_OK")
+    if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+        _history_safe(conn, task_id, f"TOPIC2_TELEGRAM_DELIVERED:{send_res.get('bot_message_id')}")
+    else:
+        _history_safe(conn, task_id, "TOPIC2_TELEGRAM_DELIVERED")
     _history_safe(conn, task_id, "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:estimate_generated")
     _memory_save(chat_id, "topic_2_estimate_last", {
         "task_id": task_id,

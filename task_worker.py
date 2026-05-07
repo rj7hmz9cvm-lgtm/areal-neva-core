@@ -4937,6 +4937,24 @@ async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
                 return
 
             if _top2_ob_estimate_like(full_context):
+                # PATCH_TOPIC2_CANONICAL_REROUTE_V2: try canonical engine first
+                _t2rt_handled = False
+                try:
+                    from core.stroyka_estimate_canon import maybe_handle_stroyka_estimate as _t2rt_canon_fn
+                    _t2rt_task_dict = {}
+                    try:
+                        for k in task.keys():
+                            _t2rt_task_dict[k] = task[k]
+                    except Exception:
+                        _t2rt_task_dict = {}
+                    _t2rt_task_dict["raw_input"] = full_context
+                    _t2rt_handled = await _t2rt_canon_fn(conn, _t2rt_task_dict, logger=None)
+                except Exception as _t2rt_ex:
+                    _top2_ob_hist(conn, task_id, f"TOPIC2_CANONICAL_REROUTE_V2:EX:{str(_t2rt_ex)[:150]}")
+                if _t2rt_handled:
+                    _top2_ob_hist(conn, task_id, "TOPIC2_CANONICAL_REROUTE_V2:CANONICAL_HANDLED")
+                    return
+                _top2_ob_hist(conn, task_id, "TOPIC2_CANONICAL_REROUTE_V2:FALLBACK_TO_OLD_PIPELINE")
                 try:
                     from core.sample_template_engine import handle_topic2_one_big_formula_pipeline_v1
                 except Exception as e:
