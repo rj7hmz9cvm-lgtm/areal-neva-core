@@ -1,7 +1,7 @@
 # SINGLE_MODEL_FULL_CONTEXT
 
-GENERATED_AT: 2026-05-07T16:50:02.703042+00:00
-GIT_SHA: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
+GENERATED_AT: 2026-05-07T17:00:02.413249+00:00
+GIT_SHA: 1b1078c6e2895cef4354469ad990a5ee9f51c7b9
 PURPOSE: Один файл с полным контекстом проекта для любой модели
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 
@@ -22,7 +22,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 | topic_id | name | status | active | failed_24h |
 |----------|------|--------|--------|------------|
 | 0 | COMMON | UNKNOWN | 0 | 0 |
-| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 0 | 9 |
+| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 0 | 7 |
 | 5 | TEKHNADZOR | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
 | 11 | VIDEO | UNKNOWN | 0 | 0 |
 | 210 | PROEKTIROVANIE | INSTALLED_NOT_VERIFIED | 0 | 5 |
@@ -85,11 +85,11 @@ owner_reference_registry: loaded=True items=11
 # 2. LATEST_HANDOFF
 ================================================================================
 
-# LATEST HANDOFF — 2026-05-07 ~19:48 MSK
-**HEAD**: `0c15037` — feat(topic500): adaptive output by intent mode (9 modes, V1)  
-**Предыдущий HEAD**: `c0300fb`  
+# LATEST HANDOFF — 2026-05-07 ~20:00 MSK
+**HEAD**: `0d6a9a4` — fix(memory): ARCHIVE_DUPLICATE_GUARD_V1 + topic500 search pollution guard  
+**Предыдущий HEAD**: `0c15037`  
 **Воркер**: active  
-**GitHub**: pushed (0c15037 visible)  
+**GitHub**: pushed (0d6a9a4 visible)  
 **Детальный handoff**: `HANDOFF_20260507_V4_GAP_CLOSE.md`
 
 ---
@@ -194,11 +194,27 @@ TOPIC2_DONE_CONTRACT_OK
 
 ---
 
+## MEMORY DEDUP — `0d6a9a4`
+
+**GAP-5: ARCHIVE_DUPLICATE_GUARD_V1**
+- memory.db: добавлен `UNIQUE INDEX ON memory(chat_id, key)` — дубли блокируются на уровне БД
+- task_worker.py lines 1076/1080/1084/3150: `INSERT INTO` → `INSERT OR REPLACE INTO`
+- memory_api_server.py `/memory POST`: upsert по (chat_id, key) вместо plain INSERT
+- memory_api_server.py `init_db()`: создаёт UNIQUE INDEX при старте
+- До фикса: 694 дубля topic_500_task_summary, 7726 строк → 5184 после dedup
+
+**GAP-6: PATCH_TOPIC500_SEARCH_POLLUTION_GUARD_V1**
+- Wrapper вокруг `_save_memory` для topic_500: результат > 300 символов → сохраняется truncated summary
+- Предотвращает засорение long_memory_context таблицами поставщиков
+
+---
+
 ## OPEN CONTOURS (не закрыто)
 
 1. **Live-verify topic_2** — задача с полным ТЗ в Telegram, проверить полную цепочку маркеров
 2. **Live-verify topic_500** — проверить adaptive output: normative/factual запрос → правильный формат
-3. **`_parse_price_sources` quality** — матчинг ключевых слов требует мониторинга
+3. **inbox_aggregator стабы** — IMAP/Telethon/Profi.ru коннекторы (P2, будущий канал)
+4. **`_parse_price_sources` quality** — матчинг ключевых слов требует мониторинга
 
 ---
 
@@ -3954,8 +3970,8 @@ I canno
 ```
 # topic_0 COMMON
 
-GENERATED_AT: 2026-05-07T16:50:02.393651+00:00
-GIT_SHA: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
+GENERATED_AT: 2026-05-07T17:00:02.103099+00:00
+GIT_SHA: 1b1078c6e2895cef4354469ad990a5ee9f51c7b9
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 0
@@ -4032,7 +4048,7 @@ STATUS: SYNCED_LOCAL
 ## TOPIC_2_STROYKA
 
 STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE: 0  FAILED_24H: 9
+ACTIVE: 0  FAILED_24H: 7
 DIRECTIONS_BOUND: Сметы
 
 ### LAST_FAILED (5)
@@ -4824,8 +4840,8 @@ def _write_xlsx(path: Path, items: List[Dict[str, Any]], source_text: str, photo
 ```
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-05-07T16:50:02.421231+00:00
-GIT_SHA: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
+GENERATED_AT: 2026-05-07T17:00:02.141422+00:00
+GIT_SHA: 1b1078c6e2895cef4354469ad990a5ee9f51c7b9
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -4833,7 +4849,7 @@ ROLE: Сметы
 DIRECTIONS_BOUND: estimates
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
 ACTIVE_TASKS: 0
-FAILED_LAST_24H: 9
+FAILED_LAST_24H: 7
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 12
@@ -4899,18 +4915,18 @@ FAILED_LAST_24H: 9
 - clarified:Все задачи завершены
 - clarified:Отбой всех задач
 - clarified:отмена всех задач
-- state:FAILED
-- reply_sent:stale_failed
 - reply_sent:full_contour_direct_tender
 - FULL_CONSTRUCTION_FILE_CONTOUR_CANON_GUARD_V1:DIRECT_TENDER_ESTIMATE_GENERATED
-- FULL_CONSTRUCTION_FILE_CONTOUR_CANON_GUARD_V1:UPDATE_BLOCKED:INVALID_PUBLIC_RESU
-- TOPIC2_ESTIMATE_FINAL_CLOSE_V2:ESTIMATE_ARTIFACTS_CREATED
-- TOPIC2_ESTIMATE_SESSION_CREATED
-- TOPIC2_CONTEXT_READY
-- TOPIC2_XLSX_CREATED
-- TOPIC2_PDF_CREATED
-- TOPIC2_PDF_CYRILLIC_OK
-- TOPIC2_DRIVE_UPLOAD_XLSX_OK
+- P3_TOPIC2_CLARIFICATION
+- TOPIC2_ONE_BIG_FINAL_PIPELINE_V1_WORKER_ERR:maximum recursion depth exceeded
+- DRIVE_FILE_NO_INTENT_OFFER_V1:menu_shown
+- reply_sent:drive_file_no_intent_offer
+- PRICE_BIND_POISON_PARENT_GUARD_V2_BLOCKED_V4:LATEST_PRICE_MENU_FALLBACK
+- TOPIC2_PRICE_CHOICE_CONFIRMED:median
+- PATCH_TOPIC2_FRESH_ESTIMATE_ROUTE_GUARD_V1:CANON_FALLBACK:BYPASS_P6E67_PARENT_LO
+- state:FAILED
+- reply_sent:stale_failed
+- FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:estimate_generated
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210
@@ -5561,8 +5577,8 @@ _P6H5_NORMATIVE_EXPAND = [
 ```
 # topic_5 TEKHNADZOR
 
-GENERATED_AT: 2026-05-07T16:50:02.454735+00:00
-GIT_SHA: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
+GENERATED_AT: 2026-05-07T17:00:02.172985+00:00
+GIT_SHA: 1b1078c6e2895cef4354469ad990a5ee9f51c7b9
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 5
@@ -5586,6 +5602,7 @@ FAILED_LAST_24H: 0
 - 8093deb3 | INVALID_PUBLIC_RESULT
 
 ## COMMITS_LAST_14D
+- 0d6a9a4|fix(memory): ARCHIVE_DUPLICATE_GUARD_V1 + topic500 search pollution guard
 - 3f53d3f|docs(handoff): update after topic500 adaptive output V1
 - 0c15037|feat(topic500): adaptive output by intent mode (9 modes, V1)
 - 48eed2e|fix(topic5): filter garbage from act — canon §4/§5 material filter
@@ -5615,7 +5632,6 @@ FAILED_LAST_24H: 0
 - ff753aa|feat(technadzor): P6H_PART_4 topic_5 hook + STT hallucination guard
 - 94c6b3f|P6H_TOPIC5_TECHNADZOR_TEMPLATE_PHOTO_CLIENT_SAFE_VOICE_LIVE_CLOSE_20260504: systemic technadzor module for topic_5 — INSTALLED_NOT_LIVE_TESTED
 - e3d992c|P6G_CLEAN_OLD_TOPIC500_CONTAMINATION_V1: SQL clean task 4883 contamination (point 1 of 5)
-- 949c379|P6F_FULL_CODE_CLOSE_REMAINING_CONTOURS_20260504_V1: close revision binding, topic500 sanitizer, photo CV via OpenRouter, TZ params, source labels, technadzor DOCX, project_210 drive, artifact gates
 
 ## MARKERS_LAST_24H
 - created:NEW
@@ -5695,8 +5711,8 @@ DIRECTIONS_BOUND: Видео
 ```
 # topic_11 VIDEO
 
-GENERATED_AT: 2026-05-07T16:50:02.485829+00:00
-GIT_SHA: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
+GENERATED_AT: 2026-05-07T17:00:02.197828+00:00
+GIT_SHA: 1b1078c6e2895cef4354469ad990a5ee9f51c7b9
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 11
@@ -6309,8 +6325,8 @@ def _normalize_sheet_register(template: Dict[str, Any], data: Dict[str, Any]) ->
 ```
 # topic_210 PROEKTIROVANIE
 
-GENERATED_AT: 2026-05-07T16:50:02.521679+00:00
-GIT_SHA: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
+GENERATED_AT: 2026-05-07T17:00:02.232553+00:00
+GIT_SHA: 1b1078c6e2895cef4354469ad990a5ee9f51c7b9
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 210
@@ -6903,8 +6919,8 @@ except Exception:
 ```
 # topic_500 VEB_POISK
 
-GENERATED_AT: 2026-05-07T16:50:02.552960+00:00
-GIT_SHA: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
+GENERATED_AT: 2026-05-07T17:00:02.267574+00:00
+GIT_SHA: 1b1078c6e2895cef4354469ad990a5ee9f51c7b9
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 500
@@ -6928,6 +6944,7 @@ FAILED_LAST_24H: 0
 - a6e666e8 | IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1
 
 ## COMMITS_LAST_14D
+- 0d6a9a4|fix(memory): ARCHIVE_DUPLICATE_GUARD_V1 + topic500 search pollution guard
 - 3f53d3f|docs(handoff): update after topic500 adaptive output V1
 - 0c15037|feat(topic500): adaptive output by intent mode (9 modes, V1)
 - f28a106|fix(topic2/topic500): extend estimate pipeline, offer menu for drive_file, fix search result blocking
@@ -7028,8 +7045,8 @@ DIRECTIONS_BOUND: Сервер DevOps
 ```
 # topic_794 DEVOPS
 
-GENERATED_AT: 2026-05-07T16:50:02.580145+00:00
-GIT_SHA: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
+GENERATED_AT: 2026-05-07T17:00:02.291417+00:00
+GIT_SHA: 1b1078c6e2895cef4354469ad990a5ee9f51c7b9
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 794
@@ -7124,8 +7141,8 @@ DIRECTIONS_BOUND: Автозапчасти
 ```
 # topic_961 AVTOZAPCHASTI
 
-GENERATED_AT: 2026-05-07T16:50:02.604479+00:00
-GIT_SHA: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
+GENERATED_AT: 2026-05-07T17:00:02.317099+00:00
+GIT_SHA: 1b1078c6e2895cef4354469ad990a5ee9f51c7b9
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 961
@@ -7217,8 +7234,8 @@ DIRECTIONS_BOUND: Мозги оркестра
 ```
 # topic_3008 KODY_MOZGOV
 
-GENERATED_AT: 2026-05-07T16:50:02.634804+00:00
-GIT_SHA: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
+GENERATED_AT: 2026-05-07T17:00:02.347493+00:00
+GIT_SHA: 1b1078c6e2895cef4354469ad990a5ee9f51c7b9
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 3008
@@ -7321,8 +7338,8 @@ DIRECTIONS_BOUND: CRM лиды
 ```
 # topic_4569 CRM_LEADS
 
-GENERATED_AT: 2026-05-07T16:50:02.661832+00:00
-GIT_SHA: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
+GENERATED_AT: 2026-05-07T17:00:02.375264+00:00
+GIT_SHA: 1b1078c6e2895cef4354469ad990a5ee9f51c7b9
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 4569
@@ -7430,8 +7447,8 @@ DIRECTIONS_BOUND: Поиск работы
 ```
 # topic_6104 JOB_SEARCH
 
-GENERATED_AT: 2026-05-07T16:50:02.692772+00:00
-GIT_SHA: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
+GENERATED_AT: 2026-05-07T17:00:02.404555+00:00
+GIT_SHA: 1b1078c6e2895cef4354469ad990a5ee9f51c7b9
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 6104

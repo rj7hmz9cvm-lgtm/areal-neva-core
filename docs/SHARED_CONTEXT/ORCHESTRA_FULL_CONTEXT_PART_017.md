@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_017
-generated_at_utc: 2026-05-07T16:50:02.341157+00:00
-git_sha_before_commit: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
+generated_at_utc: 2026-05-07T17:00:02.050240+00:00
+git_sha_before_commit: 1b1078c6e2895cef4354469ad990a5ee9f51c7b9
 part: 17/17
 
 
@@ -5163,7 +5163,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: memory_api_server.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: c162918a0af1c8e9aa0cea11bf94f965df343a3baaecf2e271510c3165c882aa
+SHA256_FULL_FILE: d7aaf43f95a8d5cd1c4f49f82b807b62a036e13548d96396336e77031280f86c
 ====================================================================================================
 import os, json, sqlite3, uuid
 from flask import Flask, request, jsonify
@@ -5178,6 +5178,8 @@ def init_db():
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("CREATE TABLE IF NOT EXISTS memory (id TEXT PRIMARY KEY, chat_id TEXT, key TEXT, value TEXT, timestamp TEXT)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_chat_id ON memory(chat_id)")
+        # ARCHIVE_DUPLICATE_GUARD_V1: enforce uniqueness on (chat_id, key)
+        conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_memory_chat_key_unique ON memory(chat_id, key)")
         conn.commit()
 
 @app.route("/health", methods=["GET"])
@@ -5216,8 +5218,17 @@ def get_memory():
 def post_memory():
     if request.headers.get("Authorization") != f"Bearer {TOKEN}": return jsonify({"error": "unauthorized"}), 403
     data = request.json
+    chat_id = data["chat_id"]
+    key = data.get("key", "full_export")
+    value = str(data.get("value", ""))
+    ts = datetime.utcnow().isoformat()
     with sqlite3.connect(DB) as conn:
-        conn.execute("INSERT INTO memory (id, chat_id, key, value, timestamp) VALUES (?,?,?,?,?)", (str(uuid.uuid4()), data["chat_id"], data.get("key", "full_export"), str(data.get("value", "")), datetime.utcnow().isoformat()))
+        # ARCHIVE_DUPLICATE_GUARD_V1: upsert by (chat_id, key)
+        existing = conn.execute("SELECT id FROM memory WHERE chat_id=? AND key=? LIMIT 1", (chat_id, key)).fetchone()
+        if existing:
+            conn.execute("UPDATE memory SET value=?, timestamp=? WHERE chat_id=? AND key=?", (value, ts, chat_id, key))
+        else:
+            conn.execute("INSERT INTO memory (id, chat_id, key, value, timestamp) VALUES (?,?,?,?,?)", (str(uuid.uuid4()), chat_id, key, value, ts))
         conn.commit()
     return jsonify({"status": "ok"}), 201
 

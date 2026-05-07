@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_005
-generated_at_utc: 2026-05-07T16:50:02.333046+00:00
-git_sha_before_commit: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
+generated_at_utc: 2026-05-07T17:00:02.041118+00:00
+git_sha_before_commit: 1b1078c6e2895cef4354469ad990a5ee9f51c7b9
 part: 5/17
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 1/3
-SHA256_FULL_FILE: 86ed6c087df283b361ea0f2c203c78c2b24ed66a0f6db477a2e2fbb928c68325
+SHA256_FULL_FILE: 0107f58efc83f4f498440f2edc93bc4048ff1b78c64a0568cbc96efd3561925b
 ====================================================================================================
 
 def _force_voice_finish(raw_input: str, result: str) -> bool:
@@ -1084,15 +1084,15 @@ def _save_memory(chat_id: str, topic_id: int, raw_input: str, result: str) -> No
             conn.execute("CREATE TABLE IF NOT EXISTS memory (chat_id TEXT, key TEXT, value TEXT, timestamp TEXT)")
         prefix = f"topic_{int(topic_id)}_"
         conn.execute(
-            "INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
+            "INSERT OR REPLACE INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
             (str(chat_id), f"{prefix}assistant_output", _clean(result, 50000)),
         )
         conn.execute(
-            "INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
+            "INSERT OR REPLACE INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
             (str(chat_id), f"{prefix}task_summary", _clean(result, 20000) if len(result) >= MIN_RESULT_LEN else ""),
         )
         conn.execute(
-            "INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
+            "INSERT OR REPLACE INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
             (str(chat_id), f"{prefix}user_input", _clean(raw_input, 500)),
         )
         conn.commit()
@@ -3158,7 +3158,7 @@ def _save_topic_role_memory(chat_id: str, topic_id: int, text: str) -> str:
             return ""
         key = f"topic_{int(topic_id)}_role"
         conn_mem.execute(
-            "INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
+            "INSERT OR REPLACE INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, datetime('now'))",
             (str(chat_id), key, role),
         )
         conn_mem.commit()

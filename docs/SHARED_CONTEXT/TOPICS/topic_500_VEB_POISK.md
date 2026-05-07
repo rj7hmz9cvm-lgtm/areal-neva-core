@@ -1,7 +1,7 @@
 # topic_500 VEB_POISK
 
-GENERATED_AT: 2026-05-07T16:50:02.552960+00:00
-GIT_SHA: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
+GENERATED_AT: 2026-05-07T17:00:02.267574+00:00
+GIT_SHA: 1b1078c6e2895cef4354469ad990a5ee9f51c7b9
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 500
@@ -25,6 +25,7 @@ FAILED_LAST_24H: 0
 - a6e666e8 | IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1
 
 ## COMMITS_LAST_14D
+- 0d6a9a4|fix(memory): ARCHIVE_DUPLICATE_GUARD_V1 + topic500 search pollution guard
 - 3f53d3f|docs(handoff): update after topic500 adaptive output V1
 - 0c15037|feat(topic500): adaptive output by intent mode (9 modes, V1)
 - f28a106|fix(topic2/topic500): extend estimate pipeline, offer menu for drive_file, fix search result blocking

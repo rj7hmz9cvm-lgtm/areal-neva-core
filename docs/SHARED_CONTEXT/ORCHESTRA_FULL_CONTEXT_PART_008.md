@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_008
-generated_at_utc: 2026-05-07T16:50:02.335155+00:00
-git_sha_before_commit: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
+generated_at_utc: 2026-05-07T17:00:02.043870+00:00
+git_sha_before_commit: 1b1078c6e2895cef4354469ad990a5ee9f51c7b9
 part: 8/17
 
 
@@ -6546,7 +6546,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/memory_api_server.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: fd6a4c4d644b60e13f2c6e5522bcc90560f7085518611ef1c71493655f3b0c91
+SHA256_FULL_FILE: 6e3fe51f91a6894dc17aa1e439115929cf857b7de2b31572482c706817b30537
 ====================================================================================================
 # === MEMORY_API_SERVER_V1 ===
 """
@@ -6592,6 +6592,8 @@ def _ensure_table():
             )
         """)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_memory_chat_topic ON memory(chat_id, topic_id)")
+        # ARCHIVE_DUPLICATE_GUARD_V1: enforce uniqueness on (chat_id, key)
+        conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_memory_chat_key_unique ON memory(chat_id, key)")
         conn.commit()
         conn.close()
 
@@ -6602,10 +6604,22 @@ def _save(chat_id, key, value, topic_id=0, scope="topic"):
     rid = str(uuid.uuid4())
     with _lock:
         conn = _db()
-        conn.execute(
-            "INSERT OR REPLACE INTO memory(id,chat_id,key,value,timestamp,topic_id,scope) VALUES(?,?,?,?,?,?,?)",
-            (rid, str(chat_id), str(key), str(value), ts, int(topic_id), str(scope))
-        )
+        # ARCHIVE_DUPLICATE_GUARD_V1: upsert by (chat_id, key) — never create duplicates
+        existing = conn.execute(
+            "SELECT id FROM memory WHERE chat_id=? AND key=?",
+            (str(chat_id), str(key))
+        ).fetchone()
+        if existing:
+            rid = existing[0] or rid
+            conn.execute(
+                "UPDATE memory SET value=?, timestamp=?, topic_id=?, scope=? WHERE chat_id=? AND key=?",
+                (str(value), ts, int(topic_id), str(scope), str(chat_id), str(key))
+            )
+        else:
+            conn.execute(
+                "INSERT INTO memory(id,chat_id,key,value,timestamp,topic_id,scope) VALUES(?,?,?,?,?,?,?)",
+                (rid, str(chat_id), str(key), str(value), ts, int(topic_id), str(scope))
+            )
         conn.commit()
         conn.close()
     return rid

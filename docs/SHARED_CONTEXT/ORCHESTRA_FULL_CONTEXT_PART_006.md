@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_006
-generated_at_utc: 2026-05-07T16:50:02.333727+00:00
-git_sha_before_commit: 3f53d3f07cafd6e9b6fe379031106c7f96b74d26
+generated_at_utc: 2026-05-07T17:00:02.041748+00:00
+git_sha_before_commit: 1b1078c6e2895cef4354469ad990a5ee9f51c7b9
 part: 6/17
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 2/3
-SHA256_FULL_FILE: 86ed6c087df283b361ea0f2c203c78c2b24ed66a0f6db477a2e2fbb928c68325
+SHA256_FULL_FILE: 0107f58efc83f4f498440f2edc93bc4048ff1b78c64a0568cbc96efd3561925b
 ====================================================================================================
         _history(conn, str(task_id), str(action))
         conn.commit()
@@ -7714,7 +7714,7 @@ FILE_CHUNK: 2/3
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 3/3
-SHA256_FULL_FILE: 86ed6c087df283b361ea0f2c203c78c2b24ed66a0f6db477a2e2fbb928c68325
+SHA256_FULL_FILE: 0107f58efc83f4f498440f2edc93bc4048ff1b78c64a0568cbc96efd3561925b
 ====================================================================================================
                         "error_message='TOPIC2_CANCEL_GUARD_V1', "
                         "updated_at=datetime('now') WHERE id=?",
@@ -8258,6 +8258,37 @@ if _T500AO_ORIG and not getattr(_T500AO_ORIG, "_t500ao_wrapped", False):
 else:
     _T500AO_LOG.warning("PATCH_TOPIC500_ADAPTIVE_OUTPUT_V1 skipped: _p0_runtime_topic500_direct_search_20260504 not found")
 # === END_PATCH_TOPIC500_ADAPTIVE_OUTPUT_V1 ===
+
+
+# === PATCH_TOPIC500_MEMORY_DEDUP_V1 + PATCH_TOPIC500_SEARCH_POLLUTION_GUARD_V1 ===
+# GAP-5: memory.db had no UNIQUE on (chat_id, key) → INSERT INTO created duplicates.
+#         Fixed: UNIQUE INDEX added to DB, INSERT OR REPLACE in task_worker.py body.
+# GAP-6: _save_memory for topic_500 stored full supplier tables in long_memory_context →
+#         next prompts received garbage context. Fix: truncate to 300 chars summary only.
+import logging as _t500mem_logging
+_T500MEM_LOG = _t500mem_logging.getLogger("task_worker")
+
+_T500MEM_ORIG_SAVE = globals().get("_save_memory")
+if _T500MEM_ORIG_SAVE and not getattr(_T500MEM_ORIG_SAVE, "_t500mem_wrapped", False):
+    def _save_memory(chat_id, topic_id, raw_input, result):
+        try:
+            _t500mem_tid = int(topic_id or 0)
+            if _t500mem_tid == 500 and isinstance(result, str) and len(result) > 300:
+                _t500mem_summary = result[:300].rsplit("\n", 1)[0] + "…"
+                _T500MEM_LOG.info(
+                    "PATCH_TOPIC500_SEARCH_POLLUTION_GUARD_V1 truncated result=%d->300 chat=%s",
+                    len(result), str(chat_id)
+                )
+                result = _t500mem_summary
+        except Exception as _t500mem_e:
+            _T500MEM_LOG.warning("PATCH_TOPIC500_SEARCH_POLLUTION_GUARD_V1 err: %s", _t500mem_e)
+        return _T500MEM_ORIG_SAVE(chat_id, topic_id, raw_input, result)
+    _save_memory._t500mem_wrapped = True
+    _T500MEM_LOG.info("PATCH_TOPIC500_MEMORY_DEDUP_V1 installed (DB UNIQUE INDEX + INSERT OR REPLACE)")
+    _T500MEM_LOG.info("PATCH_TOPIC500_SEARCH_POLLUTION_GUARD_V1 installed")
+else:
+    _T500MEM_LOG.warning("PATCH_TOPIC500_MEMORY_DEDUP_V1 skipped: _save_memory not found")
+# === END_PATCH_TOPIC500_MEMORY_DEDUP_V1 ===
 
 if __name__ == "__main__":
     asyncio.run(main())
