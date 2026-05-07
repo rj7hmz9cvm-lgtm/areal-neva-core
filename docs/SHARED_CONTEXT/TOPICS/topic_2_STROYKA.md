@@ -1,7 +1,7 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-05-07T15:15:30.525498+00:00
-GIT_SHA: 983ced8149ebd4c84be0c2926296ad19722d0d88
+GENERATED_AT: 2026-05-07T15:48:00.667678+00:00
+GIT_SHA: 835c7a916507486ff2f6ce2e03bafeadf475079a
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -25,6 +25,7 @@ FAILED_LAST_24H: 11
 - 8212f685 | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
+- 168ce5e|fix(topic2): close final V5 code gaps for prices guards totals
 - 983ced8|fix(topic2): close 3 remaining V4 gaps (repeat/negative/pdf_missing_question)
 - 2353fc3|fix(topic2): close remaining project/pdf/photo/price/artifact gaps V4
 - ccab9ed|fix(topic2): PATCH_TOPIC2_FULL_CLOSE_RUNTIME_V3 — all 9 requirements
@@ -54,7 +55,6 @@ FAILED_LAST_24H: 11
 - 2ea6754|fix(topic2): extend estimate detection for construction photos + search result fix
 - 967c48f|fix(topic_2/topic_5): close logic gaps in smeta, voice, and act routing
 - 4aa44eb|fix: close canon contours for topic_5/topic_2/topic_500
-- a277900|docs(normative): add shared normative context for topic_5 and topic_210
 
 ## MARKERS_LAST_24H
 - created:NEW

@@ -1,20 +1,20 @@
 # ORCHESTRA_FULL_CONTEXT_PART_001
-generated_at_utc: 2026-05-07T15:15:30.418414+00:00
-git_sha_before_commit: 983ced8149ebd4c84be0c2926296ad19722d0d88
+generated_at_utc: 2026-05-07T15:48:00.566731+00:00
+git_sha_before_commit: 835c7a916507486ff2f6ce2e03bafeadf475079a
 part: 1/17
 
 
 ====================================================================================================
 BEGIN_FILE: docs/HANDOFFS/LATEST_HANDOFF.md
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 1459a4064974ae5e487a321a36d8670e2344d84ce066fed44ce5e0f6427353b3
+SHA256_FULL_FILE: 0ad48f0151d7e51658c5029d65cc906a653b5844c8435715b6bc90b2910481fc
 ====================================================================================================
-# LATEST HANDOFF — 2026-05-07 17:50 MSK
-**HEAD**: `2353fc3` — fix(topic2): close remaining project/pdf/photo/price/artifact gaps V4  
-**Предыдущий HEAD**: `b46bba5` (docs handoff)  
+# LATEST HANDOFF — 2026-05-07 ~20:00 MSK
+**HEAD**: `168ce5e` — fix(topic2): close final V5 code gaps for prices guards totals  
+**Предыдущий HEAD**: `983ced8`  
 **Воркер**: active  
-**GitHub**: pushed (2353fc3 visible)  
-**Детальный handoff**: `HANDOFF_20260507_V4_GAP_CLOSE.md`  
+**GitHub**: pushed (168ce5e visible)  
+**Детальный handoff**: `HANDOFF_20260507_V4_GAP_CLOSE.md`
 
 ---
 
@@ -22,45 +22,50 @@ SHA256_FULL_FILE: 1459a4064974ae5e487a321a36d8670e2344d84ce066fed44ce5e0f6427353
 
 | Топик | Состояние | Примечание |
 |-------|-----------|------------|
-| topic_2 СТРОИКА | INSTALLED (не VERIFIED) | V4 applied, live-replay pending |
+| topic_2 СТРОИКА | INSTALLED (не VERIFIED) | V5 applied, live-replay pending |
 | topic_5 ТЕХНАДЗОР | Stable | без изменений |
 | topic_500 ПОИСК | Partial | 16 режимов НЕ реализованы |
 | topic_210 PROJECT | Active | без изменений |
 
 ---
 
-## ЧТО ПРИМЕНЕНО В ЭТОЙ СЕССИИ — `2353fc3`
+## ЧТО ПРИМЕНЕНО В V5 — `168ce5e`
 
-### PATCH_TOPIC2_FULL_GAP_CLOSE_V4 — 10 body edits
+### PATCH_TOPIC2_FINAL_GAPS_V5 — 4 body edits
 
 | # | Файл | Где | Что |
 |---|------|-----|-----|
-| 1 | task_worker.py | `_p6e2_tw_handle_topic2_image_estimate` | Canonical engine first → P6E2 fallback. Маркер: `TOPIC2_CANONICAL_PHOTO_ROUTE_FIRST` |
-| 2 | stroyka_estimate_canon.py | `maybe_handle_stroyka_estimate` после `_parse_request` | PDF spec extraction via `pdf_spec_extractor.extract_spec`. Маркер: `TOPIC2_PDF_SPEC_EXTRACTED` |
-| 3 | stroyka_estimate_canon.py | `maybe_handle_stroyka_estimate` после `_parse_request` | OCR table extraction via `ocr_table_engine.image_table_to_excel`. Маркер: `TOPIC2_OCR_TABLE_EXTRACTED` |
-| 4 | stroyka_estimate_canon.py | `_search_prices_online` | Per-item search via `price_enrichment._openrouter_price_search` (5 позиций) |
-| 5 | stroyka_estimate_canon.py | `maybe_handle_stroyka_estimate` | `TOPIC2_AFTER_PRICE_CHOICE_GENERATION_STARTED` перед обоими `_generate_and_send` |
-| 6 | stroyka_estimate_canon.py | `maybe_handle_stroyka_estimate` после `_parse_request` | `TOPIC2_MULTIFILE_PROJECT_CONTEXT_*` маркеры |
-| 7 | stroyka_estimate_canon.py | `maybe_handle_stroyka_estimate` revision block | `TOPIC2_REVISION_BOUND_TO_PARENT` parent-binding |
-| 8 | task_worker.py | P6E67 `_update_task` wrapper | topic_2 blocked → `state=FAILED` + `TOPIC2_FORBIDDEN_FINAL_RESULT_BLOCKED` (было IN_PROGRESS) |
-| 9 | stroyka_estimate_canon.py | `_generate_and_send` после quality gate | `TOPIC2_PDF_TOTALS_MATCH_XLSX` маркер |
-| 10 | stroyka_estimate_canon.py | `_generate_and_send` перед `_update_task_safe` | AC gate (`TOPIC2_AC_GATE_OK` / `TOPIC2_AC_GATE_BLOCKED:*`) |
+| 1 | stroyka_estimate_canon.py | `_search_prices_online` | conn/task_id params; per-item markers: TOPIC2_PRICE_MATERIAL_SEARCH_STARTED / TOPIC2_PRICE_WORK_SEARCH_STARTED / TOPIC2_PRICE_SOURCE_FOUND / TOPIC2_PRICE_SOURCE_MISSING |
+| 2 | stroyka_estimate_canon.py | `maybe_handle_stroyka_estimate` PDF/OCR block | Alias markers: TOPIC2_PDF_SPEC_EXTRACTOR_STARTED, TOPIC2_PDF_SPEC_ROWS_EXTRACTED, TOPIC2_OCR_TABLE_STARTED, TOPIC2_OCR_TABLE_ROWS_EXTRACTED, TOPIC2_MULTIFILE_PROJECT_CONTEXT_STARTED/FILE_ADDED/READY |
+| 3 | stroyka_estimate_canon.py | `_is_bad_estimate_result` + AC gate | 11 new forbidden phrases + regex позиций:1 + /root/ /tmp/ revision_context traceback engine: manifest:; AC gate bad_result check → FAILED |
+| 4 | stroyka_estimate_canon.py | `_generate_and_send` totals block | Real openpyxl read-back: TOPIC2_PDF_TOTALS_MATCH_XLSX:xlsx=X:pdf=Y; MISMATCH → FAILED + user message |
 
 ---
 
-## ОЖИДАЕМАЯ ПОСЛЕДОВАТЕЛЬНОСТЬ МАРКЕРОВ (верификация topic_2 после V4)
+## ПОЛНАЯ ПОСЛЕДОВАТЕЛЬНОСТЬ МАРКЕРОВ (верификация topic_2 после V5)
 
 ```
 TOPIC2_CANONICAL_PHOTO_ROUTE_FIRST:attempting          # если фото
 TOPIC2_CANONICAL_PHOTO_ROUTE_FIRST:handled             # или fallback_to_p6e2
-TOPIC2_PDF_SPEC_EXTRACTED:<N>_rows                     # если PDF
-TOPIC2_OCR_TABLE_EXTRACTED:<N>_rows                    # если фото с таблицей
+TOPIC2_PDF_SPEC_EXTRACTOR_STARTED                      # если PDF
+TOPIC2_PDF_SPEC_EXTRACTED:<N>_rows
+TOPIC2_PDF_SPEC_ROWS_EXTRACTED:<N>
+TOPIC2_OCR_TABLE_STARTED                               # если фото с таблицей
+TOPIC2_OCR_TABLE_EXTRACTED:<N>_rows
+TOPIC2_OCR_TABLE_ROWS_EXTRACTED:<N>
+TOPIC2_MULTIFILE_PROJECT_CONTEXT_STARTED               # если >1 файл
+TOPIC2_MULTIFILE_PROJECT_CONTEXT_FILE_ADDED:<name>
+TOPIC2_MULTIFILE_PROJECT_CONTEXT_READY
 TOPIC2_PRICE_CHOICE_CONFIRMED:median
 TOPIC2_CANONICAL_OLD_ROUTE_HARD_BLOCK:pending_intercepted
 TOPIC2_AFTER_PRICE_CHOICE_GENERATION_STARTED
+TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:<item>            # per-item
+TOPIC2_PRICE_WORK_SEARCH_STARTED:<item>
+TOPIC2_PRICE_SOURCE_FOUND:<item>:<supplier>:<status>
+TOPIC2_PRICE_SOURCE_MISSING:<item>
 TOPIC2_TEMPLATE_SELECTED:<name>
 TOPIC2_XLSX_CANON_COLUMNS_OK:15
-TOPIC2_PDF_TOTALS_MATCH_XLSX:total=<N>:items=<N>
+TOPIC2_PDF_TOTALS_MATCH_XLSX:xlsx=<N>:pdf=<N>
 TOPIC2_DRIVE_TOPIC_FOLDER_OK
 TOPIC2_LOGISTICS_DISTANCE_KM:<n>
 TOPIC2_AC_GATE_OK
@@ -74,7 +79,7 @@ TOPIC2_DONE_CONTRACT_OK
 
 ## OPEN CONTOURS (не закрыто)
 
-1. **Live-verify topic_2** — задача с полным ТЗ в Telegram, проверить маркеры + CANONICAL_PHOTO_ROUTE_FIRST
+1. **Live-verify topic_2** — задача с полным ТЗ в Telegram, проверить маркеры V5
 2. **topic_500 adaptive output** — 16 режимов не реализованы
 3. **MEMORY_QUERY_GUARD_V1** — «что обсуждали» → попадает в estimate route
 4. **`_parse_price_sources` quality** — матчинг ключевых слов требует мониторинга

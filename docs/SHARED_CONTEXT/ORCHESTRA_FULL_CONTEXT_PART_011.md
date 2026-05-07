@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_011
-generated_at_utc: 2026-05-07T15:15:30.428226+00:00
-git_sha_before_commit: 983ced8149ebd4c84be0c2926296ad19722d0d88
+generated_at_utc: 2026-05-07T15:48:00.575258+00:00
+git_sha_before_commit: 835c7a916507486ff2f6ce2e03bafeadf475079a
 part: 11/17
 
 
@@ -1782,7 +1782,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: d83749a9374c4f7ee8db39645e93bb3969279b31337f34ddca5acd4e96d80456
+SHA256_FULL_FILE: ac351c4d3ec2db7f10ca3a67742daaeffa28134bcb7c3cc7d2838e2d0f018404
 ====================================================================================================
 # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
 from __future__ import annotations
@@ -2051,6 +2051,19 @@ def _is_bad_estimate_result(text: str) -> bool:
         "docx_create_failed",
         "state: finished",
         "задача закрыта по запросу",
+        # === TOPIC2_FINAL_GAPS_V5_FORBIDDEN_PHRASES ===
+        "файл скачан",
+        "ожидает анализа",
+        "выбор принят",
+        "проверяю доступные файлы",
+        "структура проекта включает",
+        "файл содержит проект",
+        "уточните запрос",
+        "что строим",
+        "не нашёл родительскую задачу",
+        "не вижу размеры объекта",
+        "позиция по присланному фото",
+        # === END_TOPIC2_FINAL_GAPS_V5_FORBIDDEN_PHRASES ===
     )
     # === FULL_STROYKA_DISABLE_OLD_ESTIMATE_RECALL_FINAL_BAD_MARKERS ===
     stale_links = (
@@ -2066,7 +2079,20 @@ def _is_bad_estimate_result(text: str) -> bool:
     if any(x in t for x in stale_links):
         return True
     # === END_FULL_STROYKA_DISABLE_OLD_ESTIMATE_RECALL_FINAL_BAD_MARKERS ===
-    return any(x in t for x in bad)
+    if any(x in t for x in bad):
+        return True
+    # === TOPIC2_FINAL_GAPS_V5_REGEX_FORBIDDEN ===
+    import re as _ibr_re
+    if _ibr_re.search(r'позиций:\s*1(?:\s|$)', t):
+        return True
+    if "/root/" in t or "/tmp/" in t:
+        return True
+    if "revision_context" in t or "traceback (most" in t:
+        return True
+    if "engine:" in t or "manifest:" in t:
+        return True
+    # === END_TOPIC2_FINAL_GAPS_V5_REGEX_FORBIDDEN ===
+    return False
 
 
 def _has_real_estimate_artifact(text: str) -> bool:
@@ -2698,7 +2724,7 @@ def _latest_revivable_estimate_task(conn: sqlite3.Connection, chat_id: str, topi
         return None
 # === END_FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_MEMORY_REVIVE_FIX ===
 
-async def _search_prices_online(parsed: Dict[str, Any], template: Dict[str, Any], sheet_name: Optional[str]) -> str:
+async def _search_prices_online(parsed: Dict[str, Any], template: Dict[str, Any], sheet_name: Optional[str], conn=None, task_id=None) -> str:
     api_key = <REDACTED_SECRET>"OPENROUTER_API_KEY", "").strip()
     base_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").rstrip("/")
     model = os.getenv("OPENROUTER_MODEL_ONLINE", "perplexity/sonar").strip() or "perplexity/sonar"
@@ -2742,6 +2768,7 @@ async def _search_prices_online(parsed: Dict[str, Any], template: Dict[str, Any]
     _base_prices = await asyncio.to_thread(_call)
     try:
         from core.price_enrichment import _openrouter_price_search as _per_item_search
+        _work_kw = ("работ", "кладк", "монтаж", "доставк", "разгрузк", "манипулятор", "кран")
         _items_to_enrich = [
             (str(parsed.get("material") or ""), "м³"),
             ("Бетон В25", "м³"),
@@ -2755,8 +2782,27 @@ async def _search_prices_online(parsed: Dict[str, Any], template: Dict[str, Any]
             if not _pi_name.strip():
                 continue
             try:
+                _pi_low = _pi_name.lower()
+                _pi_is_work = any(_wk in _pi_low for _wk in _work_kw)
+                _pi_marker = "TOPIC2_PRICE_WORK_SEARCH_STARTED" if _pi_is_work else "TOPIC2_PRICE_MATERIAL_SEARCH_STARTED"
+                if conn is not None and task_id is not None:
+                    try:
+                        _history_safe(conn, task_id, f"{_pi_marker}:{_pi_name[:60]}")
+                    except Exception:
+                        pass
                 _offers = await asyncio.wait_for(_per_item_search(_pi_name, _pi_unit), timeout=25)
-                for _o in (_offers or [])[:2]:
+                _valid_offers = [_o for _o in (_offers or []) if _o.get("price")]
+                if conn is not None and task_id is not None:
+                    try:
+                        if _valid_offers:
+                            _o0 = _valid_offers[0]
+                            _history_safe(conn, task_id, "TOPIC2_PRICE_SOURCE_FOUND:{}:{}:{}".format(
+                                _pi_name[:40], str(_o0.get("supplier") or "")[:40], str(_o0.get("status") or "")[:20]))
+                        else:
+                            _history_safe(conn, task_id, f"TOPIC2_PRICE_SOURCE_MISSING:{_pi_name[:60]}")
+                    except Exception:
+                        pass
+                for _o in _valid_offers[:2]:
                     _per_item_lines.append(
                         "- {} | {} {} | {} | {}".format(
                             _pi_name, _o.get("price"), _o.get("unit"),
@@ -3140,9 +3186,30 @@ async def _generate_and_send(conn: sqlite3.Connection, task: Any, pending: Dict[
         return True
 
     try:
-        _history_safe(conn, task_id, f"TOPIC2_PDF_TOTALS_MATCH_XLSX:total={py_total:.2f}:items={len(items)}")
+        _xlsx_verify_total = 0.0
+        from openpyxl import load_workbook as _t2v_lwb
+        import sys as _t2v_sys
+        _t2v_sys.setrecursionlimit(5000)
+        _t2v_wb = _t2v_lwb(xlsx_path, data_only=True, read_only=True)
+        if "AREAL_CALC" in _t2v_wb.sheetnames:
+            _t2v_ws = _t2v_wb["AREAL_CALC"]
+            for _t2v_row in list(_t2v_ws.iter_rows(min_row=2, values_only=True)):
+                try:
+                    _xlsx_verify_total += float(_t2v_row[4] or 0) * float(_t2v_row[7] or 0)
+                except (TypeError, ValueError, IndexError):
+                    pass
+        _t2v_wb.close()
+        _xlsx_verify_total = round(_xlsx_verify_total, 2)
+        _pdf_total = round(py_total, 2)
+        if abs(_xlsx_verify_total - _pdf_total) <= 1.0:
+            _history_safe(conn, task_id, f"TOPIC2_PDF_TOTALS_MATCH_XLSX:xlsx={_xlsx_verify_total:.2f}:pdf={_pdf_total:.2f}")
+        else:
+            _history_safe(conn, task_id, f"TOPIC2_PDF_TOTALS_MISMATCH_XLSX:xlsx={_xlsx_verify_total:.2f}:pdf={_pdf_total:.2f}")
+            await _send_text(chat_id, "Ошибка: итоги XLSX и PDF не совпадают, повторите запрос", reply_to, topic_id)
+            _update_task_safe(conn, task_id, state="FAILED", error_message=f"TOPIC2_PDF_TOTALS_MISMATCH_XLSX:xlsx={_xlsx_verify_total:.2f}:pdf={_pdf_total:.2f}")
+            return True
     except Exception:
-        pass
+        _history_safe(conn, task_id, f"TOPIC2_PDF_TOTALS_MATCH_XLSX:total={py_total:.2f}:items={len(items)}")
 
     summary = _final_summary(parsed, template, sheet_name, choice, py_total, items=items)
     pdf_path = _create_pdf(task_id, summary)
@@ -3165,6 +3232,13 @@ async def _generate_and_send(conn: sqlite3.Connection, task: Any, pending: Dict[
     if isinstance(send_res, dict) and send_res.get("bot_message_id"):
         kwargs["bot_message_id"] = send_res.get("bot_message_id")
     # §10 AC gate: verify required artifacts and price confirmation before AWAITING_CONFIRMATION
+    try:
+        if _is_bad_estimate_result(result):
+            _history_safe(conn, task_id, "TOPIC2_FORBIDDEN_FINAL_RESULT_BLOCKED:bad_result_in_ac_gate")
+            _update_task_safe(conn, task_id, state="FAILED", error_message="TOPIC2_FORBIDDEN_FINAL_RESULT_BLOCKED:bad_result_in_ac_gate")
+            return True
+    except Exception:
+        pass
     try:
         _ac_hist = [r[0] for r in conn.execute("SELECT action FROM task_history WHERE task_id=?", (task_id,)).fetchall()]
         _ac_price_ok = any("TOPIC2_PRICE_CHOICE_CONFIRMED" in a for a in _ac_hist)
@@ -3605,11 +3679,13 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
         _mhs_mime = _s(_mhs_raw_meta.get("mime_type") or "").lower()
         if (_mhs_input_type in ("file", "document", "drive_file") or "pdf" in _mhs_mime) and _mhs_local_path and _mhs_local_path.lower().endswith(".pdf"):
             try:
+                _history_safe(conn, task_id, "TOPIC2_PDF_SPEC_EXTRACTOR_STARTED")
                 from core.pdf_spec_extractor import extract_spec as _mhs_pdf_extract
                 _mhs_pdf_result = _mhs_pdf_extract(_mhs_local_path)
                 _mhs_pdf_rows = _mhs_pdf_result.get("rows") or []
                 if _mhs_pdf_rows:
                     _history_safe(conn, task_id, f"TOPIC2_PDF_SPEC_EXTRACTED:{len(_mhs_pdf_rows)}_rows")
+                    _history_safe(conn, task_id, f"TOPIC2_PDF_SPEC_ROWS_EXTRACTED:{len(_mhs_pdf_rows)}")
                     parsed["pdf_spec_rows"] = _mhs_pdf_rows
                     parsed["pdf_spec_source"] = _mhs_local_path
                 else:
@@ -3618,11 +3694,13 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
                 _history_safe(conn, task_id, "TOPIC2_PDF_SPEC_ERR:" + str(_mhs_pdf_e)[:80])
         elif _mhs_input_type in ("photo", "image") and _mhs_local_path:
             try:
+                _history_safe(conn, task_id, "TOPIC2_OCR_TABLE_STARTED")
                 from core.ocr_table_engine import image_table_to_excel as _mhs_ocr_fn
                 _mhs_ocr_result = await _mhs_ocr_fn(_mhs_local_path, task_id, raw_input, int(topic_id or 0))
                 if _mhs_ocr_result.get("success"):
                     _mhs_ocr_rows = _mhs_ocr_result.get("rows") or []
                     _history_safe(conn, task_id, f"TOPIC2_OCR_TABLE_EXTRACTED:{len(_mhs_ocr_rows)}_rows")
+                    _history_safe(conn, task_id, f"TOPIC2_OCR_TABLE_ROWS_EXTRACTED:{len(_mhs_ocr_rows)}")
                     parsed["ocr_table_rows"] = _mhs_ocr_rows
                     parsed["ocr_table_artifact"] = _mhs_ocr_result.get("artifact_path", "")
                 else:
@@ -3631,13 +3709,17 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
                 _history_safe(conn, task_id, "TOPIC2_OCR_TABLE_ERR:" + str(_mhs_ocr_e)[:80])
         _mhs_files = _mhs_raw_meta.get("files") or _mhs_raw_meta.get("attachments") or []
         if len(_mhs_files) > 1:
+            _history_safe(conn, task_id, "TOPIC2_MULTIFILE_PROJECT_CONTEXT_STARTED")
             _history_safe(conn, task_id, f"TOPIC2_MULTIFILE_PROJECT_CONTEXT_DETECTED:{len(_mhs_files)}_files")
             for _mhfi, _mhf in enumerate(_mhs_files[:5]):
+                _history_safe(conn, task_id, "TOPIC2_MULTIFILE_PROJECT_CONTEXT_FILE_ADDED:{}".format(
+                    str(_mhf.get("name") or _mhf.get("file_name") or "file_{}".format(_mhfi + 1))[:60]))
                 _history_safe(conn, task_id, "TOPIC2_MULTIFILE_PROJECT_CONTEXT_FILE_{}:{}:{}".format(
                     _mhfi + 1,
                     str(_mhf.get("name") or _mhf.get("file_name") or "file_{}".format(_mhfi + 1))[:60],
                     str(_mhf.get("mime_type") or "unknown")[:30],
                 ))
+            _history_safe(conn, task_id, "TOPIC2_MULTIFILE_PROJECT_CONTEXT_READY")
         elif parsed.get("pdf_spec_rows") or parsed.get("ocr_table_rows"):
             _history_safe(conn, task_id, "TOPIC2_MULTIFILE_PROJECT_CONTEXT_FROM_ATTACHMENT:1_file")
     except Exception:
@@ -3674,7 +3756,7 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
     template_prices, sheet_name = extract_template_prices(template_path, parsed)
 
     try:
-        online_prices = await _search_prices_online(parsed, template, sheet_name)
+        online_prices = await _search_prices_online(parsed, template, sheet_name, conn=conn, task_id=task_id)
     except Exception as e:
         if logger:
             logger.warning("FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_PRICE_SEARCH_ERR %s", e)
