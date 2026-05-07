@@ -5923,7 +5923,11 @@ async def handle_topic2_image_estimate_pipeline_p6d(conn, task, chat_id=None, to
             pass
         return True
 
-    fn = globals().get("handle_topic2_one_big_formula_pipeline_v1")
+    # === PATCH_P6D_NO_GLOBALS_RECURSION_V1 — use pre-P3 ref to break recursion chain ===
+    _p6d_pre_p3 = globals().get("_P6DREC_PRE_P3") or globals().get("_p3pcg_orig_handle")
+    fn = _p6d_pre_p3 if callable(_p6d_pre_p3) else None
+    if fn is None:
+        fn = globals().get("handle_topic2_one_big_formula_pipeline_v1")
     if not callable(fn):
         raise RuntimeError("TOPIC2_ESTIMATE_PIPELINE_NOT_FOUND")
 

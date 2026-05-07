@@ -940,7 +940,13 @@ def _create_xlsx_from_template(task_id: str, parsed: Dict[str, Any], template: D
 
     if template_path and os.path.exists(template_path):
         try:
-            wb = load_workbook(template_path)
+            import sys as _sec_sys
+            _sec_old_limit = _sec_sys.getrecursionlimit()
+            _sec_sys.setrecursionlimit(5000)
+            try:
+                wb = load_workbook(template_path)
+            finally:
+                _sec_sys.setrecursionlimit(_sec_old_limit)
             if sheet_name and sheet_name in wb.sheetnames:
                 wb.active = wb.sheetnames.index(sheet_name)
         except Exception:
@@ -1019,8 +1025,14 @@ def _quality_gate_xlsx(xlsx_path: str, items: List[Dict[str, Any]], py_total: fl
     if py_total <= 0:
         return False, "TOTAL_ZERO"
     try:
+        import sys as _qg_sys
         from openpyxl import load_workbook
-        wb = load_workbook(xlsx_path, data_only=False)
+        _qg_old = _qg_sys.getrecursionlimit()
+        _qg_sys.setrecursionlimit(5000)
+        try:
+            wb = load_workbook(xlsx_path, data_only=False)
+        finally:
+            _qg_sys.setrecursionlimit(_qg_old)
         ws = wb["AREAL_CALC"] if "AREAL_CALC" in wb.sheetnames else wb.active
         formula_count = sum(1 for row in ws.iter_rows() for c in row if isinstance(c.value, str) and c.value.startswith("="))
         wb.close()
@@ -1077,44 +1089,64 @@ async def _upload_or_fallback(chat_id: str, topic_id: int, reply_to: Optional[in
     return ""
 
 
-def _final_summary(parsed: Dict[str, Any], template: Dict[str, Any], sheet_name: Optional[str], choice: Dict[str, Any], py_total: float) -> str:
-    exclusions = "\n".join(f"- {x}" for x in EXCLUSIONS_DEFAULT)
-    nds = py_total * 0.2
-    return f"""✅ Предварительная смета готова
+def _final_summary(parsed: Dict[str, Any], template: Dict[str, Any], sheet_name: Optional[str], choice: Dict[str, Any], py_total: float, items=None) -> str:
+    # === PATCH_TOPIC2_CANONICAL_FINAL_SUMMARY_V1 — §9 format ===
+    obj = parsed.get("object") or parsed.get("raw") or "объект"
+    material = parsed.get("material") or "не указан"
+    dims = parsed.get("dims") or parsed.get("dimensions")
+    try:
+        a, b = float(dims[0]), float(dims[1])
+        area_s = f"{a * b:.0f} м²"
+    except Exception:
+        area_s = str(parsed.get("area") or "не указана")
+    floors = parsed.get("floors") or "не указана"
+    region = parsed.get("region") or parsed.get("location") or "СПб и ЛО"
+    tpl_name = template.get("title") or "Ареал Нева.xlsx"
+    sheet = sheet_name or "смета"
+    price_mode = choice.get("choice") or "шаблон"
 
-Объект: {parsed.get('object') or 'объект'}
-Эталон: {template.get('title')}
-Лист эталона: {sheet_name or 'не выбран'}
-Выбор цены: {choice.get('choice')}
-Поправка: {choice.get('percent_adjustment', 0)}%
+    mat_total = work_total = logistics_total = overhead_total = 0.0
+    if items:
+        for it in items:
+            sec = str(it.get("section", ""))
+            val = float(it.get("qty") or 0) * float(it.get("price") or 0)
+            if sec in ("Логистика",):
+                logistics_total += val
+            elif sec in ("Накладные расходы", "Накладные"):
+                overhead_total += val
+            else:
+                mat_total += val
+    else:
+        logistics_total = round(py_total * 0.08, 2)
+        overhead_total = round(py_total * 0.05, 2)
+        mat_total = round(py_total * 0.87, 2)
 
-Разделы:
-- Фундамент
-- Стены
-- Перекрытия
-- Кровля
-- Логистика
-- Накладные расходы
+    subtotal = round(mat_total + work_total + logistics_total + overhead_total, 2) or round(py_total, 2)
+    nds = round(subtotal * 0.2, 2)
+    total_nds = round(subtotal + nds, 2)
 
-Итого: {py_total:,.0f} руб
-НДС 20%: {nds:,.0f} руб
-С НДС: {py_total + nds:,.0f} руб
-
-Входит:
-- основные строительные работы по указанному ТЗ
-- материалы и работы по подтверждённым позициям
-- логистика отдельным блоком
-
-Не входит:
-{exclusions}""".replace(",", " ")
+    return (
+        f"✅ Смета готова\n\n"
+        f"Объект: {obj}   Материал: {material}   Площадь: {area_s}   "
+        f"Этажность: {floors}   Регион: {region}\n"
+        f"Шаблон: {tpl_name}   Лист: {sheet}   Цены: {price_mode}\n\n"
+        f"Итого:\n"
+        f"  Материалы: {mat_total:,.0f} руб\n"
+        f"  Работы: {work_total:,.0f} руб\n"
+        f"  Логистика: {logistics_total:,.0f} руб\n"
+        f"  Накладные: {overhead_total:,.0f} руб\n"
+        f"  Без НДС: {subtotal:,.0f} руб\n"
+        f"  НДС: {nds:,.0f} руб\n"
+        f"  С НДС: {total_nds:,.0f} руб"
+    ).replace(",", " ")
 
 
 def _price_confirmation_text(parsed: Dict[str, Any], template: Dict[str, Any], sheet_name: Optional[str], template_prices: str, online_prices: str) -> str:
     exclusions = "\n".join(f"- {x}" for x in EXCLUSIONS_DEFAULT)
     return f"""⏳ Задачу понял
 
-Эталон сметы: {template.get('title')}
-Лист эталона: {sheet_name or 'не выбран'}
+Шаблон: {template.get('title')}
+Лист: {sheet_name or 'не выбран'}
 Объект: {parsed.get('object') or 'не указан'}
 Материал: {parsed.get('material') or 'не указан'}
 Размеры: {parsed.get('dimensions') or 'не указаны'}
@@ -1159,7 +1191,7 @@ async def _generate_and_send(conn: sqlite3.Connection, task: Any, pending: Dict[
         _update_task_safe(conn, task_id, state="FAILED", error_message=f"STROYKA_QG_FAILED:{reason}")
         return True
 
-    summary = _final_summary(parsed, template, sheet_name, choice, py_total)
+    summary = _final_summary(parsed, template, sheet_name, choice, py_total, items=items)
     pdf_path = _create_pdf(task_id, summary)
     xlsx_link = await _upload_or_fallback(chat_id, topic_id, reply_to, xlsx_path, f"stroyka_estimate_{task_id[:8]}.xlsx", "Excel сметы")
     pdf_link = await _upload_or_fallback(chat_id, topic_id, reply_to, pdf_path, f"stroyka_estimate_{task_id[:8]}.pdf", "PDF сметы")
@@ -1169,7 +1201,8 @@ async def _generate_and_send(conn: sqlite3.Connection, task: Any, pending: Dict[
         _update_task_safe(conn, task_id, state="FAILED", error_message="STROYKA_UPLOAD_FAILED")
         return True
 
-    result = summary + f"\n\n📊 Excel: {xlsx_link}\n📄 PDF: {pdf_link}\n\nДоволен? Да / Уточни / Правки"
+    # === §9 canonical result format ===
+    result = summary + f"\n\nExcel: {xlsx_link}\nPDF: {pdf_link}\n\nПодтверди или пришли правки"
     send_res = await _send_text(chat_id, result, reply_to, topic_id)
     kwargs = {"state": "AWAITING_CONFIRMATION", "result": result}
     if isinstance(send_res, dict) and send_res.get("bot_message_id"):
