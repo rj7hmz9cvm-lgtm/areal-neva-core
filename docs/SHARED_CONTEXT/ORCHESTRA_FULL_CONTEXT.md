@@ -1,7 +1,7 @@
 # ORCHESTRA_FULL_CONTEXT
 
-generated_at_utc: 2026-05-07T17:00:02.054503+00:00
-git_sha_before_commit: 1b1078c6e2895cef4354469ad990a5ee9f51c7b9
+generated_at_utc: 2026-05-07T17:24:49.708143+00:00
+git_sha_before_commit: 551829d5a33270fde4d9355e2dae407da05e6fb3
 parts_count: 17
 included_full_files: 336
 excluded_records: 78
@@ -55,6 +55,7 @@ https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHAR
 https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md
 
 ## STATUS_INDEX
+FIRST_READ_CURRENT_CONTEXT: https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md
 FIRST_READ_SINGLE_MODEL_SOURCE: https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md
 FIRST_READ_TOPIC_STATUS: https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md
 FIRST_READ_DIRECTION_STATUS: https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md

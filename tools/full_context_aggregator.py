@@ -50,6 +50,7 @@ SKIP_DIR_PARTS = {".git", "__pycache__", ".venv", "venv", "node_modules", ".mypy
 GENERATED_EXACT = {
     "docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md",
     "docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md",
+    "docs/SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md",
     "docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md",
     "docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md",
     "docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md",
@@ -438,6 +439,7 @@ def build_manifest(records: list[dict], chunk_counts: dict[str, int], git_sha: s
             "manifest": f"{RAW_MAIN}/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_MANIFEST.json",
             "single_model_source": f"{RAW_MAIN}/docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md",
             "single_model_full_context": f"{RAW_MAIN}/docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md",
+            "single_model_current_context": f"{RAW_MAIN}/docs/SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md",
             "topic_status_index": f"{RAW_MAIN}/docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md",
             "direction_status_index": f"{RAW_MAIN}/docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md",
             "topics_dir": f"{RAW_MAIN}/docs/SHARED_CONTEXT/TOPICS/",
@@ -479,6 +481,7 @@ excluded_records: {sum(1 for r in records if r["mode"] != "full")}
 {RAW_MAIN}/docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md
 
 ## STATUS_INDEX
+FIRST_READ_CURRENT_CONTEXT: {RAW_MAIN}/docs/SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md
 FIRST_READ_SINGLE_MODEL_SOURCE: {RAW_MAIN}/docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md
 FIRST_READ_TOPIC_STATUS: {RAW_MAIN}/docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md
 FIRST_READ_DIRECTION_STATUS: {RAW_MAIN}/docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md
@@ -516,15 +519,20 @@ MODEL_BOOTSTRAP_CONTEXT_UNAVAILABLE
 
 ## READ_ORDER
 1. This MODEL_BOOTSTRAP_CONTEXT
-2. SINGLE_MODEL_SOURCE
-3. TOPIC_STATUS_INDEX
-4. DIRECTION_STATUS_INDEX
-5. Required topic/direction file from TOPICS/ or DIRECTIONS/
-6. SAFE_RUNTIME_SNAPSHOT
-7. ORCHESTRA_FULL_CONTEXT_MANIFEST
-8. ORCHESTRA_FULL_CONTEXT_PART_XXX only if needed
+2. SINGLE_MODEL_CURRENT_CONTEXT — quick start
+3. SINGLE_MODEL_SOURCE — operational index
+4. TOPIC_STATUS_INDEX
+5. DIRECTION_STATUS_INDEX
+6. Required topic/direction file from TOPICS/ or DIRECTIONS/
+7. SAFE_RUNTIME_SNAPSHOT
+8. SINGLE_MODEL_FULL_CONTEXT — audit only
+9. ORCHESTRA_FULL_CONTEXT_MANIFEST
+10. ORCHESTRA_FULL_CONTEXT_PART_XXX only if dispute/raw dump needed
 
 ## RAW_LINKS
+SINGLE_MODEL_CURRENT_CONTEXT:
+{RAW_MAIN}/docs/SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md
+
 SINGLE_MODEL_SOURCE:
 {RAW_MAIN}/docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md
 
@@ -616,6 +624,7 @@ def stage_outputs(parts_count: int) -> None:
         "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_MANIFEST.json",
         "docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md",
         "docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md",
+        "docs/SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md",
         "docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md",
         "docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md",
     ] + [
@@ -1295,6 +1304,8 @@ def _smsv1_render_single_model_source(directions, topic_status_map, topic_meta, 
         parts.append(f"| {did} | {prof.get('engine','?')} | {prof.get('enabled', False)} | {prof.get('topic_ids', [])} | {prof.get('quality_gates', [])} |")
 
     parts += ["", "## SOURCE_LINKS"]
+    parts.append("- CURRENT_CONTEXT (quick start): docs/SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md")
+    parts.append("- FULL_CONTEXT (audit): docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md")
     parts.append("- TOPIC_STATUS_INDEX: docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md")
     parts.append("- DIRECTION_STATUS_INDEX: docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md")
     parts.append("- LATEST_HANDOFF: docs/HANDOFFS/LATEST_HANDOFF.md")
@@ -1545,6 +1556,289 @@ def _smfc_render_full_context(directions, topic_status_map, topic_meta, git_sha)
 
 # === END SMSV1_FULL_CONTEXT_APPLIED ===
 
+
+
+# === SMCC_CURRENT_CONTEXT_APPLIED ===
+import re as _smcc_re
+from datetime import datetime as _smcc_dt, timezone as _smcc_tz, timedelta as _smcc_td
+
+_SMCC_MAX_TOPIC_BYTES = 2000
+_SMCC_MAX_TOTAL_BYTES = 40000
+
+_SMCC_OPEN_KEYS = (
+    "NOT CLOSED", "NOT_VERIFIED", "NOT VERIFIED", "INSTALLED, NOT VERIFIED",
+    "INSTALLED НО НЕ VERIFIED", "НЕ VERIFIED", "НЕ ЗАКРЫТО", "НЕ ПРОВЕРЕНО",
+    "PENDING", "BLOCKER", "TODO", "OPEN", "BROKEN", "ОСТАЁТСЯ", "БЛОКЕР",
+)
+_SMCC_CLOSED_KEYS = (
+    "VERIFIED", "CLOSED", "DONE", "ARCHIVED", "OBSOLETE", "SUPERSEDED",
+    "ЗАКРЫТО", "ПОДТВЕРЖДЕНО", "АРХИВ",
+)
+_SMCC_LINE_FILTER = (
+    "⚠️", "❌", "🔴", "OPEN:", "BROKEN:", "PENDING:", "BLOCKER:",
+    "NOT VERIFIED", "INSTALLED, NOT VERIFIED", "НЕ VERIFIED", "НЕ ЗАКРЫТО",
+    "- ", "* ",
+)
+_SMCC_DATE_RE = _smcc_re.compile(r"(\d{2}[\.\-/]\d{2}[\.\-/]\d{4}|\d{4}[\.\-/]\d{2}[\.\-/]\d{2})")
+
+
+def _smcc_clip(text, limit):
+    if len(text.encode("utf-8")) <= limit:
+        return text
+    raw = text.encode("utf-8")[:limit]
+    cut = raw.decode("utf-8", errors="ignore")
+    nl = cut.rfind("\n")
+    if nl > int(limit * 0.65):
+        cut = cut[:nl]
+    return cut.rstrip() + "\n... [TRUNCATED — see SINGLE_MODEL_FULL_CONTEXT.md]\n"
+
+
+def _smcc_classify_section(header):
+    h = header.upper()
+    is_open = any(k in h for k in _SMCC_OPEN_KEYS)
+    is_closed = any(k in h for k in _SMCC_CLOSED_KEYS)
+    if is_open:
+        return "OPEN"
+    if is_closed:
+        return "CLOSED"
+    return "UNKNOWN"
+
+
+def _smcc_extract_date(header):
+    m = _SMCC_DATE_RE.search(header)
+    if not m:
+        return None
+    raw = m.group(1).replace("/", ".").replace("-", ".")
+    parts = raw.split(".")
+    try:
+        if len(parts[0]) == 4:
+            y, mo, d = int(parts[0]), int(parts[1]), int(parts[2])
+        else:
+            d, mo, y = int(parts[0]), int(parts[1]), int(parts[2])
+        return _smcc_dt(y, mo, d, tzinfo=_smcc_tz.utc)
+    except Exception:
+        return None
+
+
+def _smcc_parse_not_closed():
+    nc = BASE / "docs" / "REPORTS" / "NOT_CLOSED.md"
+    if not nc.exists():
+        return []
+    text = nc.read_text(encoding="utf-8", errors="ignore")
+    sections = []
+    cur = None
+    for line in text.splitlines():
+        if line.startswith("## ") or line.startswith("### "):
+            if cur:
+                sections.append(cur)
+            cur = {"header": line.strip(), "lines": []}
+        elif cur is not None:
+            cur["lines"].append(line)
+    if cur:
+        sections.append(cur)
+
+    cutoff = _smcc_dt.now(_smcc_tz.utc) - _smcc_td(days=30)
+    out = []
+    for s in sections:
+        if _smcc_classify_section(s["header"]) != "OPEN":
+            continue
+        date = _smcc_extract_date(s["header"])
+        if date and date < cutoff:
+            continue
+
+        lines = []
+        for ln in s["lines"]:
+            t = ln.strip()
+            if not t:
+                continue
+            u = t.upper()
+            if any(t.startswith(prefix) for prefix in _SMCC_LINE_FILTER) or any(k in u for k in ("NOT VERIFIED", "PENDING", "BLOCKER", "BROKEN", "НЕ ЗАКРЫТО")):
+                lines.append(t[:220])
+            if len(lines) >= 10:
+                break
+
+        if lines:
+            out.append({"header": s["header"], "date_unknown": date is None, "lines": lines})
+        if len(out) >= 12:
+            break
+    return out
+
+
+def _smcc_recent_commits_topic(topic_id):
+    try:
+        return _smsv1_git_log_per_topic(topic_id, 7)
+    except Exception:
+        return []
+
+
+def _smcc_topic_section(tid, name, role, db, markers_24h, blockers_topic):
+    states = db.get("states", {}) if isinstance(db, dict) else {}
+    failed_24h = db.get("failed_24h", 0) if isinstance(db, dict) else 0
+    last_failed = (db.get("last_failed", []) or [])[:5]
+    active = sum(states.get(s, 0) for s in ("NEW", "IN_PROGRESS", "WAITING_CLARIFICATION", "AWAITING_CONFIRMATION"))
+    commits = _smcc_recent_commits_topic(tid)
+
+    if active == 0 and failed_24h == 0 and not commits and int(tid) not in (2, 5, 210, 500):
+        return None
+
+    missing = []
+    if int(tid) == 2:
+        try:
+            missing = _smsv1_compute_markers_missing(2, markers_24h)[:20]
+        except Exception:
+            missing = []
+
+    parts = []
+    parts.append(f"### topic_{tid} {name}")
+    parts.append(f"role: {role}")
+    parts.append(f"active: {active}")
+    parts.append(f"failed_24h: {failed_24h}")
+    parts.append(f"commits_last_7d: {len(commits)}")
+
+    if commits:
+        parts.append("recent_commits:")
+        for c in commits[:3]:
+            parts.append(f"- {c[:140]}")
+
+    if missing:
+        parts.append(f"markers_missing: {len(missing)}")
+        for m in missing[:8]:
+            parts.append(f"- {m}")
+
+    if last_failed:
+        parts.append("last_failed:")
+        for f in last_failed[:3]:
+            parts.append(f"- {str(f.get('id',''))[:8]} | {str(f.get('em',''))[:100]}")
+
+    if blockers_topic:
+        parts.append("blockers:")
+        for b in blockers_topic[:3]:
+            parts.append(f"- {str(b)[:140]}")
+
+    next_action = "live-test required"
+    if missing:
+        next_action = f"live-test / close missing markers: {len(missing)}"
+    elif last_failed:
+        next_action = f"investigate latest failed: {str(last_failed[0].get('em',''))[:80]}"
+    elif blockers_topic:
+        next_action = f"close blocker: {str(blockers_topic[0])[:80]}"
+    elif commits:
+        next_action = "verify recent installed code by live-test"
+
+    parts.append(f"NEXT_ACTION: {next_action}")
+    parts.append("")
+    return _smcc_clip("\n".join(parts), _SMCC_MAX_TOPIC_BYTES)
+
+
+def _smcc_render_current_context(directions, topic_status_map, topic_meta, git_sha):
+    parts = []
+    parts.append("# SINGLE_MODEL_CURRENT_CONTEXT")
+    parts.append("")
+    parts.append(f"GENERATED_AT: {utc_now()}")
+    parts.append(f"GIT_SHA: {git_sha}")
+    parts.append("PURPOSE: Быстрый старт для любой модели — только актуальное состояние")
+    parts.append("FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md")
+    parts.append("STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test")
+    parts.append("")
+    parts.append("## READ_ORDER")
+    parts.append("1. This SINGLE_MODEL_CURRENT_CONTEXT")
+    parts.append("2. SINGLE_MODEL_SOURCE")
+    parts.append("3. Topic/direction file if needed")
+    parts.append("4. SINGLE_MODEL_FULL_CONTEXT only for audit/dispute")
+    parts.append("5. ORCHESTRA_FULL_CONTEXT_PART_*.md only for raw dump")
+    parts.append("")
+    parts.append("## GLOBAL_STATUS")
+    parts.append("| topic | name | status | active | failed_24h |")
+    parts.append("|-------|------|--------|--------|------------|")
+    for tid, meta in sorted(topic_meta.items()):
+        if meta.get("active", 0) > 0 or meta.get("failed_24h", 0) > 0 or int(tid) in (2, 5, 210, 500):
+            parts.append(f"| {tid} | {_smsv1_topic_safe_name(tid)} | {meta.get('status','?')} | {meta.get('active',0)} | {meta.get('failed_24h',0)} |")
+    parts.append("")
+
+    parts.append("## OPEN_BLOCKERS_FROM_NOT_CLOSED")
+    open_sections = _smcc_parse_not_closed()
+    if open_sections:
+        for s in open_sections[:5]:
+            parts.append(f"### {s['header'].lstrip('#').strip()}")
+            if s.get("date_unknown"):
+                parts.append("DATE_UNKNOWN")
+            for ln in s["lines"][:6]:
+                parts.append(ln)
+            parts.append("")
+    else:
+        parts.append("(no current open sections detected)")
+        parts.append("")
+
+    parts.append("## ACTIVE_OR_RECENT_TOPICS")
+    for tid in sorted(topic_meta.keys()):
+        meta = topic_meta[tid]
+        db = _smsv1_db_state(tid)
+        markers = _smsv1_markers_24h(tid)
+        blockers = _smsv1_extract_blockers_from_not_closed(tid)
+        sec = _smcc_topic_section(tid, _smsv1_topic_safe_name(tid), meta.get("role", "?"), db, markers, blockers)
+        if sec:
+            parts.append(sec)
+
+    parts.append("## STRICT_RULES")
+    parts.append("- INSTALLED != VERIFIED")
+    parts.append("- VERIFIED только после live-test")
+    parts.append("- Diagnostics → BAK → PATCH → PY_COMPILE → RESTART → LOGS → DB_VERIFY → GIT_PUSH → FINAL_VERIFY")
+    parts.append("- Не объявлять закрытым без live-теста")
+    parts.append("- BROKEN / REJECTED / UNKNOWN не использовать как канон")
+    parts.append("- chat_id + topic_id обязательны для контекста")
+    parts.append("- FULL_CONTEXT использовать только для аудита или спора")
+    parts.append("")
+
+    parts.append("## ALLOWED_FILES_BY_SCOPE")
+    parts.append("- core/stroyka_estimate_canon.py — topic_2 estimates")
+    parts.append("- core/sample_template_engine.py — topic_2 estimates/templates")
+    parts.append("- core/topic2_estimate_final_close_v2.py — topic_2 legacy/fallback")
+    parts.append("- core/technadzor_engine.py — topic_5")
+    parts.append("- core/normative_engine.py — topic_5")
+    parts.append("- core/project_engine.py — topic_210")
+    parts.append("- core/search_session.py — topic_500")
+    parts.append("- tools/full_context_aggregator.py — aggregator")
+    parts.append("")
+
+    parts.append("## FORBIDDEN_FILES")
+    parts.append("- .env / credentials / sessions/")
+    parts.append("- core/ai_router.py")
+    parts.append("- core/reply_sender.py")
+    parts.append("- core/google_io.py")
+    parts.append("- telegram_daemon.py")
+    parts.append("- data/core.db / data/memory.db schema")
+    parts.append("- systemd unit files")
+    parts.append("")
+
+    parts.append("## CONDITIONAL_PATCH")
+    parts.append("- task_worker.py — only with explicit task scope and diagnostics-first")
+    parts.append("")
+
+    parts.append("## DRIVE_BINDING")
+    for k, v in _smsv1_drive_binding().items():
+        parts.append(f"{k}: {v}")
+    parts.append("")
+
+    parts.append("## REFERENCE_REGISTRIES")
+    et = _smsv1_load_estimate_templates()
+    ref = _smsv1_load_owner_reference()
+    parts.append(f"estimate_template_registry: loaded={et.get('loaded')} count={len(et.get('templates', []))}")
+    parts.append(f"owner_reference_registry: loaded={ref.get('loaded')} items={ref.get('items', 0)}")
+    parts.append("")
+
+    parts.append("## SOURCE_LINKS")
+    parts.append(f"- CURRENT_CONTEXT: {RAW_MAIN}/docs/SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md")
+    parts.append(f"- SINGLE_MODEL_SOURCE: {RAW_MAIN}/docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md")
+    parts.append(f"- FULL_CONTEXT_AUDIT: {RAW_MAIN}/docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md")
+    parts.append(f"- TOPIC_STATUS_INDEX: {RAW_MAIN}/docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md")
+    parts.append(f"- DIRECTION_STATUS_INDEX: {RAW_MAIN}/docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md")
+    parts.append(f"- LATEST_HANDOFF: {RAW_MAIN}/docs/HANDOFFS/LATEST_HANDOFF.md")
+    parts.append(f"- NOT_CLOSED_FULL: {RAW_MAIN}/docs/REPORTS/NOT_CLOSED.md")
+    parts.append("")
+
+    return _smcc_clip("\n".join(parts) + "\n", _SMCC_MAX_TOTAL_BYTES)
+# === END_SMCC_CURRENT_CONTEXT_APPLIED ===
+
 def smsv1_generate_all(git_sha):
     _SMSV1_TOPICS_DIR.mkdir(parents=True, exist_ok=True)
     _SMSV1_DIRECTIONS_DIR.mkdir(parents=True, exist_ok=True)
@@ -1606,6 +1900,12 @@ def smsv1_generate_all(git_sha):
         print(f"SMFC_GENERATED full_context_size={len(full_ctx)}")
     except Exception as _smfc_e:
         print(f"SMFC_FAIL {_smfc_e}")
+    try:
+        current_ctx = _smcc_render_current_context(directions, topic_status_map, topic_meta, git_sha)
+        write(OUTPUT_DIR / "SINGLE_MODEL_CURRENT_CONTEXT.md", current_ctx)
+        print(f"SMCC_GENERATED current_context_size={len(current_ctx.encode('utf-8'))}")
+    except Exception as _smcc_e:
+        print(f"SMCC_FAIL {_smcc_e}")
     print(f"SMSV1_GENERATED directions={len(directions)} topics={len(topic_meta)} dr={dr_source}")
 
 # === END_PATCH_AGGREGATOR_SINGLE_MODEL_SOURCE_V1 ===
