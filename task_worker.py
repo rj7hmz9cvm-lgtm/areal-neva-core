@@ -15501,5 +15501,140 @@ else:
     _FDCB_LOG.warning("PATCH_FCG_DONE_CONTRACT_BYPASS_V1 skipped: _update_task not found")
 # === END_PATCH_FCG_DONE_CONTRACT_BYPASS_V1 ===
 
+# === PATCH_TOPIC500_ADAPTIVE_OUTPUT_V1 ===
+# Root cause: all topic_500 queries use engine="search_supplier" and procurement format
+# (supplier table with phone/price/URL). Factual/normative/technical queries return wrong format.
+# Fix: classify query intent → prepend format instruction to raw_input so Perplexity
+# returns the right output structure. procurement mode unchanged.
+import logging as _t500ao_logging
+import re as _t500ao_re
+
+_T500AO_LOG = _t500ao_logging.getLogger("task_worker")
+
+_T500AO_PROCUREMENT_RE = re.compile(
+    r"\b(купить|купи|куплю|цена|стоимость|почём|поставщик|материал|товар|артикул|авито|avito|озон|ozon|wildberries|вайлдберриз|auto\.ru|дром|drom|наличие|заказать|найди.{0,20}где|найди.{0,20}купить|маркетплейс|прайс|оптом|розница|скидка|доставка)\b",
+    re.IGNORECASE,
+)
+_T500AO_NORMATIVE_RE = re.compile(
+    r"\b(ГОСТ|СП\s*\d|СНиП|норматив|стандарт|требование|допуск|регламент|ФЗ\s*\d|федеральн|кодекс|СанПиН|ПНСТ|ТУ\s*\d)\b",
+    re.IGNORECASE,
+)
+_T500AO_TECHNICAL_RE = re.compile(
+    r"\b(технология|технологию|технологии|монтаж|установка|инструкция|как делать|как сделать|порядок работ|методика|состав работ|этапы|нанесение|укладка|заливка|армирование|сварка|бетонирование)\b",
+    re.IGNORECASE,
+)
+_T500AO_DOWNLOAD_RE = re.compile(
+    r"\b(скачать|скачай|ссылка.{0,15}скачать|приложение|программа|apk|4pda|appstorrent|apkpure|trashbox|torrent|exe|setup)\b",
+    re.IGNORECASE,
+)
+_T500AO_NEWS_RE = re.compile(
+    r"\b(новост|последн.{0,10}изменен|актуальн|свеж.{0,5}(данн|новост|информац)|что нов|когда вышл|обновлени)\b",
+    re.IGNORECASE,
+)
+_T500AO_SERVICE_RE = re.compile(
+    r"\b(подрядчик|бригада|найти.{0,15}(мастер|компани|бригад|подрядчик)|услуга.{0,20}(строй|ремонт|монтаж)|кто делает|найди.{0,15}компани)\b",
+    re.IGNORECASE,
+)
+_T500AO_COMPARISON_RE = re.compile(
+    r"\b(сравни|сравнение|что лучше|разница между|отличие|плюсы и минусы|чем отличается|vs\b)\b",
+    re.IGNORECASE,
+)
+_T500AO_TROUBLESHOOT_RE = re.compile(
+    r"\b(не работает|не запускается|ошибка|проблема|почему не|как исправить|как починить|что делать если|неисправность|сбой|вылетает|зависает)\b",
+    re.IGNORECASE,
+)
+
+_T500AO_MODE_PROMPTS = {
+    "normative": (
+        "Задача: найти норму/стандарт/документ. "
+        "Формат ответа: название документа, номер пункта если применимо, область применения, прямая ссылка на источник, дата проверки. "
+        "Без таблиц поставщиков. Без цен. Только нормативная информация.\n\n"
+    ),
+    "technical": (
+        "Задача: найти техническую информацию/технологию. "
+        "Формат ответа: метод/технология, ключевые шаги, нормативные требования если есть, источник. "
+        "Без таблиц поставщиков. Без цен.\n\n"
+    ),
+    "download": (
+        "Задача: найти ссылку для скачивания. "
+        "Формат ответа: одна лучшая ссылка, платформа, совместимость, статус источника (официальный/форум). "
+        "Без таблиц поставщиков.\n\n"
+    ),
+    "news": (
+        "Задача: найти актуальные новости/изменения. "
+        "Формат ответа: последние подтверждённые факты, дата события, источник. "
+        "Только свежая информация, не кэш. Без таблиц поставщиков.\n\n"
+    ),
+    "service": (
+        "Задача: найти подрядчика/компанию/услугу. "
+        "Формат ответа: название, город, контакт, ссылка, рейтинг если найден. "
+        "Без таблиц цен на материалы.\n\n"
+    ),
+    "comparison": (
+        "Задача: сравнить варианты. "
+        "Формат ответа: таблица сравнения с ключевыми параметрами, итоговый вывод. "
+        "Без избыточных supplier-строк.\n\n"
+    ),
+    "troubleshooting": (
+        "Задача: найти решение проблемы. "
+        "Формат ответа: причина проблемы, конкретные шаги решения, команды/настройки если применимо, ссылка на официальную документацию. "
+        "Без таблиц поставщиков.\n\n"
+    ),
+    "factual": (
+        "Задача: найти факт/информацию. "
+        "Формат ответа: прямой ответ на вопрос, источник, что подтверждено, что неуверенно. "
+        "Без таблиц поставщиков. Без цен.\n\n"
+    ),
+}
+
+
+def _t500ao_classify(text: str) -> str:
+    if _T500AO_PROCUREMENT_RE.search(text):
+        return "procurement"
+    if _T500AO_NORMATIVE_RE.search(text):
+        return "normative"
+    if _T500AO_DOWNLOAD_RE.search(text):
+        return "download"
+    if _T500AO_NEWS_RE.search(text):
+        return "news"
+    if _T500AO_TROUBLESHOOT_RE.search(text):
+        return "troubleshooting"
+    if _T500AO_COMPARISON_RE.search(text):
+        return "comparison"
+    if _T500AO_SERVICE_RE.search(text):
+        return "service"
+    if _T500AO_TECHNICAL_RE.search(text):
+        return "technical"
+    return "factual"
+
+
+_T500AO_ORIG = globals().get("_p0_runtime_topic500_direct_search_20260504")
+if _T500AO_ORIG and not getattr(_T500AO_ORIG, "_t500ao_wrapped", False):
+    async def _p0_runtime_topic500_direct_search_20260504(conn, task, chat_id, topic_id):
+        try:
+            _t500ao_text = str(
+                (task.get("raw_input") if isinstance(task, dict) else None) or ""
+            ).strip()[:2000]
+            _t500ao_mode = _t500ao_classify(_t500ao_text)
+            if _t500ao_mode != "procurement" and _t500ao_mode in _T500AO_MODE_PROMPTS:
+                _t500ao_instruction = _T500AO_MODE_PROMPTS[_t500ao_mode]
+                _t500ao_new_input = _t500ao_instruction + _t500ao_text
+                task = dict(task) if not isinstance(task, dict) else dict(task)
+                task["raw_input"] = _t500ao_new_input
+                task["normalized_input"] = _t500ao_new_input
+                _T500AO_LOG.info(
+                    "PATCH_TOPIC500_ADAPTIVE_OUTPUT_V1 mode=%s task=%s",
+                    _t500ao_mode,
+                    str(task.get("id", ""))[:36],
+                )
+        except Exception as _t500ao_e:
+            _T500AO_LOG.warning("PATCH_TOPIC500_ADAPTIVE_OUTPUT_V1 classify_err: %s", _t500ao_e)
+        return await _T500AO_ORIG(conn, task, chat_id, topic_id)
+    _p0_runtime_topic500_direct_search_20260504._t500ao_wrapped = True
+    _T500AO_LOG.info("PATCH_TOPIC500_ADAPTIVE_OUTPUT_V1 installed")
+else:
+    _T500AO_LOG.warning("PATCH_TOPIC500_ADAPTIVE_OUTPUT_V1 skipped: _p0_runtime_topic500_direct_search_20260504 not found")
+# === END_PATCH_TOPIC500_ADAPTIVE_OUTPUT_V1 ===
+
 if __name__ == "__main__":
     asyncio.run(main())
