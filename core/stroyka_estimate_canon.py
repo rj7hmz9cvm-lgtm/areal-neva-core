@@ -433,6 +433,8 @@ def _parse_request(text: str) -> Dict[str, Any]:
 
 def _missing_question(parsed: Dict[str, Any]) -> Optional[str]:
 
+    if parsed.get("pdf_spec_rows") or parsed.get("ocr_table_rows"):
+        return None
     # === STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED_DIRECT_PRICE_NO_MISSING ===
     raw = _low(parsed.get("raw", ""))
     if ("цена" in raw or "руб" in raw or "₽" in raw) and any(u in raw for u in ("м²", "м2", "м³", "м3", "шт", "кг", "тн", "тонн")) and any(x in raw for x in ("смет", "фундамент", "монолит", "кровл", "работ")):
@@ -1717,15 +1719,19 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
 
     if _is_revision(raw_input):
         try:
-            if reply_to:
-                _history_safe(conn, task_id, f"TOPIC2_REVISION_BOUND_TO_PARENT:{reply_to}")
-            else:
+            _rev_pid = reply_to
+            if not _rev_pid:
                 _rev_row = conn.execute(
                     "SELECT id FROM tasks WHERE CAST(chat_id AS TEXT)=? AND COALESCE(topic_id,0)=? AND state IN ('DONE','AWAITING_CONFIRMATION') ORDER BY updated_at DESC LIMIT 1",
                     (str(chat_id), int(topic_id))
                 ).fetchone()
                 if _rev_row:
-                    _history_safe(conn, task_id, f"TOPIC2_REVISION_BOUND_TO_PARENT:{_rev_row[0]}")
+                    _rev_pid = _rev_row[0]
+            if _rev_pid:
+                _history_safe(conn, task_id, f"TOPIC2_REVISION_BOUND_TO_PARENT:{_rev_pid}")
+                _neg_check = ("нет не так", "не то", "неправильно", "неверно", "не верно")
+                if any(x in _low(raw_input) for x in _neg_check):
+                    _history_safe(conn, task_id, f"TOPIC2_NEGATIVE_PARENT:{_rev_pid}")
         except Exception:
             pass
         text = "Принял правки. Напиши одну конкретную правку к смете: что изменить?"
@@ -1781,6 +1787,17 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
                 _update_task_safe(conn, task_id, **kwargs)
                 _history_safe(conn, task_id, "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_CONTEXT_BLEED_FIX:no_active_estimate")
                 return True
+
+    # §7 repeat parent binding — link new estimate to last closed task for this chat/topic
+    try:
+        _rpt_row = conn.execute(
+            "SELECT id FROM tasks WHERE CAST(chat_id AS TEXT)=? AND COALESCE(topic_id,0)=? AND id<>? AND state IN ('DONE','AWAITING_CONFIRMATION','FAILED','CANCELLED') ORDER BY updated_at DESC LIMIT 1",
+            (str(chat_id), int(topic_id), task_id)
+        ).fetchone()
+        if _rpt_row:
+            _history_safe(conn, task_id, f"TOPIC2_REPEAT_PARENT_TASK:{_rpt_row[0]}")
+    except Exception:
+        pass
 
     parsed = _parse_request(raw_input)
 
