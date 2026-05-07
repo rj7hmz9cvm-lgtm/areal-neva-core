@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-05-07T15:48:00.582072+00:00",
-  "git_sha_before_commit": "835c7a916507486ff2f6ce2e03bafeadf475079a",
+  "generated_at_utc": "2026-05-07T15:57:26.239206+00:00",
+  "git_sha_before_commit": "62d85b864b760c7aaa7b72360d2dafb02076f6c4",
   "part_max_bytes": 400000,
   "content_chunk_bytes": 340000,
   "total_records": 410,
@@ -16,6 +16,7 @@
     "full_context_index": "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md",
     "manifest": "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_MANIFEST.json",
     "single_model_source": "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md",
+    "single_model_full_context": "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md",
     "topic_status_index": "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md",
     "direction_status_index": "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md",
     "topics_dir": "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main/docs/SHARED_CONTEXT/TOPICS/",
@@ -2115,9 +2116,9 @@
       "path": "core/stroyka_estimate_canon.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 134031,
-      "sha256": "ac351c4d3ec2db7f10ca3a67742daaeffa28134bcb7c3cc7d2838e2d0f018404",
-      "chars": 123620,
+      "size_bytes": 135585,
+      "sha256": "8f87ff2d0060159700f58133323c495b21df009db485468b83733222f67ef359",
+      "chars": 125143,
       "chunks": 1
     },
     {
@@ -2331,9 +2332,9 @@
       "path": "tools/full_context_aggregator.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 53672,
-      "sha256": "0bfae1034c64c482aec296b2ffee787f4d9220389da09af27ee047bfae323c1b",
-      "chars": 53249,
+      "size_bytes": 63311,
+      "sha256": "b4f0402a267fcf2690b216dd94693328c272856da6283568fe2ee2ebcd42aa95",
+      "chars": 62766,
       "chunks": 1
     },
     {
@@ -3123,7 +3124,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_MANIFEST.json",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 103625,
+      "size_bytes": 117175,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3132,7 +3133,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_001.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 362818,
+      "size_bytes": 362559,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3222,7 +3223,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_011.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 250649,
+      "size_bytes": 257117,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3240,7 +3241,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_013.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 387125,
+      "size_bytes": 396452,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3285,7 +3286,7 @@
       "path": "docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 26943,
+      "size_bytes": 29809,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3330,7 +3331,7 @@
       "path": "docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 8592,
+      "size_bytes": 8614,
       "sha256": "",
       "chars": 0,
       "chunks": 0

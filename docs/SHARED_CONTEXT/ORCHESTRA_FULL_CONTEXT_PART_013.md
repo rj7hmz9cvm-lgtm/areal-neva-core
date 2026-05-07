@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_013
-generated_at_utc: 2026-05-07T15:48:00.577774+00:00
-git_sha_before_commit: 835c7a916507486ff2f6ce2e03bafeadf475079a
+generated_at_utc: 2026-05-07T15:57:26.232819+00:00
+git_sha_before_commit: 62d85b864b760c7aaa7b72360d2dafb02076f6c4
 part: 13/17
 
 
 ====================================================================================================
 BEGIN_FILE: tools/full_context_aggregator.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 0bfae1034c64c482aec296b2ffee787f4d9220389da09af27ee047bfae323c1b
+SHA256_FULL_FILE: b4f0402a267fcf2690b216dd94693328c272856da6283568fe2ee2ebcd42aa95
 ====================================================================================================
 #!/usr/bin/env python3
 # === FULL_CONTEXT_AGGREGATOR_V1 ===
@@ -60,6 +60,7 @@ SKIP_DIR_PARTS = {".git", "__pycache__", ".venv", "venv", "node_modules", ".mypy
 
 GENERATED_EXACT = {
     "docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md",
+    "docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md",
     "docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md",
     "docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md",
     "docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md",
@@ -447,6 +448,7 @@ def build_manifest(records: list[dict], chunk_counts: dict[str, int], git_sha: s
             "full_context_index": f"{RAW_MAIN}/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md",
             "manifest": f"{RAW_MAIN}/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_MANIFEST.json",
             "single_model_source": f"{RAW_MAIN}/docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md",
+            "single_model_full_context": f"{RAW_MAIN}/docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md",
             "topic_status_index": f"{RAW_MAIN}/docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md",
             "direction_status_index": f"{RAW_MAIN}/docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md",
             "topics_dir": f"{RAW_MAIN}/docs/SHARED_CONTEXT/TOPICS/",
@@ -624,6 +626,7 @@ def stage_outputs(parts_count: int) -> None:
         "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md",
         "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_MANIFEST.json",
         "docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md",
+        "docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md",
         "docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md",
         "docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md",
     ] + [
@@ -1347,6 +1350,212 @@ def _smsv1_render_direction_status_index(directions, topic_status_map, git_sha):
     parts.append("")
     return "\n".join(parts) + "\n"
 
+
+
+# === SMSV1_FULL_CONTEXT_APPLIED ===
+def _smfc_read_file(path, max_chars=None):
+    p = BASE / path
+    if not p.exists():
+        return f"# (file missing: {path})\n"
+    try:
+        text = p.read_text(encoding="utf-8", errors="ignore")
+        if max_chars and len(text) > max_chars:
+            text = text[:max_chars] + f"\n\n... [TRUNCATED at {max_chars} chars from {len(text)} total — see source file] ..."
+        return text
+    except Exception as e:
+        return f"# (read error {path}: {e})\n"
+
+def _smfc_last_failed_per_topic(topic_id, limit=5):
+    try:
+        conn = _smsv1_sqlite.connect(str(BASE / "data" / "core.db"))
+        conn.row_factory = _smsv1_sqlite.Row
+        cur = conn.execute(
+            "SELECT id, datetime(updated_at,'localtime') t, "
+            "substr(coalesce(error_message,''),1,200) em, "
+            "substr(raw_input,1,150) ri "
+            "FROM tasks WHERE topic_id=? AND state='FAILED' "
+            "ORDER BY rowid DESC LIMIT ?",
+            (int(topic_id), limit)
+        )
+        rows = []
+        for r in cur.fetchall():
+            d = dict(r)
+            hist_cur = conn.execute(
+                "SELECT substr(action,1,100) FROM task_history "
+                "WHERE task_id=? ORDER BY rowid DESC LIMIT 5",
+                (d["id"],)
+            )
+            d["history"] = [h[0] for h in hist_cur.fetchall()]
+            rows.append(d)
+        conn.close()
+        return rows
+    except Exception as e:
+        return [{"error": str(e)}]
+
+def _smfc_render_full_context(directions, topic_status_map, topic_meta, git_sha):
+    parts = []
+    parts.append("# SINGLE_MODEL_FULL_CONTEXT")
+    parts.append("")
+    parts.append(f"GENERATED_AT: {utc_now()}")
+    parts.append(f"GIT_SHA: {git_sha}")
+    parts.append("PURPOSE: Один файл с полным контекстом проекта для любой модели")
+    parts.append("STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test")
+    parts.append("")
+    parts.append("## CONTENTS")
+    parts.append("1. SUMMARY (карта статусов всех топиков и направлений)")
+    parts.append("2. DOCS/HANDOFFS/LATEST_HANDOFF.md (полностью)")
+    parts.append("3. DOCS/REPORTS/NOT_CLOSED.md (полностью)")
+    parts.append("4. DOCS/CANON_FINAL/* (полностью)")
+    parts.append("5. PER_TOPIC: status + last failed + key engine code (head)")
+    parts.append("6. PER_DIRECTION: profile + bound topics status")
+    parts.append("7. SOURCE_LINKS")
+    parts.append("")
+    parts.append("=" * 80)
+    parts.append("# 1. SUMMARY")
+    parts.append("=" * 80)
+    parts.append("")
+    parts.append("## GLOBAL_TOPIC_TABLE")
+    parts.append("| topic_id | name | status | active | failed_24h |")
+    parts.append("|----------|------|--------|--------|------------|")
+    for tid, meta in sorted(topic_meta.items()):
+        parts.append(f"| {tid} | {_smsv1_topic_safe_name(tid)} | {meta.get('status','?')} | "
+                     f"{meta.get('active',0)} | {meta.get('failed_24h',0)} |")
+    parts.append("")
+    parts.append("## DIRECTION_TABLE")
+    parts.append("| direction_id | engine | enabled | topic_ids |")
+    parts.append("|--------------|--------|---------|-----------|")
+    for did, prof in directions.items():
+        parts.append(f"| {did} | {(prof or {}).get('engine','?')} | "
+                     f"{(prof or {}).get('enabled', False)} | {(prof or {}).get('topic_ids', [])} |")
+    parts.append("")
+    parts.append("## DRIVE_BINDING")
+    for k, v in _smsv1_drive_binding().items():
+        parts.append(f"{k}: {v}")
+    parts.append("")
+    parts.append("## REFERENCE_REGISTRIES")
+    et = _smsv1_load_estimate_templates()
+    ref = _smsv1_load_owner_reference()
+    parts.append(f"estimate_template_registry: loaded={et.get('loaded')} count={len(et.get('templates', []))}")
+    parts.append(f"owner_reference_registry: loaded={ref.get('loaded')} items={ref.get('items', 0)}")
+    for t in et.get("templates", [])[:10]:
+        parts.append(f"- {t.get('key')} | {t.get('title')} | {t.get('role')}")
+    parts.append("")
+
+    parts.append("=" * 80)
+    parts.append("# 2. LATEST_HANDOFF")
+    parts.append("=" * 80)
+    parts.append("")
+    parts.append(_smfc_read_file("docs/HANDOFFS/LATEST_HANDOFF.md"))
+    parts.append("")
+
+    parts.append("=" * 80)
+    parts.append("# 3. NOT_CLOSED")
+    parts.append("=" * 80)
+    parts.append("")
+    parts.append(_smfc_read_file("docs/REPORTS/NOT_CLOSED.md"))
+    parts.append("")
+
+    parts.append("=" * 80)
+    parts.append("# 4. CANON_FINAL")
+    parts.append("=" * 80)
+    parts.append("")
+    canon_dir = BASE / "docs" / "CANON_FINAL"
+    if canon_dir.exists():
+        for f in sorted(canon_dir.glob("*.md")):
+            parts.append(f"## CANON_FINAL/{f.name}")
+            parts.append("")
+            parts.append(_smfc_read_file(f"docs/CANON_FINAL/{f.name}"))
+            parts.append("")
+
+    parts.append("=" * 80)
+    parts.append("# 5. PER_TOPIC")
+    parts.append("=" * 80)
+    parts.append("")
+    
+    # Engine maps per topic
+    topic_engines = {
+        2: ["core/sample_template_engine.py", "core/stroyka_estimate_canon.py", "core/topic2_estimate_final_close_v2.py"],
+        5: ["core/technadzor_engine.py", "core/normative_engine.py"],
+        210: ["core/project_engine.py", "core/cad_project_engine.py"],
+        500: ["core/search_session.py", "core/search_engine.py"],
+    }
+    
+    for tid in sorted(topic_meta.keys()):
+        meta = topic_meta[tid]
+        parts.append(f"## TOPIC_{tid}_{_smsv1_topic_safe_name(tid)}")
+        parts.append("")
+        parts.append(f"STATUS: {meta.get('status','?')}")
+        parts.append(f"ACTIVE: {meta.get('active',0)}  FAILED_24H: {meta.get('failed_24h',0)}")
+        parts.append(f"DIRECTIONS_BOUND: {meta.get('role','?')}")
+        parts.append("")
+        # Last failed
+        failed = _smfc_last_failed_per_topic(tid, 5)
+        if failed and not failed[0].get("error"):
+            parts.append("### LAST_FAILED (5)")
+            for f in failed:
+                parts.append(f"- {f.get('id','')[:8]} | {f.get('t','')} | {f.get('em','')[:80]}")
+                if f.get("history"):
+                    for h in f["history"][:3]:
+                        parts.append(f"    history: {h}")
+            parts.append("")
+        # Engine code (head 250 lines)
+        if tid in topic_engines:
+            parts.append("### KEY_ENGINE_CODE (head 250 lines each)")
+            for engine_path in topic_engines[tid]:
+                ep = BASE / engine_path
+                if ep.exists():
+                    parts.append(f"#### {engine_path}")
+                    parts.append("```python")
+                    try:
+                        lines = ep.read_text(encoding="utf-8", errors="ignore").splitlines()[:250]
+                        parts.append("\n".join(lines))
+                    except Exception as e:
+                        parts.append(f"# read error: {e}")
+                    parts.append("```")
+                    parts.append("")
+        # Topic file inline (markers, blockers, regression)
+        topic_file = BASE / "docs" / "SHARED_CONTEXT" / "TOPICS" / f"topic_{tid}_{_smsv1_topic_safe_name(tid)}.md"
+        if topic_file.exists():
+            parts.append(f"### TOPIC_FILE_INLINE")
+            parts.append("```")
+            parts.append(_smfc_read_file(f"docs/SHARED_CONTEXT/TOPICS/topic_{tid}_{_smsv1_topic_safe_name(tid)}.md"))
+            parts.append("```")
+            parts.append("")
+
+    parts.append("=" * 80)
+    parts.append("# 6. PER_DIRECTION")
+    parts.append("=" * 80)
+    parts.append("")
+    for did, prof in directions.items():
+        prof = prof or {}
+        if not prof.get("enabled", False):
+            continue
+        parts.append(f"## {did}")
+        parts.append(f"engine: {prof.get('engine','?')}")
+        parts.append(f"topic_ids: {prof.get('topic_ids', [])}")
+        parts.append(f"input_types: {prof.get('input_types', [])}")
+        parts.append(f"output_formats: {prof.get('output_formats', [])}")
+        parts.append(f"quality_gates: {prof.get('quality_gates', [])}")
+        parts.append(f"aliases: {(prof.get('aliases') or [])[:10]}")
+        parts.append("")
+
+    parts.append("=" * 80)
+    parts.append("# 7. SOURCE_LINKS")
+    parts.append("=" * 80)
+    parts.append("")
+    parts.append("- TOPIC_STATUS_INDEX: docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md")
+    parts.append("- DIRECTION_STATUS_INDEX: docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md")
+    parts.append("- SAFE_RUNTIME_SNAPSHOT: docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md")
+    parts.append("- MANIFEST: docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_MANIFEST.json")
+    parts.append("- DirectionRegistry: core/direction_registry.py")
+    parts.append("- runtime_file_catalog: core/runtime_file_catalog.py")
+    parts.append("- topic_drive_oauth: core/topic_drive_oauth.py")
+    parts.append("- ORCHESTRA_FULL_CONTEXT_PARTS: 17 files (full project dump)")
+    parts.append("")
+    return "\n".join(parts) + "\n"
+
+# === END SMSV1_FULL_CONTEXT_APPLIED ===
+
 def smsv1_generate_all(git_sha):
     _SMSV1_TOPICS_DIR.mkdir(parents=True, exist_ok=True)
     _SMSV1_DIRECTIONS_DIR.mkdir(parents=True, exist_ok=True)
@@ -1402,6 +1611,12 @@ def smsv1_generate_all(git_sha):
     write(OUTPUT_DIR / "DIRECTION_STATUS_INDEX.md", _smsv1_render_direction_status_index(directions, topic_status_map, git_sha))
     write(OUTPUT_DIR / "SINGLE_MODEL_SOURCE.md", _smsv1_render_single_model_source(directions, topic_status_map, topic_meta, git_sha))
 
+    try:
+        full_ctx = _smfc_render_full_context(directions, topic_status_map, topic_meta, git_sha)
+        write(OUTPUT_DIR / "SINGLE_MODEL_FULL_CONTEXT.md", full_ctx)
+        print(f"SMFC_GENERATED full_context_size={len(full_ctx)}")
+    except Exception as _smfc_e:
+        print(f"SMFC_FAIL {_smfc_e}")
     print(f"SMSV1_GENERATED directions={len(directions)} topics={len(topic_meta)} dr={dr_source}")
 
 # === END_PATCH_AGGREGATOR_SINGLE_MODEL_SOURCE_V1 ===

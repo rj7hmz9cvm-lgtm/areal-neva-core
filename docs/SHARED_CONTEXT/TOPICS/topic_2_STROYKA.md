@@ -1,7 +1,7 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-05-07T15:48:00.667678+00:00
-GIT_SHA: 835c7a916507486ff2f6ce2e03bafeadf475079a
+GENERATED_AT: 2026-05-07T15:57:26.315639+00:00
+GIT_SHA: 62d85b864b760c7aaa7b72360d2dafb02076f6c4
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -25,6 +25,7 @@ FAILED_LAST_24H: 11
 - 8212f685 | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
+- 62d85b8|fix(topic2): V5B — price source quality gate, raw JSON guard, canonical totals col J
 - 168ce5e|fix(topic2): close final V5 code gaps for prices guards totals
 - 983ced8|fix(topic2): close 3 remaining V4 gaps (repeat/negative/pdf_missing_question)
 - 2353fc3|fix(topic2): close remaining project/pdf/photo/price/artifact gaps V4
@@ -54,7 +55,6 @@ FAILED_LAST_24H: 11
 - f28a106|fix(topic2/topic500): extend estimate pipeline, offer menu for drive_file, fix search result blocking
 - 2ea6754|fix(topic2): extend estimate detection for construction photos + search result fix
 - 967c48f|fix(topic_2/topic_5): close logic gaps in smeta, voice, and act routing
-- 4aa44eb|fix: close canon contours for topic_5/topic_2/topic_500
 
 ## MARKERS_LAST_24H
 - created:NEW
