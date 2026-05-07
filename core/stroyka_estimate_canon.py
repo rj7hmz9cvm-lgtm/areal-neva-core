@@ -581,6 +581,10 @@ def is_stroyka_estimate_candidate(task: Any) -> bool:
         return False
     input_type = _low(_row_get(task, "input_type", ""))
     if input_type in ("photo", "file", "drive_file", "image", "document"):
+        # §6 multi-format intake: allow when caption contains estimate keywords
+        _mfi_cap = _low(_row_get(task, "raw_input", ""))
+        if _mfi_cap and any(x in _mfi_cap for x in ESTIMATE_WORDS):
+            return True
         return False
     raw = _low(_row_get(task, "raw_input", ""))
     if not raw:
@@ -659,6 +663,55 @@ def _numbers_from_price_text(price_text: str, keywords: Tuple[str, ...]) -> List
                 except Exception:
                     pass
     return vals
+
+
+def _parse_price_sources(price_text: str) -> List[Dict[str, Any]]:
+    """Parse Perplexity pipe-delimited response into per-position source records."""
+    sources: List[Dict[str, Any]] = []
+    if not price_text:
+        return sources
+    today = datetime.date.today().isoformat()
+    for line in price_text.splitlines():
+        line = line.strip(" \t-—•·")
+        if "|" not in line:
+            continue
+        parts = [p.strip() for p in line.split("|")]
+        if len(parts) < 4:
+            continue
+        position = parts[0].lower()
+        supplier = parts[4] if len(parts) > 4 else ""
+        url = parts[5] if len(parts) > 5 else ""
+        checked_at = parts[6].strip() if len(parts) > 6 else today
+        status = "found" if (supplier or url) else "no_data"
+        if not position:
+            continue
+        kw = [w for w in re.split(r"[\s,;/]+", position) if len(w) > 2]
+        sources.append({
+            "keywords": kw,
+            "position": position,
+            "supplier": supplier,
+            "url": url,
+            "checked_at": checked_at or today,
+            "status": status,
+        })
+    return sources
+
+
+def _match_price_source(sources: List[Dict[str, Any]], item_name: str, item_section: str) -> Dict[str, Any]:
+    """Return best matching source for an estimate item."""
+    today = datetime.date.today().isoformat()
+    _empty = {"supplier": "", "url": "", "checked_at": today, "status": "template_only"}
+    if not sources:
+        return _empty
+    combined = (item_name + " " + item_section).lower()
+    best = None
+    best_score = 0
+    for src in sources:
+        score = sum(1 for kw in src["keywords"] if kw in combined)
+        if score > best_score:
+            best_score = score
+            best = src
+    return best if (best and best_score > 0) else _empty
 
 
 def _choose_value(values: List[float], choice: Dict[str, Any], default: float = 0.0) -> float:
@@ -940,7 +993,7 @@ def _create_xlsx_from_template(task_id: str, parsed: Dict[str, Any], template: D
 
     items = _build_estimate_items(parsed, price_text, choice)
     today_str = datetime.date.today().isoformat()
-    price_source = "Perplexity" if price_text and len(str(price_text).strip()) > 10 else "TEMPLATE_ONLY"
+    _ps_sources = _parse_price_sources(price_text)
 
     if template_path and os.path.exists(template_path):
         try:
@@ -1004,10 +1057,11 @@ def _create_xlsx_from_template(task_id: str, parsed: Dict[str, Any], template: D
         ws.cell(row_idx, 8, price)
         ws.cell(row_idx, 9).value = f"=E{row_idx}*H{row_idx}"
         ws.cell(row_idx, 10).value = f"=G{row_idx}+I{row_idx}"
-        ws.cell(row_idx, 11, price_source)
-        ws.cell(row_idx, 12, "")
-        ws.cell(row_idx, 13, "")
-        ws.cell(row_idx, 14, today_str)
+        _ps = _match_price_source(_ps_sources, it["name"], it["section"])
+        ws.cell(row_idx, 11, _ps.get("status", "template_only"))
+        ws.cell(row_idx, 12, _ps.get("supplier", ""))
+        ws.cell(row_idx, 13, _ps.get("url", ""))
+        ws.cell(row_idx, 14, _ps.get("checked_at", today_str))
         ws.cell(row_idx, 15, it["note"])
         for c in range(1, 16):
             ws.cell(row_idx, c).fill = row_fill
@@ -1116,6 +1170,33 @@ async def _upload_or_fallback(chat_id: str, topic_id: int, reply_to: Optional[in
     return ""
 
 
+def _strip_telegram_output(text: str) -> str:
+    """Hard strip Engine/MANIFEST/path/JSON/REVISION_CONTEXT from Telegram output."""
+    lines = str(text or "").splitlines()
+    clean = []
+    skip_revision = False
+    for ln in lines:
+        s = ln.strip()
+        if "REVISION_CONTEXT" in s:
+            skip_revision = True
+        if skip_revision:
+            if s.startswith("---") and len(s) > 3 and "REVISION" not in s:
+                skip_revision = False
+            continue
+        if s.startswith("Engine:") or s.startswith("MANIFEST:"):
+            continue
+        if s.startswith("/root/") or s.startswith("/tmp/"):
+            continue
+        if re.match(r"^\s*[{\[].*[}\]]\s*$", s) and len(s) > 20:
+            continue
+        if s.startswith("Traceback (most recent"):
+            continue
+        clean.append(ln)
+    result = "\n".join(clean)
+    result = re.sub(r"\n{3,}", "\n\n", result).strip()
+    return result
+
+
 def _final_summary(parsed: Dict[str, Any], template: Dict[str, Any], sheet_name: Optional[str], choice: Dict[str, Any], py_total: float, items=None) -> str:
     # === PATCH_TOPIC2_CANONICAL_FINAL_SUMMARY_V1 — §9 format ===
     obj = parsed.get("object") or parsed.get("raw") or "объект"
@@ -1210,8 +1291,30 @@ async def _generate_and_send(conn: sqlite3.Connection, task: Any, pending: Dict[
     sheet_name = pending.get("sheet_name")
     choice = parse_price_choice(confirm_text)
 
+    # §2 price choice gate: hard block if TOPIC2_PRICE_CHOICE_CONFIRMED not in history
+    try:
+        _pc_hist = [r[0] for r in conn.execute("SELECT action FROM task_history WHERE task_id=?", (task_id,)).fetchall()]
+        if not any("TOPIC2_PRICE_CHOICE_CONFIRMED" in a for a in _pc_hist):
+            _history_safe(conn, task_id, "TOPIC2_GAS_PRICE_GATE_BLOCKED:no_confirmed_choice_in_history")
+            await _send_text(chat_id, "Выберите уровень цен:\n1 — минимальные\n2 — средние\n3 — максимальные\n4 — ручные", reply_to, topic_id)
+            _update_task_safe(conn, task_id, state="WAITING_CLARIFICATION", result="Ожидаю выбор уровня цен")
+            return True
+    except Exception:
+        pass
+
     template_path = download_template_xlsx(template)
     xlsx_path, items, py_total = _create_xlsx_from_template(task_id, parsed, template, template_path, sheet_name, online_prices, choice)
+
+    # §8 logistics markers
+    try:
+        _log_dist = float(parsed.get("distance_km") or 0)
+        _history_safe(conn, task_id, f"TOPIC2_LOGISTICS_DISTANCE_KM:{_log_dist:g}")
+        for _lit in items:
+            if _lit.get("section") == "Логистика":
+                _history_safe(conn, task_id, f"TOPIC2_LOGISTICS_ITEM:{_lit['name'][:40]}:qty={float(_lit['qty']):g}:price={float(_lit['price']):g}")
+    except Exception:
+        pass
+
     ok, reason = _quality_gate_xlsx(xlsx_path, items, py_total)
     if not ok:
         await _send_text(chat_id, "Произошла ошибка при расчёте, повторяю", reply_to, topic_id)
@@ -1223,13 +1326,17 @@ async def _generate_and_send(conn: sqlite3.Connection, task: Any, pending: Dict[
     xlsx_link = await _upload_or_fallback(chat_id, topic_id, reply_to, xlsx_path, f"stroyka_estimate_{task_id[:8]}.xlsx", "Excel сметы")
     pdf_link = await _upload_or_fallback(chat_id, topic_id, reply_to, pdf_path, f"stroyka_estimate_{task_id[:8]}.pdf", "PDF сметы")
 
+    # §3 Drive topic folder marker
+    if xlsx_link and "drive.google.com" in xlsx_link:
+        _history_safe(conn, task_id, "TOPIC2_DRIVE_TOPIC_FOLDER_OK")
+
     if not xlsx_link or not pdf_link:
         await _send_text(chat_id, "Произошла ошибка при загрузке файлов, повторяю", reply_to, topic_id)
         _update_task_safe(conn, task_id, state="FAILED", error_message="STROYKA_UPLOAD_FAILED")
         return True
 
-    # === §9 canonical result format ===
-    result = summary + f"\n\nExcel: {xlsx_link}\nPDF: {pdf_link}\n\nПодтверди или пришли правки"
+    # §4 Telegram cleaner: hard strip internal paths/Engine/MANIFEST/JSON/REVISION_CONTEXT
+    result = _strip_telegram_output(summary + f"\n\nExcel: {xlsx_link}\nPDF: {pdf_link}\n\nПодтверди или пришли правки")
     send_res = await _send_text(chat_id, result, reply_to, topic_id)
     kwargs = {"state": "AWAITING_CONFIRMATION", "result": result}
     if isinstance(send_res, dict) and send_res.get("bot_message_id"):
@@ -1523,13 +1630,25 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
     except Exception as _stroyka_direct_err:
         logger.exception("STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED_DIRECT_HANDLER_ERR %s", _stroyka_direct_err)
     # === END_STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED_DIRECT_HANDLER_CALL ===
-    if not is_stroyka_estimate_candidate(task):
-        return False
 
     task_id = _s(_row_get(task, "id"))
     chat_id = _s(_row_get(task, "chat_id"))
     topic_id = int(_row_get(task, "topic_id", 0) or 0)
     raw_input = _s(_row_get(task, "raw_input", ""))
+
+    # §5 Old route hard block: if pending canonical estimate exists, handle before candidate check
+    try:
+        _orhb_pending = _memory_latest(chat_id, "topic_2_estimate_pending_")
+        if (_orhb_pending and _orhb_pending.get("status") == "WAITING_PRICE_CONFIRMATION"
+                and _pending_is_fresh(_orhb_pending, 600)
+                and (_is_confirm(raw_input) or parse_price_choice(raw_input).get("confirmed"))):
+            _history_safe(conn, task_id, "TOPIC2_CANONICAL_OLD_ROUTE_HARD_BLOCK:pending_intercepted")
+            return await _generate_and_send(conn, task, _orhb_pending, raw_input, logger=logger)
+    except Exception:
+        pass
+
+    if not is_stroyka_estimate_candidate(task):
+        return False
     reply_to = _row_get(task, "reply_to_message_id", None) or _row_get(task, "message_id", None)
 
     try:
@@ -1592,15 +1711,32 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
                 return True
 
     parsed = _parse_request(raw_input)
-    question = _missing_question(parsed)
-    if question:
-        send_res = await _send_text(chat_id, question, reply_to, topic_id)
-        kwargs = {"state": "WAITING_CLARIFICATION", "result": question}
-        if isinstance(send_res, dict) and send_res.get("bot_message_id"):
-            kwargs["bot_message_id"] = send_res.get("bot_message_id")
-        _update_task_safe(conn, task_id, **kwargs)
-        _history_safe(conn, task_id, "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:clarification")
-        return True
+
+    # §7 anti-loop guard: if >= 3 clarification requests in last 30 min, proceed with defaults
+    try:
+        _alg_count = conn.execute(
+            """SELECT COUNT(*) FROM task_history th
+               JOIN tasks t ON th.task_id=t.id
+               WHERE CAST(t.chat_id AS TEXT)=? AND COALESCE(t.topic_id,0)=?
+                 AND th.action LIKE '%:clarification%'
+                 AND th.created_at >= datetime('now','-30 minutes')""",
+            (str(chat_id), int(topic_id))
+        ).fetchone()[0]
+    except Exception:
+        _alg_count = 0
+
+    if _alg_count < 3:
+        question = _missing_question(parsed)
+        if question:
+            send_res = await _send_text(chat_id, question, reply_to, topic_id)
+            kwargs = {"state": "WAITING_CLARIFICATION", "result": question}
+            if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+                kwargs["bot_message_id"] = send_res.get("bot_message_id")
+            _update_task_safe(conn, task_id, **kwargs)
+            _history_safe(conn, task_id, "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:clarification")
+            return True
+    else:
+        _history_safe(conn, task_id, f"TOPIC2_MISSING_GATE_ANTILOOP:count={_alg_count}_proceeding_with_defaults")
 
     template = choose_template(parsed)
     template_path = download_template_xlsx(template)
@@ -2081,6 +2217,7 @@ def _update_task_safe(conn, task_id, **kwargs):
                 hist_actions = [_s(h[0]) for h in hist]
                 price_confirmed = any("TOPIC2_PRICE_CHOICE_CONFIRMED" in a for a in hist_actions)
                 estimate_generated = any("estimate_generated" in a or "FINAL_DONE" in a or "P3_TOPIC2_FINAL" in a for a in hist_actions)
+                explicit_confirm = any("TOPIC2_EXPLICIT_CONFIRM" in a for a in hist_actions)
 
                 if not estimate_generated:
                     _STV3_LOG.warning(
@@ -2099,10 +2236,21 @@ def _update_task_safe(conn, task_id, **kwargs):
                         "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
                         (task_id, "TOPIC2_DONE_BLOCKED_REASON:no_price_choice_confirmed"),
                     )
-                    # Override: set AWAITING_CONFIRMATION instead of DONE
                     kwargs = dict(kwargs)
                     kwargs["state"] = "AWAITING_CONFIRMATION"
                     _STV3_LOG.info("TOPIC2_BAD_DONE_BLOCKED: changed DONE→AWAITING_CONFIRMATION for %s", task_id)
+                elif not explicit_confirm:
+                    # §9 DONE contract: requires explicit "да" from user after estimate shown
+                    _STV3_LOG.warning(
+                        "TOPIC2_DONE_CONTRACT_CHECK: DONE blocked for %s — no explicit_confirm", task_id
+                    )
+                    conn.execute(
+                        "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                        (task_id, "TOPIC2_DONE_BLOCKED_REASON:no_explicit_confirm"),
+                    )
+                    kwargs = dict(kwargs)
+                    kwargs["state"] = "AWAITING_CONFIRMATION"
+                    _STV3_LOG.info("TOPIC2_BAD_DONE_BLOCKED: changed DONE→AWAITING_CONFIRMATION (no_explicit_confirm) for %s", task_id)
                 else:
                     conn.execute(
                         "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",

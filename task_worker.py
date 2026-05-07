@@ -3246,6 +3246,15 @@ async def _handle_in_progress(conn: sqlite3.Connection, task: sqlite3.Row, chat_
         if target:
             target_id = _s(target["id"])
             target_result = _s(target["result"])
+            # §9 DONE contract: write TOPIC2_EXPLICIT_CONFIRM before DONE for topic_2
+            if int(topic_id or 0) == 2:
+                try:
+                    conn.execute(
+                        "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                        (target_id, "TOPIC2_EXPLICIT_CONFIRM:from_user_done_command"),
+                    )
+                except Exception:
+                    pass
             saved_role = _save_topic_role_memory(chat_id, topic_id, target_result)
             _update_task(conn, target_id, state="DONE", error_message="")
             _history(conn, target_id, "state:DONE")
