@@ -1,14 +1,54 @@
 # ORCHESTRA_FULL_CONTEXT_PART_006
-generated_at_utc: 2026-05-07T17:30:02.276480+00:00
-git_sha_before_commit: 8c640a786fb4072c73fcbf7c4d7351b48dfd19ea
+generated_at_utc: 2026-05-07T17:50:02.483957+00:00
+git_sha_before_commit: b3e5be73bca451c0ed863454767d568630087479
 part: 6/17
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 2/3
-SHA256_FULL_FILE: 0107f58efc83f4f498440f2edc93bc4048ff1b78c64a0568cbc96efd3561925b
+SHA256_FULL_FILE: 6b5bc2b3dfdff74b092ddb8f3b4dd512b01293b0b792adf0284b2d6afdc296f0
 ====================================================================================================
+    "нормальн", "снова", "сделай", "ещё раз", "еще раз", "заново", "повтори", "ещё", "еще",
+    "сделать", "переделать", "по новой", "сначала", "новой", "опять",
+)
+
+_P6E67_ARTIFACT_WORDS = (
+    "pdf", "пдф", "xlsx", "excel", "эксель", "txt", "ссылку", "ссылки", "drive", "расчет", "расчёт"
+)
+
+_P6E67_BAD_RESULT = (
+    "что строим", "дом, ангар, склад", "фундамент или кровлю", "какой объект", "уточните что строим"
+)
+
+def _p6e67_log():
+    try:
+        return logger
+    except Exception:
+        return _p6e67_logging.getLogger("task_worker")
+
+def _p6e67_s(v, limit=60000):
+    try:
+        return str(v or "").strip()[:limit]
+    except Exception:
+        return ""
+
+def _p6e67_low(v, limit=60000):
+    return _p6e67_s(v, limit).lower().replace("ё", "е")
+
+def _p6e67_row(row, key, default=None):
+    try:
+        if hasattr(row, "keys") and key in row.keys():
+            return row[key]
+    except Exception:
+        pass
+    try:
+        return row[key]
+    except Exception:
+        return default
+
+def _p6e67_hist(conn, task_id, action):
+    try:
         _history(conn, str(task_id), str(action))
         conn.commit()
     except Exception as e:
@@ -7671,6 +7711,17 @@ _TCG_LOG = _tcg_logging.getLogger("task_worker.cancel_guard")
 _TCG_CANCEL_RE = _tcg_re.compile(
     r"(?:^|\s)(?:\[VOICE\]\s*)?"
     r"(отмена|отбой|стоп|заверши|завершена|закрой|закрывай|очисти|"
+
+====================================================================================================
+END_FILE: task_worker.py
+FILE_CHUNK: 2/3
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: task_worker.py
+FILE_CHUNK: 3/3
+SHA256_FULL_FILE: 6b5bc2b3dfdff74b092ddb8f3b4dd512b01293b0b792adf0284b2d6afdc296f0
+====================================================================================================
     r"отменяй|задача отменена|отмена задач|все задачи завершен|"
     r"отбой всех|очисти все|задача завершена)",
     _tcg_re.IGNORECASE
@@ -7705,17 +7756,6 @@ if _TCG_ORIG_HANDLE_NEW and not getattr(_TCG_ORIG_HANDLE_NEW, "_tcg_wrapped", Fa
                 try:
                     conn.execute(
                         "UPDATE tasks SET state='CANCELLED', "
-
-====================================================================================================
-END_FILE: task_worker.py
-FILE_CHUNK: 2/3
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: task_worker.py
-FILE_CHUNK: 3/3
-SHA256_FULL_FILE: 0107f58efc83f4f498440f2edc93bc4048ff1b78c64a0568cbc96efd3561925b
-====================================================================================================
                         "error_message='TOPIC2_CANCEL_GUARD_V1', "
                         "updated_at=datetime('now') WHERE id=?",
                         (task_id,)

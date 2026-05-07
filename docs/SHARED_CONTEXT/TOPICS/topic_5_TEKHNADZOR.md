@@ -1,7 +1,7 @@
 # topic_5 TEKHNADZOR
 
-GENERATED_AT: 2026-05-07T17:30:02.412728+00:00
-GIT_SHA: 8c640a786fb4072c73fcbf7c4d7351b48dfd19ea
+GENERATED_AT: 2026-05-07T17:50:02.609126+00:00
+GIT_SHA: b3e5be73bca451c0ed863454767d568630087479
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 5
@@ -25,6 +25,7 @@ FAILED_LAST_24H: 0
 - 8093deb3 | INVALID_PUBLIC_RESULT
 
 ## COMMITS_LAST_14D
+- b3e5be7|fix(topic500): relax bad-result filter for adaptive output modes
 - 0d6a9a4|fix(memory): ARCHIVE_DUPLICATE_GUARD_V1 + topic500 search pollution guard
 - 3f53d3f|docs(handoff): update after topic500 adaptive output V1
 - 0c15037|feat(topic500): adaptive output by intent mode (9 modes, V1)
@@ -54,7 +55,6 @@ FAILED_LAST_24H: 0
 - 1405fdb|CHAT EXPORT GPT_TOPIC5_FULL_CLOSE 2026-05-05
 - ff753aa|feat(technadzor): P6H_PART_4 topic_5 hook + STT hallucination guard
 - 94c6b3f|P6H_TOPIC5_TECHNADZOR_TEMPLATE_PHOTO_CLIENT_SAFE_VOICE_LIVE_CLOSE_20260504: systemic technadzor module for topic_5 — INSTALLED_NOT_LIVE_TESTED
-- e3d992c|P6G_CLEAN_OLD_TOPIC500_CONTAMINATION_V1: SQL clean task 4883 contamination (point 1 of 5)
 
 ## MARKERS_LAST_24H
 - created:NEW

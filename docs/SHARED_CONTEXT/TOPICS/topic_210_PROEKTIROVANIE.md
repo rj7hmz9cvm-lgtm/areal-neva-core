@@ -1,7 +1,7 @@
 # topic_210 PROEKTIROVANIE
 
-GENERATED_AT: 2026-05-07T17:30:02.476570+00:00
-GIT_SHA: 8c640a786fb4072c73fcbf7c4d7351b48dfd19ea
+GENERATED_AT: 2026-05-07T17:50:02.666959+00:00
+GIT_SHA: b3e5be73bca451c0ed863454767d568630087479
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 210
@@ -9,7 +9,7 @@ ROLE: КЖ КМ
 DIRECTIONS_BOUND: structural_design
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
 ACTIVE_TASKS: 0
-FAILED_LAST_24H: 5
+FAILED_LAST_24H: 1
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 3
@@ -32,30 +32,16 @@ FAILED_LAST_24H: 5
 
 ## MARKERS_LAST_24H
 - created:NEW
-- result:Для решения проблемы подтопления подвального этажа из-за высокого уровня 
 - reply_sent:result
-- result:Для решения проблемы подтопления подвального этажа необходимо выполнить с
-- state:FAILED
-- reply_sent:invalid_result
-- FULL_CONSTRUCTION_FILE_CONTOUR_CANON_GUARD_V1:UPDATE_BLOCKED:NO_VALID_ARTIFACT
-- FULL_CONSTRUCTION_FILE_CONTOUR_CANON_GUARD_V1:NO_VALID_ARTIFACT
-- reply_sent:full_contour_guard_failed
-- WEB_SEARCH_PRICE_ENRICHMENT_V1:HANDLED
-- result:Для составления сметы с использованием средних цен необходимо уточнить:
-
-
-- result:Для составления сметы с усреднёнными ценами необходимо уточнить:
-
-1. Тип 
-- result:Для выполнения задачи по установке средних цен на работы и материалы необ
-- result:Понял. Буду использовать средние рыночные цены по СПб и ЛО на май 2026 го
-- P6F_T210_PROJECT_DRIVE_REFS_RETURNED:7
 - P6F_DAH_BLOCKED_DONE_NO_UPLOAD_OR_TG_HISTORY
+- P6F_T210_PROJECT_DRIVE_REFS_RETURNED:7
 - result:Для разработки нового проекта со всеми разделами (АР, КР, КЖ, КД, КМ, ОВ,
 - result:На основании ваших указаний, я работаю с образцами проектной документации
 - result:Принято. Буду использовать образцы проектирования без уточнения названий 
 - result:Понял. Буду использовать образцы проектирования для работы без уточнений.
 - result:Для создания нового проекта с полным набором разделов (АР, КР, КЖ, КД, КМ
+- state:FAILED
+- reply_sent:invalid_result
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210

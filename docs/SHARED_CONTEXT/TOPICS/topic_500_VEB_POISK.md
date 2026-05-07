@@ -1,7 +1,7 @@
 # topic_500 VEB_POISK
 
-GENERATED_AT: 2026-05-07T17:30:02.508959+00:00
-GIT_SHA: 8c640a786fb4072c73fcbf7c4d7351b48dfd19ea
+GENERATED_AT: 2026-05-07T17:50:02.701834+00:00
+GIT_SHA: b3e5be73bca451c0ed863454767d568630087479
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 500
@@ -25,6 +25,7 @@ FAILED_LAST_24H: 0
 - a6e666e8 | IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1
 
 ## COMMITS_LAST_14D
+- b3e5be7|fix(topic500): relax bad-result filter for adaptive output modes
 - 0d6a9a4|fix(memory): ARCHIVE_DUPLICATE_GUARD_V1 + topic500 search pollution guard
 - 3f53d3f|docs(handoff): update after topic500 adaptive output V1
 - 0c15037|feat(topic500): adaptive output by intent mode (9 modes, V1)
@@ -43,15 +44,13 @@ FAILED_LAST_24H: 0
 
 ## MARKERS_LAST_24H
 - created:NEW
-- MEMORY_QUERY_GUARD_V1:DONE
-- reply_sent:memory_query_guard_v1
-- state:IN_PROGRESS
-- P6_TOPIC500_DIRECT_SEARCH_MONOLITH_ROUTE
 - P6F_DAH_BLOCKED_DONE_NO_UPLOAD_OR_TG_HISTORY
 - P6_TOPIC500_SEARCH_DONE
-- reply_sent:p6_topic500_search_result
 - STARTUP_RECOVERY_REPLY_SENT_GUARD_V1:DONE_SKIP_RECOVERY
+- P6_TOPIC500_DIRECT_SEARCH_MONOLITH_ROUTE
 - PATCH_T500_P6F_DAH_EXCLUDE_V1_FORCE_DONE_STUCK
+- state:IN_PROGRESS
+- reply_sent:p6_topic500_search_result
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - (none)

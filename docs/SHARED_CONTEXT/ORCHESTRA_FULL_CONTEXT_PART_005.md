@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_005
-generated_at_utc: 2026-05-07T17:30:02.275871+00:00
-git_sha_before_commit: 8c640a786fb4072c73fcbf7c4d7351b48dfd19ea
+generated_at_utc: 2026-05-07T17:50:02.483208+00:00
+git_sha_before_commit: b3e5be73bca451c0ed863454767d568630087479
 part: 5/17
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 1/3
-SHA256_FULL_FILE: 0107f58efc83f4f498440f2edc93bc4048ff1b78c64a0568cbc96efd3561925b
+SHA256_FULL_FILE: 6b5bc2b3dfdff74b092ddb8f3b4dd512b01293b0b792adf0284b2d6afdc296f0
 ====================================================================================================
 
 def _force_voice_finish(raw_input: str, result: str) -> bool:
@@ -5554,8 +5554,9 @@ def _p0_runtime_is_topic500_search_20260504(raw_input, input_type):
 
 def _p0_runtime_is_bad_search_result_20260504(text):
     low = _p0_runtime_s_20260504(text, 20000).lower()
-    if not low:
+    if not low or len(low.strip()) < 80:
         return True
+    # Block estimate/construction artifacts leaking into search results
     bad = (
         "смета готова",
         "предварительная смета готова",
@@ -5566,14 +5567,16 @@ def _p0_runtime_is_bad_search_result_20260504(text):
         "ареал нева.xlsx",
         "м-110.xlsx",
         "позиций: 1. итого: 0.00",
-        "фундамент",
-        "кровля",
-        "монолитная плита",
     )
     if any(x in low for x in bad):
         return True
-    if "http://" not in low and "https://" not in low and "цена" not in low and "руб" not in low and "₽" not in low:
-        return True
+    # PATCH_TOPIC500_ADAPTIVE_FILTER_V1: procurement mode requires URL or price;
+    # normative/factual/technical/download/news modes only require substantive content (>80 chars, already checked above)
+    _procurement_signals = ("поставщик", "avito", "авито", "ozon", "озон", "wildberries", "найдено:", "купить", "цена материала", "стоимость материала")
+    _is_procurement_result = any(x in low for x in _procurement_signals)
+    if _is_procurement_result:
+        if "http://" not in low and "https://" not in low and "цена" not in low and "руб" not in low and "₽" not in low:
+            return True
     return False
 
 def _p0_runtime_is_topic2_current_estimate_20260504(raw_input):
@@ -6550,14 +6553,21 @@ def _p6_topic500_needs_search_20260504(raw_input, input_type):
 def _p6_bad_search_result_20260504(result, raw_input):
     low = _p6_low_20260504(result)
     q = _p6_low_20260504(raw_input)
-    if not low:
+    if not low or len(low.strip()) < 80:
         return True
+    # Block estimate artifacts leaking into search
     if any(x in low for x in ("смета готова", "предварительная смета готова", "xlsx:", "pdf:", "engine:", "м-110.xlsx", "ареал нева.xlsx", "позиций: 1. итого: 0.00")):
         return True
+    # Block stale supplier data irrelevant to query
     if ("rockwool" in low or "каменная вата" in low or "термодом" in low) and not any(x in q for x in ("rockwool", "каменная вата", "утепл", "light batts", "light buds")):
         return True
-    if ("http://" not in low and "https://" not in low) and ("₽" not in low and "руб" not in low and "цена" not in low and "найдено:" not in low):
-        return True
+    # PATCH_TOPIC500_ADAPTIVE_FILTER_V1: only require URL/price for procurement-style results;
+    # normative/factual/technical modes return substantive text without prices — allow if >80 chars
+    _procurement_signals = ("поставщик", "avito", "авито", "ozon", "озон", "wildberries", "найдено:", "купить", "цена материала")
+    _is_procurement_result = any(x in _procurement_signals for x in low.split()) or any(x in low for x in _procurement_signals)
+    if _is_procurement_result:
+        if ("http://" not in low and "https://" not in low) and ("₽" not in low and "руб" not in low and "цена" not in low and "найдено:" not in low):
+            return True
     return False
 
 def _p6_find_previous_topic500_query_20260504(conn, chat_id, current_task_id):
@@ -7368,46 +7378,6 @@ _P6E67_REVISION_WORDS = (
     "пришли", "отправь", "скинь", "дай", "pdf", "пдф", "xlsx", "excel", "эксель", "txt",
     "ссылку", "ссылки", "drive", "расчет", "расчёт", "комнат", "помещ", "окн", "окон",
     "двер", "площад", "переделай", "доработай", "исправь", "правк", "нормально", "не так",
-    "нормальн", "снова", "сделай", "ещё раз", "еще раз", "заново", "повтори", "ещё", "еще",
-    "сделать", "переделать", "по новой", "сначала", "новой", "опять",
-)
-
-_P6E67_ARTIFACT_WORDS = (
-    "pdf", "пдф", "xlsx", "excel", "эксель", "txt", "ссылку", "ссылки", "drive", "расчет", "расчёт"
-)
-
-_P6E67_BAD_RESULT = (
-    "что строим", "дом, ангар, склад", "фундамент или кровлю", "какой объект", "уточните что строим"
-)
-
-def _p6e67_log():
-    try:
-        return logger
-    except Exception:
-        return _p6e67_logging.getLogger("task_worker")
-
-def _p6e67_s(v, limit=60000):
-    try:
-        return str(v or "").strip()[:limit]
-    except Exception:
-        return ""
-
-def _p6e67_low(v, limit=60000):
-    return _p6e67_s(v, limit).lower().replace("ё", "е")
-
-def _p6e67_row(row, key, default=None):
-    try:
-        if hasattr(row, "keys") and key in row.keys():
-            return row[key]
-    except Exception:
-        pass
-    try:
-        return row[key]
-    except Exception:
-        return default
-
-def _p6e67_hist(conn, task_id, action):
-    try:
 
 ====================================================================================================
 END_FILE: task_worker.py
