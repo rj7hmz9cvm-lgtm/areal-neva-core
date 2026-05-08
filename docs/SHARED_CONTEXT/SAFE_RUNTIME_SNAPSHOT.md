@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-08T23:40:02.377670+00:00
-git_sha_before_commit: 00af427ad88d1bb346aff4b7dd986acf47f8d250
+generated_at_utc: 2026-05-08T23:45:02.235980+00:00
+git_sha_before_commit: 36b3c2db3d693d2ee490f71878f957cc4e6ccac2
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,7 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: inactive
 
 ## GIT_LOG_30
+36b3c2d FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 00af427 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 876e5d2 fix(topic2): PATCH_TOPIC2_WC_PICKER_DRAINAGE_MULTIFILE_V3 — stop WC loop, bind drainage replies to parent, include all 3 user PDFs
 5cabdb8 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
@@ -39,12 +40,11 @@ db7d006 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 6862c04 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 6923bea FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 afdcfad FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
-075edf9 fix(topic2): PATCH_TOPIC2_STALE_PENDING_TASK_GUARD_V1 + LOCAL_BOT_API_404_FIX
 
 ## GIT_SHOW_STAT_HEAD
-commit 00af427ad88d1bb346aff4b7dd986acf47f8d250
+commit 36b3c2db3d693d2ee490f71878f957cc4e6ccac2
 Author: Ila <ilakuznecov@mac.local>
-Date:   Sat May 9 02:35:12 2026 +0300
+Date:   Sat May 9 02:40:07 2026 +0300
 
     FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
@@ -81,42 +81,42 @@ Date:   Sat May 9 02:35:12 2026 +0300
  docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md      |   4 +-
  docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |   6 +-
  docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |   6 +-
- docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |   6 +-
- .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  45 +++--
+ docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  22 ++--
  .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_004.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |   6 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |   6 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_007.md             | 172 +++++++++++++++++-
+ .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_007.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_010.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_011.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_012.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_013.md             | 183 ++++++++-----------
- .../ORCHESTRA_FULL_CONTEXT_PART_014.md             | 107 ++++++++++-
+ .../ORCHESTRA_FULL_CONTEXT_PART_013.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_014.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_015.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_016.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_017.md             |   4 +-
- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 201 ++++++++-------------
- .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |  14 +-
- docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  75 ++++----
- docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |   6 +-
+ docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 121 +++++++++++++++------
+ .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |   6 +-
+ docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  49 ++++-----
+ docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |   4 +-
- .../TOPICS/topic_210_PROEKTIROVANIE.md             |  17 +-
- docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |   6 +-
+ .../TOPICS/topic_210_PROEKTIROVANIE.md             |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |   4 +-
  .../TOPICS/topic_3008_KODY_MOZGOV.md               |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |   5 +-
  docs/SHARED_CONTEXT/TOPICS/topic_5_TEKHNADZOR.md   |   4 +-
  .../SHARED_CONTEXT/TOPICS/topic_6104_JOB_SEARCH.md |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |   4 +-
  .../TOPICS/topic_961_AVTOZAPCHASTI.md              |   4 +-
- docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   6 +-
- 68 files changed, 640 insertions(+), 430 deletions(-)
+ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   4 +-
+ 68 files changed, 255 insertions(+), 204 deletions(-)
 
 ## GIT_CHANGED_FILES_10
 docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md
@@ -192,17 +192,21 @@ tools/__init__.py
 tools/topic2_drainage_repair_close.py
 
 ## CORE_DB_STATE_COUNTS
-- FAILED|2973
+- FAILED|2972
 - CANCELLED|823
 - DONE|579
 - ARCHIVED|381
-- WAITING_CLARIFICATION|1
+- WAITING_CLARIFICATION|2
 
 ## CORE_DB_OPEN_TASKS
-- 1
+- 2
 
 ## LATEST_TASKS_15
-- f02f874e-91da-480f-9a1e-d2c5d4553b55|210|text|FAILED|По размеру дома ты мне сможешь определить сколько свай мне нужно на него?|None|2026-05-08 23:32:20
+- f02f874e-91da-480f-9a1e-d2c5d4553b55|210|text|WAITING_CLARIFICATION|По размеру дома ты мне сможешь определить сколько свай мне нужно на него?|Расчёт количества свай — нужны исходные данные:
+
+1. Размер дома в плане (например 8×10 м)
+2. Этажность (1 этаж, 1+мансарда, 2 этажа)
+3. Стеновой материал (брус,|2026-05-08 23:40:56
 - 6a535d79-5368-45d8-b8a4-a4c2133f5223|2|text|FAILED|[VOICE] посмотри у тебя есть документы в чате я же тебе скидывал уже ты же попросил чтоб я тебе продублировал|PDF определён как схема дренажа/ливнёвки.
 Домовую смету не запускаю: текущий файл относится к наружным сетям, а не к дому.
 Считать приблизительно по схеме или п|2026-05-08 22:33:52
@@ -267,7 +271,6 @@ tools/topic2_drainage_repair_close.py
 3|2026-05-08 18:14:03
 
 ## LATEST_FAILED_10
-- f02f874e-91da-480f-9a1e-d2c5d4553b55|210|По размеру дома ты мне сможешь определить сколько свай мне нужно на него?|INVALID_RESULT_GATE|2026-05-08 23:32:20
 - 6a535d79-5368-45d8-b8a4-a4c2133f5223|2|[VOICE] посмотри у тебя есть документы в чате я же тебе скидывал уже ты же попросил чтоб я тебе продублировал|STALE_TIMEOUT|2026-05-08 22:33:52
 - f9df5eb5-3746-40c4-a730-bbc1a021dbc1|2|[VOICE] Мне необходимо найти стоимость материалов, как указано в техническом задании, и стоимость работы посмотреть. Выш|STALE_TIMEOUT|2026-05-08 22:33:28
 - test-multifile-gate-001|2|[VOICE] У тебя два файла. На одном у тебя схема дренажа, на другом у тебя длинные высоты и все есть. Посмотри оба файла |STALE_TIMEOUT|2026-05-08 20:29:32
@@ -277,8 +280,14 @@ tools/topic2_drainage_repair_close.py
 - acdae011-7299-482d-92c2-571f8ccbee0c|2|[VOICE] необходимо посчитать смету взять ценник высокого ценового сегмента на работу и на материалы и создать по длине и|STALE_TIMEOUT|2026-05-08 19:39:38
 - test-gate-drainage-live-001|2|{"file_name": "Схема глубинного дренажа.pdf", "mime_type": "application/pdf", "local_path": "/root/.areal-neva-core/runt|STALE_TIMEOUT|2026-05-08 19:40:26
 - test-drainage-reply-001|2|Объект находится 50 км от Санкт-Петербурга цены выше среднего нужно посчитать стоимость работы материалов по данному зап|STALE_TIMEOUT|2026-05-08 18:50:16
+- 60b9503b-75cc-4913-bb7b-11092508fdae|2|[VOICE] Я тебе говорил про вот эту информацию, посмотри.|TOPIC2_STALE_HOUSE_CONTEXT_USED_FOR_DRAINAGE_FILE|2026-05-08 19:17:11
 
 ## LATEST_TASK_HISTORY_20
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_PRICE_ENRICHMENT_STARTED|2026-05-08 23:43:14
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|USER_PROVIDED_LENGTH:80.0|2026-05-08 23:43:13
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_LENGTH_APPROX_FROM_SCHEME_CHOICE_1|2026-05-08 23:43:12
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|USER_PROVIDED_LENGTH:80|2026-05-08 23:43:12
+- f02f874e-91da-480f-9a1e-d2c5d4553b55|TOPIC210_RECOVERED_FROM_INVALID_RESULT_GATE_PER_CANON_§0|2026-05-08 23:40:56
 - 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_WC_SENT:10643|2026-05-08 23:38:02
 - 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_FINAL_ARTIFACTS_BLOCKED|2026-05-08 23:38:02
 - 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_RECOGNIZED:dk=3,dns=True,pu=True,kgn=True,slope=0.005|2026-05-08 23:38:02
@@ -294,11 +303,6 @@ tools/topic2_drainage_repair_close.py
 - f02f874e-91da-480f-9a1e-d2c5d4553b55|TOPIC2_STALE_PENDING_BLOCKED:pending_task=test-multifile-g:done=True|2026-05-08 23:32:12
 - 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_PARENT_REPAIRED_AFTER_PATCH_TOPIC2_WC_PICKER_DRAINAGE_MULTIFILE_V3|2026-05-08 23:32:11
 - f02f874e-91da-480f-9a1e-d2c5d4553b55|created:NEW|2026-05-08T23:10:26.785647+00:00
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|P6_TOPIC2_VAGUE_OLD_MEMORY_BLOCKED|2026-05-08 23:09:21
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|clarified:Распознай фото лучше|2026-05-08T23:09:20.492998+00:00
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_WCG_SQL_FIX_SYNTAX_AND_LIKE_DROP_V1|2026-05-08 23:05:56
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_WCG_SKIP_SQL_PRESERVE_DRAINAGE_ERROR_V2_DB_REPAIR|2026-05-08 22:58:44
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_WCG_ERROR_REPAIRED_TO_DRAINAGE_LENGTH_NOT_PROVEN|2026-05-08 22:57:32
 
 ## MEMORY_DB_COUNT
 - 5199
@@ -332,38 +336,6 @@ tools/topic2_drainage_repair_close.py
 - topic_210_file_eeb0d013-704a-404c-9390-5a06c90ee976|{"task_id": "eeb0d013-704a-404c-9390-5a06c90ee976", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T23:22:17.678121+00:00
 
 ## JOURNAL_AREAL_TASK_WORKER_60
-areal-task-worker.service: Failed with result 'exit-code'.
-areal-task-worker.service: Scheduled restart job, restart counter is at 1.
-Started areal-task-worker.service - Areal Task Worker.
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 6.116s CPU time.
-Started areal-task-worker.service - Areal Task Worker.
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 28.965s CPU time.
-Started areal-task-worker.service - Areal Task Worker.
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 16.235s CPU time.
-Started areal-task-worker.service - Areal Task Worker.
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 1min 52.276s CPU time.
-Started areal-task-worker.service - Areal Task Worker.
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 17.177s CPU time.
-Started areal-task-worker.service - Areal Task Worker.
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 1.142s CPU time.
 Started areal-task-worker.service - Areal Task Worker.
 Stopping areal-task-worker.service - Areal Task Worker...
 areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
@@ -392,6 +364,38 @@ areal-task-worker.service: Deactivated successfully.
 Stopped areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Consumed 57.743s CPU time.
 Started areal-task-worker.service - Areal Task Worker.
+Traceback (most recent call last):
+  File "/root/.areal-neva-core/task_worker.py", line 17431, in <module>
+    asyncio.run(main())
+  File "/usr/lib/python3.12/asyncio/runners.py", line 194, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/base_events.py", line 687, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/root/.areal-neva-core/task_worker.py", line 4276, in main
+    return await _res
+           ^^^^^^^^^^
+  File "/root/.areal-neva-core/task_worker.py", line 3849, in main
+    _recover_stale_tasks(conn, None)
+  File "/root/.areal-neva-core/task_worker.py", line 14861, in _recover_stale_tasks
+    return _CTDD_ORIG_RECOVER(conn, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.areal-neva-core/task_worker.py", line 5441, in _recover_stale_tasks
+    res = _T500_PSV_ORIG_RECOVER_STALE_TASKS(conn, *args, **kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.areal-neva-core/task_worker.py", line 1277, in _recover_stale_tasks
+    conn.execute("""
+sqlite3.OperationalError: database is locked
+areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
+areal-task-worker.service: Failed with result 'exit-code'.
+areal-task-worker.service: Consumed 16.587s CPU time.
+areal-task-worker.service: Scheduled restart job, restart counter is at 1.
+Started areal-task-worker.service - Areal Task Worker.
+T2WCG_PRESERVE_ERR database is locked
 
 ## JOURNAL_TELEGRAM_INGRESS_30
 2026-05-08 23:18:50,917 INFO DAEMON: Task 043e5c9f-e8bc-434c-9dad-a66c7e50f917 created state=NEW topic_id=2
