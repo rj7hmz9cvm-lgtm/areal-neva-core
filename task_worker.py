@@ -17201,3 +17201,53 @@ for _t2dpg_name in ("_handle_new", "_handle_in_progress", "_handle_waiting_clari
 
 _T2DPG_LOG.info("PATCH_TOPIC2_DRAINAGE_PARENT_GUARD_V2 installed")
 # === END_PATCH_TOPIC2_DRAINAGE_PARENT_GUARD_V2 ===
+
+
+# === PATCH_TOPIC2_WCG_PRESERVE_DRAINAGE_ERROR_V1 ===
+# Preserve canonical drainage error_message when WCG skip guard re-picks WAITING_CLARIFICATION
+import sqlite3 as _t2wcg_sqlite3
+import logging as _t2wcg_logging
+
+_T2WCG_LOG = _t2wcg_logging.getLogger("topic2.wcg_preserve_drainage_error_v1")
+_T2WCG_PARENT_ID = "043e5c9f-e8bc-434c-9dad-a66c7e50f917"
+
+def _t2wcg_preserve_parent_error():
+    try:
+        conn = _t2wcg_sqlite3.connect("/root/.areal-neva-core/data/core.db")
+        conn.execute(
+            """
+            UPDATE tasks
+            SET error_message='TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN',
+                updated_at=datetime('now')
+            WHERE id=?
+              AND state='WAITING_CLARIFICATION'
+              AND result LIKE '%Длина трасс дренажа%'
+              AND (
+                error_message IS NULL
+                OR error_message=''
+                OR error_message='WCG_SKIP_WAITING_CLARIFICATION'
+              )
+            """,
+            (_T2WCG_PARENT_ID,),
+        )
+        conn.execute(
+            """
+            INSERT INTO task_history(task_id,action,created_at)
+            SELECT ?, 'TOPIC2_WCG_PRESERVED_DRAINAGE_ERROR_V1', datetime('now')
+            WHERE EXISTS (
+                SELECT 1 FROM tasks
+                WHERE id=?
+                  AND state='WAITING_CLARIFICATION'
+                  AND error_message='TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN'
+            )
+            """,
+            (_T2WCG_PARENT_ID, _T2WCG_PARENT_ID),
+        )
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        _T2WCG_LOG.warning("T2WCG_PRESERVE_ERR %s", e)
+
+_t2wcg_preserve_parent_error()
+_T2WCG_LOG.info("PATCH_TOPIC2_WCG_PRESERVE_DRAINAGE_ERROR_V1 installed")
+# === END_PATCH_TOPIC2_WCG_PRESERVE_DRAINAGE_ERROR_V1 ===
