@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-08T07:15:01.953047+00:00
-git_sha_before_commit: 8760011c8fade9dd2f05aae948ced61f67135748
+generated_at_utc: 2026-05-08T07:20:02.364331+00:00
+git_sha_before_commit: 3dcb94adb675639f423ecd26617e6c1c2d10ba23
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,7 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: inactive
 
 ## GIT_LOG_30
+3dcb94a FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 8760011 fix(topic2): enforce full canonical estimate pipeline without cross-topic regression
 e08536b FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 33ce4a6 3 patches: material parse fix, zero-qty filter, price honesty
@@ -39,44 +40,83 @@ ffca836 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 9841d5e FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 48f9858 docs(handoff): update latest handoff after topic2 and aggregator guard
 c0300fb fix(topic2): close 4 code gaps — enrichment markers, cyrillic marker, function-object bug, FCG bypass
-5111f33 fix(aggregator): refuse dirty tracked sources before guarded build
 
 ## GIT_SHOW_STAT_HEAD
-commit 8760011c8fade9dd2f05aae948ced61f67135748
+commit 3dcb94adb675639f423ecd26617e6c1c2d10ba23
 Author: Ila <ilakuznecov@mac.local>
-Date:   Fri May 8 10:10:49 2026 +0300
+Date:   Fri May 8 10:15:08 2026 +0300
 
-    fix(topic2): enforce full canonical estimate pipeline without cross-topic regression
-    
-    TOPIC2_CANONICAL_PDF_GATE_V1 (task_worker.py body-edit):
-    - Inside FILE_INTAKE_ROUTER_V1_WIRED: for topic_id=2 + PDF + intent=estimate,
-      call maybe_handle_stroyka_estimate BEFORE generic estimate_engine fallback.
-    - Canonical engine reads PDF via OCR, builds full 11-section estimate,
-      creates XLSX+PDF, uploads to Drive, sends Telegram, sets AWAITING_CONFIRMATION.
-    - Markers: FILE_INTAKE_ROUTER_TOPIC2_CANONICAL_ROUTE, TOPIC2_FILE_INTAKE_LOCAL_PATH_OK,
-      TOPIC2_FILE_INTAKE_ROUTER_RESULT_OK / RESULT_FAILED.
-    - Falls to generic only if canonical engine returns False.
-    
-    PATCH_TOPIC2_CANONICAL_MARKERS_V1 (sample_template_engine.py append):
-    - _p2_build_rows wrapper: logs TOPIC2_FULL_ESTIMATE_MATRIX_ENFORCED:<count>
-      and TOPIC2_FULL_ESTIMATE_MATRIX_MISSING:<section> for any absent required section.
-    - _p3e_summary wrapper: verifies Telegram total matches rows total,
-      logs TOPIC2_TELEGRAM_MATCHES_ARTIFACTS or TOPIC2_TELEGRAM_ARTIFACT_MISMATCH_BLOCKED.
-      Checks for internal leak patterns, logs TOPIC2_PUBLIC_OUTPUT_CLEAN_OK.
-    
-    Previously patched (preserved):
-    - MATERIAL_PARSE_FIX_V1: газобетон overrides каркас when both in text
-    - ZERO_QTY_FILTER_V1: removes rows with qty=0/total=0 (1-floor interfloor)
-    - PRICE_HONESTY_V1 + P3E_PRICE_HONESTY_V1: honest price text per applied count
-    
-    Cross-topic: technadzor_engine (15 refs), project_engine (13 refs),
-    search_session (9 refs) — all untouched.
-    
-    Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+    FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
- core/sample_template_engine.py | 66 ++++++++++++++++++++++++++++++++++++++++++
- task_worker.py                 | 19 ++++++++++++
- 2 files changed, 85 insertions(+)
+ docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md    |  6 +-
+ docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md |  2 +-
+ .../SHARED_CONTEXT/DIRECTIONS/auto_parts_search.md |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/cad_dwg.md          |  4 +-
+ .../DIRECTIONS/construction_search.md              |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/crm_leads.md        |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/defect_acts.md      |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/devops_server.md    |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/documents.md        |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/email_ingress.md    |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/estimates.md        |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/general_chat.md     |  4 +-
+ .../DIRECTIONS/google_drive_storage.md             |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/internet_search.md  |  4 +-
+ .../DIRECTIONS/isolated_project_ivan.md            |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/job_search.md       |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/memory_archive.md   |  4 +-
+ .../SHARED_CONTEXT/DIRECTIONS/monolith_concrete.md |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/ocr_photo.md        |  4 +-
+ .../DIRECTIONS/orchestration_core.md               |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/photo_cleanup.md    |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/product_search.md   |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/roofing.md          |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/social_content.md   |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/spreadsheets.md     |  4 +-
+ .../SHARED_CONTEXT/DIRECTIONS/structural_design.md |  4 +-
+ .../DIRECTIONS/technical_supervision.md            |  4 +-
+ .../DIRECTIONS/telegram_automation.md              |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/video_production.md |  4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/vpn_network.md      |  4 +-
+ docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md      |  4 +-
+ docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |  6 +-
+ docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |  6 +-
+ docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           | 20 +++---
+ .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_004.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_005.md             | 49 +++++++-------
+ .../ORCHESTRA_FULL_CONTEXT_PART_006.md             | 52 +++++++++++----
+ .../ORCHESTRA_FULL_CONTEXT_PART_007.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_010.md             | 74 ++++++++++++++++++++--
+ .../ORCHESTRA_FULL_CONTEXT_PART_011.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_012.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_013.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_014.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_015.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_016.md             |  4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_017.md             |  4 +-
+ docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 64 +++++++++++--------
+ .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |  6 +-
+ docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   | 50 +++++++--------
+ docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |  4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |  4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |  4 +-
+ .../TOPICS/topic_210_PROEKTIROVANIE.md             |  4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |  6 +-
+ .../TOPICS/topic_3008_KODY_MOZGOV.md               |  4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |  4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |  4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_5_TEKHNADZOR.md   |  4 +-
+ .../SHARED_CONTEXT/TOPICS/topic_6104_JOB_SEARCH.md |  4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |  4 +-
+ .../TOPICS/topic_961_AVTOZAPCHASTI.md              |  4 +-
+ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |  4 +-
+ 68 files changed, 329 insertions(+), 236 deletions(-)
 
 ## GIT_CHANGED_FILES_10
 core/sample_template_engine.py
@@ -156,11 +196,13 @@ task_worker.py
 - CANCELLED|819
 - DONE|573
 - ARCHIVED|381
+- WAITING_CLARIFICATION|1
 
 ## CORE_DB_OPEN_TASKS
-- 0
+- 1
 
 ## LATEST_TASKS_15
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|2|text|WAITING_CLARIFICATION|[VOICE] Что не так, скажи?|Пришли задание заново — расскажи что нужно сделать.|2026-05-08 07:20:01
 - 524f5853-4243-4833-ae82-116da9202179|2|text|CANCELLED|[VOICE] Так а ты посмотри то, что я тебе писал, еще раз тебе говорю, посмотри последнее задание.|P6E67_MERGED_TO_PARENT_TASK 57c2617a-7975-4282-bffb-2b18577d8b9d|2026-05-08 06:18:34
 - 4df9cf88-0843-478b-bef1-9d828d505298|2|text|DONE|[VOICE] Блять, я тебе еще раз говорю Посмотри все то, что мы с тобой писали По этому проекту У тебя же есть вся полность|Нового полного ТЗ для сметы в сообщении нет. Старую смету из памяти не поднимаю|2026-05-08 06:18:17
 - 57c2617a-7975-4282-bffb-2b18577d8b9d|2|text|CANCELLED|[VOICE] посмотри проект все увидишь у тебя же есть проект зайди да глянь там же есть вся информация если тебе не хватает|P6E67_MERGED_TO_PARENT_TASK d72028da-b4ff-424d-a626-790c9da8be77|2026-05-08 06:18:36
@@ -218,7 +260,6 @@ task_worker.py
 - Фундамент
 - Стены
 - Пе|2026-05-06T20:06:18.506053+00:00
-- cf15cc9b-ce2a-4848-8c58-5f2428c0be1c|2|text|CANCELLED|[VOICE] Мне нужно посчитать дом по газобетонной технологии. Его размеры 8,5 на 12,5 и есть еще поворот. Это его общая дл|P6E67_MERGED_TO_PARENT_TASK 71adbe24-ece1-42ca-a7b5-6160b0aded74|2026-05-06 21:05:08
 
 ## LATEST_FAILED_10
 - a7b2879e-14e6-4002-8a06-f73019d40a99|2|{"file_id": "1XRwOwZr2Kpxy-wrAUPrBR2dLqHseg7jS", "file_name": "photo_-1003725299009_10394.jpg", "mime_type": "image/jpeg|STALE_TIMEOUT|2026-05-07 13:34:34
@@ -233,26 +274,26 @@ task_worker.py
 - eba6dc80-d993-43e8-945b-cf1b48b9d103|210|{"file_id": "1evYG_-JrYks_cJ3D04LTYgdh1CZnWqTT", "file_name": "Схема глубинного дренажа.pdf", "mime_type": "application/|NO_VALID_ARTIFACT|2026-05-06 17:31:31
 
 ## LATEST_TASK_HISTORY_20
-- d72028da-b4ff-424d-a626-790c9da8be77|P3_TOPIC2_FINAL_DONE_ROWS_24_PRICE_APPLIED_0|2026-05-08 06:54:21
-- d72028da-b4ff-424d-a626-790c9da8be77|TOPIC2_PRICE_CHOICE_CONFIRMED:confirmed|2026-05-08 06:54:12
-- d72028da-b4ff-424d-a626-790c9da8be77|P6C_TOPIC2_IMAGE_OR_FILE_ESTIMATE_ROUTE_TAKEN|2026-05-08 06:54:12
-- d72028da-b4ff-424d-a626-790c9da8be77|P3_TOPIC2_FINAL_DONE_ROWS_24_PRICE_APPLIED_0|2026-05-08 06:52:51
-- d72028da-b4ff-424d-a626-790c9da8be77|TOPIC2_PRICE_CHOICE_CONFIRMED:confirmed|2026-05-08 06:52:42
-- d72028da-b4ff-424d-a626-790c9da8be77|P6C_TOPIC2_IMAGE_OR_FILE_ESTIMATE_ROUTE_TAKEN|2026-05-08 06:52:42
-- d72028da-b4ff-424d-a626-790c9da8be77|P3_TOPIC2_FINAL_DONE_ROWS_25_PRICE_APPLIED_0|2026-05-08 06:25:09
-- d72028da-b4ff-424d-a626-790c9da8be77|TOPIC2_PRICE_CHOICE_CONFIRMED:confirmed|2026-05-08 06:25:00
-- d72028da-b4ff-424d-a626-790c9da8be77|P6C_TOPIC2_IMAGE_OR_FILE_ESTIMATE_ROUTE_TAKEN|2026-05-08 06:25:00
-- d72028da-b4ff-424d-a626-790c9da8be77|P3_TOPIC2_CLARIFICATION|2026-05-08 06:19:00
-- d72028da-b4ff-424d-a626-790c9da8be77|TOPIC2_PRICE_CHOICE_CONFIRMED:confirmed|2026-05-08 06:19:00
-- d72028da-b4ff-424d-a626-790c9da8be77|P6C_TOPIC2_IMAGE_OR_FILE_ESTIMATE_ROUTE_TAKEN|2026-05-08 06:19:00
-- d72028da-b4ff-424d-a626-790c9da8be77|clarified:вот|2026-05-08T06:19:00.028490+00:00
-- d72028da-b4ff-424d-a626-790c9da8be77|P3_TOPIC2_CLARIFICATION|2026-05-08 06:18:37
-- d72028da-b4ff-424d-a626-790c9da8be77|TOPIC2_PRICE_CHOICE_CONFIRMED:confirmed|2026-05-08 06:18:37
-- d72028da-b4ff-424d-a626-790c9da8be77|P6C_TOPIC2_IMAGE_OR_FILE_ESTIMATE_ROUTE_TAKEN|2026-05-08 06:18:37
-- 57c2617a-7975-4282-bffb-2b18577d8b9d|P6E67_CURRENT_TASK_CANCELLED_MERGED_TO_PARENT:d72028da-b4ff-424d-a626-790c9da8be77|2026-05-08 06:18:36
-- d72028da-b4ff-424d-a626-790c9da8be77|P6E67_REVISION_TEXT_MERGED_FROM_TASK:57c2617a-7975-4282-bffb-2b18577d8b9d|2026-05-08 06:18:36
-- d72028da-b4ff-424d-a626-790c9da8be77|P6E67_PARENT_REVIVED_AS_REVISION_SOURCE:LAST_ACTIVE_ESTIMATE_FALLBACK|2026-05-08 06:18:36
-- 524f5853-4243-4833-ae82-116da9202179|P6E67_CURRENT_TASK_CANCELLED_MERGED_TO_PARENT:57c2617a-7975-4282-bffb-2b18577d8b9d|2026-05-08 06:18:34
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 07:20:01
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 07:20:01
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 07:19:59
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 07:19:59
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 07:19:58
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 07:19:58
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 07:19:56
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 07:19:56
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 07:19:55
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 07:19:54
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|clarified:|2026-05-08T07:19:54.650438+00:00
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 07:19:53
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 07:19:53
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 07:19:51
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 07:19:51
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 07:19:50
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 07:19:50
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 07:19:48
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 07:19:48
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 07:19:47
 
 ## MEMORY_DB_COUNT
 - 5185
@@ -342,15 +383,6 @@ areal-task-worker.service: Consumed 10.116s CPU time, 109.4M memory peak, 0B mem
 Started areal-task-worker.service - Areal Task Worker.
 
 ## JOURNAL_TELEGRAM_INGRESS_30
-2026-05-08 08:19:46,412 INFO DAEMON: Update id=262221988 is handled. Duration 61 ms by bot id=8216054898
-2026-05-08 08:20:37,504 INFO DAEMON: Update id=262221989 is handled. Duration 76 ms by bot id=8216054898
-2026-05-08 08:23:06,269 INFO DAEMON: Update id=262221990 is handled. Duration 83 ms by bot id=8216054898
-2026-05-08 08:23:42,668 INFO DAEMON: Update id=262221991 is handled. Duration 114 ms by bot id=8216054898
-2026-05-08 08:27:54,723 INFO DAEMON: Update id=262221992 is handled. Duration 138 ms by bot id=8216054898
-2026-05-08 08:44:38,408 INFO DAEMON: Update id=262221993 is handled. Duration 79 ms by bot id=8216054898
-2026-05-08 08:44:46,050 INFO DAEMON: Update id=262221994 is handled. Duration 68 ms by bot id=8216054898
-2026-05-08 08:45:08,513 INFO DAEMON: Update id=262221995 is handled. Duration 138 ms by bot id=8216054898
-2026-05-08 08:45:37,464 INFO DAEMON: Update id=262221996 is handled. Duration 107 ms by bot id=8216054898
 2026-05-08 09:13:14,266 INFO DAEMON: Update id=262221997 is handled. Duration 149 ms by bot id=8216054898
 2026-05-08 09:17:40,132 INFO DAEMON: Update id=262221998 is handled. Duration 90 ms by bot id=8216054898
 2026-05-08 09:17:55,715 INFO DAEMON: STT env check groq=True
@@ -372,3 +404,12 @@ Started areal-task-worker.service - Areal Task Worker.
 2026-05-08 09:18:33,943 INFO DAEMON: Task 524f5853-4243-4833-ae82-116da9202179 created state=NEW topic_id=2
 2026-05-08 09:18:33,943 INFO DAEMON: Update id=262222001 is handled. Duration 642 ms by bot id=8216054898
 2026-05-08 09:19:00,193 INFO DAEMON: Update id=262222002 is handled. Duration 176 ms by bot id=8216054898
+2026-05-08 10:18:08,178 ERROR DAEMON: HANDLER_CRASH: Telegram server says - Bad Request: file is too big
+2026-05-08 10:18:08,257 INFO DAEMON: Update id=262222003 is handled. Duration 181 ms by bot id=8216054898
+2026-05-08 10:19:35,006 INFO DAEMON: STT env check groq=True
+2026-05-08 10:19:35,006 INFO DAEMON: STT start file=/root/.areal-neva-core/runtime/voice_queue/voice_1003725299009_10506.ogg size=7450 model=whisper-large-v3-turbo
+2026-05-08 10:19:35,340 INFO DAEMON: STT http_status=200
+2026-05-08 10:19:35,340 INFO DAEMON: STT ok transcript_len=18
+2026-05-08 10:19:35,421 INFO DAEMON: Task 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9 created state=NEW topic_id=2
+2026-05-08 10:19:35,421 INFO DAEMON: Update id=262222004 is handled. Duration 578 ms by bot id=8216054898
+2026-05-08 10:19:55,083 INFO DAEMON: Update id=262222005 is handled. Duration 438 ms by bot id=8216054898
