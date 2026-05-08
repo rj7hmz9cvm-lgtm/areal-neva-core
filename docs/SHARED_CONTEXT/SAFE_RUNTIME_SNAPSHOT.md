@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-08T07:25:02.495281+00:00
-git_sha_before_commit: d36b224cf8bade49bc73a8853405b336861dc2b5
+generated_at_utc: 2026-05-08T07:30:01.747534+00:00
+git_sha_before_commit: f5838bb21bbc9157fcf828d5efebb20ee84beb60
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,7 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: inactive
 
 ## GIT_LOG_30
+f5838bb FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 d36b224 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 3dcb94a FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 8760011 fix(topic2): enforce full canonical estimate pipeline without cross-topic regression
@@ -39,12 +40,11 @@ ffca836 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 3f53d3f docs(handoff): update after topic500 adaptive output V1
 0c15037 feat(topic500): adaptive output by intent mode (9 modes, V1)
 9841d5e FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
-48f9858 docs(handoff): update latest handoff after topic2 and aggregator guard
 
 ## GIT_SHOW_STAT_HEAD
-commit d36b224cf8bade49bc73a8853405b336861dc2b5
+commit f5838bb21bbc9157fcf828d5efebb20ee84beb60
 Author: Ila <ilakuznecov@mac.local>
-Date:   Fri May 8 10:20:08 2026 +0300
+Date:   Fri May 8 10:25:08 2026 +0300
 
     FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
@@ -82,7 +82,7 @@ Date:   Fri May 8 10:20:08 2026 +0300
  docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |   6 +-
  docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |   6 +-
  docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  18 +--
+ .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  10 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |   4 +-
@@ -100,14 +100,14 @@ Date:   Fri May 8 10:20:08 2026 +0300
  .../ORCHESTRA_FULL_CONTEXT_PART_015.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_016.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_017.md             |   4 +-
- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 173 +++++++++++++--------
- .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |   8 +-
- docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  55 +++----
- docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |   6 +-
+ docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 230 ++++++++++-----------
+ .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |   4 +-
+ docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  48 ++---
+ docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |   4 +-
  .../TOPICS/topic_210_PROEKTIROVANIE.md             |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |   7 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |   4 +-
  .../TOPICS/topic_3008_KODY_MOZGOV.md               |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |   4 +-
@@ -115,8 +115,8 @@ Date:   Fri May 8 10:20:08 2026 +0300
  .../SHARED_CONTEXT/TOPICS/topic_6104_JOB_SEARCH.md |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |   4 +-
  .../TOPICS/topic_961_AVTOZAPCHASTI.md              |   4 +-
- docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   6 +-
- 68 files changed, 282 insertions(+), 239 deletions(-)
+ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   4 +-
+ 68 files changed, 276 insertions(+), 276 deletions(-)
 
 ## GIT_CHANGED_FILES_10
 core/sample_template_engine.py
@@ -202,7 +202,7 @@ task_worker.py
 - 1
 
 ## LATEST_TASKS_15
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|2|text|WAITING_CLARIFICATION|[VOICE] Что не так, скажи?|Пришли задание заново — расскажи что нужно сделать.|2026-05-08 07:25:01
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|2|text|WAITING_CLARIFICATION|[VOICE] Что не так, скажи?|Пришли задание заново — расскажи что нужно сделать.|2026-05-08 07:30:00
 - 524f5853-4243-4833-ae82-116da9202179|2|text|CANCELLED|[VOICE] Так а ты посмотри то, что я тебе писал, еще раз тебе говорю, посмотри последнее задание.|P6E67_MERGED_TO_PARENT_TASK 57c2617a-7975-4282-bffb-2b18577d8b9d|2026-05-08 06:18:34
 - 4df9cf88-0843-478b-bef1-9d828d505298|2|text|DONE|[VOICE] Блять, я тебе еще раз говорю Посмотри все то, что мы с тобой писали По этому проекту У тебя же есть вся полность|Нового полного ТЗ для сметы в сообщении нет. Старую смету из памяти не поднимаю|2026-05-08 06:18:17
 - 57c2617a-7975-4282-bffb-2b18577d8b9d|2|text|CANCELLED|[VOICE] посмотри проект все увидишь у тебя же есть проект зайди да глянь там же есть вся информация если тебе не хватает|P6E67_MERGED_TO_PARENT_TASK d72028da-b4ff-424d-a626-790c9da8be77|2026-05-08 06:18:36
@@ -274,26 +274,26 @@ task_worker.py
 - eba6dc80-d993-43e8-945b-cf1b48b9d103|210|{"file_id": "1evYG_-JrYks_cJ3D04LTYgdh1CZnWqTT", "file_name": "Схема глубинного дренажа.pdf", "mime_type": "application/|NO_VALID_ARTIFACT|2026-05-06 17:31:31
 
 ## LATEST_TASK_HISTORY_20
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 07:25:01
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 07:25:01
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 07:24:59
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 07:24:59
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 07:24:58
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 07:24:58
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 07:24:56
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 07:24:56
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 07:24:55
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 07:24:55
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 07:24:53
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 07:24:53
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 07:24:52
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 07:24:52
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 07:24:50
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 07:24:50
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 07:24:48
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 07:24:48
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 07:24:47
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 07:24:47
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 07:30:00
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 07:30:00
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 07:29:58
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 07:29:58
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 07:29:57
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 07:29:57
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 07:29:55
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 07:29:55
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 07:29:54
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 07:29:54
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 07:29:52
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 07:29:52
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 07:29:50
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 07:29:50
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 07:29:49
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 07:29:49
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 07:29:47
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 07:29:47
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 07:29:46
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 07:29:46
 
 ## MEMORY_DB_COUNT
 - 5185
