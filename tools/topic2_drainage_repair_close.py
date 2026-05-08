@@ -666,7 +666,7 @@ async def main():
             return
 
     await _do_price_search(conn, tid, chat_id, topic_id, total_len, vat_mode)
-    conn.close()
+    conn.close()  # OLD main() end
 
 
 async def _do_price_search(conn, tid, chat_id, topic_id, L, vat_mode):
@@ -774,4 +774,201 @@ async def _generate_and_send(conn, tid, chat_id, topic_id, vat_mode, mode, cache
 
 
 if __name__ == "__main__":
+    pass  # entry point moved to end — overridden by PATCH_TOPIC2_DRAINAGE_RECOGNIZE_ALL_V1
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PATCH_TOPIC2_DRAINAGE_RECOGNIZE_ALL_V1  (2026-05-09)
+# Overrides main() WC branch: shows recognized scheme elements before asking
+# for missing lengths. Appended per append-only rule.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _recognize_scheme_v1(text: str) -> dict:
+    t = low(text)
+    dk_count = count_unique(text, "Дк")
+    lk_count = count_unique(text, "Лк")
+    diameters: List[int] = []
+    for m in re.finditer(r"[∅Ø]\s*(\d{3,4})", text):
+        d = int(m.group(1))
+        if d not in diameters:
+            diameters.append(d)
+    well_types: List[str] = []
+    if "полимерный" in t:
+        well_types.append("полимерный")
+    if "ж/б" in t or "железобетон" in t:
+        well_types.append("ж/б")
+    slope_m = re.search(r"i\s*=\s*(\d+(?:[,.]\d+)?)", text, re.I)
+    slope = slope_m.group(1).replace(",", ".") if slope_m else None
+    legend_length: Optional[float] = None
+    for line in text.splitlines():
+        ll = low(line)
+        if "уклон" in ll and ("длина" in ll or " l " in ll or "l=" in ll.replace(" ","")):
+            lm = re.search(r"l\s*=\s*(\d+(?:[,.]\d+)?)\s*м", line, re.I)
+            if lm:
+                try:
+                    v = float(lm.group(1).replace(",", "."))
+                    if 0.5 <= v <= 200:
+                        legend_length = v
+                except Exception:
+                    pass
+    return {
+        "dk_count": dk_count,
+        "lk_count": lk_count,
+        "diameters": sorted(set(diameters)),
+        "well_types": well_types,
+        "has_dns": has(text, "ДНС"),
+        "has_pu": has(text, "ПУ-1") or has(text, "пескоуловитель"),
+        "has_kgn": bool(re.search(r"кгн", t)),
+        "has_linear": has(text, "линейный водоотвод") or has(text, "лоток"),
+        "slope": slope,
+        "legend_length": legend_length,
+    }
+
+
+def _build_wc_length_message_v1(rec: dict) -> str:
+    lines = ["Распознал из схемы дренажа:\n"]
+    if rec["dk_count"] > 0:
+        diam_parts = [f"∅{d}" for d in rec["diameters"] if d in (315, 500)]
+        types_part = ", полимерные" if "полимерный" in rec["well_types"] else ""
+        diam_str = (" (" + "/".join(diam_parts) + types_part + ")") if diam_parts else ""
+        lines.append(f"• Дренажные колодцы: Дк × {rec['dk_count']} шт{diam_str}")
+    if 1000 in rec["diameters"] and "ж/б" in rec["well_types"]:
+        lines.append("• Колодец ∅1000 ж/б (сборный)")
+    if rec["lk_count"] > 0:
+        lines.append(f"• Ливневые колодцы: Лк × {rec['lk_count']} шт")
+    if rec["has_dns"]:
+        kgn = " (ёмкость КГН-460)" if rec["has_kgn"] else ""
+        lines.append(f"• ДНС-1 — дренажная насосная станция{kgn}")
+    if rec["has_pu"]:
+        lines.append("• ПУ-1 — пескоуловитель")
+    if rec["has_linear"]:
+        lines.append("• Линейный водоотвод (лотки)")
+    if rec["slope"]:
+        lines.append(f"• Уклон трубы: i={rec['slope']}")
+    if rec["legend_length"]:
+        lines.append(
+            f"• В легенде схемы: l={rec['legend_length']} м"
+            " (пример обозначения, не суммарная длина)"
+        )
+    lines += [
+        "",
+        "Не удалось прочитать: длины трасс (схема графическая, оцифровки нет).\n",
+    ]
+    if rec["legend_length"]:
+        lines.append(
+            f"Если l={rec['legend_length']} м — это типовая длина участка,"
+            " пришли общую длину трассы (Дк-1→Дк-2→...→ДНС, сумма участков в метрах)."
+        )
+    else:
+        lines.append(
+            "Пришли, пожалуйста, общую длину дренажных труб (м)"
+            " или длины по участкам: Дк-1→Дк-2, Дк-2→ДНС и т.д."
+        )
+    lines.append("\nПосле этого запрошу актуальные цены и покажу смету.")
+    return "\n".join(lines)
+
+
+async def main():  # noqa: F811  PATCH_TOPIC2_DRAINAGE_RECOGNIZE_ALL_V1
+    conn = sqlite3.connect(str(DB)); conn.row_factory = sqlite3.Row
+    task = conn.execute("SELECT * FROM tasks WHERE id=? LIMIT 1", (TASK_ID,)).fetchone()
+    if not task:
+        raise SystemExit(f"TASK_NOT_FOUND:{TASK_ID}")
+    tid = str(task["id"]); chat_id = str(task["chat_id"]); topic_id = int(task["topic_id"] or 2)
+    raw_in = str(task["raw_input"] or ""); result = str(task["result"] or "")
+
+    vat_mode = infer_vat(conn, tid, raw_in, result)
+    if vat_mode is None:
+        ask_vat(conn, task); conn.close(); return
+
+    markers = read_history_markers(conn, tid)
+
+    confirmed_marker = find_marker(markers, "TOPIC2_PRICE_CHOICE_CONFIRMED:")
+    if confirmed_marker:
+        mode = confirmed_marker.split(":", 1)[1].strip()
+        print(f"PRICE_CHOICE_CONFIRMED:{mode} — generating estimate")
+        cache = load_cache()
+        if cache is None:
+            raise SystemExit("PRICE_CACHE_FILE_MISSING — re-run from price search state")
+        await _generate_and_send(conn, tid, chat_id, topic_id, vat_mode, mode, cache, markers)
+        conn.close(); return
+
+    menu_marker = find_marker(markers, "TOPIC2_PRICE_CHOICE_MENU_SENT:")
+    if menu_marker:
+        user_reply = read_recent_user_reply(conn, tid)
+        if user_reply:
+            choice = _detect_price_choice(user_reply)
+            if choice:
+                print(f"USER_CHOICE_DETECTED:{choice} from '{user_reply[:40]}'")
+                hist(conn, tid, f"TOPIC2_PRICE_CHOICE_CONFIRMED:{choice}")
+                conn.commit()
+                cache = load_cache()
+                if cache is None:
+                    raise SystemExit("PRICE_CACHE_FILE_MISSING")
+                await _generate_and_send(conn, tid, chat_id, topic_id, vat_mode, choice, cache, markers)
+                conn.close(); return
+            m = re.search(r"(\d+(?:[.,]\d+)?)\s*(?:м\b|метр)", user_reply.lower())
+            if m:
+                try:
+                    L_reply = float(m.group(1).replace(",", "."))
+                    if 5 <= L_reply <= 2000:
+                        print(f"LENGTH_FROM_USER_REPLY:{L_reply} — rebuilding cache")
+                        hist(conn, tid, f"USER_PROVIDED_LENGTH:{L_reply}")
+                        conn.commit()
+                        await _do_price_search(conn, tid, chat_id, topic_id, L_reply, vat_mode)
+                        conn.close(); return
+                except Exception:
+                    pass
+        print("WAITING_FOR_PRICE_CHOICE — no actionable reply yet")
+        conn.close(); return
+
+    sources = find_user_pdfs()
+    if not sources:
+        raise SystemExit("NO_USER_SOURCE_PDFS")
+    drainage = [x for x in sources if x["kind"] == "drainage_scheme"]
+    if not drainage:
+        raise SystemExit("DRAINAGE_SOURCE_NOT_FOUND")
+
+    scheme_text = "\n".join(x["text"] for x in drainage)
+
+    pdf_lengths = extract_lengths_from_pdf(scheme_text)
+    total_len   = round(sum(pdf_lengths), 2)
+    print(f"PDF_LENGTHS={pdf_lengths} TOTAL_LEN={total_len}")
+
+    if total_len <= 0:
+        user_len = read_user_provided_length(conn, tid)
+        if user_len > 0:
+            print(f"USER_PROVIDED_LENGTH:{user_len}")
+            hist(conn, tid, f"USER_PROVIDED_LENGTH:{user_len}")
+            conn.commit()
+            total_len = user_len
+        else:
+            rec = _recognize_scheme_v1(scheme_text)
+            wc_msg = _build_wc_length_message_v1(rec)
+            print(f"RECOGNIZE_ALL: dk={rec['dk_count']} dns={rec['has_dns']} pu={rec['has_pu']}"
+                  f" kgn={rec['has_kgn']} diameters={rec['diameters']} slope={rec['slope']}"
+                  f" legend_l={rec['legend_length']}")
+            bot_msg = send_msg(chat_id, topic_id, wc_msg)
+            conn.execute(
+                "UPDATE tasks SET state='WAITING_CLARIFICATION', result=?, bot_message_id=?,"
+                " error_message='TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN',"
+                " updated_at=datetime('now') WHERE id=?",
+                (wc_msg, bot_msg, tid),
+            )
+            for a in [
+                "TOPIC2_DRAINAGE_LENGTH_PROOF_GATE_V1",
+                f"TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN:lines={len(pdf_lengths)}:total={total_len}",
+                f"TOPIC2_DRAINAGE_RECOGNIZED:dk={rec['dk_count']},dns={rec['has_dns']},"
+                f"pu={rec['has_pu']},kgn={rec['has_kgn']},slope={rec['slope']}",
+                "TOPIC2_DRAINAGE_FINAL_ARTIFACTS_BLOCKED",
+                f"TOPIC2_DRAINAGE_WC_SENT:{bot_msg}",
+            ]:
+                hist(conn, tid, a)
+            conn.commit(); conn.close()
+            print(f"DRAINAGE_RECOGNIZE_ALL_WC_SENT BOT_MESSAGE_ID={bot_msg}")
+            return
+
+    await _do_price_search(conn, tid, chat_id, topic_id, total_len, vat_mode)
+    conn.close()
+
+
+if __name__ == "__main__":  # PATCH_TOPIC2_DRAINAGE_RECOGNIZE_ALL_V1 entry point
     asyncio.run(main())
