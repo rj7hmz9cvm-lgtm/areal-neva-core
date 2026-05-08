@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-08T22:10:01.912775+00:00
-git_sha_before_commit: af42c97232f42a953e720cd4afceba9a494a9621
+generated_at_utc: 2026-05-08T22:15:02.376967+00:00
+git_sha_before_commit: fd5778eef413aefddca3bffb0022f25ab810edd2
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,7 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: inactive
 
 ## GIT_LOG_30
+fd5778e docs: update LATEST_HANDOFF af42c97 — drainage full close, child merge patch
 af42c97 fix(topic2): TOPIC2_DRAINAGE_FULL_CLOSE_NO_LOOP_V2 — child merge guard, legend filter, noise tasks closed
 859c045 fix(topic2): TOPIC2_DRAINAGE_VAT_GATE_PUBLIC_CLEAN_V1 — VAT gate 22%, source filter, clean public output, Drive upload fix
 3343690 fix(topic2): TOPIC2_DRAINAGE_MULTIFILE_REPAIR_CLOSE_V1 — close drainage estimate from two PDFs, send XLSX+PDF to Telegram
@@ -39,29 +40,86 @@ c9443ff FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 af86bf5 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 981d301 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 f5838bb FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
-d36b224 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
 ## GIT_SHOW_STAT_HEAD
-commit af42c97232f42a953e720cd4afceba9a494a9621
+commit fd5778eef413aefddca3bffb0022f25ab810edd2
 Author: Ila <ilakuznecov@mac.local>
-Date:   Sat May 9 01:08:29 2026 +0300
+Date:   Sat May 9 01:10:43 2026 +0300
 
-    fix(topic2): TOPIC2_DRAINAGE_FULL_CLOSE_NO_LOOP_V2 — child merge guard, legend filter, noise tasks closed
-    
-    - PATCH_TOPIC2_DRAINAGE_CHILD_MERGE_V1 in task_worker.py: NEW topic_2 text tasks
-      while active drainage parent (WC/AC) exists → merged to DONE immediately
-    - topic2_input_gate.py: uncommitted gate improvements from prev session (WC delivery,
-      drainage user-explicit check, recent-file-tasks lookup)
-    - repair_close: extract_lengths filters legend definition lines (уклон/длина/диаметр),
-      build_items fallback 6→80m, VAT gate, source filter, APPROX_FROM_SCHEME_NO_FULL_LENGTH_TABLE
-    - Noise tasks 9a174a37 / 85992edd merged to DONE in DB
+    docs: update LATEST_HANDOFF af42c97 — drainage full close, child merge patch
     
     Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 
- core/topic2_input_gate.py             |  90 ++++++++++++++++++++++++-----
- task_worker.py                        | 106 ++++++++++++++++++++++++++++++++++
- tools/topic2_drainage_repair_close.py |   5 +-
- 3 files changed, 187 insertions(+), 14 deletions(-)
+ docs/HANDOFFS/LATEST_HANDOFF.md                    |    55 +-
+ docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md    |     6 +-
+ docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md |     2 +-
+ .../SHARED_CONTEXT/DIRECTIONS/auto_parts_search.md |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/cad_dwg.md          |     4 +-
+ .../DIRECTIONS/construction_search.md              |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/crm_leads.md        |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/defect_acts.md      |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/devops_server.md    |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/documents.md        |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/email_ingress.md    |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/estimates.md        |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/general_chat.md     |     4 +-
+ .../DIRECTIONS/google_drive_storage.md             |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/internet_search.md  |     4 +-
+ .../DIRECTIONS/isolated_project_ivan.md            |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/job_search.md       |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/memory_archive.md   |     4 +-
+ .../SHARED_CONTEXT/DIRECTIONS/monolith_concrete.md |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/ocr_photo.md        |     4 +-
+ .../DIRECTIONS/orchestration_core.md               |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/photo_cleanup.md    |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/product_search.md   |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/roofing.md          |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/social_content.md   |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/spreadsheets.md     |     4 +-
+ .../SHARED_CONTEXT/DIRECTIONS/structural_design.md |     4 +-
+ .../DIRECTIONS/technical_supervision.md            |     4 +-
+ .../DIRECTIONS/telegram_automation.md              |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/video_production.md |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/vpn_network.md      |     4 +-
+ docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md      |     4 +-
+ docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |     6 +-
+ docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |     6 +-
+ docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |     6 +-
+ .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |    43 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |     4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |     4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |     4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_004.md             |     4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |     6 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |     6 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_007.md             |  3498 +---
+ .../ORCHESTRA_FULL_CONTEXT_PART_008.md             | 16088 ++++++++++---------
+ .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |  3032 +++-
+ .../ORCHESTRA_FULL_CONTEXT_PART_010.md             |     4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_011.md             |     4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_012.md             |    96 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_013.md             |   939 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_014.md             |   524 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_015.md             |     4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_016.md             |     4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_017.md             |     4 +-
+ docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       |   235 +-
+ .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |    18 +-
+ docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |    92 +-
+ docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |     6 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |     4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |     4 +-
+ .../TOPICS/topic_210_PROEKTIROVANIE.md             |     4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |    24 +-
+ .../TOPICS/topic_3008_KODY_MOZGOV.md               |     4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |     4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |     4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_5_TEKHNADZOR.md   |     4 +-
+ .../SHARED_CONTEXT/TOPICS/topic_6104_JOB_SEARCH.md |     4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |     4 +-
+ .../TOPICS/topic_961_AVTOZAPCHASTI.md              |     4 +-
+ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |     6 +-
+ 69 files changed, 12754 insertions(+), 12132 deletions(-)
 
 ## GIT_CHANGED_FILES_10
 core/stroyka_estimate_canon.py

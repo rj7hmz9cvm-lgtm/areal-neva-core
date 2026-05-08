@@ -1,7 +1,7 @@
 # SINGLE_MODEL_FULL_CONTEXT
 
-GENERATED_AT: 2026-05-08T22:10:02.414718+00:00
-GIT_SHA: af42c97232f42a953e720cd4afceba9a494a9621
+GENERATED_AT: 2026-05-08T22:15:03.018196+00:00
+GIT_SHA: fd5778eef413aefddca3bffb0022f25ab810edd2
 PURPOSE: Один файл с полным контекстом проекта для любой модели
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 
@@ -85,10 +85,10 @@ owner_reference_registry: loaded=True items=11
 # 2. LATEST_HANDOFF
 ================================================================================
 
-# LATEST HANDOFF — 2026-05-09 ~02:05 MSK
-**HEAD**: `3421216`
-**Воркер**: active (pid=2711712)
-**telegram-ingress**: active + bigfile wrapper
+# LATEST HANDOFF — 2026-05-09 ~01:15 MSK
+**HEAD**: `af42c97`
+**Воркер**: active (areal-task-worker)
+**telegram-ingress**: active
 
 ---
 
@@ -96,52 +96,61 @@ owner_reference_registry: loaded=True items=11
 
 | Топик | Состояние | Примечание |
 |-------|-----------|------------|
-| topic_2 СТРОИКА | AWAITING_CONFIRMATION c94ec497 / CODEX_FULL_CANON_VERIFIED | bot_msg=10547, total=8 173 431 руб |
+| topic_2 СТРОИКА — дренаж | AWAITING_CONFIRMATION `043e5c9f` | bot_msg=10613, итого 1 035 664 руб, WITHOUT_VAT |
 | topic_5 ТЕХНАДЗОР | INSTALLED (не VERIFIED) | SA Drive upload fails 403, OAuth fallback в коде |
 | topic_500 ПОИСК | INSTALLED (не VERIFIED) | 9 режимов adaptive output |
 | topic_210 PROJECT | Active | без изменений |
 
 ---
 
-## ЗАКРЫТО В ЭТОЙ СЕССИИ (08-09.05.2026)
+## ЗАКРЫТО В СЕССИИ 08-09.05.2026
 
 ### 1. PATCH_TOPIC2_INPUT_GATE_SOURCE_OF_TRUTH_V1 — COMMITTED ✅
-- `core/topic2_input_gate.py` — новый файл, gate с 25 маркерами дренажа/ливнёвки
-- Wrapper в конце `core/stroyka_estimate_canon.py` — перехватывает `maybe_handle_stroyka_estimate`
-- Smoke test: 3/3 drainage задачи → WAITING_CLARIFICATION
-- Live: `acdae011` (голос "посчитай смету") — gate сработал, домовая смета не запустилась
+- `core/topic2_input_gate.py` — gate с 25 маркерами дренажа/ливнёвки
+- Wrapper в конце `core/stroyka_estimate_canon.py`
+- Live: `acdae011` → gate сработал, WC-ответ доставлен вручную (bot_msg=10575)
 
 ### 2. PATCH_WAITING_CLARIFICATION_DELIVERY_GUARD_V1 — COMMITTED ✅
-- Патч в `task_worker.py` перед `__main__`
-- Перехватывает `_pick_next_task`, при каждом цикле ищет WC-задачи с пустым `bot_message_id`
-- Доставляет через `send_reply_ex` если есть gate-маркеры
+- Патч в `task_worker.py` — перехватывает `_pick_next_task`, доставляет WC-сообщения при пустом `bot_message_id`
 
-### 3. GATE SEND FIX (sqlite3.Row) — COMMITTED ✅
-- Баг: `task.get(...)` не работает для `sqlite3.Row` → chat_id пустой → send падал молча
-- Фикс: `dict(task)` перед извлечением полей
-- Добавлены маркеры в task_history: `TOPIC2_INPUT_GATE_SENT:XXXX` + `reply_sent:waiting_clarification`
+### 3. PATCH_TOPIC2_DRAINAGE_CHILD_MERGE_V1 — COMMITTED ✅ (af42c97)
+- Патч в `task_worker.py` перед `__main__`
+- При каждом цикле пикера: если есть активный дренажный родитель (WC/AC) → все NEW text-задачи topic_2 → DONE с маркером `TOPIC2_CHILD_MERGED_TO_DRAINAGE_PARENT:<parent_id>`
+- Noise-задачи `9a174a37` и `85992edd` закрыты напрямую в БД
+
+### 4. TOPIC2_DRAINAGE_FULL_CLOSE_NO_LOOP_V2 — COMMITTED ✅ (af42c97)
+- `tools/topic2_drainage_repair_close.py`: legend filter в `extract_lengths`, fallback L=80м, VAT gate 22%, source filter (user PDFs only), clean public output
+- PDF `file_1.pdf` — схема дренажа (120 774 chars, только отметки высот, нет машиночитаемых длин)
+- PDF `file_0.pdf` — геологический отчёт (76 662 chars)
+- Длины: `APPROX_FROM_SCHEME_NO_FULL_LENGTH_TABLE`, L=80м (консервативный дефолт, 3 колодца Дк-1/2/3 + ДНС-1 + ПУ-1)
+- VAT: `WITHOUT_VAT` (подтверждено в history rowid 90090)
+- XLSX → bot_msg=10611, PDF → bot_msg=10612, текст → bot_msg=10613
+- Задача `043e5c9f` → AWAITING_CONFIRMATION, result чистый (нет /root/, runtime, drainage_estimate_)
 
 ---
 
-## НЕ СДЕЛАНО / ОТКРЫТЫЕ БАГИ
+## ОТКРЫТЫЕ ВОПРОСЫ
 
 | Проблема | Статус |
 |----------|--------|
-| Live-тест send fix | Нужен реальный дренажный PDF после 3421216 — проверить что `TOPIC2_INPUT_GATE_SENT` появляется в history |
-| WC задача пикается после доставки | После send bot_message_id заполнен, WCG_SKIP_LOOP срабатывает, но задача продолжает попадать в пикер (STALE_TIMEOUT закрывает) |
+| Длины дренажа не извлекаются | PDF — графическая схема, только отметки высот в тексте. Дефолт 80м. Если пользователь пришлёт реальные длины — пересчитать |
 | topic_5 Drive SA 403 | live-тест не пройден |
 | PDF_SPEC_EXTRACTOR_REAL_V1 | stub |
+| WC задача пикается после доставки | STALE_TIMEOUT закрывает, WCG_SKIP_LOOP защищает от повтора — не критично |
 
 ---
 
 ## ДИАГНОСТИКА
 
 ```bash
-# Последние задачи topic_2
-sqlite3 data/core.db "SELECT id,state,bot_message_id,error_message,substr(result,1,80),updated_at FROM tasks WHERE topic_id=2 ORDER BY rowid DESC LIMIT 5;"
+# Дренажная задача
+sqlite3 data/core.db "SELECT id,state,bot_message_id,substr(result,1,120),updated_at FROM tasks WHERE id='043e5c9f-e8bc-434c-9dad-a66c7e50f917';"
 
-# Маркеры gate
-sqlite3 data/core.db "SELECT rowid,task_id,action FROM task_history WHERE action LIKE 'TOPIC2_INPUT_GATE_%' ORDER BY rowid DESC LIMIT 10;"
+# Последние задачи topic_2
+sqlite3 data/core.db "SELECT id,state,bot_message_id,error_message,updated_at FROM tasks WHERE topic_id=2 ORDER BY rowid DESC LIMIT 5;"
+
+# Child merge маркеры
+sqlite3 data/core.db "SELECT task_id,action FROM task_history WHERE action LIKE 'TOPIC2_CHILD_MERGED%' ORDER BY rowid DESC LIMIT 10;"
 
 # Воркер
 systemctl is-active areal-task-worker
@@ -3873,8 +3882,8 @@ I canno
 ```
 # topic_0 COMMON
 
-GENERATED_AT: 2026-05-08T22:10:02.082396+00:00
-GIT_SHA: af42c97232f42a953e720cd4afceba9a494a9621
+GENERATED_AT: 2026-05-08T22:15:02.637757+00:00
+GIT_SHA: fd5778eef413aefddca3bffb0022f25ab810edd2
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 0
@@ -4743,8 +4752,8 @@ def _write_xlsx(path: Path, items: List[Dict[str, Any]], source_text: str, photo
 ```
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-05-08T22:10:02.118014+00:00
-GIT_SHA: af42c97232f42a953e720cd4afceba9a494a9621
+GENERATED_AT: 2026-05-08T22:15:02.672535+00:00
+GIT_SHA: fd5778eef413aefddca3bffb0022f25ab810edd2
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -5484,8 +5493,8 @@ _P6H5_NORMATIVE_EXPAND = [
 ```
 # topic_5 TEKHNADZOR
 
-GENERATED_AT: 2026-05-08T22:10:02.155956+00:00
-GIT_SHA: af42c97232f42a953e720cd4afceba9a494a9621
+GENERATED_AT: 2026-05-08T22:15:02.708370+00:00
+GIT_SHA: fd5778eef413aefddca3bffb0022f25ab810edd2
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 5
@@ -5634,8 +5643,8 @@ DIRECTIONS_BOUND: Видео
 ```
 # topic_11 VIDEO
 
-GENERATED_AT: 2026-05-08T22:10:02.181929+00:00
-GIT_SHA: af42c97232f42a953e720cd4afceba9a494a9621
+GENERATED_AT: 2026-05-08T22:15:02.736330+00:00
+GIT_SHA: fd5778eef413aefddca3bffb0022f25ab810edd2
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 11
@@ -6248,8 +6257,8 @@ def _normalize_sheet_register(template: Dict[str, Any], data: Dict[str, Any]) ->
 ```
 # topic_210 PROEKTIROVANIE
 
-GENERATED_AT: 2026-05-08T22:10:02.215255+00:00
-GIT_SHA: af42c97232f42a953e720cd4afceba9a494a9621
+GENERATED_AT: 2026-05-08T22:15:02.776003+00:00
+GIT_SHA: fd5778eef413aefddca3bffb0022f25ab810edd2
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 210
@@ -6818,8 +6827,8 @@ except Exception:
 ```
 # topic_500 VEB_POISK
 
-GENERATED_AT: 2026-05-08T22:10:02.256505+00:00
-GIT_SHA: af42c97232f42a953e720cd4afceba9a494a9621
+GENERATED_AT: 2026-05-08T22:15:02.814875+00:00
+GIT_SHA: fd5778eef413aefddca3bffb0022f25ab810edd2
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 500
@@ -6934,8 +6943,8 @@ DIRECTIONS_BOUND: Сервер DevOps
 ```
 # topic_794 DEVOPS
 
-GENERATED_AT: 2026-05-08T22:10:02.283614+00:00
-GIT_SHA: af42c97232f42a953e720cd4afceba9a494a9621
+GENERATED_AT: 2026-05-08T22:15:02.850728+00:00
+GIT_SHA: fd5778eef413aefddca3bffb0022f25ab810edd2
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 794
@@ -7030,8 +7039,8 @@ DIRECTIONS_BOUND: Автозапчасти
 ```
 # topic_961 AVTOZAPCHASTI
 
-GENERATED_AT: 2026-05-08T22:10:02.313187+00:00
-GIT_SHA: af42c97232f42a953e720cd4afceba9a494a9621
+GENERATED_AT: 2026-05-08T22:15:02.893389+00:00
+GIT_SHA: fd5778eef413aefddca3bffb0022f25ab810edd2
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 961
@@ -7123,8 +7132,8 @@ DIRECTIONS_BOUND: Мозги оркестра
 ```
 # topic_3008 KODY_MOZGOV
 
-GENERATED_AT: 2026-05-08T22:10:02.341142+00:00
-GIT_SHA: af42c97232f42a953e720cd4afceba9a494a9621
+GENERATED_AT: 2026-05-08T22:15:02.935082+00:00
+GIT_SHA: fd5778eef413aefddca3bffb0022f25ab810edd2
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 3008
@@ -7227,8 +7236,8 @@ DIRECTIONS_BOUND: CRM лиды
 ```
 # topic_4569 CRM_LEADS
 
-GENERATED_AT: 2026-05-08T22:10:02.374167+00:00
-GIT_SHA: af42c97232f42a953e720cd4afceba9a494a9621
+GENERATED_AT: 2026-05-08T22:15:02.973806+00:00
+GIT_SHA: fd5778eef413aefddca3bffb0022f25ab810edd2
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 4569
@@ -7336,8 +7345,8 @@ DIRECTIONS_BOUND: Поиск работы
 ```
 # topic_6104 JOB_SEARCH
 
-GENERATED_AT: 2026-05-08T22:10:02.405173+00:00
-GIT_SHA: af42c97232f42a953e720cd4afceba9a494a9621
+GENERATED_AT: 2026-05-08T22:15:03.007846+00:00
+GIT_SHA: fd5778eef413aefddca3bffb0022f25ab810edd2
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 6104
