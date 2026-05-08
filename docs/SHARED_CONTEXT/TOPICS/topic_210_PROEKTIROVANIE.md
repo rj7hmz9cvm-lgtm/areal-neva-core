@@ -1,15 +1,15 @@
 # topic_210 PROEKTIROVANIE
 
-GENERATED_AT: 2026-05-07T17:50:02.666959+00:00
-GIT_SHA: b3e5be73bca451c0ed863454767d568630087479
+GENERATED_AT: 2026-05-08T06:05:01.921148+00:00
+GIT_SHA: b236f02ce3ca63701b23e2185620504fab02ba28
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 210
 ROLE: КЖ КМ
 DIRECTIONS_BOUND: structural_design
-CURRENT_STATUS: INSTALLED_NOT_VERIFIED
+CURRENT_STATUS: IDLE_NO_FAILURES_NOT_VERIFIED
 ACTIVE_TASKS: 0
-FAILED_LAST_24H: 1
+FAILED_LAST_24H: 0
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 3
@@ -31,17 +31,7 @@ FAILED_LAST_24H: 1
 - 10036c1|TOPIC_ISOLATION_V1: exclude topic_210_500 from FILE_TECH and restore drive scope
 
 ## MARKERS_LAST_24H
-- created:NEW
-- reply_sent:result
-- P6F_DAH_BLOCKED_DONE_NO_UPLOAD_OR_TG_HISTORY
-- P6F_T210_PROJECT_DRIVE_REFS_RETURNED:7
-- result:Для разработки нового проекта со всеми разделами (АР, КР, КЖ, КД, КМ, ОВ,
-- result:На основании ваших указаний, я работаю с образцами проектной документации
-- result:Принято. Буду использовать образцы проектирования без уточнения названий 
-- result:Понял. Буду использовать образцы проектирования для работы без уточнений.
-- result:Для создания нового проекта с полным набором разделов (АР, КР, КЖ, КД, КМ
-- state:FAILED
-- reply_sent:invalid_result
+- (none)
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210

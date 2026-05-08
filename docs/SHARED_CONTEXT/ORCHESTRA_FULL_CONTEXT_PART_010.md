@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_010
-generated_at_utc: 2026-05-07T17:50:02.487525+00:00
-git_sha_before_commit: b3e5be73bca451c0ed863454767d568630087479
+generated_at_utc: 2026-05-08T06:05:01.727214+00:00
+git_sha_before_commit: b236f02ce3ca63701b23e2185620504fab02ba28
 part: 10/17
 
 
 ====================================================================================================
 BEGIN_FILE: core/sample_template_engine.py
 FILE_CHUNK: 1/2
-SHA256_FULL_FILE: afed00e027068743fbef3ed9c07c0187d1a3de653ba6b8b59ac88a2396f70f13
+SHA256_FULL_FILE: 1649913fa52dba5b895fc0a0479ba7b531c48174c46964dcbb222b9add7359b2
 ====================================================================================================
 # === FULLFIX_13A_SAMPLE_FILE_INTENT_AND_TEMPLATE_ESTIMATE ===
 import os
@@ -7897,7 +7897,7 @@ FILE_CHUNK: 1/2
 ====================================================================================================
 BEGIN_FILE: core/sample_template_engine.py
 FILE_CHUNK: 2/2
-SHA256_FULL_FILE: afed00e027068743fbef3ed9c07c0187d1a3de653ba6b8b59ac88a2396f70f13
+SHA256_FULL_FILE: 1649913fa52dba5b895fc0a0479ba7b531c48174c46964dcbb222b9add7359b2
 ====================================================================================================
             return False
         if not _p6d_img_estimate_like(caption):
@@ -8139,6 +8139,130 @@ def _p2_create_xlsx(task_id, p, rows, prices=None, price_status=""):
 
 _P2XL15_LOG.info("PATCH_TOPIC2_P2_XLSX_15_COLS_CANONICAL_V1 installed")
 # === END_PATCH_TOPIC2_P2_XLSX_15_COLS_CANONICAL_V1 ===
+
+# === PATCH_P3PCG_CLARIFIED_HISTORY_CHECK_V1 ===
+# Bug: P3PCG checks raw_s (PDF/file JSON) for price choice keyword.
+# For file tasks the user's reply "2" arrives via telegram as clarified:2 in task_history,
+# not in raw_s — so P3PCG never sees it and keeps sending the price menu.
+# Fix: Wrap pipeline entry to inject clarified price from task_history into raw_input.
+import logging as _p3chk_log_mod
+_P3CHK_LOG = _p3chk_log_mod.getLogger("task_worker")
+
+_P3CHK_MAP = {"1": "минимальные", "2": "средние", "3": "надёжный поставщик", "4": "ручные"}
+_P3CHK_VALID_WORDS = ("миним", "максим", "средн", "медиан", "ручн", "надёж", "надеж", "поставщик")
+
+def _p3chk_get_clarified_price(conn, task_id: str):
+    if not conn or not task_id:
+        return None
+    try:
+        rows = conn.execute(
+            "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'clarified:_%' ORDER BY rowid DESC LIMIT 20",
+            (task_id,),
+        ).fetchall()
+        for row in rows:
+            val = str(row[0]).split("clarified:", 1)[-1].strip().lower()
+            if val in _P3CHK_MAP:
+                return _P3CHK_MAP[val]
+            if any(w in val for w in _P3CHK_VALID_WORDS):
+                return val
+    except Exception:
+        pass
+    return None
+
+_P3CHK_ORIG = globals().get("handle_topic2_one_big_formula_pipeline_v1")
+if _P3CHK_ORIG and not getattr(_P3CHK_ORIG, "_p3chk_wrapped", False):
+    import asyncio as _p3chk_aio
+
+    async def handle_topic2_one_big_formula_pipeline_v1(
+        conn=None, task=None, chat_id=None, topic_id=None,
+        raw_input=None, full_context=None, **kwargs
+    ):
+        task_id = ""
+        if task is not None:
+            try:
+                task_id = str(task["id"] if hasattr(task, "keys") and "id" in task.keys() else (task.get("id") if isinstance(task, dict) else getattr(task, "id", "")))
+            except Exception:
+                pass
+        raw_s = str(raw_input or full_context or "")
+        if task_id and conn and not _p3pcg_has_explicit_price(raw_s):
+            clarified = _p3chk_get_clarified_price(conn, task_id)
+            if clarified:
+                _P3CHK_LOG.info("P3CHK: injecting clarified price=%r from history for task=%s", clarified, task_id)
+                raw_input = clarified
+        return await _P3CHK_ORIG(
+            conn=conn, task=task, chat_id=chat_id, topic_id=topic_id,
+            raw_input=raw_input, full_context=full_context, **kwargs
+        )
+
+    handle_topic2_one_big_formula_pipeline_v1._p3chk_wrapped = True
+    globals()["handle_topic2_one_big_formula_pipeline_v1"] = handle_topic2_one_big_formula_pipeline_v1
+    _P3CHK_LOG.info("PATCH_P3PCG_CLARIFIED_HISTORY_CHECK_V1 installed")
+# === END_PATCH_P3PCG_CLARIFIED_HISTORY_CHECK_V1 ===
+
+# === PATCH_P3CHK_PRICE_APPEND_FIX_V2 ===
+# Bug: PATCH_P3PCG_CLARIFIED_HISTORY_CHECK_V1 sets raw_input="средние" (replaces full ТЗ).
+# P3E then parses only "средние" → dims=None → asks "Уточни размеры дома" in loop.
+# Fix: append price tier to raw_s instead of replacing it.
+import logging as _p3chk2_log_mod
+_P3CHK2_LOG = _p3chk2_log_mod.getLogger("task_worker")
+_P3CHK2_ORIG = globals().get("handle_topic2_one_big_formula_pipeline_v1")
+if _P3CHK2_ORIG and not getattr(_P3CHK2_ORIG, "_p3chk2_wrapped", False):
+    import asyncio as _p3chk2_aio
+
+    async def handle_topic2_one_big_formula_pipeline_v1(
+        conn=None, task=None, chat_id=None, topic_id=None,
+        raw_input=None, full_context=None, **kwargs
+    ):
+        task_id = ""
+        if task is not None:
+            try:
+                task_id = str(
+                    task["id"] if hasattr(task, "keys") and "id" in task.keys()
+                    else (task.get("id") if isinstance(task, dict) else getattr(task, "id", ""))
+                )
+            except Exception:
+                pass
+        raw_s = str(raw_input or full_context or "")
+        if task_id and conn and not _p3pcg_has_explicit_price(raw_s):
+            clarified = _p3chk_get_clarified_price(conn, task_id)
+            if clarified:
+                _P3CHK2_LOG.info("P3CHK2: appending price=%r (not replacing) for task=%s", clarified, task_id)
+                raw_input = raw_s + "\nЦены: " + clarified
+        return await _P3CHK2_ORIG(
+            conn=conn, task=task, chat_id=chat_id, topic_id=topic_id,
+            raw_input=raw_input, full_context=full_context, **kwargs
+        )
+
+    handle_topic2_one_big_formula_pipeline_v1._p3chk2_wrapped = True
+    globals()["handle_topic2_one_big_formula_pipeline_v1"] = handle_topic2_one_big_formula_pipeline_v1
+    _P3CHK2_LOG.info("PATCH_P3CHK_PRICE_APPEND_FIX_V2 installed")
+# === END_PATCH_P3CHK_PRICE_APPEND_FIX_V2 ===
+
+# === PATCH_P2_MISSING_SKIP_DISTANCE_V1 ===
+# Bug: _p2_missing returns "Уточни город или удалённость объекта в км" when distance_km=None.
+# For drive-file tasks user rarely specifies distance; calculation defaults to 0 safely.
+# Fix: remove distance_km check — p["distance_km"] or 0 in calc handles None.
+import logging as _p2ms_log_mod
+_P2MS_LOG = _p2ms_log_mod.getLogger("task_worker")
+_P2MS_ORIG = globals().get("_p2_missing")
+if _P2MS_ORIG and not getattr(_P2MS_ORIG, "_p2ms_wrapped", False):
+    def _p2_missing(p):
+        if not p.get("dims"):
+            return "Уточни размеры дома"
+        if not p.get("floors"):
+            return "Уточни этажность"
+        # distance_km: omitted — defaults to 0 (city) in logistics calc
+        if not p.get("foundation"):
+            return "Уточни тип фундамента"
+        if not p.get("material"):
+            return "Уточни материал стен"
+        if not p.get("scope"):
+            return "Уточни состав сметы: коробка или под ключ"
+        return None
+    _p2_missing._p2ms_wrapped = True
+    globals()["_p2_missing"] = _p2_missing
+    _P2MS_LOG.info("PATCH_P2_MISSING_SKIP_DISTANCE_V1 installed")
+# === END_PATCH_P2_MISSING_SKIP_DISTANCE_V1 ===
 
 ====================================================================================================
 END_FILE: core/sample_template_engine.py

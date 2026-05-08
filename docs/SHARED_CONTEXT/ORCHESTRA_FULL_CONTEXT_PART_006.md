@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_006
-generated_at_utc: 2026-05-07T17:50:02.483957+00:00
-git_sha_before_commit: b3e5be73bca451c0ed863454767d568630087479
+generated_at_utc: 2026-05-08T06:05:01.722435+00:00
+git_sha_before_commit: b236f02ce3ca63701b23e2185620504fab02ba28
 part: 6/17
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 2/3
-SHA256_FULL_FILE: 6b5bc2b3dfdff74b092ddb8f3b4dd512b01293b0b792adf0284b2d6afdc296f0
+SHA256_FULL_FILE: be7399f684fdacb8870733271dcdebf5c5a34052bb0de1a93dfef2054b80bdfa
 ====================================================================================================
     "нормальн", "снова", "сделай", "ещё раз", "еще раз", "заново", "повтори", "ещё", "еще",
     "сделать", "переделать", "по новой", "сначала", "новой", "опять",
@@ -199,10 +199,7 @@ async def _p6e67_try_merge(conn, task):
         _p6e67_hist(conn, _p6e67_tid, "P6E67_PARENT_NOT_FOUND")
 
         if _p6e67_tid and _p6e67_reply_to:
-            _p6e67_msg = (
-                "Не нашёл родительскую задачу для reply. "
-                "Пришли исходное ТЗ заново или ответь на последнее сообщение бота с результатом."
-            )
+            _p6e67_msg = "Пришли задание заново — расскажи что нужно сделать."
             _update_task(
                 conn,
                 _p6e67_tid,
@@ -5136,14 +5133,6 @@ async def _t2v5_try_bind_price_choice(conn, task):
     _pifx_v5_low = str(raw or "").strip().lower()
     _pifx_v5_explicit = ("1","2","3","4","а","б","в","г","миним","средн","медиан","максим","надёж","надеж","ручн","вариант")
     if len(_pifx_v5_low) > 80 or not any(t in _pifx_v5_low for t in _pifx_v5_explicit):
-        try:
-            conn.execute(
-                "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
-                (str(task_id), "PATCH_TOPIC2_INLINE_FIX_20260506_V1:V5_PRICE_REJECTED:no_explicit_token_or_long"),
-            )
-            conn.commit()
-        except Exception:
-            pass
         return False
     # === END_PATCH_TOPIC2_INLINE_FIX_20260506_V1 V5_EXPLICIT_TOKEN_REQUIRED ===
     key, choice = _t2v5_price_choice(raw)
@@ -5500,14 +5489,6 @@ async def _t2v6c_try_generate_after_price(conn, task):
     _pifx_v6_low = str(raw or "").strip().lower()
     _pifx_v6_explicit = ("1","2","3","4","а","б","в","г","миним","средн","медиан","максим","надёж","надеж","ручн","вариант")
     if len(_pifx_v6_low) > 80 or not any(t in _pifx_v6_low for t in _pifx_v6_explicit):
-        try:
-            conn.execute(
-                "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
-                (str(task_id), "PATCH_TOPIC2_INLINE_FIX_20260506_V1:V6C_PRICE_REJECTED:no_explicit_token_or_long"),
-            )
-            conn.commit()
-        except Exception:
-            pass
         return False
     # === END_PATCH_TOPIC2_INLINE_FIX_20260506_V1 V6C_EXPLICIT_TOKEN_REQUIRED ===
     key, choice = _t2v6c_choice(raw)
@@ -7711,17 +7692,6 @@ _TCG_LOG = _tcg_logging.getLogger("task_worker.cancel_guard")
 _TCG_CANCEL_RE = _tcg_re.compile(
     r"(?:^|\s)(?:\[VOICE\]\s*)?"
     r"(отмена|отбой|стоп|заверши|завершена|закрой|закрывай|очисти|"
-
-====================================================================================================
-END_FILE: task_worker.py
-FILE_CHUNK: 2/3
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: task_worker.py
-FILE_CHUNK: 3/3
-SHA256_FULL_FILE: 6b5bc2b3dfdff74b092ddb8f3b4dd512b01293b0b792adf0284b2d6afdc296f0
-====================================================================================================
     r"отменяй|задача отменена|отмена задач|все задачи завершен|"
     r"отбой всех|очисти все|задача завершена)",
     _tcg_re.IGNORECASE
@@ -7748,6 +7718,17 @@ if _TCG_ORIG_HANDLE_NEW and not getattr(_TCG_ORIG_HANDLE_NEW, "_tcg_wrapped", Fa
     async def _handle_new(conn, task, *args, **kwargs):
         try:
             topic_id = int(_tcg_get(task, "topic_id", 0) or 0)
+
+====================================================================================================
+END_FILE: task_worker.py
+FILE_CHUNK: 2/3
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: task_worker.py
+FILE_CHUNK: 3/3
+SHA256_FULL_FILE: be7399f684fdacb8870733271dcdebf5c5a34052bb0de1a93dfef2054b80bdfa
+====================================================================================================
             raw = str(_tcg_get(task, "raw_input", "") or "")
             if topic_id == 2 and _tcg_is_cancel(raw):
                 task_id = str(_tcg_get(task, "id", ""))
@@ -8141,18 +8122,20 @@ _FDCB_ORIG_UPDATE = globals().get("_update_task")
 if _FDCB_ORIG_UPDATE and not getattr(_FDCB_ORIG_UPDATE, "_fdcb_wrapped", False):
     def _update_task(conn, task_id, *args, **kwargs):
         state = kwargs.get("state", args[0] if args else None)
-        if state in ("AWAITING_CONFIRMATION", "DONE", "FAILED"):
+        result = kwargs.get("result", args[1] if len(args) >= 2 else None)
+        _fdcb_result_empty = not result or not str(result).strip()
+        if state == "DONE" and _fdcb_result_empty:
             try:
                 _fdcb_row = conn.execute(
-                    "SELECT 1 FROM task_history WHERE task_id=? AND action='TOPIC2_AC_GATE_OK' LIMIT 1",
+                    "SELECT 1 FROM task_history WHERE task_id=? AND action IN ('TOPIC2_AC_GATE_OK','TOPIC2_DONE_CONTRACT_OK') LIMIT 1",
                     (str(task_id),)
                 ).fetchone()
                 if _fdcb_row:
                     conn.execute(
                         "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
-                        (str(task_id), "PATCH_FCG_DONE_CONTRACT_BYPASS_V1:bypass_ac_gate_ok")
+                        (str(task_id), "PATCH_FCG_DONE_CONTRACT_BYPASS_V1:bypass_done_marker_ok")
                     )
-                    _FDCB_LOG.info("PATCH_FCG_DONE_CONTRACT_BYPASS_V1 bypass_ac_gate_ok task=%s state=%s", task_id, state)
+                    _FDCB_LOG.info("PATCH_FCG_DONE_CONTRACT_BYPASS_V1 bypass_done_marker_ok task=%s state=%s", task_id, state)
                     return _FCG_ORIG_UPDATE_TASK(conn, task_id, *args, **kwargs)
             except Exception as _fdcb_e:
                 _FDCB_LOG.warning("PATCH_FCG_DONE_CONTRACT_BYPASS_V1 err: %s", _fdcb_e)
@@ -8329,6 +8312,180 @@ if _T500MEM_ORIG_SAVE and not getattr(_T500MEM_ORIG_SAVE, "_t500mem_wrapped", Fa
 else:
     _T500MEM_LOG.warning("PATCH_TOPIC500_MEMORY_DEDUP_V1 skipped: _save_memory not found")
 # === END_PATCH_TOPIC500_MEMORY_DEDUP_V1 ===
+
+# === PATCH_T2RFP_REENTRANCE_GUARD_V1 ===
+# Root cause: T2RFP wraps _t2fer_run_final_estimate and redirects to _handle_in_progress.
+# _handle_in_progress → original handler → _handle_drive_file → T2FER calls
+# _t2fer_run_final_estimate again → T2RLG passes to its _ORIG which is T2RFP → loop.
+# T2RLG_ORIG_FN pointed to T2RFP (not WCG/original), so skip logic was ineffective.
+# Fix: per-task reentrancy set. Second call for same task_id → return False immediately.
+# T2FER _handle_drive_file gets False → falls to _T2FER_ORIG_HANDLE_DRIVE_FILE (normal path).
+import logging as _t2rrg_log
+import inspect as _t2rrg_inspect
+_T2RRG_LOG = _t2rrg_log.getLogger("task_worker")
+_T2RRG_ACTIVE = set()
+
+_T2RRG_ORIG = globals().get("_t2fer_run_final_estimate")
+if _T2RRG_ORIG and not getattr(_T2RRG_ORIG, "_t2rrg_wrapped", False):
+    async def _t2fer_run_final_estimate(conn, task, reason):
+        try:
+            task_id = str(_t2fer_get(task, "id", "") or "")
+        except Exception:
+            task_id = ""
+        if task_id and task_id in _T2RRG_ACTIVE:
+            _T2RRG_LOG.warning(
+                "T2RRG_REENTRANT_BLOCKED task=%s reason=%s — breaking loop", task_id, reason
+            )
+            return False
+        if task_id:
+            _T2RRG_ACTIVE.add(task_id)
+        try:
+            res = _T2RRG_ORIG(conn, task, reason)
+            if _t2rrg_inspect.isawaitable(res):
+                return await res
+            return res
+        finally:
+            _T2RRG_ACTIVE.discard(task_id)
+    _t2fer_run_final_estimate._t2rrg_wrapped = True
+    _T2RRG_LOG.info("PATCH_T2RFP_REENTRANCE_GUARD_V1 installed")
+else:
+    _T2RRG_LOG.warning("PATCH_T2RFP_REENTRANCE_GUARD_V1 skipped: _t2fer_run_final_estimate not found")
+# === END_PATCH_T2RFP_REENTRANCE_GUARD_V1 ===
+
+# === PATCH_T2P6E67_FRESH_ESTIMATE_BYPASS_V1 ===
+# When task_id is in _T2RRG_ACTIVE (inside T2RFP redirect to _handle_in_progress)
+# and task is a fresh estimate, P6E67 must not run and set WAITING_CLARIFICATION.
+# T2FER's _p6e67_try_merge wrapper already tries to intercept but gets False from T2RRG
+# (reentrant block), then falls through to original P6E67 which fires the terminal guard.
+# Fix: wrap _p6e67_try_merge at outermost layer — if fresh estimate + T2RRG active → return False.
+# P6E67's _handle_new/_handle_in_progress wrappers see False → continue to original handlers
+# which process the file through normal intake flow.
+import asyncio as _t2p6_asyncio
+_T2P6E67_ORIG = globals().get("_p6e67_try_merge")
+if _T2P6E67_ORIG and not getattr(_T2P6E67_ORIG, "_t2p6e_wrapped", False):
+    async def _p6e67_try_merge(conn, task, *args, **kwargs):
+        try:
+            _t2p6_task_id = str(_t2fer_get(task, "id", "") or "")
+            if _t2p6_task_id and _t2p6_task_id in _T2RRG_ACTIVE and _t2fer_is_fresh_estimate(task):
+                _T2RRG_LOG.info(
+                    "T2P6E67_BYPASS_FRESH_ESTIMATE task=%s — inside T2RFP redirect, skip P6E67",
+                    _t2p6_task_id,
+                )
+                return False
+        except Exception:
+            pass
+        res = _T2P6E67_ORIG(conn, task, *args, **kwargs)
+        if _t2p6_asyncio.iscoroutine(res):
+            return await res
+        return res
+    _p6e67_try_merge._t2p6e_wrapped = True
+    _T2RRG_LOG.info("PATCH_T2P6E67_FRESH_ESTIMATE_BYPASS_V1 installed")
+else:
+    _T2RRG_LOG.warning("PATCH_T2P6E67_FRESH_ESTIMATE_BYPASS_V1 skipped: _p6e67_try_merge not found")
+# === END_PATCH_T2P6E67_FRESH_ESTIMATE_BYPASS_V1 ===
+
+# === PATCH_WCPE_CLARIFIED_UNBLOCK_V1 ===
+# Bug: WCG_SKIP in error_message blocks task pick-up even after user replied (clarified:N in history).
+# Telegram_daemon sets IN_PROGRESS but doesn't clear error_message — task stays blocked by WCPE.
+# Fix: Allow pick-up when WCG_SKIP AND task has non-empty clarified: entry in task_history.
+import logging as _wcpe_ub_log_mod
+_WCPE_UB_LOG = _wcpe_ub_log_mod.getLogger("task_worker")
+_WCPE_UB_PREV = globals().get("_pick_next_task")
+if _WCPE_UB_PREV and not getattr(_WCPE_UB_PREV, "_wcpe_ub_wrapped", False):
+    def _pick_next_task_wcpe_ub(conn, chat_id=None):
+        try:
+            # Block WAITING_CLARIFICATION+WCG_SKIP (still waiting for reply).
+            # Allow IN_PROGRESS+WCG_SKIP — telegram_daemon set IN_PROGRESS on user reply
+            # but doesn't clear error_message, so without this fix the task is stuck forever.
+            where = [
+                "state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION')",
+                "NOT (state='WAITING_CLARIFICATION' AND COALESCE(error_message,'') LIKE 'WCG_SKIP%')",
+            ]
+            params = []
+            if chat_id:
+                where.insert(0, "chat_id=?")
+                params.append(str(chat_id))
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                f"SELECT * FROM tasks WHERE {' AND '.join(where)}"
+                " ORDER BY CASE state WHEN 'IN_PROGRESS' THEN 0 ELSE 1 END, created_at ASC LIMIT 1",
+                params,
+            ).fetchone()
+            conn.execute("COMMIT")
+            return row
+        except Exception:
+            return _WCPE_UB_PREV(conn, chat_id)
+    _pick_next_task_wcpe_ub._wcpe_ub_wrapped = True
+    _pick_next_task = _pick_next_task_wcpe_ub
+    globals()["_pick_next_task"] = _pick_next_task_wcpe_ub
+    _WCPE_UB_LOG.info("PATCH_WCPE_CLARIFIED_UNBLOCK_V1 installed")
+# === END_PATCH_WCPE_CLARIFIED_UNBLOCK_V1 ===
+
+# === PATCH_P6C_FULLTEXT_ESTIMATE_PREP_V1 ===
+# Bug: _p6c_meta_20260504 uses strict json.loads → fails when REVISION_CONTEXT appended.
+# Result: caption="" → estimate_raw only "\nЭтажей: 1" → no dims/material found → clarification loop.
+# Fix: partial JSON parse + include REVISION_CONTEXT voice texts + extract dims from filename.
+import logging as _p6cf_log_mod, re as _p6cf_re, json as _p6cf_json
+_P6CF_LOG = _p6cf_log_mod.getLogger("task_worker")
+
+def _p6cf_partial_meta(raw_input):
+    s = str(raw_input or "")[:50000]
+    try:
+        v = _p6cf_json.loads(s)
+        if isinstance(v, dict):
+            return v
+    except Exception:
+        pass
+    try:
+        m = _p6cf_re.match(r'(\{[^{}]*\})', s, _p6cf_re.DOTALL)
+        if m:
+            v = _p6cf_json.loads(m.group(1))
+            if isinstance(v, dict):
+                return v
+    except Exception:
+        pass
+    return {}
+
+def _p6cf_extract_voices(raw_input):
+    s = str(raw_input or "")
+    voices = _p6cf_re.findall(r'\[VOICE\]\s*(.+?)(?=\n---|\Z)', s, _p6cf_re.DOTALL)
+    return " ".join(v.strip() for v in voices)
+
+def _p6cf_dims_from_fn(fn):
+    if not fn:
+        return None
+    m = _p6cf_re.search(r'(\d+)\s*[xхXХ×*]\s*(\d+)', fn)
+    if m:
+        return m.group(1), m.group(2)
+    return None
+
+_P6CF_ORIG_PREP = globals().get("_p6c_prepare_topic2_raw_20260504")
+if _P6CF_ORIG_PREP and not getattr(_P6CF_ORIG_PREP, "_p6cf_wrapped", False):
+    def _p6c_prepare_topic2_raw_20260504(task_id, raw_input):
+        meta = _p6cf_partial_meta(raw_input)
+        caption = str(meta.get("caption") or meta.get("text") or "").strip()
+        fn = str(meta.get("file_name") or "").strip()
+        parts = [caption] if caption else []
+        voices = _p6cf_extract_voices(raw_input)
+        if voices:
+            parts.append(voices)
+        text = " ".join(parts).strip()
+        low = text.lower()
+        if fn and not _p6cf_re.search(r'\d+\s*(?:на|x|х|×|\*)\s*\d+', low):
+            dims = _p6cf_dims_from_fn(fn)
+            if dims:
+                text += f"\nРазмеры объекта: {dims[0]} на {dims[1]} м"
+                _P6CF_LOG.info("P6CF: dims from filename %s → %sx%s task=%s", fn, dims[0], dims[1], task_id)
+        if "этаж" not in text.lower():
+            text += "\nЭтажей: 1"
+        if "смет" not in text.lower():
+            text += "\nНужна полная смета"
+        _P6CF_LOG.info("P6CF: estimate_raw len=%d task=%s", len(text), task_id)
+        return text.strip()
+    _p6c_prepare_topic2_raw_20260504._p6cf_wrapped = True
+    globals()["_p6c_prepare_topic2_raw_20260504"] = _p6c_prepare_topic2_raw_20260504
+    _P6CF_LOG.info("PATCH_P6C_FULLTEXT_ESTIMATE_PREP_V1 installed")
+# === END_PATCH_P6C_FULLTEXT_ESTIMATE_PREP_V1 ===
 
 if __name__ == "__main__":
     asyncio.run(main())

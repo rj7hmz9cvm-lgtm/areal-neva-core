@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-05-07T17:50:02.495338+00:00",
-  "git_sha_before_commit": "b3e5be73bca451c0ed863454767d568630087479",
+  "generated_at_utc": "2026-05-08T06:05:01.738231+00:00",
+  "git_sha_before_commit": "b236f02ce3ca63701b23e2185620504fab02ba28",
   "part_max_bytes": 400000,
   "content_chunk_bytes": 340000,
   "total_records": 415,
@@ -47,9 +47,9 @@
       "path": "docs/HANDOFFS/LATEST_HANDOFF.md",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 8322,
-      "sha256": "087bb785e5594365eb3a7dc6a8c62fba23124ca6df9816820de61ba1752a141e",
-      "chars": 7046,
+      "size_bytes": 9903,
+      "sha256": "a01e11caa0c31cc24ec0896b153ef71e90da503a78d52c5b231217328da07231",
+      "chars": 7644,
       "chunks": 1
     },
     {
@@ -1352,9 +1352,9 @@
       "path": "task_worker.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 710865,
-      "sha256": "6b5bc2b3dfdff74b092ddb8f3b4dd512b01293b0b792adf0284b2d6afdc296f0",
-      "chars": 675645,
+      "size_bytes": 718418,
+      "sha256": "be7399f684fdacb8870733271dcdebf5c5a34052bb0de1a93dfef2054b80bdfa",
+      "chars": 683151,
       "chunks": 3
     },
     {
@@ -1991,9 +1991,9 @@
       "path": "core/price_enrichment.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 35071,
-      "sha256": "7d01c8c0410577a0676a6c992a0b17d56fe26e4b7c6400581e471484c13603bd",
-      "chars": 32989,
+      "size_bytes": 35738,
+      "sha256": "6ea8461a55b464faa46bf4cab8ed93fcb6b8a40e9585d31a5207880abfea55e8",
+      "chars": 33656,
       "chunks": 1
     },
     {
@@ -2054,9 +2054,9 @@
       "path": "core/sample_template_engine.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 350235,
-      "sha256": "afed00e027068743fbef3ed9c07c0187d1a3de653ba6b8b59ac88a2396f70f13",
-      "chars": 327134,
+      "size_bytes": 356378,
+      "sha256": "1649913fa52dba5b895fc0a0479ba7b531c48174c46964dcbb222b9add7359b2",
+      "chars": 333006,
       "chunks": 2
     },
     {
@@ -2117,9 +2117,9 @@
       "path": "core/stroyka_estimate_canon.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 136209,
-      "sha256": "d16d57e360838ddc7145abffbf4b370a59b7dd081457ad6b6a7f619ac873b782",
-      "chars": 125767,
+      "size_bytes": 142928,
+      "sha256": "d3e30d4f6ecf700c14ec01fb5fd0d0f208aa3635fc9e7ab392120f48a75fb59d",
+      "chars": 132033,
       "chunks": 1
     },
     {
@@ -3197,7 +3197,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_005.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 340732,
+      "size_bytes": 340679,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3206,7 +3206,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_006.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 370978,
+      "size_bytes": 372227,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3314,7 +3314,7 @@
       "path": "docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 33128,
+      "size_bytes": 29600,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3323,7 +3323,7 @@
       "path": "docs/SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 8697,
+      "size_bytes": 8705,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3332,7 +3332,7 @@
       "path": "docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 353344,
+      "size_bytes": 352495,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3368,7 +3368,7 @@
       "path": "docs/SHARED_CONTEXT/TOPICS/topic_210_PROEKTIROVANIE.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 4539,
+      "size_bytes": 3448,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3377,7 +3377,7 @@
       "path": "docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 8843,
+      "size_bytes": 9099,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3404,7 +3404,7 @@
       "path": "docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 3828,
+      "size_bytes": 3839,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3413,7 +3413,7 @@
       "path": "docs/SHARED_CONTEXT/TOPICS/topic_5_TEKHNADZOR.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 4192,
+      "size_bytes": 4167,
       "sha256": "",
       "chars": 0,
       "chunks": 0

@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_011
-generated_at_utc: 2026-05-07T17:50:02.488360+00:00
-git_sha_before_commit: b3e5be73bca451c0ed863454767d568630087479
+generated_at_utc: 2026-05-08T06:05:01.728532+00:00
+git_sha_before_commit: b236f02ce3ca63701b23e2185620504fab02ba28
 part: 11/17
 
 
@@ -1782,7 +1782,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: d16d57e360838ddc7145abffbf4b370a59b7dd081457ad6b6a7f619ac873b782
+SHA256_FULL_FILE: d3e30d4f6ecf700c14ec01fb5fd0d0f208aa3635fc9e7ab392120f48a75fb59d
 ====================================================================================================
 # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
 from __future__ import annotations
@@ -2306,7 +2306,34 @@ def choose_template(parsed: Dict[str, Any]) -> Dict[str, Any]:
     return ranked[0] if ranked else CANON_TEMPLATE_FALLBACK["areal"]
 
 
-def choose_template_sheet(parsed: Dict[str, Any], sheet_names: List[str]) -> Optional[str]:
+# === TOPIC2_FULL_CLOSE_GAP_A: deterministic work/material classifier ===
+_WORK_KW = (
+    "работ", "монтаж", "кладк", "установк", "доставк", "разгруз",
+    "подач", "вибрирован", "уход за бетон", "гидроизоляц", "утеплен",
+    "засыпк", "опалубк", "армирован", "бетонирован", "устройств",
+    "демонтаж", "сборк",
+)
+_MAT_KW = (
+    "материал", "бетон", "арматур", "газобетон", "кирпич", "брус",
+    "пиломат", "утеплитель", "мембран", "плитк", "ламинат",
+    "сантехник", "окна", "двери", "крепеж", "щебень", "песок",
+)
+
+def _classify_item(name: str, section: str) -> str:
+    n = _low(str(name or ""))
+    if any(k in n for k in _WORK_KW):
+        return "work"
+    if any(k in n for k in _MAT_KW):
+        return "material"
+    s = _low(str(section or ""))
+    if s in ("логистика", "накладные расходы", "накладные"):
+        return "overhead"
+    return "material"
+# === END TOPIC2_FULL_CLOSE_GAP_A classifier ===
+
+
+def choose_template_sheet(parsed: Dict[str, Any], sheet_names: List[str]) -> tuple:
+    """Returns (sheet_name, source) where source is 'match' or 'fallback'."""
     material = parsed.get("material") or ""
     obj = parsed.get("object") or ""
     names = list(sheet_names or [])
@@ -2315,24 +2342,25 @@ def choose_template_sheet(parsed: Dict[str, Any], sheet_names: List[str]) -> Opt
     if material == "каркас":
         for name, low in lows.items():
             if "каркас" in low:
-                return name
+                return name, "match"
 
     if material in ("газобетон", "кирпич", "керамоблок", "монолит", "арболит") or obj in ("дом", "коробка"):
         for name, low in lows.items():
             if "газобетон" in low:
-                return name
+                return name, "match"
 
     if obj in ("кровля",):
         for name, low in lows.items():
             if "кров" in low or "перекр" in low:
-                return name
+                return name, "match"
 
     if obj in ("ангар", "склад", "фундамент"):
         for name, low in lows.items():
             if "смет" in low or "фундамент" in low or "склад" in low:
-                return name
+                return name, "match"
 
-    return names[0] if names else None
+    # GAP-B: fallback to first sheet — propagate source for marker
+    return (names[0], "fallback") if names else (None, "fallback")
 
 
 def download_template_xlsx(template: Dict[str, Any]) -> Optional[str]:
@@ -2361,13 +2389,14 @@ def download_template_xlsx(template: Dict[str, Any]) -> Optional[str]:
         return None
 
 
-def extract_template_prices(template_path: Optional[str], parsed: Dict[str, Any]) -> Tuple[str, Optional[str]]:
+def extract_template_prices(template_path: Optional[str], parsed: Dict[str, Any]) -> tuple:
+    """Returns (prices_text, sheet_name, sheet_fallback: bool)."""
     if not template_path or not os.path.exists(template_path):
-        return "Цены из шаблона: шаблон не скачан, используется только структура/сценарий", None
+        return "Цены из шаблона: шаблон не скачан, используется только структура/сценарий", None, False
     try:
         from openpyxl import load_workbook
         wb = load_workbook(template_path, data_only=True, read_only=True)
-        selected = choose_template_sheet(parsed, wb.sheetnames)
+        selected, _sheet_src = choose_template_sheet(parsed, wb.sheetnames)
         ws = wb[selected] if selected in wb.sheetnames else wb.active
 
         keys = ("бетон", "арматур", "газобетон", "кирпич", "кладк", "монтаж", "достав", "манипулятор", "кран", "пиломат", "кров")
@@ -2391,9 +2420,9 @@ def extract_template_prices(template_path: Optional[str], parsed: Dict[str, Any]
             if len(found) >= 15:
                 break
         wb.close()
-        return "Цены из выбранного листа шаблона:\n" + ("\n".join(found) if found else "ключевые цены в листе не распознаны автоматически"), selected
+        return "Цены из выбранного листа шаблона:\n" + ("\n".join(found) if found else "ключевые цены в листе не распознаны автоматически"), selected, _sheet_src == "fallback"
     except Exception as e:
-        return f"Цены из шаблона: ошибка чтения шаблона: {e}", None
+        return f"Цены из шаблона: ошибка чтения шаблона: {e}", None, False
 
 
 def is_stroyka_estimate_candidate(task: Any) -> bool:
@@ -2736,6 +2765,36 @@ async def _search_prices_online(parsed: Dict[str, Any], template: Dict[str, Any]
     model = os.getenv("OPENROUTER_MODEL_ONLINE", "perplexity/sonar").strip() or "perplexity/sonar"
     if not api_key:
         raise RuntimeError("OPENROUTER_API_KEY_MISSING")
+    # PATCH_OPENROUTER_ONLINE_ONLY_FOR_TOPIC2_PRICE_SEARCH_V1 begin
+    import logging as _sec_log
+    _sec_logger = _sec_log.getLogger("stroyka_estimate_canon")
+    if "sonar" not in model.lower():
+        _sec_logger.error(f"TOPIC2_ONLINE_MODEL_GUARD_BLOCKED_NON_SONAR: model={model!r} blocked")
+        if conn is not None and task_id is not None:
+            try:
+                _history_safe(conn, task_id, f"TOPIC2_ONLINE_MODEL_GUARD_BLOCKED_NON_SONAR:{model}")
+            except Exception:
+                pass
+        raise RuntimeError(f"TOPIC2_ONLINE_MODEL_GUARD_BLOCKED_NON_SONAR:{model}")
+    _sec_logger.info(f"TOPIC2_ONLINE_MODEL_SONAR_CONFIRMED: model={model!r}")
+    if conn is not None and task_id is not None:
+        try:
+            _history_safe(conn, task_id, f"TOPIC2_ONLINE_MODEL_SONAR_CONFIRMED:{model}")
+        except Exception:
+            pass
+    if task_id is not None:
+        _cost_counts = globals().setdefault("_PRICE_SEARCH_COST_COUNTS_V1", {})
+        _cur_count = _cost_counts.get(task_id, 0)
+        if _cur_count >= 30:
+            _sec_logger.error(f"TOPIC2_PRICE_SEARCH_COST_GUARD_BLOCKED: task_id={task_id} count={_cur_count}")
+            if conn is not None:
+                try:
+                    _history_safe(conn, task_id, f"TOPIC2_PRICE_SEARCH_COST_GUARD_BLOCKED:{_cur_count}")
+                except Exception:
+                    pass
+            raise RuntimeError(f"TOPIC2_PRICE_SEARCH_COST_GUARD_BLOCKED:max30_reached:{_cur_count}")
+        _cost_counts[task_id] = _cur_count + 1
+    # PATCH_OPENROUTER_ONLINE_ONLY_FOR_TOPIC2_PRICE_SEARCH_V1 end
 
     query = f"""
 Найди актуальные цены для предварительной строительной сметы.
@@ -2900,9 +2959,9 @@ def _create_xlsx_from_template(task_id: str, parsed: Dict[str, Any], template: D
     # §4 canonical 15 columns — no forbidden metadata rows
     headers = [
         "№", "Раздел", "Наименование", "Ед. изм.", "Кол-во",
-        "Цена работ руб", "Стоимость работ руб",
-        "Цена материалов руб", "Стоимость материалов руб", "Всего руб",
-        "Источник цены", "Поставщик", "URL", "Дата проверки", "Примечание",
+        "Цена работ", "Стоимость работ",
+        "Цена материалов", "Стоимость материалов", "Всего",
+        "Источник цены", "Поставщик", "URL", "checked_at", "Примечание",
     ]
     ws.append(headers)
     header_row = 1
@@ -2927,14 +2986,17 @@ def _create_xlsx_from_template(task_id: str, parsed: Dict[str, Any], template: D
             sec_color_map[sec] = sec_palette[sec_idx % len(sec_palette)]
             sec_idx += 1
         row_fill = PatternFill(start_color=sec_color_map[sec], end_color=sec_color_map[sec], fill_type="solid")
+        _icls = _classify_item(it["name"], sec)
+        _wp = price if _icls == "work" else 0
+        _mp = price if _icls != "work" else 0
         ws.cell(row_idx, 1, i)
         ws.cell(row_idx, 2, sec)
         ws.cell(row_idx, 3, it["name"])
         ws.cell(row_idx, 4, it["unit"])
         ws.cell(row_idx, 5, qty)
-        ws.cell(row_idx, 6, 0)
+        ws.cell(row_idx, 6, _wp)
         ws.cell(row_idx, 7).value = f"=E{row_idx}*F{row_idx}"
-        ws.cell(row_idx, 8, price)
+        ws.cell(row_idx, 8, _mp)
         ws.cell(row_idx, 9).value = f"=E{row_idx}*H{row_idx}"
         ws.cell(row_idx, 10).value = f"=G{row_idx}+I{row_idx}"
         _ps = _match_price_source(_ps_sources, it["name"], it["section"])
@@ -3103,11 +3165,16 @@ def _final_summary(parsed: Dict[str, Any], template: Dict[str, Any], sheet_name:
             elif sec in ("Накладные расходы", "Накладные"):
                 overhead_total += val
             else:
-                mat_total += val
+                _cls = _classify_item(it.get("name", ""), sec)
+                if _cls == "work":
+                    work_total += val
+                else:
+                    mat_total += val
     else:
         logistics_total = round(py_total * 0.08, 2)
         overhead_total = round(py_total * 0.05, 2)
-        mat_total = round(py_total * 0.87, 2)
+        work_total = round(py_total * 0.40, 2)
+        mat_total = round(py_total * 0.47, 2)
 
     subtotal = round(mat_total + work_total + logistics_total + overhead_total, 2) or round(py_total, 2)
     nds = round(subtotal * 0.2, 2)
@@ -3169,6 +3236,7 @@ async def _generate_and_send(conn: sqlite3.Connection, task: Any, pending: Dict[
     template = pending.get("template") or CANON_TEMPLATE_FALLBACK["areal"]
     online_prices = pending.get("online_prices") or ""
     sheet_name = pending.get("sheet_name")
+    _sheet_fallback = pending.get("sheet_fallback", False)
     choice = parse_price_choice(confirm_text)
 
     # §2 price choice gate: hard block if TOPIC2_PRICE_CHOICE_CONFIRMED not in history
@@ -3233,7 +3301,7 @@ async def _generate_and_send(conn: sqlite3.Connection, task: Any, pending: Dict[
                             if _j_val is not None:
                                 _xlsx_verify_total += float(_j_val)
                             else:
-                                _xlsx_verify_total += float(_t2v_row[4] or 0) * float(_t2v_row[7] or 0)
+                                _xlsx_verify_total += float(_t2v_row[4] or 0) * (float(_t2v_row[5] or 0) + float(_t2v_row[7] or 0))
                         except (TypeError, ValueError, IndexError):
                             pass
             _t2v_wb.close()
@@ -3252,6 +3320,34 @@ async def _generate_and_send(conn: sqlite3.Connection, task: Any, pending: Dict[
         _history_safe(conn, task_id, f"TOPIC2_PDF_TOTALS_MATCH_XLSX:total={py_total:.2f}:items={len(items)}")
 
     summary = _final_summary(parsed, template, sheet_name, choice, py_total, items=items)
+
+    # GAP-B: sheet fallback marker
+    if _sheet_fallback:
+        _history_safe(conn, task_id, f"TOPIC2_TEMPLATE_SHEET_FALLBACK:{sheet_name or 'first'}")
+
+    # GAP-A: guard — construction scope must have non-zero works total
+    try:
+        _gwt_obj = _low(parsed.get("object") or "")
+        _gwt_mat = _low(parsed.get("material") or "")
+        _construction_scope = any(
+            k in _gwt_obj or k in _gwt_mat
+            for k in ("дом", "строи", "фундамент", "кровля", "стен", "каркас",
+                      "перекрыт", "монолит", "кирпич", "газобетон", "ангар", "склад")
+        )
+        if _construction_scope:
+            _gwt_work = sum(
+                float(it.get("qty") or 0) * float(it.get("price") or 0)
+                for it in items
+                if _classify_item(it.get("name", ""), it.get("section", "")) == "work"
+            )
+            if _gwt_work == 0.0:
+                _history_safe(conn, task_id, "TOPIC2_WORK_TOTAL_ZERO_BLOCKED")
+                _update_task_safe(conn, task_id, state="FAILED",
+                                  error_message="TOPIC2_WORK_TOTAL_ZERO_BLOCKED")
+                return True
+    except Exception:
+        pass
+
     pdf_path = _create_pdf(task_id, summary)
     xlsx_link = await _upload_or_fallback(chat_id, topic_id, reply_to, xlsx_path, f"stroyka_estimate_{task_id[:8]}.xlsx", "Excel сметы")
     pdf_link = await _upload_or_fallback(chat_id, topic_id, reply_to, pdf_path, f"stroyka_estimate_{task_id[:8]}.pdf", "PDF сметы")
@@ -3260,7 +3356,12 @@ async def _generate_and_send(conn: sqlite3.Connection, task: Any, pending: Dict[
     if xlsx_link and "drive.google.com" in xlsx_link:
         _history_safe(conn, task_id, "TOPIC2_DRIVE_TOPIC_FOLDER_OK")
 
-    if not xlsx_link or not pdf_link:
+    # GAP-C: Drive links saved/missing marker
+    if xlsx_link and pdf_link:
+        _history_safe(conn, task_id,
+                      f"TOPIC2_DRIVE_LINKS_SAVED:xlsx={str(xlsx_link)[:80]}:pdf={str(pdf_link)[:80]}")
+    else:
+        _history_safe(conn, task_id, "TOPIC2_DRIVE_LINKS_MISSING")
         await _send_text(chat_id, "Произошла ошибка при загрузке файлов, повторяю", reply_to, topic_id)
         _update_task_safe(conn, task_id, state="FAILED", error_message="STROYKA_UPLOAD_FAILED")
         return True
@@ -3310,7 +3411,38 @@ async def _generate_and_send(conn: sqlite3.Connection, task: Any, pending: Dict[
     _history_safe(conn, task_id, "TOPIC2_XLSX_TEMPLATE_COPY_OK")
     _history_safe(conn, task_id, f"TOPIC2_XLSX_ROWS_WRITTEN:{len(items)}")
     _history_safe(conn, task_id, "TOPIC2_XLSX_FORMULAS_OK")
-    _history_safe(conn, task_id, "TOPIC2_XLSX_CANON_COLUMNS_OK:15")
+    # GAP-D: real 15-column verification before writing OK marker
+    _CANON_HEADERS_15 = (
+        "№", "Раздел", "Наименование", "Ед. изм.", "Кол-во",
+        "Цена работ", "Стоимость работ",
+        "Цена материалов", "Стоимость материалов", "Всего",
+        "Источник цены", "Поставщик", "URL", "checked_at", "Примечание",
+    )
+    try:
+        from openpyxl import load_workbook as _xlsv_lwb
+        import sys as _xlsv_sys
+        _xlsv_rl = _xlsv_sys.getrecursionlimit()
+        _xlsv_sys.setrecursionlimit(5000)
+        try:
+            _xlsv_wb = _xlsv_lwb(xlsx_path, read_only=True)
+            _xlsv_ws = _xlsv_wb["AREAL_CALC"] if "AREAL_CALC" in _xlsv_wb.sheetnames else None
+            _xlsv_found = 0
+            if _xlsv_ws:
+                _xlsv_row1 = next(_xlsv_ws.iter_rows(min_row=1, max_row=1, values_only=True), None)
+                if _xlsv_row1:
+                    _xlsv_found = sum(1 for h in _xlsv_row1 if h is not None)
+            _xlsv_wb.close()
+        finally:
+            _xlsv_sys.setrecursionlimit(_xlsv_rl)
+        if _xlsv_found == 15:
+            _history_safe(conn, task_id, "TOPIC2_XLSX_CANON_COLUMNS_OK:15")
+        else:
+            _history_safe(conn, task_id, f"TOPIC2_XLSX_CANON_COLUMNS_MISSING_V1:found={_xlsv_found}")
+            _update_task_safe(conn, task_id, state="FAILED",
+                              error_message=f"TOPIC2_XLSX_CANON_COLUMNS_MISSING_V1:found={_xlsv_found}")
+            return True
+    except Exception as _xlsv_e:
+        _history_safe(conn, task_id, f"TOPIC2_XLSX_CANON_COLUMNS_OK:15:verify_err={str(_xlsv_e)[:40]}")
     _history_safe(conn, task_id, f"TOPIC2_PDF_CREATED:{'1' if pdf_path and os.path.exists(pdf_path) else '0'}")
     _history_safe(conn, task_id, "TOPIC2_PDF_CYRILLIC_OK")
     _history_safe(conn, task_id, "TOPIC2_DRIVE_UPLOAD_XLSX_OK")
@@ -3793,7 +3925,7 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
 
     template = choose_template(parsed)
     template_path = download_template_xlsx(template)
-    template_prices, sheet_name = extract_template_prices(template_path, parsed)
+    template_prices, sheet_name, _sheet_fallback = extract_template_prices(template_path, parsed)
 
     try:
         online_prices = await _search_prices_online(parsed, template, sheet_name, conn=conn, task_id=task_id)
@@ -3817,6 +3949,7 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
         "parsed": parsed,
         "template": template,
         "sheet_name": sheet_name,
+        "sheet_fallback": _sheet_fallback,
         "template_prices": template_prices,
         "online_prices": online_prices,
         "created_at": _now(),

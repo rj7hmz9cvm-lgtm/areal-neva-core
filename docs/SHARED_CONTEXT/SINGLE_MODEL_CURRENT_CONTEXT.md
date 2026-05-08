@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-05-07T17:50:03.060529+00:00
-GIT_SHA: b3e5be73bca451c0ed863454767d568630087479
+GENERATED_AT: 2026-05-08T06:05:02.286659+00:00
+GIT_SHA: b236f02ce3ca63701b23e2185620504fab02ba28
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -16,9 +16,9 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 ## GLOBAL_STATUS
 | topic | name | status | active | failed_24h |
 |-------|------|--------|--------|------------|
-| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 0 | 3 |
+| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 1 | 1 |
 | 5 | TEKHNADZOR | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
-| 210 | PROEKTIROVANIE | INSTALLED_NOT_VERIFIED | 0 | 1 |
+| 210 | PROEKTIROVANIE | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
 | 500 | VEB_POISK | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
 
 ## OPEN_BLOCKERS_FROM_NOT_CLOSED
@@ -70,17 +70,22 @@ DATE_UNKNOWN
 ## ACTIVE_OR_RECENT_TOPICS
 ### topic_2 STROYKA
 role: Сметы
-active: 0
-failed_24h: 3
+active: 1
+failed_24h: 1
 commits_last_7d: 30
 recent_commits:
-- 48f9858|docs(handoff): update latest handoff after topic2 and aggregator guard
-- c0300fb|fix(topic2): close 4 code gaps — enrichment markers, cyrillic marker, function-object bug, FCG bypass
-- 2ece9eb|fix(topic2): close 3 live bugs — poison loop terminate, recursion restore, FCG done bypass
-markers_missing: 3
+- b236f02|fix(topic2): session 08.05 — P6C fulltext prep, P3CHK append fix, P2 distance skip, WCPE unblock
+- e3a016c|PATCH_OPENROUTER_ONLINE_ONLY_FOR_TOPIC2_PRICE_SEARCH_V1: hard-enforce Sonar for all price/search calls
+- 4cfd9b6|fix(topic2): close P6E67 loop storm + natural reply message
+markers_missing: 13
+- TOPIC2_ESTIMATE_SESSION_CREATED
+- TOPIC2_CONTEXT_READY
 - TOPIC2_TEMPLATE_SELECTED
 - TOPIC2_PRICE_ENRICHMENT_DONE
 - TOPIC2_LOGISTICS_CONFIRMED
+- TOPIC2_XLSX_CREATED
+- TOPIC2_PDF_CREATED
+- TOPIC2_PDF_CYRILLIC_OK
 last_failed:
 - a7b2879e | STALE_TIMEOUT
 - 893436d4 | INVALID_PUBLIC_RESULT
@@ -89,7 +94,7 @@ blockers:
 - - topic_2 не тянет проектные образцы topic_210
 - - topic_210 не тянет сметные артефакты как результат
 - - WRONG_FILES_SHOWN_IN_TOPIC_2
-NEXT_ACTION: live-test / close missing markers: 3
+NEXT_ACTION: live-test / close missing markers: 13
 
 ### topic_5 TEKHNADZOR
 role: Технадзор
@@ -111,7 +116,7 @@ NEXT_ACTION: investigate latest failed: STALE_NEW_30MIN
 ### topic_210 PROEKTIROVANIE
 role: КЖ КМ
 active: 0
-failed_24h: 1
+failed_24h: 0
 commits_last_7d: 4
 recent_commits:
 - 9420d6a|fix(topic2): stroyka meta-confirm guard + reply chain + xlsx 15 cols + topic210 meta guard

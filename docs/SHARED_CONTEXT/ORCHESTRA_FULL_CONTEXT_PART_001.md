@@ -1,20 +1,18 @@
 # ORCHESTRA_FULL_CONTEXT_PART_001
-generated_at_utc: 2026-05-07T17:50:02.479527+00:00
-git_sha_before_commit: b3e5be73bca451c0ed863454767d568630087479
+generated_at_utc: 2026-05-08T06:05:01.717903+00:00
+git_sha_before_commit: b236f02ce3ca63701b23e2185620504fab02ba28
 part: 1/17
 
 
 ====================================================================================================
 BEGIN_FILE: docs/HANDOFFS/LATEST_HANDOFF.md
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 087bb785e5594365eb3a7dc6a8c62fba23124ca6df9816820de61ba1752a141e
+SHA256_FULL_FILE: a01e11caa0c31cc24ec0896b153ef71e90da503a78d52c5b231217328da07231
 ====================================================================================================
-# LATEST HANDOFF — 2026-05-07 ~20:00 MSK
-**HEAD**: `0d6a9a4` — fix(memory): ARCHIVE_DUPLICATE_GUARD_V1 + topic500 search pollution guard  
-**Предыдущий HEAD**: `0c15037`  
+# LATEST HANDOFF — 2026-05-08 ~09:00 MSK
+**HEAD**: `e3a016c` + uncommitted patches below  
 **Воркер**: active  
-**GitHub**: pushed (0d6a9a4 visible)  
-**Детальный handoff**: `HANDOFF_20260507_V4_GAP_CLOSE.md`
+**GitHub**: нужен push (см. ниже)
 
 ---
 
@@ -22,149 +20,174 @@ SHA256_FULL_FILE: 087bb785e5594365eb3a7dc6a8c62fba23124ca6df9816820de61ba1752a14
 
 | Топик | Состояние | Примечание |
 |-------|-----------|------------|
-| topic_2 СТРОИКА | INSTALLED (не VERIFIED) | V5 applied, live-replay pending |
+| topic_2 СТРОИКА | INSTALLED (не VERIFIED) | 5 патчей session 08.05, live-run d72028da застрял |
 | topic_5 ТЕХНАДЗОР | Stable | без изменений |
-| topic_500 ПОИСК | INSTALLED (не VERIFIED) | 9 режимов adaptive output, procurement дефолт |
+| topic_500 ПОИСК | INSTALLED (не VERIFIED) | 9 режимов adaptive output |
 | topic_210 PROJECT | Active | без изменений |
 
 ---
 
-## ЧТО ПРИМЕНЕНО В V5 — `168ce5e`
+## СЕССИЯ 08.05.2026 — ЧТО НАШЛИ И ЧТО СДЕЛАЛИ
 
-### PATCH_TOPIC2_FINAL_GAPS_V5 — 4 body edits
+### ПРОБЛЕМА 1: P3CHK заменяет raw_input → бесконечный вопрос
 
-| # | Файл | Где | Что |
-|---|------|-----|-----|
-| 1 | stroyka_estimate_canon.py | `_search_prices_online` | conn/task_id params; per-item markers: TOPIC2_PRICE_MATERIAL_SEARCH_STARTED / TOPIC2_PRICE_WORK_SEARCH_STARTED / TOPIC2_PRICE_SOURCE_FOUND / TOPIC2_PRICE_SOURCE_MISSING |
-| 2 | stroyka_estimate_canon.py | `maybe_handle_stroyka_estimate` PDF/OCR block | Alias markers: TOPIC2_PDF_SPEC_EXTRACTOR_STARTED, TOPIC2_PDF_SPEC_ROWS_EXTRACTED, TOPIC2_OCR_TABLE_STARTED, TOPIC2_OCR_TABLE_ROWS_EXTRACTED, TOPIC2_MULTIFILE_PROJECT_CONTEXT_STARTED/FILE_ADDED/READY |
-| 3 | stroyka_estimate_canon.py | `_is_bad_estimate_result` + AC gate | 11 new forbidden phrases + regex позиций:1 + /root/ /tmp/ revision_context traceback engine: manifest:; AC gate bad_result check → FAILED |
-| 4 | stroyka_estimate_canon.py | `_generate_and_send` totals block | Real openpyxl read-back: TOPIC2_PDF_TOTALS_MATCH_XLSX:xlsx=X:pdf=Y; MISMATCH → FAILED + user message |
+**Симптом**: задача d72028da спрашивает "Уточни этажность" бесконечно  
+**Корень**: `PATCH_P3PCG_CLARIFIED_HISTORY_CHECK_V1` (P3CHK) инжектировал `raw_input = "средние"` вместо append → P3E парсил только "средние", не видел ни размеров, ни материала  
+**Патч**: `PATCH_P3CHK_PRICE_APPEND_FIX_V2` (sample_template_engine.py append)  
+- Вместо `raw_input = clarified` → `raw_input = raw_s + "\nЦены: " + clarified`  
+- Теперь P3E получает полный текст ТЗ + цену как суффикс
+
+### ПРОБЛЕМА 2: P6C не парсит JSON с REVISION_CONTEXT
+
+**Симптом**: для задачи с PDF-файлом estimate_raw = только "\nЭтажей: 1"  
+**Корень**: `_p6c_meta_20260504(raw_input)` использует строгий `json.loads` — FAIL когда в raw_input после JSON идёт `---REVISION_CONTEXT`. caption="" → вся информация теряется  
+**Патч**: `PATCH_P6C_FULLTEXT_ESTIMATE_PREP_V1` (task_worker.py append)  
+- Частичный JSON parse (первый `{...}` блок через regex) → caption извлекается  
+- Голосовые тексты из `[VOICE]` блоков добавляются в estimate_raw  
+- Размеры из filename ("8х12.pdf" → "Размеры объекта: 8 на 12 м")  
+- estimate_raw теперь 618 символов с реальным содержимым
+
+### ПРОБЛЕМА 3: "Этажей: 1" не парсится регexpом
+
+**Симптом**: P6CF добавляет "Этажей: 1" → `_p2_floors()` всё равно None → "Уточни этажность"  
+**Корень**: regex `(\d+)\s*(?:этаж|этажа|этажей)` ищет цифру ПЕРЕД словом. "Этажей: 1" — цифра ПОСЛЕ → нет матча  
+**НЕ ЗАКРЫТО**: Нужен P6CF_V2, меняющий `"\nЭтажей: 1"` → `"\n1 этаж"` (матчится regex). Либо добавить дополнительную проверку в `_p2_floors`
+
+### ПРОБЛЕМА 4: _p2_missing спрашивает город/км
+
+**Симптом**: После фикса размеров и этажей — следующий вопрос "Уточни город или удалённость объекта в км"  
+**Корень**: `_p2_missing` проверяет distance_km, для drive_file задач пользователь его не указывает  
+**Патч**: `PATCH_P2_MISSING_SKIP_DISTANCE_V1` (sample_template_engine.py append)  
+- Убирает проверку distance_km из `_p2_missing`  
+- В расчёте `max(float(p["distance_km"] or 0), 1)` — None безопасен  
+**Статус**: INSTALLED, НЕ VERIFIED (логирование не подтверждено)
+
+### ПРОБЛЕМА 5: PDF содержимое не читается (ГЛАВНАЯ НЕ ЗАКРЫТАЯ)
+
+**Симптом**: `TOPIC2_PDF_SPEC_EXTRACTOR_STARTED` никогда не появляется в истории d72028da  
+**Корень**: P6C route вызывает `handle_topic2_one_big_formula_pipeline_v1` с текстом из caption/filename, НЕ читает сам PDF через `maybe_handle_stroyka_estimate`  
+**Правильное решение**: P6C должен скачать PDF из Drive → передать в `maybe_handle_stroyka_estimate` → тот извлекает текст (pdfplumber/OCR) → использует реальное содержимое  
+**НЕ ЗАКРЫТО**: требует интеграции Drive download + maybe_handle_stroyka_estimate в P6C route
+
+### ПРОБЛЕМА 6: WCPE блокировал задачи после ответа пользователя
+
+**Симптом**: telegram_daemon ставит state=IN_PROGRESS, но error_message=WCG_SKIP не очищает → WCPE фильтр блокировал задачу навсегда  
+**Патч**: `PATCH_WCPE_CLARIFIED_UNBLOCK_V1` (task_worker.py append)  
+- Блокирует только WAITING_CLARIFICATION+WCG_SKIP  
+- Пропускает IN_PROGRESS+WCG_SKIP (пользователь ответил)  
+**Статус**: INSTALLED, работает
 
 ---
 
-## ПОЛНАЯ ПОСЛЕДОВАТЕЛЬНОСТЬ МАРКЕРОВ (верификация topic_2 после V5)
+## ПАТЧИ ТЕКУЩЕЙ СЕССИИ (08.05.2026)
 
+### В task_worker.py (appended):
 ```
-TOPIC2_CANONICAL_PHOTO_ROUTE_FIRST:attempting          # если фото
-TOPIC2_CANONICAL_PHOTO_ROUTE_FIRST:handled             # или fallback_to_p6e2
-TOPIC2_PDF_SPEC_EXTRACTOR_STARTED                      # если PDF
-TOPIC2_PDF_SPEC_EXTRACTED:<N>_rows
-TOPIC2_PDF_SPEC_ROWS_EXTRACTED:<N>
-TOPIC2_OCR_TABLE_STARTED                               # если фото с таблицей
-TOPIC2_OCR_TABLE_EXTRACTED:<N>_rows
-TOPIC2_OCR_TABLE_ROWS_EXTRACTED:<N>
-TOPIC2_MULTIFILE_PROJECT_CONTEXT_STARTED               # если >1 файл
-TOPIC2_MULTIFILE_PROJECT_CONTEXT_FILE_ADDED:<name>
-TOPIC2_MULTIFILE_PROJECT_CONTEXT_READY
+PATCH_WCPE_CLARIFIED_UNBLOCK_V1          — пик-фильтр: разрешить IN_PROGRESS+WCG_SKIP
+PATCH_P6C_FULLTEXT_ESTIMATE_PREP_V1      — partial JSON + REVISION_CONTEXT voices + filename dims
+```
+
+### В core/sample_template_engine.py (appended):
+```
+PATCH_P3PCG_CLARIFIED_HISTORY_CHECK_V1  — check clarified:N in history (старый патч)
+PATCH_P3CHK_PRICE_APPEND_FIX_V2         — append price к raw_s вместо replace
+PATCH_P2_MISSING_SKIP_DISTANCE_V1       — убрать вопрос о расстоянии
+```
+
+---
+
+## ЧТО НЕ ЗАКРЫТО (ПРИОРИТЕТ)
+
+### P1 — КРИТИЧНО: PDF не читается
+Задача d72028da имеет PDF "8х12.pdf" с планом дома. Система ДОЛЖНА:
+1. Скачать PDF из Drive по `file_id = "1-isQhm067W2LDv2Bgm5ewbfyVm2B8QhV"`
+2. Запустить `maybe_handle_stroyka_estimate` (stroyka_estimate_canon.py) — там есть PDF OCR
+3. Маркеры: `TOPIC2_PDF_SPEC_EXTRACTOR_STARTED` → `TOPIC2_PDF_SPEC_ROWS_EXTRACTED`
+4. Использовать извлечённый текст для расчёта — без дополнительных вопросов
+
+**Где это делается**: `_handle_drive_file` → скачивает PDF → затем нужно вызвать `maybe_handle_stroyka_estimate` с `file_path=local_path`
+
+### P2 — НЕ ЗАКРЫТО: "Этажей: 1" → нужен "1 этаж"
+Добавить в task_worker.py append:
+```python
+# P6CF_V2: fix floor format
+_P6CF2_ORIG = globals().get("_p6c_prepare_topic2_raw_20260504")
+if _P6CF2_ORIG and not getattr(_P6CF2_ORIG, "_p6cf2_wrapped", False):
+    def _p6c_prepare_topic2_raw_20260504(task_id, raw_input):
+        text = _P6CF2_ORIG(task_id, raw_input)
+        return text.replace("Этажей: 1", "1 этаж")
+    _p6c_prepare_topic2_raw_20260504._p6cf2_wrapped = True
+    globals()["_p6c_prepare_topic2_raw_20260504"] = _p6c_prepare_topic2_raw_20260504
+```
+
+### P3 — НЕ ЗАКРЫТО: Voice в reply не транскрибируется
+telegram_daemon.py (FORBIDDEN) обрабатывает reply к боту через text-only handler, не вызывает STT  
+Нужен перехват в task_worker.py или отдельный голосовой обработчик
+
+### P4 — Верификация
+Запустить новую задачу topic_2 с PDF — проверить полную цепочку маркеров:
+```
+TOPIC2_PDF_SPEC_EXTRACTOR_STARTED
+TOPIC2_PDF_SPEC_ROWS_EXTRACTED
 TOPIC2_PRICE_CHOICE_CONFIRMED:median
-TOPIC2_CANONICAL_OLD_ROUTE_HARD_BLOCK:pending_intercepted
 TOPIC2_AFTER_PRICE_CHOICE_GENERATION_STARTED
-TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:<item>            # per-item
-TOPIC2_PRICE_WORK_SEARCH_STARTED:<item>
-TOPIC2_PRICE_SOURCE_FOUND:<item>:<supplier>:<status>
-TOPIC2_PRICE_SOURCE_MISSING:<item>
 TOPIC2_TEMPLATE_SELECTED:<name>
 TOPIC2_XLSX_CANON_COLUMNS_OK:15
-TOPIC2_PDF_TOTALS_MATCH_XLSX:xlsx=<N>:pdf=<N>
+TOPIC2_PDF_TOTALS_MATCH_XLSX
 TOPIC2_DRIVE_TOPIC_FOLDER_OK
-TOPIC2_LOGISTICS_DISTANCE_KM:<n>
 TOPIC2_AC_GATE_OK
-TOPIC2_TELEGRAM_DELIVERED:<msg_id>
+TOPIC2_TELEGRAM_DELIVERED
 FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:estimate_generated
-TOPIC2_EXPLICIT_CONFIRM:from_user_done_command
-TOPIC2_DONE_CONTRACT_OK
 ```
 
 ---
 
-## BUGFIX3 — `2ece9eb` (3 live bugs from DB diagnostics)
+## ЗАДАЧА d72028da (ЗАСТРЯВШАЯ)
 
-| Патч | Файл | Что |
-|------|------|-----|
-| PATCH_PRICE_BIND_LOOP_TERMINATE_V1 | task_worker.py (append) | Если PRICE_BIND_POISON ≥3 раз для LATEST_PRICE_MENU_FALLBACK → FAILED немедленно |
-| PATCH_RECURSION_LIMIT_RESTORE | stroyka_estimate_canon.py (body) | try/finally восстанавливает sys.getrecursionlimit() после openpyxl |
-| PATCH_FCG_DONE_CONTRACT_BYPASS_V1 | task_worker.py (append) | TOPIC2_DONE_CONTRACT_OK в history → bypass FCG violation check |
+```
+id: d72028da-b4ff-424d-a626-790c9da8be77
+state: WAITING_CLARIFICATION | WCG_SKIP_WAITING_CLARIFICATION
+file: 8х12.pdf (file_id: 1-isQhm067W2LDv2Bgm5ewbfyVm2B8QhV)
+caption: "Надо полную смету на внутреннюю наружную отделку"
+voices: газобетон 400, монолитная плита, клик-фальц, имитация бруса, ламинат, тёплые полы
+price: "средние" (clarified:2 в истории)
+dims: 8х12 м (из имени файла)
+```
 
-Все три патча подтверждены в логе: `PATCH_PRICE_BIND_LOOP_TERMINATE_V1 installed`, `PATCH_FCG_DONE_CONTRACT_BYPASS_V1 installed`
-
----
-
-## GAP_CLOSE4 — `c0300fb` (4 code gaps from audit)
-
-| Патч | Файл | Что |
-|------|------|-----|
-| PATCH-GAP1 | stroyka_estimate_canon.py | TOPIC2_PRICE_ENRICHMENT_STARTED + DONE в _search_prices_online |
-| PATCH-GAP2 | stroyka_estimate_canon.py | TOPIC2_PDF_CYRILLIC_ATTEMPTED → TOPIC2_PDF_CYRILLIC_OK |
-| PATCH-GAP3 | sample_template_engine.py | fix {_p3pcg_has_explicit_price} → "confirmed" (function-object bug) |
-| PATCH-GAP4 | task_worker.py | FCG bypass: DONE_CONTRACT_OK → AC_GATE_OK |
+Для ручного сброса:
+```bash
+sqlite3 /root/.areal-neva-core/data/core.db \
+  "UPDATE tasks SET state='IN_PROGRESS', error_message='', updated_at=datetime('now') \
+   WHERE id='d72028da-b4ff-424d-a626-790c9da8be77';"
+```
 
 ---
 
-## TOPIC500 ADAPTIVE OUTPUT — `0c15037`
-
-**PATCH_TOPIC500_ADAPTIVE_OUTPUT_V1** — wrapper вокруг `_p0_runtime_topic500_direct_search_20260504`
-
-| Режим | Триггер (ключевые слова) | Что меняется |
-|-------|--------------------------|--------------|
-| procurement | купить/цена/поставщик/Avito/Ozon | ничего (стандарт) |
-| normative | ГОСТ/СП/СНиП/норматив/стандарт | формат: название, пункт, применимость, ссылка |
-| technical | технология/монтаж/инструкция/как сделать | формат: метод, шаги, нормативы, источник |
-| download | скачать/APK/4PDA/программа | формат: одна ссылка, платформа, статус |
-| news | новость/изменения/актуально | формат: факты, дата, источник |
-| service | подрядчик/бригада/услуга/мастер | формат: название, контакт, ссылка, рейтинг |
-| comparison | сравни/что лучше/разница | формат: таблица сравнения |
-| troubleshooting | не работает/ошибка/как исправить | формат: причина, решение, шаги, docs |
-| factual | всё остальное | формат: ответ, источник, что подтверждено |
-
----
-
-## MEMORY DEDUP — `0d6a9a4`
-
-**GAP-5: ARCHIVE_DUPLICATE_GUARD_V1**
-- memory.db: добавлен `UNIQUE INDEX ON memory(chat_id, key)` — дубли блокируются на уровне БД
-- task_worker.py lines 1076/1080/1084/3150: `INSERT INTO` → `INSERT OR REPLACE INTO`
-- memory_api_server.py `/memory POST`: upsert по (chat_id, key) вместо plain INSERT
-- memory_api_server.py `init_db()`: создаёт UNIQUE INDEX при старте
-- До фикса: 694 дубля topic_500_task_summary, 7726 строк → 5184 после dedup
-
-**GAP-6: PATCH_TOPIC500_SEARCH_POLLUTION_GUARD_V1**
-- Wrapper вокруг `_save_memory` для topic_500: результат > 300 символов → сохраняется truncated summary
-- Предотвращает засорение long_memory_context таблицами поставщиков
-
----
-
-## OPEN CONTOURS (не закрыто)
-
-1. **Live-verify topic_2** — задача с полным ТЗ в Telegram, проверить полную цепочку маркеров
-2. **Live-verify topic_500** — проверить adaptive output: normative/factual запрос → правильный формат
-3. **inbox_aggregator стабы** — IMAP/Telethon/Profi.ru коннекторы (P2, будущий канал)
-4. **`_parse_price_sources` quality** — матчинг ключевых слов требует мониторинга
-
----
-
-## ДИАГНОСТИКА С НУЛЯ
+## ДИАГНОСТИКА
 
 ```bash
-# 1. Воркер жив?
+# Воркер жив?
 systemctl is-active areal-task-worker
 
-# 2. Последние коммиты
-git -C /root/.areal-neva-core log --oneline | head -5
+# Последние патчи установились?
+grep "PATCH_P6C_FULLTEXT\|PATCH_P3CHK_PRICE\|PATCH_P2_MISSING\|PATCH_WCPE" \
+  /root/.areal-neva-core/logs/task_worker.log | tail -10
 
-# 3. Последняя topic_2 задача
+# Задача d72028da
 sqlite3 -readonly /root/.areal-neva-core/data/core.db \
-  "SELECT id, state, substr(result,1,80), updated_at FROM tasks
-   WHERE COALESCE(topic_id,0)=2 ORDER BY updated_at DESC LIMIT 3;"
+  "SELECT state, substr(error_message,1,50), substr(result,1,80), updated_at \
+   FROM tasks WHERE id='d72028da-b4ff-424d-a626-790c9da8be77';"
 
-# 4. Маркеры задачи
+# История d72028da (последние 15)
 sqlite3 -readonly /root/.areal-neva-core/data/core.db \
-  "SELECT action, created_at FROM task_history WHERE task_id='TASK_ID' ORDER BY created_at;"
+  "SELECT action, created_at FROM task_history \
+   WHERE task_id='d72028da-b4ff-424d-a626-790c9da8be77' \
+   ORDER BY rowid DESC LIMIT 15;"
 ```
 
 ---
 
 ## CANON REFS
-
 - `docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md`
 - `docs/CANON_FINAL/TOPIC_2_CANONICAL_ESTIMATE_CONTRACT.md`
 - `docs/HANDOFFS/LATEST_HANDOFF.md` (этот файл)

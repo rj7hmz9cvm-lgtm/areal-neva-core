@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_009
-generated_at_utc: 2026-05-07T17:50:02.487044+00:00
-git_sha_before_commit: b3e5be73bca451c0ed863454767d568630087479
+generated_at_utc: 2026-05-08T06:05:01.726262+00:00
+git_sha_before_commit: b236f02ce3ca63701b23e2185620504fab02ba28
 part: 9/17
 
 
@@ -2197,7 +2197,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/price_enrichment.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 7d01c8c0410577a0676a6c992a0b17d56fe26e4b7c6400581e471484c13603bd
+SHA256_FULL_FILE: 6ea8461a55b464faa46bf4cab8ed93fcb6b8a40e9585d31a5207880abfea55e8
 ====================================================================================================
 # === WEB_SEARCH_PRICE_ENRICHMENT_V1 ===
 # === PRICE_CONFIRMATION_BEFORE_ESTIMATE_V1 ===
@@ -2350,6 +2350,16 @@ async def _openrouter_price_search(item_name: str, unit: str = "", region: str =
         return []
 
     model = (os.getenv("OPENROUTER_MODEL_ONLINE") or "perplexity/sonar").strip()
+    # PATCH_OPENROUTER_ONLINE_ONLY_FOR_TOPIC2_PRICE_SEARCH_V1 begin
+    import logging as _pe_log
+    _pe_logger = _pe_log.getLogger("price_enrichment")
+    if not os.getenv("OPENROUTER_MODEL_ONLINE", "").strip():
+        _pe_logger.warning("ONLINE_MODEL_MISSING_BLOCKED_NO_DEFAULT_FALLBACK: OPENROUTER_MODEL_ONLINE not set, defaulted to perplexity/sonar")
+    if "sonar" not in model.lower():
+        _pe_logger.error(f"ONLINE_MODEL_GUARD_BLOCKED_NON_SONAR: model={model!r} is not sonar, blocking price search")
+        return []
+    _pe_logger.info(f"ONLINE_MODEL_SONAR_CONFIRMED: model={model!r}")
+    # PATCH_OPENROUTER_ONLINE_ONLY_FOR_TOPIC2_PRICE_SEARCH_V1 end
     base_url = (os.getenv("OPENROUTER_BASE_URL") or "https://openrouter.ai/api/v1").strip().rstrip("/")
 
     source_queries = [

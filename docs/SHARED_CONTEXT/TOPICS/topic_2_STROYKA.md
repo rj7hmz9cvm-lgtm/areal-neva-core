@@ -1,21 +1,22 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-05-07T17:50:02.575386+00:00
-GIT_SHA: b3e5be73bca451c0ed863454767d568630087479
+GENERATED_AT: 2026-05-08T06:05:01.826223+00:00
+GIT_SHA: b236f02ce3ca63701b23e2185620504fab02ba28
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
 ROLE: Сметы
 DIRECTIONS_BOUND: estimates
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE_TASKS: 0
-FAILED_LAST_24H: 3
+ACTIVE_TASKS: 1
+FAILED_LAST_24H: 1
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 12
-- CANCELLED: 96
+- CANCELLED: 98
 - DONE: 129
 - FAILED: 109
+- WAITING_CLARIFICATION: 1
 
 ## LATEST_FAILED
 - a7b2879e | STALE_TIMEOUT
@@ -25,6 +26,12 @@ FAILED_LAST_24H: 3
 - 8212f685 | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
+- b236f02|fix(topic2): session 08.05 — P6C fulltext prep, P3CHK append fix, P2 distance skip, WCPE unblock
+- e3a016c|PATCH_OPENROUTER_ONLINE_ONLY_FOR_TOPIC2_PRICE_SEARCH_V1: hard-enforce Sonar for all price/search calls
+- 4cfd9b6|fix(topic2): close P6E67 loop storm + natural reply message
+- dc26486|fix(topic2): PATCH_PRICE_REJECT_STORM_FIX_V1 — remove noisy INSERT from V5/V6C rejected path
+- 0c8518e|fix(topic2): TOPIC2_FULL_CLOSE — work/material split, sheet fallback, drive links, xlsx 15-col gate
+- a216eeb|fix(topic2): PATCH_FCG_V2PATH_BYPASS_V1 — extend FDCB bypass to TOPIC2_DONE_CONTRACT_OK
 - 48f9858|docs(handoff): update latest handoff after topic2 and aggregator guard
 - c0300fb|fix(topic2): close 4 code gaps — enrichment markers, cyrillic marker, function-object bug, FCG bypass
 - 2ece9eb|fix(topic2): close 3 live bugs — poison loop terminate, recursion restore, FCG done bypass
@@ -49,44 +56,38 @@ FAILED_LAST_24H: 3
 - ac58cfe|docs(topic2): add 20260506 stroyka in progress report
 - 7a9bc69|docs(topic2): add 20260506 stroyka not closed report
 - 20020d1|docs(topic2): add 20260506 stroyka price flow handoff
-- a27c1ea|CHAT EXPORT topic2_stroyka_price_choice_patch 2026-05-06
-- 91b2753|fix(topic2): close stroyka estimate canon runtime contract
-- a6df8c0|fix(topic2): extend price confirmation phrases + pending estimate TTL to 24h
-- 7b4a634|fix(topic2): fix P6 estimate/vague detection for implicit estimate requests
-- b466fa9|fix(topic2): inject historical DONE/FAILED/CANCELLED context into estimate pipeline
-- 4d43c1a|fix(sample_template_engine): context enrich + implicit scope for thin topic2 inputs
 
 ## MARKERS_LAST_24H
 - created:NEW
-- clarified:Сделай пожалуйста по полученному заданию
-- clarified:У тебя есть размеры дома
-- clarified:ну что?
+- PATCH_TOPIC2_INLINE_FIX_20260506_V1:V6C_PRICE_REJECTED:no_explicit_token_or_long
+- PATCH_TOPIC2_INLINE_FIX_20260506_V1:V5_PRICE_REJECTED:no_explicit_token_or_long
+- P6E2_TOPIC2_IMAGE_ESTIMATE_ROUTE_TAKEN
+- P6E2_CANON_DIMS_NOT_RECOGNIZED
+- reply_sent:p6e2_topic2_image_estimate_result
 - clarified:
-- clarified:Каркас там же написано
-- clarified:Возьми это как новый техзадании
-- clarified:Ну что ты по двум задачам мне сделаешь или нет
-- clarified:2
-- clarified:Да жду
-- cancelled
-- clarified:Отмена задач говорю
-- clarified:Необходимо сделать подробную смету с расчётом стоимости материалов по 
-- clarified:фундамент
-- clarified:У меня же написано всё
-- clarified:Все задачи завершены
-- clarified:Отбой всех задач
-- clarified:отмена всех задач
-- TOPIC2_PRICE_CHOICE_CONFIRMED:median
-- P3_TOPIC2_CLARIFICATION
-- TOPIC2_ONE_BIG_FINAL_PIPELINE_V1_WORKER_ERR:maximum recursion depth exceeded
-- PATCH_TOPIC2_FRESH_ESTIMATE_ROUTE_GUARD_V1:CANON_FALLBACK:BYPASS_P6E67_PARENT_LO
-- FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:estimate_generated
-- P6E67_PARENT_REVIVED_AS_REVISION_SOURCE:EXACT_REPLY_LINK
-- P6E67_REVISION_TEXT_MERGED_FROM_TASK:ee3984f3-4e34-4b62-8512-430b24127d34
-- P6E67_CURRENT_TASK_CANCELLED_MERGED_TO_PARENT:c661ab5e-9555-4358-b06f-2301c06310
+- state:FAILED
+- reply_sent:stale_failed
+- P6E67_PARENT_NOT_FOUND
+- P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION
+- clarified:Вот документ мне необходимо посчитать стоимость строительства Дом из г
+- reply_sent:p6e67_parent_not_found
 - P6E67_PARENT_REVIVED_AS_REVISION_SOURCE:LAST_ACTIVE_ESTIMATE_FALLBACK
-- P6E67_REVISION_TEXT_MERGED_FROM_TASK:c661ab5e-9555-4358-b06f-2301c06310d1
-- P6E67_CURRENT_TASK_CANCELLED_MERGED_TO_PARENT:893436d4-72d2-4bdf-b362-f40d722657
-- continued:Покажи мне мой запрос на который ты это посчитал что это был за запрос
+- P6E67_REVISION_TEXT_MERGED_FROM_TASK:89f1a927-af21-4d77-b287-70e8ecef659c
+- P6E67_CURRENT_TASK_CANCELLED_MERGED_TO_PARENT:d72028da-b4ff-424d-a626-790c9da8be
+- P6E67_BLOCK_ARTIFACT_GATE_PDF_LINK_MISSING_BEFORE_SEND_EX
+- P6C_TOPIC2_IMAGE_OR_FILE_ESTIMATE_ROUTE_TAKEN
+- TOPIC2_PRICE_CHOICE_REQUESTED
+- clarified:2
+- P6E67_BLOCK_ARTIFACT_GATE_PDF_LINK_MISSING_BEFORE_SEND
+- P6E67_REVISION_TEXT_MERGED_FROM_TASK:0aaa723d-e506-4cfe-9cfc-7dc20b7ea094
+- continued:вот размеры
+- continued:вот задание
+- TOPIC2_PRICE_CHOICE_CONFIRMED:confirmed
+- P3_TOPIC2_CLARIFICATION
+- clarified:Там же есть картинка посмотри проект
+- clarified:есть в проекте
+- clarified:смотри задание и проект
+- clarified:ты не видешь что ранее писал?
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210
@@ -159,9 +160,19 @@ PATCH_TOPIC2_FULL_GAP_CLOSE_V4
 - TOPIC2_DONE_CONTRACT_OK
 
 ## MARKERS_MISSING
+- TOPIC2_ESTIMATE_SESSION_CREATED
+- TOPIC2_CONTEXT_READY
 - TOPIC2_TEMPLATE_SELECTED
 - TOPIC2_PRICE_ENRICHMENT_DONE
 - TOPIC2_LOGISTICS_CONFIRMED
+- TOPIC2_XLSX_CREATED
+- TOPIC2_PDF_CREATED
+- TOPIC2_PDF_CYRILLIC_OK
+- TOPIC2_DRIVE_UPLOAD_XLSX_OK
+- TOPIC2_DRIVE_UPLOAD_PDF_OK
+- TOPIC2_TELEGRAM_DELIVERED
+- TOPIC2_MESSAGE_THREAD_ID_OK
+- TOPIC2_DONE_CONTRACT_OK
 
 ## REGRESSION_GUARDS
 - не возвращать P6E67_PARENT_NOT_FOUND на полное ТЗ
