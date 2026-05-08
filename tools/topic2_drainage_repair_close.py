@@ -971,4 +971,67 @@ async def main():  # noqa: F811  PATCH_TOPIC2_DRAINAGE_RECOGNIZE_ALL_V1
 
 
 if __name__ == "__main__":  # PATCH_TOPIC2_DRAINAGE_RECOGNIZE_ALL_V1 entry point
+    pass  # entry point moved to final by PATCH_TOPIC2_DRAINAGE_MULTIFILE_SOURCE_V3
+
+
+# === PATCH_TOPIC2_DRAINAGE_MULTIFILE_SOURCE_V3 ===
+def _t2dmf_kind_override_v3(path, text, kind):
+    try:
+        t = low(text)
+        if kind == "other_pdf":
+            has_project = "рабочий проект" in t
+            has_pipe = ("пвх" in t) or ("пнд" in t)
+            has_drain = ("дренаж" in t) or ("ливнев" in t) or ("наружные водостоки" in t)
+            if has_project and has_pipe and has_drain:
+                return "drainage_scheme"
+        return kind
+    except Exception:
+        return kind
+
+def find_user_pdfs():  # noqa: F811
+    import glob as _glob
+    from pathlib import Path as _Path
+    from datetime import datetime as _datetime
+
+    now = _datetime.now().timestamp()
+    candidates = []
+    for raw in _glob.glob("/var/lib/telegram-bot-api/*/documents/*.pdf"):
+        p = _Path(raw)
+        try:
+            if p.is_file() and now - p.stat().st_mtime <= 48 * 3600:
+                candidates.append(p)
+        except Exception:
+            pass
+
+    out = []
+    seen_paths = set()
+    geology_added = False
+
+    for p in sorted(set(candidates), key=lambda x: x.stat().st_mtime, reverse=True):
+        txt = pdf_text(p)
+        if is_artifact(p, txt):
+            continue
+        kind = _t2dmf_kind_override_v3(p, txt, classify(p, txt))
+
+        if kind == "drainage_scheme":
+            key = str(p.resolve())
+            if key in seen_paths:
+                continue
+            out.append({"path": p, "kind": kind, "name": p.name, "text": txt, "chars": len(txt)})
+            seen_paths.add(key)
+            continue
+
+        if kind == "geology_report" and not geology_added:
+            key = str(p.resolve())
+            if key in seen_paths:
+                continue
+            out.append({"path": p, "kind": kind, "name": p.name, "text": txt, "chars": len(txt)})
+            seen_paths.add(key)
+            geology_added = True
+
+    return out
+
+if __name__ == "__main__":  # PATCH_TOPIC2_DRAINAGE_MULTIFILE_SOURCE_V3 final entry point
     asyncio.run(main())
+# === END_PATCH_TOPIC2_DRAINAGE_MULTIFILE_SOURCE_V3 ===
+
