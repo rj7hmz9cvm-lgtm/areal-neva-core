@@ -4123,6 +4123,25 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
             _fir_caption = data.get("caption", "") or raw_input or ""
             _fir_intent = detect_intent(_fir_caption) or detect_intent_from_filename(file_name)
             _fir_topic_role = ""
+            # === TOPIC2_CANONICAL_PDF_GATE_V1 ===
+            # topic_2 + PDF + estimate intent → canonical maybe_handle_stroyka_estimate
+            # NOT generic estimate_engine.process_estimate_to_excel (which has no PDF OCR)
+            if int(topic_id or 0) == 2 and str(local_path or "").lower().endswith(".pdf") and _fir_intent == "estimate":
+                try:
+                    from core.stroyka_estimate_canon import maybe_handle_stroyka_estimate as _t2cpg_mhs
+                    _history(conn, task_id, "FILE_INTAKE_ROUTER_TOPIC2_CANONICAL_ROUTE")
+                    _history(conn, task_id, "TOPIC2_FILE_INTAKE_LOCAL_PATH_OK")
+                    conn.commit()
+                    logger.info("TOPIC2_CANONICAL_PDF_GATE: task=%s file=%s intent=%s", task_id, file_name, _fir_intent)
+                    _t2cpg_ok = await _t2cpg_mhs(conn, task, logger)
+                    if _t2cpg_ok:
+                        logger.info("TOPIC2_FILE_INTAKE_ROUTER_RESULT_OK task=%s", task_id)
+                        return
+                    else:
+                        logger.warning("TOPIC2_FILE_INTAKE_ROUTER_RESULT_FAILED task=%s falling to generic", task_id)
+                except Exception as _t2cpg_e:
+                    logger.warning("TOPIC2_CANONICAL_PDF_GATE_ERR task=%s err=%s", task_id, _t2cpg_e)
+            # === END TOPIC2_CANONICAL_PDF_GATE_V1 ===
             if _fir_intent:
                 _fir_result = await route_file(local_path, task_id, int(topic_id or 0), _fir_intent)
                 if _fir_result and _fir_result.get("success"):
