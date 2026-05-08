@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_011
-generated_at_utc: 2026-05-08T18:55:02.530347+00:00
-git_sha_before_commit: 6923beaa0452da841615845c3876517b51e746a7
+generated_at_utc: 2026-05-08T19:20:01.988152+00:00
+git_sha_before_commit: 80b0809e73f89fdaa7bc03674b23058e081d6fc3
 part: 11/17
 
 
@@ -1782,7 +1782,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: a7073752d6dc797440fa281132f49bfac2c96afdcc99303976d8b0beab3ef5bd
+SHA256_FULL_FILE: 91bd4f7fc2958604249afcc10657a5dfb1524800a34c5582d09b819e09baeecf
 ====================================================================================================
 # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
 from __future__ import annotations
@@ -6020,6 +6020,41 @@ async def maybe_handle_stroyka_estimate(conn, task, logger=None):  # noqa: F811
 
 _STPG_LOG.info("PATCH_TOPIC2_STALE_PENDING_TASK_GUARD_V1: installed")
 # === END_PATCH_TOPIC2_STALE_PENDING_TASK_GUARD_V1 ===
+
+
+# === PATCH_TOPIC2_INPUT_GATE_SOURCE_OF_TRUTH_V1 ===
+import logging as _t2ig_log_mod
+_T2IG_LOG = _t2ig_log_mod.getLogger("areal.topic2_input_gate")
+
+try:
+    from core.topic2_input_gate import topic2_pre_estimate_gate as _t2ig_gate
+    from core.topic2_input_gate import apply_gate_result_to_task as _t2ig_apply
+except Exception as _t2ig_import_err:
+    _t2ig_gate = None
+    _t2ig_apply = None
+    _T2IG_LOG.warning("TOPIC2_INPUT_GATE_IMPORT_FAILED:%s", _t2ig_import_err)
+
+_T2IG_ORIG_MAYBE_HANDLE = maybe_handle_stroyka_estimate
+
+async def maybe_handle_stroyka_estimate(conn, task, logger=None):  # noqa: F811
+    if _t2ig_gate is not None and _t2ig_apply is not None:
+        try:
+            _t2ig_decision = _t2ig_gate(conn, task, logger=logger)
+            if _t2ig_decision and _t2ig_decision.get("block_engine"):
+                _t2ig_apply(conn, task, _t2ig_decision)
+                _T2IG_LOG.info(
+                    "TOPIC2_INPUT_GATE_BLOCKED:domain=%s state=%s",
+                    _t2ig_decision.get("domain"),
+                    _t2ig_decision.get("state"),
+                )
+                return True
+        except Exception as _t2ig_err:
+            _T2IG_LOG.warning("TOPIC2_INPUT_GATE_ERR:%s", _t2ig_err)
+    return await _T2IG_ORIG_MAYBE_HANDLE(conn, task, logger)
+
+_T2IG_LOG.info("PATCH_TOPIC2_INPUT_GATE_SOURCE_OF_TRUTH_V1: installed")
+# === END_PATCH_TOPIC2_INPUT_GATE_SOURCE_OF_TRUTH_V1 ===
+
 
 ====================================================================================================
 END_FILE: core/stroyka_estimate_canon.py

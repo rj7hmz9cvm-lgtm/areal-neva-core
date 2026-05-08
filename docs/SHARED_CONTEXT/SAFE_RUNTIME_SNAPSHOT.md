@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-08T18:55:02.323950+00:00
-git_sha_before_commit: 6923beaa0452da841615845c3876517b51e746a7
+generated_at_utc: 2026-05-08T19:20:01.835762+00:00
+git_sha_before_commit: 80b0809e73f89fdaa7bc03674b23058e081d6fc3
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,8 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: inactive
 
 ## GIT_LOG_30
+80b0809 fix(topic2): PATCH_TOPIC2_INPUT_GATE_SOURCE_OF_TRUTH_V1 — current file source-of-truth gate blocks stale house context for drainage PDF
+6862c04 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 6923bea FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 afdcfad FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 075edf9 fix(topic2): PATCH_TOPIC2_STALE_PENDING_TASK_GUARD_V1 + LOCAL_BOT_API_404_FIX
@@ -38,89 +40,22 @@ bf3bb26 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 d7b743d handoff: update HEAD to 81f35b5, mark P1 clarified loop closed
 81f35b5 PATCH_P6CF3_CLARIFIED_HISTORY_INCLUDE_V1: fix infinite clarification loop
 e7b171e FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
-96bea6c docs: handoff 08.05 — file_intake_router not called from _handle_drive_file (P0 arch)
-74b156c FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
 ## GIT_SHOW_STAT_HEAD
-commit 6923beaa0452da841615845c3876517b51e746a7
+commit 80b0809e73f89fdaa7bc03674b23058e081d6fc3
 Author: Ila <ilakuznecov@mac.local>
-Date:   Fri May 8 21:45:08 2026 +0300
+Date:   Fri May 8 22:18:28 2026 +0300
 
-    FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
+    fix(topic2): PATCH_TOPIC2_INPUT_GATE_SOURCE_OF_TRUTH_V1 — current file source-of-truth gate blocks stale house context for drainage PDF
 
- docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md    |   6 +-
- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md |   2 +-
- .../SHARED_CONTEXT/DIRECTIONS/auto_parts_search.md |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/cad_dwg.md          |   4 +-
- .../DIRECTIONS/construction_search.md              |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/crm_leads.md        |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/defect_acts.md      |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/devops_server.md    |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/documents.md        |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/email_ingress.md    |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/estimates.md        |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/general_chat.md     |   4 +-
- .../DIRECTIONS/google_drive_storage.md             |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/internet_search.md  |   4 +-
- .../DIRECTIONS/isolated_project_ivan.md            |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/job_search.md       |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/memory_archive.md   |   4 +-
- .../SHARED_CONTEXT/DIRECTIONS/monolith_concrete.md |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/ocr_photo.md        |   4 +-
- .../DIRECTIONS/orchestration_core.md               |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/photo_cleanup.md    |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/product_search.md   |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/roofing.md          |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/social_content.md   |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/spreadsheets.md     |   4 +-
- .../SHARED_CONTEXT/DIRECTIONS/structural_design.md |   4 +-
- .../DIRECTIONS/technical_supervision.md            |   4 +-
- .../DIRECTIONS/telegram_automation.md              |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/video_production.md |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/vpn_network.md      |   4 +-
- docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md      |   4 +-
- docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |   6 +-
- docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |   6 +-
- docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  16 +--
- .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_004.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_007.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_010.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_011.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_012.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_013.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_014.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_015.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_016.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_017.md             |   4 +-
- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 146 +++++++++++++++------
- .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |   8 +-
- docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  59 ++++-----
- docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |   6 +-
- docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |   4 +-
- .../TOPICS/topic_210_PROEKTIROVANIE.md             |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |  11 +-
- .../TOPICS/topic_3008_KODY_MOZGOV.md               |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_5_TEKHNADZOR.md   |   4 +-
- .../SHARED_CONTEXT/TOPICS/topic_6104_JOB_SEARCH.md |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |   4 +-
- .../TOPICS/topic_961_AVTOZAPCHASTI.md              |   4 +-
- docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   6 +-
- 68 files changed, 282 insertions(+), 218 deletions(-)
+ core/stroyka_estimate_canon.py |  35 ++++
+ core/topic2_input_gate.py      | 432 +++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 467 insertions(+)
 
 ## GIT_CHANGED_FILES_10
 areal_telegram_wrapper.py
 core/stroyka_estimate_canon.py
+core/topic2_input_gate.py
 docs/HANDOFFS/LATEST_HANDOFF.md
 docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md
 docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
@@ -190,11 +125,10 @@ docs/SHARED_CONTEXT/TOPICS/topic_6104_JOB_SEARCH.md
 docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md
 docs/SHARED_CONTEXT/TOPICS/topic_961_AVTOZAPCHASTI.md
 docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md
-task_worker.py
 
 ## CORE_DB_STATE_COUNTS
-- FAILED|2963
-- CANCELLED|824
+- FAILED|2964
+- CANCELLED|823
 - DONE|577
 - ARCHIVED|381
 
@@ -212,10 +146,10 @@ task_worker.py
 Этажей: не указано
 Фундамент: монолитная плита
 Удалённо|2026-05-08 18:50:16
-- 60b9503b-75cc-4913-bb7b-11092508fdae|2|text|CANCELLED|[VOICE] Я тебе говорил про вот эту информацию, посмотри.|✅ Смета готова
+- 60b9503b-75cc-4913-bb7b-11092508fdae|2|text|FAILED|[VOICE] Я тебе говорил про вот эту информацию, посмотри.|✅ Смета готова
 
 Объект: дом   Материал: газобетон   Площадь: 106.25 м²   Этажность: не указана   Регион: СПб и ЛО
-Шаблон: Ареал Нева.xlsx   Лист: смета   Цены: |2026-05-08 18:41:18
+Шаблон: Ареал Нева.xlsx   Лист: смета   Цены: |2026-05-08 19:17:11
 - 1d2b38c4-8c86-4a44-8442-40be5c94fe89|2|drive_file|FAILED|{"file_id": "1ZJ4CqxlTcrXIL6b5GxE6nh9soo7Ud03h", "file_name": "project_file_2.pdf", "mime_type": "application/pdf", "cap|Принял файл «project_file_2.pdf». Что нужно сделать?
 
 1️⃣ Смета — извлечь позиции, посчитать объёмы, создать Excel
@@ -260,6 +194,7 @@ https://drive.google.com/drive/folders/1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG
 
 ## LATEST_FAILED_10
 - test-drainage-reply-001|2|Объект находится 50 км от Санкт-Петербурга цены выше среднего нужно посчитать стоимость работы материалов по данному зап|STALE_TIMEOUT|2026-05-08 18:50:16
+- 60b9503b-75cc-4913-bb7b-11092508fdae|2|[VOICE] Я тебе говорил про вот эту информацию, посмотри.|TOPIC2_STALE_HOUSE_CONTEXT_USED_FOR_DRAINAGE_FILE|2026-05-08 19:17:11
 - 1d2b38c4-8c86-4a44-8442-40be5c94fe89|2|{"file_id": "1ZJ4CqxlTcrXIL6b5GxE6nh9soo7Ud03h", "file_name": "project_file_2.pdf", "mime_type": "application/pdf", "cap|STALE_TIMEOUT|2026-05-08 18:14:03
 - a7b2879e-14e6-4002-8a06-f73019d40a99|2|{"file_id": "1XRwOwZr2Kpxy-wrAUPrBR2dLqHseg7jS", "file_name": "photo_-1003725299009_10394.jpg", "mime_type": "image/jpeg|STALE_TIMEOUT|2026-05-07 13:34:34
 - 893436d4-72d2-4bdf-b362-f40d7226570e|2|[VOICE] Я тебе прислал картинку, две картинки и я тебе прислал техническое задание. Мне нужно сделать смету, уточнить ст|INVALID_PUBLIC_RESULT|2026-05-06 18:05:02
@@ -268,9 +203,9 @@ https://drive.google.com/drive/folders/1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG
 - c6b40dfc-854b-430b-9ff1-096ba254f8ac|2|[VOICE] Мне необходимо сделать расчет по стоимости работы материалов, взяв за основу средняя стоимость материалов, либо |STROYKA_QG_FAILED:XLSX_VALIDATE_ERROR:maximum recursion depth exceeded|2026-05-06 17:33:30
 - 8212f685-b877-466a-a303-f468a00a664b|2|{"file_id": "1y5C9R1BG9a8Nf6MTu1d8MV_Y5LzLw-K6", "file_name": "Отчет_Мистолово_03.26.pdf", "mime_type": "application/pdf|STALE_TIMEOUT|2026-05-06 17:42:46
 - 3828ac7a-d425-482f-b1f8-4ec76d27da82|2|{"file_id": "1zVQWoakxbwssZJbXdudubQSMhLv_qSS9", "file_name": "Схема глубинного дренажа.pdf", "mime_type": "application/|STALE_TIMEOUT|2026-05-06 17:42:46
-- b71a685b-b129-446b-bd43-e6298b24f8cc|210|[VOICE] Средние цены поставь везде, на работу и на материалы.|INVALID_RESULT_GATE|2026-05-06 17:32:40
 
 ## LATEST_TASK_HISTORY_20
+- 60b9503b-75cc-4913-bb7b-11092508fdae|TOPIC2_STALE_HOUSE_CONTEXT_USED_FOR_DRAINAGE_FILE|2026-05-08 19:17:11
 - test-drainage-reply-001|reply_sent:stale_failed|2026-05-08 18:50:16
 - test-drainage-reply-001|state:FAILED|2026-05-08 18:50:16
 - 60b9503b-75cc-4913-bb7b-11092508fdae|CANCELLED:INVALID_STALE_CONTEXT_RESULT|2026-05-08 18:41:18
@@ -290,7 +225,6 @@ https://drive.google.com/drive/folders/1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG
 - test-drainage-reply-001|TOPIC2_PRICE_ENRICHMENT_DONE:1133|2026-05-08 18:39:09
 - test-drainage-reply-001|TOPIC2_PRICE_ENRICHMENT_STARTED|2026-05-08 18:39:03
 - test-drainage-reply-001|TOPIC2_ONLINE_MODEL_SONAR_CONFIRMED:perplexity/sonar|2026-05-08 18:39:03
-- test-drainage-reply-001|TOPIC2_REPEAT_PARENT_TASK:60b9503b-75cc-4913-bb7b-11092508fdae|2026-05-08 18:39:02
 
 ## MEMORY_DB_COUNT
 - 5196
@@ -318,18 +252,6 @@ https://drive.google.com/drive/folders/1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG
 - topic_210_file_fb6aadc5-b372-488a-aede-f3433a030e55|{"task_id": "fb6aadc5-b372-488a-aede-f3433a030e55", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T18:52:03.866645+00:00
 
 ## JOURNAL_AREAL_TASK_WORKER_60
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 38.803s CPU time.
-Started areal-task-worker.service - Areal Task Worker.
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 20.995s CPU time, 202.7M memory peak, 0B memory swap peak.
-Started areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
-areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
 areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
 areal-task-worker.service: Failed with result 'exit-code'.
 areal-task-worker.service: Scheduled restart job, restart counter is at 1.
@@ -378,20 +300,20 @@ areal-task-worker.service: Deactivated successfully.
 Stopped areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Consumed 2.253s CPU time.
 Started areal-task-worker.service - Areal Task Worker.
+Stopping areal-task-worker.service - Areal Task Worker...
+areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
+areal-task-worker.service: Deactivated successfully.
+Stopped areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Consumed 32.421s CPU time, 104.9M memory peak, 0B memory swap peak.
+Started areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
+areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
+areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
+areal-task-worker.service: Failed with result 'exit-code'.
+areal-task-worker.service: Scheduled restart job, restart counter is at 1.
+Started areal-task-worker.service - Areal Task Worker.
 
 ## JOURNAL_TELEGRAM_INGRESS_30
-2026-05-08 12:34:32,504 INFO DAEMON: Run polling for bot @ai_orkestra_all_bot id=8216054898 - 'AREAL-NEVA ORCHESTRA'
-2026-05-08 13:11:00,381 INFO DAEMON: Update id=210388089 is handled. Duration 89 ms by bot id=8216054898
-2026-05-08 20:50:10,453 ERROR DAEMON: HANDLER_CRASH: 404, message='Not Found', url='http://localhost:8081/file/bot8216054898:AAH-PtfhSlIlbyHUg6qKaSWWhZHG9y6tdRU//var/lib/telegram-bot-api/<REDACTED_SECRET>/documents/file_1.pdf'
-2026-05-08 20:50:10,560 INFO DAEMON: Update id=210388090 is handled. Duration 346 ms by bot id=8216054898
-2026-05-08 20:50:10,778 ERROR DAEMON: HANDLER_CRASH: 404, message='Not Found', url='http://localhost:8081/file/bot8216054898:AAH-PtfhSlIlbyHUg6qKaSWWhZHG9y6tdRU//var/lib/telegram-bot-api/<REDACTED_SECRET>/documents/file_2.pdf'
-2026-05-08 20:50:10,841 INFO DAEMON: Update id=210388091 is handled. Duration 627 ms by bot id=8216054898
-2026-05-08 20:51:56,312 ERROR DAEMON: HANDLER_CRASH: 404, message='Not Found', url='http://localhost:8081/file/bot8216054898:AAH-PtfhSlIlbyHUg6qKaSWWhZHG9y6tdRU//var/lib/telegram-bot-api/<REDACTED_SECRET>/voice/file_3.oga'
-2026-05-08 20:51:56,435 INFO DAEMON: Update id=210388092 is handled. Duration 208 ms by bot id=8216054898
-2026-05-08 20:57:10,082 ERROR DAEMON: HANDLER_CRASH: 404, message='Not Found', url='http://localhost:8081/file/bot8216054898:AAH-PtfhSlIlbyHUg6qKaSWWhZHG9y6tdRU//var/lib/telegram-bot-api/<REDACTED_SECRET>/voice/file_4.oga'
-2026-05-08 20:57:10,216 INFO DAEMON: Update id=210388093 is handled. Duration 216 ms by bot id=8216054898
-2026-05-08 21:00:41,932 WARNING DAEMON: Received SIGTERM signal
-2026-05-08 21:00:41,932 INFO DAEMON: Polling stopped for bot @ai_orkestra_all_bot id=8216054898 - 'AREAL-NEVA ORCHESTRA'
 2026-05-08 21:00:41,932 INFO DAEMON: Polling stopped
 Stopping telegram-ingress.service - AREAL telegram ingress...
 telegram-ingress.service: Deactivated successfully.
@@ -410,3 +332,15 @@ Started telegram-ingress.service - AREAL telegram ingress.
 2026-05-08 21:08:08,312 INFO DAEMON: STT ok transcript_len=48
 2026-05-08 21:08:08,389 INFO DAEMON: Task 60b9503b-75cc-4913-bb7b-11092508fdae created state=NEW topic_id=2
 2026-05-08 21:08:08,389 INFO DAEMON: Update id=210388095 is handled. Duration 484 ms by bot id=8216054898
+Stopping telegram-ingress.service - AREAL telegram ingress...
+2026-05-08 22:17:31,652 WARNING DAEMON: Received SIGTERM signal
+2026-05-08 22:17:31,653 INFO DAEMON: Polling stopped for bot @ai_orkestra_all_bot id=8216054898 - 'AREAL-NEVA ORCHESTRA'
+2026-05-08 22:17:31,653 INFO DAEMON: Polling stopped
+telegram-ingress.service: Deactivated successfully.
+Stopped telegram-ingress.service - AREAL telegram ingress.
+telegram-ingress.service: Consumed 2.671s CPU time.
+Started telegram-ingress.service - AREAL telegram ingress.
+2026-05-08 22:17:34,073 INFO DAEMON: BIG_FILE_LOCAL_BOT_API_USED: local server active
+2026-05-08 22:17:34,083 INFO DAEMON: BOT STARTED id=8216054898 username=ai_orkestra_all_bot
+2026-05-08 22:17:34,083 INFO DAEMON: Start polling
+2026-05-08 22:17:34,084 INFO DAEMON: Run polling for bot @ai_orkestra_all_bot id=8216054898 - 'AREAL-NEVA ORCHESTRA'
