@@ -1,25 +1,41 @@
 #!/usr/bin/env python3
-# TOPIC2_DRAINAGE_LENGTH_PROOF_GATE_AND_ONLINE_PRICES_V2
-# Requires: length proven from PDF read-back
-# Requires: online price lookup via OpenRouter/Sonar for drainage materials
-# If length=0: search prices (cache in history), ask user, WC. No fallback.
+# TOPIC2_DRAINAGE_PRICE_ENRICHMENT_CANON_FIX_V1
+# Canonical price flow only:
+#   _openrouter_price_search → _price_prompt → user choice → XLSX/PDF
+# No custom Sonar prompts. No regex price parsing. No fallback prices.
+# No XLSX/PDF before TOPIC2_PRICE_CHOICE_CONFIRMED.
 from __future__ import annotations
-import asyncio, glob, inspect, os, re, sqlite3, subprocess, sys
+import asyncio, glob, json, os, re, sqlite3, subprocess, sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 import requests
 from dotenv import load_dotenv
 
 BASE = Path("/root/.areal-neva-core")
 sys.path.insert(0, str(BASE))
-DB = BASE / "data" / "core.db"
+DB   = BASE / "data" / "core.db"
 OUT_DIR = BASE / "runtime" / "stroyka_estimates" / "drainage_repair"
-TASK_ID = "043e5c9f-e8bc-434c-9dad-a66c7e50f917"
+TASK_ID  = "043e5c9f-e8bc-434c-9dad-a66c7e50f917"
+CACHE_FILE = OUT_DIR / f"price_cache_{TASK_ID[:8]}.json"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 load_dotenv(BASE / ".env", override=False)
 VAT_RATE = 0.22
 
+# ---------------------------------------------------------------------------
+# Canonical imports — must not be replaced with custom equivalents
+# ---------------------------------------------------------------------------
+from core.price_enrichment import (
+    _openrouter_price_search,
+    _detect_price_choice,
+    _price_prompt,
+    _select_price,
+    _apply_selected_prices,
+)
+
+# ---------------------------------------------------------------------------
+# Source classification helpers
+# ---------------------------------------------------------------------------
 DRAINAGE_STRONG = ["нвд","наружные водостоки","наружные водостоки и дренажи",
     "схема дренажной и ливневой канализации","дренажная насосная станция",
     "пескоуловитель","линейный водоотвод","d=160","i=0,005","дк","лк"]
@@ -29,12 +45,15 @@ GEO_STRONG = ["инженерно-геологические","бурение г
 def low(t): return str(t or "").lower().replace("ё","е")
 
 def hist(conn, tid, action):
-    conn.execute("INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",(tid,action[:900],))
+    conn.execute(
+        "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+        (tid, action[:900]),
+    )
 
 def pdf_text(path):
     try:
         r = subprocess.run(["pdftotext","-layout","-q",str(path),"-"],
-            stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,text=True,timeout=25)
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, timeout=25)
         return r.stdout or ""
     except Exception as e:
         return f"PDFTOTEXT_ERR={e}"
@@ -60,42 +79,48 @@ def classify(path, text):
 
 def friendly(kind):
     return {"drainage_scheme":"Схема глубинного дренажа.pdf",
-            "geology_report":"Отчет_Мистолово_03.26.pdf"}.get(kind,"source.pdf")
+            "geology_report":"Отчет_Мистолово_03.26.pdf"}.get(kind, "source.pdf")
 
 def find_user_pdfs():
     now = datetime.now().timestamp()
     candidates = []
-    for pat in ["/var/lib/telegram-bot-api/*/documents/*.pdf"]:
-        for raw in glob.glob(pat):
-            p = Path(raw)
-            try:
-                if p.is_file() and now - p.stat().st_mtime <= 12*3600:
-                    candidates.append(p)
-            except: pass
-    out = []
-    seen_kinds = set()
+    for raw in glob.glob("/var/lib/telegram-bot-api/*/documents/*.pdf"):
+        p = Path(raw)
+        try:
+            if p.is_file() and now - p.stat().st_mtime <= 12*3600:
+                candidates.append(p)
+        except: pass
+    out = []; seen = set()
     for p in sorted(set(candidates), key=lambda x: x.stat().st_mtime, reverse=True):
         txt = pdf_text(p)
         if is_artifact(p, txt): continue
         kind = classify(p, txt)
-        if kind in ("drainage_scheme","geology_report") and kind not in seen_kinds:
+        if kind in ("drainage_scheme","geology_report") and kind not in seen:
             out.append({"path":p,"kind":kind,"name":friendly(kind),"text":txt,"chars":len(txt)})
-            seen_kinds.add(kind)
+            seen.add(kind)
     return out
 
+# ---------------------------------------------------------------------------
+# VAT helpers
+# ---------------------------------------------------------------------------
 def infer_vat(conn, tid, raw_in, result):
     texts = [raw_in or "", result or ""]
-    for row in conn.execute("SELECT action FROM task_history WHERE task_id=? ORDER BY rowid ASC",(tid,)).fetchall():
+    for row in conn.execute(
+        "SELECT action FROM task_history WHERE task_id=? ORDER BY rowid ASC", (tid,)
+    ).fetchall():
         texts.append(str(row[0] or ""))
     t = low("\n".join(texts))
     if "topic2_vat_mode_confirmed:with_vat_22" in t: return "WITH_VAT_22"
     if "topic2_vat_mode_confirmed:without_vat" in t: return "WITHOUT_VAT"
-    wo = ["без ндс","ндс не нужен","без налога","без учета ндс","без учёта ндс"]
-    wv = ["с ндс","с учетом ндс","с учётом ндс","добавь ндс","посчитай с ндс","с налогом"]
+    wo = ["без ндс","ндс не нужен","без налога","без учета ндс"]
+    wv = ["с ндс","с учетом ндс","добавь ндс","посчитай с ндс"]
     if any(p in t for p in wo): return "WITHOUT_VAT"
     if any(p in t for p in wv): return "WITH_VAT_22"
     return None
 
+# ---------------------------------------------------------------------------
+# Messaging
+# ---------------------------------------------------------------------------
 def send_msg(chat_id, topic_id, text):
     from core.reply_sender import send_reply_ex
     if len(text) > 3900: text = text[:3800]+"\n\n[сокращено]"
@@ -105,7 +130,7 @@ def send_msg(chat_id, topic_id, text):
     return int(res.get("bot_message_id") or 0)
 
 def ask_vat(conn, task):
-    tid = str(task["id"]); chat_id = str(task["chat_id"]); topic_id = int(task["topic_id"] or 2)
+    tid=str(task["id"]); chat_id=str(task["chat_id"]); topic_id=int(task["topic_id"] or 2)
     msg = "Считать с НДС 22% или без НДС?"
     bot_msg = send_msg(chat_id, topic_id, msg)
     conn.execute("UPDATE tasks SET state='WAITING_CLARIFICATION',result=?,bot_message_id=?,"
@@ -117,14 +142,16 @@ def ask_vat(conn, task):
     conn.commit()
     print(f"VAT_MODE_REQUIRED\nBOT_MESSAGE_ID={bot_msg}")
 
+# ---------------------------------------------------------------------------
+# Length extraction (PDF + user reply in recent tasks)
+# ---------------------------------------------------------------------------
 def num(x): return float(x.replace(",","."))
 
-def extract_lengths(text):
-    LEGEND_SKIP = ("уклон", "длина", "диаметр")
+def extract_lengths_from_pdf(text):
+    LEGEND_SKIP = ("уклон","длина","диаметр")
     vals = []
     for line in text.splitlines():
         ll = low(line)
-        # skip legend/definition lines: "l=6,0 м i - уклон, l - длина, d - диаметр"
         if all(k in ll for k in LEGEND_SKIP): continue
         if not any(k in ll for k in ["i=","d=","дрен","водоотвод","труб","ливнев"]): continue
         for pat in [r"(?i)\bl\s*=\s*(\d+(?:[,.]\d+)?)\s*м\b",
@@ -152,154 +179,258 @@ def count_unique(text, prefix):
 
 def has(text, marker): return low(marker) in low(text)
 
-async def search_drainage_prices_online(conn, tid):
-    """Query Perplexity Sonar for drainage material prices in SPb/LO region."""
-    api_key = os.getenv("OPENROUTER_API_KEY","").strip()
-    base_url = os.getenv("OPENROUTER_BASE_URL","https://openrouter.ai/api/v1").rstrip("/")
-    model = os.getenv("OPENROUTER_MODEL_ONLINE","perplexity/sonar").strip() or "perplexity/sonar"
-    if not api_key:
-        print("OPENROUTER_API_KEY_MISSING — online prices unavailable")
-        hist(conn, tid, "TOPIC2_DRAINAGE_PRICE_SEARCH_KEY_MISSING")
-        return None, {}
-    if "sonar" not in model.lower():
-        print(f"ONLINE_MODEL_NOT_SONAR:{model} — skipping")
-        hist(conn, tid, f"TOPIC2_DRAINAGE_PRICE_SEARCH_MODEL_GUARD:{model}")
-        return None, {}
+def read_user_provided_length(conn, tid):
+    """Check task_history and recent topic_2 tasks for user-provided length."""
+    # Check history markers first
+    for row in conn.execute(
+        "SELECT action FROM task_history WHERE task_id=? ORDER BY rowid DESC LIMIT 50", (tid,)
+    ).fetchall():
+        a = str(row[0] or "")
+        m = re.match(r"USER_PROVIDED_LENGTH:(\d+(?:\.\d+)?)", a)
+        if m:
+            return float(m.group(1))
+    # Check recent topic_2 text tasks (user's reply after WC was sent)
+    rows = conn.execute(
+        "SELECT raw_input FROM tasks WHERE topic_id=2 AND id!=? "
+        "AND input_type='text' ORDER BY rowid DESC LIMIT 15",
+        (tid,),
+    ).fetchall()
+    for row in rows:
+        text = str(row[0] or "").lower()
+        m = re.search(r"(\d+(?:[.,]\d+)?)\s*(?:м(?:\.|\.п\.|\s|$)|метр)", text)
+        if m:
+            try:
+                v = float(m.group(1).replace(",","."))
+                if 5 <= v <= 2000:
+                    return v
+            except: pass
+    return 0.0
 
-    query = (
-        "Актуальные рыночные цены Санкт-Петербург и Ленинградская область, 2025-2026.\n"
-        "Объект: дренаж и ливневая канализация коттеджного участка.\n\n"
-        "Найди цены с источниками:\n"
-        "1. Труба дренажная гофрированная двустенная d=160мм (КОРСИС SN8 или аналог) — руб/п.м.\n"
-        "2. Геотекстиль нетканый 150-200 г/м² (Terram, Typar, ТехноНИКОЛЬ) — руб/м²\n"
-        "3. Щебень гранитный фракция 20-40мм — руб/м³\n"
-        "4. Песок строительный намывной — руб/м³\n"
-        "5. Колодец дренажный ревизионный ∅500 полимерный (Wavin, Политрон) — руб/шт\n"
-        "6. Насосная станция дренажная 0.55кВт (Grundfos Unilift, Джилекс, Wilo) — руб/шт\n"
-        "7. Пескоуловитель ПУ-1 дорожный пластиковый (Ecoteck, Gidrostroy) — руб/шт\n"
-        "8. Лоток водоотводный DN100 пластиковый с решёткой (Hauraton, Gidrostroy) — руб/п.м.\n\n"
-        "Формат для каждой позиции:\n"
-        "[N]. Позиция | мин. цена | макс. цена | ед. | источник | URL | дата\n\n"
-        "Только реальные данные. Если нет — НЕТ ДАННЫХ. Не выдумывай."
-    )
-    body = {
-        "model": model,
-        "messages": [
-            {"role":"system","content":"Снабженец строительной компании. Только цены с источниками. Без советов."},
-            {"role":"user","content":query},
-        ],
-        "temperature": 0.1,
-    }
-    headers = {"Authorization":f"Bearer {api_key}","Content-Type":"application/json"}
-    try:
-        def _call():
-            r = requests.post(f"{base_url}/chat/completions", headers=headers, json=body, timeout=90)
-            if r.status_code != 200:
-                raise RuntimeError(f"HTTP_{r.status_code}:{r.text[:200]}")
-            return r.json()["choices"][0]["message"]["content"]
-        content = await asyncio.to_thread(_call)
-        hist(conn, tid, f"TOPIC2_DRAINAGE_PRICE_SEARCH_SONAR_OK:{len(content)}chars")
-        prices = _parse_drainage_prices(content)
-        print(f"SONAR_PRICES_PARSED={list(prices.keys())}")
-        return content, prices
-    except Exception as e:
-        hist(conn, tid, f"TOPIC2_DRAINAGE_PRICE_SEARCH_ERR:{str(e)[:120]}")
-        print(f"SONAR_PRICE_SEARCH_FAILED: {e}")
-        return None, {}
+# ---------------------------------------------------------------------------
+# History state readers
+# ---------------------------------------------------------------------------
+def read_history_markers(conn, tid):
+    rows = conn.execute(
+        "SELECT action FROM task_history WHERE task_id=? ORDER BY rowid ASC", (tid,)
+    ).fetchall()
+    return [str(r[0] or "") for r in rows]
 
-def _parse_drainage_prices(text):
-    """Extract numeric prices from Sonar response. Returns dict item → price."""
-    prices = {}
-    if not text: return prices
-    t = low(text)
+def find_marker(markers, prefix):
+    for m in reversed(markers):
+        if m.startswith(prefix): return m
+    return ""
 
-    def _grab(pattern, lo, hi):
-        m = re.search(pattern, t, re.I|re.S)
-        if not m: return None
-        try:
-            v = float(re.sub(r"[\s\xa0 ]","", m.group(1)).replace(",","."))
-            return v if lo <= v <= hi else None
-        except: return None
+# ---------------------------------------------------------------------------
+# Read recent user reply (for price choice)
+# ---------------------------------------------------------------------------
+def read_recent_user_reply(conn, tid):
+    """Return most recent user text input in topic_2 (not the parent task)."""
+    rows = conn.execute(
+        "SELECT raw_input FROM tasks WHERE topic_id=2 AND id!=? "
+        "AND input_type='text' ORDER BY rowid DESC LIMIT 10",
+        (tid,),
+    ).fetchall()
+    for row in rows:
+        text = str(row[0] or "").strip()
+        if text: return text
+    return ""
 
-    v = _grab(r"труб[а-я]*.*?d=?160[^|]*?\|[^|]*?(\d[\d\s]*)\s*руб", 100, 3000)
-    if v: prices["pipe_per_m"] = v
+# ---------------------------------------------------------------------------
+# Cache file (stores item definitions + offers between script runs)
+# ---------------------------------------------------------------------------
+def save_cache(cache: dict):
+    CACHE_FILE.write_text(json.dumps(cache, ensure_ascii=False, indent=2))
 
-    v = _grab(r"геотекстил[ья][^|]*?\|[^|]*?(\d[\d\s]*)\s*руб", 20, 800)
-    if v: prices["geotextile_per_m2"] = v
+def load_cache() -> Optional[dict]:
+    if CACHE_FILE.exists():
+        try: return json.loads(CACHE_FILE.read_text())
+        except: pass
+    return None
 
-    v = _grab(r"щебен[ья][^|]*?\|[^|]*?(\d[\d\s]*)\s*руб", 500, 15000)
-    if v: prices["gravel_per_m3"] = v
+# ---------------------------------------------------------------------------
+# Drainage item definitions
+# (name_xlsx, search_query, unit, work_price, раздел)
+# qty_fn(L, ex, wd, wl) computed in build_cache
+# ---------------------------------------------------------------------------
+def build_drainage_cache(L, ex, wd, wl, has_dns, has_pu, sources):
+    """Build the canonical cache dict for price enrichment."""
+    items = []
 
-    v = _grab(r"колодец[^|]*?∅?500[^|]*?\|[^|]*?(\d[\d\s]*)\s*руб", 3000, 150000)
-    if not v: v = _grab(r"колодец[^|]*?дренаж[^|]*?\|[^|]*?(\d[\d\s]*)\s*руб", 3000, 150000)
-    if v: prices["well_per_unit"] = v
-
-    v = _grab(r"насосн[^|]*?станц[^|]*?\|[^|]*?(\d[\d\s]*)\s*руб", 5000, 500000)
-    if v: prices["dns_per_unit"] = v
-
-    v = _grab(r"пескоулов[^|]*?\|[^|]*?(\d[\d\s]*)\s*руб", 1000, 80000)
-    if v: prices["pu_per_unit"] = v
-
-    v = _grab(r"лоток[^|]*?\|[^|]*?(\d[\d\s]*)\s*руб", 200, 15000)
-    if v: prices["channel_per_m"] = v
-
-    return prices
-
-def build_items(L, depth, wd, wl, dns, pu, note, online_prices=None):
-    # No fallback — caller must ensure L > 0
-    if L <= 0:
-        raise ValueError("TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN_NO_FALLBACK")
-    p = online_prices or {}
-    src = "OpenRouter/Sonar (актуальные)" if p else "MANUAL_HIGH_SEGMENT_BY_USER"
-    supplier = "онлайн-поиск СПб/ЛО" if p else "ручной высокий сегмент"
-
-    pipe_mat     = p.get("pipe_per_m",        1250)
-    geo_mat      = p.get("geotextile_per_m2",   95)
-    gravel_mat   = p.get("gravel_per_m3",      3200)
-    well_mat     = p.get("well_per_unit",     18000)
-    dns_mat      = p.get("dns_per_unit",     145000)
-    pu_mat       = p.get("pu_per_unit",       22000)
-    channel_mat  = p.get("channel_per_m",      2600)
-
-    ex = round(L * depth * 0.6, 2)
-    rows = [
-        ("Подготовительные и земляные работы","Разметка трасс дренажа/ливнёвки","м.п.",L,450,0),
-        ("Подготовительные и земляные работы","Разработка траншей","м³",ex,1900,0),
-        ("Подготовительные и земляные работы","Вывоз/перемещение лишнего грунта","м³",round(ex*0.35,2),1400,0),
-        ("Геотекстиль / щебень / песок","Геотекстиль в траншее","м²",round(L*1.8,2),180,geo_mat),
-        ("Геотекстиль / щебень / песок","Песчаная подготовка","м³",round(L*0.12,2),1300,1700),
-        ("Геотекстиль / щебень / песок","Щебёночный фильтр","м³",round(L*0.35,2),1600,gravel_mat),
-        ("Дренажные трубы и обратный фильтр","Труба дренажная/водоотводящая d=160","м.п.",L,850,pipe_mat),
-        ("Дренажные трубы и обратный фильтр","Укладка трубы с уклоном i=0,005","м.п.",L,950,0),
+    # Material items that need online price search
+    mat_defs = [
+        ("Геотекстиль в траншее",
+         "Геотекстиль нетканый 150-200 г/м² Terram Typar ТехноНИКОЛЬ",
+         "м²", round(L*1.8,2), 180, "Геотекстиль / щебень / песок"),
+        ("Песчаная подготовка",
+         "Песок строительный намывной",
+         "м³", round(L*0.12,2), 1300, "Геотекстиль / щебень / песок"),
+        ("Щебёночный фильтр 20-40мм",
+         "Щебень гранитный фракция 20-40мм",
+         "м³", round(L*0.35,2), 1600, "Геотекстиль / щебень / песок"),
+        ("Труба дренажная/водоотводящая d=160",
+         "Труба дренажная гофрированная двустенная d=160мм КОРСИС SN8",
+         "п.м.", L, 850, "Дренажные трубы и обратный фильтр"),
     ]
-    if wd: rows.append(("Колодцы и дождеприёмники","Дренажный ревизионный колодец Дк","шт",wd,6500,well_mat))
-    if wl: rows.append(("Колодцы и дождеприёмники","Ливневый ревизионный колодец Лк","шт",wl,6500,well_mat))
-    if dns: rows.append(("ДНС / насосное оборудование","Дренажная насосная станция ДНС-1","компл",1,28000,dns_mat))
-    if pu: rows.append(("Пескоуловители / линейный водоотвод","Пескоуловитель ПУ-1","шт",1,6500,pu_mat))
-    rows.extend([
-        ("Ливневая канализация","Линейный водоотвод / лотки","м.п.",max(round(L*0.2,2),1),1100,channel_mat),
-        ("Монтажные работы","Сборка узлов, подключение колодцев и выпусков","компл",1,45000,0),
-        ("Логистика","Доставка материалов и инструмента","рейс",2,0,18000),
-    ])
-    out = []
-    for i,(sec,name,unit,qty,work,mat) in enumerate(rows,1):
-        qty=float(qty);work=float(work);mat=float(mat)
-        out.append({"№":i,"Раздел":sec,"Наименование":name,"Ед изм":unit,"Кол-во":qty,
-            "Цена работ":work,"Стоимость работ":round(qty*work,2),
-            "Цена материалов":mat,"Стоимость материалов":round(qty*mat,2),
-            "Всего":round(qty*(work+mat),2),"Источник цены":src,
-            "Поставщик":supplier,
-            "URL":"—","checked_at":datetime.now().strftime("%Y-%m-%d"),"Примечание":note})
-    return out
+    if wd:
+        mat_defs.append((
+            "Дренажный ревизионный колодец Дк ∅500",
+            "Колодец дренажный ревизионный диаметр 500мм полимерный Wavin Политрон",
+            "шт", float(wd), 6500, "Колодцы и дождеприёмники",
+        ))
+    if wl:
+        mat_defs.append((
+            "Ливневый ревизионный колодец Лк ∅500",
+            "Колодец ливневый ревизионный диаметр 500мм полимерный",
+            "шт", float(wl), 6500, "Колодцы и дождеприёмники",
+        ))
+    if has_dns:
+        mat_defs.append((
+            "Дренажная насосная станция ДНС-1",
+            "Дренажная насосная станция 0.55кВт Grundfos Unilift Wilo Джилекс",
+            "шт", 1.0, 28000, "ДНС / насосное оборудование",
+        ))
+    if has_pu:
+        mat_defs.append((
+            "Пескоуловитель ПУ-1",
+            "Пескоуловитель дорожный пластиковый ПУ-1 Ecoteck Gidrostroy",
+            "шт", 1.0, 6500, "Пескоуловители / линейный водоотвод",
+        ))
+    mat_defs.append((
+        "Линейный водоотвод / лотки DN100",
+        "Лоток водоотводный пластиковый DN100 с решёткой Hauraton Gidrostroy",
+        "п.м.", max(round(L*0.2,2), 1.0), 1100, "Ливневая канализация",
+    ))
 
-def calc_totals(items, vat_mode):
-    works = sum(x["Стоимость работ"] for x in items)
-    mats  = sum(x["Стоимость материалов"] for x in items)
+    for (name, search, unit, qty, work_price, раздел) in mat_defs:
+        items.append({
+            "name": name, "search": search, "unit": unit,
+            "qty": qty, "work_price": float(work_price),
+            "раздел": раздел, "offers": [],
+        })
+
+    # Pure work items (no material price search)
+    work_defs = [
+        ("Разметка трасс дренажа/ливнёвки",        "м.п.",   L,               450.0,     0.0, "Подготовительные и земляные работы"),
+        ("Разработка траншей",                       "м³",     ex,             1900.0,     0.0, "Подготовительные и земляные работы"),
+        ("Вывоз/перемещение лишнего грунта",         "м³",     round(ex*0.35,2),1400.0,    0.0, "Подготовительные и земляные работы"),
+        ("Укладка трубы с уклоном i=0,005",         "м.п.",   L,               950.0,     0.0, "Дренажные трубы и обратный фильтр"),
+        ("Сборка узлов, подключение колодцев",      "компл",  1.0,           45000.0,     0.0, "Монтажные работы"),
+        ("Доставка материалов и инструмента",        "рейс",   2.0,               0.0, 18000.0, "Логистика"),
+    ]
+    for (name, unit, qty, work_price, mat_price, раздел) in work_defs:
+        items.append({
+            "name": name, "search": None, "unit": unit,
+            "qty": qty, "work_price": work_price,
+            "раздел": раздел, "offers": [],
+            "_fixed_mat_price": mat_price,  # for delivery etc.
+        })
+
+    return {
+        "length": L, "ex": ex, "wd": wd, "wl": wl,
+        "has_dns": has_dns, "has_pu": has_pu,
+        "sources": sources,
+        "items": items,
+    }
+
+# ---------------------------------------------------------------------------
+# Price enrichment: call _openrouter_price_search for each material item
+# ---------------------------------------------------------------------------
+async def enrich_cache(conn, tid, cache):
+    hist(conn, tid, "TOPIC2_PRICE_ENRICHMENT_STARTED")
+    conn.commit()
+    for item in cache["items"]:
+        if not item.get("search"):
+            continue
+        name = item["name"]; unit = item["unit"]
+        print(f"  SEARCHING: {name} ({unit})")
+        try:
+            offers = await asyncio.wait_for(
+                _openrouter_price_search(item["search"], unit, "Санкт-Петербург"),
+                timeout=30.0,
+            )
+        except Exception as e:
+            print(f"  SEARCH_ERR {name}: {e}")
+            offers = []
+        item["offers"] = offers
+        if offers:
+            sup = offers[0].get("supplier","")
+            hist(conn, tid, f"TOPIC2_PRICE_SOURCE_FOUND:{name}:{sup}")
+            print(f"    → {len(offers)} offers, best: {offers[0].get('price')} {unit} @ {sup}")
+        else:
+            hist(conn, tid, f"TOPIC2_PRICE_SOURCE_MISSING:{name}")
+            print(f"    → no offers found")
+    hist(conn, tid, "TOPIC2_PRICE_ENRICHMENT_DONE")
+    conn.commit()
+    return cache
+
+# ---------------------------------------------------------------------------
+# Send price choice menu to user
+# ---------------------------------------------------------------------------
+def send_price_menu(conn, tid, chat_id, topic_id, cache):
+    menu_text = _price_prompt(cache)
+    bot_msg = send_msg(chat_id, topic_id, menu_text)
+    conn.execute(
+        "UPDATE tasks SET state='WAITING_CLARIFICATION', result=?, bot_message_id=?, "
+        "error_message='TOPIC2_DRAINAGE_PRICE_CHOICE_REQUIRED', updated_at=datetime('now') WHERE id=?",
+        (menu_text, bot_msg, tid),
+    )
+    hist(conn, tid, f"TOPIC2_PRICE_CHOICE_MENU_SENT:{bot_msg}")
+    conn.commit()
+    print(f"PRICE_MENU_SENT BOT_MESSAGE_ID={bot_msg}")
+    return bot_msg
+
+# ---------------------------------------------------------------------------
+# XLSX + PDF generation (only after TOPIC2_PRICE_CHOICE_CONFIRMED)
+# ---------------------------------------------------------------------------
+def build_xlsx_rows(cache, mode, vat_mode):
+    """Apply selected prices and build full XLSX row dicts."""
+    rows = []
+    for i, item in enumerate(cache["items"], 1):
+        offers = item.get("offers") or []
+        fixed_mat = item.get("_fixed_mat_price", 0.0)
+
+        if offers:
+            mat_price = _select_price(offers, mode)
+            best = offers[0]
+            src = best.get("status", "UNVERIFIED")
+            supplier = best.get("supplier", "—")
+            url = best.get("url", "—")
+            checked = best.get("checked_at", datetime.now().strftime("%Y-%m-%d"))
+        else:
+            mat_price = fixed_mat
+            src = "MANUAL" if fixed_mat > 0 else "WORK_ONLY"
+            supplier = "—"; url = "—"
+            checked = datetime.now().strftime("%Y-%m-%d")
+
+        qty = float(item["qty"])
+        work = float(item["work_price"])
+        rows.append({
+            "№": i,
+            "Раздел": item.get("раздел",""),
+            "Наименование": item["name"],
+            "Ед изм": item["unit"],
+            "Кол-во": qty,
+            "Цена работ": work,
+            "Стоимость работ": round(qty*work, 2),
+            "Цена материалов": mat_price,
+            "Стоимость материалов": round(qty*mat_price, 2),
+            "Всего": round(qty*(work+mat_price), 2),
+            "Источник цены": src,
+            "Поставщик": supplier,
+            "URL": url,
+            "checked_at": checked,
+            "Примечание": f"mode={mode}",
+        })
+    return rows
+
+def calc_totals(rows, vat_mode):
+    works = sum(r["Стоимость работ"] for r in rows)
+    mats  = sum(r["Стоимость материалов"] for r in rows)
     no_vat = works + mats
     vat = no_vat * VAT_RATE if vat_mode == "WITH_VAT_22" else 0.0
     return {"works":works,"mats":mats,"no_vat":no_vat,"vat":vat,"grand":no_vat+vat}
 
-def create_xlsx(path, items, meta, vat_mode, online_price_text=None):
+def create_xlsx(path, rows, meta, vat_mode, mode):
     from openpyxl import Workbook
     from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
     from openpyxl.utils import get_column_letter
@@ -308,8 +439,8 @@ def create_xlsx(path, items, meta, vat_mode, online_price_text=None):
     wb = Workbook(); ws = wb.active; ws.title = "DRAINAGE_CALC"
     ws["A1"] = "Смета: дренаж / ливневая канализация / наружные сети"
     ws["A2"] = f"Исходные файлы: {', '.join(meta['file_names'])}"
-    ws["A3"] = f"Длина: {meta['total_len']} м; глубина: {meta['avg_depth']} м; статус: {meta['length_status']}"
-    ws["A4"] = "Цены: онлайн-поиск OpenRouter/Sonar (СПб/ЛО)" if meta.get("prices_source") == "sonar" else "Цены: высокий ценовой сегмент по ТЗ"
+    ws["A3"] = f"Длина: {meta['total_len']} м; глубина: {meta['avg_depth']} м"
+    ws["A4"] = f"Цены: онлайн-поиск OpenRouter/Sonar, выбор пользователя: {mode}"
     ws["A5"] = "НДС: 22%" if vat_mode=="WITH_VAT_22" else "НДС: не применяется"
     for r in range(1,6): ws.cell(r,1).font = Font(bold=True)
     start = 7
@@ -318,12 +449,14 @@ def create_xlsx(path, items, meta, vat_mode, online_price_text=None):
         cell.font = Font(bold=True)
         cell.fill = PatternFill("solid",fgColor="D9EAF7")
         cell.alignment = Alignment(horizontal="center",vertical="center",wrap_text=True)
-    for r,item in enumerate(items,start+1):
-        for c,h in enumerate(H,1): ws.cell(r,c,item[h])
+    for r,row in enumerate(rows, start+1):
+        for c,h in enumerate(H,1): ws.cell(r,c,row[h])
         ws.cell(r,7,f"=E{r}*F{r}"); ws.cell(r,9,f"=E{r}*H{r}"); ws.cell(r,10,f"=G{r}+I{r}")
-    last = start+len(items); tr=last+2
+    last = start+len(rows); tr=last+2
     ws.cell(tr,2,"ИТОГО без НДС" if vat_mode=="WITH_VAT_22" else "ИТОГО")
-    ws.cell(tr,7,f"=SUM(G{start+1}:G{last})"); ws.cell(tr,9,f"=SUM(I{start+1}:I{last})"); ws.cell(tr,10,f"=SUM(J{start+1}:J{last})")
+    ws.cell(tr,7,f"=SUM(G{start+1}:G{last})")
+    ws.cell(tr,9,f"=SUM(I{start+1}:I{last})")
+    ws.cell(tr,10,f"=SUM(J{start+1}:J{last})")
     if vat_mode=="WITH_VAT_22":
         vr=tr+1; gr=vr+1
         ws.cell(vr,2,"НДС 22%"); ws.cell(vr,10,f"=J{tr}*0.22")
@@ -333,27 +466,16 @@ def create_xlsx(path, items, meta, vat_mode, online_price_text=None):
         ws.cell(vr,2,"НДС не применяется"); ws.cell(vr,10,0)
     for r in range(tr,gr+1):
         for c in range(1,16): ws.cell(r,c).font = Font(bold=True)
-    for i,w in enumerate([6,26,46,10,12,14,16,16,18,16,22,28,16,14,46],1):
+    for i,w in enumerate([6,26,46,10,12,14,16,16,18,16,22,28,16,14,20],1):
         ws.column_dimensions[get_column_letter(i)].width = w
     thin = Side(style="thin",color="999999")
     for row in ws.iter_rows(min_row=start,max_row=gr,min_col=1,max_col=15):
         for cell in row:
             cell.border = Border(left=thin,right=thin,top=thin,bottom=thin)
             cell.alignment = Alignment(vertical="top",wrap_text=True)
-    # Online prices sheet
-    if online_price_text:
-        ws2 = wb.create_sheet("Цены онлайн (Sonar)")
-        ws2["A1"] = "Цены из интернета — OpenRouter / Perplexity Sonar"
-        ws2["A2"] = f"Дата запроса: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
-        ws2["A1"].font = Font(bold=True)
-        ws2["A2"].font = Font(italic=True)
-        for i, line in enumerate(online_price_text.splitlines(), 4):
-            ws2.cell(i, 1, line[:500])
-        ws2.column_dimensions["A"].width = 120
     wb.save(path)
-    return calc_totals(items, vat_mode)
 
-def create_pdf(path, items, meta, totals, vat_mode):
+def create_pdf(path, rows, meta, totals, vat_mode, mode):
     from reportlab.lib.pagesizes import A4, landscape
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
     from reportlab.lib import colors
@@ -365,55 +487,47 @@ def create_pdf(path, items, meta, totals, vat_mode):
     if fp: pdfmetrics.registerFont(TTFont("RU",fp)); font="RU"
     else: font="Helvetica"
     vat_label = "НДС: 22%" if vat_mode=="WITH_VAT_22" else "НДС: не применяется"
-    prices_label = "Цены: онлайн-поиск OpenRouter/Sonar" if meta.get("prices_source")=="sonar" else "Цены: высокий ценовой сегмент"
     doc = SimpleDocTemplate(str(path),pagesize=landscape(A4),leftMargin=18,rightMargin=18,topMargin=18,bottomMargin=18)
     sty = getSampleStyleSheet()
     N = ParagraphStyle("n",parent=sty["Normal"],fontName=font,fontSize=8,leading=10)
     T = ParagraphStyle("t",parent=sty["Title"],fontName=font,fontSize=14,leading=16)
-    story = [Paragraph("Смета: дренаж / ливневая канализация / наружные сети",T),Spacer(1,8),
-             Paragraph(f"Исходные файлы: {', '.join(meta['file_names'])}",N),
-             Paragraph(f"Длина: {meta['total_len']} м; глубина: {meta['avg_depth']} м; статус: {meta['length_status']}",N),
-             Paragraph(f"{prices_label}; {vat_label}",N),Spacer(1,8)]
+    story = [
+        Paragraph("Смета: дренаж / ливневая канализация / наружные сети",T),Spacer(1,8),
+        Paragraph(f"Исходные файлы: {', '.join(meta['file_names'])}",N),
+        Paragraph(f"Длина: {meta['total_len']} м; глубина: {meta['avg_depth']} м",N),
+        Paragraph(f"Цены: онлайн-поиск OpenRouter/Sonar, режим: {mode}; {vat_label}",N),
+        Spacer(1,8),
+    ]
     data=[["Раздел","Наименование","Ед","Кол-во","Работы","Материалы","Всего"]]
-    for item in items:
-        data.append([Paragraph(item["Раздел"],N),Paragraph(item["Наименование"],N),item["Ед изм"],
-                     f"{item['Кол-во']:.1f}",
-                     f"{item['Стоимость работ']:,.0f}".replace(",","  "),
-                     f"{item['Стоимость материалов']:,.0f}".replace(",","  "),
-                     f"{item['Всего']:,.0f}".replace(",","  ")])
+    for r in rows:
+        data.append([
+            Paragraph(r["Раздел"],N), Paragraph(r["Наименование"],N), r["Ед изм"],
+            f"{r['Кол-во']:.1f}",
+            f"{r['Стоимость работ']:,.0f}".replace(",","  "),
+            f"{r['Стоимость материалов']:,.0f}".replace(",","  "),
+            f"{r['Всего']:,.0f}".replace(",","  "),
+        ])
     table=Table(data,colWidths=[105,230,42,55,75,85,75])
-    table.setStyle(TableStyle([("FONTNAME",(0,0),(-1,-1),font),("FONTSIZE",(0,0),(-1,-1),7),
-                                ("BACKGROUND",(0,0),(-1,0),colors.lightgrey),
-                                ("GRID",(0,0),(-1,-1),0.25,colors.grey),("VALIGN",(0,0),(-1,-1),"TOP")]))
-    story+=[table,Spacer(1,8),
-            Paragraph(f"Материалы: {totals['mats']:,.0f} руб".replace(",","  "),N),
-            Paragraph(f"Работы: {totals['works']:,.0f} руб".replace(",","  "),N)]
+    table.setStyle(TableStyle([
+        ("FONTNAME",(0,0),(-1,-1),font),("FONTSIZE",(0,0),(-1,-1),7),
+        ("BACKGROUND",(0,0),(-1,0),colors.lightgrey),
+        ("GRID",(0,0),(-1,-1),0.25,colors.grey),("VALIGN",(0,0),(-1,-1),"TOP"),
+    ]))
+    story += [table, Spacer(1,8),
+              Paragraph(f"Материалы: {totals['mats']:,.0f} руб".replace(",","  "),N),
+              Paragraph(f"Работы: {totals['works']:,.0f} руб".replace(",","  "),N)]
     if vat_mode=="WITH_VAT_22":
-        story+=[Paragraph(f"Без НДС: {totals['no_vat']:,.0f} руб".replace(",","  "),N),
-                Paragraph(f"НДС 22%: {totals['vat']:,.0f} руб".replace(",","  "),N),
-                Paragraph(f"С НДС: {totals['grand']:,.0f} руб".replace(",","  "),N)]
+        story += [
+            Paragraph(f"Без НДС: {totals['no_vat']:,.0f} руб".replace(",","  "),N),
+            Paragraph(f"НДС 22%: {totals['vat']:,.0f} руб".replace(",","  "),N),
+            Paragraph(f"С НДС: {totals['grand']:,.0f} руб".replace(",","  "),N),
+        ]
     else:
-        story+=[Paragraph(f"Итого без НДС: {totals['grand']:,.0f} руб".replace(",","  "),N),
-                Paragraph("НДС: не применяется",N)]
+        story += [
+            Paragraph(f"Итого без НДС: {totals['grand']:,.0f} руб".replace(",","  "),N),
+            Paragraph("НДС: не применяется",N),
+        ]
     doc.build(story)
-
-async def maybe_upload(path, chat_id, topic_id):
-    try: from core.topic_drive_oauth import upload_file_to_topic
-    except: return ""
-    for fn in [
-        lambda: upload_file_to_topic(file_path=str(path), file_name=path.name, chat_id=str(chat_id), topic_id=int(topic_id)),
-        lambda: upload_file_to_topic(str(path), path.name, str(chat_id), int(topic_id)),
-    ]:
-        try:
-            res = fn()
-            if inspect.isawaitable(res): res = await res
-            if isinstance(res,dict):
-                for k in ("webViewLink","link","url","drive_link","view_link"):
-                    if res.get(k): return str(res[k])
-                if res.get("file_id"): return f"https://drive.google.com/file/d/{res['file_id']}/view"
-            if isinstance(res,str) and res.startswith("http"): return res
-        except: continue
-    return ""
 
 def send_doc(chat_id, topic_id, path, caption):
     token = os.getenv("TELEGRAM_BOT_TOKEN","").strip()
@@ -428,96 +542,189 @@ def send_doc(chat_id, topic_id, path, caption):
         raise RuntimeError(f"SEND_DOC_FAILED:{r.status_code}:{r.text[:200]}")
     return int(js["result"]["message_id"])
 
-async def main():
-    conn=sqlite3.connect(str(DB)); conn.row_factory=sqlite3.Row
-    task=conn.execute("SELECT * FROM tasks WHERE id=? LIMIT 1",(TASK_ID,)).fetchone()
-    if not task: raise SystemExit(f"TASK_NOT_FOUND:{TASK_ID}")
-    tid=str(task["id"]); chat_id=str(task["chat_id"]); topic_id=int(task["topic_id"] or 2)
-    raw_in=str(task["raw_input"] or ""); result=str(task["result"] or "")
+async def maybe_upload(path, chat_id, topic_id):
+    import inspect
+    try: from core.topic_drive_oauth import upload_file_to_topic
+    except: return ""
+    for fn in [
+        lambda: upload_file_to_topic(file_path=str(path),file_name=path.name,chat_id=str(chat_id),topic_id=int(topic_id)),
+        lambda: upload_file_to_topic(str(path),path.name,str(chat_id),int(topic_id)),
+    ]:
+        try:
+            res = fn()
+            if inspect.isawaitable(res): res = await res
+            if isinstance(res,dict):
+                for k in ("webViewLink","link","url","drive_link","view_link"):
+                    if res.get(k): return str(res[k])
+                if res.get("file_id"): return f"https://drive.google.com/file/d/{res['file_id']}/view"
+            if isinstance(res,str) and res.startswith("http"): return res
+        except: continue
+    return ""
 
+# ---------------------------------------------------------------------------
+# Main state machine
+# ---------------------------------------------------------------------------
+async def main():
+    conn = sqlite3.connect(str(DB)); conn.row_factory = sqlite3.Row
+    task = conn.execute("SELECT * FROM tasks WHERE id=? LIMIT 1",(TASK_ID,)).fetchone()
+    if not task: raise SystemExit(f"TASK_NOT_FOUND:{TASK_ID}")
+    tid = str(task["id"]); chat_id = str(task["chat_id"]); topic_id = int(task["topic_id"] or 2)
+    raw_in = str(task["raw_input"] or ""); result = str(task["result"] or "")
+
+    # VAT gate
     vat_mode = infer_vat(conn, tid, raw_in, result)
     if vat_mode is None:
         ask_vat(conn, task); conn.close(); return
 
-    hist(conn, tid, "TOPIC2_VAT_GATE_CHECKED")
-    hist(conn, tid, f"TOPIC2_VAT_MODE_CONFIRMED:{vat_mode}")
+    markers = read_history_markers(conn, tid)
 
+    # ── STATE: TOPIC2_PRICE_CHOICE_CONFIRMED exists → generate estimate ──
+    confirmed_marker = find_marker(markers, "TOPIC2_PRICE_CHOICE_CONFIRMED:")
+    if confirmed_marker:
+        mode = confirmed_marker.split(":", 1)[1].strip()
+        print(f"PRICE_CHOICE_CONFIRMED:{mode} — generating estimate")
+        cache = load_cache()
+        if cache is None:
+            raise SystemExit("PRICE_CACHE_FILE_MISSING — re-run from price search state")
+        await _generate_and_send(conn, tid, chat_id, topic_id, vat_mode, mode, cache, markers)
+        conn.close(); return
+
+    # ── STATE: price menu already sent → check for user reply ──
+    menu_marker = find_marker(markers, "TOPIC2_PRICE_CHOICE_MENU_SENT:")
+    if menu_marker:
+        user_reply = read_recent_user_reply(conn, tid)
+        if user_reply:
+            choice = _detect_price_choice(user_reply)
+            if choice:
+                print(f"USER_CHOICE_DETECTED:{choice} from '{user_reply[:40]}'")
+                hist(conn, tid, f"TOPIC2_PRICE_CHOICE_CONFIRMED:{choice}")
+                conn.commit()
+                cache = load_cache()
+                if cache is None:
+                    raise SystemExit("PRICE_CACHE_FILE_MISSING")
+                await _generate_and_send(conn, tid, chat_id, topic_id, vat_mode, choice, cache, markers)
+                conn.close(); return
+            # Check if it's a length (user replied to wrong WC)
+            m = re.search(r"(\d+(?:[.,]\d+)?)\s*(?:м\b|метр)", user_reply.lower())
+            if m:
+                try:
+                    L_reply = float(m.group(1).replace(",","."))
+                    if 5 <= L_reply <= 2000:
+                        print(f"LENGTH_FROM_USER_REPLY:{L_reply} — rebuilding cache")
+                        hist(conn, tid, f"USER_PROVIDED_LENGTH:{L_reply}")
+                        conn.commit()
+                        await _do_price_search(conn, tid, chat_id, topic_id, L_reply, vat_mode)
+                        conn.close(); return
+                except: pass
+        print("WAITING_FOR_PRICE_CHOICE — no actionable reply yet")
+        conn.close(); return
+
+    # ── STATE: find length ──
     sources = find_user_pdfs()
-    if not sources: raise SystemExit("NO_USER_SOURCE_PDFS")
+    if not sources:
+        raise SystemExit("NO_USER_SOURCE_PDFS")
     drainage = [x for x in sources if x["kind"]=="drainage_scheme"]
-    geology  = [x for x in sources if x["kind"]=="geology_report"]
-    if not drainage: raise SystemExit("DRAINAGE_SOURCE_NOT_FOUND")
-
-    print(f"SOURCES_FOUND={[x['name'] for x in sources]}")
+    if not drainage:
+        raise SystemExit("DRAINAGE_SOURCE_NOT_FOUND")
 
     scheme_text = "\n".join(x["text"] for x in drainage)
-    geo_text    = "\n".join(x["text"] for x in geology)
-    lengths = extract_lengths(scheme_text)
-    total_len = round(sum(lengths),2)
-    depths = extract_depths(geo_text)
-    avg_depth = round(max(1.2,min(depths)),2) if depths else 1.2
-    wells_d=count_unique(scheme_text,"Дк"); wells_l=count_unique(scheme_text,"Лк")
-    has_dns=has(scheme_text,"ДНС"); has_pu=has(scheme_text,"пескоуловитель") or has(scheme_text,"ПУ-1")
+    geo_text    = "\n".join(x["text"] for x in sources if x["kind"]=="geology_report")
 
-    print(f"LENGTHS_FOUND={lengths} TOTAL_LEN={total_len}")
+    pdf_lengths = extract_lengths_from_pdf(scheme_text)
+    total_len   = round(sum(pdf_lengths), 2)
+    print(f"PDF_LENGTHS={pdf_lengths} TOTAL_LEN={total_len}")
 
-    # LENGTH PROOF GATE — no fallback allowed
-    if total_len <= 0 or len(lengths) < 1:
-        print("LENGTH_NOT_PROVEN — searching prices online then asking user")
-        price_text, _ = await search_drainage_prices_online(conn, tid)
-        if price_text:
-            hist(conn, tid, f"TOPIC2_DRAINAGE_ONLINE_PRICES_CACHED:{len(price_text)}chars")
+    if total_len <= 0:
+        user_len = read_user_provided_length(conn, tid)
+        if user_len > 0:
+            print(f"USER_PROVIDED_LENGTH:{user_len}")
+            hist(conn, tid, f"USER_PROVIDED_LENGTH:{user_len}")
             conn.commit()
+            total_len = user_len
+        else:
+            # Ask user for length
+            wc_msg = (
+                "Длина трасс дренажа и ливнёвки в PDF не читается — схема графическая.\n\n"
+                "Пришли, пожалуйста:\n"
+                "• Общую длину дренажных труб (в метрах)\n"
+                "• Или длины по участкам: Дк-1→Дк-2, Дк-2→ДНС, и т.д.\n\n"
+                "После этого запрошу актуальные цены и покажу смету."
+            )
+            bot_msg = send_msg(chat_id, topic_id, wc_msg)
+            conn.execute(
+                "UPDATE tasks SET state='WAITING_CLARIFICATION', result=?, bot_message_id=?, "
+                "error_message='TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN', updated_at=datetime('now') WHERE id=?",
+                (wc_msg, bot_msg, tid),
+            )
+            for a in ["TOPIC2_DRAINAGE_LENGTH_PROOF_GATE_V1",
+                      f"TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN:lines={len(pdf_lengths)}:total={total_len}",
+                      "TOPIC2_DRAINAGE_FINAL_ARTIFACTS_BLOCKED",
+                      f"TOPIC2_DRAINAGE_WC_SENT:{bot_msg}"]:
+                hist(conn, tid, a)
+            conn.commit(); conn.close()
+            print(f"DRAINAGE_LENGTH_GATE_WC_SENT BOT_MESSAGE_ID={bot_msg}")
+            return
 
-        wc_msg = (
-            "Длина трасс дренажа и ливнёвки в PDF не читается — схема графическая, "
-            "размерные цепочки не в текстовом слое.\n\n"
-            "Пришли, пожалуйста:\n"
-            "• Общую длину дренажных труб (в метрах)\n"
-            "• Или длины по участкам: Дк-1→Дк-2, Дк-2→ДНС, и т.д.\n\n"
-            "После этого пересчитаю смету с актуальными ценами из интернета."
-        )
-        bot_msg = send_msg(chat_id, topic_id, wc_msg)
-        conn.execute(
-            "UPDATE tasks SET state='WAITING_CLARIFICATION', result=?, bot_message_id=?, "
-            "error_message='TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN', updated_at=datetime('now') WHERE id=?",
-            (wc_msg, bot_msg, tid),
-        )
-        for action in [
-            "TOPIC2_DRAINAGE_LENGTH_PROOF_GATE_V1",
-            f"TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN:lines={len(lengths)}:total={total_len}",
-            "TOPIC2_DRAINAGE_FINAL_ARTIFACTS_BLOCKED",
-            f"TOPIC2_DRAINAGE_WC_SENT:{bot_msg}",
-        ]:
-            hist(conn, tid, action)
-        conn.commit(); conn.close()
-        print(f"DRAINAGE_LENGTH_GATE_WC_SENT\nBOT_MESSAGE_ID={bot_msg}")
-        return
+    await _do_price_search(conn, tid, chat_id, topic_id, total_len, vat_mode)
+    conn.close()
 
-    # LENGTH PROVEN — search prices online before generating
-    price_text, online_prices = await search_drainage_prices_online(conn, tid)
-    prices_source = "sonar" if online_prices else "manual"
-    print(f"ONLINE_PRICES={list(online_prices.keys()) if online_prices else 'NONE — using manual baseline'}")
 
-    length_status = "READBACK_LENGTHS_FOUND"
-    note = (f"{length_status}; prices={prices_source}; "
-            f"source_filter=user_pdfs_only; drainage={len(drainage)}, geology={len(geology)}")
-    items = build_items(total_len, avg_depth, wells_d, wells_l, has_dns, has_pu, note, online_prices)
+async def _do_price_search(conn, tid, chat_id, topic_id, L, vat_mode):
+    """Search prices via canonical _openrouter_price_search + send menu."""
+    task = conn.execute("SELECT * FROM tasks WHERE id=? LIMIT 1",(tid,)).fetchone()
+    sources = find_user_pdfs()
+    drainage = [x for x in sources if x["kind"]=="drainage_scheme"]
+    geo      = [x for x in sources if x["kind"]=="geology_report"]
+    scheme_text = "\n".join(x["text"] for x in drainage)
+    geo_text    = "\n".join(x["text"] for x in geo)
+    depths = extract_depths(geo_text)
+    avg_depth = round(max(1.2, min(depths)), 2) if depths else 1.2
+    ex = round(L * avg_depth * 0.6, 2)
+    wd = count_unique(scheme_text, "Дк")
+    wl = count_unique(scheme_text, "Лк")
+    has_dns = has(scheme_text, "ДНС")
+    has_pu  = has(scheme_text, "пескоуловитель") or has(scheme_text, "ПУ-1")
 
-    stamp=datetime.now().strftime("%Y%m%d_%H%M%S")
-    xlsx=OUT_DIR/f"drainage_estimate_clean_{tid[:8]}_{stamp}.xlsx"
-    pdf_out=OUT_DIR/f"drainage_estimate_clean_{tid[:8]}_{stamp}.pdf"
-    meta={"file_names":[x["name"] for x in sources],"total_len":total_len,"avg_depth":avg_depth,
-          "length_status":length_status,"prices_source":prices_source}
+    print(f"LENGTH={L} DEPTH={avg_depth} WELLS_DK={wd} WELLS_LK={wl} DNS={has_dns} PU={has_pu}")
 
-    totals=create_xlsx(xlsx, items, meta, vat_mode, online_price_text=price_text)
-    create_pdf(pdf_out, items, meta, totals, vat_mode)
+    cache = build_drainage_cache(L, ex, wd, wl, has_dns, has_pu,
+                                  [x["name"] for x in sources])
+    cache = await enrich_cache(conn, tid, cache)
+    save_cache(cache)
+    print(f"CACHE_SAVED:{CACHE_FILE}")
 
-    xlsx_link=await maybe_upload(xlsx,chat_id,topic_id)
-    pdf_link =await maybe_upload(pdf_out,chat_id,topic_id)
+    hist(conn, tid, f"TOPIC2_DRAINAGE_LENGTHS_STATUS:PROVEN:total_len={L}")
+    hist(conn, tid, f"TOPIC2_DRAINAGE_VAT_MODE:{vat_mode}")
+    conn.commit()
 
-    if not xlsx_link: msg_id=send_doc(chat_id,topic_id,xlsx,"Excel: смета дренажа"); print(f"XLSX_DOC_SENT:{msg_id}")
-    if not pdf_link:  msg_id=send_doc(chat_id,topic_id,pdf_out,"PDF: смета дренажа"); print(f"PDF_DOC_SENT:{msg_id}")
+    send_price_menu(conn, tid, chat_id, topic_id, cache)
+
+
+async def _generate_and_send(conn, tid, chat_id, topic_id, vat_mode, mode, cache, markers):
+    """Generate XLSX/PDF after confirmed price choice and send to Telegram."""
+    hist(conn, tid, "TOPIC2_DRAINAGE_GENERATE_STARTED")
+    conn.commit()
+
+    rows    = build_xlsx_rows(cache, mode, vat_mode)
+    totals  = calc_totals(rows, vat_mode)
+    sources = cache.get("sources", [])
+    L       = cache["length"]
+    depth   = cache.get("ex",0) / (cache["length"] * 0.6) if cache["length"] else 1.2
+    meta    = {"file_names": sources, "total_len": L, "avg_depth": round(depth,2)}
+
+    stamp   = datetime.now().strftime("%Y%m%d_%H%M%S")
+    xlsx    = OUT_DIR / f"drainage_estimate_clean_{tid[:8]}_{stamp}.xlsx"
+    pdf_out = OUT_DIR / f"drainage_estimate_clean_{tid[:8]}_{stamp}.pdf"
+
+    create_xlsx(xlsx, rows, meta, vat_mode, mode)
+    create_pdf(pdf_out, rows, meta, totals, vat_mode, mode)
+
+    xlsx_link = await maybe_upload(xlsx, chat_id, topic_id)
+    pdf_link  = await maybe_upload(pdf_out, chat_id, topic_id)
+    if not xlsx_link:
+        mid = send_doc(chat_id, topic_id, xlsx, "Excel: смета дренажа"); print(f"XLSX_DOC_SENT:{mid}")
+    if not pdf_link:
+        mid = send_doc(chat_id, topic_id, pdf_out, "PDF: смета дренажа"); print(f"PDF_DOC_SENT:{mid}")
 
     if vat_mode=="WITH_VAT_22":
         totals_block=(f"Без НДС: {totals['no_vat']:,.0f} руб\n"
@@ -526,44 +733,45 @@ async def main():
     else:
         totals_block=f"Итого без НДС: {totals['grand']:,.0f} руб\n НДС: не применяется".replace(",","  ")
 
-    prices_line = "Цены: онлайн-поиск OpenRouter/Sonar" if online_prices else "Цены: высокий ценовой сегмент"
-    excel_line=f"Excel: {xlsx_link}" if xlsx_link else "Excel: отправлен файлом"
-    pdf_line  =f"PDF: {pdf_link}"   if pdf_link  else "PDF: отправлен файлом"
+    excel_line = f"Excel: {xlsx_link}" if xlsx_link else "Excel: отправлен файлом"
+    pdf_line   = f"PDF: {pdf_link}"   if pdf_link  else "PDF: отправлен файлом"
 
-    public=(f"✅ Смета дренажа готова\n\n"
-            f"Объект: наружные сети / дренаж / ливневая канализация\n"
-            f"Файлы учтены: {', '.join(meta['file_names'])}\n"
-            f"{prices_line}\n"
-            f"Длина: {total_len} м; глубина: {avg_depth} м\n\n"
-            f"Итого:\n Материалы: {totals['mats']:,.0f} руб\n Работы: {totals['works']:,.0f} руб\n {totals_block}\n\n"
-            f"{excel_line}\n{pdf_line}\n\nПодтверди или пришли правки").replace(",","  ")
+    public = (
+        f"✅ Смета дренажа готова\n\n"
+        f"Объект: наружные сети / дренаж / ливневая канализация\n"
+        f"Файлы учтены: {', '.join(sources)}\n"
+        f"Цены: онлайн-поиск OpenRouter/Sonar, режим: {mode}\n"
+        f"Длина: {L} м\n\n"
+        f"Итого:\n Материалы: {totals['mats']:,.0f} руб\n"
+        f" Работы: {totals['works']:,.0f} руб\n {totals_block}\n\n"
+        f"{excel_line}\n{pdf_line}\n\nПодтверди или пришли правки"
+    ).replace(",","  ")
 
-    dirty=[x for x in ["/root/","runtime","drainage_estimate_"] if x in public]
+    dirty = [x for x in ["/root/","runtime","drainage_estimate_"] if x in public]
     if dirty: raise SystemExit(f"PUBLIC_OUTPUT_DIRTY:{dirty}")
 
-    bot_msg=send_msg(chat_id,topic_id,public)
-    conn.execute("UPDATE tasks SET state='AWAITING_CONFIRMATION',result=?,bot_message_id=?,"
-                 "error_message=NULL,updated_at=datetime('now') WHERE id=?",(public,bot_msg,tid))
-
+    bot_msg = send_msg(chat_id, topic_id, public)
+    conn.execute(
+        "UPDATE tasks SET state='AWAITING_CONFIRMATION', result=?, bot_message_id=?, "
+        "error_message=NULL, updated_at=datetime('now') WHERE id=?",
+        (public, bot_msg, tid),
+    )
     for action in [
         f"TOPIC2_DRAINAGE_SOURCE_FILTER_OK:user_pdfs={len(sources)}",
         "TOPIC2_DRAINAGE_NO_GENERATED_ARTIFACT_INPUT",
-        *[f"TOPIC2_DRAINAGE_SOURCE_FILE:{x['name']}:kind={x['kind']}:chars={x['chars']}" for x in sources],
-        f"TOPIC2_DRAINAGE_LENGTHS_STATUS:{length_status}:total_len={total_len}",
-        f"TOPIC2_DRAINAGE_DEPTH_STATUS:avg_depth={avg_depth}",
-        f"TOPIC2_DRAINAGE_PRICES_SOURCE:{prices_source}:keys={list(online_prices.keys()) if online_prices else []}",
+        f"TOPIC2_DRAINAGE_PRICES_SOURCE:OpenRouter/Sonar:mode={mode}",
         f"TOPIC2_DRAINAGE_XLSX_CREATED:{xlsx.name}",
         f"TOPIC2_DRAINAGE_PDF_CREATED:{pdf_out.name}",
         f"TOPIC2_DRAINAGE_DRIVE_XLSX_OK:{xlsx_link}" if xlsx_link else "TOPIC2_DRAINAGE_TELEGRAM_XLSX_FALLBACK_SENT",
-        f"TOPIC2_DRAINAGE_DRIVE_PDF_OK:{pdf_link}"  if pdf_link  else "TOPIC2_DRAINAGE_TELEGRAM_PDF_FALLBACK_SENT",
+        f"TOPIC2_DRAINAGE_DRIVE_PDF_OK:{pdf_link}"   if pdf_link  else "TOPIC2_DRAINAGE_TELEGRAM_PDF_FALLBACK_SENT",
         f"TOPIC2_DRAINAGE_TELEGRAM_SENT:{bot_msg}",
-        "TOPIC2_VAT_PUBLIC_OUTPUT_OK","TOPIC2_DRAINAGE_AWAITING_CONFIRMATION_CLEAN_V1",
-    ]: hist(conn,tid,action)
-    conn.commit(); conn.close()
+        "TOPIC2_VAT_PUBLIC_OUTPUT_OK",
+        "TOPIC2_DRAINAGE_AWAITING_CONFIRMATION_CLEAN_V1",
+    ]:
+        hist(conn, tid, action)
+    conn.commit()
+    print(f"DRAINAGE_ESTIMATE_OK BOT_MESSAGE_ID={bot_msg} GRAND={totals['grand']}")
 
-    print("DRAINAGE_ESTIMATE_OK")
-    print(f"VAT_MODE={vat_mode} BOT_MESSAGE_ID={bot_msg}")
-    print(f"TOTAL_LEN={total_len} GRAND={totals['grand']}")
 
-if __name__=="__main__":
+if __name__ == "__main__":
     asyncio.run(main())
