@@ -2894,29 +2894,16 @@ def _create_xlsx_from_template(task_id, parsed, template, template_path, sheet_n
             return path, items, py_total
         ws = wb["AREAL_CALC"]
 
-        HDR_ROW = 7
-        if ws.cell(HDR_ROW, 12).value is not None:
+        # Exit early only if Поставщик (col12) is already correctly filled
+        if ws.cell(2, 12).value == "Ареал Нева.xlsx":
             wb.close()
             return path, items, py_total  # already extended
 
-        _bold = Font(bold=True)
-        for idx, h in enumerate(["Источник цены", "Поставщик", "URL", "Дата проверки"], 12):
-            c = ws.cell(HDR_ROW, idx, h)
-            c.font = _bold
-            c.alignment = _SC15Align(wrap_text=True)
-
-        for col_letter, width in [("L", 20), ("M", 22), ("N", 35), ("O", 16)]:
-            ws.column_dimensions[col_letter].width = width
-
-        date_str = _sc15_dt.datetime.now().strftime("%d.%m.%Y")
-        src_label = "Perplexity" if price_text and len(str(price_text)) > 20 else "—"
-
-        row_idx = HDR_ROW + 1
+        # Fill Поставщик for all template_only rows (col11 already set by main generation)
+        row_idx = 2
         while ws.cell(row_idx, 3).value is not None:
-            ws.cell(row_idx, 12, src_label)
-            ws.cell(row_idx, 13, "—")
-            ws.cell(row_idx, 14, "—")
-            ws.cell(row_idx, 15, date_str)
+            if ws.cell(row_idx, 11).value == "template_only":
+                ws.cell(row_idx, 12, "Ареал Нева.xlsx")
             row_idx += 1
 
         wb.save(path)
