@@ -1,7 +1,7 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-05-08T22:45:02.280370+00:00
-GIT_SHA: bf608812cd6da45f43c6bbe690f61efd96ea7136
+GENERATED_AT: 2026-05-08T22:55:02.412611+00:00
+GIT_SHA: bce535d36f635a78dbf3d6d1ea8f6ee34e571027
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -26,6 +26,7 @@ FAILED_LAST_24H: 11
 - test-gat | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
+- bce535d|PATCH_TOPIC2_DRAINAGE_RECOGNIZE_ALL_V1
 - 0152cb4|fix(topic2): TOPIC2_DRAINAGE_PRICE_ENRICHMENT_CANON_FIX_V1
 - b07a265|fix(topic2): TOPIC2_DRAINAGE_LENGTH_PROOF_GATE_AND_ONLINE_PRICES_V2
 - af42c97|fix(topic2): TOPIC2_DRAINAGE_FULL_CLOSE_NO_LOOP_V2 — child merge guard, legend filter, noise tasks closed
@@ -55,7 +56,6 @@ FAILED_LAST_24H: 11
 - ccab9ed|fix(topic2): PATCH_TOPIC2_FULL_CLOSE_RUNTIME_V3 — all 9 requirements
 - 055157b|fix(topic2): PATCH_TOPIC2_FULL_CLOSE_RUNTIME_V2
 - ad829c4|fix(topic2): PATCH_TOPIC2_FULL_CANONICAL_CLOSE_ONEPASS_V1 — §9 output + recursion fix
-- c7c8755|fix(topic2): inline-fix V1 — replace dead wrappers with body edits
 
 ## MARKERS_LAST_24H
 - created:NEW

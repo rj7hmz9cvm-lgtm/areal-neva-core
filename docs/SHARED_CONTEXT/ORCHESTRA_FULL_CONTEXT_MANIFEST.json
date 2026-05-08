@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-05-08T22:45:02.198072+00:00",
-  "git_sha_before_commit": "bf608812cd6da45f43c6bbe690f61efd96ea7136",
+  "generated_at_utc": "2026-05-08T22:55:02.332874+00:00",
+  "git_sha_before_commit": "bce535d36f635a78dbf3d6d1ea8f6ee34e571027",
   "part_max_bytes": 400000,
   "content_chunk_bytes": 340000,
   "total_records": 421,
@@ -2540,9 +2540,9 @@
       "path": "tools/topic2_drainage_repair_close.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 38125,
-      "sha256": "f035ba7e16289a2a48de56dd844dd5eaf5b1949d8df54f04fc947527fbf74488",
-      "chars": 35212,
+      "size_bytes": 47833,
+      "sha256": "60f72722762716c0b2baf761c3de85b53f0aafa41138edf788e2d7e7db1e6866",
+      "chars": 43985,
       "chunks": 1
     },
     {
@@ -3368,7 +3368,7 @@
       "path": "docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 32250,
+      "size_bytes": 35605,
       "sha256": "",
       "chars": 0,
       "chunks": 0
