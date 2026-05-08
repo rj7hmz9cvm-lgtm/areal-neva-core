@@ -15731,5 +15731,108 @@ else:
     _T2RRG_LOG.warning("PATCH_T2P6E67_FRESH_ESTIMATE_BYPASS_V1 skipped: _p6e67_try_merge not found")
 # === END_PATCH_T2P6E67_FRESH_ESTIMATE_BYPASS_V1 ===
 
+# === PATCH_WCPE_CLARIFIED_UNBLOCK_V1 ===
+# Bug: WCG_SKIP in error_message blocks task pick-up even after user replied (clarified:N in history).
+# Telegram_daemon sets IN_PROGRESS but doesn't clear error_message — task stays blocked by WCPE.
+# Fix: Allow pick-up when WCG_SKIP AND task has non-empty clarified: entry in task_history.
+import logging as _wcpe_ub_log_mod
+_WCPE_UB_LOG = _wcpe_ub_log_mod.getLogger("task_worker")
+_WCPE_UB_PREV = globals().get("_pick_next_task")
+if _WCPE_UB_PREV and not getattr(_WCPE_UB_PREV, "_wcpe_ub_wrapped", False):
+    def _pick_next_task_wcpe_ub(conn, chat_id=None):
+        try:
+            # Block WAITING_CLARIFICATION+WCG_SKIP (still waiting for reply).
+            # Allow IN_PROGRESS+WCG_SKIP — telegram_daemon set IN_PROGRESS on user reply
+            # but doesn't clear error_message, so without this fix the task is stuck forever.
+            where = [
+                "state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION')",
+                "NOT (state='WAITING_CLARIFICATION' AND COALESCE(error_message,'') LIKE 'WCG_SKIP%')",
+            ]
+            params = []
+            if chat_id:
+                where.insert(0, "chat_id=?")
+                params.append(str(chat_id))
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                f"SELECT * FROM tasks WHERE {' AND '.join(where)}"
+                " ORDER BY CASE state WHEN 'IN_PROGRESS' THEN 0 ELSE 1 END, created_at ASC LIMIT 1",
+                params,
+            ).fetchone()
+            conn.execute("COMMIT")
+            return row
+        except Exception:
+            return _WCPE_UB_PREV(conn, chat_id)
+    _pick_next_task_wcpe_ub._wcpe_ub_wrapped = True
+    _pick_next_task = _pick_next_task_wcpe_ub
+    globals()["_pick_next_task"] = _pick_next_task_wcpe_ub
+    _WCPE_UB_LOG.info("PATCH_WCPE_CLARIFIED_UNBLOCK_V1 installed")
+# === END_PATCH_WCPE_CLARIFIED_UNBLOCK_V1 ===
+
+# === PATCH_P6C_FULLTEXT_ESTIMATE_PREP_V1 ===
+# Bug: _p6c_meta_20260504 uses strict json.loads → fails when REVISION_CONTEXT appended.
+# Result: caption="" → estimate_raw only "\nЭтажей: 1" → no dims/material found → clarification loop.
+# Fix: partial JSON parse + include REVISION_CONTEXT voice texts + extract dims from filename.
+import logging as _p6cf_log_mod, re as _p6cf_re, json as _p6cf_json
+_P6CF_LOG = _p6cf_log_mod.getLogger("task_worker")
+
+def _p6cf_partial_meta(raw_input):
+    s = str(raw_input or "")[:50000]
+    try:
+        v = _p6cf_json.loads(s)
+        if isinstance(v, dict):
+            return v
+    except Exception:
+        pass
+    try:
+        m = _p6cf_re.match(r'(\{[^{}]*\})', s, _p6cf_re.DOTALL)
+        if m:
+            v = _p6cf_json.loads(m.group(1))
+            if isinstance(v, dict):
+                return v
+    except Exception:
+        pass
+    return {}
+
+def _p6cf_extract_voices(raw_input):
+    s = str(raw_input or "")
+    voices = _p6cf_re.findall(r'\[VOICE\]\s*(.+?)(?=\n---|\Z)', s, _p6cf_re.DOTALL)
+    return " ".join(v.strip() for v in voices)
+
+def _p6cf_dims_from_fn(fn):
+    if not fn:
+        return None
+    m = _p6cf_re.search(r'(\d+)\s*[xхXХ×*]\s*(\d+)', fn)
+    if m:
+        return m.group(1), m.group(2)
+    return None
+
+_P6CF_ORIG_PREP = globals().get("_p6c_prepare_topic2_raw_20260504")
+if _P6CF_ORIG_PREP and not getattr(_P6CF_ORIG_PREP, "_p6cf_wrapped", False):
+    def _p6c_prepare_topic2_raw_20260504(task_id, raw_input):
+        meta = _p6cf_partial_meta(raw_input)
+        caption = str(meta.get("caption") or meta.get("text") or "").strip()
+        fn = str(meta.get("file_name") or "").strip()
+        parts = [caption] if caption else []
+        voices = _p6cf_extract_voices(raw_input)
+        if voices:
+            parts.append(voices)
+        text = " ".join(parts).strip()
+        low = text.lower()
+        if fn and not _p6cf_re.search(r'\d+\s*(?:на|x|х|×|\*)\s*\d+', low):
+            dims = _p6cf_dims_from_fn(fn)
+            if dims:
+                text += f"\nРазмеры объекта: {dims[0]} на {dims[1]} м"
+                _P6CF_LOG.info("P6CF: dims from filename %s → %sx%s task=%s", fn, dims[0], dims[1], task_id)
+        if "этаж" not in text.lower():
+            text += "\nЭтажей: 1"
+        if "смет" not in text.lower():
+            text += "\nНужна полная смета"
+        _P6CF_LOG.info("P6CF: estimate_raw len=%d task=%s", len(text), task_id)
+        return text.strip()
+    _p6c_prepare_topic2_raw_20260504._p6cf_wrapped = True
+    globals()["_p6c_prepare_topic2_raw_20260504"] = _p6c_prepare_topic2_raw_20260504
+    _P6CF_LOG.info("PATCH_P6C_FULLTEXT_ESTIMATE_PREP_V1 installed")
+# === END_PATCH_P6C_FULLTEXT_ESTIMATE_PREP_V1 ===
+
 if __name__ == "__main__":
     asyncio.run(main())
