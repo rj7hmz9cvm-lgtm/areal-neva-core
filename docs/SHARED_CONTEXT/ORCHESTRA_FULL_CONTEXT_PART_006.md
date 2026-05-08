@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_006
-generated_at_utc: 2026-05-08T06:10:01.778649+00:00
-git_sha_before_commit: 96bea6cb5d84cc490e5082cbba51505b0bd20710
+generated_at_utc: 2026-05-08T06:35:02.458761+00:00
+git_sha_before_commit: d7b743de8cd1e5c5801fd25701afd944e14811cb
 part: 6/17
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 2/3
-SHA256_FULL_FILE: be7399f684fdacb8870733271dcdebf5c5a34052bb0de1a93dfef2054b80bdfa
+SHA256_FULL_FILE: 0e299f62d6f11f60365f5fe61c084f22ec822a9473e198e0c4f5a32e6c3419be
 ====================================================================================================
     "нормальн", "снова", "сделай", "ещё раз", "еще раз", "заново", "повтори", "ещё", "еще",
     "сделать", "переделать", "по новой", "сначала", "новой", "опять",
@@ -7727,7 +7727,7 @@ FILE_CHUNK: 2/3
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 3/3
-SHA256_FULL_FILE: be7399f684fdacb8870733271dcdebf5c5a34052bb0de1a93dfef2054b80bdfa
+SHA256_FULL_FILE: 0e299f62d6f11f60365f5fe61c084f22ec822a9473e198e0c4f5a32e6c3419be
 ====================================================================================================
             raw = str(_tcg_get(task, "raw_input", "") or "")
             if topic_id == 2 and _tcg_is_cancel(raw):
@@ -8486,6 +8486,60 @@ if _P6CF_ORIG_PREP and not getattr(_P6CF_ORIG_PREP, "_p6cf_wrapped", False):
     globals()["_p6c_prepare_topic2_raw_20260504"] = _p6c_prepare_topic2_raw_20260504
     _P6CF_LOG.info("PATCH_P6C_FULLTEXT_ESTIMATE_PREP_V1 installed")
 # === END_PATCH_P6C_FULLTEXT_ESTIMATE_PREP_V1 ===
+
+# === PATCH_P6CF2_FLOOR_FORMAT_FIX_V1 ===
+# Bug: "Этажей: 1" не матчится _p2_floors regex (\d+\s*этаж — число ДО слова).
+# Fix: заменить на "1 этаж" который матчится.
+import logging as _p6cf2_log_mod
+_P6CF2_LOG = _p6cf2_log_mod.getLogger("task_worker")
+_P6CF2_ORIG = globals().get("_p6c_prepare_topic2_raw_20260504")
+if _P6CF2_ORIG and not getattr(_P6CF2_ORIG, "_p6cf2_wrapped", False):
+    def _p6c_prepare_topic2_raw_20260504(task_id, raw_input):
+        text = _P6CF2_ORIG(task_id, raw_input)
+        text = text.replace("Этажей: 1", "1 этаж")
+        return text
+    _p6c_prepare_topic2_raw_20260504._p6cf2_wrapped = True
+    globals()["_p6c_prepare_topic2_raw_20260504"] = _p6c_prepare_topic2_raw_20260504
+    _P6CF2_LOG.info("PATCH_P6CF2_FLOOR_FORMAT_FIX_V1 installed")
+# === END_PATCH_P6CF2_FLOOR_FORMAT_FIX_V1 ===
+
+# === PATCH_P6CF3_CLARIFIED_HISTORY_INCLUDE_V1 ===
+# Bug: estimate_raw строится только из caption+voices, без ответов пользователя.
+# clarified:* в task_history игнорируются → _p2_parse не видит "Фундамент монолитный..."
+# → бесконечный цикл вопросов. Fix: добавить осмысленные clarified ответы (≥10 симв).
+import sqlite3 as _p6cf3_sqlite3
+import logging as _p6cf3_log_mod
+_P6CF3_LOG = _p6cf3_log_mod.getLogger("task_worker")
+_P6CF3_DB = "/root/.areal-neva-core/data/core.db"
+_P6CF3_SKIP = {"1", "2", "3", "да", "нет", "вот", "всё", "все", "средние", "дешёвые", "дорогие",
+               "средний", "дешёвый", "дорогой", "подтверждаю"}
+
+_P6CF3_ORIG = globals().get("_p6c_prepare_topic2_raw_20260504")
+if _P6CF3_ORIG and not getattr(_P6CF3_ORIG, "_p6cf3_wrapped", False):
+    def _p6c_prepare_topic2_raw_20260504(task_id, raw_input):
+        text = _P6CF3_ORIG(task_id, raw_input)
+        try:
+            conn2 = _p6cf3_sqlite3.connect(_P6CF3_DB, timeout=5)
+            rows = conn2.execute(
+                "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'clarified:%' ORDER BY rowid",
+                (str(task_id),)
+            ).fetchall()
+            conn2.close()
+            extra = []
+            for (action,) in rows:
+                val = action[len("clarified:"):].strip()
+                if val and len(val) >= 10 and val.lower() not in _P6CF3_SKIP:
+                    extra.append(val)
+            if extra:
+                text = text + "\n" + "\n".join(extra)
+                _P6CF3_LOG.info("PATCH_P6CF3: added %d clarified entries task=%s", len(extra), task_id)
+        except Exception as _p6cf3_e:
+            _P6CF3_LOG.warning("PATCH_P6CF3 err: %s", _p6cf3_e)
+        return text
+    _p6c_prepare_topic2_raw_20260504._p6cf3_wrapped = True
+    globals()["_p6c_prepare_topic2_raw_20260504"] = _p6c_prepare_topic2_raw_20260504
+    _P6CF3_LOG.info("PATCH_P6CF3_CLARIFIED_HISTORY_INCLUDE_V1 installed")
+# === END_PATCH_P6CF3_CLARIFIED_HISTORY_INCLUDE_V1 ===
 
 if __name__ == "__main__":
     asyncio.run(main())

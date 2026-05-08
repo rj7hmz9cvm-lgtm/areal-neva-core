@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-05-08T06:10:01.789418+00:00",
-  "git_sha_before_commit": "96bea6cb5d84cc490e5082cbba51505b0bd20710",
+  "generated_at_utc": "2026-05-08T06:35:02.475490+00:00",
+  "git_sha_before_commit": "d7b743de8cd1e5c5801fd25701afd944e14811cb",
   "part_max_bytes": 400000,
   "content_chunk_bytes": 340000,
   "total_records": 415,
@@ -47,9 +47,9 @@
       "path": "docs/HANDOFFS/LATEST_HANDOFF.md",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 7104,
-      "sha256": "d8c6f24414da011c5a5ab3e44bcc7e41f2881e58560988cd24c4377790dc6c3f",
-      "chars": 5815,
+      "size_bytes": 7522,
+      "sha256": "7c31cc09474257188bf694f88508ddb4b35a7bdd68780e44a0ea8dde36c6efc8",
+      "chars": 6112,
       "chunks": 1
     },
     {
@@ -1352,9 +1352,9 @@
       "path": "task_worker.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 718418,
-      "sha256": "be7399f684fdacb8870733271dcdebf5c5a34052bb0de1a93dfef2054b80bdfa",
-      "chars": 683151,
+      "size_bytes": 721510,
+      "sha256": "0e299f62d6f11f60365f5fe61c084f22ec822a9473e198e0c4f5a32e6c3419be",
+      "chars": 685968,
       "chunks": 3
     },
     {
@@ -3161,7 +3161,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_001.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 367919,
+      "size_bytes": 365120,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3314,7 +3314,7 @@
       "path": "docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 30053,
+      "size_bytes": 29323,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3332,7 +3332,7 @@
       "path": "docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 353105,
+      "size_bytes": 350306,
       "sha256": "",
       "chars": 0,
       "chunks": 0

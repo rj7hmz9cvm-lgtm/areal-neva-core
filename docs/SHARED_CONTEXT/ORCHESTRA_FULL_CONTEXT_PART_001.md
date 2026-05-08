@@ -1,16 +1,16 @@
 # ORCHESTRA_FULL_CONTEXT_PART_001
-generated_at_utc: 2026-05-08T06:10:01.772946+00:00
-git_sha_before_commit: 96bea6cb5d84cc490e5082cbba51505b0bd20710
+generated_at_utc: 2026-05-08T06:35:02.455171+00:00
+git_sha_before_commit: d7b743de8cd1e5c5801fd25701afd944e14811cb
 part: 1/17
 
 
 ====================================================================================================
 BEGIN_FILE: docs/HANDOFFS/LATEST_HANDOFF.md
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: d8c6f24414da011c5a5ab3e44bcc7e41f2881e58560988cd24c4377790dc6c3f
+SHA256_FULL_FILE: 7c31cc09474257188bf694f88508ddb4b35a7bdd68780e44a0ea8dde36c6efc8
 ====================================================================================================
 # LATEST HANDOFF — 2026-05-08 ~09:30 MSK
-**HEAD**: `b236f02`
+**HEAD**: `81f35b5`
 **Воркер**: active
 
 ---
@@ -81,7 +81,12 @@ _handle_drive_file(conn, task)
 ### P0 — АРХИТЕКТУРА: file_intake_router не вызывается (см. выше)
 → Решение: обернуть `_handle_drive_file` чтобы вызывать `route_file` после скачивания
 
-### P1 — "Этажей: 1" не парсится regex
+### P1 ЗАКРЫТ — PATCH_P6CF3_CLARIFIED_HISTORY_INCLUDE_V1 (81f35b5)
+clarified:* ответы из task_history теперь включаются в estimate_raw → _p2_parse
+видит "Фундамент монолитный..." → бесконечный цикл вопросов устранён.
+Задача d72028da прошла DONE: 25 позиций, 5 425 839 руб, Excel+PDF в Drive.
+
+### ЗАКРЫТ — "Этажей: 1" не парсится regex
 `_p6c_prepare_topic2_raw_20260504` добавляет `"\nЭтажей: 1"` но `_p2_floors()` ищет `(\d+)\s*этаж` — число ДО слова.
 Нужен P6CF_V2 в task_worker.py (append):
 ```python
