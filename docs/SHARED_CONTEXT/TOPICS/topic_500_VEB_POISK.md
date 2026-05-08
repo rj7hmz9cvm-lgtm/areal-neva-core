@@ -1,7 +1,7 @@
 # topic_500 VEB_POISK
 
-GENERATED_AT: 2026-05-08T17:25:02.344297+00:00
-GIT_SHA: 222202e208b2bd141bd81defd309cae6c95aad2a
+GENERATED_AT: 2026-05-08T17:30:02.805220+00:00
+GIT_SHA: 433ffeb6f77b119b138fd842d095806370e61795
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 500
@@ -40,7 +40,6 @@ FAILED_LAST_24H: 0
 - dc2f770|FINAL_TOPIC2_TOPIC5_TOPIC500_CLOSE_20260504_V1: close topic2 current TZ route and topic500 search output contract
 - a5cdb89|TOPIC2_ESTIMATE_AND_TOPIC500_SEARCH_FULLFIX_V1: strict template estimate pdf and bypass search misroute
 - 19f619d|CANON_ROUTE_FIX_V3_TOPIC500_ISOLATION: skip file_context_intake for topic_500
-- 4c5af54|CANON_ROUTE_FIX_V2: topic500 isolation, list-query guard, estimate plita unblock
 
 ## MARKERS_LAST_24H
 - (none)

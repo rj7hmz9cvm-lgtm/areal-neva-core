@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-05-08T17:25:02.089561+00:00",
-  "git_sha_before_commit": "222202e208b2bd141bd81defd309cae6c95aad2a",
+  "generated_at_utc": "2026-05-08T17:30:02.562537+00:00",
+  "git_sha_before_commit": "433ffeb6f77b119b138fd842d095806370e61795",
   "part_max_bytes": 400000,
   "content_chunk_bytes": 340000,
   "total_records": 419,
@@ -3197,7 +3197,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_001.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 366578,
+      "size_bytes": 364002,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3350,7 +3350,7 @@
       "path": "docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 31394,
+      "size_bytes": 34626,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3368,7 +3368,7 @@
       "path": "docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 352208,
+      "size_bytes": 349632,
       "sha256": "",
       "chars": 0,
       "chunks": 0

@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-08T17:25:01.871359+00:00
-git_sha_before_commit: 222202e208b2bd141bd81defd309cae6c95aad2a
+generated_at_utc: 2026-05-08T17:30:02.354492+00:00
+git_sha_before_commit: 433ffeb6f77b119b138fd842d095806370e61795
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,7 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: inactive
 
 ## GIT_LOG_30
+433ffeb FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 222202e docs(handoff): CODEX_FULL_CANON_VERIFIED — c94ec497 AWAITING_CONFIRMATION, all phases 1-20 pass
 6cf9154 fix(topic2): PATCH_TOPIC2_ADD_PEREKRYTIYA_SECTION_V1 — add missing §5 Перекрытия section
 2475eb5 fix(topic2): PATCH_TOPIC2_REALSHEET_PRICES_V3 — real Газобетонный дом prices
@@ -39,96 +40,83 @@ e3a016c PATCH_OPENROUTER_ONLINE_ONLY_FOR_TOPIC2_PRICE_SEARCH_V1: hard-enforce So
 dc26486 fix(topic2): PATCH_PRICE_REJECT_STORM_FIX_V1 — remove noisy INSERT from V5/V6C rejected path
 0c8518e fix(topic2): TOPIC2_FULL_CLOSE — work/material split, sheet fallback, drive links, xlsx 15-col gate
 a216eeb fix(topic2): PATCH_FCG_V2PATH_BYPASS_V1 — extend FDCB bypass to TOPIC2_DONE_CONTRACT_OK
-88761b3 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
 ## GIT_SHOW_STAT_HEAD
-commit 222202e208b2bd141bd81defd309cae6c95aad2a
+commit 433ffeb6f77b119b138fd842d095806370e61795
 Author: Ila <ilakuznecov@mac.local>
-Date:   Fri May 8 20:22:48 2026 +0300
+Date:   Fri May 8 20:25:11 2026 +0300
 
-    docs(handoff): CODEX_FULL_CANON_VERIFIED — c94ec497 AWAITING_CONFIRMATION, all phases 1-20 pass
-    
-    - c94ec497 state corrected to AWAITING_CONFIRMATION (was DONE)
-    - All 12 CODEX missing markers inserted: PROJECT_FACTS_READBACK_OK,
-      TEMPLATE_PRICE_COLUMNS_PROVEN, PRICE_EXTRACTION_FIXED,
-      FULL_TURNKEY_SCOPE_ENFORCED, XLSX_TOTAL_MANUAL_RECALC_OK,
-      XLSX_READBACK_OK, PDF_READBACK_OK, TELEGRAM_READBACK_OK,
-      OLD_10540/10541/10542_SUPERSEDED, CODEX_FULL_CANON_VERIFIED
-    - LATEST_HANDOFF updated with verified state (HEAD 6cf9154)
-    - Context aggregator docs updated (auto-generated)
-    
-    Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+    FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
- docs/HANDOFFS/LATEST_HANDOFF.md                    |   211 +-
- docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md    |     6 +-
- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md |     2 +-
- .../SHARED_CONTEXT/DIRECTIONS/auto_parts_search.md |     4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/cad_dwg.md          |     4 +-
- .../DIRECTIONS/construction_search.md              |     4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/crm_leads.md        |     4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/defect_acts.md      |     4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/devops_server.md    |     4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/documents.md        |     4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/email_ingress.md    |     4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/estimates.md        |     4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/general_chat.md     |     4 +-
- .../DIRECTIONS/google_drive_storage.md             |     4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/internet_search.md  |     4 +-
- .../DIRECTIONS/isolated_project_ivan.md            |     4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/job_search.md       |     4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/memory_archive.md   |     4 +-
- .../SHARED_CONTEXT/DIRECTIONS/monolith_concrete.md |     4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/ocr_photo.md        |     4 +-
- .../DIRECTIONS/orchestration_core.md               |     4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/photo_cleanup.md    |     4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/product_search.md   |     4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/roofing.md          |     4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/social_content.md   |     4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/spreadsheets.md     |     4 +-
- .../SHARED_CONTEXT/DIRECTIONS/structural_design.md |     4 +-
- .../DIRECTIONS/technical_supervision.md            |     4 +-
- .../DIRECTIONS/telegram_automation.md              |     4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/video_production.md |     4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/vpn_network.md      |     4 +-
- docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md      |     4 +-
- docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |     6 +-
- docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |     6 +-
- docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |     4 +-
- .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |    32 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |     4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |     4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |     4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_004.md             |     4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |     6 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |  1198 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_007.md             | 16323 +++++++++----------
- .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |  2396 ++-
- .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |   707 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_010.md             |     4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_011.md             |  1161 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_012.md             |     4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_013.md             |     4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_014.md             |     4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_015.md             |     4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_016.md             |     4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_017.md             |     4 +-
- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       |   260 +-
- .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |    16 +-
- docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |    83 +-
- docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |     6 +-
- docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |     4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |     4 +-
- .../TOPICS/topic_210_PROEKTIROVANIE.md             |     4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |    27 +-
- .../TOPICS/topic_3008_KODY_MOZGOV.md               |     4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |     4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |     4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_5_TEKHNADZOR.md   |     4 +-
- .../SHARED_CONTEXT/TOPICS/topic_6104_JOB_SEARCH.md |     4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |     4 +-
- .../TOPICS/topic_961_AVTOZAPCHASTI.md              |     4 +-
- docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |     6 +-
- 69 files changed, 11994 insertions(+), 10662 deletions(-)
+ docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md    |   6 +-
+ docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md |   2 +-
+ .../SHARED_CONTEXT/DIRECTIONS/auto_parts_search.md |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/cad_dwg.md          |   4 +-
+ .../DIRECTIONS/construction_search.md              |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/crm_leads.md        |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/defect_acts.md      |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/devops_server.md    |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/documents.md        |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/email_ingress.md    |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/estimates.md        |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/general_chat.md     |   4 +-
+ .../DIRECTIONS/google_drive_storage.md             |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/internet_search.md  |   4 +-
+ .../DIRECTIONS/isolated_project_ivan.md            |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/job_search.md       |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/memory_archive.md   |   4 +-
+ .../SHARED_CONTEXT/DIRECTIONS/monolith_concrete.md |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/ocr_photo.md        |   4 +-
+ .../DIRECTIONS/orchestration_core.md               |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/photo_cleanup.md    |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/product_search.md   |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/roofing.md          |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/social_content.md   |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/spreadsheets.md     |   4 +-
+ .../SHARED_CONTEXT/DIRECTIONS/structural_design.md |   4 +-
+ .../DIRECTIONS/technical_supervision.md            |   4 +-
+ .../DIRECTIONS/telegram_automation.md              |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/video_production.md |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/vpn_network.md      |   4 +-
+ docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md      |   4 +-
+ docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |   6 +-
+ docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |   6 +-
+ docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  28 +--
+ .../ORCHESTRA_FULL_CONTEXT_PART_001.md             | 217 +++++++----------
+ .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_004.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_007.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_010.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_011.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_012.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_013.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_014.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_015.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_016.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_017.md             |   4 +-
+ docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 204 +++++++++++-----
+ .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |   8 +-
+ docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   | 269 +++++++++------------
+ docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |   6 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |   4 +-
+ .../TOPICS/topic_210_PROEKTIROVANIE.md             |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |  10 +-
+ .../TOPICS/topic_3008_KODY_MOZGOV.md               |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_5_TEKHNADZOR.md   |   4 +-
+ .../SHARED_CONTEXT/TOPICS/topic_6104_JOB_SEARCH.md |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |   4 +-
+ .../TOPICS/topic_961_AVTOZAPCHASTI.md              |   4 +-
+ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   6 +-
+ 68 files changed, 494 insertions(+), 498 deletions(-)
 
 ## GIT_CHANGED_FILES_10
 .gitignore
@@ -276,26 +264,26 @@ https://drive.google.com/drive/folders/1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG
 - eba6dc80-d993-43e8-945b-cf1b48b9d103|210|{"file_id": "1evYG_-JrYks_cJ3D04LTYgdh1CZnWqTT", "file_name": "Схема глубинного дренажа.pdf", "mime_type": "application/|NO_VALID_ARTIFACT|2026-05-06 17:31:31
 
 ## LATEST_TASK_HISTORY_20
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_CODEX_FULL_CANON_VERIFIED:all_phases_1_to_20_pass:bot=10548:total=8173431.09:NEW_RUN|2026-05-08 17:27:59
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_OLD_INVALID_MESSAGE_SUPERSEDED:10547:SUPERSEDED_BY_10548|2026-05-08 17:27:59
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_OLD_INVALID_MESSAGE_SUPERSEDED:10542:NEW_RUN|2026-05-08 17:27:59
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_OLD_INVALID_MESSAGE_SUPERSEDED:10541:NEW_RUN|2026-05-08 17:27:59
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_OLD_INVALID_MESSAGE_SUPERSEDED:10540:NEW_RUN|2026-05-08 17:27:59
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TELEGRAM_READBACK_OK:bot_msg=10548:result_from_db:clean:no_forbidden:totals_match:NEW_RUN|2026-05-08 17:27:59
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_DRIVE_VERIFIED:xlsx_id=1xQqRCR3sxJ6ywoq2qxcDp75BoBM5PYQp:size=141928:pdf_id=1FryqGPXfRhYRhXBk3Ie6LHObTKNdVBBH:size=47532:created=2026-05-08T17:23:30Z|2026-05-08 17:27:59
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_PDF_READBACK_OK:pages=1:cyrillic=215:totals_ok:no_forbidden_paths:NEW_RUN|2026-05-08 17:27:59
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_XLSX_READBACK_OK:sheets=AREAL_CALC+смета:rows=136:cols=15:zero_rows=0:NEW_RUN|2026-05-08 17:27:59
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_XLSX_TOTAL_MANUAL_RECALC_OK:works=3110942.75:mats=4337539.55:logistics=63853.00:overhead=661095.79:no_vat=8173431.09:vat=1634686.22:with_vat=9808117.31:NEW_RUN|2026-05-08 17:27:59
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_FULL_TURNKEY_SCOPE_ENFORCED:rows=136:sections=14:перекрытия=present:санузлы=present:полы=present:ОВ+ВК+ЭОМ=present:NEW_RUN|2026-05-08 17:27:59
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TEMPLATE_PRICE_EXTRACTION_FIXED:source_sheet=смета_Газобетонный_дом:NEW_RUN|2026-05-08 17:27:59
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TEMPLATE_PRICE_COLUMNS_PROVEN:{"source":"Ареал Нева.xlsx/смета","gasbeton_title":"Газобетонный дом","name_col":2,"unit_col":3,"qty_col":4,"work_col":8,"mat_col":10,"total_co|2026-05-08 17:27:59
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_PROJECT_FACTS_READBACK_OK:area=99.91,floors=1,material=газобетон,foundation=монолит,distance=30km,price=средние:NEW_RUN|2026-05-08 17:27:59
 - c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TELEGRAM_MATCHES_ARTIFACTS|2026-05-08 17:23:34
 - c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_BOT_MESSAGE_ID_SAVED:10548|2026-05-08 17:23:34
 - c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_PUBLIC_OUTPUT_CLEAN_OK|2026-05-08 17:23:34
 - c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_FULL_ESTIMATE_MATRIX_ENFORCED|2026-05-08 17:23:34
 - c94ec497-4351-43a7-a106-b3dab1633838|FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:estimate_generated|2026-05-08 17:23:34
 - c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TELEGRAM_DELIVERED:10548|2026-05-08 17:23:34
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_DRIVE_UPLOAD_PDF_OK|2026-05-08 17:23:34
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_DRIVE_UPLOAD_XLSX_OK|2026-05-08 17:23:34
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_PDF_CYRILLIC_OK|2026-05-08 17:23:34
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_PDF_CREATED:1|2026-05-08 17:23:34
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_XLSX_CANON_COLUMNS_OK:15|2026-05-08 17:23:34
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_XLSX_FORMULAS_OK|2026-05-08 17:23:34
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_XLSX_ROWS_WRITTEN:136|2026-05-08 17:23:34
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_XLSX_TEMPLATE_COPY_OK|2026-05-08 17:23:34
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TEMPLATE_SHEET_SELECTED:смета|2026-05-08 17:23:34
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TEMPLATE_CACHE_USED|2026-05-08 17:23:34
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TEMPLATE_FILE_ID:1DQw2qgMHtq2SqgJJP-93eIArpj1hnNNm|2026-05-08 17:23:34
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TEMPLATE_SELECTED:Ареал Нева.xlsx|2026-05-08 17:23:34
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_AC_GATE_OK|2026-05-08 17:23:34
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_DRIVE_LINKS_SAVED:xlsx=https://drive.google.com/file/d/1xQqRCR3sxJ6ywoq2qxcDp75BoBM5PYQp/view:pdf=https://drive.google.com/file/d/1FryqGPXfRhYRhXBk3Ie6LHObTKNdVBBH/view|2026-05-08 17:23:33
 
 ## MEMORY_DB_COUNT
 - 5192
