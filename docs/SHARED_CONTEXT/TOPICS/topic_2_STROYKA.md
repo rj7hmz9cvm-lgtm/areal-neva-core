@@ -1,31 +1,32 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-05-08T19:25:01.975169+00:00
-GIT_SHA: db7d00671b731d6df40984496859d0b33e41cbfa
+GENERATED_AT: 2026-05-08T20:10:02.098227+00:00
+GIT_SHA: 531398c8bf6e37ce42979d3ad69fc7bafe2a76cf
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
 ROLE: Сметы
 DIRECTIONS_BOUND: estimates
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE_TASKS: 2
-FAILED_LAST_24H: 3
+ACTIVE_TASKS: 1
+FAILED_LAST_24H: 6
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 12
 - CANCELLED: 102
 - DONE: 132
-- FAILED: 112
-- WAITING_CLARIFICATION: 2
+- FAILED: 115
+- WAITING_CLARIFICATION: 1
 
 ## LATEST_FAILED
+- e425b052 | STALE_TIMEOUT
+- acdae011 | STALE_TIMEOUT
+- test-gat | STALE_TIMEOUT
 - test-dra | STALE_TIMEOUT
 - 60b9503b | TOPIC2_STALE_HOUSE_CONTEXT_USED_FOR_DRAINAGE_FILE
-- 1d2b38c4 | STALE_TIMEOUT
-- a7b2879e | STALE_TIMEOUT
-- 893436d4 | INVALID_PUBLIC_RESULT
 
 ## COMMITS_LAST_14D
+- 3421216|fix(topic2): gate send fix (dict(task) for sqlite3.Row) + WCG delivery guard on picker cycle
 - 80b0809|fix(topic2): PATCH_TOPIC2_INPUT_GATE_SOURCE_OF_TRUTH_V1 — current file source-of-truth gate blocks stale house context for drainage PDF
 - 075edf9|fix(topic2): PATCH_TOPIC2_STALE_PENDING_TASK_GUARD_V1 + LOCAL_BOT_API_404_FIX
 - e185e83|fix(topic2): PATCH_SUPPLIER_HONESTY_V1 — fix fake Perplexity в Поставщик
@@ -55,7 +56,6 @@ FAILED_LAST_24H: 3
 - 58d33aa|fix(topic2): stop T2RFP infinite redirect loop for drive_file re-picks
 - b17bca2|fix(topic2): stop WAITING_CLARIFICATION pick loop
 - 2ef3f86|fix(topic2): price reply thread isolation + chat-aware price search
-- a054796|feat(topic2): canonical template selection, 15-col XLSX, status guard
 
 ## MARKERS_LAST_24H
 - created:NEW

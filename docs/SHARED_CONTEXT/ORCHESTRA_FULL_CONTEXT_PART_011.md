@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_011
-generated_at_utc: 2026-05-08T19:25:01.876092+00:00
-git_sha_before_commit: db7d00671b731d6df40984496859d0b33e41cbfa
+generated_at_utc: 2026-05-08T20:10:02.004038+00:00
+git_sha_before_commit: 531398c8bf6e37ce42979d3ad69fc7bafe2a76cf
 part: 11/17
 
 
@@ -1782,7 +1782,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 91bd4f7fc2958604249afcc10657a5dfb1524800a34c5582d09b819e09baeecf
+SHA256_FULL_FILE: 12e87be27b9b9a53a30705d171abf8d5ed5953b4fbe7436b2b603ccdaf55f5cc
 ====================================================================================================
 # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
 from __future__ import annotations
@@ -6047,6 +6047,39 @@ async def maybe_handle_stroyka_estimate(conn, task, logger=None):  # noqa: F811
                     _t2ig_decision.get("domain"),
                     _t2ig_decision.get("state"),
                 )
+                _t2ig_msg = _t2ig_decision.get("result") or ""
+                if _t2ig_msg:
+                    try:
+                        # sqlite3.Row has .keys() but not .get() — use dict() to normalize
+                        _t2ig_td = dict(task) if hasattr(task, "keys") else (task if isinstance(task, dict) else {})
+                        _t2ig_chat = str(_t2ig_td.get("chat_id") or "")
+                        _t2ig_reply = _t2ig_td.get("reply_to_message_id")
+                        _t2ig_topic = int(_t2ig_td.get("topic_id") or 0)
+                        _t2ig_task_id = str(_t2ig_td.get("id") or "")
+                        if not _t2ig_chat:
+                            raise ValueError(f"empty chat_id in task {_t2ig_task_id}")
+                        _t2ig_send_res = await _send_text(_t2ig_chat, _t2ig_msg, _t2ig_reply, _t2ig_topic)
+                        _t2ig_bot_msg_id = _t2ig_send_res.get("bot_message_id") if isinstance(_t2ig_send_res, dict) else None
+                        if _t2ig_bot_msg_id and _t2ig_task_id:
+                            conn.execute(
+                                "UPDATE tasks SET bot_message_id=? WHERE id=?",
+                                (int(_t2ig_bot_msg_id), _t2ig_task_id),
+                            )
+                            try:
+                                conn.execute(
+                                    "INSERT INTO task_history (task_id,action,created_at) VALUES (?,?,datetime('now'))",
+                                    (_t2ig_task_id, f"TOPIC2_INPUT_GATE_SENT:{_t2ig_bot_msg_id}"),
+                                )
+                                conn.execute(
+                                    "INSERT INTO task_history (task_id,action,created_at) VALUES (?,?,datetime('now'))",
+                                    (_t2ig_task_id, "reply_sent:waiting_clarification"),
+                                )
+                            except Exception:
+                                pass
+                            conn.commit()
+                        _T2IG_LOG.info("TOPIC2_INPUT_GATE_SENT:chat=%s bot_msg=%s", _t2ig_chat, _t2ig_bot_msg_id)
+                    except Exception as _t2ig_send_err:
+                        _T2IG_LOG.warning("TOPIC2_INPUT_GATE_SEND_ERR:%s", _t2ig_send_err)
                 return True
         except Exception as _t2ig_err:
             _T2IG_LOG.warning("TOPIC2_INPUT_GATE_ERR:%s", _t2ig_err)
