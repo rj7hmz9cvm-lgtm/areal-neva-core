@@ -1,8 +1,243 @@
 # ORCHESTRA_FULL_CONTEXT_PART_014
-generated_at_utc: 2026-05-08T22:15:02.582077+00:00
-git_sha_before_commit: fd5778eef413aefddca3bffb0022f25ab810edd2
+generated_at_utc: 2026-05-08T22:25:02.556942+00:00
+git_sha_before_commit: b07a2654c76173a3fb8134b325fd123283ff2e7e
 part: 14/17
 
+
+====================================================================================================
+BEGIN_FILE: docs/TECHNADZOR/TOPIC5_DOCUMENT_OUTPUT_CONTRACT.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: edff2931c8896b02651a0175466d81c5659f3ebc155ccfa5f9a60b6ddc44480d
+====================================================================================================
+# TOPIC5 DOCUMENT OUTPUT CONTRACT
+
+version: TOPIC5_DOCUMENT_OUTPUT_CONTRACT_V1
+updated_at: 2026-05-05
+status: CODE_AUDIT_DRAFT_NOT_LIVE_VERIFIED
+source: technadzor_engine.py audit + owner addendum 2026-05-05
+
+---
+
+## 1. Типы выходных документов
+
+| Тип | Константа | Статус |
+|---|---|---|
+| Текстовый разбор | TEXT_REPORT | ACTIVE — рабочий путь |
+| PDF акт | PDF_ACT | NOT_IMPLEMENTED — local-check 2026-05-05: ModuleNotFoundError |
+| DOCX черновик | DOCX | NOT_IMPLEMENTED — local-check 2026-05-05: ModuleNotFoundError |
+| XLSX реестр | XLSX | UNVERIFIED |
+| Google Doc | GOOGLE_DOC | FUTURE_OPTIONAL_NOT_VERIFIED |
+| Только Telegram | TELEGRAM_ONLY | ACTIVE — нет файла, только текст |
+
+---
+
+## 2. Статусы документа
+
+```
+TELEGRAM_TEXT_REPORT_SENT   — текстовый разбор отправлен в Telegram
+LOCAL_DRAFT_CREATED         — черновик создан локально (НЕ ДОСТАВЛЕН клиенту)
+DOCX_DRAFT_CREATED          — DOCX создан локально (НЕ ДОСТАВЛЕН клиенту)
+PDF_GENERATION_NOT_IMPLEMENTED — reportlab не установлен: ModuleNotFoundError
+DRIVE_UPLOAD_PENDING        — ожидает загрузки на Drive
+DRIVE_UPLOAD_DONE           — загружен на Drive
+DRIVE_UPLOAD_FAILED         — ошибка загрузки на Drive
+TELEGRAM_LINK_SENT          — ссылка на Drive отправлена в Telegram
+FALLBACK_SENT               — текстовый fallback вместо файла
+CLIENT_DOCUMENT_DELIVERED   — документ доставлен: Drive + Telegram ссылка получена
+```
+
+---
+
+## 3. Правило DONE
+
+```
+CLIENT_DOCUMENT_DELIVERED = задача выполнена
+LOCAL_DRAFT_CREATED        ≠ задача выполнена
+DOCX_DRAFT_CREATED         ≠ задача выполнена
+DRIVE_UPLOAD_DONE без Telegram ссылки ≠ задача выполнена
+
+Закрыто только когда:
+  1. Документ существует (PDF / DOCX / TEXT)
+  2. Загружен на Drive (PDF/DOCX) ИЛИ текст отправлен в Telegram (TEXT)
+  3. Владелец/клиент получил ссылку или текст в Telegram
+```
+
+---
+
+## 4. Запрещённые паттерны
+
+- Называть LOCAL_DRAFT_CREATED «готово» или «документ создан»
+- Называть DOCX_DRAFT_CREATED «акт готов» без Drive-загрузки и Telegram-ссылки
+- Сообщать «PDF сгенерирован» без фактической проверки reportlab
+- Загружать на Drive без подтверждения ссылки в Telegram
+- Отправлять клиенту путь вида /root/...
+- Помещать DOCX в client_facing папку без явной команды владельца
+
+---
+
+## 5. Цепочка доставки
+
+```
+Telegram (владелец)
+  → task_worker._handle_in_progress
+  → process_technadzor (wrapper chain, 8 definitions)
+  → VisitPackage собран
+  → _p6h_build_* (text / docx / pdf builder)
+  → technadzor_drive_index.upload_client_pdf_to_folder (line 383, verified)
+  → Telegram ответ со ссылкой
+```
+
+Если любой шаг падает → FALLBACK_SENT + статус ошибки в ObjectCard.
+
+---
+
+## 6. Статус пакетов (local-check 2026-05-05)
+
+```
+reportlab:    ModuleNotFoundError — не установлен
+python-docx:  ModuleNotFoundError — не установлен
+DejaVu fonts: присутствуют (/usr/share/fonts/truetype/dejavu/)
+
+Код _p6h_build_pdf_act / _p6h_build_docx_act существует в technadzor_engine.py
+но упадёт на import при вызове.
+
+Текущий рабочий путь: TEXT_REPORT → Telegram text
+```
+
+---
+
+## 7. Именование файлов
+
+```
+Черновик DOCX:  Черновик_акта_<объект>_<дата>.docx
+Финальный PDF:  Акт_осмотра_<объект>_<дата>.pdf
+Реестр XLSX:    Реестр_замечаний_<объект>_<дата>.xlsx
+```
+
+Дата формат: YYYYMMDD.
+Объект: имя из ObjectCard на русском для клиентских файлов.
+
+---
+
+## 8. Drive placement
+
+```
+client_facing=True папка → финальный PDF акт
+                           DOCX — только по явной команде владельца
+topic_5 system folder    → служебные файлы, черновики, JSON манифесты
+Путь /root/...           → НИКОГДА не отправлять клиенту
+```
+
+====================================================================================================
+END_FILE: docs/TECHNADZOR/TOPIC5_DOCUMENT_OUTPUT_CONTRACT.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/TECHNADZOR/TOPIC5_RUNTIME_USAGE_RULES.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 4093ded0ac87b42cc50beb5578095a4ae85e9bc4ec5ec7f5ddb5ead599618fa3
+====================================================================================================
+# TOPIC5 RUNTIME USAGE RULES
+
+version: TOPIC5_RUNTIME_USAGE_RULES_V1
+updated_at: 2026-05-05
+status: CODE_AUDIT_VERIFIED
+
+---
+
+## 1. Что можно трогать / что нельзя
+
+### Запрещено редактировать напрямую
+```
+task_worker.py           — overlay chain (_handle_in_progress 14 definitions)
+telegram_daemon.py       — Telegram polling loop
+ai_router.py             — routing logic
+reply_sender.py          — delivery chain
+google_io.py             — Drive OAuth
+normative_engine.py      — dirty (+283 lines P6H5 expansion), не stage, не commit
+.env / credentials.json  — секреты
+token.json / *.session   — OAuth токены
+data/core.db             — рабочая БД
+data/memory.db           — memory БД
+```
+
+### Разрешено
+```
+docs/**                  — документация (append или новые файлы)
+core/technadzor_engine.py — только append к концу файла (monkeypatch pattern)
+core/normative_engine.py  — только append к концу файла (если явно разрешено)
+```
+
+---
+
+## 2. Append-only rule
+
+Все изменения кода в `/root/.areal-neva-core` — только дописывание к концу файла.
+Это соответствует существующему паттерну wrapper/monkeypatch-цепочек.
+
+Нельзя: редактировать существующие функции в середине файла.
+Можно: добавить новую обёртку в конец, которая вызывает предыдущую версию.
+
+---
+
+## 3. Перед любым патчем
+
+1. Прочитать `docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md`
+2. Прочитать `HANDOFFS/LATEST_HANDOFF.md`
+3. Убедиться что normative_engine.py не попадает в staged
+
+---
+
+## 4. Активное состояние системы (2026-05-05)
+
+```
+ActiveTechnadzorFolder:
+  object: тест надзор
+  folder_id: 1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG
+  status: OPEN
+  verified: true (task 5276 DONE)
+
+process_technadzor wrapper chain:
+  _p6h4tw_v1_wrapped = True
+  P6H4FD → P6H4TW → ... (8 definitions)
+
+Vision guard:
+  EXTERNAL_PHOTO_ANALYSIS_ALLOWED = False
+  OpenRouter Google: 403 при попытке включить
+
+SearchMonolithV2:
+  model: perplexity/sonar (via OpenRouter)
+  OPENROUTER_API_KEY: confirmed in .env
+  HTTP: real calls via urllib
+```
+
+---
+
+## 5. Изоляция объектов
+
+- Дефекты KIEVSKOE_95 → только KIEVSKOE_95
+- Дефекты NOVICHKOVO → только NOVICHKOVO
+- Дефекты SUSANINO → только SUSANINO
+- Нельзя переносить замечания между объектами
+- Нельзя применять металлокаркасные нормы к каркасному дому без проверки
+
+---
+
+## 6. Перед git push
+
+```bash
+mv core/context_aggregator.py /tmp/context_aggregator_backup.py
+# ... push ...
+mv /tmp/context_aggregator_backup.py core/context_aggregator.py
+```
+
+Это обязательный шаг перед каждым push.
+
+====================================================================================================
+END_FILE: docs/TECHNADZOR/TOPIC5_RUNTIME_USAGE_RULES.md
+FILE_CHUNK: 1/1
+====================================================================================================
 
 ====================================================================================================
 BEGIN_FILE: docs/TECHNADZOR/TOPIC5_TECHNADZOR_SYSTEM_LOGIC_FINAL.json

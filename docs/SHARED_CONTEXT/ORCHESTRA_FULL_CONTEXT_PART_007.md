@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_007
-generated_at_utc: 2026-05-08T22:15:02.573160+00:00
-git_sha_before_commit: fd5778eef413aefddca3bffb0022f25ab810edd2
+generated_at_utc: 2026-05-08T22:25:02.550456+00:00
+git_sha_before_commit: b07a2654c76173a3fb8134b325fd123283ff2e7e
 part: 7/17
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 3/3
-SHA256_FULL_FILE: d2b65f7a57b6f0d80affba2430770895bdc8a7a19916d4326ae9bd2a27421364
+SHA256_FULL_FILE: 2357d789c75118471eaca43ddced2d9fa279b27fca1a28d267f0f8a314e9fc54
 ====================================================================================================
 # Факт: 17:33 «Задача отменена» → бот спросил «Сколько этажей»
 # ============================================================
@@ -1826,6 +1826,40 @@ try:
 except Exception:
     pass
 # === END_PATCH_TOPIC2_DRAINAGE_CHILD_MERGE_V1 ===
+
+
+
+# PATCH_TOPIC2_DRAINAGE_CHILD_MERGE_V1_FIX1
+# Fix 1: SQL used th.event — correct column is th.action (was silently failing)
+# Fix 2: Only merge when parent is AWAITING_CONFIRMATION, not WAITING_CLARIFICATION
+#         (WC = awaiting user's reply with data — those tasks must flow through normally)
+
+def _t2cm_v1_find_active_drainage_parent(conn):
+    try:
+        row = conn.execute(
+            """
+            SELECT t.id FROM tasks t
+            JOIN task_history th ON th.task_id = t.id
+            WHERE t.topic_id = 2
+              AND t.state = 'AWAITING_CONFIRMATION'
+              AND (
+                    th.action LIKE '%TOPIC2_INPUT_GATE%'
+                    OR th.action LIKE '%TOPIC2_DRAINAGE%'
+                    OR th.action LIKE '%WCG_DELIVERY_SENT%'
+                  )
+            ORDER BY t.rowid DESC
+            LIMIT 1
+            """
+        ).fetchone()
+        return row[0] if row else None
+    except Exception:
+        return None
+
+try:
+    logger.info("PATCH_TOPIC2_DRAINAGE_CHILD_MERGE_V1_FIX1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_DRAINAGE_CHILD_MERGE_V1_FIX1 ===
 
 
 if __name__ == "__main__":

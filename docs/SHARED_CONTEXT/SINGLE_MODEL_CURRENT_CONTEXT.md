@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-05-08T22:15:03.219794+00:00
-GIT_SHA: fd5778eef413aefddca3bffb0022f25ab810edd2
+GENERATED_AT: 2026-05-08T22:25:03.093170+00:00
+GIT_SHA: b07a2654c76173a3fb8134b325fd123283ff2e7e
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -16,7 +16,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 ## GLOBAL_STATUS
 | topic | name | status | active | failed_24h |
 |-------|------|--------|--------|------------|
-| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 1 | 9 |
+| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 3 | 9 |
 | 5 | TEKHNADZOR | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
 | 210 | PROEKTIROVANIE | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
 | 500 | VEB_POISK | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
@@ -70,13 +70,13 @@ DATE_UNKNOWN
 ## ACTIVE_OR_RECENT_TOPICS
 ### topic_2 STROYKA
 role: Сметы
-active: 1
+active: 3
 failed_24h: 9
 commits_last_7d: 30
 recent_commits:
+- b07a265|fix(topic2): TOPIC2_DRAINAGE_LENGTH_PROOF_GATE_AND_ONLINE_PRICES_V2
 - af42c97|fix(topic2): TOPIC2_DRAINAGE_FULL_CLOSE_NO_LOOP_V2 — child merge guard, legend filter, noise tasks closed
 - 859c045|fix(topic2): TOPIC2_DRAINAGE_VAT_GATE_PUBLIC_CLEAN_V1 — VAT gate 22%, source filter, clean public output, Drive upload fix
-- 3343690|fix(topic2): TOPIC2_DRAINAGE_MULTIFILE_REPAIR_CLOSE_V1 — close drainage estimate from two PDFs, send XLSX+PDF to Telegram
 markers_missing: 6
 - TOPIC2_ESTIMATE_SESSION_CREATED
 - TOPIC2_CONTEXT_READY
