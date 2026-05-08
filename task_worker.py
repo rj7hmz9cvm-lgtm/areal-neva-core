@@ -7557,10 +7557,7 @@ async def _p6e67_try_merge(conn, task):
         _p6e67_hist(conn, _p6e67_tid, "P6E67_PARENT_NOT_FOUND")
 
         if _p6e67_tid and _p6e67_reply_to:
-            _p6e67_msg = (
-                "Не нашёл родительскую задачу для reply. "
-                "Пришли исходное ТЗ заново или ответь на последнее сообщение бота с результатом."
-            )
+            _p6e67_msg = "Пришли задание заново — расскажи что нужно сделать."
             _update_task(
                 conn,
                 _p6e67_tid,
@@ -15662,6 +15659,77 @@ if _T500MEM_ORIG_SAVE and not getattr(_T500MEM_ORIG_SAVE, "_t500mem_wrapped", Fa
 else:
     _T500MEM_LOG.warning("PATCH_TOPIC500_MEMORY_DEDUP_V1 skipped: _save_memory not found")
 # === END_PATCH_TOPIC500_MEMORY_DEDUP_V1 ===
+
+# === PATCH_T2RFP_REENTRANCE_GUARD_V1 ===
+# Root cause: T2RFP wraps _t2fer_run_final_estimate and redirects to _handle_in_progress.
+# _handle_in_progress → original handler → _handle_drive_file → T2FER calls
+# _t2fer_run_final_estimate again → T2RLG passes to its _ORIG which is T2RFP → loop.
+# T2RLG_ORIG_FN pointed to T2RFP (not WCG/original), so skip logic was ineffective.
+# Fix: per-task reentrancy set. Second call for same task_id → return False immediately.
+# T2FER _handle_drive_file gets False → falls to _T2FER_ORIG_HANDLE_DRIVE_FILE (normal path).
+import logging as _t2rrg_log
+import inspect as _t2rrg_inspect
+_T2RRG_LOG = _t2rrg_log.getLogger("task_worker")
+_T2RRG_ACTIVE = set()
+
+_T2RRG_ORIG = globals().get("_t2fer_run_final_estimate")
+if _T2RRG_ORIG and not getattr(_T2RRG_ORIG, "_t2rrg_wrapped", False):
+    async def _t2fer_run_final_estimate(conn, task, reason):
+        try:
+            task_id = str(_t2fer_get(task, "id", "") or "")
+        except Exception:
+            task_id = ""
+        if task_id and task_id in _T2RRG_ACTIVE:
+            _T2RRG_LOG.warning(
+                "T2RRG_REENTRANT_BLOCKED task=%s reason=%s — breaking loop", task_id, reason
+            )
+            return False
+        if task_id:
+            _T2RRG_ACTIVE.add(task_id)
+        try:
+            res = _T2RRG_ORIG(conn, task, reason)
+            if _t2rrg_inspect.isawaitable(res):
+                return await res
+            return res
+        finally:
+            _T2RRG_ACTIVE.discard(task_id)
+    _t2fer_run_final_estimate._t2rrg_wrapped = True
+    _T2RRG_LOG.info("PATCH_T2RFP_REENTRANCE_GUARD_V1 installed")
+else:
+    _T2RRG_LOG.warning("PATCH_T2RFP_REENTRANCE_GUARD_V1 skipped: _t2fer_run_final_estimate not found")
+# === END_PATCH_T2RFP_REENTRANCE_GUARD_V1 ===
+
+# === PATCH_T2P6E67_FRESH_ESTIMATE_BYPASS_V1 ===
+# When task_id is in _T2RRG_ACTIVE (inside T2RFP redirect to _handle_in_progress)
+# and task is a fresh estimate, P6E67 must not run and set WAITING_CLARIFICATION.
+# T2FER's _p6e67_try_merge wrapper already tries to intercept but gets False from T2RRG
+# (reentrant block), then falls through to original P6E67 which fires the terminal guard.
+# Fix: wrap _p6e67_try_merge at outermost layer — if fresh estimate + T2RRG active → return False.
+# P6E67's _handle_new/_handle_in_progress wrappers see False → continue to original handlers
+# which process the file through normal intake flow.
+import asyncio as _t2p6_asyncio
+_T2P6E67_ORIG = globals().get("_p6e67_try_merge")
+if _T2P6E67_ORIG and not getattr(_T2P6E67_ORIG, "_t2p6e_wrapped", False):
+    async def _p6e67_try_merge(conn, task, *args, **kwargs):
+        try:
+            _t2p6_task_id = str(_t2fer_get(task, "id", "") or "")
+            if _t2p6_task_id and _t2p6_task_id in _T2RRG_ACTIVE and _t2fer_is_fresh_estimate(task):
+                _T2RRG_LOG.info(
+                    "T2P6E67_BYPASS_FRESH_ESTIMATE task=%s — inside T2RFP redirect, skip P6E67",
+                    _t2p6_task_id,
+                )
+                return False
+        except Exception:
+            pass
+        res = _T2P6E67_ORIG(conn, task, *args, **kwargs)
+        if _t2p6_asyncio.iscoroutine(res):
+            return await res
+        return res
+    _p6e67_try_merge._t2p6e_wrapped = True
+    _T2RRG_LOG.info("PATCH_T2P6E67_FRESH_ESTIMATE_BYPASS_V1 installed")
+else:
+    _T2RRG_LOG.warning("PATCH_T2P6E67_FRESH_ESTIMATE_BYPASS_V1 skipped: _p6e67_try_merge not found")
+# === END_PATCH_T2P6E67_FRESH_ESTIMATE_BYPASS_V1 ===
 
 if __name__ == "__main__":
     asyncio.run(main())
