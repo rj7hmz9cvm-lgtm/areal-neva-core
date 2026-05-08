@@ -55,11 +55,19 @@ try:
     _code = open(_daemon_path, "r", encoding="utf-8").read()
 
     _CLOUD_PATTERN = 'url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"'
-    _LOCAL_PATTERN = f'url = f"{LOCAL_API_BASE}/file/bot{{BOT_TOKEN}}/{{file_path}}"'
+    # Local Bot API returns absolute disk path in file_path — copy directly, skip HTTP
+    _LOCAL_PATTERN = (
+        'if file_path.startswith("/") and os.path.exists(file_path):\n'
+        '        import shutil as _shutil_lbp, logging as _log_lbp\n'
+        '        _log_lbp.getLogger("areal.bigfile_patch").info("LOCAL_BOT_API_ABSOLUTE_PATH_USED:%s", os.path.basename(file_path))\n'
+        '        _shutil_lbp.copy2(file_path, local_path)\n'
+        '        return local_path\n'
+        f'    url = f"{LOCAL_API_BASE}/file/bot{{BOT_TOKEN}}/{{file_path}}"'
+    )
 
     if _CLOUD_PATTERN in _code:
         _code = _code.replace(_CLOUD_PATTERN, _LOCAL_PATTERN)
-        _LOG.info("PATCH_DOWNLOAD_URL_LOCAL_SERVER: ok")
+        _LOG.info("PATCH_DOWNLOAD_URL_LOCAL_SERVER: ok (absolute path → disk copy)")
     else:
         _LOG.warning(
             "PATCH_DOWNLOAD_URL_LOCAL_SERVER: pattern not found in telegram_daemon.py — "
