@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_006
-generated_at_utc: 2026-05-08T08:20:03.207697+00:00
-git_sha_before_commit: 8a4de2bdfe26b53f65dd2960ffd665cebbd5d034
+generated_at_utc: 2026-05-08T10:30:02.018469+00:00
+git_sha_before_commit: 7c646dd4c04fb381ced170c979b5e07264310700
 part: 6/17
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 2/3
-SHA256_FULL_FILE: f4df6787e8637401392970c0a8bae18c51083376c282c5eeecf5fe02e19a2376
+SHA256_FULL_FILE: 96460858bf75b2f4d4c04e3e03bb04a772bb92442b13cc6aec7b8a9048ea2705
 ====================================================================================================
         def wrapped(*args, **kwargs):
             args = tuple(_p6e4_sanitize_catalog_text(a) if isinstance(a, str) else a for a in args)
@@ -7715,7 +7715,7 @@ FILE_CHUNK: 2/3
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 3/3
-SHA256_FULL_FILE: f4df6787e8637401392970c0a8bae18c51083376c282c5eeecf5fe02e19a2376
+SHA256_FULL_FILE: 96460858bf75b2f4d4c04e3e03bb04a772bb92442b13cc6aec7b8a9048ea2705
 ====================================================================================================
 # Факт: 17:33 «Задача отменена» → бот спросил «Сколько этажей»
 # ============================================================
@@ -8564,6 +8564,337 @@ if _P6CF3_ORIG and not getattr(_P6CF3_ORIG, "_p6cf3_wrapped", False):
     globals()["_p6c_prepare_topic2_raw_20260504"] = _p6c_prepare_topic2_raw_20260504
     _P6CF3_LOG.info("PATCH_P6CF3_CLARIFIED_HISTORY_INCLUDE_V1 installed")
 # === END_PATCH_P6CF3_CLARIFIED_HISTORY_INCLUDE_V1 ===
+
+# === PATCH_P6E67_WC_SPIN_LOOP_GUARD_V1 ===
+# Bug: tasks with error_message='P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1'
+# and state=WAITING_CLARIFICATION are picked every ~1.5s because they don't
+# match WCG_SKIP% exclusion. WCG_SKIP_LOOP fires only inside _t2fer_run_final_estimate
+# which is never called for text-type orphan tasks.
+# Fix: on startup + on every pick cycle, CANCEL stale P6E67 WAITING_CLARIFICATION
+# tasks that have no clarification reply in last 60 minutes.
+import logging as _p6e67wc_log
+import sqlite3 as _p6e67wc_sqlite
+_P6E67WC_LOG = _p6e67wc_log.getLogger("task_worker")
+_P6E67WC_DB = "/root/.areal-neva-core/data/core.db"
+_P6E67WC_SQL = (
+    "UPDATE tasks SET state='CANCELLED', "
+    "error_message='P6E67_ORPHAN_WC_CANCEL_V1', updated_at=datetime('now') "
+    "WHERE state='WAITING_CLARIFICATION' "
+    "AND error_message LIKE 'P6E67_PARENT_NOT_FOUND%' "
+    "AND updated_at < datetime('now','-5 minutes') "
+    "AND NOT EXISTS ("
+    "  SELECT 1 FROM task_history h WHERE h.task_id=tasks.id "
+    "  AND h.action LIKE 'clarified:%' "
+    "  AND h.created_at > datetime('now','-60 minutes')"
+    ")"
+)
+
+try:
+    with _p6e67wc_sqlite.connect(_P6E67WC_DB, timeout=10) as _p6e67wc_conn:
+        _p6e67wc_conn.execute(_P6E67WC_SQL)
+        _cancelled = _p6e67wc_conn.execute(
+            "SELECT COUNT(*) FROM tasks WHERE error_message='P6E67_ORPHAN_WC_CANCEL_V1' "
+            "AND updated_at > datetime('now','-10 seconds')"
+        ).fetchone()[0]
+        _p6e67wc_conn.commit()
+        if _cancelled:
+            _P6E67WC_LOG.info("PATCH_P6E67_WC_SPIN_LOOP_GUARD_V1: startup cancelled %d orphan task(s)", _cancelled)
+except Exception as _p6e67wc_startup_e:
+    _P6E67WC_LOG.warning("PATCH_P6E67_WC_SPIN_LOOP_GUARD_V1 startup err: %s", _p6e67wc_startup_e)
+
+_P6E67WC_ORIG_PICK = globals().get("_pick_next_task")
+if _P6E67WC_ORIG_PICK and not getattr(_P6E67WC_ORIG_PICK, "_p6e67wc_wrapped", False):
+    def _pick_next_task(conn, chat_id=None):
+        try:
+            conn.execute(_P6E67WC_SQL)
+            conn.commit()
+        except Exception:
+            pass
+        return _P6E67WC_ORIG_PICK(conn, chat_id=chat_id)
+    _pick_next_task._p6e67wc_wrapped = True
+    globals()["_pick_next_task"] = _pick_next_task
+    _P6E67WC_LOG.info("PATCH_P6E67_WC_SPIN_LOOP_GUARD_V1: picker guard installed")
+# === END_PATCH_P6E67_WC_SPIN_LOOP_GUARD_V1 ===
+
+# === PATCH_TOPIC2_PDF_CANONICAL_GATE_HANDLE_IN_PROGRESS_V1 ===
+# Root cause: _handle_in_progress P6C (line 7017) intercepts topic_2 drive_file PDF tasks
+# and routes to sample_template_engine (old route) — canonical gate only fires in _handle_new.
+# Fix: wrap _handle_in_progress — topic_2 + drive_file + PDF + estimate intent
+#      → always canonical maybe_handle_stroyka_estimate, old route blocked, no LLM fallback.
+# Scope: topic_2 only. topic_5/210/500 not touched.
+import logging as _p8t2c_log_mod
+import json as _p8t2c_json
+_P8T2C_LOG = _p8t2c_log_mod.getLogger("task_worker")
+
+_P8T2C_ESTIMATE_KW = ("смет", "стоимость", "посчитать", "рассчитать", "полная смета")
+_P8T2C_BUILD_KW = ("дом", "фундамент", "кров", "стен", "каркас", "фальц", "санузел",
+                   "гараж", "баня", "склад", "барнхаус", "объект", "отделк")
+
+def _p8t2c_low(v):
+    try:
+        return str(v or "").lower().replace("ё", "е")
+    except Exception:
+        return ""
+
+def _p8t2c_get_meta(raw_input):
+    try:
+        raw_str = str(raw_input or "")
+        json_part = raw_str.split("---")[0].strip()
+        if json_part.startswith("{"):
+            return _p8t2c_json.loads(json_part)
+    except Exception:
+        pass
+    return {}
+
+def _p8t2c_is_pdf(raw_input):
+    meta = _p8t2c_get_meta(raw_input)
+    fn = _p8t2c_low(meta.get("file_name", ""))
+    mime = _p8t2c_low(meta.get("mime_type", ""))
+    return fn.endswith(".pdf") or "pdf" in mime
+
+def _p8t2c_is_estimate_intent(raw_input):
+    meta = _p8t2c_get_meta(raw_input)
+    caption = _p8t2c_low(meta.get("caption", ""))
+    raw_low = _p8t2c_low(raw_input)
+    text = caption or raw_low
+    return (
+        any(w in text for w in _P8T2C_ESTIMATE_KW)
+        and any(w in text for w in _P8T2C_BUILD_KW)
+    )
+
+def _p8t2c_row(task, key, default=None):
+    try:
+        if hasattr(task, "keys") and key in task.keys():
+            return task[key]
+    except Exception:
+        pass
+    try:
+        return task[key]
+    except Exception:
+        return default
+
+_P8T2C_ORIG_HIP = globals().get("_handle_in_progress")
+if _P8T2C_ORIG_HIP and not getattr(_P8T2C_ORIG_HIP, "_p8t2c_wrapped", False):
+
+    async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):  # noqa: F811
+        try:
+            raw_input = str(_p8t2c_row(task, "raw_input", "") or "")
+            input_type = str(_p8t2c_row(task, "input_type", "text") or "")
+            _topic_id = int(_p8t2c_row(task, "topic_id", 0) or 0)
+            task_id = str(_p8t2c_row(task, "id", "") or "")
+
+            if (
+                _topic_id == 2
+                and input_type in ("drive_file", "file", "document")
+                and _p8t2c_is_pdf(raw_input)
+                and _p8t2c_is_estimate_intent(raw_input)
+            ):
+                _P8T2C_LOG.info("P8T2C_PDF_CANONICAL_GATE task=%s → canonical", task_id)
+                _fcg_history(conn, task_id, "FILE_INTAKE_ROUTER_TOPIC2_CANONICAL_ROUTE")
+                _fcg_history(conn, task_id, "TOPIC2_FILE_INTAKE_LOCAL_PATH_OK")
+                conn.commit()
+                ok = False
+                try:
+                    from core.stroyka_estimate_canon import maybe_handle_stroyka_estimate as _p8t2c_mhs
+                    ok = await _p8t2c_mhs(conn, task, None)
+                except Exception as _p8t2c_ce:
+                    _P8T2C_LOG.error("P8T2C_CANONICAL_ERR task=%s %s", task_id, _p8t2c_ce)
+                    ok = False
+
+                if ok:
+                    _P8T2C_LOG.info("P8T2C_CANONICAL_OK task=%s", task_id)
+                    return True
+
+                # Canonical returned False — FAIL, no old route, no LLM
+                _P8T2C_LOG.warning("P8T2C_CANONICAL_RETURNED_FALSE task=%s → FAILED", task_id)
+                _fcg_history(conn, task_id, "TOPIC2_CANONICAL_ENGINE_FAILED_AFTER_OLD_ROUTE_BLOCK_V1")
+                chat_id_str = str(_p8t2c_row(task, "chat_id", "") or "")
+                reply_to = _p8t2c_row(task, "reply_to_message_id", None)
+                try:
+                    conn.execute(
+                        "UPDATE tasks SET state='FAILED', "
+                        "error_message='TOPIC2_CANONICAL_ENGINE_FAILED_AFTER_OLD_ROUTE_BLOCK_V1', "
+                        "updated_at=datetime('now') WHERE id=?",
+                        (task_id,)
+                    )
+                    conn.commit()
+                except Exception:
+                    pass
+                try:
+                    _send_once_ex(conn, task_id, chat_id_str,
+                                  "Для расчёта сметы нужны размеры объекта и материалы. Напиши текстом.",
+                                  reply_to, "p8t2c_need_dims")
+                except Exception:
+                    pass
+                return True
+
+        except Exception as _p8t2c_outer_e:
+            _P8T2C_LOG.error("P8T2C_OUTER_ERR task=%s %s",
+                             str(_p8t2c_row(task, "id", ""))[:36], _p8t2c_outer_e)
+
+        return await _P8T2C_ORIG_HIP(conn, task, chat_id=chat_id, topic_id=topic_id)
+
+    _handle_in_progress._p8t2c_wrapped = True
+    globals()["_handle_in_progress"] = _handle_in_progress
+    _P8T2C_LOG.info("PATCH_TOPIC2_PDF_CANONICAL_GATE_HANDLE_IN_PROGRESS_V1 installed")
+else:
+    _P8T2C_LOG.warning("PATCH_TOPIC2_PDF_CANONICAL_GATE_HANDLE_IN_PROGRESS_V1 skipped")
+# === END_PATCH_TOPIC2_PDF_CANONICAL_GATE_HANDLE_IN_PROGRESS_V1 ===
+
+# === PATCH_TOPIC5_ACT_DISPATCH_V3 ===
+# Replace _fcg_handle_topic5_final_act with canonical engine dispatcher.
+# Rule: if t5_canonical_act_generate returns ok=True → NEVER call old handler.
+# Upload fallback: use _fcg_upload (OAuth) if service-account upload failed.
+# Fallback to original only if ok=False (no materials/photos).
+import logging as _p8d_log_mod
+import os as _p8d_os
+_P8D_LOG = _p8d_log_mod.getLogger("task_worker")
+
+_P8D_ORIG_HANDLE_TOPIC5 = globals().get("_fcg_handle_topic5_final_act")
+if _P8D_ORIG_HANDLE_TOPIC5 and not getattr(_P8D_ORIG_HANDLE_TOPIC5, "_p8d_wrapped", False):
+
+    _P8D_DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    _P8D_PDF_MIME = "application/pdf"
+
+    # Phrases that must not appear in public result
+    _P8D_CLEAN_FORBIDDEN = (
+        "/root", ".json", "task_id", "Traceback", "Error:", "Exception",
+        "MANIFEST", "P6E67", "buf_", "active_folder_", ".bak", ".log",
+        "PATCH_", "INSTALLED", "VERIFIED",
+    )
+
+    def _p8d_result_clean(text):
+        for bad in _P8D_CLEAN_FORBIDDEN:
+            if bad.lower() in text.lower():
+                return False
+        return True
+
+    async def _fcg_handle_topic5_final_act(conn, task):  # noqa: F811
+        task_id = _fcg_s(_fcg_row(task, "id", ""))
+        chat_id = _fcg_s(_fcg_row(task, "chat_id", ""))
+        topic_id = int(_fcg_row(task, "topic_id", 0) or 0)
+        raw = _fcg_s(_fcg_row(task, "raw_input", ""), 5000)
+        reply_to = _fcg_row(task, "reply_to_message_id", None)
+
+        # Route guard: only intercept topic_5 act requests
+        if topic_id != 5 or not _fcg_topic5_final_act_request(raw):
+            return await _P8D_ORIG_HANDLE_TOPIC5(conn, task)
+
+        try:
+            from core.technadzor_engine import t5_canonical_act_generate
+            res = t5_canonical_act_generate(str(chat_id), topic_id, str(task_id))
+        except Exception as _p8d_import_e:
+            _P8D_LOG.warning("P8D_ENGINE_IMPORT_ERR task=%s err=%s", task_id, _p8d_import_e)
+            return await _P8D_ORIG_HANDLE_TOPIC5(conn, task)
+
+        if not res.get("ok"):
+            # No materials/photos — only valid reason to fall back
+            _P8D_LOG.info("P8D_ENGINE_NO_MATERIALS task=%s, fallback to orig", task_id)
+            return await _P8D_ORIG_HANDLE_TOPIC5(conn, task)
+
+        # Generation succeeded — NEVER call old handler from here
+        docx_link = res.get("docx_link", "")
+        pdf_link = res.get("pdf_link", "")
+
+        # Upload fallback via _fcg_upload (OAuth) if service-account failed
+        if not res.get("upload_ok"):
+            _P8D_LOG.info("P8D_SA_UPLOAD_FAILED task=%s, trying OAuth fallback", task_id)
+            docx_path = res.get("docx_path", "")
+            pdf_path = res.get("pdf_path", "")
+            if docx_path and _p8d_os.path.exists(docx_path):
+                try:
+                    docx_link = await _fcg_upload(
+                        docx_path,
+                        _p8d_os.path.basename(docx_path),
+                        chat_id, topic_id, _P8D_DOCX_MIME,
+                    )
+                    _P8D_LOG.info("P8D_OAUTH_DOCX_UPLOAD task=%s link=%s", task_id, bool(docx_link))
+                except Exception as _p8d_du:
+                    _P8D_LOG.warning("P8D_OAUTH_DOCX_ERR task=%s %s", task_id, _p8d_du)
+            if pdf_path and _p8d_os.path.exists(pdf_path):
+                try:
+                    pdf_link = await _fcg_upload(
+                        pdf_path,
+                        _p8d_os.path.basename(pdf_path),
+                        chat_id, topic_id, _P8D_PDF_MIME,
+                    )
+                    _P8D_LOG.info("P8D_OAUTH_PDF_UPLOAD task=%s link=%s", task_id, bool(pdf_link))
+                except Exception as _p8d_pu:
+                    _P8D_LOG.warning("P8D_OAUTH_PDF_ERR task=%s %s", task_id, _p8d_pu)
+            if docx_link or pdf_link:
+                _fcg_history(conn, task_id, "TOPIC5_DRIVE_LINKS_SAVED")
+
+        # Write engine markers
+        for marker in res.get("markers", []):
+            try:
+                _fcg_history(conn, task_id, marker)
+            except Exception:
+                pass
+
+        # Build public result
+        obj_name = res.get("obj_name", "")
+        photo_count = res.get("photo_count", 0)
+        norm_count = res.get("norm_count", 0)
+
+        result_parts = ["Акт осмотра объекта сформирован"]
+        if obj_name:
+            result_parts.append(f"Объект: {obj_name}")
+        result_parts.append(f"Фото учтено: {photo_count}")
+        if norm_count:
+            result_parts.append(f"Нормативов подтверждено: {norm_count}")
+
+        links_parts = []
+        if docx_link:
+            links_parts.append(f"📄 DOCX: {docx_link}")
+        if pdf_link:
+            links_parts.append(f"📋 PDF: {pdf_link}")
+        if links_parts:
+            result_parts.append("")
+            result_parts.extend(links_parts)
+        else:
+            result_parts.append("(файлы не загружены в Drive)")
+
+        result_parts.append("")
+        result_parts.append("Подтверди или пришли правки")
+        result_text = "\n".join(result_parts)
+
+        # PUBLIC_OUTPUT_CLEAN check
+        if not _p8d_result_clean(result_text):
+            _P8D_LOG.warning("P8D_PUBLIC_OUTPUT_DIRTY task=%s — stripping forbidden", task_id)
+            result_text = "Акт осмотра объекта сформирован.\nПодтверди или пришли правки."
+
+        send_res = await _fcg_send_public(conn, task_id, chat_id, topic_id, reply_to, result_text, "topic5_canonical_act_v3")
+        bot_id = send_res.get("bot_message_id") if isinstance(send_res, dict) else None
+
+        try:
+            if bot_id:
+                conn.execute(
+                    "UPDATE tasks SET state='AWAITING_CONFIRMATION', result=?, error_message='', bot_message_id=?, updated_at=datetime('now') WHERE id=?",
+                    (result_text, bot_id, task_id),
+                )
+            else:
+                conn.execute(
+                    "UPDATE tasks SET state='AWAITING_CONFIRMATION', result=?, error_message='', updated_at=datetime('now') WHERE id=?",
+                    (result_text, task_id),
+                )
+            _fcg_history(conn, task_id, "PATCH_TOPIC5_ACT_DISPATCH_V3:ACT_GENERATED")
+            conn.commit()
+        except Exception as _p8d_db_e:
+            _P8D_LOG.warning("P8D_DB_ERR task=%s %s", task_id, _p8d_db_e)
+            return False
+
+        _P8D_LOG.info(
+            "P8D_ACT_OK task=%s obj=%s photos=%d docx=%s pdf=%s",
+            task_id, obj_name, photo_count, bool(docx_link), bool(pdf_link),
+        )
+        return True
+
+    _fcg_handle_topic5_final_act._p8d_wrapped = True
+    globals()["_fcg_handle_topic5_final_act"] = _fcg_handle_topic5_final_act
+    _P8D_LOG.info("PATCH_TOPIC5_ACT_DISPATCH_V3 installed")
+else:
+    _P8D_LOG.warning("PATCH_TOPIC5_ACT_DISPATCH_V3 skipped: _fcg_handle_topic5_final_act not found or already wrapped")
+# === END_PATCH_TOPIC5_ACT_DISPATCH_V3 ===
 
 if __name__ == "__main__":
     asyncio.run(main())

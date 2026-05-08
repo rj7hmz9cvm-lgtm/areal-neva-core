@@ -1,31 +1,31 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-05-08T08:20:03.317180+00:00
-GIT_SHA: 8a4de2bdfe26b53f65dd2960ffd665cebbd5d034
+GENERATED_AT: 2026-05-08T10:30:02.123331+00:00
+GIT_SHA: 7c646dd4c04fb381ced170c979b5e07264310700
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
 ROLE: Сметы
 DIRECTIONS_BOUND: estimates
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE_TASKS: 1
-FAILED_LAST_24H: 1
+ACTIVE_TASKS: 0
+FAILED_LAST_24H: 2
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 12
-- CANCELLED: 100
+- CANCELLED: 101
 - DONE: 131
-- FAILED: 109
-- WAITING_CLARIFICATION: 1
+- FAILED: 110
 
 ## LATEST_FAILED
+- c94ec497 | TOPIC2_CANONICAL_FULL_CLOSE_NOT_PROVEN
 - a7b2879e | STALE_TIMEOUT
 - 893436d4 | INVALID_PUBLIC_RESULT
 - f43100b3 | TOPIC2_ONE_BIG_FINAL_PIPELINE_V1_WORKER_ERR:maximum recursion depth exceeded
 - c6b40dfc | STROYKA_QG_FAILED:XLSX_VALIDATE_ERROR:maximum recursion depth exceeded
-- 8212f685 | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
+- 7c646dd|session(08.05): bigfile activated, topic5 V3 dispatcher, topic2 P6C intercept, c94ec497 FAILED/NOT_PROVEN
 - 8760011|fix(topic2): enforce full canonical estimate pipeline without cross-topic regression
 - b236f02|fix(topic2): session 08.05 — P6C fulltext prep, P3CHK append fix, P2 distance skip, WCPE unblock
 - e3a016c|PATCH_OPENROUTER_ONLINE_ONLY_FOR_TOPIC2_PRICE_SEARCH_V1: hard-enforce Sonar for all price/search calls
@@ -55,7 +55,6 @@ FAILED_LAST_24H: 1
 - d9edd5d|fix(topic2): auto price enrichment + DONE contract markers
 - 842c52b|docs(topic2): update chat export for stroyka price choice patch
 - ac58cfe|docs(topic2): add 20260506 stroyka in progress report
-- 7a9bc69|docs(topic2): add 20260506 stroyka not closed report
 
 ## MARKERS_LAST_24H
 - created:NEW
@@ -162,15 +161,8 @@ PATCH_TOPIC2_FULL_GAP_CLOSE_V4
 ## MARKERS_MISSING
 - TOPIC2_ESTIMATE_SESSION_CREATED
 - TOPIC2_CONTEXT_READY
-- TOPIC2_TEMPLATE_SELECTED
-- TOPIC2_PRICE_ENRICHMENT_DONE
 - TOPIC2_LOGISTICS_CONFIRMED
 - TOPIC2_XLSX_CREATED
-- TOPIC2_PDF_CREATED
-- TOPIC2_PDF_CYRILLIC_OK
-- TOPIC2_DRIVE_UPLOAD_XLSX_OK
-- TOPIC2_DRIVE_UPLOAD_PDF_OK
-- TOPIC2_TELEGRAM_DELIVERED
 - TOPIC2_MESSAGE_THREAD_ID_OK
 - TOPIC2_DONE_CONTRACT_OK
 

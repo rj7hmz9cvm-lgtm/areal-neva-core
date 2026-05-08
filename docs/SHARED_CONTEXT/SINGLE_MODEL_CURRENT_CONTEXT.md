@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-05-08T08:20:03.932612+00:00
-GIT_SHA: 8a4de2bdfe26b53f65dd2960ffd665cebbd5d034
+GENERATED_AT: 2026-05-08T10:30:02.696263+00:00
+GIT_SHA: 7c646dd4c04fb381ced170c979b5e07264310700
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -16,7 +16,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 ## GLOBAL_STATUS
 | topic | name | status | active | failed_24h |
 |-------|------|--------|--------|------------|
-| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 1 | 1 |
+| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 0 | 2 |
 | 5 | TEKHNADZOR | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
 | 210 | PROEKTIROVANIE | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
 | 500 | VEB_POISK | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
@@ -70,31 +70,29 @@ DATE_UNKNOWN
 ## ACTIVE_OR_RECENT_TOPICS
 ### topic_2 STROYKA
 role: Сметы
-active: 1
-failed_24h: 1
+active: 0
+failed_24h: 2
 commits_last_7d: 30
 recent_commits:
+- 7c646dd|session(08.05): bigfile activated, topic5 V3 dispatcher, topic2 P6C intercept, c94ec497 FAILED/NOT_PROVEN
 - 8760011|fix(topic2): enforce full canonical estimate pipeline without cross-topic regression
 - b236f02|fix(topic2): session 08.05 — P6C fulltext prep, P3CHK append fix, P2 distance skip, WCPE unblock
-- e3a016c|PATCH_OPENROUTER_ONLINE_ONLY_FOR_TOPIC2_PRICE_SEARCH_V1: hard-enforce Sonar for all price/search calls
-markers_missing: 13
+markers_missing: 6
 - TOPIC2_ESTIMATE_SESSION_CREATED
 - TOPIC2_CONTEXT_READY
-- TOPIC2_TEMPLATE_SELECTED
-- TOPIC2_PRICE_ENRICHMENT_DONE
 - TOPIC2_LOGISTICS_CONFIRMED
 - TOPIC2_XLSX_CREATED
-- TOPIC2_PDF_CREATED
-- TOPIC2_PDF_CYRILLIC_OK
+- TOPIC2_MESSAGE_THREAD_ID_OK
+- TOPIC2_DONE_CONTRACT_OK
 last_failed:
+- c94ec497 | TOPIC2_CANONICAL_FULL_CLOSE_NOT_PROVEN
 - a7b2879e | STALE_TIMEOUT
 - 893436d4 | INVALID_PUBLIC_RESULT
-- f43100b3 | TOPIC2_ONE_BIG_FINAL_PIPELINE_V1_WORKER_ERR:maximum recursion depth exceeded
 blockers:
 - - topic_2 не тянет проектные образцы topic_210
 - - topic_210 не тянет сметные артефакты как результат
 - - WRONG_FILES_SHOWN_IN_TOPIC_2
-NEXT_ACTION: live-test / close missing markers: 13
+NEXT_ACTION: live-test / close missing markers: 6
 
 ### topic_5 TEKHNADZOR
 role: Технадзор
@@ -102,9 +100,9 @@ active: 0
 failed_24h: 0
 commits_last_7d: 30
 recent_commits:
+- 7c646dd|session(08.05): bigfile activated, topic5 V3 dispatcher, topic2 P6C intercept, c94ec497 FAILED/NOT_PROVEN
 - b3e5be7|fix(topic500): relax bad-result filter for adaptive output modes
 - 0d6a9a4|fix(memory): ARCHIVE_DUPLICATE_GUARD_V1 + topic500 search pollution guard
-- 3f53d3f|docs(handoff): update after topic500 adaptive output V1
 last_failed:
 - 775a2251 | STALE_NEW_30MIN
 - f3637754 | STALE_NEW_30MIN

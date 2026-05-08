@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-08T08:20:02.053879+00:00
-git_sha_before_commit: 8a4de2bdfe26b53f65dd2960ffd665cebbd5d034
+generated_at_utc: 2026-05-08T10:30:01.763144+00:00
+git_sha_before_commit: 7c646dd4c04fb381ced170c979b5e07264310700
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,7 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: inactive
 
 ## GIT_LOG_30
+7c646dd session(08.05): bigfile activated, topic5 V3 dispatcher, topic2 P6C intercept, c94ec497 FAILED/NOT_PROVEN
 8a4de2b feat(bigfile): prepare PATCH_TELEGRAM_BIG_FILE_LOCAL_BOT_API_V1
 c9443ff FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 8feb5f5 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
@@ -39,45 +40,109 @@ b3e5be7 fix(topic500): relax bad-result filter for adaptive output modes
 272a9bb FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 8c640a7 feat(aggregator): add current context quick start layer
 e90165d feat(aggregator): add current context quick start layer
-551829d FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
 ## GIT_SHOW_STAT_HEAD
-commit 8a4de2bdfe26b53f65dd2960ffd665cebbd5d034
+commit 7c646dd4c04fb381ced170c979b5e07264310700
 Author: Ila <ilakuznecov@mac.local>
-Date:   Fri May 8 11:18:21 2026 +0300
+Date:   Fri May 8 13:27:20 2026 +0300
 
-    feat(bigfile): prepare PATCH_TELEGRAM_BIG_FILE_LOCAL_BOT_API_V1
+    session(08.05): bigfile activated, topic5 V3 dispatcher, topic2 P6C intercept, c94ec497 FAILED/NOT_PROVEN
     
-    - areal_telegram_wrapper.py: patches aiogram Bot in-memory to use
-      local Telegram Bot API server (localhost:8081), removes 20MB limit
-      without editing telegram_daemon.py (forbidden file)
-    - tools/verify_local_bot_api.sh: 4-step activation gate script
-      (binary OK / service active / local getMe / wrapper dry-run)
-    - docs/ARCHITECTURE/telegram-bot-api-local.service.template:
-      systemd service template, no secret values (vars only)
-    - docs/ARCHITECTURE/bigfile_ingress_override.conf.pending:
-      pending ExecStart override, activate only after verify gate passes
-    - docs/HANDOFFS/LATEST_HANDOFF.md: updated with full build/activation
-      status and credentials location (/etc/areal, chmod 600)
-    - .gitignore: add tmp/ exclusion
+    ЗАКРЫТО:
+    - PATCH_TELEGRAM_BIG_FILE_LOCAL_BOT_API_V1: активирован (4 gates passed, bigfile.conf applied, BIG_FILE_LOCAL_BOT_API_USED confirmed)
+    - Bot name restored: AREAL-NEVA ORCHESTRA (был Sport VIP)
+    - PATCH_TOPIC5_ACT_DISPATCH_V3: installed (technadzor_engine.py canonical act + OAuth fallback)
+    - PATCH_TOPIC2_PDF_CANONICAL_GATE_HANDLE_IN_PROGRESS_V1: installed (_handle_in_progress intercept for topic_2 PDF estimates)
     
-    Activation gate: binary built → service active → getMe OK → dry-run OK
-    telegram-ingress NOT changed, all topics unchanged.
+    ОТКРЫТО:
+    - c94ec497 (Микеа РП3, 62MB PDF): FAILED/TOPIC2_CANONICAL_FULL_CLOSE_NOT_PROVEN
+      6 missing markers: FILE_INTAKE_ROUTER_LOCAL_PATH_PASSED, FILE_INTAKE_ROUTER_TOPIC2_CANONICAL_ROUTE,
+      TOPIC2_PDF_SPEC_EXTRACTOR_STARTED, TOPIC2_PDF_SPEC_ROWS_EXTRACTED,
+      TOPIC2_FULL_ESTIMATE_MATRIX_ENFORCED, TOPIC2_TELEGRAM_MATCHES_ARTIFACTS, TOPIC2_PUBLIC_OUTPUT_CLEAN_OK
+      PDF extracted: 1 этаж, 99.91м², газобетон 400мм, монолитная плита, кровля 185м²
+      Clarified: 30км, средние цены
+      Pending: PATCH_TOPIC2_BIGPDF_CANONICAL_FULL_CLOSE_V2
+    - topic_5 SA Drive upload 403 storageQuotaExceeded — OAuth fallback в коде, не verified live
     
     Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 
- .gitignore                                         |   3 +
- areal_telegram_wrapper.py                          |  82 ++++++++++
- .../bigfile_ingress_override.conf.pending          |  16 ++
- .../telegram-bot-api-local.service.template        |  25 +++
- docs/HANDOFFS/LATEST_HANDOFF.md                    | 180 ++++++++-------------
- tools/verify_local_bot_api.sh                      | 107 ++++++++++++
- 6 files changed, 303 insertions(+), 110 deletions(-)
+ core/technadzor_engine.py                          | 569 +++++++++++++++++++++
+ docs/HANDOFFS/LATEST_HANDOFF.md                    | 202 +++++---
+ docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md    |   6 +-
+ docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md |   2 +-
+ .../SHARED_CONTEXT/DIRECTIONS/auto_parts_search.md |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/cad_dwg.md          |   4 +-
+ .../DIRECTIONS/construction_search.md              |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/crm_leads.md        |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/defect_acts.md      |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/devops_server.md    |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/documents.md        |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/email_ingress.md    |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/estimates.md        |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/general_chat.md     |   4 +-
+ .../DIRECTIONS/google_drive_storage.md             |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/internet_search.md  |   4 +-
+ .../DIRECTIONS/isolated_project_ivan.md            |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/job_search.md       |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/memory_archive.md   |   4 +-
+ .../SHARED_CONTEXT/DIRECTIONS/monolith_concrete.md |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/ocr_photo.md        |   4 +-
+ .../DIRECTIONS/orchestration_core.md               |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/photo_cleanup.md    |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/product_search.md   |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/roofing.md          |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/social_content.md   |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/spreadsheets.md     |   4 +-
+ .../SHARED_CONTEXT/DIRECTIONS/structural_design.md |   4 +-
+ .../DIRECTIONS/technical_supervision.md            |   4 +-
+ .../DIRECTIONS/telegram_automation.md              |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/video_production.md |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/vpn_network.md      |   4 +-
+ docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md      |   4 +-
+ docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |   6 +-
+ docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |   6 +-
+ docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |   8 +-
+ .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  60 ++-
+ .../ORCHESTRA_FULL_CONTEXT_PART_001.md             | 180 +++----
+ .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_004.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_007.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_010.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_011.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_012.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_013.md             | 316 ++++++++----
+ .../ORCHESTRA_FULL_CONTEXT_PART_014.md             | 100 +++-
+ .../ORCHESTRA_FULL_CONTEXT_PART_015.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_016.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_017.md             |   4 +-
+ docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 196 +++----
+ .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |   4 +-
+ docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   | 222 ++++----
+ docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |   4 +-
+ .../TOPICS/topic_210_PROEKTIROVANIE.md             |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |   4 +-
+ .../TOPICS/topic_3008_KODY_MOZGOV.md               |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_5_TEKHNADZOR.md   |   4 +-
+ .../SHARED_CONTEXT/TOPICS/topic_6104_JOB_SEARCH.md |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |   4 +-
+ .../TOPICS/topic_961_AVTOZAPCHASTI.md              |   4 +-
+ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   4 +-
+ task_worker.py                                     | 331 ++++++++++++
+ 71 files changed, 1757 insertions(+), 675 deletions(-)
 
 ## GIT_CHANGED_FILES_10
 .gitignore
 areal_telegram_wrapper.py
-core/sample_template_engine.py
+core/technadzor_engine.py
 docs/ARCHITECTURE/bigfile_ingress_override.conf.pending
 docs/ARCHITECTURE/telegram-bot-api-local.service.template
 docs/HANDOFFS/LATEST_HANDOFF.md
@@ -153,17 +218,42 @@ task_worker.py
 tools/verify_local_bot_api.sh
 
 ## CORE_DB_STATE_COUNTS
-- FAILED|2961
-- CANCELLED|819
-- DONE|573
+- FAILED|2962
+- CANCELLED|822
+- DONE|576
 - ARCHIVED|381
-- WAITING_CLARIFICATION|1
 
 ## CORE_DB_OPEN_TASKS
-- 1
+- 0
 
 ## LATEST_TASKS_15
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|2|text|WAITING_CLARIFICATION|[VOICE] Что не так, скажи?|Пришли задание заново — расскажи что нужно сделать.|2026-05-08 08:20:02
+- c94ec497-4351-43a7-a106-b3dab1633838|2|drive_file|FAILED|{"file_id": "1EBmfcyns9UOm4S9tg0CYqCpIIidfLgwl", "file_name": "Открыть Микеа 3 РП 3 (1) (3) (3).pdf", "mime_type": "appl|✅ Смета готова
+
+Объект: дом   Материал: газобетон   Площадь: 106 м²   Этажность: не указана   Регион: СПб и ЛО
+Шаблон: Ареал Нева.xlsx   Лист: смета   Цены: med|2026-05-08 10:18:08
+- 22712334-c39f-436a-90ec-cae5ce56f251|5|text|DONE|сделай акт|Акт осмотра объекта сформирован
+Объект: Ропшинское шоссе 198
+Фото учтено: 20
+Нормативов подтверждено: 2
+
+📄 DOCX: https://docs.google.com/document/d/10J6Wyvom27H|2026-05-08 09:59:54
+- ce1d4d0b-7b7a-445e-b0e4-e52e54f001a7|5|text|CANCELLED|сделай акт|Финальный акт технадзора сформирован по текущему пакету фото
+
+Фото в акте: 18
+Пояснений учтено: 19
+Нормы СП/ГОСТ не выдуманы, конкретные пункты не подставлены б|2026-05-08 09:29:30
+- d8a8fbe7-81d7-4190-888c-2d8285c881b9|5|text|CANCELLED|сделай акт|Финальный акт технадзора сформирован по текущему пакету фото
+
+Фото в акте: 18
+Пояснений учтено: 20
+Нормы СП/ГОСТ не выдуманы, конкретные пункты не подставлены б|2026-05-08 09:03:55
+- de13074b-f71d-4523-a17e-8608cd3fd9dd|5|text|DONE|делай|Пакет технадзора активен
+Папка: тест надзор
+https://drive.google.com/drive/folders/1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG
+Фото в пакете: 23 шт
+1. photo_-100372529900|2026-05-08 08:28:37
+- ac8bce62-7d06-494a-b6e5-bc6719b53359|5|text|DONE|[VOICE] Что по последнему заданию по итогам?|Пояснение принято к фото: photo_-1003725299009_10122.jpg. В пакете технадзора: 23 шт. Акт не формирую без отдельной команды|2026-05-08 08:28:28
+- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|2|text|CANCELLED|[VOICE] Что не так, скажи?|Пришли задание заново — расскажи что нужно сделать.|2026-05-08 08:27:08
 - 524f5853-4243-4833-ae82-116da9202179|2|text|CANCELLED|[VOICE] Так а ты посмотри то, что я тебе писал, еще раз тебе говорю, посмотри последнее задание.|P6E67_MERGED_TO_PARENT_TASK 57c2617a-7975-4282-bffb-2b18577d8b9d|2026-05-08 06:18:34
 - 4df9cf88-0843-478b-bef1-9d828d505298|2|text|DONE|[VOICE] Блять, я тебе еще раз говорю Посмотри все то, что мы с тобой писали По этому проекту У тебя же есть вся полность|Нового полного ТЗ для сметы в сообщении нет. Старую смету из памяти не поднимаю|2026-05-08 06:18:17
 - 57c2617a-7975-4282-bffb-2b18577d8b9d|2|text|CANCELLED|[VOICE] посмотри проект все увидишь у тебя же есть проект зайди да глянь там же есть вся информация если тебе не хватает|P6E67_MERGED_TO_PARENT_TASK d72028da-b4ff-424d-a626-790c9da8be77|2026-05-08 06:18:36
@@ -179,50 +269,9 @@ tools/verify_local_bot_api.sh
 Стены: г|2026-05-08 06:54:21
 - a7b2879e-14e6-4002-8a06-f73019d40a99|2|drive_file|FAILED|{"file_id": "1XRwOwZr2Kpxy-wrAUPrBR2dLqHseg7jS", "file_name": "photo_-1003725299009_10394.jpg", "mime_type": "image/jpeg|Не вижу размеры объекта на фото/в ТЗ. Пришли размер в формате 7.8х9.0 или фото крупнее|2026-05-07 13:34:34
 - f3b2ae30-35cf-4e08-a25d-d3131d351676|5|text|DONE|Что такое цокольная балка где используется|Пояснение принято к фото: photo_-1003725299009_10122.jpg. В пакете технадзора: 23 шт. Акт не формирую без отдельной команды|2026-05-07 12:25:11
-- 64eb9797-1a09-4f21-98f2-3671cf6e835c|2|text|DONE|[VOICE] А что мы вообще в принципе обсуждали в чате, скажи мне пожалуйста, вот за два дня последних|✅ Предварительная смета готова
-
-Объект: дом
-Эталон: М-80.xlsx
-Лист эталона: Каркас под ключ
-Выбор цены: median
-Поправка: 0.0%
-
-Разделы:
-- Фундамент
-- Стены
-- Пе|2026-05-06 21:35:37
-- 1d00cc5d-5f9f-40dc-a63b-98f99dfc4751|2|text|CANCELLED|[VOICE] А еще какие были после этого задачи? Это я понял, а другие...|P6E67_MERGED_TO_PARENT_TASK 71adbe24-ece1-42ca-a7b5-6160b0aded74|2026-05-06 21:05:15
-- 67458c2c-49e2-400a-accc-dd911788b03c|2|text|DONE|[VOICE] итак что у нас по задачам скажи пожалуйста какие эти последние ставил|Последняя задача topic_2:
-7bb7416b-5a96-4dc2-813b-5984a9cf9a7f
-Статус: CANCELLED
-✅ Предварительная смета готова
-
-Объект: дом
-Эталон: М-80.xlsx
-Лист эталона: Кар|2026-05-06 20:53:57
-- 2d644d13-7372-48f7-8775-7e973072c3e0|2|text|CANCELLED|[VOICE] А до этого какие задачи я тебе еще отдавал?|Не нашёл родительскую задачу для reply. Пришли исходное ТЗ заново или ответь на последнее сообщение бота с результатом.|2026-05-06 20:10:57
-- 8abdbf70-4b70-4ddd-a728-1d79ad710a21|2|text|DONE|[VOICE] какая у нас последняя с тобой задача была скажи мне|Последняя задача topic_2:
-7bb7416b-5a96-4dc2-813b-5984a9cf9a7f
-Статус: CANCELLED
-✅ Предварительная смета готова
-
-Объект: дом
-Эталон: М-80.xlsx
-Лист эталона: Кар|2026-05-06 20:06:46
-- 7bb7416b-5a96-4dc2-813b-5984a9cf9a7f|2|text|CANCELLED|[VOICE] Как понял меня?|✅ Предварительная смета готова
-
-Объект: дом
-Эталон: М-80.xlsx
-Лист эталона: Каркас под ключ
-Выбор цены: median
-Поправка: 0.0%
-
-Разделы:
-- Фундамент
-- Стены
-- Пе|2026-05-06T20:06:18.506053+00:00
 
 ## LATEST_FAILED_10
+- c94ec497-4351-43a7-a106-b3dab1633838|2|{"file_id": "1EBmfcyns9UOm4S9tg0CYqCpIIidfLgwl", "file_name": "Открыть Микеа 3 РП 3 (1) (3) (3).pdf", "mime_type": "appl|TOPIC2_CANONICAL_FULL_CLOSE_NOT_PROVEN|2026-05-08 10:18:08
 - a7b2879e-14e6-4002-8a06-f73019d40a99|2|{"file_id": "1XRwOwZr2Kpxy-wrAUPrBR2dLqHseg7jS", "file_name": "photo_-1003725299009_10394.jpg", "mime_type": "image/jpeg|STALE_TIMEOUT|2026-05-07 13:34:34
 - 893436d4-72d2-4bdf-b362-f40d7226570e|2|[VOICE] Я тебе прислал картинку, две картинки и я тебе прислал техническое задание. Мне нужно сделать смету, уточнить ст|INVALID_PUBLIC_RESULT|2026-05-06 18:05:02
 - cfadbd05-8b7c-4aca-a5e4-62b8d56398bb|210|[VOICE] Так ты сам должен выбирать то, что тебе нужно, а не спрашивать у меня. У тебя это как образцы для проектирования|INVALID_RESULT_GATE|2026-05-06 17:57:43
@@ -232,86 +281,55 @@ tools/verify_local_bot_api.sh
 - 3828ac7a-d425-482f-b1f8-4ec76d27da82|2|{"file_id": "1zVQWoakxbwssZJbXdudubQSMhLv_qSS9", "file_name": "Схема глубинного дренажа.pdf", "mime_type": "application/|STALE_TIMEOUT|2026-05-06 17:42:46
 - b71a685b-b129-446b-bd43-e6298b24f8cc|210|[VOICE] Средние цены поставь везде, на работу и на материалы.|INVALID_RESULT_GATE|2026-05-06 17:32:40
 - 6e34406d-335c-4209-a3f6-b98e06791e78|210|{"file_id": "1UAv2GC3Ne3D8I-1YCpmmSNH6CrG5ACQi", "file_name": "Отчет_Мистолово_03.26.pdf", "mime_type": "application/pdf|NO_VALID_ARTIFACT|2026-05-06 17:31:44
-- eba6dc80-d993-43e8-945b-cf1b48b9d103|210|{"file_id": "1evYG_-JrYks_cJ3D04LTYgdh1CZnWqTT", "file_name": "Схема глубинного дренажа.pdf", "mime_type": "application/|NO_VALID_ARTIFACT|2026-05-06 17:31:31
 
 ## LATEST_TASK_HISTORY_20
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 08:20:02
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 08:20:02
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 08:20:00
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 08:20:00
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 08:19:58
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 08:19:58
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 08:19:57
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 08:19:57
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 08:19:55
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 08:19:55
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 08:19:54
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 08:19:54
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 08:19:52
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 08:19:52
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 08:19:50
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 08:19:50
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 08:19:49
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 08:19:49
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION|2026-05-08 08:19:47
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|P6E67_PARENT_NOT_FOUND|2026-05-08 08:19:47
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_CANONICAL_FULL_CLOSE_NOT_PROVEN|2026-05-08 10:18:08
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_CANONICAL_REROUTE_V2:CANONICAL_HANDLED|2026-05-08 10:11:09
+- c94ec497-4351-43a7-a106-b3dab1633838|FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:estimate_generated|2026-05-08 10:11:09
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TELEGRAM_DELIVERED:10539|2026-05-08 10:11:09
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_DRIVE_UPLOAD_PDF_OK|2026-05-08 10:11:09
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_DRIVE_UPLOAD_XLSX_OK|2026-05-08 10:11:09
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_PDF_CYRILLIC_OK|2026-05-08 10:11:09
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_PDF_CREATED:1|2026-05-08 10:11:09
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_XLSX_CANON_COLUMNS_OK:15|2026-05-08 10:11:09
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_XLSX_FORMULAS_OK|2026-05-08 10:11:09
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_XLSX_ROWS_WRITTEN:22|2026-05-08 10:11:09
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_XLSX_TEMPLATE_COPY_OK|2026-05-08 10:11:09
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TEMPLATE_SHEET_SELECTED:смета|2026-05-08 10:11:09
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TEMPLATE_CACHE_USED|2026-05-08 10:11:09
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TEMPLATE_FILE_ID:1DQw2qgMHtq2SqgJJP-93eIArpj1hnNNm|2026-05-08 10:11:09
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TEMPLATE_SELECTED:Ареал Нева.xlsx|2026-05-08 10:11:09
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_AC_GATE_OK|2026-05-08 10:11:09
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_DRIVE_LINKS_SAVED:xlsx=https://drive.google.com/file/d/1Xvk4z_Pn4am3dFGVkgKDlmF27vBgYVnG/view:pdf=https://drive.google.com/file/d/1ghZSRJoZ672es4kUx2478oBw6OwlBxSH/view|2026-05-08 10:11:08
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_DRIVE_TOPIC_FOLDER_OK|2026-05-08 10:11:08
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TEMPLATE_SHEET_FALLBACK:смета|2026-05-08 10:11:03
 
 ## MEMORY_DB_COUNT
-- 5185
+- 5192
 
 ## LATEST_MEMORY_20
-- topic_500_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 500, "count": 27, "updated_at": "2026-05-08T07:51:37.197123+00:00", "files": [{"task_id": "7b609434-8167-43f5-a52a-beb85e0b4ed5", "file_id|2026-05-08T07:51:37.197641+00:00
-- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 50, "updated_at": "2026-05-08T07:51:37.163752+00:00", "files": [{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "file_id|2026-05-08T07:51:37.164285+00:00
-- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 50, "updated_at": "2026-05-08T07:51:37.064849+00:00", "files": [{"task_id": "4b402275-e99b-4d9f-b331-08f2ba2a93be", "file_id":|2026-05-08T07:51:37.067807+00:00
-- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-08T07:51:37.001934+00:00", "files": [{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "file_id":|2026-05-08T07:51:37.005462+00:00
-- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T07:51:36.939711+00:00
-- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "state": "FAILED", "file_id": "", "file_name": "", "mime_type"|2026-05-08T07:51:36.937526+00:00
-- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T07:51:36.937359+00:00
-- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T07:51:36.937237+00:00
-- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T07:51:36.937083+00:00
-- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_file", "state": "FAILED", "file_id": "1bXXtuHRsXCuxBSRUl8Tj5z6E|2026-05-08T07:51:36.936933+00:00
-- topic_2_file_92de809d-9274-48ee-82b4-584058ea4e48|{"task_id": "92de809d-9274-48ee-82b4-584058ea4e48", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "search", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T07:51:36.936811+00:00
-- topic_210_file_ce9421cb-5451-4cea-9823-a413b698bc94|{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T07:51:36.936505+00:00
-- topic_210_file_c8619b7e-9ebb-4731-973a-b3f6064bbe38|{"task_id": "c8619b7e-9ebb-4731-973a-b3f6064bbe38", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T07:51:36.936120+00:00
-- topic_210_file_42320ab0-c49a-4a08-8f9b-5e38618a4e58|{"task_id": "42320ab0-c49a-4a08-8f9b-5e38618a4e58", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T07:51:36.935895+00:00
-- topic_210_file_7dca3b5f-2782-400f-af84-fb030904e917|{"task_id": "7dca3b5f-2782-400f-af84-fb030904e917", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T07:51:36.933438+00:00
-- topic_210_file_12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88|{"task_id": "12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "16V3s5DcAvnXj8f-3CcfZE2g5|2026-05-08T07:51:36.933099+00:00
-- topic_210_file_b1f8e982-db2e-42de-9046-833287d3567d|{"task_id": "b1f8e982-db2e-42de-9046-833287d3567d", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T07:51:36.932964+00:00
-- topic_210_file_eeb0d013-704a-404c-9390-5a06c90ee976|{"task_id": "eeb0d013-704a-404c-9390-5a06c90ee976", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T07:51:36.932687+00:00
-- topic_210_file_5ead32f3-23d5-4872-9279-a42460ba5dd1|{"task_id": "5ead32f3-23d5-4872-9279-a42460ba5dd1", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "1qy-mPcmRZxJIzEnY2Gp8B8J2|2026-05-08T07:51:36.932412+00:00
-- topic_210_file_fb6aadc5-b372-488a-aede-f3433a030e55|{"task_id": "fb6aadc5-b372-488a-aede-f3433a030e55", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T07:51:36.932292+00:00
+- topic_500_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 500, "count": 27, "updated_at": "2026-05-08T10:21:43.044074+00:00", "files": [{"task_id": "7b609434-8167-43f5-a52a-beb85e0b4ed5", "file_id|2026-05-08T10:21:43.044693+00:00
+- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 50, "updated_at": "2026-05-08T10:21:43.020848+00:00", "files": [{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "file_id|2026-05-08T10:21:43.021461+00:00
+- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 50, "updated_at": "2026-05-08T10:21:42.960348+00:00", "files": [{"task_id": "4b402275-e99b-4d9f-b331-08f2ba2a93be", "file_id":|2026-05-08T10:21:42.960836+00:00
+- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-08T10:21:42.926211+00:00", "files": [{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "file_id":|2026-05-08T10:21:42.926912+00:00
+- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T10:21:42.865893+00:00
+- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "state": "FAILED", "file_id": "", "file_name": "", "mime_type"|2026-05-08T10:21:42.865751+00:00
+- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T10:21:42.865629+00:00
+- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T10:21:42.865476+00:00
+- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T10:21:42.865353+00:00
+- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_file", "state": "FAILED", "file_id": "1bXXtuHRsXCuxBSRUl8Tj5z6E|2026-05-08T10:21:42.865233+00:00
+- topic_2_file_92de809d-9274-48ee-82b4-584058ea4e48|{"task_id": "92de809d-9274-48ee-82b4-584058ea4e48", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "search", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T10:21:42.865097+00:00
+- topic_210_file_ce9421cb-5451-4cea-9823-a413b698bc94|{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T10:21:42.864821+00:00
+- topic_210_file_c8619b7e-9ebb-4731-973a-b3f6064bbe38|{"task_id": "c8619b7e-9ebb-4731-973a-b3f6064bbe38", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T10:21:42.864494+00:00
+- topic_210_file_42320ab0-c49a-4a08-8f9b-5e38618a4e58|{"task_id": "42320ab0-c49a-4a08-8f9b-5e38618a4e58", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T10:21:42.864349+00:00
+- topic_210_file_7dca3b5f-2782-400f-af84-fb030904e917|{"task_id": "7dca3b5f-2782-400f-af84-fb030904e917", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T10:21:42.863909+00:00
+- topic_210_file_12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88|{"task_id": "12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "16V3s5DcAvnXj8f-3CcfZE2g5|2026-05-08T10:21:42.863526+00:00
+- topic_210_file_b1f8e982-db2e-42de-9046-833287d3567d|{"task_id": "b1f8e982-db2e-42de-9046-833287d3567d", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T10:21:42.863409+00:00
+- topic_210_file_eeb0d013-704a-404c-9390-5a06c90ee976|{"task_id": "eeb0d013-704a-404c-9390-5a06c90ee976", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T10:21:42.863163+00:00
+- topic_210_file_5ead32f3-23d5-4872-9279-a42460ba5dd1|{"task_id": "5ead32f3-23d5-4872-9279-a42460ba5dd1", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "1qy-mPcmRZxJIzEnY2Gp8B8J2|2026-05-08T10:21:42.862894+00:00
+- topic_210_file_fb6aadc5-b372-488a-aede-f3433a030e55|{"task_id": "fb6aadc5-b372-488a-aede-f3433a030e55", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T10:21:42.862748+00:00
 
 ## JOURNAL_AREAL_TASK_WORKER_60
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 13.693s CPU time.
-Started areal-task-worker.service - Areal Task Worker.
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 1min 54.177s CPU time.
-Started areal-task-worker.service - Areal Task Worker.
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 7.323s CPU time.
-Started areal-task-worker.service - Areal Task Worker.
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 15.484s CPU time, 83.7M memory peak, 0B memory swap peak.
-Started areal-task-worker.service - Areal Task Worker.
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 1min 7.353s CPU time.
-Started areal-task-worker.service - Areal Task Worker.
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 27.441s CPU time.
 Started areal-task-worker.service - Areal Task Worker.
 Stopping areal-task-worker.service - Areal Task Worker...
 areal-task-worker.service: Deactivated successfully.
@@ -342,35 +360,65 @@ Stopped areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Consumed 10.116s CPU time, 109.4M memory peak, 0B memory swap peak.
 Started areal-task-worker.service - Areal Task Worker.
 Stopping areal-task-worker.service - Areal Task Worker...
+Stopping areal-task-worker.service - Areal Task Worker...
+areal-task-worker.service: Deactivated successfully.
+Stopped areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Consumed 1min 58.678s CPU time, 82.1M memory peak, 0B memory swap peak.
+Started areal-task-worker.service - Areal Task Worker.
+Stopping areal-task-worker.service - Areal Task Worker...
+areal-task-worker.service: Deactivated successfully.
+Stopped areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Consumed 29.598s CPU time, 122.5M memory peak, 0B memory swap peak.
+Started areal-task-worker.service - Areal Task Worker.
+T5CA_DOCX_UPLOAD_ERR <HttpError 403 when requesting https://www.googleapis.com/upload/drive/v3/files?fields=id%2CwebViewLink&supportsAllDrives=true&alt=json&uploadType=resumable returned "Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.". Details: "[{'message': 'Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.', 'domain': 'usageLimits', 'reason': 'storageQuotaExceeded'}]">
+T5CA_PDF_UPLOAD_ERR <HttpError 403 when requesting https://www.googleapis.com/upload/drive/v3/files?fields=id%2CwebViewLink&supportsAllDrives=true&alt=json&uploadType=resumable returned "Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.". Details: "[{'message': 'Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.', 'domain': 'usageLimits', 'reason': 'storageQuotaExceeded'}]">
+T5CA_NO_LINKS task=ce1d4d0b-7b7a-445e-b0e4-e52e54f001a7 docx=True pdf=True
+Stopping areal-task-worker.service - Areal Task Worker...
+areal-task-worker.service: Deactivated successfully.
+Stopped areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Consumed 14.884s CPU time.
+Started areal-task-worker.service - Areal Task Worker.
+Stopping areal-task-worker.service - Areal Task Worker...
+areal-task-worker.service: Deactivated successfully.
+Stopped areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Consumed 2.181s CPU time.
+Started areal-task-worker.service - Areal Task Worker.
+T5CA_SA_UPLOAD_WARN docx_path <HttpError 403 when requesting https://www.googleapis.com/upload/drive/v3/files?fields=id%2CwebViewLink&supportsAllDrives=true&alt=json&uploadType=resumable returned "Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.". Details: "[{'message': 'Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.', 'domain': 'usageLimits', 'reason': 'storageQuotaExceeded'}]">
+T5CA_SA_UPLOAD_WARN pdf_path <HttpError 403 when requesting https://www.googleapis.com/upload/drive/v3/files?fields=id%2CwebViewLink&supportsAllDrives=true&alt=json&uploadType=resumable returned "Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.". Details: "[{'message': 'Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.', 'domain': 'usageLimits', 'reason': 'storageQuotaExceeded'}]">
+Stopping areal-task-worker.service - Areal Task Worker...
+areal-task-worker.service: Deactivated successfully.
+Stopped areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Consumed 18.097s CPU time, 105.3M memory peak, 0B memory swap peak.
+Started areal-task-worker.service - Areal Task Worker.
 
 ## JOURNAL_TELEGRAM_INGRESS_30
-2026-05-08 09:18:16,255 INFO DAEMON: STT http_status=200
-2026-05-08 09:18:16,256 INFO DAEMON: STT ok transcript_len=161
-2026-05-08 09:18:16,327 INFO DAEMON: Task 4df9cf88-0843-478b-bef1-9d828d505298 created state=NEW topic_id=2
-2026-05-08 09:18:16,327 INFO DAEMON: Update id=262222000 is handled. Duration 689 ms by bot id=8216054898
-2026-05-08 09:18:33,504 INFO DAEMON: STT env check groq=True
-2026-05-08 09:18:33,504 INFO DAEMON: STT start file=/root/.areal-neva-core/runtime/voice_queue/voice_1003725299009_10495.ogg size=25835 model=whisper-large-v3-turbo
-2026-05-08 09:18:33,868 INFO DAEMON: STT http_status=200
-2026-05-08 09:18:33,870 INFO DAEMON: STT ok transcript_len=88
-2026-05-08 09:18:33,943 INFO DAEMON: Task 524f5853-4243-4833-ae82-116da9202179 created state=NEW topic_id=2
-2026-05-08 09:18:33,943 INFO DAEMON: Update id=262222001 is handled. Duration 642 ms by bot id=8216054898
-2026-05-08 09:19:00,193 INFO DAEMON: Update id=262222002 is handled. Duration 176 ms by bot id=8216054898
-2026-05-08 10:18:08,178 ERROR DAEMON: HANDLER_CRASH: Telegram server says - Bad Request: file is too big
-2026-05-08 10:18:08,257 INFO DAEMON: Update id=262222003 is handled. Duration 181 ms by bot id=8216054898
-2026-05-08 10:19:35,006 INFO DAEMON: STT env check groq=True
-2026-05-08 10:19:35,006 INFO DAEMON: STT start file=/root/.areal-neva-core/runtime/voice_queue/voice_1003725299009_10506.ogg size=7450 model=whisper-large-v3-turbo
-2026-05-08 10:19:35,340 INFO DAEMON: STT http_status=200
-2026-05-08 10:19:35,340 INFO DAEMON: STT ok transcript_len=18
-2026-05-08 10:19:35,421 INFO DAEMON: Task 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9 created state=NEW topic_id=2
-2026-05-08 10:19:35,421 INFO DAEMON: Update id=262222004 is handled. Duration 578 ms by bot id=8216054898
-2026-05-08 10:19:55,083 INFO DAEMON: Update id=262222005 is handled. Duration 438 ms by bot id=8216054898
-2026-05-08 10:48:43,368 WARNING DAEMON: Received SIGTERM signal
-2026-05-08 10:48:43,372 INFO DAEMON: Polling stopped for bot @ai_orkestra_all_bot id=8216054898 - '🎰 1WIN CASINO #1095'
-2026-05-08 10:48:43,372 INFO DAEMON: Polling stopped
+2026-05-08 10:48:46,982 INFO DAEMON: Run polling for bot @ai_orkestra_all_bot id=8216054898 - 'AREAL-NEVA ORCHESTRA'
+2026-05-08 11:28:26,770 INFO DAEMON: STT env check groq=True
+2026-05-08 11:28:26,775 INFO DAEMON: STT start file=/root/.areal-neva-core/runtime/voice_queue/voice_1003725299009_10511.ogg size=16626 model=whisper-large-v3-turbo
+2026-05-08 11:28:27,015 INFO DAEMON: STT http_status=200
+2026-05-08 11:28:27,016 INFO DAEMON: STT ok transcript_len=36
+2026-05-08 11:28:27,147 INFO DAEMON: Task ac8bce62-7d06-494a-b6e5-bc6719b53359 created state=NEW topic_id=5
+2026-05-08 11:28:27,148 INFO DAEMON: Update id=262222006 is handled. Duration 714 ms by bot id=8216054898
+2026-05-08 11:28:37,141 INFO DAEMON: Task de13074b-f71d-4523-a17e-8608cd3fd9dd created state=NEW topic_id=5
+2026-05-08 11:28:37,141 INFO DAEMON: Update id=262222007 is handled. Duration 21 ms by bot id=8216054898
+2026-05-08 11:31:23,246 INFO DAEMON: Task d8a8fbe7-81d7-4190-888c-2d8285c881b9 created state=NEW topic_id=5
+2026-05-08 11:31:23,246 INFO DAEMON: Update id=262222008 is handled. Duration 100 ms by bot id=8216054898
+2026-05-08 12:05:30,246 INFO DAEMON: Task ce1d4d0b-7b7a-445e-b0e4-e52e54f001a7 created state=NEW topic_id=5
+2026-05-08 12:05:30,246 INFO DAEMON: Update id=262222009 is handled. Duration 15 ms by bot id=8216054898
+2026-05-08 12:23:20,968 INFO DAEMON: Update id=262222010 is handled. Duration 348 ms by bot id=8216054898
+2026-05-08 12:24:15,305 INFO DAEMON: Update id=262222011 is handled. Duration 77 ms by bot id=8216054898
+2026-05-08 12:29:45,160 INFO DAEMON: Task 22712334-c39f-436a-90ec-cae5ce56f251 created state=NEW topic_id=5
+2026-05-08 12:29:45,160 INFO DAEMON: Update id=262222012 is handled. Duration 19 ms by bot id=8216054898
+Stopping telegram-ingress.service - AREAL telegram ingress...
+2026-05-08 12:34:29,744 WARNING DAEMON: Received SIGTERM signal
+2026-05-08 12:34:29,745 INFO DAEMON: Polling stopped for bot @ai_orkestra_all_bot id=8216054898 - 'AREAL-NEVA ORCHESTRA'
+2026-05-08 12:34:29,746 INFO DAEMON: Polling stopped
 telegram-ingress.service: Deactivated successfully.
 Stopped telegram-ingress.service - AREAL telegram ingress.
-telegram-ingress.service: Consumed 41.203s CPU time, 164.5M memory peak, 0B memory swap peak.
+telegram-ingress.service: Consumed 3.600s CPU time, 120.7M memory peak, 91.8M memory swap peak.
 Started telegram-ingress.service - AREAL telegram ingress.
-2026-05-08 10:48:46,952 INFO DAEMON: BOT STARTED id=8216054898 username=ai_orkestra_all_bot
-2026-05-08 10:48:46,953 INFO DAEMON: Start polling
-2026-05-08 10:48:46,982 INFO DAEMON: Run polling for bot @ai_orkestra_all_bot id=8216054898 - 'AREAL-NEVA ORCHESTRA'
+2026-05-08 12:34:32,497 INFO DAEMON: BIG_FILE_LOCAL_BOT_API_USED: local server active
+2026-05-08 12:34:32,503 INFO DAEMON: BOT STARTED id=8216054898 username=ai_orkestra_all_bot
+2026-05-08 12:34:32,503 INFO DAEMON: Start polling
+2026-05-08 12:34:32,504 INFO DAEMON: Run polling for bot @ai_orkestra_all_bot id=8216054898 - 'AREAL-NEVA ORCHESTRA'
+2026-05-08 13:11:00,381 INFO DAEMON: Update id=210388089 is handled. Duration 89 ms by bot id=8216054898

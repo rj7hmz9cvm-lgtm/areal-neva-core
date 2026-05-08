@@ -1,7 +1,7 @@
 # topic_5 TEKHNADZOR
 
-GENERATED_AT: 2026-05-08T08:20:03.353075+00:00
-GIT_SHA: 8a4de2bdfe26b53f65dd2960ffd665cebbd5d034
+GENERATED_AT: 2026-05-08T10:30:02.164829+00:00
+GIT_SHA: 7c646dd4c04fb381ced170c979b5e07264310700
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 5
@@ -13,8 +13,8 @@ FAILED_LAST_24H: 0
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 21
-- CANCELLED: 23
-- DONE: 65
+- CANCELLED: 25
+- DONE: 68
 - FAILED: 53
 
 ## LATEST_FAILED
@@ -25,6 +25,7 @@ FAILED_LAST_24H: 0
 - 8093deb3 | INVALID_PUBLIC_RESULT
 
 ## COMMITS_LAST_14D
+- 7c646dd|session(08.05): bigfile activated, topic5 V3 dispatcher, topic2 P6C intercept, c94ec497 FAILED/NOT_PROVEN
 - b3e5be7|fix(topic500): relax bad-result filter for adaptive output modes
 - 0d6a9a4|fix(memory): ARCHIVE_DUPLICATE_GUARD_V1 + topic500 search pollution guard
 - 3f53d3f|docs(handoff): update after topic500 adaptive output V1
@@ -54,12 +55,27 @@ FAILED_LAST_24H: 0
 - 2deb7c8|docs(technadzor): finalize topic5 logic context and document output contract
 - 1405fdb|CHAT EXPORT GPT_TOPIC5_FULL_CLOSE 2026-05-05
 - ff753aa|feat(technadzor): P6H_PART_4 topic_5 hook + STT hallucination guard
-- 94c6b3f|P6H_TOPIC5_TECHNADZOR_TEMPLATE_PHOTO_CLIENT_SAFE_VOICE_LIVE_CLOSE_20260504: systemic technadzor module for topic_5 — INSTALLED_NOT_LIVE_TESTED
 
 ## MARKERS_LAST_24H
 - created:NEW
 - reply_sent:topic5_reply_photo_comment_bound
 - topic5_reply_photo_comment_bound
+- reply_sent:topic5_package_status_continuous
+- topic5_package_status_continuous
+- reply_sent:topic5_final_act
+- FULL_CONSTRUCTION_FILE_CONTOUR_CANON_GUARD_V1:TOPIC5_FINAL_ACT_GENERATED
+- P8T5_SUPERSEDED_BY_CANONICAL_V2
+- P8T5_CANCELLED_OLD_GARBAGE_ACT_V2
+- TOPIC5_DRIVE_LINKS_SAVED
+- TOPIC5_GARBAGE_FILTER_OK
+- TOPIC5_ACT_STRUCTURE_OK
+- TOPIC5_DEFECT_TABLE_OK
+- TOPIC5_RECOMMENDATIONS_SECTION_OK
+- TOPIC5_NORMATIVE_SECTION_OK
+- TOPIC5_DOCX_CREATED
+- TOPIC5_PDF_CREATED
+- reply_sent:topic5_canonical_act_v3
+- PATCH_TOPIC5_ACT_DISPATCH_V3:ACT_GENERATED
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_5 не тянет КЖ/АР без прямой команды

@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_012
-generated_at_utc: 2026-05-08T08:20:03.213765+00:00
-git_sha_before_commit: 8a4de2bdfe26b53f65dd2960ffd665cebbd5d034
+generated_at_utc: 2026-05-08T10:30:02.022938+00:00
+git_sha_before_commit: 7c646dd4c04fb381ced170c979b5e07264310700
 part: 12/17
 
 
 ====================================================================================================
 BEGIN_FILE: core/technadzor_engine.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: fa9dd48fb9045b96f2e80d28c538af261067cfaaeb949324cbd4bfa924ac5654
+SHA256_FULL_FILE: 4677dac1c9d15e1a54aff22f31bbddeac1e5c132f6eb03d57bc5e732b457b560
 ====================================================================================================
 # === FINAL_CLOSURE_BLOCKER_FIX_V1_TECHNADZOR_ENGINE ===
 from __future__ import annotations
@@ -4120,6 +4120,575 @@ def process_technadzor(text="", task_id="", chat_id="", topic_id=0, file_path=""
 process_technadzor._p6amf_wrapped = True
 _P6AMF_LOG.info("P6_ACT_MATERIAL_FILTER_V1_INSTALLED")
 # === END_P6_ACT_MATERIAL_FILTER_V1 ===
+
+
+# === PATCH_TOPIC5_CANONICAL_ACT_ENGINE_V3 ===
+# АКТ ОСМОТРА ОБЪЕКТА — TECHNADZOR_DOMAIN_LOGIC_CANON
+# 8 разделов, таблица замечаний 8 колонок.
+# ok=True если файлы сгенерированы, даже если upload упал.
+# Dispatcher отвечает за upload fallback и НИКОГДА не вызывает старый дамп при ok=True.
+
+import json as _t5ca_json
+import logging as _t5ca_logging
+import tempfile as _t5ca_tmp
+from datetime import datetime as _t5ca_dt
+from pathlib import Path as _t5ca_Path
+
+_T5CA_LOG = _t5ca_logging.getLogger("technadzor_engine")
+_T5CA_DATA = _t5ca_Path("/root/.areal-neva-core/data/technadzor")
+_T5CA_SPECIALIST = "Кузнецов Илья Владимирович"
+_T5CA_DEJAVU = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+_T5CA_DEJAVU_BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+_T5CA_NORM_NONE = "норма не подтверждена"
+
+_T5CA_PHOTO_EXT = (".jpg", ".jpeg", ".png", ".webp", ".heic")
+_T5CA_NON_PHOTO_TYPES = ("PDF", "XLSX", "XLS", "DOCX", "DOC", "OTHER")
+# Фразы-мусор — не включать в замечания
+_T5CA_GARBAGE = [
+    "сделай акт", "делай акт", "оформи акт", "финальный акт", "итоговый акт",
+    "добавь в папку", "добавить в папку", "нужно добавить в папку",
+    "не в тот чат", "это тест", "тест надзор", "проверка связи",
+    "ты добавил", "добавил все", "какой адрес", "дай нормы", "дай мне нормы",
+    "какую задачу", "что по итогу", "видишь их да или нет",
+    "делай финальный", "сделай мне пожалуйста акт", "положи в правильную папку",
+]
+
+
+def _t5ca_s(v, limit=50000):
+    try:
+        return "" if v is None else str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+
+def _t5ca_read_json(path):
+    try:
+        with open(str(path), encoding="utf-8") as _f:
+            return _t5ca_json.load(_f)
+    except Exception:
+        return {}
+
+
+def _t5ca_is_photo(m):
+    fn = _t5ca_s(m.get("file_name", "")).lower()
+    ft = _t5ca_s(m.get("file_type", "")).upper()
+    if ft == "PHOTO":
+        return True
+    if ft in _T5CA_NON_PHOTO_TYPES:
+        return False
+    return any(fn.endswith(e) for e in _T5CA_PHOTO_EXT)
+
+
+def _t5ca_is_garbage(text):
+    low = _t5ca_s(text).lower()
+    return any(p in low for p in _T5CA_GARBAGE)
+
+
+def _t5ca_match_norms(text):
+    """Нормы только если norm_id непустой — не выдумывать."""
+    if not text or not text.strip():
+        return []
+    try:
+        from core.normative_engine import search_norms_sync
+        raw = search_norms_sync(str(text), limit=5)
+        return [n for n in (raw or []) if n.get("norm_id")]
+    except Exception:
+        return []
+
+
+def _t5ca_norm_str(comment):
+    norms = _t5ca_match_norms(comment)
+    if norms:
+        parts = []
+        for n in norms[:2]:
+            nid = _t5ca_s(n.get("norm_id", ""))
+            sec = _t5ca_s(n.get("section", ""))
+            parts.append(f"{nid} — {sec}" if sec else nid)
+        return "; ".join(parts)
+    return _T5CA_NORM_NONE
+
+
+def _t5ca_register_fonts():
+    try:
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        if "T5CADejavu" not in pdfmetrics.getRegisteredFontNames():
+            pdfmetrics.registerFont(TTFont("T5CADejavu", _T5CA_DEJAVU))
+        if "T5CADejavuB" not in pdfmetrics.getRegisteredFontNames():
+            pdfmetrics.registerFont(TTFont("T5CADejavuB", _T5CA_DEJAVU_BOLD))
+        return True
+    except Exception:
+        return False
+
+
+def _t5ca_cell_w(cell, emu):
+    try:
+        from docx.oxml.ns import qn
+        from docx.oxml import OxmlElement
+        twips = str(max(1, int(emu / 635)))
+        tc = cell._tc
+        tcPr = tc.get_or_add_tcPr()
+        for old in tcPr.findall(qn("w:tcW")):
+            tcPr.remove(old)
+        tcW = OxmlElement("w:tcW")
+        tcW.set(qn("w:w"), twips)
+        tcW.set(qn("w:type"), "dxa")
+        tcPr.append(tcW)
+    except Exception:
+        pass
+
+
+def _t5ca_build_sections(af, materials):
+    """Build all content lists needed for the act."""
+    obj_name = _t5ca_s(af.get("object_name", ""))
+    obj_addr = _t5ca_s(af.get("object_address") or af.get("object_name") or "")
+    obj_loc = (obj_addr or obj_name)[:40]
+    visit_basis = _t5ca_s(af.get("visit_basis", "запрос заказчика"))
+    source_req = _t5ca_s(af.get("source_request", ""))
+
+    file_count = len(materials)
+    photo_count = sum(1 for m in materials if _t5ca_is_photo(m))
+
+    # remark_rows: №, Фото, Узел/место, Нарушение, Последствия, Что сделать, Норматив, Статус
+    remark_rows = []
+    all_comments = []
+    all_files = []
+
+    for idx, m in enumerate(materials, 1):
+        fn = _t5ca_s(m.get("file_name", f"файл_{idx}"), 80)
+        all_files.append(fn)
+        if not _t5ca_is_photo(m):
+            continue
+        raw = _t5ca_s(m.get("voice_comment") or m.get("comment") or "")
+        comment = "" if _t5ca_is_garbage(raw) else raw[:300]
+        if comment:
+            all_comments.append(comment)
+
+        norm_col = _t5ca_norm_str(comment) if comment else _T5CA_NORM_NONE
+
+        lc = comment.lower() if comment else ""
+        if "заменить" in lc or "старое оборудование" in lc or "вышло из строя" in lc:
+            rec = "Рекомендуется заменить"
+        elif "сварн" in lc or "шов" in lc:
+            rec = "Необходимо проверить качество сварных соединений"
+        elif "примыкание" in lc or "щельник" in lc:
+            rec = "Рекомендуется выполнить нормальное примыкание"
+        elif comment:
+            rec = "Рекомендуется повторный осмотр после устранения"
+        else:
+            rec = ""
+
+        remark_rows.append([
+            str(idx), fn, obj_loc,
+            comment or "—", "",   # Нарушение, Последствия (manual)
+            rec, norm_col, "Открыто",
+        ])
+
+    facts = list(dict.fromkeys(c for c in all_comments if c))[:20]
+
+    recs = []
+    for comment in all_comments:
+        lc = comment.lower()
+        if "заменить" in lc or "старое оборудование" in lc:
+            recs.append(f"Рекомендуется заменить: {comment[:200]}")
+        elif "примыкание" in lc or "щельник" in lc:
+            recs.append(f"Рекомендуется выполнить нормальное примыкание: {comment[:200]}")
+        elif "сварн" in lc:
+            recs.append(f"Необходимо проверить сварные соединения: {comment[:200]}")
+    for inst in af.get("owner_instructions", []):
+        ci = _t5ca_s(inst)
+        if _t5ca_is_garbage(ci):
+            continue
+        lc = ci.lower()
+        if any(x in lc for x in ("рекоменд", "нужно", "необходимо")):
+            recs.append(ci[:300])
+    recs = list(dict.fromkeys(recs))[:20]
+
+    conseqs = []
+    for comment in all_comments:
+        lc = comment.lower()
+        if "старое оборудование" in lc or "вышло из строя" in lc:
+            conseqs.append("Выход оборудования из строя, аварийная ситуация")
+        if "сварн" in lc or "шов" in lc:
+            conseqs.append("Разрушение сварного соединения, нарушение несущей способности")
+        if "примыкание" in lc or "щельник" in lc:
+            conseqs.append("Проникновение влаги, нарушение теплоизоляции")
+    conseqs = list(dict.fromkeys(conseqs))[:10]
+
+    norms_global = _t5ca_match_norms(" ".join(all_comments))
+    norms_found = [r[6] for r in remark_rows if r[6] and r[6] != _T5CA_NORM_NONE]
+
+    basis = f"Основание: {visit_basis}." + (f" Источник: {source_req}." if source_req else "")
+
+    return dict(
+        obj_name=obj_name, obj_addr=obj_addr, file_count=file_count,
+        photo_count=photo_count, all_files=all_files,
+        remark_rows=remark_rows, facts=facts, recs=recs, conseqs=conseqs,
+        norms_global=norms_global, norms_found=norms_found, basis=basis,
+    )
+
+
+def _t5ca_write_docx(dst, act_num, date_str, af, sec):
+    try:
+        from docx import Document
+        from docx.shared import Cm, Pt
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+
+        obj_name = sec["obj_name"]
+        obj_addr = sec["obj_addr"]
+        folder_name = _t5ca_s(af.get("folder_name", ""))
+
+        doc = Document()
+        s = doc.sections[0]
+        s.page_width, s.page_height = s.page_height, s.page_width
+        s.left_margin = s.right_margin = Cm(2)
+        s.top_margin = Cm(2)
+        s.bottom_margin = Cm(1.5)
+
+        h = doc.add_heading(f"АКТ ОСМОТРА ОБЪЕКТА № {act_num}", level=1)
+        h.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        sub = doc.add_paragraph("Методом визуального неразрушающего контроля")
+        sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+        doc.add_paragraph(f"Дата осмотра: {date_str}")
+        doc.add_paragraph(f"Место осмотра: {obj_addr or obj_name}")
+        doc.add_paragraph(f"Объект осмотра: {obj_name}")
+        doc.add_paragraph(f"Основание осмотра: {sec['basis']}")
+        doc.add_paragraph(f"Метод обследования: визуальный неразрушающий контроль с выездом на объект")
+        doc.add_paragraph(f"Технический специалист: {_T5CA_SPECIALIST}")
+        if folder_name:
+            doc.add_paragraph(f"Ссылка на фотоматериалы: папка Drive «{folder_name}»")
+
+        doc.add_heading("1. Общие сведения", level=2)
+        doc.add_paragraph(
+            "Осмотр выполнен методом визуального неразрушающего контроля с выездом на объект. "
+            "Цель — выявление фактически наблюдаемых дефектов и формирование рекомендаций "
+            "по их устранению."
+        )
+        doc.add_paragraph(
+            f"Файлов в пакете: {sec['file_count']}. Фотоматериалов: {sec['photo_count']}."
+        )
+
+        doc.add_heading("2. Основание текущего осмотра", level=2)
+        doc.add_paragraph(sec["basis"])
+
+        doc.add_heading("3. Установлено по факту осмотра", level=2)
+        if sec["facts"]:
+            for i, f in enumerate(sec["facts"], 1):
+                doc.add_paragraph(f"{i}. {f[:400]}", style="List Number")
+        else:
+            doc.add_paragraph("Данные фиксируются по пояснениям владельца и фотоматериалам.")
+
+        doc.add_heading("4. Рекомендовано к устранению", level=2)
+        if sec["recs"]:
+            for i, r in enumerate(sec["recs"], 1):
+                doc.add_paragraph(f"{i}. {r[:400]}", style="List Number")
+        else:
+            doc.add_paragraph("Рекомендации формируются по результатам детального осмотра.")
+
+        doc.add_heading("5. Возможные последствия при отсутствии устранения", level=2)
+        if sec["conseqs"]:
+            for c in sec["conseqs"]:
+                doc.add_paragraph(f"— {c[:300]}", style="List Bullet")
+        else:
+            doc.add_paragraph("Последствия определяются по характеру выявленных дефектов.")
+
+        doc.add_heading("6. Таблица замечаний", level=2)
+        col_hdrs = ["№", "Фото", "Узел/место", "Нарушение",
+                    "Последствия", "Что сделать", "Норматив", "Статус"]
+        col_emu = [int(c * 360000) for c in [0.7, 3.2, 2.5, 5.0, 3.0, 4.0, 4.5, 1.8]]
+        tbl = doc.add_table(rows=1, cols=8)
+        tbl.style = "Table Grid"
+        hc = tbl.rows[0].cells
+        for i, ht in enumerate(col_hdrs):
+            hc[i].text = ht
+            _t5ca_cell_w(hc[i], col_emu[i])
+            for p in hc[i].paragraphs:
+                for run in p.runs:
+                    run.bold = True
+                    run.font.size = Pt(8)
+        for row_data in sec["remark_rows"]:
+            row = tbl.add_row().cells
+            for i, val in enumerate(row_data):
+                row[i].text = _t5ca_s(val, 300)
+                _t5ca_cell_w(row[i], col_emu[i])
+                for p in row[i].paragraphs:
+                    for run in p.runs:
+                        run.font.size = Pt(8)
+
+        doc.add_heading("7. Заключение", level=2)
+        if sec["norms_found"]:
+            doc.add_paragraph(
+                f"По результатам осмотра выявлены дефекты. "
+                f"Нормативные документы: {'; '.join(dict.fromkeys(sec['norms_found'][:3]))}. "
+                "Рекомендуется выполнить мероприятия из раздела 4 "
+                "и провести повторный осмотр после их устранения."
+            )
+        else:
+            doc.add_paragraph(
+                "По результатам осмотра зафиксированы замечания согласно таблице. "
+                "Нормативные пункты не подтверждены без дополнительного анализа. "
+                "Рекомендуется повторный осмотр после устранения."
+            )
+
+        doc.add_heading("8. Приложение: перечень фото и документов", level=2)
+        doc.add_paragraph(
+            f"Фотоматериалов: {sec['photo_count']} шт. "
+            f"Файлов в пакете: {sec['file_count']} шт."
+        )
+        for fn in sec["all_files"]:
+            doc.add_paragraph(f"— {fn}", style="List Bullet")
+
+        doc.add_paragraph("")
+        doc.add_paragraph(
+            f"Технический специалист: {_T5CA_SPECIALIST}     _____________     {date_str}"
+        )
+        doc.add_paragraph(
+            "Представитель заказчика: _______________________     _____________     ___________"
+        )
+
+        doc.save(str(dst))
+        return True
+    except Exception as _e:
+        _T5CA_LOG.exception("T5CA_DOCX_ERR %s", _e)
+        return False
+
+
+def _t5ca_write_pdf(dst, act_num, date_str, af, sec):
+    try:
+        from reportlab.lib.pagesizes import A4, landscape as _ls
+        from reportlab.lib.styles import ParagraphStyle
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.units import cm
+        from reportlab.lib import colors
+
+        ok = _t5ca_register_fonts()
+        base = "T5CADejavu" if ok else "Helvetica"
+        bold = "T5CADejavuB" if ok else "Helvetica-Bold"
+
+        st = lambda name, **kw: ParagraphStyle(name, fontName=base, **kw)  # noqa: E731
+        sb = lambda name, **kw: ParagraphStyle(name, fontName=bold, **kw)  # noqa: E731
+
+        sty_t = sb("t5t", fontSize=13, alignment=1, spaceAfter=3)
+        sty_s = st("t5s", fontSize=10, alignment=1, spaceAfter=6, textColor=colors.grey)
+        sty_h = sb("t5h", fontSize=11, spaceBefore=8, spaceAfter=3)
+        sty_b = st("t5b", fontSize=10, leading=13, spaceAfter=2)
+        sty_sm = st("t5sm", fontSize=7, leading=9)
+        sty_smb = sb("t5smb", fontSize=7, leading=9)
+
+        obj_name = sec["obj_name"]
+        obj_addr = sec["obj_addr"]
+        folder_name = _t5ca_s(af.get("folder_name", ""))
+
+        flow = []
+        flow.append(Paragraph(f"АКТ ОСМОТРА ОБЪЕКТА № {act_num}", sty_t))
+        flow.append(Paragraph("Методом визуального неразрушающего контроля", sty_s))
+        flow.append(Paragraph(f"Дата: {date_str}  |  Объект: {obj_name}", sty_b))
+        flow.append(Paragraph(f"Место: {obj_addr or obj_name}", sty_b))
+        flow.append(Paragraph(f"Основание: {sec['basis']}", sty_b))
+        flow.append(Paragraph(f"Технический специалист: {_T5CA_SPECIALIST}", sty_b))
+        if folder_name:
+            flow.append(Paragraph(f"Фотоматериалы: папка Drive «{folder_name}»", sty_b))
+        flow.append(Spacer(1, 6))
+
+        flow.append(Paragraph("1. Общие сведения", sty_h))
+        flow.append(Paragraph(
+            "Осмотр выполнен методом визуального неразрушающего контроля. "
+            f"Файлов в пакете: {sec['file_count']}. Фотоматериалов: {sec['photo_count']}.",
+            sty_b,
+        ))
+
+        flow.append(Paragraph("2. Основание текущего осмотра", sty_h))
+        flow.append(Paragraph(sec["basis"], sty_b))
+
+        flow.append(Paragraph("3. Установлено по факту осмотра", sty_h))
+        if sec["facts"]:
+            for i, f in enumerate(sec["facts"], 1):
+                flow.append(Paragraph(f"{i}. {f[:400]}", sty_b))
+        else:
+            flow.append(Paragraph(
+                "Данные фиксируются по пояснениям владельца и фотоматериалам.", sty_b))
+
+        flow.append(Paragraph("4. Рекомендовано к устранению", sty_h))
+        if sec["recs"]:
+            for i, r in enumerate(sec["recs"], 1):
+                flow.append(Paragraph(f"{i}. {r[:400]}", sty_b))
+        else:
+            flow.append(Paragraph("Рекомендации формируются по результатам осмотра.", sty_b))
+
+        flow.append(Paragraph("5. Возможные последствия при отсутствии устранения", sty_h))
+        if sec["conseqs"]:
+            for c in sec["conseqs"]:
+                flow.append(Paragraph(f"— {c[:300]}", sty_b))
+        else:
+            flow.append(Paragraph(
+                "Последствия определяются по характеру выявленных дефектов.", sty_b))
+
+        flow.append(Paragraph("6. Таблица замечаний", sty_h))
+        col_hdrs = ["№", "Фото", "Узел/место", "Нарушение",
+                    "Последствия", "Что сделать", "Норматив", "Статус"]
+        col_w = [0.7*cm, 3.2*cm, 2.5*cm, 5.0*cm, 3.0*cm, 4.0*cm, 4.5*cm, 1.8*cm]
+        rows = [[Paragraph(h, sty_smb) for h in col_hdrs]]
+        for r in sec["remark_rows"]:
+            rows.append([Paragraph(_t5ca_s(c, 250), sty_sm) for c in r])
+        tbl = Table(rows, colWidths=col_w, repeatRows=1)
+        tbl.setStyle(TableStyle([
+            ("FONTNAME", (0, 0), (-1, -1), base),
+            ("FONTNAME", (0, 0), (-1, 0), bold),
+            ("FONTSIZE", (0, 0), (-1, -1), 7),
+            ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+            ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ]))
+        flow.append(tbl)
+        flow.append(Spacer(1, 6))
+
+        flow.append(Paragraph("7. Заключение", sty_h))
+        if sec["norms_found"]:
+            flow.append(Paragraph(
+                f"Выявлены дефекты. Нормативные документы: "
+                f"{'; '.join(dict.fromkeys(sec['norms_found'][:3]))}. "
+                "Рекомендуется повторный осмотр после устранения.",
+                sty_b,
+            ))
+        else:
+            flow.append(Paragraph(
+                "Зафиксированы замечания. Нормативные пункты не подтверждены без анализа. "
+                "Рекомендуется повторный осмотр после устранения.",
+                sty_b,
+            ))
+
+        flow.append(Paragraph("8. Приложение: перечень фото и документов", sty_h))
+        flow.append(Paragraph(
+            f"Фото: {sec['photo_count']} шт., файлов в пакете: {sec['file_count']} шт.",
+            sty_b,
+        ))
+        for fn in sec["all_files"]:
+            flow.append(Paragraph(f"— {fn}", sty_sm))
+
+        flow.append(Spacer(1, 12))
+        flow.append(Paragraph(
+            f"Технический специалист: {_T5CA_SPECIALIST}     ___________     {date_str}",
+            sty_b,
+        ))
+        flow.append(Paragraph(
+            "Представитель заказчика: _______________________     ___________     ___________",
+            sty_b,
+        ))
+
+        SimpleDocTemplate(
+            str(dst), pagesize=_ls(A4),
+            leftMargin=2*cm, rightMargin=2*cm,
+            topMargin=2*cm, bottomMargin=2*cm,
+        ).build(flow)
+        return True
+    except Exception as _e:
+        _T5CA_LOG.exception("T5CA_PDF_ERR %s", _e)
+        return False
+
+
+def t5_canonical_act_generate(chat_id: str, topic_id: int, task_id: str) -> dict:
+    """
+    PATCH_TOPIC5_CANONICAL_ACT_ENGINE_V3
+    ok=True если DOCX или PDF сгенерированы (даже без upload).
+    Dispatcher отвечает за fallback upload.
+    """
+    markers = []
+    result = {
+        "ok": False, "docx_link": "", "pdf_link": "",
+        "docx_path": "", "pdf_path": "",
+        "photo_count": 0, "file_count": 0, "norm_count": 0,
+        "obj_name": "", "obj_addr": "", "folder_name": "", "folder_id": "",
+        "upload_ok": False, "error": "", "markers": markers,
+    }
+    try:
+        buf = _t5ca_read_json(_T5CA_DATA / f"buf_{chat_id}_{topic_id}.json")
+        af = _t5ca_read_json(_T5CA_DATA / f"active_folder_{chat_id}_{topic_id}.json")
+        materials = buf.get("materials", [])
+
+        result["obj_name"] = _t5ca_s(af.get("object_name", ""))
+        result["obj_addr"] = _t5ca_s(af.get("object_address") or af.get("object_name") or "")
+        result["folder_name"] = _t5ca_s(af.get("folder_name", ""))
+        result["folder_id"] = _t5ca_s(af.get("folder_id", ""))
+
+        if not materials:
+            result["error"] = "NO_MATERIALS"
+            return result
+
+        sec = _t5ca_build_sections(af, materials)
+        result["file_count"] = sec["file_count"]
+        result["photo_count"] = sec["photo_count"]
+        result["norm_count"] = len(sec["norms_global"])
+
+        markers.append("TOPIC5_GARBAGE_FILTER_OK")
+        markers.append("TOPIC5_ACT_STRUCTURE_OK")
+        if sec["remark_rows"]:
+            markers.append("TOPIC5_DEFECT_TABLE_OK")
+        markers.append("TOPIC5_RECOMMENDATIONS_SECTION_OK")
+        markers.append("TOPIC5_NORMATIVE_SECTION_OK")
+
+        date_str = _t5ca_dt.now().strftime("%d.%m.%Y")
+        act_num = _t5ca_dt.now().strftime("%d.%m/%y")
+        safe = (task_id[:6] if task_id else "000000").upper()
+        base_name = f"AKT_OSMOTRA_{safe}_{_t5ca_dt.now().strftime('%Y%m%d')}"
+
+        out_dir = _t5ca_Path(_t5ca_tmp.gettempdir()) / f"areal_t5ca_{task_id}"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        docx_path = out_dir / f"{base_name}.docx"
+        pdf_path = out_dir / f"{base_name}.pdf"
+
+        docx_ok = _t5ca_write_docx(docx_path, act_num, date_str, af, sec)
+        if docx_ok and docx_path.exists():
+            markers.append("TOPIC5_DOCX_CREATED")
+            result["docx_path"] = str(docx_path)
+
+        pdf_ok = _t5ca_write_pdf(pdf_path, act_num, date_str, af, sec)
+        if pdf_ok and pdf_path.exists():
+            markers.append("TOPIC5_PDF_CREATED")
+            result["pdf_path"] = str(pdf_path)
+
+        if not docx_ok and not pdf_ok:
+            result["error"] = "FILE_GENERATION_FAILED"
+            return result
+
+        # ok=True means files are ready — dispatcher handles upload
+        result["ok"] = True
+
+        # Try service account upload
+        folder_id = result["folder_id"]
+        for path_key, link_key in (("docx_path", "docx_link"), ("pdf_path", "pdf_link")):
+            fpath = result.get(path_key, "")
+            if not fpath:
+                continue
+            try:
+                from core.drive_service_account_uploader import upload_artifact_service_account
+                lnk = upload_artifact_service_account(
+                    fpath, name=_t5ca_Path(fpath).name,
+                    folder_id=folder_id or None,
+                ) or ""
+                result[link_key] = lnk
+            except Exception as _ue:
+                _T5CA_LOG.warning("T5CA_SA_UPLOAD_WARN %s %s", path_key, _ue)
+
+        if result["docx_link"] or result["pdf_link"]:
+            markers.append("TOPIC5_DRIVE_LINKS_SAVED")
+            result["upload_ok"] = True
+
+        _T5CA_LOG.info(
+            "T5CA_DONE task=%s photos=%s files=%s norms=%s docx=%s pdf=%s upload=%s",
+            task_id, sec["photo_count"], sec["file_count"], len(sec["norms_global"]),
+            docx_ok, pdf_ok, result["upload_ok"],
+        )
+        return result
+
+    except Exception as _e:
+        _T5CA_LOG.exception("T5CA_ERR task=%s %s", task_id, _e)
+        result["error"] = _t5ca_s(str(_e), 200)
+        return result
+
+
+_T5CA_LOG.info("PATCH_TOPIC5_CANONICAL_ACT_ENGINE_V3 installed")
+# === END_PATCH_TOPIC5_CANONICAL_ACT_ENGINE_V3 ===
 
 ====================================================================================================
 END_FILE: core/technadzor_engine.py

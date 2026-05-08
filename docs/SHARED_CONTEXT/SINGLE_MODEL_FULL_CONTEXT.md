@@ -1,7 +1,7 @@
 # SINGLE_MODEL_FULL_CONTEXT
 
-GENERATED_AT: 2026-05-08T08:20:03.674859+00:00
-GIT_SHA: 8a4de2bdfe26b53f65dd2960ffd665cebbd5d034
+GENERATED_AT: 2026-05-08T10:30:02.441455+00:00
+GIT_SHA: 7c646dd4c04fb381ced170c979b5e07264310700
 PURPOSE: Один файл с полным контекстом проекта для любой модели
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 
@@ -22,7 +22,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 | topic_id | name | status | active | failed_24h |
 |----------|------|--------|--------|------------|
 | 0 | COMMON | UNKNOWN | 0 | 0 |
-| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 1 | 1 |
+| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 0 | 2 |
 | 5 | TEKHNADZOR | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
 | 11 | VIDEO | UNKNOWN | 0 | 0 |
 | 210 | PROEKTIROVANIE | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
@@ -85,9 +85,10 @@ owner_reference_registry: loaded=True items=11
 # 2. LATEST_HANDOFF
 ================================================================================
 
-# LATEST HANDOFF — 2026-05-08 ~11:00 MSK
-**HEAD**: `8760011`
+# LATEST HANDOFF — 2026-05-08 ~13:30 MSK
+**HEAD**: `8a4de2b` (до push текущей сессии)
 **Воркер**: active
+**telegram-ingress**: active + bigfile wrapper
 
 ---
 
@@ -95,110 +96,159 @@ owner_reference_registry: loaded=True items=11
 
 | Топик | Состояние | Примечание |
 |-------|-----------|------------|
-| topic_2 СТРОИКА | INSTALLED (не VERIFIED) | TOPIC2_CANONICAL_PDF_GATE_V1 в task_worker.py, d72028da → DONE |
-| topic_5 ТЕХНАДЗОР | Stable | без изменений |
+| topic_2 СТРОИКА | FAILED c94ec497 / TOPIC2_CANONICAL_FULL_CLOSE_NOT_PROVEN | Смета не принята, 6 missing markers |
+| topic_5 ТЕХНАДЗОР | INSTALLED (не VERIFIED) | SA Drive upload fails 403, OAuth fallback в коде |
 | topic_500 ПОИСК | INSTALLED (не VERIFIED) | 9 режимов adaptive output |
 | topic_210 PROJECT | Active | без изменений |
 
 ---
 
-## ТЕКУЩАЯ ЗАДАЧА: PATCH_TELEGRAM_BIG_FILE_LOCAL_BOT_API_V1
+## ЗАКРЫТО В ЭТОЙ СЕССИИ
 
-### Проблема
-`telegram-ingress.service` (telegram_daemon.py, строка 743) — `bot.get_file(file_id)` → `HANDLER_CRASH: file is too big` для файлов >20MB. Задача в БД не создаётся.
+### 1. PATCH_TELEGRAM_BIG_FILE_LOCAL_BOT_API_V1 — ACTIVATED ✅
+- `/usr/local/bin/telegram-bot-api` — бинарь собран, active
+- `/etc/systemd/system/telegram-ingress.service.d/bigfile.conf` — скопирован
+- Credentials в `/etc/areal/telegram-local-api.env` (TELEGRAM_API_ID / TELEGRAM_API_HASH)
+- `telegram-ingress` перезапущен, лог: `BIG_FILE_LOCAL_BOT_API_USED: local server active`
+- Файлы >20MB поступают через `/var/lib/telegram-bot-api/{TOKEN}/documents/`
 
-### Что сделано (сессия 08.05 ~11:00)
+### 2. Bot name restored ✅
+- Был: "Sport VIP" → Восстановлен: "AREAL-NEVA ORCHESTRA"
+- via `setMyName` API
 
-| Файл | Статус | Описание |
-|------|--------|----------|
-| `/opt/telegram-bot-api-build/` | **BUILD IN PROGRESS ~36%** | PID 2332600, лог `/opt/telegram-bot-api-build.log` |
-| `/etc/areal/telegram-local-api.env` | **READY** | chmod 600, root:root, значения ПУСТЫЕ — нужны api_id/api_hash |
-| `/etc/systemd/system/telegram-bot-api-local.service` | **READY, NOT STARTED** | ConditionPathExists=/usr/local/bin/telegram-bot-api |
-| `/root/.areal-neva-core/areal_telegram_wrapper.py` | **READY, NOT ACTIVE** | wrapper patching aiogram + download URL в памяти |
-| `/root/.areal-neva-core/tmp/bigfile_ingress_override.conf.pending` | **PENDING** | НЕ скопировать до gates |
-| `/root/.areal-neva-core/tools/verify_local_bot_api.sh` | **READY** | 4-step activation gate |
+### 3. PATCH_TOPIC5_ACT_DISPATCH_V3 — INSTALLED (не VERIFIED)
+- Файл: `task_worker.py` (append перед `if __name__`)
+- Вызывает `t5_canonical_act_generate` из `core/technadzor_engine.py`
+- Если SA upload fails → fallback `_fcg_upload` (OAuth)
+- **Проблема**: `storageQuotaExceeded` для Service Account; OAuth fallback в коде, не проверен live
+- Маркеры: `T5CA_SA_UPLOAD_WARN`, `P8D_OAUTH_DOCX_UPLOAD`, `P8D_OAUTH_PDF_UPLOAD`
 
-### Activation Gate (все 4 обязательны)
-```
-1. binary OK      → /usr/local/bin/telegram-bot-api -x
-2. service active → systemctl is-active telegram-bot-api-local
-3. local getMe OK → curl http://localhost:8081/bot${TOKEN}/getMe → ok:true
-4. wrapper dry-run OK → tools/verify_local_bot_api.sh
-```
+### 4. PATCH_TOPIC2_PDF_CANONICAL_GATE_HANDLE_IN_PROGRESS_V1 — INSTALLED
+- Файл: `task_worker.py` (append перед PATCH_TOPIC5_ACT_DISPATCH_V3)
+- Перехватывает `_handle_in_progress` для topic_2 + drive_file + PDF + estimate intent
+- Блокирует старый P6C route
+- Роутит в `maybe_handle_stroyka_estimate`
 
-### Что НУЖНО от пользователя
-```
-TELEGRAM_API_ID=<число>
-TELEGRAM_API_HASH=<hex строка>
-```
-Источник: https://my.telegram.org → API Development Tools
-
-### Как заполнить credentials и активировать
-```bash
-# 1. Заполнить credentials (root only, не печатать в chat)
-nano /etc/areal/telegram-local-api.env
-
-# 2. Запустить local сервер
-systemctl daemon-reload
-systemctl start telegram-bot-api-local
-
-# 3. Прогнать все проверки
-/root/.areal-neva-core/tools/verify_local_bot_api.sh
-
-# 4. Только если verify_local_bot_api.sh вернул 0:
-mkdir -p /etc/systemd/system/telegram-ingress.service.d
-cp /root/.areal-neva-core/tmp/bigfile_ingress_override.conf.pending \
-   /etc/systemd/system/telegram-ingress.service.d/bigfile.conf
-systemctl daemon-reload
-systemctl restart telegram-ingress
-```
-
-### Ожидаемое поведение после активации
-- Файл >20MB из Telegram → задача создаётся → `_handle_drive_file`
-- `TOPIC2_CANONICAL_PDF_GATE_V1` → `maybe_handle_stroyka_estimate` → полный pipeline
-- Маркеры: `BIG_FILE_LOCAL_BOT_API_USED` → `FILE_INTAKE_ROUTER_LOCAL_PATH_PASSED`
-- topic_5/topic_210/topic_500 не изменяются
-
-### Запрещённые файлы (не трогать никогда)
-telegram_daemon.py, .env, ai_router.py, reply_sender.py, google_io.py, credentials.json
+### 5. c94ec497 — задача создана, результат INVALID
+- PDF: `Открыть Микеа 3 РП 3 (1) (3) (3).pdf` (62MB), local_path: `/root/.areal-neva-core/runtime/drive_files/mikea_rp3.pdf`
+- Drive file_id: `1EBmfcyns9UOm4S9tg0CYqCpIIidfLgwl`
+- Откатена в FAILED / `TOPIC2_CANONICAL_FULL_CLOSE_NOT_PROVEN`
+- Причина: 6 missing canonical markers
 
 ---
 
-## ПРОШЛАЯ P0 (ЗАКРЫТО в 8760011)
+## ОТКРЫТО: c94ec497 — PENDING PATCH_TOPIC2_BIGPDF_CANONICAL_FULL_CLOSE_V2
 
-### TOPIC2_CANONICAL_PDF_GATE_V1 — task_worker.py body-edit
-- Вставлена до generic route_file (строки ~4122-4148)
-- topic_2 + PDF + intent=estimate → `maybe_handle_stroyka_estimate` → canonical pipeline
-- d72028da: DONE, 25 позиций, 5 425 839 руб, Excel+PDF в Drive ✅
+### Проблема
+Смета сгенерирована неканонично:
+- PDF не парсился (`TOPIC2_PDF_SPEC_EXTRACTOR_STARTED` отсутствует)
+- `Этажность: не указана` в результате
+- `TOPIC2_LOGISTICS_DISTANCE_KM:0` — но пользователь уточнил **30 км**
+- Использован FALLBACK лист (`TOPIC2_TEMPLATE_SHEET_FALLBACK`) вместо «газобетон»
+- message_id=10539 — невалиден как proof of full close
+
+### Таблица маркеров (последняя проверка)
+
+| Маркер | Статус |
+|--------|--------|
+| `BIG_FILE_LOCAL_DOWNLOAD_OK` | ✅ FOUND |
+| `FILE_INTAKE_ROUTER_LOCAL_PATH_PASSED` | ❌ MISSING |
+| `FILE_INTAKE_ROUTER_TOPIC2_CANONICAL_ROUTE` | ❌ MISSING |
+| `TOPIC2_PDF_SPEC_EXTRACTOR_STARTED` | ❌ MISSING |
+| `TOPIC2_PDF_SPEC_ROWS_EXTRACTED` | ❌ MISSING |
+| `TOPIC2_FULL_ESTIMATE_MATRIX_ENFORCED` | ❌ MISSING |
+| `TOPIC2_TEMPLATE_SELECTED` | ✅ FOUND |
+| `TOPIC2_XLSX_CANON_COLUMNS_OK` | ✅ FOUND |
+| `TOPIC2_PDF_CREATED` | ✅ FOUND |
+| `TOPIC2_PDF_CYRILLIC_OK` | ✅ FOUND |
+| `TOPIC2_PDF_TOTALS_MATCH_XLSX` | ✅ FOUND |
+| `TOPIC2_DRIVE_UPLOAD_XLSX_OK` | ✅ FOUND |
+| `TOPIC2_DRIVE_UPLOAD_PDF_OK` | ✅ FOUND |
+| `TOPIC2_TELEGRAM_MATCHES_ARTIFACTS` | ❌ MISSING |
+| `TOPIC2_PUBLIC_OUTPUT_CLEAN_OK` | ❌ MISSING |
+
+### Факты из PDF (извлечено fitz, 42 страницы)
+- **Этажность**: 1 этаж (Маркировочный план 1 этажа)
+- **Площадь**: 99.91 м² (жилая) + 24.6 м² (наружные площадки)
+- **Помещения 1 этажа**: прихожая 6.6, коридор 6.0, бойлерная 2.18, гостиная 24.79, кухня 9.46, коридор2 2.86, санузел 3.85, спальня хозяйская 14.08, спальня1 10.16, спальня2 10.16, санузел2 4.3, сауна 2.79, прачечная 2.69
+- **Материал**: Газобетон 400мм (внешние стены), 250мм (внутренние), 150мм (перегородки)
+- **Фундамент**: Монолитная плита «перевёрнутая чаша»
+- **Кровля**: Фальцевая кровля 185 м², RAL7024
+- **Фасад**: Оштукатуривание 96м² белый + цоколь 20м² RAL7012 + рейка 27.1м²
+- **Окна**: 9 типов (Ок-1…Ок-9), все ПВХ с энергосберегающими стеклопакетами
+- **Двери**: 5 типов (ДуМО1 входная, ДЧ чердачная, Д-1, Д-2, Д-3 межкомнатные)
+- **Инженерка**: ОВ (3 листа), ВК (2 листа), ЭОМ
+- **Тёплый пол**: экспликация тёплых полов — лист 37
+
+### Уточнение от пользователя (из task_history)
+```
+clarified: Этажи написаны в проекте удалённость от города 30 км средние цены
+```
+- Удалённость: **30 км**
+- Цены: **средние (median)** — подтверждено
+- Этажи: в проекте → **1 этаж** (подтверждено PDF)
+
+### Следующий шаг: PATCH_TOPIC2_BIGPDF_CANONICAL_FULL_CLOSE_V2
+
+Требования по ТЗ (2026-05-08):
+1. PDF spec extractor: извлечь все параметры из lokального PDF
+2. Лист шаблона: «газобетон» (не fallback)
+3. Дистанция: 30 км (не 0)
+4. Полная матрица 11 секций
+5. Все 15 canonical markers
+6. Отправка только через нормальный send path (не curl)
+7. TOPIC2_BOT_MESSAGE_ID_SAVED обязателен
+8. AWAITING_CONFIRMATION только после full marker set
+
+### Запрещено
+- Новая task_id
+- Брать d72028da
+- Generic LLM fallback для финала
+- median без подтверждения (подтверждено — можно использовать)
+- AWAITING_CONFIRMATION без full marker set
+- message_id=10539 как валидный proof
+
+---
+
+## НЕ СДЕЛАНО / ИЗВЕСТНЫЕ ПРОБЛЕМЫ
+
+| Проблема | Статус |
+|----------|--------|
+| topic_5 Drive upload (SA 403) | Код OAuth fallback есть, live-тест не пройден |
+| c94ec497 canonical estimate | FAILED, нужен PATCH_TOPIC2_BIGPDF_CANONICAL_FULL_CLOSE_V2 |
+| topic_2 `_handle_in_progress` wrapper | INSTALLED, live-тест не пройден на новом файле |
 
 ---
 
 ## ДИАГНОСТИКА
 
 ```bash
-# Прогресс сборки
-tail -5 /opt/telegram-bot-api-build.log
-
-# Готовность бинаря
-ls -la /usr/local/bin/telegram-bot-api 2>/dev/null || echo "not built yet"
-
-# Проверка gates
-/root/.areal-neva-core/tools/verify_local_bot_api.sh
-
 # Воркер
 systemctl is-active areal-task-worker
-grep "TOPIC2_CANONICAL_PDF_GATE\|BIG_FILE_LOCAL" \
-  /root/.areal-neva-core/logs/task_worker.log | tail -10
+tail -20 /root/.areal-neva-core/logs/task_worker.log
+
+# Bigfile wrapper
+systemctl is-active telegram-bot-api-local
+systemctl is-active telegram-ingress
+grep "BIG_FILE_LOCAL_BOT_API_USED" /root/.areal-neva-core/logs/task_worker.log | tail -3
+
+# c94ec497 состояние
+sqlite3 /root/.areal-neva-core/data/core.db "SELECT state, error_message FROM tasks WHERE id='c94ec497-4351-43a7-a106-b3dab1633838';"
+sqlite3 /root/.areal-neva-core/data/core.db "SELECT action, created_at FROM task_history WHERE task_id='c94ec497-4351-43a7-a106-b3dab1633838' ORDER BY created_at;"
+
+# Local PDF
+ls -la /root/.areal-neva-core/runtime/drive_files/mikea_rp3.pdf
 ```
 
 ---
 
 ## CANON REFS
 - `docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md` — §4, §11.9
-- `core/stroyka_estimate_canon.py:1930` — `maybe_handle_stroyka_estimate`
-- `areal_telegram_wrapper.py` — PATCH_TELEGRAM_BIG_FILE_LOCAL_BOT_API_V1 (не активен)
+- `docs/CANON_FINAL/TOPIC_2_CANONICAL_ESTIMATE_CONTRACT.md` — §10 DONE contract
+- `core/stroyka_estimate_canon.py:2808` — `maybe_handle_stroyka_estimate` (последняя def)
+- `areal_telegram_wrapper.py` — PATCH_TELEGRAM_BIG_FILE_LOCAL_BOT_API_V1 (активен)
 - `tools/verify_local_bot_api.sh` — activation gate script
-- `docs/HANDOFFS/LATEST_HANDOFF.md` — этот файл
+- `runtime/drive_files/mikea_rp3.pdf` — исходный PDF (62MB, 42 страницы)
 
 
 ================================================================================
@@ -3925,8 +3975,8 @@ I canno
 ```
 # topic_0 COMMON
 
-GENERATED_AT: 2026-05-08T08:20:03.278865+00:00
-GIT_SHA: 8a4de2bdfe26b53f65dd2960ffd665cebbd5d034
+GENERATED_AT: 2026-05-08T10:30:02.082572+00:00
+GIT_SHA: 7c646dd4c04fb381ced170c979b5e07264310700
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 0
@@ -4003,10 +4053,14 @@ STATUS: SYNCED_LOCAL
 ## TOPIC_2_STROYKA
 
 STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE: 1  FAILED_24H: 1
+ACTIVE: 0  FAILED_24H: 2
 DIRECTIONS_BOUND: Сметы
 
 ### LAST_FAILED (5)
+- c94ec497 | 2026-05-08 13:18:08 | TOPIC2_CANONICAL_FULL_CLOSE_NOT_PROVEN
+    history: TOPIC2_CANONICAL_FULL_CLOSE_NOT_PROVEN
+    history: TOPIC2_CANONICAL_REROUTE_V2:CANONICAL_HANDLED
+    history: FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:estimate_generated
 - a7b2879e | 2026-05-07 16:34:34 | STALE_TIMEOUT
     history: reply_sent:stale_failed
     history: state:FAILED
@@ -4023,10 +4077,6 @@ DIRECTIONS_BOUND: Сметы
     history: PATCH_TOPIC2_FRESH_ESTIMATE_ROUTE_GUARD_V1:CANON_FALLBACK:BYPASS_P6E67_PARENT_LOOKUP
     history: TOPIC2_PRICE_CHOICE_CONFIRMED:median
     history: PRICE_BIND_POISON_PARENT_GUARD_V2_BLOCKED_V4:LATEST_PRICE_MENU_FALLBACK
-- 8212f685 | 2026-05-06 20:42:46 | STALE_TIMEOUT
-    history: reply_sent:stale_failed
-    history: state:FAILED
-    history: reply_sent:drive_file_no_intent_offer
 
 ### KEY_ENGINE_CODE (head 250 lines each)
 #### core/sample_template_engine.py
@@ -4795,32 +4845,32 @@ def _write_xlsx(path: Path, items: List[Dict[str, Any]], source_text: str, photo
 ```
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-05-08T08:20:03.317180+00:00
-GIT_SHA: 8a4de2bdfe26b53f65dd2960ffd665cebbd5d034
+GENERATED_AT: 2026-05-08T10:30:02.123331+00:00
+GIT_SHA: 7c646dd4c04fb381ced170c979b5e07264310700
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
 ROLE: Сметы
 DIRECTIONS_BOUND: estimates
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE_TASKS: 1
-FAILED_LAST_24H: 1
+ACTIVE_TASKS: 0
+FAILED_LAST_24H: 2
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 12
-- CANCELLED: 100
+- CANCELLED: 101
 - DONE: 131
-- FAILED: 109
-- WAITING_CLARIFICATION: 1
+- FAILED: 110
 
 ## LATEST_FAILED
+- c94ec497 | TOPIC2_CANONICAL_FULL_CLOSE_NOT_PROVEN
 - a7b2879e | STALE_TIMEOUT
 - 893436d4 | INVALID_PUBLIC_RESULT
 - f43100b3 | TOPIC2_ONE_BIG_FINAL_PIPELINE_V1_WORKER_ERR:maximum recursion depth exceeded
 - c6b40dfc | STROYKA_QG_FAILED:XLSX_VALIDATE_ERROR:maximum recursion depth exceeded
-- 8212f685 | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
+- 7c646dd|session(08.05): bigfile activated, topic5 V3 dispatcher, topic2 P6C intercept, c94ec497 FAILED/NOT_PROVEN
 - 8760011|fix(topic2): enforce full canonical estimate pipeline without cross-topic regression
 - b236f02|fix(topic2): session 08.05 — P6C fulltext prep, P3CHK append fix, P2 distance skip, WCPE unblock
 - e3a016c|PATCH_OPENROUTER_ONLINE_ONLY_FOR_TOPIC2_PRICE_SEARCH_V1: hard-enforce Sonar for all price/search calls
@@ -4850,7 +4900,6 @@ FAILED_LAST_24H: 1
 - d9edd5d|fix(topic2): auto price enrichment + DONE contract markers
 - 842c52b|docs(topic2): update chat export for stroyka price choice patch
 - ac58cfe|docs(topic2): add 20260506 stroyka in progress report
-- 7a9bc69|docs(topic2): add 20260506 stroyka not closed report
 
 ## MARKERS_LAST_24H
 - created:NEW
@@ -4957,15 +5006,8 @@ PATCH_TOPIC2_FULL_GAP_CLOSE_V4
 ## MARKERS_MISSING
 - TOPIC2_ESTIMATE_SESSION_CREATED
 - TOPIC2_CONTEXT_READY
-- TOPIC2_TEMPLATE_SELECTED
-- TOPIC2_PRICE_ENRICHMENT_DONE
 - TOPIC2_LOGISTICS_CONFIRMED
 - TOPIC2_XLSX_CREATED
-- TOPIC2_PDF_CREATED
-- TOPIC2_PDF_CYRILLIC_OK
-- TOPIC2_DRIVE_UPLOAD_XLSX_OK
-- TOPIC2_DRIVE_UPLOAD_PDF_OK
-- TOPIC2_TELEGRAM_DELIVERED
 - TOPIC2_MESSAGE_THREAD_ID_OK
 - TOPIC2_DONE_CONTRACT_OK
 
@@ -5543,8 +5585,8 @@ _P6H5_NORMATIVE_EXPAND = [
 ```
 # topic_5 TEKHNADZOR
 
-GENERATED_AT: 2026-05-08T08:20:03.353075+00:00
-GIT_SHA: 8a4de2bdfe26b53f65dd2960ffd665cebbd5d034
+GENERATED_AT: 2026-05-08T10:30:02.164829+00:00
+GIT_SHA: 7c646dd4c04fb381ced170c979b5e07264310700
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 5
@@ -5556,8 +5598,8 @@ FAILED_LAST_24H: 0
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 21
-- CANCELLED: 23
-- DONE: 65
+- CANCELLED: 25
+- DONE: 68
 - FAILED: 53
 
 ## LATEST_FAILED
@@ -5568,6 +5610,7 @@ FAILED_LAST_24H: 0
 - 8093deb3 | INVALID_PUBLIC_RESULT
 
 ## COMMITS_LAST_14D
+- 7c646dd|session(08.05): bigfile activated, topic5 V3 dispatcher, topic2 P6C intercept, c94ec497 FAILED/NOT_PROVEN
 - b3e5be7|fix(topic500): relax bad-result filter for adaptive output modes
 - 0d6a9a4|fix(memory): ARCHIVE_DUPLICATE_GUARD_V1 + topic500 search pollution guard
 - 3f53d3f|docs(handoff): update after topic500 adaptive output V1
@@ -5597,12 +5640,27 @@ FAILED_LAST_24H: 0
 - 2deb7c8|docs(technadzor): finalize topic5 logic context and document output contract
 - 1405fdb|CHAT EXPORT GPT_TOPIC5_FULL_CLOSE 2026-05-05
 - ff753aa|feat(technadzor): P6H_PART_4 topic_5 hook + STT hallucination guard
-- 94c6b3f|P6H_TOPIC5_TECHNADZOR_TEMPLATE_PHOTO_CLIENT_SAFE_VOICE_LIVE_CLOSE_20260504: systemic technadzor module for topic_5 — INSTALLED_NOT_LIVE_TESTED
 
 ## MARKERS_LAST_24H
 - created:NEW
 - reply_sent:topic5_reply_photo_comment_bound
 - topic5_reply_photo_comment_bound
+- reply_sent:topic5_package_status_continuous
+- topic5_package_status_continuous
+- reply_sent:topic5_final_act
+- FULL_CONSTRUCTION_FILE_CONTOUR_CANON_GUARD_V1:TOPIC5_FINAL_ACT_GENERATED
+- P8T5_SUPERSEDED_BY_CANONICAL_V2
+- P8T5_CANCELLED_OLD_GARBAGE_ACT_V2
+- TOPIC5_DRIVE_LINKS_SAVED
+- TOPIC5_GARBAGE_FILTER_OK
+- TOPIC5_ACT_STRUCTURE_OK
+- TOPIC5_DEFECT_TABLE_OK
+- TOPIC5_RECOMMENDATIONS_SECTION_OK
+- TOPIC5_NORMATIVE_SECTION_OK
+- TOPIC5_DOCX_CREATED
+- TOPIC5_PDF_CREATED
+- reply_sent:topic5_canonical_act_v3
+- PATCH_TOPIC5_ACT_DISPATCH_V3:ACT_GENERATED
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_5 не тянет КЖ/АР без прямой команды
@@ -5677,8 +5735,8 @@ DIRECTIONS_BOUND: Видео
 ```
 # topic_11 VIDEO
 
-GENERATED_AT: 2026-05-08T08:20:03.377270+00:00
-GIT_SHA: 8a4de2bdfe26b53f65dd2960ffd665cebbd5d034
+GENERATED_AT: 2026-05-08T10:30:02.199175+00:00
+GIT_SHA: 7c646dd4c04fb381ced170c979b5e07264310700
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 11
@@ -6291,8 +6349,8 @@ def _normalize_sheet_register(template: Dict[str, Any], data: Dict[str, Any]) ->
 ```
 # topic_210 PROEKTIROVANIE
 
-GENERATED_AT: 2026-05-08T08:20:03.412800+00:00
-GIT_SHA: 8a4de2bdfe26b53f65dd2960ffd665cebbd5d034
+GENERATED_AT: 2026-05-08T10:30:02.240084+00:00
+GIT_SHA: 7c646dd4c04fb381ced170c979b5e07264310700
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 210
@@ -6861,8 +6919,8 @@ except Exception:
 ```
 # topic_500 VEB_POISK
 
-GENERATED_AT: 2026-05-08T08:20:03.455939+00:00
-GIT_SHA: 8a4de2bdfe26b53f65dd2960ffd665cebbd5d034
+GENERATED_AT: 2026-05-08T10:30:02.280086+00:00
+GIT_SHA: 7c646dd4c04fb381ced170c979b5e07264310700
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 500
@@ -6979,8 +7037,8 @@ DIRECTIONS_BOUND: Сервер DevOps
 ```
 # topic_794 DEVOPS
 
-GENERATED_AT: 2026-05-08T08:20:03.481866+00:00
-GIT_SHA: 8a4de2bdfe26b53f65dd2960ffd665cebbd5d034
+GENERATED_AT: 2026-05-08T10:30:02.310407+00:00
+GIT_SHA: 7c646dd4c04fb381ced170c979b5e07264310700
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 794
@@ -7075,8 +7133,8 @@ DIRECTIONS_BOUND: Автозапчасти
 ```
 # topic_961 AVTOZAPCHASTI
 
-GENERATED_AT: 2026-05-08T08:20:03.518746+00:00
-GIT_SHA: 8a4de2bdfe26b53f65dd2960ffd665cebbd5d034
+GENERATED_AT: 2026-05-08T10:30:02.349118+00:00
+GIT_SHA: 7c646dd4c04fb381ced170c979b5e07264310700
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 961
@@ -7168,8 +7226,8 @@ DIRECTIONS_BOUND: Мозги оркестра
 ```
 # topic_3008 KODY_MOZGOV
 
-GENERATED_AT: 2026-05-08T08:20:03.548854+00:00
-GIT_SHA: 8a4de2bdfe26b53f65dd2960ffd665cebbd5d034
+GENERATED_AT: 2026-05-08T10:30:02.380624+00:00
+GIT_SHA: 7c646dd4c04fb381ced170c979b5e07264310700
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 3008
@@ -7272,8 +7330,8 @@ DIRECTIONS_BOUND: CRM лиды
 ```
 # topic_4569 CRM_LEADS
 
-GENERATED_AT: 2026-05-08T08:20:03.593315+00:00
-GIT_SHA: 8a4de2bdfe26b53f65dd2960ffd665cebbd5d034
+GENERATED_AT: 2026-05-08T10:30:02.405056+00:00
+GIT_SHA: 7c646dd4c04fb381ced170c979b5e07264310700
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 4569
@@ -7381,8 +7439,8 @@ DIRECTIONS_BOUND: Поиск работы
 ```
 # topic_6104 JOB_SEARCH
 
-GENERATED_AT: 2026-05-08T08:20:03.653482+00:00
-GIT_SHA: 8a4de2bdfe26b53f65dd2960ffd665cebbd5d034
+GENERATED_AT: 2026-05-08T10:30:02.433679+00:00
+GIT_SHA: 7c646dd4c04fb381ced170c979b5e07264310700
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 6104
