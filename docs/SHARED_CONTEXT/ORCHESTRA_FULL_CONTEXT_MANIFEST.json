@@ -1,10 +1,10 @@
 {
-  "generated_at_utc": "2026-05-08T23:15:02.604108+00:00",
-  "git_sha_before_commit": "844c3ae339d9c6edb9bfdc833a265148f9e1b7fc",
+  "generated_at_utc": "2026-05-08T23:35:02.208457+00:00",
+  "git_sha_before_commit": "876e5d24f1c376e211a9e6002c5002abbf642daf",
   "part_max_bytes": 400000,
   "content_chunk_bytes": 340000,
-  "total_records": 421,
-  "included_full_files": 340,
+  "total_records": 422,
+  "included_full_files": 341,
   "excluded_records": 81,
   "parts_count": 17,
   "raw_main": "https://raw.githubusercontent.com/rj7hmz9cvm-lgtm/areal-neva-core/main",
@@ -1370,9 +1370,9 @@
       "path": "task_worker.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 774814,
-      "sha256": "e738679d0ddc271bdf5aad2291f8e6b526e2d301d056eb0b10d6676da642459b",
-      "chars": 737783,
+      "size_bytes": 780782,
+      "sha256": "2ecb07bcf1b166dea2bd056b1154cd25914fe7d02cb97e11ca8d2ccf4e69dd04",
+      "chars": 743751,
       "chunks": 3
     },
     {
@@ -2384,6 +2384,15 @@
       "chunks": 1
     },
     {
+      "path": "tools/__init__.py",
+      "mode": "full",
+      "reason": "tracked text",
+      "size_bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "chars": 0,
+      "chunks": 1
+    },
+    {
       "path": "tools/areal_reference_full_monolith_v1.py",
       "mode": "full",
       "reason": "tracked text",
@@ -2540,9 +2549,9 @@
       "path": "tools/topic2_drainage_repair_close.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 47833,
-      "sha256": "60f72722762716c0b2baf761c3de85b53f0aafa41138edf788e2d7e7db1e6866",
-      "chars": 43985,
+      "size_bytes": 50000,
+      "sha256": "9c05d54c033fae1b9714a96efd4bacf2d75340bfff395b184900274f066cfb2a",
+      "chars": 46104,
       "chunks": 1
     },
     {
@@ -3116,7 +3125,7 @@
       "path": "docs/SHARED_CONTEXT/DIRECTIONS/structural_design.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 644,
+      "size_bytes": 637,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3161,7 +3170,7 @@
       "path": "docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 1983,
+      "size_bytes": 1976,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3368,7 +3377,7 @@
       "path": "docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 31962,
+      "size_bytes": 35114,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3377,7 +3386,7 @@
       "path": "docs/SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 8770,
+      "size_bytes": 8763,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3386,7 +3395,7 @@
       "path": "docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 347225,
+      "size_bytes": 347127,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3395,7 +3404,7 @@
       "path": "docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 5126,
+      "size_bytes": 5119,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3422,7 +3431,7 @@
       "path": "docs/SHARED_CONTEXT/TOPICS/topic_210_PROEKTIROVANIE.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 2584,
+      "size_bytes": 2500,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3503,7 +3512,7 @@
       "path": "docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 1323,
+      "size_bytes": 1316,
       "sha256": "",
       "chars": 0,
       "chunks": 0

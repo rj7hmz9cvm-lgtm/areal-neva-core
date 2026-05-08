@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_007
-generated_at_utc: 2026-05-08T23:15:02.595151+00:00
-git_sha_before_commit: 844c3ae339d9c6edb9bfdc833a265148f9e1b7fc
+generated_at_utc: 2026-05-08T23:35:02.200614+00:00
+git_sha_before_commit: 876e5d24f1c376e211a9e6002c5002abbf642daf
 part: 7/17
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 3/3
-SHA256_FULL_FILE: e738679d0ddc271bdf5aad2291f8e6b526e2d301d056eb0b10d6676da642459b
+SHA256_FULL_FILE: 2ecb07bcf1b166dea2bd056b1154cd25914fe7d02cb97e11ca8d2ccf4e69dd04
 ====================================================================================================
 # Факт: 11:54 «Отмена всех задач» → бот выдал смету
 # Факт: 17:33 «Задача отменена» → бот спросил «Сколько этажей»
@@ -1864,7 +1864,7 @@ except Exception:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    pass  # entry point moved to final by PATCH_TOPIC2_WC_PICKER_DRAINAGE_REPLY_BIND_V3
 
 
 # === PATCH_TOPIC2_DRAINAGE_PARENT_GUARD_V2 ===
@@ -2209,6 +2209,170 @@ _T2WCG_LOG.info("PATCH_TOPIC2_WCG_PRESERVE_DRAINAGE_ERROR_V1 installed")
 # Parent: 043e5c9f-e8bc-434c-9dad-a66c7e50f917
 # Preserve: TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN
 # === END_PATCH_TOPIC2_WCG_SKIP_SQL_PRESERVE_DRAINAGE_ERROR_V2 ===
+
+
+# === PATCH_TOPIC2_WC_PICKER_DRAINAGE_REPLY_BIND_V3 ===
+import logging as _t2wcp_logging
+
+_T2WCP_LOG = _t2wcp_logging.getLogger("topic2.wc_picker_drainage_reply_bind_v3")
+_T2WCP_PARENT_ID = "043e5c9f-e8bc-434c-9dad-a66c7e50f917"
+
+def _t2wcp_row(row, key, default=None):
+    try:
+        return row[key]
+    except Exception:
+        try:
+            return getattr(row, key)
+        except Exception:
+            return default
+
+def _t2wcp_s(v):
+    return str(v or "")
+
+def _t2wcp_hist(conn, task_id, action):
+    try:
+        conn.execute(
+            "INSERT INTO task_history(task_id,action,created_at) VALUES (?,?,datetime('now'))",
+            (str(task_id), str(action)[:900]),
+        )
+    except Exception:
+        pass
+
+def _t2wcp_find_active_drainage_parent(conn, chat_id):
+    try:
+        return conn.execute(
+            """
+            SELECT t.*
+            FROM tasks t
+            WHERE t.chat_id=?
+              AND COALESCE(t.topic_id,0)=2
+              AND t.state='WAITING_CLARIFICATION'
+              AND (
+                    t.error_message IN (
+                        'TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN',
+                        'TOPIC2_VAT_MODE_REQUIRED'
+                    )
+                    OR EXISTS (
+                        SELECT 1 FROM task_history h
+                        WHERE h.task_id=t.id
+                          AND (
+                                h.action LIKE 'TOPIC2_DRAINAGE_WC_SENT:%'
+                                OR h.action LIKE 'TOPIC2_PRICE_CHOICE_MENU_SENT:%'
+                                OR h.action LIKE 'TOPIC2_VAT_QUESTION_SENT:%'
+                              )
+                    )
+                  )
+            ORDER BY t.rowid DESC
+            LIMIT 1
+            """,
+            (chat_id,),
+        ).fetchone()
+    except Exception as e:
+        try:
+            _T2WCP_LOG.warning("T2WCP_FIND_PARENT_ERR %s", e)
+        except Exception:
+            pass
+        return None
+
+_T2WCP_ORIG_PICK_NEXT = _pick_next_task
+
+def _pick_next_task(*args, **kwargs):
+    conn = args[0] if args else kwargs.get("conn")
+    if conn is None:
+        return _T2WCP_ORIG_PICK_NEXT(*args, **kwargs)
+    try:
+        if "_t2cm_v1_merge_children" in globals():
+            try:
+                _t2cm_v1_merge_children(conn)
+            except Exception as e:
+                try:
+                    _T2WCP_LOG.warning("T2WCP_CHILD_MERGE_ERR %s", e)
+                except Exception:
+                    pass
+        row = conn.execute(
+            """
+            SELECT *
+            FROM tasks
+            WHERE state IN ('NEW','IN_PROGRESS','AWAITING_PRICE_CONFIRMATION','WAITING_CLARIFICATION')
+              AND NOT (
+                    state='WAITING_CLARIFICATION'
+                    AND COALESCE(result,'') <> ''
+                  )
+            ORDER BY
+              CASE state
+                WHEN 'NEW' THEN 0
+                WHEN 'IN_PROGRESS' THEN 1
+                WHEN 'AWAITING_PRICE_CONFIRMATION' THEN 2
+                ELSE 3
+              END,
+              rowid ASC
+            LIMIT 1
+            """
+        ).fetchone()
+        return row
+    except Exception as e:
+        try:
+            _T2WCP_LOG.warning("T2WCP_PICKER_ERR %s", e)
+        except Exception:
+            pass
+        return _T2WCP_ORIG_PICK_NEXT(*args, **kwargs)
+
+_T2WCP_ORIG_P6_TOPIC2_VAGUE = _p6_handle_topic2_vague_20260504
+
+def _p6_handle_topic2_vague_20260504(conn, task, chat_id, topic_id):
+    try:
+        if int(topic_id or 0) == 2:
+            parent = _t2wcp_find_active_drainage_parent(conn, chat_id)
+            if parent:
+                parent_id = _t2wcp_s(_t2wcp_row(parent, "id", ""))
+                child_id = _t2wcp_s(_t2wcp_row(task, "id", ""))
+                raw = _t2wcp_s(_t2wcp_row(task, "raw_input", ""))
+                if parent_id and child_id and parent_id != child_id:
+                    old_raw = _t2wcp_s(_t2wcp_row(parent, "raw_input", ""))
+                    merged_raw = (
+                        old_raw + "\n\n---\n"
+                        + "DRAINAGE_FOLLOWUP_FROM_TASK=" + child_id + "\n" + raw
+                    )
+                    conn.execute(
+                        "UPDATE tasks SET raw_input=?, state='IN_PROGRESS',"
+                        " error_message='TOPIC2_DRAINAGE_FOLLOWUP_BOUND',"
+                        " updated_at=datetime('now') WHERE id=?",
+                        (merged_raw, parent_id),
+                    )
+                    conn.execute(
+                        "UPDATE tasks SET state='DONE', result=?, error_message=?,"
+                        " updated_at=datetime('now') WHERE id=?",
+                        (
+                            "TOPIC2_FOLLOWUP_BOUND_TO_DRAINAGE_PARENT " + parent_id,
+                            "TOPIC2_FOLLOWUP_BOUND_TO_DRAINAGE_PARENT:" + parent_id,
+                            child_id,
+                        ),
+                    )
+                    _t2wcp_hist(conn, parent_id, "TOPIC2_DRAINAGE_FOLLOWUP_BOUND_FROM:" + child_id)
+                    _t2wcp_hist(conn, parent_id, "clarified:" + raw[:700])
+                    _t2wcp_hist(conn, child_id, "TOPIC2_DRAINAGE_FOLLOWUP_BOUND_TO_PARENT:" + parent_id)
+                    conn.commit()
+                    try:
+                        _T2WCP_LOG.info("T2WCP_DRAINAGE_FOLLOWUP_BOUND child=%s parent=%s", child_id, parent_id)
+                    except Exception:
+                        pass
+                    return True
+    except Exception as e:
+        try:
+            _T2WCP_LOG.warning("T2WCP_VAGUE_BIND_ERR %s", e)
+        except Exception:
+            pass
+    return _T2WCP_ORIG_P6_TOPIC2_VAGUE(conn, task, chat_id, topic_id)
+
+try:
+    _T2WCP_LOG.info("PATCH_TOPIC2_WC_PICKER_DRAINAGE_REPLY_BIND_V3 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_WC_PICKER_DRAINAGE_REPLY_BIND_V3 ===
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
 
 ====================================================================================================
 END_FILE: task_worker.py

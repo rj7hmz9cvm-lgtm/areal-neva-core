@@ -1,7 +1,7 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-05-08T23:15:02.695247+00:00
-GIT_SHA: 844c3ae339d9c6edb9bfdc833a265148f9e1b7fc
+GENERATED_AT: 2026-05-08T23:35:02.288831+00:00
+GIT_SHA: 876e5d24f1c376e211a9e6002c5002abbf642daf
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -26,6 +26,7 @@ FAILED_LAST_24H: 11
 - test-gat | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
+- 876e5d2|fix(topic2): PATCH_TOPIC2_WC_PICKER_DRAINAGE_MULTIFILE_V3 — stop WC loop, bind drainage replies to parent, include all 3 user PDFs
 - 107186a|fix(topic2): TOPIC2_WCG_SQL_FIX_SYNTAX_AND_LIKE_DROP_V1
 - 24e65b0|fix(topic2): TOPIC2_WCG_PRESERVE_DRAINAGE_ERROR_V1 — preserve drainage length error through WCG skip
 - c956edd|fix(topic2): TOPIC2_DRAINAGE_PARENT_GUARD_V2 — bind drainage followups to parent and block silent continue
@@ -55,7 +56,6 @@ FAILED_LAST_24H: 11
 - 62d85b8|fix(topic2): V5B — price source quality gate, raw JSON guard, canonical totals col J
 - 168ce5e|fix(topic2): close final V5 code gaps for prices guards totals
 - 983ced8|fix(topic2): close 3 remaining V4 gaps (repeat/negative/pdf_missing_question)
-- 2353fc3|fix(topic2): close remaining project/pdf/photo/price/artifact gaps V4
 
 ## MARKERS_LAST_24H
 - created:NEW

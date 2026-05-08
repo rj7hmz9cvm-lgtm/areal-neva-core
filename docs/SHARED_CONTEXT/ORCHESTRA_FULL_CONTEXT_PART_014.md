@@ -1,8 +1,111 @@
 # ORCHESTRA_FULL_CONTEXT_PART_014
-generated_at_utc: 2026-05-08T23:15:02.601071+00:00
-git_sha_before_commit: 844c3ae339d9c6edb9bfdc833a265148f9e1b7fc
+generated_at_utc: 2026-05-08T23:35:02.205581+00:00
+git_sha_before_commit: 876e5d24f1c376e211a9e6002c5002abbf642daf
 part: 14/17
 
+
+====================================================================================================
+BEGIN_FILE: docs/TECHNADZOR/NORMATIVE_ENGINE_SHARED_CONTEXT.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 9011f21b0b01ee1ac4003c659691ab5e1f7cae2cdde825f9eb706352568f28a0
+====================================================================================================
+{
+  "version": "NORMATIVE_ENGINE_SHARED_CONTEXT_V2",
+  "updated_at": "2026-05-05",
+  "status": "VERIFIED_FROM_CODE",
+  "git_head": "73b4946",
+  "sources": {
+    "normative_engine": "core/normative_engine.py",
+    "norms_map": "core/project_engine.py NORMS_MAP lines 39-45"
+  },
+
+  "normative_engine_committed": {
+    "total_entries": 59,
+    "blocks": {
+      "NORMATIVE_ENGINE_SAFE_V1": 8,
+      "P6H_NORMATIVE_INDEX_EXTRA_V1": 10,
+      "P6H5_NORMATIVE_FULL_EXPAND_V1": 36,
+      "P6H6_LOADS_V1": 5
+    },
+    "smoke_test": "11/11 PASS at commit 73b4946",
+    "shared_topic5_topic210": [
+      "СП 70.13330.2012",
+      "СП 63.13330.2018",
+      "СП 20.13330.2016/2017",
+      "СП 16.13330.2017",
+      "СП 17.13330.2017"
+    ],
+    "primarily_topic5": [
+      "СП 28.13330.2017",
+      "ГОСТ 23118-2019",
+      "СП 48.13330.2019",
+      "СП 13-102-2003",
+      "ГОСТ 31937-2024",
+      "ГОСТ Р ИСО 17637-2014",
+      "СП 22.13330.2016"
+    ],
+    "primarily_topic210": [
+      "ГОСТ 21.101-2020",
+      "ГОСТ 21.501-2018",
+      "СП 71.13330.2017"
+    ],
+    "p6h5_topic210_ov_vk_eom": [
+      "СП 60.13330.2020", "СП 73.13330.2016", "СП 61.13330.2012",
+      "СП 30.13330.2020", "СП 31.13330.2021", "СП 32.13330.2018",
+      "ПУЭ (7-е изд.)", "СП 256.1325800.2016", "ГОСТ Р 50571-4-41-2022"
+    ],
+    "p6h6_loads_sp20": [
+      "снеговые нагрузки",
+      "ветровые нагрузки",
+      "постоянные нагрузки",
+      "временные нагрузки",
+      "сочетания нагрузок"
+    ]
+  },
+
+  "norms_map_committed": {
+    "кж": ["СП 63.13330.2018", "ГОСТ 34028-2016", "СП 20.13330.2017"],
+    "км": ["СП 16.13330.2017", "ГОСТ 27772-2015", "СП 20.13330.2017"],
+    "ар": ["СП 118.13330.2022", "ГОСТ 21.501-2018"],
+    "ов": ["СП 60.13330.2020", "ГОСТ 30494-2011"],
+    "вк": ["СП 30.13330.2020", "СП 31.13330.2021"],
+    "эом": ["СП 256.1325800.2016", "ПУЭ-7"],
+    "overlap_with_normative_engine": ["СП 63.13330.2018", "СП 20.13330.2017", "СП 16.13330.2017", "ГОСТ 21.501-2018"],
+    "only_in_norms_map": ["ГОСТ 34028-2016", "ГОСТ 30494-2011", "СП 118.13330.2022", "ПУЭ-7", "ГОСТ 27772-2015"]
+  },
+
+  "loads_calculation": {
+    "normative_binding_status": "CLOSED",
+    "normative_binding_note": "P6H6 committed — все виды нагрузок покрыты ключевыми словами СП 20",
+    "calc_logic_status": "PARTIAL_CALC",
+    "calc_logic_note": "calc_loads() покрывает только снег/ветер по районам",
+    "committed": {
+      "calc_loads_fn": "core/project_engine.py:68",
+      "covers": ["snow_kPa by region (1-8)", "wind_kPa by region (1-8)"],
+      "norm_reference": "СП 20.13330.2017"
+    },
+    "not_implemented": [
+      "постоянные нагрузки (собственный вес)",
+      "временные нагрузки (полезная нагрузка по назначению помещения)",
+      "сочетания нагрузок",
+      "проверка предельных состояний"
+    ]
+  },
+
+  "open_items": {
+    "calc_logic": "PARTIAL_CALC — автоматический расчёт постоянных/временных/сочетаний не реализован",
+    "topic5_live_test": "NOT_DONE — фото/буфер/разбор через реальный Telegram не пройден",
+    "document_output_live": "NOT_DONE — PDF/DOCX/Drive link/fallback не подтверждены живым тестом",
+    "topic210_live": "NOT_DONE — ОВ/ВК/ЭОМ/КЖ/КМ через реальные файлы не прогнаны",
+    "vision": "BLOCKED — EXTERNAL_PHOTO_ANALYSIS_ALLOWED=False, owner decision required",
+    "missing_in_norms_map": ["сс", "гп", "пз", "см", "тх"]
+  }
+}
+
+====================================================================================================
+END_FILE: docs/TECHNADZOR/NORMATIVE_ENGINE_SHARED_CONTEXT.json
+FILE_CHUNK: 1/1
+====================================================================================================
 
 ====================================================================================================
 BEGIN_FILE: docs/TECHNADZOR/NORMATIVE_ENGINE_SHARED_CONTEXT.md

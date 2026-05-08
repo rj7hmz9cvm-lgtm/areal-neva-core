@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-08T23:15:02.427702+00:00
-git_sha_before_commit: 844c3ae339d9c6edb9bfdc833a265148f9e1b7fc
+generated_at_utc: 2026-05-08T23:35:02.078004+00:00
+git_sha_before_commit: 876e5d24f1c376e211a9e6002c5002abbf642daf
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,8 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: inactive
 
 ## GIT_LOG_30
+876e5d2 fix(topic2): PATCH_TOPIC2_WC_PICKER_DRAINAGE_MULTIFILE_V3 — stop WC loop, bind drainage replies to parent, include all 3 user PDFs
+5cabdb8 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 844c3ae FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 107186a fix(topic2): TOPIC2_WCG_SQL_FIX_SYNTAX_AND_LIKE_DROP_V1
 24e65b0 fix(topic2): TOPIC2_WCG_PRESERVE_DRAINAGE_ERROR_V1 — preserve drainage length error through WCG skip
@@ -38,85 +40,30 @@ db7d006 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 afdcfad FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 075edf9 fix(topic2): PATCH_TOPIC2_STALE_PENDING_TASK_GUARD_V1 + LOCAL_BOT_API_404_FIX
 db5dbef FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
-e185e83 fix(topic2): PATCH_SUPPLIER_HONESTY_V1 — fix fake Perplexity в Поставщик
-5cff0da FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
 ## GIT_SHOW_STAT_HEAD
-commit 844c3ae339d9c6edb9bfdc833a265148f9e1b7fc
+commit 876e5d24f1c376e211a9e6002c5002abbf642daf
 Author: Ila <ilakuznecov@mac.local>
-Date:   Sat May 9 02:10:11 2026 +0300
+Date:   Sat May 9 02:33:55 2026 +0300
 
-    FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
+    fix(topic2): PATCH_TOPIC2_WC_PICKER_DRAINAGE_MULTIFILE_V3 — stop WC loop, bind drainage replies to parent, include all 3 user PDFs
+    
+    - task_worker.py: PATCH_TOPIC2_WC_PICKER_DRAINAGE_REPLY_BIND_V3
+      * picker excludes WAITING_CLARIFICATION with non-empty result (canon §22)
+      * P6 vague guard binds reply to active drainage parent instead of blocking
+      * entry point moved to end so all orphan patches load
+    - tools/topic2_drainage_repair_close.py: PATCH_TOPIC2_DRAINAGE_MULTIFILE_SOURCE_V3
+      * find_user_pdfs() picks all drainage_scheme PDFs (not just one)
+      * mtime window 12h → 48h to include older project PDFs
+      * file_0.pdf working project now classified as drainage_scheme via override
+    - tools/__init__.py created for proper package import
+    
+    Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 
- docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md    |   6 +-
- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md |   2 +-
- .../SHARED_CONTEXT/DIRECTIONS/auto_parts_search.md |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/cad_dwg.md          |   4 +-
- .../DIRECTIONS/construction_search.md              |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/crm_leads.md        |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/defect_acts.md      |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/devops_server.md    |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/documents.md        |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/email_ingress.md    |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/estimates.md        |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/general_chat.md     |   4 +-
- .../DIRECTIONS/google_drive_storage.md             |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/internet_search.md  |   4 +-
- .../DIRECTIONS/isolated_project_ivan.md            |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/job_search.md       |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/memory_archive.md   |   4 +-
- .../SHARED_CONTEXT/DIRECTIONS/monolith_concrete.md |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/ocr_photo.md        |   4 +-
- .../DIRECTIONS/orchestration_core.md               |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/photo_cleanup.md    |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/product_search.md   |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/roofing.md          |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/social_content.md   |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/spreadsheets.md     |   4 +-
- .../SHARED_CONTEXT/DIRECTIONS/structural_design.md |   4 +-
- .../DIRECTIONS/technical_supervision.md            |   4 +-
- .../DIRECTIONS/telegram_automation.md              |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/video_production.md |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/vpn_network.md      |   4 +-
- docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md      |   4 +-
- docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |   6 +-
- docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |   6 +-
- docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  20 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_004.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |   6 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |  17 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_007.md             | 351 ++++++++++++++++++++-
- .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_010.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_011.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_012.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_013.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_014.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_015.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_016.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_017.md             |   4 +-
- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 111 +++----
- .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |  10 +-
- docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  54 ++--
- docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |   4 +-
- .../TOPICS/topic_210_PROEKTIROVANIE.md             |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |  10 +-
- .../TOPICS/topic_3008_KODY_MOZGOV.md               |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_5_TEKHNADZOR.md   |   4 +-
- .../SHARED_CONTEXT/TOPICS/topic_6104_JOB_SEARCH.md |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |   4 +-
- .../TOPICS/topic_961_AVTOZAPCHASTI.md              |   4 +-
- docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   4 +-
- 68 files changed, 588 insertions(+), 235 deletions(-)
+ task_worker.py                        | 166 +++++++++++++++++++++++++++++++++-
+ tools/__init__.py                     |   0
+ tools/topic2_drainage_repair_close.py |  63 +++++++++++++
+ 3 files changed, 228 insertions(+), 1 deletion(-)
 
 ## GIT_CHANGED_FILES_10
 docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md
@@ -188,21 +135,21 @@ docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md
 docs/SHARED_CONTEXT/TOPICS/topic_961_AVTOZAPCHASTI.md
 docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md
 task_worker.py
+tools/__init__.py
 tools/topic2_drainage_repair_close.py
 
 ## CORE_DB_STATE_COUNTS
-- FAILED|2972
+- FAILED|2973
 - CANCELLED|823
 - DONE|579
 - ARCHIVED|381
 - WAITING_CLARIFICATION|1
-- NEW|1
 
 ## CORE_DB_OPEN_TASKS
-- 2
+- 1
 
 ## LATEST_TASKS_15
-- f02f874e-91da-480f-9a1e-d2c5d4553b55|210|text|NEW|По размеру дома ты мне сможешь определить сколько свай мне нужно на него?|None|2026-05-08T23:10:26.785647+00:00
+- f02f874e-91da-480f-9a1e-d2c5d4553b55|210|text|FAILED|По размеру дома ты мне сможешь определить сколько свай мне нужно на него?|None|2026-05-08 23:32:20
 - 6a535d79-5368-45d8-b8a4-a4c2133f5223|2|text|FAILED|[VOICE] посмотри у тебя есть документы в чате я же тебе скидывал уже ты же попросил чтоб я тебе продублировал|PDF определён как схема дренажа/ливнёвки.
 Домовую смету не запускаю: текущий файл относится к наружным сетям, а не к дому.
 Считать приблизительно по схеме или п|2026-05-08 22:33:52
@@ -215,7 +162,11 @@ tools/topic2_drainage_repair_close.py
 - 9a174a37-fc01-4414-97f9-064621356083|2|text|DONE|А смета-то где|PDF определён как схема дренажа/ливнёвки.
 Домовую смету не запускаю: текущий файл относится к наружным сетям, а не к дому.
 Считать приблизительно по схеме или п|2026-05-08 20:47:30
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|2|text|WAITING_CLARIFICATION|[VOICE] Посмотри то, что я тебе писал ранее, у тебя же все есть|Нет нового ТЗ для расчёта. Смету по старой памяти не запускаю. Напиши конкретную правку или новое полное ТЗ|2026-05-08 23:15:01
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|2|text|WAITING_CLARIFICATION|[VOICE] Посмотри то, что я тебе писал ранее, у тебя же все есть|Распознал из схемы дренажа:
+
+• Дренажные колодцы: Дк × 3 шт (∅315/∅500, полимерные)
+• Колодец ∅1000 ж/б (сборный)
+• ДНС-1 — дренажная насосная станция (ёмкость |2026-05-08 23:34:19
 - test-multifile-gate-001|2|text|FAILED|[VOICE] У тебя два файла. На одном у тебя схема дренажа, на другом у тебя длинные высоты и все есть. Посмотри оба файла |⏳ Задачу понял
 
 Шаблон: Ареал Нева.xlsx
@@ -263,6 +214,7 @@ tools/topic2_drainage_repair_close.py
 3|2026-05-08 18:14:03
 
 ## LATEST_FAILED_10
+- f02f874e-91da-480f-9a1e-d2c5d4553b55|210|По размеру дома ты мне сможешь определить сколько свай мне нужно на него?|INVALID_RESULT_GATE|2026-05-08 23:32:20
 - 6a535d79-5368-45d8-b8a4-a4c2133f5223|2|[VOICE] посмотри у тебя есть документы в чате я же тебе скидывал уже ты же попросил чтоб я тебе продублировал|STALE_TIMEOUT|2026-05-08 22:33:52
 - f9df5eb5-3746-40c4-a730-bbc1a021dbc1|2|[VOICE] Мне необходимо найти стоимость материалов, как указано в техническом задании, и стоимость работы посмотреть. Выш|STALE_TIMEOUT|2026-05-08 22:33:28
 - test-multifile-gate-001|2|[VOICE] У тебя два файла. На одном у тебя схема дренажа, на другом у тебя длинные высоты и все есть. Посмотри оба файла |STALE_TIMEOUT|2026-05-08 20:29:32
@@ -272,61 +224,61 @@ tools/topic2_drainage_repair_close.py
 - acdae011-7299-482d-92c2-571f8ccbee0c|2|[VOICE] необходимо посчитать смету взять ценник высокого ценового сегмента на работу и на материалы и создать по длине и|STALE_TIMEOUT|2026-05-08 19:39:38
 - test-gate-drainage-live-001|2|{"file_name": "Схема глубинного дренажа.pdf", "mime_type": "application/pdf", "local_path": "/root/.areal-neva-core/runt|STALE_TIMEOUT|2026-05-08 19:40:26
 - test-drainage-reply-001|2|Объект находится 50 км от Санкт-Петербурга цены выше среднего нужно посчитать стоимость работы материалов по данному зап|STALE_TIMEOUT|2026-05-08 18:50:16
-- 60b9503b-75cc-4913-bb7b-11092508fdae|2|[VOICE] Я тебе говорил про вот эту информацию, посмотри.|TOPIC2_STALE_HOUSE_CONTEXT_USED_FOR_DRAINAGE_FILE|2026-05-08 19:17:11
 
 ## LATEST_TASK_HISTORY_20
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_WC_SENT:10642|2026-05-08 23:34:19
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_FINAL_ARTIFACTS_BLOCKED|2026-05-08 23:34:19
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_RECOGNIZED:dk=3,dns=True,pu=True,kgn=True,slope=0.005|2026-05-08 23:34:19
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN:lines=0:total=0|2026-05-08 23:34:19
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_LENGTH_PROOF_GATE_V1|2026-05-08 23:34:19
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_FINAL_ARTIFACTS_BLOCKED_LENGTH_NOT_PROVEN|2026-05-08 23:34:18
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_PARENT_GUARD_V2:PARENT_REPICK_BLOCKED|2026-05-08 23:34:18
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_FULL_RESTART_FROM_SCRATCH|2026-05-08 23:34:18
+- f02f874e-91da-480f-9a1e-d2c5d4553b55|reply_sent:invalid_result|2026-05-08 23:32:20
+- f02f874e-91da-480f-9a1e-d2c5d4553b55|state:FAILED|2026-05-08 23:32:20
+- f02f874e-91da-480f-9a1e-d2c5d4553b55|state:IN_PROGRESS|2026-05-08 23:32:12
+- f02f874e-91da-480f-9a1e-d2c5d4553b55|TOPIC2_STALE_PENDING_BLOCKED:pending_task=test-multifile-g:done=True|2026-05-08 23:32:12
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_WCG_PRESERVED_DRAINAGE_ERROR_V1|2026-05-08 23:32:11
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_PARENT_REPAIRED_AFTER_PATCH_TOPIC2_WC_PICKER_DRAINAGE_MULTIFILE_V3|2026-05-08 23:32:11
 - f02f874e-91da-480f-9a1e-d2c5d4553b55|created:NEW|2026-05-08T23:10:26.785647+00:00
 - 043e5c9f-e8bc-434c-9dad-a66c7e50f917|P6_TOPIC2_VAGUE_OLD_MEMORY_BLOCKED|2026-05-08 23:09:21
 - 043e5c9f-e8bc-434c-9dad-a66c7e50f917|clarified:Распознай фото лучше|2026-05-08T23:09:20.492998+00:00
 - 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_WC_SENT:10637|2026-05-08 23:09:05
 - 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_FINAL_ARTIFACTS_BLOCKED|2026-05-08 23:09:05
 - 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_RECOGNIZED:dk=3,dns=True,pu=True,kgn=True,slope=0.005|2026-05-08 23:09:05
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN:lines=0:total=0|2026-05-08 23:09:05
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_LENGTH_PROOF_GATE_V1|2026-05-08 23:09:05
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_WCG_SQL_FIX_SYNTAX_AND_LIKE_DROP_V1|2026-05-08 23:05:56
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_WCG_SKIP_SQL_PRESERVE_DRAINAGE_ERROR_V2_DB_REPAIR|2026-05-08 22:58:44
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_WCG_ERROR_REPAIRED_TO_DRAINAGE_LENGTH_NOT_PROVEN|2026-05-08 22:57:32
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_NO_SILENT_CONTINUE_ENFORCED|2026-05-08 22:56:39
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_PARENT_STATE_REPAIRED_BY_PATCH_V2|2026-05-08 22:56:39
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|P6_TOPIC2_VAGUE_OLD_MEMORY_BLOCKED|2026-05-08 22:51:16
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|clarified:жду|2026-05-08T22:51:16.133499+00:00
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|P6_TOPIC2_VAGUE_OLD_MEMORY_BLOCKED|2026-05-08 22:50:40
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|clarified:смотри лучше|2026-05-08T22:50:40.723226+00:00
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_WC_SENT:10632|2026-05-08 22:49:54
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_FINAL_ARTIFACTS_BLOCKED|2026-05-08 22:49:54
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_RECOGNIZED:dk=3,dns=True,pu=True,kgn=True,slope=0.005|2026-05-08 22:49:54
 
 ## MEMORY_DB_COUNT
-- 5198
+- 5199
 
 ## LATEST_MEMORY_20
-- topic_500_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 500, "count": 27, "updated_at": "2026-05-08T22:52:15.989840+00:00", "files": [{"task_id": "7b609434-8167-43f5-a52a-beb85e0b4ed5", "file_id|2026-05-08T22:52:15.990259+00:00
-- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 50, "updated_at": "2026-05-08T22:52:15.967885+00:00", "files": [{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "file_id|2026-05-08T22:52:15.968327+00:00
-- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 50, "updated_at": "2026-05-08T22:52:15.916316+00:00", "files": [{"task_id": "4b402275-e99b-4d9f-b331-08f2ba2a93be", "file_id":|2026-05-08T22:52:15.916827+00:00
-- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-08T22:52:15.888677+00:00", "files": [{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "file_id":|2026-05-08T22:52:15.889264+00:00
-- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T22:52:15.842262+00:00
-- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "state": "FAILED", "file_id": "", "file_name": "", "mime_type"|2026-05-08T22:52:15.842191+00:00
-- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T22:52:15.842127+00:00
-- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T22:52:15.842052+00:00
-- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T22:52:15.842000+00:00
-- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_file", "state": "FAILED", "file_id": "1bXXtuHRsXCuxBSRUl8Tj5z6E|2026-05-08T22:52:15.841940+00:00
-- topic_2_file_92de809d-9274-48ee-82b4-584058ea4e48|{"task_id": "92de809d-9274-48ee-82b4-584058ea4e48", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "search", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T22:52:15.841873+00:00
-- topic_210_file_ce9421cb-5451-4cea-9823-a413b698bc94|{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T22:52:15.841726+00:00
-- topic_210_file_c8619b7e-9ebb-4731-973a-b3f6064bbe38|{"task_id": "c8619b7e-9ebb-4731-973a-b3f6064bbe38", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T22:52:15.841543+00:00
-- topic_210_file_42320ab0-c49a-4a08-8f9b-5e38618a4e58|{"task_id": "42320ab0-c49a-4a08-8f9b-5e38618a4e58", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T22:52:15.841458+00:00
-- topic_210_file_7dca3b5f-2782-400f-af84-fb030904e917|{"task_id": "7dca3b5f-2782-400f-af84-fb030904e917", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T22:52:15.841107+00:00
-- topic_210_file_12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88|{"task_id": "12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "16V3s5DcAvnXj8f-3CcfZE2g5|2026-05-08T22:52:15.840845+00:00
-- topic_210_file_b1f8e982-db2e-42de-9046-833287d3567d|{"task_id": "b1f8e982-db2e-42de-9046-833287d3567d", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T22:52:15.840780+00:00
-- topic_210_file_eeb0d013-704a-404c-9390-5a06c90ee976|{"task_id": "eeb0d013-704a-404c-9390-5a06c90ee976", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T22:52:15.840584+00:00
-- topic_210_file_5ead32f3-23d5-4872-9279-a42460ba5dd1|{"task_id": "5ead32f3-23d5-4872-9279-a42460ba5dd1", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "1qy-mPcmRZxJIzEnY2Gp8B8J2|2026-05-08T22:52:15.840383+00:00
-- topic_210_file_fb6aadc5-b372-488a-aede-f3433a030e55|{"task_id": "fb6aadc5-b372-488a-aede-f3433a030e55", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T22:52:15.840273+00:00
+- topic_210_archive_f02f874e|{"task_id": "f02f874e-91da-480f-9a1e-d2c5d4553b55", "chat_id": "-1003725299009", "topic_id": 210, "direction": "structural_design", "engine": "search_supplier", "input_type": "text|2026-05-08T23:32:20.211178
+- topic_2_estimate_pending_test-multifile-gate-001|{
+  "version": "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3",
+  "status": "GENERATED",
+  "task_id": "test-multifile-gate-001",
+  "chat_id": "-1003725299009",
+  "topic_id": 2,
+  "parsed": |2026-05-08T23:32:12.076926
+- topic_500_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 500, "count": 27, "updated_at": "2026-05-08T23:22:17.837576+00:00", "files": [{"task_id": "7b609434-8167-43f5-a52a-beb85e0b4ed5", "file_id|2026-05-08T23:22:17.838140+00:00
+- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 50, "updated_at": "2026-05-08T23:22:17.816734+00:00", "files": [{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "file_id|2026-05-08T23:22:17.817366+00:00
+- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 50, "updated_at": "2026-05-08T23:22:17.769074+00:00", "files": [{"task_id": "4b402275-e99b-4d9f-b331-08f2ba2a93be", "file_id":|2026-05-08T23:22:17.769531+00:00
+- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-08T23:22:17.732378+00:00", "files": [{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "file_id":|2026-05-08T23:22:17.732874+00:00
+- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T23:22:17.682776+00:00
+- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "state": "FAILED", "file_id": "", "file_name": "", "mime_type"|2026-05-08T23:22:17.682483+00:00
+- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T23:22:17.682325+00:00
+- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T23:22:17.682182+00:00
+- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T23:22:17.682066+00:00
+- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_file", "state": "FAILED", "file_id": "1bXXtuHRsXCuxBSRUl8Tj5z6E|2026-05-08T23:22:17.681934+00:00
+- topic_2_file_92de809d-9274-48ee-82b4-584058ea4e48|{"task_id": "92de809d-9274-48ee-82b4-584058ea4e48", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "search", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T23:22:17.681771+00:00
+- topic_210_file_ce9421cb-5451-4cea-9823-a413b698bc94|{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T23:22:17.681197+00:00
+- topic_210_file_c8619b7e-9ebb-4731-973a-b3f6064bbe38|{"task_id": "c8619b7e-9ebb-4731-973a-b3f6064bbe38", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T23:22:17.680846+00:00
+- topic_210_file_42320ab0-c49a-4a08-8f9b-5e38618a4e58|{"task_id": "42320ab0-c49a-4a08-8f9b-5e38618a4e58", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T23:22:17.680633+00:00
+- topic_210_file_7dca3b5f-2782-400f-af84-fb030904e917|{"task_id": "7dca3b5f-2782-400f-af84-fb030904e917", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T23:22:17.679655+00:00
+- topic_210_file_12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88|{"task_id": "12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "16V3s5DcAvnXj8f-3CcfZE2g5|2026-05-08T23:22:17.678995+00:00
+- topic_210_file_b1f8e982-db2e-42de-9046-833287d3567d|{"task_id": "b1f8e982-db2e-42de-9046-833287d3567d", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T23:22:17.678745+00:00
+- topic_210_file_eeb0d013-704a-404c-9390-5a06c90ee976|{"task_id": "eeb0d013-704a-404c-9390-5a06c90ee976", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T23:22:17.678121+00:00
 
 ## JOURNAL_AREAL_TASK_WORKER_60
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 11.723s CPU time, 103.5M memory peak, 0B memory swap peak.
-Started areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
 areal-task-worker.service: Failed with result 'exit-code'.
 areal-task-worker.service: Scheduled restart job, restart counter is at 1.
 Started areal-task-worker.service - Areal Task Worker.
@@ -381,6 +333,11 @@ Stopping areal-task-worker.service - Areal Task Worker...
 areal-task-worker.service: Deactivated successfully.
 Stopped areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Consumed 13.338s CPU time.
+Started areal-task-worker.service - Areal Task Worker.
+Stopping areal-task-worker.service - Areal Task Worker...
+areal-task-worker.service: Deactivated successfully.
+Stopped areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Consumed 57.743s CPU time.
 Started areal-task-worker.service - Areal Task Worker.
 
 ## JOURNAL_TELEGRAM_INGRESS_30

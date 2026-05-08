@@ -1,7 +1,7 @@
 # SINGLE_MODEL_FULL_CONTEXT
 
-GENERATED_AT: 2026-05-08T23:15:02.998117+00:00
-GIT_SHA: 844c3ae339d9c6edb9bfdc833a265148f9e1b7fc
+GENERATED_AT: 2026-05-08T23:35:02.557513+00:00
+GIT_SHA: 876e5d24f1c376e211a9e6002c5002abbf642daf
 PURPOSE: Один файл с полным контекстом проекта для любой модели
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 
@@ -25,7 +25,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 | 2 | STROYKA | INSTALLED_NOT_VERIFIED | 1 | 11 |
 | 5 | TEKHNADZOR | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
 | 11 | VIDEO | UNKNOWN | 0 | 0 |
-| 210 | PROEKTIROVANIE | INSTALLED_NOT_VERIFIED | 1 | 0 |
+| 210 | PROEKTIROVANIE | INSTALLED_NOT_VERIFIED | 0 | 1 |
 | 500 | VEB_POISK | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
 | 794 | DEVOPS | UNKNOWN | 0 | 0 |
 | 961 | AVTOZAPCHASTI | UNKNOWN | 0 | 0 |
@@ -3882,8 +3882,8 @@ I canno
 ```
 # topic_0 COMMON
 
-GENERATED_AT: 2026-05-08T23:15:02.662769+00:00
-GIT_SHA: 844c3ae339d9c6edb9bfdc833a265148f9e1b7fc
+GENERATED_AT: 2026-05-08T23:35:02.255716+00:00
+GIT_SHA: 876e5d24f1c376e211a9e6002c5002abbf642daf
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 0
@@ -4752,8 +4752,8 @@ def _write_xlsx(path: Path, items: List[Dict[str, Any]], source_text: str, photo
 ```
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-05-08T23:15:02.695247+00:00
-GIT_SHA: 844c3ae339d9c6edb9bfdc833a265148f9e1b7fc
+GENERATED_AT: 2026-05-08T23:35:02.288831+00:00
+GIT_SHA: 876e5d24f1c376e211a9e6002c5002abbf642daf
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -4778,6 +4778,7 @@ FAILED_LAST_24H: 11
 - test-gat | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
+- 876e5d2|fix(topic2): PATCH_TOPIC2_WC_PICKER_DRAINAGE_MULTIFILE_V3 — stop WC loop, bind drainage replies to parent, include all 3 user PDFs
 - 107186a|fix(topic2): TOPIC2_WCG_SQL_FIX_SYNTAX_AND_LIKE_DROP_V1
 - 24e65b0|fix(topic2): TOPIC2_WCG_PRESERVE_DRAINAGE_ERROR_V1 — preserve drainage length error through WCG skip
 - c956edd|fix(topic2): TOPIC2_DRAINAGE_PARENT_GUARD_V2 — bind drainage followups to parent and block silent continue
@@ -4807,7 +4808,6 @@ FAILED_LAST_24H: 11
 - 62d85b8|fix(topic2): V5B — price source quality gate, raw JSON guard, canonical totals col J
 - 168ce5e|fix(topic2): close final V5 code gaps for prices guards totals
 - 983ced8|fix(topic2): close 3 remaining V4 gaps (repeat/negative/pdf_missing_question)
-- 2353fc3|fix(topic2): close remaining project/pdf/photo/price/artifact gaps V4
 
 ## MARKERS_LAST_24H
 - created:NEW
@@ -5493,8 +5493,8 @@ _P6H5_NORMATIVE_EXPAND = [
 ```
 # topic_5 TEKHNADZOR
 
-GENERATED_AT: 2026-05-08T23:15:02.728102+00:00
-GIT_SHA: 844c3ae339d9c6edb9bfdc833a265148f9e1b7fc
+GENERATED_AT: 2026-05-08T23:35:02.328060+00:00
+GIT_SHA: 876e5d24f1c376e211a9e6002c5002abbf642daf
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 5
@@ -5643,8 +5643,8 @@ DIRECTIONS_BOUND: Видео
 ```
 # topic_11 VIDEO
 
-GENERATED_AT: 2026-05-08T23:15:02.753966+00:00
-GIT_SHA: 844c3ae339d9c6edb9bfdc833a265148f9e1b7fc
+GENERATED_AT: 2026-05-08T23:35:02.355822+00:00
+GIT_SHA: 876e5d24f1c376e211a9e6002c5002abbf642daf
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 11
@@ -5717,10 +5717,14 @@ STATUS: SYNCED_LOCAL
 ## TOPIC_210_PROEKTIROVANIE
 
 STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE: 1  FAILED_24H: 0
+ACTIVE: 0  FAILED_24H: 1
 DIRECTIONS_BOUND: КЖ КМ
 
 ### LAST_FAILED (5)
+- f02f874e | 2026-05-09 02:32:20 | INVALID_RESULT_GATE
+    history: reply_sent:invalid_result
+    history: state:FAILED
+    history: state:IN_PROGRESS
 - cfadbd05 | 2026-05-06 20:57:43 | INVALID_RESULT_GATE
     history: reply_sent:invalid_result
     history: state:FAILED
@@ -5739,10 +5743,6 @@ DIRECTIONS_BOUND: КЖ КМ
     history: reply_sent:full_contour_guard_failed
     history: FULL_CONSTRUCTION_FILE_CONTOUR_CANON_GUARD_V1:NO_VALID_ARTIFACT
     history: FULL_CONSTRUCTION_FILE_CONTOUR_CANON_GUARD_V1:UPDATE_BLOCKED:NO_VALID_ARTIFACT
-- 540a9ccc | 2026-05-06 20:31:23 | INVALID_RESULT_GATE
-    history: reply_sent:invalid_result
-    history: state:FAILED
-    history: result:Для решения проблемы подтопления подвального этажа необходимо выполнить следующие мероприятия
 
 ### KEY_ENGINE_CODE (head 250 lines each)
 #### core/project_engine.py
@@ -6257,30 +6257,29 @@ def _normalize_sheet_register(template: Dict[str, Any], data: Dict[str, Any]) ->
 ```
 # topic_210 PROEKTIROVANIE
 
-GENERATED_AT: 2026-05-08T23:15:02.791390+00:00
-GIT_SHA: 844c3ae339d9c6edb9bfdc833a265148f9e1b7fc
+GENERATED_AT: 2026-05-08T23:35:02.384611+00:00
+GIT_SHA: 876e5d24f1c376e211a9e6002c5002abbf642daf
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 210
 ROLE: КЖ КМ
 DIRECTIONS_BOUND: structural_design
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE_TASKS: 1
-FAILED_LAST_24H: 0
+ACTIVE_TASKS: 0
+FAILED_LAST_24H: 1
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 3
 - CANCELLED: 28
 - DONE: 81
-- FAILED: 26
-- NEW: 1
+- FAILED: 27
 
 ## LATEST_FAILED
+- f02f874e | INVALID_RESULT_GATE
 - cfadbd05 | INVALID_RESULT_GATE
 - b71a685b | INVALID_RESULT_GATE
 - 6e34406d | NO_VALID_ARTIFACT
 - eba6dc80 | NO_VALID_ARTIFACT
-- 540a9ccc | INVALID_RESULT_GATE
 
 ## COMMITS_LAST_14D
 - 9420d6a|fix(topic2): stroyka meta-confirm guard + reply chain + xlsx 15 cols + topic210 meta guard
@@ -6289,6 +6288,10 @@ FAILED_LAST_24H: 0
 
 ## MARKERS_LAST_24H
 - created:NEW
+- TOPIC2_STALE_PENDING_BLOCKED:pending_task=test-multifile-g:done=True
+- state:IN_PROGRESS
+- state:FAILED
+- reply_sent:invalid_result
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210
@@ -6827,8 +6830,8 @@ except Exception:
 ```
 # topic_500 VEB_POISK
 
-GENERATED_AT: 2026-05-08T23:15:02.827378+00:00
-GIT_SHA: 844c3ae339d9c6edb9bfdc833a265148f9e1b7fc
+GENERATED_AT: 2026-05-08T23:35:02.415139+00:00
+GIT_SHA: 876e5d24f1c376e211a9e6002c5002abbf642daf
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 500
@@ -6943,8 +6946,8 @@ DIRECTIONS_BOUND: Сервер DevOps
 ```
 # topic_794 DEVOPS
 
-GENERATED_AT: 2026-05-08T23:15:02.853475+00:00
-GIT_SHA: 844c3ae339d9c6edb9bfdc833a265148f9e1b7fc
+GENERATED_AT: 2026-05-08T23:35:02.442567+00:00
+GIT_SHA: 876e5d24f1c376e211a9e6002c5002abbf642daf
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 794
@@ -7039,8 +7042,8 @@ DIRECTIONS_BOUND: Автозапчасти
 ```
 # topic_961 AVTOZAPCHASTI
 
-GENERATED_AT: 2026-05-08T23:15:02.884926+00:00
-GIT_SHA: 844c3ae339d9c6edb9bfdc833a265148f9e1b7fc
+GENERATED_AT: 2026-05-08T23:35:02.474036+00:00
+GIT_SHA: 876e5d24f1c376e211a9e6002c5002abbf642daf
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 961
@@ -7132,8 +7135,8 @@ DIRECTIONS_BOUND: Мозги оркестра
 ```
 # topic_3008 KODY_MOZGOV
 
-GENERATED_AT: 2026-05-08T23:15:02.926264+00:00
-GIT_SHA: 844c3ae339d9c6edb9bfdc833a265148f9e1b7fc
+GENERATED_AT: 2026-05-08T23:35:02.498458+00:00
+GIT_SHA: 876e5d24f1c376e211a9e6002c5002abbf642daf
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 3008
@@ -7236,8 +7239,8 @@ DIRECTIONS_BOUND: CRM лиды
 ```
 # topic_4569 CRM_LEADS
 
-GENERATED_AT: 2026-05-08T23:15:02.961357+00:00
-GIT_SHA: 844c3ae339d9c6edb9bfdc833a265148f9e1b7fc
+GENERATED_AT: 2026-05-08T23:35:02.522869+00:00
+GIT_SHA: 876e5d24f1c376e211a9e6002c5002abbf642daf
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 4569
@@ -7345,8 +7348,8 @@ DIRECTIONS_BOUND: Поиск работы
 ```
 # topic_6104 JOB_SEARCH
 
-GENERATED_AT: 2026-05-08T23:15:02.989269+00:00
-GIT_SHA: 844c3ae339d9c6edb9bfdc833a265148f9e1b7fc
+GENERATED_AT: 2026-05-08T23:35:02.551563+00:00
+GIT_SHA: 876e5d24f1c376e211a9e6002c5002abbf642daf
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 6104

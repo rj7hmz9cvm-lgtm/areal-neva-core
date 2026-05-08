@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-05-08T23:15:03.173064+00:00
-GIT_SHA: 844c3ae339d9c6edb9bfdc833a265148f9e1b7fc
+GENERATED_AT: 2026-05-08T23:35:02.704629+00:00
+GIT_SHA: 876e5d24f1c376e211a9e6002c5002abbf642daf
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -18,7 +18,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 |-------|------|--------|--------|------------|
 | 2 | STROYKA | INSTALLED_NOT_VERIFIED | 1 | 11 |
 | 5 | TEKHNADZOR | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
-| 210 | PROEKTIROVANIE | INSTALLED_NOT_VERIFIED | 1 | 0 |
+| 210 | PROEKTIROVANIE | INSTALLED_NOT_VERIFIED | 0 | 1 |
 | 500 | VEB_POISK | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
 
 ## OPEN_BLOCKERS_FROM_NOT_CLOSED
@@ -74,9 +74,9 @@ active: 1
 failed_24h: 11
 commits_last_7d: 30
 recent_commits:
+- 876e5d2|fix(topic2): PATCH_TOPIC2_WC_PICKER_DRAINAGE_MULTIFILE_V3 — stop WC loop, bind drainage replies to parent, include all 3 user PDFs
 - 107186a|fix(topic2): TOPIC2_WCG_SQL_FIX_SYNTAX_AND_LIKE_DROP_V1
 - 24e65b0|fix(topic2): TOPIC2_WCG_PRESERVE_DRAINAGE_ERROR_V1 — preserve drainage length error through WCG skip
-- c956edd|fix(topic2): TOPIC2_DRAINAGE_PARENT_GUARD_V2 — bind drainage followups to parent and block silent continue
 markers_missing: 6
 - TOPIC2_ESTIMATE_SESSION_CREATED
 - TOPIC2_CONTEXT_READY
@@ -113,17 +113,17 @@ NEXT_ACTION: investigate latest failed: STALE_NEW_30MIN
 
 ### topic_210 PROEKTIROVANIE
 role: КЖ КМ
-active: 1
-failed_24h: 0
+active: 0
+failed_24h: 1
 commits_last_7d: 3
 recent_commits:
 - 9420d6a|fix(topic2): stroyka meta-confirm guard + reply chain + xlsx 15 cols + topic210 meta guard
 - a277900|docs(normative): add shared normative context for topic_5 and topic_210
 - bc58444|COMBINED_TOPIC2_AND_TOPIC210_CLOSE_V1: real topic2 estimate and cad section fix
 last_failed:
+- f02f874e | INVALID_RESULT_GATE
 - cfadbd05 | INVALID_RESULT_GATE
 - b71a685b | INVALID_RESULT_GATE
-- 6e34406d | NO_VALID_ARTIFACT
 blockers:
 - - topic_2 не тянет проектные образцы topic_210
 - - topic_210 не тянет сметные артефакты как результат

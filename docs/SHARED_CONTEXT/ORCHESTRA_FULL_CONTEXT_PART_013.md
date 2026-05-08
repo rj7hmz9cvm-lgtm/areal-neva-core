@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_013
-generated_at_utc: 2026-05-08T23:15:02.599903+00:00
-git_sha_before_commit: 844c3ae339d9c6edb9bfdc833a265148f9e1b7fc
+generated_at_utc: 2026-05-08T23:35:02.204908+00:00
+git_sha_before_commit: 876e5d24f1c376e211a9e6002c5002abbf642daf
 part: 13/17
 
 
@@ -1984,6 +1984,17 @@ if __name__ == "__main__":
 
 ====================================================================================================
 END_FILE: tools/claude_bootstrap_aggregator.py
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: tools/__init__.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+====================================================================================================
+
+====================================================================================================
+END_FILE: tools/__init__.py
 FILE_CHUNK: 1/1
 ====================================================================================================
 
@@ -6216,7 +6227,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: tools/topic2_drainage_repair_close.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 60f72722762716c0b2baf761c3de85b53f0aafa41138edf788e2d7e7db1e6866
+SHA256_FULL_FILE: 9c05d54c033fae1b9714a96efd4bacf2d75340bfff395b184900274f066cfb2a
 ====================================================================================================
 #!/usr/bin/env python3
 # TOPIC2_DRAINAGE_PRICE_ENRICHMENT_CANON_FIX_V1
@@ -7191,7 +7202,70 @@ async def main():  # noqa: F811  PATCH_TOPIC2_DRAINAGE_RECOGNIZE_ALL_V1
 
 
 if __name__ == "__main__":  # PATCH_TOPIC2_DRAINAGE_RECOGNIZE_ALL_V1 entry point
+    pass  # entry point moved to final by PATCH_TOPIC2_DRAINAGE_MULTIFILE_SOURCE_V3
+
+
+# === PATCH_TOPIC2_DRAINAGE_MULTIFILE_SOURCE_V3 ===
+def _t2dmf_kind_override_v3(path, text, kind):
+    try:
+        t = low(text)
+        if kind == "other_pdf":
+            has_project = "рабочий проект" in t
+            has_pipe = ("пвх" in t) or ("пнд" in t)
+            has_drain = ("дренаж" in t) or ("ливнев" in t) or ("наружные водостоки" in t)
+            if has_project and has_pipe and has_drain:
+                return "drainage_scheme"
+        return kind
+    except Exception:
+        return kind
+
+def find_user_pdfs():  # noqa: F811
+    import glob as _glob
+    from pathlib import Path as _Path
+    from datetime import datetime as _datetime
+
+    now = _datetime.now().timestamp()
+    candidates = []
+    for raw in _glob.glob("/var/lib/telegram-bot-api/*/documents/*.pdf"):
+        p = _Path(raw)
+        try:
+            if p.is_file() and now - p.stat().st_mtime <= 48 * 3600:
+                candidates.append(p)
+        except Exception:
+            pass
+
+    out = []
+    seen_paths = set()
+    geology_added = False
+
+    for p in sorted(set(candidates), key=lambda x: x.stat().st_mtime, reverse=True):
+        txt = pdf_text(p)
+        if is_artifact(p, txt):
+            continue
+        kind = _t2dmf_kind_override_v3(p, txt, classify(p, txt))
+
+        if kind == "drainage_scheme":
+            key = str(p.resolve())
+            if key in seen_paths:
+                continue
+            out.append({"path": p, "kind": kind, "name": p.name, "text": txt, "chars": len(txt)})
+            seen_paths.add(key)
+            continue
+
+        if kind == "geology_report" and not geology_added:
+            key = str(p.resolve())
+            if key in seen_paths:
+                continue
+            out.append({"path": p, "kind": kind, "name": p.name, "text": txt, "chars": len(txt)})
+            seen_paths.add(key)
+            geology_added = True
+
+    return out
+
+if __name__ == "__main__":  # PATCH_TOPIC2_DRAINAGE_MULTIFILE_SOURCE_V3 final entry point
     asyncio.run(main())
+# === END_PATCH_TOPIC2_DRAINAGE_MULTIFILE_SOURCE_V3 ===
+
 
 ====================================================================================================
 END_FILE: tools/topic2_drainage_repair_close.py
@@ -9337,108 +9411,5 @@ SHA256_FULL_FILE: c1575faa9c30f7376fc965272741bac01693c844705a64e8b4ab6813ad0e4e
 }
 ====================================================================================================
 END_FILE: docs/SHARED_CONTEXT/DWG_CONVERTER_STATUS.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: docs/TECHNADZOR/NORMATIVE_ENGINE_SHARED_CONTEXT.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 9011f21b0b01ee1ac4003c659691ab5e1f7cae2cdde825f9eb706352568f28a0
-====================================================================================================
-{
-  "version": "NORMATIVE_ENGINE_SHARED_CONTEXT_V2",
-  "updated_at": "2026-05-05",
-  "status": "VERIFIED_FROM_CODE",
-  "git_head": "73b4946",
-  "sources": {
-    "normative_engine": "core/normative_engine.py",
-    "norms_map": "core/project_engine.py NORMS_MAP lines 39-45"
-  },
-
-  "normative_engine_committed": {
-    "total_entries": 59,
-    "blocks": {
-      "NORMATIVE_ENGINE_SAFE_V1": 8,
-      "P6H_NORMATIVE_INDEX_EXTRA_V1": 10,
-      "P6H5_NORMATIVE_FULL_EXPAND_V1": 36,
-      "P6H6_LOADS_V1": 5
-    },
-    "smoke_test": "11/11 PASS at commit 73b4946",
-    "shared_topic5_topic210": [
-      "СП 70.13330.2012",
-      "СП 63.13330.2018",
-      "СП 20.13330.2016/2017",
-      "СП 16.13330.2017",
-      "СП 17.13330.2017"
-    ],
-    "primarily_topic5": [
-      "СП 28.13330.2017",
-      "ГОСТ 23118-2019",
-      "СП 48.13330.2019",
-      "СП 13-102-2003",
-      "ГОСТ 31937-2024",
-      "ГОСТ Р ИСО 17637-2014",
-      "СП 22.13330.2016"
-    ],
-    "primarily_topic210": [
-      "ГОСТ 21.101-2020",
-      "ГОСТ 21.501-2018",
-      "СП 71.13330.2017"
-    ],
-    "p6h5_topic210_ov_vk_eom": [
-      "СП 60.13330.2020", "СП 73.13330.2016", "СП 61.13330.2012",
-      "СП 30.13330.2020", "СП 31.13330.2021", "СП 32.13330.2018",
-      "ПУЭ (7-е изд.)", "СП 256.1325800.2016", "ГОСТ Р 50571-4-41-2022"
-    ],
-    "p6h6_loads_sp20": [
-      "снеговые нагрузки",
-      "ветровые нагрузки",
-      "постоянные нагрузки",
-      "временные нагрузки",
-      "сочетания нагрузок"
-    ]
-  },
-
-  "norms_map_committed": {
-    "кж": ["СП 63.13330.2018", "ГОСТ 34028-2016", "СП 20.13330.2017"],
-    "км": ["СП 16.13330.2017", "ГОСТ 27772-2015", "СП 20.13330.2017"],
-    "ар": ["СП 118.13330.2022", "ГОСТ 21.501-2018"],
-    "ов": ["СП 60.13330.2020", "ГОСТ 30494-2011"],
-    "вк": ["СП 30.13330.2020", "СП 31.13330.2021"],
-    "эом": ["СП 256.1325800.2016", "ПУЭ-7"],
-    "overlap_with_normative_engine": ["СП 63.13330.2018", "СП 20.13330.2017", "СП 16.13330.2017", "ГОСТ 21.501-2018"],
-    "only_in_norms_map": ["ГОСТ 34028-2016", "ГОСТ 30494-2011", "СП 118.13330.2022", "ПУЭ-7", "ГОСТ 27772-2015"]
-  },
-
-  "loads_calculation": {
-    "normative_binding_status": "CLOSED",
-    "normative_binding_note": "P6H6 committed — все виды нагрузок покрыты ключевыми словами СП 20",
-    "calc_logic_status": "PARTIAL_CALC",
-    "calc_logic_note": "calc_loads() покрывает только снег/ветер по районам",
-    "committed": {
-      "calc_loads_fn": "core/project_engine.py:68",
-      "covers": ["snow_kPa by region (1-8)", "wind_kPa by region (1-8)"],
-      "norm_reference": "СП 20.13330.2017"
-    },
-    "not_implemented": [
-      "постоянные нагрузки (собственный вес)",
-      "временные нагрузки (полезная нагрузка по назначению помещения)",
-      "сочетания нагрузок",
-      "проверка предельных состояний"
-    ]
-  },
-
-  "open_items": {
-    "calc_logic": "PARTIAL_CALC — автоматический расчёт постоянных/временных/сочетаний не реализован",
-    "topic5_live_test": "NOT_DONE — фото/буфер/разбор через реальный Telegram не пройден",
-    "document_output_live": "NOT_DONE — PDF/DOCX/Drive link/fallback не подтверждены живым тестом",
-    "topic210_live": "NOT_DONE — ОВ/ВК/ЭОМ/КЖ/КМ через реальные файлы не прогнаны",
-    "vision": "BLOCKED — EXTERNAL_PHOTO_ANALYSIS_ALLOWED=False, owner decision required",
-    "missing_in_norms_map": ["сс", "гп", "пз", "см", "тх"]
-  }
-}
-
-====================================================================================================
-END_FILE: docs/TECHNADZOR/NORMATIVE_ENGINE_SHARED_CONTEXT.json
 FILE_CHUNK: 1/1
 ====================================================================================================

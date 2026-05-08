@@ -1,29 +1,28 @@
 # topic_210 PROEKTIROVANIE
 
-GENERATED_AT: 2026-05-08T23:15:02.791390+00:00
-GIT_SHA: 844c3ae339d9c6edb9bfdc833a265148f9e1b7fc
+GENERATED_AT: 2026-05-08T23:35:02.384611+00:00
+GIT_SHA: 876e5d24f1c376e211a9e6002c5002abbf642daf
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 210
 ROLE: КЖ КМ
 DIRECTIONS_BOUND: structural_design
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE_TASKS: 1
-FAILED_LAST_24H: 0
+ACTIVE_TASKS: 0
+FAILED_LAST_24H: 1
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 3
 - CANCELLED: 28
 - DONE: 81
-- FAILED: 26
-- NEW: 1
+- FAILED: 27
 
 ## LATEST_FAILED
+- f02f874e | INVALID_RESULT_GATE
 - cfadbd05 | INVALID_RESULT_GATE
 - b71a685b | INVALID_RESULT_GATE
 - 6e34406d | NO_VALID_ARTIFACT
 - eba6dc80 | NO_VALID_ARTIFACT
-- 540a9ccc | INVALID_RESULT_GATE
 
 ## COMMITS_LAST_14D
 - 9420d6a|fix(topic2): stroyka meta-confirm guard + reply chain + xlsx 15 cols + topic210 meta guard
@@ -32,6 +31,10 @@ FAILED_LAST_24H: 0
 
 ## MARKERS_LAST_24H
 - created:NEW
+- TOPIC2_STALE_PENDING_BLOCKED:pending_task=test-multifile-g:done=True
+- state:IN_PROGRESS
+- state:FAILED
+- reply_sent:invalid_result
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210
