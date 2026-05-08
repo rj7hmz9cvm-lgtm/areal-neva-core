@@ -12494,14 +12494,6 @@ async def _t2v5_try_bind_price_choice(conn, task):
     _pifx_v5_low = str(raw or "").strip().lower()
     _pifx_v5_explicit = ("1","2","3","4","а","б","в","г","миним","средн","медиан","максим","надёж","надеж","ручн","вариант")
     if len(_pifx_v5_low) > 80 or not any(t in _pifx_v5_low for t in _pifx_v5_explicit):
-        try:
-            conn.execute(
-                "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
-                (str(task_id), "PATCH_TOPIC2_INLINE_FIX_20260506_V1:V5_PRICE_REJECTED:no_explicit_token_or_long"),
-            )
-            conn.commit()
-        except Exception:
-            pass
         return False
     # === END_PATCH_TOPIC2_INLINE_FIX_20260506_V1 V5_EXPLICIT_TOKEN_REQUIRED ===
     key, choice = _t2v5_price_choice(raw)
@@ -12858,14 +12850,6 @@ async def _t2v6c_try_generate_after_price(conn, task):
     _pifx_v6_low = str(raw or "").strip().lower()
     _pifx_v6_explicit = ("1","2","3","4","а","б","в","г","миним","средн","медиан","максим","надёж","надеж","ручн","вариант")
     if len(_pifx_v6_low) > 80 or not any(t in _pifx_v6_low for t in _pifx_v6_explicit):
-        try:
-            conn.execute(
-                "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
-                (str(task_id), "PATCH_TOPIC2_INLINE_FIX_20260506_V1:V6C_PRICE_REJECTED:no_explicit_token_or_long"),
-            )
-            conn.commit()
-        except Exception:
-            pass
         return False
     # === END_PATCH_TOPIC2_INLINE_FIX_20260506_V1 V6C_EXPLICIT_TOKEN_REQUIRED ===
     key, choice = _t2v6c_choice(raw)
