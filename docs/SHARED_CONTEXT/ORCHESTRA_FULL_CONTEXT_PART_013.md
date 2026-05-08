@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_013
-generated_at_utc: 2026-05-08T07:50:02.854550+00:00
-git_sha_before_commit: 8feb5f5cc01382e767867cffdaaa7920698d11c1
+generated_at_utc: 2026-05-08T08:20:03.214488+00:00
+git_sha_before_commit: 8a4de2bdfe26b53f65dd2960ffd665cebbd5d034
 part: 13/17
 
 
@@ -6293,9 +6293,127 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 
 ====================================================================================================
+BEGIN_FILE: tools/verify_local_bot_api.sh
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 2e151d42af7dc5a05fa8db4f5c5426d05116adf14362a9ea3feeb9fd1bc9922f
+====================================================================================================
+#!/bin/bash
+# verify_local_bot_api.sh
+# PATCH_TELEGRAM_BIG_FILE_LOCAL_BOT_API_V1 — activation gate
+#
+# Run all 4 checks before activating wrapper.
+# Exit 0 = all OK, ready to activate.
+# Exit 1 = not ready, do NOT activate.
+
+set -e
+PASS=0
+FAIL=0
+CRED_FILE="/etc/areal/telegram-local-api.env"
+BINARY="/usr/local/bin/telegram-bot-api"
+SERVICE="telegram-bot-api-local.service"
+WRAPPER="/root/.areal-neva-core/areal_telegram_wrapper.py"
+PENDING="/root/.areal-neva-core/tmp/bigfile_ingress_override.conf.pending"
+OVERRIDE_DIR="/etc/systemd/system/telegram-ingress.service.d"
+
+echo "=== PATCH_TELEGRAM_BIG_FILE_LOCAL_BOT_API_V1 — Activation Gate ==="
+echo ""
+
+# ── Check 1: binary ───────────────────────────────────────────────────────────
+echo "1. Binary..."
+if [ -x "$BINARY" ]; then
+    VER=$("$BINARY" --version 2>/dev/null || echo "built")
+    echo "   OK: $BINARY ($VER)"
+    PASS=$((PASS+1))
+else
+    echo "   FAIL: $BINARY not found or not executable"
+    FAIL=$((FAIL+1))
+fi
+
+# ── Check 2: service active ───────────────────────────────────────────────────
+echo "2. Service telegram-bot-api-local..."
+if systemctl is-active "$SERVICE" >/dev/null 2>&1; then
+    echo "   OK: $SERVICE is active"
+    PASS=$((PASS+1))
+else
+    STATUS=$(systemctl is-active "$SERVICE" 2>/dev/null || echo "unknown")
+    echo "   FAIL: $SERVICE status=$STATUS"
+    FAIL=$((FAIL+1))
+fi
+
+# ── Check 3: local getMe ──────────────────────────────────────────────────────
+echo "3. Local getMe..."
+source "$CRED_FILE" 2>/dev/null || true
+BOT_TOKEN=<REDACTED_SECRET> show telegram-ingress -p Environment --value 2>/dev/null | \
+    tr ' ' '\n' | grep "^TELEGRAM_BOT_TOKEN=" | cut -d= -f2- | head -1)
+if [ -z "$BOT_TOKEN" ]; then
+    # Try from running process
+    PID=$(systemctl show telegram-ingress -p MainPID --value 2>/dev/null)
+    BOT_TOKEN=<REDACTED_SECRET> -n "$PID" ] && grep -z "TELEGRAM_BOT_TOKEN" /proc/$PID/environ 2>/dev/null \
+        | tr '\0' '\n' | grep "^TELEGRAM_BOT_TOKEN=" | cut -d= -f2- | head -1 || echo "")
+fi
+if [ -n "$BOT_TOKEN" ]; then
+    RESULT=$(curl -s --max-time 5 "http://localhost:8081/bot${BOT_TOKEN}/getMe" 2>/dev/null)
+    if echo "$RESULT" | /root/.areal-neva-core/.venv/bin/python3 -c \
+        "import sys,json; d=json.load(sys.stdin); assert d.get('ok'), 'not ok'" 2>/dev/null; then
+        USERNAME=$(echo "$RESULT" | /root/.areal-neva-core/.venv/bin/python3 -c \
+            "import sys,json; d=json.load(sys.stdin); print(d['result'].get('username','?'))" 2>/dev/null)
+        echo "   OK: getMe → @${USERNAME}"
+        PASS=$((PASS+1))
+    else
+        echo "   FAIL: getMe returned error or timeout"
+        FAIL=$((FAIL+1))
+    fi
+else
+    echo "   SKIP: BOT_TOKEN not found — cannot test getMe (manual check required)"
+    FAIL=$((FAIL+1))
+fi
+
+# ── Check 4: wrapper dry-run ──────────────────────────────────────────────────
+echo "4. Wrapper imports dry-run..."
+/root/.areal-neva-core/.venv/bin/python3 -c "
+import sys, os
+os.environ.setdefault('TELEGRAM_LOCAL_API_BASE', 'http://localhost:8081')
+from aiogram.client.telegram import TelegramAPIServer
+from aiogram.client.session.aiohttp import AiohttpSession
+srv = TelegramAPIServer.from_base('http://localhost:8081')
+sess = AiohttpSession(api=srv)
+# Verify pattern exists in daemon
+daemon = open('/root/.areal-neva-core/telegram_daemon.py').read()
+pattern = 'url = f\"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}\"'
+assert pattern in daemon, 'download URL pattern not found in telegram_daemon.py'
+print('   OK: aiogram local server imports ok, daemon pattern ok')
+" && PASS=$((PASS+1)) || { echo "   FAIL: wrapper dry-run failed"; FAIL=$((FAIL+1)); }
+
+# ── Summary ───────────────────────────────────────────────────────────────────
+echo ""
+echo "=== Results: $PASS/4 passed, $FAIL failed ==="
+echo ""
+
+if [ "$FAIL" -eq 0 ]; then
+    echo "ALL CHECKS PASSED — ready to activate"
+    echo ""
+    echo "Activation (requires explicit confirmation):"
+    echo "  mkdir -p $OVERRIDE_DIR"
+    echo "  cp $PENDING $OVERRIDE_DIR/bigfile.conf"
+    echo "  systemctl daemon-reload"
+    echo "  systemctl restart telegram-ingress"
+    echo ""
+    exit 0
+else
+    echo "NOT READY — do NOT activate wrapper"
+    echo ""
+    exit 1
+fi
+
+====================================================================================================
+END_FILE: tools/verify_local_bot_api.sh
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
 BEGIN_FILE: .gitignore
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: de30dbfb6949c2563d160fa0c789e682f7c2dfeae5a334f556fd3d61563446b1
+SHA256_FULL_FILE: 18457271563906a3e4e6d7d2c66167960f746a3db5d3fd7fbed171828b7c7289
 ====================================================================================================
 *.pyc
 __pycache__/
@@ -6353,6 +6471,9 @@ data/templates/technadzor/ACTIVE__*.json
 data/templates/technadzor/objects/
 data/memory_files/technadzor_index_cache/
 outputs/technadzor_p6h/
+
+# temp activation files
+tmp/
 
 ====================================================================================================
 END_FILE: .gitignore
@@ -6910,6 +7031,99 @@ Drive = резерв и тяжёлые файлы
 
 ====================================================================================================
 END_FILE: README.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: areal_telegram_wrapper.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 85d344f0a7a7175010ae80c0f6e094380fe2d137dd890324773c9608a6cc0b3d
+====================================================================================================
+"""
+PATCH_TELEGRAM_BIG_FILE_LOCAL_BOT_API_V1
+Patches aiogram in-memory to use local Telegram Bot API server (localhost:8081).
+Removes 20MB file size limit. telegram_daemon.py is NOT modified on disk.
+
+Markers logged to task_history (via daemon):
+  BIG_FILE_LOCAL_BOT_API_USED
+  BIG_FILE_LOCAL_DOWNLOAD_OK
+  BIG_FILE_LOCAL_DOWNLOAD_FAILED
+  BIG_FILE_TEMP_CLEANED
+  FILE_INTAKE_ROUTER_LOCAL_PATH_PASSED
+
+Activation gate: only via verify_local_bot_api.sh — do NOT activate manually.
+"""
+import os
+import sys
+import logging
+
+_LOG = logging.getLogger("areal.bigfile_patch")
+
+# Read from EnvironmentFile — never hardcode, never log values
+LOCAL_API_BASE = os.getenv("TELEGRAM_LOCAL_API_BASE", "http://localhost:8081")
+
+# ── Patch 1: aiogram Bot session → local server ──────────────────────────────
+try:
+    from aiogram.client.session.aiohttp import AiohttpSession
+    from aiogram.client.telegram import TelegramAPIServer
+    import aiogram
+
+    _orig_bot_init = aiogram.Bot.__init__
+
+    def _patched_bot_init(self, token, session=None, default=None, **kwargs):
+        if session is None:
+            try:
+                local_server = TelegramAPIServer.from_base(LOCAL_API_BASE)
+                session = AiohttpSession(api=local_server)
+                _LOG.info("BIG_FILE_LOCAL_BOT_API_USED: local server active")
+            except Exception as _e:
+                # Never log LOCAL_API_BASE value with credentials embedded
+                _LOG.warning("BIG_FILE_LOCAL_API_SESSION_FAILED: %s — falling back", type(_e).__name__)
+        _orig_bot_init(self, token, session=session, default=default, **kwargs)
+
+    aiogram.Bot.__init__ = _patched_bot_init
+    _LOG.info("PATCH_BOT_INIT_LOCAL_SERVER: installed")
+
+except Exception as _patch_err:
+    _LOG.error("PATCH_BOT_INIT_LOCAL_SERVER_FAILED: %s", type(_patch_err).__name__)
+
+# ── Patch 2: Fix download URL (in-memory only, file on disk unchanged) ────────
+_daemon_path = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "telegram_daemon.py"
+)
+
+try:
+    _code = open(_daemon_path, "r", encoding="utf-8").read()
+
+    _CLOUD_PATTERN = 'url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"'
+    _LOCAL_PATTERN = f'url = f"{LOCAL_API_BASE}/file/bot{{BOT_TOKEN}}/{{file_path}}"'
+
+    if _CLOUD_PATTERN in _code:
+        _code = _code.replace(_CLOUD_PATTERN, _LOCAL_PATTERN)
+        _LOG.info("PATCH_DOWNLOAD_URL_LOCAL_SERVER: ok")
+    else:
+        _LOG.warning(
+            "PATCH_DOWNLOAD_URL_LOCAL_SERVER: pattern not found in telegram_daemon.py — "
+            "large file download URL not patched"
+        )
+
+    # ── Execute patched daemon as __main__ ────────────────────────────────────
+    _globals = {
+        "__name__": "__main__",
+        "__file__": _daemon_path,
+        "__doc__": None,
+        "__package__": None,
+        "__spec__": None,
+        "__builtins__": __builtins__,
+    }
+    exec(compile(_code, _daemon_path, "exec"), _globals)
+
+except Exception as _exec_err:
+    _LOG.error("WRAPPER_EXEC_DAEMON_FAILED: %s", _exec_err)
+    raise
+
+====================================================================================================
+END_FILE: areal_telegram_wrapper.py
 FILE_CHUNK: 1/1
 ====================================================================================================
 
@@ -9308,101 +9522,5 @@ Drive placement:
 
 ====================================================================================================
 END_FILE: docs/TECHNADZOR/TOPIC5_TECHNADZOR_SYSTEM_LOGIC_FINAL.md
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: docs/TECHNADZOR/TOPIC5_TECHNADZOR_SYSTEM_LOGIC_FINAL_REPORT.md
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 3fa5aa20e7d214e993ed3cdd8e92f54c81539f60605513169901b9ace0eb726f
-====================================================================================================
-# TOPIC5 TECHNADZOR — ИТОГОВЫЙ ОТЧЁТ
-
-version: TOPIC5_TECHNADZOR_SYSTEM_LOGIC_FINAL_REPORT_V1
-date: 2026-05-05
-status: FINAL
-
----
-
-## 1. Что сделано
-
-### Документы контекста (unified_context/)
-- KIEVSKOE_95_OBJECT_CONTEXT.md — DRIVE_VERIFIED (3 акта прочитаны с Drive)
-- NOVICHKOVO_OBJECT_CONTEXT.md — DRIVE_VERIFIED (акт Щеглово прочитан, source ref добавлен)
-- SUSANINO_OBJECT_CONTEXT.md — DRIVE_VERIFIED (неподтверждённое авторство фото убрано → UNKNOWN)
-- OWNER_ACT_STYLE_PROFILE.md — DRIVE_VERIFIED (профиль стиля из 3 реальных актов)
-- OBJECT_CONTEXT_INDEX.json — VERIFIED (все folder_id подтверждены Drive API)
-- OWNER_ACTS_INDEX.json — DRIVE_VERIFIED (5 актов, все прочитаны)
-- NORMATIVE_CONTEXT_INDEX.json — VERIFIED_FROM_ACTS
-- TNZ_MSK_SKILL_BINDING.json — VERIFIED
-- CHAT_EXPORT_TECHNADZOR_BINDING.json — VERIFIED
-- OWNER_ENGINEERING_LOAD_VALIDATION_PATTERN.md/.json — SOURCE_FROM_OWNER_CONVERSATION
-- TOPIC5_UNIFIED_TECHNADZOR_CONTEXT.md/.json — VERIFIED
-
-### Системные документы
-- TOPIC5_TECHNADZOR_SYSTEM_LOGIC_FINAL.md — CODE_AUDIT_VERIFIED (20 секций)
-- TOPIC5_TECHNADZOR_SYSTEM_LOGIC_FINAL.json — CODE_AUDIT_VERIFIED
-- TOPIC5_DOCUMENT_OUTPUT_CONTRACT.md/.json — CODE_AUDIT_DRAFT_NOT_LIVE_VERIFIED
-- TOPIC5_RUNTIME_USAGE_RULES.md — CODE_AUDIT_VERIFIED
-
----
-
-## 2. Исправленные ошибки
-
-| Файл | Ошибка | Исправление |
-|---|---|---|
-| SUSANINO_OBJECT_CONTEXT.md | Выдуманное авторство фото (Фото Илья + Фото от заказчиков) | Заменено на UNKNOWN / NOT_VERIFIED |
-| NOVICHKOVO_OBJECT_CONTEXT.md | Нет ссылки на источник | Добавлен source_file (Drive id: 1mqE0G-U5mB889IQMlh5e02UFFSkoADW9) |
-| OWNER_ACT_STYLE_PROFILE.md | Предыдущая версия создана до чтения Drive актов | Полностью переписан из 3 реальных актов |
-
----
-
-## 3. Верифицированные факты системы
-
-### Wrapper chains
-- `process_technadzor`: 8 определений в technadzor_engine.py, `_p6h4tw_v1_wrapped=True`
-- `_handle_in_progress`: 14 определений в task_worker.py
-- `_handle_new`: 4 определения в task_worker.py
-
-### Drive
-- ТЕХНАДЗОР root: `1s2y5l2mJFTb7P90XVokErXYVzmoH-VtD`
-- topic_5 system: `1yWIJdSrypH3BbIozCz-OAw1R6hmnMRHK`
-- Active test folder: `тест надзор` (`1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG`) — task 5276 DONE
-
-### Пакеты (local-check 2026-05-05)
-- reportlab: NOT INSTALLED (ModuleNotFoundError)
-- python-docx: NOT INSTALLED (ModuleNotFoundError)
-- DejaVu fonts: PRESENT
-
-### Vision
-- `EXTERNAL_PHOTO_ANALYSIS_ALLOWED = False`
-- OpenRouter Google: 403
-
-### Search
-- SearchMonolithV2 → perplexity/sonar via OpenRouter
-- OPENROUTER_API_KEY подтверждён в .env
-
----
-
-## 4. Открытые вопросы
-
-| Вопрос | Статус |
-|---|---|
-| Vision для 3-го выезда Киевское (04.05.2026) | OWNER_DECISION_REQUIRED |
-| reportlab/python-docx — установить? | OWNER_DECISION_REQUIRED |
-| @tnz_msk карты (66 на review) — одобрить? | OWNER_DECISION_REQUIRED |
-| ГОСТ 30971 — добавить в normative_engine? | OWNER_DECISION_REQUIRED |
-
----
-
-## 5. Что НЕ делалось
-
-- Runtime patches: нет
-- Drive mutations: нет
-- normative_engine.py: не staged, не committed
-- Запрещённые файлы: не редактировались
-
-====================================================================================================
-END_FILE: docs/TECHNADZOR/TOPIC5_TECHNADZOR_SYSTEM_LOGIC_FINAL_REPORT.md
 FILE_CHUNK: 1/1
 ====================================================================================================
