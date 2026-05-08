@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-08T22:35:01.798795+00:00
-git_sha_before_commit: 9196960a6c8b4b95a99c481a7b42a5ca37c5f761
+generated_at_utc: 2026-05-08T22:40:01.624587+00:00
+git_sha_before_commit: 0152cb470622435e66910978b2d1349f2a68bf76
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,8 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: inactive
 
 ## GIT_LOG_30
+0152cb4 fix(topic2): TOPIC2_DRAINAGE_PRICE_ENRICHMENT_CANON_FIX_V1
+4479511 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 9196960 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 b07a265 fix(topic2): TOPIC2_DRAINAGE_LENGTH_PROOF_GATE_AND_ONLINE_PRICES_V2
 eb76615 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
@@ -38,88 +40,31 @@ e185e83 fix(topic2): PATCH_SUPPLIER_HONESTY_V1 — fix fake Perplexity в Пос
 7c646dd session(08.05): bigfile activated, topic5 V3 dispatcher, topic2 P6C intercept, c94ec497 FAILED/NOT_PROVEN
 8a4de2b feat(bigfile): prepare PATCH_TELEGRAM_BIG_FILE_LOCAL_BOT_API_V1
 c9443ff FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
-8feb5f5 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
-7423725 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
 ## GIT_SHOW_STAT_HEAD
-commit 9196960a6c8b4b95a99c481a7b42a5ca37c5f761
+commit 0152cb470622435e66910978b2d1349f2a68bf76
 Author: Ila <ilakuznecov@mac.local>
-Date:   Sat May 9 01:25:15 2026 +0300
+Date:   Sat May 9 01:35:57 2026 +0300
 
-    FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
+    fix(topic2): TOPIC2_DRAINAGE_PRICE_ENRICHMENT_CANON_FIX_V1
+    
+    - Remove custom search_drainage_prices_online(), _parse_drainage_prices(), regex price extraction
+    - Use canonical _openrouter_price_search, _detect_price_choice, _price_prompt,
+      _select_price, _apply_selected_prices from core.price_enrichment
+    - State machine: no length → WC ask; length found → price search + menu → WC;
+      TOPIC2_PRICE_CHOICE_CONFIRMED → XLSX+PDF → AWAITING_CONFIRMATION
+    - No XLSX/PDF generated before price choice confirmed
+    - Markers: TOPIC2_PRICE_ENRICHMENT_STARTED/DONE, TOPIC2_PRICE_SOURCE_FOUND/MISSING,
+      TOPIC2_PRICE_CHOICE_MENU_SENT, TOPIC2_PRICE_CHOICE_CONFIRMED
+    - Cache saved to runtime file between runs (price_cache_*.json)
+    - VAT 22% optional, without_vat default
+    
+    Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 
- docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md    |   6 +-
- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md |   2 +-
- .../SHARED_CONTEXT/DIRECTIONS/auto_parts_search.md |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/cad_dwg.md          |   4 +-
- .../DIRECTIONS/construction_search.md              |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/crm_leads.md        |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/defect_acts.md      |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/devops_server.md    |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/documents.md        |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/email_ingress.md    |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/estimates.md        |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/general_chat.md     |   4 +-
- .../DIRECTIONS/google_drive_storage.md             |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/internet_search.md  |   4 +-
- .../DIRECTIONS/isolated_project_ivan.md            |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/job_search.md       |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/memory_archive.md   |   4 +-
- .../SHARED_CONTEXT/DIRECTIONS/monolith_concrete.md |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/ocr_photo.md        |   4 +-
- .../DIRECTIONS/orchestration_core.md               |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/photo_cleanup.md    |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/product_search.md   |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/roofing.md          |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/social_content.md   |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/spreadsheets.md     |   4 +-
- .../SHARED_CONTEXT/DIRECTIONS/structural_design.md |   4 +-
- .../DIRECTIONS/technical_supervision.md            |   4 +-
- .../DIRECTIONS/telegram_automation.md              |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/video_production.md |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/vpn_network.md      |   4 +-
- docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md      |   4 +-
- docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |   6 +-
- docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |   6 +-
- docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  22 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_004.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |   6 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |   6 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_007.md             |  40 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_010.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_011.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_012.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_013.md             | 468 +++++++++------------
- .../ORCHESTRA_FULL_CONTEXT_PART_014.md             | 239 ++++++++++-
- .../ORCHESTRA_FULL_CONTEXT_PART_015.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_016.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_017.md             |   4 +-
- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 252 ++++-------
- .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |  10 +-
- docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  58 +--
- docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |   6 +-
- docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |   4 +-
- .../TOPICS/topic_210_PROEKTIROVANIE.md             |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |  10 +-
- .../TOPICS/topic_3008_KODY_MOZGOV.md               |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_5_TEKHNADZOR.md   |   4 +-
- .../SHARED_CONTEXT/TOPICS/topic_6104_JOB_SEARCH.md |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |   4 +-
- .../TOPICS/topic_961_AVTOZAPCHASTI.md              |   4 +-
- docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   6 +-
- 68 files changed, 742 insertions(+), 609 deletions(-)
+ tools/topic2_drainage_repair_close.py | 870 +++++++++++++++++++++-------------
+ 1 file changed, 539 insertions(+), 331 deletions(-)
 
 ## GIT_CHANGED_FILES_10
-core/stroyka_estimate_canon.py
 core/topic2_input_gate.py
 docs/HANDOFFS/LATEST_HANDOFF.md
 docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md
@@ -194,13 +139,14 @@ task_worker.py
 tools/topic2_drainage_repair_close.py
 
 ## CORE_DB_STATE_COUNTS
-- FAILED|2973
+- FAILED|2972
 - CANCELLED|823
 - DONE|579
 - ARCHIVED|381
+- WAITING_CLARIFICATION|1
 
 ## CORE_DB_OPEN_TASKS
-- 0
+- 1
 
 ## LATEST_TASKS_15
 - 6a535d79-5368-45d8-b8a4-a4c2133f5223|2|text|FAILED|[VOICE] посмотри у тебя есть документы в чате я же тебе скидывал уже ты же попросил чтоб я тебе продублировал|PDF определён как схема дренажа/ливнёвки.
@@ -215,7 +161,7 @@ tools/topic2_drainage_repair_close.py
 - 9a174a37-fc01-4414-97f9-064621356083|2|text|DONE|А смета-то где|PDF определён как схема дренажа/ливнёвки.
 Домовую смету не запускаю: текущий файл относится к наружным сетям, а не к дому.
 Считать приблизительно по схеме или п|2026-05-08 20:47:30
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|2|text|FAILED|[VOICE] Посмотри то, что я тебе писал ранее, у тебя же все есть|Нет нового ТЗ для расчёта. Смету по старой памяти не запускаю. Напиши конкретную правку или новое полное ТЗ|2026-05-08 22:32:58
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|2|text|WAITING_CLARIFICATION|[VOICE] Посмотри то, что я тебе писал ранее, у тебя же все есть|Нет нового ТЗ для расчёта. Смету по старой памяти не запускаю. Напиши конкретную правку или новое полное ТЗ|2026-05-08 22:36:40
 - test-multifile-gate-001|2|text|FAILED|[VOICE] У тебя два файла. На одном у тебя схема дренажа, на другом у тебя длинные высоты и все есть. Посмотри оба файла |⏳ Задачу понял
 
 Шаблон: Ареал Нева.xlsx
@@ -270,7 +216,6 @@ tools/topic2_drainage_repair_close.py
 ## LATEST_FAILED_10
 - 6a535d79-5368-45d8-b8a4-a4c2133f5223|2|[VOICE] посмотри у тебя есть документы в чате я же тебе скидывал уже ты же попросил чтоб я тебе продублировал|STALE_TIMEOUT|2026-05-08 22:33:52
 - f9df5eb5-3746-40c4-a730-bbc1a021dbc1|2|[VOICE] Мне необходимо найти стоимость материалов, как указано в техническом задании, и стоимость работы посмотреть. Выш|STALE_TIMEOUT|2026-05-08 22:33:28
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|2|[VOICE] Посмотри то, что я тебе писал ранее, у тебя же все есть|STALE_TIMEOUT|2026-05-08 22:32:58
 - test-multifile-gate-001|2|[VOICE] У тебя два файла. На одном у тебя схема дренажа, на другом у тебя длинные высоты и все есть. Посмотри оба файла |STALE_TIMEOUT|2026-05-08 20:29:32
 - 2c732335-4650-439e-9287-0984497b4aa6|2|[VOICE] Я тебе прислал два файла, там есть все длинные, там есть все размеры, посмотри, пожалуйста, внимательно. Два фай|STALE_TIMEOUT|2026-05-08 20:20:28
 - test-gate-send-fix-001|2|[VOICE] У тебя два файла. На одном у тебя схема дренажа, на другом у тебя длинные высоты и все есть. Посмотри оба файла |STALE_TIMEOUT|2026-05-08 20:19:46
@@ -278,8 +223,15 @@ tools/topic2_drainage_repair_close.py
 - acdae011-7299-482d-92c2-571f8ccbee0c|2|[VOICE] необходимо посчитать смету взять ценник высокого ценового сегмента на работу и на материалы и создать по длине и|STALE_TIMEOUT|2026-05-08 19:39:38
 - test-gate-drainage-live-001|2|{"file_name": "Схема глубинного дренажа.pdf", "mime_type": "application/pdf", "local_path": "/root/.areal-neva-core/runt|STALE_TIMEOUT|2026-05-08 19:40:26
 - test-drainage-reply-001|2|Объект находится 50 км от Санкт-Петербурга цены выше среднего нужно посчитать стоимость работы материалов по данному зап|STALE_TIMEOUT|2026-05-08 18:50:16
+- 60b9503b-75cc-4913-bb7b-11092508fdae|2|[VOICE] Я тебе говорил про вот эту информацию, посмотри.|TOPIC2_STALE_HOUSE_CONTEXT_USED_FOR_DRAINAGE_FILE|2026-05-08 19:17:11
 
 ## LATEST_TASK_HISTORY_20
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|P6_TOPIC2_VAGUE_OLD_MEMORY_BLOCKED|2026-05-08 22:36:38
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|clarified:Все что есть я тебе скинул посмотри там лучше у меня нет других файлов|2026-05-08T22:36:37.814029+00:00
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_WC_SENT:10626|2026-05-08 22:35:30
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_FINAL_ARTIFACTS_BLOCKED|2026-05-08 22:35:30
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN:lines=0:total=0|2026-05-08 22:35:30
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_LENGTH_PROOF_GATE_V1|2026-05-08 22:35:30
 - 6a535d79-5368-45d8-b8a4-a4c2133f5223|reply_sent:stale_failed|2026-05-08 22:33:52
 - 6a535d79-5368-45d8-b8a4-a4c2133f5223|state:FAILED|2026-05-08 22:33:52
 - f9df5eb5-3746-40c4-a730-bbc1a021dbc1|reply_sent:stale_failed|2026-05-08 22:33:29
@@ -294,12 +246,6 @@ tools/topic2_drainage_repair_close.py
 - 6a535d79-5368-45d8-b8a4-a4c2133f5223|TOPIC2_INPUT_GATE_DRAINAGE_BLOCK|2026-05-08 22:23:48
 - 6a535d79-5368-45d8-b8a4-a4c2133f5223|TOPIC2_INPUT_GATE_DOMAIN:drainage_network|2026-05-08 22:23:48
 - 6a535d79-5368-45d8-b8a4-a4c2133f5223|created:NEW|2026-05-08T22:23:46.024565+00:00
-- f9df5eb5-3746-40c4-a730-bbc1a021dbc1|TOPIC2_CANONICAL_REROUTE_V2:CANONICAL_HANDLED|2026-05-08 22:23:25
-- f9df5eb5-3746-40c4-a730-bbc1a021dbc1|reply_sent:waiting_clarification|2026-05-08 22:23:25
-- f9df5eb5-3746-40c4-a730-bbc1a021dbc1|TOPIC2_INPUT_GATE_SENT:10620|2026-05-08 22:23:25
-- f9df5eb5-3746-40c4-a730-bbc1a021dbc1|TOPIC2_INPUT_GATE_HANDLED:state=WAITING_CLARIFICATION:domain=drainage_network|2026-05-08 22:23:25
-- f9df5eb5-3746-40c4-a730-bbc1a021dbc1|TOPIC2_CURRENT_FILE_SOURCE_OF_TRUTH:eba6dc80-d993-43e8-945b-cf1b48b9d103_Схема глубинного дренажа.pdf,mikea_rp3.pdf|2026-05-08 22:23:25
-- f9df5eb5-3746-40c4-a730-bbc1a021dbc1|TOPIC2_VOICE_BOUND_TO_ACTIVE_FILE_TASK:test-gate-drainage-live-001|2026-05-08 22:23:25
 
 ## MEMORY_DB_COUNT
 - 5198
@@ -389,7 +335,6 @@ areal-task-worker.service: Consumed 1.142s CPU time.
 Started areal-task-worker.service - Areal Task Worker.
 
 ## JOURNAL_TELEGRAM_INGRESS_30
-2026-05-08 23:10:21,167 INFO DAEMON: Task 2c732335-4650-439e-9287-0984497b4aa6 created state=NEW topic_id=2
 2026-05-08 23:10:21,167 INFO DAEMON: Update id=210388098 is handled. Duration 719 ms by bot id=8216054898
 2026-05-08 23:18:50,467 INFO DAEMON: LOCAL_BOT_API_ABSOLUTE_PATH_USED:file_9.oga
 2026-05-08 23:18:50,468 INFO DAEMON: STT env check groq=True
@@ -419,3 +364,4 @@ Started areal-task-worker.service - Areal Task Worker.
 2026-05-09 01:23:45,960 INFO DAEMON: STT ok transcript_len=101
 2026-05-09 01:23:46,028 INFO DAEMON: Task 6a535d79-5368-45d8-b8a4-a4c2133f5223 created state=NEW topic_id=2
 2026-05-09 01:23:46,028 INFO DAEMON: Update id=210388106 is handled. Duration 434 ms by bot id=8216054898
+2026-05-09 01:36:37,924 INFO DAEMON: Update id=210388107 is handled. Duration 123 ms by bot id=8216054898

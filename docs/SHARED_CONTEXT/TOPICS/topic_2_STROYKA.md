@@ -1,30 +1,32 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-05-08T22:35:02.072361+00:00
-GIT_SHA: 9196960a6c8b4b95a99c481a7b42a5ca37c5f761
+GENERATED_AT: 2026-05-08T22:40:01.844839+00:00
+GIT_SHA: 0152cb470622435e66910978b2d1349f2a68bf76
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
 ROLE: Сметы
 DIRECTIONS_BOUND: estimates
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE_TASKS: 0
-FAILED_LAST_24H: 12
+ACTIVE_TASKS: 1
+FAILED_LAST_24H: 11
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 12
 - CANCELLED: 102
 - DONE: 134
-- FAILED: 121
+- FAILED: 120
+- WAITING_CLARIFICATION: 1
 
 ## LATEST_FAILED
 - 6a535d79 | STALE_TIMEOUT
 - f9df5eb5 | STALE_TIMEOUT
-- 043e5c9f | STALE_TIMEOUT
 - test-mul | STALE_TIMEOUT
 - 2c732335 | STALE_TIMEOUT
+- test-gat | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
+- 0152cb4|fix(topic2): TOPIC2_DRAINAGE_PRICE_ENRICHMENT_CANON_FIX_V1
 - b07a265|fix(topic2): TOPIC2_DRAINAGE_LENGTH_PROOF_GATE_AND_ONLINE_PRICES_V2
 - af42c97|fix(topic2): TOPIC2_DRAINAGE_FULL_CLOSE_NO_LOOP_V2 — child merge guard, legend filter, noise tasks closed
 - 859c045|fix(topic2): TOPIC2_DRAINAGE_VAT_GATE_PUBLIC_CLEAN_V1 — VAT gate 22%, source filter, clean public output, Drive upload fix
@@ -54,7 +56,6 @@ FAILED_LAST_24H: 12
 - 055157b|fix(topic2): PATCH_TOPIC2_FULL_CLOSE_RUNTIME_V2
 - ad829c4|fix(topic2): PATCH_TOPIC2_FULL_CANONICAL_CLOSE_ONEPASS_V1 — §9 output + recursion fix
 - c7c8755|fix(topic2): inline-fix V1 — replace dead wrappers with body edits
-- d1f20a0|fix(topic2): full mega-guards V1 — 6 guards закрытие topic_2 acceptance bugs
 
 ## MARKERS_LAST_24H
 - created:NEW

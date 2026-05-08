@@ -1,8 +1,328 @@
 # ORCHESTRA_FULL_CONTEXT_PART_014
-generated_at_utc: 2026-05-08T22:35:01.992757+00:00
-git_sha_before_commit: 9196960a6c8b4b95a99c481a7b42a5ca37c5f761
+generated_at_utc: 2026-05-08T22:40:01.756302+00:00
+git_sha_before_commit: 0152cb470622435e66910978b2d1349f2a68bf76
 part: 14/17
 
+
+====================================================================================================
+BEGIN_FILE: docs/TECHNADZOR/NORMATIVE_ENGINE_SHARED_CONTEXT.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: fbe4915ea50f48d499b50d5e242969fe82790379f9887fbfe5a08c6aff1cb1cd
+====================================================================================================
+# NORMATIVE ENGINE — SHARED CONTEXT (topic_5 + topic_210)
+
+version: NORMATIVE_ENGINE_SHARED_CONTEXT_V2
+updated_at: 2026-05-05
+status: VERIFIED_FROM_CODE
+source_1: core/normative_engine.py — git HEAD 73b4946 (P6H5+P6H6 committed)
+source_2: core/project_engine.py NORMS_MAP — git HEAD 73b4946
+note: Только нормы из committed кода. Не изобретать новые нормы. Не добавлять пункты.
+
+---
+
+## 1. Два нормативных контура
+
+```
+normative_engine.py — SHARED
+  keyword-based search_norms_sync(text)
+  Используется: topic_5 (технадзор) + topic_210 (проектирование)
+  Committed: 59 записей (HEAD 73b4946)
+    — base 8 (NORMATIVE_ENGINE_SAFE_V1)
+    — P6H extension 10 (P6H_NORMATIVE_INDEX_EXTRA_V1)
+    — P6H5 expansion 36 (P6H5_NORMATIVE_FULL_EXPAND_V1) ← теперь COMMITTED
+    — P6H6 loads 5 (P6H6_LOADS_V1) ← теперь COMMITTED
+
+project_engine.py NORMS_MAP — topic_210 ONLY
+  section-based NORMS_MAP[section] → list of norm_ids
+  Используется: topic_210 — АР / КЖ / КМ / ОВ / ВК / ЭОМ
+  Committed: 6 разделов (HEAD 2deb7c8)
+```
+
+---
+
+## 2. normative_engine.py — committed 18 записей
+
+### 2.1 Общие (topic_5 + topic_210)
+
+| norm_id | Раздел | topic_5 | topic_210 |
+|---|---|---|---|
+| СП 70.13330.2012 | Несущие и ограждающие конструкции | акты: бетон, трещины | КЖ: несущая способность |
+| СП 63.13330.2018 | Бетонные и железобетонные конструкции | акты: ЖБ дефекты | КЖ: армирование, защитный слой |
+| СП 20.13330.2016/2017 | Нагрузки и воздействия | акты: основания, перекрытия | КЖ/КМ: расчётные нагрузки |
+| СП 16.13330.2017 | Стальные конструкции | акты: сварка, связи, узлы | КМ: металлокаркас |
+| СП 17.13330.2017 | Кровли | акты: протечки, примыкания | АР: кровельные решения |
+
+### 2.2 Преимущественно topic_5
+
+| norm_id | Раздел |
+|---|---|
+| СП 28.13330.2017 | Защита строительных конструкций от коррозии |
+| ГОСТ 23118-2019 | Конструкции стальные строительные. Общие ТУ |
+| СП 48.13330.2019 | Организация строительства (стройконтроль) |
+| СП 13-102-2003 | Обследование несущих строительных конструкций |
+| ГОСТ 31937-2024 | Обследование и мониторинг технического состояния |
+| ГОСТ Р ИСО 17637-2014 | Визуальный контроль сварных соединений |
+| СП 22.13330.2016 | Основания зданий и сооружений |
+| СП 70.13330.2012 *(2-я запись)* | Опорные узлы металлоконструкций |
+| СП 16.13330.2017 *(2-я запись)* | Пространственные связи |
+| СП 20.13330.2016 *(2-я запись)* | Нагрузки — перекрытия |
+
+### 2.3 Преимущественно topic_210
+
+| norm_id | Раздел |
+|---|---|
+| ГОСТ 21.101-2020 | Основные требования к проектной и рабочей документации |
+| ГОСТ 21.501-2018 | Рабочая документация АР и КР |
+| СП 71.13330.2017 | Изоляционные и отделочные покрытия |
+
+---
+
+## 3. project_engine.py NORMS_MAP — topic_210, 6 разделов
+
+Источник: `core/project_engine.py`, строки 39–45, HEAD 2deb7c8.
+
+```python
+NORMS_MAP = {
+    "кж":  ["СП 63.13330.2018", "ГОСТ 34028-2016", "СП 20.13330.2017"],
+    "км":  ["СП 16.13330.2017", "ГОСТ 27772-2015", "СП 20.13330.2017"],
+    "ар":  ["СП 118.13330.2022", "ГОСТ 21.501-2018"],
+    "ов":  ["СП 60.13330.2020", "ГОСТ 30494-2011"],
+    "вк":  ["СП 30.13330.2020", "СП 31.13330.2021"],
+    "эом": ["СП 256.1325800.2016", "ПУЭ-7"],
+}
+```
+
+NORMS_MAP частично пересекается с normative_engine.py (committed):
+- СП 63.13330.2018 — в NORMS_MAP["кж"] и в normative_engine base
+- СП 20.13330.2017 — в NORMS_MAP["кж","км"] и в normative_engine ("СП 20.13330.2016/2017")
+- СП 16.13330.2017 — в NORMS_MAP["км"] и в normative_engine base
+- ГОСТ 21.501-2018 — в NORMS_MAP["ар"] и в normative_engine base
+
+Только в NORMS_MAP (не в normative_engine committed):
+- ГОСТ 34028-2016 — прокат арматурный (КЖ)
+- ГОСТ 30494-2011 — параметры микроклимата (ОВ)
+- СП 118.13330.2022 — общественные здания (АР)
+- ПУЭ-7 — электроустановки (ЭОМ)
+- ГОСТ 27772-2015 — прокат стальной (КМ)
+
+---
+
+## 4. Расчёт нагрузок и несущей способности — PARTIAL
+
+### Что есть в committed коде
+
+`core/project_engine.py` — `calc_loads(region)`, строки 68–73:
+```python
+{"snow_kPa": ..., "wind_kPa": ..., "region": region, "note": "СП 20.13330.2017 — район N"}
+```
+
+Закрыто только:
+- снеговая нагрузка по 8 районам (SNOW_LOADS)
+- ветровая нагрузка по 8 районам (WIND_LOADS)
+- нормативная привязка: СП 20.13330.2017
+
+Нормативные документы в committed движке (оба контура):
+- СП 20.13330.2016/2017 — нагрузки и воздействия (normative_engine)
+- СП 16.13330.2017 — стальные конструкции (normative_engine + NORMS_MAP КМ)
+- СП 63.13330.2018 — ЖБ конструкции (normative_engine + NORMS_MAP КЖ)
+- СП 22.13330.2016 — основания (normative_engine)
+
+### Что НЕ закрыто
+
+```
+FULL расчёт несущей способности: НЕ ЗАКРЫТ
+
+Отсутствует в committed коде:
+- постоянные нагрузки (собственный вес конструкций)
+- временные нагрузки (полезная нагрузка на перекрытия по назначению)
+- особые нагрузки (сейсмика, взрыв, обрушение)
+- крановые нагрузки
+- нагрузки на фундаменты от надземных конструкций
+- расчёт сечений элементов по нормативным требованиям
+- проверка предельных состояний (1-я группа, 2-я группа)
+```
+
+### Что необходимо добавить (в оба направления)
+
+**topic_5 (ТЕХНАДЗОР):**
+Нормы ветровых и снеговых нагрузок нужны при проверке несущих конструкций в актах осмотра:
+- установить соответствие пролётов, прогонов, связей расчётным нагрузкам
+- фиксировать нагрузочный класс объекта при документировании дефектов несущих элементов
+
+**topic_210 (ПРОЕКТИРОВАНИЕ):**
+Для полноценного разбора КЖ/КМ разделов проектной документации:
+- нормативная привязка по видам нагрузок (не только снег/ветер)
+- расчётные сочетания нагрузок
+- классы ответственности и коэффициенты надёжности
+
+Статус: `PARTIAL — базовая нормативная привязка закрыта; полный расчётный контур не реализован`
+
+---
+
+## 5. P6H5 + P6H6 — COMMITTED (73b4946)
+
+`core/normative_engine.py` — оба блока зафиксированы в коммите 73b4946.
+Статус: `COMMITTED`
+
+**P6H5_NORMATIVE_FULL_EXPAND_V1** (36 норм):
+- ИД / журналы: РД-11-02-2006, РД-11-05-2007, СП 11-110-99
+- Бетонные смеси: ГОСТ 7473-2010, ГОСТ 18105-2018, ГОСТ 26633-2015
+- Газобетон / кладка: ГОСТ 31360-2007, СП 339.1325800.2017, СП 15.13330.2020
+- КМ: СП 294.1325800.2017, ГОСТ 27772-2015, СП 260.1325800.2016
+- ГКЛ: СП 163.1325800.2014, ГОСТ 6266-2018
+- Фасады / окна: СП 50.13330.2012, СП 293.1325800.2017, ГОСТ 30674-99
+- ОВ: СП 60.13330.2020, СП 73.13330.2016, СП 61.13330.2012
+- ВК: СП 30.13330.2020, СП 31.13330.2021, СП 32.13330.2018
+- ЭОМ: ПУЭ (7-е изд.), СП 256.1325800.2016, ГОСТ Р 50571-4-41-2022
+- Пожарная безопасность: 123-ФЗ, СП 1.13130.2020, СП 2.13130.2020
+- Охрана труда: СНиП 12-03-2001, СНиП 12-04-2002, Приказ №336н/№883н, ГОСТ 12.0.004-2015, ГОСТ 12.4.011-89, СП 49.13330.2010
+
+**P6H6_LOADS_V1** (5 записей — СП 20.13330.2017):
+снеговые, ветровые, постоянные, временные, сочетания нагрузок
+
+P6H5 частично дублирует NORMS_MAP (ОВ, ВК, ЭОМ) — оба источника теперь committed.
+smoke 11/11 PASS при commit.
+
+---
+
+## 6. Правила использования нормативного контура
+
+```
+1. topic_5 (ТЕХНАДЗОР):
+   - Использовать search_norms_sync() из normative_engine.py
+   - NORMS_MAP не применяется
+   - Если норма не найдена → "норма не подтверждена"
+
+2. topic_210 (ПРОЕКТИРОВАНИЕ):
+   - Раздел: detect_section() → NORMS_MAP[section]
+   - normative_engine дополнительно для текстового поиска
+   - Нельзя смешивать нормы разных разделов
+
+3. Общий запрет:
+   - Не изобретать новые СП/ГОСТ
+   - Не придумывать пункты нормативов
+   - Confidence=PARTIAL у всех committed записей
+
+4. Нагрузки:
+   - Нормативная привязка по всем видам нагрузок: ЗАКРЫТА (P6H6, СП 20)
+   - calc_loads() в project_engine: только снег/ветер по районам
+   - Автоматический расчёт постоянных/временных/сочетаний нагрузок: НЕ РЕАЛИЗОВАН
+   - Статус: PARTIAL_CALC — нормы есть, расчётная логика отсутствует
+```
+
+---
+
+## 7. Верификация с каноном
+
+Canon `TECHNADZOR_DOMAIN_LOGIC_CANON.md`, §22:
+```
+СП 16, СП 70, СП 28, ГОСТ 23118, СП 48, СП 13-102, ГОСТ 31937, СП 63, СП 22
+```
+Все 9 норм присутствуют в committed normative_engine.py. ✓
+
+Canon `01_SYSTEM_LOGIC_FULL.md`:
+```
+topic_210: КЖ / КМ / КМД / АР / ОВ / ВК / ЭОМ / СС / ГП / ПЗ / СМ / ТХ
+```
+- ОВ / ВК / ЭОМ — committed нормы в project_engine.py NORMS_MAP. ✓
+- СС / ГП / ПЗ / СМ / ТХ — в NORMS_MAP отсутствуют. NOT_PRESENT.
+
+====================================================================================================
+END_FILE: docs/TECHNADZOR/NORMATIVE_ENGINE_SHARED_CONTEXT.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/TECHNADZOR/TOPIC5_DOCUMENT_OUTPUT_CONTRACT.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 557b97c8c932bb7c5228ff7049330426530dca78340f4cddab5435c59e290633
+====================================================================================================
+{
+  "version": "TOPIC5_DOCUMENT_OUTPUT_CONTRACT_V1",
+  "updated_at": "2026-05-05",
+  "status": "CODE_AUDIT_DRAFT_NOT_LIVE_VERIFIED",
+  "source": "technadzor_engine.py audit + owner addendum 2026-05-05",
+
+  "output_types": [
+    {"type": "TEXT_REPORT", "status": "ACTIVE", "note": "рабочий путь"},
+    {"type": "PDF_ACT", "status": "NOT_IMPLEMENTED", "note": "local-check 2026-05-05: ModuleNotFoundError reportlab"},
+    {"type": "DOCX", "status": "NOT_IMPLEMENTED", "note": "local-check 2026-05-05: ModuleNotFoundError python-docx"},
+    {"type": "XLSX", "status": "UNVERIFIED"},
+    {"type": "GOOGLE_DOC", "status": "FUTURE_OPTIONAL_NOT_VERIFIED"},
+    {"type": "TELEGRAM_ONLY", "status": "ACTIVE", "note": "нет файла, только текст"}
+  ],
+
+  "document_statuses": [
+    "TELEGRAM_TEXT_REPORT_SENT",
+    "LOCAL_DRAFT_CREATED",
+    "DOCX_DRAFT_CREATED",
+    "PDF_GENERATION_NOT_IMPLEMENTED",
+    "DRIVE_UPLOAD_PENDING",
+    "DRIVE_UPLOAD_DONE",
+    "DRIVE_UPLOAD_FAILED",
+    "TELEGRAM_LINK_SENT",
+    "FALLBACK_SENT",
+    "CLIENT_DOCUMENT_DELIVERED"
+  ],
+
+  "done_rule": {
+    "done": "CLIENT_DOCUMENT_DELIVERED",
+    "not_done": [
+      "LOCAL_DRAFT_CREATED",
+      "DOCX_DRAFT_CREATED",
+      "DRIVE_UPLOAD_DONE without TELEGRAM_LINK_SENT"
+    ],
+    "conditions": [
+      "Document exists (PDF / DOCX / TEXT)",
+      "Uploaded to Drive (PDF/DOCX) OR text sent to Telegram (TEXT)",
+      "Owner/client received link or text in Telegram"
+    ]
+  },
+
+  "forbidden_patterns": [
+    "calling LOCAL_DRAFT_CREATED done",
+    "calling DOCX_DRAFT_CREATED done without Drive upload and Telegram link",
+    "claiming PDF generated without reportlab local-check",
+    "Drive upload without Telegram confirmation",
+    "sending /root/... path to client",
+    "placing DOCX in client_facing without explicit owner command"
+  ],
+
+  "delivery_chain": {
+    "entry": "task_worker._handle_in_progress",
+    "process": "process_technadzor (wrapper chain, 8 definitions)",
+    "build": "_p6h_build_* (text / docx / pdf)",
+    "drive_upload_fn": "technadzor_drive_index.upload_client_pdf_to_folder",
+    "drive_upload_fn_line": 383,
+    "drive_upload_fn_verified": true,
+    "fallback": "FALLBACK_SENT + error status in ObjectCard"
+  },
+
+  "packages_local_check_20260505": {
+    "reportlab": "NOT_INSTALLED",
+    "python_docx": "NOT_INSTALLED",
+    "dejavu_fonts": "PRESENT"
+  },
+
+  "file_naming": {
+    "docx_draft": "Черновик_акта_<объект>_<дата>.docx",
+    "pdf_final": "Акт_осмотра_<объект>_<дата>.pdf",
+    "xlsx_registry": "Реестр_замечаний_<объект>_<дата>.xlsx",
+    "date_format": "YYYYMMDD",
+    "object_name": "Russian name from ObjectCard"
+  },
+
+  "drive_placement": {
+    "client_facing_folder": "финальный PDF; DOCX только по явной команде владельца",
+    "topic5_system_folder": "служебные файлы, черновики, JSON манифесты",
+    "forbidden": "путь /root/... клиенту"
+  }
+}
+
+====================================================================================================
+END_FILE: docs/TECHNADZOR/TOPIC5_DOCUMENT_OUTPUT_CONTRACT.json
+FILE_CHUNK: 1/1
+====================================================================================================
 
 ====================================================================================================
 BEGIN_FILE: docs/TECHNADZOR/TOPIC5_DOCUMENT_OUTPUT_CONTRACT.md
