@@ -1,8 +1,1697 @@
 # ORCHESTRA_FULL_CONTEXT_PART_008
-generated_at_utc: 2026-05-08T10:30:02.020276+00:00
-git_sha_before_commit: 7c646dd4c04fb381ced170c979b5e07264310700
+generated_at_utc: 2026-05-08T13:30:01.839928+00:00
+git_sha_before_commit: 6cf91547d86c51b3e813702f9840a06eb53aab71
 part: 8/17
 
+
+====================================================================================================
+BEGIN_FILE: core/file_intake_router.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: cc90687dbd7f88ca7b05507b9279cbdc19a1bc27cb0b2449c753ac37c7ff1e6b
+====================================================================================================
+from core.gemini_vision import analyze_image_file  # GEMINI_VISION_V43
+import os, logging, asyncio
+from typing import Dict, Any, Optional, List
+
+logger = logging.getLogger(__name__)
+
+INTENT_TRIGGERS = {
+    "estimate": [
+        "смет", "расчёт", "расчет", "стоимость", "цена", "бюджет",
+        "сделай таблицу", "таблицу", "вытащи объёмы", "вытащи объемы",
+        "посчитай объём", "посчитай объем", "объём", "объем",
+        "excel", "эксель", "google таблицу", "google таблица", "google sheets",
+        "sheets", "спецификац", "ведомост", "бетон", "арматур", "фундамент"
+    ],
+    "ocr": [
+        "распознай таблицу", "распознать таблицу", "распозна", "ocr",
+        "скан", "текст с фото", "фото в таблицу"
+    ],
+    "technadzor": [
+        "проверь дефекты", "акт технадзора", "дефекты", "дефект",
+        "нарушение", "нарушения", "косяк", "осмотр", "технадзор",
+        "проверь фото", "проверь узел", "проверь"
+    ],
+    "dwg": ["чертёж", "чертеж", "dxf", "dwg", "проект", "автокад"],
+    "template": ["сделай так же", "по образцу", "как в", "шаблон"],
+    "vision": ["анализ фото", "анализ схемы", "разбери фото", "что на фото", "что на схеме"],
+    "search": ["найди в сметах", "поиск по сметам", "искать в старых"],
+}
+FORMAT_TRIGGERS = {
+    "excel": ["excel", "эксель", "xlsx", "иксель"],
+    "sheets": ["google sheets", "google таблиц", "гугл таблиц", "sheets", "таблицу на диск", "google sheet"],
+    "word": ["word", "ворд", "docx"],
+    "docs": ["google docs", "google документ", "гугл документ", "docs"],
+}
+
+def detect_intent(text: str) -> Optional[str]:
+    if not text: return None
+    t = text.lower()
+    for intent, triggers in INTENT_TRIGGERS.items():
+        if any(tr in t for tr in triggers): return intent
+    return None
+
+def detect_format(text: str) -> str:
+    t = (text or "").lower()
+    if any(x in t for x in FORMAT_TRIGGERS["sheets"]): return "sheets"
+    elif any(x in t for x in FORMAT_TRIGGERS["docs"]): return "docs"
+    elif any(x in t for x in FORMAT_TRIGGERS["word"]): return "word"
+    elif any(x in t for x in FORMAT_TRIGGERS["excel"]): return "excel"
+    return "excel"
+
+def format_priority(file_name: str, available_files: list = None) -> str:
+    """FORMAT_PRIORITY_V1 — DWG/DXF > XLSX > DOCX > PDF > IMAGE"""
+    files = available_files or [file_name]
+    # Приоритет по канону §11.9
+    for ext in [".dwg", ".dxf"]:
+        if any(f.lower().endswith(ext) for f in files):
+            return "dwg"
+    for ext in [".xlsx", ".xls", ".csv"]:
+        if any(f.lower().endswith(ext) for f in files):
+            return "excel"
+    for ext in [".docx", ".doc"]:
+        if any(f.lower().endswith(ext) for f in files):
+            return "word"
+    for ext in [".pdf"]:
+        if any(f.lower().endswith(ext) for f in files):
+            return "pdf"
+    for ext in [".jpg", ".jpeg", ".png", ".heic", ".webp", ".tiff", ".bmp"]:
+        if any(f.lower().endswith(ext) for f in files):
+            return "image"
+    return "unknown"
+
+def get_topic_role(topic_id: int) -> str:
+    try:
+        import sqlite3
+        conn = sqlite3.connect('/root/.areal-neva-core/data/memory.db')
+        cur = conn.cursor()
+        cur.execute("SELECT value FROM memory WHERE key = ?", (f"topic_{topic_id}_role",))
+        row = cur.fetchone(); conn.close()
+        return row[0] if row else ""
+    except: return ""
+
+def get_clarification_message(file_name: str, topic_id: int) -> str:
+    role = get_topic_role(topic_id)
+    base = f"📎 Получил файл «{file_name}».\nЧто с ним сделать?"
+    if topic_id == 2 or "СТРОЙКА" in role:
+        return base + "\n• Смета / Расчёт\n• Проектирование / Расчёт нагрузок\n• Анализ фото / Схема\n• Распознать таблицу\n• Просто сохранить\n\nВ каком формате?\n• Excel\n• Google Sheets"
+    elif topic_id == 5 or "ТЕХНАДЗОР" in role:
+        return base + "\n• Проверить дефекты / Составить акт\n• Анализ фото / Схема\n• Распознать таблицу\n• Просто сохранить\n\nВ каком формате?\n• Word\n• Google Docs"
+    else:
+        return base + "\n• Анализ фото / Схема\n• Распознать таблицу\n• Проверить дефекты\n• Смета / Расчёт\n• Просто сохранить"
+
+# === CANON_PASS_INTAKE_OFFER_SENT ===
+_OFFER_SENT = {}
+def mark_offer_sent(tid): _OFFER_SENT[tid] = True
+def is_offer_sent(tid): return _OFFER_SENT.get(tid, False)
+# === END CANON_PASS_INTAKE_OFFER_SENT ===
+
+def should_ask_clarification(raw_input: str, has_file: bool, already_asked: bool = False) -> bool:
+    # === ANTI_REPEAT_V1 — не спрашивать если уже спрашивали ===
+    if already_asked:
+        return False
+    if not has_file: return False
+    return detect_intent(raw_input) is None
+
+
+ESTIMATE_FILENAME_TRIGGERS = ["кж","кд","спецификац","ведомост","смет","расход","арматур","бетон","плит","конструкци","фундамент","у1-","у2-","кр-"]
+
+def detect_intent_from_filename(file_name: str) -> Optional[str]:
+    fn = (file_name or "").lower()
+    if any(t in fn for t in ESTIMATE_FILENAME_TRIGGERS):
+        return "estimate"
+    if any(t in fn for t in ["акт","дефект","осмотр","технадзор"]):
+        return "technadzor"
+    if any(t in fn for t in [".dwg",".dxf","чертеж","чертёж"]):
+        return "dwg"
+    return None
+
+async def route_file(file_path: str, task_id: str, topic_id: int, intent: str, fmt: str = "excel") -> Optional[Dict[str, Any]]:
+    try:
+        from core.engine_base import detect_real_file_type
+        real_type = detect_real_file_type(file_path)
+        # === UNIVERSAL_FILE_HANDLER_V1_WIRED ===
+        if real_type in ("zip", "rar", "7z", "dwg", "dxf", "video", "mp4", "audio", "text_fallback", "unknown") or intent == "dwg":
+            try:
+                from core.universal_file_handler import extract_text_from_file
+                _ufh = extract_text_from_file(file_path, task_id, topic_id)
+                _ufh_text = (_ufh.get("text") or "").strip()
+                _ufh_rows = _ufh.get("rows") or []
+                if _ufh.get("success") and (_ufh_text or _ufh_rows):
+                    _summary = f"\u0424\u0430\u0439\u043b \u043e\u0431\u0440\u0430\u0431\u043e\u0442\u0430\u043d ({_ufh.get('type','unknown')}):\n"
+                    if _ufh_rows:
+                        _summary += f"\u0421\u0442\u0440\u043e\u043a \u0434\u0430\u043d\u043d\u044b\u0445: {len(_ufh_rows)}\n"
+                        for row in _ufh_rows[:5]:
+                            _summary += "  " + " | ".join(str(c) for c in row if c) + "\n"
+                    if _ufh_text:
+                        _summary += _ufh_text[:1500]
+                    return {"success": True, "text": _summary, "type": _ufh.get("type")}
+                else:
+                    return {"success": False, "error": _ufh.get("error") or f"\u0424\u043e\u0440\u043c\u0430\u0442 {real_type} \u043d\u0435 \u043f\u043e\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442\u0441\u044f"}
+            except Exception as _ufh_e:
+                return {"success": False, "error": f"UNIVERSAL_HANDLER_ERROR: {_ufh_e}"}
+        # === END UNIVERSAL_FILE_HANDLER_V1_WIRED ===
+        if real_type in ("csv", "txt") and intent not in ("estimate", "technadzor", "ocr"):
+            intent = "estimate"
+        if real_type == "dwg":
+            intent = "dwg"
+        if intent == "estimate":
+            if fmt == "sheets":
+                from core.sheets_generator import create_google_sheet
+                from core.estimate_engine import process_estimate_to_excel
+                data = await process_estimate_to_excel(file_path, task_id, topic_id)
+                if data.get("excel_path"):
+                    from openpyxl import load_workbook
+                    wb = load_workbook(data["excel_path"]); ws = wb.active
+                    rows = [[cell.value for cell in row] for row in ws.iter_rows()]; wb.close()
+                    link = None
+                    try:
+                        link = create_google_sheet(f"Estimate_{task_id[:8]}", rows)
+                    except Exception as e:
+                        err_str = str(e)
+                        if "403" in err_str or "permission" in err_str.lower() or "quota" in err_str.lower():
+                            logger.warning(f"Google Sheets 403/quota -> fallback XLSX: {e}")
+                        else:
+                            logger.warning(f"create_google_sheet fallback to XLSX: {e}")
+                        link = None
+                    if link and "docs.google.com" in str(link):
+                        return {"success": True, "drive_link": link, "artifact_path": data["excel_path"]}
+                    # Fallback: return XLSX artifact
+                    return {"success": True, "artifact_path": data["excel_path"], "excel_path": data["excel_path"]}
+            else:
+                from core.estimate_engine import process_estimate_to_excel
+                return await process_estimate_to_excel(file_path, task_id, topic_id)
+        elif intent == "ocr":
+            from core.ocr_engine import process_image_to_excel
+            return await process_image_to_excel(file_path, task_id, topic_id)
+        elif intent == "technadzor":
+            from core.technadzor_engine import process_defect_to_report
+            data = await process_defect_to_report(file_path, task_id, topic_id)
+            if not data or not data.get("success"):
+                return {"success": False, "error": (data.get("error") if isinstance(data, dict) else None) or "TECHNADZOR_FAILED"}
+            rp = data.get("report_path")
+            if rp:
+                import os as _os
+                rp_size = _os.path.getsize(rp) if _os.path.exists(rp) else 0
+                if rp_size < 1000:
+                    return {"success": False, "error": "DOCUMENT_EMPTY_RESULT: DOCX too small"}
+                from docx import Document as _Doc
+                _doc = _Doc(rp)
+                _has_content = any(p.text.strip() for p in _doc.paragraphs) or len(_doc.tables) > 0
+                if not _has_content:
+                    return {"success": False, "error": "DOCUMENT_EMPTY_RESULT: no paragraphs or tables"}
+            if fmt == "docs" and rp:
+                try:
+                    from core.docs_generator import create_google_doc
+                    from docx import Document
+                    doc = Document(rp)
+                    content = "\n".join([p.text for p in doc.paragraphs if p.text.strip()])
+                    link = create_google_doc(f"Defect_{task_id[:8]}", content)
+                    if link:
+                        return {"success": True, "drive_link": link, "artifact_path": rp}
+                except Exception as _e:
+                    logger.warning(f"create_google_doc fallback to DOCX: {_e}")
+            return data
+        elif intent == "dwg":
+            from core.dwg_engine import process_dwg_to_excel
+            return await process_dwg_to_excel(file_path, task_id, topic_id)
+        elif intent == "template":
+            from core.template_manager import apply_template, get_template
+            tmpl = get_template(str(topic_id), topic_id, "estimate")
+            if tmpl:
+                out = f"/tmp/{task_id}_template.xlsx"
+                # Extract real data from source file if possible
+                real_rows = []
+                try:
+                    real_type_t = detect_real_file_type(file_path)
+                    if real_type_t in ("xlsx", "zip_or_office"):
+                        from openpyxl import load_workbook
+                        wb_t = load_workbook(file_path, data_only=True)
+                        ws_t = wb_t.active
+                        for row_t in ws_t.iter_rows(min_row=2, values_only=True):
+                            if row_t and any(v is not None for v in row_t):
+                                real_rows.append(list(row_t))
+                        wb_t.close()
+                    elif real_type_t == "pdf":
+                        try:
+                            import pdfplumber
+                            with pdfplumber.open(file_path) as pdf_t:
+                                for page_t in pdf_t.pages:
+                                    tables_t = page_t.extract_tables()
+                                    for table_t in tables_t:
+                                        for row_t in table_t[1:]:
+                                            if row_t and any(v for v in row_t if v):
+                                                real_rows.append(row_t)
+                        except Exception:
+                            pass
+                except Exception as _te:
+                    logger.warning(f"template data extraction failed: {_te}")
+                if apply_template(tmpl, out, real_rows): return {"success": True, "excel_path": out}
+                elif apply_template(tmpl, out, []): return {"success": True, "excel_path": out}
+        elif intent == "vision":
+            result = await analyze_image_file(file_path, None)
+            return {"success": True, "engine": "gemini_vision", "result_text": result, "text_result": result}
+        elif intent == "search":
+            from core.search_engine import search_in_estimates
+            results = search_in_estimates(file_path, topic_id)
+            return {"success": True, "text_result": "\n".join(results[:10])}
+        return {"success": False, "error": f"PIPELINE_NOT_EXECUTED: no handler for intent={intent}"}
+    except Exception as e:
+        logger.error(f"route_file: {e}", exc_info=True)
+        return {"success": False, "error": str(e)}
+
+async def handle_multiple_files(file_paths: List[str], task_id: str, topic_id: int, intent: str, fmt: str = "excel") -> Optional[Dict[str, Any]]:
+    if intent == "estimate":
+        from core.multi_file_orchestrator import merge_estimate_results
+        results = []
+        for fp in file_paths:
+            from core.estimate_engine import process_estimate_to_excel
+            r = await process_estimate_to_excel(fp, task_id, topic_id)
+            if r: results.append(r)
+        return merge_estimate_results(results)
+    return None
+
+# === ARK_KZH_KD_TRIGGERS ===
+ESTIMATE_FILENAME_TRIGGERS = list(set(ESTIMATE_FILENAME_TRIGGERS + [
+    'арк', 'кж', 'кд', 'кр', 'ов', 'вк', 'эо', 'гп',
+    'марка', 'раздел', 'спецификация', 'ведомость',
+]))
+
+_ARK_SECTION_MAP = {
+    'арк': 'estimate', 'кж': 'estimate', 'кд': 'estimate',
+    'кр': 'estimate', 'ов': 'estimate', 'вк': 'estimate',
+    'эо': 'estimate', 'гп': 'estimate',
+}
+
+def detect_intent_from_filename_v2(file_name: str):
+    fn = (file_name or '').lower()
+    for key, intent in _ARK_SECTION_MAP.items():
+        if key in fn:
+            return intent
+    return detect_intent_from_filename(file_name)
+# === END ARK_KZH_KD_TRIGGERS ===
+
+# === ALL_CONTOURS_ROUTE_FILE_V2 ===
+try:
+    _all_contours_orig_route_file=route_file
+except Exception:
+    _all_contours_orig_route_file=None
+def _ac_words(*groups):
+    return ["".join(chr(x) for x in g) for g in groups]
+def _ac_has(text, words):
+    t=str(text or "").lower()
+    return any(w in t for w in words)
+async def route_file(file_path, task_id, topic_id=0, *args, **kwargs):
+    import inspect
+    fp=str(file_path or "")
+    raw=" ".join([fp,str(kwargs.get("raw_input") or ""),str(kwargs.get("prompt") or ""),str(kwargs.get("user_text") or "")]+[str(a or "") for a in args])
+    template_words=_ac_words((1080,1089,1087,1086,1083,1100,1079,1091,1081,32,1082,1072,1082,32,1096,1072,1073,1083,1086,1085),(1089,1086,1093,1088,1072,1085,1080,32,1096,1072,1073,1083,1086,1085),(1101,1090,1086,32,1096,1072,1073,1083,1086,1085))
+    if _ac_has(raw, template_words):
+        from core.template_manager import save_template
+        return {"success":True,"intent":"template","template_path":save_template(fp,int(topic_id or 0),"template")}
+    kzh_words=_ac_words((1082,1078),(1082,1076),(1072,1088,1082),(1082,1088))
+    detector=globals().get("detect_intent_from_filename_v2") or globals().get("detect_intent_from_filename")
+    intent=detector(fp) if detector else "unknown"
+    if intent=="estimate" and _ac_has(fp,kzh_words):
+        from core.estimate_engine import process_kzh_pdf
+        return await process_kzh_pdf(fp,str(task_id),int(topic_id or 0))
+    if _all_contours_orig_route_file is None:
+        return {"success":False,"error":"original_route_file_missing","intent":intent}
+    res=_all_contours_orig_route_file(fp,task_id,topic_id,*args,**kwargs)
+    if inspect.isawaitable(res):
+        res=await res
+    sheets_words=("google sheets","fmt=sheets","sheets")+tuple(_ac_words((1075,1091,1075,1083,32,1090,1072,1073,1083),(1075,1091,1075,1083,32,1090,1072,1073,1083,1080,1094),(1092,1086,1088,1084,1072,1090,32,115,104,101,101,116,115)))
+    if isinstance(res,dict) and _ac_has(raw,sheets_words):
+        xl=res.get("excel_path") or res.get("xlsx_path")
+        if xl:
+            try:
+                from core.sheets_generator import create_google_sheet
+                sh=create_google_sheet(xl,task_id=task_id,topic_id=topic_id)
+                if inspect.isawaitable(sh):
+                    sh=await sh
+                if sh:
+                    res["sheets_link"]=sh.get("url") if isinstance(sh,dict) else str(sh)
+                    res["drive_link"]=res.get("drive_link") or res["sheets_link"]
+            except Exception as e:
+                res["sheets_error"]=str(e)[:300]
+    return res
+# === END_ALL_CONTOURS_ROUTE_FILE_V2 ===
+
+# === FINAL_CODE_CONTOUR_FILE_INTAKE_V1 ===
+try:
+    ESTIMATE_FILENAME_TRIGGERS=list(set(ESTIMATE_FILENAME_TRIGGERS+[_f for _f in ["km","kmd"]]))
+except Exception:
+    pass
+try:
+    _ARK_SECTION_MAP.update({"km":"estimate","kmd":"estimate"})
+except Exception:
+    _ARK_SECTION_MAP={"km":"estimate","kmd":"estimate"}
+try:
+    _final_orig_route_file=route_file
+except Exception:
+    _final_orig_route_file=None
+async def route_file(file_path, task_id, topic_id=0, *args, **kwargs):
+    import inspect
+    fp=str(file_path or "")
+    detector=globals().get("detect_intent_from_filename_v2") or globals().get("detect_intent_from_filename")
+    intent=detector(fp) if detector else "unknown"
+    low=fp.lower()
+    if intent=="estimate" and any(x in low for x in ["km","kmd","kzh","kd","ark","kr"]):
+        from core.estimate_engine import process_kzh_pdf
+        return await process_kzh_pdf(fp,str(task_id),int(topic_id or 0))
+    if _final_orig_route_file is None:
+        return {"success":False,"error":"original_route_file_missing","intent":intent}
+    res=_final_orig_route_file(fp,task_id,topic_id,*args,**kwargs)
+    if inspect.isawaitable(res):
+        res=await res
+    if isinstance(res,dict) and (kwargs.get("fmt")=="sheets" or str(kwargs.get("raw_input") or "").lower().find("sheets")>=0):
+        xl=res.get("excel_path") or res.get("xlsx_path")
+        if xl:
+            from openpyxl import load_workbook
+            wb=load_workbook(xl,data_only=False)
+            ws=wb.active
+            rows=[[cell.value for cell in row] for row in ws.iter_rows()]
+            from core.sheets_generator import create_google_sheet
+            sh=create_google_sheet(Path(xl).stem, rows)
+            if inspect.isawaitable(sh): sh=await sh
+            if sh:
+                res["sheets_link"]=sh.get("url") if isinstance(sh,dict) else str(sh)
+                res["drive_link"]=res.get("drive_link") or res["sheets_link"]
+    return res
+# === END_FINAL_CODE_CONTOUR_FILE_INTAKE_V1 ===
+
+# === FILE_INTAKE_KM_V39 ===
+try:
+    ESTIMATE_FILENAME_TRIGGERS = list(set(list(ESTIMATE_FILENAME_TRIGGERS) + ["км","кмд","металл","конструкц"]))
+except Exception:
+    pass
+try:
+    _ARK_SECTION_MAP.update({"км": "estimate", "кмд": "estimate"})
+except Exception:
+    pass
+# === END_FILE_INTAKE_KM_V39 ===
+
+# === FILE_INTAKE_PROJECT_V41 ===
+
+_PROJECT_V41_TRIGGERS = ("кж","км","кмд","ар","ов","вк","эом","сс","гп","пз","тх")
+
+def _v41_project_section_hit(text):
+    src = str(text or "").lower()
+    import re
+    for key in _PROJECT_V41_TRIGGERS:
+        if re.search(r"(^|[^а-яa-z0-9])" + re.escape(key) + r"([^а-яa-z0-9]|$)", src, re.I):
+            return True
+    return False
+
+try:
+    _v41_orig_detect_intent = detect_intent
+    def detect_intent(file_name: str, raw_input: str = "", *args, **kwargs):
+        src = (str(file_name or "") + " " + str(raw_input or "")).lower()
+        if _v41_project_section_hit(src):
+            return "project"
+        return _v41_orig_detect_intent(file_name)  # DETECT_INTENT_FIX_V1
+except Exception:
+    pass
+
+if "route_file" in globals():
+    _v41_orig_route_file = route_file
+
+    async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *args, **kwargs):
+        raw_input = str(kwargs.get("raw_input") or "")
+        file_name = str(file_path or "")
+        final_intent = intent or detect_intent(file_name, raw_input)
+
+        if final_intent == "project":
+            try:
+                from core.project_engine import process_project_file
+                return await process_project_file(file_path, task_id, topic_id, raw_input)
+            except Exception as e:
+                return {"success": False, "error": "PROJECT_ENGINE_FAILED: " + str(e)[:300]}
+
+        res = _v41_orig_route_file(file_path, task_id, topic_id, final_intent, fmt, *args, **kwargs)
+        import inspect
+        if inspect.isawaitable(res):
+            res = await res
+
+        if isinstance(res, dict) and res.get("success") is False:
+            return res
+        if not isinstance(res, dict):
+            return {"success": False, "error": "FILE_RESULT_GUARD: route_file returned empty"}
+        if not (res.get("drive_link") or res.get("sheets_link") or res.get("doc_link") or res.get("excel_path") or res.get("artifact_path") or res.get("text") or res.get("result")):
+            return {"success": False, "error": "FILE_RESULT_GUARD: no usable output"}
+        return res
+
+# === END_FILE_INTAKE_PROJECT_V41 ===
+
+# === FILE_INTAKE_PROJECT_SAFE_V42 ===
+
+_PROJECT_V42_TRIGGERS = ("кж","км","кмд","ар","ов","вк","эом","сс","гп","пз","тх")
+
+def _v42_project_choice(raw_input: str) -> bool:
+    t = str(raw_input or "").lower()
+    return "проектирование" in t or "расчёт нагрузок" in t or "расчет нагрузок" in t
+
+if "route_file" in globals():
+    _v42_orig_route_file = route_file
+
+    async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *args, **kwargs):
+        import inspect
+        raw_input = str(kwargs.get("raw_input") or "")
+
+        if _v42_project_choice(raw_input):
+            try:
+                from core.project_engine import process_project_file
+                res = await process_project_file(file_path, task_id, topic_id, raw_input)
+                if not isinstance(res, dict):
+                    return {"success": False, "error": "PROJECT_RESULT_GUARD: empty_payload"}
+                if res.get("success") is False:
+                    return res
+                if not (res.get("drive_link") or res.get("excel_path") or res.get("docx_path") or res.get("pdf_path")):
+                    return {"success": False, "error": "PROJECT_RESULT_GUARD: no_artifact"}
+                return res
+            except Exception as e:
+                return {"success": False, "error": "PROJECT_ENGINE_FAILED: " + str(e)[:300]}
+
+        if str(intent or "").lower() == "project" and not _v42_project_choice(raw_input):
+            intent = "estimate"
+
+        res = _v42_orig_route_file(file_path, task_id, topic_id, intent, fmt, *args, **kwargs)
+        if inspect.isawaitable(res):
+            res = await res
+
+        if isinstance(res, dict) and res.get("success") is False:
+            return res
+
+        if not isinstance(res, dict):
+            return {"success": False, "error": "FILE_RESULT_GUARD: route_file returned empty"}
+
+        if not (res.get("drive_link") or res.get("sheets_link") or res.get("doc_link") or res.get("excel_path") or res.get("artifact_path") or res.get("text") or res.get("result")):
+            return {"success": False, "error": "FILE_RESULT_GUARD: no usable output"}
+
+        return res
+
+# === END_FILE_INTAKE_PROJECT_SAFE_V42 ===
+
+# === CODE_CLOSE_V43_FILE_INTAKE ===
+
+def _v43_is_template_learn(raw_input):
+    t = str(raw_input or "").lower()
+    return "образец" in t or "шаблон" in t or "запомни структуру" in t
+
+def _v43_is_project_choice(raw_input):
+    t = str(raw_input or "").lower()
+    return "проектирование" in t or "расчёт нагрузок" in t or "расчет нагрузок" in t
+
+if "route_file" in globals():
+    _v43_orig_route_file = route_file
+
+    async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *args, **kwargs):
+        import inspect
+        raw_input = str(kwargs.get("raw_input") or "")
+
+        if _v43_is_template_learn(raw_input):
+            try:
+                from core.template_manager import template_learn_v43
+                ok = template_learn_v43(file_path, topic_id, intent or "project")
+                return {"success": bool(ok), "text": "Шаблон сохранён для топика" if ok else "TEMPLATE_LEARN_FAILED"}
+            except Exception as e:
+                return {"success": False, "error": "TEMPLATE_LEARN_FAILED: " + str(e)[:300]}
+
+        if _v43_is_project_choice(raw_input):
+            try:
+                from core.template_manager import template_priority_v43
+                template = template_priority_v43(topic_id, "project")
+                from core.project_engine import process_project_file
+                res = await process_project_file(file_path, task_id, topic_id, raw_input)
+                if template:
+                    res["template_used"] = template
+                return res
+            except Exception as e:
+                return {"success": False, "error": "PROJECT_ENGINE_FAILED: " + str(e)[:300]}
+
+        if str(intent or "").lower() == "project" and not _v43_is_project_choice(raw_input):
+            intent = "estimate"
+
+        res = _v43_orig_route_file(file_path, task_id, topic_id, intent, fmt, *args, **kwargs)
+        if inspect.isawaitable(res):
+            res = await res
+
+        if isinstance(res, dict) and res.get("success") is False:
+            return res
+        if not isinstance(res, dict):
+            return {"success": False, "error": "FILE_RESULT_GUARD: empty_route_result"}
+        if not (res.get("drive_link") or res.get("sheets_link") or res.get("doc_link") or res.get("excel_path") or res.get("artifact_path") or res.get("text") or res.get("result")):
+            return {"success": False, "error": "FILE_RESULT_GUARD: no_output"}
+        return res
+
+# === END_CODE_CLOSE_V43_FILE_INTAKE ===
+
+
+# === FILE_INTAKE_KZH_INTENT_FIX_V1 ===
+# Bare KЖ/КД/project files are project-context files, not estimate files.
+# File upload without explicit user instruction must ask what to do.
+
+import json as _fik_json
+import os as _fik_os
+import re as _fik_re
+from typing import Optional as _FIKOptional
+
+ESTIMATE_FILENAME_TRIGGERS = [
+    "смет", "расход", "ведомост", "спецификац",
+    "у1-", "у2-", "кр-",
+]
+
+PROJECT_FILENAME_TRIGGERS = [
+    "кж", "кд", "кмд", "км", "ар",
+    "плит", "фундамент", "конструкци", "конструкция",
+    "узел", "цоколь", "разрез", "армирован", "чертеж", "чертёж",
+]
+
+def _fik_norm_text(value) -> str:
+    return str(value or "").lower().replace("ё", "е").strip()
+
+def _fik_word_hit(text: str, words) -> bool:
+    t = _fik_norm_text(text)
+    for w in words:
+        ww = _fik_norm_text(w)
+        if not ww:
+            continue
+        if len(ww) <= 3:
+            if _fik_re.search(r"(^|[^а-яa-z0-9])" + _fik_re.escape(ww) + r"([^а-яa-z0-9]|$)", t, _fik_re.I):
+                return True
+        elif ww in t:
+            return True
+    return False
+
+def _fik_extract_user_instruction(raw_input: str) -> str:
+    """
+    Extract only explicit user instruction.
+    Ignore file_name/file_id/mime/source metadata, because filename alone must not auto-run pipeline.
+    """
+    raw = str(raw_input or "").strip()
+    if not raw:
+        return ""
+    try:
+        obj = _fik_json.loads(raw)
+        if isinstance(obj, dict):
+            for key in ("caption", "user_text", "text", "prompt", "comment", "message"):
+                val = obj.get(key)
+                if isinstance(val, str) and val.strip():
+                    return val.strip()
+            return ""
+    except Exception:
+        pass
+    if raw.startswith("{") and ("file_name" in raw or "file_id" in raw or "mime_type" in raw):
+        return ""
+    return raw
+
+def detect_intent_from_filename(file_name: str) -> _FIKOptional[str]:
+    fn = _fik_norm_text(_fik_os.path.basename(str(file_name or "")))
+
+    if _fik_word_hit(fn, PROJECT_FILENAME_TRIGGERS):
+        return "project"
+
+    if _fik_word_hit(fn, ESTIMATE_FILENAME_TRIGGERS):
+        return "estimate"
+
+    if _fik_word_hit(fn, ("акт", "дефект", "осмотр", "технадзор")):
+        return "technadzor"
+
+    if _fik_word_hit(fn, (".dwg", ".dxf", "dwg", "dxf", "чертеж", "чертёж")):
+        return "dwg"
+
+    return None
+
+def detect_intent_from_filename_v2(file_name: str) -> _FIKOptional[str]:
+    return detect_intent_from_filename(file_name)
+
+def should_ask_clarification(raw_input: str, has_file: bool, already_asked: bool = False) -> bool:
+    if already_asked:
+        return False
+    if not has_file:
+        return False
+
+    instruction = _fik_extract_user_instruction(raw_input)
+    low = _fik_norm_text(instruction)
+
+    service_words = (
+        "tmp", "healthcheck", "service_file", "служебный", "синхронизации"
+    )
+    if _fik_word_hit(low, service_words):
+        return False
+
+    explicit_action_words = (
+        "сделай", "делай", "создай", "сформируй", "подготовь", "разработай",
+        "посчитай", "рассчитай", "проверь", "проанализируй", "выгрузи",
+        "сохрани", "возьми", "прими", "используй", "распознай", "обработай",
+        "шаблон", "образец", "по образцу", "по шаблону",
+        "смет", "проект", "кж", "кд", "км", "кмд", "акт", "технадзор",
+        "таблиц", "excel", "xlsx", "pdf", "dxf", "dwg", "ocr",
+        "проектирование", "расчет нагрузок", "расчёт нагрузок",
+    )
+
+    return not _fik_word_hit(low, explicit_action_words)
+
+try:
+    _fik_orig_route_file = route_file
+except Exception:
+    _fik_orig_route_file = None
+
+async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *args, **kwargs):
+    """
+    Final guard:
+    - KЖ/KД/project filenames never become estimate automatically
+    - if caller passes estimate for project file without explicit estimate command, downgrade to project
+    - raw file with no user instruction must return clarification payload
+    """
+    import inspect as _fik_inspect
+
+    raw_input = str(kwargs.get("raw_input") or kwargs.get("prompt") or kwargs.get("user_text") or "")
+    instruction = _fik_extract_user_instruction(raw_input)
+    filename_intent = detect_intent_from_filename(str(file_path or ""))
+
+    if not instruction and filename_intent in ("project", "estimate", "technadzor", "dwg"):
+        try:
+            msg = get_clarification_message(_fik_os.path.basename(str(file_path or "")), int(topic_id or 0))
+        except Exception:
+            msg = (
+                "Файл принят.\n"
+                "Что сделать с ним?\n\n"
+                "1. Взять как шаблон проекта\n"
+                "2. Взять как шаблон сметы\n"
+                "3. Взять как шаблон технадзора\n"
+                "4. Обработать как обычный файл\n\n"
+                "Ответь одним сообщением"
+            )
+        return {
+            "success": False,
+            "needs_clarification": True,
+            "state": "WAITING_CLARIFICATION",
+            "intent": filename_intent,
+            "result_text": msg,
+            "error": "FILE_INTAKE_NEEDS_CONTEXT",
+        }
+
+    low_instruction = _fik_norm_text(instruction)
+    explicit_estimate = _fik_word_hit(low_instruction, ("смет", "расход", "ведомост", "спецификац", "расчет", "расчёт", "стоимость", "цена", "объем", "объём"))
+
+    if filename_intent == "project" and str(intent or "").lower() == "estimate" and not explicit_estimate:
+        intent = "project"
+
+    if intent is None:
+        intent = filename_intent
+
+    if _fik_orig_route_file is None:
+        return {"success": False, "error": "original_route_file_missing", "intent": intent}
+
+    res = _fik_orig_route_file(file_path, task_id, topic_id, intent, fmt, *args, **kwargs)
+    if _fik_inspect.isawaitable(res):
+        res = await res
+    return res
+
+# === END_FILE_INTAKE_KZH_INTENT_FIX_V1 ===
+
+
+# === CONTEXT_AWARE_FILE_INTAKE_V1_ROUTER_WRAPPER ===
+try:
+    _ca_fir_orig_route_file = route_file
+except Exception:
+    _ca_fir_orig_route_file = None
+
+async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *args, **kwargs):
+    import inspect
+    raw_input = str(kwargs.get("raw_input") or kwargs.get("prompt") or kwargs.get("user_text") or "")
+    if not raw_input:
+        try:
+            from core.file_context_intake import latest_pending_instruction_for_topic
+            chat_id = str(kwargs.get("chat_id") or "")
+            pending = latest_pending_instruction_for_topic(int(topic_id or 0), chat_id)
+            if pending:
+                kwargs["raw_input"] = pending
+                raw_input = pending
+        except Exception:
+            pass
+
+    if _ca_fir_orig_route_file is None:
+        return {"success": False, "error": "CONTEXT_AWARE_FILE_INTAKE_V1: original_route_file_missing"}
+
+    res = _ca_fir_orig_route_file(file_path, task_id, topic_id, intent, fmt, *args, **kwargs)
+    if inspect.isawaitable(res):
+        res = await res
+    return res
+
+# === END_CONTEXT_AWARE_FILE_INTAKE_V1_ROUTER_WRAPPER ===
+
+
+
+# === FILE_INTAKE_SUPPORTED_FORMATS_V1 ===
+SUPPORTED_IMAGE_FORMATS = {".jpg", ".jpeg", ".png", ".heic", ".heif", ".webp", ".bmp", ".tiff", ".tif", ".gif", ".svg"}
+SUPPORTED_DOCUMENT_FORMATS = {".pdf", ".docx", ".doc", ".xlsx", ".xls", ".csv", ".txt", ".rtf"}
+SUPPORTED_CAD_FORMATS = {".dwg", ".dxf", ".ifc", ".pln", ".rvt"}
+SUPPORTED_AUDIO_FORMATS = {".ogg", ".mp3", ".wav", ".m4a", ".flac", ".aac"}
+SUPPORTED_ARCHIVE_FORMATS = {".zip", ".rar", ".7z"}
+
+def get_supported_file_format_v1(file_name: str) -> str:
+    import os
+    ext = os.path.splitext(str(file_name or "").lower())[1]
+    if ext in SUPPORTED_IMAGE_FORMATS:
+        return "image_ocr_vision"
+    if ext in SUPPORTED_DOCUMENT_FORMATS:
+        return "document"
+    if ext in SUPPORTED_CAD_FORMATS:
+        if ext == ".pln":
+            return "pln_metadata_only"
+        if ext == ".rvt":
+            return "rvt_metadata_only"
+        if ext == ".ifc":
+            return "ifc_ifcopenshell"
+        return "cad_ezdxf"
+    if ext in SUPPORTED_AUDIO_FORMATS:
+        return "audio_groq_stt"
+    if ext in SUPPORTED_ARCHIVE_FORMATS:
+        return "archive_recursive"
+    return "unsupported"
+
+def unsupported_format_message_v1(file_name: str) -> str:
+    return "Формат файла не читается напрямую. Пришли PDF/DOCX/XLSX или экспортированный чертёж"
+
+try:
+    ESTIMATE_FILENAME_TRIGGERS = list(set(ESTIMATE_FILENAME_TRIGGERS + [
+        "jpg", "jpeg", "png", "heic", "heif", "webp", "bmp", "tiff", "gif", "svg",
+        "dwg", "dxf", "ifc", "pln", "rvt", "zip", "rar", "7z",
+        "км", "кмд", "ов", "вк", "эо", "эм", "эос"
+    ]))
+except Exception:
+    pass
+# === END_FILE_INTAKE_SUPPORTED_FORMATS_V1 ===
+
+
+# === CONTEXT_AWARE_FILE_INTAKE_V1_DB_LOOKUP ===
+def _context_aware_file_intake_lookup_v1(chat_id: str = "", topic_id: int = 0) -> str:
+    import sqlite3
+    try:
+        conn = sqlite3.connect("/root/.areal-neva-core/data/core.db")
+        try:
+            if chat_id:
+                rows = conn.execute(
+                    "SELECT raw_input, input_type, state, result FROM tasks WHERE chat_id=? AND COALESCE(topic_id,0)=? AND state IN ('DONE','AWAITING_CONFIRMATION','IN_PROGRESS','WAITING_CLARIFICATION') ORDER BY updated_at DESC LIMIT 5",
+                    (str(chat_id), int(topic_id or 0)),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT raw_input, input_type, state, result FROM tasks WHERE COALESCE(topic_id,0)=? AND state IN ('DONE','AWAITING_CONFIRMATION','IN_PROGRESS','WAITING_CLARIFICATION') ORDER BY updated_at DESC LIMIT 5",
+                    (int(topic_id or 0),),
+                ).fetchall()
+        finally:
+            conn.close()
+    except Exception:
+        rows = []
+
+    for r in rows or []:
+        combined = " ".join(str(x or "") for x in r).lower()
+        if any(x in combined for x in ("смет", "estimate", "расцен", "стоимость", "цена")):
+            return "estimate"
+        if any(x in combined for x in ("проект", "кж", "кд", "ар", "эскиз", "км", "кмд", "ов", "вк", "эо")):
+            return "project"
+        if any(x in combined for x in ("акт", "технадзор", "дефект", "нарушение")):
+            return "technadzor"
+        if any(x in combined for x in ("образец", "шаблон", "эталон")):
+            return "template"
+    return ""
+
+try:
+    _context_aware_orig_route_file_v1 = route_file
+    async def route_file(*args, **kwargs):
+        import inspect
+        lst = list(args)
+        raw_input = str(kwargs.get("raw_input") or kwargs.get("caption") or kwargs.get("user_text") or "")
+        chat_id = str(kwargs.get("chat_id") or "")
+        topic_id = kwargs.get("topic_id", lst[2] if len(lst) >= 3 else 0)
+        current_intent = kwargs.get("intent", lst[3] if len(lst) >= 4 else None)
+        final_intent = current_intent
+
+        if not final_intent or str(final_intent).lower() in ("unknown", "none", ""):
+            if not raw_input.strip():
+                final_intent = _context_aware_file_intake_lookup_v1(chat_id=chat_id, topic_id=int(topic_id or 0))
+
+        if final_intent and final_intent != current_intent:
+            if "intent" in kwargs:
+                kwargs["intent"] = final_intent
+            elif len(lst) >= 4:
+                lst[3] = final_intent
+            else:
+                kwargs["intent"] = final_intent
+
+        res = _context_aware_orig_route_file_v1(*lst, **kwargs)
+        if inspect.isawaitable(res):
+            res = await res
+        return res
+except Exception:
+    pass
+# === END_CONTEXT_AWARE_FILE_INTAKE_V1_DB_LOOKUP ===
+
+
+# === P6D_FILE_INTAKE_IMAGE_ESTIMATE_KWARGS_CLOSE_20260504_V1 ===
+try:
+    _p6d_orig_route_file_20260504 = route_file
+except Exception:
+    _p6d_orig_route_file_20260504 = None
+
+def _p6d_fi_s(v, limit=50000):
+    try:
+        if v is None:
+            return ""
+        return str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+def _p6d_fi_low(v):
+    return _p6d_fi_s(v).lower().replace("ё", "е")
+
+def _p6d_fi_is_image(path, mime=""):
+    low = _p6d_fi_low(str(path) + " " + str(mime))
+    return low.startswith("image/") or any(x in low for x in (".jpg", ".jpeg", ".png", ".webp", ".heic", ".tif", ".tiff", ".bmp"))
+
+def _p6d_fi_is_estimate_text(raw):
+    low = _p6d_fi_low(raw)
+    return any(x in low for x in (
+        "смет", "стоимость", "расчет", "расчёт", "полная смета", "дом",
+        "фундамент", "плита", "каркас", "кровля", "стены", "отделка", "санузел"
+    ))
+
+async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *args, **kwargs):
+    import inspect
+    fp = _p6d_fi_s(file_path, 3000)
+    raw_input = _p6d_fi_s(kwargs.get("raw_input") or kwargs.get("caption") or kwargs.get("user_text") or kwargs.get("prompt") or "", 12000)
+    mime_type = _p6d_fi_s(kwargs.get("mime_type") or "", 500)
+    final_intent = _p6d_fi_s(intent or kwargs.get("intent") or "", 100)
+
+    if int(topic_id or 0) == 2 and _p6d_fi_is_image(fp, mime_type) and _p6d_fi_is_estimate_text(raw_input):
+        try:
+            from core import sample_template_engine as _ste
+            fake_task = {"id": str(task_id), "raw_input": raw_input, "topic_id": int(topic_id or 0), "input_type": "drive_file"}
+            res = _ste.handle_topic2_image_estimate_pipeline_p6d(
+                conn=kwargs.get("conn"),
+                task=fake_task,
+                chat_id=kwargs.get("chat_id"),
+                topic_id=int(topic_id or 0),
+                raw_input=raw_input,
+                local_path=fp,
+                full_context=raw_input,
+            )
+            if inspect.isawaitable(res):
+                res = await res
+            if res:
+                return {"success": True, "intent": "estimate", "engine": "P6D_IMAGE_ESTIMATE_FROM_PHOTO_FULL_CLOSE_20260504_V1", "text": "image estimate handled"}
+        except Exception as e:
+            return {"success": False, "error": "P6D_IMAGE_ESTIMATE_ROUTE_FAILED:" + str(e)[:500]}
+
+    if _p6d_orig_route_file_20260504 is None:
+        return {"success": False, "error": "P6D_ORIGINAL_ROUTE_FILE_MISSING"}
+
+    try:
+        res = _p6d_orig_route_file_20260504(fp, task_id, topic_id, final_intent or intent, fmt, *args, **kwargs)
+    except TypeError:
+        clean_kwargs = {k: v for k, v in kwargs.items() if k not in ("raw_input", "caption", "user_text", "prompt", "mime_type", "conn", "chat_id")}
+        res = _p6d_orig_route_file_20260504(fp, task_id, topic_id, final_intent or intent, fmt, *args, **clean_kwargs)
+
+    if inspect.isawaitable(res):
+        res = await res
+    return res
+# === END_P6D_FILE_INTAKE_IMAGE_ESTIMATE_KWARGS_CLOSE_20260504_V1 ===
+
+# === P6E2_FILE_INTAKE_ROUTE_FILE_KWARGS_AND_IMAGE_ESTIMATE_20260504_V1 ===
+try:
+    _P6E2_ORIG_ROUTE_FILE_20260504 = route_file
+except Exception:
+    _P6E2_ORIG_ROUTE_FILE_20260504 = None
+
+def _p6e2_fi_s(v, limit=50000):
+    try:
+        if v is None:
+            return ""
+        return str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+def _p6e2_fi_low(v):
+    return _p6e2_fi_s(v).lower().replace("ё", "е")
+
+def _p6e2_fi_is_image(path="", mime_type="", file_name=""):
+    low = _p6e2_fi_low(" ".join([path or "", mime_type or "", file_name or ""]))
+    return low.startswith("image/") or any(x in low for x in (".jpg", ".jpeg", ".png", ".webp", ".heic", ".tif", ".tiff", ".bmp"))
+
+def _p6e2_fi_estimate_like(text):
+    low = _p6e2_fi_low(text)
+    return any(x in low for x in ("смет", "расчет", "расчёт", "посчитай", "стоимость", "полная смета"))
+
+async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *args, **kwargs):
+    raw_input = _p6e2_fi_s(kwargs.get("raw_input") or kwargs.get("caption") or kwargs.get("user_text") or kwargs.get("prompt") or "", 100000)
+    mime_type = _p6e2_fi_s(kwargs.get("mime_type") or "")
+    file_name = _p6e2_fi_s(kwargs.get("file_name") or kwargs.get("name") or "")
+    conn = kwargs.get("conn")
+    chat_id = kwargs.get("chat_id")
+    if int(topic_id or 0) == 2 and _p6e2_fi_is_image(file_path, mime_type, file_name) and _p6e2_fi_estimate_like(raw_input):
+        try:
+            from core.sample_template_engine import handle_topic2_image_estimate_p6e2
+            if conn is not None:
+                fake_task = {"id": str(task_id), "raw_input": raw_input, "input_type": "drive_file", "topic_id": int(topic_id or 0), "chat_id": chat_id}
+                ok = await handle_topic2_image_estimate_p6e2(conn=conn, task=fake_task, chat_id=chat_id, topic_id=topic_id, raw_input=raw_input, local_path=file_path, file_name=file_name, mime_type=mime_type)
+                if ok:
+                    return {"success": True, "intent": "estimate", "result_text": "Смета по фото сформирована"}
+        except Exception as e:
+            return {"success": False, "error": "P6E2_IMAGE_ESTIMATE_ROUTE_FAILED:" + str(e)[:500]}
+    if _P6E2_ORIG_ROUTE_FILE_20260504:
+        clean = dict(kwargs)
+        for k in ("raw_input", "caption", "user_text", "prompt", "mime_type", "conn", "chat_id", "file_name", "name"):
+            clean.pop(k, None)
+        return await _P6E2_ORIG_ROUTE_FILE_20260504(file_path, task_id, topic_id, intent, fmt, *args, **clean)
+    return {"success": False, "error": "P6E2_ORIGINAL_ROUTE_FILE_MISSING"}
+# === END_P6E2_FILE_INTAKE_ROUTE_FILE_KWARGS_AND_IMAGE_ESTIMATE_20260504_V1 ===
+
+====================================================================================================
+END_FILE: core/file_intake_router.py
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: core/ai_router.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 7c5a85800f035842fcd179daf52546522c9c5592891d9f1b6790beaf5143c69d
+====================================================================================================
+import os
+import re
+import json
+import hashlib
+import logging
+from typing import Any, Dict, List
+
+# === SEARCH_MONOLITH_V2_IMPORT ===
+# AVAILABILITY_CHECK: проверка доступности источника перед поиском
+# STALE_CONTEXT_GUARD: не использовать устаревший контекст > 24h
+# NEGATIVE_SELECTION: исключать нерелевантные источники
+
+try:
+    from core.search_session import run_search_monolith_v2, has_active_search_session
+except Exception:
+    run_search_monolith_v2 = None
+    has_active_search_session = lambda chat_id, topic_id: False
+# === END SEARCH_MONOLITH_V2_IMPORT ===
+
+import httpx
+from dotenv import load_dotenv
+
+BASE = "/root/.areal-neva-core"
+ENV_PATH = f"{BASE}/.env"
+LOG_PATH = f"{BASE}/logs/ai_router.log"
+
+load_dotenv(ENV_PATH, override=True)
+os.makedirs(f"{BASE}/logs", exist_ok=True)
+
+logger = logging.getLogger("ai_router")
+logger.setLevel(logging.INFO)
+if not logger.handlers:
+    fh = logging.FileHandler(LOG_PATH)
+    fh.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+    logger.addHandler(fh)
+
+OPENROUTER_API_KEY = <REDACTED_SECRET>"OPENROUTER_API_KEY", "").strip()
+OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").strip().rstrip("/")
+
+DEFAULT_MODEL = os.getenv("OPENROUTER_MODEL", "deepseek/deepseek-chat").strip() or "deepseek/deepseek-chat"
+ONLINE_MODEL = os.getenv("OPENROUTER_MODEL_ONLINE", "perplexity/sonar").strip() or "perplexity/sonar"  # SEARCH_MONOLITH_V1
+
+SEARCH_RE = [
+    r"\bнайди\b", r"\bнайти\b", r"\bпоиск\b", r"\bпоищи\b", r"\bsearch\b",
+    r"\bцена\b", r"\bстоимость\b", r"\bсколько стоит\b",
+    r"\bavito\b", r"\bozon\b", r"\bwildberries\b", r"\bauto\.ru\b", r"\bdrom\b",
+    r"\bновости\b", r"\bпогода\b", r"\bкурс\b", r"\bмаркетплейс\b", r"\bссылк", r"\bкупить\b", r"\bзаказать\b", r"\bтовар\b",
+    r"озон", r"валбер", r"вайлдбер", r"площадк"
+]
+
+BAD_CONTEXT_RE = [
+    r"forbidden default model",
+    r"traceback",
+    r"telegramconflicterror",
+    r"voice unavailable",
+    r"stt failed",
+    r"/root/",
+    r"\.log",
+    r"\.json"
+]
+
+BAD_RESULT_RE = [
+    r"\bой\b",
+    r"сорян",
+    r"дружище",
+    r"не переживай",
+    r"дай мне немного времени",
+    r"я могу помочь",
+    r"извини",
+    r"извините",
+    r"я тут",
+    r"уведомлятор",
+    r"перегрелся",
+    r"😅",
+    r"💪",
+    r"😎",
+    r"непонятно",
+    r"уточните",
+    r"недостаточно данных",
+    r"\bищу\b",
+    r"\bнайду\b",
+    r"ожидаю уточнения",
+    r"ссылк[аи]\s+предоставлю",
+    r"готов искать",
+    r"могу найти",
+    r"укажите,?\s+что именно нужно найти"
+]
+
+SYSTEM_PROMPT = """# AREAL-NEVA ORCHESTRA — КАНОНИЧЕСКИЙ СИСТЕМНЫЙ ПРОМПТ
+# CANON_SYSTEM_PROMPT_V1
+
+## КТО ТЫ
+Ты — исполнительный AI-оркестр системы AREAL-NEVA. Ты не просто отвечаешь на последнее сообщение. Ты понимаешь контекст, смысл, область задачи и текущую ветку разговора.
+
+## ГЛАВНЫЙ ПРИОРИТЕТ КОНТЕКСТА
+1. Текущее сообщение пользователя — ВСЕГДА главное
+2. Активная задача (если есть и релевантна)
+3. PIN (только если совпадает с темой)
+4. Краткая память (последние 2-3 релевантных факта)
+5. Долгая память (знания и выводы)
+6. Архив (только если тема совпадает)
+7. Результат поиска (если был)
+
+## ПОНИМАНИЕ ЧАТА
+Каждый чат имеет свою роль и специализацию:
+- технадзор → думай как технический инспектор
+- стройка → думай как прораб/сметчик
+- поиск → думай как снабженец
+- авто → думай как механик/снабженец запчастей
+- оркестр → думай как системный архитектор
+Если есть topic_role — это твой рабочий режим.
+
+## РАЗЛИЧЕНИЕ РАЗГОВОР / ЗАДАЧА
+РАЗГОВОР ("привет", "как дела", "ты тут", "ок", "спасибо") → короткий ответ, НИКАКИХ задач
+ЗАДАЧА = действие + объект + ожидаемый результат → создаётся задача
+УТОЧНЕНИЕ к активной задаче → продолжение задачи, не новая
+ПОДТВЕРЖДЕНИЕ ("да", "верно", "ок") при AWAITING_CONFIRMATION → DONE
+ИСПРАВЛЕНИЕ ("нет", "не так", "переделай") → revision
+ЗАВЕРШЕНИЕ ("всё", "готово", "закрывай") → FINISH, перебивает всё
+
+## ПРИОРИТЕТ ИНТЕНТОВ
+FINISH > CANCEL > CONFIRM > REVISION > TASK > SEARCH > CHAT
+
+## ПАМЯТЬ — ЧТО ХРАНИТЬ / ЧТО НЕ ХРАНИТЬ
+ХРАНИТЬ: результаты задач, выводы, факты, решения
+НЕ ХРАНИТЬ: ошибки, "не найдено", "уточните", служебные тексты, трейсбэки
+
+## ПОИСК
+Запускать поиск ТОЛЬКО если нужны актуальные внешние данные.
+Если [SEARCH_RESULT] есть в контексте — используй ТОЛЬКО его, не выдумывай.
+НЕ писать: "ищу", "найду", "ссылки предоставлю" — только готовый результат.
+
+## ОТВЕТ
+- Только по сути задачи
+- Без болтовни, без эмодзи, без извинений
+- Без служебных фраз, путей, json-обрывков, трейсбэков
+- Если неясно — ОДИН короткий уточняющий вопрос
+- Активная задача не блокирует чат — новые вопросы получают ответ
+
+## ЗАПРЕЩЁННЫЕ ФРАЗЫ
+"недостаточно данных" | "не могу" | "уточните" (без причины) | "ожидаю уточнения" |
+"готов искать" | "могу найти" | "задача не выполнена" (без кода) | "Задача завершена" (без результата) |
+"Не понимаю запрос" | "Готов к выполнению"
+
+## ФАЙЛЫ
+Файл принят → обработать → результат в Google Drive → вернуть ссылку.
+Сервер не хранит тяжёлые файлы постоянно. Drive = основное хранилище.
+
+## ЦЕЛЬ
+Думай как человек: понимай смысл, помни только важное, не засоряй голову мусором, доводи задачу до результата.
+""".strip()  # CANON_SYSTEM_PROMPT_V1
+
+SEARCH_SYSTEM_PROMPT = """# SEARCH_MONOLITH_V1 — ЦИФРОВОЙ СНАБЖЕНЕЦ
+
+Ты — закупочный эксперт. Твоя задача НЕ "найти ссылки", а дать закупочное решение.
+
+## ЭТАП 1: РАЗБОР ЗАПРОСА
+Извлеки: товар, категорию, бренд, модель, характеристики, артикул/OEM/SKU, город, количество, новое/б/у, аналоги допустимы?, доставка нужна?, приоритет (цена/качество/скорость).
+Для стройки: материал, профиль, толщина, RAL, покрытие, ГОСТ/ТУ, единица цены, объём.
+Для запчастей: марка, модель, год, кузов, OEM, сторона, рестайлинг/дорестайлинг, новая/б/у/контрактная.
+
+## ЭТАП 2: УТОЧНЕНИЕ (максимум 3 вопроса если данных мало)
+Не более 3 вопросов. Дальше работай с тем что есть.
+
+## ЭТАП 3: РАСШИРЕНИЕ ЗАПРОСА (7+ формул)
+Ищи по: название+город, название+оптом, название+производитель, артикул/OEM, физпараметры, название+Avito, название+VK/Telegram.
+
+## ЭТАП 4: ЦИФРОВОЙ ДВОЙНИК ТОВАРА
+Ищи по физическим параметрам, не по рекламному названию.
+
+## ЭТАП 5: ИСТОЧНИКИ
+Проверь: Ozon, Wildberries, Яндекс Маркет, Avito, Петрович, Леруа, ВсеИнструменты, заводы, дилеры, 2ГИС, VK, Telegram, форумы.
+Для запчастей: Exist, Emex, ZZap, Drom, Auto.ru, EuroAuto, разборки.
+
+## ЭТАП 6: КЛАССИФИКАЦИЯ ИСТОЧНИКА
+Каждому источнику: производитель / дилер / база / оптовик / маркетплейс / частник / разборка / форум.
+Доверие: CONFIRMED / PARTIAL / UNVERIFIED / RISK.
+checked_at и source_url ОБЯЗАТЕЛЬНЫ. Без них — не выше PARTIAL.
+
+## ЭТАП 7: ТЕХНИЧЕСКИЙ АУДИТ
+Для стройки: проверь толщину, RAL, покрытие, слой цинка, жалобы ("тонкий","брак","не тот цвет").
+Для запчастей: OEM, сторона, кузов, состояние, жалобы ("не подошло","не та сторона","предоплата").
+ЗАПРЕЩЕНО смешивать в одной строке: 0.45 и 0.5, разные RAL, оригинал и аналог, б/у и новое.
+
+## ЭТАП 8: REVIEW TRUST SCORE (0-100)
+80-100: живые отзывы с фото и деталями.
+60-79: частично подтверждены.
+40-59: нужен звонок.
+0-39: высокий риск фейка.
+Фейки: одинаковые фразы, все в один день, нет фото, профиль пустой.
+
+## ЭТАП 9: SELLER_RISK для VK/Telegram
+Автоматически UNVERIFIED пока не подтверждены: цена, дата, контакт, наличие.
+Красные флаги: новая группа, боты, только предоплата, скрытые контакты.
+
+## ЭТАП 10: RISK SCORE
+Красные флаги: цена сильно ниже рынка, только предоплата, нет телефона/адреса/ИНН, старый прайс, не совпадают ТТХ.
+
+## ЭТАП 11: TCO
+итоговая цена = цена + доставка + комиссия + добор + риск − кэшбэк
+Учитывай: НДС, минимальная партия, гарантия, возврат, самовывоз.
+
+## ЭТАП 12: РАНЖИРОВАНИЕ
+CHEAPEST — самый дешёвый.
+MOST_RELIABLE — самый надёжный.
+BEST_VALUE — лучший баланс цена/риск/логистика.
+FASTEST — самый быстрый.
+RISK_CHEAP — дёшево но рискованно.
+REJECTED — что отброшено и почему.
+
+## ЭТАП 13: ТАБЛИЦА (обязательна)
+Поставщик | Площадка | Тип | Город | Цена | Ед. | TCO | ТТХ совпадают | Trust Score | Риск | Контакт | Ссылка | checked_at | Статус
+
+## ЭТАП 14: ШАБЛОН ЗВОНКА (обязателен)
+- Цена актуальна?
+- Есть в наличии?
+- Цена с НДС или без?
+- Доставка сколько и когда?
+- Документы/счёт дадут?
+- Гарантия/возврат есть?
+- Характеристики точно такие?
+- Для металла: толщина, покрытие, слой цинка.
+- Для запчастей: OEM, сторона, кузов, состояние.
+
+## ЗАПРЕЩЕНО
+- Выдавать просто список ссылок без анализа.
+- Писать "цена уточняйте" как результат.
+- Смешивать разные ТТХ в одном варианте.
+- Выдумывать цены и контакты.
+- Непроверенные данные как факт.
+"""  # END SEARCH_MONOLITH_V1.strip()
+
+def _s(v: Any) -> str:
+    if v is None:
+        return ""
+    if isinstance(v, str):
+        return v.strip()
+    try:
+        return json.dumps(v, ensure_ascii=False)
+    except Exception:
+        return str(v).strip()
+
+
+def _dedup_text(text: str) -> str:
+    seen = set()
+    out = []
+    for line in text.split("\n"):
+        key = line.strip().lower()
+        if key and key not in seen:
+            seen.add(key)
+            out.append(line)
+    return "\n".join(out)
+
+def _clean(text: str, limit: int = 12000) -> str:
+    text = (text or "").replace("\r", "\n")
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()[:limit]
+
+def _match_any(patterns: List[str], text: str) -> bool:
+    t = (text or "").lower()
+    return any(re.search(p, t, re.I) for p in patterns)
+
+def _search_intent(text: str, input_type: str) -> bool:
+    if (input_type or "").lower() == "search":
+        return True
+    return _match_any(SEARCH_RE, text)
+
+def _sanitize_block(label: str, value: Any) -> str:
+    text = _clean(_s(value), 4000)
+    if not text:
+        return ""
+    if _match_any(BAD_CONTEXT_RE, text):
+        return ""
+    return f"[TYPE:{label}]\n{text}"
+
+def _dedup_blocks(blocks: List[str]) -> List[str]:
+    out = []
+    seen = set()
+    for block in blocks:
+        b = _clean(block, 4000)
+        if not b:
+            continue
+        key = hashlib.sha1(re.sub(r"\s+", " ", b.lower()).encode("utf-8")).hexdigest()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(b)
+    return out
+
+def _extract_user_text(payload: Dict[str, Any]) -> str:
+    for key in ("normalized_input", "raw_input", "input", "text", "prompt", "message", "transcript"):
+        text = _clean(_s(payload.get(key)))
+        if text:
+            return text
+    return ""
+
+
+def _build_messages(payload: Dict[str, Any], user_text: str) -> List[Dict[str, str]]:
+    user_text = _dedup_text(user_text)
+    if not user_text.strip():
+        return [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": "REQUEST:\nпустой запрос"}
+        ]
+
+    input_type = _s(payload.get("input_type")).lower() or "text"
+    state = _s(payload.get("state")).upper() or "IN_PROGRESS"
+
+    topic_role = _clean(_s(payload.get("topic_role")), 500)
+    topic_directions = _clean(_s(payload.get("topic_directions")), 1000)
+    system_content = SYSTEM_PROMPT
+    # search-followup: если жалуются на ссылки и есть search_context — не давать общие советы
+    search_followup_markers = [
+        "нерелевант",
+        "битые",
+        "битые ссылки",
+        "ссылки биты",
+        "ссылки битые",
+        "живые ссылки",
+        "ссылки не те",
+        "проверь",
+        "проверь еще",
+        "проверь ещё",
+        "ещё раз",
+        "еще раз",
+        "это не то",
+    ]
+    if any(m in user_text.lower() for m in search_followup_markers) and payload.get("search_context"):
+        system_content += "\n\nFORBIDDEN_SEARCH_ADVICE: ЗАПРЕЩЕНО предлагать Dr.Web, Link Checker, Yandex Safety, Google Safe Browsing, VirusTotal и любые общие сервисы проверки ссылок. Нужно продолжить именно предыдущую поисковую задачу, опираясь на SEARCH_RESULT, без общих советов и без ухода в сторону."
+    if topic_role:
+        system_content = f"Роль этого чата: {topic_role}\n\n" + system_content
+    if topic_directions:
+        system_content = system_content + f"\n\nТиповые задачи этого чата: {topic_directions}"
+
+
+    # === OWNER_REFERENCE_FULL_WORKFLOW_POLICY_V1 ===
+    try:
+        from core.owner_reference_policy import build_owner_reference_context
+        _owner_reference_policy_context = build_owner_reference_context(user_text)
+    except Exception as _orp_err:
+        logger.warning("OWNER_REFERENCE_POLICY_V1_ERR %s", _orp_err)
+        _owner_reference_policy_context = ""
+    # === END_OWNER_REFERENCE_FULL_WORKFLOW_POLICY_V1 ===
+
+    # === ESTIMATE_TEMPLATE_POLICY_CONTEXT_V4_TOP_LOGISTICS ===
+    try:
+        from core.estimate_template_policy import build_estimate_template_context
+        _estimate_template_policy_context = build_estimate_template_context(user_text)
+    except Exception as _etp_err:
+        logger.warning("ESTIMATE_TEMPLATE_POLICY_CONTEXT_V4_ERR %s", _etp_err)
+        _estimate_template_policy_context = ""
+    # === END_ESTIMATE_TEMPLATE_POLICY_CONTEXT_V4_TOP_LOGISTICS ===
+
+    blocks = _dedup_blocks([
+        _sanitize_block("OWNER_REFERENCE_POLICY", _owner_reference_policy_context),
+        _sanitize_block("ESTIMATE_TEMPLATE_POLICY", _estimate_template_policy_context),
+        _sanitize_block("ACTIVE_TASK", payload.get("active_task_context")),
+        _sanitize_block("PIN", payload.get("pin_context")),
+        _sanitize_block("SHORT_MEMORY", payload.get("short_memory_context")),
+        _sanitize_block("LONG_MEMORY", payload.get("long_memory_context")),
+        _sanitize_block("ARCHIVE", payload.get("archive_context")),
+        _sanitize_block("SEARCH_RESULT", payload.get("search_context")),
+    ])
+
+    user_parts = [
+        f"STATE: {state}",
+        f"INPUT_TYPE: {input_type}",
+    ]
+    if blocks:
+        user_parts.append("CONTEXT:\n" + "\n\n".join(blocks))
+    user_parts.append("REQUEST:\n" + user_text)
+
+    return [
+        {"role": "system", "content": system_content},
+        {"role": "user", "content": "\n\n".join(user_parts)},
+    ]
+
+def _extract_content(data: Dict[str, Any]) -> str:
+    try:
+        content = data["choices"][0]["message"]["content"]
+        if isinstance(content, list):
+            parts = []
+            for item in content:
+                if isinstance(item, dict) and item.get("type") == "text":
+                    parts.append(item.get("text", ""))
+                else:
+                    parts.append(_s(item))
+            return _clean("\n".join(parts))
+        return _clean(_s(content))
+    except Exception:
+        return _clean(json.dumps(data, ensure_ascii=False)[:2000])
+
+async def _openrouter_call(model: str, messages: List[Dict[str, str]]) -> str:
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    body = {
+        "model": model,
+        "messages": messages,
+        "temperature": 0.2,
+    }
+    async with httpx.AsyncClient(timeout=httpx.Timeout(300.0, connect=30.0)) as client:
+        r = await client.post(f"{OPENROUTER_BASE_URL}/chat/completions", headers=headers, json=body)
+    if r.status_code != 200:
+        msg = f"OPENROUTER_HTTP_{r.status_code}: {r.text[:500]}"
+        logger.error(msg)
+        raise RuntimeError(msg)
+    return _extract_content(r.json())
+
+async def process_ai_task(payload: Dict[str, Any]) -> str:
+    if not OPENROUTER_API_KEY:
+        raise RuntimeError("OPENROUTER_API_KEY not set")
+
+    user_text = _dedup_text(_extract_user_text(payload))
+    if not user_text:
+        return ""
+
+    input_type = _s(payload.get("input_type")).lower()
+    _s_chat = _s(payload.get("chat_id"))
+    try: _s_topic = int(payload.get("topic_id") or 0)
+    except: _s_topic = 0
+    is_search = _search_intent(user_text, input_type) or bool(has_active_search_session(_s_chat, _s_topic))
+    work_payload = dict(payload)
+
+    if is_search:
+        # === SEARCH_MONOLITH_V2_CALL ===
+        try:
+            if run_search_monolith_v2 is not None:
+                _v2 = await run_search_monolith_v2(work_payload, user_text, _openrouter_call, ONLINE_MODEL, SEARCH_SYSTEM_PROMPT)
+                _v2 = _clean(_s(_v2), 12000)
+                if _v2:
+                    logger.info("SEARCH_MONOLITH_V2_OK chars=%s", len(_v2))
+                    return _v2
+        except Exception as _v2e:
+            logger.error("SEARCH_MONOLITH_V2_FAIL err=%s fallback=V1", _v2e)
+        # === END SEARCH_MONOLITH_V2_CALL ===
+        logger.info(
+            "router_search_call model=%s input_type=%s state=%s chars=%s",
+            ONLINE_MODEL,
+            input_type or "text",
+            _s(payload.get("state")).upper() or "IN_PROGRESS",
+            len(user_text),
+        )
+        try:
+            search_result = await _openrouter_call(
+                ONLINE_MODEL,
+                [
+                    {"role": "system", "content": SEARCH_SYSTEM_PROMPT},
+                    {"role": "user", "content": user_text},
+                ],
+            )
+        except Exception as e:
+            logger.error("search_model_fail err=%s — fallback to DEFAULT_MODEL without search", e)
+            search_result = ""
+
+        search_result = _clean(_s(search_result), 4000)
+        if not search_result:
+            logger.warning("web_search_empty query=%s", user_text[:200])
+        else:
+            existing = _clean(_s(work_payload.get("search_context")), 4000)
+            work_payload["search_context"] = search_result + ("\n\n" + existing if existing else "")
+            logger.info("web_search_ok chars=%s", len(search_result))
+
+    logger.info(
+        "router_call model=%s input_type=%s state=%s chars=%s is_search=%s",
+        DEFAULT_MODEL,
+        input_type or "text",
+        _s(payload.get("state")).upper() or "IN_PROGRESS",
+        len(user_text),
+        is_search,
+    )
+
+    messages = _build_messages(work_payload, user_text)
+    ctx_str = _clean_context("\n\n".join(m.get("content", "") for m in messages))
+    if _context_has_answer(ctx_str):
+        for m in messages:
+            if m.get("role") == "system":
+                m["content"] += "\nFORBIDDEN: do not ask clarifying questions. Answer directly."
+                break
+    # === MODEL_OVERRIDE_V1 ===
+    _final_model = work_payload.get("model_override") or DEFAULT_MODEL
+    result = await _openrouter_call(_final_model, messages)
+    # === END MODEL_OVERRIDE_V1 ===
+
+    if _match_any(BAD_RESULT_RE, result):
+        logger.warning("router_result_filtered result=%s", result[:120])
+        return ""
+
+    logger.info("router_ok chars=%s", len(result))
+    return result
+
+
+
+def _clean_context(text: str) -> str:
+    if not text:
+        return ""
+    text = text.replace("\r", "\n")
+    text = text.replace("\t", " ")
+    while "\n\n\n" in text:
+        text = text.replace("\n\n\n", "\n\n")
+    return text.strip()[:12000]
+
+def _context_has_answer(text: str) -> bool:
+    if not text:
+        return False
+    return len(text.strip()) > 50
+
+# FORCE CLEAN CONTEXT
+
+SEARCH_SYSTEM_PROMPT = """# TOPIC500_SEARCH_OUTPUT_CONTRACT_20260504_V1
+
+ROLE:
+Ты закупочный интернет-поиск для topic_500
+
+OUTPUT MUST BE USEFUL, NOT ANALYTICAL
+
+HARD RULES:
+- No long analysis
+- No essay
+- No fake source numbers like [1], [2]
+- No "НЕ ПОДТВЕРЖДЕНО" blocks as final answer
+- No duplicated summary sections
+- No generic advice
+- No old context
+- Use only current user query
+- If user asks suppliers/prices, return direct supplier rows
+- Every row must contain direct URL
+- Phone is mandatory when visible in search result; if phone is not visible write "телефон не найден"
+- Prefer Saint Petersburg / Ленобласть when requested
+- Prefer official supplier/site/marketplace pages over articles
+- If exact brand spelling is suspicious, search both original and corrected spelling, but keep original in output
+
+FORMAT STRICTLY:
+
+Найдено: <N> вариантов
+
+| № | Поставщик | Город | Цена | Ед. | Наличие | Доставка | Телефон | Ссылка |
+|---|-----------|-------|------|-----|---------|----------|---------|--------|
+| 1 | ... | ... | ... | ... | ... | ... | ... | https://... |
+
+Лучший вариант:
+<1 строка: поставщик, цена, почему>
+
+Проверить звонком:
+1. актуальная цена
+2. наличие
+3. доставка
+4. НДС/счёт
+5. точная марка/толщина/размер
+
+Отброшено:
+- <только если реально есть что отбросить, кратко>
+
+If fewer than 3 supplier rows are found:
+Return what is found and write:
+"Найдено меньше 3 прямых поставщиков, нужен повторный поиск по расширенным площадкам"
+
+"""
+
+
+# === P6F_TOPIC500_CONTEXT_SANITIZER_V1 ===
+# FACT: removes old supplier tables / Trust Score / TCO / "НЕ ПОДТВЕРЖДЕНО" / "ЭТАП N"
+# / naked [1][2][3] markers from search context BEFORE Perplexity call.
+# Exposed as _p6f_ts_sanitize_payload(payload) — used by callers via append-wraps.
+import re as _p6f_ts_re
+import logging as _p6f_ts_logging
+
+_P6F_TS_LOG = _p6f_ts_logging.getLogger("ai_router")
+
+_P6F_TS_NOISE_PATTERNS = [
+    r"(?im)^\s*Trust\s*Score[^\n]*\n?",
+    r"(?im)^\s*TCO[^\n]*\n?",
+    r"(?im)^\s*НЕ\s*ПОДТВЕРЖД[^\n]*\n?",
+    r"(?im)^\s*ЭТАП\s*\d+[^\n]*\n?",
+    r"(?im)^\s*Risk\s*Score[^\n]*\n?",
+    r"(?im)^\s*Review\s*Trust[^\n]*\n?",
+    r"(?im)^\s*\|[^\n]*Поставщик[^\n]*\|[^\n]*\n?",
+    r"(?im)^\s*\|[^\n]*Цена[^\n]*\|[^\n]*Источник[^\n]*\n?",
+    r"(?<![a-zA-Z0-9.])\[\d+\](?![\(\:])",
+]
+
+_P6F_TS_SUPPLIER_TABLE = _p6f_ts_re.compile(
+    r"(?ims)\n\s*\|.*?Поставщик.*?\|\s*\n(\s*\|[-: ]+\|.*\n)?(\s*\|.*\n){1,40}",
+)
+
+def _p6f_ts_sanitize_text(text):
+    if not text:
+        return ""
+    s = str(text)
+    s = _P6F_TS_SUPPLIER_TABLE.sub("\n", s)
+    for p in _P6F_TS_NOISE_PATTERNS:
+        s = _p6f_ts_re.sub(p, "", s)
+    s = _p6f_ts_re.sub(r"\n{3,}", "\n\n", s).strip()
+    return s
+
+def _p6f_ts_is_search_topic(payload):
+    try:
+        return int((payload or {}).get("topic_id", 0) or 0) == 500
+    except Exception:
+        return False
+
+def _p6f_ts_sanitize_payload(payload):
+    """
+    Returns a NEW dict (shallow copy) with sanitized search_context and user_text
+    for topic_500 procurement search. Other topics pass through unchanged.
+    """
+    if not isinstance(payload, dict):
+        return payload
+    if not _p6f_ts_is_search_topic(payload):
+        return payload
+    out = dict(payload)
+    if "search_context" in out and out["search_context"]:
+        before_len = len(str(out["search_context"]))
+        out["search_context"] = _p6f_ts_sanitize_text(out["search_context"])
+        after_len = len(str(out["search_context"]))
+        if before_len != after_len:
+            _P6F_TS_LOG.info(
+                "P6F_TS_SANITIZED_SEARCH_CONTEXT topic=500 chat=%s before=%d after=%d removed=%d",
+                out.get("chat_id"), before_len, after_len, before_len - after_len,
+            )
+    for key in ("raw_input", "normalized_input", "user_text"):
+        if key in out and out[key] and isinstance(out[key], str):
+            out[key] = _p6f_ts_sanitize_text(out[key])
+    return out
+
+try:
+    _P6F_TS_LOG.info("P6F_TOPIC500_CONTEXT_SANITIZER_V1_LOADED")
+except Exception:
+    pass
+# === END_P6F_TOPIC500_CONTEXT_SANITIZER_V1 ===
+
+# === P6F_TOPIC500_SANITIZER_AI_ROUTER_BIND_20260504_V1 ===
+# FACT: wraps process_ai_task at module level so callers that re-import
+# inside functions (e.g., sample_template_engine line 5132) pick up the
+# sanitized version on every call.
+try:
+    _P6F_TS_AR_ORIG_PROCESS_AI_TASK = process_ai_task
+    if not getattr(_P6F_TS_AR_ORIG_PROCESS_AI_TASK, "_p6f_ts_ar_wrapped", False):
+        async def _p6f_ts_ar_wrapped_process_ai_task(payload):
+            try:
+                payload = _p6f_ts_sanitize_payload(payload)
+            except Exception as _e:
+                _P6F_TS_LOG.warning("P6F_TS_AR_SANITIZE_ERR %s", _e)
+            return await _P6F_TS_AR_ORIG_PROCESS_AI_TASK(payload)
+        _p6f_ts_ar_wrapped_process_ai_task._p6f_ts_ar_wrapped = True
+        process_ai_task = _p6f_ts_ar_wrapped_process_ai_task
+        _P6F_TS_LOG.info("P6F_TOPIC500_SANITIZER_AI_ROUTER_BIND_INSTALLED")
+except Exception as _e:
+    _P6F_TS_LOG.exception("P6F_TS_AR_BIND_INSTALL_ERR %s", _e)
+# === END_P6F_TOPIC500_SANITIZER_AI_ROUTER_BIND_20260504_V1 ===
+
+
+# === P6G_PAYLOAD_SANITIZER_EXTENDED_FIELDS_V1 ===
+# FACT: extends P6F_TS_sanitize_payload to clean MORE fields where stale
+# context can leak: memory_context, archive_context, full_context, history,
+# context, pin_context, parent_context.
+import logging as _p6g_pse_logging
+_P6G_PSE_LOG = _p6g_pse_logging.getLogger("ai_router")
+
+_P6G_PSE_EXTRA_FIELDS = (
+    "memory_context", "archive_context", "full_context", "history",
+    "context", "pin_context", "parent_context",
+)
+
+try:
+    _P6G_PSE_ORIG_SANITIZE = _p6f_ts_sanitize_payload
+    if not getattr(_P6G_PSE_ORIG_SANITIZE, "_p6g_pse_wrapped", False):
+        def _p6f_ts_sanitize_payload(payload):
+            out = _P6G_PSE_ORIG_SANITIZE(payload)
+            if not isinstance(out, dict):
+                return out
+            try:
+                topic_id = int((out or {}).get("topic_id", 0) or 0)
+            except Exception:
+                topic_id = 0
+            if topic_id != 500:
+                return out
+            cleaned_count = 0
+            for f in _P6G_PSE_EXTRA_FIELDS:
+                if f in out and out[f] and isinstance(out[f], str):
+                    before = len(out[f])
+                    out[f] = _p6f_ts_sanitize_text(out[f])
+                    after = len(out[f])
+                    if before != after:
+                        cleaned_count += 1
+            if cleaned_count:
+                _P6G_PSE_LOG.info(
+                    "P6G_PSE_EXTRA_FIELDS_CLEANED topic=500 fields_changed=%d", cleaned_count,
+                )
+            return out
+        _p6f_ts_sanitize_payload._p6g_pse_wrapped = True
+        _P6G_PSE_LOG.info("P6G_PAYLOAD_SANITIZER_EXTENDED_FIELDS_V1_INSTALLED")
+except Exception as _e:
+    _P6G_PSE_LOG.exception("P6G_PSE_INSTALL_ERR %s", _e)
+# === END_P6G_PAYLOAD_SANITIZER_EXTENDED_FIELDS_V1 ===
+
+====================================================================================================
+END_FILE: core/ai_router.py
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: core/__init__.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+====================================================================================================
+
+====================================================================================================
+END_FILE: core/__init__.py
+FILE_CHUNK: 1/1
+====================================================================================================
 
 ====================================================================================================
 BEGIN_FILE: core/active_dialog_state.py
@@ -7318,708 +9007,5 @@ async def search_norms(defect_description: str, section: str = "") -> list:
 
 ====================================================================================================
 END_FILE: core/normative_db.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/normative_engine.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 355ac95be8b8f06c6adca69858b21865560a36941156094be6bd91dc207aeb8e
-====================================================================================================
-# === NORMATIVE_ENGINE_SAFE_V1 ===
-from __future__ import annotations
-from typing import Any, Dict, List
-
-NORMATIVE_INDEX = [
-    {"keywords": ["трещин", "бетон", "монолит", "раковин", "скол"], "norm_id": "СП 70.13330.2012", "section": "Несущие и ограждающие конструкции", "requirement": "Дефекты бетонных и железобетонных конструкций подлежат фиксации, оценке влияния на несущую способность и устранению по проектному решению", "confidence": "PARTIAL"},
-    {"keywords": ["бетон", "арматур", "защитный слой", "а500", "b25", "в25"], "norm_id": "СП 63.13330.2018", "section": "Бетонные и железобетонные конструкции", "requirement": "Расчёт и контроль железобетонных конструкций выполняется с учётом класса бетона, арматуры, защитного слоя и требований проектной документации", "confidence": "PARTIAL"},
-    {"keywords": ["нагрузк", "фундамент", "плита", "перекрытие", "кж"], "norm_id": "СП 20.13330.2016/2017", "section": "Нагрузки и воздействия", "requirement": "Проверка конструкций выполняется с учётом постоянных, временных и особых нагрузок по расчётным сочетаниям", "confidence": "PARTIAL"},
-    {"keywords": ["кровл", "протеч", "мембран", "пароизоляц", "водосток"], "norm_id": "СП 17.13330.2017", "section": "Кровли", "requirement": "Кровельные работы должны обеспечивать водонепроницаемость, надёжное примыкание и соответствие проектным решениям", "confidence": "PARTIAL"},
-    {"keywords": ["отделк", "штукатур", "плитк", "стяжк", "покраск"], "norm_id": "СП 71.13330.2017", "section": "Изоляционные и отделочные покрытия", "requirement": "Отделочные покрытия проверяются по основанию, геометрии, сцеплению, ровности и отсутствию видимых дефектов", "confidence": "PARTIAL"},
-    {"keywords": ["металл", "сварк", "км", "кмд", "болт", "корроз"], "norm_id": "СП 16.13330.2017", "section": "Стальные конструкции", "requirement": "Стальные конструкции должны соответствовать расчётной схеме, проектным сечениям, качеству сварных и болтовых соединений", "confidence": "PARTIAL"},
-    {"keywords": ["проект", "чертеж", "чертёж", "спецификац", "ведомость", "стадия"], "norm_id": "ГОСТ 21.101-2020", "section": "Основные требования к проектной и рабочей документации", "requirement": "Проектная и рабочая документация оформляется с составом, обозначениями и ведомостями по системе проектной документации для строительства", "confidence": "PARTIAL"},
-    {"keywords": ["кж", "железобетон", "армирование", "опалуб", "монолит"], "norm_id": "ГОСТ 21.501-2018", "section": "Правила выполнения рабочей документации архитектурных и конструктивных решений", "requirement": "Рабочие чертежи конструктивных решений должны содержать схемы, спецификации, ведомости элементов и данные для производства работ", "confidence": "PARTIAL"},
-]
-
-def search_norms_sync(text: str, limit: int = 5) -> List[Dict[str, Any]]:
-    hay = (text or "").lower()
-    scored = []
-    for row in NORMATIVE_INDEX:
-        score = sum(1 for kw in row["keywords"] if kw in hay)
-        if score:
-            item = dict(row)
-            item["score"] = score
-            scored.append(item)
-    scored.sort(key=lambda x: int(x.get("score") or 0), reverse=True)
-    return scored[:limit]
-
-def format_norms_for_act(norms: List[Dict[str, Any]]) -> str:
-    return "\n".join(f"{n.get('norm_id','')}: {n.get('requirement','')} [{n.get('confidence','PARTIAL')}]" for n in norms or [] if n.get("norm_id"))
-# === END_NORMATIVE_ENGINE_SAFE_V1 ===
-
-
-# === P6H_NORMATIVE_INDEX_EXTRA_V1 ===
-# Append-only extension to NORMATIVE_INDEX with technadzor-specific norms
-# referenced in real client acts (Киевское 95, металлокаркас, антикоррозия,
-# обследование зданий и сооружений, организация строительного контроля).
-# Each entry uses confidence=PARTIAL — promote to CONFIRMED only after manual
-# review of an authoritative source.
-import logging as _p6h_norm_logging
-
-_P6H_NORMATIVE_EXTRA = [
-    {
-        "keywords": ["антикорроз", "лакокрас", "окрас", "защитное покрытие", "ржавчин"],
-        "norm_id": "СП 28.13330.2017",
-        "section": "Защита строительных конструкций от коррозии",
-        "requirement": "Требования к защите строительных конструкций от коррозии: подготовка поверхности, выбор защитной системы, контроль качества и сохранности покрытия в процессе эксплуатации",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["металлоконструкц", "стальн", "сварн", "ферм", "колонн", "балк", "кмд", "мк", "анкерн"],
-        "norm_id": "ГОСТ 23118-2019",
-        "section": "Конструкции стальные строительные. Общие технические условия",
-        "requirement": "Требования к материалам, изготовлению, монтажу и приёмке стальных строительных конструкций, включая сварные и болтовые соединения, антикоррозионную защиту, маркировку",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["организация строительного контроля", "осс", "стройконтроль", "технадзор", "приёмка", "приемка", "освидетельств"],
-        "norm_id": "СП 48.13330.2019",
-        "section": "Организация строительства",
-        "requirement": "Порядок организации строительного контроля заказчика и подрядчика, освидетельствование скрытых работ, ведение исполнительной документации",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["обследован", "техническое состояние", "категория состояния", "несущ", "предаварийн", "аварийн"],
-        "norm_id": "СП 13-102-2003",
-        "section": "Правила обследования несущих строительных конструкций зданий и сооружений",
-        "requirement": "Порядок и состав обследований несущих конструкций, методы выявления дефектов и повреждений, классификация технического состояния (нормальное, удовлетворительное, ограниченно работоспособное, аварийное)",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["обследован", "мониторинг", "техническое состояние", "категория"],
-        "norm_id": "ГОСТ 31937-2024",
-        "section": "Здания и сооружения. Правила обследования и мониторинга технического состояния",
-        "requirement": "Современные правила обследования и мониторинга технического состояния зданий и сооружений: цели, состав работ, оформление результатов, заключение о категории состояния",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["сварн", "сварка", "шов", "провар", "наплыв", "качество свар"],
-        "norm_id": "ГОСТ Р ИСО 17637-2014",
-        "section": "Неразрушающий контроль сварных соединений. Визуальный контроль",
-        "requirement": "Правила визуального и измерительного контроля сварных соединений: критерии приёмки, фиксация дефектов, оформление результатов",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["опорн", "анкерн", "плита", "опирани", "узел колонн", "подлив"],
-        "norm_id": "СП 70.13330.2012",
-        "section": "Несущие и ограждающие конструкции — опорные узлы металлоконструкций",
-        "requirement": "Опорные узлы стальных колонн должны передавать нагрузку через плотное опирание опорной плиты на фундамент. Подливка под опорные плиты выполняется до проектного состояния, без зазоров, трещин и разрушений",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["укосин", "связи", "диагональн", "горизонтальн связи", "пространственн"],
-        "norm_id": "СП 16.13330.2017",
-        "section": "Стальные конструкции — пространственные связи",
-        "requirement": "Узлы пересечения и крепления связей жёсткости должны обеспечивать пространственную жёсткость каркаса; ослабленные или непроработанные узлы не допускаются",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["основан", "грунт", "замачив", "размыв", "просадк", "водоотвод"],
-        "norm_id": "СП 22.13330.2016",
-        "section": "Основания зданий и сооружений",
-        "requirement": "Подготовка и эксплуатация оснований: водоотвод от фундаментов, защита от замачивания, контроль осадок и просадок, обеспечение проектной несущей способности грунта",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["перекрыт", "ригел", "балк", "несущая способность"],
-        "norm_id": "СП 20.13330.2016",
-        "section": "Нагрузки и воздействия — перекрытия",
-        "requirement": "Перекрытия должны рассчитываться на постоянные и временные нагрузки с учётом особых воздействий; конструктивные решения и сечения элементов должны соответствовать расчётной схеме",
-        "confidence": "PARTIAL",
-    },
-]
-
-try:
-    NORMATIVE_INDEX.extend(_P6H_NORMATIVE_EXTRA)
-    _p6h_norm_logging.getLogger("task_worker").info(
-        "P6H_NORMATIVE_INDEX_EXTRA_V1_INSTALLED added=%d total=%d",
-        len(_P6H_NORMATIVE_EXTRA), len(NORMATIVE_INDEX),
-    )
-except Exception:
-    pass
-# === END_P6H_NORMATIVE_INDEX_EXTRA_V1 ===
-
-
-# === P6H5_NORMATIVE_FULL_EXPAND_V1 ===
-# Comprehensive normative expansion: исполнительная документация, бетон,
-# газобетон/кладка, стальные конструкции, отделка, фасады, ОВ, ВК,
-# электрика, пожарная безопасность, охрана труда (35 записей).
-# confidence=PARTIAL — promote after manual verification.
-
-_P6H5_NORMATIVE_EXPAND = [
-    # --- Блок 1: Исполнительная документация ---
-    {
-        "keywords": ["исполнительн", "акт скрытых", "скрытые работы", "освидетельств", "исполнительная документация", "кс-2", "кс-3"],
-        "norm_id": "РД-11-02-2006",
-        "section": "Требования к составу и порядку ведения исполнительной документации",
-        "requirement": "Состав и порядок ведения исполнительной документации при строительстве: акты освидетельствования скрытых работ, акты промежуточной приёмки ответственных конструкций, исполнительные схемы",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["журнал работ", "общий журнал", "журнал производства", "ожр", "специальный журнал"],
-        "norm_id": "РД-11-05-2007",
-        "section": "Порядок ведения общего и специальных журналов работ",
-        "requirement": "Порядок ведения общего журнала работ и специальных журналов при строительстве: состав записей, ответственные лица, порядок хранения и передачи",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["авторский надзор", "надзор проектировщик", "проектировщик на объекте", "журнал авторского надзора"],
-        "norm_id": "СП 11-110-99",
-        "section": "Авторский надзор за строительством зданий и сооружений",
-        "requirement": "Порядок осуществления авторского надзора проектировщиков за строительством: состав работ, права и обязанности, журнал авторского надзора",
-        "confidence": "PARTIAL",
-    },
-    # --- Блок 2: Бетон (расширение) ---
-    {
-        "keywords": ["бетонная смесь", "подвижность смеси", "водоцементн", "класс бетона", "замес бетон", "марка бетона"],
-        "norm_id": "ГОСТ 7473-2010",
-        "section": "Смеси бетонные. Технические условия",
-        "requirement": "Требования к бетонным смесям: классификация, показатели удобоукладываемости, водонепроницаемости, морозостойкости, правила приёмки и контроля",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["прочность бетона", "испытание бетона", "образец-куб", "керн бетон", "контроль прочности бетон"],
-        "norm_id": "ГОСТ 18105-2018",
-        "section": "Бетоны. Правила контроля и оценки прочности",
-        "requirement": "Правила контроля и оценки прочности бетона в конструкциях: методы испытаний, статистический контроль, приёмочные уровни",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["тяжёлый бетон", "тяжелый бетон", "состав бетона", "крупный заполнитель", "щебень бетон"],
-        "norm_id": "ГОСТ 26633-2015",
-        "section": "Бетоны тяжёлые и мелкозернистые. Технические условия",
-        "requirement": "Технические требования к тяжёлым и мелкозернистым бетонам: классы по прочности, морозостойкости, водонепроницаемости, правила приёмки и методы испытаний",
-        "confidence": "PARTIAL",
-    },
-    # --- Блок 3: Газобетон и кладка ---
-    {
-        "keywords": ["газоблок", "газобетон", "ячеистый бетон", "автоклавный бетон", "d400", "d500", "d600"],
-        "norm_id": "ГОСТ 31360-2007",
-        "section": "Изделия стеновые неармированные из ячеистого бетона автоклавного твердения",
-        "requirement": "Требования к стеновым блокам из ячеистого автоклавного бетона: классы по плотности, прочности, морозостойкости, геометрические параметры, правила приёмки",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["кладка газобетон", "армирование газобетон", "газобетонный блок", "стена из газобетон"],
-        "norm_id": "СП 339.1325800.2017",
-        "section": "Конструкции с применением автоклавного газобетона",
-        "requirement": "Проектирование и возведение конструкций из автоклавного газобетона: кладочные растворы, армирование, обеспечение жёсткости, допустимые деформации",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["кладка", "каменная конструкц", "кирпич", "кладочный раствор", "армокаменн", "кладка блоков"],
-        "norm_id": "СП 15.13330.2020",
-        "section": "Каменные и армокаменные конструкции",
-        "requirement": "Расчёт и проектирование каменных и армокаменных конструкций: требования к материалам, кладке, перевязке швов, анкеровке и армированию",
-        "confidence": "PARTIAL",
-    },
-    # --- Блок 4: Стальные конструкции (расширение) ---
-    {
-        "keywords": ["проектирование стальных", "расчёт металлоконструкц", "расчет металлоконструкц", "км проект", "стальная конструкц"],
-        "norm_id": "СП 294.1325800.2017",
-        "section": "Конструкции стальные. Правила проектирования",
-        "requirement": "Актуализированные правила проектирования стальных конструкций: расчётные сопротивления, предельные состояния, соединения, устойчивость элементов",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["прокат стальн", "двутавр", "швеллер", "уголок металл", "листовой прокат", "сортовой прокат"],
-        "norm_id": "ГОСТ 27772-2015",
-        "section": "Прокат для стальных строительных конструкций. Общие технические условия",
-        "requirement": "Требования к прокату (двутавры, швеллеры, уголки, листы) для стальных строительных конструкций: марки стали, механические характеристики, допуски, испытания",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["лстк", "тонкостенный профиль", "профиль холодногнутый", "оцинкованный профиль", "лёгкая стальная конструкц"],
-        "norm_id": "СП 260.1325800.2016",
-        "section": "Конструкции стальные тонкостенные из холодногнутых оцинкованных профилей",
-        "requirement": "Проектирование и монтаж ЛСТК: расчёт профилей, узлы соединений, защита от коррозии, контроль качества монтажа",
-        "confidence": "PARTIAL",
-    },
-    # --- Блок 5: Внутренняя отделка (расширение) ---
-    {
-        "keywords": ["гипсокартон", "гкл", "перегородка гкл", "подвесной потолок", "профиль cd", "профиль ud"],
-        "norm_id": "СП 163.1325800.2014",
-        "section": "Конструкции с применением гипсокартонных и гипсоволокнистых листов",
-        "requirement": "Устройство перегородок, облицовок и подвесных потолков с применением ГКЛ: шаг стоек, крепление, зазоры, огнестойкость, звукоизоляция",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["лист гипсокартонный", "гипсокартон технические", "влагостойкий гкл", "огнестойкий гкл"],
-        "norm_id": "ГОСТ 6266-2018",
-        "section": "Листы гипсокартонные. Технические условия",
-        "requirement": "Технические требования к гипсокартонным листам: типы (ГКЛ, ГКЛВ, ГКЛО), размеры, прочность на изгиб, влагостойкость, маркировка",
-        "confidence": "PARTIAL",
-    },
-    # --- Блок 6: Фасады и тепловая защита ---
-    {
-        "keywords": ["тепловая защита", "утепление фасад", "теплопотери", "сопротивление теплопередач", "утеплитель стен"],
-        "norm_id": "СП 50.13330.2012",
-        "section": "Тепловая защита зданий",
-        "requirement": "Требования к тепловой защите зданий: нормируемые значения сопротивления теплопередаче, воздухопроницаемости, защита от переувлажнения ограждающих конструкций",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["сфтк", "фасадная система", "навесной фасад", "вентилируемый фасад", "штукатурный фасад", "утепление стен снаружи"],
-        "norm_id": "СП 293.1325800.2017",
-        "section": "Системы фасадные теплоизоляционные композиционные с наружными штукатурными слоями",
-        "requirement": "Проектирование и монтаж СФТК: состав системы, крепление утеплителя, армирующий слой, декоративное покрытие, контроль адгезии и геометрии",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["окно пвх", "оконный блок пвх", "профиль пвх", "остекление", "монтаж окон", "монтажный шов окна"],
-        "norm_id": "ГОСТ 30674-99",
-        "section": "Блоки оконные из поливинилхлоридных профилей. Технические условия",
-        "requirement": "Требования к оконным блокам из ПВХ: конструкция, размеры, сопротивление теплопередаче, воздухо- и водопроницаемость, испытания, монтаж",
-        "confidence": "PARTIAL",
-    },
-    # --- Блок 7: ОВ (отопление, вентиляция) ---
-    {
-        "keywords": ["отоплен", "вентиляц", "кондицион", "овик", "воздуховод", "тепловой узел", "радиатор отоплен"],
-        "norm_id": "СП 60.13330.2020",
-        "section": "Отопление, вентиляция и кондиционирование воздуха",
-        "requirement": "Проектирование и монтаж систем ОВиК: параметры микроклимата, расчёт теплопотерь, воздухообмен, выбор оборудования, испытание и наладка систем",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["санитарно-технические системы", "внутренние инженерные системы", "монтаж инженерных систем", "приёмка инженерных систем"],
-        "norm_id": "СП 73.13330.2016",
-        "section": "Внутренние санитарно-технические системы зданий",
-        "requirement": "Монтаж внутренних санитарно-технических систем: водоснабжение, водоотведение, отопление, вентиляция — требования к производству работ и приёмке",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["тепловая изоляция трубопровод", "изоляция труб", "теплоизоляция оборудован", "тепловые сети изоляц"],
-        "norm_id": "СП 61.13330.2012",
-        "section": "Тепловая изоляция оборудования и трубопроводов",
-        "requirement": "Требования к тепловой изоляции трубопроводов и оборудования: выбор материала, толщина изоляции, конструктивные решения, контроль качества",
-        "confidence": "PARTIAL",
-    },
-    # --- Блок 8: ВК (водоснабжение, канализация) ---
-    {
-        "keywords": ["внутренний водопровод", "внутренняя канализац", "водоотведение здания", "трубопровод вк", "сантехника монтаж"],
-        "norm_id": "СП 30.13330.2020",
-        "section": "Внутренний водопровод и канализация зданий",
-        "requirement": "Проектирование и монтаж внутреннего водопровода и канализации: давление в системе, уклоны труб, вентиляция стояков, испытание на герметичность, приёмка",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["наружный водопровод", "наружное водоснабжение", "водонапорная башня", "насосная станция водоснабж"],
-        "norm_id": "СП 31.13330.2021",
-        "section": "Водоснабжение. Наружные сети и сооружения",
-        "requirement": "Проектирование наружных сетей водоснабжения: расчётные расходы, трубы и арматура, защита от замерзания, испытание на прочность и герметичность",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["наружная канализац", "ливневая канализац", "дождевой коллектор", "выпуск канализац", "дворовая канализац"],
-        "norm_id": "СП 32.13330.2018",
-        "section": "Канализация. Наружные сети и сооружения",
-        "requirement": "Проектирование наружных канализационных сетей: уклоны, глубины заложения, смотровые колодцы, испытание на герметичность, ливневые и хозяйственно-бытовые системы",
-        "confidence": "PARTIAL",
-    },
-    # --- Блок 9: Электрика ---
-    {
-        "keywords": ["электроустановка", "кабельная линия", "электрощит", "электропроводка", "ввод электрический", "пуэ"],
-        "norm_id": "ПУЭ (7-е изд.)",
-        "section": "Правила устройства электроустановок",
-        "requirement": "Общие требования к устройству электроустановок: выбор проводников и кабелей, защитная аппаратура, заземление, молниезащита, вводно-распределительные устройства",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["электроустановки жилых", "электрика в квартире", "групповые цепи", "щит учёта", "электромонтаж жилые"],
-        "norm_id": "СП 256.1325800.2016",
-        "section": "Электроустановки жилых и общественных зданий. Правила проектирования и монтажа",
-        "requirement": "Проектирование и монтаж электроустановок жилых и общественных зданий: схемы питания, сечения проводников, УЗО, автоматы, заземление, приёмо-сдаточные испытания",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["узо", "дифавтомат", "заземление", "молниезащита", "потенциаловыравнивание", "поражение током"],
-        "norm_id": "ГОСТ Р 50571-4-41-2022",
-        "section": "Электроустановки зданий. Защита от поражения электрическим током",
-        "requirement": "Требования к защите от поражения электрическим током: автоматическое отключение, двойная изоляция, выравнивание потенциалов, применение УЗО и дифавтоматов",
-        "confidence": "PARTIAL",
-    },
-    # --- Блок 10: Пожарная безопасность ---
-    {
-        "keywords": ["пожарная безопасность", "огнестойкость", "возгорание", "пожаробезопасность", "класс пожарной опасности"],
-        "norm_id": "123-ФЗ",
-        "section": "Технический регламент о требованиях пожарной безопасности",
-        "requirement": "Общие требования пожарной безопасности к зданиям: классы конструктивной пожарной опасности, степени огнестойкости, требования к эвакуации и противопожарным преградам",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["эвакуационный выход", "путь эвакуации", "ширина прохода", "лестничная клетка", "эвакуация людей"],
-        "norm_id": "СП 1.13130.2020",
-        "section": "Системы противопожарной защиты. Эвакуационные пути и выходы",
-        "requirement": "Требования к эвакуационным путям и выходам: ширина, высота, протяжённость, количество выходов, незадымляемые лестничные клетки",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["предел огнестойкости", "нормируемый предел огнестойкост", "пожарная секция", "огнестойкость несущих конструкц"],
-        "norm_id": "СП 2.13130.2020",
-        "section": "Системы противопожарной защиты. Обеспечение огнестойкости объектов защиты",
-        "requirement": "Требования к огнестойкости строительных конструкций: нормирование пределов огнестойкости несущих и ограждающих конструкций в зависимости от степени огнестойкости здания",
-        "confidence": "PARTIAL",
-    },
-    # --- Блок 11: Охрана труда и техника безопасности ---
-    {
-        "keywords": ["охрана труда", "техника безопасности", "безопасность труда строительство", "несчастный случай", "производственный травматизм"],
-        "norm_id": "СНиП 12-03-2001",
-        "section": "Безопасность труда в строительстве. Часть 1. Общие требования",
-        "requirement": "Общие требования безопасности труда при строительстве: организация рабочих мест, опасные зоны, средства защиты, санитарно-бытовые условия, расследование несчастных случаев",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["безопасность строительного производства", "работы повышенной опасности", "наряд-допуск", "опасные строительные работы"],
-        "norm_id": "СНиП 12-04-2002",
-        "section": "Безопасность труда в строительстве. Часть 2. Строительное производство",
-        "requirement": "Требования безопасности при производстве строительных работ: земляные, монтажные, кровельные, отделочные работы, работы с механизмами — наряды-допуски, ограждения опасных зон",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["правила по охране труда строительство", "пот строительство", "требования охраны труда", "безопасность на строительной площадке"],
-        "norm_id": "Приказ Минтруда №336н",
-        "section": "Правила по охране труда в строительстве",
-        "requirement": "Актуальные правила по охране труда при строительстве: требования к организации работ, применению механизмов, защитным устройствам, оформлению нарядов-допусков",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["работы на высоте", "высотные работы", "страховочная система", "строительные леса", "подмости"],
-        "norm_id": "Приказ Минтруда №883н",
-        "section": "Правила по охране труда при работе на высоте",
-        "requirement": "Требования безопасности при работах на высоте: применение страховочных систем, устройство лесов и подмостей, ограждения проёмов, допуск и обучение персонала",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["инструктаж по охране труда", "вводный инструктаж", "журнал инструктажей", "обучение безопасности труда"],
-        "norm_id": "ГОСТ 12.0.004-2015",
-        "section": "Система стандартов безопасности труда. Организация обучения безопасности труда",
-        "requirement": "Порядок обучения и проверки знаний по охране труда: виды инструктажей (вводный, первичный, повторный, внеплановый, целевой), ведение журналов инструктажей",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["средства индивидуальной защиты", "сиз", "каска строительная", "защитный жилет", "очки защитные", "перчатки рабочие"],
-        "norm_id": "ГОСТ 12.4.011-89",
-        "section": "Система стандартов безопасности труда. Средства защиты работающих",
-        "requirement": "Классификация и требования к средствам индивидуальной и коллективной защиты работников: каски, жилеты, очки, перчатки, монтажные пояса, страховочные привязи",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["организация строительной площадки", "стройплощадка требования", "временные сооружения стройплощадка", "бытовки стройплощадка"],
-        "norm_id": "СП 49.13330.2010",
-        "section": "Безопасность труда в строительстве",
-        "requirement": "Требования к организации и обустройству строительных площадок: временные сооружения, санитарно-бытовые помещения, ограждения, освещение, безопасная организация труда",
-        "confidence": "PARTIAL",
-    },
-]
-
-try:
-    NORMATIVE_INDEX.extend(_P6H5_NORMATIVE_EXPAND)
-    _p6h_norm_logging.getLogger("task_worker").info(
-        "P6H5_NORMATIVE_FULL_EXPAND_V1_INSTALLED added=%d total=%d",
-        len(_P6H5_NORMATIVE_EXPAND), len(NORMATIVE_INDEX),
-    )
-except Exception:
-    pass
-# === END_P6H5_NORMATIVE_FULL_EXPAND_V1 ===
-
-# === P6H6_LOADS_V1 ===
-# Append-only: keyword coverage for load types under СП 20.13330.2017 only.
-# No new norms, no clause numbers. topic_5 + topic_210 shared.
-
-_P6H6_LOADS = [
-    {
-        "keywords": ["снеговая нагрузка", "снеговой район", "снеговой мешок", "масса снега", "снег на кровле"],
-        "norm_id": "СП 20.13330.2017",
-        "section": "Нагрузки и воздействия — снеговые нагрузки",
-        "requirement": "Снеговые нагрузки на конструкции определяются по нормативному значению снегового покрова для соответствующего снегового района с учётом схем распределения снега на кровле",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["ветровая нагрузка", "ветровой район", "пульсация ветра", "скоростной напор", "ветровое давление"],
-        "norm_id": "СП 20.13330.2017",
-        "section": "Нагрузки и воздействия — ветровые нагрузки",
-        "requirement": "Ветровые нагрузки определяются по нормативному значению ветрового давления для соответствующего ветрового района с учётом пульсационной составляющей",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["постоянная нагрузка", "собственный вес конструкц", "нагрузка от конструкции", "нагрузка от покрытия", "нагрузка от перегородок"],
-        "norm_id": "СП 20.13330.2017",
-        "section": "Нагрузки и воздействия — постоянные нагрузки",
-        "requirement": "Постоянные нагрузки включают собственный вес несущих и ограждающих конструкций и другие воздействия, неизменные в течение срока эксплуатации",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["временная нагрузка", "полезная нагрузка", "нагрузка на перекрытие", "нагрузка от людей", "нагрузка от оборудования", "нагрузка от складируемых материалов"],
-        "norm_id": "СП 20.13330.2017",
-        "section": "Нагрузки и воздействия — временные нагрузки",
-        "requirement": "Временные нагрузки на перекрытия и покрытия принимаются по нормативным значениям в зависимости от назначения помещения и характера использования",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["сочетание нагрузок", "расчётное сочетание", "особое сочетание", "основное сочетание", "коэффициент сочетания", "коэффициент надёжности по нагрузке"],
-        "norm_id": "СП 20.13330.2017",
-        "section": "Нагрузки и воздействия — сочетания нагрузок",
-        "requirement": "Расчёт конструкций выполняется на основные и особые сочетания нагрузок с применением коэффициентов сочетания и коэффициентов надёжности по нагрузке",
-        "confidence": "PARTIAL",
-    },
-]
-
-try:
-    NORMATIVE_INDEX.extend(_P6H6_LOADS)
-    _p6h_norm_logging.getLogger("task_worker").info(
-        "P6H6_LOADS_V1_INSTALLED added=%d total=%d",
-        len(_P6H6_LOADS), len(NORMATIVE_INDEX),
-    )
-except Exception:
-    pass
-# === END_P6H6_LOADS_V1 ===
-
-====================================================================================================
-END_FILE: core/normative_engine.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/normative_source_engine.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 570992de13fccd6bac9fbd100d64c2a766772eb0158450b267b5a576ff722467
-====================================================================================================
-# === NORMATIVE_SOURCE_ENGINE_FULL_CLOSE_V1 ===
-# === NORMATIVE_NO_HALLUCINATION_GUARD_V1 ===
-from __future__ import annotations
-
-import json
-import re
-from pathlib import Path
-from typing import Any, Dict, List
-
-BASE = Path("/root/.areal-neva-core")
-NORM_INDEX = BASE / "data/norms/normative_index.json"
-
-def _load() -> List[Dict[str, Any]]:
-    if NORM_INDEX.exists():
-        try:
-            data = json.loads(NORM_INDEX.read_text(encoding="utf-8"))
-            return data if isinstance(data, list) else []
-        except Exception:
-            return []
-    return []
-
-def search_normative_sources(text: str, limit: int = 8) -> List[Dict[str, Any]]:
-    hay = (text or "").lower()
-    out = []
-    for row in _load():
-        keys = " ".join(row.get("keywords") or []).lower()
-        score = sum(1 for w in re.findall(r"[а-яa-z0-9]{4,}", hay) if w in keys or w in str(row).lower())
-        if score:
-            r = dict(row)
-            r["score"] = score
-            r["confidence"] = "CONFIRMED" if r.get("source") and r.get("clause") else "PARTIAL"
-            out.append(r)
-    out.sort(key=lambda x: int(x.get("score") or 0), reverse=True)
-    return out[:limit]
-
-def assert_no_exact_clause_without_source(norm: Dict[str, Any]) -> bool:
-    return not bool(norm.get("clause")) or bool(norm.get("source"))
-
-def format_normative_sources(rows: List[Dict[str, Any]]) -> str:
-    lines = []
-    for r in rows:
-        confidence = "CONFIRMED" if assert_no_exact_clause_without_source(r) and r.get("source") else "PARTIAL"
-        lines.append(f"{r.get('doc','UNKNOWN')} {r.get('clause','')}: {r.get('text','')} [{confidence}] {r.get('source','')}")
-    return "\n".join(lines)
-# === END_NORMATIVE_NO_HALLUCINATION_GUARD_V1 ===
-# === END_NORMATIVE_SOURCE_ENGINE_FULL_CLOSE_V1 ===
-
-====================================================================================================
-END_FILE: core/normative_source_engine.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/ocr_engine.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 08aeb8f3e25b091f13412d0352b24189e3cf9dd7af3d0c2640e448e4f7ca30b9
-====================================================================================================
-# === FINAL_CLOSURE_BLOCKER_FIX_V1_OCR_TABLE_ENGINE ===
-from __future__ import annotations
-
-import csv
-from datetime import datetime
-from pathlib import Path
-from typing import Any, Dict, List
-
-BASE = Path("/root/.areal-neva-core")
-OUT = BASE / "outputs" / "ocr"
-OUT.mkdir(parents=True, exist_ok=True)
-
-
-def is_ocr_table_intent(text: str = "", file_name: str = "") -> bool:
-    t = f"{text} {file_name}".lower().replace("ё", "е")
-    return any(x in t for x in ["таблиц", "распознай", "ocr", "скан", "фото таблицы", "в excel", "в эксель"])
-
-
-def process_ocr_table(text: str = "", task_id: str = "", file_path: str = "", file_name: str = "") -> Dict[str, Any]:
-    if not is_ocr_table_intent(text, file_name):
-        return {"ok": False, "handled": False, "reason": "NOT_OCR_TABLE"}
-
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    csv_path = OUT / f"OCR_TABLE__{task_id[:8] or ts}.csv"
-    rows: List[List[str]] = [["status", "message"], ["FAILED", "OCR_TABLE_REQUIRES_REAL_RECOGNITION_ENGINE"]]
-
-    with csv_path.open("w", encoding="utf-8", newline="") as f:
-        csv.writer(f).writerows(rows)
-
-    return {
-        "ok": True,
-        "handled": True,
-        "kind": "ocr_table",
-        "state": "FAILED",
-        "artifact_path": str(csv_path),
-        "message": "OCR таблицы не выполнен: реальный OCR-движок не подключён\nСоздан диагностический CSV\nБез распознавания структура таблицы не выдумывается",
-        "history": "FINAL_CLOSURE_BLOCKER_FIX_V1:OCR_REQUIRES_ENGINE",
-    }
-
-
-# === END_FINAL_CLOSURE_BLOCKER_FIX_V1_OCR_TABLE_ENGINE ===
-
-====================================================================================================
-END_FILE: core/ocr_engine.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/ocr_table_engine.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 5cd90f31ee3cb4af0edd0d1fd334a6c4c8e6b7c08a3011d0694d651bd13163fb
-====================================================================================================
-# === OCR_TABLE_TO_EXCEL_FULL_CLOSE_V1 ===
-from __future__ import annotations
-
-import json
-import os
-import re
-import tempfile
-import zipfile
-from pathlib import Path
-from typing import Any, Dict, List
-
-def _safe(v: Any) -> str:
-    return re.sub(r"[^A-Za-zА-Яа-я0-9_.-]+", "_", str(v or "ocr_table")).strip("._") or "ocr_table"
-
-def _parse_rows(text: str) -> List[List[str]]:
-    rows = []
-    try:
-        data = json.loads(text)
-        if isinstance(data, dict):
-            data = data.get("rows") or data.get("items") or []
-        if isinstance(data, list):
-            for item in data:
-                if isinstance(item, dict):
-                    rows.append([
-                        str(item.get("name") or item.get("наименование") or ""),
-                        str(item.get("unit") or item.get("ед") or ""),
-                        str(item.get("qty") or item.get("количество") or ""),
-                        str(item.get("price") or item.get("цена") or ""),
-                    ])
-                elif isinstance(item, list):
-                    rows.append([str(x) for x in item])
-        if rows:
-            return rows
-    except Exception:
-        pass
-
-    for line in (text or "").splitlines():
-        parts = [p.strip() for p in re.split(r"\s{2,}|\t|;", line) if p.strip()]
-        if len(parts) >= 2:
-            rows.append(parts[:6])
-    return rows
-
-def _write_xlsx(rows: List[List[str]], task_id: str) -> str:
-    out = Path(tempfile.gettempdir()) / f"ocr_table_{_safe(task_id)}.xlsx"
-    from openpyxl import Workbook
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "OCR_TABLE"
-    headers = ["Наименование", "Ед", "Кол-во", "Цена", "Сумма"]
-    ws.append(headers)
-    for r in rows:
-        name = r[0] if len(r) > 0 else ""
-        unit = r[1] if len(r) > 1 else ""
-        qty = r[2] if len(r) > 2 else ""
-        price = r[3] if len(r) > 3 else ""
-        ws.append([name, unit, qty, price, None])
-        row = ws.max_row
-        ws.cell(row=row, column=5, value=f"=C{row}*D{row}")
-    total_row = ws.max_row + 1
-    ws.cell(row=total_row, column=4, value="ИТОГО")
-    ws.cell(row=total_row, column=5, value=f"=SUM(E2:E{total_row-1})")
-    wb.save(out)
-    wb.close()
-    return str(out)
-
-def _write_pdf_stub(rows: List[List[str]], task_id: str) -> str:
-    out = Path(tempfile.gettempdir()) / f"ocr_table_{_safe(task_id)}.pdf"
-    text = "OCR TABLE RESULT\\nRows: " + str(len(rows))
-    stream = f"BT /F1 12 Tf 50 780 Td ({text}) Tj ET".encode()
-    pdf = b"%PDF-1.4\n1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj\n2 0 obj<< /Type /Pages /Kids [3 0 R] /Count 1 >>endobj\n3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>endobj\n4 0 obj<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>endobj\n5 0 obj<< /Length " + str(len(stream)).encode() + b" >>stream\n" + stream + b"\nendstream endobj\ntrailer<< /Root 1 0 R >>\n%%EOF"
-    out.write_bytes(pdf)
-    return str(out)
-
-def _zip(paths: List[str], task_id: str) -> str:
-    out = Path(tempfile.gettempdir()) / f"ocr_table_package_{_safe(task_id)}.zip"
-    with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as z:
-        for p in paths:
-            if p and os.path.exists(p):
-                z.write(p, arcname=os.path.basename(p))
-    return str(out)
-
-async def image_table_to_excel(local_path: str, task_id: str, user_text: str = "", topic_id: int = 0) -> Dict[str, Any]:
-    if not local_path or not os.path.exists(local_path):
-        return {"success": False, "error": "IMAGE_NOT_FOUND"}
-
-    vision_text = ""
-    try:
-        from core.gemini_vision import analyze_image_file
-        prompt = (
-            "Распознай таблицу/смету/ВОР на изображении. "
-            "Верни строго JSON: {\"rows\":[{\"name\":\"\",\"unit\":\"\",\"qty\":\"\",\"price\":\"\"}]}. "
-            "Не считай руками, только извлеки строки."
-        )
-        vision_text = await analyze_image_file(local_path, prompt=prompt, timeout=90) or ""
-    except Exception as e:
-        return {"success": False, "error": f"VISION_UNAVAILABLE:{e}"}
-
-    rows = _parse_rows(vision_text)
-    if not rows:
-        return {"success": False, "error": "NO_TABLE_ROWS_RECOGNIZED", "raw": vision_text[:2000]}
-
-    xlsx = _write_xlsx(rows, task_id)
-    pdf = _write_pdf_stub(rows, task_id)
-    package = _zip([xlsx, pdf], task_id)
-
-    return {
-        "success": True,
-        "engine": "OCR_TABLE_TO_EXCEL_FULL_CLOSE_V1",
-        "summary": f"Фото таблицы распознано\\nСтрок: {len(rows)}\\nАртефакты: XLSX + PDF",
-        "artifact_path": package,
-        "artifact_name": f"ocr_table_package_{_safe(task_id)}.zip",
-        "extra_artifacts": [xlsx, pdf],
-        "rows": rows,
-    }
-# === END_OCR_TABLE_TO_EXCEL_FULL_CLOSE_V1 ===
-
-====================================================================================================
-END_FILE: core/ocr_table_engine.py
 FILE_CHUNK: 1/1
 ====================================================================================================

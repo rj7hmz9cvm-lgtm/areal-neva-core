@@ -1,30 +1,33 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-05-08T10:30:02.123331+00:00
-GIT_SHA: 7c646dd4c04fb381ced170c979b5e07264310700
+GENERATED_AT: 2026-05-08T13:30:01.938017+00:00
+GIT_SHA: 6cf91547d86c51b3e813702f9840a06eb53aab71
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
 ROLE: Сметы
 DIRECTIONS_BOUND: estimates
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE_TASKS: 0
-FAILED_LAST_24H: 2
+ACTIVE_TASKS: 1
+FAILED_LAST_24H: 1
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 12
+- AWAITING_CONFIRMATION: 1
 - CANCELLED: 101
 - DONE: 131
-- FAILED: 110
+- FAILED: 109
 
 ## LATEST_FAILED
-- c94ec497 | TOPIC2_CANONICAL_FULL_CLOSE_NOT_PROVEN
 - a7b2879e | STALE_TIMEOUT
 - 893436d4 | INVALID_PUBLIC_RESULT
 - f43100b3 | TOPIC2_ONE_BIG_FINAL_PIPELINE_V1_WORKER_ERR:maximum recursion depth exceeded
 - c6b40dfc | STROYKA_QG_FAILED:XLSX_VALIDATE_ERROR:maximum recursion depth exceeded
+- 8212f685 | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
+- 6cf9154|fix(topic2): PATCH_TOPIC2_ADD_PEREKRYTIYA_SECTION_V1 — add missing §5 Перекрытия section
+- 2475eb5|fix(topic2): PATCH_TOPIC2_REALSHEET_PRICES_V3 — real Газобетонный дом prices
 - 7c646dd|session(08.05): bigfile activated, topic5 V3 dispatcher, topic2 P6C intercept, c94ec497 FAILED/NOT_PROVEN
 - 8760011|fix(topic2): enforce full canonical estimate pipeline without cross-topic regression
 - b236f02|fix(topic2): session 08.05 — P6C fulltext prep, P3CHK append fix, P2 distance skip, WCPE unblock
@@ -53,19 +56,14 @@ FAILED_LAST_24H: 2
 - 79ba839|fix(topic2): redirect simplified v2 path to full P2/P3 pipeline
 - 66a57e1|fix(topic2): route ALL estimates through full P2/P3 pipeline
 - d9edd5d|fix(topic2): auto price enrichment + DONE contract markers
-- 842c52b|docs(topic2): update chat export for stroyka price choice patch
-- ac58cfe|docs(topic2): add 20260506 stroyka in progress report
 
 ## MARKERS_LAST_24H
 - created:NEW
-- PATCH_TOPIC2_INLINE_FIX_20260506_V1:V6C_PRICE_REJECTED:no_explicit_token_or_long
-- PATCH_TOPIC2_INLINE_FIX_20260506_V1:V5_PRICE_REJECTED:no_explicit_token_or_long
-- P6E2_TOPIC2_IMAGE_ESTIMATE_ROUTE_TAKEN
-- P6E2_CANON_DIMS_NOT_RECOGNIZED
-- reply_sent:p6e2_topic2_image_estimate_result
 - clarified:
 - state:FAILED
 - reply_sent:stale_failed
+- PATCH_TOPIC2_INLINE_FIX_20260506_V1:V6C_PRICE_REJECTED:no_explicit_token_or_long
+- PATCH_TOPIC2_INLINE_FIX_20260506_V1:V5_PRICE_REJECTED:no_explicit_token_or_long
 - P6E67_PARENT_NOT_FOUND
 - P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION
 - clarified:Вот документ мне необходимо посчитать стоимость строительства Дом из г
@@ -87,6 +85,9 @@ FAILED_LAST_24H: 2
 - clarified:есть в проекте
 - clarified:смотри задание и проект
 - clarified:ты не видешь что ранее писал?
+- clarified:где расчет?
+- clarified:ну че
+- clarified:заебал
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210

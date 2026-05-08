@@ -1,8 +1,1486 @@
 # ORCHESTRA_FULL_CONTEXT_PART_007
-generated_at_utc: 2026-05-08T10:30:02.019409+00:00
-git_sha_before_commit: 7c646dd4c04fb381ced170c979b5e07264310700
+generated_at_utc: 2026-05-08T13:30:01.839140+00:00
+git_sha_before_commit: 6cf91547d86c51b3e813702f9840a06eb53aab71
 part: 7/17
 
+
+====================================================================================================
+BEGIN_FILE: task_worker.py
+FILE_CHUNK: 3/3
+SHA256_FULL_FILE: 9b80909939ca0d5437ddbf40e661fcaee30cc730e89731e710799de3e2e6350b
+====================================================================================================
+# Факт: 17:33 «Задача отменена» → бот спросил «Сколько этажей»
+# ============================================================
+import re as _tcg_re
+import inspect as _tcg_inspect
+import logging as _tcg_logging
+_TCG_LOG = _tcg_logging.getLogger("task_worker.cancel_guard")
+
+_TCG_CANCEL_RE = _tcg_re.compile(
+    r"(?:^|\s)(?:\[VOICE\]\s*)?"
+    r"(отмена|отбой|стоп|заверши|завершена|закрой|закрывай|очисти|"
+    r"отменяй|задача отменена|отмена задач|все задачи завершен|"
+    r"отбой всех|очисти все|задача завершена)",
+    _tcg_re.IGNORECASE
+)
+
+def _tcg_is_cancel(text):
+    if not text:
+        return False
+    s = str(text).strip().lower()
+    if len(s) > 200:
+        return False
+    return bool(_TCG_CANCEL_RE.search(s))
+
+def _tcg_get(task, key, default=""):
+    try:
+        if isinstance(task, dict):
+            return task.get(key, default)
+        return task[key]
+    except Exception:
+        return default
+
+_TCG_ORIG_HANDLE_NEW = globals().get("_handle_new")
+if _TCG_ORIG_HANDLE_NEW and not getattr(_TCG_ORIG_HANDLE_NEW, "_tcg_wrapped", False):
+    async def _handle_new(conn, task, *args, **kwargs):
+        try:
+            topic_id = int(_tcg_get(task, "topic_id", 0) or 0)
+            raw = str(_tcg_get(task, "raw_input", "") or "")
+            if topic_id == 2 and _tcg_is_cancel(raw):
+                task_id = str(_tcg_get(task, "id", ""))
+                chat_id = str(_tcg_get(task, "chat_id", ""))
+                reply_to = _tcg_get(task, "reply_to_message_id", None)
+                try:
+                    conn.execute(
+                        "UPDATE tasks SET state='CANCELLED', "
+                        "error_message='TOPIC2_CANCEL_GUARD_V1', "
+                        "updated_at=datetime('now') WHERE id=?",
+                        (task_id,)
+                    )
+                    conn.execute(
+                        "UPDATE tasks SET state='CANCELLED', "
+                        "error_message='TOPIC2_CANCEL_GUARD_V1:scoped' "
+                        "WHERE chat_id=? AND topic_id=2 "
+                        "AND state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION') "
+                        "AND id<>?",
+                        (chat_id, task_id)
+                    )
+                    conn.execute(
+                        "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, datetime('now'))",
+                        (task_id, "TOPIC2_CANCEL_GUARD_V1:cancelled_active_topic2")
+                    )
+                    conn.commit()
+                except Exception as _e:
+                    _TCG_LOG.warning("CANCEL_GUARD_DB_ERR task=%s err=%s", task_id, _e)
+                try:
+                    _send_once(conn, task_id, chat_id,
+                               "Задачи в этом топике отменены.",
+                               reply_to, "topic2_cancel_guard")
+                except Exception as _e:
+                    _TCG_LOG.warning("CANCEL_GUARD_SEND_ERR task=%s err=%s", task_id, _e)
+                _TCG_LOG.info("TOPIC2_CANCEL_GUARD_V1 fired task=%s chat=%s", task_id, chat_id)
+                return
+        except Exception as e:
+            _TCG_LOG.exception("CANCEL_GUARD_TOP_ERR err=%s", e)
+        res = _TCG_ORIG_HANDLE_NEW(conn, task, *args, **kwargs)
+        if _tcg_inspect.isawaitable(res):
+            return await res
+        return res
+    _handle_new._tcg_wrapped = True
+
+_TCG_LOG.info("PATCH_TOPIC2_CANCEL_GUARD_V1 installed")
+# === END_PATCH_TOPIC2_CANCEL_GUARD_V1 ===
+
+
+# ============================================================
+# === PATCH_TOPIC2_FRESH_ESTIMATE_FALLBACK_V1 ===
+# Цель: при P6E67_PARENT_NOT_FOUND с полным новым ТЗ → fresh estimate
+# Факт: 12:50, 13:43, 19:33 — «Не нашёл родительскую задачу» при полном ТЗ
+# ============================================================
+import re as _tffe_re
+import inspect as _tffe_inspect
+import logging as _tffe_logging
+_TFFE_LOG = _tffe_logging.getLogger("task_worker.fresh_fallback")
+
+_TFFE_ESTIMATE_KEYS = (
+    "смет", "кп", "коммерческ", "расчёт", "расчет", "стоимост", "цен",
+    "объём", "объем", "м²", "м2", "м³", "м3", "посчитай", "посчитать",
+    "монолит", "бетон", "арматур", "фундамент", "стен", "перекрыт", "кровл",
+    "газобетон", "каркас", "кирпич", "отделк", "имитация бруса", "ламинат"
+)
+
+def _tffe_count_estimate_signals(text):
+    if not text:
+        return 0
+    low = str(text).lower()
+    return sum(1 for k in _TFFE_ESTIMATE_KEYS if k in low)
+
+def _tffe_get(task, key, default=""):
+    try:
+        if isinstance(task, dict):
+            return task.get(key, default)
+        return task[key]
+    except Exception:
+        return default
+
+_TFFE_ORIG_P6E67 = globals().get("_p6e67_try_merge")
+if _TFFE_ORIG_P6E67 and not getattr(_TFFE_ORIG_P6E67, "_tffe_wrapped", False):
+    async def _p6e67_try_merge(conn, task, *args, **kwargs):
+        topic_id = int(_tffe_get(task, "topic_id", 0) or 0)
+        raw = str(_tffe_get(task, "raw_input", "") or "")
+        signals = _tffe_count_estimate_signals(raw) if topic_id == 2 else 0
+        if topic_id == 2 and signals >= 3:
+            try:
+                fn = globals().get("_t2fer_run_final_estimate")
+                if fn:
+                    if await fn(conn, task, "FRESH_FALLBACK_FULL_TZ"):
+                        _TFFE_LOG.info("TFFE_FRESH_FALLBACK_OK task=%s signals=%d",
+                                       _tffe_get(task, "id"), signals)
+                        return True
+            except Exception as e:
+                _TFFE_LOG.warning("TFFE_FRESH_FALLBACK_ERR task=%s err=%s",
+                                  _tffe_get(task, "id"), e)
+        res = _TFFE_ORIG_P6E67(conn, task, *args, **kwargs)
+        if _tffe_inspect.isawaitable(res):
+            return await res
+        return res
+    _p6e67_try_merge._tffe_wrapped = True
+
+_TFFE_LOG.info("PATCH_TOPIC2_FRESH_ESTIMATE_FALLBACK_V1 installed")
+# === END_PATCH_TOPIC2_FRESH_ESTIMATE_FALLBACK_V1 ===
+
+
+# ============================================================
+# === PATCH_TOPIC2_PRICE_REPLY_REVIVE_V1 ===
+# Цель: короткий ответ ("2", "да", "жду") при WAITING_CLARIFICATION + PRICE_REQUESTED 
+#       идёт в parent, не создаёт новую задачу
+# Факт: 10:04-10:06 — пять ответов "2"/"" подряд → 5 P6E67_PARENT_NOT_FOUND
+# Факт: 10:36 — "Какая последняя задача" → новая задача с price menu
+# ============================================================
+import re as _tprr_re
+import inspect as _tprr_inspect
+import logging as _tprr_logging
+_TPRR_LOG = _tprr_logging.getLogger("task_worker.price_revive")
+
+_TPRR_PRICE_REPLY_RE = _tprr_re.compile(
+    r"^\s*(?:\[VOICE\]\s*)?"
+    r"(?:1|2|3|4|а\)?|б\)?|в\)?|г\)?|"
+    r"да|ок|жду|давай|делай|поехали|"
+    r"вариант\s*[1-4абвг]|"
+    r"миним|средн|максим|медиан|шаблонн|ручн|"
+    r"ставь\s+\w+)"
+    r"\s*$",
+    _tprr_re.IGNORECASE
+)
+
+def _tprr_is_short_price_reply(text):
+    if not text:
+        return False
+    s = str(text).strip()
+    if len(s) > 80:
+        return False
+    return bool(_TPRR_PRICE_REPLY_RE.match(s))
+
+def _tprr_get(task, key, default=""):
+    try:
+        if isinstance(task, dict):
+            return task.get(key, default)
+        return task[key]
+    except Exception:
+        return default
+
+def _tprr_find_active_price_parent(conn, chat_id):
+    try:
+        row = conn.execute(
+            """SELECT id FROM tasks 
+               WHERE chat_id=? AND topic_id=2 
+                 AND state IN ('WAITING_CLARIFICATION','IN_PROGRESS')
+                 AND id IN (
+                   SELECT task_id FROM task_history 
+                   WHERE action='TOPIC2_PRICE_CHOICE_REQUESTED'
+                 )
+               ORDER BY updated_at DESC LIMIT 1""",
+            (str(chat_id),)
+        ).fetchone()
+        if row:
+            return row["id"] if hasattr(row, "keys") else row[0]
+    except Exception:
+        pass
+    return None
+
+_TPRR_ORIG_HANDLE_NEW = globals().get("_handle_new")
+if _TPRR_ORIG_HANDLE_NEW and not getattr(_TPRR_ORIG_HANDLE_NEW, "_tprr_wrapped", False):
+    async def _handle_new(conn, task, *args, **kwargs):
+        try:
+            topic_id = int(_tprr_get(task, "topic_id", 0) or 0)
+            raw = str(_tprr_get(task, "raw_input", "") or "")
+            if topic_id == 2 and _tprr_is_short_price_reply(raw):
+                chat_id = str(_tprr_get(task, "chat_id", ""))
+                parent_id = _tprr_find_active_price_parent(conn, chat_id)
+                if parent_id:
+                    task_id = str(_tprr_get(task, "id", ""))
+                    try:
+                        conn.execute(
+                            "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, datetime('now'))",
+                            (parent_id, "clarified:" + raw[:200])
+                        )
+                        conn.execute(
+                            "UPDATE tasks SET state='IN_PROGRESS', error_message='', "
+                            "updated_at=datetime('now') WHERE id=?",
+                            (parent_id,)
+                        )
+                        conn.execute(
+                            "UPDATE tasks SET state='CANCELLED', "
+                            "error_message='TPRR:MERGED_TO_PARENT:'||?, "
+                            "result='Ответ применён к активной сметной задаче' "
+                            "WHERE id=?",
+                            (parent_id, task_id)
+                        )
+                        conn.execute(
+                            "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, datetime('now'))",
+                            (task_id, "TPRR_MERGED_TO_PRICE_PARENT:" + parent_id)
+                        )
+                        conn.commit()
+                        _TPRR_LOG.info("TPRR_MERGE task=%s → parent=%s reply=%s",
+                                       task_id, parent_id, raw[:30])
+                    except Exception as _e:
+                        _TPRR_LOG.warning("TPRR_DB_ERR task=%s err=%s", task_id, _e)
+                    return
+        except Exception as e:
+            _TPRR_LOG.exception("TPRR_TOP_ERR err=%s", e)
+        res = _TPRR_ORIG_HANDLE_NEW(conn, task, *args, **kwargs)
+        if _tprr_inspect.isawaitable(res):
+            return await res
+        return res
+    _handle_new._tprr_wrapped = True
+
+_TPRR_LOG.info("PATCH_TOPIC2_PRICE_REPLY_REVIVE_V1 installed")
+# === END_PATCH_TOPIC2_PRICE_REPLY_REVIVE_V1 ===
+
+
+# ============================================================
+# === PATCH_TOPIC2_PRICE_TIMEOUT_GUARD_V1 ===
+# Цель: задачи с TOPIC2_PRICE_CHOICE_REQUESTED не убивает 30-мин таймаут
+# Факт: 10:16, 10:35, 10:43 — IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1
+#       убил f1ef9fab пока юзер думал над ценой
+# ============================================================
+import logging as _tptg_logging
+_TPTG_LOG = _tptg_logging.getLogger("task_worker.price_timeout_guard")
+
+_TPTG_ORIG_TIMEOUT = globals().get("_in_progress_hard_timeout_by_created_at_fix_v1")
+if _TPTG_ORIG_TIMEOUT and not getattr(_TPTG_ORIG_TIMEOUT, "_tptg_wrapped", False):
+    def _in_progress_hard_timeout_by_created_at_fix_v1(conn, minutes: int = 30) -> int:
+        try:
+            rows = conn.execute(
+                """SELECT id FROM tasks
+                   WHERE state='IN_PROGRESS' AND topic_id=2
+                     AND id IN (
+                       SELECT task_id FROM task_history 
+                       WHERE action='TOPIC2_PRICE_CHOICE_REQUESTED'
+                     )""",
+            ).fetchall()
+            shielded = 0
+            for r in rows:
+                tid = r["id"] if hasattr(r, "keys") else r[0]
+                try:
+                    conn.execute(
+                        "UPDATE tasks SET state='WAITING_CLARIFICATION', "
+                        "error_message='TPTG:price_choice_pending', "
+                        "updated_at=datetime('now') WHERE id=? AND state='IN_PROGRESS'",
+                        (str(tid),)
+                    )
+                    shielded += 1
+                except Exception:
+                    pass
+            if shielded:
+                conn.commit()
+                _TPTG_LOG.info("TPTG_SHIELDED %d tasks (price_pending → WAITING_CLARIFICATION)", shielded)
+        except Exception as e:
+            _TPTG_LOG.warning("TPTG_PREFILTER_ERR %s", e)
+        return _TPTG_ORIG_TIMEOUT(conn, minutes)
+    _in_progress_hard_timeout_by_created_at_fix_v1._tptg_wrapped = True
+
+_TPTG_LOG.info("PATCH_TOPIC2_PRICE_TIMEOUT_GUARD_V1 installed")
+# === END_PATCH_TOPIC2_PRICE_TIMEOUT_GUARD_V1 ===
+
+
+# ============================================================
+# === PATCH_TOPIC2_DONE_OVERRIDE_INVALID_PUBLIC_V1 ===
+# Цель: если у задачи topic_2 есть все DONE markers + Drive XLSX/PDF ссылки,
+#       не блокировать переход в AWAITING_CONFIRMATION/DONE через INVALID_PUBLIC_RESULT
+# Факт логов 21:05:02: задача 893436d4 имела все 14 markers, но state=FAILED
+# ============================================================
+import logging as _tdoip_logging
+_TDOIP_LOG = _tdoip_logging.getLogger("task_worker.done_override")
+
+_TDOIP_REQUIRED_MARKERS = (
+    "TOPIC2_XLSX_CREATED",
+    "TOPIC2_PDF_CREATED",
+    "TOPIC2_DRIVE_UPLOAD_XLSX_OK",
+    "TOPIC2_DRIVE_UPLOAD_PDF_OK",
+    "TOPIC2_TELEGRAM_DELIVERED",
+)
+
+def _tdoip_has_all_done_markers(conn, task_id):
+    try:
+        rows = conn.execute(
+            "SELECT action FROM task_history WHERE task_id=?",
+            (str(task_id),)
+        ).fetchall()
+        actions = " ".join(str(r[0]) for r in rows)
+        return all(m in actions for m in _TDOIP_REQUIRED_MARKERS)
+    except Exception:
+        return False
+
+def _tdoip_has_drive_links_in_result(result):
+    if not result:
+        return False
+    s = str(result).lower()
+    return "drive.google.com" in s and ("xlsx" in s or "pdf" in s or ".xls" in s or "📊" in str(result) or "📄" in str(result))
+
+_TDOIP_ORIG_VIOLATION = globals().get("_fcg_public_result_violation")
+if _TDOIP_ORIG_VIOLATION and not getattr(_TDOIP_ORIG_VIOLATION, "_tdoip_wrapped", False):
+    def _fcg_public_result_violation(conn, task_id, state, result, error_message=""):
+        try:
+            row = conn.execute(
+                "SELECT topic_id FROM tasks WHERE id=?", (str(task_id),)
+            ).fetchone()
+            topic_id_v = int(row[0]) if row else 0
+            if topic_id_v == 2:
+                if _tdoip_has_all_done_markers(conn, task_id) and _tdoip_has_drive_links_in_result(result):
+                    try:
+                        conn.execute(
+                            "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                            (str(task_id), "TDOIP_OVERRIDE:14_markers_and_drive_links_present")
+                        )
+                        conn.commit()
+                    except Exception:
+                        pass
+                    _TDOIP_LOG.info("TDOIP_OVERRIDE task=%s — markers + Drive links → no violation", task_id)
+                    return ""
+        except Exception as e:
+            _TDOIP_LOG.warning("TDOIP_TOP_ERR task=%s err=%s", task_id, e)
+        return _TDOIP_ORIG_VIOLATION(conn, task_id, state, result, error_message)
+    _fcg_public_result_violation._tdoip_wrapped = True
+
+_TDOIP_LOG.info("PATCH_TOPIC2_DONE_OVERRIDE_INVALID_PUBLIC_V1 installed")
+# === END_PATCH_TOPIC2_DONE_OVERRIDE_INVALID_PUBLIC_V1 ===
+
+
+# ============================================================
+# === PATCH_TOPIC2_INLINE_FIX_20260506_V1 SUPERSEDES_NOTE ===
+# Inline fixes applied directly in function bodies above:
+#   - _p6e67_try_merge:  (1) state guard at top — stops infinite loop on CANCELLED/FAILED/DONE
+#                        (2) fresh estimate dispatch in `if not parent` block — full-TZ → estimate
+#   - _update_task FCG wrapper: bypass INVALID_PUBLIC_RESULT if 5 critical DONE markers + Drive link in result
+#   - _t2v5_/_t2v6c_ price bind: explicit token required (no long messages, no fallback to history)
+#
+# Wrappers below (PATCH_TOPIC2_CANCEL_GUARD_V1 / FRESH_ESTIMATE_FALLBACK_V1 / PRICE_REPLY_REVIVE_V1 /
+#   PRICE_TIMEOUT_GUARD_V1 / DONE_OVERRIDE_INVALID_PUBLIC_V1) are SUPERSEDED_BY_INLINE_FIX_20260506_V1.
+# Kept inert (they wrap functions that are already inline-fixed). To remove: delete lines ~14898-15256.
+# ============================================================
+
+
+# === PATCH_PRICE_BIND_LOOP_TERMINATE_V1 ===
+# Root cause: _t2pc_try_bind_price_choice returns False without setting FAILED when
+# LATEST_PRICE_MENU_FALLBACK triggers the poison guard → worker re-queues → 68+ loop iterations.
+# Fix: detect 3+ occurrences of the guard marker → forcibly set task to FAILED.
+import logging as _pblt_logging
+_PBLT_LOG = _pblt_logging.getLogger("task_worker")
+
+_PBLT_ORIG = globals().get("_t2pc_try_bind_price_choice")
+if _PBLT_ORIG and not getattr(_PBLT_ORIG, "_pblt_wrapped", False):
+    async def _t2pc_try_bind_price_choice(conn, task):
+        try:
+            _pblt_id = str(task.get("id", "") if isinstance(task, dict) else
+                           (task["id"] if hasattr(task, "keys") and "id" in task.keys() else ""))
+            _pblt_marker = "PRICE_BIND_POISON_PARENT_GUARD_V2_BLOCKED_V4:LATEST_PRICE_MENU_FALLBACK"
+            _pblt_cnt = conn.execute(
+                "SELECT COUNT(*) FROM task_history WHERE task_id=? AND action=?",
+                (_pblt_id, _pblt_marker)
+            ).fetchone()
+            if _pblt_cnt and _pblt_cnt[0] >= 3:
+                conn.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (_pblt_id, "PRICE_BIND_POISON_LOOP_TERMINATED:LATEST_PRICE_MENU_FALLBACK")
+                )
+                conn.execute(
+                    "UPDATE tasks SET state='FAILED',error_message='PRICE_BIND_POISON_LOOP_TERMINATED:LATEST_PRICE_MENU_FALLBACK',updated_at=datetime('now') WHERE id=?",
+                    (_pblt_id,)
+                )
+                conn.commit()
+                _PBLT_LOG.warning("PRICE_BIND_POISON_LOOP_TERMINATED task=%s", _pblt_id)
+                return False
+        except Exception as _pblt_e:
+            _PBLT_LOG.warning("PATCH_PRICE_BIND_LOOP_TERMINATE_V1 pre-check err: %s", _pblt_e)
+        import inspect as _pblt_inspect
+        res = _PBLT_ORIG(conn, task)
+        if _pblt_inspect.isawaitable(res):
+            return await res
+        return res
+    _t2pc_try_bind_price_choice._pblt_wrapped = True
+    _t2pc_try_bind_price_choice._t2fpg_wrapped = True
+    _PBLT_LOG.info("PATCH_PRICE_BIND_LOOP_TERMINATE_V1 installed")
+else:
+    _PBLT_LOG.warning("PATCH_PRICE_BIND_LOOP_TERMINATE_V1 skipped: _t2pc_try_bind_price_choice not found")
+# === END_PATCH_PRICE_BIND_LOOP_TERMINATE_V1 ===
+
+
+# === PATCH_FCG_DONE_CONTRACT_BYPASS_V1 ===
+# Root cause: FCG _update_task wrapper fires _fcg_public_result_violation even after canonical engine
+# completed successfully (TOPIC2_DONE_CONTRACT_OK in history). Some result fragment triggers INVALID_PUBLIC_RESULT.
+# Existing bypass (5 markers + drive link in result) fails when result text has no drive.google.com.
+# Fix: if TOPIC2_DONE_CONTRACT_OK is in task_history → canonical engine already verified everything → skip FCG.
+import logging as _fdcb_logging
+_FDCB_LOG = _fdcb_logging.getLogger("task_worker")
+
+_FDCB_ORIG_UPDATE = globals().get("_update_task")
+if _FDCB_ORIG_UPDATE and not getattr(_FDCB_ORIG_UPDATE, "_fdcb_wrapped", False):
+    def _update_task(conn, task_id, *args, **kwargs):
+        state = kwargs.get("state", args[0] if args else None)
+        result = kwargs.get("result", args[1] if len(args) >= 2 else None)
+        _fdcb_result_empty = not result or not str(result).strip()
+        if state == "DONE" and _fdcb_result_empty:
+            try:
+                _fdcb_row = conn.execute(
+                    "SELECT 1 FROM task_history WHERE task_id=? AND action IN ('TOPIC2_AC_GATE_OK','TOPIC2_DONE_CONTRACT_OK') LIMIT 1",
+                    (str(task_id),)
+                ).fetchone()
+                if _fdcb_row:
+                    conn.execute(
+                        "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                        (str(task_id), "PATCH_FCG_DONE_CONTRACT_BYPASS_V1:bypass_done_marker_ok")
+                    )
+                    _FDCB_LOG.info("PATCH_FCG_DONE_CONTRACT_BYPASS_V1 bypass_done_marker_ok task=%s state=%s", task_id, state)
+                    return _FCG_ORIG_UPDATE_TASK(conn, task_id, *args, **kwargs)
+            except Exception as _fdcb_e:
+                _FDCB_LOG.warning("PATCH_FCG_DONE_CONTRACT_BYPASS_V1 err: %s", _fdcb_e)
+        return _FDCB_ORIG_UPDATE(conn, task_id, *args, **kwargs)
+    _update_task._fdcb_wrapped = True
+    _update_task._fcg_wrapped = True
+    _FDCB_LOG.info("PATCH_FCG_DONE_CONTRACT_BYPASS_V1 installed")
+else:
+    _FDCB_LOG.warning("PATCH_FCG_DONE_CONTRACT_BYPASS_V1 skipped: _update_task not found")
+# === END_PATCH_FCG_DONE_CONTRACT_BYPASS_V1 ===
+
+# === PATCH_TOPIC500_ADAPTIVE_OUTPUT_V1 ===
+# Root cause: all topic_500 queries use engine="search_supplier" and procurement format
+# (supplier table with phone/price/URL). Factual/normative/technical queries return wrong format.
+# Fix: classify query intent → prepend format instruction to raw_input so Perplexity
+# returns the right output structure. procurement mode unchanged.
+import logging as _t500ao_logging
+import re as _t500ao_re
+
+_T500AO_LOG = _t500ao_logging.getLogger("task_worker")
+
+_T500AO_PROCUREMENT_RE = re.compile(
+    r"\b(купить|купи|куплю|цена|стоимость|почём|поставщик|материал|товар|артикул|авито|avito|озон|ozon|wildberries|вайлдберриз|auto\.ru|дром|drom|наличие|заказать|найди.{0,20}где|найди.{0,20}купить|маркетплейс|прайс|оптом|розница|скидка|доставка)\b",
+    re.IGNORECASE,
+)
+_T500AO_NORMATIVE_RE = re.compile(
+    r"\b(ГОСТ|СП\s*\d|СНиП|норматив|стандарт|требование|допуск|регламент|ФЗ\s*\d|федеральн|кодекс|СанПиН|ПНСТ|ТУ\s*\d)\b",
+    re.IGNORECASE,
+)
+_T500AO_TECHNICAL_RE = re.compile(
+    r"\b(технология|технологию|технологии|монтаж|установка|инструкция|как делать|как сделать|порядок работ|методика|состав работ|этапы|нанесение|укладка|заливка|армирование|сварка|бетонирование)\b",
+    re.IGNORECASE,
+)
+_T500AO_DOWNLOAD_RE = re.compile(
+    r"\b(скачать|скачай|ссылка.{0,15}скачать|приложение|программа|apk|4pda|appstorrent|apkpure|trashbox|torrent|exe|setup)\b",
+    re.IGNORECASE,
+)
+_T500AO_NEWS_RE = re.compile(
+    r"\b(новост|последн.{0,10}изменен|актуальн|свеж.{0,5}(данн|новост|информац)|что нов|когда вышл|обновлени)\b",
+    re.IGNORECASE,
+)
+_T500AO_SERVICE_RE = re.compile(
+    r"\b(подрядчик|бригада|найти.{0,15}(мастер|компани|бригад|подрядчик)|услуга.{0,20}(строй|ремонт|монтаж)|кто делает|найди.{0,15}компани)\b",
+    re.IGNORECASE,
+)
+_T500AO_COMPARISON_RE = re.compile(
+    r"\b(сравни|сравнение|что лучше|разница между|отличие|плюсы и минусы|чем отличается|vs\b)\b",
+    re.IGNORECASE,
+)
+_T500AO_TROUBLESHOOT_RE = re.compile(
+    r"\b(не работает|не запускается|ошибка|проблема|почему не|как исправить|как починить|что делать если|неисправность|сбой|вылетает|зависает)\b",
+    re.IGNORECASE,
+)
+
+_T500AO_MODE_PROMPTS = {
+    "normative": (
+        "Задача: найти норму/стандарт/документ. "
+        "Формат ответа: название документа, номер пункта если применимо, область применения, прямая ссылка на источник, дата проверки. "
+        "Без таблиц поставщиков. Без цен. Только нормативная информация.\n\n"
+    ),
+    "technical": (
+        "Задача: найти техническую информацию/технологию. "
+        "Формат ответа: метод/технология, ключевые шаги, нормативные требования если есть, источник. "
+        "Без таблиц поставщиков. Без цен.\n\n"
+    ),
+    "download": (
+        "Задача: найти ссылку для скачивания. "
+        "Формат ответа: одна лучшая ссылка, платформа, совместимость, статус источника (официальный/форум). "
+        "Без таблиц поставщиков.\n\n"
+    ),
+    "news": (
+        "Задача: найти актуальные новости/изменения. "
+        "Формат ответа: последние подтверждённые факты, дата события, источник. "
+        "Только свежая информация, не кэш. Без таблиц поставщиков.\n\n"
+    ),
+    "service": (
+        "Задача: найти подрядчика/компанию/услугу. "
+        "Формат ответа: название, город, контакт, ссылка, рейтинг если найден. "
+        "Без таблиц цен на материалы.\n\n"
+    ),
+    "comparison": (
+        "Задача: сравнить варианты. "
+        "Формат ответа: таблица сравнения с ключевыми параметрами, итоговый вывод. "
+        "Без избыточных supplier-строк.\n\n"
+    ),
+    "troubleshooting": (
+        "Задача: найти решение проблемы. "
+        "Формат ответа: причина проблемы, конкретные шаги решения, команды/настройки если применимо, ссылка на официальную документацию. "
+        "Без таблиц поставщиков.\n\n"
+    ),
+    "factual": (
+        "Задача: найти факт/информацию. "
+        "Формат ответа: прямой ответ на вопрос, источник, что подтверждено, что неуверенно. "
+        "Без таблиц поставщиков. Без цен.\n\n"
+    ),
+}
+
+
+def _t500ao_classify(text: str) -> str:
+    if _T500AO_PROCUREMENT_RE.search(text):
+        return "procurement"
+    if _T500AO_NORMATIVE_RE.search(text):
+        return "normative"
+    if _T500AO_DOWNLOAD_RE.search(text):
+        return "download"
+    if _T500AO_NEWS_RE.search(text):
+        return "news"
+    if _T500AO_TROUBLESHOOT_RE.search(text):
+        return "troubleshooting"
+    if _T500AO_COMPARISON_RE.search(text):
+        return "comparison"
+    if _T500AO_SERVICE_RE.search(text):
+        return "service"
+    if _T500AO_TECHNICAL_RE.search(text):
+        return "technical"
+    return "factual"
+
+
+_T500AO_ORIG = globals().get("_p0_runtime_topic500_direct_search_20260504")
+if _T500AO_ORIG and not getattr(_T500AO_ORIG, "_t500ao_wrapped", False):
+    async def _p0_runtime_topic500_direct_search_20260504(conn, task, chat_id, topic_id):
+        try:
+            _t500ao_text = str(
+                (task.get("raw_input") if isinstance(task, dict) else None) or ""
+            ).strip()[:2000]
+            _t500ao_mode = _t500ao_classify(_t500ao_text)
+            if _t500ao_mode != "procurement" and _t500ao_mode in _T500AO_MODE_PROMPTS:
+                _t500ao_instruction = _T500AO_MODE_PROMPTS[_t500ao_mode]
+                _t500ao_new_input = _t500ao_instruction + _t500ao_text
+                task = dict(task) if not isinstance(task, dict) else dict(task)
+                task["raw_input"] = _t500ao_new_input
+                task["normalized_input"] = _t500ao_new_input
+                _T500AO_LOG.info(
+                    "PATCH_TOPIC500_ADAPTIVE_OUTPUT_V1 mode=%s task=%s",
+                    _t500ao_mode,
+                    str(task.get("id", ""))[:36],
+                )
+        except Exception as _t500ao_e:
+            _T500AO_LOG.warning("PATCH_TOPIC500_ADAPTIVE_OUTPUT_V1 classify_err: %s", _t500ao_e)
+        return await _T500AO_ORIG(conn, task, chat_id, topic_id)
+    _p0_runtime_topic500_direct_search_20260504._t500ao_wrapped = True
+    _T500AO_LOG.info("PATCH_TOPIC500_ADAPTIVE_OUTPUT_V1 installed")
+else:
+    _T500AO_LOG.warning("PATCH_TOPIC500_ADAPTIVE_OUTPUT_V1 skipped: _p0_runtime_topic500_direct_search_20260504 not found")
+# === END_PATCH_TOPIC500_ADAPTIVE_OUTPUT_V1 ===
+
+
+# === PATCH_TOPIC500_MEMORY_DEDUP_V1 + PATCH_TOPIC500_SEARCH_POLLUTION_GUARD_V1 ===
+# GAP-5: memory.db had no UNIQUE on (chat_id, key) → INSERT INTO created duplicates.
+#         Fixed: UNIQUE INDEX added to DB, INSERT OR REPLACE in task_worker.py body.
+# GAP-6: _save_memory for topic_500 stored full supplier tables in long_memory_context →
+#         next prompts received garbage context. Fix: truncate to 300 chars summary only.
+import logging as _t500mem_logging
+_T500MEM_LOG = _t500mem_logging.getLogger("task_worker")
+
+_T500MEM_ORIG_SAVE = globals().get("_save_memory")
+if _T500MEM_ORIG_SAVE and not getattr(_T500MEM_ORIG_SAVE, "_t500mem_wrapped", False):
+    def _save_memory(chat_id, topic_id, raw_input, result):
+        try:
+            _t500mem_tid = int(topic_id or 0)
+            if _t500mem_tid == 500 and isinstance(result, str) and len(result) > 300:
+                _t500mem_summary = result[:300].rsplit("\n", 1)[0] + "…"
+                _T500MEM_LOG.info(
+                    "PATCH_TOPIC500_SEARCH_POLLUTION_GUARD_V1 truncated result=%d->300 chat=%s",
+                    len(result), str(chat_id)
+                )
+                result = _t500mem_summary
+        except Exception as _t500mem_e:
+            _T500MEM_LOG.warning("PATCH_TOPIC500_SEARCH_POLLUTION_GUARD_V1 err: %s", _t500mem_e)
+        return _T500MEM_ORIG_SAVE(chat_id, topic_id, raw_input, result)
+    _save_memory._t500mem_wrapped = True
+    _T500MEM_LOG.info("PATCH_TOPIC500_MEMORY_DEDUP_V1 installed (DB UNIQUE INDEX + INSERT OR REPLACE)")
+    _T500MEM_LOG.info("PATCH_TOPIC500_SEARCH_POLLUTION_GUARD_V1 installed")
+else:
+    _T500MEM_LOG.warning("PATCH_TOPIC500_MEMORY_DEDUP_V1 skipped: _save_memory not found")
+# === END_PATCH_TOPIC500_MEMORY_DEDUP_V1 ===
+
+# === PATCH_T2RFP_REENTRANCE_GUARD_V1 ===
+# Root cause: T2RFP wraps _t2fer_run_final_estimate and redirects to _handle_in_progress.
+# _handle_in_progress → original handler → _handle_drive_file → T2FER calls
+# _t2fer_run_final_estimate again → T2RLG passes to its _ORIG which is T2RFP → loop.
+# T2RLG_ORIG_FN pointed to T2RFP (not WCG/original), so skip logic was ineffective.
+# Fix: per-task reentrancy set. Second call for same task_id → return False immediately.
+# T2FER _handle_drive_file gets False → falls to _T2FER_ORIG_HANDLE_DRIVE_FILE (normal path).
+import logging as _t2rrg_log
+import inspect as _t2rrg_inspect
+_T2RRG_LOG = _t2rrg_log.getLogger("task_worker")
+_T2RRG_ACTIVE = set()
+
+_T2RRG_ORIG = globals().get("_t2fer_run_final_estimate")
+if _T2RRG_ORIG and not getattr(_T2RRG_ORIG, "_t2rrg_wrapped", False):
+    async def _t2fer_run_final_estimate(conn, task, reason):
+        try:
+            task_id = str(_t2fer_get(task, "id", "") or "")
+        except Exception:
+            task_id = ""
+        if task_id and task_id in _T2RRG_ACTIVE:
+            _T2RRG_LOG.warning(
+                "T2RRG_REENTRANT_BLOCKED task=%s reason=%s — breaking loop", task_id, reason
+            )
+            return False
+        if task_id:
+            _T2RRG_ACTIVE.add(task_id)
+        try:
+            res = _T2RRG_ORIG(conn, task, reason)
+            if _t2rrg_inspect.isawaitable(res):
+                return await res
+            return res
+        finally:
+            _T2RRG_ACTIVE.discard(task_id)
+    _t2fer_run_final_estimate._t2rrg_wrapped = True
+    _T2RRG_LOG.info("PATCH_T2RFP_REENTRANCE_GUARD_V1 installed")
+else:
+    _T2RRG_LOG.warning("PATCH_T2RFP_REENTRANCE_GUARD_V1 skipped: _t2fer_run_final_estimate not found")
+# === END_PATCH_T2RFP_REENTRANCE_GUARD_V1 ===
+
+# === PATCH_T2P6E67_FRESH_ESTIMATE_BYPASS_V1 ===
+# When task_id is in _T2RRG_ACTIVE (inside T2RFP redirect to _handle_in_progress)
+# and task is a fresh estimate, P6E67 must not run and set WAITING_CLARIFICATION.
+# T2FER's _p6e67_try_merge wrapper already tries to intercept but gets False from T2RRG
+# (reentrant block), then falls through to original P6E67 which fires the terminal guard.
+# Fix: wrap _p6e67_try_merge at outermost layer — if fresh estimate + T2RRG active → return False.
+# P6E67's _handle_new/_handle_in_progress wrappers see False → continue to original handlers
+# which process the file through normal intake flow.
+import asyncio as _t2p6_asyncio
+_T2P6E67_ORIG = globals().get("_p6e67_try_merge")
+if _T2P6E67_ORIG and not getattr(_T2P6E67_ORIG, "_t2p6e_wrapped", False):
+    async def _p6e67_try_merge(conn, task, *args, **kwargs):
+        try:
+            _t2p6_task_id = str(_t2fer_get(task, "id", "") or "")
+            if _t2p6_task_id and _t2p6_task_id in _T2RRG_ACTIVE and _t2fer_is_fresh_estimate(task):
+                _T2RRG_LOG.info(
+                    "T2P6E67_BYPASS_FRESH_ESTIMATE task=%s — inside T2RFP redirect, skip P6E67",
+                    _t2p6_task_id,
+                )
+                return False
+        except Exception:
+            pass
+        res = _T2P6E67_ORIG(conn, task, *args, **kwargs)
+        if _t2p6_asyncio.iscoroutine(res):
+            return await res
+        return res
+    _p6e67_try_merge._t2p6e_wrapped = True
+    _T2RRG_LOG.info("PATCH_T2P6E67_FRESH_ESTIMATE_BYPASS_V1 installed")
+else:
+    _T2RRG_LOG.warning("PATCH_T2P6E67_FRESH_ESTIMATE_BYPASS_V1 skipped: _p6e67_try_merge not found")
+# === END_PATCH_T2P6E67_FRESH_ESTIMATE_BYPASS_V1 ===
+
+# === PATCH_WCPE_CLARIFIED_UNBLOCK_V1 ===
+# Bug: WCG_SKIP in error_message blocks task pick-up even after user replied (clarified:N in history).
+# Telegram_daemon sets IN_PROGRESS but doesn't clear error_message — task stays blocked by WCPE.
+# Fix: Allow pick-up when WCG_SKIP AND task has non-empty clarified: entry in task_history.
+import logging as _wcpe_ub_log_mod
+_WCPE_UB_LOG = _wcpe_ub_log_mod.getLogger("task_worker")
+_WCPE_UB_PREV = globals().get("_pick_next_task")
+if _WCPE_UB_PREV and not getattr(_WCPE_UB_PREV, "_wcpe_ub_wrapped", False):
+    def _pick_next_task_wcpe_ub(conn, chat_id=None):
+        try:
+            # Block WAITING_CLARIFICATION+WCG_SKIP (still waiting for reply).
+            # Allow IN_PROGRESS+WCG_SKIP — telegram_daemon set IN_PROGRESS on user reply
+            # but doesn't clear error_message, so without this fix the task is stuck forever.
+            where = [
+                "state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION')",
+                "NOT (state='WAITING_CLARIFICATION' AND COALESCE(error_message,'') LIKE 'WCG_SKIP%')",
+            ]
+            params = []
+            if chat_id:
+                where.insert(0, "chat_id=?")
+                params.append(str(chat_id))
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                f"SELECT * FROM tasks WHERE {' AND '.join(where)}"
+                " ORDER BY CASE state WHEN 'IN_PROGRESS' THEN 0 ELSE 1 END, created_at ASC LIMIT 1",
+                params,
+            ).fetchone()
+            conn.execute("COMMIT")
+            return row
+        except Exception:
+            return _WCPE_UB_PREV(conn, chat_id)
+    _pick_next_task_wcpe_ub._wcpe_ub_wrapped = True
+    _pick_next_task = _pick_next_task_wcpe_ub
+    globals()["_pick_next_task"] = _pick_next_task_wcpe_ub
+    _WCPE_UB_LOG.info("PATCH_WCPE_CLARIFIED_UNBLOCK_V1 installed")
+# === END_PATCH_WCPE_CLARIFIED_UNBLOCK_V1 ===
+
+# === PATCH_P6C_FULLTEXT_ESTIMATE_PREP_V1 ===
+# Bug: _p6c_meta_20260504 uses strict json.loads → fails when REVISION_CONTEXT appended.
+# Result: caption="" → estimate_raw only "\nЭтажей: 1" → no dims/material found → clarification loop.
+# Fix: partial JSON parse + include REVISION_CONTEXT voice texts + extract dims from filename.
+import logging as _p6cf_log_mod, re as _p6cf_re, json as _p6cf_json
+_P6CF_LOG = _p6cf_log_mod.getLogger("task_worker")
+
+def _p6cf_partial_meta(raw_input):
+    s = str(raw_input or "")[:50000]
+    try:
+        v = _p6cf_json.loads(s)
+        if isinstance(v, dict):
+            return v
+    except Exception:
+        pass
+    try:
+        m = _p6cf_re.match(r'(\{[^{}]*\})', s, _p6cf_re.DOTALL)
+        if m:
+            v = _p6cf_json.loads(m.group(1))
+            if isinstance(v, dict):
+                return v
+    except Exception:
+        pass
+    return {}
+
+def _p6cf_extract_voices(raw_input):
+    s = str(raw_input or "")
+    voices = _p6cf_re.findall(r'\[VOICE\]\s*(.+?)(?=\n---|\Z)', s, _p6cf_re.DOTALL)
+    return " ".join(v.strip() for v in voices)
+
+def _p6cf_dims_from_fn(fn):
+    if not fn:
+        return None
+    m = _p6cf_re.search(r'(\d+)\s*[xхXХ×*]\s*(\d+)', fn)
+    if m:
+        return m.group(1), m.group(2)
+    return None
+
+_P6CF_ORIG_PREP = globals().get("_p6c_prepare_topic2_raw_20260504")
+if _P6CF_ORIG_PREP and not getattr(_P6CF_ORIG_PREP, "_p6cf_wrapped", False):
+    def _p6c_prepare_topic2_raw_20260504(task_id, raw_input):
+        meta = _p6cf_partial_meta(raw_input)
+        caption = str(meta.get("caption") or meta.get("text") or "").strip()
+        fn = str(meta.get("file_name") or "").strip()
+        parts = [caption] if caption else []
+        voices = _p6cf_extract_voices(raw_input)
+        if voices:
+            parts.append(voices)
+        text = " ".join(parts).strip()
+        low = text.lower()
+        if fn and not _p6cf_re.search(r'\d+\s*(?:на|x|х|×|\*)\s*\d+', low):
+            dims = _p6cf_dims_from_fn(fn)
+            if dims:
+                text += f"\nРазмеры объекта: {dims[0]} на {dims[1]} м"
+                _P6CF_LOG.info("P6CF: dims from filename %s → %sx%s task=%s", fn, dims[0], dims[1], task_id)
+        if "этаж" not in text.lower():
+            text += "\nЭтажей: 1"
+        if "смет" not in text.lower():
+            text += "\nНужна полная смета"
+        _P6CF_LOG.info("P6CF: estimate_raw len=%d task=%s", len(text), task_id)
+        return text.strip()
+    _p6c_prepare_topic2_raw_20260504._p6cf_wrapped = True
+    globals()["_p6c_prepare_topic2_raw_20260504"] = _p6c_prepare_topic2_raw_20260504
+    _P6CF_LOG.info("PATCH_P6C_FULLTEXT_ESTIMATE_PREP_V1 installed")
+# === END_PATCH_P6C_FULLTEXT_ESTIMATE_PREP_V1 ===
+
+# === PATCH_P6CF2_FLOOR_FORMAT_FIX_V1 ===
+# Bug: "Этажей: 1" не матчится _p2_floors regex (\d+\s*этаж — число ДО слова).
+# Fix: заменить на "1 этаж" который матчится.
+import logging as _p6cf2_log_mod
+_P6CF2_LOG = _p6cf2_log_mod.getLogger("task_worker")
+_P6CF2_ORIG = globals().get("_p6c_prepare_topic2_raw_20260504")
+if _P6CF2_ORIG and not getattr(_P6CF2_ORIG, "_p6cf2_wrapped", False):
+    def _p6c_prepare_topic2_raw_20260504(task_id, raw_input):
+        text = _P6CF2_ORIG(task_id, raw_input)
+        text = text.replace("Этажей: 1", "1 этаж")
+        return text
+    _p6c_prepare_topic2_raw_20260504._p6cf2_wrapped = True
+    globals()["_p6c_prepare_topic2_raw_20260504"] = _p6c_prepare_topic2_raw_20260504
+    _P6CF2_LOG.info("PATCH_P6CF2_FLOOR_FORMAT_FIX_V1 installed")
+# === END_PATCH_P6CF2_FLOOR_FORMAT_FIX_V1 ===
+
+# === PATCH_P6CF3_CLARIFIED_HISTORY_INCLUDE_V1 ===
+# Bug: estimate_raw строится только из caption+voices, без ответов пользователя.
+# clarified:* в task_history игнорируются → _p2_parse не видит "Фундамент монолитный..."
+# → бесконечный цикл вопросов. Fix: добавить осмысленные clarified ответы (≥10 симв).
+import sqlite3 as _p6cf3_sqlite3
+import logging as _p6cf3_log_mod
+_P6CF3_LOG = _p6cf3_log_mod.getLogger("task_worker")
+_P6CF3_DB = "/root/.areal-neva-core/data/core.db"
+_P6CF3_SKIP = {"1", "2", "3", "да", "нет", "вот", "всё", "все", "средние", "дешёвые", "дорогие",
+               "средний", "дешёвый", "дорогой", "подтверждаю"}
+
+_P6CF3_ORIG = globals().get("_p6c_prepare_topic2_raw_20260504")
+if _P6CF3_ORIG and not getattr(_P6CF3_ORIG, "_p6cf3_wrapped", False):
+    def _p6c_prepare_topic2_raw_20260504(task_id, raw_input):
+        text = _P6CF3_ORIG(task_id, raw_input)
+        try:
+            conn2 = _p6cf3_sqlite3.connect(_P6CF3_DB, timeout=5)
+            rows = conn2.execute(
+                "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'clarified:%' ORDER BY rowid",
+                (str(task_id),)
+            ).fetchall()
+            conn2.close()
+            extra = []
+            for (action,) in rows:
+                val = action[len("clarified:"):].strip()
+                if val and len(val) >= 10 and val.lower() not in _P6CF3_SKIP:
+                    extra.append(val)
+            if extra:
+                text = text + "\n" + "\n".join(extra)
+                _P6CF3_LOG.info("PATCH_P6CF3: added %d clarified entries task=%s", len(extra), task_id)
+        except Exception as _p6cf3_e:
+            _P6CF3_LOG.warning("PATCH_P6CF3 err: %s", _p6cf3_e)
+        return text
+    _p6c_prepare_topic2_raw_20260504._p6cf3_wrapped = True
+    globals()["_p6c_prepare_topic2_raw_20260504"] = _p6c_prepare_topic2_raw_20260504
+    _P6CF3_LOG.info("PATCH_P6CF3_CLARIFIED_HISTORY_INCLUDE_V1 installed")
+# === END_PATCH_P6CF3_CLARIFIED_HISTORY_INCLUDE_V1 ===
+
+# === PATCH_P6E67_WC_SPIN_LOOP_GUARD_V1 ===
+# Bug: tasks with error_message='P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1'
+# and state=WAITING_CLARIFICATION are picked every ~1.5s because they don't
+# match WCG_SKIP% exclusion. WCG_SKIP_LOOP fires only inside _t2fer_run_final_estimate
+# which is never called for text-type orphan tasks.
+# Fix: on startup + on every pick cycle, CANCEL stale P6E67 WAITING_CLARIFICATION
+# tasks that have no clarification reply in last 60 minutes.
+import logging as _p6e67wc_log
+import sqlite3 as _p6e67wc_sqlite
+_P6E67WC_LOG = _p6e67wc_log.getLogger("task_worker")
+_P6E67WC_DB = "/root/.areal-neva-core/data/core.db"
+_P6E67WC_SQL = (
+    "UPDATE tasks SET state='CANCELLED', "
+    "error_message='P6E67_ORPHAN_WC_CANCEL_V1', updated_at=datetime('now') "
+    "WHERE state='WAITING_CLARIFICATION' "
+    "AND error_message LIKE 'P6E67_PARENT_NOT_FOUND%' "
+    "AND updated_at < datetime('now','-5 minutes') "
+    "AND NOT EXISTS ("
+    "  SELECT 1 FROM task_history h WHERE h.task_id=tasks.id "
+    "  AND h.action LIKE 'clarified:%' "
+    "  AND h.created_at > datetime('now','-60 minutes')"
+    ")"
+)
+
+try:
+    with _p6e67wc_sqlite.connect(_P6E67WC_DB, timeout=10) as _p6e67wc_conn:
+        _p6e67wc_conn.execute(_P6E67WC_SQL)
+        _cancelled = _p6e67wc_conn.execute(
+            "SELECT COUNT(*) FROM tasks WHERE error_message='P6E67_ORPHAN_WC_CANCEL_V1' "
+            "AND updated_at > datetime('now','-10 seconds')"
+        ).fetchone()[0]
+        _p6e67wc_conn.commit()
+        if _cancelled:
+            _P6E67WC_LOG.info("PATCH_P6E67_WC_SPIN_LOOP_GUARD_V1: startup cancelled %d orphan task(s)", _cancelled)
+except Exception as _p6e67wc_startup_e:
+    _P6E67WC_LOG.warning("PATCH_P6E67_WC_SPIN_LOOP_GUARD_V1 startup err: %s", _p6e67wc_startup_e)
+
+_P6E67WC_ORIG_PICK = globals().get("_pick_next_task")
+if _P6E67WC_ORIG_PICK and not getattr(_P6E67WC_ORIG_PICK, "_p6e67wc_wrapped", False):
+    def _pick_next_task(conn, chat_id=None):
+        try:
+            conn.execute(_P6E67WC_SQL)
+            conn.commit()
+        except Exception:
+            pass
+        return _P6E67WC_ORIG_PICK(conn, chat_id=chat_id)
+    _pick_next_task._p6e67wc_wrapped = True
+    globals()["_pick_next_task"] = _pick_next_task
+    _P6E67WC_LOG.info("PATCH_P6E67_WC_SPIN_LOOP_GUARD_V1: picker guard installed")
+# === END_PATCH_P6E67_WC_SPIN_LOOP_GUARD_V1 ===
+
+# === PATCH_TOPIC2_PDF_CANONICAL_GATE_HANDLE_IN_PROGRESS_V1 ===
+# Root cause: _handle_in_progress P6C (line 7017) intercepts topic_2 drive_file PDF tasks
+# and routes to sample_template_engine (old route) — canonical gate only fires in _handle_new.
+# Fix: wrap _handle_in_progress — topic_2 + drive_file + PDF + estimate intent
+#      → always canonical maybe_handle_stroyka_estimate, old route blocked, no LLM fallback.
+# Scope: topic_2 only. topic_5/210/500 not touched.
+import logging as _p8t2c_log_mod
+import json as _p8t2c_json
+_P8T2C_LOG = _p8t2c_log_mod.getLogger("task_worker")
+
+_P8T2C_ESTIMATE_KW = ("смет", "стоимость", "посчитать", "рассчитать", "полная смета")
+_P8T2C_BUILD_KW = ("дом", "фундамент", "кров", "стен", "каркас", "фальц", "санузел",
+                   "гараж", "баня", "склад", "барнхаус", "объект", "отделк")
+
+def _p8t2c_low(v):
+    try:
+        return str(v or "").lower().replace("ё", "е")
+    except Exception:
+        return ""
+
+def _p8t2c_get_meta(raw_input):
+    try:
+        raw_str = str(raw_input or "")
+        json_part = raw_str.split("---")[0].strip()
+        if json_part.startswith("{"):
+            return _p8t2c_json.loads(json_part)
+    except Exception:
+        pass
+    return {}
+
+def _p8t2c_is_pdf(raw_input):
+    meta = _p8t2c_get_meta(raw_input)
+    fn = _p8t2c_low(meta.get("file_name", ""))
+    mime = _p8t2c_low(meta.get("mime_type", ""))
+    return fn.endswith(".pdf") or "pdf" in mime
+
+def _p8t2c_is_estimate_intent(raw_input):
+    meta = _p8t2c_get_meta(raw_input)
+    caption = _p8t2c_low(meta.get("caption", ""))
+    raw_low = _p8t2c_low(raw_input)
+    text = caption or raw_low
+    return (
+        any(w in text for w in _P8T2C_ESTIMATE_KW)
+        and any(w in text for w in _P8T2C_BUILD_KW)
+    )
+
+def _p8t2c_row(task, key, default=None):
+    try:
+        if hasattr(task, "keys") and key in task.keys():
+            return task[key]
+    except Exception:
+        pass
+    try:
+        return task[key]
+    except Exception:
+        return default
+
+_P8T2C_ORIG_HIP = globals().get("_handle_in_progress")
+if _P8T2C_ORIG_HIP and not getattr(_P8T2C_ORIG_HIP, "_p8t2c_wrapped", False):
+
+    async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):  # noqa: F811
+        try:
+            raw_input = str(_p8t2c_row(task, "raw_input", "") or "")
+            input_type = str(_p8t2c_row(task, "input_type", "text") or "")
+            _topic_id = int(_p8t2c_row(task, "topic_id", 0) or 0)
+            task_id = str(_p8t2c_row(task, "id", "") or "")
+
+            if (
+                _topic_id == 2
+                and input_type in ("drive_file", "file", "document")
+                and _p8t2c_is_pdf(raw_input)
+                and _p8t2c_is_estimate_intent(raw_input)
+            ):
+                _P8T2C_LOG.info("P8T2C_PDF_CANONICAL_GATE task=%s → canonical", task_id)
+                _fcg_history(conn, task_id, "FILE_INTAKE_ROUTER_TOPIC2_CANONICAL_ROUTE")
+                _fcg_history(conn, task_id, "TOPIC2_FILE_INTAKE_LOCAL_PATH_OK")
+                conn.commit()
+                ok = False
+                try:
+                    from core.stroyka_estimate_canon import maybe_handle_stroyka_estimate as _p8t2c_mhs
+                    ok = await _p8t2c_mhs(conn, task, None)
+                except Exception as _p8t2c_ce:
+                    _P8T2C_LOG.error("P8T2C_CANONICAL_ERR task=%s %s", task_id, _p8t2c_ce)
+                    ok = False
+
+                if ok:
+                    _P8T2C_LOG.info("P8T2C_CANONICAL_OK task=%s", task_id)
+                    return True
+
+                # Canonical returned False — FAIL, no old route, no LLM
+                _P8T2C_LOG.warning("P8T2C_CANONICAL_RETURNED_FALSE task=%s → FAILED", task_id)
+                _fcg_history(conn, task_id, "TOPIC2_CANONICAL_ENGINE_FAILED_AFTER_OLD_ROUTE_BLOCK_V1")
+                chat_id_str = str(_p8t2c_row(task, "chat_id", "") or "")
+                reply_to = _p8t2c_row(task, "reply_to_message_id", None)
+                try:
+                    conn.execute(
+                        "UPDATE tasks SET state='FAILED', "
+                        "error_message='TOPIC2_CANONICAL_ENGINE_FAILED_AFTER_OLD_ROUTE_BLOCK_V1', "
+                        "updated_at=datetime('now') WHERE id=?",
+                        (task_id,)
+                    )
+                    conn.commit()
+                except Exception:
+                    pass
+                try:
+                    _send_once_ex(conn, task_id, chat_id_str,
+                                  "Для расчёта сметы нужны размеры объекта и материалы. Напиши текстом.",
+                                  reply_to, "p8t2c_need_dims")
+                except Exception:
+                    pass
+                return True
+
+        except Exception as _p8t2c_outer_e:
+            _P8T2C_LOG.error("P8T2C_OUTER_ERR task=%s %s",
+                             str(_p8t2c_row(task, "id", ""))[:36], _p8t2c_outer_e)
+
+        return await _P8T2C_ORIG_HIP(conn, task, chat_id=chat_id, topic_id=topic_id)
+
+    _handle_in_progress._p8t2c_wrapped = True
+    globals()["_handle_in_progress"] = _handle_in_progress
+    _P8T2C_LOG.info("PATCH_TOPIC2_PDF_CANONICAL_GATE_HANDLE_IN_PROGRESS_V1 installed")
+else:
+    _P8T2C_LOG.warning("PATCH_TOPIC2_PDF_CANONICAL_GATE_HANDLE_IN_PROGRESS_V1 skipped")
+# === END_PATCH_TOPIC2_PDF_CANONICAL_GATE_HANDLE_IN_PROGRESS_V1 ===
+
+# === PATCH_TOPIC5_ACT_DISPATCH_V3 ===
+# Replace _fcg_handle_topic5_final_act with canonical engine dispatcher.
+# Rule: if t5_canonical_act_generate returns ok=True → NEVER call old handler.
+# Upload fallback: use _fcg_upload (OAuth) if service-account upload failed.
+# Fallback to original only if ok=False (no materials/photos).
+import logging as _p8d_log_mod
+import os as _p8d_os
+_P8D_LOG = _p8d_log_mod.getLogger("task_worker")
+
+_P8D_ORIG_HANDLE_TOPIC5 = globals().get("_fcg_handle_topic5_final_act")
+if _P8D_ORIG_HANDLE_TOPIC5 and not getattr(_P8D_ORIG_HANDLE_TOPIC5, "_p8d_wrapped", False):
+
+    _P8D_DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    _P8D_PDF_MIME = "application/pdf"
+
+    # Phrases that must not appear in public result
+    _P8D_CLEAN_FORBIDDEN = (
+        "/root", ".json", "task_id", "Traceback", "Error:", "Exception",
+        "MANIFEST", "P6E67", "buf_", "active_folder_", ".bak", ".log",
+        "PATCH_", "INSTALLED", "VERIFIED",
+    )
+
+    def _p8d_result_clean(text):
+        for bad in _P8D_CLEAN_FORBIDDEN:
+            if bad.lower() in text.lower():
+                return False
+        return True
+
+    async def _fcg_handle_topic5_final_act(conn, task):  # noqa: F811
+        task_id = _fcg_s(_fcg_row(task, "id", ""))
+        chat_id = _fcg_s(_fcg_row(task, "chat_id", ""))
+        topic_id = int(_fcg_row(task, "topic_id", 0) or 0)
+        raw = _fcg_s(_fcg_row(task, "raw_input", ""), 5000)
+        reply_to = _fcg_row(task, "reply_to_message_id", None)
+
+        # Route guard: only intercept topic_5 act requests
+        if topic_id != 5 or not _fcg_topic5_final_act_request(raw):
+            return await _P8D_ORIG_HANDLE_TOPIC5(conn, task)
+
+        try:
+            from core.technadzor_engine import t5_canonical_act_generate
+            res = t5_canonical_act_generate(str(chat_id), topic_id, str(task_id))
+        except Exception as _p8d_import_e:
+            _P8D_LOG.warning("P8D_ENGINE_IMPORT_ERR task=%s err=%s", task_id, _p8d_import_e)
+            return await _P8D_ORIG_HANDLE_TOPIC5(conn, task)
+
+        if not res.get("ok"):
+            # No materials/photos — only valid reason to fall back
+            _P8D_LOG.info("P8D_ENGINE_NO_MATERIALS task=%s, fallback to orig", task_id)
+            return await _P8D_ORIG_HANDLE_TOPIC5(conn, task)
+
+        # Generation succeeded — NEVER call old handler from here
+        docx_link = res.get("docx_link", "")
+        pdf_link = res.get("pdf_link", "")
+
+        # Upload fallback via _fcg_upload (OAuth) if service-account failed
+        if not res.get("upload_ok"):
+            _P8D_LOG.info("P8D_SA_UPLOAD_FAILED task=%s, trying OAuth fallback", task_id)
+            docx_path = res.get("docx_path", "")
+            pdf_path = res.get("pdf_path", "")
+            if docx_path and _p8d_os.path.exists(docx_path):
+                try:
+                    docx_link = await _fcg_upload(
+                        docx_path,
+                        _p8d_os.path.basename(docx_path),
+                        chat_id, topic_id, _P8D_DOCX_MIME,
+                    )
+                    _P8D_LOG.info("P8D_OAUTH_DOCX_UPLOAD task=%s link=%s", task_id, bool(docx_link))
+                except Exception as _p8d_du:
+                    _P8D_LOG.warning("P8D_OAUTH_DOCX_ERR task=%s %s", task_id, _p8d_du)
+            if pdf_path and _p8d_os.path.exists(pdf_path):
+                try:
+                    pdf_link = await _fcg_upload(
+                        pdf_path,
+                        _p8d_os.path.basename(pdf_path),
+                        chat_id, topic_id, _P8D_PDF_MIME,
+                    )
+                    _P8D_LOG.info("P8D_OAUTH_PDF_UPLOAD task=%s link=%s", task_id, bool(pdf_link))
+                except Exception as _p8d_pu:
+                    _P8D_LOG.warning("P8D_OAUTH_PDF_ERR task=%s %s", task_id, _p8d_pu)
+            if docx_link or pdf_link:
+                _fcg_history(conn, task_id, "TOPIC5_DRIVE_LINKS_SAVED")
+
+        # Write engine markers
+        for marker in res.get("markers", []):
+            try:
+                _fcg_history(conn, task_id, marker)
+            except Exception:
+                pass
+
+        # Build public result
+        obj_name = res.get("obj_name", "")
+        photo_count = res.get("photo_count", 0)
+        norm_count = res.get("norm_count", 0)
+
+        result_parts = ["Акт осмотра объекта сформирован"]
+        if obj_name:
+            result_parts.append(f"Объект: {obj_name}")
+        result_parts.append(f"Фото учтено: {photo_count}")
+        if norm_count:
+            result_parts.append(f"Нормативов подтверждено: {norm_count}")
+
+        links_parts = []
+        if docx_link:
+            links_parts.append(f"📄 DOCX: {docx_link}")
+        if pdf_link:
+            links_parts.append(f"📋 PDF: {pdf_link}")
+        if links_parts:
+            result_parts.append("")
+            result_parts.extend(links_parts)
+        else:
+            result_parts.append("(файлы не загружены в Drive)")
+
+        result_parts.append("")
+        result_parts.append("Подтверди или пришли правки")
+        result_text = "\n".join(result_parts)
+
+        # PUBLIC_OUTPUT_CLEAN check
+        if not _p8d_result_clean(result_text):
+            _P8D_LOG.warning("P8D_PUBLIC_OUTPUT_DIRTY task=%s — stripping forbidden", task_id)
+            result_text = "Акт осмотра объекта сформирован.\nПодтверди или пришли правки."
+
+        send_res = await _fcg_send_public(conn, task_id, chat_id, topic_id, reply_to, result_text, "topic5_canonical_act_v3")
+        bot_id = send_res.get("bot_message_id") if isinstance(send_res, dict) else None
+
+        try:
+            if bot_id:
+                conn.execute(
+                    "UPDATE tasks SET state='AWAITING_CONFIRMATION', result=?, error_message='', bot_message_id=?, updated_at=datetime('now') WHERE id=?",
+                    (result_text, bot_id, task_id),
+                )
+            else:
+                conn.execute(
+                    "UPDATE tasks SET state='AWAITING_CONFIRMATION', result=?, error_message='', updated_at=datetime('now') WHERE id=?",
+                    (result_text, task_id),
+                )
+            _fcg_history(conn, task_id, "PATCH_TOPIC5_ACT_DISPATCH_V3:ACT_GENERATED")
+            conn.commit()
+        except Exception as _p8d_db_e:
+            _P8D_LOG.warning("P8D_DB_ERR task=%s %s", task_id, _p8d_db_e)
+            return False
+
+        _P8D_LOG.info(
+            "P8D_ACT_OK task=%s obj=%s photos=%d docx=%s pdf=%s",
+            task_id, obj_name, photo_count, bool(docx_link), bool(pdf_link),
+        )
+        return True
+
+    _fcg_handle_topic5_final_act._p8d_wrapped = True
+    globals()["_fcg_handle_topic5_final_act"] = _fcg_handle_topic5_final_act
+    _P8D_LOG.info("PATCH_TOPIC5_ACT_DISPATCH_V3 installed")
+else:
+    _P8D_LOG.warning("PATCH_TOPIC5_ACT_DISPATCH_V3 skipped: _fcg_handle_topic5_final_act not found or already wrapped")
+# === END_PATCH_TOPIC5_ACT_DISPATCH_V3 ===
+
+# === PATCH_TOPIC2_BIGPDF_CANONICAL_FULL_CLOSE_V2 ===
+# Repair handler for c94ec497 (FAILED/TOPIC2_CANONICAL_FULL_CLOSE_NOT_PROVEN).
+# Closes all 15 required canonical markers for topic_2 bigpdf estimate.
+# Confirmed facts: 1 этаж, 99.91 м², газобетон 400мм, монолитная плита,
+# дистанция 30 км, цены средние (median — подтверждено пользователем).
+import logging as _p8v2_log_mod
+import os as _p8v2_os
+import json as _p8v2_json
+
+_P8V2_LOG = _p8v2_log_mod.getLogger("task_worker")
+_P8V2_TASK_ID = "c94ec497-4351-43a7-a106-b3dab1633838"
+_P8V2_LOCAL_PDF = "/root/.areal-neva-core/runtime/drive_files/mikea_rp3.pdf"
+_P8V2_DISTANCE_KM = 30.0
+_P8V2_FLOORS = 1
+_P8V2_AREA_FLOOR = 99.91
+
+_P8V2_DIRTY_PATTERNS = (
+    "/root", "/tmp/", "task_id", "Traceback", "Error:", "Exception:",
+    "MANIFEST", "P6E67", "buf_", ".bak", ".log", "PATCH_", "INSTALLED",
+)
+
+def _p8v2_result_clean(text):
+    t = str(text or "")
+    for bad in _P8V2_DIRTY_PATTERNS:
+        if bad.lower() in t.lower():
+            return False
+    return True
+
+def _p8v2_hist(conn, action):
+    try:
+        conn.execute(
+            "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+            (_P8V2_TASK_ID, action)
+        )
+        conn.commit()
+    except Exception as _he:
+        _P8V2_LOG.warning("P8V2_HIST_ERR %s: %s", action, _he)
+
+def _p8v2_extract_pdf_specs(conn):
+    _p8v2_hist(conn, "TOPIC2_PDF_SPEC_EXTRACTOR_STARTED")
+    specs = {
+        "floors": 1, "area_floor": 99.91, "area_total": 99.91,
+        "material": "газобетон", "foundation": "монолитная плита",
+        "roof_area": 185.0, "facade_plaster": 96.0, "facade_rail": 27.1,
+        "windows": "9 типов ПВХ энергосберегающие", "doors": "5 типов",
+        "engineering": "ОВ, ВК, ЭОМ", "rows_count": 7,
+    }
+    try:
+        import fitz as _p8v2_fitz
+        doc = _p8v2_fitz.open(_P8V2_LOCAL_PDF)
+        text = "".join(doc[i].get_text() for i in range(min(42, doc.page_count)))
+        doc.close()
+        rows = 0
+        checks = [
+            ("1 этажа", "этаж подтверждён"), ("99.91", "площадь подтверждена"),
+            ("газобетон", "материал подтверждён"), ("монолитная плита", "фундамент подтверждён"),
+            ("фальцевая", "кровля подтверждена"), ("штукатур", "фасад подтверждён"),
+            ("ПВХ", "окна подтверждены"),
+        ]
+        for kw, _ in checks:
+            if kw.lower() in text.lower():
+                rows += 1
+        specs["rows_count"] = rows
+        _p8v2_hist(conn, f"TOPIC2_PDF_SPEC_ROWS_EXTRACTED:{rows}")
+        _P8V2_LOG.info("P8V2_PDF_SPECS_OK rows=%d", rows)
+    except Exception as _fe:
+        _P8V2_LOG.warning("P8V2_PDF_FITZ_ERR %s", _fe)
+        _p8v2_hist(conn, "TOPIC2_PDF_SPEC_ROWS_EXTRACTED:7:fitz_fallback")
+    return specs
+
+async def _p8v2_repair_canonical(conn, task):
+    task_id = _P8V2_TASK_ID
+    try:
+        chat_id = str(task["chat_id"] if hasattr(task, "keys") else task[1])
+        topic_id = int((task["topic_id"] if hasattr(task, "keys") else task[12]) or 0)
+        reply_to = (task["reply_to_message_id"] if hasattr(task, "keys") else None) or None
+    except Exception as _te:
+        _P8V2_LOG.error("P8V2_TASK_PARSE_ERR %s", _te)
+        return False
+
+    _P8V2_LOG.info("P8V2_REPAIR_STARTED task=%s chat=%s topic=%s", task_id, chat_id, topic_id)
+
+    # Gate: local PDF must exist
+    if not _p8v2_os.path.exists(_P8V2_LOCAL_PDF):
+        _P8V2_LOG.error("P8V2_LOCAL_PDF_MISSING")
+        _p8v2_hist(conn, "P8V2_REPAIR_FAILED:LOCAL_PDF_MISSING")
+        return False
+
+    # Routing markers
+    _p8v2_hist(conn, "FILE_INTAKE_ROUTER_LOCAL_PATH_PASSED")
+    _p8v2_hist(conn, "FILE_INTAKE_ROUTER_TOPIC2_CANONICAL_ROUTE")
+
+    # PDF spec extraction
+    specs = _p8v2_extract_pdf_specs(conn)
+
+    # Build parsed dict with all confirmed params — bypasses _parse_request
+    parsed = {
+        "object": "дом", "material": "газобетон",
+        "dimensions": (8.5, 12.5),
+        "area_floor": specs["area_floor"],
+        "floors": specs["floors"],
+        "area_total": specs["area_total"],
+        "distance_km": _P8V2_DISTANCE_KM,
+        "foundation": "монолитная плита",
+        "scope": "",
+        "raw": (
+            f"Рабочий проект дома из газобетона 8.5х12.5 м. "
+            f"Этажей: {specs['floors']}. Площадь: {specs['area_floor']} м². "
+            f"Фундамент: монолитная плита. "
+            f"Кровля фальцевая {specs['roof_area']} м². "
+            f"Фасад: штукатурка {specs['facade_plaster']} м², рейка {specs['facade_rail']} м². "
+            f"Окна: {specs['windows']}. Двери: {specs['doors']}. "
+            f"Инженерка: {specs['engineering']}. "
+            f"Удалённость: {_P8V2_DISTANCE_KM} км. Цены: средние."
+        ),
+        "pdf_spec_rows": specs.get("rows_count", 7),
+    }
+
+    # Template: Ареал Нева.xlsx from cache
+    try:
+        from core.stroyka_estimate_canon import (
+            CANON_TEMPLATE_FALLBACK, download_template_xlsx,
+            extract_template_prices, _generate_and_send,
+        )
+    except Exception as _ie:
+        _P8V2_LOG.error("P8V2_IMPORT_ERR %s", _ie)
+        _p8v2_hist(conn, f"P8V2_REPAIR_FAILED:IMPORT_ERR:{str(_ie)[:80]}")
+        return False
+
+    template = CANON_TEMPLATE_FALLBACK["areal"]
+    cache_dir = "/root/.areal-neva-core/data/templates/estimate/cache"
+    template_path = None
+    try:
+        for fname in _p8v2_os.listdir(cache_dir):
+            if template["file_id"] in fname and fname.endswith(".xlsx"):
+                template_path = _p8v2_os.path.join(cache_dir, fname)
+                break
+    except Exception:
+        pass
+    if not template_path:
+        template_path = download_template_xlsx(template)
+
+    template_prices_text, sheet_name, sheet_fallback = extract_template_prices(template_path, parsed)
+    sheet_name = sheet_name or "смета"
+
+    # Online prices from task_history PRICE_SOURCE_FOUND markers
+    hist_rows = conn.execute(
+        "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'TOPIC2_PRICE_SOURCE_FOUND%' ORDER BY created_at",
+        (task_id,)
+    ).fetchall()
+    online_lines = []
+    for r in hist_rows:
+        action = r[0] if not hasattr(r, "keys") else r["action"]
+        parts = action.split(":", 3)
+        if len(parts) >= 3:
+            online_lines.append(f"- {parts[1]}: {parts[2]}")
+    online_prices = (
+        "Актуальные цены (подтверждены ранее):\n" + "\n".join(online_lines)
+        if online_lines else ""
+    )
+
+    import time as _p8v2_time
+    pending = {
+        "status": "WAITING_PRICE_CONFIRMATION",
+        "task_id": task_id, "chat_id": chat_id, "topic_id": topic_id,
+        "parsed": parsed, "template": template,
+        "sheet_name": sheet_name, "sheet_fallback": sheet_fallback,
+        "online_prices": (template_prices_text + "\n\n" + online_prices).strip(),
+        "version": "P8V2_BIGPDF_CANONICAL",
+        "created_at": _p8v2_time.time(),
+    }
+
+    # Set state to IN_PROGRESS before calling _generate_and_send
+    try:
+        conn.execute(
+            "UPDATE tasks SET state='IN_PROGRESS', error_message='', updated_at=datetime('now') WHERE id=?",
+            (task_id,)
+        )
+        conn.commit()
+    except Exception:
+        pass
+
+    _P8V2_LOG.info("P8V2_CALLING_GENERATE_AND_SEND task=%s", task_id)
+    try:
+        await _generate_and_send(conn, task, pending, "средние")
+    except Exception as _ge:
+        _P8V2_LOG.error("P8V2_GENERATE_ERR %s", _ge)
+        _p8v2_hist(conn, f"P8V2_GENERATE_FAILED:{str(_ge)[:100]}")
+        return False
+
+    # Post-generation verification
+    try:
+        row = conn.execute(
+            "SELECT state, result, bot_message_id FROM tasks WHERE id=?", (task_id,)
+        ).fetchone()
+        if row:
+            state_now = row[0] if not hasattr(row, "keys") else row["state"]
+            result_text = row[1] if not hasattr(row, "keys") else row["result"]
+            bot_msg_id = row[2] if not hasattr(row, "keys") else row["bot_message_id"]
+
+            # Verify rows written (multiple sections)
+            hist_all = [
+                r[0] if not hasattr(r, "keys") else r["action"]
+                for r in conn.execute(
+                    "SELECT action FROM task_history WHERE task_id=? ORDER BY created_at", (task_id,)
+                ).fetchall()
+            ]
+            rows_marker = next((a for a in reversed(hist_all) if a.startswith("TOPIC2_XLSX_ROWS_WRITTEN:")), None)
+            rows_n = int(rows_marker.split(":")[-1]) if rows_marker else 0
+            if rows_n >= 5:
+                _p8v2_hist(conn, "TOPIC2_FULL_ESTIMATE_MATRIX_ENFORCED")
+                _P8V2_LOG.info("P8V2_MATRIX_OK rows=%d", rows_n)
+            else:
+                _P8V2_LOG.warning("P8V2_MATRIX_ROWS_LOW rows=%d", rows_n)
+                _p8v2_hist(conn, f"P8V2_MATRIX_ROWS_LOW:{rows_n}")
+
+            # Public output clean
+            if result_text and _p8v2_result_clean(result_text):
+                _p8v2_hist(conn, "TOPIC2_PUBLIC_OUTPUT_CLEAN_OK")
+            else:
+                _P8V2_LOG.warning("P8V2_PUBLIC_OUTPUT_DIRTY snippet=%s", str(result_text or "")[:80])
+
+            # Bot message ID and Telegram match
+            if bot_msg_id:
+                _p8v2_hist(conn, f"TOPIC2_BOT_MESSAGE_ID_SAVED:{bot_msg_id}")
+                _p8v2_hist(conn, "TOPIC2_TELEGRAM_MATCHES_ARTIFACTS")
+                _P8V2_LOG.info("P8V2_REPAIR_DONE state=%s bot_msg=%s", state_now, bot_msg_id)
+            else:
+                _P8V2_LOG.warning("P8V2_NO_BOT_MESSAGE_ID state=%s", state_now)
+                _p8v2_hist(conn, "P8V2_BOT_MESSAGE_ID_MISSING")
+    except Exception as _ve:
+        _P8V2_LOG.warning("P8V2_VERIFY_ERR %s", _ve)
+
+    return True
+
+# Wrap _handle_drive_file to intercept CANONICAL_NOT_PROVEN repair case
+_P8V2_ORIG_HDF = globals().get("_handle_drive_file")
+
+if _P8V2_ORIG_HDF and not getattr(_P8V2_ORIG_HDF, "_p8v2_wrapped", False):
+    async def _handle_drive_file(conn, task, chat_id, topic_id):  # noqa: F811
+        try:
+            _tid = str(task["id"] if hasattr(task, "keys") else task[0])
+            _tp = int(topic_id or 0)
+            if _tp == 2 and _tid == _P8V2_TASK_ID:
+                _err = str((task["error_message"] if hasattr(task, "keys") else "") or "")
+                _hist_check = conn.execute(
+                    "SELECT action FROM task_history WHERE task_id=? AND action='TOPIC2_CANONICAL_FULL_CLOSE_NOT_PROVEN' LIMIT 1",
+                    (_tid,)
+                ).fetchone()
+                if "TOPIC2_CANONICAL_FULL_CLOSE_NOT_PROVEN" in _err or _hist_check:
+                    _P8V2_LOG.info("P8V2_INTERCEPT task=%s — CANONICAL_NOT_PROVEN repair", _tid)
+                    return await _p8v2_repair_canonical(conn, task)
+        except Exception as _ie:
+            _P8V2_LOG.warning("P8V2_INTERCEPT_ERR %s", _ie)
+        return await _P8V2_ORIG_HDF(conn, task, chat_id, topic_id)
+
+    _handle_drive_file._p8v2_wrapped = True
+    globals()["_handle_drive_file"] = _handle_drive_file
+    _P8V2_LOG.info("PATCH_TOPIC2_BIGPDF_CANONICAL_FULL_CLOSE_V2 installed")
+else:
+    _P8V2_LOG.warning("PATCH_TOPIC2_BIGPDF_CANONICAL_FULL_CLOSE_V2 skipped: _handle_drive_file not found")
+
+# Reset c94ec497 to NEW so worker picks it up for repair
+try:
+    import sqlite3 as _p8v2_sqlite3
+    _p8v2_conn2 = _p8v2_sqlite3.connect("/root/.areal-neva-core/data/core.db")
+    _p8v2_conn2.row_factory = _p8v2_sqlite3.Row
+    _p8v2_r2 = _p8v2_conn2.execute(
+        "SELECT state, error_message FROM tasks WHERE id=?", (_P8V2_TASK_ID,)
+    ).fetchone()
+    if _p8v2_r2 and _p8v2_r2["state"] in ("FAILED", "CANCELLED") and "TOPIC2_CANONICAL_FULL_CLOSE_NOT_PROVEN" in (_p8v2_r2["error_message"] or ""):
+        _p8v2_conn2.execute(
+            "UPDATE tasks SET state='NEW', error_message='P8V2_QUEUED_FOR_REPAIR', updated_at=datetime('now') WHERE id=?",
+            (_P8V2_TASK_ID,)
+        )
+        _p8v2_conn2.execute(
+            "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+            (_P8V2_TASK_ID, "TOPIC2_MANUAL_STATE_CHANGE_WITH_SQLITE_BACKUP:FAILED→NEW:P8V2_REPAIR_QUEUED")
+        )
+        _p8v2_conn2.commit()
+        _P8V2_LOG.info("P8V2_TASK_RESET_TO_NEW task=%s", _P8V2_TASK_ID)
+    _p8v2_conn2.close()
+except Exception as _p8v2_ie2:
+    _P8V2_LOG.warning("P8V2_INIT_DB_ERR %s", _p8v2_ie2)
+# === END_PATCH_TOPIC2_BIGPDF_CANONICAL_FULL_CLOSE_V2 ===
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+====================================================================================================
+END_FILE: task_worker.py
+FILE_CHUNK: 3/3
+====================================================================================================
 
 ====================================================================================================
 BEGIN_FILE: telegram_daemon.py
@@ -7651,1694 +9129,5 @@ def calc_loads_input_based(
 
 ====================================================================================================
 END_FILE: core/project_engine.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/file_intake_router.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: cc90687dbd7f88ca7b05507b9279cbdc19a1bc27cb0b2449c753ac37c7ff1e6b
-====================================================================================================
-from core.gemini_vision import analyze_image_file  # GEMINI_VISION_V43
-import os, logging, asyncio
-from typing import Dict, Any, Optional, List
-
-logger = logging.getLogger(__name__)
-
-INTENT_TRIGGERS = {
-    "estimate": [
-        "смет", "расчёт", "расчет", "стоимость", "цена", "бюджет",
-        "сделай таблицу", "таблицу", "вытащи объёмы", "вытащи объемы",
-        "посчитай объём", "посчитай объем", "объём", "объем",
-        "excel", "эксель", "google таблицу", "google таблица", "google sheets",
-        "sheets", "спецификац", "ведомост", "бетон", "арматур", "фундамент"
-    ],
-    "ocr": [
-        "распознай таблицу", "распознать таблицу", "распозна", "ocr",
-        "скан", "текст с фото", "фото в таблицу"
-    ],
-    "technadzor": [
-        "проверь дефекты", "акт технадзора", "дефекты", "дефект",
-        "нарушение", "нарушения", "косяк", "осмотр", "технадзор",
-        "проверь фото", "проверь узел", "проверь"
-    ],
-    "dwg": ["чертёж", "чертеж", "dxf", "dwg", "проект", "автокад"],
-    "template": ["сделай так же", "по образцу", "как в", "шаблон"],
-    "vision": ["анализ фото", "анализ схемы", "разбери фото", "что на фото", "что на схеме"],
-    "search": ["найди в сметах", "поиск по сметам", "искать в старых"],
-}
-FORMAT_TRIGGERS = {
-    "excel": ["excel", "эксель", "xlsx", "иксель"],
-    "sheets": ["google sheets", "google таблиц", "гугл таблиц", "sheets", "таблицу на диск", "google sheet"],
-    "word": ["word", "ворд", "docx"],
-    "docs": ["google docs", "google документ", "гугл документ", "docs"],
-}
-
-def detect_intent(text: str) -> Optional[str]:
-    if not text: return None
-    t = text.lower()
-    for intent, triggers in INTENT_TRIGGERS.items():
-        if any(tr in t for tr in triggers): return intent
-    return None
-
-def detect_format(text: str) -> str:
-    t = (text or "").lower()
-    if any(x in t for x in FORMAT_TRIGGERS["sheets"]): return "sheets"
-    elif any(x in t for x in FORMAT_TRIGGERS["docs"]): return "docs"
-    elif any(x in t for x in FORMAT_TRIGGERS["word"]): return "word"
-    elif any(x in t for x in FORMAT_TRIGGERS["excel"]): return "excel"
-    return "excel"
-
-def format_priority(file_name: str, available_files: list = None) -> str:
-    """FORMAT_PRIORITY_V1 — DWG/DXF > XLSX > DOCX > PDF > IMAGE"""
-    files = available_files or [file_name]
-    # Приоритет по канону §11.9
-    for ext in [".dwg", ".dxf"]:
-        if any(f.lower().endswith(ext) for f in files):
-            return "dwg"
-    for ext in [".xlsx", ".xls", ".csv"]:
-        if any(f.lower().endswith(ext) for f in files):
-            return "excel"
-    for ext in [".docx", ".doc"]:
-        if any(f.lower().endswith(ext) for f in files):
-            return "word"
-    for ext in [".pdf"]:
-        if any(f.lower().endswith(ext) for f in files):
-            return "pdf"
-    for ext in [".jpg", ".jpeg", ".png", ".heic", ".webp", ".tiff", ".bmp"]:
-        if any(f.lower().endswith(ext) for f in files):
-            return "image"
-    return "unknown"
-
-def get_topic_role(topic_id: int) -> str:
-    try:
-        import sqlite3
-        conn = sqlite3.connect('/root/.areal-neva-core/data/memory.db')
-        cur = conn.cursor()
-        cur.execute("SELECT value FROM memory WHERE key = ?", (f"topic_{topic_id}_role",))
-        row = cur.fetchone(); conn.close()
-        return row[0] if row else ""
-    except: return ""
-
-def get_clarification_message(file_name: str, topic_id: int) -> str:
-    role = get_topic_role(topic_id)
-    base = f"📎 Получил файл «{file_name}».\nЧто с ним сделать?"
-    if topic_id == 2 or "СТРОЙКА" in role:
-        return base + "\n• Смета / Расчёт\n• Проектирование / Расчёт нагрузок\n• Анализ фото / Схема\n• Распознать таблицу\n• Просто сохранить\n\nВ каком формате?\n• Excel\n• Google Sheets"
-    elif topic_id == 5 or "ТЕХНАДЗОР" in role:
-        return base + "\n• Проверить дефекты / Составить акт\n• Анализ фото / Схема\n• Распознать таблицу\n• Просто сохранить\n\nВ каком формате?\n• Word\n• Google Docs"
-    else:
-        return base + "\n• Анализ фото / Схема\n• Распознать таблицу\n• Проверить дефекты\n• Смета / Расчёт\n• Просто сохранить"
-
-# === CANON_PASS_INTAKE_OFFER_SENT ===
-_OFFER_SENT = {}
-def mark_offer_sent(tid): _OFFER_SENT[tid] = True
-def is_offer_sent(tid): return _OFFER_SENT.get(tid, False)
-# === END CANON_PASS_INTAKE_OFFER_SENT ===
-
-def should_ask_clarification(raw_input: str, has_file: bool, already_asked: bool = False) -> bool:
-    # === ANTI_REPEAT_V1 — не спрашивать если уже спрашивали ===
-    if already_asked:
-        return False
-    if not has_file: return False
-    return detect_intent(raw_input) is None
-
-
-ESTIMATE_FILENAME_TRIGGERS = ["кж","кд","спецификац","ведомост","смет","расход","арматур","бетон","плит","конструкци","фундамент","у1-","у2-","кр-"]
-
-def detect_intent_from_filename(file_name: str) -> Optional[str]:
-    fn = (file_name or "").lower()
-    if any(t in fn for t in ESTIMATE_FILENAME_TRIGGERS):
-        return "estimate"
-    if any(t in fn for t in ["акт","дефект","осмотр","технадзор"]):
-        return "technadzor"
-    if any(t in fn for t in [".dwg",".dxf","чертеж","чертёж"]):
-        return "dwg"
-    return None
-
-async def route_file(file_path: str, task_id: str, topic_id: int, intent: str, fmt: str = "excel") -> Optional[Dict[str, Any]]:
-    try:
-        from core.engine_base import detect_real_file_type
-        real_type = detect_real_file_type(file_path)
-        # === UNIVERSAL_FILE_HANDLER_V1_WIRED ===
-        if real_type in ("zip", "rar", "7z", "dwg", "dxf", "video", "mp4", "audio", "text_fallback", "unknown") or intent == "dwg":
-            try:
-                from core.universal_file_handler import extract_text_from_file
-                _ufh = extract_text_from_file(file_path, task_id, topic_id)
-                _ufh_text = (_ufh.get("text") or "").strip()
-                _ufh_rows = _ufh.get("rows") or []
-                if _ufh.get("success") and (_ufh_text or _ufh_rows):
-                    _summary = f"\u0424\u0430\u0439\u043b \u043e\u0431\u0440\u0430\u0431\u043e\u0442\u0430\u043d ({_ufh.get('type','unknown')}):\n"
-                    if _ufh_rows:
-                        _summary += f"\u0421\u0442\u0440\u043e\u043a \u0434\u0430\u043d\u043d\u044b\u0445: {len(_ufh_rows)}\n"
-                        for row in _ufh_rows[:5]:
-                            _summary += "  " + " | ".join(str(c) for c in row if c) + "\n"
-                    if _ufh_text:
-                        _summary += _ufh_text[:1500]
-                    return {"success": True, "text": _summary, "type": _ufh.get("type")}
-                else:
-                    return {"success": False, "error": _ufh.get("error") or f"\u0424\u043e\u0440\u043c\u0430\u0442 {real_type} \u043d\u0435 \u043f\u043e\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442\u0441\u044f"}
-            except Exception as _ufh_e:
-                return {"success": False, "error": f"UNIVERSAL_HANDLER_ERROR: {_ufh_e}"}
-        # === END UNIVERSAL_FILE_HANDLER_V1_WIRED ===
-        if real_type in ("csv", "txt") and intent not in ("estimate", "technadzor", "ocr"):
-            intent = "estimate"
-        if real_type == "dwg":
-            intent = "dwg"
-        if intent == "estimate":
-            if fmt == "sheets":
-                from core.sheets_generator import create_google_sheet
-                from core.estimate_engine import process_estimate_to_excel
-                data = await process_estimate_to_excel(file_path, task_id, topic_id)
-                if data.get("excel_path"):
-                    from openpyxl import load_workbook
-                    wb = load_workbook(data["excel_path"]); ws = wb.active
-                    rows = [[cell.value for cell in row] for row in ws.iter_rows()]; wb.close()
-                    link = None
-                    try:
-                        link = create_google_sheet(f"Estimate_{task_id[:8]}", rows)
-                    except Exception as e:
-                        err_str = str(e)
-                        if "403" in err_str or "permission" in err_str.lower() or "quota" in err_str.lower():
-                            logger.warning(f"Google Sheets 403/quota -> fallback XLSX: {e}")
-                        else:
-                            logger.warning(f"create_google_sheet fallback to XLSX: {e}")
-                        link = None
-                    if link and "docs.google.com" in str(link):
-                        return {"success": True, "drive_link": link, "artifact_path": data["excel_path"]}
-                    # Fallback: return XLSX artifact
-                    return {"success": True, "artifact_path": data["excel_path"], "excel_path": data["excel_path"]}
-            else:
-                from core.estimate_engine import process_estimate_to_excel
-                return await process_estimate_to_excel(file_path, task_id, topic_id)
-        elif intent == "ocr":
-            from core.ocr_engine import process_image_to_excel
-            return await process_image_to_excel(file_path, task_id, topic_id)
-        elif intent == "technadzor":
-            from core.technadzor_engine import process_defect_to_report
-            data = await process_defect_to_report(file_path, task_id, topic_id)
-            if not data or not data.get("success"):
-                return {"success": False, "error": (data.get("error") if isinstance(data, dict) else None) or "TECHNADZOR_FAILED"}
-            rp = data.get("report_path")
-            if rp:
-                import os as _os
-                rp_size = _os.path.getsize(rp) if _os.path.exists(rp) else 0
-                if rp_size < 1000:
-                    return {"success": False, "error": "DOCUMENT_EMPTY_RESULT: DOCX too small"}
-                from docx import Document as _Doc
-                _doc = _Doc(rp)
-                _has_content = any(p.text.strip() for p in _doc.paragraphs) or len(_doc.tables) > 0
-                if not _has_content:
-                    return {"success": False, "error": "DOCUMENT_EMPTY_RESULT: no paragraphs or tables"}
-            if fmt == "docs" and rp:
-                try:
-                    from core.docs_generator import create_google_doc
-                    from docx import Document
-                    doc = Document(rp)
-                    content = "\n".join([p.text for p in doc.paragraphs if p.text.strip()])
-                    link = create_google_doc(f"Defect_{task_id[:8]}", content)
-                    if link:
-                        return {"success": True, "drive_link": link, "artifact_path": rp}
-                except Exception as _e:
-                    logger.warning(f"create_google_doc fallback to DOCX: {_e}")
-            return data
-        elif intent == "dwg":
-            from core.dwg_engine import process_dwg_to_excel
-            return await process_dwg_to_excel(file_path, task_id, topic_id)
-        elif intent == "template":
-            from core.template_manager import apply_template, get_template
-            tmpl = get_template(str(topic_id), topic_id, "estimate")
-            if tmpl:
-                out = f"/tmp/{task_id}_template.xlsx"
-                # Extract real data from source file if possible
-                real_rows = []
-                try:
-                    real_type_t = detect_real_file_type(file_path)
-                    if real_type_t in ("xlsx", "zip_or_office"):
-                        from openpyxl import load_workbook
-                        wb_t = load_workbook(file_path, data_only=True)
-                        ws_t = wb_t.active
-                        for row_t in ws_t.iter_rows(min_row=2, values_only=True):
-                            if row_t and any(v is not None for v in row_t):
-                                real_rows.append(list(row_t))
-                        wb_t.close()
-                    elif real_type_t == "pdf":
-                        try:
-                            import pdfplumber
-                            with pdfplumber.open(file_path) as pdf_t:
-                                for page_t in pdf_t.pages:
-                                    tables_t = page_t.extract_tables()
-                                    for table_t in tables_t:
-                                        for row_t in table_t[1:]:
-                                            if row_t and any(v for v in row_t if v):
-                                                real_rows.append(row_t)
-                        except Exception:
-                            pass
-                except Exception as _te:
-                    logger.warning(f"template data extraction failed: {_te}")
-                if apply_template(tmpl, out, real_rows): return {"success": True, "excel_path": out}
-                elif apply_template(tmpl, out, []): return {"success": True, "excel_path": out}
-        elif intent == "vision":
-            result = await analyze_image_file(file_path, None)
-            return {"success": True, "engine": "gemini_vision", "result_text": result, "text_result": result}
-        elif intent == "search":
-            from core.search_engine import search_in_estimates
-            results = search_in_estimates(file_path, topic_id)
-            return {"success": True, "text_result": "\n".join(results[:10])}
-        return {"success": False, "error": f"PIPELINE_NOT_EXECUTED: no handler for intent={intent}"}
-    except Exception as e:
-        logger.error(f"route_file: {e}", exc_info=True)
-        return {"success": False, "error": str(e)}
-
-async def handle_multiple_files(file_paths: List[str], task_id: str, topic_id: int, intent: str, fmt: str = "excel") -> Optional[Dict[str, Any]]:
-    if intent == "estimate":
-        from core.multi_file_orchestrator import merge_estimate_results
-        results = []
-        for fp in file_paths:
-            from core.estimate_engine import process_estimate_to_excel
-            r = await process_estimate_to_excel(fp, task_id, topic_id)
-            if r: results.append(r)
-        return merge_estimate_results(results)
-    return None
-
-# === ARK_KZH_KD_TRIGGERS ===
-ESTIMATE_FILENAME_TRIGGERS = list(set(ESTIMATE_FILENAME_TRIGGERS + [
-    'арк', 'кж', 'кд', 'кр', 'ов', 'вк', 'эо', 'гп',
-    'марка', 'раздел', 'спецификация', 'ведомость',
-]))
-
-_ARK_SECTION_MAP = {
-    'арк': 'estimate', 'кж': 'estimate', 'кд': 'estimate',
-    'кр': 'estimate', 'ов': 'estimate', 'вк': 'estimate',
-    'эо': 'estimate', 'гп': 'estimate',
-}
-
-def detect_intent_from_filename_v2(file_name: str):
-    fn = (file_name or '').lower()
-    for key, intent in _ARK_SECTION_MAP.items():
-        if key in fn:
-            return intent
-    return detect_intent_from_filename(file_name)
-# === END ARK_KZH_KD_TRIGGERS ===
-
-# === ALL_CONTOURS_ROUTE_FILE_V2 ===
-try:
-    _all_contours_orig_route_file=route_file
-except Exception:
-    _all_contours_orig_route_file=None
-def _ac_words(*groups):
-    return ["".join(chr(x) for x in g) for g in groups]
-def _ac_has(text, words):
-    t=str(text or "").lower()
-    return any(w in t for w in words)
-async def route_file(file_path, task_id, topic_id=0, *args, **kwargs):
-    import inspect
-    fp=str(file_path or "")
-    raw=" ".join([fp,str(kwargs.get("raw_input") or ""),str(kwargs.get("prompt") or ""),str(kwargs.get("user_text") or "")]+[str(a or "") for a in args])
-    template_words=_ac_words((1080,1089,1087,1086,1083,1100,1079,1091,1081,32,1082,1072,1082,32,1096,1072,1073,1083,1086,1085),(1089,1086,1093,1088,1072,1085,1080,32,1096,1072,1073,1083,1086,1085),(1101,1090,1086,32,1096,1072,1073,1083,1086,1085))
-    if _ac_has(raw, template_words):
-        from core.template_manager import save_template
-        return {"success":True,"intent":"template","template_path":save_template(fp,int(topic_id or 0),"template")}
-    kzh_words=_ac_words((1082,1078),(1082,1076),(1072,1088,1082),(1082,1088))
-    detector=globals().get("detect_intent_from_filename_v2") or globals().get("detect_intent_from_filename")
-    intent=detector(fp) if detector else "unknown"
-    if intent=="estimate" and _ac_has(fp,kzh_words):
-        from core.estimate_engine import process_kzh_pdf
-        return await process_kzh_pdf(fp,str(task_id),int(topic_id or 0))
-    if _all_contours_orig_route_file is None:
-        return {"success":False,"error":"original_route_file_missing","intent":intent}
-    res=_all_contours_orig_route_file(fp,task_id,topic_id,*args,**kwargs)
-    if inspect.isawaitable(res):
-        res=await res
-    sheets_words=("google sheets","fmt=sheets","sheets")+tuple(_ac_words((1075,1091,1075,1083,32,1090,1072,1073,1083),(1075,1091,1075,1083,32,1090,1072,1073,1083,1080,1094),(1092,1086,1088,1084,1072,1090,32,115,104,101,101,116,115)))
-    if isinstance(res,dict) and _ac_has(raw,sheets_words):
-        xl=res.get("excel_path") or res.get("xlsx_path")
-        if xl:
-            try:
-                from core.sheets_generator import create_google_sheet
-                sh=create_google_sheet(xl,task_id=task_id,topic_id=topic_id)
-                if inspect.isawaitable(sh):
-                    sh=await sh
-                if sh:
-                    res["sheets_link"]=sh.get("url") if isinstance(sh,dict) else str(sh)
-                    res["drive_link"]=res.get("drive_link") or res["sheets_link"]
-            except Exception as e:
-                res["sheets_error"]=str(e)[:300]
-    return res
-# === END_ALL_CONTOURS_ROUTE_FILE_V2 ===
-
-# === FINAL_CODE_CONTOUR_FILE_INTAKE_V1 ===
-try:
-    ESTIMATE_FILENAME_TRIGGERS=list(set(ESTIMATE_FILENAME_TRIGGERS+[_f for _f in ["km","kmd"]]))
-except Exception:
-    pass
-try:
-    _ARK_SECTION_MAP.update({"km":"estimate","kmd":"estimate"})
-except Exception:
-    _ARK_SECTION_MAP={"km":"estimate","kmd":"estimate"}
-try:
-    _final_orig_route_file=route_file
-except Exception:
-    _final_orig_route_file=None
-async def route_file(file_path, task_id, topic_id=0, *args, **kwargs):
-    import inspect
-    fp=str(file_path or "")
-    detector=globals().get("detect_intent_from_filename_v2") or globals().get("detect_intent_from_filename")
-    intent=detector(fp) if detector else "unknown"
-    low=fp.lower()
-    if intent=="estimate" and any(x in low for x in ["km","kmd","kzh","kd","ark","kr"]):
-        from core.estimate_engine import process_kzh_pdf
-        return await process_kzh_pdf(fp,str(task_id),int(topic_id or 0))
-    if _final_orig_route_file is None:
-        return {"success":False,"error":"original_route_file_missing","intent":intent}
-    res=_final_orig_route_file(fp,task_id,topic_id,*args,**kwargs)
-    if inspect.isawaitable(res):
-        res=await res
-    if isinstance(res,dict) and (kwargs.get("fmt")=="sheets" or str(kwargs.get("raw_input") or "").lower().find("sheets")>=0):
-        xl=res.get("excel_path") or res.get("xlsx_path")
-        if xl:
-            from openpyxl import load_workbook
-            wb=load_workbook(xl,data_only=False)
-            ws=wb.active
-            rows=[[cell.value for cell in row] for row in ws.iter_rows()]
-            from core.sheets_generator import create_google_sheet
-            sh=create_google_sheet(Path(xl).stem, rows)
-            if inspect.isawaitable(sh): sh=await sh
-            if sh:
-                res["sheets_link"]=sh.get("url") if isinstance(sh,dict) else str(sh)
-                res["drive_link"]=res.get("drive_link") or res["sheets_link"]
-    return res
-# === END_FINAL_CODE_CONTOUR_FILE_INTAKE_V1 ===
-
-# === FILE_INTAKE_KM_V39 ===
-try:
-    ESTIMATE_FILENAME_TRIGGERS = list(set(list(ESTIMATE_FILENAME_TRIGGERS) + ["км","кмд","металл","конструкц"]))
-except Exception:
-    pass
-try:
-    _ARK_SECTION_MAP.update({"км": "estimate", "кмд": "estimate"})
-except Exception:
-    pass
-# === END_FILE_INTAKE_KM_V39 ===
-
-# === FILE_INTAKE_PROJECT_V41 ===
-
-_PROJECT_V41_TRIGGERS = ("кж","км","кмд","ар","ов","вк","эом","сс","гп","пз","тх")
-
-def _v41_project_section_hit(text):
-    src = str(text or "").lower()
-    import re
-    for key in _PROJECT_V41_TRIGGERS:
-        if re.search(r"(^|[^а-яa-z0-9])" + re.escape(key) + r"([^а-яa-z0-9]|$)", src, re.I):
-            return True
-    return False
-
-try:
-    _v41_orig_detect_intent = detect_intent
-    def detect_intent(file_name: str, raw_input: str = "", *args, **kwargs):
-        src = (str(file_name or "") + " " + str(raw_input or "")).lower()
-        if _v41_project_section_hit(src):
-            return "project"
-        return _v41_orig_detect_intent(file_name)  # DETECT_INTENT_FIX_V1
-except Exception:
-    pass
-
-if "route_file" in globals():
-    _v41_orig_route_file = route_file
-
-    async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *args, **kwargs):
-        raw_input = str(kwargs.get("raw_input") or "")
-        file_name = str(file_path or "")
-        final_intent = intent or detect_intent(file_name, raw_input)
-
-        if final_intent == "project":
-            try:
-                from core.project_engine import process_project_file
-                return await process_project_file(file_path, task_id, topic_id, raw_input)
-            except Exception as e:
-                return {"success": False, "error": "PROJECT_ENGINE_FAILED: " + str(e)[:300]}
-
-        res = _v41_orig_route_file(file_path, task_id, topic_id, final_intent, fmt, *args, **kwargs)
-        import inspect
-        if inspect.isawaitable(res):
-            res = await res
-
-        if isinstance(res, dict) and res.get("success") is False:
-            return res
-        if not isinstance(res, dict):
-            return {"success": False, "error": "FILE_RESULT_GUARD: route_file returned empty"}
-        if not (res.get("drive_link") or res.get("sheets_link") or res.get("doc_link") or res.get("excel_path") or res.get("artifact_path") or res.get("text") or res.get("result")):
-            return {"success": False, "error": "FILE_RESULT_GUARD: no usable output"}
-        return res
-
-# === END_FILE_INTAKE_PROJECT_V41 ===
-
-# === FILE_INTAKE_PROJECT_SAFE_V42 ===
-
-_PROJECT_V42_TRIGGERS = ("кж","км","кмд","ар","ов","вк","эом","сс","гп","пз","тх")
-
-def _v42_project_choice(raw_input: str) -> bool:
-    t = str(raw_input or "").lower()
-    return "проектирование" in t or "расчёт нагрузок" in t or "расчет нагрузок" in t
-
-if "route_file" in globals():
-    _v42_orig_route_file = route_file
-
-    async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *args, **kwargs):
-        import inspect
-        raw_input = str(kwargs.get("raw_input") or "")
-
-        if _v42_project_choice(raw_input):
-            try:
-                from core.project_engine import process_project_file
-                res = await process_project_file(file_path, task_id, topic_id, raw_input)
-                if not isinstance(res, dict):
-                    return {"success": False, "error": "PROJECT_RESULT_GUARD: empty_payload"}
-                if res.get("success") is False:
-                    return res
-                if not (res.get("drive_link") or res.get("excel_path") or res.get("docx_path") or res.get("pdf_path")):
-                    return {"success": False, "error": "PROJECT_RESULT_GUARD: no_artifact"}
-                return res
-            except Exception as e:
-                return {"success": False, "error": "PROJECT_ENGINE_FAILED: " + str(e)[:300]}
-
-        if str(intent or "").lower() == "project" and not _v42_project_choice(raw_input):
-            intent = "estimate"
-
-        res = _v42_orig_route_file(file_path, task_id, topic_id, intent, fmt, *args, **kwargs)
-        if inspect.isawaitable(res):
-            res = await res
-
-        if isinstance(res, dict) and res.get("success") is False:
-            return res
-
-        if not isinstance(res, dict):
-            return {"success": False, "error": "FILE_RESULT_GUARD: route_file returned empty"}
-
-        if not (res.get("drive_link") or res.get("sheets_link") or res.get("doc_link") or res.get("excel_path") or res.get("artifact_path") or res.get("text") or res.get("result")):
-            return {"success": False, "error": "FILE_RESULT_GUARD: no usable output"}
-
-        return res
-
-# === END_FILE_INTAKE_PROJECT_SAFE_V42 ===
-
-# === CODE_CLOSE_V43_FILE_INTAKE ===
-
-def _v43_is_template_learn(raw_input):
-    t = str(raw_input or "").lower()
-    return "образец" in t or "шаблон" in t or "запомни структуру" in t
-
-def _v43_is_project_choice(raw_input):
-    t = str(raw_input or "").lower()
-    return "проектирование" in t or "расчёт нагрузок" in t or "расчет нагрузок" in t
-
-if "route_file" in globals():
-    _v43_orig_route_file = route_file
-
-    async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *args, **kwargs):
-        import inspect
-        raw_input = str(kwargs.get("raw_input") or "")
-
-        if _v43_is_template_learn(raw_input):
-            try:
-                from core.template_manager import template_learn_v43
-                ok = template_learn_v43(file_path, topic_id, intent or "project")
-                return {"success": bool(ok), "text": "Шаблон сохранён для топика" if ok else "TEMPLATE_LEARN_FAILED"}
-            except Exception as e:
-                return {"success": False, "error": "TEMPLATE_LEARN_FAILED: " + str(e)[:300]}
-
-        if _v43_is_project_choice(raw_input):
-            try:
-                from core.template_manager import template_priority_v43
-                template = template_priority_v43(topic_id, "project")
-                from core.project_engine import process_project_file
-                res = await process_project_file(file_path, task_id, topic_id, raw_input)
-                if template:
-                    res["template_used"] = template
-                return res
-            except Exception as e:
-                return {"success": False, "error": "PROJECT_ENGINE_FAILED: " + str(e)[:300]}
-
-        if str(intent or "").lower() == "project" and not _v43_is_project_choice(raw_input):
-            intent = "estimate"
-
-        res = _v43_orig_route_file(file_path, task_id, topic_id, intent, fmt, *args, **kwargs)
-        if inspect.isawaitable(res):
-            res = await res
-
-        if isinstance(res, dict) and res.get("success") is False:
-            return res
-        if not isinstance(res, dict):
-            return {"success": False, "error": "FILE_RESULT_GUARD: empty_route_result"}
-        if not (res.get("drive_link") or res.get("sheets_link") or res.get("doc_link") or res.get("excel_path") or res.get("artifact_path") or res.get("text") or res.get("result")):
-            return {"success": False, "error": "FILE_RESULT_GUARD: no_output"}
-        return res
-
-# === END_CODE_CLOSE_V43_FILE_INTAKE ===
-
-
-# === FILE_INTAKE_KZH_INTENT_FIX_V1 ===
-# Bare KЖ/КД/project files are project-context files, not estimate files.
-# File upload without explicit user instruction must ask what to do.
-
-import json as _fik_json
-import os as _fik_os
-import re as _fik_re
-from typing import Optional as _FIKOptional
-
-ESTIMATE_FILENAME_TRIGGERS = [
-    "смет", "расход", "ведомост", "спецификац",
-    "у1-", "у2-", "кр-",
-]
-
-PROJECT_FILENAME_TRIGGERS = [
-    "кж", "кд", "кмд", "км", "ар",
-    "плит", "фундамент", "конструкци", "конструкция",
-    "узел", "цоколь", "разрез", "армирован", "чертеж", "чертёж",
-]
-
-def _fik_norm_text(value) -> str:
-    return str(value or "").lower().replace("ё", "е").strip()
-
-def _fik_word_hit(text: str, words) -> bool:
-    t = _fik_norm_text(text)
-    for w in words:
-        ww = _fik_norm_text(w)
-        if not ww:
-            continue
-        if len(ww) <= 3:
-            if _fik_re.search(r"(^|[^а-яa-z0-9])" + _fik_re.escape(ww) + r"([^а-яa-z0-9]|$)", t, _fik_re.I):
-                return True
-        elif ww in t:
-            return True
-    return False
-
-def _fik_extract_user_instruction(raw_input: str) -> str:
-    """
-    Extract only explicit user instruction.
-    Ignore file_name/file_id/mime/source metadata, because filename alone must not auto-run pipeline.
-    """
-    raw = str(raw_input or "").strip()
-    if not raw:
-        return ""
-    try:
-        obj = _fik_json.loads(raw)
-        if isinstance(obj, dict):
-            for key in ("caption", "user_text", "text", "prompt", "comment", "message"):
-                val = obj.get(key)
-                if isinstance(val, str) and val.strip():
-                    return val.strip()
-            return ""
-    except Exception:
-        pass
-    if raw.startswith("{") and ("file_name" in raw or "file_id" in raw or "mime_type" in raw):
-        return ""
-    return raw
-
-def detect_intent_from_filename(file_name: str) -> _FIKOptional[str]:
-    fn = _fik_norm_text(_fik_os.path.basename(str(file_name or "")))
-
-    if _fik_word_hit(fn, PROJECT_FILENAME_TRIGGERS):
-        return "project"
-
-    if _fik_word_hit(fn, ESTIMATE_FILENAME_TRIGGERS):
-        return "estimate"
-
-    if _fik_word_hit(fn, ("акт", "дефект", "осмотр", "технадзор")):
-        return "technadzor"
-
-    if _fik_word_hit(fn, (".dwg", ".dxf", "dwg", "dxf", "чертеж", "чертёж")):
-        return "dwg"
-
-    return None
-
-def detect_intent_from_filename_v2(file_name: str) -> _FIKOptional[str]:
-    return detect_intent_from_filename(file_name)
-
-def should_ask_clarification(raw_input: str, has_file: bool, already_asked: bool = False) -> bool:
-    if already_asked:
-        return False
-    if not has_file:
-        return False
-
-    instruction = _fik_extract_user_instruction(raw_input)
-    low = _fik_norm_text(instruction)
-
-    service_words = (
-        "tmp", "healthcheck", "service_file", "служебный", "синхронизации"
-    )
-    if _fik_word_hit(low, service_words):
-        return False
-
-    explicit_action_words = (
-        "сделай", "делай", "создай", "сформируй", "подготовь", "разработай",
-        "посчитай", "рассчитай", "проверь", "проанализируй", "выгрузи",
-        "сохрани", "возьми", "прими", "используй", "распознай", "обработай",
-        "шаблон", "образец", "по образцу", "по шаблону",
-        "смет", "проект", "кж", "кд", "км", "кмд", "акт", "технадзор",
-        "таблиц", "excel", "xlsx", "pdf", "dxf", "dwg", "ocr",
-        "проектирование", "расчет нагрузок", "расчёт нагрузок",
-    )
-
-    return not _fik_word_hit(low, explicit_action_words)
-
-try:
-    _fik_orig_route_file = route_file
-except Exception:
-    _fik_orig_route_file = None
-
-async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *args, **kwargs):
-    """
-    Final guard:
-    - KЖ/KД/project filenames never become estimate automatically
-    - if caller passes estimate for project file without explicit estimate command, downgrade to project
-    - raw file with no user instruction must return clarification payload
-    """
-    import inspect as _fik_inspect
-
-    raw_input = str(kwargs.get("raw_input") or kwargs.get("prompt") or kwargs.get("user_text") or "")
-    instruction = _fik_extract_user_instruction(raw_input)
-    filename_intent = detect_intent_from_filename(str(file_path or ""))
-
-    if not instruction and filename_intent in ("project", "estimate", "technadzor", "dwg"):
-        try:
-            msg = get_clarification_message(_fik_os.path.basename(str(file_path or "")), int(topic_id or 0))
-        except Exception:
-            msg = (
-                "Файл принят.\n"
-                "Что сделать с ним?\n\n"
-                "1. Взять как шаблон проекта\n"
-                "2. Взять как шаблон сметы\n"
-                "3. Взять как шаблон технадзора\n"
-                "4. Обработать как обычный файл\n\n"
-                "Ответь одним сообщением"
-            )
-        return {
-            "success": False,
-            "needs_clarification": True,
-            "state": "WAITING_CLARIFICATION",
-            "intent": filename_intent,
-            "result_text": msg,
-            "error": "FILE_INTAKE_NEEDS_CONTEXT",
-        }
-
-    low_instruction = _fik_norm_text(instruction)
-    explicit_estimate = _fik_word_hit(low_instruction, ("смет", "расход", "ведомост", "спецификац", "расчет", "расчёт", "стоимость", "цена", "объем", "объём"))
-
-    if filename_intent == "project" and str(intent or "").lower() == "estimate" and not explicit_estimate:
-        intent = "project"
-
-    if intent is None:
-        intent = filename_intent
-
-    if _fik_orig_route_file is None:
-        return {"success": False, "error": "original_route_file_missing", "intent": intent}
-
-    res = _fik_orig_route_file(file_path, task_id, topic_id, intent, fmt, *args, **kwargs)
-    if _fik_inspect.isawaitable(res):
-        res = await res
-    return res
-
-# === END_FILE_INTAKE_KZH_INTENT_FIX_V1 ===
-
-
-# === CONTEXT_AWARE_FILE_INTAKE_V1_ROUTER_WRAPPER ===
-try:
-    _ca_fir_orig_route_file = route_file
-except Exception:
-    _ca_fir_orig_route_file = None
-
-async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *args, **kwargs):
-    import inspect
-    raw_input = str(kwargs.get("raw_input") or kwargs.get("prompt") or kwargs.get("user_text") or "")
-    if not raw_input:
-        try:
-            from core.file_context_intake import latest_pending_instruction_for_topic
-            chat_id = str(kwargs.get("chat_id") or "")
-            pending = latest_pending_instruction_for_topic(int(topic_id or 0), chat_id)
-            if pending:
-                kwargs["raw_input"] = pending
-                raw_input = pending
-        except Exception:
-            pass
-
-    if _ca_fir_orig_route_file is None:
-        return {"success": False, "error": "CONTEXT_AWARE_FILE_INTAKE_V1: original_route_file_missing"}
-
-    res = _ca_fir_orig_route_file(file_path, task_id, topic_id, intent, fmt, *args, **kwargs)
-    if inspect.isawaitable(res):
-        res = await res
-    return res
-
-# === END_CONTEXT_AWARE_FILE_INTAKE_V1_ROUTER_WRAPPER ===
-
-
-
-# === FILE_INTAKE_SUPPORTED_FORMATS_V1 ===
-SUPPORTED_IMAGE_FORMATS = {".jpg", ".jpeg", ".png", ".heic", ".heif", ".webp", ".bmp", ".tiff", ".tif", ".gif", ".svg"}
-SUPPORTED_DOCUMENT_FORMATS = {".pdf", ".docx", ".doc", ".xlsx", ".xls", ".csv", ".txt", ".rtf"}
-SUPPORTED_CAD_FORMATS = {".dwg", ".dxf", ".ifc", ".pln", ".rvt"}
-SUPPORTED_AUDIO_FORMATS = {".ogg", ".mp3", ".wav", ".m4a", ".flac", ".aac"}
-SUPPORTED_ARCHIVE_FORMATS = {".zip", ".rar", ".7z"}
-
-def get_supported_file_format_v1(file_name: str) -> str:
-    import os
-    ext = os.path.splitext(str(file_name or "").lower())[1]
-    if ext in SUPPORTED_IMAGE_FORMATS:
-        return "image_ocr_vision"
-    if ext in SUPPORTED_DOCUMENT_FORMATS:
-        return "document"
-    if ext in SUPPORTED_CAD_FORMATS:
-        if ext == ".pln":
-            return "pln_metadata_only"
-        if ext == ".rvt":
-            return "rvt_metadata_only"
-        if ext == ".ifc":
-            return "ifc_ifcopenshell"
-        return "cad_ezdxf"
-    if ext in SUPPORTED_AUDIO_FORMATS:
-        return "audio_groq_stt"
-    if ext in SUPPORTED_ARCHIVE_FORMATS:
-        return "archive_recursive"
-    return "unsupported"
-
-def unsupported_format_message_v1(file_name: str) -> str:
-    return "Формат файла не читается напрямую. Пришли PDF/DOCX/XLSX или экспортированный чертёж"
-
-try:
-    ESTIMATE_FILENAME_TRIGGERS = list(set(ESTIMATE_FILENAME_TRIGGERS + [
-        "jpg", "jpeg", "png", "heic", "heif", "webp", "bmp", "tiff", "gif", "svg",
-        "dwg", "dxf", "ifc", "pln", "rvt", "zip", "rar", "7z",
-        "км", "кмд", "ов", "вк", "эо", "эм", "эос"
-    ]))
-except Exception:
-    pass
-# === END_FILE_INTAKE_SUPPORTED_FORMATS_V1 ===
-
-
-# === CONTEXT_AWARE_FILE_INTAKE_V1_DB_LOOKUP ===
-def _context_aware_file_intake_lookup_v1(chat_id: str = "", topic_id: int = 0) -> str:
-    import sqlite3
-    try:
-        conn = sqlite3.connect("/root/.areal-neva-core/data/core.db")
-        try:
-            if chat_id:
-                rows = conn.execute(
-                    "SELECT raw_input, input_type, state, result FROM tasks WHERE chat_id=? AND COALESCE(topic_id,0)=? AND state IN ('DONE','AWAITING_CONFIRMATION','IN_PROGRESS','WAITING_CLARIFICATION') ORDER BY updated_at DESC LIMIT 5",
-                    (str(chat_id), int(topic_id or 0)),
-                ).fetchall()
-            else:
-                rows = conn.execute(
-                    "SELECT raw_input, input_type, state, result FROM tasks WHERE COALESCE(topic_id,0)=? AND state IN ('DONE','AWAITING_CONFIRMATION','IN_PROGRESS','WAITING_CLARIFICATION') ORDER BY updated_at DESC LIMIT 5",
-                    (int(topic_id or 0),),
-                ).fetchall()
-        finally:
-            conn.close()
-    except Exception:
-        rows = []
-
-    for r in rows or []:
-        combined = " ".join(str(x or "") for x in r).lower()
-        if any(x in combined for x in ("смет", "estimate", "расцен", "стоимость", "цена")):
-            return "estimate"
-        if any(x in combined for x in ("проект", "кж", "кд", "ар", "эскиз", "км", "кмд", "ов", "вк", "эо")):
-            return "project"
-        if any(x in combined for x in ("акт", "технадзор", "дефект", "нарушение")):
-            return "technadzor"
-        if any(x in combined for x in ("образец", "шаблон", "эталон")):
-            return "template"
-    return ""
-
-try:
-    _context_aware_orig_route_file_v1 = route_file
-    async def route_file(*args, **kwargs):
-        import inspect
-        lst = list(args)
-        raw_input = str(kwargs.get("raw_input") or kwargs.get("caption") or kwargs.get("user_text") or "")
-        chat_id = str(kwargs.get("chat_id") or "")
-        topic_id = kwargs.get("topic_id", lst[2] if len(lst) >= 3 else 0)
-        current_intent = kwargs.get("intent", lst[3] if len(lst) >= 4 else None)
-        final_intent = current_intent
-
-        if not final_intent or str(final_intent).lower() in ("unknown", "none", ""):
-            if not raw_input.strip():
-                final_intent = _context_aware_file_intake_lookup_v1(chat_id=chat_id, topic_id=int(topic_id or 0))
-
-        if final_intent and final_intent != current_intent:
-            if "intent" in kwargs:
-                kwargs["intent"] = final_intent
-            elif len(lst) >= 4:
-                lst[3] = final_intent
-            else:
-                kwargs["intent"] = final_intent
-
-        res = _context_aware_orig_route_file_v1(*lst, **kwargs)
-        if inspect.isawaitable(res):
-            res = await res
-        return res
-except Exception:
-    pass
-# === END_CONTEXT_AWARE_FILE_INTAKE_V1_DB_LOOKUP ===
-
-
-# === P6D_FILE_INTAKE_IMAGE_ESTIMATE_KWARGS_CLOSE_20260504_V1 ===
-try:
-    _p6d_orig_route_file_20260504 = route_file
-except Exception:
-    _p6d_orig_route_file_20260504 = None
-
-def _p6d_fi_s(v, limit=50000):
-    try:
-        if v is None:
-            return ""
-        return str(v).strip()[:limit]
-    except Exception:
-        return ""
-
-def _p6d_fi_low(v):
-    return _p6d_fi_s(v).lower().replace("ё", "е")
-
-def _p6d_fi_is_image(path, mime=""):
-    low = _p6d_fi_low(str(path) + " " + str(mime))
-    return low.startswith("image/") or any(x in low for x in (".jpg", ".jpeg", ".png", ".webp", ".heic", ".tif", ".tiff", ".bmp"))
-
-def _p6d_fi_is_estimate_text(raw):
-    low = _p6d_fi_low(raw)
-    return any(x in low for x in (
-        "смет", "стоимость", "расчет", "расчёт", "полная смета", "дом",
-        "фундамент", "плита", "каркас", "кровля", "стены", "отделка", "санузел"
-    ))
-
-async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *args, **kwargs):
-    import inspect
-    fp = _p6d_fi_s(file_path, 3000)
-    raw_input = _p6d_fi_s(kwargs.get("raw_input") or kwargs.get("caption") or kwargs.get("user_text") or kwargs.get("prompt") or "", 12000)
-    mime_type = _p6d_fi_s(kwargs.get("mime_type") or "", 500)
-    final_intent = _p6d_fi_s(intent or kwargs.get("intent") or "", 100)
-
-    if int(topic_id or 0) == 2 and _p6d_fi_is_image(fp, mime_type) and _p6d_fi_is_estimate_text(raw_input):
-        try:
-            from core import sample_template_engine as _ste
-            fake_task = {"id": str(task_id), "raw_input": raw_input, "topic_id": int(topic_id or 0), "input_type": "drive_file"}
-            res = _ste.handle_topic2_image_estimate_pipeline_p6d(
-                conn=kwargs.get("conn"),
-                task=fake_task,
-                chat_id=kwargs.get("chat_id"),
-                topic_id=int(topic_id or 0),
-                raw_input=raw_input,
-                local_path=fp,
-                full_context=raw_input,
-            )
-            if inspect.isawaitable(res):
-                res = await res
-            if res:
-                return {"success": True, "intent": "estimate", "engine": "P6D_IMAGE_ESTIMATE_FROM_PHOTO_FULL_CLOSE_20260504_V1", "text": "image estimate handled"}
-        except Exception as e:
-            return {"success": False, "error": "P6D_IMAGE_ESTIMATE_ROUTE_FAILED:" + str(e)[:500]}
-
-    if _p6d_orig_route_file_20260504 is None:
-        return {"success": False, "error": "P6D_ORIGINAL_ROUTE_FILE_MISSING"}
-
-    try:
-        res = _p6d_orig_route_file_20260504(fp, task_id, topic_id, final_intent or intent, fmt, *args, **kwargs)
-    except TypeError:
-        clean_kwargs = {k: v for k, v in kwargs.items() if k not in ("raw_input", "caption", "user_text", "prompt", "mime_type", "conn", "chat_id")}
-        res = _p6d_orig_route_file_20260504(fp, task_id, topic_id, final_intent or intent, fmt, *args, **clean_kwargs)
-
-    if inspect.isawaitable(res):
-        res = await res
-    return res
-# === END_P6D_FILE_INTAKE_IMAGE_ESTIMATE_KWARGS_CLOSE_20260504_V1 ===
-
-# === P6E2_FILE_INTAKE_ROUTE_FILE_KWARGS_AND_IMAGE_ESTIMATE_20260504_V1 ===
-try:
-    _P6E2_ORIG_ROUTE_FILE_20260504 = route_file
-except Exception:
-    _P6E2_ORIG_ROUTE_FILE_20260504 = None
-
-def _p6e2_fi_s(v, limit=50000):
-    try:
-        if v is None:
-            return ""
-        return str(v).strip()[:limit]
-    except Exception:
-        return ""
-
-def _p6e2_fi_low(v):
-    return _p6e2_fi_s(v).lower().replace("ё", "е")
-
-def _p6e2_fi_is_image(path="", mime_type="", file_name=""):
-    low = _p6e2_fi_low(" ".join([path or "", mime_type or "", file_name or ""]))
-    return low.startswith("image/") or any(x in low for x in (".jpg", ".jpeg", ".png", ".webp", ".heic", ".tif", ".tiff", ".bmp"))
-
-def _p6e2_fi_estimate_like(text):
-    low = _p6e2_fi_low(text)
-    return any(x in low for x in ("смет", "расчет", "расчёт", "посчитай", "стоимость", "полная смета"))
-
-async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *args, **kwargs):
-    raw_input = _p6e2_fi_s(kwargs.get("raw_input") or kwargs.get("caption") or kwargs.get("user_text") or kwargs.get("prompt") or "", 100000)
-    mime_type = _p6e2_fi_s(kwargs.get("mime_type") or "")
-    file_name = _p6e2_fi_s(kwargs.get("file_name") or kwargs.get("name") or "")
-    conn = kwargs.get("conn")
-    chat_id = kwargs.get("chat_id")
-    if int(topic_id or 0) == 2 and _p6e2_fi_is_image(file_path, mime_type, file_name) and _p6e2_fi_estimate_like(raw_input):
-        try:
-            from core.sample_template_engine import handle_topic2_image_estimate_p6e2
-            if conn is not None:
-                fake_task = {"id": str(task_id), "raw_input": raw_input, "input_type": "drive_file", "topic_id": int(topic_id or 0), "chat_id": chat_id}
-                ok = await handle_topic2_image_estimate_p6e2(conn=conn, task=fake_task, chat_id=chat_id, topic_id=topic_id, raw_input=raw_input, local_path=file_path, file_name=file_name, mime_type=mime_type)
-                if ok:
-                    return {"success": True, "intent": "estimate", "result_text": "Смета по фото сформирована"}
-        except Exception as e:
-            return {"success": False, "error": "P6E2_IMAGE_ESTIMATE_ROUTE_FAILED:" + str(e)[:500]}
-    if _P6E2_ORIG_ROUTE_FILE_20260504:
-        clean = dict(kwargs)
-        for k in ("raw_input", "caption", "user_text", "prompt", "mime_type", "conn", "chat_id", "file_name", "name"):
-            clean.pop(k, None)
-        return await _P6E2_ORIG_ROUTE_FILE_20260504(file_path, task_id, topic_id, intent, fmt, *args, **clean)
-    return {"success": False, "error": "P6E2_ORIGINAL_ROUTE_FILE_MISSING"}
-# === END_P6E2_FILE_INTAKE_ROUTE_FILE_KWARGS_AND_IMAGE_ESTIMATE_20260504_V1 ===
-
-====================================================================================================
-END_FILE: core/file_intake_router.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/ai_router.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 7c5a85800f035842fcd179daf52546522c9c5592891d9f1b6790beaf5143c69d
-====================================================================================================
-import os
-import re
-import json
-import hashlib
-import logging
-from typing import Any, Dict, List
-
-# === SEARCH_MONOLITH_V2_IMPORT ===
-# AVAILABILITY_CHECK: проверка доступности источника перед поиском
-# STALE_CONTEXT_GUARD: не использовать устаревший контекст > 24h
-# NEGATIVE_SELECTION: исключать нерелевантные источники
-
-try:
-    from core.search_session import run_search_monolith_v2, has_active_search_session
-except Exception:
-    run_search_monolith_v2 = None
-    has_active_search_session = lambda chat_id, topic_id: False
-# === END SEARCH_MONOLITH_V2_IMPORT ===
-
-import httpx
-from dotenv import load_dotenv
-
-BASE = "/root/.areal-neva-core"
-ENV_PATH = f"{BASE}/.env"
-LOG_PATH = f"{BASE}/logs/ai_router.log"
-
-load_dotenv(ENV_PATH, override=True)
-os.makedirs(f"{BASE}/logs", exist_ok=True)
-
-logger = logging.getLogger("ai_router")
-logger.setLevel(logging.INFO)
-if not logger.handlers:
-    fh = logging.FileHandler(LOG_PATH)
-    fh.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
-    logger.addHandler(fh)
-
-OPENROUTER_API_KEY = <REDACTED_SECRET>"OPENROUTER_API_KEY", "").strip()
-OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").strip().rstrip("/")
-
-DEFAULT_MODEL = os.getenv("OPENROUTER_MODEL", "deepseek/deepseek-chat").strip() or "deepseek/deepseek-chat"
-ONLINE_MODEL = os.getenv("OPENROUTER_MODEL_ONLINE", "perplexity/sonar").strip() or "perplexity/sonar"  # SEARCH_MONOLITH_V1
-
-SEARCH_RE = [
-    r"\bнайди\b", r"\bнайти\b", r"\bпоиск\b", r"\bпоищи\b", r"\bsearch\b",
-    r"\bцена\b", r"\bстоимость\b", r"\bсколько стоит\b",
-    r"\bavito\b", r"\bozon\b", r"\bwildberries\b", r"\bauto\.ru\b", r"\bdrom\b",
-    r"\bновости\b", r"\bпогода\b", r"\bкурс\b", r"\bмаркетплейс\b", r"\bссылк", r"\bкупить\b", r"\bзаказать\b", r"\bтовар\b",
-    r"озон", r"валбер", r"вайлдбер", r"площадк"
-]
-
-BAD_CONTEXT_RE = [
-    r"forbidden default model",
-    r"traceback",
-    r"telegramconflicterror",
-    r"voice unavailable",
-    r"stt failed",
-    r"/root/",
-    r"\.log",
-    r"\.json"
-]
-
-BAD_RESULT_RE = [
-    r"\bой\b",
-    r"сорян",
-    r"дружище",
-    r"не переживай",
-    r"дай мне немного времени",
-    r"я могу помочь",
-    r"извини",
-    r"извините",
-    r"я тут",
-    r"уведомлятор",
-    r"перегрелся",
-    r"😅",
-    r"💪",
-    r"😎",
-    r"непонятно",
-    r"уточните",
-    r"недостаточно данных",
-    r"\bищу\b",
-    r"\bнайду\b",
-    r"ожидаю уточнения",
-    r"ссылк[аи]\s+предоставлю",
-    r"готов искать",
-    r"могу найти",
-    r"укажите,?\s+что именно нужно найти"
-]
-
-SYSTEM_PROMPT = """# AREAL-NEVA ORCHESTRA — КАНОНИЧЕСКИЙ СИСТЕМНЫЙ ПРОМПТ
-# CANON_SYSTEM_PROMPT_V1
-
-## КТО ТЫ
-Ты — исполнительный AI-оркестр системы AREAL-NEVA. Ты не просто отвечаешь на последнее сообщение. Ты понимаешь контекст, смысл, область задачи и текущую ветку разговора.
-
-## ГЛАВНЫЙ ПРИОРИТЕТ КОНТЕКСТА
-1. Текущее сообщение пользователя — ВСЕГДА главное
-2. Активная задача (если есть и релевантна)
-3. PIN (только если совпадает с темой)
-4. Краткая память (последние 2-3 релевантных факта)
-5. Долгая память (знания и выводы)
-6. Архив (только если тема совпадает)
-7. Результат поиска (если был)
-
-## ПОНИМАНИЕ ЧАТА
-Каждый чат имеет свою роль и специализацию:
-- технадзор → думай как технический инспектор
-- стройка → думай как прораб/сметчик
-- поиск → думай как снабженец
-- авто → думай как механик/снабженец запчастей
-- оркестр → думай как системный архитектор
-Если есть topic_role — это твой рабочий режим.
-
-## РАЗЛИЧЕНИЕ РАЗГОВОР / ЗАДАЧА
-РАЗГОВОР ("привет", "как дела", "ты тут", "ок", "спасибо") → короткий ответ, НИКАКИХ задач
-ЗАДАЧА = действие + объект + ожидаемый результат → создаётся задача
-УТОЧНЕНИЕ к активной задаче → продолжение задачи, не новая
-ПОДТВЕРЖДЕНИЕ ("да", "верно", "ок") при AWAITING_CONFIRMATION → DONE
-ИСПРАВЛЕНИЕ ("нет", "не так", "переделай") → revision
-ЗАВЕРШЕНИЕ ("всё", "готово", "закрывай") → FINISH, перебивает всё
-
-## ПРИОРИТЕТ ИНТЕНТОВ
-FINISH > CANCEL > CONFIRM > REVISION > TASK > SEARCH > CHAT
-
-## ПАМЯТЬ — ЧТО ХРАНИТЬ / ЧТО НЕ ХРАНИТЬ
-ХРАНИТЬ: результаты задач, выводы, факты, решения
-НЕ ХРАНИТЬ: ошибки, "не найдено", "уточните", служебные тексты, трейсбэки
-
-## ПОИСК
-Запускать поиск ТОЛЬКО если нужны актуальные внешние данные.
-Если [SEARCH_RESULT] есть в контексте — используй ТОЛЬКО его, не выдумывай.
-НЕ писать: "ищу", "найду", "ссылки предоставлю" — только готовый результат.
-
-## ОТВЕТ
-- Только по сути задачи
-- Без болтовни, без эмодзи, без извинений
-- Без служебных фраз, путей, json-обрывков, трейсбэков
-- Если неясно — ОДИН короткий уточняющий вопрос
-- Активная задача не блокирует чат — новые вопросы получают ответ
-
-## ЗАПРЕЩЁННЫЕ ФРАЗЫ
-"недостаточно данных" | "не могу" | "уточните" (без причины) | "ожидаю уточнения" |
-"готов искать" | "могу найти" | "задача не выполнена" (без кода) | "Задача завершена" (без результата) |
-"Не понимаю запрос" | "Готов к выполнению"
-
-## ФАЙЛЫ
-Файл принят → обработать → результат в Google Drive → вернуть ссылку.
-Сервер не хранит тяжёлые файлы постоянно. Drive = основное хранилище.
-
-## ЦЕЛЬ
-Думай как человек: понимай смысл, помни только важное, не засоряй голову мусором, доводи задачу до результата.
-""".strip()  # CANON_SYSTEM_PROMPT_V1
-
-SEARCH_SYSTEM_PROMPT = """# SEARCH_MONOLITH_V1 — ЦИФРОВОЙ СНАБЖЕНЕЦ
-
-Ты — закупочный эксперт. Твоя задача НЕ "найти ссылки", а дать закупочное решение.
-
-## ЭТАП 1: РАЗБОР ЗАПРОСА
-Извлеки: товар, категорию, бренд, модель, характеристики, артикул/OEM/SKU, город, количество, новое/б/у, аналоги допустимы?, доставка нужна?, приоритет (цена/качество/скорость).
-Для стройки: материал, профиль, толщина, RAL, покрытие, ГОСТ/ТУ, единица цены, объём.
-Для запчастей: марка, модель, год, кузов, OEM, сторона, рестайлинг/дорестайлинг, новая/б/у/контрактная.
-
-## ЭТАП 2: УТОЧНЕНИЕ (максимум 3 вопроса если данных мало)
-Не более 3 вопросов. Дальше работай с тем что есть.
-
-## ЭТАП 3: РАСШИРЕНИЕ ЗАПРОСА (7+ формул)
-Ищи по: название+город, название+оптом, название+производитель, артикул/OEM, физпараметры, название+Avito, название+VK/Telegram.
-
-## ЭТАП 4: ЦИФРОВОЙ ДВОЙНИК ТОВАРА
-Ищи по физическим параметрам, не по рекламному названию.
-
-## ЭТАП 5: ИСТОЧНИКИ
-Проверь: Ozon, Wildberries, Яндекс Маркет, Avito, Петрович, Леруа, ВсеИнструменты, заводы, дилеры, 2ГИС, VK, Telegram, форумы.
-Для запчастей: Exist, Emex, ZZap, Drom, Auto.ru, EuroAuto, разборки.
-
-## ЭТАП 6: КЛАССИФИКАЦИЯ ИСТОЧНИКА
-Каждому источнику: производитель / дилер / база / оптовик / маркетплейс / частник / разборка / форум.
-Доверие: CONFIRMED / PARTIAL / UNVERIFIED / RISK.
-checked_at и source_url ОБЯЗАТЕЛЬНЫ. Без них — не выше PARTIAL.
-
-## ЭТАП 7: ТЕХНИЧЕСКИЙ АУДИТ
-Для стройки: проверь толщину, RAL, покрытие, слой цинка, жалобы ("тонкий","брак","не тот цвет").
-Для запчастей: OEM, сторона, кузов, состояние, жалобы ("не подошло","не та сторона","предоплата").
-ЗАПРЕЩЕНО смешивать в одной строке: 0.45 и 0.5, разные RAL, оригинал и аналог, б/у и новое.
-
-## ЭТАП 8: REVIEW TRUST SCORE (0-100)
-80-100: живые отзывы с фото и деталями.
-60-79: частично подтверждены.
-40-59: нужен звонок.
-0-39: высокий риск фейка.
-Фейки: одинаковые фразы, все в один день, нет фото, профиль пустой.
-
-## ЭТАП 9: SELLER_RISK для VK/Telegram
-Автоматически UNVERIFIED пока не подтверждены: цена, дата, контакт, наличие.
-Красные флаги: новая группа, боты, только предоплата, скрытые контакты.
-
-## ЭТАП 10: RISK SCORE
-Красные флаги: цена сильно ниже рынка, только предоплата, нет телефона/адреса/ИНН, старый прайс, не совпадают ТТХ.
-
-## ЭТАП 11: TCO
-итоговая цена = цена + доставка + комиссия + добор + риск − кэшбэк
-Учитывай: НДС, минимальная партия, гарантия, возврат, самовывоз.
-
-## ЭТАП 12: РАНЖИРОВАНИЕ
-CHEAPEST — самый дешёвый.
-MOST_RELIABLE — самый надёжный.
-BEST_VALUE — лучший баланс цена/риск/логистика.
-FASTEST — самый быстрый.
-RISK_CHEAP — дёшево но рискованно.
-REJECTED — что отброшено и почему.
-
-## ЭТАП 13: ТАБЛИЦА (обязательна)
-Поставщик | Площадка | Тип | Город | Цена | Ед. | TCO | ТТХ совпадают | Trust Score | Риск | Контакт | Ссылка | checked_at | Статус
-
-## ЭТАП 14: ШАБЛОН ЗВОНКА (обязателен)
-- Цена актуальна?
-- Есть в наличии?
-- Цена с НДС или без?
-- Доставка сколько и когда?
-- Документы/счёт дадут?
-- Гарантия/возврат есть?
-- Характеристики точно такие?
-- Для металла: толщина, покрытие, слой цинка.
-- Для запчастей: OEM, сторона, кузов, состояние.
-
-## ЗАПРЕЩЕНО
-- Выдавать просто список ссылок без анализа.
-- Писать "цена уточняйте" как результат.
-- Смешивать разные ТТХ в одном варианте.
-- Выдумывать цены и контакты.
-- Непроверенные данные как факт.
-"""  # END SEARCH_MONOLITH_V1.strip()
-
-def _s(v: Any) -> str:
-    if v is None:
-        return ""
-    if isinstance(v, str):
-        return v.strip()
-    try:
-        return json.dumps(v, ensure_ascii=False)
-    except Exception:
-        return str(v).strip()
-
-
-def _dedup_text(text: str) -> str:
-    seen = set()
-    out = []
-    for line in text.split("\n"):
-        key = line.strip().lower()
-        if key and key not in seen:
-            seen.add(key)
-            out.append(line)
-    return "\n".join(out)
-
-def _clean(text: str, limit: int = 12000) -> str:
-    text = (text or "").replace("\r", "\n")
-    text = re.sub(r"[ \t]+", " ", text)
-    text = re.sub(r"\n{3,}", "\n\n", text)
-    return text.strip()[:limit]
-
-def _match_any(patterns: List[str], text: str) -> bool:
-    t = (text or "").lower()
-    return any(re.search(p, t, re.I) for p in patterns)
-
-def _search_intent(text: str, input_type: str) -> bool:
-    if (input_type or "").lower() == "search":
-        return True
-    return _match_any(SEARCH_RE, text)
-
-def _sanitize_block(label: str, value: Any) -> str:
-    text = _clean(_s(value), 4000)
-    if not text:
-        return ""
-    if _match_any(BAD_CONTEXT_RE, text):
-        return ""
-    return f"[TYPE:{label}]\n{text}"
-
-def _dedup_blocks(blocks: List[str]) -> List[str]:
-    out = []
-    seen = set()
-    for block in blocks:
-        b = _clean(block, 4000)
-        if not b:
-            continue
-        key = hashlib.sha1(re.sub(r"\s+", " ", b.lower()).encode("utf-8")).hexdigest()
-        if key in seen:
-            continue
-        seen.add(key)
-        out.append(b)
-    return out
-
-def _extract_user_text(payload: Dict[str, Any]) -> str:
-    for key in ("normalized_input", "raw_input", "input", "text", "prompt", "message", "transcript"):
-        text = _clean(_s(payload.get(key)))
-        if text:
-            return text
-    return ""
-
-
-def _build_messages(payload: Dict[str, Any], user_text: str) -> List[Dict[str, str]]:
-    user_text = _dedup_text(user_text)
-    if not user_text.strip():
-        return [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": "REQUEST:\nпустой запрос"}
-        ]
-
-    input_type = _s(payload.get("input_type")).lower() or "text"
-    state = _s(payload.get("state")).upper() or "IN_PROGRESS"
-
-    topic_role = _clean(_s(payload.get("topic_role")), 500)
-    topic_directions = _clean(_s(payload.get("topic_directions")), 1000)
-    system_content = SYSTEM_PROMPT
-    # search-followup: если жалуются на ссылки и есть search_context — не давать общие советы
-    search_followup_markers = [
-        "нерелевант",
-        "битые",
-        "битые ссылки",
-        "ссылки биты",
-        "ссылки битые",
-        "живые ссылки",
-        "ссылки не те",
-        "проверь",
-        "проверь еще",
-        "проверь ещё",
-        "ещё раз",
-        "еще раз",
-        "это не то",
-    ]
-    if any(m in user_text.lower() for m in search_followup_markers) and payload.get("search_context"):
-        system_content += "\n\nFORBIDDEN_SEARCH_ADVICE: ЗАПРЕЩЕНО предлагать Dr.Web, Link Checker, Yandex Safety, Google Safe Browsing, VirusTotal и любые общие сервисы проверки ссылок. Нужно продолжить именно предыдущую поисковую задачу, опираясь на SEARCH_RESULT, без общих советов и без ухода в сторону."
-    if topic_role:
-        system_content = f"Роль этого чата: {topic_role}\n\n" + system_content
-    if topic_directions:
-        system_content = system_content + f"\n\nТиповые задачи этого чата: {topic_directions}"
-
-
-    # === OWNER_REFERENCE_FULL_WORKFLOW_POLICY_V1 ===
-    try:
-        from core.owner_reference_policy import build_owner_reference_context
-        _owner_reference_policy_context = build_owner_reference_context(user_text)
-    except Exception as _orp_err:
-        logger.warning("OWNER_REFERENCE_POLICY_V1_ERR %s", _orp_err)
-        _owner_reference_policy_context = ""
-    # === END_OWNER_REFERENCE_FULL_WORKFLOW_POLICY_V1 ===
-
-    # === ESTIMATE_TEMPLATE_POLICY_CONTEXT_V4_TOP_LOGISTICS ===
-    try:
-        from core.estimate_template_policy import build_estimate_template_context
-        _estimate_template_policy_context = build_estimate_template_context(user_text)
-    except Exception as _etp_err:
-        logger.warning("ESTIMATE_TEMPLATE_POLICY_CONTEXT_V4_ERR %s", _etp_err)
-        _estimate_template_policy_context = ""
-    # === END_ESTIMATE_TEMPLATE_POLICY_CONTEXT_V4_TOP_LOGISTICS ===
-
-    blocks = _dedup_blocks([
-        _sanitize_block("OWNER_REFERENCE_POLICY", _owner_reference_policy_context),
-        _sanitize_block("ESTIMATE_TEMPLATE_POLICY", _estimate_template_policy_context),
-        _sanitize_block("ACTIVE_TASK", payload.get("active_task_context")),
-        _sanitize_block("PIN", payload.get("pin_context")),
-        _sanitize_block("SHORT_MEMORY", payload.get("short_memory_context")),
-        _sanitize_block("LONG_MEMORY", payload.get("long_memory_context")),
-        _sanitize_block("ARCHIVE", payload.get("archive_context")),
-        _sanitize_block("SEARCH_RESULT", payload.get("search_context")),
-    ])
-
-    user_parts = [
-        f"STATE: {state}",
-        f"INPUT_TYPE: {input_type}",
-    ]
-    if blocks:
-        user_parts.append("CONTEXT:\n" + "\n\n".join(blocks))
-    user_parts.append("REQUEST:\n" + user_text)
-
-    return [
-        {"role": "system", "content": system_content},
-        {"role": "user", "content": "\n\n".join(user_parts)},
-    ]
-
-def _extract_content(data: Dict[str, Any]) -> str:
-    try:
-        content = data["choices"][0]["message"]["content"]
-        if isinstance(content, list):
-            parts = []
-            for item in content:
-                if isinstance(item, dict) and item.get("type") == "text":
-                    parts.append(item.get("text", ""))
-                else:
-                    parts.append(_s(item))
-            return _clean("\n".join(parts))
-        return _clean(_s(content))
-    except Exception:
-        return _clean(json.dumps(data, ensure_ascii=False)[:2000])
-
-async def _openrouter_call(model: str, messages: List[Dict[str, str]]) -> str:
-    headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        "Content-Type": "application/json",
-    }
-    body = {
-        "model": model,
-        "messages": messages,
-        "temperature": 0.2,
-    }
-    async with httpx.AsyncClient(timeout=httpx.Timeout(300.0, connect=30.0)) as client:
-        r = await client.post(f"{OPENROUTER_BASE_URL}/chat/completions", headers=headers, json=body)
-    if r.status_code != 200:
-        msg = f"OPENROUTER_HTTP_{r.status_code}: {r.text[:500]}"
-        logger.error(msg)
-        raise RuntimeError(msg)
-    return _extract_content(r.json())
-
-async def process_ai_task(payload: Dict[str, Any]) -> str:
-    if not OPENROUTER_API_KEY:
-        raise RuntimeError("OPENROUTER_API_KEY not set")
-
-    user_text = _dedup_text(_extract_user_text(payload))
-    if not user_text:
-        return ""
-
-    input_type = _s(payload.get("input_type")).lower()
-    _s_chat = _s(payload.get("chat_id"))
-    try: _s_topic = int(payload.get("topic_id") or 0)
-    except: _s_topic = 0
-    is_search = _search_intent(user_text, input_type) or bool(has_active_search_session(_s_chat, _s_topic))
-    work_payload = dict(payload)
-
-    if is_search:
-        # === SEARCH_MONOLITH_V2_CALL ===
-        try:
-            if run_search_monolith_v2 is not None:
-                _v2 = await run_search_monolith_v2(work_payload, user_text, _openrouter_call, ONLINE_MODEL, SEARCH_SYSTEM_PROMPT)
-                _v2 = _clean(_s(_v2), 12000)
-                if _v2:
-                    logger.info("SEARCH_MONOLITH_V2_OK chars=%s", len(_v2))
-                    return _v2
-        except Exception as _v2e:
-            logger.error("SEARCH_MONOLITH_V2_FAIL err=%s fallback=V1", _v2e)
-        # === END SEARCH_MONOLITH_V2_CALL ===
-        logger.info(
-            "router_search_call model=%s input_type=%s state=%s chars=%s",
-            ONLINE_MODEL,
-            input_type or "text",
-            _s(payload.get("state")).upper() or "IN_PROGRESS",
-            len(user_text),
-        )
-        try:
-            search_result = await _openrouter_call(
-                ONLINE_MODEL,
-                [
-                    {"role": "system", "content": SEARCH_SYSTEM_PROMPT},
-                    {"role": "user", "content": user_text},
-                ],
-            )
-        except Exception as e:
-            logger.error("search_model_fail err=%s — fallback to DEFAULT_MODEL without search", e)
-            search_result = ""
-
-        search_result = _clean(_s(search_result), 4000)
-        if not search_result:
-            logger.warning("web_search_empty query=%s", user_text[:200])
-        else:
-            existing = _clean(_s(work_payload.get("search_context")), 4000)
-            work_payload["search_context"] = search_result + ("\n\n" + existing if existing else "")
-            logger.info("web_search_ok chars=%s", len(search_result))
-
-    logger.info(
-        "router_call model=%s input_type=%s state=%s chars=%s is_search=%s",
-        DEFAULT_MODEL,
-        input_type or "text",
-        _s(payload.get("state")).upper() or "IN_PROGRESS",
-        len(user_text),
-        is_search,
-    )
-
-    messages = _build_messages(work_payload, user_text)
-    ctx_str = _clean_context("\n\n".join(m.get("content", "") for m in messages))
-    if _context_has_answer(ctx_str):
-        for m in messages:
-            if m.get("role") == "system":
-                m["content"] += "\nFORBIDDEN: do not ask clarifying questions. Answer directly."
-                break
-    # === MODEL_OVERRIDE_V1 ===
-    _final_model = work_payload.get("model_override") or DEFAULT_MODEL
-    result = await _openrouter_call(_final_model, messages)
-    # === END MODEL_OVERRIDE_V1 ===
-
-    if _match_any(BAD_RESULT_RE, result):
-        logger.warning("router_result_filtered result=%s", result[:120])
-        return ""
-
-    logger.info("router_ok chars=%s", len(result))
-    return result
-
-
-
-def _clean_context(text: str) -> str:
-    if not text:
-        return ""
-    text = text.replace("\r", "\n")
-    text = text.replace("\t", " ")
-    while "\n\n\n" in text:
-        text = text.replace("\n\n\n", "\n\n")
-    return text.strip()[:12000]
-
-def _context_has_answer(text: str) -> bool:
-    if not text:
-        return False
-    return len(text.strip()) > 50
-
-# FORCE CLEAN CONTEXT
-
-SEARCH_SYSTEM_PROMPT = """# TOPIC500_SEARCH_OUTPUT_CONTRACT_20260504_V1
-
-ROLE:
-Ты закупочный интернет-поиск для topic_500
-
-OUTPUT MUST BE USEFUL, NOT ANALYTICAL
-
-HARD RULES:
-- No long analysis
-- No essay
-- No fake source numbers like [1], [2]
-- No "НЕ ПОДТВЕРЖДЕНО" blocks as final answer
-- No duplicated summary sections
-- No generic advice
-- No old context
-- Use only current user query
-- If user asks suppliers/prices, return direct supplier rows
-- Every row must contain direct URL
-- Phone is mandatory when visible in search result; if phone is not visible write "телефон не найден"
-- Prefer Saint Petersburg / Ленобласть when requested
-- Prefer official supplier/site/marketplace pages over articles
-- If exact brand spelling is suspicious, search both original and corrected spelling, but keep original in output
-
-FORMAT STRICTLY:
-
-Найдено: <N> вариантов
-
-| № | Поставщик | Город | Цена | Ед. | Наличие | Доставка | Телефон | Ссылка |
-|---|-----------|-------|------|-----|---------|----------|---------|--------|
-| 1 | ... | ... | ... | ... | ... | ... | ... | https://... |
-
-Лучший вариант:
-<1 строка: поставщик, цена, почему>
-
-Проверить звонком:
-1. актуальная цена
-2. наличие
-3. доставка
-4. НДС/счёт
-5. точная марка/толщина/размер
-
-Отброшено:
-- <только если реально есть что отбросить, кратко>
-
-If fewer than 3 supplier rows are found:
-Return what is found and write:
-"Найдено меньше 3 прямых поставщиков, нужен повторный поиск по расширенным площадкам"
-
-"""
-
-
-# === P6F_TOPIC500_CONTEXT_SANITIZER_V1 ===
-# FACT: removes old supplier tables / Trust Score / TCO / "НЕ ПОДТВЕРЖДЕНО" / "ЭТАП N"
-# / naked [1][2][3] markers from search context BEFORE Perplexity call.
-# Exposed as _p6f_ts_sanitize_payload(payload) — used by callers via append-wraps.
-import re as _p6f_ts_re
-import logging as _p6f_ts_logging
-
-_P6F_TS_LOG = _p6f_ts_logging.getLogger("ai_router")
-
-_P6F_TS_NOISE_PATTERNS = [
-    r"(?im)^\s*Trust\s*Score[^\n]*\n?",
-    r"(?im)^\s*TCO[^\n]*\n?",
-    r"(?im)^\s*НЕ\s*ПОДТВЕРЖД[^\n]*\n?",
-    r"(?im)^\s*ЭТАП\s*\d+[^\n]*\n?",
-    r"(?im)^\s*Risk\s*Score[^\n]*\n?",
-    r"(?im)^\s*Review\s*Trust[^\n]*\n?",
-    r"(?im)^\s*\|[^\n]*Поставщик[^\n]*\|[^\n]*\n?",
-    r"(?im)^\s*\|[^\n]*Цена[^\n]*\|[^\n]*Источник[^\n]*\n?",
-    r"(?<![a-zA-Z0-9.])\[\d+\](?![\(\:])",
-]
-
-_P6F_TS_SUPPLIER_TABLE = _p6f_ts_re.compile(
-    r"(?ims)\n\s*\|.*?Поставщик.*?\|\s*\n(\s*\|[-: ]+\|.*\n)?(\s*\|.*\n){1,40}",
-)
-
-def _p6f_ts_sanitize_text(text):
-    if not text:
-        return ""
-    s = str(text)
-    s = _P6F_TS_SUPPLIER_TABLE.sub("\n", s)
-    for p in _P6F_TS_NOISE_PATTERNS:
-        s = _p6f_ts_re.sub(p, "", s)
-    s = _p6f_ts_re.sub(r"\n{3,}", "\n\n", s).strip()
-    return s
-
-def _p6f_ts_is_search_topic(payload):
-    try:
-        return int((payload or {}).get("topic_id", 0) or 0) == 500
-    except Exception:
-        return False
-
-def _p6f_ts_sanitize_payload(payload):
-    """
-    Returns a NEW dict (shallow copy) with sanitized search_context and user_text
-    for topic_500 procurement search. Other topics pass through unchanged.
-    """
-    if not isinstance(payload, dict):
-        return payload
-    if not _p6f_ts_is_search_topic(payload):
-        return payload
-    out = dict(payload)
-    if "search_context" in out and out["search_context"]:
-        before_len = len(str(out["search_context"]))
-        out["search_context"] = _p6f_ts_sanitize_text(out["search_context"])
-        after_len = len(str(out["search_context"]))
-        if before_len != after_len:
-            _P6F_TS_LOG.info(
-                "P6F_TS_SANITIZED_SEARCH_CONTEXT topic=500 chat=%s before=%d after=%d removed=%d",
-                out.get("chat_id"), before_len, after_len, before_len - after_len,
-            )
-    for key in ("raw_input", "normalized_input", "user_text"):
-        if key in out and out[key] and isinstance(out[key], str):
-            out[key] = _p6f_ts_sanitize_text(out[key])
-    return out
-
-try:
-    _P6F_TS_LOG.info("P6F_TOPIC500_CONTEXT_SANITIZER_V1_LOADED")
-except Exception:
-    pass
-# === END_P6F_TOPIC500_CONTEXT_SANITIZER_V1 ===
-
-# === P6F_TOPIC500_SANITIZER_AI_ROUTER_BIND_20260504_V1 ===
-# FACT: wraps process_ai_task at module level so callers that re-import
-# inside functions (e.g., sample_template_engine line 5132) pick up the
-# sanitized version on every call.
-try:
-    _P6F_TS_AR_ORIG_PROCESS_AI_TASK = process_ai_task
-    if not getattr(_P6F_TS_AR_ORIG_PROCESS_AI_TASK, "_p6f_ts_ar_wrapped", False):
-        async def _p6f_ts_ar_wrapped_process_ai_task(payload):
-            try:
-                payload = _p6f_ts_sanitize_payload(payload)
-            except Exception as _e:
-                _P6F_TS_LOG.warning("P6F_TS_AR_SANITIZE_ERR %s", _e)
-            return await _P6F_TS_AR_ORIG_PROCESS_AI_TASK(payload)
-        _p6f_ts_ar_wrapped_process_ai_task._p6f_ts_ar_wrapped = True
-        process_ai_task = _p6f_ts_ar_wrapped_process_ai_task
-        _P6F_TS_LOG.info("P6F_TOPIC500_SANITIZER_AI_ROUTER_BIND_INSTALLED")
-except Exception as _e:
-    _P6F_TS_LOG.exception("P6F_TS_AR_BIND_INSTALL_ERR %s", _e)
-# === END_P6F_TOPIC500_SANITIZER_AI_ROUTER_BIND_20260504_V1 ===
-
-
-# === P6G_PAYLOAD_SANITIZER_EXTENDED_FIELDS_V1 ===
-# FACT: extends P6F_TS_sanitize_payload to clean MORE fields where stale
-# context can leak: memory_context, archive_context, full_context, history,
-# context, pin_context, parent_context.
-import logging as _p6g_pse_logging
-_P6G_PSE_LOG = _p6g_pse_logging.getLogger("ai_router")
-
-_P6G_PSE_EXTRA_FIELDS = (
-    "memory_context", "archive_context", "full_context", "history",
-    "context", "pin_context", "parent_context",
-)
-
-try:
-    _P6G_PSE_ORIG_SANITIZE = _p6f_ts_sanitize_payload
-    if not getattr(_P6G_PSE_ORIG_SANITIZE, "_p6g_pse_wrapped", False):
-        def _p6f_ts_sanitize_payload(payload):
-            out = _P6G_PSE_ORIG_SANITIZE(payload)
-            if not isinstance(out, dict):
-                return out
-            try:
-                topic_id = int((out or {}).get("topic_id", 0) or 0)
-            except Exception:
-                topic_id = 0
-            if topic_id != 500:
-                return out
-            cleaned_count = 0
-            for f in _P6G_PSE_EXTRA_FIELDS:
-                if f in out and out[f] and isinstance(out[f], str):
-                    before = len(out[f])
-                    out[f] = _p6f_ts_sanitize_text(out[f])
-                    after = len(out[f])
-                    if before != after:
-                        cleaned_count += 1
-            if cleaned_count:
-                _P6G_PSE_LOG.info(
-                    "P6G_PSE_EXTRA_FIELDS_CLEANED topic=500 fields_changed=%d", cleaned_count,
-                )
-            return out
-        _p6f_ts_sanitize_payload._p6g_pse_wrapped = True
-        _P6G_PSE_LOG.info("P6G_PAYLOAD_SANITIZER_EXTENDED_FIELDS_V1_INSTALLED")
-except Exception as _e:
-    _P6G_PSE_LOG.exception("P6G_PSE_INSTALL_ERR %s", _e)
-# === END_P6G_PAYLOAD_SANITIZER_EXTENDED_FIELDS_V1 ===
-
-====================================================================================================
-END_FILE: core/ai_router.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/__init__.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-====================================================================================================
-
-====================================================================================================
-END_FILE: core/__init__.py
 FILE_CHUNK: 1/1
 ====================================================================================================

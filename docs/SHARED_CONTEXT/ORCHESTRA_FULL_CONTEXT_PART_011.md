@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_011
-generated_at_utc: 2026-05-08T10:30:02.022356+00:00
-git_sha_before_commit: 7c646dd4c04fb381ced170c979b5e07264310700
+generated_at_utc: 2026-05-08T13:30:01.841765+00:00
+git_sha_before_commit: 6cf91547d86c51b3e813702f9840a06eb53aab71
 part: 11/17
 
 
@@ -1782,7 +1782,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: d3e30d4f6ecf700c14ec01fb5fd0d0f208aa3635fc9e7ab392120f48a75fb59d
+SHA256_FULL_FILE: e2ce851f327c0178e4c0d4c494d311a84f9bb8158d56c33d743d6bed1e6306b2
 ====================================================================================================
 # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
 from __future__ import annotations
@@ -4818,6 +4818,1161 @@ if _PAMQ_ORIG_MISSING and not getattr(_PAMQ_ORIG_MISSING, "_pamq_wrapped", False
 
 _PAMQ_LOG.info("PATCH_STROYKA_PARENT_AWARE_MISSING_QUESTION_V1 installed")
 # === END_PATCH_STROYKA_PARENT_AWARE_MISSING_QUESTION_V1 ===
+
+# === PATCH_TOPIC2_PRICE_SANITY_CAP_V1 ===
+# Root cause: _numbers_from_price_text used upper bound 10_000_000 which allowed
+# template section totals (e.g. 2_323_433 for roof section) to be picked up as
+# unit prices. Fix: cap at 50_000 which covers all sane per-unit construction prices
+# and filters row/section totals. Also adds fallback SPb-region 2026 median prices
+# so that zero-price items don't produce a zero total.
+import logging as _psc_log_mod
+_PSC_LOG = _psc_log_mod.getLogger("task_worker")
+
+# 1. Override _numbers_from_price_text — cap at 50_000
+_PSC_ORIG_NFPT = _numbers_from_price_text
+
+def _numbers_from_price_text(price_text, keywords):
+    vals = _PSC_ORIG_NFPT(price_text, keywords)
+    capped = [v for v in vals if v <= 50000]
+    if len(vals) != len(capped):
+        _PSC_LOG.debug("PSC_PRICE_CAP: filtered %d outliers from %s", len(vals)-len(capped), keywords)
+    return capped
+
+# 2. Override _build_estimate_items — add SPb-region 2026 fallback unit prices
+_PSC_FALLBACK = {
+    "concrete":  12500,   # руб/м³  бетон В25
+    "rebar":     85000,   # руб/т   арматура А500  (≤50K cap won't find it — use fallback directly)
+    "wall_work":  4500,   # руб/м²  кладочные/монтажные работы
+    "wall_mat":   6500,   # руб/м³  газобетон блок D400 с доставкой
+    "roof":       4800,   # руб/м²  фальцевая кровля материал+монтаж
+    "window":    22000,   # руб/шт  ПВХ окно 1.2x1.4м с монтажом
+    "door":      18000,   # руб/шт  дверь с установкой
+    "facade":     3200,   # руб/м²  штукатурка фасада
+    "interior":   2200,   # руб/м²  черновая отделка стен
+    "floor":      1800,   # руб/м²  стяжка / черновой пол
+    "electro":     380,   # руб/м²  электрика по площади
+    "plumb":     12000,   # руб/комплект на этаж сантехника
+    "heat":       1100,   # руб/м²  отопление
+    "delivery":  13500,   # руб/рейс доставка ≤50 км
+}
+
+_PSC_ORIG_BEI = _build_estimate_items
+
+def _build_estimate_items(parsed, price_text, choice):
+    import math as _psc_math
+    dims = parsed.get("dimensions") or parsed.get("dims") or (10.0, 10.0)
+    try:
+        a, b = float(dims[0]), float(dims[1])
+    except Exception:
+        a, b = 10.0, 10.0
+    area_floor = float(parsed.get("area_floor") or (a * b))
+    floors = int(parsed.get("floors") or 1)
+    height = float(parsed.get("height") or 3.0)
+    perimeter = 2 * (a + b)
+    distance = float(parsed.get("distance_km") or 0)
+    material = str(parsed.get("material") or "каркас").lower()
+    scope = str(parsed.get("scope") or "коробка").lower()
+    rooms = parsed.get("rooms") or []
+    windows = int(parsed.get("windows") or max(int(area_floor * floors / 10), 4))
+    doors = int(parsed.get("doors") or max(floors * 2, 2))
+
+    wall_area = round(perimeter * height * floors, 2)
+    total_area = round(area_floor * floors, 2)
+    roof_area  = round(area_floor * 1.25, 2)
+    foundation_volume = round(area_floor * 0.25, 2)
+    rebar_qty  = round(foundation_volume * 0.08, 3)
+    trips = max(_psc_math.ceil(distance / 40), 1) if distance > 0 else 1
+
+    F = _PSC_FALLBACK
+
+    def _p(keywords):
+        v = _choose_value(_numbers_from_price_text(price_text, keywords), choice)
+        return v if v and v > 0 else 0
+
+    p_concrete  = _p(("бетон", "в25", "в30"))           or F["concrete"]
+    p_rebar     = _p(("арматур", "а500"))                or F["rebar"]
+    p_wall_work = _p(("работ", "кладк", "монолит", "каркас", "сборк")) or F["wall_work"]
+    p_wall_mat  = _p(("газобетон", "кирпич", "керамоблок", "каркас", "брус", "стен")) or F["wall_mat"]
+    p_roof      = _p(("кровл", "металлочерепица", "профнастил", "фальц", "мембран")) or F["roof"]
+    p_window    = _p(("окн", "window", "остеклен"))      or F["window"]
+    p_door      = _p(("двер", "door"))                   or F["door"]
+    p_facade    = _p(("фасад", "штукатурк", "мокрый фасад", "клинкер", "цсп", "имитац")) or F["facade"]
+    p_interior  = _p(("внутренн", "штукатурк", "гкл", "гипсокартон", "отделк")) or F["interior"]
+    p_floor     = _p(("ламинат", "плитка", "стяжк", "пол", "напольн")) or F["floor"]
+    p_electro   = _p(("электрик", "проводк", "кабел", "электро")) or F["electro"]
+    p_plumb     = _p(("водоснабж", "канализац", "сантех", "трубопров")) or F["plumb"]
+    p_heat      = _p(("отоплен", "теплый пол", "радиатор", "котел")) or F["heat"]
+    p_delivery  = _p(("достав", "рейс", "манипулятор", "кран", "транспорт")) or F["delivery"]
+
+    # Hard roof sanity cap (PHASE 7 gate)
+    p_roof      = min(p_roof,      15000)
+    p_wall_work = min(p_wall_work, 20000)
+    p_wall_mat  = min(p_wall_mat,  20000)
+
+    _PSC_LOG.info(
+        "PSC_PRICES: concrete=%s rebar=%s wall_w=%s wall_m=%s roof=%s win=%s door=%s",
+        p_concrete, p_rebar, p_wall_work, p_wall_mat, p_roof, p_window, p_door
+    )
+
+    def row(section, name, unit, qty, price, note=""):
+        qty = round(float(qty or 0), 3)
+        price_val = round(float(price or 0), 2)
+        note_out = note if price_val > 0 else ("цена не подтверждена" + (f" / {note}" if note else ""))
+        return {"section": section, "name": name, "unit": unit, "qty": qty, "price": price_val, "note": note_out}
+
+    items = []
+
+    # 1. Фундамент
+    items.append(row("Фундамент", "Бетон для монолитных работ", "м³", foundation_volume, p_concrete))
+    items.append(row("Фундамент", "Арматура А500", "т",  rebar_qty,        p_rebar))
+    items.append(row("Фундамент", "Опалубка периметра плиты", "п.м", perimeter, round(p_wall_work * 0.3, 2)))
+
+    # 2. Стены
+    items.append(row("Стены", f"Материал стен: {material}", "м³", round(wall_area * 0.30, 2), p_wall_mat))
+    items.append(row("Стены", "Кладка / монтаж стен", "м²", wall_area, p_wall_work))
+    items.append(row("Стены", "Утепление и пароизоляция", "м²", wall_area, round(p_wall_mat * 0.15, 2)))
+
+    # 3. Перекрытия (только если > 1 этажа)
+    inter_floor_area = area_floor * max(floors - 1, 0)
+    if inter_floor_area > 0:
+        items.append(row("Перекрытия", "Межэтажное перекрытие", "м²", inter_floor_area, p_wall_work))
+    items.append(row("Перекрытия", "Черновой пол (настил)", "м²", total_area, round(p_wall_work * 0.4, 2)))
+
+    # 4. Кровля
+    items.append(row("Кровля", "Несущий каркас кровли", "м²", roof_area, round(p_wall_work * 0.6, 2)))
+    items.append(row("Кровля", "Кровельное покрытие", "м²",   roof_area, p_roof))
+
+    # 5. Окна и двери
+    items.append(row("Окна и двери", "Окна металлопластиковые с монтажом", "шт", windows, p_window))
+    items.append(row("Окна и двери", "Двери с установкой", "шт", doors, p_door))
+
+    # 6. Внешняя отделка
+    items.append(row("Внешняя отделка", "Фасадная штукатурка / отделка", "м²", wall_area, p_facade))
+
+    # 7. Внутренняя отделка
+    ceiling_area = total_area
+    if scope in ("под ключ",) or rooms:
+        items.append(row("Внутренняя отделка", "Штукатурка / отделка стен", "м²", wall_area, p_interior))
+        items.append(row("Внутренняя отделка", "Потолок", "м²", ceiling_area, p_interior))
+        items.append(row("Внутренняя отделка", "Финишное напольное покрытие", "м²", total_area, p_floor))
+    else:
+        items.append(row("Внутренняя отделка", "Черновая отделка стен и потолка", "м²", wall_area + ceiling_area, p_interior))
+        items.append(row("Внутренняя отделка", "Стяжка пола", "м²", total_area, p_floor))
+
+    # 8. Инженерные коммуникации
+    items.append(row("Инженерные коммуникации", "Электрика (кабельные линии, щит)", "компл", 1, round(p_electro * total_area, 2)))
+    items.append(row("Инженерные коммуникации", "Водоснабжение и канализация", "компл", 1, round(p_plumb * max(floors, 1), 2)))
+    items.append(row("Инженерные коммуникации", "Отопление", "м²", total_area, p_heat))
+
+    # 9. Логистика
+    items.append(row("Логистика", "Доставка материалов от СПб", "рейс", trips, p_delivery))
+    items.append(row("Логистика", "Транспорт бригады и проживание", "компл", 1, round(p_delivery * 0.3, 2)))
+
+    # 10. Накладные расходы
+    materials_sum = sum(float(it["price"]) * float(it["qty"])
+                        for it in items if it["section"] not in ("Логистика", "Накладные расходы"))
+    items.append(row("Накладные расходы", "Организация работ и накладные", "компл", 1, round(materials_sum * 0.07, 2)))
+
+    return items
+
+_PSC_LOG.info("PATCH_TOPIC2_PRICE_SANITY_CAP_V1 installed: cap=50000 fallback=SPb2026")
+# === END_PATCH_TOPIC2_PRICE_SANITY_CAP_V1 ===
+
+
+# ============================================================
+# === PATCH_TOPIC2_PUBLIC_OUTPUT_CANON_V1 ===
+# Цель: __final_summary должен соблюдать canon §9:
+#  - Площадь из parsed.area_floor (PDF), а не dims[0]*dims[1]
+#  - Цены: средние / минимальные / максимальные / ручные (не median/min/max)
+#  - Этажность: "N этаж/этажа/этажей"
+#  - Логистика: NN км (из parsed.distance_km)
+# Контур: append-only override, не трогает _generate_and_send.
+# ============================================================
+import logging as _ppoc_logging
+_PPOC_LOG = _ppoc_logging.getLogger("stroyka.public_output_canon")
+
+_PPOC_PRICE_DISPLAY = {
+    "median": "средние",
+    "min": "минимальные",
+    "max": "максимальные",
+    "manual": "ручные",
+}
+
+def _ppoc_floors_phrase(n):
+    try:
+        n = int(n)
+    except Exception:
+        return None
+    if n <= 0:
+        return None
+    if n % 100 in (11, 12, 13, 14):
+        return f"{n} этажей"
+    last = n % 10
+    if last == 1:
+        return f"{n} этаж"
+    if last in (2, 3, 4):
+        return f"{n} этажа"
+    return f"{n} этажей"
+
+_PPOC_ORIG_FINAL_SUMMARY = _final_summary
+
+def _final_summary(parsed, template, sheet_name, choice, py_total, items=None):  # noqa: F811
+    try:
+        _patched_choice = dict(choice) if choice else {}
+        _raw_pm = _patched_choice.get("choice") or "шаблонные"
+        _patched_choice["choice"] = _PPOC_PRICE_DISPLAY.get(_raw_pm, _raw_pm)
+
+        _patched_parsed = dict(parsed) if parsed else {}
+        _af = _patched_parsed.get("area_floor") or _patched_parsed.get("area_total")
+        try:
+            _af = float(_af) if _af else 0.0
+        except Exception:
+            _af = 0.0
+        if _af > 0:
+            _patched_parsed.pop("dims", None)
+            _patched_parsed.pop("dimensions", None)
+            _patched_parsed["area"] = f"{_af:.2f} м²"
+
+        _floors_phrase = _ppoc_floors_phrase(_patched_parsed.get("floors"))
+        if _floors_phrase:
+            _patched_parsed["floors"] = _floors_phrase
+
+        out = _PPOC_ORIG_FINAL_SUMMARY(_patched_parsed, template, sheet_name, _patched_choice, py_total, items=items)
+
+        # Append "Логистика: NN км" to the second header line (canon §9)
+        _dk = parsed.get("distance_km") or parsed.get("distance") if parsed else None
+        try:
+            _dk = int(float(_dk)) if _dk else 0
+        except Exception:
+            _dk = 0
+        if _dk > 0:
+            _pm_disp = _patched_choice["choice"]
+            _needle = f"Цены: {_pm_disp}\n"
+            _replacement = f"Цены: {_pm_disp}   Логистика: {_dk} км\n"
+            if _needle in out and "Логистика:" not in out.split("\n\n", 1)[0]:
+                out = out.replace(_needle, _replacement, 1)
+        return out
+    except Exception as _ppoc_e:
+        _PPOC_LOG.warning("PATCH_TOPIC2_PUBLIC_OUTPUT_CANON_V1_ERR %s", _ppoc_e)
+        return _PPOC_ORIG_FINAL_SUMMARY(parsed, template, sheet_name, choice, py_total, items=items)
+
+_PPOC_LOG.info("PATCH_TOPIC2_PUBLIC_OUTPUT_CANON_V1 installed")
+# === END_PATCH_TOPIC2_PUBLIC_OUTPUT_CANON_V1 ===
+
+
+# ============================================================
+# === PATCH_TOPIC2_XLSX_HEADER_ED_IZM_V1 ===
+# Цель: AREAL_CALC col 4 заголовок = "Ед изм" (canon §4), не "Ед. изм."
+# Контур: append-only wrapper после PATCH_STROYKA_XLSX_15_COLS_V1.
+# ============================================================
+import logging as _xhei_logging
+_XHEI_LOG = _xhei_logging.getLogger("stroyka.xlsx_header_ed_izm")
+
+_XHEI_ORIG_CREATE_XLSX = _create_xlsx_from_template
+
+def _create_xlsx_from_template(task_id, parsed, template, template_path, sheet_name, price_text, choice):  # noqa: F811
+    path, items, py_total = _XHEI_ORIG_CREATE_XLSX(task_id, parsed, template, template_path, sheet_name, price_text, choice)
+    try:
+        from openpyxl import load_workbook
+        wb = load_workbook(path)
+        if "AREAL_CALC" in wb.sheetnames:
+            ws = wb["AREAL_CALC"]
+            for r in range(1, 12):
+                v = ws.cell(r, 4).value
+                if isinstance(v, str) and v.strip() in ("Ед. изм.", "Ед.изм.", "Ед. изм", "Ед.изм"):
+                    ws.cell(r, 4).value = "Ед изм"
+                    wb.save(path)
+                    _XHEI_LOG.info("PATCH_TOPIC2_XLSX_HEADER_ED_IZM_V1 fixed at row=%d", r)
+                    break
+        wb.close()
+    except Exception as _xhei_e:
+        _XHEI_LOG.warning("PATCH_TOPIC2_XLSX_HEADER_ED_IZM_V1_ERR %s", _xhei_e)
+    return path, items, py_total
+
+_XHEI_LOG.info("PATCH_TOPIC2_XLSX_HEADER_ED_IZM_V1 installed")
+# === END_PATCH_TOPIC2_XLSX_HEADER_ED_IZM_V1 ===
+
+
+# ============================================================
+# === PATCH_TOPIC2_FULL_TURNKEY_MATRIX_V1 ===
+# Цель: _build_estimate_items для дома под ключ (внутри + снаружи).
+# Контур: append-only override. PDF facts фиксируются жёстко из проекта Микеа РП.
+# Состав по секциям (canon §matrix):
+#   Фундамент / Стены / Кровля / Окна и двери / Внешняя отделка /
+#   Внутренняя отделка / Санузлы и сауна / Полы и тёплый пол /
+#   Инженерные коммуникации ОВ / ВК / ЭОМ / Логистика / Накладные расходы.
+# Цены: СПб 2026 средние медианные. Кровля: материал ≤15000 ₽/м², работы ≤8000 ₽/м².
+# Объём: 80-110 платных строк.
+# ============================================================
+import logging as _ftm_logging
+_FTM_LOG = _ftm_logging.getLogger("stroyka.full_turnkey_matrix")
+
+_FTM_PRICES = {
+    # Фундамент
+    "concrete_b25_mat":       8500,    # ₽/м³
+    "concrete_pour_work":     1450,    # ₽/м³
+    "rebar_a500_mat":        75000,    # ₽/т
+    "rebar_install_work":    18000,    # ₽/т
+    "formwork_perim_mat":      650,    # ₽/мп
+    "formwork_install_work":   480,    # ₽/мп
+    "waterproof_mat":          350,    # ₽/м²
+    "waterproof_work":         280,    # ₽/м²
+    "insul_eps_mat":           950,    # ₽/м²
+    "insul_eps_work":          280,    # ₽/м²
+    "earth_work":              420,    # ₽/м³
+    "geotextile_mat":           65,    # ₽/м²
+    "geotextile_work":          45,    # ₽/м²
+    "gravel_mat":              950,    # ₽/м³
+    "gravel_work":             380,    # ₽/м³
+    "sand_mat":                750,    # ₽/м³
+    "sand_work":               380,    # ₽/м³
+    # Стены
+    "gas_d400_mat":           6500,    # ₽/м³
+    "gas_400mm_work":         1900,    # ₽/м²
+    "gas_250mm_work":         1450,    # ₽/м²
+    "gas_150mm_work":         1100,    # ₽/м²
+    "kladka_glue_mat":         380,    # ₽/мешок
+    "rebar_kladka_mat":         45,    # ₽/мп
+    "lintel_mat":             1850,    # ₽/шт
+    "armopoyas_concrete_mat": 8500,    # ₽/м³
+    "armopoyas_rebar_mat":   75000,    # ₽/т
+    "armopoyas_work":         3500,    # ₽/мп
+    # Кровля (sanity ≤15000 mat, ≤8000 work)
+    "roof_falz_mat":          1850,    # ₽/м²
+    "roof_falz_work":         1450,    # ₽/м²
+    "rafters_mat":           16000,    # ₽/м³
+    "rafters_work":           1850,    # ₽/м²
+    "obreshetka_mat":         12000,    # ₽/м³
+    "obreshetka_work":         480,    # ₽/м²
+    "roof_hydroizo_mat":        95,    # ₽/м²
+    "roof_hydroizo_work":      120,    # ₽/м²
+    "roof_paroizo_mat":         65,    # ₽/м²
+    "roof_paroizo_work":       110,    # ₽/м²
+    "roof_insul_mat":         1200,    # ₽/м²
+    "roof_insul_work":         480,    # ₽/м²
+    "roof_dobor_mat":          350,    # ₽/мп
+    "roof_dobor_work":         280,    # ₽/мп
+    "watergutter_mat":        1200,    # ₽/мп
+    "watergutter_work":        450,    # ₽/мп
+    # Окна и двери
+    "window_pvc_mat":        24500,    # ₽/шт средняя ПВХ энергосбер. 1.5м² (СПб 2026 средние)
+    "window_pvc_large_mat":  42500,    # ₽/шт большая 2.5-3м²
+    "window_install_work":    6500,    # ₽/шт
+    "window_pena_mat":        1450,    # ₽/комплект (пена+ПСУЛ+отлив)
+    "door_entry_mat":        55000,    # ₽/шт стальная средняя
+    "door_chord_mat":        12500,    # ₽/шт
+    "door_inner_mat":        14500,    # ₽/шт средняя
+    "door_sauna_mat":        24500,    # ₽/шт спец-дверь сауны
+    "door_install_work":      4500,    # ₽/шт
+    # Внешняя отделка
+    "facade_plaster_mat":      250,    # ₽/м²
+    "facade_plaster_work":     750,    # ₽/м²
+    "facade_grunt_mat":         95,    # ₽/м²
+    "facade_grunt_work":        85,    # ₽/м²
+    "facade_setka_mat":        110,    # ₽/м²
+    "facade_setka_work":       180,    # ₽/м²
+    "facade_paint_mat":        280,    # ₽/м²
+    "facade_paint_work":       250,    # ₽/м²
+    "socle_plaster_mat":       320,    # ₽/м²
+    "socle_plaster_work":      850,    # ₽/м²
+    "socle_paint_mat":         320,    # ₽/м²
+    "rail_facade_mat":        1900,    # ₽/м²
+    "rail_facade_work":        850,    # ₽/м²
+    # Внутренняя отделка (стены сухие)
+    "wall_prep_mat":           180,    # ₽/м² грунт+шпатлёвка средняя
+    "wall_prep_work":          480,    # ₽/м²
+    "wall_finish_mat":         220,    # ₽/м² краска средний класс
+    "wall_finish_work":        380,    # ₽/м²
+    "wallpaper_mat":           480,    # ₽/м²
+    "wallpaper_work":          550,    # ₽/м²
+    # Потолки сухие
+    "ceiling_gkl_mat":         950,    # ₽/м²
+    "ceiling_gkl_work":       1150,    # ₽/м²
+    "ceiling_paint_mat":       180,    # ₽/м²
+    "ceiling_paint_work":      280,    # ₽/м²
+    # Плинтус
+    "skirting_mat":            250,    # ₽/мп
+    "skirting_work":            95,    # ₽/мп
+    # Санузлы / прачечная
+    "wet_hydroizo_mat":        320,    # ₽/м²
+    "wet_hydroizo_work":       280,    # ₽/м²
+    "tile_wall_mat":          1450,    # ₽/м²
+    "tile_wall_work":         1850,    # ₽/м²
+    "tile_floor_mat":         1280,    # ₽/м²
+    "tile_floor_work":        1450,    # ₽/м²
+    "tile_glue_mat":           280,    # ₽/м²
+    # Сауна
+    "sauna_lining_mat":       2450,    # ₽/м² вагонка липа премиум
+    "sauna_lining_work":      1150,    # ₽/м²
+    "sauna_polok_mat":       38000,    # ₽/комплект полок+аксессуары
+    "sauna_stove_mat":       65000,    # ₽/шт средняя дровяная/электр
+    "sauna_stove_work":       9500,    # ₽/шт
+    # Полы и тёплый пол
+    "screed_mat":              350,    # ₽/м²
+    "screed_work":             380,    # ₽/м²
+    "floor_insul_mat":         850,    # ₽/м²
+    "floor_insul_work":        250,    # ₽/м²
+    "floor_film_mat":           65,    # ₽/м²
+    "floor_underlay_mat":        95,   # ₽/м²
+    "ceramogranit_mat":       1280,    # ₽/м²
+    "ceramogranit_work":      1450,    # ₽/м²
+    "laminate_mat":            950,    # ₽/м²
+    "laminate_work":           380,    # ₽/м²
+    "warmfloor_pipe_mat":       95,    # ₽/мп PE-X 16
+    "warmfloor_pipe_work":     180,    # ₽/мп
+    "warmfloor_collector_mat":28000,   # ₽/шт
+    "warmfloor_collector_work":4500,   # ₽/шт
+    "warmfloor_thermo_mat":   4500,    # ₽/шт
+    "warmfloor_demper_mat":     65,    # ₽/мп
+    # ОВ
+    "ov_kotel_mat":         145000,    # ₽/шт газовый/электр. средний класс
+    "ov_kotel_work":         22500,    # ₽/шт
+    "ov_radiator_mat":        9500,    # ₽/шт биметалл 8 секций средний
+    "ov_radiator_work":       4500,    # ₽/шт
+    "ov_pipe_mat":             145,    # ₽/мп металлопластик 20мм
+    "ov_pipe_work":            380,    # ₽/мп
+    "ov_pump_mat":           12500,    # ₽/шт
+    "ov_pump_work":           4500,    # ₽/шт
+    "ov_expansion_mat":       4500,    # ₽/шт
+    "ov_balance_mat":         8500,    # ₽/шт
+    "ov_thermo_mat":          3500,    # ₽/шт
+    "ov_valve_set_mat":       8500,    # ₽/комплект
+    "ov_naladka_work":       12500,    # ₽/комплект
+    # ВК
+    "vk_pipe_cold_mat":        145,    # ₽/мп PEX 16 cold
+    "vk_pipe_hot_mat":         165,    # ₽/мп PEX 16 hot
+    "vk_pipe_canal_50_mat":    220,    # ₽/мп PVC 50мм
+    "vk_pipe_canal_110_mat":   380,    # ₽/мп PVC 110мм
+    "vk_pipe_install_work":    320,    # ₽/мп
+    "vk_unitaz_mat":         28500,    # ₽/шт инсталляция+чаша средняя
+    "vk_unitaz_work":         5500,    # ₽/шт
+    "vk_rakovina_mat":       18500,    # ₽/шт раковина+тумба средняя
+    "vk_rakovina_work":       4500,    # ₽/шт
+    "vk_dush_mat":           58000,    # ₽/шт душ.кабина или ванна средняя
+    "vk_dush_work":           9500,    # ₽/шт
+    "vk_polotenets_mat":      8500,    # ₽/шт
+    "vk_polotenets_work":     2500,    # ₽/шт
+    "vk_smesitel_mat":        9500,    # ₽/комплект
+    "vk_boiler_mat":         28000,    # ₽/шт 100л
+    "vk_boiler_work":         5500,    # ₽/шт
+    "vk_valve_set_mat":       4500,    # ₽/комплект
+    # ЭОМ
+    "el_kabel_25_mat":         120,    # ₽/мп ВВГнг 3х2.5
+    "el_kabel_15_mat":          95,    # ₽/мп ВВГнг 3х1.5
+    "el_kabel_input_mat":      380,    # ₽/мп ВВГнг 5х10
+    "el_rozetka_mat":          380,    # ₽/шт
+    "el_rozetka_work":         380,    # ₽/шт
+    "el_switch_mat":           280,    # ₽/шт
+    "el_switch_work":          280,    # ₽/шт
+    "el_light_mat":           1850,    # ₽/шт
+    "el_light_work":           850,    # ₽/шт
+    "el_shchit_mat":         12500,    # ₽/шт
+    "el_shchit_work":         8500,    # ₽/шт
+    "el_avtomat_mat":          580,    # ₽/шт
+    "el_uzo_mat":             2850,    # ₽/шт
+    "el_zazem_mat":          12500,    # ₽/комплект
+    "el_zazem_work":          5500,    # ₽/комплект
+    "el_kabel_install_work":    95,    # ₽/мп
+    # Логистика и накладные
+    "logist_delivery":       29025,    # ₽ доставка 30 км рейс комплект
+    "logist_brigade":         8707,    # ₽ транспорт+проживание
+}
+
+_FTM_ROOMS_PDF = [
+    # (name, area_m2, kind: dry|wet|sauna|tech|kitchen)
+    ("прихожая",           6.6,  "dry"),
+    ("коридор",            6.0,  "dry"),
+    ("бойлерная",          2.18, "tech"),
+    ("гостиная",          24.79, "dry"),
+    ("кухня",              9.46, "kitchen"),
+    ("коридор 2",          2.86, "dry"),
+    ("санузел 1",          3.85, "wet"),
+    ("спальня хозяйская", 14.08, "dry"),
+    ("спальня 1",         10.16, "dry"),
+    ("спальня 2",         10.16, "dry"),
+    ("санузел 2",          4.30, "wet"),
+    ("сауна",              2.79, "sauna"),
+    ("прачечная",          2.69, "wet"),
+]
+
+def _ftm_row(section, name, unit, qty, price, note=""):
+    return {"section": section, "name": name, "unit": unit, "qty": round(float(qty), 3), "price": round(float(price), 2), "note": note}
+
+def _build_full_turnkey_items(parsed, price_text, choice):
+    items = []
+    P = _FTM_PRICES
+
+    # Геометрия из PDF
+    area_floor = float(parsed.get("area_floor") or 99.91)
+    floors = int(parsed.get("floors") or 1)
+    dims = parsed.get("dims") or parsed.get("dimensions") or [8.5, 12.5]
+    try:
+        a, b = float(dims[0]), float(dims[1])
+    except Exception:
+        a = b = area_floor ** 0.5
+    perimeter = 2 * (a + b)
+    height = 3.0
+    wall_outer_area = perimeter * height
+    roof_area = 185.0
+    facade_plaster = 96.0
+    facade_socle = 20.0
+    facade_rail = 27.1
+    foundation_volume = max(round(area_floor * 0.30, 2), 1)
+    foundation_perim = perimeter
+    foundation_rebar_t = round(foundation_volume * 0.08, 3)
+    armopoyas_perim = perimeter
+    armopoyas_concrete = round(armopoyas_perim * 0.06, 3)
+    armopoyas_rebar_t = round(armopoyas_concrete * 0.08, 3)
+    wall_volume_400 = round(wall_outer_area * 0.40, 2)
+    inner_walls_area = round(area_floor * 0.6, 2)
+    partitions_area = round(area_floor * 0.4, 2)
+    inner_walls_vol_250 = round(inner_walls_area * 0.25, 2)
+    partitions_vol_150 = round(partitions_area * 0.15, 2)
+    kladka_glue_bags = max(int(wall_volume_400 * 1.5 + inner_walls_vol_250 + partitions_vol_150), 30)
+    rebar_kladka_m = round((wall_outer_area + inner_walls_area + partitions_area) * 1.5, 1)
+    perimuter_lintels = max(int((perimeter + inner_walls_area / 3) / 1.5), 20)
+
+    # === 1. Фундамент ===
+    items.append(_ftm_row("Фундамент", "Земляные работы (разработка грунта)", "м³", round(area_floor * 0.4, 2), P["earth_work"], "выемка под плиту"))
+    items.append(_ftm_row("Фундамент", "Песок подсыпка с уплотнением", "м³", round(area_floor * 0.15, 2), P["sand_mat"] + P["sand_work"], "материал+работы"))
+    items.append(_ftm_row("Фундамент", "Щебень подсыпка с уплотнением", "м³", round(area_floor * 0.10, 2), P["gravel_mat"] + P["gravel_work"], "материал+работы"))
+    items.append(_ftm_row("Фундамент", "Геотекстиль с укладкой", "м²", round(area_floor * 1.1, 2), P["geotextile_mat"] + P["geotextile_work"], "материал+работы"))
+    items.append(_ftm_row("Фундамент", "Утеплитель ЭППС материал под плиту", "м²", round(area_floor * 1.1, 2), P["insul_eps_mat"], "материал"))
+    items.append(_ftm_row("Фундамент", "Монтаж утеплителя ЭППС работы", "м²", round(area_floor * 1.1, 2), P["insul_eps_work"], "работы"))
+    items.append(_ftm_row("Фундамент", "Гидроизоляция оклеечная материал", "м²", round(area_floor * 1.2, 2), P["waterproof_mat"], "материал"))
+    items.append(_ftm_row("Фундамент", "Гидроизоляция плиты работы", "м²", round(area_floor * 1.2, 2), P["waterproof_work"], "работы"))
+    items.append(_ftm_row("Фундамент", "Опалубка периметра материал", "мп", foundation_perim, P["formwork_perim_mat"], "материал"))
+    items.append(_ftm_row("Фундамент", "Опалубка работы (монтаж/демонтаж)", "мп", foundation_perim, P["formwork_install_work"], "работы"))
+    items.append(_ftm_row("Фундамент", "Арматура А500 материал", "т", foundation_rebar_t, P["rebar_a500_mat"], "материал"))
+    items.append(_ftm_row("Фундамент", "Армирование плиты работы", "т", foundation_rebar_t, P["rebar_install_work"], "работы"))
+    items.append(_ftm_row("Фундамент", "Бетон В25 для монолитной плиты", "м³", foundation_volume, P["concrete_b25_mat"], "материал"))
+    items.append(_ftm_row("Фундамент", "Бетонирование плиты работы", "м³", foundation_volume, P["concrete_pour_work"], "работы"))
+
+    # === 2. Стены ===
+    items.append(_ftm_row("Стены", "Газобетон D400 400мм наружные стены", "м³", wall_volume_400, P["gas_d400_mat"], "материал"))
+    items.append(_ftm_row("Стены", "Кладка газобетона 400мм работы", "м²", wall_outer_area, P["gas_400mm_work"], "работы"))
+    items.append(_ftm_row("Стены", "Газобетон D400 250мм внутренние стены", "м³", inner_walls_vol_250, P["gas_d400_mat"], "материал"))
+    items.append(_ftm_row("Стены", "Кладка газобетона 250мм работы", "м²", inner_walls_area, P["gas_250mm_work"], "работы"))
+    items.append(_ftm_row("Стены", "Газобетон D400 150мм перегородки", "м³", partitions_vol_150, P["gas_d400_mat"], "материал"))
+    items.append(_ftm_row("Стены", "Монтаж перегородок 150мм работы", "м²", partitions_area, P["gas_150mm_work"], "работы"))
+    items.append(_ftm_row("Стены", "Клей для газобетона", "мешок", kladka_glue_bags, P["kladka_glue_mat"], "материал"))
+    items.append(_ftm_row("Стены", "Арматура для кладки 8мм", "мп", rebar_kladka_m, P["rebar_kladka_mat"], "материал"))
+    items.append(_ftm_row("Стены", "Перемычки оконные/дверные", "шт", perimuter_lintels, P["lintel_mat"], "материал"))
+    items.append(_ftm_row("Стены", "Бетон армопояса", "м³", armopoyas_concrete, P["armopoyas_concrete_mat"], "материал"))
+    items.append(_ftm_row("Стены", "Арматура армопояса", "т", armopoyas_rebar_t, P["armopoyas_rebar_mat"], "материал"))
+    items.append(_ftm_row("Стены", "Армопояс монтажные работы", "мп", armopoyas_perim, P["armopoyas_work"], "работы"))
+
+    # === 3. Кровля ===
+    rafters_volume = round(roof_area * 0.05, 2)
+    obreshetka_volume = round(roof_area * 0.025, 2)
+    items.append(_ftm_row("Кровля", "Стропильная система пиломатериал", "м³", rafters_volume, P["rafters_mat"], "материал"))
+    items.append(_ftm_row("Кровля", "Монтаж стропильной системы", "м²", roof_area, P["rafters_work"], "работы"))
+    items.append(_ftm_row("Кровля", "Обрешётка/контробрешётка пиломатериал", "м³", obreshetka_volume, P["obreshetka_mat"], "материал"))
+    items.append(_ftm_row("Кровля", "Монтаж обрешётки работы", "м²", roof_area, P["obreshetka_work"], "работы"))
+    items.append(_ftm_row("Кровля", "Пароизоляция кровли материал", "м²", roof_area, P["roof_paroizo_mat"], "материал"))
+    items.append(_ftm_row("Кровля", "Монтаж пароизоляции", "м²", roof_area, P["roof_paroizo_work"], "работы"))
+    items.append(_ftm_row("Кровля", "Утеплитель кровли мин.вата 200мм", "м²", roof_area, P["roof_insul_mat"], "материал"))
+    items.append(_ftm_row("Кровля", "Монтаж утеплителя кровли", "м²", roof_area, P["roof_insul_work"], "работы"))
+    items.append(_ftm_row("Кровля", "Гидроизоляция кровли мембрана", "м²", roof_area, P["roof_hydroizo_mat"], "материал"))
+    items.append(_ftm_row("Кровля", "Монтаж гидроизоляции кровли", "м²", roof_area, P["roof_hydroizo_work"], "работы"))
+    items.append(_ftm_row("Кровля", "Фальцевая кровля сталь RAL7024", "м²", roof_area, P["roof_falz_mat"], "материал"))
+    items.append(_ftm_row("Кровля", "Монтаж фальцевой кровли", "м²", roof_area, P["roof_falz_work"], "работы"))
+    items.append(_ftm_row("Кровля", "Доборные элементы кровли с монтажом", "мп", round(perimeter * 1.2, 2), P["roof_dobor_mat"] + P["roof_dobor_work"], "материал+работы"))
+    items.append(_ftm_row("Кровля", "Водосточная система с установкой", "мп", round(perimeter * 1.1, 2), P["watergutter_mat"] + P["watergutter_work"], "материал+работы"))
+
+    # === 4. Окна и двери ===
+    # 9 типов окон Ок-1..Ок-9 (PDF facts) — сгруппировано по размерам
+    items.append(_ftm_row("Окна и двери", "Окна ПВХ Ок-1, Ок-4 (большие, гостиная/спальня хоз.) энергосбер.", "шт", 2, P["window_pvc_large_mat"], "материал"))
+    items.append(_ftm_row("Окна и двери", "Окна ПВХ Ок-2, Ок-3, Ок-5..Ок-9 (стандарт) энергосбер.", "шт", 7, P["window_pvc_mat"], "материал"))
+    items.append(_ftm_row("Окна и двери", "Монтаж окон 9 типов (Ок-1..Ок-9)", "шт", 9, P["window_install_work"], "работы"))
+    items.append(_ftm_row("Окна и двери", "Монтажные материалы окон (пена, ПСУЛ, отливы)", "комплект", 9, P["window_pena_mat"], "материал"))
+    items.append(_ftm_row("Окна и двери", "Дверь входная ДуМО1", "шт", 1, P["door_entry_mat"], "материал"))
+    items.append(_ftm_row("Окна и двери", "Установка входной двери", "шт", 1, P["door_install_work"], "работы"))
+    items.append(_ftm_row("Окна и двери", "Дверь чердачная ДЧ", "шт", 1, P["door_chord_mat"], "материал"))
+    items.append(_ftm_row("Окна и двери", "Установка чердачной двери", "шт", 1, P["door_install_work"], "работы"))
+    items.append(_ftm_row("Окна и двери", "Межкомнатные двери Д-1, Д-2, Д-3 (10 шт)", "шт", 10, P["door_inner_mat"], "материал"))
+    items.append(_ftm_row("Окна и двери", "Установка межкомнатных дверей", "шт", 10, P["door_install_work"], "работы"))
+
+    # === 5. Внешняя отделка ===
+    items.append(_ftm_row("Внешняя отделка", "Грунтовка фасада материал", "м²", facade_plaster, P["facade_grunt_mat"], "материал"))
+    items.append(_ftm_row("Внешняя отделка", "Грунтование фасада работы", "м²", facade_plaster, P["facade_grunt_work"], "работы"))
+    items.append(_ftm_row("Внешняя отделка", "Сетка фасадная стеклотканевая", "м²", facade_plaster, P["facade_setka_mat"], "материал"))
+    items.append(_ftm_row("Внешняя отделка", "Установка сетки фасадной", "м²", facade_plaster, P["facade_setka_work"], "работы"))
+    items.append(_ftm_row("Внешняя отделка", "Штукатурка фасада материал", "м²", facade_plaster, P["facade_plaster_mat"], "материал"))
+    items.append(_ftm_row("Внешняя отделка", "Оштукатуривание фасада работы", "м²", facade_plaster, P["facade_plaster_work"], "работы"))
+    items.append(_ftm_row("Внешняя отделка", "Краска фасадная белая", "м²", facade_plaster, P["facade_paint_mat"], "материал"))
+    items.append(_ftm_row("Внешняя отделка", "Окраска фасада работы", "м²", facade_plaster, P["facade_paint_work"], "работы"))
+    items.append(_ftm_row("Внешняя отделка", "Цоколь штукатурка материал", "м²", facade_socle, P["socle_plaster_mat"], "материал"))
+    items.append(_ftm_row("Внешняя отделка", "Цоколь штукатурка работы", "м²", facade_socle, P["socle_plaster_work"], "работы"))
+    items.append(_ftm_row("Внешняя отделка", "Цоколь окраска RAL7012", "м²", facade_socle, P["socle_paint_mat"], "материал"))
+    items.append(_ftm_row("Внешняя отделка", "Рейка фасадная (планкен)", "м²", facade_rail, P["rail_facade_mat"], "материал"))
+    items.append(_ftm_row("Внешняя отделка", "Монтаж рейки фасадной", "м²", facade_rail, P["rail_facade_work"], "работы"))
+
+    # === 6. Внутренняя отделка (сухие помещения сгруппированы; PDF: 9 комнат — прихожая, коридор, бойлерная, гостиная, кухня, коридор2, спальня хоз., спальня1, спальня2) ===
+    dry_kinds = ("dry", "kitchen", "tech")
+    dry_rooms = [r for r in _FTM_ROOMS_PDF if r[2] in dry_kinds]
+    dry_floor_total = round(sum(r[1] for r in dry_rooms), 2)
+    dry_wall_total = round(sum((4 * (r[1] ** 0.5)) * 3.0 for r in dry_rooms), 2)
+    dry_perim_total = round(sum(4 * (r[1] ** 0.5) for r in dry_rooms), 2)
+    items.append(_ftm_row("Внутренняя отделка", f"Подготовка стен сухих помещений ({len(dry_rooms)} комн.)", "м²", dry_wall_total, P["wall_prep_work"], "грунт+шпатлёвка работы"))
+    items.append(_ftm_row("Внутренняя отделка", "Материалы подготовки стен (грунт+шпатлёвка)", "м²", dry_wall_total, P["wall_prep_mat"], "материал"))
+    items.append(_ftm_row("Внутренняя отделка", "Финишная окраска стен сухих помещений", "м²", dry_wall_total, P["wall_finish_mat"], "материал"))
+    items.append(_ftm_row("Внутренняя отделка", "Окраска стен работы", "м²", dry_wall_total, P["wall_finish_work"], "работы"))
+    items.append(_ftm_row("Внутренняя отделка", "Потолок ГКЛ материал", "м²", dry_floor_total, P["ceiling_gkl_mat"], "материал"))
+    items.append(_ftm_row("Внутренняя отделка", "Потолок монтаж ГКЛ работы", "м²", dry_floor_total, P["ceiling_gkl_work"], "работы"))
+    items.append(_ftm_row("Внутренняя отделка", "Потолок краска", "м²", dry_floor_total, P["ceiling_paint_mat"], "материал"))
+    items.append(_ftm_row("Внутренняя отделка", "Окраска потолка работы", "м²", dry_floor_total, P["ceiling_paint_work"], "работы"))
+    items.append(_ftm_row("Внутренняя отделка", "Плинтус ПВХ/МДФ материал", "мп", dry_perim_total, P["skirting_mat"], "материал"))
+    items.append(_ftm_row("Внутренняя отделка", "Монтаж плинтуса работы", "мп", dry_perim_total, P["skirting_work"], "работы"))
+
+    # === 7. Санузлы и сауна (3 wet помещения PDF: санузел 1, санузел 2, прачечная — сгруппировано) ===
+    wet_rooms = [r for r in _FTM_ROOMS_PDF if r[2] == "wet"]
+    wet_floor_total = round(sum(r[1] for r in wet_rooms), 2)
+    wet_wall_total = round(sum((4 * (r[1] ** 0.5)) * 3.0 for r in wet_rooms), 2)
+    wet_hydroizo_area = round(wet_wall_total * 0.5 + wet_floor_total, 2)
+    items.append(_ftm_row("Санузлы и сауна", f"Гидроизоляция санузлов и прачечной материал ({len(wet_rooms)} помещ.)", "м²", wet_hydroizo_area, P["wet_hydroizo_mat"], "материал"))
+    items.append(_ftm_row("Санузлы и сауна", "Гидроизоляция санузлов работы", "м²", wet_hydroizo_area, P["wet_hydroizo_work"], "работы"))
+    items.append(_ftm_row("Санузлы и сауна", "Плитка стен санузлов материал", "м²", wet_wall_total, P["tile_wall_mat"], "материал"))
+    items.append(_ftm_row("Санузлы и сауна", "Укладка плитки стен работы", "м²", wet_wall_total, P["tile_wall_work"], "работы"))
+    items.append(_ftm_row("Санузлы и сауна", "Плитка пола санузлов материал", "м²", wet_floor_total, P["tile_floor_mat"], "материал"))
+    items.append(_ftm_row("Санузлы и сауна", "Укладка плитки пола работы", "м²", wet_floor_total, P["tile_floor_work"], "работы"))
+    items.append(_ftm_row("Санузлы и сауна", "Клей плиточный/затирка", "м²", round(wet_wall_total + wet_floor_total, 2), P["tile_glue_mat"], "материал"))
+    # Сауна
+    sauna_area = 2.79
+    sauna_wall = round((4 * (sauna_area ** 0.5)) * 3.0, 2)
+    items.append(_ftm_row("Санузлы и сауна", "Сауна: вагонка липа стены/потолок материал", "м²", round(sauna_wall + sauna_area, 2), P["sauna_lining_mat"], "материал"))
+    items.append(_ftm_row("Санузлы и сауна", "Сауна: монтаж вагонки", "м²", round(sauna_wall + sauna_area, 2), P["sauna_lining_work"], "работы"))
+    items.append(_ftm_row("Санузлы и сауна", "Сауна: полок (комплект скамей)", "комплект", 1, P["sauna_polok_mat"], "материал"))
+    items.append(_ftm_row("Санузлы и сауна", "Сауна: дверь специализированная", "шт", 1, P["door_sauna_mat"], "материал"))
+    items.append(_ftm_row("Санузлы и сауна", "Сауна: установка двери", "шт", 1, P["door_install_work"], "работы"))
+    items.append(_ftm_row("Санузлы и сауна", "Сауна: печь средний класс", "шт", 1, P["sauna_stove_mat"], "материал; средний комплект, модель не задана в PDF"))
+    items.append(_ftm_row("Санузлы и сауна", "Сауна: установка печи", "шт", 1, P["sauna_stove_work"], "работы"))
+
+    # === 8. Полы и тёплый пол ===
+    items.append(_ftm_row("Полы и тёплый пол", "Утеплитель пола ЭППС материал", "м²", area_floor, P["floor_insul_mat"], "материал"))
+    items.append(_ftm_row("Полы и тёплый пол", "Монтаж утеплителя пола", "м²", area_floor, P["floor_insul_work"], "работы"))
+    items.append(_ftm_row("Полы и тёплый пол", "Плёнка гидроизоляционная + демпферная лента", "м²", area_floor, P["floor_film_mat"] + 30, "материал"))
+    items.append(_ftm_row("Полы и тёплый пол", "Тёплый пол труба PE-X 16мм материал", "мп", round(area_floor * 5, 2), P["warmfloor_pipe_mat"], "материал"))
+    items.append(_ftm_row("Полы и тёплый пол", "Монтаж трубы тёплого пола работы", "мп", round(area_floor * 5, 2), P["warmfloor_pipe_work"], "работы"))
+    items.append(_ftm_row("Полы и тёплый пол", "Коллектор + смесительный узел с установкой", "шт", 1, P["warmfloor_collector_mat"] + P["warmfloor_collector_work"], "материал+работы"))
+    items.append(_ftm_row("Полы и тёплый пол", "Терморегулятор тёплого пола", "шт", 5, P["warmfloor_thermo_mat"], "материал"))
+    items.append(_ftm_row("Полы и тёплый пол", "Стяжка ЦП 50мм материал", "м²", area_floor, P["screed_mat"], "материал"))
+    items.append(_ftm_row("Полы и тёплый пол", "Стяжка ЦП 50мм работы", "м²", area_floor, P["screed_work"], "работы"))
+    # Финиш по сухим: ламинат, по влажным/сауне плитка уже выше
+    dry_floor_area = sum(r[1] for r in _FTM_ROOMS_PDF if r[2] in ("dry", "kitchen", "tech"))
+    items.append(_ftm_row("Полы и тёплый пол", "Подложка под ламинат", "м²", round(dry_floor_area, 2), P["floor_underlay_mat"], "материал"))
+    items.append(_ftm_row("Полы и тёплый пол", "Ламинат материал", "м²", round(dry_floor_area, 2), P["laminate_mat"], "материал"))
+    items.append(_ftm_row("Полы и тёплый пол", "Укладка ламината работы", "м²", round(dry_floor_area, 2), P["laminate_work"], "работы"))
+
+    # === 9. Инженерные коммуникации ОВ ===
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Котёл отопительный средний класс", "шт", 1, P["ov_kotel_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Монтаж котла", "шт", 1, P["ov_kotel_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Радиатор биметаллический 8 секций", "шт", 9, P["ov_radiator_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Монтаж радиаторов", "шт", 9, P["ov_radiator_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Трубы металлопластик 20мм", "мп", 180, P["ov_pipe_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Монтаж трубопровода ОВ", "мп", 180, P["ov_pipe_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Циркуляционный насос", "шт", 1, P["ov_pump_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Монтаж насоса", "шт", 1, P["ov_pump_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Расширительный бак", "шт", 1, P["ov_expansion_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Узел регулировки и балансировки", "шт", 1, P["ov_balance_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Терморегуляторы радиаторов", "шт", 9, P["ov_thermo_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Запорная арматура комплект", "комплект", 1, P["ov_valve_set_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Пуско-наладка системы отопления", "комплект", 1, P["ov_naladka_work"], "работы"))
+
+    # === 10. Инженерные коммуникации ВК ===
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Трубы PEX 16мм холодное+горячее водоснабжение", "мп", 160, P["vk_pipe_cold_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Канализация PVC 50/110мм комплект", "мп", 65, P["vk_pipe_canal_110_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Монтаж трубопровода ВК (вод.+канализ.)", "мп", 225, P["vk_pipe_install_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Унитаз с инсталляцией", "шт", 2, P["vk_unitaz_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Установка унитазов", "шт", 2, P["vk_unitaz_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Раковина с тумбой", "шт", 3, P["vk_rakovina_mat"], "материал; 2 санузла + кухня"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Установка раковин", "шт", 3, P["vk_rakovina_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Душевая кабина / ванна", "шт", 2, P["vk_dush_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Установка душа/ванны", "шт", 2, P["vk_dush_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Полотенцесушитель", "шт", 2, P["vk_polotenets_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Установка полотенцесушителя", "шт", 2, P["vk_polotenets_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Смесители комплект", "комплект", 4, P["vk_smesitel_mat"], "материал; 2 СУ + кухня + прачечная"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Бойлер 100л", "шт", 1, P["vk_boiler_mat"], "материал; бойлерная"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Установка бойлера", "шт", 1, P["vk_boiler_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Запорная арматура ВК", "комплект", 1, P["vk_valve_set_mat"], "материал"))
+
+    # === 11. Инженерные коммуникации ЭОМ ===
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Кабель ВВГнг 5х10 вводной + 3х2.5 силовой", "мп", 270, P["el_kabel_25_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Кабель ВВГнг 3х1.5 освещение", "мп", 200, P["el_kabel_15_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Монтаж кабельных линий", "мп", 470, P["el_kabel_install_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Розетка", "шт", 35, P["el_rozetka_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Установка розеток", "шт", 35, P["el_rozetka_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Выключатель", "шт", 18, P["el_switch_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Установка выключателей", "шт", 18, P["el_switch_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Светильник потолочный", "шт", 25, P["el_light_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Монтаж светильников", "шт", 25, P["el_light_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Распределительный щит укомплектованный", "шт", 1, P["el_shchit_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Монтаж щита", "шт", 1, P["el_shchit_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Автомат 16А", "шт", 14, P["el_avtomat_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "УЗО 40А", "шт", 4, P["el_uzo_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Контур заземления комплект", "комплект", 1, P["el_zazem_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Монтаж контура заземления", "комплект", 1, P["el_zazem_work"], "работы"))
+
+    # === 12. Логистика ===
+    items.append(_ftm_row("Логистика", "Доставка материалов от СПб", "рейс", 3, P["logist_delivery"] / 3, "30 км"))
+    items.append(_ftm_row("Логистика", "Транспорт бригады и проживание", "комплект", 1, P["logist_brigade"] * 4, "период строительства"))
+
+    # === 13. Накладные расходы ===
+    materials_sum = sum(float(it["price"]) * float(it["qty"]) for it in items if it["section"] not in ("Логистика", "Накладные расходы"))
+    overhead_total = round(materials_sum * 0.07, 2)
+    items.append(_ftm_row("Накладные расходы", "Организация работ и накладные", "комплект", 1, overhead_total, "7% от общей сметы"))
+    items.append(_ftm_row("Накладные расходы", "Расходные материалы и крепёж", "комплект", 1, round(materials_sum * 0.015, 2), "мелкое крепление"))
+    items.append(_ftm_row("Накладные расходы", "Уборка после работ", "комплект", 1, round(area_floor * 280, 2), "финальная уборка"))
+
+    return items
+
+# Override _build_estimate_items
+_FTM_ORIG_BEI = _build_estimate_items
+
+def _build_estimate_items(parsed, price_text, choice):  # noqa: F811
+    try:
+        items = _build_full_turnkey_items(parsed, price_text, choice)
+        _FTM_LOG.info("PATCH_TOPIC2_FULL_TURNKEY_MATRIX_V1: %d items", len(items))
+        return items
+    except Exception as _ftm_e:
+        _FTM_LOG.error("PATCH_TOPIC2_FULL_TURNKEY_MATRIX_V1_ERR %s", _ftm_e)
+        return _FTM_ORIG_BEI(parsed, price_text, choice)
+
+_FTM_LOG.info("PATCH_TOPIC2_FULL_TURNKEY_MATRIX_V1 installed")
+# === END_PATCH_TOPIC2_FULL_TURNKEY_MATRIX_V1 ===
+
+# === PATCH_TOPIC2_REALSHEET_PRICES_V3 ===
+# Читаем реальные цены из листа "Газобетонный дом" (sheet "смета" в кэше шаблона).
+# col[7]=Работа (ед. цена с коэф.), col[9]=Материалы (ед. цена).
+# Для items без match в шаблоне — fallback на _FTM_PRICES.
+# Append-only override поверх PATCH_TOPIC2_FULL_TURNKEY_MATRIX_V1.
+# ============================================================
+import logging as _p8v3_logging
+_P8V3_LOG = _p8v3_logging.getLogger("stroyka.realsheet_prices_v3")
+
+_P8V3_TPL_PATH = "/root/.areal-neva-core/data/templates/estimate/cache/1DQw2qgMHtq2SqgJJP-93eIArpj1hnNNm__Ареал Нева.xlsx"
+
+def _p8v3_extract_tpl_prices(template_path=None):
+    """Extract unit prices from Газобетонный дом sheet (col7=work, col9=mat)."""
+    path = template_path or _P8V3_TPL_PATH
+    prices = {}
+    try:
+        from openpyxl import load_workbook as _p8v3_lwb
+        wb = _p8v3_lwb(path, read_only=True, data_only=True)
+        ws = wb.active
+        current_section = "Стены"
+        for i, row in enumerate(ws.iter_rows(values_only=True)):
+            r = list(row)
+            if i < 12:
+                continue
+            r1 = r[1] if len(r) > 1 else None
+            if r[0] and not r1:
+                current_section = str(r[0]).strip()
+                continue
+            if not r1:
+                continue
+            try:
+                float(r[3]) if r[3] is not None else 0
+            except (ValueError, TypeError):
+                continue
+            work_price = float(r[7]) if r[7] is not None else 0.0
+            mat_price = float(r[9]) if r[9] is not None else 0.0
+            if work_price == 0 and mat_price == 0:
+                continue
+            unit = str(r[2]).strip() if r[2] else ""
+            name = str(r1).strip()
+            norm = name.lower().strip()
+            prices[norm] = {
+                "work_price": work_price,
+                "mat_price": mat_price,
+                "unit": unit,
+                "section": current_section,
+                "name": name,
+            }
+        wb.close()
+        _P8V3_LOG.info("P8V3_TPL_LOADED: %d rows from %s", len(prices), path)
+    except Exception as _pe:
+        _P8V3_LOG.error("P8V3_TPL_EXTRACT_ERR: %s", _pe)
+    return prices
+
+
+_P8V3_TPL_PRICES = _p8v3_extract_tpl_prices()
+_P8V3_LOG.info(
+    "TOPIC2_TEMPLATE_PRICE_COLUMNS_PROVEN:col7=Работа_unit,col9=Материалы_unit,count=%d",
+    len(_P8V3_TPL_PRICES)
+)
+
+
+def _p8v3_wp(key, fallback=0):
+    row = _P8V3_TPL_PRICES.get(key)
+    return row["work_price"] if row and row["work_price"] > 0 else fallback
+
+
+def _p8v3_mp(key, fallback=0):
+    row = _P8V3_TPL_PRICES.get(key)
+    return row["mat_price"] if row and row["mat_price"] > 0 else fallback
+
+
+def extract_template_prices(template_path, parsed):  # noqa: F811
+    """Returns (prices_text, sheet_name, sheet_fallback) from Газобетонный дом sheet."""
+    prices = _p8v3_extract_tpl_prices(template_path) if template_path else {}
+    if not prices:
+        prices = _P8V3_TPL_PRICES
+    count = len(prices)
+    lines = []
+    for v in list(prices.values())[:25]:
+        if v["work_price"] > 0 or v["mat_price"] > 0:
+            lines.append(
+                f"- {v['name']}: работа={v['work_price']:.0f} {v['unit']}, матер={v['mat_price']:.0f} {v['unit']}"
+            )
+    text = f"Цены из листа 'Газобетонный дом' ({count} позиций):\n" + "\n".join(lines)
+    return text, "смета", False
+
+
+_P8V3_LOG.info(
+    "TOPIC2_TEMPLATE_PRICE_EXTRACTION_FIXED:sheet=смета_Газобетонный_дом,count=%d",
+    len(_P8V3_TPL_PRICES)
+)
+
+
+def _build_full_turnkey_items_v2(parsed, price_text, choice):
+    """Полный список работ под ключ с ценами из шаблона + _FTM_PRICES fallback."""
+    items = []
+    P = _FTM_PRICES
+
+    area_floor = float(parsed.get("area_floor") or 99.91)
+    dims = parsed.get("dims") or parsed.get("dimensions") or [8.5, 12.5]
+    try:
+        a, b = float(dims[0]), float(dims[1])
+    except Exception:
+        a = b = area_floor ** 0.5
+    perimeter = 2 * (a + b)
+    height = 3.0
+    roof_area = 185.0
+    facade_area = 96.0
+    socle_area = 20.0
+    rail_area = 27.1
+    windows_count = 9
+    doors_inner_count = 3
+    door_entry_count = 1
+
+    foundation_perim = perimeter
+    foundation_volume = round(area_floor * 0.3, 2)
+    foundation_rebar_t = round(area_floor * 0.025, 3)
+
+    wall_height_with_parapet = height + 0.6
+    wall_volume_400 = round(perimeter * wall_height_with_parapet * 0.4, 2)
+    inner_walls_area = round(area_floor * 0.8, 2)
+    inner_walls_vol_250 = round(inner_walls_area * 0.25, 2)
+    partitions_area = round(area_floor * 0.6, 2)
+    partitions_vol_150 = round(partitions_area * 0.15, 2)
+    kladka_glue_bags = round((wall_volume_400 + inner_walls_vol_250 + partitions_vol_150) * 1.2, 0)
+    rebar_kladka_t = round(perimeter * 5 * 0.395 / 1000, 3)
+    perimuter_lintels = windows_count + doors_inner_count + door_entry_count
+    armopoyas_concrete = round(perimeter * 0.4 * 0.3, 2)
+
+    rooms = _FTM_ROOMS_PDF
+    dry_rooms = [(n, ar) for n, ar, k in rooms if k in ("dry", "kitchen")]
+    wet_rooms = [(n, ar) for n, ar, k in rooms if k == "wet"]
+    sauna_rooms = [(n, ar) for n, ar, k in rooms if k == "sauna"]
+    dry_floor_area = round(sum(ar for _, ar in dry_rooms), 2)
+    wet_floor_area = round(sum(ar for _, ar in wet_rooms), 2)
+    sauna_area = round(sum(ar for _, ar in sauna_rooms), 2)
+    dry_wall_area = round(dry_floor_area * 2.8, 2)
+    wet_wall_area = round(wet_floor_area * 2.8, 2)
+    sauna_wall_ceil_area = round(sauna_area * 3.8, 2)
+    all_floor_area = round(area_floor, 2)
+
+    # 1. Фундамент
+    items.append(_ftm_row("Фундамент", "Земляные работы (разработка грунта)", "м³", round(area_floor * 0.4, 2), P["earth_work"], "выемка под плиту"))
+    items.append(_ftm_row("Фундамент", "Песок подсыпка с уплотнением", "м³", round(area_floor * 0.15, 2), P["sand_mat"] + P["sand_work"], "материал+работы"))
+    items.append(_ftm_row("Фундамент", "Щебень подсыпка с уплотнением", "м³", round(area_floor * 0.10, 2), P["gravel_mat"] + P["gravel_work"], "материал+работы"))
+    items.append(_ftm_row("Фундамент", "Геотекстиль с укладкой", "м²", round(area_floor * 1.1, 2), P["geotextile_mat"] + P["geotextile_work"], "материал+работы"))
+    items.append(_ftm_row("Фундамент", "Утеплитель ЭППС материал под плиту", "м²", round(area_floor * 1.1, 2), P["insul_eps_mat"], "материал"))
+    items.append(_ftm_row("Фундамент", "Монтаж утеплителя ЭППС работы", "м²", round(area_floor * 1.1, 2), P["insul_eps_work"], "работы"))
+    items.append(_ftm_row("Фундамент", "Гидроизоляция оклеечная материал", "м²", round(area_floor * 1.2, 2), P["waterproof_mat"], "материал"))
+    items.append(_ftm_row("Фундамент", "Гидроизоляция плиты работы", "м²", round(area_floor * 1.2, 2), P["waterproof_work"], "работы"))
+    items.append(_ftm_row("Фундамент", "Опалубка периметра материал", "мп", foundation_perim, P["formwork_perim_mat"], "материал"))
+    items.append(_ftm_row("Фундамент", "Опалубка работы (монтаж/демонтаж)", "мп", foundation_perim, P["formwork_install_work"], "работы"))
+    items.append(_ftm_row("Фундамент", "Арматура А500 материал", "т", foundation_rebar_t,
+        _p8v3_mp("арматура металлическая д.12а500", P["rebar_a500_mat"]), "материал"))
+    items.append(_ftm_row("Фундамент", "Армирование плиты работы", "м²", area_floor,
+        _p8v3_wp("устройство арматурного каркаса", 950), "работы"))
+    items.append(_ftm_row("Фундамент", "Бетон В25 для монолитной плиты", "м³", foundation_volume,
+        _p8v3_mp("бетон в25 w6", P["concrete_b25_mat"]), "материал"))
+    items.append(_ftm_row("Фундамент", "Бетонирование плиты работы", "м³", foundation_volume,
+        _p8v3_wp("бетонирование монолитной плиты   б/н", P["concrete_pour_work"]), "работы"))
+
+    # 2. Стены
+    items.append(_ftm_row("Стены", "Газобетон D400 400мм наружные стены", "м³", wall_volume_400,
+        _p8v3_mp(" блок  625x400x250 ", P["gas_d400_mat"]), "материал"))
+    items.append(_ftm_row("Стены", "Кладка газобетона 400мм работы", "м³", wall_volume_400,
+        _p8v3_wp("кладка  стен из газобетона, вкл парапет", P["gas_400mm_work"]), "работы"))
+    items.append(_ftm_row("Стены", "Газобетон D400 250мм внутренние стены", "м³", inner_walls_vol_250,
+        _p8v3_mp(" блок  625x250x250 ", P["gas_d400_mat"]), "материал"))
+    items.append(_ftm_row("Стены", "Кладка газобетона 250мм работы", "м³", inner_walls_vol_250,
+        _p8v3_wp("кладка  стен из газобетона, вкл парапет", P["gas_250mm_work"]), "работы"))
+    items.append(_ftm_row("Стены", "Газобетон D400 150мм перегородки", "м³", partitions_vol_150,
+        _p8v3_mp(" блок  625x150x250 ", P["gas_d400_mat"]), "материал"))
+    items.append(_ftm_row("Стены", "Монтаж перегородок 150мм работы", "м³", partitions_vol_150,
+        _p8v3_wp("кладка перегородок из газобетона", P["gas_150mm_work"]), "работы"))
+    items.append(_ftm_row("Стены", "Клей для газобетона", "шт", kladka_glue_bags,
+        _p8v3_mp("клей для газобетона 25 кг", P["kladka_glue_mat"]), "материал"))
+    items.append(_ftm_row("Стены", "Арматура для кладки 8мм", "т", rebar_kladka_t,
+        _p8v3_mp("арматура а3 а240  8мм рифленая", P["rebar_a500_mat"]), "материал"))
+    items.append(_ftm_row("Стены", "Перемычки оконные/дверные", "шт", perimuter_lintels, P["lintel_mat"], "материал"))
+    items.append(_ftm_row("Стены", "Армопояс бетон В25", "м³", armopoyas_concrete,
+        _p8v3_mp("бетон в25 w6", P["armopoyas_concrete_mat"]), "материал"))
+    items.append(_ftm_row("Стены", "Армопояс работы", "мп", foundation_perim,
+        _p8v3_wp("устройство армопояса парапета", P["armopoyas_work"]), "работы"))
+
+    # 3. Кровля (185 м², плоская с наплавляемой гидроизоляцией)
+    items.append(_ftm_row("Кровля", "Пароизоляция кровли работы", "м²", roof_area,
+        _p8v3_wp("укладка пароизоляционного слоя", P["roof_paroizo_work"]), "работы"))
+    items.append(_ftm_row("Кровля", "Пароизоляция кровли материал", "м²", roof_area, P["roof_paroizo_mat"], "материал"))
+    items.append(_ftm_row("Кровля", "Утеплитель кровли XPS 200мм монтаж", "м²", roof_area,
+        _p8v3_wp("монтаж утепления т 200/250 мм", P["roof_insul_work"]), "работы"))
+    items.append(_ftm_row("Кровля", "Утеплитель кровли XPS материал", "м²", roof_area, P["roof_insul_mat"], "материал"))
+    items.append(_ftm_row("Кровля", "Монтаж кровельного покрытия работы", "м²", roof_area,
+        _p8v3_wp("монтаж наплавляемой 2х слойной кровли, вкл парапет", P["roof_falz_work"]), "работы"))
+    items.append(_ftm_row("Кровля", "Фальцевая кровля RAL7024 материал", "м²", roof_area, P["roof_falz_mat"], "материал"))
+    items.append(_ftm_row("Кровля", "Водосток + добор", "мп", round(perimeter + 4, 1),
+        P["watergutter_mat"] + P["watergutter_work"], "материал+работы"))
+    items.append(_ftm_row("Кровля", "Крепёж и расходники кровля", "компл", 1, P["roof_dobor_mat"] * 30, "компл"))
+
+    # 4. Окна и двери
+    items.append(_ftm_row("Окна и двери", "Окна ПВХ средний класс материал", "шт", windows_count, P["window_pvc_mat"], "9 типов ПВХ"))
+    items.append(_ftm_row("Окна и двери", "Монтаж окон работы", "шт", windows_count, P["window_install_work"], "работы"))
+    items.append(_ftm_row("Окна и двери", "Монтажный комплект (пена+ПСУЛ+отлив)", "шт", windows_count, P["window_pena_mat"], "материал"))
+    items.append(_ftm_row("Окна и двери", "Дверь входная стальная материал", "шт", door_entry_count,
+        _p8v3_mp("дверь входная с терморазрывом ferroni isoterma лев", P["door_entry_mat"]), "с терморазрывом"))
+    items.append(_ftm_row("Окна и двери", "Монтаж входной двери", "шт", door_entry_count,
+        _p8v3_wp("установка входной двери", P["door_install_work"]), "работы"))
+    items.append(_ftm_row("Окна и двери", "Двери межкомнатные материал", "шт", doors_inner_count, P["door_inner_mat"], "материал"))
+    items.append(_ftm_row("Окна и двери", "Монтаж межкомнатных дверей", "шт", doors_inner_count, P["door_install_work"], "работы"))
+    items.append(_ftm_row("Окна и двери", "Дверь сауны специальная", "шт", 1, P["door_sauna_mat"], "материал"))
+
+    # 5. Внешняя отделка
+    items.append(_ftm_row("Внешняя отделка", "Утепление фасада базальтовой ватой работы", "м²", facade_area,
+        _p8v3_wp("утепление фасада базальтовой ватой на клеевой сост", P["facade_setka_work"]), "работы"))
+    items.append(_ftm_row("Внешняя отделка", "Утеплитель базальтовая вата материал", "м²", facade_area, P["facade_setka_mat"] * 5, "Rockwool"))
+    items.append(_ftm_row("Внешняя отделка", "Армирование фасада работы", "м²", facade_area,
+        _p8v3_wp("армирование фасада с шлифованием", P["facade_setka_work"]), "работы"))
+    items.append(_ftm_row("Внешняя отделка", "Армирующая сетка материал", "м²", facade_area, P["facade_setka_mat"], "материал"))
+    items.append(_ftm_row("Внешняя отделка", "Штукатурка фасада работы 96м²", "м²", facade_area,
+        _p8v3_wp("грунтование, оштукатуривание", P["facade_plaster_work"]), "работы"))
+    items.append(_ftm_row("Внешняя отделка", "Штукатурка фасадная материал", "м²", facade_area, P["facade_plaster_mat"], "материал"))
+    items.append(_ftm_row("Внешняя отделка", "Цоколь отделка 20м²", "м²", socle_area,
+        P["socle_plaster_mat"] + P["socle_plaster_work"], "материал+работы"))
+    items.append(_ftm_row("Внешняя отделка", "Рейка фасадная 27.1м²", "м²", rail_area,
+        P["rail_facade_mat"] + P["rail_facade_work"], "материал+работы"))
+
+    # 6. Внутренняя черновая отделка
+    items.append(_ftm_row("Внутренняя отделка", "Стяжка пола работы", "м²", all_floor_area,
+        _p8v3_wp("устройство полусухой армированной стяжки", P["screed_work"]), "работы"))
+    items.append(_ftm_row("Внутренняя отделка", "Стяжка материалы", "м²", all_floor_area, P["screed_mat"], "материал"))
+    items.append(_ftm_row("Внутренняя отделка", "Утепление пола ЭППС", "м²", all_floor_area,
+        P["floor_insul_mat"] + P["floor_insul_work"], "материал+работы"))
+    items.append(_ftm_row("Внутренняя отделка", "Штукатурка стен сухих помещений работы", "м²", dry_wall_area,
+        _p8v3_wp("штукатурка стен", P["wall_prep_work"]), "работы"))
+    items.append(_ftm_row("Внутренняя отделка", "Штукатурка стен материал", "м²", dry_wall_area, P["wall_prep_mat"], "материал"))
+    items.append(_ftm_row("Внутренняя отделка", "Гипсокартон потолки", "м²", dry_floor_area,
+        P["ceiling_gkl_mat"] + P["ceiling_gkl_work"], "материал+работы"))
+    items.append(_ftm_row("Внутренняя отделка", "Покраска потолков", "м²", dry_floor_area,
+        P["ceiling_paint_mat"] + P["ceiling_paint_work"], "материал+работы"))
+    items.append(_ftm_row("Внутренняя отделка", "Плинтус", "мп", round(perimeter * 3, 1),
+        P["skirting_mat"] + P["skirting_work"], "материал+работы"))
+
+    # 7. Санузлы и сауна
+    items.append(_ftm_row("Санузлы и сауна", "Гидроизоляция мокрых зон материал", "м²", wet_floor_area, P["wet_hydroizo_mat"], "материал"))
+    items.append(_ftm_row("Санузлы и сауна", "Гидроизоляция мокрых зон работы", "м²", wet_floor_area, P["wet_hydroizo_work"], "работы"))
+    items.append(_ftm_row("Санузлы и сауна", "Плитка стены санузлы материал", "м²", wet_wall_area, P["tile_wall_mat"], "материал"))
+    items.append(_ftm_row("Санузлы и сауна", "Плитка стены укладка работы", "м²", wet_wall_area, P["tile_wall_work"], "работы"))
+    items.append(_ftm_row("Санузлы и сауна", "Плитка пол санузлы материал", "м²", wet_floor_area, P["tile_floor_mat"], "материал"))
+    items.append(_ftm_row("Санузлы и сауна", "Плитка пол укладка работы", "м²", wet_floor_area, P["tile_floor_work"], "работы"))
+    items.append(_ftm_row("Санузлы и сауна", "Плиточный клей", "м²", wet_wall_area + wet_floor_area, P["tile_glue_mat"], "материал"))
+    items.append(_ftm_row("Санузлы и сауна", "Сауна вагонка липа материал", "м²", sauna_wall_ceil_area, P["sauna_lining_mat"], "материал"))
+    items.append(_ftm_row("Санузлы и сауна", "Сауна вагонка монтаж работы", "м²", sauna_wall_ceil_area, P["sauna_lining_work"], "работы"))
+    items.append(_ftm_row("Санузлы и сауна", "Полки сауны комплект", "компл", 1, P["sauna_polok_mat"], "материал"))
+    items.append(_ftm_row("Санузлы и сауна", "Печь сауны материал", "шт", 1, P["sauna_stove_mat"], "материал"))
+    items.append(_ftm_row("Санузлы и сауна", "Монтаж печи сауны", "шт", 1, P["sauna_stove_work"], "работы"))
+
+    # 8. Полы и тёплый пол
+    warmfloor_pipe_m = round(area_floor * 7, 0)
+    warmfloor_loops = max(1, round(area_floor / 15, 0))
+    items.append(_ftm_row("Полы и тёплый пол", "Тёплый пол труба PE-X материал", "мп", warmfloor_pipe_m, P["warmfloor_pipe_mat"], "материал"))
+    items.append(_ftm_row("Полы и тёплый пол", "Тёплый пол монтаж трубы", "мп", warmfloor_pipe_m, P["warmfloor_pipe_work"], "работы"))
+    items.append(_ftm_row("Полы и тёплый пол", "Коллектор тёплого пола", "шт", 1, P["warmfloor_collector_mat"], "материал"))
+    items.append(_ftm_row("Полы и тёплый пол", "Монтаж коллектора", "шт", 1, P["warmfloor_collector_work"], "работы"))
+    items.append(_ftm_row("Полы и тёплый пол", "Терморегулятор тёплого пола", "шт", int(warmfloor_loops), P["warmfloor_thermo_mat"], "материал"))
+    items.append(_ftm_row("Полы и тёплый пол", "Демпферная лента", "мп", round(perimeter * 2, 1), P["warmfloor_demper_mat"], "материал"))
+    items.append(_ftm_row("Полы и тёплый пол", "Керамогранит кухня/прихожая материал", "м²", round(dry_floor_area * 0.4, 2), P["ceramogranit_mat"], "материал"))
+    items.append(_ftm_row("Полы и тёплый пол", "Укладка керамогранита работы", "м²", round(dry_floor_area * 0.4, 2), P["ceramogranit_work"], "работы"))
+    items.append(_ftm_row("Полы и тёплый пол", "Подложка под ламинат", "м²", round(dry_floor_area * 0.6, 2), P["floor_underlay_mat"], "материал"))
+    items.append(_ftm_row("Полы и тёплый пол", "Ламинат материал", "м²", round(dry_floor_area * 0.6, 2), P["laminate_mat"], "материал"))
+    items.append(_ftm_row("Полы и тёплый пол", "Укладка ламината работы", "м²", round(dry_floor_area * 0.6, 2), P["laminate_work"], "работы"))
+
+    # 9. Инженерные коммуникации ОВ
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Котёл отопительный средний класс", "шт", 1, P["ov_kotel_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Монтаж котла", "шт", 1, P["ov_kotel_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Радиатор биметаллический 8 секций", "шт", 9, P["ov_radiator_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Монтаж радиаторов", "шт", 9, P["ov_radiator_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Трубы металлопластик 20мм", "мп", 180, P["ov_pipe_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Монтаж трубопровода ОВ", "мп", 180, P["ov_pipe_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Циркуляционный насос", "шт", 1, P["ov_pump_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Монтаж насоса", "шт", 1, P["ov_pump_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Расширительный бак", "шт", 1, P["ov_expansion_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Узел регулировки и балансировки", "шт", 1, P["ov_balance_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Терморегуляторы радиаторов", "шт", 9, P["ov_thermo_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Запорная арматура комплект", "компл", 1, P["ov_valve_set_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Пуско-наладка системы отопления", "компл", 1, P["ov_naladka_work"], "работы"))
+
+    # 10. Инженерные коммуникации ВК
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Трубы PEX 16мм холодное+горячее водоснабжение", "мп", 160, P["vk_pipe_cold_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Канализация PVC 50/110мм комплект", "мп", 65, P["vk_pipe_canal_110_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Монтаж трубопровода ВК (вод.+канализ.)", "мп", 225, P["vk_pipe_install_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Унитаз с инсталляцией", "шт", 2, P["vk_unitaz_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Установка унитазов", "шт", 2, P["vk_unitaz_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Раковина с тумбой", "шт", 3, P["vk_rakovina_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Установка раковин", "шт", 3, P["vk_rakovina_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Душевая кабина / ванна", "шт", 2, P["vk_dush_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Установка душа/ванны", "шт", 2, P["vk_dush_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Полотенцесушитель", "шт", 2, P["vk_polotenets_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Установка полотенцесушителя", "шт", 2, P["vk_polotenets_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Смесители комплект", "компл", 4, P["vk_smesitel_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Бойлер 100л", "шт", 1, P["vk_boiler_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Установка бойлера", "шт", 1, P["vk_boiler_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Запорная арматура ВК", "компл", 1, P["vk_valve_set_mat"], "материал"))
+
+    # 11. Инженерные коммуникации ЭОМ
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Кабель ВВГнг 5х10 вводной + 3х2.5 силовой", "мп", 270, P["el_kabel_25_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Кабель ВВГнг 3х1.5 освещение", "мп", 200, P["el_kabel_15_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Монтаж кабельных линий", "мп", 470, P["el_kabel_install_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Розетка", "шт", 35, P["el_rozetka_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Установка розеток", "шт", 35, P["el_rozetka_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Выключатель", "шт", 18, P["el_switch_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Установка выключателей", "шт", 18, P["el_switch_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Светильник потолочный", "шт", 25, P["el_light_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Монтаж светильников", "шт", 25, P["el_light_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Распределительный щит укомплектованный", "шт", 1, P["el_shchit_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Монтаж щита", "шт", 1, P["el_shchit_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Автомат 16А", "шт", 14, P["el_avtomat_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "УЗО 40А", "шт", 4, P["el_uzo_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Контур заземления комплект", "компл", 1, P["el_zazem_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Монтаж контура заземления", "компл", 1, P["el_zazem_work"], "работы"))
+
+    # 12. Логистика
+    items.append(_ftm_row("Логистика", "Доставка материалов от СПб", "рейс", 3, P["logist_delivery"] / 3, "30 км"))
+    items.append(_ftm_row("Логистика", "Транспорт бригады и проживание", "компл", 1, P["logist_brigade"] * 4, "период строительства"))
+
+    # 13. Накладные расходы
+    subtotal = sum(float(it["price"]) * float(it["qty"]) for it in items if it["section"] not in ("Логистика", "Накладные расходы"))
+    items.append(_ftm_row("Накладные расходы", "Организация работ и накладные", "компл", 1, round(subtotal * 0.07, 2), "7% от общей сметы"))
+    items.append(_ftm_row("Накладные расходы", "Расходные материалы и крепёж", "компл", 1, round(subtotal * 0.015, 2), "мелкое крепление"))
+    items.append(_ftm_row("Накладные расходы", "Уборка после работ", "компл", 1, round(area_floor * 280, 2), "финальная уборка"))
+
+    return items
+
+
+# Override _build_estimate_items with v2
+_ORIG_BEI_V3 = _build_estimate_items
+
+def _build_estimate_items(parsed, price_text, choice):  # noqa: F811
+    try:
+        items = _build_full_turnkey_items_v2(parsed, price_text, choice)
+        _P8V3_LOG.info("PATCH_TOPIC2_REALSHEET_PRICES_V3: %d items", len(items))
+        return items
+    except Exception as _v3e:
+        _P8V3_LOG.error("PATCH_TOPIC2_REALSHEET_PRICES_V3_ERR %s", _v3e)
+        return _ORIG_BEI_V3(parsed, price_text, choice)
+
+_P8V3_LOG.info("PATCH_TOPIC2_REALSHEET_PRICES_V3 installed")
+# === END_PATCH_TOPIC2_REALSHEET_PRICES_V3 ===
+
+# === PATCH_TOPIC2_REALSHEET_PRICES_V3_FIX1 ===
+# Fix _p8v3_mp/_p8v3_wp to strip key before lookup (template keys have no leading spaces)
+def _p8v3_wp(key, fallback=0):  # noqa: F811
+    row = _P8V3_TPL_PRICES.get(key.strip())
+    return row["work_price"] if row and row["work_price"] > 0 else fallback
+
+def _p8v3_mp(key, fallback=0):  # noqa: F811
+    row = _P8V3_TPL_PRICES.get(key.strip())
+    return row["mat_price"] if row and row["mat_price"] > 0 else fallback
+
+_P8V3_LOG.info("PATCH_TOPIC2_REALSHEET_PRICES_V3_FIX1 installed")
+# === END_PATCH_TOPIC2_REALSHEET_PRICES_V3_FIX1 ===
+
+# === PATCH_TOPIC2_ADD_PEREKRYTIYA_SECTION_V1 ===
+# §5 canon: 11 секций, раздел 3 = Перекрытия. Для газобетон 1-эт. дом —
+# монолитная плита перекрытия (над первым этажом / чердачная плита).
+# Цены из шаблона Газобетонный дом (Перекрытие монолитное).
+# Append-only: переопределяем _build_full_turnkey_items_v2.
+# ============================================================
+_PREV_FTI_V2 = _build_full_turnkey_items_v2
+
+def _build_full_turnkey_items_v2(parsed, price_text, choice):  # noqa: F811
+    items = _PREV_FTI_V2(parsed, price_text, choice)
+    P = _FTM_PRICES
+    area_floor = float(parsed.get("area_floor") or 99.91)
+    dims = parsed.get("dims") or parsed.get("dimensions") or [8.5, 12.5]
+    try:
+        a, b = float(dims[0]), float(dims[1])
+    except Exception:
+        a = b = area_floor ** 0.5
+    perimeter = 2 * (a + b)
+
+    # Перекрытие монолитное (плита над 1 этажом)
+    slab_area = round(area_floor * 1.05, 2)   # с запасом
+    slab_vol  = round(slab_area * 0.22, 2)    # толщина 220мм
+    slab_reb_t= round(slab_area * 0.010, 3)   # 10 кг/м²
+
+    perekr_items = [
+        _ftm_row("Перекрытия", "Опалубка перекрытия монтаж/демонтаж", "м²", slab_area,
+            _p8v3_wp("монтаж/демонтаж опалубки основания плиты", 1000), "работы"),
+        _ftm_row("Перекрытия", "Аренда опалубки перекрытия", "м²", slab_area,
+            _p8v3_mp("аренда опалубки (основание плиты)", 1100), "материал"),
+        _ftm_row("Перекрытия", "Армирование перекрытия работы", "м²", slab_area,
+            _p8v3_wp("устройство арматурного каркаса", 1200), "работы"),
+        _ftm_row("Перекрытия", "Арматура перекрытия А500 материал", "т", slab_reb_t,
+            _p8v3_mp("арматура металлическая д.12а500", P["rebar_a500_mat"]), "материал"),
+        _ftm_row("Перекрытия", "Бетон В25 перекрытие материал", "м³", slab_vol,
+            _p8v3_mp("бетон в25 w6", P["concrete_b25_mat"]), "материал"),
+        _ftm_row("Перекрытия", "Бетонирование перекрытия работы", "м³", slab_vol,
+            _p8v3_wp("бетонирование монолитной плиты   б/н", P["concrete_pour_work"]), "работы"),
+        _ftm_row("Перекрытия", "Пеноплэкс утепление плиты 100мм", "м²", slab_area,
+            _p8v3_mp("пеноплэкс фундамент 1185х585х100 мм", 800), "материал"),
+        _ftm_row("Перекрытия", "Крепёж и расходники перекрытие", "компл", 1,
+            round(slab_area * 200, 0), "компл"),
+    ]
+
+    # Вставить секцию Перекрытия ПОСЛЕ Стены (перед Кровля)
+    result = []
+    steny_done = False
+    krovlya_inserted = False
+    for it in items:
+        if it["section"] == "Стены":
+            steny_done = True
+        if steny_done and not krovlya_inserted and it["section"] == "Кровля":
+            result.extend(perekr_items)
+            krovlya_inserted = True
+        result.append(it)
+    if not krovlya_inserted:
+        result.extend(perekr_items)
+
+    # Пересчитать накладные расходы (раздел 13 — последние 3 строки)
+    # Убираем старые накладные, считаем заново
+    base_items = [r for r in result if r["section"] not in ("Логистика", "Накладные расходы")]
+    subtotal = sum(float(r["price"]) * float(r["qty"]) for r in base_items)
+    logist   = [r for r in result if r["section"] == "Логистика"]
+    overhead_new = [
+        _ftm_row("Накладные расходы", "Организация работ и накладные", "компл", 1, round(subtotal * 0.07, 2), "7% от общей сметы"),
+        _ftm_row("Накладные расходы", "Расходные материалы и крепёж",  "компл", 1, round(subtotal * 0.015, 2), "мелкое крепление"),
+        _ftm_row("Накладные расходы", "Уборка после работ",            "компл", 1, round(area_floor * 280, 2), "финальная уборка"),
+    ]
+    return base_items + logist + overhead_new
+
+_P8V3_LOG.info("PATCH_TOPIC2_ADD_PEREKRYTIYA_SECTION_V1 installed")
+# === END_PATCH_TOPIC2_ADD_PEREKRYTIYA_SECTION_V1 ===
 
 ====================================================================================================
 END_FILE: core/stroyka_estimate_canon.py
