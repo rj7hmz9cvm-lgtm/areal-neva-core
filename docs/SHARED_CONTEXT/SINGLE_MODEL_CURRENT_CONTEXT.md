@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-05-08T22:25:03.093170+00:00
-GIT_SHA: b07a2654c76173a3fb8134b325fd123283ff2e7e
+GENERATED_AT: 2026-05-08T22:35:02.569164+00:00
+GIT_SHA: 9196960a6c8b4b95a99c481a7b42a5ca37c5f761
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -16,7 +16,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 ## GLOBAL_STATUS
 | topic | name | status | active | failed_24h |
 |-------|------|--------|--------|------------|
-| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 3 | 9 |
+| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 0 | 12 |
 | 5 | TEKHNADZOR | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
 | 210 | PROEKTIROVANIE | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
 | 500 | VEB_POISK | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
@@ -70,8 +70,8 @@ DATE_UNKNOWN
 ## ACTIVE_OR_RECENT_TOPICS
 ### topic_2 STROYKA
 role: Сметы
-active: 3
-failed_24h: 9
+active: 0
+failed_24h: 12
 commits_last_7d: 30
 recent_commits:
 - b07a265|fix(topic2): TOPIC2_DRAINAGE_LENGTH_PROOF_GATE_AND_ONLINE_PRICES_V2
@@ -85,9 +85,9 @@ markers_missing: 6
 - TOPIC2_MESSAGE_THREAD_ID_OK
 - TOPIC2_DONE_CONTRACT_OK
 last_failed:
-- test-mul | STALE_TIMEOUT
-- 2c732335 | STALE_TIMEOUT
-- test-gat | STALE_TIMEOUT
+- 6a535d79 | STALE_TIMEOUT
+- f9df5eb5 | STALE_TIMEOUT
+- 043e5c9f | STALE_TIMEOUT
 blockers:
 - - topic_2 не тянет проектные образцы topic_210
 - - topic_210 не тянет сметные артефакты как результат
