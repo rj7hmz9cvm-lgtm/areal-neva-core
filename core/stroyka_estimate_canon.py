@@ -4115,3 +4115,75 @@ def _p8v3_mp(key, fallback=0):  # noqa: F811
 
 _P8V3_LOG.info("PATCH_TOPIC2_REALSHEET_PRICES_V3_FIX1 installed")
 # === END_PATCH_TOPIC2_REALSHEET_PRICES_V3_FIX1 ===
+
+# === PATCH_TOPIC2_ADD_PEREKRYTIYA_SECTION_V1 ===
+# §5 canon: 11 секций, раздел 3 = Перекрытия. Для газобетон 1-эт. дом —
+# монолитная плита перекрытия (над первым этажом / чердачная плита).
+# Цены из шаблона Газобетонный дом (Перекрытие монолитное).
+# Append-only: переопределяем _build_full_turnkey_items_v2.
+# ============================================================
+_PREV_FTI_V2 = _build_full_turnkey_items_v2
+
+def _build_full_turnkey_items_v2(parsed, price_text, choice):  # noqa: F811
+    items = _PREV_FTI_V2(parsed, price_text, choice)
+    P = _FTM_PRICES
+    area_floor = float(parsed.get("area_floor") or 99.91)
+    dims = parsed.get("dims") or parsed.get("dimensions") or [8.5, 12.5]
+    try:
+        a, b = float(dims[0]), float(dims[1])
+    except Exception:
+        a = b = area_floor ** 0.5
+    perimeter = 2 * (a + b)
+
+    # Перекрытие монолитное (плита над 1 этажом)
+    slab_area = round(area_floor * 1.05, 2)   # с запасом
+    slab_vol  = round(slab_area * 0.22, 2)    # толщина 220мм
+    slab_reb_t= round(slab_area * 0.010, 3)   # 10 кг/м²
+
+    perekr_items = [
+        _ftm_row("Перекрытия", "Опалубка перекрытия монтаж/демонтаж", "м²", slab_area,
+            _p8v3_wp("монтаж/демонтаж опалубки основания плиты", 1000), "работы"),
+        _ftm_row("Перекрытия", "Аренда опалубки перекрытия", "м²", slab_area,
+            _p8v3_mp("аренда опалубки (основание плиты)", 1100), "материал"),
+        _ftm_row("Перекрытия", "Армирование перекрытия работы", "м²", slab_area,
+            _p8v3_wp("устройство арматурного каркаса", 1200), "работы"),
+        _ftm_row("Перекрытия", "Арматура перекрытия А500 материал", "т", slab_reb_t,
+            _p8v3_mp("арматура металлическая д.12а500", P["rebar_a500_mat"]), "материал"),
+        _ftm_row("Перекрытия", "Бетон В25 перекрытие материал", "м³", slab_vol,
+            _p8v3_mp("бетон в25 w6", P["concrete_b25_mat"]), "материал"),
+        _ftm_row("Перекрытия", "Бетонирование перекрытия работы", "м³", slab_vol,
+            _p8v3_wp("бетонирование монолитной плиты   б/н", P["concrete_pour_work"]), "работы"),
+        _ftm_row("Перекрытия", "Пеноплэкс утепление плиты 100мм", "м²", slab_area,
+            _p8v3_mp("пеноплэкс фундамент 1185х585х100 мм", 800), "материал"),
+        _ftm_row("Перекрытия", "Крепёж и расходники перекрытие", "компл", 1,
+            round(slab_area * 200, 0), "компл"),
+    ]
+
+    # Вставить секцию Перекрытия ПОСЛЕ Стены (перед Кровля)
+    result = []
+    steny_done = False
+    krovlya_inserted = False
+    for it in items:
+        if it["section"] == "Стены":
+            steny_done = True
+        if steny_done and not krovlya_inserted and it["section"] == "Кровля":
+            result.extend(perekr_items)
+            krovlya_inserted = True
+        result.append(it)
+    if not krovlya_inserted:
+        result.extend(perekr_items)
+
+    # Пересчитать накладные расходы (раздел 13 — последние 3 строки)
+    # Убираем старые накладные, считаем заново
+    base_items = [r for r in result if r["section"] not in ("Логистика", "Накладные расходы")]
+    subtotal = sum(float(r["price"]) * float(r["qty"]) for r in base_items)
+    logist   = [r for r in result if r["section"] == "Логистика"]
+    overhead_new = [
+        _ftm_row("Накладные расходы", "Организация работ и накладные", "компл", 1, round(subtotal * 0.07, 2), "7% от общей сметы"),
+        _ftm_row("Накладные расходы", "Расходные материалы и крепёж",  "компл", 1, round(subtotal * 0.015, 2), "мелкое крепление"),
+        _ftm_row("Накладные расходы", "Уборка после работ",            "компл", 1, round(area_floor * 280, 2), "финальная уборка"),
+    ]
+    return base_items + logist + overhead_new
+
+_P8V3_LOG.info("PATCH_TOPIC2_ADD_PEREKRYTIYA_SECTION_V1 installed")
+# === END_PATCH_TOPIC2_ADD_PEREKRYTIYA_SECTION_V1 ===
