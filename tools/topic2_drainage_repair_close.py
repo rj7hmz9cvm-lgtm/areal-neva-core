@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-# TOPIC2_DRAINAGE_VAT_GATE_PUBLIC_CLEAN_V1
+# TOPIC2_DRAINAGE_LENGTH_PROOF_GATE_AND_ONLINE_PRICES_V2
+# Requires: length proven from PDF read-back
+# Requires: online price lookup via OpenRouter/Sonar for drainage materials
+# If length=0: search prices (cache in history), ask user, WC. No fallback.
 from __future__ import annotations
 import asyncio, glob, inspect, os, re, sqlite3, subprocess, sys
 from datetime import datetime
@@ -149,25 +152,132 @@ def count_unique(text, prefix):
 
 def has(text, marker): return low(marker) in low(text)
 
-def build_items(L, depth, wd, wl, dns, pu, note):
-    if L <= 0: L = 80.0  # conservative default for scheme with 3 wells + DNS, no machine-readable lengths
-    ex = round(L*depth*0.6, 2)
+async def search_drainage_prices_online(conn, tid):
+    """Query Perplexity Sonar for drainage material prices in SPb/LO region."""
+    api_key = os.getenv("OPENROUTER_API_KEY","").strip()
+    base_url = os.getenv("OPENROUTER_BASE_URL","https://openrouter.ai/api/v1").rstrip("/")
+    model = os.getenv("OPENROUTER_MODEL_ONLINE","perplexity/sonar").strip() or "perplexity/sonar"
+    if not api_key:
+        print("OPENROUTER_API_KEY_MISSING — online prices unavailable")
+        hist(conn, tid, "TOPIC2_DRAINAGE_PRICE_SEARCH_KEY_MISSING")
+        return None, {}
+    if "sonar" not in model.lower():
+        print(f"ONLINE_MODEL_NOT_SONAR:{model} — skipping")
+        hist(conn, tid, f"TOPIC2_DRAINAGE_PRICE_SEARCH_MODEL_GUARD:{model}")
+        return None, {}
+
+    query = (
+        "Актуальные рыночные цены Санкт-Петербург и Ленинградская область, 2025-2026.\n"
+        "Объект: дренаж и ливневая канализация коттеджного участка.\n\n"
+        "Найди цены с источниками:\n"
+        "1. Труба дренажная гофрированная двустенная d=160мм (КОРСИС SN8 или аналог) — руб/п.м.\n"
+        "2. Геотекстиль нетканый 150-200 г/м² (Terram, Typar, ТехноНИКОЛЬ) — руб/м²\n"
+        "3. Щебень гранитный фракция 20-40мм — руб/м³\n"
+        "4. Песок строительный намывной — руб/м³\n"
+        "5. Колодец дренажный ревизионный ∅500 полимерный (Wavin, Политрон) — руб/шт\n"
+        "6. Насосная станция дренажная 0.55кВт (Grundfos Unilift, Джилекс, Wilo) — руб/шт\n"
+        "7. Пескоуловитель ПУ-1 дорожный пластиковый (Ecoteck, Gidrostroy) — руб/шт\n"
+        "8. Лоток водоотводный DN100 пластиковый с решёткой (Hauraton, Gidrostroy) — руб/п.м.\n\n"
+        "Формат для каждой позиции:\n"
+        "[N]. Позиция | мин. цена | макс. цена | ед. | источник | URL | дата\n\n"
+        "Только реальные данные. Если нет — НЕТ ДАННЫХ. Не выдумывай."
+    )
+    body = {
+        "model": model,
+        "messages": [
+            {"role":"system","content":"Снабженец строительной компании. Только цены с источниками. Без советов."},
+            {"role":"user","content":query},
+        ],
+        "temperature": 0.1,
+    }
+    headers = {"Authorization":f"Bearer {api_key}","Content-Type":"application/json"}
+    try:
+        def _call():
+            r = requests.post(f"{base_url}/chat/completions", headers=headers, json=body, timeout=90)
+            if r.status_code != 200:
+                raise RuntimeError(f"HTTP_{r.status_code}:{r.text[:200]}")
+            return r.json()["choices"][0]["message"]["content"]
+        content = await asyncio.to_thread(_call)
+        hist(conn, tid, f"TOPIC2_DRAINAGE_PRICE_SEARCH_SONAR_OK:{len(content)}chars")
+        prices = _parse_drainage_prices(content)
+        print(f"SONAR_PRICES_PARSED={list(prices.keys())}")
+        return content, prices
+    except Exception as e:
+        hist(conn, tid, f"TOPIC2_DRAINAGE_PRICE_SEARCH_ERR:{str(e)[:120]}")
+        print(f"SONAR_PRICE_SEARCH_FAILED: {e}")
+        return None, {}
+
+def _parse_drainage_prices(text):
+    """Extract numeric prices from Sonar response. Returns dict item → price."""
+    prices = {}
+    if not text: return prices
+    t = low(text)
+
+    def _grab(pattern, lo, hi):
+        m = re.search(pattern, t, re.I|re.S)
+        if not m: return None
+        try:
+            v = float(re.sub(r"[\s\xa0 ]","", m.group(1)).replace(",","."))
+            return v if lo <= v <= hi else None
+        except: return None
+
+    v = _grab(r"труб[а-я]*.*?d=?160[^|]*?\|[^|]*?(\d[\d\s]*)\s*руб", 100, 3000)
+    if v: prices["pipe_per_m"] = v
+
+    v = _grab(r"геотекстил[ья][^|]*?\|[^|]*?(\d[\d\s]*)\s*руб", 20, 800)
+    if v: prices["geotextile_per_m2"] = v
+
+    v = _grab(r"щебен[ья][^|]*?\|[^|]*?(\d[\d\s]*)\s*руб", 500, 15000)
+    if v: prices["gravel_per_m3"] = v
+
+    v = _grab(r"колодец[^|]*?∅?500[^|]*?\|[^|]*?(\d[\d\s]*)\s*руб", 3000, 150000)
+    if not v: v = _grab(r"колодец[^|]*?дренаж[^|]*?\|[^|]*?(\d[\d\s]*)\s*руб", 3000, 150000)
+    if v: prices["well_per_unit"] = v
+
+    v = _grab(r"насосн[^|]*?станц[^|]*?\|[^|]*?(\d[\d\s]*)\s*руб", 5000, 500000)
+    if v: prices["dns_per_unit"] = v
+
+    v = _grab(r"пескоулов[^|]*?\|[^|]*?(\d[\d\s]*)\s*руб", 1000, 80000)
+    if v: prices["pu_per_unit"] = v
+
+    v = _grab(r"лоток[^|]*?\|[^|]*?(\d[\d\s]*)\s*руб", 200, 15000)
+    if v: prices["channel_per_m"] = v
+
+    return prices
+
+def build_items(L, depth, wd, wl, dns, pu, note, online_prices=None):
+    # No fallback — caller must ensure L > 0
+    if L <= 0:
+        raise ValueError("TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN_NO_FALLBACK")
+    p = online_prices or {}
+    src = "OpenRouter/Sonar (актуальные)" if p else "MANUAL_HIGH_SEGMENT_BY_USER"
+    supplier = "онлайн-поиск СПб/ЛО" if p else "ручной высокий сегмент"
+
+    pipe_mat     = p.get("pipe_per_m",        1250)
+    geo_mat      = p.get("geotextile_per_m2",   95)
+    gravel_mat   = p.get("gravel_per_m3",      3200)
+    well_mat     = p.get("well_per_unit",     18000)
+    dns_mat      = p.get("dns_per_unit",     145000)
+    pu_mat       = p.get("pu_per_unit",       22000)
+    channel_mat  = p.get("channel_per_m",      2600)
+
+    ex = round(L * depth * 0.6, 2)
     rows = [
-        ("Подготовительные и земляные работы","Разметка трасс дренажа/ливневки","м.п.",L,450,0),
+        ("Подготовительные и земляные работы","Разметка трасс дренажа/ливнёвки","м.п.",L,450,0),
         ("Подготовительные и земляные работы","Разработка траншей","м³",ex,1900,0),
         ("Подготовительные и земляные работы","Вывоз/перемещение лишнего грунта","м³",round(ex*0.35,2),1400,0),
-        ("Геотекстиль / щебень / песок","Геотекстиль в траншее","м²",round(L*1.8,2),180,95),
+        ("Геотекстиль / щебень / песок","Геотекстиль в траншее","м²",round(L*1.8,2),180,geo_mat),
         ("Геотекстиль / щебень / песок","Песчаная подготовка","м³",round(L*0.12,2),1300,1700),
-        ("Геотекстиль / щебень / песок","Щебёночный фильтр","м³",round(L*0.35,2),1600,3200),
-        ("Дренажные трубы и обратный фильтр","Труба дренажная/водоотводящая d=160","м.п.",L,850,1250),
+        ("Геотекстиль / щебень / песок","Щебёночный фильтр","м³",round(L*0.35,2),1600,gravel_mat),
+        ("Дренажные трубы и обратный фильтр","Труба дренажная/водоотводящая d=160","м.п.",L,850,pipe_mat),
         ("Дренажные трубы и обратный фильтр","Укладка трубы с уклоном i=0,005","м.п.",L,950,0),
     ]
-    if wd: rows.append(("Колодцы и дождеприёмники","Дренажный ревизионный колодец Дк","шт",wd,6500,18000))
-    if wl: rows.append(("Колодцы и дождеприёмники","Ливневый ревизионный колодец Лк","шт",wl,6500,16000))
-    if dns: rows.append(("ДНС / насосное оборудование","Дренажная насосная станция ДНС-1","компл",1,28000,145000))
-    if pu: rows.append(("Пескоуловители / линейный водоотвод","Пескоуловитель ПУ-1","шт",1,6500,22000))
+    if wd: rows.append(("Колодцы и дождеприёмники","Дренажный ревизионный колодец Дк","шт",wd,6500,well_mat))
+    if wl: rows.append(("Колодцы и дождеприёмники","Ливневый ревизионный колодец Лк","шт",wl,6500,well_mat))
+    if dns: rows.append(("ДНС / насосное оборудование","Дренажная насосная станция ДНС-1","компл",1,28000,dns_mat))
+    if pu: rows.append(("Пескоуловители / линейный водоотвод","Пескоуловитель ПУ-1","шт",1,6500,pu_mat))
     rows.extend([
-        ("Ливневая канализация","Линейный водоотвод / лотки","м.п.",max(round(L*0.2,2),1),1100,2600),
+        ("Ливневая канализация","Линейный водоотвод / лотки","м.п.",max(round(L*0.2,2),1),1100,channel_mat),
         ("Монтажные работы","Сборка узлов, подключение колодцев и выпусков","компл",1,45000,0),
         ("Логистика","Доставка материалов и инструмента","рейс",2,0,18000),
     ])
@@ -177,8 +287,8 @@ def build_items(L, depth, wd, wl, dns, pu, note):
         out.append({"№":i,"Раздел":sec,"Наименование":name,"Ед изм":unit,"Кол-во":qty,
             "Цена работ":work,"Стоимость работ":round(qty*work,2),
             "Цена материалов":mat,"Стоимость материалов":round(qty*mat,2),
-            "Всего":round(qty*(work+mat),2),"Источник цены":"MANUAL_HIGH_SEGMENT_BY_USER",
-            "Поставщик":"ручной высокий сегмент по запросу пользователя",
+            "Всего":round(qty*(work+mat),2),"Источник цены":src,
+            "Поставщик":supplier,
             "URL":"—","checked_at":datetime.now().strftime("%Y-%m-%d"),"Примечание":note})
     return out
 
@@ -189,7 +299,7 @@ def calc_totals(items, vat_mode):
     vat = no_vat * VAT_RATE if vat_mode == "WITH_VAT_22" else 0.0
     return {"works":works,"mats":mats,"no_vat":no_vat,"vat":vat,"grand":no_vat+vat}
 
-def create_xlsx(path, items, meta, vat_mode):
+def create_xlsx(path, items, meta, vat_mode, online_price_text=None):
     from openpyxl import Workbook
     from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
     from openpyxl.utils import get_column_letter
@@ -198,8 +308,8 @@ def create_xlsx(path, items, meta, vat_mode):
     wb = Workbook(); ws = wb.active; ws.title = "DRAINAGE_CALC"
     ws["A1"] = "Смета: дренаж / ливневая канализация / наружные сети"
     ws["A2"] = f"Исходные файлы: {', '.join(meta['file_names'])}"
-    ws["A3"] = f"Длина по read-back: {meta['total_len']} м; глубина: {meta['avg_depth']} м; статус: {meta['length_status']}"
-    ws["A4"] = "Цены: высокий ценовой сегмент по голосовому ТЗ пользователя"
+    ws["A3"] = f"Длина: {meta['total_len']} м; глубина: {meta['avg_depth']} м; статус: {meta['length_status']}"
+    ws["A4"] = "Цены: онлайн-поиск OpenRouter/Sonar (СПб/ЛО)" if meta.get("prices_source") == "sonar" else "Цены: высокий ценовой сегмент по ТЗ"
     ws["A5"] = "НДС: 22%" if vat_mode=="WITH_VAT_22" else "НДС: не применяется"
     for r in range(1,6): ws.cell(r,1).font = Font(bold=True)
     start = 7
@@ -230,6 +340,16 @@ def create_xlsx(path, items, meta, vat_mode):
         for cell in row:
             cell.border = Border(left=thin,right=thin,top=thin,bottom=thin)
             cell.alignment = Alignment(vertical="top",wrap_text=True)
+    # Online prices sheet
+    if online_price_text:
+        ws2 = wb.create_sheet("Цены онлайн (Sonar)")
+        ws2["A1"] = "Цены из интернета — OpenRouter / Perplexity Sonar"
+        ws2["A2"] = f"Дата запроса: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+        ws2["A1"].font = Font(bold=True)
+        ws2["A2"].font = Font(italic=True)
+        for i, line in enumerate(online_price_text.splitlines(), 4):
+            ws2.cell(i, 1, line[:500])
+        ws2.column_dimensions["A"].width = 120
     wb.save(path)
     return calc_totals(items, vat_mode)
 
@@ -245,6 +365,7 @@ def create_pdf(path, items, meta, totals, vat_mode):
     if fp: pdfmetrics.registerFont(TTFont("RU",fp)); font="RU"
     else: font="Helvetica"
     vat_label = "НДС: 22%" if vat_mode=="WITH_VAT_22" else "НДС: не применяется"
+    prices_label = "Цены: онлайн-поиск OpenRouter/Sonar" if meta.get("prices_source")=="sonar" else "Цены: высокий ценовой сегмент"
     doc = SimpleDocTemplate(str(path),pagesize=landscape(A4),leftMargin=18,rightMargin=18,topMargin=18,bottomMargin=18)
     sty = getSampleStyleSheet()
     N = ParagraphStyle("n",parent=sty["Normal"],fontName=font,fontSize=8,leading=10)
@@ -252,7 +373,7 @@ def create_pdf(path, items, meta, totals, vat_mode):
     story = [Paragraph("Смета: дренаж / ливневая канализация / наружные сети",T),Spacer(1,8),
              Paragraph(f"Исходные файлы: {', '.join(meta['file_names'])}",N),
              Paragraph(f"Длина: {meta['total_len']} м; глубина: {meta['avg_depth']} м; статус: {meta['length_status']}",N),
-             Paragraph(f"Цены: высокий ценовой сегмент; {vat_label}",N),Spacer(1,8)]
+             Paragraph(f"{prices_label}; {vat_label}",N),Spacer(1,8)]
     data=[["Раздел","Наименование","Ед","Кол-во","Работы","Материалы","Всего"]]
     for item in items:
         data.append([Paragraph(item["Раздел"],N),Paragraph(item["Наименование"],N),item["Ед изм"],
@@ -318,8 +439,8 @@ async def main():
     if vat_mode is None:
         ask_vat(conn, task); conn.close(); return
 
-    hist(conn,tid,"TOPIC2_VAT_GATE_CHECKED")
-    hist(conn,tid,f"TOPIC2_VAT_MODE_CONFIRMED:{vat_mode}")
+    hist(conn, tid, "TOPIC2_VAT_GATE_CHECKED")
+    hist(conn, tid, f"TOPIC2_VAT_MODE_CONFIRMED:{vat_mode}")
 
     sources = find_user_pdfs()
     if not sources: raise SystemExit("NO_USER_SOURCE_PDFS")
@@ -328,7 +449,6 @@ async def main():
     if not drainage: raise SystemExit("DRAINAGE_SOURCE_NOT_FOUND")
 
     print(f"SOURCES_FOUND={[x['name'] for x in sources]}")
-    print(f"DRAINAGE_COUNT={len(drainage)} GEOLOGY_COUNT={len(geology)}")
 
     scheme_text = "\n".join(x["text"] for x in drainage)
     geo_text    = "\n".join(x["text"] for x in geology)
@@ -338,17 +458,60 @@ async def main():
     avg_depth = round(max(1.2,min(depths)),2) if depths else 1.2
     wells_d=count_unique(scheme_text,"Дк"); wells_l=count_unique(scheme_text,"Лк")
     has_dns=has(scheme_text,"ДНС"); has_pu=has(scheme_text,"пескоуловитель") or has(scheme_text,"ПУ-1")
-    length_status="READBACK_LENGTHS_FOUND" if total_len>0 else "APPROX_FROM_SCHEME_NO_FULL_LENGTH_TABLE"
-    note=f"{length_status}; source_filter=user_pdfs_only; drainage={len(drainage)}, geology={len(geology)}"
 
-    items=build_items(total_len,avg_depth,wells_d,wells_l,has_dns,has_pu,note)
+    print(f"LENGTHS_FOUND={lengths} TOTAL_LEN={total_len}")
+
+    # LENGTH PROOF GATE — no fallback allowed
+    if total_len <= 0 or len(lengths) < 1:
+        print("LENGTH_NOT_PROVEN — searching prices online then asking user")
+        price_text, _ = await search_drainage_prices_online(conn, tid)
+        if price_text:
+            hist(conn, tid, f"TOPIC2_DRAINAGE_ONLINE_PRICES_CACHED:{len(price_text)}chars")
+            conn.commit()
+
+        wc_msg = (
+            "Длина трасс дренажа и ливнёвки в PDF не читается — схема графическая, "
+            "размерные цепочки не в текстовом слое.\n\n"
+            "Пришли, пожалуйста:\n"
+            "• Общую длину дренажных труб (в метрах)\n"
+            "• Или длины по участкам: Дк-1→Дк-2, Дк-2→ДНС, и т.д.\n\n"
+            "После этого пересчитаю смету с актуальными ценами из интернета."
+        )
+        bot_msg = send_msg(chat_id, topic_id, wc_msg)
+        conn.execute(
+            "UPDATE tasks SET state='WAITING_CLARIFICATION', result=?, bot_message_id=?, "
+            "error_message='TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN', updated_at=datetime('now') WHERE id=?",
+            (wc_msg, bot_msg, tid),
+        )
+        for action in [
+            "TOPIC2_DRAINAGE_LENGTH_PROOF_GATE_V1",
+            f"TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN:lines={len(lengths)}:total={total_len}",
+            "TOPIC2_DRAINAGE_FINAL_ARTIFACTS_BLOCKED",
+            f"TOPIC2_DRAINAGE_WC_SENT:{bot_msg}",
+        ]:
+            hist(conn, tid, action)
+        conn.commit(); conn.close()
+        print(f"DRAINAGE_LENGTH_GATE_WC_SENT\nBOT_MESSAGE_ID={bot_msg}")
+        return
+
+    # LENGTH PROVEN — search prices online before generating
+    price_text, online_prices = await search_drainage_prices_online(conn, tid)
+    prices_source = "sonar" if online_prices else "manual"
+    print(f"ONLINE_PRICES={list(online_prices.keys()) if online_prices else 'NONE — using manual baseline'}")
+
+    length_status = "READBACK_LENGTHS_FOUND"
+    note = (f"{length_status}; prices={prices_source}; "
+            f"source_filter=user_pdfs_only; drainage={len(drainage)}, geology={len(geology)}")
+    items = build_items(total_len, avg_depth, wells_d, wells_l, has_dns, has_pu, note, online_prices)
+
     stamp=datetime.now().strftime("%Y%m%d_%H%M%S")
     xlsx=OUT_DIR/f"drainage_estimate_clean_{tid[:8]}_{stamp}.xlsx"
     pdf_out=OUT_DIR/f"drainage_estimate_clean_{tid[:8]}_{stamp}.pdf"
-    meta={"file_names":[x["name"] for x in sources],"total_len":total_len,"avg_depth":avg_depth,"length_status":length_status}
+    meta={"file_names":[x["name"] for x in sources],"total_len":total_len,"avg_depth":avg_depth,
+          "length_status":length_status,"prices_source":prices_source}
 
-    totals=create_xlsx(xlsx,items,meta,vat_mode)
-    create_pdf(pdf_out,items,meta,totals,vat_mode)
+    totals=create_xlsx(xlsx, items, meta, vat_mode, online_price_text=price_text)
+    create_pdf(pdf_out, items, meta, totals, vat_mode)
 
     xlsx_link=await maybe_upload(xlsx,chat_id,topic_id)
     pdf_link =await maybe_upload(pdf_out,chat_id,topic_id)
@@ -363,14 +526,15 @@ async def main():
     else:
         totals_block=f"Итого без НДС: {totals['grand']:,.0f} руб\n НДС: не применяется".replace(",","  ")
 
+    prices_line = "Цены: онлайн-поиск OpenRouter/Sonar" if online_prices else "Цены: высокий ценовой сегмент"
     excel_line=f"Excel: {xlsx_link}" if xlsx_link else "Excel: отправлен файлом"
     pdf_line  =f"PDF: {pdf_link}"   if pdf_link  else "PDF: отправлен файлом"
 
     public=(f"✅ Смета дренажа готова\n\n"
             f"Объект: наружные сети / дренаж / ливневая канализация\n"
             f"Файлы учтены: {', '.join(meta['file_names'])}\n"
-            f"Цены: высокий ценовой сегмент\n"
-            f"Длина по read-back: {total_len} м; глубина: {avg_depth} м\n\n"
+            f"{prices_line}\n"
+            f"Длина: {total_len} м; глубина: {avg_depth} м\n\n"
             f"Итого:\n Материалы: {totals['mats']:,.0f} руб\n Работы: {totals['works']:,.0f} руб\n {totals_block}\n\n"
             f"{excel_line}\n{pdf_line}\n\nПодтверди или пришли правки").replace(",","  ")
 
@@ -387,6 +551,7 @@ async def main():
         *[f"TOPIC2_DRAINAGE_SOURCE_FILE:{x['name']}:kind={x['kind']}:chars={x['chars']}" for x in sources],
         f"TOPIC2_DRAINAGE_LENGTHS_STATUS:{length_status}:total_len={total_len}",
         f"TOPIC2_DRAINAGE_DEPTH_STATUS:avg_depth={avg_depth}",
+        f"TOPIC2_DRAINAGE_PRICES_SOURCE:{prices_source}:keys={list(online_prices.keys()) if online_prices else []}",
         f"TOPIC2_DRAINAGE_XLSX_CREATED:{xlsx.name}",
         f"TOPIC2_DRAINAGE_PDF_CREATED:{pdf_out.name}",
         f"TOPIC2_DRAINAGE_DRIVE_XLSX_OK:{xlsx_link}" if xlsx_link else "TOPIC2_DRAINAGE_TELEGRAM_XLSX_FALLBACK_SENT",
@@ -396,7 +561,7 @@ async def main():
     ]: hist(conn,tid,action)
     conn.commit(); conn.close()
 
-    print("DRAINAGE_VAT_CLEAN_OK")
+    print("DRAINAGE_ESTIMATE_OK")
     print(f"VAT_MODE={vat_mode} BOT_MESSAGE_ID={bot_msg}")
     print(f"TOTAL_LEN={total_len} GRAND={totals['grand']}")
 

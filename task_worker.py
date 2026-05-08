@@ -16878,5 +16878,39 @@ except Exception:
 # === END_PATCH_TOPIC2_DRAINAGE_CHILD_MERGE_V1 ===
 
 
+
+# PATCH_TOPIC2_DRAINAGE_CHILD_MERGE_V1_FIX1
+# Fix 1: SQL used th.event — correct column is th.action (was silently failing)
+# Fix 2: Only merge when parent is AWAITING_CONFIRMATION, not WAITING_CLARIFICATION
+#         (WC = awaiting user's reply with data — those tasks must flow through normally)
+
+def _t2cm_v1_find_active_drainage_parent(conn):
+    try:
+        row = conn.execute(
+            """
+            SELECT t.id FROM tasks t
+            JOIN task_history th ON th.task_id = t.id
+            WHERE t.topic_id = 2
+              AND t.state = 'AWAITING_CONFIRMATION'
+              AND (
+                    th.action LIKE '%TOPIC2_INPUT_GATE%'
+                    OR th.action LIKE '%TOPIC2_DRAINAGE%'
+                    OR th.action LIKE '%WCG_DELIVERY_SENT%'
+                  )
+            ORDER BY t.rowid DESC
+            LIMIT 1
+            """
+        ).fetchone()
+        return row[0] if row else None
+    except Exception:
+        return None
+
+try:
+    logger.info("PATCH_TOPIC2_DRAINAGE_CHILD_MERGE_V1_FIX1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_DRAINAGE_CHILD_MERGE_V1_FIX1 ===
+
+
 if __name__ == "__main__":
     asyncio.run(main())
