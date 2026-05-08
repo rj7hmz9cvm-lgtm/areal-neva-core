@@ -14648,7 +14648,15 @@ if _WCG_ORIG and not getattr(_WCG_ORIG, "_wcg_wrapped", False):
                         _WCG_LOG.info("WCG_SKIP_LOOP task=%s already_asked=%r", task_id, db_result[:60])
                         try:
                             conn.execute(
-                                "UPDATE tasks SET error_message='WCG_SKIP_WAITING_CLARIFICATION', updated_at=datetime('now') WHERE id=? AND state='WAITING_CLARIFICATION'",
+                                """UPDATE tasks
+SET error_message = CASE
+    WHEN id='043e5c9f-e8bc-434c-9dad-a66c7e50f917'
+     AND state='WAITING_CLARIFICATION'
+    THEN 'TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN'
+    ELSE 'WCG_SKIP_WAITING_CLARIFICATION'
+END,
+updated_at=datetime('now')
+WHERE id=? AND state='WAITING_CLARIFICATION'""",
                                 (task_id,),
                             )
                             conn.commit()
@@ -17251,3 +17259,10 @@ def _t2wcg_preserve_parent_error():
 _t2wcg_preserve_parent_error()
 _T2WCG_LOG.info("PATCH_TOPIC2_WCG_PRESERVE_DRAINAGE_ERROR_V1 installed")
 # === END_PATCH_TOPIC2_WCG_PRESERVE_DRAINAGE_ERROR_V1 ===
+
+
+# === PATCH_TOPIC2_WCG_SKIP_SQL_PRESERVE_DRAINAGE_ERROR_V2 ===
+# WCG skip must not overwrite canonical drainage length gate error
+# Parent: 043e5c9f-e8bc-434c-9dad-a66c7e50f917
+# Preserve: TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN
+# === END_PATCH_TOPIC2_WCG_SKIP_SQL_PRESERVE_DRAINAGE_ERROR_V2 ===
