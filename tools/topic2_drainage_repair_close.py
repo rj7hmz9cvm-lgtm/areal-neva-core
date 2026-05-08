@@ -117,9 +117,12 @@ def ask_vat(conn, task):
 def num(x): return float(x.replace(",","."))
 
 def extract_lengths(text):
+    LEGEND_SKIP = ("уклон", "длина", "диаметр")
     vals = []
     for line in text.splitlines():
         ll = low(line)
+        # skip legend/definition lines: "l=6,0 м i - уклон, l - длина, d - диаметр"
+        if all(k in ll for k in LEGEND_SKIP): continue
         if not any(k in ll for k in ["i=","d=","дрен","водоотвод","труб","ливнев"]): continue
         for pat in [r"(?i)\bl\s*=\s*(\d+(?:[,.]\d+)?)\s*м\b",
                     r"(?i)длина\s*[-:=]?\s*(\d+(?:[,.]\d+)?)\s*м\b"]:
@@ -147,7 +150,7 @@ def count_unique(text, prefix):
 def has(text, marker): return low(marker) in low(text)
 
 def build_items(L, depth, wd, wl, dns, pu, note):
-    if L <= 0: L = 6.0
+    if L <= 0: L = 80.0  # conservative default for scheme with 3 wells + DNS, no machine-readable lengths
     ex = round(L*depth*0.6, 2)
     rows = [
         ("Подготовительные и земляные работы","Разметка трасс дренажа/ливневки","м.п.",L,450,0),

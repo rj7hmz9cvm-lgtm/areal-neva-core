@@ -205,6 +205,17 @@ def _has_drainage(text: str) -> bool:
     return any(m in low for m in DRAINAGE_MARKERS)
 
 
+def _user_explicitly_wants_drainage(text: str) -> bool:
+    """User knowingly requests drainage work — gate must not block."""
+    low = _low(text)
+    triggers = (
+        "дренаж", "нвд", "ливнёвка", "ливневка",
+        "наружные водостоки", "дренажная", "ливневая",
+        "хоз.-бытовая", "хозяйственно-бытовая",
+    )
+    return any(t in low for t in triggers)
+
+
 def _has_house_contamination(text: str) -> bool:
     low = _low(text)
     return any(m in low for m in BAD_HOUSE_MARKERS)
@@ -259,6 +270,28 @@ def _latest_file_task(
     return rows[0] if rows else None
 
 
+def _recent_file_tasks(
+    conn: sqlite3.Connection, chat_id: str, topic_id: int, current_task_id: str = "", limit: int = 6
+) -> List[Any]:
+    try:
+        conn.row_factory = sqlite3.Row
+    except Exception:
+        pass
+    return conn.execute(
+        """
+        SELECT rowid,id,chat_id,topic_id,input_type,state,raw_input,result,created_at,updated_at
+        FROM tasks
+        WHERE CAST(chat_id AS TEXT)=CAST(? AS TEXT)
+          AND COALESCE(topic_id,0)=?
+          AND input_type IN ('drive_file','file','photo','document')
+          AND id<>?
+        ORDER BY rowid DESC
+        LIMIT ?
+        """,
+        (str(chat_id), int(topic_id or 0), str(current_task_id or ""), limit),
+    ).fetchall()
+
+
 def _collect_current_file_text(
     conn: sqlite3.Connection, task: Any
 ) -> Tuple[str, Dict[str, Any]]:
@@ -276,19 +309,34 @@ def _collect_current_file_text(
         "input_type": input_type,
         "paths": [],
         "parent_file_task_id": "",
+        "file_count": 0,
+        "drainage_count": 0,
+        "non_drainage_count": 0,
+        "per_file": [],
     }
 
     paths = _candidate_paths_from_raw(raw)
 
-    if input_type in ("text", "voice") and _is_file_clarification(_text_from_task(task)):
-        parent = _latest_file_task(conn, chat_id, topic_id, task_id)
-        if parent is not None:
-            meta["parent_file_task_id"] = _s(parent["id"])
-            texts.append(_text_from_task(parent))
-            paths.extend(_candidate_paths_from_raw(parent["raw_input"]))
-
+    # For file-type tasks: add own path
     if input_type in ("drive_file", "file", "photo", "document"):
         paths.extend(_candidate_paths_from_raw(raw))
+
+    # For text/voice: look up recent file tasks in topic (not just the last one)
+    if input_type in ("text", "voice"):
+        recent = _recent_file_tasks(conn, chat_id, topic_id, task_id, limit=6)
+        for ft in recent:
+            ft_paths = _candidate_paths_from_raw(_row_get(ft, "raw_input", ""))
+            paths.extend(ft_paths)
+            if not meta["parent_file_task_id"] and ft_paths:
+                meta["parent_file_task_id"] = _s(_row_get(ft, "id", ""))
+        # Only use bot-api fallback if the task is a file-type, not for text/voice
+        # (avoids pulling in unrelated PDFs from other sessions)
+
+    # For direct file tasks with no local path: use bot-api fallback scoped to recent
+    if input_type in ("drive_file", "file", "photo", "document") and not paths:
+        for p in _recent_bot_api_pdfs(limit=3) + _recent_runtime_pdfs(limit=3):
+            if p.exists():
+                paths.append(p)
 
     seen: set = set()
     uniq: List[Path] = []
@@ -301,15 +349,18 @@ def _collect_current_file_text(
         except Exception:
             continue
 
-    if not uniq:
-        for p in _recent_bot_api_pdfs(limit=4) + _recent_runtime_pdfs(limit=4):
-            if p.exists():
-                uniq.append(p)
-
     for p in uniq[:6]:
         meta["paths"].append(str(p))
         if p.suffix.lower() == ".pdf":
-            texts.append(_pdf_text(p))
+            txt = _pdf_text(p)
+            texts.append(txt)
+            is_drain = _has_drainage(txt) or _has_drainage(p.name)
+            meta["per_file"].append({"path": str(p), "is_drainage": is_drain})
+            meta["file_count"] += 1
+            if is_drain:
+                meta["drainage_count"] += 1
+            else:
+                meta["non_drainage_count"] += 1
 
     joined = "\n".join(t for t in texts if t)
     return joined, meta
@@ -332,6 +383,19 @@ def topic2_pre_estimate_gate(
     text, meta = _collect_current_file_text(conn, task)
 
     if _has_drainage(text):
+        # Case 1: user explicitly says "дренаж/НВД" in their OWN message → allow through
+        # Check only raw_input, not result (result may contain "дренаж" from previous WC response)
+        _t2ig_raw_only = _s(_row_get(task, "raw_input", ""))
+        if _user_explicitly_wants_drainage(_t2ig_raw_only):
+            _history(conn, task_id, "TOPIC2_INPUT_GATE_DRAINAGE_ALLOWED:user_explicit")
+            return {"allow": True, "reason": "user_explicitly_wants_drainage", "domain": "drainage_network", "meta": meta}
+
+        # Case 2: multiple files, some non-drainage → don't block, engine will sort it out
+        if meta.get("file_count", 0) > 1 and meta.get("non_drainage_count", 0) > 0:
+            _history(conn, task_id, f"TOPIC2_INPUT_GATE_MIXED_FILES:total={meta['file_count']},drainage={meta['drainage_count']},other={meta['non_drainage_count']}")
+            return {"allow": True, "reason": "mixed_files_non_drainage_present", "domain": "mixed", "meta": meta}
+
+        # Case 3: all files (or only file) are drainage → block
         msg = (
             "PDF определён как схема дренажа/ливнёвки.\n"
             "Домовую смету не запускаю: текущий файл относится к наружным сетям, а не к дому.\n"

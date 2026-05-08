@@ -16772,5 +16772,111 @@ except Exception:
 # === END_PATCH_WAITING_CLARIFICATION_DELIVERY_GUARD_V1 ===
 
 
+
+
+# PATCH_TOPIC2_DRAINAGE_CHILD_MERGE_V1
+# NEW topic_2 text tasks while drainage parent is active → merge to DONE immediately
+
+def _t2cm_v1_find_active_drainage_parent(conn):
+    """Returns active drainage parent task id in topic_2, or None."""
+    try:
+        row = conn.execute(
+            """
+            SELECT t.id FROM tasks t
+            JOIN task_history th ON th.task_id = t.id
+            WHERE t.topic_id = 2
+              AND t.state IN ('WAITING_CLARIFICATION','AWAITING_CONFIRMATION')
+              AND (
+                    th.event LIKE '%TOPIC2_INPUT_GATE%'
+                    OR th.event LIKE '%TOPIC2_DRAINAGE%'
+                    OR th.event LIKE '%WCG_DELIVERY_SENT%'
+                  )
+            ORDER BY t.rowid DESC
+            LIMIT 1
+            """
+        ).fetchone()
+        return row[0] if row else None
+    except Exception:
+        return None
+
+
+def _t2cm_v1_merge_children(conn):
+    """
+    If active drainage parent found: close all NEW topic_2 text child tasks
+    with TOPIC2_CHILD_MERGED_TO_DRAINAGE_PARENT marker. Returns merge count.
+    """
+    try:
+        parent_id = _t2cm_v1_find_active_drainage_parent(conn)
+        if not parent_id:
+            return 0
+        rows = conn.execute(
+            """
+            SELECT id FROM tasks
+            WHERE topic_id = 2
+              AND state = 'NEW'
+              AND COALESCE(input_type,'') = 'text'
+              AND id != ?
+            ORDER BY rowid ASC
+            LIMIT 20
+            """,
+            (parent_id,),
+        ).fetchall()
+        if not rows:
+            return 0
+        merged = 0
+        marker = "TOPIC2_CHILD_MERGED_TO_DRAINAGE_PARENT:" + parent_id
+        for (task_id,) in rows:
+            try:
+                conn.execute(
+                    "UPDATE tasks SET state='DONE', error_message=? WHERE id=?",
+                    (marker, task_id),
+                )
+                conn.execute(
+                    "INSERT INTO task_history (task_id, event, created_at) VALUES (?,?,datetime('now'))",
+                    (task_id, marker),
+                )
+                conn.commit()
+                merged += 1
+                try:
+                    logger.info("T2CMV1_MERGED child=%s parent=%s", task_id, parent_id)
+                except Exception:
+                    pass
+            except Exception as _me:
+                try:
+                    logger.warning("T2CMV1_MERGE_ERR task=%s err=%s", task_id, _me)
+                except Exception:
+                    pass
+        return merged
+    except Exception as _e:
+        try:
+            logger.warning("T2CMV1_CHECK_ERR %s", _e)
+        except Exception:
+            pass
+        return 0
+
+
+_T2CM_V1_ORIG_PICK = _pick_next_task
+
+
+def _pick_next_task(*args, **kwargs):
+    _conn = args[0] if args else kwargs.get("conn")
+    if _conn is not None:
+        try:
+            _t2cm_v1_merge_children(_conn)
+        except Exception as _t2cm_err:
+            try:
+                logger.warning("T2CM_V1_GUARD_ERR %s", _t2cm_err)
+            except Exception:
+                pass
+    return _T2CM_V1_ORIG_PICK(*args, **kwargs)
+
+
+try:
+    logger.info("PATCH_TOPIC2_DRAINAGE_CHILD_MERGE_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_DRAINAGE_CHILD_MERGE_V1 ===
+
+
 if __name__ == "__main__":
     asyncio.run(main())
