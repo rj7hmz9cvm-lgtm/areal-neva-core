@@ -1,7 +1,7 @@
 # SINGLE_MODEL_FULL_CONTEXT
 
-GENERATED_AT: 2026-05-08T20:10:02.413946+00:00
-GIT_SHA: 531398c8bf6e37ce42979d3ad69fc7bafe2a76cf
+GENERATED_AT: 2026-05-08T22:10:02.414718+00:00
+GIT_SHA: af42c97232f42a953e720cd4afceba9a494a9621
 PURPOSE: Один файл с полным контекстом проекта для любой модели
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 
@@ -22,7 +22,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 | topic_id | name | status | active | failed_24h |
 |----------|------|--------|--------|------------|
 | 0 | COMMON | UNKNOWN | 0 | 0 |
-| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 1 | 6 |
+| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 1 | 9 |
 | 5 | TEKHNADZOR | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
 | 11 | VIDEO | UNKNOWN | 0 | 0 |
 | 210 | PROEKTIROVANIE | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
@@ -3873,8 +3873,8 @@ I canno
 ```
 # topic_0 COMMON
 
-GENERATED_AT: 2026-05-08T20:10:02.055974+00:00
-GIT_SHA: 531398c8bf6e37ce42979d3ad69fc7bafe2a76cf
+GENERATED_AT: 2026-05-08T22:10:02.082396+00:00
+GIT_SHA: af42c97232f42a953e720cd4afceba9a494a9621
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 0
@@ -3951,10 +3951,22 @@ STATUS: SYNCED_LOCAL
 ## TOPIC_2_STROYKA
 
 STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE: 1  FAILED_24H: 6
+ACTIVE: 1  FAILED_24H: 9
 DIRECTIONS_BOUND: Сметы
 
 ### LAST_FAILED (5)
+- test-mul | 2026-05-08 23:29:32 | STALE_TIMEOUT
+    history: reply_sent:stale_failed
+    history: state:FAILED
+    history: WCG_DELIVERY_SEND_FAILED
+- 2c732335 | 2026-05-08 23:20:28 | STALE_TIMEOUT
+    history: reply_sent:stale_failed
+    history: state:FAILED
+    history: reply_sent:waiting_clarification
+- test-gat | 2026-05-08 23:19:46 | STALE_TIMEOUT
+    history: reply_sent:stale_failed
+    history: state:FAILED
+    history: reply_sent:waiting_clarification
 - e425b052 | 2026-05-08 22:40:15 | STALE_TIMEOUT
     history: reply_sent:stale_failed
     history: state:FAILED
@@ -3963,18 +3975,6 @@ DIRECTIONS_BOUND: Сметы
     history: reply_sent:stale_failed
     history: state:FAILED
     history: reply_sent:waiting_clarification
-- test-gat | 2026-05-08 22:40:26 | STALE_TIMEOUT
-    history: reply_sent:stale_failed
-    history: state:FAILED
-    history: reply_sent:waiting_clarification
-- test-dra | 2026-05-08 21:50:16 | STALE_TIMEOUT
-    history: reply_sent:stale_failed
-    history: state:FAILED
-    history: TOPIC2_CANONICAL_REROUTE_V2:CANONICAL_HANDLED
-- 60b9503b | 2026-05-08 22:17:11 | TOPIC2_STALE_HOUSE_CONTEXT_USED_FOR_DRAINAGE_FILE
-    history: TOPIC2_STALE_HOUSE_CONTEXT_USED_FOR_DRAINAGE_FILE
-    history: CANCELLED:INVALID_STALE_CONTEXT_RESULT
-    history: FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:estimate_generated
 
 ### KEY_ENGINE_CODE (head 250 lines each)
 #### core/sample_template_engine.py
@@ -4743,8 +4743,8 @@ def _write_xlsx(path: Path, items: List[Dict[str, Any]], source_text: str, photo
 ```
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-05-08T20:10:02.098227+00:00
-GIT_SHA: 531398c8bf6e37ce42979d3ad69fc7bafe2a76cf
+GENERATED_AT: 2026-05-08T22:10:02.118014+00:00
+GIT_SHA: af42c97232f42a953e720cd4afceba9a494a9621
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -4752,23 +4752,26 @@ ROLE: Сметы
 DIRECTIONS_BOUND: estimates
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
 ACTIVE_TASKS: 1
-FAILED_LAST_24H: 6
+FAILED_LAST_24H: 9
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 12
+- AWAITING_CONFIRMATION: 1
 - CANCELLED: 102
-- DONE: 132
-- FAILED: 115
-- WAITING_CLARIFICATION: 1
+- DONE: 134
+- FAILED: 118
 
 ## LATEST_FAILED
+- test-mul | STALE_TIMEOUT
+- 2c732335 | STALE_TIMEOUT
+- test-gat | STALE_TIMEOUT
 - e425b052 | STALE_TIMEOUT
 - acdae011 | STALE_TIMEOUT
-- test-gat | STALE_TIMEOUT
-- test-dra | STALE_TIMEOUT
-- 60b9503b | TOPIC2_STALE_HOUSE_CONTEXT_USED_FOR_DRAINAGE_FILE
 
 ## COMMITS_LAST_14D
+- af42c97|fix(topic2): TOPIC2_DRAINAGE_FULL_CLOSE_NO_LOOP_V2 — child merge guard, legend filter, noise tasks closed
+- 859c045|fix(topic2): TOPIC2_DRAINAGE_VAT_GATE_PUBLIC_CLEAN_V1 — VAT gate 22%, source filter, clean public output, Drive upload fix
+- 3343690|fix(topic2): TOPIC2_DRAINAGE_MULTIFILE_REPAIR_CLOSE_V1 — close drainage estimate from two PDFs, send XLSX+PDF to Telegram
 - 3421216|fix(topic2): gate send fix (dict(task) for sqlite3.Row) + WCG delivery guard on picker cycle
 - 80b0809|fix(topic2): PATCH_TOPIC2_INPUT_GATE_SOURCE_OF_TRUTH_V1 — current file source-of-truth gate blocks stale house context for drainage PDF
 - 075edf9|fix(topic2): PATCH_TOPIC2_STALE_PENDING_TASK_GUARD_V1 + LOCAL_BOT_API_404_FIX
@@ -4796,9 +4799,6 @@ FAILED_LAST_24H: 6
 - c7c8755|fix(topic2): inline-fix V1 — replace dead wrappers with body edits
 - d1f20a0|fix(topic2): full mega-guards V1 — 6 guards закрытие topic_2 acceptance bugs
 - 9420d6a|fix(topic2): stroyka meta-confirm guard + reply chain + xlsx 15 cols + topic210 meta guard
-- 58d33aa|fix(topic2): stop T2RFP infinite redirect loop for drive_file re-picks
-- b17bca2|fix(topic2): stop WAITING_CLARIFICATION pick loop
-- 2ef3f86|fix(topic2): price reply thread isolation + chat-aware price search
 
 ## MARKERS_LAST_24H
 - created:NEW
@@ -5484,8 +5484,8 @@ _P6H5_NORMATIVE_EXPAND = [
 ```
 # topic_5 TEKHNADZOR
 
-GENERATED_AT: 2026-05-08T20:10:02.135837+00:00
-GIT_SHA: 531398c8bf6e37ce42979d3ad69fc7bafe2a76cf
+GENERATED_AT: 2026-05-08T22:10:02.155956+00:00
+GIT_SHA: af42c97232f42a953e720cd4afceba9a494a9621
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 5
@@ -5634,8 +5634,8 @@ DIRECTIONS_BOUND: Видео
 ```
 # topic_11 VIDEO
 
-GENERATED_AT: 2026-05-08T20:10:02.169191+00:00
-GIT_SHA: 531398c8bf6e37ce42979d3ad69fc7bafe2a76cf
+GENERATED_AT: 2026-05-08T22:10:02.181929+00:00
+GIT_SHA: af42c97232f42a953e720cd4afceba9a494a9621
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 11
@@ -6248,8 +6248,8 @@ def _normalize_sheet_register(template: Dict[str, Any], data: Dict[str, Any]) ->
 ```
 # topic_210 PROEKTIROVANIE
 
-GENERATED_AT: 2026-05-08T20:10:02.205024+00:00
-GIT_SHA: 531398c8bf6e37ce42979d3ad69fc7bafe2a76cf
+GENERATED_AT: 2026-05-08T22:10:02.215255+00:00
+GIT_SHA: af42c97232f42a953e720cd4afceba9a494a9621
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 210
@@ -6818,8 +6818,8 @@ except Exception:
 ```
 # topic_500 VEB_POISK
 
-GENERATED_AT: 2026-05-08T20:10:02.240495+00:00
-GIT_SHA: 531398c8bf6e37ce42979d3ad69fc7bafe2a76cf
+GENERATED_AT: 2026-05-08T22:10:02.256505+00:00
+GIT_SHA: af42c97232f42a953e720cd4afceba9a494a9621
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 500
@@ -6934,8 +6934,8 @@ DIRECTIONS_BOUND: Сервер DevOps
 ```
 # topic_794 DEVOPS
 
-GENERATED_AT: 2026-05-08T20:10:02.272451+00:00
-GIT_SHA: 531398c8bf6e37ce42979d3ad69fc7bafe2a76cf
+GENERATED_AT: 2026-05-08T22:10:02.283614+00:00
+GIT_SHA: af42c97232f42a953e720cd4afceba9a494a9621
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 794
@@ -7030,8 +7030,8 @@ DIRECTIONS_BOUND: Автозапчасти
 ```
 # topic_961 AVTOZAPCHASTI
 
-GENERATED_AT: 2026-05-08T20:10:02.306850+00:00
-GIT_SHA: 531398c8bf6e37ce42979d3ad69fc7bafe2a76cf
+GENERATED_AT: 2026-05-08T22:10:02.313187+00:00
+GIT_SHA: af42c97232f42a953e720cd4afceba9a494a9621
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 961
@@ -7123,8 +7123,8 @@ DIRECTIONS_BOUND: Мозги оркестра
 ```
 # topic_3008 KODY_MOZGOV
 
-GENERATED_AT: 2026-05-08T20:10:02.338885+00:00
-GIT_SHA: 531398c8bf6e37ce42979d3ad69fc7bafe2a76cf
+GENERATED_AT: 2026-05-08T22:10:02.341142+00:00
+GIT_SHA: af42c97232f42a953e720cd4afceba9a494a9621
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 3008
@@ -7227,8 +7227,8 @@ DIRECTIONS_BOUND: CRM лиды
 ```
 # topic_4569 CRM_LEADS
 
-GENERATED_AT: 2026-05-08T20:10:02.371964+00:00
-GIT_SHA: 531398c8bf6e37ce42979d3ad69fc7bafe2a76cf
+GENERATED_AT: 2026-05-08T22:10:02.374167+00:00
+GIT_SHA: af42c97232f42a953e720cd4afceba9a494a9621
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 4569
@@ -7336,8 +7336,8 @@ DIRECTIONS_BOUND: Поиск работы
 ```
 # topic_6104 JOB_SEARCH
 
-GENERATED_AT: 2026-05-08T20:10:02.403527+00:00
-GIT_SHA: 531398c8bf6e37ce42979d3ad69fc7bafe2a76cf
+GENERATED_AT: 2026-05-08T22:10:02.405173+00:00
+GIT_SHA: af42c97232f42a953e720cd4afceba9a494a9621
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 6104

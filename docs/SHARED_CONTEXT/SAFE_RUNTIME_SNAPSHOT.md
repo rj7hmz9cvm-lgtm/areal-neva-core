@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-08T20:10:01.870461+00:00
-git_sha_before_commit: 531398c8bf6e37ce42979d3ad69fc7bafe2a76cf
+generated_at_utc: 2026-05-08T22:10:01.912775+00:00
+git_sha_before_commit: af42c97232f42a953e720cd4afceba9a494a9621
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,10 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: inactive
 
 ## GIT_LOG_30
+af42c97 fix(topic2): TOPIC2_DRAINAGE_FULL_CLOSE_NO_LOOP_V2 — child merge guard, legend filter, noise tasks closed
+859c045 fix(topic2): TOPIC2_DRAINAGE_VAT_GATE_PUBLIC_CLEAN_V1 — VAT gate 22%, source filter, clean public output, Drive upload fix
+3343690 fix(topic2): TOPIC2_DRAINAGE_MULTIFILE_REPAIR_CLOSE_V1 — close drainage estimate from two PDFs, send XLSX+PDF to Telegram
+5f3e6cc FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 531398c docs: update LATEST_HANDOFF 3421216 — gate+delivery session close
 3421216 fix(topic2): gate send fix (dict(task) for sqlite3.Row) + WCG delivery guard on picker cycle
 4cedce3 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
@@ -36,23 +40,30 @@ af86bf5 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 981d301 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 f5838bb FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 d36b224 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
-3dcb94a FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
-8760011 fix(topic2): enforce full canonical estimate pipeline without cross-topic regression
-e08536b FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
-33ce4a6 3 patches: material parse fix, zero-qty filter, price honesty
 
 ## GIT_SHOW_STAT_HEAD
-commit 531398c8bf6e37ce42979d3ad69fc7bafe2a76cf
+commit af42c97232f42a953e720cd4afceba9a494a9621
 Author: Ila <ilakuznecov@mac.local>
-Date:   Fri May 8 23:07:39 2026 +0300
+Date:   Sat May 9 01:08:29 2026 +0300
 
-    docs: update LATEST_HANDOFF 3421216 — gate+delivery session close
+    fix(topic2): TOPIC2_DRAINAGE_FULL_CLOSE_NO_LOOP_V2 — child merge guard, legend filter, noise tasks closed
+    
+    - PATCH_TOPIC2_DRAINAGE_CHILD_MERGE_V1 in task_worker.py: NEW topic_2 text tasks
+      while active drainage parent (WC/AC) exists → merged to DONE immediately
+    - topic2_input_gate.py: uncommitted gate improvements from prev session (WC delivery,
+      drainage user-explicit check, recent-file-tasks lookup)
+    - repair_close: extract_lengths filters legend definition lines (уклон/длина/диаметр),
+      build_items fallback 6→80m, VAT gate, source filter, APPROX_FROM_SCHEME_NO_FULL_LENGTH_TABLE
+    - Noise tasks 9a174a37 / 85992edd merged to DONE in DB
+    
+    Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 
- docs/HANDOFFS/LATEST_HANDOFF.md | 131 ++++++++++------------------------------
- 1 file changed, 33 insertions(+), 98 deletions(-)
+ core/topic2_input_gate.py             |  90 ++++++++++++++++++++++++-----
+ task_worker.py                        | 106 ++++++++++++++++++++++++++++++++++
+ tools/topic2_drainage_repair_close.py |   5 +-
+ 3 files changed, 187 insertions(+), 14 deletions(-)
 
 ## GIT_CHANGED_FILES_10
-areal_telegram_wrapper.py
 core/stroyka_estimate_canon.py
 core/topic2_input_gate.py
 docs/HANDOFFS/LATEST_HANDOFF.md
@@ -125,21 +136,46 @@ docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md
 docs/SHARED_CONTEXT/TOPICS/topic_961_AVTOZAPCHASTI.md
 docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md
 task_worker.py
+tools/topic2_drainage_repair_close.py
 
 ## CORE_DB_STATE_COUNTS
-- FAILED|2967
+- FAILED|2970
 - CANCELLED|823
-- DONE|577
+- DONE|579
 - ARCHIVED|381
-- WAITING_CLARIFICATION|1
+- AWAITING_CONFIRMATION|1
 
 ## CORE_DB_OPEN_TASKS
 - 1
 
 ## LATEST_TASKS_15
-- test-gate-send-fix-001|2|text|WAITING_CLARIFICATION|[VOICE] У тебя два файла. На одном у тебя схема дренажа, на другом у тебя длинные высоты и все есть. Посмотри оба файла |PDF определён как схема дренажа/ливнёвки.
+- 85992edd-85cd-4406-85b5-b08b335cb8af|2|text|DONE|Да жду всё верно|PDF определён как схема дренажа/ливнёвки.
 Домовую смету не запускаю: текущий файл относится к наружным сетям, а не к дому.
-Считать приблизительно по схеме или п|2026-05-08 20:09:44
+Считать приблизительно по схеме или п|2026-05-08 21:50:33
+- 9a174a37-fc01-4414-97f9-064621356083|2|text|DONE|А смета-то где|PDF определён как схема дренажа/ливнёвки.
+Домовую смету не запускаю: текущий файл относится к наружным сетям, а не к дому.
+Считать приблизительно по схеме или п|2026-05-08 20:47:30
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|2|text|AWAITING_CONFIRMATION|[VOICE] Посмотри то, что я тебе писал ранее, у тебя же все есть|✅ Смета дренажа готова
+
+Объект: наружные сети / дренаж / ливневая канализация
+Файлы учтены: Отчет_Мистолово_03.26.pdf   Схема глубинного дренажа.pdf
+Цены: высок|2026-05-08 22:03:48
+- test-multifile-gate-001|2|text|FAILED|[VOICE] У тебя два файла. На одном у тебя схема дренажа, на другом у тебя длинные высоты и все есть. Посмотри оба файла |⏳ Задачу понял
+
+Шаблон: Ареал Нева.xlsx
+Лист: смета
+Объект: дом
+Материал: газобетон
+Размеры: (8.5, 12.5)
+Этажей: не указано
+Фундамент: монолитная плита
+Удалённо|2026-05-08 20:29:32
+- 2c732335-4650-439e-9287-0984497b4aa6|2|text|FAILED|[VOICE] Я тебе прислал два файла, там есть все длинные, там есть все размеры, посмотри, пожалуйста, внимательно. Два фай|PDF определён как схема дренажа/ливнёвки.
+Домовую смету не запускаю: текущий файл относится к наружным сетям, а не к дому.
+Считать приблизительно по схеме или п|2026-05-08 20:20:28
+- test-gate-send-fix-001|2|text|FAILED|[VOICE] У тебя два файла. На одном у тебя схема дренажа, на другом у тебя длинные высоты и все есть. Посмотри оба файла |PDF определён как схема дренажа/ливнёвки.
+Домовую смету не запускаю: текущий файл относится к наружным сетям, а не к дому.
+Считать приблизительно по схеме или п|2026-05-08 20:19:46
 - e425b052-455f-46b4-990f-1421b7dac675|2|text|FAILED|[VOICE] У тебя два файла. На одном у тебя схема дренажа, на другом у тебя длинные высоты и все есть. Посмотри оба файла |PDF определён как схема дренажа/ливнёвки.
 Домовую смету не запускаю: текущий файл относится к наружным сетям, а не к дому.
 Считать приблизительно по схеме или п|2026-05-08 19:40:15
@@ -184,25 +220,11 @@ task_worker.py
 Нормативов подтверждено: 2
 
 📄 DOCX: https://docs.google.com/document/d/10J6Wyvom27H|2026-05-08 09:59:54
-- ce1d4d0b-7b7a-445e-b0e4-e52e54f001a7|5|text|CANCELLED|сделай акт|Финальный акт технадзора сформирован по текущему пакету фото
-
-Фото в акте: 18
-Пояснений учтено: 19
-Нормы СП/ГОСТ не выдуманы, конкретные пункты не подставлены б|2026-05-08 09:29:30
-- d8a8fbe7-81d7-4190-888c-2d8285c881b9|5|text|CANCELLED|сделай акт|Финальный акт технадзора сформирован по текущему пакету фото
-
-Фото в акте: 18
-Пояснений учтено: 20
-Нормы СП/ГОСТ не выдуманы, конкретные пункты не подставлены б|2026-05-08 09:03:55
-- de13074b-f71d-4523-a17e-8608cd3fd9dd|5|text|DONE|делай|Пакет технадзора активен
-Папка: тест надзор
-https://drive.google.com/drive/folders/1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG
-Фото в пакете: 23 шт
-1. photo_-100372529900|2026-05-08 08:28:37
-- ac8bce62-7d06-494a-b6e5-bc6719b53359|5|text|DONE|[VOICE] Что по последнему заданию по итогам?|Пояснение принято к фото: photo_-1003725299009_10122.jpg. В пакете технадзора: 23 шт. Акт не формирую без отдельной команды|2026-05-08 08:28:28
-- 089a9afa-ed1d-44ac-a68d-26d51f4bcdc9|2|text|CANCELLED|[VOICE] Что не так, скажи?|Пришли задание заново — расскажи что нужно сделать.|2026-05-08 08:27:08
 
 ## LATEST_FAILED_10
+- test-multifile-gate-001|2|[VOICE] У тебя два файла. На одном у тебя схема дренажа, на другом у тебя длинные высоты и все есть. Посмотри оба файла |STALE_TIMEOUT|2026-05-08 20:29:32
+- 2c732335-4650-439e-9287-0984497b4aa6|2|[VOICE] Я тебе прислал два файла, там есть все длинные, там есть все размеры, посмотри, пожалуйста, внимательно. Два фай|STALE_TIMEOUT|2026-05-08 20:20:28
+- test-gate-send-fix-001|2|[VOICE] У тебя два файла. На одном у тебя схема дренажа, на другом у тебя длинные высоты и все есть. Посмотри оба файла |STALE_TIMEOUT|2026-05-08 20:19:46
 - e425b052-455f-46b4-990f-1421b7dac675|2|[VOICE] У тебя два файла. На одном у тебя схема дренажа, на другом у тебя длинные высоты и все есть. Посмотри оба файла |STALE_TIMEOUT|2026-05-08 19:40:15
 - acdae011-7299-482d-92c2-571f8ccbee0c|2|[VOICE] необходимо посчитать смету взять ценник высокого ценового сегмента на работу и на материалы и создать по длине и|STALE_TIMEOUT|2026-05-08 19:39:38
 - test-gate-drainage-live-001|2|{"file_name": "Схема глубинного дренажа.pdf", "mime_type": "application/pdf", "local_path": "/root/.areal-neva-core/runt|STALE_TIMEOUT|2026-05-08 19:40:26
@@ -210,68 +232,55 @@ https://drive.google.com/drive/folders/1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG
 - 60b9503b-75cc-4913-bb7b-11092508fdae|2|[VOICE] Я тебе говорил про вот эту информацию, посмотри.|TOPIC2_STALE_HOUSE_CONTEXT_USED_FOR_DRAINAGE_FILE|2026-05-08 19:17:11
 - 1d2b38c4-8c86-4a44-8442-40be5c94fe89|2|{"file_id": "1ZJ4CqxlTcrXIL6b5GxE6nh9soo7Ud03h", "file_name": "project_file_2.pdf", "mime_type": "application/pdf", "cap|STALE_TIMEOUT|2026-05-08 18:14:03
 - a7b2879e-14e6-4002-8a06-f73019d40a99|2|{"file_id": "1XRwOwZr2Kpxy-wrAUPrBR2dLqHseg7jS", "file_name": "photo_-1003725299009_10394.jpg", "mime_type": "image/jpeg|STALE_TIMEOUT|2026-05-07 13:34:34
-- 893436d4-72d2-4bdf-b362-f40d7226570e|2|[VOICE] Я тебе прислал картинку, две картинки и я тебе прислал техническое задание. Мне нужно сделать смету, уточнить ст|INVALID_PUBLIC_RESULT|2026-05-06 18:05:02
-- cfadbd05-8b7c-4aca-a5e4-62b8d56398bb|210|[VOICE] Так ты сам должен выбирать то, что тебе нужно, а не спрашивать у меня. У тебя это как образцы для проектирования|INVALID_RESULT_GATE|2026-05-06 17:57:43
-- f43100b3-65e8-4412-a3b4-6ab35071825e|2|[VOICE] Так ты должен мне смету посчитать Посмотреть в интернете сколько это стоит И посчитать мне смету Что ты не понял|TOPIC2_ONE_BIG_FINAL_PIPELINE_V1_WORKER_ERR:maximum recursion depth exceeded|2026-05-06 17:56:47
 
 ## LATEST_TASK_HISTORY_20
-- test-gate-send-fix-001|reply_sent:waiting_clarification|2026-05-08 20:09:42
-- test-gate-send-fix-001|TOPIC2_INPUT_GATE_SENT:10583|2026-05-08 20:09:42
-- test-gate-send-fix-001|TOPIC2_INPUT_GATE_HANDLED:state=WAITING_CLARIFICATION:domain=drainage_network|2026-05-08 20:09:42
-- test-gate-send-fix-001|TOPIC2_CURRENT_FILE_SOURCE_OF_TRUTH:file_2.pdf,file_1.pdf,file_0.pdf|2026-05-08 20:09:42
-- test-gate-send-fix-001|TOPIC2_STALE_HOUSE_CONTEXT_BLOCKED|2026-05-08 20:09:42
-- test-gate-send-fix-001|TOPIC2_INPUT_GATE_DRAINAGE_BLOCK|2026-05-08 20:09:42
-- test-gate-send-fix-001|TOPIC2_INPUT_GATE_DOMAIN:drainage_network|2026-05-08 20:09:42
-- test-gate-drainage-live-001|reply_sent:stale_failed|2026-05-08 19:40:26
-- test-gate-drainage-live-001|state:FAILED|2026-05-08 19:40:26
-- e425b052-455f-46b4-990f-1421b7dac675|reply_sent:stale_failed|2026-05-08 19:40:15
-- e425b052-455f-46b4-990f-1421b7dac675|state:FAILED|2026-05-08 19:40:15
-- acdae011-7299-482d-92c2-571f8ccbee0c|reply_sent:stale_failed|2026-05-08 19:39:38
-- acdae011-7299-482d-92c2-571f8ccbee0c|state:FAILED|2026-05-08 19:39:38
-- test-gate-drainage-live-001|reply_sent:waiting_clarification|2026-05-08 19:30:25
-- test-gate-drainage-live-001|WCG_DELIVERY_SENT:10579|2026-05-08 19:30:25
-- e425b052-455f-46b4-990f-1421b7dac675|TOPIC2_INPUT_GATE_HANDLED:state=WAITING_CLARIFICATION:domain=drainage_network|2026-05-08 19:30:12
-- e425b052-455f-46b4-990f-1421b7dac675|TOPIC2_CURRENT_FILE_SOURCE_OF_TRUTH:file_2.pdf,file_1.pdf,file_0.pdf|2026-05-08 19:30:12
-- e425b052-455f-46b4-990f-1421b7dac675|TOPIC2_STALE_HOUSE_CONTEXT_BLOCKED|2026-05-08 19:30:12
-- e425b052-455f-46b4-990f-1421b7dac675|TOPIC2_INPUT_GATE_DRAINAGE_BLOCK|2026-05-08 19:30:12
-- e425b052-455f-46b4-990f-1421b7dac675|TOPIC2_INPUT_GATE_DOMAIN:drainage_network|2026-05-08 19:30:12
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_AWAITING_CONFIRMATION_CLEAN_V1|2026-05-08 22:03:48
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_VAT_PUBLIC_OUTPUT_OK|2026-05-08 22:03:48
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_TELEGRAM_SENT:10613|2026-05-08 22:03:48
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_TELEGRAM_PDF_FALLBACK_SENT|2026-05-08 22:03:48
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_TELEGRAM_XLSX_FALLBACK_SENT|2026-05-08 22:03:48
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_PDF_CREATED:drainage_estimate_clean_043e5c9f_20260509_010337.pdf|2026-05-08 22:03:48
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_XLSX_CREATED:drainage_estimate_clean_043e5c9f_20260509_010337.xlsx|2026-05-08 22:03:48
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_DEPTH_STATUS:avg_depth=1.2|2026-05-08 22:03:48
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_LENGTHS_STATUS:APPROX_FROM_SCHEME_NO_FULL_LENGTH_TABLE:total_len=0|2026-05-08 22:03:48
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_SOURCE_FILE:Схема глубинного дренажа.pdf:kind=drainage_scheme:chars=120774|2026-05-08 22:03:48
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_SOURCE_FILE:Отчет_Мистолово_03.26.pdf:kind=geology_report:chars=76662|2026-05-08 22:03:48
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_NO_GENERATED_ARTIFACT_INPUT|2026-05-08 22:03:48
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_SOURCE_FILTER_OK:user_pdfs=2|2026-05-08 22:03:48
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_VAT_MODE_CONFIRMED:WITHOUT_VAT|2026-05-08 22:03:37
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_VAT_GATE_CHECKED|2026-05-08 22:03:37
+- 85992edd-85cd-4406-85b5-b08b335cb8af|TOPIC2_CHILD_MERGED_TO_DRAINAGE_PARENT:043e5c9f-e8bc-434c-9dad-a66c7e50f917|2026-05-08 22:00:14
+- 9a174a37-fc01-4414-97f9-064621356083|TOPIC2_CHILD_MERGED_TO_DRAINAGE_PARENT:043e5c9f-e8bc-434c-9dad-a66c7e50f917|2026-05-08 22:00:14
+- 85992edd-85cd-4406-85b5-b08b335cb8af|reply_sent:waiting_clarification|2026-05-08 21:50:32
+- 85992edd-85cd-4406-85b5-b08b335cb8af|TOPIC2_INPUT_GATE_SENT:10610|2026-05-08 21:50:32
+- 85992edd-85cd-4406-85b5-b08b335cb8af|TOPIC2_INPUT_GATE_HANDLED:state=WAITING_CLARIFICATION:domain=drainage_network|2026-05-08 21:50:32
 
 ## MEMORY_DB_COUNT
-- 5197
+- 5198
 
 ## LATEST_MEMORY_20
-- topic_500_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 500, "count": 27, "updated_at": "2026-05-08T19:52:06.305991+00:00", "files": [{"task_id": "7b609434-8167-43f5-a52a-beb85e0b4ed5", "file_id|2026-05-08T19:52:06.306814+00:00
-- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 50, "updated_at": "2026-05-08T19:52:06.282367+00:00", "files": [{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "file_id|2026-05-08T19:52:06.282863+00:00
-- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 50, "updated_at": "2026-05-08T19:52:06.220553+00:00", "files": [{"task_id": "4b402275-e99b-4d9f-b331-08f2ba2a93be", "file_id":|2026-05-08T19:52:06.221107+00:00
-- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-08T19:52:06.185889+00:00", "files": [{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "file_id":|2026-05-08T19:52:06.186617+00:00
-- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T19:52:06.132323+00:00
-- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "state": "FAILED", "file_id": "", "file_name": "", "mime_type"|2026-05-08T19:52:06.132235+00:00
-- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T19:52:06.132154+00:00
-- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T19:52:06.132074+00:00
-- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T19:52:06.132016+00:00
-- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_file", "state": "FAILED", "file_id": "1bXXtuHRsXCuxBSRUl8Tj5z6E|2026-05-08T19:52:06.131948+00:00
-- topic_2_file_92de809d-9274-48ee-82b4-584058ea4e48|{"task_id": "92de809d-9274-48ee-82b4-584058ea4e48", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "search", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T19:52:06.131866+00:00
-- topic_210_file_ce9421cb-5451-4cea-9823-a413b698bc94|{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T19:52:06.131706+00:00
-- topic_210_file_c8619b7e-9ebb-4731-973a-b3f6064bbe38|{"task_id": "c8619b7e-9ebb-4731-973a-b3f6064bbe38", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T19:52:06.131461+00:00
-- topic_210_file_42320ab0-c49a-4a08-8f9b-5e38618a4e58|{"task_id": "42320ab0-c49a-4a08-8f9b-5e38618a4e58", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T19:52:06.131263+00:00
-- topic_210_file_7dca3b5f-2782-400f-af84-fb030904e917|{"task_id": "7dca3b5f-2782-400f-af84-fb030904e917", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T19:52:06.130732+00:00
-- topic_210_file_12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88|{"task_id": "12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "16V3s5DcAvnXj8f-3CcfZE2g5|2026-05-08T19:52:06.130222+00:00
-- topic_210_file_b1f8e982-db2e-42de-9046-833287d3567d|{"task_id": "b1f8e982-db2e-42de-9046-833287d3567d", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T19:52:06.130096+00:00
-- topic_210_file_eeb0d013-704a-404c-9390-5a06c90ee976|{"task_id": "eeb0d013-704a-404c-9390-5a06c90ee976", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T19:52:06.129713+00:00
-- topic_210_file_5ead32f3-23d5-4872-9279-a42460ba5dd1|{"task_id": "5ead32f3-23d5-4872-9279-a42460ba5dd1", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "1qy-mPcmRZxJIzEnY2Gp8B8J2|2026-05-08T19:52:06.129348+00:00
-- topic_210_file_fb6aadc5-b372-488a-aede-f3433a030e55|{"task_id": "fb6aadc5-b372-488a-aede-f3433a030e55", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T19:52:06.129117+00:00
+- topic_500_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 500, "count": 27, "updated_at": "2026-05-08T21:52:13.021713+00:00", "files": [{"task_id": "7b609434-8167-43f5-a52a-beb85e0b4ed5", "file_id|2026-05-08T21:52:13.022269+00:00
+- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 50, "updated_at": "2026-05-08T21:52:12.999879+00:00", "files": [{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "file_id|2026-05-08T21:52:13.000514+00:00
+- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 50, "updated_at": "2026-05-08T21:52:12.943986+00:00", "files": [{"task_id": "4b402275-e99b-4d9f-b331-08f2ba2a93be", "file_id":|2026-05-08T21:52:12.944562+00:00
+- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-08T21:52:12.905560+00:00", "files": [{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "file_id":|2026-05-08T21:52:12.906181+00:00
+- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T21:52:12.848343+00:00
+- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "state": "FAILED", "file_id": "", "file_name": "", "mime_type"|2026-05-08T21:52:12.848259+00:00
+- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T21:52:12.848166+00:00
+- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T21:52:12.847961+00:00
+- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T21:52:12.847893+00:00
+- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_file", "state": "FAILED", "file_id": "1bXXtuHRsXCuxBSRUl8Tj5z6E|2026-05-08T21:52:12.847820+00:00
+- topic_2_file_92de809d-9274-48ee-82b4-584058ea4e48|{"task_id": "92de809d-9274-48ee-82b4-584058ea4e48", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "search", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T21:52:12.847742+00:00
+- topic_210_file_ce9421cb-5451-4cea-9823-a413b698bc94|{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T21:52:12.847557+00:00
+- topic_210_file_c8619b7e-9ebb-4731-973a-b3f6064bbe38|{"task_id": "c8619b7e-9ebb-4731-973a-b3f6064bbe38", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T21:52:12.847382+00:00
+- topic_210_file_42320ab0-c49a-4a08-8f9b-5e38618a4e58|{"task_id": "42320ab0-c49a-4a08-8f9b-5e38618a4e58", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T21:52:12.847291+00:00
+- topic_210_file_7dca3b5f-2782-400f-af84-fb030904e917|{"task_id": "7dca3b5f-2782-400f-af84-fb030904e917", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T21:52:12.846947+00:00
+- topic_210_file_12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88|{"task_id": "12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "16V3s5DcAvnXj8f-3CcfZE2g5|2026-05-08T21:52:12.846671+00:00
+- topic_210_file_b1f8e982-db2e-42de-9046-833287d3567d|{"task_id": "b1f8e982-db2e-42de-9046-833287d3567d", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T21:52:12.846600+00:00
+- topic_210_file_eeb0d013-704a-404c-9390-5a06c90ee976|{"task_id": "eeb0d013-704a-404c-9390-5a06c90ee976", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T21:52:12.846400+00:00
+- topic_210_file_5ead32f3-23d5-4872-9279-a42460ba5dd1|{"task_id": "5ead32f3-23d5-4872-9279-a42460ba5dd1", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "1qy-mPcmRZxJIzEnY2Gp8B8J2|2026-05-08T21:52:12.846218+00:00
+- topic_210_file_fb6aadc5-b372-488a-aede-f3433a030e55|{"task_id": "fb6aadc5-b372-488a-aede-f3433a030e55", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T21:52:12.846132+00:00
 
 ## JOURNAL_AREAL_TASK_WORKER_60
-Started areal-task-worker.service - Areal Task Worker.
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 5.185s CPU time.
-Started areal-task-worker.service - Areal Task Worker.
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Consumed 46.862s CPU time, 194.3M memory peak, 0B memory swap peak.
 Started areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
@@ -322,28 +331,18 @@ areal-task-worker.service: Deactivated successfully.
 Stopped areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Consumed 28.965s CPU time.
 Started areal-task-worker.service - Areal Task Worker.
+Stopping areal-task-worker.service - Areal Task Worker...
+areal-task-worker.service: Deactivated successfully.
+Stopped areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Consumed 16.235s CPU time.
+Started areal-task-worker.service - Areal Task Worker.
+Stopping areal-task-worker.service - Areal Task Worker...
+areal-task-worker.service: Deactivated successfully.
+Stopped areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Consumed 1min 52.276s CPU time.
+Started areal-task-worker.service - Areal Task Worker.
 
 ## JOURNAL_TELEGRAM_INGRESS_30
-2026-05-08 21:08:08,312 INFO DAEMON: STT http_status=200
-2026-05-08 21:08:08,312 INFO DAEMON: STT ok transcript_len=48
-2026-05-08 21:08:08,389 INFO DAEMON: Task 60b9503b-75cc-4913-bb7b-11092508fdae created state=NEW topic_id=2
-2026-05-08 21:08:08,389 INFO DAEMON: Update id=210388095 is handled. Duration 484 ms by bot id=8216054898
-Stopping telegram-ingress.service - AREAL telegram ingress...
-2026-05-08 22:17:31,652 WARNING DAEMON: Received SIGTERM signal
-2026-05-08 22:17:31,653 INFO DAEMON: Polling stopped for bot @ai_orkestra_all_bot id=8216054898 - 'AREAL-NEVA ORCHESTRA'
-2026-05-08 22:17:31,653 INFO DAEMON: Polling stopped
-telegram-ingress.service: Deactivated successfully.
-Stopped telegram-ingress.service - AREAL telegram ingress.
-telegram-ingress.service: Consumed 2.671s CPU time.
-Started telegram-ingress.service - AREAL telegram ingress.
-2026-05-08 22:17:34,073 INFO DAEMON: BIG_FILE_LOCAL_BOT_API_USED: local server active
-2026-05-08 22:17:34,083 INFO DAEMON: BOT STARTED id=8216054898 username=ai_orkestra_all_bot
-2026-05-08 22:17:34,083 INFO DAEMON: Start polling
-2026-05-08 22:17:34,084 INFO DAEMON: Run polling for bot @ai_orkestra_all_bot id=8216054898 - 'AREAL-NEVA ORCHESTRA'
-2026-05-08 22:21:47,259 INFO DAEMON: LOCAL_BOT_API_ABSOLUTE_PATH_USED:file_6.oga
-2026-05-08 22:21:47,259 INFO DAEMON: STT env check groq=True
-2026-05-08 22:21:47,259 INFO DAEMON: STT start file=/root/.areal-neva-core/runtime/voice_queue/voice_1003725299009_10573.ogg size=79690 model=whisper-large-v3-turbo
-2026-05-08 22:21:47,560 INFO DAEMON: STT http_status=200
 2026-05-08 22:21:47,561 INFO DAEMON: STT ok transcript_len=196
 2026-05-08 22:21:47,700 INFO DAEMON: Task acdae011-7299-482d-92c2-571f8ccbee0c created state=NEW topic_id=2
 2026-05-08 22:21:47,700 INFO DAEMON: Update id=210388096 is handled. Duration 604 ms by bot id=8216054898
@@ -354,3 +353,23 @@ Started telegram-ingress.service - AREAL telegram ingress.
 2026-05-08 22:30:08,615 INFO DAEMON: STT ok transcript_len=173
 2026-05-08 22:30:08,724 INFO DAEMON: Task e425b052-455f-46b4-990f-1421b7dac675 created state=NEW topic_id=2
 2026-05-08 22:30:08,724 INFO DAEMON: Update id=210388097 is handled. Duration 769 ms by bot id=8216054898
+2026-05-08 23:10:20,620 INFO DAEMON: LOCAL_BOT_API_ABSOLUTE_PATH_USED:file_8.oga
+2026-05-08 23:10:20,620 INFO DAEMON: STT env check groq=True
+2026-05-08 23:10:20,620 INFO DAEMON: STT start file=/root/.areal-neva-core/runtime/voice_queue/voice_1003725299009_10584.ogg size=35345 model=whisper-large-v3-turbo
+2026-05-08 23:10:21,003 INFO DAEMON: STT http_status=200
+2026-05-08 23:10:21,004 INFO DAEMON: STT ok transcript_len=119
+2026-05-08 23:10:21,167 INFO DAEMON: Task 2c732335-4650-439e-9287-0984497b4aa6 created state=NEW topic_id=2
+2026-05-08 23:10:21,167 INFO DAEMON: Update id=210388098 is handled. Duration 719 ms by bot id=8216054898
+2026-05-08 23:18:50,467 INFO DAEMON: LOCAL_BOT_API_ABSOLUTE_PATH_USED:file_9.oga
+2026-05-08 23:18:50,468 INFO DAEMON: STT env check groq=True
+2026-05-08 23:18:50,468 INFO DAEMON: STT start file=/root/.areal-neva-core/runtime/voice_queue/voice_1003725299009_10588.ogg size=16565 model=whisper-large-v3-turbo
+2026-05-08 23:18:50,792 INFO DAEMON: STT http_status=200
+2026-05-08 23:18:50,793 INFO DAEMON: STT ok transcript_len=55
+2026-05-08 23:18:50,917 INFO DAEMON: Task 043e5c9f-e8bc-434c-9dad-a66c7e50f917 created state=NEW topic_id=2
+2026-05-08 23:18:50,917 INFO DAEMON: Update id=210388099 is handled. Duration 554 ms by bot id=8216054898
+2026-05-08 23:36:35,323 INFO DAEMON: Update id=210388100 is handled. Duration 321 ms by bot id=8216054898
+2026-05-08 23:37:14,569 INFO DAEMON: Task 9a174a37-fc01-4414-97f9-064621356083 created state=NEW topic_id=2
+2026-05-08 23:37:14,569 INFO DAEMON: Update id=210388101 is handled. Duration 30 ms by bot id=8216054898
+2026-05-08 23:37:26,244 INFO DAEMON: Update id=210388102 is handled. Duration 66 ms by bot id=8216054898
+2026-05-09 00:50:30,646 INFO DAEMON: Task 85992edd-85cd-4406-85b5-b08b335cb8af created state=NEW topic_id=2
+2026-05-09 00:50:30,646 INFO DAEMON: Update id=210388103 is handled. Duration 18 ms by bot id=8216054898

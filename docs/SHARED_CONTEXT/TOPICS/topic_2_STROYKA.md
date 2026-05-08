@@ -1,7 +1,7 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-05-08T20:10:02.098227+00:00
-GIT_SHA: 531398c8bf6e37ce42979d3ad69fc7bafe2a76cf
+GENERATED_AT: 2026-05-08T22:10:02.118014+00:00
+GIT_SHA: af42c97232f42a953e720cd4afceba9a494a9621
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -9,23 +9,26 @@ ROLE: Сметы
 DIRECTIONS_BOUND: estimates
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
 ACTIVE_TASKS: 1
-FAILED_LAST_24H: 6
+FAILED_LAST_24H: 9
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 12
+- AWAITING_CONFIRMATION: 1
 - CANCELLED: 102
-- DONE: 132
-- FAILED: 115
-- WAITING_CLARIFICATION: 1
+- DONE: 134
+- FAILED: 118
 
 ## LATEST_FAILED
+- test-mul | STALE_TIMEOUT
+- 2c732335 | STALE_TIMEOUT
+- test-gat | STALE_TIMEOUT
 - e425b052 | STALE_TIMEOUT
 - acdae011 | STALE_TIMEOUT
-- test-gat | STALE_TIMEOUT
-- test-dra | STALE_TIMEOUT
-- 60b9503b | TOPIC2_STALE_HOUSE_CONTEXT_USED_FOR_DRAINAGE_FILE
 
 ## COMMITS_LAST_14D
+- af42c97|fix(topic2): TOPIC2_DRAINAGE_FULL_CLOSE_NO_LOOP_V2 — child merge guard, legend filter, noise tasks closed
+- 859c045|fix(topic2): TOPIC2_DRAINAGE_VAT_GATE_PUBLIC_CLEAN_V1 — VAT gate 22%, source filter, clean public output, Drive upload fix
+- 3343690|fix(topic2): TOPIC2_DRAINAGE_MULTIFILE_REPAIR_CLOSE_V1 — close drainage estimate from two PDFs, send XLSX+PDF to Telegram
 - 3421216|fix(topic2): gate send fix (dict(task) for sqlite3.Row) + WCG delivery guard on picker cycle
 - 80b0809|fix(topic2): PATCH_TOPIC2_INPUT_GATE_SOURCE_OF_TRUTH_V1 — current file source-of-truth gate blocks stale house context for drainage PDF
 - 075edf9|fix(topic2): PATCH_TOPIC2_STALE_PENDING_TASK_GUARD_V1 + LOCAL_BOT_API_404_FIX
@@ -53,9 +56,6 @@ FAILED_LAST_24H: 6
 - c7c8755|fix(topic2): inline-fix V1 — replace dead wrappers with body edits
 - d1f20a0|fix(topic2): full mega-guards V1 — 6 guards закрытие topic_2 acceptance bugs
 - 9420d6a|fix(topic2): stroyka meta-confirm guard + reply chain + xlsx 15 cols + topic210 meta guard
-- 58d33aa|fix(topic2): stop T2RFP infinite redirect loop for drive_file re-picks
-- b17bca2|fix(topic2): stop WAITING_CLARIFICATION pick loop
-- 2ef3f86|fix(topic2): price reply thread isolation + chat-aware price search
 
 ## MARKERS_LAST_24H
 - created:NEW

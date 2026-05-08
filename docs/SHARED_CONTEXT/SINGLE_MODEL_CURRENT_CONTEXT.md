@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-05-08T20:10:02.630337+00:00
-GIT_SHA: 531398c8bf6e37ce42979d3ad69fc7bafe2a76cf
+GENERATED_AT: 2026-05-08T22:10:02.578224+00:00
+GIT_SHA: af42c97232f42a953e720cd4afceba9a494a9621
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -16,7 +16,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 ## GLOBAL_STATUS
 | topic | name | status | active | failed_24h |
 |-------|------|--------|--------|------------|
-| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 1 | 6 |
+| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 1 | 9 |
 | 5 | TEKHNADZOR | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
 | 210 | PROEKTIROVANIE | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
 | 500 | VEB_POISK | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
@@ -71,12 +71,12 @@ DATE_UNKNOWN
 ### topic_2 STROYKA
 role: Сметы
 active: 1
-failed_24h: 6
+failed_24h: 9
 commits_last_7d: 30
 recent_commits:
-- 3421216|fix(topic2): gate send fix (dict(task) for sqlite3.Row) + WCG delivery guard on picker cycle
-- 80b0809|fix(topic2): PATCH_TOPIC2_INPUT_GATE_SOURCE_OF_TRUTH_V1 — current file source-of-truth gate blocks stale house context for drainage 
-- 075edf9|fix(topic2): PATCH_TOPIC2_STALE_PENDING_TASK_GUARD_V1 + LOCAL_BOT_API_404_FIX
+- af42c97|fix(topic2): TOPIC2_DRAINAGE_FULL_CLOSE_NO_LOOP_V2 — child merge guard, legend filter, noise tasks closed
+- 859c045|fix(topic2): TOPIC2_DRAINAGE_VAT_GATE_PUBLIC_CLEAN_V1 — VAT gate 22%, source filter, clean public output, Drive upload fix
+- 3343690|fix(topic2): TOPIC2_DRAINAGE_MULTIFILE_REPAIR_CLOSE_V1 — close drainage estimate from two PDFs, send XLSX+PDF to Telegram
 markers_missing: 6
 - TOPIC2_ESTIMATE_SESSION_CREATED
 - TOPIC2_CONTEXT_READY
@@ -85,8 +85,8 @@ markers_missing: 6
 - TOPIC2_MESSAGE_THREAD_ID_OK
 - TOPIC2_DONE_CONTRACT_OK
 last_failed:
-- e425b052 | STALE_TIMEOUT
-- acdae011 | STALE_TIMEOUT
+- test-mul | STALE_TIMEOUT
+- 2c732335 | STALE_TIMEOUT
 - test-gat | STALE_TIMEOUT
 blockers:
 - - topic_2 не тянет проектные образцы topic_210
