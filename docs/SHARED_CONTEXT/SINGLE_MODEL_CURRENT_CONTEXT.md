@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-05-08T13:30:02.458986+00:00
-GIT_SHA: 6cf91547d86c51b3e813702f9840a06eb53aab71
+GENERATED_AT: 2026-05-08T17:25:02.777772+00:00
+GIT_SHA: 222202e208b2bd141bd81defd309cae6c95aad2a
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -16,7 +16,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 ## GLOBAL_STATUS
 | topic | name | status | active | failed_24h |
 |-------|------|--------|--------|------------|
-| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 1 | 1 |
+| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 1 | 0 |
 | 5 | TEKHNADZOR | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
 | 210 | PROEKTIROVANIE | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
 | 500 | VEB_POISK | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
@@ -71,7 +71,7 @@ DATE_UNKNOWN
 ### topic_2 STROYKA
 role: Сметы
 active: 1
-failed_24h: 1
+failed_24h: 0
 commits_last_7d: 30
 recent_commits:
 - 6cf9154|fix(topic2): PATCH_TOPIC2_ADD_PEREKRYTIYA_SECTION_V1 — add missing §5 Перекрытия section

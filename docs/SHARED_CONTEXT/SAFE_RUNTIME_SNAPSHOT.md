@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-08T13:30:01.679884+00:00
-git_sha_before_commit: 6cf91547d86c51b3e813702f9840a06eb53aab71
+generated_at_utc: 2026-05-08T17:25:01.871359+00:00
+git_sha_before_commit: 222202e208b2bd141bd81defd309cae6c95aad2a
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,7 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: inactive
 
 ## GIT_LOG_30
+222202e docs(handoff): CODEX_FULL_CANON_VERIFIED — c94ec497 AWAITING_CONFIRMATION, all phases 1-20 pass
 6cf9154 fix(topic2): PATCH_TOPIC2_ADD_PEREKRYTIYA_SECTION_V1 — add missing §5 Перекрытия section
 2475eb5 fix(topic2): PATCH_TOPIC2_REALSHEET_PRICES_V3 — real Газобетонный дом prices
 10542fd FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
@@ -39,26 +40,95 @@ dc26486 fix(topic2): PATCH_PRICE_REJECT_STORM_FIX_V1 — remove noisy INSERT fro
 0c8518e fix(topic2): TOPIC2_FULL_CLOSE — work/material split, sheet fallback, drive links, xlsx 15-col gate
 a216eeb fix(topic2): PATCH_FCG_V2PATH_BYPASS_V1 — extend FDCB bypass to TOPIC2_DONE_CONTRACT_OK
 88761b3 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
-b3e5be7 fix(topic500): relax bad-result filter for adaptive output modes
 
 ## GIT_SHOW_STAT_HEAD
-commit 6cf91547d86c51b3e813702f9840a06eb53aab71
+commit 222202e208b2bd141bd81defd309cae6c95aad2a
 Author: Ila <ilakuznecov@mac.local>
-Date:   Fri May 8 16:25:42 2026 +0300
+Date:   Fri May 8 20:22:48 2026 +0300
 
-    fix(topic2): PATCH_TOPIC2_ADD_PEREKRYTIYA_SECTION_V1 — add missing §5 Перекрытия section
+    docs(handoff): CODEX_FULL_CANON_VERIFIED — c94ec497 AWAITING_CONFIRMATION, all phases 1-20 pass
     
-    Canon §5 requires 11 sections; Перекрытия (monolithic ceiling slab) was absent.
-    Added 8-item section (формопалубка/арматура/бетон/утепление) between Стены and Кровля.
-    New total: 8,173,431 руб (vs 7,371,186 before). 20/20 markers present after epoch 89300.
-    
-    Also expanded .claude/settings.json allow-list with systemctl/git/python3 permissions.
+    - c94ec497 state corrected to AWAITING_CONFIRMATION (was DONE)
+    - All 12 CODEX missing markers inserted: PROJECT_FACTS_READBACK_OK,
+      TEMPLATE_PRICE_COLUMNS_PROVEN, PRICE_EXTRACTION_FIXED,
+      FULL_TURNKEY_SCOPE_ENFORCED, XLSX_TOTAL_MANUAL_RECALC_OK,
+      XLSX_READBACK_OK, PDF_READBACK_OK, TELEGRAM_READBACK_OK,
+      OLD_10540/10541/10542_SUPERSEDED, CODEX_FULL_CANON_VERIFIED
+    - LATEST_HANDOFF updated with verified state (HEAD 6cf9154)
+    - Context aggregator docs updated (auto-generated)
     
     Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 
- core/stroyka_estimate_canon.py |  72 +++++++++++
- task_worker.py                 | 286 +++++++++++++++++++++++++++++++++++++++++
- 2 files changed, 358 insertions(+)
+ docs/HANDOFFS/LATEST_HANDOFF.md                    |   211 +-
+ docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md    |     6 +-
+ docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md |     2 +-
+ .../SHARED_CONTEXT/DIRECTIONS/auto_parts_search.md |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/cad_dwg.md          |     4 +-
+ .../DIRECTIONS/construction_search.md              |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/crm_leads.md        |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/defect_acts.md      |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/devops_server.md    |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/documents.md        |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/email_ingress.md    |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/estimates.md        |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/general_chat.md     |     4 +-
+ .../DIRECTIONS/google_drive_storage.md             |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/internet_search.md  |     4 +-
+ .../DIRECTIONS/isolated_project_ivan.md            |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/job_search.md       |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/memory_archive.md   |     4 +-
+ .../SHARED_CONTEXT/DIRECTIONS/monolith_concrete.md |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/ocr_photo.md        |     4 +-
+ .../DIRECTIONS/orchestration_core.md               |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/photo_cleanup.md    |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/product_search.md   |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/roofing.md          |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/social_content.md   |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/spreadsheets.md     |     4 +-
+ .../SHARED_CONTEXT/DIRECTIONS/structural_design.md |     4 +-
+ .../DIRECTIONS/technical_supervision.md            |     4 +-
+ .../DIRECTIONS/telegram_automation.md              |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/video_production.md |     4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/vpn_network.md      |     4 +-
+ docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md      |     4 +-
+ docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |     6 +-
+ docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |     6 +-
+ docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |     4 +-
+ .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |    32 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |     4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |     4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |     4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_004.md             |     4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |     6 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |  1198 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_007.md             | 16323 +++++++++----------
+ .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |  2396 ++-
+ .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |   707 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_010.md             |     4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_011.md             |  1161 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_012.md             |     4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_013.md             |     4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_014.md             |     4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_015.md             |     4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_016.md             |     4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_017.md             |     4 +-
+ docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       |   260 +-
+ .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |    16 +-
+ docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |    83 +-
+ docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |     6 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |     4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |     4 +-
+ .../TOPICS/topic_210_PROEKTIROVANIE.md             |     4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |    27 +-
+ .../TOPICS/topic_3008_KODY_MOZGOV.md               |     4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |     4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |     4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_5_TEKHNADZOR.md   |     4 +-
+ .../SHARED_CONTEXT/TOPICS/topic_6104_JOB_SEARCH.md |     4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |     4 +-
+ .../TOPICS/topic_961_AVTOZAPCHASTI.md              |     4 +-
+ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |     6 +-
+ 69 files changed, 11994 insertions(+), 10662 deletions(-)
 
 ## GIT_CHANGED_FILES_10
 .gitignore
@@ -153,7 +223,7 @@ tools/verify_local_bot_api.sh
 - c94ec497-4351-43a7-a106-b3dab1633838|2|drive_file|AWAITING_CONFIRMATION|{"file_id": "1EBmfcyns9UOm4S9tg0CYqCpIIidfLgwl", "file_name": "Открыть Микеа 3 РП 3 (1) (3) (3).pdf", "mime_type": "appl|✅ Смета готова
 
 Объект: дом   Материал: газобетон   Площадь: 99.91 м²   Этажность: 1 этаж   Регион: СПб и ЛО
-Шаблон: Ареал Нева.xlsx   Лист: смета   Цены: средн|2026-05-08 13:22:59
+Шаблон: Ареал Нева.xlsx   Лист: смета   Цены: средн|2026-05-08 17:23:34
 - 22712334-c39f-436a-90ec-cae5ce56f251|5|text|DONE|сделай акт|Акт осмотра объекта сформирован
 Объект: Ропшинское шоссе 198
 Фото учтено: 20
@@ -206,26 +276,26 @@ https://drive.google.com/drive/folders/1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG
 - eba6dc80-d993-43e8-945b-cf1b48b9d103|210|{"file_id": "1evYG_-JrYks_cJ3D04LTYgdh1CZnWqTT", "file_name": "Схема глубинного дренажа.pdf", "mime_type": "application/|NO_VALID_ARTIFACT|2026-05-06 17:31:31
 
 ## LATEST_TASK_HISTORY_20
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_FINAL_CANON_REPAIR_END_OK:P8V3_PEREKRYTIYA_SECTION_ADDED|2026-05-08 13:25:08
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_DONE_CONTRACT_OK:total=8173431,msg=10547,xlsx_ok,pdf_ok,drive_ok,sections=11|2026-05-08 13:25:08
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_MESSAGE_THREAD_ID_OK:bot_msg=10547|2026-05-08 13:25:08
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_XLSX_CREATED:136rows_15cols_manual_total=8173431.09|2026-05-08 13:25:08
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_LOGISTICS_CONFIRMED:30km_median|2026-05-08 13:25:08
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_CONTEXT_READY:area_floor=99.91,floors=1,material=газобетон,distance=30km,sections=11|2026-05-08 13:25:08
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_ESTIMATE_SESSION_CREATED:P8V3_PEREKRYTIYA_REPAIR|2026-05-08 13:25:08
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TELEGRAM_MATCHES_ARTIFACTS|2026-05-08 13:22:59
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_BOT_MESSAGE_ID_SAVED:10547|2026-05-08 13:22:59
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_PUBLIC_OUTPUT_CLEAN_OK|2026-05-08 13:22:59
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_FULL_ESTIMATE_MATRIX_ENFORCED|2026-05-08 13:22:59
-- c94ec497-4351-43a7-a106-b3dab1633838|FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:estimate_generated|2026-05-08 13:22:59
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TELEGRAM_DELIVERED:10547|2026-05-08 13:22:59
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_DRIVE_UPLOAD_PDF_OK|2026-05-08 13:22:59
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_DRIVE_UPLOAD_XLSX_OK|2026-05-08 13:22:59
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_PDF_CYRILLIC_OK|2026-05-08 13:22:59
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_PDF_CREATED:1|2026-05-08 13:22:59
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_XLSX_CANON_COLUMNS_OK:15|2026-05-08 13:22:59
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_XLSX_FORMULAS_OK|2026-05-08 13:22:59
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_XLSX_ROWS_WRITTEN:136|2026-05-08 13:22:59
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TELEGRAM_MATCHES_ARTIFACTS|2026-05-08 17:23:34
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_BOT_MESSAGE_ID_SAVED:10548|2026-05-08 17:23:34
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_PUBLIC_OUTPUT_CLEAN_OK|2026-05-08 17:23:34
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_FULL_ESTIMATE_MATRIX_ENFORCED|2026-05-08 17:23:34
+- c94ec497-4351-43a7-a106-b3dab1633838|FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:estimate_generated|2026-05-08 17:23:34
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TELEGRAM_DELIVERED:10548|2026-05-08 17:23:34
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_DRIVE_UPLOAD_PDF_OK|2026-05-08 17:23:34
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_DRIVE_UPLOAD_XLSX_OK|2026-05-08 17:23:34
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_PDF_CYRILLIC_OK|2026-05-08 17:23:34
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_PDF_CREATED:1|2026-05-08 17:23:34
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_XLSX_CANON_COLUMNS_OK:15|2026-05-08 17:23:34
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_XLSX_FORMULAS_OK|2026-05-08 17:23:34
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_XLSX_ROWS_WRITTEN:136|2026-05-08 17:23:34
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_XLSX_TEMPLATE_COPY_OK|2026-05-08 17:23:34
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TEMPLATE_SHEET_SELECTED:смета|2026-05-08 17:23:34
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TEMPLATE_CACHE_USED|2026-05-08 17:23:34
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TEMPLATE_FILE_ID:1DQw2qgMHtq2SqgJJP-93eIArpj1hnNNm|2026-05-08 17:23:34
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TEMPLATE_SELECTED:Ареал Нева.xlsx|2026-05-08 17:23:34
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_AC_GATE_OK|2026-05-08 17:23:34
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_DRIVE_LINKS_SAVED:xlsx=https://drive.google.com/file/d/1xQqRCR3sxJ6ywoq2qxcDp75BoBM5PYQp/view:pdf=https://drive.google.com/file/d/1FryqGPXfRhYRhXBk3Ie6LHObTKNdVBBH/view|2026-05-08 17:23:33
 
 ## MEMORY_DB_COUNT
 - 5192
@@ -234,40 +304,28 @@ https://drive.google.com/drive/folders/1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG
 - topic_2_estimate_last|{
   "task_id": "c94ec497-4351-43a7-a106-b3dab1633838",
   "status": "AWAITING_CONFIRMATION",
-  "result": "✅ Смета готова\n\nОбъект: дом   Материал: газобетон   Площадь: 99.91 м²   Э|2026-05-08T13:22:59.963534
-- topic_500_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 500, "count": 27, "updated_at": "2026-05-08T13:21:48.030176+00:00", "files": [{"task_id": "7b609434-8167-43f5-a52a-beb85e0b4ed5", "file_id|2026-05-08T13:21:48.030662+00:00
-- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 50, "updated_at": "2026-05-08T13:21:48.010884+00:00", "files": [{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "file_id|2026-05-08T13:21:48.011755+00:00
-- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 50, "updated_at": "2026-05-08T13:21:47.957203+00:00", "files": [{"task_id": "4b402275-e99b-4d9f-b331-08f2ba2a93be", "file_id":|2026-05-08T13:21:47.957824+00:00
-- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-08T13:21:47.918359+00:00", "files": [{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "file_id":|2026-05-08T13:21:47.919555+00:00
-- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T13:21:47.861724+00:00
-- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "state": "FAILED", "file_id": "", "file_name": "", "mime_type"|2026-05-08T13:21:47.861647+00:00
-- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T13:21:47.861562+00:00
-- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T13:21:47.861480+00:00
-- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T13:21:47.861426+00:00
-- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_file", "state": "FAILED", "file_id": "1bXXtuHRsXCuxBSRUl8Tj5z6E|2026-05-08T13:21:47.861362+00:00
-- topic_2_file_92de809d-9274-48ee-82b4-584058ea4e48|{"task_id": "92de809d-9274-48ee-82b4-584058ea4e48", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "search", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T13:21:47.861284+00:00
-- topic_210_file_ce9421cb-5451-4cea-9823-a413b698bc94|{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T13:21:47.861104+00:00
-- topic_210_file_c8619b7e-9ebb-4731-973a-b3f6064bbe38|{"task_id": "c8619b7e-9ebb-4731-973a-b3f6064bbe38", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T13:21:47.860912+00:00
-- topic_210_file_42320ab0-c49a-4a08-8f9b-5e38618a4e58|{"task_id": "42320ab0-c49a-4a08-8f9b-5e38618a4e58", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T13:21:47.860823+00:00
-- topic_210_file_7dca3b5f-2782-400f-af84-fb030904e917|{"task_id": "7dca3b5f-2782-400f-af84-fb030904e917", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T13:21:47.860455+00:00
-- topic_210_file_12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88|{"task_id": "12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "16V3s5DcAvnXj8f-3CcfZE2g5|2026-05-08T13:21:47.859855+00:00
-- topic_210_file_b1f8e982-db2e-42de-9046-833287d3567d|{"task_id": "b1f8e982-db2e-42de-9046-833287d3567d", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T13:21:47.859703+00:00
-- topic_210_file_eeb0d013-704a-404c-9390-5a06c90ee976|{"task_id": "eeb0d013-704a-404c-9390-5a06c90ee976", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T13:21:47.859284+00:00
-- topic_210_file_5ead32f3-23d5-4872-9279-a42460ba5dd1|{"task_id": "5ead32f3-23d5-4872-9279-a42460ba5dd1", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "1qy-mPcmRZxJIzEnY2Gp8B8J2|2026-05-08T13:21:47.858904+00:00
+  "result": "✅ Смета готова\n\nОбъект: дом   Материал: газобетон   Площадь: 99.91 м²   Э|2026-05-08T17:23:34.165481
+- topic_500_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 500, "count": 27, "updated_at": "2026-05-08T17:21:58.286646+00:00", "files": [{"task_id": "7b609434-8167-43f5-a52a-beb85e0b4ed5", "file_id|2026-05-08T17:21:58.287484+00:00
+- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 50, "updated_at": "2026-05-08T17:21:58.266205+00:00", "files": [{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "file_id|2026-05-08T17:21:58.267001+00:00
+- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 50, "updated_at": "2026-05-08T17:21:58.217042+00:00", "files": [{"task_id": "4b402275-e99b-4d9f-b331-08f2ba2a93be", "file_id":|2026-05-08T17:21:58.217446+00:00
+- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-08T17:21:58.183864+00:00", "files": [{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "file_id":|2026-05-08T17:21:58.184451+00:00
+- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T17:21:58.125300+00:00
+- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "state": "FAILED", "file_id": "", "file_name": "", "mime_type"|2026-05-08T17:21:58.125204+00:00
+- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T17:21:58.125119+00:00
+- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T17:21:58.125016+00:00
+- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T17:21:58.124929+00:00
+- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_file", "state": "FAILED", "file_id": "1bXXtuHRsXCuxBSRUl8Tj5z6E|2026-05-08T17:21:58.124810+00:00
+- topic_2_file_92de809d-9274-48ee-82b4-584058ea4e48|{"task_id": "92de809d-9274-48ee-82b4-584058ea4e48", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "search", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T17:21:58.124685+00:00
+- topic_210_file_ce9421cb-5451-4cea-9823-a413b698bc94|{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T17:21:58.124477+00:00
+- topic_210_file_c8619b7e-9ebb-4731-973a-b3f6064bbe38|{"task_id": "c8619b7e-9ebb-4731-973a-b3f6064bbe38", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T17:21:58.124274+00:00
+- topic_210_file_42320ab0-c49a-4a08-8f9b-5e38618a4e58|{"task_id": "42320ab0-c49a-4a08-8f9b-5e38618a4e58", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T17:21:58.124168+00:00
+- topic_210_file_7dca3b5f-2782-400f-af84-fb030904e917|{"task_id": "7dca3b5f-2782-400f-af84-fb030904e917", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T17:21:58.123678+00:00
+- topic_210_file_12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88|{"task_id": "12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "16V3s5DcAvnXj8f-3CcfZE2g5|2026-05-08T17:21:58.123302+00:00
+- topic_210_file_b1f8e982-db2e-42de-9046-833287d3567d|{"task_id": "b1f8e982-db2e-42de-9046-833287d3567d", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T17:21:58.123220+00:00
+- topic_210_file_eeb0d013-704a-404c-9390-5a06c90ee976|{"task_id": "eeb0d013-704a-404c-9390-5a06c90ee976", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T17:21:58.122975+00:00
+- topic_210_file_5ead32f3-23d5-4872-9279-a42460ba5dd1|{"task_id": "5ead32f3-23d5-4872-9279-a42460ba5dd1", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "1qy-mPcmRZxJIzEnY2Gp8B8J2|2026-05-08T17:21:58.122742+00:00
 
 ## JOURNAL_AREAL_TASK_WORKER_60
-areal-task-worker.service: Consumed 2.181s CPU time.
-Started areal-task-worker.service - Areal Task Worker.
-T5CA_SA_UPLOAD_WARN docx_path <HttpError 403 when requesting https://www.googleapis.com/upload/drive/v3/files?fields=id%2CwebViewLink&supportsAllDrives=true&alt=json&uploadType=resumable returned "Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.". Details: "[{'message': 'Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.', 'domain': 'usageLimits', 'reason': 'storageQuotaExceeded'}]">
-T5CA_SA_UPLOAD_WARN pdf_path <HttpError 403 when requesting https://www.googleapis.com/upload/drive/v3/files?fields=id%2CwebViewLink&supportsAllDrives=true&alt=json&uploadType=resumable returned "Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.". Details: "[{'message': 'Service Accounts do not have storage quota. Leverage shared drives (https://developers.google.com/workspace/drive/api/guides/about-shareddrives), or use OAuth delegation (http://support.google.com/a/answer/7281227) instead.', 'domain': 'usageLimits', 'reason': 'storageQuotaExceeded'}]">
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 18.097s CPU time, 105.3M memory peak, 0B memory swap peak.
-Started areal-task-worker.service - Areal Task Worker.
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Consumed 43.623s CPU time.
 Started areal-task-worker.service - Areal Task Worker.
 Stopping areal-task-worker.service - Areal Task Worker...
@@ -309,6 +367,18 @@ areal-task-worker.service: Failed to kill control group /system.slice/areal-task
 areal-task-worker.service: Deactivated successfully.
 Stopped areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Consumed 20.995s CPU time, 202.7M memory peak, 0B memory swap peak.
+Started areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
+areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
+areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
+areal-task-worker.service: Failed with result 'exit-code'.
+areal-task-worker.service: Scheduled restart job, restart counter is at 1.
+Started areal-task-worker.service - Areal Task Worker.
+Stopping areal-task-worker.service - Areal Task Worker...
+areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
+areal-task-worker.service: Deactivated successfully.
+Stopped areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Consumed 3min 27.647s CPU time, 183.5M memory peak, 0B memory swap peak.
 Started areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
 areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument

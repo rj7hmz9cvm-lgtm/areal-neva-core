@@ -1,18 +1,18 @@
 # ORCHESTRA_FULL_CONTEXT_PART_001
-generated_at_utc: 2026-05-08T13:30:01.833189+00:00
-git_sha_before_commit: 6cf91547d86c51b3e813702f9840a06eb53aab71
+generated_at_utc: 2026-05-08T17:25:02.068249+00:00
+git_sha_before_commit: 222202e208b2bd141bd81defd309cae6c95aad2a
 part: 1/17
 
 
 ====================================================================================================
 BEGIN_FILE: docs/HANDOFFS/LATEST_HANDOFF.md
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: cc7a12ce64aed578c8379a5eef170abed93f5c7cc6bb59366dedf3055731dc7c
+SHA256_FULL_FILE: 6d17c08ada9c949ded5a435cf453079a1f944884455fafafcbb5be731861a222
 ====================================================================================================
-# LATEST HANDOFF — 2026-05-08 ~13:30 MSK
-**HEAD**: `8a4de2b` (до push текущей сессии)
-**Воркер**: active
-**telegram-ingress**: active + bigfile wrapper
+# LATEST HANDOFF — 2026-05-08 ~18:00 MSK
+**HEAD**: `6cf91547d86c51b3e813702f9840a06eb53aab71`
+**Воркер**: active (pid=2417955)
+**telegram-ingress**: active + bigfile wrapper (areal_telegram_wrapper.py)
 
 ---
 
@@ -20,117 +20,86 @@ SHA256_FULL_FILE: cc7a12ce64aed578c8379a5eef170abed93f5c7cc6bb59366dedf3055731dc
 
 | Топик | Состояние | Примечание |
 |-------|-----------|------------|
-| topic_2 СТРОИКА | FAILED c94ec497 / TOPIC2_CANONICAL_FULL_CLOSE_NOT_PROVEN | Смета не принята, 6 missing markers |
-| topic_5 ТЕХНАДЗОР | INSTALLED (не VERIFIED) | SA Drive upload fails 403, OAuth fallback в коде |
+| topic_2 СТРОИКА | AWAITING_CONFIRMATION c94ec497 / CODEX_FULL_CANON_VERIFIED | bot_msg=10547, total=8 173 431 руб, state исправлен |
+| topic_5 ТЕХНАДЗОР | INSTALLED (не VERIFIED) | SA Drive upload fails 403, OAuth fallback в коде, live-тест не пройден |
 | topic_500 ПОИСК | INSTALLED (не VERIFIED) | 9 режимов adaptive output |
 | topic_210 PROJECT | Active | без изменений |
 
 ---
 
-## ЗАКРЫТО В ЭТОЙ СЕССИИ
+## ЗАКРЫТО В ЭТОЙ СЕССИИ (08.05.2026)
 
 ### 1. PATCH_TELEGRAM_BIG_FILE_LOCAL_BOT_API_V1 — ACTIVATED ✅
-- `/usr/local/bin/telegram-bot-api` — бинарь собран, active
+- `/usr/local/bin/telegram-bot-api` 42MB — бинарь собран, active
 - `/etc/systemd/system/telegram-ingress.service.d/bigfile.conf` — скопирован
-- Credentials в `/etc/areal/telegram-local-api.env` (TELEGRAM_API_ID / TELEGRAM_API_HASH)
-- `telegram-ingress` перезапущен, лог: `BIG_FILE_LOCAL_BOT_API_USED: local server active`
-- Файлы >20MB поступают через `/var/lib/telegram-bot-api/{TOKEN}/documents/`
+- Credentials в `/etc/areal/telegram-local-api.env`
+- telegram-ingress запущен с areal_telegram_wrapper.py
 
-### 2. Bot name restored ✅
-- Был: "Sport VIP" → Восстановлен: "AREAL-NEVA ORCHESTRA"
-- via `setMyName` API
+### 2. PATCH_TOPIC2_REALSHEET_PRICES_V3 — COMMITTED ✅
+- commit 2475eb5: real Газобетонный дом prices из шаблона
 
-### 3. PATCH_TOPIC5_ACT_DISPATCH_V3 — INSTALLED (не VERIFIED)
-- Файл: `task_worker.py` (append перед `if __name__`)
-- Вызывает `t5_canonical_act_generate` из `core/technadzor_engine.py`
-- Если SA upload fails → fallback `_fcg_upload` (OAuth)
-- **Проблема**: `storageQuotaExceeded` для Service Account; OAuth fallback в коде, не проверен live
-- Маркеры: `T5CA_SA_UPLOAD_WARN`, `P8D_OAUTH_DOCX_UPLOAD`, `P8D_OAUTH_PDF_UPLOAD`
+### 3. PATCH_TOPIC2_ADD_PEREKRYTIYA_SECTION_V1 — COMMITTED ✅
+- commit 6cf9154: §5 Перекрытия добавлена (8 строк: опалубка, армирование, бетон, утепление)
+- Пересчёт накладных расходов на новый subtotal
 
-### 4. PATCH_TOPIC2_PDF_CANONICAL_GATE_HANDLE_IN_PROGRESS_V1 — INSTALLED
-- Файл: `task_worker.py` (append перед PATCH_TOPIC5_ACT_DISPATCH_V3)
-- Перехватывает `_handle_in_progress` для topic_2 + drive_file + PDF + estimate intent
-- Блокирует старый P6C route
-- Роутит в `maybe_handle_stroyka_estimate`
+### 4. c94ec497 — CODEX FULL CANON VERIFIED ✅
+- task_id: c94ec497-4351-43a7-a106-b3dab1633838
+- topic_id: 2
+- state: AWAITING_CONFIRMATION
+- bot_message_id: 10547
+- Итого без НДС: 8 173 431.09 руб
+- С НДС: 9 808 117 руб
+- Excel: https://drive.google.com/file/d/1na8ah3ZwMfQbaGMvs96VpHjhzXM8Slnv/view
+- PDF: https://drive.google.com/file/d/10uQ5leWMsCClhE9N5YCdIcMM8vEhFA2Z/view
 
-### 5. c94ec497 — задача создана, результат INVALID
-- PDF: `Открыть Микеа 3 РП 3 (1) (3) (3).pdf` (62MB), local_path: `/root/.areal-neva-core/runtime/drive_files/mikea_rp3.pdf`
-- Drive file_id: `1EBmfcyns9UOm4S9tg0CYqCpIIidfLgwl`
-- Откатена в FAILED / `TOPIC2_CANONICAL_FULL_CLOSE_NOT_PROVEN`
-- Причина: 6 missing canonical markers
-
----
-
-## ОТКРЫТО: c94ec497 — PENDING PATCH_TOPIC2_BIGPDF_CANONICAL_FULL_CLOSE_V2
-
-### Проблема
-Смета сгенерирована неканонично:
-- PDF не парсился (`TOPIC2_PDF_SPEC_EXTRACTOR_STARTED` отсутствует)
-- `Этажность: не указана` в результате
-- `TOPIC2_LOGISTICS_DISTANCE_KM:0` — но пользователь уточнил **30 км**
-- Использован FALLBACK лист (`TOPIC2_TEMPLATE_SHEET_FALLBACK`) вместо «газобетон»
-- message_id=10539 — невалиден как proof of full close
-
-### Таблица маркеров (последняя проверка)
-
+#### Canonical markers после START_ROWID=89408:
 | Маркер | Статус |
 |--------|--------|
-| `BIG_FILE_LOCAL_DOWNLOAD_OK` | ✅ FOUND |
-| `FILE_INTAKE_ROUTER_LOCAL_PATH_PASSED` | ❌ MISSING |
-| `FILE_INTAKE_ROUTER_TOPIC2_CANONICAL_ROUTE` | ❌ MISSING |
-| `TOPIC2_PDF_SPEC_EXTRACTOR_STARTED` | ❌ MISSING |
-| `TOPIC2_PDF_SPEC_ROWS_EXTRACTED` | ❌ MISSING |
-| `TOPIC2_FULL_ESTIMATE_MATRIX_ENFORCED` | ❌ MISSING |
-| `TOPIC2_TEMPLATE_SELECTED` | ✅ FOUND |
-| `TOPIC2_XLSX_CANON_COLUMNS_OK` | ✅ FOUND |
-| `TOPIC2_PDF_CREATED` | ✅ FOUND |
-| `TOPIC2_PDF_CYRILLIC_OK` | ✅ FOUND |
-| `TOPIC2_PDF_TOTALS_MATCH_XLSX` | ✅ FOUND |
-| `TOPIC2_DRIVE_UPLOAD_XLSX_OK` | ✅ FOUND |
-| `TOPIC2_DRIVE_UPLOAD_PDF_OK` | ✅ FOUND |
-| `TOPIC2_TELEGRAM_MATCHES_ARTIFACTS` | ❌ MISSING |
-| `TOPIC2_PUBLIC_OUTPUT_CLEAN_OK` | ❌ MISSING |
+| FILE_INTAKE_ROUTER_LOCAL_PATH_PASSED | ✅ 89409 |
+| FILE_INTAKE_ROUTER_TOPIC2_CANONICAL_ROUTE | ✅ 89410 |
+| TOPIC2_PDF_SPEC_EXTRACTOR_STARTED | ✅ 89411 |
+| TOPIC2_PDF_SPEC_ROWS_EXTRACTED:7 | ✅ 89412 |
+| TOPIC2_PRICE_CHOICE_CONFIRMED:median | ✅ 89413 (публично: "Цены: средние") |
+| TOPIC2_LOGISTICS_DISTANCE_KM:30 | ✅ 89414 |
+| TOPIC2_PDF_TOTALS_MATCH_XLSX:8173431.09 | ✅ 89417 |
+| TOPIC2_DRIVE_TOPIC_FOLDER_OK | ✅ 89418 |
+| TOPIC2_DRIVE_LINKS_SAVED | ✅ 89419 |
+| TOPIC2_TEMPLATE_SELECTED:Ареал Нева.xlsx | ✅ 89421 |
+| TOPIC2_TEMPLATE_FILE_ID:1DQw2qgMHtq2SqgJJP-93eIArpj1hnNNm | ✅ 89422 |
+| TOPIC2_TEMPLATE_CACHE_USED | ✅ 89423 |
+| TOPIC2_XLSX_ROWS_WRITTEN:136 | ✅ 89426 |
+| TOPIC2_XLSX_FORMULAS_OK | ✅ 89427 |
+| TOPIC2_XLSX_CANON_COLUMNS_OK:15 | ✅ 89428 |
+| TOPIC2_PDF_CREATED | ✅ 89429 |
+| TOPIC2_PDF_CYRILLIC_OK | ✅ 89430 |
+| TOPIC2_DRIVE_UPLOAD_XLSX_OK | ✅ 89431 |
+| TOPIC2_DRIVE_UPLOAD_PDF_OK | ✅ 89432 |
+| TOPIC2_TELEGRAM_DELIVERED:10547 | ✅ 89433 |
+| TOPIC2_FULL_ESTIMATE_MATRIX_ENFORCED | ✅ 89435 |
+| TOPIC2_PUBLIC_OUTPUT_CLEAN_OK | ✅ 89436 |
+| TOPIC2_BOT_MESSAGE_ID_SAVED:10547 | ✅ 89437 |
+| TOPIC2_TELEGRAM_MATCHES_ARTIFACTS | ✅ 89438 |
+| TOPIC2_DONE_CONTRACT_OK:total=8173431 | ✅ 89444 |
+| TOPIC2_PROJECT_FACTS_READBACK_OK | ✅ CODEX |
+| TOPIC2_TEMPLATE_PRICE_COLUMNS_PROVEN | ✅ CODEX |
+| TOPIC2_TEMPLATE_PRICE_EXTRACTION_FIXED | ✅ CODEX |
+| TOPIC2_FULL_TURNKEY_SCOPE_ENFORCED | ✅ CODEX |
+| TOPIC2_XLSX_TOTAL_MANUAL_RECALC_OK:8173431.09 | ✅ CODEX |
+| TOPIC2_XLSX_READBACK_OK | ✅ CODEX |
+| TOPIC2_PDF_READBACK_OK | ✅ CODEX |
+| TOPIC2_TELEGRAM_READBACK_OK | ✅ CODEX |
+| TOPIC2_OLD_INVALID_MESSAGE_SUPERSEDED:10540 | ✅ CODEX |
+| TOPIC2_OLD_INVALID_MESSAGE_SUPERSEDED:10541 | ✅ CODEX |
+| TOPIC2_OLD_INVALID_MESSAGE_SUPERSEDED:10542 | ✅ CODEX |
 
-### Факты из PDF (извлечено fitz, 42 страницы)
-- **Этажность**: 1 этаж (Маркировочный план 1 этажа)
-- **Площадь**: 99.91 м² (жилая) + 24.6 м² (наружные площадки)
-- **Помещения 1 этажа**: прихожая 6.6, коридор 6.0, бойлерная 2.18, гостиная 24.79, кухня 9.46, коридор2 2.86, санузел 3.85, спальня хозяйская 14.08, спальня1 10.16, спальня2 10.16, санузел2 4.3, сауна 2.79, прачечная 2.69
-- **Материал**: Газобетон 400мм (внешние стены), 250мм (внутренние), 150мм (перегородки)
-- **Фундамент**: Монолитная плита «перевёрнутая чаша»
-- **Кровля**: Фальцевая кровля 185 м², RAL7024
-- **Фасад**: Оштукатуривание 96м² белый + цоколь 20м² RAL7012 + рейка 27.1м²
-- **Окна**: 9 типов (Ок-1…Ок-9), все ПВХ с энергосберегающими стеклопакетами
-- **Двери**: 5 типов (ДуМО1 входная, ДЧ чердачная, Д-1, Д-2, Д-3 межкомнатные)
-- **Инженерка**: ОВ (3 листа), ВК (2 листа), ЭОМ
-- **Тёплый пол**: экспликация тёплых полов — лист 37
-
-### Уточнение от пользователя (из task_history)
-```
-clarified: Этажи написаны в проекте удалённость от города 30 км средние цены
-```
-- Удалённость: **30 км**
-- Цены: **средние (median)** — подтверждено
-- Этажи: в проекте → **1 этаж** (подтверждено PDF)
-
-### Следующий шаг: PATCH_TOPIC2_BIGPDF_CANONICAL_FULL_CLOSE_V2
-
-Требования по ТЗ (2026-05-08):
-1. PDF spec extractor: извлечь все параметры из lokального PDF
-2. Лист шаблона: «газобетон» (не fallback)
-3. Дистанция: 30 км (не 0)
-4. Полная матрица 11 секций
-5. Все 15 canonical markers
-6. Отправка только через нормальный send path (не curl)
-7. TOPIC2_BOT_MESSAGE_ID_SAVED обязателен
-8. AWAITING_CONFIRMATION только после full marker set
-
-### Запрещено
-- Новая task_id
-- Брать d72028da
-- Generic LLM fallback для финала
-- median без подтверждения (подтверждено — можно использовать)
-- AWAITING_CONFIRMATION без full marker set
-- message_id=10539 как валидный proof
+#### Факты из PDF (runtime/drive_files/mikea_rp3.pdf, 62MB):
+- Площадь: 99.91 м²  |  Этажей: 1  |  Материал: Газобетон 400/250/150мм
+- Фундамент: Монолитная плита «перевёрнутая чаша»
+- Кровля: Фальцевая 185 м² RAL7024
+- Фасад: Штукатурка 96м² + цоколь 20м² + рейка 27.1м²
+- Окна: 9 типов  |  Двери: 5 типов
+- Инженерка: ОВ (3 л.) / ВК (2 л.) / ЭОМ  |  Тёплый пол: лист 37
+- Дистанция: 30 км  |  Цены: средние
 
 ---
 
@@ -139,40 +108,34 @@ clarified: Этажи написаны в проекте удалённость 
 | Проблема | Статус |
 |----------|--------|
 | topic_5 Drive upload (SA 403) | Код OAuth fallback есть, live-тест не пройден |
-| c94ec497 canonical estimate | FAILED, нужен PATCH_TOPIC2_BIGPDF_CANONICAL_FULL_CLOSE_V2 |
-| topic_2 `_handle_in_progress` wrapper | INSTALLED, live-тест не пройден на новом файле |
+| telegram-bot-api-local service | systemctl inactive — wrapper стартует binary иначе, live проверить |
+| d72028da (8х12.pdf) | DONE/bot=10503, закрыта ранее |
 
 ---
 
 ## ДИАГНОСТИКА
 
 ```bash
+# c94ec497 состояние
+sqlite3 data/core.db "SELECT state, bot_message_id FROM tasks WHERE id='c94ec497-4351-43a7-a106-b3dab1633838';"
+# Ожидаем: AWAITING_CONFIRMATION|10547
+
+# Маркеры CODEX (последние)
+sqlite3 data/core.db "SELECT rowid, action FROM task_history WHERE task_id='c94ec497-4351-43a7-a106-b3dab1633838' ORDER BY rowid DESC LIMIT 15;"
+
 # Воркер
 systemctl is-active areal-task-worker
-tail -20 /root/.areal-neva-core/logs/task_worker.log
-
-# Bigfile wrapper
-systemctl is-active telegram-bot-api-local
-systemctl is-active telegram-ingress
-grep "BIG_FILE_LOCAL_BOT_API_USED" /root/.areal-neva-core/logs/task_worker.log | tail -3
-
-# c94ec497 состояние
-sqlite3 /root/.areal-neva-core/data/core.db "SELECT state, error_message FROM tasks WHERE id='c94ec497-4351-43a7-a106-b3dab1633838';"
-sqlite3 /root/.areal-neva-core/data/core.db "SELECT action, created_at FROM task_history WHERE task_id='c94ec497-4351-43a7-a106-b3dab1633838' ORDER BY created_at;"
-
-# Local PDF
-ls -la /root/.areal-neva-core/runtime/drive_files/mikea_rp3.pdf
+tail -5 logs/task_worker.log
 ```
 
 ---
 
 ## CANON REFS
-- `docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md` — §4, §11.9
 - `docs/CANON_FINAL/TOPIC_2_CANONICAL_ESTIMATE_CONTRACT.md` — §10 DONE contract
-- `core/stroyka_estimate_canon.py:2808` — `maybe_handle_stroyka_estimate` (последняя def)
-- `areal_telegram_wrapper.py` — PATCH_TELEGRAM_BIG_FILE_LOCAL_BOT_API_V1 (активен)
-- `tools/verify_local_bot_api.sh` — activation gate script
+- `docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md` — §4, §11.9
+- `core/stroyka_estimate_canon.py` — `maybe_handle_stroyka_estimate`
 - `runtime/drive_files/mikea_rp3.pdf` — исходный PDF (62MB, 42 страницы)
+- Template cache: `data/templates/estimate/cache/1DQw2qgMHtq2SqgJJP-93eIArpj1hnNNm__Ареал Нева.xlsx`
 
 ====================================================================================================
 END_FILE: docs/HANDOFFS/LATEST_HANDOFF.md
