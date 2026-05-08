@@ -1,7 +1,7 @@
 # TOPIC_STATUS_INDEX
 
-GENERATED_AT: 2026-05-08T23:10:02.254911+00:00
-GIT_SHA: 107186aec60862d7b6e08cc27a44d6828fcf39fd
+GENERATED_AT: 2026-05-08T23:15:02.993960+00:00
+GIT_SHA: 844c3ae339d9c6edb9bfdc833a265148f9e1b7fc
 
 | topic_id | name | role | status | active | failed_24h | source |
 |----------|------|------|--------|--------|------------|--------|
@@ -9,7 +9,7 @@ GIT_SHA: 107186aec60862d7b6e08cc27a44d6828fcf39fd
 | 2 | STROYKA | Сметы | INSTALLED_NOT_VERIFIED | 1 | 11 | TOPICS/topic_2_STROYKA.md |
 | 5 | TEKHNADZOR | Технадзор | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 | TOPICS/topic_5_TEKHNADZOR.md |
 | 11 | VIDEO | Видео | UNKNOWN | 0 | 0 | TOPICS/topic_11_VIDEO.md |
-| 210 | PROEKTIROVANIE | КЖ КМ | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 | TOPICS/topic_210_PROEKTIROVANIE.md |
+| 210 | PROEKTIROVANIE | КЖ КМ | INSTALLED_NOT_VERIFIED | 1 | 0 | TOPICS/topic_210_PROEKTIROVANIE.md |
 | 500 | VEB_POISK | Интернет-поиск | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 | TOPICS/topic_500_VEB_POISK.md |
 | 794 | DEVOPS | Сервер DevOps | UNKNOWN | 0 | 0 | TOPICS/topic_794_DEVOPS.md |
 | 961 | AVTOZAPCHASTI | Автозапчасти | UNKNOWN | 0 | 0 | TOPICS/topic_961_AVTOZAPCHASTI.md |

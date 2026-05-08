@@ -1,7 +1,7 @@
 # direction: structural_design
 
-GENERATED_AT: 2026-05-08T23:10:02.253659+00:00
-GIT_SHA: 107186aec60862d7b6e08cc27a44d6828fcf39fd
+GENERATED_AT: 2026-05-08T23:15:02.992432+00:00
+GIT_SHA: 844c3ae339d9c6edb9bfdc833a265148f9e1b7fc
 GENERATED_FROM: core.direction_registry.DirectionRegistry
 
 DIRECTION_ID: structural_design
@@ -18,5 +18,5 @@ ALIASES: ['кж', 'км', 'проект', 'расчет', 'расчёт', 'ба�
 STRONG_ALIASES: []
 
 ## BOUND_TOPICS_STATUS
-- topic_210: IDLE_NO_FAILURES_NOT_VERIFIED
+- topic_210: INSTALLED_NOT_VERIFIED
 

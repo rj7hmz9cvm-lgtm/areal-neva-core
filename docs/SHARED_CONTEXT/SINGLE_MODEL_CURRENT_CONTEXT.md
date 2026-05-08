@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-05-08T23:10:02.465710+00:00
-GIT_SHA: 107186aec60862d7b6e08cc27a44d6828fcf39fd
+GENERATED_AT: 2026-05-08T23:15:03.173064+00:00
+GIT_SHA: 844c3ae339d9c6edb9bfdc833a265148f9e1b7fc
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -18,7 +18,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 |-------|------|--------|--------|------------|
 | 2 | STROYKA | INSTALLED_NOT_VERIFIED | 1 | 11 |
 | 5 | TEKHNADZOR | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
-| 210 | PROEKTIROVANIE | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
+| 210 | PROEKTIROVANIE | INSTALLED_NOT_VERIFIED | 1 | 0 |
 | 500 | VEB_POISK | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
 
 ## OPEN_BLOCKERS_FROM_NOT_CLOSED
@@ -113,9 +113,9 @@ NEXT_ACTION: investigate latest failed: STALE_NEW_30MIN
 
 ### topic_210 PROEKTIROVANIE
 role: КЖ КМ
-active: 0
+active: 1
 failed_24h: 0
-commits_last_7d: 4
+commits_last_7d: 3
 recent_commits:
 - 9420d6a|fix(topic2): stroyka meta-confirm guard + reply chain + xlsx 15 cols + topic210 meta guard
 - a277900|docs(normative): add shared normative context for topic_5 and topic_210

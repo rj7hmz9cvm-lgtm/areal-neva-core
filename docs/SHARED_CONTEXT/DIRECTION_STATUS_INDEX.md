@@ -1,7 +1,7 @@
 # DIRECTION_STATUS_INDEX
 
-GENERATED_AT: 2026-05-08T23:10:02.255036+00:00
-GIT_SHA: 107186aec60862d7b6e08cc27a44d6828fcf39fd
+GENERATED_AT: 2026-05-08T23:15:02.994125+00:00
+GIT_SHA: 844c3ae339d9c6edb9bfdc833a265148f9e1b7fc
 Source: core/direction_registry.DirectionRegistry from config/directions.yaml
 
 | direction | enabled | engine | topic_ids | bound_status |
@@ -24,7 +24,7 @@ Source: core/direction_registry.DirectionRegistry from config/directions.yaml
 | vpn_network | False | ai_router | [] | - |
 | ocr_photo | False | ocr_engine | [] | - |
 | cad_dwg | False | dwg_engine | [] | - |
-| structural_design | False | project_engine | [210] | 210:IDLE_NO_FAILURES_NOT_VERIFIED |
+| structural_design | False | project_engine | [210] | 210:INSTALLED_NOT_VERIFIED |
 | roofing | False | estimate_unified | [] | - |
 | monolith_concrete | False | estimate_unified | [] | - |
 | crm_leads | False | ai_router | [4569] | 4569:UNKNOWN |

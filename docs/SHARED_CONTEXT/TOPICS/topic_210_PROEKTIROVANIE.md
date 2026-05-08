@@ -1,14 +1,14 @@
 # topic_210 PROEKTIROVANIE
 
-GENERATED_AT: 2026-05-08T23:10:02.068842+00:00
-GIT_SHA: 107186aec60862d7b6e08cc27a44d6828fcf39fd
+GENERATED_AT: 2026-05-08T23:15:02.791390+00:00
+GIT_SHA: 844c3ae339d9c6edb9bfdc833a265148f9e1b7fc
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 210
 ROLE: КЖ КМ
 DIRECTIONS_BOUND: structural_design
-CURRENT_STATUS: IDLE_NO_FAILURES_NOT_VERIFIED
-ACTIVE_TASKS: 0
+CURRENT_STATUS: INSTALLED_NOT_VERIFIED
+ACTIVE_TASKS: 1
 FAILED_LAST_24H: 0
 
 ## DB_STATE_COUNTS
@@ -16,6 +16,7 @@ FAILED_LAST_24H: 0
 - CANCELLED: 28
 - DONE: 81
 - FAILED: 26
+- NEW: 1
 
 ## LATEST_FAILED
 - cfadbd05 | INVALID_RESULT_GATE
@@ -28,10 +29,9 @@ FAILED_LAST_24H: 0
 - 9420d6a|fix(topic2): stroyka meta-confirm guard + reply chain + xlsx 15 cols + topic210 meta guard
 - a277900|docs(normative): add shared normative context for topic_5 and topic_210
 - bc58444|COMBINED_TOPIC2_AND_TOPIC210_CLOSE_V1: real topic2 estimate and cad section fix
-- 10036c1|TOPIC_ISOLATION_V1: exclude topic_210_500 from FILE_TECH and restore drive scope
 
 ## MARKERS_LAST_24H
-- (none)
+- created:NEW
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210
