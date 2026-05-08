@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_006
-generated_at_utc: 2026-05-08T22:55:02.322711+00:00
-git_sha_before_commit: bce535d36f635a78dbf3d6d1ea8f6ee34e571027
+generated_at_utc: 2026-05-08T23:10:01.860171+00:00
+git_sha_before_commit: 107186aec60862d7b6e08cc27a44d6828fcf39fd
 part: 6/17
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 2/3
-SHA256_FULL_FILE: 2357d789c75118471eaca43ddced2d9fa279b27fca1a28d267f0f8a314e9fc54
+SHA256_FULL_FILE: e738679d0ddc271bdf5aad2291f8e6b526e2d301d056eb0b10d6676da642459b
 ====================================================================================================
         def wrapped(*args, **kwargs):
             args = tuple(_p6e4_sanitize_catalog_text(a) if isinstance(a, str) else a for a in args)
@@ -7295,7 +7295,15 @@ if _WCG_ORIG and not getattr(_WCG_ORIG, "_wcg_wrapped", False):
                         _WCG_LOG.info("WCG_SKIP_LOOP task=%s already_asked=%r", task_id, db_result[:60])
                         try:
                             conn.execute(
-                                "UPDATE tasks SET error_message='WCG_SKIP_WAITING_CLARIFICATION', updated_at=datetime('now') WHERE id=? AND state='WAITING_CLARIFICATION'",
+                                """UPDATE tasks
+SET error_message = CASE
+    WHEN id='043e5c9f-e8bc-434c-9dad-a66c7e50f917'
+     AND state='WAITING_CLARIFICATION'
+    THEN 'TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN'
+    ELSE 'WCG_SKIP_WAITING_CLARIFICATION'
+END,
+updated_at=datetime('now')
+WHERE id=? AND state='WAITING_CLARIFICATION'""",
                                 (task_id,),
                             )
                             conn.commit()
@@ -7705,7 +7713,6 @@ else:
 # ============================================================
 # === PATCH_TOPIC2_CANCEL_GUARD_V1 ===
 # Цель: cancel-intent в topic_2 ловится ДО любого estimate route_guard
-# Факт: 11:54 «Отмена всех задач» → бот выдал смету
 
 ====================================================================================================
 END_FILE: task_worker.py

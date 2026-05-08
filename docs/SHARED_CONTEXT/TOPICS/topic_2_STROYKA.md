@@ -1,7 +1,7 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-05-08T22:55:02.412611+00:00
-GIT_SHA: bce535d36f635a78dbf3d6d1ea8f6ee34e571027
+GENERATED_AT: 2026-05-08T23:10:01.971016+00:00
+GIT_SHA: 107186aec60862d7b6e08cc27a44d6828fcf39fd
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -26,6 +26,9 @@ FAILED_LAST_24H: 11
 - test-gat | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
+- 107186a|fix(topic2): TOPIC2_WCG_SQL_FIX_SYNTAX_AND_LIKE_DROP_V1
+- 24e65b0|fix(topic2): TOPIC2_WCG_PRESERVE_DRAINAGE_ERROR_V1 — preserve drainage length error through WCG skip
+- c956edd|fix(topic2): TOPIC2_DRAINAGE_PARENT_GUARD_V2 — bind drainage followups to parent and block silent continue
 - bce535d|PATCH_TOPIC2_DRAINAGE_RECOGNIZE_ALL_V1
 - 0152cb4|fix(topic2): TOPIC2_DRAINAGE_PRICE_ENRICHMENT_CANON_FIX_V1
 - b07a265|fix(topic2): TOPIC2_DRAINAGE_LENGTH_PROOF_GATE_AND_ONLINE_PRICES_V2
@@ -53,9 +56,6 @@ FAILED_LAST_24H: 11
 - 168ce5e|fix(topic2): close final V5 code gaps for prices guards totals
 - 983ced8|fix(topic2): close 3 remaining V4 gaps (repeat/negative/pdf_missing_question)
 - 2353fc3|fix(topic2): close remaining project/pdf/photo/price/artifact gaps V4
-- ccab9ed|fix(topic2): PATCH_TOPIC2_FULL_CLOSE_RUNTIME_V3 — all 9 requirements
-- 055157b|fix(topic2): PATCH_TOPIC2_FULL_CLOSE_RUNTIME_V2
-- ad829c4|fix(topic2): PATCH_TOPIC2_FULL_CANONICAL_CLOSE_ONEPASS_V1 — §9 output + recursion fix
 
 ## MARKERS_LAST_24H
 - created:NEW

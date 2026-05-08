@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-08T22:55:02.211367+00:00
-git_sha_before_commit: bce535d36f635a78dbf3d6d1ea8f6ee34e571027
+generated_at_utc: 2026-05-08T23:10:01.711843+00:00
+git_sha_before_commit: 107186aec60862d7b6e08cc27a44d6828fcf39fd
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,10 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: inactive
 
 ## GIT_LOG_30
+107186a fix(topic2): TOPIC2_WCG_SQL_FIX_SYNTAX_AND_LIKE_DROP_V1
+24e65b0 fix(topic2): TOPIC2_WCG_PRESERVE_DRAINAGE_ERROR_V1 — preserve drainage length error through WCG skip
+c956edd fix(topic2): TOPIC2_DRAINAGE_PARENT_GUARD_V2 — bind drainage followups to parent and block silent continue
+7c4ea9a FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 bce535d PATCH_TOPIC2_DRAINAGE_RECOGNIZE_ALL_V1
 a2d244f FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 bf60881 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
@@ -36,33 +40,30 @@ db5dbef FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 e185e83 fix(topic2): PATCH_SUPPLIER_HONESTY_V1 — fix fake Perplexity в Поставщик
 5cff0da FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 433ffeb FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
-222202e docs(handoff): CODEX_FULL_CANON_VERIFIED — c94ec497 AWAITING_CONFIRMATION, all phases 1-20 pass
-6cf9154 fix(topic2): PATCH_TOPIC2_ADD_PEREKRYTIYA_SECTION_V1 — add missing §5 Перекрытия section
-2475eb5 fix(topic2): PATCH_TOPIC2_REALSHEET_PRICES_V3 — real Газобетонный дом prices
-10542fd FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
 ## GIT_SHOW_STAT_HEAD
-commit bce535d36f635a78dbf3d6d1ea8f6ee34e571027
+commit 107186aec60862d7b6e08cc27a44d6828fcf39fd
 Author: Ila <ilakuznecov@mac.local>
-Date:   Sat May 9 01:50:45 2026 +0300
+Date:   Sat May 9 02:07:38 2026 +0300
 
-    PATCH_TOPIC2_DRAINAGE_RECOGNIZE_ALL_V1
+    fix(topic2): TOPIC2_WCG_SQL_FIX_SYNTAX_AND_LIKE_DROP_V1
     
-    Распознаёт все элементы из схемы дренажа перед запросом длин.
-    Добавлены _recognize_scheme_v1, _build_wc_length_message_v1.
-    WC-сообщение показывает: колодцы Дк×N (∅500/∅315), ДНС-1 (КГН-460),
-    ПУ-1, линейный водоотвод, уклон, длину из легенды — и спрашивает
-    только реальные длины трасс. Точка входа перенесена в конец файла
-    (старый if __name__ → pass) чтобы override main() срабатывал корректно.
+    Исправлен SyntaxError на строке 14651 — SQL CASE был вставлен как
+    обычная "..." строка с переносами. Заменено на """...""".
+    Убрано условие result LIKE '%Длина трасс дренажа%' — CASE теперь
+    проверяет только task_id, что не зависит от текста WC-message
+    (который меняется между версиями repair-скрипта).
+    
+    Также подтверждён PATCH_TOPIC2_DRAINAGE_RECOGNIZE_ALL_V1 в
+    tools/topic2_drainage_repair_close.py — recognize-all WC-сообщение
+    показывает Дк×3, ∅315/500/1000, ДНС, ПУ, КГН, i=0.005, l=6.0.
     
     Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 
- tools/topic2_drainage_repair_close.py | 199 +++++++++++++++++++++++++++++++++-
- 1 file changed, 198 insertions(+), 1 deletion(-)
+ task_worker.py | 17 ++++++++++++++++-
+ 1 file changed, 16 insertions(+), 1 deletion(-)
 
 ## GIT_CHANGED_FILES_10
-core/topic2_input_gate.py
-docs/HANDOFFS/LATEST_HANDOFF.md
 docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md
 docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
 docs/SHARED_CONTEXT/DIRECTIONS/auto_parts_search.md
@@ -157,7 +158,7 @@ tools/topic2_drainage_repair_close.py
 - 9a174a37-fc01-4414-97f9-064621356083|2|text|DONE|А смета-то где|PDF определён как схема дренажа/ливнёвки.
 Домовую смету не запускаю: текущий файл относится к наружным сетям, а не к дому.
 Считать приблизительно по схеме или п|2026-05-08 20:47:30
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|2|text|WAITING_CLARIFICATION|[VOICE] Посмотри то, что я тебе писал ранее, у тебя же все есть|Нет нового ТЗ для расчёта. Смету по старой памяти не запускаю. Напиши конкретную правку или новое полное ТЗ|2026-05-08 22:51:17
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|2|text|WAITING_CLARIFICATION|[VOICE] Посмотри то, что я тебе писал ранее, у тебя же все есть|Нет нового ТЗ для расчёта. Смету по старой памяти не запускаю. Напиши конкретную правку или новое полное ТЗ|2026-05-08 23:10:00
 - test-multifile-gate-001|2|text|FAILED|[VOICE] У тебя два файла. На одном у тебя схема дренажа, на другом у тебя длинные высоты и все есть. Посмотри оба файла |⏳ Задачу понял
 
 Шаблон: Ареал Нева.xlsx
@@ -222,6 +223,18 @@ tools/topic2_drainage_repair_close.py
 - 60b9503b-75cc-4913-bb7b-11092508fdae|2|[VOICE] Я тебе говорил про вот эту информацию, посмотри.|TOPIC2_STALE_HOUSE_CONTEXT_USED_FOR_DRAINAGE_FILE|2026-05-08 19:17:11
 
 ## LATEST_TASK_HISTORY_20
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|P6_TOPIC2_VAGUE_OLD_MEMORY_BLOCKED|2026-05-08 23:09:21
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|clarified:Распознай фото лучше|2026-05-08T23:09:20.492998+00:00
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_WC_SENT:10637|2026-05-08 23:09:05
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_FINAL_ARTIFACTS_BLOCKED|2026-05-08 23:09:05
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_RECOGNIZED:dk=3,dns=True,pu=True,kgn=True,slope=0.005|2026-05-08 23:09:05
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN:lines=0:total=0|2026-05-08 23:09:05
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_LENGTH_PROOF_GATE_V1|2026-05-08 23:09:05
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_WCG_SQL_FIX_SYNTAX_AND_LIKE_DROP_V1|2026-05-08 23:05:56
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_WCG_SKIP_SQL_PRESERVE_DRAINAGE_ERROR_V2_DB_REPAIR|2026-05-08 22:58:44
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_WCG_ERROR_REPAIRED_TO_DRAINAGE_LENGTH_NOT_PROVEN|2026-05-08 22:57:32
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_NO_SILENT_CONTINUE_ENFORCED|2026-05-08 22:56:39
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_PARENT_STATE_REPAIRED_BY_PATCH_V2|2026-05-08 22:56:39
 - 043e5c9f-e8bc-434c-9dad-a66c7e50f917|P6_TOPIC2_VAGUE_OLD_MEMORY_BLOCKED|2026-05-08 22:51:16
 - 043e5c9f-e8bc-434c-9dad-a66c7e50f917|clarified:жду|2026-05-08T22:51:16.133499+00:00
 - 043e5c9f-e8bc-434c-9dad-a66c7e50f917|P6_TOPIC2_VAGUE_OLD_MEMORY_BLOCKED|2026-05-08 22:50:40
@@ -230,18 +243,6 @@ tools/topic2_drainage_repair_close.py
 - 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_FINAL_ARTIFACTS_BLOCKED|2026-05-08 22:49:54
 - 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_RECOGNIZED:dk=3,dns=True,pu=True,kgn=True,slope=0.005|2026-05-08 22:49:54
 - 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN:lines=0:total=0|2026-05-08 22:49:54
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_LENGTH_PROOF_GATE_V1|2026-05-08 22:49:54
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_WC_SENT:10631|2026-05-08 22:48:03
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_FINAL_ARTIFACTS_BLOCKED|2026-05-08 22:48:03
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN:lines=0:total=0|2026-05-08 22:48:03
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_LENGTH_PROOF_GATE_V1|2026-05-08 22:48:03
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|P6_TOPIC2_VAGUE_OLD_MEMORY_BLOCKED|2026-05-08 22:41:35
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|clarified:ну что|2026-05-08T22:41:35.668855+00:00
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|P6_TOPIC2_VAGUE_OLD_MEMORY_BLOCKED|2026-05-08 22:36:38
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|clarified:Все что есть я тебе скинул посмотри там лучше у меня нет других файлов|2026-05-08T22:36:37.814029+00:00
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_WC_SENT:10626|2026-05-08 22:35:30
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_FINAL_ARTIFACTS_BLOCKED|2026-05-08 22:35:30
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN:lines=0:total=0|2026-05-08 22:35:30
 
 ## MEMORY_DB_COUNT
 - 5198
@@ -269,28 +270,6 @@ tools/topic2_drainage_repair_close.py
 - topic_210_file_fb6aadc5-b372-488a-aede-f3433a030e55|{"task_id": "fb6aadc5-b372-488a-aede-f3433a030e55", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T22:52:15.840273+00:00
 
 ## JOURNAL_AREAL_TASK_WORKER_60
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 1.392s CPU time, 81.2M memory peak, 0B memory swap peak.
-Started areal-task-worker.service - Areal Task Worker.
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 2.253s CPU time.
-Started areal-task-worker.service - Areal Task Worker.
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 32.421s CPU time, 104.9M memory peak, 0B memory swap peak.
-Started areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
-areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
-areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
-areal-task-worker.service: Failed with result 'exit-code'.
-areal-task-worker.service: Scheduled restart job, restart counter is at 1.
-Started areal-task-worker.service - Areal Task Worker.
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
 areal-task-worker.service: Deactivated successfully.
 Stopped areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Consumed 11.723s CPU time, 103.5M memory peak, 0B memory swap peak.
@@ -329,9 +308,30 @@ areal-task-worker.service: Deactivated successfully.
 Stopped areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Consumed 1.142s CPU time.
 Started areal-task-worker.service - Areal Task Worker.
+Stopping areal-task-worker.service - Areal Task Worker...
+areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
+areal-task-worker.service: Deactivated successfully.
+Stopped areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Consumed 54.712s CPU time, 105.4M memory peak, 0B memory swap peak.
+Started areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
+areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
+areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
+areal-task-worker.service: Failed with result 'exit-code'.
+areal-task-worker.service: Scheduled restart job, restart counter is at 1.
+Started areal-task-worker.service - Areal Task Worker.
+Stopping areal-task-worker.service - Areal Task Worker...
+areal-task-worker.service: Deactivated successfully.
+Stopped areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Consumed 1.589s CPU time.
+Started areal-task-worker.service - Areal Task Worker.
+Stopping areal-task-worker.service - Areal Task Worker...
+areal-task-worker.service: Deactivated successfully.
+Stopped areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Consumed 13.338s CPU time.
+Started areal-task-worker.service - Areal Task Worker.
 
 ## JOURNAL_TELEGRAM_INGRESS_30
-2026-05-08 23:18:50,468 INFO DAEMON: STT start file=/root/.areal-neva-core/runtime/voice_queue/voice_1003725299009_10588.ogg size=16565 model=whisper-large-v3-turbo
 2026-05-08 23:18:50,792 INFO DAEMON: STT http_status=200
 2026-05-08 23:18:50,793 INFO DAEMON: STT ok transcript_len=55
 2026-05-08 23:18:50,917 INFO DAEMON: Task 043e5c9f-e8bc-434c-9dad-a66c7e50f917 created state=NEW topic_id=2
@@ -361,3 +361,4 @@ Started areal-task-worker.service - Areal Task Worker.
 2026-05-09 01:41:35,765 INFO DAEMON: Update id=210388108 is handled. Duration 107 ms by bot id=8216054898
 2026-05-09 01:50:40,820 INFO DAEMON: Update id=210388109 is handled. Duration 110 ms by bot id=8216054898
 2026-05-09 01:51:16,192 INFO DAEMON: Update id=210388110 is handled. Duration 66 ms by bot id=8216054898
+2026-05-09 02:09:20,600 INFO DAEMON: Update id=210388111 is handled. Duration 119 ms by bot id=8216054898

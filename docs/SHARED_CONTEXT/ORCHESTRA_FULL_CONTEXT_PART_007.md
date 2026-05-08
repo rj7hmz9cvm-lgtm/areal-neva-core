@@ -1,14 +1,15 @@
 # ORCHESTRA_FULL_CONTEXT_PART_007
-generated_at_utc: 2026-05-08T22:55:02.323356+00:00
-git_sha_before_commit: bce535d36f635a78dbf3d6d1ea8f6ee34e571027
+generated_at_utc: 2026-05-08T23:10:01.861392+00:00
+git_sha_before_commit: 107186aec60862d7b6e08cc27a44d6828fcf39fd
 part: 7/17
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 3/3
-SHA256_FULL_FILE: 2357d789c75118471eaca43ddced2d9fa279b27fca1a28d267f0f8a314e9fc54
+SHA256_FULL_FILE: e738679d0ddc271bdf5aad2291f8e6b526e2d301d056eb0b10d6676da642459b
 ====================================================================================================
+# Факт: 11:54 «Отмена всех задач» → бот выдал смету
 # Факт: 17:33 «Задача отменена» → бот спросил «Сколько этажей»
 # ============================================================
 import re as _tcg_re
@@ -1864,6 +1865,350 @@ except Exception:
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+
+# === PATCH_TOPIC2_DRAINAGE_PARENT_GUARD_V2 ===
+# Facts fixed:
+# - parent task 043e5c9f is the active drainage task
+# - vague follow-ups/status texts must not start old memory / house context / fresh estimate
+# - "Принято, продолжаю" without visible state/result is forbidden for this drainage parent
+import inspect as _t2dpg_inspect
+import logging as _t2dpg_logging
+
+_T2DPG_LOG = _t2dpg_logging.getLogger("topic2.drainage_parent_guard_v2")
+_T2DPG_PARENT_ID = "043e5c9f-e8bc-434c-9dad-a66c7e50f917"
+
+_T2DPG_GATE_TEXT = (
+    "Длина трасс дренажа и ливнёвки в PDF не читается — схема графическая.\n\n"
+    "Распознано из текущих файлов:\n"
+    "• Дренажные колодцы: Дк × 3 шт\n"
+    "• ДНС-1 — дренажная насосная станция\n"
+    "• ПУ-1 — пескоуловитель\n"
+    "• Линейный водоотвод / лотки\n"
+    "• Уклон трубы: i=0.005\n"
+    "• l=6.0 м — пример обозначения, не суммарная длина\n\n"
+    "Финальную смету без доказанной длины не закрываю.\n\n"
+    "Напиши одно:\n"
+    "1 — считать ориентировочно по схеме\n"
+    "2 — пришлёшь общую длину трасс в метрах"
+)
+
+_T2DPG_STATUS_WORDS = (
+    "ну что",
+    "что там",
+    "где результат",
+    "а смета",
+    "смета-то где",
+    "жду",
+)
+
+_T2DPG_NO_MORE_FILES_WORDS = (
+    "все что есть",
+    "всё что есть",
+    "других файлов нет",
+    "нет других файлов",
+    "лучше у меня нет",
+    "посмотри там",
+    "смотри лучше",
+)
+
+def _t2dpg_row(row, key, default=None):
+    try:
+        return row[key]
+    except Exception:
+        try:
+            return getattr(row, key)
+        except Exception:
+            return default
+
+def _t2dpg_low(v):
+    return str(v or "").lower().replace("ё", "е")
+
+def _t2dpg_hist(conn, task_id, action):
+    try:
+        conn.execute(
+            "INSERT INTO task_history (task_id, action, created_at) VALUES (?,?,datetime('now'))",
+            (task_id, str(action)[:900]),
+        )
+    except Exception as e:
+        _T2DPG_LOG.warning("T2DPG_HISTORY_ERR %s", e)
+
+def _t2dpg_send(chat_id, topic_id, text, reply_to=None):
+    try:
+        from core.reply_sender import send_reply_ex
+        kwargs = {
+            "chat_id": str(chat_id),
+            "text": str(text)[:3900],
+        }
+        if int(topic_id or 0):
+            kwargs["message_thread_id"] = int(topic_id)
+        if reply_to:
+            kwargs["reply_to_message_id"] = int(reply_to)
+        res = send_reply_ex(**kwargs)
+        if isinstance(res, dict) and res.get("ok"):
+            return int(res.get("bot_message_id") or 0)
+    except Exception as e:
+        _T2DPG_LOG.warning("T2DPG_SEND_ERR %s", e)
+    return 0
+
+def _t2dpg_get_parent(conn, chat_id, topic_id):
+    try:
+        row = conn.execute(
+            "SELECT * FROM tasks WHERE id=? AND chat_id=? AND COALESCE(topic_id,0)=? LIMIT 1",
+            (_T2DPG_PARENT_ID, chat_id, int(topic_id or 0)),
+        ).fetchone()
+        if row:
+            return row
+    except Exception:
+        pass
+    return None
+
+def _t2dpg_has_drainage_markers(conn, task_id):
+    try:
+        row = conn.execute(
+            """
+            SELECT 1
+            FROM task_history
+            WHERE task_id=?
+              AND (
+                action LIKE 'TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN:%'
+                OR action LIKE 'TOPIC2_DRAINAGE_LENGTH_PROOF_GATE_V1%'
+                OR action LIKE 'TOPIC2_DRAINAGE_RECOGNIZED:%'
+                OR action LIKE 'TOPIC2_DRAINAGE_SOURCE_FILE:%'
+              )
+            LIMIT 1
+            """,
+            (task_id,),
+        ).fetchone()
+        return bool(row)
+    except Exception:
+        return False
+
+def _t2dpg_is_followup_text(text):
+    t = _t2dpg_low(text)
+    if any(w in t for w in _T2DPG_STATUS_WORDS):
+        return True
+    if any(w in t for w in _T2DPG_NO_MORE_FILES_WORDS):
+        return True
+    return False
+
+def _t2dpg_is_bad_continue_result(text):
+    t = _t2dpg_low(text)
+    return (
+        "принято, продолжаю" in t
+        or "нет нового тз для расчета" in t
+        or "смету по старой памяти не запускаю" in t
+    )
+
+def _t2dpg_fix_parent_state(conn, parent, reason, send_visible=False, reply_to=None):
+    parent_id = _t2dpg_row(parent, "id")
+    chat_id = _t2dpg_row(parent, "chat_id")
+    topic_id = int(_t2dpg_row(parent, "topic_id", 0) or 0)
+    old_bot = _t2dpg_row(parent, "bot_message_id", None)
+    bot_id = 0
+
+    if send_visible:
+        bot_id = _t2dpg_send(chat_id, topic_id, _T2DPG_GATE_TEXT, reply_to=reply_to)
+
+    final_bot = bot_id or old_bot
+
+    try:
+        if final_bot:
+            conn.execute(
+                """
+                UPDATE tasks
+                SET state='WAITING_CLARIFICATION',
+                    result=?,
+                    bot_message_id=?,
+                    error_message='TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN',
+                    updated_at=datetime('now')
+                WHERE id=?
+                """,
+                (_T2DPG_GATE_TEXT, final_bot, parent_id),
+            )
+        else:
+            conn.execute(
+                """
+                UPDATE tasks
+                SET state='WAITING_CLARIFICATION',
+                    result=?,
+                    error_message='TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN',
+                    updated_at=datetime('now')
+                WHERE id=?
+                """,
+                (_T2DPG_GATE_TEXT, parent_id),
+            )
+        _t2dpg_hist(conn, parent_id, "TOPIC2_DRAINAGE_PARENT_GUARD_V2:" + reason)
+        _t2dpg_hist(conn, parent_id, "TOPIC2_DRAINAGE_FINAL_ARTIFACTS_BLOCKED_LENGTH_NOT_PROVEN")
+        if bot_id:
+            _t2dpg_hist(conn, parent_id, "TOPIC2_DRAINAGE_GATE_RESENT:" + str(bot_id))
+        conn.commit()
+    except Exception as e:
+        _T2DPG_LOG.warning("T2DPG_PARENT_FIX_ERR %s", e)
+
+    return True
+
+def _t2dpg_absorb_child(conn, task):
+    task_id = _t2dpg_row(task, "id")
+    chat_id = _t2dpg_row(task, "chat_id")
+    topic_id = int(_t2dpg_row(task, "topic_id", 0) or 0)
+    raw = str(_t2dpg_row(task, "raw_input", "") or "")
+    reply_to = _t2dpg_row(task, "reply_to_message_id", None)
+
+    if int(topic_id) != 2:
+        return False
+
+    parent = _t2dpg_get_parent(conn, chat_id, topic_id)
+    if not parent:
+        return False
+
+    parent_id = _t2dpg_row(parent, "id")
+    if task_id == parent_id:
+        parent_result = str(_t2dpg_row(parent, "result", "") or "")
+        parent_state = str(_t2dpg_row(parent, "state", "") or "")
+
+        if _t2dpg_has_drainage_markers(conn, parent_id) and (
+            parent_state in ("NEW", "IN_PROGRESS", "WAITING_CLARIFICATION")
+            or _t2dpg_is_bad_continue_result(parent_result)
+        ):
+            return _t2dpg_fix_parent_state(conn, parent, "PARENT_REPICK_BLOCKED", send_visible=False)
+
+        return False
+
+    if not _t2dpg_has_drainage_markers(conn, parent_id):
+        return False
+
+    if not _t2dpg_is_followup_text(raw):
+        return False
+
+    send_visible = any(w in _t2dpg_low(raw) for w in _T2DPG_STATUS_WORDS + _T2DPG_NO_MORE_FILES_WORDS)
+    bot_id = 0
+
+    if send_visible:
+        bot_id = _t2dpg_send(chat_id, topic_id, _T2DPG_GATE_TEXT, reply_to=reply_to)
+
+    try:
+        conn.execute(
+            """
+            UPDATE tasks
+            SET state='DONE',
+                result=?,
+                bot_message_id=COALESCE(?, bot_message_id),
+                error_message=?,
+                updated_at=datetime('now')
+            WHERE id=?
+            """,
+            (
+                "TOPIC2_CHILD_MERGED_TO_DRAINAGE_PARENT " + parent_id,
+                bot_id if bot_id else None,
+                "TOPIC2_CHILD_MERGED_TO_DRAINAGE_PARENT:" + parent_id,
+                task_id,
+            ),
+        )
+        _t2dpg_hist(conn, task_id, "TOPIC2_CHILD_MERGED_TO_DRAINAGE_PARENT:" + parent_id)
+        _t2dpg_hist(conn, parent_id, "clarified:" + raw[:700])
+        if any(w in _t2dpg_low(raw) for w in _T2DPG_NO_MORE_FILES_WORDS):
+            _t2dpg_hist(conn, parent_id, "TOPIC2_DRAINAGE_NO_MORE_FILES_CONFIRMED")
+        if bot_id:
+            _t2dpg_hist(conn, parent_id, "TOPIC2_DRAINAGE_GATE_RESENT:" + str(bot_id))
+        conn.commit()
+    except Exception as e:
+        _T2DPG_LOG.warning("T2DPG_CHILD_MERGE_ERR %s", e)
+        return False
+
+    _t2dpg_fix_parent_state(conn, parent, "CHILD_FOLLOWUP_BOUND", send_visible=False)
+    return True
+
+def _t2dpg_wrap_handler(name):
+    old = globals().get(name)
+    if not callable(old):
+        return
+
+    if getattr(old, "_t2dpg_wrapped", False):
+        return
+
+    if _t2dpg_inspect.iscoroutinefunction(old):
+        async def wrapped(conn, task, *args, **kwargs):
+            try:
+                if _t2dpg_absorb_child(conn, task):
+                    return True
+            except Exception as e:
+                _T2DPG_LOG.warning("T2DPG_WRAP_ASYNC_ERR %s", e)
+            return await old(conn, task, *args, **kwargs)
+    else:
+        def wrapped(conn, task, *args, **kwargs):
+            try:
+                if _t2dpg_absorb_child(conn, task):
+                    return True
+            except Exception as e:
+                _T2DPG_LOG.warning("T2DPG_WRAP_ERR %s", e)
+            return old(conn, task, *args, **kwargs)
+
+    wrapped._t2dpg_wrapped = True
+    globals()[name] = wrapped
+
+for _t2dpg_name in ("_handle_new", "_handle_in_progress", "_handle_waiting_clarification"):
+    _t2dpg_wrap_handler(_t2dpg_name)
+
+_T2DPG_LOG.info("PATCH_TOPIC2_DRAINAGE_PARENT_GUARD_V2 installed")
+# === END_PATCH_TOPIC2_DRAINAGE_PARENT_GUARD_V2 ===
+
+
+# === PATCH_TOPIC2_WCG_PRESERVE_DRAINAGE_ERROR_V1 ===
+# Preserve canonical drainage error_message when WCG skip guard re-picks WAITING_CLARIFICATION
+import sqlite3 as _t2wcg_sqlite3
+import logging as _t2wcg_logging
+
+_T2WCG_LOG = _t2wcg_logging.getLogger("topic2.wcg_preserve_drainage_error_v1")
+_T2WCG_PARENT_ID = "043e5c9f-e8bc-434c-9dad-a66c7e50f917"
+
+def _t2wcg_preserve_parent_error():
+    try:
+        conn = _t2wcg_sqlite3.connect("/root/.areal-neva-core/data/core.db")
+        conn.execute(
+            """
+            UPDATE tasks
+            SET error_message='TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN',
+                updated_at=datetime('now')
+            WHERE id=?
+              AND state='WAITING_CLARIFICATION'
+              AND result LIKE '%Длина трасс дренажа%'
+              AND (
+                error_message IS NULL
+                OR error_message=''
+                OR error_message='WCG_SKIP_WAITING_CLARIFICATION'
+              )
+            """,
+            (_T2WCG_PARENT_ID,),
+        )
+        conn.execute(
+            """
+            INSERT INTO task_history(task_id,action,created_at)
+            SELECT ?, 'TOPIC2_WCG_PRESERVED_DRAINAGE_ERROR_V1', datetime('now')
+            WHERE EXISTS (
+                SELECT 1 FROM tasks
+                WHERE id=?
+                  AND state='WAITING_CLARIFICATION'
+                  AND error_message='TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN'
+            )
+            """,
+            (_T2WCG_PARENT_ID, _T2WCG_PARENT_ID),
+        )
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        _T2WCG_LOG.warning("T2WCG_PRESERVE_ERR %s", e)
+
+_t2wcg_preserve_parent_error()
+_T2WCG_LOG.info("PATCH_TOPIC2_WCG_PRESERVE_DRAINAGE_ERROR_V1 installed")
+# === END_PATCH_TOPIC2_WCG_PRESERVE_DRAINAGE_ERROR_V1 ===
+
+
+# === PATCH_TOPIC2_WCG_SKIP_SQL_PRESERVE_DRAINAGE_ERROR_V2 ===
+# WCG skip must not overwrite canonical drainage length gate error
+# Parent: 043e5c9f-e8bc-434c-9dad-a66c7e50f917
+# Preserve: TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN
+# === END_PATCH_TOPIC2_WCG_SKIP_SQL_PRESERVE_DRAINAGE_ERROR_V2 ===
 
 ====================================================================================================
 END_FILE: task_worker.py
