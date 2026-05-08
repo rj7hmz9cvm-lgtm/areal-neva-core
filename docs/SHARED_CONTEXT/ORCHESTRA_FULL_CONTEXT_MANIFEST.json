@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-05-08T06:55:02.503943+00:00",
-  "git_sha_before_commit": "33ce4a6e720abc77c0cd0091408ea062312426e0",
+  "generated_at_utc": "2026-05-08T07:15:02.113976+00:00",
+  "git_sha_before_commit": "8760011c8fade9dd2f05aae948ced61f67135748",
   "part_max_bytes": 400000,
   "content_chunk_bytes": 340000,
   "total_records": 415,
@@ -1352,9 +1352,9 @@
       "path": "task_worker.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 721510,
-      "sha256": "0e299f62d6f11f60365f5fe61c084f22ec822a9473e198e0c4f5a32e6c3419be",
-      "chars": 685968,
+      "size_bytes": 722885,
+      "sha256": "f4df6787e8637401392970c0a8bae18c51083376c282c5eeecf5fe02e19a2376",
+      "chars": 687341,
       "chunks": 3
     },
     {
@@ -2054,9 +2054,9 @@
       "path": "core/sample_template_engine.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 361839,
-      "sha256": "c30999acf0622729d2f9e29cb0d7980956c4443f4cf2a302d4861c79fcec1038",
-      "chars": 337635,
+      "size_bytes": 365380,
+      "sha256": "31f5b62ba05d003e8723ebbee0da2caa4d4db0bac70e173f5dfd81ad4f2cc544",
+      "chars": 341119,
       "chunks": 2
     },
     {
@@ -3242,7 +3242,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_010.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 369955,
+      "size_bytes": 375416,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3314,7 +3314,7 @@
       "path": "docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 29164,
+      "size_bytes": 30067,
       "sha256": "",
       "chars": 0,
       "chunks": 0

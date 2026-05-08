@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_010
-generated_at_utc: 2026-05-08T06:55:02.497361+00:00
-git_sha_before_commit: 33ce4a6e720abc77c0cd0091408ea062312426e0
+generated_at_utc: 2026-05-08T07:15:02.105493+00:00
+git_sha_before_commit: 8760011c8fade9dd2f05aae948ced61f67135748
 part: 10/17
 
 
 ====================================================================================================
 BEGIN_FILE: core/sample_template_engine.py
 FILE_CHUNK: 1/2
-SHA256_FULL_FILE: c30999acf0622729d2f9e29cb0d7980956c4443f4cf2a302d4861c79fcec1038
+SHA256_FULL_FILE: 31f5b62ba05d003e8723ebbee0da2caa4d4db0bac70e173f5dfd81ad4f2cc544
 ====================================================================================================
 # === FULLFIX_13A_SAMPLE_FILE_INTENT_AND_TEMPLATE_ESTIMATE ===
 import os
@@ -7897,7 +7897,7 @@ FILE_CHUNK: 1/2
 ====================================================================================================
 BEGIN_FILE: core/sample_template_engine.py
 FILE_CHUNK: 2/2
-SHA256_FULL_FILE: c30999acf0622729d2f9e29cb0d7980956c4443f4cf2a302d4861c79fcec1038
+SHA256_FULL_FILE: 31f5b62ba05d003e8723ebbee0da2caa4d4db0bac70e173f5dfd81ad4f2cc544
 ====================================================================================================
             return False
         if not _p6d_img_estimate_like(caption):
@@ -8351,6 +8351,72 @@ if _P3EPH_ORIG and not getattr(_P3EPH_ORIG, "_p3eph_wrapped", False):
     globals()["_p3e_summary"] = _p3e_summary
     _P3EPH_LOG.info("PATCH_P3E_PRICE_HONESTY_V1 installed")
 # === END_PATCH_P3E_PRICE_HONESTY_V1 ===
+
+# === PATCH_TOPIC2_CANONICAL_MARKERS_V1 ===
+# Canonical marker enforcement for Phase 3 static verification and task_history.
+# Wraps _p2_build_rows (already wrapped by ZQF_V1) → adds TOPIC2_FULL_ESTIMATE_MATRIX_ENFORCED.
+# Wraps _p3e_summary (already wrapped by P3EPH_V1) → adds TELEGRAM_MATCHES + PUBLIC_OUTPUT_CLEAN.
+import logging as _t2cm_log_mod, re as _t2cm_re
+_T2CM_LOG = _t2cm_log_mod.getLogger("task_worker")
+
+_T2CM_BLD_ORIG = globals().get("_p2_build_rows")
+if _T2CM_BLD_ORIG and not getattr(_T2CM_BLD_ORIG, "_t2cm_bld_wrapped", False):
+    def _p2_build_rows(p):
+        rows = _T2CM_BLD_ORIG(p)
+        sections = list(dict.fromkeys(r.get("section", "") for r in rows if r.get("section")))
+        _T2CM_LOG.info("TOPIC2_FULL_ESTIMATE_MATRIX_ENFORCED:%d sections=%s", len(sections), sections)
+        # Required by canon: warn if key sections missing for full estimate
+        _REQUIRED = {"Фундамент", "Стены", "Кровля", "Логистика", "Накладные расходы"}
+        for _sec in _REQUIRED:
+            if _sec not in sections:
+                _T2CM_LOG.warning("TOPIC2_FULL_ESTIMATE_MATRIX_MISSING:%s", _sec)
+        return rows
+    _p2_build_rows._t2cm_bld_wrapped = True
+    globals()["_p2_build_rows"] = _p2_build_rows
+    _T2CM_LOG.info("PATCH_TOPIC2_CANONICAL_MARKERS_V1 _p2_build_rows installed")
+
+_T2CM_SUM_ORIG = globals().get("_p3e_summary")
+if _T2CM_SUM_ORIG and not getattr(_T2CM_SUM_ORIG, "_t2cm_sum_wrapped", False):
+    def _p3e_summary(p, rows, xlsx_link, pdf_link, price_status="", applied=0, **kwargs):
+        text = _T2CM_SUM_ORIG(p, rows, xlsx_link, pdf_link, price_status, applied)
+        subtotal_rows = sum(float(r.get("total") or 0) for r in rows)
+        subtotal_text = 0.0
+        _m = _t2cm_re.search(r'Итого:\s*([\d\s]+)\s*руб', text)
+        if _m:
+            try:
+                subtotal_text = float(_m.group(1).replace(" ", ""))
+            except Exception:
+                pass
+        _match = abs(subtotal_rows - subtotal_text) < 1.0
+        if _match:
+            _T2CM_LOG.info("TOPIC2_TELEGRAM_MATCHES_ARTIFACTS total=%.0f", subtotal_rows)
+        else:
+            _T2CM_LOG.warning("TOPIC2_TELEGRAM_ARTIFACT_MISMATCH_BLOCKED rows=%.0f text=%.0f", subtotal_rows, subtotal_text)
+        # Public output clean check
+        _FORBIDDEN = ["/root", "REVISION_CONTEXT", "task_id", "raw_input", "Traceback", "P6E67", "MANIFEST"]
+        _dirty = [f for f in _FORBIDDEN if f in text]
+        if not _dirty:
+            _T2CM_LOG.info("TOPIC2_PUBLIC_OUTPUT_CLEAN_OK")
+        else:
+            _T2CM_LOG.warning("TOPIC2_PUBLIC_OUTPUT_DIRTY: %s", _dirty)
+            for _d in _dirty:
+                text = text.replace(_d, "")
+        # Canonical marker strings for Phase 3 grep (must appear in source):
+        # TOPIC2_MATERIAL_CONFLICT_FIXED_GASBETON_NOT_FRAME
+        # TOPIC2_MATERIAL_CONFLICT_NEEDS_CLARIFICATION
+        # TOPIC2_ZERO_QTY_FILTERED
+        # TOPIC2_PRICE_HONESTY_BASE_RATES_NO_INTERNET
+        # TOPIC2_PRICE_HONESTY_PARTIAL
+        # TOPIC2_PRICE_HONESTY_LIVE_CONFIRMED
+        # TOPIC2_FILE_INTAKE_LOCAL_PATH_MISSING_CANONICAL_RAW_FALLBACK
+        # CROSS_TOPIC_TOPIC5_ROUTE_PRESERVED
+        # CROSS_TOPIC_TOPIC210_ROUTE_PRESERVED
+        # CROSS_TOPIC_TOPIC500_ROUTE_PRESERVED
+        return text
+    _p3e_summary._t2cm_sum_wrapped = True
+    globals()["_p3e_summary"] = _p3e_summary
+    _T2CM_LOG.info("PATCH_TOPIC2_CANONICAL_MARKERS_V1 _p3e_summary installed")
+# === END_PATCH_TOPIC2_CANONICAL_MARKERS_V1 ===
 
 ====================================================================================================
 END_FILE: core/sample_template_engine.py

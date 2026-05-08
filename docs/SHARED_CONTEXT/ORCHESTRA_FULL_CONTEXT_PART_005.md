@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_005
-generated_at_utc: 2026-05-08T06:55:02.493048+00:00
-git_sha_before_commit: 33ce4a6e720abc77c0cd0091408ea062312426e0
+generated_at_utc: 2026-05-08T07:15:02.099911+00:00
+git_sha_before_commit: 8760011c8fade9dd2f05aae948ced61f67135748
 part: 5/17
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 1/3
-SHA256_FULL_FILE: 0e299f62d6f11f60365f5fe61c084f22ec822a9473e198e0c4f5a32e6c3419be
+SHA256_FULL_FILE: f4df6787e8637401392970c0a8bae18c51083376c282c5eeecf5fe02e19a2376
 ====================================================================================================
 
 def _force_voice_finish(raw_input: str, result: str) -> bool:
@@ -4134,6 +4134,25 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
             _fir_caption = data.get("caption", "") or raw_input or ""
             _fir_intent = detect_intent(_fir_caption) or detect_intent_from_filename(file_name)
             _fir_topic_role = ""
+            # === TOPIC2_CANONICAL_PDF_GATE_V1 ===
+            # topic_2 + PDF + estimate intent → canonical maybe_handle_stroyka_estimate
+            # NOT generic estimate_engine.process_estimate_to_excel (which has no PDF OCR)
+            if int(topic_id or 0) == 2 and str(local_path or "").lower().endswith(".pdf") and _fir_intent == "estimate":
+                try:
+                    from core.stroyka_estimate_canon import maybe_handle_stroyka_estimate as _t2cpg_mhs
+                    _history(conn, task_id, "FILE_INTAKE_ROUTER_TOPIC2_CANONICAL_ROUTE")
+                    _history(conn, task_id, "TOPIC2_FILE_INTAKE_LOCAL_PATH_OK")
+                    conn.commit()
+                    logger.info("TOPIC2_CANONICAL_PDF_GATE: task=%s file=%s intent=%s", task_id, file_name, _fir_intent)
+                    _t2cpg_ok = await _t2cpg_mhs(conn, task, logger)
+                    if _t2cpg_ok:
+                        logger.info("TOPIC2_FILE_INTAKE_ROUTER_RESULT_OK task=%s", task_id)
+                        return
+                    else:
+                        logger.warning("TOPIC2_FILE_INTAKE_ROUTER_RESULT_FAILED task=%s falling to generic", task_id)
+                except Exception as _t2cpg_e:
+                    logger.warning("TOPIC2_CANONICAL_PDF_GATE_ERR task=%s err=%s", task_id, _t2cpg_e)
+            # === END TOPIC2_CANONICAL_PDF_GATE_V1 ===
             if _fir_intent:
                 _fir_result = await route_file(local_path, task_id, int(topic_id or 0), _fir_intent)
                 if _fir_result and _fir_result.get("success"):
@@ -7354,30 +7373,6 @@ def _p6e4_wrap_send(name):
             kwargs = {k: (_p6e4_sanitize_catalog_text(v) if isinstance(v, str) else v) for k, v in kwargs.items()}
             return await orig(*args, **kwargs)
     else:
-        def wrapped(*args, **kwargs):
-            args = tuple(_p6e4_sanitize_catalog_text(a) if isinstance(a, str) else a for a in args)
-            kwargs = {k: (_p6e4_sanitize_catalog_text(v) if isinstance(v, str) else v) for k, v in kwargs.items()}
-            return orig(*args, **kwargs)
-    wrapped._p6e4_wrapped = True
-    globals()[name] = wrapped
-
-for _p6e4_send_name in ("_send_once_ex", "send_once_ex", "_send_task_result", "send_task_result"):
-    _p6e4_wrap_send(_p6e4_send_name)
-
-_p6e4_logging.getLogger("WORKER").info("P6E4_LIVE_ROUTE_GUARD_INSTALLED")
-# === END_P6E4_LIVE_ROUTE_FULL_CLOSE_IMAGE_SEARCH_CATALOG_20260504_V1 ===
-
-# === P6F_P6E67_REPLY_REVISION_STRICT_ARTIFACT_GATE_20260504_V1 ===
-# FACT: revision binding + anti-fake DONE + /root cleaner
-# Inserted before __main__ guard so wrappers actually load at runtime
-import re as _p6e67_re
-import inspect as _p6e67_inspect
-import logging as _p6e67_logging
-
-_P6E67_REVISION_WORDS = (
-    "пришли", "отправь", "скинь", "дай", "pdf", "пдф", "xlsx", "excel", "эксель", "txt",
-    "ссылку", "ссылки", "drive", "расчет", "расчёт", "комнат", "помещ", "окн", "окон",
-    "двер", "площад", "переделай", "доработай", "исправь", "правк", "нормально", "не так",
 
 ====================================================================================================
 END_FILE: task_worker.py

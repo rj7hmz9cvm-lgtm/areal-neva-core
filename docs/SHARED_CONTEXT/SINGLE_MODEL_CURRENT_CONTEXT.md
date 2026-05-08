@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-05-08T06:55:03.075978+00:00
-GIT_SHA: 33ce4a6e720abc77c0cd0091408ea062312426e0
+GENERATED_AT: 2026-05-08T07:15:02.703139+00:00
+GIT_SHA: 8760011c8fade9dd2f05aae948ced61f67135748
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -74,9 +74,9 @@ active: 0
 failed_24h: 1
 commits_last_7d: 30
 recent_commits:
+- 8760011|fix(topic2): enforce full canonical estimate pipeline without cross-topic regression
 - b236f02|fix(topic2): session 08.05 — P6C fulltext prep, P3CHK append fix, P2 distance skip, WCPE unblock
 - e3a016c|PATCH_OPENROUTER_ONLINE_ONLY_FOR_TOPIC2_PRICE_SEARCH_V1: hard-enforce Sonar for all price/search calls
-- 4cfd9b6|fix(topic2): close P6E67 loop storm + natural reply message
 markers_missing: 13
 - TOPIC2_ESTIMATE_SESSION_CREATED
 - TOPIC2_CONTEXT_READY

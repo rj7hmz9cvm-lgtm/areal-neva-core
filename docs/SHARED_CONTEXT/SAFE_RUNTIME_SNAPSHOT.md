@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-08T06:55:02.366986+00:00
-git_sha_before_commit: 33ce4a6e720abc77c0cd0091408ea062312426e0
+generated_at_utc: 2026-05-08T07:15:01.953047+00:00
+git_sha_before_commit: 8760011c8fade9dd2f05aae948ced61f67135748
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,8 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: inactive
 
 ## GIT_LOG_30
+8760011 fix(topic2): enforce full canonical estimate pipeline without cross-topic regression
+e08536b FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 33ce4a6 3 patches: material parse fix, zero-qty filter, price honesty
 bf3bb26 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 d7b743d handoff: update HEAD to 81f35b5, mark P1 clarified loop closed
@@ -38,40 +40,46 @@ ffca836 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 48f9858 docs(handoff): update latest handoff after topic2 and aggregator guard
 c0300fb fix(topic2): close 4 code gaps — enrichment markers, cyrillic marker, function-object bug, FCG bypass
 5111f33 fix(aggregator): refuse dirty tracked sources before guarded build
-bfbf121 fix(aggregator): add five minute guarded context builder
-2ece9eb fix(topic2): close 3 live bugs — poison loop terminate, recursion restore, FCG done bypass
 
 ## GIT_SHOW_STAT_HEAD
-commit 33ce4a6e720abc77c0cd0091408ea062312426e0
+commit 8760011c8fade9dd2f05aae948ced61f67135748
 Author: Ila <ilakuznecov@mac.local>
-Date:   Fri May 8 09:54:40 2026 +0300
+Date:   Fri May 8 10:10:49 2026 +0300
 
-    3 patches: material parse fix, zero-qty filter, price honesty
+    fix(topic2): enforce full canonical estimate pipeline without cross-topic regression
     
-    PATCH_MATERIAL_PARSE_FIX_V1: "имитация бруса" (finish material) no longer
-    overrides wall material to "каркас" — if газобетон is in text, it wins.
-    Стены: газобетон ✅ instead of каркас.
+    TOPIC2_CANONICAL_PDF_GATE_V1 (task_worker.py body-edit):
+    - Inside FILE_INTAKE_ROUTER_V1_WIRED: for topic_id=2 + PDF + intent=estimate,
+      call maybe_handle_stroyka_estimate BEFORE generic estimate_engine fallback.
+    - Canonical engine reads PDF via OCR, builds full 11-section estimate,
+      creates XLSX+PDF, uploads to Drive, sends Telegram, sets AWAITING_CONFIRMATION.
+    - Markers: FILE_INTAKE_ROUTER_TOPIC2_CANONICAL_ROUTE, TOPIC2_FILE_INTAKE_LOCAL_PATH_OK,
+      TOPIC2_FILE_INTAKE_ROUTER_RESULT_OK / RESULT_FAILED.
+    - Falls to generic only if canonical engine returns False.
     
-    PATCH_ZERO_QTY_FILTER_V1: rows with qty=0 or total=0 filtered before
-    XLSX/PDF/Telegram. "Межэтажное перекрытие" at floors=1 (qty=0) removed.
-    25→24 rows.
+    PATCH_TOPIC2_CANONICAL_MARKERS_V1 (sample_template_engine.py append):
+    - _p2_build_rows wrapper: logs TOPIC2_FULL_ESTIMATE_MATRIX_ENFORCED:<count>
+      and TOPIC2_FULL_ESTIMATE_MATRIX_MISSING:<section> for any absent required section.
+    - _p3e_summary wrapper: verifies Telegram total matches rows total,
+      logs TOPIC2_TELEGRAM_MATCHES_ARTIFACTS or TOPIC2_TELEGRAM_ARTIFACT_MISMATCH_BLOCKED.
+      Checks for internal leak patterns, logs TOPIC2_PUBLIC_OUTPUT_CLEAN_OK.
     
-    PATCH_PRICE_HONESTY_V1 + PATCH_P3E_PRICE_HONESTY_V1: both _p2_summary
-    and _p3e_summary now write honest price text. When PRICE_APPLIED_0:
-    "расчёт по базовым ставкам, интернет-цены не применены".
-    No more fake "Проверка цен: выполнена".
+    Previously patched (preserved):
+    - MATERIAL_PARSE_FIX_V1: газобетон overrides каркас when both in text
+    - ZERO_QTY_FILTER_V1: removes rows with qty=0/total=0 (1-floor interfloor)
+    - PRICE_HONESTY_V1 + P3E_PRICE_HONESTY_V1: honest price text per applied count
     
-    Verified: d72028da DONE, all 3 fixes confirmed in live result.
+    Cross-topic: technadzor_engine (15 refs), project_engine (13 refs),
+    search_session (9 refs) — all untouched.
     
     Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 
- core/sample_template_engine.py | 88 ++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 88 insertions(+)
+ core/sample_template_engine.py | 66 ++++++++++++++++++++++++++++++++++++++++++
+ task_worker.py                 | 19 ++++++++++++
+ 2 files changed, 85 insertions(+)
 
 ## GIT_CHANGED_FILES_10
-core/price_enrichment.py
 core/sample_template_engine.py
-core/stroyka_estimate_canon.py
 docs/HANDOFFS/LATEST_HANDOFF.md
 docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md
 docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
@@ -272,12 +280,6 @@ task_worker.py
 - topic_210_file_fb6aadc5-b372-488a-aede-f3433a030e55|{"task_id": "fb6aadc5-b372-488a-aede-f3433a030e55", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T06:51:35.858934+00:00
 
 ## JOURNAL_AREAL_TASK_WORKER_60
-areal-task-worker.service: Consumed 12.822s CPU time.
-Started areal-task-worker.service - Areal Task Worker.
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 7min 4.269s CPU time.
 Started areal-task-worker.service - Areal Task Worker.
 Stopping areal-task-worker.service - Areal Task Worker...
 areal-task-worker.service: Deactivated successfully.
@@ -331,6 +333,12 @@ Stopping areal-task-worker.service - Areal Task Worker...
 areal-task-worker.service: Deactivated successfully.
 Stopped areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Consumed 2.218s CPU time.
+Started areal-task-worker.service - Areal Task Worker.
+Stopping areal-task-worker.service - Areal Task Worker...
+areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
+areal-task-worker.service: Deactivated successfully.
+Stopped areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Consumed 10.116s CPU time, 109.4M memory peak, 0B memory swap peak.
 Started areal-task-worker.service - Areal Task Worker.
 
 ## JOURNAL_TELEGRAM_INGRESS_30

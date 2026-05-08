@@ -1,14 +1,38 @@
 # ORCHESTRA_FULL_CONTEXT_PART_006
-generated_at_utc: 2026-05-08T06:55:02.493860+00:00
-git_sha_before_commit: 33ce4a6e720abc77c0cd0091408ea062312426e0
+generated_at_utc: 2026-05-08T07:15:02.100882+00:00
+git_sha_before_commit: 8760011c8fade9dd2f05aae948ced61f67135748
 part: 6/17
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 2/3
-SHA256_FULL_FILE: 0e299f62d6f11f60365f5fe61c084f22ec822a9473e198e0c4f5a32e6c3419be
+SHA256_FULL_FILE: f4df6787e8637401392970c0a8bae18c51083376c282c5eeecf5fe02e19a2376
 ====================================================================================================
+        def wrapped(*args, **kwargs):
+            args = tuple(_p6e4_sanitize_catalog_text(a) if isinstance(a, str) else a for a in args)
+            kwargs = {k: (_p6e4_sanitize_catalog_text(v) if isinstance(v, str) else v) for k, v in kwargs.items()}
+            return orig(*args, **kwargs)
+    wrapped._p6e4_wrapped = True
+    globals()[name] = wrapped
+
+for _p6e4_send_name in ("_send_once_ex", "send_once_ex", "_send_task_result", "send_task_result"):
+    _p6e4_wrap_send(_p6e4_send_name)
+
+_p6e4_logging.getLogger("WORKER").info("P6E4_LIVE_ROUTE_GUARD_INSTALLED")
+# === END_P6E4_LIVE_ROUTE_FULL_CLOSE_IMAGE_SEARCH_CATALOG_20260504_V1 ===
+
+# === P6F_P6E67_REPLY_REVISION_STRICT_ARTIFACT_GATE_20260504_V1 ===
+# FACT: revision binding + anti-fake DONE + /root cleaner
+# Inserted before __main__ guard so wrappers actually load at runtime
+import re as _p6e67_re
+import inspect as _p6e67_inspect
+import logging as _p6e67_logging
+
+_P6E67_REVISION_WORDS = (
+    "пришли", "отправь", "скинь", "дай", "pdf", "пдф", "xlsx", "excel", "эксель", "txt",
+    "ссылку", "ссылки", "drive", "расчет", "расчёт", "комнат", "помещ", "окн", "окон",
+    "двер", "площад", "переделай", "доработай", "исправь", "правк", "нормально", "не так",
     "нормальн", "снова", "сделай", "ещё раз", "еще раз", "заново", "повтори", "ещё", "еще",
     "сделать", "переделать", "по новой", "сначала", "новой", "опять",
 )
@@ -7682,6 +7706,17 @@ else:
 # === PATCH_TOPIC2_CANCEL_GUARD_V1 ===
 # Цель: cancel-intent в topic_2 ловится ДО любого estimate route_guard
 # Факт: 11:54 «Отмена всех задач» → бот выдал смету
+
+====================================================================================================
+END_FILE: task_worker.py
+FILE_CHUNK: 2/3
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: task_worker.py
+FILE_CHUNK: 3/3
+SHA256_FULL_FILE: f4df6787e8637401392970c0a8bae18c51083376c282c5eeecf5fe02e19a2376
+====================================================================================================
 # Факт: 17:33 «Задача отменена» → бот спросил «Сколько этажей»
 # ============================================================
 import re as _tcg_re
@@ -7718,17 +7753,6 @@ if _TCG_ORIG_HANDLE_NEW and not getattr(_TCG_ORIG_HANDLE_NEW, "_tcg_wrapped", Fa
     async def _handle_new(conn, task, *args, **kwargs):
         try:
             topic_id = int(_tcg_get(task, "topic_id", 0) or 0)
-
-====================================================================================================
-END_FILE: task_worker.py
-FILE_CHUNK: 2/3
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: task_worker.py
-FILE_CHUNK: 3/3
-SHA256_FULL_FILE: 0e299f62d6f11f60365f5fe61c084f22ec822a9473e198e0c4f5a32e6c3419be
-====================================================================================================
             raw = str(_tcg_get(task, "raw_input", "") or "")
             if topic_id == 2 and _tcg_is_cancel(raw):
                 task_id = str(_tcg_get(task, "id", ""))

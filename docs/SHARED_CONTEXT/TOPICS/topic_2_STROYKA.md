@@ -1,7 +1,7 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-05-08T06:55:02.588075+00:00
-GIT_SHA: 33ce4a6e720abc77c0cd0091408ea062312426e0
+GENERATED_AT: 2026-05-08T07:15:02.199999+00:00
+GIT_SHA: 8760011c8fade9dd2f05aae948ced61f67135748
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -25,6 +25,7 @@ FAILED_LAST_24H: 1
 - 8212f685 | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
+- 8760011|fix(topic2): enforce full canonical estimate pipeline without cross-topic regression
 - b236f02|fix(topic2): session 08.05 — P6C fulltext prep, P3CHK append fix, P2 distance skip, WCPE unblock
 - e3a016c|PATCH_OPENROUTER_ONLINE_ONLY_FOR_TOPIC2_PRICE_SEARCH_V1: hard-enforce Sonar for all price/search calls
 - 4cfd9b6|fix(topic2): close P6E67 loop storm + natural reply message
@@ -54,7 +55,6 @@ FAILED_LAST_24H: 1
 - 842c52b|docs(topic2): update chat export for stroyka price choice patch
 - ac58cfe|docs(topic2): add 20260506 stroyka in progress report
 - 7a9bc69|docs(topic2): add 20260506 stroyka not closed report
-- 20020d1|docs(topic2): add 20260506 stroyka price flow handoff
 
 ## MARKERS_LAST_24H
 - created:NEW
