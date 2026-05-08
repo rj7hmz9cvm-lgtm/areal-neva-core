@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-08T18:45:02.267025+00:00
-git_sha_before_commit: afdcfad39237ebaaf33b8947f0fdf1b8863db434
+generated_at_utc: 2026-05-08T18:55:02.323950+00:00
+git_sha_before_commit: 6923beaa0452da841615845c3876517b51e746a7
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,7 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: inactive
 
 ## GIT_LOG_30
+6923bea FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 afdcfad FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 075edf9 fix(topic2): PATCH_TOPIC2_STALE_PENDING_TASK_GUARD_V1 + LOCAL_BOT_API_404_FIX
 db5dbef FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
@@ -39,12 +40,11 @@ d7b743d handoff: update HEAD to 81f35b5, mark P1 clarified loop closed
 e7b171e FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 96bea6c docs: handoff 08.05 — file_intake_router not called from _handle_drive_file (P0 arch)
 74b156c FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
-b236f02 fix(topic2): session 08.05 — P6C fulltext prep, P3CHK append fix, P2 distance skip, WCPE unblock
 
 ## GIT_SHOW_STAT_HEAD
-commit afdcfad39237ebaaf33b8947f0fdf1b8863db434
+commit 6923beaa0452da841615845c3876517b51e746a7
 Author: Ila <ilakuznecov@mac.local>
-Date:   Fri May 8 21:40:09 2026 +0300
+Date:   Fri May 8 21:45:08 2026 +0300
 
     FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
@@ -82,7 +82,7 @@ Date:   Fri May 8 21:40:09 2026 +0300
  docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |   6 +-
  docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |   6 +-
  docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  26 +--
+ .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  16 +--
  .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |   4 +-
@@ -93,21 +93,21 @@ Date:   Fri May 8 21:40:09 2026 +0300
  .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_010.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_011.md             |  66 +++++-
+ .../ORCHESTRA_FULL_CONTEXT_PART_011.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_012.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_013.md             |  18 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_013.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_014.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_015.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_016.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_017.md             |   4 +-
- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 252 +++++++++++----------
- .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |  14 +-
- docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  75 +++---
+ docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 146 +++++++++++++++------
+ .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |   8 +-
+ docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  59 ++++-----
  docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |   6 +-
  docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |   4 +-
  .../TOPICS/topic_210_PROEKTIROVANIE.md             |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |  19 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |  11 +-
  .../TOPICS/topic_3008_KODY_MOZGOV.md               |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |   4 +-
@@ -116,7 +116,7 @@ Date:   Fri May 8 21:40:09 2026 +0300
  docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |   4 +-
  .../TOPICS/topic_961_AVTOZAPCHASTI.md              |   4 +-
  docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   6 +-
- 68 files changed, 400 insertions(+), 322 deletions(-)
+ 68 files changed, 282 insertions(+), 218 deletions(-)
 
 ## GIT_CHANGED_FILES_10
 areal_telegram_wrapper.py
@@ -193,17 +193,16 @@ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md
 task_worker.py
 
 ## CORE_DB_STATE_COUNTS
-- FAILED|2962
+- FAILED|2963
 - CANCELLED|824
 - DONE|577
 - ARCHIVED|381
-- WAITING_CLARIFICATION|1
 
 ## CORE_DB_OPEN_TASKS
-- 1
+- 0
 
 ## LATEST_TASKS_15
-- test-drainage-reply-001|2|text|WAITING_CLARIFICATION|Объект находится 50 км от Санкт-Петербурга цены выше среднего нужно посчитать стоимость работы материалов по данному зап|⏳ Задачу понял
+- test-drainage-reply-001|2|text|FAILED|Объект находится 50 км от Санкт-Петербурга цены выше среднего нужно посчитать стоимость работы материалов по данному зап|⏳ Задачу понял
 
 Шаблон: Ареал Нева.xlsx
 Лист: смета
@@ -212,7 +211,7 @@ task_worker.py
 Размеры: (8.5, 12.5)
 Этажей: не указано
 Фундамент: монолитная плита
-Удалённо|2026-05-08 18:40:14
+Удалённо|2026-05-08 18:50:16
 - 60b9503b-75cc-4913-bb7b-11092508fdae|2|text|CANCELLED|[VOICE] Я тебе говорил про вот эту информацию, посмотри.|✅ Смета готова
 
 Объект: дом   Материал: газобетон   Площадь: 106.25 м²   Этажность: не указана   Регион: СПб и ЛО
@@ -260,6 +259,7 @@ https://drive.google.com/drive/folders/1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG
 - 0aaa723d-e506-4cfe-9cfc-7dc20b7ea094|2|text|CANCELLED|[VOICE] Я тебе в предыдущем сообщении уже все выбирал, все давал. Что тебе еще непонятно? Два. Средние цены, средние. Дв|P6E67_MERGED_TO_PARENT_TASK d72028da-b4ff-424d-a626-790c9da8be77|2026-05-08 05:07:19
 
 ## LATEST_FAILED_10
+- test-drainage-reply-001|2|Объект находится 50 км от Санкт-Петербурга цены выше среднего нужно посчитать стоимость работы материалов по данному зап|STALE_TIMEOUT|2026-05-08 18:50:16
 - 1d2b38c4-8c86-4a44-8442-40be5c94fe89|2|{"file_id": "1ZJ4CqxlTcrXIL6b5GxE6nh9soo7Ud03h", "file_name": "project_file_2.pdf", "mime_type": "application/pdf", "cap|STALE_TIMEOUT|2026-05-08 18:14:03
 - a7b2879e-14e6-4002-8a06-f73019d40a99|2|{"file_id": "1XRwOwZr2Kpxy-wrAUPrBR2dLqHseg7jS", "file_name": "photo_-1003725299009_10394.jpg", "mime_type": "image/jpeg|STALE_TIMEOUT|2026-05-07 13:34:34
 - 893436d4-72d2-4bdf-b362-f40d7226570e|2|[VOICE] Я тебе прислал картинку, две картинки и я тебе прислал техническое задание. Мне нужно сделать смету, уточнить ст|INVALID_PUBLIC_RESULT|2026-05-06 18:05:02
@@ -269,9 +269,10 @@ https://drive.google.com/drive/folders/1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG
 - 8212f685-b877-466a-a303-f468a00a664b|2|{"file_id": "1y5C9R1BG9a8Nf6MTu1d8MV_Y5LzLw-K6", "file_name": "Отчет_Мистолово_03.26.pdf", "mime_type": "application/pdf|STALE_TIMEOUT|2026-05-06 17:42:46
 - 3828ac7a-d425-482f-b1f8-4ec76d27da82|2|{"file_id": "1zVQWoakxbwssZJbXdudubQSMhLv_qSS9", "file_name": "Схема глубинного дренажа.pdf", "mime_type": "application/|STALE_TIMEOUT|2026-05-06 17:42:46
 - b71a685b-b129-446b-bd43-e6298b24f8cc|210|[VOICE] Средние цены поставь везде, на работу и на материалы.|INVALID_RESULT_GATE|2026-05-06 17:32:40
-- 6e34406d-335c-4209-a3f6-b98e06791e78|210|{"file_id": "1UAv2GC3Ne3D8I-1YCpmmSNH6CrG5ACQi", "file_name": "Отчет_Мистолово_03.26.pdf", "mime_type": "application/pdf|NO_VALID_ARTIFACT|2026-05-06 17:31:44
 
 ## LATEST_TASK_HISTORY_20
+- test-drainage-reply-001|reply_sent:stale_failed|2026-05-08 18:50:16
+- test-drainage-reply-001|state:FAILED|2026-05-08 18:50:16
 - 60b9503b-75cc-4913-bb7b-11092508fdae|CANCELLED:INVALID_STALE_CONTEXT_RESULT|2026-05-08 18:41:18
 - 1b281c50-2544-45c0-967d-2e49427d0d84|CANCELLED:INVALID_STALE_CONTEXT_RESULT|2026-05-08 18:41:18
 - test-drainage-reply-001|TOPIC2_CANONICAL_REROUTE_V2:CANONICAL_HANDLED|2026-05-08 18:40:12
@@ -290,43 +291,31 @@ https://drive.google.com/drive/folders/1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG
 - test-drainage-reply-001|TOPIC2_PRICE_ENRICHMENT_STARTED|2026-05-08 18:39:03
 - test-drainage-reply-001|TOPIC2_ONLINE_MODEL_SONAR_CONFIRMED:perplexity/sonar|2026-05-08 18:39:03
 - test-drainage-reply-001|TOPIC2_REPEAT_PARENT_TASK:60b9503b-75cc-4913-bb7b-11092508fdae|2026-05-08 18:39:02
-- test-drainage-reply-001|FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_MEMORY_REVIVE_FIX:active_estimate_memory_used|2026-05-08 18:39:02
-- test-drainage-reply-001|TOPIC2_STALE_PENDING_BLOCKED:pending_task=c94ec497-4351-43:done=True|2026-05-08 18:39:01
 
 ## MEMORY_DB_COUNT
 - 5196
 
 ## LATEST_MEMORY_20
-- topic_2_estimate_pending_test-drainage-reply-001|{
-  "version": "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3",
-  "status": "WAITING_PRICE_CONFIRMATION",
-  "task_id": "test-drainage-reply-001",
-  "chat_id": "-1003725299009",
-  "topic_id"|2026-05-08T18:40:12.337852
-- topic_2_estimate_pending_c94ec497-4351-43a7-a106-b3dab1633838|{
-  "version": "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3",
-  "status": "GENERATED",
-  "task_id": "c94ec497-4351-43a7-a106-b3dab1633838",
-  "chat_id": "-1003725299009",
-  "topic_id": 2,|2026-05-08T18:39:01.877085
-- topic_500_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 500, "count": 27, "updated_at": "2026-05-08T18:22:03.069189+00:00", "files": [{"task_id": "7b609434-8167-43f5-a52a-beb85e0b4ed5", "file_id|2026-05-08T18:22:03.069679+00:00
-- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 50, "updated_at": "2026-05-08T18:22:03.046561+00:00", "files": [{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "file_id|2026-05-08T18:22:03.047286+00:00
-- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 50, "updated_at": "2026-05-08T18:22:02.981646+00:00", "files": [{"task_id": "4b402275-e99b-4d9f-b331-08f2ba2a93be", "file_id":|2026-05-08T18:22:02.982164+00:00
-- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-08T18:22:02.944571+00:00", "files": [{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "file_id":|2026-05-08T18:22:02.945637+00:00
-- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T18:22:02.882524+00:00
-- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "state": "FAILED", "file_id": "", "file_name": "", "mime_type"|2026-05-08T18:22:02.882400+00:00
-- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T18:22:02.882276+00:00
-- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T18:22:02.882140+00:00
-- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T18:22:02.882028+00:00
-- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_file", "state": "FAILED", "file_id": "1bXXtuHRsXCuxBSRUl8Tj5z6E|2026-05-08T18:22:02.881927+00:00
-- topic_2_file_92de809d-9274-48ee-82b4-584058ea4e48|{"task_id": "92de809d-9274-48ee-82b4-584058ea4e48", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "search", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T18:22:02.881823+00:00
-- topic_210_file_ce9421cb-5451-4cea-9823-a413b698bc94|{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T18:22:02.881532+00:00
-- topic_210_file_c8619b7e-9ebb-4731-973a-b3f6064bbe38|{"task_id": "c8619b7e-9ebb-4731-973a-b3f6064bbe38", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T18:22:02.881247+00:00
-- topic_210_file_42320ab0-c49a-4a08-8f9b-5e38618a4e58|{"task_id": "42320ab0-c49a-4a08-8f9b-5e38618a4e58", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T18:22:02.881100+00:00
-- topic_210_file_7dca3b5f-2782-400f-af84-fb030904e917|{"task_id": "7dca3b5f-2782-400f-af84-fb030904e917", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T18:22:02.880581+00:00
-- topic_210_file_12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88|{"task_id": "12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "16V3s5DcAvnXj8f-3CcfZE2g5|2026-05-08T18:22:02.880162+00:00
-- topic_210_file_b1f8e982-db2e-42de-9046-833287d3567d|{"task_id": "b1f8e982-db2e-42de-9046-833287d3567d", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T18:22:02.880079+00:00
-- topic_210_file_eeb0d013-704a-404c-9390-5a06c90ee976|{"task_id": "eeb0d013-704a-404c-9390-5a06c90ee976", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T18:22:02.879820+00:00
+- topic_500_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 500, "count": 27, "updated_at": "2026-05-08T18:52:04.047424+00:00", "files": [{"task_id": "7b609434-8167-43f5-a52a-beb85e0b4ed5", "file_id|2026-05-08T18:52:04.048531+00:00
+- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 50, "updated_at": "2026-05-08T18:52:04.026041+00:00", "files": [{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "file_id|2026-05-08T18:52:04.026747+00:00
+- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 50, "updated_at": "2026-05-08T18:52:03.967965+00:00", "files": [{"task_id": "4b402275-e99b-4d9f-b331-08f2ba2a93be", "file_id":|2026-05-08T18:52:03.968882+00:00
+- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-08T18:52:03.932204+00:00", "files": [{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "file_id":|2026-05-08T18:52:03.932902+00:00
+- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T18:52:03.869496+00:00
+- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "state": "FAILED", "file_id": "", "file_name": "", "mime_type"|2026-05-08T18:52:03.869375+00:00
+- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T18:52:03.869245+00:00
+- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T18:52:03.869100+00:00
+- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T18:52:03.868994+00:00
+- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_file", "state": "FAILED", "file_id": "1bXXtuHRsXCuxBSRUl8Tj5z6E|2026-05-08T18:52:03.868882+00:00
+- topic_2_file_92de809d-9274-48ee-82b4-584058ea4e48|{"task_id": "92de809d-9274-48ee-82b4-584058ea4e48", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "search", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T18:52:03.868689+00:00
+- topic_210_file_ce9421cb-5451-4cea-9823-a413b698bc94|{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T18:52:03.868460+00:00
+- topic_210_file_c8619b7e-9ebb-4731-973a-b3f6064bbe38|{"task_id": "c8619b7e-9ebb-4731-973a-b3f6064bbe38", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T18:52:03.868249+00:00
+- topic_210_file_42320ab0-c49a-4a08-8f9b-5e38618a4e58|{"task_id": "42320ab0-c49a-4a08-8f9b-5e38618a4e58", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T18:52:03.868128+00:00
+- topic_210_file_7dca3b5f-2782-400f-af84-fb030904e917|{"task_id": "7dca3b5f-2782-400f-af84-fb030904e917", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T18:52:03.867720+00:00
+- topic_210_file_12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88|{"task_id": "12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "16V3s5DcAvnXj8f-3CcfZE2g5|2026-05-08T18:52:03.867340+00:00
+- topic_210_file_b1f8e982-db2e-42de-9046-833287d3567d|{"task_id": "b1f8e982-db2e-42de-9046-833287d3567d", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T18:52:03.867253+00:00
+- topic_210_file_eeb0d013-704a-404c-9390-5a06c90ee976|{"task_id": "eeb0d013-704a-404c-9390-5a06c90ee976", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T18:52:03.866999+00:00
+- topic_210_file_5ead32f3-23d5-4872-9279-a42460ba5dd1|{"task_id": "5ead32f3-23d5-4872-9279-a42460ba5dd1", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "1qy-mPcmRZxJIzEnY2Gp8B8J2|2026-05-08T18:52:03.866761+00:00
+- topic_210_file_fb6aadc5-b372-488a-aede-f3433a030e55|{"task_id": "fb6aadc5-b372-488a-aede-f3433a030e55", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T18:52:03.866645+00:00
 
 ## JOURNAL_AREAL_TASK_WORKER_60
 areal-task-worker.service: Deactivated successfully.
