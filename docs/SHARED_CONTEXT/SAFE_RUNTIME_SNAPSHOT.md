@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-08T18:40:01.706585+00:00
-git_sha_before_commit: 075edf970d92730892f5a0e9d597ec033d4f9760
+generated_at_utc: 2026-05-08T18:45:02.267025+00:00
+git_sha_before_commit: afdcfad39237ebaaf33b8947f0fdf1b8863db434
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,7 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: inactive
 
 ## GIT_LOG_30
+afdcfad FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 075edf9 fix(topic2): PATCH_TOPIC2_STALE_PENDING_TASK_GUARD_V1 + LOCAL_BOT_API_404_FIX
 db5dbef FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 e185e83 fix(topic2): PATCH_SUPPLIER_HONESTY_V1 — fix fake Perplexity в Поставщик
@@ -39,35 +40,87 @@ e7b171e FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 96bea6c docs: handoff 08.05 — file_intake_router not called from _handle_drive_file (P0 arch)
 74b156c FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 b236f02 fix(topic2): session 08.05 — P6C fulltext prep, P3CHK append fix, P2 distance skip, WCPE unblock
-e3a016c PATCH_OPENROUTER_ONLINE_ONLY_FOR_TOPIC2_PRICE_SEARCH_V1: hard-enforce Sonar for all price/search calls
 
 ## GIT_SHOW_STAT_HEAD
-commit 075edf970d92730892f5a0e9d597ec033d4f9760
+commit afdcfad39237ebaaf33b8947f0fdf1b8863db434
 Author: Ila <ilakuznecov@mac.local>
-Date:   Fri May 8 21:36:59 2026 +0300
+Date:   Fri May 8 21:40:09 2026 +0300
 
-    fix(topic2): PATCH_TOPIC2_STALE_PENDING_TASK_GUARD_V1 + LOCAL_BOT_API_404_FIX
-    
-    Closes stale-pending contamination: §5 in maybe_handle_stroyka_estimate was
-    reusing pending from c94ec497 (house estimate) for drainage file tasks because
-    _memory_latest uses LIKE key search and _pending_is_fresh was patched to 86400s.
-    Text containing "среднего" matched patched _is_confirm → §5 fired with wrong context.
-    Fix: wrapper checks pending.task_id vs current task_id; if pending's task is in
-    terminal state (DONE/AC/FAILED) marks it GENERATED permanently, blocks §5 reuse.
-    
-    Also commits PATCH_LOCAL_BOT_API_ABSOLUTE_FILE_PATH_DOWNLOAD_V1 for 404 fix on
-    local Bot API absolute file paths (copy from disk instead of HTTP request).
-    
-    Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+    FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
- areal_telegram_wrapper.py      | 12 +++++++--
- core/stroyka_estimate_canon.py | 60 ++++++++++++++++++++++++++++++++++++++++++
- 2 files changed, 70 insertions(+), 2 deletions(-)
+ docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md    |   6 +-
+ docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md |   2 +-
+ .../SHARED_CONTEXT/DIRECTIONS/auto_parts_search.md |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/cad_dwg.md          |   4 +-
+ .../DIRECTIONS/construction_search.md              |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/crm_leads.md        |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/defect_acts.md      |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/devops_server.md    |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/documents.md        |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/email_ingress.md    |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/estimates.md        |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/general_chat.md     |   4 +-
+ .../DIRECTIONS/google_drive_storage.md             |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/internet_search.md  |   4 +-
+ .../DIRECTIONS/isolated_project_ivan.md            |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/job_search.md       |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/memory_archive.md   |   4 +-
+ .../SHARED_CONTEXT/DIRECTIONS/monolith_concrete.md |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/ocr_photo.md        |   4 +-
+ .../DIRECTIONS/orchestration_core.md               |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/photo_cleanup.md    |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/product_search.md   |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/roofing.md          |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/social_content.md   |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/spreadsheets.md     |   4 +-
+ .../SHARED_CONTEXT/DIRECTIONS/structural_design.md |   4 +-
+ .../DIRECTIONS/technical_supervision.md            |   4 +-
+ .../DIRECTIONS/telegram_automation.md              |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/video_production.md |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/vpn_network.md      |   4 +-
+ docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md      |   4 +-
+ docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |   6 +-
+ docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |   6 +-
+ docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  26 +--
+ .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_004.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_007.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_010.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_011.md             |  66 +++++-
+ .../ORCHESTRA_FULL_CONTEXT_PART_012.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_013.md             |  18 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_014.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_015.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_016.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_017.md             |   4 +-
+ docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 252 +++++++++++----------
+ .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |  14 +-
+ docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  75 +++---
+ docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |   6 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |   4 +-
+ .../TOPICS/topic_210_PROEKTIROVANIE.md             |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |  19 +-
+ .../TOPICS/topic_3008_KODY_MOZGOV.md               |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_5_TEKHNADZOR.md   |   4 +-
+ .../SHARED_CONTEXT/TOPICS/topic_6104_JOB_SEARCH.md |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |   4 +-
+ .../TOPICS/topic_961_AVTOZAPCHASTI.md              |   4 +-
+ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   6 +-
+ 68 files changed, 400 insertions(+), 322 deletions(-)
 
 ## GIT_CHANGED_FILES_10
 areal_telegram_wrapper.py
 core/stroyka_estimate_canon.py
-core/technadzor_engine.py
 docs/HANDOFFS/LATEST_HANDOFF.md
 docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md
 docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md
@@ -141,31 +194,39 @@ task_worker.py
 
 ## CORE_DB_STATE_COUNTS
 - FAILED|2962
-- CANCELLED|822
-- DONE|578
+- CANCELLED|824
+- DONE|577
 - ARCHIVED|381
 - WAITING_CLARIFICATION|1
-- IN_PROGRESS|1
 
 ## CORE_DB_OPEN_TASKS
-- 2
+- 1
 
 ## LATEST_TASKS_15
-- test-drainage-reply-001|2|text|IN_PROGRESS|Объект находится 50 км от Санкт-Петербурга цены выше среднего нужно посчитать стоимость работы материалов по данному зап|None|2026-05-08 18:39:01
-- 60b9503b-75cc-4913-bb7b-11092508fdae|2|text|DONE|[VOICE] Я тебе говорил про вот эту информацию, посмотри.|✅ Смета готова
+- test-drainage-reply-001|2|text|WAITING_CLARIFICATION|Объект находится 50 км от Санкт-Петербурга цены выше среднего нужно посчитать стоимость работы материалов по данному зап|⏳ Задачу понял
+
+Шаблон: Ареал Нева.xlsx
+Лист: смета
+Объект: дом
+Материал: газобетон
+Размеры: (8.5, 12.5)
+Этажей: не указано
+Фундамент: монолитная плита
+Удалённо|2026-05-08 18:40:14
+- 60b9503b-75cc-4913-bb7b-11092508fdae|2|text|CANCELLED|[VOICE] Я тебе говорил про вот эту информацию, посмотри.|✅ Смета готова
 
 Объект: дом   Материал: газобетон   Площадь: 106.25 м²   Этажность: не указана   Регион: СПб и ЛО
-Шаблон: Ареал Нева.xlsx   Лист: смета   Цены: |2026-05-08 18:38:17
+Шаблон: Ареал Нева.xlsx   Лист: смета   Цены: |2026-05-08 18:41:18
 - 1d2b38c4-8c86-4a44-8442-40be5c94fe89|2|drive_file|FAILED|{"file_id": "1ZJ4CqxlTcrXIL6b5GxE6nh9soo7Ud03h", "file_name": "project_file_2.pdf", "mime_type": "application/pdf", "cap|Принял файл «project_file_2.pdf». Что нужно сделать?
 
 1️⃣ Смета — извлечь позиции, посчитать объёмы, создать Excel
 2️⃣ Описание — описать содержимое документа
 3|2026-05-08 18:14:03
-- 1b281c50-2544-45c0-967d-2e49427d0d84|2|drive_file|WAITING_CLARIFICATION|{"file_id": "1I7asWUOoZafUz53auWHeXL4Rr58AxNiK", "file_name": "project_file_1.pdf", "mime_type": "application/pdf", "cap|Принял файл «project_file_1.pdf». Что нужно сделать?
+- 1b281c50-2544-45c0-967d-2e49427d0d84|2|drive_file|CANCELLED|{"file_id": "1I7asWUOoZafUz53auWHeXL4Rr58AxNiK", "file_name": "project_file_1.pdf", "mime_type": "application/pdf", "cap|Принял файл «project_file_1.pdf». Что нужно сделать?
 
 1️⃣ Смета — извлечь позиции, посчитать объёмы, создать Excel
 2️⃣ Описание — описать содержимое документа
-3|2026-05-08 18:38:40
+3|2026-05-08 18:41:18
 - c94ec497-4351-43a7-a106-b3dab1633838|2|drive_file|DONE|{"file_id": "1EBmfcyns9UOm4S9tg0CYqCpIIidfLgwl", "file_name": "Открыть Микеа 3 РП 3 (1) (3) (3).pdf", "mime_type": "appl|✅ Смета готова
 
 Объект: дом   Материал: газобетон   Площадь: 99.91 м²   Этажность: 1 этаж   Регион: СПб и ЛО
@@ -211,6 +272,13 @@ https://drive.google.com/drive/folders/1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG
 - 6e34406d-335c-4209-a3f6-b98e06791e78|210|{"file_id": "1UAv2GC3Ne3D8I-1YCpmmSNH6CrG5ACQi", "file_name": "Отчет_Мистолово_03.26.pdf", "mime_type": "application/pdf|NO_VALID_ARTIFACT|2026-05-06 17:31:44
 
 ## LATEST_TASK_HISTORY_20
+- 60b9503b-75cc-4913-bb7b-11092508fdae|CANCELLED:INVALID_STALE_CONTEXT_RESULT|2026-05-08 18:41:18
+- 1b281c50-2544-45c0-967d-2e49427d0d84|CANCELLED:INVALID_STALE_CONTEXT_RESULT|2026-05-08 18:41:18
+- test-drainage-reply-001|TOPIC2_CANONICAL_REROUTE_V2:CANONICAL_HANDLED|2026-05-08 18:40:12
+- test-drainage-reply-001|FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:prices_shown|2026-05-08 18:40:12
+- test-drainage-reply-001|TOPIC2_PRICE_SOURCE_FOUND:Работы по монтажу и кладке:ООО ТСК:CONFIRMED|2026-05-08 18:40:12
+- test-drainage-reply-001|TOPIC2_PRICE_WORK_SEARCH_STARTED:Работы по монтажу и кладке|2026-05-08 18:40:02
+- test-drainage-reply-001|TOPIC2_PRICE_SOURCE_FOUND:монолитная плита:beton-monolit.spb.ru:CONFIRMED|2026-05-08 18:40:02
 - test-drainage-reply-001|TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:монолитная плита|2026-05-08 18:39:40
 - test-drainage-reply-001|TOPIC2_PRICE_SOURCE_FOUND:Арматура А500:stroybazav.ru:UNVERIFIED|2026-05-08 18:39:40
 - test-drainage-reply-001|TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:Арматура А500|2026-05-08 18:39:30
@@ -224,18 +292,17 @@ https://drive.google.com/drive/folders/1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG
 - test-drainage-reply-001|TOPIC2_REPEAT_PARENT_TASK:60b9503b-75cc-4913-bb7b-11092508fdae|2026-05-08 18:39:02
 - test-drainage-reply-001|FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_MEMORY_REVIVE_FIX:active_estimate_memory_used|2026-05-08 18:39:02
 - test-drainage-reply-001|TOPIC2_STALE_PENDING_BLOCKED:pending_task=c94ec497-4351-43:done=True|2026-05-08 18:39:01
-- 1b281c50-2544-45c0-967d-2e49427d0d84|DRIVE_FILE_NO_INTENT_OFFER_V1:menu_shown|2026-05-08 18:38:40
-- 1b281c50-2544-45c0-967d-2e49427d0d84|RETEST_STALE_PENDING_GUARD_V1|2026-05-08 18:38:40
-- 1d2b38c4-8c86-4a44-8442-40be5c94fe89|reply_sent:stale_failed|2026-05-08 18:14:03
-- 1d2b38c4-8c86-4a44-8442-40be5c94fe89|state:FAILED|2026-05-08 18:14:03
-- 60b9503b-75cc-4913-bb7b-11092508fdae|FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:estimate_generated|2026-05-08 18:08:16
-- 60b9503b-75cc-4913-bb7b-11092508fdae|TOPIC2_TELEGRAM_DELIVERED:10567|2026-05-08 18:08:16
-- 60b9503b-75cc-4913-bb7b-11092508fdae|TOPIC2_DRIVE_UPLOAD_PDF_OK|2026-05-08 18:08:16
 
 ## MEMORY_DB_COUNT
-- 5195
+- 5196
 
 ## LATEST_MEMORY_20
+- topic_2_estimate_pending_test-drainage-reply-001|{
+  "version": "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3",
+  "status": "WAITING_PRICE_CONFIRMATION",
+  "task_id": "test-drainage-reply-001",
+  "chat_id": "-1003725299009",
+  "topic_id"|2026-05-08T18:40:12.337852
 - topic_2_estimate_pending_c94ec497-4351-43a7-a106-b3dab1633838|{
   "version": "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3",
   "status": "GENERATED",
@@ -260,7 +327,6 @@ https://drive.google.com/drive/folders/1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG
 - topic_210_file_12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88|{"task_id": "12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "16V3s5DcAvnXj8f-3CcfZE2g5|2026-05-08T18:22:02.880162+00:00
 - topic_210_file_b1f8e982-db2e-42de-9046-833287d3567d|{"task_id": "b1f8e982-db2e-42de-9046-833287d3567d", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T18:22:02.880079+00:00
 - topic_210_file_eeb0d013-704a-404c-9390-5a06c90ee976|{"task_id": "eeb0d013-704a-404c-9390-5a06c90ee976", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T18:22:02.879820+00:00
-- topic_210_file_5ead32f3-23d5-4872-9279-a42460ba5dd1|{"task_id": "5ead32f3-23d5-4872-9279-a42460ba5dd1", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "1qy-mPcmRZxJIzEnY2Gp8B8J2|2026-05-08T18:22:02.879545+00:00
 
 ## JOURNAL_AREAL_TASK_WORKER_60
 areal-task-worker.service: Deactivated successfully.
