@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_010
-generated_at_utc: 2026-05-08T06:35:02.463162+00:00
-git_sha_before_commit: d7b743de8cd1e5c5801fd25701afd944e14811cb
+generated_at_utc: 2026-05-08T06:55:02.497361+00:00
+git_sha_before_commit: 33ce4a6e720abc77c0cd0091408ea062312426e0
 part: 10/17
 
 
 ====================================================================================================
 BEGIN_FILE: core/sample_template_engine.py
 FILE_CHUNK: 1/2
-SHA256_FULL_FILE: 1649913fa52dba5b895fc0a0479ba7b531c48174c46964dcbb222b9add7359b2
+SHA256_FULL_FILE: c30999acf0622729d2f9e29cb0d7980956c4443f4cf2a302d4861c79fcec1038
 ====================================================================================================
 # === FULLFIX_13A_SAMPLE_FILE_INTENT_AND_TEMPLATE_ESTIMATE ===
 import os
@@ -7897,7 +7897,7 @@ FILE_CHUNK: 1/2
 ====================================================================================================
 BEGIN_FILE: core/sample_template_engine.py
 FILE_CHUNK: 2/2
-SHA256_FULL_FILE: 1649913fa52dba5b895fc0a0479ba7b531c48174c46964dcbb222b9add7359b2
+SHA256_FULL_FILE: c30999acf0622729d2f9e29cb0d7980956c4443f4cf2a302d4861c79fcec1038
 ====================================================================================================
             return False
         if not _p6d_img_estimate_like(caption):
@@ -8263,6 +8263,94 @@ if _P2MS_ORIG and not getattr(_P2MS_ORIG, "_p2ms_wrapped", False):
     globals()["_p2_missing"] = _p2_missing
     _P2MS_LOG.info("PATCH_P2_MISSING_SKIP_DISTANCE_V1 installed")
 # === END_PATCH_P2_MISSING_SKIP_DISTANCE_V1 ===
+
+# === PATCH_MATERIAL_PARSE_FIX_V1 ===
+# Bug: _p2_parse строка 4969 — "брус" стоит ПЕРВЫМ в проверке материала стен.
+# "Имитация бруса" (финишная отделка) → material="каркас", газобетон игнорируется.
+# Fix: если parse вернул "каркас" но в тексте есть "газобет"/"газоблок" → override.
+import logging as _mpfix_log_mod, re as _mpfix_re
+_MPFIX_LOG = _mpfix_log_mod.getLogger("task_worker")
+_MPFIX_ORIG = globals().get("_p2_parse")
+if _MPFIX_ORIG and not getattr(_MPFIX_ORIG, "_mpfix_wrapped", False):
+    def _p2_parse(text):
+        result = _MPFIX_ORIG(text)
+        if result.get("material") == "каркас":
+            low = str(text or "").lower().replace("ё", "е")
+            if "газобет" in low or "газоблок" in low:
+                result = dict(result)
+                result["material"] = "газобетон"
+                _MPFIX_LOG.info("PATCH_MATERIAL_PARSE_FIX: газобетон override (was каркас via брус)")
+        return result
+    _p2_parse._mpfix_wrapped = True
+    globals()["_p2_parse"] = _p2_parse
+    _MPFIX_LOG.info("PATCH_MATERIAL_PARSE_FIX_V1 installed")
+# === END_PATCH_MATERIAL_PARSE_FIX_V1 ===
+
+# === PATCH_ZERO_QTY_FILTER_V1 ===
+# Bug: _p2_build_rows добавляет "Межэтажное перекрытие" с qty=footprint*(floors-1)=0 при floors=1.
+# Нулевые позиции попадают в XLSX/PDF/Telegram — засоряют смету, вводят в заблуждение.
+# Fix: фильтруем все rows где qty==0 или total==0 до передачи в xlsx/pdf/summary.
+import logging as _zqf_log_mod
+_ZQF_LOG = _zqf_log_mod.getLogger("task_worker")
+_ZQF_ORIG = globals().get("_p2_build_rows")
+if _ZQF_ORIG and not getattr(_ZQF_ORIG, "_zqf_wrapped", False):
+    def _p2_build_rows(p):
+        rows = _ZQF_ORIG(p)
+        filtered = [r for r in rows if float(r.get("qty") or 0) > 0 and float(r.get("total") or 0) > 0]
+        removed = len(rows) - len(filtered)
+        if removed:
+            _ZQF_LOG.info("PATCH_ZERO_QTY_FILTER: removed %d zero-qty rows", removed)
+        return filtered
+    _p2_build_rows._zqf_wrapped = True
+    globals()["_p2_build_rows"] = _p2_build_rows
+    _ZQF_LOG.info("PATCH_ZERO_QTY_FILTER_V1 installed")
+# === END_PATCH_ZERO_QTY_FILTER_V1 ===
+
+# === PATCH_PRICE_HONESTY_V1 ===
+# Bug: _p2_summary пишет "Цены: интернет-проверка выполнена" при price_status=PRICE_SEARCH_OK
+# даже если applied=0 (нуль цен реально применено). Ложь пользователю.
+# Fix: оборачиваем _p2_summary — заменяем строку "Цены:" честным текстом по статусу.
+import logging as _ph_log_mod, re as _ph_re
+_PH_LOG = _ph_log_mod.getLogger("task_worker")
+_PH_ORIG = globals().get("_p2_summary")
+if _PH_ORIG and not getattr(_PH_ORIG, "_ph_wrapped", False):
+    def _p2_summary(p, rows, xlsx_link, pdf_link, price_status="", **kwargs):
+        text = _PH_ORIG(p, rows, xlsx_link, pdf_link, price_status)
+        ps = str(price_status or "").upper()
+        if "EMPTY" in ps or not ps or ps == "PRICE_SEARCH_EMPTY_FALLBACK":
+            honest = "расчёт по базовым ставкам, интернет-цены не применены"
+        elif "OK" in ps:
+            honest = "цены частично проверены по открытым источникам"
+        else:
+            honest = "расчёт по базовым ставкам"
+        text = _ph_re.sub(r'Цены:[^\n]+', f'Цены: {honest}', text)
+        text = _ph_re.sub(r'Проверка цен:[^\n]+', f'Проверка цен: {honest}', text)
+        return text
+    _p2_summary._ph_wrapped = True
+    globals()["_p2_summary"] = _p2_summary
+    _PH_LOG.info("PATCH_PRICE_HONESTY_V1 installed")
+# === END_PATCH_PRICE_HONESTY_V1 ===
+
+# === PATCH_P3E_PRICE_HONESTY_V1 ===
+# Bug: _p3e_summary строка 5635 — всегда пишет "Проверка цен: выполнена" даже если applied=0.
+# PRICE_APPLIED_0 в task_history подтверждает: нуль интернет-цен применено.
+# Fix: оборачиваем _p3e_summary — честный текст цен по applied и price_status.
+import logging as _p3eph_log_mod, re as _p3eph_re
+_P3EPH_LOG = _p3eph_log_mod.getLogger("task_worker")
+_P3EPH_ORIG = globals().get("_p3e_summary")
+if _P3EPH_ORIG and not getattr(_P3EPH_ORIG, "_p3eph_wrapped", False):
+    def _p3e_summary(p, rows, xlsx_link, pdf_link, price_status="", applied=0, **kwargs):
+        text = _P3EPH_ORIG(p, rows, xlsx_link, pdf_link, price_status, applied)
+        if applied and int(applied) > 0:
+            honest = f"цены проверены частично по открытым источникам, применено позиций: {applied}"
+        else:
+            honest = "расчёт по базовым ставкам, интернет-цены не применены"
+        text = _p3eph_re.sub(r'Проверка цен:[^\n]+', f'Проверка цен: {honest}', text)
+        return text
+    _p3e_summary._p3eph_wrapped = True
+    globals()["_p3e_summary"] = _p3e_summary
+    _P3EPH_LOG.info("PATCH_P3E_PRICE_HONESTY_V1 installed")
+# === END_PATCH_P3E_PRICE_HONESTY_V1 ===
 
 ====================================================================================================
 END_FILE: core/sample_template_engine.py

@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-08T06:35:02.328367+00:00
-git_sha_before_commit: d7b743de8cd1e5c5801fd25701afd944e14811cb
+generated_at_utc: 2026-05-08T06:55:02.366986+00:00
+git_sha_before_commit: 33ce4a6e720abc77c0cd0091408ea062312426e0
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,8 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: inactive
 
 ## GIT_LOG_30
+33ce4a6 3 patches: material parse fix, zero-qty filter, price honesty
+bf3bb26 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 d7b743d handoff: update HEAD to 81f35b5, mark P1 clarified loop closed
 81f35b5 PATCH_P6CF3_CLARIFIED_HISTORY_INCLUDE_V1: fix infinite clarification loop
 e7b171e FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
@@ -38,20 +40,33 @@ c0300fb fix(topic2): close 4 code gaps — enrichment markers, cyrillic marker, 
 5111f33 fix(aggregator): refuse dirty tracked sources before guarded build
 bfbf121 fix(aggregator): add five minute guarded context builder
 2ece9eb fix(topic2): close 3 live bugs — poison loop terminate, recursion restore, FCG done bypass
-cf97e9f feat(aggregator): SINGLE_MODEL_FULL_CONTEXT — full inline context for any model
-62d85b8 fix(topic2): V5B — price source quality gate, raw JSON guard, canonical totals col J
 
 ## GIT_SHOW_STAT_HEAD
-commit d7b743de8cd1e5c5801fd25701afd944e14811cb
+commit 33ce4a6e720abc77c0cd0091408ea062312426e0
 Author: Ila <ilakuznecov@mac.local>
-Date:   Fri May 8 09:30:03 2026 +0300
+Date:   Fri May 8 09:54:40 2026 +0300
 
-    handoff: update HEAD to 81f35b5, mark P1 clarified loop closed
+    3 patches: material parse fix, zero-qty filter, price honesty
+    
+    PATCH_MATERIAL_PARSE_FIX_V1: "имитация бруса" (finish material) no longer
+    overrides wall material to "каркас" — if газобетон is in text, it wins.
+    Стены: газобетон ✅ instead of каркас.
+    
+    PATCH_ZERO_QTY_FILTER_V1: rows with qty=0 or total=0 filtered before
+    XLSX/PDF/Telegram. "Межэтажное перекрытие" at floors=1 (qty=0) removed.
+    25→24 rows.
+    
+    PATCH_PRICE_HONESTY_V1 + PATCH_P3E_PRICE_HONESTY_V1: both _p2_summary
+    and _p3e_summary now write honest price text. When PRICE_APPLIED_0:
+    "расчёт по базовым ставкам, интернет-цены не применены".
+    No more fake "Проверка цен: выполнена".
+    
+    Verified: d72028da DONE, all 3 fixes confirmed in live result.
     
     Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 
- docs/HANDOFFS/LATEST_HANDOFF.md | 9 +++++++--
- 1 file changed, 7 insertions(+), 2 deletions(-)
+ core/sample_template_engine.py | 88 ++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 88 insertions(+)
 
 ## GIT_CHANGED_FILES_10
 core/price_enrichment.py
@@ -150,7 +165,7 @@ task_worker.py
 Площадь застройки: 96.0 м²
 Расчётная площадь: 96.0 м²
 Фундамент: монолитная плита
-Стены: к|2026-05-08 06:25:09
+Стены: г|2026-05-08 06:54:21
 - a7b2879e-14e6-4002-8a06-f73019d40a99|2|drive_file|FAILED|{"file_id": "1XRwOwZr2Kpxy-wrAUPrBR2dLqHseg7jS", "file_name": "photo_-1003725299009_10394.jpg", "mime_type": "image/jpeg|Не вижу размеры объекта на фото/в ТЗ. Пришли размер в формате 7.8х9.0 или фото крупнее|2026-05-07 13:34:34
 - f3b2ae30-35cf-4e08-a25d-d3131d351676|5|text|DONE|Что такое цокольная балка где используется|Пояснение принято к фото: photo_-1003725299009_10122.jpg. В пакете технадзора: 23 шт. Акт не формирую без отдельной команды|2026-05-07 12:25:11
 - 64eb9797-1a09-4f21-98f2-3671cf6e835c|2|text|DONE|[VOICE] А что мы вообще в принципе обсуждали в чате, скажи мне пожалуйста, вот за два дня последних|✅ Предварительная смета готова
@@ -210,6 +225,12 @@ task_worker.py
 - eba6dc80-d993-43e8-945b-cf1b48b9d103|210|{"file_id": "1evYG_-JrYks_cJ3D04LTYgdh1CZnWqTT", "file_name": "Схема глубинного дренажа.pdf", "mime_type": "application/|NO_VALID_ARTIFACT|2026-05-06 17:31:31
 
 ## LATEST_TASK_HISTORY_20
+- d72028da-b4ff-424d-a626-790c9da8be77|P3_TOPIC2_FINAL_DONE_ROWS_24_PRICE_APPLIED_0|2026-05-08 06:54:21
+- d72028da-b4ff-424d-a626-790c9da8be77|TOPIC2_PRICE_CHOICE_CONFIRMED:confirmed|2026-05-08 06:54:12
+- d72028da-b4ff-424d-a626-790c9da8be77|P6C_TOPIC2_IMAGE_OR_FILE_ESTIMATE_ROUTE_TAKEN|2026-05-08 06:54:12
+- d72028da-b4ff-424d-a626-790c9da8be77|P3_TOPIC2_FINAL_DONE_ROWS_24_PRICE_APPLIED_0|2026-05-08 06:52:51
+- d72028da-b4ff-424d-a626-790c9da8be77|TOPIC2_PRICE_CHOICE_CONFIRMED:confirmed|2026-05-08 06:52:42
+- d72028da-b4ff-424d-a626-790c9da8be77|P6C_TOPIC2_IMAGE_OR_FILE_ESTIMATE_ROUTE_TAKEN|2026-05-08 06:52:42
 - d72028da-b4ff-424d-a626-790c9da8be77|P3_TOPIC2_FINAL_DONE_ROWS_25_PRICE_APPLIED_0|2026-05-08 06:25:09
 - d72028da-b4ff-424d-a626-790c9da8be77|TOPIC2_PRICE_CHOICE_CONFIRMED:confirmed|2026-05-08 06:25:00
 - d72028da-b4ff-424d-a626-790c9da8be77|P6C_TOPIC2_IMAGE_OR_FILE_ESTIMATE_ROUTE_TAKEN|2026-05-08 06:25:00
@@ -224,50 +245,33 @@ task_worker.py
 - d72028da-b4ff-424d-a626-790c9da8be77|P6E67_REVISION_TEXT_MERGED_FROM_TASK:57c2617a-7975-4282-bffb-2b18577d8b9d|2026-05-08 06:18:36
 - d72028da-b4ff-424d-a626-790c9da8be77|P6E67_PARENT_REVIVED_AS_REVISION_SOURCE:LAST_ACTIVE_ESTIMATE_FALLBACK|2026-05-08 06:18:36
 - 524f5853-4243-4833-ae82-116da9202179|P6E67_CURRENT_TASK_CANCELLED_MERGED_TO_PARENT:57c2617a-7975-4282-bffb-2b18577d8b9d|2026-05-08 06:18:34
-- 57c2617a-7975-4282-bffb-2b18577d8b9d|P6E67_REVISION_TEXT_MERGED_FROM_TASK:524f5853-4243-4833-ae82-116da9202179|2026-05-08 06:18:34
-- 57c2617a-7975-4282-bffb-2b18577d8b9d|P6E67_PARENT_REVIVED_AS_REVISION_SOURCE:LAST_ACTIVE_ESTIMATE_FALLBACK|2026-05-08 06:18:34
-- 524f5853-4243-4833-ae82-116da9202179|created:NEW|2026-05-08T06:18:33.938799+00:00
-- 4df9cf88-0843-478b-bef1-9d828d505298|reply_sent:topic2_vague_blocked|2026-05-08 06:18:17
-- 4df9cf88-0843-478b-bef1-9d828d505298|TOPIC2_ONE_BIG_FINAL_PIPELINE_V1:vague_no_memory_revive|2026-05-08 06:18:17
-- 4df9cf88-0843-478b-bef1-9d828d505298|created:NEW|2026-05-08T06:18:16.324300+00:00
 
 ## MEMORY_DB_COUNT
 - 5185
 
 ## LATEST_MEMORY_20
-- topic_500_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 500, "count": 27, "updated_at": "2026-05-08T06:21:34.041185+00:00", "files": [{"task_id": "7b609434-8167-43f5-a52a-beb85e0b4ed5", "file_id|2026-05-08T06:21:34.041696+00:00
-- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 50, "updated_at": "2026-05-08T06:21:34.017558+00:00", "files": [{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "file_id|2026-05-08T06:21:34.018190+00:00
-- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 50, "updated_at": "2026-05-08T06:21:33.957871+00:00", "files": [{"task_id": "4b402275-e99b-4d9f-b331-08f2ba2a93be", "file_id":|2026-05-08T06:21:33.958485+00:00
-- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-08T06:21:33.925601+00:00", "files": [{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "file_id":|2026-05-08T06:21:33.926101+00:00
-- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T06:21:33.877208+00:00
-- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "state": "FAILED", "file_id": "", "file_name": "", "mime_type"|2026-05-08T06:21:33.877113+00:00
-- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T06:21:33.877010+00:00
-- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T06:21:33.876854+00:00
-- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T06:21:33.876710+00:00
-- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_file", "state": "FAILED", "file_id": "1bXXtuHRsXCuxBSRUl8Tj5z6E|2026-05-08T06:21:33.876616+00:00
-- topic_2_file_92de809d-9274-48ee-82b4-584058ea4e48|{"task_id": "92de809d-9274-48ee-82b4-584058ea4e48", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "search", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T06:21:33.876517+00:00
-- topic_210_file_ce9421cb-5451-4cea-9823-a413b698bc94|{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T06:21:33.876323+00:00
-- topic_210_file_c8619b7e-9ebb-4731-973a-b3f6064bbe38|{"task_id": "c8619b7e-9ebb-4731-973a-b3f6064bbe38", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T06:21:33.876084+00:00
-- topic_210_file_42320ab0-c49a-4a08-8f9b-5e38618a4e58|{"task_id": "42320ab0-c49a-4a08-8f9b-5e38618a4e58", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T06:21:33.875934+00:00
-- topic_210_file_7dca3b5f-2782-400f-af84-fb030904e917|{"task_id": "7dca3b5f-2782-400f-af84-fb030904e917", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T06:21:33.875269+00:00
-- topic_210_file_12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88|{"task_id": "12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "16V3s5DcAvnXj8f-3CcfZE2g5|2026-05-08T06:21:33.874492+00:00
-- topic_210_file_b1f8e982-db2e-42de-9046-833287d3567d|{"task_id": "b1f8e982-db2e-42de-9046-833287d3567d", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T06:21:33.874300+00:00
-- topic_210_file_eeb0d013-704a-404c-9390-5a06c90ee976|{"task_id": "eeb0d013-704a-404c-9390-5a06c90ee976", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T06:21:33.873862+00:00
-- topic_210_file_5ead32f3-23d5-4872-9279-a42460ba5dd1|{"task_id": "5ead32f3-23d5-4872-9279-a42460ba5dd1", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "1qy-mPcmRZxJIzEnY2Gp8B8J2|2026-05-08T06:21:33.873544+00:00
-- topic_210_file_fb6aadc5-b372-488a-aede-f3433a030e55|{"task_id": "fb6aadc5-b372-488a-aede-f3433a030e55", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T06:21:33.873443+00:00
+- topic_500_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 500, "count": 27, "updated_at": "2026-05-08T06:51:36.008370+00:00", "files": [{"task_id": "7b609434-8167-43f5-a52a-beb85e0b4ed5", "file_id|2026-05-08T06:51:36.009345+00:00
+- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 50, "updated_at": "2026-05-08T06:51:35.989904+00:00", "files": [{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "file_id|2026-05-08T06:51:35.990391+00:00
+- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 50, "updated_at": "2026-05-08T06:51:35.944124+00:00", "files": [{"task_id": "4b402275-e99b-4d9f-b331-08f2ba2a93be", "file_id":|2026-05-08T06:51:35.944485+00:00
+- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-05-08T06:51:35.918069+00:00", "files": [{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "file_id":|2026-05-08T06:51:35.918528+00:00
+- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T06:51:35.861425+00:00
+- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "state": "FAILED", "file_id": "", "file_name": "", "mime_type"|2026-05-08T06:51:35.861336+00:00
+- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T06:51:35.861187+00:00
+- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T06:51:35.860822+00:00
+- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-05-08T06:51:35.860653+00:00
+- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_file", "state": "FAILED", "file_id": "1bXXtuHRsXCuxBSRUl8Tj5z6E|2026-05-08T06:51:35.860570+00:00
+- topic_2_file_92de809d-9274-48ee-82b4-584058ea4e48|{"task_id": "92de809d-9274-48ee-82b4-584058ea4e48", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "search", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T06:51:35.860505+00:00
+- topic_210_file_ce9421cb-5451-4cea-9823-a413b698bc94|{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T06:51:35.860353+00:00
+- topic_210_file_c8619b7e-9ebb-4731-973a-b3f6064bbe38|{"task_id": "c8619b7e-9ebb-4731-973a-b3f6064bbe38", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T06:51:35.860164+00:00
+- topic_210_file_42320ab0-c49a-4a08-8f9b-5e38618a4e58|{"task_id": "42320ab0-c49a-4a08-8f9b-5e38618a4e58", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T06:51:35.860083+00:00
+- topic_210_file_7dca3b5f-2782-400f-af84-fb030904e917|{"task_id": "7dca3b5f-2782-400f-af84-fb030904e917", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T06:51:35.859773+00:00
+- topic_210_file_12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88|{"task_id": "12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "16V3s5DcAvnXj8f-3CcfZE2g5|2026-05-08T06:51:35.859479+00:00
+- topic_210_file_b1f8e982-db2e-42de-9046-833287d3567d|{"task_id": "b1f8e982-db2e-42de-9046-833287d3567d", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T06:51:35.859415+00:00
+- topic_210_file_eeb0d013-704a-404c-9390-5a06c90ee976|{"task_id": "eeb0d013-704a-404c-9390-5a06c90ee976", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T06:51:35.859236+00:00
+- topic_210_file_5ead32f3-23d5-4872-9279-a42460ba5dd1|{"task_id": "5ead32f3-23d5-4872-9279-a42460ba5dd1", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "1qy-mPcmRZxJIzEnY2Gp8B8J2|2026-05-08T06:51:35.859034+00:00
+- topic_210_file_fb6aadc5-b372-488a-aede-f3433a030e55|{"task_id": "fb6aadc5-b372-488a-aede-f3433a030e55", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T06:51:35.858934+00:00
 
 ## JOURNAL_AREAL_TASK_WORKER_60
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 39.810s CPU time.
-Started areal-task-worker.service - Areal Task Worker.
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 13.717s CPU time.
-Started areal-task-worker.service - Areal Task Worker.
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Consumed 12.822s CPU time.
 Started areal-task-worker.service - Areal Task Worker.
 Stopping areal-task-worker.service - Areal Task Worker...
@@ -316,6 +320,17 @@ areal-task-worker.service: Failed to kill control group /system.slice/areal-task
 areal-task-worker.service: Deactivated successfully.
 Stopped areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Consumed 9.692s CPU time, 84.2M memory peak, 0B memory swap peak.
+Started areal-task-worker.service - Areal Task Worker.
+Stopping areal-task-worker.service - Areal Task Worker...
+areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
+areal-task-worker.service: Deactivated successfully.
+Stopped areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Consumed 21.834s CPU time, 122.2M memory peak, 0B memory swap peak.
+Started areal-task-worker.service - Areal Task Worker.
+Stopping areal-task-worker.service - Areal Task Worker...
+areal-task-worker.service: Deactivated successfully.
+Stopped areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Consumed 2.218s CPU time.
 Started areal-task-worker.service - Areal Task Worker.
 
 ## JOURNAL_TELEGRAM_INGRESS_30
