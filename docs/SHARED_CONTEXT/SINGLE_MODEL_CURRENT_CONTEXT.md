@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-05-08T23:45:02.954116+00:00
-GIT_SHA: 36b3c2db3d693d2ee490f71878f957cc4e6ccac2
+GENERATED_AT: 2026-05-08T23:50:03.065990+00:00
+GIT_SHA: 82535ed3c4087a2bbd99020991b7f03e1150fb1c
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -16,9 +16,9 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 ## GLOBAL_STATUS
 | topic | name | status | active | failed_24h |
 |-------|------|--------|--------|------------|
-| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 1 | 11 |
+| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 0 | 11 |
 | 5 | TEKHNADZOR | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
-| 210 | PROEKTIROVANIE | INSTALLED_NOT_VERIFIED | 1 | 0 |
+| 210 | PROEKTIROVANIE | INSTALLED_NOT_VERIFIED | 0 | 2 |
 | 500 | VEB_POISK | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
 
 ## OPEN_BLOCKERS_FROM_NOT_CLOSED
@@ -70,7 +70,7 @@ DATE_UNKNOWN
 ## ACTIVE_OR_RECENT_TOPICS
 ### topic_2 STROYKA
 role: Сметы
-active: 1
+active: 0
 failed_24h: 11
 commits_last_7d: 30
 recent_commits:
@@ -113,22 +113,21 @@ NEXT_ACTION: investigate latest failed: STALE_NEW_30MIN
 
 ### topic_210 PROEKTIROVANIE
 role: КЖ КМ
-active: 1
-failed_24h: 0
-commits_last_7d: 3
+active: 0
+failed_24h: 2
+commits_last_7d: 2
 recent_commits:
 - 9420d6a|fix(topic2): stroyka meta-confirm guard + reply chain + xlsx 15 cols + topic210 meta guard
 - a277900|docs(normative): add shared normative context for topic_5 and topic_210
-- bc58444|COMBINED_TOPIC2_AND_TOPIC210_CLOSE_V1: real topic2 estimate and cad section fix
 last_failed:
+- b98e1117 | TASK_WORKER_ARTIFACT_GATE_V1:EMPTY_OR_TOO_SHORT
+- f02f874e | INVALID_RESULT_GATE
 - cfadbd05 | INVALID_RESULT_GATE
-- b71a685b | INVALID_RESULT_GATE
-- 6e34406d | NO_VALID_ARTIFACT
 blockers:
 - - topic_2 не тянет проектные образцы topic_210
 - - topic_210 не тянет сметные артефакты как результат
 - - проверить topic_210: "какие образцы есть по АР/КЖ/КД" должен показать список без создания файла
-NEXT_ACTION: investigate latest failed: INVALID_RESULT_GATE
+NEXT_ACTION: investigate latest failed: TASK_WORKER_ARTIFACT_GATE_V1:EMPTY_OR_TOO_SHORT
 
 ### topic_500 VEB_POISK
 role: Интернет-поиск
