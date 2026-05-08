@@ -1,5 +1,5 @@
 # LATEST HANDOFF — 2026-05-08 ~09:30 MSK
-**HEAD**: `b236f02`
+**HEAD**: `81f35b5`
 **Воркер**: active
 
 ---
@@ -70,7 +70,12 @@ _handle_drive_file(conn, task)
 ### P0 — АРХИТЕКТУРА: file_intake_router не вызывается (см. выше)
 → Решение: обернуть `_handle_drive_file` чтобы вызывать `route_file` после скачивания
 
-### P1 — "Этажей: 1" не парсится regex
+### P1 ЗАКРЫТ — PATCH_P6CF3_CLARIFIED_HISTORY_INCLUDE_V1 (81f35b5)
+clarified:* ответы из task_history теперь включаются в estimate_raw → _p2_parse
+видит "Фундамент монолитный..." → бесконечный цикл вопросов устранён.
+Задача d72028da прошла DONE: 25 позиций, 5 425 839 руб, Excel+PDF в Drive.
+
+### ЗАКРЫТ — "Этажей: 1" не парсится regex
 `_p6c_prepare_topic2_raw_20260504` добавляет `"\nЭтажей: 1"` но `_p2_floors()` ищет `(\d+)\s*этаж` — число ДО слова.
 Нужен P6CF_V2 в task_worker.py (append):
 ```python
