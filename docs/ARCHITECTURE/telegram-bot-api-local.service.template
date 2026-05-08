@@ -1,0 +1,25 @@
+[Unit]
+Description=Telegram Bot API Local Server (big file support >20MB)
+After=network.target
+ConditionPathExists=/usr/local/bin/telegram-bot-api
+
+[Service]
+Type=simple
+User=root
+EnvironmentFile=/etc/areal/telegram-local-api.env
+ExecStart=/usr/local/bin/telegram-bot-api \
+    --api-id=${TELEGRAM_API_ID} \
+    --api-hash=${TELEGRAM_API_HASH} \
+    --local \
+    --http-port=8081 \
+    --dir=/var/lib/telegram-bot-api \
+    --verbosity=0
+WorkingDirectory=/var/lib/telegram-bot-api
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=telegram-bot-api-local
+
+[Install]
+WantedBy=multi-user.target

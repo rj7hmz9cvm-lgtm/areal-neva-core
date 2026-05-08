@@ -1,5 +1,5 @@
-# LATEST HANDOFF — 2026-05-08 ~09:30 MSK
-**HEAD**: `81f35b5`
+# LATEST HANDOFF — 2026-05-08 ~11:00 MSK
+**HEAD**: `8760011`
 **Воркер**: active
 
 ---
@@ -8,147 +8,107 @@
 
 | Топик | Состояние | Примечание |
 |-------|-----------|------------|
-| topic_2 СТРОИКА | INSTALLED (не VERIFIED) | 5 патчей session 08.05, d72028da застрял |
+| topic_2 СТРОИКА | INSTALLED (не VERIFIED) | TOPIC2_CANONICAL_PDF_GATE_V1 в task_worker.py, d72028da → DONE |
 | topic_5 ТЕХНАДЗОР | Stable | без изменений |
 | topic_500 ПОИСК | INSTALLED (не VERIFIED) | 9 режимов adaptive output |
 | topic_210 PROJECT | Active | без изменений |
 
 ---
 
-## ГЛАВНАЯ АРХИТЕКТУРНАЯ ПРОБЛЕМА (P0)
+## ТЕКУЩАЯ ЗАДАЧА: PATCH_TELEGRAM_BIG_FILE_LOCAL_BOT_API_V1
 
-### file_intake_router НЕ вызывается из _handle_drive_file
+### Проблема
+`telegram-ingress.service` (telegram_daemon.py, строка 743) — `bot.get_file(file_id)` → `HANDLER_CRASH: file is too big` для файлов >20MB. Задача в БД не создаётся.
 
-**Это зафиксировано в самом каноне** (01_SYSTEM_LOGIC_FULL.md, строка ~314):
-> `file_intake_router не вызывается в _handle_drive_file`
+### Что сделано (сессия 08.05 ~11:00)
 
-**Что есть**: `core/file_intake_router.py` — **универсальный** обработчик файлов для ВСЕХ топиков:
-- Intent detection: estimate / ocr / technadzor / dwg / template / vision / search
-- Format priority: DWG > XLSX > DOCX > PDF > IMAGE
-- Entry point: `async def route_file(file_path, task_id, topic_id, intent, fmt)`
-- Работает для topic_2, topic_5, topic_210 — одинаково
+| Файл | Статус | Описание |
+|------|--------|----------|
+| `/opt/telegram-bot-api-build/` | **BUILD IN PROGRESS ~36%** | PID 2332600, лог `/opt/telegram-bot-api-build.log` |
+| `/etc/areal/telegram-local-api.env` | **READY** | chmod 600, root:root, значения ПУСТЫЕ — нужны api_id/api_hash |
+| `/etc/systemd/system/telegram-bot-api-local.service` | **READY, NOT STARTED** | ConditionPathExists=/usr/local/bin/telegram-bot-api |
+| `/root/.areal-neva-core/areal_telegram_wrapper.py` | **READY, NOT ACTIVE** | wrapper patching aiogram + download URL в памяти |
+| `/root/.areal-neva-core/tmp/bigfile_ingress_override.conf.pending` | **PENDING** | НЕ скопировать до gates |
+| `/root/.areal-neva-core/tools/verify_local_bot_api.sh` | **READY** | 4-step activation gate |
 
-**Что происходит сейчас**: `_handle_drive_file` (task_worker.py ~3906) скачивает файл, но потом:
-- НЕ вызывает `file_intake_router.route_file(local_path, ...)`
-- Вместо этого идёт через P6C → topic-specific route → берёт только caption из JSON
-- PDF содержимое **никогда не читается**
-- `TOPIC2_PDF_SPEC_EXTRACTOR_STARTED` никогда не появляется
-
-**Правильная архитектура**:
+### Activation Gate (все 4 обязательны)
 ```
-_handle_drive_file(conn, task)
-  → скачать PDF/файл по file_id → local_path
-  → detect_intent(caption) → intent="estimate"|"technadzor"|...
-  → file_intake_router.route_file(local_path, task_id, topic_id, intent)
-      → [topic_2] maybe_handle_stroyka_estimate с file_path → PDF OCR → смета
-      → [topic_5] technadzor_engine с file_path → анализ дефектов
-      → [topic_210] проектирование с file_path → анализ проекта
+1. binary OK      → /usr/local/bin/telegram-bot-api -x
+2. service active → systemctl is-active telegram-bot-api-local
+3. local getMe OK → curl http://localhost:8081/bot${TOKEN}/getMe → ok:true
+4. wrapper dry-run OK → tools/verify_local_bot_api.sh
 ```
 
-**Где реализовать**: append-only патч в task_worker.py:
-- Обернуть `_handle_drive_file` так, чтобы после скачивания файла вызывался `route_file`
-- ИЛИ: вызывать `maybe_handle_stroyka_estimate` напрямую для topic_2 drive_file задач
-
-**Этот принцип единый для всех топиков** — нет регрессии, нет дублирования.
-
----
-
-## ПАТЧИ СЕССИИ 08.05.2026 (запушены в b236f02)
-
-| Патч | Файл | Что |
-|------|------|-----|
-| PATCH_WCPE_CLARIFIED_UNBLOCK_V1 | task_worker.py | WCG_SKIP не блокирует IN_PROGRESS |
-| PATCH_P6C_FULLTEXT_ESTIMATE_PREP_V1 | task_worker.py | partial JSON + VOICE в estimate_raw + dims из filename |
-| PATCH_P3PCG_CLARIFIED_HISTORY_CHECK_V1 | sample_template_engine.py | clarified:N → цена (старый патч) |
-| PATCH_P3CHK_PRICE_APPEND_FIX_V2 | sample_template_engine.py | append цены к raw_s вместо replace |
-| PATCH_P2_MISSING_SKIP_DISTANCE_V1 | sample_template_engine.py | убрать вопрос о расстоянии |
-
----
-
-## ОТКРЫТЫЕ ПРОБЛЕМЫ (приоритет)
-
-### P0 — АРХИТЕКТУРА: file_intake_router не вызывается (см. выше)
-→ Решение: обернуть `_handle_drive_file` чтобы вызывать `route_file` после скачивания
-
-### P1 ЗАКРЫТ — PATCH_P6CF3_CLARIFIED_HISTORY_INCLUDE_V1 (81f35b5)
-clarified:* ответы из task_history теперь включаются в estimate_raw → _p2_parse
-видит "Фундамент монолитный..." → бесконечный цикл вопросов устранён.
-Задача d72028da прошла DONE: 25 позиций, 5 425 839 руб, Excel+PDF в Drive.
-
-### ЗАКРЫТ — "Этажей: 1" не парсится regex
-`_p6c_prepare_topic2_raw_20260504` добавляет `"\nЭтажей: 1"` но `_p2_floors()` ищет `(\d+)\s*этаж` — число ДО слова.
-Нужен P6CF_V2 в task_worker.py (append):
-```python
-_P6CF2_ORIG = globals().get("_p6c_prepare_topic2_raw_20260504")
-if _P6CF2_ORIG and not getattr(_P6CF2_ORIG, "_p6cf2_wrapped", False):
-    def _p6c_prepare_topic2_raw_20260504(task_id, raw_input):
-        text = _P6CF2_ORIG(task_id, raw_input)
-        return text.replace("Этажей: 1", "1 этаж")
-    _p6c_prepare_topic2_raw_20260504._p6cf2_wrapped = True
-    globals()["_p6c_prepare_topic2_raw_20260504"] = _p6c_prepare_topic2_raw_20260504
-    import logging as _p6cf2_log
-    _p6cf2_log.getLogger("task_worker").info("PATCH_P6CF2_FLOOR_FORMAT_FIX installed")
+### Что НУЖНО от пользователя
 ```
-
-### P2 — Voice в reply не транскрибируется
-telegram_daemon.py FORBIDDEN. Нужен обходной путь в task_worker.py.
-
-### P3 — Верификация полного цикла topic_2
-Запустить чистую задачу, проверить маркеры:
+TELEGRAM_API_ID=<число>
+TELEGRAM_API_HASH=<hex строка>
 ```
-TOPIC2_PDF_SPEC_EXTRACTOR_STARTED → TOPIC2_PDF_SPEC_ROWS_EXTRACTED
-TOPIC2_PRICE_CHOICE_CONFIRMED:median
-TOPIC2_TEMPLATE_SELECTED → TOPIC2_XLSX_CANON_COLUMNS_OK:15
-TOPIC2_PDF_TOTALS_MATCH_XLSX
-TOPIC2_DRIVE_TOPIC_FOLDER_OK → TOPIC2_AC_GATE_OK
-TOPIC2_TELEGRAM_DELIVERED
-FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:estimate_generated
-```
+Источник: https://my.telegram.org → API Development Tools
 
----
-
-## ЗАДАЧА d72028da (застрявшая, для теста)
-
-```
-file: 8х12.pdf  file_id: 1-isQhm067W2LDv2Bgm5ewbfyVm2B8QhV
-caption: "Надо полную смету на внутреннюю наружную отделку"
-voices: газобетон 400, монолитная плита, клик-фальц, имитация бруса, ламинат, тёплые полы
-price: "средние" (clarified:2)
-dims: 8х12 м (из имени файла)
-```
-
-Сброс:
+### Как заполнить credentials и активировать
 ```bash
-sqlite3 /root/.areal-neva-core/data/core.db \
-  "UPDATE tasks SET state='IN_PROGRESS', error_message='', updated_at=datetime('now') \
-   WHERE id='d72028da-b4ff-424d-a626-790c9da8be77';"
+# 1. Заполнить credentials (root only, не печатать в chat)
+nano /etc/areal/telegram-local-api.env
+
+# 2. Запустить local сервер
+systemctl daemon-reload
+systemctl start telegram-bot-api-local
+
+# 3. Прогнать все проверки
+/root/.areal-neva-core/tools/verify_local_bot_api.sh
+
+# 4. Только если verify_local_bot_api.sh вернул 0:
+mkdir -p /etc/systemd/system/telegram-ingress.service.d
+cp /root/.areal-neva-core/tmp/bigfile_ingress_override.conf.pending \
+   /etc/systemd/system/telegram-ingress.service.d/bigfile.conf
+systemctl daemon-reload
+systemctl restart telegram-ingress
 ```
+
+### Ожидаемое поведение после активации
+- Файл >20MB из Telegram → задача создаётся → `_handle_drive_file`
+- `TOPIC2_CANONICAL_PDF_GATE_V1` → `maybe_handle_stroyka_estimate` → полный pipeline
+- Маркеры: `BIG_FILE_LOCAL_BOT_API_USED` → `FILE_INTAKE_ROUTER_LOCAL_PATH_PASSED`
+- topic_5/topic_210/topic_500 не изменяются
+
+### Запрещённые файлы (не трогать никогда)
+telegram_daemon.py, .env, ai_router.py, reply_sender.py, google_io.py, credentials.json
+
+---
+
+## ПРОШЛАЯ P0 (ЗАКРЫТО в 8760011)
+
+### TOPIC2_CANONICAL_PDF_GATE_V1 — task_worker.py body-edit
+- Вставлена до generic route_file (строки ~4122-4148)
+- topic_2 + PDF + intent=estimate → `maybe_handle_stroyka_estimate` → canonical pipeline
+- d72028da: DONE, 25 позиций, 5 425 839 руб, Excel+PDF в Drive ✅
 
 ---
 
 ## ДИАГНОСТИКА
 
 ```bash
+# Прогресс сборки
+tail -5 /opt/telegram-bot-api-build.log
+
+# Готовность бинаря
+ls -la /usr/local/bin/telegram-bot-api 2>/dev/null || echo "not built yet"
+
+# Проверка gates
+/root/.areal-neva-core/tools/verify_local_bot_api.sh
+
+# Воркер
 systemctl is-active areal-task-worker
-
-grep "PATCH_P6C_FULLTEXT\|PATCH_P3CHK2\|PATCH_P2_MISSING\|PATCH_WCPE" \
+grep "TOPIC2_CANONICAL_PDF_GATE\|BIG_FILE_LOCAL" \
   /root/.areal-neva-core/logs/task_worker.log | tail -10
-
-sqlite3 -readonly /root/.areal-neva-core/data/core.db \
-  "SELECT state, substr(error_message,1,50), substr(result,1,80), updated_at \
-   FROM tasks WHERE id='d72028da-b4ff-424d-a626-790c9da8be77';"
-
-sqlite3 -readonly /root/.areal-neva-core/data/core.db \
-  "SELECT action, created_at FROM task_history \
-   WHERE task_id='d72028da-b4ff-424d-a626-790c9da8be77' \
-   ORDER BY rowid DESC LIMIT 15;"
 ```
 
 ---
 
 ## CANON REFS
-- `docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md` — §4, §11.9, строка ~314 (file_intake_router bug known)
-- `docs/CANON_FINAL/TOPIC_2_CANONICAL_ESTIMATE_CONTRACT.md` — §7 PDF pipeline
-- `core/file_intake_router.py` — универсальный роутер файлов (уже написан, не подключён)
-- `core/stroyka_estimate_canon.py:1930` — `maybe_handle_stroyka_estimate` (PDF OCR внутри)
+- `docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md` — §4, §11.9
+- `core/stroyka_estimate_canon.py:1930` — `maybe_handle_stroyka_estimate`
+- `areal_telegram_wrapper.py` — PATCH_TELEGRAM_BIG_FILE_LOCAL_BOT_API_V1 (не активен)
+- `tools/verify_local_bot_api.sh` — activation gate script
 - `docs/HANDOFFS/LATEST_HANDOFF.md` — этот файл

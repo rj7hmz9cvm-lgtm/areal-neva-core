@@ -54,3 +54,6 @@ data/templates/technadzor/ACTIVE__*.json
 data/templates/technadzor/objects/
 data/memory_files/technadzor_index_cache/
 outputs/technadzor_p6h/
+
+# temp activation files
+tmp/

@@ -1,0 +1,16 @@
+# PATCH_TELEGRAM_BIG_FILE_LOCAL_BOT_API_V1
+# Pending override for telegram-ingress.service
+#
+# DO NOT COPY until all verify_local_bot_api.sh checks pass:
+#   binary OK, service active, local getMe OK, wrapper dry-run OK
+#
+# Activation command (run verify_local_bot_api.sh first):
+#   cp /root/.areal-neva-core/tmp/bigfile_ingress_override.conf.pending \
+#      /etc/systemd/system/telegram-ingress.service.d/bigfile.conf
+#   systemctl daemon-reload
+#   systemctl restart telegram-ingress
+
+[Service]
+ExecStart=
+ExecStart=/root/.areal-neva-core/.venv/bin/python3 -u /root/.areal-neva-core/areal_telegram_wrapper.py
+EnvironmentFile=/etc/areal/telegram-local-api.env
