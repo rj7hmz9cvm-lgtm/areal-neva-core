@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-08T17:30:02.354492+00:00
-git_sha_before_commit: 433ffeb6f77b119b138fd842d095806370e61795
+generated_at_utc: 2026-05-08T17:50:02.341457+00:00
+git_sha_before_commit: e185e83865a40e0712e8de514a3f56cee666eecb
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,8 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: inactive
 
 ## GIT_LOG_30
+e185e83 fix(topic2): PATCH_SUPPLIER_HONESTY_V1 — fix fake Perplexity в Поставщик
+5cff0da FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 433ffeb FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 222202e docs(handoff): CODEX_FULL_CANON_VERIFIED — c94ec497 AWAITING_CONFIRMATION, all phases 1-20 pass
 6cf9154 fix(topic2): PATCH_TOPIC2_ADD_PEREKRYTIYA_SECTION_V1 — add missing §5 Перекрытия section
@@ -38,85 +40,24 @@ b236f02 fix(topic2): session 08.05 — P6C fulltext prep, P3CHK append fix, P2 d
 e3a016c PATCH_OPENROUTER_ONLINE_ONLY_FOR_TOPIC2_PRICE_SEARCH_V1: hard-enforce Sonar for all price/search calls
 4cfd9b6 fix(topic2): close P6E67 loop storm + natural reply message
 dc26486 fix(topic2): PATCH_PRICE_REJECT_STORM_FIX_V1 — remove noisy INSERT from V5/V6C rejected path
-0c8518e fix(topic2): TOPIC2_FULL_CLOSE — work/material split, sheet fallback, drive links, xlsx 15-col gate
-a216eeb fix(topic2): PATCH_FCG_V2PATH_BYPASS_V1 — extend FDCB bypass to TOPIC2_DONE_CONTRACT_OK
 
 ## GIT_SHOW_STAT_HEAD
-commit 433ffeb6f77b119b138fd842d095806370e61795
+commit e185e83865a40e0712e8de514a3f56cee666eecb
 Author: Ila <ilakuznecov@mac.local>
-Date:   Fri May 8 20:25:11 2026 +0300
+Date:   Fri May 8 20:46:43 2026 +0300
 
-    FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
+    fix(topic2): PATCH_SUPPLIER_HONESTY_V1 — fix fake Perplexity в Поставщик
+    
+    PATCH_STROYKA_XLSX_15_COLS_V1 писал "Perplexity" в col12 из-за
+    неверного HDR_ROW=7 и src_label="Perplexity". Патч переписан:
+    - ранний выход по ws.cell(2,12)=="Ареал Нева.xlsx"
+    - заполняет только col12 (Поставщик) для template_only строк
+    - col11 (Источник цены) уже выставляется основным кодом
+    
+    Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 
- docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md    |   6 +-
- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md |   2 +-
- .../SHARED_CONTEXT/DIRECTIONS/auto_parts_search.md |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/cad_dwg.md          |   4 +-
- .../DIRECTIONS/construction_search.md              |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/crm_leads.md        |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/defect_acts.md      |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/devops_server.md    |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/documents.md        |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/email_ingress.md    |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/estimates.md        |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/general_chat.md     |   4 +-
- .../DIRECTIONS/google_drive_storage.md             |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/internet_search.md  |   4 +-
- .../DIRECTIONS/isolated_project_ivan.md            |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/job_search.md       |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/memory_archive.md   |   4 +-
- .../SHARED_CONTEXT/DIRECTIONS/monolith_concrete.md |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/ocr_photo.md        |   4 +-
- .../DIRECTIONS/orchestration_core.md               |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/photo_cleanup.md    |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/product_search.md   |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/roofing.md          |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/social_content.md   |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/spreadsheets.md     |   4 +-
- .../SHARED_CONTEXT/DIRECTIONS/structural_design.md |   4 +-
- .../DIRECTIONS/technical_supervision.md            |   4 +-
- .../DIRECTIONS/telegram_automation.md              |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/video_production.md |   4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/vpn_network.md      |   4 +-
- docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md      |   4 +-
- docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |   6 +-
- docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |   6 +-
- docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  28 +--
- .../ORCHESTRA_FULL_CONTEXT_PART_001.md             | 217 +++++++----------
- .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_004.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_007.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_010.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_011.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_012.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_013.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_014.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_015.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_016.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_017.md             |   4 +-
- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 204 +++++++++++-----
- .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |   8 +-
- docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   | 269 +++++++++------------
- docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |   6 +-
- docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |   4 +-
- .../TOPICS/topic_210_PROEKTIROVANIE.md             |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |  10 +-
- .../TOPICS/topic_3008_KODY_MOZGOV.md               |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_5_TEKHNADZOR.md   |   4 +-
- .../SHARED_CONTEXT/TOPICS/topic_6104_JOB_SEARCH.md |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |   4 +-
- .../TOPICS/topic_961_AVTOZAPCHASTI.md              |   4 +-
- docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   6 +-
- 68 files changed, 494 insertions(+), 498 deletions(-)
+ core/stroyka_estimate_canon.py | 25 ++++++-------------------
+ 1 file changed, 6 insertions(+), 19 deletions(-)
 
 ## GIT_CHANGED_FILES_10
 .gitignore
@@ -211,7 +152,7 @@ tools/verify_local_bot_api.sh
 - c94ec497-4351-43a7-a106-b3dab1633838|2|drive_file|AWAITING_CONFIRMATION|{"file_id": "1EBmfcyns9UOm4S9tg0CYqCpIIidfLgwl", "file_name": "Открыть Микеа 3 РП 3 (1) (3) (3).pdf", "mime_type": "appl|✅ Смета готова
 
 Объект: дом   Материал: газобетон   Площадь: 99.91 м²   Этажность: 1 этаж   Регион: СПб и ЛО
-Шаблон: Ареал Нева.xlsx   Лист: смета   Цены: средн|2026-05-08 17:23:34
+Шаблон: Ареал Нева.xlsx   Лист: смета   Цены: средн|2026-05-08 17:45:48
 - 22712334-c39f-436a-90ec-cae5ce56f251|5|text|DONE|сделай акт|Акт осмотра объекта сформирован
 Объект: Ропшинское шоссе 198
 Фото учтено: 20
@@ -264,26 +205,26 @@ https://drive.google.com/drive/folders/1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG
 - eba6dc80-d993-43e8-945b-cf1b48b9d103|210|{"file_id": "1evYG_-JrYks_cJ3D04LTYgdh1CZnWqTT", "file_name": "Схема глубинного дренажа.pdf", "mime_type": "application/|NO_VALID_ARTIFACT|2026-05-06 17:31:31
 
 ## LATEST_TASK_HISTORY_20
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_CODEX_FULL_CANON_VERIFIED:all_phases_1_to_20_pass:bot=10548:total=8173431.09:NEW_RUN|2026-05-08 17:27:59
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_OLD_INVALID_MESSAGE_SUPERSEDED:10547:SUPERSEDED_BY_10548|2026-05-08 17:27:59
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_OLD_INVALID_MESSAGE_SUPERSEDED:10542:NEW_RUN|2026-05-08 17:27:59
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_OLD_INVALID_MESSAGE_SUPERSEDED:10541:NEW_RUN|2026-05-08 17:27:59
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_OLD_INVALID_MESSAGE_SUPERSEDED:10540:NEW_RUN|2026-05-08 17:27:59
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TELEGRAM_READBACK_OK:bot_msg=10548:result_from_db:clean:no_forbidden:totals_match:NEW_RUN|2026-05-08 17:27:59
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_DRIVE_VERIFIED:xlsx_id=1xQqRCR3sxJ6ywoq2qxcDp75BoBM5PYQp:size=141928:pdf_id=1FryqGPXfRhYRhXBk3Ie6LHObTKNdVBBH:size=47532:created=2026-05-08T17:23:30Z|2026-05-08 17:27:59
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_PDF_READBACK_OK:pages=1:cyrillic=215:totals_ok:no_forbidden_paths:NEW_RUN|2026-05-08 17:27:59
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_XLSX_READBACK_OK:sheets=AREAL_CALC+смета:rows=136:cols=15:zero_rows=0:NEW_RUN|2026-05-08 17:27:59
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_XLSX_TOTAL_MANUAL_RECALC_OK:works=3110942.75:mats=4337539.55:logistics=63853.00:overhead=661095.79:no_vat=8173431.09:vat=1634686.22:with_vat=9808117.31:NEW_RUN|2026-05-08 17:27:59
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_FULL_TURNKEY_SCOPE_ENFORCED:rows=136:sections=14:перекрытия=present:санузлы=present:полы=present:ОВ+ВК+ЭОМ=present:NEW_RUN|2026-05-08 17:27:59
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TEMPLATE_PRICE_EXTRACTION_FIXED:source_sheet=смета_Газобетонный_дом:NEW_RUN|2026-05-08 17:27:59
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TEMPLATE_PRICE_COLUMNS_PROVEN:{"source":"Ареал Нева.xlsx/смета","gasbeton_title":"Газобетонный дом","name_col":2,"unit_col":3,"qty_col":4,"work_col":8,"mat_col":10,"total_co|2026-05-08 17:27:59
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_PROJECT_FACTS_READBACK_OK:area=99.91,floors=1,material=газобетон,foundation=монолит,distance=30km,price=средние:NEW_RUN|2026-05-08 17:27:59
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TELEGRAM_MATCHES_ARTIFACTS|2026-05-08 17:23:34
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_BOT_MESSAGE_ID_SAVED:10548|2026-05-08 17:23:34
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_PUBLIC_OUTPUT_CLEAN_OK|2026-05-08 17:23:34
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_FULL_ESTIMATE_MATRIX_ENFORCED|2026-05-08 17:23:34
-- c94ec497-4351-43a7-a106-b3dab1633838|FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:estimate_generated|2026-05-08 17:23:34
-- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TELEGRAM_DELIVERED:10548|2026-05-08 17:23:34
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TELEGRAM_MATCHES_ARTIFACTS|2026-05-08 17:45:48
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_BOT_MESSAGE_ID_SAVED:10550|2026-05-08 17:45:48
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_PUBLIC_OUTPUT_CLEAN_OK|2026-05-08 17:45:48
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_FULL_ESTIMATE_MATRIX_ENFORCED|2026-05-08 17:45:48
+- c94ec497-4351-43a7-a106-b3dab1633838|FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:estimate_generated|2026-05-08 17:45:48
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TELEGRAM_DELIVERED:10550|2026-05-08 17:45:48
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_DRIVE_UPLOAD_PDF_OK|2026-05-08 17:45:48
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_DRIVE_UPLOAD_XLSX_OK|2026-05-08 17:45:48
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_PDF_CYRILLIC_OK|2026-05-08 17:45:48
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_PDF_CREATED:1|2026-05-08 17:45:48
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_XLSX_CANON_COLUMNS_OK:15|2026-05-08 17:45:48
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_XLSX_FORMULAS_OK|2026-05-08 17:45:48
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_XLSX_ROWS_WRITTEN:136|2026-05-08 17:45:48
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_XLSX_TEMPLATE_COPY_OK|2026-05-08 17:45:48
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TEMPLATE_SHEET_SELECTED:смета|2026-05-08 17:45:48
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TEMPLATE_CACHE_USED|2026-05-08 17:45:48
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TEMPLATE_FILE_ID:1DQw2qgMHtq2SqgJJP-93eIArpj1hnNNm|2026-05-08 17:45:48
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_TEMPLATE_SELECTED:Ареал Нева.xlsx|2026-05-08 17:45:48
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_AC_GATE_OK|2026-05-08 17:45:48
+- c94ec497-4351-43a7-a106-b3dab1633838|TOPIC2_DRIVE_LINKS_SAVED:xlsx=https://drive.google.com/file/d/1DoVqBpRVAJU07y4ycRapVoN5twXal-Pl/view:pdf=https://drive.google.com/file/d/1w7P48KpyKB6gOlO9ytYQRtWRV_lWxSOd/view|2026-05-08 17:45:48
 
 ## MEMORY_DB_COUNT
 - 5192
@@ -292,7 +233,7 @@ https://drive.google.com/drive/folders/1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG
 - topic_2_estimate_last|{
   "task_id": "c94ec497-4351-43a7-a106-b3dab1633838",
   "status": "AWAITING_CONFIRMATION",
-  "result": "✅ Смета готова\n\nОбъект: дом   Материал: газобетон   Площадь: 99.91 м²   Э|2026-05-08T17:23:34.165481
+  "result": "✅ Смета готова\n\nОбъект: дом   Материал: газобетон   Площадь: 99.91 м²   Э|2026-05-08T17:45:48.806368
 - topic_500_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 500, "count": 27, "updated_at": "2026-05-08T17:21:58.286646+00:00", "files": [{"task_id": "7b609434-8167-43f5-a52a-beb85e0b4ed5", "file_id|2026-05-08T17:21:58.287484+00:00
 - topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 50, "updated_at": "2026-05-08T17:21:58.266205+00:00", "files": [{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "file_id|2026-05-08T17:21:58.267001+00:00
 - topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 50, "updated_at": "2026-05-08T17:21:58.217042+00:00", "files": [{"task_id": "4b402275-e99b-4d9f-b331-08f2ba2a93be", "file_id":|2026-05-08T17:21:58.217446+00:00
@@ -314,16 +255,6 @@ https://drive.google.com/drive/folders/1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG
 - topic_210_file_5ead32f3-23d5-4872-9279-a42460ba5dd1|{"task_id": "5ead32f3-23d5-4872-9279-a42460ba5dd1", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "1qy-mPcmRZxJIzEnY2Gp8B8J2|2026-05-08T17:21:58.122742+00:00
 
 ## JOURNAL_AREAL_TASK_WORKER_60
-areal-task-worker.service: Consumed 43.623s CPU time.
-Started areal-task-worker.service - Areal Task Worker.
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 35.662s CPU time, 201.1M memory peak, 0B memory swap peak.
-Started areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
-areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
 areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
 areal-task-worker.service: Failed with result 'exit-code'.
 areal-task-worker.service: Scheduled restart job, restart counter is at 1.
@@ -373,6 +304,16 @@ areal-task-worker.service: Failed to kill control group /system.slice/areal-task
 areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
 areal-task-worker.service: Failed with result 'exit-code'.
 areal-task-worker.service: Scheduled restart job, restart counter is at 1.
+Started areal-task-worker.service - Areal Task Worker.
+Stopping areal-task-worker.service - Areal Task Worker...
+areal-task-worker.service: Deactivated successfully.
+Stopped areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Consumed 19.029s CPU time.
+Started areal-task-worker.service - Areal Task Worker.
+Stopping areal-task-worker.service - Areal Task Worker...
+areal-task-worker.service: Deactivated successfully.
+Stopped areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Consumed 5.185s CPU time.
 Started areal-task-worker.service - Areal Task Worker.
 
 ## JOURNAL_TELEGRAM_INGRESS_30

@@ -1,7 +1,7 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-05-08T17:30:02.653193+00:00
-GIT_SHA: 433ffeb6f77b119b138fd842d095806370e61795
+GENERATED_AT: 2026-05-08T17:50:02.587998+00:00
+GIT_SHA: e185e83865a40e0712e8de514a3f56cee666eecb
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -26,6 +26,7 @@ FAILED_LAST_24H: 0
 - 8212f685 | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
+- e185e83|fix(topic2): PATCH_SUPPLIER_HONESTY_V1 — fix fake Perplexity в Поставщик
 - 6cf9154|fix(topic2): PATCH_TOPIC2_ADD_PEREKRYTIYA_SECTION_V1 — add missing §5 Перекрытия section
 - 2475eb5|fix(topic2): PATCH_TOPIC2_REALSHEET_PRICES_V3 — real Газобетонный дом prices
 - 7c646dd|session(08.05): bigfile activated, topic5 V3 dispatcher, topic2 P6C intercept, c94ec497 FAILED/NOT_PROVEN
@@ -55,7 +56,6 @@ FAILED_LAST_24H: 0
 - a054796|feat(topic2): canonical template selection, 15-col XLSX, status guard
 - 79ba839|fix(topic2): redirect simplified v2 path to full P2/P3 pipeline
 - 66a57e1|fix(topic2): route ALL estimates through full P2/P3 pipeline
-- d9edd5d|fix(topic2): auto price enrichment + DONE contract markers
 
 ## MARKERS_LAST_24H
 - created:NEW

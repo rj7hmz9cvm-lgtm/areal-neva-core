@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_011
-generated_at_utc: 2026-05-08T17:30:02.556948+00:00
-git_sha_before_commit: 433ffeb6f77b119b138fd842d095806370e61795
+generated_at_utc: 2026-05-08T17:50:02.498016+00:00
+git_sha_before_commit: e185e83865a40e0712e8de514a3f56cee666eecb
 part: 11/17
 
 
@@ -1782,7 +1782,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: e2ce851f327c0178e4c0d4c494d311a84f9bb8158d56c33d743d6bed1e6306b2
+SHA256_FULL_FILE: e76f31db7923805c122320c44d8279779f75490cb54f818b51c8829761776701
 ====================================================================================================
 # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
 from __future__ import annotations
@@ -4680,29 +4680,16 @@ def _create_xlsx_from_template(task_id, parsed, template, template_path, sheet_n
             return path, items, py_total
         ws = wb["AREAL_CALC"]
 
-        HDR_ROW = 7
-        if ws.cell(HDR_ROW, 12).value is not None:
+        # Exit early only if Поставщик (col12) is already correctly filled
+        if ws.cell(2, 12).value == "Ареал Нева.xlsx":
             wb.close()
             return path, items, py_total  # already extended
 
-        _bold = Font(bold=True)
-        for idx, h in enumerate(["Источник цены", "Поставщик", "URL", "Дата проверки"], 12):
-            c = ws.cell(HDR_ROW, idx, h)
-            c.font = _bold
-            c.alignment = _SC15Align(wrap_text=True)
-
-        for col_letter, width in [("L", 20), ("M", 22), ("N", 35), ("O", 16)]:
-            ws.column_dimensions[col_letter].width = width
-
-        date_str = _sc15_dt.datetime.now().strftime("%d.%m.%Y")
-        src_label = "Perplexity" if price_text and len(str(price_text)) > 20 else "—"
-
-        row_idx = HDR_ROW + 1
+        # Fill Поставщик for all template_only rows (col11 already set by main generation)
+        row_idx = 2
         while ws.cell(row_idx, 3).value is not None:
-            ws.cell(row_idx, 12, src_label)
-            ws.cell(row_idx, 13, "—")
-            ws.cell(row_idx, 14, "—")
-            ws.cell(row_idx, 15, date_str)
+            if ws.cell(row_idx, 11).value == "template_only":
+                ws.cell(row_idx, 12, "Ареал Нева.xlsx")
             row_idx += 1
 
         wb.save(path)
