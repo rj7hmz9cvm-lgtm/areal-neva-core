@@ -979,6 +979,36 @@ async def _search_prices_online(parsed: Dict[str, Any], template: Dict[str, Any]
     model = os.getenv("OPENROUTER_MODEL_ONLINE", "perplexity/sonar").strip() or "perplexity/sonar"
     if not api_key:
         raise RuntimeError("OPENROUTER_API_KEY_MISSING")
+    # PATCH_OPENROUTER_ONLINE_ONLY_FOR_TOPIC2_PRICE_SEARCH_V1 begin
+    import logging as _sec_log
+    _sec_logger = _sec_log.getLogger("stroyka_estimate_canon")
+    if "sonar" not in model.lower():
+        _sec_logger.error(f"TOPIC2_ONLINE_MODEL_GUARD_BLOCKED_NON_SONAR: model={model!r} blocked")
+        if conn is not None and task_id is not None:
+            try:
+                _history_safe(conn, task_id, f"TOPIC2_ONLINE_MODEL_GUARD_BLOCKED_NON_SONAR:{model}")
+            except Exception:
+                pass
+        raise RuntimeError(f"TOPIC2_ONLINE_MODEL_GUARD_BLOCKED_NON_SONAR:{model}")
+    _sec_logger.info(f"TOPIC2_ONLINE_MODEL_SONAR_CONFIRMED: model={model!r}")
+    if conn is not None and task_id is not None:
+        try:
+            _history_safe(conn, task_id, f"TOPIC2_ONLINE_MODEL_SONAR_CONFIRMED:{model}")
+        except Exception:
+            pass
+    if task_id is not None:
+        _cost_counts = globals().setdefault("_PRICE_SEARCH_COST_COUNTS_V1", {})
+        _cur_count = _cost_counts.get(task_id, 0)
+        if _cur_count >= 30:
+            _sec_logger.error(f"TOPIC2_PRICE_SEARCH_COST_GUARD_BLOCKED: task_id={task_id} count={_cur_count}")
+            if conn is not None:
+                try:
+                    _history_safe(conn, task_id, f"TOPIC2_PRICE_SEARCH_COST_GUARD_BLOCKED:{_cur_count}")
+                except Exception:
+                    pass
+            raise RuntimeError(f"TOPIC2_PRICE_SEARCH_COST_GUARD_BLOCKED:max30_reached:{_cur_count}")
+        _cost_counts[task_id] = _cur_count + 1
+    # PATCH_OPENROUTER_ONLINE_ONLY_FOR_TOPIC2_PRICE_SEARCH_V1 end
 
     query = f"""
 Найди актуальные цены для предварительной строительной сметы.

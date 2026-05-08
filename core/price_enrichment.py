@@ -149,6 +149,16 @@ async def _openrouter_price_search(item_name: str, unit: str = "", region: str =
         return []
 
     model = (os.getenv("OPENROUTER_MODEL_ONLINE") or "perplexity/sonar").strip()
+    # PATCH_OPENROUTER_ONLINE_ONLY_FOR_TOPIC2_PRICE_SEARCH_V1 begin
+    import logging as _pe_log
+    _pe_logger = _pe_log.getLogger("price_enrichment")
+    if not os.getenv("OPENROUTER_MODEL_ONLINE", "").strip():
+        _pe_logger.warning("ONLINE_MODEL_MISSING_BLOCKED_NO_DEFAULT_FALLBACK: OPENROUTER_MODEL_ONLINE not set, defaulted to perplexity/sonar")
+    if "sonar" not in model.lower():
+        _pe_logger.error(f"ONLINE_MODEL_GUARD_BLOCKED_NON_SONAR: model={model!r} is not sonar, blocking price search")
+        return []
+    _pe_logger.info(f"ONLINE_MODEL_SONAR_CONFIRMED: model={model!r}")
+    # PATCH_OPENROUTER_ONLINE_ONLY_FOR_TOPIC2_PRICE_SEARCH_V1 end
     base_url = (os.getenv("OPENROUTER_BASE_URL") or "https://openrouter.ai/api/v1").strip().rstrip("/")
 
     source_queries = [
