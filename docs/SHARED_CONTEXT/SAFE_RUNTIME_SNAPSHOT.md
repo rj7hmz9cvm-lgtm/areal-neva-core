@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-08T06:05:01.561967+00:00
-git_sha_before_commit: b236f02ce3ca63701b23e2185620504fab02ba28
+generated_at_utc: 2026-05-08T06:10:01.618850+00:00
+git_sha_before_commit: 96bea6cb5d84cc490e5082cbba51505b0bd20710
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,8 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: inactive
 
 ## GIT_LOG_30
+96bea6c docs: handoff 08.05 — file_intake_router not called from _handle_drive_file (P0 arch)
+74b156c FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 b236f02 fix(topic2): session 08.05 — P6C fulltext prep, P3CHK append fix, P2 distance skip, WCPE unblock
 e3a016c PATCH_OPENROUTER_ONLINE_ONLY_FOR_TOPIC2_PRICE_SEARCH_V1: hard-enforce Sonar for all price/search calls
 4cfd9b6 fix(topic2): close P6E67 loop storm + natural reply message
@@ -38,41 +40,26 @@ cf97e9f feat(aggregator): SINGLE_MODEL_FULL_CONTEXT — full inline context for 
 680c120 fix(aggregator): generate single model source indexes (SMSV1+FIX2)
 835c7a9 docs(handoff): V5 final gaps close — HEAD 168ce5e
 168ce5e fix(topic2): close final V5 code gaps for prices guards totals
-983ced8 fix(topic2): close 3 remaining V4 gaps (repeat/negative/pdf_missing_question)
-2353fc3 fix(topic2): close remaining project/pdf/photo/price/artifact gaps V4
 
 ## GIT_SHOW_STAT_HEAD
-commit b236f02ce3ca63701b23e2185620504fab02ba28
+commit 96bea6cb5d84cc490e5082cbba51505b0bd20710
 Author: Ila <ilakuznecov@mac.local>
-Date:   Fri May 8 09:03:51 2026 +0300
+Date:   Fri May 8 09:07:53 2026 +0300
 
-    fix(topic2): session 08.05 — P6C fulltext prep, P3CHK append fix, P2 distance skip, WCPE unblock
+    docs: handoff 08.05 — file_intake_router not called from _handle_drive_file (P0 arch)
     
-    PATCH_WCPE_CLARIFIED_UNBLOCK_V1 (task_worker.py):
-      - WCG_SKIP блокировал только WAITING_CLARIFICATION; IN_PROGRESS+WCG_SKIP теперь проходит
+    Зафиксирована главная архитектурная проблема (известна из канона §01_SYSTEM_LOGIC_FULL.md):
+    - core/file_intake_router.py — универсальный для всех топиков (estimate/technadzor/dwg/ocr)
+    - НЕ вызывается из _handle_drive_file → PDF содержимое никогда не читается
+    - Решение: обернуть _handle_drive_file → скачать → route_file(local_path, ...)
+    - Единый слой для topic_2/topic_5/topic_210 без регрессии
     
-    PATCH_P6C_FULLTEXT_ESTIMATE_PREP_V1 (task_worker.py):
-      - _p6c_meta_20260504 падал на JSON+REVISION_CONTEXT → partial JSON parse
-      - REVISION_CONTEXT [VOICE] тексты добавляются в estimate_raw
-      - dims из filename ("8х12.pdf" → "Размеры: 8 на 12 м")
-    
-    PATCH_P3CHK_PRICE_APPEND_FIX_V2 (sample_template_engine.py):
-      - Старый P3CHK заменял raw_input="средние" → P3E не видел dims/material
-      - Исправлено: raw_input = raw_s + "\nЦены: " + clarified (append не replace)
-    
-    PATCH_P2_MISSING_SKIP_DISTANCE_V1 (sample_template_engine.py):
-      - _p2_missing убрана проверка distance_km → не спрашивает город для drive_file задач
-    
-    OPEN: PDF не читается через may_handle_stroyka_estimate — P6C не вызывает PDF OCR
-    OPEN: "Этажей: 1" не матчится regex — нужен P6CF_V2 с "1 этаж"
-    OPEN: Voice в reply path не транскрибируется (telegram_daemon FORBIDDEN)
+    Также зафиксированы P1 (floor format fix), P2 (voice reply), P3 (verification).
     
     Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 
- core/sample_template_engine.py  | 124 ++++++++++++++++++++++
- docs/HANDOFFS/LATEST_HANDOFF.md | 225 ++++++++++++++++++++++------------------
- task_worker.py                  | 103 ++++++++++++++++++
- 3 files changed, 351 insertions(+), 101 deletions(-)
+ docs/HANDOFFS/LATEST_HANDOFF.md | 163 ++++++++++++++++------------------------
+ 1 file changed, 65 insertions(+), 98 deletions(-)
 
 ## GIT_CHANGED_FILES_10
 core/price_enrichment.py
@@ -162,7 +149,7 @@ task_worker.py
 ## LATEST_TASKS_15
 - 0aaa723d-e506-4cfe-9cfc-7dc20b7ea094|2|text|CANCELLED|[VOICE] Я тебе в предыдущем сообщении уже все выбирал, все давал. Что тебе еще непонятно? Два. Средние цены, средние. Дв|P6E67_MERGED_TO_PARENT_TASK d72028da-b4ff-424d-a626-790c9da8be77|2026-05-08 05:07:19
 - 89f1a927-af21-4d77-b287-70e8ecef659c|2|text|CANCELLED|[VOICE] Вот задание, соответственно, если что-то непонятно, мне нужна полностью смета с материалами посчитанная. Соответ|P6E67_MERGED_TO_PARENT_TASK d72028da-b4ff-424d-a626-790c9da8be77|2026-05-08 04:32:16
-- d72028da-b4ff-424d-a626-790c9da8be77|2|drive_file|WAITING_CLARIFICATION|{"file_id": "1-isQhm067W2LDv2Bgm5ewbfyVm2B8QhV", "file_name": "8х12.pdf", "mime_type": "application/pdf", "caption": "На|Уточни этажность|2026-05-08 05:58:21
+- d72028da-b4ff-424d-a626-790c9da8be77|2|drive_file|WAITING_CLARIFICATION|{"file_id": "1-isQhm067W2LDv2Bgm5ewbfyVm2B8QhV", "file_name": "8х12.pdf", "mime_type": "application/pdf", "caption": "На|Уточни этажность|2026-05-08 06:08:22
 - a7b2879e-14e6-4002-8a06-f73019d40a99|2|drive_file|FAILED|{"file_id": "1XRwOwZr2Kpxy-wrAUPrBR2dLqHseg7jS", "file_name": "photo_-1003725299009_10394.jpg", "mime_type": "image/jpeg|Не вижу размеры объекта на фото/в ТЗ. Пришли размер в формате 7.8х9.0 или фото крупнее|2026-05-07 13:34:34
 - f3b2ae30-35cf-4e08-a25d-d3131d351676|5|text|DONE|Что такое цокольная балка где используется|Пояснение принято к фото: photo_-1003725299009_10122.jpg. В пакете технадзора: 23 шт. Акт не формирую без отдельной команды|2026-05-07 12:25:11
 - 64eb9797-1a09-4f21-98f2-3671cf6e835c|2|text|DONE|[VOICE] А что мы вообще в принципе обсуждали в чате, скажи мне пожалуйста, вот за два дня последних|✅ Предварительная смета готова
@@ -230,6 +217,11 @@ P6E67_REVISION_FROM_TASK=ee39|P6E67_MERGED_TO_PARENT_TASK 893436d4-72d2-4bdf-b36
 - eba6dc80-d993-43e8-945b-cf1b48b9d103|210|{"file_id": "1evYG_-JrYks_cJ3D04LTYgdh1CZnWqTT", "file_name": "Схема глубинного дренажа.pdf", "mime_type": "application/|NO_VALID_ARTIFACT|2026-05-06 17:31:31
 
 ## LATEST_TASK_HISTORY_20
+- d72028da-b4ff-424d-a626-790c9da8be77|P3_TOPIC2_CLARIFICATION|2026-05-08 06:08:22
+- d72028da-b4ff-424d-a626-790c9da8be77|TOPIC2_PRICE_CHOICE_CONFIRMED:confirmed|2026-05-08 06:08:22
+- d72028da-b4ff-424d-a626-790c9da8be77|P6C_TOPIC2_IMAGE_OR_FILE_ESTIMATE_ROUTE_TAKEN|2026-05-08 06:08:22
+- d72028da-b4ff-424d-a626-790c9da8be77|P6E67_BLOCK_ARTIFACT_GATE_PDF_LINK_MISSING_BEFORE_SEND|2026-05-08 06:08:22
+- d72028da-b4ff-424d-a626-790c9da8be77|state:FAILED|2026-05-08 06:08:22
 - d72028da-b4ff-424d-a626-790c9da8be77|P3_TOPIC2_CLARIFICATION|2026-05-08 05:58:21
 - d72028da-b4ff-424d-a626-790c9da8be77|TOPIC2_PRICE_CHOICE_CONFIRMED:confirmed|2026-05-08 05:58:21
 - d72028da-b4ff-424d-a626-790c9da8be77|P6C_TOPIC2_IMAGE_OR_FILE_ESTIMATE_ROUTE_TAKEN|2026-05-08 05:58:21
@@ -245,11 +237,6 @@ P6E67_REVISION_FROM_TASK=ee39|P6E67_MERGED_TO_PARENT_TASK 893436d4-72d2-4bdf-b36
 - d72028da-b4ff-424d-a626-790c9da8be77|P3_TOPIC2_CLARIFICATION|2026-05-08 05:45:08
 - d72028da-b4ff-424d-a626-790c9da8be77|TOPIC2_PRICE_CHOICE_CONFIRMED:confirmed|2026-05-08 05:45:08
 - d72028da-b4ff-424d-a626-790c9da8be77|P6C_TOPIC2_IMAGE_OR_FILE_ESTIMATE_ROUTE_TAKEN|2026-05-08 05:45:08
-- d72028da-b4ff-424d-a626-790c9da8be77|clarified:я же все скинул уже|2026-05-08T05:45:08.380248+00:00
-- d72028da-b4ff-424d-a626-790c9da8be77|P3_TOPIC2_CLARIFICATION|2026-05-08 05:44:47
-- d72028da-b4ff-424d-a626-790c9da8be77|TOPIC2_PRICE_CHOICE_CONFIRMED:confirmed|2026-05-08 05:44:47
-- d72028da-b4ff-424d-a626-790c9da8be77|P6C_TOPIC2_IMAGE_OR_FILE_ESTIMATE_ROUTE_TAKEN|2026-05-08 05:44:47
-- d72028da-b4ff-424d-a626-790c9da8be77|clarified:заебал|2026-05-08T05:44:45.989410+00:00
 
 ## MEMORY_DB_COUNT
 - 5185
