@@ -16524,5 +16524,253 @@ except Exception as _p8v2_ie2:
     _P8V2_LOG.warning("P8V2_INIT_DB_ERR %s", _p8v2_ie2)
 # === END_PATCH_TOPIC2_BIGPDF_CANONICAL_FULL_CLOSE_V2 ===
 
+
+# === PATCH_WAITING_CLARIFICATION_DELIVERY_GUARD_V1 ===
+# FACT:
+# WAITING_CLARIFICATION may contain correct result text but bot_message_id is empty
+# WCG_SKIP_LOOP must not treat DB result as delivered without bot_message_id or delivery marker
+import json as _wcg_json_mod
+import sqlite3 as _wcg_sqlite_mod
+from typing import Any as _WcgAny
+
+try:
+    from core.reply_sender import send_reply_ex as _wcg_send_reply_ex
+except Exception as _wcg_send_import_err:
+    _wcg_send_reply_ex = None
+    try:
+        logger.warning("WCG_DELIVERY_IMPORT_ERR %s", _wcg_send_import_err)
+    except Exception:
+        pass
+
+def _wcg_v1_s(value: _WcgAny) -> str:
+    if value is None:
+        return ""
+    try:
+        return str(value)
+    except Exception:
+        return ""
+
+def _wcg_v1_clean(text: str, limit: int = 12000) -> str:
+    text = _wcg_v1_s(text).replace("\r", "\n").strip()
+    while "\n\n\n" in text:
+        text = text.replace("\n\n\n", "\n\n")
+    return text[:limit]
+
+def _wcg_v1_cols(conn, table: str):
+    try:
+        return [r[1] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()]
+    except Exception:
+        return []
+
+def _wcg_v1_has_history(conn, task_id: str, patterns):
+    try:
+        for p in patterns:
+            row = conn.execute(
+                "SELECT 1 FROM task_history WHERE task_id=? AND action LIKE ? LIMIT 1",
+                (task_id, p),
+            ).fetchone()
+            if row:
+                return True
+    except Exception:
+        return False
+    return False
+
+def _wcg_v1_history(conn, task_id: str, action: str):
+    try:
+        conn.execute(
+            "INSERT INTO task_history (task_id, action, created_at) VALUES (?,?,datetime('now'))",
+            (task_id, action[:900]),
+        )
+    except Exception:
+        pass
+
+def _wcg_v1_row_get(row, key: str, default=None):
+    try:
+        if hasattr(row, "keys") and key in row.keys():
+            return row[key]
+    except Exception:
+        pass
+    try:
+        return row[key]
+    except Exception:
+        return default
+
+def _wcg_v1_reply_to(row):
+    raw = _wcg_v1_s(_wcg_v1_row_get(row, "raw_input", ""))
+    try:
+        obj = _wcg_json_mod.loads(raw)
+        if isinstance(obj, dict):
+            for k in ("reply_to_message_id", "message_id", "source_message_id"):
+                v = obj.get(k)
+                if v:
+                    return int(v)
+    except Exception:
+        pass
+    try:
+        v = _wcg_v1_row_get(row, "reply_to_message_id", None)
+        return int(v) if v else None
+    except Exception:
+        return None
+
+def _wcg_v1_should_send(conn, row) -> bool:
+    task_id = _wcg_v1_s(_wcg_v1_row_get(row, "id", ""))
+    state = _wcg_v1_s(_wcg_v1_row_get(row, "state", "")).upper()
+    result = _wcg_v1_clean(_wcg_v1_row_get(row, "result", ""))
+    bot_message_id = _wcg_v1_s(_wcg_v1_row_get(row, "bot_message_id", "")).strip()
+
+    if not task_id or state != "WAITING_CLARIFICATION":
+        return False
+    if not result:
+        return False
+    if bot_message_id and bot_message_id.lower() not in ("none", "null", "0"):
+        return False
+
+    if _wcg_v1_has_history(conn, task_id, [
+        "WCG_DELIVERY_SENT:%",
+        "WCG_DELIVERY_REPAIR_SENT:%",
+        "CLARIFICATION_SENT:%",
+        "reply_sent:clarification",
+        "reply_sent:waiting_clarification",
+    ]):
+        return False
+
+    if _wcg_v1_has_history(conn, task_id, [
+        "TOPIC2_INPUT_GATE_HANDLED:%",
+        "TOPIC2_INPUT_GATE_DRAINAGE_BLOCK%",
+        "TOPIC2_INPUT_GATE_DOMAIN:%",
+    ]):
+        return True
+
+    err = _wcg_v1_s(_wcg_v1_row_get(row, "error_message", ""))
+    if "WCG_SKIP" in err:
+        return True
+
+    return False
+
+def _wcg_v1_deliver_row(conn, row, repair: bool = False):
+    if _wcg_send_reply_ex is None:
+        return {"ok": False, "reason": "NO_REPLY_SENDER"}
+
+    task_id = _wcg_v1_s(_wcg_v1_row_get(row, "id", ""))
+    chat_id = _wcg_v1_s(_wcg_v1_row_get(row, "chat_id", ""))
+    topic_id = _wcg_v1_row_get(row, "topic_id", 0)
+    result = _wcg_v1_clean(_wcg_v1_row_get(row, "result", ""))
+
+    if not task_id or not chat_id or not result:
+        return {"ok": False, "reason": "MISSING_FIELDS"}
+
+    try:
+        topic_int = int(topic_id or 0)
+    except Exception:
+        topic_int = 0
+
+    reply_to = _wcg_v1_reply_to(row)
+
+    sent = _wcg_send_reply_ex(
+        chat_id=str(chat_id),
+        text=result,
+        reply_to_message_id=reply_to,
+        message_thread_id=topic_int if topic_int else None,
+    )
+
+    bot_msg = sent.get("bot_message_id") if isinstance(sent, dict) else None
+    if not sent or not sent.get("ok") or not bot_msg:
+        _wcg_v1_history(conn, task_id, "WCG_DELIVERY_SEND_FAILED")
+        try:
+            conn.commit()
+        except Exception:
+            pass
+        return {"ok": False, "reason": "SEND_FAILED"}
+
+    cols = _wcg_v1_cols(conn, "tasks")
+    updates = []
+    vals = []
+    if "bot_message_id" in cols:
+        updates.append("bot_message_id=?")
+        vals.append(int(bot_msg))
+    if "error_message" in cols:
+        updates.append("error_message=NULL")
+    if "updated_at" in cols:
+        updates.append("updated_at=datetime('now')")
+    if updates:
+        vals.append(task_id)
+        conn.execute(f"UPDATE tasks SET {', '.join(updates)} WHERE id=?", vals)
+
+    marker = "WCG_DELIVERY_REPAIR_SENT" if repair else "WCG_DELIVERY_SENT"
+    _wcg_v1_history(conn, task_id, f"{marker}:{bot_msg}")
+    _wcg_v1_history(conn, task_id, "reply_sent:waiting_clarification")
+    try:
+        conn.commit()
+    except Exception:
+        pass
+
+    try:
+        logger.info("WCG_DELIVERY_SENT task=%s bot_message_id=%s", task_id, bot_msg)
+    except Exception:
+        pass
+
+    return {"ok": True, "bot_message_id": bot_msg}
+
+def _wcg_v1_deliver_pending(conn, limit: int = 5):
+    try:
+        conn.row_factory = _wcg_sqlite_mod.Row
+    except Exception:
+        pass
+
+    rows = []
+    try:
+        rows = conn.execute(
+            """
+            SELECT *
+            FROM tasks
+            WHERE state='WAITING_CLARIFICATION'
+              AND COALESCE(result,'')<>''
+              AND (bot_message_id IS NULL OR bot_message_id='' OR bot_message_id=0)
+              AND COALESCE(topic_id,0)=2
+            ORDER BY rowid DESC
+            LIMIT ?
+            """,
+            (int(limit),),
+        ).fetchall()
+    except Exception as e:
+        try:
+            logger.warning("WCG_DELIVERY_SELECT_ERR %s", e)
+        except Exception:
+            pass
+        return 0
+
+    sent_count = 0
+    for row in rows:
+        if _wcg_v1_should_send(conn, row):
+            res = _wcg_v1_deliver_row(conn, row, repair=False)
+            if res.get("ok"):
+                sent_count += 1
+    return sent_count
+
+_WCG_ORIG_PICK_NEXT_TASK = _pick_next_task
+
+def _pick_next_task(*args, **kwargs):
+    conn = None
+    if args:
+        conn = args[0]
+    if conn is None:
+        conn = kwargs.get("conn")
+    if conn is not None:
+        try:
+            _wcg_v1_deliver_pending(conn)
+        except Exception as _wcg_err:
+            try:
+                logger.warning("WCG_DELIVERY_GUARD_ERR %s", _wcg_err)
+            except Exception:
+                pass
+    return _WCG_ORIG_PICK_NEXT_TASK(*args, **kwargs)
+
+try:
+    logger.info("PATCH_WAITING_CLARIFICATION_DELIVERY_GUARD_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_WAITING_CLARIFICATION_DELIVERY_GUARD_V1 ===
+
+
 if __name__ == "__main__":
     asyncio.run(main())

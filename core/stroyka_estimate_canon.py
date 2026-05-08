@@ -4261,6 +4261,39 @@ async def maybe_handle_stroyka_estimate(conn, task, logger=None):  # noqa: F811
                     _t2ig_decision.get("domain"),
                     _t2ig_decision.get("state"),
                 )
+                _t2ig_msg = _t2ig_decision.get("result") or ""
+                if _t2ig_msg:
+                    try:
+                        # sqlite3.Row has .keys() but not .get() — use dict() to normalize
+                        _t2ig_td = dict(task) if hasattr(task, "keys") else (task if isinstance(task, dict) else {})
+                        _t2ig_chat = str(_t2ig_td.get("chat_id") or "")
+                        _t2ig_reply = _t2ig_td.get("reply_to_message_id")
+                        _t2ig_topic = int(_t2ig_td.get("topic_id") or 0)
+                        _t2ig_task_id = str(_t2ig_td.get("id") or "")
+                        if not _t2ig_chat:
+                            raise ValueError(f"empty chat_id in task {_t2ig_task_id}")
+                        _t2ig_send_res = await _send_text(_t2ig_chat, _t2ig_msg, _t2ig_reply, _t2ig_topic)
+                        _t2ig_bot_msg_id = _t2ig_send_res.get("bot_message_id") if isinstance(_t2ig_send_res, dict) else None
+                        if _t2ig_bot_msg_id and _t2ig_task_id:
+                            conn.execute(
+                                "UPDATE tasks SET bot_message_id=? WHERE id=?",
+                                (int(_t2ig_bot_msg_id), _t2ig_task_id),
+                            )
+                            try:
+                                conn.execute(
+                                    "INSERT INTO task_history (task_id,action,created_at) VALUES (?,?,datetime('now'))",
+                                    (_t2ig_task_id, f"TOPIC2_INPUT_GATE_SENT:{_t2ig_bot_msg_id}"),
+                                )
+                                conn.execute(
+                                    "INSERT INTO task_history (task_id,action,created_at) VALUES (?,?,datetime('now'))",
+                                    (_t2ig_task_id, "reply_sent:waiting_clarification"),
+                                )
+                            except Exception:
+                                pass
+                            conn.commit()
+                        _T2IG_LOG.info("TOPIC2_INPUT_GATE_SENT:chat=%s bot_msg=%s", _t2ig_chat, _t2ig_bot_msg_id)
+                    except Exception as _t2ig_send_err:
+                        _T2IG_LOG.warning("TOPIC2_INPUT_GATE_SEND_ERR:%s", _t2ig_send_err)
                 return True
         except Exception as _t2ig_err:
             _T2IG_LOG.warning("TOPIC2_INPUT_GATE_ERR:%s", _t2ig_err)
