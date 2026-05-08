@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_011
-generated_at_utc: 2026-05-08T17:50:02.498016+00:00
-git_sha_before_commit: e185e83865a40e0712e8de514a3f56cee666eecb
+generated_at_utc: 2026-05-08T18:40:01.846929+00:00
+git_sha_before_commit: 075edf970d92730892f5a0e9d597ec033d4f9760
 part: 11/17
 
 
@@ -1782,7 +1782,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: e76f31db7923805c122320c44d8279779f75490cb54f818b51c8829761776701
+SHA256_FULL_FILE: a7073752d6dc797440fa281132f49bfac2c96afdcc99303976d8b0beab3ef5bd
 ====================================================================================================
 # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
 from __future__ import annotations
@@ -5960,6 +5960,66 @@ def _build_full_turnkey_items_v2(parsed, price_text, choice):  # noqa: F811
 
 _P8V3_LOG.info("PATCH_TOPIC2_ADD_PEREKRYTIYA_SECTION_V1 installed")
 # === END_PATCH_TOPIC2_ADD_PEREKRYTIYA_SECTION_V1 ===
+
+# === PATCH_TOPIC2_STALE_PENDING_TASK_GUARD_V1 ===
+# ROOT CAUSE: §5 in maybe_handle_stroyka_estimate reuses pending from a DIFFERENT task.
+#   _memory_latest("topic_2_estimate_pending_") uses LIKE → finds any task's pending.
+#   FIX_STROYKA_PRICE_CONFIRM_EXTEND_V1 patched _pending_is_fresh to 86400s → always fresh.
+#   Patched _is_confirm matches "средн" as substring → "цены выше среднего" fires §5.
+#   Result: drainage file task gets house estimate from old c94ec497 context.
+# FIX: wrap maybe_handle_stroyka_estimate — if pending.task_id != current task_id,
+#   check if pending's task is done → mark pending "GENERATED" (permanent block).
+import logging as _stpg_log_mod
+_STPG_LOG = _stpg_log_mod.getLogger("areal.stale_pending_guard")
+
+_STPG_ORIG = maybe_handle_stroyka_estimate
+
+async def maybe_handle_stroyka_estimate(conn, task, logger=None):  # noqa: F811
+    try:
+        _stpg_tid = _s(_row_get(task, "id"))
+        _stpg_chat = _s(_row_get(task, "chat_id"))
+        if _stpg_tid and _stpg_chat:
+            _stpg_pend = _memory_latest(_stpg_chat, "topic_2_estimate_pending_")
+            _stpg_pend_task = (_stpg_pend or {}).get("task_id", "")
+            if (
+                _stpg_pend
+                and _stpg_pend.get("status") == "WAITING_PRICE_CONFIRMATION"
+                and _stpg_pend_task
+                and _stpg_pend_task != _stpg_tid
+            ):
+                # Check if the pending's own task is already in a terminal state
+                _stpg_done = False
+                try:
+                    _stpg_row = conn.execute(
+                        "SELECT state FROM tasks WHERE id=? LIMIT 1",
+                        (_stpg_pend_task,)
+                    ).fetchone()
+                    if _stpg_row and str(_stpg_row[0] or "").upper() in (
+                        "DONE", "AWAITING_CONFIRMATION", "FAILED", "CANCELLED", "ARCHIVED"
+                    ):
+                        _stpg_done = True
+                except Exception:
+                    pass
+                _stpg_key = (
+                    _stpg_pend.get("_memory_key")
+                    or f"topic_2_estimate_pending_{_stpg_pend_task}"
+                )
+                _stpg_new_status = "GENERATED" if _stpg_done else "STALE_BLOCKED"
+                _stpg_blocked = dict(_stpg_pend)
+                _stpg_blocked["status"] = _stpg_new_status
+                _memory_save(_stpg_chat, _stpg_key, _stpg_blocked)
+                _history_safe(conn, _stpg_tid,
+                              f"TOPIC2_STALE_PENDING_BLOCKED:pending_task={_stpg_pend_task[:16]}:done={_stpg_done}")
+                _STPG_LOG.info(
+                    "STPG: pending task=%s (done=%s) → %s; current task=%s",
+                    _stpg_pend_task[:8], _stpg_done, _stpg_new_status, _stpg_tid[:8],
+                )
+    except Exception as _stpg_e:
+        _STPG_LOG.warning("STPG_PRE_ERR: %s", _stpg_e)
+    return await _STPG_ORIG(conn, task, logger)
+
+_STPG_LOG.info("PATCH_TOPIC2_STALE_PENDING_TASK_GUARD_V1: installed")
+# === END_PATCH_TOPIC2_STALE_PENDING_TASK_GUARD_V1 ===
 
 ====================================================================================================
 END_FILE: core/stroyka_estimate_canon.py

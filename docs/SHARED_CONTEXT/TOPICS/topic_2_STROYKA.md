@@ -1,31 +1,33 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-05-08T17:50:02.587998+00:00
-GIT_SHA: e185e83865a40e0712e8de514a3f56cee666eecb
+GENERATED_AT: 2026-05-08T18:40:01.933771+00:00
+GIT_SHA: 075edf970d92730892f5a0e9d597ec033d4f9760
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
 ROLE: Сметы
 DIRECTIONS_BOUND: estimates
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE_TASKS: 1
-FAILED_LAST_24H: 0
+ACTIVE_TASKS: 2
+FAILED_LAST_24H: 1
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 12
-- AWAITING_CONFIRMATION: 1
 - CANCELLED: 101
-- DONE: 131
-- FAILED: 109
+- DONE: 133
+- FAILED: 110
+- IN_PROGRESS: 1
+- WAITING_CLARIFICATION: 1
 
 ## LATEST_FAILED
+- 1d2b38c4 | STALE_TIMEOUT
 - a7b2879e | STALE_TIMEOUT
 - 893436d4 | INVALID_PUBLIC_RESULT
 - f43100b3 | TOPIC2_ONE_BIG_FINAL_PIPELINE_V1_WORKER_ERR:maximum recursion depth exceeded
 - c6b40dfc | STROYKA_QG_FAILED:XLSX_VALIDATE_ERROR:maximum recursion depth exceeded
-- 8212f685 | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
+- 075edf9|fix(topic2): PATCH_TOPIC2_STALE_PENDING_TASK_GUARD_V1 + LOCAL_BOT_API_404_FIX
 - e185e83|fix(topic2): PATCH_SUPPLIER_HONESTY_V1 — fix fake Perplexity в Поставщик
 - 6cf9154|fix(topic2): PATCH_TOPIC2_ADD_PEREKRYTIYA_SECTION_V1 — add missing §5 Перекрытия section
 - 2475eb5|fix(topic2): PATCH_TOPIC2_REALSHEET_PRICES_V3 — real Газобетонный дом prices
@@ -55,7 +57,6 @@ FAILED_LAST_24H: 0
 - 2ef3f86|fix(topic2): price reply thread isolation + chat-aware price search
 - a054796|feat(topic2): canonical template selection, 15-col XLSX, status guard
 - 79ba839|fix(topic2): redirect simplified v2 path to full P2/P3 pipeline
-- 66a57e1|fix(topic2): route ALL estimates through full P2/P3 pipeline
 
 ## MARKERS_LAST_24H
 - created:NEW

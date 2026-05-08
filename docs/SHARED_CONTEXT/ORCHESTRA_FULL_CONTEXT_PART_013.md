@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_013
-generated_at_utc: 2026-05-08T17:50:02.499883+00:00
-git_sha_before_commit: e185e83865a40e0712e8de514a3f56cee666eecb
+generated_at_utc: 2026-05-08T18:40:01.848333+00:00
+git_sha_before_commit: 075edf970d92730892f5a0e9d597ec033d4f9760
 part: 13/17
 
 
@@ -7037,7 +7037,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: areal_telegram_wrapper.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 85d344f0a7a7175010ae80c0f6e094380fe2d137dd890324773c9608a6cc0b3d
+SHA256_FULL_FILE: ff7e0e9e7f77c13d370d8796b6683523ec134d09232e9b3d18fbcd63dbce47d3
 ====================================================================================================
 """
 PATCH_TELEGRAM_BIG_FILE_LOCAL_BOT_API_V1
@@ -7096,11 +7096,19 @@ try:
     _code = open(_daemon_path, "r", encoding="utf-8").read()
 
     _CLOUD_PATTERN = 'url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"'
-    _LOCAL_PATTERN = f'url = f"{LOCAL_API_BASE}/file/bot{{BOT_TOKEN}}/{{file_path}}"'
+    # Local Bot API returns absolute disk path in file_path — copy directly, skip HTTP
+    _LOCAL_PATTERN = (
+        'if file_path.startswith("/") and os.path.exists(file_path):\n'
+        '        import shutil as _shutil_lbp, logging as _log_lbp\n'
+        '        _log_lbp.getLogger("areal.bigfile_patch").info("LOCAL_BOT_API_ABSOLUTE_PATH_USED:%s", os.path.basename(file_path))\n'
+        '        _shutil_lbp.copy2(file_path, local_path)\n'
+        '        return local_path\n'
+        f'    url = f"{LOCAL_API_BASE}/file/bot{{BOT_TOKEN}}/{{file_path}}"'
+    )
 
     if _CLOUD_PATTERN in _code:
         _code = _code.replace(_CLOUD_PATTERN, _LOCAL_PATTERN)
-        _LOG.info("PATCH_DOWNLOAD_URL_LOCAL_SERVER: ok")
+        _LOG.info("PATCH_DOWNLOAD_URL_LOCAL_SERVER: ok (absolute path → disk copy)")
     else:
         _LOG.warning(
             "PATCH_DOWNLOAD_URL_LOCAL_SERVER: pattern not found in telegram_daemon.py — "
