@@ -1,7 +1,7 @@
 # topic_500 VEB_POISK
 
-GENERATED_AT: 2026-05-08T23:35:02.415139+00:00
-GIT_SHA: 876e5d24f1c376e211a9e6002c5002abbf642daf
+GENERATED_AT: 2026-05-08T23:40:02.763984+00:00
+GIT_SHA: 00af427ad88d1bb346aff4b7dd986acf47f8d250
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 500
@@ -38,7 +38,6 @@ FAILED_LAST_24H: 0
 - d4db3fb|P0_RUNTIME_ROUTE_GUARD_TOPIC2_TOPIC500_20260504_V1: block topic500 estimate misroute and force topic2 current estimate route
 - bf6cece|TOPIC500_PRE_SEND_VALIDATOR_AND_STARTUP_RECOVERY_HARD_GUARD_V1: pre-send procurement validator and startup recovery hard guard
 - dc2f770|FINAL_TOPIC2_TOPIC5_TOPIC500_CLOSE_20260504_V1: close topic2 current TZ route and topic500 search output contract
-- a5cdb89|TOPIC2_ESTIMATE_AND_TOPIC500_SEARCH_FULLFIX_V1: strict template estimate pdf and bypass search misroute
 
 ## MARKERS_LAST_24H
 - (none)

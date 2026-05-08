@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-08T23:35:02.078004+00:00
-git_sha_before_commit: 876e5d24f1c376e211a9e6002c5002abbf642daf
+generated_at_utc: 2026-05-08T23:40:02.377670+00:00
+git_sha_before_commit: 00af427ad88d1bb346aff4b7dd986acf47f8d250
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,7 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: inactive
 
 ## GIT_LOG_30
+00af427 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 876e5d2 fix(topic2): PATCH_TOPIC2_WC_PICKER_DRAINAGE_MULTIFILE_V3 — stop WC loop, bind drainage replies to parent, include all 3 user PDFs
 5cabdb8 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 844c3ae FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
@@ -39,31 +40,83 @@ db7d006 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 6923bea FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 afdcfad FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 075edf9 fix(topic2): PATCH_TOPIC2_STALE_PENDING_TASK_GUARD_V1 + LOCAL_BOT_API_404_FIX
-db5dbef FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
 ## GIT_SHOW_STAT_HEAD
-commit 876e5d24f1c376e211a9e6002c5002abbf642daf
+commit 00af427ad88d1bb346aff4b7dd986acf47f8d250
 Author: Ila <ilakuznecov@mac.local>
-Date:   Sat May 9 02:33:55 2026 +0300
+Date:   Sat May 9 02:35:12 2026 +0300
 
-    fix(topic2): PATCH_TOPIC2_WC_PICKER_DRAINAGE_MULTIFILE_V3 — stop WC loop, bind drainage replies to parent, include all 3 user PDFs
-    
-    - task_worker.py: PATCH_TOPIC2_WC_PICKER_DRAINAGE_REPLY_BIND_V3
-      * picker excludes WAITING_CLARIFICATION with non-empty result (canon §22)
-      * P6 vague guard binds reply to active drainage parent instead of blocking
-      * entry point moved to end so all orphan patches load
-    - tools/topic2_drainage_repair_close.py: PATCH_TOPIC2_DRAINAGE_MULTIFILE_SOURCE_V3
-      * find_user_pdfs() picks all drainage_scheme PDFs (not just one)
-      * mtime window 12h → 48h to include older project PDFs
-      * file_0.pdf working project now classified as drainage_scheme via override
-    - tools/__init__.py created for proper package import
-    
-    Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+    FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
- task_worker.py                        | 166 +++++++++++++++++++++++++++++++++-
- tools/__init__.py                     |   0
- tools/topic2_drainage_repair_close.py |  63 +++++++++++++
- 3 files changed, 228 insertions(+), 1 deletion(-)
+ docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md    |   6 +-
+ docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md |   2 +-
+ .../SHARED_CONTEXT/DIRECTIONS/auto_parts_search.md |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/cad_dwg.md          |   4 +-
+ .../DIRECTIONS/construction_search.md              |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/crm_leads.md        |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/defect_acts.md      |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/devops_server.md    |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/documents.md        |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/email_ingress.md    |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/estimates.md        |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/general_chat.md     |   4 +-
+ .../DIRECTIONS/google_drive_storage.md             |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/internet_search.md  |   4 +-
+ .../DIRECTIONS/isolated_project_ivan.md            |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/job_search.md       |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/memory_archive.md   |   4 +-
+ .../SHARED_CONTEXT/DIRECTIONS/monolith_concrete.md |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/ocr_photo.md        |   4 +-
+ .../DIRECTIONS/orchestration_core.md               |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/photo_cleanup.md    |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/product_search.md   |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/roofing.md          |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/social_content.md   |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/spreadsheets.md     |   4 +-
+ .../SHARED_CONTEXT/DIRECTIONS/structural_design.md |   4 +-
+ .../DIRECTIONS/technical_supervision.md            |   4 +-
+ .../DIRECTIONS/telegram_automation.md              |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/video_production.md |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/vpn_network.md      |   4 +-
+ docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md      |   4 +-
+ docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |   6 +-
+ docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |   6 +-
+ docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |   6 +-
+ .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  45 +++--
+ .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_004.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |   6 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |   6 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_007.md             | 172 +++++++++++++++++-
+ .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_010.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_011.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_012.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_013.md             | 183 ++++++++-----------
+ .../ORCHESTRA_FULL_CONTEXT_PART_014.md             | 107 ++++++++++-
+ .../ORCHESTRA_FULL_CONTEXT_PART_015.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_016.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_017.md             |   4 +-
+ docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 201 ++++++++-------------
+ .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |  14 +-
+ docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  75 ++++----
+ docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |   6 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |   4 +-
+ .../TOPICS/topic_210_PROEKTIROVANIE.md             |  17 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |   6 +-
+ .../TOPICS/topic_3008_KODY_MOZGOV.md               |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_5_TEKHNADZOR.md   |   4 +-
+ .../SHARED_CONTEXT/TOPICS/topic_6104_JOB_SEARCH.md |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |   4 +-
+ .../TOPICS/topic_961_AVTOZAPCHASTI.md              |   4 +-
+ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   6 +-
+ 68 files changed, 640 insertions(+), 430 deletions(-)
 
 ## GIT_CHANGED_FILES_10
 docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md
@@ -166,7 +219,7 @@ tools/topic2_drainage_repair_close.py
 
 • Дренажные колодцы: Дк × 3 шт (∅315/∅500, полимерные)
 • Колодец ∅1000 ж/б (сборный)
-• ДНС-1 — дренажная насосная станция (ёмкость |2026-05-08 23:34:19
+• ДНС-1 — дренажная насосная станция (ёмкость |2026-05-08 23:38:02
 - test-multifile-gate-001|2|text|FAILED|[VOICE] У тебя два файла. На одном у тебя схема дренажа, на другом у тебя длинные высоты и все есть. Посмотри оба файла |⏳ Задачу понял
 
 Шаблон: Ареал Нева.xlsx
@@ -226,26 +279,26 @@ tools/topic2_drainage_repair_close.py
 - test-drainage-reply-001|2|Объект находится 50 км от Санкт-Петербурга цены выше среднего нужно посчитать стоимость работы материалов по данному зап|STALE_TIMEOUT|2026-05-08 18:50:16
 
 ## LATEST_TASK_HISTORY_20
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_WC_SENT:10642|2026-05-08 23:34:19
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_FINAL_ARTIFACTS_BLOCKED|2026-05-08 23:34:19
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_RECOGNIZED:dk=3,dns=True,pu=True,kgn=True,slope=0.005|2026-05-08 23:34:19
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN:lines=0:total=0|2026-05-08 23:34:19
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_LENGTH_PROOF_GATE_V1|2026-05-08 23:34:19
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_FINAL_ARTIFACTS_BLOCKED_LENGTH_NOT_PROVEN|2026-05-08 23:34:18
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_PARENT_GUARD_V2:PARENT_REPICK_BLOCKED|2026-05-08 23:34:18
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_WC_SENT:10643|2026-05-08 23:38:02
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_FINAL_ARTIFACTS_BLOCKED|2026-05-08 23:38:02
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_RECOGNIZED:dk=3,dns=True,pu=True,kgn=True,slope=0.005|2026-05-08 23:38:02
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN:lines=0:total=0|2026-05-08 23:38:02
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_LENGTH_PROOF_GATE_V1|2026-05-08 23:38:02
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_FINAL_ARTIFACTS_BLOCKED_LENGTH_NOT_PROVEN|2026-05-08 23:38:01
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_PARENT_GUARD_V2:PARENT_REPICK_BLOCKED|2026-05-08 23:38:01
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_FULL_CYCLE_RESET_20260509_023800|2026-05-08 23:38:00
 - 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_FULL_RESTART_FROM_SCRATCH|2026-05-08 23:34:18
 - f02f874e-91da-480f-9a1e-d2c5d4553b55|reply_sent:invalid_result|2026-05-08 23:32:20
 - f02f874e-91da-480f-9a1e-d2c5d4553b55|state:FAILED|2026-05-08 23:32:20
 - f02f874e-91da-480f-9a1e-d2c5d4553b55|state:IN_PROGRESS|2026-05-08 23:32:12
 - f02f874e-91da-480f-9a1e-d2c5d4553b55|TOPIC2_STALE_PENDING_BLOCKED:pending_task=test-multifile-g:done=True|2026-05-08 23:32:12
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_WCG_PRESERVED_DRAINAGE_ERROR_V1|2026-05-08 23:32:11
 - 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_PARENT_REPAIRED_AFTER_PATCH_TOPIC2_WC_PICKER_DRAINAGE_MULTIFILE_V3|2026-05-08 23:32:11
 - f02f874e-91da-480f-9a1e-d2c5d4553b55|created:NEW|2026-05-08T23:10:26.785647+00:00
 - 043e5c9f-e8bc-434c-9dad-a66c7e50f917|P6_TOPIC2_VAGUE_OLD_MEMORY_BLOCKED|2026-05-08 23:09:21
 - 043e5c9f-e8bc-434c-9dad-a66c7e50f917|clarified:Распознай фото лучше|2026-05-08T23:09:20.492998+00:00
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_WC_SENT:10637|2026-05-08 23:09:05
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_FINAL_ARTIFACTS_BLOCKED|2026-05-08 23:09:05
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_RECOGNIZED:dk=3,dns=True,pu=True,kgn=True,slope=0.005|2026-05-08 23:09:05
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_WCG_SQL_FIX_SYNTAX_AND_LIKE_DROP_V1|2026-05-08 23:05:56
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_WCG_SKIP_SQL_PRESERVE_DRAINAGE_ERROR_V2_DB_REPAIR|2026-05-08 22:58:44
+- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_WCG_ERROR_REPAIRED_TO_DRAINAGE_LENGTH_NOT_PROVEN|2026-05-08 22:57:32
 
 ## MEMORY_DB_COUNT
 - 5199

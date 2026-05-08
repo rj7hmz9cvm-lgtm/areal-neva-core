@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-05-08T23:35:02.704629+00:00
-GIT_SHA: 876e5d24f1c376e211a9e6002c5002abbf642daf
+GENERATED_AT: 2026-05-08T23:40:03.121621+00:00
+GIT_SHA: 00af427ad88d1bb346aff4b7dd986acf47f8d250
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -134,7 +134,7 @@ NEXT_ACTION: investigate latest failed: INVALID_RESULT_GATE
 role: Интернет-поиск
 active: 0
 failed_24h: 0
-commits_last_7d: 14
+commits_last_7d: 13
 recent_commits:
 - b3e5be7|fix(topic500): relax bad-result filter for adaptive output modes
 - 0d6a9a4|fix(memory): ARCHIVE_DUPLICATE_GUARD_V1 + topic500 search pollution guard
