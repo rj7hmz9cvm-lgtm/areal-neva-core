@@ -236,7 +236,7 @@ def _text_from_task(row: Any) -> str:
     res = _row_get(row, "result", "")
     obj = _json(raw)
     parts = [
-        raw, res,
+        raw,
         obj.get("file_name", ""),
         obj.get("caption", ""),
         obj.get("mime_type", ""),
@@ -262,6 +262,7 @@ def _latest_file_task(
           AND COALESCE(topic_id,0)=?
           AND input_type IN ('drive_file','file','photo','document')
           AND id<>?
+          AND state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION')
         ORDER BY rowid DESC
         LIMIT 10
         """,
@@ -285,6 +286,7 @@ def _recent_file_tasks(
           AND COALESCE(topic_id,0)=?
           AND input_type IN ('drive_file','file','photo','document')
           AND id<>?
+          AND state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION')
         ORDER BY rowid DESC
         LIMIT ?
         """,
@@ -332,11 +334,14 @@ def _collect_current_file_text(
         # Only use bot-api fallback if the task is a file-type, not for text/voice
         # (avoids pulling in unrelated PDFs from other sessions)
 
-    # For direct file tasks with no local path: use bot-api fallback scoped to recent
+    # For direct file tasks with no local path: use DB-tracked state-filtered tasks (no filesystem scan)
     if input_type in ("drive_file", "file", "photo", "document") and not paths:
-        for p in _recent_bot_api_pdfs(limit=3) + _recent_runtime_pdfs(limit=3):
-            if p.exists():
-                paths.append(p)
+        _fb_recent = _recent_file_tasks(conn, chat_id, topic_id, task_id, limit=6)
+        for ft in _fb_recent:
+            ft_paths = _candidate_paths_from_raw(_row_get(ft, "raw_input", ""))
+            paths.extend(ft_paths)
+            if not meta["parent_file_task_id"] and ft_paths:
+                meta["parent_file_task_id"] = _s(_row_get(ft, "id", ""))
 
     seen: set = set()
     uniq: List[Path] = []

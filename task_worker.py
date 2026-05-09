@@ -2098,7 +2098,7 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
             if _ff14_done:
                 return
         # 3. estimate from natural language text
-        if _ff14_itype in ("text", "search") and _ff14_parse(_ff14_raw):
+        if _ff14_itype in ("text", "search") and int(topic_id or 0) == 2 and _ff14_parse(_ff14_raw):
             # === FULLFIX_16_ESTIMATE_HARD_STOP ===
             # Estimate route: ALWAYS return, never fall through to FULLFIX_10
             conn.execute("INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
@@ -6701,6 +6701,8 @@ def _p6_is_topic2_estimate_20260504(raw):
 def _p6_is_topic2_vague_20260504(raw):
     low = _p6_low_20260504(raw)
     if not low or _p6_is_topic2_estimate_20260504(raw):
+        return False
+    if any(x in low for x in ("это не", "это план", "план дома", "не дренаж", "не схема", "это дом", "это каркас")):
         return False
     return len(low) <= 160 and any(x in low for x in ("ну что", "что там", "дальше", "как там", "готово", "проверь", "посмотри", "что у нас", "почитай"))
 

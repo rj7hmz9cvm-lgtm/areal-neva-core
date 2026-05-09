@@ -4302,3 +4302,41 @@ async def maybe_handle_stroyka_estimate(conn, task, logger=None):  # noqa: F811
 _T2IG_LOG.info("PATCH_TOPIC2_INPUT_GATE_SOURCE_OF_TRUTH_V1: installed")
 # === END_PATCH_TOPIC2_INPUT_GATE_SOURCE_OF_TRUTH_V1 ===
 
+# === PATCH_TOPIC2_PRICE_ALWAYS_ASK_V1 ===
+# Fix: новый estimate-запрос ("сделай по заданию смету" и т.д.) не должен подхватывать
+# pending от предыдущего task_id или от того же task_id после MANUAL_RESET_NEW.
+# Price WC должен запускаться КАЖДЫЙ РАЗ для задач с estimate-контентом.
+# Корень бага: _is_confirm(startswith "сделай ") = True + _pending_is_fresh override 24h
+# → CANONICAL_OLD_ROUTE_HARD_BLOCK пропускает price WC (подтверждено history 076e4350).
+import logging as _t2paa_log_mod
+_T2PAA_LOG = _t2paa_log_mod.getLogger("stroyka_estimate_canon")
+_T2PAA_ORIG_MAYBE_HANDLE = maybe_handle_stroyka_estimate
+
+async def maybe_handle_stroyka_estimate(conn, task, logger=None):
+    try:
+        task_id = _s(_row_get(task, "id"))
+        chat_id = _s(_row_get(task, "chat_id"))
+        raw = _s(_row_get(task, "raw_input", ""))
+        _pend = _memory_latest(chat_id, "topic_2_estimate_pending_")
+        # Если pending активен И текущий ввод — не чистое подтверждение цены
+        # (содержит ESTIMATE_WORDS) → помечаем pending stale, чтобы запустился полный price WC.
+        # _is_confirm_only = False при наличии "смет"/"дом"/"газобетон" и т.д. в тексте.
+        if (_pend
+                and _pend.get("status") == "WAITING_PRICE_CONFIRMATION"
+                and not _is_confirm_only(raw)):
+            _stale = dict(_pend)
+            _stale["status"] = "STALE_DEPRECATED"
+            _stale["deprecated_at"] = _now()
+            _stale["deprecated_reason"] = "PRICE_ALWAYS_ASK_V1:new_estimate_request_not_confirm_only"
+            _memory_save(chat_id, f"topic_2_estimate_pending_{_pend.get('task_id', 'x')}", _stale)
+            _T2PAA_LOG.info(
+                "PATCH_TOPIC2_PRICE_ALWAYS_ASK_V1:stale_cleared task=%s prev_task=%s raw=%.60s",
+                task_id, _pend.get("task_id"), raw,
+            )
+    except Exception as _t2paa_e:
+        _T2PAA_LOG.warning("PATCH_TOPIC2_PRICE_ALWAYS_ASK_V1:ERR %s", _t2paa_e)
+    return await _T2PAA_ORIG_MAYBE_HANDLE(conn, task, logger)
+
+_T2PAA_LOG.info("PATCH_TOPIC2_PRICE_ALWAYS_ASK_V1 installed")
+# === END_PATCH_TOPIC2_PRICE_ALWAYS_ASK_V1 ===
+
