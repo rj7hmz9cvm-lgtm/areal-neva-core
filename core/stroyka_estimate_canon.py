@@ -4683,3 +4683,88 @@ except Exception:
     pass
 # === END_PATCH_TOPIC2_FRAME_HOUSE_MATERIAL_V1 ===
 
+# === FULL_CANON_CLOSURE_VERIFIED_V1 / TOPIC2_TEMPLATE_PRICE_EXTRACTION_SAFE_V1 ===
+try:
+    import re as _fccv1_re
+    import logging as _fccv1_logging
+    from openpyxl import load_workbook as _fccv1_load_workbook
+
+    _fccv1_log = _fccv1_logging.getLogger("task_worker")
+
+    def _fccv1_float_or_none(value):
+        if value is None:
+            return None, "PRICE_MISSING"
+        if isinstance(value, (int, float)):
+            return float(value), "OK"
+        s = str(value).strip().replace("\xa0", " ").replace(" ", "").replace(",", ".")
+        if not s:
+            return None, "PRICE_MISSING"
+        try:
+            return float(s), "OK"
+        except Exception:
+            return None, "PRICE_MISSING"
+
+    def _p8v3_extract_tpl_prices(template_path=None):
+        prices = {}
+        loaded = 0
+        skipped = 0
+        missing_price = 0
+
+        if not template_path:
+            _fccv1_log.info("TOPIC2_TEMPLATE_PRICE_EXTRACTION_SAFE_V1 installed loaded=0 skipped=0 missing_price=0")
+            return prices
+
+        wb = _fccv1_load_workbook(template_path, data_only=True)
+        ws = wb.active
+
+        for r in ws.iter_rows(values_only=True):
+            if not r or len(r) < 10:
+                skipped += 1
+                continue
+
+            name = str(r[0] if r[0] is not None else "").strip()
+            if not name:
+                skipped += 1
+                continue
+
+            qty, qty_status = _fccv1_float_or_none(r[3])
+            if qty_status != "OK":
+                skipped += 1
+                continue
+
+            work_price, work_status = _fccv1_float_or_none(r[7])
+            mat_price, mat_status = _fccv1_float_or_none(r[9])
+
+            if work_status != "OK" or mat_status != "OK":
+                missing_price += 1
+
+            if work_status == "OK" and mat_status == "OK" and work_price == 0 and mat_price == 0:
+                skipped += 1
+                continue
+
+            norm = _fccv1_re.sub(r"\s+", " ", name.lower()).strip()
+            prices[norm] = {
+                "name": name,
+                "qty": qty,
+                "work_price": work_price,
+                "mat_price": mat_price,
+                "work_price_status": work_status,
+                "mat_price_status": mat_status,
+            }
+            loaded += 1
+
+        _fccv1_log.info(
+            "TOPIC2_TEMPLATE_PRICE_EXTRACTION_SAFE_V1 installed loaded=%s skipped=%s missing_price=%s",
+            loaded,
+            skipped,
+            missing_price,
+        )
+        return prices
+
+    _fccv1_log.info("TOPIC2_TEMPLATE_PRICE_EXTRACTION_SAFE_V1 installed loaded=0 skipped=0 missing_price=0")
+except Exception as _e:
+    try:
+        _fccv1_log.exception("TOPIC2_TEMPLATE_PRICE_EXTRACTION_SAFE_V1_INSTALL_ERR:%s", _e)
+    except Exception:
+        pass
+# === /FULL_CANON_CLOSURE_VERIFIED_V1 ===

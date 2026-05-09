@@ -18007,6 +18007,334 @@ except Exception:
 # === END_PATCH_TOPIC2_REMOVE_HARDCODED_DRAINAGE_PARENT_V1 ===
 
 
+# === PATCH_P6_CLARIFICATION_MERGE_V1 ===
+# Root cause: _p6_handle_topic2_estimate_20260504 calls handle_topic2_one_big_formula_pipeline_v1
+# with only raw_input — clarified:* entries from task_history are not included.
+# P3 asks "Уточни этажность", user answers, answer saved as clarified:*, but next P6 run
+# ignores it → P3 asks again → infinite clarification loop.
+# Fix: before calling pipeline, collect all clarified:* from task_history and append to raw_input.
+import logging as _p6cm_logging
+_P6CM_LOG = _p6cm_logging.getLogger("task_worker.p6_clarification_merge")
+_P6CM_ORIG_HANDLE = _p6_handle_topic2_estimate_20260504
+
+async def _p6_handle_topic2_estimate_20260504(conn, task, chat_id, topic_id):
+    task_id = _p6_s_20260504(_p6_row_get_20260504(task, "id", ""))
+    raw_input = _p6_s_20260504(_p6_row_get_20260504(task, "raw_input", ""), 12000)
+    enriched = raw_input
+    try:
+        if conn and task_id:
+            rows = conn.execute(
+                "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'clarified:%' ORDER BY rowid ASC",
+                (task_id,)
+            ).fetchall()
+            clarifications = [r[0].split("clarified:", 1)[1].strip() for r in rows if "clarified:" in r[0]]
+            if clarifications:
+                enriched = raw_input + "\n" + "\n".join(clarifications)
+                _P6CM_LOG.info("P6CM: task=%s merged %d clarifications into raw_input", task_id, len(clarifications))
+    except Exception as _p6cm_e:
+        _P6CM_LOG.warning("P6CM_ERR: %s", _p6cm_e)
+    _p6_history_20260504(conn, task_id, "P6_TOPIC2_CURRENT_ESTIMATE_ROUTE")
+    from core import sample_template_engine as ste
+    fn = getattr(ste, "handle_topic2_one_big_formula_pipeline_v1")
+    res = fn(conn=conn, task=task, chat_id=chat_id, topic_id=topic_id, raw_input=enriched, full_context=enriched)
+    if asyncio.iscoroutine(res):
+        return await res
+    return res
+
+_P6CM_LOG.info("PATCH_P6_CLARIFICATION_MERGE_V1 installed")
+# === END_PATCH_P6_CLARIFICATION_MERGE_V1 ===
+
+# === FULL_CANON_CLOSURE_VERIFIED_V1 ===
+try:
+    import re as _fccv1_re
+    import logging as _fccv1_logging
+    from datetime import datetime as _fccv1_datetime
+
+    _fccv1_log = _fccv1_logging.getLogger("task_worker")
+    _FCCV1_LIMIT = 3900
+
+    def _fccv1_history(conn, task_id, action):
+        try:
+            _history(conn, task_id, str(action)[:900])
+        except Exception:
+            try:
+                conn.execute(
+                    "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)",
+                    (str(task_id), str(action)[:900], _fccv1_datetime.utcnow().isoformat()),
+                )
+            except Exception as e:
+                _fccv1_log.warning("FCCV1_HISTORY_ERR:%s:%s", task_id, e)
+
+    def _fccv1_links(text):
+        return _fccv1_re.findall(r"https?://(?:drive|docs)\.google\.com/[^\s)]+", str(text or ""))
+
+    def _fccv1_truncate_public(text):
+        if not isinstance(text, str) or len(text) <= _FCCV1_LIMIT:
+            return text
+        links = _fccv1_links(text)[:5]
+        suffix = ("\n\nАртефакты:\n" + "\n".join(links) if links else "") + "\n\n[урезано]"
+        budget = max(0, _FCCV1_LIMIT - len(suffix))
+        return text[:budget] + suffix
+
+    _fccv1_orig_send_reply_ex = send_reply_ex
+    _fccv1_orig_send_reply = send_reply
+
+    def send_reply_ex(*args, **kwargs):
+        if "text" in kwargs:
+            kwargs["text"] = _fccv1_truncate_public(kwargs.get("text"))
+        elif len(args) > 1 and isinstance(args[1], str):
+            args = list(args)
+            args[1] = _fccv1_truncate_public(args[1])
+            args = tuple(args)
+        return _fccv1_orig_send_reply_ex(*args, **kwargs)
+
+    def send_reply(*args, **kwargs):
+        if "text" in kwargs:
+            kwargs["text"] = _fccv1_truncate_public(kwargs.get("text"))
+        elif len(args) > 1 and isinstance(args[1], str):
+            args = list(args)
+            args[1] = _fccv1_truncate_public(args[1])
+            args = tuple(args)
+        return _fccv1_orig_send_reply(*args, **kwargs)
+
+    _fccv1_log.info("PATCH_TASK_WORKER_PUBLIC_MESSAGE_LENGTH_GUARD_V1 installed")
+
+    def _fccv1_is_frame(raw):
+        s = str(raw or "").lower()
+        return (
+            ("имитац" in s and "брус" in s)
+            or "свай жб" in s
+            or "сваи 150" in s
+            or "утепление стен 150" in s
+            or "половая доска" in s
+        ) and "дом из бруса" not in s
+
+    def _fccv1_old_route_hit(raw, result):
+        t = str(result or "")
+        for p in ("Шаблон:", "Лист:", "Цены из листа", "Газобетонный дом", "Эталон:"):
+            if p in t:
+                return p
+        if "Материал: газобетон" in t and _fccv1_is_frame(raw):
+            return "Материал: газобетон"
+        return None
+
+    def _fccv1_final_claim(result):
+        s = str(result or "")
+        return (
+            "✅ Смета готова" in s
+            or "Итого:" in s
+            or "С НДС:" in s
+            or ("Материалы:" in s and "Работы:" in s)
+        )
+
+    def _fccv1_task_history_text(conn, task_id):
+        try:
+            rows = conn.execute("SELECT action FROM task_history WHERE task_id=? ORDER BY rowid ASC", (task_id,)).fetchall()
+            return "\n".join(str(r["action"] if hasattr(r, "keys") else r[0]) for r in rows)
+        except Exception:
+            return ""
+
+    def _fccv1_missing_contract(conn, task_id, result):
+        h = _fccv1_task_history_text(conn, task_id)
+        if "TOPIC2_DONE_CONTRACT_OK" in h:
+            return []
+
+        missing = []
+        for m in (
+            "TOPIC2_TEMPLATE_SELECTED",
+            "TOPIC2_TEMPLATE_SHEET_SELECTED",
+            "TOPIC2_XLSX_TEMPLATE_COPY_OK",
+            "TOPIC2_XLSX_ROWS_WRITTEN",
+            "TOPIC2_XLSX_FORMULAS_OK",
+            "TOPIC2_XLSX_CANON_COLUMNS_OK",
+            "TOPIC2_PDF_CREATED",
+            "TOPIC2_PDF_CYRILLIC_OK",
+            "TOPIC2_DRIVE_UPLOAD_XLSX_OK",
+            "TOPIC2_DRIVE_UPLOAD_PDF_OK",
+            "TOPIC2_TELEGRAM_DELIVERED",
+        ):
+            if m not in h:
+                missing.append(m)
+
+        if not (
+            "TOPIC2_TEMPLATE_FILE_ID" in h
+            or "TOPIC2_TEMPLATE_CACHE_USED" in h
+            or "TOPIC2_TEMPLATE_DRIVE_DOWNLOADED" in h
+        ):
+            missing.append("TOPIC2_TEMPLATE_FILE_ID_OR_CACHE_OR_DRIVE_DOWNLOADED")
+
+        if "TOPIC2_DRIVE_UPLOAD_XLSX_OK" not in h or "TOPIC2_DRIVE_UPLOAD_PDF_OK" not in h:
+            missing.append("XLSX_AND_PDF_UPLOAD_PROOF")
+
+        if len(_fccv1_links(result)) < 2 and "TOPIC2_TELEGRAM_DELIVERED" not in h:
+            missing.append("XLSX_AND_PDF_PUBLIC_LINK_PROOF")
+
+        return missing
+
+    _fccv1_orig_update_task = _update_task
+
+    def _update_task(conn, task_id, **kwargs):
+        try:
+            row = conn.execute("SELECT id, topic_id, raw_input, state FROM tasks WHERE id=? LIMIT 1", (task_id,)).fetchone()
+        except Exception:
+            row = None
+
+        if row is not None:
+            topic_id = int(row["topic_id"] if hasattr(row, "keys") else row[1])
+            raw_input = row["raw_input"] if hasattr(row, "keys") else row[2]
+
+            if topic_id == 2:
+                result = kwargs.get("result")
+                new_state = kwargs.get("state")
+
+                if isinstance(result, str):
+                    hit = _fccv1_old_route_hit(raw_input, result)
+                    if hit:
+                        kwargs["result"] = "⚠ Старый маршрут заблокирован. Нужен canon-артефакт XLSX+PDF+Drive"
+                        kwargs["state"] = "WAITING_CLARIFICATION"
+                        kwargs["error_message"] = "TOPIC2_OLD_OUTPUT_BLOCKED"
+                        _fccv1_history(conn, task_id, f"TOPIC2_OLD_OUTPUT_BLOCKER_V2:hit:{hit}")
+
+                result2 = kwargs.get("result")
+                state2 = kwargs.get("state")
+                if state2 in ("DONE", "AWAITING_CONFIRMATION") and _fccv1_final_claim(result2):
+                    missing = _fccv1_missing_contract(conn, task_id, result2)
+                    if missing:
+                        miss = ",".join(missing)[:800]
+                        kwargs["state"] = "WAITING_CLARIFICATION"
+                        kwargs["error_message"] = "TOPIC2_DONE_CONTRACT_INCOMPLETE:" + miss
+                        _fccv1_history(conn, task_id, "TOPIC2_DONE_CONTRACT_GATE_V1:BLOCKED:" + miss)
+                    else:
+                        _fccv1_history(conn, task_id, "TOPIC2_DONE_CONTRACT_OK")
+
+        return _fccv1_orig_update_task(conn, task_id, **kwargs)
+
+    _fccv1_log.info("PATCH_TOPIC2_OLD_OUTPUT_BLOCKER_V2 installed")
+    _fccv1_log.info("PATCH_TOPIC2_DONE_CONTRACT_GATE_V1 installed")
+
+    def _fccv1_building_fact(raw):
+        s = str(raw or "").lower()
+        return any(x in s for x in ("смета","объект","этаж","свай","газобетон","имитац","кирпич","брус","метр","×"," x "," х ","арболит","каркас","фундамент","ндс","цена","руб","фото","файл"))
+
+    def _fccv1_frustration(raw):
+        s = str(raw or "").lower()
+        return len(s) < 60 and not _fccv1_building_fact(s) and any(x in s for x in ("[voice]","?","чё","что","залупа","хуйня","блядь","заебал","все есть","жду","быстрее","давай","ну что","тупиш","почему","какого","зачем"))
+
+    def _fccv1_find_topic2_parent(conn, task):
+        chat_id = task["chat_id"]
+        reply_to = task["reply_to_message_id"]
+        task_id = task["id"]
+        active = ("AWAITING_CONFIRMATION","WAITING_CLARIFICATION","IN_PROGRESS")
+
+        if reply_to:
+            q = "SELECT * FROM tasks WHERE chat_id=? AND topic_id=2 AND bot_message_id=? AND state IN (?,?,?) ORDER BY updated_at DESC LIMIT 1"
+            r = conn.execute(q, (chat_id, reply_to, *active)).fetchone()
+            if r:
+                return r
+
+        q = "SELECT * FROM tasks WHERE chat_id=? AND topic_id=2 AND id<>? AND state IN (?,?,?) ORDER BY updated_at DESC LIMIT 1"
+        return conn.execute(q, (chat_id, task_id, *active)).fetchone()
+
+    def _fccv1_pile_summary(text):
+        lines = [x.strip() for x in str(text or "").splitlines() if x.strip()]
+        keep = []
+        for line in lines:
+            low = line.lower()
+            if any(k in low for k in ("итого","всего","свай","количество","шаг","расчёт","расчет")):
+                keep.append(line)
+        if not keep:
+            keep = lines[:8]
+        return _fccv1_truncate_public("\n".join(keep[:12]) or "Итог по сваям не найден в родительском расчёте")
+
+    def _fccv1_find_topic210_parent(conn, task):
+        chat_id = task["chat_id"]
+        reply_to = task["reply_to_message_id"]
+        task_id = task["id"]
+
+        if reply_to:
+            r = conn.execute(
+                "SELECT * FROM tasks WHERE chat_id=? AND topic_id=210 AND bot_message_id=? AND state IN ('DONE','AWAITING_CONFIRMATION') ORDER BY updated_at DESC LIMIT 1",
+                (chat_id, reply_to),
+            ).fetchone()
+            if r:
+                return r
+
+        return conn.execute(
+            "SELECT * FROM tasks WHERE chat_id=? AND topic_id=210 AND id<>? AND state IN ('DONE','AWAITING_CONFIRMATION') AND id IN (SELECT task_id FROM task_history WHERE action LIKE 'TOPIC210_CANON_PILE_%') ORDER BY updated_at DESC LIMIT 1",
+            (chat_id, task_id),
+        ).fetchone()
+
+    _fccv1_orig_handle_new = _handle_new
+
+    async def _handle_new(conn, task, chat_id, topic_id):
+        try:
+            tid = task["id"]
+            raw = str(task["raw_input"] or "")
+            input_type = str(task["input_type"] or "")
+
+            if int(topic_id or 0) == 2 and _fccv1_frustration(raw):
+                parent = _fccv1_find_topic2_parent(conn, task)
+                if parent:
+                    _fccv1_history(conn, parent["id"], f"TOPIC2_FRUSTRATION_REPLY_REROUTED:from={tid}:text={raw[:200]}")
+                    _fccv1_orig_update_task(conn, tid, state="CANCELLED", error_message=f"TOPIC2_FRUSTRATION_REPLY_MERGED_TO:{parent['id']}")
+                    _fccv1_history(conn, tid, f"TOPIC2_FRUSTRATION_REPLY_GUARD_V1:merged_to:{parent['id']}")
+                    send_reply_ex(chat_id=str(chat_id), text="Привязал к текущей задаче, продолжаю по ней", reply_to_message_id=task["reply_to_message_id"], message_thread_id=2)
+                    return
+                _fccv1_orig_update_task(conn, tid, state="WAITING_CLARIFICATION", error_message="TOPIC2_FRUSTRATION_REPLY_NO_ACTIVE_PARENT")
+                _fccv1_history(conn, tid, "TOPIC2_FRUSTRATION_REPLY_GUARD_V1:no_parent")
+                send_reply_ex(chat_id=str(chat_id), text="Не нашёл активную задачу в этой теме. Пришли ТЗ одним сообщением", reply_to_message_id=task["reply_to_message_id"], message_thread_id=2)
+                return
+
+            if int(topic_id or 0) == 210:
+                clean = raw.replace("[VOICE]", "").strip().lower()
+                has_new_pile_facts = bool(_fccv1_re.search(r"\d+\s*(сваи?|штук|шт|мм)|\d+\s*[xх×]\s*\d+|\d+\s*на\s*\d+", clean))
+
+                if len(clean) < 30 and not has_new_pile_facts and any(x in clean for x in ("итого","сколько","?","выполни")):
+                    parent = _fccv1_find_topic210_parent(conn, task)
+                    if parent:
+                        answer = _fccv1_pile_summary(parent["result"])
+                        send_reply_ex(chat_id=str(chat_id), text=answer, reply_to_message_id=task["reply_to_message_id"], message_thread_id=210)
+                        _fccv1_orig_update_task(conn, tid, state="DONE", result=answer)
+                        _fccv1_history(conn, tid, f"TOPIC210_REPLY_BOUND_TO_PARENT:{parent['id']}")
+                        return
+                    text = "По какой задаче нужен итог? Ответь на сообщение с расчётом"
+                    send_reply_ex(chat_id=str(chat_id), text=text, reply_to_message_id=task["reply_to_message_id"], message_thread_id=210)
+                    _fccv1_orig_update_task(conn, tid, state="WAITING_CLARIFICATION", result=text)
+                    _fccv1_history(conn, tid, "TOPIC210_REPLY_NO_PARENT")
+                    return
+
+                if input_type in ("drive_file","file","photo","image","document"):
+                    hist = _fccv1_task_history_text(conn, tid)
+                    if "TOPIC210_DRIVE_FILE_CONTEXT_BOUND:parent=" not in hist:
+                        parent = _fccv1_find_topic210_parent(conn, task)
+                        if parent:
+                            summary = _fccv1_pile_summary(parent["result"])
+                            conn.execute("UPDATE tasks SET raw_input = COALESCE(raw_input,'') || char(10) || ? WHERE id=?", (f"[CONTEXT FROM PARENT {str(parent['id'])[:8]}]: {summary}", tid))
+                            _fccv1_history(conn, tid, f"TOPIC210_DRIVE_FILE_CONTEXT_BOUND:parent={parent['id']}")
+                            conn.commit()
+                        else:
+                            text = "Что считать на этом изображении: сваи, размеры, площадь, объём?"
+                            send_reply_ex(chat_id=str(chat_id), text=text, reply_to_message_id=task["reply_to_message_id"], message_thread_id=210)
+                            _fccv1_orig_update_task(conn, tid, state="WAITING_CLARIFICATION", result=text)
+                            _fccv1_history(conn, tid, "TOPIC210_DRIVE_FILE_NO_CONTEXT")
+                            return
+        except Exception as e:
+            _fccv1_log.exception("FULL_CANON_CLOSURE_VERIFIED_V1_HANDLE_NEW_ERR:%s", e)
+
+        return await _fccv1_orig_handle_new(conn, task, chat_id, topic_id)
+
+    _fccv1_log.info("PATCH_P6_CLARIFICATION_MERGE_FAMILY_V2 installed")
+    _fccv1_log.info("PATCH_TOPIC2_FRUSTRATION_REPLY_GUARD_V1 installed")
+    _fccv1_log.info("PATCH_TOPIC210_REPLY_BIND_V1 installed")
+    _fccv1_log.info("PATCH_TOPIC210_DRIVE_FILE_CONTEXT_BOUND_V1 installed")
+
+except Exception as _fccv1_err:
+    try:
+        _fccv1_log.exception("FULL_CANON_CLOSURE_VERIFIED_V1_INSTALL_ERR:%s", _fccv1_err)
+    except Exception:
+        pass
+# === /FULL_CANON_CLOSURE_VERIFIED_V1 ===
+
 if __name__ == "__main__":
     asyncio.run(main())
 
