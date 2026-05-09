@@ -1,7 +1,7 @@
 # topic_500 VEB_POISK
 
-GENERATED_AT: 2026-05-09T07:05:02.255573+00:00
-GIT_SHA: f53ec3bd2073dd3794cbd23970c5b836c1e897ac
+GENERATED_AT: 2026-05-09T07:40:02.534490+00:00
+GIT_SHA: 62a5da22f1c20cb0ad84a06020938053156ddd54
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 500
@@ -35,7 +35,6 @@ FAILED_LAST_24H: 0
 - 949c379|P6F_FULL_CODE_CLOSE_REMAINING_CONTOURS_20260504_V1: close revision binding, topic500 sanitizer, photo CV via OpenRouter, TZ params, source labels, technadzor DOCX, project_210 drive, artifact gates
 - 709b28a|P3_FINAL_ROUTE_HARD_LOCK_SEARCH_ESTIMATE_20260504_V1: hard-lock topic500 search and topic2 current estimate route
 - 4f6af26|P2_FINAL_SEARCH_AND_ESTIMATE_CLOSE_20260504_V1: close topic500 search memory and topic2 final estimate logic
-- d4db3fb|P0_RUNTIME_ROUTE_GUARD_TOPIC2_TOPIC500_20260504_V1: block topic500 estimate misroute and force topic2 current estimate route
 
 ## MARKERS_LAST_24H
 - (none)

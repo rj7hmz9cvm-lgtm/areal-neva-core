@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_006
-generated_at_utc: 2026-05-09T07:05:01.999924+00:00
-git_sha_before_commit: f53ec3bd2073dd3794cbd23970c5b836c1e897ac
+generated_at_utc: 2026-05-09T07:40:02.309004+00:00
+git_sha_before_commit: 62a5da22f1c20cb0ad84a06020938053156ddd54
 part: 6/17
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 2/3
-SHA256_FULL_FILE: 5b18c4e77e98257a47917ee3ba36c4ed2ee22863cce92cb4fb62f10cee200248
+SHA256_FULL_FILE: 063c2baa424d68ad7be5dbc5e327a9b2ff282e58edd634cfad27d4576dbbaceb
 ====================================================================================================
         def wrapped(*args, **kwargs):
             args = tuple(_p6e4_sanitize_catalog_text(a) if isinstance(a, str) else a for a in args)

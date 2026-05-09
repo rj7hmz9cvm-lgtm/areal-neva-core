@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_007
-generated_at_utc: 2026-05-09T07:05:02.001452+00:00
-git_sha_before_commit: f53ec3bd2073dd3794cbd23970c5b836c1e897ac
+generated_at_utc: 2026-05-09T07:40:02.309760+00:00
+git_sha_before_commit: 62a5da22f1c20cb0ad84a06020938053156ddd54
 part: 7/17
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 3/3
-SHA256_FULL_FILE: 5b18c4e77e98257a47917ee3ba36c4ed2ee22863cce92cb4fb62f10cee200248
+SHA256_FULL_FILE: 063c2baa424d68ad7be5dbc5e327a9b2ff282e58edd634cfad27d4576dbbaceb
 ====================================================================================================
 # Факт: 11:54 «Отмена всех задач» → бот выдал смету
 # Факт: 17:33 «Задача отменена» → бот спросил «Сколько этажей»
@@ -2902,6 +2902,50 @@ try:
 except Exception:
     pass
 # === END_PATCH_TOPIC210_CANON_PILE_ROUTE_V2 ===
+
+
+# === PATCH_TOPIC2_REMOVE_HARDCODED_DRAINAGE_PARENT_V1 ===
+# Facts proven from live DB + code:
+# - _T2DPG_PARENT_ID = "043e5c9f..." hardcoded in 5 places (lines 14653,16936,17015,17220,17275)
+# - _t2dpg_get_parent queries WHERE id=hardcoded_id WITHOUT state filter
+# - 043e5c9f is state=FAILED/EXECUTION_TIMEOUT in live DB
+# - _t2dpg_absorb_child finds FAILED parent → calls _t2dpg_fix_parent_state
+# - _t2dpg_fix_parent_state sets state=WAITING_CLARIFICATION → picker picks it → EXECUTION_TIMEOUT loop
+# Fix: override _t2dpg_get_parent with dynamic lookup by chat_id+topic_id+state+error_message
+# No hardcoded task_id. No DB schema change. Only task_worker.py touched.
+import logging as _t2rhdp_logging
+
+_T2RHDP_LOG = _t2rhdp_logging.getLogger("topic2.remove_hardcoded_drainage_parent_v1")
+
+def _t2dpg_get_parent(conn, chat_id, topic_id):
+    """Dynamic lookup: active drainage WC parent by chat_id + topic_id + state."""
+    try:
+        row = conn.execute(
+            """
+            SELECT * FROM tasks
+            WHERE chat_id=?
+              AND COALESCE(topic_id,0)=?
+              AND state='WAITING_CLARIFICATION'
+              AND error_message='TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN'
+            ORDER BY updated_at DESC
+            LIMIT 1
+            """,
+            (str(chat_id), int(topic_id or 0)),
+        ).fetchone()
+        if row:
+            return row
+    except Exception as _e:
+        try:
+            _T2RHDP_LOG.warning("T2RHDP_GET_PARENT_ERR %s", _e)
+        except Exception:
+            pass
+    return None
+
+try:
+    _T2RHDP_LOG.info("PATCH_TOPIC2_REMOVE_HARDCODED_DRAINAGE_PARENT_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_REMOVE_HARDCODED_DRAINAGE_PARENT_V1 ===
 
 
 if __name__ == "__main__":

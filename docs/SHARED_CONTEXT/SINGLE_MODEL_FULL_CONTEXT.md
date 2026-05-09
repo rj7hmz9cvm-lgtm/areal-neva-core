@@ -1,7 +1,7 @@
 # SINGLE_MODEL_FULL_CONTEXT
 
-GENERATED_AT: 2026-05-09T07:05:02.415145+00:00
-GIT_SHA: f53ec3bd2073dd3794cbd23970c5b836c1e897ac
+GENERATED_AT: 2026-05-09T07:40:02.690490+00:00
+GIT_SHA: 62a5da22f1c20cb0ad84a06020938053156ddd54
 PURPOSE: Один файл с полным контекстом проекта для любой модели
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 
@@ -22,9 +22,9 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 | topic_id | name | status | active | failed_24h |
 |----------|------|--------|--------|------------|
 | 0 | COMMON | UNKNOWN | 0 | 0 |
-| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 0 | 12 |
+| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 3 | 12 |
 | 5 | TEKHNADZOR | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
-| 11 | VIDEO | UNKNOWN | 0 | 0 |
+| 11 | VIDEO | UNKNOWN | 1 | 0 |
 | 210 | PROEKTIROVANIE | INSTALLED_NOT_VERIFIED | 0 | 6 |
 | 500 | VEB_POISK | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
 | 794 | DEVOPS | UNKNOWN | 0 | 0 |
@@ -3882,8 +3882,8 @@ I canno
 ```
 # topic_0 COMMON
 
-GENERATED_AT: 2026-05-09T07:05:02.067806+00:00
-GIT_SHA: f53ec3bd2073dd3794cbd23970c5b836c1e897ac
+GENERATED_AT: 2026-05-09T07:40:02.366835+00:00
+GIT_SHA: 62a5da22f1c20cb0ad84a06020938053156ddd54
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 0
@@ -3960,7 +3960,7 @@ STATUS: SYNCED_LOCAL
 ## TOPIC_2_STROYKA
 
 STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE: 0  FAILED_24H: 12
+ACTIVE: 3  FAILED_24H: 12
 DIRECTIONS_BOUND: Сметы
 
 ### LAST_FAILED (5)
@@ -4752,22 +4752,23 @@ def _write_xlsx(path: Path, items: List[Dict[str, Any]], source_text: str, photo
 ```
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-05-09T07:05:02.106298+00:00
-GIT_SHA: f53ec3bd2073dd3794cbd23970c5b836c1e897ac
+GENERATED_AT: 2026-05-09T07:40:02.404002+00:00
+GIT_SHA: 62a5da22f1c20cb0ad84a06020938053156ddd54
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
 ROLE: Сметы
 DIRECTIONS_BOUND: estimates
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE_TASKS: 0
+ACTIVE_TASKS: 3
 FAILED_LAST_24H: 12
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 12
-- CANCELLED: 102
+- CANCELLED: 103
 - DONE: 135
 - FAILED: 121
+- WAITING_CLARIFICATION: 3
 
 ## LATEST_FAILED
 - 6a535d79 | STALE_TIMEOUT
@@ -4777,6 +4778,7 @@ FAILED_LAST_24H: 12
 - 2c732335 | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
+- 62a5da2|fix(topic2): remove hardcoded drainage parent 043e5c9f — dynamic lookup by state
 - 7a5f770|fix(topic210): canonical pile count route
 - ca312d9|fix(topic210): pile count route and db lock recover guard
 - 876e5d2|fix(topic2): PATCH_TOPIC2_WC_PICKER_DRAINAGE_MULTIFILE_V3 — stop WC loop, bind drainage replies to parent, include all 3 user PDFs
@@ -4806,7 +4808,6 @@ FAILED_LAST_24H: 12
 - 48f9858|docs(handoff): update latest handoff after topic2 and aggregator guard
 - c0300fb|fix(topic2): close 4 code gaps — enrichment markers, cyrillic marker, function-object bug, FCG bypass
 - 2ece9eb|fix(topic2): close 3 live bugs — poison loop terminate, recursion restore, FCG done bypass
-- 62d85b8|fix(topic2): V5B — price source quality gate, raw JSON guard, canonical totals col J
 
 ## MARKERS_LAST_24H
 - created:NEW
@@ -4827,7 +4828,6 @@ FAILED_LAST_24H: 12
 - clarified:Фундамент монолитный песчаная подушка толщиной 300 мм с отступом на ме
 - clarified:вот
 - P6E67_PARENT_NOT_FOUND
-- reply_sent:p6e67_parent_not_found
 - P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION
 - BIG_FILE_LOCAL_BOT_API_USED
 - BIG_FILE_LOCAL_DOWNLOAD_OK
@@ -4839,6 +4839,7 @@ FAILED_LAST_24H: 12
 - TOPIC2_PRICE_SOURCE_FOUND:газобетон:Завод (Авито):CONFIRMED
 - TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:Бетон В25
 - TOPIC2_PRICE_SOURCE_FOUND:Бетон В25:beton-spb.ru:CONFIRMED
+- TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:Арматура А500
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210
@@ -5492,8 +5493,8 @@ _P6H5_NORMATIVE_EXPAND = [
 ```
 # topic_5 TEKHNADZOR
 
-GENERATED_AT: 2026-05-09T07:05:02.149202+00:00
-GIT_SHA: f53ec3bd2073dd3794cbd23970c5b836c1e897ac
+GENERATED_AT: 2026-05-09T07:40:02.435876+00:00
+GIT_SHA: 62a5da22f1c20cb0ad84a06020938053156ddd54
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 5
@@ -5621,7 +5622,7 @@ items: 11
 ## TOPIC_11_VIDEO
 
 STATUS: UNKNOWN
-ACTIVE: 0  FAILED_24H: 0
+ACTIVE: 1  FAILED_24H: 0
 DIRECTIONS_BOUND: Видео
 
 ### LAST_FAILED (5)
@@ -5642,18 +5643,19 @@ DIRECTIONS_BOUND: Видео
 ```
 # topic_11 VIDEO
 
-GENERATED_AT: 2026-05-09T07:05:02.180109+00:00
-GIT_SHA: f53ec3bd2073dd3794cbd23970c5b836c1e897ac
+GENERATED_AT: 2026-05-09T07:40:02.459156+00:00
+GIT_SHA: 62a5da22f1c20cb0ad84a06020938053156ddd54
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 11
 ROLE: Видео
 DIRECTIONS_BOUND: video_production
 CURRENT_STATUS: UNKNOWN
-ACTIVE_TASKS: 0
+ACTIVE_TASKS: 1
 FAILED_LAST_24H: 0
 
 ## DB_STATE_COUNTS
+- AWAITING_CONFIRMATION: 1
 - DONE: 1
 - FAILED: 3
 
@@ -5666,7 +5668,9 @@ FAILED_LAST_24H: 0
 - (none matching topic)
 
 ## MARKERS_LAST_24H
-- (none)
+- created:NEW
+- FULLFIX_16_ESTIMATE_ROUTE_TAKEN
+- state:AWAITING_CONFIRMATION:estimate_unified
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - (none)
@@ -6251,8 +6255,8 @@ def _normalize_sheet_register(template: Dict[str, Any], data: Dict[str, Any]) ->
 ```
 # topic_210 PROEKTIROVANIE
 
-GENERATED_AT: 2026-05-09T07:05:02.215988+00:00
-GIT_SHA: f53ec3bd2073dd3794cbd23970c5b836c1e897ac
+GENERATED_AT: 2026-05-09T07:40:02.494253+00:00
+GIT_SHA: 62a5da22f1c20cb0ad84a06020938053156ddd54
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 210
@@ -6853,8 +6857,8 @@ except Exception:
 ```
 # topic_500 VEB_POISK
 
-GENERATED_AT: 2026-05-09T07:05:02.255573+00:00
-GIT_SHA: f53ec3bd2073dd3794cbd23970c5b836c1e897ac
+GENERATED_AT: 2026-05-09T07:40:02.534490+00:00
+GIT_SHA: 62a5da22f1c20cb0ad84a06020938053156ddd54
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 500
@@ -6888,7 +6892,6 @@ FAILED_LAST_24H: 0
 - 949c379|P6F_FULL_CODE_CLOSE_REMAINING_CONTOURS_20260504_V1: close revision binding, topic500 sanitizer, photo CV via OpenRouter, TZ params, source labels, technadzor DOCX, project_210 drive, artifact gates
 - 709b28a|P3_FINAL_ROUTE_HARD_LOCK_SEARCH_ESTIMATE_20260504_V1: hard-lock topic500 search and topic2 current estimate route
 - 4f6af26|P2_FINAL_SEARCH_AND_ESTIMATE_CLOSE_20260504_V1: close topic500 search memory and topic2 final estimate logic
-- d4db3fb|P0_RUNTIME_ROUTE_GUARD_TOPIC2_TOPIC500_20260504_V1: block topic500 estimate misroute and force topic2 current estimate route
 
 ## MARKERS_LAST_24H
 - (none)
@@ -6966,8 +6969,8 @@ DIRECTIONS_BOUND: Сервер DevOps
 ```
 # topic_794 DEVOPS
 
-GENERATED_AT: 2026-05-09T07:05:02.290454+00:00
-GIT_SHA: f53ec3bd2073dd3794cbd23970c5b836c1e897ac
+GENERATED_AT: 2026-05-09T07:40:02.566279+00:00
+GIT_SHA: 62a5da22f1c20cb0ad84a06020938053156ddd54
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 794
@@ -7062,8 +7065,8 @@ DIRECTIONS_BOUND: Автозапчасти
 ```
 # topic_961 AVTOZAPCHASTI
 
-GENERATED_AT: 2026-05-09T07:05:02.321499+00:00
-GIT_SHA: f53ec3bd2073dd3794cbd23970c5b836c1e897ac
+GENERATED_AT: 2026-05-09T07:40:02.596723+00:00
+GIT_SHA: 62a5da22f1c20cb0ad84a06020938053156ddd54
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 961
@@ -7155,8 +7158,8 @@ DIRECTIONS_BOUND: Мозги оркестра
 ```
 # topic_3008 KODY_MOZGOV
 
-GENERATED_AT: 2026-05-09T07:05:02.350494+00:00
-GIT_SHA: f53ec3bd2073dd3794cbd23970c5b836c1e897ac
+GENERATED_AT: 2026-05-09T07:40:02.626379+00:00
+GIT_SHA: 62a5da22f1c20cb0ad84a06020938053156ddd54
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 3008
@@ -7259,8 +7262,8 @@ DIRECTIONS_BOUND: CRM лиды
 ```
 # topic_4569 CRM_LEADS
 
-GENERATED_AT: 2026-05-09T07:05:02.380107+00:00
-GIT_SHA: f53ec3bd2073dd3794cbd23970c5b836c1e897ac
+GENERATED_AT: 2026-05-09T07:40:02.651121+00:00
+GIT_SHA: 62a5da22f1c20cb0ad84a06020938053156ddd54
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 4569
@@ -7368,8 +7371,8 @@ DIRECTIONS_BOUND: Поиск работы
 ```
 # topic_6104 JOB_SEARCH
 
-GENERATED_AT: 2026-05-09T07:05:02.408562+00:00
-GIT_SHA: f53ec3bd2073dd3794cbd23970c5b836c1e897ac
+GENERATED_AT: 2026-05-09T07:40:02.679915+00:00
+GIT_SHA: 62a5da22f1c20cb0ad84a06020938053156ddd54
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 6104

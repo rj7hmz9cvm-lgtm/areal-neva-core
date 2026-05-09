@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-05-09T07:05:02.606756+00:00
-GIT_SHA: f53ec3bd2073dd3794cbd23970c5b836c1e897ac
+GENERATED_AT: 2026-05-09T07:40:02.885697+00:00
+GIT_SHA: 62a5da22f1c20cb0ad84a06020938053156ddd54
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -16,8 +16,9 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 ## GLOBAL_STATUS
 | topic | name | status | active | failed_24h |
 |-------|------|--------|--------|------------|
-| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 0 | 12 |
+| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 3 | 12 |
 | 5 | TEKHNADZOR | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
+| 11 | VIDEO | UNKNOWN | 1 | 0 |
 | 210 | PROEKTIROVANIE | INSTALLED_NOT_VERIFIED | 0 | 6 |
 | 500 | VEB_POISK | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
 
@@ -70,13 +71,13 @@ DATE_UNKNOWN
 ## ACTIVE_OR_RECENT_TOPICS
 ### topic_2 STROYKA
 role: Сметы
-active: 0
+active: 3
 failed_24h: 12
 commits_last_7d: 30
 recent_commits:
+- 62a5da2|fix(topic2): remove hardcoded drainage parent 043e5c9f — dynamic lookup by state
 - 7a5f770|fix(topic210): canonical pile count route
 - ca312d9|fix(topic210): pile count route and db lock recover guard
-- 876e5d2|fix(topic2): PATCH_TOPIC2_WC_PICKER_DRAINAGE_MULTIFILE_V3 — stop WC loop, bind drainage replies to parent, include all 3 user PDFs
 markers_missing: 6
 - TOPIC2_ESTIMATE_SESSION_CREATED
 - TOPIC2_CONTEXT_READY
@@ -111,6 +112,17 @@ blockers:
 - - topic_5 не тянет КЖ/АР без прямой команды
 NEXT_ACTION: investigate latest failed: STALE_NEW_30MIN
 
+### topic_11 VIDEO
+role: Видео
+active: 1
+failed_24h: 0
+commits_last_7d: 0
+last_failed:
+- 6abb8aa0 | cannot access local variable 'ai_result' where it is not associated with a value
+- 83b52b32 | cannot access local variable 'ai_result' where it is not associated with a value
+- 6b8a3806 | cannot access local variable 'ai_result' where it is not associated with a value
+NEXT_ACTION: investigate latest failed: cannot access local variable 'ai_result' where it is not associated with a value
+
 ### topic_210 PROEKTIROVANIE
 role: КЖ КМ
 active: 0
@@ -134,7 +146,7 @@ NEXT_ACTION: investigate latest failed: INVALID_RESULT_GATE
 role: Интернет-поиск
 active: 0
 failed_24h: 0
-commits_last_7d: 11
+commits_last_7d: 10
 recent_commits:
 - b3e5be7|fix(topic500): relax bad-result filter for adaptive output modes
 - 0d6a9a4|fix(memory): ARCHIVE_DUPLICATE_GUARD_V1 + topic500 search pollution guard

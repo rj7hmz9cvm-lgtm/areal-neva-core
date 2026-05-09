@@ -1,21 +1,22 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-05-09T07:05:02.106298+00:00
-GIT_SHA: f53ec3bd2073dd3794cbd23970c5b836c1e897ac
+GENERATED_AT: 2026-05-09T07:40:02.404002+00:00
+GIT_SHA: 62a5da22f1c20cb0ad84a06020938053156ddd54
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
 ROLE: Сметы
 DIRECTIONS_BOUND: estimates
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE_TASKS: 0
+ACTIVE_TASKS: 3
 FAILED_LAST_24H: 12
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 12
-- CANCELLED: 102
+- CANCELLED: 103
 - DONE: 135
 - FAILED: 121
+- WAITING_CLARIFICATION: 3
 
 ## LATEST_FAILED
 - 6a535d79 | STALE_TIMEOUT
@@ -25,6 +26,7 @@ FAILED_LAST_24H: 12
 - 2c732335 | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
+- 62a5da2|fix(topic2): remove hardcoded drainage parent 043e5c9f — dynamic lookup by state
 - 7a5f770|fix(topic210): canonical pile count route
 - ca312d9|fix(topic210): pile count route and db lock recover guard
 - 876e5d2|fix(topic2): PATCH_TOPIC2_WC_PICKER_DRAINAGE_MULTIFILE_V3 — stop WC loop, bind drainage replies to parent, include all 3 user PDFs
@@ -54,7 +56,6 @@ FAILED_LAST_24H: 12
 - 48f9858|docs(handoff): update latest handoff after topic2 and aggregator guard
 - c0300fb|fix(topic2): close 4 code gaps — enrichment markers, cyrillic marker, function-object bug, FCG bypass
 - 2ece9eb|fix(topic2): close 3 live bugs — poison loop terminate, recursion restore, FCG done bypass
-- 62d85b8|fix(topic2): V5B — price source quality gate, raw JSON guard, canonical totals col J
 
 ## MARKERS_LAST_24H
 - created:NEW
@@ -75,7 +76,6 @@ FAILED_LAST_24H: 12
 - clarified:Фундамент монолитный песчаная подушка толщиной 300 мм с отступом на ме
 - clarified:вот
 - P6E67_PARENT_NOT_FOUND
-- reply_sent:p6e67_parent_not_found
 - P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION
 - BIG_FILE_LOCAL_BOT_API_USED
 - BIG_FILE_LOCAL_DOWNLOAD_OK
@@ -87,6 +87,7 @@ FAILED_LAST_24H: 12
 - TOPIC2_PRICE_SOURCE_FOUND:газобетон:Завод (Авито):CONFIRMED
 - TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:Бетон В25
 - TOPIC2_PRICE_SOURCE_FOUND:Бетон В25:beton-spb.ru:CONFIRMED
+- TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:Арматура А500
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210
