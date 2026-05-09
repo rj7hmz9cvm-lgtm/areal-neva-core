@@ -18335,6 +18335,107 @@ except Exception as _fccv1_err:
         pass
 # === /FULL_CANON_CLOSURE_VERIFIED_V1 ===
 
+# === PATCH_PRICE_CONFIRMATION_ROUTING_V1 ===
+# Fix: "Да делай смету" not recognized as price confirmation.
+# Root causes:
+#   1. _t2pc_choice doesn't recognize affirmations like "делай смету"/"да"/"ок"
+#   2. _t2pc_find_parent searches result LIKE '%Выберите уровень цен%' but canonical
+#      WC (_price_confirmation_text) stores "Выбор цены:" — never matches.
+#      Canonical path writes FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:prices_shown in history.
+try:
+    import logging as _pcrv1_logging
+    _pcrv1_log = _pcrv1_logging.getLogger("task_worker")
+
+    # Part A: extend _t2pc_choice to recognize affirmations
+    _pcrv1_orig_choice = _t2pc_choice
+
+    def _t2pc_choice(raw):
+        r = _pcrv1_orig_choice(raw)
+        if r:
+            return r
+        t = _t2pc_low(raw)
+        t = _t2pc_re.sub(r"\s+", " ", t).strip(" .,!?:;()[]{}")
+        if not t:
+            return ""
+        # "делай смету", "сделай смету", "давай смету" → estimate-specific
+        if any(x in t for x in ("делай смет", "сделай смет", "давай смет", "делаем смет", "запускай смет")):
+            return "median"
+        # "да делай", "давай делай", "ок делай"
+        if "делай" in t and any(x in t for x in ("да ", "ок ", "давай ", "ладно ")):
+            return "median"
+        # "ставь обычные/стандартные/рыночные/нормальные"
+        if "ставь" in t and any(x in t for x in ("обычн", "стандарт", "рыночн", "нормальн")):
+            return "median"
+        # bare affirmatives — _t2pc_find_parent is the secondary guard
+        _BARE_AFF = {
+            "да", "ок", "окей", "хорошо", "конечно", "поехали",
+            "ага", "угу", "yes", "yep", "принято", "принял",
+        }
+        if t in _BARE_AFF:
+            return "median"
+        return ""
+
+    # Part B: extend _t2pc_find_parent to also find canonical WC by prices_shown
+    _pcrv1_orig_find_parent = _t2pc_find_parent
+
+    def _t2pc_find_parent(conn, task, chat_id, topic_id):
+        parent, source = _pcrv1_orig_find_parent(conn, task, chat_id, topic_id)
+        if parent:
+            return parent, source
+        # Canonical path fallback: task has prices_shown in history but result
+        # doesn't contain "Выберите уровень цен" (uses _price_confirmation_text format)
+        task_id = _t2pc_s(_t2pc_row(task, "id", ""))
+        reply_to = _t2pc_row(task, "reply_to_message_id", None)
+        try:
+            # Prefer exact reply match first
+            if reply_to:
+                row = conn.execute("""
+                    SELECT t.*
+                    FROM tasks t
+                    INNER JOIN task_history th ON th.task_id = t.id
+                    WHERE t.chat_id = ?
+                      AND COALESCE(t.topic_id, 0) = ?
+                      AND t.id <> ?
+                      AND t.state IN ('WAITING_CLARIFICATION', 'IN_PROGRESS', 'NEW')
+                      AND th.action LIKE 'FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:prices_shown%'
+                      AND t.updated_at >= datetime('now', '-24 hours')
+                      AND (t.bot_message_id = ? OR t.reply_to_message_id = ?)
+                    ORDER BY t.updated_at DESC, t.rowid DESC
+                    LIMIT 1
+                """, (str(chat_id), int(topic_id or 0), task_id, reply_to, reply_to)).fetchone()
+                if row:
+                    return row, "PRICES_SHOWN_EXACT_REPLY"
+            # Latest active WC with prices_shown fallback
+            row = conn.execute("""
+                SELECT t.*
+                FROM tasks t
+                INNER JOIN task_history th ON th.task_id = t.id
+                WHERE t.chat_id = ?
+                  AND COALESCE(t.topic_id, 0) = ?
+                  AND t.id <> ?
+                  AND t.state IN ('WAITING_CLARIFICATION', 'IN_PROGRESS', 'NEW')
+                  AND th.action LIKE 'FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:prices_shown%'
+                  AND t.updated_at >= datetime('now', '-24 hours')
+                ORDER BY t.updated_at DESC, t.rowid DESC
+                LIMIT 1
+            """, (str(chat_id), int(topic_id or 0), task_id)).fetchone()
+            if row:
+                return row, "PRICES_SHOWN_HISTORY_FALLBACK"
+        except Exception as _pcrv1_fe:
+            _pcrv1_log.warning("PATCH_PRICE_CONFIRMATION_ROUTING_V1_FIND_ERR: %s", _pcrv1_fe)
+        return None, "PRICE_MENU_NOT_FOUND"
+
+    _pcrv1_log.info("PATCH_PRICE_CONFIRMATION_ROUTING_V1 installed")
+except Exception as _pcrv1_install_err:
+    try:
+        import logging as _pcrv1_err_log
+        _pcrv1_err_log.getLogger("task_worker").error(
+            "PATCH_PRICE_CONFIRMATION_ROUTING_V1_INSTALL_ERR: %s", _pcrv1_install_err
+        )
+    except Exception:
+        pass
+# === END PATCH_PRICE_CONFIRMATION_ROUTING_V1 ===
+
 if __name__ == "__main__":
     asyncio.run(main())
 
