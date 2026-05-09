@@ -1,14 +1,18 @@
 # ORCHESTRA_FULL_CONTEXT_PART_006
-generated_at_utc: 2026-05-09T07:40:02.309004+00:00
-git_sha_before_commit: 62a5da22f1c20cb0ad84a06020938053156ddd54
+generated_at_utc: 2026-05-09T17:35:02.366385+00:00
+git_sha_before_commit: 7aff8a6c8fa2d5b28aa4188a5e888b6d87ae65e1
 part: 6/17
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 2/3
-SHA256_FULL_FILE: 063c2baa424d68ad7be5dbc5e327a9b2ff282e58edd634cfad27d4576dbbaceb
+SHA256_FULL_FILE: b8484c0045715ed6922c0b8f62a4d3c1f612ce8d7ae2858ff3b801af76e84a2e
 ====================================================================================================
+            args = tuple(_p6e4_sanitize_catalog_text(a) if isinstance(a, str) else a for a in args)
+            kwargs = {k: (_p6e4_sanitize_catalog_text(v) if isinstance(v, str) else v) for k, v in kwargs.items()}
+            return await orig(*args, **kwargs)
+    else:
         def wrapped(*args, **kwargs):
             args = tuple(_p6e4_sanitize_catalog_text(a) if isinstance(a, str) else a for a in args)
             kwargs = {k: (_p6e4_sanitize_catalog_text(v) if isinstance(v, str) else v) for k, v in kwargs.items()}
@@ -7705,14 +7709,6 @@ else:
     _T210MG_LOG.warning("PATCH_TOPIC210_META_GUARD_V1 skipped: _handle_new not found")
 # === END_PATCH_TOPIC210_META_GUARD_V1 ===
 
-# DISABLED_BY_PATCH_PRICE_BIND_LOOP_TERMINATE_V1 — asyncio.run moved after new patches below
-# if __name__ == "__main__":
-#     asyncio.run(main())
-
-
-# ============================================================
-# === PATCH_TOPIC2_CANCEL_GUARD_V1 ===
-# Цель: cancel-intent в topic_2 ловится ДО любого estimate route_guard
 
 ====================================================================================================
 END_FILE: task_worker.py

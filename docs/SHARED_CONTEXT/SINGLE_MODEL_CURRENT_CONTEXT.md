@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-05-09T07:40:02.885697+00:00
-GIT_SHA: 62a5da22f1c20cb0ad84a06020938053156ddd54
+GENERATED_AT: 2026-05-09T17:35:03.050469+00:00
+GIT_SHA: 7aff8a6c8fa2d5b28aa4188a5e888b6d87ae65e1
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -16,9 +16,8 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 ## GLOBAL_STATUS
 | topic | name | status | active | failed_24h |
 |-------|------|--------|--------|------------|
-| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 3 | 12 |
+| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 1 | 25 |
 | 5 | TEKHNADZOR | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
-| 11 | VIDEO | UNKNOWN | 1 | 0 |
 | 210 | PROEKTIROVANIE | INSTALLED_NOT_VERIFIED | 0 | 6 |
 | 500 | VEB_POISK | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
 
@@ -71,13 +70,13 @@ DATE_UNKNOWN
 ## ACTIVE_OR_RECENT_TOPICS
 ### topic_2 STROYKA
 role: Сметы
-active: 3
-failed_24h: 12
+active: 1
+failed_24h: 25
 commits_last_7d: 30
 recent_commits:
-- 62a5da2|fix(topic2): remove hardcoded drainage parent 043e5c9f — dynamic lookup by state
-- 7a5f770|fix(topic210): canonical pile count route
-- ca312d9|fix(topic210): pile count route and db lock recover guard
+- 7aff8a6|feat(topic2): PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1 — top-level price choice interceptor
+- 3ceedaf|fix(topic2): close price choice loop after price enrichment
+- 3723bbe|fix(topic2): PATCH_KARKASNIK_SHEET_FIX_V1 — correct sheet for frame houses
 markers_missing: 6
 - TOPIC2_ESTIMATE_SESSION_CREATED
 - TOPIC2_CONTEXT_READY
@@ -86,9 +85,9 @@ markers_missing: 6
 - TOPIC2_MESSAGE_THREAD_ID_OK
 - TOPIC2_DONE_CONTRACT_OK
 last_failed:
-- 6a535d79 | STALE_TIMEOUT
-- f9df5eb5 | STALE_TIMEOUT
-- 043e5c9f | EXECUTION_TIMEOUT
+- b57b1bae | STALE_TIMEOUT
+- 57cee6eb | STALE_TIMEOUT
+- d9b4d3d7 | STALE_TIMEOUT
 blockers:
 - - topic_2 не тянет проектные образцы topic_210
 - - topic_210 не тянет сметные артефакты как результат
@@ -111,17 +110,6 @@ last_failed:
 blockers:
 - - topic_5 не тянет КЖ/АР без прямой команды
 NEXT_ACTION: investigate latest failed: STALE_NEW_30MIN
-
-### topic_11 VIDEO
-role: Видео
-active: 1
-failed_24h: 0
-commits_last_7d: 0
-last_failed:
-- 6abb8aa0 | cannot access local variable 'ai_result' where it is not associated with a value
-- 83b52b32 | cannot access local variable 'ai_result' where it is not associated with a value
-- 6b8a3806 | cannot access local variable 'ai_result' where it is not associated with a value
-NEXT_ACTION: investigate latest failed: cannot access local variable 'ai_result' where it is not associated with a value
 
 ### topic_210 PROEKTIROVANIE
 role: КЖ КМ
@@ -146,7 +134,7 @@ NEXT_ACTION: investigate latest failed: INVALID_RESULT_GATE
 role: Интернет-поиск
 active: 0
 failed_24h: 0
-commits_last_7d: 10
+commits_last_7d: 7
 recent_commits:
 - b3e5be7|fix(topic500): relax bad-result filter for adaptive output modes
 - 0d6a9a4|fix(memory): ARCHIVE_DUPLICATE_GUARD_V1 + topic500 search pollution guard

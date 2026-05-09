@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_011
-generated_at_utc: 2026-05-09T07:40:02.313126+00:00
-git_sha_before_commit: 62a5da22f1c20cb0ad84a06020938053156ddd54
+generated_at_utc: 2026-05-09T17:35:02.371112+00:00
+git_sha_before_commit: 7aff8a6c8fa2d5b28aa4188a5e888b6d87ae65e1
 part: 11/17
 
 
@@ -1782,7 +1782,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 12e87be27b9b9a53a30705d171abf8d5ed5953b4fbe7436b2b603ccdaf55f5cc
+SHA256_FULL_FILE: 32b9498d82e188d0f1b3940abc68138af775069aeeaed2ed53695106a29e74e8
 ====================================================================================================
 # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
 from __future__ import annotations
@@ -1929,6 +1929,96 @@ def _history_safe(conn: sqlite3.Connection, task_id: str, action: str) -> None:
     except Exception:
         pass
 
+# === PATCH_TOPIC2_PRICE_CHOICE_LOOP_CLOSE_V1 helpers ===
+PRICE_CHOICE_PROMPT_V1 = "Выбери уровень цен: 1 дешёвые / 2 средние / 3 надёжные / 4 вручную"
+
+def _t2pcl_history_text(conn, task_id):
+    try:
+        rows = conn.execute(
+            "SELECT action FROM task_history WHERE task_id=? ORDER BY rowid ASC",
+            (str(task_id),),
+        ).fetchall()
+        out = []
+        for r in rows:
+            try:
+                out.append(str(r["action"]))
+            except Exception:
+                out.append(str(r[0]))
+        return "\n".join(out)
+    except Exception:
+        return ""
+
+def _t2pcl_parse_explicit_price_choice(text):
+    t = _low(text)
+    t = re.sub(r"\s+", " ", t).strip(" .,!?:;()[]{}")
+    if not t:
+        return ""
+    _exact = {
+        "1": "cheapest", "а": "cheapest", "a": "cheapest", "а)": "cheapest", "a)": "cheapest",
+        "дешевые": "cheapest", "дешёвые": "cheapest", "самые дешевые": "cheapest",
+        "самые дешёвые": "cheapest", "минимальные": "cheapest", "минимальная": "cheapest",
+        "вариант 1": "cheapest", "первый": "cheapest",
+        "2": "median", "б": "median", "b": "median", "б)": "median", "b)": "median",
+        "средние": "median", "средняя": "median", "среднее": "median",
+        "медианная": "median", "медианные": "median",
+        "вариант 2": "median", "второй": "median",
+        "3": "reliable", "в": "reliable", "v": "reliable", "в)": "reliable", "v)": "reliable",
+        "надежные": "reliable", "надёжные": "reliable", "надежный": "reliable", "надёжный": "reliable",
+        "проверенные": "reliable", "проверенный": "reliable",
+        "вариант 3": "reliable", "третий": "reliable",
+        "4": "manual", "г": "manual", "g": "manual", "г)": "manual", "g)": "manual",
+        "вручную": "manual", "ручная": "manual", "свои цены": "manual",
+        "своя цена": "manual", "укажу цены": "manual",
+        "вариант 4": "manual", "четвертый": "manual", "четвёртый": "manual",
+    }
+    return _exact.get(t, "")
+
+def _t2pcl_old_public_output(text):
+    s = _s(text)
+    if not s:
+        return False
+    if any(x in s for x in ("⏳ Задачу понял", "Шаблон:", "Лист:", "Цены из листа")):
+        return True
+    if "✅ Смета готова" in s and not ("drive.google.com" in s and (".xlsx" in s or "spreadsheets/d" in s) and ".pdf" in s):
+        return True
+    return False
+
+async def _t2pcl_send_price_choice_prompt(conn, task_id, chat_id, reply_to_message_id=None, repeat=True):
+    action = "TOPIC2_PRICE_CHOICE_REQUIRED_REPEAT" if repeat else "TOPIC2_PRICE_CHOICE_REQUESTED"
+    _history_safe(conn, str(task_id), action)
+    _update_task_safe(
+        conn, str(task_id),
+        state="WAITING_CLARIFICATION",
+        result=PRICE_CHOICE_PROMPT_V1,
+        error_message="TOPIC2_PRICE_CHOICE_REQUIRED",
+    )
+    try:
+        maybe = _send_text(str(chat_id), PRICE_CHOICE_PROMPT_V1, reply_to_message_id, int(TOPIC_ID_STROYKA))
+        if hasattr(maybe, "__await__"):
+            await maybe
+    except Exception as _e:
+        _history_safe(conn, str(task_id), "TOPIC2_PRICE_CHOICE_PROMPT_SEND_ERR:" + _s(_e)[:200])
+    return True
+
+async def _t2pcl_price_choice_guard(conn, task_id, chat_id, raw_input, reply_to_message_id=None):
+    task_id = str(task_id or "")
+    if not task_id:
+        return False
+    hist = _t2pcl_history_text(conn, task_id)
+    has_prices = ("TOPIC2_PRICE_ENRICHMENT_DONE" in hist or
+                  "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:prices_shown" in hist)
+    has_choice = "TOPIC2_PRICE_CHOICE_CONFIRMED" in hist
+    if not has_prices or has_choice:
+        return False
+    choice = _t2pcl_parse_explicit_price_choice(raw_input)
+    if choice:
+        _history_safe(conn, task_id, "TOPIC2_PRICE_CHOICE_CONFIRMED:" + choice)
+        return False
+    return await _t2pcl_send_price_choice_prompt(
+        conn, task_id, chat_id, reply_to_message_id,
+        repeat=("TOPIC2_PRICE_CHOICE_REQUESTED" in hist),
+    )
+# === /PATCH_TOPIC2_PRICE_CHOICE_LOOP_CLOSE_V1 helpers ===
 
 def _memory_save(chat_id: str, key: str, value: Dict[str, Any]) -> None:
     try:
@@ -2585,6 +2675,12 @@ def _choose_value(values: List[float], choice: Dict[str, Any], default: float = 
 
 
 async def _send_text(chat_id: str, text: str, reply_to: Optional[int], topic_id: int) -> Dict[str, Any]:
+    # PATCH_TOPIC2_PRICE_CHOICE_LOOP_CLOSE_V1 send_text guard
+    try:
+        if _t2pcl_old_public_output(text):
+            text = PRICE_CHOICE_PROMPT_V1
+    except Exception:
+        pass
     from core.reply_sender import send_reply_ex
     return await asyncio.to_thread(
         send_reply_ex,
@@ -4382,6 +4478,33 @@ def _stv3_context_hash(raw_input: str, source_file_id: str = "") -> str:
 _stv3_orig_update_task_safe = _update_task_safe
 
 def _update_task_safe(conn, task_id, **kwargs):
+    # PATCH_TOPIC2_PRICE_CHOICE_LOOP_CLOSE_V1 update guard
+    try:
+        _t2pcl_result = kwargs.get("result")
+        _t2pcl_state = kwargs.get("state")
+        _t2pcl_row = conn.execute("SELECT topic_id FROM tasks WHERE id=? LIMIT 1", (str(task_id),)).fetchone()
+        _t2pcl_topic_id = int((_t2pcl_row[0] if _t2pcl_row else 0) or 0)
+        if _t2pcl_topic_id == TOPIC_ID_STROYKA:
+            if _t2pcl_old_public_output(_t2pcl_result):
+                _t2pcl_hist = _t2pcl_history_text(conn, str(task_id))
+                if "TOPIC2_PRICE_CHOICE_CONFIRMED" not in _t2pcl_hist:
+                    kwargs["state"] = "WAITING_CLARIFICATION"
+                    kwargs["result"] = PRICE_CHOICE_PROMPT_V1
+                    kwargs["error_message"] = "TOPIC2_PRICE_CHOICE_REQUIRED"
+                    if "TOPIC2_PRICE_CHOICE_REQUESTED" not in _t2pcl_hist:
+                        _history_safe(conn, str(task_id), "TOPIC2_PRICE_CHOICE_REQUESTED")
+                    _history_safe(conn, str(task_id), "TOPIC2_OLD_PUBLIC_OUTPUT_BLOCKED_BY_PRICE_CHOICE_GATE")
+            elif _t2pcl_state in ("IN_PROGRESS", "WAITING_CLARIFICATION", "AWAITING_CONFIRMATION"):
+                _t2pcl_hist = _t2pcl_history_text(conn, str(task_id))
+                if ("FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:prices_shown" in _t2pcl_hist
+                        and "TOPIC2_PRICE_CHOICE_CONFIRMED" not in _t2pcl_hist):
+                    kwargs["state"] = "WAITING_CLARIFICATION"
+                    kwargs["result"] = PRICE_CHOICE_PROMPT_V1
+                    kwargs["error_message"] = "TOPIC2_PRICE_CHOICE_REQUIRED"
+                    if "TOPIC2_PRICE_CHOICE_REQUESTED" not in _t2pcl_hist:
+                        _history_safe(conn, str(task_id), "TOPIC2_PRICE_CHOICE_REQUESTED")
+    except Exception:
+        pass
     new_state = kwargs.get("state", "")
     if new_state == "DONE":
         # Check task is topic_2
@@ -6088,6 +6211,580 @@ async def maybe_handle_stroyka_estimate(conn, task, logger=None):  # noqa: F811
 _T2IG_LOG.info("PATCH_TOPIC2_INPUT_GATE_SOURCE_OF_TRUTH_V1: installed")
 # === END_PATCH_TOPIC2_INPUT_GATE_SOURCE_OF_TRUTH_V1 ===
 
+# === PATCH_TOPIC2_PRICE_ALWAYS_ASK_V1 ===
+# Fix: новый estimate-запрос ("сделай по заданию смету" и т.д.) не должен подхватывать
+# pending от предыдущего task_id или от того же task_id после MANUAL_RESET_NEW.
+# Price WC должен запускаться КАЖДЫЙ РАЗ для задач с estimate-контентом.
+# Корень бага: _is_confirm(startswith "сделай ") = True + _pending_is_fresh override 24h
+# → CANONICAL_OLD_ROUTE_HARD_BLOCK пропускает price WC (подтверждено history 076e4350).
+import logging as _t2paa_log_mod
+_T2PAA_LOG = _t2paa_log_mod.getLogger("stroyka_estimate_canon")
+_T2PAA_ORIG_MAYBE_HANDLE = maybe_handle_stroyka_estimate
+
+async def maybe_handle_stroyka_estimate(conn, task, logger=None):
+    try:
+        task_id = _s(_row_get(task, "id"))
+        chat_id = _s(_row_get(task, "chat_id"))
+        raw = _s(_row_get(task, "raw_input", ""))
+        _pend = _memory_latest(chat_id, "topic_2_estimate_pending_")
+        # Если pending активен И текущий ввод — не чистое подтверждение цены
+        # (содержит ESTIMATE_WORDS) → помечаем pending stale, чтобы запустился полный price WC.
+        # _is_confirm_only = False при наличии "смет"/"дом"/"газобетон" и т.д. в тексте.
+        if (_pend
+                and _pend.get("status") == "WAITING_PRICE_CONFIRMATION"
+                and not _is_confirm_only(raw)):
+            _stale = dict(_pend)
+            _stale["status"] = "STALE_DEPRECATED"
+            _stale["deprecated_at"] = _now()
+            _stale["deprecated_reason"] = "PRICE_ALWAYS_ASK_V1:new_estimate_request_not_confirm_only"
+            _memory_save(chat_id, f"topic_2_estimate_pending_{_pend.get('task_id', 'x')}", _stale)
+            _T2PAA_LOG.info(
+                "PATCH_TOPIC2_PRICE_ALWAYS_ASK_V1:stale_cleared task=%s prev_task=%s raw=%.60s",
+                task_id, _pend.get("task_id"), raw,
+            )
+    except Exception as _t2paa_e:
+        _T2PAA_LOG.warning("PATCH_TOPIC2_PRICE_ALWAYS_ASK_V1:ERR %s", _t2paa_e)
+    return await _T2PAA_ORIG_MAYBE_HANDLE(conn, task, logger)
+
+_T2PAA_LOG.info("PATCH_TOPIC2_PRICE_ALWAYS_ASK_V1 installed")
+# === END_PATCH_TOPIC2_PRICE_ALWAYS_ASK_V1 ===
+
+# === PATCH_TOPIC2_PARSE_REQUEST_SMART_INFER_V1 ===
+# §9 spec: "что строим — если object_type уже есть — запрещено"
+# §10 spec: "имитация бруса" / "по всем помещениям" → scope=под ключ
+# §12 spec: брус → Ареал Нева = дом (canon §2)
+# Fix 1: pile cross-section "N свай жб AxB" убирается из _extract_dimensions (сечение сваи ≠ размер здания)
+# Fix 2: material="брус" + object="" → object="дом"
+# Fix 3: "по всем помещениям" / "имитация бруса внутри" → scope="под ключ"
+import re as _t2prs_re
+import logging as _t2prs_log_mod
+_T2PRS_LOG = _t2prs_log_mod.getLogger("stroyka_estimate_canon")
+
+_T2PRS_ORIG_EXTRACT_DIM = _extract_dimensions
+_T2PRS_ORIG_PARSE_REQUEST = _parse_request
+
+def _extract_dimensions(text: str):
+    t = _low(text)
+    # Убираем сечения свай: "N свай [жб] AxB" или "жб AxB"
+    t_clean = _t2prs_re.sub(
+        r'(?:\d+\s+)?(?:свай|свая|сваи|жб)\s+(?:жб\s+)?\d+\s*[xх×*]\s*\d+',
+        ' ', t,
+    )
+    return _T2PRS_ORIG_EXTRACT_DIM(t_clean)
+
+def _parse_request(text: str):
+    parsed = _T2PRS_ORIG_PARSE_REQUEST(text)
+    t = _low(text)
+    # Fix 2: брус → дом (canon §2: брус → Ареал Нева.xlsx = деревянный дом)
+    if not parsed.get("object") and parsed.get("material") == "брус":
+        parsed["object"] = "дом"
+        _T2PRS_LOG.info("T2PRS_INFER:object=дом:from_material=брус")
+    # Fix 2b: другие признаки дома
+    if not parsed.get("object"):
+        for _hint in ("дач", "коттедж", "жилой", "жилого"):
+            if _hint in t:
+                parsed["object"] = "дом"
+                _T2PRS_LOG.info("T2PRS_INFER:object=дом:hint=%s", _hint)
+                break
+    # Fix 3: признаки scope=под ключ (spec §10)
+    if not parsed.get("scope"):
+        _scope_hints = (
+            "по всем помещениям", "по комнатам", "все помещения",
+            "имитация бруса внутри", "чистовая отделка", "ламинат",
+            "санузел", "теплые полы", "тёплые полы",
+        )
+        for _sh in _scope_hints:
+            if _sh in t:
+                parsed["scope"] = "под ключ"
+                _T2PRS_LOG.info("T2PRS_INFER:scope=под_ключ:hint=%s", _sh)
+                break
+    return parsed
+
+_T2PRS_LOG.info("PATCH_TOPIC2_PARSE_REQUEST_SMART_INFER_V1 installed")
+# === END_PATCH_TOPIC2_PARSE_REQUEST_SMART_INFER_V1 ===
+
+# === PATCH_TOPIC2_CLARIFICATION_MERGE_V1 ===
+# Fix: clarified:* entries in task_history not merged into raw_input before _parse_request
+# → _missing_question asks the same question again after user answered it.
+# PAMQ wrapper exists but _missing_question is called with only (parsed), conn/task not passed.
+# Solution: enrich task.raw_input with clarification history BEFORE calling the full chain.
+import logging as _t2cm_log_mod
+_T2CM_LOG = _t2cm_log_mod.getLogger("stroyka_estimate_canon")
+_T2CM_ORIG = maybe_handle_stroyka_estimate
+
+async def maybe_handle_stroyka_estimate(conn, task, logger=None):
+    try:
+        task_id = _s(_row_get(task, "id"))
+        if conn is not None and task_id:
+            rows = conn.execute(
+                "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'clarified:%' ORDER BY rowid ASC",
+                (task_id,)
+            ).fetchall()
+            clarifications = [r[0].split(":", 1)[1].strip() for r in rows if ":" in r[0]]
+            if clarifications:
+                raw = _s(_row_get(task, "raw_input", ""))
+                enriched = raw + "\n" + "\n".join(clarifications)
+                if hasattr(task, "keys"):
+                    task_dict = dict(zip(task.keys(), task))
+                elif isinstance(task, dict):
+                    task_dict = dict(task)
+                else:
+                    task_dict = {"raw_input": enriched}
+                task_dict["raw_input"] = enriched
+                _T2CM_LOG.info(
+                    "T2CM_MERGE: task=%s clarifs=%d enriched_len=%d",
+                    task_id, len(clarifications), len(enriched),
+                )
+                return await _T2CM_ORIG(conn, task_dict, logger)
+    except Exception as _t2cm_e:
+        _T2CM_LOG.warning("T2CM_ERR: %s", _t2cm_e)
+    return await _T2CM_ORIG(conn, task, logger)
+
+_T2CM_LOG.info("PATCH_TOPIC2_CLARIFICATION_MERGE_V1 installed")
+# === END_PATCH_TOPIC2_CLARIFICATION_MERGE_V1 ===
+
+
+# === PATCH_TOPIC2_TOPIC_ID_INT_SAFE_V1 ===
+import logging as _t2tid_log_mod
+_T2TID_LOG = _t2tid_log_mod.getLogger("stroyka_estimate_canon")
+_T2TID_ORIG_DIRECT = _stroyka_final_handle_direct_item_estimate
+
+async def _stroyka_final_handle_direct_item_estimate(conn, task, logger=None):
+    try:
+        raw_tid = _row_get(task, "topic_id", 0)
+        int(raw_tid or 0)
+    except (ValueError, TypeError):
+        if hasattr(task, "keys"):
+            task_dict = dict(zip(task.keys(), tuple(task)))
+        elif isinstance(task, dict):
+            task_dict = dict(task)
+        else:
+            task_dict = {}
+        task_dict["topic_id"] = TOPIC_ID_STROYKA
+        _T2TID_LOG.info("T2TID_FIX: topic_id coerced to %s", TOPIC_ID_STROYKA)
+        return await _T2TID_ORIG_DIRECT(conn, task_dict, logger)
+    return await _T2TID_ORIG_DIRECT(conn, task, logger)
+
+_T2TID_LOG.info("PATCH_TOPIC2_TOPIC_ID_INT_SAFE_V1 installed")
+# === END_PATCH_TOPIC2_TOPIC_ID_INT_SAFE_V1 ===
+
+# === PATCH_TOPIC2_CLARIFICATION_MERGE_V2 ===
+# Fix V1 bug: dict(zip(task.keys(), task)) for plain dict iterates keys not values
+# → task_dict becomes {key:key}, internal call fails, fallback to original (no merge).
+# V2: uses dict(task) for plain dict (same pattern as FIX_STROYKA_CONTEXT_ENRICH line 2393).
+# Calls _T2CM_ORIG (PAA) directly, bypassing broken V1.
+import logging as _t2cm2_log_mod
+_T2CM2_LOG = _t2cm2_log_mod.getLogger("task_worker")
+_T2CM2_INNER = _T2CM_ORIG  # PAA wrapper — skip broken V1
+
+async def maybe_handle_stroyka_estimate(conn, task, logger=None):
+    # PATCH_TOPIC2_PRICE_CHOICE_LOOP_CLOSE_V1 maybe_handle guard
+    try:
+        _t2pcl_task_id = str(_row_get(task, "id", ""))
+        _t2pcl_chat_id = str(_row_get(task, "chat_id", ""))
+        _t2pcl_topic_id = int(_row_get(task, "topic_id", 0) or 0)
+        _t2pcl_raw_input = _row_get(task, "raw_input", "")
+        _t2pcl_reply_to = _row_get(task, "reply_to_message_id", None)
+        if _t2pcl_topic_id == TOPIC_ID_STROYKA:
+            if await _t2pcl_price_choice_guard(conn, _t2pcl_task_id, _t2pcl_chat_id, _t2pcl_raw_input, _t2pcl_reply_to):
+                return True
+    except Exception as _t2pcl_e:
+        try:
+            _history_safe(conn, str(_row_get(task, "id", "")), "PATCH_TOPIC2_PRICE_CHOICE_LOOP_CLOSE_V1_MAYBE_ERR:" + _s(_t2pcl_e)[:200])
+        except Exception:
+            pass
+    try:
+        task_id = _s(_row_get(task, "id"))
+        if conn is not None and task_id:
+            rows = conn.execute(
+                "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'clarified:%' ORDER BY rowid ASC",
+                (task_id,)
+            ).fetchall()
+            clarifications = [r[0].split(":", 1)[1].strip() for r in rows if ":" in r[0]]
+            if clarifications:
+                raw = _s(_row_get(task, "raw_input", ""))
+                enriched = raw + "\n" + "\n".join(clarifications)
+                if isinstance(task, dict):
+                    task_dict = dict(task)
+                elif hasattr(task, "keys"):
+                    task_dict = dict(zip(task.keys(), tuple(task)))
+                else:
+                    task_dict = {}
+                task_dict["raw_input"] = enriched
+                _T2CM2_LOG.info(
+                    "T2CM2_MERGE: task=%s clarifs=%d enriched_len=%d",
+                    task_id, len(clarifications), len(enriched),
+                )
+                return await _T2CM2_INNER(conn, task_dict, logger)
+    except Exception as _t2cm2_e:
+        _T2CM2_LOG.warning("T2CM2_ERR: %s", _t2cm2_e)
+    return await _T2CM2_INNER(conn, task, logger)
+
+_T2CM2_LOG.info("PATCH_TOPIC2_CLARIFICATION_MERGE_V2 installed")
+# === END_PATCH_TOPIC2_CLARIFICATION_MERGE_V2 ===
+
+# === PATCH_TOPIC2_PRICE_TEXT_TRUNCATE_V1 ===
+# Bug: _price_confirmation_text с 126 позициями шаблона → >4096 симв → Telegram 400 "message is too long"
+# Fix: ограничить template_prices до 15 строк; остаток заменить «… (+N позиций)».
+import logging as _ptt_log_mod
+_PTT_LOG = _ptt_log_mod.getLogger("task_worker")
+_PTT_ORIG = _price_confirmation_text
+
+def _price_confirmation_text(parsed, template, sheet_name, template_prices, online_prices):
+    MAX_PRICE_LINES = 15
+    if template_prices:
+        lines = template_prices.splitlines()
+        if len(lines) > MAX_PRICE_LINES + 1:
+            shown = "\n".join(lines[:MAX_PRICE_LINES])
+            rest = len(lines) - MAX_PRICE_LINES
+            template_prices = shown + f"\n… (+{rest} позиций в смете)"
+    text = _PTT_ORIG(parsed, template, sheet_name, template_prices, online_prices)
+    if len(text) > 3900:
+        text = text[:3900] + "\n…(сообщение сокращено)"
+    return text
+
+_PTT_LOG.info("PATCH_TOPIC2_PRICE_TEXT_TRUNCATE_V1 installed")
+# === END_PATCH_TOPIC2_PRICE_TEXT_TRUNCATE_V1 ===
+
+
+# === PATCH_TOPIC2_FRAME_HOUSE_MATERIAL_V1 ===
+# Facts:
+# - topic_2 canonical frame-house estimate request was classified as material="брус"
+# - request contained frame-house markers: свайный фундамент, ЖБ сваи 150x150, утепление стен 150, имитация бруса as finish
+# - canon requires frame house >100m2 to use frame template route, not gasbeton/bрус route
+import re as _t2fh_re
+import logging as _t2fh_logging
+
+_T2FH_LOG = _t2fh_logging.getLogger("topic2.frame_house_material_v1")
+
+def _t2fh_s(v, limit=20000):
+    try:
+        return str(v or "")[:limit]
+    except Exception:
+        return ""
+
+def _t2fh_low(v):
+    return _t2fh_s(v).lower().replace("ё", "е")
+
+def _t2fh_has_solid_brus(low: str) -> bool:
+    return any(x in low for x in (
+        "дом из бруса",
+        "дом брус",
+        "брусовой дом",
+        "клееный брус",
+        "клееного бруса",
+        "профилированный брус",
+        "профилированного бруса",
+        "оцилиндрованное бревно",
+        "сруб",
+        "лафет",
+    ))
+
+def _t2fh_is_frame_house_context(raw) -> bool:
+    low = _t2fh_low(raw)
+    if not low:
+        return False
+
+    if _t2fh_has_solid_brus(low):
+        return False
+
+    has_direct_frame = any(x in low for x in (
+        "каркас",
+        "каркасный",
+        "каркасник",
+        "frame",
+    ))
+
+    has_finish_brus = (
+        "имитац" in low and "брус" in low
+    )
+
+    has_piles = any(x in low for x in (
+        "свая",
+        "сваи",
+        "свай",
+        "жб 150",
+        "ж/б 150",
+        "150х150",
+        "150x150",
+        "150×150",
+        "железобетонн",
+    ))
+
+    has_wall_insulation = (
+        "утепл" in low and "стен" in low
+    ) or any(x in low for x in (
+        "утепление стен 150",
+        "утепления стен 150",
+        "минвата",
+        "каменная вата",
+    ))
+
+    if has_direct_frame:
+        return True
+
+    if has_finish_brus and (has_piles or has_wall_insulation):
+        return True
+
+    if has_piles and has_wall_insulation:
+        return True
+
+    return False
+
+def _t2fh_force_frame(parsed, raw):
+    try:
+        if isinstance(parsed, dict) and _t2fh_is_frame_house_context(raw):
+            old_material = _t2fh_low(parsed.get("material"))
+            if old_material in ("", "брус", "дерево", "деревянный", "газобетон"):
+                parsed["material"] = "каркас"
+                parsed["frame_house"] = True
+                parsed["material_source"] = "PATCH_TOPIC2_FRAME_HOUSE_MATERIAL_V1"
+        return parsed
+    except Exception as e:
+        try:
+            _T2FH_LOG.warning("PATCH_TOPIC2_FRAME_HOUSE_MATERIAL_V1_DICT_ERR %s", e)
+        except Exception:
+            pass
+        return parsed
+
+def _t2fh_wrap_material_func(name):
+    old = globals().get(name)
+    if not callable(old) or getattr(old, "_t2fh_wrapped", False):
+        return False
+
+    def wrapped(*args, **kwargs):
+        raw_parts = []
+        for x in args:
+            raw_parts.append(_t2fh_s(x, 5000))
+        for k in ("raw_input", "text", "caption", "prompt", "user_text"):
+            if k in kwargs:
+                raw_parts.append(_t2fh_s(kwargs.get(k), 5000))
+        raw = "\n".join(raw_parts)
+
+        res = old(*args, **kwargs)
+
+        if isinstance(res, str):
+            if _t2fh_is_frame_house_context(raw) and _t2fh_low(res) in ("", "брус", "дерево", "деревянный", "газобетон"):
+                return "каркас"
+            return res
+
+        if isinstance(res, dict):
+            return _t2fh_force_frame(res, raw)
+
+        return res
+
+    wrapped._t2fh_wrapped = True
+    globals()[name] = wrapped
+    return True
+
+_T2FH_WRAPPED = []
+for _t2fh_name in (
+    "_extract_material",
+    "extract_material",
+    "_detect_material",
+    "detect_material",
+    "_parse_estimate_input",
+    "parse_estimate_input",
+    "_parse_user_input",
+    "parse_user_input",
+    "_parse_task_input",
+    "parse_task_input",
+    "_parse_stroyka_input",
+    "parse_stroyka_input",
+):
+    try:
+        if _t2fh_wrap_material_func(_t2fh_name):
+            _T2FH_WRAPPED.append(_t2fh_name)
+    except Exception as _t2fh_e:
+        try:
+            _T2FH_LOG.warning("PATCH_TOPIC2_FRAME_HOUSE_MATERIAL_V1_WRAP_ERR %s %s", _t2fh_name, _t2fh_e)
+        except Exception:
+            pass
+
+try:
+    _T2FH_LOG.info("PATCH_TOPIC2_FRAME_HOUSE_MATERIAL_V1 installed wrapped=%s", ",".join(_T2FH_WRAPPED))
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_FRAME_HOUSE_MATERIAL_V1 ===
+
+# === FULL_CANON_CLOSURE_VERIFIED_V1 / TOPIC2_TEMPLATE_PRICE_EXTRACTION_SAFE_V1 ===
+try:
+    import re as _fccv1_re
+    import logging as _fccv1_logging
+    from openpyxl import load_workbook as _fccv1_load_workbook
+
+    _fccv1_log = _fccv1_logging.getLogger("task_worker")
+
+    def _fccv1_float_or_none(value):
+        if value is None:
+            return None, "PRICE_MISSING"
+        if isinstance(value, (int, float)):
+            return float(value), "OK"
+        s = str(value).strip().replace("\xa0", " ").replace(" ", "").replace(",", ".")
+        if not s:
+            return None, "PRICE_MISSING"
+        try:
+            return float(s), "OK"
+        except Exception:
+            return None, "PRICE_MISSING"
+
+    def _p8v3_extract_tpl_prices(template_path=None):
+        prices = {}
+        loaded = 0
+        skipped = 0
+        missing_price = 0
+
+        if not template_path:
+            _fccv1_log.info("TOPIC2_TEMPLATE_PRICE_EXTRACTION_SAFE_V1 installed loaded=0 skipped=0 missing_price=0")
+            return prices
+
+        wb = _fccv1_load_workbook(template_path, data_only=True)
+        ws = wb.active
+
+        for r in ws.iter_rows(values_only=True):
+            if not r or len(r) < 10:
+                skipped += 1
+                continue
+
+            name = str(r[0] if r[0] is not None else "").strip()
+            if not name:
+                skipped += 1
+                continue
+
+            qty, qty_status = _fccv1_float_or_none(r[3])
+            if qty_status != "OK":
+                skipped += 1
+                continue
+
+            work_price, work_status = _fccv1_float_or_none(r[7])
+            mat_price, mat_status = _fccv1_float_or_none(r[9])
+
+            if work_status != "OK" or mat_status != "OK":
+                missing_price += 1
+
+            if work_status == "OK" and mat_status == "OK" and work_price == 0 and mat_price == 0:
+                skipped += 1
+                continue
+
+            norm = _fccv1_re.sub(r"\s+", " ", name.lower()).strip()
+            prices[norm] = {
+                "name": name,
+                "qty": qty,
+                "work_price": work_price,
+                "mat_price": mat_price,
+                "work_price_status": work_status,
+                "mat_price_status": mat_status,
+            }
+            loaded += 1
+
+        _fccv1_log.info(
+            "TOPIC2_TEMPLATE_PRICE_EXTRACTION_SAFE_V1 installed loaded=%s skipped=%s missing_price=%s",
+            loaded,
+            skipped,
+            missing_price,
+        )
+        return prices
+
+    _fccv1_log.info("TOPIC2_TEMPLATE_PRICE_EXTRACTION_SAFE_V1 installed loaded=0 skipped=0 missing_price=0")
+except Exception as _e:
+    try:
+        _fccv1_log.exception("TOPIC2_TEMPLATE_PRICE_EXTRACTION_SAFE_V1_INSTALL_ERR:%s", _e)
+    except Exception:
+        pass
+# === /FULL_CANON_CLOSURE_VERIFIED_V1 ===
+
+# === PATCH_PRICE_ENRICHMENT_IDEMPOTENT_V1 ===
+# Причина: _pick_next_task забирает задачи в NEW/IN_PROGRESS/WAITING_CLARIFICATION.
+# После price WC задача переходит в WAITING_CLARIFICATION, но через 1.5с poll
+# подхватывает её снова → запускает полный pipeline → второй вызов Sonar.
+# Фикс: проверяем TOPIC2_PRICE_ENRICHMENT_DONE в task_history перед вызовом Sonar.
+# Если маркер есть — возвращаем "" без сетевого запроса.
+try:
+    import logging as _pei_log_mod
+    _PEI_LOG = _pei_log_mod.getLogger("task_worker")
+    _PEI_ORIG_SEARCH = _search_prices_online
+
+    async def _search_prices_online(parsed, template, sheet_name, conn=None, task_id=None):
+        if conn is not None and task_id is not None:
+            try:
+                row = conn.execute(
+                    "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'TOPIC2_PRICE_ENRICHMENT_DONE:%' ORDER BY rowid DESC LIMIT 1",
+                    (task_id,)
+                ).fetchone()
+                if row:
+                    _PEI_LOG.info("PATCH_PRICE_ENRICHMENT_IDEMPOTENT_V1: skip task=%s already=%s", task_id, row[0] if not hasattr(row, "keys") else row["action"])
+                    return ""
+            except Exception as _pei_check_e:
+                _PEI_LOG.warning("PATCH_PRICE_ENRICHMENT_IDEMPOTENT_V1_CHECK_ERR: %s", _pei_check_e)
+        return await _PEI_ORIG_SEARCH(parsed, template, sheet_name, conn=conn, task_id=task_id)
+
+    _PEI_LOG.info("PATCH_PRICE_ENRICHMENT_IDEMPOTENT_V1 installed")
+except Exception as _pei_install_e:
+    try:
+        _PEI_LOG.exception("PATCH_PRICE_ENRICHMENT_IDEMPOTENT_V1_INSTALL_ERR: %s", _pei_install_e)
+    except Exception:
+        pass
+# === END_PATCH_PRICE_ENRICHMENT_IDEMPOTENT_V1 ===
+
+# === PATCH_KARKASNIK_SHEET_FIX_V1 ===
+# Fix regression from PATCH_TOPIC2_REALSHEET_PRICES_V3 which hardcoded "Газобетонный дом"
+# for ALL materials. For material=="каркас": read "Каркас под ключ" from М-80.xlsx
+# (col4=work_price, col6=mat_price, data starts row 10).
+import logging as _kfv1_log_mod
+_KFV1_LOG = _kfv1_log_mod.getLogger("stroyka.karkasnik_sheet_fix_v1")
+
+_ETF_V3_ORIG = extract_template_prices
+
+def extract_template_prices(template_path, parsed):  # noqa: F811
+    if (parsed or {}).get("material") == "каркас":
+        _kark_path = template_path
+        if not _kark_path or not os.path.exists(_kark_path):
+            _kark_path = "/root/.areal-neva-core/data/templates/estimate/cache/1yt-RJsGRhO13zmPKNAn6bMuGrpXY7kWp__М-80.xlsx"
+        prices = {}
+        try:
+            from openpyxl import load_workbook as _kw
+            wb = _kw(_kark_path, read_only=True, data_only=True)
+            ws = wb["Каркас под ключ"] if "Каркас под ключ" in wb.sheetnames else wb.active
+            section = "Общее"
+            for i, row in enumerate(ws.iter_rows(values_only=True)):
+                r = list(row)
+                if i < 9:
+                    continue
+                r1 = r[1] if len(r) > 1 else None
+                if r[0] and not r1:
+                    section = str(r[0]).strip()
+                    continue
+                if not r1:
+                    continue
+                try:
+                    wp = float(r[4]) if r[4] is not None else 0.0
+                    mp = float(r[6]) if r[6] is not None else 0.0
+                except (ValueError, TypeError):
+                    continue
+                if wp == 0 and mp == 0:
+                    continue
+                unit = str(r[2]).strip() if r[2] else ""
+                name = str(r1).strip()
+                prices[name.lower().strip()] = {
+                    "work_price": wp, "mat_price": mp,
+                    "unit": unit, "section": section, "name": name,
+                }
+            wb.close()
+        except Exception as _ke:
+            _KFV1_LOG.error("KARKASNIK_SHEET_FIX_V1_ERR: %s", _ke)
+        count = len(prices)
+        lines = [
+            f"- {v['name']}: работа={v['work_price']:.0f} {v['unit']}, матер={v['mat_price']:.0f} {v['unit']}"
+            for v in list(prices.values())[:25]
+            if v["work_price"] > 0 or v["mat_price"] > 0
+        ]
+        text = f"Цены из листа 'Каркас под ключ' ({count} позиций):\n" + "\n".join(lines)
+        _KFV1_LOG.info("KARKASNIK_SHEET_FIX_V1:count=%d sheet=Каркас_под_ключ", count)
+        return text, "Каркас под ключ", False
+    return _ETF_V3_ORIG(template_path, parsed)
+
+_KFV1_LOG.info("PATCH_KARKASNIK_SHEET_FIX_V1 installed")
+# === END_PATCH_KARKASNIK_SHEET_FIX_V1 ===
 
 ====================================================================================================
 END_FILE: core/stroyka_estimate_canon.py

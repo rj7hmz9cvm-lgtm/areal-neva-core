@@ -1,7 +1,7 @@
 # topic_500 VEB_POISK
 
-GENERATED_AT: 2026-05-09T07:40:02.534490+00:00
-GIT_SHA: 62a5da22f1c20cb0ad84a06020938053156ddd54
+GENERATED_AT: 2026-05-09T17:35:02.619928+00:00
+GIT_SHA: 7aff8a6c8fa2d5b28aa4188a5e888b6d87ae65e1
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 500
@@ -32,9 +32,6 @@ FAILED_LAST_24H: 0
 - f28a106|fix(topic2/topic500): extend estimate pipeline, offer menu for drive_file, fix search result blocking
 - 4aa44eb|fix: close canon contours for topic_5/topic_2/topic_500
 - e3d992c|P6G_CLEAN_OLD_TOPIC500_CONTAMINATION_V1: SQL clean task 4883 contamination (point 1 of 5)
-- 949c379|P6F_FULL_CODE_CLOSE_REMAINING_CONTOURS_20260504_V1: close revision binding, topic500 sanitizer, photo CV via OpenRouter, TZ params, source labels, technadzor DOCX, project_210 drive, artifact gates
-- 709b28a|P3_FINAL_ROUTE_HARD_LOCK_SEARCH_ESTIMATE_20260504_V1: hard-lock topic500 search and topic2 current estimate route
-- 4f6af26|P2_FINAL_SEARCH_AND_ESTIMATE_CLOSE_20260504_V1: close topic500 search memory and topic2 final estimate logic
 
 ## MARKERS_LAST_24H
 - (none)

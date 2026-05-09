@@ -1,7 +1,7 @@
 # SINGLE_MODEL_FULL_CONTEXT
 
-GENERATED_AT: 2026-05-09T07:40:02.690490+00:00
-GIT_SHA: 62a5da22f1c20cb0ad84a06020938053156ddd54
+GENERATED_AT: 2026-05-09T17:35:02.796552+00:00
+GIT_SHA: 7aff8a6c8fa2d5b28aa4188a5e888b6d87ae65e1
 PURPOSE: Один файл с полным контекстом проекта для любой модели
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 
@@ -22,9 +22,9 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 | topic_id | name | status | active | failed_24h |
 |----------|------|--------|--------|------------|
 | 0 | COMMON | UNKNOWN | 0 | 0 |
-| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 3 | 12 |
+| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 1 | 25 |
 | 5 | TEKHNADZOR | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
-| 11 | VIDEO | UNKNOWN | 1 | 0 |
+| 11 | VIDEO | UNKNOWN | 0 | 0 |
 | 210 | PROEKTIROVANIE | INSTALLED_NOT_VERIFIED | 0 | 6 |
 | 500 | VEB_POISK | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
 | 794 | DEVOPS | UNKNOWN | 0 | 0 |
@@ -85,8 +85,8 @@ owner_reference_registry: loaded=True items=11
 # 2. LATEST_HANDOFF
 ================================================================================
 
-# LATEST HANDOFF — 2026-05-09 ~01:15 MSK
-**HEAD**: `af42c97`
+# LATEST HANDOFF — 2026-05-09 ~15:30 MSK
+**HEAD**: `8b21d75`
 **Воркер**: active (areal-task-worker)
 **telegram-ingress**: active
 
@@ -96,36 +96,34 @@ owner_reference_registry: loaded=True items=11
 
 | Топик | Состояние | Примечание |
 |-------|-----------|------------|
-| topic_2 СТРОИКА — дренаж | AWAITING_CONFIRMATION `043e5c9f` | bot_msg=10613, итого 1 035 664 руб, WITHOUT_VAT |
+| topic_2 СТРОИКА | AWAITING_CONFIRMATION `076e4350` | bot_msg=10757, 8 348 317 руб — сгенерирована БЕЗ price WC (до патча), требует подтверждения/правок от пользователя |
 | topic_5 ТЕХНАДЗОР | INSTALLED (не VERIFIED) | SA Drive upload fails 403, OAuth fallback в коде |
 | topic_500 ПОИСК | INSTALLED (не VERIFIED) | 9 режимов adaptive output |
 | topic_210 PROJECT | Active | без изменений |
 
 ---
 
-## ЗАКРЫТО В СЕССИИ 08-09.05.2026
+## ЗАКРЫТО В СЕССИИ 09.05.2026 (вторая смена)
 
-### 1. PATCH_TOPIC2_INPUT_GATE_SOURCE_OF_TRUTH_V1 — COMMITTED ✅
-- `core/topic2_input_gate.py` — gate с 25 маркерами дренажа/ливнёвки
-- Wrapper в конце `core/stroyka_estimate_canon.py`
-- Live: `acdae011` → gate сработал, WC-ответ доставлен вручную (bot_msg=10575)
+### PATCH_TOPIC2_PRICE_ALWAYS_ASK_V1 — COMMITTED ✅ (8b21d75)
+**Файл**: `core/stroyka_estimate_canon.py` — append в конец
 
-### 2. PATCH_WAITING_CLARIFICATION_DELIVERY_GUARD_V1 — COMMITTED ✅
-- Патч в `task_worker.py` — перехватывает `_pick_next_task`, доставляет WC-сообщения при пустом `bot_message_id`
+**Проблема**: "сделай по заданию смету" → `_is_confirm(startswith "сделай ")` = True + `_pending_is_fresh` override 24h (строка 2470-2472) → `CANONICAL_OLD_ROUTE_HARD_BLOCK` подхватывал pending от предыдущего запуска → пропускал price WC → estimate без TOPIC2_PRICE_CHOICE_CONFIRMED.
 
-### 3. PATCH_TOPIC2_DRAINAGE_CHILD_MERGE_V1 — COMMITTED ✅ (af42c97)
-- Патч в `task_worker.py` перед `__main__`
-- При каждом цикле пикера: если есть активный дренажный родитель (WC/AC) → все NEW text-задачи topic_2 → DONE с маркером `TOPIC2_CHILD_MERGED_TO_DRAINAGE_PARENT:<parent_id>`
-- Noise-задачи `9a174a37` и `85992edd` закрыты напрямую в БД
+**Фикс**: Wrapper вокруг `maybe_handle_stroyka_estimate` — если pending активен AND `not _is_confirm_only(raw)` (raw содержит ESTIMATE_WORDS, напр. "смет") → помечает pending stale. `_is_confirm_only("сделай по заданию смету")` = False (содержит "смет") → pending очищается → полный flow → price WC.
 
-### 4. TOPIC2_DRAINAGE_FULL_CLOSE_NO_LOOP_V2 — COMMITTED ✅ (af42c97)
-- `tools/topic2_drainage_repair_close.py`: legend filter в `extract_lengths`, fallback L=80м, VAT gate 22%, source filter (user PDFs only), clean public output
-- PDF `file_1.pdf` — схема дренажа (120 774 chars, только отметки высот, нет машиночитаемых длин)
-- PDF `file_0.pdf` — геологический отчёт (76 662 chars)
-- Длины: `APPROX_FROM_SCHEME_NO_FULL_LENGTH_TABLE`, L=80м (консервативный дефолт, 3 колодца Дк-1/2/3 + ДНС-1 + ПУ-1)
-- VAT: `WITHOUT_VAT` (подтверждено в history rowid 90090)
-- XLSX → bot_msg=10611, PDF → bot_msg=10612, текст → bot_msg=10613
-- Задача `043e5c9f` → AWAITING_CONFIRMATION, result чистый (нет /root/, runtime, drainage_estimate_)
+Легитимные подтверждения ("да", "средняя", "ок") — `_is_confirm_only` = True → pending НЕ очищается → estimate генерируется ✓.
+
+### Gate stale-context fixes — COMMITTED ✅ (8b21d75)
+**Файл**: `core/topic2_input_gate.py`
+
+- `_text_from_task`: убран `result` из текста gate — estimate result "Не входит: дренаж" → ложная блокировка user-clarification как drainage
+- `_latest_file_task` / `_recent_file_tasks`: фильтр `IN (NEW/IP/WC/AC)` — DONE задача с mikea_rp3.pdf (ливневая канализация) давала false positive
+- `_collect_current_file_text`: filesystem-scan заменён DB-lookup по активным задачам — `_recent_runtime_pdfs()` находила 4 old drainage PDF из FAILED задач
+
+### task_worker.py fixes — COMMITTED ✅ (8b21d75)
+- FULLFIX_14: добавлен `topic_id==2` guard — topic_11 (видео) больше не роутится в estimate
+- `_p6_is_topic2_vague`: исключение correction-фраз ("это не", "это план", "план дома" и т.д.)
 
 ---
 
@@ -133,28 +131,30 @@ owner_reference_registry: loaded=True items=11
 
 | Проблема | Статус |
 |----------|--------|
-| Длины дренажа не извлекаются | PDF — графическая схема, только отметки высот в тексте. Дефолт 80м. Если пользователь пришлёт реальные длины — пересчитать |
+| topic_2 `076e4350` — estimate без price WC | AWAITING_CONFIRMATION, bot_msg=10757. Сгенерирован ДО патча. Ждёт ответа пользователя |
 | topic_5 Drive SA 403 | live-тест не пройден |
-| PDF_SPEC_EXTRACTOR_REAL_V1 | stub |
-| WC задача пикается после доставки | STALE_TIMEOUT закрывает, WCG_SKIP_LOOP защищает от повтора — не критично |
+| Длины дренажа из PDF | PDF-схема графическая, дефолт 80м — дренажная задача 043e5c9f уже закрыта |
 
 ---
 
 ## ДИАГНОСТИКА
 
 ```bash
-# Дренажная задача
-sqlite3 data/core.db "SELECT id,state,bot_message_id,substr(result,1,120),updated_at FROM tasks WHERE id='043e5c9f-e8bc-434c-9dad-a66c7e50f917';"
+# Текущая house-смета
+sqlite3 data/core.db "SELECT id,state,bot_message_id,substr(result,1,100),updated_at FROM tasks WHERE id='076e4350-c8e7-4fea-bca6-b980faad2a64';"
 
-# Последние задачи topic_2
-sqlite3 data/core.db "SELECT id,state,bot_message_id,error_message,updated_at FROM tasks WHERE topic_id=2 ORDER BY rowid DESC LIMIT 5;"
+# Проверка price WC в истории следующей задачи
+sqlite3 data/core.db "SELECT action,created_at FROM task_history WHERE task_id='076e4350-c8e7-4fea-bca6-b980faad2a64' ORDER BY rowid DESC LIMIT 10;"
 
-# Child merge маркеры
-sqlite3 data/core.db "SELECT task_id,action FROM task_history WHERE action LIKE 'TOPIC2_CHILD_MERGED%' ORDER BY rowid DESC LIMIT 10;"
+# Последние topic_2 задачи
+sqlite3 data/core.db "SELECT id,state,bot_message_id,substr(raw_input,1,60),updated_at FROM tasks WHERE topic_id=2 ORDER BY rowid DESC LIMIT 5;"
 
 # Воркер
 systemctl is-active areal-task-worker
 tail -10 logs/task_worker.log
+
+# Проверка патча в памяти модуля
+python3 -c "from core.stroyka_estimate_canon import maybe_handle_stroyka_estimate; import inspect; print('PRICE_ALWAYS_ASK' in inspect.getsource(maybe_handle_stroyka_estimate))"
 ```
 
 
@@ -3882,8 +3882,8 @@ I canno
 ```
 # topic_0 COMMON
 
-GENERATED_AT: 2026-05-09T07:40:02.366835+00:00
-GIT_SHA: 62a5da22f1c20cb0ad84a06020938053156ddd54
+GENERATED_AT: 2026-05-09T17:35:02.440166+00:00
+GIT_SHA: 7aff8a6c8fa2d5b28aa4188a5e888b6d87ae65e1
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 0
@@ -3960,30 +3960,30 @@ STATUS: SYNCED_LOCAL
 ## TOPIC_2_STROYKA
 
 STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE: 3  FAILED_24H: 12
+ACTIVE: 1  FAILED_24H: 25
 DIRECTIONS_BOUND: Сметы
 
 ### LAST_FAILED (5)
-- 6a535d79 | 2026-05-09 01:33:52 | STALE_TIMEOUT
+- b57b1bae | 2026-05-09 20:18:10 | STALE_TIMEOUT
+    history: state:FAILED
+    history: P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION
+    history: reply_sent:p6e67_parent_not_found
+- 57cee6eb | 2026-05-09 18:38:17 | STALE_TIMEOUT
     history: reply_sent:stale_failed
     history: state:FAILED
-    history: reply_sent:waiting_clarification
-- f9df5eb5 | 2026-05-09 01:33:28 | STALE_TIMEOUT
+    history: P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION
+- d9b4d3d7 | 2026-05-09 17:58:24 | STALE_TIMEOUT
+    history: reply_sent:stale_failed
+    history: state:FAILED
+    history: TOPIC2_PRICE_SOURCE_FOUND:Работы по монтажу и кладке:ТСК Company:CONFIRMED
+- 952f5635 | 2026-05-09 14:47:08 | STALE_TIMEOUT
+    history: reply_sent:stale_failed
+    history: state:FAILED
+    history: FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:prices_shown
+- e375fd12 | 2026-05-09 14:45:04 | STALE_TIMEOUT
     history: reply_sent:stale_failed
     history: state:FAILED
     history: TOPIC2_CANONICAL_REROUTE_V2:CANONICAL_HANDLED
-- 043e5c9f | 2026-05-09 10:03:24 | EXECUTION_TIMEOUT
-    history: reply_sent:execution_timeout
-    history: state:FAILED:EXECUTION_TIMEOUT
-    history: clarified:нет. фото и тз почитай
-- test-mul | 2026-05-08 23:29:32 | STALE_TIMEOUT
-    history: reply_sent:stale_failed
-    history: state:FAILED
-    history: WCG_DELIVERY_SEND_FAILED
-- 2c732335 | 2026-05-08 23:20:28 | STALE_TIMEOUT
-    history: reply_sent:stale_failed
-    history: state:FAILED
-    history: reply_sent:waiting_clarification
 
 ### KEY_ENGINE_CODE (head 250 lines each)
 #### core/sample_template_engine.py
@@ -4387,6 +4387,96 @@ def _history_safe(conn: sqlite3.Connection, task_id: str, action: str) -> None:
     except Exception:
         pass
 
+# === PATCH_TOPIC2_PRICE_CHOICE_LOOP_CLOSE_V1 helpers ===
+PRICE_CHOICE_PROMPT_V1 = "Выбери уровень цен: 1 дешёвые / 2 средние / 3 надёжные / 4 вручную"
+
+def _t2pcl_history_text(conn, task_id):
+    try:
+        rows = conn.execute(
+            "SELECT action FROM task_history WHERE task_id=? ORDER BY rowid ASC",
+            (str(task_id),),
+        ).fetchall()
+        out = []
+        for r in rows:
+            try:
+                out.append(str(r["action"]))
+            except Exception:
+                out.append(str(r[0]))
+        return "\n".join(out)
+    except Exception:
+        return ""
+
+def _t2pcl_parse_explicit_price_choice(text):
+    t = _low(text)
+    t = re.sub(r"\s+", " ", t).strip(" .,!?:;()[]{}")
+    if not t:
+        return ""
+    _exact = {
+        "1": "cheapest", "а": "cheapest", "a": "cheapest", "а)": "cheapest", "a)": "cheapest",
+        "дешевые": "cheapest", "дешёвые": "cheapest", "самые дешевые": "cheapest",
+        "самые дешёвые": "cheapest", "минимальные": "cheapest", "минимальная": "cheapest",
+        "вариант 1": "cheapest", "первый": "cheapest",
+        "2": "median", "б": "median", "b": "median", "б)": "median", "b)": "median",
+        "средние": "median", "средняя": "median", "среднее": "median",
+        "медианная": "median", "медианные": "median",
+        "вариант 2": "median", "второй": "median",
+        "3": "reliable", "в": "reliable", "v": "reliable", "в)": "reliable", "v)": "reliable",
+        "надежные": "reliable", "надёжные": "reliable", "надежный": "reliable", "надёжный": "reliable",
+        "проверенные": "reliable", "проверенный": "reliable",
+        "вариант 3": "reliable", "третий": "reliable",
+        "4": "manual", "г": "manual", "g": "manual", "г)": "manual", "g)": "manual",
+        "вручную": "manual", "ручная": "manual", "свои цены": "manual",
+        "своя цена": "manual", "укажу цены": "manual",
+        "вариант 4": "manual", "четвертый": "manual", "четвёртый": "manual",
+    }
+    return _exact.get(t, "")
+
+def _t2pcl_old_public_output(text):
+    s = _s(text)
+    if not s:
+        return False
+    if any(x in s for x in ("⏳ Задачу понял", "Шаблон:", "Лист:", "Цены из листа")):
+        return True
+    if "✅ Смета готова" in s and not ("drive.google.com" in s and (".xlsx" in s or "spreadsheets/d" in s) and ".pdf" in s):
+        return True
+    return False
+
+async def _t2pcl_send_price_choice_prompt(conn, task_id, chat_id, reply_to_message_id=None, repeat=True):
+    action = "TOPIC2_PRICE_CHOICE_REQUIRED_REPEAT" if repeat else "TOPIC2_PRICE_CHOICE_REQUESTED"
+    _history_safe(conn, str(task_id), action)
+    _update_task_safe(
+        conn, str(task_id),
+        state="WAITING_CLARIFICATION",
+        result=PRICE_CHOICE_PROMPT_V1,
+        error_message="TOPIC2_PRICE_CHOICE_REQUIRED",
+    )
+    try:
+        maybe = _send_text(str(chat_id), PRICE_CHOICE_PROMPT_V1, reply_to_message_id, int(TOPIC_ID_STROYKA))
+        if hasattr(maybe, "__await__"):
+            await maybe
+    except Exception as _e:
+        _history_safe(conn, str(task_id), "TOPIC2_PRICE_CHOICE_PROMPT_SEND_ERR:" + _s(_e)[:200])
+    return True
+
+async def _t2pcl_price_choice_guard(conn, task_id, chat_id, raw_input, reply_to_message_id=None):
+    task_id = str(task_id or "")
+    if not task_id:
+        return False
+    hist = _t2pcl_history_text(conn, task_id)
+    has_prices = ("TOPIC2_PRICE_ENRICHMENT_DONE" in hist or
+                  "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:prices_shown" in hist)
+    has_choice = "TOPIC2_PRICE_CHOICE_CONFIRMED" in hist
+    if not has_prices or has_choice:
+        return False
+    choice = _t2pcl_parse_explicit_price_choice(raw_input)
+    if choice:
+        _history_safe(conn, task_id, "TOPIC2_PRICE_CHOICE_CONFIRMED:" + choice)
+        return False
+    return await _t2pcl_send_price_choice_prompt(
+        conn, task_id, chat_id, reply_to_message_id,
+        repeat=("TOPIC2_PRICE_CHOICE_REQUESTED" in hist),
+    )
+# === /PATCH_TOPIC2_PRICE_CHOICE_LOOP_CLOSE_V1 helpers ===
 
 def _memory_save(chat_id: str, key: str, value: Dict[str, Any]) -> None:
     try:
@@ -4402,96 +4492,6 @@ def _memory_save(chat_id: str, key: str, value: Dict[str, Any]) -> None:
             con.close()
     except Exception:
         pass
-
-
-def _memory_latest(chat_id: str, key_prefix: str) -> Optional[Dict[str, Any]]:
-    try:
-        con = sqlite3.connect(str(MEM_DB))
-        con.row_factory = sqlite3.Row
-        try:
-            row = con.execute(
-                "SELECT key,value,timestamp FROM memory WHERE chat_id=? AND key LIKE ? ORDER BY timestamp DESC LIMIT 1",
-                (str(chat_id), f"{key_prefix}%"),
-            ).fetchone()
-            if not row:
-                return None
-            data = json.loads(row["value"] or "{}")
-            data["_memory_key"] = row["key"]
-            data["_memory_timestamp"] = row["timestamp"]
-            return data
-        finally:
-            con.close()
-    except Exception:
-        return None
-
-
-
-# === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_CONTEXT_BLEED_FIX ===
-def _parse_iso_ts(value: Any) -> Optional[datetime.datetime]:
-    txt = _s(value)
-    if not txt:
-        return None
-    txt = txt.replace("Z", "+00:00")
-    try:
-        dt = datetime.datetime.fromisoformat(txt)
-        if dt.tzinfo is not None:
-            dt = dt.astimezone(datetime.timezone.utc).replace(tzinfo=None)
-        return dt
-    except Exception:
-        return None
-
-
-def _age_seconds(value: Any) -> Optional[float]:
-    dt = _parse_iso_ts(value)
-    if not dt:
-        return None
-    return (datetime.datetime.utcnow() - dt).total_seconds()
-
-
-def _pending_is_fresh(pending: Optional[Dict[str, Any]], max_seconds: int = 600) -> bool:
-    if not pending:
-        return False
-    created = pending.get("created_at") or pending.get("_memory_timestamp")
-    age = _age_seconds(created)
-    return age is not None and 0 <= age <= max_seconds
-
-
-def _is_bad_estimate_result(text: str) -> bool:
-    t = _low(text)
-
-    # === STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED_BAD_RESULT_MARKERS ===
-    stale_markers = (
-        "задачи за последние 24 часа",
-        "создание сметы: профлист",
-        "итоговая сумма: 55000",
-        "1capn1ikkxwypbxhny5caokqrsxbgzho",
-        "1glcscpl3d91elveo_m11ezwh_uu5b4vm",
-        "1pu77xrzhmpobus1pfximwdwckrgje1tn",
-        "смета уже есть:",
-        "смета создана по образцу вор",
-        "вор_кирпичная_кладка",
-        "vor_kirpich",
-        "позиций: 13 | итого: 690510",
-        "690510.00 руб",
-        "файлы в этом топике уже есть",
-        "нашёл релевантное",
-        "нашел релевантное",
-        "активный контекст найден",
-    )
-    if any(x in t for x in stale_markers):
-        return True
-    # === END_STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED_BAD_RESULT_MARKERS ===
-    bad = (
-        # === FULL_STROYKA_V3_SEARCH_LOOP_BAD_RESULT_FIX ===
-        "поставщик | площадка",
-        "auto_parts",
-        "search_monolith",
-        "tco | риски",
-        "ошибка классификации запроса",
-        "категория не совпадает",
-        # === FULL_STROYKA_LOOP_FINAL_CLOSE_BAD_RESULT_FIX ===
-        "смета создана по образцу вор",
-        "смета уже есть:",
 ```
 
 #### core/topic2_estimate_final_close_v2.py
@@ -4752,32 +4752,37 @@ def _write_xlsx(path: Path, items: List[Dict[str, Any]], source_text: str, photo
 ```
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-05-09T07:40:02.404002+00:00
-GIT_SHA: 62a5da22f1c20cb0ad84a06020938053156ddd54
+GENERATED_AT: 2026-05-09T17:35:02.477352+00:00
+GIT_SHA: 7aff8a6c8fa2d5b28aa4188a5e888b6d87ae65e1
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
 ROLE: Сметы
 DIRECTIONS_BOUND: estimates
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE_TASKS: 3
-FAILED_LAST_24H: 12
+ACTIVE_TASKS: 1
+FAILED_LAST_24H: 25
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 12
-- CANCELLED: 103
-- DONE: 135
-- FAILED: 121
-- WAITING_CLARIFICATION: 3
+- CANCELLED: 111
+- DONE: 144
+- FAILED: 134
+- WAITING_CLARIFICATION: 1
 
 ## LATEST_FAILED
-- 6a535d79 | STALE_TIMEOUT
-- f9df5eb5 | STALE_TIMEOUT
-- 043e5c9f | EXECUTION_TIMEOUT
-- test-mul | STALE_TIMEOUT
-- 2c732335 | STALE_TIMEOUT
+- b57b1bae | STALE_TIMEOUT
+- 57cee6eb | STALE_TIMEOUT
+- d9b4d3d7 | STALE_TIMEOUT
+- 952f5635 | STALE_TIMEOUT
+- e375fd12 | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
+- 7aff8a6|feat(topic2): PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1 — top-level price choice interceptor
+- 3ceedaf|fix(topic2): close price choice loop after price enrichment
+- 3723bbe|fix(topic2): PATCH_KARKASNIK_SHEET_FIX_V1 — correct sheet for frame houses
+- 7cc4523|fix(topic2): classify frame house with imitation timber finish
+- 8b21d75|fix(topic2): price WC always runs + gate stale-context fixes
 - 62a5da2|fix(topic2): remove hardcoded drainage parent 043e5c9f — dynamic lookup by state
 - 7a5f770|fix(topic210): canonical pile count route
 - ca312d9|fix(topic210): pile count route and db lock recover guard
@@ -4803,11 +4808,6 @@ FAILED_LAST_24H: 12
 - e3a016c|PATCH_OPENROUTER_ONLINE_ONLY_FOR_TOPIC2_PRICE_SEARCH_V1: hard-enforce Sonar for all price/search calls
 - 4cfd9b6|fix(topic2): close P6E67 loop storm + natural reply message
 - dc26486|fix(topic2): PATCH_PRICE_REJECT_STORM_FIX_V1 — remove noisy INSERT from V5/V6C rejected path
-- 0c8518e|fix(topic2): TOPIC2_FULL_CLOSE — work/material split, sheet fallback, drive links, xlsx 15-col gate
-- a216eeb|fix(topic2): PATCH_FCG_V2PATH_BYPASS_V1 — extend FDCB bypass to TOPIC2_DONE_CONTRACT_OK
-- 48f9858|docs(handoff): update latest handoff after topic2 and aggregator guard
-- c0300fb|fix(topic2): close 4 code gaps — enrichment markers, cyrillic marker, function-object bug, FCG bypass
-- 2ece9eb|fix(topic2): close 3 live bugs — poison loop terminate, recursion restore, FCG done bypass
 
 ## MARKERS_LAST_24H
 - created:NEW
@@ -4827,19 +4827,19 @@ FAILED_LAST_24H: 12
 - clarified:ответы все есть в проекте. посмотри
 - clarified:Фундамент монолитный песчаная подушка толщиной 300 мм с отступом на ме
 - clarified:вот
-- P6E67_PARENT_NOT_FOUND
-- P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION
-- BIG_FILE_LOCAL_BOT_API_USED
-- BIG_FILE_LOCAL_DOWNLOAD_OK
-- TOPIC2_REPEAT_PARENT_TASK:089a9afa-ed1d-44ac-a68d-26d51f4bcdc9
-- TOPIC2_ONLINE_MODEL_SONAR_CONFIRMED:perplexity/sonar
-- TOPIC2_PRICE_ENRICHMENT_STARTED
-- TOPIC2_PRICE_ENRICHMENT_DONE:1588
-- TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:газобетон
-- TOPIC2_PRICE_SOURCE_FOUND:газобетон:Завод (Авито):CONFIRMED
-- TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:Бетон В25
-- TOPIC2_PRICE_SOURCE_FOUND:Бетон В25:beton-spb.ru:CONFIRMED
-- TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:Арматура А500
+- clarified:Этажи написаны в проекте удалённости от города 30 км средние цены
+- FILE_INTAKE_ROUTER_LOCAL_PATH_PASSED
+- FILE_INTAKE_ROUTER_TOPIC2_CANONICAL_ROUTE
+- TOPIC2_PDF_SPEC_EXTRACTOR_STARTED
+- TOPIC2_PDF_SPEC_ROWS_EXTRACTED:7
+- TOPIC2_PRICE_CHOICE_CONFIRMED:median
+- TOPIC2_LOGISTICS_DISTANCE_KM:30
+- TOPIC2_LOGISTICS_ITEM:Доставка материалов от СПб:qty=3:price=9675
+- TOPIC2_LOGISTICS_ITEM:Транспорт бригады и проживание:qty=1:price=34828
+- TOPIC2_PDF_TOTALS_MATCH_XLSX:xlsx=8173431.09:pdf=8173431.09
+- TOPIC2_DRIVE_TOPIC_FOLDER_OK
+- TOPIC2_DRIVE_LINKS_SAVED:xlsx=https://drive.google.com/file/d/1azn2tIu_lyh5AJeLq
+- TOPIC2_AC_GATE_OK
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210
@@ -5493,8 +5493,8 @@ _P6H5_NORMATIVE_EXPAND = [
 ```
 # topic_5 TEKHNADZOR
 
-GENERATED_AT: 2026-05-09T07:40:02.435876+00:00
-GIT_SHA: 62a5da22f1c20cb0ad84a06020938053156ddd54
+GENERATED_AT: 2026-05-09T17:35:02.514256+00:00
+GIT_SHA: 7aff8a6c8fa2d5b28aa4188a5e888b6d87ae65e1
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 5
@@ -5551,24 +5551,6 @@ FAILED_LAST_24H: 0
 
 ## MARKERS_LAST_24H
 - created:NEW
-- reply_sent:topic5_reply_photo_comment_bound
-- topic5_reply_photo_comment_bound
-- reply_sent:topic5_package_status_continuous
-- topic5_package_status_continuous
-- reply_sent:topic5_final_act
-- FULL_CONSTRUCTION_FILE_CONTOUR_CANON_GUARD_V1:TOPIC5_FINAL_ACT_GENERATED
-- P8T5_SUPERSEDED_BY_CANONICAL_V2
-- P8T5_CANCELLED_OLD_GARBAGE_ACT_V2
-- TOPIC5_DRIVE_LINKS_SAVED
-- TOPIC5_GARBAGE_FILTER_OK
-- TOPIC5_ACT_STRUCTURE_OK
-- TOPIC5_DEFECT_TABLE_OK
-- TOPIC5_RECOMMENDATIONS_SECTION_OK
-- TOPIC5_NORMATIVE_SECTION_OK
-- TOPIC5_DOCX_CREATED
-- TOPIC5_PDF_CREATED
-- reply_sent:topic5_canonical_act_v3
-- PATCH_TOPIC5_ACT_DISPATCH_V3:ACT_GENERATED
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_5 не тянет КЖ/АР без прямой команды
@@ -5622,7 +5604,7 @@ items: 11
 ## TOPIC_11_VIDEO
 
 STATUS: UNKNOWN
-ACTIVE: 1  FAILED_24H: 0
+ACTIVE: 0  FAILED_24H: 0
 DIRECTIONS_BOUND: Видео
 
 ### LAST_FAILED (5)
@@ -5643,19 +5625,19 @@ DIRECTIONS_BOUND: Видео
 ```
 # topic_11 VIDEO
 
-GENERATED_AT: 2026-05-09T07:40:02.459156+00:00
-GIT_SHA: 62a5da22f1c20cb0ad84a06020938053156ddd54
+GENERATED_AT: 2026-05-09T17:35:02.545613+00:00
+GIT_SHA: 7aff8a6c8fa2d5b28aa4188a5e888b6d87ae65e1
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 11
 ROLE: Видео
 DIRECTIONS_BOUND: video_production
 CURRENT_STATUS: UNKNOWN
-ACTIVE_TASKS: 1
+ACTIVE_TASKS: 0
 FAILED_LAST_24H: 0
 
 ## DB_STATE_COUNTS
-- AWAITING_CONFIRMATION: 1
+- CANCELLED: 1
 - DONE: 1
 - FAILED: 3
 
@@ -5671,6 +5653,7 @@ FAILED_LAST_24H: 0
 - created:NEW
 - FULLFIX_16_ESTIMATE_ROUTE_TAKEN
 - state:AWAITING_CONFIRMATION:estimate_unified
+- rejected:WAITING_CLARIFICATION
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - (none)
@@ -6255,8 +6238,8 @@ def _normalize_sheet_register(template: Dict[str, Any], data: Dict[str, Any]) ->
 ```
 # topic_210 PROEKTIROVANIE
 
-GENERATED_AT: 2026-05-09T07:40:02.494253+00:00
-GIT_SHA: 62a5da22f1c20cb0ad84a06020938053156ddd54
+GENERATED_AT: 2026-05-09T17:35:02.582462+00:00
+GIT_SHA: 7aff8a6c8fa2d5b28aa4188a5e888b6d87ae65e1
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 210
@@ -6857,8 +6840,8 @@ except Exception:
 ```
 # topic_500 VEB_POISK
 
-GENERATED_AT: 2026-05-09T07:40:02.534490+00:00
-GIT_SHA: 62a5da22f1c20cb0ad84a06020938053156ddd54
+GENERATED_AT: 2026-05-09T17:35:02.619928+00:00
+GIT_SHA: 7aff8a6c8fa2d5b28aa4188a5e888b6d87ae65e1
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 500
@@ -6889,9 +6872,6 @@ FAILED_LAST_24H: 0
 - f28a106|fix(topic2/topic500): extend estimate pipeline, offer menu for drive_file, fix search result blocking
 - 4aa44eb|fix: close canon contours for topic_5/topic_2/topic_500
 - e3d992c|P6G_CLEAN_OLD_TOPIC500_CONTAMINATION_V1: SQL clean task 4883 contamination (point 1 of 5)
-- 949c379|P6F_FULL_CODE_CLOSE_REMAINING_CONTOURS_20260504_V1: close revision binding, topic500 sanitizer, photo CV via OpenRouter, TZ params, source labels, technadzor DOCX, project_210 drive, artifact gates
-- 709b28a|P3_FINAL_ROUTE_HARD_LOCK_SEARCH_ESTIMATE_20260504_V1: hard-lock topic500 search and topic2 current estimate route
-- 4f6af26|P2_FINAL_SEARCH_AND_ESTIMATE_CLOSE_20260504_V1: close topic500 search memory and topic2 final estimate logic
 
 ## MARKERS_LAST_24H
 - (none)
@@ -6969,8 +6949,8 @@ DIRECTIONS_BOUND: Сервер DevOps
 ```
 # topic_794 DEVOPS
 
-GENERATED_AT: 2026-05-09T07:40:02.566279+00:00
-GIT_SHA: 62a5da22f1c20cb0ad84a06020938053156ddd54
+GENERATED_AT: 2026-05-09T17:35:02.649798+00:00
+GIT_SHA: 7aff8a6c8fa2d5b28aa4188a5e888b6d87ae65e1
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 794
@@ -7065,8 +7045,8 @@ DIRECTIONS_BOUND: Автозапчасти
 ```
 # topic_961 AVTOZAPCHASTI
 
-GENERATED_AT: 2026-05-09T07:40:02.596723+00:00
-GIT_SHA: 62a5da22f1c20cb0ad84a06020938053156ddd54
+GENERATED_AT: 2026-05-09T17:35:02.686069+00:00
+GIT_SHA: 7aff8a6c8fa2d5b28aa4188a5e888b6d87ae65e1
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 961
@@ -7158,8 +7138,8 @@ DIRECTIONS_BOUND: Мозги оркестра
 ```
 # topic_3008 KODY_MOZGOV
 
-GENERATED_AT: 2026-05-09T07:40:02.626379+00:00
-GIT_SHA: 62a5da22f1c20cb0ad84a06020938053156ddd54
+GENERATED_AT: 2026-05-09T17:35:02.717884+00:00
+GIT_SHA: 7aff8a6c8fa2d5b28aa4188a5e888b6d87ae65e1
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 3008
@@ -7262,8 +7242,8 @@ DIRECTIONS_BOUND: CRM лиды
 ```
 # topic_4569 CRM_LEADS
 
-GENERATED_AT: 2026-05-09T07:40:02.651121+00:00
-GIT_SHA: 62a5da22f1c20cb0ad84a06020938053156ddd54
+GENERATED_AT: 2026-05-09T17:35:02.752938+00:00
+GIT_SHA: 7aff8a6c8fa2d5b28aa4188a5e888b6d87ae65e1
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 4569
@@ -7371,8 +7351,8 @@ DIRECTIONS_BOUND: Поиск работы
 ```
 # topic_6104 JOB_SEARCH
 
-GENERATED_AT: 2026-05-09T07:40:02.679915+00:00
-GIT_SHA: 62a5da22f1c20cb0ad84a06020938053156ddd54
+GENERATED_AT: 2026-05-09T17:35:02.786791+00:00
+GIT_SHA: 7aff8a6c8fa2d5b28aa4188a5e888b6d87ae65e1
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 6104

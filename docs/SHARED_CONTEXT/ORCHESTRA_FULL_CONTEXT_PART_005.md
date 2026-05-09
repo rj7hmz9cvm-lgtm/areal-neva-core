@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_005
-generated_at_utc: 2026-05-09T07:40:02.308154+00:00
-git_sha_before_commit: 62a5da22f1c20cb0ad84a06020938053156ddd54
+generated_at_utc: 2026-05-09T17:35:02.365300+00:00
+git_sha_before_commit: 7aff8a6c8fa2d5b28aa4188a5e888b6d87ae65e1
 part: 5/17
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 1/3
-SHA256_FULL_FILE: 063c2baa424d68ad7be5dbc5e327a9b2ff282e58edd634cfad27d4576dbbaceb
+SHA256_FULL_FILE: b8484c0045715ed6922c0b8f62a4d3c1f612ce8d7ae2858ff3b801af76e84a2e
 ====================================================================================================
 
 def _force_voice_finish(raw_input: str, result: str) -> bool:
@@ -2109,7 +2109,7 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
             if _ff14_done:
                 return
         # 3. estimate from natural language text
-        if _ff14_itype in ("text", "search") and _ff14_parse(_ff14_raw):
+        if _ff14_itype in ("text", "search") and int(topic_id or 0) == 2 and _ff14_parse(_ff14_raw):
             # === FULLFIX_16_ESTIMATE_HARD_STOP ===
             # Estimate route: ALWAYS return, never fall through to FULLFIX_10
             conn.execute("INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
@@ -6713,6 +6713,8 @@ def _p6_is_topic2_vague_20260504(raw):
     low = _p6_low_20260504(raw)
     if not low or _p6_is_topic2_estimate_20260504(raw):
         return False
+    if any(x in low for x in ("это не", "это план", "план дома", "не дренаж", "не схема", "это дом", "это каркас")):
+        return False
     return len(low) <= 160 and any(x in low for x in ("ну что", "что там", "дальше", "как там", "готово", "проверь", "посмотри", "что у нас", "почитай"))
 
 async def _p6_handle_topic2_estimate_20260504(conn, task, chat_id, topic_id):
@@ -7369,10 +7371,6 @@ def _p6e4_wrap_send(name):
         return
     if _p6e4_inspect.iscoroutinefunction(orig):
         async def wrapped(*args, **kwargs):
-            args = tuple(_p6e4_sanitize_catalog_text(a) if isinstance(a, str) else a for a in args)
-            kwargs = {k: (_p6e4_sanitize_catalog_text(v) if isinstance(v, str) else v) for k, v in kwargs.items()}
-            return await orig(*args, **kwargs)
-    else:
 
 ====================================================================================================
 END_FILE: task_worker.py

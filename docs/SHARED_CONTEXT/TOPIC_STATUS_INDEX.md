@@ -1,14 +1,14 @@
 # TOPIC_STATUS_INDEX
 
-GENERATED_AT: 2026-05-09T07:40:02.686309+00:00
-GIT_SHA: 62a5da22f1c20cb0ad84a06020938053156ddd54
+GENERATED_AT: 2026-05-09T17:35:02.791503+00:00
+GIT_SHA: 7aff8a6c8fa2d5b28aa4188a5e888b6d87ae65e1
 
 | topic_id | name | role | status | active | failed_24h | source |
 |----------|------|------|--------|--------|------------|--------|
 | 0 | COMMON | Общий | UNKNOWN | 0 | 0 | TOPICS/topic_0_COMMON.md |
-| 2 | STROYKA | Сметы | INSTALLED_NOT_VERIFIED | 3 | 12 | TOPICS/topic_2_STROYKA.md |
+| 2 | STROYKA | Сметы | INSTALLED_NOT_VERIFIED | 1 | 25 | TOPICS/topic_2_STROYKA.md |
 | 5 | TEKHNADZOR | Технадзор | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 | TOPICS/topic_5_TEKHNADZOR.md |
-| 11 | VIDEO | Видео | UNKNOWN | 1 | 0 | TOPICS/topic_11_VIDEO.md |
+| 11 | VIDEO | Видео | UNKNOWN | 0 | 0 | TOPICS/topic_11_VIDEO.md |
 | 210 | PROEKTIROVANIE | КЖ КМ | INSTALLED_NOT_VERIFIED | 0 | 6 | TOPICS/topic_210_PROEKTIROVANIE.md |
 | 500 | VEB_POISK | Интернет-поиск | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 | TOPICS/topic_500_VEB_POISK.md |
 | 794 | DEVOPS | Сервер DevOps | UNKNOWN | 0 | 0 | TOPICS/topic_794_DEVOPS.md |

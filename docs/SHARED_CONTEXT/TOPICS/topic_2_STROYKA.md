@@ -1,31 +1,36 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-05-09T07:40:02.404002+00:00
-GIT_SHA: 62a5da22f1c20cb0ad84a06020938053156ddd54
+GENERATED_AT: 2026-05-09T17:35:02.477352+00:00
+GIT_SHA: 7aff8a6c8fa2d5b28aa4188a5e888b6d87ae65e1
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
 ROLE: Сметы
 DIRECTIONS_BOUND: estimates
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE_TASKS: 3
-FAILED_LAST_24H: 12
+ACTIVE_TASKS: 1
+FAILED_LAST_24H: 25
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 12
-- CANCELLED: 103
-- DONE: 135
-- FAILED: 121
-- WAITING_CLARIFICATION: 3
+- CANCELLED: 111
+- DONE: 144
+- FAILED: 134
+- WAITING_CLARIFICATION: 1
 
 ## LATEST_FAILED
-- 6a535d79 | STALE_TIMEOUT
-- f9df5eb5 | STALE_TIMEOUT
-- 043e5c9f | EXECUTION_TIMEOUT
-- test-mul | STALE_TIMEOUT
-- 2c732335 | STALE_TIMEOUT
+- b57b1bae | STALE_TIMEOUT
+- 57cee6eb | STALE_TIMEOUT
+- d9b4d3d7 | STALE_TIMEOUT
+- 952f5635 | STALE_TIMEOUT
+- e375fd12 | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
+- 7aff8a6|feat(topic2): PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1 — top-level price choice interceptor
+- 3ceedaf|fix(topic2): close price choice loop after price enrichment
+- 3723bbe|fix(topic2): PATCH_KARKASNIK_SHEET_FIX_V1 — correct sheet for frame houses
+- 7cc4523|fix(topic2): classify frame house with imitation timber finish
+- 8b21d75|fix(topic2): price WC always runs + gate stale-context fixes
 - 62a5da2|fix(topic2): remove hardcoded drainage parent 043e5c9f — dynamic lookup by state
 - 7a5f770|fix(topic210): canonical pile count route
 - ca312d9|fix(topic210): pile count route and db lock recover guard
@@ -51,11 +56,6 @@ FAILED_LAST_24H: 12
 - e3a016c|PATCH_OPENROUTER_ONLINE_ONLY_FOR_TOPIC2_PRICE_SEARCH_V1: hard-enforce Sonar for all price/search calls
 - 4cfd9b6|fix(topic2): close P6E67 loop storm + natural reply message
 - dc26486|fix(topic2): PATCH_PRICE_REJECT_STORM_FIX_V1 — remove noisy INSERT from V5/V6C rejected path
-- 0c8518e|fix(topic2): TOPIC2_FULL_CLOSE — work/material split, sheet fallback, drive links, xlsx 15-col gate
-- a216eeb|fix(topic2): PATCH_FCG_V2PATH_BYPASS_V1 — extend FDCB bypass to TOPIC2_DONE_CONTRACT_OK
-- 48f9858|docs(handoff): update latest handoff after topic2 and aggregator guard
-- c0300fb|fix(topic2): close 4 code gaps — enrichment markers, cyrillic marker, function-object bug, FCG bypass
-- 2ece9eb|fix(topic2): close 3 live bugs — poison loop terminate, recursion restore, FCG done bypass
 
 ## MARKERS_LAST_24H
 - created:NEW
@@ -75,19 +75,19 @@ FAILED_LAST_24H: 12
 - clarified:ответы все есть в проекте. посмотри
 - clarified:Фундамент монолитный песчаная подушка толщиной 300 мм с отступом на ме
 - clarified:вот
-- P6E67_PARENT_NOT_FOUND
-- P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION
-- BIG_FILE_LOCAL_BOT_API_USED
-- BIG_FILE_LOCAL_DOWNLOAD_OK
-- TOPIC2_REPEAT_PARENT_TASK:089a9afa-ed1d-44ac-a68d-26d51f4bcdc9
-- TOPIC2_ONLINE_MODEL_SONAR_CONFIRMED:perplexity/sonar
-- TOPIC2_PRICE_ENRICHMENT_STARTED
-- TOPIC2_PRICE_ENRICHMENT_DONE:1588
-- TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:газобетон
-- TOPIC2_PRICE_SOURCE_FOUND:газобетон:Завод (Авито):CONFIRMED
-- TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:Бетон В25
-- TOPIC2_PRICE_SOURCE_FOUND:Бетон В25:beton-spb.ru:CONFIRMED
-- TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:Арматура А500
+- clarified:Этажи написаны в проекте удалённости от города 30 км средние цены
+- FILE_INTAKE_ROUTER_LOCAL_PATH_PASSED
+- FILE_INTAKE_ROUTER_TOPIC2_CANONICAL_ROUTE
+- TOPIC2_PDF_SPEC_EXTRACTOR_STARTED
+- TOPIC2_PDF_SPEC_ROWS_EXTRACTED:7
+- TOPIC2_PRICE_CHOICE_CONFIRMED:median
+- TOPIC2_LOGISTICS_DISTANCE_KM:30
+- TOPIC2_LOGISTICS_ITEM:Доставка материалов от СПб:qty=3:price=9675
+- TOPIC2_LOGISTICS_ITEM:Транспорт бригады и проживание:qty=1:price=34828
+- TOPIC2_PDF_TOTALS_MATCH_XLSX:xlsx=8173431.09:pdf=8173431.09
+- TOPIC2_DRIVE_TOPIC_FOLDER_OK
+- TOPIC2_DRIVE_LINKS_SAVED:xlsx=https://drive.google.com/file/d/1azn2tIu_lyh5AJeLq
+- TOPIC2_AC_GATE_OK
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210

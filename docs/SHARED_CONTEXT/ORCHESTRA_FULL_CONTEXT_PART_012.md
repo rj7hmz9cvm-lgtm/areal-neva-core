@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_012
-generated_at_utc: 2026-05-09T07:40:02.314294+00:00
-git_sha_before_commit: 62a5da22f1c20cb0ad84a06020938053156ddd54
+generated_at_utc: 2026-05-09T17:35:02.372502+00:00
+git_sha_before_commit: 7aff8a6c8fa2d5b28aa4188a5e888b6d87ae65e1
 part: 12/17
 
 
@@ -7238,7 +7238,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/topic2_input_gate.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: d18b857bf90fd5af34166bcd5776412e4a46cb969eba8c98eb495097e43138a7
+SHA256_FULL_FILE: e02ce39a97f259c848f2525cdd5783e71770c74fd6be249afe48040927710961
 ====================================================================================================
 # === PATCH_TOPIC2_INPUT_GATE_SOURCE_OF_TRUTH_V1 ===
 from __future__ import annotations
@@ -7478,7 +7478,7 @@ def _text_from_task(row: Any) -> str:
     res = _row_get(row, "result", "")
     obj = _json(raw)
     parts = [
-        raw, res,
+        raw,
         obj.get("file_name", ""),
         obj.get("caption", ""),
         obj.get("mime_type", ""),
@@ -7504,6 +7504,7 @@ def _latest_file_task(
           AND COALESCE(topic_id,0)=?
           AND input_type IN ('drive_file','file','photo','document')
           AND id<>?
+          AND state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION')
         ORDER BY rowid DESC
         LIMIT 10
         """,
@@ -7527,6 +7528,7 @@ def _recent_file_tasks(
           AND COALESCE(topic_id,0)=?
           AND input_type IN ('drive_file','file','photo','document')
           AND id<>?
+          AND state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION')
         ORDER BY rowid DESC
         LIMIT ?
         """,
@@ -7574,11 +7576,14 @@ def _collect_current_file_text(
         # Only use bot-api fallback if the task is a file-type, not for text/voice
         # (avoids pulling in unrelated PDFs from other sessions)
 
-    # For direct file tasks with no local path: use bot-api fallback scoped to recent
+    # For direct file tasks with no local path: use DB-tracked state-filtered tasks (no filesystem scan)
     if input_type in ("drive_file", "file", "photo", "document") and not paths:
-        for p in _recent_bot_api_pdfs(limit=3) + _recent_runtime_pdfs(limit=3):
-            if p.exists():
-                paths.append(p)
+        _fb_recent = _recent_file_tasks(conn, chat_id, topic_id, task_id, limit=6)
+        for ft in _fb_recent:
+            ft_paths = _candidate_paths_from_raw(_row_get(ft, "raw_input", ""))
+            paths.extend(ft_paths)
+            if not meta["parent_file_task_id"] and ft_paths:
+                meta["parent_file_task_id"] = _s(_row_get(ft, "id", ""))
 
     seen: set = set()
     uniq: List[Path] = []
