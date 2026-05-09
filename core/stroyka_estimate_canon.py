@@ -143,6 +143,96 @@ def _history_safe(conn: sqlite3.Connection, task_id: str, action: str) -> None:
     except Exception:
         pass
 
+# === PATCH_TOPIC2_PRICE_CHOICE_LOOP_CLOSE_V1 helpers ===
+PRICE_CHOICE_PROMPT_V1 = "Выбери уровень цен: 1 дешёвые / 2 средние / 3 надёжные / 4 вручную"
+
+def _t2pcl_history_text(conn, task_id):
+    try:
+        rows = conn.execute(
+            "SELECT action FROM task_history WHERE task_id=? ORDER BY rowid ASC",
+            (str(task_id),),
+        ).fetchall()
+        out = []
+        for r in rows:
+            try:
+                out.append(str(r["action"]))
+            except Exception:
+                out.append(str(r[0]))
+        return "\n".join(out)
+    except Exception:
+        return ""
+
+def _t2pcl_parse_explicit_price_choice(text):
+    t = _low(text)
+    t = re.sub(r"\s+", " ", t).strip(" .,!?:;()[]{}")
+    if not t:
+        return ""
+    _exact = {
+        "1": "cheapest", "а": "cheapest", "a": "cheapest", "а)": "cheapest", "a)": "cheapest",
+        "дешевые": "cheapest", "дешёвые": "cheapest", "самые дешевые": "cheapest",
+        "самые дешёвые": "cheapest", "минимальные": "cheapest", "минимальная": "cheapest",
+        "вариант 1": "cheapest", "первый": "cheapest",
+        "2": "median", "б": "median", "b": "median", "б)": "median", "b)": "median",
+        "средние": "median", "средняя": "median", "среднее": "median",
+        "медианная": "median", "медианные": "median",
+        "вариант 2": "median", "второй": "median",
+        "3": "reliable", "в": "reliable", "v": "reliable", "в)": "reliable", "v)": "reliable",
+        "надежные": "reliable", "надёжные": "reliable", "надежный": "reliable", "надёжный": "reliable",
+        "проверенные": "reliable", "проверенный": "reliable",
+        "вариант 3": "reliable", "третий": "reliable",
+        "4": "manual", "г": "manual", "g": "manual", "г)": "manual", "g)": "manual",
+        "вручную": "manual", "ручная": "manual", "свои цены": "manual",
+        "своя цена": "manual", "укажу цены": "manual",
+        "вариант 4": "manual", "четвертый": "manual", "четвёртый": "manual",
+    }
+    return _exact.get(t, "")
+
+def _t2pcl_old_public_output(text):
+    s = _s(text)
+    if not s:
+        return False
+    if any(x in s for x in ("⏳ Задачу понял", "Шаблон:", "Лист:", "Цены из листа")):
+        return True
+    if "✅ Смета готова" in s and not ("drive.google.com" in s and (".xlsx" in s or "spreadsheets/d" in s) and ".pdf" in s):
+        return True
+    return False
+
+async def _t2pcl_send_price_choice_prompt(conn, task_id, chat_id, reply_to_message_id=None, repeat=True):
+    action = "TOPIC2_PRICE_CHOICE_REQUIRED_REPEAT" if repeat else "TOPIC2_PRICE_CHOICE_REQUESTED"
+    _history_safe(conn, str(task_id), action)
+    _update_task_safe(
+        conn, str(task_id),
+        state="WAITING_CLARIFICATION",
+        result=PRICE_CHOICE_PROMPT_V1,
+        error_message="TOPIC2_PRICE_CHOICE_REQUIRED",
+    )
+    try:
+        maybe = _send_text(str(chat_id), PRICE_CHOICE_PROMPT_V1, reply_to_message_id, int(TOPIC_ID_STROYKA))
+        if hasattr(maybe, "__await__"):
+            await maybe
+    except Exception as _e:
+        _history_safe(conn, str(task_id), "TOPIC2_PRICE_CHOICE_PROMPT_SEND_ERR:" + _s(_e)[:200])
+    return True
+
+async def _t2pcl_price_choice_guard(conn, task_id, chat_id, raw_input, reply_to_message_id=None):
+    task_id = str(task_id or "")
+    if not task_id:
+        return False
+    hist = _t2pcl_history_text(conn, task_id)
+    has_prices = ("TOPIC2_PRICE_ENRICHMENT_DONE" in hist or
+                  "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:prices_shown" in hist)
+    has_choice = "TOPIC2_PRICE_CHOICE_CONFIRMED" in hist
+    if not has_prices or has_choice:
+        return False
+    choice = _t2pcl_parse_explicit_price_choice(raw_input)
+    if choice:
+        _history_safe(conn, task_id, "TOPIC2_PRICE_CHOICE_CONFIRMED:" + choice)
+        return False
+    return await _t2pcl_send_price_choice_prompt(
+        conn, task_id, chat_id, reply_to_message_id,
+        repeat=("TOPIC2_PRICE_CHOICE_REQUESTED" in hist),
+    )
+# === /PATCH_TOPIC2_PRICE_CHOICE_LOOP_CLOSE_V1 helpers ===
 
 def _memory_save(chat_id: str, key: str, value: Dict[str, Any]) -> None:
     try:
@@ -799,6 +889,12 @@ def _choose_value(values: List[float], choice: Dict[str, Any], default: float = 
 
 
 async def _send_text(chat_id: str, text: str, reply_to: Optional[int], topic_id: int) -> Dict[str, Any]:
+    # PATCH_TOPIC2_PRICE_CHOICE_LOOP_CLOSE_V1 send_text guard
+    try:
+        if _t2pcl_old_public_output(text):
+            text = PRICE_CHOICE_PROMPT_V1
+    except Exception:
+        pass
     from core.reply_sender import send_reply_ex
     return await asyncio.to_thread(
         send_reply_ex,
@@ -2596,6 +2692,33 @@ def _stv3_context_hash(raw_input: str, source_file_id: str = "") -> str:
 _stv3_orig_update_task_safe = _update_task_safe
 
 def _update_task_safe(conn, task_id, **kwargs):
+    # PATCH_TOPIC2_PRICE_CHOICE_LOOP_CLOSE_V1 update guard
+    try:
+        _t2pcl_result = kwargs.get("result")
+        _t2pcl_state = kwargs.get("state")
+        _t2pcl_row = conn.execute("SELECT topic_id FROM tasks WHERE id=? LIMIT 1", (str(task_id),)).fetchone()
+        _t2pcl_topic_id = int((_t2pcl_row[0] if _t2pcl_row else 0) or 0)
+        if _t2pcl_topic_id == TOPIC_ID_STROYKA:
+            if _t2pcl_old_public_output(_t2pcl_result):
+                _t2pcl_hist = _t2pcl_history_text(conn, str(task_id))
+                if "TOPIC2_PRICE_CHOICE_CONFIRMED" not in _t2pcl_hist:
+                    kwargs["state"] = "WAITING_CLARIFICATION"
+                    kwargs["result"] = PRICE_CHOICE_PROMPT_V1
+                    kwargs["error_message"] = "TOPIC2_PRICE_CHOICE_REQUIRED"
+                    if "TOPIC2_PRICE_CHOICE_REQUESTED" not in _t2pcl_hist:
+                        _history_safe(conn, str(task_id), "TOPIC2_PRICE_CHOICE_REQUESTED")
+                    _history_safe(conn, str(task_id), "TOPIC2_OLD_PUBLIC_OUTPUT_BLOCKED_BY_PRICE_CHOICE_GATE")
+            elif _t2pcl_state in ("IN_PROGRESS", "WAITING_CLARIFICATION", "AWAITING_CONFIRMATION"):
+                _t2pcl_hist = _t2pcl_history_text(conn, str(task_id))
+                if ("FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:prices_shown" in _t2pcl_hist
+                        and "TOPIC2_PRICE_CHOICE_CONFIRMED" not in _t2pcl_hist):
+                    kwargs["state"] = "WAITING_CLARIFICATION"
+                    kwargs["result"] = PRICE_CHOICE_PROMPT_V1
+                    kwargs["error_message"] = "TOPIC2_PRICE_CHOICE_REQUIRED"
+                    if "TOPIC2_PRICE_CHOICE_REQUESTED" not in _t2pcl_hist:
+                        _history_safe(conn, str(task_id), "TOPIC2_PRICE_CHOICE_REQUESTED")
+    except Exception:
+        pass
     new_state = kwargs.get("state", "")
     if new_state == "DONE":
         # Check task is topic_2
@@ -4469,6 +4592,21 @@ _T2CM2_LOG = _t2cm2_log_mod.getLogger("task_worker")
 _T2CM2_INNER = _T2CM_ORIG  # PAA wrapper — skip broken V1
 
 async def maybe_handle_stroyka_estimate(conn, task, logger=None):
+    # PATCH_TOPIC2_PRICE_CHOICE_LOOP_CLOSE_V1 maybe_handle guard
+    try:
+        _t2pcl_task_id = str(_row_get(task, "id", ""))
+        _t2pcl_chat_id = str(_row_get(task, "chat_id", ""))
+        _t2pcl_topic_id = int(_row_get(task, "topic_id", 0) or 0)
+        _t2pcl_raw_input = _row_get(task, "raw_input", "")
+        _t2pcl_reply_to = _row_get(task, "reply_to_message_id", None)
+        if _t2pcl_topic_id == TOPIC_ID_STROYKA:
+            if await _t2pcl_price_choice_guard(conn, _t2pcl_task_id, _t2pcl_chat_id, _t2pcl_raw_input, _t2pcl_reply_to):
+                return True
+    except Exception as _t2pcl_e:
+        try:
+            _history_safe(conn, str(_row_get(task, "id", "")), "PATCH_TOPIC2_PRICE_CHOICE_LOOP_CLOSE_V1_MAYBE_ERR:" + _s(_t2pcl_e)[:200])
+        except Exception:
+            pass
     try:
         task_id = _s(_row_get(task, "id"))
         if conn is not None and task_id:
