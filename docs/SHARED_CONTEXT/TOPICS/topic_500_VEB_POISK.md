@@ -1,7 +1,7 @@
 # topic_500 VEB_POISK
 
-GENERATED_AT: 2026-05-09T00:10:02.494611+00:00
-GIT_SHA: ca312d9c80531e50adbe0d2a6e045d01f967a014
+GENERATED_AT: 2026-05-09T00:15:02.412731+00:00
+GIT_SHA: 3ac0907382ec766362b45a580c8e3b63d7fe23ad
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 500
@@ -36,7 +36,6 @@ FAILED_LAST_24H: 0
 - 709b28a|P3_FINAL_ROUTE_HARD_LOCK_SEARCH_ESTIMATE_20260504_V1: hard-lock topic500 search and topic2 current estimate route
 - 4f6af26|P2_FINAL_SEARCH_AND_ESTIMATE_CLOSE_20260504_V1: close topic500 search memory and topic2 final estimate logic
 - d4db3fb|P0_RUNTIME_ROUTE_GUARD_TOPIC2_TOPIC500_20260504_V1: block topic500 estimate misroute and force topic2 current estimate route
-- bf6cece|TOPIC500_PRE_SEND_VALIDATOR_AND_STARTUP_RECOVERY_HARD_GUARD_V1: pre-send procurement validator and startup recovery hard guard
 
 ## MARKERS_LAST_24H
 - (none)
