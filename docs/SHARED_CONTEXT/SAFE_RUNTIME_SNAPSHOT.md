@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-09T00:15:01.995271+00:00
-git_sha_before_commit: 3ac0907382ec766362b45a580c8e3b63d7fe23ad
+generated_at_utc: 2026-05-09T00:20:02.466014+00:00
+git_sha_before_commit: 9f7bcac5c29f62862baa51d3474612c8d78dc609
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,7 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: inactive
 
 ## GIT_LOG_30
+9f7bcac FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 3ac0907 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 ca312d9 fix(topic210): pile count route and db lock recover guard
 d79bb95 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
@@ -39,12 +40,11 @@ af42c97 fix(topic2): TOPIC2_DRAINAGE_FULL_CLOSE_NO_LOOP_V2 — child merge guard
 5f3e6cc FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 531398c docs: update LATEST_HANDOFF 3421216 — gate+delivery session close
 3421216 fix(topic2): gate send fix (dict(task) for sqlite3.Row) + WCG delivery guard on picker cycle
-4cedce3 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
 ## GIT_SHOW_STAT_HEAD
-commit 3ac0907382ec766362b45a580c8e3b63d7fe23ad
+commit 9f7bcac5c29f62862baa51d3474612c8d78dc609
 Author: Ila <ilakuznecov@mac.local>
-Date:   Sat May 9 03:10:10 2026 +0300
+Date:   Sat May 9 03:15:07 2026 +0300
 
     FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
@@ -82,14 +82,14 @@ Date:   Sat May 9 03:10:10 2026 +0300
  docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |   6 +-
  docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |   6 +-
  docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  16 +-
+ .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  18 ++--
  .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_004.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |   6 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |   6 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_007.md             | 253 ++++++++++++++++++++-
+ .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_007.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_010.md             |   4 +-
@@ -100,14 +100,14 @@ Date:   Sat May 9 03:10:10 2026 +0300
  .../ORCHESTRA_FULL_CONTEXT_PART_015.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_016.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_017.md             |   4 +-
- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 128 +++--------
- .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |  19 +-
- docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  73 +++---
+ docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 119 ++++++++++++++++-----
+ .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |  14 +--
+ docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  68 ++++++------
  docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |   6 +-
  docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |   4 +-
- .../TOPICS/topic_210_PROEKTIROVANIE.md             |  12 +-
- docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |   8 +-
+ .../TOPICS/topic_210_PROEKTIROVANIE.md             |  10 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |   4 +-
  .../TOPICS/topic_3008_KODY_MOZGOV.md               |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |   5 +-
@@ -116,7 +116,7 @@ Date:   Sat May 9 03:10:10 2026 +0300
  docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |   4 +-
  .../TOPICS/topic_961_AVTOZAPCHASTI.md              |   4 +-
  docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   6 +-
- 68 files changed, 473 insertions(+), 293 deletions(-)
+ 68 files changed, 275 insertions(+), 215 deletions(-)
 
 ## GIT_CHANGED_FILES_10
 docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md
@@ -196,11 +196,21 @@ tools/topic2_drainage_repair_close.py
 - CANCELLED|823
 - DONE|582
 - ARCHIVED|381
+- WAITING_CLARIFICATION|1
 
 ## CORE_DB_OPEN_TASKS
-- 0
+- 1
 
 ## LATEST_TASKS_15
+- ed118834-bd18-4182-baf4-99f3ea017858|210|text|DONE|Сколько нужно свай ж/б 150х150 длиной 2,5м для каркасного дома 8х10?|Расчёт количества свай по topic_210
+
+Исходные данные:
+• Дом: каркасный
+• Размер в плане: 10×8 м
+• Сваи: ж/б 150×150, длина 2,5 м
+
+Расстановка:
+• Расчётный шаг с|2026-05-09 00:15:49
 - dd000985-408f-4829-85d3-af9df8309f47|210|drive_file|FAILED|{"file_id": "1ZPraIey7-ZPgfl_tqQFh2rTwteKi823f", "file_name": "photo_-1003725299009_10666.jpg", "mime_type": "image/jpeg||2026-05-09 00:13:53
 - 0332e116-3d48-42ac-80c2-6aebbac378dc|210|text|FAILED|выполни|None|2026-05-09 00:09:28
 - 530e5e89-f3c4-418e-a974-ca06913f15c9|210|text|DONE|[VOICE] Если у тебя нет нужного образца, используй то, что найдешь в интернете, либо посмотри то, что у тебя есть.|Проектные ссылки из Drive (topic_210) — секция: КЖ
@@ -208,13 +218,9 @@ tools/topic2_drainage_repair_close.py
 1. [UNKNOWN] Баня.pln (FILE)
  Папка: Образцы проектов
  https://drive.google.com/file/d/1G0obdndF7a6Yo84gyWBZ|2026-05-08 23:50:22
-- cd7c36f8-0703-4b80-a91e-4e4a4e8dd401|210|text|DONE|[VOICE] Мне надо посчитать, сколько для этого каркасного дома потребуется свай железобетонных 150 на 150 длиной 2,5 метр|Файлы в этом топике уже есть. Нашёл релевантное:
+- cd7c36f8-0703-4b80-a91e-4e4a4e8dd401|210|text|WAITING_CLARIFICATION|[VOICE] Мне надо посчитать, сколько для этого каркасного дома потребуется свай железобетонных 150 на 150 длиной 2,5 метр|Не вижу доказанного размера дома в тексте задачи и в topic_210 template JSON.
 
-1. КД АК-М-160.pdf
- Можно использовать как образец проектирования
-
-2. АР АК-М-160.pdf
- Можно использовать как |2026-05-08 23:50:04
+Для расчёта количества свай пришли размер дома в плане одной строкой, например: 8|2026-05-09 00:17:04
 - b98e1117-fff5-4d3e-b799-1eb6ad435faa|210|drive_file|FAILED|{"file_id": "1ggTNx1h0lhc7LA5MCiewMX57yd-tXc70", "file_name": "photo_-1003725299009_10651.jpg", "mime_type": "image/jpeg||2026-05-08 23:48:08
 - f02f874e-91da-480f-9a1e-d2c5d4553b55|210|text|FAILED|По размеру дома ты мне сможешь определить сколько свай мне нужно на него?|Расчёт количества свай — нужны исходные данные:
 
@@ -254,9 +260,6 @@ tools/topic2_drainage_repair_close.py
 - test-gate-send-fix-001|2|text|FAILED|[VOICE] У тебя два файла. На одном у тебя схема дренажа, на другом у тебя длинные высоты и все есть. Посмотри оба файла |PDF определён как схема дренажа/ливнёвки.
 Домовую смету не запускаю: текущий файл относится к наружным сетям, а не к дому.
 Считать приблизительно по схеме или п|2026-05-08 20:19:46
-- e425b052-455f-46b4-990f-1421b7dac675|2|text|FAILED|[VOICE] У тебя два файла. На одном у тебя схема дренажа, на другом у тебя длинные высоты и все есть. Посмотри оба файла |PDF определён как схема дренажа/ливнёвки.
-Домовую смету не запускаю: текущий файл относится к наружным сетям, а не к дому.
-Считать приблизительно по схеме или п|2026-05-08 19:40:15
 
 ## LATEST_FAILED_10
 - dd000985-408f-4829-85d3-af9df8309f47|210|{"file_id": "1ZPraIey7-ZPgfl_tqQFh2rTwteKi823f", "file_name": "photo_-1003725299009_10666.jpg", "mime_type": "image/jpeg|TASK_WORKER_ARTIFACT_GATE_V1:EMPTY_OR_TOO_SHORT|2026-05-09 00:13:53
@@ -271,6 +274,14 @@ tools/topic2_drainage_repair_close.py
 - e425b052-455f-46b4-990f-1421b7dac675|2|[VOICE] У тебя два файла. На одном у тебя схема дренажа, на другом у тебя длинные высоты и все есть. Посмотри оба файла |STALE_TIMEOUT|2026-05-08 19:40:15
 
 ## LATEST_TASK_HISTORY_20
+- cd7c36f8-0703-4b80-a91e-4e4a4e8dd401|TOPIC210_PILE_DIMENSIONS_REQUIRED|2026-05-09 00:17:04
+- cd7c36f8-0703-4b80-a91e-4e4a4e8dd401|PATCH_TOPIC210_PILE_COUNT_ROUTE_V1:HANDLED|2026-05-09 00:17:04
+- cd7c36f8-0703-4b80-a91e-4e4a4e8dd401|reply_sent:topic210_pile_count_route_v1|2026-05-09 00:17:04
+- cd7c36f8-0703-4b80-a91e-4e4a4e8dd401|PILE_COUNT_RERUN_AFTER_PATCH_RESTART|2026-05-09 00:17:03
+- ed118834-bd18-4182-baf4-99f3ea017858|TOPIC210_PILE_COUNT_DONE|2026-05-09 00:15:49
+- ed118834-bd18-4182-baf4-99f3ea017858|PATCH_TOPIC210_PILE_COUNT_ROUTE_V1:HANDLED|2026-05-09 00:15:49
+- ed118834-bd18-4182-baf4-99f3ea017858|reply_sent:topic210_pile_count_route_v1|2026-05-09 00:15:49
+- ed118834-bd18-4182-baf4-99f3ea017858|TEST_PILE_ROUTE_V1_CHECK|2026-05-09 00:15:49
 - dd000985-408f-4829-85d3-af9df8309f47|TASK_WORKER_ARTIFACT_GATE_V1:FAILED:EMPTY_OR_TOO_SHORT|2026-05-09 00:13:53
 - dd000985-408f-4829-85d3-af9df8309f47|created:NEW|2026-05-09T00:13:52.248094+00:00
 - 0332e116-3d48-42ac-80c2-6aebbac378dc|reply_sent:invalid_result|2026-05-09 00:09:28
@@ -283,14 +294,6 @@ tools/topic2_drainage_repair_close.py
 - 530e5e89-f3c4-418e-a974-ca06913f15c9|created:NEW|2026-05-08T23:50:20.243586+00:00
 - cd7c36f8-0703-4b80-a91e-4e4a4e8dd401|FINAL_CLOSURE_MEMORY_QUERY_PUBLIC_OUTPUT_V3:LISTED|2026-05-08 23:50:04
 - cd7c36f8-0703-4b80-a91e-4e4a4e8dd401|reply_sent:memory_query|2026-05-08 23:50:04
-- cd7c36f8-0703-4b80-a91e-4e4a4e8dd401|created:NEW|2026-05-08T23:50:03.886088+00:00
-- f02f874e-91da-480f-9a1e-d2c5d4553b55|state:FAILED|2026-05-08 23:49:05
-- f02f874e-91da-480f-9a1e-d2c5d4553b55|clarified:сваи жб 150х150|2026-05-08T23:48:58.138077+00:00
-- b98e1117-fff5-4d3e-b799-1eb6ad435faa|TASK_WORKER_ARTIFACT_GATE_V1:FAILED:EMPTY_OR_TOO_SHORT|2026-05-08 23:48:08
-- b98e1117-fff5-4d3e-b799-1eb6ad435faa|created:NEW|2026-05-08T23:48:05.464434+00:00
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|confirmed:DONE|2026-05-08T23:47:17.593154+00:00
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_DRAINAGE_AWAITING_CONFIRMATION_CLEAN_V1|2026-05-08 23:46:27
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|TOPIC2_VAT_PUBLIC_OUTPUT_OK|2026-05-08 23:46:27
 
 ## MEMORY_DB_COUNT
 - 5205
@@ -318,18 +321,6 @@ tools/topic2_drainage_repair_close.py
 - topic_210_file_b1f8e982-db2e-42de-9046-833287d3567d|{"task_id": "b1f8e982-db2e-42de-9046-833287d3567d", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-08T23:52:20.879337+00:00
 
 ## JOURNAL_AREAL_TASK_WORKER_60
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 1.589s CPU time.
-Started areal-task-worker.service - Areal Task Worker.
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 13.338s CPU time.
-Started areal-task-worker.service - Areal Task Worker.
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Consumed 57.743s CPU time.
 Started areal-task-worker.service - Areal Task Worker.
 Traceback (most recent call last):
@@ -378,6 +369,18 @@ Started areal-task-worker.service - Areal Task Worker.
   _ts = datetime.datetime.utcnow().isoformat()
 /root/.areal-neva-core/task_worker.py:664: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
   "timestamp": datetime.datetime.utcnow().isoformat(),
+Stopping areal-task-worker.service - Areal Task Worker...
+areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
+areal-task-worker.service: Deactivated successfully.
+Stopped areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Consumed 12.179s CPU time, 129.3M memory peak, 22.8M memory swap peak.
+Started areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
+areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
+areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
+areal-task-worker.service: Failed with result 'exit-code'.
+areal-task-worker.service: Scheduled restart job, restart counter is at 1.
+Started areal-task-worker.service - Areal Task Worker.
 
 ## JOURNAL_TELEGRAM_INGRESS_30
 2026-05-09 02:10:26,787 INFO DAEMON: Task f02f874e-91da-480f-9a1e-d2c5d4553b55 created state=NEW topic_id=210
