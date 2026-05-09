@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-05-09T00:25:02.541618+00:00
-GIT_SHA: c533c40450b8f9b0209795e1aee43eec068022fc
+GENERATED_AT: 2026-05-09T00:40:02.177507+00:00
+GIT_SHA: 7a5f770d798caf070c337520d425ddab19cbaf60
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -18,7 +18,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 |-------|------|--------|--------|------------|
 | 2 | STROYKA | INSTALLED_NOT_VERIFIED | 0 | 11 |
 | 5 | TEKHNADZOR | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
-| 210 | PROEKTIROVANIE | INSTALLED_NOT_VERIFIED | 0 | 4 |
+| 210 | PROEKTIROVANIE | INSTALLED_NOT_VERIFIED | 0 | 5 |
 | 500 | VEB_POISK | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
 
 ## OPEN_BLOCKERS_FROM_NOT_CLOSED
@@ -74,9 +74,9 @@ active: 0
 failed_24h: 11
 commits_last_7d: 30
 recent_commits:
+- 7a5f770|fix(topic210): canonical pile count route
 - ca312d9|fix(topic210): pile count route and db lock recover guard
 - 876e5d2|fix(topic2): PATCH_TOPIC2_WC_PICKER_DRAINAGE_MULTIFILE_V3 — stop WC loop, bind drainage replies to parent, include all 3 user PDFs
-- 107186a|fix(topic2): TOPIC2_WCG_SQL_FIX_SYNTAX_AND_LIKE_DROP_V1
 markers_missing: 6
 - TOPIC2_ESTIMATE_SESSION_CREATED
 - TOPIC2_CONTEXT_READY
@@ -114,16 +114,16 @@ NEXT_ACTION: investigate latest failed: STALE_NEW_30MIN
 ### topic_210 PROEKTIROVANIE
 role: КЖ КМ
 active: 0
-failed_24h: 4
-commits_last_7d: 3
+failed_24h: 5
+commits_last_7d: 4
 recent_commits:
+- 7a5f770|fix(topic210): canonical pile count route
 - ca312d9|fix(topic210): pile count route and db lock recover guard
 - 9420d6a|fix(topic2): stroyka meta-confirm guard + reply chain + xlsx 15 cols + topic210 meta guard
-- a277900|docs(normative): add shared normative context for topic_5 and topic_210
 last_failed:
+- 088df3dc | TASK_WORKER_ARTIFACT_GATE_V1:EMPTY_OR_TOO_SHORT
 - dd000985 | TASK_WORKER_ARTIFACT_GATE_V1:EMPTY_OR_TOO_SHORT
 - 0332e116 | INVALID_RESULT_GATE
-- b98e1117 | TASK_WORKER_ARTIFACT_GATE_V1:EMPTY_OR_TOO_SHORT
 blockers:
 - - topic_2 не тянет проектные образцы topic_210
 - - topic_210 не тянет сметные артефакты как результат

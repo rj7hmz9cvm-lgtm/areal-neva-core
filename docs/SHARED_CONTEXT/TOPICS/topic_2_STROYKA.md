@@ -1,7 +1,7 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-05-09T00:25:02.066312+00:00
-GIT_SHA: c533c40450b8f9b0209795e1aee43eec068022fc
+GENERATED_AT: 2026-05-09T00:40:01.729717+00:00
+GIT_SHA: 7a5f770d798caf070c337520d425ddab19cbaf60
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -25,6 +25,7 @@ FAILED_LAST_24H: 11
 - test-gat | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
+- 7a5f770|fix(topic210): canonical pile count route
 - ca312d9|fix(topic210): pile count route and db lock recover guard
 - 876e5d2|fix(topic2): PATCH_TOPIC2_WC_PICKER_DRAINAGE_MULTIFILE_V3 — stop WC loop, bind drainage replies to parent, include all 3 user PDFs
 - 107186a|fix(topic2): TOPIC2_WCG_SQL_FIX_SYNTAX_AND_LIKE_DROP_V1
@@ -54,7 +55,6 @@ FAILED_LAST_24H: 11
 - c0300fb|fix(topic2): close 4 code gaps — enrichment markers, cyrillic marker, function-object bug, FCG bypass
 - 2ece9eb|fix(topic2): close 3 live bugs — poison loop terminate, recursion restore, FCG done bypass
 - 62d85b8|fix(topic2): V5B — price source quality gate, raw JSON guard, canonical totals col J
-- 168ce5e|fix(topic2): close final V5 code gaps for prices guards totals
 
 ## MARKERS_LAST_24H
 - created:NEW

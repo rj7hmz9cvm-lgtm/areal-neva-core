@@ -1,7 +1,7 @@
 # topic_210 PROEKTIROVANIE
 
-GENERATED_AT: 2026-05-09T00:25:02.160257+00:00
-GIT_SHA: c533c40450b8f9b0209795e1aee43eec068022fc
+GENERATED_AT: 2026-05-09T00:40:01.824798+00:00
+GIT_SHA: 7a5f770d798caf070c337520d425ddab19cbaf60
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 210
@@ -9,22 +9,23 @@ ROLE: КЖ КМ
 DIRECTIONS_BOUND: structural_design
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
 ACTIVE_TASKS: 0
-FAILED_LAST_24H: 4
+FAILED_LAST_24H: 5
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 3
 - CANCELLED: 28
-- DONE: 84
-- FAILED: 30
+- DONE: 86
+- FAILED: 31
 
 ## LATEST_FAILED
+- 088df3dc | TASK_WORKER_ARTIFACT_GATE_V1:EMPTY_OR_TOO_SHORT
 - dd000985 | TASK_WORKER_ARTIFACT_GATE_V1:EMPTY_OR_TOO_SHORT
 - 0332e116 | INVALID_RESULT_GATE
 - b98e1117 | TASK_WORKER_ARTIFACT_GATE_V1:EMPTY_OR_TOO_SHORT
 - f02f874e | INVALID_RESULT_GATE
-- cfadbd05 | INVALID_RESULT_GATE
 
 ## COMMITS_LAST_14D
+- 7a5f770|fix(topic210): canonical pile count route
 - ca312d9|fix(topic210): pile count route and db lock recover guard
 - 9420d6a|fix(topic2): stroyka meta-confirm guard + reply chain + xlsx 15 cols + topic210 meta guard
 - a277900|docs(normative): add shared normative context for topic_5 and topic_210
@@ -54,6 +55,9 @@ FAILED_LAST_24H: 4
 - reply_sent:execution_timeout
 - PILE_COUNT_RERUN_WITH_TEMPLATE_DIMS_10x8
 - TOPIC210_PILE_COUNT_TELEGRAM_DELIVERED:10673
+- reply_sent:topic210_canon_pile_route_v2
+- PATCH_TOPIC210_CANON_PILE_ROUTE_V2:HANDLED
+- TOPIC210_CANON_PILE_COUNT_DONE
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210

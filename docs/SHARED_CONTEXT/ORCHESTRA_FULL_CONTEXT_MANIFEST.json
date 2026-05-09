@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-05-09T00:25:01.970977+00:00",
-  "git_sha_before_commit": "c533c40450b8f9b0209795e1aee43eec068022fc",
+  "generated_at_utc": "2026-05-09T00:40:01.647695+00:00",
+  "git_sha_before_commit": "7a5f770d798caf070c337520d425ddab19cbaf60",
   "part_max_bytes": 400000,
   "content_chunk_bytes": 340000,
   "total_records": 422,
@@ -1370,9 +1370,9 @@
       "path": "task_worker.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 790717,
-      "sha256": "d20800933434fdf35d7a82bb144586bb30ad967ec2214d78a8393fee2258f82e",
-      "chars": 753078,
+      "size_bytes": 802474,
+      "sha256": "5b18c4e77e98257a47917ee3ba36c4ed2ee22863cce92cb4fb62f10cee200248",
+      "chars": 764043,
       "chunks": 3
     },
     {
@@ -3377,7 +3377,7 @@
       "path": "docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 34366,
+      "size_bytes": 34601,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3395,7 +3395,7 @@
       "path": "docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 347095,
+      "size_bytes": 347263,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3431,7 +3431,7 @@
       "path": "docs/SHARED_CONTEXT/TOPICS/topic_210_PROEKTIROVANIE.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 3255,
+      "size_bytes": 3423,
       "sha256": "",
       "chars": 0,
       "chunks": 0
