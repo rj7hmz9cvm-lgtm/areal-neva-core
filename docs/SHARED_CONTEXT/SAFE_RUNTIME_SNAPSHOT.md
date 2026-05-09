@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-05-09T00:40:01.487794+00:00
-git_sha_before_commit: 7a5f770d798caf070c337520d425ddab19cbaf60
+generated_at_utc: 2026-05-09T00:45:02.053286+00:00
+git_sha_before_commit: 7d98580ac632b211619de46756ae92929d406f77
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,7 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: inactive
 
 ## GIT_LOG_30
+7d98580 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 7a5f770 fix(topic210): canonical pile count route
 786e4c8 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 c533c40 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
@@ -39,17 +40,83 @@ eb76615 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 fd5778e docs: update LATEST_HANDOFF af42c97 — drainage full close, child merge patch
 af42c97 fix(topic2): TOPIC2_DRAINAGE_FULL_CLOSE_NO_LOOP_V2 — child merge guard, legend filter, noise tasks closed
 859c045 fix(topic2): TOPIC2_DRAINAGE_VAT_GATE_PUBLIC_CLEAN_V1 — VAT gate 22%, source filter, clean public output, Drive upload fix
-3343690 fix(topic2): TOPIC2_DRAINAGE_MULTIFILE_REPAIR_CLOSE_V1 — close drainage estimate from two PDFs, send XLSX+PDF to Telegram
 
 ## GIT_SHOW_STAT_HEAD
-commit 7a5f770d798caf070c337520d425ddab19cbaf60
+commit 7d98580ac632b211619de46756ae92929d406f77
 Author: Ila <ilakuznecov@mac.local>
-Date:   Sat May 9 03:37:20 2026 +0300
+Date:   Sat May 9 03:40:10 2026 +0300
 
-    fix(topic210): canonical pile count route
+    FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
- task_worker.py | 287 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 287 insertions(+)
+ docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md    |   6 +-
+ docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md |   2 +-
+ .../SHARED_CONTEXT/DIRECTIONS/auto_parts_search.md |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/cad_dwg.md          |   4 +-
+ .../DIRECTIONS/construction_search.md              |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/crm_leads.md        |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/defect_acts.md      |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/devops_server.md    |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/documents.md        |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/email_ingress.md    |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/estimates.md        |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/general_chat.md     |   4 +-
+ .../DIRECTIONS/google_drive_storage.md             |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/internet_search.md  |   4 +-
+ .../DIRECTIONS/isolated_project_ivan.md            |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/job_search.md       |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/memory_archive.md   |   4 +-
+ .../SHARED_CONTEXT/DIRECTIONS/monolith_concrete.md |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/ocr_photo.md        |   4 +-
+ .../DIRECTIONS/orchestration_core.md               |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/photo_cleanup.md    |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/product_search.md   |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/roofing.md          |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/social_content.md   |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/spreadsheets.md     |   4 +-
+ .../SHARED_CONTEXT/DIRECTIONS/structural_design.md |   4 +-
+ .../DIRECTIONS/technical_supervision.md            |   4 +-
+ .../DIRECTIONS/telegram_automation.md              |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/video_production.md |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/vpn_network.md      |   4 +-
+ docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md      |   4 +-
+ docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |   6 +-
+ docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |   6 +-
+ docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  16 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_004.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |   6 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |   6 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_007.md             | 293 ++++++++++++++++++++-
+ .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_010.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_011.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_012.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_013.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_014.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_015.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_016.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_017.md             |   4 +-
+ docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 190 +++++--------
+ .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |  16 +-
+ docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  73 ++---
+ docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |   6 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |   4 +-
+ .../TOPICS/topic_210_PROEKTIROVANIE.md             |  16 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |   6 +-
+ .../TOPICS/topic_3008_KODY_MOZGOV.md               |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_5_TEKHNADZOR.md   |   4 +-
+ .../SHARED_CONTEXT/TOPICS/topic_6104_JOB_SEARCH.md |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |   4 +-
+ .../TOPICS/topic_961_AVTOZAPCHASTI.md              |   4 +-
+ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   6 +-
+ 68 files changed, 546 insertions(+), 320 deletions(-)
 
 ## GIT_CHANGED_FILES_10
 docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md
@@ -123,15 +190,24 @@ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md
 task_worker.py
 
 ## CORE_DB_STATE_COUNTS
-- FAILED|2977
+- FAILED|2978
 - CANCELLED|823
-- DONE|585
+- DONE|586
 - ARCHIVED|381
 
 ## CORE_DB_OPEN_TASKS
 - 0
 
 ## LATEST_TASKS_15
+- f09e5a55-5ce8-462d-a356-681b4f5e796b|210|text|DONE|нужно посчитать сваи жб 150-150 на этот дом|Расчёт количества свай по topic_210
+
+Исходные данные:
+• Тип: каркасный дом
+• Размер в плане: 24×14 м
+• Сваи: ж/б 150×150, длина 2,5 м
+
+Принятый расчётный принци|2026-05-09 00:41:09
+- 4cd74051-efb8-470e-81f2-ae93e390a98f|210|text|FAILED|итого?|None|2026-05-09 00:40:42
 - 088df3dc-14e0-41d2-9187-ef0fdb58a5b7|210|drive_file|FAILED|{"file_id": "1jdseIFUevlE2GJBwJZLAlnCULxfwL0t-", "file_name": "image.jpeg", "mime_type": "image/jpeg", "caption": "посмо||2026-05-09 00:39:53
 - b67bd13d-6be6-449b-b8fc-fc4f4fdd60df|210|text|DONE|а если дом 24 на 14 то сколько|Расчёт количества свай по topic_210
 
@@ -189,16 +265,9 @@ task_worker.py
 - 85992edd-85cd-4406-85b5-b08b335cb8af|2|text|DONE|Да жду всё верно|PDF определён как схема дренажа/ливнёвки.
 Домовую смету не запускаю: текущий файл относится к наружным сетям, а не к дому.
 Считать приблизительно по схеме или п|2026-05-08 21:50:33
-- 9a174a37-fc01-4414-97f9-064621356083|2|text|DONE|А смета-то где|PDF определён как схема дренажа/ливнёвки.
-Домовую смету не запускаю: текущий файл относится к наружным сетям, а не к дому.
-Считать приблизительно по схеме или п|2026-05-08 20:47:30
-- 043e5c9f-e8bc-434c-9dad-a66c7e50f917|2|text|DONE|[VOICE] Посмотри то, что я тебе писал ранее, у тебя же все есть|✅ Смета дренажа готова
-
-Объект: наружные сети / дренаж / ливневая канализация
-Файлы учтены: file_2.pdf   file_1.pdf   file_0.pdf
-Цены: онлайн-поиск OpenRouter/S|2026-05-08T23:47:17.592846+00:00
 
 ## LATEST_FAILED_10
+- 4cd74051-efb8-470e-81f2-ae93e390a98f|210|итого?|INVALID_RESULT_GATE|2026-05-09 00:40:42
 - 088df3dc-14e0-41d2-9187-ef0fdb58a5b7|210|{"file_id": "1jdseIFUevlE2GJBwJZLAlnCULxfwL0t-", "file_name": "image.jpeg", "mime_type": "image/jpeg", "caption": "посмо|TASK_WORKER_ARTIFACT_GATE_V1:EMPTY_OR_TOO_SHORT|2026-05-09 00:39:53
 - dd000985-408f-4829-85d3-af9df8309f47|210|{"file_id": "1ZPraIey7-ZPgfl_tqQFh2rTwteKi823f", "file_name": "photo_-1003725299009_10666.jpg", "mime_type": "image/jpeg|TASK_WORKER_ARTIFACT_GATE_V1:EMPTY_OR_TOO_SHORT|2026-05-09 00:13:53
 - 0332e116-3d48-42ac-80c2-6aebbac378dc|210|выполни|INVALID_RESULT_GATE|2026-05-09 00:09:28
@@ -208,9 +277,28 @@ task_worker.py
 - f9df5eb5-3746-40c4-a730-bbc1a021dbc1|2|[VOICE] Мне необходимо найти стоимость материалов, как указано в техническом задании, и стоимость работы посмотреть. Выш|STALE_TIMEOUT|2026-05-08 22:33:28
 - test-multifile-gate-001|2|[VOICE] У тебя два файла. На одном у тебя схема дренажа, на другом у тебя длинные высоты и все есть. Посмотри оба файла |STALE_TIMEOUT|2026-05-08 20:29:32
 - 2c732335-4650-439e-9287-0984497b4aa6|2|[VOICE] Я тебе прислал два файла, там есть все длинные, там есть все размеры, посмотри, пожалуйста, внимательно. Два фай|STALE_TIMEOUT|2026-05-08 20:20:28
-- test-gate-send-fix-001|2|[VOICE] У тебя два файла. На одном у тебя схема дренажа, на другом у тебя длинные высоты и все есть. Посмотри оба файла |STALE_TIMEOUT|2026-05-08 20:19:46
 
 ## LATEST_TASK_HISTORY_20
+- f09e5a55-5ce8-462d-a356-681b4f5e796b|TOPIC210_CANON_PILE_COUNT_DONE|2026-05-09 00:41:09
+- f09e5a55-5ce8-462d-a356-681b4f5e796b|PATCH_TOPIC210_CANON_PILE_ROUTE_V2:HANDLED|2026-05-09 00:41:09
+- f09e5a55-5ce8-462d-a356-681b4f5e796b|reply_sent:topic210_canon_pile_route_v2|2026-05-09 00:41:09
+- f09e5a55-5ce8-462d-a356-681b4f5e796b|created:NEW|2026-05-09T00:41:08.040200+00:00
+- 4cd74051-efb8-470e-81f2-ae93e390a98f|reply_sent:invalid_result|2026-05-09 00:40:42
+- 4cd74051-efb8-470e-81f2-ae93e390a98f|state:FAILED|2026-05-09 00:40:42
+- 4cd74051-efb8-470e-81f2-ae93e390a98f|continued:нет|2026-05-09T00:40:39.936808+00:00
+- 4cd74051-efb8-470e-81f2-ae93e390a98f|result:Задача: обработка и анализ смет. 
+Результат: найдены релевантные файлы смет, доступные для использования как образцы. 
+
+Ссылки на файлы: 
+1. [АР_КД_Агалатово_02.pdf](https:/|2026-05-09 00:40:34
+- 4cd74051-efb8-470e-81f2-ae93e390a98f|reply_sent:result|2026-05-09 00:40:26
+- 4cd74051-efb8-470e-81f2-ae93e390a98f|result:На текущий момент в системе зафиксированы следующие артефакты по теме:
+
+1. **Образцы сметной документации**:
+ - АР_КД_Агалатово_02.pdf (готовый образец сметы)
+ - КЖ_project_|2026-05-09 00:40:26
+- 4cd74051-efb8-470e-81f2-ae93e390a98f|state:IN_PROGRESS|2026-05-09 00:40:15
+- 4cd74051-efb8-470e-81f2-ae93e390a98f|created:NEW|2026-05-09T00:40:13.983396+00:00
 - 088df3dc-14e0-41d2-9187-ef0fdb58a5b7|TASK_WORKER_ARTIFACT_GATE_V1:FAILED:EMPTY_OR_TOO_SHORT|2026-05-09 00:39:53
 - 088df3dc-14e0-41d2-9187-ef0fdb58a5b7|created:NEW|2026-05-09T00:39:51.178010+00:00
 - b67bd13d-6be6-449b-b8fc-fc4f4fdd60df|TOPIC210_CANON_PILE_COUNT_DONE|2026-05-09 00:39:06
@@ -219,23 +307,12 @@ task_worker.py
 - b67bd13d-6be6-449b-b8fc-fc4f4fdd60df|created:NEW|2026-05-09T00:39:04.688141+00:00
 - f1fbced5-bed0-42b7-90d8-020fe322b216|TOPIC210_CANON_PILE_COUNT_DONE|2026-05-09 00:38:33
 - f1fbced5-bed0-42b7-90d8-020fe322b216|PATCH_TOPIC210_CANON_PILE_ROUTE_V2:HANDLED|2026-05-09 00:38:33
-- f1fbced5-bed0-42b7-90d8-020fe322b216|reply_sent:topic210_canon_pile_route_v2|2026-05-09 00:38:33
-- f1fbced5-bed0-42b7-90d8-020fe322b216|created:NEW|2026-05-09T00:38:31.945989+00:00
-- cd7c36f8-0703-4b80-a91e-4e4a4e8dd401|TOPIC210_PILE_COUNT_TELEGRAM_DELIVERED:10673|2026-05-09 00:23:11
-- cd7c36f8-0703-4b80-a91e-4e4a4e8dd401|TOPIC210_PILE_COUNT_DONE|2026-05-09 00:22:09
-- cd7c36f8-0703-4b80-a91e-4e4a4e8dd401|PATCH_TOPIC210_PILE_COUNT_ROUTE_V1:HANDLED|2026-05-09 00:22:09
-- cd7c36f8-0703-4b80-a91e-4e4a4e8dd401|PILE_COUNT_RERUN_WITH_TEMPLATE_DIMS_10x8|2026-05-09 00:22:08
-- cd7c36f8-0703-4b80-a91e-4e4a4e8dd401|reply_sent:execution_timeout|2026-05-09 00:22:03
-- cd7c36f8-0703-4b80-a91e-4e4a4e8dd401|state:FAILED:EXECUTION_TIMEOUT|2026-05-09 00:22:03
-- cd7c36f8-0703-4b80-a91e-4e4a4e8dd401|clarified:смотри все есть|2026-05-09T00:22:03.060451+00:00
-- cd7c36f8-0703-4b80-a91e-4e4a4e8dd401|TOPIC210_PILE_DIMENSIONS_REQUIRED|2026-05-09 00:17:04
-- cd7c36f8-0703-4b80-a91e-4e4a4e8dd401|PATCH_TOPIC210_PILE_COUNT_ROUTE_V1:HANDLED|2026-05-09 00:17:04
-- cd7c36f8-0703-4b80-a91e-4e4a4e8dd401|reply_sent:topic210_pile_count_route_v1|2026-05-09 00:17:04
 
 ## MEMORY_DB_COUNT
-- 5207
+- 5208
 
 ## LATEST_MEMORY_20
+- topic_210_archive_4cd74051|{"task_id": "4cd74051-efb8-470e-81f2-ae93e390a98f", "chat_id": "-1003725299009", "topic_id": 210, "direction": "structural_design", "engine": "search_supplier", "input_type": "text|2026-05-09T00:40:26.104265
 - topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 50, "updated_at": "2026-05-09T00:39:52.152299+00:00", "files": [{"task_id": "", "file_id": "", "file_name": "image.jpeg", "m|2026-05-09T00:39:52.154103+00:00
 - topic_210_file_content_status_088df3dc-14e0-41d2-9187-ef0fdb58a5b7|{"ok": false, "reason": "UNSUPPORTED_TYPE", "file_name": "image.jpeg"}|2026-05-09T00:39:52.095429
 - topic_210_file_088df3dc-14e0-41d2-9187-ef0fdb58a5b7|{"task_id": "088df3dc-14e0-41d2-9187-ef0fdb58a5b7", "chat_id": "-1003725299009", "topic_id": 210, "file_id": "1jdseIFUevlE2GJBwJZLAlnCULxfwL0t-", "file_name": "image.jpeg", "captio|2026-05-09T00:39:52.089660
@@ -255,7 +332,6 @@ task_worker.py
 - topic_210_file_7dca3b5f-2782-400f-af84-fb030904e917|{"task_id": "7dca3b5f-2782-400f-af84-fb030904e917", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-09T00:22:23.894842+00:00
 - topic_210_file_12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88|{"task_id": "12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "16V3s5DcAvnXj8f-3CcfZE2g5|2026-05-09T00:22:23.893766+00:00
 - topic_210_file_b1f8e982-db2e-42de-9046-833287d3567d|{"task_id": "b1f8e982-db2e-42de-9046-833287d3567d", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-09T00:22:23.893453+00:00
-- topic_210_file_eeb0d013-704a-404c-9390-5a06c90ee976|{"task_id": "eeb0d013-704a-404c-9390-5a06c90ee976", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-05-09T00:22:23.892764+00:00
 
 ## JOURNAL_AREAL_TASK_WORKER_60
 File "/usr/lib/python3.12/asyncio/base_events.py", line 687, in run_until_complete
@@ -320,12 +396,6 @@ Started areal-task-worker.service - Areal Task Worker.
   "timestamp": datetime.datetime.utcnow().isoformat(),
 
 ## JOURNAL_TELEGRAM_INGRESS_30
-2026-05-09 02:50:03,377 INFO DAEMON: STT env check groq=True
-2026-05-09 02:50:03,377 INFO DAEMON: STT start file=/root/.areal-neva-core/runtime/voice_queue/voice_1003725299009_10655.ogg size=38051 model=whisper-large-v3-turbo
-2026-05-09 02:50:03,788 INFO DAEMON: STT http_status=200
-2026-05-09 02:50:03,788 INFO DAEMON: STT ok transcript_len=114
-2026-05-09 02:50:03,891 INFO DAEMON: Task cd7c36f8-0703-4b80-a91e-4e4a4e8dd401 created state=NEW topic_id=210
-2026-05-09 02:50:03,891 INFO DAEMON: Update id=210388116 is handled. Duration 620 ms by bot id=8216054898
 2026-05-09 02:50:19,821 INFO DAEMON: LOCAL_BOT_API_ABSOLUTE_PATH_USED:file_14.oga
 2026-05-09 02:50:19,821 INFO DAEMON: STT env check groq=True
 2026-05-09 02:50:19,821 INFO DAEMON: STT start file=/root/.areal-neva-core/runtime/voice_queue/voice_1003725299009_10658.ogg size=37978 model=whisper-large-v3-turbo
@@ -350,3 +420,9 @@ Started areal-task-worker.service - Areal Task Worker.
 2026-05-09 03:39:48,761 INFO DAEMON: file_cache is only supported with oauth2client<4.0.0
 2026-05-09 03:39:51,184 INFO DAEMON: Task 088df3dc-14e0-41d2-9187-ef0fdb58a5b7 created state=NEW topic_id=210
 2026-05-09 03:39:51,281 INFO DAEMON: Update id=210388125 is handled. Duration 2878 ms by bot id=8216054898
+2026-05-09 03:40:13,986 INFO DAEMON: Task 4cd74051-efb8-470e-81f2-ae93e390a98f created state=NEW topic_id=210
+2026-05-09 03:40:13,986 INFO DAEMON: Update id=210388126 is handled. Duration 17 ms by bot id=8216054898
+2026-05-09 03:40:40,000 INFO DAEMON: Update id=210388127 is handled. Duration 76 ms by bot id=8216054898
+2026-05-09 03:41:08,043 INFO DAEMON: Task f09e5a55-5ce8-462d-a356-681b4f5e796b created state=NEW topic_id=210
+2026-05-09 03:41:08,044 INFO DAEMON: Update id=210388128 is handled. Duration 19 ms by bot id=8216054898
+2026-05-09 03:41:22,787 INFO DAEMON: Update id=210388129 is handled. Duration 98 ms by bot id=8216054898

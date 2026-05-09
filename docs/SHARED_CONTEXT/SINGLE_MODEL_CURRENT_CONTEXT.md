@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-05-09T00:40:02.177507+00:00
-GIT_SHA: 7a5f770d798caf070c337520d425ddab19cbaf60
+GENERATED_AT: 2026-05-09T00:45:02.783877+00:00
+GIT_SHA: 7d98580ac632b211619de46756ae92929d406f77
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -18,7 +18,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 |-------|------|--------|--------|------------|
 | 2 | STROYKA | INSTALLED_NOT_VERIFIED | 0 | 11 |
 | 5 | TEKHNADZOR | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
-| 210 | PROEKTIROVANIE | INSTALLED_NOT_VERIFIED | 0 | 5 |
+| 210 | PROEKTIROVANIE | INSTALLED_NOT_VERIFIED | 0 | 6 |
 | 500 | VEB_POISK | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
 
 ## OPEN_BLOCKERS_FROM_NOT_CLOSED
@@ -114,21 +114,21 @@ NEXT_ACTION: investigate latest failed: STALE_NEW_30MIN
 ### topic_210 PROEKTIROVANIE
 role: КЖ КМ
 active: 0
-failed_24h: 5
+failed_24h: 6
 commits_last_7d: 4
 recent_commits:
 - 7a5f770|fix(topic210): canonical pile count route
 - ca312d9|fix(topic210): pile count route and db lock recover guard
 - 9420d6a|fix(topic2): stroyka meta-confirm guard + reply chain + xlsx 15 cols + topic210 meta guard
 last_failed:
+- 4cd74051 | INVALID_RESULT_GATE
 - 088df3dc | TASK_WORKER_ARTIFACT_GATE_V1:EMPTY_OR_TOO_SHORT
 - dd000985 | TASK_WORKER_ARTIFACT_GATE_V1:EMPTY_OR_TOO_SHORT
-- 0332e116 | INVALID_RESULT_GATE
 blockers:
 - - topic_2 не тянет проектные образцы topic_210
 - - topic_210 не тянет сметные артефакты как результат
 - - проверить topic_210: "какие образцы есть по АР/КЖ/КД" должен показать список без создания файла
-NEXT_ACTION: investigate latest failed: TASK_WORKER_ARTIFACT_GATE_V1:EMPTY_OR_TOO_SHORT
+NEXT_ACTION: investigate latest failed: INVALID_RESULT_GATE
 
 ### topic_500 VEB_POISK
 role: Интернет-поиск

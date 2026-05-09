@@ -1,7 +1,7 @@
 # topic_210 PROEKTIROVANIE
 
-GENERATED_AT: 2026-05-09T00:40:01.824798+00:00
-GIT_SHA: 7a5f770d798caf070c337520d425ddab19cbaf60
+GENERATED_AT: 2026-05-09T00:45:02.427215+00:00
+GIT_SHA: 7d98580ac632b211619de46756ae92929d406f77
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 210
@@ -9,20 +9,20 @@ ROLE: КЖ КМ
 DIRECTIONS_BOUND: structural_design
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
 ACTIVE_TASKS: 0
-FAILED_LAST_24H: 5
+FAILED_LAST_24H: 6
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 3
 - CANCELLED: 28
-- DONE: 86
-- FAILED: 31
+- DONE: 87
+- FAILED: 32
 
 ## LATEST_FAILED
+- 4cd74051 | INVALID_RESULT_GATE
 - 088df3dc | TASK_WORKER_ARTIFACT_GATE_V1:EMPTY_OR_TOO_SHORT
 - dd000985 | TASK_WORKER_ARTIFACT_GATE_V1:EMPTY_OR_TOO_SHORT
 - 0332e116 | INVALID_RESULT_GATE
 - b98e1117 | TASK_WORKER_ARTIFACT_GATE_V1:EMPTY_OR_TOO_SHORT
-- f02f874e | INVALID_RESULT_GATE
 
 ## COMMITS_LAST_14D
 - 7a5f770|fix(topic210): canonical pile count route
@@ -58,6 +58,12 @@ FAILED_LAST_24H: 5
 - reply_sent:topic210_canon_pile_route_v2
 - PATCH_TOPIC210_CANON_PILE_ROUTE_V2:HANDLED
 - TOPIC210_CANON_PILE_COUNT_DONE
+- result:На текущий момент в системе зафиксированы следующие артефакты по теме:
+
+1
+- result:Задача: обработка и анализ смет. 
+Результат: найдены релевантные файлы см
+- continued:нет
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210
