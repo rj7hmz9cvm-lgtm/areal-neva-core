@@ -18361,7 +18361,8 @@ try:
         if any(x in t for x in ("делай смет", "сделай смет", "давай смет", "делаем смет", "запускай смет")):
             return "median"
         # "да делай", "давай делай", "ок делай"
-        if "делай" in t and any(x in t for x in ("да ", "ок ", "давай ", "ладно ")):
+        # Use " делай" (with space prefix) to avoid matching "сделай" as false positive
+        if " делай" in (" " + t) and any(x in t for x in ("да ", "ок ", "давай ", "ладно ")):
             return "median"
         # "ставь обычные/стандартные/рыночные/нормальные"
         if "ставь" in t and any(x in t for x in ("обычн", "стандарт", "рыночн", "нормальн")):
