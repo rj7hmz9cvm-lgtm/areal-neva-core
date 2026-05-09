@@ -1,7 +1,7 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-05-09T00:45:02.338252+00:00
-GIT_SHA: 7d98580ac632b211619de46756ae92929d406f77
+GENERATED_AT: 2026-05-09T07:05:02.106298+00:00
+GIT_SHA: f53ec3bd2073dd3794cbd23970c5b836c1e897ac
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -9,20 +9,20 @@ ROLE: Сметы
 DIRECTIONS_BOUND: estimates
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
 ACTIVE_TASKS: 0
-FAILED_LAST_24H: 11
+FAILED_LAST_24H: 12
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 12
 - CANCELLED: 102
 - DONE: 135
-- FAILED: 120
+- FAILED: 121
 
 ## LATEST_FAILED
 - 6a535d79 | STALE_TIMEOUT
 - f9df5eb5 | STALE_TIMEOUT
+- 043e5c9f | EXECUTION_TIMEOUT
 - test-mul | STALE_TIMEOUT
 - 2c732335 | STALE_TIMEOUT
-- test-gat | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
 - 7a5f770|fix(topic210): canonical pile count route
@@ -58,28 +58,11 @@ FAILED_LAST_24H: 11
 
 ## MARKERS_LAST_24H
 - created:NEW
-- PATCH_TOPIC2_INLINE_FIX_20260506_V1:V6C_PRICE_REJECTED:no_explicit_token_or_long
-- PATCH_TOPIC2_INLINE_FIX_20260506_V1:V5_PRICE_REJECTED:no_explicit_token_or_long
-- P6E67_PARENT_NOT_FOUND
-- P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION
 - clarified:Вот документ мне необходимо посчитать стоимость строительства Дом из г
-- state:FAILED
-- reply_sent:stale_failed
 - clarified:
-- reply_sent:p6e67_parent_not_found
-- P6E67_PARENT_REVIVED_AS_REVISION_SOURCE:LAST_ACTIVE_ESTIMATE_FALLBACK
-- P6E67_REVISION_TEXT_MERGED_FROM_TASK:89f1a927-af21-4d77-b287-70e8ecef659c
-- P6E67_CURRENT_TASK_CANCELLED_MERGED_TO_PARENT:d72028da-b4ff-424d-a626-790c9da8be
-- P6E67_BLOCK_ARTIFACT_GATE_PDF_LINK_MISSING_BEFORE_SEND_EX
-- P6C_TOPIC2_IMAGE_OR_FILE_ESTIMATE_ROUTE_TAKEN
-- TOPIC2_PRICE_CHOICE_REQUESTED
 - clarified:2
-- P6E67_BLOCK_ARTIFACT_GATE_PDF_LINK_MISSING_BEFORE_SEND
-- P6E67_REVISION_TEXT_MERGED_FROM_TASK:0aaa723d-e506-4cfe-9cfc-7dc20b7ea094
 - continued:вот размеры
 - continued:вот задание
-- TOPIC2_PRICE_CHOICE_CONFIRMED:confirmed
-- P3_TOPIC2_CLARIFICATION
 - clarified:Там же есть картинка посмотри проект
 - clarified:есть в проекте
 - clarified:смотри задание и проект
@@ -87,6 +70,23 @@ FAILED_LAST_24H: 11
 - clarified:где расчет?
 - clarified:ну че
 - clarified:заебал
+- clarified:я же все скинул уже
+- clarified:ответы все есть в проекте. посмотри
+- clarified:Фундамент монолитный песчаная подушка толщиной 300 мм с отступом на ме
+- clarified:вот
+- P6E67_PARENT_NOT_FOUND
+- reply_sent:p6e67_parent_not_found
+- P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION
+- BIG_FILE_LOCAL_BOT_API_USED
+- BIG_FILE_LOCAL_DOWNLOAD_OK
+- TOPIC2_REPEAT_PARENT_TASK:089a9afa-ed1d-44ac-a68d-26d51f4bcdc9
+- TOPIC2_ONLINE_MODEL_SONAR_CONFIRMED:perplexity/sonar
+- TOPIC2_PRICE_ENRICHMENT_STARTED
+- TOPIC2_PRICE_ENRICHMENT_DONE:1588
+- TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:газобетон
+- TOPIC2_PRICE_SOURCE_FOUND:газобетон:Завод (Авито):CONFIRMED
+- TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:Бетон В25
+- TOPIC2_PRICE_SOURCE_FOUND:Бетон В25:beton-spb.ru:CONFIRMED
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210

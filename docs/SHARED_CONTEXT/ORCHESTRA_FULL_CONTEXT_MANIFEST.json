@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-05-09T00:45:02.249554+00:00",
-  "git_sha_before_commit": "7d98580ac632b211619de46756ae92929d406f77",
+  "generated_at_utc": "2026-05-09T07:05:02.019097+00:00",
+  "git_sha_before_commit": "f53ec3bd2073dd3794cbd23970c5b836c1e897ac",
   "part_max_bytes": 400000,
   "content_chunk_bytes": 340000,
   "total_records": 422,
@@ -3377,7 +3377,7 @@
       "path": "docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 30100,
+      "size_bytes": 34166,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3386,7 +3386,7 @@
       "path": "docs/SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 8762,
+      "size_bytes": 8734,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3395,7 +3395,7 @@
       "path": "docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 347318,
+      "size_bytes": 347575,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3431,7 +3431,7 @@
       "path": "docs/SHARED_CONTEXT/TOPICS/topic_210_PROEKTIROVANIE.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 3623,
+      "size_bytes": 3928,
       "sha256": "",
       "chars": 0,
       "chunks": 0
