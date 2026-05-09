@@ -4801,3 +4801,63 @@ except Exception as _pei_install_e:
     except Exception:
         pass
 # === END_PATCH_PRICE_ENRICHMENT_IDEMPOTENT_V1 ===
+
+# === PATCH_KARKASNIK_SHEET_FIX_V1 ===
+# Fix regression from PATCH_TOPIC2_REALSHEET_PRICES_V3 which hardcoded "Газобетонный дом"
+# for ALL materials. For material=="каркас": read "Каркас под ключ" from М-80.xlsx
+# (col4=work_price, col6=mat_price, data starts row 10).
+import logging as _kfv1_log_mod
+_KFV1_LOG = _kfv1_log_mod.getLogger("stroyka.karkasnik_sheet_fix_v1")
+
+_ETF_V3_ORIG = extract_template_prices
+
+def extract_template_prices(template_path, parsed):  # noqa: F811
+    if (parsed or {}).get("material") == "каркас":
+        _kark_path = template_path
+        if not _kark_path or not os.path.exists(_kark_path):
+            _kark_path = "/root/.areal-neva-core/data/templates/estimate/cache/1yt-RJsGRhO13zmPKNAn6bMuGrpXY7kWp__М-80.xlsx"
+        prices = {}
+        try:
+            from openpyxl import load_workbook as _kw
+            wb = _kw(_kark_path, read_only=True, data_only=True)
+            ws = wb["Каркас под ключ"] if "Каркас под ключ" in wb.sheetnames else wb.active
+            section = "Общее"
+            for i, row in enumerate(ws.iter_rows(values_only=True)):
+                r = list(row)
+                if i < 9:
+                    continue
+                r1 = r[1] if len(r) > 1 else None
+                if r[0] and not r1:
+                    section = str(r[0]).strip()
+                    continue
+                if not r1:
+                    continue
+                try:
+                    wp = float(r[4]) if r[4] is not None else 0.0
+                    mp = float(r[6]) if r[6] is not None else 0.0
+                except (ValueError, TypeError):
+                    continue
+                if wp == 0 and mp == 0:
+                    continue
+                unit = str(r[2]).strip() if r[2] else ""
+                name = str(r1).strip()
+                prices[name.lower().strip()] = {
+                    "work_price": wp, "mat_price": mp,
+                    "unit": unit, "section": section, "name": name,
+                }
+            wb.close()
+        except Exception as _ke:
+            _KFV1_LOG.error("KARKASNIK_SHEET_FIX_V1_ERR: %s", _ke)
+        count = len(prices)
+        lines = [
+            f"- {v['name']}: работа={v['work_price']:.0f} {v['unit']}, матер={v['mat_price']:.0f} {v['unit']}"
+            for v in list(prices.values())[:25]
+            if v["work_price"] > 0 or v["mat_price"] > 0
+        ]
+        text = f"Цены из листа 'Каркас под ключ' ({count} позиций):\n" + "\n".join(lines)
+        _KFV1_LOG.info("KARKASNIK_SHEET_FIX_V1:count=%d sheet=Каркас_под_ключ", count)
+        return text, "Каркас под ключ", False
+    return _ETF_V3_ORIG(template_path, parsed)
+
+_KFV1_LOG.info("PATCH_KARKASNIK_SHEET_FIX_V1 installed")
+# === END_PATCH_KARKASNIK_SHEET_FIX_V1 ===
