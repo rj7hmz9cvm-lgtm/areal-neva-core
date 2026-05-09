@@ -17961,6 +17961,50 @@ except Exception:
 # === END_PATCH_TOPIC210_CANON_PILE_ROUTE_V2 ===
 
 
+# === PATCH_TOPIC2_REMOVE_HARDCODED_DRAINAGE_PARENT_V1 ===
+# Facts proven from live DB + code:
+# - _T2DPG_PARENT_ID = "043e5c9f..." hardcoded in 5 places (lines 14653,16936,17015,17220,17275)
+# - _t2dpg_get_parent queries WHERE id=hardcoded_id WITHOUT state filter
+# - 043e5c9f is state=FAILED/EXECUTION_TIMEOUT in live DB
+# - _t2dpg_absorb_child finds FAILED parent → calls _t2dpg_fix_parent_state
+# - _t2dpg_fix_parent_state sets state=WAITING_CLARIFICATION → picker picks it → EXECUTION_TIMEOUT loop
+# Fix: override _t2dpg_get_parent with dynamic lookup by chat_id+topic_id+state+error_message
+# No hardcoded task_id. No DB schema change. Only task_worker.py touched.
+import logging as _t2rhdp_logging
+
+_T2RHDP_LOG = _t2rhdp_logging.getLogger("topic2.remove_hardcoded_drainage_parent_v1")
+
+def _t2dpg_get_parent(conn, chat_id, topic_id):
+    """Dynamic lookup: active drainage WC parent by chat_id + topic_id + state."""
+    try:
+        row = conn.execute(
+            """
+            SELECT * FROM tasks
+            WHERE chat_id=?
+              AND COALESCE(topic_id,0)=?
+              AND state='WAITING_CLARIFICATION'
+              AND error_message='TOPIC2_DRAINAGE_LENGTH_NOT_PROVEN'
+            ORDER BY updated_at DESC
+            LIMIT 1
+            """,
+            (str(chat_id), int(topic_id or 0)),
+        ).fetchone()
+        if row:
+            return row
+    except Exception as _e:
+        try:
+            _T2RHDP_LOG.warning("T2RHDP_GET_PARENT_ERR %s", _e)
+        except Exception:
+            pass
+    return None
+
+try:
+    _T2RHDP_LOG.info("PATCH_TOPIC2_REMOVE_HARDCODED_DRAINAGE_PARENT_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_REMOVE_HARDCODED_DRAINAGE_PARENT_V1 ===
+
+
 if __name__ == "__main__":
     asyncio.run(main())
 
