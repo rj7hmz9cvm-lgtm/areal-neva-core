@@ -4340,3 +4340,346 @@ async def maybe_handle_stroyka_estimate(conn, task, logger=None):
 _T2PAA_LOG.info("PATCH_TOPIC2_PRICE_ALWAYS_ASK_V1 installed")
 # === END_PATCH_TOPIC2_PRICE_ALWAYS_ASK_V1 ===
 
+# === PATCH_TOPIC2_PARSE_REQUEST_SMART_INFER_V1 ===
+# §9 spec: "что строим — если object_type уже есть — запрещено"
+# §10 spec: "имитация бруса" / "по всем помещениям" → scope=под ключ
+# §12 spec: брус → Ареал Нева = дом (canon §2)
+# Fix 1: pile cross-section "N свай жб AxB" убирается из _extract_dimensions (сечение сваи ≠ размер здания)
+# Fix 2: material="брус" + object="" → object="дом"
+# Fix 3: "по всем помещениям" / "имитация бруса внутри" → scope="под ключ"
+import re as _t2prs_re
+import logging as _t2prs_log_mod
+_T2PRS_LOG = _t2prs_log_mod.getLogger("stroyka_estimate_canon")
+
+_T2PRS_ORIG_EXTRACT_DIM = _extract_dimensions
+_T2PRS_ORIG_PARSE_REQUEST = _parse_request
+
+def _extract_dimensions(text: str):
+    t = _low(text)
+    # Убираем сечения свай: "N свай [жб] AxB" или "жб AxB"
+    t_clean = _t2prs_re.sub(
+        r'(?:\d+\s+)?(?:свай|свая|сваи|жб)\s+(?:жб\s+)?\d+\s*[xх×*]\s*\d+',
+        ' ', t,
+    )
+    return _T2PRS_ORIG_EXTRACT_DIM(t_clean)
+
+def _parse_request(text: str):
+    parsed = _T2PRS_ORIG_PARSE_REQUEST(text)
+    t = _low(text)
+    # Fix 2: брус → дом (canon §2: брус → Ареал Нева.xlsx = деревянный дом)
+    if not parsed.get("object") and parsed.get("material") == "брус":
+        parsed["object"] = "дом"
+        _T2PRS_LOG.info("T2PRS_INFER:object=дом:from_material=брус")
+    # Fix 2b: другие признаки дома
+    if not parsed.get("object"):
+        for _hint in ("дач", "коттедж", "жилой", "жилого"):
+            if _hint in t:
+                parsed["object"] = "дом"
+                _T2PRS_LOG.info("T2PRS_INFER:object=дом:hint=%s", _hint)
+                break
+    # Fix 3: признаки scope=под ключ (spec §10)
+    if not parsed.get("scope"):
+        _scope_hints = (
+            "по всем помещениям", "по комнатам", "все помещения",
+            "имитация бруса внутри", "чистовая отделка", "ламинат",
+            "санузел", "теплые полы", "тёплые полы",
+        )
+        for _sh in _scope_hints:
+            if _sh in t:
+                parsed["scope"] = "под ключ"
+                _T2PRS_LOG.info("T2PRS_INFER:scope=под_ключ:hint=%s", _sh)
+                break
+    return parsed
+
+_T2PRS_LOG.info("PATCH_TOPIC2_PARSE_REQUEST_SMART_INFER_V1 installed")
+# === END_PATCH_TOPIC2_PARSE_REQUEST_SMART_INFER_V1 ===
+
+# === PATCH_TOPIC2_CLARIFICATION_MERGE_V1 ===
+# Fix: clarified:* entries in task_history not merged into raw_input before _parse_request
+# → _missing_question asks the same question again after user answered it.
+# PAMQ wrapper exists but _missing_question is called with only (parsed), conn/task not passed.
+# Solution: enrich task.raw_input with clarification history BEFORE calling the full chain.
+import logging as _t2cm_log_mod
+_T2CM_LOG = _t2cm_log_mod.getLogger("stroyka_estimate_canon")
+_T2CM_ORIG = maybe_handle_stroyka_estimate
+
+async def maybe_handle_stroyka_estimate(conn, task, logger=None):
+    try:
+        task_id = _s(_row_get(task, "id"))
+        if conn is not None and task_id:
+            rows = conn.execute(
+                "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'clarified:%' ORDER BY rowid ASC",
+                (task_id,)
+            ).fetchall()
+            clarifications = [r[0].split(":", 1)[1].strip() for r in rows if ":" in r[0]]
+            if clarifications:
+                raw = _s(_row_get(task, "raw_input", ""))
+                enriched = raw + "\n" + "\n".join(clarifications)
+                if hasattr(task, "keys"):
+                    task_dict = dict(zip(task.keys(), task))
+                elif isinstance(task, dict):
+                    task_dict = dict(task)
+                else:
+                    task_dict = {"raw_input": enriched}
+                task_dict["raw_input"] = enriched
+                _T2CM_LOG.info(
+                    "T2CM_MERGE: task=%s clarifs=%d enriched_len=%d",
+                    task_id, len(clarifications), len(enriched),
+                )
+                return await _T2CM_ORIG(conn, task_dict, logger)
+    except Exception as _t2cm_e:
+        _T2CM_LOG.warning("T2CM_ERR: %s", _t2cm_e)
+    return await _T2CM_ORIG(conn, task, logger)
+
+_T2CM_LOG.info("PATCH_TOPIC2_CLARIFICATION_MERGE_V1 installed")
+# === END_PATCH_TOPIC2_CLARIFICATION_MERGE_V1 ===
+
+
+# === PATCH_TOPIC2_TOPIC_ID_INT_SAFE_V1 ===
+import logging as _t2tid_log_mod
+_T2TID_LOG = _t2tid_log_mod.getLogger("stroyka_estimate_canon")
+_T2TID_ORIG_DIRECT = _stroyka_final_handle_direct_item_estimate
+
+async def _stroyka_final_handle_direct_item_estimate(conn, task, logger=None):
+    try:
+        raw_tid = _row_get(task, "topic_id", 0)
+        int(raw_tid or 0)
+    except (ValueError, TypeError):
+        if hasattr(task, "keys"):
+            task_dict = dict(zip(task.keys(), tuple(task)))
+        elif isinstance(task, dict):
+            task_dict = dict(task)
+        else:
+            task_dict = {}
+        task_dict["topic_id"] = TOPIC_ID_STROYKA
+        _T2TID_LOG.info("T2TID_FIX: topic_id coerced to %s", TOPIC_ID_STROYKA)
+        return await _T2TID_ORIG_DIRECT(conn, task_dict, logger)
+    return await _T2TID_ORIG_DIRECT(conn, task, logger)
+
+_T2TID_LOG.info("PATCH_TOPIC2_TOPIC_ID_INT_SAFE_V1 installed")
+# === END_PATCH_TOPIC2_TOPIC_ID_INT_SAFE_V1 ===
+
+# === PATCH_TOPIC2_CLARIFICATION_MERGE_V2 ===
+# Fix V1 bug: dict(zip(task.keys(), task)) for plain dict iterates keys not values
+# → task_dict becomes {key:key}, internal call fails, fallback to original (no merge).
+# V2: uses dict(task) for plain dict (same pattern as FIX_STROYKA_CONTEXT_ENRICH line 2393).
+# Calls _T2CM_ORIG (PAA) directly, bypassing broken V1.
+import logging as _t2cm2_log_mod
+_T2CM2_LOG = _t2cm2_log_mod.getLogger("task_worker")
+_T2CM2_INNER = _T2CM_ORIG  # PAA wrapper — skip broken V1
+
+async def maybe_handle_stroyka_estimate(conn, task, logger=None):
+    try:
+        task_id = _s(_row_get(task, "id"))
+        if conn is not None and task_id:
+            rows = conn.execute(
+                "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'clarified:%' ORDER BY rowid ASC",
+                (task_id,)
+            ).fetchall()
+            clarifications = [r[0].split(":", 1)[1].strip() for r in rows if ":" in r[0]]
+            if clarifications:
+                raw = _s(_row_get(task, "raw_input", ""))
+                enriched = raw + "\n" + "\n".join(clarifications)
+                if isinstance(task, dict):
+                    task_dict = dict(task)
+                elif hasattr(task, "keys"):
+                    task_dict = dict(zip(task.keys(), tuple(task)))
+                else:
+                    task_dict = {}
+                task_dict["raw_input"] = enriched
+                _T2CM2_LOG.info(
+                    "T2CM2_MERGE: task=%s clarifs=%d enriched_len=%d",
+                    task_id, len(clarifications), len(enriched),
+                )
+                return await _T2CM2_INNER(conn, task_dict, logger)
+    except Exception as _t2cm2_e:
+        _T2CM2_LOG.warning("T2CM2_ERR: %s", _t2cm2_e)
+    return await _T2CM2_INNER(conn, task, logger)
+
+_T2CM2_LOG.info("PATCH_TOPIC2_CLARIFICATION_MERGE_V2 installed")
+# === END_PATCH_TOPIC2_CLARIFICATION_MERGE_V2 ===
+
+# === PATCH_TOPIC2_PRICE_TEXT_TRUNCATE_V1 ===
+# Bug: _price_confirmation_text с 126 позициями шаблона → >4096 симв → Telegram 400 "message is too long"
+# Fix: ограничить template_prices до 15 строк; остаток заменить «… (+N позиций)».
+import logging as _ptt_log_mod
+_PTT_LOG = _ptt_log_mod.getLogger("task_worker")
+_PTT_ORIG = _price_confirmation_text
+
+def _price_confirmation_text(parsed, template, sheet_name, template_prices, online_prices):
+    MAX_PRICE_LINES = 15
+    if template_prices:
+        lines = template_prices.splitlines()
+        if len(lines) > MAX_PRICE_LINES + 1:
+            shown = "\n".join(lines[:MAX_PRICE_LINES])
+            rest = len(lines) - MAX_PRICE_LINES
+            template_prices = shown + f"\n… (+{rest} позиций в смете)"
+    text = _PTT_ORIG(parsed, template, sheet_name, template_prices, online_prices)
+    if len(text) > 3900:
+        text = text[:3900] + "\n…(сообщение сокращено)"
+    return text
+
+_PTT_LOG.info("PATCH_TOPIC2_PRICE_TEXT_TRUNCATE_V1 installed")
+# === END_PATCH_TOPIC2_PRICE_TEXT_TRUNCATE_V1 ===
+
+
+# === PATCH_TOPIC2_FRAME_HOUSE_MATERIAL_V1 ===
+# Facts:
+# - topic_2 canonical frame-house estimate request was classified as material="брус"
+# - request contained frame-house markers: свайный фундамент, ЖБ сваи 150x150, утепление стен 150, имитация бруса as finish
+# - canon requires frame house >100m2 to use frame template route, not gasbeton/bрус route
+import re as _t2fh_re
+import logging as _t2fh_logging
+
+_T2FH_LOG = _t2fh_logging.getLogger("topic2.frame_house_material_v1")
+
+def _t2fh_s(v, limit=20000):
+    try:
+        return str(v or "")[:limit]
+    except Exception:
+        return ""
+
+def _t2fh_low(v):
+    return _t2fh_s(v).lower().replace("ё", "е")
+
+def _t2fh_has_solid_brus(low: str) -> bool:
+    return any(x in low for x in (
+        "дом из бруса",
+        "дом брус",
+        "брусовой дом",
+        "клееный брус",
+        "клееного бруса",
+        "профилированный брус",
+        "профилированного бруса",
+        "оцилиндрованное бревно",
+        "сруб",
+        "лафет",
+    ))
+
+def _t2fh_is_frame_house_context(raw) -> bool:
+    low = _t2fh_low(raw)
+    if not low:
+        return False
+
+    if _t2fh_has_solid_brus(low):
+        return False
+
+    has_direct_frame = any(x in low for x in (
+        "каркас",
+        "каркасный",
+        "каркасник",
+        "frame",
+    ))
+
+    has_finish_brus = (
+        "имитац" in low and "брус" in low
+    )
+
+    has_piles = any(x in low for x in (
+        "свая",
+        "сваи",
+        "свай",
+        "жб 150",
+        "ж/б 150",
+        "150х150",
+        "150x150",
+        "150×150",
+        "железобетонн",
+    ))
+
+    has_wall_insulation = (
+        "утепл" in low and "стен" in low
+    ) or any(x in low for x in (
+        "утепление стен 150",
+        "утепления стен 150",
+        "минвата",
+        "каменная вата",
+    ))
+
+    if has_direct_frame:
+        return True
+
+    if has_finish_brus and (has_piles or has_wall_insulation):
+        return True
+
+    if has_piles and has_wall_insulation:
+        return True
+
+    return False
+
+def _t2fh_force_frame(parsed, raw):
+    try:
+        if isinstance(parsed, dict) and _t2fh_is_frame_house_context(raw):
+            old_material = _t2fh_low(parsed.get("material"))
+            if old_material in ("", "брус", "дерево", "деревянный", "газобетон"):
+                parsed["material"] = "каркас"
+                parsed["frame_house"] = True
+                parsed["material_source"] = "PATCH_TOPIC2_FRAME_HOUSE_MATERIAL_V1"
+        return parsed
+    except Exception as e:
+        try:
+            _T2FH_LOG.warning("PATCH_TOPIC2_FRAME_HOUSE_MATERIAL_V1_DICT_ERR %s", e)
+        except Exception:
+            pass
+        return parsed
+
+def _t2fh_wrap_material_func(name):
+    old = globals().get(name)
+    if not callable(old) or getattr(old, "_t2fh_wrapped", False):
+        return False
+
+    def wrapped(*args, **kwargs):
+        raw_parts = []
+        for x in args:
+            raw_parts.append(_t2fh_s(x, 5000))
+        for k in ("raw_input", "text", "caption", "prompt", "user_text"):
+            if k in kwargs:
+                raw_parts.append(_t2fh_s(kwargs.get(k), 5000))
+        raw = "\n".join(raw_parts)
+
+        res = old(*args, **kwargs)
+
+        if isinstance(res, str):
+            if _t2fh_is_frame_house_context(raw) and _t2fh_low(res) in ("", "брус", "дерево", "деревянный", "газобетон"):
+                return "каркас"
+            return res
+
+        if isinstance(res, dict):
+            return _t2fh_force_frame(res, raw)
+
+        return res
+
+    wrapped._t2fh_wrapped = True
+    globals()[name] = wrapped
+    return True
+
+_T2FH_WRAPPED = []
+for _t2fh_name in (
+    "_extract_material",
+    "extract_material",
+    "_detect_material",
+    "detect_material",
+    "_parse_estimate_input",
+    "parse_estimate_input",
+    "_parse_user_input",
+    "parse_user_input",
+    "_parse_task_input",
+    "parse_task_input",
+    "_parse_stroyka_input",
+    "parse_stroyka_input",
+):
+    try:
+        if _t2fh_wrap_material_func(_t2fh_name):
+            _T2FH_WRAPPED.append(_t2fh_name)
+    except Exception as _t2fh_e:
+        try:
+            _T2FH_LOG.warning("PATCH_TOPIC2_FRAME_HOUSE_MATERIAL_V1_WRAP_ERR %s %s", _t2fh_name, _t2fh_e)
+        except Exception:
+            pass
+
+try:
+    _T2FH_LOG.info("PATCH_TOPIC2_FRAME_HOUSE_MATERIAL_V1 installed wrapped=%s", ",".join(_T2FH_WRAPPED))
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_FRAME_HOUSE_MATERIAL_V1 ===
+
