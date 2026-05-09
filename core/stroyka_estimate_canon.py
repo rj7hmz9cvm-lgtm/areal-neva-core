@@ -4768,3 +4768,36 @@ except Exception as _e:
     except Exception:
         pass
 # === /FULL_CANON_CLOSURE_VERIFIED_V1 ===
+
+# === PATCH_PRICE_ENRICHMENT_IDEMPOTENT_V1 ===
+# Причина: _pick_next_task забирает задачи в NEW/IN_PROGRESS/WAITING_CLARIFICATION.
+# После price WC задача переходит в WAITING_CLARIFICATION, но через 1.5с poll
+# подхватывает её снова → запускает полный pipeline → второй вызов Sonar.
+# Фикс: проверяем TOPIC2_PRICE_ENRICHMENT_DONE в task_history перед вызовом Sonar.
+# Если маркер есть — возвращаем "" без сетевого запроса.
+try:
+    import logging as _pei_log_mod
+    _PEI_LOG = _pei_log_mod.getLogger("task_worker")
+    _PEI_ORIG_SEARCH = _search_prices_online
+
+    async def _search_prices_online(parsed, template, sheet_name, conn=None, task_id=None):
+        if conn is not None and task_id is not None:
+            try:
+                row = conn.execute(
+                    "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'TOPIC2_PRICE_ENRICHMENT_DONE:%' ORDER BY rowid DESC LIMIT 1",
+                    (task_id,)
+                ).fetchone()
+                if row:
+                    _PEI_LOG.info("PATCH_PRICE_ENRICHMENT_IDEMPOTENT_V1: skip task=%s already=%s", task_id, row[0] if not hasattr(row, "keys") else row["action"])
+                    return ""
+            except Exception as _pei_check_e:
+                _PEI_LOG.warning("PATCH_PRICE_ENRICHMENT_IDEMPOTENT_V1_CHECK_ERR: %s", _pei_check_e)
+        return await _PEI_ORIG_SEARCH(parsed, template, sheet_name, conn=conn, task_id=task_id)
+
+    _PEI_LOG.info("PATCH_PRICE_ENRICHMENT_IDEMPOTENT_V1 installed")
+except Exception as _pei_install_e:
+    try:
+        _PEI_LOG.exception("PATCH_PRICE_ENRICHMENT_IDEMPOTENT_V1_INSTALL_ERR: %s", _pei_install_e)
+    except Exception:
+        pass
+# === END_PATCH_PRICE_ENRICHMENT_IDEMPOTENT_V1 ===
