@@ -17427,6 +17427,253 @@ except Exception:
     pass
 # === END_PATCH_TOPIC2_WC_PICKER_DRAINAGE_REPLY_BIND_V3 ===
 
+
+# === PATCH_TOPIC210_PILE_COUNT_ROUTE_V1__DB_LOCK_RECOVER_GUARD_V1 ===
+# Facts from diagnostics:
+# - topic_210 pile-count route anchor was absent
+# - topic_210 pile request was routed to Drive refs / generic project logic
+# - worker crashed on sqlite3.OperationalError: database is locked inside _recover_stale_tasks
+import re as _t210pile_re
+import os as _t210pile_os
+import json as _t210pile_json
+import math as _t210pile_math
+import shutil as _t210pile_shutil
+import sqlite3 as _t210pile_sqlite3
+import subprocess as _t210pile_subprocess
+import logging as _t210pile_logging
+import inspect as _t210pile_inspect
+
+_T210PILE_LOG = _t210pile_logging.getLogger("topic210.pile_count_route_v1")
+
+def _t210pile_s(v, limit=12000):
+    return str(v or "")[:limit]
+
+def _t210pile_low(v):
+    return _t210pile_s(v).lower().replace("ё", "е")
+
+def _t210pile_row(task, key, default=None):
+    try:
+        if isinstance(task, dict):
+            return task.get(key, default)
+        if hasattr(task, "keys") and key in task.keys():
+            return task[key]
+    except Exception:
+        pass
+    return default
+
+def _t210pile_hist(conn, task_id, action):
+    try:
+        conn.execute(
+            "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+            (_t210pile_s(task_id, 120), _t210pile_s(action, 900)),
+        )
+    except Exception:
+        pass
+
+def _t210pile_is_request(raw):
+    low = _t210pile_low(raw)
+    if not low:
+        return False
+    has_pile = any(x in low for x in (
+        "свая", "сваи", "свай", "свайное", "свайный", "свайно",
+        "жб свая", "железобетонн"
+    ))
+    has_count = any(x in low for x in (
+        "сколько", "количество", "посчитать", "рассчитать", "расчет", "расчёт",
+        "потребуется", "нужно"
+    ))
+    return bool(has_pile and has_count)
+
+def _t210pile_template_text():
+    chunks = []
+    meta_path = "/root/.areal-neva-core/data/templates/topic_210_estimate.json"
+    try:
+        with open(meta_path, "r", encoding="utf-8", errors="replace") as f:
+            meta = _t210pile_json.load(f)
+        chunks.append(_t210pile_json.dumps(meta, ensure_ascii=False))
+        img = meta.get("path") if isinstance(meta, dict) else ""
+    except Exception:
+        img = ""
+
+    if img and _t210pile_os.path.exists(img) and _t210pile_shutil.which("tesseract"):
+        for lang in ("rus+eng", "eng"):
+            try:
+                r = _t210pile_subprocess.run(
+                    ["tesseract", img, "stdout", "-l", lang, "--psm", "6"],
+                    stdout=_t210pile_subprocess.PIPE,
+                    stderr=_t210pile_subprocess.DEVNULL,
+                    text=True,
+                    timeout=25,
+                )
+                if r.stdout and len(r.stdout.strip()) > 10:
+                    chunks.append(r.stdout)
+                    break
+            except Exception as e:
+                try:
+                    _T210PILE_LOG.warning("T210PILE_OCR_ERR %s", e)
+                except Exception:
+                    pass
+    return "\n".join(chunks)
+
+def _t210pile_float(x):
+    return float(str(x).replace(",", "."))
+
+def _t210pile_norm_dim(a, b):
+    a = _t210pile_float(a)
+    b = _t210pile_float(b)
+    if a > 100 and b > 100:
+        a = a / 1000.0
+        b = b / 1000.0
+    if 3.0 <= a <= 30.0 and 3.0 <= b <= 30.0:
+        return round(a, 2), round(b, 2)
+    return None
+
+def _t210pile_parse_dims(text):
+    src = _t210pile_s(text, 20000)
+    patterns = [
+        r"(\d+(?:[,.]\d+)?)\s*(?:х|x|×|\*)\s*(\d+(?:[,.]\d+)?)\s*(?:м|m|метр)?",
+        r"(\d+(?:[,.]\d+)?)\s*(?:на)\s*(\d+(?:[,.]\d+)?)\s*(?:м|m|метр)?",
+        r"(?:размер|габарит|дом)\D{0,40}(\d+(?:[,.]\d+)?)\D{0,8}(?:х|x|×|\*|на)\D{0,8}(\d+(?:[,.]\d+)?)",
+    ]
+    found = []
+    for pat in patterns:
+        for m in _t210pile_re.finditer(pat, src, _t210pile_re.I):
+            d = _t210pile_norm_dim(m.group(1), m.group(2))
+            if d and d not in found:
+                found.append(d)
+    if not found:
+        return None
+    found.sort(key=lambda x: x[0] * x[1], reverse=True)
+    return found[0]
+
+def _t210pile_parse_pile_spec(text):
+    low = _t210pile_low(text)
+    section = "150×150"
+    length = "2,5 м"
+    m = _t210pile_re.search(r"(\d{2,4})\s*(?:х|x|×|на)\s*(\d{2,4})", low)
+    if m:
+        a = int(m.group(1))
+        b = int(m.group(2))
+        if 50 <= a <= 500 and 50 <= b <= 500:
+            section = f"{a}×{b}"
+    lm = _t210pile_re.search(r"(?:длин[аой]*|l)\D{0,12}(\d+(?:[,.]\d+)?)\s*(?:м|метр)", low)
+    if lm:
+        length = lm.group(1).replace(".", ",") + " м"
+    return section, length
+
+def _t210pile_build_result(raw):
+    template_text = _t210pile_template_text()
+    dims = _t210pile_parse_dims(str(raw or "") + "\n" + template_text)
+    section, length = _t210pile_parse_pile_spec(raw)
+
+    if not dims:
+        return (
+            "Не вижу доказанного размера дома в тексте задачи и в topic_210 template JSON.\n\n"
+            "Для расчёта количества свай пришли размер дома в плане одной строкой, например: 8×10 м"
+        ), False
+
+    a, b = dims
+    long_side = max(a, b)
+    short_side = min(a, b)
+    step_m = 2.0
+
+    nx = int(_t210pile_math.ceil(long_side / step_m)) + 1
+    ny = int(_t210pile_math.ceil(short_side / step_m)) + 1
+    count_grid = nx * ny
+
+    perimeter = 2 * nx + 2 * ny - 4
+    center_axis = nx if short_side > 6.0 else 0
+    count_min = perimeter + center_axis
+
+    msg = (
+        "Расчёт количества свай по topic_210\n\n"
+        f"Исходные данные:\n"
+        f"• Дом: каркасный\n"
+        f"• Размер в плане: {long_side:g}×{short_side:g} м\n"
+        f"• Сваи: ж/б {section}, длина {length}\n\n"
+        f"Расстановка:\n"
+        f"• Расчётный шаг свай: не более {step_m:g} м\n"
+        f"• Осей по длине: {nx}\n"
+        f"• Осей по ширине: {ny}\n\n"
+        f"Количество:\n"
+        f"• Минимально по периметру + средняя несущая ось: {count_min} шт\n"
+        f"• Полная сетка под каркасный дом: {count_grid} шт\n\n"
+        f"Принять для предварительного проектирования: {count_grid} шт\n\n"
+        "Финальное КЖ требует подтверждения грунта и несущей способности свай"
+    )
+    return msg, True
+
+_T210PILE_ORIG_RECOVER = globals().get("_recover_stale_tasks")
+
+if callable(_T210PILE_ORIG_RECOVER) and not getattr(_T210PILE_ORIG_RECOVER, "_t210pile_db_lock_wrapped", False):
+    def _recover_stale_tasks(conn, *args, **kwargs):
+        try:
+            return _T210PILE_ORIG_RECOVER(conn, *args, **kwargs)
+        except _t210pile_sqlite3.OperationalError as e:
+            if "database is locked" in str(e).lower():
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+                try:
+                    _T210PILE_LOG.warning("PATCH_DB_LOCK_RECOVER_GUARD_V1 skipped locked stale recovery")
+                except Exception:
+                    pass
+                return None
+            raise
+    _recover_stale_tasks._t210pile_db_lock_wrapped = True
+
+_T210PILE_ORIG_HANDLE_NEW = globals().get("_handle_new")
+
+if callable(_T210PILE_ORIG_HANDLE_NEW) and not getattr(_T210PILE_ORIG_HANDLE_NEW, "_t210pile_wrapped", False):
+    async def _handle_new(conn, task, *args, **kwargs):
+        try:
+            topic_id_v = int(_t210pile_row(task, "topic_id", 0) or 0)
+            raw_v = _t210pile_s(_t210pile_row(task, "raw_input", ""))
+            input_type_v = _t210pile_s(_t210pile_row(task, "input_type", "text"))
+            task_id_v = _t210pile_s(_t210pile_row(task, "id", ""))
+            chat_id_v = _t210pile_s(_t210pile_row(task, "chat_id", ""))
+            reply_to_v = _t210pile_row(task, "reply_to_message_id", None)
+
+            if topic_id_v == 210 and input_type_v == "text" and _t210pile_is_request(raw_v):
+                msg, complete = _t210pile_build_result(raw_v)
+                sent = _send_once_ex(conn, task_id_v, chat_id_v, msg, reply_to_v, "topic210_pile_count_route_v1")
+                bot_id = sent.get("bot_message_id") if isinstance(sent, dict) else None
+                _update_task(
+                    conn,
+                    task_id_v,
+                    state="DONE" if complete else "WAITING_CLARIFICATION",
+                    result=msg,
+                    error_message="" if complete else "TOPIC210_PILE_DIMENSIONS_REQUIRED",
+                    bot_message_id=bot_id,
+                )
+                _t210pile_hist(conn, task_id_v, "PATCH_TOPIC210_PILE_COUNT_ROUTE_V1:HANDLED")
+                if complete:
+                    _t210pile_hist(conn, task_id_v, "TOPIC210_PILE_COUNT_DONE")
+                else:
+                    _t210pile_hist(conn, task_id_v, "TOPIC210_PILE_DIMENSIONS_REQUIRED")
+                conn.commit()
+                return True
+        except Exception as e:
+            try:
+                _T210PILE_LOG.warning("PATCH_TOPIC210_PILE_COUNT_ROUTE_V1_ERR %s", e)
+            except Exception:
+                pass
+
+        res = _T210PILE_ORIG_HANDLE_NEW(conn, task, *args, **kwargs)
+        if _t210pile_inspect.isawaitable(res):
+            return await res
+        return res
+
+    _handle_new._t210pile_wrapped = True
+
+try:
+    _T210PILE_LOG.info("PATCH_TOPIC210_PILE_COUNT_ROUTE_V1__DB_LOCK_RECOVER_GUARD_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC210_PILE_COUNT_ROUTE_V1__DB_LOCK_RECOVER_GUARD_V1 ===
+
+
 if __name__ == "__main__":
     asyncio.run(main())
 
