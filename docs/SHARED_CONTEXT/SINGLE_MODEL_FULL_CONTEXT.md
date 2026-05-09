@@ -1,7 +1,7 @@
 # SINGLE_MODEL_FULL_CONTEXT
 
-GENERATED_AT: 2026-05-08T23:55:02.843262+00:00
-GIT_SHA: 10f61528a33681951500d4a2a9e7cd61f0d031a0
+GENERATED_AT: 2026-05-09T00:10:02.632325+00:00
+GIT_SHA: ca312d9c80531e50adbe0d2a6e045d01f967a014
 PURPOSE: Один файл с полным контекстом проекта для любой модели
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 
@@ -25,7 +25,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 | 2 | STROYKA | INSTALLED_NOT_VERIFIED | 0 | 11 |
 | 5 | TEKHNADZOR | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
 | 11 | VIDEO | UNKNOWN | 0 | 0 |
-| 210 | PROEKTIROVANIE | INSTALLED_NOT_VERIFIED | 0 | 2 |
+| 210 | PROEKTIROVANIE | INSTALLED_NOT_VERIFIED | 0 | 3 |
 | 500 | VEB_POISK | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
 | 794 | DEVOPS | UNKNOWN | 0 | 0 |
 | 961 | AVTOZAPCHASTI | UNKNOWN | 0 | 0 |
@@ -3882,8 +3882,8 @@ I canno
 ```
 # topic_0 COMMON
 
-GENERATED_AT: 2026-05-08T23:55:02.532110+00:00
-GIT_SHA: 10f61528a33681951500d4a2a9e7cd61f0d031a0
+GENERATED_AT: 2026-05-09T00:10:02.357739+00:00
+GIT_SHA: ca312d9c80531e50adbe0d2a6e045d01f967a014
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 0
@@ -4752,8 +4752,8 @@ def _write_xlsx(path: Path, items: List[Dict[str, Any]], source_text: str, photo
 ```
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-05-08T23:55:02.564705+00:00
-GIT_SHA: 10f61528a33681951500d4a2a9e7cd61f0d031a0
+GENERATED_AT: 2026-05-09T00:10:02.387753+00:00
+GIT_SHA: ca312d9c80531e50adbe0d2a6e045d01f967a014
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -4777,6 +4777,7 @@ FAILED_LAST_24H: 11
 - test-gat | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
+- ca312d9|fix(topic210): pile count route and db lock recover guard
 - 876e5d2|fix(topic2): PATCH_TOPIC2_WC_PICKER_DRAINAGE_MULTIFILE_V3 — stop WC loop, bind drainage replies to parent, include all 3 user PDFs
 - 107186a|fix(topic2): TOPIC2_WCG_SQL_FIX_SYNTAX_AND_LIKE_DROP_V1
 - 24e65b0|fix(topic2): TOPIC2_WCG_PRESERVE_DRAINAGE_ERROR_V1 — preserve drainage length error through WCG skip
@@ -4806,11 +4807,9 @@ FAILED_LAST_24H: 11
 - 2ece9eb|fix(topic2): close 3 live bugs — poison loop terminate, recursion restore, FCG done bypass
 - 62d85b8|fix(topic2): V5B — price source quality gate, raw JSON guard, canonical totals col J
 - 168ce5e|fix(topic2): close final V5 code gaps for prices guards totals
-- 983ced8|fix(topic2): close 3 remaining V4 gaps (repeat/negative/pdf_missing_question)
 
 ## MARKERS_LAST_24H
 - created:NEW
-- clarified:
 - PATCH_TOPIC2_INLINE_FIX_20260506_V1:V6C_PRICE_REJECTED:no_explicit_token_or_long
 - PATCH_TOPIC2_INLINE_FIX_20260506_V1:V5_PRICE_REJECTED:no_explicit_token_or_long
 - P6E67_PARENT_NOT_FOUND
@@ -4818,6 +4817,7 @@ FAILED_LAST_24H: 11
 - clarified:Вот документ мне необходимо посчитать стоимость строительства Дом из г
 - state:FAILED
 - reply_sent:stale_failed
+- clarified:
 - reply_sent:p6e67_parent_not_found
 - P6E67_PARENT_REVIVED_AS_REVISION_SOURCE:LAST_ACTIVE_ESTIMATE_FALLBACK
 - P6E67_REVISION_TEXT_MERGED_FROM_TASK:89f1a927-af21-4d77-b287-70e8ecef659c
@@ -5492,8 +5492,8 @@ _P6H5_NORMATIVE_EXPAND = [
 ```
 # topic_5 TEKHNADZOR
 
-GENERATED_AT: 2026-05-08T23:55:02.595824+00:00
-GIT_SHA: 10f61528a33681951500d4a2a9e7cd61f0d031a0
+GENERATED_AT: 2026-05-09T00:10:02.417045+00:00
+GIT_SHA: ca312d9c80531e50adbe0d2a6e045d01f967a014
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 5
@@ -5642,8 +5642,8 @@ DIRECTIONS_BOUND: Видео
 ```
 # topic_11 VIDEO
 
-GENERATED_AT: 2026-05-08T23:55:02.626520+00:00
-GIT_SHA: 10f61528a33681951500d4a2a9e7cd61f0d031a0
+GENERATED_AT: 2026-05-09T00:10:02.439082+00:00
+GIT_SHA: ca312d9c80531e50adbe0d2a6e045d01f967a014
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 11
@@ -5716,10 +5716,14 @@ STATUS: SYNCED_LOCAL
 ## TOPIC_210_PROEKTIROVANIE
 
 STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE: 0  FAILED_24H: 2
+ACTIVE: 0  FAILED_24H: 3
 DIRECTIONS_BOUND: КЖ КМ
 
 ### LAST_FAILED (5)
+- 0332e116 | 2026-05-09 03:09:28 | INVALID_RESULT_GATE
+    history: reply_sent:invalid_result
+    history: state:FAILED
+    history: continued:Задание я тебе уже писал
 - b98e1117 | 2026-05-09 02:48:08 | TASK_WORKER_ARTIFACT_GATE_V1:EMPTY_OR_TOO_SHORT
     history: TASK_WORKER_ARTIFACT_GATE_V1:FAILED:EMPTY_OR_TOO_SHORT
     history: created:NEW
@@ -5737,10 +5741,6 @@ DIRECTIONS_BOUND: КЖ КМ
     history: result:Понял. Буду использовать средние рыночные цены по СПб и ЛО на май 2026 года. 
 
 Типовые расцен
-- 6e34406d | 2026-05-06 20:31:44 | NO_VALID_ARTIFACT
-    history: reply_sent:full_contour_guard_failed
-    history: FULL_CONSTRUCTION_FILE_CONTOUR_CANON_GUARD_V1:NO_VALID_ARTIFACT
-    history: FULL_CONSTRUCTION_FILE_CONTOUR_CANON_GUARD_V1:UPDATE_BLOCKED:NO_VALID_ARTIFACT
 
 ### KEY_ENGINE_CODE (head 250 lines each)
 #### core/project_engine.py
@@ -6255,8 +6255,8 @@ def _normalize_sheet_register(template: Dict[str, Any], data: Dict[str, Any]) ->
 ```
 # topic_210 PROEKTIROVANIE
 
-GENERATED_AT: 2026-05-08T23:55:02.657482+00:00
-GIT_SHA: 10f61528a33681951500d4a2a9e7cd61f0d031a0
+GENERATED_AT: 2026-05-09T00:10:02.466775+00:00
+GIT_SHA: ca312d9c80531e50adbe0d2a6e045d01f967a014
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 210
@@ -6264,22 +6264,23 @@ ROLE: КЖ КМ
 DIRECTIONS_BOUND: structural_design
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
 ACTIVE_TASKS: 0
-FAILED_LAST_24H: 2
+FAILED_LAST_24H: 3
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 3
 - CANCELLED: 28
 - DONE: 83
-- FAILED: 28
+- FAILED: 29
 
 ## LATEST_FAILED
+- 0332e116 | INVALID_RESULT_GATE
 - b98e1117 | TASK_WORKER_ARTIFACT_GATE_V1:EMPTY_OR_TOO_SHORT
 - f02f874e | INVALID_RESULT_GATE
 - cfadbd05 | INVALID_RESULT_GATE
 - b71a685b | INVALID_RESULT_GATE
-- 6e34406d | NO_VALID_ARTIFACT
 
 ## COMMITS_LAST_14D
+- ca312d9|fix(topic210): pile count route and db lock recover guard
 - 9420d6a|fix(topic2): stroyka meta-confirm guard + reply chain + xlsx 15 cols + topic210 meta guard
 - a277900|docs(normative): add shared normative context for topic_5 and topic_210
 
@@ -6296,6 +6297,7 @@ FAILED_LAST_24H: 2
 - FINAL_CLOSURE_MEMORY_QUERY_PUBLIC_OUTPUT_V3:LISTED
 - reply_sent:result
 - P6F_T210_PROJECT_DRIVE_REFS_RETURNED:7
+- continued:Задание я тебе уже писал
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210
@@ -6834,8 +6836,8 @@ except Exception:
 ```
 # topic_500 VEB_POISK
 
-GENERATED_AT: 2026-05-08T23:55:02.686222+00:00
-GIT_SHA: 10f61528a33681951500d4a2a9e7cd61f0d031a0
+GENERATED_AT: 2026-05-09T00:10:02.494611+00:00
+GIT_SHA: ca312d9c80531e50adbe0d2a6e045d01f967a014
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 500
@@ -6871,7 +6873,6 @@ FAILED_LAST_24H: 0
 - 4f6af26|P2_FINAL_SEARCH_AND_ESTIMATE_CLOSE_20260504_V1: close topic500 search memory and topic2 final estimate logic
 - d4db3fb|P0_RUNTIME_ROUTE_GUARD_TOPIC2_TOPIC500_20260504_V1: block topic500 estimate misroute and force topic2 current estimate route
 - bf6cece|TOPIC500_PRE_SEND_VALIDATOR_AND_STARTUP_RECOVERY_HARD_GUARD_V1: pre-send procurement validator and startup recovery hard guard
-- dc2f770|FINAL_TOPIC2_TOPIC5_TOPIC500_CLOSE_20260504_V1: close topic2 current TZ route and topic500 search output contract
 
 ## MARKERS_LAST_24H
 - (none)
@@ -6949,8 +6950,8 @@ DIRECTIONS_BOUND: Сервер DevOps
 ```
 # topic_794 DEVOPS
 
-GENERATED_AT: 2026-05-08T23:55:02.715904+00:00
-GIT_SHA: 10f61528a33681951500d4a2a9e7cd61f0d031a0
+GENERATED_AT: 2026-05-09T00:10:02.523840+00:00
+GIT_SHA: ca312d9c80531e50adbe0d2a6e045d01f967a014
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 794
@@ -7045,8 +7046,8 @@ DIRECTIONS_BOUND: Автозапчасти
 ```
 # topic_961 AVTOZAPCHASTI
 
-GENERATED_AT: 2026-05-08T23:55:02.745622+00:00
-GIT_SHA: 10f61528a33681951500d4a2a9e7cd61f0d031a0
+GENERATED_AT: 2026-05-09T00:10:02.548651+00:00
+GIT_SHA: ca312d9c80531e50adbe0d2a6e045d01f967a014
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 961
@@ -7138,8 +7139,8 @@ DIRECTIONS_BOUND: Мозги оркестра
 ```
 # topic_3008 KODY_MOZGOV
 
-GENERATED_AT: 2026-05-08T23:55:02.782316+00:00
-GIT_SHA: 10f61528a33681951500d4a2a9e7cd61f0d031a0
+GENERATED_AT: 2026-05-09T00:10:02.574823+00:00
+GIT_SHA: ca312d9c80531e50adbe0d2a6e045d01f967a014
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 3008
@@ -7242,8 +7243,8 @@ DIRECTIONS_BOUND: CRM лиды
 ```
 # topic_4569 CRM_LEADS
 
-GENERATED_AT: 2026-05-08T23:55:02.809897+00:00
-GIT_SHA: 10f61528a33681951500d4a2a9e7cd61f0d031a0
+GENERATED_AT: 2026-05-09T00:10:02.599454+00:00
+GIT_SHA: ca312d9c80531e50adbe0d2a6e045d01f967a014
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 4569
@@ -7351,8 +7352,8 @@ DIRECTIONS_BOUND: Поиск работы
 ```
 # topic_6104 JOB_SEARCH
 
-GENERATED_AT: 2026-05-08T23:55:02.836059+00:00
-GIT_SHA: 10f61528a33681951500d4a2a9e7cd61f0d031a0
+GENERATED_AT: 2026-05-09T00:10:02.626147+00:00
+GIT_SHA: ca312d9c80531e50adbe0d2a6e045d01f967a014
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 6104

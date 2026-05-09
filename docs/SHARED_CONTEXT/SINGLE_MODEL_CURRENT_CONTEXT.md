@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-05-08T23:55:03.058353+00:00
-GIT_SHA: 10f61528a33681951500d4a2a9e7cd61f0d031a0
+GENERATED_AT: 2026-05-09T00:10:02.769844+00:00
+GIT_SHA: ca312d9c80531e50adbe0d2a6e045d01f967a014
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -18,7 +18,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 |-------|------|--------|--------|------------|
 | 2 | STROYKA | INSTALLED_NOT_VERIFIED | 0 | 11 |
 | 5 | TEKHNADZOR | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
-| 210 | PROEKTIROVANIE | INSTALLED_NOT_VERIFIED | 0 | 2 |
+| 210 | PROEKTIROVANIE | INSTALLED_NOT_VERIFIED | 0 | 3 |
 | 500 | VEB_POISK | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
 
 ## OPEN_BLOCKERS_FROM_NOT_CLOSED
@@ -74,9 +74,9 @@ active: 0
 failed_24h: 11
 commits_last_7d: 30
 recent_commits:
+- ca312d9|fix(topic210): pile count route and db lock recover guard
 - 876e5d2|fix(topic2): PATCH_TOPIC2_WC_PICKER_DRAINAGE_MULTIFILE_V3 — stop WC loop, bind drainage replies to parent, include all 3 user PDFs
 - 107186a|fix(topic2): TOPIC2_WCG_SQL_FIX_SYNTAX_AND_LIKE_DROP_V1
-- 24e65b0|fix(topic2): TOPIC2_WCG_PRESERVE_DRAINAGE_ERROR_V1 — preserve drainage length error through WCG skip
 markers_missing: 6
 - TOPIC2_ESTIMATE_SESSION_CREATED
 - TOPIC2_CONTEXT_READY
@@ -114,26 +114,27 @@ NEXT_ACTION: investigate latest failed: STALE_NEW_30MIN
 ### topic_210 PROEKTIROVANIE
 role: КЖ КМ
 active: 0
-failed_24h: 2
-commits_last_7d: 2
+failed_24h: 3
+commits_last_7d: 3
 recent_commits:
+- ca312d9|fix(topic210): pile count route and db lock recover guard
 - 9420d6a|fix(topic2): stroyka meta-confirm guard + reply chain + xlsx 15 cols + topic210 meta guard
 - a277900|docs(normative): add shared normative context for topic_5 and topic_210
 last_failed:
+- 0332e116 | INVALID_RESULT_GATE
 - b98e1117 | TASK_WORKER_ARTIFACT_GATE_V1:EMPTY_OR_TOO_SHORT
 - f02f874e | INVALID_RESULT_GATE
-- cfadbd05 | INVALID_RESULT_GATE
 blockers:
 - - topic_2 не тянет проектные образцы topic_210
 - - topic_210 не тянет сметные артефакты как результат
 - - проверить topic_210: "какие образцы есть по АР/КЖ/КД" должен показать список без создания файла
-NEXT_ACTION: investigate latest failed: TASK_WORKER_ARTIFACT_GATE_V1:EMPTY_OR_TOO_SHORT
+NEXT_ACTION: investigate latest failed: INVALID_RESULT_GATE
 
 ### topic_500 VEB_POISK
 role: Интернет-поиск
 active: 0
 failed_24h: 0
-commits_last_7d: 13
+commits_last_7d: 12
 recent_commits:
 - b3e5be7|fix(topic500): relax bad-result filter for adaptive output modes
 - 0d6a9a4|fix(memory): ARCHIVE_DUPLICATE_GUARD_V1 + topic500 search pollution guard

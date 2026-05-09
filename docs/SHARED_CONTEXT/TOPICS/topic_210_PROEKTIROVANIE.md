@@ -1,7 +1,7 @@
 # topic_210 PROEKTIROVANIE
 
-GENERATED_AT: 2026-05-08T23:55:02.657482+00:00
-GIT_SHA: 10f61528a33681951500d4a2a9e7cd61f0d031a0
+GENERATED_AT: 2026-05-09T00:10:02.466775+00:00
+GIT_SHA: ca312d9c80531e50adbe0d2a6e045d01f967a014
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 210
@@ -9,22 +9,23 @@ ROLE: КЖ КМ
 DIRECTIONS_BOUND: structural_design
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
 ACTIVE_TASKS: 0
-FAILED_LAST_24H: 2
+FAILED_LAST_24H: 3
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 3
 - CANCELLED: 28
 - DONE: 83
-- FAILED: 28
+- FAILED: 29
 
 ## LATEST_FAILED
+- 0332e116 | INVALID_RESULT_GATE
 - b98e1117 | TASK_WORKER_ARTIFACT_GATE_V1:EMPTY_OR_TOO_SHORT
 - f02f874e | INVALID_RESULT_GATE
 - cfadbd05 | INVALID_RESULT_GATE
 - b71a685b | INVALID_RESULT_GATE
-- 6e34406d | NO_VALID_ARTIFACT
 
 ## COMMITS_LAST_14D
+- ca312d9|fix(topic210): pile count route and db lock recover guard
 - 9420d6a|fix(topic2): stroyka meta-confirm guard + reply chain + xlsx 15 cols + topic210 meta guard
 - a277900|docs(normative): add shared normative context for topic_5 and topic_210
 
@@ -41,6 +42,7 @@ FAILED_LAST_24H: 2
 - FINAL_CLOSURE_MEMORY_QUERY_PUBLIC_OUTPUT_V3:LISTED
 - reply_sent:result
 - P6F_T210_PROJECT_DRIVE_REFS_RETURNED:7
+- continued:Задание я тебе уже писал
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210

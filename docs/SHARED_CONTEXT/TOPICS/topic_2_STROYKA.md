@@ -1,7 +1,7 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-05-08T23:55:02.564705+00:00
-GIT_SHA: 10f61528a33681951500d4a2a9e7cd61f0d031a0
+GENERATED_AT: 2026-05-09T00:10:02.387753+00:00
+GIT_SHA: ca312d9c80531e50adbe0d2a6e045d01f967a014
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -25,6 +25,7 @@ FAILED_LAST_24H: 11
 - test-gat | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
+- ca312d9|fix(topic210): pile count route and db lock recover guard
 - 876e5d2|fix(topic2): PATCH_TOPIC2_WC_PICKER_DRAINAGE_MULTIFILE_V3 — stop WC loop, bind drainage replies to parent, include all 3 user PDFs
 - 107186a|fix(topic2): TOPIC2_WCG_SQL_FIX_SYNTAX_AND_LIKE_DROP_V1
 - 24e65b0|fix(topic2): TOPIC2_WCG_PRESERVE_DRAINAGE_ERROR_V1 — preserve drainage length error through WCG skip
@@ -54,11 +55,9 @@ FAILED_LAST_24H: 11
 - 2ece9eb|fix(topic2): close 3 live bugs — poison loop terminate, recursion restore, FCG done bypass
 - 62d85b8|fix(topic2): V5B — price source quality gate, raw JSON guard, canonical totals col J
 - 168ce5e|fix(topic2): close final V5 code gaps for prices guards totals
-- 983ced8|fix(topic2): close 3 remaining V4 gaps (repeat/negative/pdf_missing_question)
 
 ## MARKERS_LAST_24H
 - created:NEW
-- clarified:
 - PATCH_TOPIC2_INLINE_FIX_20260506_V1:V6C_PRICE_REJECTED:no_explicit_token_or_long
 - PATCH_TOPIC2_INLINE_FIX_20260506_V1:V5_PRICE_REJECTED:no_explicit_token_or_long
 - P6E67_PARENT_NOT_FOUND
@@ -66,6 +65,7 @@ FAILED_LAST_24H: 11
 - clarified:Вот документ мне необходимо посчитать стоимость строительства Дом из г
 - state:FAILED
 - reply_sent:stale_failed
+- clarified:
 - reply_sent:p6e67_parent_not_found
 - P6E67_PARENT_REVIVED_AS_REVISION_SOURCE:LAST_ACTIVE_ESTIMATE_FALLBACK
 - P6E67_REVISION_TEXT_MERGED_FROM_TASK:89f1a927-af21-4d77-b287-70e8ecef659c
