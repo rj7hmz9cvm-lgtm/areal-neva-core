@@ -17674,6 +17674,293 @@ except Exception:
 # === END_PATCH_TOPIC210_PILE_COUNT_ROUTE_V1__DB_LOCK_RECOVER_GUARD_V1 ===
 
 
+# === PATCH_TOPIC210_CANON_PILE_ROUTE_V2 ===
+# Canon facts:
+# - topic_210 is PROEKTIROVANIE
+# - pile count request must be answered by deterministic calculation, not Drive refs and not generic LLM text
+# - no OCR guessing, no hidden dimensions, no DB schema change, no forbidden files
+import re as _t210canon_re
+import math as _t210canon_math
+import sqlite3 as _t210canon_sqlite3
+import logging as _t210canon_logging
+import inspect as _t210canon_inspect
+
+_T210CANON_LOG = _t210canon_logging.getLogger("topic210.canon_pile_route_v2")
+
+def _t210canon_s(v, limit=20000):
+    return str(v or "")[:limit]
+
+def _t210canon_low(v):
+    return _t210canon_s(v).lower().replace("ё", "е")
+
+def _t210canon_row(task, key, default=None):
+    try:
+        if isinstance(task, dict):
+            return task.get(key, default)
+        if hasattr(task, "keys") and key in task.keys():
+            return task[key]
+    except Exception:
+        pass
+    return default
+
+def _t210canon_hist(conn, task_id, action):
+    try:
+        conn.execute(
+            "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+            (_t210canon_s(task_id, 120), _t210canon_s(action, 900)),
+        )
+    except Exception:
+        pass
+
+def _t210canon_has_pile_request(text):
+    low = _t210canon_low(text)
+    if not low:
+        return False
+    has_pile = any(x in low for x in (
+        "свая", "сваи", "свай", "свайное", "свайный", "свайно",
+        "жб свая", "ж/б свая", "железобетонн"
+    ))
+    has_count = any(x in low for x in (
+        "сколько", "количество", "посчитать", "рассчитать", "расчет", "расчёт",
+        "потребуется", "нужно", "определить"
+    ))
+    return bool(has_pile and has_count)
+
+def _t210canon_is_short_execute(text):
+    low = _t210canon_low(text).strip(" .,!?:;")
+    return low in ("выполни", "делай", "считай", "посчитай", "рассчитай", "да", "ок", "продолжай")
+
+def _t210canon_norm_dim(a, b):
+    a = float(str(a).replace(",", "."))
+    b = float(str(b).replace(",", "."))
+    if a > 100 and b > 100:
+        a = a / 1000.0
+        b = b / 1000.0
+    if 3.0 <= a <= 30.0 and 3.0 <= b <= 30.0:
+        return round(a, 2), round(b, 2)
+    return None
+
+def _t210canon_parse_dims(text):
+    src = _t210canon_s(text, 20000)
+    found = []
+    patterns = (
+        r"(\d+(?:[,.]\d+)?)\s*(?:х|x|×|\*)\s*(\d+(?:[,.]\d+)?)\s*(?:м|m|метр)?",
+        r"(\d+(?:[,.]\d+)?)\s*(?:на)\s*(\d+(?:[,.]\d+)?)\s*(?:м|m|метр)?",
+        r"(?:размер|габарит|дом)\D{0,60}(\d+(?:[,.]\d+)?)\D{0,10}(?:х|x|×|\*|на)\D{0,10}(\d+(?:[,.]\d+)?)",
+    )
+    for pat in patterns:
+        for m in _t210canon_re.finditer(pat, src, _t210canon_re.I):
+            d = _t210canon_norm_dim(m.group(1), m.group(2))
+            if d and d not in found:
+                found.append(d)
+    if not found:
+        return None
+    found.sort(key=lambda x: x[0] * x[1], reverse=True)
+    return found[0]
+
+def _t210canon_parse_pile_spec(text):
+    low = _t210canon_low(text)
+    section = "150×150"
+    length = "2,5 м"
+    m = _t210canon_re.search(r"(\d{2,4})\s*(?:х|x|×|на)\s*(\d{2,4})", low)
+    if m:
+        a = int(m.group(1))
+        b = int(m.group(2))
+        if 50 <= a <= 500 and 50 <= b <= 500:
+            section = f"{a}×{b}"
+    lm = _t210canon_re.search(r"(?:длин[аой]*|l)\D{0,20}(\d+(?:[,.]\d+)?)\s*(?:м|метр)", low)
+    if lm:
+        length = lm.group(1).replace(".", ",") + " м"
+    return section, length
+
+def _t210canon_parent_context(conn, chat_id, topic_id, reply_to):
+    if not reply_to:
+        return ""
+    try:
+        row = conn.execute(
+            """
+            SELECT raw_input,result
+            FROM tasks
+            WHERE chat_id=?
+              AND COALESCE(topic_id,0)=?
+              AND (
+                    bot_message_id=?
+                    OR reply_to_message_id=?
+                    OR raw_input LIKE ?
+                  )
+            ORDER BY rowid DESC
+            LIMIT 1
+            """,
+            (int(chat_id), int(topic_id), int(reply_to), int(reply_to), '%' + str(reply_to) + '%'),
+        ).fetchone()
+        if row:
+            try:
+                return _t210canon_s(row["raw_input"]) + "\n" + _t210canon_s(row["result"])
+            except Exception:
+                return _t210canon_s(row[0]) + "\n" + _t210canon_s(row[1])
+    except Exception as e:
+        try:
+            _T210CANON_LOG.warning("T210CANON_PARENT_CONTEXT_ERR %s", e)
+        except Exception:
+            pass
+    return ""
+
+def _t210canon_recent_context(conn, chat_id, topic_id):
+    chunks = []
+    try:
+        rows = conn.execute(
+            """
+            SELECT raw_input,result
+            FROM tasks
+            WHERE chat_id=?
+              AND COALESCE(topic_id,0)=?
+              AND state IN ('DONE','AWAITING_CONFIRMATION','WAITING_CLARIFICATION','FAILED')
+            ORDER BY rowid DESC
+            LIMIT 12
+            """,
+            (int(chat_id), int(topic_id)),
+        ).fetchall()
+        for row in rows:
+            try:
+                chunks.append(_t210canon_s(row["raw_input"], 2000))
+                chunks.append(_t210canon_s(row["result"], 2000))
+            except Exception:
+                chunks.append(_t210canon_s(row[0], 2000))
+                chunks.append(_t210canon_s(row[1], 2000))
+    except Exception as e:
+        try:
+            _T210CANON_LOG.warning("T210CANON_RECENT_CONTEXT_ERR %s", e)
+        except Exception:
+            pass
+    return "\n".join(chunks)
+
+def _t210canon_build_answer(raw, context):
+    combined = _t210canon_s(raw) + "\n" + _t210canon_s(context)
+    dims = _t210canon_parse_dims(combined)
+    section, length = _t210canon_parse_pile_spec(combined)
+
+    if not dims:
+        return (
+            "Не вижу доказанного размера дома в тексте задачи.\n\n"
+            "Для расчёта количества свай напиши размер дома в плане одной строкой, например: 8×10 м"
+        ), False
+
+    a, b = dims
+    long_side = max(a, b)
+    short_side = min(a, b)
+
+    step_m = 2.0
+    nx = int(_t210canon_math.ceil(long_side / step_m)) + 1
+    ny = int(_t210canon_math.ceil(short_side / step_m)) + 1
+
+    perimeter_count = 2 * nx + 2 * ny - 4
+    middle_axis_count = nx if short_side > 6.0 else 0
+    min_count = perimeter_count + middle_axis_count
+    grid_count = nx * ny
+
+    msg = (
+        "Расчёт количества свай по topic_210\n\n"
+        "Исходные данные:\n"
+        "• Тип: каркасный дом\n"
+        f"• Размер в плане: {long_side:g}×{short_side:g} м\n"
+        f"• Сваи: ж/б {section}, длина {length}\n\n"
+        "Принятый расчётный принцип:\n"
+        "• Сваи по углам, по периметру и под несущими линиями\n"
+        f"• Шаг свай: не более {step_m:g} м\n"
+        "• Нормативная проверка несущей способности без геологии не выполняется\n\n"
+        "Расстановка:\n"
+        f"• Осей по длине: {nx}\n"
+        f"• Осей по ширине: {ny}\n\n"
+        "Количество:\n"
+        f"• Периметр + средняя несущая линия: {min_count} шт\n"
+        f"• Полная сетка под каркасный дом: {grid_count} шт\n\n"
+        f"Принять предварительно: {grid_count} шт\n\n"
+        "Для финального КЖ нужны геология, нагрузки, схема несущих стен и подтверждение несущей способности свай"
+    )
+    return msg, True
+
+_T210CANON_ORIG_RECOVER = globals().get("_recover_stale_tasks")
+
+if callable(_T210CANON_ORIG_RECOVER) and not getattr(_T210CANON_ORIG_RECOVER, "_t210canon_db_lock_wrapped", False):
+    def _recover_stale_tasks(conn, *args, **kwargs):
+        try:
+            return _T210CANON_ORIG_RECOVER(conn, *args, **kwargs)
+        except _t210canon_sqlite3.OperationalError as e:
+            if "database is locked" in str(e).lower():
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+                try:
+                    _T210CANON_LOG.warning("PATCH_TOPIC210_CANON_PILE_ROUTE_V2_DB_LOCK_SKIP")
+                except Exception:
+                    pass
+                return None
+            raise
+    _recover_stale_tasks._t210canon_db_lock_wrapped = True
+
+_T210CANON_ORIG_HANDLE_NEW = globals().get("_handle_new")
+
+if callable(_T210CANON_ORIG_HANDLE_NEW) and not getattr(_T210CANON_ORIG_HANDLE_NEW, "_t210canon_wrapped", False):
+    async def _handle_new(conn, task, *args, **kwargs):
+        try:
+            topic_id_v = int(_t210canon_row(task, "topic_id", 0) or 0)
+            raw_v = _t210canon_s(_t210canon_row(task, "raw_input", ""))
+            input_type_v = _t210canon_s(_t210canon_row(task, "input_type", "text"))
+            task_id_v = _t210canon_s(_t210canon_row(task, "id", ""))
+            chat_id_v = _t210canon_s(_t210canon_row(task, "chat_id", ""))
+            reply_to_v = _t210canon_row(task, "reply_to_message_id", None)
+
+            if topic_id_v == 210 and input_type_v == "text":
+                parent_ctx = _t210canon_parent_context(conn, chat_id_v, topic_id_v, reply_to_v)
+                recent_ctx = _t210canon_recent_context(conn, chat_id_v, topic_id_v)
+                merged_ctx = parent_ctx + "\n" + recent_ctx
+
+                should_handle = (
+                    _t210canon_has_pile_request(raw_v)
+                    or (_t210canon_is_short_execute(raw_v) and _t210canon_has_pile_request(merged_ctx))
+                    or (_t210canon_parse_dims(raw_v) and _t210canon_has_pile_request(merged_ctx))
+                )
+
+                if should_handle:
+                    msg, complete = _t210canon_build_answer(raw_v, merged_ctx)
+                    sent = _send_once_ex(conn, task_id_v, chat_id_v, msg, reply_to_v, "topic210_canon_pile_route_v2")
+                    bot_id = sent.get("bot_message_id") if isinstance(sent, dict) else None
+                    _update_task(
+                        conn,
+                        task_id_v,
+                        state="DONE" if complete else "WAITING_CLARIFICATION",
+                        result=msg,
+                        error_message="" if complete else "TOPIC210_PILE_DIMENSIONS_REQUIRED",
+                        bot_message_id=bot_id,
+                    )
+                    _t210canon_hist(conn, task_id_v, "PATCH_TOPIC210_CANON_PILE_ROUTE_V2:HANDLED")
+                    if complete:
+                        _t210canon_hist(conn, task_id_v, "TOPIC210_CANON_PILE_COUNT_DONE")
+                    else:
+                        _t210canon_hist(conn, task_id_v, "TOPIC210_CANON_PILE_DIMENSIONS_REQUIRED")
+                    conn.commit()
+                    return True
+        except Exception as e:
+            try:
+                _T210CANON_LOG.warning("PATCH_TOPIC210_CANON_PILE_ROUTE_V2_ERR %s", e)
+            except Exception:
+                pass
+
+        res = _T210CANON_ORIG_HANDLE_NEW(conn, task, *args, **kwargs)
+        if _t210canon_inspect.isawaitable(res):
+            return await res
+        return res
+
+    _handle_new._t210canon_wrapped = True
+
+try:
+    _T210CANON_LOG.info("PATCH_TOPIC210_CANON_PILE_ROUTE_V2 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC210_CANON_PILE_ROUTE_V2 ===
+
+
 if __name__ == "__main__":
     asyncio.run(main())
 
