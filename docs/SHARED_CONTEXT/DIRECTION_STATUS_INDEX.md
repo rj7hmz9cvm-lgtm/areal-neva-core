@@ -1,7 +1,7 @@
 # DIRECTION_STATUS_INDEX
 
-GENERATED_AT: 2026-05-09T17:35:02.791674+00:00
-GIT_SHA: 7aff8a6c8fa2d5b28aa4188a5e888b6d87ae65e1
+GENERATED_AT: 2026-07-04T21:54:23.627141+00:00
+GIT_SHA: fed18c2ba1c081e89de6d526675911a92361a309
 Source: core/direction_registry.DirectionRegistry from config/directions.yaml
 
 | direction | enabled | engine | topic_ids | bound_status |
@@ -10,12 +10,12 @@ Source: core/direction_registry.DirectionRegistry from config/directions.yaml
 | orchestration_core | True | ai_router | [3008] | 3008:UNKNOWN |
 | telegram_automation | True | telegram_pipeline | [] | - |
 | memory_archive | True | context_search_archive_engine | [] | - |
-| internet_search | True | search_supplier | [500] | 500:IDLE_NO_FAILURES_NOT_VERIFIED |
+| internet_search | True | search_supplier | [500] | 500:UNKNOWN |
 | product_search | True | search_supplier | [] | - |
 | auto_parts_search | True | search_supplier | [961] | 961:UNKNOWN |
 | construction_search | True | search_supplier | [] | - |
-| technical_supervision | True | defect_act | [5] | 5:IDLE_NO_FAILURES_NOT_VERIFIED |
-| estimates | True | estimate_unified | [2] | 2:INSTALLED_NOT_VERIFIED |
+| technical_supervision | True | defect_act | [5] | 5:UNKNOWN |
+| estimates | True | estimate_unified | [2] | 2:BROKEN |
 | defect_acts | True | defect_act | [] | - |
 | documents | True | document_engine | [] | - |
 | spreadsheets | True | sheets_route | [] | - |
@@ -24,7 +24,7 @@ Source: core/direction_registry.DirectionRegistry from config/directions.yaml
 | vpn_network | False | ai_router | [] | - |
 | ocr_photo | False | ocr_engine | [] | - |
 | cad_dwg | False | dwg_engine | [] | - |
-| structural_design | False | project_engine | [210] | 210:INSTALLED_NOT_VERIFIED |
+| structural_design | False | project_engine | [210] | 210:UNKNOWN |
 | roofing | False | estimate_unified | [] | - |
 | monolith_concrete | False | estimate_unified | [] | - |
 | crm_leads | False | ai_router | [4569] | 4569:UNKNOWN |

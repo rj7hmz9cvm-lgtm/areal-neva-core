@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-05-09T17:35:03.050469+00:00
-GIT_SHA: 7aff8a6c8fa2d5b28aa4188a5e888b6d87ae65e1
+GENERATED_AT: 2026-07-04T21:54:23.839000+00:00
+GIT_SHA: fed18c2ba1c081e89de6d526675911a92361a309
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -16,10 +16,11 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 ## GLOBAL_STATUS
 | topic | name | status | active | failed_24h |
 |-------|------|--------|--------|------------|
-| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 1 | 25 |
-| 5 | TEKHNADZOR | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
-| 210 | PROEKTIROVANIE | INSTALLED_NOT_VERIFIED | 0 | 6 |
-| 500 | VEB_POISK | IDLE_NO_FAILURES_NOT_VERIFIED | 0 | 0 |
+| 0 | COMMON | UNKNOWN | 0 | 1 |
+| 2 | STROYKA | BROKEN | 1 | 3 |
+| 5 | TEKHNADZOR | UNKNOWN | 0 | 0 |
+| 210 | PROEKTIROVANIE | UNKNOWN | 0 | 0 |
+| 500 | VEB_POISK | UNKNOWN | 0 | 0 |
 
 ## OPEN_BLOCKERS_FROM_NOT_CLOSED
 ### ЧТО INSTALLED НО НЕ VERIFIED (факт из NOT_CLOSED)
@@ -68,41 +69,40 @@ DATE_UNKNOWN
 - AWAITING_CONFIRMATION: 19 задач — проверить не зависли ли
 
 ## ACTIVE_OR_RECENT_TOPICS
+### topic_0 COMMON
+role: Общий
+active: 0
+failed_24h: 1
+commits_last_7d: 0
+last_failed:
+- 71aa047d | INVALID_RESULT_GATE
+- 66b9f841 | INVALID_RESULT_GATE
+- 5c19256b | INVALID_RESULT_GATE
+NEXT_ACTION: investigate latest failed: INVALID_RESULT_GATE
+
 ### topic_2 STROYKA
 role: Сметы
 active: 1
-failed_24h: 25
-commits_last_7d: 30
-recent_commits:
-- 7aff8a6|feat(topic2): PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1 — top-level price choice interceptor
-- 3ceedaf|fix(topic2): close price choice loop after price enrichment
-- 3723bbe|fix(topic2): PATCH_KARKASNIK_SHEET_FIX_V1 — correct sheet for frame houses
-markers_missing: 6
-- TOPIC2_ESTIMATE_SESSION_CREATED
-- TOPIC2_CONTEXT_READY
+failed_24h: 3
+commits_last_7d: 0
+markers_missing: 2
+- TOPIC2_TEMPLATE_SELECTED
 - TOPIC2_LOGISTICS_CONFIRMED
-- TOPIC2_XLSX_CREATED
-- TOPIC2_MESSAGE_THREAD_ID_OK
-- TOPIC2_DONE_CONTRACT_OK
 last_failed:
-- b57b1bae | STALE_TIMEOUT
-- 57cee6eb | STALE_TIMEOUT
-- d9b4d3d7 | STALE_TIMEOUT
+- 5a453d88 | STALE_TIMEOUT
+- c82ce66e | STALE_TIMEOUT
+- 0b1a2b5f | NO_VALID_ARTIFACT
 blockers:
 - - topic_2 не тянет проектные образцы topic_210
 - - topic_210 не тянет сметные артефакты как результат
 - - WRONG_FILES_SHOWN_IN_TOPIC_2
-NEXT_ACTION: live-test / close missing markers: 6
+NEXT_ACTION: live-test / close missing markers: 2
 
 ### topic_5 TEKHNADZOR
 role: Технадзор
 active: 0
 failed_24h: 0
-commits_last_7d: 30
-recent_commits:
-- 7c646dd|session(08.05): bigfile activated, topic5 V3 dispatcher, topic2 P6C intercept, c94ec497 FAILED/NOT_PROVEN
-- b3e5be7|fix(topic500): relax bad-result filter for adaptive output modes
-- 0d6a9a4|fix(memory): ARCHIVE_DUPLICATE_GUARD_V1 + topic500 search pollution guard
+commits_last_7d: 0
 last_failed:
 - 775a2251 | STALE_NEW_30MIN
 - f3637754 | STALE_NEW_30MIN
@@ -114,12 +114,8 @@ NEXT_ACTION: investigate latest failed: STALE_NEW_30MIN
 ### topic_210 PROEKTIROVANIE
 role: КЖ КМ
 active: 0
-failed_24h: 6
-commits_last_7d: 4
-recent_commits:
-- 7a5f770|fix(topic210): canonical pile count route
-- ca312d9|fix(topic210): pile count route and db lock recover guard
-- 9420d6a|fix(topic2): stroyka meta-confirm guard + reply chain + xlsx 15 cols + topic210 meta guard
+failed_24h: 0
+commits_last_7d: 0
 last_failed:
 - 4cd74051 | INVALID_RESULT_GATE
 - 088df3dc | TASK_WORKER_ARTIFACT_GATE_V1:EMPTY_OR_TOO_SHORT
@@ -134,11 +130,7 @@ NEXT_ACTION: investigate latest failed: INVALID_RESULT_GATE
 role: Интернет-поиск
 active: 0
 failed_24h: 0
-commits_last_7d: 7
-recent_commits:
-- b3e5be7|fix(topic500): relax bad-result filter for adaptive output modes
-- 0d6a9a4|fix(memory): ARCHIVE_DUPLICATE_GUARD_V1 + topic500 search pollution guard
-- 3f53d3f|docs(handoff): update after topic500 adaptive output V1
+commits_last_7d: 0
 last_failed:
 - 6719452a | P6_TOPIC500_BLOCKED_BAD_OR_STALE_SEARCH_RESULT
 - 16129a0c | P6_TOPIC500_BLOCKED_BAD_OR_STALE_SEARCH_RESULT

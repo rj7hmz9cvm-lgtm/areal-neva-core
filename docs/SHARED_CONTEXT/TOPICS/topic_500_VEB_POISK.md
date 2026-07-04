@@ -1,13 +1,13 @@
 # topic_500 VEB_POISK
 
-GENERATED_AT: 2026-05-09T17:35:02.619928+00:00
-GIT_SHA: 7aff8a6c8fa2d5b28aa4188a5e888b6d87ae65e1
+GENERATED_AT: 2026-07-04T21:54:23.512621+00:00
+GIT_SHA: fed18c2ba1c081e89de6d526675911a92361a309
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 500
 ROLE: Интернет-поиск
 DIRECTIONS_BOUND: internet_search
-CURRENT_STATUS: IDLE_NO_FAILURES_NOT_VERIFIED
+CURRENT_STATUS: UNKNOWN
 ACTIVE_TASKS: 0
 FAILED_LAST_24H: 0
 
@@ -25,13 +25,7 @@ FAILED_LAST_24H: 0
 - a6e666e8 | IN_PROGRESS_HARD_TIMEOUT_BY_CREATED_AT_FIX_V1
 
 ## COMMITS_LAST_14D
-- b3e5be7|fix(topic500): relax bad-result filter for adaptive output modes
-- 0d6a9a4|fix(memory): ARCHIVE_DUPLICATE_GUARD_V1 + topic500 search pollution guard
-- 3f53d3f|docs(handoff): update after topic500 adaptive output V1
-- 0c15037|feat(topic500): adaptive output by intent mode (9 modes, V1)
-- f28a106|fix(topic2/topic500): extend estimate pipeline, offer menu for drive_file, fix search result blocking
-- 4aa44eb|fix: close canon contours for topic_5/topic_2/topic_500
-- e3d992c|P6G_CLEAN_OLD_TOPIC500_CONTAMINATION_V1: SQL clean task 4883 contamination (point 1 of 5)
+- (none matching topic)
 
 ## MARKERS_LAST_24H
 - (none)

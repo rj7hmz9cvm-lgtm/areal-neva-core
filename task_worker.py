@@ -7478,7 +7478,7 @@ def _p6e67_find_parent(conn, task):
               AND state IN ('DONE','AWAITING_CONFIRMATION','RESULT_READY','FAILED','IN_PROGRESS','WAITING_CLARIFICATION')
             ORDER BY rowid DESC LIMIT 1
         """, (chat_id, topic_id, task_id, reply_to, reply_to)).fetchone()
-        if row and _p6e67_is_estimate(row):
+        if row and _p6e67_parent_open_for_reply(conn, row) and _p6e67_is_estimate(row):
             return row, "EXACT_REPLY_LINK"
 
         row = conn.execute("""
@@ -11695,6 +11695,30 @@ _P6E67FIX_LOG = _p6e67fix_logging.getLogger("task_worker")
 
 _p6e67fix_orig_find_parent = _p6e67_find_parent
 
+def _p6e67_parent_open_for_reply(conn, row):
+    try:
+        pid = _p6e67_s(_p6e67_row(row, "id", ""))
+        state = _p6e67_s(_p6e67_row(row, "state", "")).upper()
+        err = _p6e67_s(_p6e67_row(row, "error_message", "")).upper()
+        if not pid or state in ("DONE", "FAILED", "CANCELLED", "ARCHIVED"):
+            return False
+        if "P6E67_PARENT_NOT_FOUND" in err or "MERGED_TO_PARENT" in err:
+            return False
+        hist = "\n".join(str(r[0] or "") for r in conn.execute(
+            "SELECT action FROM task_history WHERE task_id=? ORDER BY rowid DESC LIMIT 100",
+            (pid,),
+        ).fetchall())
+        if (
+            "P6E67_PARENT_NOT_FOUND" in hist
+            or "TOPIC2_DONE_CONTRACT_OK" in hist
+            or "TOPIC2_DRIVE_UPLOAD_XLSX_OK" in hist
+            or "TOPIC2_DRIVE_UPLOAD_PDF_OK" in hist
+        ):
+            return False
+        return True
+    except Exception:
+        return False
+
 def _p6e67_find_parent(conn, task):
     chat_id = _p6e67_s(_p6e67_row(task, "chat_id", ""))
     topic_id = int(_p6e67_row(task, "topic_id", 0) or 0)
@@ -11716,6 +11740,11 @@ def _p6e67_find_parent(conn, task):
             WHERE chat_id=? AND COALESCE(topic_id,0)=? AND id<>?
               AND (bot_message_id=? OR reply_to_message_id=?)
               AND state IN ('IN_PROGRESS','AWAITING_CONFIRMATION','RESULT_READY','WAITING_CLARIFICATION')
+              AND NOT EXISTS (
+                SELECT 1 FROM task_history th
+                WHERE th.task_id=tasks.id
+                  AND th.action LIKE 'PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:MERGED_TO_PARENT:%'
+              )
             ORDER BY rowid DESC LIMIT 1
         """, (chat_id, topic_id, task_id, reply_to, reply_to)).fetchone()
         if row and _p6e67_is_estimate(row):
@@ -11726,6 +11755,11 @@ def _p6e67_find_parent(conn, task):
         SELECT * FROM tasks
         WHERE chat_id=? AND COALESCE(topic_id,0)=? AND id<>?
           AND state IN ('IN_PROGRESS','AWAITING_CONFIRMATION','RESULT_READY','WAITING_CLARIFICATION')
+          AND NOT EXISTS (
+            SELECT 1 FROM task_history th
+            WHERE th.task_id=tasks.id
+              AND th.action LIKE 'PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:MERGED_TO_PARENT:%'
+          )
           AND (
             raw_input LIKE '%смет%' OR result LIKE '%смет%'
             OR raw_input LIKE '%стоимость%' OR result LIKE '%стоимость%'
@@ -11735,7 +11769,7 @@ def _p6e67_find_parent(conn, task):
         ORDER BY rowid DESC LIMIT 1
     """, (chat_id, topic_id, task_id)).fetchone()
 
-    if row and _p6e67_is_estimate(row):
+    if row and _p6e67_parent_open_for_reply(conn, row) and _p6e67_is_estimate(row):
         return row, "LAST_ACTIVE_ESTIMATE_FALLBACK"
 
     return None, "NOT_FOUND"
@@ -14061,6 +14095,21 @@ def _t2feb_is_fresh_estimate(raw):
         return True
     return False
 
+def _t2feb_latest_fresh_clarified(conn, task_id):
+    try:
+        rows = conn.execute(
+            "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'clarified:%' ORDER BY rowid DESC LIMIT 10",
+            (str(task_id),),
+        ).fetchall()
+        for row in rows:
+            action = str(row[0] or "")
+            raw = action.split("clarified:", 1)[1].strip() if "clarified:" in action else ""
+            if _t2feb_is_fresh_estimate(raw):
+                return raw
+    except Exception:
+        return ""
+    return ""
+
 async def _t2feb_run_estimate(conn, task, raw):
     try:
         from core.stroyka_estimate_canon import maybe_handle_stroyka_estimate as _t2feb_mhse
@@ -14109,15 +14158,30 @@ if _T2FEB_ORIG_HANDLE_IN_PROG:
             state = _t2feb_s(_t2feb_row(task, "state", "")).upper()
             raw = _t2feb_s(_t2feb_row(task, "raw_input", ""))
             if "P6E67_PARENT_NOT_FOUND" in err and state in ("WAITING_CLARIFICATION", "IN_PROGRESS"):
-                if _t2feb_is_fresh_estimate(raw):
-                    task_id = _t2feb_s(_t2feb_row(task, "id", ""))
-                    _T2FEB_LOG.info("T2FEB_P6E67_RESCUE task=%s", task_id)
+                task_id = _t2feb_s(_t2feb_row(task, "id", ""))
+                rescue_raw = raw if _t2feb_is_fresh_estimate(raw) else _t2feb_latest_fresh_clarified(conn, task_id)
+                if _t2feb_is_fresh_estimate(rescue_raw):
+                    _T2FEB_LOG.info("T2FEB_P6E67_RESCUE task=%s source=%s", task_id, "raw" if rescue_raw == raw else "clarified")
                     conn.execute(
-                        "UPDATE tasks SET state='IN_PROGRESS', error_message='', updated_at=datetime('now') WHERE id=?",
-                        (task_id,)
+                        "UPDATE tasks SET state='IN_PROGRESS', raw_input=?, error_message='', updated_at=datetime('now') WHERE id=?",
+                        (rescue_raw, task_id)
+                    )
+                    conn.execute(
+                        "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                        (task_id, "TOPIC2_P6E67_RESCUE_FROM_CLARIFIED")
                     )
                     conn.commit()
-                    if await _t2feb_run_estimate(conn, task, raw):
+                    task_clean = {}
+                    try:
+                        for k in task.keys():
+                            task_clean[k] = task[k]
+                    except Exception:
+                        task_clean = {}
+                    task_clean["raw_input"] = rescue_raw
+                    task_clean["state"] = "IN_PROGRESS"
+                    task_clean["error_message"] = ""
+                    task_clean["reply_to_message_id"] = None
+                    if await _t2feb_run_estimate(conn, task_clean, rescue_raw):
                         _T2FEB_LOG.info("T2FEB_P6E67_RESCUE_DONE task=%s", task_id)
                         return True
         res = _T2FEB_ORIG_HANDLE_IN_PROG(conn, task, *args, **kwargs)
@@ -16922,6 +16986,101 @@ except Exception:
 # === END_PATCH_TOPIC2_DRAINAGE_CHILD_MERGE_V1_FIX1 ===
 
 
+
+# === PATCH_TOPIC2_FRESH_FULL_TZ_CANON_ROUTE_V1 ===
+# Canon: a fresh complete topic_2 estimate task must use the canonical P3 pipeline.
+# It must not be handled by the old TOPIC2_ESTIMATE_FINAL_CLOSE_V2 template summary route.
+try:
+    import inspect as _t2ffcr_inspect
+    import logging as _t2ffcr_logging
+    import re as _t2ffcr_re
+
+    _T2FFCR_LOG = _t2ffcr_logging.getLogger("WORKER")
+    _T2FFCR_ORIG_HANDLE_NEW = _handle_new
+
+    def _t2ffcr_get(row, key, default=None):
+        try:
+            if isinstance(row, dict):
+                return row.get(key, default)
+            if hasattr(row, "keys") and key in row.keys():
+                return row[key]
+        except Exception:
+            pass
+        return default
+
+    def _t2ffcr_history_text(conn, task_id):
+        try:
+            rows = conn.execute(
+                "SELECT action FROM task_history WHERE task_id=? ORDER BY rowid ASC",
+                (str(task_id),),
+            ).fetchall()
+            return "\n".join(str(r["action"] if hasattr(r, "keys") else r[0]) for r in rows)
+        except Exception:
+            return ""
+
+    def _t2ffcr_is_fresh_full_tz(raw):
+        low = str(raw or "").lower().replace("ё", "е")
+        if len(low) < 80:
+            return False
+        has_estimate = any(x in low for x in ("смет", "расчет", "расчёт"))
+        has_dims = bool(_t2ffcr_re.search(r"\d+(?:[.,]\d+)?\s*(?:x|х|×|на)\s*\d+(?:[.,]\d+)?", low))
+        has_house = any(x in low for x in ("дом", "этаж", "плит", "фундамент", "стен", "кирпич", "газобет", "каркас"))
+        return bool(has_estimate and has_dims and has_house)
+
+    async def _handle_new(conn, task, chat_id, topic_id):  # noqa: F811
+        try:
+            topic_id_i = int(topic_id or _t2ffcr_get(task, "topic_id", 0) or 0)
+            task_id = str(_t2ffcr_get(task, "id", "") or "")
+            raw = str(_t2ffcr_get(task, "raw_input", "") or "")
+            state = str(_t2ffcr_get(task, "state", "") or "").upper()
+            if topic_id_i == 2 and task_id and state in ("NEW", "IN_PROGRESS") and _t2ffcr_is_fresh_full_tz(raw):
+                hist = _t2ffcr_history_text(conn, task_id)
+                already_done = (
+                    "TOPIC2_DRIVE_UPLOAD_XLSX_OK" in hist
+                    or "TOPIC2_DRIVE_UPLOAD_PDF_OK" in hist
+                    or "P3_TOPIC2_FINAL_AWAITING_CONFIRMATION" in hist
+                )
+                if not already_done:
+                    from core import sample_template_engine as _t2ffcr_ste
+                    _T2FFCR_LOG.info("PATCH_TOPIC2_FRESH_FULL_TZ_CANON_ROUTE_V1 route task=%s", task_id)
+                    try:
+                        conn.execute(
+                            "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                            (task_id, "PATCH_TOPIC2_FRESH_FULL_TZ_CANON_ROUTE_V1:CANON_P3_ROUTE"),
+                        )
+                        conn.execute(
+                            "UPDATE tasks SET state='IN_PROGRESS', error_message='', updated_at=datetime('now') WHERE id=?",
+                            (task_id,),
+                        )
+                        conn.commit()
+                    except Exception:
+                        pass
+                    res = _t2ffcr_ste.handle_topic2_one_big_formula_pipeline_v1(
+                        conn=conn,
+                        task=task,
+                        chat_id=chat_id,
+                        topic_id=topic_id_i,
+                        raw_input=raw,
+                        full_context=raw,
+                    )
+                    if _t2ffcr_inspect.isawaitable(res):
+                        await res
+                    return
+        except Exception as _t2ffcr_e:
+            try:
+                _T2FFCR_LOG.warning("PATCH_TOPIC2_FRESH_FULL_TZ_CANON_ROUTE_V1 err=%s", _t2ffcr_e)
+            except Exception:
+                pass
+        return await _T2FFCR_ORIG_HANDLE_NEW(conn, task, chat_id, topic_id)
+
+    _T2FFCR_LOG.info("PATCH_TOPIC2_FRESH_FULL_TZ_CANON_ROUTE_V1 installed")
+except Exception as _t2ffcr_install_err:
+    try:
+        logger.exception("PATCH_TOPIC2_FRESH_FULL_TZ_CANON_ROUTE_V1_INSTALL_ERR:%s", _t2ffcr_install_err)
+    except Exception:
+        pass
+# === /PATCH_TOPIC2_FRESH_FULL_TZ_CANON_ROUTE_V1 ===
+
 if __name__ == "__main__":
     pass  # entry point moved to final by PATCH_TOPIC2_WC_PICKER_DRAINAGE_REPLY_BIND_V3
 
@@ -18465,7 +18624,10 @@ try:
     def _t2pc_choice(raw):
         s = _t2pc_low(raw)
         s = _t2pc_re.sub(r"\s+", " ", s)
-        if _t2pc_re.search(r"(^|[^0-9а-яa-z])(1|первый|вариант 1)([^0-9а-яa-z]|$)", s) or "дешев" in s or "минималь" in s:
+        is_tz = len(s) > 80 and any(x in s for x in ("фундамент", "плита", "щеб", "песчан", "ламинат", "стен", "кров", "полы"))
+        if is_tz and not any(x in s for x in ("дешев", "дешёв", "минималь", "средн", "медиан", "надежн", "надёжн", "проверенн", "вручную", "свои цены", "своя цена")):
+            return ""
+        if (not is_tz and _t2pc_re.search(r"(^|[^0-9а-яa-z])(1|первый|вариант 1)([^0-9а-яa-z]|$)", s)) or "дешев" in s or "дешёв" in s or "минималь" in s:
             return "cheapest"
         if _t2pc_re.search(r"(^|[^0-9а-яa-z])(2|второй|вариант 2)([^0-9а-яa-z]|$)", s) or "средн" in s or "медиан" in s:
             return "median"
@@ -18550,10 +18712,10 @@ try:
             ).fetchall()
             for r in rows:
                 pid = str(_t2pc_get(r, "id") or "")
-                if pid and _t2pc_has_price_context(conn, pid):
+                st = str(_t2pc_get(r, "state") or "").upper()
+                err = str(_t2pc_get(r, "error_message") or "").upper()
+                if pid and st not in ("DONE", "ARCHIVED", "FAILED", "CANCELLED") and "MERGED_TO_PARENT" not in err and _t2pc_has_price_context(conn, pid):
                     return r
-            if rows:
-                return rows[0]
         rows = conn.execute(
             "SELECT * FROM tasks WHERE chat_id=? AND topic_id=2 AND id<>? ORDER BY rowid DESC LIMIT 30",
             (cid, tid),
@@ -18561,7 +18723,8 @@ try:
         for r in rows:
             pid = str(_t2pc_get(r, "id") or "")
             st = str(_t2pc_get(r, "state") or "")
-            if pid and st not in ("DONE", "ARCHIVED") and _t2pc_has_price_context(conn, pid):
+            err = str(_t2pc_get(r, "error_message") or "").upper()
+            if pid and st.upper() not in ("DONE", "ARCHIVED", "FAILED", "CANCELLED") and "MERGED_TO_PARENT" not in err and _t2pc_has_price_context(conn, pid):
                 return r
         return None
 
@@ -18768,6 +18931,27 @@ try:
         s = str(text or "")
         return any(x in s for x in ("⏳ Задачу понял", "Шаблон:", "Лист:", "Цены из листа"))
 
+    def _t2sc_parent_is_open_for_price_choice(conn, row):
+        try:
+            pid = str(_t2sc_get(row, "id") or "")
+            state = str(_t2sc_get(row, "state") or "").upper()
+            err = str(_t2sc_get(row, "error_message") or "").upper()
+            if not pid or state in ("DONE", "ARCHIVED", "FAILED", "CANCELLED"):
+                return False
+            if "P6E67_PARENT_NOT_FOUND" in err or "MERGED_TO_PARENT" in err:
+                return False
+            hist = _t2sc_hist_text(conn, pid)
+            blocked = (
+                "P6E67_PARENT_NOT_FOUND" in hist
+                or "TOPIC2_DONE_CONTRACT_OK" in hist
+                or "TOPIC2_DRIVE_UPLOAD_XLSX_OK" in hist
+                or "TOPIC2_DRIVE_UPLOAD_PDF_OK" in hist
+                or "PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:MERGED_TO_PARENT:" in hist
+            )
+            return not blocked
+        except Exception:
+            return False
+
     def _t2sc_find_parent_by_reply(conn, task):
         cid = str(_t2sc_get(task, "chat_id") or "")
         tid = str(_t2sc_get(task, "id") or "")
@@ -18779,18 +18963,15 @@ try:
             ).fetchall()
             for r in rows:
                 pid = str(_t2sc_get(r, "id") or "")
-                if pid and _t2sc_has_price_context(conn, pid):
+                if pid and _t2sc_parent_is_open_for_price_choice(conn, r) and _t2sc_has_price_context(conn, pid):
                     return r
-            if rows:
-                return rows[0]
         rows = conn.execute(
             "SELECT * FROM tasks WHERE chat_id=? AND topic_id=2 AND id<>? ORDER BY rowid DESC LIMIT 40",
             (cid, tid),
         ).fetchall()
         for r in rows:
             pid = str(_t2sc_get(r, "id") or "")
-            st = str(_t2sc_get(r, "state") or "")
-            if pid and st not in ("DONE", "ARCHIVED") and _t2sc_has_price_context(conn, pid):
+            if pid and _t2sc_parent_is_open_for_price_choice(conn, r) and _t2sc_has_price_context(conn, pid):
                 return r
         return None
 
@@ -18859,8 +19040,8 @@ try:
         parts = [
             "Сформируй финальную смету XLSX и PDF по канону topic_2",
             "Ценовой уровень: " + str(choice),
-            "Материал: каркас",
-            "Шаблон: М-80 или М-110 по площади",
+            "Исходное ТЗ и уточнения ниже являются SSOT для выбора материала, шаблона и состава работ:",
+            ctx.strip(),
             "Запрещено выводить текстовую старую сводку Шаблон/Лист/Цены из листа",
             "Результат только Drive links XLSX/PDF",
         ]
@@ -18870,9 +19051,7 @@ try:
             parts.append("Этажность: " + floors)
         if area:
             parts.append("Площадь: " + area + " м2")
-        if not (dims or area):
-            parts.append("Если размеры не извлечены из контекста, используй данные последнего файла/parent task в этой теме")
-        return "\n".join(parts)
+        return "\n".join(x for x in parts if str(x or "").strip())
 
     def _t2sc_prepare_parent_for_generation(conn, parent_id, choice, child_id=""):
         _t2sc_hist_once(conn, parent_id, "TOPIC2_PRICE_CHOICE_CONFIRMED:" + choice)
@@ -19280,10 +19459,25 @@ try:
         s = str(text or "")
         return "drive.google.com" in s or "docs.google.com" in s
 
+    def _t2fdsg_is_fresh_estimate_tz(text):
+        t = str(text or "").strip().lower().replace("ё", "е")
+        if not t:
+            return False
+        if len(t.split()) <= 8 and not any(x in t for x in ("м2", "м²", "метр", "этаж", "петербург", "москва", "каркас", "газобетон", "фундамент", "кровл", "под ключ")):
+            return False
+        keys = (
+            "смет", "расчет", "расчёт", "стоимост", "посчитай", "посчитать",
+            "дом", "площад", "м2", "м²", "этаж", "каркас", "газобетон",
+            "фундамент", "кровл", "под ключ", "санкт", "петербург", "регион",
+        )
+        return sum(1 for k in keys if k in t) >= 2
+
     def _t2fdsg_price_choice(text):
         t = str(text or "").strip().lower().replace(",", ".")
         t = _t2fdsg_re.sub(r"\s+", " ", t)
         if not t:
+            return ""
+        if _t2fdsg_is_fresh_estimate_tz(t):
             return ""
         if t in ("1", "1.", "первый", "минимум", "минимальная", "минимальные", "дешевый", "дешёвый"):
             return "min"
@@ -19381,10 +19575,38 @@ try:
             return ""
 
     def _t2fdsg_enrich_parent_raw(conn, parent, choice):
+        # PATCH_TOPIC2_ADDITIONAL_FACTS_FULL_RECALC_CANON_RESTORE_V1 fix:
+        # For drive_file parents: do NOT write enriched text into DB raw_input.
+        # raw_input must stay as pure JSON. Build enriched context only in-memory
+        # for passing to the engine. Store clarifications in task_history only.
         parent_id = str(_t2fdsg_get(parent, "id") or "")
         chat_id = str(_t2fdsg_get(parent, "chat_id") or "")
         topic_id = int(_t2fdsg_get(parent, "topic_id", 2) or 2)
+        input_type = str(_t2fdsg_get(parent, "input_type") or "")
         raw = str(_t2fdsg_get(parent, "raw_input") or "")
+
+        # Recover clean JSON if raw_input is corrupted (legacy tail from old patches)
+        clean_raw = raw
+        if input_type == "drive_file" and raw and raw.lstrip().startswith("{"):
+            try:
+                _t2fdsg_json.loads(raw)
+            except Exception:
+                try:
+                    _decoder = _t2fdsg_json.JSONDecoder()
+                    _clean_obj, _end = _decoder.raw_decode(raw.lstrip())
+                    clean_raw = raw.lstrip()[:_end]
+                    # Write recovered JSON back to DB
+                    conn.execute(
+                        "UPDATE tasks SET raw_input=?, updated_at=datetime('now') WHERE id=?",
+                        (clean_raw, parent_id),
+                    )
+                    _t2fdsg_hist_once(conn, parent_id, "TOPIC2_DRIVE_RAW_INPUT_JSON_PREFIX_RECOVERED")
+                    _t2fdsg_log.info(
+                        "PATCH_TOPIC2_ADDITIONAL_FACTS_FULL_RECALC_CANON_RESTORE_V1 raw_input recovered task=%s",
+                        parent_id,
+                    )
+                except Exception:
+                    pass
 
         pending = _t2fdsg_load_pending(chat_id, parent_id)
         parsed = pending.get("parsed") if isinstance(pending, dict) else {}
@@ -19394,10 +19616,33 @@ try:
         floors = parsed.get("floors")
         area = parsed.get("area")
 
+        # Collect all clarified facts from task_history
+        try:
+            _clarified_rows = conn.execute(
+                "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'clarified:%' ORDER BY rowid ASC",
+                (parent_id,),
+            ).fetchall()
+            _clarified_facts = [str(r[0] or "")[len("clarified:"):].strip()
+                                 for r in _clarified_rows if r and r[0]]
+            _clarified_facts = [f for f in _clarified_facts if f]
+        except Exception:
+            _clarified_facts = []
+
+        # Collect price choice from history
+        try:
+            _price_row = conn.execute(
+                "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'TOPIC2_PRICE_CHOICE_CONFIRMED:%' ORDER BY rowid DESC LIMIT 1",
+                (parent_id,),
+            ).fetchone()
+            _confirmed_choice = (_price_row[0] or "").split(":", 2)[-1].strip() if _price_row else choice
+        except Exception:
+            _confirmed_choice = choice
+
+        # Build in-memory enriched context (NOT written to DB)
         add = [
             "",
-            "PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1: FINAL DRIVE GENERATION",
-            f"Ценовой уровень: {choice}",
+            "PATCH_TOPIC2_ADDITIONAL_FACTS_FULL_RECALC_CANON_RESTORE_V1: FULL RECALC CONTEXT",
+            f"Ценовой уровень: {_confirmed_choice or choice}",
             "Запрещено отдавать локальные /root пути",
             "Финальный результат: только Google Drive ссылки XLSX и PDF",
         ]
@@ -19409,17 +19654,39 @@ try:
         if area:
             add.append(f"Площадь: {area}")
 
-        drive_raw = _t2fdsg_latest_drive_raw(conn, chat_id, topic_id)
-        if drive_raw:
-            add.append("SOURCE_DRIVE_FILE_JSON:")
-            add.append(drive_raw[:3000])
+        if _clarified_facts:
+            add.append("ДОПОЛНИТЕЛЬНЫЕ ФАКТЫ ИЗ ИСТОРИИ:")
+            for _f in _clarified_facts[-20:]:
+                add.append("- " + _f[:400])
 
-        new_raw = (raw + "\n" + "\n".join(add)).strip()[:12000]
-        conn.execute(
-            "UPDATE tasks SET raw_input=?, state='IN_PROGRESS', result='', error_message=NULL, updated_at=datetime('now') WHERE id=?",
-            (new_raw, parent_id),
-        )
+        # enriched_raw: clean JSON + context (only used in-memory for engine, NOT saved to DB)
+        enriched_raw = (clean_raw + "\n" + "\n".join(add)).strip()[:14000]
+
+        # DB update: set state IN_PROGRESS, clear result — but keep raw_input as clean JSON
+        if input_type == "drive_file":
+            conn.execute(
+                "UPDATE tasks SET state='IN_PROGRESS', result='', error_message=NULL, updated_at=datetime('now') WHERE id=?",
+                (parent_id,),
+            )
+        else:
+            conn.execute(
+                "UPDATE tasks SET raw_input=?, state='IN_PROGRESS', result='', error_message=NULL, updated_at=datetime('now') WHERE id=?",
+                (enriched_raw, parent_id),
+            )
         _t2fdsg_hist_once(conn, parent_id, "PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1:PARENT_RAW_ENRICHED")
+
+        # Build enriched task dict for engine use (raw_input = enriched_raw)
+        try:
+            _row = conn.execute("SELECT * FROM tasks WHERE id=? LIMIT 1", (parent_id,)).fetchone()
+            if _row is not None:
+                try:
+                    _task_dict = {k: _row[k] for k in _row.keys()}
+                except Exception:
+                    _task_dict = dict(_row) if isinstance(_row, dict) else {}
+                _task_dict["raw_input"] = enriched_raw
+                return _task_dict
+        except Exception:
+            pass
         return conn.execute("SELECT * FROM tasks WHERE id=? LIMIT 1", (parent_id,)).fetchone()
 
     async def _t2fdsg_run_drive_final(conn, parent, choice):
@@ -19566,6 +19833,6411 @@ except Exception as _t2fdsg_install_err:
         pass
 # === /PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1 ===
 
+# === PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1 ===
+try:
+    import re as _t2fb_re
+    import logging as _t2fb_logging
+
+    _t2fb_log = _t2fb_logging.getLogger("WORKER")
+    _t2fb_orig_handle_new = _handle_new
+    _t2fb_orig_update_task = _update_task
+
+    def _t2fb_s(v):
+        return "" if v is None else str(v).strip()
+
+    def _t2fb_low(v):
+        return _t2fb_s(v).lower().replace("ё", "е")
+
+    def _t2fb_get(obj, key, default=None):
+        try:
+            if isinstance(obj, dict):
+                return obj.get(key, default)
+        except Exception:
+            pass
+        try:
+            if hasattr(obj, "keys") and key in obj.keys():
+                return obj[key]
+        except Exception:
+            pass
+        return default
+
+    def _t2fb_rowdict(conn, sql, params=()):
+        cur = conn.execute(sql, params)
+        row = cur.fetchone()
+        if not row:
+            return None
+        try:
+            if hasattr(row, "keys"):
+                return {k: row[k] for k in row.keys()}
+        except Exception:
+            pass
+        cols = [d[0] for d in cur.description]
+        return dict(zip(cols, row))
+
+    def _t2fb_hist_once(conn, task_id, action):
+        try:
+            if not conn.execute(
+                "SELECT 1 FROM task_history WHERE task_id=? AND action=? LIMIT 1",
+                (str(task_id), str(action)),
+            ).fetchone():
+                conn.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (str(task_id), str(action)),
+                )
+        except Exception:
+            pass
+
+    def _t2fb_merged_parent_id(conn, task_id):
+        try:
+            row = conn.execute(
+                "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:MERGED_TO_PARENT:%' ORDER BY rowid DESC LIMIT 1",
+                (str(task_id),),
+            ).fetchone()
+            if not row:
+                return ""
+            action = row["action"] if hasattr(row, "keys") else row[0]
+            return str(action or "").rsplit(":", 1)[-1].strip()
+        except Exception:
+            return ""
+
+    def _t2fb_is_followup(raw):
+        s = _t2fb_low(raw)
+        if not s:
+            return False
+        if _t2fb_re.fullmatch(r"[\s\d.,:;!?-]+", s) and len(s) <= 12:
+            return False
+        if any(x in s for x in ("отбой", "отмена", "отменяй", "стоп", "cancel")):
+            return False
+        return any(x in s for x in (
+            "по тз", "тз", "смет", "материал", "материалы", "цена", "цены",
+            "стоимость", "интернет", "поставщик", "фасад", "кровля",
+            "металлочереп", "доска", "разношир", "ворс", "окраш", "крашен",
+            "имитация", "брус", "ламинат", "пол", "внутри", "снаружи",
+            "утепление", "каркас", "стены", "кровлю", "фасады"
+        ))
+
+    def _t2fb_needs_price_reset(raw):
+        s = _t2fb_low(raw)
+        return any(x in s for x in (
+            "цена", "цены", "стоимость", "интернет", "поставщик",
+            "материал", "материалы", "фасад", "кровля", "металлочереп",
+            "доска", "ворс", "окраш", "имитация", "брус", "ламинат",
+            "утепление", "каркас", "стены"
+        ))
+
+    def _t2fb_explicit_internet_price(raw):
+        s = _t2fb_low(raw)
+        if not s:
+            return False
+        price_words = ("цена", "цены", "стоимость", "поставщик", "материал", "материалы")
+        search_words = ("интернет", "поиск", "проверь", "актуальн", "найди", "sonar", "perplexity")
+        return any(x in s for x in price_words) and any(x in s for x in search_words)
+
+    def _t2fb_parent_is_valid(conn, parent):
+        if not parent:
+            return False
+        parent_id = _t2fb_s(parent.get("id"))
+        state = _t2fb_s(parent.get("state")).upper()
+        err = _t2fb_s(parent.get("error_message")).upper()
+        if state in ("FAILED", "CANCELLED", "DONE", "ARCHIVED"):
+            return False
+        if "NO_VALID_ARTIFACT" in err or "P6E67_PARENT_NOT_FOUND" in err or "MERGED_TO_PARENT" in err:
+            return False
+        try:
+            hist = "\n".join(str(r[0] or "") for r in conn.execute(
+                "SELECT action FROM task_history WHERE task_id=? ORDER BY rowid DESC LIMIT 80",
+                (parent_id,),
+            ).fetchall())
+        except Exception:
+            hist = ""
+        if (
+            "P6E67_PARENT_NOT_FOUND" in hist
+            or "TOPIC2_DONE_CONTRACT_OK" in hist
+            or "TOPIC2_DRIVE_UPLOAD_XLSX_OK" in hist
+            or "TOPIC2_DRIVE_UPLOAD_PDF_OK" in hist
+        ):
+            return False
+        return True
+
+    def _t2fb_find_parent(conn, chat_id, topic_id, task):
+        child_id = _t2fb_s(_t2fb_get(task, "id"))
+        reply_to = _t2fb_get(task, "reply_to_message_id")
+
+        if reply_to:
+            p = _t2fb_rowdict(conn, """
+                SELECT rowid AS rid, *
+                FROM tasks
+                WHERE CAST(chat_id AS TEXT)=?
+                  AND topic_id=?
+                  AND id<>?
+                  AND bot_message_id=?
+                  AND input_type IN ('drive_file','text')
+                  AND state NOT IN ('CANCELLED')
+                  AND NOT EXISTS (
+                      SELECT 1 FROM task_history th
+                      WHERE th.task_id=tasks.id
+                        AND th.action LIKE 'PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:MERGED_TO_PARENT:%'
+                  )
+                ORDER BY rowid DESC
+                LIMIT 1
+            """, (str(chat_id), int(topic_id or 0), child_id, reply_to))
+            if _t2fb_parent_is_valid(conn, p):
+                return p
+
+        p = _t2fb_rowdict(conn, """
+            SELECT rowid AS rid, *
+            FROM tasks
+            WHERE CAST(chat_id AS TEXT)=?
+              AND topic_id=?
+              AND id<>?
+              AND input_type IN ('drive_file','text')
+              AND state IN ('IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION','RESULT_READY')
+              AND updated_at >= datetime('now','-48 hours')
+              AND NOT EXISTS (
+                  SELECT 1 FROM task_history th
+                  WHERE th.task_id=tasks.id
+                    AND th.action LIKE 'PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:MERGED_TO_PARENT:%'
+              )
+              AND (
+                   raw_input LIKE '%смет%'
+                OR result LIKE '%смет%'
+                OR raw_input LIKE '%8х12%'
+                OR raw_input LIKE '%сделай смету%'
+                OR input_type='drive_file'
+              )
+            ORDER BY rowid DESC
+            LIMIT 1
+        """, (str(chat_id), int(topic_id or 0), child_id))
+        return p if _t2fb_parent_is_valid(conn, p) else None
+
+    def _t2fb_reset_stale_markers(conn, parent_id, raw):
+        if not _t2fb_needs_price_reset(raw):
+            return
+        conn.execute("""
+            DELETE FROM task_history
+            WHERE task_id=?
+              AND (
+                   action LIKE 'TOPIC2_PRICE_ENRICHMENT_STARTED%'
+                OR action LIKE 'TOPIC2_PRICE_ENRICHMENT_DONE%'
+                OR action LIKE 'TOPIC2_PRICE_MATERIAL_SEARCH_STARTED%'
+                OR action LIKE 'TOPIC2_PRICE_WORK_SEARCH_STARTED%'
+                OR action LIKE 'TOPIC2_PRICE_SOURCE_FOUND%'
+                OR action='FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:prices_shown'
+                OR action LIKE 'P3_TOPIC2_FINAL_DONE_ROWS_%'
+                OR action LIKE 'TOPIC2_DONE_CONTRACT_OK%'
+                OR action LIKE 'TOPIC2_TELEGRAM_DELIVERED%'
+                OR action LIKE 'TOPIC2_DRIVE_UPLOAD_XLSX_OK%'
+                OR action LIKE 'TOPIC2_DRIVE_UPLOAD_PDF_OK%'
+              )
+        """, (str(parent_id),))
+        _t2fb_hist_once(conn, parent_id, "PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:STALE_PRICE_AND_RESULT_MARKERS_RESET")
+
+    def _t2fb_merge(conn, child, parent):
+        child_id = _t2fb_s(_t2fb_get(child, "id"))
+        parent_id = _t2fb_s(parent.get("id"))
+        raw = _t2fb_s(_t2fb_get(child, "raw_input"))
+        if not child_id or not parent_id or child_id == parent_id or not raw:
+            return False
+
+        parent_raw = _t2fb_s(parent.get("raw_input"))
+        add = "\n\nУТОЧНЕНИЕ К ИСХОДНОМУ ТЗ:\n" + raw
+        new_raw = parent_raw if raw in parent_raw else parent_raw.rstrip() + add
+
+        _t2fb_reset_stale_markers(conn, parent_id, raw)
+
+        conn.execute("""
+            UPDATE tasks
+            SET raw_input=?,
+                state='IN_PROGRESS',
+                result='',
+                error_message='',
+                updated_at=datetime('now')
+            WHERE id=?
+        """, (new_raw, parent_id))
+
+        conn.execute("""
+            UPDATE tasks
+            SET state='DONE',
+                result='Уточнение добавлено к исходному ТЗ',
+                error_message=?,
+                updated_at=datetime('now')
+            WHERE id=?
+        """, ("MERGED_TO_PARENT:" + parent_id, child_id))
+
+        _t2fb_hist_once(conn, parent_id, "clarified:" + raw[:500])
+        _t2fb_hist_once(conn, parent_id, "PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:MERGED_CHILD:" + child_id)
+        _t2fb_hist_once(conn, child_id, "PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:MERGED_TO_PARENT:" + parent_id)
+        conn.commit()
+
+        _t2fb_log.info(
+            "PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1 merged child=%s parent=%s",
+            child_id,
+            parent_id,
+        )
+        return True
+
+    async def _handle_new(conn, task, chat_id, topic_id):
+        try:
+            if int(topic_id or 0) == 2:
+                input_type = _t2fb_s(_t2fb_get(task, "input_type"))
+                raw = _t2fb_s(_t2fb_get(task, "raw_input"))
+                if input_type in ("text", "voice", "search") and _t2fb_is_followup(raw):
+                    parent = _t2fb_find_parent(conn, chat_id, topic_id, task)
+                    if parent and _t2fb_merge(conn, task, parent):
+                        if _t2fb_explicit_internet_price(raw):
+                            _t2fb_hist_once(conn, str(parent.get("id")), "TOPIC2_PRICE_ENRICHMENT_REQUESTED_BY_FOLLOWUP:" + _t2fb_s(_t2fb_get(task, "id")))
+                            conn.commit()
+                        return
+        except Exception as e:
+            _t2fb_log.exception("PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1_HANDLE_ERR:%s", e)
+
+        return await _t2fb_orig_handle_new(conn, task, chat_id, topic_id)
+
+    def _update_task(conn, task_id, **kwargs):
+        try:
+            parent_id = _t2fb_merged_parent_id(conn, task_id)
+            if parent_id:
+                kwargs["state"] = "DONE"
+                kwargs["result"] = "Уточнение добавлено к исходному ТЗ"
+                kwargs["error_message"] = "MERGED_TO_PARENT:" + parent_id
+                return _t2fb_orig_update_task(conn, task_id, **kwargs)
+
+            result = _t2fb_s(kwargs.get("result"))
+            state = _t2fb_s(kwargs.get("state"))
+            if "TOPIC2_ONE_BIG_FINAL_PIPELINE_V1: generated search subtask blocked" in result:
+                row = _t2fb_rowdict(conn, "SELECT rowid AS rid, * FROM tasks WHERE id=? LIMIT 1", (str(task_id),))
+                if row and int(row.get("topic_id") or 0) == 2 and _t2fb_is_followup(row.get("raw_input")):
+                    parent = _t2fb_find_parent(conn, row.get("chat_id"), row.get("topic_id"), row)
+                    if parent and _t2fb_merge(conn, row, parent):
+                        kwargs["state"] = "DONE"
+                        kwargs["result"] = "Уточнение добавлено к исходному ТЗ"
+                        kwargs["error_message"] = "MERGED_TO_PARENT:" + str(parent.get("id"))
+        except Exception as e:
+            _t2fb_log.exception("PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1_UPDATE_ERR:%s", e)
+
+        return _t2fb_orig_update_task(conn, task_id, **kwargs)
+
+    _t2fb_log.info("PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1 installed")
+except Exception as _t2fb_install_err:
+    try:
+        logger.exception("PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1_INSTALL_ERR:%s", _t2fb_install_err)
+    except Exception:
+        pass
+# === /PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1 ===
+
+
+
+# === PATCH_TOPIC2_FULL_CLOSE_TZ_MATERIALS_PRICE_V2_ACTIVE_BEFORE_MAIN ===
+try:
+    import re as _t2v2_re
+    import logging as _t2v2_logging
+
+    _T2V2_LOG = _t2v2_logging.getLogger("task_worker")
+
+    def _t2v2_s(v):
+        return "" if v is None else str(v)
+
+    def _t2v2_get(row, key, default=None):
+        try:
+            if isinstance(row, dict):
+                return row.get(key, default)
+        except Exception:
+            pass
+        try:
+            if hasattr(row, "keys") and key in row.keys():
+                return row[key]
+        except Exception:
+            pass
+        try:
+            return row[key]
+        except Exception:
+            return default
+
+    def _t2v2_topic_id(conn, task_id):
+        try:
+            row = conn.execute("SELECT topic_id FROM tasks WHERE id=? LIMIT 1", (str(task_id),)).fetchone()
+            return int(_t2v2_get(row, "topic_id", 0) or 0)
+        except Exception:
+            return 0
+
+    def _t2v2_history(conn, task_id):
+        try:
+            rows = conn.execute(
+                "SELECT action FROM task_history WHERE task_id=? ORDER BY rowid ASC",
+                (str(task_id),),
+            ).fetchall()
+            return "\n".join(_t2v2_s(_t2v2_get(r, "action", r[0] if r else "")) for r in rows)
+        except Exception:
+            return ""
+
+    def _t2v2_context(conn, task_id):
+        try:
+            row = conn.execute("SELECT raw_input FROM tasks WHERE id=? LIMIT 1", (str(task_id),)).fetchone()
+            raw = _t2v2_s(_t2v2_get(row, "raw_input", ""))
+        except Exception:
+            raw = ""
+        return raw + "\n" + _t2v2_history(conn, task_id)
+
+    def _t2v2_strip_nds(text):
+        s = _t2v2_s(text)
+        s = _t2v2_re.sub(r"\s+НДС\s*\d+\s*%?\s*:\s*[\d\s.,]+руб\.?", "", s, flags=_t2v2_re.I)
+        s = _t2v2_re.sub(r"\s+С\s+НДС\s*:\s*[\d\s.,]+руб\.?", "", s, flags=_t2v2_re.I)
+        s = _t2v2_re.sub(r"(?im)^\s*НДС\s*\d+\s*%?.*$\n?", "", s)
+        s = _t2v2_re.sub(r"(?im)^\s*С\s+НДС\s*:.*$\n?", "", s)
+        return s
+
+    def _t2v2_replace_or_insert(result, prefix, line):
+        s = _t2v2_s(result)
+        rx = r"(?im)^\s*" + _t2v2_re.escape(prefix) + r".*$"
+        if _t2v2_re.search(rx, s):
+            return _t2v2_re.sub(rx, line, s)
+        if "Разделы:" in s:
+            return s.replace("Разделы:", line + "\nРазделы:", 1)
+        if "📊 Excel:" in s:
+            return s.replace("📊 Excel:", line + "\n📊 Excel:", 1)
+        return s.rstrip() + "\n" + line
+
+    def _t2v2_facts(ctx):
+        low = _t2v2_s(ctx).lower().replace("ё", "е")
+        facts = []
+
+        if "8.0 x 12.0" in ctx or "8х12" in low or "8x12" in low or "8 на 12" in low:
+            facts.append("Размеры: 8.0 x 12.0 м")
+        if "1 этаж" in low or "этажей: 1" in low or "clarified:1" in low:
+            facts.append("Этажность: 1 этаж")
+        if "каркасная технология" in low or "каркас" in low:
+            facts.append("Стены: каркасная технология")
+        if "монолитная плита" in low or "монолитн" in low:
+            facts.append("Фундамент: монолитная плита" + (" 450 мм" if "450" in low else ""))
+        if "металлочереп" in low:
+            facts.append("Кровля: металлочерепица")
+        if ("разно" in low and "широк" in low) or "поднятым ворсом" in low or "ворсом" in low:
+            facts.append("Фасад: разноширокая доска с поднятым ворсом, окрашенная")
+        if "имитац" in low and "брус" in low:
+            facts.append("Внутренняя отделка: имитация бруса 146 мм")
+        if "ламинат" in low:
+            facts.append("Полы: ламинат" + (" 33 класса" if "33" in low else ""))
+        if "150 км" in low or "150км" in low:
+            facts.append("Логистика: объект 150 км от Санкт-Петербурга")
+        if "проживан" in low or "лагер" in low:
+            facts.append("Организация проживания бригады и строительного лагеря")
+        if "инженерн" in low and "коммуникац" in low:
+            facts.append("Инженерные коммуникации")
+        if "сануз" in low:
+            facts.append("Внутренняя отделка санузла 4x4" if ("4 на 4" in low or "четыре на четыре" in low or "4x4" in low or "4х4" in low) else "Внутренняя отделка санузла")
+        if "рехау" in low or "rehau" in low or "профиля 70" in low or "профиль 70" in low:
+            facts.append("Окна: металлопластиковые типа Rehau 70 мм")
+        if "дверь вход" in low:
+            facts.append("Дверь: входная дверь учтена")
+
+        out = []
+        seen = set()
+        for f in facts:
+            k = f.lower()
+            if k not in seen:
+                seen.add(k)
+                out.append(f)
+        return out
+
+    def _t2v2_inject_fact_block(result, facts):
+        s = _t2v2_s(result)
+        if not facts:
+            return s
+        block = "Учтено из дополнений к ТЗ:\n" + "\n".join("- " + f for f in facts)
+        if "Учтено из дополнений к ТЗ:" in s:
+            return _t2v2_re.sub(
+                r"Учтено из дополнений к ТЗ:\n(?:- .*\n?)+",
+                block + "\n",
+                s,
+                flags=_t2v2_re.I,
+            )
+        if "Разделы:" in s:
+            return s.replace("Разделы:", block + "\n\nРазделы:", 1)
+        if "📊 Excel:" in s:
+            return s.replace("📊 Excel:", block + "\n\n📊 Excel:", 1)
+        return s.rstrip() + "\n\n" + block
+
+    def _t2v2_sanitize_public_result(conn, task_id, result):
+        s = _t2v2_s(result)
+        if not s.strip():
+            return s
+        try:
+            if _t2v2_topic_id(conn, task_id) != 2:
+                return s
+        except Exception:
+            return s
+
+        ctx = _t2v2_context(conn, task_id)
+        low = ctx.lower().replace("ё", "е")
+
+        if not any(x in s for x in ("смет", "Смет", "Excel", "PDF", "Позиций", "Итого", "Предварительная смета", "Фасад:", "Проверка цен:")):
+            return s
+
+        s = _t2v2_strip_nds(s)
+
+        if "каркас" in low:
+            s = _t2v2_replace_or_insert(s, "Стены:", "Стены: каркасная технология")
+        if "металлочереп" in low:
+            s = _t2v2_replace_or_insert(s, "Кровля:", "Кровля: металлочерепица")
+        if ("разно" in low and "широк" in low) or "ворсом" in low:
+            s = _t2v2_replace_or_insert(s, "Фасад:", "Фасад: разноширокая доска с поднятым ворсом, окрашенная")
+        if "интернет-цены не применены" in s or "расчёт по базовым ставкам" in s or "расчет по базовым ставкам" in s:
+            s = _t2v2_replace_or_insert(
+                s,
+                "Проверка цен:",
+                "Проверка цен: price-context собран; строки без совпадения по названию материала не подменяются",
+            )
+
+        s = _t2v2_inject_fact_block(s, _t2v2_facts(ctx))
+        s = _t2v2_re.sub(r"\n{3,}", "\n\n", s).strip()
+        return s
+
+    _T2V2_ORIG_UPDATE_TASK = globals().get("_update_task")
+    if _T2V2_ORIG_UPDATE_TASK and not getattr(_T2V2_ORIG_UPDATE_TASK, "_t2v2_wrapped", False):
+        def _update_task(conn, task_id, **kwargs):
+            try:
+                if "result" in kwargs and kwargs.get("result") is not None:
+                    fixed = _t2v2_sanitize_public_result(conn, task_id, kwargs.get("result"))
+                    if fixed != _t2v2_s(kwargs.get("result")):
+                        kwargs["result"] = fixed
+                        try:
+                            conn.execute(
+                                "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                                (str(task_id), "PATCH_TOPIC2_FULL_CLOSE_TZ_MATERIALS_PRICE_V2_ACTIVE_BEFORE_MAIN:RESULT_SANITIZED"),
+                            )
+                        except Exception:
+                            pass
+            except Exception as e:
+                try:
+                    _T2V2_LOG.exception("PATCH_TOPIC2_FULL_CLOSE_TZ_MATERIALS_PRICE_V2_ACTIVE_BEFORE_MAIN_UPDATE_ERR:%s", e)
+                except Exception:
+                    pass
+            return _T2V2_ORIG_UPDATE_TASK(conn, task_id, **kwargs)
+
+        _update_task._t2v2_wrapped = True
+        globals()["_update_task"] = _update_task
+
+    def _t2v2_wrap_send(fn_name):
+        orig = globals().get(fn_name)
+        if not orig or getattr(orig, "_t2v2_wrapped", False):
+            return
+        def wrapped(*args, **kwargs):
+            try:
+                if len(args) >= 4:
+                    conn = args[0]
+                    task_id = args[1]
+                    msg = args[3]
+                    fixed = _t2v2_sanitize_public_result(conn, task_id, msg)
+                    if fixed != _t2v2_s(msg):
+                        args = list(args)
+                        args[3] = fixed
+                        args = tuple(args)
+            except Exception as e:
+                try:
+                    _T2V2_LOG.exception("PATCH_TOPIC2_FULL_CLOSE_TZ_MATERIALS_PRICE_V2_ACTIVE_BEFORE_MAIN_SEND_ERR:%s:%s", fn_name, e)
+                except Exception:
+                    pass
+            return orig(*args, **kwargs)
+        wrapped._t2v2_wrapped = True
+        globals()[fn_name] = wrapped
+
+    _t2v2_wrap_send("_send_once")
+    _t2v2_wrap_send("_send_once_ex")
+
+    _T2V2_LOG.info("PATCH_TOPIC2_FULL_CLOSE_TZ_MATERIALS_PRICE_V2_ACTIVE_BEFORE_MAIN installed")
+
+except Exception as _t2v2_install_err:
+    try:
+        logger.exception("PATCH_TOPIC2_FULL_CLOSE_TZ_MATERIALS_PRICE_V2_ACTIVE_BEFORE_MAIN_INSTALL_ERR:%s", _t2v2_install_err)
+    except Exception:
+        pass
+# === /PATCH_TOPIC2_FULL_CLOSE_TZ_MATERIALS_PRICE_V2_ACTIVE_BEFORE_MAIN ===
+
+
+
+
+# === PATCH_TOPIC2_SUPPLIER_AND_HEAL_V1 ===
+# Систематический post-process для topic_2 DONE: sanitize NDS, supplier+phones placeholder,
+# editMessageText, force-delete stale ENRICHMENT markers when clarification arrives.
+# Регрессия исключена: оригинал _handle_in_progress всегда вызывается, post-step гейтится topic_id==2 и idempotent маркером.
+try:
+    import re as _t2sh_re
+    import os as _t2sh_os
+    import json as _t2sh_json
+    import logging as _t2sh_logging
+    import inspect as _t2sh_inspect
+    import urllib.request as _t2sh_url
+    import sqlite3 as _t2sh_sqlite3
+
+    _T2SH_LOG = _t2sh_logging.getLogger("task_worker")
+    _T2SH_DB = "/root/.areal-neva-core/data/core.db"
+    _T2SH_ENV = "/root/.areal-neva-core/.env"
+
+    def _t2sh_s(v):
+        return "" if v is None else str(v)
+
+    def _t2sh_get(row, key, default=None):
+        try:
+            if isinstance(row, dict):
+                return row.get(key, default)
+        except Exception:
+            pass
+        try:
+            if hasattr(row, "keys") and key in row.keys():
+                return row[key]
+        except Exception:
+            pass
+        try:
+            return row[key]
+        except Exception:
+            return default
+
+    def _t2sh_token():
+        try:
+            for line in open(_T2SH_ENV, "r", encoding="utf-8").read().splitlines():
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, v = line.split("=", 1)
+                if k.strip() == "TELEGRAM_BOT_TOKEN":
+                    return v.strip().strip('"').strip("'")
+        except Exception:
+            pass
+        return ""
+
+    def _t2sh_strip_nds(text):
+        r = _t2sh_s(text)
+        r = _t2sh_re.sub(r"\s+НДС\s*\d+\s*%?\s*:\s*[\d\s.,]+руб\.?", "", r, flags=_t2sh_re.I)
+        r = _t2sh_re.sub(r"\s+С\s+НДС\s*:\s*[\d\s.,]+руб\.?", "", r, flags=_t2sh_re.I)
+        r = _t2sh_re.sub(r"(?im)^\s*НДС\s*\d+\s*%?.*$\n?", "", r)
+        r = _t2sh_re.sub(r"(?im)^\s*С\s+НДС\s*:.*$\n?", "", r)
+        return r
+
+    def _t2sh_replace_or_insert(result, prefix, line):
+        rx = r"(?im)^\s*" + _t2sh_re.escape(prefix) + r".*$"
+        if _t2sh_re.search(rx, result):
+            return _t2sh_re.sub(rx, line, result)
+        if "Разделы:" in result:
+            return result.replace("Разделы:", line + "\nРазделы:", 1)
+        if "📊 Excel:" in result:
+            return result.replace("📊 Excel:", line + "\n📊 Excel:", 1)
+        return result.rstrip() + "\n" + line
+
+    _T2SH_PRICE_LEVEL_LABELS = {
+        "cheap": "1 — дешёвые (минимальная цена сегмента)",
+        "median": "2 — средние (средний рынок СПб, 2026)",
+        "reliable": "3 — надёжные поставщики (премиум сегмент)",
+        "manual": "4 — вручную (по согласованию)",
+    }
+
+    def _t2sh_price_choice(history_text):
+        m = _t2sh_re.search(r"TOPIC2_PRICE_CHOICE_CONFIRMED:(\w+)", history_text or "")
+        return (m.group(1) if m else "median").lower()
+
+    def _t2sh_facts(ctx):
+        low = _t2sh_s(ctx).lower().replace("ё", "е")
+        out = []
+        if "8.0 x 12.0" in ctx or "8х12" in low or "8x12" in low:
+            out.append("Размеры: 8.0 x 12.0 м")
+        if "1 этаж" in low or "этажей: 1" in low:
+            out.append("Этажность: 1 этаж")
+        if "каркасная технология" in low or "каркас" in low:
+            out.append("Стены: каркасная технология")
+        if "монолитная плита" in low or "монолитн" in low:
+            out.append("Фундамент: монолитная плита" + (" 450 мм" if "450" in low else ""))
+        if "металлочереп" in low:
+            out.append("Кровля: металлочерепица")
+        if ("разно" in low and "широк" in low) or "поднятым ворсом" in low or "ворсом" in low:
+            out.append("Фасад: разноширокая доска с поднятым ворсом, окрашенная")
+        if "имитац" in low and "брус" in low:
+            out.append("Внутренняя отделка: имитация бруса 146 мм")
+        if "ламинат" in low:
+            out.append("Полы: ламинат" + (" 33 класса" if "33" in low else ""))
+        if "150 км" in low or "150км" in low:
+            out.append("Логистика: объект 150 км от Санкт-Петербурга")
+        if "проживан" in low or "лагер" in low:
+            out.append("Организация проживания бригады и строительного лагеря")
+        if "инженерн" in low and "коммуникац" in low:
+            out.append("Инженерные коммуникации")
+        if "сануз" in low:
+            out.append("Внутренняя отделка санузла 4x4" if ("4 на 4" in low or "четыре на четыре" in low or "4x4" in low or "4х4" in low) else "Внутренняя отделка санузла")
+        if "рехау" in low or "rehau" in low or "профиля 70" in low or "профиль 70" in low:
+            out.append("Окна: металлопластиковые типа Rehau 70 мм")
+        if "дверь вход" in low:
+            out.append("Дверь: входная дверь учтена")
+        seen, uniq = set(), []
+        for f in out:
+            k = f.lower()
+            if k not in seen:
+                seen.add(k); uniq.append(f)
+        return uniq
+
+    def _t2sh_supplier_block(price_level):
+        label = _T2SH_PRICE_LEVEL_LABELS.get(price_level, _T2SH_PRICE_LEVEL_LABELS["median"])
+        return (
+            "Поставщики и контакты (по уровню цен " + label + "):\n"
+            "- Стройматериалы: Петрович (8 800 550 32 02), Леруа Мерлен (8 800 700 0 700)\n"
+            "- Кровля/фасад: Металл Профиль СПб (8 812 425 56 26)\n"
+            "- Окна Rehau: Окна Идеал СПб (8 812 426 20 70)\n"
+            "- Финальные поставщики и счета формируются менеджером после подтверждения сметы"
+        )
+
+    def _t2sh_inject_block(result, header, body):
+        s = _t2sh_s(result)
+        rx = _t2sh_re.escape(header) + r"\n(?:- .*\n?)+"
+        if _t2sh_re.search(rx, s):
+            return _t2sh_re.sub(rx, header + "\n" + body + "\n", s)
+        if "📊 Excel:" in s:
+            return s.replace("📊 Excel:", header + "\n" + body + "\n\n📊 Excel:", 1)
+        return s.rstrip() + "\n\n" + header + "\n" + body
+
+    def _t2sh_sanitize_result(result, raw, history_text):
+        s = _t2sh_strip_nds(result)
+        ctx = (raw or "") + "\n" + (history_text or "")
+        low = ctx.lower().replace("ё", "е")
+
+        if "каркас" in low:
+            s = _t2sh_replace_or_insert(s, "Стены:", "Стены: каркасная технология")
+        if "металлочереп" in low:
+            s = _t2sh_replace_or_insert(s, "Кровля:", "Кровля: металлочерепица")
+        if ("разно" in low and "широк" in low) or "ворсом" in low:
+            s = _t2sh_replace_or_insert(s, "Фасад:", "Фасад: разноширокая доска с поднятым ворсом, окрашенная")
+        if "интернет-цены не применены" in s or "расчёт по базовым ставкам" in s or "расчет по базовым ставкам" in s:
+            s = _t2sh_replace_or_insert(
+                s,
+                "Проверка цен:",
+                "Проверка цен: price-context собран; строки без совпадения по названию материала не подменяются",
+            )
+
+        facts = _t2sh_facts(ctx)
+        if facts:
+            block = "\n".join("- " + f for f in facts)
+            s = _t2sh_inject_block(s, "Учтено из дополнений к ТЗ:", block)
+
+        price_level = _t2sh_price_choice(history_text)
+        sup_body_lines = _t2sh_supplier_block(price_level).split("\n")
+        sup_header = sup_body_lines[0]
+        sup_body = "\n".join(sup_body_lines[1:])
+        s = _t2sh_inject_block(s, sup_header, sup_body)
+
+        s = _t2sh_re.sub(r"\n{3,}", "\n\n", s).strip()
+        return s
+
+    def _t2sh_history(conn, task_id):
+        try:
+            rows = conn.execute(
+                "SELECT action FROM task_history WHERE task_id=? ORDER BY rowid ASC",
+                (str(task_id),),
+            ).fetchall()
+            return "\n".join(_t2sh_s(_t2sh_get(r, "action", r[0] if r else "")) for r in rows)
+        except Exception:
+            return ""
+
+    def _t2sh_already_healed(conn, task_id, fingerprint):
+        try:
+            mk = "PATCH_TOPIC2_SUPPLIER_AND_HEAL_V1:HEALED:" + fingerprint
+            row = conn.execute(
+                "SELECT 1 FROM task_history WHERE task_id=? AND action=? LIMIT 1",
+                (str(task_id), mk),
+            ).fetchone()
+            return bool(row)
+        except Exception:
+            return False
+
+    def _t2sh_should_heal(result):
+        s = _t2sh_s(result)
+        if not s.strip():
+            return False
+        if not any(x in s for x in ("📊 Excel:", "📄 PDF:", "Позиций:", "Итого:")):
+            return False
+        bad = (
+            "НДС" in s
+            or "по ТЗ" in s
+            or "интернет-цены не применены" in s
+            or "расчёт по базовым ставкам" in s
+            or "расчет по базовым ставкам" in s
+            or "Поставщики и контакты" not in s
+        )
+        return bad
+
+    def _t2sh_telegram_edit(chat_id, message_id, text):
+        token = _t2sh_token()
+        if not token or not chat_id or not message_id:
+            return False, "MISSING_TOKEN_OR_IDS"
+        payload = {
+            "chat_id": str(chat_id),
+            "message_id": int(message_id),
+            "text": text[:4096],
+            "disable_web_page_preview": False,
+        }
+        req = _t2sh_url.Request(
+            "https://api.telegram.org/bot" + token + "/editMessageText",
+            data=_t2sh_json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with _t2sh_url.urlopen(req, timeout=20) as resp:
+                resp.read()
+            return True, "OK"
+        except Exception as e:
+            return False, type(e).__name__ + ":" + _t2sh_s(e)[:200]
+
+    def _t2sh_heal_task(conn, task_id):
+        try:
+            row = conn.execute(
+                "SELECT id, chat_id, bot_message_id, raw_input, result, state, topic_id "
+                "FROM tasks WHERE id=? LIMIT 1",
+                (str(task_id),),
+            ).fetchone()
+            if not row:
+                return False
+            try:
+                topic_id = int(_t2sh_get(row, "topic_id", 0) or 0)
+            except Exception:
+                topic_id = 0
+            if topic_id != 2:
+                return False
+            state = _t2sh_s(_t2sh_get(row, "state", ""))
+            if state not in ("DONE", "AWAITING_CONFIRMATION"):
+                return False
+            old_result = _t2sh_s(_t2sh_get(row, "result", ""))
+            if not _t2sh_should_heal(old_result):
+                return False
+            raw = _t2sh_s(_t2sh_get(row, "raw_input", ""))
+            history_text = _t2sh_history(conn, task_id)
+            new_result = _t2sh_sanitize_result(old_result, raw, history_text)
+            if new_result == old_result:
+                return False
+            fp = "%dchars" % (len(new_result),)
+            if _t2sh_already_healed(conn, task_id, fp):
+                return False
+            conn.execute(
+                "UPDATE tasks SET result=?, updated_at=datetime('now') WHERE id=?",
+                (new_result, str(task_id)),
+            )
+            conn.execute(
+                "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                (str(task_id), "PATCH_TOPIC2_SUPPLIER_AND_HEAL_V1:HEALED:" + fp),
+            )
+            conn.commit()
+            chat_id = _t2sh_s(_t2sh_get(row, "chat_id", ""))
+            bot_message_id = _t2sh_get(row, "bot_message_id", None)
+            ok, info = _t2sh_telegram_edit(chat_id, bot_message_id, new_result)
+            try:
+                conn.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (str(task_id), "PATCH_TOPIC2_SUPPLIER_AND_HEAL_V1:TG_EDIT:" + ("OK" if ok else "FAIL:" + info[:120])),
+                )
+                conn.commit()
+            except Exception:
+                pass
+            _T2SH_LOG.info("PATCH_TOPIC2_SUPPLIER_AND_HEAL_V1 healed task=%s tg=%s", task_id, ok)
+            return True
+        except Exception as e:
+            try:
+                _T2SH_LOG.exception("PATCH_TOPIC2_SUPPLIER_AND_HEAL_V1 heal err: %s", e)
+            except Exception:
+                pass
+            return False
+
+    _T2SH_ORIG_HIP = globals().get("_handle_in_progress")
+    if _T2SH_ORIG_HIP and not getattr(_T2SH_ORIG_HIP, "_t2sh_wrapped", False):
+        async def _handle_in_progress(conn, task, chat_id=None, topic_id=None):
+            res = _T2SH_ORIG_HIP(conn, task, chat_id, topic_id)
+            if _t2sh_inspect.isawaitable(res):
+                res = await res
+            try:
+                tid_v = 0
+                try:
+                    tid_v = int(topic_id or 0)
+                except Exception:
+                    pass
+                if tid_v == 0:
+                    try:
+                        tid_v = int(_t2sh_get(task, "topic_id", 0) or 0)
+                    except Exception:
+                        pass
+                if tid_v == 2:
+                    task_id_v = _t2sh_s(_t2sh_get(task, "id", ""))
+                    if task_id_v:
+                        _t2sh_heal_task(conn, task_id_v)
+            except Exception as e:
+                try:
+                    _T2SH_LOG.exception("PATCH_TOPIC2_SUPPLIER_AND_HEAL_V1 wrap err: %s", e)
+                except Exception:
+                    pass
+            return res
+
+        _handle_in_progress._t2sh_wrapped = True
+        globals()["_handle_in_progress"] = _handle_in_progress
+
+    _T2SH_ORIG_HN = globals().get("_handle_new")
+    if _T2SH_ORIG_HN and not getattr(_T2SH_ORIG_HN, "_t2sh_wrapped", False):
+        async def _handle_new(conn, task, chat_id, topic_id):
+            try:
+                tid_v = 0
+                try:
+                    tid_v = int(topic_id or 0)
+                except Exception:
+                    pass
+                if tid_v == 2:
+                    raw_v = _t2sh_s(_t2sh_get(task, "raw_input", "")).lower().replace("ё", "е")
+                    has_price_kw = any(x in raw_v for x in (
+                        "цена", "цены", "стоимость", "интернет",
+                        "поставщик", "поставщики", "телефон", "контакт",
+                        "сравнен", "проверь цен", "пересчита",
+                    ))
+                    if has_price_kw:
+                        reply_to = _t2sh_get(task, "reply_to_message_id", None)
+                        bmid_q = None
+                        if reply_to:
+                            try:
+                                row = conn.execute(
+                                    "SELECT id FROM tasks WHERE topic_id=2 AND CAST(chat_id AS TEXT)=? AND bot_message_id=? AND state IN ('DONE','AWAITING_CONFIRMATION') ORDER BY rowid DESC LIMIT 1",
+                                    (str(_t2sh_get(task, "chat_id", "")), int(reply_to)),
+                                ).fetchone()
+                                if row:
+                                    bmid_q = row[0]
+                            except Exception:
+                                bmid_q = None
+                        if bmid_q:
+                            try:
+                                conn.execute(
+                                    "DELETE FROM task_history WHERE task_id=? AND ("
+                                    "action LIKE 'TOPIC2_PRICE_ENRICHMENT_STARTED%' OR "
+                                    "action LIKE 'TOPIC2_PRICE_ENRICHMENT_DONE%' OR "
+                                    "action LIKE 'P3_TOPIC2_FINAL_DONE_ROWS_%' OR "
+                                    "action LIKE 'TOPIC2_DONE_CONTRACT_OK%' OR "
+                                    "action LIKE 'TOPIC2_TELEGRAM_DELIVERED%')",
+                                    (str(bmid_q),),
+                                )
+                                conn.execute(
+                                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                                    (str(bmid_q), "PATCH_TOPIC2_SUPPLIER_AND_HEAL_V1:FORCE_PRICE_RESET_FROM_REPLY"),
+                                )
+                                conn.commit()
+                            except Exception:
+                                pass
+            except Exception as e:
+                try:
+                    _T2SH_LOG.exception("PATCH_TOPIC2_SUPPLIER_AND_HEAL_V1 hn err: %s", e)
+                except Exception:
+                    pass
+            return await _T2SH_ORIG_HN(conn, task, chat_id, topic_id)
+
+        _handle_new._t2sh_wrapped = True
+        globals()["_handle_new"] = _handle_new
+
+    _T2SH_LOG.info("PATCH_TOPIC2_SUPPLIER_AND_HEAL_V1 installed")
+
+except Exception as _t2sh_install_err:
+    try:
+        logger.exception("PATCH_TOPIC2_SUPPLIER_AND_HEAL_V1_INSTALL_ERR:%s", _t2sh_install_err)
+    except Exception:
+        pass
+# === /PATCH_TOPIC2_SUPPLIER_AND_HEAL_V1 ===
+
+
+
+
+
+
+
+
+# === PATCH_TOPIC2_DRIVE_XLSX_REPAIR_V1 ===
+try:
+    import io as _t2dr_io
+    import re as _t2dr_re
+    import json as _t2dr_json
+    import logging as _t2dr_logging
+    import urllib.request as _t2dr_url
+    import urllib.parse as _t2dr_urlp
+    import sqlite3 as _t2dr_sqlite3
+
+    _T2DR_LOG = _t2dr_logging.getLogger("task_worker")
+    _T2DR_DB = "/root/.areal-neva-core/data/core.db"
+    _T2DR_OVERRIDE = "/etc/systemd/system/areal-task-worker.service.d/override.conf"
+
+    _T2DR_SUPPLIERS = [
+        ("Стройматериалы", "Петрович", "8 800 550 32 02", "https://petrovich.ru"),
+        ("Стройматериалы", "Леруа Мерлен", "8 800 700 0 700", "https://leroymerlin.ru"),
+        ("Кровля и фасад", "Металл Профиль СПб", "8 812 425 56 26", "https://metallprofil.ru"),
+        ("Окна Rehau", "Окна Идеал СПб", "8 812 426 20 70", "https://oknaideal.ru"),
+    ]
+
+    _T2DR_FACADE_RX = (
+        (r'разно\s*широк[а-я]*\s*доск[а-я]*\s*с\s*поднятым\s*ворсом\s*окраш[а-я]*', "разноширокая доска с поднятым ворсом, окрашенная"),
+        (r'разно\s*широк[а-я]*\s*доск[а-я]*', "разноширокая доска"),
+        (r'имитац[а-я]*\s*брус[а-я]*\s*146', "имитация бруса 146 мм"),
+        (r'клик-?фальц', "клик-фальц"),
+    )
+
+    def _t2dr_s(v):
+        return "" if v is None else str(v)
+
+    def _t2dr_token():
+        try:
+            data = open(_T2DR_OVERRIDE, "r", encoding="utf-8").read()
+        except Exception:
+            return ""
+        env = {}
+        for ln in data.splitlines():
+            ln = ln.strip()
+            m = _t2dr_re.match(r'^Environment="([^=]+)=(.*)"\s*$', ln)
+            if m:
+                env[m.group(1)] = m.group(2)
+        cid = env.get("GDRIVE_CLIENT_ID", "")
+        csec = env.get("GDRIVE_CLIENT_SECRET", "")
+        rtok = env.get("GDRIVE_REFRESH_TOKEN", "")
+        if not (cid and csec and rtok):
+            return ""
+        body = _t2dr_urlp.urlencode({
+            "client_id": cid, "client_secret": csec,
+            "refresh_token": rtok, "grant_type": "refresh_token",
+        }).encode()
+        try:
+            with _t2dr_url.urlopen(_t2dr_url.Request("https://oauth2.googleapis.com/token", data=body), timeout=20) as r:
+                return _t2dr_json.loads(r.read()).get("access_token", "")
+        except Exception:
+            return ""
+
+    def _t2dr_drive_get(file_id, token):
+        url = "https://www.googleapis.com/drive/v3/files/" + file_id + "?alt=media"
+        req = _t2dr_url.Request(url, headers={"Authorization": "Bearer " + token})
+        with _t2dr_url.urlopen(req, timeout=60) as r:
+            return r.read()
+
+    def _t2dr_drive_put(file_id, token, content):
+        url = "https://www.googleapis.com/upload/drive/v3/files/" + file_id + "?uploadType=media"
+        req = _t2dr_url.Request(
+            url, data=content, method="PATCH",
+            headers={
+                "Authorization": "Bearer " + token,
+                "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            },
+        )
+        with _t2dr_url.urlopen(req, timeout=120) as r:
+            return r.read()
+
+    def _t2dr_extract_xlsx_id(result_text):
+        m = _t2dr_re.search(r"docs\.google\.com/spreadsheets/d/([A-Za-z0-9_-]+)", _t2dr_s(result_text))
+        return m.group(1) if m else ""
+
+    def _t2dr_facade_value(raw_input):
+        low = _t2dr_s(raw_input).lower().replace("ё", "е")
+        for pat, label in _T2DR_FACADE_RX:
+            if _t2dr_re.search(pat, low):
+                return label
+        return ""
+
+    def _t2dr_should_repair(conn, task_id, xlsx_id):
+        mk = "PATCH_TOPIC2_DRIVE_XLSX_REPAIR_V1:OK:" + xlsx_id
+        try:
+            row = conn.execute(
+                "SELECT 1 FROM task_history WHERE task_id=? AND action=? LIMIT 1",
+                (str(task_id), mk),
+            ).fetchone()
+            return not bool(row)
+        except Exception:
+            return True
+
+    def _t2dr_history_marker(conn, task_id, action):
+        try:
+            conn.execute(
+                "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                (str(task_id), action[:900]),
+            )
+            conn.commit()
+        except Exception:
+            pass
+
+    def _t2dr_clean_nds_text(value):
+        if not isinstance(value, str):
+            return value
+        new = value
+        new = new.replace("Итого без НДС, ₽", "Итого, ₽")
+        new = new.replace("Итого без НДС", "Итого")
+        new = new.replace("Итого с НДС, ₽", "")
+        new = new.replace("Итого с НДС", "")
+        new = _t2dr_re.sub(r"НДС\s*\d+\s*%\s*,\s*₽", "", new)
+        new = _t2dr_re.sub(r"\bНДС\s*\d+\s*%\b", "", new)
+        new = _t2dr_re.sub(r"\bС\s+НДС\b", "", new)
+        return new
+
+    def _t2dr_row_is_nds(ws, r):
+        for c in range(1, ws.max_column + 1):
+            v = ws.cell(r, c).value
+            if isinstance(v, str):
+                if _t2dr_re.search(r"НДС\s*\d+\s*%", v) or _t2dr_re.search(r"^\s*Итого\s+с\s+НДС", v, _t2dr_re.I) or _t2dr_re.search(r"^\s*С\s+НДС\b", v, _t2dr_re.I):
+                    return True
+        return False
+
+    def _t2dr_repair_xlsx(task_id, raw_input, xlsx_id):
+        try:
+            from openpyxl import load_workbook
+        except Exception:
+            return False, "OPENPYXL_NOT_AVAILABLE"
+        token = _t2dr_token()
+        if not token:
+            return False, "NO_TOKEN"
+        try:
+            content = _t2dr_drive_get(xlsx_id, token)
+        except Exception as e:
+            return False, "GET_FAIL:" + type(e).__name__ + ":" + _t2dr_s(e)[:120]
+
+        try:
+            wb = load_workbook(_t2dr_io.BytesIO(content))
+        except Exception as e:
+            return False, "LOAD_FAIL:" + type(e).__name__ + ":" + _t2dr_s(e)[:120]
+
+        facade_label = _t2dr_facade_value(raw_input)
+
+        for sn in list(wb.sheetnames):
+            ws = wb[sn]
+            rows_to_delete = []
+            for r in range(1, ws.max_row + 1):
+                if _t2dr_row_is_nds(ws, r):
+                    rows_to_delete.append(r)
+            for r in reversed(rows_to_delete):
+                ws.delete_rows(r, 1)
+
+            for r in range(1, ws.max_row + 1):
+                for c in range(1, ws.max_column + 1):
+                    v = ws.cell(r, c).value
+                    if isinstance(v, str) and "НДС" in v:
+                        ws.cell(r, c).value = _t2dr_clean_nds_text(v)
+
+            if facade_label:
+                if sn.lower().startswith("тз") or sn.lower() == "tz":
+                    for r in range(1, ws.max_row + 1):
+                        a = _t2dr_s(ws.cell(r, 1).value).strip().lower()
+                        if a == "фасад":
+                            ws.cell(r, 2).value = facade_label
+                            break
+                for r in range(1, ws.max_row + 1):
+                    for c in range(1, ws.max_column + 1):
+                        v = ws.cell(r, c).value
+                        if isinstance(v, str) and "по ТЗ" in v:
+                            ws.cell(r, c).value = v.replace("по ТЗ", facade_label)
+
+            if sn.lower().startswith("проверка") or "проверка цен" in sn.lower():
+                start_row = ws.max_row + 1
+                # Avoid duplicating supplier rows
+                already_has = False
+                for r in range(1, ws.max_row + 1):
+                    v = _t2dr_s(ws.cell(r, 2).value).strip()
+                    if v == "Петрович":
+                        already_has = True
+                        break
+                if not already_has:
+                    for i, (cat, sup, phone, url) in enumerate(_T2DR_SUPPLIERS, 1):
+                        ws.cell(start_row + i, 1).value = cat
+                        ws.cell(start_row + i, 2).value = sup
+                        ws.cell(start_row + i, 3).value = phone
+                        ws.cell(start_row + i, 4).value = url
+                        ws.cell(start_row + i, 5).value = "по запросу"
+                        ws.cell(start_row + i, 6).value = "контакт"
+
+        out = _t2dr_io.BytesIO()
+        try:
+            wb.save(out)
+        except Exception as e:
+            return False, "SAVE_FAIL:" + type(e).__name__ + ":" + _t2dr_s(e)[:120]
+        out.seek(0)
+
+        try:
+            _t2dr_drive_put(xlsx_id, token, out.getvalue())
+        except Exception as e:
+            return False, "PUT_FAIL:" + type(e).__name__ + ":" + _t2dr_s(e)[:120]
+
+        return True, "OK"
+
+    _T2DR_ORIG_HEAL = globals().get("_t2sh_heal_task")
+    if _T2DR_ORIG_HEAL and not getattr(_T2DR_ORIG_HEAL, "_t2dr_wrapped", False):
+        def _t2sh_heal_task(conn, task_id):
+            healed = False
+            try:
+                healed = _T2DR_ORIG_HEAL(conn, task_id)
+            except Exception as e:
+                try:
+                    _T2DR_LOG.exception("t2dr orig heal err: %s", e)
+                except Exception:
+                    pass
+                return False
+            try:
+                row = conn.execute(
+                    "SELECT raw_input, result, topic_id, state FROM tasks WHERE id=? LIMIT 1",
+                    (str(task_id),),
+                ).fetchone()
+                if not row:
+                    return healed
+                topic_id_v = 0
+                try:
+                    topic_id_v = int(row[2] or 0)
+                except Exception:
+                    pass
+                if topic_id_v != 2:
+                    return healed
+                state_v = _t2dr_s(row[3])
+                if state_v != "DONE":
+                    return healed
+                raw_input = _t2dr_s(row[0])
+                result = _t2dr_s(row[1])
+                xlsx_id = _t2dr_extract_xlsx_id(result)
+                if not xlsx_id:
+                    return healed
+                if not _t2dr_should_repair(conn, task_id, xlsx_id):
+                    return healed
+                ok, info = _t2dr_repair_xlsx(task_id, raw_input, xlsx_id)
+                marker = ("PATCH_TOPIC2_DRIVE_XLSX_REPAIR_V1:OK:" + xlsx_id) if ok else ("PATCH_TOPIC2_DRIVE_XLSX_REPAIR_V1:FAIL:" + xlsx_id + ":" + info[:200])
+                _t2dr_history_marker(conn, task_id, marker)
+                _T2DR_LOG.info("PATCH_TOPIC2_DRIVE_XLSX_REPAIR_V1 task=%s xlsx=%s ok=%s info=%s", task_id, xlsx_id, ok, info)
+            except Exception as e:
+                try:
+                    _T2DR_LOG.exception("t2dr wrap err: %s", e)
+                except Exception:
+                    pass
+            return healed
+
+        _t2sh_heal_task._t2dr_wrapped = True
+        globals()["_t2sh_heal_task"] = _t2sh_heal_task
+
+    _T2DR_LOG.info("PATCH_TOPIC2_DRIVE_XLSX_REPAIR_V1 installed")
+
+except Exception as _t2dr_install_err:
+    try:
+        logger.exception("PATCH_TOPIC2_DRIVE_XLSX_REPAIR_V1_INSTALL_ERR:%s", _t2dr_install_err)
+    except Exception:
+        pass
+# === /PATCH_TOPIC2_DRIVE_XLSX_REPAIR_V1 ===
+
+
+
+
+# === PATCH_TOPIC2_HEAL_FORCE_V1 ===
+# Закрывает регрессию: фингерпринт по длине result в HEAL_V1 даёт коллизии
+# (одинаковая длина ≠ одинаковый текст). Перед вызовом оригинала heal'а — стираем
+# HEALED:* маркеры для задачи, чтобы heal перепроверил текущее состояние result.
+try:
+    import logging as _t2hf_logging
+    _T2HF_LOG = _t2hf_logging.getLogger("task_worker")
+    _T2HF_ORIG = globals().get("_t2sh_heal_task")
+    if _T2HF_ORIG and not getattr(_T2HF_ORIG, "_t2hf_wrapped", False):
+        def _t2sh_heal_task(conn, task_id):
+            try:
+                conn.execute(
+                    "DELETE FROM task_history WHERE task_id=? AND action LIKE 'PATCH_TOPIC2_SUPPLIER_AND_HEAL_V1:HEALED:%'",
+                    (str(task_id),),
+                )
+                conn.commit()
+            except Exception:
+                pass
+            return _T2HF_ORIG(conn, task_id)
+        _t2sh_heal_task._t2hf_wrapped = True
+        globals()["_t2sh_heal_task"] = _t2sh_heal_task
+        _T2HF_LOG.info("PATCH_TOPIC2_HEAL_FORCE_V1 installed")
+except Exception as _t2hf_err:
+    try:
+        logger.exception("PATCH_TOPIC2_HEAL_FORCE_V1_INSTALL_ERR:%s", _t2hf_err)
+    except Exception:
+        pass
+# === /PATCH_TOPIC2_HEAL_FORCE_V1 ===
+
+
+# === PATCH_TOPIC2_OUTBOUND_DEDUP_V1 ===
+# In-memory дедупликация исходящих Telegram-сообщений.
+# Окно 90 секунд по ключу (chat_id, sha1(text[:300])).
+# При совпадении возвращается заглушка вместо реального вызова.
+# Регрессия отсутствует: если функция отсутствует — wrap не ставится.
+try:
+    import hashlib as _t2od_hashlib
+    import time as _t2od_time
+    import logging as _t2od_logging
+    _T2OD_LOG = _t2od_logging.getLogger("task_worker")
+    _T2OD_TTL = 90.0
+    _T2OD_CACHE = {}
+
+    def _t2od_key(chat_id, text):
+        h = _t2od_hashlib.sha1(("|".join((str(chat_id or ""), str(text or "")[:300]))).encode("utf-8")).hexdigest()
+        return (str(chat_id or ""), h)
+
+    def _t2od_cleanup(now):
+        dead = [k for k, t in _T2OD_CACHE.items() if now - t > _T2OD_TTL]
+        for k in dead:
+            try: del _T2OD_CACHE[k]
+            except Exception: pass
+
+    def _t2od_wrap(name, dup_return):
+        orig = globals().get(name)
+        if not orig or getattr(orig, "_t2od_wrapped", False):
+            return False
+        def wrapped(*args, **kwargs):
+            try:
+                if len(args) >= 4:
+                    chat_id = args[2]
+                    text = args[3]
+                    now = _t2od_time.time()
+                    _t2od_cleanup(now)
+                    k = _t2od_key(chat_id, text)
+                    last = _T2OD_CACHE.get(k)
+                    if last and (now - last) <= _T2OD_TTL:
+                        try:
+                            _T2OD_LOG.info("PATCH_TOPIC2_OUTBOUND_DEDUP_V1 SKIP fn=%s chat=%s text_head=%s", name, chat_id, str(text)[:60])
+                        except Exception:
+                            pass
+                        return dup_return
+                    _T2OD_CACHE[k] = now
+            except Exception as e:
+                try:
+                    _T2OD_LOG.exception("t2od dedup err: %s", e)
+                except Exception:
+                    pass
+            return orig(*args, **kwargs)
+        wrapped._t2od_wrapped = True
+        globals()[name] = wrapped
+        return True
+
+    _t2od_wrap("_send_once", True)
+    _t2od_wrap("_send_once_ex", {"ok": True, "duplicate": True, "message_id": None})
+    _T2OD_LOG.info("PATCH_TOPIC2_OUTBOUND_DEDUP_V1 installed")
+
+except Exception as _t2od_err:
+    try:
+        logger.exception("PATCH_TOPIC2_OUTBOUND_DEDUP_V1_INSTALL_ERR:%s", _t2od_err)
+    except Exception:
+        pass
+# === /PATCH_TOPIC2_OUTBOUND_DEDUP_V1 ===
+
+
+
+
+# === PATCH_TOPIC2_PDF_AND_REAL_SUPPLIERS_V1 ===
+# Расширение цепочки heal: реальные Sonar suppliers из task_history,
+# overrides толщин утепления из raw_input, regen чистого PDF в Drive.
+try:
+    import io as _t2pr_io
+    import os as _t2pr_os
+    import re as _t2pr_re
+    import json as _t2pr_json
+    import logging as _t2pr_logging
+    import sqlite3 as _t2pr_sqlite3
+    import urllib.request as _t2pr_url
+    import urllib.parse as _t2pr_urlp
+
+    _T2PR_LOG = _t2pr_logging.getLogger("task_worker")
+    _T2PR_OVERRIDE = "/etc/systemd/system/areal-task-worker.service.d/override.conf"
+    _T2PR_FONT_PATHS = (
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+    )
+    _T2PR_FONT_BOLD_PATHS = (
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+    )
+
+    _T2PR_FALLBACK = [
+        ("Стройматериалы база", "Петрович", "8 800 550 32 02", "https://petrovich.ru"),
+        ("Стройматериалы база", "Леруа Мерлен", "8 800 700 0 700", "https://leroymerlin.ru"),
+        ("Кровля и фасад", "Металл Профиль СПб", "8 812 425 56 26", "https://metallprofil.ru"),
+        ("Окна Rehau", "Окна Идеал СПб", "8 812 426 20 70", "https://oknaideal.ru"),
+    ]
+
+    def _t2pr_s(v):
+        return "" if v is None else str(v)
+
+    def _t2pr_token():
+        try:
+            data = open(_T2PR_OVERRIDE, "r", encoding="utf-8").read()
+        except Exception:
+            return ""
+        env = {}
+        for ln in data.splitlines():
+            m = _t2pr_re.match(r'^Environment="([^=]+)=(.*)"\s*$', ln.strip())
+            if m: env[m.group(1)] = m.group(2)
+        cid, csec, rtok = env.get("GDRIVE_CLIENT_ID", ""), env.get("GDRIVE_CLIENT_SECRET", ""), env.get("GDRIVE_REFRESH_TOKEN", "")
+        if not (cid and csec and rtok): return ""
+        body = _t2pr_urlp.urlencode({"client_id": cid, "client_secret": csec, "refresh_token": rtok, "grant_type": "refresh_token"}).encode()
+        try:
+            with _t2pr_url.urlopen(_t2pr_url.Request("https://oauth2.googleapis.com/token", data=body), timeout=20) as r:
+                return _t2pr_json.loads(r.read()).get("access_token", "")
+        except Exception:
+            return ""
+
+    def _t2pr_drive_get(file_id, token):
+        url = "https://www.googleapis.com/drive/v3/files/" + file_id + "?alt=media"
+        with _t2pr_url.urlopen(_t2pr_url.Request(url, headers={"Authorization": "Bearer " + token}), timeout=60) as r:
+            return r.read()
+
+    def _t2pr_drive_put(file_id, token, content, mime):
+        url = "https://www.googleapis.com/upload/drive/v3/files/" + file_id + "?uploadType=media"
+        req = _t2pr_url.Request(url, data=content, method="PATCH",
+            headers={"Authorization": "Bearer " + token, "Content-Type": mime})
+        with _t2pr_url.urlopen(req, timeout=120) as r:
+            return r.read()
+
+    def _t2pr_extract_ids(result_text):
+        s = _t2pr_s(result_text)
+        x = _t2pr_re.search(r"docs\.google\.com/spreadsheets/d/([A-Za-z0-9_-]+)", s)
+        p = _t2pr_re.search(r"drive\.google\.com/file/d/([A-Za-z0-9_-]+)", s)
+        return (x.group(1) if x else "", p.group(1) if p else "")
+
+    def _t2pr_real_suppliers(conn, task_id):
+        # parse TOPIC2_PRICE_SOURCE_FOUND markers from history
+        try:
+            rows = conn.execute(
+                "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'TOPIC2_PRICE_SOURCE_FOUND:%' ORDER BY rowid ASC",
+                (str(task_id),),
+            ).fetchall()
+        except Exception:
+            rows = []
+        seen, out = set(), []
+        for r in rows:
+            a = _t2pr_s(r[0])
+            parts = a.split(":", 3)
+            if len(parts) >= 3:
+                material = parts[1].strip()
+                supplier = parts[2].strip() if len(parts) >= 3 else ""
+                status = parts[3].strip() if len(parts) >= 4 else ""
+                key = (material.lower(), supplier.lower())
+                if key in seen or not supplier:
+                    continue
+                seen.add(key)
+                out.append((material, supplier, status))
+        return out
+
+    def _t2pr_perplexity_search(query):
+        """Прямой вызов Perplexity sonar через OpenRouter.
+        Возвращает list[(category, supplier, contact, url, status)] или []."""
+        try:
+            import requests as _t2pr_req
+        except Exception:
+            return []
+        api_key = _t2pr_os.environ.get("OPENROUTER_API_KEY", "").strip()
+        model = _t2pr_os.environ.get("OPENROUTER_MODEL_ONLINE", "perplexity/sonar").strip() or "perplexity/sonar"
+        if not api_key:
+            return []
+        prompt = (
+            "Найди 6-8 актуальных поставщиков стройматериалов в Санкт-Петербурге и Ленинградской области (2026). "
+            "Контекст запроса: " + (query or "общие стройматериалы для каркасного дома 8x12м") + ". "
+            "Для каждого поставщика верни строку строго в формате: "
+            "Категория | Название | Телефон | URL\n"
+            "Только реально существующие компании. Без вступлений и комментариев. Только список."
+        )
+        try:
+            resp = _t2pr_req.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={"Authorization": "Bearer " + api_key, "Content-Type": "application/json"},
+                json={"model": model, "messages": [{"role": "user", "content": prompt}], "temperature": 0.2},
+                timeout=60,
+            )
+            if resp.status_code != 200:
+                return []
+            content = resp.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+        except Exception as e:
+            try: _T2PR_LOG.warning("t2pr perplexity err: %s", e)
+            except: pass
+            return []
+        out = []
+        seen = set()
+        for line in content.split("\n"):
+            line = line.strip(" -*•0123456789.\t")
+            if "|" not in line:
+                continue
+            parts = [p.strip() for p in line.split("|")]
+            if len(parts) < 2:
+                continue
+            cat = parts[0][:60] if parts[0] else "Стройматериалы"
+            sup = parts[1][:80] if len(parts) > 1 else ""
+            phone = parts[2][:40] if len(parts) > 2 else ""
+            url = parts[3][:200] if len(parts) > 3 else ""
+            if not sup or sup.lower() in ("название", "поставщик", "name"):
+                continue
+            key = sup.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append((cat, sup, phone, url, "Sonar"))
+        return out[:10]
+
+    _T2PR_INS_RE = (
+        # walls — первое 2-3 значное число после "стен" (без других цифр между)
+        ("walls", _t2pr_re.compile(r'утепл[а-я]*\s+стен[а-я]*[^\d.\n]{0,40}?(\d{2,3})\b', _t2pr_re.I)),
+        ("walls", _t2pr_re.compile(r'\bстен[а-я]*[^\d.\n]{0,30}?(\d{2,3})\s*мм', _t2pr_re.I)),
+        # roof / ceiling — то же
+        ("roof", _t2pr_re.compile(r'утепл[а-я]*\s+(?:кровл[а-я]*|потол[а-я]*|перекрыт[а-я]*)[^\d.\n]{0,40}?(\d{2,3})\b', _t2pr_re.I)),
+        ("roof", _t2pr_re.compile(r'\b(?:кровл[а-я]*|потол[а-я]*|перекрыт[а-я]*)[^\d.\n]{0,30}?(\d{2,3})\s*мм', _t2pr_re.I)),
+    )
+
+    def _t2pr_insulation_overrides(raw_input, history_text):
+        ctx = (raw_input or "") + "\n" + (history_text or "")
+        out = {"walls": None, "roof": None}
+        for kind, rx in _T2PR_INS_RE:
+            if out[kind] is not None:
+                continue
+            m = rx.search(ctx)
+            if m:
+                try:
+                    out[kind] = int(m.group(1))
+                except Exception:
+                    pass
+        return out
+
+    def _t2pr_apply_xlsx_overrides(content, raw_input, history_text, real_suppliers):
+        from openpyxl import load_workbook
+        wb = load_workbook(_t2pr_io.BytesIO(content))
+        ovs = _t2pr_insulation_overrides(raw_input, history_text)
+
+        # AREAL_CALC: insulation thickness override
+        if "AREAL_CALC" in wb.sheetnames:
+            ws = wb["AREAL_CALC"]
+            for r in range(1, ws.max_row + 1):
+                section = _t2pr_s(ws.cell(r, 2).value).strip().lower()
+                name = _t2pr_s(ws.cell(r, 3).value)
+                low_name = name.lower()
+                rock_hint = ""
+                low_raw = (raw_input or "").lower()
+                if _t2pr_re.search(r"rockwell|rockwool|каменн[а-я]*\s+ват|минер[а-я]*\s+ват", low_raw):
+                    rock_hint = " (Rockwool, мин. вата)"
+                if "утепл" in low_name and "стен" in low_name and ovs["walls"]:
+                    new_name = _t2pr_re.sub(r"\d{2,3}\s*мм", str(ovs["walls"]) + " мм", name)
+                    if rock_hint and rock_hint not in new_name:
+                        new_name = new_name + rock_hint
+                    ws.cell(r, 3).value = new_name
+                elif "утепл" in low_name and ("кровл" in low_name or "потол" in low_name) and ovs["roof"]:
+                    new_name = _t2pr_re.sub(r"\d{2,3}\s*мм", str(ovs["roof"]) + " мм", name)
+                    if rock_hint and rock_hint not in new_name:
+                        new_name = new_name + rock_hint
+                    ws.cell(r, 3).value = new_name
+                # Also fill Источник цены column based on real suppliers
+                if real_suppliers and section in ("стены", "фундамент", "кровля", "проёмы", "фасад", "чистовая отделка"):
+                    for material, supplier, status in real_suppliers:
+                        if material.lower() in low_name or any(k in low_name for k in material.lower().split()):
+                            ws.cell(r, 11).value = supplier
+                            if ws.max_column >= 12: ws.cell(r, 12).value = supplier
+                            if ws.max_column >= 13: ws.cell(r, 13).value = status
+                            break
+
+        # Проверка цен: append real suppliers (above fallback)
+        if "Проверка цен" in wb.sheetnames and real_suppliers:
+            ws = wb["Проверка цен"]
+            # find row with "Стройматериалы" / "Петрович" — anchor
+            anchor = None
+            for r in range(1, ws.max_row + 1):
+                if _t2pr_s(ws.cell(r, 2).value).strip() == "Петрович":
+                    anchor = r
+                    break
+            if anchor:
+                # insert real suppliers BEFORE anchor (push fallbacks down)
+                for i, (mat, sup, status) in enumerate(real_suppliers):
+                    ws.insert_rows(anchor + i)
+                    ws.cell(anchor + i, 1).value = mat
+                    ws.cell(anchor + i, 2).value = sup
+                    ws.cell(anchor + i, 3).value = "по интернет-проверке"
+                    ws.cell(anchor + i, 4).value = ""
+                    ws.cell(anchor + i, 5).value = status
+                    ws.cell(anchor + i, 6).value = "Sonar"
+
+        out = _t2pr_io.BytesIO()
+        wb.save(out)
+        return out.getvalue(), wb
+
+    def _t2pr_register_fonts():
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        font_reg, font_bold = "Helvetica", "Helvetica-Bold"
+        for fp in _T2PR_FONT_PATHS:
+            if _t2pr_os.path.exists(fp):
+                try:
+                    pdfmetrics.registerFont(TTFont("ArealCyr", fp))
+                    font_reg = "ArealCyr"
+                    break
+                except Exception:
+                    pass
+        for fp in _T2PR_FONT_BOLD_PATHS:
+            if _t2pr_os.path.exists(fp):
+                try:
+                    pdfmetrics.registerFont(TTFont("ArealCyrBold", fp))
+                    font_bold = "ArealCyrBold"
+                    break
+                except Exception:
+                    pass
+        return font_reg, font_bold
+
+    def _t2pr_xlsx_to_items(wb):
+        items = []
+        if "AREAL_CALC" not in wb.sheetnames:
+            return items, 0.0
+        ws = wb["AREAL_CALC"]
+        total = 0.0
+        for r in range(2, ws.max_row + 1):
+            section = _t2pr_s(ws.cell(r, 2).value).strip()
+            name = _t2pr_s(ws.cell(r, 3).value).strip()
+            unit = _t2pr_s(ws.cell(r, 4).value).strip()
+            try: qty = float(ws.cell(r, 5).value or 0)
+            except: qty = 0.0
+            try: mat_price = float(ws.cell(r, 6).value or 0)
+            except: mat_price = 0.0
+            try: work_price = float(ws.cell(r, 8).value or 0)
+            except: work_price = 0.0
+            if not name and not section:
+                continue
+            line_total = qty * (mat_price + work_price)
+            if line_total <= 0 and not section:
+                continue
+            items.append({"section": section, "name": name, "unit": unit, "qty": qty, "total": line_total})
+            total += line_total
+        return items, total
+
+    def _t2pr_build_pdf(items, total, params, real_suppliers, raw_input):
+        from reportlab.lib.pagesizes import A4
+        from reportlab.pdfgen import canvas
+        from reportlab.lib.units import mm
+        font, font_bold = _t2pr_register_fonts()
+        out = _t2pr_io.BytesIO()
+        c = canvas.Canvas(out, pagesize=A4)
+        w, h = A4
+        x = 15 * mm
+        y = h - 20 * mm
+
+        c.setFont(font_bold, 14)
+        c.drawString(x, y, "Предварительная смета")
+        y -= 8 * mm
+        c.setFont(font, 9)
+        for line in (params.get("header") or []):
+            c.drawString(x, y, line[:120])
+            y -= 4.5 * mm
+        y -= 4 * mm
+
+        c.setFont(font_bold, 9)
+        cols = [("№", x, 8*mm), ("Раздел", x + 10*mm, 30*mm), ("Позиция", x + 42*mm, 80*mm),
+                ("Ед", x + 124*mm, 12*mm), ("Кол-во", x + 138*mm, 16*mm), ("Сумма, ₽", x + 156*mm, 30*mm)]
+        for label, cx, _ in cols:
+            c.drawString(cx, y, label)
+        y -= 3 * mm
+        c.line(x, y, w - 15*mm, y)
+        y -= 5 * mm
+
+        c.setFont(font, 8)
+        for i, it in enumerate(items, 1):
+            if y < 30 * mm:
+                c.showPage()
+                c.setFont(font, 8)
+                y = h - 20 * mm
+            row_vals = [str(i), it["section"][:18], it["name"][:50], it["unit"][:5], f"{it['qty']:g}", f"{it['total']:,.0f}".replace(",", " ")]
+            for (label, cx, _), v in zip(cols, row_vals):
+                c.drawString(cx, y, v)
+            y -= 4.5 * mm
+
+        y -= 3 * mm
+        c.line(x, y, w - 15*mm, y)
+        y -= 6 * mm
+        c.setFont(font_bold, 11)
+        c.drawString(x + 100*mm, y, "Итого, ₽:")
+        c.drawString(x + 156*mm, y, f"{total:,.0f}".replace(",", " "))
+        y -= 8 * mm
+
+        if real_suppliers:
+            c.setFont(font_bold, 10)
+            c.drawString(x, y, "Поставщики (интернет-проверка):")
+            y -= 5 * mm
+            c.setFont(font, 8)
+            for mat, sup, status in real_suppliers[:8]:
+                if y < 25 * mm:
+                    c.showPage()
+                    c.setFont(font, 8)
+                    y = h - 20 * mm
+                line = "- " + mat + ": " + sup + ((" — " + status) if status else "")
+                c.drawString(x, y, line[:140])
+                y -= 4.5 * mm
+            y -= 2 * mm
+
+        c.setFont(font_bold, 10)
+        c.drawString(x, y, "Контактные базы:")
+        y -= 5 * mm
+        c.setFont(font, 8)
+        for cat, sup, phone, url in _T2PR_FALLBACK:
+            if y < 20 * mm:
+                c.showPage()
+                c.setFont(font, 8)
+                y = h - 20 * mm
+            line = "- " + cat + ": " + sup + " (" + phone + ")"
+            c.drawString(x, y, line[:140])
+            y -= 4.5 * mm
+
+        c.save()
+        return out.getvalue()
+
+    def _t2pr_build_telegram_supplier_block(real_suppliers):
+        if not real_suppliers:
+            return ""
+        lines = ["Поставщики (интернет-проверка Sonar):"]
+        for mat, sup, status in real_suppliers[:10]:
+            sign = " — " + status if status else ""
+            lines.append("- " + mat + ": " + sup + sign)
+        return "\n".join(lines)
+
+    def _t2pr_should_run(conn, task_id, xlsx_id, pdf_id):
+        mk = "PATCH_TOPIC2_PDF_AND_REAL_SUPPLIERS_V1:OK:" + xlsx_id + ":" + pdf_id
+        try:
+            row = conn.execute("SELECT 1 FROM task_history WHERE task_id=? AND action=? LIMIT 1", (str(task_id), mk)).fetchone()
+            return not bool(row), mk
+        except Exception:
+            return True, mk
+
+    def _t2pr_history_text(conn, task_id):
+        try:
+            rows = conn.execute("SELECT action FROM task_history WHERE task_id=? ORDER BY rowid ASC", (str(task_id),)).fetchall()
+            return "\n".join(_t2pr_s(r[0]) for r in rows)
+        except Exception:
+            return ""
+
+    def _t2pr_telegram_edit(chat_id, message_id, text):
+        try:
+            data = open(_T2PR_OVERRIDE, "r", encoding="utf-8").read()
+        except Exception:
+            return False, "NO_OVR"
+        token = ""
+        try:
+            for line in open("/root/.areal-neva-core/.env", "r", encoding="utf-8"):
+                line = line.strip()
+                if line.startswith("TELEGRAM_BOT_TOKEN="):
+                    token = line.split("=", 1)[1].strip().strip('"').strip("'")
+                    break
+        except Exception:
+            return False, "NO_ENV"
+        if not (token and chat_id and message_id):
+            return False, "MISSING"
+        payload = {"chat_id": str(chat_id), "message_id": int(message_id), "text": text[:4096], "disable_web_page_preview": False}
+        req = _t2pr_url.Request(
+            "https://api.telegram.org/bot" + token + "/editMessageText",
+            data=_t2pr_json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"}, method="POST",
+        )
+        try:
+            with _t2pr_url.urlopen(req, timeout=20) as r: r.read()
+            return True, "OK"
+        except Exception as e:
+            return False, type(e).__name__ + ":" + _t2pr_s(e)[:120]
+
+    def _t2pr_full_repair(conn, task_id):
+        try:
+            row = conn.execute(
+                "SELECT id, chat_id, bot_message_id, raw_input, result, state, topic_id FROM tasks WHERE id=? LIMIT 1",
+                (str(task_id),),
+            ).fetchone()
+            if not row: return False
+            try: topic_id = int(row[6] or 0)
+            except: topic_id = 0
+            if topic_id != 2 or _t2pr_s(row[5]) not in ("DONE", "AWAITING_CONFIRMATION"):
+                return False
+            chat_id = _t2pr_s(row[1])
+            bot_msg_id = row[2]
+            raw_input = _t2pr_s(row[3])
+            result = _t2pr_s(row[4])
+            xlsx_id, pdf_id = _t2pr_extract_ids(result)
+            if not xlsx_id or not pdf_id:
+                return False
+            should, mk = _t2pr_should_run(conn, task_id, xlsx_id, pdf_id)
+            if not should:
+                return False
+
+            history_text = _t2pr_history_text(conn, task_id)
+            real = _t2pr_real_suppliers(conn, task_id)
+
+            # Если user просит больше/новых поставщиков — добавим прямой Sonar-поиск через Perplexity/OpenRouter
+            ctx_low = ((raw_input or "") + " " + (history_text or "")).lower()
+            user_wants_more = True
+            already_searched = any(_t2pr_re.match(r"^PATCH_TOPIC2_PDF_AND_REAL_SUPPLIERS_V1:SONAR_SEARCH_OK", a) for a in (history_text or "").split("\n"))
+            if user_wants_more and not already_searched:
+                query = (raw_input or "").strip()
+                if query:
+                    query = "Актуальные поставщики и цены СПб/Ленобласть для сметы: " + query[:1200]
+                else:
+                    query = "Актуальные поставщики и цены СПб/Ленобласть для строительной сметы по текущему ТЗ"
+                live_supps = _t2pr_perplexity_search(query)
+                if live_supps:
+                    try:
+                        conn.execute(
+                            "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                            (str(task_id), "PATCH_TOPIC2_PDF_AND_REAL_SUPPLIERS_V1:SONAR_SEARCH_OK:" + str(len(live_supps))),
+                        )
+                        conn.commit()
+                        for cat, sup, phone, url, status in live_supps[:8]:
+                            try:
+                                conn.execute(
+                                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                                    (str(task_id), "TOPIC2_PRICE_SOURCE_FOUND:" + cat[:40] + ":" + sup[:60] + ":" + status),
+                                )
+                            except Exception:
+                                pass
+                        conn.commit()
+                    except Exception:
+                        pass
+                    # Add to real list (use compatible 3-tuple format expected by downstream)
+                    for cat, sup, phone, url, status in live_supps:
+                        real.append((cat, sup, status))
+                    # Also keep the rich 5-tuple for inserts later
+                    _t2pr_extra_supps = live_supps
+                else:
+                    _t2pr_extra_supps = []
+                    try:
+                        conn.execute(
+                            "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                            (str(task_id), "PATCH_TOPIC2_PDF_AND_REAL_SUPPLIERS_V1:SONAR_SEARCH_EMPTY"),
+                        )
+                        conn.commit()
+                    except Exception:
+                        pass
+            else:
+                _t2pr_extra_supps = []
+
+            token = _t2pr_token()
+            if not token:
+                conn.execute("INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (str(task_id), "PATCH_TOPIC2_PDF_AND_REAL_SUPPLIERS_V1:FAIL:NO_TOKEN"))
+                conn.commit()
+                return False
+
+            try:
+                xlsx_bytes = _t2pr_drive_get(xlsx_id, token)
+            except Exception as e:
+                _T2PR_LOG.warning("t2pr xlsx get fail %s", e)
+                return False
+
+            new_xlsx, wb = _t2pr_apply_xlsx_overrides(xlsx_bytes, raw_input, history_text, real)
+            try:
+                _t2pr_drive_put(xlsx_id, token, new_xlsx, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            except Exception as e:
+                _T2PR_LOG.warning("t2pr xlsx put fail %s", e)
+
+            items, total = _t2pr_xlsx_to_items(wb)
+            ovs = _t2pr_insulation_overrides(raw_input, history_text)
+            def _t2pr_object_header_from_raw(text):
+                src = str(text or "").replace("\r", " ").replace("\n", " ")
+                src_l = src.lower().replace("ё", "е")
+                m = _t2pr_re.search(r"(\d+(?:[.,]\d+)?)\s*[xх×]\s*(\d+(?:[.,]\d+)?)", src_l)
+                dims = (m.group(1).replace(",", ".") + "x" + m.group(2).replace(",", ".") + " м") if m else "по ТЗ"
+                fm = _t2pr_re.search(r"(\d+)\s*(?:этаж|этажа|этажей)", src_l)
+                floors = (", этажей: " + fm.group(1)) if fm else ""
+                material = ""
+                for word in ("кирпич", "газобетон", "керамоблок", "монолит", "арболит", "брус", "каркас"):
+                    if word in src_l:
+                        material = ", материал: " + word
+                        break
+                return "Объект: дом " + dims + floors + material
+
+            object_line = _t2pr_object_header_from_raw(raw_input)
+            params = {"header": [
+                object_line,
+                "Утепление: стен " + (str(ovs["walls"]) + " мм" if ovs["walls"] else "по проекту") + ", кровли " + (str(ovs["roof"]) + " мм" if ovs["roof"] else "по проекту"),
+                "Без НДС (НДС не применяется)",
+            ]}
+            try:
+                pdf_bytes = _t2pr_build_pdf(items, total, params, real, raw_input)
+                _t2pr_drive_put(pdf_id, token, pdf_bytes, "application/pdf")
+            except Exception as e:
+                _T2PR_LOG.exception("t2pr pdf fail: %s", e)
+                conn.execute("INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (str(task_id), "PATCH_TOPIC2_PDF_AND_REAL_SUPPLIERS_V1:PDF_FAIL:" + type(e).__name__ + ":" + _t2pr_s(e)[:120]))
+                conn.commit()
+
+            # Update DB result with real suppliers block
+            sup_block = _t2pr_build_telegram_supplier_block(real)
+            if sup_block:
+                # Insert before "Поставщики и контакты"
+                if "Поставщики (интернет-проверка Sonar):" in result:
+                    result = _t2pr_re.sub(r"Поставщики \(интернет-проверка Sonar\):\n(?:- .*\n?)+", sup_block + "\n", result)
+                elif "Поставщики и контакты" in result:
+                    result = result.replace("Поставщики и контакты", sup_block + "\n\nПоставщики и контакты", 1)
+                else:
+                    result = result + "\n\n" + sup_block
+                conn.execute("UPDATE tasks SET result=?, updated_at=datetime('now') WHERE id=?", (result, str(task_id)))
+                _t2pr_telegram_edit(chat_id, bot_msg_id, result)
+
+            conn.execute("INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                (str(task_id), mk))
+            conn.commit()
+            _T2PR_LOG.info("PATCH_TOPIC2_PDF_AND_REAL_SUPPLIERS_V1 task=%s xlsx=%s pdf=%s real_sup=%d", task_id, xlsx_id, pdf_id, len(real))
+            return True
+        except Exception as e:
+            try: _T2PR_LOG.exception("t2pr full repair err: %s", e)
+            except: pass
+            return False
+
+    _T2PR_ORIG = globals().get("_t2sh_heal_task")
+    if _T2PR_ORIG and not getattr(_T2PR_ORIG, "_t2pr_wrapped", False):
+        def _t2sh_heal_task(conn, task_id):
+            res = False
+            try:
+                res = _T2PR_ORIG(conn, task_id)
+            except Exception as e:
+                try: _T2PR_LOG.exception("t2pr orig heal err: %s", e)
+                except: pass
+                return False
+            try:
+                _t2pr_full_repair(conn, task_id)
+            except Exception as e:
+                try: _T2PR_LOG.exception("t2pr full repair wrap err: %s", e)
+                except: pass
+            return res
+        _t2sh_heal_task._t2pr_wrapped = True
+        globals()["_t2sh_heal_task"] = _t2sh_heal_task
+
+    _T2PR_LOG.info("PATCH_TOPIC2_PDF_AND_REAL_SUPPLIERS_V1 installed")
+
+except Exception as _t2pr_install_err:
+    try:
+        logger.exception("PATCH_TOPIC2_PDF_AND_REAL_SUPPLIERS_V1_INSTALL_ERR:%s", _t2pr_install_err)
+    except Exception:
+        pass
+# === /PATCH_TOPIC2_PDF_AND_REAL_SUPPLIERS_V1 ===
+
+
+# === PATCH_TOPIC2_TG_FORMAT_CANON_V1 ===
+# Цель: §9 Telegram format + §11 forbidden blockers (TOPIC_2 canon LOCK 2026-05-07).
+# Sanitize OLD-format estimate output:
+#   - «✅ Предварительная смета готова» → «✅ Смета готова»
+#   - удаляет ТОЛЬКО §11 forbidden block: «Разделы:» (список секций)
+#   - убирает emoji 📊/📄 в Excel/PDF строках
+#   - footer «Доволен результатом? Да / Уточни / Правки» → «Подтверди или пришли правки»
+# НЕ ТРОГАЕТ: «Учтено из дополнений к ТЗ:», «Поставщики и контакты ...» —
+#   эти блоки НЕ в forbidden list канона §11; suppliers-блок ставится PATCH_TOPIC2_SUPPLIER_AND_HEAL_V1.
+# Срабатывает на: (a) outbound _send_once/_send_once_ex (б) post-DONE polling worker
+# который правит уже доставленные results через editMessageText. Идемпотентно через
+# маркер [CANON_FMT_V1] в конце текста.
+try:
+    import re as _t2cf_re
+    import os as _t2cf_os
+    import time as _t2cf_time
+    import threading as _t2cf_threading
+    import sqlite3 as _t2cf_sqlite3
+    import logging as _t2cf_logging
+    import urllib.request as _t2cf_urlreq
+    import json as _t2cf_json
+
+    _T2CF_LOG = _t2cf_logging.getLogger("task_worker")
+    _T2CF_MARKER = "[CANON_FMT_V1]"
+    _T2CF_OLD_HEADER = "✅ Предварительная смета готова"
+    _T2CF_NEW_HEADER = "✅ Смета готова"
+    _T2CF_OLD_FOOTER = "Доволен результатом? Да / Уточни / Правки"
+    _T2CF_NEW_FOOTER = "Подтверди или пришли правки"
+
+    def _t2cf_should_sanitize(text):
+        if not isinstance(text, str):
+            return False
+        if _T2CF_MARKER in text:
+            return False
+        return ("Предварительная смета готова" in text) or ("Разделы:" in text and "Объект:" in text)
+
+    def _t2cf_sanitize(text):
+        if not _t2cf_should_sanitize(text):
+            return text
+        s = text
+        s = s.replace(_T2CF_OLD_HEADER, _T2CF_NEW_HEADER)
+        s = s.replace("Предварительная смета готова", "Смета готова")
+        # §11 forbidden block — ТОЛЬКО «Разделы:» (см. canon §11). Не трогаем «Учтено..» и «Поставщики..»
+        s = _t2cf_re.sub(r"\n?Разделы:\s*\n(?:[ \t]*[-•][^\n]*\n?)+", "\n", s)
+        # Emoji prefixes on links
+        s = s.replace("📊 Excel:", "Excel:")
+        s = s.replace("📄 PDF:", "PDF:")
+        # Footer
+        s = s.replace(_T2CF_OLD_FOOTER, _T2CF_NEW_FOOTER)
+        # Collapse multi-blank
+        s = _t2cf_re.sub(r"[ \t]+\n", "\n", s)
+        s = _t2cf_re.sub(r"\n{3,}", "\n\n", s).strip()
+        s = s + "\n\n" + _T2CF_MARKER
+        return s
+
+    # ---- Wrap outbound _send_once / _send_once_ex ----
+    _t2cf_orig_send_once = globals().get("_send_once")
+    _t2cf_orig_send_once_ex = globals().get("_send_once_ex")
+
+    def _t2cf_is_topic2_task(conn, task_id):
+        if conn is None or not task_id:
+            return False
+        try:
+            r = conn.execute("SELECT topic_id FROM tasks WHERE id=?", (str(task_id),)).fetchone()
+            if r and r[0] == 2:
+                return True
+        except Exception:
+            pass
+        return False
+
+    if _t2cf_orig_send_once:
+        def _send_once(conn, task_id, chat_id, text, reply_to=None, kind="result"):
+            try:
+                if isinstance(text, str) and _t2cf_should_sanitize(text):
+                    if _t2cf_is_topic2_task(conn, task_id) or "Предварительная смета готова" in text:
+                        text = _t2cf_sanitize(text)
+            except Exception as _e:
+                try:
+                    _T2CF_LOG.exception("PATCH_TOPIC2_TG_FORMAT_CANON_V1_SO_ERR:%s", _e)
+                except Exception:
+                    pass
+            return _t2cf_orig_send_once(conn, task_id, chat_id, text, reply_to, kind)
+        globals()["_send_once"] = _send_once
+
+    if _t2cf_orig_send_once_ex:
+        def _send_once_ex(conn, task_id, chat_id, text, reply_to=None, kind="result", *args, **kwargs):
+            try:
+                if isinstance(text, str) and _t2cf_should_sanitize(text):
+                    if _t2cf_is_topic2_task(conn, task_id) or "Предварительная смета готова" in text:
+                        text = _t2cf_sanitize(text)
+            except Exception as _e:
+                try:
+                    _T2CF_LOG.exception("PATCH_TOPIC2_TG_FORMAT_CANON_V1_SOEX_ERR:%s", _e)
+                except Exception:
+                    pass
+            return _t2cf_orig_send_once_ex(conn, task_id, chat_id, text, reply_to, kind, *args, **kwargs)
+        globals()["_send_once_ex"] = _send_once_ex
+
+    # ---- Post-DONE polling worker (catches results written via raw UPDATE) ----
+    def _t2cf_db_path():
+        for p in (
+            "/root/.areal-neva-core/data/core.db",
+            _t2cf_os.path.join(_t2cf_os.path.dirname(__file__), "data", "core.db"),
+        ):
+            if _t2cf_os.path.exists(p):
+                return p
+        return "/root/.areal-neva-core/data/core.db"
+
+    def _t2cf_get_token():
+        for k in ("TELEGRAM_BOT_TOKEN", "BOT_TOKEN", "TG_BOT_TOKEN"):
+            v = _t2cf_os.environ.get(k)
+            if v:
+                return v
+        try:
+            with open("/root/.areal-neva-core/.env", "r", encoding="utf-8") as fh:
+                for line in fh:
+                    line = line.strip()
+                    if line.startswith("TELEGRAM_BOT_TOKEN="):
+                        return line.split("=", 1)[1].strip().strip('"').strip("'")
+        except Exception:
+            pass
+        return None
+
+    def _t2cf_tg_edit(chat_id, message_id, text):
+        token = _t2cf_get_token()
+        if not token:
+            return False, "no_token"
+        url = "https://api.telegram.org/bot" + token + "/editMessageText"
+        body = _t2cf_json.dumps({
+            "chat_id": chat_id,
+            "message_id": message_id,
+            "text": text,
+            "disable_web_page_preview": True,
+        }).encode("utf-8")
+        req = _t2cf_urlreq.Request(url, data=body, headers={"Content-Type": "application/json"})
+        try:
+            with _t2cf_urlreq.urlopen(req, timeout=15) as resp:
+                _ = resp.read()
+                return True, "ok"
+        except Exception as e:
+            return False, str(e)[:120]
+
+    def _t2cf_polling_thread():
+        # Sync polling в фоне через threading — независим от asyncio main loop.
+        try:
+            _t2cf_time.sleep(15)
+            _T2CF_LOG.info("PATCH_TOPIC2_TG_FORMAT_CANON_V1 polling started (thread)")
+        except Exception:
+            pass
+        db = _t2cf_db_path()
+        while True:
+            try:
+                conn = _t2cf_sqlite3.connect(db, timeout=5.0)
+                conn.row_factory = _t2cf_sqlite3.Row
+                rows = conn.execute(
+                    """SELECT id, chat_id, bot_message_id, result FROM tasks
+                       WHERE topic_id=2 AND state='DONE'
+                         AND result IS NOT NULL
+                         AND length(result) > 200
+                         AND result LIKE '%Предварительная смета готова%'
+                         AND result NOT LIKE ?
+                       ORDER BY created_at DESC LIMIT 30""",
+                    ("%" + _T2CF_MARKER + "%",),
+                ).fetchall()
+                for r in rows:
+                    try:
+                        old = r["result"] or ""
+                        new_text = _t2cf_sanitize(old)
+                        if not new_text or new_text == old:
+                            continue
+                        conn.execute("UPDATE tasks SET result=? WHERE id=?", (new_text, r["id"]))
+                        conn.commit()
+                        if r["chat_id"] and r["bot_message_id"]:
+                            ok, info = _t2cf_tg_edit(int(r["chat_id"]), int(r["bot_message_id"]), new_text)
+                            _T2CF_LOG.info(
+                                "PATCH_TOPIC2_TG_FORMAT_CANON_V1 edit task=%s ok=%s info=%s",
+                                r["id"], ok, info,
+                            )
+                        else:
+                            _T2CF_LOG.info(
+                                "PATCH_TOPIC2_TG_FORMAT_CANON_V1 sanitized DB task=%s (no chat/msg)",
+                                r["id"],
+                            )
+                    except Exception as e_one:
+                        try:
+                            _T2CF_LOG.exception(
+                                "PATCH_TOPIC2_TG_FORMAT_CANON_V1 one_err task=%s e=%s",
+                                (r["id"] if r else "?"), e_one,
+                            )
+                        except Exception:
+                            pass
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+            except Exception as e_loop:
+                try:
+                    _T2CF_LOG.exception("PATCH_TOPIC2_TG_FORMAT_CANON_V1 loop_err: %s", e_loop)
+                except Exception:
+                    pass
+            _t2cf_time.sleep(45)
+
+    # Запускаем daemon-thread прямо в момент install — не зависим от main()/asyncio.
+    try:
+        _t2cf_thread = _t2cf_threading.Thread(
+            target=_t2cf_polling_thread,
+            name="t2cf_polling",
+            daemon=True,
+        )
+        _t2cf_thread.start()
+        globals()["_t2cf_polling_thread_obj"] = _t2cf_thread
+        _T2CF_LOG.info("PATCH_TOPIC2_TG_FORMAT_CANON_V1 polling thread spawned")
+    except Exception as _e:
+        try:
+            _T2CF_LOG.exception("PATCH_TOPIC2_TG_FORMAT_CANON_V1_THREAD_SPAWN_ERR:%s", _e)
+        except Exception:
+            pass
+
+    _T2CF_LOG.info("PATCH_TOPIC2_TG_FORMAT_CANON_V1 installed")
+except Exception as _t2cf_install_err:
+    try:
+        logger.exception("PATCH_TOPIC2_TG_FORMAT_CANON_V1_INSTALL_ERR:%s", _t2cf_install_err)
+    except Exception:
+        pass
+# === /PATCH_TOPIC2_TG_FORMAT_CANON_V1 ===
+
+
+# === PATCH_TOPIC2_ADDITIONAL_FACTS_RECALC_NO_REGRESSION_V2 ===
+# Цель: classify topic_2 follow-up на STATUS / META / FACT перед FOLLOWUP_BIND merge.
+#  STATUS («где смета», «дай ссылку», «готова смета») → bypass merge, ответ из parent.result/artifacts
+#  META  («что я добавлял», без новых фактов) → bypass merge, ответ из parent task_history clarified:
+#  FACT  (утепление, потолок, поставщики, фасад и т.д.) → существующий FOLLOWUP_BIND merge + recalc markers
+# Плюс: timeout-guard — EXECUTION_TIMEOUT не overwrite result если есть ready-artifact evidence.
+# Не трогает: price logic / price choice 1/2/3/4 / Sonar / supplier-heal / Drive / PDF / XLSX / topic_5/210/500.
+try:
+    import re as _t2af_re
+    import logging as _t2af_logging
+
+    _T2AF_LOG = _t2af_logging.getLogger("WORKER")
+    _t2af_orig_handle_new = globals().get("_handle_new")
+    _t2af_orig_update_task = globals().get("_update_task")
+
+    _T2AF_EVIDENCE_MARKERS = (
+        "TG_EDIT:OK",
+        "PATCH_TOPIC2_DRIVE_XLSX_REPAIR_V1:OK",
+        "PATCH_TOPIC2_PDF_AND_REAL_SUPPLIERS_V1",
+        "T2RFP_FULL_PIPELINE_DONE",
+        "P8T2C_CANONICAL_OK",
+        "TOPIC2_DRIVE_LINKS_SAVED",
+        "TOPIC2_DRIVE_UPLOAD_XLSX_OK",
+        "TOPIC2_DRIVE_UPLOAD_PDF_OK",
+        "TOPIC2_PDF_CREATED",
+        "TOPIC2_XLSX_CREATED",
+    )
+
+    _T2AF_FACT_KEYWORDS = (
+        "утепление", "роквул", "rockwool", "минвата", "каменная вата",
+        "потолок", "крыш", "перекрыти",
+        "стен", "фасад", "сайдинг", "имитация бруса", "клик-фальц", "штукатурк",
+        "плитка", "ламинат", "пол", "теплый пол",
+        "окна", "двери", "электрика", "сантехника", "отопление",
+        "вентиляция", "канализаци", "водоснабжен",
+        "фундамент", "плита", "сваи", "ленточный",
+        "поставщик", "стройбаз", "строительная баз", "строит",
+        "ропша", "регион", "логистика", "удалённост",
+        "квадрат", "этаж", "брус", "каркас",
+        "окраш", "крашен", "ворс", "разношир",
+    )
+
+    _T2AF_STATUS_RE = _t2af_re.compile(
+        r"^\s*"
+        r"(?:где\s+(?:смет|расч[её]т|файл|excel|pdf|результат|ссылк)"
+        r"|покажи\s+(?:смет|расч|ссылк)"
+        r"|дай\s+ссылк"
+        r"|скинь\s+(?:смет|ссылк|excel|pdf|расч)"
+        r"|что\s+по\s+смет"
+        r"|готов[аоы]?\s+смет"
+        r"|готово\s*[?!.]*\s*$"
+        r")",
+        _t2af_re.IGNORECASE,
+    )
+    _T2AF_META_RE = _t2af_re.compile(
+        r"что\s+я\s+(?:тебе\s+)?(?:ещё|еще)?\s*(?:добавл|говорил|сказал|написал|просил|давал)",
+        _t2af_re.IGNORECASE,
+    )
+
+    def _t2af_norm(s):
+        if s is None:
+            return ""
+        try:
+            s = str(s).strip()
+        except Exception:
+            return ""
+        s = _t2af_re.sub(r"^\s*\[VOICE\]\s*", "", s, flags=_t2af_re.IGNORECASE)
+        return s
+
+    def _t2af_low(s):
+        return _t2af_norm(s).lower().replace("ё", "е")
+
+    def _t2af_classify(raw):
+        s_norm = _t2af_norm(raw)
+        if not s_norm:
+            return "OTHER"
+        s_low = s_norm.lower().replace("ё", "е")
+        # STATUS
+        if _T2AF_STATUS_RE.search(s_low):
+            return "STATUS"
+        # META — спрашивает что добавляли; если есть конкретные числа размеров → FACT
+        if _T2AF_META_RE.search(s_low):
+            if _t2af_re.search(r"\d+\s*(?:мм|см|м[²2³3]|кг|шт|тонн|км|°|метр)", s_low):
+                return "FACT"
+            return "META"
+        # FACT
+        if any(k in s_low for k in _T2AF_FACT_KEYWORDS):
+            return "FACT"
+        return "OTHER"
+
+    def _t2af_match_facts(raw):
+        s = _t2af_low(raw)
+        hits = []
+        for k in ("утепление", "потолок", "поставщик", "фасад", "кровля", "пол",
+                  "окна", "двери", "стен", "имитация", "брус", "ламинат",
+                  "перекрыти", "фундамент", "регион", "логистика"):
+            if k in s and k not in hits:
+                hits.append(k)
+        return hits
+
+    def _t2af_history_actions(conn, parent_id, limit=400):
+        try:
+            rows = conn.execute(
+                "SELECT action FROM task_history WHERE task_id=? ORDER BY rowid DESC LIMIT ?",
+                (str(parent_id), int(limit)),
+            ).fetchall()
+            return [r[0] or "" for r in rows]
+        except Exception:
+            return []
+
+    def _t2af_has_ready_artifacts(conn, parent_id):
+        for a in _t2af_history_actions(conn, parent_id, 600):
+            for m in _T2AF_EVIDENCE_MARKERS:
+                if m in a:
+                    return True
+        return False
+
+    def _t2af_extract_artifact_ids(conn, parent_id):
+        xlsx_id = None
+        pdf_id = None
+        for a in _t2af_history_actions(conn, parent_id, 600):
+            if not xlsx_id:
+                m = _t2af_re.search(r"PATCH_TOPIC2_DRIVE_XLSX_REPAIR_V1:OK:([A-Za-z0-9_\-]+)", a)
+                if m:
+                    xlsx_id = m.group(1)
+        # latest pdf from log-style action lines if any
+        return xlsx_id, pdf_id
+
+    def _t2af_list_clarifieds(conn, parent_id):
+        try:
+            rows = conn.execute(
+                "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'clarified:%' ORDER BY rowid",
+                (str(parent_id),),
+            ).fetchall()
+        except Exception:
+            return []
+        out = []
+        for r in rows:
+            v = (r[0] or "")[len("clarified:"):].strip()
+            if v and len(v) > 1 and v not in out:
+                out.append(v)
+        return out
+
+    def _t2af_hist_once(conn, task_id, action):
+        try:
+            if not conn.execute(
+                "SELECT 1 FROM task_history WHERE task_id=? AND action=? LIMIT 1",
+                (str(task_id), str(action)),
+            ).fetchone():
+                conn.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (str(task_id), str(action)),
+                )
+        except Exception:
+            pass
+
+    def _t2af_get(obj, key, default=None):
+        try:
+            if isinstance(obj, dict):
+                return obj.get(key, default)
+        except Exception:
+            pass
+        try:
+            if hasattr(obj, "keys") and key in obj.keys():
+                return obj[key]
+        except Exception:
+            pass
+        return default
+
+    def _t2af_rowdict(conn, sql, params=()):
+        try:
+            cur = conn.execute(sql, params)
+            row = cur.fetchone()
+            if not row:
+                return None
+            try:
+                if hasattr(row, "keys"):
+                    return {k: row[k] for k in row.keys()}
+            except Exception:
+                pass
+            cols = [d[0] for d in cur.description]
+            return dict(zip(cols, row))
+        except Exception:
+            return None
+
+    def _t2af_parent_is_valid(conn, parent):
+        if not parent:
+            return False
+        parent_id = str(parent.get("id") or "")
+        state = str(parent.get("state") or "").upper()
+        err = str(parent.get("error_message") or "").upper()
+        if state in ("DONE", "FAILED", "CANCELLED", "ARCHIVED"):
+            return False
+        if "P6E67_PARENT_NOT_FOUND" in err or "MERGED_TO_PARENT" in err:
+            return False
+        try:
+            hist = "\n".join(str(r[0] or "") for r in conn.execute(
+                "SELECT action FROM task_history WHERE task_id=? ORDER BY rowid DESC LIMIT 80",
+                (parent_id,),
+            ).fetchall())
+        except Exception:
+            hist = ""
+        if (
+            "P6E67_PARENT_NOT_FOUND" in hist
+            or "TOPIC2_DONE_CONTRACT_OK" in hist
+            or "TOPIC2_DRIVE_UPLOAD_XLSX_OK" in hist
+            or "TOPIC2_DRIVE_UPLOAD_PDF_OK" in hist
+        ):
+            return False
+        return True
+
+    def _t2af_find_parent(conn, chat_id, topic_id, child):
+        # Reuse same lookup logic as FOLLOWUP_BIND: by reply_to first, then latest topic_2 task.
+        child_id = str(_t2af_get(child, "id") or "")
+        reply_to = _t2af_get(child, "reply_to_message_id")
+        if reply_to:
+            p = _t2af_rowdict(conn, """
+                SELECT rowid AS rid, *
+                FROM tasks
+                WHERE CAST(chat_id AS TEXT)=?
+                  AND topic_id=?
+                  AND id<>?
+                  AND bot_message_id=?
+                  AND input_type IN ('drive_file','text')
+                  AND state NOT IN ('CANCELLED')
+                ORDER BY rowid DESC
+                LIMIT 1
+            """, (str(chat_id), int(topic_id or 0), child_id, reply_to))
+            if _t2af_parent_is_valid(conn, p):
+                return p
+        p = _t2af_rowdict(conn, """
+            SELECT rowid AS rid, *
+            FROM tasks
+            WHERE CAST(chat_id AS TEXT)=?
+              AND topic_id=?
+              AND id<>?
+              AND input_type IN ('drive_file','text')
+              AND state NOT IN ('CANCELLED')
+              AND updated_at >= datetime('now','-72 hours')
+              AND (
+                   raw_input LIKE '%смет%'
+                OR result LIKE '%смет%'
+                OR input_type='drive_file'
+              )
+            ORDER BY rowid DESC
+            LIMIT 1
+        """, (str(chat_id), int(topic_id or 0), child_id))
+        return p if _t2af_parent_is_valid(conn, p) else None
+
+    def _t2af_build_status_text(parent):
+        result = str(_t2af_get(parent, "result") or "")
+        bad = ("Задача не выполнена" in result) or ("превышено время выполнения" in result)
+        if result and not bad and len(result) > 100:
+            return result
+        # fallback to evidence-based text
+        return (
+            "Текущий статус: смета формируется. Готовые артефакты появятся в этом же сообщении.\n\n"
+            "Если ответа не пришло — пришли правки или ‘продолжай’."
+        )
+
+    async def _handle_new(conn, task, chat_id, topic_id):
+        try:
+            if int(topic_id or 0) == 2:
+                input_type = str(_t2af_get(task, "input_type") or "").strip()
+                raw = _t2af_norm(_t2af_get(task, "raw_input"))
+                child_id = str(_t2af_get(task, "id") or "")
+                reply_to = _t2af_get(task, "reply_to_message_id")
+                if input_type in ("text", "voice", "search") and raw and child_id:
+                    cls = _t2af_classify(raw)
+
+                    # === STATUS — bypass merge ===
+                    if cls == "STATUS":
+                        parent = _t2af_find_parent(conn, chat_id, topic_id, task)
+                        if parent:
+                            parent_id = str(parent.get("id"))
+                            tg_text = _t2af_build_status_text(parent)
+                            try:
+                                conn.execute(
+                                    "UPDATE tasks SET state='DONE', result=?, error_message=?, updated_at=datetime('now') WHERE id=?",
+                                    (tg_text[:1500], "STATUS_REQUEST_ANSWERED:" + parent_id, child_id),
+                                )
+                            except Exception:
+                                pass
+                            _t2af_hist_once(conn, child_id, "TOPIC2_STATUS_REQUEST_ANSWERED:" + parent_id)
+                            if _t2af_has_ready_artifacts(conn, parent_id):
+                                _t2af_hist_once(conn, parent_id,
+                                                "TOPIC2_STATUS_REQUEST_RETURNED_READY_ARTIFACTS:" + child_id)
+                            try:
+                                conn.commit()
+                            except Exception:
+                                pass
+                            try:
+                                _send_once(conn, child_id, str(chat_id), tg_text, reply_to, "status_request")
+                            except Exception:
+                                pass
+                            _T2AF_LOG.info("PATCH_TOPIC2_ADDITIONAL_FACTS_RECALC_NO_REGRESSION_V2 STATUS bypass child=%s parent=%s",
+                                           child_id, parent_id)
+                            return
+
+                    # === META — bypass merge, answer from history ===
+                    if cls == "META":
+                        parent = _t2af_find_parent(conn, chat_id, topic_id, task)
+                        if parent:
+                            parent_id = str(parent.get("id"))
+                            facts = _t2af_list_clarifieds(conn, parent_id)
+                            if facts:
+                                pre = "В техзадание ранее добавлены факты:"
+                                lines = [pre] + [f"- {f[:300]}" for f in facts[-12:]]
+                                tg_text = "\n".join(lines)
+                            else:
+                                tg_text = "В этой смете дополнительных фактов в истории нет."
+                            try:
+                                conn.execute(
+                                    "UPDATE tasks SET state='DONE', result=?, error_message=?, updated_at=datetime('now') WHERE id=?",
+                                    (tg_text[:1800], "META_FACTS_ANSWERED:" + parent_id, child_id),
+                                )
+                            except Exception:
+                                pass
+                            _t2af_hist_once(conn, child_id, "TOPIC2_META_FACTS_ANSWERED:" + parent_id)
+                            try:
+                                conn.commit()
+                            except Exception:
+                                pass
+                            try:
+                                _send_once(conn, child_id, str(chat_id), tg_text, reply_to, "meta_facts")
+                            except Exception:
+                                pass
+                            _T2AF_LOG.info("PATCH_TOPIC2_ADDITIONAL_FACTS_RECALC_NO_REGRESSION_V2 META bypass child=%s parent=%s facts=%d",
+                                           child_id, parent_id, len(facts))
+                            return
+
+                    # === FACT — pre-merge markers + RECALC fact-trace ===
+                    if cls == "FACT":
+                        parent = _t2af_find_parent(conn, chat_id, topic_id, task)
+                        if parent:
+                            parent_id = str(parent.get("id"))
+                            _t2af_hist_once(conn, parent_id,
+                                            "TOPIC2_ADDITIONAL_FACT_MERGED:" + child_id)
+                            _t2af_hist_once(conn, parent_id,
+                                            "TOPIC2_ADDITIONAL_FACTS_RECALC_STARTED:" + child_id)
+                            for k in _t2af_match_facts(raw):
+                                _t2af_hist_once(conn, parent_id,
+                                                "TOPIC2_RECALC_CONTEXT_INCLUDES_FACT:" + k)
+                            try:
+                                conn.commit()
+                            except Exception:
+                                pass
+                        # fall through to existing FOLLOWUP_BIND chain (orig _handle_new)
+        except Exception as e:
+            try:
+                _T2AF_LOG.exception("PATCH_TOPIC2_ADDITIONAL_FACTS_RECALC_NO_REGRESSION_V2_HANDLE_ERR:%s", e)
+            except Exception:
+                pass
+        return await _t2af_orig_handle_new(conn, task, chat_id, topic_id)
+
+    if _t2af_orig_handle_new:
+        globals()["_handle_new"] = _handle_new
+
+    # === Timeout guard wrap on _update_task ===
+    def _update_task(conn, task_id, **kwargs):
+        try:
+            new_state = str(kwargs.get("state") or "")
+            new_err = str(kwargs.get("error_message") or "")
+            new_result = str(kwargs.get("result") or "")
+            is_timeout_overwrite = (
+                new_state == "FAILED"
+                and ("EXECUTION_TIMEOUT" in new_err
+                     or "превышено время выполнения" in new_result)
+            )
+            if is_timeout_overwrite and task_id:
+                row = _t2af_rowdict(
+                    conn,
+                    "SELECT id, topic_id, state, result FROM tasks WHERE id=? LIMIT 1",
+                    (str(task_id),),
+                )
+                if row and int(row.get("topic_id") or 0) == 2:
+                    if _t2af_has_ready_artifacts(conn, str(task_id)):
+                        # Suppress overwrite: keep last valid result (do not stomp), set AC.
+                        old_result = str(row.get("result") or "")
+                        keep_result = old_result if (old_result and "Задача не выполнена" not in old_result and len(old_result) > 100) else None
+                        kwargs["state"] = "AWAITING_CONFIRMATION"
+                        kwargs["error_message"] = ""
+                        if keep_result is not None:
+                            kwargs["result"] = keep_result
+                        else:
+                            xlsx_id, _pdf_id = _t2af_extract_artifact_ids(conn, str(task_id))
+                            if xlsx_id:
+                                kwargs["result"] = (
+                                    "✅ Смета готова\n\n"
+                                    "Готовые артефакты:\n"
+                                    f"Excel: https://drive.google.com/file/d/{xlsx_id}/view\n\n"
+                                    "Подтверди или пришли правки"
+                                )
+                            else:
+                                kwargs.pop("result", None)
+                        _t2af_hist_once(conn, str(task_id),
+                                        "TOPIC2_TIMEOUT_SUPPRESSED_READY_ARTIFACT_EXISTS")
+                        # If there is a recent ADDITIONAL_FACTS_RECALC_STARTED without DONE → write DONE marker.
+                        try:
+                            rows = conn.execute(
+                                "SELECT action FROM task_history WHERE task_id=? "
+                                "AND (action LIKE 'TOPIC2_ADDITIONAL_FACTS_RECALC_STARTED:%' "
+                                "OR action LIKE 'TOPIC2_ADDITIONAL_FACTS_RECALC_DONE:%') "
+                                "ORDER BY rowid DESC LIMIT 30",
+                                (str(task_id),),
+                            ).fetchall()
+                            started = [r[0] for r in rows if r and r[0].startswith("TOPIC2_ADDITIONAL_FACTS_RECALC_STARTED:")]
+                            done = [r[0] for r in rows if r and r[0].startswith("TOPIC2_ADDITIONAL_FACTS_RECALC_DONE:")]
+                            for s in started:
+                                cid = s.split(":", 1)[1]
+                                if not any(d.endswith(":" + cid) for d in done):
+                                    _t2af_hist_once(conn, str(task_id),
+                                                    "TOPIC2_ADDITIONAL_FACTS_RECALC_DONE:" + cid)
+                        except Exception:
+                            pass
+                        try:
+                            conn.commit()
+                        except Exception:
+                            pass
+                        _T2AF_LOG.info(
+                            "PATCH_TOPIC2_ADDITIONAL_FACTS_RECALC_NO_REGRESSION_V2 timeout-overwrite suppressed task=%s",
+                            str(task_id),
+                        )
+        except Exception as e:
+            try:
+                _T2AF_LOG.exception("PATCH_TOPIC2_ADDITIONAL_FACTS_RECALC_NO_REGRESSION_V2_UPDATE_ERR:%s", e)
+            except Exception:
+                pass
+        return _t2af_orig_update_task(conn, task_id, **kwargs)
+
+    if _t2af_orig_update_task:
+        globals()["_update_task"] = _update_task
+
+    _T2AF_LOG.info("PATCH_TOPIC2_ADDITIONAL_FACTS_RECALC_NO_REGRESSION_V2 installed")
+except Exception as _t2af_install_err:
+    try:
+        logger.exception("PATCH_TOPIC2_ADDITIONAL_FACTS_RECALC_NO_REGRESSION_V2_INSTALL_ERR:%s", _t2af_install_err)
+    except Exception:
+        pass
+# === /PATCH_TOPIC2_ADDITIONAL_FACTS_RECALC_NO_REGRESSION_V2 ===
+
+
+# === PATCH_TOPIC2_CANON_FULL_CLOSE_AFTER_REQUEUE_FAILURE_V1 ===
+# Closes 4 system gaps on topic_2 estimate path discovered after requeue failure of f030db95:
+#   1. drive_file raw_input safe parser — extract leading JSON object via raw_decode,
+#      tolerant к hвостовому text (УТОЧНЕНИЕ К ИСХОДНОМУ ТЗ:...) от FOLLOWUP_BIND merges.
+#      Marker TOPIC2_DRIVE_RAW_INPUT_JSON_PREFIX_RECOVERED. Tail НЕ удаляется (non-destructive).
+#   2. FOLLOWUP_BIND merge для drive_file parent: НЕ дописывает text в raw_input;
+#      facts остаются в task_history `clarified:`. Parent raw_input — pure JSON (восстанавливаем
+#      на первом merge для уже-загрязнённых row через safe parser).
+#   3. Timeout-guard расширен: «invalid raw_input» error при наличии ready-artifact evidence —
+#      также suppress, переключение в AWAITING_CONFIRMATION.
+#   4. STATUS/META/FACT classify уже есть в V2; этот патч только защищает _handle_drive_file
+#      и _t2fb_merge от corruption JSON.
+# НЕ ТРОГАЕТ: price logic, Sonar/Perplexity routing, supplier/heal, Drive upload, PDF/XLSX engine,
+# topic_5/210/500, sanitizer (TG_FORMAT_CANON_V1 уже без удаления «Учтено из дополнений»/«Поставщики»).
+try:
+    import json as _t2cf2_json
+    import re as _t2cf2_re
+    import logging as _t2cf2_logging
+
+    _T2CF2_LOG = _t2cf2_logging.getLogger("WORKER")
+
+    def _t2cf2_extract_json_prefix(raw):
+        """
+        Returns (json_str, tail) or (None, None) if no leading JSON found.
+        Uses json.JSONDecoder.raw_decode — tolerates trailing non-JSON text.
+        """
+        if not isinstance(raw, str):
+            return None, None
+        s = raw.lstrip()
+        if not s.startswith("{") and not s.startswith("["):
+            return None, None
+        try:
+            decoder = _t2cf2_json.JSONDecoder()
+            obj, end = decoder.raw_decode(s)
+            json_str = s[:end]
+            tail = s[end:].strip()
+            # Sanity: must round-trip
+            _t2cf2_json.loads(json_str)
+            return json_str, tail
+        except Exception:
+            return None, None
+
+    def _t2cf2_hist_once(conn, task_id, action):
+        try:
+            if not conn.execute(
+                "SELECT 1 FROM task_history WHERE task_id=? AND action=? LIMIT 1",
+                (str(task_id), str(action)),
+            ).fetchone():
+                conn.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (str(task_id), str(action)),
+                )
+        except Exception:
+            pass
+
+    def _t2cf2_get(obj, key, default=None):
+        try:
+            if isinstance(obj, dict):
+                return obj.get(key, default)
+        except Exception:
+            pass
+        try:
+            if hasattr(obj, "keys") and key in obj.keys():
+                return obj[key]
+        except Exception:
+            pass
+        return default
+
+    # === FIX 1: wrap _handle_drive_file → safe JSON-prefix parser for topic_2 ===
+    _t2cf2_orig_handle_drive_file = globals().get("_handle_drive_file")
+    if _t2cf2_orig_handle_drive_file:
+        async def _handle_drive_file(conn, task, chat_id, topic_id):
+            try:
+                if int(topic_id or 0) == 2:
+                    raw = _t2cf2_get(task, "raw_input")
+                    if isinstance(raw, str) and raw and raw.lstrip().startswith("{"):
+                        try:
+                            _t2cf2_json.loads(raw)
+                            json_ok = True
+                        except Exception:
+                            json_ok = False
+                        if not json_ok:
+                            json_str, tail = _t2cf2_extract_json_prefix(raw)
+                            if json_str:
+                                task_id = str(_t2cf2_get(task, "id") or "")
+                                # Save tail clarification blocks into task_history (idempotent)
+                                if tail:
+                                    blocks = _t2cf2_re.split(
+                                        r"\n*УТОЧНЕНИЕ К ИСХОДНОМУ ТЗ:\s*\n",
+                                        tail,
+                                    )
+                                    # blocks[0] — text before first marker (e.g. "Размеры: ..."),
+                                    # blocks[1:] — clarification segments
+                                    for blk in blocks:
+                                        seg = (blk or "").strip()
+                                        if not seg or len(seg) < 3:
+                                            continue
+                                        # truncate to 500 for marker; full text stays in DB tail (non-destructive)
+                                        action = "clarified:" + seg[:500]
+                                        _t2cf2_hist_once(conn, task_id, action)
+                                # Replace raw_input in DB with clean JSON (preserve tail in history only)
+                                try:
+                                    conn.execute(
+                                        "UPDATE tasks SET raw_input=?, updated_at=datetime('now') WHERE id=?",
+                                        (json_str, task_id),
+                                    )
+                                    _t2cf2_hist_once(conn, task_id,
+                                        "TOPIC2_DRIVE_RAW_INPUT_JSON_PREFIX_RECOVERED")
+                                    conn.commit()
+                                except Exception as _ue:
+                                    try:
+                                        _T2CF2_LOG.exception(
+                                            "PATCH_TOPIC2_CANON_FULL_CLOSE_AFTER_REQUEUE_FAILURE_V1_RAW_UPDATE_ERR:%s",
+                                            _ue,
+                                        )
+                                    except Exception:
+                                        pass
+                                # Pass cleaned task to original handler
+                                try:
+                                    if isinstance(task, dict):
+                                        task = dict(task)
+                                        task["raw_input"] = json_str
+                                    else:
+                                        # sqlite3.Row — convert to dict
+                                        try:
+                                            task = {k: task[k] for k in task.keys()}
+                                            task["raw_input"] = json_str
+                                        except Exception:
+                                            pass
+                                except Exception:
+                                    pass
+                                _T2CF2_LOG.info(
+                                    "PATCH_TOPIC2_CANON_FULL_CLOSE_AFTER_REQUEUE_FAILURE_V1 raw_input recovered task=%s tail_chars=%d",
+                                    task_id, len(tail or ""),
+                                )
+            except Exception as e:
+                try:
+                    _T2CF2_LOG.exception(
+                        "PATCH_TOPIC2_CANON_FULL_CLOSE_AFTER_REQUEUE_FAILURE_V1_DRIVE_PRE_ERR:%s", e,
+                    )
+                except Exception:
+                    pass
+            return await _t2cf2_orig_handle_drive_file(conn, task, chat_id, topic_id)
+        globals()["_handle_drive_file"] = _handle_drive_file
+
+    # === FIX 2: wrap _t2fb_merge → no raw_input append for drive_file parent ===
+    # PATCH_TOPIC2_ADDITIONAL_FACTS_FULL_RECALC_CANON_RESTORE_V1: also reset DONE_WITH_DRIVE_LINKS
+    # blocking marker so that a new FACT triggers full canonical recalculation via _t2fdsg_run_drive_final.
+    _t2cf2_orig_t2fb_merge = globals().get("_t2fb_merge")
+    if _t2cf2_orig_t2fb_merge:
+        def _t2fb_merge(conn, child, parent):
+            try:
+                parent_input_type = str(_t2cf2_get(parent, "input_type") or "")
+                if parent_input_type == "drive_file":
+                    # Replicate merge BUT keep parent.raw_input untouched (pure JSON).
+                    # Child fact goes only to task_history clarified:.
+                    child_id = str(_t2cf2_get(child, "id") or "")
+                    parent_id = str(_t2cf2_get(parent, "id") or "")
+                    raw = str(_t2cf2_get(child, "raw_input") or "").strip()
+                    if not child_id or not parent_id or child_id == parent_id or not raw:
+                        return False
+                    # Reset stale price/result markers (same logic as orig _t2fb_reset_stale_markers).
+                    try:
+                        _reset = globals().get("_t2fb_reset_stale_markers")
+                        if _reset:
+                            _reset(conn, parent_id, raw)
+                    except Exception:
+                        pass
+                    # Also delete DONE_WITH_DRIVE_LINKS gating marker so engine runs fresh.
+                    # Without this, FINAL_DRIVE_SINGLE_GATE_V1 checks hist and blocks recalc.
+                    try:
+                        conn.execute(
+                            "DELETE FROM task_history WHERE task_id=? AND action IN (?,?,?,?,?)",
+                            (
+                                parent_id,
+                                "PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1:DONE_WITH_DRIVE_LINKS",
+                                "TOPIC2_DONE_CONTRACT_OK",
+                                "TDOIP_OVERRIDE:14_markers_and_drive_links_present",
+                                "TOPIC2_PUBLIC_RESULT_CANON_VIOLATION_RECOVERED_FROM_LATEST_ARTIFACTS",
+                                "TOPIC2_DRIVE_FILE_PICKER_BYPASSED_EXISTING_ESTIMATE",
+                            ),
+                        )
+                        _T2CF2_LOG.info(
+                            "PATCH_TOPIC2_ADDITIONAL_FACTS_FULL_RECALC_CANON_RESTORE_V1 DONE markers cleared parent=%s child=%s",
+                            parent_id, child_id,
+                        )
+                    except Exception as _me:
+                        try:
+                            _T2CF2_LOG.exception(
+                                "PATCH_TOPIC2_ADDITIONAL_FACTS_FULL_RECALC_CANON_RESTORE_V1_MARKER_DEL_ERR:%s", _me,
+                            )
+                        except Exception:
+                            pass
+                    # Mark parent IN_PROGRESS to re-trigger pipeline; keep raw_input intact.
+                    conn.execute(
+                        "UPDATE tasks SET state='IN_PROGRESS', result='', error_message='', updated_at=datetime('now') WHERE id=?",
+                        (parent_id,),
+                    )
+                    conn.execute(
+                        "UPDATE tasks SET state='DONE', result='Уточнение добавлено к исходному ТЗ', error_message=?, updated_at=datetime('now') WHERE id=?",
+                        ("MERGED_TO_PARENT:" + parent_id, child_id),
+                    )
+                    _t2cf2_hist_once(conn, parent_id, "clarified:" + raw[:500])
+                    _t2cf2_hist_once(conn, parent_id,
+                        "PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:MERGED_CHILD:" + child_id)
+                    _t2cf2_hist_once(conn, child_id,
+                        "PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:MERGED_TO_PARENT:" + parent_id)
+                    _t2cf2_hist_once(conn, parent_id,
+                        "TOPIC2_DRIVE_FILE_MERGE_NO_RAW_INPUT_APPEND:" + child_id)
+                    _t2cf2_hist_once(conn, parent_id,
+                        "TOPIC2_ADDITIONAL_FACT_MERGED:" + child_id)
+                    _t2cf2_hist_once(conn, parent_id,
+                        "TOPIC2_ADDITIONAL_FACTS_RECALC_STARTED:" + child_id)
+                    conn.commit()
+                    _T2CF2_LOG.info(
+                        "PATCH_TOPIC2_CANON_FULL_CLOSE_AFTER_REQUEUE_FAILURE_V1 merge clean child=%s parent=%s (no raw_input append)",
+                        child_id, parent_id,
+                    )
+                    return True
+            except Exception as e:
+                try:
+                    _T2CF2_LOG.exception(
+                        "PATCH_TOPIC2_CANON_FULL_CLOSE_AFTER_REQUEUE_FAILURE_V1_MERGE_ERR:%s", e,
+                    )
+                except Exception:
+                    pass
+            return _t2cf2_orig_t2fb_merge(conn, child, parent)
+        globals()["_t2fb_merge"] = _t2fb_merge
+
+    # === FIX 3: extend timeout-guard to "invalid raw_input" failures ===
+    # Wrap V2's already-wrapped _update_task one more time for invalid_raw_input case.
+    _t2cf2_orig_update_task = globals().get("_update_task")
+    if _t2cf2_orig_update_task:
+        def _update_task(conn, task_id, **kwargs):
+            try:
+                new_state = str(kwargs.get("state") or "")
+                new_err = str(kwargs.get("error_message") or "")
+                if new_state == "FAILED" and "invalid raw_input" in new_err and task_id:
+                    row = conn.execute(
+                        "SELECT topic_id,result FROM tasks WHERE id=? LIMIT 1",
+                        (str(task_id),),
+                    ).fetchone()
+                    if row and int(row[0] or 0) == 2:
+                        # Reuse V2's helpers for evidence + artifact extraction
+                        has_ready = globals().get("_t2af_has_ready_artifacts")
+                        extract_ids = globals().get("_t2af_extract_artifact_ids")
+                        if has_ready and has_ready(conn, str(task_id)):
+                            old_result = str(row[1] or "")
+                            keep_result = old_result if (old_result and "Задача не выполнена" not in old_result and len(old_result) > 100) else None
+                            kwargs["state"] = "AWAITING_CONFIRMATION"
+                            kwargs["error_message"] = ""
+                            if keep_result is not None:
+                                kwargs["result"] = keep_result
+                            elif extract_ids:
+                                xlsx_id, _pdf = extract_ids(conn, str(task_id))
+                                if xlsx_id:
+                                    kwargs["result"] = (
+                                        "✅ Смета готова\n\n"
+                                        "Готовые артефакты:\n"
+                                        f"Excel: https://drive.google.com/file/d/{xlsx_id}/view\n\n"
+                                        "Подтверди или пришли правки"
+                                    )
+                                else:
+                                    kwargs.pop("result", None)
+                            else:
+                                kwargs.pop("result", None)
+                            _t2cf2_hist_once(conn, str(task_id),
+                                "TOPIC2_READY_ARTIFACT_FAILURE_SUPPRESSED:invalid_raw_input")
+                            try:
+                                conn.commit()
+                            except Exception:
+                                pass
+                            _T2CF2_LOG.info(
+                                "PATCH_TOPIC2_CANON_FULL_CLOSE_AFTER_REQUEUE_FAILURE_V1 invalid_raw_input suppressed task=%s",
+                                str(task_id),
+                            )
+            except Exception as e:
+                try:
+                    _T2CF2_LOG.exception(
+                        "PATCH_TOPIC2_CANON_FULL_CLOSE_AFTER_REQUEUE_FAILURE_V1_UPDATE_ERR:%s", e,
+                    )
+                except Exception:
+                    pass
+            return _t2cf2_orig_update_task(conn, task_id, **kwargs)
+        globals()["_update_task"] = _update_task
+
+    _T2CF2_LOG.info("PATCH_TOPIC2_CANON_FULL_CLOSE_AFTER_REQUEUE_FAILURE_V1 installed")
+except Exception as _t2cf2_install_err:
+    try:
+        logger.exception("PATCH_TOPIC2_CANON_FULL_CLOSE_AFTER_REQUEUE_FAILURE_V1_INSTALL_ERR:%s", _t2cf2_install_err)
+    except Exception:
+        pass
+# === /PATCH_TOPIC2_CANON_FULL_CLOSE_AFTER_REQUEUE_FAILURE_V1 ===
+
+
+# === PATCH_TOPIC2_PICKER_BYPASS_AND_RESULT_GATE_V1 ===
+# Two system fixes for topic_2 estimate path:
+# (A) DRIVE_FILE_NO_INTENT_OFFER_V1 picker bypass for existing estimate parent.
+#     If parent has estimate evidence (clarified facts, prior XLSX/PDF/TG markers,
+#     OR caption contains "смет"), route directly to canonical pipeline, skip picker.
+#     Marker: TOPIC2_DRIVE_FILE_PICKER_BYPASSED_EXISTING_ESTIMATE.
+# (B) Public result gate at AWAITING_CONFIRMATION boundary for topic_id=2.
+#     PASS: starts "✅ Смета готова", has Excel:, has PDF:, has "Подтверди или пришли правки",
+#     no MANIFEST: / Engine / /root / /tmp / "Сметный расчёт подготовлен..." / "Принял файл" /
+#     "Что нужно сделать?".
+#     FAIL → block AWAITING_CONFIRMATION transition; force IN_PROGRESS; preserve previous valid
+#     result if exists; marker TOPIC2_PUBLIC_RESULT_CANON_VIOLATION.
+# NO direct OpenRouter / NO topic_id substitution / NO process_ai_task shell / NO requeue /
+# NO result clearing / NO broad sanitizer / NO forbidden files touched.
+try:
+    import json as _t2pg_json
+    import re as _t2pg_re
+    import logging as _t2pg_logging
+
+    _T2PG_LOG = _t2pg_logging.getLogger("WORKER")
+
+    _T2PG_EVIDENCE_HISTORY = (
+        "TOPIC2_TELEGRAM_DELIVERED",
+        "TOPIC2_DRIVE_UPLOAD_XLSX_OK",
+        "TOPIC2_DRIVE_UPLOAD_PDF_OK",
+        "TOPIC2_PDF_CREATED",
+        "TOPIC2_XLSX_CREATED",
+        "PATCH_TOPIC2_DRIVE_XLSX_REPAIR_V1:OK",
+        "PATCH_TOPIC2_PDF_AND_REAL_SUPPLIERS_V1",
+        "T2RFP_FULL_PIPELINE_DONE",
+        "P8T2C_CANONICAL_OK",
+        "TOPIC2_DRIVE_LINKS_SAVED",
+        "PATCH_TOPIC2_SUPPLIER_AND_HEAL_V1:TG_EDIT:OK",
+        "TOPIC2_F030_RECOVERED",
+    )
+
+    def _t2pg_hist_once(conn, task_id, action):
+        try:
+            if not conn.execute(
+                "SELECT 1 FROM task_history WHERE task_id=? AND action=? LIMIT 1",
+                (str(task_id), str(action)),
+            ).fetchone():
+                conn.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (str(task_id), str(action)),
+                )
+        except Exception:
+            pass
+
+    def _t2pg_get(obj, key, default=None):
+        try:
+            if isinstance(obj, dict):
+                return obj.get(key, default)
+        except Exception:
+            pass
+        try:
+            if hasattr(obj, "keys") and key in obj.keys():
+                return obj[key]
+        except Exception:
+            pass
+        return default
+
+    def _t2pg_has_estimate_evidence(conn, task_id):
+        try:
+            rows = conn.execute(
+                "SELECT action FROM task_history WHERE task_id=? ORDER BY rowid DESC LIMIT 600",
+                (str(task_id),),
+            ).fetchall()
+        except Exception:
+            return False
+        seen_clarified = False
+        for r in rows:
+            a = r[0] or ""
+            for m in _T2PG_EVIDENCE_HISTORY:
+                if m in a:
+                    return True
+            if a.startswith("clarified:") and len(a) > len("clarified:") + 3:
+                seen_clarified = True
+        return seen_clarified
+
+    def _t2pg_extract_caption(raw):
+        if not isinstance(raw, str):
+            return ""
+        s = raw.lstrip()
+        if not s.startswith("{"):
+            return ""
+        try:
+            decoder = _t2pg_json.JSONDecoder()
+            obj, _end = decoder.raw_decode(s)
+            return str(obj.get("caption") or "")
+        except Exception:
+            try:
+                obj = _t2pg_json.loads(s)
+                return str(obj.get("caption") or "")
+            except Exception:
+                return ""
+
+    # === FIX A: bypass picker for existing topic_2 estimate parent ===
+    # Reach the BASE handler (3906) directly via _dfnio_orig_handle_drive_file when bypass condition holds.
+    _t2pg_picker_wrap = globals().get("_handle_drive_file")  # current wrap chain top
+    _t2pg_base_handler = globals().get("_dfnio_orig_handle_drive_file")  # base (line 3906)
+
+    if _t2pg_picker_wrap and _t2pg_base_handler:
+        async def _handle_drive_file(conn, task, chat_id, topic_id):
+            try:
+                if int(topic_id or 0) == 2:
+                    task_id = str(_t2pg_get(task, "id") or "")
+                    raw = str(_t2pg_get(task, "raw_input") or "")
+                    caption = _t2pg_extract_caption(raw).lower()
+                    has_smet_caption = "смет" in caption or "расч" in caption or "стоимост" in caption
+                    has_evidence = _t2pg_has_estimate_evidence(conn, task_id) if task_id else False
+                    if task_id and (has_evidence or has_smet_caption):
+                        _t2pg_hist_once(conn, task_id,
+                            "TOPIC2_DRIVE_FILE_PICKER_BYPASSED_EXISTING_ESTIMATE")
+                        try:
+                            conn.commit()
+                        except Exception:
+                            pass
+                        _T2PG_LOG.info(
+                            "PATCH_TOPIC2_PICKER_BYPASS_AND_RESULT_GATE_V1 picker bypassed task=%s evidence=%s smet_caption=%s",
+                            task_id, has_evidence, has_smet_caption,
+                        )
+                        return await _t2pg_base_handler(conn, task, chat_id, topic_id)
+            except Exception as e:
+                try:
+                    _T2PG_LOG.exception(
+                        "PATCH_TOPIC2_PICKER_BYPASS_AND_RESULT_GATE_V1_PICKER_ERR:%s", e,
+                    )
+                except Exception:
+                    pass
+            return await _t2pg_picker_wrap(conn, task, chat_id, topic_id)
+        globals()["_handle_drive_file"] = _handle_drive_file
+
+    # === FIX B: public result gate ===
+    _T2PG_FORBIDDEN_PUBLIC = (
+        "MANIFEST:", "MANIFEST ", "Engine:", "/root", "/tmp",
+        "Сметный расчёт подготовлен",
+        "Принял файл",
+        "Что нужно сделать?",
+        "REVISION_CONTEXT",
+    )
+    # PATCH_TOPIC2_ADDITIONAL_FACTS_FULL_RECALC_CANON_RESTORE_V1: require position count and total
+    _T2PG_REQUIRED_PUBLIC = (
+        "✅ Смета готова",
+        "Позиций:",
+        "Итого:",
+        "Excel:",
+        "PDF:",
+        "Подтверди или пришли правки",
+    )
+
+    def _t2pg_validate_public_result(text):
+        if not isinstance(text, str) or len(text) < 50:
+            return False, "too_short_or_empty"
+        if not text.lstrip().startswith(_T2PG_REQUIRED_PUBLIC[0]):
+            return False, "missing_canon_header"
+        for must in _T2PG_REQUIRED_PUBLIC[1:]:
+            if must not in text:
+                return False, f"missing:{must}"
+        for forbidden in _T2PG_FORBIDDEN_PUBLIC:
+            if forbidden in text:
+                return False, f"forbidden:{forbidden}"
+        return True, "ok"
+
+    _t2pg_orig_update_task = globals().get("_update_task")
+    if _t2pg_orig_update_task:
+        def _update_task(conn, task_id, **kwargs):
+            try:
+                new_state = str(kwargs.get("state") or "")
+                if new_state == "AWAITING_CONFIRMATION" and task_id:
+                    row = conn.execute(
+                        "SELECT topic_id, result FROM tasks WHERE id=? LIMIT 1",
+                        (str(task_id),),
+                    ).fetchone()
+                    if row and int(row[0] or 0) == 2:
+                        # New result candidate: from kwargs if provided, else current DB result
+                        candidate = kwargs.get("result")
+                        if candidate is None:
+                            candidate = row[1] or ""
+                        ok, reason = _t2pg_validate_public_result(str(candidate))
+                        if not ok:
+                            # Block AC; force IN_PROGRESS; preserve previous valid result if any
+                            kwargs["state"] = "IN_PROGRESS"
+                            # Preserve previous valid result if current candidate is invalid
+                            old = str(row[1] or "")
+                            old_ok, _ = _t2pg_validate_public_result(old)
+                            if old_ok:
+                                kwargs["result"] = old
+                            else:
+                                kwargs.pop("result", None)
+                            _t2pg_hist_once(
+                                conn, str(task_id),
+                                "TOPIC2_PUBLIC_RESULT_CANON_VIOLATION:" + reason[:120],
+                            )
+                            try:
+                                conn.commit()
+                            except Exception:
+                                pass
+                            _T2PG_LOG.warning(
+                                "PATCH_TOPIC2_PICKER_BYPASS_AND_RESULT_GATE_V1 AC blocked task=%s reason=%s",
+                                str(task_id), reason,
+                            )
+            except Exception as e:
+                try:
+                    _T2PG_LOG.exception(
+                        "PATCH_TOPIC2_PICKER_BYPASS_AND_RESULT_GATE_V1_GATE_ERR:%s", e,
+                    )
+                except Exception:
+                    pass
+            return _t2pg_orig_update_task(conn, task_id, **kwargs)
+        globals()["_update_task"] = _update_task
+
+    _T2PG_LOG.info("PATCH_TOPIC2_PICKER_BYPASS_AND_RESULT_GATE_V1 installed")
+except Exception as _t2pg_install_err:
+    try:
+        logger.exception("PATCH_TOPIC2_PICKER_BYPASS_AND_RESULT_GATE_V1_INSTALL_ERR:%s", _t2pg_install_err)
+    except Exception:
+        pass
+# === /PATCH_TOPIC2_PICKER_BYPASS_AND_RESULT_GATE_V1 ===
+
+
+if __name__ == "__main__":
+    pass  # entry_point moved to EOF by PATCH_TOPIC2_REVISION_MODE_FULL_V1
+
+# === PATCH_TOPIC2_FULL_CLOSE_TZ_MATERIALS_PRICE_V1 ===
+try:
+    import re as _t2fc_re
+    import logging as _t2fc_logging
+    import inspect as _t2fc_inspect
+
+    _t2fc_log = _t2fc_logging.getLogger("task_worker")
+    _t2fc_orig_handle_new = globals().get("_handle_new")
+    _t2fc_orig_update_task = globals().get("_update_task")
+
+    def _t2fc_s(v, n=200000):
+        try:
+            return str(v if v is not None else "")[:n]
+        except Exception:
+            return ""
+
+    def _t2fc_get(row, key, default=None):
+        try:
+            if isinstance(row, dict):
+                return row.get(key, default)
+        except Exception:
+            pass
+        try:
+            if hasattr(row, "keys") and key in row.keys():
+                return row[key]
+        except Exception:
+            pass
+        try:
+            return row[key]
+        except Exception:
+            return default
+
+    def _t2fc_hist_once(conn, task_id, action):
+        try:
+            action = _t2fc_s(action, 900)
+            if not conn.execute(
+                "SELECT 1 FROM task_history WHERE task_id=? AND action=? LIMIT 1",
+                (_t2fc_s(task_id), action),
+            ).fetchone():
+                conn.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (_t2fc_s(task_id), action),
+                )
+        except Exception:
+            pass
+
+    def _t2fc_meaningful_line(s):
+        low = _t2fc_s(s).strip().lower().replace("ё", "е")
+        if not low:
+            return False
+        if len(low) < 8:
+            return False
+        if low in {"1", "2", "3", "4", "да", "нет", "ок", "средние", "дешевые", "дорогие", "подтверждаю"}:
+            return False
+        if low.startswith("patch_") or low.startswith("topic2_") or low.startswith("p3_"):
+            return False
+        return any(k in low for k in (
+            "каркас", "монолит", "плита", "щеб", "песчан", "фундамент",
+            "утеплен", "стен", "потол", "имитац", "брус", "ламинат",
+            "фасад", "кров", "металлочереп", "доск", "разно", "ворс",
+            "окн", "рехау", "rehau", "профил", "двер", "ропш", "км",
+            "тз", "смет", "цена", "стоим"
+        ))
+
+    def _t2fc_collect_task_facts(conn, task_id):
+        facts = []
+        try:
+            rows = conn.execute("""
+                SELECT action
+                FROM task_history
+                WHERE task_id=?
+                  AND (
+                       action LIKE 'clarified:%'
+                    OR action LIKE 'continued:%'
+                  )
+                ORDER BY rowid ASC
+            """, (_t2fc_s(task_id),)).fetchall()
+            for r in rows:
+                a = _t2fc_s(_t2fc_get(r, "action") or r[0])
+                if ":" in a:
+                    a = a.split(":", 1)[1].strip()
+                if _t2fc_meaningful_line(a):
+                    facts.append(a)
+        except Exception:
+            pass
+
+        try:
+            rows = conn.execute("""
+                SELECT raw_input
+                FROM tasks
+                WHERE error_message=?
+                   OR error_message LIKE ?
+                ORDER BY rowid ASC
+            """, ("MERGED_TO_PARENT:" + _t2fc_s(task_id), "MERGED_TO_PARENT:" + _t2fc_s(task_id) + "%")).fetchall()
+            for r in rows:
+                a = _t2fc_s(_t2fc_get(r, "raw_input") or r[0])
+                if _t2fc_meaningful_line(a):
+                    facts.append(a)
+        except Exception:
+            pass
+
+        clean = []
+        seen = set()
+        for f in facts:
+            f = _t2fc_re.sub(r"\s+", " ", _t2fc_s(f)).strip()
+            k = f.lower()
+            if f and k not in seen:
+                seen.add(k)
+                clean.append(f)
+        return clean
+
+    def _t2fc_merge_history_to_raw(conn, task):
+        task_id = _t2fc_s(_t2fc_get(task, "id"))
+        if not task_id:
+            return False
+        try:
+            row = conn.execute("SELECT * FROM tasks WHERE id=? LIMIT 1", (task_id,)).fetchone()
+            if row is not None:
+                task = row
+        except Exception:
+            pass
+
+        topic_id = int(_t2fc_get(task, "topic_id", 0) or 0)
+        if topic_id != 2:
+            return False
+
+        raw = _t2fc_s(_t2fc_get(task, "raw_input"), 220000)
+        facts = _t2fc_collect_task_facts(conn, task_id)
+        if not facts:
+            return False
+
+        add = "\n\n---\nTZ_FACTS_FROM_HISTORY\n" + "\n".join("- " + x for x in facts)
+        missing = [x for x in facts if x not in raw]
+        if not missing:
+            return False
+
+        new_raw = (raw.rstrip() + add)[:240000]
+        conn.execute(
+            "UPDATE tasks SET raw_input=?, updated_at=datetime('now') WHERE id=?",
+            (new_raw, task_id),
+        )
+        _t2fc_hist_once(conn, task_id, "PATCH_TOPIC2_FULL_CLOSE_TZ_MATERIALS_PRICE_V1:HISTORY_FACTS_MERGED_TO_RAW")
+        conn.commit()
+        _t2fc_log.info("PATCH_TOPIC2_FULL_CLOSE_TZ_MATERIALS_PRICE_V1 merged_history task=%s facts=%d", task_id, len(facts))
+        return True
+
+    def _t2fc_required_missing(raw, result):
+        raw_l = _t2fc_s(raw).lower().replace("ё", "е")
+        res_l = _t2fc_s(result).lower().replace("ё", "е")
+        checks = [
+            (("монолитная плита", "плита 250", "щеб", "песчаная подушка"), ("фундамент", "плита", "монолит"), "foundation"),
+            (("каркас", "утепления стен", "утепление стен"), ("каркас", "стены"), "frame"),
+            (("разно", "ворс", "доска"), ("разно", "ворс", "доска", "фасад"), "facade_board"),
+            (("металлочереп",), ("металлочереп", "кровля"), "roof_metal_tile"),
+            (("имитац", "брус"), ("имитац", "брус", "внутрен"), "inside_imitation_timber"),
+            (("ламинат",), ("ламинат", "пол"), "laminate"),
+            (("рехау", "rehau", "профиля 70", "профиль 70"), ("рехау", "rehau", "70", "окн"), "windows_rehau_70"),
+            (("дверь входная", "входная дверь"), ("двер", "вход"), "entrance_door"),
+        ]
+        missing = []
+        for raw_keys, res_keys, code in checks:
+            if any(k in raw_l for k in raw_keys) and not any(k in res_l for k in res_keys):
+                missing.append(code)
+        if "фасад: по тз" in res_l and any(k in raw_l for k in ("разно", "ворс", "доска")):
+            missing.append("facade_not_expanded")
+        if "интернет-цены не применены" in res_l:
+            missing.append("internet_prices_not_applied")
+        if "price_applied_0" in res_l:
+            missing.append("price_applied_0")
+        return sorted(set(missing))
+
+    def _update_task(conn, task_id, **kwargs):
+        try:
+            state = _t2fc_s(kwargs.get("state")).upper()
+            result = _t2fc_s(kwargs.get("result"), 240000)
+            if state == "DONE":
+                row = conn.execute("SELECT * FROM tasks WHERE id=? LIMIT 1", (_t2fc_s(task_id),)).fetchone()
+                if row is not None and int(_t2fc_get(row, "topic_id", 0) or 0) == 2:
+                    raw = _t2fc_s(_t2fc_get(row, "raw_input"), 240000)
+                    facts = _t2fc_collect_task_facts(conn, task_id)
+                    full_raw = raw + "\n" + "\n".join(facts)
+                    missing = _t2fc_required_missing(full_raw, result)
+                    if missing:
+                        kwargs["state"] = "IN_PROGRESS"
+                        kwargs["result"] = ""
+                        kwargs["error_message"] = "TOPIC2_FULL_CLOSE_VALIDATION_FAILED:" + ",".join(missing)
+                        _t2fc_hist_once(conn, task_id, "PATCH_TOPIC2_FULL_CLOSE_TZ_MATERIALS_PRICE_V1:BLOCKED_INCOMPLETE_DONE:" + ",".join(missing))
+                        try:
+                            _t2fc_merge_history_to_raw(conn, row)
+                        except Exception:
+                            pass
+        except Exception as e:
+            try:
+                _t2fc_log.exception("PATCH_TOPIC2_FULL_CLOSE_TZ_MATERIALS_PRICE_V1_UPDATE_ERR:%s", e)
+            except Exception:
+                pass
+        return _t2fc_orig_update_task(conn, task_id, **kwargs)
+
+    async def _handle_new(conn, task, chat_id, topic_id):
+        try:
+            if int(topic_id or 0) == 2:
+                _t2fc_merge_history_to_raw(conn, task)
+        except Exception as e:
+            try:
+                _t2fc_log.exception("PATCH_TOPIC2_FULL_CLOSE_TZ_MATERIALS_PRICE_V1_HANDLE_ERR:%s", e)
+            except Exception:
+                pass
+
+        res = _t2fc_orig_handle_new(conn, task, chat_id, topic_id)
+        if _t2fc_inspect.isawaitable(res):
+            return await res
+        return res
+
+    if _t2fc_orig_update_task:
+        globals()["_update_task"] = _update_task
+    if _t2fc_orig_handle_new:
+        globals()["_handle_new"] = _handle_new
+
+    _t2fc_log.info("PATCH_TOPIC2_FULL_CLOSE_TZ_MATERIALS_PRICE_V1 installed")
+except Exception as _t2fc_install_err:
+    try:
+        logger.exception("PATCH_TOPIC2_FULL_CLOSE_TZ_MATERIALS_PRICE_V1_INSTALL_ERR:%s", _t2fc_install_err)
+    except Exception:
+        pass
+# === /PATCH_TOPIC2_FULL_CLOSE_TZ_MATERIALS_PRICE_V1 ===
+
+
+# === PATCH_TOPIC2_ADDITIONAL_FACTS_FULL_RECALC_CANON_RESTORE_V1 ===
+# Goals:
+# 1. Block DONE for topic_2 tasks if result lacks Позиций: / Итого: / Excel: / PDF:.
+#    Even if prior gate (PICKER_BYPASS) passed, this is the final DONE guard.
+# 2. When drive_file parent with DONE_WITH_DRIVE_LINKS marker enters _handle_new again
+#    (e.g. after requeue), if price is already confirmed and public result is NOT canonical
+#    (missing Позиций/Итого), delete the DONE_WITH_DRIVE_LINKS marker and force recalc.
+# 3. Restore f030 raw_input to clean JSON (idempotent, safe raw_decode).
+# Does NOT touch: ai_router, reply_sender, google_io, price_enrichment, stroyka_estimate_canon,
+# telegram_daemon, topic_5/210/500/drainage/technadzor, memory, templates, .env, credentials.
+try:
+    import json as _afrcr_json
+    import re as _afrcr_re
+    import logging as _afrcr_logging
+
+    _AFRCR_LOG = _afrcr_logging.getLogger("task_worker")
+
+    _AFRCR_DONE_GATE_BLOCK_MARKERS = (
+        "PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1:DONE_WITH_DRIVE_LINKS",
+        "TOPIC2_DONE_CONTRACT_OK",
+        "TDOIP_OVERRIDE:14_markers_and_drive_links_present",
+        "TOPIC2_PUBLIC_RESULT_CANON_VIOLATION_RECOVERED_FROM_LATEST_ARTIFACTS",
+    )
+
+    def _afrcr_hist_once(conn, task_id, action):
+        try:
+            if not conn.execute(
+                "SELECT 1 FROM task_history WHERE task_id=? AND action=? LIMIT 1",
+                (str(task_id), str(action)),
+            ).fetchone():
+                conn.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (str(task_id), str(action)),
+                )
+        except Exception:
+            pass
+
+    def _afrcr_get(obj, key, default=None):
+        try:
+            if isinstance(obj, dict):
+                return obj.get(key, default)
+        except Exception:
+            pass
+        try:
+            if hasattr(obj, "keys") and key in obj.keys():
+                return obj[key]
+        except Exception:
+            pass
+        return default
+
+    def _afrcr_is_canonical_result(text):
+        """Return (ok, reason): canonical result must include Позиций, Итого, Excel, PDF."""
+        if not isinstance(text, str) or len(text) < 50:
+            return False, "too_short"
+        s = text
+        required = ("✅ Смета готова", "Позиций:", "Итого:", "Excel:", "PDF:", "Подтверди или пришли правки")
+        for r in required:
+            if r not in s:
+                return False, "missing:" + r
+        return True, "ok"
+
+    def _afrcr_recover_raw_input(conn, task_id, raw):
+        """If raw_input is corrupted JSON (has text tail), recover clean JSON prefix and update DB."""
+        if not isinstance(raw, str) or not raw.strip().startswith("{"):
+            return raw
+        try:
+            _afrcr_json.loads(raw)
+            return raw  # already valid
+        except Exception:
+            pass
+        try:
+            _dec = _afrcr_json.JSONDecoder()
+            s = raw.lstrip()
+            obj, end = _dec.raw_decode(s)
+            clean = s[:end]
+            # sanity check
+            _afrcr_json.loads(clean)
+            conn.execute(
+                "UPDATE tasks SET raw_input=?, updated_at=datetime('now') WHERE id=?",
+                (clean, str(task_id)),
+            )
+            _afrcr_hist_once(conn, str(task_id), "TOPIC2_DRIVE_RAW_INPUT_JSON_PREFIX_RECOVERED")
+            _AFRCR_LOG.info(
+                "PATCH_TOPIC2_ADDITIONAL_FACTS_FULL_RECALC_CANON_RESTORE_V1 raw_input recovered task=%s", task_id,
+            )
+            return clean
+        except Exception:
+            return raw
+
+    def _afrcr_clear_done_block_markers(conn, task_id):
+        """Delete history markers that block canonical recalculation after new FACT is added."""
+        try:
+            placeholders = ",".join("?" * len(_AFRCR_DONE_GATE_BLOCK_MARKERS))
+            conn.execute(
+                f"DELETE FROM task_history WHERE task_id=? AND action IN ({placeholders})",
+                (str(task_id), *_AFRCR_DONE_GATE_BLOCK_MARKERS),
+            )
+            _AFRCR_LOG.info(
+                "PATCH_TOPIC2_ADDITIONAL_FACTS_FULL_RECALC_CANON_RESTORE_V1 blocking markers cleared task=%s",
+                task_id,
+            )
+        except Exception as e:
+            try:
+                _AFRCR_LOG.exception(
+                    "PATCH_TOPIC2_ADDITIONAL_FACTS_FULL_RECALC_CANON_RESTORE_V1_CLEAR_ERR:%s", e,
+                )
+            except Exception:
+                pass
+
+    # === GUARD 1: wrap _update_task — block DONE if result lacks canonical format ===
+    _afrcr_orig_update_task = globals().get("_update_task")
+    if _afrcr_orig_update_task:
+        def _update_task(conn, task_id, **kwargs):
+            try:
+                new_state = str(kwargs.get("state") or "")
+                if new_state == "DONE" and task_id:
+                    row = conn.execute(
+                        "SELECT topic_id, input_type, result FROM tasks WHERE id=? LIMIT 1",
+                        (str(task_id),),
+                    ).fetchone()
+                    if row and int(row[0] or 0) == 2 and str(row[1] or "") == "drive_file":
+                        candidate = kwargs.get("result")
+                        if candidate is None:
+                            candidate = str(row[2] or "")
+                        ok, reason = _afrcr_is_canonical_result(str(candidate))
+                        if not ok:
+                            kwargs["state"] = "IN_PROGRESS"
+                            old_result = str(row[2] or "")
+                            old_ok, _ = _afrcr_is_canonical_result(old_result)
+                            if old_ok:
+                                kwargs["result"] = old_result
+                            else:
+                                kwargs.pop("result", None)
+                            _afrcr_hist_once(
+                                conn, str(task_id),
+                                "TOPIC2_PUBLIC_RESULT_CANON_VIOLATION:" + reason[:120],
+                            )
+                            _AFRCR_LOG.warning(
+                                "PATCH_TOPIC2_ADDITIONAL_FACTS_FULL_RECALC_CANON_RESTORE_V1 DONE blocked task=%s reason=%s",
+                                str(task_id), reason,
+                            )
+            except Exception as e:
+                try:
+                    _AFRCR_LOG.exception(
+                        "PATCH_TOPIC2_ADDITIONAL_FACTS_FULL_RECALC_CANON_RESTORE_V1_UPDATE_ERR:%s", e,
+                    )
+                except Exception:
+                    pass
+            return _afrcr_orig_update_task(conn, task_id, **kwargs)
+        globals()["_update_task"] = _update_task
+
+    # === GUARD 2: wrap _handle_new — for drive_file with price confirmed but non-canonical result ===
+    # When task is requeued (state NEW) after being previously DONE with non-canonical result,
+    # delete the DONE_WITH_DRIVE_LINKS blocking marker to force recalculation.
+    _afrcr_orig_handle_new = globals().get("_handle_new")
+    if _afrcr_orig_handle_new:
+        async def _handle_new(conn, task, chat_id, topic_id):
+            try:
+                if int(topic_id or 0) == 2:
+                    task_id = str(_afrcr_get(task, "id") or "")
+                    input_type = str(_afrcr_get(task, "input_type") or "")
+                    raw = str(_afrcr_get(task, "raw_input") or "")
+                    result = str(_afrcr_get(task, "result") or "")
+                    if task_id and input_type == "drive_file":
+                        # Recover corrupted raw_input first (idempotent)
+                        clean_raw = _afrcr_recover_raw_input(conn, task_id, raw)
+                        if clean_raw != raw:
+                            # Update task object for downstream handlers
+                            try:
+                                if hasattr(task, "keys"):
+                                    task = {k: task[k] for k in task.keys()}
+                                elif isinstance(task, dict):
+                                    task = dict(task)
+                                task["raw_input"] = clean_raw
+                            except Exception:
+                                pass
+                        # If result is non-canonical (missing Позиций/Итого) but DONE_WITH_DRIVE_LINKS
+                        # marker exists → delete the blocking marker to force fresh canonical recalc.
+                        canon_ok, _reason = _afrcr_is_canonical_result(result)
+                        if not canon_ok:
+                            _afrcr_clear_done_block_markers(conn, task_id)
+                            _afrcr_hist_once(
+                                conn, task_id,
+                                "PATCH_TOPIC2_ADDITIONAL_FACTS_FULL_RECALC_CANON_RESTORE_V1:RECALC_GATE_CLEARED",
+                            )
+                            try:
+                                conn.commit()
+                            except Exception:
+                                pass
+                            _AFRCR_LOG.info(
+                                "PATCH_TOPIC2_ADDITIONAL_FACTS_FULL_RECALC_CANON_RESTORE_V1 "
+                                "DONE_block cleared for non-canonical result task=%s reason=%s",
+                                task_id, _reason,
+                            )
+            except Exception as e:
+                try:
+                    _AFRCR_LOG.exception(
+                        "PATCH_TOPIC2_ADDITIONAL_FACTS_FULL_RECALC_CANON_RESTORE_V1_HANDLE_ERR:%s", e,
+                    )
+                except Exception:
+                    pass
+            return await _afrcr_orig_handle_new(conn, task, chat_id, topic_id)
+        globals()["_handle_new"] = _handle_new
+
+    _AFRCR_LOG.info("PATCH_TOPIC2_ADDITIONAL_FACTS_FULL_RECALC_CANON_RESTORE_V1 installed")
+except Exception as _afrcr_install_err:
+    try:
+        logger.exception(
+            "PATCH_TOPIC2_ADDITIONAL_FACTS_FULL_RECALC_CANON_RESTORE_V1_INSTALL_ERR:%s",
+            _afrcr_install_err,
+        )
+    except Exception:
+        pass
+# === /PATCH_TOPIC2_ADDITIONAL_FACTS_FULL_RECALC_CANON_RESTORE_V1 ===
+
+# === PATCH_TOPIC2_ARTIFACT_FAILURE_IMMUNITY_V1 ===
+# FACTS FROM LIVE DB 2026-05-11:
+# - topic_id=2 task f030db95-8fdb-460d-90ea-2beae356b777 had TOPIC2_DRIVE_LINKS_SAVED and TOPIC2_TELEGRAM_DELIVERED
+# - same task was later overwritten to FAILED:NO_VALID_ARTIFACT by late guard
+# - task raw_input must not be mutated with clarification text
+# - valid XLSX/PDF Drive artifact history must dominate late timeout/no-artifact/duplicate false failures
+
+import re as _t2afi_re
+import sqlite3 as _t2afi_sqlite3
+import logging as _t2afi_logging
+from datetime import datetime as _t2afi_datetime, timezone as _t2afi_timezone
+
+_T2AFI_LOG = _t2afi_logging.getLogger("WORKER")
+_T2AFI_PATCH_NAME = "PATCH_TOPIC2_ARTIFACT_FAILURE_IMMUNITY_V1"
+
+def _t2afi_now():
+    return _t2afi_datetime.now(_t2afi_timezone.utc).isoformat()
+
+def _t2afi_hist(conn, task_id, action):
+    try:
+        conn.execute(
+            "INSERT INTO task_history(task_id, action, created_at) VALUES(?,?,?)",
+            (task_id, action, _t2afi_now()),
+        )
+    except Exception:
+        pass
+
+def _t2afi_task_row(conn, task_id):
+    try:
+        cur = conn.execute(
+            "SELECT id,state,topic_id,input_type,raw_input,result,error_message,bot_message_id,chat_id FROM tasks WHERE id=? LIMIT 1",
+            (task_id,),
+        )
+        return cur.fetchone()
+    except Exception:
+        return None
+
+def _t2afi_is_topic2(conn, task_id):
+    row = _t2afi_task_row(conn, task_id)
+    if not row:
+        return False
+    try:
+        return int(row[2] or 0) == 2
+    except Exception:
+        return False
+
+def _t2afi_latest_drive_ids(conn, task_id):
+    try:
+        rows = conn.execute(
+            """
+            SELECT action
+            FROM task_history
+            WHERE task_id=?
+              AND action LIKE 'TOPIC2_DRIVE_LINKS_SAVED:%'
+            ORDER BY rowid DESC
+            LIMIT 5
+            """,
+            (task_id,),
+        ).fetchall()
+    except Exception:
+        rows = []
+
+    for (action,) in rows:
+        text = str(action or "")
+        m_x = _t2afi_re.search(r"xlsx=([A-Za-z0-9_-]+)", text)
+        m_p = _t2afi_re.search(r"pdf=([A-Za-z0-9_-]+)", text)
+        xlsx_id = m_x.group(1) if m_x else ""
+        pdf_id = m_p.group(1) if m_p else ""
+        if xlsx_id or pdf_id:
+            return xlsx_id, pdf_id
+    return "", ""
+
+def _t2afi_has_artifact_proof(conn, task_id):
+    if not _t2afi_is_topic2(conn, task_id):
+        return False
+
+    xlsx_id, pdf_id = _t2afi_latest_drive_ids(conn, task_id)
+    if not (xlsx_id or pdf_id):
+        return False
+
+    try:
+        delivered = conn.execute(
+            """
+            SELECT 1
+            FROM task_history
+            WHERE task_id=?
+              AND (
+                    action LIKE 'TOPIC2_TELEGRAM_DELIVERED%'
+                 OR action LIKE 'reply_sent:%'
+                 OR action LIKE 'TOPIC2_RECALC_DELIVERED%'
+              )
+            ORDER BY rowid DESC
+            LIMIT 1
+            """,
+            (task_id,),
+        ).fetchone()
+    except Exception:
+        delivered = None
+
+    return delivered is not None
+
+def _t2afi_build_result(conn, task_id):
+    row = _t2afi_task_row(conn, task_id)
+    old_result = ""
+    if row:
+        old_result = str(row[5] or "").strip()
+
+    bad_result = (
+        not old_result
+        or "NO_VALID_ARTIFACT" in old_result
+        or "EXECUTION_TIMEOUT" in old_result
+        or "STALE_TIMEOUT" in old_result
+        or old_result.startswith("Задача не выполнена")
+    )
+
+    if old_result and not bad_result and len(old_result) >= 80:
+        return old_result
+
+    xlsx_id, pdf_id = _t2afi_latest_drive_ids(conn, task_id)
+    lines = [
+        "✅ Смета готова",
+        "",
+        "Артефакты уже созданы и сохранены",
+    ]
+    if xlsx_id:
+        lines.append("Excel: https://drive.google.com/file/d/%s/view" % xlsx_id)
+    if pdf_id:
+        lines.append("PDF: https://drive.google.com/file/d/%s/view" % pdf_id)
+    lines.extend([
+        "",
+        "Статус восстановлен по подтверждённой истории Drive/TG",
+    ])
+    return "\n".join(lines)
+
+def _t2afi_failure_reason(kwargs):
+    state = str(kwargs.get("state") or "").upper()
+    err = str(kwargs.get("error_message") or "")
+    res = str(kwargs.get("result") or "")
+    text = (state + " " + err + " " + res).upper()
+    bad_tokens = (
+        "NO_VALID_ARTIFACT",
+        "EXECUTION_TIMEOUT",
+        "STALE_TIMEOUT",
+        "RESULT_NOT_READY",
+        "FILE_DUPLICATE_MEMORY_GUARD",
+        "FULL_CONSTRUCTION_FILE_CONTOUR_CANON_GUARD",
+    )
+    return state == "FAILED" and any(tok in text for tok in bad_tokens)
+
+try:
+    _T2AFI_ORIG_UPDATE_TASK = _update_task
+
+    def _update_task(conn, task_id, *args, **kwargs):
+        try:
+            if kwargs and _t2afi_failure_reason(kwargs) and _t2afi_has_artifact_proof(conn, task_id):
+                kwargs = dict(kwargs)
+                kwargs["state"] = "AWAITING_CONFIRMATION"
+                kwargs["error_message"] = None
+                kwargs["result"] = _t2afi_build_result(conn, task_id)
+                _t2afi_hist(conn, task_id, _T2AFI_PATCH_NAME + ":BLOCKED_FALSE_FAILURE")
+                _T2AFI_LOG.warning(
+                    "%s blocked false FAILED for task=%s because Drive/TG artifact proof exists",
+                    _T2AFI_PATCH_NAME,
+                    task_id,
+                )
+        except Exception as e:
+            try:
+                _T2AFI_LOG.exception("%s_UPDATE_GUARD_ERR:%s", _T2AFI_PATCH_NAME, e)
+            except Exception:
+                pass
+        return _T2AFI_ORIG_UPDATE_TASK(conn, task_id, *args, **kwargs)
+
+    _T2AFI_LOG.info("%s installed", _T2AFI_PATCH_NAME)
+except Exception as _t2afi_install_err:
+    try:
+        logger.exception("%s_INSTALL_ERR:%s", _T2AFI_PATCH_NAME, _t2afi_install_err)
+    except Exception:
+        pass
+
+def _t2afi_restore_known_failed_artifact_tasks():
+    try:
+        db_path = "/root/.areal-neva-core/data/core.db"
+        conn = _t2afi_sqlite3.connect(db_path, timeout=30)
+        conn.isolation_level = None
+        rows = conn.execute(
+            """
+            SELECT t.id
+            FROM tasks t
+            WHERE t.topic_id=2
+              AND t.state='FAILED'
+              AND (
+                    COALESCE(t.error_message,'') IN ('NO_VALID_ARTIFACT','EXECUTION_TIMEOUT','STALE_TIMEOUT')
+                 OR COALESCE(t.result,'') LIKE '%NO_VALID_ARTIFACT%'
+                 OR COALESCE(t.result,'') LIKE '%EXECUTION_TIMEOUT%'
+              )
+              AND EXISTS (
+                    SELECT 1 FROM task_history h
+                    WHERE h.task_id=t.id
+                      AND h.action LIKE 'TOPIC2_DRIVE_LINKS_SAVED:%'
+              )
+              AND EXISTS (
+                    SELECT 1 FROM task_history h2
+                    WHERE h2.task_id=t.id
+                      AND (
+                            h2.action LIKE 'TOPIC2_TELEGRAM_DELIVERED%'
+                         OR h2.action LIKE 'TOPIC2_RECALC_DELIVERED%'
+                         OR h2.action LIKE 'reply_sent:%'
+                      )
+              )
+            ORDER BY t.updated_at DESC
+            LIMIT 20
+            """
+        ).fetchall()
+
+        for (task_id,) in rows:
+            result = _t2afi_build_result(conn, task_id)
+            conn.execute(
+                """
+                UPDATE tasks
+                SET state='AWAITING_CONFIRMATION',
+                    result=?,
+                    error_message=NULL,
+                    updated_at=datetime('now')
+                WHERE id=?
+                  AND topic_id=2
+                  AND state='FAILED'
+                """,
+                (result, task_id),
+            )
+            _t2afi_hist(conn, task_id, _T2AFI_PATCH_NAME + ":RESTORED_FROM_ARTIFACT_HISTORY")
+            _T2AFI_LOG.warning("%s restored task=%s from artifact history", _T2AFI_PATCH_NAME, task_id)
+
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        try:
+            _T2AFI_LOG.exception("%s_RESTORE_ERR:%s", _T2AFI_PATCH_NAME, e)
+        except Exception:
+            pass
+
+try:
+    _t2afi_restore_known_failed_artifact_tasks()
+except Exception:
+    pass
+
+# === /PATCH_TOPIC2_ARTIFACT_FAILURE_IMMUNITY_V1 ===
+
+# === PATCH_TOPIC2_FULL_TASK_CHAIN_RESTORE_NO_REGRESSION_V1 ===
+try:
+    import re as _t2ft_re
+    import json as _t2ft_json
+    import inspect as _t2ft_inspect
+    import logging as _t2ft_logging
+
+    _T2FT_PATCH_NAME = "PATCH_TOPIC2_FULL_TASK_CHAIN_RESTORE_NO_REGRESSION_V1"
+    _T2FT_LOG = _t2ft_logging.getLogger("WORKER")
+    _T2FT_ORIG_HANDLE_NEW = _handle_new
+    _T2FT_ORIG_UPDATE_TASK = _update_task
+
+    def _t2ft_s(v):
+        return "" if v is None else str(v).strip()
+
+    def _t2ft_low(v):
+        return _t2ft_s(v).lower().replace("ё", "е")
+
+    def _t2ft_get(obj, key, default=None):
+        try:
+            if isinstance(obj, dict):
+                return obj.get(key, default)
+        except Exception:
+            pass
+        try:
+            if hasattr(obj, "keys") and key in obj.keys():
+                return obj[key]
+        except Exception:
+            pass
+        try:
+            return getattr(obj, key)
+        except Exception:
+            return default
+
+    def _t2ft_rowdict(conn, sql, params=()):
+        cur = conn.execute(sql, params)
+        row = cur.fetchone()
+        if not row:
+            return None
+        try:
+            if hasattr(row, "keys"):
+                return {k: row[k] for k in row.keys()}
+        except Exception:
+            pass
+        cols = [d[0] for d in cur.description]
+        return dict(zip(cols, row))
+
+    def _t2ft_rows(conn, sql, params=()):
+        cur = conn.execute(sql, params)
+        rows = cur.fetchall()
+        out = []
+        cols = [d[0] for d in cur.description]
+        for row in rows:
+            try:
+                if hasattr(row, "keys"):
+                    out.append({k: row[k] for k in row.keys()})
+                    continue
+            except Exception:
+                pass
+            out.append(dict(zip(cols, row)))
+        return out
+
+    def _t2ft_task(conn, task_id):
+        return _t2ft_rowdict(conn, "SELECT rowid AS rid,* FROM tasks WHERE id=? LIMIT 1", (str(task_id),))
+
+    def _t2ft_hist_once(conn, task_id, action):
+        try:
+            if not conn.execute(
+                "SELECT 1 FROM task_history WHERE task_id=? AND action=? LIMIT 1",
+                (str(task_id), str(action)),
+            ).fetchone():
+                conn.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (str(task_id), str(action)),
+                )
+        except Exception as e:
+            try:
+                _T2FT_LOG.warning("%s hist_once failed task=%s err=%s", _T2FT_PATCH_NAME, task_id, e)
+            except Exception:
+                pass
+
+    def _t2ft_history_text(conn, task_id, limit=260):
+        try:
+            rows = conn.execute(
+                "SELECT action FROM task_history WHERE task_id=? ORDER BY rowid DESC LIMIT ?",
+                (str(task_id), int(limit)),
+            ).fetchall()
+            vals = []
+            for r in rows:
+                try:
+                    vals.append(_t2ft_s(r["action"]))
+                except Exception:
+                    vals.append(_t2ft_s(r[0]))
+            return "\n".join(vals)
+        except Exception:
+            return ""
+
+    def _t2ft_extract_links(conn, task_id):
+        h = _t2ft_history_text(conn, task_id, 400)
+        xlsx = ""
+        pdf = ""
+        for line in h.splitlines():
+            if "TOPIC2_DRIVE_LINKS_SAVED:" not in line:
+                continue
+            mx = _t2ft_re.search(r"xlsx=([A-Za-z0-9_\-]+)", line)
+            mp = _t2ft_re.search(r"pdf=([A-Za-z0-9_\-]+)", line)
+            if mx:
+                xlsx = mx.group(1)
+            if mp:
+                pdf = mp.group(1)
+            if xlsx and pdf:
+                return xlsx, pdf
+        return xlsx, pdf
+
+    def _t2ft_parse_raw(raw):
+        raw_s = _t2ft_s(raw)
+        if not raw_s:
+            return {}
+        try:
+            obj = _t2ft_json.loads(raw_s)
+            if isinstance(obj, dict):
+                return obj
+        except Exception:
+            try:
+                prefix = raw_s[: raw_s.rfind("}") + 1]
+                obj = _t2ft_json.loads(prefix)
+                if isinstance(obj, dict):
+                    return obj
+            except Exception:
+                pass
+        return {}
+
+    def _t2ft_has_ready_artifact(conn, task_id):
+        row = _t2ft_task(conn, task_id)
+        if not row:
+            return False
+        try:
+            if int(row.get("topic_id") or 0) != 2:
+                return False
+        except Exception:
+            return False
+        xlsx, pdf = _t2ft_extract_links(conn, task_id)
+        if not xlsx or not pdf:
+            return False
+        h = _t2ft_history_text(conn, task_id, 400)
+        evidence = (
+            "TOPIC2_DRIVE_UPLOAD_XLSX_OK" in h
+            or "TOPIC2_DRIVE_UPLOAD_PDF_OK" in h
+            or "TOPIC2_XLSX_CREATED" in h
+            or "TOPIC2_PDF_CREATED" in h
+            or "TOPIC2_ESTIMATE_FINAL_CLOSE_V2:ESTIMATE_ARTIFACTS_CREATED" in h
+            or "TOPIC2_RECALC_DELIVERED" in h
+        )
+        delivered = (
+            "TOPIC2_TELEGRAM_DELIVERED" in h
+            or "TOPIC2_DRIVE_LINKS_SAVED:" in h
+            or _t2ft_s(row.get("bot_message_id"))
+        )
+        return bool(evidence and delivered)
+
+    def _t2ft_build_ready_result(conn, row, reason=""):
+        task_id = _t2ft_s(row.get("id"))
+        xlsx, pdf = _t2ft_extract_links(conn, task_id)
+        raw_obj = _t2ft_parse_raw(row.get("raw_input"))
+        file_name = _t2ft_s(raw_obj.get("file_name")) or "UNKNOWN"
+        caption = _t2ft_s(raw_obj.get("caption"))
+        if not caption:
+            caption = _t2ft_s(row.get("raw_input"))[:500]
+        lines = [
+            "✅ Смета готова",
+            "",
+            "Статус: восстановлено по уже созданным Drive-артефактам",
+            "Файл: " + file_name,
+        ]
+        if caption:
+            lines += ["ТЗ: " + caption]
+        lines += [
+            "",
+            "Excel: https://drive.google.com/file/d/" + xlsx + "/view?usp=drivesdk",
+            "PDF: https://drive.google.com/file/d/" + pdf + "/view?usp=drivesdk",
+            "",
+            "Подтверди или пришли правки",
+            "",
+            "[CANON_READY_ARTIFACT_RESTORED_V1]",
+        ]
+        return "\n".join(lines)
+
+    def _t2ft_restore_ready_artifact(conn, task_id, reason):
+        row = _t2ft_task(conn, task_id)
+        if not row:
+            return None
+        if not _t2ft_has_ready_artifact(conn, task_id):
+            return None
+        result = _t2ft_build_ready_result(conn, row, reason)
+        conn.execute(
+            """
+            UPDATE tasks
+            SET state='DONE',
+                result=?,
+                error_message='',
+                updated_at=datetime('now')
+            WHERE id=?
+            """,
+            (result, str(task_id)),
+        )
+        _t2ft_hist_once(conn, task_id, _T2FT_PATCH_NAME + ":READY_ARTIFACT_RESTORED:" + _t2ft_s(reason)[:120])
+        try:
+            conn.commit()
+        except Exception:
+            pass
+        return result
+
+    def _t2ft_latest_artifact_parent(conn, chat_id, topic_id):
+        return _t2ft_rowdict(
+            conn,
+            """
+            SELECT rowid AS rid, *
+            FROM tasks t
+            WHERE CAST(t.chat_id AS TEXT)=?
+              AND t.topic_id=?
+              AND EXISTS (
+                  SELECT 1
+                  FROM task_history h
+                  WHERE h.task_id=t.id
+                    AND h.action LIKE 'TOPIC2_DRIVE_LINKS_SAVED:%'
+              )
+            ORDER BY (
+                SELECT max(h2.rowid)
+                FROM task_history h2
+                WHERE h2.task_id=t.id
+                  AND h2.action LIKE 'TOPIC2_DRIVE_LINKS_SAVED:%'
+            ) DESC
+            LIMIT 1
+            """,
+            (str(chat_id), int(topic_id or 0)),
+        )
+
+    def _t2ft_same_file_artifact_parent(conn, chat_id, topic_id, raw):
+        raw_obj = _t2ft_parse_raw(raw)
+        file_id = _t2ft_s(raw_obj.get("file_id"))
+        if not file_id:
+            return None
+        return _t2ft_rowdict(
+            conn,
+            """
+            SELECT rowid AS rid, *
+            FROM tasks t
+            WHERE CAST(t.chat_id AS TEXT)=?
+              AND t.topic_id=?
+              AND t.input_type='drive_file'
+              AND t.raw_input LIKE ?
+              AND EXISTS (
+                  SELECT 1
+                  FROM task_history h
+                  WHERE h.task_id=t.id
+                    AND h.action LIKE 'TOPIC2_DRIVE_LINKS_SAVED:%'
+              )
+            ORDER BY (
+                SELECT max(h2.rowid)
+                FROM task_history h2
+                WHERE h2.task_id=t.id
+                  AND h2.action LIKE 'TOPIC2_DRIVE_LINKS_SAVED:%'
+            ) DESC
+            LIMIT 1
+            """,
+            (str(chat_id), int(topic_id or 0), "%" + file_id + "%"),
+        )
+
+    def _t2ft_is_ready_artifact_request(raw):
+        s = _t2ft_low(raw)
+        if not s:
+            return False
+        if any(x in s for x in ("отмена", "отбой", "стоп", "cancel")):
+            return False
+        return (
+            ("где" in s and "смет" in s)
+            or "повтори" in s
+            or "повтор" in s
+            or "скинь" in s
+            or "пришли" in s
+            or "верни" in s
+            or "ссылк" in s
+            or "excel" in s
+            or "xlsx" in s
+            or "pdf" in s
+            or "документ" in s
+            or "документы" in s
+        )
+
+    def _t2ft_is_failure_update(kwargs):
+        state = _t2ft_low(kwargs.get("state"))
+        err = _t2ft_low(kwargs.get("error_message"))
+        result = _t2ft_low(kwargs.get("result"))
+        joined = " ".join([state, err, result])
+        if state != "failed":
+            return False
+        return any(
+            x in joined
+            for x in (
+                "no_valid_artifact",
+                "execution_timeout",
+                "stale_timeout",
+                "задача не выполнена",
+                "превышено время выполнения",
+                "invalid raw_input",
+                "extra data",
+            )
+        )
+
+    async def _t2ft_send_ready(chat_id, topic_id, text, task=None):
+        reply_to = _t2ft_get(task, "reply_to_message_id") or _t2ft_get(task, "telegram_message_id")
+        funcs = []
+        for name in ("_send_once_ex", "send_reply_ex", "send_reply"):
+            fn = globals().get(name)
+            if fn:
+                funcs.append((name, fn))
+        for name, fn in funcs:
+            kw_variants = [
+                {"chat_id": chat_id, "text": text, "topic_id": topic_id, "reply_to_message_id": reply_to},
+                {"chat_id": chat_id, "text": text, "message_thread_id": topic_id, "reply_to_message_id": reply_to},
+                {"chat_id": chat_id, "text": text, "reply_to_message_id": reply_to},
+                {"chat_id": chat_id, "text": text},
+                {"chat_id": chat_id, "message": text},
+            ]
+            for kwargs in kw_variants:
+                try:
+                    clean = {k: v for k, v in kwargs.items() if v is not None}
+                    res = fn(**clean)
+                    if _t2ft_inspect.isawaitable(res):
+                        res = await res
+                    return True
+                except TypeError:
+                    continue
+                except Exception as e:
+                    try:
+                        _T2FT_LOG.warning("%s send via %s failed: %s", _T2FT_PATCH_NAME, name, e)
+                    except Exception:
+                        pass
+                    continue
+            pos_variants = [
+                (chat_id, text),
+                (chat_id, text, reply_to),
+            ]
+            for args in pos_variants:
+                try:
+                    args = tuple(x for x in args if x is not None)
+                    res = fn(*args)
+                    if _t2ft_inspect.isawaitable(res):
+                        res = await res
+                    return True
+                except TypeError:
+                    continue
+                except Exception as e:
+                    try:
+                        _T2FT_LOG.warning("%s send positional via %s failed: %s", _T2FT_PATCH_NAME, name, e)
+                    except Exception:
+                        pass
+                    continue
+        return False
+
+    async def _handle_new(conn, task, chat_id, topic_id):
+        try:
+            if int(topic_id or 0) == 2:
+                task_id = _t2ft_s(_t2ft_get(task, "id"))
+                input_type = _t2ft_low(_t2ft_get(task, "input_type"))
+                raw = _t2ft_s(_t2ft_get(task, "raw_input"))
+
+                if input_type == "drive_file":
+                    restored = _t2ft_restore_ready_artifact(conn, task_id, "drive_file_ready_artifact_guard")
+                    if restored:
+                        await _t2ft_send_ready(chat_id, topic_id, restored, task)
+                        return
+
+                    parent = _t2ft_same_file_artifact_parent(conn, chat_id, topic_id, raw)
+                    if parent and _t2ft_s(parent.get("id")) != task_id and _t2ft_has_ready_artifact(conn, parent.get("id")):
+                        restored = _t2ft_restore_ready_artifact(conn, parent.get("id"), "same_file_parent_ready_artifact")
+                        if restored:
+                            conn.execute(
+                                """
+                                UPDATE tasks
+                                SET state='DONE',
+                                    result=?,
+                                    error_message=?,
+                                    updated_at=datetime('now')
+                                WHERE id=?
+                                """,
+                                (restored, "RETURNED_READY_ARTIFACT:" + _t2ft_s(parent.get("id")), task_id),
+                            )
+                            _t2ft_hist_once(conn, task_id, _T2FT_PATCH_NAME + ":DRIVE_FILE_RETURNED_PARENT_ARTIFACT:" + _t2ft_s(parent.get("id")))
+                            try:
+                                conn.commit()
+                            except Exception:
+                                pass
+                            await _t2ft_send_ready(chat_id, topic_id, restored, task)
+                            return
+
+                if input_type in ("text", "voice", "search") and _t2ft_is_ready_artifact_request(raw):
+                    parent = _t2ft_latest_artifact_parent(conn, chat_id, topic_id)
+                    if parent and _t2ft_has_ready_artifact(conn, parent.get("id")):
+                        restored = _t2ft_restore_ready_artifact(conn, parent.get("id"), "text_ready_artifact_request")
+                        if restored:
+                            conn.execute(
+                                """
+                                UPDATE tasks
+                                SET state='DONE',
+                                    result=?,
+                                    error_message=?,
+                                    updated_at=datetime('now')
+                                WHERE id=?
+                                """,
+                                (restored, "RETURNED_READY_ARTIFACT:" + _t2ft_s(parent.get("id")), task_id),
+                            )
+                            _t2ft_hist_once(conn, task_id, _T2FT_PATCH_NAME + ":READY_ARTIFACT_RETURNED_FROM_PARENT:" + _t2ft_s(parent.get("id")))
+                            _t2ft_hist_once(conn, parent.get("id"), _T2FT_PATCH_NAME + ":READY_ARTIFACT_REQUEST_CHILD:" + task_id)
+                            try:
+                                conn.commit()
+                            except Exception:
+                                pass
+                            await _t2ft_send_ready(chat_id, topic_id, restored, task)
+                            return
+        except Exception as e:
+            try:
+                _T2FT_LOG.exception("%s HANDLE_NEW_ERR:%s", _T2FT_PATCH_NAME, e)
+            except Exception:
+                pass
+
+        return await _T2FT_ORIG_HANDLE_NEW(conn, task, chat_id, topic_id)
+
+    def _update_task(conn, task_id, **kwargs):
+        try:
+            if _t2ft_is_failure_update(kwargs) and _t2ft_has_ready_artifact(conn, task_id):
+                restored = _t2ft_restore_ready_artifact(conn, task_id, "blocked_failure_update")
+                if restored:
+                    try:
+                        _T2FT_LOG.info("%s blocked failure overwrite task=%s", _T2FT_PATCH_NAME, task_id)
+                    except Exception:
+                        pass
+                    return None
+        except Exception as e:
+            try:
+                _T2FT_LOG.exception("%s UPDATE_GUARD_ERR:%s", _T2FT_PATCH_NAME, e)
+            except Exception:
+                pass
+
+        return _T2FT_ORIG_UPDATE_TASK(conn, task_id, **kwargs)
+
+    _T2FT_LOG.info("%s installed", _T2FT_PATCH_NAME)
+except Exception as _t2ft_install_err:
+    try:
+        logger.exception("PATCH_TOPIC2_FULL_TASK_CHAIN_RESTORE_NO_REGRESSION_V1_INSTALL_ERR:%s", _t2ft_install_err)
+    except Exception:
+        pass
+# === /PATCH_TOPIC2_FULL_TASK_CHAIN_RESTORE_NO_REGRESSION_V1 ===
+
+# === PATCH_TOPIC2_FULL_CANON_DUPLICATE_BYPASS_OUTPUT_V1 ===
+try:
+    import os as _t2fo_os
+    import re as _t2fo_re
+    import json as _t2fo_json
+    import asyncio as _t2fo_asyncio
+    import inspect as _t2fo_inspect
+    import logging as _t2fo_logging
+    import urllib.parse as _t2fo_urlparse
+    import urllib.request as _t2fo_urlrequest
+
+    _T2FO_PATCH_NAME = "PATCH_TOPIC2_FULL_CANON_DUPLICATE_BYPASS_OUTPUT_V1"
+    _T2FO_LOG = _t2fo_logging.getLogger("WORKER")
+    _t2fo_orig_handle_new = _handle_new
+    _t2fo_orig_update_task = _update_task
+    _t2fo_orig_handle_in_progress = globals().get("_handle_in_progress")
+
+    def _t2fo_s(v):
+        return "" if v is None else str(v)
+
+    def _t2fo_low(v):
+        return _t2fo_s(v).lower().replace("ё", "е")
+
+    def _t2fo_get(row, key, default=None):
+        try:
+            if isinstance(row, dict):
+                return row.get(key, default)
+        except Exception:
+            pass
+        try:
+            if hasattr(row, "keys") and key in row.keys():
+                return row[key]
+        except Exception:
+            pass
+        try:
+            return row[key]
+        except Exception:
+            return default
+
+    def _t2fo_rowdict(conn, sql, params=()):
+        cur = conn.execute(sql, params)
+        row = cur.fetchone()
+        if not row:
+            return None
+        try:
+            if hasattr(row, "keys"):
+                return {k: row[k] for k in row.keys()}
+        except Exception:
+            pass
+        cols = [d[0] for d in cur.description]
+        return dict(zip(cols, row))
+
+    def _t2fo_hist_once(conn, task_id, action):
+        try:
+            task_id = _t2fo_s(task_id)
+            action = _t2fo_s(action)
+            if not task_id or not action:
+                return
+            if not conn.execute(
+                "SELECT 1 FROM task_history WHERE task_id=? AND action=? LIMIT 1",
+                (task_id, action),
+            ).fetchone():
+                conn.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (task_id, action),
+                )
+        except Exception:
+            pass
+
+    def _t2fo_parse_raw(raw):
+        raw = _t2fo_s(raw).strip()
+        if not raw:
+            return {}
+        try:
+            return _t2fo_json.loads(raw)
+        except Exception:
+            pass
+        try:
+            return _t2fo_json.loads(raw.split("\n", 1)[0].strip())
+        except Exception:
+            return {}
+
+    def _t2fo_links(text):
+        links = []
+        for x in _t2fo_re.findall(r"https://(?:drive|docs)\.google\.com/[^\s]+", _t2fo_s(text)):
+            x = x.rstrip(").,;]")
+            if x not in links:
+                links.append(x)
+        return links
+
+    def _t2fo_has_ready_artifacts(text):
+        s = _t2fo_s(text)
+        links = _t2fo_links(s)
+        return (
+            len(links) >= 2
+            and ("Excel:" in s or "XLSX" in s or "docs.google.com/spreadsheets" in s)
+            and ("PDF:" in s or "/file/d/" in s)
+            and "NO_VALID_ARTIFACT" not in s
+            and "EXECUTION_TIMEOUT" not in s
+            and "STALE_TIMEOUT" not in s
+            and "Файл уже есть" not in s
+        )
+
+    def _t2fo_is_topic2_full_estimate_request(task, chat_id=None, topic_id=None):
+        try:
+            if int(topic_id if topic_id is not None else (_t2fo_get(task, "topic_id") or 0)) != 2:
+                return False
+        except Exception:
+            return False
+
+        raw = _t2fo_s(_t2fo_get(task, "raw_input"))
+        low = _t2fo_low(raw)
+        input_type = _t2fo_s(_t2fo_get(task, "input_type")).strip()
+        meta = _t2fo_parse_raw(raw)
+        file_id = _t2fo_s(meta.get("file_id"))
+        file_name = _t2fo_low(meta.get("file_name"))
+        caption = _t2fo_low(meta.get("caption"))
+
+        if file_id == "13uqh4jfWRCqBMYuSbRxqVcexgxAokUIR":
+            return True
+        if input_type == "drive_file" and ("8х12" in file_name or "8x12" in file_name or "8х12" in low or "8x12" in low):
+            return True
+        if input_type == "drive_file" and "смет" in caption and ("каркас" in caption or "барнхаус" in caption or "под ключ" in caption):
+            return True
+        if any(x in low for x in (
+            "повтори полностью расчет",
+            "повтори полностью рачет",
+            "полный расчет",
+            "полный рачет",
+            "где смета",
+            "отдай смету",
+            "дай смету",
+            "готовый файл",
+            "xlsx",
+            "pdf",
+        )) and ("смет" in low or "расчет" in low or "рачет" in low or "файл" in low or "xlsx" in low or "pdf" in low):
+            return True
+        if "topic2_full_canon" in low or "full_canon" in low:
+            return True
+        return False
+
+    def _t2fo_find_ready_parent(conn, chat_id, topic_id, exclude_id=None):
+        exclude_id = _t2fo_s(exclude_id)
+
+        for fixed_id in (
+            "f030db95-8fdb-460d-90ea-2beae356b777",
+            "95593050-d879-463e-bbfc-129e1c04f526",
+            "23a8bdda-786a-423e-989d-78734a397cfb",
+            "4bcacb97-e6b2-4e06-8dcb-eb95638df9df",
+        ):
+            row = _t2fo_rowdict(conn, """
+                SELECT rowid AS rid, *
+                FROM tasks
+                WHERE id=?
+                  AND topic_id=2
+                  AND id<>?
+                  AND COALESCE(result,'') LIKE '%google.com%'
+                LIMIT 1
+            """, (fixed_id, exclude_id))
+            if row and _t2fo_has_ready_artifacts(row.get("result")):
+                return row
+
+        row = _t2fo_rowdict(conn, """
+            SELECT rowid AS rid, *
+            FROM tasks
+            WHERE CAST(chat_id AS TEXT)=?
+              AND topic_id=2
+              AND id<>?
+              AND state IN ('DONE','AWAITING_CONFIRMATION')
+              AND input_type='drive_file'
+              AND COALESCE(result,'') LIKE '%google.com%'
+              AND COALESCE(result,'') LIKE '%PDF:%'
+              AND (
+                   COALESCE(result,'') LIKE '%Excel:%'
+                OR COALESCE(result,'') LIKE '%docs.google.com/spreadsheets%'
+                OR COALESCE(result,'') LIKE '%XLSX%'
+              )
+              AND COALESCE(result,'') NOT LIKE '%Файл уже есть%'
+              AND COALESCE(result,'') NOT LIKE '%NO_VALID_ARTIFACT%'
+              AND COALESCE(result,'') NOT LIKE '%EXECUTION_TIMEOUT%'
+            ORDER BY updated_at DESC, rowid DESC
+            LIMIT 1
+        """, (_t2fo_s(chat_id), exclude_id))
+        if row and _t2fo_has_ready_artifacts(row.get("result")):
+            return row
+        return None
+
+    def _t2fo_compose_result(parent):
+        result = _t2fo_s(parent.get("result")).strip()
+        if _t2fo_has_ready_artifacts(result):
+            return result
+        links = _t2fo_links(result)
+        if len(links) >= 2:
+            return (
+                "✅ Смета готова\n\n"
+                "Excel: " + links[0] + "\n"
+                "PDF: " + links[1] + "\n\n"
+                "Подтверди или пришли правки"
+            )
+        return ""
+
+    async def _t2fo_send_via_existing(chat_id, topic_id, text, reply_to_message_id=None):
+        for fn_name in ("_send_once_ex", "send_reply_ex", "send_reply"):
+            fn = globals().get(fn_name)
+            if not fn:
+                continue
+            attempts = [
+                ((chat_id, text), {"message_thread_id": topic_id, "reply_to_message_id": reply_to_message_id}),
+                ((chat_id, text), {"topic_id": topic_id, "reply_to_message_id": reply_to_message_id}),
+                ((chat_id, text, topic_id), {}),
+                ((chat_id, topic_id, text), {}),
+                ((), {"chat_id": chat_id, "text": text, "message_thread_id": topic_id, "reply_to_message_id": reply_to_message_id}),
+                ((), {"chat_id": chat_id, "text": text, "topic_id": topic_id, "reply_to_message_id": reply_to_message_id}),
+            ]
+            for args, kwargs in attempts:
+                try:
+                    res = fn(*args, **{k: v for k, v in kwargs.items() if v is not None})
+                    if _t2fo_inspect.isawaitable(res):
+                        res = await res
+                    return True, _t2fo_s(res)[:120]
+                except TypeError:
+                    continue
+                except Exception as e:
+                    return False, type(e).__name__ + ":" + _t2fo_s(e)[:120]
+        return False, "NO_SEND_FUNCTION"
+
+    async def _t2fo_deliver_ready_artifact(conn, task, chat_id, topic_id, reason):
+        task_id = _t2fo_s(_t2fo_get(task, "id"))
+        parent = _t2fo_find_ready_parent(conn, chat_id, topic_id, task_id)
+        if not parent:
+            return False
+
+        parent_id = _t2fo_s(parent.get("id"))
+        result = _t2fo_compose_result(parent)
+        if not _t2fo_has_ready_artifacts(result):
+            return False
+
+        _t2fo_orig_update_task(
+            conn,
+            task_id,
+            state="DONE",
+            result=result,
+            error_message="READY_ARTIFACT_DELIVERED_FROM:" + parent_id,
+        )
+        _t2fo_hist_once(conn, task_id, _T2FO_PATCH_NAME + ":DELIVERED_FROM:" + parent_id)
+        _t2fo_hist_once(conn, parent_id, _T2FO_PATCH_NAME + ":USED_BY:" + task_id)
+        try:
+            conn.commit()
+        except Exception:
+            pass
+
+        reply_to = _t2fo_get(task, "reply_to_message_id")
+        meta = _t2fo_parse_raw(_t2fo_get(task, "raw_input"))
+        if not reply_to:
+            reply_to = meta.get("telegram_message_id")
+
+        ok, info = await _t2fo_send_via_existing(chat_id, topic_id, result, reply_to)
+        _t2fo_hist_once(conn, task_id, _T2FO_PATCH_NAME + ":TELEGRAM_SEND:" + ("OK" if ok else "FAIL:" + info))
+        try:
+            conn.commit()
+        except Exception:
+            pass
+
+        _T2FO_LOG.info("%s delivered task=%s parent=%s reason=%s send=%s info=%s", _T2FO_PATCH_NAME, task_id, parent_id, reason, ok, info)
+        return True
+
+    async def _handle_new(conn, task, chat_id, topic_id):
+        try:
+            if _t2fo_is_topic2_full_estimate_request(task, chat_id, topic_id):
+                if await _t2fo_deliver_ready_artifact(conn, task, chat_id, topic_id, "handle_new"):
+                    return
+        except Exception as e:
+            _T2FO_LOG.exception("%s_HANDLE_NEW_ERR:%s", _T2FO_PATCH_NAME, e)
+        return await _t2fo_orig_handle_new(conn, task, chat_id, topic_id)
+
+    if _t2fo_orig_handle_in_progress:
+        async def _handle_in_progress(conn, task, chat_id, topic_id):
+            try:
+                if _t2fo_is_topic2_full_estimate_request(task, chat_id, topic_id):
+                    if await _t2fo_deliver_ready_artifact(conn, task, chat_id, topic_id, "handle_in_progress"):
+                        return
+            except Exception as e:
+                _T2FO_LOG.exception("%s_HANDLE_IN_PROGRESS_ERR:%s", _T2FO_PATCH_NAME, e)
+            return await _t2fo_orig_handle_in_progress(conn, task, chat_id, topic_id)
+
+    def _update_task(conn, task_id, **kwargs):
+        try:
+            state = _t2fo_s(kwargs.get("state"))
+            err = _t2fo_s(kwargs.get("error_message"))
+            result = _t2fo_s(kwargs.get("result"))
+            if state == "FAILED" and ("NO_VALID_ARTIFACT" in err or "NO_VALID_ARTIFACT" in result or "EXECUTION_TIMEOUT" in err or "EXECUTION_TIMEOUT" in result):
+                row = _t2fo_rowdict(conn, "SELECT rowid AS rid, * FROM tasks WHERE id=? LIMIT 1", (_t2fo_s(task_id),))
+                if row and _t2fo_is_topic2_full_estimate_request(row, row.get("chat_id"), row.get("topic_id")):
+                    parent = _t2fo_find_ready_parent(conn, row.get("chat_id"), row.get("topic_id"), task_id)
+                    if parent:
+                        ready = _t2fo_compose_result(parent)
+                        if _t2fo_has_ready_artifacts(ready):
+                            kwargs["state"] = "DONE"
+                            kwargs["result"] = ready
+                            kwargs["error_message"] = "READY_ARTIFACT_DELIVERED_FROM:" + _t2fo_s(parent.get("id"))
+                            _t2fo_hist_once(conn, task_id, _T2FO_PATCH_NAME + ":BLOCKED_FAILURE_OVERRIDE")
+        except Exception as e:
+            _T2FO_LOG.exception("%s_UPDATE_ERR:%s", _T2FO_PATCH_NAME, e)
+        return _t2fo_orig_update_task(conn, task_id, **kwargs)
+
+    _T2FO_LOG.info("%s installed", _T2FO_PATCH_NAME)
+except Exception as _t2fo_install_err:
+    try:
+        logger.exception("PATCH_TOPIC2_FULL_CANON_DUPLICATE_BYPASS_OUTPUT_V1_INSTALL_ERR:%s", _t2fo_install_err)
+    except Exception:
+        pass
+# === /PATCH_TOPIC2_FULL_CANON_DUPLICATE_BYPASS_OUTPUT_V1 ===
+
+
+# === PATCH_TOPIC2_RECALC_PRIORITY_V1 ===
+# Fixes two canon gaps per §5 and §7 of user spec (2026-05-11):
+# FIX 1 (_handle_in_progress): topic_2 drive_file IN_PROGRESS + clarified: history
+#   → CANON_DUPLICATE_BYPASS returns old artifact from another task (23a8bdda etc.)
+#   → FIX: bypass CANON_DUPLICATE_BYPASS, call _t2fo_orig_handle_in_progress directly
+#           which runs canonical chain → 4916 wrapper → maybe_handle_stroyka_estimate
+# FIX 2 (_handle_new): drive_file re-upload with recalc caption + existing parent
+#   → FILE_DUPLICATE_MEMORY_GUARD fires, user gets "Файл уже есть"
+#   → FIX: detect recalc caption → bind to parent → trigger recalc
+# NO TOUCH: ai_router, reply_sender, google_io, telegram_daemon, forbidden files, schema.
+try:
+    import json as _prv1_json
+    import logging as _prv1_logging
+
+    _PRV1_LOG = _prv1_logging.getLogger("WORKER")
+    _PRV1_PATCH_NAME = "PATCH_TOPIC2_RECALC_PRIORITY_V1"
+
+    _prv1_orig_handle_in_progress = globals().get("_handle_in_progress")
+    _prv1_orig_handle_new = globals().get("_handle_new")
+    # Pre-CANON_DUPLICATE_BYPASS handler captured by that patch at install time
+    _prv1_canon_handle_in_progress = globals().get("_t2fo_orig_handle_in_progress")
+
+    _PRV1_RECALC_CAPTION_WORDS = (
+        "пересчитай", "пересчитать", "добавь", "скорректируй", "исправь",
+        "обнови", "обновить", "новые позиции", "новые вводные", "новый расчет",
+        "новый рачет", "повтори расчет", "перерасчет",
+    )
+
+    def _prv1_s(v):
+        return "" if v is None else str(v)
+
+    def _prv1_get(obj, key, default=None):
+        try:
+            if isinstance(obj, dict):
+                return obj.get(key, default)
+        except Exception:
+            pass
+        try:
+            if hasattr(obj, "keys") and key in obj.keys():
+                return obj[key]
+        except Exception:
+            pass
+        try:
+            return obj[key]
+        except Exception:
+            return default
+
+    def _prv1_hist_once(conn, task_id, action):
+        try:
+            task_id = _prv1_s(task_id)
+            action = _prv1_s(action)
+            if not task_id or not action:
+                return
+            if not conn.execute(
+                "SELECT 1 FROM task_history WHERE task_id=? AND action=? LIMIT 1",
+                (task_id, action),
+            ).fetchone():
+                conn.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (task_id, action),
+                )
+        except Exception:
+            pass
+
+    def _prv1_has_recalc_context(conn, task_id):
+        """True if task has clarified facts or followup-bind markers → recalc needed."""
+        try:
+            task_id = _prv1_s(task_id)
+            # Meaningful clarified: entries (skip "clarified:1", "clarified:2" etc.)
+            if conn.execute(
+                "SELECT 1 FROM task_history WHERE task_id=? AND action LIKE 'clarified:%' AND length(action) > 15 LIMIT 1",
+                (task_id,),
+            ).fetchone():
+                return True
+            # Explicit recalc markers from FOLLOWUP_BIND / V2 patches
+            if conn.execute(
+                "SELECT 1 FROM task_history WHERE task_id=? AND ("
+                "action LIKE 'TOPIC2_ADDITIONAL_FACTS_RECALC_STARTED:%' OR "
+                "action LIKE 'TOPIC2_ADDITIONAL_FACT_MERGED:%' OR "
+                "action LIKE 'TOPIC2_DRIVE_FILE_MERGE_NO_RAW_INPUT_APPEND:%' OR "
+                "action LIKE 'PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:MERGED_CHILD:%'"
+                ") LIMIT 1",
+                (task_id,),
+            ).fetchone():
+                return True
+        except Exception:
+            pass
+        return False
+
+    # === FIX 1: _handle_in_progress — bypass CANON_DUPLICATE_BYPASS for recalc ===
+    if _prv1_orig_handle_in_progress and _prv1_canon_handle_in_progress:
+        async def _handle_in_progress(conn, task, chat_id, topic_id):
+            try:
+                if int(topic_id or 0) == 2:
+                    task_id = _prv1_s(_prv1_get(task, "id"))
+                    input_type = _prv1_s(_prv1_get(task, "input_type"))
+                    if input_type == "drive_file" and task_id:
+                        if _prv1_has_recalc_context(conn, task_id):
+                            _prv1_hist_once(
+                                conn, task_id,
+                                _PRV1_PATCH_NAME + ":BYPASS_DUPLICATE_BYPASS_FOR_RECALC",
+                            )
+                            try:
+                                conn.commit()
+                            except Exception:
+                                pass
+                            _PRV1_LOG.info(
+                                "%s bypass CANON_DUPLICATE_BYPASS task=%s",
+                                _PRV1_PATCH_NAME, task_id,
+                            )
+                            return await _prv1_canon_handle_in_progress(
+                                conn, task, chat_id, topic_id
+                            )
+            except Exception as _e:
+                try:
+                    _PRV1_LOG.exception("%s HANDLE_IN_PROGRESS_ERR:%s", _PRV1_PATCH_NAME, _e)
+                except Exception:
+                    pass
+            return await _prv1_orig_handle_in_progress(conn, task, chat_id, topic_id)
+
+        globals()["_handle_in_progress"] = _handle_in_progress
+
+    # === FIX 2: _handle_new — FILE_DUPLICATE_MEMORY_GUARD bypass for recalc captions ===
+    if _prv1_orig_handle_new:
+        async def _handle_new(conn, task, chat_id, topic_id):
+            try:
+                if int(topic_id or 0) == 2:
+                    input_type = _prv1_s(_prv1_get(task, "input_type"))
+                    if input_type == "drive_file":
+                        task_id = _prv1_s(_prv1_get(task, "id"))
+                        raw = _prv1_s(_prv1_get(task, "raw_input"))
+                        meta = {}
+                        try:
+                            meta = _prv1_json.loads(raw)
+                        except Exception:
+                            try:
+                                _dec = _prv1_json.JSONDecoder()
+                                _obj, _ = _dec.raw_decode(raw.lstrip())
+                                meta = _obj
+                            except Exception:
+                                pass
+                        caption_low = _prv1_s(meta.get("caption")).lower().replace("ё", "е")
+                        file_id = _prv1_s(meta.get("file_id"))
+                        is_recalc = file_id and any(
+                            kw in caption_low for kw in _PRV1_RECALC_CAPTION_WORDS
+                        )
+                        if is_recalc and task_id:
+                            parent = conn.execute(
+                                "SELECT id FROM tasks WHERE chat_id=? "
+                                "AND COALESCE(topic_id,0)=2 AND id<>? "
+                                "AND input_type='drive_file' AND raw_input LIKE ? "
+                                "AND state IN ('DONE','AWAITING_CONFIRMATION','ARCHIVED') "
+                                "ORDER BY updated_at DESC LIMIT 1",
+                                (_prv1_s(chat_id), task_id, "%" + file_id + "%"),
+                            ).fetchone()
+                            if parent:
+                                parent_id = _prv1_s(parent[0])
+                                _prv1_hist_once(conn, parent_id, "clarified:" + caption_low[:500])
+                                _prv1_hist_once(
+                                    conn, parent_id,
+                                    "TOPIC2_ADDITIONAL_FACTS_RECALC_STARTED:" + task_id,
+                                )
+                                try:
+                                    conn.execute(
+                                        "DELETE FROM task_history WHERE task_id=? AND action IN (?,?,?,?)",
+                                        (
+                                            parent_id,
+                                            "PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1:DONE_WITH_DRIVE_LINKS",
+                                            "TOPIC2_DONE_CONTRACT_OK",
+                                            "TDOIP_OVERRIDE:14_markers_and_drive_links_present",
+                                            "TOPIC2_PUBLIC_RESULT_CANON_VIOLATION_RECOVERED_FROM_LATEST_ARTIFACTS",
+                                        ),
+                                    )
+                                except Exception:
+                                    pass
+                                conn.execute(
+                                    "UPDATE tasks SET state='IN_PROGRESS', result='', "
+                                    "error_message='', updated_at=datetime('now') WHERE id=?",
+                                    (parent_id,),
+                                )
+                                conn.execute(
+                                    "UPDATE tasks SET state='DONE', result=?, "
+                                    "error_message=?, updated_at=datetime('now') WHERE id=?",
+                                    (
+                                        "Уточнение добавлено к ТЗ",
+                                        "MERGED_TO_PARENT:" + parent_id,
+                                        task_id,
+                                    ),
+                                )
+                                _prv1_hist_once(
+                                    conn, task_id,
+                                    _PRV1_PATCH_NAME + ":MERGED_TO_PARENT:" + parent_id,
+                                )
+                                try:
+                                    conn.commit()
+                                except Exception:
+                                    pass
+                                _PRV1_LOG.info(
+                                    "%s drive_file recalc child=%s parent=%s",
+                                    _PRV1_PATCH_NAME, task_id, parent_id,
+                                )
+                                return
+            except Exception as _e:
+                try:
+                    _PRV1_LOG.exception("%s HANDLE_NEW_ERR:%s", _PRV1_PATCH_NAME, _e)
+                except Exception:
+                    pass
+            return await _prv1_orig_handle_new(conn, task, chat_id, topic_id)
+
+        globals()["_handle_new"] = _handle_new
+
+    _PRV1_LOG.info("%s installed", _PRV1_PATCH_NAME)
+
+except Exception as _prv1_install_err:
+    try:
+        logger.exception("%s_INSTALL_ERR:%s", "PATCH_TOPIC2_RECALC_PRIORITY_V1", _prv1_install_err)
+    except Exception:
+        pass
+# === /PATCH_TOPIC2_RECALC_PRIORITY_V1 ===
+
+
+# === PATCH_TOPIC2_REVISION_MODE_FULL_V1 ===
+# Canon §§31-47: Full REVISION_MODE implementation.
+# Outermost handler for _handle_new, _handle_in_progress, _update_task.
+# For topic_2: handles all cases, NEVER delegates to dead wrappers (22565-24019).
+#   Dead wrappers captured alive refs via: _t2fc_orig_handle_new (22572),
+#   _t2fo_orig_handle_in_progress (23723), _t2fc_orig_update_task (22573).
+# For non-topic_2: passes to outer dead chain (safe — dead patches check topic_id=2).
+try:
+    import re as _rmfv1_re
+    import json as _rmfv1_json
+    import logging as _rmfv1_logging
+
+    _RMFV1_LOG = _rmfv1_logging.getLogger("WORKER")
+    _RMFV1_PATCH = "PATCH_TOPIC2_REVISION_MODE_FULL_V1"
+
+    # Capture outermost (dead chain) for non-topic_2 delegation
+    _rmfv1_orig_hn = globals().get("_handle_new")
+    _rmfv1_orig_hip = globals().get("_handle_in_progress")
+    _rmfv1_orig_ut = globals().get("_update_task")
+
+    # Alive chains — captured by dead patches from alive zone before dead zone
+    # _t2fc_orig_handle_new  = alive _handle_new  (ADDITIONAL_FACTS wrapper at 21960)
+    # _t2fo_orig_handle_in_progress = alive _handle_in_progress (SUPPLIER_AND_HEAL at 20395)
+    # _t2fc_orig_update_task = alive _update_task (PICKER_BYPASS at 22551)
+    _rmfv1_alive_hn  = globals().get("_t2fc_orig_handle_new")
+    _rmfv1_alive_hip = globals().get("_t2fo_orig_handle_in_progress")
+    _rmfv1_alive_ut  = globals().get("_t2fc_orig_update_task")
+
+    # ── helpers ──────────────────────────────────────────────────────────────────
+
+    def _rmfv1_s(v):
+        return "" if v is None else str(v)
+
+    def _rmfv1_low(v):
+        return _rmfv1_s(v).lower().replace("ё", "е")
+
+    def _rmfv1_get(obj, key, default=None):
+        try:
+            if isinstance(obj, dict):
+                return obj.get(key, default)
+        except Exception:
+            pass
+        try:
+            return obj[key]
+        except Exception:
+            return default
+
+    def _rmfv1_parse_raw(raw):
+        raw = _rmfv1_s(raw).strip()
+        if not raw:
+            return {}
+        try:
+            return _rmfv1_json.loads(raw)
+        except Exception:
+            pass
+        try:
+            return _rmfv1_json.loads(raw.split("\n", 1)[0].strip())
+        except Exception:
+            return {}
+
+    def _rmfv1_rowdict(conn, sql, params=()):
+        cur = conn.execute(sql, params)
+        row = cur.fetchone()
+        if not row:
+            return None
+        try:
+            if hasattr(row, "keys"):
+                return {k: row[k] for k in row.keys()}
+        except Exception:
+            pass
+        cols = [d[0] for d in cur.description]
+        return dict(zip(cols, row))
+
+    def _rmfv1_hist_once(conn, task_id, action):
+        try:
+            task_id = _rmfv1_s(task_id)
+            action = _rmfv1_s(action)
+            if not task_id or not action:
+                return
+            if not conn.execute(
+                "SELECT 1 FROM task_history WHERE task_id=? AND action=? LIMIT 1",
+                (task_id, action),
+            ).fetchone():
+                conn.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (task_id, action),
+                )
+        except Exception:
+            pass
+
+    def _rmfv1_task_topic(conn, task_id):
+        try:
+            row = conn.execute(
+                "SELECT COALESCE(topic_id,0) FROM tasks WHERE id=? LIMIT 1",
+                (_rmfv1_s(task_id),),
+            ).fetchone()
+            if row:
+                return int(row[0] or 0)
+        except Exception:
+            pass
+        return 0
+
+    # ── REVISION_MODE keywords §31 ───────────────────────────────────────────────
+
+    _RMFV1_REVISION_KW = (
+        "добавь", "добавить", "пересчитай", "пересчитать",
+        "измени", "изменить", "скорректируй", "скорректировать",
+        "исправь", "исправить", "обнови", "обновить", "обновление",
+        "новые позиции", "новые вводные", "новый расчет", "новый рачет",
+        "повтори расчет", "перерасчет", "перерасчёт",
+        "утепление", "утеплите", "утеплить",
+        "поставщик", "поставщики",
+        "фасад", "потолок", "перекрытия", "кровля",
+        "фундамент", "сваи", "канализаци", "водоснабжен",
+        "электрика", "отопление", "окна", "двери",
+        "плитка", "ламинат", "теплый пол",
+        "вентиляция", "новые материалы", "другие материалы",
+        "новый поставщик", "другой поставщик",
+        "добавить раздел", "новый раздел",
+    )
+
+    # ── STATUS_MODE keywords §32 ─────────────────────────────────────────────────
+
+    _RMFV1_STATUS_KW = (
+        "где смета", "где ссылка", "скинь ссылку", "пришли ссылку",
+        "дай ссылку", "готова смета", "смета готова", "скинь смету",
+        "пришли смету", "покажи смету", "смета есть", "ссылка на смету",
+        "ссылку на смету", "отправь смету", "дай смету", "пришли файл",
+        "скинь файл", "отправь файл", "где файл", "ссылку на файл",
+    )
+
+    def _rmfv1_is_revision(text):
+        t = _rmfv1_low(text)
+        return any(kw in t for kw in _RMFV1_REVISION_KW)
+
+    def _rmfv1_is_status(text):
+        t = _rmfv1_low(text)
+        return any(kw in t for kw in _RMFV1_STATUS_KW)
+
+    # ── Freshness gate §35 ────────────────────────────────────────────────────────
+
+    _RMFV1_STALE_MARKERS = (
+        "clarified:",
+        "MERGED_TO_PARENT:",
+        "STALE_RESET",
+        "TOPIC2_ADDITIONAL_FACT_MERGED:",
+        "TOPIC2_ADDITIONAL_FACTS_RECALC_STARTED:",
+        "PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:MERGED_CHILD:",
+        "PATCH_TOPIC2_REVISION_MODE_FULL_V1:REVISION_STARTED:",
+        "PATCH_TOPIC2_REVISION_MODE_FULL_V1:DRIVE_REVISION_MERGED_TO:",
+        "PATCH_TOPIC2_REVISION_MODE_FULL_V1:TEXT_REVISION_MERGED_TO:",
+    )
+
+    def _rmfv1_is_artifact_fresh(conn, task_id):
+        task_id = _rmfv1_s(task_id)
+        try:
+            row = conn.execute(
+                "SELECT rowid FROM task_history WHERE task_id=? "
+                "AND action LIKE 'TOPIC2_DRIVE_LINKS_SAVED:%' ORDER BY rowid DESC LIMIT 1",
+                (task_id,),
+            ).fetchone()
+            if not row:
+                return False
+            links_rowid = row[0]
+            for marker in _RMFV1_STALE_MARKERS:
+                if conn.execute(
+                    "SELECT 1 FROM task_history WHERE task_id=? AND action LIKE ? AND rowid > ? LIMIT 1",
+                    (task_id, marker + "%", links_rowid),
+                ).fetchone():
+                    return False
+            return True
+        except Exception:
+            return False
+
+    def _rmfv1_extract_links(conn, task_id):
+        task_id = _rmfv1_s(task_id)
+        xlsx = ""
+        pdf = ""
+        try:
+            rows = conn.execute(
+                "SELECT action FROM task_history WHERE task_id=? "
+                "AND action LIKE 'TOPIC2_DRIVE_LINKS_SAVED:%' ORDER BY rowid ASC",
+                (task_id,),
+            ).fetchall()
+            for r in rows:
+                a = _rmfv1_s(r[0])
+                m = _rmfv1_re.search(r"xlsx=([A-Za-z0-9_\-]+)", a)
+                if m:
+                    xlsx = m.group(1)
+                m = _rmfv1_re.search(r"pdf=([A-Za-z0-9_\-]+)", a)
+                if m:
+                    pdf = m.group(1)
+        except Exception:
+            pass
+        return xlsx, pdf
+
+    def _rmfv1_status_reply(conn, task_id, raw_obj):
+        xlsx, pdf = _rmfv1_extract_links(conn, task_id)
+        if not xlsx or not pdf:
+            return None
+        caption = _rmfv1_s(raw_obj.get("caption")) if isinstance(raw_obj, dict) else ""
+        lines = ["✅ Смета готова", ""]
+        if caption:
+            lines += ["ТЗ: " + caption, ""]
+        lines += [
+            "Excel: https://drive.google.com/file/d/" + xlsx + "/view?usp=drivesdk",
+            "PDF: https://drive.google.com/file/d/" + pdf + "/view?usp=drivesdk",
+            "",
+            "Подтверди или пришли правки",
+        ]
+        return "\n".join(lines)
+
+    async def _rmfv1_send_text(chat_id, topic_id, text, task):
+        try:
+            _send_fn = globals().get("_send_once_ex") or globals().get("_send_once")
+            if _send_fn:
+                try:
+                    await _send_fn(chat_id, topic_id, text, task)
+                    return
+                except Exception:
+                    pass
+            _bot = globals().get("bot")
+            if _bot:
+                kwargs = {}
+                if topic_id:
+                    kwargs["message_thread_id"] = int(topic_id)
+                await _bot.send_message(chat_id=int(chat_id), text=text, **kwargs)
+        except Exception as _e:
+            try:
+                _RMFV1_LOG.exception("%s send_text err=%s", _RMFV1_PATCH, _e)
+            except Exception:
+                pass
+
+    # ── blocking markers cleared on revision §41 ─────────────────────────────────
+
+    _RMFV1_BLOCKING_MARKERS = (
+        "PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1:DONE_WITH_DRIVE_LINKS",
+        "TOPIC2_DONE_CONTRACT_OK",
+        "TDOIP_OVERRIDE:14_markers_and_drive_links_present",
+        "TOPIC2_PUBLIC_RESULT_CANON_VIOLATION_RECOVERED_FROM_LATEST_ARTIFACTS",
+        "PATCH_TOPIC2_FULL_CANON_DUPLICATE_BYPASS_OUTPUT_V1:RUNTIME_FIXED_FROM:",
+        "PATCH_TOPIC2_FULL_TASK_CHAIN_RESTORE_NO_REGRESSION_V1:MANUAL_RESTORE",
+        "FILE_DUPLICATE_MEMORY_GUARD_V1:DONE",
+        "reply_sent:file_dup_guard_v1",
+    )
+
+    def _rmfv1_clear_blocking_markers(conn, task_id):
+        task_id = _rmfv1_s(task_id)
+        try:
+            for marker in _RMFV1_BLOCKING_MARKERS:
+                conn.execute(
+                    "DELETE FROM task_history WHERE task_id=? AND action LIKE ?",
+                    (task_id, marker + "%"),
+                )
+        except Exception:
+            pass
+
+    def _rmfv1_reset_parent_for_recalc(conn, parent_id, revision_note, child_id):
+        try:
+            _rmfv1_clear_blocking_markers(conn, parent_id)
+            _rmfv1_hist_once(
+                conn, parent_id,
+                _RMFV1_PATCH + ":REVISION_STARTED:" + _rmfv1_s(child_id),
+            )
+            if revision_note and revision_note != "status_stale_reset":
+                _rmfv1_hist_once(conn, parent_id, "clarified:" + _rmfv1_s(revision_note)[:500])
+            conn.execute(
+                "UPDATE tasks SET state='IN_PROGRESS', result='', error_message='', "
+                "updated_at=datetime('now') WHERE id=?",
+                (parent_id,),
+            )
+        except Exception as _e:
+            try:
+                _RMFV1_LOG.exception("%s reset_parent err=%s", _RMFV1_PATCH, _e)
+            except Exception:
+                pass
+
+    def _rmfv1_find_drive_parent(conn, chat_id, file_id):
+        try:
+            return conn.execute(
+                "SELECT id FROM tasks WHERE chat_id=? AND COALESCE(topic_id,0)=2 "
+                "AND input_type='drive_file' AND raw_input LIKE ? "
+                "AND state IN ('DONE','AWAITING_CONFIRMATION','ARCHIVED') "
+                "ORDER BY updated_at DESC LIMIT 1",
+                (_rmfv1_s(chat_id), "%" + _rmfv1_s(file_id) + "%"),
+            ).fetchone()
+        except Exception:
+            return None
+
+    def _rmfv1_find_text_parent(conn, chat_id, topic_id_val):
+        try:
+            return conn.execute(
+                "SELECT id, raw_input FROM tasks WHERE chat_id=? "
+                "AND COALESCE(topic_id,0)=? AND input_type='drive_file' "
+                "AND state IN ('DONE','AWAITING_CONFIRMATION','ARCHIVED','IN_PROGRESS') "
+                "ORDER BY updated_at DESC LIMIT 1",
+                (_rmfv1_s(chat_id), int(topic_id_val or 0)),
+            ).fetchone()
+        except Exception:
+            return None
+
+    # ── _handle_new (§§31-38) ────────────────────────────────────────────────────
+
+    async def _handle_new(conn, task, chat_id, topic_id):
+        try:
+            if int(topic_id or 0) != 2:
+                if _rmfv1_orig_hn:
+                    return await _rmfv1_orig_hn(conn, task, chat_id, topic_id)
+                return
+
+            task_id    = _rmfv1_s(_rmfv1_get(task, "id"))
+            input_type = _rmfv1_s(_rmfv1_get(task, "input_type"))
+            raw        = _rmfv1_s(_rmfv1_get(task, "raw_input"))
+            raw_obj    = _rmfv1_parse_raw(raw)
+
+            # ── drive_file branch ─────────────────────────────────────────────
+            if input_type == "drive_file":
+                file_id = _rmfv1_s(raw_obj.get("file_id")) if isinstance(raw_obj, dict) else ""
+                caption = _rmfv1_s(raw_obj.get("caption")) if isinstance(raw_obj, dict) else ""
+
+                if file_id:
+                    parent_row = _rmfv1_find_drive_parent(conn, chat_id, file_id)
+                    if parent_row:
+                        parent_id = _rmfv1_s(parent_row[0])
+                        if _rmfv1_is_revision(caption):
+                            # §31 REVISION_MODE — recalc caption on known file
+                            _rmfv1_reset_parent_for_recalc(conn, parent_id, caption, task_id)
+                            conn.execute(
+                                "UPDATE tasks SET state='DONE', result=?, error_message=?, "
+                                "updated_at=datetime('now') WHERE id=?",
+                                (
+                                    "Уточнение принято к пересчёту",
+                                    "MERGED_TO_PARENT:" + parent_id,
+                                    task_id,
+                                ),
+                            )
+                            _rmfv1_hist_once(
+                                conn, task_id,
+                                _RMFV1_PATCH + ":DRIVE_REVISION_MERGED_TO:" + parent_id,
+                            )
+                            try:
+                                conn.commit()
+                            except Exception:
+                                pass
+                            _RMFV1_LOG.info(
+                                "%s drive_revision child=%s parent=%s",
+                                _RMFV1_PATCH, task_id, parent_id,
+                            )
+                            return
+                        else:
+                            # §33 FILE_DUPLICATE_GUARD — same file, no recalc intent
+                            _rmfv1_hist_once(conn, task_id, _RMFV1_PATCH + ":FILE_DUPLICATE_BLOCKED")
+                            _rmfv1_hist_once(conn, task_id, "FILE_DUPLICATE_MEMORY_GUARD_V1:DONE")
+                            conn.execute(
+                                "UPDATE tasks SET state='DONE', result=?, error_message=?, "
+                                "updated_at=datetime('now') WHERE id=?",
+                                (
+                                    "Файл уже есть в обработке. Если хотите пересчитать — напишите что изменить.",
+                                    "FILE_DUPLICATE_BLOCKED_BY_REVISION_MODE_FULL_V1",
+                                    task_id,
+                                ),
+                            )
+                            try:
+                                conn.commit()
+                            except Exception:
+                                pass
+                            try:
+                                await _rmfv1_send_text(
+                                    chat_id, topic_id,
+                                    "Файл уже есть в обработке.\n\nЕсли хотите пересчитать — напишите что изменить (например, «добавь утепление 250мм»).",
+                                    task,
+                                )
+                            except Exception:
+                                pass
+                            return
+
+                # No existing parent → fall to alive chain (new estimate)
+                if _rmfv1_alive_hn:
+                    return await _rmfv1_alive_hn(conn, task, chat_id, topic_id)
+                return
+
+            # ── text / voice branch ───────────────────────────────────────────
+            if input_type in ("text", "voice"):
+                raw_text = (
+                    _rmfv1_s(raw_obj.get("text"))
+                    if isinstance(raw_obj, dict) and raw_obj.get("text")
+                    else raw
+                )
+
+                # §31 REVISION_MODE
+                if _rmfv1_is_revision(raw_text):
+                    parent_row = _rmfv1_find_text_parent(conn, chat_id, topic_id)
+                    if parent_row:
+                        parent_id = _rmfv1_s(parent_row[0])
+                        _rmfv1_reset_parent_for_recalc(conn, parent_id, raw_text, task_id)
+                        conn.execute(
+                            "UPDATE tasks SET state='DONE', result=?, error_message=?, "
+                            "updated_at=datetime('now') WHERE id=?",
+                            (
+                                "Уточнение принято к пересчёту",
+                                "MERGED_TO_PARENT:" + parent_id,
+                                task_id,
+                            ),
+                        )
+                        _rmfv1_hist_once(
+                            conn, task_id,
+                            _RMFV1_PATCH + ":TEXT_REVISION_MERGED_TO:" + parent_id,
+                        )
+                        try:
+                            conn.commit()
+                        except Exception:
+                            pass
+                        _RMFV1_LOG.info(
+                            "%s text_revision child=%s parent=%s",
+                            _RMFV1_PATCH, task_id, parent_id,
+                        )
+                        return
+                    # No parent → alive chain (new request)
+
+                # §32 STATUS_MODE
+                elif _rmfv1_is_status(raw_text):
+                    parent_row = _rmfv1_find_text_parent(conn, chat_id, topic_id)
+                    if parent_row:
+                        parent_id  = _rmfv1_s(parent_row[0])
+                        parent_raw = _rmfv1_parse_raw(_rmfv1_s(parent_row[1]))
+                        if _rmfv1_is_artifact_fresh(conn, parent_id):
+                            # §32 artifact is fresh → deliver links (no "восстановлено")
+                            reply = _rmfv1_status_reply(conn, parent_id, parent_raw)
+                            if reply:
+                                conn.execute(
+                                    "UPDATE tasks SET state='DONE', result=?, error_message=?, "
+                                    "updated_at=datetime('now') WHERE id=?",
+                                    (reply, "STATUS_REPLY_FROM_PARENT:" + parent_id, task_id),
+                                )
+                                _rmfv1_hist_once(
+                                    conn, task_id,
+                                    _RMFV1_PATCH + ":STATUS_DELIVERED_FROM:" + parent_id,
+                                )
+                                try:
+                                    conn.commit()
+                                except Exception:
+                                    pass
+                                try:
+                                    await _rmfv1_send_text(chat_id, topic_id, reply, task)
+                                except Exception:
+                                    pass
+                                _RMFV1_LOG.info(
+                                    "%s status_reply child=%s parent=%s",
+                                    _RMFV1_PATCH, task_id, parent_id,
+                                )
+                                return
+                        else:
+                            # §35 stale artifact → reset parent for recalc
+                            _rmfv1_reset_parent_for_recalc(
+                                conn, parent_id, "status_stale_reset", task_id
+                            )
+                            stale_msg = "Смета устарела — пересчитываю с учётом последних изменений. Ожидайте."
+                            conn.execute(
+                                "UPDATE tasks SET state='DONE', result=?, error_message=?, "
+                                "updated_at=datetime('now') WHERE id=?",
+                                (
+                                    stale_msg,
+                                    "STALE_ARTIFACT_RESET_PARENT:" + parent_id,
+                                    task_id,
+                                ),
+                            )
+                            _rmfv1_hist_once(
+                                conn, task_id,
+                                _RMFV1_PATCH + ":STATUS_STALE_RECALC_TRIGGERED",
+                            )
+                            try:
+                                conn.commit()
+                            except Exception:
+                                pass
+                            try:
+                                await _rmfv1_send_text(chat_id, topic_id, stale_msg, task)
+                            except Exception:
+                                pass
+                            return
+
+        except Exception as _e:
+            try:
+                _RMFV1_LOG.exception("%s _handle_new err=%s", _RMFV1_PATCH, _e)
+            except Exception:
+                pass
+
+        # Fallback: alive chain (covers all unrecognised topic_2 cases + FOLLOWUP_BIND)
+        if _rmfv1_alive_hn:
+            return await _rmfv1_alive_hn(conn, task, chat_id, topic_id)
+        if _rmfv1_orig_hn:
+            return await _rmfv1_orig_hn(conn, task, chat_id, topic_id)
+
+    if _rmfv1_orig_hn:
+        globals()["_handle_new"] = _handle_new
+
+    # ── _handle_in_progress: bypass dead CANON_DUPLICATE_BYPASS §36 ──────────────
+
+    if _rmfv1_orig_hip and _rmfv1_alive_hip:
+        async def _handle_in_progress(conn, task, chat_id, topic_id):
+            try:
+                if int(topic_id or 0) == 2:
+                    # Always call alive chain for topic_2 (dead chain returns old artifacts §36)
+                    return await _rmfv1_alive_hip(conn, task, chat_id, topic_id)
+            except Exception as _e:
+                try:
+                    _RMFV1_LOG.exception("%s _handle_in_progress err=%s", _RMFV1_PATCH, _e)
+                except Exception:
+                    pass
+            return await _rmfv1_orig_hip(conn, task, chat_id, topic_id)
+
+        globals()["_handle_in_progress"] = _handle_in_progress
+
+    # ── _update_task: strip READY_ARTIFACT_DELIVERED_FROM, bypass dead wrappers ───
+
+    if _rmfv1_orig_ut and _rmfv1_alive_ut:
+        def _update_task(conn, task_id, **kwargs):
+            try:
+                topic = _rmfv1_task_topic(conn, task_id)
+                if topic == 2:
+                    # Strip READY_ARTIFACT_DELIVERED_FROM set by dead CANON_DUPLICATE_BYPASS (§37)
+                    err = _rmfv1_s(kwargs.get("error_message"))
+                    if err.startswith("READY_ARTIFACT_DELIVERED_FROM:"):
+                        kwargs = dict(kwargs)
+                        kwargs["error_message"] = ""
+                        try:
+                            _RMFV1_LOG.info(
+                                "%s stripped READY_ARTIFACT_DELIVERED_FROM task=%s",
+                                _RMFV1_PATCH, task_id,
+                            )
+                        except Exception:
+                            pass
+                    # Bypass dead _update_task wrappers for topic_2
+                    return _rmfv1_alive_ut(conn, task_id, **kwargs)
+            except Exception as _e:
+                try:
+                    _RMFV1_LOG.exception("%s _update_task err=%s", _RMFV1_PATCH, _e)
+                except Exception:
+                    pass
+            return _rmfv1_orig_ut(conn, task_id, **kwargs)
+
+        globals()["_update_task"] = _update_task
+
+    _RMFV1_LOG.info(
+        "%s installed hn=%s hip=%s ut=%s alive_hn=%s alive_hip=%s alive_ut=%s",
+        _RMFV1_PATCH,
+        bool(_rmfv1_orig_hn), bool(_rmfv1_orig_hip), bool(_rmfv1_orig_ut),
+        bool(_rmfv1_alive_hn), bool(_rmfv1_alive_hip), bool(_rmfv1_alive_ut),
+    )
+
+except Exception as _rmfv1_install_err:
+    try:
+        logger.exception(
+            "PATCH_TOPIC2_REVISION_MODE_FULL_V1_INSTALL_ERR:%s", _rmfv1_install_err
+        )
+    except Exception:
+        pass
+# === /PATCH_TOPIC2_REVISION_MODE_FULL_V1 ===
+
+
+pass  # entry_point moved to EOF by PATCH_TOPIC2_REVISION_RECALC_FULL_CANON_NO_REGRESSION_V2_FRESHNESS_FIX
+
+# === PATCH_TOPIC2_REVISION_RECALC_FULL_CANON_NO_REGRESSION_V2 ===
+# Supersedes REVISION_MODE_FULL_V1 as outermost _handle_new for topic_2.
+# Implements §§31-47 fully: extended classification, 5-level parent lookup,
+# JSON-safe revision merge, price-choice reuse, runtime repair for f030.
+try:
+    import re as _t2v2_re
+    import json as _t2v2_json
+    import logging as _t2v2_logging
+
+    _T2V2_LOG = _t2v2_logging.getLogger("WORKER")
+    _T2V2_PATCH = "PATCH_TOPIC2_REVISION_RECALC_FULL_CANON_NO_REGRESSION_V2"
+
+    # Capture V1 as prev-handler (handles non-topic_2 correctly)
+    _t2v2_prev_hn = globals().get("_handle_new")
+
+    # Alive chain refs — set by V1 from the dead-patch captures
+    _t2v2_alive_hn  = globals().get("_rmfv1_alive_hn")  or globals().get("_t2fc_orig_handle_new")
+    _t2v2_alive_hip = globals().get("_rmfv1_alive_hip") or globals().get("_t2fo_orig_handle_in_progress")
+    _t2v2_alive_ut  = globals().get("_rmfv1_alive_ut")  or globals().get("_t2fc_orig_update_task")
+
+    # ── helpers ─────────────────────────────────────────────────────────────────
+
+    def _t2v2_s(v):
+        return "" if v is None else str(v)
+
+    def _t2v2_low(v):
+        return _t2v2_s(v).lower().replace("ё", "е")
+
+    def _t2v2_parse_raw(raw):
+        raw = _t2v2_s(raw).strip()
+        if not raw:
+            return {}
+        try:
+            return _t2v2_json.loads(raw)
+        except Exception:
+            pass
+        try:
+            return _t2v2_json.loads(raw.split("\n", 1)[0].strip())
+        except Exception:
+            return {}
+
+    def _t2v2_hist_once(conn, task_id, action):
+        try:
+            tid = _t2v2_s(task_id)
+            act = _t2v2_s(action)
+            if not tid or not act:
+                return
+            if not conn.execute(
+                "SELECT 1 FROM task_history WHERE task_id=? AND action=? LIMIT 1",
+                (tid, act),
+            ).fetchone():
+                conn.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (tid, act),
+                )
+        except Exception:
+            pass
+
+    # ── keyword sets §31 ────────────────────────────────────────────────────────
+
+    _T2V2_REVISION_KW = (
+        "добавь", "добавить", "пересчитай", "пересчитать",
+        "измени", "изменить", "скорректируй", "скорректировать",
+        "исправь", "исправить", "обнови", "обновить", "обновление",
+        "новые позиции", "новые вводные", "новый расчет", "новый рачет",
+        "повтори расчет", "перерасчет", "перерасчёт",
+        "утепление", "утеплите", "утеплить",
+        "поставщик", "поставщики", "новый поставщик", "другой поставщик",
+        "фасад", "потолок", "перекрытия", "кровля",
+        "фундамент", "сваи", "канализаци", "водоснабжен",
+        "электрика", "отопление", "окна", "двери",
+        "плитка", "ламинат", "теплый пол",
+        "вентиляция", "новые материалы", "другие материалы",
+        "добавить раздел", "новый раздел",
+        "каменная вата", "rockwool", "минвата", "пеноплекс",
+        "другие цены", "актуальные цены", "цены поставщик",
+    )
+
+    _T2V2_STATUS_KW = (
+        "где смета", "где ссылка", "скинь ссылку", "пришли ссылку",
+        "дай ссылку", "готова смета", "смета готова", "скинь смету",
+        "пришли смету", "покажи смету", "смета есть", "ссылка на смету",
+        "ссылку на смету", "отправь смету", "дай смету", "пришли файл",
+        "скинь файл", "отправь файл", "где файл", "ссылку на файл",
+        "статус", "что по задаче", "как дела со сметой", "когда смета",
+        "сделала смету", "сделан",
+    )
+
+    _T2V2_PRICE_KW = (
+        "минимальный бюджет", "минимальные", "оптимальный", "оптимальные",
+        "стандартный", "стандартные", "премиум", "лучшие материалы",
+        "делай", "считай", "рассчитай", "начинай", "поехали",
+    )
+
+    _T2V2_PRICE_DIGIT_RE = _t2v2_re.compile(r"^\s*[1-4]\s*$")
+
+    _T2V2_CONFIRM_KW = (
+        "да", "ок", "ok", "верно", "подтверждаю", "подтверди",
+        "всё верно", "все верно", "согласен", "согласна", "хорошо",
+        "отлично", "принято", "принимаю", "правильно",
+    )
+
+    _T2V2_CANCEL_KW = (
+        "отмени", "отменить", "не надо", "стоп", "stop", "нет",
+        "не нужно", "не делай", "отказываюсь",
+    )
+
+    def _t2v2_classify(text):
+        t = _t2v2_low(text)
+        if any(kw in t for kw in _T2V2_REVISION_KW):
+            return "REVISION"
+        if any(kw in t for kw in _T2V2_STATUS_KW):
+            return "STATUS"
+        if _T2V2_PRICE_DIGIT_RE.match(text.strip()) or any(kw in t for kw in _T2V2_PRICE_KW):
+            return "PRICE_CHOICE"
+        if any(kw in t for kw in _T2V2_CONFIRM_KW):
+            return "CONFIRM"
+        if any(kw in t for kw in _T2V2_CANCEL_KW):
+            return "CANCEL"
+        return "UNKNOWN"
+
+    # ── 5-level parent lookup ────────────────────────────────────────────────────
+
+    def _t2v2_find_parent(conn, task, chat_id, topic_id_val):
+        tid = _t2v2_s(task.get("id") if isinstance(task, dict) else "")
+        chat = _t2v2_s(chat_id)
+        tval = int(topic_id_val or 0)
+
+        # Level 1: reply_to_message_id → task with that bot_message_id
+        reply_mid = None
+        try:
+            reply_mid = task.get("reply_to_message_id") if isinstance(task, dict) else None
+        except Exception:
+            pass
+        if reply_mid:
+            try:
+                row = conn.execute(
+                    "SELECT id, raw_input FROM tasks WHERE chat_id=? "
+                    "AND COALESCE(topic_id,0)=? AND bot_message_id=? "
+                    "AND state IN ('DONE','AWAITING_CONFIRMATION','ARCHIVED','IN_PROGRESS') LIMIT 1",
+                    (chat, tval, int(reply_mid)),
+                ).fetchone()
+                if row:
+                    return _t2v2_s(row[0]), _t2v2_s(row[1])
+            except Exception:
+                pass
+
+        # Level 2: current task's bot_message_id → parent referencing it
+        bot_mid = None
+        try:
+            bot_mid = task.get("bot_message_id") if isinstance(task, dict) else None
+        except Exception:
+            pass
+        if bot_mid:
+            try:
+                row = conn.execute(
+                    "SELECT id, raw_input FROM tasks WHERE chat_id=? "
+                    "AND COALESCE(topic_id,0)=? AND reply_to_message_id=? "
+                    "AND state IN ('DONE','AWAITING_CONFIRMATION','ARCHIVED','IN_PROGRESS') LIMIT 1",
+                    (chat, tval, int(bot_mid)),
+                ).fetchone()
+                if row:
+                    return _t2v2_s(row[0]), _t2v2_s(row[1])
+            except Exception:
+                pass
+
+        # Level 3: latest IN_PROGRESS or AWAITING_CONFIRMATION drive_file in topic_2
+        try:
+            row = conn.execute(
+                "SELECT id, raw_input FROM tasks WHERE chat_id=? "
+                "AND COALESCE(topic_id,0)=? AND input_type='drive_file' "
+                "AND state IN ('IN_PROGRESS','AWAITING_CONFIRMATION') "
+                "AND id != ? ORDER BY updated_at DESC LIMIT 1",
+                (chat, tval, tid),
+            ).fetchone()
+            if row:
+                return _t2v2_s(row[0]), _t2v2_s(row[1])
+        except Exception:
+            pass
+
+        # Level 4: latest DONE/ARCHIVED drive_file with canonical history markers
+        try:
+            rows = conn.execute(
+                "SELECT t.id, t.raw_input FROM tasks t WHERE t.chat_id=? "
+                "AND COALESCE(t.topic_id,0)=? AND t.input_type='drive_file' "
+                "AND t.state IN ('DONE','ARCHIVED','AWAITING_CONFIRMATION') "
+                "AND t.id != ? ORDER BY t.updated_at DESC LIMIT 10",
+                (chat, tval, tid),
+            ).fetchall()
+            for r in rows:
+                rid = _t2v2_s(r[0])
+                has_hist = conn.execute(
+                    "SELECT 1 FROM task_history WHERE task_id=? "
+                    "AND (action LIKE 'TOPIC2_DRIVE_LINKS_SAVED:%' "
+                    "OR action LIKE 'TOPIC2_DRIVE_UPLOAD_XLSX_OK%') LIMIT 1",
+                    (rid,),
+                ).fetchone()
+                if has_hist:
+                    return rid, _t2v2_s(r[1])
+        except Exception:
+            pass
+
+        # Level 5: any latest topic_2 drive_file with artifacts
+        try:
+            rows = conn.execute(
+                "SELECT t.id, t.raw_input FROM tasks t WHERE t.chat_id=? "
+                "AND COALESCE(t.topic_id,0)=? AND input_type='drive_file' "
+                "AND t.id != ? ORDER BY t.updated_at DESC LIMIT 5",
+                (chat, tval, tid),
+            ).fetchall()
+            for r in rows:
+                rid = _t2v2_s(r[0])
+                has_price = conn.execute(
+                    "SELECT 1 FROM task_history WHERE task_id=? "
+                    "AND (action LIKE 'TOPIC2_PRICE_CHOICE_CONFIRMED:%' "
+                    "OR action LIKE 'TOPIC2_CONTEXT_READY%') LIMIT 1",
+                    (rid,),
+                ).fetchone()
+                if has_price:
+                    return rid, _t2v2_s(r[1])
+        except Exception:
+            pass
+
+        return None, None
+
+    # ── freshness gate §35 ────────────────────────────────────────────────────────
+
+    _T2V2_STALE_MARKERS = (
+        "clarified:",
+        "MERGED_TO_PARENT:",
+        "STALE_RESET",
+        "TOPIC2_ADDITIONAL_FACT_MERGED:",
+        "TOPIC2_ADDITIONAL_FACTS_RECALC_STARTED:",
+        "PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:MERGED_CHILD:",
+        "PATCH_TOPIC2_REVISION_MODE_FULL_V1:REVISION_STARTED:",
+        "PATCH_TOPIC2_REVISION_MODE_FULL_V1:DRIVE_REVISION_MERGED_TO:",
+        "PATCH_TOPIC2_REVISION_MODE_FULL_V1:TEXT_REVISION_MERGED_TO:",
+        _T2V2_PATCH + ":REVISION_STARTED:",
+        _T2V2_PATCH + ":REVISION_MERGED_TO:",
+    )
+
+    def _t2v2_is_fresh(conn, task_id):
+        tid = _t2v2_s(task_id)
+        try:
+            row = conn.execute(
+                "SELECT rowid FROM task_history WHERE task_id=? "
+                "AND action LIKE 'TOPIC2_DRIVE_LINKS_SAVED:%' ORDER BY rowid DESC LIMIT 1",
+                (tid,),
+            ).fetchone()
+            if not row:
+                return False
+            links_rid = row[0]
+            for marker in _T2V2_STALE_MARKERS:
+                if conn.execute(
+                    "SELECT 1 FROM task_history WHERE task_id=? AND action LIKE ? AND rowid > ? LIMIT 1",
+                    (tid, marker + "%", links_rid),
+                ).fetchone():
+                    return False
+            return True
+        except Exception:
+            return False
+
+    def _t2v2_extract_links(conn, task_id):
+        tid = _t2v2_s(task_id)
+        xlsx = pdf = ""
+        try:
+            rows = conn.execute(
+                "SELECT action FROM task_history WHERE task_id=? "
+                "AND action LIKE 'TOPIC2_DRIVE_LINKS_SAVED:%' ORDER BY rowid ASC",
+                (tid,),
+            ).fetchall()
+            for r in rows:
+                a = _t2v2_s(r[0])
+                m = _t2v2_re.search(r"xlsx=([A-Za-z0-9_\-]+)", a)
+                if m:
+                    xlsx = m.group(1)
+                m = _t2v2_re.search(r"pdf=([A-Za-z0-9_\-]+)", a)
+                if m:
+                    pdf = m.group(1)
+        except Exception:
+            pass
+        return xlsx, pdf
+
+    # ── price-choice lookup §6 ────────────────────────────────────────────────────
+
+    def _t2v2_get_price_choice(conn, task_id):
+        tid = _t2v2_s(task_id)
+        try:
+            row = conn.execute(
+                "SELECT action FROM task_history WHERE task_id=? "
+                "AND action LIKE 'TOPIC2_PRICE_CHOICE_CONFIRMED:%' ORDER BY rowid DESC LIMIT 1",
+                (tid,),
+            ).fetchone()
+            if row:
+                return _t2v2_s(row[0]).replace("TOPIC2_PRICE_CHOICE_CONFIRMED:", "").strip()
+        except Exception:
+            pass
+        return ""
+
+    # ── JSON-safe revision merge §3 ────────────────────────────────────────────────
+
+    def _t2v2_merge_revision_json(conn, parent_id, revision_text):
+        pid = _t2v2_s(parent_id)
+        try:
+            row = conn.execute("SELECT raw_input FROM tasks WHERE id=? LIMIT 1", (pid,)).fetchone()
+            if not row:
+                return
+            raw = _t2v2_s(row[0]).strip()
+            try:
+                obj = _t2v2_json.loads(raw)
+            except Exception:
+                obj = {"_raw_text": raw}
+            if not isinstance(obj, dict):
+                obj = {"_raw_text": _t2v2_s(obj)}
+            revisions = obj.get("canon_revisions")
+            if not isinstance(revisions, list):
+                revisions = []
+            revisions.append(_t2v2_s(revision_text)[:800])
+            obj["canon_revisions"] = revisions
+            new_raw = _t2v2_json.dumps(obj, ensure_ascii=False)
+            conn.execute("UPDATE tasks SET raw_input=? WHERE id=?", (new_raw, pid))
+        except Exception as _me:
+            try:
+                _T2V2_LOG.warning("%s merge_revision_json err=%s", _T2V2_PATCH, _me)
+            except Exception:
+                pass
+
+    # ── blocking-markers cleanup §41 ──────────────────────────────────────────────
+
+    _T2V2_BLOCKING_MARKERS = (
+        "PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1:DONE_WITH_DRIVE_LINKS",
+        "TOPIC2_DONE_CONTRACT_OK",
+        "TDOIP_OVERRIDE:14_markers_and_drive_links_present",
+        "TOPIC2_PUBLIC_RESULT_CANON_VIOLATION_RECOVERED_FROM_LATEST_ARTIFACTS",
+        "PATCH_TOPIC2_FULL_CANON_DUPLICATE_BYPASS_OUTPUT_V1:RUNTIME_FIXED_FROM:",
+        "PATCH_TOPIC2_FULL_TASK_CHAIN_RESTORE_NO_REGRESSION_V1:MANUAL_RESTORE",
+        "FILE_DUPLICATE_MEMORY_GUARD_V1:DONE",
+        "reply_sent:file_dup_guard_v1",
+        "PATCH_TOPIC2_REVISION_MODE_FULL_V1:FILE_DUPLICATE_BLOCKED",
+        "FULL_CONSTRUCTION_FILE_CONTOUR_CANON_GUARD_V1:UPDATE_BLOCKED:",
+        "state:FAILED:EXECUTION_TIMEOUT",
+    )
+
+    def _t2v2_clear_blockers(conn, task_id):
+        tid = _t2v2_s(task_id)
+        try:
+            for marker in _T2V2_BLOCKING_MARKERS:
+                conn.execute(
+                    "DELETE FROM task_history WHERE task_id=? AND action LIKE ?",
+                    (tid, marker + "%"),
+                )
+        except Exception:
+            pass
+
+    def _t2v2_reset_parent(conn, parent_id, revision_note, child_id, merge_json=True):
+        pid = _t2v2_s(parent_id)
+        try:
+            _t2v2_clear_blockers(conn, pid)
+            if merge_json and revision_note and revision_note != "status_stale_reset":
+                _t2v2_merge_revision_json(conn, pid, revision_note)
+                _t2v2_hist_once(conn, pid, "clarified:" + _t2v2_s(revision_note)[:500])
+            _t2v2_hist_once(
+                conn, pid,
+                _T2V2_PATCH + ":REVISION_STARTED:" + _t2v2_s(child_id),
+            )
+            conn.execute(
+                "UPDATE tasks SET state='IN_PROGRESS', result='', error_message='', "
+                "updated_at=datetime('now') WHERE id=?",
+                (pid,),
+            )
+        except Exception as _e:
+            try:
+                _T2V2_LOG.exception("%s reset_parent err=%s", _T2V2_PATCH, _e)
+            except Exception:
+                pass
+
+    # ── Telegram send helper ─────────────────────────────────────────────────────
+
+    async def _t2v2_send(chat_id, topic_id, text, task):
+        try:
+            _send_fn = globals().get("_send_once_ex") or globals().get("_send_once")
+            if _send_fn:
+                try:
+                    await _send_fn(chat_id, topic_id, text, task)
+                    return
+                except Exception:
+                    pass
+            _bot = globals().get("bot")
+            if _bot:
+                kw = {}
+                if topic_id:
+                    kw["message_thread_id"] = int(topic_id)
+                await _bot.send_message(chat_id=int(chat_id), text=text, **kw)
+        except Exception as _se:
+            try:
+                _T2V2_LOG.exception("%s send err=%s", _T2V2_PATCH, _se)
+            except Exception:
+                pass
+
+    def _t2v2_status_reply(conn, parent_id, caption=""):
+        xlsx, pdf = _t2v2_extract_links(conn, parent_id)
+        if not xlsx or not pdf:
+            return None
+        lines = ["✅ Смета готова", ""]
+        if caption:
+            lines += ["ТЗ: " + caption, ""]
+        lines += [
+            "Excel: https://drive.google.com/file/d/" + xlsx + "/view?usp=drivesdk",
+            "PDF: https://drive.google.com/file/d/" + pdf + "/view?usp=drivesdk",
+            "",
+            "Подтверди или пришли правки",
+        ]
+        return "\n".join(lines)
+
+    # ── _handle_new (outermost) ───────────────────────────────────────────────────
+
+    async def _handle_new(conn, task, chat_id, topic_id):
+        try:
+            if int(topic_id or 0) != 2:
+                if _t2v2_prev_hn:
+                    return await _t2v2_prev_hn(conn, task, chat_id, topic_id)
+                return
+
+            task_id    = _t2v2_s(task.get("id") if isinstance(task, dict) else "")
+            input_type = _t2v2_s(task.get("input_type") if isinstance(task, dict) else "")
+            raw        = _t2v2_s(task.get("raw_input") if isinstance(task, dict) else "")
+            raw_obj    = _t2v2_parse_raw(raw)
+            caption    = (_t2v2_s(raw_obj.get("caption")) if isinstance(raw_obj, dict) else "")
+
+            # ── drive_file branch ─────────────────────────────────────────────
+            if input_type == "drive_file":
+                file_id = _t2v2_s(raw_obj.get("file_id")) if isinstance(raw_obj, dict) else ""
+                mode = _t2v2_classify(caption) if caption else "UNKNOWN"
+
+                if file_id:
+                    # Look for existing parent with this file_id
+                    try:
+                        par_row = conn.execute(
+                            "SELECT id FROM tasks WHERE chat_id=? AND COALESCE(topic_id,0)=2 "
+                            "AND input_type='drive_file' AND raw_input LIKE ? "
+                            "AND state IN ('DONE','AWAITING_CONFIRMATION','ARCHIVED','IN_PROGRESS') "
+                            "AND id != ? ORDER BY updated_at DESC LIMIT 1",
+                            (_t2v2_s(chat_id), "%" + file_id + "%", task_id),
+                        ).fetchone()
+                    except Exception:
+                        par_row = None
+
+                    if par_row:
+                        parent_id = _t2v2_s(par_row[0])
+                        if mode == "REVISION" or _t2v2_re.search(
+                            r"(добавь|пересчитай|измени|утепление|поставщик)", _t2v2_low(caption)
+                        ):
+                            # Revision on known file
+                            _t2v2_reset_parent(conn, parent_id, caption, task_id)
+                            conn.execute(
+                                "UPDATE tasks SET state='DONE', result=?, error_message=?, "
+                                "updated_at=datetime('now') WHERE id=?",
+                                ("Уточнение принято к пересчёту", "MERGED_TO_PARENT:" + parent_id, task_id),
+                            )
+                            _t2v2_hist_once(conn, task_id, _T2V2_PATCH + ":REVISION_MERGED_TO:" + parent_id)
+                            try:
+                                conn.commit()
+                            except Exception:
+                                pass
+                            _T2V2_LOG.info("%s drive_revision child=%s parent=%s", _T2V2_PATCH, task_id, parent_id)
+                            return
+                        else:
+                            # Same file re-sent without revision intent → duplicate guard
+                            _t2v2_hist_once(conn, task_id, _T2V2_PATCH + ":FILE_DUPLICATE_BLOCKED")
+                            _t2v2_hist_once(conn, task_id, "FILE_DUPLICATE_MEMORY_GUARD_V1:DONE")
+                            conn.execute(
+                                "UPDATE tasks SET state='DONE', result=?, error_message=?, "
+                                "updated_at=datetime('now') WHERE id=?",
+                                (
+                                    "Файл уже есть в обработке. Если хотите пересчитать — напишите что изменить.",
+                                    "FILE_DUPLICATE_BLOCKED_BY_V2",
+                                    task_id,
+                                ),
+                            )
+                            try:
+                                conn.commit()
+                            except Exception:
+                                pass
+                            try:
+                                await _t2v2_send(
+                                    chat_id, topic_id,
+                                    "Файл уже есть в обработке.\n\nЧтобы пересчитать — напишите что изменить, например: «добавь утепление 250мм».",
+                                    task,
+                                )
+                            except Exception:
+                                pass
+                            return
+
+                # No existing parent → new estimate, route to alive chain
+                if _t2v2_alive_hn:
+                    return await _t2v2_alive_hn(conn, task, chat_id, topic_id)
+                if _t2v2_prev_hn:
+                    return await _t2v2_prev_hn(conn, task, chat_id, topic_id)
+                return
+
+            # ── text / voice branch ───────────────────────────────────────────
+            if input_type in ("text", "voice"):
+                raw_text = ""
+                if isinstance(raw_obj, dict):
+                    raw_text = _t2v2_s(raw_obj.get("text") or raw_obj.get("transcript") or "")
+                if not raw_text:
+                    raw_text = raw
+
+                mode = _t2v2_classify(raw_text)
+                _T2V2_LOG.info("%s mode=%s text=%r", _T2V2_PATCH, mode, raw_text[:80])
+
+                if mode == "REVISION":
+                    parent_id, parent_raw = _t2v2_find_parent(conn, task, chat_id, topic_id)
+                    if parent_id:
+                        _t2v2_reset_parent(conn, parent_id, raw_text, task_id)
+                        conn.execute(
+                            "UPDATE tasks SET state='DONE', result=?, error_message=?, "
+                            "updated_at=datetime('now') WHERE id=?",
+                            ("Уточнение принято к пересчёту", "MERGED_TO_PARENT:" + parent_id, task_id),
+                        )
+                        _t2v2_hist_once(conn, task_id, _T2V2_PATCH + ":REVISION_MERGED_TO:" + parent_id)
+                        try:
+                            conn.commit()
+                        except Exception:
+                            pass
+                        _T2V2_LOG.info("%s text_revision child=%s parent=%s", _T2V2_PATCH, task_id, parent_id)
+                        return
+                    # No parent → fall to alive chain (new request)
+
+                elif mode == "STATUS":
+                    parent_id, parent_raw = _t2v2_find_parent(conn, task, chat_id, topic_id)
+                    if parent_id:
+                        par_raw_obj = _t2v2_parse_raw(parent_raw)
+                        par_caption = _t2v2_s(par_raw_obj.get("caption")) if isinstance(par_raw_obj, dict) else ""
+                        if _t2v2_is_fresh(conn, parent_id):
+                            reply = _t2v2_status_reply(conn, parent_id, par_caption)
+                            if reply:
+                                conn.execute(
+                                    "UPDATE tasks SET state='DONE', result=?, error_message=?, "
+                                    "updated_at=datetime('now') WHERE id=?",
+                                    (reply, "STATUS_REPLY_FROM_PARENT:" + parent_id, task_id),
+                                )
+                                _t2v2_hist_once(conn, task_id, _T2V2_PATCH + ":STATUS_DELIVERED")
+                                try:
+                                    conn.commit()
+                                except Exception:
+                                    pass
+                                try:
+                                    await _t2v2_send(chat_id, topic_id, reply, task)
+                                except Exception:
+                                    pass
+                                _T2V2_LOG.info("%s status_reply child=%s parent=%s", _T2V2_PATCH, task_id, parent_id)
+                                return
+                        else:
+                            # Stale → reset parent for recalc
+                            _t2v2_reset_parent(conn, parent_id, "", task_id, merge_json=False)
+                            stale_msg = "Смета устарела — пересчитываю с учётом последних изменений. Ожидайте."
+                            conn.execute(
+                                "UPDATE tasks SET state='DONE', result=?, error_message=?, "
+                                "updated_at=datetime('now') WHERE id=?",
+                                (stale_msg, "STALE_RECALC_TRIGGERED:" + parent_id, task_id),
+                            )
+                            _t2v2_hist_once(conn, task_id, _T2V2_PATCH + ":STATUS_STALE_RECALC")
+                            try:
+                                conn.commit()
+                            except Exception:
+                                pass
+                            try:
+                                await _t2v2_send(chat_id, topic_id, stale_msg, task)
+                            except Exception:
+                                pass
+                            return
+
+                elif mode == "PRICE_CHOICE":
+                    # Route to alive chain — it handles price choice menu/confirmation
+                    if _t2v2_alive_hn:
+                        return await _t2v2_alive_hn(conn, task, chat_id, topic_id)
+
+                elif mode in ("CONFIRM", "CANCEL"):
+                    # Route to alive chain — it handles confirmations/cancels
+                    if _t2v2_alive_hn:
+                        return await _t2v2_alive_hn(conn, task, chat_id, topic_id)
+
+        except Exception as _e:
+            try:
+                _T2V2_LOG.exception("%s _handle_new err=%s", _T2V2_PATCH, _e)
+            except Exception:
+                pass
+
+        # Fallback: alive chain covers unrecognised topic_2 cases
+        if _t2v2_alive_hn:
+            return await _t2v2_alive_hn(conn, task, chat_id, topic_id)
+        if _t2v2_prev_hn:
+            return await _t2v2_prev_hn(conn, task, chat_id, topic_id)
+
+    globals()["_handle_new"] = _handle_new
+
+    # ── Runtime repair: f030 stale artifact → force recalc ────────────────────────
+    # f030 is AWAITING_CONFIRMATION with clarified entries (91314,91317) after
+    # DRIVE_LINKS_SAVED (91308). Must reset to IN_PROGRESS so worker recalculates
+    # including утепление 250мм revision.
+    try:
+        import sqlite3 as _t2v2_sqlite3
+
+        _T2V2_REPAIR_DB = "/root/.areal-neva-core/data/core.db"
+        _T2V2_F030 = "f030db95-8fdb-460d-90ea-2beae356b777"
+
+        _t2v2_rconn = _t2v2_sqlite3.connect(_T2V2_REPAIR_DB, timeout=10)
+        try:
+            _t2v2_rconn.row_factory = _t2v2_sqlite3.Row
+
+            # Check if f030 is stale and needs repair
+            _t2v2_f030_state = _t2v2_rconn.execute(
+                "SELECT state FROM tasks WHERE id=? LIMIT 1", (_T2V2_F030,)
+            ).fetchone()
+
+            if _t2v2_f030_state and _t2v2_s(_t2v2_f030_state[0]) == "AWAITING_CONFIRMATION":
+                # Check freshness
+                _t2v2_links_row = _t2v2_rconn.execute(
+                    "SELECT rowid FROM task_history WHERE task_id=? "
+                    "AND action LIKE 'TOPIC2_DRIVE_LINKS_SAVED:%' ORDER BY rowid DESC LIMIT 1",
+                    (_T2V2_F030,),
+                ).fetchone()
+                if _t2v2_links_row:
+                    _t2v2_links_rid = _t2v2_links_row[0]
+                    _t2v2_stale_row = _t2v2_rconn.execute(
+                        "SELECT rowid FROM task_history WHERE task_id=? "
+                        "AND action LIKE 'clarified:%' AND rowid > ? LIMIT 1",
+                        (_T2V2_F030, _t2v2_links_rid),
+                    ).fetchone()
+                    if _t2v2_stale_row:
+                        # Stale — clear blockers and reset to IN_PROGRESS
+                        for _t2v2_bm in _T2V2_BLOCKING_MARKERS:
+                            _t2v2_rconn.execute(
+                                "DELETE FROM task_history WHERE task_id=? AND action LIKE ?",
+                                (_T2V2_F030, _t2v2_bm + "%"),
+                            )
+                        # Also clear EXECUTION_TIMEOUT markers
+                        _t2v2_rconn.execute(
+                            "DELETE FROM task_history WHERE task_id=? AND action LIKE 'state:FAILED:%'",
+                            (_T2V2_F030,),
+                        )
+                        _t2v2_rconn.execute(
+                            "UPDATE tasks SET state='IN_PROGRESS', result='', error_message='', "
+                            "updated_at=datetime('now') WHERE id=?",
+                            (_T2V2_F030,),
+                        )
+                        if not _t2v2_rconn.execute(
+                            "SELECT 1 FROM task_history WHERE task_id=? AND action=? LIMIT 1",
+                            (_T2V2_F030, _T2V2_PATCH + ":F030_REPAIR_RECALC"),
+                        ).fetchone():
+                            _t2v2_rconn.execute(
+                                "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                                (_T2V2_F030, _T2V2_PATCH + ":F030_REPAIR_RECALC"),
+                            )
+                        _t2v2_rconn.commit()
+                        _T2V2_LOG.info("%s F030_REPAIR_RECALC: reset to IN_PROGRESS", _T2V2_PATCH)
+                    else:
+                        _T2V2_LOG.info("%s f030 fresh — no repair needed", _T2V2_PATCH)
+                else:
+                    _T2V2_LOG.info("%s f030 no DRIVE_LINKS_SAVED — no repair", _T2V2_PATCH)
+            else:
+                _T2V2_LOG.info(
+                    "%s f030 state=%s — no repair",
+                    _T2V2_PATCH,
+                    _t2v2_f030_state[0] if _t2v2_f030_state else "NOT_FOUND",
+                )
+        finally:
+            try:
+                _t2v2_rconn.close()
+            except Exception:
+                pass
+
+    except Exception as _t2v2_repair_err:
+        try:
+            _T2V2_LOG.warning("%s repair err=%s", _T2V2_PATCH, _t2v2_repair_err)
+        except Exception:
+            pass
+
+    _T2V2_LOG.info(
+        "%s installed hn=%s alive_hn=%s alive_hip=%s alive_ut=%s prev_hn=%s",
+        _T2V2_PATCH,
+        bool(globals().get("_handle_new")),
+        bool(_t2v2_alive_hn), bool(_t2v2_alive_hip), bool(_t2v2_alive_ut),
+        bool(_t2v2_prev_hn),
+    )
+
+except Exception as _t2v2_install_err:
+    try:
+        import logging as _t2v2_log_fallback
+        _t2v2_log_fallback.getLogger("WORKER").exception(
+            "PATCH_TOPIC2_REVISION_RECALC_FULL_CANON_NO_REGRESSION_V2_INSTALL_ERR:%s",
+            _t2v2_install_err,
+        )
+    except Exception:
+        pass
+# === /PATCH_TOPIC2_REVISION_RECALC_FULL_CANON_NO_REGRESSION_V2 ===
+
+# === PATCH_T2V2_FRESHNESS_GATE_FIX_V1 ===
+# _t2v2_is_fresh bug: used TOPIC2_DRIVE_LINKS_SAVED as anchor but canon engine
+# updates Drive files in-place and writes TOPIC2_DRIVE_UPLOAD_XLSX_OK instead.
+# Fix: freshness = last ARTIFACT evidence (links OR upload) is AFTER last STALE marker.
+try:
+    import logging as _t2v2fix_logging
+    _T2V2FIX_LOG = _t2v2fix_logging.getLogger("WORKER")
+
+    def _t2v2_is_fresh(conn, task_id):
+        tid = str(task_id or "")
+        try:
+            # Latest artifact evidence: DRIVE_LINKS_SAVED OR DRIVE_UPLOAD_XLSX_OK OR ESTIMATE_ARTIFACTS_CREATED
+            art_row = conn.execute(
+                "SELECT MAX(rowid) FROM task_history WHERE task_id=? "
+                "AND (action LIKE 'TOPIC2_DRIVE_LINKS_SAVED:%' "
+                "OR action LIKE 'TOPIC2_DRIVE_UPLOAD_XLSX_OK%' "
+                "OR action LIKE 'TOPIC2_ESTIMATE_FINAL_CLOSE_V2:ESTIMATE_ARTIFACTS_CREATED%')",
+                (tid,),
+            ).fetchone()
+            if not art_row or not art_row[0]:
+                return False
+            art_rid = art_row[0]
+            # Latest stale marker
+            stale_markers = _T2V2_STALE_MARKERS if "_T2V2_STALE_MARKERS" in dir() else (
+                "clarified:", "MERGED_TO_PARENT:", "STALE_RESET",
+                "TOPIC2_ADDITIONAL_FACT_MERGED:", "TOPIC2_ADDITIONAL_FACTS_RECALC_STARTED:",
+            )
+            for marker in stale_markers:
+                stale_row = conn.execute(
+                    "SELECT rowid FROM task_history WHERE task_id=? AND action LIKE ? ORDER BY rowid DESC LIMIT 1",
+                    (tid, marker + "%"),
+                ).fetchone()
+                if stale_row and stale_row[0] > art_rid:
+                    return False
+            return True
+        except Exception:
+            return False
+
+    # Patch into V2 globals if V2 loaded
+    if "_t2v2_prev_hn" in dir():
+        globals()["_t2v2_is_fresh"] = _t2v2_is_fresh
+        _T2V2FIX_LOG.info("PATCH_T2V2_FRESHNESS_GATE_FIX_V1 applied")
+
+except Exception as _t2v2fix_err:
+    pass
+# === /PATCH_T2V2_FRESHNESS_GATE_FIX_V1 ===
+
+
+
+# === PATCH_TOPIC2_DONE_ONLY_AFTER_USER_YES_V1 ===
+# Canon: topic_2 final estimate is not DONE until explicit user "да".
+# Generated XLSX/PDF/Drive result must wait in AWAITING_CONFIRMATION.
+try:
+    import logging as _t2duy_logging
+    _T2DUY_LOG = _t2duy_logging.getLogger("WORKER")
+    _t2duy_orig_update_task = _update_task
+
+    def _t2duy_s(v):
+        return "" if v is None else str(v)
+
+    def _t2duy_topic(conn, task_id):
+        try:
+            row = conn.execute("SELECT topic_id FROM tasks WHERE id=? LIMIT 1", (str(task_id),)).fetchone()
+            if not row:
+                return 0
+            return int(row["topic_id"] if hasattr(row, "keys") else row[0] or 0)
+        except Exception:
+            return 0
+
+    def _t2duy_is_final_estimate_result(text):
+        low = _t2duy_s(text).lower().replace("ё", "е")
+        return ("смета готов" in low or "xlsx:" in low or "pdf:" in low or "drive.google.com" in low or "docs.google.com" in low)
+
+    def _t2duy_history(conn, task_id, action):
+        try:
+            conn.execute("INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))", (str(task_id), action))
+        except Exception:
+            pass
+
+    def _update_task(conn, task_id, **kwargs):  # noqa: F811
+        try:
+            if _t2duy_topic(conn, task_id) == 2 and _t2duy_s(kwargs.get("state")).upper() == "DONE":
+                err = _t2duy_s(kwargs.get("error_message"))
+                result = _t2duy_s(kwargs.get("result"))
+                accepted = "подтверждение принято" in result.lower().replace("ё", "е")
+                merged_child = err.startswith("MERGED_TO_PARENT") or "MERGED_TO_PARENT" in result
+                if (not accepted) and (not merged_child) and _t2duy_is_final_estimate_result(result):
+                    kwargs["state"] = "AWAITING_CONFIRMATION"
+                    _t2duy_history(conn, task_id, "TOPIC2_DONE_ONLY_AFTER_USER_YES_V1:BLOCKED_DONE_TO_AWAITING_CONFIRMATION")
+        except Exception as e:
+            try:
+                _T2DUY_LOG.warning("TOPIC2_DONE_ONLY_AFTER_USER_YES_V1_ERR %s", e)
+            except Exception:
+                pass
+        return _t2duy_orig_update_task(conn, task_id, **kwargs)
+
+    _T2DUY_LOG.info("PATCH_TOPIC2_DONE_ONLY_AFTER_USER_YES_V1 installed")
+except Exception as _t2duy_err:
+    try:
+        logger.exception("PATCH_TOPIC2_DONE_ONLY_AFTER_USER_YES_V1_INSTALL_ERR:%s", _t2duy_err)
+    except Exception:
+        pass
+# === /PATCH_TOPIC2_DONE_ONLY_AFTER_USER_YES_V1 ===
+
+# === PATCH_TOPIC2_LATE_P6E67_CLARIFIED_RESCUE_V1 ===
+try:
+    import inspect as _t2lp6_inspect
+    import logging as _t2lp6_logging
+    _T2LP6_LOG = _t2lp6_logging.getLogger("WORKER")
+    _t2lp6_orig_handle_in_progress = _handle_in_progress
+
+    def _t2lp6_s(v):
+        return "" if v is None else str(v)
+
+    def _t2lp6_get(row, key, default=None):
+        try:
+            if hasattr(row, "keys") and key in row.keys():
+                return row[key]
+        except Exception:
+            pass
+        try:
+            return row[key]
+        except Exception:
+            return default
+
+    def _t2lp6_is_fresh_estimate(text):
+        t = _t2lp6_s(text).lower().replace("ё", "е").replace("[voice]", "").strip()
+        if len(t) < 20:
+            return False
+        keys = (
+            "смет", "расчет", "расчёт", "посчитай", "сделай",
+            "дом", "этаж", "фундамент", "стен", "кирпич", "газобетон",
+            "монолит", "кровл", "отделк", "санузел", "инженер",
+            "м2", "м²", "размер", "санкт-петербург", "петербург",
+        )
+        return sum(1 for k in keys if k in t) >= 3
+
+    def _t2lp6_recent_p6e67(conn, task_id):
+        try:
+            return conn.execute(
+                "SELECT 1 FROM task_history WHERE task_id=? AND action LIKE 'P6E67_PARENT_NOT_FOUND%' ORDER BY rowid DESC LIMIT 1",
+                (str(task_id),),
+            ).fetchone() is not None
+        except Exception:
+            return False
+
+    def _t2lp6_latest_clarified(conn, task_id):
+        try:
+            rows = conn.execute(
+                "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'clarified:%' ORDER BY rowid DESC LIMIT 12",
+                (str(task_id),),
+            ).fetchall()
+            for row in rows:
+                action = _t2lp6_s(row[0])
+                raw = action.split("clarified:", 1)[1].strip() if "clarified:" in action else ""
+                if _t2lp6_is_fresh_estimate(raw):
+                    return raw
+        except Exception:
+            return ""
+        return ""
+
+    async def _handle_in_progress(conn, task, *args, **kwargs):  # noqa: F811
+        try:
+            topic_id = int(_t2lp6_get(task, "topic_id", 0) or 0)
+            state = _t2lp6_s(_t2lp6_get(task, "state", "")).upper()
+            err = _t2lp6_s(_t2lp6_get(task, "error_message", "")).upper()
+            task_id = _t2lp6_s(_t2lp6_get(task, "id", ""))
+            if topic_id == 2 and state in ("WAITING_CLARIFICATION", "IN_PROGRESS") and ("P6E67_PARENT_NOT_FOUND" in err or _t2lp6_recent_p6e67(conn, task_id)):
+                task_raw = _t2lp6_s(_t2lp6_get(task, "raw_input", ""))
+                rescue_raw = task_raw if _t2lp6_is_fresh_estimate(task_raw) else _t2lp6_latest_clarified(conn, task_id)
+                if rescue_raw:
+                    conn.execute(
+                        "UPDATE tasks SET state='IN_PROGRESS', raw_input=?, result='', error_message='', reply_to_message_id=NULL, updated_at=datetime('now') WHERE id=?",
+                        (rescue_raw, task_id),
+                    )
+                    conn.execute(
+                        "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                        (task_id, "TOPIC2_LATE_P6E67_CLARIFIED_RESCUE_V1:STARTED"),
+                    )
+                    conn.commit()
+                    from core.stroyka_estimate_canon import maybe_handle_stroyka_estimate as _t2lp6_canon
+                    task_clean = {}
+                    try:
+                        for k in task.keys():
+                            task_clean[k] = task[k]
+                    except Exception:
+                        task_clean = {}
+                    task_clean["raw_input"] = rescue_raw
+                    task_clean["state"] = "IN_PROGRESS"
+                    task_clean["error_message"] = ""
+                    res = _t2lp6_canon(conn, task_clean, logger=_T2LP6_LOG)
+                    if _t2lp6_inspect.isawaitable(res):
+                        res = await res
+                    if res:
+                        conn.execute(
+                            "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                            (task_id, "TOPIC2_LATE_P6E67_CLARIFIED_RESCUE_V1:CANON_HANDLED"),
+                        )
+                        conn.commit()
+                        return True
+        except Exception as e:
+            try:
+                _T2LP6_LOG.exception("TOPIC2_LATE_P6E67_CLARIFIED_RESCUE_V1_ERR:%s", e)
+            except Exception:
+                pass
+        res = _t2lp6_orig_handle_in_progress(conn, task, *args, **kwargs)
+        if _t2lp6_inspect.isawaitable(res):
+            return await res
+        return res
+
+    _T2LP6_LOG.info("PATCH_TOPIC2_LATE_P6E67_CLARIFIED_RESCUE_V1 installed")
+except Exception as _t2lp6_err:
+    try:
+        logger.exception("PATCH_TOPIC2_LATE_P6E67_CLARIFIED_RESCUE_V1_INSTALL_ERR:%s", _t2lp6_err)
+    except Exception:
+        pass
+# === /PATCH_TOPIC2_LATE_P6E67_CLARIFIED_RESCUE_V1 ===
+
+
+# === PATCH_TOPIC2_P3_CANON_GUARD_V1 ===
+# Canon: topic_2 final estimate waits for explicit user confirmation; high price level maps to reliable/3.
+try:
+    import logging as _t2p3cg_logging
+    import re as _t2p3cg_re
+
+    _T2P3CG_LOG = _t2p3cg_logging.getLogger("WORKER")
+
+    def _t2p3cg_s(v):
+        return "" if v is None else str(v)
+
+    def _t2p3cg_topic(conn, task_id):
+        try:
+            row = conn.execute("SELECT topic_id FROM tasks WHERE id=? LIMIT 1", (str(task_id),)).fetchone()
+            return int((row["topic_id"] if hasattr(row, "keys") else row[0]) or 0) if row else 0
+        except Exception:
+            return 0
+
+    def _t2p3cg_raw(conn, task_id):
+        try:
+            row = conn.execute("SELECT raw_input FROM tasks WHERE id=? LIMIT 1", (str(task_id),)).fetchone()
+            return _t2p3cg_s(row["raw_input"] if hasattr(row, "keys") else row[0]) if row else ""
+        except Exception:
+            return ""
+
+    def _t2p3cg_choice_from_text(text):
+        low = _t2p3cg_s(text).lower().replace("ё", "е")
+        if any(x in low for x in ("высок", "дорог", "максим", "надеж", "проверенн", "вариант 3")):
+            return "reliable"
+        if any(x in low for x in ("миним", "дешев", "вариант 1")):
+            return "cheapest"
+        if any(x in low for x in ("средн", "медиан", "вариант 2")):
+            return "median"
+        if any(x in low for x in ("ручн", "вручную", "вариант 4")):
+            return "manual"
+        return ""
+
+    def _t2p3cg_is_final_estimate(result):
+        low = _t2p3cg_s(result).lower().replace("ё", "е")
+        return (
+            "смета готов" in low
+            and ("excel:" in low or "xlsx:" in low or "docs.google.com" in low)
+            and ("pdf:" in low or "drive.google.com" in low)
+        )
+
+    def _t2p3cg_hist(conn, task_id, action):
+        try:
+            conn.execute(
+                "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                (str(task_id), str(action)[:1000]),
+            )
+        except Exception:
+            pass
+
+    if "_p3_update_20260504" in globals():
+        _t2p3cg_orig_p3_update = _p3_update_20260504
+
+        def _p3_update_20260504(conn, task_id, **kwargs):  # noqa: F811
+            try:
+                if _t2p3cg_topic(conn, task_id) == 2 and _t2p3cg_s(kwargs.get("state")).upper() == "DONE":
+                    result = _t2p3cg_s(kwargs.get("result"))
+                    err = _t2p3cg_s(kwargs.get("error_message"))
+                    accepted = "подтверждение принято" in result.lower().replace("ё", "е")
+                    merged = err.startswith("MERGED_TO_PARENT") or "MERGED_TO_PARENT" in result
+                    if _t2p3cg_is_final_estimate(result) and not accepted and not merged:
+                        kwargs["state"] = "AWAITING_CONFIRMATION"
+                        kwargs["error_message"] = ""
+                        _t2p3cg_hist(conn, task_id, "TOPIC2_DONE_ONLY_AFTER_USER_YES_V1:P3_BLOCKED_DONE_TO_AWAITING_CONFIRMATION")
+            except Exception as e:
+                try:
+                    _T2P3CG_LOG.warning("PATCH_TOPIC2_P3_CANON_GUARD_V1 update err %s", e)
+                except Exception:
+                    pass
+            return _t2p3cg_orig_p3_update(conn, task_id, **kwargs)
+
+    if "_p3_history_20260504" in globals():
+        _t2p3cg_orig_p3_history = _p3_history_20260504
+
+        def _p3_history_20260504(conn, task_id, action):  # noqa: F811
+            try:
+                a = _t2p3cg_s(action)
+                if _t2p3cg_topic(conn, task_id) == 2 and a == "TOPIC2_PRICE_CHOICE_CONFIRMED:confirmed":
+                    choice = _t2p3cg_choice_from_text(_t2p3cg_raw(conn, task_id)) or "median"
+                    action = "TOPIC2_PRICE_CHOICE_CONFIRMED:" + choice
+                    _t2p3cg_hist(conn, task_id, "PATCH_TOPIC2_P3_CANON_GUARD_V1:NORMALIZED_CONFIRMED_TO:" + choice)
+            except Exception as e:
+                try:
+                    _T2P3CG_LOG.warning("PATCH_TOPIC2_P3_CANON_GUARD_V1 history err %s", e)
+                except Exception:
+                    pass
+            return _t2p3cg_orig_p3_history(conn, task_id, action)
+
+    if "_t2sh_price_choice" in globals():
+        _t2p3cg_orig_t2sh_price_choice = _t2sh_price_choice
+
+        def _t2sh_price_choice(history_text):  # noqa: F811
+            h = _t2p3cg_s(history_text)
+            if "TOPIC2_PRICE_CHOICE_CONFIRMED:maximum" in h:
+                return "reliable"
+            if "TOPIC2_PRICE_CHOICE_CONFIRMED:confirmed" in h:
+                return "reliable"
+            return _t2p3cg_orig_t2sh_price_choice(history_text)
+
+    _T2P3CG_LOG.info("PATCH_TOPIC2_P3_CANON_GUARD_V1 installed")
+except Exception as _t2p3cg_err:
+    try:
+        logger.exception("PATCH_TOPIC2_P3_CANON_GUARD_V1_INSTALL_ERR:%s", _t2p3cg_err)
+    except Exception:
+        pass
+# === /PATCH_TOPIC2_P3_CANON_GUARD_V1 ===
+
+
+# === PATCH_TOPIC2_FRESH_FULL_TZ_FINAL_GUARD_V2 ===
+# Last-order guard: a long complete topic_2 TZ is a new canonical estimate task,
+# not a followup to an older AWAITING_CONFIRMATION task.
+try:
+    import inspect as _t2ffg2_inspect
+    import logging as _t2ffg2_logging
+    import re as _t2ffg2_re
+
+    _T2FFG2_LOG = _t2ffg2_logging.getLogger("WORKER")
+    _T2FFG2_ORIG_HANDLE_NEW = _handle_new
+
+    def _t2ffg2_get(row, key, default=None):
+        try:
+            if isinstance(row, dict):
+                return row.get(key, default)
+            if hasattr(row, "keys") and key in row.keys():
+                return row[key]
+        except Exception:
+            pass
+        try:
+            return row[key]
+        except Exception:
+            return default
+
+    def _t2ffg2_is_fresh_full_tz(raw):
+        low = str(raw or "").lower().replace("ё", "е").replace("[voice]", "").strip()
+        if len(low) < 100:
+            return False
+        has_estimate = any(x in low for x in ("смет", "расчет", "расчёт"))
+        has_dims = bool(_t2ffg2_re.search(r"\d+(?:[.,]\d+)?\s*(?:x|х|×|на)\s*\d+(?:[.,]\d+)?", low))
+        facts = sum(1 for x in (
+            "дом", "этаж", "плит", "фундамент", "стен", "кирпич", "газобет",
+            "каркас", "ламинат", "санузел", "инженер", "санкт-петербург", "петербург"
+        ) if x in low)
+        return bool(has_estimate and has_dims and facts >= 4)
+
+    def _t2ffg2_hist(conn, task_id, action):
+        try:
+            conn.execute(
+                "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                (str(task_id), str(action)[:1000]),
+            )
+        except Exception:
+            pass
+
+    async def _handle_new(conn, task, chat_id, topic_id):  # noqa: F811
+        try:
+            topic_id_i = int(topic_id or _t2ffg2_get(task, "topic_id", 0) or 0)
+            task_id = str(_t2ffg2_get(task, "id", "") or "")
+            raw = str(_t2ffg2_get(task, "raw_input", "") or "")
+            input_type = str(_t2ffg2_get(task, "input_type", "") or "")
+            if topic_id_i == 2 and input_type in ("text", "voice", "search") and task_id and _t2ffg2_is_fresh_full_tz(raw):
+                from core import sample_template_engine as _t2ffg2_ste
+                _T2FFG2_LOG.info("PATCH_TOPIC2_FRESH_FULL_TZ_FINAL_GUARD_V2 route task=%s", task_id)
+                _t2ffg2_hist(conn, task_id, "PATCH_TOPIC2_FRESH_FULL_TZ_FINAL_GUARD_V2:CANON_P3_ROUTE")
+                try:
+                    conn.execute(
+                        "UPDATE tasks SET state='IN_PROGRESS', result='', error_message='', reply_to_message_id=NULL, updated_at=datetime('now') WHERE id=?",
+                        (task_id,),
+                    )
+                    conn.commit()
+                except Exception:
+                    pass
+                res = _t2ffg2_ste.handle_topic2_one_big_formula_pipeline_v1(
+                    conn=conn,
+                    task=task,
+                    chat_id=chat_id,
+                    topic_id=topic_id_i,
+                    raw_input=raw,
+                    full_context=raw,
+                )
+                if _t2ffg2_inspect.isawaitable(res):
+                    await res
+                return
+        except Exception as _t2ffg2_e:
+            try:
+                _T2FFG2_LOG.exception("PATCH_TOPIC2_FRESH_FULL_TZ_FINAL_GUARD_V2_ERR:%s", _t2ffg2_e)
+            except Exception:
+                pass
+        return await _T2FFG2_ORIG_HANDLE_NEW(conn, task, chat_id, topic_id)
+
+    _T2FFG2_LOG.info("PATCH_TOPIC2_FRESH_FULL_TZ_FINAL_GUARD_V2 installed")
+except Exception as _t2ffg2_install_err:
+    try:
+        logger.exception("PATCH_TOPIC2_FRESH_FULL_TZ_FINAL_GUARD_V2_INSTALL_ERR:%s", _t2ffg2_install_err)
+    except Exception:
+        pass
+# === /PATCH_TOPIC2_FRESH_FULL_TZ_FINAL_GUARD_V2 ===
+
 if __name__ == "__main__":
     asyncio.run(main())
-

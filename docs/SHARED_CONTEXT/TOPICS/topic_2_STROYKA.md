@@ -1,93 +1,64 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-05-09T17:35:02.477352+00:00
-GIT_SHA: 7aff8a6c8fa2d5b28aa4188a5e888b6d87ae65e1
+GENERATED_AT: 2026-07-04T21:54:23.404382+00:00
+GIT_SHA: fed18c2ba1c081e89de6d526675911a92361a309
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
 ROLE: Сметы
 DIRECTIONS_BOUND: estimates
-CURRENT_STATUS: INSTALLED_NOT_VERIFIED
+CURRENT_STATUS: BROKEN
 ACTIVE_TASKS: 1
-FAILED_LAST_24H: 25
+FAILED_LAST_24H: 3
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 12
-- CANCELLED: 111
-- DONE: 144
-- FAILED: 134
-- WAITING_CLARIFICATION: 1
+- CANCELLED: 134
+- DONE: 180
+- FAILED: 137
+- IN_PROGRESS: 1
 
 ## LATEST_FAILED
+- 5a453d88 | STALE_TIMEOUT
+- c82ce66e | STALE_TIMEOUT
+- 0b1a2b5f | NO_VALID_ARTIFACT
 - b57b1bae | STALE_TIMEOUT
 - 57cee6eb | STALE_TIMEOUT
-- d9b4d3d7 | STALE_TIMEOUT
-- 952f5635 | STALE_TIMEOUT
-- e375fd12 | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
-- 7aff8a6|feat(topic2): PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1 — top-level price choice interceptor
-- 3ceedaf|fix(topic2): close price choice loop after price enrichment
-- 3723bbe|fix(topic2): PATCH_KARKASNIK_SHEET_FIX_V1 — correct sheet for frame houses
-- 7cc4523|fix(topic2): classify frame house with imitation timber finish
-- 8b21d75|fix(topic2): price WC always runs + gate stale-context fixes
-- 62a5da2|fix(topic2): remove hardcoded drainage parent 043e5c9f — dynamic lookup by state
-- 7a5f770|fix(topic210): canonical pile count route
-- ca312d9|fix(topic210): pile count route and db lock recover guard
-- 876e5d2|fix(topic2): PATCH_TOPIC2_WC_PICKER_DRAINAGE_MULTIFILE_V3 — stop WC loop, bind drainage replies to parent, include all 3 user PDFs
-- 107186a|fix(topic2): TOPIC2_WCG_SQL_FIX_SYNTAX_AND_LIKE_DROP_V1
-- 24e65b0|fix(topic2): TOPIC2_WCG_PRESERVE_DRAINAGE_ERROR_V1 — preserve drainage length error through WCG skip
-- c956edd|fix(topic2): TOPIC2_DRAINAGE_PARENT_GUARD_V2 — bind drainage followups to parent and block silent continue
-- bce535d|PATCH_TOPIC2_DRAINAGE_RECOGNIZE_ALL_V1
-- 0152cb4|fix(topic2): TOPIC2_DRAINAGE_PRICE_ENRICHMENT_CANON_FIX_V1
-- b07a265|fix(topic2): TOPIC2_DRAINAGE_LENGTH_PROOF_GATE_AND_ONLINE_PRICES_V2
-- af42c97|fix(topic2): TOPIC2_DRAINAGE_FULL_CLOSE_NO_LOOP_V2 — child merge guard, legend filter, noise tasks closed
-- 859c045|fix(topic2): TOPIC2_DRAINAGE_VAT_GATE_PUBLIC_CLEAN_V1 — VAT gate 22%, source filter, clean public output, Drive upload fix
-- 3343690|fix(topic2): TOPIC2_DRAINAGE_MULTIFILE_REPAIR_CLOSE_V1 — close drainage estimate from two PDFs, send XLSX+PDF to Telegram
-- 3421216|fix(topic2): gate send fix (dict(task) for sqlite3.Row) + WCG delivery guard on picker cycle
-- 80b0809|fix(topic2): PATCH_TOPIC2_INPUT_GATE_SOURCE_OF_TRUTH_V1 — current file source-of-truth gate blocks stale house context for drainage PDF
-- 075edf9|fix(topic2): PATCH_TOPIC2_STALE_PENDING_TASK_GUARD_V1 + LOCAL_BOT_API_404_FIX
-- e185e83|fix(topic2): PATCH_SUPPLIER_HONESTY_V1 — fix fake Perplexity в Поставщик
-- 6cf9154|fix(topic2): PATCH_TOPIC2_ADD_PEREKRYTIYA_SECTION_V1 — add missing §5 Перекрытия section
-- 2475eb5|fix(topic2): PATCH_TOPIC2_REALSHEET_PRICES_V3 — real Газобетонный дом prices
-- 7c646dd|session(08.05): bigfile activated, topic5 V3 dispatcher, topic2 P6C intercept, c94ec497 FAILED/NOT_PROVEN
-- 8760011|fix(topic2): enforce full canonical estimate pipeline without cross-topic regression
-- b236f02|fix(topic2): session 08.05 — P6C fulltext prep, P3CHK append fix, P2 distance skip, WCPE unblock
-- e3a016c|PATCH_OPENROUTER_ONLINE_ONLY_FOR_TOPIC2_PRICE_SEARCH_V1: hard-enforce Sonar for all price/search calls
-- 4cfd9b6|fix(topic2): close P6E67 loop storm + natural reply message
-- dc26486|fix(topic2): PATCH_PRICE_REJECT_STORM_FIX_V1 — remove noisy INSERT from V5/V6C rejected path
+- (none matching topic)
 
 ## MARKERS_LAST_24H
 - created:NEW
-- clarified:Вот документ мне необходимо посчитать стоимость строительства Дом из г
-- clarified:
-- clarified:2
-- continued:вот размеры
-- continued:вот задание
-- clarified:Там же есть картинка посмотри проект
-- clarified:есть в проекте
-- clarified:смотри задание и проект
-- clarified:ты не видешь что ранее писал?
-- clarified:где расчет?
-- clarified:ну че
-- clarified:заебал
-- clarified:я же все скинул уже
-- clarified:ответы все есть в проекте. посмотри
-- clarified:Фундамент монолитный песчаная подушка толщиной 300 мм с отступом на ме
-- clarified:вот
-- clarified:Этажи написаны в проекте удалённости от города 30 км средние цены
-- FILE_INTAKE_ROUTER_LOCAL_PATH_PASSED
-- FILE_INTAKE_ROUTER_TOPIC2_CANONICAL_ROUTE
-- TOPIC2_PDF_SPEC_EXTRACTOR_STARTED
-- TOPIC2_PDF_SPEC_ROWS_EXTRACTED:7
+- state:IN_PROGRESS
+- THREE_CONTOURS_FULL_CONTEXT_NO_REPEAT_CLARIFY_V1:estimate_ok
+- THREE_CONTOURS_FULL_CONTEXT_NO_REPEAT_CLARIFY_V1:missing:Что строим: дом, фундам
+- STROYKA_TOPIC2_SOURCE_LOCK_PRIORITY_FIX_V1:fallback:ESTIMATE_ITEMS_NOT_PARSED_FR
+- P6_TOPIC2_VAGUE_OLD_MEMORY_BLOCKED
+- reply_sent:p6_topic2_vague_guard
+- state:FAILED
+- reply_sent:stale_failed
 - TOPIC2_PRICE_CHOICE_CONFIRMED:median
-- TOPIC2_LOGISTICS_DISTANCE_KM:30
-- TOPIC2_LOGISTICS_ITEM:Доставка материалов от СПб:qty=3:price=9675
-- TOPIC2_LOGISTICS_ITEM:Транспорт бригады и проживание:qty=1:price=34828
-- TOPIC2_PDF_TOTALS_MATCH_XLSX:xlsx=8173431.09:pdf=8173431.09
-- TOPIC2_DRIVE_TOPIC_FOLDER_OK
-- TOPIC2_DRIVE_LINKS_SAVED:xlsx=https://drive.google.com/file/d/1azn2tIu_lyh5AJeLq
-- TOPIC2_AC_GATE_OK
+- PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1:CHOICE_BOUND_FROM:f2efa5c0-ad58-4273-9bd
+- PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1:MERGED_TO:0b1a2b5f-a924-4c6a-b123-d24d6b
+- PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1:PARENT_RAW_ENRICHED
+- PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1:DRIVE_FINAL_START
+- TOPIC2_PUBLIC_RESULT_CANON_VIOLATION:missing_canon_header
+- TOPIC2_ESTIMATE_FINAL_CLOSE_V2:ESTIMATE_ARTIFACTS_CREATED
+- TOPIC2_ESTIMATE_SESSION_CREATED
+- TOPIC2_CONTEXT_READY
+- TOPIC2_XLSX_CREATED
+- TOPIC2_PDF_CREATED
+- TOPIC2_PDF_CYRILLIC_OK
+- TOPIC2_MESSAGE_THREAD_ID_OK
+- PATCH_TOPIC2_FULL_CLOSE_TZ_MATERIALS_PRICE_V2_ACTIVE_BEFORE_MAIN:RESULT_SANITIZE
+- PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1:DRIVE_LINK_REQUIRED
+- TOPIC2_ADDITIONAL_FACT_MERGED:353f2eb6-e19e-49e4-ad0d-7b23ef00cd0f
+- TOPIC2_ADDITIONAL_FACTS_RECALC_STARTED:353f2eb6-e19e-49e4-ad0d-7b23ef00cd0f
+- TOPIC2_RECALC_CONTEXT_INCLUDES_FACT:пол
+- clarified:[VOICE] Выполнил мне расчет в полном соответствии
+- PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:MERGED_CHILD:353f2eb6-e19e-49e4-ad0d-
+- PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:MERGED_TO_PARENT:f2efa5c0-ad58-4273-9
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210
@@ -160,12 +131,8 @@ PATCH_TOPIC2_FULL_GAP_CLOSE_V4
 - TOPIC2_DONE_CONTRACT_OK
 
 ## MARKERS_MISSING
-- TOPIC2_ESTIMATE_SESSION_CREATED
-- TOPIC2_CONTEXT_READY
+- TOPIC2_TEMPLATE_SELECTED
 - TOPIC2_LOGISTICS_CONFIRMED
-- TOPIC2_XLSX_CREATED
-- TOPIC2_MESSAGE_THREAD_ID_OK
-- TOPIC2_DONE_CONTRACT_OK
 
 ## REGRESSION_GUARDS
 - не возвращать P6E67_PARENT_NOT_FOUND на полное ТЗ

@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_006
-generated_at_utc: 2026-05-09T17:35:02.366385+00:00
-git_sha_before_commit: 7aff8a6c8fa2d5b28aa4188a5e888b6d87ae65e1
-part: 6/17
+generated_at_utc: 2026-07-04T21:54:23.310784+00:00
+git_sha_before_commit: fed18c2ba1c081e89de6d526675911a92361a309
+part: 6/18
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
-FILE_CHUNK: 2/3
-SHA256_FULL_FILE: b8484c0045715ed6922c0b8f62a4d3c1f612ce8d7ae2858ff3b801af76e84a2e
+FILE_CHUNK: 2/4
+SHA256_FULL_FILE: 1d97d7bfec3646a6972c7874d63d01820d1c9c0acb35320bde9919bc467ebe3e
 ====================================================================================================
             args = tuple(_p6e4_sanitize_catalog_text(a) if isinstance(a, str) else a for a in args)
             kwargs = {k: (_p6e4_sanitize_catalog_text(v) if isinstance(v, str) else v) for k, v in kwargs.items()}
@@ -127,7 +127,7 @@ def _p6e67_find_parent(conn, task):
               AND state IN ('DONE','AWAITING_CONFIRMATION','RESULT_READY','FAILED','IN_PROGRESS','WAITING_CLARIFICATION')
             ORDER BY rowid DESC LIMIT 1
         """, (chat_id, topic_id, task_id, reply_to, reply_to)).fetchone()
-        if row and _p6e67_is_estimate(row):
+        if row and _p6e67_parent_open_for_reply(conn, row) and _p6e67_is_estimate(row):
             return row, "EXACT_REPLY_LINK"
 
         row = conn.execute("""
@@ -4344,6 +4344,30 @@ _P6E67FIX_LOG = _p6e67fix_logging.getLogger("task_worker")
 
 _p6e67fix_orig_find_parent = _p6e67_find_parent
 
+def _p6e67_parent_open_for_reply(conn, row):
+    try:
+        pid = _p6e67_s(_p6e67_row(row, "id", ""))
+        state = _p6e67_s(_p6e67_row(row, "state", "")).upper()
+        err = _p6e67_s(_p6e67_row(row, "error_message", "")).upper()
+        if not pid or state in ("DONE", "FAILED", "CANCELLED", "ARCHIVED"):
+            return False
+        if "P6E67_PARENT_NOT_FOUND" in err or "MERGED_TO_PARENT" in err:
+            return False
+        hist = "\n".join(str(r[0] or "") for r in conn.execute(
+            "SELECT action FROM task_history WHERE task_id=? ORDER BY rowid DESC LIMIT 100",
+            (pid,),
+        ).fetchall())
+        if (
+            "P6E67_PARENT_NOT_FOUND" in hist
+            or "TOPIC2_DONE_CONTRACT_OK" in hist
+            or "TOPIC2_DRIVE_UPLOAD_XLSX_OK" in hist
+            or "TOPIC2_DRIVE_UPLOAD_PDF_OK" in hist
+        ):
+            return False
+        return True
+    except Exception:
+        return False
+
 def _p6e67_find_parent(conn, task):
     chat_id = _p6e67_s(_p6e67_row(task, "chat_id", ""))
     topic_id = int(_p6e67_row(task, "topic_id", 0) or 0)
@@ -4365,6 +4389,11 @@ def _p6e67_find_parent(conn, task):
             WHERE chat_id=? AND COALESCE(topic_id,0)=? AND id<>?
               AND (bot_message_id=? OR reply_to_message_id=?)
               AND state IN ('IN_PROGRESS','AWAITING_CONFIRMATION','RESULT_READY','WAITING_CLARIFICATION')
+              AND NOT EXISTS (
+                SELECT 1 FROM task_history th
+                WHERE th.task_id=tasks.id
+                  AND th.action LIKE 'PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:MERGED_TO_PARENT:%'
+              )
             ORDER BY rowid DESC LIMIT 1
         """, (chat_id, topic_id, task_id, reply_to, reply_to)).fetchone()
         if row and _p6e67_is_estimate(row):
@@ -4375,6 +4404,11 @@ def _p6e67_find_parent(conn, task):
         SELECT * FROM tasks
         WHERE chat_id=? AND COALESCE(topic_id,0)=? AND id<>?
           AND state IN ('IN_PROGRESS','AWAITING_CONFIRMATION','RESULT_READY','WAITING_CLARIFICATION')
+          AND NOT EXISTS (
+            SELECT 1 FROM task_history th
+            WHERE th.task_id=tasks.id
+              AND th.action LIKE 'PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:MERGED_TO_PARENT:%'
+          )
           AND (
             raw_input LIKE '%смет%' OR result LIKE '%смет%'
             OR raw_input LIKE '%стоимость%' OR result LIKE '%стоимость%'
@@ -4384,7 +4418,7 @@ def _p6e67_find_parent(conn, task):
         ORDER BY rowid DESC LIMIT 1
     """, (chat_id, topic_id, task_id)).fetchone()
 
-    if row and _p6e67_is_estimate(row):
+    if row and _p6e67_parent_open_for_reply(conn, row) and _p6e67_is_estimate(row):
         return row, "LAST_ACTIVE_ESTIMATE_FALLBACK"
 
     return None, "NOT_FOUND"
@@ -6710,6 +6744,21 @@ def _t2feb_is_fresh_estimate(raw):
         return True
     return False
 
+def _t2feb_latest_fresh_clarified(conn, task_id):
+    try:
+        rows = conn.execute(
+            "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'clarified:%' ORDER BY rowid DESC LIMIT 10",
+            (str(task_id),),
+        ).fetchall()
+        for row in rows:
+            action = str(row[0] or "")
+            raw = action.split("clarified:", 1)[1].strip() if "clarified:" in action else ""
+            if _t2feb_is_fresh_estimate(raw):
+                return raw
+    except Exception:
+        return ""
+    return ""
+
 async def _t2feb_run_estimate(conn, task, raw):
     try:
         from core.stroyka_estimate_canon import maybe_handle_stroyka_estimate as _t2feb_mhse
@@ -6758,15 +6807,30 @@ if _T2FEB_ORIG_HANDLE_IN_PROG:
             state = _t2feb_s(_t2feb_row(task, "state", "")).upper()
             raw = _t2feb_s(_t2feb_row(task, "raw_input", ""))
             if "P6E67_PARENT_NOT_FOUND" in err and state in ("WAITING_CLARIFICATION", "IN_PROGRESS"):
-                if _t2feb_is_fresh_estimate(raw):
-                    task_id = _t2feb_s(_t2feb_row(task, "id", ""))
-                    _T2FEB_LOG.info("T2FEB_P6E67_RESCUE task=%s", task_id)
+                task_id = _t2feb_s(_t2feb_row(task, "id", ""))
+                rescue_raw = raw if _t2feb_is_fresh_estimate(raw) else _t2feb_latest_fresh_clarified(conn, task_id)
+                if _t2feb_is_fresh_estimate(rescue_raw):
+                    _T2FEB_LOG.info("T2FEB_P6E67_RESCUE task=%s source=%s", task_id, "raw" if rescue_raw == raw else "clarified")
                     conn.execute(
-                        "UPDATE tasks SET state='IN_PROGRESS', error_message='', updated_at=datetime('now') WHERE id=?",
-                        (task_id,)
+                        "UPDATE tasks SET state='IN_PROGRESS', raw_input=?, error_message='', updated_at=datetime('now') WHERE id=?",
+                        (rescue_raw, task_id)
+                    )
+                    conn.execute(
+                        "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                        (task_id, "TOPIC2_P6E67_RESCUE_FROM_CLARIFIED")
                     )
                     conn.commit()
-                    if await _t2feb_run_estimate(conn, task, raw):
+                    task_clean = {}
+                    try:
+                        for k in task.keys():
+                            task_clean[k] = task[k]
+                    except Exception:
+                        task_clean = {}
+                    task_clean["raw_input"] = rescue_raw
+                    task_clean["state"] = "IN_PROGRESS"
+                    task_clean["error_message"] = ""
+                    task_clean["reply_to_message_id"] = None
+                    if await _t2feb_run_estimate(conn, task_clean, rescue_raw):
                         _T2FEB_LOG.info("T2FEB_P6E67_RESCUE_DONE task=%s", task_id)
                         return True
         res = _T2FEB_ORIG_HANDLE_IN_PROG(conn, task, *args, **kwargs)
@@ -7657,60 +7721,8 @@ _T210_META_PHRASES = (
     "бери и делай", "делай сам", "сам решай",
 )
 
-def _t210mg_is_meta(raw: str, input_type: str) -> bool:
-    if input_type in ("photo", "file", "drive_file", "image", "document"):
-        return False
-    t = str(raw or "").lower().replace("ё", "е").replace("[voice]", "").replace("[голос]", "").strip(" .,!?:;")
-    if len(t.split()) > 12:
-        return False
-    return any(x in t for x in _T210_META_PHRASES)
-
-_T210MG_ORIG_HN = globals().get("_handle_new")
-
-if _T210MG_ORIG_HN and not getattr(_T210MG_ORIG_HN, "_t210mg_wrapped", False):
-    async def _handle_new(conn, task, *args, **kwargs):
-        try:
-            if isinstance(task, dict):
-                topic_id_v = int(task.get("topic_id") or 0)
-                raw_v = str(task.get("raw_input") or "")
-                input_type_v = str(task.get("input_type") or "")
-                task_id_v = str(task.get("id") or "")
-                chat_id_v = str(task.get("chat_id") or "")
-                reply_to_v = task.get("reply_to_message_id")
-            else:
-                topic_id_v = int(task["topic_id"] if hasattr(task, "keys") and "topic_id" in task.keys() else 0)
-                raw_v = str(task["raw_input"] if hasattr(task, "keys") and "raw_input" in task.keys() else "")
-                input_type_v = str(task["input_type"] if hasattr(task, "keys") and "input_type" in task.keys() else "")
-                task_id_v = str(task["id"] if hasattr(task, "keys") and "id" in task.keys() else "")
-                chat_id_v = str(task["chat_id"] if hasattr(task, "keys") and "chat_id" in task.keys() else "")
-                reply_to_v = task["reply_to_message_id"] if hasattr(task, "keys") and "reply_to_message_id" in task.keys() else None
-
-            if topic_id_v == 210 and _t210mg_is_meta(raw_v, input_type_v):
-                msg = "Понял, принято. Продолжаю работу по проекту в этом разделе."
-                try:
-                    _send_once_ex(conn, task_id_v, chat_id_v, msg, reply_to_v, "t210mg_ack")
-                except Exception:
-                    pass
-                _update_task(conn, task_id_v, state="DONE", result=msg, error_message="")
-                _history(conn, task_id_v, "TOPIC210_META_GUARD_DONE_V1")
-                conn.commit()
-                _T210MG_LOG.info("PATCH_TOPIC210_META_GUARD_V1 handled meta task=%s", task_id_v)
-                return True
-        except Exception as _t210mg_e:
-            _T210MG_LOG.warning("PATCH_TOPIC210_META_GUARD_V1_ERR %s", _t210mg_e)
-        res = _T210MG_ORIG_HN(conn, task, *args, **kwargs)
-        if _t210mg_inspect.isawaitable(res):
-            return await res
-        return res
-
-    _handle_new._t210mg_wrapped = True
-    _T210MG_LOG.info("PATCH_TOPIC210_META_GUARD_V1 installed")
-else:
-    _T210MG_LOG.warning("PATCH_TOPIC210_META_GUARD_V1 skipped: _handle_new not found")
-# === END_PATCH_TOPIC210_META_GUARD_V1 ===
-
 
 ====================================================================================================
 END_FILE: task_worker.py
-FILE_CHUNK: 2/3
+FILE_CHUNK: 2/4
 ====================================================================================================

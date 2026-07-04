@@ -1,7 +1,7 @@
 # topic_0 COMMON
 
-GENERATED_AT: 2026-05-09T17:35:02.440166+00:00
-GIT_SHA: 7aff8a6c8fa2d5b28aa4188a5e888b6d87ae65e1
+GENERATED_AT: 2026-07-04T21:54:23.375079+00:00
+GIT_SHA: fed18c2ba1c081e89de6d526675911a92361a309
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 0
@@ -9,26 +9,33 @@ ROLE: Общий
 DIRECTIONS_BOUND: none
 CURRENT_STATUS: UNKNOWN
 ACTIVE_TASKS: 0
-FAILED_LAST_24H: 0
+FAILED_LAST_24H: 1
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 289
 - CANCELLED: 643
 - DONE: 207
-- FAILED: 2705
+- FAILED: 2706
 
 ## LATEST_FAILED
+- 71aa047d | INVALID_RESULT_GATE
 - 66b9f841 | INVALID_RESULT_GATE
 - 5c19256b | INVALID_RESULT_GATE
 - 0de22d01 | PROJECT_LINKS_MISSING
 - d65dd41b | CONFIRMATION_TIMEOUT
-- 890ac70c | CONFIRMATION_TIMEOUT
 
 ## COMMITS_LAST_14D
 - (none matching topic)
 
 ## MARKERS_LAST_24H
-- (none)
+- created:NEW
+- state:IN_PROGRESS
+- result:Система восстановлена и функционирует в штатном режиме. Готов к обработке
+- reply_sent:result
+- result:Тест после восстановления системы выполнен. Система функционирует в штатн
+- result:Тест после восстановления системы AREAL-NEVA ORCHESTRA выполнен. Система 
+- state:FAILED
+- reply_sent:invalid_result
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - (none)

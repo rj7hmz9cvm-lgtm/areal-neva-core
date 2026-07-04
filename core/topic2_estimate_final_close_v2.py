@@ -376,26 +376,31 @@ def _write_pdf(path: Path, items: List[Dict[str, Any]]) -> None:
     c.save()
 
 
-def _upload(path: Path, task_id: str, topic_id: int) -> str:
-    for mod_name, fn_name in (
-        ("core.engine_base", "upload_artifact_to_drive"),
-        ("core.topic_drive_oauth", "upload_file_to_topic"),
-    ):
-        try:
-            mod = __import__(mod_name, fromlist=[fn_name])
-            fn = getattr(mod, fn_name)
-            try:
-                link = fn(str(path), task_id, topic_id)
-            except TypeError:
-                link = fn(str(path))
+def _upload(path: Path, task_id: str, topic_id: int, chat_id: str = "") -> str:
+    try:
+        from core.topic_drive_oauth import _upload_file_sync
+        up = _upload_file_sync(str(path), path.name, str(chat_id or task_id), int(topic_id or 0), None)
+        if isinstance(up, dict):
+            link = up.get("webViewLink")
+            fid = up.get("drive_file_id")
             if link:
                 return str(link)
-        except Exception:
-            continue
+            if fid:
+                return "https://drive.google.com/file/d/" + str(fid) + "/view?usp=drivesdk"
+    except Exception:
+        pass
+
+    try:
+        from core.engine_base import upload_artifact_to_drive
+        link = upload_artifact_to_drive(str(path), task_id, topic_id)
+        if link and "drive.google.com" in str(link):
+            return str(link)
+    except Exception:
+        pass
     return str(path)
 
 
-def _make_artifacts(task_id: str, topic_id: int, raw_text: str, photo_text: str = "") -> Dict[str, Any]:
+def _make_artifacts(task_id: str, topic_id: int, raw_text: str, photo_text: str = "", chat_id: str = "") -> Dict[str, Any]:
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     safe = re.sub(r"[^A-Za-z0-9_-]+", "_", task_id or ts)[:32]
     out_dir = OUT / f"{safe}_{ts}"
@@ -423,9 +428,9 @@ def _make_artifacts(task_id: str, topic_id: int, raw_text: str, photo_text: str 
     }
     manifest.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    xlsx_link = _upload(xlsx, task_id, topic_id)
-    pdf_link = _upload(pdf, task_id, topic_id)
-    manifest_link = _upload(manifest, task_id, topic_id)
+    xlsx_link = _upload(xlsx, task_id, topic_id, chat_id)
+    pdf_link = _upload(pdf, task_id, topic_id, chat_id)
+    manifest_link = _upload(manifest, task_id, topic_id, chat_id)
 
     msg = (
         "Сметный расчёт подготовлен без запроса цены по кругу\n"
@@ -593,7 +598,7 @@ async def handle_topic2_estimate_final_close(
                 _hist(conn, history, task_id, f"{ENGINE}:SHORT_CONFIRM_DONE")
                 return True
 
-            res = _make_artifacts(parent_id or task_id, topic_id, parent_raw or full_text, "")
+            res = _make_artifacts(parent_id or task_id, topic_id, parent_raw or full_text, "", chat_id)
             bot_id = _send(send_reply_ex, chat_id, res["message"], reply_to, topic_id)
             _update(conn, update_task, parent_id, state="AWAITING_CONFIRMATION", result=res["message"], error_message="", bot_message_id=bot_id)
             _update(conn, update_task, task_id, state="DONE", result="Уточнение применено к родительской смете", error_message="")
@@ -607,7 +612,7 @@ async def handle_topic2_estimate_final_close(
         if not _is_estimate_intent(full_text, meta.get("file_name", "")) and not _is_file_or_photo(input_type, raw_input):
             return False
 
-        res = _make_artifacts(task_id, topic_id, full_text or raw_text or meta.get("file_name", ""), file_text)
+        res = _make_artifacts(task_id, topic_id, full_text or raw_text or meta.get("file_name", ""), file_text, chat_id)
         bot_id = _send(send_reply_ex, chat_id, res["message"], reply_to, topic_id)
         _update(conn, update_task, task_id, state="AWAITING_CONFIRMATION", result=res["message"], error_message="", bot_message_id=bot_id)
         _hist(conn, history, task_id, f"{ENGINE}:ESTIMATE_ARTIFACTS_CREATED")
@@ -878,8 +883,8 @@ def _parse_items(text: str) -> _T2LT_List[_T2LT_Dict[str, _T2LT_Any]]:
 
 _T2DC_ORIG_MAKE_ARTIFACTS = _make_artifacts
 
-def _make_artifacts(task_id: str, topic_id: int, raw_text: str, photo_text: str = "") -> dict:
-    result = _T2DC_ORIG_MAKE_ARTIFACTS(task_id, topic_id, raw_text, photo_text)
+def _make_artifacts(task_id: str, topic_id: int, raw_text: str, photo_text: str = "", chat_id: str = "") -> dict:
+    result = _T2DC_ORIG_MAKE_ARTIFACTS(task_id, topic_id, raw_text, photo_text, chat_id)
     result["_done_contract_markers"] = [
         "TOPIC2_ESTIMATE_SESSION_CREATED",
         "TOPIC2_CONTEXT_READY",

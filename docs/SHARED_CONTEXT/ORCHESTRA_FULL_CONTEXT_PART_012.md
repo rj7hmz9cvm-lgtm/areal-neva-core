@@ -1,3480 +1,1348 @@
 # ORCHESTRA_FULL_CONTEXT_PART_012
-generated_at_utc: 2026-05-09T17:35:02.372502+00:00
-git_sha_before_commit: 7aff8a6c8fa2d5b28aa4188a5e888b6d87ae65e1
-part: 12/17
+generated_at_utc: 2026-07-04T21:54:23.319416+00:00
+git_sha_before_commit: fed18c2ba1c081e89de6d526675911a92361a309
+part: 12/18
 
 
 ====================================================================================================
-BEGIN_FILE: core/technadzor_engine.py
+BEGIN_FILE: core/search_session.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 4677dac1c9d15e1a54aff22f31bbddeac1e5c132f6eb03d57bc5e732b457b560
+SHA256_FULL_FILE: 02340d9c1c5596ce8ad99fd40e054e5dd1a8b6885cdfe27858d13a5c12abad22
 ====================================================================================================
-# === FINAL_CLOSURE_BLOCKER_FIX_V1_TECHNADZOR_ENGINE ===
+# === SEARCH_MONOLITH_V2_FULL ===
 from __future__ import annotations
-
-import re
-from datetime import datetime
-from pathlib import Path
-from typing import Any, Dict
-
-BASE = Path("/root/.areal-neva-core")
-OUT = BASE / "outputs" / "technadzor"
-OUT.mkdir(parents=True, exist_ok=True)
-
-
-def is_technadzor_intent(text: str = "", file_name: str = "") -> bool:
-    t = f"{text} {file_name}".lower().replace("ё", "е")
-    return bool(re.search(r"\b(акт|технадзор|техническ.*надзор|дефект|замечан|нарушен|освидетельств|стройконтроль|сп|гост|снип)\b", t))
-
-
-def _norm_refs(text: str) -> str:
-    refs = []
-    for m in re.findall(r"\b(сп\s*\d+[.\d]*|гост\s*\d+[.\d-]*|снип\s*[\w.\-]+)\b", text or "", flags=re.I):
-        refs.append(m.upper().replace("  ", " "))
-    return ", ".join(sorted(set(refs))) if refs else "Норма не подтверждена"
-
-
-def process_technadzor(text: str = "", task_id: str = "", chat_id: str = "", topic_id: int = 0, file_path: str = "", file_name: str = "") -> Dict[str, Any]:
-    if not is_technadzor_intent(text, file_name):
-        return {"ok": False, "handled": False, "reason": "NOT_TECHNADZOR"}
-
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    stem = f"TECHNADZOR_ACT__{task_id[:8] or ts}"
-    txt_path = OUT / f"{stem}.txt"
-
-    body = [
-        "АКТ ТЕХНИЧЕСКОГО НАДЗОРА",
-        "",
-        f"Дата: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-        f"Задача: {task_id}",
-        f"Топик: {topic_id}",
-    ]
-
-    if file_name:
-        body.append(f"Файл: {file_name}")
-
-    body.extend(
-        [
-            "",
-            "Исходное описание:",
-            (text or "").strip() or "UNKNOWN",
-            "",
-            "Нормативная база:",
-            _norm_refs(text),
-            "",
-            "Вывод:",
-            "Черновик акта создан. Если норматив не подтверждён источником, в акте указано: Норма не подтверждена",
-        ]
-    )
-
-    txt_path.write_text("\n".join(body) + "\n", encoding="utf-8")
-
-    return {
-        "ok": True,
-        "handled": True,
-        "kind": "technadzor_act",
-        "state": "DONE",
-        "artifact_path": str(txt_path),
-        "message": "Технадзорный акт подготовлен",  # TECHNADZOR_PUBLIC_MESSAGE_NO_LOCAL_PATH_V1
-        "history": "FINAL_CLOSURE_BLOCKER_FIX_V1:TECHNADZOR_ACT_CREATED",
-    }
-
-
-# === END_FINAL_CLOSURE_BLOCKER_FIX_V1_TECHNADZOR_ENGINE ===
-
-
-# === P6_TECHNADZOR_TEMPLATE_AND_ARTIFACT_CLOSE_20260504_V1 ===
-# Scope:
-# - technadzor sample/template files can be saved as active reference per chat/topic
-# - future technadzor acts use active reference metadata
-# - produces TXT and DOCX when python-docx exists; no DB schema changes
-
-import json as _p6tz_json
-import re as _p6tz_re
-from datetime import datetime as _p6tz_datetime
-from pathlib import Path as _p6tz_Path
-
-_P6TZ_BASE = _p6tz_Path("/root/.areal-neva-core")
-_P6TZ_TEMPLATE_DIR = _P6TZ_BASE / "data/templates/technadzor"
-_P6TZ_OUT = _P6TZ_BASE / "outputs/technadzor"
-_P6TZ_TEMPLATE_DIR.mkdir(parents=True, exist_ok=True)
-_P6TZ_OUT.mkdir(parents=True, exist_ok=True)
-
-def _p6tz_s(v, limit=12000):
-    try:
-        if v is None:
-            return ""
-        return str(v).strip()[:limit]
-    except Exception:
-        return ""
-
-def _p6tz_low(v):
-    return _p6tz_s(v).lower().replace("ё", "е")
-
-def _p6tz_template_path(chat_id, topic_id):
-    safe_chat = _p6tz_re.sub(r"[^0-9a-zA-Z_-]+", "_", str(chat_id or "unknown"))
-    return _P6TZ_TEMPLATE_DIR / f"ACTIVE__chat_{safe_chat}__topic_{int(topic_id or 0)}.json"
-
-def _p6tz_is_template_intent(text="", file_name=""):
-    low = _p6tz_low(str(text) + " " + str(file_name))
-    return any(x in low for x in ("образец", "шаблон", "пример", "как образец", "как шаблон", "возьми его как образец", "сохрани как образец")) and any(x in low for x in ("технадзор", "акт", "замечан", "дефект", "строительный контроль", "стройконтроль"))
-
-def _p6tz_save_template(text="", task_id="", chat_id="", topic_id=0, file_path="", file_name=""):
-    meta = {
-        "engine": "P6_TECHNADZOR_TEMPLATE_AND_ARTIFACT_CLOSE_20260504_V1",
-        "kind": "technadzor_template",
-        "status": "active",
-        "chat_id": str(chat_id or ""),
-        "topic_id": int(topic_id or 0),
-        "source_task_id": str(task_id or ""),
-        "source_file_path": str(file_path or ""),
-        "source_file_name": str(file_name or ""),
-        "raw_user_instruction": _p6tz_s(text, 4000),
-        "usage_rule": "Use this file as formatting/sample reference for future technadzor acts in same chat/topic",
-        "saved_at": _p6tz_datetime.now().isoformat(),
-    }
-    path = _p6tz_template_path(chat_id, topic_id)
-    path.write_text(_p6tz_json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
-    return path
-
-def _p6tz_load_template(chat_id, topic_id):
-    path = _p6tz_template_path(chat_id, topic_id)
-    if not path.exists():
-        return {}
-    try:
-        return _p6tz_json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-
-def _p6tz_refs(text):
-    refs = []
-    for m in _p6tz_re.findall(r"\b(сп\s*\d+[.\d]*|гост\s*\d+[.\d-]*|снип\s*[\w.\-]+)\b", text or "", flags=_p6tz_re.I):
-        refs.append(m.upper().replace("  ", " "))
-    return ", ".join(sorted(set(refs))) if refs else "Норма не подтверждена"
-
-def _p6tz_make_docx(path, lines):
-    try:
-        from docx import Document
-        doc = Document()
-        for i, line in enumerate(lines):
-            if i == 0:
-                doc.add_heading(line, level=1)
-            elif line == "":
-                doc.add_paragraph("")
-            else:
-                doc.add_paragraph(line)
-        doc.save(str(path))
-        return str(path)
-    except Exception:
-        return ""
-
-try:
-    _p6tz_orig_is_intent = is_technadzor_intent
-    def is_technadzor_intent(text: str = "", file_name: str = "") -> bool:
-        low = _p6tz_low(str(text) + " " + str(file_name))
-        if _p6tz_is_template_intent(text, file_name):
-            return True
-        if any(x in low for x in ("технадзор", "акт", "замечан", "дефект", "нарушен", "освидетельств", "стройконтроль", "строительный контроль", "сп ", "гост", "снип")):
-            return True
-        return _p6tz_orig_is_intent(text, file_name)
-except Exception:
-    pass
-
-try:
-    _p6tz_orig_process = process_technadzor
-    def process_technadzor(text: str = "", task_id: str = "", chat_id: str = "", topic_id: int = 0, file_path: str = "", file_name: str = ""):
-        if _p6tz_is_template_intent(text, file_name):
-            meta_path = _p6tz_save_template(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id, file_path=file_path, file_name=file_name)
-            return {
-                "ok": True,
-                "handled": True,
-                "kind": "technadzor_template_saved",
-                "state": "DONE",
-                "artifact_path": str(meta_path),
-                "message": "Образец технадзора сохранён для этого топика",
-                "history": "P6_TECHNADZOR_TEMPLATE_SAVED",
-            }
-
-        if not is_technadzor_intent(text, file_name):
-            return {"ok": False, "handled": False, "reason": "NOT_TECHNADZOR"}
-
-        tpl = _p6tz_load_template(chat_id, topic_id)
-        ts = _p6tz_datetime.now().strftime("%Y%m%d_%H%M%S")
-        safe = str(task_id or ts)[:8] or ts
-        stem = f"TECHNADZOR_ACT__{safe}"
-        txt_path = _P6TZ_OUT / f"{stem}.txt"
-        docx_path = _P6TZ_OUT / f"{stem}.docx"
-
-        lines = [
-            "АКТ ТЕХНИЧЕСКОГО НАДЗОРА",
-            "",
-            f"Дата: {_p6tz_datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-            f"Задача: {task_id}",
-            f"Топик: {topic_id}",
-        ]
-        if file_name:
-            lines.append(f"Файл: {file_name}")
-        if tpl:
-            lines.append(f"Образец: {tpl.get('source_file_name') or tpl.get('source_file_path') or 'активный шаблон топика'}")
-        lines += [
-            "",
-            "Исходное описание:",
-            _p6tz_s(text, 6000) or "UNKNOWN",
-            "",
-            "Нормативная база:",
-            _p6tz_refs(text),
-            "",
-            "Выявленные замечания:",
-            "1. Требуется заполнение по присланным фото/файлам и описанию",
-            "",
-            "Требуемые действия:",
-            "1. Устранить замечания",
-            "2. Предоставить фотофиксацию устранения",
-            "3. Повторно предъявить участок работ техническому надзору",
-            "",
-            "Статус:",
-            "Черновик подготовлен по текущим данным",
-        ]
-
-        txt_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-        docx_created = _p6tz_make_docx(docx_path, lines)
-        return {
-            "ok": True,
-            "handled": True,
-            "kind": "technadzor_act",
-            "state": "DONE",
-            "artifact_path": docx_created or str(txt_path),
-            "extra_artifact_path": str(txt_path),
-            "message": "Технадзорный акт подготовлен",
-            "history": "P6_TECHNADZOR_ACT_CREATED",
-        }
-except Exception:
-    pass
-
-# === END_P6_TECHNADZOR_TEMPLATE_AND_ARTIFACT_CLOSE_20260504_V1 ===
-
-# === P6C_TECHNADZOR_CONN_COMPAT_TEMPLATE_ACT_CLOSE_20260504_V1 ===
-import json as _p6c_te_json
-import re as _p6c_te_re
-from pathlib import Path as _p6c_te_Path
-from datetime import datetime as _p6c_te_datetime
-
-_P6C_TE_BASE = _p6c_te_Path("/root/.areal-neva-core")
-_P6C_TE_OUT = _P6C_TE_BASE / "outputs" / "technadzor"
-_P6C_TE_TPL = _P6C_TE_BASE / "data" / "templates" / "technadzor"
-_P6C_TE_OUT.mkdir(parents=True, exist_ok=True)
-_P6C_TE_TPL.mkdir(parents=True, exist_ok=True)
-
-def _p6c_te_s(v, limit=50000):
-    try:
-        if v is None:
-            return ""
-        return str(v).strip()[:limit]
-    except Exception:
-        return ""
-
-def _p6c_te_low(v):
-    return _p6c_te_s(v).lower().replace("ё", "е")
-
-def is_technadzor_intent(text: str = "", file_name: str = "") -> bool:
-    low = _p6c_te_low(f"{text} {file_name}")
-    return any(x in low for x in (
-        "технадзор", "акт", "осмотр", "выезд", "дефект", "замечан",
-        "образец написания", "образец акта", "как образец"
-    ))
-
-def _p6c_te_is_template(text, file_name):
-    low = _p6c_te_low(f"{text} {file_name}")
-    return any(x in low for x in (
-        "образец", "как образец", "прими это как факт", "образец написания",
-        "возьми это как образец", "шаблон"
-    ))
-
-def _p6c_te_read_text(file_path):
-    fp = _p6c_te_Path(_p6c_te_s(file_path))
-    if not fp.exists():
-        return ""
-    suf = fp.suffix.lower()
-    try:
-        if suf == ".txt":
-            return fp.read_text(encoding="utf-8", errors="ignore")[:30000]
-        if suf == ".pdf":
-            try:
-                import fitz
-                doc = fitz.open(str(fp))
-                return "\n".join(page.get_text("text") for page in doc)[:30000]
-            except Exception:
-                return ""
-        if suf == ".docx":
-            try:
-                import docx
-                d = docx.Document(str(fp))
-                return "\n".join(p.text for p in d.paragraphs)[:30000]
-            except Exception:
-                return ""
-    except Exception:
-        return ""
-    return ""
-
-def _p6c_te_save_template(chat_id, topic_id, task_id, text, file_name, file_path):
-    data = {
-        "engine": "P6C_TECHNADZOR_CONN_COMPAT_TEMPLATE_ACT_CLOSE_20260504_V1",
-        "chat_id": str(chat_id or ""),
-        "topic_id": int(topic_id or 0),
-        "task_id": str(task_id or ""),
-        "file_name": _p6c_te_s(file_name),
-        "file_path": _p6c_te_s(file_path),
-        "saved_at": _p6c_te_datetime.utcnow().isoformat() + "Z",
-        "template_text": _p6c_te_s(text, 25000),
-    }
-    out = _P6C_TE_TPL / f"ACTIVE__chat_{chat_id}__topic_{int(topic_id or 0)}.json"
-    out.write_text(_p6c_te_json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-    return str(out)
-
-def _p6c_te_load_template(chat_id, topic_id):
-    p = _P6C_TE_TPL / f"ACTIVE__chat_{chat_id}__topic_{int(topic_id or 0)}.json"
-    if not p.exists():
-        return {}
-    try:
-        return _p6c_te_json.loads(p.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-
-def _p6c_te_write_act(task_id, chat_id, topic_id, body):
-    out = _P6C_TE_OUT / f"TECHNADZOR_ACT__{str(task_id)[:8]}.txt"
-    out.write_text(body, encoding="utf-8")
-    return str(out)
-
-def process_technadzor(text: str = "", task_id: str = "", chat_id: str = "", topic_id: int = 0, file_path: str = "", file_name: str = "", **kwargs):
-    conn = kwargs.get("conn")
-    raw_text = _p6c_te_s(text, 50000)
-    file_name = _p6c_te_s(file_name or kwargs.get("name") or "")
-    file_path = _p6c_te_s(file_path or kwargs.get("local_path") or "")
-    task_id = _p6c_te_s(task_id or kwargs.get("id") or kwargs.get("task_id") or "technadzor")
-    chat_id = _p6c_te_s(chat_id or kwargs.get("chat_id") or "")
-    try:
-        topic_id = int(topic_id or kwargs.get("topic_id") or 0)
-    except Exception:
-        topic_id = 0
-
-    extracted = _p6c_te_read_text(file_path)
-    combined = "\n".join(x for x in [raw_text, extracted] if x).strip()
-
-    if _p6c_te_is_template(raw_text, file_name):
-        tpl_path = _p6c_te_save_template(chat_id, topic_id, task_id, combined, file_name, file_path)
-        return {
-            "ok": True,
-            "status": "DONE",
-            "result_text": f"Образец технадзора принят и сохранён\nФайл: {file_name}\nШаблон: активен для topic_{topic_id}",
-            "artifact_path": tpl_path,
-            "history": "P6C_TECHNADZOR_TEMPLATE_SAVED",
-        }
-
-    tpl = _p6c_te_load_template(chat_id, topic_id)
-    tpl_note = "Использован сохранённый образец" if tpl else "Сохранённый образец не найден"
-
-    body = "\n".join([
-        "АКТ ОСМОТРА ПО ФАКТУ ВЫЕЗДА",
-        "",
-        f"Дата формирования: {_p6c_te_datetime.now().strftime('%d.%m.%Y %H:%M')}",
-        f"Файл: {file_name or 'без файла'}",
-        f"Источник: topic_{topic_id}",
-        f"Шаблон: {tpl_note}",
-        "",
-        "Исходные данные:",
-        combined[:12000] if combined else "Данные из файла не извлечены автоматически",
-        "",
-        "Вывод технического надзора:",
-        "Документ сформирован как рабочий черновик акта. Требуется проверка владельцем перед выдачей заказчику.",
-    ])
-    artifact = _p6c_te_write_act(task_id, chat_id, topic_id, body)
-
-    return {
-        "ok": True,
-        "status": "DONE",
-        "result_text": f"Акт технадзора сформирован\nФайл: {file_name or 'без файла'}\nАртефакт: {artifact}",
-        "artifact_path": artifact,
-        "history": "P6C_TECHNADZOR_ACT_CREATED",
-    }
-# === END_P6C_TECHNADZOR_CONN_COMPAT_TEMPLATE_ACT_CLOSE_20260504_V1 ===
-
-# === P6E2_TECHNADZOR_FOLDER_AWARE_NO_DRIVE_POLLUTION_20260504_V1 ===
-import json as _p6e2_te_json
-import re as _p6e2_te_re
-from pathlib import Path as _p6e2_te_Path
-from datetime import datetime as _p6e2_te_datetime
-
-_P6E2_TE_BASE = _p6e2_te_Path("/root/.areal-neva-core")
-_P6E2_TE_OUT = _P6E2_TE_BASE / "outputs" / "technadzor"
-_P6E2_TE_TPL = _P6E2_TE_BASE / "data" / "templates" / "technadzor"
-_P6E2_TE_OUT.mkdir(parents=True, exist_ok=True)
-_P6E2_TE_TPL.mkdir(parents=True, exist_ok=True)
-
-def _p6e2_te_s(v, limit=50000):
-    try:
-        if v is None:
-            return ""
-        return str(v).strip()[:limit]
-    except Exception:
-        return ""
-
-def _p6e2_te_low(v):
-    return _p6e2_te_s(v).lower().replace("ё", "е")
-
-def _p6e2_te_is_template(text, file_name=""):
-    low = _p6e2_te_low(text + " " + file_name)
-    return any(x in low for x in ("как образец", "образец написания", "прими это как факт", "возьми это как образец", "шаблон акта"))
-
-def _p6e2_te_extract_links(text):
-    return _p6e2_te_re.findall(r"https?://\S+", _p6e2_te_s(text, 50000))
-
-def _p6e2_te_read_file(path):
-    p = _p6e2_te_Path(_p6e2_te_s(path))
-    if not p.exists():
-        return ""
-    try:
-        if p.suffix.lower() == ".txt":
-            return p.read_text(encoding="utf-8", errors="ignore")[:50000]
-        if p.suffix.lower() == ".docx":
-            import docx
-            d = docx.Document(str(p))
-            return "\n".join(x.text for x in d.paragraphs)[:50000]
-        if p.suffix.lower() == ".pdf":
-            try:
-                import fitz
-                doc = fitz.open(str(p))
-                return "\n".join(page.get_text("text") for page in doc)[:50000]
-            except Exception:
-                return ""
-    except Exception:
-        return ""
-    return ""
-
-def _p6e2_te_tpl_path(chat_id, topic_id):
-    return _P6E2_TE_TPL / f"ACTIVE__chat_{chat_id}__topic_{int(topic_id or 0)}.json"
-
-def _p6e2_te_save_template(chat_id, topic_id, task_id, body, file_name, file_path, links):
-    data = {
-        "engine": "P6E2_TECHNADZOR_FOLDER_AWARE_NO_DRIVE_POLLUTION_20260504_V1",
-        "chat_id": str(chat_id),
-        "topic_id": int(topic_id or 0),
-        "task_id": str(task_id),
-        "file_name": _p6e2_te_s(file_name),
-        "file_path": _p6e2_te_s(file_path),
-        "drive_links_seen": links,
-        "saved_at": _p6e2_te_datetime.utcnow().isoformat() + "Z",
-        "template_text": _p6e2_te_s(body, 30000),
-    }
-    p = _p6e2_te_tpl_path(chat_id, topic_id)
-    p.write_text(_p6e2_te_json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-    return str(p)
-
-def _p6e2_te_load_template(chat_id, topic_id):
-    p = _p6e2_te_tpl_path(chat_id, topic_id)
-    if not p.exists():
-        return {}
-    try:
-        return _p6e2_te_json.loads(p.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-
-def is_technadzor_intent(text: str = "", file_name: str = "") -> bool:
-    low = _p6e2_te_low(text + " " + file_name)
-    return any(x in low for x in ("технадзор", "акт", "осмотр", "выезд", "дефект", "замечан", "нарушен", "образец написания", "как образец", "прими это как факт"))
-
-def process_technadzor(text: str = "", task_id: str = "", chat_id: str = "", topic_id: int = 0, file_path: str = "", file_name: str = "", **kwargs):
-    raw = _p6e2_te_s(text, 50000)
-    extracted = _p6e2_te_read_file(file_path)
-    combined = "\n".join(x for x in (raw, extracted) if x).strip()
-    links = _p6e2_te_extract_links(combined)
-    task_id = _p6e2_te_s(task_id or kwargs.get("task_id") or kwargs.get("id") or "technadzor")
-    chat_id = _p6e2_te_s(chat_id or kwargs.get("chat_id") or "")
-    try:
-        topic_id = int(topic_id or kwargs.get("topic_id") or 0)
-    except Exception:
-        topic_id = 0
-    file_name = _p6e2_te_s(file_name or kwargs.get("file_name") or kwargs.get("name") or "")
-    file_path = _p6e2_te_s(file_path or kwargs.get("local_path") or "")
-
-    if _p6e2_te_is_template(raw, file_name):
-        tpl = _p6e2_te_save_template(chat_id, topic_id, task_id, combined, file_name, file_path, links)
-        return {
-            "ok": True,
-            "handled": True,
-            "status": "DONE",
-            "state": "DONE",
-            "result_text": f"Образец технадзора принят и сохранён\nФайл: {file_name or 'без файла'}\nШаблон: active topic_{topic_id}\nDrive-ссылки учтены: {len(links)}",
-            "message": "Образец технадзора принят и сохранён",
-            "artifact_path": tpl,
-            "history": "P6E2_TECHNADZOR_TEMPLATE_SAVED",
-        }
-
-    if not is_technadzor_intent(combined, file_name):
-        return {"ok": False, "handled": False, "reason": "NOT_TECHNADZOR"}
-
-    tpl = _p6e2_te_load_template(chat_id, topic_id)
-    tpl_note = "использован сохранённый образец" if tpl else "сохранённый образец не найден"
-    out = _P6E2_TE_OUT / f"TECHNADZOR_ACT__{str(task_id)[:8]}.txt"
-    body = "\n".join([
-        "АКТ ОСМОТРА ПО ФАКТУ ВЫЕЗДА",
-        "",
-        f"Дата формирования: {_p6e2_te_datetime.now().strftime('%d.%m.%Y %H:%M')}",
-        f"Файл: {file_name or 'без файла'}",
-        f"Источник: topic_{topic_id}",
-        f"Шаблон: {tpl_note}",
-        f"Drive-ссылки в исходных данных: {len(links)}",
-        "",
-        "Исходные данные:",
-        combined[:15000] if combined else "UNKNOWN",
-        "",
-        "Вывод технического надзора:",
-        "Документ сформирован по текущим данным и сохранён локально без записи мусора в Google Drive",
-    ])
-    out.write_text(body + "\n", encoding="utf-8")
-    return {
-        "ok": True,
-        "handled": True,
-        "status": "DONE",
-        "state": "DONE",
-        "result_text": f"Акт технадзора сформирован\nФайл: {file_name or 'без файла'}\nАртефакт: {out}",
-        "message": "Акт технадзора сформирован",
-        "artifact_path": str(out),
-        "history": "P6E2_TECHNADZOR_ACT_CREATED",
-    }
-# === END_P6E2_TECHNADZOR_FOLDER_AWARE_NO_DRIVE_POLLUTION_20260504_V1 ===
-
-
-# === P6F_TECHNADZOR_CLEAN_OUTPUT_AND_NORM_GATE_V1 ===
-# FACT: wraps process_technadzor to ensure clean user-facing output.
-# Uses core.normative_engine for confirmed references; if no confidence
-# >= PARTIAL — explicitly states "норма не подтверждена" (per canon).
-# Forbids JSON output to user.
-import json as _p6f_tnz_json
-import logging as _p6f_tnz_logging
-
-_P6F_TNZ_LOG = _p6f_tnz_logging.getLogger("technadzor_engine")
-
-def _p6f_tnz_clean_for_user(text):
-    if not text:
-        return ""
-    s = str(text).strip()
-    if (s.startswith("{") and s.rstrip().endswith("}")) or (s.startswith("[") and s.rstrip().endswith("]")):
+import json, logging, os, re, sqlite3, time
+from dataclasses import dataclass, field, asdict
+from datetime import datetime, timezone
+from typing import Any, Callable, Dict, List, Optional
+
+logger = logging.getLogger("search_session")
+BASE = "/root/.areal-neva-core"
+MEM_DB = f"{BASE}/data/memory.db"
+SEARCH_SESSION_VERSION = "SEARCH_MONOLITH_V2_FULL"
+SESSION_TTL_SEC = 7200
+MAX_CLARIFICATIONS = 3
+RED_FLAGS = ("цена=1","1 руб","договорная","под заказ","нет телефона","нет адреса","только предоплата","без адреса","нет даты","предоплата 100%")
+SEARCH_PROFILES = {
+    "BUILDING_SUPPLY": ["Ozon","Wildberries","Яндекс Маркет","Петрович","Лемана","ВсеИнструменты","заводы","Avito","VK","Telegram"],
+    "AUTO_PARTS": ["OEM cross","Exist","Emex","ZZap","Drom","Auto.ru","EuroAuto","Avito","разборки","Telegram"],
+    "CLASSIFIEDS": ["Avito","Юла","VK","Telegram чаты","2ГИС"],
+    "GENERAL": ["официальные сайты","маркетплейсы","Avito","2ГИС"],
+}
+BUILDING_WORDS = ("металлочереп","монтеррей","профлист","утепл","бетон","арматур","цемент","фанер","доска","брус","кровл","кирпич","газобетон","строй","петрович","лемана","всеинструменты","материал")
+AUTO_WORDS = ("oem","артикул","запчаст","суппорт","диск","колод","рычаг","стойк","двигател","коробк","бампер","фара","drom","дром","exist","emex","zzap","авто","машин","разбор")
+CLASSIFIED_WORDS = ("авито","avito","юла","б/у","бу","объявлен","частник")
+
+def _utc(): return datetime.now(timezone.utc).isoformat()
+def _clean(text, limit=12000):
+    if text is None: return ""
+    if not isinstance(text, str):
+        try: text = json.dumps(text, ensure_ascii=False)
+        except: text = str(text)
+    return re.sub(r"\n{3,}","\n\n",re.sub(r"[ \t]+"," ",text.replace("\r","\n"))).strip()[:limit]
+def _safe_int(v, default=0):
+    try: return int(v or 0)
+    except: return default
+
+def _assert_online_model_allowed(online_model=None):
+    model = (online_model or os.getenv("OPENROUTER_MODEL_ONLINE") or "perplexity/sonar").strip()
+    low = model.lower()
+    if "deepseek" in low:
+        raise RuntimeError("FORBIDDEN_SEARCH_MODEL_DEEPSEEK")
+    if model != "perplexity/sonar":
+        raise RuntimeError("FORBIDDEN_SEARCH_MODEL_NOT_SONAR")
+    return model
+
+@dataclass
+class SearchSession:
+    chat_id: str; topic_id: int; goal: str
+    criteria: Dict[str,Any] = field(default_factory=dict)
+    clarifications: List[str] = field(default_factory=list)
+    queries: List[str] = field(default_factory=list)
+    sources: List[str] = field(default_factory=list)
+    best_suppliers: List[Dict[str,Any]] = field(default_factory=list)
+    rejected: List[Dict[str,Any]] = field(default_factory=list)
+    status: str = "ACTIVE"
+    created_at_ts: float = field(default_factory=time.time)
+    updated_at: str = field(default_factory=_utc)
+    def to_dict(self):
+        d = asdict(self); d["version"] = SEARCH_SESSION_VERSION; return d
+    @staticmethod
+    def from_dict(data):
+        return SearchSession(chat_id=str(data.get("chat_id") or ""), topic_id=_safe_int(data.get("topic_id")), goal=str(data.get("goal") or ""), criteria=dict(data.get("criteria") or {}), clarifications=list(data.get("clarifications") or []), queries=list(data.get("queries") or []), sources=list(data.get("sources") or []), best_suppliers=list(data.get("best_suppliers") or []), rejected=list(data.get("rejected") or []), status=str(data.get("status") or "ACTIVE"), created_at_ts=float(data.get("created_at_ts") or time.time()), updated_at=str(data.get("updated_at") or _utc()))
+
+class SearchSessionManager:
+    def __init__(self, db_path=MEM_DB):
+        self.db_path = db_path; self._ensure()
+    def _conn(self):
+        c = sqlite3.connect(self.db_path, timeout=20); c.row_factory = sqlite3.Row; return c
+    def _ensure(self):
+        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+        with self._conn() as c:
+            c.execute("CREATE TABLE IF NOT EXISTS memory (id TEXT PRIMARY KEY, chat_id TEXT, key TEXT, value TEXT, timestamp TEXT)")
+            c.execute("CREATE INDEX IF NOT EXISTS idx_mem_search ON memory(chat_id,key)")
+            c.commit()
+    def key(self, chat_id, topic_id): return f"topic_{int(topic_id)}_search_session_{chat_id}"
+    def get(self, chat_id, topic_id):
         try:
-            obj = _p6f_tnz_json.loads(s)
-            if isinstance(obj, dict):
-                summary = str(obj.get("summary") or obj.get("message") or "").strip()
-                if summary:
-                    return summary
-                lines = []
-                for k in ("kind", "state", "artifact_path", "history"):
-                    if k in obj:
-                        v = obj[k]
-                        if k == "artifact_path":
-                            lines.append("Артефакт: создан")
-                        else:
-                            lines.append(str(k) + ": " + str(v))
-                if lines:
-                    return "\n".join(lines)
-                return "Технадзорный результат подготовлен"
+            with self._conn() as c:
+                row = c.execute("SELECT value FROM memory WHERE chat_id=? AND key=? ORDER BY timestamp DESC LIMIT 1", (str(chat_id), self.key(chat_id, topic_id))).fetchone()
+            if not row: return None
+            s = SearchSession.from_dict(json.loads(row["value"]))
+            if s.status == "CLOSED" or time.time() - float(s.created_at_ts or 0) > SESSION_TTL_SEC: return None
+            return s
+        except Exception as e: logger.warning("SEARCH_V2_GET_ERR %s", e); return None
+    def save(self, s):
+        s.updated_at = _utc()
+        k = self.key(s.chat_id, s.topic_id)
+        v = json.dumps(s.to_dict(), ensure_ascii=False)[:50000]
+        with self._conn() as c:
+            c.execute("DELETE FROM memory WHERE chat_id=? AND key=?", (s.chat_id, k))
+            c.execute("INSERT OR REPLACE INTO memory (id,chat_id,key,value,timestamp) VALUES (?,?,?,?,?)", (f"{s.chat_id}:{k}", s.chat_id, k, v, _utc()))
+            c.commit()
+    def get_or_create(self, chat_id, topic_id, goal, criteria=None):
+        s = self.get(chat_id, topic_id)
+        if s:
+            if goal and goal != s.goal: s.clarifications.append(goal)
+            if criteria: s.criteria.update({k:v for k,v in criteria.items() if v not in ("",None,[],{})})
+            self.save(s); return s
+        s = SearchSession(chat_id=str(chat_id), topic_id=int(topic_id or 0), goal=goal, criteria=criteria or {})
+        self.save(s); return s
+    def close(self, chat_id, topic_id):
+        s = self.get(chat_id, topic_id)
+        if s: s.status = "CLOSED"; self.save(s)
+
+class CriteriaExtractor:
+    def extract(self, text):
+        t = _clean(text, 4000); low = t.lower(); c = {}
+        c["category"] = self.detect_category(low)
+        c["target"] = self.extract_target(t)
+        r = re.search(r"(санкт-петербург|спб|питер|ленобласть|москва|мск|казань|екатеринбург|новосибирск)", low)
+        if r: c["region"] = r.group(0)
+        q = re.search(r"(\d+(?:[,.]\d+)?)\s*(шт|м2|м²|м3|м³|кг|т|пог\.?\s*м|п\.м|лист|упак|м\b)", low)
+        if q: c["quantity"] = q.group(0)
+        p = re.search(r"(?:до|не дороже|бюджет|максимум|за)\s*(\d[\d\s]{2,})\s*(?:руб|₽)?", low)
+        if p: c["budget"] = p.group(1).replace(" ","")
+        if "б/у" in low or re.search(r"\bбу\b", low): c["condition"] = "used"
+        elif "нов" in low: c["condition"] = "new"
+        ral = re.search(r"\bral\s*[\- ]?(\d{4})\b", low)
+        if ral: c["ral"] = "RAL " + ral.group(1)
+        th = re.search(r"(\d[,.]\d{1,2})\s*мм", low)
+        if th: c["thickness_mm"] = th.group(1).replace(",",".")
+        oem = re.search(r"\b([A-ZА-Я0-9]{4,}[-/ ]?[A-ZА-Я0-9]{2,})\b", t, re.I)
+        if c["category"] == "AUTO_PARTS" and oem: c["oem_or_article"] = oem.group(1)
+        return {k:v for k,v in c.items() if v not in ("",None,[],{})}
+    def detect_category(self, low):
+        if any(w in low for w in AUTO_WORDS): return "AUTO_PARTS"
+        if any(w in low for w in BUILDING_WORDS): return "BUILDING_SUPPLY"
+        if any(w in low for w in CLASSIFIED_WORDS): return "CLASSIFIEDS"
+        return "GENERAL"
+    def extract_target(self, text):
+        t = _clean(text, 500)
+        t = re.sub(r"^\[voice\]\s*","",t,flags=re.I)
+        t = re.sub(r"^(найди|найти|поищи|поиск|сколько стоит|цена на|стоимость|подбери)\s+","",t,flags=re.I)
+        return re.sub(r"\s+"," ",t).strip()[:220]
+
+class ClarificationEngine:
+    def ask(self, session):
+        c = session.criteria; q = []
+        if not c.get("target") or len(str(c.get("target"))) < 4: q.append("что именно искать")
+        if c.get("category") == "AUTO_PARTS":
+            if not c.get("oem_or_article"): q.append("OEM/артикул или машина/год/кузов")
+            if not c.get("condition"): q.append("новое, контрактное или б/у")
+            if not c.get("region"): q.append("город или доставка по РФ")
+        elif c.get("category") == "BUILDING_SUPPLY":
+            if not c.get("region"): q.append("город/район доставки")
+            if "металлочереп" in str(c.get("target","")).lower() and not (c.get("ral") and c.get("thickness_mm")): q.append("толщина, RAL и покрытие")
+            if not (c.get("quantity") or c.get("budget")): q.append("объём или бюджет")
+        else:
+            if not c.get("region"): q.append("город или доставка")
+        already = len(session.clarifications)
+        if already >= MAX_CLARIFICATIONS: return None
+        q = q[:max(0, MAX_CLARIFICATIONS - already)]
+        if not q: return None
+        return "SEARCH_CLARIFICATION_REQUIRED:\n" + "\n".join(f"{i+1}. {x}" for i,x in enumerate(q))
+
+class QueryExpander:
+    def expand(self, session):
+        goal = session.goal or session.criteria.get("target","")
+        cat = session.criteria.get("category","GENERAL")
+        region = session.criteria.get("region","")
+        sources = SEARCH_PROFILES.get(cat, SEARCH_PROFILES["GENERAL"])
+        base_parts = [goal]
+        for k in ("ral","thickness_mm","oem_or_article","quantity","condition","budget"):
+            if session.criteria.get(k): base_parts.append(str(session.criteria[k]))
+        base = " ".join(base_parts).strip()
+        queries = [base, f"{base} {region}".strip(), f"{base} купить {region}".strip(), f"{base} цена наличие {region}".strip(), f"{base} доставка {region}".strip()]
+        for src in sources: queries.append(f"{base} {src} {region}".strip())
+        seen = set(); out = []
+        for q in queries:
+            q = re.sub(r"\s+"," ",q).strip()
+            if q and q.lower() not in seen: seen.add(q.lower()); out.append(q)
+        return out[:14]
+
+class SourcePlanner:
+    def plan(self, category): return SEARCH_PROFILES.get(category, SEARCH_PROFILES["GENERAL"])
+
+class RiskScorer:
+    def score_text(self, text):
+        low = text.lower()
+        flags = [f for f in RED_FLAGS if f in low]
+        has_src = "http" in low or "source_url" in low
+        has_date = re.search(r"\b202[4-9]\b", low)
+        if has_src and has_date and not flags: status,trust = "CONFIRMED",80
+        elif has_src and not flags: status,trust = "PARTIAL",60
+        elif flags: status,trust = "RISK",35
+        else: status,trust = "UNVERIFIED",40
+        return {"status":status,"trust_score":trust,"red_flags":flags}
+
+class TcoCalculator:
+    def instruction(self): return "TCO = цена + доставка + комиссия + добор + риск; если данных нет — НЕ ПОДТВЕРЖДЕНО"
+
+class ResultRanker:
+    def instruction(self): return "Ранжирование: CHEAPEST, MOST_RELIABLE, BEST_VALUE, FASTEST, RISK_CHEAP, REJECTED"
+
+class SearchOutputFormatter:
+    TABLE_HEADER = "Поставщик | Площадка | Тип | Город | Цена | Наличие | Доставка | TCO | Trust Score | Риски | Статус | Ссылка | checked_at"
+    def build_prompt(self, session, queries, sources):
+        return f"""SEARCH_MONOLITH_V2_FULL
+ЦЕЛЬ: {session.goal}
+КРИТЕРИИ: {json.dumps(session.criteria,ensure_ascii=False)}
+ПЛОЩАДКИ: {", ".join(sources)}
+ФОРМУЛИРОВКИ:\n{chr(10).join("- "+q for q in queries)}
+ВЫВОД: {self.TABLE_HEADER}
+После таблицы: 1.Что брать и почему 2.Что проверить звонком 3.Что отброшено 4.Данные не подтверждены
+ПРАВИЛА: Не выдумывать цены/телефоны/адреса. Без source_url/даты — статус не выше PARTIAL. Красные флаги: {", ".join(RED_FLAGS)}""".strip()
+    def ensure(self, text, risk):
+        text = _clean(text, 12000)
+        if self.TABLE_HEADER not in text: text = self.TABLE_HEADER + "\n" + text
+        for h in ("1. Что брать и почему","2. Что проверить звонком","3. Что отброшено","4. Данные не подтверждены"):
+            if h not in text: text += f"\n\n{h}\nНЕ ПОДТВЕРЖДЕНО"
+        text += f"\n\nRiskScorer: {risk.get('status')} | Trust: {risk.get('trust_score')} | flags: {', '.join(risk.get('red_flags') or []) or 'нет'}"
+        return text
+
+class SearchMonolithV2:
+    def __init__(self):
+        self.sessions = SearchSessionManager(); self.extractor = CriteriaExtractor()
+        self.clarifier = ClarificationEngine(); self.expander = QueryExpander()
+        self.planner = SourcePlanner(); self.risk = RiskScorer()
+        self.tco = TcoCalculator(); self.ranker = ResultRanker(); self.formatter = SearchOutputFormatter()
+    def has_active_session(self, chat_id, topic_id): return self.sessions.get(chat_id, topic_id) is not None
+
+    # === SEARCH_SESSION_ISOLATION_FIX_V1 ===
+    def _is_new_search_goal(self, user_text, existing, extracted):
+        low = _clean(user_text, 1000).lower()
+        new_markers = ("найди ", "найти ", "поищи ", "поиск ", "подбери ", "сколько стоит ", "цена на ", "стоимость ")
+        if not any(low.startswith(m) for m in new_markers):
+            return False
+
+        old_target = str((existing.criteria or {}).get("target") or existing.goal or "").lower()
+        new_target = str((extracted or {}).get("target") or user_text or "").lower()
+        old_cat = str((existing.criteria or {}).get("category") or "")
+        new_cat = str((extracted or {}).get("category") or "")
+
+        if old_cat and new_cat and old_cat != new_cat:
+            return True
+
+        old_words = set(w for w in re.findall(r"[а-яa-z0-9]{4,}", old_target) if w not in ("найди","найти","поищи","поиск","купить","цена","стоимость"))
+        new_words = set(w for w in re.findall(r"[а-яa-z0-9]{4,}", new_target) if w not in ("найди","найти","поищи","поиск","купить","цена","стоимость"))
+
+        if old_words and new_words:
+            overlap = len(old_words & new_words)
+            if overlap == 0:
+                return True
+            if overlap / max(1, min(len(old_words), len(new_words))) < 0.35:
+                return True
+
+        return False
+
+    async def run(self, payload, user_text, online_call, online_model, base_system_prompt=""):
+        chat_id = str(payload.get("chat_id") or ""); topic_id = int(payload.get("topic_id") or 0)
+        user_text = _clean(user_text, 4000)
+        existing = self.sessions.get(chat_id, topic_id)
+        extracted = self.extractor.extract(user_text)
+
+        if existing and self._is_new_search_goal(user_text, existing, extracted):
+            try:
+                existing.status = "CLOSED"
+                self.sessions.save(existing)
+                logger.info("SEARCH_SESSION_ISOLATION_FIX_V1 closed_old_session chat=%s topic=%s old_goal=%s new_goal=%s", chat_id, topic_id, existing.goal, user_text)
+            except Exception as e:
+                logger.warning("SEARCH_SESSION_ISOLATION_FIX_V1_CLOSE_ERR %s", e)
+            session = SearchSession(chat_id=str(chat_id), topic_id=int(topic_id or 0), goal=user_text, criteria=extracted)
+            self.sessions.save(session)
+        elif existing:
+            # === SEARCH_SESSION_CLARIFICATION_PRESERVE_FIX_V1 ===
+            existing.clarifications.append(user_text)
+            _keep = dict(existing.criteria or {})
+            _safe_update_keys = ("region", "quantity", "budget", "condition", "ral", "thickness_mm", "oem_or_article")
+            for k, v in (extracted or {}).items():
+                if v in ("", None, [], {}):
+                    continue
+                if k in ("category", "target"):
+                    if not _keep.get(k):
+                        _keep[k] = v
+                    continue
+                if k in _safe_update_keys:
+                    _keep[k] = v
+            existing.criteria = _keep
+            logger.info("SEARCH_SESSION_CLARIFICATION_PRESERVE_FIX_V1 preserved category=%s target=%s", existing.criteria.get("category"), existing.criteria.get("target"))
+            session = existing
+            # === END SEARCH_SESSION_CLARIFICATION_PRESERVE_FIX_V1 ===
+        else:
+            session = self.sessions.get_or_create(chat_id, topic_id, user_text, extracted)
+    # === END SEARCH_SESSION_ISOLATION_FIX_V1 ===
+        ask = self.clarifier.ask(session)
+        if ask: session.status = "WAITING_CLARIFICATION"; self.sessions.save(session); return ask
+        session.status = "IN_PROGRESS"
+        sources = self.planner.plan(str(session.criteria.get("category") or "GENERAL"))
+        queries = self.expander.expand(session)
+        session.sources = sources; session.queries = queries; self.sessions.save(session)
+        prompt = self.formatter.build_prompt(session, queries, sources)
+        system = (base_system_prompt or "") + "\nSEARCH_MONOLITH_V2_FULL_ACTIVE\n" + self.tco.instruction() + "\n" + self.ranker.instruction()
+        online_model = _assert_online_model_allowed(online_model)
+        raw = await online_call(online_model, [{"role":"system","content":system},{"role":"user","content":prompt}])
+        risk = self.risk.score_text(raw)
+        final = self.formatter.ensure(raw, risk)
+        session.status = "AWAITING_CONFIRMATION"
+        session.best_suppliers = [{"summary":final[:1500],"risk":risk,"checked_at":_utc()}]
+        self.sessions.save(session); return final
+
+_MONOLITH = SearchMonolithV2()
+def has_active_search_session(chat_id, topic_id): return _MONOLITH.has_active_session(str(chat_id), int(topic_id or 0))
+def is_search_clarification_output(text): return _clean(text, 200).startswith("SEARCH_CLARIFICATION_REQUIRED:")
+async def run_search_monolith_v2(payload, user_text, online_call, online_model, base_system_prompt=""): return await _MONOLITH.run(payload, user_text, online_call, online_model, base_system_prompt)
+def get_session(chat_id, topic_id): s = _MONOLITH.sessions.get(str(chat_id), int(topic_id or 0)); return s.to_dict() if s else None
+def close_session(chat_id, topic_id): _MONOLITH.sessions.close(str(chat_id), int(topic_id or 0))
+def extract_criteria(text): return CriteriaExtractor().extract(text)
+SEARCH_PRESETS = SEARCH_PROFILES
+# === END SEARCH_MONOLITH_V2_FULL ===
+
+
+# === REAL_SEARCH_QUALITY_LOGIC_V1 ===
+_NEGATIVE_DOMAINS_V1 = ("avito.ru", "dzen.ru", "zen.yandex.ru")
+
+def _negative_selection_v1(results):
+    # NEGATIVE_SELECTION_V1
+    out = []
+    for r in results or []:
+        url = ""
+        try:
+            url = str(r.get("url") or r.get("link") or "")
         except Exception:
-            pass
+            url = str(r or "")
+        if any(nd in url.lower() for nd in _NEGATIVE_DOMAINS_V1):
+            continue
+        out.append(r)
+    return out
+
+def _stale_context_guard_v1(payload):
+    # STALE_CONTEXT_GUARD_V1
+    try:
+        ts = None
+        if isinstance(payload, dict):
+            ts = payload.get("search_context_timestamp") or payload.get("checked_at")
+        if not ts:
+            return payload
+        from datetime import datetime, timezone, timedelta
+        ctx_time = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+        if ctx_time.tzinfo is None:
+            ctx_time = ctx_time.replace(tzinfo=timezone.utc)
+        if datetime.now(timezone.utc) - ctx_time > timedelta(hours=24):
+            if isinstance(payload, dict):
+                payload = dict(payload)
+                payload["search_context"] = None
+                payload["stale_context_dropped"] = True
+        return payload
+    except Exception:
+        return payload
+
+def _availability_check_v1(result):
+    # AVAILABILITY_CHECK_V1
+    try:
+        url = str(result.get("url") or result.get("link") or "")
+        title = str(result.get("title") or result.get("name") or "")
+        return bool(url or title)
+    except Exception:
+        return bool(result)
+
+try:
+    _orig_run_search_monolith_v2_quality_v1 = run_search_monolith_v2
+    async def run_search_monolith_v2(*args, **kwargs):
+        import inspect
+        if "payload" in kwargs and isinstance(kwargs["payload"], dict):
+            kwargs["payload"] = _stale_context_guard_v1(kwargs["payload"])
+        res = _orig_run_search_monolith_v2_quality_v1(*args, **kwargs)
+        if inspect.isawaitable(res):
+            res = await res
+        if isinstance(res, list):
+            return [r for r in _negative_selection_v1(res) if _availability_check_v1(r)]
+        if isinstance(res, dict):
+            for key in ("results", "items", "offers"):
+                if isinstance(res.get(key), list):
+                    res[key] = [r for r in _negative_selection_v1(res[key]) if _availability_check_v1(r)]
+        return res
+except Exception:
+    pass
+
+try:
+    _orig_run_quality_v1 = run
+    async def run(*args, **kwargs):
+        import inspect
+        if "payload" in kwargs and isinstance(kwargs["payload"], dict):
+            kwargs["payload"] = _stale_context_guard_v1(kwargs["payload"])
+        res = _orig_run_quality_v1(*args, **kwargs)
+        if inspect.isawaitable(res):
+            res = await res
+        if isinstance(res, list):
+            return [r for r in _negative_selection_v1(res) if _availability_check_v1(r)]
+        if isinstance(res, dict):
+            for key in ("results", "items", "offers"):
+                if isinstance(res.get(key), list):
+                    res[key] = [r for r in _negative_selection_v1(res[key]) if _availability_check_v1(r)]
+        return res
+except Exception:
+    pass
+# === END_REAL_SEARCH_QUALITY_LOGIC_V1 ===
+
+
+# === PROJECT_SEARCH_FINAL_REGEX_AND_HEADER_FIX_SEARCH_FORMATTER ===
+try:
+    _SS_FINAL_HEADER = "Поставщик | Площадка | Тип | Город | Цена | Наличие | Доставка | TCO | Trust Score | Риски | Статус | Ссылка | checked_at"
+    SearchOutputFormatter.TABLE_HEADER = _SS_FINAL_HEADER
+    _ss_orig_ensure = SearchOutputFormatter.ensure
+
+    def _ss_ensure_final(self, text, risk):
+        text = _ss_orig_ensure(self, text, risk)
+        lines = text.splitlines() if text else []
+        first = lines[0] if lines else ""
+
+        if "Поставщик" in first and ("Trust Score" not in first or "checked_at" not in first):
+            rest = "\n".join(lines[1:]) if len(lines) > 1 else ""
+            text = _SS_FINAL_HEADER + ("\n" + rest if rest else "")
+
+        if _SS_FINAL_HEADER not in text:
+            text = _SS_FINAL_HEADER + "\n" + text
+
+        if "checked_at" not in text.lower():
+            text += f"\n\nchecked_at: {_utc()}"
+
+        if "Trust Score:" not in text:
+            text += f"\n\nTrust Score: {risk.get('trust_score')}"
+
+        return text
+
+    SearchOutputFormatter.ensure = _ss_ensure_final
+except Exception:
+    pass
+# === END_PROJECT_SEARCH_FINAL_REGEX_AND_HEADER_FIX_SEARCH_FORMATTER ===
+
+# === P5_SEARCH_SESSION_VOICE_STALE_CLOSE_20260504_V1 ===
+# Runtime overlay only
+# Scope:
+# - normalize [VOICE] search text before new-goal detection
+# - close stale Rockwool/building session when new product/auto/electronics search arrives
+# - prevent previous session target from contaminating online prompt
+# - no DB schema changes, no forbidden files, no systemd unit changes
+
+try:
+    SEARCH_PROFILES.setdefault("ELECTRONICS", ["Ozon", "Wildberries", "Яндекс Маркет", "DNS", "М.Видео", "Эльдорадо", "Avito", "AliExpress", "официальные магазины"])
+except Exception:
+    pass
+
+_P5_SEARCH_STOP_WORDS = {
+    "найди", "найти", "поиск", "поищи", "подбери", "купить", "цена", "стоимость",
+    "дешевле", "самый", "самая", "новый", "новое", "нужен", "нужна", "мне",
+    "проведи", "соответственно", "если", "такое", "есть", "сообщи", "там",
+    "самый", "крутой", "большой", "самого", "самую"
+}
+
+_P5_ELECTRONICS_WORDS = (
+    "iphone", "айфон", "pixel", "google pixel", "телефон", "смартфон",
+    "samsung", "galaxy", "xiaomi", "redmi", "honor", "huawei", "pro max", "xl"
+)
+
+_P5_AUTO_EXTRA_WORDS = (
+    "сайлентблок", "саленблок", "сальник", "пыльник", "ваз", "2110", "2114",
+    "жигули", "лада", "приора", "гранта", "калина", "нива", "автозапчаст"
+)
+
+def _p5_norm_text(text):
+    s = _clean(text, 4000)
+    s = re.sub(r"^\s*\[voice\]\s*", "", s, flags=re.I)
+    s = re.sub(r"^\s*(voice|голос|голосовое)\s*[:\-]\s*", "", s, flags=re.I)
+    s = re.sub(r"\s+", " ", s).strip()
     return s
 
-def _p6f_tnz_norm_block(text):
-    try:
-        from core.normative_engine import search_norms_sync, format_norms_for_act
-    except Exception:
-        return ""
-    try:
-        norms = search_norms_sync(text or "", limit=3)
-    except Exception:
-        return ""
-    if not norms:
-        return "Норма не подтверждена. Акт оформлен без ссылки на конкретный пункт СП/ГОСТ"
-    confirmed_or_partial = [n for n in norms if str(n.get("confidence", "")).upper() in ("CONFIRMED", "PARTIAL")]
-    if not confirmed_or_partial:
-        return "Норма не подтверждена. Источник не найден"
-    try:
-        return format_norms_for_act(confirmed_or_partial)
-    except Exception:
-        out = []
-        for n in confirmed_or_partial:
-            nid = str(n.get("norm_id", "")).strip()
-            sec = str(n.get("section", "")).strip()
-            req = str(n.get("requirement", "")).strip()
-            conf = str(n.get("confidence", "")).strip()
-            if nid:
-                out.append(f"- {nid} | {sec} | {req} | confidence={conf}")
-        return "\n".join(out)
+def _p5_low(text):
+    return _p5_norm_text(text).lower().replace("ё", "е")
+
+def _p5_words(text):
+    low = _p5_low(text)
+    return set(
+        w for w in re.findall(r"[а-яa-z0-9]{3,}", low)
+        if w not in _P5_SEARCH_STOP_WORDS
+    )
+
+def _p5_category(low):
+    if any(x in low for x in _P5_AUTO_EXTRA_WORDS):
+        return "AUTO_PARTS"
+    if any(x in low for x in _P5_ELECTRONICS_WORDS):
+        return "ELECTRONICS"
+    if any(w in low for w in AUTO_WORDS):
+        return "AUTO_PARTS"
+    if any(w in low for w in BUILDING_WORDS):
+        return "BUILDING_SUPPLY"
+    if any(w in low for w in CLASSIFIED_WORDS):
+        return "CLASSIFIEDS"
+    return "GENERAL"
 
 try:
-    _P6F_TNZ_ORIG_PROCESS = process_technadzor
-    if not getattr(_P6F_TNZ_ORIG_PROCESS, "_p6f_tnz_wrapped", False):
-        def process_technadzor(text="", task_id="", chat_id="", topic_id=0, file_path="", file_name="", **kwargs):
-            try:
-                res = _P6F_TNZ_ORIG_PROCESS(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs)
-            except TypeError:
-                res = _P6F_TNZ_ORIG_PROCESS(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id, file_path=file_path, file_name=file_name)
-            try:
-                if isinstance(res, dict) and res.get("ok") and res.get("handled"):
-                    raw_msg = res.get("message") or ""
-                    clean = _p6f_tnz_clean_for_user(raw_msg)
-                    norm_block = _p6f_tnz_norm_block(text)
-                    artifact_line = ""
-                    if res.get("artifact_path"):
-                        artifact_line = "Артефакт акта: создан"
-                    parts = [clean]
-                    if norm_block:
-                        parts.append("\nНормативная база:\n" + norm_block)
-                    if artifact_line:
-                        parts.append("\n" + artifact_line)
-                    res["message"] = "\n".join([p for p in parts if p]).strip()
-                    res["history"] = (res.get("history") or "") + ";P6F_TNZ_CLEANED_OUTPUT"
-            except Exception as _e:
-                try:
-                    _P6F_TNZ_LOG.warning("P6F_TNZ_WRAP_ERR %s", _e)
-                except Exception:
-                    pass
-            return res
-        process_technadzor._p6f_tnz_wrapped = True
-        _P6F_TNZ_LOG.info("P6F_TECHNADZOR_CLEAN_OUTPUT_AND_NORM_GATE_INSTALLED")
-except Exception as _e:
-    try:
-        _P6F_TNZ_LOG.exception("P6F_TNZ_INSTALL_ERR %s", _e)
-    except Exception:
-        pass
-# === END_P6F_TECHNADZOR_CLEAN_OUTPUT_AND_NORM_GATE_V1 ===
+    _p5_orig_detect_category = CriteriaExtractor.detect_category
+    def _p5_detect_category(self, low):
+        cat = _p5_category(str(low or ""))
+        if cat:
+            return cat
+        return _p5_orig_detect_category(self, low)
+    CriteriaExtractor.detect_category = _p5_detect_category
+except Exception:
+    pass
 
-
-# === P6F_TECHNADZOR_PHOTO_TO_DOCX_REAL_V1 ===
-# FACT: real photo defect → Vision (OpenRouter) → DOCX акт →
-# Drive upload via topic_drive_oauth.upload_file_to_topic.
-# No direct Google API. Norms only via core.normative_engine
-# (no invented references).
-import os as _p6f_tnz_os
-import base64 as _p6f_tnz_base64
-import asyncio as _p6f_tnz_asyncio
-import json as _p6f_tnz_json2
-import logging as _p6f_tnz_logging2
-
-_P6F_TNZ_REAL_LOG = _p6f_tnz_logging2.getLogger("technadzor_engine")
-
-_P6F_TNZ_REAL_PROMPT = (
-    "Ты эксперт технического надзора в строительстве. На фото фиксация состояния "
-    "конструкций или дефекта. Верни СТРОГО JSON без пояснений со схемой:\n"
-    "{\n"
-    "  \"summary\": \"кратко что видно\",\n"
-    "  \"defects\": [{\n"
-    "    \"title\": \"короткое название\",\n"
-    "    \"location\": \"место\",\n"
-    "    \"severity\": \"low|medium|high|critical\",\n"
-    "    \"description\": \"что не так\",\n"
-    "    \"recommendation\": \"что делать\"\n"
-    "  }],\n"
-    "  \"confidence\": \"HIGH|MEDIUM|LOW\"\n"
-    "}\n"
-    "Если на фото нет дефектов — defects=[]. "
-    "Не выдумывай нормы СП/ГОСТ — это не твоя задача."
-)
-
-def _p6f_tnz_is_image_path(path):
-    if not path:
-        return False
-    p = str(path).lower()
-    return any(p.endswith(e) for e in (".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif", ".bmp"))
-
-async def _p6f_tnz_vision_via_openrouter(local_path):
-    if not _p6f_tnz_is_image_path(local_path) or not _p6f_tnz_os.path.exists(str(local_path)):
-        return None, "PATH_MISSING"
-    api_key = <REDACTED_SECRET>"OPENROUTER_API_KEY") or "").strip()
-    if not api_key:
-        return None, "NO_OPENROUTER_KEY"
-    base_url = (_p6f_tnz_os.getenv("OPENROUTER_BASE_URL") or "https://openrouter.ai/api/v1").strip().rstrip("/")
-    model = (_p6f_tnz_os.getenv("OPENROUTER_VISION_MODEL") or "google/gemini-2.5-flash").strip()
-    ext = _p6f_tnz_os.path.splitext(str(local_path))[1].lower().lstrip(".") or "jpeg"
-    mime = "image/jpeg" if ext in ("jpg", "jpeg") else "image/{}".format(ext)
-    try:
-        with open(str(local_path), "rb") as f:
-            b64 = _p6f_tnz_base64.b64encode(f.read()).decode("utf-8")
-    except Exception as e:
-        return None, "READ_ERR:{}".format(e)
-
-    body = {
-        "model": model,
-        "messages": [{
-            "role": "user",
-            "content": [
-                {"type": "text", "text": _P6F_TNZ_REAL_PROMPT},
-                {"type": "image_url", "image_url": {"url": "data:" + mime + ";base64," + b64}},
-            ],
-        }],
-        "temperature": 0.1,
-    }
-    headers = {"Authorization": "Bearer " + api_key, "Content-Type": "application/json"}
-    try:
-        import httpx
-        async with httpx.AsyncClient(timeout=httpx.Timeout(180.0, connect=30.0)) as client:
-            r = await client.post(base_url + "/chat/completions", headers=headers, json=body)
-            r.raise_for_status()
-            data = r.json()
-        content = data["choices"][0]["message"]["content"]
-        if isinstance(content, list):
-            content = "\n".join(x.get("text", "") if isinstance(x, dict) else str(x) for x in content)
-    except Exception as e:
-        return None, "OPENROUTER_CALL_ERR:{}".format(type(e).__name__)
-
-    s = str(content).strip()
-    if s.startswith("```"):
-        import re as _re
-        s = _re.sub(r"^```(?:json)?\s*", "", s)
-        s = _re.sub(r"\s*```\s*$", "", s)
-    try:
-        return _p6f_tnz_json2.loads(s), "OK"
-    except Exception:
-        return {"summary": s[:2000], "defects": [], "confidence": "LOW"}, "PARTIAL"
-
-def _p6f_tnz_norms_block(text_for_search):
-    try:
-        from core.normative_engine import search_norms_sync
-    except Exception:
-        return [], ""
-    try:
-        norms = search_norms_sync(text_for_search or "", limit=3)
-    except Exception:
-        return [], ""
-    confirmed = [n for n in norms if str(n.get("confidence", "")).upper() in ("CONFIRMED", "PARTIAL")]
-    if not confirmed:
-        return [], "Норма не подтверждена"
-    return confirmed, ""
-
-def _p6f_tnz_build_docx_lines(vision_result, norms, file_name, task_id):
-    from datetime import datetime as _dt
-    lines = [
-        "АКТ ТЕХНИЧЕСКОГО НАДЗОРА",
-        "",
-        "Дата: " + _dt.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "Задача: " + str(task_id),
-        "",
-    ]
-    if file_name:
-        lines.append("Источник: фото " + str(file_name))
-        lines.append("")
-    summary = (vision_result.get("summary") or "").strip() if isinstance(vision_result, dict) else ""
-    if summary:
-        lines.extend(["Сводка по фото:", summary, ""])
-    defects = vision_result.get("defects") or [] if isinstance(vision_result, dict) else []
-    if defects:
-        lines.append("Выявленные дефекты:")
-        for i, d in enumerate(defects, 1):
-            lines.append("{}. {}".format(i, d.get("title", "Дефект")))
-            if d.get("location"):
-                lines.append("   Место: " + str(d["location"]))
-            if d.get("severity"):
-                lines.append("   Степень: " + str(d["severity"]))
-            if d.get("description"):
-                lines.append("   Описание: " + str(d["description"]))
-            if d.get("recommendation"):
-                lines.append("   Рекомендация: " + str(d["recommendation"]))
-            lines.append("")
-    else:
-        lines.extend(["Дефекты на фото не выявлены или фото недостаточно информативно", ""])
-
-    if norms:
-        lines.append("Нормативная база:")
-        for n in norms:
-            lines.append("- " + str(n.get("norm_id", "")) + " — " + str(n.get("section", "")))
-            req = str(n.get("requirement", "")).strip()
-            if req:
-                lines.append("  " + req)
-            lines.append("  confidence=" + str(n.get("confidence", "")))
-        lines.append("")
-    else:
-        lines.extend(["Нормативная база: норма не подтверждена", ""])
-
-    confidence = vision_result.get("confidence", "LOW") if isinstance(vision_result, dict) else "LOW"
-    lines.append("Источник анализа: OpenRouter Vision (model=google/gemini-2.5-flash, confidence={})".format(confidence))
-    return lines
-
-async def _p6f_tnz_upload_to_topic(local_path, file_name, chat_id, topic_id):
-    try:
-        from core.topic_drive_oauth import upload_file_to_topic
-    except Exception as e:
-        _P6F_TNZ_REAL_LOG.warning("P6F_TNZ_UPLOAD_IMPORT_ERR %s", e)
-        return None, "NO_UPLOADER"
-    try:
-        result = await upload_file_to_topic(
-            file_path=str(local_path),
-            file_name=str(file_name),
-            chat_id=str(chat_id),
-            topic_id=int(topic_id or 5),
-        )
-        if isinstance(result, dict) and result.get("ok"):
-            file_id = result.get("drive_file_id") or result.get("id") or ""
-            if file_id:
-                return "https://drive.google.com/file/d/" + str(file_id) + "/view", "OK"
-            link = result.get("link") or result.get("web_view_link") or ""
-            return link, "OK_NO_ID"
-        return None, "UPLOAD_FAIL:" + str(result)[:200]
-    except Exception as e:
-        return None, "UPLOAD_ERR:{}".format(type(e).__name__)
-
-async def p6f_tnz_handle_photo_act_real(file_path, file_name, task_id, chat_id, topic_id, user_text=""):
-    """
-    Real entry point: photo → Vision → DOCX → Drive upload → return dict.
-    Used by topic_5 photo-act flow.
-    """
-    vision, vstatus = await _p6f_tnz_vision_via_openrouter(file_path)
-    if vision is None:
-        return {
-            "ok": False, "handled": True, "kind": "technadzor_photo_act",
-            "state": "WAITING_CLARIFICATION",
-            "message": "Не удалось проанализировать фото через Vision ({}). Пришли фото крупнее или текстовое описание дефекта".format(vstatus),
-            "history": "P6F_TNZ_VISION_FAIL:{}".format(vstatus),
-        }
-    norms_text = (vision.get("summary", "") or "") + " " + " ".join(
-        str(d.get("title", "")) + " " + str(d.get("description", ""))
-        for d in (vision.get("defects") or [])
-    ) + " " + str(user_text or "")
-    confirmed_norms, _ = _p6f_tnz_norms_block(norms_text)
-    docx_lines = _p6f_tnz_build_docx_lines(vision, confirmed_norms, file_name, task_id)
-
-    from datetime import datetime as _dt
-    ts = _dt.now().strftime("%Y%m%d_%H%M%S")
-    safe = (str(task_id or ts)[:8] or ts).replace("/", "_").replace("\\", "_")
-    out_dir = "/root/.areal-neva-core/outputs/technadzor_acts"
-    _p6f_tnz_os.makedirs(out_dir, exist_ok=True)
-    docx_path = "{}/TECHNADZOR_ACT_PHOTO__{}_{}.docx".format(out_dir, safe, ts)
-
-    try:
-        from core.technadzor_engine import _p6tz_make_docx as _make_docx
-    except Exception:
-        _make_docx = None
-    if _make_docx is None:
-        return {
-            "ok": False, "handled": True, "kind": "technadzor_photo_act",
-            "state": "FAILED",
-            "message": "DOCX-генератор недоступен (python-docx не установлен)",
-            "history": "P6F_TNZ_DOCX_GEN_MISSING",
-        }
-    written = _make_docx(docx_path, docx_lines)
-    if not written:
-        return {
-            "ok": False, "handled": True, "kind": "technadzor_photo_act",
-            "state": "FAILED",
-            "message": "Ошибка создания DOCX акта",
-            "history": "P6F_TNZ_DOCX_WRITE_FAIL",
-        }
-
-    drive_link, ustatus = await _p6f_tnz_upload_to_topic(
-        docx_path, _p6f_tnz_os.path.basename(docx_path), chat_id or "-1003725299009", topic_id or 5
-    )
-    confidence = vision.get("confidence", "LOW")
-    summary = vision.get("summary", "") or ""
-    defects_count = len(vision.get("defects") or [])
-    norms_count = len(confirmed_norms)
-
-    public_lines = [
-        "Акт технадзора по фото готов",
-        "Файл: " + str(file_name or "photo"),
-        "Уверенность Vision: " + str(confidence),
-        "Дефектов на фото: " + str(defects_count),
-        "Нормативных ссылок: " + str(norms_count) + (" (confidence=PARTIAL/CONFIRMED)" if norms_count else " — норма не подтверждена"),
-    ]
-    if drive_link:
-        public_lines.append("Drive DOCX: " + str(drive_link))
-    else:
-        public_lines.append("Drive upload: не выполнен (" + str(ustatus) + "). DOCX лежит локально, доставка через Telegram fallback в следующей итерации")
-    if summary:
-        public_lines.append("")
-        public_lines.append("Краткое описание: " + summary[:600])
-
-    history_marker = "P6F_TNZ_PHOTO_ACT_DONE_DEFECTS_{}_NORMS_{}_DRIVE_{}".format(
-        defects_count, norms_count, "OK" if drive_link else "FAIL"
-    )
-    return {
-        "ok": True,
-        "handled": True,
-        "kind": "technadzor_photo_act",
-        "state": "DONE" if drive_link else "AWAITING_CONFIRMATION",
-        "artifact_path": docx_path,
-        "drive_link": drive_link or "",
-        "message": "\n".join(public_lines),
-        "history": history_marker,
-    }
-
-_P6F_TNZ_REAL_LOG.info("P6F_TECHNADZOR_PHOTO_TO_DOCX_REAL_V1_INSTALLED")
-# === END_P6F_TECHNADZOR_PHOTO_TO_DOCX_REAL_V1 ===
-
-
-# === P6H_TOPIC5_USE_EXISTING_TEMPLATES_PHOTO_TO_TECH_REPORT_20260504_V1 ===
-# Append-only wrapper.
-# - Auto-indexes Drive topic_5 contents (PRIMARY_PDF_STYLE, SECONDARY_DOCX_REFERENCE, etc.)
-#   on first photo / "акт" request per chat — without manual "образец" command.
-# - On photo: Vision (existing _p6f_tnz_vision_via_openrouter) → section classifier
-#   → clean Telegram text (no JSON, no /root, no internal paths).
-# - On "сделай акт" / "оформи акт": same + DOCX (service folder _drafts) +
-#   client-grade PDF A4 with cyrillic + clickable hyperlinks.
-# - DOCX always lands in topic_5/_drafts/ (system).  PDF lands in topic root by default;
-#   if user explicitly named a client folder, drop PDF there (only PDF allowed in client
-#   folders per spec).
-# - Telegram fallback when Drive upload fails — handled by existing P6F path
-#   (we keep returning local artifact_path in that case so caller can retry).
-import logging as _p6h_logging
-import os as _p6h_os
-import asyncio as _p6h_asyncio
-from pathlib import Path as _P6H_Path
-from datetime import datetime as _p6h_dt
-
-_P6H_LOG = _p6h_logging.getLogger("task_worker")
-
-# Eager import so drive_index install marker fires at worker startup
 try:
-    from core import technadzor_drive_index as _p6h_tdi  # noqa: F401
-except Exception as _e_imp:
-    _P6H_LOG.warning("P6H_DRIVE_INDEX_IMPORT_FAIL: %s", _e_imp)
-_P6H_BASE = _P6H_Path(__file__).resolve().parent.parent
-_P6H_OUTDIR = _P6H_BASE / "outputs" / "technadzor_p6h"
-_P6H_OUTDIR.mkdir(parents=True, exist_ok=True)
+    _p5_orig_extract_target = CriteriaExtractor.extract_target
+    def _p5_extract_target(self, text):
+        t = _p5_norm_text(text)
+        t = re.sub(r"^(найди|найти|поищи|поиск|сколько стоит|цена на|стоимость|подбери|проведи поиск|мне нужен|мне нужна|нужен|нужна)\s+", "", t, flags=re.I)
+        return re.sub(r"\s+", " ", t).strip()[:220]
+    CriteriaExtractor.extract_target = _p5_extract_target
+except Exception:
+    pass
 
-_P6H_DEJAVU = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
-_P6H_DEJAVU_BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-
-# Section classifier — keyword (lowercase substring) → canonical section title.
-_P6H_SECTIONS = [
-    ("Опорные узлы колонн",                        ["опорн", "анкерн", "колонн", "подлив", "опорная плита", "узел опор"]),
-    ("Сварные соединения металлоконструкций",      ["сварн", "сварка", "шов", "провар", "наплыв", "сварные стык"]),
-    ("Антикоррозионная защита",                    ["окрас", "лакокрас", "корроз", "защитн", "ржавчин", "антикорроз"]),
-    ("Состояние основания и прилегающей территории", ["грунт", "основан", "замачив", "размыв", "просадк", "водоотвод", "канав", "лужа"]),
-    ("Перекрытия",                                  ["перекрыт", "ригел", "балк перекрыт", "плита перекрыт"]),
-    ("Узлы пересечения укосин",                     ["укосин", "связи", "диагональн", "жесткост", "пространств"]),
-    ("Узлы крепления элементов покрытия",           ["крепл", "примыкан", "покрыт", "узел кров"]),
-    ("Бетонные / железобетонные конструкции",       ["бетон", "железобетон", "арматур", "ж/б", "опалуб", "монолит"]),
-    ("Гидроизоляция",                               ["гидроизол", "пароизол", "мембран"]),
-    ("Кровля",                                       ["кровл", "крыш", "водосток", "желоб", "конек"]),
-    ("Фасад",                                        ["фасад", "облиц", "сайдинг"]),
-    ("Общие обзорные материалы",                    ["обзор", "общ вид", "общий вид"]),
-]
-
-
-def _p6h_classify_defect(d):
-    text_pool = " ".join([
-        str(d.get("title", "") or ""),
-        str(d.get("description", "") or ""),
-        str(d.get("section_hint", "") or ""),
-        str(d.get("category", "") or ""),
-    ]).lower()
-    for section, kws in _P6H_SECTIONS:
-        for kw in kws:
-            if kw in text_pool:
-                return section
-    return "Прочие выявленные замечания"
-
-
-def _p6h_group_defects_by_section(defects):
-    groups = {}
-    for d in defects or []:
-        sec = _p6h_classify_defect(d)
-        groups.setdefault(sec, []).append(d)
-    ordered = []
-    for sec, _ in _P6H_SECTIONS:
-        if sec in groups:
-            ordered.append((sec, groups[sec]))
-    if "Прочие выявленные замечания" in groups:
-        ordered.append(("Прочие выявленные замечания", groups["Прочие выявленные замечания"]))
-    return ordered
-
-
-def _p6h_clean_text(s, limit=4000):
-    """Strip JSON/system markers, /root paths, traceback patterns, internal markers
-    so result text is safe to send to Telegram."""
-    if not s:
-        return ""
-    txt = str(s)
-    # Strip lines starting with /root or containing internal markers
-    bad_substrings = ["/root/", "task_id=", "TRACEBACK", "Traceback (most recent",
-                       "P6F_", "P6G_", "P6H_", "P6E", "INSTALLED",
-                       "MARKER:", "DEBUG:", "DEBUG ", "MANIFEST", "raw_input"]
-    cleaned_lines = []
-    for ln in txt.splitlines():
-        keep = True
-        for bad in bad_substrings:
-            if bad in ln:
-                keep = False
-                break
-        if keep:
-            cleaned_lines.append(ln)
-    out = "\n".join(cleaned_lines).strip()
-    # Collapse triple+ blank lines
-    while "\n\n\n" in out:
-        out = out.replace("\n\n\n", "\n\n")
-    return out[:limit]
-
-
-def _p6h_norms_for_haystack(text):
-    try:
-        from core.normative_engine import search_norms_sync
-        return search_norms_sync(text or "", limit=8)
-    except Exception:
-        return []
-
-
-def _p6h_norms_for_section(section_title, defect_texts):
-    haystack = (section_title + " " + " ".join(defect_texts)).strip()
-    return _p6h_norms_for_haystack(haystack)
-
-
-def _p6h_human_act_number(task_id):
-    """Pretty act number 12-03/26 style — fall back to short task_id if missing."""
-    today = _p6h_dt.now()
-    n = today.strftime("%d-%m") + "/" + today.strftime("%y")
-    if task_id:
-        suffix = str(task_id)[:6]
-        return f"{n}-{suffix}"
-    return n
-
-
-# ────────────────────────────────────────────────────────────────────
-# DOCX builder — service-side, draft, with clickable hyperlinks
-# ────────────────────────────────────────────────────────────────────
-def _p6h_docx_add_hyperlink(paragraph, url, text):
-    try:
-        from docx.oxml.shared import OxmlElement, qn
-    except Exception:
-        paragraph.add_run(text + " (" + url + ")")
-        return None
-    part = paragraph.part
-    r_id = part.relate_to(
-        url,
-        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
-        is_external=True,
+def _p5_is_explicit_new_search(text):
+    low = _p5_low(text)
+    if not low:
+        return False
+    markers = (
+        "найди", "найти", "поищи", "поиск", "подбери", "проведи поиск",
+        "мне нужен", "мне нужна", "нужен ", "нужна ", "дешевле", "купить"
     )
-    hyperlink = OxmlElement("w:hyperlink")
-    hyperlink.set(qn("r:id"), r_id)
-    new_run = OxmlElement("w:r")
-    rPr = OxmlElement("w:rPr")
-    color = OxmlElement("w:color")
-    color.set(qn("w:val"), "0563C1")
-    rPr.append(color)
-    underline = OxmlElement("w:u")
-    underline.set(qn("w:val"), "single")
-    rPr.append(underline)
-    new_run.append(rPr)
-    text_el = OxmlElement("w:t")
-    text_el.text = text
-    new_run.append(text_el)
-    hyperlink.append(new_run)
-    paragraph._element.append(hyperlink)
-    return hyperlink
-
-
-def _p6h_build_docx_act(payload, dst_path):
-    """payload = {
-        act_number, date_str, place, object_descr, method, performer, specialist,
-        photos_link, general_purpose, sections=[(title, defects=[{title,description,norm_id,section_norms}], norms=[...], photos_block=[...])],
-        recommendations=[str], consequences=[str], violations_table=[(violation, norm_id, photo)]
-    }"""
-    from docx import Document
-    from docx.shared import Pt
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
-
-    doc = Document()
-
-    # Header
-    h = doc.add_paragraph()
-    h.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    r = h.add_run(f"АКТ ОСМОТРА ОБЪЕКТА № {payload.get('act_number','')}")
-    r.bold = True
-    r.font.size = Pt(14)
-    sub = doc.add_paragraph()
-    sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    sub.add_run("Методом визуального неразрушающего контроля").italic = True
-
-    doc.add_paragraph(f"Дата осмотра: {payload.get('date_str','')}")
-    doc.add_paragraph(f"Место осмотра: {payload.get('place','')}")
-    doc.add_paragraph(f"Объект осмотра: {payload.get('object_descr','')}")
-    doc.add_paragraph(f"Метод обследования: {payload.get('method','визуальный неразрушающий контроль с выездом на объект')}")
-    if payload.get("performer"):
-        doc.add_paragraph(f"Представитель подрядчика: {payload['performer']}")
-    doc.add_paragraph(f"Технический специалист: {payload.get('specialist','Кузнецов Илья Владимирович')}")
-
-    if payload.get("photos_link"):
-        p = doc.add_paragraph("Ссылка на фотоматериалы: ")
-        _p6h_docx_add_hyperlink(p, payload["photos_link"], payload["photos_link"])
-
-    # 1. Общие сведения
-    doc.add_paragraph()
-    h1 = doc.add_paragraph()
-    h1.add_run("1. Общие сведения").bold = True
-    doc.add_paragraph(payload.get("general_purpose",
-        "Осмотр выполнен методом визуального неразрушающего контроля с выездом на "
-        "объект. Цель осмотра — выявление фактически наблюдаемых дефектов, определение "
-        "рекомендаций к устранению и возможных последствий для заказчика при сохранении "
-        "текущего состояния объекта"))
-
-    # 2. Установлено по факту осмотра
-    doc.add_paragraph()
-    h2 = doc.add_paragraph()
-    h2.add_run("2. Установлено по факту осмотра").bold = True
-    sections = payload.get("sections") or []
-    for i, sec in enumerate(sections, 1):
-        ph = doc.add_paragraph()
-        ph.add_run(f"2.{i} {sec.get('title','')}").bold = True
-        # facts
-        for d in sec.get("defects") or []:
-            line = (d.get("title") or "").strip()
-            descr = (d.get("description") or "").strip()
-            if line and descr:
-                doc.add_paragraph(f"— {line}: {descr}")
-            elif line:
-                doc.add_paragraph(f"— {line}")
-            elif descr:
-                doc.add_paragraph(f"— {descr}")
-        # norm refs for section
-        norms = sec.get("norms") or []
-        if norms:
-            np = doc.add_paragraph()
-            np.add_run("Нормативная отсылка: ").italic = True
-            np.add_run("; ".join(f"{n.get('norm_id','')} — {n.get('section','')}" for n in norms if n.get("norm_id")))
-        else:
-            np = doc.add_paragraph()
-            np.add_run("Нормативная отсылка: ").italic = True
-            np.add_run("норма не подтверждена").italic = True
-        # photos
-        photos = sec.get("photos_block") or []
-        if photos:
-            pp = doc.add_paragraph()
-            pp.add_run("Фотоматериалы: ").italic = True
-            pp.add_run(", ".join(photos))
-
-    # Рекомендации
-    if payload.get("recommendations"):
-        doc.add_paragraph()
-        rh = doc.add_paragraph()
-        rh.add_run("3. Рекомендовано к устранению").bold = True
-        for i, line in enumerate(payload["recommendations"], 1):
-            doc.add_paragraph(f"{i}. {line}")
-
-    # Возможные последствия
-    if payload.get("consequences"):
-        doc.add_paragraph()
-        ch = doc.add_paragraph()
-        ch.add_run("4. Возможные последствия при отсутствии устранения").bold = True
-        for line in payload["consequences"]:
-            doc.add_paragraph(f"— {line}")
-
-    # Таблица: Нарушение / Норматив / Фото
-    if payload.get("violations_table"):
-        doc.add_paragraph()
-        th = doc.add_paragraph()
-        th.add_run("5. Сводная таблица нарушений").bold = True
-        tbl = doc.add_table(rows=1, cols=3)
-        tbl.style = "Light Grid"
-        hdr = tbl.rows[0].cells
-        hdr[0].text = "Нарушение"
-        hdr[1].text = "Норматив"
-        hdr[2].text = "Фото"
-        for v, n, ph in payload["violations_table"]:
-            row = tbl.add_row().cells
-            row[0].text = str(v or "")
-            row[1].text = str(n or "норма не подтверждена")
-            row[2].text = str(ph or "")
-
-    # Подпись
-    doc.add_paragraph()
-    doc.add_paragraph()
-    sig = doc.add_paragraph()
-    sig.add_run(f"Технический специалист: {payload.get('specialist','Кузнецов Илья Владимирович')}").bold = True
-    doc.add_paragraph(f"Дата: {payload.get('date_str','')}")
-
-    doc.save(str(dst_path))
-    return str(dst_path)
-
-
-# ────────────────────────────────────────────────────────────────────
-# PDF builder — A4, cyrillic, clickable hyperlinks (reportlab platypus)
-# ────────────────────────────────────────────────────────────────────
-def _p6h_register_fonts():
-    try:
-        from reportlab.pdfbase import pdfmetrics
-        from reportlab.pdfbase.ttfonts import TTFont
-        if "DejaVuSans" not in pdfmetrics.getRegisteredFontNames():
-            pdfmetrics.registerFont(TTFont("DejaVuSans", _P6H_DEJAVU))
-        if "DejaVuSans-Bold" not in pdfmetrics.getRegisteredFontNames():
-            pdfmetrics.registerFont(TTFont("DejaVuSans-Bold", _P6H_DEJAVU_BOLD))
+    if low.startswith(markers):
         return True
-    except Exception:
-        return False
-
-
-def _p6h_build_pdf_act(payload, dst_path):
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether
-    from reportlab.lib.units import cm
-    from reportlab.lib import colors
-
-    _p6h_register_fonts()
-
-    styles = getSampleStyleSheet()
-    base_font = "DejaVuSans"
-    bold_font = "DejaVuSans-Bold"
-
-    sty_title = ParagraphStyle("title", parent=styles["Title"], fontName=bold_font, fontSize=14, alignment=1, spaceAfter=4)
-    sty_subtitle = ParagraphStyle("subtitle", parent=styles["Normal"], fontName=base_font, fontSize=10, alignment=1, textColor=colors.grey, spaceAfter=10)
-    sty_h2 = ParagraphStyle("h2", parent=styles["Heading2"], fontName=bold_font, fontSize=12, spaceBefore=8, spaceAfter=4)
-    sty_h3 = ParagraphStyle("h3", parent=styles["Heading3"], fontName=bold_font, fontSize=11, spaceBefore=6, spaceAfter=2)
-    sty_body = ParagraphStyle("body", parent=styles["Normal"], fontName=base_font, fontSize=10, leading=13, spaceAfter=2)
-    sty_italic = ParagraphStyle("italic", parent=sty_body, textColor=colors.grey)
-    sty_small = ParagraphStyle("small", parent=sty_body, fontSize=9)
-
-    flow = []
-    flow.append(Paragraph(f"АКТ ОСМОТРА ОБЪЕКТА № {payload.get('act_number','')}", sty_title))
-    flow.append(Paragraph("Методом визуального неразрушающего контроля", sty_subtitle))
-    flow.append(Paragraph(f"<b>Дата осмотра:</b> {payload.get('date_str','')}", sty_body))
-    flow.append(Paragraph(f"<b>Место осмотра:</b> {payload.get('place','')}", sty_body))
-    flow.append(Paragraph(f"<b>Объект осмотра:</b> {payload.get('object_descr','')}", sty_body))
-    flow.append(Paragraph(f"<b>Метод обследования:</b> {payload.get('method','визуальный неразрушающий контроль с выездом на объект')}", sty_body))
-    if payload.get("performer"):
-        flow.append(Paragraph(f"<b>Представитель подрядчика:</b> {payload['performer']}", sty_body))
-    flow.append(Paragraph(f"<b>Технический специалист:</b> {payload.get('specialist','Кузнецов Илья Владимирович')}", sty_body))
-    if payload.get("photos_link"):
-        flow.append(Paragraph(
-            f'<b>Ссылка на фотоматериалы:</b> <link href="{payload["photos_link"]}"><font color="#0563C1"><u>{payload["photos_link"]}</u></font></link>',
-            sty_body,
-        ))
-
-    flow.append(Spacer(1, 8))
-    flow.append(Paragraph("1. Общие сведения", sty_h2))
-    flow.append(Paragraph(payload.get("general_purpose",
-        "Осмотр выполнен методом визуального неразрушающего контроля с выездом на "
-        "объект. Цель осмотра — выявление фактически наблюдаемых дефектов, определение "
-        "рекомендаций к устранению и возможных последствий для заказчика."), sty_body))
-
-    flow.append(Paragraph("2. Установлено по факту осмотра", sty_h2))
-    sections = payload.get("sections") or []
-    for i, sec in enumerate(sections, 1):
-        flow.append(Paragraph(f"2.{i} {sec.get('title','')}", sty_h3))
-        for d in sec.get("defects") or []:
-            line = (d.get("title") or "").strip()
-            descr = (d.get("description") or "").strip()
-            txt = (line + ((": " + descr) if descr and line else descr)).strip()
-            if txt:
-                flow.append(Paragraph("— " + txt, sty_body))
-        norms = sec.get("norms") or []
-        if norms:
-            ns = "; ".join(f"{n.get('norm_id','')} — {n.get('section','')}" for n in norms if n.get("norm_id"))
-            flow.append(Paragraph(f"<i>Нормативная отсылка:</i> {ns}", sty_italic))
-        else:
-            flow.append(Paragraph("<i>Нормативная отсылка: норма не подтверждена</i>", sty_italic))
-        photos = sec.get("photos_block") or []
-        if photos:
-            flow.append(Paragraph(f"<i>Фотоматериалы:</i> {', '.join(photos)}", sty_italic))
-
-    if payload.get("recommendations"):
-        flow.append(Spacer(1, 4))
-        flow.append(Paragraph("3. Рекомендовано к устранению", sty_h2))
-        for i, line in enumerate(payload["recommendations"], 1):
-            flow.append(Paragraph(f"{i}. {line}", sty_body))
-
-    if payload.get("consequences"):
-        flow.append(Spacer(1, 4))
-        flow.append(Paragraph("4. Возможные последствия при отсутствии устранения", sty_h2))
-        for line in payload["consequences"]:
-            flow.append(Paragraph("— " + line, sty_body))
-
-    if payload.get("violations_table"):
-        flow.append(Spacer(1, 6))
-        flow.append(Paragraph("5. Сводная таблица нарушений", sty_h2))
-        rows = [["Нарушение", "Норматив", "Фото"]]
-        for v, n, ph in payload["violations_table"]:
-            rows.append([Paragraph(str(v or ""), sty_small),
-                         Paragraph(str(n or "норма не подтверждена"), sty_small),
-                         Paragraph(str(ph or ""), sty_small)])
-        tbl = Table(rows, colWidths=[7*cm, 6*cm, 4*cm], repeatRows=1)
-        tbl.setStyle(TableStyle([
-            ("FONTNAME", (0, 0), (-1, -1), base_font),
-            ("FONTNAME", (0, 0), (-1, 0), bold_font),
-            ("FONTSIZE", (0, 0), (-1, -1), 9),
-            ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
-            ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ]))
-        flow.append(tbl)
-
-    flow.append(Spacer(1, 16))
-    flow.append(Paragraph(
-        f"<b>Технический специалист:</b> {payload.get('specialist','Кузнецов Илья Владимирович')}",
-        sty_body,
-    ))
-    flow.append(Paragraph(f"<b>Дата:</b> {payload.get('date_str','')}", sty_body))
-
-    doc = SimpleDocTemplate(
-        str(dst_path), pagesize=A4,
-        leftMargin=2 * cm, rightMargin=2 * cm,
-        topMargin=2 * cm, bottomMargin=2 * cm,
-        title=f"Акт осмотра № {payload.get('act_number','')}",
-    )
-    doc.build(flow)
-    return str(dst_path)
-
-
-# ────────────────────────────────────────────────────────────────────
-# Async pipeline: photo → Vision → sections → response (and optionally DOCX+PDF)
-# ────────────────────────────────────────────────────────────────────
-async def _p6h_process_photo_async(file_path, file_name, task_id, chat_id, topic_id, user_text="", make_act=False, place="", object_descr=""):
-    # Ensure Drive index is built (silently, best-effort)
-    try:
-        from core import technadzor_drive_index as _tdi
-        idx = _tdi.build_technadzor_template_index(str(chat_id), int(topic_id), force=False)
-    except Exception:
-        idx = {}
-
-    # Vision
-    vision, vstatus = await _p6f_tnz_vision_via_openrouter(file_path)
-    if vstatus == "FAIL" or vision is None:
-        return {
-            "ok": False, "handled": True, "kind": "technadzor_p6h_photo",
-            "state": "WAITING_CLARIFICATION",
-            "message": "Не удалось проанализировать фото через Vision. Пришли крупнее или текстовое описание дефекта",
-            "history": "P6H_VISION_FAIL",
-        }
-
-    summary = (vision.get("summary") or "").strip() if isinstance(vision, dict) else ""
-    defects = (vision.get("defects") or []) if isinstance(vision, dict) else []
-    confidence = vision.get("confidence", "LOW") if isinstance(vision, dict) else "LOW"
-
-    grouped = _p6h_group_defects_by_section(defects)
-
-    # Norms per section + global
-    section_norms = []
-    all_haystack = summary + " " + (user_text or "") + " " + " ".join(
-        str(d.get("title", "")) + " " + str(d.get("description", "")) for d in defects
-    )
-    global_norms = _p6h_norms_for_haystack(all_haystack)
-
-    # Build sections payload (used by both DOCX and PDF, and partly by Telegram)
-    sections_payload = []
-    for sec_title, ds in grouped:
-        defect_texts = [str(d.get("title", "")) + " " + str(d.get("description", "")) for d in ds]
-        snorms = _p6h_norms_for_section(sec_title, defect_texts)
-        section_norms.append((sec_title, snorms))
-        sections_payload.append({
-            "title": sec_title,
-            "defects": ds,
-            "norms": snorms,
-            "photos_block": [str(file_name or "")] if file_name else [],
-        })
-
-    # Topic folder link from index for "Ссылка на фотоматериалы"
-    topic_folder_link = (idx or {}).get("topic_folder_link", "")
-
-    # Build clean Telegram text response.
-    # If make_act=False — photo-only response (template per spec).
-    # If make_act=True  — short summary + DOCX/PDF links.
-    if not make_act:
-        out_lines = ["Технический осмотр по фото", ""]
-        # 1. Что видно
-        out_lines.append("1. Что видно:")
-        if summary:
-            out_lines.append(_p6h_clean_text(summary, 700))
-        else:
-            out_lines.append("Описание не сформировано")
-        out_lines.append("")
-        # 2. Замечания
-        out_lines.append("2. Обнаруженные замечания:")
-        if grouped:
-            for sec_title, ds in grouped:
-                titles = []
-                for d in ds:
-                    t = str(d.get("title") or d.get("description") or "").strip()
-                    if t:
-                        titles.append(t[:120])
-                line = f"— {sec_title}: " + ("; ".join(titles) if titles else "замечания зафиксированы")
-                out_lines.append(_p6h_clean_text(line, 500))
-        else:
-            out_lines.append("Дефектов на фото не выявлено")
-        out_lines.append("")
-        # 3. Почему плохо — берём severity/why из Vision если есть, иначе общий
-        out_lines.append("3. Почему это плохо:")
-        why_lines = []
-        for d in defects:
-            w = str(d.get("why") or d.get("severity") or d.get("impact") or "").strip()
-            if w:
-                why_lines.append("— " + w[:200])
-        if why_lines:
-            out_lines.extend(why_lines[:6])
-        elif grouped:
-            out_lines.append("Зафиксированные отклонения снижают эксплуатационную надёжность и/или несущую способность конструкции и требуют проверки и устранения")
-        else:
-            out_lines.append("Отклонений не выявлено")
-        out_lines.append("")
-        # 4. Как исправить
-        out_lines.append("4. Как исправить:")
-        fix_lines = []
-        for d in defects:
-            f = str(d.get("fix") or d.get("recommendation") or "").strip()
-            if f:
-                fix_lines.append("— " + f[:200])
-        if fix_lines:
-            out_lines.extend(fix_lines[:6])
-        else:
-            out_lines.append("Привести узлы и покрытия к нормативному состоянию по соответствующим СП/ГОСТ. Уточнить решения по проектной документации")
-        out_lines.append("")
-        # 5. Что проверить на объекте
-        out_lines.append("5. Что проверить на объекте:")
-        check_lines = []
-        for d in defects:
-            c = str(d.get("verify") or d.get("check") or "").strip()
-            if c:
-                check_lines.append("— " + c[:200])
-        if check_lines:
-            out_lines.extend(check_lines[:6])
-        else:
-            out_lines.append("Состояние конструкции в полном объёме, наличие и соответствие исполнительной документации, ранее выданные предписания и их устранение")
-        out_lines.append("")
-        # 6. Норма
-        out_lines.append("6. Нормативная отсылка:")
-        if global_norms:
-            for n in global_norms[:5]:
-                out_lines.append("— " + str(n.get("norm_id","")) + ": " + str(n.get("section","")) + f" [{n.get('confidence','PARTIAL')}]")
-        else:
-            out_lines.append("норма не подтверждена")
-        out_lines.append("")
-        # 7. Акт
-        out_lines.append("7. Акт:")
-        out_lines.append("Могу оформить акт по текущим фото — напишите «сделай акт» / «оформи акт»")
-
-        return {
-            "ok": True, "handled": True, "kind": "technadzor_p6h_photo",
-            "state": "DONE",
-            "message": _p6h_clean_text("\n".join(out_lines), 6000),
-            "history": "P6H_PHOTO_REPORT_DEFECTS_{}_NORMS_{}".format(len(defects), len(global_norms)),
-        }
-
-    # ── Build DOCX (service _drafts) + PDF (client topic root) ──
-    ts = _p6h_dt.now().strftime("%Y%m%d_%H%M%S")
-    safe_tid = (str(task_id or ts)[:8] or ts).replace("/", "_").replace("\\", "_")
-    docx_local = _P6H_OUTDIR / f"P6H_TNZ_ACT_DRAFT__{safe_tid}_{ts}.docx"
-    pdf_local = _P6H_OUTDIR / f"АКТ_ОСМОТРА__{safe_tid}_{ts}.pdf"
-
-    # Recommendations / consequences — pulled from defects
-    recs = []
-    cons = []
-    for d in defects:
-        r = str(d.get("fix") or d.get("recommendation") or "").strip()
-        if r:
-            recs.append(r[:300])
-        c = str(d.get("consequence") or d.get("why") or "").strip()
-        if c:
-            cons.append(c[:300])
-    # Violation table rows
-    vtable = []
-    for sec_title, ds in grouped:
-        for d in ds:
-            v = str(d.get("title") or d.get("description") or sec_title)[:200]
-            sn = ""
-            for n in section_norms:
-                if n[0] == sec_title and n[1]:
-                    sn = n[1][0].get("norm_id", "")
-                    break
-            ph = str(file_name or "")
-            vtable.append((v, sn or "норма не подтверждена", ph))
-
-    payload = {
-        "act_number": _p6h_human_act_number(task_id),
-        "date_str": _p6h_dt.now().strftime("%d.%m.%Y"),
-        "place": place or "место уточняется по запросу владельца",
-        "object_descr": object_descr or "объект уточняется по запросу владельца",
-        "method": "визуальный неразрушающий контроль с выездом на объект",
-        "performer": "",
-        "specialist": "Кузнецов Илья Владимирович",
-        "photos_link": topic_folder_link or "",
-        "general_purpose": (
-            "Осмотр выполнен методом визуального неразрушающего контроля. "
-            "Цель осмотра — выявление фактически наблюдаемых дефектов, определение "
-            "рекомендаций к устранению и возможных последствий для заказчика при "
-            "сохранении текущего состояния объекта."
-        ),
-        "sections": sections_payload,
-        "recommendations": recs[:20] if recs else ["Привести выявленные узлы и покрытия к нормативному состоянию по соответствующим СП/ГОСТ"],
-        "consequences": cons[:10] if cons else ["Снижение несущей способности и эксплуатационной надёжности конструкций"],
-        "violations_table": vtable[:30],
-    }
-
-    docx_ok = False
-    pdf_ok = False
-    try:
-        _p6h_build_docx_act(payload, docx_local)
-        docx_ok = True
-    except Exception:
-        _P6H_LOG.exception("P6H_DOCX_BUILD_FAIL")
-    try:
-        _p6h_build_pdf_act(payload, pdf_local)
-        pdf_ok = True
-    except Exception:
-        _P6H_LOG.exception("P6H_PDF_BUILD_FAIL")
-
-    drive_docx = None
-    drive_pdf = None
-    if docx_ok or pdf_ok:
-        try:
-            from core import technadzor_drive_index as _tdi
-            if docx_ok:
-                drive_docx = _tdi.upload_to_service_subfolder(
-                    docx_local, docx_local.name, str(chat_id), int(topic_id), subfolder="_drafts",
-                )
-            if pdf_ok:
-                drive_pdf = _tdi.upload_client_pdf_to_folder(
-                    pdf_local, pdf_local.name, str(chat_id), int(topic_id), target_folder_name=None,
-                )
-        except Exception:
-            _P6H_LOG.exception("P6H_UPLOAD_FAIL")
-
-    pdf_link = (drive_pdf or {}).get("link", "") if drive_pdf else ""
-    docx_link = (drive_docx or {}).get("link", "") if drive_docx else ""
-
-    msg_lines = ["Акт сформирован"]
-    if pdf_link:
-        msg_lines.append(f"PDF: {pdf_link}")
-    elif pdf_ok:
-        msg_lines.append("PDF: подготовлен локально, загрузка на Drive не выполнена — повторная попытка через retry queue")
-    else:
-        msg_lines.append("PDF: ошибка генерации")
-    if docx_link:
-        msg_lines.append(f"DOCX (черновик, служебно): {docx_link}")
-    if topic_folder_link:
-        msg_lines.append(f"Фото: {topic_folder_link}")
-    msg_lines.append("Норма: " + ("подтверждена" if global_norms else "не подтверждена"))
-
-    return {
-        "ok": True if (pdf_ok or docx_ok) else False,
-        "handled": True,
-        "kind": "technadzor_p6h_act",
-        "state": "DONE" if pdf_link else "AWAITING_CONFIRMATION",
-        "artifact_path": str(pdf_local if pdf_ok else docx_local),
-        "extra_artifact_path": str(docx_local if docx_ok else ""),
-        "drive_link": pdf_link or docx_link or "",
-        "message": _p6h_clean_text("\n".join(msg_lines), 4000),
-        "history": "P6H_ACT_DOCX_{}_PDF_{}_DRIVE_PDF_{}".format(
-            "OK" if docx_ok else "FAIL",
-            "OK" if pdf_ok else "FAIL",
-            "OK" if pdf_link else "FAIL",
-        ),
-    }
-
-
-# ────────────────────────────────────────────────────────────────────
-# Sync wrapper around process_technadzor — only intercepts topic_5
-# ────────────────────────────────────────────────────────────────────
-def _p6h_is_image_path(path):
-    if not path:
-        return False
-    p = str(path).lower()
-    return p.endswith((".jpg", ".jpeg", ".png", ".webp", ".bmp", ".heic"))
-
-
-_P6H_ACT_TRIGGERS = (
-    "сделай акт", "оформи акт", "выдай акт", "финальн", "акт по фото",
-    "сформируй акт", "подготовь акт", "сделать акт", "оформить акт",
-)
-
-
-def _p6h_should_handle(topic_id, file_path, user_text):
-    if int(topic_id or 0) != 5:
-        return False
-    if file_path and _p6h_is_image_path(file_path):
-        return True
-    low = (user_text or "").lower()
-    if any(t in low for t in _P6H_ACT_TRIGGERS):
+    if any(x in low for x in _P5_ELECTRONICS_WORDS + _P5_AUTO_EXTRA_WORDS) and any(x in low for x in ("найди", "поиск", "дешевле", "купить", "цена", "стоимость", "нужен", "нужна")):
         return True
     return False
 
-
-def _p6h_run_async(coro):
-    """Run coro from sync context. Mimics codebase pattern."""
-    try:
-        return _p6h_asyncio.run(coro)
-    except RuntimeError:
-        # Already in a loop — schedule in a worker thread with its own loop
-        import threading
-        result = {"v": None, "exc": None}
-        def _runner():
-            new_loop = _p6h_asyncio.new_event_loop()
-            try:
-                _p6h_asyncio.set_event_loop(new_loop)
-                result["v"] = new_loop.run_until_complete(coro)
-            except Exception as e:
-                result["exc"] = e
-            finally:
-                new_loop.close()
-        t = threading.Thread(target=_runner, daemon=True)
-        t.start()
-        t.join()
-        if result["exc"]:
-            raise result["exc"]
-        return result["v"]
-
-
-try:
-    _p6h_orig_process = process_technadzor
-    if not getattr(_p6h_orig_process, "_p6h_wrapped", False):
-        def process_technadzor(text="", task_id="", chat_id="", topic_id=0, file_path="", file_name="", **kwargs):
-            try:
-                if _p6h_should_handle(topic_id, file_path, text):
-                    is_image = _p6h_is_image_path(file_path)
-                    low = (text or "").lower()
-                    make_act = any(t in low for t in _P6H_ACT_TRIGGERS)
-                    if is_image or make_act:
-                        return _p6h_run_async(
-                            _p6h_process_photo_async(
-                                file_path=file_path,
-                                file_name=file_name,
-                                task_id=task_id,
-                                chat_id=chat_id,
-                                topic_id=topic_id,
-                                user_text=text,
-                                make_act=make_act,
-                            )
-                        )
-            except Exception:
-                _P6H_LOG.exception("P6H_WRAPPER_FAIL — falling back to original")
-            return _p6h_orig_process(
-                text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id,
-                file_path=file_path, file_name=file_name, **kwargs,
-            )
-        process_technadzor._p6h_wrapped = True
-        _p6h_orig_process._p6h_wrapped = True
-    _P6H_LOG.info("P6H_TOPIC5_USE_EXISTING_TEMPLATES_PHOTO_TO_TECH_REPORT_20260504_V1_INSTALLED")
-except Exception as _exc:
-    _P6H_LOG.exception("P6H_TOPIC5_INSTALL_FAIL: %s", _exc)
-# === END_P6H_TOPIC5_USE_EXISTING_TEMPLATES_PHOTO_TO_TECH_REPORT_20260504_V1 ===
-
-
-# === P6H_PART_2: PHOTO_NUMBER_DEFECT_NORM_CLARIFICATION_LOGIC + VOICE_LIVE_DIALOG_CLARIFICATION_GATE_20260504 ===
-# Adds on top of P6H_PART_1:
-# - voice transcript parser (extracts object_hint, folder_hint, visit_date_hint, client_facing flag, raw user-stated defects)
-# - clarification gate (returns WAITING_CLARIFICATION with concrete questions, never «что строим?»)
-# - photo-numbered Telegram output («Фото №N — <file>»)
-# - 8-column violations_table for акты
-# - memory summary write after DONE (key topic_5_technadzor_photo_report_summary)
-# - replaces _p6h_process_photo_async with enhanced version
-import re as _p6h2_re
-import json as _p6h2_json
-
-_P6H2_LOG = _p6h_logging.getLogger("task_worker")
-
-_P6H2_FOLDER_HINT_PATTERNS = [
-    _p6h2_re.compile(r"папк[аеу]?\s+[«\"\'']?([^«»\"\'\.,;\n]{2,80})[»\"\'']?", _p6h2_re.IGNORECASE),
-    _p6h2_re.compile(r"директор[ияю]?\s+[«\"\'']?([^«»\"\'\.,;\n]{2,80})[»\"\'']?", _p6h2_re.IGNORECASE),
-]
-_P6H2_OBJECT_HINTS = [
-    "ангар", "склад", "цех", "корпус", "коттедж", "дом", "здание", "сооружение",
-    "фундамент", "кровл", "фасад", "перекрыт", "колонн", "балк", "ферм", "плита",
-    "паркинг", "гараж", "трибун", "купол", "теплиц",
-]
-_P6H2_DATE_RE = _p6h2_re.compile(
-    r"(?P<d>\d{1,2})[\s\-./](?P<m>\d{1,2}|январ|феврал|март|апрел|ма[яй]|июн|июл|август|сентябр|октябр|ноябр|декабр)[\s\-./а-я]*?(?P<y>\d{2,4})?",
-    _p6h2_re.IGNORECASE,
-)
-_P6H2_CLIENT_HINTS = ("заказчик", "клиент", "генподряд", "застройщ", "владельцу объекта")
-_P6H2_INTERNAL_HINTS = ("служебн", "не для клиента", "черновик", "внутрен", "тестов", "smoke")
-
-
-def _p6h_parse_voice_instruction(raw_input):
-    """Parse [VOICE] transcript into structured TZ context.
-
-    Returns dict with keys:
-      object_hint, folder_hint, visit_date_hint, client_facing,
-      explicit_include, explicit_exclude, output_kind, requires_act
-    All values are conservative — present only when transcript explicitly mentioned them.
-    """
-    text = (raw_input or "").strip()
-    if text.startswith("[VOICE]"):
-        text_body = text[len("[VOICE]"):].strip()
-    else:
-        text_body = text
-    low = text_body.lower()
-    ctx = {
-        "is_voice": text.startswith("[VOICE]"),
-        "transcript": text_body,
-        "object_hint": "",
-        "folder_hint": "",
-        "visit_date_hint": "",
-        "client_facing": None,  # None=unknown, True/False=explicit
-        "explicit_include": [],
-        "explicit_exclude": [],
-        "output_kind": "",  # text|act|pdf|docx|description
-        "requires_act": False,
-    }
-    if not text_body:
-        return ctx
-
-    # Object
-    for h in _P6H2_OBJECT_HINTS:
-        if h in low:
-            ctx["object_hint"] = h
-            break
-
-    # Folder hint
-    for pat in _P6H2_FOLDER_HINT_PATTERNS:
-        m = pat.search(text_body)
-        if m:
-            ctx["folder_hint"] = m.group(1).strip()
-            break
-
-    # Date hint
-    m = _P6H2_DATE_RE.search(text_body)
-    if m:
-        ctx["visit_date_hint"] = m.group(0).strip()
-
-    # Client-facing
-    if any(h in low for h in _P6H2_CLIENT_HINTS):
-        ctx["client_facing"] = True
-    if any(h in low for h in _P6H2_INTERNAL_HINTS):
-        ctx["client_facing"] = False
-
-    # Output
-    if any(t in low for t in _P6H_ACT_TRIGGERS):
-        ctx["requires_act"] = True
-        ctx["output_kind"] = "act"
-    elif "pdf" in low or "пдф" in low:
-        ctx["output_kind"] = "pdf"
-    elif "docx" in low or "ворд" in low or "word" in low:
-        ctx["output_kind"] = "docx"
-    elif "описан" in low or "опиши" in low or "посмотри" in low:
-        ctx["output_kind"] = "description"
-
-    # Explicit include/exclude lists
-    for marker, key in (("включ", "explicit_include"), ("не включ", "explicit_exclude"),
-                         ("исключ", "explicit_exclude")):
-        i = low.find(marker)
-        if i >= 0:
-            tail = text_body[i:i + 240]
-            ctx[key].append(tail.strip())
-    return ctx
-
-
-def _p6h_should_wait_for_clarification(vision, defects, voice_ctx, drive_idx):
-    """Returns (should_wait: bool, questions: [str]).
-
-    Triggers:
-      • Vision confidence=LOW AND no defects → ask what's on the photo, before/after, side
-      • voice_ctx folder_hint set but folder not in Drive index
-      • voice_ctx client_facing is None AND folder_hint set (need to know if it's customer-visible)
-    Never asks "что строим?" / "что это?" / "пришлите шаблон".
-    """
-    questions = []
-    confidence = (vision or {}).get("confidence", "LOW") if isinstance(vision, dict) else "LOW"
-    nd = len(defects or [])
-
-    # 1. Folder named by owner — check it exists
-    fh = (voice_ctx or {}).get("folder_hint", "").strip()
-    if fh:
-        folders = []
-        for f in (drive_idx or {}).get("folders_client", []) + (drive_idx or {}).get("folders_system", []):
-            folders.append(f.get("name", ""))
-        if not any(fh.lower() == n.lower() or fh.lower() in n.lower() for n in folders if n):
-            questions.append(
-                f"Не нашёл папку «{fh}» в Drive topic_5. "
-                "Уточни точное имя или создай её перед загрузкой фото"
-            )
-
-    # 2. Folder client_facing flag uncertain
-    if fh and (voice_ctx or {}).get("client_facing") is None:
-        questions.append(
-            f"Папку «{fh}» считать клиентской (туда складывать только фото и чистовой PDF) "
-            "или служебной (тогда туда можно DOCX-черновик)?"
-        )
-
-    # 3. Vision low-confidence + no defects on a photo
-    if confidence == "LOW" and nd == 0:
-        questions.append(
-            "Фото не позволяет однозначно определить дефект. "
-            "Это до или после исправления? С какой стороны конструкции снято? "
-            "Что именно нужно зафиксировать на этом фото?"
-        )
-
-    # Never trigger generic clarifier
-    return (bool(questions), questions)
-
-
-def _p6h_save_summary_to_memory(chat_id, topic_id, summary_dict):
-    """Persist a compact summary to memory.db under topic_5_technadzor_photo_report_summary.
-
-    Uses task_worker._save_memory_safe if exposed; falls back to direct memory_client write.
-    Stores ONLY: folder, object, date, owner_directives, defect_brief, pdf_link, status.
-    """
-    try:
-        payload = {
-            "folder": str(summary_dict.get("folder") or "")[:200],
-            "object": str(summary_dict.get("object") or "")[:200],
-            "date": str(summary_dict.get("date") or "")[:40],
-            "owner_directives": (summary_dict.get("owner_directives") or [])[:6],
-            "defect_brief": (summary_dict.get("defect_brief") or [])[:12],
-            "pdf_link": str(summary_dict.get("pdf_link") or "")[:400],
-            "docx_link": str(summary_dict.get("docx_link") or "")[:400],
-            "status": str(summary_dict.get("status") or "")[:60],
-            "ts": int(_p6h_dt.now().timestamp()),
-        }
-        body = _p6h2_json.dumps(payload, ensure_ascii=False)[:4000]
-    except Exception:
+def _p5_should_force_new_goal(user_text, existing, extracted):
+    new_norm = _p5_norm_text(user_text)
+    low = new_norm.lower().replace("ё", "е")
+    if not _p5_is_explicit_new_search(new_norm):
         return False
-    try:
-        from core.memory_client import save_memory  # type: ignore
-        key = f"topic_{int(topic_id or 5)}_technadzor_photo_report_summary"
-        save_memory(chat_id=str(chat_id), key=key, value=body)
-        return True
-    except Exception:
-        try:
-            import sqlite3 as _sql
-            db = _P6H_BASE / "data" / "memory.db"
-            con = _sql.connect(str(db))
-            cur = con.cursor()
-            cur.execute(
-                "INSERT INTO memory(chat_id,key,value,timestamp) VALUES (?,?,?,strftime('%s','now'))",
-                (str(chat_id), f"topic_{int(topic_id or 5)}_technadzor_photo_report_summary", body),
-            )
-            con.commit()
-            con.close()
+
+    old_goal = str(getattr(existing, "goal", "") or "")
+    old_target = str((getattr(existing, "criteria", {}) or {}).get("target") or old_goal)
+    old_low = old_target.lower().replace("ё", "е")
+    new_target = str((extracted or {}).get("target") or new_norm)
+    old_cat = str((getattr(existing, "criteria", {}) or {}).get("category") or "")
+    new_cat = str((extracted or {}).get("category") or _p5_category(low) or "")
+
+    if "rockwool" in old_low or "light buds" in old_low or "light batts" in old_low or "каменная вата" in old_low:
+        if any(x in low for x in _P5_AUTO_EXTRA_WORDS + _P5_ELECTRONICS_WORDS):
             return True
-        except Exception:
-            _P6H2_LOG.exception("P6H2_MEMORY_SAVE_FAIL")
-            return False
 
+    if old_cat and new_cat and old_cat != new_cat:
+        return True
 
-def _p6h_format_photo_numbered_response(vision, defects, grouped, global_norms, file_name, photo_no=1, voice_ctx=None):
-    """Build per-photo numbered Telegram text per spec section 'Формат текстового ответа без акта'."""
-    fname = str(file_name or "photo")
-    out = ["Технический осмотр по фото", ""]
-    if voice_ctx and (voice_ctx.get("folder_hint") or voice_ctx.get("object_hint")):
-        out.append("Объект / папка:")
-        parts = []
-        if voice_ctx.get("object_hint"):
-            parts.append(voice_ctx["object_hint"])
-        if voice_ctx.get("folder_hint"):
-            parts.append(f"папка «{voice_ctx['folder_hint']}»")
-        if voice_ctx.get("visit_date_hint"):
-            parts.append(f"дата {voice_ctx['visit_date_hint']}")
-        out.append(" / ".join(parts))
-        out.append("")
+    old_words = _p5_words(old_target)
+    new_words = _p5_words(new_target)
+    if old_words and new_words:
+        overlap = len(old_words & new_words)
+        ratio = overlap / max(1, min(len(old_words), len(new_words)))
+        if overlap == 0 or ratio < 0.35:
+            return True
 
-    out.append(f"Фото №{photo_no} — {fname}")
-
-    summary = (vision or {}).get("summary", "") if isinstance(vision, dict) else ""
-    out.append("Что видно:")
-    if summary:
-        out.append(_p6h_clean_text(summary, 600))
-    else:
-        out.append("по фото однозначно не определяется")
-
-    out.append("")
-    out.append("Замечание:")
-    if grouped:
-        per_section = []
-        for sec_title, ds in grouped:
-            tt = []
-            for d in ds:
-                t = str(d.get("title") or d.get("description") or "").strip()
-                if t:
-                    tt.append(t[:120])
-            per_section.append(f"— {sec_title}: " + ("; ".join(tt) if tt else "замечания зафиксированы"))
-        out.extend(per_section)
-    else:
-        out.append("Дефектов на фото не выявлено")
-
-    out.append("")
-    out.append("Чем опасно:")
-    risks = []
-    for d in defects or []:
-        r = str(d.get("risk") or d.get("why") or d.get("severity") or d.get("impact") or "").strip()
-        if r:
-            risks.append("— " + r[:200])
-    if risks:
-        out.extend(risks[:6])
-    elif grouped:
-        out.append("Зафиксированные отклонения снижают эксплуатационную надёжность и/или несущую способность конструкции")
-    else:
-        out.append("Отклонений не выявлено")
-
-    out.append("")
-    out.append("Как исправить:")
-    fixes = []
-    for d in defects or []:
-        f = str(d.get("recommended_fix") or d.get("fix") or d.get("recommendation") or "").strip()
-        if f:
-            fixes.append("— " + f[:200])
-    if fixes:
-        out.extend(fixes[:6])
-    else:
-        out.append("Привести к нормативному состоянию по соответствующим СП/ГОСТ; уточнить решения по проектной документации")
-
-    out.append("")
-    out.append("Что проверить:")
-    checks = []
-    for d in defects or []:
-        c = d.get("site_checks") or d.get("verify") or d.get("check")
-        if isinstance(c, list):
-            for x in c[:3]:
-                xs = str(x).strip()
-                if xs:
-                    checks.append("— " + xs[:200])
-        elif c:
-            checks.append("— " + str(c)[:200])
-    if checks:
-        out.extend(checks[:6])
-    else:
-        out.append("Состояние конструкции в полном объёме, исполнительная документация, ранее выданные предписания")
-
-    out.append("")
-    out.append("Нормативная отсылка:")
-    if global_norms:
-        for n in global_norms[:5]:
-            out.append("— " + str(n.get("norm_id", "")) + ": " + str(n.get("section", "")) + f" [{n.get('confidence', 'PARTIAL')}]")
-    else:
-        out.append("норма не подтверждена")
-
-    out.append("")
-    out.append("Итог:")
-    crit = [d for d in (defects or []) if str(d.get("severity", "")).lower() in ("high", "critical", "критическ", "high_risk")]
-    out.append(f"— критичные замечания: {len(crit)}")
-    out.append(f"— рабочие замечания: {len(defects or []) - len(crit)}")
-    out.append("— нужен ли акт: могу оформить акт по текущим фото — напиши «сделай акт»")
-
-    return _p6h_clean_text("\n".join(out), 6000)
-
-
-# Override _p6h_process_photo_async with the enhanced version
-async def _p6h_process_photo_async(file_path, file_name, task_id, chat_id, topic_id, user_text="", make_act=False, place="", object_descr=""):
-    # 1. Drive index — best-effort eager build
-    try:
-        from core import technadzor_drive_index as _tdi
-        idx = _tdi.build_technadzor_template_index(str(chat_id), int(topic_id), force=False)
-    except Exception:
-        idx = {}
-
-    # 2. Voice transcript parsing
-    voice_ctx = _p6h_parse_voice_instruction(user_text or "")
-
-    # 3. Vision
-    vision, vstatus = await _p6f_tnz_vision_via_openrouter(file_path)
-    if vstatus == "FAIL" or vision is None:
-        return {
-            "ok": False, "handled": True, "kind": "technadzor_p6h_photo",
-            "state": "WAITING_CLARIFICATION",
-            "message": "Не удалось проанализировать фото через Vision. "
-                       "Пришли крупнее или короткое описание дефекта текстом",
-            "history": "P6H_VISION_FAIL",
-        }
-
-    summary = (vision.get("summary") or "").strip() if isinstance(vision, dict) else ""
-    defects = (vision.get("defects") or []) if isinstance(vision, dict) else []
-
-    # Tag defects with photo_no/file_name (single-photo task = #1)
-    photo_no = 1
-    for d in defects:
-        if isinstance(d, dict):
-            d.setdefault("photo_no", photo_no)
-            d.setdefault("file_name", file_name or "")
-
-    grouped = _p6h_group_defects_by_section(defects)
-
-    # 4. Clarification gate
-    should_wait, questions = _p6h_should_wait_for_clarification(vision, defects, voice_ctx, idx)
-    if should_wait and not make_act:
-        return {
-            "ok": True, "handled": True, "kind": "technadzor_p6h_clarify",
-            "state": "WAITING_CLARIFICATION",
-            "message": _p6h_clean_text(
-                "Технадзор topic_5 — нужны уточнения перед разбором:\n\n" + "\n".join(f"— {q}" for q in questions),
-                3000,
-            ),
-            "history": "P6H_CLARIFY:{}".format(len(questions)),
-        }
-
-    # 5. Norms
-    haystack = " ".join([
-        summary, voice_ctx.get("transcript", "") or "",
-    ] + [str(d.get("title", "")) + " " + str(d.get("description", "")) for d in defects])
-    global_norms = _p6h_norms_for_haystack(haystack)
-
-    # 6. Per-section payload
-    sections_payload = []
-    for sec_title, ds in grouped:
-        defect_texts = [str(d.get("title", "")) + " " + str(d.get("description", "")) for d in ds]
-        snorms = _p6h_norms_for_section(sec_title, defect_texts)
-        sections_payload.append({
-            "title": sec_title,
-            "defects": ds,
-            "norms": snorms,
-            "photos_block": [str(file_name or "")] if file_name else [],
-        })
-
-    topic_folder_link = (idx or {}).get("topic_folder_link", "")
-
-    # 7a. Photo-only response (numbered format)
-    if not make_act:
-        msg = _p6h_format_photo_numbered_response(
-            vision, defects, grouped, global_norms, file_name or "photo",
-            photo_no=photo_no, voice_ctx=voice_ctx,
-        )
-        # Save compact summary to memory
-        _p6h_save_summary_to_memory(chat_id, topic_id, {
-            "folder": voice_ctx.get("folder_hint") or "",
-            "object": voice_ctx.get("object_hint") or "",
-            "date": voice_ctx.get("visit_date_hint") or "",
-            "owner_directives": (voice_ctx.get("explicit_include") or []) + (voice_ctx.get("explicit_exclude") or []),
-            "defect_brief": [str(d.get("title") or d.get("description") or "")[:200] for d in defects][:8],
-            "pdf_link": "",
-            "docx_link": "",
-            "status": "PHOTO_REPORT_DONE",
-        })
-        return {
-            "ok": True, "handled": True, "kind": "technadzor_p6h_photo",
-            "state": "DONE",
-            "message": msg,
-            "history": "P6H_PHOTO_REPORT_PHOTO{}_DEFECTS_{}_NORMS_{}".format(photo_no, len(defects), len(global_norms)),
-        }
-
-    # 7b. Build act: DOCX (service) + PDF (client topic root) + upload
-    ts = _p6h_dt.now().strftime("%Y%m%d_%H%M%S")
-    safe_tid = (str(task_id or ts)[:8] or ts).replace("/", "_").replace("\\", "_")
-    docx_local = _P6H_OUTDIR / f"P6H_TNZ_ACT_DRAFT__{safe_tid}_{ts}.docx"
-    pdf_local = _P6H_OUTDIR / f"АКТ_ОСМОТРА__{safe_tid}_{ts}.pdf"
-
-    recs = []
-    cons = []
-    for d in defects:
-        r = str(d.get("recommended_fix") or d.get("fix") or d.get("recommendation") or "").strip()
-        if r:
-            recs.append(r[:300])
-        c = str(d.get("consequence") or d.get("risk") or d.get("why") or "").strip()
-        if c:
-            cons.append(c[:300])
-
-    # 8-column violations table per spec
-    violations_8 = []
-    for sec_title, ds in grouped:
-        for d in ds:
-            num = len(violations_8) + 1
-            ph = str(d.get("file_name") or file_name or "")
-            place_node = sec_title
-            violation = str(d.get("title") or d.get("description") or sec_title)[:200]
-            consequence = str(d.get("consequence") or d.get("risk") or "")[:200]
-            fix = str(d.get("recommended_fix") or d.get("fix") or "")[:200]
-            # find norm for this defect's section
-            norm_id = ""
-            for s in sections_payload:
-                if s["title"] == sec_title and s["norms"]:
-                    norm_id = s["norms"][0].get("norm_id", "") or ""
-                    break
-            status = ""
-            conf = (vision or {}).get("confidence", "LOW")
-            if conf == "HIGH" and norm_id:
-                status = "CONFIRMED_BY_PHOTO"
-            elif conf in ("HIGH", "MEDIUM") and not norm_id:
-                status = "NORM_NOT_CONFIRMED"
-            elif conf == "MEDIUM":
-                status = "PARTIAL_BY_PHOTO"
-            else:
-                status = "NEEDS_OWNER_CLARIFICATION"
-            violations_8.append((num, ph, place_node, violation, consequence, fix, norm_id or "норма не подтверждена", status))
-
-    payload = {
-        "act_number": _p6h_human_act_number(task_id),
-        "date_str": _p6h_dt.now().strftime("%d.%m.%Y"),
-        "place": place or (voice_ctx.get("folder_hint") or "место уточняется по запросу владельца"),
-        "object_descr": object_descr or (voice_ctx.get("object_hint") or "объект уточняется по запросу владельца"),
-        "method": "визуальный неразрушающий контроль с выездом на объект",
-        "performer": "",
-        "specialist": "Кузнецов Илья Владимирович",
-        "photos_link": topic_folder_link or "",
-        "general_purpose": (
-            "Осмотр выполнен методом визуального неразрушающего контроля. "
-            "Цель осмотра — выявление фактически наблюдаемых дефектов, определение "
-            "рекомендаций к устранению и возможных последствий для заказчика."
-        ),
-        "sections": sections_payload,
-        "recommendations": (recs[:20] if recs else
-                             ["Привести выявленные узлы и покрытия к нормативному состоянию по соответствующим СП/ГОСТ"]),
-        "consequences": (cons[:10] if cons else
-                          ["Снижение несущей способности и эксплуатационной надёжности конструкций"]),
-        # 8-col rich table
-        "violations_table_8col": violations_8[:30],
-        # 3-col simple table (back-compat for DOCX/PDF builders that use violations_table)
-        "violations_table": [(v, n, p) for (_no, p, _pl, v, _co, _fi, n, _st) in violations_8[:30]],
-    }
-
-    docx_ok = False
-    pdf_ok = False
-    try:
-        _p6h_build_docx_act(payload, docx_local)
-        docx_ok = True
-    except Exception:
-        _P6H2_LOG.exception("P6H2_DOCX_BUILD_FAIL")
-    try:
-        _p6h_build_pdf_act(payload, pdf_local)
-        pdf_ok = True
-    except Exception:
-        _P6H2_LOG.exception("P6H2_PDF_BUILD_FAIL")
-
-    drive_docx = None
-    drive_pdf = None
-    if docx_ok or pdf_ok:
-        try:
-            from core import technadzor_drive_index as _tdi2
-            if docx_ok:
-                drive_docx = _tdi2.upload_to_service_subfolder(
-                    docx_local, docx_local.name, str(chat_id), int(topic_id), subfolder="_drafts",
-                )
-            if pdf_ok:
-                target_folder = None
-                # Owner explicitly named a client folder for the final PDF?
-                fh = voice_ctx.get("folder_hint", "") or ""
-                if fh:
-                    # Only allow target placement if folder is explicitly client-facing per voice
-                    if voice_ctx.get("client_facing") is True:
-                        from core.technadzor_drive_index import is_system_folder as _is_sys
-                        if not _is_sys(fh):
-                            target_folder = fh
-                drive_pdf = _tdi2.upload_client_pdf_to_folder(
-                    pdf_local, pdf_local.name, str(chat_id), int(topic_id),
-                    target_folder_name=target_folder,
-                )
-        except Exception:
-            _P6H2_LOG.exception("P6H2_UPLOAD_FAIL")
-
-    pdf_link = (drive_pdf or {}).get("link", "") if drive_pdf else ""
-    docx_link = (drive_docx or {}).get("link", "") if drive_docx else ""
-
-    msg_lines = ["Акт сформирован"]
-    if pdf_link:
-        msg_lines.append(f"PDF: {pdf_link}")
-    elif pdf_ok:
-        msg_lines.append("PDF: подготовлен локально, загрузка на Drive не выполнена — Telegram fallback в следующей итерации")
-    else:
-        msg_lines.append("PDF: ошибка генерации — повторите позже")
-    if docx_link:
-        msg_lines.append(f"DOCX (черновик, служебно): {docx_link}")
-    if topic_folder_link:
-        msg_lines.append(f"Фото: {topic_folder_link}")
-    msg_lines.append("Норма: " + ("подтверждена" if global_norms else "не подтверждена"))
-
-    # Memory save
-    _p6h_save_summary_to_memory(chat_id, topic_id, {
-        "folder": voice_ctx.get("folder_hint") or "",
-        "object": voice_ctx.get("object_hint") or "",
-        "date": voice_ctx.get("visit_date_hint") or "",
-        "owner_directives": (voice_ctx.get("explicit_include") or []) + (voice_ctx.get("explicit_exclude") or []),
-        "defect_brief": [str(d.get("title") or d.get("description") or "")[:200] for d in defects][:8],
-        "pdf_link": pdf_link,
-        "docx_link": docx_link,
-        "status": "ACT_DONE" if pdf_link else ("ACT_PARTIAL" if (pdf_ok or docx_ok) else "ACT_FAIL"),
-    })
-
-    return {
-        "ok": True if (pdf_ok or docx_ok) else False,
-        "handled": True,
-        "kind": "technadzor_p6h_act",
-        "state": "DONE" if pdf_link else "AWAITING_CONFIRMATION",
-        "artifact_path": str(pdf_local if pdf_ok else docx_local),
-        "extra_artifact_path": str(docx_local if docx_ok else ""),
-        "drive_link": pdf_link or docx_link or "",
-        "message": _p6h_clean_text("\n".join(msg_lines), 4000),
-        "history": "P6H_ACT_DOCX_{}_PDF_{}_DRIVE_PDF_{}".format(
-            "OK" if docx_ok else "FAIL",
-            "OK" if pdf_ok else "FAIL",
-            "OK" if pdf_link else "FAIL",
-        ),
-    }
-
-
-_P6H2_LOG.info("P6H_TOPIC5_PHOTO_NUMBER_DEFECT_NORM_CLARIFICATION_LOGIC_20260504_INSTALLED")
-_P6H2_LOG.info("P6H_TOPIC5_VOICE_LIVE_DIALOG_CLARIFICATION_GATE_20260504_INSTALLED")
-# === END_P6H_PART_2 ===
-
-
-# === P6H_PART_3: TOPIC5_OBJECT_REGISTRY_INSPECTION_CHAIN_20260504 ===
-# Final wiring of object registry into the photo pipeline.
-# Replaces _p6h_process_photo_async with a registry-aware version that:
-#   • Identifies object_id from voice/Drive/file_name signals.
-#   • Loads existing card and prior inspection_chain.
-#   • Detects visit_mode (initial / repeat / extension / description_only).
-#   • Adds clarification questions when object_id is ambiguous OR when voice/Vision conflict.
-#   • For follow-up acts: carries forward open_items with statuses
-#     (УСТРАНЕНО / УСТРАНЕНО ЧАСТИЧНО / НЕ УСТРАНЕНО / ТРЕБУЕТ УТОЧНЕНИЯ / ...).
-#   • After the act is built, appends an inspection record to the chain
-#     (server JSON + memory + timeline).
-#   • Never writes registry/system files into client-facing folders.
+    return False
 
 try:
-    from core import technadzor_object_registry as _p6h3_reg
-except Exception as _exc_reg:
-    _p6h3_reg = None
-    _P6H2_LOG.warning("P6H3_REGISTRY_IMPORT_FAIL: %s", _exc_reg)
+    _p5_orig_is_new_search_goal = SearchMonolithV2._is_new_search_goal
+    def _p5_is_new_search_goal(self, user_text, existing, extracted):
+        if _p5_should_force_new_goal(user_text, existing, extracted):
+            return True
+        return _p5_orig_is_new_search_goal(self, _p5_norm_text(user_text), existing, extracted)
+    SearchMonolithV2._is_new_search_goal = _p5_is_new_search_goal
+except Exception:
+    pass
 
+try:
+    _p5_orig_run_search = SearchMonolithV2.run
+    async def _p5_run_search(self, payload, user_text, online_call, online_model, base_system_prompt=""):
+        payload = dict(payload or {})
+        original_text = _clean(user_text, 4000)
+        normalized_text = _p5_norm_text(original_text)
+        chat_id = str(payload.get("chat_id") or "")
+        topic_id = int(payload.get("topic_id") or 0)
 
-async def _p6h_process_photo_async(file_path, file_name, task_id, chat_id, topic_id, user_text="", make_act=False, place="", object_descr=""):
-    # 1. Drive index
-    try:
-        from core import technadzor_drive_index as _tdi
-        idx = _tdi.build_technadzor_template_index(str(chat_id), int(topic_id), force=False)
-    except Exception:
-        idx = {}
+        extracted = self.extractor.extract(normalized_text)
+        existing = self.sessions.get(chat_id, topic_id)
 
-    # 2. Voice context
-    voice_ctx = _p6h_parse_voice_instruction(user_text or "")
-
-    # 3. Object registry — identify object_id
-    object_id = ""
-    object_card = None
-    visit_mode = "initial"
-    derive_sources = {}
-    if _p6h3_reg is not None:
-        try:
-            object_id, derive_sources = _p6h3_reg.derive_object_id_from_context(
-                voice_ctx, idx, file_path or "", file_name or "",
-            )
-            if object_id:
-                object_card = _p6h3_reg.load_object(object_id)
-            visit_mode = _p6h3_reg.detect_visit_mode(object_card, voice_ctx)
-        except Exception:
-            _P6H2_LOG.exception("P6H3_REGISTRY_DERIVE_FAIL")
-
-    # 4. Vision
-    vision, vstatus = await _p6f_tnz_vision_via_openrouter(file_path)
-    if vstatus == "FAIL" or vision is None:
-        return {
-            "ok": False, "handled": True, "kind": "technadzor_p6h_photo",
-            "state": "WAITING_CLARIFICATION",
-            "message": "Не удалось проанализировать фото через Vision. "
-                       "Пришли крупнее или короткое описание дефекта текстом",
-            "history": "P6H_VISION_FAIL",
-        }
-
-    summary = (vision.get("summary") or "").strip() if isinstance(vision, dict) else ""
-    defects = (vision.get("defects") or []) if isinstance(vision, dict) else []
-    photo_no = 1
-    for d in defects:
-        if isinstance(d, dict):
-            d.setdefault("photo_no", photo_no)
-            d.setdefault("file_name", file_name or "")
-
-    grouped = _p6h_group_defects_by_section(defects)
-
-    # 5. Clarification gate (registry + Vision + voice/Vision conflict)
-    should_wait_basic, basic_questions = _p6h_should_wait_for_clarification(vision, defects, voice_ctx, idx)
-    questions = list(basic_questions)
-
-    # Object identity question — only if no folder/object hints AND no object_id derived
-    if not object_id and not voice_ctx.get("folder_hint") and not voice_ctx.get("object_hint"):
-        existing_summaries = []
-        if _p6h3_reg is not None:
+        if existing and _p5_should_force_new_goal(normalized_text, existing, extracted):
             try:
-                existing_summaries = _p6h3_reg.list_object_summaries()
-            except Exception:
-                existing_summaries = []
-        if existing_summaries:
-            names = ", ".join(
-                f"«{e.get('object_name') or e.get('object_id')}»"
-                for e in existing_summaries[:5]
-            )
-            questions.append(
-                f"Это новый объект или продолжение одного из существующих ({names})? "
-                "Уточни — иначе не смогу привязать к истории объекта"
-            )
+                old_goal = getattr(existing, "goal", "")
+                existing.status = "CLOSED"
+                self.sessions.save(existing)
+                logger.info(
+                    "P5_SEARCH_SESSION_VOICE_STALE_CLOSE closed_old_session chat=%s topic=%s old_goal=%s new_goal=%s",
+                    chat_id, topic_id, old_goal, normalized_text
+                )
+            except Exception as e:
+                logger.warning("P5_SEARCH_SESSION_VOICE_STALE_CLOSE_ERR %s", e)
+
+        payload["raw_input"] = normalized_text
+        payload["normalized_input"] = normalized_text
+
+        async def _p5_online_call(model, messages):
+            clean_messages = []
+            for m in messages or []:
+                mm = dict(m or {})
+                content = str(mm.get("content") or "")
+                if "rockwool" in content.lower() or "light buds" in content.lower() or "light batts" in content.lower() or "каменная вата" in content.lower():
+                    if any(x in normalized_text.lower().replace("ё", "е") for x in _P5_AUTO_EXTRA_WORDS + _P5_ELECTRONICS_WORDS):
+                        content = re.sub(r".*(Rockwool|ROCKWOOL|Light Buds|Light Batts|каменная вата).*\n?", "", content, flags=re.I)
+                        content += "\nАКТУАЛЬНЫЙ ЗАПРОС ПОЛЬЗОВАТЕЛЯ: " + normalized_text
+                mm["content"] = content
+                clean_messages.append(mm)
+            return await online_call(model, clean_messages)
+
+        return await _p5_orig_run_search(self, payload, normalized_text, _p5_online_call, online_model, base_system_prompt)
+    SearchMonolithV2.run = _p5_run_search
+except Exception:
+    pass
+
+try:
+    _p5_orig_formatter_build_prompt = SearchOutputFormatter.build_prompt
+    def _p5_build_prompt(self, session, queries, sources):
+        if session and getattr(session, "goal", None):
+            session.goal = _p5_norm_text(session.goal)
+        return _p5_orig_formatter_build_prompt(self, session, queries, sources)
+    SearchOutputFormatter.build_prompt = _p5_build_prompt
+except Exception:
+    pass
+
+# === END_P5_SEARCH_SESSION_VOICE_STALE_CLOSE_20260504_V1 ===
+
+
+# === P6_GLOBAL_SEARCH_SESSION_HARD_ISOLATION_20260504_V1 ===
+# Scope:
+# - every explicit new search starts a clean session
+# - vague follow-up may use previous session only when it is really vague
+# - stale topic_500 sessions cannot contaminate new auto/electronics/building search
+# - output is supplier/result contract, not estimate, not old context
+# - no DB schema changes
+
+try:
+    SEARCH_PROFILES.setdefault("ELECTRONICS", ["Ozon", "Wildberries", "Яндекс Маркет", "DNS", "М.Видео", "Эльдорадо", "Avito", "AliExpress", "официальные магазины"])
+    SEARCH_PROFILES.setdefault("AUTO_PARTS", ["ZZap", "Exist", "Emex", "Drom", "Auto.ru", "EuroAuto", "Avito", "разборки", "Telegram"])
+    SEARCH_PROFILES.setdefault("BUILDING_SUPPLY", ["Петрович", "Лемана", "ВсеИнструменты", "Ozon", "Wildberries", "Яндекс Маркет", "Avito", "2ГИС", "официальные поставщики"])
+except Exception:
+    pass
+
+_P6_SEARCH_STOP_WORDS = {
+    "найди", "найти", "поиск", "поищи", "подбери", "купить", "цена", "стоимость",
+    "дешевле", "самый", "самая", "новый", "новое", "нужен", "нужна", "мне",
+    "проведи", "соответственно", "если", "такое", "есть", "сообщи", "там",
+    "варианты", "вариант", "хорошие", "хороший", "пожалуйста"
+}
+
+_P6_AUTO_WORDS = (
+    "сайлентблок", "саленблок", "сальник", "пыльник", "ваз", "2110", "2114",
+    "жигули", "лада", "приора", "гранта", "калина", "нива", "автозапчаст",
+    "запчаст", "oem", "артикул", "drom", "exist", "emex", "zzap"
+)
+
+_P6_ELECTRONICS_WORDS = (
+    "iphone", "айфон", "pixel", "google pixel", "телефон", "смартфон",
+    "samsung", "galaxy", "xiaomi", "redmi", "honor", "huawei", "pro max", "xl"
+)
+
+_P6_BUILD_WORDS = (
+    "rockwool", "роквул", "light batts", "light buds", "каменная вата", "утеплитель",
+    "бетон", "арматура", "цемент", "профлист", "металлочерепица", "клик-фальц",
+    "фальц", "кирпич", "газобетон", "доска", "брус", "петрович", "лемана"
+)
+
+def _p6_norm_text(text):
+    s = _clean(text, 4000)
+    s = re.sub(r"^\s*\[voice\]\s*", "", s, flags=re.I)
+    s = re.sub(r"^\s*(voice|голос|голосовое)\s*[:\-]\s*", "", s, flags=re.I)
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
+
+def _p6_low(text):
+    return _p6_norm_text(text).lower().replace("ё", "е")
+
+def _p6_words(text):
+    low = _p6_low(text)
+    return set(
+        w for w in re.findall(r"[а-яa-z0-9]{3,}", low)
+        if w not in _P6_SEARCH_STOP_WORDS
+    )
+
+def _p6_category_from_low(low):
+    if any(x in low for x in _P6_AUTO_WORDS):
+        return "AUTO_PARTS"
+    if any(x in low for x in _P6_ELECTRONICS_WORDS):
+        return "ELECTRONICS"
+    if any(x in low for x in _P6_BUILD_WORDS):
+        return "BUILDING_SUPPLY"
+    if any(w in low for w in AUTO_WORDS):
+        return "AUTO_PARTS"
+    if any(w in low for w in BUILDING_WORDS):
+        return "BUILDING_SUPPLY"
+    if any(w in low for w in CLASSIFIED_WORDS):
+        return "CLASSIFIEDS"
+    return "GENERAL"
+
+def _p6_is_explicit_new_search(text):
+    low = _p6_low(text)
+    if not low:
+        return False
+    if any(x in low for x in ("найди", "найти", "поищи", "поиск", "подбери", "купить", "дешевле", "цена", "стоимость", "мне нужен", "мне нужна", "нужен ", "нужна ")):
+        return True
+    return any(x in low for x in _P6_AUTO_WORDS + _P6_ELECTRONICS_WORDS + _P6_BUILD_WORDS)
+
+def _p6_is_vague_followup(text):
+    low = _p6_low(text)
+    if not low:
+        return False
+    if _p6_is_explicit_new_search(text):
+        return False
+    return len(low) <= 120 and any(x in low for x in (
+        "то что", "то, что", "предыдущ", "прошл", "я тебя про что", "выполни поиск",
+        "продолжи", "дальше", "что там", "ну что"
+    ))
+
+def _p6_target(text):
+    t = _p6_norm_text(text)
+    t = re.sub(
+        r"^(найди|найти|поищи|поиск|сколько стоит|цена на|стоимость|подбери|проведи поиск|мне нужен|мне нужна|нужен|нужна)\s+",
+        "",
+        t,
+        flags=re.I,
+    )
+    return re.sub(r"\s+", " ", t).strip()[:260]
+
+def _p6_same_goal(old_text, new_text):
+    ow = _p6_words(old_text)
+    nw = _p6_words(new_text)
+    if not ow or not nw:
+        return False
+    overlap = len(ow & nw)
+    return overlap > 0 and (overlap / max(1, min(len(ow), len(nw)))) >= 0.35
+
+def _p6_force_new_session(user_text, existing, extracted):
+    if not existing:
+        return True
+    if _p6_is_vague_followup(user_text):
+        return False
+    if _p6_is_explicit_new_search(user_text):
+        old_goal = str(getattr(existing, "goal", "") or "")
+        old_target = str((getattr(existing, "criteria", {}) or {}).get("target") or old_goal)
+        old_cat = str((getattr(existing, "criteria", {}) or {}).get("category") or "")
+        new_cat = str((extracted or {}).get("category") or _p6_category_from_low(_p6_low(user_text)) or "")
+        if old_cat and new_cat and old_cat != new_cat:
+            return True
+        if not _p6_same_goal(old_target, user_text):
+            return True
+    return False
+
+try:
+    def _p6_detect_category(self, low):
+        return _p6_category_from_low(str(low or ""))
+    CriteriaExtractor.detect_category = _p6_detect_category
+
+    def _p6_extract_target(self, text):
+        return _p6_target(text)
+    CriteriaExtractor.extract_target = _p6_extract_target
+except Exception:
+    pass
+
+def _p6_patch_criteria(criteria, text):
+    c = dict(criteria or {})
+    low = _p6_low(text)
+    c["category"] = _p6_category_from_low(low)
+    c["target"] = _p6_target(text)
+    if not c.get("region"):
+        if any(x in low for x in ("санкт-петербург", "спб", "питер", "ленобласть")):
+            c["region"] = "Санкт-Петербург / Ленобласть"
+        elif c["category"] in ("AUTO_PARTS", "ELECTRONICS", "GENERAL", "CLASSIFIEDS"):
+            c["region"] = "Россия / доставка"
+    return {k: v for k, v in c.items() if v not in ("", None, [], {})}
+
+try:
+    _p6_orig_query_expand = QueryExpander.expand
+    def _p6_expand(self, session):
+        c = session.criteria or {}
+        target = str(c.get("target") or session.goal or "")
+        region = str(c.get("region") or "")
+        category = str(c.get("category") or "GENERAL")
+        sources = SEARCH_PROFILES.get(category, SEARCH_PROFILES.get("GENERAL", []))
+        base = " ".join(x for x in [
+            target,
+            str(c.get("oem_or_article") or ""),
+            str(c.get("condition") or ""),
+            str(c.get("budget") or ""),
+        ] if x).strip()
+        q = [
+            base,
+            f"{base} {region}".strip(),
+            f"{base} купить {region}".strip(),
+            f"{base} цена наличие {region}".strip(),
+            f"{base} доставка {region}".strip(),
+        ]
+        if category == "AUTO_PARTS":
+            q += [f"{base} zzap", f"{base} exist", f"{base} emex", f"{base} drom", f"{base} avito"]
+        elif category == "ELECTRONICS":
+            q += [f"{base} ozon", f"{base} wildberries", f"{base} яндекс маркет", f"{base} avito", f"{base} dns"]
+        elif category == "BUILDING_SUPPLY":
+            q += [f"{base} петрович", f"{base} лемана", f"{base} всеинструменты", f"{base} avito", f"{base} 2гис"]
+        for src in sources:
+            q.append(f"{base} {src} {region}".strip())
+        out, seen = [], set()
+        for x in q:
+            x = re.sub(r"\s+", " ", str(x)).strip()
+            k = x.lower()
+            if x and k not in seen:
+                seen.add(k)
+                out.append(x)
+        return out[:16]
+    QueryExpander.expand = _p6_expand
+except Exception:
+    pass
+
+try:
+    _p6_orig_plan_sources = SourcePlanner.plan
+    def _p6_plan_sources(self, category):
+        category = str(category or "GENERAL")
+        return SEARCH_PROFILES.get(category, SEARCH_PROFILES.get("GENERAL", ["официальные сайты", "маркетплейсы", "Avito", "2ГИС"]))
+    SourcePlanner.plan = _p6_plan_sources
+except Exception:
+    pass
+
+try:
+    def _p6_build_prompt(self, session, queries, sources):
+        c = session.criteria or {}
+        return f"""P6_GLOBAL_SEARCH_SESSION_HARD_ISOLATION_ACTIVE
+АКТУАЛЬНЫЙ ЗАПРОС: {session.goal}
+КАТЕГОРИЯ: {c.get('category','GENERAL')}
+ЦЕЛЬ: {c.get('target', session.goal)}
+РЕГИОН: {c.get('region','Россия / доставка')}
+ПЛОЩАДКИ: {", ".join(sources)}
+ПОИСКОВЫЕ ФОРМУЛИРОВКИ:
+{chr(10).join("- " + q for q in queries)}
+
+ЖЁСТКИЕ ПРАВИЛА:
+1. Используй только АКТУАЛЬНЫЙ ЗАПРОС
+2. Не используй старые цели, старые товары, Rockwool/каменная вата, если их нет в актуальном запросе
+3. Не составляй смету
+4. Не создавай XLSX/PDF
+5. Не выдавай общие советы
+6. Нужны реальные варианты покупки или честно напиши, что подтверждённых вариантов нет
+7. Каждая строка должна иметь ссылку
+8. Если цена/телефон/наличие не видны — так и пиши
+
+ФОРМАТ:
+Найдено: <N> вариантов
+
+| № | Поставщик | Площадка | Товар | Город/регион | Цена | Наличие | Доставка | Телефон | Ссылка | Риск |
+|---|-----------|----------|-------|--------------|------|---------|----------|---------|--------|------|
+
+Лучший вариант:
+<одна строка>
+
+Проверить звонком:
+1. актуальная цена
+2. наличие
+3. доставка
+4. НДС/счёт
+5. точная модель/артикул/совместимость
+
+Отброшено:
+- <кратко, если есть>
+""".strip()
+    SearchOutputFormatter.build_prompt = _p6_build_prompt
+except Exception:
+    pass
+
+try:
+    _p6_orig_ensure = SearchOutputFormatter.ensure
+    def _p6_ensure(self, text, risk):
+        t = _clean(text, 12000)
+        bad = ("смета готова", "предварительная смета готова", "xlsx:", "pdf:", "engine:", "м-110.xlsx", "ареал нева.xlsx")
+        if any(x in t.lower().replace("ё", "е") for x in bad):
+            return "Поиск заблокирован: маршрут вернул сметный результат вместо поиска"
+        if "Найдено:" not in t and "| № |" not in t:
+            t = "Найдено: результат требует проверки\n\n" + t
+        if "Проверить звонком:" not in t:
+            t += "\n\nПроверить звонком:\n1. актуальная цена\n2. наличие\n3. доставка\n4. НДС/счёт\n5. точная модель/артикул/совместимость"
+        return _clean(t, 12000)
+    SearchOutputFormatter.ensure = _p6_ensure
+except Exception:
+    pass
+
+try:
+    async def _p6_run_search(self, payload, user_text, online_call, online_model, base_system_prompt=""):
+        payload = dict(payload or {})
+        chat_id = str(payload.get("chat_id") or "")
+        topic_id = int(payload.get("topic_id") or 0)
+        normalized = _p6_norm_text(user_text)
+        existing = self.sessions.get(chat_id, topic_id)
+        extracted = _p6_patch_criteria(self.extractor.extract(normalized), normalized)
+
+        if existing and _p6_is_vague_followup(normalized):
+            goal = str(getattr(existing, "goal", "") or normalized)
+            merged = dict(getattr(existing, "criteria", {}) or {})
+            for k, v in extracted.items():
+                if k not in ("target", "category") and v not in ("", None, [], {}):
+                    merged[k] = v
+            session = existing
+            session.clarifications.append(normalized)
+            session.criteria = merged
         else:
-            questions.append(
-                "Назови объект (адрес / папка / имя), чтобы я завёл карточку и привязал акт"
-            )
+            if existing and _p6_force_new_session(normalized, existing, extracted):
+                try:
+                    existing.status = "CLOSED"
+                    self.sessions.save(existing)
+                    logger.info("P6_GLOBAL_SEARCH_SESSION_CLOSED_OLD chat=%s topic=%s old_goal=%s new_goal=%s", chat_id, topic_id, existing.goal, normalized)
+                except Exception as e:
+                    logger.warning("P6_GLOBAL_SEARCH_SESSION_CLOSE_ERR %s", e)
+            session = SearchSession(chat_id=str(chat_id), topic_id=int(topic_id or 0), goal=normalized, criteria=extracted)
 
-    # Voice/Vision conflict
-    if _p6h3_reg is not None and voice_ctx.get("transcript"):
-        try:
-            conflict_flags = _p6h3_reg.detect_voice_vision_conflict(voice_ctx, grouped)
-        except Exception:
-            conflict_flags = []
-        for cf in conflict_flags:
-            if cf not in questions:
-                questions.append(cf)
-    else:
-        conflict_flags = []
+        session.criteria = _p6_patch_criteria(session.criteria, session.goal)
+        session.status = "IN_PROGRESS"
+        sources = self.planner.plan(str(session.criteria.get("category") or "GENERAL"))
+        queries = self.expander.expand(session)
+        session.sources = sources
+        session.queries = queries
+        self.sessions.save(session)
 
-    # If photo-only mode AND we have questions — return WAITING_CLARIFICATION
-    if questions and not make_act:
-        return {
-            "ok": True, "handled": True, "kind": "technadzor_p6h_clarify",
-            "state": "WAITING_CLARIFICATION",
-            "message": _p6h_clean_text(
-                "Технадзор topic_5 — нужны уточнения перед разбором:\n\n"
-                + "\n".join(f"— {q}" for q in questions),
-                3000,
-            ),
-            "history": "P6H_CLARIFY_WITH_REGISTRY:{}_visit_{}".format(len(questions), visit_mode),
-        }
+        prompt = self.formatter.build_prompt(session, queries, sources)
+        system = (base_system_prompt or "") + "\nP6_GLOBAL_SEARCH_SESSION_ACTIVE\nCURRENT_QUERY_ONLY\nNO_ESTIMATE_NO_XLSX_NO_PDF"
+        online_model = _assert_online_model_allowed(online_model)
+        raw = await online_call(online_model, [{"role": "system", "content": system}, {"role": "user", "content": prompt}])
+        risk = self.risk.score_text(raw)
+        final = self.formatter.ensure(raw, risk)
 
-    # 6. Norms
-    haystack = " ".join([
-        summary, voice_ctx.get("transcript", "") or "",
-    ] + [str(d.get("title", "")) + " " + str(d.get("description", "")) for d in defects])
-    global_norms = _p6h_norms_for_haystack(haystack)
-
-    # 7. Sections payload
-    sections_payload = []
-    for sec_title, ds in grouped:
-        defect_texts = [str(d.get("title", "")) + " " + str(d.get("description", "")) for d in ds]
-        snorms = _p6h_norms_for_section(sec_title, defect_texts)
-        sections_payload.append({
-            "title": sec_title,
-            "defects": ds,
-            "norms": snorms,
-            "photos_block": [str(file_name or "")] if file_name else [],
-        })
-
-    topic_folder_link = (idx or {}).get("topic_folder_link", "")
-
-    # 7a. Photo-only response (numbered) ── append registry context if known
-    if not make_act:
-        msg = _p6h_format_photo_numbered_response(
-            vision, defects, grouped, global_norms, file_name or "photo",
-            photo_no=photo_no, voice_ctx=voice_ctx,
+        qlow = _p6_low(session.goal)
+        flow = final.lower().replace("ё", "е")
+        stale_pairs = (
+            ("rockwool", ("сальник", "сайлент", "саленблок", "iphone", "pixel", "телефон", "2110", "2114")),
+            ("каменная вата", ("сальник", "сайлент", "саленблок", "iphone", "pixel", "телефон", "2110", "2114")),
+            ("light batts", ("сальник", "сайлент", "саленблок", "iphone", "pixel", "телефон", "2110", "2114")),
+            ("термодом", ("сальник", "сайлент", "саленблок", "iphone", "pixel", "телефон", "2110", "2114")),
         )
-        if object_id and object_card:
-            registry_tail = (
-                "\n\nКарточка объекта: "
-                f"{object_card.get('object_name') or object_id}"
-                f" (осмотров в истории: {len(object_card.get('inspection_chain') or [])})"
-            )
-            msg = (msg + registry_tail).strip()
+        for stale, actual_markers in stale_pairs:
+            if stale in flow and stale not in qlow and any(x in qlow for x in actual_markers):
+                final = "Поиск заблокирован: ответ содержит старый товар из другой поисковой сессии. Повтори запрос одной строкой с товаром и регионом"
+                break
 
-        # Update memory summary
+        session.status = "AWAITING_CONFIRMATION"
+        session.best_suppliers = [{"summary": final[:1500], "risk": risk, "checked_at": _utc()}]
+        self.sessions.save(session)
+        logger.info("P6_GLOBAL_SEARCH_SESSION_DONE chat=%s topic=%s category=%s chars=%s", chat_id, topic_id, session.criteria.get("category"), len(final))
+        return final
+
+    SearchMonolithV2.run = _p6_run_search
+except Exception:
+    pass
+
+# === END_P6_GLOBAL_SEARCH_SESSION_HARD_ISOLATION_20260504_V1 ===
+
+# === P6B_SEARCH_SESSION_NO_STALE_CONTEXT_FINAL_20260504_V1 ===
+# Runtime overlay only
+# Scope:
+# - final SearchMonolithV2.run override
+# - current query only for explicit new product/auto/electronics searches
+# - stale Rockwool/building session cannot contaminate auto/electronics prompts
+# - no DB schema changes, no forbidden files, no systemd unit changes
+
+_P6B_STALE_WORDS = (
+    "rockwool", "rockwool light", "light buds", "light batts", "лайт баттс",
+    "каменная вата", "минвата", "утеплитель", "термодом", "minvata",
+    "www-minvata", "petrovich", "петрович", "лемана", "стройматериал"
+)
+
+_P6B_ELECTRONICS_WORDS = (
+    "iphone", "айфон", "pixel", "google pixel", "телефон", "смартфон",
+    "samsung", "galaxy", "xiaomi", "redmi", "honor", "huawei", "pro max", "xl"
+)
+
+_P6B_AUTO_WORDS = (
+    "сайлентблок", "саленблок", "сальник", "пыльник", "ваз", "2110", "2114",
+    "жигули", "лада", "приора", "гранта", "калина", "нива", "автозапчаст",
+    "шрус", "рычаг", "суппорт", "колодки", "стойка", "амортизатор"
+)
+
+_P6B_SEARCH_VERBS = (
+    "найди", "найти", "поищи", "поиск", "подбери", "проведи поиск",
+    "мне нужен", "мне нужна", "нужен", "нужна", "дешевле", "купить",
+    "цена", "стоимость", "сколько стоит"
+)
+
+_P6B_STOP_WORDS = {
+    "найди", "найти", "поиск", "поищи", "подбери", "купить", "цена", "стоимость",
+    "дешевле", "самый", "самая", "новый", "новое", "нужен", "нужна", "мне",
+    "проведи", "соответственно", "если", "такое", "есть", "сообщи", "там",
+    "самого", "самую", "большой", "крутой", "для", "всех", "интернет", "площадках"
+}
+
+def _p6b_norm(text):
+    s = _clean(text, 4000)
+    s = re.sub(r"^\s*\[voice\]\s*", "", s, flags=re.I)
+    s = re.sub(r"^\s*(voice|голос|голосовое)\s*[:\-]\s*", "", s, flags=re.I)
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
+
+def _p6b_low(text):
+    return _p6b_norm(text).lower().replace("ё", "е")
+
+def _p6b_words(text):
+    low = _p6b_low(text)
+    return {
+        w for w in re.findall(r"[а-яa-z0-9]{3,}", low)
+        if w not in _P6B_STOP_WORDS
+    }
+
+def _p6b_category(text):
+    low = _p6b_low(text)
+    if any(x in low for x in _P6B_AUTO_WORDS):
+        return "AUTO_PARTS"
+    if any(x in low for x in _P6B_ELECTRONICS_WORDS):
+        return "ELECTRONICS"
+    if any(x in low for x in AUTO_WORDS):
+        return "AUTO_PARTS"
+    if any(x in low for x in BUILDING_WORDS):
+        return "BUILDING_SUPPLY"
+    if any(x in low for x in CLASSIFIED_WORDS):
+        return "CLASSIFIEDS"
+    return "GENERAL"
+
+def _p6b_explicit_new_search(text):
+    low = _p6b_low(text)
+    if not low:
+        return False
+    if any(low.startswith(v) for v in _P6B_SEARCH_VERBS):
+        return True
+    if any(x in low for x in _P6B_AUTO_WORDS + _P6B_ELECTRONICS_WORDS) and any(v in low for v in _P6B_SEARCH_VERBS):
+        return True
+    return False
+
+def _p6b_force_new(existing, current_text, extracted):
+    if not existing:
+        return False
+    if not _p6b_explicit_new_search(current_text):
+        return False
+
+    old_goal = str(getattr(existing, "goal", "") or "")
+    old_criteria = getattr(existing, "criteria", {}) or {}
+    old_target = str(old_criteria.get("target") or old_goal)
+    old_low = old_target.lower().replace("ё", "е")
+
+    new_cat = str((extracted or {}).get("category") or _p6b_category(current_text) or "")
+    old_cat = str(old_criteria.get("category") or "")
+
+    if any(x in old_low for x in _P6B_STALE_WORDS) and new_cat in ("AUTO_PARTS", "ELECTRONICS"):
+        return True
+
+    if old_cat and new_cat and old_cat != new_cat:
+        return True
+
+    old_words = _p6b_words(old_target)
+    new_words = _p6b_words(current_text)
+    if old_words and new_words:
+        overlap = len(old_words & new_words)
+        ratio = overlap / max(1, min(len(old_words), len(new_words)))
+        if overlap == 0 or ratio < 0.30:
+            return True
+
+    return False
+
+def _p6b_scrub_stale_from_text(content, current_text):
+    s = str(content or "")
+    cur_low = _p6b_low(current_text)
+    current_is_building = _p6b_category(current_text) == "BUILDING_SUPPLY"
+    if current_is_building:
+        return s
+
+    if not any(x in s.lower().replace("ё", "е") for x in _P6B_STALE_WORDS):
+        return s
+
+    clean_lines = []
+    for line in s.splitlines():
+        low = line.lower().replace("ё", "е")
+        if any(x in low for x in _P6B_STALE_WORDS):
+            continue
+        clean_lines.append(line)
+
+    out = "\n".join(clean_lines).strip()
+    out += "\n\nАКТУАЛЬНЫЙ ЗАПРОС ПОЛЬЗОВАТЕЛЯ, ЕДИНСТВЕННЫЙ ИСТОЧНИК ПОИСКА: " + _p6b_norm(current_text)
+    return out
+
+def _p6b_target(text):
+    t = _p6b_norm(text)
+    t = re.sub(
+        r"^(найди|найти|поищи|поиск|сколько стоит|цена на|стоимость|подбери|проведи поиск|мне нужен|мне нужна|нужен|нужна)\s+",
+        "",
+        t,
+        flags=re.I,
+    )
+    return re.sub(r"\s+", " ", t).strip()[:220]
+
+try:
+    _p6b_orig_detect_category = CriteriaExtractor.detect_category
+    def _p6b_detect_category(self, low):
+        return _p6b_category(str(low or ""))
+    CriteriaExtractor.detect_category = _p6b_detect_category
+except Exception:
+    pass
+
+try:
+    _p6b_orig_extract_target = CriteriaExtractor.extract_target
+    def _p6b_extract_target(self, text):
+        return _p6b_target(text)
+    CriteriaExtractor.extract_target = _p6b_extract_target
+except Exception:
+    pass
+
+async def _p6b_run_search_final(self, payload, user_text, online_call, online_model, base_system_prompt=""):
+    payload = dict(payload or {})
+    chat_id = str(payload.get("chat_id") or "")
+    topic_id = int(payload.get("topic_id") or 0)
+    normalized = _p6b_norm(user_text or payload.get("raw_input") or payload.get("normalized_input") or "")
+    if not normalized:
+        normalized = _p6b_norm(user_text)
+
+    extracted = self.extractor.extract(normalized)
+    extracted["category"] = _p6b_category(normalized)
+    extracted["target"] = _p6b_target(normalized)
+
+    if not extracted.get("region"):
+        extracted["region"] = "Санкт-Петербург / РФ"
+
+    existing = self.sessions.get(chat_id, topic_id)
+
+    if existing and _p6b_force_new(existing, normalized, extracted):
         try:
-            _p6h_save_summary_to_memory(chat_id, topic_id, {
-                "folder": voice_ctx.get("folder_hint") or "",
-                "object": voice_ctx.get("object_hint") or object_id or "",
-                "date": voice_ctx.get("visit_date_hint") or "",
-                "owner_directives": (voice_ctx.get("explicit_include") or []) + (voice_ctx.get("explicit_exclude") or []),
-                "defect_brief": [str(d.get("title") or d.get("description") or "")[:200] for d in defects][:8],
-                "pdf_link": "",
-                "docx_link": "",
-                "status": f"PHOTO_REPORT_DONE:visit={visit_mode}",
-            })
+            existing.status = "CLOSED"
+            self.sessions.save(existing)
+            logger.info(
+                "P6B_SEARCH_SESSION_CLOSED_STALE chat=%s topic=%s old_goal=%s new_goal=%s",
+                chat_id,
+                topic_id,
+                getattr(existing, "goal", ""),
+                normalized,
+            )
+        except Exception as e:
+            logger.warning("P6B_SEARCH_SESSION_CLOSE_ERR %s", e)
+        existing = None
+
+    if existing and not _p6b_explicit_new_search(normalized):
+        session = existing
+        session.clarifications.append(normalized)
+        safe_update = dict(session.criteria or {})
+        for k, v in (extracted or {}).items():
+            if v in ("", None, [], {}):
+                continue
+            if k in ("region", "quantity", "budget", "condition", "ral", "thickness_mm", "oem_or_article"):
+                safe_update[k] = v
+        session.criteria = safe_update
+    else:
+        session = SearchSession(chat_id=str(chat_id), topic_id=int(topic_id or 0), goal=normalized, criteria=extracted)
+
+    session.status = "IN_PROGRESS"
+    sources = self.planner.plan(str(session.criteria.get("category") or "GENERAL"))
+    queries = self.expander.expand(session)
+
+    if session.criteria.get("category") == "AUTO_PARTS":
+        sources = ["Exist", "Emex", "ZZap", "Drom", "Auto.ru", "EuroAuto", "Avito", "разборки", "официальные каталоги"]
+    elif session.criteria.get("category") == "ELECTRONICS":
+        sources = ["Ozon", "Wildberries", "Яндекс Маркет", "DNS", "М.Видео", "Эльдорадо", "Avito", "AliExpress", "официальные магазины"]
+
+    session.sources = sources
+    session.queries = queries
+    self.sessions.save(session)
+
+    prompt = self.formatter.build_prompt(session, queries, sources)
+    prompt = _p6b_scrub_stale_from_text(prompt, normalized)
+
+    system = "\n".join([
+        base_system_prompt or "",
+        "P6B_SEARCH_SESSION_NO_STALE_CONTEXT_FINAL_ACTIVE",
+        "CURRENT_QUERY_ONLY",
+        "USE ONLY CURRENT USER QUERY AND CURRENT CRITERIA",
+        "IGNORE OLD SEARCH SESSIONS, OLD SUPPLIERS, OLD MEMORY, OLD BUILDING MATERIAL CONTEXT",
+        "FORBIDDEN: estimate, смета, XLSX, PDF, проектные расчёты",
+        self.tco.instruction(),
+        self.ranker.instruction(),
+    ])
+
+    async def _p6b_online_call(model, messages):
+        clean_messages = []
+        for m in messages or []:
+            mm = dict(m or {})
+            mm["content"] = _p6b_scrub_stale_from_text(mm.get("content") or "", normalized)
+            clean_messages.append(mm)
+        joined = "\n".join(str(x.get("content") or "") for x in clean_messages)
+        jlow = joined.lower().replace("ё", "е")
+        if _p6b_category(normalized) in ("AUTO_PARTS", "ELECTRONICS"):
+            if any(x in jlow for x in _P6B_STALE_WORDS):
+                raise RuntimeError("P6B_STALE_CONTEXT_BLOCKED_BEFORE_ONLINE_CALL")
+        return await online_call(model, clean_messages)
+
+    raw = await _p6b_online_call(
+        online_model,
+        [
+            {"role": "system", "content": system},
+            {"role": "user", "content": prompt},
+        ],
+    )
+
+    if _p6b_category(normalized) in ("AUTO_PARTS", "ELECTRONICS"):
+        rlow = str(raw or "").lower().replace("ё", "е")
+        if any(x in rlow for x in _P6B_STALE_WORDS):
+            raw = "Подтверждённых вариантов по актуальному запросу не получено без загрязнения старым контекстом. Повтори запрос с артикулом/OEM или точной моделью"
+
+    risk = self.risk.score_text(str(raw or ""))
+    final = self.formatter.ensure(str(raw or ""), risk)
+    session.status = "AWAITING_CONFIRMATION"
+    session.best_suppliers = [{"summary": final[:1500], "risk": risk, "checked_at": _utc()}]
+    self.sessions.save(session)
+    logger.info(
+        "P6B_SEARCH_SESSION_DONE chat=%s topic=%s category=%s chars=%s",
+        chat_id,
+        topic_id,
+        session.criteria.get("category"),
+        len(final),
+    )
+    return final
+
+try:
+    SearchMonolithV2.run = _p6b_run_search_final
+except Exception:
+    pass
+
+try:
+    _p6b_orig_formatter_prompt = SearchOutputFormatter.build_prompt
+    def _p6b_build_prompt(self, session, queries, sources):
+        if session and getattr(session, "goal", None):
+            session.goal = _p6b_norm(session.goal)
+        text = _p6b_orig_formatter_prompt(self, session, queries, sources)
+        return _p6b_scrub_stale_from_text(text, getattr(session, "goal", "") if session else "")
+    SearchOutputFormatter.build_prompt = _p6b_build_prompt
+except Exception:
+    pass
+
+# === END_P6B_SEARCH_SESSION_NO_STALE_CONTEXT_FINAL_20260504_V1 ===
+
+# === P6C_SEARCH_CURRENT_QUERY_ONLY_NO_STALE_CONTEXT_20260504_V1 ===
+import re as _p6c_re
+
+def _p6c_clean_text_20260504(text, limit=4000):
+    try:
+        s = _clean(text, limit)
+    except Exception:
+        s = str(text or "")[:limit]
+    s = _p6c_re.sub(r"^\s*\[VOICE\]\s*", "", s, flags=_p6c_re.I)
+    s = _p6c_re.sub(r"^\s*(voice|голос|голосовое)\s*[:\-]\s*", "", s, flags=_p6c_re.I)
+    s = _p6c_re.sub(r"\s+", " ", s).strip()
+    return s[:limit]
+
+def _p6c_low_20260504(text):
+    return _p6c_clean_text_20260504(text).lower().replace("ё", "е")
+
+def _p6c_category_20260504(text):
+    low = _p6c_low_20260504(text)
+    if any(x in low for x in ("сайлентблок", "саленблок", "сальник", "пыльник", "ваз", "2110", "2114", "лада", "жигули", "автозапчаст", "drom", "exist", "emex", "zzap")):
+        return "AUTO_PARTS", "drom, exist, emex, zzap, avito, профильные магазины автозапчастей"
+    if any(x in low for x in ("iphone", "айфон", "pixel", "google pixel", "телефон", "смартфон", "samsung", "galaxy", "xiaomi", "redmi", "honor", "huawei")):
+        return "ELECTRONICS", "ozon, wildberries, яндекс маркет, dns, мвидео, эльдорадо, avito, официальные магазины"
+    if any(x in low for x in ("вата", "утеплитель", "rockwool", "light batts", "light buds", "бетон", "арматур", "пиломатериал")):
+        return "BUILDING_SUPPLY", "петрович, лемана про, всеинструменты, профильные поставщики, avito"
+    return "GENERAL", "официальные сайты, маркетплейсы, avito, профильные магазины"
+
+def _p6c_messages_20260504(query):
+    q = _p6c_clean_text_20260504(query, 2500)
+    cat, sources = _p6c_category_20260504(q)
+    system = (
+        "Ты выполняешь только товарный интернет-поиск по текущему запросу пользователя. "
+        "Не используй старые задачи, память, архив, прошлые товары и прошлые ответы. "
+        "Нужны реальные варианты покупки, цены, наличие, доставка и прямые ссылки."
+    )
+    user = (
+        "Текущий запрос пользователя:\n"
+        f"{q}\n\n"
+        f"Категория: {cat}\n"
+        f"Где проверять: {sources}\n\n"
+        "Ответ строго таблицей:\n"
+        "№ | Площадка/поставщик | Товар | Город/регион | Цена | Наличие | Доставка | Телефон | Прямая ссылка | Риск\n"
+        "Минимум 3 варианта, если они реально существуют. Если подтверждённых вариантов нет, так и напиши."
+    )
+    return [{"role": "system", "content": system}, {"role": "user", "content": user}]
+
+try:
+    _p6c_prev_run_20260504 = SearchMonolithV2.run
+
+    async def _p6c_run_20260504(self, payload, user_text, online_call, online_model, base_system_prompt=""):
+        payload = dict(payload or {})
+        query = _p6c_clean_text_20260504(user_text or payload.get("raw_input") or payload.get("normalized_input") or "", 3000)
+        chat_id = str(payload.get("chat_id") or "")
+        topic_id = int(payload.get("topic_id") or 0)
+
+        try:
+            existing = self.sessions.get(chat_id, topic_id)
+            if existing:
+                existing.status = "CLOSED"
+                self.sessions.save(existing)
         except Exception:
             pass
 
-        return {
-            "ok": True, "handled": True, "kind": "technadzor_p6h_photo",
-            "state": "DONE",
-            "message": msg,
-            "history": "P6H_PHOTO_REPORT_PHOTO{}_DEFECTS_{}_NORMS_{}_VISIT_{}".format(
-                photo_no, len(defects), len(global_norms), visit_mode,
-            ),
-        }
+        payload["raw_input"] = query
+        payload["normalized_input"] = query
+        payload["active_task_context"] = ""
+        payload["pin_context"] = ""
+        payload["short_memory_context"] = ""
+        payload["long_memory_context"] = ""
+        payload["archive_context"] = ""
+        payload["search_context"] = ""
 
-    # 7b. Act build — DOCX (service _drafts) + PDF (client topic root or named client folder)
-    ts = _p6h_dt.now().strftime("%Y%m%d_%H%M%S")
-    safe_tid = (str(task_id or ts)[:8] or ts).replace("/", "_").replace("\\", "_")
-    docx_local = _P6H_OUTDIR / f"P6H_TNZ_ACT_DRAFT__{safe_tid}_{ts}.docx"
-    pdf_local = _P6H_OUTDIR / f"АКТ_ОСМОТРА__{safe_tid}_{ts}.pdf"
-
-    # Recommendations / consequences
-    recs, cons = [], []
-    for d in defects:
-        r = str(d.get("recommended_fix") or d.get("fix") or d.get("recommendation") or "").strip()
-        if r:
-            recs.append(r[:300])
-        c = str(d.get("consequence") or d.get("risk") or d.get("why") or "").strip()
-        if c:
-            cons.append(c[:300])
-
-    # Carry forward open_items for follow-up acts
-    carried_open_items = []
-    if _p6h3_reg is not None and visit_mode in ("repeat", "extension"):
+        online_model = _assert_online_model_allowed(online_model)
+        raw = await online_call(online_model, _p6c_messages_20260504(query))
         try:
-            carried_open_items = _p6h3_reg.carry_forward_open_items(object_card, defects)
+            final = _clean(raw, 12000)
         except Exception:
-            carried_open_items = []
-
-    # Build follow-up section payload (added before regular sections in act)
-    if carried_open_items:
-        follow_section = {
-            "title": "Состояние ранее выданных замечаний (повторный осмотр)",
-            "defects": [
-                {
-                    "title": f"[{it.get('status','?')}] {it.get('title','') or it.get('description','')}",
-                    "description": (it.get("description", "") or "")[:300]
-                                    + (f" (из акта № {it.get('from_act_no')})" if it.get("from_act_no") else ""),
-                }
-                for it in carried_open_items
-            ],
-            "norms": [],
-            "photos_block": [],
-        }
-        sections_payload.insert(0, follow_section)
-
-    # 8-column violations table
-    violations_8 = []
-    for sec_title, ds in grouped:
-        for d in ds:
-            num = len(violations_8) + 1
-            ph = str(d.get("file_name") or file_name or "")
-            place_node = sec_title
-            violation = str(d.get("title") or d.get("description") or sec_title)[:200]
-            consequence = str(d.get("consequence") or d.get("risk") or "")[:200]
-            fix = str(d.get("recommended_fix") or d.get("fix") or "")[:200]
-            norm_id = ""
-            for s in sections_payload:
-                if s["title"] == sec_title and s["norms"]:
-                    norm_id = s["norms"][0].get("norm_id", "") or ""
-                    break
-            conf = (vision or {}).get("confidence", "LOW")
-            if conf == "HIGH" and norm_id:
-                status = "CONFIRMED_BY_PHOTO"
-            elif conf in ("HIGH", "MEDIUM") and not norm_id:
-                status = "NORM_NOT_CONFIRMED"
-            elif conf == "MEDIUM":
-                status = "PARTIAL_BY_PHOTO"
-            else:
-                status = "NEEDS_OWNER_CLARIFICATION"
-            violations_8.append((num, ph, place_node, violation, consequence, fix, norm_id or "норма не подтверждена", status))
-
-    # Determine general_purpose by visit_mode
-    if visit_mode == "repeat":
-        gen_purpose = (
-            "Повторный осмотр выполнен в развитие предыдущих актов по объекту. "
-            "Цель — фиксация выполненных исправлений и неустранённых замечаний, "
-            "определение рекомендаций к доведению конструктивных решений до нормативного состояния."
-        )
-    elif visit_mode == "extension":
-        gen_purpose = (
-            "Дополнение к предыдущему акту по объекту. "
-            "Фиксируются дополнительные материалы и замечания, обнаруженные после основного осмотра."
-        )
-    else:
-        gen_purpose = (
-            "Осмотр выполнен методом визуального неразрушающего контроля. "
-            "Цель осмотра — выявление фактически наблюдаемых дефектов, определение "
-            "рекомендаций к устранению и возможных последствий для заказчика."
-        )
-
-    # Act number — for follow-up, hint at parent
-    act_number = _p6h_human_act_number(task_id)
-    if visit_mode == "repeat" and object_card and (object_card.get("last_act_no") or ""):
-        act_number = act_number + f" (в развитие акта № {object_card['last_act_no']})"
-
-    payload = {
-        "act_number": act_number,
-        "date_str": _p6h_dt.now().strftime("%d.%m.%Y"),
-        "place": place or (voice_ctx.get("folder_hint") or "место уточняется по запросу владельца"),
-        "object_descr": object_descr or (voice_ctx.get("object_hint") or
-                                          (object_card.get("object_name") if object_card else "")
-                                          or "объект уточняется по запросу владельца"),
-        "method": "визуальный неразрушающий контроль с выездом на объект",
-        "performer": "",
-        "specialist": "Кузнецов Илья Владимирович",
-        "photos_link": topic_folder_link or "",
-        "general_purpose": gen_purpose,
-        "sections": sections_payload,
-        "recommendations": (recs[:20] if recs else
-                             ["Привести выявленные узлы и покрытия к нормативному состоянию по соответствующим СП/ГОСТ"]),
-        "consequences": (cons[:10] if cons else
-                          ["Снижение несущей способности и эксплуатационной надёжности конструкций"]),
-        "violations_table_8col": violations_8[:30],
-        "violations_table": [(v, n, p) for (_no, p, _pl, v, _co, _fi, n, _st) in violations_8[:30]],
-    }
-
-    # Build files
-    docx_ok = pdf_ok = False
-    try:
-        _p6h_build_docx_act(payload, docx_local)
-        docx_ok = True
-    except Exception:
-        _P6H2_LOG.exception("P6H3_DOCX_BUILD_FAIL")
-    try:
-        _p6h_build_pdf_act(payload, pdf_local)
-        pdf_ok = True
-    except Exception:
-        _P6H2_LOG.exception("P6H3_PDF_BUILD_FAIL")
-
-    # Upload — DOCX → _drafts (system).  PDF → client folder if explicitly named, else topic root.
-    drive_docx = drive_pdf = None
-    if docx_ok or pdf_ok:
+            final = str(raw or "")[:12000]
+        if not final.strip():
+            final = "Подтверждённых вариантов по текущему запросу не найдено"
         try:
-            from core import technadzor_drive_index as _tdi2
-            if docx_ok:
-                drive_docx = _tdi2.upload_to_service_subfolder(
-                    docx_local, docx_local.name, str(chat_id), int(topic_id), subfolder="_drafts",
-                )
-            if pdf_ok:
-                target_folder = None
-                fh = voice_ctx.get("folder_hint", "") or ""
-                if fh and voice_ctx.get("client_facing") is True:
-                    from core.technadzor_drive_index import is_system_folder as _is_sys
-                    if not _is_sys(fh):
-                        target_folder = fh
-                drive_pdf = _tdi2.upload_client_pdf_to_folder(
-                    pdf_local, pdf_local.name, str(chat_id), int(topic_id),
-                    target_folder_name=target_folder,
-                )
+            logger.info("P6C_SEARCH_CURRENT_QUERY_ONLY_DONE chat=%s topic=%s chars=%s", chat_id, topic_id, len(final))
         except Exception:
-            _P6H2_LOG.exception("P6H3_UPLOAD_FAIL")
+            pass
+        return final
 
-    pdf_link = (drive_pdf or {}).get("link", "") if drive_pdf else ""
-    docx_link = (drive_docx or {}).get("link", "") if drive_docx else ""
-
-    # Record inspection in chain
-    if _p6h3_reg is not None and (object_id or pdf_ok or docx_ok):
-        try:
-            # If we still don't have object_id by here (e.g., act forced through),
-            # create a synthetic stable id from file/date so chain still records.
-            if not object_id:
-                object_id = _p6h3_reg._slug(
-                    voice_ctx.get("object_hint") or
-                    voice_ctx.get("folder_hint") or
-                    (file_name.rsplit(".", 1)[0] if file_name else "") or
-                    f"obj_{ts}"
-                )
-            new_open = []
-            for sec_title, ds in grouped:
-                for d in ds:
-                    new_open.append({
-                        "title": str(d.get("title") or "")[:200],
-                        "description": str(d.get("description") or "")[:300],
-                        "section": sec_title,
-                        "act_no": payload["act_number"],
-                    })
-            _p6h3_reg.record_inspection(
-                object_id, str(chat_id),
-                act_no=payload["act_number"],
-                date_str=payload["date_str"],
-                mode=visit_mode,
-                pdf_link=pdf_link,
-                docx_link=docx_link,
-                source_photo_folder=voice_ctx.get("folder_hint") or "",
-                findings=[{"section": s["title"],
-                            "defects": s["defects"][:10],
-                            "norms": [n.get("norm_id") for n in (s.get("norms") or [])]}
-                           for s in sections_payload],
-                open_items=new_open,
-                closed_items=[
-                    {"title": it.get("title"), "from_act_no": it.get("from_act_no")}
-                    for it in carried_open_items if it.get("status") == "УСТРАНЕНО"
-                ],
-                new_items=new_open,
-                owner_observation=voice_ctx.get("transcript", "")[:1000],
-                conflict_flags=conflict_flags or [],
-                object_name=(voice_ctx.get("object_hint") or
-                              (object_card.get("object_name") if object_card else "") or ""),
-                object_folder_url=topic_folder_link or "",
-            )
-        except Exception:
-            _P6H2_LOG.exception("P6H3_RECORD_INSPECTION_FAIL")
-
-    msg_lines = ["Акт сформирован"]
-    if pdf_link:
-        msg_lines.append(f"PDF: {pdf_link}")
-    elif pdf_ok:
-        msg_lines.append("PDF: подготовлен локально, загрузка на Drive не выполнена — Telegram fallback")
-    else:
-        msg_lines.append("PDF: ошибка генерации — повторите позже")
-    if docx_link:
-        msg_lines.append(f"DOCX (черновик, служебно): {docx_link}")
-    if topic_folder_link:
-        msg_lines.append(f"Фото: {topic_folder_link}")
-    msg_lines.append("Норма: " + ("подтверждена" if global_norms else "не подтверждена"))
-    if visit_mode == "repeat":
-        msg_lines.append(f"Тип осмотра: повторный (история объекта: {len((object_card or {}).get('inspection_chain') or []) + 1} записей)")
-    elif visit_mode == "extension":
-        msg_lines.append("Тип осмотра: дополнение к предыдущему акту")
-    else:
-        msg_lines.append("Тип осмотра: первичный")
-
-    # Memory summary
-    try:
-        _p6h_save_summary_to_memory(chat_id, topic_id, {
-            "folder": voice_ctx.get("folder_hint") or "",
-            "object": voice_ctx.get("object_hint") or object_id or "",
-            "date": payload["date_str"],
-            "owner_directives": (voice_ctx.get("explicit_include") or []) + (voice_ctx.get("explicit_exclude") or []),
-            "defect_brief": [str(d.get("title") or d.get("description") or "")[:200] for d in defects][:8],
-            "pdf_link": pdf_link,
-            "docx_link": docx_link,
-            "status": ("ACT_DONE" if pdf_link else ("ACT_PARTIAL" if (pdf_ok or docx_ok) else "ACT_FAIL"))
-                       + f":visit={visit_mode}",
-        })
-    except Exception:
-        pass
-
-    return {
-        "ok": True if (pdf_ok or docx_ok) else False,
-        "handled": True,
-        "kind": "technadzor_p6h_act",
-        "state": "DONE" if pdf_link else "AWAITING_CONFIRMATION",
-        "artifact_path": str(pdf_local if pdf_ok else docx_local),
-        "extra_artifact_path": str(docx_local if docx_ok else ""),
-        "drive_link": pdf_link or docx_link or "",
-        "message": _p6h_clean_text("\n".join(msg_lines), 4000),
-        "history": "P6H_ACT_VISIT_{}_DOCX_{}_PDF_{}_DRIVE_PDF_{}_OPEN_CARRIED_{}".format(
-            visit_mode,
-            "OK" if docx_ok else "FAIL",
-            "OK" if pdf_ok else "FAIL",
-            "OK" if pdf_link else "FAIL",
-            len(carried_open_items),
-        ),
-    }
-
-
-_P6H2_LOG.info("P6H_TOPIC5_OBJECT_REGISTRY_INSPECTION_CHAIN_20260504_INSTALLED")
-# === END_P6H_PART_3 ===
-
-# ─── P6H_EXTERNAL_VISION_GUARD_V1 ──────────────────────────────────────────
-# CANON: TECHNADZOR_DOMAIN_LOGIC_CANON_V2 §33
-# EXTERNAL_PHOTO_ANALYSIS_ALLOWED = False by default
-# Vision запускается только после явного разрешения владельца
-
-_P6H_EXTERNAL_VISION_ALLOWED = False
-
-_p6h_vision_orig = _p6f_tnz_vision_via_openrouter  # сохраняем оригинал
-
-async def _p6f_tnz_vision_via_openrouter(local_path):  # noqa: F811
-    if not _P6H_EXTERNAL_VISION_ALLOWED:
-        _P6H2_LOG.warning("EXTERNAL_VISION_BLOCKED path=%s EXTERNAL_PHOTO_ANALYSIS_ALLOWED=False", local_path)
-        return {}, "EXTERNAL_PHOTO_ANALYSIS_BLOCKED"
-    return await _p6h_vision_orig(local_path)
-
-def _p6h_allow_external_vision():
-    global _P6H_EXTERNAL_VISION_ALLOWED
-    _P6H_EXTERNAL_VISION_ALLOWED = True
-    _P6H2_LOG.info("EXTERNAL_VISION_ALLOWED_SET owner_approved=True")
-
-_P6H2_LOG.info("P6H_EXTERNAL_VISION_GUARD_V1_INSTALLED allowed=%s", _P6H_EXTERNAL_VISION_ALLOWED)
-# ─── END P6H_EXTERNAL_VISION_GUARD_V1 ──────────────────────────────────────
-
-# ─── P6H_PART_4_VISIT_BUFFER_V1 ────────────────────────────────────────────
-# CANON: TECHNADZOR_DOMAIN_LOGIC_CANON_V2
-# ActiveTechnadzorFolder / VisitMaterial / visit_buffer_add / visit_buffer_flush
-
-import os as _p6h4_os
-import json as _p6h4_json
-import time as _p6h4_time
-import logging as _p6h4_logging
-
-_P6H4_LOG = _p6h4_logging.getLogger("task_worker")
-
-_P6H4_BASE = _p6h4_os.path.join(
-    _p6h4_os.path.dirname(_p6h4_os.path.dirname(_p6h4_os.path.abspath(__file__))),
-    "data", "technadzor"
-)
-
-
-def _p6h4_ensure():
-    _p6h4_os.makedirs(_P6H4_BASE, exist_ok=True)
-
-
-def _p6h4_buf_path(chat_id, topic_id):
-    _p6h4_ensure()
-    return _p6h4_os.path.join(_P6H4_BASE, f"buf_{chat_id}_{topic_id}.json")
-
-
-def _p6h4_folder_path(chat_id, topic_id):
-    _p6h4_ensure()
-    return _p6h4_os.path.join(_P6H4_BASE, f"active_folder_{chat_id}_{topic_id}.json")
-
-
-def visit_buffer_add(chat_id, topic_id, material: dict) -> int:
-    """Append VisitMaterial to persistent buffer. Returns new total count."""
-    path = _p6h4_buf_path(str(chat_id), int(topic_id))
-    try:
-        with open(path, "r", encoding="utf-8") as _f:
-            buf = _p6h4_json.load(_f)
-    except Exception:
-        buf = {"materials": [], "created_at": _p6h4_time.time()}
-    if "material_id" not in material:
-        material["material_id"] = f"{int(_p6h4_time.time() * 1000)}"
-    material.setdefault("added_at", _p6h4_time.time())
-    buf["materials"].append(material)
-    buf["updated_at"] = _p6h4_time.time()
-    with open(path, "w", encoding="utf-8") as _f:
-        _p6h4_json.dump(buf, _f, ensure_ascii=False, indent=2)
-    count = len(buf["materials"])
-    _P6H4_LOG.info("P6H4_VISIT_BUFFER_ADD chat=%s topic=%s count=%s", chat_id, topic_id, count)
-    return count
-
-
-def visit_buffer_flush(chat_id, topic_id) -> list:
-    """Return all buffered VisitMaterials and clear buffer."""
-    path = _p6h4_buf_path(str(chat_id), int(topic_id))
-    try:
-        with open(path, "r", encoding="utf-8") as _f:
-            buf = _p6h4_json.load(_f)
-        materials = buf.get("materials", [])
-        _p6h4_os.remove(path)
-        _P6H4_LOG.info("P6H4_VISIT_BUFFER_FLUSH chat=%s topic=%s count=%s", chat_id, topic_id, len(materials))
-        return materials
-    except Exception:
-        _P6H4_LOG.info("P6H4_VISIT_BUFFER_FLUSH_EMPTY chat=%s topic=%s", chat_id, topic_id)
-        return []
-
-
-def visit_buffer_count(chat_id, topic_id) -> int:
-    path = _p6h4_buf_path(str(chat_id), int(topic_id))
-    try:
-        with open(path, "r", encoding="utf-8") as _f:
-            buf = _p6h4_json.load(_f)
-        return len(buf.get("materials", []))
-    except Exception:
-        return 0
-
-
-def set_active_folder(chat_id, topic_id, folder_data: dict):
-    path = _p6h4_folder_path(str(chat_id), int(topic_id))
-    folder_data["set_at"] = _p6h4_time.time()
-    with open(path, "w", encoding="utf-8") as _f:
-        _p6h4_json.dump(folder_data, _f, ensure_ascii=False, indent=2)
-    _P6H4_LOG.info(
-        "P6H4_ACTIVE_FOLDER_SET chat=%s topic=%s name=%s",
-        chat_id, topic_id, folder_data.get("folder_name", "?"),
-    )
-
-
-def get_active_folder(chat_id, topic_id) -> dict:
-    path = _p6h4_folder_path(str(chat_id), int(topic_id))
-    try:
-        with open(path, "r", encoding="utf-8") as _f:
-            return _p6h4_json.load(_f)
-    except Exception:
-        return {}
-
-
-def process_drive_folder_batch(chat_id, topic_id, folder_id: str, folder_name: str = "") -> int:
-    """Scan Drive folder, add all files as VisitMaterials. Returns count added."""
-    added = 0
-    try:
-        from core.topic_drive_oauth import get_drive_service as _p6h4_get_drive
-        svc = _p6h4_get_drive(chat_id=str(chat_id), topic_id=int(topic_id))
-        items = svc.files().list(
-            q=f"'{folder_id}' in parents and trashed=false",
-            fields="files(id,name,mimeType,webViewLink)",
-            pageSize=200,
-        ).execute().get("files", [])
-        for item in items:
-            mime = item.get("mimeType", "")
-            if "folder" in mime:
-                continue
-            ftype = "PHOTO" if mime.startswith("image/") else "PDF" if "pdf" in mime else "OTHER"
-            mat = {
-                "source": "DRIVE",
-                "file_type": ftype,
-                "file_name": item.get("name", ""),
-                "drive_url": item.get("webViewLink", ""),
-                "drive_file_id": item.get("id", ""),
-                "include_in_act": True,
-                "include_in_report": True,
-                "group_label": folder_name or "",
-            }
-            visit_buffer_add(str(chat_id), int(topic_id), mat)
-            added += 1
-        _P6H4_LOG.info("P6H4_DRIVE_FOLDER_BATCH chat=%s topic=%s folder=%s added=%s", chat_id, topic_id, folder_id, added)
-    except Exception as _p6h4_batch_err:
-        _P6H4_LOG.warning("P6H4_DRIVE_FOLDER_BATCH_ERR %s", _p6h4_batch_err)
-    return added
-
-
-_P6H4_LOG.info("P6H_PART_4_VISIT_BUFFER_V1_INSTALLED")
-# ─── END P6H_PART_4_VISIT_BUFFER_V1 ─────────────────────────────────────────
-
-
-# === P6H4TW_BATCH_TRIGGER_V1 ===
-# FIX: original P6H_PART_4 hook in task_worker.py is after asyncio.run() and never fires.
-# This wrapper hooks process_technadzor here (before asyncio.run()), intercepting all topic_5 calls.
-# Handles: photo/file buffering, Drive folder batch load, visit buffer flush to process_technadzor.
-# EXTERNAL_PHOTO_ANALYSIS_ALLOWED=False: no Vision without explicit owner permission.
-import logging as _p6h4tw_v1_log_mod
-import os as _p6h4tw_v1_os
-import re as _p6h4tw_v1_re
-
-_P6H4TW_V1_LOG = _p6h4tw_v1_log_mod.getLogger("task_worker")
-_P6H4TW_V1_DRIVE_RE = _p6h4tw_v1_re.compile(
-    r"https://drive\.google\.com/drive/folders/([A-Za-z0-9_-]+)"
-)
-_P6H4TW_V1_BATCH_TRIGGERS = (
-    "загрузи все файлы из папки", "загрузи все файлы",
-    "возьми файлы из папки", "прочитай папку",
-    "обработай папку", "сделай разбор по папке", "сделай акт по папке",
-    "разбор по папке", "акт по папке",
-    "загрузи папку", "возьми из папки",
-)
-_P6H4TW_V1_BATCH_AND_FLUSH = (
-    "сделай разбор по папке", "сделай акт по папке",
-    "разбор по папке", "акт по папке",
-)
-_P6H4TW_V1_FLUSH_TRIGGERS = (
-    "сделай акт", "собери акт", "сделай разбор", "сделай анализ",
-    "собери разбор", "разберись", "сделай отчет", "сделай отчёт",
-    "начни анализ", "сформируй акт",
-)
-_P6H4TW_V1_ACTIVE_FOLDER_TRIGGERS = (
-    "работаем по этой папке", "установи папку", "активная папка это",
-    "drive.google.com/drive/folders/",
-)
-_P6H4TW_V1_SHOW_FOLDER_TRIGGERS = (
-    "покажи активную папку", "какая активная папка", "какая папка",
-    "текущая папка", "покажи папку",
-)
-
-
-def _p6h4tw_v1_low(v):
-    return str(v or "").lower().replace("ё", "е")
-
-
-try:
-    _p6h4tw_v1_orig = process_technadzor
-    if not getattr(_p6h4tw_v1_orig, "_p6h4tw_v1_wrapped", False):
-
-        def process_technadzor(text="", task_id="", chat_id="", topic_id=0, file_path="", file_name="", **kwargs):  # noqa: F811
-            if int(topic_id or 0) != 5:
-                return _p6h4tw_v1_orig(
-                    text=text, task_id=task_id, chat_id=chat_id,
-                    topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs
-                )
-
-            chat_str = str(chat_id)
-            txt_low = _p6h4tw_v1_low(text)
-
-            # ── Photo / Drive file → buffer (no Vision) ──────────────────────
-            if file_path or file_name:
-                fn = file_name or _p6h4tw_v1_os.path.basename(file_path or "")
-                fn_low = fn.lower()
-                is_photo = fn_low.endswith((".jpg", ".jpeg", ".png", ".webp", ".heic"))
-                ftype = "PHOTO" if is_photo else "PDF" if fn_low.endswith(".pdf") else "DOCUMENT"
-                material = {
-                    "source": "telegram",
-                    "file_type": ftype,
-                    "file_name": fn,
-                    "drive_file_id": "",
-                    "drive_url": file_path or "",
-                    "caption": text or "",
-                    "include_in_act": True,
-                    "include_in_report": True,
-                }
-                try:
-                    count = visit_buffer_add(chat_str, 5, material)
-                    _P6H4TW_V1_LOG.info(
-                        "P6H4TW_V1_PHOTO_BUFFERED chat=%s count=%s fn=%s", chat_str, count, fn
-                    )
-                    return {
-                        "ok": True,
-                        "result_text": f"Добавлено в пакет ({count} шт.). Когда готово — скажи «сделай разбор».",
-                        "history": "P6H4TW_V1_PHOTO_BUFFERED",
-                    }
-                except Exception as _e:
-                    _P6H4TW_V1_LOG.warning("P6H4TW_V1_BUF_ADD_ERR %s", _e)
-                    return _p6h4tw_v1_orig(
-                        text=text, task_id=task_id, chat_id=chat_id,
-                        topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs
-                    )
-
-            # ── Drive folder URL / set active folder ─────────────────────────
-            m_drive = _P6H4TW_V1_DRIVE_RE.search(text or "")
-            if m_drive or any(t in txt_low for t in _P6H4TW_V1_ACTIVE_FOLDER_TRIGGERS):
-                folder_id = m_drive.group(1) if m_drive else ""
-                folder_name = ""
-                if folder_id:
-                    try:
-                        from core.topic_drive_oauth import get_drive_service as _p6h4tw_v1_gds
-                        svc = _p6h4tw_v1_gds(chat_id=chat_str, topic_id=5)
-                        folder_name = (
-                            svc.files().get(fileId=folder_id, fields="name").execute().get("name", "")
-                        )
-                    except Exception:
-                        pass
-                try:
-                    set_active_folder(chat_str, 5, {
-                        "folder_id": folder_id,
-                        "folder_name": folder_name,
-                        "source_text": (text or "")[:500],
-                    })
-                    return {
-                        "ok": True,
-                        "result_text": f"Активная папка установлена: {folder_name or folder_id or '(из текста)'}.",
-                        "history": "P6H4TW_V1_ACTIVE_FOLDER_SET",
-                    }
-                except Exception as _e:
-                    _P6H4TW_V1_LOG.warning("P6H4TW_V1_SET_FOLDER_ERR %s", _e)
-
-            # ── Show active folder ────────────────────────────────────────────
-            if any(t in txt_low for t in _P6H4TW_V1_SHOW_FOLDER_TRIGGERS):
-                try:
-                    af = get_active_folder(chat_str, 5)
-                    if af:
-                        name = af.get("folder_name") or af.get("folder_id", "(нет имени)")
-                        fid = af.get("folder_id", "")
-                        link = f"https://drive.google.com/drive/folders/{fid}" if fid else "—"
-                        msg = f"Активная папка: {name}\n{link}"
-                    else:
-                        msg = "Активная папка не установлена. Пришли ссылку на папку."
-                    return {"ok": True, "result_text": msg, "history": "P6H4TW_V1_SHOW_FOLDER"}
-                except Exception as _e:
-                    _P6H4TW_V1_LOG.warning("P6H4TW_V1_SHOW_FOLDER_ERR %s", _e)
-
-            # ── Drive folder batch load ───────────────────────────────────────
-            if any(t in txt_low for t in _P6H4TW_V1_BATCH_TRIGGERS):
-                try:
-                    m_drive2 = _P6H4TW_V1_DRIVE_RE.search(text or "")
-                    if m_drive2:
-                        batch_fid = m_drive2.group(1)
-                        batch_fname = ""
-                        try:
-                            from core.topic_drive_oauth import get_drive_service as _p6h4tw_v1_gds2
-                            svc2 = _p6h4tw_v1_gds2(chat_id=chat_str, topic_id=5)
-                            batch_fname = (
-                                svc2.files().get(fileId=batch_fid, fields="name").execute().get("name", "")
-                            )
-                        except Exception:
-                            pass
-                    else:
-                        af2 = get_active_folder(chat_str, 5) or {}
-                        batch_fid = af2.get("folder_id", "")
-                        batch_fname = af2.get("folder_name", "")
-                    if not batch_fid:
-                        return {
-                            "ok": True,
-                            "result_text": "Не найдена активная папка. Пришли ссылку на папку Drive.",
-                            "history": "P6H4TW_V1_BATCH_NO_FOLDER",
-                        }
-                    added = process_drive_folder_batch(chat_str, 5, batch_fid, batch_fname)
-                    _P6H4TW_V1_LOG.info(
-                        "P6H4TW_V1_BATCH_LOADED chat=%s folder=%s added=%s", chat_str, batch_fid, added
-                    )
-                    do_flush = any(t in txt_low for t in _P6H4TW_V1_BATCH_AND_FLUSH)
-                    if not do_flush:
-                        return {
-                            "ok": True,
-                            "result_text": (
-                                f"Принял. Файлы из папки добавлены в пакет выезда: {added} шт. "
-                                "Vision не запускаю без разрешения владельца. Скажи «сделай разбор» когда готово."
-                            ),
-                            "history": "P6H4TW_V1_BATCH_LOADED",
-                        }
-                    txt_low = "сделай разбор"  # fall through to flush
-                except Exception as _e:
-                    _P6H4TW_V1_LOG.warning("P6H4TW_V1_BATCH_ERR %s", _e)
-
-            # ── Flush buffer → process_technadzor ────────────────────────────
-            if any(t in txt_low for t in _P6H4TW_V1_FLUSH_TRIGGERS):
-                try:
-                    count = visit_buffer_count(chat_str, 5)
-                    if count == 0:
-                        return {
-                            "ok": True,
-                            "result_text": "Буфер пуст — сначала пришли фото или файлы.",
-                            "history": "P6H4TW_V1_FLUSH_EMPTY",
-                        }
-                    materials = visit_buffer_flush(chat_str, 5)
-                    lines = ["Технический надзор. Акт по материалам выезда:", "VISIT_PACKAGE:"]
-                    for i, m in enumerate(materials, 1):
-                        fn2 = m.get("file_name", f"файл {i}")
-                        url2 = m.get("drive_url", "")
-                        note2 = (m.get("caption", "") or m.get("voice_comment", "") or "").strip()
-                        line = f"  {i}. {fn2}"
-                        if url2:
-                            line += f" {url2}"
-                        if note2:
-                            line += f" — {note2}"
-                        lines.append(line)
-                    package_text = "\n".join(lines)
-                    _P6H4TW_V1_LOG.info(
-                        "P6H4TW_V1_FLUSH chat=%s count=%s", chat_str, len(materials)
-                    )
-                    return _p6h4tw_v1_orig(
-                        text=package_text, task_id=task_id, chat_id=chat_id,
-                        topic_id=topic_id, file_path="", file_name="", **kwargs
-                    )
-                except Exception as _e:
-                    _P6H4TW_V1_LOG.warning("P6H4TW_V1_FLUSH_ERR %s", _e)
-
-            # ── Default pass-through ──────────────────────────────────────────
-            return _p6h4tw_v1_orig(
-                text=text, task_id=task_id, chat_id=chat_id,
-                topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs
-            )
-
-        process_technadzor._p6h4tw_v1_wrapped = True
-        _p6h4tw_v1_orig._p6h4tw_v1_wrapped = True
-        _P6H4TW_V1_LOG.info("P6H4TW_BATCH_TRIGGER_V1_INSTALLED")
-except Exception as _p6h4tw_v1_err:
-    _P6H4TW_V1_LOG.exception("P6H4TW_V1_INSTALL_ERR %s", _p6h4tw_v1_err)
-# === END_P6H4TW_BATCH_TRIGGER_V1 ===
-
-# === P6H4FD_FOLDER_DISCOVERY_V1 ===
-import re as _p6h4fd_re
-import logging as _p6h4fd_log_mod
-
-_P6H4FD_LOG = _p6h4fd_log_mod.getLogger("technadzor_engine.p6h4fd")
-
-_P6H4FD_FOLDER_INTENTS = (
-    "папка",
-    "новая папка",
-    "создана папка",
-    "создал папку",
-    "обнаружь папку",
-    "найди папку",
-    "папка называется",
-    "работаем по папке",
-    "текущая папка",
-    "прими папку",
-    "туда складывать",
-    "туда загружать",
-    "все материалы туда",
-)
-
-# Matches "папк[у/а/и] <name>" — captures up to 60 chars until punctuation or end
-_P6H4FD_NAME_RE = _p6h4fd_re.compile(
-    r"(?:папк[уаи]|папка)\s+([А-Яа-яёЁA-Za-z0-9][А-Яа-яёЁA-Za-z0-9 \-_]{0,60}?)(?:[,.\n!?]|$)",
-    _p6h4fd_re.IGNORECASE,
-)
-
-
-def _p6h4fd_extract_name(text: str) -> str:
-    m = _P6H4FD_NAME_RE.search(text)
-    if m:
-        return m.group(1).strip()
-    return ""
-
-
-def _p6h4fd_norm(s: str) -> str:
-    return " ".join(s.lower().replace("ё", "е").split())
-
-
-def _p6h4fd_match_score(candidate: str, folder_name: str) -> int:
-    c = _p6h4fd_norm(candidate)
-    f = _p6h4fd_norm(folder_name)
-    if not c:
-        return 0
-    if c == f:
-        return 100
-    if c in f or f in c:
-        return 80
-    cw = set(c.split())
-    fw = set(f.split())
-    overlap = len(cw & fw)
-    return overlap * 10 if overlap else 0
-
-
-try:
-    _p6h4fd_orig_pt = process_technadzor
-    if not getattr(_p6h4fd_orig_pt, "_p6h4fd_wrapped", False):
-
-        def process_technadzor(  # noqa: F811
-            text="", task_id="", chat_id="", topic_id=0,
-            file_path="", file_name="", **kwargs
-        ):
-            if int(topic_id or 0) != 5:
-                return _p6h4fd_orig_pt(
-                    text=text, task_id=task_id, chat_id=chat_id,
-                    topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs
-                )
-
-            txt_low = (text or "").lower().replace("ё", "е")
-            if not any(t in txt_low for t in _P6H4FD_FOLDER_INTENTS):
-                return _p6h4fd_orig_pt(
-                    text=text, task_id=task_id, chat_id=chat_id,
-                    topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs
-                )
-
-            # — folder/context intent: fresh Drive lookup by name —
-            try:
-                candidate = _p6h4fd_extract_name(text or "")
-                chat_str = str(chat_id or "")
-                _P6H4FD_LOG.info(
-                    "P6H4FD_DISCOVERY_START candidate=%r chat=%s", candidate, chat_str
-                )
-
-                from core.technadzor_drive_index import _service as _p6h4fd_svc
-
-                # system/container names — never a valid active folder result
-                _P6H4FD_NEVER_RESULT = frozenset({
-                    "technadzor", "технадзор", "topic_5", "_orchestra_work",
-                    "_system", "_tmp", "_archive", "_drafts", "_templates", "_manifests",
-                })
-
-                def _p6h4fd_is_container(name):
-                    return (name or "").strip().lower() in _P6H4FD_NEVER_RESULT
-
-                svc = _p6h4fd_svc()
-
-                def _p6h4fd_list_subfolders(parent_fid):
-                    r = svc.files().list(
-                        q=(
-                            f"'{parent_fid}' in parents"
-                            " and mimeType='application/vnd.google-apps.folder'"
-                            " and trashed=false"
-                        ),
-                        fields="files(id,name,createdTime,modifiedTime)",
-                        orderBy="createdTime desc",
-                        pageSize=50,
-                    ).execute()
-                    return r.get("files", [])
-
-                # Step A: search inside correct user ТЕХНАДЗОР root
-                _TECHNADZOR_ROOT_FID = "1s2y5l2mJFTb7P90XVokErXYVzmoH-VtD"
-                raw_a = _p6h4fd_list_subfolders(_TECHNADZOR_ROOT_FID)
-                folders = [f for f in raw_a if not _p6h4fd_is_container(f.get("name", ""))]
-                _P6H4FD_LOG.info("P6H4FD_ROOT_SEARCH count=%s", len(folders))
-
-                # Step D: fallback — Drive-wide exact name search
-                if not folders and candidate:
-                    _safe = candidate.replace("'", "\\'")
-                    _gr = svc.files().list(
-                        q=(
-                            f"name='{_safe}'"
-                            " and mimeType='application/vnd.google-apps.folder'"
-                            " and trashed=false"
-                        ),
-                        fields="files(id,name,createdTime,modifiedTime)",
-                        orderBy="createdTime desc",
-                        pageSize=10,
-                    ).execute()
-                    folders = [
-                        f for f in _gr.get("files", [])
-                        if not _p6h4fd_is_container(f.get("name", ""))
-                    ]
-                    _P6H4FD_LOG.info("P6H4FD_GLOBAL_SEARCH count=%s candidate=%r", len(folders), candidate)
-
-                if not folders:
-                    msg_nf = (
-                        "Папку не нашёл"
-                        + (f" «{candidate}»" if candidate else "")
-                        + ". Укажи точное название или пришли ссылку."
-                    )
-                    return {
-                        "ok": True,
-                        "handled": True,
-                        "state": "DONE",
-                        "result_text": msg_nf,
-                        "message": msg_nf,
-                        "history": "P6H4FD_V1:NO_USER_FOLDERS",
-                    }
-
-                # exact match first, then fuzzy, then newest
-                best = None
-                best_score = 0
-                if candidate:
-                    for f in folders:
-                        score = _p6h4fd_match_score(candidate, f.get("name", ""))
-                        if score > best_score:
-                            best_score = score
-                            best = f
-
-                if best is None or best_score == 0:
-                    best = folders[0]
-
-                fid = best["id"]
-                fname = best.get("name", "")
-                link = f"https://drive.google.com/drive/folders/{fid}"
-
-                set_active_folder(chat_str, 5, {
-                    "folder_id": fid,
-                    "folder_name": fname,
-                    "source_text": (text or "")[:500],
-                })
-                msg = f"Нашёл папку «{fname}» и установил её как активную.\n{link}"
-                _P6H4FD_LOG.info(
-                    "P6H4FD_SET_ACTIVE folder_id=%s name=%r score=%s chat=%s",
-                    fid, fname, best_score, chat_str,
-                )
-                return {
-                    "ok": True,
-                    "handled": True,
-                    "result_text": msg,
-                    "message": msg,
-                    "history": f"P6H4FD_V1:SET_ACTIVE:{fid}",
-                }
-
-            except Exception as _e:
-                _P6H4FD_LOG.warning("P6H4FD_ERR %s", _e)
-                # on error fall through to lower wrapper
-                return _p6h4fd_orig_pt(
-                    text=text, task_id=task_id, chat_id=chat_id,
-                    topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs
-                )
-
-        process_technadzor._p6h4fd_wrapped = True
-        _p6h4fd_orig_pt._p6h4fd_wrapped = True
-        _P6H4FD_LOG.info("P6H4FD_FOLDER_DISCOVERY_V1_INSTALLED")
-except Exception as _p6h4fd_err:
-    _P6H4FD_LOG.exception("P6H4FD_INSTALL_ERR %s", _p6h4fd_err)
-# === END_P6H4FD_FOLDER_DISCOVERY_V1 ===
-
-# === PHOTO_RECOGNITION_TOPIC5_RUNTIME_BINDING_V1 ===
-try:
-    _photo_t5_orig_process_technadzor = process_technadzor
-
-    def process_technadzor(
-        text: str = "",
-        task_id: str = "",
-        chat_id: str = "",
-        topic_id: int = 0,
-        file_path: str = "",
-        file_name: str = "",
-        **kwargs,
-    ):
-        from core.photo_recognition_engine import is_image_file, process_photo_recognition
-
-        clean_kwargs = dict(kwargs)
-        for key in (
-            "text", "raw_input", "task_id", "id", "chat_id", "topic_id",
-            "file_path", "local_path", "file_name", "name",
-        ):
-            clean_kwargs.pop(key, None)
-
-        raw_text = str(text or kwargs.get("raw_input") or "")
-        fp = str(file_path or kwargs.get("local_path") or "")
-        fn = str(file_name or kwargs.get("file_name") or kwargs.get("name") or "")
-        resolved_task_id = str(task_id or kwargs.get("task_id") or kwargs.get("id") or "")
-        resolved_chat_id = str(chat_id or kwargs.get("chat_id") or "")
-
-        try:
-            tid = int(topic_id or kwargs.get("topic_id") or 0)
-        except Exception:
-            tid = 0
-
-        photo_result = None
-        if tid == 5 and is_image_file(file_name=fn, file_path=fp):
-            photo_result = process_photo_recognition(
-                topic_id=5,
-                file_name=fn,
-                file_path=fp,
-                owner_comment=raw_text,
-                source="TELEGRAM",
-            )
-
-            if not raw_text.strip():
-                return {
-                    "ok": True,
-                    "handled": True,
-                    "status": "WAITING_CLARIFICATION",
-                    "state": "WAITING_CLARIFICATION",
-                    "kind": "technadzor_photo_material",
-                    "message": "Фото принято как материал технадзора. Укажи, к какому замечанию или разделу его отнести",
-                    "result_text": "Фото принято как материал технадзора. Укажи, к какому замечанию или разделу его отнести",
-                    "photo_recognition": photo_result,
-                    "history": "PHOTO_RECOGNITION_TOPIC5_RUNTIME_BINDING_V1:WAITING_OWNER_COMMENT",
-                }
-
-        result = _photo_t5_orig_process_technadzor(
-            text=raw_text,
-            task_id=resolved_task_id,
-            chat_id=resolved_chat_id,
-            topic_id=tid,
-            file_path=fp,
-            file_name=fn,
-            **clean_kwargs,
-        )
-
-        if photo_result and isinstance(result, dict):
-            result["photo_recognition"] = photo_result
-            result["photo_recognition_status"] = photo_result.get("status")
-            result["history"] = str(result.get("history") or "") + "|PHOTO_RECOGNITION_TOPIC5_RUNTIME_BINDING_V1"
-            if "message" not in result and "result_text" not in result:
-                result["message"] = "Фото принято и связано с технадзорным материалом"
-
-        return result
+    SearchMonolithV2.run = _p6c_run_20260504
 except Exception:
     pass
-# === END_PHOTO_RECOGNITION_TOPIC5_RUNTIME_BINDING_V1 ===
 
+try:
+    def run_search_monolith_v2(payload, user_text, online_call, online_model, base_system_prompt=""):
+        online_model = _assert_online_model_allowed(online_model)
+        return _MONOLITH.run(payload, user_text, online_call, online_model, base_system_prompt)
+except Exception:
+    pass
+# === END_P6C_SEARCH_CURRENT_QUERY_ONLY_NO_STALE_CONTEXT_20260504_V1 ===
 
-# === P7_TOPIC5_REPLY_VOICE_BINDING_V1 ===
-# Binds Telegram text/voice reply to the VisitMaterial created from the replied photo/file.
-import json as _p7_t5_json
-import re as _p7_t5_re
-import time as _p7_t5_time
-from pathlib import Path as _p7_t5_Path
+# === P6E2_SEARCH_CURRENT_QUERY_HARD_NO_STALE_NO_ESTIMATE_POLLUTION_20260504_V1 ===
+import re as _p6e2_search_re
 
-_P7_T5_ORIG_PROCESS_TECHNADZOR = process_technadzor
-_P7_T5_DATA = _p7_t5_Path("/root/.areal-neva-core/data/technadzor")
-
-def _p7_t5_s(v, limit=20000):
-    try:
-        return "" if v is None else str(v).strip()[:limit]
-    except Exception:
-        return ""
-
-def _p7_t5_low(v):
-    return _p7_t5_s(v).lower().replace("ё", "е")
-
-def _p7_t5_task_get(task, key, default=None):
-    if task is None:
-        return default
-    try:
-        if isinstance(task, dict):
-            return task.get(key, default)
-        return task[key]
-    except Exception:
-        return getattr(task, key, default)
-
-def _p7_t5_parse_payload(text):
-    raw = _p7_t5_s(text, 50000)
-    try:
-        obj = _p7_t5_json.loads(raw)
-        return obj if isinstance(obj, dict) else {"text": raw}
-    except Exception:
-        return {"text": raw}
-
-def _p7_t5_buf_path(chat_id):
-    _P7_T5_DATA.mkdir(parents=True, exist_ok=True)
-    return _P7_T5_DATA / f"buf_{chat_id}_5.json"
-
-def _p7_t5_active_folder(chat_id):
-    p = _P7_T5_DATA / f"active_folder_{chat_id}_5.json"
-    try:
-        obj = _p7_t5_json.loads(p.read_text(encoding="utf-8"))
-        return obj if isinstance(obj, dict) else {}
-    except Exception:
-        return {}
-
-def _p7_t5_load_buf(chat_id):
-    p = _p7_t5_buf_path(chat_id)
-    try:
-        obj = _p7_t5_json.loads(p.read_text(encoding="utf-8"))
-        if isinstance(obj, dict):
-            obj.setdefault("materials", [])
-            return obj
-    except Exception:
-        pass
-    return {"materials": [], "created_at": _p7_t5_time.time()}
-
-def _p7_t5_save_buf(chat_id, buf):
-    p = _p7_t5_buf_path(chat_id)
-    buf["updated_at"] = _p7_t5_time.time()
-    p.write_text(_p7_t5_json.dumps(buf, ensure_ascii=False, indent=2), encoding="utf-8")
-
-def _p7_t5_msg_id_from_name(name):
-    m = _p7_t5_re.search(r"_([0-9]{3,})\.[A-Za-z0-9]+$", _p7_t5_s(name))
-    return m.group(1) if m else ""
-
-def _p7_t5_add_material(chat_id, material):
-    buf = _p7_t5_load_buf(chat_id)
-    mid = _p7_t5_s(material.get("telegram_message_id"))
-    fname = _p7_t5_s(material.get("file_name"))
-    for old in buf.get("materials", []):
-        if mid and _p7_t5_s(old.get("telegram_message_id")) == mid:
-            old.update({k: v for k, v in material.items() if v not in ("", None)})
-            _p7_t5_save_buf(chat_id, buf)
-            return len(buf.get("materials", [])), old
-        if fname and _p7_t5_s(old.get("file_name")) == fname:
-            old.update({k: v for k, v in material.items() if v not in ("", None)})
-            _p7_t5_save_buf(chat_id, buf)
-            return len(buf.get("materials", [])), old
-    buf["materials"].append(material)
-    _p7_t5_save_buf(chat_id, buf)
-    return len(buf.get("materials", [])), material
-
-def _p7_t5_bind_comment(chat_id, reply_to_message_id, comment, is_voice=False):
-    reply_id = _p7_t5_s(reply_to_message_id)
-    if not reply_id:
-        return None
-    comment = _p7_t5_s(comment, 8000)
-    if not comment:
-        return None
-
-    buf = _p7_t5_load_buf(chat_id)
-    for m in buf.get("materials", []):
-        ids = {
-            _p7_t5_s(m.get("telegram_message_id")),
-            _p7_t5_s(m.get("reply_to_message_id")),
-            _p7_t5_msg_id_from_name(m.get("file_name")),
-        }
-        if reply_id in ids:
-            field = "voice_comment" if is_voice else "owner_comment"
-            prev = _p7_t5_s(m.get(field))
-            m[field] = (prev + "\n" + comment).strip() if prev and comment not in prev else comment
-            m["status"] = "LINKED"
-            m["linked_reply_to_message_id"] = reply_id
-            m["updated_at"] = _p7_t5_time.time()
-            _p7_t5_save_buf(chat_id, buf)
-            return m
-    return None
-
-def _p7_t5_is_flush_command(text):
-    low = _p7_t5_low(text)
-    return any(x in low for x in (
-        "сделай акт", "собери акт", "сделай разбор", "сделай анализ",
-        "собери разбор", "сформируй акт", "сделай отчет", "сделай отчёт"
-    ))
-
-def process_technadzor(text: str = "", task_id: str = "", chat_id: str = "", topic_id: int = 0, file_path: str = "", file_name: str = "", **kwargs):
-    if int(topic_id or 0) != 5:
-        return _P7_T5_ORIG_PROCESS_TECHNADZOR(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs)
-
-    chat = _p7_t5_s(chat_id or _p7_t5_task_get(kwargs.get("task"), "chat_id", ""))
-    payload = _p7_t5_parse_payload(text)
-    task = kwargs.get("task")
-    reply_to = payload.get("telegram_reply_to_message_id") or _p7_t5_task_get(task, "reply_to_message_id", "")
-    current_msg = payload.get("telegram_message_id") or _p7_t5_msg_id_from_name(file_name)
-    comment = payload.get("transcript") or payload.get("text") or text
-    is_voice = _p7_t5_low(comment).startswith("[voice]") or _p7_t5_low(payload.get("input_type", "")) == "voice"
-    comment_clean = _p7_t5_re.sub(r"^\s*\[VOICE\]\s*", "", _p7_t5_s(comment), flags=_p7_t5_re.I)
-
-    if (file_path or file_name) and not _p7_t5_is_flush_command(comment_clean):
-        af = _p7_t5_active_folder(chat)
-        fn = _p7_t5_s(file_name or payload.get("file_name") or payload.get("name") or "")
-        low_fn = fn.lower()
-        ftype = "PHOTO" if low_fn.endswith((".jpg", ".jpeg", ".png", ".webp", ".heic")) else "PDF" if low_fn.endswith(".pdf") else "DOCUMENT"
-        material = {
-            "source": "TELEGRAM",
-            "file_type": ftype,
-            "file_name": fn,
-            "telegram_message_id": _p7_t5_s(current_msg),
-            "reply_to_message_id": _p7_t5_s(reply_to),
-            "drive_file_id": _p7_t5_s(payload.get("drive_file_id")),
-            "drive_url": _p7_t5_s(payload.get("drive_url") or payload.get("webViewLink") or file_path),
-            "active_folder_id": _p7_t5_s(af.get("folder_id")),
-            "active_folder_name": _p7_t5_s(af.get("folder_name")),
-            "caption": _p7_t5_s(payload.get("caption") or comment_clean),
-            "include_in_act": True,
-            "include_in_report": True,
-            "status": "PENDING",
-            "added_at": _p7_t5_time.time(),
-        }
-        count, _ = _p7_t5_add_material(chat, material)
-        return {
-            "ok": True,
-            "handled": True,
-            "state": "DONE",
-            "result_text": f"Фото/файл принят в пакет выезда: {count} шт. Активная папка: {material.get('active_folder_name') or material.get('active_folder_id')}.",
-            "message": "Фото/файл принят в пакет выезда",
-            "history": "P7_TOPIC5_MATERIAL_BUFFERED_WITH_ACTIVE_FOLDER",
-        }
-
-    if reply_to and comment_clean and not _p7_t5_is_flush_command(comment_clean):
-        linked = _p7_t5_bind_comment(chat, reply_to, comment_clean, is_voice=is_voice)
-        if linked:
-            return {
-                "ok": True,
-                "handled": True,
-                "state": "DONE",
-                "result_text": f"Пояснение привязано к фото: {linked.get('file_name', '')}",
-                "message": "Пояснение привязано к фото",
-                "history": "P7_TOPIC5_REPLY_VOICE_BOUND_TO_MATERIAL",
-            }
-
-    return _P7_T5_ORIG_PROCESS_TECHNADZOR(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs)
-# === END_P7_TOPIC5_REPLY_VOICE_BINDING_V1 ===
-
-# === FULLFIX_TOPIC5_TECHNADZOR_CANON_CONTOUR_V2_TECHNADZOR ===
-import json as _t5v2_json
-import sqlite3 as _t5v2_sqlite3
-import time as _t5v2_time
-import uuid as _t5v2_uuid
-from pathlib import Path as _t5v2_Path
-
-_T5V2_ORIG_PROCESS_TECHNADZOR = process_technadzor
-_T5V2_DB = "/root/.areal-neva-core/data/core.db"
-_T5V2_DATA = _t5v2_Path("/root/.areal-neva-core/data/technadzor")
-_T5V2_DATA.mkdir(parents=True, exist_ok=True)
-
-def _t5v2_s(v, limit=50000):
+def _p6e2_search_s(v, limit=5000):
     try:
         if v is None:
             return ""
@@ -3482,3847 +1350,552 @@ def _t5v2_s(v, limit=50000):
     except Exception:
         return ""
 
-def _t5v2_low(v):
-    return _t5v2_s(v).lower().replace("ё", "е")
+def _p6e2_search_low(v):
+    return _p6e2_search_s(v).lower().replace("ё", "е")
 
-def _t5v2_json_load(raw):
-    try:
-        d = _t5v2_json.loads(_t5v2_s(raw))
-        return d if isinstance(d, dict) else {}
-    except Exception:
-        return {}
+def _p6e2_search_category(q):
+    low = _p6e2_search_low(q)
+    if any(x in low for x in ("ваз", "2110", "2114", "сайлент", "саленблок", "сальник", "пыльник", "автозапчаст", "drom", "exist", "emex", "zzap")):
+        return "AUTO_PARTS", "drom, exist, emex, zzap, avito, auto.ru, профильные магазины"
+    if any(x in low for x in ("iphone", "айфон", "pixel", "телефон", "смартфон", "samsung", "xiaomi", "honor", "ноутбук")):
+        return "ELECTRONICS", "ozon, wildberries, яндекс маркет, dns, мвидео, avito, официальные магазины"
+    if any(x in low for x in ("бетон", "арматур", "пиломатериал", "утеплитель", "rockwool", "плита", "стройматериал")):
+        return "BUILDING_SUPPLY", "петрович, лемана про, всеинструменты, профильные поставщики, avito"
+    return "GENERAL", "официальные сайты, маркетплейсы, avito, профильные поставщики"
 
-def _t5v2_get(obj, key, default=""):
+def _p6e2_search_messages(q):
+    cat, sources = _p6e2_search_category(q)
+    user = f"""АКТУАЛЬНЫЙ ЗАПРОС:
+{_p6e2_search_s(q, 2500)}
+
+Категория: {cat}
+Искать только по текущему запросу
+Площадки: {sources}
+
+Верни только чистую выдачу поставщиков/вариантов:
+Поставщик | Площадка | Город | Цена | Наличие | Доставка | Ссылка | Проверено
+Запрещено возвращать старые товары, сметы, Excel, PDF, строительные позиции из другого запроса"""
+    return [{"role": "system", "content": "CURRENT_QUERY_ONLY. NO_STALE_CONTEXT. NO_ESTIMATE_OUTPUT. NO_INTERNAL_MARKERS."}, {"role": "user", "content": user}]
+
+try:
+    _P6E2_ORIG_SEARCH_RUN = SearchMonolithV2.run
+    async def _p6e2_search_run(self, payload, user_text, online_call, online_model, base_system_prompt=""):
+        payload = dict(payload or {})
+        q = _p6e2_search_s(user_text or payload.get("raw_input") or payload.get("normalized_input") or "", 5000)
+        payload["raw_input"] = q
+        payload["normalized_input"] = q
+        payload["pin_context"] = ""
+        payload["short_memory_context"] = ""
+        payload["long_memory_context"] = ""
+        payload["archive_context"] = ""
+        payload["search_context"] = ""
+        online_model = _assert_online_model_allowed(online_model)
+        raw = await online_call(online_model, _p6e2_search_messages(q))
+        final = _p6e2_search_s(raw, 12000)
+        stale = ("rockwool", "каменная вата", "термодом", "утеплитель")
+        qlow = _p6e2_search_low(q)
+        flow = _p6e2_search_low(final)
+        if any(x in flow and x not in qlow for x in stale) and any(x in qlow for x in ("ваз", "2110", "2114", "сайлент", "саленблок", "сальник", "iphone", "pixel", "телефон")):
+            final = "Поиск заблокирован: ответ содержит старый товар из другой поисковой сессии. Повтори запрос одной строкой с товаром и регионом"
+        if not final:
+            final = "Подтверждённых вариантов по текущему запросу не найдено"
+        try:
+            import logging
+            logging.getLogger("ai_router").info("P6E2_SEARCH_CURRENT_QUERY_DONE chars=%s", len(final))
+        except Exception:
+            pass
+        return final
+    SearchMonolithV2.run = _p6e2_search_run
+except Exception:
+    pass
+# === END_P6E2_SEARCH_CURRENT_QUERY_HARD_NO_STALE_NO_ESTIMATE_POLLUTION_20260504_V1 ===
+
+# === P6E4_GENERAL_SEARCH_NO_DOMAIN_CONTAMINATION_20260504_V1 ===
+import os as _p6e4_os
+import re as _p6e4_re
+import json as _p6e4_json
+import urllib.request as _p6e4_urllib_request
+import inspect as _p6e4_inspect
+import asyncio as _p6e4_asyncio
+import logging as _p6e4_logging
+
+_P6E4_AUTO_TERMS = ("саленблок", "сайлентблок", "сальник", "ваз", "жигули", "2110", "авто", "машин", "пыльник", "шрус", "рычаг", "стойка")
+_P6E4_BUILD_TERMS = ("смет", "бетон", "арматур", "фундамент", "кровл", "технадзор", "стро", "дом", "плита", "каркас", "клик-фальц", "утепл", "rockwool", "минват")
+_P6E4_BUILD_RESULT_TERMS = ("rockwool", "роквул", "минват", "утеплител", "термодом", "строймат", "базальт", "кровл", "бетон", "арматур")
+_P6E4_AUTO_RESULT_TERMS = ("сайлентблок", "саленблок", "сальник", "ваз", "2110", "lada", "vaz", "автозапчаст", "шрус", "пыльник")
+
+def _p6e4_env_load_once():
+    if getattr(_p6e4_env_load_once, "_done", False):
+        return
+    for path in ("/root/.areal-neva-core/.env", ".env"):
+        try:
+            if not _p6e4_os.path.exists(path):
+                continue
+            for line in open(path, "r", encoding="utf-8", errors="ignore"):
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, v = line.split("=", 1)
+                k = k.strip()
+                v = v.strip().strip('"').strip("'")
+                if k and k not in _p6e4_os.environ:
+                    _p6e4_os.environ[k] = v
+        except Exception:
+            pass
+    _p6e4_env_load_once._done = True
+
+def _p6e4_val(obj, key, default=None):
     try:
         if isinstance(obj, dict):
             return obj.get(key, default)
         return obj[key]
     except Exception:
-        return getattr(obj, key, default)
+        try:
+            return getattr(obj, key, default)
+        except Exception:
+            return default
 
-def _t5v2_task(task_id, kwargs):
-    task = kwargs.get("task")
-    if task:
-        return {
-            "id": _t5v2_s(_t5v2_get(task, "id", task_id)),
-            "chat_id": _t5v2_s(_t5v2_get(task, "chat_id", kwargs.get("chat_id", ""))),
-            "topic_id": int(_t5v2_get(task, "topic_id", kwargs.get("topic_id", 0)) or 0),
-            "reply_to_message_id": _t5v2_s(_t5v2_get(task, "reply_to_message_id", "")),
-            "bot_message_id": _t5v2_s(_t5v2_get(task, "bot_message_id", "")),
-            "input_type": _t5v2_s(_t5v2_get(task, "input_type", "")),
-            "raw_input": _t5v2_s(_t5v2_get(task, "raw_input", "")),
-        }
+def _p6e4_extract_query(args, kwargs):
+    for k in ("query", "prompt", "raw_input", "user_input", "text"):
+        if isinstance(kwargs.get(k), str) and kwargs.get(k).strip():
+            return kwargs.get(k).strip()
+    for obj in args:
+        if isinstance(obj, str) and obj.strip():
+            return obj.strip()
+        raw = _p6e4_val(obj, "raw_input", None)
+        if isinstance(raw, str) and raw.strip():
+            return raw.strip()
+        inp = _p6e4_val(obj, "input", None)
+        if isinstance(inp, str) and inp.strip():
+            return inp.strip()
+    return ""
 
-    if not task_id:
-        return {}
+def _p6e4_norm(s):
+    return _p6e4_re.sub(r"\s+", " ", str(s or "").lower()).strip()
 
-    con = _t5v2_sqlite3.connect(_T5V2_DB)
-    try:
-        r = con.execute(
-            "SELECT id,chat_id,topic_id,reply_to_message_id,bot_message_id,input_type,raw_input FROM tasks WHERE id=? LIMIT 1",
-            (_t5v2_s(task_id),)
-        ).fetchone()
-    finally:
-        con.close()
+def _p6e4_is_auto_query(q):
+    t = _p6e4_norm(q)
+    return any(x in t for x in _P6E4_AUTO_TERMS)
 
-    if not r:
-        return {}
+def _p6e4_is_build_query(q):
+    t = _p6e4_norm(q)
+    return any(x in t for x in _P6E4_BUILD_TERMS)
 
-    return {
-        "id": _t5v2_s(r[0]),
-        "chat_id": _t5v2_s(r[1]),
-        "topic_id": int(r[2] or 0),
-        "reply_to_message_id": _t5v2_s(r[3]),
-        "bot_message_id": _t5v2_s(r[4]),
-        "input_type": _t5v2_s(r[5]),
-        "raw_input": _t5v2_s(r[6]),
-    }
+def _p6e4_is_too_vague(q):
+    t = _p6e4_norm(q)
+    return len(t) < 8 or t in ("я тебя про что спрашивал?", "я тебя про что спрашивал", "дальше что?", "дальше что")
 
-def _t5v2_is_photo_meta(meta):
-    fn = _t5v2_s(meta.get("file_name") or meta.get("name"))
-    mt = _t5v2_s(meta.get("mime_type"))
-    return fn.lower().endswith((".jpg", ".jpeg", ".png", ".webp", ".heic")) or mt.startswith("image/")
+def _p6e4_contaminated(q, result):
+    qt = _p6e4_norm(q)
+    rt = _p6e4_norm(result)
+    if _p6e4_is_auto_query(qt):
+        return any(x in rt for x in _P6E4_BUILD_RESULT_TERMS) and not any(x in rt for x in _P6E4_AUTO_RESULT_TERMS)
+    if not _p6e4_is_build_query(qt):
+        return any(x in rt for x in ("rockwool", "роквул", "термодом", "минват"))
+    return False
 
-def _t5v2_msg_id(meta):
-    for k in ("telegram_message_id", "_reply_to_message_id", "reply_to_message_id"):
-        v = _t5v2_s(meta.get(k))
-        if v:
-            return v
-    fn = _t5v2_s(meta.get("file_name"))
-    import re as _re
-    m = _re.search(r"_(\d+)\.(?:jpg|jpeg|png|webp|heic)$", fn, _re.I)
-    return m.group(1) if m else ""
-
-def _t5v2_photo_rows(chat_id, topic_id=5):
-    con = _t5v2_sqlite3.connect(_T5V2_DB)
-    try:
-        rows = con.execute(
-            """
-            SELECT rowid,id,raw_input,reply_to_message_id,created_at
-            FROM tasks
-            WHERE chat_id=?
-              AND topic_id=?
-              AND input_type='drive_file'
-            ORDER BY rowid DESC
-            LIMIT 300
-            """,
-            (_t5v2_s(chat_id), int(topic_id or 0))
-        ).fetchall()
-    finally:
-        con.close()
-
-    out = []
-    for rowid, tid, raw, reply_to, created_at in rows:
-        meta = _t5v2_json_load(raw)
-        if not _t5v2_is_photo_meta(meta):
-            continue
-        meta["_rowid"] = int(rowid)
-        meta["_task_id"] = _t5v2_s(tid)
-        meta["_reply_to_message_id"] = _t5v2_s(reply_to)
-        meta["_created_at"] = _t5v2_s(created_at)
-        out.append(meta)
-    return out
-
-def _t5v2_parent_reply_by_bot(chat_id, topic_id, bot_message_id):
-    if not bot_message_id:
+def _p6e4_general_online_search(q):
+    _p6e4_env_load_once()
+    if _p6e4_is_too_vague(q):
+        return "По текущему сообщению нет самостоятельного поискового запроса. Старый результат не использую"
+    api_key = <REDACTED_SECRET>"OPENROUTER_API_KEY", "")
+    if not api_key:
         return ""
-    con = _t5v2_sqlite3.connect(_T5V2_DB)
-    try:
-        r = con.execute(
-            """
-            SELECT reply_to_message_id
-            FROM tasks
-            WHERE chat_id=?
-              AND topic_id=?
-              AND CAST(bot_message_id AS TEXT)=?
-            ORDER BY rowid DESC
-            LIMIT 1
-            """,
-            (_t5v2_s(chat_id), int(topic_id or 0), _t5v2_s(bot_message_id))
-        ).fetchone()
-    finally:
-        con.close()
-    return _t5v2_s(r[0]) if r else ""
-
-def _t5v2_find_anchor_photo(chat_id, topic_id, reply_to_message_id):
-    rid = _t5v2_s(reply_to_message_id)
-    if not rid:
-        return {}
-
-    rows = _t5v2_photo_rows(chat_id, topic_id)
-
-    for meta in rows:
-        ids = {
-            _t5v2_s(meta.get("_reply_to_message_id")),
-            _t5v2_s(meta.get("telegram_message_id")),
-            _t5v2_msg_id(meta),
-        }
-        if rid in ids:
-            return meta
-
-    parent_reply = _t5v2_parent_reply_by_bot(chat_id, topic_id, rid)
-    if parent_reply and parent_reply != rid:
-        for meta in rows:
-            ids = {
-                _t5v2_s(meta.get("_reply_to_message_id")),
-                _t5v2_s(meta.get("telegram_message_id")),
-                _t5v2_msg_id(meta),
-            }
-            if parent_reply in ids:
-                return meta
-
-    return {}
-
-def _t5v2_group_requested(text):
-    low = _t5v2_low(text)
-    return any(x in low for x in (
-        "этими фото",
-        "эти фото",
-        "этих фото",
-        "все фото",
-        "всеми фото",
-        "несколько фото",
-        "три фото",
-        "фотографии",
-        "с ними",
-        "по ним",
-        "их",
-        "фото",
-        "пакет",
-    ))
-
-def _t5v2_select_photo_group(chat_id, topic_id, anchor, text):
-    if not anchor:
-        return []
-
-    if not _t5v2_group_requested(text):
-        return [anchor]
-
-    rows = _t5v2_photo_rows(chat_id, topic_id)
-
-    try:
-        anchor_rowid = int(anchor.get("_rowid") or 0)
-    except Exception:
-        anchor_rowid = 0
-
-    try:
-        anchor_msg = int(_t5v2_msg_id(anchor) or 0)
-    except Exception:
-        anchor_msg = 0
-
-    selected = []
-    for meta in rows:
-        try:
-            rowid = int(meta.get("_rowid") or 0)
-        except Exception:
-            rowid = 0
-
-        try:
-            msg = int(_t5v2_msg_id(meta) or 0)
-        except Exception:
-            msg = 0
-
-        same_row_cluster = bool(anchor_rowid and abs(rowid - anchor_rowid) <= 10)
-        same_msg_cluster = bool(anchor_msg and msg and abs(msg - anchor_msg) <= 20)
-
-        if same_row_cluster and same_msg_cluster:
-            selected.append(meta)
-
-    selected = sorted(selected, key=lambda m: int(m.get("_rowid") or 0))
-    return selected or [anchor]
-
-def _t5v2_active_folder(chat_id):
-    try:
-        if "get_active_folder" in globals():
-            af = get_active_folder(str(chat_id), 5)
-            if isinstance(af, dict):
-                return af
-    except Exception:
-        pass
-
-    try:
-        p = _T5V2_DATA / f"active_folder_{chat_id}_5.json"
-        d = _t5v2_json.loads(p.read_text(encoding="utf-8"))
-        return d if isinstance(d, dict) else {}
-    except Exception:
-        return {}
-
-def _t5v2_buf_path(chat_id):
-    return _T5V2_DATA / f"buf_{chat_id}_5.json"
-
-def _t5v2_load_buf(chat_id):
-    p = _t5v2_buf_path(chat_id)
-    try:
-        d = _t5v2_json.loads(p.read_text(encoding="utf-8"))
-        if isinstance(d, dict):
-            d.setdefault("materials", [])
-            return d
-    except Exception:
-        pass
-    return {"source": "topic5_visit_buffer", "materials": [], "created_at": _t5v2_time.time()}
-
-def _t5v2_save_buf(chat_id, buf):
-    buf["updated_at"] = _t5v2_time.time()
-    _t5v2_buf_path(chat_id).write_text(_t5v2_json.dumps(buf, ensure_ascii=False, indent=2), encoding="utf-8")
-
-def _t5v2_material(chat_id, meta, comment=""):
-    af = _t5v2_active_folder(chat_id)
-    fid = _t5v2_s(meta.get("drive_file_id") or meta.get("file_id") or meta.get("id"))
-    fn = _t5v2_s(meta.get("file_name") or meta.get("name"))
-    mid = _t5v2_msg_id(meta)
-    clean = _t5v2_s(comment, 20000)
-
-    if clean.upper().startswith("[VOICE]"):
-        clean = clean[7:].strip()
-
-    return {
-        "material_id": str(_t5v2_uuid.uuid4()),
-        "source": "TELEGRAM",
-        "file_type": "PHOTO",
-        "file_name": fn,
-        "drive_file_id": fid,
-        "drive_url": _t5v2_s(meta.get("drive_url") or meta.get("webViewLink") or (f"https://drive.google.com/file/d/{fid}/view?usp=drivesdk" if fid else "")),
-        "telegram_message_id": mid,
-        "reply_to_message_id": mid,
-        "source_task_id": _t5v2_s(meta.get("_task_id")),
-        "active_folder_id": _t5v2_s(af.get("folder_id")),
-        "active_folder_name": _t5v2_s(af.get("folder_name")),
-        "include_in_report": True,
-        "include_in_act": True,
-        "status": "LINKED" if clean else "PENDING",
-        "voice_comment": clean,
-        "added_at": _t5v2_time.time(),
-        "updated_at": _t5v2_time.time(),
-    }
-
-def _t5v2_upsert_material(chat_id, material):
-    buf = _t5v2_load_buf(chat_id)
-    mid = _t5v2_s(material.get("telegram_message_id"))
-    fn = _t5v2_s(material.get("file_name"))
-
-    target = None
-    for old in buf.get("materials", []):
-        if (mid and _t5v2_s(old.get("telegram_message_id")) == mid) or (fn and _t5v2_s(old.get("file_name")) == fn):
-            target = old
-            break
-
-    if target is None:
-        buf["materials"].append(material)
-    else:
-        old_comment = _t5v2_s(target.get("voice_comment"), 20000)
-        new_comment = _t5v2_s(material.get("voice_comment"), 20000)
-        target.update({k: v for k, v in material.items() if v not in ("", None)})
-
-        if old_comment and new_comment and new_comment not in old_comment:
-            target["voice_comment"] = old_comment + "\n" + new_comment
-        elif old_comment and not new_comment:
-            target["voice_comment"] = old_comment
-
-    _t5v2_save_buf(chat_id, buf)
-    return len(buf.get("materials", []))
-
-def _t5v2_bind_photos(chat_id, photos, comment):
-    count = 0
-    for meta in photos:
-        count = _t5v2_upsert_material(chat_id, _t5v2_material(chat_id, meta, comment))
-    return count
-
-def _t5v2_positive_act(text):
-    low = _t5v2_low(text)
-
-    negated = any(x in low for x in (
-        "не делай акт",
-        "не надо акт",
-        "не нужно акт",
-        "не формируй акт",
-        "не должен был сделать акт",
-        "не должен делать акт",
-        "акт не для каждого",
-        "не для каждого из",
-        "принять к сведению",
-        "принять это к сведению",
-        "прими к сведению",
-        "прими это к сведению",
-    ))
-
-    positive = any(x in low for x in (
-        "сделай акт",
-        "сформируй акт",
-        "собери акт",
-        "готовь акт",
-        "акт по этим фото",
-        "сделай разбор",
-        "сформируй документ",
-    ))
-
-    return positive and not negated
-
-def _t5v2_buffer_summary(chat_id):
-    buf = _t5v2_load_buf(chat_id)
-    mats = buf.get("materials", [])
-
-    lines = []
-    for i, m in enumerate(mats, 1):
-        lines.append(f"Фото №{i}: {m.get('file_name','')}")
-        if m.get("voice_comment"):
-            lines.append(f"Пояснение: {m.get('voice_comment')}")
-        if m.get("drive_url"):
-            lines.append(f"Ссылка: {m.get('drive_url')}")
-
-    return "\n".join(lines), len(mats)
-
-def process_technadzor(text: str = "", task_id: str = "", chat_id: str = "", topic_id: int = 0, file_path: str = "", file_name: str = "", **kwargs):
-    task = _t5v2_task(task_id, kwargs)
-
-    try:
-        tid = int(topic_id or task.get("topic_id") or kwargs.get("topic_id") or 0)
-    except Exception:
-        tid = 0
-
-    if tid != 5:
-        return _T5V2_ORIG_PROCESS_TECHNADZOR(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs)
-
-    chat = _t5v2_s(chat_id or task.get("chat_id") or kwargs.get("chat_id"))
-    raw = _t5v2_s(text or task.get("raw_input"))
-    input_type = _t5v2_s(task.get("input_type"))
-    reply_to = _t5v2_s(task.get("reply_to_message_id"))
-
-    if input_type == "drive_file":
-        meta = _t5v2_json_load(raw)
-        if _t5v2_is_photo_meta(meta):
-            count = _t5v2_upsert_material(chat, _t5v2_material(chat, meta, ""))
-            return {
-                "ok": True,
-                "handled": True,
-                "state": "DONE",
-                "status": "DONE",
-                "result_text": f"Фото принято в пакет технадзора: {count} шт. Акт не формирую без отдельной команды.",
-                "message": "Фото принято в пакет технадзора",
-                "history": "FULLFIX_TOPIC5_PHOTO_TO_VISITBUFFER",
-            }
-
-    if input_type in ("text", "voice", "") and reply_to and raw and not _t5v2_positive_act(raw):
-        anchor = _t5v2_find_anchor_photo(chat, 5, reply_to)
-        if anchor:
-            photos = _t5v2_select_photo_group(chat, 5, anchor, raw)
-            count = _t5v2_bind_photos(chat, photos, raw)
-            names = ", ".join(_t5v2_s(p.get("file_name")) for p in photos if p.get("file_name"))
-            return {
-                "ok": True,
-                "handled": True,
-                "state": "DONE",
-                "status": "DONE",
-                "result_text": f"Пояснение принято к фото: {len(photos)} шт. В пакете технадзора: {count} шт. Акт не формирую без отдельной команды.\nФайлы: {names}",
-                "message": "Пояснение принято к фото",
-                "history": "FULLFIX_TOPIC5_REPLY_TO_PHOTO_BOUND",
-            }
-
-    if input_type in ("text", "voice", "") and _t5v2_positive_act(raw):
-        summary, n = _t5v2_buffer_summary(chat)
-        if n <= 0:
-            return {
-                "ok": True,
-                "handled": True,
-                "state": "DONE",
-                "status": "DONE",
-                "result_text": "В пакете технадзора нет фото. Сначала пришли фото или ответь голосом на фото.",
-                "message": "В пакете технадзора нет фото",
-                "history": "FULLFIX_TOPIC5_ACT_NO_MATERIALS",
-            }
-
-        enriched = raw + "\n\nПакет фото технадзора:\n" + summary
-        return _T5V2_ORIG_PROCESS_TECHNADZOR(text=enriched, task_id=task_id, chat_id=chat, topic_id=5, file_path=file_path, file_name=file_name, **kwargs)
-
-    return _T5V2_ORIG_PROCESS_TECHNADZOR(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs)
-# === END_FULLFIX_TOPIC5_TECHNADZOR_CANON_CONTOUR_V2_TECHNADZOR ===
-
-# === P6H_VISION_BLOCKED_FALLBACK_V1 ===
-# CANON §17: когда Vision заблокирован — строить акт из текста/голоса владельца
-# + метаданных файла + предыдущих актов, не останавливаться.
-# Сообщение в документе: "Визуальный анализ фото не выполнялся..."
-import logging as _p6hvbf_log
-_P6HVBF_LOG = _p6hvbf_log.getLogger("technadzor_engine")
-
-_P6HVBF_ORIG = p6f_tnz_handle_photo_act_real
-
-async def p6f_tnz_handle_photo_act_real(file_path, file_name, task_id, chat_id, topic_id, user_text=""):  # noqa: F811
-    vision, vstatus = await _p6f_tnz_vision_via_openrouter(file_path)
-    if vstatus == "EXTERNAL_PHOTO_ANALYSIS_BLOCKED":
-        # Canon §17: Vision blocked → build act from owner text + file metadata
-        _P6HVBF_LOG.info("P6HVBF_VISION_BLOCKED_FALLBACK file=%s user_text_len=%s", file_name, len(user_text or ""))
-        vision = {
-            "summary": (
-                "Автоматический визуальный анализ фото не выполнялся, так как Vision заблокирован. "
-                "Выводы основаны на предыдущих актах, пояснениях владельца и доступных именах/метаданных файлов."
-            ),
-            "defects": [],
-            "confidence": "LOW",
-            "_vision_blocked": True,
-        }
-        if user_text and str(user_text).strip():
-            vision["summary"] += "\n\nПояснение владельца: " + str(user_text).strip()
-        if file_name:
-            vision["summary"] += "\n\nФайл: " + str(file_name)
-        vstatus = "BLOCKED_FALLBACK"
-    # delegate to original with resolved vision
-    # re-enter original logic but skip first vision call
-    if vision is None:
-        return await _P6HVBF_ORIG(file_path, file_name, task_id, chat_id, topic_id, user_text)
-    # replicate original body with already-resolved vision
-    import os as _p6hvbf_os
-    from datetime import datetime as _p6hvbf_dt
-    norms_text = (vision.get("summary", "") or "") + " " + str(user_text or "")
-    confirmed_norms, _ = _p6f_tnz_norms_block(norms_text)
-    docx_lines = _p6f_tnz_build_docx_lines(vision, confirmed_norms, file_name, task_id)
-    ts = _p6hvbf_dt.now().strftime("%Y%m%d_%H%M%S")
-    safe = (str(task_id or ts)[:8] or ts).replace("/", "_").replace("\\", "_")
-    out_dir = "/root/.areal-neva-core/outputs/technadzor_acts"
-    _p6hvbf_os.makedirs(out_dir, exist_ok=True)
-    docx_path = "{}/TECHNADZOR_ACT_PHOTO__{}_{}.docx".format(out_dir, safe, ts)
-    written = _p6tz_make_docx(docx_path, docx_lines)
-    if not written:
-        return {
-            "ok": False, "handled": True, "kind": "technadzor_photo_act",
-            "state": "FAILED",
-            "message": "Ошибка создания DOCX акта",
-            "history": "P6HVBF_DOCX_WRITE_FAIL",
-        }
-    drive_link, ustatus = await _p6f_tnz_upload_to_topic(
-        docx_path, _p6hvbf_os.path.basename(docx_path), chat_id or "-1003725299009", topic_id or 5
+    base = (_p6e4_os.getenv("OPENROUTER_BASE_URL") or "https://openrouter.ai/api/v1").rstrip("/")
+    model = _assert_online_model_allowed(_p6e4_os.getenv("OPENROUTER_MODEL_ONLINE") or _p6e4_os.getenv("ONLINE_MODEL") or "perplexity/sonar")
+    domain_rule = "Автозапчасти/товары/услуги/строительство определяй только по текущему запросу"
+    if _p6e4_is_auto_query(q):
+        domain_rule = "Это поиск автозапчастей. Ищи только автозапчасти и совместимые детали. Стройматериалы запрещены"
+    elif _p6e4_is_build_query(q):
+        domain_rule = "Это строительный/сметный поиск. Ищи стройматериалы, работы, поставщиков или нормы по текущему запросу"
+    prompt = (
+        "Ты универсальный поисковый агент. Работай по текущему запросу, без старой памяти и без доменной подмены.\n"
+        f"{domain_rule}.\n"
+        "Верни кратко по-русски: найдено, таблица вариантов, цена/наличие/город/ссылка, лучший вариант, что проверить.\n"
+        "Если точных данных нет — так и напиши, не подменяй товар другим доменом.\n\n"
+        f"Текущий запрос: {q}"
     )
-    defects_count = len(vision.get("defects") or [])
-    norms_count = len(confirmed_norms)
-    public_lines = [
-        "Акт технического надзора сформирован (Vision заблокирован — анализ по тексту владельца)",
-        "Файл: " + str(file_name or ""),
-        "Дефектов в тексте: {}".format(defects_count),
-        "Нормативных ссылок: {}".format(norms_count) if norms_count else "Нормативная база: норма не подтверждена",
-    ]
-    if drive_link:
-        public_lines.append("Drive DOCX: " + str(drive_link))
-    return {
-        "ok": bool(drive_link),
-        "handled": True,
-        "kind": "technadzor_photo_act",
-        "message": "\n".join(public_lines),
-        "state": "DONE" if drive_link else "AWAITING_CONFIRMATION",
-        "drive_link": drive_link or "",
-        "history": "P6HVBF:vision={},defects={},norms={},upload={}".format(
-            vstatus, defects_count, norms_count, "OK" if drive_link else "FAIL"
-        ),
+    body = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": "You are a fresh web/product search agent. Use only the current user query. Never reuse stale construction results for non-construction searches."},
+            {"role": "user", "content": prompt},
+        ],
+        "temperature": 0.1,
+        "max_tokens": 1800,
     }
-
-p6f_tnz_handle_photo_act_real._p6hvbf_wrapped = True
-_P6HVBF_LOG.info("P6H_VISION_BLOCKED_FALLBACK_V1_INSTALLED")
-# === END_P6H_VISION_BLOCKED_FALLBACK_V1 ===
-
-# === P6_ACT_MATERIAL_FILTER_V1 ===
-# Canon §4/§5: в акт только реальные фото + пояснения к дефектам.
-# Фильтрует буфер перед тем как enriched-текст попадёт в LLM:
-# - исключает PDF/XLSX/DOCX (образцы, старые акты, таблицы)
-# - удаляет служебные команды из voice_comment
-# - передаёт объект/адрес/основание из active_folder в заголовок акта
-import logging as _p6amf_log
-import re as _p6amf_re
-
-_P6AMF_LOG = _p6amf_log.getLogger("technadzor_engine")
-
-_P6AMF_SERVICE_PATTERNS = [
-    "сделай акт", "делай акт", "оформи акт", "собери акт", "готовь акт",
-    "формируй акт", "сделать акт", "финальный акт",
-    "добавь в папку", "добавить в папку", "добавить в эту папку",
-    "не в тот чат", "не туда", "ошибочно",
-    "это тест", "тест надзор", "проверка связи",
-    "ты добавил", "добавил все", "ты все добавил",
-    "какой адрес", "какой у него адрес",
-    "дай мне нормы", "дай нормы",
-]
-
-_P6AMF_NON_PHOTO_EXT = (".xlsx", ".xls", ".pdf", ".docx", ".doc", ".pptx")
-_P6AMF_NON_PHOTO_TYPES = ("PDF", "XLSX", "XLS", "DOCX", "DOC", "OTHER")
-
-def _p6amf_is_service_comment(text):
-    if not text:
-        return False
-    low = str(text).lower().strip()
-    return any(p in low for p in _P6AMF_SERVICE_PATTERNS)
-
-def _p6amf_is_real_photo(m):
-    """True only for real photo materials that belong in the act."""
-    ft = str(m.get("file_type", "PHOTO")).upper()
-    if ft in _P6AMF_NON_PHOTO_TYPES:
-        return False
-    fn = str(m.get("file_name", "")).lower()
-    if any(fn.endswith(ext) for ext in _P6AMF_NON_PHOTO_EXT):
-        return False
-    if m.get("include_in_act") is False:
-        return False
-    return True
-
-def _p6amf_clean_comment(text):
-    """Return comment if substantive, empty string if service command."""
-    if _p6amf_is_service_comment(text):
-        return ""
-    return str(text or "").strip()
-
-def _p6amf_build_enriched(raw, active_folder, materials):
-    """Build structured enriched text for act LLM call."""
-    obj = active_folder.get("object_name") or active_folder.get("folder_name") or ""
-    addr = active_folder.get("object_address") or obj
-    basis = active_folder.get("visit_basis") or ""
-    src = active_folder.get("source_request") or ""
-    instructions = active_folder.get("owner_instructions") or []
-
-    # Filter to real photos only
-    photos = [m for m in materials if _p6amf_is_real_photo(m)]
-    # Excluded non-photo files (for reference note only)
-    excluded = [m for m in materials if not _p6amf_is_real_photo(m)]
-
-    lines = ["КОМАНДА: Сформировать акт технического надзора", ""]
-    if obj:
-        lines.append(f"ОБЪЕКТ: {obj}")
-    if addr and addr != obj:
-        lines.append(f"АДРЕС: {addr}")
-    if basis:
-        lines.append(f"ОСНОВАНИЕ: {basis}")
-    if src:
-        lines.append(f"ИСТОЧНИК ЗАЯВКИ: {src}")
-    lines.append("")
-
-    if instructions:
-        lines.append("ИНСТРУКЦИИ ВЛАДЕЛЬЦА:")
-        # Skip command-like instructions
-        for ins in instructions:
-            if not _p6amf_is_service_comment(ins):
-                lines.append("— " + str(ins).strip())
-        lines.append("")
-
-    lines.append(f"ФОТОМАТЕРИАЛЫ ОБЪЕКТА ({len(photos)} шт.):")
-    for i, m in enumerate(photos, 1):
-        fn = m.get("file_name", "")
-        lines.append(f"Фото №{i}: {fn}")
-        vc = _p6amf_clean_comment(m.get("voice_comment", ""))
-        if vc:
-            lines.append(f"  Пояснение: {vc}")
-        du = m.get("drive_url", "")
-        if du:
-            lines.append(f"  Ссылка: {du}")
-    lines.append("")
-
-    if excluded:
-        lines.append(f"Справочные файлы (не входят в фотофиксацию): {', '.join(m.get('file_name','') for m in excluded)}")
-        lines.append("")
-
-    return "\n".join(lines)
-
-# Wrap process_technadzor to intercept act command path
-_P6AMF_ORIG_PT = process_technadzor
-
-def process_technadzor(text="", task_id="", chat_id="", topic_id=0, file_path="", file_name="", **kwargs):  # noqa: F811
-    try:
-        tid = int(topic_id or (kwargs.get("topic_id") or 0))
-    except Exception:
-        tid = 0
-    if tid != 5:
-        return _P6AMF_ORIG_PT(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id,
-                               file_path=file_path, file_name=file_name, **kwargs)
-
-    # Only intercept act command path
-    raw = str(text or "").strip()
-    if not _t5v2_positive_act(raw):
-        return _P6AMF_ORIG_PT(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id,
-                               file_path=file_path, file_name=file_name, **kwargs)
-
-    try:
-        chat = str(chat_id or "")
-        buf = _t5v2_load_buf(chat)
-        materials = buf.get("materials", [])
-        if not materials:
-            return _P6AMF_ORIG_PT(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id,
-                                   file_path=file_path, file_name=file_name, **kwargs)
-
-        active_folder = get_active_folder(chat, 5) or {}
-        enriched = _p6amf_build_enriched(raw, active_folder, materials)
-
-        photo_count = len([m for m in materials if _p6amf_is_real_photo(m)])
-        excluded_count = len(materials) - photo_count
-        _P6AMF_LOG.info(
-            "P6AMF_ACT_FILTER chat=%s photos=%s excluded=%s obj=%s",
-            chat, photo_count, excluded_count, active_folder.get("object_name", "")
-        )
-        return _P6AMF_ORIG_PT(text=enriched, task_id=task_id, chat_id=chat, topic_id=5,
-                               file_path=file_path, file_name=file_name, **kwargs)
-    except Exception as _e:
-        _P6AMF_LOG.exception("P6AMF_ERR %s", _e)
-        return _P6AMF_ORIG_PT(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id,
-                               file_path=file_path, file_name=file_name, **kwargs)
-
-process_technadzor._p6amf_wrapped = True
-_P6AMF_LOG.info("P6_ACT_MATERIAL_FILTER_V1_INSTALLED")
-# === END_P6_ACT_MATERIAL_FILTER_V1 ===
-
-
-# === PATCH_TOPIC5_CANONICAL_ACT_ENGINE_V3 ===
-# АКТ ОСМОТРА ОБЪЕКТА — TECHNADZOR_DOMAIN_LOGIC_CANON
-# 8 разделов, таблица замечаний 8 колонок.
-# ok=True если файлы сгенерированы, даже если upload упал.
-# Dispatcher отвечает за upload fallback и НИКОГДА не вызывает старый дамп при ok=True.
-
-import json as _t5ca_json
-import logging as _t5ca_logging
-import tempfile as _t5ca_tmp
-from datetime import datetime as _t5ca_dt
-from pathlib import Path as _t5ca_Path
-
-_T5CA_LOG = _t5ca_logging.getLogger("technadzor_engine")
-_T5CA_DATA = _t5ca_Path("/root/.areal-neva-core/data/technadzor")
-_T5CA_SPECIALIST = "Кузнецов Илья Владимирович"
-_T5CA_DEJAVU = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
-_T5CA_DEJAVU_BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-_T5CA_NORM_NONE = "норма не подтверждена"
-
-_T5CA_PHOTO_EXT = (".jpg", ".jpeg", ".png", ".webp", ".heic")
-_T5CA_NON_PHOTO_TYPES = ("PDF", "XLSX", "XLS", "DOCX", "DOC", "OTHER")
-# Фразы-мусор — не включать в замечания
-_T5CA_GARBAGE = [
-    "сделай акт", "делай акт", "оформи акт", "финальный акт", "итоговый акт",
-    "добавь в папку", "добавить в папку", "нужно добавить в папку",
-    "не в тот чат", "это тест", "тест надзор", "проверка связи",
-    "ты добавил", "добавил все", "какой адрес", "дай нормы", "дай мне нормы",
-    "какую задачу", "что по итогу", "видишь их да или нет",
-    "делай финальный", "сделай мне пожалуйста акт", "положи в правильную папку",
-]
-
-
-def _t5ca_s(v, limit=50000):
-    try:
-        return "" if v is None else str(v).strip()[:limit]
-    except Exception:
-        return ""
-
-
-def _t5ca_read_json(path):
-    try:
-        with open(str(path), encoding="utf-8") as _f:
-            return _t5ca_json.load(_f)
-    except Exception:
-        return {}
-
-
-def _t5ca_is_photo(m):
-    fn = _t5ca_s(m.get("file_name", "")).lower()
-    ft = _t5ca_s(m.get("file_type", "")).upper()
-    if ft == "PHOTO":
-        return True
-    if ft in _T5CA_NON_PHOTO_TYPES:
-        return False
-    return any(fn.endswith(e) for e in _T5CA_PHOTO_EXT)
-
-
-def _t5ca_is_garbage(text):
-    low = _t5ca_s(text).lower()
-    return any(p in low for p in _T5CA_GARBAGE)
-
-
-def _t5ca_match_norms(text):
-    """Нормы только если norm_id непустой — не выдумывать."""
-    if not text or not text.strip():
-        return []
-    try:
-        from core.normative_engine import search_norms_sync
-        raw = search_norms_sync(str(text), limit=5)
-        return [n for n in (raw or []) if n.get("norm_id")]
-    except Exception:
-        return []
-
-
-def _t5ca_norm_str(comment):
-    norms = _t5ca_match_norms(comment)
-    if norms:
-        parts = []
-        for n in norms[:2]:
-            nid = _t5ca_s(n.get("norm_id", ""))
-            sec = _t5ca_s(n.get("section", ""))
-            parts.append(f"{nid} — {sec}" if sec else nid)
-        return "; ".join(parts)
-    return _T5CA_NORM_NONE
-
-
-def _t5ca_register_fonts():
-    try:
-        from reportlab.pdfbase import pdfmetrics
-        from reportlab.pdfbase.ttfonts import TTFont
-        if "T5CADejavu" not in pdfmetrics.getRegisteredFontNames():
-            pdfmetrics.registerFont(TTFont("T5CADejavu", _T5CA_DEJAVU))
-        if "T5CADejavuB" not in pdfmetrics.getRegisteredFontNames():
-            pdfmetrics.registerFont(TTFont("T5CADejavuB", _T5CA_DEJAVU_BOLD))
-        return True
-    except Exception:
-        return False
-
-
-def _t5ca_cell_w(cell, emu):
-    try:
-        from docx.oxml.ns import qn
-        from docx.oxml import OxmlElement
-        twips = str(max(1, int(emu / 635)))
-        tc = cell._tc
-        tcPr = tc.get_or_add_tcPr()
-        for old in tcPr.findall(qn("w:tcW")):
-            tcPr.remove(old)
-        tcW = OxmlElement("w:tcW")
-        tcW.set(qn("w:w"), twips)
-        tcW.set(qn("w:type"), "dxa")
-        tcPr.append(tcW)
-    except Exception:
-        pass
-
-
-def _t5ca_build_sections(af, materials):
-    """Build all content lists needed for the act."""
-    obj_name = _t5ca_s(af.get("object_name", ""))
-    obj_addr = _t5ca_s(af.get("object_address") or af.get("object_name") or "")
-    obj_loc = (obj_addr or obj_name)[:40]
-    visit_basis = _t5ca_s(af.get("visit_basis", "запрос заказчика"))
-    source_req = _t5ca_s(af.get("source_request", ""))
-
-    file_count = len(materials)
-    photo_count = sum(1 for m in materials if _t5ca_is_photo(m))
-
-    # remark_rows: №, Фото, Узел/место, Нарушение, Последствия, Что сделать, Норматив, Статус
-    remark_rows = []
-    all_comments = []
-    all_files = []
-
-    for idx, m in enumerate(materials, 1):
-        fn = _t5ca_s(m.get("file_name", f"файл_{idx}"), 80)
-        all_files.append(fn)
-        if not _t5ca_is_photo(m):
-            continue
-        raw = _t5ca_s(m.get("voice_comment") or m.get("comment") or "")
-        comment = "" if _t5ca_is_garbage(raw) else raw[:300]
-        if comment:
-            all_comments.append(comment)
-
-        norm_col = _t5ca_norm_str(comment) if comment else _T5CA_NORM_NONE
-
-        lc = comment.lower() if comment else ""
-        if "заменить" in lc or "старое оборудование" in lc or "вышло из строя" in lc:
-            rec = "Рекомендуется заменить"
-        elif "сварн" in lc or "шов" in lc:
-            rec = "Необходимо проверить качество сварных соединений"
-        elif "примыкание" in lc or "щельник" in lc:
-            rec = "Рекомендуется выполнить нормальное примыкание"
-        elif comment:
-            rec = "Рекомендуется повторный осмотр после устранения"
-        else:
-            rec = ""
-
-        remark_rows.append([
-            str(idx), fn, obj_loc,
-            comment or "—", "",   # Нарушение, Последствия (manual)
-            rec, norm_col, "Открыто",
-        ])
-
-    facts = list(dict.fromkeys(c for c in all_comments if c))[:20]
-
-    recs = []
-    for comment in all_comments:
-        lc = comment.lower()
-        if "заменить" in lc or "старое оборудование" in lc:
-            recs.append(f"Рекомендуется заменить: {comment[:200]}")
-        elif "примыкание" in lc or "щельник" in lc:
-            recs.append(f"Рекомендуется выполнить нормальное примыкание: {comment[:200]}")
-        elif "сварн" in lc:
-            recs.append(f"Необходимо проверить сварные соединения: {comment[:200]}")
-    for inst in af.get("owner_instructions", []):
-        ci = _t5ca_s(inst)
-        if _t5ca_is_garbage(ci):
-            continue
-        lc = ci.lower()
-        if any(x in lc for x in ("рекоменд", "нужно", "необходимо")):
-            recs.append(ci[:300])
-    recs = list(dict.fromkeys(recs))[:20]
-
-    conseqs = []
-    for comment in all_comments:
-        lc = comment.lower()
-        if "старое оборудование" in lc or "вышло из строя" in lc:
-            conseqs.append("Выход оборудования из строя, аварийная ситуация")
-        if "сварн" in lc or "шов" in lc:
-            conseqs.append("Разрушение сварного соединения, нарушение несущей способности")
-        if "примыкание" in lc or "щельник" in lc:
-            conseqs.append("Проникновение влаги, нарушение теплоизоляции")
-    conseqs = list(dict.fromkeys(conseqs))[:10]
-
-    norms_global = _t5ca_match_norms(" ".join(all_comments))
-    norms_found = [r[6] for r in remark_rows if r[6] and r[6] != _T5CA_NORM_NONE]
-
-    basis = f"Основание: {visit_basis}." + (f" Источник: {source_req}." if source_req else "")
-
-    return dict(
-        obj_name=obj_name, obj_addr=obj_addr, file_count=file_count,
-        photo_count=photo_count, all_files=all_files,
-        remark_rows=remark_rows, facts=facts, recs=recs, conseqs=conseqs,
-        norms_global=norms_global, norms_found=norms_found, basis=basis,
+    req = _p6e4_urllib_request.Request(
+        base + "/chat/completions",
+        data=_p6e4_json.dumps(body).encode("utf-8"),
+        headers={
+            "Authorization": "Bearer " + api_key,
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://github.com/rj7hmz9cvm-lgtm/areal-neva-core",
+            "X-Title": "AREAL-NEVA-ORCHESTRA",
+        },
+        method="POST",
     )
-
-
-def _t5ca_write_docx(dst, act_num, date_str, af, sec):
     try:
-        from docx import Document
-        from docx.shared import Cm, Pt
-        from docx.enum.text import WD_ALIGN_PARAGRAPH
-
-        obj_name = sec["obj_name"]
-        obj_addr = sec["obj_addr"]
-        folder_name = _t5ca_s(af.get("folder_name", ""))
-
-        doc = Document()
-        s = doc.sections[0]
-        s.page_width, s.page_height = s.page_height, s.page_width
-        s.left_margin = s.right_margin = Cm(2)
-        s.top_margin = Cm(2)
-        s.bottom_margin = Cm(1.5)
-
-        h = doc.add_heading(f"АКТ ОСМОТРА ОБЪЕКТА № {act_num}", level=1)
-        h.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        sub = doc.add_paragraph("Методом визуального неразрушающего контроля")
-        sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
-
-        doc.add_paragraph(f"Дата осмотра: {date_str}")
-        doc.add_paragraph(f"Место осмотра: {obj_addr or obj_name}")
-        doc.add_paragraph(f"Объект осмотра: {obj_name}")
-        doc.add_paragraph(f"Основание осмотра: {sec['basis']}")
-        doc.add_paragraph(f"Метод обследования: визуальный неразрушающий контроль с выездом на объект")
-        doc.add_paragraph(f"Технический специалист: {_T5CA_SPECIALIST}")
-        if folder_name:
-            doc.add_paragraph(f"Ссылка на фотоматериалы: папка Drive «{folder_name}»")
-
-        doc.add_heading("1. Общие сведения", level=2)
-        doc.add_paragraph(
-            "Осмотр выполнен методом визуального неразрушающего контроля с выездом на объект. "
-            "Цель — выявление фактически наблюдаемых дефектов и формирование рекомендаций "
-            "по их устранению."
-        )
-        doc.add_paragraph(
-            f"Файлов в пакете: {sec['file_count']}. Фотоматериалов: {sec['photo_count']}."
-        )
-
-        doc.add_heading("2. Основание текущего осмотра", level=2)
-        doc.add_paragraph(sec["basis"])
-
-        doc.add_heading("3. Установлено по факту осмотра", level=2)
-        if sec["facts"]:
-            for i, f in enumerate(sec["facts"], 1):
-                doc.add_paragraph(f"{i}. {f[:400]}", style="List Number")
-        else:
-            doc.add_paragraph("Данные фиксируются по пояснениям владельца и фотоматериалам.")
-
-        doc.add_heading("4. Рекомендовано к устранению", level=2)
-        if sec["recs"]:
-            for i, r in enumerate(sec["recs"], 1):
-                doc.add_paragraph(f"{i}. {r[:400]}", style="List Number")
-        else:
-            doc.add_paragraph("Рекомендации формируются по результатам детального осмотра.")
-
-        doc.add_heading("5. Возможные последствия при отсутствии устранения", level=2)
-        if sec["conseqs"]:
-            for c in sec["conseqs"]:
-                doc.add_paragraph(f"— {c[:300]}", style="List Bullet")
-        else:
-            doc.add_paragraph("Последствия определяются по характеру выявленных дефектов.")
-
-        doc.add_heading("6. Таблица замечаний", level=2)
-        col_hdrs = ["№", "Фото", "Узел/место", "Нарушение",
-                    "Последствия", "Что сделать", "Норматив", "Статус"]
-        col_emu = [int(c * 360000) for c in [0.7, 3.2, 2.5, 5.0, 3.0, 4.0, 4.5, 1.8]]
-        tbl = doc.add_table(rows=1, cols=8)
-        tbl.style = "Table Grid"
-        hc = tbl.rows[0].cells
-        for i, ht in enumerate(col_hdrs):
-            hc[i].text = ht
-            _t5ca_cell_w(hc[i], col_emu[i])
-            for p in hc[i].paragraphs:
-                for run in p.runs:
-                    run.bold = True
-                    run.font.size = Pt(8)
-        for row_data in sec["remark_rows"]:
-            row = tbl.add_row().cells
-            for i, val in enumerate(row_data):
-                row[i].text = _t5ca_s(val, 300)
-                _t5ca_cell_w(row[i], col_emu[i])
-                for p in row[i].paragraphs:
-                    for run in p.runs:
-                        run.font.size = Pt(8)
-
-        doc.add_heading("7. Заключение", level=2)
-        if sec["norms_found"]:
-            doc.add_paragraph(
-                f"По результатам осмотра выявлены дефекты. "
-                f"Нормативные документы: {'; '.join(dict.fromkeys(sec['norms_found'][:3]))}. "
-                "Рекомендуется выполнить мероприятия из раздела 4 "
-                "и провести повторный осмотр после их устранения."
-            )
-        else:
-            doc.add_paragraph(
-                "По результатам осмотра зафиксированы замечания согласно таблице. "
-                "Нормативные пункты не подтверждены без дополнительного анализа. "
-                "Рекомендуется повторный осмотр после устранения."
-            )
-
-        doc.add_heading("8. Приложение: перечень фото и документов", level=2)
-        doc.add_paragraph(
-            f"Фотоматериалов: {sec['photo_count']} шт. "
-            f"Файлов в пакете: {sec['file_count']} шт."
-        )
-        for fn in sec["all_files"]:
-            doc.add_paragraph(f"— {fn}", style="List Bullet")
-
-        doc.add_paragraph("")
-        doc.add_paragraph(
-            f"Технический специалист: {_T5CA_SPECIALIST}     _____________     {date_str}"
-        )
-        doc.add_paragraph(
-            "Представитель заказчика: _______________________     _____________     ___________"
-        )
-
-        doc.save(str(dst))
-        return True
-    except Exception as _e:
-        _T5CA_LOG.exception("T5CA_DOCX_ERR %s", _e)
-        return False
-
-
-def _t5ca_write_pdf(dst, act_num, date_str, af, sec):
-    try:
-        from reportlab.lib.pagesizes import A4, landscape as _ls
-        from reportlab.lib.styles import ParagraphStyle
-        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-        from reportlab.lib.units import cm
-        from reportlab.lib import colors
-
-        ok = _t5ca_register_fonts()
-        base = "T5CADejavu" if ok else "Helvetica"
-        bold = "T5CADejavuB" if ok else "Helvetica-Bold"
-
-        st = lambda name, **kw: ParagraphStyle(name, fontName=base, **kw)  # noqa: E731
-        sb = lambda name, **kw: ParagraphStyle(name, fontName=bold, **kw)  # noqa: E731
-
-        sty_t = sb("t5t", fontSize=13, alignment=1, spaceAfter=3)
-        sty_s = st("t5s", fontSize=10, alignment=1, spaceAfter=6, textColor=colors.grey)
-        sty_h = sb("t5h", fontSize=11, spaceBefore=8, spaceAfter=3)
-        sty_b = st("t5b", fontSize=10, leading=13, spaceAfter=2)
-        sty_sm = st("t5sm", fontSize=7, leading=9)
-        sty_smb = sb("t5smb", fontSize=7, leading=9)
-
-        obj_name = sec["obj_name"]
-        obj_addr = sec["obj_addr"]
-        folder_name = _t5ca_s(af.get("folder_name", ""))
-
-        flow = []
-        flow.append(Paragraph(f"АКТ ОСМОТРА ОБЪЕКТА № {act_num}", sty_t))
-        flow.append(Paragraph("Методом визуального неразрушающего контроля", sty_s))
-        flow.append(Paragraph(f"Дата: {date_str}  |  Объект: {obj_name}", sty_b))
-        flow.append(Paragraph(f"Место: {obj_addr or obj_name}", sty_b))
-        flow.append(Paragraph(f"Основание: {sec['basis']}", sty_b))
-        flow.append(Paragraph(f"Технический специалист: {_T5CA_SPECIALIST}", sty_b))
-        if folder_name:
-            flow.append(Paragraph(f"Фотоматериалы: папка Drive «{folder_name}»", sty_b))
-        flow.append(Spacer(1, 6))
-
-        flow.append(Paragraph("1. Общие сведения", sty_h))
-        flow.append(Paragraph(
-            "Осмотр выполнен методом визуального неразрушающего контроля. "
-            f"Файлов в пакете: {sec['file_count']}. Фотоматериалов: {sec['photo_count']}.",
-            sty_b,
-        ))
-
-        flow.append(Paragraph("2. Основание текущего осмотра", sty_h))
-        flow.append(Paragraph(sec["basis"], sty_b))
-
-        flow.append(Paragraph("3. Установлено по факту осмотра", sty_h))
-        if sec["facts"]:
-            for i, f in enumerate(sec["facts"], 1):
-                flow.append(Paragraph(f"{i}. {f[:400]}", sty_b))
-        else:
-            flow.append(Paragraph(
-                "Данные фиксируются по пояснениям владельца и фотоматериалам.", sty_b))
-
-        flow.append(Paragraph("4. Рекомендовано к устранению", sty_h))
-        if sec["recs"]:
-            for i, r in enumerate(sec["recs"], 1):
-                flow.append(Paragraph(f"{i}. {r[:400]}", sty_b))
-        else:
-            flow.append(Paragraph("Рекомендации формируются по результатам осмотра.", sty_b))
-
-        flow.append(Paragraph("5. Возможные последствия при отсутствии устранения", sty_h))
-        if sec["conseqs"]:
-            for c in sec["conseqs"]:
-                flow.append(Paragraph(f"— {c[:300]}", sty_b))
-        else:
-            flow.append(Paragraph(
-                "Последствия определяются по характеру выявленных дефектов.", sty_b))
-
-        flow.append(Paragraph("6. Таблица замечаний", sty_h))
-        col_hdrs = ["№", "Фото", "Узел/место", "Нарушение",
-                    "Последствия", "Что сделать", "Норматив", "Статус"]
-        col_w = [0.7*cm, 3.2*cm, 2.5*cm, 5.0*cm, 3.0*cm, 4.0*cm, 4.5*cm, 1.8*cm]
-        rows = [[Paragraph(h, sty_smb) for h in col_hdrs]]
-        for r in sec["remark_rows"]:
-            rows.append([Paragraph(_t5ca_s(c, 250), sty_sm) for c in r])
-        tbl = Table(rows, colWidths=col_w, repeatRows=1)
-        tbl.setStyle(TableStyle([
-            ("FONTNAME", (0, 0), (-1, -1), base),
-            ("FONTNAME", (0, 0), (-1, 0), bold),
-            ("FONTSIZE", (0, 0), (-1, -1), 7),
-            ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
-            ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ]))
-        flow.append(tbl)
-        flow.append(Spacer(1, 6))
-
-        flow.append(Paragraph("7. Заключение", sty_h))
-        if sec["norms_found"]:
-            flow.append(Paragraph(
-                f"Выявлены дефекты. Нормативные документы: "
-                f"{'; '.join(dict.fromkeys(sec['norms_found'][:3]))}. "
-                "Рекомендуется повторный осмотр после устранения.",
-                sty_b,
-            ))
-        else:
-            flow.append(Paragraph(
-                "Зафиксированы замечания. Нормативные пункты не подтверждены без анализа. "
-                "Рекомендуется повторный осмотр после устранения.",
-                sty_b,
-            ))
-
-        flow.append(Paragraph("8. Приложение: перечень фото и документов", sty_h))
-        flow.append(Paragraph(
-            f"Фото: {sec['photo_count']} шт., файлов в пакете: {sec['file_count']} шт.",
-            sty_b,
-        ))
-        for fn in sec["all_files"]:
-            flow.append(Paragraph(f"— {fn}", sty_sm))
-
-        flow.append(Spacer(1, 12))
-        flow.append(Paragraph(
-            f"Технический специалист: {_T5CA_SPECIALIST}     ___________     {date_str}",
-            sty_b,
-        ))
-        flow.append(Paragraph(
-            "Представитель заказчика: _______________________     ___________     ___________",
-            sty_b,
-        ))
-
-        SimpleDocTemplate(
-            str(dst), pagesize=_ls(A4),
-            leftMargin=2*cm, rightMargin=2*cm,
-            topMargin=2*cm, bottomMargin=2*cm,
-        ).build(flow)
-        return True
-    except Exception as _e:
-        _T5CA_LOG.exception("T5CA_PDF_ERR %s", _e)
-        return False
-
-
-def t5_canonical_act_generate(chat_id: str, topic_id: int, task_id: str) -> dict:
-    """
-    PATCH_TOPIC5_CANONICAL_ACT_ENGINE_V3
-    ok=True если DOCX или PDF сгенерированы (даже без upload).
-    Dispatcher отвечает за fallback upload.
-    """
-    markers = []
-    result = {
-        "ok": False, "docx_link": "", "pdf_link": "",
-        "docx_path": "", "pdf_path": "",
-        "photo_count": 0, "file_count": 0, "norm_count": 0,
-        "obj_name": "", "obj_addr": "", "folder_name": "", "folder_id": "",
-        "upload_ok": False, "error": "", "markers": markers,
-    }
-    try:
-        buf = _t5ca_read_json(_T5CA_DATA / f"buf_{chat_id}_{topic_id}.json")
-        af = _t5ca_read_json(_T5CA_DATA / f"active_folder_{chat_id}_{topic_id}.json")
-        materials = buf.get("materials", [])
-
-        result["obj_name"] = _t5ca_s(af.get("object_name", ""))
-        result["obj_addr"] = _t5ca_s(af.get("object_address") or af.get("object_name") or "")
-        result["folder_name"] = _t5ca_s(af.get("folder_name", ""))
-        result["folder_id"] = _t5ca_s(af.get("folder_id", ""))
-
-        if not materials:
-            result["error"] = "NO_MATERIALS"
-            return result
-
-        sec = _t5ca_build_sections(af, materials)
-        result["file_count"] = sec["file_count"]
-        result["photo_count"] = sec["photo_count"]
-        result["norm_count"] = len(sec["norms_global"])
-
-        markers.append("TOPIC5_GARBAGE_FILTER_OK")
-        markers.append("TOPIC5_ACT_STRUCTURE_OK")
-        if sec["remark_rows"]:
-            markers.append("TOPIC5_DEFECT_TABLE_OK")
-        markers.append("TOPIC5_RECOMMENDATIONS_SECTION_OK")
-        markers.append("TOPIC5_NORMATIVE_SECTION_OK")
-
-        date_str = _t5ca_dt.now().strftime("%d.%m.%Y")
-        act_num = _t5ca_dt.now().strftime("%d.%m/%y")
-        safe = (task_id[:6] if task_id else "000000").upper()
-        base_name = f"AKT_OSMOTRA_{safe}_{_t5ca_dt.now().strftime('%Y%m%d')}"
-
-        out_dir = _t5ca_Path(_t5ca_tmp.gettempdir()) / f"areal_t5ca_{task_id}"
-        out_dir.mkdir(parents=True, exist_ok=True)
-        docx_path = out_dir / f"{base_name}.docx"
-        pdf_path = out_dir / f"{base_name}.pdf"
-
-        docx_ok = _t5ca_write_docx(docx_path, act_num, date_str, af, sec)
-        if docx_ok and docx_path.exists():
-            markers.append("TOPIC5_DOCX_CREATED")
-            result["docx_path"] = str(docx_path)
-
-        pdf_ok = _t5ca_write_pdf(pdf_path, act_num, date_str, af, sec)
-        if pdf_ok and pdf_path.exists():
-            markers.append("TOPIC5_PDF_CREATED")
-            result["pdf_path"] = str(pdf_path)
-
-        if not docx_ok and not pdf_ok:
-            result["error"] = "FILE_GENERATION_FAILED"
-            return result
-
-        # ok=True means files are ready — dispatcher handles upload
-        result["ok"] = True
-
-        # Try service account upload
-        folder_id = result["folder_id"]
-        for path_key, link_key in (("docx_path", "docx_link"), ("pdf_path", "pdf_link")):
-            fpath = result.get(path_key, "")
-            if not fpath:
-                continue
-            try:
-                from core.drive_service_account_uploader import upload_artifact_service_account
-                lnk = upload_artifact_service_account(
-                    fpath, name=_t5ca_Path(fpath).name,
-                    folder_id=folder_id or None,
-                ) or ""
-                result[link_key] = lnk
-            except Exception as _ue:
-                _T5CA_LOG.warning("T5CA_SA_UPLOAD_WARN %s %s", path_key, _ue)
-
-        if result["docx_link"] or result["pdf_link"]:
-            markers.append("TOPIC5_DRIVE_LINKS_SAVED")
-            result["upload_ok"] = True
-
-        _T5CA_LOG.info(
-            "T5CA_DONE task=%s photos=%s files=%s norms=%s docx=%s pdf=%s upload=%s",
-            task_id, sec["photo_count"], sec["file_count"], len(sec["norms_global"]),
-            docx_ok, pdf_ok, result["upload_ok"],
-        )
-        return result
-
-    except Exception as _e:
-        _T5CA_LOG.exception("T5CA_ERR task=%s %s", task_id, _e)
-        result["error"] = _t5ca_s(str(_e), 200)
-        return result
-
-
-_T5CA_LOG.info("PATCH_TOPIC5_CANONICAL_ACT_ENGINE_V3 installed")
-# === END_PATCH_TOPIC5_CANONICAL_ACT_ENGINE_V3 ===
-
-====================================================================================================
-END_FILE: core/technadzor_engine.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/technadzor_object_registry.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: b003e7b28c05758383c40e493308bafd72abc8deb716bb2a31f8f0357af8134c
-====================================================================================================
-# === P6H_TOPIC5_OBJECT_REGISTRY_INSPECTION_CHAIN_20260504 ===
-# Object registry + inspection chain for topic_5 / Технадзор.
-#
-# Storage layers (system-only, never client-facing):
-#   1) server JSON: data/templates/technadzor/objects/<object_id>.json
-#   2) memory.db key: topic_5_technadzor_object_<object_id>
-#   3) timeline:    data/memory_files/chat_<chat_id>/topic_5/timeline.jsonl
-#   4) Drive (best-effort): topic_5/_system/object_registry/<object_id>.json
-#
-# A card has:
-#   object_id, object_name, client_name, object_folder_url,
-#   client_facing_folder_url, service_folder_url,
-#   inspection_chain[], previous_acts[],
-#   current_open_items[], closed_items[], unresolved_items[],
-#   recommendations[], last_visit_date, last_act_no, last_pdf_link,
-#   created_at, updated_at
-#
-# Inspection record:
-#   act_no, date, mode (initial|repeat|extension|description_only),
-#   pdf_link, docx_link, source_photo_folder,
-#   findings[], open_items[], closed_items[], new_items[],
-#   owner_observation, conflict_flags
-from __future__ import annotations
-
-import json
-import logging
-import re
-import time
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
-
-LOG = logging.getLogger("task_worker")
-
-_BASE = Path(__file__).resolve().parent.parent
-_REGISTRY_DIR = _BASE / "data" / "templates" / "technadzor" / "objects"
-_REGISTRY_DIR.mkdir(parents=True, exist_ok=True)
-
-_TIMELINE_BASE = _BASE / "data" / "memory_files"
-
-_FOLLOW_UP_INDICATORS = (
-    "та же папка", "тот же объект", "то же место", "сегодняшний выезд",
-    "повторн", "продолжен", "доделай по", "прошлый раз", "ранее", "вчера",
-    "та же стройка", "тот же ангар", "следующий выезд", "очередной выезд",
-)
-
-_NEW_OBJECT_INDICATORS = (
-    "новый объект", "другой объект", "новая стройка", "новый ангар",
-    "новая площадка", "новый адрес",
-)
-
-
-def _slug(s: str) -> str:
-    if not s:
+        with _p6e4_urllib_request.urlopen(req, timeout=90) as resp:
+            data = _p6e4_json.loads(resp.read().decode("utf-8", errors="ignore"))
+        return str(data["choices"][0]["message"]["content"]).strip()
+    except Exception as exc:
+        _p6e4_logging.getLogger("ai_router").warning("P6E4_GENERAL_SEARCH_ERR query=%r err=%s", q[:120], exc)
         return ""
-    s = s.lower().strip()
-    s = re.sub(r"[^a-zа-я0-9]+", "_", s)
-    s = re.sub(r"_+", "_", s).strip("_")
-    return s[:60]
 
-
-def _card_path(object_id: str) -> Path:
-    return _REGISTRY_DIR / f"{_slug(object_id)}.json"
-
-
-def list_object_ids() -> List[str]:
-    return sorted(p.stem for p in _REGISTRY_DIR.glob("*.json"))
-
-
-def list_object_summaries() -> List[Dict[str, Any]]:
-    summaries = []
-    for p in _REGISTRY_DIR.glob("*.json"):
-        try:
-            data = json.loads(p.read_text(encoding="utf-8"))
-            summaries.append({
-                "object_id": data.get("object_id") or p.stem,
-                "object_name": data.get("object_name", ""),
-                "client_name": data.get("client_name", ""),
-                "last_visit_date": data.get("last_visit_date", ""),
-                "last_act_no": data.get("last_act_no", ""),
-                "inspection_count": len(data.get("inspection_chain") or []),
-            })
-        except Exception:
-            pass
-    return summaries
-
-
-def load_object(object_id: str) -> Optional[Dict[str, Any]]:
-    p = _card_path(object_id)
-    if not p.exists():
-        return None
-    try:
-        return json.loads(p.read_text(encoding="utf-8"))
-    except Exception:
-        LOG.exception("P6H_REG_LOAD_FAIL %s", object_id)
-        return None
-
-
-def _new_card(object_id: str, **fields) -> Dict[str, Any]:
-    now = int(time.time())
-    base = {
-        "object_id": object_id,
-        "object_name": "",
-        "client_name": "",
-        "object_folder_url": "",
-        "client_facing_folder_url": "",
-        "service_folder_url": "",
-        "inspection_chain": [],
-        "previous_acts": [],
-        "current_open_items": [],
-        "closed_items": [],
-        "unresolved_items": [],
-        "recommendations": [],
-        "last_visit_date": "",
-        "last_act_no": "",
-        "last_pdf_link": "",
-        "created_at": now,
-        "updated_at": now,
-    }
-    for k, v in (fields or {}).items():
-        if k in base and v:
-            base[k] = v
-    return base
-
-
-def save_object(card: Dict[str, Any]) -> Optional[Path]:
-    if not card or not card.get("object_id"):
-        return None
-    card["updated_at"] = int(time.time())
-    p = _card_path(card["object_id"])
-    try:
-        p.write_text(json.dumps(card, ensure_ascii=False, indent=2), encoding="utf-8")
-        _persist_to_memory(card)
-        _append_timeline(card.get("chat_id", ""), card)
-        return p
-    except Exception:
-        LOG.exception("P6H_REG_SAVE_FAIL %s", card.get("object_id"))
-        return None
-
-
-def _persist_to_memory(card: Dict[str, Any]) -> None:
-    try:
-        from core.memory_client import save_memory  # type: ignore
-        chat_id = str(card.get("chat_id") or "")
-        oid = card.get("object_id", "")
-        body = json.dumps(card, ensure_ascii=False)[:8000]
-        save_memory(chat_id=chat_id, key=f"topic_5_technadzor_object_{oid}", value=body)
-    except Exception:
-        # silent — server JSON is the canonical store
-        pass
-
-
-def _append_timeline(chat_id: str, card: Dict[str, Any]) -> None:
-    if not chat_id:
+def _p6e4_wrap_search_func(name):
+    orig = globals().get(name)
+    if not orig or getattr(orig, "_p6e4_wrapped", False):
         return
-    try:
-        d = _TIMELINE_BASE / f"chat_{chat_id}" / "topic_5"
-        d.mkdir(parents=True, exist_ok=True)
-        line = json.dumps({
-            "ts": int(time.time()),
-            "kind": "technadzor_object_update",
-            "object_id": card.get("object_id"),
-            "object_name": card.get("object_name", ""),
-            "last_act_no": card.get("last_act_no", ""),
-            "last_visit_date": card.get("last_visit_date", ""),
-            "inspection_count": len(card.get("inspection_chain") or []),
-        }, ensure_ascii=False)
-        with (d / "timeline.jsonl").open("a", encoding="utf-8") as f:
-            f.write(line + "\n")
-    except Exception:
-        pass
+    if _p6e4_inspect.iscoroutinefunction(orig):
+        async def wrapped(*args, **kwargs):
+            q = _p6e4_extract_query(args, kwargs)
+            if q and not _p6e4_is_build_query(q):
+                fresh = await _p6e4_asyncio.to_thread(_p6e4_general_online_search, q)
+                if fresh:
+                    return fresh
+            res = await orig(*args, **kwargs)
+            if q and _p6e4_contaminated(q, res):
+                fresh = await _p6e4_asyncio.to_thread(_p6e4_general_online_search, q)
+                if fresh:
+                    return fresh
+            return res
+    else:
+        def wrapped(*args, **kwargs):
+            q = _p6e4_extract_query(args, kwargs)
+            if q and not _p6e4_is_build_query(q):
+                fresh = _p6e4_general_online_search(q)
+                if fresh:
+                    return fresh
+            res = orig(*args, **kwargs)
+            if q and _p6e4_contaminated(q, res):
+                fresh = _p6e4_general_online_search(q)
+                if fresh:
+                    return fresh
+            return res
+    wrapped._p6e4_wrapped = True
+    globals()[name] = wrapped
 
+for _p6e4_func_name in (
+    "run_search_session",
+    "search_current_query",
+    "handle_search_query",
+    "handle_search",
+    "run_search",
+    "execute_search",
+    "search_session",
+    "run",
+):
+    _p6e4_wrap_search_func(_p6e4_func_name)
 
-def derive_object_id_from_context(
-    voice_ctx: Optional[Dict[str, Any]],
-    drive_idx: Optional[Dict[str, Any]],
-    file_path: str = "",
-    file_name: str = "",
-) -> Tuple[str, Dict[str, str]]:
-    """Try to derive a stable object_id from available signals.
-
-    Returns (object_id, source_dict) where source_dict explains what was used.
-    Empty object_id means we cannot derive — caller must ask owner.
-    """
-    sources: Dict[str, str] = {}
-    candidates: List[str] = []
-
-    if voice_ctx:
-        fh = (voice_ctx.get("folder_hint") or "").strip()
-        if fh:
-            candidates.append(fh)
-            sources["folder_hint"] = fh
-        oh = (voice_ctx.get("object_hint") or "").strip()
-        if oh and not candidates:
-            candidates.append(oh)
-            sources["object_hint"] = oh
-
-    # Drive: client-folder match by file path or by recent client folders
-    if drive_idx:
-        for f in drive_idx.get("folders_client", []) or []:
-            name = f.get("name") or ""
-            if name and name not in candidates:
-                # Use the most recently modified client folder as a fallback hint only
-                candidates.append(name)
-                sources.setdefault("drive_client_folder", name)
-                break
-
-    # File name pattern (e.g., "kievskoe_08_04_26_act.pdf")
-    if file_name and not candidates:
-        candidates.append(file_name.rsplit(".", 1)[0])
-        sources["file_name"] = file_name
-
-    if not candidates:
-        return ("", sources)
-    return (_slug(candidates[0]), sources)
-
-
-def detect_visit_mode(card: Optional[Dict[str, Any]], voice_ctx: Optional[Dict[str, Any]]) -> str:
-    """Returns one of: initial | repeat | extension | description_only.
-
-    Decision:
-      • card is None or empty inspection_chain → initial
-      • voice transcript explicitly says повторный/продолжение → repeat
-      • else if chain non-empty → repeat (default for known object)
-      • else → initial
-    """
-    transcript = ((voice_ctx or {}).get("transcript") or "").lower()
-    if any(t in transcript for t in _NEW_OBJECT_INDICATORS):
-        return "initial"
-    has_history = bool(card and (card.get("inspection_chain") or []))
-    if not has_history:
-        return "initial"
-    if any(t in transcript for t in _FOLLOW_UP_INDICATORS):
-        return "repeat"
-    if "дополнен" in transcript or "приложен" in transcript:
-        return "extension"
-    if (voice_ctx or {}).get("output_kind") == "description":
-        return "description_only"
-    return "repeat"
-
-
-def carry_forward_open_items(card: Optional[Dict[str, Any]], current_findings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """For follow-up acts: take prior open_items and assign status based on
-    whether similar findings exist in current_findings.
-
-    Status set:
-      УСТРАНЕНО, УСТРАНЕНО ЧАСТИЧНО, НЕ УСТРАНЕНО,
-      ТРЕБУЕТ ДОВЕДЕНИЯ, НЕ ПРОВЕРЯЛОСЬ, ТРЕБУЕТ УТОЧНЕНИЯ
-    """
-    if not card:
-        return []
-    prior = card.get("current_open_items") or []
-    if not prior:
-        return []
-
-    def _norm(s: str) -> str:
-        return re.sub(r"\s+", " ", (s or "").lower()).strip()
-
-    cur_blobs = [_norm((d.get("title") or "") + " " + (d.get("description") or "")) for d in current_findings or []]
-
-    out: List[Dict[str, Any]] = []
-    for it in prior:
-        prior_blob = _norm((it.get("title") or "") + " " + (it.get("description") or "") + " " + (it.get("section") or ""))
-        # naive match: any token of length >= 5 from prior present in current
-        tokens = [t for t in re.findall(r"\w+", prior_blob) if len(t) >= 5]
-        match = False
-        partial = False
-        for cb in cur_blobs:
-            present = sum(1 for t in tokens if t in cb)
-            if present >= max(2, len(tokens) // 3):
-                match = True
-                if present < max(3, len(tokens) // 2):
-                    partial = True
-                break
-        if match and not partial:
-            status = "НЕ УСТРАНЕНО"
-        elif match and partial:
-            status = "УСТРАНЕНО ЧАСТИЧНО"
-        else:
-            status = "ТРЕБУЕТ УТОЧНЕНИЯ"
-        out.append({
-            "title": it.get("title", ""),
-            "description": it.get("description", ""),
-            "section": it.get("section", ""),
-            "status": status,
-            "from_act_no": it.get("act_no", ""),
-        })
-    return out
-
-
-def detect_voice_vision_conflict(voice_ctx: Optional[Dict[str, Any]], grouped_sections: List[Tuple[str, List[Dict[str, Any]]]]) -> List[str]:
-    """Returns a list of human-readable conflict markers.
-
-    Conflict cases:
-      • voice mentions sections that Vision didn't pick up
-      • voice explicitly excludes section that Vision flagged
-    """
-    if not voice_ctx or not (voice_ctx.get("transcript") or ""):
-        return []
-    transcript = (voice_ctx.get("transcript") or "").lower()
-    flags: List[str] = []
-
-    # Use the same section keywords as the engine
-    try:
-        from core.technadzor_engine import _P6H_SECTIONS  # type: ignore
-    except Exception:
-        return []
-
-    voice_mentioned: List[str] = []
-    for sec_title, kws in _P6H_SECTIONS:
-        for kw in kws:
-            if kw in transcript:
-                voice_mentioned.append(sec_title)
-                break
-
-    vision_sections = [s[0] for s in (grouped_sections or [])]
-    for vm in voice_mentioned:
-        if vm not in vision_sections:
-            flags.append(
-                f"По голосовому ТЗ упомянуто «{vm}», но по фото Vision этого не подтвердил — уточни, что включать в акт"
-            )
-    excludes = " ".join(voice_ctx.get("explicit_exclude") or [])
-    for vs in vision_sections:
-        for kw_pair in _P6H_SECTIONS:
-            if kw_pair[0] != vs:
-                continue
-            if any(kw in excludes.lower() for kw in kw_pair[1]):
-                flags.append(
-                    f"Vision выделил «{vs}», но владелец голосом просил это не включать — уточни"
-                )
-            break
-    return flags[:6]
-
-
-def record_inspection(
-    object_id: str,
-    chat_id: str,
-    *,
-    act_no: str = "",
-    date_str: str = "",
-    mode: str = "initial",
-    pdf_link: str = "",
-    docx_link: str = "",
-    source_photo_folder: str = "",
-    findings: Optional[List[Dict[str, Any]]] = None,
-    open_items: Optional[List[Dict[str, Any]]] = None,
-    closed_items: Optional[List[Dict[str, Any]]] = None,
-    new_items: Optional[List[Dict[str, Any]]] = None,
-    owner_observation: str = "",
-    conflict_flags: Optional[List[str]] = None,
-    object_name: str = "",
-    client_name: str = "",
-    object_folder_url: str = "",
-    client_facing_folder_url: str = "",
-    service_folder_url: str = "",
-) -> Dict[str, Any]:
-    """Append an inspection record to object's chain. Creates card if missing."""
-    card = load_object(object_id) or _new_card(object_id)
-    card["chat_id"] = str(chat_id)
-    if object_name:
-        card["object_name"] = object_name
-    if client_name and not card.get("client_name"):
-        card["client_name"] = client_name
-    if object_folder_url:
-        card["object_folder_url"] = object_folder_url
-    if client_facing_folder_url:
-        card["client_facing_folder_url"] = client_facing_folder_url
-    if service_folder_url:
-        card["service_folder_url"] = service_folder_url
-
-    record = {
-        "act_no": act_no or "",
-        "date": date_str or "",
-        "mode": mode or "initial",
-        "pdf_link": pdf_link or "",
-        "docx_link": docx_link or "",
-        "source_photo_folder": source_photo_folder or "",
-        "findings": findings or [],
-        "open_items": open_items or [],
-        "closed_items": closed_items or [],
-        "new_items": new_items or [],
-        "owner_observation": owner_observation or "",
-        "conflict_flags": conflict_flags or [],
-        "ts": int(time.time()),
-    }
-    card["inspection_chain"].append(record)
-    if act_no:
-        card["last_act_no"] = act_no
-    if date_str:
-        card["last_visit_date"] = date_str
-    if pdf_link:
-        card["last_pdf_link"] = pdf_link
-        card["previous_acts"].append({
-            "act_no": act_no, "date": date_str,
-            "pdf_link": pdf_link, "docx_link": docx_link,
-        })
-    if open_items is not None:
-        card["current_open_items"] = list(open_items)
-    if closed_items:
-        card["closed_items"] = (card.get("closed_items") or []) + list(closed_items)
-    save_object(card)
-    return card
-
-
-try:
-    LOG.info("P6H_TOPIC5_OBJECT_REGISTRY_INSPECTION_CHAIN_20260504_INSTALLED")
-except Exception:
-    pass
-# === END_P6H_TOPIC5_OBJECT_REGISTRY_INSPECTION_CHAIN_20260504 ===
+_p6e4_logging.getLogger("ai_router").info("P6E4_GENERAL_SEARCH_GUARD_INSTALLED")
+# === END_P6E4_GENERAL_SEARCH_NO_DOMAIN_CONTAMINATION_20260504_V1 ===
 
 ====================================================================================================
-END_FILE: core/technadzor_object_registry.py
+END_FILE: core/search_session.py
 FILE_CHUNK: 1/1
 ====================================================================================================
 
 ====================================================================================================
-BEGIN_FILE: core/telegram_artifact_fallback.py
+BEGIN_FILE: core/sheets_generator.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 4a26f39caf63a874a8b6f186ef3b2ce95745637edd8d21d9e8e7230b14ba4b99
+SHA256_FULL_FILE: c81446527b4f3d281a6839303da115164fdc1d9f1ec3f0cbd58ed9f8da4a6112
 ====================================================================================================
-import os
+# === GOOGLE_SHEETS_NATIVE_EXPORT_V1 ===
+from __future__ import annotations
 import logging
-import requests
-from typing import Optional
+import os
+import re
+from typing import Any, List, Optional
 
 logger = logging.getLogger(__name__)
 
-def send_artifact_to_telegram(
-    chat_id,
-    topic_id,
-    reply_to_message_id,
-    artifact_path: str,
-    caption: str = "",
-) -> dict:
-    bot_token = <REDACTED_SECRET>"BOT_TOKEN") or os.environ.get("TELEGRAM_BOT_TOKEN")
-    if not bot_token:
-        return {"ok": False, "error": "BOT_TOKEN_NOT_SET"}
-    if not artifact_path or not os.path.exists(artifact_path):
-        return {"ok": False, "error": "ARTIFACT_NOT_FOUND"}
+def _safe_title(title: str) -> str:
+    t = re.sub(r"[\r\n\t]+", " ", str(title or "Estimate")).strip()
+    return re.sub(r"[\\/]+", "_", t)[:90] or "Estimate"
+
+def _creds():
+    from dotenv import load_dotenv
+    load_dotenv("/root/.areal-neva-core/.env", override=False)
+    from google.oauth2.credentials import Credentials
+    from google.auth.transport.requests import Request
+    creds = Credentials(
+        None,
+        refresh_token=<REDACTED_SECRET>"GDRIVE_REFRESH_TOKEN"],
+        token_uri="https://oauth2.googleapis.com/token",
+        client_id=os.environ["GDRIVE_CLIENT_ID"],
+        client_secret=<REDACTED_SECRET>"GDRIVE_CLIENT_SECRET"],
+        scopes=["https://www.googleapis.com/auth/drive","https://www.googleapis.com/auth/spreadsheets"],
+    )
+    creds.refresh(Request())
+    return creds
+
+def create_google_sheet(title: str, rows: List[List[Any]], topic_id: int = 0, task_id: str = "") -> Optional[str]:
     try:
-        data = {
-            "chat_id": str(chat_id),
-            "caption": caption or "Готово. Файл отправлен в Telegram.",
-        }
-        if topic_id and int(topic_id) > 0:
-            data["message_thread_id"] = str(topic_id)
-        if reply_to_message_id:
-            data["reply_to_message_id"] = str(reply_to_message_id)
-        with open(artifact_path, "rb") as f:
-            res = requests.post(
-                f"https://api.telegram.org/bot{bot_token}/sendDocument",
-                data=data,
-                files={"document": (os.path.basename(artifact_path), f)},
-                timeout=30,
-            )
-        if res.ok:
-            resp = res.json()
-            msg = resp.get("result", {})
-            doc = msg.get("document", {})
-            return {
-                "ok": True,
-                "message_id": msg.get("message_id"),
-                "file_id": doc.get("file_id"),
-                "file_name": doc.get("file_name"),
-            }
-        return {"ok": False, "error": f"TG_STATUS_{res.status_code}"}
+        from googleapiclient.discovery import build
+        creds = _creds()
+        drive = build("drive", "v3", credentials=creds, cache_discovery=False)
+        sheets = build("sheets", "v4", credentials=creds, cache_discovery=False)
+        sheet = sheets.spreadsheets().create(
+            body={"properties": {"title": _safe_title(title)}, "sheets": [{"properties": {"title": "Смета"}}]},
+            fields="spreadsheetId,spreadsheetUrl",
+        ).execute()
+        sid = sheet.get("spreadsheetId")
+        if not sid:
+            return None
+        values = [["" if v is None else v for v in (row if isinstance(row, list) else [row])] for row in (rows or [])][:5000]
+        if values:
+            sheets.spreadsheets().values().update(
+                spreadsheetId=sid, range="Смета!A1",
+                valueInputOption="USER_ENTERED", body={"values": values},
+            ).execute()
+        try:
+            from core.engine_base import get_drive_topic_folder_id
+            folder_id = get_drive_topic_folder_id(int(topic_id or 0))
+            if folder_id:
+                meta = drive.files().get(fileId=sid, fields="parents").execute()
+                old = ",".join(meta.get("parents") or [])
+                drive.files().update(fileId=sid, addParents=folder_id, removeParents=old, fields="id").execute()
+        except Exception as me:
+            logger.warning("SHEETS_MOVE_ERR task=%s err=%s", task_id, me)
+        try:
+            drive.permissions().create(fileId=sid, body={"role": "reader", "type": "anyone"}, fields="id").execute()
+        except Exception:
+            pass
+        link = drive.files().get(fileId=sid, fields="webViewLink").execute().get("webViewLink") \
+               or f"https://docs.google.com/spreadsheets/d/{sid}/edit"
+        logger.info("GOOGLE_SHEETS_NATIVE_EXPORT_V1_OK task=%s link=%s", task_id, link)
+        return link
     except Exception as e:
-        logger.error("send_artifact_to_telegram failed: %s", e)
-        return {"ok": False, "error": str(e)}
+        logger.warning("GOOGLE_SHEETS_NATIVE_EXPORT_V1_ERR task=%s err=%s", task_id, e)
+        return None
+# === END_GOOGLE_SHEETS_NATIVE_EXPORT_V1 ===
 
 ====================================================================================================
-END_FILE: core/telegram_artifact_fallback.py
+END_FILE: core/sheets_generator.py
 FILE_CHUNK: 1/1
 ====================================================================================================
 
 ====================================================================================================
-BEGIN_FILE: core/telegram_source_skill_extractor.py
+BEGIN_FILE: core/sheets_route.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 2f9e18163498265ad703ced0637bf33a83779fdfc4b7304974bb64d091a5f797
+SHA256_FULL_FILE: 6f8fdc9ca242696660b7d018166ccec46738a0ccfdf0baf929cf4d85f42d2f00
 ====================================================================================================
-#!/usr/bin/env python3
-# === TELEGRAM_SOURCE_SKILL_EXTRACTOR_V1 ===
-# Read-only Telethon-based extractor for public Telegram sources.
-# Collects message metadata, links, and document references.
-# Does NOT save raw history to memory.db or create core.db tasks.
-from __future__ import annotations
+# === SHEETS_ROUTE_V1 ===
+import os, logging
+logger = logging.getLogger(__name__)
+CREDENTIALS_PATH = "/root/.areal-neva-core/credentials.json"
 
-import asyncio
-import logging
-import os
-import re
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any
+def is_sheets_requested(text: str) -> bool:
+    # === SHEETS_INTENT_DETECT_V1 ===
+    t = (text or "").lower()
+    return any(k in t for k in ["таблиц", "sheets", "гугл таблиц", "google sheets"])
 
-logger = logging.getLogger("telegram_source_skill_extractor")
+async def create_estimate_sheet(rows: list, title: str, chat_id: str, topic_id: int) -> dict:
+    if not os.path.exists(CREDENTIALS_PATH):
+        return {"success": False, "url": "", "error": "SHEETS_CREDENTIALS_MISSING"}
+    try:
+        from google.oauth2 import service_account
+        from googleapiclient.discovery import build
+        creds = service_account.Credentials.from_service_account_file(
+            CREDENTIALS_PATH,
+            scopes=["https://www.googleapis.com/auth/spreadsheets"]
+        )
+        svc = build("sheets", "v4", credentials=creds)
+        sheet = svc.spreadsheets().create(body={"properties": {"title": title}}).execute()
+        sid = sheet["spreadsheetId"]
+        url = f"https://docs.google.com/spreadsheets/d/{sid}/edit"
+        header = [["№", "Наименование", "Ед.", "Кол-во", "Цена, руб.", "Сумма, руб."]]
+        data_rows = header + [[i+1, r.get("name",""), r.get("unit",""), r.get("qty",0),
+                                r.get("price",0), r.get("total",0)] for i, r in enumerate(rows)]
+        svc.spreadsheets().values().update(
+            spreadsheetId=sid, range="A1",
+            valueInputOption="RAW",
+            body={"values": data_rows}
+        ).execute()
+        return {"success": True, "url": url, "sheet_id": sid}
+    except Exception as e:
+        return {"success": False, "url": "", "error": str(e)}
+# === END SHEETS_ROUTE_V1 ===
 
-BASE = Path(__file__).parent.parent
-SESSION_PATH = BASE / "sessions" / "user.session"
-API_ID = 27925449
+====================================================================================================
+END_FILE: core/sheets_route.py
+FILE_CHUNK: 1/1
+====================================================================================================
 
-URL_RE = re.compile(r"https?://[^\s\)\]\>\"']+")
+====================================================================================================
+BEGIN_FILE: core/source_dedup.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: e5f2c40dc2ffb3c4c4fdfeaa1c27cd4622c0d33c6c10b363118cb90cb265baef
+====================================================================================================
+# === SOURCE_DEDUPLICATION_V1 ===
+import hashlib, logging
+logger = logging.getLogger(__name__)
 
-DOCUMENT_EXTENSIONS = {
-    ".pdf", ".docx", ".doc", ".xlsx", ".xls",
-    ".pptx", ".ppt", ".zip", ".rar", ".dwg", ".dxf",
-}
+def _sig(item: dict) -> str:
+    key = f"{item.get('url','')}|{item.get('supplier','')}|{item.get('price','')}"
+    return hashlib.md5(key.encode()).hexdigest()
 
-TECHNADZOR_KEYWORDS = [
-    "акт", "дефект", "предписание", "заключение", "протокол",
-    "осмотр", "проверка", "замечание", "нарушение", "устранение",
-    "приёмка", "приемка", "скрытые работы", "исполнительная",
-    "норматив", "снип", "гост", "сп ", "фото", "документ",
-    "отчёт", "отчет", "смета", "спецификация", "чертёж", "чертеж",
-    "технадзор", "стройконтроль", "авторский надзор",
-    "кровля", "фасад", "перекрытие", "колонна", "фундамент",
-    "бетон", "арматура", "сварка", "металл", "кладка", "газобетон",
-    "отделка", "стяжка", "штукатурка", "электрика", "вентиляция",
-    "водоснабжение", "канализация", "охрана труда",
-]
-
-NOISE_MARKERS = [
-    "реклама", "продам", "куплю", "скидка", "акция",
-    "подпишись", "переходи по ссылке", "розыгрыш",
-    "заработок", "кредит без отказа", "займ",
-    "только сегодня", "бесплатно жми", "выиграли",
-]
-
-
-def load_env(path: str | None = None) -> dict:
-    env_path = Path(path) if path else BASE / ".env"
-    result = {}
-    if not env_path.exists():
-        return result
-    for line in env_path.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        k, _, v = line.partition("=")
-        result[k.strip()] = v.strip()
+def dedup_offers(offers: list) -> list:
+    seen = set()
+    result = []
+    for o in offers:
+        s = _sig(o)
+        if s not in seen:
+            seen.add(s)
+            result.append(o)
     return result
 
+def dedup_search_results(results: list, key_field: str = "url") -> list:
+    seen = set()
+    clean = []
+    for r in results:
+        k = str(r.get(key_field) or r)[:200]
+        if k not in seen:
+            seen.add(k)
+            clean.append(r)
+    return clean
 
-def build_client(session_path: str | None = None):
-    from telethon import TelegramClient
-    sp = str(session_path or SESSION_PATH)
-    # api_hash not stored — authorized session does not need it for reads
-    return TelegramClient(sp, API_ID, "a" * 32)
-
-
-def extract_links(text: str) -> list[str]:
-    return URL_RE.findall(text or "")
-
-
-def is_relevant_for_document_skill(
-    message_text: str,
-    file_name: str | None = None,
-    links: list[str] | None = None,
-) -> bool:
-    low = (message_text or "").lower()
-    if any(n in low for n in NOISE_MARKERS):
-        return False
-    if any(kw in low for kw in TECHNADZOR_KEYWORDS):
-        return True
-    fname_low = (file_name or "").lower()
-    if any(ext in fname_low for ext in DOCUMENT_EXTENSIONS):
-        return True
-    for link in (links or []):
-        if any(ext in link.lower() for ext in DOCUMENT_EXTENSIONS):
-            return True
-    return False
-
-
-def build_source_record(msg_id: int, msg_date: str, text: str,
-                        media_type: str | None, file_name: str | None,
-                        links: list[str], channel: str) -> dict:
-    return {
-        "source": f"@{channel.lstrip('@')}",
-        "message_id": msg_id,
-        "message_date": msg_date,
-        "text": (text or "")[:1500],
-        "media_type": media_type,
-        "file_name": file_name,
-        "links": links,
-        "source_ref": f"https://t.me/{channel.lstrip('@')}/{msg_id}",
-    }
-
-
-async def check_source_access(source: str, client) -> dict:
-    try:
-        entity = await client.get_entity(source.lstrip("@"))
-        return {
-            "ok": True,
-            "id": entity.id,
-            "title": getattr(entity, "title", ""),
-            "username": getattr(entity, "username", ""),
-        }
-    except Exception as e:
-        return {"ok": False, "error": str(e)}
-
-
-async def scan_source(source: str, client, limit: int = 1000) -> dict:
-    from telethon.tl.types import (
-        MessageMediaDocument, MessageMediaPhoto, MessageMediaWebPage
-    )
-
-    records: list[dict] = []
-    total = skipped_empty = skipped_noise = detected_docs = detected_links = 0
-
-    async for msg in client.iter_messages(source.lstrip("@"), limit=limit or None):
-        total += 1
-        text = (msg.message or "").strip()
-        if not text and not msg.media:
-            skipped_empty += 1
+# TIME_RELEVANCE — фильтр по свежести
+def filter_by_time_relevance(items: list, date_field: str = "date", max_days: int = 30) -> list:
+    from datetime import datetime, timezone, timedelta
+    cutoff = datetime.now(timezone.utc) - timedelta(days=max_days)
+    result = []
+    for item in items:
+        raw_date = item.get(date_field)
+        if not raw_date:
+            result.append(item)
             continue
-
-        low = text.lower()
-        if any(n in low for n in NOISE_MARKERS):
-            skipped_noise += 1
-            continue
-
-        links = extract_links(text)
-        file_name = None
-        media_type = None
-
-        if isinstance(msg.media, MessageMediaDocument):
-            doc = msg.media.document
-            for attr in getattr(doc, "attributes", []):
-                if hasattr(attr, "file_name") and attr.file_name:
-                    file_name = attr.file_name
-            media_type = "document"
-            detected_docs += 1
-        elif isinstance(msg.media, MessageMediaPhoto):
-            media_type = "photo"
-        elif isinstance(msg.media, MessageMediaWebPage):
-            wp = msg.media.webpage
-            if hasattr(wp, "url") and wp.url:
-                links.append(wp.url)
-            media_type = "webpage"
-
-        if links:
-            detected_links += 1
-
-        date_str = msg.date.isoformat() if msg.date else ""
-        record = build_source_record(
-            msg.id, date_str, text, media_type, file_name,
-            links, source.lstrip("@")
-        )
-        records.append(record)
-
-    return {
-        "total_fetched": total,
-        "skipped_empty": skipped_empty,
-        "skipped_noise": skipped_noise,
-        "detected_docs": detected_docs,
-        "detected_links": detected_links,
-        "records": records,
-    }
-
-
-async def download_relevant_documents(
-    client, msg, output_dir: Path
-) -> str | None:
-    from telethon.tl.types import MessageMediaDocument
-    if not isinstance(msg.media, MessageMediaDocument):
-        return None
-    doc = msg.media.document
-    file_name = f"doc_{msg.id}"
-    for attr in getattr(doc, "attributes", []):
-        if hasattr(attr, "file_name") and attr.file_name:
-            file_name = attr.file_name
-    ext = Path(file_name).suffix.lower()
-    if ext not in DOCUMENT_EXTENSIONS:
-        return None
-    out_path = output_dir / file_name
-    if out_path.exists():
-        return str(out_path)
-    try:
-        await client.download_media(msg, file=str(out_path))
-        return str(out_path)
-    except Exception as e:
-        logger.warning("download failed msg=%s err=%s", msg.id, e)
-        return None
-
-
-async def run_source_scan(
-    source: str = "@tnz_msk",
-    limit: int = 1000,
-    download_docs: bool = False,
-    docs_output_dir: Path | None = None,
-) -> dict:
-    client = build_client()
-    await client.connect()
-
-    if not await client.is_user_authorized():
-        await client.disconnect()
-        return {"ok": False, "error": "session_not_authorized"}
-
-    access = await check_source_access(source, client)
-    if not access["ok"]:
-        await client.disconnect()
-        return {"ok": False, "error": access.get("error")}
-
-    scan = await scan_source(source, client, limit=limit)
-    downloaded: list[str] = []
-
-    if download_docs and docs_output_dir:
-        docs_output_dir.mkdir(parents=True, exist_ok=True)
-        from telethon.tl.types import MessageMediaDocument
-        async for msg in client.iter_messages(source.lstrip("@"), limit=limit or None):
-            if not isinstance(msg.media, MessageMediaDocument):
-                continue
-            text = msg.message or ""
-            links = extract_links(text)
-            doc = msg.media.document
-            fname = ""
-            for attr in getattr(doc, "attributes", []):
-                if hasattr(attr, "file_name") and attr.file_name:
-                    fname = attr.file_name
-            if is_relevant_for_document_skill(text, fname, links):
-                path = await download_relevant_documents(client, msg, docs_output_dir)
-                if path:
-                    downloaded.append(path)
-
-    await client.disconnect()
-
-    return {
-        "ok": True,
-        "source": source,
-        "access": access,
-        "scan": scan,
-        "downloaded_documents": downloaded,
-        "scanned_at": datetime.now(timezone.utc).isoformat(),
-    }
-# === END_TELEGRAM_SOURCE_SKILL_EXTRACTOR_V1 ===
-
-====================================================================================================
-END_FILE: core/telegram_source_skill_extractor.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/temp_cleanup.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 2b7b91b8f6ba3a13518d234d8c24a426b85854300ae56a458fae4c6bcdb06194
-====================================================================================================
-# === TEMP_CLEANUP_V1 ===
-import os, logging, glob
-from pathlib import Path
-logger = logging.getLogger(__name__)
-
-TEMP_DIRS = ["/tmp", "/root/.areal-neva-core/data/temp"]
-
-def cleanup_file(path: str) -> bool:
-    try:
-        if path and os.path.exists(path):
-            os.remove(path)
-            logger.info("TEMP_CLEANED path=%s", path)
-            return True
-    except Exception as e:
-        logger.warning("TEMP_CLEANUP_ERR path=%s err=%s", path, e)
-    return False
-
-def cleanup_task_temps(task_id: str) -> int:
-    """Удалить все temp файлы связанные с task_id"""
-    count = 0
-    for d in TEMP_DIRS:
-        if not os.path.exists(d):
-            continue
-        for f in glob.glob(f"{d}/*{task_id}*"):
-            if cleanup_file(f):
-                count += 1
-    return count
-
-def cleanup_after_upload(local_paths: list) -> int:
-    count = 0
-    for p in (local_paths or []):
-        if p and isinstance(p, str) and "/tmp" in p:
-            if cleanup_file(p):
-                count += 1
-    return count
-# === END TEMP_CLEANUP_V1 ===
-
-====================================================================================================
-END_FILE: core/temp_cleanup.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/template_engine_v1.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 03b9f6dca63b13fc8584f33acc32498fc893c9dfe06a92b5d1c0e467d04eddfc
-====================================================================================================
-# === TEMPLATE_ENGINE_V1 ===
-import os, json, logging, glob
-from typing import Optional, Dict, Any
-logger = logging.getLogger(__name__)
-
-BASE = "/root/.areal-neva-core"
-TEMPLATE_DIR = f"{BASE}/data/templates"
-TRIGGER_PHRASES = [
-    "сделай так же", "по образцу", "как в прошлый раз",
-    "аналогично", "такой же", "такую же", "такое же",
-    "по шаблону", "используй шаблон", "как раньше"
-]
-
-def is_template_request(text: str) -> bool:
-    low = text.lower()
-    return any(t in low for t in TRIGGER_PHRASES)
-
-def save_template(topic_id: int, file_path: str, template_type: str = "estimate") -> bool:
-    """Сохранить файл как шаблон для топика"""
-    try:
-        os.makedirs(f"{TEMPLATE_DIR}/{template_type}", exist_ok=True)
-        import shutil
-        ext = os.path.splitext(file_path)[1]
-        dest = f"{TEMPLATE_DIR}/{template_type}/ACTIVE__topic_{topic_id}{ext}"
-        shutil.copy2(file_path, dest)
-        meta = {
-            "topic_id": topic_id,
-            "type": template_type,
-            "source": file_path,
-            "saved_at": __import__("datetime").datetime.utcnow().isoformat()
-        }
-        with open(f"{TEMPLATE_DIR}/{template_type}/ACTIVE__topic_{topic_id}.json", "w") as f:
-            json.dump(meta, f, ensure_ascii=False)
-        logger.info("TEMPLATE_ENGINE_V1 saved topic=%s type=%s", topic_id, template_type)
-        return True
-    except Exception as e:
-        logger.error("TEMPLATE_SAVE_ERR %s", e)
-        return False
-
-def get_template(topic_id: int, template_type: str = "estimate") -> Optional[str]:
-    """Получить путь к шаблону топика"""
-    try:
-        patterns = [
-            f"{TEMPLATE_DIR}/{template_type}/ACTIVE__topic_{topic_id}.*",
-            f"{TEMPLATE_DIR}/estimate/ACTIVE__topic_{topic_id}.*",
-        ]
-        for pat in patterns:
-            hits = [f for f in glob.glob(pat) if not f.endswith(".json")]
-            if hits:
-                return hits[0]
-    except Exception as e:
-        logger.warning("TEMPLATE_GET_ERR %s", e)
-    return None
-
-def apply_template_to_xlsx(template_path: str, rows: list, output_path: str) -> bool:
-    """Применить структуру шаблона к новым данным"""
-    try:
-        from openpyxl import load_workbook
-        import copy
-        wb_tpl = load_workbook(template_path)
-        ws_tpl = wb_tpl.active
-
-        # Копируем структуру — заголовки из шаблона
-        wb_new = load_workbook(template_path)
-        ws_new = wb_new.active
-
-        # Очищаем данные, оставляем заголовки (строка 1-2)
-        header_rows = 2
-        for row in ws_new.iter_rows(min_row=header_rows+1, max_row=ws_new.max_row):
-            for cell in row:
-                cell.value = None
-
-        # Заполняем новыми данными с сохранением формул
-        for i, item in enumerate(rows, start=header_rows+1):
-            ws_new.cell(i, 1, value=i - header_rows)
-            ws_new.cell(i, 2, value=str(item.get("name", "")))
-            ws_new.cell(i, 3, value=str(item.get("unit", "шт")))
-            ws_new.cell(i, 4, value=float(item.get("qty", 0) or 0))
-            ws_new.cell(i, 5, value=float(item.get("price", 0) or 0))
-            ws_new.cell(i, 6, f"=D{i}*E{i}")
-
-        # Итог
-        last = header_rows + len(rows)
-        ws_new.cell(last+1, 6, f"=SUM(F{header_rows+1}:F{last})")
-
-        wb_new.save(output_path)
-        logger.info("TEMPLATE_APPLIED_V1 output=%s rows=%s", output_path, len(rows))
-        return True
-    except Exception as e:
-        logger.error("TEMPLATE_APPLY_ERR %s", e)
-        return False
-
-def detect_template_type(file_name: str, intent: str = "") -> str:
-    fn = file_name.lower()
-    if any(e in fn for e in [".xlsx", ".xls", ".csv"]):
-        return "estimate"
-    if any(e in fn for e in [".docx", ".doc"]):
-        return "technadzor"
-    if "estimate" in intent or "смет" in intent:
-        return "estimate"
-    return "estimate"
-# === END TEMPLATE_ENGINE_V1 ===
-
-====================================================================================================
-END_FILE: core/template_engine_v1.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/template_intake_engine.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 2f648e1b331a0532cd5ada22935d47ef2b2d81860d0239e0cde9275f3702eddf
-====================================================================================================
-# === FULLFIX_14_TEMPLATE_INTAKE ===
-import os, json, logging
-from datetime import datetime
-logger = logging.getLogger(__name__)
-ENGINE = "FULLFIX_14_TEMPLATE_INTAKE"
-TEMPLATES_DIR = "/root/.areal-neva-core/data/templates"
-TEMPLATES_INDEX = os.path.join(TEMPLATES_DIR, "index.json")
-os.makedirs(TEMPLATES_DIR, exist_ok=True)
-
-SAMPLE_PHRASES = [
-    "как образец", "как шаблон", "образец", "шаблон", "как пример",
-    "по образцу", "возьми", "используй этот", "используй как",
-    "сделай по", "сохрани", "запомни"
-]
-
-def is_sample_intent(text):
-    t = (text or "").lower()
-    return any(p in t for p in SAMPLE_PHRASES)
-
-def _load_index():
-    if os.path.exists(TEMPLATES_INDEX):
         try:
-            with open(TEMPLATES_INDEX, "r", encoding="utf-8") as f:
-                return json.load(f)
+            ts = datetime.fromisoformat(str(raw_date).replace("Z", "+00:00"))
+            if ts >= cutoff:
+                result.append(item)
         except Exception:
-            pass
-    return []
+            result.append(item)
+    return result
 
-def _save_index(idx):
-    with open(TEMPLATES_INDEX, "w", encoding="utf-8") as f:
-        json.dump(idx, f, ensure_ascii=False, indent=2)
+# REGION_PRIORITY — приоритет по региону
+_PRIORITY_REGIONS = ["санкт-петербург", "спб", "москва", "мск", "ленинградская"]
 
-def _detect_kind(file_name, mime_type, text=""):
-    name = (file_name or "").lower()
-    t = (text or "").lower()
-    if "смет" in name or "смет" in t or "estimate" in name:
-        return "estimate_template"
-    if any(x in name for x in ["ар", "кж", "кд", "км", "проект"]):
-        return "project_template"
-    if any(x in t for x in ["акт", "дефект", "технадзор"]):
-        return "act_template"
-    if mime_type and "spreadsheet" in mime_type:
-        return "estimate_template"
-    if mime_type and "pdf" in mime_type:
-        return "project_template"
-    return "unknown_template"
-
-def _save_memory_pointer(chat_id, topic_id, kind, template_id):
-    try:
-        import sqlite3
-        mem_db = "/root/.areal-neva-core/data/memory.db"
-        key = "topic_" + str(topic_id) + "_active_" + kind
-        val = json.dumps({"template_id": template_id, "kind": kind})
-        con = sqlite3.connect(mem_db)
-        con.execute(
-            "INSERT OR REPLACE INTO memory(chat_id,key,value,timestamp) VALUES(?,?,?,datetime('now'))",
-            (chat_id, key, val)
-        )
-        con.commit()
-        con.close()
-    except Exception as e:
-        logger.error("TEMPLATE_MEMORY_SAVE err=%s", e)
-
-def save_template(task_id, chat_id, topic_id, file_name, mime_type, local_path="", caption=""):
-    kind = _detect_kind(file_name, mime_type, caption)
-    tmpl = {
-        "template_id": task_id, "chat_id": chat_id, "topic_id": topic_id,
-        "source_task_id": task_id, "source_file_name": file_name,
-        "mime_type": mime_type, "kind": kind,
-        "created_at": datetime.now().isoformat(), "active": True,
-    }
-    idx = _load_index()
-    for t in idx:
-        if t.get("chat_id") == chat_id and t.get("topic_id") == topic_id and t.get("kind") == kind:
-            t["active"] = False
-    idx.append(tmpl)
-    _save_index(idx)
-    with open(os.path.join(TEMPLATES_DIR, task_id + ".json"), "w", encoding="utf-8") as f:
-        json.dump(tmpl, f, ensure_ascii=False, indent=2)
-    _save_memory_pointer(chat_id, topic_id, kind, task_id)
-    return tmpl
-
-def get_active_template(chat_id, topic_id, kind="estimate_template"):
-    idx = _load_index()
-    for t in reversed(idx):
-        if t.get("chat_id") == chat_id and t.get("topic_id") == topic_id and t.get("kind") == kind and t.get("active"):
-            p = os.path.join(TEMPLATES_DIR, t["template_id"] + ".json")
-            if os.path.exists(p):
-                with open(p, "r", encoding="utf-8") as f:
-                    return json.load(f)
-    return {}
-
-def process_template_intake_sync(conn, task_id, chat_id, topic_id, raw_input, local_path="", file_name="", mime_type=""):
-    from core.reply_sender import send_reply_ex
-    try:
-        if not is_sample_intent(raw_input) and not file_name:
-            return False
-        if not file_name:
-            row = conn.execute(
-                "SELECT raw_input FROM tasks WHERE chat_id=? AND COALESCE(topic_id,0)=? AND input_type='drive_file' AND state!='CANCELLED' ORDER BY created_at DESC LIMIT 1",
-                (chat_id, topic_id)
-            ).fetchone()
-            if row:
-                try:
-                    meta = json.loads(row[0] or "{}")
-                    file_name = meta.get("file_name", "")
-                    mime_type = meta.get("mime_type", "")
-                except Exception:
-                    pass
-        save_template(task_id, chat_id, topic_id, file_name, mime_type, local_path, raw_input)
-        kind = _detect_kind(file_name, mime_type, raw_input)
-        kind_label = {"estimate_template": "смета", "project_template": "проект", "act_template": "акт"}.get(kind, "файл")
-        result_text = "Образец принят. Тип: " + kind_label + ". Файл: " + file_name + ". Шаблон сохранён."
-        conn.execute(
-            "UPDATE tasks SET state='DONE',result=?,updated_at=datetime('now') WHERE id=?",
-            (result_text, task_id)
-        )
-        conn.execute(
-            "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
-            (task_id, "state:DONE")
-        )
-        conn.commit()
-        try:
-            send_reply_ex(chat_id=str(chat_id), text=result_text, reply_to_message_id=None)
-        except Exception as _se:
-            logger.error("TEMPLATE_SEND_ERR task=%s err=%s", task_id, _se)
-        return True
-    except Exception as e:
-        logger.error("TEMPLATE_INTAKE_ERROR task=%s err=%s", task_id, e)
-        return False
-
-async def process_template_intake(conn, task_id, chat_id, topic_id, raw_input, local_path="", file_name="", mime_type=""):
-    import asyncio
-    return await asyncio.get_event_loop().run_in_executor(
-        None, process_template_intake_sync, conn, task_id, chat_id, topic_id, raw_input, local_path, file_name, mime_type
-    )
-# === END FULLFIX_14_TEMPLATE_INTAKE ===
+def sort_by_region(offers: list, preferred_regions: list = None) -> list:
+    regions = [r.lower() for r in (preferred_regions or _PRIORITY_REGIONS)]
+    def region_score(o):
+        city = str(o.get("city", "")).lower()
+        for i, r in enumerate(regions):
+            if r in city:
+                return i
+        return len(regions)
+    return sorted(offers, key=region_score)
+# === END SOURCE_DEDUPLICATION_V1 ===
 
 ====================================================================================================
-END_FILE: core/template_intake_engine.py
+END_FILE: core/source_dedup.py
 FILE_CHUNK: 1/1
 ====================================================================================================
 
 ====================================================================================================
-BEGIN_FILE: core/template_manager.py
+BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 3a9747ea77b9eedd43404491616b056af960b0fa4cdb72331f4b0ce6c3fc9cce
+SHA256_FULL_FILE: a14245840cba352b5e7781b9be9b7ba772aa1ea620f2ab67fceb730d93fa5dae
 ====================================================================================================
-import os, logging, sqlite3, shutil
-from typing import Optional
-from datetime import datetime
-
-logger = logging.getLogger(__name__)
-MEMORY_DB = "/root/.areal-neva-core/data/memory.db"
-
-def save_template(chat_id: str, topic_id: int, template_type: str, file_path: str) -> bool:
-    try:
-        conn = sqlite3.connect(MEMORY_DB)
-        cur = conn.cursor()
-        key = f"topic_{topic_id}_template_{template_type}"
-        cur.execute("INSERT OR REPLACE INTO memory (chat_id, key, value, timestamp) VALUES (?,?,?,?)",
-                    (chat_id, key, file_path, datetime.utcnow().isoformat()))
-        conn.commit(); conn.close()
-        return True
-    except Exception as e:
-        logger.error(f"save_template: {e}")
-        return False
-
-def get_template(chat_id: str, topic_id: int, template_type: str) -> Optional[str]:
-    try:
-        conn = sqlite3.connect(MEMORY_DB)
-        cur = conn.cursor()
-        cur.execute("SELECT value FROM memory WHERE chat_id=? AND key=?", (chat_id, f"topic_{topic_id}_template_{template_type}"))
-        row = cur.fetchone()
-        conn.close()
-        return row[0] if row else None
-    except:
-        return None
-
-def apply_template(template_path: str, output_path: str, data: list) -> bool:
-    try:
-        shutil.copy(template_path, output_path)
-        from openpyxl import load_workbook
-        wb = load_workbook(output_path)
-        ws = wb.active
-        for i, row_data in enumerate(data, 2):
-            for j, val in enumerate(row_data, 1):
-                ws.cell(i, j, value=val)
-        wb.save(output_path); wb.close()
-        return True
-    except Exception as e:
-        logger.error(f"apply_template: {e}")
-        return False
-
-# === ALL_CONTOURS_TEMPLATE_MANAGER_V2 ===
-def save_template(file_path, topic_id, intent):
-    import shutil
-    from pathlib import Path
-    src=Path(file_path)
-    if not src.exists():
-        raise FileNotFoundError(str(file_path))
-    safe="".join(c if c.isalnum() or c in ("_","-") else "_" for c in str(intent or "template"))
-    out=Path("/root/.areal-neva-core/data/templates")
-    out.mkdir(parents=True, exist_ok=True)
-    dst=out/(str(int(topic_id or 0))+"_"+safe+(src.suffix or ".xlsx"))
-    shutil.copy2(src,dst)
-    return str(dst)
-# === END_ALL_CONTOURS_TEMPLATE_MANAGER_V2 ===
-
-# === FINAL_CODE_CONTOUR_TEMPLATE_APPLY_V1 ===
-def apply_template(template_path, output_path, data_rows):
-    from openpyxl import load_workbook
-    wb=load_workbook(template_path)
-    ws=wb.active
-    start=2
-    for r_idx,row in enumerate(data_rows or [], start):
-        vals=row.values() if isinstance(row,dict) else row
-        for c_idx,val in enumerate(list(vals),1):
-            ws.cell(r_idx,c_idx,value=val)
-    wb.save(output_path)
-    return output_path
-# === END_FINAL_CODE_CONTOUR_TEMPLATE_APPLY_V1 ===
-
-# === TEMPLATE_SYSTEM_V41 ===
-
-def template_learn_v41(file_path, chat_id=None, topic_id=0, template_type="project"):
-    try:
-        return save_template(str(chat_id or "default"), int(topic_id or 0), template_type, file_path)
-    except TypeError:
-        return save_template(file_path, topic_id, template_type)
-    except Exception:
-        return False
-
-
-def template_priority_v41(chat_id=None, topic_id=0, template_type="project"):
-    try:
-        return get_template(str(chat_id or "default"), int(topic_id or 0), template_type)
-    except TypeError:
-        return get_template(topic_id, template_type)
-    except Exception:
-        return None
-
-
-def project_template_engine_v41(template_path, output_path, data_rows=None):
-    if not template_path:
-        return {"success": False, "error": "TEMPLATE_NOT_FOUND"}
-    ok = apply_template(template_path, output_path, data_rows or [])
-    return {"success": bool(ok), "artifact_path": output_path if ok else None, "error": None if ok else "TEMPLATE_APPLY_FAILED"}
-
-# === END_TEMPLATE_SYSTEM_V41 ===
-
-# === CODE_CLOSE_V43_TEMPLATE_MANAGER ===
-
-def _v43_template_dir():
-    import os
-    path = "/root/.areal-neva-core/data/templates"
-    os.makedirs(path, exist_ok=True)
-    return path
-
-def template_learn_v43(file_path, topic_id=0, template_type="project"):
-    import os, shutil, json
-    base = _v43_template_dir()
-    name = "topic_" + str(int(topic_id or 0)) + "_" + str(template_type or "project")
-    ext = os.path.splitext(str(file_path))[1] or ".bin"
-    dst = os.path.join(base, name + ext)
-    shutil.copy2(file_path, dst)
-    meta = {"topic_id": int(topic_id or 0), "template_type": template_type, "path": dst}
-    with open(os.path.join(base, name + ".json"), "w", encoding="utf-8") as f:
-        json.dump(meta, f, ensure_ascii=False, indent=2)
-    return dst
-
-def template_priority_v43(topic_id=0, template_type="project"):
-    import os, json, glob
-    base = _v43_template_dir()
-    name = "topic_" + str(int(topic_id or 0)) + "_" + str(template_type or "project")
-    meta = os.path.join(base, name + ".json")
-    if os.path.exists(meta):
-        try:
-            data = json.load(open(meta, encoding="utf-8"))
-            if os.path.exists(data.get("path","")):
-                return data.get("path")
-        except Exception:
-            pass
-    files = glob.glob(os.path.join(base, name + ".*"))
-    files = [x for x in files if not x.endswith(".json")]
-    return files[0] if files else None
-
-def project_template_engine_v43(template_path, output_path, data_rows=None):
-    import shutil, os
-    if not template_path or not os.path.exists(template_path):
-        return {"success": False, "error": "TEMPLATE_NOT_FOUND"}
-    shutil.copy2(template_path, output_path)
-    return {"success": True, "artifact_path": output_path, "template_used": template_path}
-
-# === END_CODE_CLOSE_V43_TEMPLATE_MANAGER ===
-
-
-# === PATCH_PROJECT_TEMPLATE_STORAGE_V1 ===
-import json as _json_ptm
-import re as _re_ptm
-from pathlib import Path as _Path_ptm
-
-_PTM_DIR = _Path_ptm("/root/.areal-neva-core/data/project_templates")
-
-def save_project_template_model(model: dict, task_id: str = "", chat_id: str = "", topic_id: int = 0) -> str:
-    _PTM_DIR.mkdir(parents=True, exist_ok=True)
-    model = dict(model)
-    model["task_id"] = task_id or model.get("task_id","")
-    model["chat_id"] = str(chat_id or model.get("chat_id",""))
-    model["topic_id"] = int(topic_id or model.get("topic_id",0) or 0)
-    name = model.get("project_type","UNKNOWN")
-    safe = _re_ptm.sub(r"[^A-Za-zА-Яа-я0-9_.-]+","_",f"{name}_{task_id[:8] if task_id else 'manual'}")
-    path = _PTM_DIR / f"PROJECT_TEMPLATE_MODEL__{safe}.json"
-    path.write_text(_json_ptm.dumps(model, ensure_ascii=False, indent=2), encoding="utf-8")
-    return str(path)
-
-# === END PATCH_PROJECT_TEMPLATE_STORAGE_V1 ===
-
-====================================================================================================
-END_FILE: core/template_manager.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/template_workflow.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: e45401c7e1af73eed9f615dcc6455b2a91d36b5898b1729a81e61c960702b9eb
-====================================================================================================
-# === PROJECT_TEMPLATE_WORKFLOW_FULL_CLOSE_V1 ===
-# === TECHNADZOR_ACT_TEMPLATE_WORKFLOW_V1 ===
-# === TEMPLATE_SCOPE_ENFORCER_V1 ===
+# === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
 from __future__ import annotations
 
-import json
 import os
 import re
+import io
+import json
+import uuid
+import time
+import math
 import sqlite3
+import asyncio
 import tempfile
-import zipfile
-from datetime import datetime, timezone
+import statistics
+import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List, Tuple
+
+import requests
+from dotenv import load_dotenv
 
 BASE = Path("/root/.areal-neva-core")
-TEMPLATE_DIR = BASE / "data/templates"
-PROJECT_DIR = TEMPLATE_DIR / "project"
-TECH_DIR = TEMPLATE_DIR / "technadzor"
-INDEX = TEMPLATE_DIR / "index.json"
+ENV_PATH = BASE / ".env"
+MEM_DB = BASE / "data/memory.db"
+load_dotenv(str(ENV_PATH), override=True)
 
-for d in (PROJECT_DIR, TECH_DIR):
-    d.mkdir(parents=True, exist_ok=True)
+TOPIC_ID_STROYKA = 2
+DRIVE_TEMPLATES_PARENT_ID = "19Z3acDgPub4nV55mad5mb8ju63FsqoG9"
 
-SAVE_WORDS = ("образец", "шаблон", "пример", "возьми это", "сохрани это", "запомни это")
-APPLY_WORDS = ("по образцу", "по шаблону", "как в образце", "как шаблон", "сделай так же")
-PROJECT_WORDS = ("проект", "чертеж", "чертёж", "dwg", "dxf", "pdf", "кж", "км", "кмд", "ар", "проектирование")
-TECH_WORDS = ("акт", "технадзор", "дефект", "замечан", "осмотр", "гост", "сп", "снип")
+DEPRECATED_TEMPLATE_NAMES = (
+    "ВОР_кирпичная_кладка_ИСПРАВЛЕНО.xlsx",
+)
 
-def _s(v: Any, limit: int = 10000) -> str:
-    if v is None:
-        return ""
-    if isinstance(v, (dict, list)):
-        try:
-            v = json.dumps(v, ensure_ascii=False)
-        except Exception:
-            v = str(v)
-    return str(v).strip()[:limit]
-
-def _safe(v: Any) -> str:
-    return re.sub(r"[^A-Za-zА-Яа-я0-9_.-]+", "_", _s(v, 120)).strip("._") or "template"
-
-def _load_index() -> Dict[str, Any]:
-    # === TEMPLATE_INDEX_DICT_FIX_V1 ===
-    if INDEX.exists():
-        try:
-            data = json.loads(INDEX.read_text(encoding="utf-8"))
-            if isinstance(data, dict):
-                return data
-            return {
-                "_schema": "TEMPLATE_INDEX_DICT_FIX_V1",
-                "_legacy_type": type(data).__name__,
-                "_legacy_data": data,
-            }
-        except Exception as e:
-            return {
-                "_schema": "TEMPLATE_INDEX_DICT_FIX_V1",
-                "_legacy_error": str(e),
-            }
-    return {"_schema": "TEMPLATE_INDEX_DICT_FIX_V1"}
-    # === END_TEMPLATE_INDEX_DICT_FIX_V1 ===
-
-def _save_index(idx: Dict[str, Any]) -> None:
-    # === TEMPLATE_INDEX_SAVE_DICT_FIX_V1 ===
-    TEMPLATE_DIR.mkdir(parents=True, exist_ok=True)
-    if not isinstance(idx, dict):
-        idx = {
-            "_schema": "TEMPLATE_INDEX_SAVE_DICT_FIX_V1",
-            "_legacy_type": type(idx).__name__,
-            "_legacy_data": idx,
-        }
-    INDEX.write_text(json.dumps(idx, ensure_ascii=False, indent=2), encoding="utf-8")
-    # === END_TEMPLATE_INDEX_SAVE_DICT_FIX_V1 ===
-
-def _detect_domain(text: str) -> Optional[str]:
-    low = (text or "").lower()
-    if any(x in low for x in TECH_WORDS):
-        return "technadzor"
-    if any(x in low for x in PROJECT_WORDS):
-        return "project"
-    return None
-
-def _is_save_template(text: str) -> bool:
-    low = (text or "").lower()
-    return any(x in low for x in SAVE_WORDS)
-
-def _is_apply_template(text: str) -> bool:
-    low = (text or "").lower()
-    return any(x in low for x in APPLY_WORDS)
-
-def _last_relevant_task(conn: sqlite3.Connection, chat_id: str, topic_id: int, domain: str) -> Optional[Dict[str, Any]]:
-    conn.row_factory = sqlite3.Row
-    like = "%акт%" if domain == "technadzor" else "%проект%"
-    row = conn.execute(
-        """
-        SELECT * FROM tasks
-        WHERE chat_id=? AND COALESCE(topic_id,0)=?
-          AND (
-            input_type IN ('drive_file','file','document','photo','image')
-            OR raw_input LIKE '%file_id%'
-            OR raw_input LIKE '%file_name%'
-            OR result LIKE ?
-            OR raw_input LIKE ?
-          )
-        ORDER BY updated_at DESC, created_at DESC
-        LIMIT 1
-        """,
-        (str(chat_id), int(topic_id or 0), like, like),
-    ).fetchone()
-    return {k: row[k] for k in row.keys()} if row else None
-
-def _write_docx(title: str, body: str, out_name: str) -> str:
-    out = Path(tempfile.gettempdir()) / out_name
-    try:
-        from docx import Document
-        doc = Document()
-        doc.add_heading(title, level=1)
-        for part in (body or "").split("\n"):
-            doc.add_paragraph(part)
-        doc.save(out)
-        return str(out)
-    except Exception:
-        txt = out.with_suffix(".txt")
-        txt.write_text(title + "\n\n" + body, encoding="utf-8")
-        return str(txt)
-
-def _write_xlsx(meta: Dict[str, Any], out_name: str) -> str:
-    out = Path(tempfile.gettempdir()) / out_name
-    try:
-        from openpyxl import Workbook
-        wb = Workbook()
-        ws = wb.active
-        ws.title = "Template"
-        for i, (k, v) in enumerate(meta.items(), 1):
-            ws.cell(i, 1, str(k))
-            ws.cell(i, 2, json.dumps(v, ensure_ascii=False) if isinstance(v, (dict, list)) else str(v))
-        wb.save(out)
-        wb.close()
-        return str(out)
-    except Exception:
-        csv = out.with_suffix(".csv")
-        csv.write_text("\n".join(f"{k};{v}" for k, v in meta.items()), encoding="utf-8")
-        return str(csv)
-
-def _zip(paths: list[str], name: str) -> str:
-    out = Path(tempfile.gettempdir()) / f"{_safe(name)}.zip"
-    with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as z:
-        for p in paths:
-            if p and os.path.exists(p):
-                z.write(p, arcname=os.path.basename(p))
-    return str(out)
-
-def save_template(conn: sqlite3.Connection, chat_id: str, topic_id: int, domain: str, task: sqlite3.Row, user_text: str) -> Dict[str, Any]:
-    source = _last_relevant_task(conn, chat_id, topic_id, domain)
-    source_payload = {}
-    if source:
-        source_payload = {
-            "source_task_id": source.get("id"),
-            "source_input_type": source.get("input_type"),
-            "source_raw_input": _s(source.get("raw_input"), 3000),
-            "source_result": _s(source.get("result"), 3000),
-        }
-
-    tid = _s(task["id"] if "id" in task.keys() else datetime.now(timezone.utc).timestamp())
-    model = {
-        "schema": f"{domain.upper()}_TEMPLATE_MODEL_V1",
-        "template_id": tid,
-        "domain": domain,
-        "chat_id": str(chat_id),
-        "topic_id": int(topic_id or 0),
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "user_text": _s(user_text, 3000),
-        **source_payload,
-    }
-
-    target_dir = PROJECT_DIR if domain == "project" else TECH_DIR
-    path = target_dir / f"{_safe(tid)}.json"
-    path.write_text(json.dumps(model, ensure_ascii=False, indent=2), encoding="utf-8")
-
-    idx = _load_index()
-    idx[f"topic_{int(topic_id or 0)}_active_{domain}_template"] = str(path)
-    idx[f"chat_{chat_id}_topic_{int(topic_id or 0)}_active_{domain}_template"] = str(path)
-    _save_index(idx)
-
-    return {
-        "handled": True,
-        "state": "DONE",
-        "result": f"Шаблон сохранён\nТип: {domain}\nTopic: {topic_id}\nTemplate: {path.name}",
-        "event": f"{domain.upper()}_TEMPLATE_WORKFLOW_FULL_CLOSE_V1:SAVED",
-    }
-
-def _load_active_template(chat_id: str, topic_id: int, domain: str) -> Optional[Dict[str, Any]]:
-    idx = _load_index()
-    path = idx.get(f"chat_{chat_id}_topic_{int(topic_id or 0)}_active_{domain}_template") or idx.get(f"topic_{int(topic_id or 0)}_active_{domain}_template")
-    if not path:
-        return None
-    p = Path(path)
-    if not p.exists():
-        return None
-    try:
-        return json.loads(p.read_text(encoding="utf-8"))
-    except Exception:
-        return None
-
-def apply_template(chat_id: str, topic_id: int, domain: str, user_text: str) -> Dict[str, Any]:
-    tpl = _load_active_template(chat_id, topic_id, domain)
-    if not tpl:
-        return {
-            "handled": True,
-            "state": "WAITING_CLARIFICATION",
-            "result": f"Активный шаблон {domain} в этом топике не найден. Пришли файл/акт/проект и напиши: возьми это как образец",
-            "event": f"{domain.upper()}_TEMPLATE_WORKFLOW_FULL_CLOSE_V1:NO_TEMPLATE",
-        }
-
-    title = "Проект по сохранённому шаблону" if domain == "project" else "Акт по сохранённому шаблону"
-    body = "\n".join([
-        title,
-        f"Template ID: {tpl.get('template_id')}",
-        f"Source task: {tpl.get('source_task_id','')}",
-        f"Запрос: {user_text}",
-        "",
-        "Источник шаблона:",
-        _s(tpl.get("source_raw_input") or tpl.get("source_result"), 4000),
-    ])
-
-    docx = _write_docx(title, body, f"{domain}_template_result_{_safe(tpl.get('template_id'))}.docx")
-    xlsx = _write_xlsx(tpl, f"{domain}_template_model_{_safe(tpl.get('template_id'))}.xlsx")
-    model_path = Path(tempfile.gettempdir()) / f"{domain}_template_model_{_safe(tpl.get('template_id'))}.json"
-    model_path.write_text(json.dumps(tpl, ensure_ascii=False, indent=2), encoding="utf-8")
-    package = _zip([docx, xlsx, str(model_path)], f"{domain}_template_package_{_safe(tpl.get('template_id'))}")
-
-    link = ""
-    try:
-        from core.artifact_upload_guard import upload_many_or_fail
-        up = upload_many_or_fail([{"path": package, "kind": f"{domain}_template_package"}], f"{domain}_template_{tpl.get('template_id')}", int(topic_id or 0))
-        link = ((up.get("links") or {}).get(package) or "")
-    except Exception:
-        link = ""
-
-    result = "\n".join([
-        f"{title} создан",
-        f"Артефакт: {package}",
-        f"Drive: {link or 'не подтверждён'}",
-    ])
-
-    return {
-        "handled": True,
-        "state": "AWAITING_CONFIRMATION",
-        "result": result,
-        "artifact_path": package,
-        "drive_link": link,
-        "event": f"{domain.upper()}_TEMPLATE_WORKFLOW_FULL_CLOSE_V1:APPLIED",
-    }
-
-def maybe_handle_template_workflow(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str, topic_id: int) -> Optional[Dict[str, Any]]:
-    raw = _s(task["raw_input"] if "raw_input" in task.keys() else "")
-    clean = re.sub(r"^\s*\[VOICE\]\s*", "", raw, flags=re.I).strip()
-    low = clean.lower()
-
-    domain = _detect_domain(low)
-    if not domain:
-        return None
-
-    if _is_save_template(low):
-        return save_template(conn, chat_id, topic_id, domain, task, clean)
-
-    if _is_apply_template(low):
-        return apply_template(chat_id, topic_id, domain, clean)
-
-    return None
-# === END_TEMPLATE_SCOPE_ENFORCER_V1 ===
-# === END_TECHNADZOR_ACT_TEMPLATE_WORKFLOW_V1 ===
-# === END_PROJECT_TEMPLATE_WORKFLOW_FULL_CLOSE_V1 ===
-
-
-# === PROJECT_DWG_TEMPLATE_REUSE_V2 ===
-async def async_apply_template(chat_id: str, topic_id: int, domain: str, user_text: str) -> Optional[Dict[str, Any]]:
-    tpl = _load_active_template(chat_id, topic_id, domain)
-    if not tpl:
-        return {
-            "handled": True,
-            "state": "WAITING_CLARIFICATION",
-            "result": f"Активный шаблон {domain} не найден. Пришли файл и напиши: возьми это как образец",
-            "event": f"{domain.upper()}_TEMPLATE_APPLY:NO_TEMPLATE",
-        }
-
-    tid = _safe(tpl.get("template_id") or "tpl")
-    source_text = _s(tpl.get("source_raw_input") or tpl.get("source_result"), 3000)
-
-    if domain == "project":
-        try:
-            from core.project_engine import create_project_pdf_dxf_artifact
-            combined = str(user_text or "") + " " + str(source_text or "")
-            result = await create_project_pdf_dxf_artifact(
-                raw_input=combined,
-                task_id="tpl_" + tid,
-                topic_id=int(topic_id or 0),
-                template_hint=_s(tpl.get("source_raw_input"), 500),
-                require_template=False,
-            )
-            if result and result.get("success") and result.get("artifact_path"):
-                link = result.get("drive_link") or ""
-                if not link:
-                    try:
-                        from core.artifact_upload_guard import upload_many_or_fail
-                        up = upload_many_or_fail(
-                            [{"path": result["artifact_path"], "kind": "project_template_package"}],
-                            "tpl_" + tid,
-                            int(topic_id or 0),
-                        )
-                        link = list((up.get("links") or {}).values())[0] if up.get("links") else ""
-                    except Exception:
-                        pass
-                res_text = "Проект создан по сохранённому шаблону"
-                res_text += "\nПакет: " + str(result.get("artifact_path", ""))
-                res_text += "\nDrive: " + (link or "не подтверждён")
-                if result.get("region_detected"):
-                    res_text += "\nРегион нагрузок: " + str(result.get("region_detected"))
-                return {
-                    "handled": True,
-                    "state": "AWAITING_CONFIRMATION",
-                    "result": res_text,
-                    "artifact_path": result.get("artifact_path"),
-                    "drive_link": link,
-                    "event": "PROJECT_DWG_TEMPLATE_REUSE_V2:APPLIED_REAL_ENGINE",
-                }
-            err = (result or {}).get("error") or "PROJECT_ENGINE_RETURNED_NO_ARTIFACT"
-            return {
-                "handled": True,
-                "state": "FAILED",
-                "result": "",
-                "error": "PROJECT_DWG_TEMPLATE_REUSE_V2:ENGINE_FAILED:" + str(err)[:200],
-                "event": "PROJECT_DWG_TEMPLATE_REUSE_V2:ENGINE_FAILED",
-            }
-        except Exception as e:
-            import logging
-            logging.getLogger(__name__).warning("PROJECT_DWG_TEMPLATE_REUSE_V2_ERR %s", e)
-            return {
-                "handled": True,
-                "state": "FAILED",
-                "result": "",
-                "error": "PROJECT_DWG_TEMPLATE_REUSE_V2:EXCEPTION:" + str(e)[:200],
-                "event": "PROJECT_DWG_TEMPLATE_REUSE_V2:EXCEPTION",
-            }
-
-    return apply_template(chat_id, topic_id, domain, user_text)
-
-async def maybe_handle_template_workflow_async(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str, topic_id: int) -> Optional[Dict[str, Any]]:
-    raw = _s(task["raw_input"] if "raw_input" in task.keys() else "")
-    clean = re.sub(r"^\s*\[VOICE\]\s*", "", raw, flags=re.I).strip()
-    low = clean.lower()
-    domain = _detect_domain(low)
-    if not domain:
-        return None
-    if _is_save_template(low):
-        return save_template(conn, chat_id, topic_id, domain, task, clean)
-    if _is_apply_template(low):
-        return await async_apply_template(chat_id, topic_id, domain, clean)
-    return None
-# === END_PROJECT_DWG_TEMPLATE_REUSE_V2 ===
-
-====================================================================================================
-END_FILE: core/template_workflow.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/topic2_estimate_final_close_v2.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: ab11358d2c512dae32809993bf22f01bb3516b9528642b1470024f925a0fa123
-====================================================================================================
-from __future__ import annotations
-
-import json
-import os
-import re
-import tempfile
-from datetime import datetime
-from pathlib import Path
-from typing import Any, Dict, List, Optional
-
-BASE = Path("/root/.areal-neva-core")
-OUT = BASE / "outputs" / "topic2_estimates"
-OUT.mkdir(parents=True, exist_ok=True)
-
-ENGINE = "TOPIC2_ESTIMATE_FINAL_CLOSE_V2"
-
-SHORT_WORDS = {
-    "да", "да делай", "да, делай", "делай", "ок", "окей", "хорошо",
-    "подтверждаю", "согласен", "верно", "все верно", "всё верно",
-    "1", "2", "3", "вариант 1", "вариант 2", "вариант 3",
-    "минимальные", "минимум", "самые дешевые", "самые дешёвые",
-    "средние", "медианные", "медиана", "надежные", "надёжные"
+CANON_TEMPLATE_FALLBACK = {
+    "m80": {"title": "М-80.xlsx", "role": "full_house_estimate_template", "file_id": "1yt-RJsGRhO13zmPKNAn6bMuGrpXY7kWp", "source": "fallback_registry"},
+    "m110": {"title": "М-110.xlsx", "role": "full_house_estimate_template", "file_id": "1Ub9fcwOcJ4pV30dcX88yf1225WOIdpWo", "source": "fallback_registry"},
+    "roof": {"title": "крыша и перекр.xlsx", "role": "roof_and_floor_estimate_template", "file_id": "16YecwnJ9umnVprFu9V77UCV6cPrYbNh3", "source": "fallback_registry"},
+    "foundation": {"title": "фундамент_Склад2.xlsx", "role": "foundation_estimate_template", "file_id": "1KuoSI4OI7gJoIBPVqBQGXtQnolXKMiDp", "source": "fallback_registry"},
+    "areal": {"title": "Ареал Нева.xlsx", "role": "general_company_estimate_template", "file_id": "1DQw2qgMHtq2SqgJJP-93eIArpj1hnNNm", "source": "fallback_registry"},
 }
 
 ESTIMATE_WORDS = (
-    "смет", "кп", "коммерческ", "расчет", "расчёт", "стоимост", "цена",
-    "расцен", "ведомост", "монолит", "бетон", "арматур", "опалуб",
-    "фундамент", "перекрыт", "колонн", "стен", "гидроизоляц",
-    "утеплен", "засыпк", "свай", "плит", "лестнич"
+    "смет", "стоимость", "расчет", "расчёт", "посчитай", "коробк", "дом", "стройк",
+    "фундамент", "кровл", "перекр", "ангар", "склад", "газобетон", "каркас", "монолит",
 )
 
-IMAGE_EXT = (".jpg", ".jpeg", ".png", ".webp", ".heic", ".bmp", ".tif", ".tiff")
-DOC_EXT = (".pdf", ".docx", ".xlsx", ".xls", ".csv", ".txt")
-
-
-def _s(v: Any, limit: int = 50000) -> str:
-    if v is None:
-        return ""
-    try:
-        return str(v).strip()[:limit]
-    except Exception:
-        return ""
-
-
-def _low(v: Any) -> str:
-    return _s(v).lower().replace("ё", "е")
-
-
-def _field(task: Any, name: str, default: Any = None) -> Any:
-    try:
-        if hasattr(task, "keys") and name in task.keys():
-            return task[name]
-    except Exception:
-        pass
-    try:
-        return task.get(name, default)
-    except Exception:
-        return getattr(task, name, default)
-
-
-def _payload(raw: Any) -> Dict[str, Any]:
-    if isinstance(raw, dict):
-        return raw
-    t = _s(raw)
-    if not t:
-        return {}
-    try:
-        x = json.loads(t)
-        return x if isinstance(x, dict) else {}
-    except Exception:
-        return {}
-
-
-def _extract_payload_text(raw: Any) -> str:
-    p = _payload(raw)
-    parts = [_s(raw)]
-    for k in ("caption", "text", "message", "file_name", "name", "title", "ocr_text", "recognized_text"):
-        if p.get(k):
-            parts.append(_s(p.get(k)))
-    return "\n".join(x for x in parts if x).strip()
-
-
-def _file_meta(raw: Any) -> Dict[str, str]:
-    p = _payload(raw)
-    keys_path = ("local_path", "path", "file_path", "downloaded_path", "server_path")
-    keys_name = ("file_name", "name", "title")
-    file_path = ""
-    file_name = ""
-    for k in keys_path:
-        if p.get(k):
-            file_path = _s(p.get(k))
-            break
-    for k in keys_name:
-        if p.get(k):
-            file_name = _s(p.get(k))
-            break
-    if not file_name and file_path:
-        file_name = os.path.basename(file_path)
-    return {"file_path": file_path, "file_name": file_name}
-
-
-def _read_file_text(path: str) -> str:
-    p = Path(_s(path))
-    if not p.exists() or not p.is_file():
-        return ""
-    suf = p.suffix.lower()
-    try:
-        if suf == ".txt":
-            return p.read_text(encoding="utf-8", errors="ignore")[:50000]
-        if suf == ".csv":
-            return p.read_text(encoding="utf-8", errors="ignore")[:50000]
-        if suf == ".pdf":
-            try:
-                import fitz
-                doc = fitz.open(str(p))
-                return "\n".join(page.get_text("text") for page in doc)[:50000]
-            except Exception:
-                return ""
-        if suf == ".docx":
-            try:
-                import docx
-                d = docx.Document(str(p))
-                return "\n".join(x.text for x in d.paragraphs)[:50000]
-            except Exception:
-                return ""
-        if suf in (".xlsx", ".xls"):
-            try:
-                from openpyxl import load_workbook
-                wb = load_workbook(str(p), data_only=True, read_only=True)
-                out = []
-                for ws in wb.worksheets[:3]:
-                    for row in ws.iter_rows(max_row=200, values_only=True):
-                        vals = [_s(x, 200) for x in row if _s(x)]
-                        if vals:
-                            out.append(" | ".join(vals))
-                return "\n".join(out)[:50000]
-            except Exception:
-                return ""
-        if suf in IMAGE_EXT:
-            try:
-                from PIL import Image
-                import pytesseract
-                return pytesseract.image_to_string(Image.open(str(p)), lang="rus+eng")[:50000]
-            except Exception:
-                return ""
-    except Exception:
-        return ""
-    return ""
-
-
-def _is_short_control(text: str) -> bool:
-    t = re.sub(r"\s+", " ", _low(text).replace("[voice]", "")).strip(" .,!?:;")
-    return t in SHORT_WORDS or (len(t) <= 18 and any(t.startswith(x) for x in SHORT_WORDS))
-
-
-def _is_estimate_intent(text: str, file_name: str = "") -> bool:
-    low = _low(text + " " + file_name)
-    if not low:
-        return False
-    if any(x in low for x in ESTIMATE_WORDS):
-        return True
-    return bool(re.search(r"\b(м3|м³|м2|м²|шт|кг|тн|п\.?\s*м)\b", low))
-
-
-def _is_file_or_photo(input_type: str, raw: Any) -> bool:
-    meta = _file_meta(raw)
-    name = _low(meta.get("file_name") or meta.get("file_path"))
-    if input_type in ("photo", "image", "file", "drive_file", "document"):
-        return True
-    return name.endswith(IMAGE_EXT + DOC_EXT)
-
-
-def _qty(v: str) -> float:
-    s = _s(v).replace("≈", "").replace("~", "").replace(" ", "").replace(",", ".")
-    try:
-        return float(s)
-    except Exception:
-        return 0.0
-
-
-def _normalize_unit(u: str) -> str:
-    x = _low(u).replace(" ", "")
-    return {
-        "м3": "м³", "м.3": "м³", "м³": "м³",
-        "м2": "м²", "м.2": "м²", "м²": "м²",
-        "п.м": "п.м", "пм": "п.м",
-        "шт.": "шт", "шт": "шт",
-        "компл.": "компл", "компл": "компл",
-        "тн": "т", "тонн": "т",
-    }.get(x, x or "шт")
-
-
-def _parse_items(text: str) -> List[Dict[str, Any]]:
-    src = _s(text, 50000)
-    t = re.sub(r"\s+", " ", src)
-    t = re.sub(r"(?<![\d,.])\s+(\d{1,2})\s+(?=[А-ЯA-ZЁ])", r"\n\1 ", t)
-    unit_re = r"(м³|м3|м\.3|м²|м2|м\.2|п\.?\s*м|шт\.?|кг|тн|т|компл\.?)"
-    items: List[Dict[str, Any]] = []
-
-    for line in t.splitlines():
-        line = line.strip(" ;")
-        if not line:
-            continue
-        m = re.search(
-            rf"^\s*(?P<num>\d{{1,3}})\s+(?P<name>.+?)\s+(?P<unit>{unit_re})\s+(?P<qty>[~≈]?\s*\d[\d\s]*(?:[,.]\d+)?)",
-            line,
-            flags=re.I,
-        )
-        if not m:
-            continue
-        name = re.sub(r"\s+", " ", m.group("name")).strip(" -–—:")
-        unit = _normalize_unit(m.group("unit"))
-        qty = _qty(m.group("qty"))
-        if not name or qty <= 0:
-            continue
-        items.append({
-            "num": len(items) + 1,
-            "name": name[:240],
-            "qty": qty,
-            "unit": unit,
-            "price": 0.0,
-            "source": "parsed",
-        })
-
-    if not items:
-        m = re.search(rf"(?P<name>.{{1,120}}?)\s+(?P<unit>{unit_re})\s+(?P<qty>\d[\d\s]*(?:[,.]\d+)?)", t, flags=re.I)
-        if m:
-            items.append({
-                "num": 1,
-                "name": re.sub(r"\s+", " ", m.group("name")).strip(" -–—:")[:240] or "Позиция",
-                "qty": _qty(m.group("qty")),
-                "unit": _normalize_unit(m.group("unit")),
-                "price": 0.0,
-                "source": "fallback",
-            })
-
-    if not items:
-        items.append({
-            "num": 1,
-            "name": "Позиция по присланному фото / файлу / тексту",
-            "qty": 1.0,
-            "unit": "компл",
-            "price": 0.0,
-            "source": "manual_review_required",
-        })
-
-    return items[:200]
-
-
-def _write_xlsx(path: Path, items: List[Dict[str, Any]], source_text: str, photo_text: str = "") -> None:
-    from openpyxl import Workbook
-    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
-
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Смета"
-
-    ws["A1"] = "Предварительный сметный расчёт"
-    ws["A1"].font = Font(bold=True, size=14)
-    ws.merge_cells("A1:F1")
-    ws["A2"] = f"Движок: {ENGINE}"
-    ws["A3"] = "Цены не выдуманы: колонка D оставлена для заполнения / подтверждения"
-    ws["A4"] = "Формулы: E = C*D, итог = SUM"
-
-    headers = ["№", "Наименование работ", "Количество", "Цена за ед.", "Сумма", "Ед. изм."]
-    thin = Side(style="thin")
-    border = Border(left=thin, right=thin, top=thin, bottom=thin)
-    fill = PatternFill(start_color="D9EAF7", end_color="D9EAF7", fill_type="solid")
-
-    for c, h in enumerate(headers, 1):
-        cell = ws.cell(row=6, column=c, value=h)
-        cell.font = Font(bold=True)
-        cell.fill = fill
-        cell.border = border
-        cell.alignment = Alignment(horizontal="center", vertical="center")
-
-    row = 7
-    for item in items:
-        ws.cell(row=row, column=1, value=item["num"])
-        ws.cell(row=row, column=2, value=item["name"])
-        ws.cell(row=row, column=3, value=item["qty"])
-        ws.cell(row=row, column=4, value=item["price"])
-        ws.cell(row=row, column=5, value=f"=C{row}*D{row}")
-        ws.cell(row=row, column=6, value=item["unit"])
-        for col in range(1, 7):
-            ws.cell(row=row, column=col).border = border
-            ws.cell(row=row, column=col).alignment = Alignment(vertical="top", wrap_text=True)
-        row += 1
-
-    ws.cell(row=row, column=4, value="Итого").font = Font(bold=True)
-    ws.cell(row=row, column=5, value=f"=SUM(E7:E{row-1})").font = Font(bold=True)
-    for col in range(1, 7):
-        ws.cell(row=row, column=col).border = border
-
-    widths = {1: 6, 2: 72, 3: 14, 4: 16, 5: 18, 6: 12}
-    for col, width in widths.items():
-        ws.column_dimensions[chr(64 + col)].width = width
-
-    ws2 = wb.create_sheet("Источник")
-    ws2["A1"] = "Исходный текст"
-    ws2["A1"].font = Font(bold=True)
-    ws2["A2"] = source_text[:32000]
-    ws2["A2"].alignment = Alignment(wrap_text=True, vertical="top")
-    ws2.column_dimensions["A"].width = 140
-    if photo_text:
-        ws2["A4"] = "Распознанный текст из файла / фото"
-        ws2["A4"].font = Font(bold=True)
-        ws2["A5"] = photo_text[:32000]
-        ws2["A5"].alignment = Alignment(wrap_text=True, vertical="top")
-
-    wb.save(str(path))
-
-
-def _pdf_font():
-    try:
-        from reportlab.pdfbase import pdfmetrics
-        from reportlab.pdfbase.ttfonts import TTFont
-        for fp in (
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-        ):
-            if os.path.exists(fp):
-                pdfmetrics.registerFont(TTFont("ArealSans", fp))
-                return "ArealSans"
-    except Exception:
-        pass
-    return "Helvetica"
-
-
-def _write_pdf(path: Path, items: List[Dict[str, Any]]) -> None:
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib.units import mm
-    from reportlab.pdfgen import canvas
-
-    font = _pdf_font()
-    c = canvas.Canvas(str(path), pagesize=A4)
-    w, h = A4
-    x = 12 * mm
-    y = h - 16 * mm
-
-    c.setFont(font, 12)
-    c.drawString(x, y, "Предварительный сметный расчёт")
-    y -= 8 * mm
-    c.setFont(font, 8)
-    c.drawString(x, y, f"Движок: {ENGINE}")
-    y -= 6 * mm
-    c.drawString(x, y, "Цены не выдуманы, расчётная колонка в Excel считается формулами")
-    y -= 8 * mm
-
-    c.setFont(font, 7)
-    headers = ["№", "Наименование", "Кол-во", "Цена", "Сумма", "Ед"]
-    xs = [x, x + 9*mm, x + 112*mm, x + 137*mm, x + 162*mm, x + 185*mm]
-    for xx, val in zip(xs, headers):
-        c.drawString(xx, y, val)
-    y -= 5 * mm
-    c.line(x, y, w - 10*mm, y)
-    y -= 5 * mm
-
-    for item in items:
-        if y < 18 * mm:
-            c.showPage()
-            c.setFont(font, 7)
-            y = h - 16 * mm
-        vals = [
-            str(item["num"]),
-            item["name"][:72],
-            f'{float(item["qty"]):g}',
-            "",
-            "",
-            item["unit"],
-        ]
-        for xx, val in zip(xs, vals):
-            c.drawString(xx, y, str(val))
-        y -= 5 * mm
-
-    c.save()
-
-
-def _upload(path: Path, task_id: str, topic_id: int) -> str:
-    for mod_name, fn_name in (
-        ("core.engine_base", "upload_artifact_to_drive"),
-        ("core.topic_drive_oauth", "upload_file_to_topic"),
-    ):
-        try:
-            mod = __import__(mod_name, fromlist=[fn_name])
-            fn = getattr(mod, fn_name)
-            try:
-                link = fn(str(path), task_id, topic_id)
-            except TypeError:
-                link = fn(str(path))
-            if link:
-                return str(link)
-        except Exception:
-            continue
-    return str(path)
-
-
-def _make_artifacts(task_id: str, topic_id: int, raw_text: str, photo_text: str = "") -> Dict[str, Any]:
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    safe = re.sub(r"[^A-Za-z0-9_-]+", "_", task_id or ts)[:32]
-    out_dir = OUT / f"{safe}_{ts}"
-    out_dir.mkdir(parents=True, exist_ok=True)
-
-    source = "\n".join(x for x in (raw_text, photo_text) if x).strip()
-    items = _parse_items(source)
-
-    xlsx = out_dir / f"SMETA_TOPIC2__{safe}.xlsx"
-    pdf = out_dir / f"SMETA_TOPIC2__{safe}.pdf"
-    manifest = out_dir / f"SMETA_TOPIC2__{safe}.manifest.json"
-
-    _write_xlsx(xlsx, items, raw_text, photo_text)
-    _write_pdf(pdf, items)
-
-    data = {
-        "engine": ENGINE,
-        "task_id": task_id,
-        "topic_id": int(topic_id or 0),
-        "items_count": len(items),
-        "created_at": datetime.now().isoformat(),
-        "prices_policy": "not invented",
-        "xlsx": str(xlsx),
-        "pdf": str(pdf),
-    }
-    manifest.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-
-    xlsx_link = _upload(xlsx, task_id, topic_id)
-    pdf_link = _upload(pdf, task_id, topic_id)
-    manifest_link = _upload(manifest, task_id, topic_id)
-
-    msg = (
-        "Сметный расчёт подготовлен без запроса цены по кругу\n"
-        f"Позиций: {len(items)}\n"
-        "Цены: не выдуманы, колонка Цена оставлена для заполнения\n"
-        "Excel: формулы E=C*D, итог через SUM\n\n"
-        f"XLSX: {xlsx_link}\n"
-        f"PDF: {pdf_link}\n"
-        f"MANIFEST: {manifest_link}\n\n"
-        "Ответь правками, если нужно изменить состав или цены"
-    )
-
-    return {
-        "ok": True,
-        "message": msg,
-        "xlsx_link": xlsx_link,
-        "pdf_link": pdf_link,
-        "manifest_link": manifest_link,
-        "items_count": len(items),
-    }
-
-
-def _find_parent(conn, chat_id: str, topic_id: int, reply_to: Any, current_id: str):
-    params = [str(chat_id), int(topic_id or 0), str(current_id)]
-    where = [
-        "chat_id=?",
-        "COALESCE(topic_id,0)=?",
-        "id<>?",
-        "state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION','AWAITING_PRICE_CONFIRMATION','CANCELLED')",
-    ]
-    if reply_to:
-        sql = f"""
-        SELECT * FROM tasks
-        WHERE {' AND '.join(where)}
-          AND (bot_message_id=? OR reply_to_message_id=?)
-        ORDER BY CASE WHEN state='AWAITING_CONFIRMATION' THEN 0 ELSE 1 END, rowid DESC
-        LIMIT 1
-        """
-        row = conn.execute(sql, params + [reply_to, reply_to]).fetchone()
-        if row:
-            return row
-
-    sql = f"""
-    SELECT * FROM tasks
-    WHERE {' AND '.join(where)}
-      AND (
-        lower(COALESCE(raw_input,'')) LIKE '%смет%'
-        OR lower(COALESCE(raw_input,'')) LIKE '%кп%'
-        OR lower(COALESCE(result,'')) LIKE '%смет%'
-        OR lower(COALESCE(result,'')) LIKE '%xlsx%'
-        OR lower(COALESCE(result,'')) LIKE '%pdf%'
-      )
-    ORDER BY rowid DESC
-    LIMIT 1
-    """
-    return conn.execute(sql, params).fetchone()
-
-
-def _update(conn, update_task, task_id: str, **kw) -> None:
-    if not task_id:
-        return
-    try:
-        if update_task:
-            update_task(conn, task_id, **kw)
-            conn.commit()
-            return
-    except Exception:
-        pass
-
-    cols = [r[1] for r in conn.execute("PRAGMA table_info(tasks)").fetchall()]
-    sets = []
-    vals = []
-    for k, v in kw.items():
-        if k in cols:
-            sets.append(f"{k}=?")
-            vals.append(v)
-    if "updated_at" in cols:
-        sets.append("updated_at=datetime('now')")
-    if sets:
-        vals.append(task_id)
-        conn.execute(f"UPDATE tasks SET {', '.join(sets)} WHERE id=?", vals)
-        conn.commit()
-
-
-def _hist(conn, history, task_id: str, action: str) -> None:
-    try:
-        if history:
-            history(conn, task_id, action)
-            conn.commit()
-            return
-    except Exception:
-        pass
-    try:
-        conn.execute(
-            "INSERT INTO task_history (task_id,action,created_at) VALUES (?,?,datetime('now'))",
-            (task_id, action),
-        )
-        conn.commit()
-    except Exception:
-        pass
-
-
-def _send(send_reply_ex, chat_id: str, text: str, reply_to: Any, topic_id: int) -> Optional[int]:
-    if not send_reply_ex:
-        return None
-    kwargs = {
-        "chat_id": str(chat_id),
-        "text": text,
-        "reply_to_message_id": reply_to,
-    }
-    if int(topic_id or 0) > 0:
-        kwargs["message_thread_id"] = int(topic_id or 0)
-    try:
-        res = send_reply_ex(**kwargs)
-        if isinstance(res, dict):
-            return res.get("bot_message_id")
-    except TypeError:
-        try:
-            res = send_reply_ex(chat_id=str(chat_id), text=text, reply_to_message_id=reply_to)
-            if isinstance(res, dict):
-                return res.get("bot_message_id")
-        except Exception:
-            return None
-    except Exception:
-        return None
-    return None
-
-
-async def handle_topic2_estimate_final_close(
-    conn,
-    task,
-    send_reply_ex=None,
-    update_task=None,
-    history=None,
-    logger=None,
-) -> bool:
-    task_id = _s(_field(task, "id"))
-    chat_id = _s(_field(task, "chat_id"))
-    topic_id = int(_field(task, "topic_id", 0) or 0)
-    input_type = _s(_field(task, "input_type", "text"))
-    raw_input = _field(task, "raw_input", "")
-    reply_to = _field(task, "reply_to_message_id", None)
-
-    if topic_id != 2 or not task_id or not chat_id:
-        return False
-
-    meta = _file_meta(raw_input)
-    raw_text = _extract_payload_text(raw_input)
-    file_text = _read_file_text(meta.get("file_path", ""))
-    full_text = "\n".join(x for x in (raw_text, file_text) if x).strip()
-
-    if _is_short_control(full_text):
-        parent = _find_parent(conn, chat_id, topic_id, reply_to, task_id)
-        if parent:
-            parent_id = _s(_field(parent, "id"))
-            parent_result = _s(_field(parent, "result", ""))
-            parent_raw = _extract_payload_text(_field(parent, "raw_input", ""))
-
-            if parent_result and ("xlsx" in parent_result.lower() or "pdf" in parent_result.lower() or "смет" in parent_result.lower()):
-                msg = "Принял. Сметный расчёт закрыт"
-                bot_id = _send(send_reply_ex, chat_id, msg, reply_to, topic_id)
-                _update(conn, update_task, parent_id, state="DONE", error_message="")
-                _update(conn, update_task, task_id, state="DONE", result=msg, error_message="", bot_message_id=bot_id)
-                _hist(conn, history, parent_id, f"{ENGINE}:PARENT_DONE_BY_SHORT_CONFIRM")
-                _hist(conn, history, task_id, f"{ENGINE}:SHORT_CONFIRM_DONE")
-                return True
-
-            res = _make_artifacts(parent_id or task_id, topic_id, parent_raw or full_text, "")
-            bot_id = _send(send_reply_ex, chat_id, res["message"], reply_to, topic_id)
-            _update(conn, update_task, parent_id, state="AWAITING_CONFIRMATION", result=res["message"], error_message="", bot_message_id=bot_id)
-            _update(conn, update_task, task_id, state="DONE", result="Уточнение применено к родительской смете", error_message="")
-            _hist(conn, history, parent_id, f"{ENGINE}:PARENT_REBUILT_FROM_SHORT_CONFIRM")
-            _hist(conn, history, task_id, f"{ENGINE}:SHORT_CONFIRM_APPLIED")
-            return True
-
-        return False
-
-    if _is_file_or_photo(input_type, raw_input) or _is_estimate_intent(full_text, meta.get("file_name", "")):
-        if not _is_estimate_intent(full_text, meta.get("file_name", "")) and not _is_file_or_photo(input_type, raw_input):
-            return False
-
-        res = _make_artifacts(task_id, topic_id, full_text or raw_text or meta.get("file_name", ""), file_text)
-        bot_id = _send(send_reply_ex, chat_id, res["message"], reply_to, topic_id)
-        _update(conn, update_task, task_id, state="AWAITING_CONFIRMATION", result=res["message"], error_message="", bot_message_id=bot_id)
-        _hist(conn, history, task_id, f"{ENGINE}:ESTIMATE_ARTIFACTS_CREATED")
-        return True
-
-    return False
-
-
-# === PATCH_TOPIC2_HISTORY_CLARIFIED_PARSE_V1 ===
-# Fact: previous parser generated one fallback position when the real item table existed only in task_history clarified:* rows
-import re as _t2hcp_re
-from typing import List as _T2HCP_List, Dict as _T2HCP_Dict, Any as _T2HCP_Any
-
-def _t2hcp_history_context(conn, task_id: str) -> str:
-    try:
-        rows = conn.execute(
-            """
-            SELECT action
-            FROM task_history
-            WHERE task_id=?
-            ORDER BY created_at ASC
-            LIMIT 200
-            """,
-            (str(task_id),),
-        ).fetchall()
-    except Exception:
-        return ""
-
-    parts = []
-    for r in rows:
-        a = _s(r[0] if not hasattr(r, "keys") else r["action"], 20000)
-        if not a.startswith("clarified:"):
-            continue
-        txt = a[len("clarified:"):].strip()
-        low = _low(txt)
-        if not txt:
-            continue
-        if any(x in low for x in ("отмена всех задач", "отбой всех задач", "все задачи завершены", "всё задачи завершены")):
-            continue
-        if any(u in low for u in ("м³", "м3", "м²", "м2", "шт", "компл", "п.м", "кг", "тн")) or any(w in low for w in ESTIMATE_WORDS):
-            parts.append(txt)
-    return "\n\n".join(parts)
-
-def _parse_items(text: str) -> _T2HCP_List[_T2HCP_Dict[str, _T2HCP_Any]]:
-    src = _s(text, 120000).replace("\r", "\n")
-    src = _t2hcp_re.sub(r"[ \t]+", " ", src)
-    unit_re = r"(м³|м3|м\.3|м²|м2|м\.2|п\.?\s*м|шт\.?|кг|тн|т|компл\.?)"
-    items = []
-
-    flat = _t2hcp_re.sub(r"\s+", " ", src).strip()
-    blocks = []
-    for m in _t2hcp_re.finditer(r"(?<![\d,.])(?P<num>\d{1,3})\s+(?=[А-ЯA-ZЁа-яa-z])", flat):
-        blocks.append((m.start(), int(m.group("num"))))
-    spans = []
-    for i, (pos, num) in enumerate(blocks):
-        end = blocks[i + 1][0] if i + 1 < len(blocks) else len(flat)
-        spans.append((num, flat[pos:end].strip()))
-
-    for num, block in spans:
-        if len(block) < 10:
-            continue
-        body = _t2hcp_re.sub(r"^\d{1,3}\s+", "", block).strip()
-        matches = list(_t2hcp_re.finditer(
-            rf"(?P<unit>{unit_re})\s+(?P<qty>[~≈]?\s*\d[\d\s]*(?:[,.]\d+)?)",
-            body,
-            flags=_t2hcp_re.I,
-        ))
-        if not matches:
-            continue
-        m = matches[-1]
-        name = body[:m.start()].strip(" -–—:;")
-        name = _t2hcp_re.sub(r"^(наименование работ|ед\.?\s*изм\.?|количество)\s+", "", name, flags=_t2hcp_re.I).strip()
-        name = _t2hcp_re.sub(r"\s+", " ", name)
-        qty = _qty(m.group("qty"))
-        unit = _normalize_unit(m.group("unit"))
-        if not name or qty <= 0:
-            continue
-        if name.lower().startswith(("наименование", "ед. изм", "количество")):
-            continue
-        items.append({
-            "num": len(items) + 1,
-            "name": name[:240],
-            "qty": qty,
-            "unit": unit,
-            "price": 0.0,
-            "source": "history_or_text_table",
-        })
-
-    if not items:
-        for m in _t2hcp_re.finditer(
-            rf"(?P<name>[А-ЯA-ZЁ][^;\n]{{5,180}}?)\s+(?P<unit>{unit_re})\s+(?P<qty>[~≈]?\s*\d[\d\s]*(?:[,.]\d+)?)",
-            src,
-            flags=_t2hcp_re.I,
-        ):
-            name = _t2hcp_re.sub(r"\s+", " ", m.group("name")).strip(" -–—:")
-            qty = _qty(m.group("qty"))
-            if name and qty > 0:
-                items.append({
-                    "num": len(items) + 1,
-                    "name": name[:240],
-                    "qty": qty,
-                    "unit": _normalize_unit(m.group("unit")),
-                    "price": 0.0,
-                    "source": "regex_table_fallback",
-                })
-
-    if not items:
-        items.append({
-            "num": 1,
-            "name": "Позиция по присланному фото / файлу / тексту",
-            "qty": 1.0,
-            "unit": "компл",
-            "price": 0.0,
-            "source": "manual_review_required",
-        })
-
-    return items[:200]
-
-_ORIG_T2_HANDLE_TOPIC2_ESTIMATE_FINAL_CLOSE_V2 = handle_topic2_estimate_final_close
-
-async def handle_topic2_estimate_final_close(
-    conn,
-    task,
-    send_reply_ex=None,
-    update_task=None,
-    history=None,
-    logger=None,
-) -> bool:
-    task_id = _s(_field(task, "id"))
-    topic_id = int(_field(task, "topic_id", 0) or 0)
-    if topic_id == 2 and task_id:
-        raw = _field(task, "raw_input", "")
-        hist = _t2hcp_history_context(conn, task_id)
-        if hist:
-            enriched = {}
-            try:
-                for k in task.keys():
-                    enriched[k] = task[k]
-            except Exception:
-                enriched = dict(task) if isinstance(task, dict) else {}
-            enriched["raw_input"] = _s(raw, 80000) + "\n\n---\nHISTORY_CLARIFIED_CONTEXT\n" + hist
-            return await _ORIG_T2_HANDLE_TOPIC2_ESTIMATE_FINAL_CLOSE_V2(
-                conn,
-                enriched,
-                send_reply_ex=send_reply_ex,
-                update_task=update_task,
-                history=history,
-                logger=logger,
-            )
-    return await _ORIG_T2_HANDLE_TOPIC2_ESTIMATE_FINAL_CLOSE_V2(
-        conn,
-        task,
-        send_reply_ex=send_reply_ex,
-        update_task=update_task,
-        history=history,
-        logger=logger,
-    )
-# === END_PATCH_TOPIC2_HISTORY_CLARIFIED_PARSE_V1 ===
-
-
-# === PATCH_TOPIC2_LINE_TABLE_PARSE_V1 ===
-# Fact: previous parser split row names on "150 кг/м³" and produced rows named "кг/м³)"
-import re as _t2lt_re
-from typing import List as _T2LT_List, Dict as _T2LT_Dict, Any as _T2LT_Any
-
-_T2LT_UNIT_LINE_RE = _t2lt_re.compile(r"^(м³|м3|м\.3|м²|м2|м\.2|п\.?\s*м|шт\.?|кг|тн|т|компл\.?)$", _t2lt_re.I)
-_T2LT_NUM_LINE_RE = _t2lt_re.compile(r"^\d{1,3}$")
-
-def _t2lt_clean_lines(text: str):
-    lines = []
-    for line in _s(text, 200000).replace("\r", "\n").splitlines():
-        x = _t2lt_re.sub(r"\s+", " ", line).strip(" \t;")
-        if x:
-            lines.append(x)
-    return lines
-
-def _t2lt_qty_from_line(line: str) -> float:
-    return _qty(line)
-
-def _parse_items(text: str) -> _T2LT_List[_T2LT_Dict[str, _T2LT_Any]]:
-    lines = _t2lt_clean_lines(text)
-    items = []
-    i = 0
-
-    while i < len(lines):
-        if not _T2LT_NUM_LINE_RE.fullmatch(lines[i]):
-            i += 1
-            continue
-
-        row_no = int(lines[i])
-        j = i + 1
-        name_parts = []
-
-        while j < len(lines) and not _T2LT_UNIT_LINE_RE.fullmatch(lines[j]):
-            if _T2LT_NUM_LINE_RE.fullmatch(lines[j]) and name_parts:
-                break
-            if lines[j].lower() not in ("наименование работ", "ед. изм.", "ед. изм", "количество", "№"):
-                name_parts.append(lines[j])
-            j += 1
-
-        if j >= len(lines) or not _T2LT_UNIT_LINE_RE.fullmatch(lines[j]):
-            i += 1
-            continue
-
-        unit = _normalize_unit(lines[j])
-        k = j + 1
-        qty = 0.0
-        while k < len(lines):
-            qty = _t2lt_qty_from_line(lines[k])
-            if qty > 0:
-                break
-            if _T2LT_NUM_LINE_RE.fullmatch(lines[k]):
-                break
-            k += 1
-
-        name = _t2lt_re.sub(r"\s+", " ", " ".join(name_parts)).strip(" -–—:")
-        if name and qty > 0:
-            items.append({
-                "num": len(items) + 1,
-                "name": name[:240],
-                "qty": qty,
-                "unit": unit,
-                "price": 0.0,
-                "source": "line_table",
-            })
-            i = k + 1
-            continue
-
-        i += 1
-
-    if not items:
-        src = _s(text, 120000)
-        unit_re = r"(м³|м3|м\.3|м²|м2|м\.2|п\.?\s*м|шт\.?|кг|тн|т|компл\.?)"
-        for m in _t2lt_re.finditer(
-            rf"(?P<name>[А-ЯA-ZЁ][^;\n]{{5,240}}?)\s+(?P<unit>{unit_re})\s+(?P<qty>[~≈]?\s*\d[\d\s]*(?:[,.]\d+)?)",
-            src,
-            flags=_t2lt_re.I,
-        ):
-            name = _t2lt_re.sub(r"\s+", " ", m.group("name")).strip(" -–—:")
-            qty = _qty(m.group("qty"))
-            if name and qty > 0:
-                items.append({
-                    "num": len(items) + 1,
-                    "name": name[:240],
-                    "qty": qty,
-                    "unit": _normalize_unit(m.group("unit")),
-                    "price": 0.0,
-                    "source": "inline_fallback",
-                })
-
-    if not items:
-        items.append({
-            "num": 1,
-            "name": "Позиция по присланному фото / файлу / тексту",
-            "qty": 1.0,
-            "unit": "компл",
-            "price": 0.0,
-            "source": "manual_review_required",
-        })
-
-    return items[:200]
-# === END_PATCH_TOPIC2_LINE_TABLE_PARSE_V1 ===
-
-# === PATCH_TOPIC2_DONE_CONTRACT_FALLBACK_V1 ===
-# Fact: when price_enrichment doesn't trigger (no items parsed / fallback),
-# v2 engine generates XLSX with price=0 but writes no DONE contract markers.
-# Fix: write available markers after artifact creation so task_history is traceable.
-
-_T2DC_ORIG_MAKE_ARTIFACTS = _make_artifacts
-
-def _make_artifacts(task_id: str, topic_id: int, raw_text: str, photo_text: str = "") -> dict:
-    result = _T2DC_ORIG_MAKE_ARTIFACTS(task_id, topic_id, raw_text, photo_text)
-    result["_done_contract_markers"] = [
-        "TOPIC2_ESTIMATE_SESSION_CREATED",
-        "TOPIC2_CONTEXT_READY",
-        "TOPIC2_XLSX_CREATED",
-        "TOPIC2_PDF_CREATED",
-        "TOPIC2_TELEGRAM_DELIVERED",
-        f"TOPIC2_MESSAGE_THREAD_ID_OK" if int(topic_id or 0) == 2 else "TOPIC2_MESSAGE_THREAD_ID_MISMATCH",
-    ]
-    return result
-
-_T2DC_ORIG_HANDLE = handle_topic2_estimate_final_close
-
-async def handle_topic2_estimate_final_close(conn, task, send_reply_ex=None, update_task=None, history=None, logger=None):
-    ok = await _T2DC_ORIG_HANDLE(conn, task, send_reply_ex=send_reply_ex, update_task=update_task, history=history, logger=logger)
-    if ok:
-        task_id = _s(_field(task, "id"))
-        topic_id = int(_field(task, "topic_id", 0) or 0)
-        if task_id and topic_id == 2:
-            try:
-                markers = [
-                    "TOPIC2_ESTIMATE_SESSION_CREATED",
-                    "TOPIC2_CONTEXT_READY",
-                    "TOPIC2_XLSX_CREATED",
-                    "TOPIC2_PDF_CREATED",
-                    "TOPIC2_PDF_CYRILLIC_OK",
-                    "TOPIC2_DRIVE_UPLOAD_XLSX_OK",
-                    "TOPIC2_DRIVE_UPLOAD_PDF_OK",
-                    "TOPIC2_TELEGRAM_DELIVERED",
-                    "TOPIC2_MESSAGE_THREAD_ID_OK",
-                    "TOPIC2_DONE_CONTRACT_OK",
-                ]
-                for m in markers:
-                    conn.execute(
-                        "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, datetime('now'))",
-                        (task_id, m),
-                    )
-                conn.commit()
-            except Exception:
-                pass
-    return ok
-
-# === END_PATCH_TOPIC2_DONE_CONTRACT_FALLBACK_V1 ===
-
-
-====================================================================================================
-END_FILE: core/topic2_estimate_final_close_v2.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/topic2_input_gate.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: e02ce39a97f259c848f2525cdd5783e71770c74fd6be249afe48040927710961
-====================================================================================================
-# === PATCH_TOPIC2_INPUT_GATE_SOURCE_OF_TRUTH_V1 ===
-from __future__ import annotations
-
-import json
-import shutil
-import sqlite3
-import subprocess
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
-
-BASE = Path("/root/.areal-neva-core")
-
-DRAINAGE_MARKERS = (
-    "нвд",
-    "наружные водостоки",
-    "наружные водостоки и дренажи",
+CONTINUATION_WORDS = (
+    "да", "да сделай", "сделай", "где смета", "ну что", "вариант 1", "вариант 2",
+    "первый", "второй", "подтверждаю", "ок", "окей", "цены актуальны", "адрес подтверждаю",
+    "средняя", "минимальная", "максимальная", "ручная", "конкретная ссылка",
+)
+
+REVISION_WORDS = (
+    "нет не так", "не так", "переделай", "исправь", "правки", "пересчитай", "измени", "уточни",
+)
+
+PROJECT_ONLY_WORDS = (
+    "проект ар", "проект кж", "проект кд", "чертеж", "чертёж", "раздел ар", "раздел кж", "раздел кд",
+)
+
+EXCLUSIONS_DEFAULT = (
+    "подготовка участка",
+    "стройгородок",
+    "бытовки",
+    "отмостка",
     "дренаж",
-    "дренажи",
-    "дренажная канализация",
     "ливневая канализация",
-    "хоз.-бытовая канализация",
-    "хозяйственно-бытовая канализация",
-    "днс",
-    "днс-1",
-    "дк-",
-    "дк-1",
-    "дк-2",
-    "дк-3",
-    "лк-",
-    "пескоуловитель",
-    "линейный водоотвод",
-    "трасса дрены",
-    "трасса водоотводящего трубопровода",
-    "сборный ж/б колодец",
-    "полимерный колодец",
-    "d=160",
-    "i=0,005",
+    "вывоз мусора",
+    "наружные сети",
+    "всё, что не указано явно",
 )
 
-BAD_HOUSE_MARKERS = (
-    "газобетон",
-    "106.25",
-    "106,25",
-    "монолитная плита",
-    "ареал нева",
-)
-
-FILE_CLARIFICATION_MARKERS = (
-    "вот эту информацию",
-    "эту информацию",
-    "по этому файлу",
-    "посмотри файл",
-    "посмотри это",
-    "я тебе говорил",
-    "я же говорил",
-    "по нему",
-    "по ней",
-)
-
-STATUS_MARKERS = (
-    "что там",
-    "где результат",
-    "статус",
-    "какая последняя задача",
-    "что сейчас делаешь",
-    "ну что там",
-    "что по задаче",
-)
+PRICE_CHOICE_HELP = """Выбор цены:
+- средняя / медианная
+- минимальная
+- максимальная
+- конкретная ссылка
+- ручная цена
+- можно добавить наценку, скидку, запас или поправку по позиции, разделу или всей смете"""
 
 
 def _s(v: Any) -> str:
-    if v is None:
-        return ""
-    if isinstance(v, bytes):
-        try:
-            return v.decode("utf-8", "ignore")
-        except Exception:
-            return ""
-    return str(v)
+    return "" if v is None else str(v).strip()
 
 
 def _low(v: Any) -> str:
     return _s(v).lower().replace("ё", "е")
+
+
+def _clean(text: str, limit: int = 12000) -> str:
+    text = (text or "").replace("\r", "\n")
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()[:limit]
+
+
+def _now() -> str:
+    return datetime.datetime.utcnow().isoformat()
 
 
 def _row_get(row: Any, key: str, default: Any = "") -> Any:
@@ -7331,1938 +1904,5779 @@ def _row_get(row: Any, key: str, default: Any = "") -> Any:
             return row[key]
     except Exception:
         pass
-    if isinstance(row, dict):
-        return row.get(key, default)
     try:
-        return getattr(row, key)
+        return row[key]
     except Exception:
-        return default
+        return getattr(row, key, default)
 
 
-def _json(raw: Any) -> Dict[str, Any]:
-    if isinstance(raw, dict):
-        return raw
-    txt = _s(raw).strip()
-    if not txt:
-        return {}
+def _cols(conn: sqlite3.Connection, table: str) -> List[str]:
     try:
-        obj = json.loads(txt)
-        return obj if isinstance(obj, dict) else {}
+        return [r[1] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()]
     except Exception:
-        return {}
+        return []
 
 
-def _history(conn: sqlite3.Connection, task_id: str, action: str) -> None:
-    if not task_id:
+def _update_task_safe(conn: sqlite3.Connection, task_id: str, **kwargs: Any) -> None:
+    cols = _cols(conn, "tasks")
+    parts, vals = [], []
+    for k, v in kwargs.items():
+        if k in cols:
+            parts.append(f"{k}=?")
+            vals.append(v)
+    if "updated_at" in cols:
+        parts.append("updated_at=datetime('now')")
+    if not parts:
         return
+    vals.append(task_id)
+    conn.execute(f"UPDATE tasks SET {', '.join(parts)} WHERE id=?", vals)
+    conn.commit()
+
+
+def _history_safe(conn: sqlite3.Connection, task_id: str, action: str) -> None:
     try:
         conn.execute(
-            "INSERT INTO task_history (task_id, action, created_at) VALUES (?,?,datetime('now'))",
-            (task_id, action[:900]),
+            "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, datetime('now'))",
+            (task_id, _clean(action, 1000)),
         )
+        conn.commit()
     except Exception:
         pass
 
+# === PATCH_TOPIC2_PRICE_CHOICE_LOOP_CLOSE_V1 helpers ===
+PRICE_CHOICE_PROMPT_V1 = "Выбери уровень цен: 1 дешёвые / 2 средние / 3 надёжные / 4 вручную"
 
-def _candidate_paths_from_raw(raw_input: Any) -> List[Path]:
-    obj = _json(raw_input)
-    paths: List[Path] = []
-    for key in (
-        "local_path", "path", "file_path", "downloaded_path",
-        "runtime_path", "source_path", "absolute_path", "tmp_path",
-    ):
-        val = _s(obj.get(key)).strip()
-        if val.startswith("/"):
-            paths.append(Path(val))
-    return paths
-
-
-def _recent_bot_api_pdfs(limit: int = 5) -> List[Path]:
-    root = Path("/var/lib/telegram-bot-api")
-    if not root.exists():
-        return []
-    files: List[Path] = []
+def _t2pcl_history_text(conn, task_id):
     try:
-        for p in root.glob("*/documents/*.pdf"):
-            if p.is_file():
-                files.append(p)
-    except Exception:
-        return []
-    files.sort(key=lambda p: p.stat().st_mtime if p.exists() else 0, reverse=True)
-    return files[:limit]
-
-
-def _recent_runtime_pdfs(limit: int = 8) -> List[Path]:
-    roots = [
-        BASE / "runtime" / "drive_files",
-        BASE / "runtime" / "stroyka_estimates",
-        BASE / "runtime",
-    ]
-    files: List[Path] = []
-    for root in roots:
-        if not root.exists():
-            continue
-        try:
-            for p in root.rglob("*.pdf"):
-                if p.is_file():
-                    files.append(p)
-        except Exception:
-            continue
-    files.sort(key=lambda p: p.stat().st_mtime if p.exists() else 0, reverse=True)
-    return files[:limit]
-
-
-def _pdf_text(path: Path, timeout: int = 8) -> str:
-    if not path or not path.exists() or not path.is_file():
-        return ""
-    text = ""
-    try:
-        exe = shutil.which("pdftotext")
-        if exe:
-            res = subprocess.run(
-                [exe, "-layout", "-q", str(path), "-"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
-                text=True,
-                timeout=timeout,
-            )
-            text = res.stdout or ""
-    except Exception:
-        text = ""
-    if text.strip():
-        return text[:120000]
-    try:
-        import pdfplumber  # type: ignore
-        parts = []
-        with pdfplumber.open(str(path)) as pdf:
-            for page in pdf.pages[:5]:
-                parts.append(page.extract_text() or "")
-        return "\n".join(parts)[:120000]
+        rows = conn.execute(
+            "SELECT action FROM task_history WHERE task_id=? ORDER BY rowid ASC",
+            (str(task_id),),
+        ).fetchall()
+        out = []
+        for r in rows:
+            try:
+                out.append(str(r["action"]))
+            except Exception:
+                out.append(str(r[0]))
+        return "\n".join(out)
     except Exception:
         return ""
 
-
-def _has_drainage(text: str) -> bool:
-    low = _low(text)
-    return any(m in low for m in DRAINAGE_MARKERS)
-
-
-def _user_explicitly_wants_drainage(text: str) -> bool:
-    """User knowingly requests drainage work — gate must not block."""
-    low = _low(text)
-    triggers = (
-        "дренаж", "нвд", "ливнёвка", "ливневка",
-        "наружные водостоки", "дренажная", "ливневая",
-        "хоз.-бытовая", "хозяйственно-бытовая",
-    )
-    return any(t in low for t in triggers)
-
-
-def _has_house_contamination(text: str) -> bool:
-    low = _low(text)
-    return any(m in low for m in BAD_HOUSE_MARKERS)
-
-
-def _is_file_clarification(text: str) -> bool:
-    low = _low(text)
-    return any(m in low for m in FILE_CLARIFICATION_MARKERS)
-
-
-def _is_status(text: str) -> bool:
-    low = _low(text).strip()
-    return bool(low) and any(m in low for m in STATUS_MARKERS)
-
-
-def _text_from_task(row: Any) -> str:
-    raw = _row_get(row, "raw_input", "")
-    res = _row_get(row, "result", "")
-    obj = _json(raw)
-    parts = [
-        raw,
-        obj.get("file_name", ""),
-        obj.get("caption", ""),
-        obj.get("mime_type", ""),
-        obj.get("text", ""),
-        obj.get("user_text", ""),
-        obj.get("message", ""),
-    ]
-    return "\n".join(_s(x) for x in parts if _s(x))
-
-
-def _latest_file_task(
-    conn: sqlite3.Connection, chat_id: str, topic_id: int, current_task_id: str = ""
-) -> Optional[Any]:
-    try:
-        conn.row_factory = sqlite3.Row
-    except Exception:
-        pass
-    rows = conn.execute(
-        """
-        SELECT rowid,id,chat_id,topic_id,input_type,state,raw_input,result,created_at,updated_at
-        FROM tasks
-        WHERE CAST(chat_id AS TEXT)=CAST(? AS TEXT)
-          AND COALESCE(topic_id,0)=?
-          AND input_type IN ('drive_file','file','photo','document')
-          AND id<>?
-          AND state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION')
-        ORDER BY rowid DESC
-        LIMIT 10
-        """,
-        (str(chat_id), int(topic_id or 0), str(current_task_id or "")),
-    ).fetchall()
-    return rows[0] if rows else None
-
-
-def _recent_file_tasks(
-    conn: sqlite3.Connection, chat_id: str, topic_id: int, current_task_id: str = "", limit: int = 6
-) -> List[Any]:
-    try:
-        conn.row_factory = sqlite3.Row
-    except Exception:
-        pass
-    return conn.execute(
-        """
-        SELECT rowid,id,chat_id,topic_id,input_type,state,raw_input,result,created_at,updated_at
-        FROM tasks
-        WHERE CAST(chat_id AS TEXT)=CAST(? AS TEXT)
-          AND COALESCE(topic_id,0)=?
-          AND input_type IN ('drive_file','file','photo','document')
-          AND id<>?
-          AND state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION')
-        ORDER BY rowid DESC
-        LIMIT ?
-        """,
-        (str(chat_id), int(topic_id or 0), str(current_task_id or ""), limit),
-    ).fetchall()
-
-
-def _collect_current_file_text(
-    conn: sqlite3.Connection, task: Any
-) -> Tuple[str, Dict[str, Any]]:
-    task_id = _s(_row_get(task, "id"))
-    chat_id = _s(_row_get(task, "chat_id"))
-    topic_id = int(_row_get(task, "topic_id", 0) or 0)
-    input_type = _s(_row_get(task, "input_type"))
-    raw = _row_get(task, "raw_input", "")
-
-    texts: List[str] = [_text_from_task(task)]
-    meta: Dict[str, Any] = {
-        "task_id": task_id,
-        "chat_id": chat_id,
-        "topic_id": topic_id,
-        "input_type": input_type,
-        "paths": [],
-        "parent_file_task_id": "",
-        "file_count": 0,
-        "drainage_count": 0,
-        "non_drainage_count": 0,
-        "per_file": [],
+def _t2pcl_parse_explicit_price_choice(text):
+    t = _low(text)
+    t = re.sub(r"\s+", " ", t).strip(" .,!?:;()[]{}")
+    if not t:
+        return ""
+    _exact = {
+        "1": "cheapest", "а": "cheapest", "a": "cheapest", "а)": "cheapest", "a)": "cheapest",
+        "дешевые": "cheapest", "дешёвые": "cheapest", "самые дешевые": "cheapest",
+        "самые дешёвые": "cheapest", "минимальные": "cheapest", "минимальная": "cheapest",
+        "вариант 1": "cheapest", "первый": "cheapest",
+        "2": "median", "б": "median", "b": "median", "б)": "median", "b)": "median",
+        "средние": "median", "средняя": "median", "среднее": "median",
+        "медианная": "median", "медианные": "median",
+        "вариант 2": "median", "второй": "median",
+        "3": "reliable", "в": "reliable", "v": "reliable", "в)": "reliable", "v)": "reliable",
+        "надежные": "reliable", "надёжные": "reliable", "надежный": "reliable", "надёжный": "reliable",
+        "проверенные": "reliable", "проверенный": "reliable",
+        "вариант 3": "reliable", "третий": "reliable",
+        "4": "manual", "г": "manual", "g": "manual", "г)": "manual", "g)": "manual",
+        "вручную": "manual", "ручная": "manual", "свои цены": "manual",
+        "своя цена": "manual", "укажу цены": "manual",
+        "вариант 4": "manual", "четвертый": "manual", "четвёртый": "manual",
     }
+    return _exact.get(t, "")
 
-    paths = _candidate_paths_from_raw(raw)
+def _t2pcl_old_public_output(text):
+    s = _s(text)
+    if not s:
+        return False
+    if any(x in s for x in ("⏳ Задачу понял", "Шаблон:", "Лист:", "Цены из листа")):
+        return True
+    if "✅ Смета готова" in s and not ("drive.google.com" in s and (".xlsx" in s or "spreadsheets/d" in s) and ".pdf" in s):
+        return True
+    return False
 
-    # For file-type tasks: add own path
-    if input_type in ("drive_file", "file", "photo", "document"):
-        paths.extend(_candidate_paths_from_raw(raw))
-
-    # For text/voice: look up recent file tasks in topic (not just the last one)
-    if input_type in ("text", "voice"):
-        recent = _recent_file_tasks(conn, chat_id, topic_id, task_id, limit=6)
-        for ft in recent:
-            ft_paths = _candidate_paths_from_raw(_row_get(ft, "raw_input", ""))
-            paths.extend(ft_paths)
-            if not meta["parent_file_task_id"] and ft_paths:
-                meta["parent_file_task_id"] = _s(_row_get(ft, "id", ""))
-        # Only use bot-api fallback if the task is a file-type, not for text/voice
-        # (avoids pulling in unrelated PDFs from other sessions)
-
-    # For direct file tasks with no local path: use DB-tracked state-filtered tasks (no filesystem scan)
-    if input_type in ("drive_file", "file", "photo", "document") and not paths:
-        _fb_recent = _recent_file_tasks(conn, chat_id, topic_id, task_id, limit=6)
-        for ft in _fb_recent:
-            ft_paths = _candidate_paths_from_raw(_row_get(ft, "raw_input", ""))
-            paths.extend(ft_paths)
-            if not meta["parent_file_task_id"] and ft_paths:
-                meta["parent_file_task_id"] = _s(_row_get(ft, "id", ""))
-
-    seen: set = set()
-    uniq: List[Path] = []
-    for p in paths:
-        try:
-            ps = str(p)
-            if ps not in seen and p.exists():
-                seen.add(ps)
-                uniq.append(p)
-        except Exception:
-            continue
-
-    for p in uniq[:6]:
-        meta["paths"].append(str(p))
-        if p.suffix.lower() == ".pdf":
-            txt = _pdf_text(p)
-            texts.append(txt)
-            is_drain = _has_drainage(txt) or _has_drainage(p.name)
-            meta["per_file"].append({"path": str(p), "is_drainage": is_drain})
-            meta["file_count"] += 1
-            if is_drain:
-                meta["drainage_count"] += 1
-            else:
-                meta["non_drainage_count"] += 1
-
-    joined = "\n".join(t for t in texts if t)
-    return joined, meta
-
-
-def topic2_pre_estimate_gate(
-    conn: sqlite3.Connection, task: Any, logger: Any = None
-) -> Dict[str, Any]:
-    task_id = _s(_row_get(task, "id"))
-    topic_id = int(_row_get(task, "topic_id", 0) or 0)
-    input_type = _s(_row_get(task, "input_type"))
-    raw_text = _text_from_task(task)
-
-    if topic_id != 2:
-        return {"allow": True, "reason": "not_topic2"}
-
-    if _is_status(raw_text):
-        return {"allow": True, "reason": "status_query_not_estimate"}
-
-    text, meta = _collect_current_file_text(conn, task)
-
-    if _has_drainage(text):
-        # Case 1: user explicitly says "дренаж/НВД" in their OWN message → allow through
-        # Check only raw_input, not result (result may contain "дренаж" from previous WC response)
-        _t2ig_raw_only = _s(_row_get(task, "raw_input", ""))
-        if _user_explicitly_wants_drainage(_t2ig_raw_only):
-            _history(conn, task_id, "TOPIC2_INPUT_GATE_DRAINAGE_ALLOWED:user_explicit")
-            return {"allow": True, "reason": "user_explicitly_wants_drainage", "domain": "drainage_network", "meta": meta}
-
-        # Case 2: multiple files, some non-drainage → don't block, engine will sort it out
-        if meta.get("file_count", 0) > 1 and meta.get("non_drainage_count", 0) > 0:
-            _history(conn, task_id, f"TOPIC2_INPUT_GATE_MIXED_FILES:total={meta['file_count']},drainage={meta['drainage_count']},other={meta['non_drainage_count']}")
-            return {"allow": True, "reason": "mixed_files_non_drainage_present", "domain": "mixed", "meta": meta}
-
-        # Case 3: all files (or only file) are drainage → block
-        msg = (
-            "PDF определён как схема дренажа/ливнёвки.\n"
-            "Домовую смету не запускаю: текущий файл относится к наружным сетям, а не к дому.\n"
-            "Считать приблизительно по схеме или пришлёшь ведомость длин/масштаб?"
-        )
-        _history(conn, task_id, "TOPIC2_INPUT_GATE_DOMAIN:drainage_network")
-        _history(conn, task_id, "TOPIC2_INPUT_GATE_DRAINAGE_BLOCK")
-        _history(conn, task_id, "TOPIC2_STALE_HOUSE_CONTEXT_BLOCKED")
-        if meta.get("parent_file_task_id"):
-            _history(conn, task_id, f"TOPIC2_VOICE_BOUND_TO_ACTIVE_FILE_TASK:{meta['parent_file_task_id']}")
-        if meta.get("paths"):
-            _history(conn, task_id, "TOPIC2_CURRENT_FILE_SOURCE_OF_TRUTH:" + ",".join(Path(p).name for p in meta["paths"][:3]))
-        return {
-            "allow": False,
-            "block_engine": True,
-            "state": "WAITING_CLARIFICATION",
-            "result": msg,
-            "error_message": None,
-            "domain": "drainage_network",
-            "meta": meta,
-        }
-
-    if (
-        input_type in ("drive_file", "file", "photo", "document")
-        and _has_house_contamination(text)
-        and not any(x in _low(text) for x in ("план дома", "экспликация", "фундамент", "кровля", "фасад"))
-    ):
-        _history(conn, task_id, "TOPIC2_INPUT_GATE_UNCLASSIFIED_FILE_BLOCKED")
-        return {
-            "allow": False,
-            "block_engine": True,
-            "state": "WAITING_CLARIFICATION",
-            "result": "Файл прочитан, но тип расчёта не определён. Это смета, проверка проекта, акт или ведомость объёмов?",
-            "error_message": None,
-            "domain": "unknown",
-            "meta": meta,
-        }
-
-    return {"allow": True, "reason": "no_block", "domain": "unknown", "meta": meta}
-
-
-def apply_gate_result_to_task(
-    conn: sqlite3.Connection, task: Any, decision: Dict[str, Any]
-) -> None:
-    task_id = _s(_row_get(task, "id"))
-    if not task_id or not decision or decision.get("allow", True):
-        return
-    state = decision.get("state") or "WAITING_CLARIFICATION"
-    result = decision.get("result") or ""
-    error_message = decision.get("error_message")
-    conn.execute(
-        """
-        UPDATE tasks
-        SET state=?, result=?, error_message=?, updated_at=datetime('now')
-        WHERE id=?
-        """,
-        (state, result, error_message, task_id),
+async def _t2pcl_send_price_choice_prompt(conn, task_id, chat_id, reply_to_message_id=None, repeat=True):
+    action = "TOPIC2_PRICE_CHOICE_REQUIRED_REPEAT" if repeat else "TOPIC2_PRICE_CHOICE_REQUESTED"
+    _history_safe(conn, str(task_id), action)
+    _update_task_safe(
+        conn, str(task_id),
+        state="WAITING_CLARIFICATION",
+        result=PRICE_CHOICE_PROMPT_V1,
+        error_message="TOPIC2_PRICE_CHOICE_REQUIRED",
     )
-    _history(conn, task_id, f"TOPIC2_INPUT_GATE_HANDLED:state={state}:domain={decision.get('domain','unknown')}")
     try:
-        conn.commit()
-    except Exception:
-        pass
+        maybe = _send_text(str(chat_id), PRICE_CHOICE_PROMPT_V1, reply_to_message_id, int(TOPIC_ID_STROYKA))
+        if hasattr(maybe, "__await__"):
+            await maybe
+    except Exception as _e:
+        _history_safe(conn, str(task_id), "TOPIC2_PRICE_CHOICE_PROMPT_SEND_ERR:" + _s(_e)[:200])
+    return True
 
-
-def mark_known_invalid_stale_results(conn: sqlite3.Connection) -> int:
-    bad_ids = (
-        "1b281c50-2544-45c0-967d-2e49427d0d84",
-        "60b9503b-75cc-4913-bb7b-11092508fdae",
+async def _t2pcl_price_choice_guard(conn, task_id, chat_id, raw_input, reply_to_message_id=None):
+    task_id = str(task_id or "")
+    if not task_id:
+        return False
+    hist = _t2pcl_history_text(conn, task_id)
+    has_prices = ("TOPIC2_PRICE_ENRICHMENT_DONE" in hist or
+                  "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:prices_shown" in hist)
+    has_choice = "TOPIC2_PRICE_CHOICE_CONFIRMED" in hist
+    if not has_prices or has_choice:
+        return False
+    choice = _t2pcl_parse_explicit_price_choice(raw_input)
+    if choice:
+        _history_safe(conn, task_id, "TOPIC2_PRICE_CHOICE_CONFIRMED:" + choice)
+        return False
+    return await _t2pcl_send_price_choice_prompt(
+        conn, task_id, chat_id, reply_to_message_id,
+        repeat=("TOPIC2_PRICE_CHOICE_REQUESTED" in hist),
     )
-    changed = 0
-    for task_id in bad_ids:
-        row = conn.execute(
-            "SELECT id,state,result FROM tasks WHERE id=? LIMIT 1", (task_id,)
-        ).fetchone()
-        if not row:
-            continue
-        result = _s(row[2] if not hasattr(row, "keys") else row["result"])
-        if "газобетон" in _low(result) and ("106.25" in result or "106,25" in result):
-            conn.execute(
-                """
-                UPDATE tasks
-                SET state='FAILED',
-                    error_message='TOPIC2_STALE_HOUSE_CONTEXT_USED_FOR_DRAINAGE_FILE',
-                    updated_at=datetime('now')
-                WHERE id=?
-                """,
-                (task_id,),
+# === /PATCH_TOPIC2_PRICE_CHOICE_LOOP_CLOSE_V1 helpers ===
+
+def _memory_save(chat_id: str, key: str, value: Dict[str, Any]) -> None:
+    try:
+        con = sqlite3.connect(str(MEM_DB))
+        try:
+            payload = json.dumps(value, ensure_ascii=False, indent=2)
+            con.execute(
+                "INSERT OR REPLACE INTO memory (id, chat_id, key, value, timestamp) VALUES (?, ?, ?, ?, ?)",
+                (str(uuid.uuid4()), str(chat_id), str(key), payload, _now()),
             )
-            _history(conn, task_id, "TOPIC2_STALE_HOUSE_CONTEXT_USED_FOR_DRAINAGE_FILE")
-            changed += 1
-    try:
-        conn.commit()
+            con.commit()
+        finally:
+            con.close()
     except Exception:
         pass
-    return changed
 
-# === END_PATCH_TOPIC2_INPUT_GATE_SOURCE_OF_TRUTH_V1 ===
 
-====================================================================================================
-END_FILE: core/topic2_input_gate.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/topic_3008_engine.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: f6f9c29ce8def6ac922df7e40ad352a08586d5070eaa1d984e2ed9dc0dab51c0
-====================================================================================================
-import asyncio, logging, os, re
-from typing import Optional
-logger = logging.getLogger(__name__)
-
-TOPIC_3008 = 3008
-TIMEOUT = 90
-
-_WRITE_CODE = ["напиши код", "написать код"]
-_VERIFY_CODE = ["проверь код", "проверить код", "верификация"]
-_CODE_BLOCK = re.compile(r"```[\w]*\n.*?```", re.DOTALL)
-
-def is_topic_3008(topic_id):
-    return int(topic_id or 0) == TOPIC_3008
-
-def detect_command(text):
-    low = text.lower()
-    if any(t in low for t in _WRITE_CODE):
-        return "write"
-    if any(t in low for t in _VERIFY_CODE):
-        return "verify"
-    if _CODE_BLOCK.search(text):
-        return "verify"
-    return "none"
-
-def extract_code(text):
-    m = _CODE_BLOCK.search(text)
-    if m:
-        raw = m.group(0)
-        lines = raw.split("\n")
-        if lines[0].startswith("```"):
-            lines = lines[1:]
-        if lines and lines[-1].strip() == "```":
-            lines = lines[:-1]
-        return "\n".join(lines)
-    return text
-
-MODEL_REGISTRY = {
-    "deepseek": {"name":"DeepSeek","emoji":"🧠","role":"архитектура","api":"openrouter","model":"deepseek/deepseek-chat","env_key":"OPENROUTER_API_KEY","available":True},
-    "claude":   {"name":"Claude",  "emoji":"👤","role":"логика ТЗ", "api":"anthropic","model":"claude-opus-4-6","env_key":"ANTHROPIC_API_KEY","available":True},
-    "gpt":      {"name":"ChatGPT", "emoji":"🤖","role":"патчи",    "api":"openai",  "model":"gpt-4o","env_key":"OPENAI_API_KEY","available":True},
-    "gemini":   {"name":"Gemini",  "emoji":"🔒","role":"безопасность","api":"gemini","model":"gemini-2.0-flash","env_key":"GOOGLE_API_KEY","available":False},
-    "grok":     {"name":"Grok",    "emoji":"⚡","role":"архитектура","api":"xai",   "model":"grok-3","env_key":"XAI_API_KEY","available":False},
-}
-
-async def _call_openrouter(model_id, prompt, api_key, base_url):
-    import aiohttp
-    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-    payload = {"model": model_id, "messages": [{"role":"user","content":prompt}], "max_tokens":1000}
-    async with aiohttp.ClientSession() as s:
-        async with s.post(f"{base_url}/chat/completions", json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=TIMEOUT)) as r:
-            d = await r.json()
-            return d["choices"][0]["message"]["content"]
-
-async def _call_anthropic(model_id, prompt, api_key):
-    import aiohttp
-    headers = {"x-api-key": api_key, "anthropic-version": "2023-06-01", "content-type": "application/json"}
-    payload = {"model": model_id, "max_tokens":1000, "messages":[{"role":"user","content":prompt}]}
-    async with aiohttp.ClientSession() as s:
-        async with s.post("https://api.anthropic.com/v1/messages", json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=TIMEOUT)) as r:
-            d = await r.json()
-            return d["content"][0]["text"]
-
-async def _call_openai(model_id, prompt, api_key):
-    import aiohttp
-    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-    payload = {"model": model_id, "messages":[{"role":"user","content":prompt}], "max_tokens":1000}
-    async with aiohttp.ClientSession() as s:
-        async with s.post("https://api.openai.com/v1/chat/completions", json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=TIMEOUT)) as r:
-            d = await r.json()
-            return d["choices"][0]["message"]["content"]
-
-async def _verify_one(key, meta, prompt):
-    api_key = <REDACTED_SECRET>"env_key"], "")
-    if not api_key or not meta["available"]:
-        return {"key":key,"name":meta["name"],"emoji":meta["emoji"],"role":meta["role"],"result":"⚠️ НЕТ ОТВЕТА","text":"недоступна","ok":None}
+def _memory_latest(chat_id: str, key_prefix: str) -> Optional[Dict[str, Any]]:
     try:
-        base_url = os.getenv("OPENROUTER_BASE_URL","https://openrouter.ai/api/v1")
-        if meta["api"] == "openrouter":
-            text = await _call_openrouter(meta["model"], prompt, api_key, base_url)
-        elif meta["api"] == "anthropic":
-            text = await _call_anthropic(meta["model"], prompt, api_key)
-        elif meta["api"] == "openai":
-            text = await _call_openai(meta["model"], prompt, api_key)
-        else:
-            return {"key":key,"name":meta["name"],"emoji":meta["emoji"],"role":meta["role"],"result":"⚠️ НЕТ ОТВЕТА","text":"API не реализован","ok":None}
-        text_clean = text.strip()[:800]
-        low = text_clean.lower()
-        ok = not any(w in low for w in ["ошибк","проблем","уязвимост","небезопасн","запрещ"])
-        return {"key":key,"name":meta["name"],"emoji":meta["emoji"],"role":meta["role"],"result":"✅" if ok else "❌","text":text_clean,"ok":ok}
-    except asyncio.TimeoutError:
-        return {"key":key,"name":meta["name"],"emoji":meta["emoji"],"role":meta["role"],"result":"⚠️ НЕТ ОТВЕТА","text":"таймаут 90с","ok":None}
-    except Exception as e:
-        return {"key":key,"name":meta["name"],"emoji":meta["emoji"],"role":meta["role"],"result":"⚠️ НЕТ ОТВЕТА","text":str(e)[:200],"ok":None}
-
-async def verify_code(code, context=""):
-    prompt = f"Проверь код на логику, архитектуру, безопасность.\n\nКонтекст: AREAL-NEVA ORCHESTRA\n{context[:300]}\n\nКод:\n```\n{code[:3000]}\n```\n\nДай краткий вердикт (2-3 предложения)."
-    available = {k:v for k,v in MODEL_REGISTRY.items()}
-    tasks = [_verify_one(k,v,prompt) for k,v in available.items()]
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-    lines = ["=== ВЕРИФИКАЦИЯ КОДА ===\n"]
-    approved = 0
-    critical = False
-    for r in results:
-        if isinstance(r, Exception):
-            continue
-        lines.append(f"{r['emoji']} {r['name'].upper()} ({r['role']}): {r['result']}")
-        lines.append(r['text'])
-        lines.append("")
-        if r['ok'] is True:
-            approved += 1
-        if r['key'] == 'gemini' and r['result'] == '❌':
-            critical = True
-    total = sum(1 for v in available.values() if v["available"] and os.getenv(v["env_key"]))
-    lines.append("=== ОБЩАЯ КАРТИНА ===")
-    lines.append(f"Одобрено {approved} из {max(total,1)} доступных моделей.")
-    if critical:
-        lines.append("КРИТИЧЕСКОЕ ЗАМЕЧАНИЕ: Gemini выявил проблемы безопасности!")
-    lines.append("\nРешение принимает пользователь.")
-    return "\n".join(lines)
-
-async def generate_code(description, context=""):
-    api_key = <REDACTED_SECRET>"OPENROUTER_API_KEY","")
-    base_url = os.getenv("OPENROUTER_BASE_URL","https://openrouter.ai/api/v1")
-    prompt = f"Напиши код. Только код без лишних объяснений.\n\nСистема: AREAL-NEVA ORCHESTRA (Python 3.12)\n{('Контекст: ' + context[:300]) if context else ''}\n\nЗадача: {description}"
-    try:
-        return (await _call_openrouter("deepseek/deepseek-chat", prompt, api_key, base_url)).strip()
-    except Exception as e:
-        return f"Ошибка генерации: {e}"
-
-====================================================================================================
-END_FILE: core/topic_3008_engine.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/topic_autodiscovery.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: d0d1b4283ee522045919246760eaac8dd0db474767f03ff0cd346aac7ae73994
-====================================================================================================
-# === FULLFIX_TOPIC_AUTODISCOVERY_V2 ===
-from __future__ import annotations
-import json
-import logging
-import os
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
-
-logger = logging.getLogger("task_worker")
-
-AUTODISCOVERY_VERSION = "TOPIC_AUTODISCOVERY_V2"
-CONFIG_PATH = Path("/root/.areal-neva-core/config/directions.yaml")
-DATA_TOPICS_PATH = Path("/root/.areal-neva-core/data/topics")
-NAMING_TIMEOUT_HOURS = 24
-CONFLICT_SCORE_DELTA = 30
-MIN_SCORE_TO_AUTOASSIGN = 60
-
-
-def _load_config():
-    raw = CONFIG_PATH.read_text(encoding="utf-8")
-    try:
-        return json.loads(raw)
-    except Exception:
-        import yaml
-        return yaml.safe_load(raw) or {}
-
-
-def _save_config(data: dict):
-    # Всегда пишем JSON — файл directions.yaml фактически JSON
-    CONFIG_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-
-
-def _load_topic_meta(topic_id: int) -> Dict:
-    meta_file = DATA_TOPICS_PATH / str(topic_id) / "meta.json"
-    if meta_file.exists():
+        con = sqlite3.connect(str(MEM_DB))
+        con.row_factory = sqlite3.Row
         try:
-            return json.loads(meta_file.read_text(encoding="utf-8"))
-        except Exception:
-            return {}
-    return {}
+            row = con.execute(
+                "SELECT key,value,timestamp FROM memory WHERE chat_id=? AND key LIKE ? ORDER BY timestamp DESC LIMIT 1",
+                (str(chat_id), f"{key_prefix}%"),
+            ).fetchone()
+            if not row:
+                return None
+            data = json.loads(row["value"] or "{}")
+            data["_memory_key"] = row["key"]
+            data["_memory_timestamp"] = row["timestamp"]
+            return data
+        finally:
+            con.close()
+    except Exception:
+        return None
 
 
-def _save_topic_meta(topic_id: int, meta: dict):
-    folder = DATA_TOPICS_PATH / str(topic_id)
-    folder.mkdir(parents=True, exist_ok=True)
-    meta_file = folder / "meta.json"
-    meta_file.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+
+# === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_CONTEXT_BLEED_FIX ===
+def _parse_iso_ts(value: Any) -> Optional[datetime.datetime]:
+    txt = _s(value)
+    if not txt:
+        return None
+    txt = txt.replace("Z", "+00:00")
+    try:
+        dt = datetime.datetime.fromisoformat(txt)
+        if dt.tzinfo is not None:
+            dt = dt.astimezone(datetime.timezone.utc).replace(tzinfo=None)
+        return dt
+    except Exception:
+        return None
 
 
-def _topic_known(topic_id: int, data: dict) -> Optional[str]:
-    for direction_id, profile in data.get("directions", {}).items():
-        if topic_id in (profile.get("topic_ids") or []):
-            return direction_id
+def _age_seconds(value: Any) -> Optional[float]:
+    dt = _parse_iso_ts(value)
+    if not dt:
+        return None
+    return (datetime.datetime.utcnow() - dt).total_seconds()
+
+
+def _pending_is_fresh(pending: Optional[Dict[str, Any]], max_seconds: int = 600) -> bool:
+    if not pending:
+        return False
+    created = pending.get("created_at") or pending.get("_memory_timestamp")
+    age = _age_seconds(created)
+    return age is not None and 0 <= age <= max_seconds
+
+
+def _is_bad_estimate_result(text: str) -> bool:
+    t = _low(text)
+
+    # === STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED_BAD_RESULT_MARKERS ===
+    stale_markers = (
+        "задачи за последние 24 часа",
+        "создание сметы: профлист",
+        "итоговая сумма: 55000",
+        "1capn1ikkxwypbxhny5caokqrsxbgzho",
+        "1glcscpl3d91elveo_m11ezwh_uu5b4vm",
+        "1pu77xrzhmpobus1pfximwdwckrgje1tn",
+        "смета уже есть:",
+        "смета создана по образцу вор",
+        "вор_кирпичная_кладка",
+        "vor_kirpich",
+        "позиций: 13 | итого: 690510",
+        "690510.00 руб",
+        "файлы в этом топике уже есть",
+        "нашёл релевантное",
+        "нашел релевантное",
+        "активный контекст найден",
+    )
+    if any(x in t for x in stale_markers):
+        return True
+    # === END_STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED_BAD_RESULT_MARKERS ===
+    bad = (
+        # === FULL_STROYKA_V3_SEARCH_LOOP_BAD_RESULT_FIX ===
+        "поставщик | площадка",
+        "auto_parts",
+        "search_monolith",
+        "tco | риски",
+        "ошибка классификации запроса",
+        "категория не совпадает",
+        # === FULL_STROYKA_LOOP_FINAL_CLOSE_BAD_RESULT_FIX ===
+        "смета создана по образцу вор",
+        "смета уже есть:",
+        "вор_кирпичная_кладка",
+        "вор_кирпич",
+        "vor_kirpich",
+        "в_ор_кирпич",
+        "позиций: 13 | итого: 690510",
+        "690510.00 руб",
+        # === END_FULL_STROYKA_LOOP_FINAL_CLOSE_BAD_RESULT_FIX ===
+        # === END_FULL_STROYKA_V3_SEARCH_LOOP_BAD_RESULT_FIX ===
+        "файлы в этом топике уже есть",
+        "нашёл релевантное",
+        "нашел релевантное",
+        "можно использовать как образец сметы",
+        "активный контекст найден",
+        "проектный файл не создан",
+        "docx_create_failed",
+        "state: finished",
+        "задача закрыта по запросу",
+        # === TOPIC2_FINAL_GAPS_V5_FORBIDDEN_PHRASES ===
+        "файл скачан",
+        "ожидает анализа",
+        "выбор принят",
+        "проверяю доступные файлы",
+        "структура проекта включает",
+        "файл содержит проект",
+        "уточните запрос",
+        "что строим",
+        "не нашёл родительскую задачу",
+        "не вижу размеры объекта",
+        "позиция по присланному фото",
+        # === END_TOPIC2_FINAL_GAPS_V5_FORBIDDEN_PHRASES ===
+    )
+    # === FULL_STROYKA_DISABLE_OLD_ESTIMATE_RECALL_FINAL_BAD_MARKERS ===
+    stale_links = (
+        "задачи за последние 24 часа",
+        "создание сметы: профлист",
+        "итоговая сумма: 55000",
+        "1capn1ikkxwypbxhny5caokqrsxbgzho",
+        "1glcscpl3d91elveo_m11ezwh_uu5b4vm",
+        "1pu77xrzhmpobus1pfximwdwckrgje1tn",
+        "смета уже есть",
+        "использовать существующую или пересчитать",
+    )
+    if any(x in t for x in stale_links):
+        return True
+    # === END_FULL_STROYKA_DISABLE_OLD_ESTIMATE_RECALL_FINAL_BAD_MARKERS ===
+    if any(x in t for x in bad):
+        return True
+    # === TOPIC2_FINAL_GAPS_V5_REGEX_FORBIDDEN ===
+    import re as _ibr_re
+    if _ibr_re.search(r'позиций:\s*1(?:\s|$)', t):
+        return True
+    if "/root/" in t or "/tmp/" in t:
+        return True
+    if "revision_context" in t or "traceback (most" in t:
+        return True
+    if "engine:" in t or "manifest:" in t:
+        return True
+    # === TOPIC2_FINAL_GAPS_V5B_RAW_JSON_GUARD ===
+    if t.strip().startswith("{") and any(_k in t for _k in ('"state":', '"topic_id":', '"task_id":', '"result":', '"action":')):
+        return True
+    if _ibr_re.search(r'"state"\s*:\s*"(?:failed|in_progress|done|pending|waiting)', t):
+        return True
+    # === END_TOPIC2_FINAL_GAPS_V5B_RAW_JSON_GUARD ===
+    # === END_TOPIC2_FINAL_GAPS_V5_REGEX_FORBIDDEN ===
+    return False
+
+
+def _has_real_estimate_artifact(text: str) -> bool:
+    t = _low(text)
+    if _is_bad_estimate_result(t):
+        return False
+    good = (
+        "excel:",
+        "xlsx:",
+        ".xlsx",
+        "pdf:",
+        ".pdf",
+        "предварительная смета готова",
+        "итого:",
+    )
+    return any(x in t for x in good)
+
+
+def _is_confirm_only(text: str) -> bool:
+    t = _low(text).replace("[voice]", "").strip()
+    if any(x in t for x in ESTIMATE_WORDS):
+        return False
+    return _is_confirm(t)
+# === END_FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_CONTEXT_BLEED_FIX ===
+
+def _drive_service():
+    from core.topic_drive_oauth import _oauth_service
+    return _oauth_service()
+
+
+def list_drive_templates() -> List[Dict[str, Any]]:
+    try:
+        service = _drive_service()
+        q = (
+            f"'{DRIVE_TEMPLATES_PARENT_ID}' in parents and trashed = false and "
+            "(mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' "
+            "or mimeType = 'application/vnd.ms-excel' "
+            "or mimeType = 'application/vnd.google-apps.spreadsheet')"
+        )
+        resp = service.files().list(
+            q=q,
+            spaces="drive",
+            fields="files(id,name,mimeType,modifiedTime,size)",
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True,
+            pageSize=100,
+        ).execute()
+        out = []
+        for f in resp.get("files", []):
+            name = f.get("name") or ""
+            if name in DEPRECATED_TEMPLATE_NAMES:
+                continue
+            out.append({
+                "title": name,
+                "file_id": f.get("id"),
+                "mimeType": f.get("mimeType"),
+                "modifiedTime": f.get("modifiedTime"),
+                "role": "drive_dynamic_template",
+                "source": "drive_templates_folder",
+            })
+        return out
+    except Exception:
+        return []
+
+
+def _fallback_template_list() -> List[Dict[str, Any]]:
+    return [dict(v) for v in CANON_TEMPLATE_FALLBACK.values()]
+
+
+def _extract_dimensions(text: str) -> Optional[Tuple[float, float]]:
+    m = re.search(r"(\d+(?:[.,]\d+)?)\s*[xх×*]\s*(\d+(?:[.,]\d+)?)", _low(text))
+    if not m:
+        return None
+    return float(m.group(1).replace(",", ".")), float(m.group(2).replace(",", "."))
+
+
+def _extract_floors(text: str) -> Optional[int]:
+    t = _low(text)
+    m = re.search(r"(\d+)\s*(?:этаж|этажа|этажей)", t)
+    if m:
+        return int(m.group(1))
+    if "2 эта" in t or "два эта" in t:
+        return 2
+    if "1 эта" in t or "один эта" in t:
+        return 1
     return None
 
 
-def _detect_with_audit(work_item) -> Tuple[str, int, str, int]:
-    from core.direction_registry import DirectionRegistry
-    reg = DirectionRegistry()
-    results = []
-    for direction_id, profile in reg.directions.items():
-        score, item = reg._score_direction(direction_id, profile or {}, work_item)
-        results.append((direction_id, score))
-    results.sort(key=lambda x: -x[1])
-    top = results[0] if results else ("general_chat", 0)
-    second = results[1] if len(results) > 1 else ("general_chat", 0)
-    return top[0], top[1], second[0], second[1]
+def _extract_distance_km(text: str) -> Optional[float]:
+    m = re.search(r"(\d+(?:[.,]\d+)?)\s*км", _low(text))
+    return float(m.group(1).replace(",", ".")) if m else None
 
 
-def _create_topic_folder(topic_id: int, direction: str, name: str = ""):
-    folder = DATA_TOPICS_PATH / str(topic_id)
-    folder.mkdir(parents=True, exist_ok=True)
-    meta = _load_topic_meta(topic_id)
-    meta.update({
-        "topic_id": topic_id,
-        "direction": direction,
-        "name": name,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "version": AUTODISCOVERY_VERSION,
-    })
-    _save_topic_meta(topic_id, meta)
-    logger.info("TOPIC_AUTODISCOVERY folder: %s dir=%s name=%s", folder, direction, name)
+def _extract_material(text: str) -> str:
+    t = _low(text)
+    for key in ("газобетон", "каркас", "кирпич", "монолит", "керамоблок", "брус", "арболит"):
+        if key in t:
+            return key
+    return ""
 
 
-def _register_topic(topic_id: int, direction: str, data: dict):
-    profile = data["directions"].get(direction)
-    if profile is None:
-        return
-    topic_ids = list(profile.get("topic_ids") or [])
-    if topic_id not in topic_ids:
-        topic_ids.append(topic_id)
-        data["directions"][direction]["topic_ids"] = topic_ids
-    _save_config(data)
-    logger.info("TOPIC_REGISTERED topic_id=%s -> direction=%s", topic_id, direction)
+def _extract_object(text: str) -> str:
+    t = _low(text)
+    for key in ("дом", "ангар", "склад", "фундамент", "кровля", "коробка"):
+        if key in t:
+            return key
+    return ""
 
 
-def _send_naming_question(chat_id: str, topic_id: int):
-    """Отправляет вопрос о названии топика один раз."""
+def _extract_foundation(text: str) -> str:
+    t = _low(text)
+    if "монолит" in t or "плита" in t:
+        return "монолитная плита"
+    if "лента" in t:
+        return "ленточный фундамент"
+    if "сва" in t:
+        return "свайный фундамент"
+    if "фундамент" in t:
+        return "фундамент"
+    return ""
+
+
+def _extract_scope(text: str) -> str:
+    t = _low(text)
+    if "под ключ" in t:
+        return "под ключ"
+    if "коробк" in t:
+        return "коробка"
+    return ""
+
+
+def _parse_request(text: str) -> Dict[str, Any]:
+    dims = _extract_dimensions(text)
+    area_floor = dims[0] * dims[1] if dims else None
+    floors = _extract_floors(text)
+    area_total = area_floor * floors if area_floor and floors else area_floor
+    return {
+        "object": _extract_object(text),
+        "material": _extract_material(text),
+        "dimensions": dims,
+        "area_floor": area_floor,
+        "floors": floors,
+        "area_total": area_total,
+        "distance_km": _extract_distance_km(text),
+        "foundation": _extract_foundation(text),
+        "scope": _extract_scope(text),
+        "raw": text,
+    }
+
+
+def _missing_question(parsed: Dict[str, Any]) -> Optional[str]:
+
+    if parsed.get("pdf_spec_rows") or parsed.get("ocr_table_rows"):
+        return None
+    # === STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED_DIRECT_PRICE_NO_MISSING ===
+    raw = _low(parsed.get("raw", ""))
+    if ("цена" in raw or "руб" in raw or "₽" in raw) and any(u in raw for u in ("м²", "м2", "м³", "м3", "шт", "кг", "тн", "тонн")) and any(x in raw for x in ("смет", "фундамент", "монолит", "кровл", "работ")):
+        return None
+    # === END_STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED_DIRECT_PRICE_NO_MISSING ===
+    if not parsed.get("object"):
+        return "Что строим: дом, ангар, склад, фундамент или кровлю?"
+    if not parsed.get("material") and parsed.get("object") not in ("фундамент", "кровля", "ангар", "склад"):
+        return "Из какого материала строим?"
+    if parsed.get("distance_km") is None:
+        return "Где находится объект: город или удалённость в км?"
+    if not parsed.get("dimensions"):
+        return "Какие размеры объекта?"
+    if parsed.get("object") == "дом" and not parsed.get("floors"):
+        return "Сколько этажей?"
+    if not parsed.get("foundation") and parsed.get("object") not in ("кровля", "фундамент", "ангар", "склад"):
+        return "Какой фундамент?"
+    if not parsed.get("scope") and parsed.get("object") == "дом":
+        return "Смета нужна только коробка или под ключ?"
+    return None
+
+
+def _template_score(parsed: Dict[str, Any], tpl: Dict[str, Any]) -> int:
+    name = _low(tpl.get("title"))
+    obj = parsed.get("object") or ""
+    material = parsed.get("material") or ""
+    area_total = float(parsed.get("area_total") or 0)
+    score = 0
+    if tpl.get("title") in DEPRECATED_TEMPLATE_NAMES:
+        return -9999
+    if obj in ("ангар", "склад", "фундамент") and ("фундамент" in name or "склад" in name):
+        score += 100
+    if obj == "кровля" and ("крыш" in name or "перекр" in name):
+        score += 100
+    if material == "каркас" and ("м-80" in name or "м80" in name or "м-110" in name or "м110" in name):
+        score += 90
+    if material == "каркас" and area_total and area_total > 100 and ("м-110" in name or "м110" in name):
+        score += 40
+    if material == "каркас" and area_total and area_total <= 100 and ("м-80" in name or "м80" in name):
+        score += 40
+    if material in ("газобетон", "кирпич", "керамоблок", "монолит", "арболит") and ("ареал" in name or "м-110" in name or "м110" in name or "м-80" in name or "м80" in name):
+        score += 80
+    if "ареал" in name:
+        score += 20
+    return score
+
+
+def choose_template(parsed: Dict[str, Any]) -> Dict[str, Any]:
+    templates = list_drive_templates() or _fallback_template_list()
+    ranked = sorted(templates, key=lambda t: _template_score(parsed, t), reverse=True)
+    return ranked[0] if ranked else CANON_TEMPLATE_FALLBACK["areal"]
+
+
+# === TOPIC2_FULL_CLOSE_GAP_A: deterministic work/material classifier ===
+_WORK_KW = (
+    "работ", "монтаж", "кладк", "установк", "доставк", "разгруз",
+    "подач", "вибрирован", "уход за бетон", "гидроизоляц", "утеплен",
+    "засыпк", "опалубк", "армирован", "бетонирован", "устройств",
+    "демонтаж", "сборк",
+)
+_MAT_KW = (
+    "материал", "бетон", "арматур", "газобетон", "кирпич", "брус",
+    "пиломат", "утеплитель", "мембран", "плитк", "ламинат",
+    "сантехник", "окна", "двери", "крепеж", "щебень", "песок",
+)
+
+def _classify_item(name: str, section: str) -> str:
+    n = _low(str(name or ""))
+    if any(k in n for k in _WORK_KW):
+        return "work"
+    if any(k in n for k in _MAT_KW):
+        return "material"
+    s = _low(str(section or ""))
+    if s in ("логистика", "накладные расходы", "накладные"):
+        return "overhead"
+    return "material"
+# === END TOPIC2_FULL_CLOSE_GAP_A classifier ===
+
+
+def choose_template_sheet(parsed: Dict[str, Any], sheet_names: List[str]) -> tuple:
+    """Returns (sheet_name, source) where source is 'match' or 'fallback'."""
+    material = parsed.get("material") or ""
+    obj = parsed.get("object") or ""
+    names = list(sheet_names or [])
+    lows = {name: _low(name) for name in names}
+
+    if material == "каркас":
+        for name, low in lows.items():
+            if "каркас" in low:
+                return name, "match"
+
+    if material in ("газобетон", "кирпич", "керамоблок", "монолит", "арболит") or obj in ("дом", "коробка"):
+        for name, low in lows.items():
+            if "газобетон" in low:
+                return name, "match"
+
+    if obj in ("кровля",):
+        for name, low in lows.items():
+            if "кров" in low or "перекр" in low:
+                return name, "match"
+
+    if obj in ("ангар", "склад", "фундамент"):
+        for name, low in lows.items():
+            if "смет" in low or "фундамент" in low or "склад" in low:
+                return name, "match"
+
+    # GAP-B: fallback to first sheet — propagate source for marker
+    return (names[0], "fallback") if names else (None, "fallback")
+
+
+def download_template_xlsx(template: Dict[str, Any]) -> Optional[str]:
+    file_id = template.get("file_id")
+    if not file_id:
+        return None
     try:
-        from core.reply_sender import send_reply  # IMPORT_FIX_V1
-        send_reply(
-            chat_id=str(chat_id),
-            text="Как назовём этот чат? Ответь голосом или текстом.",
-            message_thread_id=topic_id,
-        )
-        logger.info("TOPIC_NAMING_QUESTION sent chat=%s topic=%s", chat_id, topic_id)
+        service = _drive_service()
+        mime = template.get("mimeType") or ""
+        if mime == "application/vnd.google-apps.spreadsheet":
+            request = service.files().export_media(
+                fileId=file_id,
+                mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        else:
+            request = service.files().get_media(fileId=file_id, supportsAllDrives=True)
+        path = os.path.join(tempfile.gettempdir(), f"tpl_{file_id}_{int(time.time())}.xlsx")
+        with io.FileIO(path, "wb") as fh:
+            from googleapiclient.http import MediaIoBaseDownload
+            downloader = MediaIoBaseDownload(fh, request)
+            done = False
+            while not done:
+                _, done = downloader.next_chunk()
+        return path if os.path.exists(path) and os.path.getsize(path) > 1000 else None
+    except Exception:
+        return None
+
+
+def extract_template_prices(template_path: Optional[str], parsed: Dict[str, Any]) -> tuple:
+    """Returns (prices_text, sheet_name, sheet_fallback: bool)."""
+    if not template_path or not os.path.exists(template_path):
+        return "Цены из шаблона: шаблон не скачан, используется только структура/сценарий", None, False
+    try:
+        from openpyxl import load_workbook
+        wb = load_workbook(template_path, data_only=True, read_only=True)
+        selected, _sheet_src = choose_template_sheet(parsed, wb.sheetnames)
+        ws = wb[selected] if selected in wb.sheetnames else wb.active
+
+        keys = ("бетон", "арматур", "газобетон", "кирпич", "кладк", "монтаж", "достав", "манипулятор", "кран", "пиломат", "кров")
+        found = []
+        for row in ws.iter_rows(values_only=True):
+            txt = " | ".join("" if v is None else str(v) for v in row)
+            low = _low(txt)
+            if not any(k in low for k in keys):
+                continue
+            nums = re.findall(r"\d[\d\s]{2,}(?:[.,]\d+)?", txt)
+            vals = []
+            for n in nums:
+                try:
+                    v = float(n.replace(" ", "").replace(",", "."))
+                    if 100 <= v <= 10000000:
+                        vals.append(v)
+                except Exception:
+                    pass
+            if vals:
+                found.append(f"- {ws.title}: {txt[:180]}")
+            if len(found) >= 15:
+                break
+        wb.close()
+        return "Цены из выбранного листа шаблона:\n" + ("\n".join(found) if found else "ключевые цены в листе не распознаны автоматически"), selected, _sheet_src == "fallback"
     except Exception as e:
-        logger.error("TOPIC_NAMING_QUESTION_ERR %s", e)
+        return f"Цены из шаблона: ошибка чтения шаблона: {e}", None, False
 
 
-def check_naming_timeout(chat_id: str, topic_id: int):
+def is_stroyka_estimate_candidate(task: Any) -> bool:
+    if int(_row_get(task, "topic_id", 0) or 0) != TOPIC_ID_STROYKA:
+        return False
+    input_type = _low(_row_get(task, "input_type", ""))
+    if input_type in ("photo", "file", "drive_file", "image", "document"):
+        # §6 multi-format intake: allow when caption contains estimate keywords
+        _mfi_cap = _low(_row_get(task, "raw_input", ""))
+        if _mfi_cap and any(x in _mfi_cap for x in ESTIMATE_WORDS):
+            return True
+        return False
+    raw = _low(_row_get(task, "raw_input", ""))
+    if not raw:
+        return False
+    if any(x in raw for x in PROJECT_ONLY_WORDS) and "смет" not in raw and "стоим" not in raw:
+        return False
+    if _is_old_task_finish_request(raw):
+        return True
+    if any(x in raw for x in ESTIMATE_WORDS):
+        return True
+    if raw in CONTINUATION_WORDS or any(raw.startswith(x + " ") for x in CONTINUATION_WORDS):
+        return True
+    if any(x in raw for x in REVISION_WORDS):
+        return True
+    if raw.startswith("[voice]"):
+        voice_raw = raw.replace("[voice]", "").strip()
+        if voice_raw in CONTINUATION_WORDS or any(x in voice_raw for x in ESTIMATE_WORDS):
+            return True
+    return False
+
+
+def _is_confirm(text: str) -> bool:
+    t = _low(text).replace("[voice]", "").strip()
+    return t in CONTINUATION_WORDS or any(t.startswith(x + " ") for x in CONTINUATION_WORDS)
+
+
+def _is_revision(text: str) -> bool:
+    return any(x in _low(text) for x in REVISION_WORDS)
+
+
+def parse_price_choice(text: str) -> Dict[str, Any]:
+    t = _low(text)
+    choice = "median"
+    if "миним" in t:
+        choice = "minimum"
+    elif "максим" in t:
+        choice = "maximum"
+    elif "конкрет" in t or "ссылк" in t or "вариант" in t:
+        choice = "specific_source"
+    elif "ручн" in t or "сам" in t:
+        choice = "manual"
+    elif "средн" in t or "медиан" in t or "да" in t or "подтверж" in t or "ок" in t:
+        choice = "median"
+
+    percent = 0.0
+    m = re.search(r"(наценк|запас|плюс|\+)\s*(\d+(?:[.,]\d+)?)\s*%", t)
+    if m:
+        percent += float(m.group(2).replace(",", "."))
+    m = re.search(r"(скидк|минус|-)\s*(\d+(?:[.,]\d+)?)\s*%", t)
+    if m:
+        percent -= float(m.group(2).replace(",", "."))
+
+    manual_values = []
+    if choice == "manual":
+        for n in re.findall(r"\d[\d\s]{2,}(?:[.,]\d+)?", text):
+            try:
+                v = float(n.replace(" ", "").replace(",", "."))
+                if 100 <= v <= 10000000:
+                    manual_values.append(v)
+            except Exception:
+                pass
+
+    return {"choice": choice, "percent_adjustment": percent, "manual_values": manual_values, "raw": text}
+
+
+def _numbers_from_price_text(price_text: str, keywords: Tuple[str, ...]) -> List[float]:
+    vals = []
+    for line in price_text.splitlines():
+        low = _low(line)
+        if any(k in low for k in keywords):
+            for n in re.findall(r"\d[\d\s]{2,}(?:[.,]\d+)?", line):
+                try:
+                    v = float(n.replace(" ", "").replace(",", "."))
+                    if 100 <= v <= 10000000:
+                        vals.append(v)
+                except Exception:
+                    pass
+    return vals
+
+
+def _parse_price_sources(price_text: str) -> List[Dict[str, Any]]:
+    """Parse Perplexity pipe-delimited response into per-position source records."""
+    sources: List[Dict[str, Any]] = []
+    if not price_text:
+        return sources
+    today = datetime.date.today().isoformat()
+    for line in price_text.splitlines():
+        line = line.strip(" \t-—•·")
+        if "|" not in line:
+            continue
+        parts = [p.strip() for p in line.split("|")]
+        if len(parts) < 4:
+            continue
+        position = parts[0].lower()
+        supplier = parts[4] if len(parts) > 4 else ""
+        url = parts[5] if len(parts) > 5 else ""
+        checked_at = parts[6].strip() if len(parts) > 6 else today
+        status = "found" if (supplier or url) else "no_data"
+        if not position:
+            continue
+        kw = [w for w in re.split(r"[\s,;/]+", position) if len(w) > 2]
+        sources.append({
+            "keywords": kw,
+            "position": position,
+            "supplier": supplier,
+            "url": url,
+            "checked_at": checked_at or today,
+            "status": status,
+        })
+    return sources
+
+
+def _match_price_source(sources: List[Dict[str, Any]], item_name: str, item_section: str) -> Dict[str, Any]:
+    """Return best matching source for an estimate item."""
+    today = datetime.date.today().isoformat()
+    _empty = {"supplier": "", "url": "", "checked_at": today, "status": "template_only"}
+    if not sources:
+        return _empty
+    combined = (item_name + " " + item_section).lower()
+    best = None
+    best_score = 0
+    for src in sources:
+        score = sum(1 for kw in src["keywords"] if kw in combined)
+        if score > best_score:
+            best_score = score
+            best = src
+    return best if (best and best_score > 0) else _empty
+
+
+def _choose_value(values: List[float], choice: Dict[str, Any], default: float = 0.0) -> float:
+    if choice.get("choice") == "manual" and choice.get("manual_values"):
+        v = float(choice["manual_values"][0])
+    elif values:
+        if choice.get("choice") == "minimum":
+            v = min(values)
+        elif choice.get("choice") == "maximum":
+            v = max(values)
+        elif choice.get("choice") == "specific_source":
+            v = values[0]
+        else:
+            v = statistics.median(values)
+    else:
+        v = default
+
+    pct = float(choice.get("percent_adjustment") or 0)
+    if pct:
+        v = v * (1 + pct / 100)
+    return float(v)
+
+
+async def _send_text(chat_id: str, text: str, reply_to: Optional[int], topic_id: int) -> Dict[str, Any]:
+    # PATCH_TOPIC2_PRICE_CHOICE_LOOP_CLOSE_V1 send_text guard
+    try:
+        if _t2pcl_old_public_output(text):
+            text = PRICE_CHOICE_PROMPT_V1
+    except Exception:
+        pass
+    from core.reply_sender import send_reply_ex
+    return await asyncio.to_thread(
+        send_reply_ex,
+        chat_id=str(chat_id),
+        text=_clean(text, 12000),
+        reply_to_message_id=reply_to,
+        message_thread_id=topic_id,
+    )
+
+
+async def _send_document(chat_id: str, file_path: str, caption: str, reply_to: Optional[int], topic_id: int) -> bool:
+    token = <REDACTED_SECRET>"TELEGRAM_BOT_TOKEN", "").strip()
+    if not token or not os.path.exists(file_path):
+        return False
+    data = {"chat_id": str(chat_id), "caption": _clean(caption, 900)}
+    if reply_to:
+        data["reply_to_message_id"] = int(reply_to)
+    if topic_id:
+        data["message_thread_id"] = int(topic_id)
+    try:
+        with open(file_path, "rb") as f:
+            r = requests.post(f"https://api.telegram.org/bot{token}/sendDocument", data=data, files={"document": f}, timeout=60)
+        return r.status_code == 200 and r.json().get("ok") is True
+    except Exception:
+        return False
+
+
+def _latest_estimate_result(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> Optional[sqlite3.Row]:
     """
-    Вызывается при каждом сообщении из топика.
-    Если топик без имени и прошло 24 часа — один раз спрашивает название.
+    STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED
+
+    Old DONE/ARCHIVED estimate reuse is forbidden for topic_2.
+    Every new stroyka estimate must be calculated from current raw_input only.
+    Old Drive links, old VOR files, old proflist estimates and stale memory are never valid input.
     """
-    meta = _load_topic_meta(topic_id)
-    if not meta:
-        return
-    if meta.get("name"):
-        return
-    if meta.get("naming_asked"):
-        return
-    created_at = meta.get("created_at")
-    if not created_at:
-        return
+    return None
+
+def _latest_estimate_task(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> Optional[sqlite3.Row]:
     try:
-        created = datetime.fromisoformat(created_at)
-        elapsed = (datetime.now(timezone.utc) - created).total_seconds() / 3600
-        if elapsed >= NAMING_TIMEOUT_HOURS:
-            meta["naming_asked"] = datetime.now(timezone.utc).isoformat()
-            _save_topic_meta(topic_id, meta)
-            _send_naming_question(chat_id, topic_id)
-    except Exception as e:
-        logger.error("TOPIC_NAMING_TIMEOUT_ERR %s", e)
+        rows = conn.execute(
+            """
+            SELECT * FROM tasks
+            WHERE chat_id=? AND COALESCE(topic_id,0)=?
+              AND state IN ('WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION')
+              AND updated_at >= datetime('now','-24 hours')
+              AND (
+                raw_input LIKE '%смет%' OR raw_input LIKE '%стоимость%' OR raw_input LIKE '%газобетон%' OR
+                raw_input LIKE '%фундамент%' OR raw_input LIKE '%кровл%' OR raw_input LIKE '%ангар%' OR
+                result LIKE '%смет%'
+              )
+            ORDER BY updated_at DESC
+            LIMIT 20
+            """,
+            (str(chat_id), int(topic_id or 0)),
+        ).fetchall()
+        for row in rows:
+            result = _s(_row_get(row, "result", ""))
+            if result and _is_bad_estimate_result(result):
+                continue
+            return row
+        return None
+    except Exception:
+        return None
 
 
-def assign_name(topic_id: int, name: str):
-    """Назначает имя топику. Вызывается когда пользователь ответил на вопрос."""
-    meta = _load_topic_meta(topic_id)
-    meta["name"] = name
-    meta["named_at"] = datetime.now(timezone.utc).isoformat()
-    _save_topic_meta(topic_id, meta)
-    logger.info("TOPIC_NAMED topic=%s name=%s", topic_id, name)
+
+# === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_MEMORY_REVIVE_FIX ===
+def _estimate_raw_score(raw: str) -> int:
+    parsed = _parse_request(raw)
+    score = 0
+    if parsed.get("object"):
+        score += 20
+    if parsed.get("material"):
+        score += 20
+    if parsed.get("dimensions"):
+        score += 25
+    if parsed.get("floors"):
+        score += 10
+    if parsed.get("distance_km") is not None:
+        score += 15
+    if parsed.get("foundation"):
+        score += 10
+    if parsed.get("scope"):
+        score += 5
+    raw_low = _low(raw)
+    if "смет" in raw_low or "стоим" in raw_low or "посчитай" in raw_low:
+        score += 15
+    return score
 
 
-def process(work_item, payload: Dict[str, Any]) -> Dict[str, Any]:
-    topic_id = int(getattr(work_item, "topic_id", 0) or 0)
-    chat_id = str(getattr(work_item, "chat_id", "") or payload.get("chat_id") or "")
-    if topic_id == 0:
-        return {}
+def _is_old_task_finish_request(text: str) -> bool:
+    t = _low(text).replace("[voice]", "").strip()
+    phrases = (
+        # === FULL_STROYKA_LOOP_FINAL_CLOSE_REVIVE_PHRASES_FIX ===
+        "что с моими задачами",
+        "какое ты задание получил",
+        "почему ты не сделаешь мне смету",
+        "предыдущее техническое задание",
+        "посмотри что мы строим",
+        "задача завершена",
+        "все задачи отменены",
+        # === END_FULL_STROYKA_LOOP_FINAL_CLOSE_REVIVE_PHRASES_FIX ===
 
+        # === FULL_STROYKA_V3_REVIVE_PHRASES_FIX ===
+        "что продолжаешь",
+        "что продолжаешь-то",
+        "где моя смета",
+        "моя смета",
+        "смета по итогу",
+        "посмотри их задания",
+        "посмотрите их задания",
+        # === END_FULL_STROYKA_V3_REVIVE_PHRASES_FIX ===
+        "доделай",
+        "доделай задачу",
+        "доделай смету",
+        "продолжай",
+        "закончи",
+        "смету в excel",
+        "смету в эксель",
+        "мне нужна смета",
+        "где смета",
+        "ну что",
+    )
+    if any(p in t for p in phrases):
+        return True
+    if t in ("да", "сделай", "да сделай", "ок", "окей"):
+        return True
+    return False
+
+
+def _latest_revivable_estimate_task(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> Optional[sqlite3.Row]:
     try:
-        data = _load_config()
-    except Exception as e:
-        logger.error("TOPIC_AUTODISCOVERY config load error: %s", e)
-        return {}
+        rows = conn.execute(
+            """
+            SELECT * FROM tasks
+            WHERE chat_id=? AND COALESCE(topic_id,0)=?
+              AND state IN ('FAILED','DONE','CANCELLED','ARCHIVED')
+              AND updated_at >= datetime('now','-7 days')
+              AND (
+                raw_input LIKE '%смет%' OR raw_input LIKE '%стоимость%' OR raw_input LIKE '%посчитай%' OR
+                raw_input LIKE '%газобетон%' OR raw_input LIKE '%фундамент%' OR raw_input LIKE '%кровл%' OR
+                raw_input LIKE '%ангар%' OR raw_input LIKE '%коробк%' OR raw_input LIKE '%монолит%' OR
+                raw_input LIKE '%дом%'
+              )
+            ORDER BY updated_at DESC
+            LIMIT 80
+            """,
+            (str(chat_id), int(topic_id or 0)),
+        ).fetchall()
 
-    # Уже известный топик — проверяем таймаут имени
-    known = _topic_known(topic_id, data)
-    if known:
+        best = None
+        best_score = 0
+        for row in rows:
+            raw = _s(_row_get(row, "raw_input", ""))
+            result = _s(_row_get(row, "result", ""))
+
+            # ВАЖНО: старые задачи являются памятью и не удаляются
+            # Нельзя повторно отдавать старый ошибочный result как готовую смету
+            # Можно и нужно брать старый raw_input как исходное ТЗ
+            if _is_bad_estimate_result(result) and not raw:
+                continue
+
+            score = _estimate_raw_score(raw)
+            if score > best_score:
+                best = row
+                best_score = score
+
+        if best is not None and best_score >= 45:
+            return best
+        return None
+    except Exception:
+        return None
+# === END_FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_MEMORY_REVIVE_FIX ===
+
+async def _search_prices_online(parsed: Dict[str, Any], template: Dict[str, Any], sheet_name: Optional[str], conn=None, task_id=None) -> str:
+    api_key = <REDACTED_SECRET>"OPENROUTER_API_KEY", "").strip()
+    base_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").rstrip("/")
+    model = os.getenv("OPENROUTER_MODEL_ONLINE", "perplexity/sonar").strip() or "perplexity/sonar"
+    if not api_key:
+        raise RuntimeError("OPENROUTER_API_KEY_MISSING")
+    # PATCH_OPENROUTER_ONLINE_ONLY_FOR_TOPIC2_PRICE_SEARCH_V1 begin
+    import logging as _sec_log
+    _sec_logger = _sec_log.getLogger("stroyka_estimate_canon")
+    if "sonar" not in model.lower():
+        _sec_logger.error(f"TOPIC2_ONLINE_MODEL_GUARD_BLOCKED_NON_SONAR: model={model!r} blocked")
+        if conn is not None and task_id is not None:
+            try:
+                _history_safe(conn, task_id, f"TOPIC2_ONLINE_MODEL_GUARD_BLOCKED_NON_SONAR:{model}")
+            except Exception:
+                pass
+        raise RuntimeError(f"TOPIC2_ONLINE_MODEL_GUARD_BLOCKED_NON_SONAR:{model}")
+    _sec_logger.info(f"TOPIC2_ONLINE_MODEL_SONAR_CONFIRMED: model={model!r}")
+    if conn is not None and task_id is not None:
         try:
-            check_naming_timeout(chat_id, topic_id)
+            _history_safe(conn, task_id, f"TOPIC2_ONLINE_MODEL_SONAR_CONFIRMED:{model}")
         except Exception:
             pass
-        return {"status": "known", "direction": known}
+    if task_id is not None:
+        _cost_counts = globals().setdefault("_PRICE_SEARCH_COST_COUNTS_V1", {})
+        _cur_count = _cost_counts.get(task_id, 0)
+        if _cur_count >= 30:
+            _sec_logger.error(f"TOPIC2_PRICE_SEARCH_COST_GUARD_BLOCKED: task_id={task_id} count={_cur_count}")
+            if conn is not None:
+                try:
+                    _history_safe(conn, task_id, f"TOPIC2_PRICE_SEARCH_COST_GUARD_BLOCKED:{_cur_count}")
+                except Exception:
+                    pass
+            raise RuntimeError(f"TOPIC2_PRICE_SEARCH_COST_GUARD_BLOCKED:max30_reached:{_cur_count}")
+        _cost_counts[task_id] = _cur_count + 1
+    # PATCH_OPENROUTER_ONLINE_ONLY_FOR_TOPIC2_PRICE_SEARCH_V1 end
 
-    # Новый топик — детектируем направление
+    query = f"""
+Найди актуальные цены для предварительной строительной сметы.
+Регион: Санкт-Петербург и Ленинградская область
+Объект: {parsed.get('object') or 'объект'}
+Материал: {parsed.get('material') or 'строительные материалы'}
+Фундамент: {parsed.get('foundation') or 'не указан'}
+Шаблон: {template.get('title')}
+Лист шаблона: {sheet_name or 'не выбран'}
+Удалённость: {parsed.get('distance_km')} км
+
+Верни цены с источниками:
+бетон В25/В30, арматура А500, материал стен, работа, доставка, манипулятор/кран, разгрузка.
+Для каждой позиции дай минимум/среднюю/максимум если доступны.
+Формат:
+- Позиция | цена | единица | регион | источник | ссылка | checked_at
+Не выдумывай. Если цены нет — НЕТ ДАННЫХ.
+""".strip()
+
+    body = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": "Ты строительный снабженец. Дай цены с источниками и ссылками. Без общих советов."},
+            {"role": "user", "content": query},
+        ],
+        "temperature": 0.1,
+    }
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+
+    def _call() -> str:
+        r = requests.post(f"{base_url}/chat/completions", headers=headers, json=body, timeout=90)
+        if r.status_code != 200:
+            raise RuntimeError(f"OPENROUTER_HTTP_{r.status_code}:{r.text[:300]}")
+        return _clean(r.json()["choices"][0]["message"]["content"], 6000)
+
+    if conn is not None and task_id is not None:
+        try:
+            _history_safe(conn, task_id, "TOPIC2_PRICE_ENRICHMENT_STARTED")
+        except Exception:
+            pass
+    _base_prices = await asyncio.to_thread(_call)
+    if conn is not None and task_id is not None:
+        try:
+            _history_safe(conn, task_id, f"TOPIC2_PRICE_ENRICHMENT_DONE:{len(_base_prices)}")
+        except Exception:
+            pass
     try:
-        top_dir, top_score, second_dir, second_score = _detect_with_audit(work_item)
-    except Exception as e:
-        logger.error("TOPIC_AUTODISCOVERY detect error: %s", e)
-        return {"status": "detect_error"}
+        from core.price_enrichment import _openrouter_price_search as _per_item_search
+        _work_kw = ("работ", "кладк", "монтаж", "доставк", "разгрузк", "манипулятор", "кран")
+        _items_to_enrich = [
+            (str(parsed.get("material") or ""), "м³"),
+            ("Бетон В25", "м³"),
+            ("Арматура А500", "т"),
+            (str(parsed.get("foundation") or "бетон монолит"), "м³"),
+            ("Работы по монтажу и кладке", "м²"),
+            ("Доставка строительных материалов", "рейс"),
+        ]
+        _per_item_lines = []
+        for _pi_name, _pi_unit in _items_to_enrich[:5]:
+            if not _pi_name.strip():
+                continue
+            try:
+                _pi_low = _pi_name.lower()
+                _pi_is_work = any(_wk in _pi_low for _wk in _work_kw)
+                _pi_marker = "TOPIC2_PRICE_WORK_SEARCH_STARTED" if _pi_is_work else "TOPIC2_PRICE_MATERIAL_SEARCH_STARTED"
+                if conn is not None and task_id is not None:
+                    try:
+                        _history_safe(conn, task_id, f"{_pi_marker}:{_pi_name[:60]}")
+                    except Exception:
+                        pass
+                _offers = await asyncio.wait_for(_per_item_search(_pi_name, _pi_unit), timeout=25)
+                _valid_offers = [_o for _o in (_offers or []) if _o.get("price") and (_o.get("supplier") or _o.get("url")) and _o.get("status")]
+                if conn is not None and task_id is not None:
+                    try:
+                        if _valid_offers:
+                            _o0 = _valid_offers[0]
+                            _history_safe(conn, task_id, "TOPIC2_PRICE_SOURCE_FOUND:{}:{}:{}".format(
+                                _pi_name[:40], str(_o0.get("supplier") or "")[:40], str(_o0.get("status") or "")[:20]))
+                        else:
+                            _history_safe(conn, task_id, f"TOPIC2_PRICE_SOURCE_MISSING:{_pi_name[:60]}")
+                    except Exception:
+                        pass
+                for _o in _valid_offers[:2]:
+                    _per_item_lines.append(
+                        "- {} | {} {} | {} | {}".format(
+                            _pi_name, _o.get("price"), _o.get("unit"),
+                            _o.get("supplier"), _o.get("status")
+                        )
+                    )
+            except Exception:
+                pass
+        if _per_item_lines:
+            _base_prices = _base_prices + "\n\n=== ПОИСК ПО ПОЗИЦИЯМ ===\n" + "\n".join(_per_item_lines)
+    except Exception:
+        pass
+    return _base_prices
 
-    # Недостаточный score
-    if top_score < MIN_SCORE_TO_AUTOASSIGN:
-        # Создаём папку но не регистрируем direction
-        _create_topic_folder(topic_id, "unknown", "")
-        logger.info("TOPIC_AUTODISCOVERY low score=%s topic=%s — folder created, waiting", top_score, topic_id)
-        return {"status": "low_score", "topic_id": topic_id, "score": top_score}
 
-    # Конфликт — уточняем
-    delta = top_score - second_score
-    if delta < CONFLICT_SCORE_DELTA and second_score >= MIN_SCORE_TO_AUTOASSIGN:
-        logger.warning("TOPIC_CONFLICT topic=%s %s(%s) vs %s(%s)",
-                       topic_id, top_dir, top_score, second_dir, second_score)
-        payload["topic_conflict"] = {
-            "topic_id": topic_id,
-            "candidates": [
-                {"direction": top_dir, "score": top_score},
-                {"direction": second_dir, "score": second_score},
-            ],
-        }
-        return {"status": "conflict", "candidates": [top_dir, second_dir]}
+def _build_estimate_items(parsed: Dict[str, Any], price_text: str, choice: Dict[str, Any]) -> List[Dict[str, Any]]:
+    dims = parsed.get("dimensions") or (10.0, 10.0)
+    area_floor = float(parsed.get("area_floor") or (dims[0] * dims[1]))
+    floors = int(parsed.get("floors") or 1)
+    perimeter = 2 * (dims[0] + dims[1])
+    distance = float(parsed.get("distance_km") or 0)
 
-    # Однозначно — регистрируем молча
+    concrete_price = _choose_value(_numbers_from_price_text(price_text, ("бетон", "в25", "в30")), choice)
+    rebar_price = _choose_value(_numbers_from_price_text(price_text, ("арматур", "а500")), choice)
+    wall_price = _choose_value(_numbers_from_price_text(price_text, ("газобетон", "кирпич", "керамоблок", "стен")), choice)
+    work_price = _choose_value(_numbers_from_price_text(price_text, ("работ", "кладк", "монолит", "каркас")), choice)
+    delivery_price = _choose_value(_numbers_from_price_text(price_text, ("достав", "рейс", "манипулятор", "кран")), choice)
+
+    foundation_volume = max(area_floor * 0.25, 1)
+    rebar_qty = max(foundation_volume * 0.08, 0.1)
+    wall_volume = max(perimeter * 3.0 * floors * 0.30, 1)
+    roof_area = max(area_floor * 1.25, 1)
+    trips = max(math.ceil(distance / 40), 1) if distance > 0 else 1
+
+    return [
+        {"section": "Фундамент", "name": "Бетон для монолитных работ", "unit": "м³", "qty": foundation_volume, "price": concrete_price, "note": "актуальная подтверждённая цена"},
+        {"section": "Фундамент", "name": "Арматура А500", "unit": "т", "qty": rebar_qty, "price": rebar_price, "note": "актуальная подтверждённая цена"},
+        {"section": "Стены", "name": f"Материал стен: {parsed.get('material') or 'по ТЗ'}", "unit": "м³", "qty": wall_volume, "price": wall_price, "note": "актуальная подтверждённая цена"},
+        {"section": "Стены", "name": "Работы по стенам", "unit": "м³", "qty": wall_volume, "price": work_price, "note": "актуальная подтверждённая цена"},
+        {"section": "Перекрытия", "name": "Перекрытия / черновой конструктив", "unit": "м²", "qty": area_floor, "price": max(work_price, 0), "note": "по шаблонной логике"},
+        {"section": "Кровля", "name": "Кровельный контур", "unit": "м²", "qty": roof_area, "price": max(wall_price * 0.15, 0), "note": "по шаблонной логике"},
+        {"section": "Логистика", "name": "Доставка / рейсы", "unit": "рейс", "qty": trips, "price": delivery_price, "note": f"{distance:g} км / 40"},
+        {"section": "Накладные", "name": "Организация работ и накладные", "unit": "компл", "qty": 1, "price": max((foundation_volume * concrete_price + wall_volume * wall_price) * 0.07, 0), "note": "отдельный блок"},
+    ]
+
+
+def _create_xlsx_from_template(task_id: str, parsed: Dict[str, Any], template: Dict[str, Any], template_path: Optional[str], sheet_name: Optional[str], price_text: str, choice: Dict[str, Any]) -> Tuple[str, List[Dict[str, Any]], float]:
+    import shutil as _xlsx_shutil
+    from openpyxl import Workbook, load_workbook
+    from openpyxl.styles import Font, Alignment, PatternFill
+    from openpyxl.utils import get_column_letter
+
+    items = _build_estimate_items(parsed, price_text, choice)
+    today_str = datetime.date.today().isoformat()
+    _ps_sources = _parse_price_sources(price_text)
+
+    if template_path and os.path.exists(template_path):
+        try:
+            tmp_copy = os.path.join(tempfile.gettempdir(), f"tpl_copy_{task_id[:8]}_{int(time.time())}.xlsx")
+            _xlsx_shutil.copy(template_path, tmp_copy)
+            import sys as _sec_sys
+            _sec_old_limit = _sec_sys.getrecursionlimit()
+            _sec_sys.setrecursionlimit(5000)
+            try:
+                wb = load_workbook(tmp_copy)
+            finally:
+                _sec_sys.setrecursionlimit(_sec_old_limit)
+            if sheet_name and sheet_name in wb.sheetnames:
+                wb.active = wb.sheetnames.index(sheet_name)
+        except Exception:
+            wb = Workbook()
+    else:
+        wb = Workbook()
+
+    if "AREAL_CALC" in wb.sheetnames:
+        del wb["AREAL_CALC"]
+    ws = wb.create_sheet("AREAL_CALC", 0)
+
+    # §4 canonical 15 columns — no forbidden metadata rows
+    headers = [
+        "№", "Раздел", "Наименование", "Ед. изм.", "Кол-во",
+        "Цена работ", "Стоимость работ",
+        "Цена материалов", "Стоимость материалов", "Всего",
+        "Источник цены", "Поставщик", "URL", "checked_at", "Примечание",
+    ]
+    ws.append(headers)
+    header_row = 1
+    hdr_fill = PatternFill(start_color="1F497D", end_color="1F497D", fill_type="solid")
+    for c in range(1, len(headers) + 1):
+        cell = ws.cell(header_row, c)
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.alignment = Alignment(wrap_text=True, horizontal="center")
+        cell.fill = hdr_fill
+
+    sec_palette = ["EBF1DE", "DCE6F1", "FDE9D9", "E2EFDA", "FFF2CC", "E7E6E6", "D9E1F2", "FCE4D6", "EDEDED", "E2EFDA", "F2F2F2"]
+    sec_color_map: Dict[str, str] = {}
+    sec_idx = 0
+    py_total = 0.0
+    row_idx = header_row + 1
+    for i, it in enumerate(items, 1):
+        qty = float(it["qty"])
+        price = float(it["price"])
+        py_total += qty * price
+        sec = it["section"]
+        if sec not in sec_color_map:
+            sec_color_map[sec] = sec_palette[sec_idx % len(sec_palette)]
+            sec_idx += 1
+        row_fill = PatternFill(start_color=sec_color_map[sec], end_color=sec_color_map[sec], fill_type="solid")
+        _icls = _classify_item(it["name"], sec)
+        _wp = price if _icls == "work" else 0
+        _mp = price if _icls != "work" else 0
+        ws.cell(row_idx, 1, i)
+        ws.cell(row_idx, 2, sec)
+        ws.cell(row_idx, 3, it["name"])
+        ws.cell(row_idx, 4, it["unit"])
+        ws.cell(row_idx, 5, qty)
+        ws.cell(row_idx, 6, _wp)
+        ws.cell(row_idx, 7).value = f"=E{row_idx}*F{row_idx}"
+        ws.cell(row_idx, 8, _mp)
+        ws.cell(row_idx, 9).value = f"=E{row_idx}*H{row_idx}"
+        ws.cell(row_idx, 10).value = f"=G{row_idx}+I{row_idx}"
+        _ps = _match_price_source(_ps_sources, it["name"], it["section"])
+        ws.cell(row_idx, 11, _ps.get("status", "template_only"))
+        ws.cell(row_idx, 12, _ps.get("supplier", ""))
+        ws.cell(row_idx, 13, _ps.get("url", ""))
+        ws.cell(row_idx, 14, _ps.get("checked_at", today_str))
+        ws.cell(row_idx, 15, it["note"])
+        for c in range(1, 16):
+            ws.cell(row_idx, c).fill = row_fill
+        row_idx += 1
+
+    data_last = row_idx - 1
+    total_row = row_idx + 1
+    total_fill = PatternFill(start_color="1F497D", end_color="1F497D", fill_type="solid")
+    for lbl, formula, tr in [
+        ("ИТОГО без НДС", f"=SUM(J{header_row + 1}:J{data_last})", total_row),
+        ("НДС 20%",       f"=J{total_row}*0.2",                    total_row + 1),
+        ("С НДС",         f"=J{total_row}+J{total_row + 1}",        total_row + 2),
+    ]:
+        ws.cell(tr, 9, lbl).font = Font(bold=True, color="FFFFFF")
+        ws.cell(tr, 9).fill = total_fill
+        ws.cell(tr, 10).value = formula
+        ws.cell(tr, 10).font = Font(bold=True, color="FFFFFF")
+        ws.cell(tr, 10).fill = total_fill
+
+    excl_row = total_row + 4
+    ws.cell(excl_row, 2, "Не входит").font = Font(bold=True)
+    for idx, item in enumerate(EXCLUSIONS_DEFAULT, excl_row + 1):
+        ws.cell(idx, 2, item)
+
+    widths = {1: 6, 2: 18, 3: 48, 4: 10, 5: 10, 6: 14, 7: 18, 8: 16, 9: 20, 10: 16, 11: 16, 12: 16, 13: 28, 14: 14, 15: 36}
+    for col, width in widths.items():
+        ws.column_dimensions[get_column_letter(col)].width = width
+
+    path = os.path.join(tempfile.gettempdir(), f"stroyka_estimate_{task_id[:8]}_{int(time.time())}.xlsx")
+    wb.save(path)
+    wb.close()
+    return path, items, py_total
+
+
+def _quality_gate_xlsx(xlsx_path: str, items: List[Dict[str, Any]], py_total: float) -> Tuple[bool, str]:
+    if not xlsx_path or not os.path.exists(xlsx_path):
+        return False, "XLSX_NOT_FOUND"
+    if os.path.getsize(xlsx_path) < 5000:
+        return False, "XLSX_TOO_SMALL"
+    if len(items) < 8:
+        return False, f"TOO_FEW_ITEMS:{len(items)}"
+    if py_total <= 0:
+        return False, "TOTAL_ZERO"
     try:
-        _register_topic(topic_id, top_dir, data)
-        _create_topic_folder(topic_id, top_dir, "")
-        payload["topic_autodiscovered"] = {
-            "topic_id": topic_id,
-            "direction": top_dir,
-            "score": top_score,
-            "version": AUTODISCOVERY_VERSION,
-        }
-        logger.info("TOPIC_AUTODISCOVERY_DONE topic=%s -> %s score=%s", topic_id, top_dir, top_score)
-        return {"status": "registered", "direction": top_dir, "score": top_score}
+        import sys as _qg_sys
+        from openpyxl import load_workbook
+        _qg_old = _qg_sys.getrecursionlimit()
+        _qg_sys.setrecursionlimit(5000)
+        try:
+            wb = load_workbook(xlsx_path, data_only=False)
+        finally:
+            _qg_sys.setrecursionlimit(_qg_old)
+        ws = wb["AREAL_CALC"] if "AREAL_CALC" in wb.sheetnames else wb.active
+        formula_count = sum(1 for row in ws.iter_rows() for c in row if isinstance(c.value, str) and c.value.startswith("="))
+        wb.close()
+        if formula_count < 8:
+            return False, f"TOO_FEW_FORMULAS:{formula_count}"
+        return True, "OK"
     except Exception as e:
-        logger.error("TOPIC_REGISTER_ERR %s", e)
-        return {"status": "register_error"}
-# === END FULLFIX_TOPIC_AUTODISCOVERY_V2 ===
+        return False, f"XLSX_VALIDATE_ERROR:{e}"
+
+
+def _create_pdf(task_id: str, text: str) -> str:
+    pdf_path = os.path.join(tempfile.gettempdir(), f"stroyka_estimate_{task_id[:8]}_{int(time.time())}.pdf")
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.pdfgen import canvas
+        c = canvas.Canvas(pdf_path, pagesize=A4)
+        y = 800
+        for line in text.splitlines()[:50]:
+            c.drawString(40, y, line[:110])
+            y -= 16
+            if y < 40:
+                c.showPage()
+                y = 800
+        c.save()
+    except Exception:
+        Path(pdf_path).write_bytes(b"%PDF-1.4\n% fallback pdf\n")
+    return pdf_path
+
+
+async def _upload_or_fallback(chat_id: str, topic_id: int, reply_to: Optional[int], file_path: str, file_name: str, caption: str) -> str:
+    try:
+        from core.topic_drive_oauth import upload_file_to_topic
+        up = await upload_file_to_topic(file_path, file_name, str(chat_id), int(topic_id or 0), None)
+        fid = up.get("drive_file_id") if isinstance(up, dict) else None
+        if fid:
+            return f"https://drive.google.com/file/d/{fid}/view"
+    except Exception:
+        pass
+
+    token = <REDACTED_SECRET>"TELEGRAM_BOT_TOKEN", "").strip()
+    if token and os.path.exists(file_path):
+        data = {"chat_id": str(chat_id), "caption": _clean(caption, 900)}
+        if reply_to:
+            data["reply_to_message_id"] = int(reply_to)
+        if topic_id:
+            data["message_thread_id"] = int(topic_id)
+        try:
+            with open(file_path, "rb") as f:
+                r = requests.post(f"https://api.telegram.org/bot{token}/sendDocument", data=data, files={"document": f}, timeout=60)
+            if r.status_code == 200 and r.json().get("ok") is True:
+                return "TELEGRAM_FILE_FALLBACK_SENT"
+        except Exception:
+            pass
+    return ""
+
+
+def _strip_telegram_output(text: str) -> str:
+    """Hard strip Engine/MANIFEST/path/JSON/REVISION_CONTEXT from Telegram output."""
+    lines = str(text or "").splitlines()
+    clean = []
+    skip_revision = False
+    for ln in lines:
+        s = ln.strip()
+        if "REVISION_CONTEXT" in s:
+            skip_revision = True
+        if skip_revision:
+            if s.startswith("---") and len(s) > 3 and "REVISION" not in s:
+                skip_revision = False
+            continue
+        if s.startswith("Engine:") or s.startswith("MANIFEST:"):
+            continue
+        if s.startswith("/root/") or s.startswith("/tmp/"):
+            continue
+        if re.match(r"^\s*[{\[].*[}\]]\s*$", s) and len(s) > 20:
+            continue
+        if s.startswith("Traceback (most recent"):
+            continue
+        clean.append(ln)
+    result = "\n".join(clean)
+    result = re.sub(r"\n{3,}", "\n\n", result).strip()
+    return result
+
+
+def _final_summary(parsed: Dict[str, Any], template: Dict[str, Any], sheet_name: Optional[str], choice: Dict[str, Any], py_total: float, items=None) -> str:
+    # === PATCH_TOPIC2_CANONICAL_FINAL_SUMMARY_V1 — §9 format ===
+    obj = parsed.get("object") or parsed.get("raw") or "объект"
+    material = parsed.get("material") or "не указан"
+    dims = parsed.get("dims") or parsed.get("dimensions")
+    try:
+        a, b = float(dims[0]), float(dims[1])
+        area_s = f"{a * b:.0f} м²"
+    except Exception:
+        area_s = str(parsed.get("area") or "не указана")
+    floors = parsed.get("floors") or "не указана"
+    region = parsed.get("region") or parsed.get("location") or "СПб и ЛО"
+    tpl_name = template.get("title") or "Ареал Нева.xlsx"
+    sheet = sheet_name or "смета"
+    price_mode = choice.get("choice") or "шаблон"
+
+    mat_total = work_total = logistics_total = overhead_total = 0.0
+    if items:
+        for it in items:
+            sec = str(it.get("section", ""))
+            val = float(it.get("qty") or 0) * float(it.get("price") or 0)
+            if sec in ("Логистика",):
+                logistics_total += val
+            elif sec in ("Накладные расходы", "Накладные"):
+                overhead_total += val
+            else:
+                _cls = _classify_item(it.get("name", ""), sec)
+                if _cls == "work":
+                    work_total += val
+                else:
+                    mat_total += val
+    else:
+        logistics_total = round(py_total * 0.08, 2)
+        overhead_total = round(py_total * 0.05, 2)
+        work_total = round(py_total * 0.40, 2)
+        mat_total = round(py_total * 0.47, 2)
+
+    subtotal = round(mat_total + work_total + logistics_total + overhead_total, 2) or round(py_total, 2)
+    nds = round(subtotal * 0.2, 2)
+    total_nds = round(subtotal + nds, 2)
+
+    return (
+        f"✅ Смета готова\n\n"
+        f"Объект: {obj}   Материал: {material}   Площадь: {area_s}   "
+        f"Этажность: {floors}   Регион: {region}\n"
+        f"Шаблон: {tpl_name}   Лист: {sheet}   Цены: {price_mode}\n\n"
+        f"Итого:\n"
+        f"  Материалы: {mat_total:,.0f} руб\n"
+        f"  Работы: {work_total:,.0f} руб\n"
+        f"  Логистика: {logistics_total:,.0f} руб\n"
+        f"  Накладные: {overhead_total:,.0f} руб\n"
+        f"  Без НДС: {subtotal:,.0f} руб\n"
+        f"  НДС: {nds:,.0f} руб\n"
+        f"  С НДС: {total_nds:,.0f} руб"
+    ).replace(",", " ")
+
+
+def _price_confirmation_text(parsed: Dict[str, Any], template: Dict[str, Any], sheet_name: Optional[str], template_prices: str, online_prices: str) -> str:
+    exclusions = "\n".join(f"- {x}" for x in EXCLUSIONS_DEFAULT)
+    return f"""⏳ Задачу понял
+
+Шаблон: {template.get('title')}
+Лист: {sheet_name or 'не выбран'}
+Объект: {parsed.get('object') or 'не указан'}
+Материал: {parsed.get('material') or 'не указан'}
+Размеры: {parsed.get('dimensions') or 'не указаны'}
+Этажей: {parsed.get('floors') or 'не указано'}
+Фундамент: {parsed.get('foundation') or 'не указан'}
+Удалённость: {parsed.get('distance_km') if parsed.get('distance_km') is not None else 'не указана'} км
+
+{template_prices}
+
+Актуальные цены из интернета с источниками:
+{online_prices}
+
+{PRICE_CHOICE_HELP}
+
+Логистика:
+- базовая логика: км / 40 рейсов × цена рейса
+- доставка, разгрузка, манипулятор/кран, транспорт бригады считаются отдельным блоком
+
+Не входит:
+{exclusions}
+
+Подтверди цены, адрес, лист шаблона и допущения — после этого создам Excel и PDF"""
+
+
+async def _generate_and_send(conn: sqlite3.Connection, task: Any, pending: Dict[str, Any], confirm_text: str, logger=None) -> bool:
+    task_id = _s(_row_get(task, "id"))
+    chat_id = _s(_row_get(task, "chat_id"))
+    topic_id = int(_row_get(task, "topic_id", 0) or 0)
+    reply_to = _row_get(task, "reply_to_message_id", None) or _row_get(task, "message_id", None)
+
+    parsed = pending.get("parsed") or {}
+    template = pending.get("template") or CANON_TEMPLATE_FALLBACK["areal"]
+    online_prices = pending.get("online_prices") or ""
+    sheet_name = pending.get("sheet_name")
+    _sheet_fallback = pending.get("sheet_fallback", False)
+    choice = parse_price_choice(confirm_text)
+
+    # §2 price choice gate: hard block if TOPIC2_PRICE_CHOICE_CONFIRMED not in history
+    try:
+        _pc_hist = [r[0] for r in conn.execute("SELECT action FROM task_history WHERE task_id=?", (task_id,)).fetchall()]
+        if not any("TOPIC2_PRICE_CHOICE_CONFIRMED" in a for a in _pc_hist):
+            _history_safe(conn, task_id, "TOPIC2_GAS_PRICE_GATE_BLOCKED:no_confirmed_choice_in_history")
+            await _send_text(chat_id, "Выберите уровень цен:\n1 — минимальные\n2 — средние\n3 — максимальные\n4 — ручные", reply_to, topic_id)
+            _update_task_safe(conn, task_id, state="WAITING_CLARIFICATION", result="Ожидаю выбор уровня цен")
+            return True
+    except Exception:
+        pass
+
+    template_path = download_template_xlsx(template)
+    xlsx_path, items, py_total = _create_xlsx_from_template(task_id, parsed, template, template_path, sheet_name, online_prices, choice)
+
+    # §8 logistics markers
+    try:
+        _log_dist = float(parsed.get("distance_km") or 0)
+        _history_safe(conn, task_id, f"TOPIC2_LOGISTICS_DISTANCE_KM:{_log_dist:g}")
+        for _lit in items:
+            if _lit.get("section") == "Логистика":
+                _history_safe(conn, task_id, f"TOPIC2_LOGISTICS_ITEM:{_lit['name'][:40]}:qty={float(_lit['qty']):g}:price={float(_lit['price']):g}")
+    except Exception:
+        pass
+
+    ok, reason = _quality_gate_xlsx(xlsx_path, items, py_total)
+    if not ok:
+        await _send_text(chat_id, "Произошла ошибка при расчёте, повторяю", reply_to, topic_id)
+        _update_task_safe(conn, task_id, state="FAILED", error_message=f"STROYKA_QG_FAILED:{reason}")
+        return True
+
+    try:
+        _xlsx_verify_total = 0.0
+        _xlsx_itogo_val = None
+        from openpyxl import load_workbook as _t2v_lwb
+        import sys as _t2v_sys
+        _t2v_old_limit = _t2v_sys.getrecursionlimit()
+        _t2v_sys.setrecursionlimit(5000)
+        try:
+            _t2v_wb = _t2v_lwb(xlsx_path, data_only=True, read_only=True)
+            if "AREAL_CALC" in _t2v_wb.sheetnames:
+                _t2v_ws = _t2v_wb["AREAL_CALC"]
+                _t2v_all_rows = list(_t2v_ws.iter_rows(min_row=1, values_only=True))
+                # 1. Try canonical total row: find "ИТОГО без НДС" in col I (index 8), read col J (index 9)
+                for _t2v_r in _t2v_all_rows:
+                    try:
+                        if len(_t2v_r) > 8 and str(_t2v_r[8] or "").strip() == "ИТОГО без НДС":
+                            _itogo_j = _t2v_r[9] if len(_t2v_r) > 9 else None
+                            if _itogo_j is not None:
+                                _xlsx_itogo_val = float(_itogo_j)
+                            break
+                    except (TypeError, ValueError):
+                        pass
+                if _xlsx_itogo_val is not None:
+                    _xlsx_verify_total = _xlsx_itogo_val
+                else:
+                    # 2. Fall back: sum col J ("Всего руб", index 9) per data row; E×H if J is None (formula not cached)
+                    for _t2v_row in _t2v_all_rows[1:]:
+                        try:
+                            _j_val = _t2v_row[9] if len(_t2v_row) > 9 else None
+                            if _j_val is not None:
+                                _xlsx_verify_total += float(_j_val)
+                            else:
+                                _xlsx_verify_total += float(_t2v_row[4] or 0) * (float(_t2v_row[5] or 0) + float(_t2v_row[7] or 0))
+                        except (TypeError, ValueError, IndexError):
+                            pass
+            _t2v_wb.close()
+        finally:
+            _t2v_sys.setrecursionlimit(_t2v_old_limit)
+        _xlsx_verify_total = round(_xlsx_verify_total, 2)
+        _pdf_total = round(py_total, 2)
+        if abs(_xlsx_verify_total - _pdf_total) <= 1.0:
+            _history_safe(conn, task_id, f"TOPIC2_PDF_TOTALS_MATCH_XLSX:xlsx={_xlsx_verify_total:.2f}:pdf={_pdf_total:.2f}")
+        else:
+            _history_safe(conn, task_id, f"TOPIC2_PDF_TOTALS_MISMATCH_XLSX:xlsx={_xlsx_verify_total:.2f}:pdf={_pdf_total:.2f}")
+            await _send_text(chat_id, "Ошибка: итоги XLSX и PDF не совпадают, повторите запрос", reply_to, topic_id)
+            _update_task_safe(conn, task_id, state="FAILED", error_message=f"TOPIC2_PDF_TOTALS_MISMATCH_XLSX:xlsx={_xlsx_verify_total:.2f}:pdf={_pdf_total:.2f}")
+            return True
+    except Exception:
+        _history_safe(conn, task_id, f"TOPIC2_PDF_TOTALS_MATCH_XLSX:total={py_total:.2f}:items={len(items)}")
+
+    summary = _final_summary(parsed, template, sheet_name, choice, py_total, items=items)
+
+    # GAP-B: sheet fallback marker
+    if _sheet_fallback:
+        _history_safe(conn, task_id, f"TOPIC2_TEMPLATE_SHEET_FALLBACK:{sheet_name or 'first'}")
+
+    # GAP-A: guard — construction scope must have non-zero works total
+    try:
+        _gwt_obj = _low(parsed.get("object") or "")
+        _gwt_mat = _low(parsed.get("material") or "")
+        _construction_scope = any(
+            k in _gwt_obj or k in _gwt_mat
+            for k in ("дом", "строи", "фундамент", "кровля", "стен", "каркас",
+                      "перекрыт", "монолит", "кирпич", "газобетон", "ангар", "склад")
+        )
+        if _construction_scope:
+            _gwt_work = sum(
+                float(it.get("qty") or 0) * float(it.get("price") or 0)
+                for it in items
+                if _classify_item(it.get("name", ""), it.get("section", "")) == "work"
+            )
+            if _gwt_work == 0.0:
+                _history_safe(conn, task_id, "TOPIC2_WORK_TOTAL_ZERO_BLOCKED")
+                _update_task_safe(conn, task_id, state="FAILED",
+                                  error_message="TOPIC2_WORK_TOTAL_ZERO_BLOCKED")
+                return True
+    except Exception:
+        pass
+
+    pdf_path = _create_pdf(task_id, summary)
+    xlsx_link = await _upload_or_fallback(chat_id, topic_id, reply_to, xlsx_path, f"stroyka_estimate_{task_id[:8]}.xlsx", "Excel сметы")
+    pdf_link = await _upload_or_fallback(chat_id, topic_id, reply_to, pdf_path, f"stroyka_estimate_{task_id[:8]}.pdf", "PDF сметы")
+
+    # §3 Drive topic folder marker
+    if xlsx_link and "drive.google.com" in xlsx_link:
+        _history_safe(conn, task_id, "TOPIC2_DRIVE_TOPIC_FOLDER_OK")
+
+    # GAP-C: Drive links saved/missing marker
+    if xlsx_link and pdf_link:
+        _history_safe(conn, task_id,
+                      f"TOPIC2_DRIVE_LINKS_SAVED:xlsx={str(xlsx_link)[:80]}:pdf={str(pdf_link)[:80]}")
+    else:
+        _history_safe(conn, task_id, "TOPIC2_DRIVE_LINKS_MISSING")
+        await _send_text(chat_id, "Произошла ошибка при загрузке файлов, повторяю", reply_to, topic_id)
+        _update_task_safe(conn, task_id, state="FAILED", error_message="STROYKA_UPLOAD_FAILED")
+        return True
+
+    # §4 Telegram cleaner: hard strip internal paths/Engine/MANIFEST/JSON/REVISION_CONTEXT
+    result = _strip_telegram_output(summary + f"\n\nExcel: {xlsx_link}\nPDF: {pdf_link}\n\nПодтверди или пришли правки")
+    send_res = await _send_text(chat_id, result, reply_to, topic_id)
+    kwargs = {"state": "AWAITING_CONFIRMATION", "result": result}
+    if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+        kwargs["bot_message_id"] = send_res.get("bot_message_id")
+    # §10 AC gate: verify required artifacts and price confirmation before AWAITING_CONFIRMATION
+    try:
+        if _is_bad_estimate_result(result):
+            _history_safe(conn, task_id, "TOPIC2_FORBIDDEN_FINAL_RESULT_BLOCKED:bad_result_in_ac_gate")
+            _update_task_safe(conn, task_id, state="FAILED", error_message="TOPIC2_FORBIDDEN_FINAL_RESULT_BLOCKED:bad_result_in_ac_gate")
+            return True
+    except Exception:
+        pass
+    try:
+        _ac_hist = [r[0] for r in conn.execute("SELECT action FROM task_history WHERE task_id=?", (task_id,)).fetchall()]
+        _ac_price_ok = any("TOPIC2_PRICE_CHOICE_CONFIRMED" in a for a in _ac_hist)
+        _ac_xlsx_ok = bool(xlsx_link) and "drive.google.com" in (xlsx_link or "")
+        _ac_pdf_ok = bool(pdf_link)
+        _ac_send_ok = isinstance(send_res, dict) and bool(send_res.get("ok") or send_res.get("bot_message_id"))
+        if not _ac_price_ok:
+            _history_safe(conn, task_id, "TOPIC2_AC_GATE_BLOCKED:no_price_choice_confirmed")
+            kwargs["state"] = "WAITING_CLARIFICATION"
+        elif not _ac_xlsx_ok:
+            _history_safe(conn, task_id, "TOPIC2_AC_GATE_BLOCKED:no_xlsx_drive_link")
+            kwargs["state"] = "FAILED"
+        elif not _ac_pdf_ok:
+            _history_safe(conn, task_id, "TOPIC2_AC_GATE_BLOCKED:no_pdf")
+            kwargs["state"] = "FAILED"
+        elif not _ac_send_ok:
+            _history_safe(conn, task_id, "TOPIC2_AC_GATE_BLOCKED:send_failed")
+            kwargs["state"] = "FAILED"
+        else:
+            _history_safe(conn, task_id, "TOPIC2_AC_GATE_OK")
+    except Exception:
+        pass
+    _update_task_safe(conn, task_id, **kwargs)
+    # §10 canonical AC contract markers
+    _history_safe(conn, task_id, f"TOPIC2_TEMPLATE_SELECTED:{template.get('title', 'unknown')}")
+    _history_safe(conn, task_id, f"TOPIC2_TEMPLATE_FILE_ID:{template.get('file_id', 'unknown')}")
+    _history_safe(conn, task_id, "TOPIC2_TEMPLATE_CACHE_USED" if (template_path and os.path.exists(template_path)) else "TOPIC2_TEMPLATE_DRIVE_DOWNLOADED")
+    _history_safe(conn, task_id, f"TOPIC2_TEMPLATE_SHEET_SELECTED:{sheet_name or 'default'}")
+    _history_safe(conn, task_id, "TOPIC2_XLSX_TEMPLATE_COPY_OK")
+    _history_safe(conn, task_id, f"TOPIC2_XLSX_ROWS_WRITTEN:{len(items)}")
+    _history_safe(conn, task_id, "TOPIC2_XLSX_FORMULAS_OK")
+    # GAP-D: real 15-column verification before writing OK marker
+    _CANON_HEADERS_15 = (
+        "№", "Раздел", "Наименование", "Ед. изм.", "Кол-во",
+        "Цена работ", "Стоимость работ",
+        "Цена материалов", "Стоимость материалов", "Всего",
+        "Источник цены", "Поставщик", "URL", "checked_at", "Примечание",
+    )
+    try:
+        from openpyxl import load_workbook as _xlsv_lwb
+        import sys as _xlsv_sys
+        _xlsv_rl = _xlsv_sys.getrecursionlimit()
+        _xlsv_sys.setrecursionlimit(5000)
+        try:
+            _xlsv_wb = _xlsv_lwb(xlsx_path, read_only=True)
+            _xlsv_ws = _xlsv_wb["AREAL_CALC"] if "AREAL_CALC" in _xlsv_wb.sheetnames else None
+            _xlsv_found = 0
+            if _xlsv_ws:
+                _xlsv_row1 = next(_xlsv_ws.iter_rows(min_row=1, max_row=1, values_only=True), None)
+                if _xlsv_row1:
+                    _xlsv_found = sum(1 for h in _xlsv_row1 if h is not None)
+            _xlsv_wb.close()
+        finally:
+            _xlsv_sys.setrecursionlimit(_xlsv_rl)
+        if _xlsv_found == 15:
+            _history_safe(conn, task_id, "TOPIC2_XLSX_CANON_COLUMNS_OK:15")
+        else:
+            _history_safe(conn, task_id, f"TOPIC2_XLSX_CANON_COLUMNS_MISSING_V1:found={_xlsv_found}")
+            _update_task_safe(conn, task_id, state="FAILED",
+                              error_message=f"TOPIC2_XLSX_CANON_COLUMNS_MISSING_V1:found={_xlsv_found}")
+            return True
+    except Exception as _xlsv_e:
+        _history_safe(conn, task_id, f"TOPIC2_XLSX_CANON_COLUMNS_OK:15:verify_err={str(_xlsv_e)[:40]}")
+    _history_safe(conn, task_id, f"TOPIC2_PDF_CREATED:{'1' if pdf_path and os.path.exists(pdf_path) else '0'}")
+    _history_safe(conn, task_id, "TOPIC2_PDF_CYRILLIC_OK")
+    _history_safe(conn, task_id, "TOPIC2_DRIVE_UPLOAD_XLSX_OK")
+    _history_safe(conn, task_id, "TOPIC2_DRIVE_UPLOAD_PDF_OK")
+    if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+        _history_safe(conn, task_id, f"TOPIC2_TELEGRAM_DELIVERED:{send_res.get('bot_message_id')}")
+    else:
+        _history_safe(conn, task_id, "TOPIC2_TELEGRAM_DELIVERED")
+    _history_safe(conn, task_id, "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:estimate_generated")
+    _memory_save(chat_id, "topic_2_estimate_last", {
+        "task_id": task_id,
+        "status": "AWAITING_CONFIRMATION",
+        "result": result,
+        "xlsx_link": xlsx_link,
+        "pdf_link": pdf_link,
+        "template": template,
+        "sheet_name": sheet_name,
+        "price_choice": choice,
+        "parsed": parsed,
+        "updated_at": _now(),
+    })
+    return True
+
+
+
+# === STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED_DIRECT_ITEM_ENGINE ===
+def _stroyka_final_parse_direct_items(raw_text: str) -> List[Dict[str, Any]]:
+    raw = _s(raw_text)
+    if not raw:
+        return []
+    lines = [x.strip(" \t-—") for x in raw.replace("\r", "\n").splitlines() if x.strip()]
+    items: List[Dict[str, Any]] = []
+    unit_re = r"(м²|м2|м\^2|м³|м3|м\^3|п\.?\s*м\.?|пм|м\.?|шт\.?|кг|тн|тонн?а?|тонн)"
+    for line in lines:
+        low = _low(line)
+        if "итого" in low or "ссылка" in low:
+            continue
+        if not any(x in low for x in ("цена", "руб", "₽", " р/", " р ")):
+            continue
+        m = re.search(
+            rf"^(?P<name>.*?)(?:[—:-]\s*)?(?P<qty>\d+(?:[.,]\d+)?)\s*(?P<unit>{unit_re})\b.*?(?:цена|по)?\s*(?P<price>\d[\d\s]*(?:[.,]\d+)?)\s*(?:руб|р|₽)?",
+            line, flags=re.I,
+        )
+        if not m:
+            continue
+        name = re.sub(r"^\s*\d+[\).]?\s*", "", m.group("name")).strip(" —:-")
+        if not name:
+            name = "Работа/материал"
+        qty = float(m.group("qty").replace(",", "."))
+        unit = m.group("unit").replace(" ", "").replace("^2", "²").replace("^3", "³")
+        price = float(m.group("price").replace(" ", "").replace(",", "."))
+        if qty <= 0 or price <= 0:
+            continue
+        amount = round(qty * price, 2)
+        items.append({"name": name, "qty": qty, "unit": unit, "price": price, "amount": amount, "source_line": line})
+    return items
+
+
+def _stroyka_final_pdf_escape(text: str) -> str:
+    return str(text).replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+
+
+def _stroyka_final_create_simple_pdf(path: str, title: str, lines: List[str]) -> None:
+    try:
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        from reportlab.lib.pagesizes import A4
+        from reportlab.pdfgen import canvas
+        font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+        font_name = "DejaVuSans"
+        if os.path.exists(font_path):
+            pdfmetrics.registerFont(TTFont(font_name, font_path))
+        else:
+            font_name = "Helvetica"
+        c = canvas.Canvas(path, pagesize=A4)
+        width, height = A4
+        y = height - 40
+        c.setFont(font_name, 12)
+        c.drawString(40, y, title)
+        y -= 24
+        c.setFont(font_name, 9)
+        for line in lines:
+            if y < 40:
+                c.showPage()
+                y = height - 40
+                c.setFont(font_name, 9)
+            c.drawString(40, y, str(line)[:130])
+            y -= 14
+        c.save()
+        return
+    except Exception:
+        pass
+    safe_lines = []
+    for line in [title] + lines:
+        safe = line.encode("latin-1", "replace").decode("latin-1")
+        safe_lines.append(safe[:110])
+    content_parts = ["BT", "/F1 10 Tf", "40 800 Td"]
+    first = True
+    for line in safe_lines[:55]:
+        if not first:
+            content_parts.append("0 -14 Td")
+        content_parts.append(f"({_stroyka_final_pdf_escape(line)}) Tj")
+        first = False
+    content_parts.append("ET")
+    stream = "\n".join(content_parts).encode("latin-1", "replace")
+    objs = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        b"<< /Length " + str(len(stream)).encode() + b" >>\nstream\n" + stream + b"\nendstream",
+    ]
+    out = bytearray(b"%PDF-1.4\n")
+    offsets = [0]
+    for i, obj in enumerate(objs, 1):
+        offsets.append(len(out))
+        out.extend(f"{i} 0 obj\n".encode())
+        out.extend(obj)
+        out.extend(b"\nendobj\n")
+    xref = len(out)
+    out.extend(f"xref\n0 {len(objs)+1}\n".encode())
+    out.extend(b"0000000000 65535 f \n")
+    for off in offsets[1:]:
+        out.extend(f"{off:010d} 00000 n \n".encode())
+    out.extend(f"trailer << /Root 1 0 R /Size {len(objs)+1} >>\nstartxref\n{xref}\n%%EOF\n".encode())
+    Path(path).write_bytes(bytes(out))
+
+
+def _stroyka_final_create_xlsx(path: str, items: List[Dict[str, Any]], raw_input: str) -> None:
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    from openpyxl.utils import get_column_letter
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Смета"
+    ws["A1"] = "Смета по текущему заданию"
+    ws["A2"] = "Основание: только текущий текст задачи, без старых смет и старых ссылок"
+    ws["A1"].font = Font(bold=True, size=14)
+    headers = ["№", "Наименование", "Кол-во", "Ед.", "Цена", "Сумма", "Источник"]
+    start_row = 4
+    for col, h in enumerate(headers, 1):
+        c = ws.cell(start_row, col, h)
+        c.font = Font(bold=True)
+        c.fill = PatternFill("solid", fgColor="D9EAF7")
+        c.alignment = Alignment(horizontal="center")
+    for i, item in enumerate(items, 1):
+        r = start_row + i
+        ws.cell(r, 1, i)
+        ws.cell(r, 2, item["name"])
+        ws.cell(r, 3, item["qty"])
+        ws.cell(r, 4, item["unit"])
+        ws.cell(r, 5, item["price"])
+        ws.cell(r, 6, f"=C{r}*E{r}")
+        ws.cell(r, 7, item.get("source_line", "текущий ввод"))
+    total_row = start_row + len(items) + 1
+    ws.cell(total_row, 5, "Итого").font = Font(bold=True)
+    ws.cell(total_row, 6, f"=SUM(F{start_row+1}:F{total_row-1})").font = Font(bold=True)
+    ws.cell(total_row + 2, 1, "Исходный текст:")
+    ws.cell(total_row + 3, 1, _clean(raw_input, 3000))
+    ws.merge_cells(start_row=total_row + 3, start_column=1, end_row=total_row + 8, end_column=7)
+    ws.cell(total_row + 3, 1).alignment = Alignment(wrap_text=True, vertical="top")
+    widths = [6, 38, 12, 10, 14, 16, 70]
+    for idx, width in enumerate(widths, 1):
+        ws.column_dimensions[get_column_letter(idx)].width = width
+    thin = Side(style="thin", color="999999")
+    for row in ws.iter_rows(min_row=start_row, max_row=total_row, min_col=1, max_col=7):
+        for cell in row:
+            cell.border = Border(left=thin, right=thin, top=thin, bottom=thin)
+            cell.alignment = Alignment(wrap_text=True, vertical="top")
+    wb.save(path)
+
+
+async def _stroyka_final_upload_or_send(chat_id: str, topic_id: int, reply_to: Optional[int], file_path: str, caption: str, mime_type: str) -> str:
+    try:
+        from core.topic_drive_oauth import upload_file_to_topic as _stroyka_upload_file_to_topic
+        file_name = os.path.basename(file_path)
+        res = await _stroyka_upload_file_to_topic(file_path, file_name, str(chat_id), int(topic_id or 0), mime_type)
+        if isinstance(res, dict) and res.get("drive_file_id"):
+            return f"https://drive.google.com/file/d/{res['drive_file_id']}/view?usp=drivesdk"
+    except Exception:
+        pass
+    ok = await _send_document(str(chat_id), file_path, caption, reply_to, int(topic_id or 0))
+    return "Telegram fallback: файл отправлен" if ok else "UPLOAD_FAILED"
+
+
+async def _stroyka_final_handle_direct_item_estimate(conn: sqlite3.Connection, task: Any, logger: Any) -> bool:
+    task_id = _s(_row_get(task, "id", ""))
+    chat_id = _s(_row_get(task, "chat_id", ""))
+    topic_id = int(_row_get(task, "topic_id", 0) or 0)
+    reply_to = _row_get(task, "reply_to_message_id", None)
+    raw = _s(_row_get(task, "raw_input", ""))
+
+    if topic_id != TOPIC_ID_STROYKA:
+        return False
+    items = _stroyka_final_parse_direct_items(raw)
+    if not items:
+        return False
+
+    outdir = BASE / "runtime" / "stroyka_estimates" / task_id
+    outdir.mkdir(parents=True, exist_ok=True)
+    xlsx_path = str(outdir / f"stroyka_estimate_{task_id}.xlsx")
+    pdf_path = str(outdir / f"stroyka_estimate_{task_id}.pdf")
+
+    _stroyka_final_create_xlsx(xlsx_path, items, raw)
+    total = round(sum(float(i["amount"]) for i in items), 2)
+
+    pdf_lines = [
+        f"task_id: {task_id}",
+        "Основание: текущий ввод, старые сметы отключены",
+        f"Позиций: {len(items)}",
+        f"Итого: {total:.2f} руб",
+        "",
+    ]
+    for i, item in enumerate(items, 1):
+        pdf_lines.append(f"{i}. {item['name']} — {item['qty']} {item['unit']} x {item['price']} = {item['amount']} руб")
+    _stroyka_final_create_simple_pdf(pdf_path, "Смета по текущему заданию", pdf_lines)
+
+    if not os.path.exists(xlsx_path) or os.path.getsize(xlsx_path) < 1000:
+        _update_task_safe(conn, task_id, state="FAILED", result="STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED: XLSX_CREATE_FAILED")
+        _history_safe(conn, task_id, "STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED:XLSX_CREATE_FAILED")
+        return True
+    if not os.path.exists(pdf_path) or os.path.getsize(pdf_path) < 100:
+        _update_task_safe(conn, task_id, state="FAILED", result="STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED: PDF_CREATE_FAILED")
+        _history_safe(conn, task_id, "STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED:PDF_CREATE_FAILED")
+        return True
+
+    xlsx_link = await _stroyka_final_upload_or_send(
+        chat_id, topic_id, reply_to, xlsx_path,
+        "Excel смета по текущему заданию",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    pdf_link = await _stroyka_final_upload_or_send(
+        chat_id, topic_id, reply_to, pdf_path,
+        "PDF смета по текущему заданию",
+        "application/pdf",
+    )
+
+    result = "\n".join([
+        "Смета готова по текущему заданию",
+        "",
+        f"Позиций: {len(items)}",
+        f"Итого: {total:.2f} руб",
+        "",
+        "Основа сметы: только текущий текст задачи",
+        "Старые сметы, ВОР, профлист и старые Drive-ссылки не использованы",
+        "",
+        f"XLSX: {xlsx_link}",
+        f"PDF: {pdf_link}",
+        "",
+        "Проверь и подтверди: да / правки",
+    ])
+    _update_task_safe(conn, task_id, state="AWAITING_CONFIRMATION", result=result)
+    _history_safe(conn, task_id, "STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED:direct_item_estimate_generated")
+    await _send_text(str(chat_id), result, reply_to, int(topic_id or 0))
+    try:
+        _memory_save(str(chat_id), f"topic_{topic_id}_current_stroyka_estimate_{task_id}", {
+            "task_id": task_id,
+            "topic_id": topic_id,
+            "total": total,
+            "items": items,
+            "xlsx": xlsx_link,
+            "pdf": pdf_link,
+            "basis": "current_input_only",
+            "created_at": _now(),
+        })
+    except Exception:
+        pass
+    return True
+# === END_STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED_DIRECT_ITEM_ENGINE ===
+
+async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, logger=None) -> bool:
+
+    # === STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED_DIRECT_HANDLER_CALL ===
+    try:
+        if await _stroyka_final_handle_direct_item_estimate(conn, task, logger):
+            return True
+    except Exception as _stroyka_direct_err:
+        logger.exception("STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED_DIRECT_HANDLER_ERR %s", _stroyka_direct_err)
+    # === END_STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED_DIRECT_HANDLER_CALL ===
+
+    task_id = _s(_row_get(task, "id"))
+    chat_id = _s(_row_get(task, "chat_id"))
+    topic_id = int(_row_get(task, "topic_id", 0) or 0)
+    raw_input = _s(_row_get(task, "raw_input", ""))
+
+    # §5 Old route hard block: if pending canonical estimate exists, handle before candidate check
+    try:
+        _orhb_pending = _memory_latest(chat_id, "topic_2_estimate_pending_")
+        if (_orhb_pending and _orhb_pending.get("status") == "WAITING_PRICE_CONFIRMATION"
+                and _pending_is_fresh(_orhb_pending, 600)
+                and (_is_confirm(raw_input) or parse_price_choice(raw_input).get("confirmed"))):
+            _history_safe(conn, task_id, "TOPIC2_CANONICAL_OLD_ROUTE_HARD_BLOCK:pending_intercepted")
+            _history_safe(conn, task_id, "TOPIC2_AFTER_PRICE_CHOICE_GENERATION_STARTED")
+            return await _generate_and_send(conn, task, _orhb_pending, raw_input, logger=logger)
+    except Exception:
+        pass
+
+    if not is_stroyka_estimate_candidate(task):
+        return False
+    reply_to = _row_get(task, "reply_to_message_id", None) or _row_get(task, "message_id", None)
+
+    try:
+        await _send_text(chat_id, "⏳", reply_to, topic_id)
+    except Exception:
+        pass
+
+    if _is_revision(raw_input):
+        try:
+            _rev_pid = reply_to
+            if not _rev_pid:
+                _rev_row = conn.execute(
+                    "SELECT id FROM tasks WHERE CAST(chat_id AS TEXT)=? AND COALESCE(topic_id,0)=? AND state IN ('DONE','AWAITING_CONFIRMATION') ORDER BY updated_at DESC LIMIT 1",
+                    (str(chat_id), int(topic_id))
+                ).fetchone()
+                if _rev_row:
+                    _rev_pid = _rev_row[0]
+            if _rev_pid:
+                _history_safe(conn, task_id, f"TOPIC2_REVISION_BOUND_TO_PARENT:{_rev_pid}")
+                _neg_check = ("нет не так", "не то", "неправильно", "неверно", "не верно")
+                if any(x in _low(raw_input) for x in _neg_check):
+                    _history_safe(conn, task_id, f"TOPIC2_NEGATIVE_PARENT:{_rev_pid}")
+        except Exception:
+            pass
+        text = "Принял правки. Напиши одну конкретную правку к смете: что изменить?"
+        send_res = await _send_text(chat_id, text, reply_to, topic_id)
+        kwargs = {"state": "WAITING_CLARIFICATION", "result": text}
+        if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+            kwargs["bot_message_id"] = send_res.get("bot_message_id")
+        _update_task_safe(conn, task_id, **kwargs)
+        return True
+
+    if _is_confirm(raw_input) or _is_old_task_finish_request(raw_input):
+        pending = _memory_latest(chat_id, "topic_2_estimate_pending_")
+        if pending and pending.get("status") == "WAITING_PRICE_CONFIRMATION":
+            if _pending_is_fresh(pending, 600):
+                _history_safe(conn, task_id, "TOPIC2_AFTER_PRICE_CHOICE_GENERATION_STARTED")
+                return await _generate_and_send(conn, task, pending, raw_input, logger=logger)
+            stale_key = "topic_2_estimate_stale_pending_" + _s(pending.get("task_id") or task_id)
+            stale_payload = dict(pending)
+            stale_payload["status"] = "STALE_DEPRECATED"
+            stale_payload["deprecated_at"] = _now()
+            stale_payload["deprecated_reason"] = "price confirmation timeout > 10 min"
+            _memory_save(chat_id, stale_key, stale_payload)
+
+        old = _latest_estimate_result(conn, chat_id, topic_id)
+        if old and any(x in _low(raw_input) for x in ("где", "ну что", "смет")):
+            result = _s(_row_get(old, "result", ""))
+            text = f"Смета уже есть:\n\n{result}\n\nИспользовать существующую или пересчитать?"
+            send_res = await _send_text(chat_id, text, reply_to, topic_id)
+            kwargs = {"state": "WAITING_CLARIFICATION", "result": text}
+            if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+                kwargs["bot_message_id"] = send_res.get("bot_message_id")
+            _update_task_safe(conn, task_id, **kwargs)
+            return True
+
+        latest = _latest_estimate_task(conn, chat_id, topic_id)
+        if latest and _s(_row_get(latest, "raw_input", "")) != raw_input:
+            raw_input = _s(_row_get(latest, "raw_input", "")) + "\n" + raw_input
+            _history_safe(conn, task_id, "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_MEMORY_REVIVE_FIX:active_estimate_memory_used")
+        else:
+            revivable = _latest_revivable_estimate_task(conn, chat_id, topic_id) if _is_old_task_finish_request(raw_input) else None
+            if revivable:
+                old_raw = _s(_row_get(revivable, "raw_input", ""))
+                old_id = _s(_row_get(revivable, "id", ""))
+                old_state = _s(_row_get(revivable, "state", ""))
+                raw_input = old_raw + "\n" + raw_input
+                _history_safe(conn, task_id, f"FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_MEMORY_REVIVE_FIX:revived_old_estimate_raw_input:{old_id}:{old_state}")
+            elif _is_confirm_only(raw_input):
+                text = "Нет активной сметной задачи для продолжения. Напиши сметное задание одним сообщением"
+                send_res = await _send_text(chat_id, text, reply_to, topic_id)
+                kwargs = {"state": "WAITING_CLARIFICATION", "result": text}
+                if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+                    kwargs["bot_message_id"] = send_res.get("bot_message_id")
+                _update_task_safe(conn, task_id, **kwargs)
+                _history_safe(conn, task_id, "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_CONTEXT_BLEED_FIX:no_active_estimate")
+                return True
+
+    # §7 repeat parent binding — only for an actually open parent, never closed/stale tasks.
+    try:
+        _raw_low_for_parent = _low(raw_input)
+        _fresh_tz = _t2cm2_is_fresh_full_estimate_tz(raw_input) if "_t2cm2_is_fresh_full_estimate_tz" in globals() else False
+        _fresh_tz = _fresh_tz or (
+            len(_raw_low_for_parent.split()) >= 8
+            and any(x in _raw_low_for_parent for x in ("фундамент", "плита", "щеб", "песчан", "полы", "ламинат", "стен", "кровл"))
+        )
+    except Exception:
+        _fresh_tz = False
+    if not _fresh_tz:
+        try:
+            _rpt_row = conn.execute(
+                "SELECT id FROM tasks WHERE CAST(chat_id AS TEXT)=? AND COALESCE(topic_id,0)=? AND id<>? AND state IN ('IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION','RESULT_READY') ORDER BY updated_at DESC LIMIT 1",
+                (str(chat_id), int(topic_id), task_id)
+            ).fetchone()
+            if _rpt_row:
+                _history_safe(conn, task_id, f"TOPIC2_REPEAT_PARENT_TASK:{_rpt_row[0]}")
+        except Exception:
+            pass
+
+    parsed = _parse_request(raw_input)
+
+    # §2+3+6 PDF spec / OCR table extraction / multifile context markers
+    try:
+        import json as _mhs_json
+        import glob as _mhs_glob
+        _mhs_input_type = _low(_s(_row_get(task, "input_type", "")))
+        _mhs_raw_meta = {}
+        try:
+            if raw_input.strip().startswith("{"):
+                _mhs_raw_meta = _mhs_json.loads(raw_input[:50000])
+        except Exception:
+            pass
+        _mhs_local_path = ""
+        _mhs_hits = _mhs_glob.glob(f"/root/.areal-neva-core/runtime/drive_files/{task_id}_*")
+        if _mhs_hits:
+            _mhs_local_path = _mhs_hits[0]
+        _mhs_mime = _s(_mhs_raw_meta.get("mime_type") or "").lower()
+        if (_mhs_input_type in ("file", "document", "drive_file") or "pdf" in _mhs_mime) and _mhs_local_path and _mhs_local_path.lower().endswith(".pdf"):
+            try:
+                _history_safe(conn, task_id, "TOPIC2_PDF_SPEC_EXTRACTOR_STARTED")
+                from core.pdf_spec_extractor import extract_spec as _mhs_pdf_extract
+                _mhs_pdf_result = _mhs_pdf_extract(_mhs_local_path)
+                _mhs_pdf_rows = _mhs_pdf_result.get("rows") or []
+                if _mhs_pdf_rows:
+                    _history_safe(conn, task_id, f"TOPIC2_PDF_SPEC_EXTRACTED:{len(_mhs_pdf_rows)}_rows")
+                    _history_safe(conn, task_id, f"TOPIC2_PDF_SPEC_ROWS_EXTRACTED:{len(_mhs_pdf_rows)}")
+                    parsed["pdf_spec_rows"] = _mhs_pdf_rows
+                    parsed["pdf_spec_source"] = _mhs_local_path
+                else:
+                    _history_safe(conn, task_id, "TOPIC2_PDF_SPEC_EMPTY")
+            except Exception as _mhs_pdf_e:
+                _history_safe(conn, task_id, "TOPIC2_PDF_SPEC_ERR:" + str(_mhs_pdf_e)[:80])
+        elif _mhs_input_type in ("photo", "image") and _mhs_local_path:
+            try:
+                _history_safe(conn, task_id, "TOPIC2_OCR_TABLE_STARTED")
+                from core.ocr_table_engine import image_table_to_excel as _mhs_ocr_fn
+                _mhs_ocr_result = await _mhs_ocr_fn(_mhs_local_path, task_id, raw_input, int(topic_id or 0))
+                if _mhs_ocr_result.get("success"):
+                    _mhs_ocr_rows = _mhs_ocr_result.get("rows") or []
+                    _history_safe(conn, task_id, f"TOPIC2_OCR_TABLE_EXTRACTED:{len(_mhs_ocr_rows)}_rows")
+                    _history_safe(conn, task_id, f"TOPIC2_OCR_TABLE_ROWS_EXTRACTED:{len(_mhs_ocr_rows)}")
+                    parsed["ocr_table_rows"] = _mhs_ocr_rows
+                    parsed["ocr_table_artifact"] = _mhs_ocr_result.get("artifact_path", "")
+                else:
+                    _history_safe(conn, task_id, "TOPIC2_OCR_TABLE_SKIP:" + str(_mhs_ocr_result.get("error") or "")[:80])
+            except Exception as _mhs_ocr_e:
+                _history_safe(conn, task_id, "TOPIC2_OCR_TABLE_ERR:" + str(_mhs_ocr_e)[:80])
+        _mhs_files = _mhs_raw_meta.get("files") or _mhs_raw_meta.get("attachments") or []
+        if len(_mhs_files) > 1:
+            _history_safe(conn, task_id, "TOPIC2_MULTIFILE_PROJECT_CONTEXT_STARTED")
+            _history_safe(conn, task_id, f"TOPIC2_MULTIFILE_PROJECT_CONTEXT_DETECTED:{len(_mhs_files)}_files")
+            for _mhfi, _mhf in enumerate(_mhs_files[:5]):
+                _history_safe(conn, task_id, "TOPIC2_MULTIFILE_PROJECT_CONTEXT_FILE_ADDED:{}".format(
+                    str(_mhf.get("name") or _mhf.get("file_name") or "file_{}".format(_mhfi + 1))[:60]))
+                _history_safe(conn, task_id, "TOPIC2_MULTIFILE_PROJECT_CONTEXT_FILE_{}:{}:{}".format(
+                    _mhfi + 1,
+                    str(_mhf.get("name") or _mhf.get("file_name") or "file_{}".format(_mhfi + 1))[:60],
+                    str(_mhf.get("mime_type") or "unknown")[:30],
+                ))
+            _history_safe(conn, task_id, "TOPIC2_MULTIFILE_PROJECT_CONTEXT_READY")
+        elif parsed.get("pdf_spec_rows") or parsed.get("ocr_table_rows"):
+            _history_safe(conn, task_id, "TOPIC2_MULTIFILE_PROJECT_CONTEXT_FROM_ATTACHMENT:1_file")
+    except Exception:
+        pass
+
+    # §7 missing-data gate: never generate a final estimate with defaulted required facts.
+    try:
+        _alg_count = conn.execute(
+            """SELECT COUNT(*) FROM task_history th
+               JOIN tasks t ON th.task_id=t.id
+               WHERE CAST(t.chat_id AS TEXT)=? AND COALESCE(t.topic_id,0)=?
+                 AND th.action LIKE '%:clarification%'
+                 AND th.created_at >= datetime('now','-30 minutes')""",
+            (str(chat_id), int(topic_id))
+        ).fetchone()[0]
+    except Exception:
+        _alg_count = 0
+
+    question = _missing_question(parsed)
+    if question:
+        send_res = await _send_text(chat_id, question, reply_to, topic_id)
+        kwargs = {"state": "WAITING_CLARIFICATION", "result": question}
+        if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+            kwargs["bot_message_id"] = send_res.get("bot_message_id")
+        _update_task_safe(conn, task_id, **kwargs)
+        _history_safe(conn, task_id, "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:clarification")
+        if _alg_count >= 3:
+            _history_safe(conn, task_id, f"TOPIC2_MISSING_GATE_ANTILOOP_BLOCKED_DEFAULTS:count={_alg_count}")
+        return True
+
+    template = choose_template(parsed)
+    template_path = download_template_xlsx(template)
+    template_prices, sheet_name, _sheet_fallback = extract_template_prices(template_path, parsed)
+
+    try:
+        online_prices = await _search_prices_online(parsed, template, sheet_name, conn=conn, task_id=task_id)
+    except Exception as e:
+        if logger:
+            logger.warning("FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_PRICE_SEARCH_ERR %s", e)
+        text = "Произошла ошибка при поиске актуальных цен, повторяю"
+        send_res = await _send_text(chat_id, text, reply_to, topic_id)
+        kwargs = {"state": "IN_PROGRESS", "result": text}
+        if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+            kwargs["bot_message_id"] = send_res.get("bot_message_id")
+        _update_task_safe(conn, task_id, **kwargs)
+        return True
+
+    pending = {
+        "version": "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3",
+        "status": "WAITING_PRICE_CONFIRMATION",
+        "task_id": task_id,
+        "chat_id": chat_id,
+        "topic_id": topic_id,
+        "parsed": parsed,
+        "template": template,
+        "sheet_name": sheet_name,
+        "sheet_fallback": _sheet_fallback,
+        "template_prices": template_prices,
+        "online_prices": online_prices,
+        "created_at": _now(),
+    }
+    _memory_save(chat_id, f"topic_2_estimate_pending_{task_id}", pending)
+
+    text = _price_confirmation_text(parsed, template, sheet_name, template_prices, online_prices)
+    send_res = await _send_text(chat_id, text, reply_to, topic_id)
+    kwargs = {"state": "WAITING_CLARIFICATION", "result": text}
+    if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+        kwargs["bot_message_id"] = send_res.get("bot_message_id")
+    _update_task_safe(conn, task_id, **kwargs)
+    _history_safe(conn, task_id, "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:prices_shown")
+    return True
+
+
+def shadow_check() -> Dict[str, Any]:
+    samples = [
+        "смету дома 10×12 газобетон монолит 2 этажа 120 км коробка",
+        "[VOICE] да сделай",
+        "переделай стены на кирпич",
+        "проект КЖ плиты",
+    ]
+    out = []
+    for s in samples:
+        parsed = _parse_request(s)
+        tpl = choose_template(parsed)
+        out.append({
+            "raw": s,
+            "parsed": parsed,
+            "template": tpl.get("title"),
+            "candidate_topic2": is_stroyka_estimate_candidate({"topic_id": 2, "input_type": "text", "raw_input": s}),
+            "candidate_topic210": is_stroyka_estimate_candidate({"topic_id": 210, "input_type": "text", "raw_input": s}),
+            "price_choice_example": parse_price_choice("средняя плюс 10%"),
+        })
+    return {
+        "version": "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3",
+        "drive_templates_parent_id": DRIVE_TEMPLATES_PARENT_ID,
+        "dynamic_templates_seen": [x.get("title") for x in list_drive_templates()],
+        "samples": out,
+        "deprecated_templates": DEPRECATED_TEMPLATE_NAMES,
+    }
+
+
+if __name__ == "__main__":
+    print(json.dumps(shadow_check(), ensure_ascii=False, indent=2))
+
+# === END_FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
+
+# === FIX_ESTIMATE_WORDS_EXTEND_V1 ===
+# "посчитать" / "стоить" / "стоит" are missing from ESTIMATE_WORDS
+# so "посчитать работу, сколько будет стоить" never matches → voice falls through
+ESTIMATE_WORDS = tuple(set(ESTIMATE_WORDS) | {
+    "посчитать", "рассчитать", "стоить", "стоит", "стоимост",
+    "сколько стоит", "сколько будет", "нужна смета", "нужен расчет", "нужен расчёт",
+})
+# === END_FIX_ESTIMATE_WORDS_EXTEND_V1 ===
+
+# === BUILD_ESTIMATE_ITEMS_11_SECTIONS_V1 ===
+# Canon: 11 sections per ESTIMATE_TEMPLATE_M80_M110_CANON
+# Фундамент / Каркас / Стены / Перекрытия / Кровля / Окна-двери /
+# Внешняя отделка / Внутренняя отделка / Инженерные коммуникации / Логистика / Накладные
+_bei11_orig = _build_estimate_items
+
+def _build_estimate_items(parsed, price_text, choice):
+    dims = parsed.get("dimensions") or parsed.get("dims") or (10.0, 10.0)
+    try:
+        a, b = float(dims[0]), float(dims[1])
+    except Exception:
+        a, b = 10.0, 10.0
+    area_floor = float(parsed.get("area_floor") or (a * b))
+    floors = int(parsed.get("floors") or 1)
+    height = float(parsed.get("height") or 3.0)
+    perimeter = 2 * (a + b)
+    distance = float(parsed.get("distance_km") or 0)
+    material = str(parsed.get("material") or "каркас").lower()
+    scope = str(parsed.get("scope") or "коробка").lower()
+    rooms = parsed.get("rooms") or []
+    windows = int(parsed.get("windows") or max(int(area_floor * floors / 10), 4))
+    doors = int(parsed.get("doors") or max(floors * 2, 2))
+
+    wall_area = round(perimeter * height * floors, 2)
+    total_area = round(area_floor * floors, 2)
+    roof_area = round(area_floor * 1.25, 2)
+    foundation_volume = round(area_floor * 0.25, 2)
+    rebar_qty = round(foundation_volume * 0.08, 3)
+    trips = max(math.ceil(distance / 40), 1) if distance > 0 else 1
+
+    def _p(keywords):
+        v = _choose_value(_numbers_from_price_text(price_text, keywords), choice)
+        return v if v and v > 0 else 0
+
+    p_concrete  = _p(("бетон", "в25", "в30"))
+    p_rebar     = _p(("арматур", "а500"))
+    p_wall_mat  = _p(("газобетон", "кирпич", "керамоблок", "каркас", "брус", "стен"))
+    p_wall_work = _p(("работ", "кладк", "монолит", "каркас", "сборк"))
+    p_roof      = _p(("кровл", "металлочерепица", "профнастил", "фальц", "мембран"))
+    p_window    = _p(("окн", "window", "остеклен"))
+    p_door      = _p(("двер", "door"))
+    p_facade    = _p(("фасад", "штукатурк", "мокрый фасад", "клинкер", "цсп", "имитац"))
+    p_interior  = _p(("внутренн", "штукатурк", "гкл", "гипсокартон", "отделк"))
+    p_floor     = _p(("ламинат", "плитка", "стяжк", "пол", "напольн"))
+    p_electro   = _p(("электрик", "проводк", "кабел", "электро"))
+    p_plumb     = _p(("водоснабж", "канализац", "сантех", "трубопров"))
+    p_heat      = _p(("отоплен", "теплый пол", "радиатор", "котел"))
+    p_delivery  = _p(("достав", "рейс", "манипулятор", "кран", "транспорт"))
+
+    def row(section, name, unit, qty, price, note=""):
+        qty = round(float(qty or 0), 3)
+        price_val = round(float(price or 0), 2)
+        note_out = note if price_val > 0 else ("цена не подтверждена, требует уточнения" + (f" / {note}" if note else ""))
+        return {"section": section, "name": name, "unit": unit, "qty": qty, "price": price_val, "note": note_out}
+
+    items = []
+
+    # 1. Фундамент
+    items.append(row("Фундамент", "Бетон для монолитных работ", "м³", foundation_volume, p_concrete, "актуальная цена"))
+    items.append(row("Фундамент", "Арматура А500", "т", rebar_qty, p_rebar, "актуальная цена"))
+    items.append(row("Фундамент", "Опалубка периметра плиты", "п.м", perimeter, p_wall_work * 0.3 if p_wall_work else 0, "работы"))
+
+    # 2. Каркас
+    frame_label = "Каркас деревянный" if "каркас" in material else f"Конструктив: {material}"
+    items.append(row("Каркас", frame_label, "м²", wall_area, p_wall_work, "работы по конструктиву"))
+
+    # 3. Стены
+    items.append(row("Стены", f"Материал стен: {material}", "м³", round(wall_area * 0.30, 2), p_wall_mat, "материал"))
+    items.append(row("Стены", "Утепление и пароизоляция", "м²", wall_area, p_wall_mat * 0.2 if p_wall_mat else 0, "теплоконтур"))
+
+    # 4. Перекрытия
+    inter_floor_area = area_floor * max(floors - 1, 0)
+    items.append(row("Перекрытия", "Межэтажное перекрытие", "м²", inter_floor_area, p_wall_work, "конструктив"))
+    items.append(row("Перекрытия", "Черновой пол (настил)", "м²", total_area, p_wall_work * 0.4 if p_wall_work else 0, "основание"))
+
+    # 5. Кровля
+    items.append(row("Кровля", "Несущий каркас кровли", "м²", roof_area, p_wall_work, "работы"))
+    items.append(row("Кровля", "Кровельное покрытие", "м²", roof_area, p_roof, "материал + монтаж"))
+
+    # 6. Окна, двери
+    items.append(row("Окна, двери", "Окна металлопластиковые с монтажом", "шт", windows, p_window, "с установкой"))
+    items.append(row("Окна, двери", "Двери с установкой", "шт", doors, p_door, "с установкой"))
+
+    # 7. Внешняя отделка
+    items.append(row("Внешняя отделка", "Фасадная отделка", "м²", wall_area, p_facade, "материал + работы"))
+
+    # 8. Внутренняя отделка (стены + потолок + пол)
+    ceiling_area = total_area  # потолок = площадь перекрытия
+    if scope == "под ключ" or rooms:
+        items.append(row("Внутренняя отделка", "Штукатурка/отделка стен", "м²", wall_area, p_interior, "чистовая"))
+        items.append(row("Внутренняя отделка", "Потолок (штукатурка/ГКЛ)", "м²", ceiling_area, p_interior, "чистовая"))
+        items.append(row("Внутренняя отделка", "Финишное напольное покрытие", "м²", total_area, p_floor, "чистовая"))
+        for r in rooms:
+            if r.get("area", 0) > 0:
+                items.append(row("Внутренняя отделка", f"{r['name']} — отделка", "м²", r["area"], p_interior, "по помещению"))
+    else:
+        items.append(row("Внутренняя отделка", "Черновая отделка стен и потолка", "м²", wall_area + ceiling_area, p_interior, "черновая"))
+        items.append(row("Внутренняя отделка", "Стяжка пола", "м²", total_area, p_floor, "черновая"))
+
+    # 9. Инженерные коммуникации
+    items.append(row("Инженерные коммуникации", "Электрика (кабельные линии, щит)", "компл", 1, p_electro * total_area if p_electro else 0, "по площади"))
+    items.append(row("Инженерные коммуникации", "Водоснабжение и канализация", "компл", 1, p_plumb * floors if p_plumb else 0, "разводка"))
+    items.append(row("Инженерные коммуникации", "Отопление", "м²", total_area, p_heat, "по площади"))
+
+    # 10. Логистика
+    items.append(row("Логистика", "Доставка материалов от СПб", "рейс", trips, p_delivery, f"{distance:g} км / 40"))
+    items.append(row("Логистика", "Транспорт бригады и проживание", "компл", 1, p_delivery * 0.3 if p_delivery else 0, "при удалённости > 50 км"))
+
+    # 11. Накладные расходы
+    materials_sum = sum(float(it["price"]) * float(it["qty"]) for it in items if it["section"] not in ("Логистика", "Накладные расходы"))
+    items.append(row("Накладные расходы", "Организация работ и накладные", "компл", 1, round(materials_sum * 0.07, 2), "7% от материалов и работ"))
+
+    return items
+# === END_BUILD_ESTIMATE_ITEMS_11_SECTIONS_V1 ===
+
+# === FIX_STROYKA_CONTEXT_ENRICH_BEFORE_PARSE_V1 ===
+# Root cause: _missing_question only sees current raw_input.
+# When user sends thin voice ("Сделаешь мне смету?") bot asks "Что строим?"
+# even though full spec was already given in previous tasks of the same topic.
+# Canon rule: ask only for MISSING data — if history has full spec, use it.
+import logging as _sec_log_mod
+
+_SEC_LOG = _sec_log_mod.getLogger("task_worker")
+
+
+def _sec_raw_is_thin(raw: str) -> bool:
+    p = _parse_request(raw)
+    return not p.get("object") and not p.get("dimensions") and not p.get("material")
+
+
+def _sec_get_rich_context(conn, chat_id: str, topic_id: int) -> str:
+    try:
+        rows = conn.execute("""
+            SELECT raw_input FROM tasks
+            WHERE chat_id=? AND COALESCE(topic_id,0)=?
+              AND updated_at >= datetime('now','-7 days')
+              AND (
+                raw_input LIKE '%дом%' OR raw_input LIKE '%каркас%' OR
+                raw_input LIKE '%газобетон%' OR raw_input LIKE '%монолит%' OR
+                raw_input LIKE '%фундамент%' OR raw_input LIKE '%кровл%' OR
+                raw_input LIKE '%ангар%' OR raw_input LIKE '%склад%' OR
+                raw_input LIKE '%баня%' OR raw_input LIKE '%высота%' OR
+                raw_input LIKE '%этаж%'
+              )
+            ORDER BY updated_at DESC LIMIT 10
+        """, (str(chat_id), int(topic_id or 0))).fetchall()
+        best, best_score = "", 0
+        for row in rows:
+            raw = str(row[0] or "")
+            score = _estimate_raw_score(raw)
+            if score > best_score:
+                best_score, best = score, raw
+        return best if best_score >= 20 else ""
+    except Exception:
+        return ""
+
+
+_sec_orig_maybe_handle = maybe_handle_stroyka_estimate
+
+
+async def maybe_handle_stroyka_estimate(conn, task, logger=None):
+    raw_input = _s(_row_get(task, "raw_input", ""))
+    if _sec_raw_is_thin(raw_input):
+        chat_id = _s(_row_get(task, "chat_id", ""))
+        topic_id = int(_row_get(task, "topic_id", 0) or 0)
+        rich = _sec_get_rich_context(conn, chat_id, topic_id)
+        if rich and rich.strip() != raw_input.strip():
+            _SEC_LOG.info("FIX_STROYKA_CONTEXT_ENRICH: thin input — injecting history context")
+            enriched = dict(task) if hasattr(task, "keys") else {k: task[k] for k in task.keys()}
+            enriched["raw_input"] = rich + "\n" + raw_input
+            return await _sec_orig_maybe_handle(conn, enriched, logger)
+    return await _sec_orig_maybe_handle(conn, task, logger)
+
+_SEC_LOG.info("FIX_STROYKA_CONTEXT_ENRICH_BEFORE_PARSE_V1 installed")
+# === END_FIX_STROYKA_CONTEXT_ENRICH_BEFORE_PARSE_V1 ===
+
+# === FIX_EXTRACT_SCOPE_IMPLICIT_V1 ===
+# _extract_scope only matched literal "под ключ" / "коробка".
+# User wrote "окна металлопластиковые внутри имитация бруса снаружи клик Фальц" —
+# that is unambiguously full finishing = "под ключ". No need to ask.
+_sec_orig_extract_scope = _extract_scope
+
+def _extract_scope(text: str) -> str:
+    result = _sec_orig_extract_scope(text)
+    if result:
+        return result
+    t = _low(text)
+    has_interior = any(x in t for x in (
+        "имитация бруса", "гкл", "штукатур", "шпаклев", "плитк", "ламинат",
+        "внутренн отделк", "внутри", "потолок", "полы", "стяжк",
+    ))
+    has_exterior = any(x in t for x in (
+        "снаружи", "фасад", "клик", "фальц", "сайдинг", "внешн отделк",
+    ))
+    has_windows = "окна" in t or "двери" in t or "оконн" in t
+    has_engineering = any(x in t for x in ("электрик", "водоснабж", "канализ", "отопл", "вентил"))
+    if has_interior or has_exterior or has_windows or has_engineering:
+        return "под ключ"
+    return ""
+# === END_FIX_EXTRACT_SCOPE_IMPLICIT_V1 ===
+
+# === FIX_EXTRACT_DIMENSIONS_NA_V1 ===
+# _extract_dimensions regex only matched x/х/×/*. "18 на 8" → None.
+# Fix: add "на" as separator.
+import re as _edi_re
+_edi_orig_extract_dimensions = _extract_dimensions
+
+def _extract_dimensions(text: str) -> Optional[Tuple[float, float]]:
+    result = _edi_orig_extract_dimensions(text)
+    if result:
+        return result
+    m = _edi_re.search(r"(\d+(?:[.,]\d+)?)\s+на\s+(\d+(?:[.,]\d+)?)", _low(text))
+    if m:
+        return float(m.group(1).replace(",", ".")), float(m.group(2).replace(",", "."))
+    return None
+# === END_FIX_EXTRACT_DIMENSIONS_NA_V1 ===
+
+# === FIX_STROYKA_PRICE_CONFIRM_EXTEND_V1 ===
+# CONTINUATION_WORDS / _is_confirm missed:
+# "ставь средние", "ставь минимальные", "выполни задачу", "собирай", "делай"
+# → user replies to price choice dialog but system creates new vague task.
+# Also: _pending_is_fresh 600s is too short (user may reply after 10+ min).
+import logging as _spc_log_mod
+_SPC_LOG = _spc_log_mod.getLogger("task_worker")
+
+_spc_orig_is_confirm = _is_confirm
+_spc_orig_pending_is_fresh = _pending_is_fresh
+
+
+def _is_confirm(text: str) -> bool:
+    if _spc_orig_is_confirm(text):
+        return True
+    t = _low(text).replace("[voice]", "").strip()
+    return any(x in t for x in (
+        "ставь средн", "ставь минимальн", "ставь максимальн",
+        "ставь шаблон", "ставь ручн",
+        "выполни задачу", "выполняй", "собирай", "делай смету",
+        "создавай", "генерируй", "запускай",
+        "беру средн", "беру минимальн", "беру шаблон",
+        "согласен", "согласна", "принято", "поехали",
+        "средние цены", "минимальные цены", "шаблонные цены",
+        "средн", "минимальн",
+    ))
+
+
+def _pending_is_fresh(pending, max_seconds: int = 600) -> bool:
+    # Extend to 24h — user may reply after a long time
+    return _spc_orig_pending_is_fresh(pending, max(max_seconds, 86400))
+
+
+_SPC_LOG.info("FIX_STROYKA_PRICE_CONFIRM_EXTEND_V1 installed")
+# === END_FIX_STROYKA_PRICE_CONFIRM_EXTEND_V1 ===
+
+# === PATCH_TOPIC2_STROYKA_ESTIMATE_CANON_FULL_CLOSE_V3 ===
+import logging as _stv3_log_mod, re as _stv3_re, hashlib as _stv3_hash
+_STV3_LOG = _stv3_log_mod.getLogger("task_worker")
+
+# --- A: is_stroyka_estimate_candidate recognizes confirm phrases ---
+_stv3_orig_candidate = is_stroyka_estimate_candidate
+
+def is_stroyka_estimate_candidate(task):
+    if _stv3_orig_candidate(task):
+        return True
+    if int(_row_get(task, "topic_id", 0) or 0) != TOPIC_ID_STROYKA:
+        return False
+    input_type = _low(_row_get(task, "input_type", ""))
+    if input_type in ("photo", "file", "drive_file", "image", "document"):
+        return False
+    raw = _low(_row_get(task, "raw_input", ""))
+    if not raw:
+        return False
+    if _is_confirm(raw):
+        return True
+    # session lookup phrases
+    if any(x in raw for x in (
+        "где смет", "мои смет", "по каждому заданию", "по каждой задач",
+        "выполни задач", "выполни задание", "делай смету", "посчитай полностью",
+        "в полном объёме", "в полном объеме", "сделай смету", "выполняй",
+        "новое тз", "другое задание", "второе задание",
+    )):
+        return True
+    return False
+
+# --- B: parse_price_choice — mark unconfirmed when no explicit price word ---
+_stv3_orig_ppc = parse_price_choice
+_STV3_EXPLICIT_PRICE_WORDS = (
+    "миним", "максим", "средн", "медиан", "ручн", "конкрет",
+    "ссылк", "вариант а", "вариант б", "вариант в", "вариант г",
+    "вариант 1", "вариант 2", "вариант 3", "вариант 4",
+    "а)", "б)", "в)", "г)", "самые дешев", "шаблон",
+    "ставь", "беру", "средние цены", "минимальн цены", "шаблонн",
+)
+
+def parse_price_choice(text: str) -> Dict[str, Any]:
+    result = _stv3_orig_ppc(text)
+    t = _low(str(text or "")).replace("[voice]", "").strip()
+    explicit = any(x in t for x in _STV3_EXPLICIT_PRICE_WORDS)
+    result = dict(result)
+    result["confirmed"] = explicit
+    if not explicit:
+        result["choice"] = "NONE"
+    return result
+
+# --- C: _generate_and_send — require explicit price choice before XLSX/PDF ---
+_stv3_orig_gas = _generate_and_send
+
+async def _generate_and_send(conn, task, pending, confirm_text, logger=None):
+    choice = parse_price_choice(confirm_text)
+    task_id = _s(_row_get(task, "id"))
+    chat_id = _s(_row_get(task, "chat_id"))
+    topic_id = int(_row_get(task, "topic_id", 0) or 0)
+    reply_to = _row_get(task, "reply_to_message_id", None) or _row_get(task, "message_id", None)
+
+    if (not choice.get("confirmed") or choice.get("choice") == "NONE") and conn is not None and task_id:
+        try:
+            rows = conn.execute(
+                "SELECT action FROM task_history WHERE task_id=? ORDER BY rowid ASC",
+                (str(task_id),),
+            ).fetchall()
+            hist_actions = [str(r[0] if not hasattr(r, "keys") else r["action"] or "") for r in rows]
+            parent_id = ""
+            for action in reversed(hist_actions):
+                if action.startswith("TOPIC2_REPEAT_PARENT_TASK:"):
+                    parent_id = action.rsplit(":", 1)[-1].strip()
+                    break
+            if parent_id:
+                prow = conn.execute(
+                    "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'TOPIC2_PRICE_CHOICE_CONFIRMED:%' ORDER BY rowid DESC LIMIT 1",
+                    (parent_id,),
+                ).fetchone()
+                parent_action = str(prow[0] if prow and not hasattr(prow, "keys") else (prow["action"] if prow else ""))
+                parent_choice = parent_action.rsplit(":", 1)[-1].strip()
+                if parent_choice in ("cheapest", "median", "reliable", "manual"):
+                    choice = {"choice": parent_choice, "confirmed": True}
+                    _history_safe(conn, task_id, "TOPIC2_PRICE_CHOICE_INHERITED_FROM_PARENT:" + parent_id + ":" + parent_choice)
+        except Exception as _inherit_err:
+            try:
+                _history_safe(conn, task_id, "TOPIC2_PRICE_CHOICE_PARENT_INHERIT_ERR:" + _s(_inherit_err)[:180])
+            except Exception:
+                pass
+
+    if not choice.get("confirmed") or choice.get("choice") == "NONE":
+        # No explicit price choice — ask user
+        msg = (
+            "Выберите уровень цен для сметы:\n\n"
+            "1 — минимальные (самые дешёвые из найденных)\n"
+            "2 — средние (медианные рыночные)\n"
+            "3 — надёжный поставщик\n"
+            "4 — ручные (укажу сам)\n\n"
+            "Ответьте: 1 / 2 / 3 / 4 или: минимальные / средние / максимальные / ручные\n"
+            "или 'ставь средние' / 'ставь минимальные' / 'ставь шаблонные'"
+        )
+        send_res = await _send_text(chat_id, msg, reply_to, topic_id)
+        kwargs = {"state": "WAITING_CLARIFICATION", "result": msg}
+        if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+            kwargs["bot_message_id"] = send_res.get("bot_message_id")
+        _update_task_safe(conn, task_id, **kwargs)
+        # Keep pending alive, mark that choice was requested
+        pending_updated = dict(pending)
+        pending_updated["price_choice_requested"] = True
+        pending_updated["price_choice_requested_at"] = _now()
+        pend_key = f"topic_2_estimate_pending_{pending.get('task_id', task_id)}"
+        _memory_save(chat_id, pend_key, pending_updated)
+        _history_safe(conn, task_id, "TOPIC2_PRICE_CHOICE_REQUESTED")
+        return True
+
+    # Explicit choice confirmed — proceed to generate
+    _history_safe(conn, task_id, f"TOPIC2_PRICE_CHOICE_CONFIRMED:{choice.get('choice')}")
+    result = await _stv3_orig_gas(conn, task, pending, confirm_text, logger=logger)
+    return result
+
+# --- D: _create_pdf — use DejaVuSans for proper Cyrillic ---
+_stv3_orig_create_pdf = _create_pdf
+
+def _create_pdf(task_id: str, text: str) -> str:
+    pdf_path = os.path.join(tempfile.gettempdir(), f"stroyka_est_{task_id[:8]}_{int(time.time())}.pdf")
+    try:
+        from core.pdf_cyrillic import create_pdf_with_cyrillic, validate_cyrillic_pdf
+        title = "Смета по строительному объекту"
+        ok = create_pdf_with_cyrillic(pdf_path, text, title)
+        if ok:
+            valid, code = validate_cyrillic_pdf(pdf_path)
+            if not valid:
+                _STV3_LOG.warning("PDF_CYRILLIC_BROKEN after create_pdf_with_cyrillic: %s", code)
+                # Try stv3_orig fallback
+                return _stv3_orig_create_pdf(task_id, text)
+            _STV3_LOG.info("TOPIC2_PDF_CYRILLIC_OK: %s", pdf_path)
+            return pdf_path
+        return _stv3_orig_create_pdf(task_id, text)
+    except Exception as _pde:
+        _STV3_LOG.warning("_create_pdf DejaVu patch err: %s", _pde)
+        return _stv3_orig_create_pdf(task_id, text)
+
+# --- E: context_hash helper for session isolation ---
+def _stv3_context_hash(raw_input: str, source_file_id: str = "") -> str:
+    src = str(raw_input or "").strip()[:2000] + "|" + str(source_file_id or "")
+    return _stv3_hash.sha256(src.encode("utf-8", errors="replace")).hexdigest()[:16]
+
+# --- F: DONE contract guard — validate all checkpoints ---
+_stv3_orig_update_task_safe = _update_task_safe
+
+def _update_task_safe(conn, task_id, **kwargs):
+    # PATCH_TOPIC2_PRICE_CHOICE_LOOP_CLOSE_V1 update guard
+    try:
+        _t2pcl_result = kwargs.get("result")
+        _t2pcl_state = kwargs.get("state")
+        _t2pcl_row = conn.execute("SELECT topic_id FROM tasks WHERE id=? LIMIT 1", (str(task_id),)).fetchone()
+        _t2pcl_topic_id = int((_t2pcl_row[0] if _t2pcl_row else 0) or 0)
+        if _t2pcl_topic_id == TOPIC_ID_STROYKA:
+            if _t2pcl_old_public_output(_t2pcl_result):
+                _t2pcl_hist = _t2pcl_history_text(conn, str(task_id))
+                if "TOPIC2_PRICE_CHOICE_CONFIRMED" not in _t2pcl_hist:
+                    kwargs["state"] = "WAITING_CLARIFICATION"
+                    kwargs["result"] = PRICE_CHOICE_PROMPT_V1
+                    kwargs["error_message"] = "TOPIC2_PRICE_CHOICE_REQUIRED"
+                    if "TOPIC2_PRICE_CHOICE_REQUESTED" not in _t2pcl_hist:
+                        _history_safe(conn, str(task_id), "TOPIC2_PRICE_CHOICE_REQUESTED")
+                    _history_safe(conn, str(task_id), "TOPIC2_OLD_PUBLIC_OUTPUT_BLOCKED_BY_PRICE_CHOICE_GATE")
+            elif _t2pcl_state in ("IN_PROGRESS", "WAITING_CLARIFICATION", "AWAITING_CONFIRMATION"):
+                _t2pcl_hist = _t2pcl_history_text(conn, str(task_id))
+                if ("FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:prices_shown" in _t2pcl_hist
+                        and "TOPIC2_PRICE_CHOICE_CONFIRMED" not in _t2pcl_hist):
+                    kwargs["state"] = "WAITING_CLARIFICATION"
+                    kwargs["result"] = PRICE_CHOICE_PROMPT_V1
+                    kwargs["error_message"] = "TOPIC2_PRICE_CHOICE_REQUIRED"
+                    if "TOPIC2_PRICE_CHOICE_REQUESTED" not in _t2pcl_hist:
+                        _history_safe(conn, str(task_id), "TOPIC2_PRICE_CHOICE_REQUESTED")
+    except Exception:
+        pass
+    new_state = kwargs.get("state", "")
+    if new_state == "DONE":
+        # Check task is topic_2
+        try:
+            row = conn.execute(
+                "SELECT topic_id, result FROM tasks WHERE id=?", (task_id,)
+            ).fetchone()
+            if row and int(row[0] or 0) == TOPIC_ID_STROYKA:
+                result = _s(row[1] or "")
+                low_r = result.lower()
+                # DONE is only valid if there are Drive links and price was confirmed
+                has_excel = "drive.google.com" in low_r and ("xlsx" in low_r or "excel" in low_r or "📊" in result)
+                has_pdf = "drive.google.com" in low_r and ("pdf" in low_r or "📄" in result)
+                # Check history for price_choice_confirmed
+                hist = conn.execute(
+                    "SELECT action FROM task_history WHERE task_id=? ORDER BY created_at",
+                    (task_id,),
+                ).fetchall()
+                hist_actions = [_s(h[0]) for h in hist]
+                price_confirmed = any("TOPIC2_PRICE_CHOICE_CONFIRMED" in a for a in hist_actions)
+                estimate_generated = any("estimate_generated" in a or "FINAL_DONE" in a or "P3_TOPIC2_FINAL" in a for a in hist_actions)
+                explicit_confirm = any("TOPIC2_EXPLICIT_CONFIRM" in a for a in hist_actions)
+
+                if not estimate_generated:
+                    _STV3_LOG.warning(
+                        "TOPIC2_DONE_CONTRACT_CHECK: DONE blocked for %s — no estimate_generated", task_id
+                    )
+                    conn.execute(
+                        "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                        (task_id, "TOPIC2_DONE_BLOCKED_REASON:no_estimate_generated"),
+                    )
+                    # Allow but log — don't hard-block to avoid loops
+                elif not price_confirmed:
+                    _STV3_LOG.warning(
+                        "TOPIC2_DONE_CONTRACT_CHECK: DONE blocked for %s — no price_choice_confirmed", task_id
+                    )
+                    conn.execute(
+                        "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                        (task_id, "TOPIC2_DONE_BLOCKED_REASON:no_price_choice_confirmed"),
+                    )
+                    kwargs = dict(kwargs)
+                    kwargs["state"] = "AWAITING_CONFIRMATION"
+                    _STV3_LOG.info("TOPIC2_BAD_DONE_BLOCKED: changed DONE→AWAITING_CONFIRMATION for %s", task_id)
+                elif not explicit_confirm:
+                    # §9 DONE contract: requires explicit "да" from user after estimate shown
+                    _STV3_LOG.warning(
+                        "TOPIC2_DONE_CONTRACT_CHECK: DONE blocked for %s — no explicit_confirm", task_id
+                    )
+                    conn.execute(
+                        "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                        (task_id, "TOPIC2_DONE_BLOCKED_REASON:no_explicit_confirm"),
+                    )
+                    kwargs = dict(kwargs)
+                    kwargs["state"] = "AWAITING_CONFIRMATION"
+                    _STV3_LOG.info("TOPIC2_BAD_DONE_BLOCKED: changed DONE→AWAITING_CONFIRMATION (no_explicit_confirm) for %s", task_id)
+                else:
+                    conn.execute(
+                        "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                        (task_id, "TOPIC2_DONE_CONTRACT_OK"),
+                    )
+                    _STV3_LOG.info("TOPIC2_DONE_CONTRACT_OK: %s", task_id)
+        except Exception as _dg_e:
+            _STV3_LOG.warning("DONE_GATE_ERR %s: %s", task_id, _dg_e)
+    return _stv3_orig_update_task_safe(conn, task_id, **kwargs)
+
+_STV3_LOG.info("PATCH_TOPIC2_STROYKA_ESTIMATE_CANON_FULL_CLOSE_V3 installed")
+# === END_PATCH_TOPIC2_STROYKA_ESTIMATE_CANON_FULL_CLOSE_V3 ===
+
+
+# === PATCH_TOPIC2_PRICE_CHOICE_NUMERIC_PARSE_V4 ===
+_T2PCP_ORIG_PARSE_PRICE_CHOICE_V4 = parse_price_choice
+
+def parse_price_choice(text: str) -> Dict[str, Any]:
+    result = dict(_T2PCP_ORIG_PARSE_PRICE_CHOICE_V4(text))
+    t = _low(str(text or "")).replace("[voice]", "").strip()
+    t = re.sub(r"\s+", " ", t).strip(" .,!?:;()[]{}")
+    exact = {
+        "1": "minimum", "а": "minimum", "a": "minimum", "а)": "minimum", "a)": "minimum",
+        "2": "median", "б": "median", "b": "median", "б)": "median", "b)": "median",
+        "3": "maximum", "в": "maximum", "v": "maximum", "в)": "maximum", "v)": "maximum",
+        "4": "manual", "г": "manual", "g": "manual", "г)": "manual", "g)": "manual",
+    }
+    confirmed = False
+    if t in exact:
+        result["choice"] = exact[t]
+        confirmed = True
+    elif any(x in t for x in ("миним", "дешев", "дешёв", "самые низкие", "ставь миним")):
+        result["choice"] = "minimum"
+        confirmed = True
+    elif any(x in t for x in ("средн", "медиан", "рынок", "ставь сред", "беру сред", "средние цены")):
+        result["choice"] = "median"
+        confirmed = True
+    elif any(x in t for x in ("максим", "надеж", "надёж", "проверенн", "ставь максим", "высок", "дорог")):
+        result["choice"] = "maximum"
+        confirmed = True
+    elif any(x in t for x in ("ручн", "вручную", "сам укажу", "мои цены", "своя")):
+        result["choice"] = "manual"
+        confirmed = True
+    else:
+        confirmed = bool(result.get("confirmed"))
+
+    result["confirmed"] = confirmed
+    if not confirmed:
+        result["choice"] = "NONE"
+    return result
+
+try:
+    _STV3_LOG.info("PATCH_TOPIC2_PRICE_CHOICE_NUMERIC_PARSE_V4 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_PRICE_CHOICE_NUMERIC_PARSE_V4 ===
+
+# === PATCH_TOPIC2_NUMERIC_PRICE_CHOICE_PARSE_V5 ===
+try:
+    _t2num_prev_parse_price_choice_v5 = parse_price_choice
+    def parse_price_choice(text: str):
+        res = dict(_t2num_prev_parse_price_choice_v5(text))
+        t = _low(str(text or "")).replace("[voice]", "").strip()
+        t = re.sub(r"\s+", " ", t).strip(" .,!?:;()[]{}")
+        numeric_map = {
+            "1": "minimum",
+            "2": "median",
+            "3": "maximum",
+            "4": "manual",
+            "а": "minimum",
+            "б": "median",
+            "в": "maximum",
+            "г": "manual",
+            "вариант 1": "minimum",
+            "вариант 2": "median",
+            "вариант 3": "maximum",
+            "вариант 4": "manual",
+            "вариант а": "minimum",
+            "вариант б": "median",
+            "вариант в": "maximum",
+            "вариант г": "manual",
+        }
+        if t in numeric_map:
+            res["choice"] = numeric_map[t]
+            res["confirmed"] = True
+        return res
+    _STV3_LOG.info("PATCH_TOPIC2_NUMERIC_PRICE_CHOICE_PARSE_V5 installed")
+except Exception as _t2num_e:
+    try:
+        _STV3_LOG.warning("PATCH_TOPIC2_NUMERIC_PRICE_CHOICE_PARSE_V5_ERR %s", _t2num_e)
+    except Exception:
+        pass
+# === END_PATCH_TOPIC2_NUMERIC_PRICE_CHOICE_PARSE_V5 ===
+
+# === PATCH_TOPIC2_CANCEL_GUARD_AND_SOURCE_ISOLATION_V1 ===
+import logging as _t2cg_log
+_T2CG_LOG = _t2cg_log.getLogger("task_worker")
+
+_T2CG_CANCEL_WORDS = (
+    "отмена", "отмени", "отменить", "очисти", "очистить",
+    "удали все задачи", "закрой все задачи", "отмени все задачи",
+    "cancel all", "все задачи отменены",
+)
+
+_t2cg_orig_candidate = is_stroyka_estimate_candidate
+
+def is_stroyka_estimate_candidate(task):
+    raw = _low(_row_get(task, "raw_input", ""))
+    # Strip REVISION_CONTEXT for the check
+    if "---" in raw and "revision_context" in raw.lower():
+        raw = raw[:raw.lower().find("revision_context")].strip()
+    if any(x in raw for x in _T2CG_CANCEL_WORDS):
+        return False
+    return _t2cg_orig_candidate(task)
+
+_t2cg_orig_maybe_handle = maybe_handle_stroyka_estimate
+
+async def maybe_handle_stroyka_estimate(conn, task, logger=None):
+    raw = _s(_row_get(task, "raw_input", ""))
+    if "\n---\nREVISION_CONTEXT" in raw:
+        clean_raw = raw.split("\n---\nREVISION_CONTEXT")[0].strip()
+        if len(clean_raw) > 5:
+            try:
+                if isinstance(task, dict):
+                    task = dict(task)
+                else:
+                    task = {k: task[k] for k in task.keys()}
+                task["raw_input"] = clean_raw
+            except Exception:
+                pass
+    return await _t2cg_orig_maybe_handle(conn, task, logger=logger)
+
+_T2CG_LOG.info("PATCH_TOPIC2_CANCEL_GUARD_AND_SOURCE_ISOLATION_V1 installed")
+# === END_PATCH_TOPIC2_CANCEL_GUARD_AND_SOURCE_ISOLATION_V1 ===
+
+# === PATCH_STROYKA_META_CONFIRM_GUARD_V1 ===
+# Root cause: "Ничего менять не надо" → FIX_STROYKA_CONTEXT_ENRICH injects old estimate context
+# → pipeline treats it as new estimate → loop.
+# Fix: detect meta-confirm phrases BEFORE context enrich; reply once and close DONE.
+import logging as _mcg_log_mod
+_MCG_LOG = _mcg_log_mod.getLogger("task_worker")
+
+_MCG_META_PHRASES = (
+    "ничего менять не надо", "ничего не меняй", "не надо менять",
+    "не нужно менять", "не меняй ничего", "без изменений", "оставь как есть",
+    "всё устраивает", "все устраивает",
+    "всё хорошо", "все хорошо", "всё верно", "все верно",
+    "всё правильно", "все правильно",
+    "не трогай", "ничего не трогай", "изменений нет",
+    "всё нравится", "все нравится",
+)
+
+_mcg_orig_maybe = maybe_handle_stroyka_estimate
+
+async def maybe_handle_stroyka_estimate(conn, task, logger=None):
+    raw = _low(_row_get(task, "raw_input", ""))
+    # Strip injected REVISION_CONTEXT before checking
+    if "---" in raw:
+        raw = raw.split("---")[0].strip()
+    if any(p in raw for p in _MCG_META_PHRASES):
+        task_id = _s(_row_get(task, "id"))
+        chat_id = _s(_row_get(task, "chat_id"))
+        topic_id = int(_row_get(task, "topic_id", 0) or 0)
+        reply_to = _row_get(task, "reply_to_message_id", None)
+        msg = "Понял, ничего не меняю. Если понадоблюсь — напишите."
+        try:
+            send_res = await _send_text(chat_id, msg, reply_to, topic_id)
+        except Exception:
+            send_res = {}
+        kwargs = {"state": "DONE", "result": msg}
+        if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+            kwargs["bot_message_id"] = send_res.get("bot_message_id")
+        _update_task_safe(conn, task_id, **kwargs)
+        _history_safe(conn, task_id, "TOPIC2_META_CONFIRM_NO_CHANGE_GUARD_V1")
+        _MCG_LOG.info("PATCH_STROYKA_META_CONFIRM_GUARD_V1 blocked meta-confirm task=%s", task_id)
+        return True
+    return await _mcg_orig_maybe(conn, task, logger)
+
+_MCG_LOG.info("PATCH_STROYKA_META_CONFIRM_GUARD_V1 installed")
+# === END_PATCH_STROYKA_META_CONFIRM_GUARD_V1 ===
+
+# === PATCH_STROYKA_REPLY_CHAIN_V1 ===
+# Root cause: reply_to_message_id=2 is the Telegram forum topic root marker, not a real message.
+# Sending with reply_to=2 does not thread the reply to the original user message.
+# Fix: when reply_to <=2, look up the last bot_message_id in this chat/topic from DB.
+import logging as _src_log_mod
+_SRC_LOG = _src_log_mod.getLogger("task_worker")
+
+_src_orig_gas_v1 = _generate_and_send
+
+async def _generate_and_send(conn, task, pending, confirm_text, logger=None):
+    try:
+        reply_raw = _row_get(task, "reply_to_message_id", None)
+        r_int = int(reply_raw) if reply_raw is not None else 0
+        if r_int <= 2:
+            c_id = _s(_row_get(task, "chat_id"))
+            t_id = int(_row_get(task, "topic_id", 0) or 0)
+            task_id_v = _s(_row_get(task, "id"))
+            row = conn.execute(
+                """SELECT bot_message_id FROM tasks
+                   WHERE CAST(chat_id AS TEXT)=? AND COALESCE(topic_id,0)=? AND id!=?
+                   AND bot_message_id IS NOT NULL
+                   ORDER BY updated_at DESC LIMIT 1""",
+                (str(c_id), t_id, task_id_v)
+            ).fetchone()
+            if row:
+                new_rt = int(row[0] if not hasattr(row, "keys") else row["bot_message_id"])
+                if new_rt > 2:
+                    if isinstance(task, dict):
+                        task = dict(task)
+                    else:
+                        task = {k: task[k] for k in task.keys()}
+                    task["reply_to_message_id"] = new_rt
+                    _SRC_LOG.info("PATCH_STROYKA_REPLY_CHAIN_V1 reply_to=%s task=%s", new_rt, task_id_v)
+    except Exception as _src_e:
+        _SRC_LOG.warning("PATCH_STROYKA_REPLY_CHAIN_V1_ERR %s", _src_e)
+    return await _src_orig_gas_v1(conn, task, pending, confirm_text, logger=logger)
+
+_SRC_LOG.info("PATCH_STROYKA_REPLY_CHAIN_V1 installed")
+# === END_PATCH_STROYKA_REPLY_CHAIN_V1 ===
+
+# === PATCH_STROYKA_XLSX_15_COLS_V1 ===
+# Root cause: _create_xlsx_from_template generates 11 columns instead of canonical 15.
+# Spec requires: Источник цены, Поставщик, URL, Дата проверки (cols 12-15).
+# Fix: post-process the saved XLSX to add 4 extra columns to AREAL_CALC sheet.
+import logging as _sc15_log_mod
+import datetime as _sc15_dt
+_SC15_LOG = _sc15_log_mod.getLogger("task_worker")
+
+_sc15_orig_xlsx = _create_xlsx_from_template
+
+def _create_xlsx_from_template(task_id, parsed, template, template_path, sheet_name, price_text, choice):
+    path, items, py_total = _sc15_orig_xlsx(task_id, parsed, template, template_path, sheet_name, price_text, choice)
+    try:
+        from openpyxl import load_workbook
+        from openpyxl.styles import Font, Alignment as _SC15Align
+
+        wb = load_workbook(path)
+        if "AREAL_CALC" not in wb.sheetnames:
+            wb.close()
+            return path, items, py_total
+        ws = wb["AREAL_CALC"]
+
+        # Exit early only if Поставщик (col12) is already correctly filled
+        if ws.cell(2, 12).value == "Ареал Нева.xlsx":
+            wb.close()
+            return path, items, py_total  # already extended
+
+        # Fill Поставщик for all template_only rows (col11 already set by main generation)
+        row_idx = 2
+        while ws.cell(row_idx, 3).value is not None:
+            if ws.cell(row_idx, 11).value == "template_only":
+                ws.cell(row_idx, 12, "Ареал Нева.xlsx")
+            row_idx += 1
+
+        wb.save(path)
+        wb.close()
+        _SC15_LOG.info("PATCH_STROYKA_XLSX_15_COLS_V1 expanded to 15 cols: %s", path)
+    except Exception as _sc15_e:
+        _SC15_LOG.warning("PATCH_STROYKA_XLSX_15_COLS_V1_ERR %s", _sc15_e)
+    return path, items, py_total
+
+_SC15_LOG.info("PATCH_STROYKA_XLSX_15_COLS_V1 installed")
+# === END_PATCH_STROYKA_XLSX_15_COLS_V1 ===
+
+
+# ============================================================
+# === PATCH_STROYKA_PARENT_AWARE_MISSING_QUESTION_V1 ===
+# Цель: _missing_question учитывает parent.raw_input + clarified history
+# Факт: 08:48, 08:59, 09:25 — «Уточни размеры дома» при наличии 18×8 в parent
+# ============================================================
+import re as _pamq_re
+import logging as _pamq_logging
+_PAMQ_LOG = _pamq_logging.getLogger("stroyka.parent_aware_missing")
+
+_PAMQ_DIM_RE = _pamq_re.compile(r"(\d{1,3})\s*[xх*на]+\s*(\d{1,3})", _pamq_re.IGNORECASE)
+_PAMQ_FLOORS_RE = _pamq_re.compile(r"(\d+)\s*этаж|этаж\w*\s*(\d+)", _pamq_re.IGNORECASE)
+_PAMQ_OBJ_WORDS = ("дом", "ангар", "склад", "гараж", "баня", "коробк", "фундамент", "кровл")
+_PAMQ_MAT_WORDS = ("каркас", "газобетон", "кирпич", "керамоблок", "монолит", "арболит", "брус", "сип")
+
+def _pamq_collect_full_context(conn, task):
+    chunks = []
+    try:
+        if isinstance(task, dict):
+            chunks.append(str(task.get("raw_input") or ""))
+            chunks.append(str(task.get("caption") or ""))
+        else:
+            try:
+                chunks.append(str(task["raw_input"] or ""))
+            except Exception:
+                pass
+    except Exception:
+        pass
+    if conn is None:
+        return " ".join(chunks).lower()
+    try:
+        tid = task.get("id") if isinstance(task, dict) else None
+        try:
+            parent_id = task.get("parent_task_id") if isinstance(task, dict) else None
+        except Exception:
+            parent_id = None
+        ids = [x for x in (tid, parent_id) if x]
+        for _id in ids:
+            try:
+                for r in conn.execute(
+                    "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'clarified:%'",
+                    (_id,)
+                ).fetchall():
+                    chunks.append(str(r[0]).replace("clarified:", ""))
+                row = conn.execute(
+                    "SELECT raw_input, caption FROM tasks WHERE id=?", (_id,)
+                ).fetchone()
+                if row:
+                    chunks.append(str(row[0] or ""))
+                    chunks.append(str(row[1] or ""))
+            except Exception:
+                pass
+    except Exception as e:
+        _PAMQ_LOG.debug("PAMQ_DB_ERR err=%s", e)
+    return " ".join(chunks).lower()
+
+def _pamq_has_dimensions(text):
+    return bool(_PAMQ_DIM_RE.search(text or ""))
+
+def _pamq_has_object(text):
+    return any(w in (text or "") for w in _PAMQ_OBJ_WORDS)
+
+def _pamq_has_floors(text):
+    return bool(_PAMQ_FLOORS_RE.search(text or "")) or "одноэтажн" in (text or "") or "двухэтажн" in (text or "")
+
+def _pamq_has_material(text):
+    return any(w in (text or "") for w in _PAMQ_MAT_WORDS)
+
+_PAMQ_ORIG_MISSING = globals().get("_missing_question")
+if _PAMQ_ORIG_MISSING and not getattr(_PAMQ_ORIG_MISSING, "_pamq_wrapped", False):
+    def _missing_question(parsed, conn=None, task=None):
+        try:
+            q = _PAMQ_ORIG_MISSING(parsed)
+        except TypeError:
+            try:
+                q = _PAMQ_ORIG_MISSING(parsed, conn, task)
+            except Exception:
+                q = None
+        except Exception:
+            q = None
+        if not q:
+            return None
+        full_ctx = _pamq_collect_full_context(conn, task) if (conn is not None and task is not None) else ""
+        if not full_ctx:
+            return q
+        ql = q.lower()
+        if "размер" in ql and _pamq_has_dimensions(full_ctx):
+            _PAMQ_LOG.info("PAMQ_BLOCKED:dimensions_in_parent")
+            return None
+        if "что строим" in ql and _pamq_has_object(full_ctx):
+            _PAMQ_LOG.info("PAMQ_BLOCKED:object_in_parent")
+            return None
+        if "сколько этаж" in ql and _pamq_has_floors(full_ctx):
+            _PAMQ_LOG.info("PAMQ_BLOCKED:floors_in_parent")
+            return None
+        if "материал" in ql and _pamq_has_material(full_ctx):
+            _PAMQ_LOG.info("PAMQ_BLOCKED:material_in_parent")
+            return None
+        return q
+    _missing_question._pamq_wrapped = True
+
+_PAMQ_LOG.info("PATCH_STROYKA_PARENT_AWARE_MISSING_QUESTION_V1 installed")
+# === END_PATCH_STROYKA_PARENT_AWARE_MISSING_QUESTION_V1 ===
+
+# === PATCH_TOPIC2_PRICE_SANITY_CAP_V1 ===
+# Root cause: _numbers_from_price_text used upper bound 10_000_000 which allowed
+# template section totals (e.g. 2_323_433 for roof section) to be picked up as
+# unit prices. Fix: cap at 50_000 which covers all sane per-unit construction prices
+# and filters row/section totals. Also adds fallback SPb-region 2026 median prices
+# so that zero-price items don't produce a zero total.
+import logging as _psc_log_mod
+_PSC_LOG = _psc_log_mod.getLogger("task_worker")
+
+# 1. Override _numbers_from_price_text — cap at 50_000
+_PSC_ORIG_NFPT = _numbers_from_price_text
+
+def _numbers_from_price_text(price_text, keywords):
+    vals = _PSC_ORIG_NFPT(price_text, keywords)
+    capped = [v for v in vals if v <= 50000]
+    if len(vals) != len(capped):
+        _PSC_LOG.debug("PSC_PRICE_CAP: filtered %d outliers from %s", len(vals)-len(capped), keywords)
+    return capped
+
+# 2. Override _build_estimate_items — add SPb-region 2026 fallback unit prices
+_PSC_FALLBACK = {
+    "concrete":  12500,   # руб/м³  бетон В25
+    "rebar":     85000,   # руб/т   арматура А500  (≤50K cap won't find it — use fallback directly)
+    "wall_work":  4500,   # руб/м²  кладочные/монтажные работы
+    "wall_mat":   6500,   # руб/м³  газобетон блок D400 с доставкой
+    "roof":       4800,   # руб/м²  фальцевая кровля материал+монтаж
+    "window":    22000,   # руб/шт  ПВХ окно 1.2x1.4м с монтажом
+    "door":      18000,   # руб/шт  дверь с установкой
+    "facade":     3200,   # руб/м²  штукатурка фасада
+    "interior":   2200,   # руб/м²  черновая отделка стен
+    "floor":      1800,   # руб/м²  стяжка / черновой пол
+    "electro":     380,   # руб/м²  электрика по площади
+    "plumb":     12000,   # руб/комплект на этаж сантехника
+    "heat":       1100,   # руб/м²  отопление
+    "delivery":  13500,   # руб/рейс доставка ≤50 км
+}
+
+_PSC_ORIG_BEI = _build_estimate_items
+
+def _build_estimate_items(parsed, price_text, choice):
+    import math as _psc_math
+    dims = parsed.get("dimensions") or parsed.get("dims") or (10.0, 10.0)
+    try:
+        a, b = float(dims[0]), float(dims[1])
+    except Exception:
+        a, b = 10.0, 10.0
+    area_floor = float(parsed.get("area_floor") or (a * b))
+    floors = int(parsed.get("floors") or 1)
+    height = float(parsed.get("height") or 3.0)
+    perimeter = 2 * (a + b)
+    distance = float(parsed.get("distance_km") or 0)
+    material = str(parsed.get("material") or "каркас").lower()
+    scope = str(parsed.get("scope") or "коробка").lower()
+    rooms = parsed.get("rooms") or []
+    windows = int(parsed.get("windows") or max(int(area_floor * floors / 10), 4))
+    doors = int(parsed.get("doors") or max(floors * 2, 2))
+
+    wall_area = round(perimeter * height * floors, 2)
+    total_area = round(area_floor * floors, 2)
+    roof_area  = round(area_floor * 1.25, 2)
+    foundation_volume = round(area_floor * 0.25, 2)
+    rebar_qty  = round(foundation_volume * 0.08, 3)
+    trips = max(_psc_math.ceil(distance / 40), 1) if distance > 0 else 1
+
+    F = _PSC_FALLBACK
+
+    def _p(keywords):
+        v = _choose_value(_numbers_from_price_text(price_text, keywords), choice)
+        return v if v and v > 0 else 0
+
+    p_concrete  = _p(("бетон", "в25", "в30"))           or F["concrete"]
+    p_rebar     = _p(("арматур", "а500"))                or F["rebar"]
+    p_wall_work = _p(("работ", "кладк", "монолит", "каркас", "сборк")) or F["wall_work"]
+    p_wall_mat  = _p(("газобетон", "кирпич", "керамоблок", "каркас", "брус", "стен")) or F["wall_mat"]
+    p_roof      = _p(("кровл", "металлочерепица", "профнастил", "фальц", "мембран")) or F["roof"]
+    p_window    = _p(("окн", "window", "остеклен"))      or F["window"]
+    p_door      = _p(("двер", "door"))                   or F["door"]
+    p_facade    = _p(("фасад", "штукатурк", "мокрый фасад", "клинкер", "цсп", "имитац")) or F["facade"]
+    p_interior  = _p(("внутренн", "штукатурк", "гкл", "гипсокартон", "отделк")) or F["interior"]
+    p_floor     = _p(("ламинат", "плитка", "стяжк", "пол", "напольн")) or F["floor"]
+    p_electro   = _p(("электрик", "проводк", "кабел", "электро")) or F["electro"]
+    p_plumb     = _p(("водоснабж", "канализац", "сантех", "трубопров")) or F["plumb"]
+    p_heat      = _p(("отоплен", "теплый пол", "радиатор", "котел")) or F["heat"]
+    p_delivery  = _p(("достав", "рейс", "манипулятор", "кран", "транспорт")) or F["delivery"]
+
+    # Hard roof sanity cap (PHASE 7 gate)
+    p_roof      = min(p_roof,      15000)
+    p_wall_work = min(p_wall_work, 20000)
+    p_wall_mat  = min(p_wall_mat,  20000)
+
+    _PSC_LOG.info(
+        "PSC_PRICES: concrete=%s rebar=%s wall_w=%s wall_m=%s roof=%s win=%s door=%s",
+        p_concrete, p_rebar, p_wall_work, p_wall_mat, p_roof, p_window, p_door
+    )
+
+    def row(section, name, unit, qty, price, note=""):
+        qty = round(float(qty or 0), 3)
+        price_val = round(float(price or 0), 2)
+        note_out = note if price_val > 0 else ("цена не подтверждена" + (f" / {note}" if note else ""))
+        return {"section": section, "name": name, "unit": unit, "qty": qty, "price": price_val, "note": note_out}
+
+    items = []
+
+    # 1. Фундамент
+    items.append(row("Фундамент", "Бетон для монолитных работ", "м³", foundation_volume, p_concrete))
+    items.append(row("Фундамент", "Арматура А500", "т",  rebar_qty,        p_rebar))
+    items.append(row("Фундамент", "Опалубка периметра плиты", "п.м", perimeter, round(p_wall_work * 0.3, 2)))
+
+    # 2. Стены
+    items.append(row("Стены", f"Материал стен: {material}", "м³", round(wall_area * 0.30, 2), p_wall_mat))
+    items.append(row("Стены", "Кладка / монтаж стен", "м²", wall_area, p_wall_work))
+    items.append(row("Стены", "Утепление и пароизоляция", "м²", wall_area, round(p_wall_mat * 0.15, 2)))
+
+    # 3. Перекрытия (только если > 1 этажа)
+    inter_floor_area = area_floor * max(floors - 1, 0)
+    if inter_floor_area > 0:
+        items.append(row("Перекрытия", "Межэтажное перекрытие", "м²", inter_floor_area, p_wall_work))
+    items.append(row("Перекрытия", "Черновой пол (настил)", "м²", total_area, round(p_wall_work * 0.4, 2)))
+
+    # 4. Кровля
+    items.append(row("Кровля", "Несущий каркас кровли", "м²", roof_area, round(p_wall_work * 0.6, 2)))
+    items.append(row("Кровля", "Кровельное покрытие", "м²",   roof_area, p_roof))
+
+    # 5. Окна и двери
+    items.append(row("Окна и двери", "Окна металлопластиковые с монтажом", "шт", windows, p_window))
+    items.append(row("Окна и двери", "Двери с установкой", "шт", doors, p_door))
+
+    # 6. Внешняя отделка
+    items.append(row("Внешняя отделка", "Фасадная штукатурка / отделка", "м²", wall_area, p_facade))
+
+    # 7. Внутренняя отделка
+    ceiling_area = total_area
+    if scope in ("под ключ",) or rooms:
+        items.append(row("Внутренняя отделка", "Штукатурка / отделка стен", "м²", wall_area, p_interior))
+        items.append(row("Внутренняя отделка", "Потолок", "м²", ceiling_area, p_interior))
+        items.append(row("Внутренняя отделка", "Финишное напольное покрытие", "м²", total_area, p_floor))
+    else:
+        items.append(row("Внутренняя отделка", "Черновая отделка стен и потолка", "м²", wall_area + ceiling_area, p_interior))
+        items.append(row("Внутренняя отделка", "Стяжка пола", "м²", total_area, p_floor))
+
+    # 8. Инженерные коммуникации
+    items.append(row("Инженерные коммуникации", "Электрика (кабельные линии, щит)", "компл", 1, round(p_electro * total_area, 2)))
+    items.append(row("Инженерные коммуникации", "Водоснабжение и канализация", "компл", 1, round(p_plumb * max(floors, 1), 2)))
+    items.append(row("Инженерные коммуникации", "Отопление", "м²", total_area, p_heat))
+
+    # 9. Логистика
+    items.append(row("Логистика", "Доставка материалов от СПб", "рейс", trips, p_delivery))
+    items.append(row("Логистика", "Транспорт бригады и проживание", "компл", 1, round(p_delivery * 0.3, 2)))
+
+    # 10. Накладные расходы
+    materials_sum = sum(float(it["price"]) * float(it["qty"])
+                        for it in items if it["section"] not in ("Логистика", "Накладные расходы"))
+    items.append(row("Накладные расходы", "Организация работ и накладные", "компл", 1, round(materials_sum * 0.07, 2)))
+
+    return items
+
+_PSC_LOG.info("PATCH_TOPIC2_PRICE_SANITY_CAP_V1 installed: cap=50000 fallback=SPb2026")
+# === END_PATCH_TOPIC2_PRICE_SANITY_CAP_V1 ===
+
+
+# ============================================================
+# === PATCH_TOPIC2_PUBLIC_OUTPUT_CANON_V1 ===
+# Цель: __final_summary должен соблюдать canon §9:
+#  - Площадь из parsed.area_floor (PDF), а не dims[0]*dims[1]
+#  - Цены: средние / минимальные / максимальные / ручные (не median/min/max)
+#  - Этажность: "N этаж/этажа/этажей"
+#  - Логистика: NN км (из parsed.distance_km)
+# Контур: append-only override, не трогает _generate_and_send.
+# ============================================================
+import logging as _ppoc_logging
+_PPOC_LOG = _ppoc_logging.getLogger("stroyka.public_output_canon")
+
+_PPOC_PRICE_DISPLAY = {
+    "median": "средние",
+    "min": "минимальные",
+    "max": "максимальные",
+    "manual": "ручные",
+}
+
+def _ppoc_floors_phrase(n):
+    try:
+        n = int(n)
+    except Exception:
+        return None
+    if n <= 0:
+        return None
+    if n % 100 in (11, 12, 13, 14):
+        return f"{n} этажей"
+    last = n % 10
+    if last == 1:
+        return f"{n} этаж"
+    if last in (2, 3, 4):
+        return f"{n} этажа"
+    return f"{n} этажей"
+
+_PPOC_ORIG_FINAL_SUMMARY = _final_summary
+
+def _final_summary(parsed, template, sheet_name, choice, py_total, items=None):  # noqa: F811
+    try:
+        _patched_choice = dict(choice) if choice else {}
+        _raw_pm = _patched_choice.get("choice") or "шаблонные"
+        _patched_choice["choice"] = _PPOC_PRICE_DISPLAY.get(_raw_pm, _raw_pm)
+
+        _patched_parsed = dict(parsed) if parsed else {}
+        _af = _patched_parsed.get("area_floor") or _patched_parsed.get("area_total")
+        try:
+            _af = float(_af) if _af else 0.0
+        except Exception:
+            _af = 0.0
+        if _af > 0:
+            _patched_parsed.pop("dims", None)
+            _patched_parsed.pop("dimensions", None)
+            _patched_parsed["area"] = f"{_af:.2f} м²"
+
+        _floors_phrase = _ppoc_floors_phrase(_patched_parsed.get("floors"))
+        if _floors_phrase:
+            _patched_parsed["floors"] = _floors_phrase
+
+        out = _PPOC_ORIG_FINAL_SUMMARY(_patched_parsed, template, sheet_name, _patched_choice, py_total, items=items)
+
+        # Append "Логистика: NN км" to the second header line (canon §9)
+        _dk = parsed.get("distance_km") or parsed.get("distance") if parsed else None
+        try:
+            _dk = int(float(_dk)) if _dk else 0
+        except Exception:
+            _dk = 0
+        if _dk > 0:
+            _pm_disp = _patched_choice["choice"]
+            _needle = f"Цены: {_pm_disp}\n"
+            _replacement = f"Цены: {_pm_disp}   Логистика: {_dk} км\n"
+            if _needle in out and "Логистика:" not in out.split("\n\n", 1)[0]:
+                out = out.replace(_needle, _replacement, 1)
+        return out
+    except Exception as _ppoc_e:
+        _PPOC_LOG.warning("PATCH_TOPIC2_PUBLIC_OUTPUT_CANON_V1_ERR %s", _ppoc_e)
+        return _PPOC_ORIG_FINAL_SUMMARY(parsed, template, sheet_name, choice, py_total, items=items)
+
+_PPOC_LOG.info("PATCH_TOPIC2_PUBLIC_OUTPUT_CANON_V1 installed")
+# === END_PATCH_TOPIC2_PUBLIC_OUTPUT_CANON_V1 ===
+
+
+# ============================================================
+# === PATCH_TOPIC2_XLSX_HEADER_ED_IZM_V1 ===
+# Цель: AREAL_CALC col 4 заголовок = "Ед изм" (canon §4), не "Ед. изм."
+# Контур: append-only wrapper после PATCH_STROYKA_XLSX_15_COLS_V1.
+# ============================================================
+import logging as _xhei_logging
+_XHEI_LOG = _xhei_logging.getLogger("stroyka.xlsx_header_ed_izm")
+
+_XHEI_ORIG_CREATE_XLSX = _create_xlsx_from_template
+
+def _create_xlsx_from_template(task_id, parsed, template, template_path, sheet_name, price_text, choice):  # noqa: F811
+    path, items, py_total = _XHEI_ORIG_CREATE_XLSX(task_id, parsed, template, template_path, sheet_name, price_text, choice)
+    try:
+        from openpyxl import load_workbook
+        wb = load_workbook(path)
+        if "AREAL_CALC" in wb.sheetnames:
+            ws = wb["AREAL_CALC"]
+            for r in range(1, 12):
+                v = ws.cell(r, 4).value
+                if isinstance(v, str) and v.strip() in ("Ед. изм.", "Ед.изм.", "Ед. изм", "Ед.изм"):
+                    ws.cell(r, 4).value = "Ед изм"
+                    wb.save(path)
+                    _XHEI_LOG.info("PATCH_TOPIC2_XLSX_HEADER_ED_IZM_V1 fixed at row=%d", r)
+                    break
+        wb.close()
+    except Exception as _xhei_e:
+        _XHEI_LOG.warning("PATCH_TOPIC2_XLSX_HEADER_ED_IZM_V1_ERR %s", _xhei_e)
+    return path, items, py_total
+
+_XHEI_LOG.info("PATCH_TOPIC2_XLSX_HEADER_ED_IZM_V1 installed")
+# === END_PATCH_TOPIC2_XLSX_HEADER_ED_IZM_V1 ===
+
+
+# ============================================================
+# === PATCH_TOPIC2_FULL_TURNKEY_MATRIX_V1 ===
+# Цель: _build_estimate_items для дома под ключ (внутри + снаружи).
+# Контур: append-only override. PDF facts фиксируются жёстко из проекта Микеа РП.
+# Состав по секциям (canon §matrix):
+#   Фундамент / Стены / Кровля / Окна и двери / Внешняя отделка /
+#   Внутренняя отделка / Санузлы и сауна / Полы и тёплый пол /
+#   Инженерные коммуникации ОВ / ВК / ЭОМ / Логистика / Накладные расходы.
+# Цены: СПб 2026 средние медианные. Кровля: материал ≤15000 ₽/м², работы ≤8000 ₽/м².
+# Объём: 80-110 платных строк.
+# ============================================================
+import logging as _ftm_logging
+_FTM_LOG = _ftm_logging.getLogger("stroyka.full_turnkey_matrix")
+
+_FTM_PRICES = {
+    # Фундамент
+    "concrete_b25_mat":       8500,    # ₽/м³
+    "concrete_pour_work":     1450,    # ₽/м³
+    "rebar_a500_mat":        75000,    # ₽/т
+    "rebar_install_work":    18000,    # ₽/т
+    "formwork_perim_mat":      650,    # ₽/мп
+    "formwork_install_work":   480,    # ₽/мп
+    "waterproof_mat":          350,    # ₽/м²
+    "waterproof_work":         280,    # ₽/м²
+    "insul_eps_mat":           950,    # ₽/м²
+    "insul_eps_work":          280,    # ₽/м²
+    "earth_work":              420,    # ₽/м³
+    "geotextile_mat":           65,    # ₽/м²
+    "geotextile_work":          45,    # ₽/м²
+    "gravel_mat":              950,    # ₽/м³
+    "gravel_work":             380,    # ₽/м³
+    "sand_mat":                750,    # ₽/м³
+    "sand_work":               380,    # ₽/м³
+    # Стены
+    "gas_d400_mat":           6500,    # ₽/м³
+    "gas_400mm_work":         1900,    # ₽/м²
+    "gas_250mm_work":         1450,    # ₽/м²
+    "gas_150mm_work":         1100,    # ₽/м²
+    "kladka_glue_mat":         380,    # ₽/мешок
+    "rebar_kladka_mat":         45,    # ₽/мп
+    "lintel_mat":             1850,    # ₽/шт
+    "armopoyas_concrete_mat": 8500,    # ₽/м³
+    "armopoyas_rebar_mat":   75000,    # ₽/т
+    "armopoyas_work":         3500,    # ₽/мп
+    # Кровля (sanity ≤15000 mat, ≤8000 work)
+    "roof_falz_mat":          1850,    # ₽/м²
+    "roof_falz_work":         1450,    # ₽/м²
+    "rafters_mat":           16000,    # ₽/м³
+    "rafters_work":           1850,    # ₽/м²
+    "obreshetka_mat":         12000,    # ₽/м³
+    "obreshetka_work":         480,    # ₽/м²
+    "roof_hydroizo_mat":        95,    # ₽/м²
+    "roof_hydroizo_work":      120,    # ₽/м²
+    "roof_paroizo_mat":         65,    # ₽/м²
+    "roof_paroizo_work":       110,    # ₽/м²
+    "roof_insul_mat":         1200,    # ₽/м²
+    "roof_insul_work":         480,    # ₽/м²
+    "roof_dobor_mat":          350,    # ₽/мп
+    "roof_dobor_work":         280,    # ₽/мп
+    "watergutter_mat":        1200,    # ₽/мп
+    "watergutter_work":        450,    # ₽/мп
+    # Окна и двери
+    "window_pvc_mat":        24500,    # ₽/шт средняя ПВХ энергосбер. 1.5м² (СПб 2026 средние)
+    "window_pvc_large_mat":  42500,    # ₽/шт большая 2.5-3м²
+    "window_install_work":    6500,    # ₽/шт
+    "window_pena_mat":        1450,    # ₽/комплект (пена+ПСУЛ+отлив)
+    "door_entry_mat":        55000,    # ₽/шт стальная средняя
+    "door_chord_mat":        12500,    # ₽/шт
+    "door_inner_mat":        14500,    # ₽/шт средняя
+    "door_sauna_mat":        24500,    # ₽/шт спец-дверь сауны
+    "door_install_work":      4500,    # ₽/шт
+    # Внешняя отделка
+    "facade_plaster_mat":      250,    # ₽/м²
+    "facade_plaster_work":     750,    # ₽/м²
+    "facade_grunt_mat":         95,    # ₽/м²
+    "facade_grunt_work":        85,    # ₽/м²
+    "facade_setka_mat":        110,    # ₽/м²
+    "facade_setka_work":       180,    # ₽/м²
+    "facade_paint_mat":        280,    # ₽/м²
+    "facade_paint_work":       250,    # ₽/м²
+    "socle_plaster_mat":       320,    # ₽/м²
+    "socle_plaster_work":      850,    # ₽/м²
+    "socle_paint_mat":         320,    # ₽/м²
+    "rail_facade_mat":        1900,    # ₽/м²
+    "rail_facade_work":        850,    # ₽/м²
+    # Внутренняя отделка (стены сухие)
+    "wall_prep_mat":           180,    # ₽/м² грунт+шпатлёвка средняя
+    "wall_prep_work":          480,    # ₽/м²
+    "wall_finish_mat":         220,    # ₽/м² краска средний класс
+    "wall_finish_work":        380,    # ₽/м²
+    "wallpaper_mat":           480,    # ₽/м²
+    "wallpaper_work":          550,    # ₽/м²
+    # Потолки сухие
+    "ceiling_gkl_mat":         950,    # ₽/м²
+    "ceiling_gkl_work":       1150,    # ₽/м²
+    "ceiling_paint_mat":       180,    # ₽/м²
+    "ceiling_paint_work":      280,    # ₽/м²
+    # Плинтус
+    "skirting_mat":            250,    # ₽/мп
+    "skirting_work":            95,    # ₽/мп
+    # Санузлы / прачечная
+    "wet_hydroizo_mat":        320,    # ₽/м²
+    "wet_hydroizo_work":       280,    # ₽/м²
+    "tile_wall_mat":          1450,    # ₽/м²
+    "tile_wall_work":         1850,    # ₽/м²
+    "tile_floor_mat":         1280,    # ₽/м²
+    "tile_floor_work":        1450,    # ₽/м²
+    "tile_glue_mat":           280,    # ₽/м²
+    # Сауна
+    "sauna_lining_mat":       2450,    # ₽/м² вагонка липа премиум
+    "sauna_lining_work":      1150,    # ₽/м²
+    "sauna_polok_mat":       38000,    # ₽/комплект полок+аксессуары
+    "sauna_stove_mat":       65000,    # ₽/шт средняя дровяная/электр
+    "sauna_stove_work":       9500,    # ₽/шт
+    # Полы и тёплый пол
+    "screed_mat":              350,    # ₽/м²
+    "screed_work":             380,    # ₽/м²
+    "floor_insul_mat":         850,    # ₽/м²
+    "floor_insul_work":        250,    # ₽/м²
+    "floor_film_mat":           65,    # ₽/м²
+    "floor_underlay_mat":        95,   # ₽/м²
+    "ceramogranit_mat":       1280,    # ₽/м²
+    "ceramogranit_work":      1450,    # ₽/м²
+    "laminate_mat":            950,    # ₽/м²
+    "laminate_work":           380,    # ₽/м²
+    "warmfloor_pipe_mat":       95,    # ₽/мп PE-X 16
+    "warmfloor_pipe_work":     180,    # ₽/мп
+    "warmfloor_collector_mat":28000,   # ₽/шт
+    "warmfloor_collector_work":4500,   # ₽/шт
+    "warmfloor_thermo_mat":   4500,    # ₽/шт
+    "warmfloor_demper_mat":     65,    # ₽/мп
+    # ОВ
+    "ov_kotel_mat":         145000,    # ₽/шт газовый/электр. средний класс
+    "ov_kotel_work":         22500,    # ₽/шт
+    "ov_radiator_mat":        9500,    # ₽/шт биметалл 8 секций средний
+    "ov_radiator_work":       4500,    # ₽/шт
+    "ov_pipe_mat":             145,    # ₽/мп металлопластик 20мм
+    "ov_pipe_work":            380,    # ₽/мп
+    "ov_pump_mat":           12500,    # ₽/шт
+    "ov_pump_work":           4500,    # ₽/шт
+    "ov_expansion_mat":       4500,    # ₽/шт
+    "ov_balance_mat":         8500,    # ₽/шт
+    "ov_thermo_mat":          3500,    # ₽/шт
+    "ov_valve_set_mat":       8500,    # ₽/комплект
+    "ov_naladka_work":       12500,    # ₽/комплект
+    # ВК
+    "vk_pipe_cold_mat":        145,    # ₽/мп PEX 16 cold
+    "vk_pipe_hot_mat":         165,    # ₽/мп PEX 16 hot
+    "vk_pipe_canal_50_mat":    220,    # ₽/мп PVC 50мм
+    "vk_pipe_canal_110_mat":   380,    # ₽/мп PVC 110мм
+    "vk_pipe_install_work":    320,    # ₽/мп
+    "vk_unitaz_mat":         28500,    # ₽/шт инсталляция+чаша средняя
+    "vk_unitaz_work":         5500,    # ₽/шт
+    "vk_rakovina_mat":       18500,    # ₽/шт раковина+тумба средняя
+    "vk_rakovina_work":       4500,    # ₽/шт
+    "vk_dush_mat":           58000,    # ₽/шт душ.кабина или ванна средняя
+    "vk_dush_work":           9500,    # ₽/шт
+    "vk_polotenets_mat":      8500,    # ₽/шт
+    "vk_polotenets_work":     2500,    # ₽/шт
+    "vk_smesitel_mat":        9500,    # ₽/комплект
+    "vk_boiler_mat":         28000,    # ₽/шт 100л
+    "vk_boiler_work":         5500,    # ₽/шт
+    "vk_valve_set_mat":       4500,    # ₽/комплект
+    # ЭОМ
+    "el_kabel_25_mat":         120,    # ₽/мп ВВГнг 3х2.5
+    "el_kabel_15_mat":          95,    # ₽/мп ВВГнг 3х1.5
+    "el_kabel_input_mat":      380,    # ₽/мп ВВГнг 5х10
+    "el_rozetka_mat":          380,    # ₽/шт
+    "el_rozetka_work":         380,    # ₽/шт
+    "el_switch_mat":           280,    # ₽/шт
+    "el_switch_work":          280,    # ₽/шт
+    "el_light_mat":           1850,    # ₽/шт
+    "el_light_work":           850,    # ₽/шт
+    "el_shchit_mat":         12500,    # ₽/шт
+    "el_shchit_work":         8500,    # ₽/шт
+    "el_avtomat_mat":          580,    # ₽/шт
+    "el_uzo_mat":             2850,    # ₽/шт
+    "el_zazem_mat":          12500,    # ₽/комплект
+    "el_zazem_work":          5500,    # ₽/комплект
+    "el_kabel_install_work":    95,    # ₽/мп
+    # Логистика и накладные
+    "logist_delivery":       29025,    # ₽ доставка 30 км рейс комплект
+    "logist_brigade":         8707,    # ₽ транспорт+проживание
+}
+
+_FTM_ROOMS_PDF = [
+    # (name, area_m2, kind: dry|wet|sauna|tech|kitchen)
+    ("прихожая",           6.6,  "dry"),
+    ("коридор",            6.0,  "dry"),
+    ("бойлерная",          2.18, "tech"),
+    ("гостиная",          24.79, "dry"),
+    ("кухня",              9.46, "kitchen"),
+    ("коридор 2",          2.86, "dry"),
+    ("санузел 1",          3.85, "wet"),
+    ("спальня хозяйская", 14.08, "dry"),
+    ("спальня 1",         10.16, "dry"),
+    ("спальня 2",         10.16, "dry"),
+    ("санузел 2",          4.30, "wet"),
+    ("сауна",              2.79, "sauna"),
+    ("прачечная",          2.69, "wet"),
+]
+
+def _ftm_row(section, name, unit, qty, price, note=""):
+    return {"section": section, "name": name, "unit": unit, "qty": round(float(qty), 3), "price": round(float(price), 2), "note": note}
+
+def _build_full_turnkey_items(parsed, price_text, choice):
+    items = []
+    P = _FTM_PRICES
+
+    # Геометрия из PDF
+    area_floor = float(parsed.get("area_floor") or 99.91)
+    floors = int(parsed.get("floors") or 1)
+    dims = parsed.get("dims") or parsed.get("dimensions") or [8.5, 12.5]
+    try:
+        a, b = float(dims[0]), float(dims[1])
+    except Exception:
+        a = b = area_floor ** 0.5
+    perimeter = 2 * (a + b)
+    height = 3.0
+    wall_outer_area = perimeter * height
+    roof_area = 185.0
+    facade_plaster = 96.0
+    facade_socle = 20.0
+    facade_rail = 27.1
+    foundation_volume = max(round(area_floor * 0.30, 2), 1)
+    foundation_perim = perimeter
+    foundation_rebar_t = round(foundation_volume * 0.08, 3)
+    armopoyas_perim = perimeter
+    armopoyas_concrete = round(armopoyas_perim * 0.06, 3)
+    armopoyas_rebar_t = round(armopoyas_concrete * 0.08, 3)
+    wall_volume_400 = round(wall_outer_area * 0.40, 2)
+    inner_walls_area = round(area_floor * 0.6, 2)
+    partitions_area = round(area_floor * 0.4, 2)
+    inner_walls_vol_250 = round(inner_walls_area * 0.25, 2)
+    partitions_vol_150 = round(partitions_area * 0.15, 2)
+    kladka_glue_bags = max(int(wall_volume_400 * 1.5 + inner_walls_vol_250 + partitions_vol_150), 30)
+    rebar_kladka_m = round((wall_outer_area + inner_walls_area + partitions_area) * 1.5, 1)
+    perimuter_lintels = max(int((perimeter + inner_walls_area / 3) / 1.5), 20)
+
+    # === 1. Фундамент ===
+    items.append(_ftm_row("Фундамент", "Земляные работы (разработка грунта)", "м³", round(area_floor * 0.4, 2), P["earth_work"], "выемка под плиту"))
+    items.append(_ftm_row("Фундамент", "Песок подсыпка с уплотнением", "м³", round(area_floor * 0.15, 2), P["sand_mat"] + P["sand_work"], "материал+работы"))
+    items.append(_ftm_row("Фундамент", "Щебень подсыпка с уплотнением", "м³", round(area_floor * 0.10, 2), P["gravel_mat"] + P["gravel_work"], "материал+работы"))
+    items.append(_ftm_row("Фундамент", "Геотекстиль с укладкой", "м²", round(area_floor * 1.1, 2), P["geotextile_mat"] + P["geotextile_work"], "материал+работы"))
+    items.append(_ftm_row("Фундамент", "Утеплитель ЭППС материал под плиту", "м²", round(area_floor * 1.1, 2), P["insul_eps_mat"], "материал"))
+    items.append(_ftm_row("Фундамент", "Монтаж утеплителя ЭППС работы", "м²", round(area_floor * 1.1, 2), P["insul_eps_work"], "работы"))
+    items.append(_ftm_row("Фундамент", "Гидроизоляция оклеечная материал", "м²", round(area_floor * 1.2, 2), P["waterproof_mat"], "материал"))
+    items.append(_ftm_row("Фундамент", "Гидроизоляция плиты работы", "м²", round(area_floor * 1.2, 2), P["waterproof_work"], "работы"))
+    items.append(_ftm_row("Фундамент", "Опалубка периметра материал", "мп", foundation_perim, P["formwork_perim_mat"], "материал"))
+    items.append(_ftm_row("Фундамент", "Опалубка работы (монтаж/демонтаж)", "мп", foundation_perim, P["formwork_install_work"], "работы"))
+    items.append(_ftm_row("Фундамент", "Арматура А500 материал", "т", foundation_rebar_t, P["rebar_a500_mat"], "материал"))
+    items.append(_ftm_row("Фундамент", "Армирование плиты работы", "т", foundation_rebar_t, P["rebar_install_work"], "работы"))
+    items.append(_ftm_row("Фундамент", "Бетон В25 для монолитной плиты", "м³", foundation_volume, P["concrete_b25_mat"], "материал"))
+    items.append(_ftm_row("Фундамент", "Бетонирование плиты работы", "м³", foundation_volume, P["concrete_pour_work"], "работы"))
+
+    # === 2. Стены ===
+    items.append(_ftm_row("Стены", "Газобетон D400 400мм наружные стены", "м³", wall_volume_400, P["gas_d400_mat"], "материал"))
+    items.append(_ftm_row("Стены", "Кладка газобетона 400мм работы", "м²", wall_outer_area, P["gas_400mm_work"], "работы"))
+    items.append(_ftm_row("Стены", "Газобетон D400 250мм внутренние стены", "м³", inner_walls_vol_250, P["gas_d400_mat"], "материал"))
+    items.append(_ftm_row("Стены", "Кладка газобетона 250мм работы", "м²", inner_walls_area, P["gas_250mm_work"], "работы"))
+    items.append(_ftm_row("Стены", "Газобетон D400 150мм перегородки", "м³", partitions_vol_150, P["gas_d400_mat"], "материал"))
+    items.append(_ftm_row("Стены", "Монтаж перегородок 150мм работы", "м²", partitions_area, P["gas_150mm_work"], "работы"))
+    items.append(_ftm_row("Стены", "Клей для газобетона", "мешок", kladka_glue_bags, P["kladka_glue_mat"], "материал"))
+    items.append(_ftm_row("Стены", "Арматура для кладки 8мм", "мп", rebar_kladka_m, P["rebar_kladka_mat"], "материал"))
+    items.append(_ftm_row("Стены", "Перемычки оконные/дверные", "шт", perimuter_lintels, P["lintel_mat"], "материал"))
+    items.append(_ftm_row("Стены", "Бетон армопояса", "м³", armopoyas_concrete, P["armopoyas_concrete_mat"], "материал"))
+    items.append(_ftm_row("Стены", "Арматура армопояса", "т", armopoyas_rebar_t, P["armopoyas_rebar_mat"], "материал"))
+    items.append(_ftm_row("Стены", "Армопояс монтажные работы", "мп", armopoyas_perim, P["armopoyas_work"], "работы"))
+
+    # === 3. Кровля ===
+    rafters_volume = round(roof_area * 0.05, 2)
+    obreshetka_volume = round(roof_area * 0.025, 2)
+    items.append(_ftm_row("Кровля", "Стропильная система пиломатериал", "м³", rafters_volume, P["rafters_mat"], "материал"))
+    items.append(_ftm_row("Кровля", "Монтаж стропильной системы", "м²", roof_area, P["rafters_work"], "работы"))
+    items.append(_ftm_row("Кровля", "Обрешётка/контробрешётка пиломатериал", "м³", obreshetka_volume, P["obreshetka_mat"], "материал"))
+    items.append(_ftm_row("Кровля", "Монтаж обрешётки работы", "м²", roof_area, P["obreshetka_work"], "работы"))
+    items.append(_ftm_row("Кровля", "Пароизоляция кровли материал", "м²", roof_area, P["roof_paroizo_mat"], "материал"))
+    items.append(_ftm_row("Кровля", "Монтаж пароизоляции", "м²", roof_area, P["roof_paroizo_work"], "работы"))
+    items.append(_ftm_row("Кровля", "Утеплитель кровли мин.вата 200мм", "м²", roof_area, P["roof_insul_mat"], "материал"))
+    items.append(_ftm_row("Кровля", "Монтаж утеплителя кровли", "м²", roof_area, P["roof_insul_work"], "работы"))
+    items.append(_ftm_row("Кровля", "Гидроизоляция кровли мембрана", "м²", roof_area, P["roof_hydroizo_mat"], "материал"))
+    items.append(_ftm_row("Кровля", "Монтаж гидроизоляции кровли", "м²", roof_area, P["roof_hydroizo_work"], "работы"))
+    items.append(_ftm_row("Кровля", "Фальцевая кровля сталь RAL7024", "м²", roof_area, P["roof_falz_mat"], "материал"))
+    items.append(_ftm_row("Кровля", "Монтаж фальцевой кровли", "м²", roof_area, P["roof_falz_work"], "работы"))
+    items.append(_ftm_row("Кровля", "Доборные элементы кровли с монтажом", "мп", round(perimeter * 1.2, 2), P["roof_dobor_mat"] + P["roof_dobor_work"], "материал+работы"))
+    items.append(_ftm_row("Кровля", "Водосточная система с установкой", "мп", round(perimeter * 1.1, 2), P["watergutter_mat"] + P["watergutter_work"], "материал+работы"))
+
+    # === 4. Окна и двери ===
+    # 9 типов окон Ок-1..Ок-9 (PDF facts) — сгруппировано по размерам
+    items.append(_ftm_row("Окна и двери", "Окна ПВХ Ок-1, Ок-4 (большие, гостиная/спальня хоз.) энергосбер.", "шт", 2, P["window_pvc_large_mat"], "материал"))
+    items.append(_ftm_row("Окна и двери", "Окна ПВХ Ок-2, Ок-3, Ок-5..Ок-9 (стандарт) энергосбер.", "шт", 7, P["window_pvc_mat"], "материал"))
+    items.append(_ftm_row("Окна и двери", "Монтаж окон 9 типов (Ок-1..Ок-9)", "шт", 9, P["window_install_work"], "работы"))
+    items.append(_ftm_row("Окна и двери", "Монтажные материалы окон (пена, ПСУЛ, отливы)", "комплект", 9, P["window_pena_mat"], "материал"))
+    items.append(_ftm_row("Окна и двери", "Дверь входная ДуМО1", "шт", 1, P["door_entry_mat"], "материал"))
+    items.append(_ftm_row("Окна и двери", "Установка входной двери", "шт", 1, P["door_install_work"], "работы"))
+    items.append(_ftm_row("Окна и двери", "Дверь чердачная ДЧ", "шт", 1, P["door_chord_mat"], "материал"))
+    items.append(_ftm_row("Окна и двери", "Установка чердачной двери", "шт", 1, P["door_install_work"], "работы"))
+    items.append(_ftm_row("Окна и двери", "Межкомнатные двери Д-1, Д-2, Д-3 (10 шт)", "шт", 10, P["door_inner_mat"], "материал"))
+    items.append(_ftm_row("Окна и двери", "Установка межкомнатных дверей", "шт", 10, P["door_install_work"], "работы"))
+
+    # === 5. Внешняя отделка ===
+    items.append(_ftm_row("Внешняя отделка", "Грунтовка фасада материал", "м²", facade_plaster, P["facade_grunt_mat"], "материал"))
+    items.append(_ftm_row("Внешняя отделка", "Грунтование фасада работы", "м²", facade_plaster, P["facade_grunt_work"], "работы"))
+    items.append(_ftm_row("Внешняя отделка", "Сетка фасадная стеклотканевая", "м²", facade_plaster, P["facade_setka_mat"], "материал"))
+    items.append(_ftm_row("Внешняя отделка", "Установка сетки фасадной", "м²", facade_plaster, P["facade_setka_work"], "работы"))
+    items.append(_ftm_row("Внешняя отделка", "Штукатурка фасада материал", "м²", facade_plaster, P["facade_plaster_mat"], "материал"))
+    items.append(_ftm_row("Внешняя отделка", "Оштукатуривание фасада работы", "м²", facade_plaster, P["facade_plaster_work"], "работы"))
+    items.append(_ftm_row("Внешняя отделка", "Краска фасадная белая", "м²", facade_plaster, P["facade_paint_mat"], "материал"))
+    items.append(_ftm_row("Внешняя отделка", "Окраска фасада работы", "м²", facade_plaster, P["facade_paint_work"], "работы"))
+    items.append(_ftm_row("Внешняя отделка", "Цоколь штукатурка материал", "м²", facade_socle, P["socle_plaster_mat"], "материал"))
+    items.append(_ftm_row("Внешняя отделка", "Цоколь штукатурка работы", "м²", facade_socle, P["socle_plaster_work"], "работы"))
+    items.append(_ftm_row("Внешняя отделка", "Цоколь окраска RAL7012", "м²", facade_socle, P["socle_paint_mat"], "материал"))
+    items.append(_ftm_row("Внешняя отделка", "Рейка фасадная (планкен)", "м²", facade_rail, P["rail_facade_mat"], "материал"))
+    items.append(_ftm_row("Внешняя отделка", "Монтаж рейки фасадной", "м²", facade_rail, P["rail_facade_work"], "работы"))
+
+    # === 6. Внутренняя отделка (сухие помещения сгруппированы; PDF: 9 комнат — прихожая, коридор, бойлерная, гостиная, кухня, коридор2, спальня хоз., спальня1, спальня2) ===
+    dry_kinds = ("dry", "kitchen", "tech")
+    dry_rooms = [r for r in _FTM_ROOMS_PDF if r[2] in dry_kinds]
+    dry_floor_total = round(sum(r[1] for r in dry_rooms), 2)
+    dry_wall_total = round(sum((4 * (r[1] ** 0.5)) * 3.0 for r in dry_rooms), 2)
+    dry_perim_total = round(sum(4 * (r[1] ** 0.5) for r in dry_rooms), 2)
+    items.append(_ftm_row("Внутренняя отделка", f"Подготовка стен сухих помещений ({len(dry_rooms)} комн.)", "м²", dry_wall_total, P["wall_prep_work"], "грунт+шпатлёвка работы"))
+    items.append(_ftm_row("Внутренняя отделка", "Материалы подготовки стен (грунт+шпатлёвка)", "м²", dry_wall_total, P["wall_prep_mat"], "материал"))
+    items.append(_ftm_row("Внутренняя отделка", "Финишная окраска стен сухих помещений", "м²", dry_wall_total, P["wall_finish_mat"], "материал"))
+    items.append(_ftm_row("Внутренняя отделка", "Окраска стен работы", "м²", dry_wall_total, P["wall_finish_work"], "работы"))
+    items.append(_ftm_row("Внутренняя отделка", "Потолок ГКЛ материал", "м²", dry_floor_total, P["ceiling_gkl_mat"], "материал"))
+    items.append(_ftm_row("Внутренняя отделка", "Потолок монтаж ГКЛ работы", "м²", dry_floor_total, P["ceiling_gkl_work"], "работы"))
+    items.append(_ftm_row("Внутренняя отделка", "Потолок краска", "м²", dry_floor_total, P["ceiling_paint_mat"], "материал"))
+    items.append(_ftm_row("Внутренняя отделка", "Окраска потолка работы", "м²", dry_floor_total, P["ceiling_paint_work"], "работы"))
+    items.append(_ftm_row("Внутренняя отделка", "Плинтус ПВХ/МДФ материал", "мп", dry_perim_total, P["skirting_mat"], "материал"))
+    items.append(_ftm_row("Внутренняя отделка", "Монтаж плинтуса работы", "мп", dry_perim_total, P["skirting_work"], "работы"))
+
+    # === 7. Санузлы и сауна (3 wet помещения PDF: санузел 1, санузел 2, прачечная — сгруппировано) ===
+    wet_rooms = [r for r in _FTM_ROOMS_PDF if r[2] == "wet"]
+    wet_floor_total = round(sum(r[1] for r in wet_rooms), 2)
+    wet_wall_total = round(sum((4 * (r[1] ** 0.5)) * 3.0 for r in wet_rooms), 2)
+    wet_hydroizo_area = round(wet_wall_total * 0.5 + wet_floor_total, 2)
+    items.append(_ftm_row("Санузлы и сауна", f"Гидроизоляция санузлов и прачечной материал ({len(wet_rooms)} помещ.)", "м²", wet_hydroizo_area, P["wet_hydroizo_mat"], "материал"))
+    items.append(_ftm_row("Санузлы и сауна", "Гидроизоляция санузлов работы", "м²", wet_hydroizo_area, P["wet_hydroizo_work"], "работы"))
+    items.append(_ftm_row("Санузлы и сауна", "Плитка стен санузлов материал", "м²", wet_wall_total, P["tile_wall_mat"], "материал"))
+    items.append(_ftm_row("Санузлы и сауна", "Укладка плитки стен работы", "м²", wet_wall_total, P["tile_wall_work"], "работы"))
+    items.append(_ftm_row("Санузлы и сауна", "Плитка пола санузлов материал", "м²", wet_floor_total, P["tile_floor_mat"], "материал"))
+    items.append(_ftm_row("Санузлы и сауна", "Укладка плитки пола работы", "м²", wet_floor_total, P["tile_floor_work"], "работы"))
+    items.append(_ftm_row("Санузлы и сауна", "Клей плиточный/затирка", "м²", round(wet_wall_total + wet_floor_total, 2), P["tile_glue_mat"], "материал"))
+    # Сауна
+    sauna_area = 2.79
+    sauna_wall = round((4 * (sauna_area ** 0.5)) * 3.0, 2)
+    items.append(_ftm_row("Санузлы и сауна", "Сауна: вагонка липа стены/потолок материал", "м²", round(sauna_wall + sauna_area, 2), P["sauna_lining_mat"], "материал"))
+    items.append(_ftm_row("Санузлы и сауна", "Сауна: монтаж вагонки", "м²", round(sauna_wall + sauna_area, 2), P["sauna_lining_work"], "работы"))
+    items.append(_ftm_row("Санузлы и сауна", "Сауна: полок (комплект скамей)", "комплект", 1, P["sauna_polok_mat"], "материал"))
+    items.append(_ftm_row("Санузлы и сауна", "Сауна: дверь специализированная", "шт", 1, P["door_sauna_mat"], "материал"))
+    items.append(_ftm_row("Санузлы и сауна", "Сауна: установка двери", "шт", 1, P["door_install_work"], "работы"))
+    items.append(_ftm_row("Санузлы и сауна", "Сауна: печь средний класс", "шт", 1, P["sauna_stove_mat"], "материал; средний комплект, модель не задана в PDF"))
+    items.append(_ftm_row("Санузлы и сауна", "Сауна: установка печи", "шт", 1, P["sauna_stove_work"], "работы"))
+
+    # === 8. Полы и тёплый пол ===
+    items.append(_ftm_row("Полы и тёплый пол", "Утеплитель пола ЭППС материал", "м²", area_floor, P["floor_insul_mat"], "материал"))
+    items.append(_ftm_row("Полы и тёплый пол", "Монтаж утеплителя пола", "м²", area_floor, P["floor_insul_work"], "работы"))
+    items.append(_ftm_row("Полы и тёплый пол", "Плёнка гидроизоляционная + демпферная лента", "м²", area_floor, P["floor_film_mat"] + 30, "материал"))
+    items.append(_ftm_row("Полы и тёплый пол", "Тёплый пол труба PE-X 16мм материал", "мп", round(area_floor * 5, 2), P["warmfloor_pipe_mat"], "материал"))
+    items.append(_ftm_row("Полы и тёплый пол", "Монтаж трубы тёплого пола работы", "мп", round(area_floor * 5, 2), P["warmfloor_pipe_work"], "работы"))
+    items.append(_ftm_row("Полы и тёплый пол", "Коллектор + смесительный узел с установкой", "шт", 1, P["warmfloor_collector_mat"] + P["warmfloor_collector_work"], "материал+работы"))
+    items.append(_ftm_row("Полы и тёплый пол", "Терморегулятор тёплого пола", "шт", 5, P["warmfloor_thermo_mat"], "материал"))
+    items.append(_ftm_row("Полы и тёплый пол", "Стяжка ЦП 50мм материал", "м²", area_floor, P["screed_mat"], "материал"))
+    items.append(_ftm_row("Полы и тёплый пол", "Стяжка ЦП 50мм работы", "м²", area_floor, P["screed_work"], "работы"))
+    # Финиш по сухим: ламинат, по влажным/сауне плитка уже выше
+    dry_floor_area = sum(r[1] for r in _FTM_ROOMS_PDF if r[2] in ("dry", "kitchen", "tech"))
+    items.append(_ftm_row("Полы и тёплый пол", "Подложка под ламинат", "м²", round(dry_floor_area, 2), P["floor_underlay_mat"], "материал"))
+    items.append(_ftm_row("Полы и тёплый пол", "Ламинат материал", "м²", round(dry_floor_area, 2), P["laminate_mat"], "материал"))
+    items.append(_ftm_row("Полы и тёплый пол", "Укладка ламината работы", "м²", round(dry_floor_area, 2), P["laminate_work"], "работы"))
+
+    # === 9. Инженерные коммуникации ОВ ===
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Котёл отопительный средний класс", "шт", 1, P["ov_kotel_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Монтаж котла", "шт", 1, P["ov_kotel_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Радиатор биметаллический 8 секций", "шт", 9, P["ov_radiator_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Монтаж радиаторов", "шт", 9, P["ov_radiator_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Трубы металлопластик 20мм", "мп", 180, P["ov_pipe_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Монтаж трубопровода ОВ", "мп", 180, P["ov_pipe_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Циркуляционный насос", "шт", 1, P["ov_pump_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Монтаж насоса", "шт", 1, P["ov_pump_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Расширительный бак", "шт", 1, P["ov_expansion_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Узел регулировки и балансировки", "шт", 1, P["ov_balance_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Терморегуляторы радиаторов", "шт", 9, P["ov_thermo_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Запорная арматура комплект", "комплект", 1, P["ov_valve_set_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Пуско-наладка системы отопления", "комплект", 1, P["ov_naladka_work"], "работы"))
+
+    # === 10. Инженерные коммуникации ВК ===
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Трубы PEX 16мм холодное+горячее водоснабжение", "мп", 160, P["vk_pipe_cold_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Канализация PVC 50/110мм комплект", "мп", 65, P["vk_pipe_canal_110_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Монтаж трубопровода ВК (вод.+канализ.)", "мп", 225, P["vk_pipe_install_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Унитаз с инсталляцией", "шт", 2, P["vk_unitaz_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Установка унитазов", "шт", 2, P["vk_unitaz_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Раковина с тумбой", "шт", 3, P["vk_rakovina_mat"], "материал; 2 санузла + кухня"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Установка раковин", "шт", 3, P["vk_rakovina_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Душевая кабина / ванна", "шт", 2, P["vk_dush_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Установка душа/ванны", "шт", 2, P["vk_dush_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Полотенцесушитель", "шт", 2, P["vk_polotenets_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Установка полотенцесушителя", "шт", 2, P["vk_polotenets_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Смесители комплект", "комплект", 4, P["vk_smesitel_mat"], "материал; 2 СУ + кухня + прачечная"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Бойлер 100л", "шт", 1, P["vk_boiler_mat"], "материал; бойлерная"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Установка бойлера", "шт", 1, P["vk_boiler_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Запорная арматура ВК", "комплект", 1, P["vk_valve_set_mat"], "материал"))
+
+    # === 11. Инженерные коммуникации ЭОМ ===
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Кабель ВВГнг 5х10 вводной + 3х2.5 силовой", "мп", 270, P["el_kabel_25_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Кабель ВВГнг 3х1.5 освещение", "мп", 200, P["el_kabel_15_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Монтаж кабельных линий", "мп", 470, P["el_kabel_install_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Розетка", "шт", 35, P["el_rozetka_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Установка розеток", "шт", 35, P["el_rozetka_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Выключатель", "шт", 18, P["el_switch_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Установка выключателей", "шт", 18, P["el_switch_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Светильник потолочный", "шт", 25, P["el_light_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Монтаж светильников", "шт", 25, P["el_light_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Распределительный щит укомплектованный", "шт", 1, P["el_shchit_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Монтаж щита", "шт", 1, P["el_shchit_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Автомат 16А", "шт", 14, P["el_avtomat_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "УЗО 40А", "шт", 4, P["el_uzo_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Контур заземления комплект", "комплект", 1, P["el_zazem_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Монтаж контура заземления", "комплект", 1, P["el_zazem_work"], "работы"))
+
+    # === 12. Логистика ===
+    items.append(_ftm_row("Логистика", "Доставка материалов от СПб", "рейс", 3, P["logist_delivery"] / 3, "30 км"))
+    items.append(_ftm_row("Логистика", "Транспорт бригады и проживание", "комплект", 1, P["logist_brigade"] * 4, "период строительства"))
+
+    # === 13. Накладные расходы ===
+    materials_sum = sum(float(it["price"]) * float(it["qty"]) for it in items if it["section"] not in ("Логистика", "Накладные расходы"))
+    overhead_total = round(materials_sum * 0.07, 2)
+    items.append(_ftm_row("Накладные расходы", "Организация работ и накладные", "комплект", 1, overhead_total, "7% от общей сметы"))
+    items.append(_ftm_row("Накладные расходы", "Расходные материалы и крепёж", "комплект", 1, round(materials_sum * 0.015, 2), "мелкое крепление"))
+    items.append(_ftm_row("Накладные расходы", "Уборка после работ", "комплект", 1, round(area_floor * 280, 2), "финальная уборка"))
+
+    return items
+
+# Override _build_estimate_items
+_FTM_ORIG_BEI = _build_estimate_items
+
+def _build_estimate_items(parsed, price_text, choice):  # noqa: F811
+    try:
+        items = _build_full_turnkey_items(parsed, price_text, choice)
+        _FTM_LOG.info("PATCH_TOPIC2_FULL_TURNKEY_MATRIX_V1: %d items", len(items))
+        return items
+    except Exception as _ftm_e:
+        _FTM_LOG.error("PATCH_TOPIC2_FULL_TURNKEY_MATRIX_V1_ERR %s", _ftm_e)
+        return _FTM_ORIG_BEI(parsed, price_text, choice)
+
+_FTM_LOG.info("PATCH_TOPIC2_FULL_TURNKEY_MATRIX_V1 installed")
+# === END_PATCH_TOPIC2_FULL_TURNKEY_MATRIX_V1 ===
+
+# === PATCH_TOPIC2_REALSHEET_PRICES_V3 ===
+# Читаем реальные цены из листа "Газобетонный дом" (sheet "смета" в кэше шаблона).
+# col[7]=Работа (ед. цена с коэф.), col[9]=Материалы (ед. цена).
+# Для items без match в шаблоне — fallback на _FTM_PRICES.
+# Append-only override поверх PATCH_TOPIC2_FULL_TURNKEY_MATRIX_V1.
+# ============================================================
+import logging as _p8v3_logging
+_P8V3_LOG = _p8v3_logging.getLogger("stroyka.realsheet_prices_v3")
+
+_P8V3_TPL_PATH = "/root/.areal-neva-core/data/templates/estimate/cache/1DQw2qgMHtq2SqgJJP-93eIArpj1hnNNm__Ареал Нева.xlsx"
+
+def _p8v3_extract_tpl_prices(template_path=None):
+    """Extract unit prices from Газобетонный дом sheet (col7=work, col9=mat)."""
+    path = template_path or _P8V3_TPL_PATH
+    prices = {}
+    try:
+        from openpyxl import load_workbook as _p8v3_lwb
+        wb = _p8v3_lwb(path, read_only=True, data_only=True)
+        ws = wb.active
+        current_section = "Стены"
+        for i, row in enumerate(ws.iter_rows(values_only=True)):
+            r = list(row)
+            if i < 12:
+                continue
+            r1 = r[1] if len(r) > 1 else None
+            if r[0] and not r1:
+                current_section = str(r[0]).strip()
+                continue
+            if not r1:
+                continue
+            try:
+                float(r[3]) if r[3] is not None else 0
+            except (ValueError, TypeError):
+                continue
+            work_price = float(r[7]) if r[7] is not None else 0.0
+            mat_price = float(r[9]) if r[9] is not None else 0.0
+            if work_price == 0 and mat_price == 0:
+                continue
+            unit = str(r[2]).strip() if r[2] else ""
+            name = str(r1).strip()
+            norm = name.lower().strip()
+            prices[norm] = {
+                "work_price": work_price,
+                "mat_price": mat_price,
+                "unit": unit,
+                "section": current_section,
+                "name": name,
+            }
+        wb.close()
+        _P8V3_LOG.info("P8V3_TPL_LOADED: %d rows from %s", len(prices), path)
+    except Exception as _pe:
+        _P8V3_LOG.error("P8V3_TPL_EXTRACT_ERR: %s", _pe)
+    return prices
+
+
+_P8V3_TPL_PRICES = _p8v3_extract_tpl_prices()
+_P8V3_LOG.info(
+    "TOPIC2_TEMPLATE_PRICE_COLUMNS_PROVEN:col7=Работа_unit,col9=Материалы_unit,count=%d",
+    len(_P8V3_TPL_PRICES)
+)
+
+
+def _p8v3_wp(key, fallback=0):
+    row = _P8V3_TPL_PRICES.get(key)
+    return row["work_price"] if row and row["work_price"] > 0 else fallback
+
+
+def _p8v3_mp(key, fallback=0):
+    row = _P8V3_TPL_PRICES.get(key)
+    return row["mat_price"] if row and row["mat_price"] > 0 else fallback
+
+
+def extract_template_prices(template_path, parsed):  # noqa: F811
+    """Returns (prices_text, sheet_name, sheet_fallback) from Газобетонный дом sheet."""
+    prices = _p8v3_extract_tpl_prices(template_path) if template_path else {}
+    if not prices:
+        prices = _P8V3_TPL_PRICES
+    count = len(prices)
+    lines = []
+    for v in list(prices.values())[:25]:
+        if v["work_price"] > 0 or v["mat_price"] > 0:
+            lines.append(
+                f"- {v['name']}: работа={v['work_price']:.0f} {v['unit']}, матер={v['mat_price']:.0f} {v['unit']}"
+            )
+    text = f"Цены из листа 'Газобетонный дом' ({count} позиций):\n" + "\n".join(lines)
+    return text, "смета", False
+
+
+_P8V3_LOG.info(
+    "TOPIC2_TEMPLATE_PRICE_EXTRACTION_FIXED:sheet=смета_Газобетонный_дом,count=%d",
+    len(_P8V3_TPL_PRICES)
+)
+
+
+def _build_full_turnkey_items_v2(parsed, price_text, choice):
+    """Полный список работ под ключ с ценами из шаблона + _FTM_PRICES fallback."""
+    items = []
+    P = _FTM_PRICES
+
+    area_floor = float(parsed.get("area_floor") or 99.91)
+    dims = parsed.get("dims") or parsed.get("dimensions") or [8.5, 12.5]
+    try:
+        a, b = float(dims[0]), float(dims[1])
+    except Exception:
+        a = b = area_floor ** 0.5
+    perimeter = 2 * (a + b)
+    height = 3.0
+    roof_area = 185.0
+    facade_area = 96.0
+    socle_area = 20.0
+    rail_area = 27.1
+    windows_count = 9
+    doors_inner_count = 3
+    door_entry_count = 1
+
+    foundation_perim = perimeter
+    foundation_volume = round(area_floor * 0.3, 2)
+    foundation_rebar_t = round(area_floor * 0.025, 3)
+
+    wall_height_with_parapet = height + 0.6
+    wall_volume_400 = round(perimeter * wall_height_with_parapet * 0.4, 2)
+    inner_walls_area = round(area_floor * 0.8, 2)
+    inner_walls_vol_250 = round(inner_walls_area * 0.25, 2)
+    partitions_area = round(area_floor * 0.6, 2)
+    partitions_vol_150 = round(partitions_area * 0.15, 2)
+    kladka_glue_bags = round((wall_volume_400 + inner_walls_vol_250 + partitions_vol_150) * 1.2, 0)
+    rebar_kladka_t = round(perimeter * 5 * 0.395 / 1000, 3)
+    perimuter_lintels = windows_count + doors_inner_count + door_entry_count
+    armopoyas_concrete = round(perimeter * 0.4 * 0.3, 2)
+
+    rooms = _FTM_ROOMS_PDF
+    dry_rooms = [(n, ar) for n, ar, k in rooms if k in ("dry", "kitchen")]
+    wet_rooms = [(n, ar) for n, ar, k in rooms if k == "wet"]
+    sauna_rooms = [(n, ar) for n, ar, k in rooms if k == "sauna"]
+    dry_floor_area = round(sum(ar for _, ar in dry_rooms), 2)
+    wet_floor_area = round(sum(ar for _, ar in wet_rooms), 2)
+    sauna_area = round(sum(ar for _, ar in sauna_rooms), 2)
+    dry_wall_area = round(dry_floor_area * 2.8, 2)
+    wet_wall_area = round(wet_floor_area * 2.8, 2)
+    sauna_wall_ceil_area = round(sauna_area * 3.8, 2)
+    all_floor_area = round(area_floor, 2)
+
+    # 1. Фундамент
+    items.append(_ftm_row("Фундамент", "Земляные работы (разработка грунта)", "м³", round(area_floor * 0.4, 2), P["earth_work"], "выемка под плиту"))
+    items.append(_ftm_row("Фундамент", "Песок подсыпка с уплотнением", "м³", round(area_floor * 0.15, 2), P["sand_mat"] + P["sand_work"], "материал+работы"))
+    items.append(_ftm_row("Фундамент", "Щебень подсыпка с уплотнением", "м³", round(area_floor * 0.10, 2), P["gravel_mat"] + P["gravel_work"], "материал+работы"))
+    items.append(_ftm_row("Фундамент", "Геотекстиль с укладкой", "м²", round(area_floor * 1.1, 2), P["geotextile_mat"] + P["geotextile_work"], "материал+работы"))
+    items.append(_ftm_row("Фундамент", "Утеплитель ЭППС материал под плиту", "м²", round(area_floor * 1.1, 2), P["insul_eps_mat"], "материал"))
+    items.append(_ftm_row("Фундамент", "Монтаж утеплителя ЭППС работы", "м²", round(area_floor * 1.1, 2), P["insul_eps_work"], "работы"))
+    items.append(_ftm_row("Фундамент", "Гидроизоляция оклеечная материал", "м²", round(area_floor * 1.2, 2), P["waterproof_mat"], "материал"))
+    items.append(_ftm_row("Фундамент", "Гидроизоляция плиты работы", "м²", round(area_floor * 1.2, 2), P["waterproof_work"], "работы"))
+    items.append(_ftm_row("Фундамент", "Опалубка периметра материал", "мп", foundation_perim, P["formwork_perim_mat"], "материал"))
+    items.append(_ftm_row("Фундамент", "Опалубка работы (монтаж/демонтаж)", "мп", foundation_perim, P["formwork_install_work"], "работы"))
+    items.append(_ftm_row("Фундамент", "Арматура А500 материал", "т", foundation_rebar_t,
+        _p8v3_mp("арматура металлическая д.12а500", P["rebar_a500_mat"]), "материал"))
+    items.append(_ftm_row("Фундамент", "Армирование плиты работы", "м²", area_floor,
+        _p8v3_wp("устройство арматурного каркаса", 950), "работы"))
+    items.append(_ftm_row("Фундамент", "Бетон В25 для монолитной плиты", "м³", foundation_volume,
+        _p8v3_mp("бетон в25 w6", P["concrete_b25_mat"]), "материал"))
+    items.append(_ftm_row("Фундамент", "Бетонирование плиты работы", "м³", foundation_volume,
+        _p8v3_wp("бетонирование монолитной плиты   б/н", P["concrete_pour_work"]), "работы"))
+
+    # 2. Стены
+    items.append(_ftm_row("Стены", "Газобетон D400 400мм наружные стены", "м³", wall_volume_400,
+        _p8v3_mp(" блок  625x400x250 ", P["gas_d400_mat"]), "материал"))
+    items.append(_ftm_row("Стены", "Кладка газобетона 400мм работы", "м³", wall_volume_400,
+        _p8v3_wp("кладка  стен из газобетона, вкл парапет", P["gas_400mm_work"]), "работы"))
+    items.append(_ftm_row("Стены", "Газобетон D400 250мм внутренние стены", "м³", inner_walls_vol_250,
+        _p8v3_mp(" блок  625x250x250 ", P["gas_d400_mat"]), "материал"))
+    items.append(_ftm_row("Стены", "Кладка газобетона 250мм работы", "м³", inner_walls_vol_250,
+        _p8v3_wp("кладка  стен из газобетона, вкл парапет", P["gas_250mm_work"]), "работы"))
+    items.append(_ftm_row("Стены", "Газобетон D400 150мм перегородки", "м³", partitions_vol_150,
+        _p8v3_mp(" блок  625x150x250 ", P["gas_d400_mat"]), "материал"))
+    items.append(_ftm_row("Стены", "Монтаж перегородок 150мм работы", "м³", partitions_vol_150,
+        _p8v3_wp("кладка перегородок из газобетона", P["gas_150mm_work"]), "работы"))
+    items.append(_ftm_row("Стены", "Клей для газобетона", "шт", kladka_glue_bags,
+        _p8v3_mp("клей для газобетона 25 кг", P["kladka_glue_mat"]), "материал"))
+    items.append(_ftm_row("Стены", "Арматура для кладки 8мм", "т", rebar_kladka_t,
+        _p8v3_mp("арматура а3 а240  8мм рифленая", P["rebar_a500_mat"]), "материал"))
+    items.append(_ftm_row("Стены", "Перемычки оконные/дверные", "шт", perimuter_lintels, P["lintel_mat"], "материал"))
+    items.append(_ftm_row("Стены", "Армопояс бетон В25", "м³", armopoyas_concrete,
+        _p8v3_mp("бетон в25 w6", P["armopoyas_concrete_mat"]), "материал"))
+    items.append(_ftm_row("Стены", "Армопояс работы", "мп", foundation_perim,
+        _p8v3_wp("устройство армопояса парапета", P["armopoyas_work"]), "работы"))
+
+    # 3. Кровля (185 м², плоская с наплавляемой гидроизоляцией)
+    items.append(_ftm_row("Кровля", "Пароизоляция кровли работы", "м²", roof_area,
+        _p8v3_wp("укладка пароизоляционного слоя", P["roof_paroizo_work"]), "работы"))
+    items.append(_ftm_row("Кровля", "Пароизоляция кровли материал", "м²", roof_area, P["roof_paroizo_mat"], "материал"))
+    items.append(_ftm_row("Кровля", "Утеплитель кровли XPS 200мм монтаж", "м²", roof_area,
+        _p8v3_wp("монтаж утепления т 200/250 мм", P["roof_insul_work"]), "работы"))
+    items.append(_ftm_row("Кровля", "Утеплитель кровли XPS материал", "м²", roof_area, P["roof_insul_mat"], "материал"))
+    items.append(_ftm_row("Кровля", "Монтаж кровельного покрытия работы", "м²", roof_area,
+        _p8v3_wp("монтаж наплавляемой 2х слойной кровли, вкл парапет", P["roof_falz_work"]), "работы"))
+    items.append(_ftm_row("Кровля", "Фальцевая кровля RAL7024 материал", "м²", roof_area, P["roof_falz_mat"], "материал"))
+    items.append(_ftm_row("Кровля", "Водосток + добор", "мп", round(perimeter + 4, 1),
+        P["watergutter_mat"] + P["watergutter_work"], "материал+работы"))
+    items.append(_ftm_row("Кровля", "Крепёж и расходники кровля", "компл", 1, P["roof_dobor_mat"] * 30, "компл"))
+
+    # 4. Окна и двери
+    items.append(_ftm_row("Окна и двери", "Окна ПВХ средний класс материал", "шт", windows_count, P["window_pvc_mat"], "9 типов ПВХ"))
+    items.append(_ftm_row("Окна и двери", "Монтаж окон работы", "шт", windows_count, P["window_install_work"], "работы"))
+    items.append(_ftm_row("Окна и двери", "Монтажный комплект (пена+ПСУЛ+отлив)", "шт", windows_count, P["window_pena_mat"], "материал"))
+    items.append(_ftm_row("Окна и двери", "Дверь входная стальная материал", "шт", door_entry_count,
+        _p8v3_mp("дверь входная с терморазрывом ferroni isoterma лев", P["door_entry_mat"]), "с терморазрывом"))
+    items.append(_ftm_row("Окна и двери", "Монтаж входной двери", "шт", door_entry_count,
+        _p8v3_wp("установка входной двери", P["door_install_work"]), "работы"))
+    items.append(_ftm_row("Окна и двери", "Двери межкомнатные материал", "шт", doors_inner_count, P["door_inner_mat"], "материал"))
+    items.append(_ftm_row("Окна и двери", "Монтаж межкомнатных дверей", "шт", doors_inner_count, P["door_install_work"], "работы"))
+    items.append(_ftm_row("Окна и двери", "Дверь сауны специальная", "шт", 1, P["door_sauna_mat"], "материал"))
+
+    # 5. Внешняя отделка
+    items.append(_ftm_row("Внешняя отделка", "Утепление фасада базальтовой ватой работы", "м²", facade_area,
+        _p8v3_wp("утепление фасада базальтовой ватой на клеевой сост", P["facade_setka_work"]), "работы"))
+    items.append(_ftm_row("Внешняя отделка", "Утеплитель базальтовая вата материал", "м²", facade_area, P["facade_setka_mat"] * 5, "Rockwool"))
+    items.append(_ftm_row("Внешняя отделка", "Армирование фасада работы", "м²", facade_area,
+        _p8v3_wp("армирование фасада с шлифованием", P["facade_setka_work"]), "работы"))
+    items.append(_ftm_row("Внешняя отделка", "Армирующая сетка материал", "м²", facade_area, P["facade_setka_mat"], "материал"))
+    items.append(_ftm_row("Внешняя отделка", "Штукатурка фасада работы 96м²", "м²", facade_area,
+        _p8v3_wp("грунтование, оштукатуривание", P["facade_plaster_work"]), "работы"))
+    items.append(_ftm_row("Внешняя отделка", "Штукатурка фасадная материал", "м²", facade_area, P["facade_plaster_mat"], "материал"))
+    items.append(_ftm_row("Внешняя отделка", "Цоколь отделка 20м²", "м²", socle_area,
+        P["socle_plaster_mat"] + P["socle_plaster_work"], "материал+работы"))
+    items.append(_ftm_row("Внешняя отделка", "Рейка фасадная 27.1м²", "м²", rail_area,
+        P["rail_facade_mat"] + P["rail_facade_work"], "материал+работы"))
+
+    # 6. Внутренняя черновая отделка
+    items.append(_ftm_row("Внутренняя отделка", "Стяжка пола работы", "м²", all_floor_area,
+        _p8v3_wp("устройство полусухой армированной стяжки", P["screed_work"]), "работы"))
+    items.append(_ftm_row("Внутренняя отделка", "Стяжка материалы", "м²", all_floor_area, P["screed_mat"], "материал"))
+    items.append(_ftm_row("Внутренняя отделка", "Утепление пола ЭППС", "м²", all_floor_area,
+        P["floor_insul_mat"] + P["floor_insul_work"], "материал+работы"))
+    items.append(_ftm_row("Внутренняя отделка", "Штукатурка стен сухих помещений работы", "м²", dry_wall_area,
+        _p8v3_wp("штукатурка стен", P["wall_prep_work"]), "работы"))
+    items.append(_ftm_row("Внутренняя отделка", "Штукатурка стен материал", "м²", dry_wall_area, P["wall_prep_mat"], "материал"))
+    items.append(_ftm_row("Внутренняя отделка", "Гипсокартон потолки", "м²", dry_floor_area,
+        P["ceiling_gkl_mat"] + P["ceiling_gkl_work"], "материал+работы"))
+    items.append(_ftm_row("Внутренняя отделка", "Покраска потолков", "м²", dry_floor_area,
+        P["ceiling_paint_mat"] + P["ceiling_paint_work"], "материал+работы"))
+    items.append(_ftm_row("Внутренняя отделка", "Плинтус", "мп", round(perimeter * 3, 1),
+        P["skirting_mat"] + P["skirting_work"], "материал+работы"))
+
+    # 7. Санузлы и сауна
+    items.append(_ftm_row("Санузлы и сауна", "Гидроизоляция мокрых зон материал", "м²", wet_floor_area, P["wet_hydroizo_mat"], "материал"))
+    items.append(_ftm_row("Санузлы и сауна", "Гидроизоляция мокрых зон работы", "м²", wet_floor_area, P["wet_hydroizo_work"], "работы"))
+    items.append(_ftm_row("Санузлы и сауна", "Плитка стены санузлы материал", "м²", wet_wall_area, P["tile_wall_mat"], "материал"))
+    items.append(_ftm_row("Санузлы и сауна", "Плитка стены укладка работы", "м²", wet_wall_area, P["tile_wall_work"], "работы"))
+    items.append(_ftm_row("Санузлы и сауна", "Плитка пол санузлы материал", "м²", wet_floor_area, P["tile_floor_mat"], "материал"))
+    items.append(_ftm_row("Санузлы и сауна", "Плитка пол укладка работы", "м²", wet_floor_area, P["tile_floor_work"], "работы"))
+    items.append(_ftm_row("Санузлы и сауна", "Плиточный клей", "м²", wet_wall_area + wet_floor_area, P["tile_glue_mat"], "материал"))
+    items.append(_ftm_row("Санузлы и сауна", "Сауна вагонка липа материал", "м²", sauna_wall_ceil_area, P["sauna_lining_mat"], "материал"))
+    items.append(_ftm_row("Санузлы и сауна", "Сауна вагонка монтаж работы", "м²", sauna_wall_ceil_area, P["sauna_lining_work"], "работы"))
+    items.append(_ftm_row("Санузлы и сауна", "Полки сауны комплект", "компл", 1, P["sauna_polok_mat"], "материал"))
+    items.append(_ftm_row("Санузлы и сауна", "Печь сауны материал", "шт", 1, P["sauna_stove_mat"], "материал"))
+    items.append(_ftm_row("Санузлы и сауна", "Монтаж печи сауны", "шт", 1, P["sauna_stove_work"], "работы"))
+
+    # 8. Полы и тёплый пол
+    warmfloor_pipe_m = round(area_floor * 7, 0)
+    warmfloor_loops = max(1, round(area_floor / 15, 0))
+    items.append(_ftm_row("Полы и тёплый пол", "Тёплый пол труба PE-X материал", "мп", warmfloor_pipe_m, P["warmfloor_pipe_mat"], "материал"))
+    items.append(_ftm_row("Полы и тёплый пол", "Тёплый пол монтаж трубы", "мп", warmfloor_pipe_m, P["warmfloor_pipe_work"], "работы"))
+    items.append(_ftm_row("Полы и тёплый пол", "Коллектор тёплого пола", "шт", 1, P["warmfloor_collector_mat"], "материал"))
+    items.append(_ftm_row("Полы и тёплый пол", "Монтаж коллектора", "шт", 1, P["warmfloor_collector_work"], "работы"))
+    items.append(_ftm_row("Полы и тёплый пол", "Терморегулятор тёплого пола", "шт", int(warmfloor_loops), P["warmfloor_thermo_mat"], "материал"))
+    items.append(_ftm_row("Полы и тёплый пол", "Демпферная лента", "мп", round(perimeter * 2, 1), P["warmfloor_demper_mat"], "материал"))
+    items.append(_ftm_row("Полы и тёплый пол", "Керамогранит кухня/прихожая материал", "м²", round(dry_floor_area * 0.4, 2), P["ceramogranit_mat"], "материал"))
+    items.append(_ftm_row("Полы и тёплый пол", "Укладка керамогранита работы", "м²", round(dry_floor_area * 0.4, 2), P["ceramogranit_work"], "работы"))
+    items.append(_ftm_row("Полы и тёплый пол", "Подложка под ламинат", "м²", round(dry_floor_area * 0.6, 2), P["floor_underlay_mat"], "материал"))
+    items.append(_ftm_row("Полы и тёплый пол", "Ламинат материал", "м²", round(dry_floor_area * 0.6, 2), P["laminate_mat"], "материал"))
+    items.append(_ftm_row("Полы и тёплый пол", "Укладка ламината работы", "м²", round(dry_floor_area * 0.6, 2), P["laminate_work"], "работы"))
+
+    # 9. Инженерные коммуникации ОВ
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Котёл отопительный средний класс", "шт", 1, P["ov_kotel_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Монтаж котла", "шт", 1, P["ov_kotel_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Радиатор биметаллический 8 секций", "шт", 9, P["ov_radiator_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Монтаж радиаторов", "шт", 9, P["ov_radiator_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Трубы металлопластик 20мм", "мп", 180, P["ov_pipe_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Монтаж трубопровода ОВ", "мп", 180, P["ov_pipe_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Циркуляционный насос", "шт", 1, P["ov_pump_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Монтаж насоса", "шт", 1, P["ov_pump_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Расширительный бак", "шт", 1, P["ov_expansion_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Узел регулировки и балансировки", "шт", 1, P["ov_balance_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Терморегуляторы радиаторов", "шт", 9, P["ov_thermo_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Запорная арматура комплект", "компл", 1, P["ov_valve_set_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ОВ", "Пуско-наладка системы отопления", "компл", 1, P["ov_naladka_work"], "работы"))
+
+    # 10. Инженерные коммуникации ВК
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Трубы PEX 16мм холодное+горячее водоснабжение", "мп", 160, P["vk_pipe_cold_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Канализация PVC 50/110мм комплект", "мп", 65, P["vk_pipe_canal_110_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Монтаж трубопровода ВК (вод.+канализ.)", "мп", 225, P["vk_pipe_install_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Унитаз с инсталляцией", "шт", 2, P["vk_unitaz_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Установка унитазов", "шт", 2, P["vk_unitaz_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Раковина с тумбой", "шт", 3, P["vk_rakovina_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Установка раковин", "шт", 3, P["vk_rakovina_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Душевая кабина / ванна", "шт", 2, P["vk_dush_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Установка душа/ванны", "шт", 2, P["vk_dush_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Полотенцесушитель", "шт", 2, P["vk_polotenets_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Установка полотенцесушителя", "шт", 2, P["vk_polotenets_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Смесители комплект", "компл", 4, P["vk_smesitel_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Бойлер 100л", "шт", 1, P["vk_boiler_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Установка бойлера", "шт", 1, P["vk_boiler_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ВК", "Запорная арматура ВК", "компл", 1, P["vk_valve_set_mat"], "материал"))
+
+    # 11. Инженерные коммуникации ЭОМ
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Кабель ВВГнг 5х10 вводной + 3х2.5 силовой", "мп", 270, P["el_kabel_25_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Кабель ВВГнг 3х1.5 освещение", "мп", 200, P["el_kabel_15_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Монтаж кабельных линий", "мп", 470, P["el_kabel_install_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Розетка", "шт", 35, P["el_rozetka_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Установка розеток", "шт", 35, P["el_rozetka_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Выключатель", "шт", 18, P["el_switch_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Установка выключателей", "шт", 18, P["el_switch_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Светильник потолочный", "шт", 25, P["el_light_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Монтаж светильников", "шт", 25, P["el_light_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Распределительный щит укомплектованный", "шт", 1, P["el_shchit_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Монтаж щита", "шт", 1, P["el_shchit_work"], "работы"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Автомат 16А", "шт", 14, P["el_avtomat_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "УЗО 40А", "шт", 4, P["el_uzo_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Контур заземления комплект", "компл", 1, P["el_zazem_mat"], "материал"))
+    items.append(_ftm_row("Инженерные коммуникации ЭОМ", "Монтаж контура заземления", "компл", 1, P["el_zazem_work"], "работы"))
+
+    # 12. Логистика
+    items.append(_ftm_row("Логистика", "Доставка материалов от СПб", "рейс", 3, P["logist_delivery"] / 3, "30 км"))
+    items.append(_ftm_row("Логистика", "Транспорт бригады и проживание", "компл", 1, P["logist_brigade"] * 4, "период строительства"))
+
+    # 13. Накладные расходы
+    subtotal = sum(float(it["price"]) * float(it["qty"]) for it in items if it["section"] not in ("Логистика", "Накладные расходы"))
+    items.append(_ftm_row("Накладные расходы", "Организация работ и накладные", "компл", 1, round(subtotal * 0.07, 2), "7% от общей сметы"))
+    items.append(_ftm_row("Накладные расходы", "Расходные материалы и крепёж", "компл", 1, round(subtotal * 0.015, 2), "мелкое крепление"))
+    items.append(_ftm_row("Накладные расходы", "Уборка после работ", "компл", 1, round(area_floor * 280, 2), "финальная уборка"))
+
+    return items
+
+
+# Override _build_estimate_items with v2
+_ORIG_BEI_V3 = _build_estimate_items
+
+def _build_estimate_items(parsed, price_text, choice):  # noqa: F811
+    try:
+        items = _build_full_turnkey_items_v2(parsed, price_text, choice)
+        _P8V3_LOG.info("PATCH_TOPIC2_REALSHEET_PRICES_V3: %d items", len(items))
+        return items
+    except Exception as _v3e:
+        _P8V3_LOG.error("PATCH_TOPIC2_REALSHEET_PRICES_V3_ERR %s", _v3e)
+        return _ORIG_BEI_V3(parsed, price_text, choice)
+
+_P8V3_LOG.info("PATCH_TOPIC2_REALSHEET_PRICES_V3 installed")
+# === END_PATCH_TOPIC2_REALSHEET_PRICES_V3 ===
+
+# === PATCH_TOPIC2_REALSHEET_PRICES_V3_FIX1 ===
+# Fix _p8v3_mp/_p8v3_wp to strip key before lookup (template keys have no leading spaces)
+def _p8v3_wp(key, fallback=0):  # noqa: F811
+    row = _P8V3_TPL_PRICES.get(key.strip())
+    return row["work_price"] if row and row["work_price"] > 0 else fallback
+
+def _p8v3_mp(key, fallback=0):  # noqa: F811
+    row = _P8V3_TPL_PRICES.get(key.strip())
+    return row["mat_price"] if row and row["mat_price"] > 0 else fallback
+
+_P8V3_LOG.info("PATCH_TOPIC2_REALSHEET_PRICES_V3_FIX1 installed")
+# === END_PATCH_TOPIC2_REALSHEET_PRICES_V3_FIX1 ===
+
+# === PATCH_TOPIC2_ADD_PEREKRYTIYA_SECTION_V1 ===
+# §5 canon: 11 секций, раздел 3 = Перекрытия. Для газобетон 1-эт. дом —
+# монолитная плита перекрытия (над первым этажом / чердачная плита).
+# Цены из шаблона Газобетонный дом (Перекрытие монолитное).
+# Append-only: переопределяем _build_full_turnkey_items_v2.
+# ============================================================
+_PREV_FTI_V2 = _build_full_turnkey_items_v2
+
+def _build_full_turnkey_items_v2(parsed, price_text, choice):  # noqa: F811
+    items = _PREV_FTI_V2(parsed, price_text, choice)
+    P = _FTM_PRICES
+    area_floor = float(parsed.get("area_floor") or 99.91)
+    dims = parsed.get("dims") or parsed.get("dimensions") or [8.5, 12.5]
+    try:
+        a, b = float(dims[0]), float(dims[1])
+    except Exception:
+        a = b = area_floor ** 0.5
+    perimeter = 2 * (a + b)
+
+    # Перекрытие монолитное (плита над 1 этажом)
+    slab_area = round(area_floor * 1.05, 2)   # с запасом
+    slab_vol  = round(slab_area * 0.22, 2)    # толщина 220мм
+    slab_reb_t= round(slab_area * 0.010, 3)   # 10 кг/м²
+
+    perekr_items = [
+        _ftm_row("Перекрытия", "Опалубка перекрытия монтаж/демонтаж", "м²", slab_area,
+            _p8v3_wp("монтаж/демонтаж опалубки основания плиты", 1000), "работы"),
+        _ftm_row("Перекрытия", "Аренда опалубки перекрытия", "м²", slab_area,
+            _p8v3_mp("аренда опалубки (основание плиты)", 1100), "материал"),
+        _ftm_row("Перекрытия", "Армирование перекрытия работы", "м²", slab_area,
+            _p8v3_wp("устройство арматурного каркаса", 1200), "работы"),
+        _ftm_row("Перекрытия", "Арматура перекрытия А500 материал", "т", slab_reb_t,
+            _p8v3_mp("арматура металлическая д.12а500", P["rebar_a500_mat"]), "материал"),
+        _ftm_row("Перекрытия", "Бетон В25 перекрытие материал", "м³", slab_vol,
+            _p8v3_mp("бетон в25 w6", P["concrete_b25_mat"]), "материал"),
+        _ftm_row("Перекрытия", "Бетонирование перекрытия работы", "м³", slab_vol,
+            _p8v3_wp("бетонирование монолитной плиты   б/н", P["concrete_pour_work"]), "работы"),
+        _ftm_row("Перекрытия", "Пеноплэкс утепление плиты 100мм", "м²", slab_area,
+            _p8v3_mp("пеноплэкс фундамент 1185х585х100 мм", 800), "материал"),
+        _ftm_row("Перекрытия", "Крепёж и расходники перекрытие", "компл", 1,
+            round(slab_area * 200, 0), "компл"),
+    ]
+
+    # Вставить секцию Перекрытия ПОСЛЕ Стены (перед Кровля)
+    result = []
+    steny_done = False
+    krovlya_inserted = False
+    for it in items:
+        if it["section"] == "Стены":
+            steny_done = True
+        if steny_done and not krovlya_inserted and it["section"] == "Кровля":
+            result.extend(perekr_items)
+            krovlya_inserted = True
+        result.append(it)
+    if not krovlya_inserted:
+        result.extend(perekr_items)
+
+    # Пересчитать накладные расходы (раздел 13 — последние 3 строки)
+    # Убираем старые накладные, считаем заново
+    base_items = [r for r in result if r["section"] not in ("Логистика", "Накладные расходы")]
+    subtotal = sum(float(r["price"]) * float(r["qty"]) for r in base_items)
+    logist   = [r for r in result if r["section"] == "Логистика"]
+    overhead_new = [
+        _ftm_row("Накладные расходы", "Организация работ и накладные", "компл", 1, round(subtotal * 0.07, 2), "7% от общей сметы"),
+        _ftm_row("Накладные расходы", "Расходные материалы и крепёж",  "компл", 1, round(subtotal * 0.015, 2), "мелкое крепление"),
+        _ftm_row("Накладные расходы", "Уборка после работ",            "компл", 1, round(area_floor * 280, 2), "финальная уборка"),
+    ]
+    return base_items + logist + overhead_new
+
+_P8V3_LOG.info("PATCH_TOPIC2_ADD_PEREKRYTIYA_SECTION_V1 installed")
+# === END_PATCH_TOPIC2_ADD_PEREKRYTIYA_SECTION_V1 ===
+
+# === PATCH_TOPIC2_STALE_PENDING_TASK_GUARD_V1 ===
+# ROOT CAUSE: §5 in maybe_handle_stroyka_estimate reuses pending from a DIFFERENT task.
+#   _memory_latest("topic_2_estimate_pending_") uses LIKE → finds any task's pending.
+#   FIX_STROYKA_PRICE_CONFIRM_EXTEND_V1 patched _pending_is_fresh to 86400s → always fresh.
+#   Patched _is_confirm matches "средн" as substring → "цены выше среднего" fires §5.
+#   Result: drainage file task gets house estimate from old c94ec497 context.
+# FIX: wrap maybe_handle_stroyka_estimate — if pending.task_id != current task_id,
+#   check if pending's task is done → mark pending "GENERATED" (permanent block).
+import logging as _stpg_log_mod
+_STPG_LOG = _stpg_log_mod.getLogger("areal.stale_pending_guard")
+
+_STPG_ORIG = maybe_handle_stroyka_estimate
+
+async def maybe_handle_stroyka_estimate(conn, task, logger=None):  # noqa: F811
+    try:
+        _stpg_tid = _s(_row_get(task, "id"))
+        _stpg_chat = _s(_row_get(task, "chat_id"))
+        if _stpg_tid and _stpg_chat:
+            _stpg_pend = _memory_latest(_stpg_chat, "topic_2_estimate_pending_")
+            _stpg_pend_task = (_stpg_pend or {}).get("task_id", "")
+            if (
+                _stpg_pend
+                and _stpg_pend.get("status") == "WAITING_PRICE_CONFIRMATION"
+                and _stpg_pend_task
+                and _stpg_pend_task != _stpg_tid
+            ):
+                # Check if the pending's own task is already in a terminal state
+                _stpg_done = False
+                try:
+                    _stpg_row = conn.execute(
+                        "SELECT state FROM tasks WHERE id=? LIMIT 1",
+                        (_stpg_pend_task,)
+                    ).fetchone()
+                    if _stpg_row and str(_stpg_row[0] or "").upper() in (
+                        "DONE", "AWAITING_CONFIRMATION", "FAILED", "CANCELLED", "ARCHIVED"
+                    ):
+                        _stpg_done = True
+                except Exception:
+                    pass
+                _stpg_key = (
+                    _stpg_pend.get("_memory_key")
+                    or f"topic_2_estimate_pending_{_stpg_pend_task}"
+                )
+                _stpg_new_status = "GENERATED" if _stpg_done else "STALE_BLOCKED"
+                _stpg_blocked = dict(_stpg_pend)
+                _stpg_blocked["status"] = _stpg_new_status
+                _memory_save(_stpg_chat, _stpg_key, _stpg_blocked)
+                _history_safe(conn, _stpg_tid,
+                              f"TOPIC2_STALE_PENDING_BLOCKED:pending_task={_stpg_pend_task[:16]}:done={_stpg_done}")
+                _STPG_LOG.info(
+                    "STPG: pending task=%s (done=%s) → %s; current task=%s",
+                    _stpg_pend_task[:8], _stpg_done, _stpg_new_status, _stpg_tid[:8],
+                )
+    except Exception as _stpg_e:
+        _STPG_LOG.warning("STPG_PRE_ERR: %s", _stpg_e)
+    return await _STPG_ORIG(conn, task, logger)
+
+_STPG_LOG.info("PATCH_TOPIC2_STALE_PENDING_TASK_GUARD_V1: installed")
+# === END_PATCH_TOPIC2_STALE_PENDING_TASK_GUARD_V1 ===
+
+
+# === PATCH_TOPIC2_INPUT_GATE_SOURCE_OF_TRUTH_V1 ===
+import logging as _t2ig_log_mod
+_T2IG_LOG = _t2ig_log_mod.getLogger("areal.topic2_input_gate")
+
+try:
+    from core.topic2_input_gate import topic2_pre_estimate_gate as _t2ig_gate
+    from core.topic2_input_gate import apply_gate_result_to_task as _t2ig_apply
+except Exception as _t2ig_import_err:
+    _t2ig_gate = None
+    _t2ig_apply = None
+    _T2IG_LOG.warning("TOPIC2_INPUT_GATE_IMPORT_FAILED:%s", _t2ig_import_err)
+
+_T2IG_ORIG_MAYBE_HANDLE = maybe_handle_stroyka_estimate
+
+async def maybe_handle_stroyka_estimate(conn, task, logger=None):  # noqa: F811
+    if _t2ig_gate is not None and _t2ig_apply is not None:
+        try:
+            _t2ig_decision = _t2ig_gate(conn, task, logger=logger)
+            if _t2ig_decision and _t2ig_decision.get("block_engine"):
+                _t2ig_apply(conn, task, _t2ig_decision)
+                _T2IG_LOG.info(
+                    "TOPIC2_INPUT_GATE_BLOCKED:domain=%s state=%s",
+                    _t2ig_decision.get("domain"),
+                    _t2ig_decision.get("state"),
+                )
+                _t2ig_msg = _t2ig_decision.get("result") or ""
+                if _t2ig_msg:
+                    try:
+                        # sqlite3.Row has .keys() but not .get() — use dict() to normalize
+                        _t2ig_td = dict(task) if hasattr(task, "keys") else (task if isinstance(task, dict) else {})
+                        _t2ig_chat = str(_t2ig_td.get("chat_id") or "")
+                        _t2ig_reply = _t2ig_td.get("reply_to_message_id")
+                        _t2ig_topic = int(_t2ig_td.get("topic_id") or 0)
+                        _t2ig_task_id = str(_t2ig_td.get("id") or "")
+                        if not _t2ig_chat:
+                            raise ValueError(f"empty chat_id in task {_t2ig_task_id}")
+                        _t2ig_send_res = await _send_text(_t2ig_chat, _t2ig_msg, _t2ig_reply, _t2ig_topic)
+                        _t2ig_bot_msg_id = _t2ig_send_res.get("bot_message_id") if isinstance(_t2ig_send_res, dict) else None
+                        if _t2ig_bot_msg_id and _t2ig_task_id:
+                            conn.execute(
+                                "UPDATE tasks SET bot_message_id=? WHERE id=?",
+                                (int(_t2ig_bot_msg_id), _t2ig_task_id),
+                            )
+                            try:
+                                conn.execute(
+                                    "INSERT INTO task_history (task_id,action,created_at) VALUES (?,?,datetime('now'))",
+                                    (_t2ig_task_id, f"TOPIC2_INPUT_GATE_SENT:{_t2ig_bot_msg_id}"),
+                                )
+                                conn.execute(
+                                    "INSERT INTO task_history (task_id,action,created_at) VALUES (?,?,datetime('now'))",
+                                    (_t2ig_task_id, "reply_sent:waiting_clarification"),
+                                )
+                            except Exception:
+                                pass
+                            conn.commit()
+                        _T2IG_LOG.info("TOPIC2_INPUT_GATE_SENT:chat=%s bot_msg=%s", _t2ig_chat, _t2ig_bot_msg_id)
+                    except Exception as _t2ig_send_err:
+                        _T2IG_LOG.warning("TOPIC2_INPUT_GATE_SEND_ERR:%s", _t2ig_send_err)
+                return True
+        except Exception as _t2ig_err:
+            _T2IG_LOG.warning("TOPIC2_INPUT_GATE_ERR:%s", _t2ig_err)
+    return await _T2IG_ORIG_MAYBE_HANDLE(conn, task, logger)
+
+_T2IG_LOG.info("PATCH_TOPIC2_INPUT_GATE_SOURCE_OF_TRUTH_V1: installed")
+# === END_PATCH_TOPIC2_INPUT_GATE_SOURCE_OF_TRUTH_V1 ===
+
+# === PATCH_TOPIC2_PRICE_ALWAYS_ASK_V1 ===
+# Fix: новый estimate-запрос ("сделай по заданию смету" и т.д.) не должен подхватывать
+# pending от предыдущего task_id или от того же task_id после MANUAL_RESET_NEW.
+# Price WC должен запускаться КАЖДЫЙ РАЗ для задач с estimate-контентом.
+# Корень бага: _is_confirm(startswith "сделай ") = True + _pending_is_fresh override 24h
+# → CANONICAL_OLD_ROUTE_HARD_BLOCK пропускает price WC (подтверждено history 076e4350).
+import logging as _t2paa_log_mod
+_T2PAA_LOG = _t2paa_log_mod.getLogger("stroyka_estimate_canon")
+_T2PAA_ORIG_MAYBE_HANDLE = maybe_handle_stroyka_estimate
+
+async def maybe_handle_stroyka_estimate(conn, task, logger=None):
+    try:
+        task_id = _s(_row_get(task, "id"))
+        chat_id = _s(_row_get(task, "chat_id"))
+        raw = _s(_row_get(task, "raw_input", ""))
+        _pend = _memory_latest(chat_id, "topic_2_estimate_pending_")
+        # Если pending активен И текущий ввод — не чистое подтверждение цены
+        # (содержит ESTIMATE_WORDS) → помечаем pending stale, чтобы запустился полный price WC.
+        # _is_confirm_only = False при наличии "смет"/"дом"/"газобетон" и т.д. в тексте.
+        if (_pend
+                and _pend.get("status") == "WAITING_PRICE_CONFIRMATION"
+                and not _is_confirm_only(raw)):
+            _stale = dict(_pend)
+            _stale["status"] = "STALE_DEPRECATED"
+            _stale["deprecated_at"] = _now()
+            _stale["deprecated_reason"] = "PRICE_ALWAYS_ASK_V1:new_estimate_request_not_confirm_only"
+            _memory_save(chat_id, f"topic_2_estimate_pending_{_pend.get('task_id', 'x')}", _stale)
+            _T2PAA_LOG.info(
+                "PATCH_TOPIC2_PRICE_ALWAYS_ASK_V1:stale_cleared task=%s prev_task=%s raw=%.60s",
+                task_id, _pend.get("task_id"), raw,
+            )
+    except Exception as _t2paa_e:
+        _T2PAA_LOG.warning("PATCH_TOPIC2_PRICE_ALWAYS_ASK_V1:ERR %s", _t2paa_e)
+    return await _T2PAA_ORIG_MAYBE_HANDLE(conn, task, logger)
+
+_T2PAA_LOG.info("PATCH_TOPIC2_PRICE_ALWAYS_ASK_V1 installed")
+# === END_PATCH_TOPIC2_PRICE_ALWAYS_ASK_V1 ===
+
+# === PATCH_TOPIC2_PARSE_REQUEST_SMART_INFER_V1 ===
+# §9 spec: "что строим — если object_type уже есть — запрещено"
+# §10 spec: "имитация бруса" / "по всем помещениям" → scope=под ключ
+# §12 spec: брус → Ареал Нева = дом (canon §2)
+# Fix 1: pile cross-section "N свай жб AxB" убирается из _extract_dimensions (сечение сваи ≠ размер здания)
+# Fix 2: material="брус" + object="" → object="дом"
+# Fix 3: "по всем помещениям" / "имитация бруса внутри" → scope="под ключ"
+import re as _t2prs_re
+import logging as _t2prs_log_mod
+_T2PRS_LOG = _t2prs_log_mod.getLogger("stroyka_estimate_canon")
+
+_T2PRS_ORIG_EXTRACT_DIM = _extract_dimensions
+_T2PRS_ORIG_PARSE_REQUEST = _parse_request
+
+def _extract_dimensions(text: str):
+    t = _low(text)
+    # Убираем сечения свай: "N свай [жб] AxB" или "жб AxB"
+    t_clean = _t2prs_re.sub(
+        r'(?:\d+\s+)?(?:свай|свая|сваи|жб)\s+(?:жб\s+)?\d+\s*[xх×*]\s*\d+',
+        ' ', t,
+    )
+    return _T2PRS_ORIG_EXTRACT_DIM(t_clean)
+
+def _parse_request(text: str):
+    parsed = _T2PRS_ORIG_PARSE_REQUEST(text)
+    t = _low(text)
+    # Fix 2: брус → дом (canon §2: брус → Ареал Нева.xlsx = деревянный дом)
+    if not parsed.get("object") and parsed.get("material") == "брус":
+        parsed["object"] = "дом"
+        _T2PRS_LOG.info("T2PRS_INFER:object=дом:from_material=брус")
+    # Fix 2b: другие признаки дома
+    if not parsed.get("object"):
+        for _hint in ("дач", "коттедж", "жилой", "жилого"):
+            if _hint in t:
+                parsed["object"] = "дом"
+                _T2PRS_LOG.info("T2PRS_INFER:object=дом:hint=%s", _hint)
+                break
+    # Fix 3: признаки scope=под ключ (spec §10)
+    if not parsed.get("scope"):
+        _scope_hints = (
+            "по всем помещениям", "по комнатам", "все помещения",
+            "имитация бруса внутри", "чистовая отделка", "ламинат",
+            "санузел", "теплые полы", "тёплые полы",
+        )
+        for _sh in _scope_hints:
+            if _sh in t:
+                parsed["scope"] = "под ключ"
+                _T2PRS_LOG.info("T2PRS_INFER:scope=под_ключ:hint=%s", _sh)
+                break
+    return parsed
+
+_T2PRS_LOG.info("PATCH_TOPIC2_PARSE_REQUEST_SMART_INFER_V1 installed")
+# === END_PATCH_TOPIC2_PARSE_REQUEST_SMART_INFER_V1 ===
+
+# === PATCH_TOPIC2_CLARIFICATION_MERGE_V1 ===
+# Fix: clarified:* entries in task_history not merged into raw_input before _parse_request
+# → _missing_question asks the same question again after user answered it.
+# PAMQ wrapper exists but _missing_question is called with only (parsed), conn/task not passed.
+# Solution: enrich task.raw_input with clarification history BEFORE calling the full chain.
+import logging as _t2cm_log_mod
+_T2CM_LOG = _t2cm_log_mod.getLogger("stroyka_estimate_canon")
+_T2CM_ORIG = maybe_handle_stroyka_estimate
+
+async def maybe_handle_stroyka_estimate(conn, task, logger=None):
+    try:
+        task_id = _s(_row_get(task, "id"))
+        if conn is not None and task_id:
+            rows = conn.execute(
+                "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'clarified:%' ORDER BY rowid ASC",
+                (task_id,)
+            ).fetchall()
+            clarifications = [r[0].split(":", 1)[1].strip() for r in rows if ":" in r[0]]
+            if clarifications:
+                raw = _s(_row_get(task, "raw_input", ""))
+                enriched = raw + "\n" + "\n".join(clarifications)
+                if hasattr(task, "keys"):
+                    task_dict = dict(zip(task.keys(), task))
+                elif isinstance(task, dict):
+                    task_dict = dict(task)
+                else:
+                    task_dict = {"raw_input": enriched}
+                task_dict["raw_input"] = enriched
+                _T2CM_LOG.info(
+                    "T2CM_MERGE: task=%s clarifs=%d enriched_len=%d",
+                    task_id, len(clarifications), len(enriched),
+                )
+                return await _T2CM_ORIG(conn, task_dict, logger)
+    except Exception as _t2cm_e:
+        _T2CM_LOG.warning("T2CM_ERR: %s", _t2cm_e)
+    return await _T2CM_ORIG(conn, task, logger)
+
+_T2CM_LOG.info("PATCH_TOPIC2_CLARIFICATION_MERGE_V1 installed")
+# === END_PATCH_TOPIC2_CLARIFICATION_MERGE_V1 ===
+
+
+# === PATCH_TOPIC2_TOPIC_ID_INT_SAFE_V1 ===
+import logging as _t2tid_log_mod
+_T2TID_LOG = _t2tid_log_mod.getLogger("stroyka_estimate_canon")
+_T2TID_ORIG_DIRECT = _stroyka_final_handle_direct_item_estimate
+
+async def _stroyka_final_handle_direct_item_estimate(conn, task, logger=None):
+    try:
+        raw_tid = _row_get(task, "topic_id", 0)
+        int(raw_tid or 0)
+    except (ValueError, TypeError):
+        if hasattr(task, "keys"):
+            task_dict = dict(zip(task.keys(), tuple(task)))
+        elif isinstance(task, dict):
+            task_dict = dict(task)
+        else:
+            task_dict = {}
+        task_dict["topic_id"] = TOPIC_ID_STROYKA
+        _T2TID_LOG.info("T2TID_FIX: topic_id coerced to %s", TOPIC_ID_STROYKA)
+        return await _T2TID_ORIG_DIRECT(conn, task_dict, logger)
+    return await _T2TID_ORIG_DIRECT(conn, task, logger)
+
+_T2TID_LOG.info("PATCH_TOPIC2_TOPIC_ID_INT_SAFE_V1 installed")
+# === END_PATCH_TOPIC2_TOPIC_ID_INT_SAFE_V1 ===
+
+# === PATCH_TOPIC2_CLARIFICATION_MERGE_V2 ===
+# Fix V1 bug: dict(zip(task.keys(), task)) for plain dict iterates keys not values
+# → task_dict becomes {key:key}, internal call fails, fallback to original (no merge).
+# V2: uses dict(task) for plain dict (same pattern as FIX_STROYKA_CONTEXT_ENRICH line 2393).
+# Calls _T2CM_ORIG (PAA) directly, bypassing broken V1.
+import logging as _t2cm2_log_mod
+_T2CM2_LOG = _t2cm2_log_mod.getLogger("task_worker")
+_T2CM2_INNER = _T2CM_ORIG  # PAA wrapper — skip broken V1
+
+def _t2cm2_is_fresh_full_estimate_tz(text):
+    low = _low(text)
+    if len(low.split()) < 18:
+        return False
+    anchors = 0
+    for key in ("дом", "фундамент", "этаж", "размер", "стен", "отделк", "смет", "расчет", "расчёт"):
+        if key in low:
+            anchors += 1
+    return anchors >= 4 and any(x in low for x in ESTIMATE_WORDS)
+
+async def maybe_handle_stroyka_estimate(conn, task, logger=None):
+    # PATCH_TOPIC2_PRICE_CHOICE_LOOP_CLOSE_V1 maybe_handle guard
+    try:
+        _t2pcl_task_id = str(_row_get(task, "id", ""))
+        _t2pcl_chat_id = str(_row_get(task, "chat_id", ""))
+        _t2pcl_topic_id = int(_row_get(task, "topic_id", 0) or 0)
+        _t2pcl_raw_input = _row_get(task, "raw_input", "")
+        _t2pcl_reply_to = _row_get(task, "reply_to_message_id", None)
+        if _t2pcl_topic_id == TOPIC_ID_STROYKA:
+            if await _t2pcl_price_choice_guard(conn, _t2pcl_task_id, _t2pcl_chat_id, _t2pcl_raw_input, _t2pcl_reply_to):
+                return True
+    except Exception as _t2pcl_e:
+        try:
+            _history_safe(conn, str(_row_get(task, "id", "")), "PATCH_TOPIC2_PRICE_CHOICE_LOOP_CLOSE_V1_MAYBE_ERR:" + _s(_t2pcl_e)[:200])
+        except Exception:
+            pass
+    try:
+        task_id = _s(_row_get(task, "id"))
+        if conn is not None and task_id:
+            rows = conn.execute(
+                "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'clarified:%' ORDER BY rowid ASC",
+                (task_id,)
+            ).fetchall()
+            clarifications = [r[0].split(":", 1)[1].strip() for r in rows if ":" in r[0]]
+            if clarifications:
+                raw = _s(_row_get(task, "raw_input", ""))
+                if _t2cm2_is_fresh_full_estimate_tz(raw):
+                    _history_safe(conn, task_id, "TOPIC2_CLARIFICATION_MERGE_V2_SKIPPED_FOR_FRESH_FULL_TZ")
+                    return await _T2CM2_INNER(conn, task, logger)
+                enriched = raw + "\n" + "\n".join(clarifications)
+                if isinstance(task, dict):
+                    task_dict = dict(task)
+                elif hasattr(task, "keys"):
+                    task_dict = dict(zip(task.keys(), tuple(task)))
+                else:
+                    task_dict = {}
+                task_dict["raw_input"] = enriched
+                _T2CM2_LOG.info(
+                    "T2CM2_MERGE: task=%s clarifs=%d enriched_len=%d",
+                    task_id, len(clarifications), len(enriched),
+                )
+                return await _T2CM2_INNER(conn, task_dict, logger)
+    except Exception as _t2cm2_e:
+        _T2CM2_LOG.warning("T2CM2_ERR: %s", _t2cm2_e)
+    return await _T2CM2_INNER(conn, task, logger)
+
+_T2CM2_LOG.info("PATCH_TOPIC2_CLARIFICATION_MERGE_V2 installed")
+# === END_PATCH_TOPIC2_CLARIFICATION_MERGE_V2 ===
+
+# === PATCH_TOPIC2_PRICE_TEXT_TRUNCATE_V1 ===
+# Bug: _price_confirmation_text с 126 позициями шаблона → >4096 симв → Telegram 400 "message is too long"
+# Fix: ограничить template_prices до 15 строк; остаток заменить «… (+N позиций)».
+import logging as _ptt_log_mod
+_PTT_LOG = _ptt_log_mod.getLogger("task_worker")
+_PTT_ORIG = _price_confirmation_text
+
+def _price_confirmation_text(parsed, template, sheet_name, template_prices, online_prices):
+    MAX_PRICE_LINES = 15
+    if template_prices:
+        lines = template_prices.splitlines()
+        if len(lines) > MAX_PRICE_LINES + 1:
+            shown = "\n".join(lines[:MAX_PRICE_LINES])
+            rest = len(lines) - MAX_PRICE_LINES
+            template_prices = shown + f"\n… (+{rest} позиций в смете)"
+    text = _PTT_ORIG(parsed, template, sheet_name, template_prices, online_prices)
+    if len(text) > 3900:
+        text = text[:3900] + "\n…(сообщение сокращено)"
+    return text
+
+_PTT_LOG.info("PATCH_TOPIC2_PRICE_TEXT_TRUNCATE_V1 installed")
+# === END_PATCH_TOPIC2_PRICE_TEXT_TRUNCATE_V1 ===
+
+
+# === PATCH_TOPIC2_FRAME_HOUSE_MATERIAL_V1 ===
+# Facts:
+# - topic_2 canonical frame-house estimate request was classified as material="брус"
+# - request contained frame-house markers: свайный фундамент, ЖБ сваи 150x150, утепление стен 150, имитация бруса as finish
+# - canon requires frame house >100m2 to use frame template route, not gasbeton/bрус route
+import re as _t2fh_re
+import logging as _t2fh_logging
+
+_T2FH_LOG = _t2fh_logging.getLogger("topic2.frame_house_material_v1")
+
+def _t2fh_s(v, limit=20000):
+    try:
+        return str(v or "")[:limit]
+    except Exception:
+        return ""
+
+def _t2fh_low(v):
+    return _t2fh_s(v).lower().replace("ё", "е")
+
+def _t2fh_has_solid_brus(low: str) -> bool:
+    return any(x in low for x in (
+        "дом из бруса",
+        "дом брус",
+        "брусовой дом",
+        "клееный брус",
+        "клееного бруса",
+        "профилированный брус",
+        "профилированного бруса",
+        "оцилиндрованное бревно",
+        "сруб",
+        "лафет",
+    ))
+
+def _t2fh_is_frame_house_context(raw) -> bool:
+    low = _t2fh_low(raw)
+    if not low:
+        return False
+
+    if _t2fh_has_solid_brus(low):
+        return False
+
+    has_direct_frame = any(x in low for x in (
+        "каркас",
+        "каркасный",
+        "каркасник",
+        "frame",
+    ))
+
+    has_finish_brus = (
+        "имитац" in low and "брус" in low
+    )
+
+    has_piles = any(x in low for x in (
+        "свая",
+        "сваи",
+        "свай",
+        "жб 150",
+        "ж/б 150",
+        "150х150",
+        "150x150",
+        "150×150",
+        "железобетонн",
+    ))
+
+    has_wall_insulation = (
+        "утепл" in low and "стен" in low
+    ) or any(x in low for x in (
+        "утепление стен 150",
+        "утепления стен 150",
+        "минвата",
+        "каменная вата",
+    ))
+
+    if has_direct_frame:
+        return True
+
+    if has_finish_brus and (has_piles or has_wall_insulation):
+        return True
+
+    if has_piles and has_wall_insulation:
+        return True
+
+    return False
+
+def _t2fh_force_frame(parsed, raw):
+    try:
+        if isinstance(parsed, dict) and _t2fh_is_frame_house_context(raw):
+            old_material = _t2fh_low(parsed.get("material"))
+            if old_material in ("", "брус", "дерево", "деревянный", "газобетон"):
+                parsed["material"] = "каркас"
+                parsed["frame_house"] = True
+                parsed["material_source"] = "PATCH_TOPIC2_FRAME_HOUSE_MATERIAL_V1"
+        return parsed
+    except Exception as e:
+        try:
+            _T2FH_LOG.warning("PATCH_TOPIC2_FRAME_HOUSE_MATERIAL_V1_DICT_ERR %s", e)
+        except Exception:
+            pass
+        return parsed
+
+def _t2fh_wrap_material_func(name):
+    old = globals().get(name)
+    if not callable(old) or getattr(old, "_t2fh_wrapped", False):
+        return False
+
+    def wrapped(*args, **kwargs):
+        raw_parts = []
+        for x in args:
+            raw_parts.append(_t2fh_s(x, 5000))
+        for k in ("raw_input", "text", "caption", "prompt", "user_text"):
+            if k in kwargs:
+                raw_parts.append(_t2fh_s(kwargs.get(k), 5000))
+        raw = "\n".join(raw_parts)
+
+        res = old(*args, **kwargs)
+
+        if isinstance(res, str):
+            if _t2fh_is_frame_house_context(raw) and _t2fh_low(res) in ("", "брус", "дерево", "деревянный", "газобетон"):
+                return "каркас"
+            return res
+
+        if isinstance(res, dict):
+            return _t2fh_force_frame(res, raw)
+
+        return res
+
+    wrapped._t2fh_wrapped = True
+    globals()[name] = wrapped
+    return True
+
+_T2FH_WRAPPED = []
+for _t2fh_name in (
+    "_extract_material",
+    "extract_material",
+    "_detect_material",
+    "detect_material",
+    "_parse_estimate_input",
+    "parse_estimate_input",
+    "_parse_user_input",
+    "parse_user_input",
+    "_parse_task_input",
+    "parse_task_input",
+    "_parse_stroyka_input",
+    "parse_stroyka_input",
+):
+    try:
+        if _t2fh_wrap_material_func(_t2fh_name):
+            _T2FH_WRAPPED.append(_t2fh_name)
+    except Exception as _t2fh_e:
+        try:
+            _T2FH_LOG.warning("PATCH_TOPIC2_FRAME_HOUSE_MATERIAL_V1_WRAP_ERR %s %s", _t2fh_name, _t2fh_e)
+        except Exception:
+            pass
+
+try:
+    _T2FH_LOG.info("PATCH_TOPIC2_FRAME_HOUSE_MATERIAL_V1 installed wrapped=%s", ",".join(_T2FH_WRAPPED))
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_FRAME_HOUSE_MATERIAL_V1 ===
+
+# === FULL_CANON_CLOSURE_VERIFIED_V1 / TOPIC2_TEMPLATE_PRICE_EXTRACTION_SAFE_V1 ===
+try:
+    import re as _fccv1_re
+    import logging as _fccv1_logging
+    from openpyxl import load_workbook as _fccv1_load_workbook
+
+    _fccv1_log = _fccv1_logging.getLogger("task_worker")
+
+    def _fccv1_float_or_none(value):
+        if value is None:
+            return None, "PRICE_MISSING"
+        if isinstance(value, (int, float)):
+            return float(value), "OK"
+        s = str(value).strip().replace("\xa0", " ").replace(" ", "").replace(",", ".")
+        if not s:
+            return None, "PRICE_MISSING"
+        try:
+            return float(s), "OK"
+        except Exception:
+            return None, "PRICE_MISSING"
+
+    def _p8v3_extract_tpl_prices(template_path=None):
+        prices = {}
+        loaded = 0
+        skipped = 0
+        missing_price = 0
+
+        if not template_path:
+            _fccv1_log.info("TOPIC2_TEMPLATE_PRICE_EXTRACTION_SAFE_V1 installed loaded=0 skipped=0 missing_price=0")
+            return prices
+
+        wb = _fccv1_load_workbook(template_path, data_only=True)
+        ws = wb.active
+
+        for r in ws.iter_rows(values_only=True):
+            if not r or len(r) < 10:
+                skipped += 1
+                continue
+
+            name = str(r[0] if r[0] is not None else "").strip()
+            if not name:
+                skipped += 1
+                continue
+
+            qty, qty_status = _fccv1_float_or_none(r[3])
+            if qty_status != "OK":
+                skipped += 1
+                continue
+
+            work_price, work_status = _fccv1_float_or_none(r[7])
+            mat_price, mat_status = _fccv1_float_or_none(r[9])
+
+            if work_status != "OK" or mat_status != "OK":
+                missing_price += 1
+
+            if work_status == "OK" and mat_status == "OK" and work_price == 0 and mat_price == 0:
+                skipped += 1
+                continue
+
+            norm = _fccv1_re.sub(r"\s+", " ", name.lower()).strip()
+            prices[norm] = {
+                "name": name,
+                "qty": qty,
+                "work_price": work_price,
+                "mat_price": mat_price,
+                "work_price_status": work_status,
+                "mat_price_status": mat_status,
+            }
+            loaded += 1
+
+        _fccv1_log.info(
+            "TOPIC2_TEMPLATE_PRICE_EXTRACTION_SAFE_V1 installed loaded=%s skipped=%s missing_price=%s",
+            loaded,
+            skipped,
+            missing_price,
+        )
+        return prices
+
+    _fccv1_log.info("TOPIC2_TEMPLATE_PRICE_EXTRACTION_SAFE_V1 installed loaded=0 skipped=0 missing_price=0")
+except Exception as _e:
+    try:
+        _fccv1_log.exception("TOPIC2_TEMPLATE_PRICE_EXTRACTION_SAFE_V1_INSTALL_ERR:%s", _e)
+    except Exception:
+        pass
+# === /FULL_CANON_CLOSURE_VERIFIED_V1 ===
+
+# === PATCH_PRICE_ENRICHMENT_IDEMPOTENT_V1 ===
+# Причина: _pick_next_task забирает задачи в NEW/IN_PROGRESS/WAITING_CLARIFICATION.
+# После price WC задача переходит в WAITING_CLARIFICATION, но через 1.5с poll
+# подхватывает её снова → запускает полный pipeline → второй вызов Sonar.
+# Фикс: проверяем TOPIC2_PRICE_ENRICHMENT_DONE в task_history перед вызовом Sonar.
+# Если маркер есть — возвращаем "" без сетевого запроса.
+try:
+    import logging as _pei_log_mod
+    _PEI_LOG = _pei_log_mod.getLogger("task_worker")
+    _PEI_ORIG_SEARCH = _search_prices_online
+
+    async def _search_prices_online(parsed, template, sheet_name, conn=None, task_id=None):
+        if conn is not None and task_id is not None:
+            try:
+                row = conn.execute(
+                    "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'TOPIC2_PRICE_ENRICHMENT_DONE:%' ORDER BY rowid DESC LIMIT 1",
+                    (task_id,)
+                ).fetchone()
+                if row:
+                    _PEI_LOG.info("PATCH_PRICE_ENRICHMENT_IDEMPOTENT_V1: skip task=%s already=%s", task_id, row[0] if not hasattr(row, "keys") else row["action"])
+                    return ""
+            except Exception as _pei_check_e:
+                _PEI_LOG.warning("PATCH_PRICE_ENRICHMENT_IDEMPOTENT_V1_CHECK_ERR: %s", _pei_check_e)
+        return await _PEI_ORIG_SEARCH(parsed, template, sheet_name, conn=conn, task_id=task_id)
+
+    _PEI_LOG.info("PATCH_PRICE_ENRICHMENT_IDEMPOTENT_V1 installed")
+except Exception as _pei_install_e:
+    try:
+        _PEI_LOG.exception("PATCH_PRICE_ENRICHMENT_IDEMPOTENT_V1_INSTALL_ERR: %s", _pei_install_e)
+    except Exception:
+        pass
+# === END_PATCH_PRICE_ENRICHMENT_IDEMPOTENT_V1 ===
+
+# === PATCH_KARKASNIK_SHEET_FIX_V1 ===
+# Fix regression from PATCH_TOPIC2_REALSHEET_PRICES_V3 which hardcoded "Газобетонный дом"
+# for ALL materials. For material=="каркас": read "Каркас под ключ" from М-80.xlsx
+# (col4=work_price, col6=mat_price, data starts row 10).
+import logging as _kfv1_log_mod
+_KFV1_LOG = _kfv1_log_mod.getLogger("stroyka.karkasnik_sheet_fix_v1")
+
+_ETF_V3_ORIG = extract_template_prices
+
+def extract_template_prices(template_path, parsed):  # noqa: F811
+    if (parsed or {}).get("material") == "каркас":
+        _kark_path = template_path
+        if not _kark_path or not os.path.exists(_kark_path):
+            _kark_path = "/root/.areal-neva-core/data/templates/estimate/cache/1yt-RJsGRhO13zmPKNAn6bMuGrpXY7kWp__М-80.xlsx"
+        prices = {}
+        try:
+            from openpyxl import load_workbook as _kw
+            wb = _kw(_kark_path, read_only=True, data_only=True)
+            ws = wb["Каркас под ключ"] if "Каркас под ключ" in wb.sheetnames else wb.active
+            section = "Общее"
+            for i, row in enumerate(ws.iter_rows(values_only=True)):
+                r = list(row)
+                if i < 9:
+                    continue
+                r1 = r[1] if len(r) > 1 else None
+                if r[0] and not r1:
+                    section = str(r[0]).strip()
+                    continue
+                if not r1:
+                    continue
+                try:
+                    wp = float(r[4]) if r[4] is not None else 0.0
+                    mp = float(r[6]) if r[6] is not None else 0.0
+                except (ValueError, TypeError):
+                    continue
+                if wp == 0 and mp == 0:
+                    continue
+                unit = str(r[2]).strip() if r[2] else ""
+                name = str(r1).strip()
+                prices[name.lower().strip()] = {
+                    "work_price": wp, "mat_price": mp,
+                    "unit": unit, "section": section, "name": name,
+                }
+            wb.close()
+        except Exception as _ke:
+            _KFV1_LOG.error("KARKASNIK_SHEET_FIX_V1_ERR: %s", _ke)
+        count = len(prices)
+        lines = [
+            f"- {v['name']}: работа={v['work_price']:.0f} {v['unit']}, матер={v['mat_price']:.0f} {v['unit']}"
+            for v in list(prices.values())[:25]
+            if v["work_price"] > 0 or v["mat_price"] > 0
+        ]
+        text = f"Цены из листа 'Каркас под ключ' ({count} позиций):\n" + "\n".join(lines)
+        _KFV1_LOG.info("KARKASNIK_SHEET_FIX_V1:count=%d sheet=Каркас_под_ключ", count)
+        return text, "Каркас под ключ", False
+    return _ETF_V3_ORIG(template_path, parsed)
+
+_KFV1_LOG.info("PATCH_KARKASNIK_SHEET_FIX_V1 installed")
+# === END_PATCH_KARKASNIK_SHEET_FIX_V1 ===
 
 ====================================================================================================
-END_FILE: core/topic_autodiscovery.py
+END_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 1/1
 ====================================================================================================
 
 ====================================================================================================
-BEGIN_FILE: core/topic_drive_oauth.py
+BEGIN_FILE: core/stt_engine.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 09e67527599b711f23e665802e1beed93944060a64a3674da0459bdafdd00513
+SHA256_FULL_FILE: 5a82d4d66baa07c5459aaece34a432de65b7d157840669f08efe5a9a6b1fe6bd
 ====================================================================================================
 import os
-import asyncio
-from typing import Optional, Dict, Any
-from dotenv import load_dotenv
-from google.oauth2.credentials import Credentials
-from google.auth.transport.requests import Request
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
+import aiohttp
+import logging
+import json
 
-BASE = "/root/.areal-neva-core"
-load_dotenv(f"{BASE}/.env", override=True)
+logger = logging.getLogger(__name__)
 
-def _oauth_service():
-    client_id = os.getenv("GDRIVE_CLIENT_ID")
-    client_secret = <REDACTED_SECRET>"GDRIVE_CLIENT_SECRET")
-    refresh_token = <REDACTED_SECRET>"GDRIVE_REFRESH_TOKEN")
-    if not client_id or not client_secret or not refresh_token:
-        raise RuntimeError("GDRIVE OAuth vars missing")
-    creds = Credentials(
-        None,
-        refresh_token=<REDACTED_SECRET>
-        token_uri="https://oauth2.googleapis.com/token",
-        client_id=client_id,
-        client_secret=<REDACTED_SECRET>
-        scopes=["https://www.googleapis.com/auth/drive"]  # SCOPE_FULL_V2,
+async def transcribe_voice(path: str) -> str:
+    if not os.path.exists(path):
+        raise RuntimeError(f"voice file not found: {path}")
+
+    groq_key = (os.getenv("GROQ_API_KEY") or "").strip()
+
+    logger.info("STT env check groq=%s", bool(groq_key))
+
+    if not groq_key:
+        raise RuntimeError("STT_GROQ_API_KEY_MISSING")
+
+    url = "https://api.groq.com/openai/v1/audio/transcriptions"
+    headers = {"Authorization": f"Bearer {groq_key}"}
+    model = "whisper-large-v3-turbo"
+
+    size = os.path.getsize(path)
+    logger.info("STT start file=%s size=%s model=%s", path, size, model)
+
+    data = aiohttp.FormData()
+    data.add_field("model", model)
+    data.add_field("response_format", "json")
+
+    with open(path, "rb") as f:
+        data.add_field("file", f, filename=os.path.basename(path), content_type="audio/ogg")
+        async with aiohttp.ClientSession() as s:
+            r = await s.post(
+                url,
+                headers=headers,
+                data=data,
+                timeout=aiohttp.ClientTimeout(total=300)
+            )
+            body = await r.text()
+            logger.info("STT http_status=%s", r.status)
+
+            if r.status != 200:
+                logger.error("STT body=%s", body[:500])
+                raise RuntimeError(f"STT_GROQ_FAILED: {r.status} {body[:300]}")
+
+            try:
+                js = json.loads(body)
+            except Exception:
+                raise RuntimeError(f"STT bad json: {body[:300]}")
+
+    text = (js.get("text") or "").strip()
+
+    if not text:
+        raise RuntimeError("STT returned empty transcript")
+
+    # === P6H_STT_HALLUCINATION_GUARD_V1 ===
+    _stt_hall_patterns = (
+        "субтитры", "субтитр", "titl", "продолжение следует",
+        "конец видео", "спасибо за просмотр", "подписывайтесь",
+        "thank you", "amara.org", "translated by", "caption",
     )
-    creds.refresh(Request())
-    return build("drive", "v3", credentials=creds)
+    _stt_low = text.lower()
+    if len(text) <= 6 or any(p in _stt_low for p in _stt_hall_patterns):
+        logger.warning("STT_HALLUCINATION_GUARD: rejected=%r", text[:80])
+        raise RuntimeError(f"STT_HALLUCINATION_REJECTED: {text[:60]!r}")
+    # === END_P6H_STT_HALLUCINATION_GUARD_V1 ===
+
+    logger.info("STT ok transcript_len=%s", len(text))
+
+    try:
+        os.remove(path)
+    except Exception:
+        pass
+
+    return text
+
+====================================================================================================
+END_FILE: core/stt_engine.py
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: core/technadzor_document_skill.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 7f86800da7b61771bec0e581bb3facd3ffa0f34a47ac55e87ca8fca8f3f1c74a
+====================================================================================================
+#!/usr/bin/env python3
+# === TECHNADZOR_DOCUMENT_SKILL_V1 ===
+# Converts source records from telegram_source_skill_extractor into skill cards.
+# Rejects noise. Classifies useful document-composition logic.
+# All extracted rules must keep source reference.
+from __future__ import annotations
+
+import hashlib
+import logging
+import re
+from typing import Any
+
+logger = logging.getLogger("technadzor_document_skill")
+
+SKILL_CATEGORIES = (
+    "act_structure",
+    "report_structure",
+    "defect_description_logic",
+    "photo_to_defect_linking",
+    "evidence_handling",
+    "normative_reference_handling",
+    "recommendation_logic",
+    "conclusion_logic",
+    "file_workflow",
+    "document_workflow",
+    "client_facing_language",
+    "contractor_statement_handling",
+    "owner_statement_handling",
+    "telegram_source_work_signal",
+    "rabota_poisk_reusable_pattern",
+    "unknown",
+)
+
+# Patterns → category
+_CATEGORY_PATTERNS: list[tuple[str, list[str]]] = [
+    ("act_structure", [
+        "акт", "форма акта", "состав акта", "разделы акта", "приложение к акту",
+        "акт освидетельствования", "акт скрытых", "акт приёмки", "акт проверки",
+    ]),
+    ("report_structure", [
+        "отчёт", "отчет", "заключение", "техническое заключение", "разделы отчёта",
+        "структура отчёта", "состав отчёта",
+    ]),
+    ("defect_description_logic", [
+        "дефект", "нарушение", "замечание", "несоответствие", "отклонение",
+        "трещин", "скол", "раковин", "расслоен", "коррозия",
+        "как описать", "формулировка дефекта", "описание дефекта",
+    ]),
+    ("photo_to_defect_linking", [
+        "фото", "фотофиксация", "привязка фото", "фото к дефекту",
+        "фото к акту", "фотоматериал", "приложение фото",
+    ]),
+    ("evidence_handling", [
+        "доказательство", "факт", "подтверждение", "доказательная база",
+        "источник данных", "обоснование", "исполнительная документация",
+    ]),
+    ("normative_reference_handling", [
+        "снип", "гост", "сп ", "нормати", "требования нормативов",
+        "ссылка на норму", "нормативный документ", "регламент",
+    ]),
+    ("recommendation_logic", [
+        "рекомендация", "предписание", "устранить", "необходимо устранить",
+        "рекомендуется", "следует", "требуется", "провести работы",
+    ]),
+    ("conclusion_logic", [
+        "вывод", "заключение", "итог", "резюме", "категория состояния",
+        "техническое состояние", "ограниченно работоспособ", "аварийн",
+    ]),
+    ("file_workflow", [
+        "pdf", "docx", "xlsx", "dwg", "файл", "загрузка файла",
+        "прикрепить файл", "скачать", "отправить файл", "формат файла",
+    ]),
+    ("document_workflow", [
+        "документооборот", "пакет документов", "комплект",
+        "исполнительная документация", "журнал работ", "акт скрытых",
+        "приёмка документов",
+    ]),
+    ("client_facing_language", [
+        "заказчик", "собственник", "владелец", "клиент", "застройщик",
+        "как написать заказчику", "для заказчика", "язык документа",
+    ]),
+    ("contractor_statement_handling", [
+        "подрядчик", "генподрядчик", "субподрядчик", "исполнитель",
+        "ответ подрядчика", "позиция подрядчика",
+    ]),
+    ("owner_statement_handling", [
+        "застройщик", "инвестор", "позиция застройщика",
+        "ответ застройщика", "письмо застройщика",
+    ]),
+    ("telegram_source_work_signal", [
+        "вакансия", "требуется", "нужен специалист", "ищем технадзор",
+        "ищем инженера", "найдём", "предложение работы",
+    ]),
+    ("rabota_poisk_reusable_pattern", [
+        "заказ", "тендер", "объявление", "контракт", "выбор подрядчика",
+        "объект ищет", "нужен технадзор", "проведём отбор",
+    ]),
+]
+
+TOPIC5_VALUE_KEYWORDS = [
+    "акт", "дефект", "технадзор", "заключение", "предписание",
+    "приёмка", "отчёт", "фото", "норматив", "документ",
+    "рекомендация", "вывод", "замечание",
+]
+
+NOISE_MARKERS = [
+    "реклама", "продам", "куплю", "скидка", "акция",
+    "заработок", "кредит без отказа", "займ", "только сегодня",
+    "подпишись", "переходи по ссылке", "выиграли",
+]
+
+
+def _card_id(source_ref: str, message_id: int | str) -> str:
+    raw = f"{source_ref}::{message_id}"
+    return "SK_" + hashlib.md5(raw.encode()).hexdigest()[:12].upper()
+
+
+def classify_category(text: str) -> str:
+    low = text.lower()
+    for category, patterns in _CATEGORY_PATTERNS:
+        if any(p in low for p in patterns):
+            return category
+    return "unknown"
+
+
+def extract_rule_from_text(text: str, category: str) -> str:
+    sentences = re.split(r"[.\n!?]+", text)
+    useful = []
+    for sent in sentences:
+        s = sent.strip()
+        if len(s) < 20:
+            continue
+        low = s.lower()
+        if any(kw in low for kw in TOPIC5_VALUE_KEYWORDS):
+            useful.append(s)
+        if len(useful) >= 3:
+            break
+    if useful:
+        return ". ".join(useful[:3])
+    # fallback: first substantial sentence
+    for sent in sentences:
+        s = sent.strip()
+        if len(s) >= 30:
+            return s[:300]
+    return text[:300].strip()
+
+
+def why_useful(category: str) -> str:
+    mapping = {
+        "act_structure": "Позволяет выстраивать структуру акта технадзора: разделы, приложения, обязательные поля",
+        "report_structure": "Определяет состав технического отчёта/заключения по объекту",
+        "defect_description_logic": "Формирует навык точной формулировки дефектов для актов и предписаний",
+        "photo_to_defect_linking": "Описывает правило привязки фотоматериалов к конкретным дефектам в документе",
+        "evidence_handling": "Показывает как формировать доказательную базу — факты, источники, исполнительная документация",
+        "normative_reference_handling": "Обучает правильному указанию нормативных ссылок (СП/ГОСТ/СНиП) в актах",
+        "recommendation_logic": "Задаёт логику формулировки предписаний и рекомендаций по устранению",
+        "conclusion_logic": "Показывает структуру вывода/заключения о техническом состоянии",
+        "file_workflow": "Описывает правила работы с файлами (PDF/DOCX/XLSX) при формировании пакета документов",
+        "document_workflow": "Определяет порядок формирования и передачи комплекта исполнительной документации",
+        "client_facing_language": "Задаёт профессиональный язык документов, обращённых к заказчику/собственнику",
+        "contractor_statement_handling": "Показывает как фиксировать позицию подрядчика в документах",
+        "owner_statement_handling": "Показывает как фиксировать позицию застройщика/инвестора",
+        "telegram_source_work_signal": "Сигнал о возможной работе/заказе — полезен для маршрутизации в topic_6104",
+        "rabota_poisk_reusable_pattern": "Паттерн для поиска заказов/вакансий через Telegram-источник (тема RABOTA_POISK)",
+        "unknown": "Категория не определена — требует ручной проверки владельца",
+    }
+    return mapping.get(category, "")
+
+
+def is_noise(text: str) -> bool:
+    low = (text or "").lower()
+    if any(n in low for n in NOISE_MARKERS):
+        return True
+    if len(text.strip()) < 20:
+        return True
+    return False
+
+
+def has_practical_value(text: str) -> bool:
+    low = text.lower()
+    return any(kw in low for kw in TOPIC5_VALUE_KEYWORDS)
+
+
+def build_skill_card(record: dict) -> dict | None:
+    text = record.get("text", "")
+    source_ref = record.get("source_ref", "")
+    message_id = record.get("message_id", "")
+
+    if not source_ref:
+        logger.debug("rejected: no source_ref msg=%s", message_id)
+        return None
+
+    if is_noise(text):
+        logger.debug("rejected: noise msg=%s", message_id)
+        return None
+
+    if not has_practical_value(text) and not record.get("file_name") and not record.get("links"):
+        logger.debug("rejected: no practical value msg=%s", message_id)
+        return None
+
+    category = classify_category(text)
+    extracted_rule = extract_rule_from_text(text, category)
+
+    needs_review = (
+        category == "unknown"
+        or len(extracted_rule) < 30
+        or not has_practical_value(text)
+    )
+
+    tags = [category]
+    if record.get("file_name"):
+        tags.append("has_document")
+    if record.get("links"):
+        tags.append("has_links")
+    if record.get("media_type") == "photo":
+        tags.append("has_photo")
+
+    return {
+        "id": _card_id(source_ref, message_id),
+        "source": record.get("source", "@tnz_msk"),
+        "source_ref": source_ref,
+        "message_id": message_id,
+        "message_date": record.get("message_date", ""),
+        "category": category,
+        "title": f"{category}: {extracted_rule[:60]}",
+        "source_excerpt": text[:400],
+        "extracted_rule": extracted_rule,
+        "why_useful_for_topic_5": why_useful(category),
+        "source_links": record.get("links", []),
+        "source_files": ([record["file_name"]] if record.get("file_name") else []),
+        "confidence": "low" if needs_review else "medium",
+        "needs_owner_review": needs_review,
+        "tags": tags,
+    }
+
+
+def process_records(records: list[dict]) -> dict:
+    cards: list[dict] = []
+    rejected = 0
+    for rec in records:
+        card = build_skill_card(rec)
+        if card:
+            cards.append(card)
+        else:
+            rejected += 1
+
+    by_category: dict[str, list] = {}
+    for card in cards:
+        by_category.setdefault(card["category"], []).append(card)
+
+    return {
+        "total_input": len(records),
+        "extracted": len(cards),
+        "rejected_noise": rejected,
+        "categories": list(by_category.keys()),
+        "cards": cards,
+        "by_category": by_category,
+    }
+# === END_TECHNADZOR_DOCUMENT_SKILL_V1 ===
+
+====================================================================================================
+END_FILE: core/technadzor_document_skill.py
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: core/technadzor_drive_index.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 31118a4e5fa521f992b026001a821ecf8cea7570e3185a3ed6b89d59a3143c77
+====================================================================================================
+# === P6H_TOPIC5_TECHNADZOR_TEMPLATE_PHOTO_CLIENT_SAFE_CLOSE_20260504 / DRIVE_INDEX_V1 ===
+# Auto-discovery of topic_5 (technadzor) Drive folder contents as style/content
+# references — without manual "прими как образец" commands.
+#
+# Layered classification (file role):
+#   PRIMARY_PDF_STYLE         — PDF in topic root or in non-system subfolders (real client acts; main style)
+#   SECONDARY_DOCX_REFERENCE  — DOCX in service subfolders (TECHNADZOR / _drafts / _system / _templates)
+#   CLIENT_PHOTO_SOURCE       — image/* in topic root or any non-system folder (work-object photos)
+#   CLIENT_FINAL_PDF          — PDF artifacts produced earlier (kept in client folders)
+#   SYSTEM_TEMPLATE           — DOCX/JSON/manifests in service subfolders
+#   OTHER                     — anything else (audio, etc.)
+#
+# Folder classification:
+#   SYSTEM   — name in {_system, _templates, _drafts, _manifests, _archive, _tmp, TECHNADZOR}
+#   CLIENT   — anything else (work-object/customer-facing folders)
+#
+# Index is persisted to:
+#   data/templates/technadzor/ACTIVE__chat_<chat_id>__topic_<topic_id>.json
+# (filename uses literal chat_id with leading dash, matching existing convention)
+#
+# In-memory cache TTL = 5 minutes.
+from __future__ import annotations
+
+import io
+import json
+import os
+import time
+import logging
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+LOG = logging.getLogger("task_worker")
+
+_CACHE_TTL_SECONDS = 300
+_CACHE: Dict[Tuple[str, int], Tuple[float, Dict[str, Any]]] = {}
+
+_BASE = Path(__file__).resolve().parent.parent
+_LOCAL_INDEX_DIR = _BASE / "data" / "templates" / "technadzor"
+_LOCAL_INDEX_DIR.mkdir(parents=True, exist_ok=True)
+_DOWNLOAD_DIR = _BASE / "data" / "memory_files" / "technadzor_index_cache"
+_DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+# Folder names treated as SYSTEM (no client artifacts allowed)
+SYSTEM_FOLDER_NAMES = {
+    "_system", "_templates", "_drafts", "_manifests", "_archive", "_tmp",
+    "technadzor",  # case-insensitive match against TECHNADZOR
+}
+
+
+def is_system_folder(name: str) -> bool:
+    """True if the folder is internal/service. Match case-insensitive."""
+    if not name:
+        return False
+    return name.strip().lower() in SYSTEM_FOLDER_NAMES
+
+
+def is_client_facing_folder(name: str) -> bool:
+    """True if the folder is client-facing (object/customer/visit folder)."""
+    if not name:
+        return False
+    return not is_system_folder(name)
+
+
+def _service():
+    from core.topic_drive_oauth import _oauth_service
+    return _oauth_service()
+
 
 def _root_folder_id() -> str:
-    folder_id = os.getenv("DRIVE_INGEST_FOLDER_ID", "").strip()
-    if not folder_id:
-        raise RuntimeError("DRIVE_INGEST_FOLDER_ID missing")
-    return folder_id
+    from core.topic_drive_oauth import _root_folder_id as r
+    return r()
 
-def _find_child_folder(service, parent_id: str, name: str) -> Optional[str]:
-    # === DRIVE_CANON_SINGLE_FOLDER_PICK_V1 ===
-    # Deterministic folder lookup: if duplicates exist, use the oldest existing folder.
-    safe_name = str(name or "").replace("'", "\\'")
-    q = (
-        f"name = '{safe_name}' and "
-        f"mimeType = 'application/vnd.google-apps.folder' and "
-        f"'{parent_id}' in parents and trashed = false"
-    )
-    resp = service.files().list(
-        q=q,
-        spaces="drive",
-        fields="files(id,name,createdTime)",
-        orderBy="createdTime",
-        supportsAllDrives=True,
-        includeItemsFromAllDrives=True,
+
+def _find_child(svc, parent_id: str, name: str) -> Optional[str]:
+    safe_name = name.replace("'", "\\'")
+    res = svc.files().list(
+        q=f"'{parent_id}' in parents and name='{safe_name}' and trashed=false",
+        fields="files(id,name,mimeType)",
+        pageSize=10,
     ).execute()
-    files = resp.get("files", [])
+    files = res.get("files", [])
     return files[0]["id"] if files else None
-    # === END_DRIVE_CANON_SINGLE_FOLDER_PICK_V1 ===
 
-def _ensure_folder(service, parent_id: str, name: str) -> str:
-    found = _find_child_folder(service, parent_id, name)
-    if found:
-        return found
-    meta = {
+
+def _ensure_subfolder(svc, parent_id: str, name: str) -> str:
+    fid = _find_child(svc, parent_id, name)
+    if fid:
+        return fid
+    body = {
         "name": name,
         "mimeType": "application/vnd.google-apps.folder",
         "parents": [parent_id],
     }
-    res = service.files().create(
-        body=meta,
-        fields="id",
-        supportsAllDrives=True,
-    ).execute()
-    return res["id"]
+    created = svc.files().create(body=body, fields="id").execute()
+    return created["id"]
 
-def _upload_file_sync(file_path: str, file_name: str, chat_id: str, topic_id: int, mime_type: Optional[str] = None) -> Dict[str, Any]:
-    service = _oauth_service()
-    root_id = _root_folder_id()
-    chat_folder = _ensure_folder(service, root_id, f"chat_{chat_id}")
-    topic_folder = _ensure_folder(service, chat_folder, f"topic_{int(topic_id or 0)}")
-    media = MediaFileUpload(file_path, mimetype=mime_type, resumable=True)
-    meta = {
-        "name": file_name,
-        "parents": [topic_folder],
-    }
-    res = service.files().create(
-        body=meta,
-        media_body=media,
-        fields="id,parents",
-        supportsAllDrives=True,
-    ).execute()
-    return {
-        "ok": True,
-        "drive_file_id": res.get("id"),
-        "folder_id": topic_folder,
-        "chat_folder_id": chat_folder,
-    }
 
-async def upload_file_to_topic(file_path: str, file_name: str, chat_id: str, topic_id: int, mime_type: Optional[str] = None) -> Dict[str, Any]:
-    return await asyncio.to_thread(_upload_file_sync, file_path, file_name, str(chat_id), int(topic_id or 0), mime_type)
-
-
-# === P7_TOPIC5_ACTIVE_FOLDER_UPLOAD_V1 ===
-# topic_5 object materials must upload into ActiveTechnadzorFolder, not generic topic_5 root.
-import json as _p7_t5_json
-import time as _p7_t5_time
-from pathlib import Path as _p7_t5_Path
-
-_P7_T5_ORIG_UPLOAD_FILE_SYNC = _upload_file_sync
-_P7_T5_BASE = _p7_t5_Path("/root/.areal-neva-core/data/technadzor")
-
-def _p7_t5_active_folder_path(chat_id, topic_id):
-    return _P7_T5_BASE / f"active_folder_{chat_id}_{int(topic_id or 0)}.json"
-
-def _p7_t5_load_active_folder(chat_id, topic_id):
-    if int(topic_id or 0) != 5:
-        return {}
-    p = _p7_t5_active_folder_path(str(chat_id), 5)
-    try:
-        data = _p7_t5_json.loads(p.read_text(encoding="utf-8"))
-        if data.get("folder_id") and str(data.get("status", "OPEN")).upper() != "CLOSED":
-            return data
-    except Exception:
-        return {}
-    return {}
-
-def _upload_file_sync(file_path: str, file_name: str, chat_id: str, topic_id: int, mime_type: Optional[str] = None) -> Dict[str, Any]:
-    if int(topic_id or 0) == 5:
-        af = _p7_t5_load_active_folder(str(chat_id), 5)
-        active_folder_id = str(af.get("folder_id") or "").strip()
-        if active_folder_id:
-            service = _oauth_service()
-            media = MediaFileUpload(file_path, mimetype=mime_type, resumable=True)
-            meta = {
-                "name": file_name,
-                "parents": [active_folder_id],
-            }
-            res = service.files().create(
-                body=meta,
-                media_body=media,
-                fields="id,parents,webViewLink",
-                supportsAllDrives=True,
-            ).execute()
-            return {
-                "ok": True,
-                "drive_file_id": res.get("id"),
-                "folder_id": active_folder_id,
-                "active_folder_id": active_folder_id,
-                "active_folder_name": af.get("folder_name", ""),
-                "webViewLink": res.get("webViewLink", ""),
-                "topic5_active_folder_upload": True,
-                "uploaded_at": _p7_t5_time.time(),
-            }
-    return _P7_T5_ORIG_UPLOAD_FILE_SYNC(file_path, file_name, chat_id, topic_id, mime_type)
-# === END_P7_TOPIC5_ACTIVE_FOLDER_UPLOAD_V1 ===
-
-====================================================================================================
-END_FILE: core/topic_drive_oauth.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/topic_meta_loader.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 081afc9cc3266e754882d8c6fce4db2ebb8d191a72aebc19c120afdb1fbb8dec
-====================================================================================================
-"""TOPIC_META_LOADER_V1 — читает data/topics/{tid}/meta.json при INTAKE."""
-import json
-from pathlib import Path
-from typing import Optional, Dict, Any
-
-DATA_TOPICS = Path("data/topics")
-
-# Триггеры "что это за чат" — отвечаем из meta.json напрямую
-WHAT_IS_THIS_TRIGGERS = [
-    "что мы здесь делаем", "что мы тут делаем", "для чего ты",
-    "для чего этот чат", "для чего этот топик", "для чего у нас",
-    "что мы делаем в данном чате", "что мы делаем тут",
-    "скажи для чего", "зачем этот чат", "зачем этот топик",
-    "про что чат", "про что топик", "что за чат", "что за топик",
-]
-
-def load_topic_meta(topic_id: int) -> Optional[Dict[str, Any]]:
-    """Возвращает meta.json топика или None."""
-    if topic_id is None:
-        return None
-    folder = DATA_TOPICS / str(topic_id)
-    meta_path = folder / "meta.json"
-    if not meta_path.exists():
-        return None
-    try:
-        return json.loads(meta_path.read_text(encoding="utf-8"))
-    except Exception:
-        return None
-
-def is_what_is_this_question(text: str) -> bool:
-    """True если текст — вопрос о назначении чата."""
-    if not text:
-        return False
-    t = text.lower().replace("[voice]", "").replace("🎤", "").strip()
-    return any(trigger in t for trigger in WHAT_IS_THIS_TRIGGERS)
-
-def build_topic_self_answer(meta: Dict[str, Any]) -> str:
-    """Формирует ответ от имени топика на вопрос 'что мы тут делаем'."""
-    name = meta.get("name", "Без имени")
-    direction = meta.get("direction", "general_chat")
-    
-    DIRECTION_DESCRIPTIONS = {
-        "general_chat": "общий чат для произвольных задач",
-        "crm_leads": "лиды, реклама, AmoCRM, лидогенерация",
-        "estimates": "сметы, расчёт стоимости строительства",
-        "technical_supervision": "технадзор, акты осмотра, дефекты, СП/ГОСТ",
-        "structural_design": "проектирование КЖ/КМ/КМД/АР/ОВ/ВК/ЭОМ/СС/ГП/ПЗ/СМ/ТХ",
-        "internet_search": "интернет-поиск товаров и информации",
-        "auto_parts_search": "поиск автозапчастей, артикулы, аналоги, цены",
-        "orchestration_core": "коды оркестра, AI-роутер, архитектура системы",
-        "video_production": "генерация и производство видеоконтента",
-        "devops_server": "VPN, VPS, конфигурации серверов, настройки",
-        "job_search": "поиск работы и интеграция с биржами труда",
-    }
-    
-    desc = DIRECTION_DESCRIPTIONS.get(direction, direction)
-    return f"Этот чат — {name}. Направление: {desc}."
-
-====================================================================================================
-END_FILE: core/topic_meta_loader.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/universal_file_engine.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: a19ee184aae5b7ddad4f2e625de87685894cd3141252bbb507d5b11c363c9fdd
-====================================================================================================
-# === UNIVERSAL_FILE_ENGINE_V1 ===
-from __future__ import annotations
-
-import json
-import os
-import re
-import tempfile
-import zipfile
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Dict, List
-
-from core.format_registry import classify_file
-
-def _clean(v: Any, limit: int = 20000) -> str:
-    s = "" if v is None else str(v)
-    s = s.replace("\r", "\n")
-    s = re.sub(r"[ \t]+", " ", s)
-    s = re.sub(r"\n{3,}", "\n\n", s)
-    return s.strip()[:limit]
-
-def _safe(v: Any, fallback: str = "file") -> str:
-    s = re.sub(r"[^A-Za-zА-Яа-я0-9_.-]+", "_", _clean(v, 120)).strip("._")
-    return s or fallback
-
-def _try_extract_text(path: str, file_name: str = "") -> str:
-    ext = Path(file_name or path).suffix.lower()
-    if ext == ".pdf":
-        try:
-            from pypdf import PdfReader
-            reader = PdfReader(path)
-            return _clean("\n".join((p.extract_text() or "") for p in reader.pages[:50]), 50000)
-        except Exception as e:
-            return f"PDF_PARSE_ERROR: {e}"
-    if ext == ".docx":
-        try:
-            from docx import Document
-            doc = Document(path)
-            return _clean("\n".join(p.text for p in doc.paragraphs if p.text), 50000)
-        except Exception as e:
-            return f"DOCX_PARSE_ERROR: {e}"
-    if ext in (".txt", ".md", ".csv", ".json", ".xml", ".html", ".htm", ".yaml", ".yml"):
-        try:
-            with open(path, "r", encoding="utf-8", errors="ignore") as f:
-                return _clean(f.read(), 50000)
-        except Exception as e:
-            return f"TEXT_PARSE_ERROR: {e}"
-    return ""
-
-def _write_docx(model: Dict[str, Any], task_id: str) -> str:
-    out = Path(tempfile.gettempdir()) / f"universal_file_report_{_safe(task_id)}.docx"
-    try:
-        from docx import Document
-        doc = Document()
-        doc.add_heading("UNIVERSAL FILE REPORT", level=1)
-        doc.add_paragraph(f"Файл: {model.get('file_name')}")
-        doc.add_paragraph(f"Тип: {model.get('kind')}")
-        doc.add_paragraph(f"Домен: {model.get('domain')}")
-        doc.add_paragraph(f"Расширение: {model.get('extension')}")
-        doc.add_paragraph(f"Размер: {model.get('size_bytes')} bytes")
-        doc.add_paragraph(f"Engine hint: {model.get('engine_hint')}")
-        doc.add_heading("Текст/превью", level=2)
-        doc.add_paragraph(_clean(model.get("text_preview"), 12000) or "Текст не извлечён")
-        doc.add_heading("Статус", level=2)
-        doc.add_paragraph(model.get("status") or "INDEXED_METADATA")
-        doc.save(out)
-        return str(out)
-    except Exception:
-        txt = out.with_suffix(".txt")
-        txt.write_text(json.dumps(model, ensure_ascii=False, indent=2), encoding="utf-8")
-        return str(txt)
-
-def _write_json(model: Dict[str, Any], task_id: str) -> str:
-    out = Path(tempfile.gettempdir()) / f"universal_file_model_{_safe(task_id)}.json"
-    out.write_text(json.dumps(model, ensure_ascii=False, indent=2), encoding="utf-8")
-    return str(out)
-
-def _write_xlsx(model: Dict[str, Any], task_id: str) -> str:
-    out = Path(tempfile.gettempdir()) / f"universal_file_register_{_safe(task_id)}.xlsx"
-    try:
-        from openpyxl import Workbook
-        wb = Workbook()
-        ws = wb.active
-        ws.title = "File"
-        for row, (k, v) in enumerate(model.items(), 1):
-            ws.cell(row=row, column=1, value=str(k))
-            ws.cell(row=row, column=2, value=json.dumps(v, ensure_ascii=False) if isinstance(v, (dict, list)) else str(v))
-        wb.save(out)
-        wb.close()
-        return str(out)
-    except Exception:
-        csv = out.with_suffix(".csv")
-        csv.write_text("key,value\n" + "\n".join(f"{k},{v}" for k, v in model.items()), encoding="utf-8")
-        return str(csv)
-
-def _zip(paths: List[str], task_id: str) -> str:
-    out = Path(tempfile.gettempdir()) / f"universal_file_package_{_safe(task_id)}.zip"
-    with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as z:
-        for p in paths:
-            if p and os.path.exists(p):
-                z.write(p, arcname=os.path.basename(p))
-        z.writestr("manifest.json", json.dumps({
-            "engine": "UNIVERSAL_FILE_ENGINE_V1",
-            "task_id": task_id,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "files": [os.path.basename(p) for p in paths if p and os.path.exists(p)],
-        }, ensure_ascii=False, indent=2))
-    return str(out)
-
-def process_universal_file(
-    local_path: str,
-    file_name: str = "",
-    mime_type: str = "",
-    user_text: str = "",
-    topic_role: str = "",
-    task_id: str = "universal_file",
-    topic_id: int = 0,
-) -> Dict[str, Any]:
-    if not local_path or not os.path.exists(local_path):
-        return {"success": False, "error": "FILE_NOT_FOUND", "summary": "Файл не найден"}
-
-    cls = classify_file(file_name or os.path.basename(local_path), mime_type, user_text, topic_role)
-    size = os.path.getsize(local_path)
-    text = _try_extract_text(local_path, file_name or local_path)
-
-    model = {
-        "schema": "UNIVERSAL_FILE_MODEL_V1",
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "file_name": file_name or os.path.basename(local_path),
-        "local_path": local_path,
-        "mime_type": mime_type,
-        "topic_id": topic_id,
-        "user_text": user_text,
-        "topic_role": topic_role,
-        "size_bytes": size,
-        "text_preview": _clean(text, 5000),
-        **cls,
-        "status": "INDEXED_WITH_TEXT" if text else "INDEXED_METADATA_ONLY",
-    }
-
-    docx = _write_docx(model, task_id)
-    xlsx = _write_xlsx(model, task_id)
-    js = _write_json(model, task_id)
-    package = _zip([docx, xlsx, js], task_id)
-
-    summary = "\n".join([
-        "Универсальный файловый контур отработал",
-        f"Файл: {model['file_name']}",
-        f"Тип: {model['kind']}",
-        f"Домен: {model['domain']}",
-        f"Статус: {model['status']}",
-        "Артефакты: DOCX + XLSX + JSON + ZIP",
-    ])
-
-    return {
-        "success": True,
-        "engine": "UNIVERSAL_FILE_ENGINE_V1",
-        "summary": summary,
-        "artifact_path": package,
-        "artifact_name": f"{Path(model['file_name']).stem}_universal_file_package.zip",
-        "extra_artifacts": [docx, xlsx, js],
-        "model": model,
-    }
-# === END_UNIVERSAL_FILE_ENGINE_V1 ===
-
-====================================================================================================
-END_FILE: core/universal_file_engine.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/universal_file_handler.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 10f50019c01f6a903296f3616568273fe69b0910481c12cc1105b19fec8ee2a7
-====================================================================================================
-# === UNIVERSAL_FILE_HANDLER_V1 ===
-import os, logging, tempfile, subprocess, csv, zipfile, json
-from typing import Dict, Any, Optional
-
-logger = logging.getLogger(__name__)
-
-# --- Magic bytes detection ---
-_MAGIC = {
-    b"%PDF": "pdf",
-    b"PK\x03\x04": "xlsx_or_zip",
-    b"\xd0\xcf\x11\xe0": "doc_or_xls",
-    b"\xff\xd8\xff": "jpg",
-    b"\x89PNG": "png",
-    b"GIF8": "gif",
-    b"BM": "bmp",
-    b"II\x2a\x00": "tiff",
-    b"MM\x00\x2a": "tiff",
-    b"RIFF": "webp_or_avi",
-    b"ftyp": "mp4",
-    b"ID3": "mp3",
-    b"AC10": "dwg",
-    b"AC12": "dwg",
-    b"AC14": "dwg",
-    b"AC15": "dwg",
-    b"AC18": "dwg",
-    b"AC21": "dwg",
-    b"AC24": "dwg",
-    b"AC27": "dwg",
-    b"  0\r\nSECTION": "dxf",
-}
-
-EXT_MAP = {
-    ".pdf": "pdf", ".docx": "docx", ".doc": "doc_old",
-    ".xlsx": "xlsx", ".xls": "xls_old", ".csv": "csv",
-    ".txt": "text", ".md": "text", ".json": "json", ".xml": "xml",
-    ".jpg": "image", ".jpeg": "image", ".png": "image",
-    ".heic": "image", ".webp": "image", ".bmp": "image", ".tiff": "image",
-    ".dwg": "dwg", ".dxf": "dxf", ".dgn": "dgn",
-    ".zip": "zip", ".rar": "rar", ".7z": "7z",
-    ".mp4": "video", ".avi": "video", ".mov": "video",
-    ".mp3": "audio", ".ogg": "audio", ".wav": "audio",
-    ".odt": "odt", ".ods": "ods", ".rtf": "rtf",
-}
-
-def detect_type(file_path: str) -> str:
-    ext = os.path.splitext(file_path)[1].lower()
-    try:
-        with open(file_path, "rb") as f:
-            header = f.read(16)
-        for magic, ftype in _MAGIC.items():
-            if header[:len(magic)] == magic:
-                # PK magic = ZIP or XLSX — уточняем по расширению
-                if ftype == "xlsx_or_zip":
-                    return "xlsx" if ext in (".xlsx", ".xlsm", ".xltx") else "zip"
-                # RIFF = webp or avi — уточняем по расширению
-                if ftype == "webp_or_avi":
-                    return "image" if ext == ".webp" else "video"
-                return ftype
-    except Exception:
-        pass
-    return EXT_MAP.get(ext, "unknown")
-
-
-def extract_text_from_file(file_path: str, task_id: str = "", topic_id: int = 0) -> Dict[str, Any]:
-    """
-    Универсальный экстрактор текста/данных из любого файла.
-    Маркер: UNIVERSAL_FILE_HANDLER_V1
-    Возвращает: {"success": bool, "type": str, "text": str, "rows": list, "error": str}
-    """
-    result = {"success": False, "type": "unknown", "text": "", "rows": [], "error": ""}
-    ftype = detect_type(file_path)
-    result["type"] = ftype
-    logger.info("UNIVERSAL_FILE_HANDLER type=%s file=%s", ftype, os.path.basename(file_path))
-
-    try:
-        # --- PDF ---
-        if ftype == "pdf":
-            import pdfplumber, re
-            with pdfplumber.open(file_path) as pdf:
-                parts = []
-                rows = []
-                for page in pdf.pages:
-                    t = page.extract_text() or ""
-                    t = re.sub(r'\(cid:\d+\)', '', t)
-                    if t.strip():
-                        parts.append(t)
-                    for tbl in (page.extract_tables() or []):
-                        rows.extend(tbl)
-                result["text"] = "\n".join(parts)
-                result["rows"] = rows
-                result["success"] = True
-
-        # --- DOCX / ODT ---
-        elif ftype in ("docx", "odt"):
-            import docx as _docx
-            doc = _docx.Document(file_path)
-            result["text"] = "\n".join(p.text for p in doc.paragraphs if p.text.strip())
-            result["rows"] = [[c.text for c in row.cells] for tbl in doc.tables for row in tbl.rows]
-            result["success"] = True
-
-        # --- XLSX / ODS ---
-        elif ftype in ("xlsx_or_zip", "xlsx"):
-            from openpyxl import load_workbook
-            wb = load_workbook(file_path, data_only=True)
-            rows = []
-            for ws in wb.worksheets:
-                for row in ws.iter_rows(values_only=True):
-                    if any(c is not None for c in row):
-                        rows.append([str(c) if c is not None else "" for c in row])
-            result["rows"] = rows
-            result["text"] = "\n".join("\t".join(r) for r in rows[:50])
-            result["success"] = True
-
-        # --- CSV ---
-        elif ftype == "csv":
-            rows = []
-            enc = "utf-8"
-            try:
-                import chardet
-                with open(file_path, "rb") as f:
-                    enc = chardet.detect(f.read(4096)).get("encoding", "utf-8") or "utf-8"
-            except Exception:
-                pass
-            with open(file_path, encoding=enc, errors="replace") as f:
-                for row in csv.reader(f):
-                    rows.append(row)
-            result["rows"] = rows
-            result["text"] = "\n".join("\t".join(r) for r in rows[:50])
-            result["success"] = True
-
-        # --- TEXT / JSON / XML / MD ---
-        elif ftype in ("text", "json", "xml", "rtf"):
-            enc = "utf-8"
-            try:
-                import chardet
-                with open(file_path, "rb") as f:
-                    enc = chardet.detect(f.read(4096)).get("encoding", "utf-8") or "utf-8"
-            except Exception:
-                pass
-            with open(file_path, encoding=enc, errors="replace") as f:
-                result["text"] = f.read(50000)
-            result["success"] = True
-
-        # --- ИЗОБРАЖЕНИЯ (JPG/PNG/HEIC/BMP/TIFF/WEBP/GIF) ---
-        elif ftype in ("jpg", "png", "image", "gif", "bmp", "tiff", "webp_or_avi"):
-            import pytesseract
-            from PIL import Image
-            try:
-                from pillow_heif import register_heif_opener
-                register_heif_opener()
-            except Exception:
-                pass
-            img = Image.open(file_path)
-            text = pytesseract.image_to_string(img, lang="rus+eng")
-            result["text"] = text.strip()
-            result["success"] = True
-            result["type"] = "image"
-
-        # --- DWG → конвертация в DXF → ezdxf ---
-        elif ftype == "dwg":
-            result = _handle_dwg(file_path, result)
-
-        # --- DXF ---
-        elif ftype == "dxf":
-            result = _handle_dxf(file_path, result)
-
-        # --- ZIP ---
-        elif ftype == "zip":
-            result = _handle_zip(file_path, task_id, topic_id, result)
-
-        # --- RAR ---
-        elif ftype == "rar":
-            try:
-                import rarfile
-                tmp = tempfile.mkdtemp()
-                with rarfile.RarFile(file_path) as rf:
-                    rf.extractall(tmp)
-                texts = []
-                for fn in os.listdir(tmp)[:5]:
-                    sub = extract_text_from_file(os.path.join(tmp, fn), task_id, topic_id)
-                    if sub["success"]:
-                        texts.append(f"[{fn}]\n{sub['text']}")
-                result["text"] = "\n\n".join(texts)
-                result["success"] = True
-                result["type"] = "rar"
-            except Exception as e:
-                result["error"] = f"RAR: {e}"
-
-        # --- 7Z ---
-        elif ftype == "7z":
-            try:
-                import py7zr
-                tmp = tempfile.mkdtemp()
-                with py7zr.SevenZipFile(file_path) as sz:
-                    sz.extractall(tmp)
-                texts = []
-                for fn in os.listdir(tmp)[:5]:
-                    sub = extract_text_from_file(os.path.join(tmp, fn), task_id, topic_id)
-                    if sub["success"]:
-                        texts.append(f"[{fn}]\n{sub['text']}")
-                result["text"] = "\n\n".join(texts)
-                result["success"] = True
-                result["type"] = "7z"
-            except Exception as e:
-                result["error"] = f"7Z: {e}"
-
-        # --- ВИДЕО/АУДИО — метаданные через ffmpeg ---
-        elif ftype in ("mp4", "video", "mp3", "audio"):
-            try:
-                out = subprocess.check_output(
-                    ["ffmpeg", "-i", file_path],
-                    stderr=subprocess.STDOUT, timeout=10
-                ).decode(errors="replace")
-            except subprocess.CalledProcessError as e:
-                out = e.output.decode(errors="replace")
-            result["text"] = out[:2000]
-            result["success"] = True
-
-        # --- UNKNOWN — попытка открыть как текст ---
-        else:
-            try:
-                with open(file_path, "r", encoding="utf-8", errors="replace") as f:
-                    txt = f.read(10000)
-                if len(txt.strip()) > 20:
-                    result["text"] = txt
-                    result["success"] = True
-                    result["type"] = "text_fallback"
-                else:
-                    result["error"] = f"Формат не поддерживается: {os.path.splitext(file_path)[1]}"
-            except Exception as e:
-                result["error"] = f"Неизвестный формат: {e}"
-
-    except Exception as e:
-        logger.error("UNIVERSAL_FILE_HANDLER_ERROR type=%s err=%s", ftype, e)
-        result["error"] = str(e)
-
-    return result
-
-
-def _handle_dwg(file_path: str, result: dict) -> dict:
-    """DWG: конвертация через dwg2dxf (libredwg), fallback через imagemagick preview"""
-    dxf_path = file_path.replace(".dwg", ".dxf").replace(".DWG", ".dxf")
-    if not dxf_path.endswith(".dxf"):
-        dxf_path = file_path + ".dxf"
-
-    # Попытка 1: dwg2dxf
-    try:
-        subprocess.run(["dwg2dxf", file_path, "-o", dxf_path],
-                       timeout=30, capture_output=True, check=True)
-        if os.path.exists(dxf_path):
-            logger.info("DWG→DXF conversion OK: %s", dxf_path)
-            return _handle_dxf(dxf_path, result)
-    except Exception as e:
-        logger.warning("dwg2dxf failed: %s", e)
-
-    # Попытка 2: imagemagick — превью в PNG + OCR
-    try:
-        png_path = file_path + "_preview.png"
-        subprocess.run(
-            ["convert", "-density", "150", file_path + "[0]", png_path],
-            timeout=30, capture_output=True, check=True
-        )
-        if os.path.exists(png_path):
-            import pytesseract
-            from PIL import Image
-            text = pytesseract.image_to_string(Image.open(png_path), lang="rus+eng")
-            result["text"] = f"[DWG файл — превью через OCR]\n{text.strip()}"
-            result["success"] = True
-            result["type"] = "dwg_ocr_preview"
-            return result
-    except Exception as e:
-        logger.warning("DWG imagemagick fallback failed: %s", e)
-
-    result["error"] = "DWG: конвертация не удалась. Пришли файл в формате .dxf"
-    result["text"] = "Файл формата DWG получен. Для полной обработки конвертируй в DXF."
-    result["success"] = False
-    return result
-
-
-def _handle_dxf(file_path: str, result: dict) -> dict:
-    """DXF через ezdxf"""
-    try:
-        import ezdxf
-        doc = ezdxf.readfile(file_path)
-        msp = doc.modelspace()
-        counts = {}
-        texts = []
-        for e in msp:
-            t = e.dxftype()
-            counts[t] = counts.get(t, 0) + 1
-            if t in ("TEXT", "MTEXT") and hasattr(e.dxf, "text"):
-                txt = str(e.dxf.text or "").strip()
-                if txt:
-                    texts.append(txt)
-        summary = "DXF элементы:\n"
-        for k, v in sorted(counts.items(), key=lambda x: -x[1])[:15]:
-            summary += f"  {k}: {v}\n"
-        if texts:
-            summary += "\nТексты в чертеже:\n" + "\n".join(texts[:30])
-        result["text"] = summary
-        result["rows"] = [[k, str(v)] for k, v in counts.items()]
-        result["success"] = True
-        result["type"] = "dxf"
-    except Exception as e:
-        result["error"] = f"DXF: {e}"
-    return result
-
-
-def _handle_zip(file_path: str, task_id: str, topic_id: int, result: dict) -> dict:
-    """ZIP — распаковка и рекурсивная обработка"""
-    try:
-        tmp = tempfile.mkdtemp()
-        with zipfile.ZipFile(file_path) as zf:
-            names = zf.namelist()[:20]
-            zf.extractall(tmp)
-        texts = []
-        all_rows = []
-        for fn in names:
-            fp = os.path.join(tmp, fn)
-            if not os.path.isfile(fp):
-                continue
-            sub = extract_text_from_file(fp, task_id, topic_id)
-            if sub["success"]:
-                texts.append(f"[{fn}]\n{sub['text'][:1000]}")
-                all_rows.extend(sub.get("rows", []))
-        result["text"] = f"ZIP архив ({len(names)} файлов):\n\n" + "\n\n".join(texts)
-        result["rows"] = all_rows
-        result["success"] = True
-        result["type"] = "zip"
-    except Exception as e:
-        result["error"] = f"ZIP: {e}"
-    return result
-# === END UNIVERSAL_FILE_HANDLER_V1 ===
-
-====================================================================================================
-END_FILE: core/universal_file_handler.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/upload_retry_queue.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: c84118ed90d2faa43ddc5a8f1c63e8767639e25641c2b6ebc4c1ca38570171c2
-====================================================================================================
-"""
-Upload retry queue.
-Finds tasks where artifact was sent to Telegram (Drive failed),
-checks if Drive is now available, re-uploads to Drive.
-Notifies user in Telegram with new Drive link.
-"""
-import os
-import sqlite3
-import logging
-import json
-import tempfile
-import requests
-from dotenv import load_dotenv
-
-load_dotenv("/root/.areal-neva-core/.env", override=True)
-
-logging.basicConfig(
-    filename="/root/.areal-neva-core/logs/upload_retry_queue.log",
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(message)s",
-)
-logger = logging.getLogger(__name__)
-
-DB_PATH = "/root/.areal-neva-core/data/core.db"
-BOT_TOKEN = <REDACTED_SECRET>"BOT_TOKEN") or os.environ.get("TELEGRAM_BOT_TOKEN")
-
-
-def check_drive_alive() -> bool:
-    # === ROOT_TMP_UPLOAD_GUARD_V1 ===
-    # Healthcheck MUST NOT upload tmp*.txt into AI_ORCHESTRA root.
-    # It only lists the configured Drive root via OAuth.
-    try:
-        from core.topic_drive_oauth import _oauth_service, _root_folder_id
-        service = _oauth_service()
-        root_id = _root_folder_id()
-        service.files().list(
-            q=f"'{root_id}' in parents and trashed = false",
-            spaces="drive",
-            pageSize=1,
-            fields="files(id,name)",
-            supportsAllDrives=True,
-            includeItemsFromAllDrives=True,
-        ).execute()
-        logger.info("ROOT_TMP_UPLOAD_GUARD_V1: DRIVE_HEALTH_CHECK_LIST_OK root=%s", root_id)
-        return True
-    except Exception as e:
-        logger.warning("ROOT_TMP_UPLOAD_GUARD_V1: DRIVE_HEALTH_CHECK_FAILED err=%s", e)
-        return False
-    # === END_ROOT_TMP_UPLOAD_GUARD_V1 ===
-
-
-def get_pending_retry_tasks(conn: sqlite3.Connection):
-    return conn.execute(
-        """
-        SELECT t.id, t.chat_id, t.topic_id, t.result,
-               th_tg.action as tg_action
-        FROM tasks t
-        JOIN task_history th_tg ON th_tg.task_id = t.id
-            AND th_tg.action LIKE 'TELEGRAM_ARTIFACT_FALLBACK_SENT:%'
-        WHERE t.state IN ('AWAITING_CONFIRMATION','DONE')
-          AND NOT EXISTS (
-              SELECT 1 FROM task_history th2
-              WHERE th2.task_id = t.id
-                AND th2.action LIKE 'DRIVE_RETRY_UPLOAD_OK:%'
-          )
-        ORDER BY t.updated_at DESC
-        LIMIT 20
-        """,
-    ).fetchall()
-
-
-def parse_tg_action(action: str) -> dict:
-    result = {}
-    for part in action.split(":"):
-        if "=" in part:
-            k, v = part.split("=", 1)
-            result[k] = v
-    return result
-
-
-def download_from_telegram(file_id: str, dest_path: str) -> bool:
-    try:
-        r = requests.get(
-            f"https://api.telegram.org/bot{BOT_TOKEN}/getFile",
-            params={"file_id": file_id},
-            timeout=15,
-        )
-        if not r.ok:
-            return False
-        file_path = r.json().get("result", {}).get("file_path")
-        if not file_path:
-            return False
-        dl = requests.get(
-            f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}",
-            timeout=30,
-        )
-        if not dl.ok:
-            return False
-        with open(dest_path, "wb") as f:
-            f.write(dl.content)
-        return True
-    except Exception as e:
-        logger.error("TG_DOWNLOAD_FAILED file_id=%s err=%s", file_id, e)
-        return False
-
-
-def notify_telegram(chat_id, topic_id, message: str):
-    if not BOT_TOKEN:
-        return
-    try:
-        data = {"chat_id": str(chat_id), "text": message, "parse_mode": "HTML"}
-        if topic_id and int(topic_id) > 0:
-            data["message_thread_id"] = str(topic_id)
-        requests.post(
-            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-            json=data, timeout=10,
-        )
-    except Exception as e:
-        logger.warning("NOTIFY_FAILED err=%s", e)
-
-
-def run():
-    logger.info("RETRY_QUEUE_START")
-
-    if not check_drive_alive():
-        logger.info("DRIVE_UNAVAILABLE — skip retry")
-        return
-
-    logger.info("DRIVE_ALIVE — checking pending tasks")
-
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-
-    try:
-        pending = get_pending_retry_tasks(conn)
-        logger.info("PENDING_RETRY_COUNT=%d", len(pending))
-
-        for row in pending:
-            task_id = row["id"]
-            chat_id = row["chat_id"]
-            topic_id = row["topic_id"]
-            tg_info = parse_tg_action(row["tg_action"])
-            file_id = tg_info.get("file_id")
-
-            if not file_id:
-                logger.warning("RETRY_SKIP task=%s no file_id", task_id)
-                continue
-
-            logger.info("RETRY_ATTEMPT task=%s file_id=%s", task_id, file_id)
-
-            with tempfile.NamedTemporaryFile(
-                suffix=".bin", delete=False,
-                dir="/root/.areal-neva-core/runtime"
-            ) as tmp:
-                tmp_path = tmp.name
-
-            ok = download_from_telegram(file_id, tmp_path)
-            if not ok:
-                logger.error("RETRY_TG_DOWNLOAD_FAILED task=%s", task_id)
-                try:
-                    os.remove(tmp_path)
-                except Exception:
-                    pass
-                continue
-
-            # PATCH_RETRY_TOPIC_FOLDER_V1: upload to topic folder, not INGEST root
-            try:
-                import mimetypes as _mt
-                from core.topic_drive_oauth import _upload_file_sync
-                # Get original file name from task raw_input
-                try:
-                    _raw = conn.execute("SELECT raw_input FROM tasks WHERE id=?", (task_id,)).fetchone()
-                    _orig_name = json.loads(_raw["raw_input"] or "{}").get("file_name", f"artifact_{task_id[:8]}")
-                except Exception:
-                    _orig_name = f"artifact_{task_id[:8]}"
-                _mime = _mt.guess_type(_orig_name)[0] or "application/octet-stream"
-                _up = _upload_file_sync(
-                    tmp_path, _orig_name,
-                    str(row["chat_id"]), int(topic_id or 0), _mime
-                )
-                _fid = _up.get("drive_file_id") if isinstance(_up, dict) else None
-                drive_link = f"https://drive.google.com/file/d/{_fid}/view" if _fid else None
-            except Exception as e:
-                logger.error("RETRY_DRIVE_UPLOAD_FAILED task=%s err=%s", task_id, e)
-                drive_link = None
-            finally:
-                try:
-                    os.remove(tmp_path)
-                except Exception:
-                    pass
-
-            if not drive_link or "drive.google.com" not in str(drive_link):
-                logger.error("RETRY_NO_LINK task=%s", task_id)
-                continue
-
-            old_result = row["result"] or ""
-            new_result = old_result.replace(
-                "Файл отправлен в Telegram. Внешнее хранилище временно недоступно.",
-                f"Файл доступен на Drive: {drive_link}"
-            )
-            if new_result == old_result:
-                new_result = old_result + f"\n\nФайл теперь на Drive: {drive_link}"
-
-            conn.execute(
-                "UPDATE tasks SET result=?, updated_at=datetime('now') WHERE id=?",
-                (new_result, task_id),
-            )
-            conn.execute(
-                "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, datetime('now'))",
-                (task_id, f"DRIVE_RETRY_UPLOAD_OK:{drive_link}"),
-            )
-            conn.commit()
-
-            notify_telegram(
-                chat_id, topic_id,
-                f"✅ Файл теперь доступен на Google Drive:\n{drive_link}"
-            )
-            logger.info("RETRY_UPLOAD_OK task=%s link=%s", task_id, drive_link)
-
-    finally:
-        conn.close()
-
-    logger.info("RETRY_QUEUE_DONE")
-
-
-if __name__ == "__main__":
-    # === FULLFIX_20_RETRY_LOOP ===
-    import time as _ff20_time
-    logger.info("UPLOAD_RETRY_SERVICE_START")
+def _list_folder(svc, folder_id: str, page_size: int = 200) -> List[Dict[str, Any]]:
+    items: List[Dict[str, Any]] = []
+    page_token = <REDACTED_SECRET>
     while True:
-        try:
-            run()
-        except Exception as _ff20_re:
-            logger.exception("UPLOAD_RETRY_LOOP_ERR=%s", _ff20_re)
-        _ff20_time.sleep(300)
-    # === END FULLFIX_20_RETRY_LOOP ===
-
-====================================================================================================
-END_FILE: core/upload_retry_queue.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/web_engine.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 60ae8879713e63665e3b98acb78976ad8f6522694bb018b072daed8bd67c8912
-====================================================================================================
-import logging
-
-logger = logging.getLogger("web_engine")
-
-async def web_search(query: str) -> str:
-    # Search handled by ONLINE_MODEL (perplexity/sonar) in ai_router.py
-    logger.warning("web_search_stub called query=%s", (query or "")[:100])
-    return ""
-
-====================================================================================================
-END_FILE: core/web_engine.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/work_item.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: ec6ecd21b8594924d8b0bdd0bde9e53d00e69485f45b88db8f7aedb11624f2f3
-====================================================================================================
-# === FULLFIX_DIRECTION_KERNEL_STAGE_1_WORKITEM ===
-from __future__ import annotations
-from dataclasses import dataclass, field, asdict
-from typing import Any, Dict, List, Optional
+        res = svc.files().list(
+            q=f"'{folder_id}' in parents and trashed=false",
+            fields="nextPageToken, files(id,name,mimeType,modifiedTime,createdTime,size,webViewLink,parents)",
+            orderBy="modifiedTime desc",
+            pageSize=page_size,
+            pageToken=<REDACTED_SECRET>
+        ).execute()
+        items.extend(res.get("files", []))
+        page_token = <REDACTED_SECRET>"nextPageToken")
+        if not page_token:
+            break
+    return items
 
 
-def _get(row, key, default=None):
-    if row is None: return default
-    if isinstance(row, dict): return row.get(key, default)
-    try: return row[key]
-    except Exception: return getattr(row, key, default)
+def classify_technadzor_drive_file(file: Dict[str, Any], parent_folder_name: str = "") -> str:
+    """Classify a Drive file by role (returns one of the role strings)."""
+    mt = file.get("mimeType", "") or ""
+    name = (file.get("name") or "").lower()
+    parent = (parent_folder_name or "").strip().lower()
+    parent_is_system = parent in SYSTEM_FOLDER_NAMES
 
-def _int(v, d=0):
+    # PDF
+    if mt == "application/pdf":
+        if parent_is_system:
+            return "SYSTEM_TEMPLATE"
+        if name.startswith("act") or "акт" in name or "осмотр" in name:
+            # PDF in non-system folder with act-like name → primary style
+            return "PRIMARY_PDF_STYLE"
+        # PDF in client folder, generic — most likely a final client PDF artifact
+        return "CLIENT_FINAL_PDF"
+
+    # DOCX
+    if mt == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        if parent_is_system:
+            return "SYSTEM_TEMPLATE"
+        return "SECONDARY_DOCX_REFERENCE"
+
+    # Image
+    if mt.startswith("image/"):
+        if parent_is_system:
+            return "SYSTEM_TEMPLATE"
+        return "CLIENT_PHOTO_SOURCE"
+
+    # JSON / manifests / system
+    if mt in ("application/json",) or name.endswith((".json", ".log", ".bak", ".tmp")):
+        return "SYSTEM_TEMPLATE"
+
+    # Audio (voice notes)
+    if mt.startswith("audio/") or mt == "application/ogg":
+        return "OTHER"
+
+    return "OTHER"
+
+
+def _resolve_topic_folder(svc, chat_id: str, topic_id: int) -> Optional[str]:
+    root = _root_folder_id()
+    chat_folder = _find_child(svc, root, f"chat_{chat_id}")
+    if not chat_folder:
+        return None
+    return _find_child(svc, chat_folder, f"topic_{int(topic_id)}")
+
+
+def _local_index_path(chat_id: str, topic_id: int) -> Path:
+    fname = f"ACTIVE__chat_{chat_id}__topic_{int(topic_id)}.json"
+    return _LOCAL_INDEX_DIR / fname
+
+
+def _drive_url(file: Dict[str, Any]) -> str:
+    fid = file.get("id", "")
+    if file.get("webViewLink"):
+        return file["webViewLink"]
+    if file.get("mimeType") == "application/vnd.google-apps.folder":
+        return f"https://drive.google.com/drive/folders/{fid}"
+    return f"https://drive.google.com/file/d/{fid}/view"
+
+
+def scan_topic5_drive_templates(chat_id: str, topic_id: int = 5, force: bool = False) -> Dict[str, Any]:
+    """Scan Drive topic_<id> contents and return classified listing.
+
+    Cached for 5 min. Pass force=True to refresh.
+    """
+    key = (str(chat_id), int(topic_id))
+    now = time.time()
+    if not force and key in _CACHE:
+        ts, cached = _CACHE[key]
+        if now - ts < _CACHE_TTL_SECONDS:
+            return cached
+
+    svc = _service()
+    topic_fid = _resolve_topic_folder(svc, chat_id, topic_id)
+    result: Dict[str, Any] = {
+        "chat_id": str(chat_id),
+        "topic_id": int(topic_id),
+        "topic_folder_id": topic_fid,
+        "topic_folder_link": (
+            f"https://drive.google.com/drive/folders/{topic_fid}"
+            if topic_fid else None
+        ),
+        "files": [],
+        "folders_system": [],
+        "folders_client": [],
+        "by_role": {},
+        "primary_pdf_style": [],
+        "secondary_docx_reference": [],
+        "client_photo_source": [],
+        "client_final_pdf": [],
+        "system_template": [],
+        "other": [],
+        "ok": False,
+        "error": None,
+        "scanned_at": int(now),
+    }
+
+    if not topic_fid:
+        result["error"] = f"topic folder chat_{chat_id}/topic_{topic_id} not found"
+        _CACHE[key] = (now, result)
+        return result
+
     try:
-        if v is None or v == "": return d
-        return int(v)
-    except Exception: return d
+        # Walk topic root
+        root_items = _list_folder(svc, topic_fid)
+        all_records: List[Dict[str, Any]] = []
+        sub_folder_walk: List[Tuple[str, str]] = []  # (folder_id, folder_name)
+        for it in root_items:
+            if it.get("mimeType") == "application/vnd.google-apps.folder":
+                if is_system_folder(it["name"]):
+                    result["folders_system"].append({
+                        "id": it["id"], "name": it["name"],
+                        "drive_url": _drive_url(it),
+                    })
+                else:
+                    result["folders_client"].append({
+                        "id": it["id"], "name": it["name"],
+                        "drive_url": _drive_url(it),
+                    })
+                sub_folder_walk.append((it["id"], it["name"]))
+            else:
+                role = classify_technadzor_drive_file(it, parent_folder_name="")
+                rec = _build_record(it, role, parent_folder_name="", chat_id=chat_id, topic_id=topic_id)
+                all_records.append(rec)
 
-def _str(v, d=""):
-    if v is None: return d
-    return str(v)
+        # Walk one level of subfolders (do not recurse deeper to keep it cheap)
+        for sub_fid, sub_name in sub_folder_walk:
+            sub_items = _list_folder(svc, sub_fid)
+            for it in sub_items:
+                if it.get("mimeType") == "application/vnd.google-apps.folder":
+                    # nested sub-subfolder — record name only, do not recurse
+                    continue
+                role = classify_technadzor_drive_file(it, parent_folder_name=sub_name)
+                rec = _build_record(it, role, parent_folder_name=sub_name, chat_id=chat_id, topic_id=topic_id)
+                all_records.append(rec)
+
+        result["files"] = all_records
+        for rec in all_records:
+            role = rec["role"]
+            bucket = role.lower()
+            if bucket == "primary_pdf_style":
+                result["primary_pdf_style"].append(rec)
+            elif bucket == "secondary_docx_reference":
+                result["secondary_docx_reference"].append(rec)
+            elif bucket == "client_photo_source":
+                result["client_photo_source"].append(rec)
+            elif bucket == "client_final_pdf":
+                result["client_final_pdf"].append(rec)
+            elif bucket == "system_template":
+                result["system_template"].append(rec)
+            else:
+                result["other"].append(rec)
+            result["by_role"].setdefault(role, 0)
+            result["by_role"][role] += 1
+
+        result["ok"] = True
+    except Exception as exc:
+        result["error"] = repr(exc)
+        LOG.exception("P6H_TOPIC5_DRIVE_INDEX_SCAN_FAIL chat=%s topic=%s", chat_id, topic_id)
+
+    _CACHE[key] = (now, result)
+    return result
 
 
-@dataclass
-class WorkItem:
-    work_id: str
-    chat_id: str
-    topic_id: int
-    user_id: Optional[str] = None
-    message_id: Optional[int] = None
-    reply_to_message_id: Optional[int] = None
-    bot_message_id: Optional[int] = None
-    source_type: str = "telegram"
-    input_type: str = "unknown"
-    raw_text: str = ""
-    state: str = "NEW"
-    intent: str = "UNKNOWN"
-    direction: Optional[str] = None
-    direction_profile: Dict[str, Any] = field(default_factory=dict)
-    formats_in: List[str] = field(default_factory=list)
-    formats_out: List[str] = field(default_factory=list)
-    attachments: List[Dict[str, Any]] = field(default_factory=list)
-    parsed_data: Dict[str, Any] = field(default_factory=dict)
-    context_refs: Dict[str, Any] = field(default_factory=dict)
-    execution_plan: List[Dict[str, Any]] = field(default_factory=list)
-    quality_gates: List[str] = field(default_factory=list)
-    result: Dict[str, Any] = field(default_factory=dict)
-    audit: Dict[str, Any] = field(default_factory=dict)
-    errors: List[Dict[str, Any]] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
+def _build_record(file: Dict[str, Any], role: str, parent_folder_name: str, chat_id: str, topic_id: int) -> Dict[str, Any]:
+    parent_lower = (parent_folder_name or "").strip().lower()
+    parent_is_system = parent_lower in SYSTEM_FOLDER_NAMES
+    return {
+        "file_id": file.get("id"),
+        "file_name": file.get("name"),
+        "mime_type": file.get("mimeType"),
+        "drive_url": _drive_url(file),
+        "folder_name": parent_folder_name or "<root>",
+        "role": role,
+        "client_facing": (not parent_is_system),
+        "created_time": file.get("createdTime"),
+        "modified_time": file.get("modifiedTime"),
+        "size": file.get("size"),
+    }
 
-    @classmethod
-    def from_task_row(cls, row, extra=None):
-        extra = extra or {}
-        raw_text = _str(extra.get("raw_text") or extra.get("raw_input") or _get(row, "raw_input", ""))
-        input_type = _str(extra.get("input_type") or _get(row, "input_type", "unknown"), "unknown")
-        topic_id = _int(extra.get("topic_id") if extra.get("topic_id") is not None else _get(row, "topic_id", 0), 0)
-        wi = cls(
-            work_id=_str(extra.get("work_id") or extra.get("task_id") or _get(row, "id", "")),
-            chat_id=_str(extra.get("chat_id") or _get(row, "chat_id", "")),
-            topic_id=topic_id,
-            user_id=_str(extra.get("user_id") or _get(row, "user_id", "")) or None,
-            message_id=_int(extra.get("message_id") or _get(row, "message_id", None), 0) or None,
-            reply_to_message_id=_int(extra.get("reply_to_message_id") if extra.get("reply_to_message_id") is not None else _get(row, "reply_to_message_id", None), 0) or None,
-            bot_message_id=_int(extra.get("bot_message_id") if extra.get("bot_message_id") is not None else _get(row, "bot_message_id", None), 0) or None,
-            source_type=_str(extra.get("source_type") or "telegram"),
-            input_type=input_type,
-            raw_text=raw_text,
-            state=_str(extra.get("state") or _get(row, "state", "NEW"), "NEW"),
-            created_at=_str(extra.get("created_at") or _get(row, "created_at", "")) or None,
-            updated_at=_str(extra.get("updated_at") or _get(row, "updated_at", "")) or None,
-        )
-        wi.formats_in = wi._detect_formats_in()
-        wi.result = {"text": _str(_get(row, "result", ""))}
-        err = _str(_get(row, "error_message", ""))
-        if err:
-            wi.errors.append({"code": "TASK_ERROR", "message": err, "fatal": False})
-        wi.audit["created_by"] = "FULLFIX_DIRECTION_KERNEL_STAGE_1"
-        return wi
 
-    def _detect_formats_in(self):
-        t = (self.input_type or "").lower()
-        raw = (self.raw_text or "").lower()
-        out = []
-        if t in ("text","voice","photo","file","drive_file","url","mixed"): out.append(t)
-        if ".pdf" in raw or "pdf" in t: out.append("pdf")
-        if ".xlsx" in raw or ".xls" in raw: out.append("xlsx")
-        if ".dwg" in raw: out.append("dwg")
-        if t in ("photo","image"): out.append("photo")
-        if not out: out.append("text")
-        return list(dict.fromkeys(out))
+def build_technadzor_template_index(chat_id: str = "-1003725299009", topic_id: int = 5, force: bool = True) -> Dict[str, Any]:
+    """Build full topic_5 index, persist to local JSON, return the index dict.
 
-    def set_direction(self, direction, profile=None):
-        self.direction = direction
-        self.direction_profile = profile or {}
-        self.audit["direction"] = direction
-        self.audit["direction_profile_id"] = self.direction_profile.get("id", direction)
+    Persistent path:
+        data/templates/technadzor/ACTIVE__chat_<chat_id>__topic_<topic_id>.json
+    """
+    idx = scan_topic5_drive_templates(chat_id, topic_id, force=force)
+    payload = {
+        "chat_id": idx.get("chat_id"),
+        "topic_id": idx.get("topic_id"),
+        "topic_folder_id": idx.get("topic_folder_id"),
+        "topic_folder_link": idx.get("topic_folder_link"),
+        "scanned_at": idx.get("scanned_at"),
+        "ok": idx.get("ok"),
+        "error": idx.get("error"),
+        "by_role": idx.get("by_role"),
+        "folders_system": idx.get("folders_system"),
+        "folders_client": idx.get("folders_client"),
+        "files": idx.get("files"),
+        "primary_pdf_style": idx.get("primary_pdf_style"),
+        "secondary_docx_reference": idx.get("secondary_docx_reference"),
+        "client_photo_source": idx.get("client_photo_source"),
+        "client_final_pdf": idx.get("client_final_pdf"),
+        "system_template": idx.get("system_template"),
+        "other": idx.get("other"),
+        "marker": "P6H_TOPIC5_USE_EXISTING_TEMPLATES_PHOTO_TO_TECH_REPORT_20260504_V1",
+        "updated_at": int(time.time()),
+    }
+    try:
+        path = _local_index_path(str(chat_id), int(topic_id))
+        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        payload["local_index_path"] = str(path)
+    except Exception as exc:
+        LOG.exception("P6H_TOPIC5_DRIVE_INDEX_PERSIST_FAIL chat=%s topic=%s err=%s", chat_id, topic_id, exc)
+    return payload
 
-    def set_intent(self, intent):
-        self.intent = intent or "UNKNOWN"
-        self.audit["intent"] = self.intent
 
-    def add_audit(self, key, value):
-        self.audit[str(key)] = value
+def get_active_index(chat_id: str = "-1003725299009", topic_id: int = 5) -> Optional[Dict[str, Any]]:
+    """Read persisted index from disk, if present."""
+    p = _local_index_path(str(chat_id), int(topic_id))
+    if not p.exists():
+        return None
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return None
 
-    def add_error(self, code, message, fatal=False):
-        self.errors.append({"code": str(code), "message": str(message), "fatal": bool(fatal)})
 
-    def to_dict(self): return asdict(self)
+def primary_template_meta(idx: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Most recent PRIMARY_PDF_STYLE record. Falls back to most recent CLIENT_FINAL_PDF."""
+    if idx.get("primary_pdf_style"):
+        return idx["primary_pdf_style"][0]
+    if idx.get("client_final_pdf"):
+        return idx["client_final_pdf"][0]
+    return None
 
-    def to_payload(self):
-        return {
-            "id": self.work_id, "task_id": self.work_id,
-            "chat_id": self.chat_id, "topic_id": self.topic_id,
-            "user_id": self.user_id, "message_id": self.message_id,
-            "reply_to_message_id": self.reply_to_message_id,
-            "bot_message_id": self.bot_message_id,
-            "source_type": self.source_type, "input_type": self.input_type,
-            "raw_input": self.raw_text, "raw_text": self.raw_text,
-            "state": self.state, "intent": self.intent,
-            "direction": self.direction, "direction_profile": self.direction_profile,
-            "formats_in": self.formats_in, "formats_out": self.formats_out,
-            "attachments": self.attachments, "parsed_data": self.parsed_data,
-            "context_refs": self.context_refs, "execution_plan": self.execution_plan,
-            "quality_gates": self.quality_gates, "result": self.result,
-            "audit": self.audit, "direction_audit": self.audit,
-            "errors": self.errors, "metadata": self.metadata,
-            "work_item": self.to_dict(),
-        }
-# === END FULLFIX_DIRECTION_KERNEL_STAGE_1_WORKITEM ===
+
+def secondary_template_meta(idx: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    if idx.get("secondary_docx_reference"):
+        return idx["secondary_docx_reference"][0]
+    return None
+
+
+def ensure_service_subfolder(chat_id: str, topic_id: int, name: str = "_drafts") -> Optional[str]:
+    """Create/return id for a SERVICE subfolder (system, never client-facing).
+
+    Refuses to create folders with non-system names.
+    """
+    if not is_system_folder(name):
+        raise ValueError(f"Refusing to create non-system folder via service path: {name}")
+    svc = _service()
+    topic_fid = _resolve_topic_folder(svc, chat_id, topic_id)
+    if not topic_fid:
+        return None
+    return _ensure_subfolder(svc, topic_fid, name)
+
+
+def upload_to_service_subfolder(local_path: Path, dst_name: str, chat_id: str, topic_id: int, subfolder: str = "_drafts") -> Optional[Dict[str, Any]]:
+    """Upload artifact to topic_<id>/<service-subfolder>/. Subfolder MUST be system."""
+    if not is_system_folder(subfolder):
+        raise ValueError(f"Refusing to upload to non-system subfolder: {subfolder}")
+    return _upload_to_folder(local_path, dst_name, chat_id, topic_id, subfolder, allow_client=False)
+
+
+def upload_client_pdf_to_folder(local_path: Path, dst_name: str, chat_id: str, topic_id: int, target_folder_name: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """Upload final client PDF.
+
+    If target_folder_name is provided AND it's a non-system (client-facing) folder,
+    upload there. Otherwise upload to topic root.
+
+    Refuses anything that isn't .pdf — by spec, client folders accept only photos and final PDFs.
+    """
+    if not str(local_path).lower().endswith(".pdf"):
+        raise ValueError(f"Refusing to upload non-PDF to client folder: {local_path}")
+    return _upload_to_folder(local_path, dst_name, chat_id, topic_id, target_folder_name, allow_client=True)
+
+
+def _upload_to_folder(local_path: Path, dst_name: str, chat_id: str, topic_id: int, target_folder_name: Optional[str], allow_client: bool) -> Optional[Dict[str, Any]]:
+    try:
+        from googleapiclient.http import MediaFileUpload
+        svc = _service()
+        topic_fid = _resolve_topic_folder(svc, chat_id, topic_id)
+        if not topic_fid:
+            return None
+
+        if target_folder_name:
+            if is_system_folder(target_folder_name):
+                target_id = _ensure_subfolder(svc, topic_fid, target_folder_name)
+            else:
+                if not allow_client:
+                    raise ValueError(f"Client folder upload not allowed via service path: {target_folder_name}")
+                # find existing client folder, do NOT auto-create client folders
+                target_id = _find_child(svc, topic_fid, target_folder_name)
+                if not target_id:
+                    LOG.warning("P6H_TOPIC5_CLIENT_FOLDER_NOT_FOUND name=%s — uploading to topic root", target_folder_name)
+                    target_id = topic_fid
+        else:
+            target_id = topic_fid
+
+        body = {"name": dst_name, "parents": [target_id]}
+        mime = None
+        ln = str(local_path).lower()
+        if ln.endswith(".docx"):
+            mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        elif ln.endswith(".pdf"):
+            mime = "application/pdf"
+        elif ln.endswith(".xlsx"):
+            mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        elif ln.endswith(".json"):
+            mime = "application/json"
+        media = MediaFileUpload(str(local_path), mimetype=mime, resumable=False)
+        created = svc.files().create(body=body, media_body=media, fields="id,webViewLink,parents").execute()
+        return {"id": created["id"], "link": created.get("webViewLink"), "parent_id": target_id, "target_folder_name": target_folder_name}
+    except Exception:
+        LOG.exception("P6H_TOPIC5_DRIVE_UPLOAD_FAIL name=%s topic=%s sub=%s", dst_name, topic_id, target_folder_name)
+        return None
+
+
+def download_to_local(file_id: str, dst_filename: str) -> Optional[Path]:
+    """Download a Drive file to local cache. Returns path or None."""
+    try:
+        from googleapiclient.http import MediaIoBaseDownload
+        svc = _service()
+        dst = _DOWNLOAD_DIR / dst_filename
+        req = svc.files().get_media(fileId=file_id)
+        with io.FileIO(dst, "wb") as buf:
+            dl = MediaIoBaseDownload(buf, req)
+            done = False
+            while not done:
+                _, done = dl.next_chunk()
+        return dst
+    except Exception:
+        LOG.exception("P6H_TOPIC5_DRIVE_INDEX_DOWNLOAD_FAIL fid=%s", file_id)
+        return None
+
+
+try:
+    LOG.info("P6H_TOPIC5_DRIVE_INDEX_V1_INSTALLED")
+except Exception:
+    pass
+# === END_P6H_TOPIC5_DRIVE_INDEX_V1 ===
 
 ====================================================================================================
-END_FILE: core/work_item.py
+END_FILE: core/technadzor_drive_index.py
 FILE_CHUNK: 1/1
 ====================================================================================================

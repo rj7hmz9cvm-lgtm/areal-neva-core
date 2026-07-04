@@ -2130,16 +2130,26 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
                 _history_safe(conn, task_id, "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_CONTEXT_BLEED_FIX:no_active_estimate")
                 return True
 
-    # §7 repeat parent binding — link new estimate to last closed task for this chat/topic
+    # §7 repeat parent binding — only for an actually open parent, never closed/stale tasks.
     try:
-        _rpt_row = conn.execute(
-            "SELECT id FROM tasks WHERE CAST(chat_id AS TEXT)=? AND COALESCE(topic_id,0)=? AND id<>? AND state IN ('DONE','AWAITING_CONFIRMATION','FAILED','CANCELLED') ORDER BY updated_at DESC LIMIT 1",
-            (str(chat_id), int(topic_id), task_id)
-        ).fetchone()
-        if _rpt_row:
-            _history_safe(conn, task_id, f"TOPIC2_REPEAT_PARENT_TASK:{_rpt_row[0]}")
+        _raw_low_for_parent = _low(raw_input)
+        _fresh_tz = _t2cm2_is_fresh_full_estimate_tz(raw_input) if "_t2cm2_is_fresh_full_estimate_tz" in globals() else False
+        _fresh_tz = _fresh_tz or (
+            len(_raw_low_for_parent.split()) >= 8
+            and any(x in _raw_low_for_parent for x in ("фундамент", "плита", "щеб", "песчан", "полы", "ламинат", "стен", "кровл"))
+        )
     except Exception:
-        pass
+        _fresh_tz = False
+    if not _fresh_tz:
+        try:
+            _rpt_row = conn.execute(
+                "SELECT id FROM tasks WHERE CAST(chat_id AS TEXT)=? AND COALESCE(topic_id,0)=? AND id<>? AND state IN ('IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION','RESULT_READY') ORDER BY updated_at DESC LIMIT 1",
+                (str(chat_id), int(topic_id), task_id)
+            ).fetchone()
+            if _rpt_row:
+                _history_safe(conn, task_id, f"TOPIC2_REPEAT_PARENT_TASK:{_rpt_row[0]}")
+        except Exception:
+            pass
 
     parsed = _parse_request(raw_input)
 
@@ -2207,7 +2217,7 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
     except Exception:
         pass
 
-    # §7 anti-loop guard: if >= 3 clarification requests in last 30 min, proceed with defaults
+    # §7 missing-data gate: never generate a final estimate with defaulted required facts.
     try:
         _alg_count = conn.execute(
             """SELECT COUNT(*) FROM task_history th
@@ -2220,18 +2230,17 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
     except Exception:
         _alg_count = 0
 
-    if _alg_count < 3:
-        question = _missing_question(parsed)
-        if question:
-            send_res = await _send_text(chat_id, question, reply_to, topic_id)
-            kwargs = {"state": "WAITING_CLARIFICATION", "result": question}
-            if isinstance(send_res, dict) and send_res.get("bot_message_id"):
-                kwargs["bot_message_id"] = send_res.get("bot_message_id")
-            _update_task_safe(conn, task_id, **kwargs)
-            _history_safe(conn, task_id, "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:clarification")
-            return True
-    else:
-        _history_safe(conn, task_id, f"TOPIC2_MISSING_GATE_ANTILOOP:count={_alg_count}_proceeding_with_defaults")
+    question = _missing_question(parsed)
+    if question:
+        send_res = await _send_text(chat_id, question, reply_to, topic_id)
+        kwargs = {"state": "WAITING_CLARIFICATION", "result": question}
+        if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+            kwargs["bot_message_id"] = send_res.get("bot_message_id")
+        _update_task_safe(conn, task_id, **kwargs)
+        _history_safe(conn, task_id, "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:clarification")
+        if _alg_count >= 3:
+            _history_safe(conn, task_id, f"TOPIC2_MISSING_GATE_ANTILOOP_BLOCKED_DEFAULTS:count={_alg_count}")
+        return True
 
     template = choose_template(parsed)
     template_path = download_template_xlsx(template)
@@ -2631,6 +2640,34 @@ async def _generate_and_send(conn, task, pending, confirm_text, logger=None):
     topic_id = int(_row_get(task, "topic_id", 0) or 0)
     reply_to = _row_get(task, "reply_to_message_id", None) or _row_get(task, "message_id", None)
 
+    if (not choice.get("confirmed") or choice.get("choice") == "NONE") and conn is not None and task_id:
+        try:
+            rows = conn.execute(
+                "SELECT action FROM task_history WHERE task_id=? ORDER BY rowid ASC",
+                (str(task_id),),
+            ).fetchall()
+            hist_actions = [str(r[0] if not hasattr(r, "keys") else r["action"] or "") for r in rows]
+            parent_id = ""
+            for action in reversed(hist_actions):
+                if action.startswith("TOPIC2_REPEAT_PARENT_TASK:"):
+                    parent_id = action.rsplit(":", 1)[-1].strip()
+                    break
+            if parent_id:
+                prow = conn.execute(
+                    "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'TOPIC2_PRICE_CHOICE_CONFIRMED:%' ORDER BY rowid DESC LIMIT 1",
+                    (parent_id,),
+                ).fetchone()
+                parent_action = str(prow[0] if prow and not hasattr(prow, "keys") else (prow["action"] if prow else ""))
+                parent_choice = parent_action.rsplit(":", 1)[-1].strip()
+                if parent_choice in ("cheapest", "median", "reliable", "manual"):
+                    choice = {"choice": parent_choice, "confirmed": True}
+                    _history_safe(conn, task_id, "TOPIC2_PRICE_CHOICE_INHERITED_FROM_PARENT:" + parent_id + ":" + parent_choice)
+        except Exception as _inherit_err:
+            try:
+                _history_safe(conn, task_id, "TOPIC2_PRICE_CHOICE_PARENT_INHERIT_ERR:" + _s(_inherit_err)[:180])
+            except Exception:
+                pass
+
     if not choice.get("confirmed") or choice.get("choice") == "NONE":
         # No explicit price choice — ask user
         msg = (
@@ -2811,7 +2848,7 @@ def parse_price_choice(text: str) -> Dict[str, Any]:
     elif any(x in t for x in ("средн", "медиан", "рынок", "ставь сред", "беру сред", "средние цены")):
         result["choice"] = "median"
         confirmed = True
-    elif any(x in t for x in ("максим", "надеж", "надёж", "проверенн", "ставь максим")):
+    elif any(x in t for x in ("максим", "надеж", "надёж", "проверенн", "ставь максим", "высок", "дорог")):
         result["choice"] = "maximum"
         confirmed = True
     elif any(x in t for x in ("ручн", "вручную", "сам укажу", "мои цены", "своя")):
@@ -4591,6 +4628,16 @@ import logging as _t2cm2_log_mod
 _T2CM2_LOG = _t2cm2_log_mod.getLogger("task_worker")
 _T2CM2_INNER = _T2CM_ORIG  # PAA wrapper — skip broken V1
 
+def _t2cm2_is_fresh_full_estimate_tz(text):
+    low = _low(text)
+    if len(low.split()) < 18:
+        return False
+    anchors = 0
+    for key in ("дом", "фундамент", "этаж", "размер", "стен", "отделк", "смет", "расчет", "расчёт"):
+        if key in low:
+            anchors += 1
+    return anchors >= 4 and any(x in low for x in ESTIMATE_WORDS)
+
 async def maybe_handle_stroyka_estimate(conn, task, logger=None):
     # PATCH_TOPIC2_PRICE_CHOICE_LOOP_CLOSE_V1 maybe_handle guard
     try:
@@ -4617,6 +4664,9 @@ async def maybe_handle_stroyka_estimate(conn, task, logger=None):
             clarifications = [r[0].split(":", 1)[1].strip() for r in rows if ":" in r[0]]
             if clarifications:
                 raw = _s(_row_get(task, "raw_input", ""))
+                if _t2cm2_is_fresh_full_estimate_tz(raw):
+                    _history_safe(conn, task_id, "TOPIC2_CLARIFICATION_MERGE_V2_SKIPPED_FOR_FRESH_FULL_TZ")
+                    return await _T2CM2_INNER(conn, task, logger)
                 enriched = raw + "\n" + "\n".join(clarifications)
                 if isinstance(task, dict):
                     task_dict = dict(task)

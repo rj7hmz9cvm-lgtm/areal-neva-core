@@ -1554,7 +1554,7 @@ def _parse_estimate_items(text: str) -> List[Dict[str, Any]]:
         width = _final_num_v1(m.group(2)) if m else 10.0
         area = round(length * width, 2)
         thick_m = 0.25
-        mt = _re.search(r"толщин[а-я]*\s*(\d{2,4})\s*мм", low)
+        mt = _re.search(r"толщин[а-я]*\s*(\d{2,4})(?:\s*мм)?", low)
         if mt:
             thick_m = _final_num_v1(mt.group(1)) / 1000.0
         concrete = round(area * thick_m, 2)
@@ -4393,6 +4393,15 @@ def _p1_parse_20260504(text):
     floors = _p1_extract_floors_20260504(text)
     footprint = dims[0] * dims[1] if dims else None
     area_total = footprint * floors if footprint and floors else footprint
+    slab_mm = 200
+    m_slab = _p2_re.search(r"(?:плит[а-я]*|фундамент).{0,80}?(\d{2,4})(?:\s*мм)?", low)
+    if not m_slab:
+        m_slab = _p2_re.search(r"толщин[а-я]*\s*(\d{2,4})(?:\s*мм)?", low)
+    if m_slab:
+        try:
+            slab_mm = max(100, int(float(m_slab.group(1).replace(",", "."))))
+        except Exception:
+            slab_mm = 200
 
     material = ""
     if any(x in low for x in ("каркас", "дерев", "брус", "имитац")):
@@ -4420,6 +4429,16 @@ def _p1_parse_20260504(text):
     if "на каждом этаже" in low and bathrooms == 0 and floors:
         bathrooms = floors
 
+    slab_mm = 200
+    m_slab = _p2_re.search(r"(?:плит[а-я]*|фундамент).{0,80}?(\d{2,4})(?:\s*мм)?", low)
+    if not m_slab:
+        m_slab = _p2_re.search(r"толщин[а-я]*\s*(\d{2,4})(?:\s*мм)?", low)
+    if m_slab:
+        try:
+            slab_mm = max(100, int(float(m_slab.group(1).replace(",", "."))))
+        except Exception:
+            slab_mm = 200
+
     return {
         "raw": text,
         "dims": dims,
@@ -4439,6 +4458,7 @@ def _p1_parse_20260504(text):
         "has_imitation_timber": "имитац" in low and "брус" in low,
         "insulation_wall_mm": 250 if "250" in low and "стен" in low else 150,
         "insulation_roof_mm": 300 if "300" in low and "кров" in low else 200,
+        "slab_mm": slab_mm,
     }
 
 def _p1_missing_question_20260504(p):
@@ -4964,6 +4984,15 @@ def _p2_parse(text):
     floors = _p2_floors(text)
     footprint = dims[0] * dims[1] if dims else None
     area_total = footprint * floors if footprint and floors else footprint
+    slab_mm = 200
+    m_slab = _p2_re.search(r"(?:плит[а-я]*|фундамент).{0,80}?(\d{2,4})(?:\s*мм)?", low)
+    if not m_slab:
+        m_slab = _p2_re.search(r"толщин[а-я]*\s*(\d{2,4})(?:\s*мм)?", low)
+    if m_slab:
+        try:
+            slab_mm = max(100, int(float(m_slab.group(1).replace(",", "."))))
+        except Exception:
+            slab_mm = 200
 
     material = ""
     if any(x in low for x in ("каркас", "дерев", "брус")):
@@ -5013,6 +5042,7 @@ def _p2_parse(text):
         "outside_imitation": outside_imitation,
         "insulation_wall_mm": 250 if "250" in low and "стен" in low else 150,
         "insulation_roof_mm": 300 if "300" in low and "кров" in low else 200,
+        "slab_mm": slab_mm,
     }
 
 def _p2_missing(p):
@@ -5055,8 +5085,10 @@ def _p2_build_rows(p):
     wall_h = 3.0
     wall_area = perimeter * wall_h * floors
     roof_area = footprint * 1.28
-    concrete = footprint * 0.20 * 1.03
-    rebar_t = footprint * 0.032
+    slab_mm = int(float(p.get("slab_mm") or 200))
+    slab_m = slab_mm / 1000.0
+    concrete = footprint * slab_m * 1.03
+    rebar_t = footprint * (0.032 if slab_mm <= 250 else 0.045)
     rooms = max(6, floors * 5)
 
     rows = []
@@ -5064,14 +5096,27 @@ def _p2_build_rows(p):
     _p2_add(rows, "Фундамент", "Песчаная подушка 200 мм", "м³", footprint * 0.20, 1450, 750)
     _p2_add(rows, "Фундамент", "Щебёночная подушка 150 мм", "м³", footprint * 0.15, 2300, 850)
     _p2_add(rows, "Фундамент", "Гидроизоляция под плиту", "м²", footprint * 1.12, 220, 260)
-    _p2_add(rows, "Фундамент", "Арматура А500С для плиты 200 мм", "т", rebar_t, 82000, 22000)
-    _p2_add(rows, "Фундамент", "Бетон B25 для плиты 200 мм", "м³", concrete, 7200, 1850)
+    _p2_add(rows, "Фундамент", f"Арматура А500С для плиты {slab_mm} мм", "т", rebar_t, 82000, 22000)
+    _p2_add(rows, "Фундамент", f"Бетон B25 для плиты {slab_mm} мм", "м³", concrete, 7200, 1850)
     _p2_add(rows, "Фундамент", "Опалубка периметра плиты", "п.м", perimeter, 950, 850)
 
-    _p2_add(rows, "Стены", "Каркас наружных стен", "м²", wall_area, 2450, 2850)
-    _p2_add(rows, "Стены", f"Утепление стен {p['insulation_wall_mm']} мм", "м²", wall_area, 1350, 650)
-    _p2_add(rows, "Стены", "Пароизоляция и ветрозащита стен", "м²", wall_area * 2, 120, 180)
-    _p2_add(rows, "Стены", "Внутренняя обшивка стен под отделку", "м²", wall_area, 850, 950)
+    material = str(p.get("material") or "").lower()
+    if "кирпич" in material:
+        brick_volume = wall_area * 0.25
+        _p2_add(rows, "Стены", "Кладка наружных стен из полнотелого кирпича", "м³", brick_volume, 9800, 7200)
+        _p2_add(rows, "Стены", "Раствор кладочный для кирпичных стен", "м³", brick_volume * 0.22, 4200, 0)
+        _p2_add(rows, "Стены", "Армирование кирпичной кладки и связи", "м²", wall_area, 180, 160)
+        _p2_add(rows, "Стены", "Внутренняя отделка гипсокартоном под покраску", "м²", wall_area, 850, 950)
+    elif "газобет" in material:
+        block_volume = wall_area * 0.30
+        _p2_add(rows, "Стены", "Кладка наружных стен из газобетона", "м³", block_volume, 6200, 5200)
+        _p2_add(rows, "Стены", "Клей и армирование газобетона", "м²", wall_area, 260, 220)
+        _p2_add(rows, "Стены", "Внутренняя отделка гипсокартоном под покраску", "м²", wall_area, 850, 950)
+    else:
+        _p2_add(rows, "Стены", "Каркас наружных стен", "м²", wall_area, 2450, 2850)
+        _p2_add(rows, "Стены", f"Утепление стен {p['insulation_wall_mm']} мм", "м²", wall_area, 1350, 650)
+        _p2_add(rows, "Стены", "Пароизоляция и ветрозащита стен", "м²", wall_area * 2, 120, 180)
+        _p2_add(rows, "Стены", "Внутренняя обшивка стен под отделку", "м²", wall_area, 850, 950)
 
     _p2_add(rows, "Перекрытия", "Межэтажное перекрытие", "м²", footprint * max(floors - 1, 0), 3200, 2600)
     _p2_add(rows, "Перекрытия", "Черновой пол и настил", "м²", area_total, 950, 780)
@@ -5498,7 +5543,11 @@ def _p3e_parse(raw_input):
     p["has_clickfalz"] = has_clickfalz
     p["inside_imitation"] = ("внутри" in low and "имитац" in low and "брус" in low) or ("имитац" in low and "брус" in low and has_clickfalz)
     p["outside_imitation"] = ("снаружи" in low and "имитац" in low and "брус" in low and not has_clickfalz)
-    if any(x in low for x in ("ламинат", "сантех", "санузел", "светильник", "выключатель", "отопление", "тепл")):
+    if "под ключ" in low:
+        p["scope"] = "под ключ"
+    elif "коробк" in low:
+        p["scope"] = "коробка"
+    elif any(x in low for x in ("ламинат", "сантех", "санузел", "светильник", "выключатель", "отопление", "тепл")):
         p["scope"] = "под ключ"
     return p
 
@@ -5687,8 +5736,10 @@ async def handle_topic2_one_big_formula_pipeline_v1(conn, task, chat_id=None, to
     pdf_link = _p3e_upload(pdf_path, task_id, topic_id)
 
     result = _p3e_summary(p, rows, xlsx_link, pdf_link, price_status, applied)
-    _p3e_update(conn, task_id, state="DONE", result=result, error_message="")
+    _p3e_update(conn, task_id, state="AWAITING_CONFIRMATION", result=result, error_message="")
+    _p3e_history(conn, task_id, f"P3_TOPIC2_FINAL_AWAITING_CONFIRMATION_ROWS_{len(rows)}_PRICE_APPLIED_{applied}")
     _p3e_history(conn, task_id, f"P3_TOPIC2_FINAL_DONE_ROWS_{len(rows)}_PRICE_APPLIED_{applied}")
+    _p3e_history(conn, task_id, "TOPIC2_DONE_ONLY_AFTER_USER_YES_V1:P3_FINAL_WAITING_CONFIRMATION")
     conn.commit()
 
     sent = _p3e_send(chat_id, result, reply_to, topic_id)
@@ -7228,6 +7279,19 @@ def _p3pcg_has_explicit_price(text: str) -> bool:
     t = str(text or "").lower().replace("ё", "е").replace("[voice]", "").strip()
     return any(x in t for x in _P3PCG_EXPLICIT_PRICE_WORDS)
 
+def _p3pcg_price_choice(text: str) -> str:
+    t = str(text or "").lower().replace("ё", "е").replace("[voice]", "").strip()
+    t = __import__("re").sub(r"\s+", " ", t).strip(" .,!?:;()[]{}")
+    if t in ("4", "г", "g", "г)", "вариант 4", "вариант г") or any(x in t for x in ("ручн", "вручную", "сам укажу", "мои цены", "своя")):
+        return "manual"
+    if t in ("3", "в", "v", "в)", "вариант 3", "вариант в") or any(x in t for x in ("максим", "надеж", "надёж", "проверенн", "высок", "дорог")):
+        return "reliable"
+    if t in ("1", "а", "a", "а)", "вариант 1", "вариант а") or any(x in t for x in ("миним", "дешев", "дешёв", "самые низкие")):
+        return "cheap"
+    if t in ("2", "б", "b", "б)", "вариант 2", "вариант б") or any(x in t for x in ("средн", "медиан", "рынок")):
+        return "median"
+    return ""
+
 def _p3pcg_mem_save(chat_id: str, key: str, value) -> None:
     import sqlite3 as _sq, json as _js
     try:
@@ -7321,14 +7385,16 @@ async def handle_topic2_one_big_formula_pipeline_v1(
             age = 0
         if age < 86400:
             # Has explicit price choice?
-            if _p3pcg_has_explicit_price(raw_s):
-                # Let original handle (it will generate XLSX/PDF)
-                _P3PCG_LOG.info("P3PCG: price confirmed, delegating to orig handle task=%s", task_id)
+            choice = _p3pcg_price_choice(raw_s)
+            if choice or _p3pcg_has_explicit_price(raw_s):
+                # Let original handle (it will generate XLSX/PDF), but store the concrete canon price choice.
+                choice = choice or "median"
+                _P3PCG_LOG.info("P3PCG: price confirmed (%s), delegating to orig handle task=%s", choice, task_id)
                 if conn:
                     try:
                         conn.execute(
                             "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
-                            (task_id, "TOPIC2_PRICE_CHOICE_CONFIRMED:confirmed"),
+                            (task_id, "TOPIC2_PRICE_CHOICE_CONFIRMED:" + choice),
                         )
                         conn.commit()
                     except Exception:
@@ -7379,6 +7445,61 @@ async def handle_topic2_one_big_formula_pipeline_v1(
         except Exception:
             pass
 
+    # Canon gate: never generate XLSX/PDF before explicit price choice.
+    if conn and task_id:
+        try:
+            hist = conn.execute(
+                "SELECT action FROM task_history WHERE task_id=? ORDER BY rowid DESC LIMIT 200",
+                (task_id,),
+            ).fetchall()
+            hist_actions = [str(h[0] or "") for h in hist]
+        except Exception:
+            hist_actions = []
+        price_ok = any("TOPIC2_PRICE_CHOICE_CONFIRMED:" in a for a in hist_actions)
+        raw_choice = _p3pcg_price_choice(raw_s)
+        if not price_ok and (raw_choice or _p3pcg_has_explicit_price(raw_s)):
+            choice = raw_choice or "median"
+            try:
+                conn.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (task_id, "TOPIC2_PRICE_CHOICE_CONFIRMED:" + choice),
+                )
+                conn.commit()
+                price_ok = True
+                _P3PCG_LOG.info("P3PCG: explicit price in new request (%s), continue task=%s", choice, task_id)
+            except Exception:
+                pass
+        if not price_ok:
+            msg = "\n".join([
+                "Выберите уровень цен для сметы:",
+                "",
+                "1 — минимальные (самые дешёвые)",
+                "2 — средние (медианные)",
+                "3 — надёжный поставщик",
+                "4 — ручные",
+                "",
+                "Ответь: 1 / 2 / 3 / 4 или: минимальные / средние / надёжные / вручную",
+            ])
+            try:
+                conn.execute(
+                    "UPDATE tasks SET state='WAITING_CLARIFICATION', result=?, error_message='TOPIC2_PRICE_CHOICE_REQUIRED', updated_at=datetime('now') WHERE id=?",
+                    (msg, task_id),
+                )
+                conn.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (task_id, "TOPIC2_PRICE_CHOICE_REQUESTED"),
+                )
+                conn.commit()
+            except Exception:
+                pass
+            try:
+                from core.stroyka_estimate_canon import _send_text as _p3_send_text
+                await _p3_send_text(chat_id_s, msg, reply_to, topic_id_i)
+            except Exception:
+                pass
+            _P3PCG_LOG.info("P3PCG: blocked generation before price choice task=%s ctx=%s", task_id, ctx_hash)
+            return True
+
     # Call original P3 — but intercept DONE to insert price gate
     try:
         result = await _p3pcg_orig_handle(
@@ -7414,6 +7535,17 @@ async def handle_topic2_one_big_formula_pipeline_v1(
                     )
                     conn.commit()
                     _P3PCG_LOG.warning("P3PCG: DONE→AWAITING_CONFIRMATION for %s (no price confirmed)", task_id)
+                elif price_ok:
+                    conn.execute(
+                        "UPDATE tasks SET state='AWAITING_CONFIRMATION', updated_at=datetime('now') WHERE id=? AND state='DONE'",
+                        (task_id,),
+                    )
+                    conn.execute(
+                        "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                        (task_id, "TOPIC2_DONE_ONLY_AFTER_USER_YES_V1:P3_POSTCHECK_BLOCKED_DONE"),
+                    )
+                    conn.commit()
+                    _P3PCG_LOG.warning("P3PCG: DONE→AWAITING_CONFIRMATION for %s (waiting explicit user yes)", task_id)
             if conn and task_id:
                 conn.execute(
                     "INSERT OR IGNORE INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
@@ -8395,3 +8527,200 @@ if _T2CM_SUM_ORIG and not getattr(_T2CM_SUM_ORIG, "_t2cm_sum_wrapped", False):
     globals()["_p3e_summary"] = _p3e_summary
     _T2CM_LOG.info("PATCH_TOPIC2_CANONICAL_MARKERS_V1 _p3e_summary installed")
 # === END_PATCH_TOPIC2_CANONICAL_MARKERS_V1 ===
+
+
+# === PATCH_TOPIC2_CURRENT_TZ_ROWS_OVERRIDE_V1 ===
+# Canon: rows must follow the current raw task facts only.
+# Fixes late _p2_build_rows override that hardcoded slab 200 mm and frame wall insulation.
+try:
+    import logging as _t2row_logging
+    _T2ROW_LOG = _t2row_logging.getLogger("sample_template_engine")
+
+    def _p2_build_rows(p):  # noqa: F811
+        footprint = float(p.get("footprint") or 0)
+        floors = int(p.get("floors") or 1)
+        area_total = float(p.get("area_total") or footprint)
+        dims = p.get("dims") or (0, 0)
+        perimeter = 2 * (float(dims[0]) + float(dims[1])) if dims else 0.0
+        wall_h = 3.0
+        wall_area = perimeter * wall_h * floors
+        roof_area = footprint * 1.28
+        slab_mm = int(float(p.get("slab_mm") or 200))
+        slab_m = slab_mm / 1000.0
+        concrete = footprint * slab_m * 1.03
+        rebar_t = footprint * (0.032 if slab_mm <= 250 else 0.045)
+        rooms_est = max(6, floors * 5)
+        rows = []
+
+        def add(section, item, unit, qty, material_price, work_price):
+            _p2_add(rows, section, item, unit, qty, material_price, work_price)
+
+        add("Фундамент", "Разработка и планировка основания под плиту", "м²", footprint, 350, 450)
+        add("Фундамент", "Песчаная подушка 200 мм", "м³", footprint * 0.20, 1450, 750)
+        add("Фундамент", "Щебёночная подушка 150 мм", "м³", footprint * 0.15, 2300, 850)
+        add("Фундамент", "Гидроизоляция под плиту", "м²", footprint * 1.12, 220, 260)
+        add("Фундамент", f"Арматура А500С для плиты {slab_mm} мм", "т", rebar_t, 82000, 22000)
+        add("Фундамент", f"Бетон B25 для монолитной плиты {slab_mm} мм", "м³", concrete, 7200, 1850)
+        add("Фундамент", "Опалубка периметра плиты", "п.м", perimeter, 950, 850)
+
+        material = str(p.get("material") or "").lower()
+        if "кирпич" in material:
+            brick_volume = wall_area * 0.25
+            add("Стены", "Кладка наружных стен из полнотелого кирпича", "м³", brick_volume, 9800, 7200)
+            add("Стены", "Раствор кладочный для кирпичных стен", "м³", brick_volume * 0.22, 4200, 0)
+            add("Стены", "Армирование кирпичной кладки и связи", "м²", wall_area, 180, 160)
+            add("Стены", "Внутренняя отделка гипсокартоном под покраску", "м²", wall_area, 850, 950)
+        elif "газобет" in material:
+            block_volume = wall_area * 0.30
+            add("Стены", "Кладка наружных стен из газобетона", "м³", block_volume, 6200, 5200)
+            add("Стены", "Клей и армирование газобетона", "м²", wall_area, 260, 220)
+            add("Стены", "Внутренняя отделка гипсокартоном под покраску", "м²", wall_area, 850, 950)
+        else:
+            add("Стены", "Каркас наружных стен", "м²", wall_area, 2450, 2850)
+            add("Стены", f"Утепление стен {p.get('insulation_wall_mm') or 150} мм", "м²", wall_area, 1350, 650)
+            add("Стены", "Пароизоляция и ветрозащита стен", "м²", wall_area * 2, 120, 180)
+            add("Стены", "Внутренняя обшивка стен под отделку", "м²", wall_area, 850, 950)
+
+        add("Перекрытия", "Межэтажное перекрытие", "м²", footprint * max(floors - 1, 0), 3200, 2600)
+        add("Перекрытия", "Черновой пол и настил", "м²", area_total, 950, 780)
+        add("Кровля", "Несущий каркас кровли", "м²", roof_area, 1850, 2250)
+        add("Кровля", f"Утепление кровли {p.get('insulation_roof_mm') or 200} мм", "м²", roof_area, 1650, 850)
+        add("Кровля", "Пароизоляция и мембрана кровли", "м²", roof_area, 220, 260)
+        add("Кровля", "Покрытие кровли клик-фальц", "м²", roof_area, 2450, 1850)
+
+        if p.get("has_windows"):
+            add("Проёмы", "Окна металлопластиковые с монтажом", "м²", max(area_total * 0.11, 18), 9800, 2200)
+        if p.get("has_imitation_timber"):
+            add("Фасад", "Наружная отделка имитацией бруса", "м²", wall_area, 1450, 1250)
+        if p.get("has_laminate"):
+            add("Чистовая отделка", "Ламинат с подложкой", "м²", area_total, 1050, 750)
+        if p.get("bathrooms"):
+            add("Санузлы", "Внутренняя отделка санузла 4x4", "компл", max(1, int(p.get("bathrooms") or 1)), 185000, 145000)
+        if p.get("has_lighting"):
+            add("Электрика", "Светильники и выключатели", "компл", rooms_est, 6500, 4200)
+        if p.get("has_warm_floor"):
+            add("Отопление", "Тёплый пол и контуры отопления", "м²", area_total, 2200, 1450)
+        if p.get("scope") == "под ключ":
+            add("Инженерные коммуникации", "Инженерные коммуникации", "компл", 1, 550000, 420000)
+            add("Проживание и стройлагерь", "Организация проживания бригады и строительного лагеря", "компл", 1, 280000, 160000)
+            add("Логистика", "Доставка материалов от СПб", "км", p.get("distance_km") or 0, 1800, 0)
+
+        subtotal = sum(float(r.get("total") or 0) for r in rows)
+        if subtotal:
+            add("Накладные расходы", "Организация работ, ПТО, снабжение", "компл", 1, subtotal * 0.08, 0)
+        _T2ROW_LOG.info("PATCH_TOPIC2_CURRENT_TZ_ROWS_OVERRIDE_V1 rows=%d slab_mm=%s material=%s", len(rows), slab_mm, material)
+        return [r for r in rows if float(r.get("qty") or 0) > 0 and float(r.get("total") or 0) > 0]
+
+    _T2ROW_LOG.info("PATCH_TOPIC2_CURRENT_TZ_ROWS_OVERRIDE_V1 installed")
+except Exception as _t2row_err:
+    try:
+        _T2ROW_LOG.exception("PATCH_TOPIC2_CURRENT_TZ_ROWS_OVERRIDE_V1_INSTALL_ERR:%s", _t2row_err)
+    except Exception:
+        pass
+# === /PATCH_TOPIC2_CURRENT_TZ_ROWS_OVERRIDE_V1 ===
+
+
+# === PATCH_TOPIC2_DIRECT_SONAR_PRICE_SEARCH_V1 ===
+# Canon: topic_2 internet prices use ONLINE_MODEL=perplexity/sonar only.
+# Fix: search_monolith may return "[]" for supplier price prompts; direct Sonar route returns parseable supplier rows.
+try:
+    import os as _t2dps_os
+    import re as _t2dps_re
+    import json as _t2dps_json
+    import logging as _t2dps_logging
+    import datetime as _t2dps_datetime
+    _T2DPS_LOG = _t2dps_logging.getLogger("sample_template_engine")
+
+    def _t2dps_price_num(text):
+        m = _t2dps_re.search(r"(\d[\d\s]{2,})(?:\s*(?:₽|руб))?", str(text or ""))
+        if not m:
+            return None
+        try:
+            return float(m.group(1).replace(" ", ""))
+        except Exception:
+            return None
+
+    def _t2dps_parse_lines(content):
+        out = []
+        today = _t2dps_datetime.datetime.now().date().isoformat()
+        for line in str(content or "").splitlines():
+            line = line.strip(" -*•\t")
+            if "|" not in line:
+                continue
+            parts = [p.strip() for p in line.split("|")]
+            if len(parts) < 4:
+                continue
+            if parts[0].lower().startswith("категор"):
+                continue
+            price = _t2dps_price_num(parts[2])
+            if not price:
+                continue
+            out.append({
+                "item": parts[0][:120],
+                "name": parts[0][:120],
+                "supplier": parts[1][:120],
+                "price": price,
+                "unit": parts[2][:80],
+                "url": parts[3][:300],
+                "checked_at": today,
+                "status": "LIVE_CONFIRMED_SONAR",
+            })
+        return out[:12]
+
+    async def _p2_price_search(p, rows, chat_id=None, topic_id=None):  # noqa: F811
+        key_items = []
+        for r in rows:
+            if r.get("section") in ("Фундамент", "Стены", "Кровля", "Фасад", "Чистовая отделка", "Санузлы", "Инженерные коммуникации"):
+                key_items.append(str(r.get("item") or ""))
+        key_items = [x for x in key_items if x][:10]
+        if not key_items:
+            return [], "PRICE_SEARCH_NO_KEY_ITEMS"
+
+        api_key = (_t2dps_os.getenv("OPENROUTER_API_KEY") or "").strip()
+        model = (_t2dps_os.getenv("OPENROUTER_MODEL_ONLINE") or "perplexity/sonar").strip()
+        if not api_key:
+            try:
+                from dotenv import load_dotenv as _t2dps_load_dotenv
+                _t2dps_load_dotenv("/root/.areal-neva-core/.env", override=False)
+                api_key = (_t2dps_os.getenv("OPENROUTER_API_KEY") or "").strip()
+                model = (_t2dps_os.getenv("OPENROUTER_MODEL_ONLINE") or model or "perplexity/sonar").strip()
+            except Exception:
+                pass
+        if model != "perplexity/sonar" or "deepseek" in model.lower():
+            return [], "PRICE_SEARCH_FORBIDDEN_MODEL"
+        if not api_key:
+            return [], "PRICE_SEARCH_NO_OPENROUTER_KEY"
+
+        prompt = (
+            "Найди актуальные поставщики и цены стройматериалов в Санкт-Петербурге и Ленинградской области. "
+            "Верни 4-10 строк строго в формате: Категория | Поставщик | Цена | URL. "
+            "Без вступления, без markdown, без пустого массива.\n"
+            "Позиции:\n" + "\n".join("- " + x for x in key_items)
+        )
+        try:
+            import requests as _t2dps_requests
+            resp = _t2dps_requests.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={"Authorization": "Bearer " + api_key, "Content-Type": "application/json"},
+                json={"model": model, "messages": [{"role": "user", "content": prompt}], "temperature": 0.2},
+                timeout=70,
+            )
+            if resp.status_code != 200:
+                _T2DPS_LOG.warning("PATCH_TOPIC2_DIRECT_SONAR_PRICE_SEARCH_V1 status=%s body=%s", resp.status_code, resp.text[:200])
+                return [], "PRICE_SEARCH_SONAR_HTTP_" + str(resp.status_code)
+            content = resp.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+        except Exception as _e:
+            _T2DPS_LOG.warning("PATCH_TOPIC2_DIRECT_SONAR_PRICE_SEARCH_V1 err=%s", _e)
+            return [], "PRICE_SEARCH_SONAR_FAILED"
+        prices = _t2dps_parse_lines(content)
+        status = "PRICE_SEARCH_OK_SONAR_DIRECT" if prices else "PRICE_SEARCH_EMPTY_SONAR_DIRECT"
+        _T2DPS_LOG.info("PATCH_TOPIC2_DIRECT_SONAR_PRICE_SEARCH_V1 model=%s prices=%d status=%s", model, len(prices), status)
+        return prices, status
+
+    _T2DPS_LOG.info("PATCH_TOPIC2_DIRECT_SONAR_PRICE_SEARCH_V1 installed")
+except Exception as _t2dps_err:
+    try:
+        _T2DPS_LOG.exception("PATCH_TOPIC2_DIRECT_SONAR_PRICE_SEARCH_V1_INSTALL_ERR:%s", _t2dps_err)
+    except Exception:
+        pass
+# === /PATCH_TOPIC2_DIRECT_SONAR_PRICE_SEARCH_V1 ===

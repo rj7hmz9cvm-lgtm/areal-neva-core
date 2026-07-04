@@ -1,13 +1,13 @@
 # topic_5 TEKHNADZOR
 
-GENERATED_AT: 2026-05-09T17:35:02.514256+00:00
-GIT_SHA: 7aff8a6c8fa2d5b28aa4188a5e888b6d87ae65e1
+GENERATED_AT: 2026-07-04T21:54:23.434554+00:00
+GIT_SHA: fed18c2ba1c081e89de6d526675911a92361a309
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 5
 ROLE: Технадзор
 DIRECTIONS_BOUND: technical_supervision
-CURRENT_STATUS: IDLE_NO_FAILURES_NOT_VERIFIED
+CURRENT_STATUS: UNKNOWN
 ACTIVE_TASKS: 0
 FAILED_LAST_24H: 0
 
@@ -25,39 +25,10 @@ FAILED_LAST_24H: 0
 - 8093deb3 | INVALID_PUBLIC_RESULT
 
 ## COMMITS_LAST_14D
-- 7c646dd|session(08.05): bigfile activated, topic5 V3 dispatcher, topic2 P6C intercept, c94ec497 FAILED/NOT_PROVEN
-- b3e5be7|fix(topic500): relax bad-result filter for adaptive output modes
-- 0d6a9a4|fix(memory): ARCHIVE_DUPLICATE_GUARD_V1 + topic500 search pollution guard
-- 3f53d3f|docs(handoff): update after topic500 adaptive output V1
-- 0c15037|feat(topic500): adaptive output by intent mode (9 modes, V1)
-- 48eed2e|fix(topic5): filter garbage from act — canon §4/§5 material filter
-- bb8e971|fix(topic5): fix vision-blocked condition — {} is not None
-- fb24e60|fix(topic5): vision-blocked fallback per canon §17 — DOCX from owner text
-- 0e01878|fix(topic5): install python-docx + enable vision via EXTERNAL_PHOTO_ANALYSIS_ALLOWED env
-- f28a106|fix(topic2/topic500): extend estimate pipeline, offer menu for drive_file, fix search result blocking
-- 967c48f|fix(topic_2/topic_5): close logic gaps in smeta, voice, and act routing
-- 4aa44eb|fix: close canon contours for topic_5/topic_2/topic_500
-- 998b6ff|fix(topic5): require owner instruction for new files
-- 6e85335|fix(topic5): route drive files through full canon guard
-- 7abefb9|fix(topic5): clean address extraction regex
-- 4d8d5d6|fix(topic5): close full technadzor context contour
-- 52bf7b5|fix(topic5): continuous active folder packet
-- d9eed5e|fix(topic5): move final gate before worker main
-- 7e3bb3e|fix(topic5): final no-clarify gate
-- 884ea78|fix(topic5): canon close active folder photo package
-- 5b01524|fix(topic5): close technadzor photo reply buffer contour
-- 80c6690|Revert "fix(topic5): bind bot replies to recent photo materials"
-- 837cf22|fix(topic5): bind bot replies to recent photo materials
-- 6588a62|Revert "fix(topic5): force telegram files into visit buffer"
-- e934209|fix(topic5): force telegram files into visit buffer
-- 46234f9|fix(topic5): bind active folder upload and reply voice material comments
-- a277900|docs(normative): add shared normative context for topic_5 and topic_210
-- 2deb7c8|docs(technadzor): finalize topic5 logic context and document output contract
-- 1405fdb|CHAT EXPORT GPT_TOPIC5_FULL_CLOSE 2026-05-05
-- ff753aa|feat(technadzor): P6H_PART_4 topic_5 hook + STT hallucination guard
+- (none matching topic)
 
 ## MARKERS_LAST_24H
-- created:NEW
+- (none)
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_5 не тянет КЖ/АР без прямой команды
