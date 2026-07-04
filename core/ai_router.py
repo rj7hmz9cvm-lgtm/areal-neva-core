@@ -40,6 +40,15 @@ OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/ap
 DEFAULT_MODEL = os.getenv("OPENROUTER_MODEL", "deepseek/deepseek-chat").strip() or "deepseek/deepseek-chat"
 ONLINE_MODEL = os.getenv("OPENROUTER_MODEL_ONLINE", "perplexity/sonar").strip() or "perplexity/sonar"  # SEARCH_MONOLITH_V1
 
+def _assert_online_model_allowed() -> None:
+    model = (ONLINE_MODEL or "").strip()
+    low = model.lower()
+    if "deepseek" in low:
+        raise RuntimeError("FORBIDDEN_SEARCH_MODEL_DEEPSEEK")
+    if model != "perplexity/sonar":
+        raise RuntimeError("FORBIDDEN_SEARCH_MODEL_NOT_SONAR")
+
+
 SEARCH_RE = [
     r"\bнайди\b", r"\bнайти\b", r"\bпоиск\b", r"\bпоищи\b", r"\bsearch\b",
     r"\bцена\b", r"\bстоимость\b", r"\bсколько стоит\b",
@@ -421,10 +430,13 @@ async def process_ai_task(payload: Dict[str, Any]) -> str:
     _s_chat = _s(payload.get("chat_id"))
     try: _s_topic = int(payload.get("topic_id") or 0)
     except: _s_topic = 0
-    is_search = _search_intent(user_text, input_type) or bool(has_active_search_session(_s_chat, _s_topic))
+    explicit_search = _search_intent(user_text, input_type)
+    active_search_context = bool(has_active_search_session(_s_chat, _s_topic))
+    is_search = explicit_search
     work_payload = dict(payload)
 
     if is_search:
+        _assert_online_model_allowed()
         # === SEARCH_MONOLITH_V2_CALL ===
         try:
             if run_search_monolith_v2 is not None:
@@ -434,7 +446,7 @@ async def process_ai_task(payload: Dict[str, Any]) -> str:
                     logger.info("SEARCH_MONOLITH_V2_OK chars=%s", len(_v2))
                     return _v2
         except Exception as _v2e:
-            logger.error("SEARCH_MONOLITH_V2_FAIL err=%s fallback=V1", _v2e)
+            logger.error("SEARCH_MONOLITH_V2_FAIL err=%s continue=ONLINE_MODEL", _v2e)
         # === END SEARCH_MONOLITH_V2_CALL ===
         logger.info(
             "router_search_call model=%s input_type=%s state=%s chars=%s",
@@ -452,8 +464,8 @@ async def process_ai_task(payload: Dict[str, Any]) -> str:
                 ],
             )
         except Exception as e:
-            logger.error("search_model_fail err=%s — fallback to DEFAULT_MODEL without search", e)
-            search_result = ""
+            logger.error("search_model_fail err=%s", e)
+            return "SEARCH_FAILED: Sonar unavailable"
 
         search_result = _clean(_s(search_result), 4000)
         if not search_result:
@@ -465,7 +477,7 @@ async def process_ai_task(payload: Dict[str, Any]) -> str:
 
     logger.info(
         "router_call model=%s input_type=%s state=%s chars=%s is_search=%s",
-        DEFAULT_MODEL,
+        ONLINE_MODEL if is_search else DEFAULT_MODEL,
         input_type or "text",
         _s(payload.get("state")).upper() or "IN_PROGRESS",
         len(user_text),
@@ -480,7 +492,9 @@ async def process_ai_task(payload: Dict[str, Any]) -> str:
                 m["content"] += "\nFORBIDDEN: do not ask clarifying questions. Answer directly."
                 break
     # === MODEL_OVERRIDE_V1 ===
-    _final_model = work_payload.get("model_override") or DEFAULT_MODEL
+    _final_model = ONLINE_MODEL if is_search else (work_payload.get("model_override") or DEFAULT_MODEL)
+    if is_search:
+        _assert_online_model_allowed()
     result = await _openrouter_call(_final_model, messages)
     # === END MODEL_OVERRIDE_V1 ===
 

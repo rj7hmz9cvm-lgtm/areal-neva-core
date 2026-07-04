@@ -33,6 +33,15 @@ def _safe_int(v, default=0):
     try: return int(v or 0)
     except: return default
 
+def _assert_online_model_allowed(online_model=None):
+    model = (online_model or os.getenv("OPENROUTER_MODEL_ONLINE") or "perplexity/sonar").strip()
+    low = model.lower()
+    if "deepseek" in low:
+        raise RuntimeError("FORBIDDEN_SEARCH_MODEL_DEEPSEEK")
+    if model != "perplexity/sonar":
+        raise RuntimeError("FORBIDDEN_SEARCH_MODEL_NOT_SONAR")
+    return model
+
 @dataclass
 class SearchSession:
     chat_id: str; topic_id: int; goal: str
@@ -280,6 +289,7 @@ class SearchMonolithV2:
         session.sources = sources; session.queries = queries; self.sessions.save(session)
         prompt = self.formatter.build_prompt(session, queries, sources)
         system = (base_system_prompt or "") + "\nSEARCH_MONOLITH_V2_FULL_ACTIVE\n" + self.tco.instruction() + "\n" + self.ranker.instruction()
+        online_model = _assert_online_model_allowed(online_model)
         raw = await online_call(online_model, [{"role":"system","content":system},{"role":"user","content":prompt}])
         risk = self.risk.score_text(raw)
         final = self.formatter.ensure(raw, risk)
@@ -905,6 +915,7 @@ try:
 
         prompt = self.formatter.build_prompt(session, queries, sources)
         system = (base_system_prompt or "") + "\nP6_GLOBAL_SEARCH_SESSION_ACTIVE\nCURRENT_QUERY_ONLY\nNO_ESTIMATE_NO_XLSX_NO_PDF"
+        online_model = _assert_online_model_allowed(online_model)
         raw = await online_call(online_model, [{"role": "system", "content": system}, {"role": "user", "content": prompt}])
         risk = self.risk.score_text(raw)
         final = self.formatter.ensure(raw, risk)
@@ -1291,6 +1302,7 @@ try:
         payload["archive_context"] = ""
         payload["search_context"] = ""
 
+        online_model = _assert_online_model_allowed(online_model)
         raw = await online_call(online_model, _p6c_messages_20260504(query))
         try:
             final = _clean(raw, 12000)
@@ -1310,6 +1322,7 @@ except Exception:
 
 try:
     def run_search_monolith_v2(payload, user_text, online_call, online_model, base_system_prompt=""):
+        online_model = _assert_online_model_allowed(online_model)
         return _MONOLITH.run(payload, user_text, online_call, online_model, base_system_prompt)
 except Exception:
     pass
@@ -1365,6 +1378,7 @@ try:
         payload["long_memory_context"] = ""
         payload["archive_context"] = ""
         payload["search_context"] = ""
+        online_model = _assert_online_model_allowed(online_model)
         raw = await online_call(online_model, _p6e2_search_messages(q))
         final = _p6e2_search_s(raw, 12000)
         stale = ("rockwool", "каменная вата", "термодом", "утеплитель")
@@ -1477,7 +1491,7 @@ def _p6e4_general_online_search(q):
     if not api_key:
         return ""
     base = (_p6e4_os.getenv("OPENROUTER_BASE_URL") or "https://openrouter.ai/api/v1").rstrip("/")
-    model = _p6e4_os.getenv("OPENROUTER_MODEL_ONLINE") or _p6e4_os.getenv("ONLINE_MODEL") or "perplexity/sonar"
+    model = _assert_online_model_allowed(_p6e4_os.getenv("OPENROUTER_MODEL_ONLINE") or _p6e4_os.getenv("ONLINE_MODEL") or "perplexity/sonar")
     domain_rule = "Автозапчасти/товары/услуги/строительство определяй только по текущему запросу"
     if _p6e4_is_auto_query(q):
         domain_rule = "Это поиск автозапчастей. Ищи только автозапчасти и совместимые детали. Стройматериалы запрещены"
