@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_011
-generated_at_utc: 2026-07-04T21:54:23.317705+00:00
-git_sha_before_commit: fed18c2ba1c081e89de6d526675911a92361a309
+generated_at_utc: 2026-07-04T22:24:23.912502+00:00
+git_sha_before_commit: c8a9f1c65cfa2e48dda716b5e6e727e4a1e0f3b1
 part: 11/18
 
 
 ====================================================================================================
 BEGIN_FILE: core/sample_template_engine.py
 FILE_CHUNK: 1/2
-SHA256_FULL_FILE: 0dda38fd606e49fdf72d151576826565463fa43760cbf8e7d4a774dee94b744c
+SHA256_FULL_FILE: a490526f5cb0dfcc5aab9a029511538d4aac55c0fed11352575b26c594905c8b
 ====================================================================================================
 # === FULLFIX_13A_SAMPLE_FILE_INTENT_AND_TEMPLATE_ESTIMATE ===
 import os
@@ -1565,7 +1565,7 @@ def _parse_estimate_items(text: str) -> List[Dict[str, Any]]:
         width = _final_num_v1(m.group(2)) if m else 10.0
         area = round(length * width, 2)
         thick_m = 0.25
-        mt = _re.search(r"толщин[а-я]*\s*(\d{2,4})\s*мм", low)
+        mt = _re.search(r"толщин[а-я]*\s*(\d{2,4})(?:\s*мм)?", low)
         if mt:
             thick_m = _final_num_v1(mt.group(1)) / 1000.0
         concrete = round(area * thick_m, 2)
@@ -4405,9 +4405,9 @@ def _p1_parse_20260504(text):
     footprint = dims[0] * dims[1] if dims else None
     area_total = footprint * floors if footprint and floors else footprint
     slab_mm = 200
-    m_slab = _p2_re.search(r"(?:плит[ауы]?|фундамент).{0,80}?(\d{2,4})\s*мм", low)
+    m_slab = _p2_re.search(r"(?:плит[а-я]*|фундамент).{0,80}?(\d{2,4})(?:\s*мм)?", low)
     if not m_slab:
-        m_slab = _p2_re.search(r"толщин[а-я]*\s*(\d{2,4})\s*мм", low)
+        m_slab = _p2_re.search(r"толщин[а-я]*\s*(\d{2,4})(?:\s*мм)?", low)
     if m_slab:
         try:
             slab_mm = max(100, int(float(m_slab.group(1).replace(",", "."))))
@@ -4441,9 +4441,9 @@ def _p1_parse_20260504(text):
         bathrooms = floors
 
     slab_mm = 200
-    m_slab = _p2_re.search(r"(?:плит[ауы]?|фундамент).{0,80}?(\d{2,4})\s*мм", low)
+    m_slab = _p2_re.search(r"(?:плит[а-я]*|фундамент).{0,80}?(\d{2,4})(?:\s*мм)?", low)
     if not m_slab:
-        m_slab = _p2_re.search(r"толщин[а-я]*\s*(\d{2,4})\s*мм", low)
+        m_slab = _p2_re.search(r"толщин[а-я]*\s*(\d{2,4})(?:\s*мм)?", low)
     if m_slab:
         try:
             slab_mm = max(100, int(float(m_slab.group(1).replace(",", "."))))
@@ -4996,9 +4996,9 @@ def _p2_parse(text):
     footprint = dims[0] * dims[1] if dims else None
     area_total = footprint * floors if footprint and floors else footprint
     slab_mm = 200
-    m_slab = _p2_re.search(r"(?:плит[ауы]?|фундамент).{0,80}?(\d{2,4})\s*мм", low)
+    m_slab = _p2_re.search(r"(?:плит[а-я]*|фундамент).{0,80}?(\d{2,4})(?:\s*мм)?", low)
     if not m_slab:
-        m_slab = _p2_re.search(r"толщин[а-я]*\s*(\d{2,4})\s*мм", low)
+        m_slab = _p2_re.search(r"толщин[а-я]*\s*(\d{2,4})(?:\s*мм)?", low)
     if m_slab:
         try:
             slab_mm = max(100, int(float(m_slab.group(1).replace(",", "."))))
@@ -7860,7 +7860,6 @@ def _p2_create_xlsx(task_id, p, rows, prices=None, price_status=""):
         ws_price.append([])
         ws_price.append(["Позиция", "Цена", "Ед.", "Поставщик", "URL", "checked_at", "Статус"])
         for pr in (prices or []):
-            ws_price.append([
 
 ====================================================================================================
 END_FILE: core/sample_template_engine.py
@@ -7870,8 +7869,9 @@ FILE_CHUNK: 1/2
 ====================================================================================================
 BEGIN_FILE: core/sample_template_engine.py
 FILE_CHUNK: 2/2
-SHA256_FULL_FILE: 0dda38fd606e49fdf72d151576826565463fa43760cbf8e7d4a774dee94b744c
+SHA256_FULL_FILE: a490526f5cb0dfcc5aab9a029511538d4aac55c0fed11352575b26c594905c8b
 ====================================================================================================
+            ws_price.append([
                 str(pr.get("name") or pr.get("item") or "")[:100],
                 pr.get("price") or pr.get("live_avg") or "",
                 str(pr.get("unit") or "")[:20],
@@ -8640,6 +8640,112 @@ except Exception as _t2row_err:
     except Exception:
         pass
 # === /PATCH_TOPIC2_CURRENT_TZ_ROWS_OVERRIDE_V1 ===
+
+
+# === PATCH_TOPIC2_DIRECT_SONAR_PRICE_SEARCH_V1 ===
+# Canon: topic_2 internet prices use ONLINE_MODEL=perplexity/sonar only.
+# Fix: search_monolith may return "[]" for supplier price prompts; direct Sonar route returns parseable supplier rows.
+try:
+    import os as _t2dps_os
+    import re as _t2dps_re
+    import json as _t2dps_json
+    import logging as _t2dps_logging
+    import datetime as _t2dps_datetime
+    _T2DPS_LOG = _t2dps_logging.getLogger("sample_template_engine")
+
+    def _t2dps_price_num(text):
+        m = _t2dps_re.search(r"(\d[\d\s]{2,})(?:\s*(?:₽|руб))?", str(text or ""))
+        if not m:
+            return None
+        try:
+            return float(m.group(1).replace(" ", ""))
+        except Exception:
+            return None
+
+    def _t2dps_parse_lines(content):
+        out = []
+        today = _t2dps_datetime.datetime.now().date().isoformat()
+        for line in str(content or "").splitlines():
+            line = line.strip(" -*•\t")
+            if "|" not in line:
+                continue
+            parts = [p.strip() for p in line.split("|")]
+            if len(parts) < 4:
+                continue
+            if parts[0].lower().startswith("категор"):
+                continue
+            price = _t2dps_price_num(parts[2])
+            if not price:
+                continue
+            out.append({
+                "item": parts[0][:120],
+                "name": parts[0][:120],
+                "supplier": parts[1][:120],
+                "price": price,
+                "unit": parts[2][:80],
+                "url": parts[3][:300],
+                "checked_at": today,
+                "status": "LIVE_CONFIRMED_SONAR",
+            })
+        return out[:12]
+
+    async def _p2_price_search(p, rows, chat_id=None, topic_id=None):  # noqa: F811
+        key_items = []
+        for r in rows:
+            if r.get("section") in ("Фундамент", "Стены", "Кровля", "Фасад", "Чистовая отделка", "Санузлы", "Инженерные коммуникации"):
+                key_items.append(str(r.get("item") or ""))
+        key_items = [x for x in key_items if x][:10]
+        if not key_items:
+            return [], "PRICE_SEARCH_NO_KEY_ITEMS"
+
+        api_key = <REDACTED_SECRET>"OPENROUTER_API_KEY") or "").strip()
+        model = (_t2dps_os.getenv("OPENROUTER_MODEL_ONLINE") or "perplexity/sonar").strip()
+        if not api_key:
+            try:
+                from dotenv import load_dotenv as _t2dps_load_dotenv
+                _t2dps_load_dotenv("/root/.areal-neva-core/.env", override=False)
+                api_key = <REDACTED_SECRET>"OPENROUTER_API_KEY") or "").strip()
+                model = (_t2dps_os.getenv("OPENROUTER_MODEL_ONLINE") or model or "perplexity/sonar").strip()
+            except Exception:
+                pass
+        if model != "perplexity/sonar" or "deepseek" in model.lower():
+            return [], "PRICE_SEARCH_FORBIDDEN_MODEL"
+        if not api_key:
+            return [], "PRICE_SEARCH_NO_OPENROUTER_KEY"
+
+        prompt = (
+            "Найди актуальные поставщики и цены стройматериалов в Санкт-Петербурге и Ленинградской области. "
+            "Верни 4-10 строк строго в формате: Категория | Поставщик | Цена | URL. "
+            "Без вступления, без markdown, без пустого массива.\n"
+            "Позиции:\n" + "\n".join("- " + x for x in key_items)
+        )
+        try:
+            import requests as _t2dps_requests
+            resp = _t2dps_requests.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={"Authorization": "Bearer " + api_key, "Content-Type": "application/json"},
+                json={"model": model, "messages": [{"role": "user", "content": prompt}], "temperature": 0.2},
+                timeout=70,
+            )
+            if resp.status_code != 200:
+                _T2DPS_LOG.warning("PATCH_TOPIC2_DIRECT_SONAR_PRICE_SEARCH_V1 status=%s body=%s", resp.status_code, resp.text[:200])
+                return [], "PRICE_SEARCH_SONAR_HTTP_" + str(resp.status_code)
+            content = resp.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+        except Exception as _e:
+            _T2DPS_LOG.warning("PATCH_TOPIC2_DIRECT_SONAR_PRICE_SEARCH_V1 err=%s", _e)
+            return [], "PRICE_SEARCH_SONAR_FAILED"
+        prices = _t2dps_parse_lines(content)
+        status = "PRICE_SEARCH_OK_SONAR_DIRECT" if prices else "PRICE_SEARCH_EMPTY_SONAR_DIRECT"
+        _T2DPS_LOG.info("PATCH_TOPIC2_DIRECT_SONAR_PRICE_SEARCH_V1 model=%s prices=%d status=%s", model, len(prices), status)
+        return prices, status
+
+    _T2DPS_LOG.info("PATCH_TOPIC2_DIRECT_SONAR_PRICE_SEARCH_V1 installed")
+except Exception as _t2dps_err:
+    try:
+        _T2DPS_LOG.exception("PATCH_TOPIC2_DIRECT_SONAR_PRICE_SEARCH_V1_INSTALL_ERR:%s", _t2dps_err)
+    except Exception:
+        pass
+# === /PATCH_TOPIC2_DIRECT_SONAR_PRICE_SEARCH_V1 ===
 
 ====================================================================================================
 END_FILE: core/sample_template_engine.py

@@ -1,7 +1,7 @@
 # DIRECTION_STATUS_INDEX
 
-GENERATED_AT: 2026-07-04T21:54:23.627141+00:00
-GIT_SHA: fed18c2ba1c081e89de6d526675911a92361a309
+GENERATED_AT: 2026-07-04T22:24:24.207594+00:00
+GIT_SHA: c8a9f1c65cfa2e48dda716b5e6e727e4a1e0f3b1
 Source: core/direction_registry.DirectionRegistry from config/directions.yaml
 
 | direction | enabled | engine | topic_ids | bound_status |
@@ -15,7 +15,7 @@ Source: core/direction_registry.DirectionRegistry from config/directions.yaml
 | auto_parts_search | True | search_supplier | [961] | 961:UNKNOWN |
 | construction_search | True | search_supplier | [] | - |
 | technical_supervision | True | defect_act | [5] | 5:UNKNOWN |
-| estimates | True | estimate_unified | [2] | 2:BROKEN |
+| estimates | True | estimate_unified | [2] | 2:INSTALLED_NOT_VERIFIED |
 | defect_acts | True | defect_act | [] | - |
 | documents | True | document_engine | [] | - |
 | spreadsheets | True | sheets_route | [] | - |
