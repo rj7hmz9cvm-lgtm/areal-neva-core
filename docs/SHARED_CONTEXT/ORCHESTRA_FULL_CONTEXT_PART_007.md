@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_007
-generated_at_utc: 2026-07-05T19:52:21.417693+00:00
-git_sha_before_commit: 56ef896bc4376400f193d1f7c90db873d1520ecd
+generated_at_utc: 2026-07-05T20:22:24.424706+00:00
+git_sha_before_commit: af84678ea309a2c12a624ccb89aa3004bef14a77
 part: 7/18
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 3/4
-SHA256_FULL_FILE: 32fd8459a3d152d5a9fa3e8476394aa53b3573f3cbbc365b3c8824af7e7e1a63
+SHA256_FULL_FILE: 00fc27afeea2ff25a93fe899cdd5462be784c8ec3ec7300006d47ce9e64af143
 ====================================================================================================
         return _T25G_CURRENT(conn, task_id, **kwargs)
     _update_task._t25g_wrapped = True
@@ -126,9 +126,9 @@ _TCG_LOG = _tcg_logging.getLogger("task_worker.cancel_guard")
 
 _TCG_CANCEL_RE = _tcg_re.compile(
     r"(?:^|\s)(?:\[VOICE\]\s*)?"
-    r"(отмена|отбой|стоп|заверши|завершена|закрой|закрывай|очисти|"
-    r"отменяй|задача отменена|отмена задач|все задачи завершен|"
-    r"отбой всех|очисти все|задача завершена)",
+    r"(отмена|отбой|стоп|закрой|закрывай|очисти|"
+    r"отменяй|задача отменена|отмена задач|"
+    r"отбой всех|очисти все)",
     _tcg_re.IGNORECASE
 )
 
@@ -7530,6 +7530,7 @@ try:
             return await _t2cf2_orig_handle_drive_file(conn, task, chat_id, topic_id)
         globals()["_handle_drive_file"] = _handle_drive_file
 
+    # === FIX 2: wrap _t2fb_merge → no raw_input append for drive_file parent ===
 
 ====================================================================================================
 END_FILE: task_worker.py

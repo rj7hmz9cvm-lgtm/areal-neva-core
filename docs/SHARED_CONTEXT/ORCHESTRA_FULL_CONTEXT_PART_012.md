@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_012
-generated_at_utc: 2026-07-05T19:52:21.422443+00:00
-git_sha_before_commit: 56ef896bc4376400f193d1f7c90db873d1520ecd
+generated_at_utc: 2026-07-05T20:22:24.429469+00:00
+git_sha_before_commit: af84678ea309a2c12a624ccb89aa3004bef14a77
 part: 12/18
 
 
@@ -1796,7 +1796,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: dc306347071f03aa44b6c0a8d3ec21d558e1394d3f24354d961259d873f71e57
+SHA256_FULL_FILE: f6718b4a7a2a6c0d03b9ed474bf631c8325a909ab21a96744d70ecfd5970165a
 ====================================================================================================
 # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
 from __future__ import annotations
@@ -2685,8 +2685,12 @@ def _parse_price_sources(price_text: str) -> List[Dict[str, Any]]:
         position = parts[0].lower()
         supplier = parts[4] if len(parts) > 4 else ""
         url = parts[5] if len(parts) > 5 else ""
+        if any(x in _low(supplier) for x in ("нет данных", "not found", "not_found", "н/д")):
+            supplier = ""
+        if any(x in _low(url) for x in ("нет данных", "not found", "not_found", "н/д")):
+            url = ""
         checked_at = parts[6].strip() if len(parts) > 6 else today
-        status = "found" if (supplier or url) else "no_data"
+        status = "LIVE_CONFIRMED" if (supplier and url) else ("PARTIAL" if (supplier or url) else "UNVERIFIED")
         if not position:
             continue
         kw = [w for w in re.split(r"[\s,;/]+", position) if len(w) > 2]
@@ -3007,14 +3011,22 @@ async def _search_prices_online(parsed: Dict[str, Any], template: Dict[str, Any]
         _work_kw = ("работ", "кладк", "монтаж", "доставк", "разгрузк", "манипулятор", "кран")
         _items_to_enrich = [
             (str(parsed.get("material") or ""), "м³"),
+            ("Газобетон D400 D500", "м³"),
             ("Бетон В25", "м³"),
             ("Арматура А500", "т"),
             (str(parsed.get("foundation") or "бетон монолит"), "м³"),
             ("Работы по монтажу и кладке", "м²"),
+            ("Аренда крана", "смена"),
+            ("Аренда бетононасоса", "смена"),
+            ("Разгрузка строительных материалов", "т"),
             ("Доставка строительных материалов", "рейс"),
+            ("Кровельные материалы и монтаж", "м²"),
+            ("Окна ПВХ с монтажом", "шт"),
+            ("Фасадные материалы и работы", "м²"),
+            ("Внутренняя отделка материалы и работы", "м²"),
         ]
         _per_item_lines = []
-        for _pi_name, _pi_unit in _items_to_enrich[:6]:
+        for _pi_name, _pi_unit in _items_to_enrich[:14]:
             if not _pi_name.strip():
                 continue
             try:
@@ -3040,9 +3052,13 @@ async def _search_prices_online(parsed: Dict[str, Any], template: Dict[str, Any]
                         pass
                 for _o in _valid_offers[:2]:
                     _per_item_lines.append(
-                        "- {} | {} {} | {} | {}".format(
-                            _pi_name, _o.get("price"), _o.get("unit"),
-                            _o.get("supplier"), _o.get("status")
+                        "- {} | {} | {} | Санкт-Петербург и Ленинградская область | {} | {} | {}".format(
+                            _pi_name,
+                            _o.get("price"),
+                            _o.get("unit") or _pi_unit,
+                            _o.get("supplier") or "",
+                            _o.get("url") or "",
+                            _o.get("checked_at") or datetime.date.today().isoformat(),
                         )
                     )
             except Exception:
@@ -3147,7 +3163,7 @@ def _create_xlsx_from_template(task_id: str, parsed: Dict[str, Any], template: D
             sec_color_map[sec] = sec_palette[sec_idx % len(sec_palette)]
             sec_idx += 1
         row_fill = PatternFill(start_color=sec_color_map[sec], end_color=sec_color_map[sec], fill_type="solid")
-        _icls = _classify_item(it["name"], sec)
+        _icls = it.get("kind") or _classify_item(it["name"], sec)
         _wp = price if _icls == "work" else 0
         _mp = price if _icls != "work" else 0
         ws.cell(row_idx, 1, i)
@@ -7232,6 +7248,20 @@ def _t2tr_num(v):
         return 0.0
 
 
+
+def _t2tr_estimate_section(section: str, name: str) -> str:
+    """Keep project/template sections, but separate logistics/overheads by meaning."""
+    sec = _s(section or "").strip()
+    low = _low(f"{sec} {name}")
+    if any(x in low for x in (
+        "аренда крана", "кран", "бетононасос", "манипулятор", "доставка",
+        "транспорт", "разгруз", "прожив", "рейс", "логист"
+    )):
+        return "Логистика"
+    if any(x in low for x in ("накладн", "организация работ", "расходные материалы", "крепеж", "крепёж", "уборка")):
+        return "Накладные расходы"
+    return sec or "Прочее"
+
 def _t2tr_template_items(template_path: Optional[str], sheet_name: Optional[str], parsed: Dict[str, Any]) -> List[Dict[str, Any]]:
     if not template_path or not os.path.exists(template_path):
         return []
@@ -7272,31 +7302,38 @@ def _t2tr_template_items(template_path: Optional[str], sheet_name: Optional[str]
         qty = _t2tr_num(row[3] if len(row) > 3 else 0)
         if a and not name:
             section = a.strip()
+            if _low(section).startswith('не входит'):
+                break
+            continue
+        if _low(section).startswith('не входит'):
             continue
         if not name or not unit or qty <= 0:
             continue
         lname = _low(name)
-        if 'наименование' in lname or 'итого' in lname:
+        if 'наименование' in lname or 'итого' in lname or lname.startswith('не входит'):
             continue
         work_price = _t2tr_num(row[work_col] if len(row) > work_col else 0)
         mat_price = _t2tr_num(row[mat_col] if len(row) > mat_col else 0)
         note = _s(row[9] if len(row) > 9 and mat_col != 9 else (row[10] if len(row) > 10 else ''))
+        calc_section = _t2tr_estimate_section(section, name)
         if work_price > 0:
             items.append({
-                'section': section or 'Работы',
+                'section': calc_section,
                 'name': name[:240],
                 'unit': unit,
                 'qty': qty,
                 'price': work_price,
+                'kind': 'work',
                 'note': (note or 'template workbook row')[:240],
             })
         if mat_price > 0:
             items.append({
-                'section': (section or 'Материалы') + ' / Материалы',
+                'section': calc_section,
                 'name': name[:240],
                 'unit': unit,
                 'qty': qty,
                 'price': mat_price,
+                'kind': 'material',
                 'note': (note or 'template workbook row')[:240],
             })
     return items[:400]
@@ -7312,6 +7349,10 @@ def _t2tr_add_required_blocks(items: List[Dict[str, Any]], parsed: Dict[str, Any
     if distance > 0 and 'логистика' not in sections:
         delivery_price = _choose_value(_numbers_from_price_text(price_text, ('достав', 'рейс', 'манипулятор', 'кран', 'транспорт')), choice)
         trips = max(math.ceil(distance / 40), 1)
+        if delivery_price and delivery_price < 5000:
+            delivery_price = 0
+        if delivery_price <= 0:
+            delivery_price = 13500
         if delivery_price > 0:
             result.append({
                 'section': 'Логистика',
