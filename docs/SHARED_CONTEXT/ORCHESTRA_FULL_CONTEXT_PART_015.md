@@ -1,8 +1,285 @@
 # ORCHESTRA_FULL_CONTEXT_PART_015
-generated_at_utc: 2026-07-05T12:24:50.356313+00:00
-git_sha_before_commit: 0e7f79f099fb2c443a8c79f823773204244098a7
+generated_at_utc: 2026-07-05T12:54:51.379152+00:00
+git_sha_before_commit: 8df212fc01ac33ed4a754701b665a1ae5f838a40
 part: 15/18
 
+
+====================================================================================================
+BEGIN_FILE: data/templates/estimate/TEMPLATE__chat_-1003725299009__topic_2__20260430_100323.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 2751853a7fec499884e42f27a565e5d1374b91b8c0c7aaec43cecba88b3128f3
+====================================================================================================
+{
+  "engine": "FULLFIX_13A_SAMPLE_FILE_INTENT_AND_TEMPLATE_ESTIMATE",
+  "kind": "estimate",
+  "status": "active",
+  "chat_id": "-1003725299009",
+  "topic_id": 2,
+  "saved_by_task_id": "d390b50d-2f5e-4aeb-871a-3b30cc149d18",
+  "source_task_id": "12f63475-a307-49d5-bf85-45852622840e",
+  "source_file_id": "1Ert7YACjcfZcodklU7UnckLN3xgsyuKD",
+  "source_file_name": "ВОР_кирпичная_кладка_ИСПРАВЛЕНО.xlsx",
+  "source_mime_type": "",
+  "source_caption": "",
+  "source_score": 150,
+  "saved_at": "2026-04-30T10:03:23.387650+00:00",
+  "usage_rule": "Use this file as formatting/sample reference for future estimate/project artifacts in the same chat and topic",
+  "raw_user_instruction": "Тот файл который я тебе скинул последний возьми его как образец для составления сметы"
+}
+====================================================================================================
+END_FILE: data/templates/estimate/TEMPLATE__chat_-1003725299009__topic_2__20260430_100323.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: data/templates/estimate/TEMPLATE__chat_-1003725299009__topic_3008__20260501_083807.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 225b637da9991f976ece0bfe4c6d0a4eca022ecb9bb09fa84104e63fb6bdca92
+====================================================================================================
+{
+  "engine": "FULLFIX_13A_SAMPLE_FILE_INTENT_AND_TEMPLATE_ESTIMATE",
+  "kind": "estimate",
+  "status": "active",
+  "chat_id": "-1003725299009",
+  "topic_id": 3008,
+  "saved_by_task_id": "7270364c-bb74-4e1e-b531-de64dfe713b7",
+  "source_task_id": "f5c33c40-dacf-46c9-97ca-2dc19e245650",
+  "source_file_id": "1XsuPOtO-vyA73IX5Ui9AR9kf6uUAE5b_",
+  "source_file_name": "estimate_c925a897-66ec-435e-8312-15687f.xlsx",
+  "source_mime_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "source_caption": "",
+  "source_score": 110,
+  "saved_at": "2026-05-01T08:38:07.108195+00:00",
+  "usage_rule": "Use this file as formatting/sample reference for future estimate/project artifacts in the same chat and topic",
+  "raw_user_instruction": "этот чат у нас используется с тобой для работы, соответственно, как ты правильно и сказал, по AI роутеру Arial Niva, но также мы здесь еще с тобой пишем коды по определенным запросам команд, которые ты вот сейчас мне написал, например, напиши код. То есть здесь мы также с тобой создаем еще коды, которые делаются на основании четырех моделей, которые присутствуют у нас с тобой."
+}
+====================================================================================================
+END_FILE: data/templates/estimate/TEMPLATE__chat_-1003725299009__topic_3008__20260501_083807.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: data/templates/estimate/deprecated/DEPRECATED__ACTIVE__chat_-1003725299009__topic_2__VOR_20260503.original.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: f58425288c17d830efcab61e9238e10842f7d55434c1f35a8249f262001212c2
+====================================================================================================
+{
+  "engine": "FULLFIX_13A_SAMPLE_FILE_INTENT_AND_TEMPLATE_ESTIMATE",
+  "kind": "estimate",
+  "status": "deprecated",
+  "chat_id": "-1003725299009",
+  "topic_id": 2,
+  "saved_by_task_id": "d390b50d-2f5e-4aeb-871a-3b30cc149d18",
+  "source_task_id": "12f63475-a307-49d5-bf85-45852622840e",
+  "source_file_id": "1Ert7YACjcfZcodklU7UnckLN3xgsyuKD",
+  "source_file_name": "ВОР_кирпичная_кладка_ИСПРАВЛЕНО.xlsx",
+  "source_mime_type": "",
+  "source_caption": "",
+  "source_score": 150,
+  "saved_at": "2026-04-30T10:03:23.387650+00:00",
+  "usage_rule": "Use this file as formatting/sample reference for future estimate/project artifacts in the same chat and topic",
+  "raw_user_instruction": "Тот файл который я тебе скинул последний возьми его как образец для составления сметы",
+  "deprecated_reason": "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3: VOR disabled from active topic_2 estimate logic",
+  "deprecated_at": "2026-05-03T11:39:40.822192"
+}
+
+====================================================================================================
+END_FILE: data/templates/estimate/deprecated/DEPRECATED__ACTIVE__chat_-1003725299009__topic_2__VOR_20260503.original.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: data/templates/index.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 4fefe3e44a76c132b89c1186ecc62d498869ba8185064756cfe43da0f0726914
+====================================================================================================
+{
+  "_schema": "TEMPLATE_INDEX_DICT_FIX_V1",
+  "_legacy_type": "list",
+  "_legacy_data": [
+    {
+      "template_id": "d5d1fbca-e848-4e36-b297-d12312cc5217",
+      "chat_id": "-1003725299009",
+      "topic_id": 4569,
+      "source_task_id": "d5d1fbca-e848-4e36-b297-d12312cc5217",
+      "source_file_name": "",
+      "mime_type": "",
+      "kind": "unknown_template",
+      "created_at": "2026-05-01T10:23:26.354953",
+      "active": true
+    },
+    {
+      "template_id": "364b2395-0744-4a88-80a8-6e87c282aa3d",
+      "chat_id": "-1003725299009",
+      "topic_id": 210,
+      "source_task_id": "364b2395-0744-4a88-80a8-6e87c282aa3d",
+      "source_file_name": "АР_КД_Агалатово_02.pdf",
+      "mime_type": "application/pdf",
+      "kind": "estimate_template",
+      "created_at": "2026-05-01T11:32:07.307426",
+      "active": false
+    },
+    {
+      "template_id": "ee10abce-9662-4797-825e-096188f40a4e",
+      "chat_id": "-1003725299009",
+      "topic_id": 210,
+      "source_task_id": "ee10abce-9662-4797-825e-096188f40a4e",
+      "source_file_name": "АР_КД_Агалатово_02.pdf",
+      "mime_type": "application/pdf",
+      "kind": "estimate_template",
+      "created_at": "2026-05-01T11:34:12.786364",
+      "active": true
+    },
+    {
+      "template_id": "bab630ba-7e3f-4c43-88ff-3e917e5c6279",
+      "chat_id": "-1003725299009",
+      "topic_id": 2,
+      "source_task_id": "bab630ba-7e3f-4c43-88ff-3e917e5c6279",
+      "source_file_name": "Техническое задание Кордон снт.docx",
+      "mime_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "kind": "estimate_template",
+      "created_at": "2026-05-02T00:20:57.882990",
+      "active": true
+    }
+  ]
+}
+====================================================================================================
+END_FILE: data/templates/index.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: data/topics/0/meta.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 99110904300dc66aa8fe5e9cc9aa1de41ba518ca5ce020af0cb0e2c4fb0739f8
+====================================================================================================
+{
+  "topic_id": 0,
+  "name": "ЛИДЫ АМО",
+  "direction": "crm_leads",
+  "chat_id": "-1003725299009",
+  "chat_name": "НЕЙРОНКИ ЧАТ",
+  "synced_at": "2026-05-01T09:28:21.231172+00:00",
+  "synced_by": "TOPIC_SYNC_FULL_V1"
+}
+====================================================================================================
+END_FILE: data/topics/0/meta.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: data/topics/11/meta.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 04c69440018c5cb2105f1624418040b5c4dac9a5da55f0ac5b07727ed5a103e0
+====================================================================================================
+{
+  "topic_id": 11,
+  "name": "ВИДЕОКОНТЕНТ",
+  "direction": "video_production",
+  "chat_id": "-1003725299009",
+  "chat_name": "НЕЙРОНКИ ЧАТ",
+  "synced_at": "2026-05-01T09:28:21.231872+00:00",
+  "synced_by": "TOPIC_SYNC_FULL_V1"
+}
+====================================================================================================
+END_FILE: data/topics/11/meta.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: data/topics/2/meta.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 51744f466380c4b2398e4e6b98c21d35fa9435a905eb9c53b308aa6a8d8836ca
+====================================================================================================
+{
+  "topic_id": 2,
+  "name": "СТРОЙКА",
+  "direction": "estimates",
+  "chat_id": "-1003725299009",
+  "chat_name": "НЕЙРОНКИ ЧАТ",
+  "synced_at": "2026-05-01T09:28:21.231412+00:00",
+  "synced_by": "TOPIC_SYNC_FULL_V1"
+}
+====================================================================================================
+END_FILE: data/topics/2/meta.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: data/topics/210/meta.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: ce50915df1bdab1a3baf419fea40ed5b9dfc1f6d009a4daecf0b4e7fcb36110a
+====================================================================================================
+{
+  "topic_id": 210,
+  "name": "ПРОЕКТИРОВАНИЕ",
+  "direction": "structural_design",
+  "chat_id": "-1003725299009",
+  "chat_name": "НЕЙРОНКИ ЧАТ",
+  "synced_at": "2026-05-01T09:28:21.232182+00:00",
+  "synced_by": "TOPIC_SYNC_FULL_V1"
+}
+====================================================================================================
+END_FILE: data/topics/210/meta.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: data/topics/3008/meta.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 997992e041d0f6ac8ad7dd83631d2eef51a26013445370bc050ff361e3f29c0e
+====================================================================================================
+{
+  "topic_id": 3008,
+  "name": "КОДЫ МОЗГОВ",
+  "direction": "orchestration_core",
+  "chat_id": "-1003725299009",
+  "chat_name": "НЕЙРОНКИ ЧАТ",
+  "synced_at": "2026-05-01T09:28:21.232993+00:00",
+  "synced_by": "TOPIC_SYNC_FULL_V1"
+}
+====================================================================================================
+END_FILE: data/topics/3008/meta.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: data/topics/4569/meta.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: a436174d9ec1dfc8e15f469fc81c061d7b8bbef1538638faefd32fec954e9343
+====================================================================================================
+{
+  "topic_id": 4569,
+  "name": "ЛИДЫ РЕКЛАМА",
+  "direction": "crm_leads",
+  "chat_id": "-1003725299009",
+  "chat_name": "НЕЙРОНКИ ЧАТ",
+  "synced_at": "2026-05-01T09:28:21.233153+00:00",
+  "synced_by": "TOPIC_SYNC_FULL_V1"
+}
+====================================================================================================
+END_FILE: data/topics/4569/meta.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: data/topics/5/meta.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 7ee48f4af7bf89f492bef00163145e6ee01981b768f38dd4c30e35b8e3311bf6
+====================================================================================================
+{
+  "topic_id": 5,
+  "name": "ТЕХНАДЗОР",
+  "direction": "technical_supervision",
+  "chat_id": "-1003725299009",
+  "chat_name": "НЕЙРОНКИ ЧАТ",
+  "synced_at": "2026-05-01T09:28:21.231656+00:00",
+  "synced_by": "TOPIC_SYNC_FULL_V1"
+}
+====================================================================================================
+END_FILE: data/topics/5/meta.json
+FILE_CHUNK: 1/1
+====================================================================================================
 
 ====================================================================================================
 BEGIN_FILE: data/topics/500/meta.json

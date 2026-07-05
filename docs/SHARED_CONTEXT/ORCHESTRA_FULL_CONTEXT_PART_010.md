@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_010
-generated_at_utc: 2026-07-05T12:24:50.351135+00:00
-git_sha_before_commit: 0e7f79f099fb2c443a8c79f823773204244098a7
+generated_at_utc: 2026-07-05T12:54:51.373584+00:00
+git_sha_before_commit: 8df212fc01ac33ed4a754701b665a1ae5f838a40
 part: 10/18
 
 
@@ -5196,7 +5196,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/pdf_spec_extractor.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 220ff5b8d57d1bef0291e929c0ca5c89e200472c149b8ca831d560330d64566a
+SHA256_FULL_FILE: 2016ec7bd7d895dd1aa185a6f96f5594616655d8ecad4e27279f2464672159b1
 ====================================================================================================
 # === PDF_SPEC_EXTRACTOR_REAL_V1 ===
 from __future__ import annotations
@@ -5419,6 +5419,68 @@ def extract_spec_table_overlay(file_path: str, **kwargs) -> Dict[str, Any]:
     rows = extract_spec_rows(file_path, max_pages=int(kwargs.get("max_pages") or 30))
     return {"rows": rows, "items": rows, "count": len(rows), "error": "", "stub": False}
 # === END_PDF_SPEC_EXTRACTOR_TABLE_OVERLAY_COMPAT_V1 ===
+
+
+# === PATCH_TOPIC2_PDF_SPEC_VALID_ROWS_ONLY_V1 ===
+# Canon: drawings/stamps/window marks are not estimate rows. Invalid rows must not
+# unlock a zero-ruble estimate.
+def _t2pdf_valid_estimate_row(row):
+    try:
+        name = _s(row.get("name", ""))
+        unit = _unit(row.get("unit", ""))
+        qty = float(row.get("qty") or 0)
+    except Exception:
+        return False
+    low = name.lower().replace("ё", "е")
+    if not name or len(name) < 5:
+        return False
+    if not unit:
+        return False
+    if qty <= 0 or qty > 10000000:
+        return False
+    if re.fullmatch(r"[0-9\s.,;:()\-+оo]+", low):
+        return False
+    if re.fullmatch(r"[оo]-?\d+(?:\s*[оo]-?\d+)*", low):
+        return False
+    if any(x in low for x in ("ооо “агора", "инв.", "формат а", "согласовано", "подп. и дата")):
+        return False
+    letters = re.findall(r"[a-zа-яё]", low, flags=re.I)
+    return len(letters) >= 4
+
+_T2PDF_ORIG_EXTRACT_SPEC = extract_spec
+_T2PDF_ORIG_EXTRACT_SPEC_ROWS = extract_spec_rows
+
+def _t2pdf_filter_rows(rows):
+    out = []
+    seen = set()
+    for row in rows or []:
+        if not isinstance(row, dict) or not _t2pdf_valid_estimate_row(row):
+            continue
+        key = (row.get("name"), row.get("unit"), row.get("qty"), row.get("price"), row.get("total"))
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(row)
+    return out
+
+def extract_spec(file_path: str, **kwargs) -> Dict[str, Any]:
+    res = _T2PDF_ORIG_EXTRACT_SPEC(file_path, **kwargs)
+    rows = _t2pdf_filter_rows((res or {}).get("rows") if isinstance(res, dict) else [])
+    if isinstance(res, dict):
+        res = dict(res)
+        res["rows"] = rows
+        res["count"] = len(rows)
+        if not rows:
+            res["error"] = "PDF_SPEC_NO_VALID_ESTIMATE_ROWS"
+        return res
+    return {"rows": rows, "count": len(rows), "error": "" if rows else "PDF_SPEC_NO_VALID_ESTIMATE_ROWS", "stub": False}
+
+def extract_spec_rows(pdf_path: str, max_pages: int = 30):
+    rows = _t2pdf_filter_rows(_T2PDF_ORIG_EXTRACT_SPEC_ROWS(pdf_path, max_pages=max_pages))
+    if not rows:
+        raise ValueError("PDF_SPEC_NO_VALID_ESTIMATE_ROWS")
+    return rows
+# === END_PATCH_TOPIC2_PDF_SPEC_VALID_ROWS_ONLY_V1 ===
 
 ====================================================================================================
 END_FILE: core/pdf_spec_extractor.py

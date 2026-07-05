@@ -1,8 +1,352 @@
 # ORCHESTRA_FULL_CONTEXT_PART_014
-generated_at_utc: 2026-07-05T12:24:50.355021+00:00
-git_sha_before_commit: 0e7f79f099fb2c443a8c79f823773204244098a7
+generated_at_utc: 2026-07-05T12:54:51.377970+00:00
+git_sha_before_commit: 8df212fc01ac33ed4a754701b665a1ae5f838a40
 part: 14/18
 
+
+====================================================================================================
+BEGIN_FILE: core/universal_file_handler.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 10f50019c01f6a903296f3616568273fe69b0910481c12cc1105b19fec8ee2a7
+====================================================================================================
+# === UNIVERSAL_FILE_HANDLER_V1 ===
+import os, logging, tempfile, subprocess, csv, zipfile, json
+from typing import Dict, Any, Optional
+
+logger = logging.getLogger(__name__)
+
+# --- Magic bytes detection ---
+_MAGIC = {
+    b"%PDF": "pdf",
+    b"PK\x03\x04": "xlsx_or_zip",
+    b"\xd0\xcf\x11\xe0": "doc_or_xls",
+    b"\xff\xd8\xff": "jpg",
+    b"\x89PNG": "png",
+    b"GIF8": "gif",
+    b"BM": "bmp",
+    b"II\x2a\x00": "tiff",
+    b"MM\x00\x2a": "tiff",
+    b"RIFF": "webp_or_avi",
+    b"ftyp": "mp4",
+    b"ID3": "mp3",
+    b"AC10": "dwg",
+    b"AC12": "dwg",
+    b"AC14": "dwg",
+    b"AC15": "dwg",
+    b"AC18": "dwg",
+    b"AC21": "dwg",
+    b"AC24": "dwg",
+    b"AC27": "dwg",
+    b"  0\r\nSECTION": "dxf",
+}
+
+EXT_MAP = {
+    ".pdf": "pdf", ".docx": "docx", ".doc": "doc_old",
+    ".xlsx": "xlsx", ".xls": "xls_old", ".csv": "csv",
+    ".txt": "text", ".md": "text", ".json": "json", ".xml": "xml",
+    ".jpg": "image", ".jpeg": "image", ".png": "image",
+    ".heic": "image", ".webp": "image", ".bmp": "image", ".tiff": "image",
+    ".dwg": "dwg", ".dxf": "dxf", ".dgn": "dgn",
+    ".zip": "zip", ".rar": "rar", ".7z": "7z",
+    ".mp4": "video", ".avi": "video", ".mov": "video",
+    ".mp3": "audio", ".ogg": "audio", ".wav": "audio",
+    ".odt": "odt", ".ods": "ods", ".rtf": "rtf",
+}
+
+def detect_type(file_path: str) -> str:
+    ext = os.path.splitext(file_path)[1].lower()
+    try:
+        with open(file_path, "rb") as f:
+            header = f.read(16)
+        for magic, ftype in _MAGIC.items():
+            if header[:len(magic)] == magic:
+                # PK magic = ZIP or XLSX — уточняем по расширению
+                if ftype == "xlsx_or_zip":
+                    return "xlsx" if ext in (".xlsx", ".xlsm", ".xltx") else "zip"
+                # RIFF = webp or avi — уточняем по расширению
+                if ftype == "webp_or_avi":
+                    return "image" if ext == ".webp" else "video"
+                return ftype
+    except Exception:
+        pass
+    return EXT_MAP.get(ext, "unknown")
+
+
+def extract_text_from_file(file_path: str, task_id: str = "", topic_id: int = 0) -> Dict[str, Any]:
+    """
+    Универсальный экстрактор текста/данных из любого файла.
+    Маркер: UNIVERSAL_FILE_HANDLER_V1
+    Возвращает: {"success": bool, "type": str, "text": str, "rows": list, "error": str}
+    """
+    result = {"success": False, "type": "unknown", "text": "", "rows": [], "error": ""}
+    ftype = detect_type(file_path)
+    result["type"] = ftype
+    logger.info("UNIVERSAL_FILE_HANDLER type=%s file=%s", ftype, os.path.basename(file_path))
+
+    try:
+        # --- PDF ---
+        if ftype == "pdf":
+            import pdfplumber, re
+            with pdfplumber.open(file_path) as pdf:
+                parts = []
+                rows = []
+                for page in pdf.pages:
+                    t = page.extract_text() or ""
+                    t = re.sub(r'\(cid:\d+\)', '', t)
+                    if t.strip():
+                        parts.append(t)
+                    for tbl in (page.extract_tables() or []):
+                        rows.extend(tbl)
+                result["text"] = "\n".join(parts)
+                result["rows"] = rows
+                result["success"] = True
+
+        # --- DOCX / ODT ---
+        elif ftype in ("docx", "odt"):
+            import docx as _docx
+            doc = _docx.Document(file_path)
+            result["text"] = "\n".join(p.text for p in doc.paragraphs if p.text.strip())
+            result["rows"] = [[c.text for c in row.cells] for tbl in doc.tables for row in tbl.rows]
+            result["success"] = True
+
+        # --- XLSX / ODS ---
+        elif ftype in ("xlsx_or_zip", "xlsx"):
+            from openpyxl import load_workbook
+            wb = load_workbook(file_path, data_only=True)
+            rows = []
+            for ws in wb.worksheets:
+                for row in ws.iter_rows(values_only=True):
+                    if any(c is not None for c in row):
+                        rows.append([str(c) if c is not None else "" for c in row])
+            result["rows"] = rows
+            result["text"] = "\n".join("\t".join(r) for r in rows[:50])
+            result["success"] = True
+
+        # --- CSV ---
+        elif ftype == "csv":
+            rows = []
+            enc = "utf-8"
+            try:
+                import chardet
+                with open(file_path, "rb") as f:
+                    enc = chardet.detect(f.read(4096)).get("encoding", "utf-8") or "utf-8"
+            except Exception:
+                pass
+            with open(file_path, encoding=enc, errors="replace") as f:
+                for row in csv.reader(f):
+                    rows.append(row)
+            result["rows"] = rows
+            result["text"] = "\n".join("\t".join(r) for r in rows[:50])
+            result["success"] = True
+
+        # --- TEXT / JSON / XML / MD ---
+        elif ftype in ("text", "json", "xml", "rtf"):
+            enc = "utf-8"
+            try:
+                import chardet
+                with open(file_path, "rb") as f:
+                    enc = chardet.detect(f.read(4096)).get("encoding", "utf-8") or "utf-8"
+            except Exception:
+                pass
+            with open(file_path, encoding=enc, errors="replace") as f:
+                result["text"] = f.read(50000)
+            result["success"] = True
+
+        # --- ИЗОБРАЖЕНИЯ (JPG/PNG/HEIC/BMP/TIFF/WEBP/GIF) ---
+        elif ftype in ("jpg", "png", "image", "gif", "bmp", "tiff", "webp_or_avi"):
+            import pytesseract
+            from PIL import Image
+            try:
+                from pillow_heif import register_heif_opener
+                register_heif_opener()
+            except Exception:
+                pass
+            img = Image.open(file_path)
+            text = pytesseract.image_to_string(img, lang="rus+eng")
+            result["text"] = text.strip()
+            result["success"] = True
+            result["type"] = "image"
+
+        # --- DWG → конвертация в DXF → ezdxf ---
+        elif ftype == "dwg":
+            result = _handle_dwg(file_path, result)
+
+        # --- DXF ---
+        elif ftype == "dxf":
+            result = _handle_dxf(file_path, result)
+
+        # --- ZIP ---
+        elif ftype == "zip":
+            result = _handle_zip(file_path, task_id, topic_id, result)
+
+        # --- RAR ---
+        elif ftype == "rar":
+            try:
+                import rarfile
+                tmp = tempfile.mkdtemp()
+                with rarfile.RarFile(file_path) as rf:
+                    rf.extractall(tmp)
+                texts = []
+                for fn in os.listdir(tmp)[:5]:
+                    sub = extract_text_from_file(os.path.join(tmp, fn), task_id, topic_id)
+                    if sub["success"]:
+                        texts.append(f"[{fn}]\n{sub['text']}")
+                result["text"] = "\n\n".join(texts)
+                result["success"] = True
+                result["type"] = "rar"
+            except Exception as e:
+                result["error"] = f"RAR: {e}"
+
+        # --- 7Z ---
+        elif ftype == "7z":
+            try:
+                import py7zr
+                tmp = tempfile.mkdtemp()
+                with py7zr.SevenZipFile(file_path) as sz:
+                    sz.extractall(tmp)
+                texts = []
+                for fn in os.listdir(tmp)[:5]:
+                    sub = extract_text_from_file(os.path.join(tmp, fn), task_id, topic_id)
+                    if sub["success"]:
+                        texts.append(f"[{fn}]\n{sub['text']}")
+                result["text"] = "\n\n".join(texts)
+                result["success"] = True
+                result["type"] = "7z"
+            except Exception as e:
+                result["error"] = f"7Z: {e}"
+
+        # --- ВИДЕО/АУДИО — метаданные через ffmpeg ---
+        elif ftype in ("mp4", "video", "mp3", "audio"):
+            try:
+                out = subprocess.check_output(
+                    ["ffmpeg", "-i", file_path],
+                    stderr=subprocess.STDOUT, timeout=10
+                ).decode(errors="replace")
+            except subprocess.CalledProcessError as e:
+                out = e.output.decode(errors="replace")
+            result["text"] = out[:2000]
+            result["success"] = True
+
+        # --- UNKNOWN — попытка открыть как текст ---
+        else:
+            try:
+                with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+                    txt = f.read(10000)
+                if len(txt.strip()) > 20:
+                    result["text"] = txt
+                    result["success"] = True
+                    result["type"] = "text_fallback"
+                else:
+                    result["error"] = f"Формат не поддерживается: {os.path.splitext(file_path)[1]}"
+            except Exception as e:
+                result["error"] = f"Неизвестный формат: {e}"
+
+    except Exception as e:
+        logger.error("UNIVERSAL_FILE_HANDLER_ERROR type=%s err=%s", ftype, e)
+        result["error"] = str(e)
+
+    return result
+
+
+def _handle_dwg(file_path: str, result: dict) -> dict:
+    """DWG: конвертация через dwg2dxf (libredwg), fallback через imagemagick preview"""
+    dxf_path = file_path.replace(".dwg", ".dxf").replace(".DWG", ".dxf")
+    if not dxf_path.endswith(".dxf"):
+        dxf_path = file_path + ".dxf"
+
+    # Попытка 1: dwg2dxf
+    try:
+        subprocess.run(["dwg2dxf", file_path, "-o", dxf_path],
+                       timeout=30, capture_output=True, check=True)
+        if os.path.exists(dxf_path):
+            logger.info("DWG→DXF conversion OK: %s", dxf_path)
+            return _handle_dxf(dxf_path, result)
+    except Exception as e:
+        logger.warning("dwg2dxf failed: %s", e)
+
+    # Попытка 2: imagemagick — превью в PNG + OCR
+    try:
+        png_path = file_path + "_preview.png"
+        subprocess.run(
+            ["convert", "-density", "150", file_path + "[0]", png_path],
+            timeout=30, capture_output=True, check=True
+        )
+        if os.path.exists(png_path):
+            import pytesseract
+            from PIL import Image
+            text = pytesseract.image_to_string(Image.open(png_path), lang="rus+eng")
+            result["text"] = f"[DWG файл — превью через OCR]\n{text.strip()}"
+            result["success"] = True
+            result["type"] = "dwg_ocr_preview"
+            return result
+    except Exception as e:
+        logger.warning("DWG imagemagick fallback failed: %s", e)
+
+    result["error"] = "DWG: конвертация не удалась. Пришли файл в формате .dxf"
+    result["text"] = "Файл формата DWG получен. Для полной обработки конвертируй в DXF."
+    result["success"] = False
+    return result
+
+
+def _handle_dxf(file_path: str, result: dict) -> dict:
+    """DXF через ezdxf"""
+    try:
+        import ezdxf
+        doc = ezdxf.readfile(file_path)
+        msp = doc.modelspace()
+        counts = {}
+        texts = []
+        for e in msp:
+            t = e.dxftype()
+            counts[t] = counts.get(t, 0) + 1
+            if t in ("TEXT", "MTEXT") and hasattr(e.dxf, "text"):
+                txt = str(e.dxf.text or "").strip()
+                if txt:
+                    texts.append(txt)
+        summary = "DXF элементы:\n"
+        for k, v in sorted(counts.items(), key=lambda x: -x[1])[:15]:
+            summary += f"  {k}: {v}\n"
+        if texts:
+            summary += "\nТексты в чертеже:\n" + "\n".join(texts[:30])
+        result["text"] = summary
+        result["rows"] = [[k, str(v)] for k, v in counts.items()]
+        result["success"] = True
+        result["type"] = "dxf"
+    except Exception as e:
+        result["error"] = f"DXF: {e}"
+    return result
+
+
+def _handle_zip(file_path: str, task_id: str, topic_id: int, result: dict) -> dict:
+    """ZIP — распаковка и рекурсивная обработка"""
+    try:
+        tmp = tempfile.mkdtemp()
+        with zipfile.ZipFile(file_path) as zf:
+            names = zf.namelist()[:20]
+            zf.extractall(tmp)
+        texts = []
+        all_rows = []
+        for fn in names:
+            fp = os.path.join(tmp, fn)
+            if not os.path.isfile(fp):
+                continue
+            sub = extract_text_from_file(fp, task_id, topic_id)
+            if sub["success"]:
+                texts.append(f"[{fn}]\n{sub['text'][:1000]}")
+                all_rows.extend(sub.get("rows", []))
+        result["text"] = f"ZIP архив ({len(names)} файлов):\n\n" + "\n\n".join(texts)
+        result["rows"] = all_rows
+        result["success"] = True
+        result["type"] = "zip"
+    except Exception as e:
+        result["error"] = f"ZIP: {e}"
+    return result
+# === END UNIVERSAL_FILE_HANDLER_V1 ===
+
+====================================================================================================
+END_FILE: core/universal_file_handler.py
+FILE_CHUNK: 1/1
+====================================================================================================
 
 ====================================================================================================
 BEGIN_FILE: core/upload_retry_queue.py
@@ -9439,282 +9783,5 @@ SHA256_FULL_FILE: 225b637da9991f976ece0bfe4c6d0a4eca022ecb9bb09fa84104e63fb6bdca
 }
 ====================================================================================================
 END_FILE: data/templates/estimate/ACTIVE__chat_-1003725299009__topic_3008.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: data/templates/estimate/TEMPLATE__chat_-1003725299009__topic_2__20260430_100323.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 2751853a7fec499884e42f27a565e5d1374b91b8c0c7aaec43cecba88b3128f3
-====================================================================================================
-{
-  "engine": "FULLFIX_13A_SAMPLE_FILE_INTENT_AND_TEMPLATE_ESTIMATE",
-  "kind": "estimate",
-  "status": "active",
-  "chat_id": "-1003725299009",
-  "topic_id": 2,
-  "saved_by_task_id": "d390b50d-2f5e-4aeb-871a-3b30cc149d18",
-  "source_task_id": "12f63475-a307-49d5-bf85-45852622840e",
-  "source_file_id": "1Ert7YACjcfZcodklU7UnckLN3xgsyuKD",
-  "source_file_name": "ВОР_кирпичная_кладка_ИСПРАВЛЕНО.xlsx",
-  "source_mime_type": "",
-  "source_caption": "",
-  "source_score": 150,
-  "saved_at": "2026-04-30T10:03:23.387650+00:00",
-  "usage_rule": "Use this file as formatting/sample reference for future estimate/project artifacts in the same chat and topic",
-  "raw_user_instruction": "Тот файл который я тебе скинул последний возьми его как образец для составления сметы"
-}
-====================================================================================================
-END_FILE: data/templates/estimate/TEMPLATE__chat_-1003725299009__topic_2__20260430_100323.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: data/templates/estimate/TEMPLATE__chat_-1003725299009__topic_3008__20260501_083807.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 225b637da9991f976ece0bfe4c6d0a4eca022ecb9bb09fa84104e63fb6bdca92
-====================================================================================================
-{
-  "engine": "FULLFIX_13A_SAMPLE_FILE_INTENT_AND_TEMPLATE_ESTIMATE",
-  "kind": "estimate",
-  "status": "active",
-  "chat_id": "-1003725299009",
-  "topic_id": 3008,
-  "saved_by_task_id": "7270364c-bb74-4e1e-b531-de64dfe713b7",
-  "source_task_id": "f5c33c40-dacf-46c9-97ca-2dc19e245650",
-  "source_file_id": "1XsuPOtO-vyA73IX5Ui9AR9kf6uUAE5b_",
-  "source_file_name": "estimate_c925a897-66ec-435e-8312-15687f.xlsx",
-  "source_mime_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "source_caption": "",
-  "source_score": 110,
-  "saved_at": "2026-05-01T08:38:07.108195+00:00",
-  "usage_rule": "Use this file as formatting/sample reference for future estimate/project artifacts in the same chat and topic",
-  "raw_user_instruction": "этот чат у нас используется с тобой для работы, соответственно, как ты правильно и сказал, по AI роутеру Arial Niva, но также мы здесь еще с тобой пишем коды по определенным запросам команд, которые ты вот сейчас мне написал, например, напиши код. То есть здесь мы также с тобой создаем еще коды, которые делаются на основании четырех моделей, которые присутствуют у нас с тобой."
-}
-====================================================================================================
-END_FILE: data/templates/estimate/TEMPLATE__chat_-1003725299009__topic_3008__20260501_083807.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: data/templates/estimate/deprecated/DEPRECATED__ACTIVE__chat_-1003725299009__topic_2__VOR_20260503.original.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: f58425288c17d830efcab61e9238e10842f7d55434c1f35a8249f262001212c2
-====================================================================================================
-{
-  "engine": "FULLFIX_13A_SAMPLE_FILE_INTENT_AND_TEMPLATE_ESTIMATE",
-  "kind": "estimate",
-  "status": "deprecated",
-  "chat_id": "-1003725299009",
-  "topic_id": 2,
-  "saved_by_task_id": "d390b50d-2f5e-4aeb-871a-3b30cc149d18",
-  "source_task_id": "12f63475-a307-49d5-bf85-45852622840e",
-  "source_file_id": "1Ert7YACjcfZcodklU7UnckLN3xgsyuKD",
-  "source_file_name": "ВОР_кирпичная_кладка_ИСПРАВЛЕНО.xlsx",
-  "source_mime_type": "",
-  "source_caption": "",
-  "source_score": 150,
-  "saved_at": "2026-04-30T10:03:23.387650+00:00",
-  "usage_rule": "Use this file as formatting/sample reference for future estimate/project artifacts in the same chat and topic",
-  "raw_user_instruction": "Тот файл который я тебе скинул последний возьми его как образец для составления сметы",
-  "deprecated_reason": "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3: VOR disabled from active topic_2 estimate logic",
-  "deprecated_at": "2026-05-03T11:39:40.822192"
-}
-
-====================================================================================================
-END_FILE: data/templates/estimate/deprecated/DEPRECATED__ACTIVE__chat_-1003725299009__topic_2__VOR_20260503.original.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: data/templates/index.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 4fefe3e44a76c132b89c1186ecc62d498869ba8185064756cfe43da0f0726914
-====================================================================================================
-{
-  "_schema": "TEMPLATE_INDEX_DICT_FIX_V1",
-  "_legacy_type": "list",
-  "_legacy_data": [
-    {
-      "template_id": "d5d1fbca-e848-4e36-b297-d12312cc5217",
-      "chat_id": "-1003725299009",
-      "topic_id": 4569,
-      "source_task_id": "d5d1fbca-e848-4e36-b297-d12312cc5217",
-      "source_file_name": "",
-      "mime_type": "",
-      "kind": "unknown_template",
-      "created_at": "2026-05-01T10:23:26.354953",
-      "active": true
-    },
-    {
-      "template_id": "364b2395-0744-4a88-80a8-6e87c282aa3d",
-      "chat_id": "-1003725299009",
-      "topic_id": 210,
-      "source_task_id": "364b2395-0744-4a88-80a8-6e87c282aa3d",
-      "source_file_name": "АР_КД_Агалатово_02.pdf",
-      "mime_type": "application/pdf",
-      "kind": "estimate_template",
-      "created_at": "2026-05-01T11:32:07.307426",
-      "active": false
-    },
-    {
-      "template_id": "ee10abce-9662-4797-825e-096188f40a4e",
-      "chat_id": "-1003725299009",
-      "topic_id": 210,
-      "source_task_id": "ee10abce-9662-4797-825e-096188f40a4e",
-      "source_file_name": "АР_КД_Агалатово_02.pdf",
-      "mime_type": "application/pdf",
-      "kind": "estimate_template",
-      "created_at": "2026-05-01T11:34:12.786364",
-      "active": true
-    },
-    {
-      "template_id": "bab630ba-7e3f-4c43-88ff-3e917e5c6279",
-      "chat_id": "-1003725299009",
-      "topic_id": 2,
-      "source_task_id": "bab630ba-7e3f-4c43-88ff-3e917e5c6279",
-      "source_file_name": "Техническое задание Кордон снт.docx",
-      "mime_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "kind": "estimate_template",
-      "created_at": "2026-05-02T00:20:57.882990",
-      "active": true
-    }
-  ]
-}
-====================================================================================================
-END_FILE: data/templates/index.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: data/topics/0/meta.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 99110904300dc66aa8fe5e9cc9aa1de41ba518ca5ce020af0cb0e2c4fb0739f8
-====================================================================================================
-{
-  "topic_id": 0,
-  "name": "ЛИДЫ АМО",
-  "direction": "crm_leads",
-  "chat_id": "-1003725299009",
-  "chat_name": "НЕЙРОНКИ ЧАТ",
-  "synced_at": "2026-05-01T09:28:21.231172+00:00",
-  "synced_by": "TOPIC_SYNC_FULL_V1"
-}
-====================================================================================================
-END_FILE: data/topics/0/meta.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: data/topics/11/meta.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 04c69440018c5cb2105f1624418040b5c4dac9a5da55f0ac5b07727ed5a103e0
-====================================================================================================
-{
-  "topic_id": 11,
-  "name": "ВИДЕОКОНТЕНТ",
-  "direction": "video_production",
-  "chat_id": "-1003725299009",
-  "chat_name": "НЕЙРОНКИ ЧАТ",
-  "synced_at": "2026-05-01T09:28:21.231872+00:00",
-  "synced_by": "TOPIC_SYNC_FULL_V1"
-}
-====================================================================================================
-END_FILE: data/topics/11/meta.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: data/topics/2/meta.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 51744f466380c4b2398e4e6b98c21d35fa9435a905eb9c53b308aa6a8d8836ca
-====================================================================================================
-{
-  "topic_id": 2,
-  "name": "СТРОЙКА",
-  "direction": "estimates",
-  "chat_id": "-1003725299009",
-  "chat_name": "НЕЙРОНКИ ЧАТ",
-  "synced_at": "2026-05-01T09:28:21.231412+00:00",
-  "synced_by": "TOPIC_SYNC_FULL_V1"
-}
-====================================================================================================
-END_FILE: data/topics/2/meta.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: data/topics/210/meta.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: ce50915df1bdab1a3baf419fea40ed5b9dfc1f6d009a4daecf0b4e7fcb36110a
-====================================================================================================
-{
-  "topic_id": 210,
-  "name": "ПРОЕКТИРОВАНИЕ",
-  "direction": "structural_design",
-  "chat_id": "-1003725299009",
-  "chat_name": "НЕЙРОНКИ ЧАТ",
-  "synced_at": "2026-05-01T09:28:21.232182+00:00",
-  "synced_by": "TOPIC_SYNC_FULL_V1"
-}
-====================================================================================================
-END_FILE: data/topics/210/meta.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: data/topics/3008/meta.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 997992e041d0f6ac8ad7dd83631d2eef51a26013445370bc050ff361e3f29c0e
-====================================================================================================
-{
-  "topic_id": 3008,
-  "name": "КОДЫ МОЗГОВ",
-  "direction": "orchestration_core",
-  "chat_id": "-1003725299009",
-  "chat_name": "НЕЙРОНКИ ЧАТ",
-  "synced_at": "2026-05-01T09:28:21.232993+00:00",
-  "synced_by": "TOPIC_SYNC_FULL_V1"
-}
-====================================================================================================
-END_FILE: data/topics/3008/meta.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: data/topics/4569/meta.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: a436174d9ec1dfc8e15f469fc81c061d7b8bbef1538638faefd32fec954e9343
-====================================================================================================
-{
-  "topic_id": 4569,
-  "name": "ЛИДЫ РЕКЛАМА",
-  "direction": "crm_leads",
-  "chat_id": "-1003725299009",
-  "chat_name": "НЕЙРОНКИ ЧАТ",
-  "synced_at": "2026-05-01T09:28:21.233153+00:00",
-  "synced_by": "TOPIC_SYNC_FULL_V1"
-}
-====================================================================================================
-END_FILE: data/topics/4569/meta.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: data/topics/5/meta.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 7ee48f4af7bf89f492bef00163145e6ee01981b768f38dd4c30e35b8e3311bf6
-====================================================================================================
-{
-  "topic_id": 5,
-  "name": "ТЕХНАДЗОР",
-  "direction": "technical_supervision",
-  "chat_id": "-1003725299009",
-  "chat_name": "НЕЙРОНКИ ЧАТ",
-  "synced_at": "2026-05-01T09:28:21.231656+00:00",
-  "synced_by": "TOPIC_SYNC_FULL_V1"
-}
-====================================================================================================
-END_FILE: data/topics/5/meta.json
 FILE_CHUNK: 1/1
 ====================================================================================================
