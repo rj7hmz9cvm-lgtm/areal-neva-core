@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-07-05T15:24:55.542917+00:00
-GIT_SHA: d33ea9cca91e58db0f9b29480d27dc7e4753371d
+GENERATED_AT: 2026-07-05T15:54:56.853937+00:00
+GIT_SHA: f3e8d1a71d990072559c0c3c811616f081914113
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -16,7 +16,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 ## GLOBAL_STATUS
 | topic | name | status | active | failed_24h |
 |-------|------|--------|--------|------------|
-| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 0 | 7 |
+| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 0 | 6 |
 | 5 | TEKHNADZOR | UNKNOWN | 0 | 0 |
 | 210 | PROEKTIROVANIE | UNKNOWN | 0 | 0 |
 | 500 | VEB_POISK | UNKNOWN | 0 | 0 |
@@ -71,7 +71,7 @@ DATE_UNKNOWN
 ### topic_2 STROYKA
 role: Сметы
 active: 0
-failed_24h: 7
+failed_24h: 6
 commits_last_7d: 1
 recent_commits:
 - c8a9f1c|Topic2 canonical estimate live repair
