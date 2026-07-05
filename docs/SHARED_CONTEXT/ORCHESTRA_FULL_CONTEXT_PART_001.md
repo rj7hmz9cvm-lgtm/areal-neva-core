@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_001
-generated_at_utc: 2026-07-05T22:33:13.984595+00:00
-git_sha_before_commit: d690605f5e0f0efa27c81f55ed584b23e6eb4fdb
+generated_at_utc: 2026-07-05T22:35:02.411806+00:00
+git_sha_before_commit: f5f758c85f63ed5dfba380551e3a46ccdea1dc73
 part: 1/19
 
 
@@ -4464,33 +4464,33 @@ HEALTHCHECK | PRICE_AGING +5-10%
 ## MULTI_MODEL_ORCHESTRA_ACTUAL_STATE_2026_04_29
 
 ### ACTIVE MODELS (CANON)
-Gemini     — vision / OCR / схемы / таблицы
-Mistral    — структуризация / нормализация
-Cerebras   — reasoning / логика
-Cohere     — rerank / фильтрация
-Perplexity — поиск (СП/ГОСТ/цены/поставщики)
-DeepSeek   — финальный ответ (DEFAULT)
-Claude     — канон / проверка / ТЗ
-GPT        — сервер / код / патчи
-Python     — расчёт / Excel / файлы
+Gemini     — vision / OCR / схемы / таблицы  
+Mistral    — структуризация / нормализация  
+Cerebras   — reasoning / логика  
+Cohere     — rerank / фильтрация  
+Perplexity — поиск (СП/ГОСТ/цены/поставщики)  
+DeepSeek   — финальный ответ (DEFAULT)  
+Claude     — канон / проверка / ТЗ  
+GPT        — сервер / код / патчи  
+Python     — расчёт / Excel / файлы  
 
 ### MODEL_ROUTER (TARGET LOGIC)
-photo/schema      → Gemini
-search            → Perplexity
-structure         → Mistral
-reasoning         → Cerebras
-calculation       → Python ONLY
-final             → DeepSeek
+photo/schema      → Gemini  
+search            → Perplexity  
+structure         → Mistral  
+reasoning         → Cerebras  
+calculation       → Python ONLY  
+final             → DeepSeek  
 
 ### FALLBACK_CHAIN (TARGET)
-Gemini → Mistral → Cloudflare → HuggingFace
+Gemini → Mistral → Cloudflare → HuggingFace  
 
 ### STATUS
-- модели описаны в каноне ✔
-- MODEL_ROUTER — НЕ реализован
-- FALLBACK_CHAIN — НЕ реализован
-- MODEL_REGISTRY — НЕ реализован
-- MULTI-MODEL EXECUTION — НЕ реализован
+- модели описаны в каноне ✔  
+- MODEL_ROUTER — НЕ реализован  
+- FALLBACK_CHAIN — НЕ реализован  
+- MODEL_REGISTRY — НЕ реализован  
+- MULTI-MODEL EXECUTION — НЕ реализован  
 
 ### CRITICAL RULE
 Сейчас оркестр работает как:
@@ -6851,11 +6851,11 @@ FILE_CHUNK: 1/1
 SHA256_FULL_FILE: d5df2433b201f973d457e5e6af150d39db5c9285e7b99214debd4dfb10eb77ce
 ====================================================================================================
 # HANDOFF — 2026-05-07 RUNTIME_V2 + RUNTIME_V3 FULL CLOSE
-**Сессия**: 2026-05-07 10:00 → 10:45 MSK
-**HEAD**: `ccab9ed` fix(topic2): PATCH_TOPIC2_FULL_CLOSE_RUNTIME_V3
-**Предыдущий HEAD перед сессией**: `ad829c4` (ONEPASS_V1)
-**Сервер**: areal-task-worker active, PID 3485017
-**Статус**: INSTALLED — VERIFIED только после live-replay в Telegram
+**Сессия**: 2026-05-07 10:00 → 10:45 MSK  
+**HEAD**: `ccab9ed` fix(topic2): PATCH_TOPIC2_FULL_CLOSE_RUNTIME_V3  
+**Предыдущий HEAD перед сессией**: `ad829c4` (ONEPASS_V1)  
+**Сервер**: areal-task-worker active, PID 3485017  
+**Статус**: INSTALLED — VERIFIED только после live-replay в Telegram  
 
 ---
 
@@ -6894,7 +6894,7 @@ SHA256_FULL_FILE: d5df2433b201f973d457e5e6af150d39db5c9285e7b99214debd4dfb10eb77
 ## ЧТО ЗАКОММИЧЕНО (хронология)
 
 ### `ad829c4` — PATCH_TOPIC2_FULL_CANONICAL_CLOSE_ONEPASS_V1
-Принято как "PARTIAL PATCH: old-output cleanup + recursion fix".
+Принято как "PARTIAL PATCH: old-output cleanup + recursion fix".  
 Файлы: `core/stroyka_estimate_canon.py`, `core/sample_template_engine.py`, `task_worker.py`
 
 - `stroyka_estimate_canon.py`: `_final_summary` → §9 формат, убраны «Эталон сметы:»/«Лист эталона:»

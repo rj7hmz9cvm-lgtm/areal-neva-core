@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_015
-generated_at_utc: 2026-07-05T22:33:13.997593+00:00
-git_sha_before_commit: d690605f5e0f0efa27c81f55ed584b23e6eb4fdb
+generated_at_utc: 2026-07-05T22:35:02.425452+00:00
+git_sha_before_commit: f5f758c85f63ed5dfba380551e3a46ccdea1dc73
 part: 15/19
 
 
@@ -2235,7 +2235,7 @@ def _smfc_render_full_context(directions, topic_status_map, topic_meta, git_sha)
     parts.append("# 5. PER_TOPIC")
     parts.append("=" * 80)
     parts.append("")
-
+    
     # Engine maps per topic
     topic_engines = {
         2: ["core/sample_template_engine.py", "core/stroyka_estimate_canon.py", "core/topic2_estimate_final_close_v2.py"],
@@ -2243,7 +2243,7 @@ def _smfc_render_full_context(directions, topic_status_map, topic_meta, git_sha)
         210: ["core/project_engine.py", "core/cad_project_engine.py"],
         500: ["core/search_session.py", "core/search_engine.py"],
     }
-
+    
     for tid in sorted(topic_meta.keys()):
         meta = topic_meta[tid]
         parts.append(f"## TOPIC_{tid}_{_smsv1_topic_safe_name(tid)}")

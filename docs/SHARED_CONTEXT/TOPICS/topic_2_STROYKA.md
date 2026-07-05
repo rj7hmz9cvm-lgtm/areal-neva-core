@@ -1,7 +1,7 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-07-05T22:33:14.076581+00:00
-GIT_SHA: d690605f5e0f0efa27c81f55ed584b23e6eb4fdb
+GENERATED_AT: 2026-07-05T22:35:02.522538+00:00
+GIT_SHA: f5f758c85f63ed5dfba380551e3a46ccdea1dc73
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -25,6 +25,7 @@ FAILED_LAST_24H: 6
 - dfdc5ca5 | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
+- f5f758c|docs: refresh single model context after topic2 handoff
 - d690605|topic2: save canonical live repair handoff
 - 844fafb|topic2: close PDF estimate confirmation flow
 - c8a9f1c|Topic2 canonical estimate live repair
@@ -45,7 +46,7 @@ FAILED_LAST_24H: 6
 - clarified:100 км
 - clarified:Сделай мне полную смету
 - clarified:Нет тебе необходимо выполнить по моему заданию ты считаешь новую смету
-- clarified:Мне нужна смета на дом 10 на 10 фундамент толщиной 400 мм удалённость
+- clarified:Мне нужна смета на дом 10 на 10 фундамент толщиной 400 мм удалённость 
 - clarified:3
 - clarified:Жду тогда
 - clarified:Сделай мне расчёт дом два этажа на монолитный плите толщиной 450 разме
@@ -168,3 +169,4 @@ items: 11
 - docs/REPORTS/NOT_CLOSED.md
 - docs/HANDOFFS/LATEST_HANDOFF.md
 - git log last 14 days
+

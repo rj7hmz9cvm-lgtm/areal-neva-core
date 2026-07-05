@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_019
-generated_at_utc: 2026-07-05T22:33:14.000222+00:00
-git_sha_before_commit: d690605f5e0f0efa27c81f55ed584b23e6eb4fdb
+generated_at_utc: 2026-07-05T22:35:02.427886+00:00
+git_sha_before_commit: f5f758c85f63ed5dfba380551e3a46ccdea1dc73
 part: 19/19
 
 
@@ -5020,7 +5020,7 @@ def get_drive_service():
     client_id = os.getenv('GDRIVE_CLIENT_ID')
     client_secret = <REDACTED_SECRET>'GDRIVE_CLIENT_SECRET')
     refresh_token = <REDACTED_SECRET>'GDRIVE_REFRESH_TOKEN')
-
+    
     if client_id and client_secret and refresh_token:
         creds = Credentials(
             token=<REDACTED_SECRET>
@@ -5032,7 +5032,7 @@ def get_drive_service():
         )
         creds.refresh(Request())
         return build('drive', 'v3', credentials=creds)
-
+    
     try:
         from google.oauth2.service_account import Credentials as SACreds
     except ImportError:

@@ -1,7 +1,7 @@
 # SINGLE_MODEL_FULL_CONTEXT
 
-GENERATED_AT: 2026-07-05T22:33:14.324160+00:00
-GIT_SHA: d690605f5e0f0efa27c81f55ed584b23e6eb4fdb
+GENERATED_AT: 2026-07-05T22:35:02.760422+00:00
+GIT_SHA: f5f758c85f63ed5dfba380551e3a46ccdea1dc73
 PURPOSE: Один файл с полным контекстом проекта для любой модели
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 
@@ -4014,7 +4014,7 @@ DIRECTIONS_BOUND: Общий
 - 71aa047d | 2026-07-04 17:50:39 | INVALID_RESULT_GATE
     history: reply_sent:invalid_result
     history: state:FAILED
-    history: result:Тест после восстановления системы выполнен. Система функционирует в штатном режиме.
+    history: result:Тест после восстановления системы выполнен. Система функционирует в штатном режиме. 
 
 Архивны
 - 66b9f841 | 2026-05-02 00:23:59 | INVALID_RESULT_GATE
@@ -4036,8 +4036,8 @@ I canno
 ```
 # topic_0 COMMON
 
-GENERATED_AT: 2026-07-05T22:33:14.043825+00:00
-GIT_SHA: d690605f5e0f0efa27c81f55ed584b23e6eb4fdb
+GENERATED_AT: 2026-07-05T22:35:02.482803+00:00
+GIT_SHA: f5f758c85f63ed5dfba380551e3a46ccdea1dc73
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 0
@@ -4121,7 +4121,7 @@ DIRECTIONS_BOUND: Сметы
 - bd0d5ae1 | 2026-07-05 23:45:23 | STALE_TIMEOUT
     history: reply_sent:stale_failed
     history: state:FAILED
-    history: TOPIC2_FRUSTRATION_REPLY_REROUTED:from=dfccdbfe-92e3-4fbb-9e16-5450a3fa6479:text=[VOICE] Все есть в
+    history: TOPIC2_FRUSTRATION_REPLY_REROUTED:from=dfccdbfe-92e3-4fbb-9e16-5450a3fa6479:text=[VOICE] Все есть в 
 - 9c5946d7 | 2026-07-05 20:14:13 | STALE_TIMEOUT
     history: reply_sent:stale_failed
     history: state:FAILED
@@ -4906,8 +4906,8 @@ def _write_xlsx(path: Path, items: List[Dict[str, Any]], source_text: str, photo
 ```
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-07-05T22:33:14.076581+00:00
-GIT_SHA: d690605f5e0f0efa27c81f55ed584b23e6eb4fdb
+GENERATED_AT: 2026-07-05T22:35:02.522538+00:00
+GIT_SHA: f5f758c85f63ed5dfba380551e3a46ccdea1dc73
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -4931,6 +4931,7 @@ FAILED_LAST_24H: 6
 - dfdc5ca5 | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
+- f5f758c|docs: refresh single model context after topic2 handoff
 - d690605|topic2: save canonical live repair handoff
 - 844fafb|topic2: close PDF estimate confirmation flow
 - c8a9f1c|Topic2 canonical estimate live repair
@@ -4951,7 +4952,7 @@ FAILED_LAST_24H: 6
 - clarified:100 км
 - clarified:Сделай мне полную смету
 - clarified:Нет тебе необходимо выполнить по моему заданию ты считаешь новую смету
-- clarified:Мне нужна смета на дом 10 на 10 фундамент толщиной 400 мм удалённость
+- clarified:Мне нужна смета на дом 10 на 10 фундамент толщиной 400 мм удалённость 
 - clarified:3
 - clarified:Жду тогда
 - clarified:Сделай мне расчёт дом два этажа на монолитный плите толщиной 450 разме
@@ -5615,8 +5616,8 @@ _P6H5_NORMATIVE_EXPAND = [
 ```
 # topic_5 TEKHNADZOR
 
-GENERATED_AT: 2026-07-05T22:33:14.105785+00:00
-GIT_SHA: d690605f5e0f0efa27c81f55ed584b23e6eb4fdb
+GENERATED_AT: 2026-07-05T22:35:02.556754+00:00
+GIT_SHA: f5f758c85f63ed5dfba380551e3a46ccdea1dc73
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 5
@@ -5718,8 +5719,8 @@ DIRECTIONS_BOUND: Видео
 ```
 # topic_11 VIDEO
 
-GENERATED_AT: 2026-07-05T22:33:14.127968+00:00
-GIT_SHA: d690605f5e0f0efa27c81f55ed584b23e6eb4fdb
+GENERATED_AT: 2026-07-05T22:35:02.579929+00:00
+GIT_SHA: f5f758c85f63ed5dfba380551e3a46ccdea1dc73
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 11
@@ -6328,8 +6329,8 @@ def _normalize_sheet_register(template: Dict[str, Any], data: Dict[str, Any]) ->
 ```
 # topic_210 PROEKTIROVANIE
 
-GENERATED_AT: 2026-07-05T22:33:14.155603+00:00
-GIT_SHA: d690605f5e0f0efa27c81f55ed584b23e6eb4fdb
+GENERATED_AT: 2026-07-05T22:35:02.609126+00:00
+GIT_SHA: f5f758c85f63ed5dfba380551e3a46ccdea1dc73
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 210
@@ -6895,8 +6896,8 @@ except Exception:
 ```
 # topic_500 VEB_POISK
 
-GENERATED_AT: 2026-07-05T22:33:14.185430+00:00
-GIT_SHA: d690605f5e0f0efa27c81f55ed584b23e6eb4fdb
+GENERATED_AT: 2026-07-05T22:35:02.634889+00:00
+GIT_SHA: f5f758c85f63ed5dfba380551e3a46ccdea1dc73
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 500
@@ -6998,8 +6999,8 @@ DIRECTIONS_BOUND: Сервер DevOps
 ```
 # topic_794 DEVOPS
 
-GENERATED_AT: 2026-07-05T22:33:14.216437+00:00
-GIT_SHA: d690605f5e0f0efa27c81f55ed584b23e6eb4fdb
+GENERATED_AT: 2026-07-05T22:35:02.657495+00:00
+GIT_SHA: f5f758c85f63ed5dfba380551e3a46ccdea1dc73
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 794
@@ -7094,8 +7095,8 @@ DIRECTIONS_BOUND: Автозапчасти
 ```
 # topic_961 AVTOZAPCHASTI
 
-GENERATED_AT: 2026-07-05T22:33:14.242267+00:00
-GIT_SHA: d690605f5e0f0efa27c81f55ed584b23e6eb4fdb
+GENERATED_AT: 2026-07-05T22:35:02.680452+00:00
+GIT_SHA: f5f758c85f63ed5dfba380551e3a46ccdea1dc73
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 961
@@ -7187,8 +7188,8 @@ DIRECTIONS_BOUND: Мозги оркестра
 ```
 # topic_3008 KODY_MOZGOV
 
-GENERATED_AT: 2026-07-05T22:33:14.270914+00:00
-GIT_SHA: d690605f5e0f0efa27c81f55ed584b23e6eb4fdb
+GENERATED_AT: 2026-07-05T22:35:02.706370+00:00
+GIT_SHA: f5f758c85f63ed5dfba380551e3a46ccdea1dc73
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 3008
@@ -7291,8 +7292,8 @@ DIRECTIONS_BOUND: CRM лиды
 ```
 # topic_4569 CRM_LEADS
 
-GENERATED_AT: 2026-07-05T22:33:14.295766+00:00
-GIT_SHA: d690605f5e0f0efa27c81f55ed584b23e6eb4fdb
+GENERATED_AT: 2026-07-05T22:35:02.730997+00:00
+GIT_SHA: f5f758c85f63ed5dfba380551e3a46ccdea1dc73
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 4569
@@ -7383,9 +7384,9 @@ DIRECTIONS_BOUND: Поиск работы
     history: result:На данный момент информация о первом запросе в этом чате отсутствует в архиве. Если требуется
 - b07ceef8 | 2026-05-01 22:19:22 | FORBIDDEN_PHRASE
     history: ROLE_SAVED:поиска работы и интеграции с биржами труда
-    history: result:Этот чат предназначен для поиска работы и интеграции с биржами труда.
+    history: result:Этот чат предназначен для поиска работы и интеграции с биржами труда. 
 
-За последние 24 часа
+За последние 24 часа 
     history: result:За последние 24 часа в этом чате не было выполнено задач. История пуста. Если вам нужно что-т
 - 711bdcd3 | 2026-05-01 22:19:04 | FORBIDDEN_PHRASE
     history: ROLE_SAVED:поиска работы и интеграции с биржами труда
@@ -7400,8 +7401,8 @@ DIRECTIONS_BOUND: Поиск работы
 ```
 # topic_6104 JOB_SEARCH
 
-GENERATED_AT: 2026-07-05T22:33:14.317446+00:00
-GIT_SHA: d690605f5e0f0efa27c81f55ed584b23e6eb4fdb
+GENERATED_AT: 2026-07-05T22:35:02.753234+00:00
+GIT_SHA: f5f758c85f63ed5dfba380551e3a46ccdea1dc73
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 6104

@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_008
-generated_at_utc: 2026-07-05T22:33:13.992471+00:00
-git_sha_before_commit: d690605f5e0f0efa27c81f55ed584b23e6eb4fdb
+generated_at_utc: 2026-07-05T22:35:02.418506+00:00
+git_sha_before_commit: f5f758c85f63ed5dfba380551e3a46ccdea1dc73
 part: 8/19
 
 
@@ -4559,32 +4559,32 @@ def save_ezone_json(text: str, telegram_chat_id: int) -> tuple:
     try: data = json.loads(norm)
     except: data = {"raw_text": norm}
     if not isinstance(data, dict): data = {"raw_text": norm}
-
+    
     chat_key = build_chat_key(telegram_chat_id)
     ts = now_iso()
     hash_val = content_hash(text)
-
+    
     if is_duplicate_today(hash_val, chat_key):
         return False, chat_key, "duplicate"
-
+    
     data["_meta"] = {"chat_key": chat_key, "ingested_at": ts, "source": "telegram"}
     chat_dir = os.path.join(MEMORY_FILES, "CHATS", chat_key)
     os.makedirs(chat_dir, exist_ok=True)
-
+    
     with open(os.path.join(chat_dir, "raw.json"), "w") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
-
+    
     entry = json.dumps({"timestamp": ts, "data": data}, ensure_ascii=False)
     with open(os.path.join(chat_dir, "timeline.jsonl"), "a") as f:
         f.write(entry + "\n")
     with open(os.path.join(MEMORY_FILES, "GLOBAL", "timeline.jsonl"), "a") as f:
         f.write(json.dumps({"timestamp": ts, "chat_key": chat_key, "data": data}, ensure_ascii=False) + "\n")
-
+    
     for key in EZONE_KEYS:
         if key in data:
             with open(os.path.join(MEMORY_FILES, "SYSTEM", f"{key}.jsonl"), "a") as f:
                 f.write(json.dumps({"timestamp": ts, "chat_key": chat_key, "data": data[key]}, ensure_ascii=False) + "\n")
-
+    
     update_chat_map_atomic(telegram_chat_id, chat_key)
     logger.info("eZone saved: chat_key=%s telegram_chat=%s", chat_key, telegram_chat_id)
     return True, chat_key, ""
@@ -4682,16 +4682,16 @@ def dump_system_state() -> str:
         if row:
             result["chat_id"] = "-1003725299009"
             result["active_task"] = {"id": row[0], "state": row[1], "input": row[2][:200]}
-
+        
         cur = conn.execute("SELECT task_id FROM pin WHERE chat_id = '-1003725299009' AND state = 'ACTIVE' ORDER BY updated_at DESC LIMIT 1")
         pin_row = cur.fetchone()
         if pin_row:
             result["active_pin"] = pin_row[0]
-
+        
         cur = conn.execute("SELECT id, result FROM tasks WHERE chat_id = '-1003725299009' AND state = 'DONE' AND result IS NOT NULL ORDER BY updated_at DESC LIMIT 20")
         for row in cur.fetchall():
             result["recent_results"].append({"task_id": row[0], "summary": row[1][:200]})
-
+        
         conn.close()
     except Exception as e:
         result["error"] = str(e)
@@ -5013,7 +5013,7 @@ async def universal_handler(message: types.Message):
                 return
             await db.execute("INSERT INTO processed_updates (update_id, created_at) VALUES (?, ?)", (update_id, now_iso()))
             await db.commit()
-
+    
     try:
         text = message.text or ""
         lower = text.lower()
@@ -5021,7 +5021,7 @@ async def universal_handler(message: types.Message):
         now_ts = time.monotonic()
         reply_to = message.reply_to_message.message_id if message.reply_to_message else None
         topic_id = int(getattr(message, "message_thread_id", 0) or 0)
-
+        
         # 1. SYSTEM COMMANDS
         if lower in SYSTEM_CMDS:
             if lower in ("сброс задач", "очистить задачи"):
@@ -5157,13 +5157,13 @@ async def universal_handler(message: types.Message):
                     await message.answer(part)
                     await asyncio.sleep(0.5)
             return
-
+        
         # 2. CANCEL
         if lower in CANCEL_CMDS:
             await cancel_active_task(tg_id)
             await message.answer("Задача отменена")
             return
-
+        
         # 3. FILE TASKS + EZONE FILE INGEST
         if message.document and message.document.file_name:
             # HEALTHCHECK_DAEMON_GUARD_V1
@@ -5241,21 +5241,21 @@ async def universal_handler(message: types.Message):
             finally:
                 try: os.remove(local_path)
                 except: pass
-
+        
         # 4. EZONE TEXT INGEST
         if message.text and is_ezone_payload(text):
             ok, chat_key, _ = save_ezone_json(text, tg_id)
             _RECENT_INGEST[tg_id] = now_ts
             await message.answer(f"Принял, память загружена ({chat_key})" if ok else "Уже загружено")
             return
-
+        
         # 5. ANTI-DUP AFTER INGEST
         if message.text:
             last = _RECENT_INGEST.get(tg_id, 0.0)
             if now_ts - last < 5:
                 if text.lstrip().startswith("{") or any(k in lower for k in EZONE_KEYS):
                     return
-
+        
         # 6. CONFIRMATION AND REPLY CONTINUATION
         active_confirm = None
         async with aiosqlite.connect(DB) as db:
@@ -5328,7 +5328,7 @@ async def universal_handler(message: types.Message):
         if any(t in lower for t in SEARCH_TRIGGERS):
             await create_task(message, "search", text, "NEW")
             return
-
+        
         # 8. VOICE
         if message.voice:
             tg_file = await bot.get_file(message.voice.file_id)
@@ -5420,7 +5420,7 @@ async def universal_handler(message: types.Message):
                     return
             await create_task(message, "text", "[VOICE] " + voice_text, "NEW")
             return
-
+        
         # 9. NORMAL TEXT
         if message.text:
             reply_to = message.reply_to_message.message_id if message.reply_to_message else None
@@ -5437,7 +5437,7 @@ async def universal_handler(message: types.Message):
             # === END CHAT_GUARD_V1 ===
             await create_task(message, "text", text, "NEW")
             return
-
+        
     except Exception as e:
         logger.error("HANDLER_CRASH: %s", e)
         try:
