@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_007
-generated_at_utc: 2026-07-05T17:24:57.880614+00:00
-git_sha_before_commit: 0e17a9baccd6e6ba25b9f1c3cf64d77f99a17be7
+generated_at_utc: 2026-07-05T17:54:57.855479+00:00
+git_sha_before_commit: c5ea64e6163a371399e50b9231dac9084cbd41c0
 part: 7/18
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 3/4
-SHA256_FULL_FILE: 4e0ba9ee16c72d0daecd1cd6b3a51003dfd86bbd54178fe0f0a42162356882a5
+SHA256_FULL_FILE: 4ddbb109a0a6cdcb5787890b1a2b09d8afbd197a1593bcaab9c2d38a20e8cdee
 ====================================================================================================
         return _T25G_CURRENT(conn, task_id, **kwargs)
     _update_task._t25g_wrapped = True
@@ -5219,7 +5219,9 @@ try:
             facts.append("Размеры: 8.0 x 12.0 м")
         if "1 этаж" in low or "этажей: 1" in low or "clarified:1" in low:
             facts.append("Этажность: 1 этаж")
-        if "каркасная технология" in low or "каркас" in low:
+        if "сэндвич" in low or "стеновая панель" in low or "стеновые панели" in low:
+            facts.append("Стены: сэндвич-панели 120 мм")
+        elif "каркасная технология" in low or "каркас" in low:
             facts.append("Стены: каркасная технология")
         if "монолитная плита" in low or "монолитн" in low:
             facts.append("Фундамент: монолитная плита" + (" 450 мм" if "450" in low else ""))
@@ -5289,7 +5291,9 @@ try:
 
         s = _t2v2_strip_nds(s)
 
-        if "каркас" in low:
+        if "сэндвич" in low or "стеновая панель" in low or "стеновые панели" in low:
+            s = _t2v2_replace_or_insert(s, "Стены:", "Стены: сэндвич-панели 120 мм")
+        elif "каркас" in low:
             s = _t2v2_replace_or_insert(s, "Стены:", "Стены: каркасная технология")
         if "металлочереп" in low:
             s = _t2v2_replace_or_insert(s, "Кровля:", "Кровля: металлочерепица")
@@ -5455,7 +5459,9 @@ try:
             out.append("Размеры: 8.0 x 12.0 м")
         if "1 этаж" in low or "этажей: 1" in low:
             out.append("Этажность: 1 этаж")
-        if "каркасная технология" in low or "каркас" in low:
+        if "сэндвич" in low or "стеновая панель" in low or "стеновые панели" in low:
+            out.append("Стены: сэндвич-панели 120 мм")
+        elif "каркасная технология" in low or "каркас" in low:
             out.append("Стены: каркасная технология")
         if "монолитная плита" in low or "монолитн" in low:
             out.append("Фундамент: монолитная плита" + (" 450 мм" if "450" in low else ""))
@@ -5510,7 +5516,9 @@ try:
         ctx = (raw or "") + "\n" + (history_text or "")
         low = ctx.lower().replace("ё", "е")
 
-        if "каркас" in low:
+        if "сэндвич" in low or "стеновая панель" in low or "стеновые панели" in low:
+            s = _t2sh_replace_or_insert(s, "Стены:", "Стены: сэндвич-панели 120 мм")
+        elif "каркас" in low:
             s = _t2sh_replace_or_insert(s, "Стены:", "Стены: каркасная технология")
         if "металлочереп" in low:
             s = _t2sh_replace_or_insert(s, "Кровля:", "Кровля: металлочерепица")
@@ -7521,19 +7529,6 @@ try:
                     pass
             return await _t2cf2_orig_handle_drive_file(conn, task, chat_id, topic_id)
         globals()["_handle_drive_file"] = _handle_drive_file
-
-    # === FIX 2: wrap _t2fb_merge → no raw_input append for drive_file parent ===
-    # PATCH_TOPIC2_ADDITIONAL_FACTS_FULL_RECALC_CANON_RESTORE_V1: also reset DONE_WITH_DRIVE_LINKS
-    # blocking marker so that a new FACT triggers full canonical recalculation via _t2fdsg_run_drive_final.
-    _t2cf2_orig_t2fb_merge = globals().get("_t2fb_merge")
-    if _t2cf2_orig_t2fb_merge:
-        def _t2fb_merge(conn, child, parent):
-            try:
-                parent_input_type = str(_t2cf2_get(parent, "input_type") or "")
-                if parent_input_type == "drive_file":
-                    # Replicate merge BUT keep parent.raw_input untouched (pure JSON).
-                    # Child fact goes only to task_history clarified:.
-                    child_id = str(_t2cf2_get(child, "id") or "")
 
 ====================================================================================================
 END_FILE: task_worker.py

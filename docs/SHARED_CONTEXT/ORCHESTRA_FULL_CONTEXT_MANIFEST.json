@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-07-05T17:24:57.889117+00:00",
-  "git_sha_before_commit": "0e17a9baccd6e6ba25b9f1c3cf64d77f99a17be7",
+  "generated_at_utc": "2026-07-05T17:54:57.867993+00:00",
+  "git_sha_before_commit": "c5ea64e6163a371399e50b9231dac9084cbd41c0",
   "part_max_bytes": 400000,
   "content_chunk_bytes": 340000,
   "total_records": 424,
@@ -1380,9 +1380,9 @@
       "path": "task_worker.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 1196575,
-      "sha256": "4e0ba9ee16c72d0daecd1cd6b3a51003dfd86bbd54178fe0f0a42162356882a5",
-      "chars": 1140748,
+      "size_bytes": 1200564,
+      "sha256": "4ddbb109a0a6cdcb5787890b1a2b09d8afbd197a1593bcaab9c2d38a20e8cdee",
+      "chars": 1144273,
       "chunks": 4
     },
     {
@@ -2271,9 +2271,9 @@
       "path": "core/topic2_estimate_final_close_v2.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 41059,
-      "sha256": "ece1ed2623573c03ee35da7c582def0f9f43b9b6c04cdb570ba90829647c7d6a",
-      "chars": 39275,
+      "size_bytes": 51375,
+      "sha256": "c54172a0b98993f988f312907e96491a98dc650f98799c261a4cc46e11221a64",
+      "chars": 48566,
       "chunks": 1
     },
     {
@@ -3288,7 +3288,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_007.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 340674,
+      "size_bytes": 340676,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3297,7 +3297,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_008.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 356456,
+      "size_bytes": 359170,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3333,7 +3333,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_012.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 385035,
+      "size_bytes": 385774,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3396,7 +3396,7 @@
       "path": "docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 30688,
+      "size_bytes": 32680,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3414,7 +3414,7 @@
       "path": "docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 346535,
+      "size_bytes": 346600,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3459,7 +3459,7 @@
       "path": "docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 6277,
+      "size_bytes": 6332,
       "sha256": "",
       "chars": 0,
       "chunks": 0

@@ -1,14 +1,27 @@
 # ORCHESTRA_FULL_CONTEXT_PART_008
-generated_at_utc: 2026-07-05T17:24:57.881276+00:00
-git_sha_before_commit: 0e17a9baccd6e6ba25b9f1c3cf64d77f99a17be7
+generated_at_utc: 2026-07-05T17:54:57.856383+00:00
+git_sha_before_commit: c5ea64e6163a371399e50b9231dac9084cbd41c0
 part: 8/18
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 4/4
-SHA256_FULL_FILE: 4e0ba9ee16c72d0daecd1cd6b3a51003dfd86bbd54178fe0f0a42162356882a5
+SHA256_FULL_FILE: 4ddbb109a0a6cdcb5787890b1a2b09d8afbd197a1593bcaab9c2d38a20e8cdee
 ====================================================================================================
+
+    # === FIX 2: wrap _t2fb_merge → no raw_input append for drive_file parent ===
+    # PATCH_TOPIC2_ADDITIONAL_FACTS_FULL_RECALC_CANON_RESTORE_V1: also reset DONE_WITH_DRIVE_LINKS
+    # blocking marker so that a new FACT triggers full canonical recalculation via _t2fdsg_run_drive_final.
+    _t2cf2_orig_t2fb_merge = globals().get("_t2fb_merge")
+    if _t2cf2_orig_t2fb_merge:
+        def _t2fb_merge(conn, child, parent):
+            try:
+                parent_input_type = str(_t2cf2_get(parent, "input_type") or "")
+                if parent_input_type == "drive_file":
+                    # Replicate merge BUT keep parent.raw_input untouched (pure JSON).
+                    # Child fact goes only to task_history clarified:.
+                    child_id = str(_t2cf2_get(child, "id") or "")
                     parent_id = str(_t2cf2_get(parent, "id") or "")
                     raw = str(_t2cf2_get(child, "raw_input") or "").strip()
                     if not child_id or not parent_id or child_id == parent_id or not raw:
@@ -3913,6 +3926,14 @@ try:
         except Exception:
             return False
 
+    def _t2nvr2_allows_orient_project(conn, task_id):
+        try:
+            row = conn.execute("SELECT raw_input FROM tasks WHERE id=? LIMIT 1", (str(task_id),)).fetchone()
+            raw = str(row[0] if row else "").lower().replace("ё", "е")
+            return "считать ориентировочно по проекту" in raw or "факты ocr/pdf" in raw
+        except Exception:
+            return False
+
     def _t2nvr2_wait_message():
         return (
             "PDF прочитан, но сметная ведомость объёмов/спецификация работ в нём не найдена. "
@@ -3926,7 +3947,7 @@ try:
         async def _t2fdsg_run_drive_final(conn, parent, choice):
             try:
                 parent_id = str(_t2fdsg_get(parent, "id") or "")
-                if parent_id and _t2nvr2_has_no_valid_pdf_rows(conn, parent_id):
+                if parent_id and _t2nvr2_has_no_valid_pdf_rows(conn, parent_id) and not _t2nvr2_allows_orient_project(conn, parent_id):
                     msg = _t2nvr2_wait_message()
                     _update_task(
                         conn,
@@ -3954,6 +3975,60 @@ except Exception as _t2nvr2_install_err:
     except Exception:
         pass
 # === END_PATCH_TOPIC2_NO_VALID_PDF_ROWS_BLOCK_FINAL_V2 ===
+
+
+# === PATCH_TOPIC2_ZERO_RESULT_HARD_GATE_V1 ===
+try:
+    import re as _t2zg_re
+    import logging as _t2zg_logging
+    _T2ZG_LOG = _t2zg_logging.getLogger("task_worker")
+    _T2ZG_ORIG_UPDATE_TASK = globals().get("_update_task")
+
+    def _t2zg_topic_id(conn, task_id):
+        try:
+            row = conn.execute("SELECT COALESCE(topic_id,0) FROM tasks WHERE id=? LIMIT 1", (str(task_id),)).fetchone()
+            return int(row[0]) if row else 0
+        except Exception:
+            return 0
+
+    def _t2zg_zero_result(text):
+        s = str(text or "").lower().replace("ё", "е")
+        has_zero_positions = bool(_t2zg_re.search(r"позиц(?:ий|ии|ия)\s*:\s*0\b", s))
+        has_zero_total = bool(_t2zg_re.search(r"итого\s*:\s*0\s*руб", s))
+        return has_zero_positions or has_zero_total
+
+    if _T2ZG_ORIG_UPDATE_TASK and not getattr(_T2ZG_ORIG_UPDATE_TASK, "_t2zg_wrapped", False):
+        def _update_task(conn, task_id, **kwargs):
+            try:
+                if _t2zg_topic_id(conn, task_id) == 2 and _t2zg_zero_result(kwargs.get("result")):
+                    msg = (
+                        "Смета на 0 руб заблокирована. PDF/OCR прочитан, но финальный расчёт не содержит "
+                        "валидных позиций и итоговой суммы. Нужны ВОР/спецификация с объёмами или корректный "
+                        "укрупнённый расчёт по извлечённым параметрам проекта."
+                    )
+                    kwargs["state"] = "WAITING_CLARIFICATION"
+                    kwargs["result"] = msg
+                    kwargs["error_message"] = "TOPIC2_ZERO_RESULT_BLOCKED"
+                    try:
+                        _history(conn, str(task_id), "PATCH_TOPIC2_ZERO_RESULT_HARD_GATE_V1:BLOCKED")
+                    except Exception:
+                        pass
+            except Exception as e:
+                try:
+                    _T2ZG_LOG.warning("PATCH_TOPIC2_ZERO_RESULT_HARD_GATE_V1_ERR:%s", e)
+                except Exception:
+                    pass
+            return _T2ZG_ORIG_UPDATE_TASK(conn, task_id, **kwargs)
+
+        _update_task._t2zg_wrapped = True
+        globals()["_update_task"] = _update_task
+        _T2ZG_LOG.info("PATCH_TOPIC2_ZERO_RESULT_HARD_GATE_V1 installed")
+except Exception as _t2zg_install_err:
+    try:
+        logger.exception("PATCH_TOPIC2_ZERO_RESULT_HARD_GATE_V1_INSTALL_ERR:%s", _t2zg_install_err)
+    except Exception:
+        pass
+# === END_PATCH_TOPIC2_ZERO_RESULT_HARD_GATE_V1 ===
 
 if __name__ == "__main__":
     asyncio.run(main())
