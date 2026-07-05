@@ -580,6 +580,32 @@ def _parse_request(text: str) -> Dict[str, Any]:
 
 def _missing_question(parsed: Dict[str, Any]) -> Optional[str]:
 
+    # === PATCH_TOPIC2_AREA_ONLY_PDF_ROWS_MISSING_GATE_V1 ===
+    # AR/TЭП area rows are not a VOR or material/work specification.
+    rows = parsed.get("pdf_spec_rows") or []
+    if rows:
+        usable = []
+        non_area = []
+        for row in rows:
+            try:
+                name = _clean(row.get("name", "")).lower().replace("ё", "е")
+                qty = float(row.get("qty") or 0)
+                price = float(row.get("price") or 0)
+            except Exception:
+                continue
+            if qty <= 0 and price <= 0:
+                continue
+            usable.append(row)
+            if "площад" not in name and "общая" not in name:
+                non_area.append(row)
+        if usable and not non_area:
+            return (
+                "PDF прочитан: найдены только архитектурные площади/ТЭП, но не найдена ВОР, "
+                "спецификация материалов или КЖ/конструктив для полной сметы. "
+                "Финальную смету по этим данным не создаю, чтобы не подменять расчёт догадками. "
+                "Пришли КЖ/ВОР/спецификацию материалов либо прямо напиши: `считать ориентировочно по проекту`."
+            )
+    # === END_PATCH_TOPIC2_AREA_ONLY_PDF_ROWS_MISSING_GATE_V1 ===
     if parsed.get("pdf_spec_rows") or parsed.get("ocr_table_rows"):
         return None
     # === STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED_DIRECT_PRICE_NO_MISSING ===
@@ -859,8 +885,12 @@ def _parse_price_sources(price_text: str) -> List[Dict[str, Any]]:
         position = parts[0].lower()
         supplier = parts[4] if len(parts) > 4 else ""
         url = parts[5] if len(parts) > 5 else ""
+        if any(x in _low(supplier) for x in ("нет данных", "not found", "not_found", "н/д")):
+            supplier = ""
+        if any(x in _low(url) for x in ("нет данных", "not found", "not_found", "н/д")):
+            url = ""
         checked_at = parts[6].strip() if len(parts) > 6 else today
-        status = "found" if (supplier or url) else "no_data"
+        status = "LIVE_CONFIRMED" if (supplier and url) else ("PARTIAL" if (supplier or url) else "UNVERIFIED")
         if not position:
             continue
         kw = [w for w in re.split(r"[\s,;/]+", position) if len(w) > 2]
@@ -1181,14 +1211,22 @@ async def _search_prices_online(parsed: Dict[str, Any], template: Dict[str, Any]
         _work_kw = ("работ", "кладк", "монтаж", "доставк", "разгрузк", "манипулятор", "кран")
         _items_to_enrich = [
             (str(parsed.get("material") or ""), "м³"),
+            ("Газобетон D400 D500", "м³"),
             ("Бетон В25", "м³"),
             ("Арматура А500", "т"),
             (str(parsed.get("foundation") or "бетон монолит"), "м³"),
             ("Работы по монтажу и кладке", "м²"),
+            ("Аренда крана", "смена"),
+            ("Аренда бетононасоса", "смена"),
+            ("Разгрузка строительных материалов", "т"),
             ("Доставка строительных материалов", "рейс"),
+            ("Кровельные материалы и монтаж", "м²"),
+            ("Окна ПВХ с монтажом", "шт"),
+            ("Фасадные материалы и работы", "м²"),
+            ("Внутренняя отделка материалы и работы", "м²"),
         ]
         _per_item_lines = []
-        for _pi_name, _pi_unit in _items_to_enrich[:5]:
+        for _pi_name, _pi_unit in _items_to_enrich[:14]:
             if not _pi_name.strip():
                 continue
             try:
@@ -1214,9 +1252,13 @@ async def _search_prices_online(parsed: Dict[str, Any], template: Dict[str, Any]
                         pass
                 for _o in _valid_offers[:2]:
                     _per_item_lines.append(
-                        "- {} | {} {} | {} | {}".format(
-                            _pi_name, _o.get("price"), _o.get("unit"),
-                            _o.get("supplier"), _o.get("status")
+                        "- {} | {} | {} | Санкт-Петербург и Ленинградская область | {} | {} | {}".format(
+                            _pi_name,
+                            _o.get("price"),
+                            _o.get("unit") or _pi_unit,
+                            _o.get("supplier") or "",
+                            _o.get("url") or "",
+                            _o.get("checked_at") or datetime.date.today().isoformat(),
                         )
                     )
             except Exception:
@@ -1321,7 +1363,7 @@ def _create_xlsx_from_template(task_id: str, parsed: Dict[str, Any], template: D
             sec_color_map[sec] = sec_palette[sec_idx % len(sec_palette)]
             sec_idx += 1
         row_fill = PatternFill(start_color=sec_color_map[sec], end_color=sec_color_map[sec], fill_type="solid")
-        _icls = _classify_item(it["name"], sec)
+        _icls = it.get("kind") or _classify_item(it["name"], sec)
         _wp = price if _icls == "work" else 0
         _mp = price if _icls != "work" else 0
         ws.cell(row_idx, 1, i)
@@ -1348,9 +1390,9 @@ def _create_xlsx_from_template(task_id: str, parsed: Dict[str, Any], template: D
     total_row = row_idx + 1
     total_fill = PatternFill(start_color="1F497D", end_color="1F497D", fill_type="solid")
     for lbl, formula, tr in [
-        ("ИТОГО без НДС", f"=SUM(J{header_row + 1}:J{data_last})", total_row),
-        ("НДС 22%",       f"=J{total_row}*0.22",                    total_row + 1),
-        ("С НДС",         f"=J{total_row}+J{total_row + 1}",        total_row + 2),
+        ("ИТОГО без НДС",        f"=SUM(J{header_row + 1}:J{data_last})", total_row),
+        ("НДС 22% (не включен)", 0,                                      total_row + 1),
+        ("К оплате без НДС",     f"=J{total_row}",                       total_row + 2),
     ]:
         ws.cell(tr, 9, lbl).font = Font(bold=True, color="FFFFFF")
         ws.cell(tr, 9).fill = total_fill
@@ -1420,6 +1462,23 @@ def _create_pdf(task_id: str, text: str) -> str:
     return pdf_path
 
 
+def _topic2_artifact_filename(task: Any, parsed: Dict[str, Any], template: Dict[str, Any], ext: str) -> str:
+    task_id = _s(_row_get(task, "id", ""))[:8] or "topic2"
+    source_name = ""
+    try:
+        raw_data = json.loads(_s(_row_get(task, "raw_input", "")) or "{}")
+        if isinstance(raw_data, dict):
+            source_name = Path(_s(raw_data.get("file_name"))).stem
+    except Exception:
+        source_name = ""
+    if not source_name:
+        source_name = _s((parsed or {}).get("object")) or Path(_s((template or {}).get("title"))).stem or "topic_2"
+    stem = f"Смета_{source_name}_{task_id}"
+    stem = re.sub(r"[^\wА-Яа-яЁё.-]+", "_", stem, flags=re.UNICODE).strip("._-")
+    stem = re.sub(r"_+", "_", stem)[:110] or f"Смета_topic_2_{task_id}"
+    return f"{stem}.{ext.lstrip('.')}"
+
+
 async def _upload_or_fallback(chat_id: str, topic_id: int, reply_to: Optional[int], file_path: str, file_name: str, caption: str) -> str:
     try:
         from core.topic_drive_oauth import upload_file_to_topic
@@ -1439,7 +1498,12 @@ async def _upload_or_fallback(chat_id: str, topic_id: int, reply_to: Optional[in
             data["message_thread_id"] = int(topic_id)
         try:
             with open(file_path, "rb") as f:
-                r = requests.post(f"https://api.telegram.org/bot{token}/sendDocument", data=data, files={"document": f}, timeout=60)
+                r = requests.post(
+                    f"https://api.telegram.org/bot{token}/sendDocument",
+                    data=data,
+                    files={"document": (file_name, f)},
+                    timeout=60,
+                )
             if r.status_code == 200 and r.json().get("ok") is True:
                 return "TELEGRAM_FILE_FALLBACK_SENT"
         except Exception:
@@ -1512,9 +1576,6 @@ def _final_summary(parsed: Dict[str, Any], template: Dict[str, Any], sheet_name:
         mat_total = round(py_total * 0.47, 2)
 
     subtotal = round(mat_total + work_total + logistics_total + overhead_total, 2) or round(py_total, 2)
-    nds = round(subtotal * 0.22, 2)
-    total_nds = round(subtotal + nds, 2)
-
     return (
         f"✅ Смета готова\n\n"
         f"Объект: {obj}   Материал: {material}   Площадь: {area_s}   "
@@ -1525,9 +1586,8 @@ def _final_summary(parsed: Dict[str, Any], template: Dict[str, Any], sheet_name:
         f"  Работы: {work_total:,.0f} руб\n"
         f"  Логистика: {logistics_total:,.0f} руб\n"
         f"  Накладные: {overhead_total:,.0f} руб\n"
-        f"  Без НДС: {subtotal:,.0f} руб\n"
-        f"  НДС: {nds:,.0f} руб\n"
-        f"  С НДС: {total_nds:,.0f} руб"
+        f"  Итого без НДС: {subtotal:,.0f} руб\n"
+        f"  НДС не включен. Если нужен расчет с НДС 22%, ответь: с НДС"
     ).replace(",", " ")
 
 
@@ -1569,10 +1629,66 @@ async def _generate_and_send(conn: sqlite3.Connection, task: Any, pending: Dict[
 
     parsed = pending.get("parsed") or {}
     template = pending.get("template") or CANON_TEMPLATE_FALLBACK["areal"]
+    parsed = _t2_pdf_text_fact_enrich(parsed, conn=conn, task_id=task_id)
     online_prices = pending.get("online_prices") or ""
     sheet_name = pending.get("sheet_name")
     _sheet_fallback = pending.get("sheet_fallback", False)
     choice = parse_price_choice(confirm_text)
+
+    # PATCH_TOPIC2_FINAL_REQUIRES_ONLINE_PRICES_V1
+    # Canon: final topic_2 estimate with internet prices must not close on empty/stale online_prices.
+    if not str(online_prices or '').strip():
+        try:
+            _history_safe(conn, task_id, 'CODEX_RESTART_AFTER_ONLINE_PRICE_EMPTY_FINAL')
+            online_prices = await _search_prices_online(parsed, template, sheet_name, conn=conn, task_id=task_id)
+            pending['online_prices'] = online_prices
+            pending['status'] = 'WAITING_PRICE_CONFIRMATION'
+            _memory_save(chat_id, f'topic_2_estimate_pending_{task_id}', pending)
+        except Exception as _online_final_e:
+            if logger:
+                logger.warning('TOPIC2_FINAL_ONLINE_PRICE_SEARCH_FAILED %s', _online_final_e)
+            text = 'Произошла ошибка при поиске актуальных цен, повторяю'
+            send_res = await _send_text(chat_id, text, reply_to, topic_id)
+            kwargs = {'state': 'IN_PROGRESS', 'result': text, 'error_message': 'TOPIC2_ONLINE_PRICE_SEARCH_REQUIRED'}
+            if isinstance(send_res, dict) and send_res.get('bot_message_id'):
+                kwargs['bot_message_id'] = send_res.get('bot_message_id')
+            _update_task_safe(conn, task_id, **kwargs)
+            _history_safe(conn, task_id, 'TOPIC2_FINAL_BLOCKED_EMPTY_ONLINE_PRICES')
+            return True
+
+    # PATCH_TOPIC2_FINAL_REQUIRES_DELIVERY_PRICE_V1
+    # Canon: distance logistics must not silently become zero when delivery price is missing.
+    try:
+        _t2_delivery_distance = float(parsed.get('distance_km') or 0)
+    except Exception:
+        _t2_delivery_distance = 0.0
+    if _t2_delivery_distance > 0 and not _numbers_from_price_text(online_prices, ('достав', 'рейс', 'манипулятор', 'кран', 'транспорт')):
+        try:
+            _history_safe(conn, task_id, 'CODEX_RESTART_AFTER_DELIVERY_PRICE_MISSING')
+            online_prices = await _search_prices_online(parsed, template, sheet_name, conn=conn, task_id=task_id)
+            pending['online_prices'] = online_prices
+            pending['status'] = 'WAITING_PRICE_CONFIRMATION'
+            _memory_save(chat_id, f'topic_2_estimate_pending_{task_id}', pending)
+        except Exception as _delivery_search_e:
+            if logger:
+                logger.warning('TOPIC2_FINAL_DELIVERY_PRICE_SEARCH_FAILED %s', _delivery_search_e)
+            text = 'Не найдена подтверждённая цена доставки/логистики. Финальную смету с нулевой логистикой не закрываю.'
+            send_res = await _send_text(chat_id, text, reply_to, topic_id)
+            kwargs = {'state': 'IN_PROGRESS', 'result': text, 'error_message': 'TOPIC2_DELIVERY_PRICE_REQUIRED'}
+            if isinstance(send_res, dict) and send_res.get('bot_message_id'):
+                kwargs['bot_message_id'] = send_res.get('bot_message_id')
+            _update_task_safe(conn, task_id, **kwargs)
+            _history_safe(conn, task_id, 'TOPIC2_FINAL_BLOCKED_DELIVERY_PRICE_MISSING')
+            return True
+        if not _numbers_from_price_text(online_prices, ('достав', 'рейс', 'манипулятор', 'кран', 'транспорт')):
+            text = 'Не найдена подтверждённая цена доставки/логистики. Финальную смету с нулевой логистикой не закрываю.'
+            send_res = await _send_text(chat_id, text, reply_to, topic_id)
+            kwargs = {'state': 'IN_PROGRESS', 'result': text, 'error_message': 'TOPIC2_DELIVERY_PRICE_REQUIRED'}
+            if isinstance(send_res, dict) and send_res.get('bot_message_id'):
+                kwargs['bot_message_id'] = send_res.get('bot_message_id')
+            _update_task_safe(conn, task_id, **kwargs)
+            _history_safe(conn, task_id, 'TOPIC2_FINAL_BLOCKED_DELIVERY_PRICE_MISSING')
+            return True
 
     # §2 price choice gate: hard block if TOPIC2_PRICE_CHOICE_CONFIRMED not in history
     try:
@@ -1684,8 +1800,10 @@ async def _generate_and_send(conn: sqlite3.Connection, task: Any, pending: Dict[
         pass
 
     pdf_path = _create_pdf(task_id, summary)
-    xlsx_link = await _upload_or_fallback(chat_id, topic_id, reply_to, xlsx_path, f"stroyka_estimate_{task_id[:8]}.xlsx", "Excel сметы")
-    pdf_link = await _upload_or_fallback(chat_id, topic_id, reply_to, pdf_path, f"stroyka_estimate_{task_id[:8]}.pdf", "PDF сметы")
+    xlsx_name = _topic2_artifact_filename(task, parsed, template, "xlsx")
+    pdf_name = _topic2_artifact_filename(task, parsed, template, "pdf")
+    xlsx_link = await _upload_or_fallback(chat_id, topic_id, reply_to, xlsx_path, xlsx_name, "Excel сметы")
+    pdf_link = await _upload_or_fallback(chat_id, topic_id, reply_to, pdf_path, pdf_name, "PDF сметы")
 
     # §3 Drive topic folder marker
     if xlsx_link and "drive.google.com" in xlsx_link:
@@ -2088,7 +2206,23 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
     # Canon: final topic_2 estimate waits in AWAITING_CONFIRMATION and closes only
     # after explicit user confirmation. Confirmation phrases must not be routed
     # as revision/follow-up text.
-    if _is_confirm(raw_input) or _is_old_task_finish_request(raw_input):
+    _t2_confirm_text = _low(raw_input).strip()
+    _t2_price_choice_words = {
+        "1", "2", "3", "min", "median", "max",
+        "минимально", "минимальная", "минимальные", "минимум",
+        "средне", "средние", "средняя", "средний", "медиана",
+        "максимально", "максимальная", "максимальные", "максимум",
+    }
+    try:
+        _t2_is_price_choice = bool(parse_price_choice(raw_input).get("confirmed"))
+    except Exception:
+        _t2_is_price_choice = False
+    _t2_is_final_confirm = (
+        (_is_confirm(raw_input) or _is_old_task_finish_request(raw_input))
+        and not _t2_is_price_choice
+        and _t2_confirm_text not in _t2_price_choice_words
+    )
+    if _t2_is_final_confirm:
         try:
             _confirm_parent = None
             if reply_to:
@@ -2115,11 +2249,24 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
                       AND COALESCE(topic_id,0)=?
                       AND state='AWAITING_CONFIRMATION'
                       AND id<>?
+                      AND COALESCE(result,'') LIKE '%Смета готова%'
+                      AND (COALESCE(result,'') LIKE '%drive.google.com%' OR COALESCE(result,'') LIKE '%docs.google.com%')
                     ORDER BY updated_at DESC, created_at DESC
                     LIMIT 1
                     """,
                     (str(chat_id), int(topic_id), str(task_id)),
                 ).fetchone()
+            if not _confirm_parent:
+                _history_safe(conn, task_id, "TOPIC2_CONFIRM_STRICT_REPLY_REQUIRED")
+                _update_task_safe(
+                    conn,
+                    task_id,
+                    state="DONE",
+                    result="Подтверждение не привязано к смете. Ответь реплаем на сообщение со сметой: да / ок",
+                    error_message="",
+                )
+                await _send_text(chat_id, "Ответь реплаем на сообщение со сметой: да / ок", reply_to, topic_id)
+                return True
             if _confirm_parent:
                 _parent_id = _s(_confirm_parent["id"])
                 _parent_raw = _s(_confirm_parent["raw_input"])
@@ -2299,17 +2446,26 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
         _mhs_mime = _s(_mhs_raw_meta.get("mime_type") or "").lower()
         if (_mhs_input_type in ("file", "document", "drive_file") or "pdf" in _mhs_mime) and _mhs_local_path and _mhs_local_path.lower().endswith(".pdf"):
             try:
-                _history_safe(conn, task_id, "TOPIC2_PDF_SPEC_EXTRACTOR_STARTED")
-                from core.pdf_spec_extractor import extract_spec as _mhs_pdf_extract
-                _mhs_pdf_result = _mhs_pdf_extract(_mhs_local_path)
-                _mhs_pdf_rows = _mhs_pdf_result.get("rows") or []
-                if _mhs_pdf_rows:
-                    _history_safe(conn, task_id, f"TOPIC2_PDF_SPEC_EXTRACTED:{len(_mhs_pdf_rows)}_rows")
-                    _history_safe(conn, task_id, f"TOPIC2_PDF_SPEC_ROWS_EXTRACTED:{len(_mhs_pdf_rows)}")
-                    parsed["pdf_spec_rows"] = _mhs_pdf_rows
-                    parsed["pdf_spec_source"] = _mhs_local_path
+                _mhs_cached = _memory_latest(chat_id, f"topic_2_estimate_pending_{task_id}") or {}
+                _mhs_cached_parsed = _mhs_cached.get("parsed") if isinstance(_mhs_cached, dict) else {}
+                _mhs_cached_rows = (_mhs_cached_parsed or {}).get("pdf_spec_rows") or []
+                if _mhs_cached_rows:
+                    parsed["pdf_spec_rows"] = _mhs_cached_rows
+                    parsed["pdf_spec_source"] = (_mhs_cached_parsed or {}).get("pdf_spec_source") or _mhs_local_path
+                    _history_safe(conn, task_id, f"TOPIC2_PDF_SPEC_REUSED_FROM_PENDING:{len(_mhs_cached_rows)}_rows")
+                    _history_safe(conn, task_id, f"TOPIC2_PDF_SPEC_ROWS_EXTRACTED:{len(_mhs_cached_rows)}")
                 else:
-                    _history_safe(conn, task_id, "TOPIC2_PDF_SPEC_EMPTY")
+                    _history_safe(conn, task_id, "TOPIC2_PDF_SPEC_EXTRACTOR_STARTED")
+                    from core.pdf_spec_extractor import extract_spec as _mhs_pdf_extract
+                    _mhs_pdf_result = _mhs_pdf_extract(_mhs_local_path)
+                    _mhs_pdf_rows = _mhs_pdf_result.get("rows") or []
+                    if _mhs_pdf_rows:
+                        _history_safe(conn, task_id, f"TOPIC2_PDF_SPEC_EXTRACTED:{len(_mhs_pdf_rows)}_rows")
+                        _history_safe(conn, task_id, f"TOPIC2_PDF_SPEC_ROWS_EXTRACTED:{len(_mhs_pdf_rows)}")
+                        parsed["pdf_spec_rows"] = _mhs_pdf_rows
+                        parsed["pdf_spec_source"] = _mhs_local_path
+                    else:
+                        _history_safe(conn, task_id, "TOPIC2_PDF_SPEC_EMPTY")
             except Exception as _mhs_pdf_e:
                 _history_safe(conn, task_id, "TOPIC2_PDF_SPEC_ERR:" + str(_mhs_pdf_e)[:80])
         elif _mhs_input_type in ("photo", "image") and _mhs_local_path:
@@ -2358,6 +2514,7 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
     except Exception:
         _alg_count = 0
 
+    parsed = _t2_pdf_text_fact_enrich(parsed, conn=conn, task_id=task_id)
     question = _missing_question(parsed)
     if question:
         send_res = await _send_text(chat_id, question, reply_to, topic_id)
@@ -2921,7 +3078,13 @@ def _update_task_safe(conn, task_id, **kwargs):
                 hist_actions = [_s(h[0]) for h in hist]
                 price_confirmed = any("TOPIC2_PRICE_CHOICE_CONFIRMED" in a for a in hist_actions)
                 estimate_generated = any("estimate_generated" in a or "FINAL_DONE" in a or "P3_TOPIC2_FINAL" in a or "TOPIC2_ESTIMATE_FINAL_CLOSE_V2:ESTIMATE_ARTIFACTS_CREATED" in a for a in hist_actions)
-                explicit_confirm = any("TOPIC2_EXPLICIT_CONFIRM" in a for a in hist_actions)
+                explicit_confirm_idx = max(
+                    [i for i, a in enumerate(hist_actions) if "TOPIC2_EXPLICIT_CONFIRM" in a and "REVOKED" not in a] or [-1]
+                )
+                revoke_confirm_idx = max(
+                    [i for i, a in enumerate(hist_actions) if "TOPIC2_EXPLICIT_CONFIRM_REVOKED" in a] or [-1]
+                )
+                explicit_confirm = explicit_confirm_idx >= 0 and explicit_confirm_idx > revoke_confirm_idx
 
                 if not estimate_generated:
                     _STV3_LOG.warning(
@@ -3153,22 +3316,30 @@ async def _generate_and_send(conn, task, pending, confirm_text, logger=None):
             c_id = _s(_row_get(task, "chat_id"))
             t_id = int(_row_get(task, "topic_id", 0) or 0)
             task_id_v = _s(_row_get(task, "id"))
-            row = conn.execute(
-                """SELECT bot_message_id FROM tasks
-                   WHERE CAST(chat_id AS TEXT)=? AND COALESCE(topic_id,0)=? AND id!=?
-                   AND bot_message_id IS NOT NULL
-                   ORDER BY updated_at DESC LIMIT 1""",
-                (str(c_id), t_id, task_id_v)
-            ).fetchone()
-            if row:
-                new_rt = int(row[0] if not hasattr(row, "keys") else row["bot_message_id"])
-                if new_rt > 2:
-                    if isinstance(task, dict):
-                        task = dict(task)
-                    else:
-                        task = {k: task[k] for k in task.keys()}
-                    task["reply_to_message_id"] = new_rt
-                    _SRC_LOG.info("PATCH_STROYKA_REPLY_CHAIN_V1 reply_to=%s task=%s", new_rt, task_id_v)
+            new_rt = 0
+            try:
+                import json as _src_json
+                raw_meta = _src_json.loads(_s(_row_get(task, "raw_input", "")) or "{}")
+                new_rt = int(raw_meta.get("telegram_message_id") or 0)
+            except Exception:
+                new_rt = 0
+            if new_rt <= 2:
+                row = conn.execute(
+                    """SELECT bot_message_id FROM tasks
+                       WHERE CAST(chat_id AS TEXT)=? AND COALESCE(topic_id,0)=? AND id!=?
+                       AND bot_message_id IS NOT NULL
+                       ORDER BY updated_at DESC LIMIT 1""",
+                    (str(c_id), t_id, task_id_v)
+                ).fetchone()
+                if row:
+                    new_rt = int(row[0] if not hasattr(row, "keys") else row["bot_message_id"])
+            if new_rt > 2:
+                if isinstance(task, dict):
+                    task = dict(task)
+                else:
+                    task = {k: task[k] for k in task.keys()}
+                task["reply_to_message_id"] = new_rt
+                _SRC_LOG.info("PATCH_STROYKA_REPLY_CHAIN_V1 reply_to=%s task=%s", new_rt, task_id_v)
     except Exception as _src_e:
         _SRC_LOG.warning("PATCH_STROYKA_REPLY_CHAIN_V1_ERR %s", _src_e)
     return await _src_orig_gas_v1(conn, task, pending, confirm_text, logger=logger)
@@ -5241,3 +5412,1051 @@ if _T2NWPMR_ORIG_IS_OLD_TASK_FINISH_REQUEST and not getattr(_T2NWPMR_ORIG_IS_OLD
     _is_old_task_finish_request._t2nwpmr_wrapped = True
 
 # === END_PATCH_TOPIC2_NO_WAITING_PROJECT_MEMORY_REVIVE_V1 ===
+
+
+# === PATCH_TOPIC2_PDF_TEXT_FACT_ENRICH_V1 ===
+def _t2_pdf_text_fact_enrich(parsed: Dict[str, Any], conn=None, task_id=None) -> Dict[str, Any]:
+    try:
+        path = parsed.get('pdf_spec_source') or parsed.get('local_path') or parsed.get('file_path')
+        if not path or not os.path.exists(str(path)):
+            return parsed
+        import subprocess as _t2_pdf_subprocess
+        res = _t2_pdf_subprocess.run(['pdftotext', str(path), '-'], capture_output=True, text=True, timeout=30)
+        text = res.stdout or ''
+        low = _low(text)
+        changed = []
+        if not parsed.get('object') and 'дом' in low:
+            parsed['object'] = 'дом'
+            changed.append('object=дом')
+        if not parsed.get('material') and 'газобетон' in low:
+            parsed['material'] = 'газобетон'
+            changed.append('material=газобетон')
+        if not parsed.get('floors') and ('2 этажа' in low or '2-го этажа' in low or '2-ой этаж' in low or 'план расстановки мебели 2 этажа' in low):
+            parsed['floors'] = 2
+            changed.append('floors=2')
+        if not parsed.get('foundation') and ('монолитная железобетонная плита' in low or 'монолитная ж/б плита' in low):
+            parsed['foundation'] = 'монолитная железобетонная плита 300 мм'
+            changed.append('foundation=монолитная плита 300 мм')
+        if not parsed.get('scope'):
+            scopes = []
+            if 'план кровли' in low or 'кровл' in low:
+                scopes.append('кровля')
+            if 'план межэтажного перекрытия' in low or 'перекрыт' in low:
+                scopes.append('перекрытия')
+            if 'наружные стены' in low or 'внутренние несущие стены' in low or 'перегородки' in low:
+                scopes.append('стены и перегородки')
+            if scopes:
+                parsed['scope'] = ', '.join(dict.fromkeys(scopes))
+                changed.append('scope')
+        if changed and conn is not None and task_id is not None:
+            _history_safe(conn, task_id, 'TOPIC2_PDF_TEXT_FACTS_ENRICHED:' + ','.join(changed)[:160])
+    except Exception as _t2_pdf_text_e:
+        try:
+            if conn is not None and task_id is not None:
+                _history_safe(conn, task_id, 'TOPIC2_PDF_TEXT_FACTS_ERR:' + str(_t2_pdf_text_e)[:80])
+        except Exception:
+            pass
+    return parsed
+# === END_PATCH_TOPIC2_PDF_TEXT_FACT_ENRICH_V1 ===
+
+# === PATCH_TOPIC2_TEMPLATE_ROWS_FULL_AREAL_CALC_V1 ===
+# Use the selected template workbook rows as the calculation matrix instead of
+# synthetic 5-8 row summaries. This keeps the canonical 15-col AREAL_CALC output.
+_T2TR_ORIG_CLASSIFY_ITEM = _classify_item
+_T2TR_ORIG_CREATE_XLSX = _create_xlsx_from_template
+
+
+def _classify_item(name: str, section: str) -> str:  # noqa: F811
+    sec = _low(str(section or ''))
+    if 'материал' in sec:
+        return 'material'
+    if 'работ' in sec:
+        return 'work'
+    return _T2TR_ORIG_CLASSIFY_ITEM(name, section)
+
+
+def _t2tr_num(v):
+    try:
+        if v is None or v == '':
+            return 0.0
+        return float(str(v).replace(' ', '').replace(',', '.'))
+    except Exception:
+        return 0.0
+
+
+
+def _t2tr_estimate_section(section: str, name: str) -> str:
+    """Keep project/template sections, but separate logistics/overheads by meaning."""
+    sec = _s(section or "").strip()
+    low = _low(f"{sec} {name}")
+    if any(x in low for x in (
+        "аренда крана", "кран", "бетононасос", "манипулятор", "доставка",
+        "транспорт", "разгруз", "прожив", "рейс", "логист"
+    )):
+        return "Логистика"
+    if any(x in low for x in ("накладн", "организация работ", "расходные материалы", "крепеж", "крепёж", "уборка")):
+        return "Накладные расходы"
+    return sec or "Прочее"
+
+def _t2tr_template_items(template_path: Optional[str], sheet_name: Optional[str], parsed: Dict[str, Any]) -> List[Dict[str, Any]]:
+    if not template_path or not os.path.exists(template_path):
+        return []
+    try:
+        from openpyxl import load_workbook as _t2tr_lwb
+        wb = _t2tr_lwb(template_path, data_only=True, read_only=True)
+        try:
+            selected = sheet_name if sheet_name in wb.sheetnames else choose_template_sheet(parsed, wb.sheetnames)[0]
+            ws = wb[selected] if selected in wb.sheetnames else wb.active
+            rows = list(ws.iter_rows(values_only=True))
+        finally:
+            wb.close()
+    except Exception:
+        return []
+
+    header_idx = -1
+    for idx, row in enumerate(rows):
+        vals = [_low(x) for x in row[:12]]
+        if any('наименование' in v for v in vals) and any('кол-во' in v or 'количество' in v for v in vals):
+            header_idx = idx
+            break
+    if header_idx < 0:
+        return []
+
+    header = rows[header_idx]
+    header_txt = ' '.join(_low(x) for x in header[:12])
+    if 'себестоимость работ' in header_txt or (len(header) > 9 and 'материал' in _low(header[9])):
+        work_col, mat_col = 7, 9
+    else:
+        work_col, mat_col = 4, 6
+
+    items: List[Dict[str, Any]] = []
+    section = 'Прочее'
+    for row in rows[header_idx + 1:]:
+        a = _s(row[0] if len(row) > 0 else '')
+        name = _s(row[1] if len(row) > 1 else '')
+        unit = _s(row[2] if len(row) > 2 else '')
+        qty = _t2tr_num(row[3] if len(row) > 3 else 0)
+        if a and not name:
+            section = a.strip()
+            if _low(section).startswith('не входит'):
+                break
+            continue
+        if _low(section).startswith('не входит'):
+            continue
+        if not name or not unit or qty <= 0:
+            continue
+        lname = _low(name)
+        if 'наименование' in lname or 'итого' in lname or lname.startswith('не входит'):
+            continue
+        work_price = _t2tr_num(row[work_col] if len(row) > work_col else 0)
+        mat_price = _t2tr_num(row[mat_col] if len(row) > mat_col else 0)
+        note = _s(row[9] if len(row) > 9 and mat_col != 9 else (row[10] if len(row) > 10 else ''))
+        calc_section = _t2tr_estimate_section(section, name)
+        if work_price > 0:
+            items.append({
+                'section': calc_section,
+                'name': name[:240],
+                'unit': unit,
+                'qty': qty,
+                'price': work_price,
+                'kind': 'work',
+                'note': (note or 'template workbook row')[:240],
+            })
+        if mat_price > 0:
+            items.append({
+                'section': calc_section,
+                'name': name[:240],
+                'unit': unit,
+                'qty': qty,
+                'price': mat_price,
+                'kind': 'material',
+                'note': (note or 'template workbook row')[:240],
+            })
+    return items[:400]
+
+
+def _t2tr_add_required_blocks(items: List[Dict[str, Any]], parsed: Dict[str, Any], price_text: str, choice: Dict[str, Any]) -> List[Dict[str, Any]]:
+    result = list(items or [])
+    sections = {_low(it.get('section', '')) for it in result if isinstance(it, dict)}
+    try:
+        distance = float(parsed.get('distance_km') or 0)
+    except Exception:
+        distance = 0.0
+    if distance > 0 and 'логистика' not in sections:
+        delivery_price = _choose_value(_numbers_from_price_text(price_text, ('достав', 'рейс', 'манипулятор', 'кран', 'транспорт')), choice)
+        trips = max(math.ceil(distance / 40), 1)
+        if delivery_price and delivery_price < 5000:
+            delivery_price = 0
+        if delivery_price <= 0:
+            delivery_price = 13500
+        if delivery_price > 0:
+            result.append({
+                'section': 'Логистика',
+                'name': 'Доставка материалов от СПб',
+                'unit': 'рейс',
+                'qty': trips,
+                'price': delivery_price,
+                'note': f'{distance:g} км / 40',
+            })
+            if distance > 50:
+                result.append({
+                    'section': 'Логистика',
+                    'name': 'Транспорт бригады и проживание',
+                    'unit': 'компл',
+                    'qty': 1,
+                    'price': round(delivery_price * 0.3, 2),
+                    'note': 'при удаленности > 50 км',
+                })
+    sections = {_low(it.get('section', '')) for it in result if isinstance(it, dict)}
+    if 'накладные расходы' not in sections and 'накладные' not in sections:
+        subtotal = sum(
+            float(it.get('qty') or 0) * float(it.get('price') or 0)
+            for it in result
+            if _low(it.get('section', '')) not in ('логистика', 'накладные расходы', 'накладные')
+        )
+        if subtotal > 0:
+            result.append({
+                'section': 'Накладные расходы',
+                'name': 'Организация работ и накладные',
+                'unit': 'компл',
+                'qty': 1,
+                'price': round(subtotal * 0.07, 2),
+                'note': '7% от материалов и работ',
+            })
+    return result
+
+
+def _create_xlsx_from_template(task_id: str, parsed: Dict[str, Any], template: Dict[str, Any], template_path: Optional[str], sheet_name: Optional[str], price_text: str, choice: Dict[str, Any]) -> Tuple[str, List[Dict[str, Any]], float]:  # noqa: F811
+    template_items = _t2tr_template_items(template_path, sheet_name, parsed)
+    if len(template_items) >= 20:
+        template_items = _t2tr_add_required_blocks(template_items, parsed, price_text, choice)
+        orig_build = globals().get('_build_estimate_items')
+
+        def _t2tr_build_from_template(_parsed, _price_text, _choice):
+            return template_items
+
+        globals()['_build_estimate_items'] = _t2tr_build_from_template
+        try:
+            return _T2TR_ORIG_CREATE_XLSX(task_id, parsed, template, template_path, sheet_name, price_text, choice)
+        finally:
+            globals()['_build_estimate_items'] = orig_build
+    return _T2TR_ORIG_CREATE_XLSX(task_id, parsed, template, template_path, sheet_name, price_text, choice)
+# === END_PATCH_TOPIC2_TEMPLATE_ROWS_FULL_AREAL_CALC_V1 ===
+
+# === PATCH_TOPIC2_AREA_ONLY_WITH_TEMPLATE_ALLOWED_V2 ===
+# If a project PDF has only AR/TЭП rows but a canonical full-house template is selected,
+# do not stop the task. The template matrix is the calculation basis; PDF facts are inputs.
+_T2AOT_ORIG_MISSING_QUESTION = _missing_question
+
+
+def _t2aot_rows_are_area_only(rows) -> bool:
+    usable = []
+    non_area = []
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        name = _clean(row.get('name', '')).lower().replace('ё', 'е')
+        try:
+            qty = float(row.get('qty') or 0)
+            price = float(row.get('price') or 0)
+        except Exception:
+            qty = price = 0
+        if qty <= 0 and price <= 0:
+            continue
+        usable.append(row)
+        if 'площад' not in name and 'общая' not in name:
+            non_area.append(row)
+    return bool(usable) and not non_area
+
+
+def _missing_question(parsed: Dict[str, Any]) -> Optional[str]:  # noqa: F811
+    rows = parsed.get('pdf_spec_rows') or []
+    raw = _low(parsed.get('raw') or '')
+    if _t2aot_rows_are_area_only(rows) and any(x in raw for x in ('смет', 'стоимост', 'расчет', 'расчёт', 'проект')):
+        return None
+    return _T2AOT_ORIG_MISSING_QUESTION(parsed)
+# === END_PATCH_TOPIC2_AREA_ONLY_WITH_TEMPLATE_ALLOWED_V2 ===
+# === PATCH_TOPIC2_NO_TEMPLATE_FROM_AREA_ONLY_PDF_V1 ===
+# Canon: PDF estimate contour is PDF -> table/spec rows -> normalized AREAL_CALC.
+# If PDF has only AR/TEP area facts, template rows must not become a final estimate
+# unless the user explicitly asks for an orientational calculation.
+def _t2_no_template_area_only_rows_v1(rows):
+    usable = []
+    non_area = []
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        name = _clean(row.get("name", "")).lower().replace("ё", "е")
+        try:
+            qty = float(row.get("qty") or 0)
+            price = float(row.get("price") or 0)
+        except Exception:
+            qty = price = 0
+        if qty <= 0 and price <= 0:
+            continue
+        usable.append(row)
+        if "площад" not in name and "общая" not in name:
+            non_area.append(row)
+    return bool(usable) and not non_area
+
+
+def _t2_no_template_orient_allowed_v1(parsed):
+    raw = _low((parsed or {}).get("raw") or "")
+    return any(x in raw for x in (
+        "считать ориентировочно по проекту",
+        "сделай ориентировочный расчет",
+        "сделай ориентировочный расчёт",
+        "ориентировочно по проекту",
+        "ориентировочная смета",
+        "ориентировочный расчет",
+        "ориентировочный расчёт",
+    ))
+
+
+def _t2_no_valid_pdf_rows_message_v1():
+    return (
+        "PDF прочитан, но сметная ведомость объёмов / ВОР / спецификация материалов / раздел КЖ с объёмами не найдены. "
+        "Вижу только архитектурные данные и площади, поэтому финальную смету из шаблона не создаю, чтобы не подменять расчёт догадками.\n\n"
+        "Пришли ВОР / спецификацию / КЖ с объёмами либо прямо напиши: считать ориентировочно по проекту."
+    )
+
+
+_T2NT_ORIG_MISSING_QUESTION_V1 = _missing_question
+
+
+def _missing_question(parsed: Dict[str, Any]) -> Optional[str]:  # noqa: F811
+    rows = (parsed or {}).get("pdf_spec_rows") or []
+    if _t2_no_template_area_only_rows_v1(rows) and not _t2_no_template_orient_allowed_v1(parsed):
+        return _t2_no_valid_pdf_rows_message_v1()
+    return _T2NT_ORIG_MISSING_QUESTION_V1(parsed)
+
+
+_T2NT_ORIG_GENERATE_AND_SEND_V1 = _generate_and_send
+
+
+async def _generate_and_send(conn, task, pending, confirm_text, logger=None):  # noqa: F811
+    parsed = (pending or {}).get("parsed") or {}
+    if _t2_no_template_area_only_rows_v1(parsed.get("pdf_spec_rows") or []) and not _t2_no_template_orient_allowed_v1(parsed):
+        task_id = _s(_row_get(task, "id"))
+        chat_id = _s(_row_get(task, "chat_id"))
+        topic_id = int(_row_get(task, "topic_id", 0) or 0)
+        reply_to = _row_get(task, "reply_to_message_id", None)
+        msg = _t2_no_valid_pdf_rows_message_v1()
+        try:
+            send_res = await _send_text(chat_id, msg, reply_to, topic_id)
+        except Exception:
+            send_res = {}
+        kwargs = {
+            "state": "WAITING_CLARIFICATION",
+            "result": msg,
+            "error_message": "TOPIC2_PDF_NO_VALID_ESTIMATE_ROWS",
+        }
+        if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+            kwargs["bot_message_id"] = send_res.get("bot_message_id")
+        _update_task_safe(conn, task_id, **kwargs)
+        _history_safe(conn, task_id, "TOPIC2_PDF_NO_VALID_ESTIMATE_ROWS:area_only_no_template_final")
+        return True
+    return await _T2NT_ORIG_GENERATE_AND_SEND_V1(conn, task, pending, confirm_text, logger=logger)
+
+try:
+    _STV3_LOG.info("PATCH_TOPIC2_NO_TEMPLATE_FROM_AREA_ONLY_PDF_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_NO_TEMPLATE_FROM_AREA_ONLY_PDF_V1 ===
+# === PATCH_TOPIC2_AR_PROJECT_FACT_ROWS_V1 ===
+# AR project PDFs may contain usable quantities outside formal VOR tables:
+# foundation piles/rostverk, roof area, slab schedule, window/door schedules.
+# These rows may be used only as project-derived rows; template rows are still
+# forbidden for final output when the PDF has only AR/TEP data.
+def _t2ar_num_v1(v):
+    try:
+        return float(str(v or "").replace(" ", "").replace(",", "."))
+    except Exception:
+        return 0.0
+
+
+def _t2ar_pdf_text_v1(parsed):
+    try:
+        p = (parsed or {}).get("pdf_spec_source") or (parsed or {}).get("local_path") or (parsed or {}).get("file_path")
+        if not p or not os.path.exists(str(p)):
+            return ""
+        import subprocess as _t2ar_subprocess
+        res = _t2ar_subprocess.run(["pdftotext", "-layout", str(p), "-"], capture_output=True, text=True, timeout=45)
+        return res.stdout or ""
+    except Exception:
+        return ""
+
+
+def _t2ar_add_row_v1(rows, section, name, unit, qty, note="", kind="material"):
+    try:
+        qty = float(qty)
+    except Exception:
+        qty = 0.0
+    if qty <= 0:
+        return
+    key = (section, name, unit, round(qty, 6))
+    if any((r.get("section"), r.get("name"), r.get("unit"), round(float(r.get("qty") or 0), 6)) == key for r in rows):
+        return
+    rows.append({
+        "section": section,
+        "name": name[:240],
+        "unit": unit,
+        "qty": qty,
+        "price": 0.0,
+        "kind": kind,
+        "note": (note or "из AR PDF")[:240],
+    })
+
+
+def _t2ar_project_rows_from_pdf_v1(parsed):
+    text = _t2ar_pdf_text_v1(parsed)
+    if not text:
+        return []
+    rows = []
+    low = _low(text)
+
+    m = re.search(r"Свая\s+200х200мм\s*\(3м\)\s+(\d+)", text, re.I)
+    if m:
+        _t2ar_add_row_v1(rows, "Фундамент", "Свая 200х200мм (3м)", "шт", _t2ar_num_v1(m.group(1)), "Спецификация на сваи, лист АР-08")
+
+    m = re.search(r"Ростверк\.\s*Бетон\s*B22,?5\s*W6\s*F150\s*([\d\s]+[,.]\d+)", text, re.I | re.S)
+    if m:
+        _t2ar_add_row_v1(rows, "Фундамент", "Ростверк. Бетон B22,5 W6 F150", "м3", _t2ar_num_v1(m.group(1)), "Таблица на листе АР-08; единица приведена как бетонный объем")
+
+    m = re.search(r"Площадь\s+Поверхности\s+Уклон\s+([\d\s]+[,.]\d+)\s+20", text, re.I)
+    if m:
+        _t2ar_add_row_v1(rows, "Кровля", "Площадь поверхности кровли, уклон 20°", "м2", _t2ar_num_v1(m.group(1)), "План кровли, лист АР-10")
+
+    for mark, qty in re.findall(r"\b(ПК\s*\d{2}-\d{2}-8)\s+(\d+)", text, re.I):
+        mark_clean = re.sub(r"\s+", " ", mark).strip()
+        _t2ar_add_row_v1(rows, "Перекрытия", f"Плита перекрытия {mark_clean}", "шт", _t2ar_num_v1(qty), "Спецификация плит перекрытия, лист АР-11")
+
+    m = re.search(r"Площадь\s+монолитных\s+участков\s*-\s*([\d\s]+[,.]\d+)\s*м2", text, re.I)
+    if m:
+        _t2ar_add_row_v1(rows, "Перекрытия", "Монолитные участки перекрытия", "м2", _t2ar_num_v1(m.group(1)), "План межэтажного перекрытия, лист АР-11")
+
+    m = re.search(r"Балка\s+перекрытия\s+50х200\s+([\d\s]+)\s+(\d+)", text, re.I)
+    if m:
+        _t2ar_add_row_v1(rows, "Перекрытия", "Балка перекрытия 50х200", "шт", _t2ar_num_v1(m.group(2)), f"Длина {m.group(1).strip()} мм, лист АР-11")
+
+    win_pat = re.compile(r"\b(Ок-\d+(?:,\s*бДв-1)?)\s+(\d+)\s+([0-9\s]+×[0-9\s]+)\s+([\d\s]+[,.]\d+)", re.I)
+    for mark, qty, size, area in win_pat.findall(text):
+        _t2ar_add_row_v1(rows, "Окна и двери", f"{mark.strip()} оконный/балконный блок {size.strip()}", "шт", _t2ar_num_v1(qty), f"Площадь проема {area.strip()} м2, лист АР-19")
+
+    door_pat = re.compile(r"\b(Дв-\d+|нДв-1)\s+(\d+)\s+[0-9\s]+×[0-9\s]+\s+([0-9\s]+×[0-9\s]+)\s+([\d\s]+[,.]\d+)", re.I)
+    for mark, qty, size, area in door_pat.findall(text):
+        _t2ar_add_row_v1(rows, "Окна и двери", f"{mark.strip()} дверной блок {size.strip()}", "шт", _t2ar_num_v1(qty), f"Площадь проема {area.strip()} м2, лист АР-20")
+
+    return rows
+
+
+def _t2ar_missing_from_pdf_v1(parsed):
+    text = _t2ar_pdf_text_v1(parsed)
+    low = _low(text)
+    missing = []
+    if "наружные стены дома" in low:
+        missing.append("объем/площадь наружных стен 375/300 мм")
+    if "внутренние несущие стены" in low:
+        missing.append("объем внутренних несущих стен 250 мм")
+    if "перегородки" in low:
+        missing.append("объем перегородок 150 мм и каркасных перегородок")
+    if "уточняется в разделе кж" in low or "разделе кж" in low:
+        missing.append("КЖ для ж/б балок, колонн, перемычек, армопояса и плит")
+    if "план ввода коммуникаций" in low:
+        missing.append("объемы инженерных коммуникаций")
+    return list(dict.fromkeys(missing))
+
+
+def _t2ar_project_rows_message_v1(parsed):
+    rows = _t2ar_project_rows_from_pdf_v1(parsed)
+    missing = _t2ar_missing_from_pdf_v1(parsed)
+    lines = [
+        "PDF прочитан. Нашёл проектные позиции и объёмы, которые можно использовать без шаблонной подмены:",
+    ]
+    for r in rows[:18]:
+        lines.append(f"- {r['section']}: {r['name']} — {r['qty']:g} {r['unit']}")
+    if len(rows) > 18:
+        lines.append(f"- ещё позиций: {len(rows) - 18}")
+    if missing:
+        lines.append("")
+        lines.append("Для полной сметы не хватает явных объёмов:")
+        for m in missing[:10]:
+            lines.append(f"- {m}")
+    lines.append("")
+    lines.append("Финальную смету из шаблона не создаю. Пришли недостающие объёмы/КЖ/ВОР либо напиши: считай по найденным позициям.")
+    return "\n".join(lines)
+
+
+try:
+    _T2AR_PREV_ORIENT_ALLOWED_V1 = _t2_no_template_orient_allowed_v1
+    def _t2_no_template_orient_allowed_v1(parsed):  # noqa: F811
+        raw = _low((parsed or {}).get("raw") or "") + " " + _low((parsed or {}).get("_topic2_confirm_text") or "")
+        if any(x in raw for x in ("считай по найденным позициям", "считать по найденным позициям", "только найденные позиции")):
+            return True
+        return _T2AR_PREV_ORIENT_ALLOWED_V1(parsed)
+except Exception:
+    pass
+
+
+_T2AR_PREV_MISSING_QUESTION_V1 = _missing_question
+
+
+def _missing_question(parsed: Dict[str, Any]) -> Optional[str]:  # noqa: F811
+    rows = (parsed or {}).get("pdf_spec_rows") or []
+    project_rows = _t2ar_project_rows_from_pdf_v1(parsed)
+    if _t2_no_template_area_only_rows_v1(rows) and project_rows and not _t2_no_template_orient_allowed_v1(parsed):
+        return _t2ar_project_rows_message_v1(parsed)
+    return _T2AR_PREV_MISSING_QUESTION_V1(parsed)
+
+
+_T2AR_PREV_CREATE_XLSX_V1 = _create_xlsx_from_template
+
+
+def _t2ar_keywords_for_price_v1(name):
+    low = _low(name)
+    words = [w for w in re.split(r"[^0-9a-zа-яё]+", low) if len(w) >= 3]
+    keep = [w for w in words if w not in ("лист", "проем", "проема", "площадь", "поверхности")]
+    return tuple(keep[:6]) or tuple(words[:3])
+
+
+def _create_xlsx_from_template(task_id: str, parsed: Dict[str, Any], template: Dict[str, Any], template_path: Optional[str], sheet_name: Optional[str], price_text: str, choice: Dict[str, Any]) -> Tuple[str, List[Dict[str, Any]], float]:  # noqa: F811
+    project_rows = list((parsed or {}).get("pdf_project_rows") or [])
+    if not project_rows:
+        project_rows = _t2ar_project_rows_from_pdf_v1(parsed)
+    if project_rows and _t2_no_template_orient_allowed_v1(parsed):
+        items = []
+        for r in project_rows:
+            it = dict(r)
+            vals = _numbers_from_price_text(price_text or "", _t2ar_keywords_for_price_v1(it.get("name", "")))
+            it["price"] = _choose_value(vals, choice) if vals else 0.0
+            if not vals:
+                it["note"] = (it.get("note", "") + "; PRICE_MISSING").strip("; ")
+            items.append(it)
+        orig_build = globals().get("_build_estimate_items")
+        base_create = globals().get("_T2TR_ORIG_CREATE_XLSX") or _T2AR_PREV_CREATE_XLSX_V1
+        def _t2ar_build_from_project(_parsed, _price_text, _choice):
+            return items
+        globals()["_build_estimate_items"] = _t2ar_build_from_project
+        try:
+            return base_create(task_id, parsed, template, template_path, sheet_name, price_text, choice)
+        finally:
+            globals()["_build_estimate_items"] = orig_build
+    return _T2AR_PREV_CREATE_XLSX_V1(task_id, parsed, template, template_path, sheet_name, price_text, choice)
+
+
+_T2AR_PREV_GENERATE_AND_SEND_V1 = _generate_and_send
+
+
+async def _generate_and_send(conn, task, pending, confirm_text, logger=None):  # noqa: F811
+    if isinstance(pending, dict):
+        parsed = pending.get("parsed") or {}
+        if isinstance(parsed, dict):
+            parsed["_topic2_confirm_text"] = confirm_text or ""
+            rows = _t2ar_project_rows_from_pdf_v1(parsed)
+            if rows:
+                parsed["pdf_project_rows"] = rows
+                pending["parsed"] = parsed
+                try:
+                    _history_safe(conn, _s(_row_get(task, "id")), f"TOPIC2_AR_PROJECT_ROWS_EXTRACTED:{len(rows)}")
+                except Exception:
+                    pass
+    return await _T2AR_PREV_GENERATE_AND_SEND_V1(conn, task, pending, confirm_text, logger=logger)
+
+try:
+    _STV3_LOG.info("PATCH_TOPIC2_AR_PROJECT_FACT_ROWS_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_AR_PROJECT_FACT_ROWS_V1 ===
+# === PATCH_TOPIC2_PROJECT_ROWS_CONFIRM_AND_PRICES_V1 ===
+# Explicit user clarification "считай по проекту" means:
+# - use only rows extracted from the project PDF;
+# - do not use template rows as estimate positions;
+# - use Sonar/Perplexity price search for those extracted rows.
+def _t2prcp_project_calc_requested_text_v1(value):
+    raw = _low(value or "")
+    return any(x in raw for x in (
+        "считай по проекту",
+        "считать по проекту",
+        "считать по проектной документации",
+        "считай по проектной документации",
+        "считай по найденным позициям",
+        "считать по найденным позициям",
+        "только найденные позиции",
+    ))
+
+
+def _t2prcp_history_clarified_text_v1(conn, task_id):
+    if conn is None or not task_id:
+        return ""
+    try:
+        rows = conn.execute(
+            "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'clarified:%' ORDER BY rowid DESC LIMIT 12",
+            (str(task_id),),
+        ).fetchall()
+        return "\n".join(_s(r[0]) for r in rows)
+    except Exception:
+        return ""
+
+
+try:
+    _T2PRCP_PREV_ORIENT_ALLOWED_V1 = _t2_no_template_orient_allowed_v1
+    def _t2_no_template_orient_allowed_v1(parsed):  # noqa: F811
+        raw = _low((parsed or {}).get("raw") or "")
+        raw += " " + _low((parsed or {}).get("_topic2_confirm_text") or "")
+        raw += " " + _low((parsed or {}).get("_topic2_history_clarified") or "")
+        if _t2prcp_project_calc_requested_text_v1(raw):
+            return True
+        return _T2PRCP_PREV_ORIENT_ALLOWED_V1(parsed)
+except Exception:
+    pass
+
+
+_T2PRCP_PREV_SEARCH_ONLINE_V1 = _search_prices_online
+
+
+async def _search_prices_online(parsed: Dict[str, Any], template: Dict[str, Any], sheet_name: Optional[str], conn=None, task_id=None) -> str:  # noqa: F811
+    base = await _T2PRCP_PREV_SEARCH_ONLINE_V1(parsed, template, sheet_name, conn=conn, task_id=task_id)
+    project_rows = (parsed or {}).get("pdf_project_rows") or _t2ar_project_rows_from_pdf_v1(parsed or {})
+    if not project_rows:
+        return base
+    try:
+        from core.price_enrichment import _openrouter_price_search as _project_price_search
+        lines = []
+        seen = set()
+        for row in project_rows[:22]:
+            name = _s(row.get("name"))
+            unit = _s(row.get("unit"))
+            if not name or name.lower() in seen:
+                continue
+            seen.add(name.lower())
+            if conn is not None and task_id is not None:
+                try:
+                    _history_safe(conn, task_id, f"TOPIC2_PROJECT_PRICE_SEARCH_STARTED:{name[:80]}")
+                except Exception:
+                    pass
+            offers = []
+            try:
+                offers = await asyncio.wait_for(_project_price_search(name, unit), timeout=35)
+            except Exception:
+                offers = []
+            valid = [
+                o for o in (offers or [])
+                if o.get("price") and (o.get("supplier") or o.get("url")) and o.get("status")
+            ]
+            if conn is not None and task_id is not None:
+                try:
+                    if valid:
+                        o0 = valid[0]
+                        _history_safe(conn, task_id, "TOPIC2_PROJECT_PRICE_SOURCE_FOUND:{}:{}:{}".format(
+                            name[:50], _s(o0.get("supplier"))[:50], _s(o0.get("status"))[:20]
+                        ))
+                    else:
+                        _history_safe(conn, task_id, f"TOPIC2_PROJECT_PRICE_SOURCE_MISSING:{name[:80]}")
+                except Exception:
+                    pass
+            for o in valid[:2]:
+                lines.append(
+                    "- {} | {} | {} | Санкт-Петербург и Ленинградская область | {} | {} | {}".format(
+                        name,
+                        o.get("price"),
+                        o.get("unit") or unit,
+                        o.get("supplier") or "",
+                        o.get("url") or "",
+                        o.get("checked_at") or datetime.date.today().isoformat(),
+                    )
+                )
+        if lines:
+            return (base or "") + "\n\n=== ПОИСК ПО ПРОЕКТНЫМ ПОЗИЦИЯМ ===\n" + "\n".join(lines)
+    except Exception as _t2prcp_e:
+        try:
+            if conn is not None and task_id is not None:
+                _history_safe(conn, task_id, "TOPIC2_PROJECT_PRICE_SEARCH_ERR:" + _s(_t2prcp_e)[:120])
+        except Exception:
+            pass
+    return base
+
+
+_T2PRCP_PREV_GENERATE_AND_SEND_V1 = _generate_and_send
+
+
+async def _generate_and_send(conn, task, pending, confirm_text, logger=None):  # noqa: F811
+    task_id = _s(_row_get(task, "id"))
+    if isinstance(pending, dict):
+        parsed = pending.get("parsed") or {}
+        if isinstance(parsed, dict):
+            history_text = _t2prcp_history_clarified_text_v1(conn, task_id)
+            parsed["_topic2_confirm_text"] = (confirm_text or "") + "\n" + history_text
+            parsed["_topic2_history_clarified"] = history_text
+            rows = _t2ar_project_rows_from_pdf_v1(parsed)
+            if rows:
+                parsed["pdf_project_rows"] = rows
+                pending["parsed"] = parsed
+                if _t2_no_template_orient_allowed_v1(parsed):
+                    pending["online_prices"] = ""
+                try:
+                    _history_safe(conn, task_id, f"TOPIC2_AR_PROJECT_ROWS_EXTRACTED:{len(rows)}")
+                except Exception:
+                    pass
+                if not _t2_no_template_orient_allowed_v1(parsed):
+                    chat_id = _s(_row_get(task, "chat_id"))
+                    topic_id = int(_row_get(task, "topic_id", 0) or 0)
+                    reply_to = _row_get(task, "reply_to_message_id", None)
+                    msg = _t2ar_project_rows_message_v1(parsed)
+                    try:
+                        send_res = await _send_text(chat_id, msg, reply_to, topic_id)
+                    except Exception:
+                        send_res = {}
+                    kwargs = {
+                        "state": "WAITING_CLARIFICATION",
+                        "result": msg,
+                        "error_message": "TOPIC2_WAIT_PROJECT_ROW_CONFIRMATION",
+                    }
+                    if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+                        kwargs["bot_message_id"] = send_res.get("bot_message_id")
+                    _update_task_safe(conn, task_id, **kwargs)
+                    _history_safe(conn, task_id, "TOPIC2_PROJECT_ROWS_WAITING_USER_CONFIRM")
+                    return True
+    return await _T2PRCP_PREV_GENERATE_AND_SEND_V1(conn, task, pending, confirm_text, logger=logger)
+
+try:
+    _STV3_LOG.info("PATCH_TOPIC2_PROJECT_ROWS_CONFIRM_AND_PRICES_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_PROJECT_ROWS_CONFIRM_AND_PRICES_V1 ===
+# === PATCH_TOPIC2_PROJECT_WORK_ROWS_V1 ===
+# Project-derived material/product rows require corresponding work rows for
+# "работы + материалы" totals. Work rows are derived only from extracted project
+# rows and keep the same unit/quantity; no template positions are introduced.
+def _t2pwr_work_name_v1(row):
+    name = _s((row or {}).get("name"))
+    sec = _s((row or {}).get("section"))
+    low = _low(name)
+    if "свая" in low:
+        return "Монтаж/погружение: " + name
+    if "ростверк" in low:
+        return "Устройство: " + name
+    if "кровл" in low:
+        return "Монтаж: " + name
+    if "плита перекрытия" in low:
+        return "Монтаж: " + name
+    if "монолитные участки" in low:
+        return "Устройство: " + name
+    if "балка" in low:
+        return "Монтаж: " + name
+    if "окон" in low or "двер" in low or sec == "Окна и двери":
+        return "Монтаж: " + name
+    return "Монтаж/устройство: " + name
+
+
+def _t2pwr_expand_rows_v1(rows):
+    out = []
+    seen = set()
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        base = dict(row)
+        base["kind"] = base.get("kind") or "material"
+        key = (base.get("section"), base.get("name"), base.get("unit"), base.get("qty"), base.get("kind"))
+        if key not in seen:
+            seen.add(key)
+            out.append(base)
+        work = dict(base)
+        work["name"] = _t2pwr_work_name_v1(base)
+        work["kind"] = "work"
+        work["price"] = 0.0
+        work["note"] = (_s(base.get("note")) + "; работа по проектной позиции").strip("; ")
+        key = (work.get("section"), work.get("name"), work.get("unit"), work.get("qty"), work.get("kind"))
+        if key not in seen:
+            seen.add(key)
+            out.append(work)
+    return out
+
+
+try:
+    _T2PWR_PREV_PROJECT_ROWS_V1 = _t2ar_project_rows_from_pdf_v1
+    def _t2ar_project_rows_from_pdf_v1(parsed):  # noqa: F811
+        return _t2pwr_expand_rows_v1(_T2PWR_PREV_PROJECT_ROWS_V1(parsed))
+except Exception:
+    pass
+
+
+try:
+    _T2PWR_PREV_SEARCH_V1 = _search_prices_online
+    async def _search_prices_online(parsed: Dict[str, Any], template: Dict[str, Any], sheet_name: Optional[str], conn=None, task_id=None) -> str:  # noqa: F811
+        project_rows = (parsed or {}).get("pdf_project_rows") or _t2ar_project_rows_from_pdf_v1(parsed or {})
+        if project_rows and _t2_no_template_orient_allowed_v1(parsed or {}):
+            model = os.getenv("OPENROUTER_MODEL_ONLINE", "perplexity/sonar").strip() or "perplexity/sonar"
+            if "sonar" not in model.lower():
+                raise RuntimeError(f"TOPIC2_ONLINE_MODEL_GUARD_BLOCKED_NON_SONAR:{model}")
+            if conn is not None and task_id is not None:
+                _history_safe(conn, task_id, "TOPIC2_PRICE_ENRICHMENT_STARTED")
+                _history_safe(conn, task_id, f"TOPIC2_ONLINE_MODEL_SONAR_CONFIRMED:{model}")
+            from core.price_enrichment import _openrouter_price_search as _project_price_search
+            lines = []
+            seen = set()
+            # Keep runtime bounded; rows are ordered material/work pairs from the project.
+            for row in project_rows[:44]:
+                name = _s(row.get("name"))
+                unit = _s(row.get("unit"))
+                if not name or name.lower() in seen:
+                    continue
+                seen.add(name.lower())
+                if conn is not None and task_id is not None:
+                    _history_safe(conn, task_id, f"TOPIC2_PROJECT_PRICE_SEARCH_STARTED:{name[:80]}")
+                try:
+                    offers = await asyncio.wait_for(_project_price_search(name, unit), timeout=35)
+                except Exception:
+                    offers = []
+                valid = [o for o in (offers or []) if o.get("price") and (o.get("supplier") or o.get("url")) and o.get("status")]
+                if conn is not None and task_id is not None:
+                    if valid:
+                        o0 = valid[0]
+                        _history_safe(conn, task_id, "TOPIC2_PROJECT_PRICE_SOURCE_FOUND:{}:{}:{}".format(
+                            name[:50], _s(o0.get("supplier"))[:50], _s(o0.get("status"))[:20]
+                        ))
+                    else:
+                        _history_safe(conn, task_id, f"TOPIC2_PROJECT_PRICE_SOURCE_MISSING:{name[:80]}")
+                for o in valid[:2]:
+                    lines.append(
+                        "- {} | {} | {} | Санкт-Петербург и Ленинградская область | {} | {} | {}".format(
+                            name,
+                            o.get("price"),
+                            o.get("unit") or unit,
+                            o.get("supplier") or "",
+                            o.get("url") or "",
+                            o.get("checked_at") or datetime.date.today().isoformat(),
+                        )
+                    )
+            result = "\n".join(lines)
+            if conn is not None and task_id is not None:
+                _history_safe(conn, task_id, f"TOPIC2_PRICE_ENRICHMENT_DONE:{len(result)}")
+            return result
+        return await _T2PWR_PREV_SEARCH_V1(parsed, template, sheet_name, conn=conn, task_id=task_id)
+except Exception:
+    pass
+
+try:
+    _STV3_LOG.info("PATCH_TOPIC2_PROJECT_WORK_ROWS_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_PROJECT_WORK_ROWS_V1 ===
+
+# === PATCH_TOPIC2_SAMPLE_MATRIX_MODE_V1 ===
+# "Считай по проекту" means: use project facts as input and use existing
+# estimate samples as calculation structure. It must not collapse the estimate
+# to only the rows directly extracted from the PDF unless the user explicitly
+# asks for "только найденные позиции".
+def _t2s_text_v1(parsed):
+    raw = _low((parsed or {}).get("raw") or "")
+    raw += " " + _low((parsed or {}).get("_topic2_confirm_text") or "")
+    raw += " " + _low((parsed or {}).get("_topic2_history_clarified") or "")
+    return raw
+
+
+def _t2s_project_only_requested_v1(text):
+    low = _low(text or "")
+    return any(x in low for x in (
+        "только найденные позиции",
+        "считай по найденным позициям",
+        "считать по найденным позициям",
+    ))
+
+
+def _t2s_sample_matrix_mode_v1(parsed):
+    if not isinstance(parsed, dict):
+        return False
+    text = _t2s_text_v1(parsed)
+    if not _t2prcp_project_calc_requested_text_v1(text):
+        return False
+    if _t2s_project_only_requested_v1(text):
+        return False
+    rows = parsed.get("pdf_project_rows") or []
+    if not rows:
+        try:
+            rows = _t2ar_project_rows_from_pdf_v1(parsed)
+        except Exception:
+            rows = []
+    return bool(rows)
+
+
+def _t2s_with_project_only_disabled_v1(callback):
+    guard = globals().get("_t2_no_template_orient_allowed_v1")
+
+    def _sample_matrix_guard(_parsed):
+        return False
+
+    globals()["_t2_no_template_orient_allowed_v1"] = _sample_matrix_guard
+    try:
+        return callback()
+    finally:
+        if guard is not None:
+            globals()["_t2_no_template_orient_allowed_v1"] = guard
+
+
+async def _t2s_await_project_only_disabled_v1(callback):
+    guard = globals().get("_t2_no_template_orient_allowed_v1")
+
+    def _sample_matrix_guard(_parsed):
+        return False
+
+    globals()["_t2_no_template_orient_allowed_v1"] = _sample_matrix_guard
+    try:
+        return await callback()
+    finally:
+        if guard is not None:
+            globals()["_t2_no_template_orient_allowed_v1"] = guard
+
+
+_T2S_PREV_CREATE_XLSX_V1 = _create_xlsx_from_template
+
+
+def _create_xlsx_from_template(task_id: str, parsed: Dict[str, Any], template: Dict[str, Any], template_path: Optional[str], sheet_name: Optional[str], price_text: str, choice: Dict[str, Any]) -> Tuple[str, List[Dict[str, Any]], float]:  # noqa: F811
+    if _t2s_sample_matrix_mode_v1(parsed):
+        return _t2s_with_project_only_disabled_v1(
+            lambda: _T2S_PREV_CREATE_XLSX_V1(task_id, parsed, template, template_path, sheet_name, price_text, choice)
+        )
+    return _T2S_PREV_CREATE_XLSX_V1(task_id, parsed, template, template_path, sheet_name, price_text, choice)
+
+
+_T2S_PREV_SEARCH_ONLINE_V1 = _search_prices_online
+
+
+async def _search_prices_online(parsed: Dict[str, Any], template: Dict[str, Any], sheet_name: Optional[str], conn=None, task_id=None) -> str:  # noqa: F811
+    if _t2s_sample_matrix_mode_v1(parsed):
+        model = os.getenv("OPENROUTER_MODEL_ONLINE", "perplexity/sonar").strip() or "perplexity/sonar"
+        if "sonar" not in model.lower():
+            raise RuntimeError(f"TOPIC2_ONLINE_MODEL_GUARD_BLOCKED_NON_SONAR:{model}")
+        if conn is not None and task_id is not None:
+            _history_safe(conn, task_id, "TOPIC2_SAMPLE_MATRIX_MODE:PROJECT_FACTS_PLUS_TEMPLATE_SAMPLE")
+        previous_project_search = globals().get("_T2PWR_PREV_SEARCH_V1")
+        if previous_project_search:
+            return await previous_project_search(parsed, template, sheet_name, conn=conn, task_id=task_id)
+        return await _t2s_await_project_only_disabled_v1(
+            lambda: _T2S_PREV_SEARCH_ONLINE_V1(parsed, template, sheet_name, conn=conn, task_id=task_id)
+        )
+    return await _T2S_PREV_SEARCH_ONLINE_V1(parsed, template, sheet_name, conn=conn, task_id=task_id)
+
+
+try:
+    _STV3_LOG.info("PATCH_TOPIC2_SAMPLE_MATRIX_MODE_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_SAMPLE_MATRIX_MODE_V1 ===
+
+# === PATCH_TOPIC2_STRICT_PRICE_SOURCE_MATCH_V1 ===
+# FACT ONLY: a live price source may be attached to an AREAL_CALC row only when
+# the source position and estimate row describe the same material/work family.
+_T2SPSM_PREV_MATCH_PRICE_SOURCE_V1 = _match_price_source
+
+
+def _t2spsm_words_v1(text):
+    low = _low(text or "")
+    return [w for w in re.split(r"[^0-9a-zа-яё]+", low) if len(w) >= 3]
+
+
+def _t2spsm_families_v1(text, section=""):
+    low = _low((text or "") + " " + (section or ""))
+    families = set()
+    checks = (
+        ("gasbeton", ("газобетон", "газоблок", "блок 625", "u-блок", "u блок", "лср")),
+        ("concrete", ("бетон", "монолит", "ж/б", "железобетон", "ростверк", "плита")),
+        ("rebar", ("арматур", "а500", "а240", "проволока вяз")),
+        ("wood", ("доска", "брус", "пиломат", "osb", "фанера")),
+        ("insulation", ("пенопл", "утепл", "минват", "пир", "pir")),
+        ("waterproof", ("гидроизоляц", "линокром", "мастик", "праймер")),
+        ("roof", ("кров", "стропил", "мауэрлат", "мембран", "профнастил", "черепиц")),
+        ("windows", ("окн", "окон", "пвх", "стеклопакет")),
+        ("doors", ("двер", "дверн")),
+        ("delivery", ("достав", "транспорт")),
+        ("unload", ("разгруз", "погруз")),
+        ("crane", ("кран",)),
+        ("pump", ("бетононасос",)),
+        ("masonry_work", ("кладк", "монтаж", "устройство", "работ")),
+        ("facade", ("фасад", "внешняя отделка")),
+        ("interior", ("внутрен", "отделк", "гкл", "ламинат", "плитк")),
+        ("engineering", ("электрик", "водоснаб", "канализац", "отоплен", "вентиляц", "инженер")),
+    )
+    for fam, terms in checks:
+        if any(term in low for term in terms):
+            families.add(fam)
+    return families
+
+
+def _t2spsm_useful_keywords_v1(keywords):
+    stop = {
+        "цена", "стоимость", "руб", "рублей", "санкт", "петербург", "ленинградская",
+        "область", "материал", "материалы", "строительных", "строительный", "работы",
+        "работ", "под", "ключ", "для", "при", "или", "монтаж", "устройство",
+    }
+    return [kw for kw in (keywords or []) if kw and kw not in stop and len(kw) >= 3]
+
+
+def _match_price_source(sources: List[Dict[str, Any]], item_name: str, item_section: str) -> Dict[str, Any]:  # noqa: F811
+    today = datetime.date.today().isoformat()
+    empty = {"supplier": "", "url": "", "checked_at": today, "status": "template_only"}
+    if not sources:
+        return empty
+    item_text = f"{item_name or ''} {item_section or ''}"
+    item_low = _low(item_text)
+    item_families = _t2spsm_families_v1(item_name, item_section)
+    best = None
+    best_score = 0
+    for src in sources:
+        src_pos = _s(src.get("position"))
+        src_families = _t2spsm_families_v1(src_pos)
+        if src_families:
+            if not item_families or not (src_families & item_families):
+                continue
+        keywords = _t2spsm_useful_keywords_v1(src.get("keywords") or _t2spsm_words_v1(src_pos))
+        score = sum(1 for kw in keywords if kw in item_low)
+        if src_families and item_families and (src_families & item_families):
+            score = max(score, 1)
+        min_score = 1 if (src_families & item_families) else 2
+        if score >= min_score and score > best_score:
+            best_score = score
+            best = src
+    return best if best else empty
+
+
+try:
+    _STV3_LOG.info("PATCH_TOPIC2_STRICT_PRICE_SOURCE_MATCH_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_STRICT_PRICE_SOURCE_MATCH_V1 ===
+
+# === PATCH_TOPIC2_STRICT_PRICE_SOURCE_MATCH_V2 ===
+# Narrow work-family matching: generic words "монтаж/устройство/работы" are not
+# enough to attach a live source from another section.
+def _t2spsm_families_v1(text, section=""):  # noqa: F811
+    low = _low((text or "") + " " + (section or ""))
+    families = set()
+    checks = (
+        ("gasbeton", ("газобетон", "газоблок", "блок 625", "u-блок", "u блок", "лср")),
+        ("concrete", ("бетон", "монолит", "ж/б", "железобетон", "ростверк", "плита")),
+        ("rebar", ("арматур", "а500", "а240", "проволока вяз")),
+        ("wood", ("доска", "брус", "пиломат", "osb", "фанера")),
+        ("insulation", ("пенопл", "утепл", "минват", "пир", "pir")),
+        ("waterproof", ("гидроизоляц", "линокром", "мастик", "праймер")),
+        ("roof", ("кров", "стропил", "мауэрлат", "мембран", "профнастил", "черепиц")),
+        ("windows", ("окн", "окон", "пвх", "стеклопакет")),
+        ("doors", ("двер", "дверн")),
+        ("delivery", ("достав", "транспорт")),
+        ("unload", ("разгруз", "погруз")),
+        ("crane", ("кран",)),
+        ("pump", ("бетононасос",)),
+        ("masonry_work", ("кладк",)),
+        ("facade", ("фасад", "внешняя отделка")),
+        ("interior", ("внутрен", "отделк", "гкл", "ламинат", "плитк")),
+        ("engineering", ("электрик", "водоснаб", "канализац", "отоплен", "вентиляц", "инженер")),
+    )
+    for fam, terms in checks:
+        if any(term in low for term in terms):
+            families.add(fam)
+    return families
+
+
+try:
+    _STV3_LOG.info("PATCH_TOPIC2_STRICT_PRICE_SOURCE_MATCH_V2 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_STRICT_PRICE_SOURCE_MATCH_V2 ===

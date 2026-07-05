@@ -1,7 +1,7 @@
 # SINGLE_MODEL_FULL_CONTEXT
 
-GENERATED_AT: 2026-07-05T20:22:24.813567+00:00
-GIT_SHA: af84678ea309a2c12a624ccb89aa3004bef14a77
+GENERATED_AT: 2026-07-05T22:22:27.251895+00:00
+GIT_SHA: dc8998f1d941a94cee3bd2cddc1d082462d7475b
 PURPOSE: Один файл с полным контекстом проекта для любой модели
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 
@@ -22,7 +22,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 | topic_id | name | status | active | failed_24h |
 |----------|------|--------|--------|------------|
 | 0 | COMMON | UNKNOWN | 0 | 0 |
-| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 1 | 5 |
+| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 0 | 6 |
 | 5 | TEKHNADZOR | UNKNOWN | 0 | 0 |
 | 11 | VIDEO | UNKNOWN | 0 | 0 |
 | 210 | PROEKTIROVANIE | UNKNOWN | 0 | 0 |
@@ -3973,7 +3973,7 @@ DIRECTIONS_BOUND: Общий
 - 71aa047d | 2026-07-04 17:50:39 | INVALID_RESULT_GATE
     history: reply_sent:invalid_result
     history: state:FAILED
-    history: result:Тест после восстановления системы выполнен. Система функционирует в штатном режиме. 
+    history: result:Тест после восстановления системы выполнен. Система функционирует в штатном режиме.
 
 Архивны
 - 66b9f841 | 2026-05-02 00:23:59 | INVALID_RESULT_GATE
@@ -3995,8 +3995,8 @@ I canno
 ```
 # topic_0 COMMON
 
-GENERATED_AT: 2026-07-05T20:22:24.491316+00:00
-GIT_SHA: af84678ea309a2c12a624ccb89aa3004bef14a77
+GENERATED_AT: 2026-07-05T22:22:26.922142+00:00
+GIT_SHA: dc8998f1d941a94cee3bd2cddc1d082462d7475b
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 0
@@ -4073,10 +4073,14 @@ STATUS: SYNCED_LOCAL
 ## TOPIC_2_STROYKA
 
 STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE: 1  FAILED_24H: 5
+ACTIVE: 0  FAILED_24H: 6
 DIRECTIONS_BOUND: Сметы
 
 ### LAST_FAILED (5)
+- bd0d5ae1 | 2026-07-05 23:45:23 | STALE_TIMEOUT
+    history: reply_sent:stale_failed
+    history: state:FAILED
+    history: TOPIC2_FRUSTRATION_REPLY_REROUTED:from=dfccdbfe-92e3-4fbb-9e16-5450a3fa6479:text=[VOICE] Все есть в
 - 9c5946d7 | 2026-07-05 20:14:13 | STALE_TIMEOUT
     history: reply_sent:stale_failed
     history: state:FAILED
@@ -4093,10 +4097,6 @@ DIRECTIONS_BOUND: Сметы
     history: reply_sent:stale_failed
     history: state:FAILED
     history: TOPIC2_CANONICAL_REROUTE_V2:CANONICAL_HANDLED
-- 29331db4 | 2026-07-05 10:24:54 | STALE_TIMEOUT
-    history: USER_CANCELLED_RESTART_AS_NEW
-    history: state:FAILED
-    history: reply_sent:drive_file_no_intent_offer
 
 ### KEY_ENGINE_CODE (head 250 lines each)
 #### core/sample_template_engine.py
@@ -4865,30 +4865,29 @@ def _write_xlsx(path: Path, items: List[Dict[str, Any]], source_text: str, photo
 ```
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-07-05T20:22:24.527774+00:00
-GIT_SHA: af84678ea309a2c12a624ccb89aa3004bef14a77
+GENERATED_AT: 2026-07-05T22:22:26.956753+00:00
+GIT_SHA: dc8998f1d941a94cee3bd2cddc1d082462d7475b
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
 ROLE: Сметы
 DIRECTIONS_BOUND: estimates
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE_TASKS: 1
-FAILED_LAST_24H: 5
+ACTIVE_TASKS: 0
+FAILED_LAST_24H: 6
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 12
-- AWAITING_CONFIRMATION: 1
-- CANCELLED: 142
-- DONE: 202
-- FAILED: 142
+- CANCELLED: 143
+- DONE: 205
+- FAILED: 143
 
 ## LATEST_FAILED
+- bd0d5ae1 | STALE_TIMEOUT
 - 9c5946d7 | STALE_TIMEOUT
 - ea794751 | NO_VALID_ARTIFACT
 - 16b3b2e6 | STALE_TIMEOUT
 - dfdc5ca5 | STALE_TIMEOUT
-- 29331db4 | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
 - 844fafb|topic2: close PDF estimate confirmation flow
@@ -4910,21 +4909,21 @@ FAILED_LAST_24H: 5
 - clarified:100 км
 - clarified:Сделай мне полную смету
 - clarified:Нет тебе необходимо выполнить по моему заданию ты считаешь новую смету
-- clarified:Мне нужна смета на дом 10 на 10 фундамент толщиной 400 мм удалённость 
+- clarified:Мне нужна смета на дом 10 на 10 фундамент толщиной 400 мм удалённость
 - clarified:3
 - clarified:Жду тогда
 - clarified:Сделай мне расчёт дом два этажа на монолитный плите толщиной 450 разме
-- TOPIC2_RUNTIME_REQUEUE_FROM_LATEST_CLARIFIED_V1
-- P6E67_PARENT_NOT_FOUND
-- P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION
-- TOPIC2_RUNTIME_REQUEUE_AFTER_LATE_CONDITION_V1
-- TOPIC2_LATE_P6E67_CLARIFIED_RESCUE_V1:STARTED
-- TOPIC2_REVISION_BOUND_TO_PARENT:11236
-- TOPIC2_LATE_P6E67_CLARIFIED_RESCUE_V1:CANON_HANDLED
 - clarified:Вот задачу мне выполнить
-- TOPIC2_RUNTIME_REQUEUE_AFTER_CLEAR_REPLY_V1
-- TOPIC2_REVISION_BOUND_TO_PARENT:e3a3d684-1eaa-4b9f-8ed3-6c6565b95e86
-- TOPIC2_RUNTIME_REQUEUE_AFTER_SKIP_STALE_CLARIFICATIONS_V1
+- clarified:1
+- created:NEW_TOPIC2_LIVE_CANON_TEST
+- clarified:Максимальная
+- created:NEW_TOPIC2_LIVE_CANON_TEST_AFTER_P3_GUARD
+- clarified:максималка
+- created:NEW_TOPIC2_LIVE_CANON_TEST_AFTER_GUARD_MOVE
+- clarified:Минимальное
+- clarified:150 км
+- clarified:24 на 24
+- clarified:150
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210
@@ -4998,7 +4997,6 @@ PATCH_TOPIC2_FULL_GAP_CLOSE_V4
 
 ## MARKERS_MISSING
 - TOPIC2_TEMPLATE_SELECTED
-- TOPIC2_PRICE_ENRICHMENT_DONE
 - TOPIC2_LOGISTICS_CONFIRMED
 
 ## REGRESSION_GUARDS
@@ -5575,8 +5573,8 @@ _P6H5_NORMATIVE_EXPAND = [
 ```
 # topic_5 TEKHNADZOR
 
-GENERATED_AT: 2026-07-05T20:22:24.561201+00:00
-GIT_SHA: af84678ea309a2c12a624ccb89aa3004bef14a77
+GENERATED_AT: 2026-07-05T22:22:26.995945+00:00
+GIT_SHA: dc8998f1d941a94cee3bd2cddc1d082462d7475b
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 5
@@ -5678,8 +5676,8 @@ DIRECTIONS_BOUND: Видео
 ```
 # topic_11 VIDEO
 
-GENERATED_AT: 2026-07-05T20:22:24.590654+00:00
-GIT_SHA: af84678ea309a2c12a624ccb89aa3004bef14a77
+GENERATED_AT: 2026-07-05T22:22:27.025738+00:00
+GIT_SHA: dc8998f1d941a94cee3bd2cddc1d082462d7475b
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 11
@@ -6288,8 +6286,8 @@ def _normalize_sheet_register(template: Dict[str, Any], data: Dict[str, Any]) ->
 ```
 # topic_210 PROEKTIROVANIE
 
-GENERATED_AT: 2026-07-05T20:22:24.625668+00:00
-GIT_SHA: af84678ea309a2c12a624ccb89aa3004bef14a77
+GENERATED_AT: 2026-07-05T22:22:27.057717+00:00
+GIT_SHA: dc8998f1d941a94cee3bd2cddc1d082462d7475b
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 210
@@ -6855,8 +6853,8 @@ except Exception:
 ```
 # topic_500 VEB_POISK
 
-GENERATED_AT: 2026-07-05T20:22:24.655943+00:00
-GIT_SHA: af84678ea309a2c12a624ccb89aa3004bef14a77
+GENERATED_AT: 2026-07-05T22:22:27.089596+00:00
+GIT_SHA: dc8998f1d941a94cee3bd2cddc1d082462d7475b
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 500
@@ -6958,8 +6956,8 @@ DIRECTIONS_BOUND: Сервер DevOps
 ```
 # topic_794 DEVOPS
 
-GENERATED_AT: 2026-07-05T20:22:24.684106+00:00
-GIT_SHA: af84678ea309a2c12a624ccb89aa3004bef14a77
+GENERATED_AT: 2026-07-05T22:22:27.117613+00:00
+GIT_SHA: dc8998f1d941a94cee3bd2cddc1d082462d7475b
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 794
@@ -7054,8 +7052,8 @@ DIRECTIONS_BOUND: Автозапчасти
 ```
 # topic_961 AVTOZAPCHASTI
 
-GENERATED_AT: 2026-07-05T20:22:24.714567+00:00
-GIT_SHA: af84678ea309a2c12a624ccb89aa3004bef14a77
+GENERATED_AT: 2026-07-05T22:22:27.149507+00:00
+GIT_SHA: dc8998f1d941a94cee3bd2cddc1d082462d7475b
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 961
@@ -7147,8 +7145,8 @@ DIRECTIONS_BOUND: Мозги оркестра
 ```
 # topic_3008 KODY_MOZGOV
 
-GENERATED_AT: 2026-07-05T20:22:24.747189+00:00
-GIT_SHA: af84678ea309a2c12a624ccb89aa3004bef14a77
+GENERATED_AT: 2026-07-05T22:22:27.181266+00:00
+GIT_SHA: dc8998f1d941a94cee3bd2cddc1d082462d7475b
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 3008
@@ -7251,8 +7249,8 @@ DIRECTIONS_BOUND: CRM лиды
 ```
 # topic_4569 CRM_LEADS
 
-GENERATED_AT: 2026-07-05T20:22:24.775536+00:00
-GIT_SHA: af84678ea309a2c12a624ccb89aa3004bef14a77
+GENERATED_AT: 2026-07-05T22:22:27.210913+00:00
+GIT_SHA: dc8998f1d941a94cee3bd2cddc1d082462d7475b
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 4569
@@ -7343,9 +7341,9 @@ DIRECTIONS_BOUND: Поиск работы
     history: result:На данный момент информация о первом запросе в этом чате отсутствует в архиве. Если требуется
 - b07ceef8 | 2026-05-01 22:19:22 | FORBIDDEN_PHRASE
     history: ROLE_SAVED:поиска работы и интеграции с биржами труда
-    history: result:Этот чат предназначен для поиска работы и интеграции с биржами труда. 
+    history: result:Этот чат предназначен для поиска работы и интеграции с биржами труда.
 
-За последние 24 часа 
+За последние 24 часа
     history: result:За последние 24 часа в этом чате не было выполнено задач. История пуста. Если вам нужно что-т
 - 711bdcd3 | 2026-05-01 22:19:04 | FORBIDDEN_PHRASE
     history: ROLE_SAVED:поиска работы и интеграции с биржами труда
@@ -7360,8 +7358,8 @@ DIRECTIONS_BOUND: Поиск работы
 ```
 # topic_6104 JOB_SEARCH
 
-GENERATED_AT: 2026-07-05T20:22:24.803612+00:00
-GIT_SHA: af84678ea309a2c12a624ccb89aa3004bef14a77
+GENERATED_AT: 2026-07-05T22:22:27.242953+00:00
+GIT_SHA: dc8998f1d941a94cee3bd2cddc1d082462d7475b
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 6104

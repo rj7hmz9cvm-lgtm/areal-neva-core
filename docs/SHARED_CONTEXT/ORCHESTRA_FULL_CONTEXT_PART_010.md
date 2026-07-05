@@ -1,7 +1,7 @@
 # ORCHESTRA_FULL_CONTEXT_PART_010
-generated_at_utc: 2026-07-05T20:22:24.427396+00:00
-git_sha_before_commit: af84678ea309a2c12a624ccb89aa3004bef14a77
-part: 10/18
+generated_at_utc: 2026-07-05T22:22:26.856954+00:00
+git_sha_before_commit: dc8998f1d941a94cee3bd2cddc1d082462d7475b
+part: 10/19
 
 
 ====================================================================================================
@@ -5997,7 +5997,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/price_enrichment.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 6ea8461a55b464faa46bf4cab8ed93fcb6b8a40e9585d31a5207880abfea55e8
+SHA256_FULL_FILE: f435fc38adb33dbf4974233925034cad9e1263ff626ebc93cdfffeb04b4df63b
 ====================================================================================================
 # === WEB_SEARCH_PRICE_ENRICHMENT_V1 ===
 # === PRICE_CONFIRMATION_BEFORE_ESTIMATE_V1 ===
@@ -6006,6 +6006,7 @@ from __future__ import annotations
 import os
 import re
 import json
+import hashlib
 import sqlite3
 import tempfile
 from pathlib import Path
@@ -6056,6 +6057,64 @@ def _safe_key(v: Any, limit: int = 80) -> str:
 
 def _cache_path(chat_id: str, topic_id: int) -> Path:
     return PRICE_DIR / f"PENDING__chat_{_safe_key(chat_id)}__topic_{int(topic_id or 0)}.json"
+
+
+def _price_search_cache_path(item_name: str, unit: str, region: str, model: str) -> Path:
+    raw = "|".join((_low(region), _low(item_name), _low(unit), _low(model)))
+    digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:24]
+    return PRICE_DIR / f"SEARCH__{digest}.json"
+
+
+def _load_price_search_cache(item_name: str, unit: str, region: str, model: str, max_age_seconds: int = 86400) -> List[Dict[str, Any]]:
+    try:
+        path = _price_search_cache_path(item_name, unit, region, model)
+        if not path.exists():
+            return []
+        data = json.loads(path.read_text(encoding="utf-8"))
+        saved_at = _s(data.get("saved_at"))
+        if saved_at:
+            age = (datetime.now(timezone.utc) - datetime.fromisoformat(saved_at.replace("Z", "+00:00"))).total_seconds()
+            if age < 0 or age > max_age_seconds:
+                return []
+        offers = data.get("offers")
+        if not isinstance(offers, list):
+            return []
+        clean = []
+        for offer in offers:
+            if not isinstance(offer, dict):
+                continue
+            if offer.get("price") and (offer.get("supplier") or offer.get("url")) and offer.get("status"):
+                cached = dict(offer)
+                cached["cache_hit"] = True
+                clean.append(cached)
+        return clean[:5]
+    except Exception:
+        return []
+
+
+def _save_price_search_cache(item_name: str, unit: str, region: str, model: str, offers: List[Dict[str, Any]]) -> None:
+    try:
+        valid = [
+            dict(o) for o in (offers or [])
+            if isinstance(o, dict) and o.get("price") and (o.get("supplier") or o.get("url")) and o.get("status")
+        ]
+        if not valid:
+            return
+        path = _price_search_cache_path(item_name, unit, region, model)
+        payload = {
+            "version": "PRICE_SEARCH_CACHE_V1",
+            "saved_at": _now(),
+            "region": region,
+            "item_name": item_name,
+            "unit": unit,
+            "model": model,
+            "offers": valid[:5],
+        }
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp.replace(path)
+    except Exception:
+        return
 
 
 def _is_web_price_request(text: str) -> bool:
@@ -6145,10 +6204,6 @@ def _parse_json_from_text(text: str) -> Any:
 
 async def _openrouter_price_search(item_name: str, unit: str = "", region: str = "Санкт-Петербург") -> List[Dict[str, Any]]:
     # PRICE_SEARCH_MULTI_SOURCE_V1
-    api_key = <REDACTED_SECRET>"OPENROUTER_API_KEY") or "").strip()
-    if not api_key:
-        return []
-
     model = (os.getenv("OPENROUTER_MODEL_ONLINE") or "perplexity/sonar").strip()
     # PATCH_OPENROUTER_ONLINE_ONLY_FOR_TOPIC2_PRICE_SEARCH_V1 begin
     import logging as _pe_log
@@ -6160,6 +6215,17 @@ async def _openrouter_price_search(item_name: str, unit: str = "", region: str =
         return []
     _pe_logger.info(f"ONLINE_MODEL_SONAR_CONFIRMED: model={model!r}")
     # PATCH_OPENROUTER_ONLINE_ONLY_FOR_TOPIC2_PRICE_SEARCH_V1 end
+
+    cached = _load_price_search_cache(item_name, unit, region, model)
+    if cached:
+        _pe_logger.info("PRICE_SEARCH_CACHE_HIT: item=%r unit=%r region=%r offers=%s", item_name, unit, region, len(cached))
+        return cached
+    _pe_logger.info("PRICE_SEARCH_CACHE_MISS: item=%r unit=%r region=%r", item_name, unit, region)
+
+    api_key = <REDACTED_SECRET>"OPENROUTER_API_KEY") or "").strip()
+    if not api_key:
+        return []
+
     base_url = (os.getenv("OPENROUTER_BASE_URL") or "https://openrouter.ai/api/v1").strip().rstrip("/")
 
     source_queries = [
@@ -6252,6 +6318,7 @@ async def _openrouter_price_search(item_name: str, unit: str = "", region: str =
         merged[0]["risk"] = "high"
         merged[0]["note"] = "Цены уточняются — найден только один источник"
 
+    _save_price_search_cache(item_name, unit, region, model, merged)
     return merged[:5]
 
 def _fallback_offer(item_name: str, unit: str = "") -> List[Dict[str, Any]]:
@@ -6851,7 +6918,6 @@ async def maybe_handle_price_enrichment_from_template_engine(
 
 _TPTI_LOG.info("PATCH_TOPIC2_PRICE_THREAD_ISOLATION_V1 installed")
 # === END_PATCH_TOPIC2_PRICE_THREAD_ISOLATION_V1 ===
-
 
 ====================================================================================================
 END_FILE: core/price_enrichment.py

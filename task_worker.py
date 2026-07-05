@@ -15187,9 +15187,9 @@ _TCG_LOG = _tcg_logging.getLogger("task_worker.cancel_guard")
 
 _TCG_CANCEL_RE = _tcg_re.compile(
     r"(?:^|\s)(?:\[VOICE\]\s*)?"
-    r"(отмена|отбой|стоп|заверши|завершена|закрой|закрывай|очисти|"
-    r"отменяй|задача отменена|отмена задач|все задачи завершен|"
-    r"отбой всех|очисти все|задача завершена)",
+    r"(отмена|отбой|стоп|закрой|закрывай|очисти|"
+    r"отменяй|задача отменена|отмена задач|"
+    r"отбой всех|очисти все)",
     _tcg_re.IGNORECASE
 )
 
@@ -20278,7 +20278,7 @@ try:
 
         if "8.0 x 12.0" in ctx or "8х12" in low or "8x12" in low or "8 на 12" in low:
             facts.append("Размеры: 8.0 x 12.0 м")
-        if "1 этаж" in low or "этажей: 1" in low or "clarified:1" in low:
+        if "этажей: 1" in low or "этажность: 1" in low:
             facts.append("Этажность: 1 этаж")
         if "сэндвич" in low or "стеновая панель" in low or "стеновые панели" in low:
             facts.append("Стены: сэндвич-панели 120 мм")
@@ -20518,7 +20518,7 @@ try:
         out = []
         if "8.0 x 12.0" in ctx or "8х12" in low or "8x12" in low:
             out.append("Размеры: 8.0 x 12.0 м")
-        if "1 этаж" in low or "этажей: 1" in low:
+        if "этажей: 1" in low or "этажность: 1" in low:
             out.append("Этажность: 1 этаж")
         if "сэндвич" in low or "стеновая панель" in low or "стеновые панели" in low:
             out.append("Стены: сэндвич-панели 120 мм")
@@ -26610,6 +26610,400 @@ except Exception as _t2zg_install_err:
     except Exception:
         pass
 # === END_PATCH_TOPIC2_ZERO_RESULT_HARD_GATE_V1 ===
+
+# === PATCH_TOPIC2_DRIVE_FILE_PICKER_CLARIFIED_CANON_V1 ===
+# Canon basis:
+# - topic_2 drive_file + explicit estimate clarification must enter canonical estimate flow;
+# - the no-intent picker is only a clarification step, not a final result;
+# - no cross-topic routing and no systemd/env/search architecture changes.
+try:
+    import json as _t2dfc_json
+    import re as _t2dfc_re
+    import inspect as _t2dfc_inspect
+    import logging as _t2dfc_logging
+
+    _T2DFC_LOG = _t2dfc_logging.getLogger("task_worker")
+    _T2DFC_ORIG_HANDLE_IN_PROGRESS = globals().get("_handle_in_progress")
+
+    def _t2dfc_s(v):
+        return "" if v is None else str(v)
+
+    def _t2dfc_get(task, key, default=None):
+        try:
+            if isinstance(task, dict):
+                return task.get(key, default)
+        except Exception:
+            pass
+        try:
+            if hasattr(task, "keys") and key in task.keys():
+                return task[key]
+        except Exception:
+            pass
+        try:
+            return _task_field(task, key, default)
+        except Exception:
+            return default
+
+    def _t2dfc_low(v):
+        return _t2dfc_s(v).lower().replace("ё", "е")
+
+    def _t2dfc_estimate_intent(text):
+        t = _t2dfc_low(text)
+        if _t2dfc_re.match(r"^\s*1\s*([\).:-]|$)", t):
+            return True
+        return any(w in t for w in (
+            "смет", "расчет", "расчёт", "стоимост", "цены", "материал",
+            "работ", "строительств", "проектной документац", "excel", "xlsx",
+        ))
+
+    def _t2dfc_file_meta(raw):
+        try:
+            data = _t2dfc_json.loads(_t2dfc_s(raw))
+            return data if isinstance(data, dict) else {}
+        except Exception:
+            return {}
+
+    def _t2dfc_latest_clarified(conn, task_id):
+        try:
+            row = conn.execute(
+                """
+                SELECT action FROM task_history
+                WHERE task_id=? AND action LIKE 'clarified:%'
+                ORDER BY rowid DESC LIMIT 1
+                """,
+                (str(task_id),),
+            ).fetchone()
+            if row:
+                return _t2dfc_s(row[0]).split("clarified:", 1)[1]
+        except Exception:
+            pass
+        return ""
+
+    def _t2dfc_hist_once(conn, task_id, action):
+        try:
+            if not conn.execute(
+                "SELECT 1 FROM task_history WHERE task_id=? AND action=? LIMIT 1",
+                (str(task_id), str(action)),
+            ).fetchone():
+                conn.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (str(task_id), str(action)),
+                )
+        except Exception:
+            pass
+
+    def _t2dfc_task_dict(task, raw_input):
+        data = {}
+        try:
+            for k in task.keys():
+                data[k] = task[k]
+        except Exception:
+            try:
+                data = dict(task) if isinstance(task, dict) else {}
+            except Exception:
+                data = {}
+        data["raw_input"] = raw_input
+        data["state"] = "IN_PROGRESS"
+        data["error_message"] = ""
+        data["result"] = ""
+        data["input_type"] = "drive_file"
+        data["topic_id"] = 2
+        return data
+
+    if _T2DFC_ORIG_HANDLE_IN_PROGRESS and not getattr(_T2DFC_ORIG_HANDLE_IN_PROGRESS, "_t2dfc_wrapped", False):
+        async def _handle_in_progress(conn, task, *args, **kwargs):  # noqa: F811
+            try:
+                task_id = _t2dfc_s(_t2dfc_get(task, "id", ""))
+                topic_id = int(_t2dfc_get(task, "topic_id", kwargs.get("topic_id", 0)) or 0)
+                input_type = _t2dfc_low(_t2dfc_get(task, "input_type", ""))
+                err = _t2dfc_s(_t2dfc_get(task, "error_message", ""))
+                result = _t2dfc_s(_t2dfc_get(task, "result", ""))
+                raw = _t2dfc_s(_t2dfc_get(task, "raw_input", ""))
+                if task_id and topic_id == 2 and input_type == "drive_file":
+                    stuck_on_picker = (
+                        "DRIVE_FILE_NO_INTENT_OFFER_V1" in err
+                        or "Что нужно сделать?" in result
+                    )
+                    clarified = _t2dfc_latest_clarified(conn, task_id)
+                    if stuck_on_picker and _t2dfc_estimate_intent(clarified):
+                        meta = _t2dfc_file_meta(raw)
+                        if meta:
+                            old_caption = _t2dfc_s(meta.get("caption", "")).strip()
+                            meta["caption"] = (old_caption + "\n" + clarified).strip() if old_caption else clarified.strip()
+                            meta["topic2_clarified_estimate_intent"] = True
+                            new_raw = _t2dfc_json.dumps(meta, ensure_ascii=False)
+                            conn.execute(
+                                "UPDATE tasks SET raw_input=?, state='IN_PROGRESS', result='', error_message='', updated_at=datetime('now') WHERE id=?",
+                                (new_raw, task_id),
+                            )
+                            _t2dfc_hist_once(conn, task_id, "PATCH_TOPIC2_DRIVE_FILE_PICKER_CLARIFIED_CANON_V1:ROUTE_CANONICAL")
+                            conn.commit()
+                            h_drive = globals().get("_handle_drive_file")
+                            if h_drive:
+                                chat_id = _t2dfc_s(_t2dfc_get(task, "chat_id", args[0] if args else ""))
+                                task2 = _t2dfc_task_dict(task, new_raw)
+                                res = h_drive(conn, task2, chat_id, 2)
+                                if _t2dfc_inspect.isawaitable(res):
+                                    return await res
+                                return res
+            except Exception as e:
+                try:
+                    _T2DFC_LOG.warning("PATCH_TOPIC2_DRIVE_FILE_PICKER_CLARIFIED_CANON_V1_ERR %s", e)
+                except Exception:
+                    pass
+            res = _T2DFC_ORIG_HANDLE_IN_PROGRESS(conn, task, *args, **kwargs)
+            if _t2dfc_inspect.isawaitable(res):
+                return await res
+            return res
+
+        _handle_in_progress._t2dfc_wrapped = True
+        globals()["_handle_in_progress"] = _handle_in_progress
+        _T2DFC_LOG.info("PATCH_TOPIC2_DRIVE_FILE_PICKER_CLARIFIED_CANON_V1 installed")
+except Exception as _t2dfc_install_err:
+    try:
+        logging.getLogger("task_worker").exception(
+            "PATCH_TOPIC2_DRIVE_FILE_PICKER_CLARIFIED_CANON_V1_INSTALL_ERR %s",
+            _t2dfc_install_err,
+        )
+    except Exception:
+        pass
+# === END_PATCH_TOPIC2_DRIVE_FILE_PICKER_CLARIFIED_CANON_V1 ===
+
+# === PATCH_TOPIC2_DRIVE_FILE_PICKER_CLARIFIED_DRIVEFILE_V1 ===
+# Same canon as CLARIFIED_CANON_V1, but on the drive_file handler path.
+# The worker dispatches active drive_file tasks through _handle_drive_file, so the
+# clarified estimate intent must be attached before DRIVE_FILE_NO_INTENT_OFFER_V1.
+try:
+    import json as _t2dfd_json
+    import re as _t2dfd_re
+    import inspect as _t2dfd_inspect
+    import logging as _t2dfd_logging
+
+    _T2DFD_LOG = _t2dfd_logging.getLogger("task_worker")
+    _T2DFD_ORIG_HANDLE_DRIVE_FILE = globals().get("_handle_drive_file")
+
+    def _t2dfd_s(v):
+        return "" if v is None else str(v)
+
+    def _t2dfd_get(task, key, default=None):
+        try:
+            if isinstance(task, dict):
+                return task.get(key, default)
+        except Exception:
+            pass
+        try:
+            if hasattr(task, "keys") and key in task.keys():
+                return task[key]
+        except Exception:
+            pass
+        try:
+            return _task_field(task, key, default)
+        except Exception:
+            return default
+
+    def _t2dfd_low(v):
+        return _t2dfd_s(v).lower().replace("ё", "е")
+
+    def _t2dfd_estimate_intent(text):
+        t = _t2dfd_low(text)
+        if _t2dfd_re.match(r"^\s*1\s*([\).:-]|$)", t):
+            return True
+        return any(w in t for w in (
+            "смет", "расчет", "расчёт", "стоимост", "цены", "материал",
+            "работ", "строительств", "проектной документац", "excel", "xlsx",
+        ))
+
+    def _t2dfd_latest_clarified(conn, task_id):
+        try:
+            row = conn.execute(
+                """
+                SELECT action FROM task_history
+                WHERE task_id=? AND action LIKE 'clarified:%'
+                ORDER BY rowid DESC LIMIT 1
+                """,
+                (str(task_id),),
+            ).fetchone()
+            if row:
+                return _t2dfd_s(row[0]).split("clarified:", 1)[1]
+        except Exception:
+            pass
+        return ""
+
+    def _t2dfd_hist_once(conn, task_id, action):
+        try:
+            if not conn.execute(
+                "SELECT 1 FROM task_history WHERE task_id=? AND action=? LIMIT 1",
+                (str(task_id), str(action)),
+            ).fetchone():
+                conn.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (str(task_id), str(action)),
+                )
+        except Exception:
+            pass
+
+    def _t2dfd_task_dict(task, raw_input):
+        data = {}
+        try:
+            for k in task.keys():
+                data[k] = task[k]
+        except Exception:
+            try:
+                data = dict(task) if isinstance(task, dict) else {}
+            except Exception:
+                data = {}
+        data["raw_input"] = raw_input
+        data["state"] = "IN_PROGRESS"
+        data["error_message"] = ""
+        data["result"] = ""
+        data["input_type"] = "drive_file"
+        data["topic_id"] = 2
+        return data
+
+    if _T2DFD_ORIG_HANDLE_DRIVE_FILE and not getattr(_T2DFD_ORIG_HANDLE_DRIVE_FILE, "_t2dfd_wrapped", False):
+        async def _handle_drive_file(conn, task, chat_id, topic_id):  # noqa: F811
+            try:
+                topic_i = int(topic_id or _t2dfd_get(task, "topic_id", 0) or 0)
+                task_id = _t2dfd_s(_t2dfd_get(task, "id", ""))
+                raw = _t2dfd_s(_t2dfd_get(task, "raw_input", ""))
+                if task_id and topic_i == 2:
+                    try:
+                        meta = _t2dfd_json.loads(raw)
+                        if not isinstance(meta, dict):
+                            meta = {}
+                    except Exception:
+                        meta = {}
+                    clarified = _t2dfd_latest_clarified(conn, task_id)
+                    already = bool(meta.get("topic2_clarified_estimate_intent"))
+                    if meta and clarified and not already and _t2dfd_estimate_intent(clarified):
+                        old_caption = _t2dfd_s(meta.get("caption", "")).strip()
+                        meta["caption"] = (old_caption + "\n" + clarified).strip() if old_caption else clarified.strip()
+                        meta["topic2_clarified_estimate_intent"] = True
+                        new_raw = _t2dfd_json.dumps(meta, ensure_ascii=False)
+                        conn.execute(
+                            "UPDATE tasks SET raw_input=?, state='IN_PROGRESS', result='', error_message='', updated_at=datetime('now') WHERE id=?",
+                            (new_raw, task_id),
+                        )
+                        _t2dfd_hist_once(conn, task_id, "PATCH_TOPIC2_DRIVE_FILE_PICKER_CLARIFIED_DRIVEFILE_V1:CAPTION_FROM_CLARIFIED")
+                        conn.commit()
+                        task = _t2dfd_task_dict(task, new_raw)
+            except Exception as e:
+                try:
+                    _T2DFD_LOG.warning("PATCH_TOPIC2_DRIVE_FILE_PICKER_CLARIFIED_DRIVEFILE_V1_ERR %s", e)
+                except Exception:
+                    pass
+            res = _T2DFD_ORIG_HANDLE_DRIVE_FILE(conn, task, chat_id, topic_id)
+            if _t2dfd_inspect.isawaitable(res):
+                return await res
+            return res
+
+        _handle_drive_file._t2dfd_wrapped = True
+        globals()["_handle_drive_file"] = _handle_drive_file
+        _T2DFD_LOG.info("PATCH_TOPIC2_DRIVE_FILE_PICKER_CLARIFIED_DRIVEFILE_V1 installed")
+except Exception as _t2dfd_install_err:
+    try:
+        logging.getLogger("task_worker").exception(
+            "PATCH_TOPIC2_DRIVE_FILE_PICKER_CLARIFIED_DRIVEFILE_V1_INSTALL_ERR %s",
+            _t2dfd_install_err,
+        )
+    except Exception:
+        pass
+# === END_PATCH_TOPIC2_DRIVE_FILE_PICKER_CLARIFIED_DRIVEFILE_V1 ===
+
+# === PATCH_TOPIC2_DRIVE_FINAL_USE_CANON_GENERATE_V2 ===
+# Price-confirmed drive_file topic_2 finals must use stroyka canonical
+# template generator, not the standalone short final_close path.
+try:
+    import re as _t2dfcg_re
+
+    def _t2dfcg_num(v):
+        try:
+            return float(str(v or '').replace(' ', '').replace(',', '.'))
+        except Exception:
+            return 0.0
+
+    def _t2dfcg_enrich_pending(pending):
+        if not isinstance(pending, dict):
+            return pending
+        parsed = pending.get('parsed') or {}
+        if not isinstance(parsed, dict):
+            parsed = {}
+        raw = str(parsed.get('raw') or '')
+        low = raw.lower().replace('ё', 'е')
+        rows = parsed.get('pdf_spec_rows') or []
+        facts = {}
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            name = str(row.get('name') or '').lower().replace('ё', 'е')
+            qty = _t2dfcg_num(row.get('qty'))
+            price = _t2dfcg_num(row.get('price'))
+            real_qty = price if price > 0 and 0 < qty <= 20 and 'площад' in name else qty
+            if real_qty <= 0:
+                continue
+            if 'застрой' in name:
+                facts['built_area'] = real_qty
+            elif 'общая' in name:
+                facts['total_area'] = real_qty
+            elif 'теплом контур' in name:
+                facts['warm_area'] = real_qty
+        if not parsed.get('object') and ('дом' in low or facts):
+            parsed['object'] = 'дом'
+        if not parsed.get('material') and 'газобетон' in low:
+            parsed['material'] = 'газобетон'
+        if not parsed.get('foundation') and ('монолитная железобетонная плита' in low or 'фундамент - монолит' in low):
+            parsed['foundation'] = 'монолитная плита'
+        if not parsed.get('area_floor') and facts.get('built_area'):
+            parsed['area_floor'] = facts['built_area']
+        if not parsed.get('area_total') and facts.get('total_area'):
+            parsed['area_total'] = facts['total_area']
+        if not parsed.get('floors'):
+            if 'план расстановки мебели 2 этажа' in low or 'обмерный план 2-го этажа' in low or '2 этажа' in low:
+                parsed['floors'] = 2
+        if not parsed.get('dimensions') and facts.get('built_area'):
+            parsed['area'] = facts.get('built_area')
+        pending['parsed'] = parsed
+        return pending
+
+    async def _t2fdsg_run_drive_final(conn, parent, choice):  # noqa: F811
+        parent_id = str(_t2fdsg_get(parent, 'id') or '')
+        chat_id = str(_t2fdsg_get(parent, 'chat_id') or '')
+        topic_id = int(_t2fdsg_get(parent, 'topic_id', 2) or 2)
+        if not parent_id:
+            return False
+        parent = _t2fdsg_enrich_parent_raw(conn, parent, choice)
+        _t2fdsg_hist_once(conn, parent_id, 'TOPIC2_PRICE_CHOICE_CONFIRMED:' + str(choice))
+        _t2fdsg_hist_once(conn, parent_id, 'PATCH_TOPIC2_DRIVE_FINAL_USE_CANON_GENERATE_V2:START')
+        pending = _t2fdsg_load_pending(chat_id, parent_id)
+        pending = _t2dfcg_enrich_pending(pending)
+        if not pending:
+            _update_task(conn, parent_id, state='FAILED', error_message='TOPIC2_PENDING_NOT_FOUND_FOR_CANON_GENERATE')
+            conn.commit()
+            return True
+        try:
+            from core.stroyka_estimate_canon import _generate_and_send as _t2dfcg_generate
+            conn.execute("UPDATE tasks SET state='IN_PROGRESS', result='', error_message=NULL, updated_at=datetime('now') WHERE id=?", (parent_id,))
+            conn.commit()
+            choice_text = {'min': 'минимальные', 'minimum': 'минимальные', 'median': 'средние', 'max': 'максимальные', 'maximum': 'максимальные'}.get(str(choice), str(choice or 'средние'))
+            res = _t2dfcg_generate(conn, parent, pending, choice_text, logger=logger)
+            if _t2fdsg_inspect.isawaitable(res):
+                await res
+            _t2fdsg_hist_once(conn, parent_id, 'PATCH_TOPIC2_DRIVE_FINAL_USE_CANON_GENERATE_V2:DONE')
+            conn.commit()
+            return True
+        except Exception as e:
+            _update_task(conn, parent_id, state='FAILED', error_message='TOPIC2_CANON_GENERATE_EXCEPTION:' + type(e).__name__)
+            _t2fdsg_hist_once(conn, parent_id, 'PATCH_TOPIC2_DRIVE_FINAL_USE_CANON_GENERATE_V2:ERR:' + str(e)[:120])
+            conn.commit()
+            return True
+
+    logger.info('PATCH_TOPIC2_DRIVE_FINAL_USE_CANON_GENERATE_V2 installed')
+except Exception as _t2dfcg_e:
+    try:
+        logger.exception('PATCH_TOPIC2_DRIVE_FINAL_USE_CANON_GENERATE_V2_INSTALL_ERR:%s', _t2dfcg_e)
+    except Exception:
+        pass
+# === END_PATCH_TOPIC2_DRIVE_FINAL_USE_CANON_GENERATE_V2 ===
 
 if __name__ == "__main__":
     asyncio.run(main())

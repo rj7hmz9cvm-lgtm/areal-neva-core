@@ -1297,3 +1297,364 @@ def _parse_items(text: str):
     return orient or (items or [])
 # === END_PATCH_TOPIC2_ORIENT_PROJECT_ITEMS_V1 ===
 
+# === PATCH_TOPIC2_FINAL_PDF_PENDING_BRIDGE_V1 ===
+# Canon bridge: topic_2 final artifacts must use facts already extracted by
+# stroyka_estimate_canon.py (pdf_spec_rows + online_prices), not only caption text.
+import json as _t2pbr_json
+import sqlite3 as _t2pbr_sqlite3
+import re as _t2pbr_re
+
+_T2PBR_ORIG_MAKE_ARTIFACTS = _make_artifacts
+
+
+def _t2pbr_memory_pending(task_id: str, chat_id: str = ''):
+    try:
+        con = _t2pbr_sqlite3.connect(str(BASE / 'data' / 'memory.db'))
+        try:
+            row = con.execute(
+                'SELECT value FROM memory WHERE key=? ORDER BY timestamp DESC LIMIT 1',
+                ('topic_2_estimate_pending_' + str(task_id),),
+            ).fetchone()
+            if not row and chat_id:
+                row = con.execute(
+                    'SELECT value FROM memory WHERE chat_id=? AND key LIKE ? ORDER BY timestamp DESC LIMIT 1',
+                    (str(chat_id), 'topic_2_estimate_pending_%'),
+                ).fetchone()
+            return _t2pbr_json.loads(row[0] or '{}') if row else {}
+        finally:
+            con.close()
+    except Exception:
+        return {}
+
+
+def _t2pbr_num(v) -> float:
+    try:
+        return float(str(v or '').replace(' ', '').replace(',', '.'))
+    except Exception:
+        return 0.0
+
+
+def _t2pbr_price_values(text: str, needles):
+    values = []
+    src = str(text or '')
+    for line in src.splitlines():
+        low = line.lower().replace('ё', 'е')
+        if not any(n in low for n in needles):
+            continue
+        for m in _t2pbr_re.finditer(r'(?<![\d])\d{2,6}(?:[.,]\d+)?', line):
+            val = _t2pbr_num(m.group(0))
+            if val >= 10:
+                values.append(val)
+    return values
+
+
+def _t2pbr_choose_median(values):
+    vals = sorted(float(x) for x in values if float(x or 0) > 0)
+    if not vals:
+        return 0.0
+    mid = len(vals) // 2
+    if len(vals) % 2:
+        return vals[mid]
+    return round((vals[mid - 1] + vals[mid]) / 2, 2)
+
+
+def _t2pbr_area_facts(rows):
+    facts = {}
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        name = _s(row.get('name', ''))
+        low = name.lower().replace('ё', 'е')
+        qty = _t2pbr_num(row.get('qty'))
+        price = _t2pbr_num(row.get('price'))
+        real_qty = price if price > 0 and 0 < qty <= 20 and 'площад' in low else qty
+        if real_qty <= 0:
+            continue
+        if 'застрой' in low:
+            facts['built_area'] = real_qty
+        elif 'общая' in low:
+            facts['total_area'] = real_qty
+        elif 'теплом контур' in low:
+            facts['warm_area'] = real_qty
+        elif 'крыль' in low or 'террас' in low:
+            facts['terrace_area'] = real_qty
+    return facts
+
+
+def _t2pbr_foundation_thickness(text: str) -> float:
+    low = _low(text)
+    m = _t2pbr_re.search(r'плит[а-я\s-]{0,40}(\d{2,4})\s*мм', low)
+    if not m:
+        m = _t2pbr_re.search(r'фундамент[а-я\s-]{0,80}(\d{2,4})\s*мм', low)
+    mm = _t2pbr_num(m.group(1)) if m else 300.0
+    return max(mm / 1000.0, 0.05)
+
+
+def _t2pbr_build_items(task_id: str, raw_text: str, photo_text: str, chat_id: str = ''):
+    pending = _t2pbr_memory_pending(task_id, chat_id)
+    parsed = pending.get('parsed') if isinstance(pending, dict) else {}
+    parsed = parsed if isinstance(parsed, dict) else {}
+    pdf_rows = parsed.get('pdf_spec_rows') or []
+    price_text = '\n'.join(
+        _s(x, 60000)
+        for x in (pending.get('online_prices'), pending.get('template_prices'))
+        if isinstance(pending, dict) and x
+    )
+    source_text = '\n'.join(x for x in (_s(raw_text, 60000), _s(photo_text, 60000), _s(parsed.get('raw'), 60000)) if x)
+    if not pdf_rows or not price_text:
+        return []
+
+    facts = _t2pbr_area_facts(pdf_rows)
+    built_area = facts.get('built_area') or facts.get('warm_area') or facts.get('total_area') or 0.0
+    if built_area <= 0:
+        return []
+
+    concrete_price = _t2pbr_choose_median(_t2pbr_price_values(price_text, ('бетон', 'b25', 'b22', 'в25', 'в22')))
+    rebar_price = _t2pbr_choose_median(_t2pbr_price_values(price_text, ('арматур', 'а500', 'a500')))
+    wall_work_price = _t2pbr_choose_median(_t2pbr_price_values(price_text, ('кладк', 'монтаж')))
+    gasbeton_price = _t2pbr_choose_median(_t2pbr_price_values(price_text, ('газобет', 'блок')))
+
+    thickness = _t2pbr_foundation_thickness(source_text)
+    concrete_qty = round(built_area * thickness, 2)
+    rebar_qty = round(concrete_qty * 0.08, 3)
+    warm_area = facts.get('warm_area') or facts.get('total_area') or built_area
+
+    items = []
+
+    def add(name, qty, unit, price, source, note=''):
+        if qty <= 0:
+            return
+        items.append({
+            'num': len(items) + 1,
+            'name': name[:240],
+            'qty': round(float(qty), 3),
+            'unit': unit,
+            'price': float(price or 0),
+            'source': source[:240],
+            'note': note[:240],
+        })
+
+    add('Площадь застройки по PDF', built_area, 'м²', 0, 'PDF_SPEC_ROWS_CANON', 'исходный факт, не стоимостная позиция')
+    if facts.get('total_area'):
+        add('Общая площадь по PDF', facts['total_area'], 'м²', 0, 'PDF_SPEC_ROWS_CANON', 'исходный факт, не стоимостная позиция')
+    if facts.get('warm_area'):
+        add('Площадь дома в теплом контуре по PDF', facts['warm_area'], 'м²', 0, 'PDF_SPEC_ROWS_CANON', 'исходный факт, не стоимостная позиция')
+
+    add(
+        f'Бетон для монолитной железобетонной плиты {int(thickness * 1000)} мм',
+        concrete_qty,
+        'м³',
+        concrete_price,
+        'PDF project facts + Sonar/template prices',
+        'фундамент из PDF: монолитная железобетонная плита',
+    )
+    add(
+        'Арматура А500/Ø12 для фундаментной плиты, расчетная масса',
+        rebar_qty,
+        'т',
+        rebar_price,
+        'PDF project facts + Sonar/template prices',
+        'масса рассчитана от объема бетона; уточняется по КЖ/ведомости арматуры',
+    )
+    add(
+        'Газобетон D400 для наружных/внутренних стен, расчет по теплому контуру',
+        warm_area,
+        'м²',
+        gasbeton_price,
+        'PDF project facts + template prices',
+        'PDF: наружные стены D400 375/300 мм, внутренние 250 мм, перегородки 150 мм',
+    )
+    add(
+        'Работы по кладке/монтажу стен по проекту',
+        warm_area,
+        'м²',
+        wall_work_price,
+        'PDF project facts + Sonar prices',
+        'средняя цена из подтвержденного поиска; состав уточняется по КЖ/ВОР',
+    )
+
+    subtotal = sum(float(x.get('qty') or 0) * float(x.get('price') or 0) for x in items)
+    if subtotal > 0:
+        add('Организация работ и накладные расходы', 1, 'компл', round(subtotal * 0.07, 2), 'topic_2 canon overhead', '7% от стоимостных позиций')
+        add('Расходные материалы, крепеж, герметики', 1, 'компл', round(subtotal * 0.015, 2), 'topic_2 canon overhead', '1.5% от стоимостных позиций')
+
+    return [x for x in items if _t2nz_valid_item(x)]
+
+
+def _make_artifacts(task_id: str, topic_id: int, raw_text: str, photo_text: str = '', chat_id: str = '') -> dict:
+    if int(topic_id or 0) == 2 and task_id:
+        bridge_items = _t2pbr_build_items(task_id, raw_text, photo_text, chat_id)
+        if bridge_items:
+            orig_parse = globals().get('_parse_items')
+
+            def _t2pbr_parse_override(text: str):
+                return bridge_items
+
+            globals()['_parse_items'] = _t2pbr_parse_override
+            try:
+                res = _T2PBR_ORIG_MAKE_ARTIFACTS(task_id, topic_id, raw_text, photo_text, chat_id)
+                if isinstance(res, dict):
+                    res['items_count'] = len(bridge_items)
+                    res['_topic2_pdf_pending_bridge'] = True
+                return res
+            finally:
+                globals()['_parse_items'] = orig_parse
+    return _T2PBR_ORIG_MAKE_ARTIFACTS(task_id, topic_id, raw_text, photo_text, chat_id)
+# === END_PATCH_TOPIC2_FINAL_PDF_PENDING_BRIDGE_V1 ===
+
+# === PATCH_TOPIC2_FINAL_PRICE_PARSE_FACTS_V2 ===
+# V1 price parser matched grade numbers (A500/D400/ЦПС-300) as prices.
+# Use only structured Sonar rows and template работа=/матер= fields.
+def _t2pbr_price_values(text: str, needles):
+    values = []
+    for line in str(text or '').splitlines():
+        low = line.lower().replace('ё', 'е')
+        if not any(n in low for n in needles):
+            continue
+        if '|' in line:
+            parts = [p.strip() for p in line.split('|')]
+            if len(parts) >= 2:
+                m = _t2pbr_re.search(r'\d{2,6}(?:[.,]\d+)?', parts[1])
+                if m:
+                    val = _t2pbr_num(m.group(0))
+                    if val >= 100:
+                        values.append(val)
+                continue
+        for m in _t2pbr_re.finditer(r'(?:работа|матер)\s*=\s*(\d{2,6}(?:[.,]\d+)?)', low):
+            val = _t2pbr_num(m.group(1))
+            if val >= 100:
+                values.append(val)
+    return values
+# === END_PATCH_TOPIC2_FINAL_PRICE_PARSE_FACTS_V2 ===
+
+# === PATCH_TOPIC2_FINAL_NO_ZERO_FACT_ROWS_ONLINE_PRIORITY_V3 ===
+# Keep PDF area facts as calculation basis, not zero-cost AREAL_CALC positions.
+# Prefer Sonar online prices for concrete/rebar/work; template is fallback.
+_T2PBR_V1_BUILD_ITEMS = _t2pbr_build_items
+
+
+def _t2pbr_first_price(primary_text: str, fallback_text: str, needles):
+    primary = _t2pbr_choose_median(_t2pbr_price_values(primary_text, needles))
+    if primary > 0:
+        return primary
+    return _t2pbr_choose_median(_t2pbr_price_values(fallback_text, needles))
+
+
+def _t2pbr_build_items(task_id: str, raw_text: str, photo_text: str, chat_id: str = ''):
+    pending = _t2pbr_memory_pending(task_id, chat_id)
+    parsed = pending.get('parsed') if isinstance(pending, dict) else {}
+    parsed = parsed if isinstance(parsed, dict) else {}
+    pdf_rows = parsed.get('pdf_spec_rows') or []
+    online_text = _s(pending.get('online_prices') if isinstance(pending, dict) else '', 60000)
+    template_text = _s(pending.get('template_prices') if isinstance(pending, dict) else '', 60000)
+    source_text = '\n'.join(x for x in (_s(raw_text, 60000), _s(photo_text, 60000), _s(parsed.get('raw'), 60000)) if x)
+    if not pdf_rows or not (online_text or template_text):
+        return []
+
+    facts = _t2pbr_area_facts(pdf_rows)
+    built_area = facts.get('built_area') or facts.get('warm_area') or facts.get('total_area') or 0.0
+    warm_area = facts.get('warm_area') or facts.get('total_area') or built_area
+    if built_area <= 0 or warm_area <= 0:
+        return []
+
+    concrete_price = _t2pbr_first_price(online_text, template_text, ('бетон', 'b25', 'b22', 'в25', 'в22'))
+    rebar_price = _t2pbr_first_price(online_text, template_text, ('арматур', 'а500', 'a500'))
+    wall_work_price = _t2pbr_first_price(online_text, template_text, ('кладк', 'монтаж'))
+    gasbeton_price = _t2pbr_first_price(online_text, template_text, ('газобет', 'блок'))
+
+    thickness = _t2pbr_foundation_thickness(source_text)
+    concrete_qty = round(built_area * thickness, 2)
+    rebar_qty = round(concrete_qty * 0.08, 3)
+    fact_note = 'PDF facts: застройка {} м², общая {} м², теплый контур {} м²'.format(
+        facts.get('built_area') or '', facts.get('total_area') or '', facts.get('warm_area') or ''
+    )
+
+    items = []
+
+    def add(name, qty, unit, price, source, note=''):
+        if qty <= 0:
+            return
+        items.append({
+            'num': len(items) + 1,
+            'name': name[:240],
+            'qty': round(float(qty), 3),
+            'unit': unit,
+            'price': float(price or 0),
+            'source': source[:240],
+            'note': note[:240],
+        })
+
+    add(
+        f'Бетон для монолитной железобетонной плиты {int(thickness * 1000)} мм',
+        concrete_qty,
+        'м³',
+        concrete_price,
+        'PDF project facts + Sonar online prices',
+        fact_note,
+    )
+    add(
+        'Арматура А500/Ø12 для фундаментной плиты, расчетная масса',
+        rebar_qty,
+        'т',
+        rebar_price,
+        'PDF project facts + Sonar online prices',
+        'масса рассчитана от объема бетона; уточняется по КЖ/ведомости арматуры',
+    )
+    add(
+        'Газобетон D400 для наружных/внутренних стен, расчет по теплому контуру',
+        warm_area,
+        'м²',
+        gasbeton_price,
+        'PDF project facts + Sonar/template prices',
+        'PDF: наружные стены D400 375/300 мм, внутренние 250 мм, перегородки 150 мм',
+    )
+    add(
+        'Работы по кладке/монтажу стен по проекту',
+        warm_area,
+        'м²',
+        wall_work_price,
+        'PDF project facts + Sonar online prices',
+        'цена из подтвержденного online/product search; состав уточняется по КЖ/ВОР',
+    )
+
+    subtotal = sum(float(x.get('qty') or 0) * float(x.get('price') or 0) for x in items)
+    if subtotal > 0:
+        add('Организация работ и накладные расходы', 1, 'компл', round(subtotal * 0.07, 2), 'topic_2 canon overhead', '7% от стоимостных позиций')
+        add('Расходные материалы, крепеж, герметики', 1, 'компл', round(subtotal * 0.015, 2), 'topic_2 canon overhead', '1.5% от стоимостных позиций')
+
+    return [x for x in items if _t2nz_valid_item(x)]
+# === END_PATCH_TOPIC2_FINAL_NO_ZERO_FACT_ROWS_ONLINE_PRIORITY_V3 ===
+
+# === PATCH_TOPIC2_BLOCK_AREA_ONLY_PDF_FINAL_V4 ===
+# Area/TЭП rows from an AR PDF are facts, not a sufficient VOR/specification.
+# They must not unlock a final estimate as if the full project was priced.
+def _t2pbr_rows_are_area_only(rows) -> bool:
+    usable = []
+    non_area = []
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        name = _s(row.get('name', '')).lower().replace('ё', 'е')
+        qty = _t2pbr_num(row.get('qty'))
+        price = _t2pbr_num(row.get('price'))
+        if qty <= 0 and price <= 0:
+            continue
+        usable.append(row)
+        if 'площад' not in name and 'общая' not in name:
+            non_area.append(row)
+    return bool(usable) and not non_area
+
+
+_T2PBR_V3_BUILD_ITEMS = _t2pbr_build_items
+
+
+def _t2pbr_build_items(task_id: str, raw_text: str, photo_text: str, chat_id: str = ''):
+    pending = _t2pbr_memory_pending(task_id, chat_id)
+    parsed = pending.get('parsed') if isinstance(pending, dict) else {}
+    parsed = parsed if isinstance(parsed, dict) else {}
+    pdf_rows = parsed.get('pdf_spec_rows') or []
+    if _t2pbr_rows_are_area_only(pdf_rows):
+        return []
+    return _T2PBR_V3_BUILD_ITEMS(task_id, raw_text, photo_text, chat_id)
+# === END_PATCH_TOPIC2_BLOCK_AREA_ONLY_PDF_FINAL_V4 ===
+

@@ -1,29 +1,28 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-07-05T20:22:24.527774+00:00
-GIT_SHA: af84678ea309a2c12a624ccb89aa3004bef14a77
+GENERATED_AT: 2026-07-05T22:22:26.956753+00:00
+GIT_SHA: dc8998f1d941a94cee3bd2cddc1d082462d7475b
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
 ROLE: Сметы
 DIRECTIONS_BOUND: estimates
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE_TASKS: 1
-FAILED_LAST_24H: 5
+ACTIVE_TASKS: 0
+FAILED_LAST_24H: 6
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 12
-- AWAITING_CONFIRMATION: 1
-- CANCELLED: 142
-- DONE: 202
-- FAILED: 142
+- CANCELLED: 143
+- DONE: 205
+- FAILED: 143
 
 ## LATEST_FAILED
+- bd0d5ae1 | STALE_TIMEOUT
 - 9c5946d7 | STALE_TIMEOUT
 - ea794751 | NO_VALID_ARTIFACT
 - 16b3b2e6 | STALE_TIMEOUT
 - dfdc5ca5 | STALE_TIMEOUT
-- 29331db4 | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
 - 844fafb|topic2: close PDF estimate confirmation flow
@@ -49,17 +48,17 @@ FAILED_LAST_24H: 5
 - clarified:3
 - clarified:Жду тогда
 - clarified:Сделай мне расчёт дом два этажа на монолитный плите толщиной 450 разме
-- TOPIC2_RUNTIME_REQUEUE_FROM_LATEST_CLARIFIED_V1
-- P6E67_PARENT_NOT_FOUND
-- P6E67_PARENT_NOT_FOUND_TERMINAL_GUARD_V1:WAITING_CLARIFICATION
-- TOPIC2_RUNTIME_REQUEUE_AFTER_LATE_CONDITION_V1
-- TOPIC2_LATE_P6E67_CLARIFIED_RESCUE_V1:STARTED
-- TOPIC2_REVISION_BOUND_TO_PARENT:11236
-- TOPIC2_LATE_P6E67_CLARIFIED_RESCUE_V1:CANON_HANDLED
 - clarified:Вот задачу мне выполнить
-- TOPIC2_RUNTIME_REQUEUE_AFTER_CLEAR_REPLY_V1
-- TOPIC2_REVISION_BOUND_TO_PARENT:e3a3d684-1eaa-4b9f-8ed3-6c6565b95e86
-- TOPIC2_RUNTIME_REQUEUE_AFTER_SKIP_STALE_CLARIFICATIONS_V1
+- clarified:1
+- created:NEW_TOPIC2_LIVE_CANON_TEST
+- clarified:Максимальная
+- created:NEW_TOPIC2_LIVE_CANON_TEST_AFTER_P3_GUARD
+- clarified:максималка
+- created:NEW_TOPIC2_LIVE_CANON_TEST_AFTER_GUARD_MOVE
+- clarified:Минимальное
+- clarified:150 км
+- clarified:24 на 24
+- clarified:150
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210
@@ -133,7 +132,6 @@ PATCH_TOPIC2_FULL_GAP_CLOSE_V4
 
 ## MARKERS_MISSING
 - TOPIC2_TEMPLATE_SELECTED
-- TOPIC2_PRICE_ENRICHMENT_DONE
 - TOPIC2_LOGISTICS_CONFIRMED
 
 ## REGRESSION_GUARDS
@@ -170,3 +168,13 @@ items: 11
 - docs/HANDOFFS/LATEST_HANDOFF.md
 - git log last 14 days
 
+## 2026-07-06_SESSION_CLOSE_FACTS
+- Latest live PDF/project estimate task: `7dab7ad1-3335-4385-b942-4c734dbdbebe` -> `DONE`.
+- Confirmation child tasks: `24e594b9-1ea3-4b82-86ab-e9355021289b` and `39af79c1-80eb-4735-8f4f-61548cf13b2e` -> `DONE`.
+- Final user-visible result must remain canonical Telegram text with Drive links:
+  - Excel: `https://drive.google.com/file/d/1S27hmlqylphbfzxpn6dx6V56cjl0sfTy/view`
+  - PDF: `https://drive.google.com/file/d/16UDyFcYXlkGtG5-ow4RlqI-cXz3-OpHT/view`
+- Current topic status remains `PARTIAL LIVE VERIFIED / NOT FULL CANON CLOSED`.
+- Open verification remains: photo, OCR, PDF/XLSX/multifile, voice continuation, reply continuation, memory query, pin isolation, project/file variants.
+- Strict owner rule: work only by existing SSOT/canons; if not written in canon/SSOT, do not do by default; carry every task to the end unless explicitly stopped.
+- Do not touch systemd, `.env`, launch commands, secrets, `core/ai_router.py`, `core/reply_sender.py`, `core/google_io.py`, neighboring topics, or Git push without explicit owner permission.
