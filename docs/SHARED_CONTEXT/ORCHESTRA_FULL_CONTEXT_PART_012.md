@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_012
-generated_at_utc: 2026-07-05T16:54:57.382893+00:00
-git_sha_before_commit: 8c1130066f4c3385f9a4a0996133bd1e710c631c
+generated_at_utc: 2026-07-05T17:24:57.883952+00:00
+git_sha_before_commit: 0e17a9baccd6e6ba25b9f1c3cf64d77f99a17be7
 part: 12/18
 
 
@@ -1796,7 +1796,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: aafce1c7114d1c8852dab520914d708181b398b57d741c6dc1024a787874d2dc
+SHA256_FULL_FILE: 7a54d2d2a52f69a7eae4000ded866ba586167a1cbe01e488736987380c8c9107
 ====================================================================================================
 # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
 from __future__ import annotations
@@ -2315,6 +2315,10 @@ def _extract_distance_km(text: str) -> Optional[float]:
 
 def _extract_material(text: str) -> str:
     t = _low(text)
+    if "сэндвич" in t or "стеновая панель" in t or "стеновые панели" in t:
+        return "сэндвич-панели"
+    if "металлический каркас" in t or "металлического каркаса" in t or "металлическая колонна" in t:
+        return "металлокаркас"
     for key in ("газобетон", "каркас", "кирпич", "монолит", "керамоблок", "брус", "арболит"):
         if key in t:
             return key
@@ -2323,7 +2327,11 @@ def _extract_material(text: str) -> str:
 
 def _extract_object(text: str) -> str:
     t = _low(text)
-    for key in ("дом", "ангар", "склад", "фундамент", "кровля", "коробка"):
+    if "производственно-склад" in t:
+        return "склад"
+    if re.search(r"\\bдом(?:а|ом|е)?\\b", t):
+        return "дом"
+    for key in ("ангар", "склад", "фундамент", "кровля", "коробка"):
         if key in t:
             return key
     return ""
@@ -6366,8 +6374,14 @@ def _parse_request(text: str):
         _T2PRS_LOG.info("T2PRS_INFER:object=дом:from_material=брус")
     # Fix 2b: другие признаки дома
     if not parsed.get("object"):
-        for _hint in ("дач", "коттедж", "жилой", "жилого"):
-            if _hint in t:
+        _home_hint_patterns = (
+            (r"\\bдач\\w*", "дач"),
+            (r"\\bкоттедж\\w*", "коттедж"),
+            (r"\\bжилой\\b", "жилой"),
+            (r"\\bжилого\\b", "жилого"),
+        )
+        for _pattern, _hint in _home_hint_patterns:
+            if re.search(_pattern, t):
                 parsed["object"] = "дом"
                 _T2PRS_LOG.info("T2PRS_INFER:object=дом:hint=%s", _hint)
                 break

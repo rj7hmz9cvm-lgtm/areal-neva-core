@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_008
-generated_at_utc: 2026-07-05T16:54:57.375228+00:00
-git_sha_before_commit: 8c1130066f4c3385f9a4a0996133bd1e710c631c
+generated_at_utc: 2026-07-05T17:24:57.881276+00:00
+git_sha_before_commit: 0e17a9baccd6e6ba25b9f1c3cf64d77f99a17be7
 part: 8/18
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 4/4
-SHA256_FULL_FILE: 7e4fd4f5c6889c30ab1c5a05c4cf86fda963990588531fbc935acecffc86bbdb
+SHA256_FULL_FILE: 4e0ba9ee16c72d0daecd1cd6b3a51003dfd86bbd54178fe0f0a42162356882a5
 ====================================================================================================
                     parent_id = str(_t2cf2_get(parent, "id") or "")
                     raw = str(_t2cf2_get(child, "raw_input") or "").strip()
@@ -3897,6 +3897,63 @@ if _T2WP_ORIG_HANDLE_DRIVE_FILE and not getattr(_T2WP_ORIG_HANDLE_DRIVE_FILE, "_
     _T2WP_LOG.info("PATCH_TOPIC2_WAITING_PROJECT_FILE_BIND_V1 _handle_drive_file installed")
 
 # === END_PATCH_TOPIC2_WAITING_PROJECT_FILE_BIND_V1 ===
+
+
+# === PATCH_TOPIC2_NO_VALID_PDF_ROWS_BLOCK_FINAL_V2 ===
+try:
+    import logging as _t2nvr2_logging
+    _T2NVR2_LOG = _t2nvr2_logging.getLogger("task_worker")
+
+    def _t2nvr2_has_no_valid_pdf_rows(conn, task_id):
+        try:
+            return conn.execute(
+                "SELECT 1 FROM task_history WHERE task_id=? AND action LIKE 'TOPIC2_PDF_NO_VALID_ESTIMATE_ROWS%' LIMIT 1",
+                (str(task_id),),
+            ).fetchone() is not None
+        except Exception:
+            return False
+
+    def _t2nvr2_wait_message():
+        return (
+            "PDF прочитан, но сметная ведомость объёмов/спецификация работ в нём не найдена. "
+            "Смету на 0 руб не создаю.\n\n"
+            "Для канонного расчёта пришли ВОР / спецификацию / раздел КР/КЖ с объёмами "
+            "или напиши: считать ориентировочно по проекту."
+        )
+
+    _T2NVR2_ORIG_RUN_DRIVE_FINAL = globals().get("_t2fdsg_run_drive_final")
+    if _T2NVR2_ORIG_RUN_DRIVE_FINAL and not getattr(_T2NVR2_ORIG_RUN_DRIVE_FINAL, "_t2nvr2_wrapped", False):
+        async def _t2fdsg_run_drive_final(conn, parent, choice):
+            try:
+                parent_id = str(_t2fdsg_get(parent, "id") or "")
+                if parent_id and _t2nvr2_has_no_valid_pdf_rows(conn, parent_id):
+                    msg = _t2nvr2_wait_message()
+                    _update_task(
+                        conn,
+                        parent_id,
+                        state="WAITING_CLARIFICATION",
+                        result=msg,
+                        error_message="TOPIC2_PDF_NO_VALID_ESTIMATE_ROWS",
+                    )
+                    _history(conn, parent_id, "PATCH_TOPIC2_NO_VALID_PDF_ROWS_BLOCK_FINAL_V2:FINAL_BLOCKED")
+                    conn.commit()
+                    return True
+            except Exception as e:
+                try:
+                    _T2NVR2_LOG.warning("PATCH_TOPIC2_NO_VALID_PDF_ROWS_BLOCK_FINAL_V2_ERR:%s", e)
+                except Exception:
+                    pass
+            return await _T2NVR2_ORIG_RUN_DRIVE_FINAL(conn, parent, choice)
+
+        _t2fdsg_run_drive_final._t2nvr2_wrapped = True
+        globals()["_t2fdsg_run_drive_final"] = _t2fdsg_run_drive_final
+        _T2NVR2_LOG.info("PATCH_TOPIC2_NO_VALID_PDF_ROWS_BLOCK_FINAL_V2 installed")
+except Exception as _t2nvr2_install_err:
+    try:
+        logger.exception("PATCH_TOPIC2_NO_VALID_PDF_ROWS_BLOCK_FINAL_V2_INSTALL_ERR:%s", _t2nvr2_install_err)
+    except Exception:
+        pass
+# === END_PATCH_TOPIC2_NO_VALID_PDF_ROWS_BLOCK_FINAL_V2 ===
 
 if __name__ == "__main__":
     asyncio.run(main())
