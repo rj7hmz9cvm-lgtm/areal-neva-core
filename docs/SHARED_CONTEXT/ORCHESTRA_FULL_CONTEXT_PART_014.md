@@ -1,8 +1,417 @@
 # ORCHESTRA_FULL_CONTEXT_PART_014
-generated_at_utc: 2026-07-05T06:54:40.155857+00:00
-git_sha_before_commit: bef6672437429b48721d60f0b658559609445201
+generated_at_utc: 2026-07-05T07:24:40.530309+00:00
+git_sha_before_commit: 348fcef33c8e3936cd3d50305a5f5420b029f2c5
 part: 14/18
 
+
+====================================================================================================
+BEGIN_FILE: core/upload_retry_queue.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: c84118ed90d2faa43ddc5a8f1c63e8767639e25641c2b6ebc4c1ca38570171c2
+====================================================================================================
+"""
+Upload retry queue.
+Finds tasks where artifact was sent to Telegram (Drive failed),
+checks if Drive is now available, re-uploads to Drive.
+Notifies user in Telegram with new Drive link.
+"""
+import os
+import sqlite3
+import logging
+import json
+import tempfile
+import requests
+from dotenv import load_dotenv
+
+load_dotenv("/root/.areal-neva-core/.env", override=True)
+
+logging.basicConfig(
+    filename="/root/.areal-neva-core/logs/upload_retry_queue.log",
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+DB_PATH = "/root/.areal-neva-core/data/core.db"
+BOT_TOKEN = <REDACTED_SECRET>"BOT_TOKEN") or os.environ.get("TELEGRAM_BOT_TOKEN")
+
+
+def check_drive_alive() -> bool:
+    # === ROOT_TMP_UPLOAD_GUARD_V1 ===
+    # Healthcheck MUST NOT upload tmp*.txt into AI_ORCHESTRA root.
+    # It only lists the configured Drive root via OAuth.
+    try:
+        from core.topic_drive_oauth import _oauth_service, _root_folder_id
+        service = _oauth_service()
+        root_id = _root_folder_id()
+        service.files().list(
+            q=f"'{root_id}' in parents and trashed = false",
+            spaces="drive",
+            pageSize=1,
+            fields="files(id,name)",
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True,
+        ).execute()
+        logger.info("ROOT_TMP_UPLOAD_GUARD_V1: DRIVE_HEALTH_CHECK_LIST_OK root=%s", root_id)
+        return True
+    except Exception as e:
+        logger.warning("ROOT_TMP_UPLOAD_GUARD_V1: DRIVE_HEALTH_CHECK_FAILED err=%s", e)
+        return False
+    # === END_ROOT_TMP_UPLOAD_GUARD_V1 ===
+
+
+def get_pending_retry_tasks(conn: sqlite3.Connection):
+    return conn.execute(
+        """
+        SELECT t.id, t.chat_id, t.topic_id, t.result,
+               th_tg.action as tg_action
+        FROM tasks t
+        JOIN task_history th_tg ON th_tg.task_id = t.id
+            AND th_tg.action LIKE 'TELEGRAM_ARTIFACT_FALLBACK_SENT:%'
+        WHERE t.state IN ('AWAITING_CONFIRMATION','DONE')
+          AND NOT EXISTS (
+              SELECT 1 FROM task_history th2
+              WHERE th2.task_id = t.id
+                AND th2.action LIKE 'DRIVE_RETRY_UPLOAD_OK:%'
+          )
+        ORDER BY t.updated_at DESC
+        LIMIT 20
+        """,
+    ).fetchall()
+
+
+def parse_tg_action(action: str) -> dict:
+    result = {}
+    for part in action.split(":"):
+        if "=" in part:
+            k, v = part.split("=", 1)
+            result[k] = v
+    return result
+
+
+def download_from_telegram(file_id: str, dest_path: str) -> bool:
+    try:
+        r = requests.get(
+            f"https://api.telegram.org/bot{BOT_TOKEN}/getFile",
+            params={"file_id": file_id},
+            timeout=15,
+        )
+        if not r.ok:
+            return False
+        file_path = r.json().get("result", {}).get("file_path")
+        if not file_path:
+            return False
+        dl = requests.get(
+            f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}",
+            timeout=30,
+        )
+        if not dl.ok:
+            return False
+        with open(dest_path, "wb") as f:
+            f.write(dl.content)
+        return True
+    except Exception as e:
+        logger.error("TG_DOWNLOAD_FAILED file_id=%s err=%s", file_id, e)
+        return False
+
+
+def notify_telegram(chat_id, topic_id, message: str):
+    if not BOT_TOKEN:
+        return
+    try:
+        data = {"chat_id": str(chat_id), "text": message, "parse_mode": "HTML"}
+        if topic_id and int(topic_id) > 0:
+            data["message_thread_id"] = str(topic_id)
+        requests.post(
+            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+            json=data, timeout=10,
+        )
+    except Exception as e:
+        logger.warning("NOTIFY_FAILED err=%s", e)
+
+
+def run():
+    logger.info("RETRY_QUEUE_START")
+
+    if not check_drive_alive():
+        logger.info("DRIVE_UNAVAILABLE — skip retry")
+        return
+
+    logger.info("DRIVE_ALIVE — checking pending tasks")
+
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+
+    try:
+        pending = get_pending_retry_tasks(conn)
+        logger.info("PENDING_RETRY_COUNT=%d", len(pending))
+
+        for row in pending:
+            task_id = row["id"]
+            chat_id = row["chat_id"]
+            topic_id = row["topic_id"]
+            tg_info = parse_tg_action(row["tg_action"])
+            file_id = tg_info.get("file_id")
+
+            if not file_id:
+                logger.warning("RETRY_SKIP task=%s no file_id", task_id)
+                continue
+
+            logger.info("RETRY_ATTEMPT task=%s file_id=%s", task_id, file_id)
+
+            with tempfile.NamedTemporaryFile(
+                suffix=".bin", delete=False,
+                dir="/root/.areal-neva-core/runtime"
+            ) as tmp:
+                tmp_path = tmp.name
+
+            ok = download_from_telegram(file_id, tmp_path)
+            if not ok:
+                logger.error("RETRY_TG_DOWNLOAD_FAILED task=%s", task_id)
+                try:
+                    os.remove(tmp_path)
+                except Exception:
+                    pass
+                continue
+
+            # PATCH_RETRY_TOPIC_FOLDER_V1: upload to topic folder, not INGEST root
+            try:
+                import mimetypes as _mt
+                from core.topic_drive_oauth import _upload_file_sync
+                # Get original file name from task raw_input
+                try:
+                    _raw = conn.execute("SELECT raw_input FROM tasks WHERE id=?", (task_id,)).fetchone()
+                    _orig_name = json.loads(_raw["raw_input"] or "{}").get("file_name", f"artifact_{task_id[:8]}")
+                except Exception:
+                    _orig_name = f"artifact_{task_id[:8]}"
+                _mime = _mt.guess_type(_orig_name)[0] or "application/octet-stream"
+                _up = _upload_file_sync(
+                    tmp_path, _orig_name,
+                    str(row["chat_id"]), int(topic_id or 0), _mime
+                )
+                _fid = _up.get("drive_file_id") if isinstance(_up, dict) else None
+                drive_link = f"https://drive.google.com/file/d/{_fid}/view" if _fid else None
+            except Exception as e:
+                logger.error("RETRY_DRIVE_UPLOAD_FAILED task=%s err=%s", task_id, e)
+                drive_link = None
+            finally:
+                try:
+                    os.remove(tmp_path)
+                except Exception:
+                    pass
+
+            if not drive_link or "drive.google.com" not in str(drive_link):
+                logger.error("RETRY_NO_LINK task=%s", task_id)
+                continue
+
+            old_result = row["result"] or ""
+            new_result = old_result.replace(
+                "Файл отправлен в Telegram. Внешнее хранилище временно недоступно.",
+                f"Файл доступен на Drive: {drive_link}"
+            )
+            if new_result == old_result:
+                new_result = old_result + f"\n\nФайл теперь на Drive: {drive_link}"
+
+            conn.execute(
+                "UPDATE tasks SET result=?, updated_at=datetime('now') WHERE id=?",
+                (new_result, task_id),
+            )
+            conn.execute(
+                "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, datetime('now'))",
+                (task_id, f"DRIVE_RETRY_UPLOAD_OK:{drive_link}"),
+            )
+            conn.commit()
+
+            notify_telegram(
+                chat_id, topic_id,
+                f"✅ Файл теперь доступен на Google Drive:\n{drive_link}"
+            )
+            logger.info("RETRY_UPLOAD_OK task=%s link=%s", task_id, drive_link)
+
+    finally:
+        conn.close()
+
+    logger.info("RETRY_QUEUE_DONE")
+
+
+if __name__ == "__main__":
+    # === FULLFIX_20_RETRY_LOOP ===
+    import time as _ff20_time
+    logger.info("UPLOAD_RETRY_SERVICE_START")
+    while True:
+        try:
+            run()
+        except Exception as _ff20_re:
+            logger.exception("UPLOAD_RETRY_LOOP_ERR=%s", _ff20_re)
+        _ff20_time.sleep(300)
+    # === END FULLFIX_20_RETRY_LOOP ===
+
+====================================================================================================
+END_FILE: core/upload_retry_queue.py
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: core/web_engine.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 60ae8879713e63665e3b98acb78976ad8f6522694bb018b072daed8bd67c8912
+====================================================================================================
+import logging
+
+logger = logging.getLogger("web_engine")
+
+async def web_search(query: str) -> str:
+    # Search handled by ONLINE_MODEL (perplexity/sonar) in ai_router.py
+    logger.warning("web_search_stub called query=%s", (query or "")[:100])
+    return ""
+
+====================================================================================================
+END_FILE: core/web_engine.py
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: core/work_item.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: ec6ecd21b8594924d8b0bdd0bde9e53d00e69485f45b88db8f7aedb11624f2f3
+====================================================================================================
+# === FULLFIX_DIRECTION_KERNEL_STAGE_1_WORKITEM ===
+from __future__ import annotations
+from dataclasses import dataclass, field, asdict
+from typing import Any, Dict, List, Optional
+
+
+def _get(row, key, default=None):
+    if row is None: return default
+    if isinstance(row, dict): return row.get(key, default)
+    try: return row[key]
+    except Exception: return getattr(row, key, default)
+
+def _int(v, d=0):
+    try:
+        if v is None or v == "": return d
+        return int(v)
+    except Exception: return d
+
+def _str(v, d=""):
+    if v is None: return d
+    return str(v)
+
+
+@dataclass
+class WorkItem:
+    work_id: str
+    chat_id: str
+    topic_id: int
+    user_id: Optional[str] = None
+    message_id: Optional[int] = None
+    reply_to_message_id: Optional[int] = None
+    bot_message_id: Optional[int] = None
+    source_type: str = "telegram"
+    input_type: str = "unknown"
+    raw_text: str = ""
+    state: str = "NEW"
+    intent: str = "UNKNOWN"
+    direction: Optional[str] = None
+    direction_profile: Dict[str, Any] = field(default_factory=dict)
+    formats_in: List[str] = field(default_factory=list)
+    formats_out: List[str] = field(default_factory=list)
+    attachments: List[Dict[str, Any]] = field(default_factory=list)
+    parsed_data: Dict[str, Any] = field(default_factory=dict)
+    context_refs: Dict[str, Any] = field(default_factory=dict)
+    execution_plan: List[Dict[str, Any]] = field(default_factory=list)
+    quality_gates: List[str] = field(default_factory=list)
+    result: Dict[str, Any] = field(default_factory=dict)
+    audit: Dict[str, Any] = field(default_factory=dict)
+    errors: List[Dict[str, Any]] = field(default_factory=list)
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+    @classmethod
+    def from_task_row(cls, row, extra=None):
+        extra = extra or {}
+        raw_text = _str(extra.get("raw_text") or extra.get("raw_input") or _get(row, "raw_input", ""))
+        input_type = _str(extra.get("input_type") or _get(row, "input_type", "unknown"), "unknown")
+        topic_id = _int(extra.get("topic_id") if extra.get("topic_id") is not None else _get(row, "topic_id", 0), 0)
+        wi = cls(
+            work_id=_str(extra.get("work_id") or extra.get("task_id") or _get(row, "id", "")),
+            chat_id=_str(extra.get("chat_id") or _get(row, "chat_id", "")),
+            topic_id=topic_id,
+            user_id=_str(extra.get("user_id") or _get(row, "user_id", "")) or None,
+            message_id=_int(extra.get("message_id") or _get(row, "message_id", None), 0) or None,
+            reply_to_message_id=_int(extra.get("reply_to_message_id") if extra.get("reply_to_message_id") is not None else _get(row, "reply_to_message_id", None), 0) or None,
+            bot_message_id=_int(extra.get("bot_message_id") if extra.get("bot_message_id") is not None else _get(row, "bot_message_id", None), 0) or None,
+            source_type=_str(extra.get("source_type") or "telegram"),
+            input_type=input_type,
+            raw_text=raw_text,
+            state=_str(extra.get("state") or _get(row, "state", "NEW"), "NEW"),
+            created_at=_str(extra.get("created_at") or _get(row, "created_at", "")) or None,
+            updated_at=_str(extra.get("updated_at") or _get(row, "updated_at", "")) or None,
+        )
+        wi.formats_in = wi._detect_formats_in()
+        wi.result = {"text": _str(_get(row, "result", ""))}
+        err = _str(_get(row, "error_message", ""))
+        if err:
+            wi.errors.append({"code": "TASK_ERROR", "message": err, "fatal": False})
+        wi.audit["created_by"] = "FULLFIX_DIRECTION_KERNEL_STAGE_1"
+        return wi
+
+    def _detect_formats_in(self):
+        t = (self.input_type or "").lower()
+        raw = (self.raw_text or "").lower()
+        out = []
+        if t in ("text","voice","photo","file","drive_file","url","mixed"): out.append(t)
+        if ".pdf" in raw or "pdf" in t: out.append("pdf")
+        if ".xlsx" in raw or ".xls" in raw: out.append("xlsx")
+        if ".dwg" in raw: out.append("dwg")
+        if t in ("photo","image"): out.append("photo")
+        if not out: out.append("text")
+        return list(dict.fromkeys(out))
+
+    def set_direction(self, direction, profile=None):
+        self.direction = direction
+        self.direction_profile = profile or {}
+        self.audit["direction"] = direction
+        self.audit["direction_profile_id"] = self.direction_profile.get("id", direction)
+
+    def set_intent(self, intent):
+        self.intent = intent or "UNKNOWN"
+        self.audit["intent"] = self.intent
+
+    def add_audit(self, key, value):
+        self.audit[str(key)] = value
+
+    def add_error(self, code, message, fatal=False):
+        self.errors.append({"code": str(code), "message": str(message), "fatal": bool(fatal)})
+
+    def to_dict(self): return asdict(self)
+
+    def to_payload(self):
+        return {
+            "id": self.work_id, "task_id": self.work_id,
+            "chat_id": self.chat_id, "topic_id": self.topic_id,
+            "user_id": self.user_id, "message_id": self.message_id,
+            "reply_to_message_id": self.reply_to_message_id,
+            "bot_message_id": self.bot_message_id,
+            "source_type": self.source_type, "input_type": self.input_type,
+            "raw_input": self.raw_text, "raw_text": self.raw_text,
+            "state": self.state, "intent": self.intent,
+            "direction": self.direction, "direction_profile": self.direction_profile,
+            "formats_in": self.formats_in, "formats_out": self.formats_out,
+            "attachments": self.attachments, "parsed_data": self.parsed_data,
+            "context_refs": self.context_refs, "execution_plan": self.execution_plan,
+            "quality_gates": self.quality_gates, "result": self.result,
+            "audit": self.audit, "direction_audit": self.audit,
+            "errors": self.errors, "metadata": self.metadata,
+            "work_item": self.to_dict(),
+        }
+# === END FULLFIX_DIRECTION_KERNEL_STAGE_1_WORKITEM ===
+
+====================================================================================================
+END_FILE: core/work_item.py
+FILE_CHUNK: 1/1
+====================================================================================================
 
 ====================================================================================================
 BEGIN_FILE: tools/full_context_aggregator.py
@@ -9307,109 +9716,5 @@ SHA256_FULL_FILE: 7ee48f4af7bf89f492bef00163145e6ee01981b768f38dd4c30e35b8e3311b
 }
 ====================================================================================================
 END_FILE: data/topics/5/meta.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: data/topics/500/meta.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: fe567370b38840c0c5b5625ad07f3c7bc8473beeaccca3d54386fed17599275c
-====================================================================================================
-{
-  "topic_id": 500,
-  "name": "ВЕБ ПОИСК",
-  "direction": "internet_search",
-  "chat_id": "-1003725299009",
-  "chat_name": "НЕЙРОНКИ ЧАТ",
-  "synced_at": "2026-05-01T09:28:21.232499+00:00",
-  "synced_by": "TOPIC_SYNC_FULL_V1"
-}
-====================================================================================================
-END_FILE: data/topics/500/meta.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: data/topics/6104/meta.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 1e7f11136e5ddd7e984c3cbc17affc50d1c3f2f207ceecd341a32c7cf3a95e58
-====================================================================================================
-{
-  "topic_id": 6104,
-  "name": "РАБОТА ПОИСК",
-  "direction": "job_search",
-  "chat_id": "-1003725299009",
-  "chat_name": "НЕЙРОНКИ ЧАТ",
-  "synced_at": "2026-05-01T09:28:21.233266+00:00",
-  "synced_by": "TOPIC_SYNC_FULL_V1"
-}
-====================================================================================================
-END_FILE: data/topics/6104/meta.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: data/topics/794/meta.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: cac974b2d8a0b3bf5dc1955a1fae4c6385a6a02fa96e5efcca1346cfc03db928
-====================================================================================================
-{
-  "topic_id": 794,
-  "name": "НЕЙРОНКИ СОФТ ВПН ВПС",
-  "direction": "devops_server",
-  "chat_id": "-1003725299009",
-  "chat_name": "НЕЙРОНКИ ЧАТ",
-  "synced_at": "2026-05-01T09:28:21.232700+00:00",
-  "synced_by": "TOPIC_SYNC_FULL_V1"
-}
-====================================================================================================
-END_FILE: data/topics/794/meta.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: data/topics/961/meta.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: c1b720f5d6b47a31456f65ecdf73132c8522479962158c9e97bbdc93b9697d25
-====================================================================================================
-{
-  "topic_id": 961,
-  "name": "АВТО ЗАПЧАСТИ",
-  "direction": "auto_parts_search",
-  "chat_id": "-1003725299009",
-  "chat_name": "НЕЙРОНКИ ЧАТ",
-  "synced_at": "2026-05-01T09:28:21.232859+00:00",
-  "synced_by": "TOPIC_SYNC_FULL_V1"
-}
-====================================================================================================
-END_FILE: data/topics/961/meta.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: docs/CHAT_EXPORTS/CHAT_EXPORT__2026-05-05_TECHNADZOR_FOLDER_DISCOVERY_FULL_CLOSE.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 8ea8e43903c6fe9dfa1ea078db41f8b928807d6652aa966afee4e1634da49ea1
-====================================================================================================
-{"chat_id":"current_chat_2026-05-05","chat_name":"TECHNADZOR_FOLDER_DISCOVERY_FULL_CLOSE","exported_at":"2026-05-05T10:45:00Z","source_model":"GPT-5.5 Thinking","system":"AREAL-NEVA / NEURON SOFT ORCHESTRA. FACT ONLY export for current chat. GitHub SSOT repository rj7hmz9cvm-lgtm/areal-neva-core.","architecture":"Server-first Telegram orchestration. Telegram topic_5 is technadzor interface. Google Drive is storage. Server stores logic/runtime. External Vision is owner-gated optional with EXTERNAL_PHOTO_ANALYSIS_ALLOWED=False by default.","pipeline":"topic_5 Telegram text/voice/files -> task_worker/final_closure_engine -> technadzor_engine.process_technadzor -> ActiveTechnadzorFolder/VisitMaterial/VisitPackage -> Drive OAuth topic-aware storage -> Telegram response. Folder discovery must resolve user folders by fresh Drive lookup before AI fallback.","files":["docs/HANDOFFS/LATEST_HANDOFF.md","docs/CANON_FINAL/TECHNADZOR_DOMAIN_LOGIC_CANON.md","core/technadzor_engine.py","core/final_closure_engine.py","task_worker.py","core/stt_engine.py","core/technadzor_drive_index.py"],"code":"Confirmed latest handoff records folder discovery live closed. Patches listed there: f1d6763 final_closure_engine topic5 route fix and technadzor_engine folder discovery; e1aa647 task_worker FCE hook unbound task fields fixed via _task_field; 8bf752e task_worker send path fixed via _task_field; 0a5c766 technadzor_engine excludes system folders; 48b1e55 technadzor_engine final folder root fix; f2e119f handoff update; previous P6H4TW/P6H4FD/P6H4TW_BATCH_TRIGGER commits include d90b5ad, ff753aa, 6463220, a5cae41, 38270c6.","patches":["TECHNADZOR_DOMAIN_LOGIC_CANON_V2 addendum accepted as ADDENDUM_NOT_REPLACEMENT, not superseding V1","EXTERNAL_PHOTO_ANALYSIS_ALLOWED=False guard added and OpenAI/GPT vision fallback forbidden","P6H_PART_4 VisitBuffer/ActiveFolder/VisitMaterial/VisitPackage implemented in code path","P6H4TW_BATCH_TRIGGER_V1 moved/wrapped process_technadzor in technadzor_engine because hook after asyncio.run in task_worker was dead","Folder discovery bug fixed to search Russian user root ТЕХНАДЗОР instead of system TECHNADZOR and exclude system folders","FCE hook fixed to use _task_field before local assignments","Folder/context intent must not fall to general AI"],"commands":["GitHub commits checked through connector","Google Drive folder metadata checked for old folder 1K2sJuMbXWt4xZWxFR8pXXPg1342Qu28j, new folder 1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG, user root 1s2y5l2mJFTb7P90XVokErXYVzmoH-VtD, system root 1vKQM0Z2qBmiKtgeyx95JaNEQAp5mJLOm","Requested server-side py_compile, restart areal-task-worker, live smoke in topic_5"],"db":"Observed task 5276 DONE in handoff with result finding folder тест надзор. Earlier task 5275 FAILED INVALID_RESULT_GATE because folder clarification/state was reprocessed. Earlier task 5274 DONE incorrectly set TECHNADZOR as active folder.","memory":"Topic scoped memory and active folder state must preserve chat_id+topic_id isolation. ActiveTechnadzorFolder must store folder_id, folder_name, folder_url, owner_instruction, updated_at, source=fresh_drive_lookup. Do not write debug/errors/system trash into long memory.","services":["areal-task-worker","telegram-ingress","areal-memory-api"],"errors":["Bot returned old folder Выезд 8 апреля 2026 instead of new тест надзор","Resolver selected system TECHNADZOR instead of user folder","Resolver searched wrong root TECHNADZOR 1vKQM0Z2qBmiKtgeyx95JaNEQAp5mJLOm instead of ТЕХНАДЗОР 1s2y5l2mJFTb7P90XVokErXYVzmoH-VtD","FCE hook UnboundLocalError cannot access local variable task_id before assignment","WAITING_CLARIFICATION was reprocessed into INVALID_RESULT_GATE for folder discovery","topic_500 internet search reported by owner as not working and remains needing diagnostics/live proof"],"decisions":["External Vision is not a blocker for full close; it is CLOSED_AS_OWNER_GATED_OPTIONAL","Vision model must not be changed, no Llama/Pixtral/OpenAI/GPT, no direct Google Gemini API for Vision","TECHNADZOR is system/service folder and must never become ActiveTechnadzorFolder","ТЕХНАДЗОР is user folder root for technadzor user folders and also must not become ActiveTechnadzorFolder","ActiveTechnadzorFolder can only be a child/user project folder such as тест надзор","The folder named тест надзор exists and should be found by name without owner sending URL","User source docs folder 1sTMg-2cJpWmjJLEj-4Y80brWl5e70AZk is flat clean owner source folder; no extra subfolders required now; orchestra service files go elsewhere"],"solutions":["Folder/context intent in topic_5 must bypass narrow is_technadzor_intent and call process_technadzor directly","Folder discovery must extract target folder name from raw input","Search order: explicit URL -> exact/fuzzy child folder under ТЕХНАДЗОР -> strict Drive-wide name fallback -> concrete clarification","Return contract: handled=True ok=True for processed folder commands, handled=False ok=False for not handled","For not found folder/context command return DONE handled message to avoid AI fallback and INVALID_RESULT_GATE","System folders excluded from candidates: TECHNADZOR, ТЕХНАДЗОР, topic_5, _orchestra_work, _system, _tmp, _archive, _drafts, _templates, _manifests"],"state":"LATEST_HANDOFF currently states FOLDER DISCOVERY LIVE CLOSED with control case PASSED. topic_5 code side considered closed, live smoke still needed for real Telegram file/photo/разбор/акт flows. topic_500 internet search not working per owner and must be diagnosed separately.","what_working":["GitHub main contains handoff update f2e119f and folder discovery status","Google Drive connector confirms new folder тест надзор exists","Owner docs folder contains three act/source documents and no service trash","P6H/P6H4TW/P6H4FD code path documented in handoff"],"what_broken":["topic_500 internet search reported not working","Before final folder fix the resolver selected wrong/stale/system folders","Live Telegram smoke for topic_5 full file/photo flow still pending"],"what_not_done":["Full live smoke: topic_5 photo/file -> buffer -> voice/text note -> сделай разбор -> one response","Drive folder URL/name -> загрузи папку -> сделай акт","topic_2 real estimate request smoke","topic_500 real search smoke with Sonar and sources","Update docs/canon with current chat export and latest folder docs if needed"],"current_breakpoint":"Owner requested full current chat/session export and GitHub update after resolving folder discovery issues and before continuing broader testing.","root_causes":["Folder resolver used stale/old active folder or wrong system root instead of fresh user-root Drive lookup","Narrow technadzor intent did not classify folder/context commands","FCE hook referenced local variables before assignment","Return/state contract caused folder clarification to be reprocessed by general gates"],"verification":["Google Drive metadata confirmed old folder Выезд 8 апреля 2026 id 1K2sJuMbXWt4xZWxFR8pXXPg1342Qu28j","Google Drive metadata confirmed new folder тест надзор id 1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG under ТЕХНАДЗОР id 1s2y5l2mJFTb7P90XVokErXYVzmoH-VtD","Google Drive metadata confirmed system TECHNADZOR id 1vKQM0Z2qBmiKtgeyx95JaNEQAp5mJLOm contains only service DOCX files","LATEST_HANDOFF fetched from GitHub confirms task 5276 DONE and found тест надзор"],"limits":["No SSH direct execution from ChatGPT environment; server commands must be run by owner/Claude on server","Google Drive chat export standard says Drive telegram_exports, but user asked GitHub update; this file is GitHub JSON export counterpart","No hidden assumptions; UNKNOWN should be used where not verified"]}
-====================================================================================================
-END_FILE: docs/CHAT_EXPORTS/CHAT_EXPORT__2026-05-05_TECHNADZOR_FOLDER_DISCOVERY_FULL_CLOSE.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: docs/SHARED_CONTEXT/DWG_CONVERTER_STATUS.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: c1575faa9c30f7376fc965272741bac01693c844705a64e8b4ab6813ad0e4e73
-====================================================================================================
-{
-  "checked_at": "2026-05-01T22:49:05.964682+00:00",
-  "dwg2dxf": null,
-  "ODAFileConverter": null,
-  "geometry_status": "DWG_METADATA_ONLY_DXF_FULL_PARSE_READY",
-  "note": "DXF parses directly. DWG full geometry requires dwg2dxf or ODAFileConverter; without converter DWG metadata path remains active"
-}
-====================================================================================================
-END_FILE: docs/SHARED_CONTEXT/DWG_CONVERTER_STATUS.json
 FILE_CHUNK: 1/1
 ====================================================================================================

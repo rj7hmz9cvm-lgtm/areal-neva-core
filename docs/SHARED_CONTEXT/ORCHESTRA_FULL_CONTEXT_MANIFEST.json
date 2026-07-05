@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-07-05T06:54:40.164172+00:00",
-  "git_sha_before_commit": "bef6672437429b48721d60f0b658559609445201",
+  "generated_at_utc": "2026-07-05T07:24:40.547782+00:00",
+  "git_sha_before_commit": "348fcef33c8e3936cd3d50305a5f5420b029f2c5",
   "part_max_bytes": 400000,
   "content_chunk_bytes": 340000,
   "total_records": 424,
@@ -48,9 +48,9 @@
       "path": "docs/HANDOFFS/LATEST_HANDOFF.md",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 4423,
-      "sha256": "980221ca25c998fe38e8b9a19d502c230fe0fd23bff228d6d6e592efcfd3b713",
-      "chars": 3497,
+      "size_bytes": 10135,
+      "sha256": "5e309807db3b2cdd013e1bf447ff36581f0235d8e91d190c5f8e558572a95ea9",
+      "chars": 8178,
       "chunks": 1
     },
     {
@@ -1380,9 +1380,9 @@
       "path": "task_worker.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 1182285,
-      "sha256": "1d97d7bfec3646a6972c7874d63d01820d1c9c0acb35320bde9919bc467ebe3e",
-      "chars": 1126930,
+      "size_bytes": 1190050,
+      "sha256": "f2bd9bfb4bc796e3dde112b06eb63c6358e45860a3665f7f8318a9a29f730122",
+      "chars": 1134433,
       "chunks": 4
     },
     {
@@ -2082,9 +2082,9 @@
       "path": "core/sample_template_engine.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 384658,
-      "sha256": "a490526f5cb0dfcc5aab9a029511538d4aac55c0fed11352575b26c594905c8b",
-      "chars": 358144,
+      "size_bytes": 385075,
+      "sha256": "51590f4462d850cb774756a9787d900f8de3880a247a8fb71214a76264ac145d",
+      "chars": 358291,
       "chunks": 2
     },
     {
@@ -2145,9 +2145,9 @@
       "path": "core/stroyka_estimate_canon.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 277140,
-      "sha256": "a14245840cba352b5e7781b9be9b7ba772aa1ea620f2ab67fceb730d93fa5dae",
-      "chars": 244839,
+      "size_bytes": 278529,
+      "sha256": "da22f011d3573d13595e50a42bd4c15204ab657f78c73c0785f47e040adc68ae",
+      "chars": 246112,
       "chunks": 1
     },
     {
@@ -2271,9 +2271,9 @@
       "path": "core/topic2_estimate_final_close_v2.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 33393,
-      "sha256": "3b97882b6df023220ad212813f361df9262fd18069d8ffb8cbae8318557e8939",
-      "chars": 31984,
+      "size_bytes": 36174,
+      "sha256": "a373c37bbe4e3db914f83563ff21d8a20e90c0d05f93908b136375c90b358765",
+      "chars": 34765,
       "chunks": 1
     },
     {
@@ -3396,7 +3396,7 @@
       "path": "docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 34714,
+      "size_bytes": 34697,
       "sha256": "",
       "chars": 0,
       "chunks": 0

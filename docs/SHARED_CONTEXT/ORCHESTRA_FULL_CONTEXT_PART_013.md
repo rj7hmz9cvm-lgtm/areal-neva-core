@@ -1,8 +1,478 @@
 # ORCHESTRA_FULL_CONTEXT_PART_013
-generated_at_utc: 2026-07-05T06:54:40.153729+00:00
-git_sha_before_commit: bef6672437429b48721d60f0b658559609445201
+generated_at_utc: 2026-07-05T07:24:40.529009+00:00
+git_sha_before_commit: 348fcef33c8e3936cd3d50305a5f5420b029f2c5
 part: 13/18
 
+
+====================================================================================================
+BEGIN_FILE: core/technadzor_drive_index.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 31118a4e5fa521f992b026001a821ecf8cea7570e3185a3ed6b89d59a3143c77
+====================================================================================================
+# === P6H_TOPIC5_TECHNADZOR_TEMPLATE_PHOTO_CLIENT_SAFE_CLOSE_20260504 / DRIVE_INDEX_V1 ===
+# Auto-discovery of topic_5 (technadzor) Drive folder contents as style/content
+# references — without manual "прими как образец" commands.
+#
+# Layered classification (file role):
+#   PRIMARY_PDF_STYLE         — PDF in topic root or in non-system subfolders (real client acts; main style)
+#   SECONDARY_DOCX_REFERENCE  — DOCX in service subfolders (TECHNADZOR / _drafts / _system / _templates)
+#   CLIENT_PHOTO_SOURCE       — image/* in topic root or any non-system folder (work-object photos)
+#   CLIENT_FINAL_PDF          — PDF artifacts produced earlier (kept in client folders)
+#   SYSTEM_TEMPLATE           — DOCX/JSON/manifests in service subfolders
+#   OTHER                     — anything else (audio, etc.)
+#
+# Folder classification:
+#   SYSTEM   — name in {_system, _templates, _drafts, _manifests, _archive, _tmp, TECHNADZOR}
+#   CLIENT   — anything else (work-object/customer-facing folders)
+#
+# Index is persisted to:
+#   data/templates/technadzor/ACTIVE__chat_<chat_id>__topic_<topic_id>.json
+# (filename uses literal chat_id with leading dash, matching existing convention)
+#
+# In-memory cache TTL = 5 minutes.
+from __future__ import annotations
+
+import io
+import json
+import os
+import time
+import logging
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+LOG = logging.getLogger("task_worker")
+
+_CACHE_TTL_SECONDS = 300
+_CACHE: Dict[Tuple[str, int], Tuple[float, Dict[str, Any]]] = {}
+
+_BASE = Path(__file__).resolve().parent.parent
+_LOCAL_INDEX_DIR = _BASE / "data" / "templates" / "technadzor"
+_LOCAL_INDEX_DIR.mkdir(parents=True, exist_ok=True)
+_DOWNLOAD_DIR = _BASE / "data" / "memory_files" / "technadzor_index_cache"
+_DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+# Folder names treated as SYSTEM (no client artifacts allowed)
+SYSTEM_FOLDER_NAMES = {
+    "_system", "_templates", "_drafts", "_manifests", "_archive", "_tmp",
+    "technadzor",  # case-insensitive match against TECHNADZOR
+}
+
+
+def is_system_folder(name: str) -> bool:
+    """True if the folder is internal/service. Match case-insensitive."""
+    if not name:
+        return False
+    return name.strip().lower() in SYSTEM_FOLDER_NAMES
+
+
+def is_client_facing_folder(name: str) -> bool:
+    """True if the folder is client-facing (object/customer/visit folder)."""
+    if not name:
+        return False
+    return not is_system_folder(name)
+
+
+def _service():
+    from core.topic_drive_oauth import _oauth_service
+    return _oauth_service()
+
+
+def _root_folder_id() -> str:
+    from core.topic_drive_oauth import _root_folder_id as r
+    return r()
+
+
+def _find_child(svc, parent_id: str, name: str) -> Optional[str]:
+    safe_name = name.replace("'", "\\'")
+    res = svc.files().list(
+        q=f"'{parent_id}' in parents and name='{safe_name}' and trashed=false",
+        fields="files(id,name,mimeType)",
+        pageSize=10,
+    ).execute()
+    files = res.get("files", [])
+    return files[0]["id"] if files else None
+
+
+def _ensure_subfolder(svc, parent_id: str, name: str) -> str:
+    fid = _find_child(svc, parent_id, name)
+    if fid:
+        return fid
+    body = {
+        "name": name,
+        "mimeType": "application/vnd.google-apps.folder",
+        "parents": [parent_id],
+    }
+    created = svc.files().create(body=body, fields="id").execute()
+    return created["id"]
+
+
+def _list_folder(svc, folder_id: str, page_size: int = 200) -> List[Dict[str, Any]]:
+    items: List[Dict[str, Any]] = []
+    page_token = <REDACTED_SECRET>
+    while True:
+        res = svc.files().list(
+            q=f"'{folder_id}' in parents and trashed=false",
+            fields="nextPageToken, files(id,name,mimeType,modifiedTime,createdTime,size,webViewLink,parents)",
+            orderBy="modifiedTime desc",
+            pageSize=page_size,
+            pageToken=<REDACTED_SECRET>
+        ).execute()
+        items.extend(res.get("files", []))
+        page_token = <REDACTED_SECRET>"nextPageToken")
+        if not page_token:
+            break
+    return items
+
+
+def classify_technadzor_drive_file(file: Dict[str, Any], parent_folder_name: str = "") -> str:
+    """Classify a Drive file by role (returns one of the role strings)."""
+    mt = file.get("mimeType", "") or ""
+    name = (file.get("name") or "").lower()
+    parent = (parent_folder_name or "").strip().lower()
+    parent_is_system = parent in SYSTEM_FOLDER_NAMES
+
+    # PDF
+    if mt == "application/pdf":
+        if parent_is_system:
+            return "SYSTEM_TEMPLATE"
+        if name.startswith("act") or "акт" in name or "осмотр" in name:
+            # PDF in non-system folder with act-like name → primary style
+            return "PRIMARY_PDF_STYLE"
+        # PDF in client folder, generic — most likely a final client PDF artifact
+        return "CLIENT_FINAL_PDF"
+
+    # DOCX
+    if mt == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        if parent_is_system:
+            return "SYSTEM_TEMPLATE"
+        return "SECONDARY_DOCX_REFERENCE"
+
+    # Image
+    if mt.startswith("image/"):
+        if parent_is_system:
+            return "SYSTEM_TEMPLATE"
+        return "CLIENT_PHOTO_SOURCE"
+
+    # JSON / manifests / system
+    if mt in ("application/json",) or name.endswith((".json", ".log", ".bak", ".tmp")):
+        return "SYSTEM_TEMPLATE"
+
+    # Audio (voice notes)
+    if mt.startswith("audio/") or mt == "application/ogg":
+        return "OTHER"
+
+    return "OTHER"
+
+
+def _resolve_topic_folder(svc, chat_id: str, topic_id: int) -> Optional[str]:
+    root = _root_folder_id()
+    chat_folder = _find_child(svc, root, f"chat_{chat_id}")
+    if not chat_folder:
+        return None
+    return _find_child(svc, chat_folder, f"topic_{int(topic_id)}")
+
+
+def _local_index_path(chat_id: str, topic_id: int) -> Path:
+    fname = f"ACTIVE__chat_{chat_id}__topic_{int(topic_id)}.json"
+    return _LOCAL_INDEX_DIR / fname
+
+
+def _drive_url(file: Dict[str, Any]) -> str:
+    fid = file.get("id", "")
+    if file.get("webViewLink"):
+        return file["webViewLink"]
+    if file.get("mimeType") == "application/vnd.google-apps.folder":
+        return f"https://drive.google.com/drive/folders/{fid}"
+    return f"https://drive.google.com/file/d/{fid}/view"
+
+
+def scan_topic5_drive_templates(chat_id: str, topic_id: int = 5, force: bool = False) -> Dict[str, Any]:
+    """Scan Drive topic_<id> contents and return classified listing.
+
+    Cached for 5 min. Pass force=True to refresh.
+    """
+    key = (str(chat_id), int(topic_id))
+    now = time.time()
+    if not force and key in _CACHE:
+        ts, cached = _CACHE[key]
+        if now - ts < _CACHE_TTL_SECONDS:
+            return cached
+
+    svc = _service()
+    topic_fid = _resolve_topic_folder(svc, chat_id, topic_id)
+    result: Dict[str, Any] = {
+        "chat_id": str(chat_id),
+        "topic_id": int(topic_id),
+        "topic_folder_id": topic_fid,
+        "topic_folder_link": (
+            f"https://drive.google.com/drive/folders/{topic_fid}"
+            if topic_fid else None
+        ),
+        "files": [],
+        "folders_system": [],
+        "folders_client": [],
+        "by_role": {},
+        "primary_pdf_style": [],
+        "secondary_docx_reference": [],
+        "client_photo_source": [],
+        "client_final_pdf": [],
+        "system_template": [],
+        "other": [],
+        "ok": False,
+        "error": None,
+        "scanned_at": int(now),
+    }
+
+    if not topic_fid:
+        result["error"] = f"topic folder chat_{chat_id}/topic_{topic_id} not found"
+        _CACHE[key] = (now, result)
+        return result
+
+    try:
+        # Walk topic root
+        root_items = _list_folder(svc, topic_fid)
+        all_records: List[Dict[str, Any]] = []
+        sub_folder_walk: List[Tuple[str, str]] = []  # (folder_id, folder_name)
+        for it in root_items:
+            if it.get("mimeType") == "application/vnd.google-apps.folder":
+                if is_system_folder(it["name"]):
+                    result["folders_system"].append({
+                        "id": it["id"], "name": it["name"],
+                        "drive_url": _drive_url(it),
+                    })
+                else:
+                    result["folders_client"].append({
+                        "id": it["id"], "name": it["name"],
+                        "drive_url": _drive_url(it),
+                    })
+                sub_folder_walk.append((it["id"], it["name"]))
+            else:
+                role = classify_technadzor_drive_file(it, parent_folder_name="")
+                rec = _build_record(it, role, parent_folder_name="", chat_id=chat_id, topic_id=topic_id)
+                all_records.append(rec)
+
+        # Walk one level of subfolders (do not recurse deeper to keep it cheap)
+        for sub_fid, sub_name in sub_folder_walk:
+            sub_items = _list_folder(svc, sub_fid)
+            for it in sub_items:
+                if it.get("mimeType") == "application/vnd.google-apps.folder":
+                    # nested sub-subfolder — record name only, do not recurse
+                    continue
+                role = classify_technadzor_drive_file(it, parent_folder_name=sub_name)
+                rec = _build_record(it, role, parent_folder_name=sub_name, chat_id=chat_id, topic_id=topic_id)
+                all_records.append(rec)
+
+        result["files"] = all_records
+        for rec in all_records:
+            role = rec["role"]
+            bucket = role.lower()
+            if bucket == "primary_pdf_style":
+                result["primary_pdf_style"].append(rec)
+            elif bucket == "secondary_docx_reference":
+                result["secondary_docx_reference"].append(rec)
+            elif bucket == "client_photo_source":
+                result["client_photo_source"].append(rec)
+            elif bucket == "client_final_pdf":
+                result["client_final_pdf"].append(rec)
+            elif bucket == "system_template":
+                result["system_template"].append(rec)
+            else:
+                result["other"].append(rec)
+            result["by_role"].setdefault(role, 0)
+            result["by_role"][role] += 1
+
+        result["ok"] = True
+    except Exception as exc:
+        result["error"] = repr(exc)
+        LOG.exception("P6H_TOPIC5_DRIVE_INDEX_SCAN_FAIL chat=%s topic=%s", chat_id, topic_id)
+
+    _CACHE[key] = (now, result)
+    return result
+
+
+def _build_record(file: Dict[str, Any], role: str, parent_folder_name: str, chat_id: str, topic_id: int) -> Dict[str, Any]:
+    parent_lower = (parent_folder_name or "").strip().lower()
+    parent_is_system = parent_lower in SYSTEM_FOLDER_NAMES
+    return {
+        "file_id": file.get("id"),
+        "file_name": file.get("name"),
+        "mime_type": file.get("mimeType"),
+        "drive_url": _drive_url(file),
+        "folder_name": parent_folder_name or "<root>",
+        "role": role,
+        "client_facing": (not parent_is_system),
+        "created_time": file.get("createdTime"),
+        "modified_time": file.get("modifiedTime"),
+        "size": file.get("size"),
+    }
+
+
+def build_technadzor_template_index(chat_id: str = "-1003725299009", topic_id: int = 5, force: bool = True) -> Dict[str, Any]:
+    """Build full topic_5 index, persist to local JSON, return the index dict.
+
+    Persistent path:
+        data/templates/technadzor/ACTIVE__chat_<chat_id>__topic_<topic_id>.json
+    """
+    idx = scan_topic5_drive_templates(chat_id, topic_id, force=force)
+    payload = {
+        "chat_id": idx.get("chat_id"),
+        "topic_id": idx.get("topic_id"),
+        "topic_folder_id": idx.get("topic_folder_id"),
+        "topic_folder_link": idx.get("topic_folder_link"),
+        "scanned_at": idx.get("scanned_at"),
+        "ok": idx.get("ok"),
+        "error": idx.get("error"),
+        "by_role": idx.get("by_role"),
+        "folders_system": idx.get("folders_system"),
+        "folders_client": idx.get("folders_client"),
+        "files": idx.get("files"),
+        "primary_pdf_style": idx.get("primary_pdf_style"),
+        "secondary_docx_reference": idx.get("secondary_docx_reference"),
+        "client_photo_source": idx.get("client_photo_source"),
+        "client_final_pdf": idx.get("client_final_pdf"),
+        "system_template": idx.get("system_template"),
+        "other": idx.get("other"),
+        "marker": "P6H_TOPIC5_USE_EXISTING_TEMPLATES_PHOTO_TO_TECH_REPORT_20260504_V1",
+        "updated_at": int(time.time()),
+    }
+    try:
+        path = _local_index_path(str(chat_id), int(topic_id))
+        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        payload["local_index_path"] = str(path)
+    except Exception as exc:
+        LOG.exception("P6H_TOPIC5_DRIVE_INDEX_PERSIST_FAIL chat=%s topic=%s err=%s", chat_id, topic_id, exc)
+    return payload
+
+
+def get_active_index(chat_id: str = "-1003725299009", topic_id: int = 5) -> Optional[Dict[str, Any]]:
+    """Read persisted index from disk, if present."""
+    p = _local_index_path(str(chat_id), int(topic_id))
+    if not p.exists():
+        return None
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
+def primary_template_meta(idx: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Most recent PRIMARY_PDF_STYLE record. Falls back to most recent CLIENT_FINAL_PDF."""
+    if idx.get("primary_pdf_style"):
+        return idx["primary_pdf_style"][0]
+    if idx.get("client_final_pdf"):
+        return idx["client_final_pdf"][0]
+    return None
+
+
+def secondary_template_meta(idx: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    if idx.get("secondary_docx_reference"):
+        return idx["secondary_docx_reference"][0]
+    return None
+
+
+def ensure_service_subfolder(chat_id: str, topic_id: int, name: str = "_drafts") -> Optional[str]:
+    """Create/return id for a SERVICE subfolder (system, never client-facing).
+
+    Refuses to create folders with non-system names.
+    """
+    if not is_system_folder(name):
+        raise ValueError(f"Refusing to create non-system folder via service path: {name}")
+    svc = _service()
+    topic_fid = _resolve_topic_folder(svc, chat_id, topic_id)
+    if not topic_fid:
+        return None
+    return _ensure_subfolder(svc, topic_fid, name)
+
+
+def upload_to_service_subfolder(local_path: Path, dst_name: str, chat_id: str, topic_id: int, subfolder: str = "_drafts") -> Optional[Dict[str, Any]]:
+    """Upload artifact to topic_<id>/<service-subfolder>/. Subfolder MUST be system."""
+    if not is_system_folder(subfolder):
+        raise ValueError(f"Refusing to upload to non-system subfolder: {subfolder}")
+    return _upload_to_folder(local_path, dst_name, chat_id, topic_id, subfolder, allow_client=False)
+
+
+def upload_client_pdf_to_folder(local_path: Path, dst_name: str, chat_id: str, topic_id: int, target_folder_name: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """Upload final client PDF.
+
+    If target_folder_name is provided AND it's a non-system (client-facing) folder,
+    upload there. Otherwise upload to topic root.
+
+    Refuses anything that isn't .pdf — by spec, client folders accept only photos and final PDFs.
+    """
+    if not str(local_path).lower().endswith(".pdf"):
+        raise ValueError(f"Refusing to upload non-PDF to client folder: {local_path}")
+    return _upload_to_folder(local_path, dst_name, chat_id, topic_id, target_folder_name, allow_client=True)
+
+
+def _upload_to_folder(local_path: Path, dst_name: str, chat_id: str, topic_id: int, target_folder_name: Optional[str], allow_client: bool) -> Optional[Dict[str, Any]]:
+    try:
+        from googleapiclient.http import MediaFileUpload
+        svc = _service()
+        topic_fid = _resolve_topic_folder(svc, chat_id, topic_id)
+        if not topic_fid:
+            return None
+
+        if target_folder_name:
+            if is_system_folder(target_folder_name):
+                target_id = _ensure_subfolder(svc, topic_fid, target_folder_name)
+            else:
+                if not allow_client:
+                    raise ValueError(f"Client folder upload not allowed via service path: {target_folder_name}")
+                # find existing client folder, do NOT auto-create client folders
+                target_id = _find_child(svc, topic_fid, target_folder_name)
+                if not target_id:
+                    LOG.warning("P6H_TOPIC5_CLIENT_FOLDER_NOT_FOUND name=%s — uploading to topic root", target_folder_name)
+                    target_id = topic_fid
+        else:
+            target_id = topic_fid
+
+        body = {"name": dst_name, "parents": [target_id]}
+        mime = None
+        ln = str(local_path).lower()
+        if ln.endswith(".docx"):
+            mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        elif ln.endswith(".pdf"):
+            mime = "application/pdf"
+        elif ln.endswith(".xlsx"):
+            mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        elif ln.endswith(".json"):
+            mime = "application/json"
+        media = MediaFileUpload(str(local_path), mimetype=mime, resumable=False)
+        created = svc.files().create(body=body, media_body=media, fields="id,webViewLink,parents").execute()
+        return {"id": created["id"], "link": created.get("webViewLink"), "parent_id": target_id, "target_folder_name": target_folder_name}
+    except Exception:
+        LOG.exception("P6H_TOPIC5_DRIVE_UPLOAD_FAIL name=%s topic=%s sub=%s", dst_name, topic_id, target_folder_name)
+        return None
+
+
+def download_to_local(file_id: str, dst_filename: str) -> Optional[Path]:
+    """Download a Drive file to local cache. Returns path or None."""
+    try:
+        from googleapiclient.http import MediaIoBaseDownload
+        svc = _service()
+        dst = _DOWNLOAD_DIR / dst_filename
+        req = svc.files().get_media(fileId=file_id)
+        with io.FileIO(dst, "wb") as buf:
+            dl = MediaIoBaseDownload(buf, req)
+            done = False
+            while not done:
+                _, done = dl.next_chunk()
+        return dst
+    except Exception:
+        LOG.exception("P6H_TOPIC5_DRIVE_INDEX_DOWNLOAD_FAIL fid=%s", file_id)
+        return None
+
+
+try:
+    LOG.info("P6H_TOPIC5_DRIVE_INDEX_V1_INSTALLED")
+except Exception:
+    pass
+# === END_P6H_TOPIC5_DRIVE_INDEX_V1 ===
+
+====================================================================================================
+END_FILE: core/technadzor_drive_index.py
+FILE_CHUNK: 1/1
+====================================================================================================
 
 ====================================================================================================
 BEGIN_FILE: core/technadzor_engine.py
@@ -6302,7 +6772,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/topic2_estimate_final_close_v2.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 3b97882b6df023220ad212813f361df9262fd18069d8ffb8cbae8318557e8939
+SHA256_FULL_FILE: a373c37bbe4e3db914f83563ff21d8a20e90c0d05f93908b136375c90b358765
 ====================================================================================================
 from __future__ import annotations
 
@@ -7234,6 +7704,59 @@ async def handle_topic2_estimate_final_close(conn, task, send_reply_ex=None, upd
 
 # === END_PATCH_TOPIC2_DONE_CONTRACT_FALLBACK_V1 ===
 
+
+# === PATCH_TOPIC2_DRIVE_MARKERS_REQUIRE_LINKS_V1 ===
+# Do not mark Drive upload OK when artifact links are local /root paths.
+_T2DMR_ORIG_MAKE_ARTIFACTS = _make_artifacts
+
+def _t2dmr_is_drive_link(value) -> bool:
+    return "drive.google.com" in str(value or "") or "docs.google.com" in str(value or "")
+
+def _make_artifacts(task_id: str, topic_id: int, raw_text: str, photo_text: str = "", chat_id: str = "") -> dict:
+    result = _T2DMR_ORIG_MAKE_ARTIFACTS(task_id, topic_id, raw_text, photo_text, chat_id)
+    result["_drive_xlsx_ok"] = _t2dmr_is_drive_link(result.get("xlsx_link"))
+    result["_drive_pdf_ok"] = _t2dmr_is_drive_link(result.get("pdf_link"))
+    return result
+
+_T2DMR_ORIG_HANDLE = handle_topic2_estimate_final_close
+
+async def handle_topic2_estimate_final_close(conn, task, send_reply_ex=None, update_task=None, history=None, logger=None):
+    captured = {}
+    orig_make = globals().get("_make_artifacts")
+
+    def _capture_make_artifacts(task_id: str, topic_id: int, raw_text: str, photo_text: str = "", chat_id: str = "") -> dict:
+        res = orig_make(task_id, topic_id, raw_text, photo_text, chat_id)
+        captured.update(res if isinstance(res, dict) else {})
+        return res
+
+    globals()["_make_artifacts"] = _capture_make_artifacts
+    try:
+        ok = await _T2DMR_ORIG_HANDLE(conn, task, send_reply_ex=send_reply_ex, update_task=update_task, history=history, logger=logger)
+    finally:
+        globals()["_make_artifacts"] = orig_make
+
+    try:
+        task_id = _s(_field(task, "id"))
+        topic_id = int(_field(task, "topic_id", 0) or 0)
+        if ok and task_id and topic_id == 2:
+            x_ok = _t2dmr_is_drive_link(captured.get("xlsx_link"))
+            p_ok = _t2dmr_is_drive_link(captured.get("pdf_link"))
+            if x_ok:
+                conn.execute("INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))", (task_id, "TOPIC2_DRIVE_UPLOAD_XLSX_OK"))
+            else:
+                conn.execute("INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))", (task_id, "TOPIC2_DRIVE_UPLOAD_XLSX_MISSING"))
+            if p_ok:
+                conn.execute("INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))", (task_id, "TOPIC2_DRIVE_UPLOAD_PDF_OK"))
+            else:
+                conn.execute("INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))", (task_id, "TOPIC2_DRIVE_UPLOAD_PDF_MISSING"))
+            if x_ok and p_ok:
+                conn.execute("INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))", (task_id, "TOPIC2_DRIVE_LINKS_SAVED"))
+            conn.commit()
+    except Exception:
+        pass
+    return ok
+
+# === END_PATCH_TOPIC2_DRIVE_MARKERS_REQUIRE_LINKS_V1 ===
 
 ====================================================================================================
 END_FILE: core/topic2_estimate_final_close_v2.py
@@ -8860,414 +9383,5 @@ def _handle_zip(file_path: str, task_id: str, topic_id: int, result: dict) -> di
 
 ====================================================================================================
 END_FILE: core/universal_file_handler.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/upload_retry_queue.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: c84118ed90d2faa43ddc5a8f1c63e8767639e25641c2b6ebc4c1ca38570171c2
-====================================================================================================
-"""
-Upload retry queue.
-Finds tasks where artifact was sent to Telegram (Drive failed),
-checks if Drive is now available, re-uploads to Drive.
-Notifies user in Telegram with new Drive link.
-"""
-import os
-import sqlite3
-import logging
-import json
-import tempfile
-import requests
-from dotenv import load_dotenv
-
-load_dotenv("/root/.areal-neva-core/.env", override=True)
-
-logging.basicConfig(
-    filename="/root/.areal-neva-core/logs/upload_retry_queue.log",
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(message)s",
-)
-logger = logging.getLogger(__name__)
-
-DB_PATH = "/root/.areal-neva-core/data/core.db"
-BOT_TOKEN = <REDACTED_SECRET>"BOT_TOKEN") or os.environ.get("TELEGRAM_BOT_TOKEN")
-
-
-def check_drive_alive() -> bool:
-    # === ROOT_TMP_UPLOAD_GUARD_V1 ===
-    # Healthcheck MUST NOT upload tmp*.txt into AI_ORCHESTRA root.
-    # It only lists the configured Drive root via OAuth.
-    try:
-        from core.topic_drive_oauth import _oauth_service, _root_folder_id
-        service = _oauth_service()
-        root_id = _root_folder_id()
-        service.files().list(
-            q=f"'{root_id}' in parents and trashed = false",
-            spaces="drive",
-            pageSize=1,
-            fields="files(id,name)",
-            supportsAllDrives=True,
-            includeItemsFromAllDrives=True,
-        ).execute()
-        logger.info("ROOT_TMP_UPLOAD_GUARD_V1: DRIVE_HEALTH_CHECK_LIST_OK root=%s", root_id)
-        return True
-    except Exception as e:
-        logger.warning("ROOT_TMP_UPLOAD_GUARD_V1: DRIVE_HEALTH_CHECK_FAILED err=%s", e)
-        return False
-    # === END_ROOT_TMP_UPLOAD_GUARD_V1 ===
-
-
-def get_pending_retry_tasks(conn: sqlite3.Connection):
-    return conn.execute(
-        """
-        SELECT t.id, t.chat_id, t.topic_id, t.result,
-               th_tg.action as tg_action
-        FROM tasks t
-        JOIN task_history th_tg ON th_tg.task_id = t.id
-            AND th_tg.action LIKE 'TELEGRAM_ARTIFACT_FALLBACK_SENT:%'
-        WHERE t.state IN ('AWAITING_CONFIRMATION','DONE')
-          AND NOT EXISTS (
-              SELECT 1 FROM task_history th2
-              WHERE th2.task_id = t.id
-                AND th2.action LIKE 'DRIVE_RETRY_UPLOAD_OK:%'
-          )
-        ORDER BY t.updated_at DESC
-        LIMIT 20
-        """,
-    ).fetchall()
-
-
-def parse_tg_action(action: str) -> dict:
-    result = {}
-    for part in action.split(":"):
-        if "=" in part:
-            k, v = part.split("=", 1)
-            result[k] = v
-    return result
-
-
-def download_from_telegram(file_id: str, dest_path: str) -> bool:
-    try:
-        r = requests.get(
-            f"https://api.telegram.org/bot{BOT_TOKEN}/getFile",
-            params={"file_id": file_id},
-            timeout=15,
-        )
-        if not r.ok:
-            return False
-        file_path = r.json().get("result", {}).get("file_path")
-        if not file_path:
-            return False
-        dl = requests.get(
-            f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}",
-            timeout=30,
-        )
-        if not dl.ok:
-            return False
-        with open(dest_path, "wb") as f:
-            f.write(dl.content)
-        return True
-    except Exception as e:
-        logger.error("TG_DOWNLOAD_FAILED file_id=%s err=%s", file_id, e)
-        return False
-
-
-def notify_telegram(chat_id, topic_id, message: str):
-    if not BOT_TOKEN:
-        return
-    try:
-        data = {"chat_id": str(chat_id), "text": message, "parse_mode": "HTML"}
-        if topic_id and int(topic_id) > 0:
-            data["message_thread_id"] = str(topic_id)
-        requests.post(
-            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-            json=data, timeout=10,
-        )
-    except Exception as e:
-        logger.warning("NOTIFY_FAILED err=%s", e)
-
-
-def run():
-    logger.info("RETRY_QUEUE_START")
-
-    if not check_drive_alive():
-        logger.info("DRIVE_UNAVAILABLE — skip retry")
-        return
-
-    logger.info("DRIVE_ALIVE — checking pending tasks")
-
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-
-    try:
-        pending = get_pending_retry_tasks(conn)
-        logger.info("PENDING_RETRY_COUNT=%d", len(pending))
-
-        for row in pending:
-            task_id = row["id"]
-            chat_id = row["chat_id"]
-            topic_id = row["topic_id"]
-            tg_info = parse_tg_action(row["tg_action"])
-            file_id = tg_info.get("file_id")
-
-            if not file_id:
-                logger.warning("RETRY_SKIP task=%s no file_id", task_id)
-                continue
-
-            logger.info("RETRY_ATTEMPT task=%s file_id=%s", task_id, file_id)
-
-            with tempfile.NamedTemporaryFile(
-                suffix=".bin", delete=False,
-                dir="/root/.areal-neva-core/runtime"
-            ) as tmp:
-                tmp_path = tmp.name
-
-            ok = download_from_telegram(file_id, tmp_path)
-            if not ok:
-                logger.error("RETRY_TG_DOWNLOAD_FAILED task=%s", task_id)
-                try:
-                    os.remove(tmp_path)
-                except Exception:
-                    pass
-                continue
-
-            # PATCH_RETRY_TOPIC_FOLDER_V1: upload to topic folder, not INGEST root
-            try:
-                import mimetypes as _mt
-                from core.topic_drive_oauth import _upload_file_sync
-                # Get original file name from task raw_input
-                try:
-                    _raw = conn.execute("SELECT raw_input FROM tasks WHERE id=?", (task_id,)).fetchone()
-                    _orig_name = json.loads(_raw["raw_input"] or "{}").get("file_name", f"artifact_{task_id[:8]}")
-                except Exception:
-                    _orig_name = f"artifact_{task_id[:8]}"
-                _mime = _mt.guess_type(_orig_name)[0] or "application/octet-stream"
-                _up = _upload_file_sync(
-                    tmp_path, _orig_name,
-                    str(row["chat_id"]), int(topic_id or 0), _mime
-                )
-                _fid = _up.get("drive_file_id") if isinstance(_up, dict) else None
-                drive_link = f"https://drive.google.com/file/d/{_fid}/view" if _fid else None
-            except Exception as e:
-                logger.error("RETRY_DRIVE_UPLOAD_FAILED task=%s err=%s", task_id, e)
-                drive_link = None
-            finally:
-                try:
-                    os.remove(tmp_path)
-                except Exception:
-                    pass
-
-            if not drive_link or "drive.google.com" not in str(drive_link):
-                logger.error("RETRY_NO_LINK task=%s", task_id)
-                continue
-
-            old_result = row["result"] or ""
-            new_result = old_result.replace(
-                "Файл отправлен в Telegram. Внешнее хранилище временно недоступно.",
-                f"Файл доступен на Drive: {drive_link}"
-            )
-            if new_result == old_result:
-                new_result = old_result + f"\n\nФайл теперь на Drive: {drive_link}"
-
-            conn.execute(
-                "UPDATE tasks SET result=?, updated_at=datetime('now') WHERE id=?",
-                (new_result, task_id),
-            )
-            conn.execute(
-                "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, datetime('now'))",
-                (task_id, f"DRIVE_RETRY_UPLOAD_OK:{drive_link}"),
-            )
-            conn.commit()
-
-            notify_telegram(
-                chat_id, topic_id,
-                f"✅ Файл теперь доступен на Google Drive:\n{drive_link}"
-            )
-            logger.info("RETRY_UPLOAD_OK task=%s link=%s", task_id, drive_link)
-
-    finally:
-        conn.close()
-
-    logger.info("RETRY_QUEUE_DONE")
-
-
-if __name__ == "__main__":
-    # === FULLFIX_20_RETRY_LOOP ===
-    import time as _ff20_time
-    logger.info("UPLOAD_RETRY_SERVICE_START")
-    while True:
-        try:
-            run()
-        except Exception as _ff20_re:
-            logger.exception("UPLOAD_RETRY_LOOP_ERR=%s", _ff20_re)
-        _ff20_time.sleep(300)
-    # === END FULLFIX_20_RETRY_LOOP ===
-
-====================================================================================================
-END_FILE: core/upload_retry_queue.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/web_engine.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 60ae8879713e63665e3b98acb78976ad8f6522694bb018b072daed8bd67c8912
-====================================================================================================
-import logging
-
-logger = logging.getLogger("web_engine")
-
-async def web_search(query: str) -> str:
-    # Search handled by ONLINE_MODEL (perplexity/sonar) in ai_router.py
-    logger.warning("web_search_stub called query=%s", (query or "")[:100])
-    return ""
-
-====================================================================================================
-END_FILE: core/web_engine.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/work_item.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: ec6ecd21b8594924d8b0bdd0bde9e53d00e69485f45b88db8f7aedb11624f2f3
-====================================================================================================
-# === FULLFIX_DIRECTION_KERNEL_STAGE_1_WORKITEM ===
-from __future__ import annotations
-from dataclasses import dataclass, field, asdict
-from typing import Any, Dict, List, Optional
-
-
-def _get(row, key, default=None):
-    if row is None: return default
-    if isinstance(row, dict): return row.get(key, default)
-    try: return row[key]
-    except Exception: return getattr(row, key, default)
-
-def _int(v, d=0):
-    try:
-        if v is None or v == "": return d
-        return int(v)
-    except Exception: return d
-
-def _str(v, d=""):
-    if v is None: return d
-    return str(v)
-
-
-@dataclass
-class WorkItem:
-    work_id: str
-    chat_id: str
-    topic_id: int
-    user_id: Optional[str] = None
-    message_id: Optional[int] = None
-    reply_to_message_id: Optional[int] = None
-    bot_message_id: Optional[int] = None
-    source_type: str = "telegram"
-    input_type: str = "unknown"
-    raw_text: str = ""
-    state: str = "NEW"
-    intent: str = "UNKNOWN"
-    direction: Optional[str] = None
-    direction_profile: Dict[str, Any] = field(default_factory=dict)
-    formats_in: List[str] = field(default_factory=list)
-    formats_out: List[str] = field(default_factory=list)
-    attachments: List[Dict[str, Any]] = field(default_factory=list)
-    parsed_data: Dict[str, Any] = field(default_factory=dict)
-    context_refs: Dict[str, Any] = field(default_factory=dict)
-    execution_plan: List[Dict[str, Any]] = field(default_factory=list)
-    quality_gates: List[str] = field(default_factory=list)
-    result: Dict[str, Any] = field(default_factory=dict)
-    audit: Dict[str, Any] = field(default_factory=dict)
-    errors: List[Dict[str, Any]] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
-
-    @classmethod
-    def from_task_row(cls, row, extra=None):
-        extra = extra or {}
-        raw_text = _str(extra.get("raw_text") or extra.get("raw_input") or _get(row, "raw_input", ""))
-        input_type = _str(extra.get("input_type") or _get(row, "input_type", "unknown"), "unknown")
-        topic_id = _int(extra.get("topic_id") if extra.get("topic_id") is not None else _get(row, "topic_id", 0), 0)
-        wi = cls(
-            work_id=_str(extra.get("work_id") or extra.get("task_id") or _get(row, "id", "")),
-            chat_id=_str(extra.get("chat_id") or _get(row, "chat_id", "")),
-            topic_id=topic_id,
-            user_id=_str(extra.get("user_id") or _get(row, "user_id", "")) or None,
-            message_id=_int(extra.get("message_id") or _get(row, "message_id", None), 0) or None,
-            reply_to_message_id=_int(extra.get("reply_to_message_id") if extra.get("reply_to_message_id") is not None else _get(row, "reply_to_message_id", None), 0) or None,
-            bot_message_id=_int(extra.get("bot_message_id") if extra.get("bot_message_id") is not None else _get(row, "bot_message_id", None), 0) or None,
-            source_type=_str(extra.get("source_type") or "telegram"),
-            input_type=input_type,
-            raw_text=raw_text,
-            state=_str(extra.get("state") or _get(row, "state", "NEW"), "NEW"),
-            created_at=_str(extra.get("created_at") or _get(row, "created_at", "")) or None,
-            updated_at=_str(extra.get("updated_at") or _get(row, "updated_at", "")) or None,
-        )
-        wi.formats_in = wi._detect_formats_in()
-        wi.result = {"text": _str(_get(row, "result", ""))}
-        err = _str(_get(row, "error_message", ""))
-        if err:
-            wi.errors.append({"code": "TASK_ERROR", "message": err, "fatal": False})
-        wi.audit["created_by"] = "FULLFIX_DIRECTION_KERNEL_STAGE_1"
-        return wi
-
-    def _detect_formats_in(self):
-        t = (self.input_type or "").lower()
-        raw = (self.raw_text or "").lower()
-        out = []
-        if t in ("text","voice","photo","file","drive_file","url","mixed"): out.append(t)
-        if ".pdf" in raw or "pdf" in t: out.append("pdf")
-        if ".xlsx" in raw or ".xls" in raw: out.append("xlsx")
-        if ".dwg" in raw: out.append("dwg")
-        if t in ("photo","image"): out.append("photo")
-        if not out: out.append("text")
-        return list(dict.fromkeys(out))
-
-    def set_direction(self, direction, profile=None):
-        self.direction = direction
-        self.direction_profile = profile or {}
-        self.audit["direction"] = direction
-        self.audit["direction_profile_id"] = self.direction_profile.get("id", direction)
-
-    def set_intent(self, intent):
-        self.intent = intent or "UNKNOWN"
-        self.audit["intent"] = self.intent
-
-    def add_audit(self, key, value):
-        self.audit[str(key)] = value
-
-    def add_error(self, code, message, fatal=False):
-        self.errors.append({"code": str(code), "message": str(message), "fatal": bool(fatal)})
-
-    def to_dict(self): return asdict(self)
-
-    def to_payload(self):
-        return {
-            "id": self.work_id, "task_id": self.work_id,
-            "chat_id": self.chat_id, "topic_id": self.topic_id,
-            "user_id": self.user_id, "message_id": self.message_id,
-            "reply_to_message_id": self.reply_to_message_id,
-            "bot_message_id": self.bot_message_id,
-            "source_type": self.source_type, "input_type": self.input_type,
-            "raw_input": self.raw_text, "raw_text": self.raw_text,
-            "state": self.state, "intent": self.intent,
-            "direction": self.direction, "direction_profile": self.direction_profile,
-            "formats_in": self.formats_in, "formats_out": self.formats_out,
-            "attachments": self.attachments, "parsed_data": self.parsed_data,
-            "context_refs": self.context_refs, "execution_plan": self.execution_plan,
-            "quality_gates": self.quality_gates, "result": self.result,
-            "audit": self.audit, "direction_audit": self.audit,
-            "errors": self.errors, "metadata": self.metadata,
-            "work_item": self.to_dict(),
-        }
-# === END FULLFIX_DIRECTION_KERNEL_STAGE_1_WORKITEM ===
-
-====================================================================================================
-END_FILE: core/work_item.py
 FILE_CHUNK: 1/1
 ====================================================================================================

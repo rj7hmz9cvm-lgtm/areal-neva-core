@@ -1,7 +1,7 @@
 # SINGLE_MODEL_FULL_CONTEXT
 
-GENERATED_AT: 2026-07-05T06:54:40.508953+00:00
-GIT_SHA: bef6672437429b48721d60f0b658559609445201
+GENERATED_AT: 2026-07-05T07:24:40.872239+00:00
+GIT_SHA: 348fcef33c8e3936cd3d50305a5f5420b029f2c5
 PURPOSE: Один файл с полным контекстом проекта для любой модели
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 
@@ -22,7 +22,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 | topic_id | name | status | active | failed_24h |
 |----------|------|--------|--------|------------|
 | 0 | COMMON | UNKNOWN | 0 | 1 |
-| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 0 | 3 |
+| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 3 | 3 |
 | 5 | TEKHNADZOR | UNKNOWN | 0 | 0 |
 | 11 | VIDEO | UNKNOWN | 0 | 0 |
 | 210 | PROEKTIROVANIE | UNKNOWN | 0 | 0 |
@@ -85,77 +85,160 @@ owner_reference_registry: loaded=True items=11
 # 2. LATEST_HANDOFF
 ================================================================================
 
-# LATEST HANDOFF — 2026-05-09 ~15:30 MSK
-**HEAD**: `8b21d75`
-**Воркер**: active (areal-task-worker)
-**telegram-ingress**: active
+# LATEST HANDOFF — 2026-07-05 topic_2 / STROYKA
+
+**HEAD на момент проверки**: `348fcef`
+**Основной SSOT**: `docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md`
+**Канон topic_2**: `docs/CANON_FINAL/TOPIC_2_CANONICAL_ESTIMATE_CONTRACT.md`
+**Рабочий отчёт сессии**: `docs/HANDOFFS/SESSION_20260705_TOPIC2_CANON_LIVE.md`
 
 ---
 
-## СТАТУС ТОПИКОВ
+## Статус topic_2
 
 | Топик | Состояние | Примечание |
 |-------|-----------|------------|
-| topic_2 СТРОИКА | AWAITING_CONFIRMATION `076e4350` | bot_msg=10757, 8 348 317 руб — сгенерирована БЕЗ price WC (до патча), требует подтверждения/правок от пользователя |
-| topic_5 ТЕХНАДЗОР | INSTALLED (не VERIFIED) | SA Drive upload fails 403, OAuth fallback в коде |
-| topic_500 ПОИСК | INSTALLED (не VERIFIED) | 9 режимов adaptive output |
-| topic_210 PROJECT | Active | без изменений |
+| topic_2 STROYKA | PARTIAL LIVE VERIFIED / NOT FULL CANON CLOSED | Text-TZ estimate flow repaired for live task `0115efea-ed49-4263-a6f0-a981a760261c`; remaining canon gaps below |
+| topic_5 TEKHNADZOR | не трогать в рамках topic_2 | соседний топик |
+| topic_210 PROJECT | не трогать в рамках topic_2 | соседний топик |
+| topic_500 SEARCH | не трогать без отдельной задачи | интернет-поиск только через Sonar по канону |
 
 ---
 
-## ЗАКРЫТО В СЕССИИ 09.05.2026 (вторая смена)
+## Что было сделано 2026-07-04 / 2026-07-05 по topic_2
 
-### PATCH_TOPIC2_PRICE_ALWAYS_ASK_V1 — COMMITTED ✅ (8b21d75)
-**Файл**: `core/stroyka_estimate_canon.py` — append в конец
-
-**Проблема**: "сделай по заданию смету" → `_is_confirm(startswith "сделай ")` = True + `_pending_is_fresh` override 24h (строка 2470-2472) → `CANONICAL_OLD_ROUTE_HARD_BLOCK` подхватывал pending от предыдущего запуска → пропускал price WC → estimate без TOPIC2_PRICE_CHOICE_CONFIRMED.
-
-**Фикс**: Wrapper вокруг `maybe_handle_stroyka_estimate` — если pending активен AND `not _is_confirm_only(raw)` (raw содержит ESTIMATE_WORDS, напр. "смет") → помечает pending stale. `_is_confirm_only("сделай по заданию смету")` = False (содержит "смет") → pending очищается → полный flow → price WC.
-
-Легитимные подтверждения ("да", "средняя", "ок") — `_is_confirm_only` = True → pending НЕ очищается → estimate генерируется ✓.
-
-### Gate stale-context fixes — COMMITTED ✅ (8b21d75)
-**Файл**: `core/topic2_input_gate.py`
-
-- `_text_from_task`: убран `result` из текста gate — estimate result "Не входит: дренаж" → ложная блокировка user-clarification как drainage
-- `_latest_file_task` / `_recent_file_tasks`: фильтр `IN (NEW/IP/WC/AC)` — DONE задача с mikea_rp3.pdf (ливневая канализация) давала false positive
-- `_collect_current_file_text`: filesystem-scan заменён DB-lookup по активным задачам — `_recent_runtime_pdfs()` находила 4 old drainage PDF из FAILED задач
-
-### task_worker.py fixes — COMMITTED ✅ (8b21d75)
-- FULLFIX_14: добавлен `topic_id==2` guard — topic_11 (видео) больше не роутится в estimate
-- `_p6_is_topic2_vague`: исключение correction-фраз ("это не", "это план", "план дома" и т.д.)
+- Восстановлен live text-TZ route для полного нового задания topic_2 без подмешивания старой задачи.
+- Исправлен симптом старого загрязнения, когда fresh complete TZ мог уйти в старый followup/template route.
+- Для тестовой задачи `0115efea-ed49-4263-a6f0-a981a760261c` подтверждено:
+  - плита `450 мм` распознана из текущего задания;
+  - кирпичные наружные стены использованы вместо старого утепления/каркасных строк;
+  - добавлены инженерные коммуникации, проживание бригады/стройлагерь, логистика, накладные расходы;
+  - `Утепление стен 150 мм` отсутствует в финальном XLSX;
+  - интернет-цены применялись через `perplexity/sonar`, без DeepSeek search fallback;
+  - созданы XLSX/PDF и Drive links;
+  - финал удерживается по канону до явного подтверждения пользователя.
+- Создан отчёт `docs/HANDOFFS/SESSION_20260705_TOPIC2_CANON_LIVE.md`.
 
 ---
 
-## ОТКРЫТЫЕ ВОПРОСЫ
+## Факты, найденные после live repair
 
-| Проблема | Статус |
-|----------|--------|
-| topic_2 `076e4350` — estimate без price WC | AWAITING_CONFIRMATION, bot_msg=10757. Сгенерирован ДО патча. Ждёт ответа пользователя |
-| topic_5 Drive SA 403 | live-тест не пройден |
-| Длины дренажа из PDF | PDF-схема графическая, дефолт 80м — дренажная задача 043e5c9f уже закрыта |
+Диагностика выполнялась по правилу `logs -> db -> pin -> memory -> context -> patch`, без правок runtime.
+
+1. `НДС 20%` всё ещё hardcoded в runtime topic_2:
+   - `core/sample_template_engine.py`
+   - `core/stroyka_estimate_canon.py`
+   - встречаются `НДС 20%`, `*0.2`, `*1.2`.
+
+2. По рабочему требованию topic_2 дальше должен считать НДС так:
+   - по умолчанию смета без НДС;
+   - если пользователь не указал режим, нужно уточнить: без НДС или с НДС 22%;
+   - если выбран НДС, ставка должна быть 22%, а не 20%.
+
+3. Long memory после DONE не полностью соответствует канону:
+   - task `0115efea-ed49-4263-a6f0-a981a760261c` в `core.db` имеет state `DONE`;
+   - в `memory.db` найден `topic_2_file_0115...`, но свежие `topic_2_user_input`, `topic_2_task_summary`, `topic_2_assistant_output` для этой задачи не найдены;
+   - последние summary-ключи topic_2 относятся к `2026-05-03`.
+
+4. Active pin содержит старые майские записи:
+   - `ebf586ce-3a29-4a22-837b-7c1d55506986` от `2026-05-04`;
+   - `9d7e08f8-2d28-4684-b5cd-8dc72ea49317` от `2026-05-01`.
+   Нужно проверить, что pin retrieval не загрязняет новые расчёты topic_2.
+
+5. Для task `0115efea...` result содержит `Объект: барнхаус`, хотя raw TZ пользователя был `дом`. Это признак шаблонного текста, который нужно убрать из topic_2 final formatting.
+
+6. Фото/PDF/OCR контур topic_2 остаётся незакрытым:
+   - `P6E2 photo intercept before canonical`;
+   - `pdf_spec_extractor.py exists but not connected to canonical flow`;
+   - `ocr_table_engine.py exists but not connected to topic_2 flow`;
+   - multifile project context для topic_2 не закрыт.
 
 ---
 
-## ДИАГНОСТИКА
+## Next work / open blockers
+
+Работать только по существующим канонам, без новых направлений и без новых канонов.
+
+1. Patch VAT policy для topic_2:
+   - убрать hardcoded `20% / 0.2 / 1.2` из topic_2 runtime paths;
+   - default output = без НДС;
+   - при неясности спросить пользователя `без НДС или с НДС 22%`;
+   - если выбран НДС, считать 22%.
+
+2. Patch topic_2 memory write after DONE:
+   - проверить `_save_memory()` path для canonical topic_2 final;
+   - обеспечить запись `topic_2_user_input`, `topic_2_task_summary`, `topic_2_assistant_output` после DONE;
+   - не писать память до DONE.
+
+3. Проверить pin/reply isolation:
+   - reply должен привязываться к parent task по `bot_message_id/reply_to_message_id` и `topic_id=2`;
+   - старые active pin не должны подмешивать майские задачи в свежую смету;
+   - любые изменения `telegram_daemon.py` только после отдельного явного `да` пользователя.
+
+4. Проверить file/photo/project intake topic_2:
+   - фото, PDF, XLSX, голос, reply и multifile должны идти в canonical topic_2 estimate flow;
+   - если данных не хватает, задаётся точный уточняющий вопрос;
+   - запрещено выдумывать параметры из старых задач.
+
+5. Live tests после patch:
+   - text full TZ;
+   - reply continuation;
+   - voice continuation;
+   - photo with/without caption;
+   - PDF/project/spec;
+   - memory query по topic_2;
+   - pin isolation.
+
+---
+
+## Что не трогать
+
+- Не создавать ветки.
+- Не push без отдельного разрешения.
+- Не менять systemd unit files.
+- Не менять рабочий запуск оркестра.
+- Не трогать `.env` и секреты.
+- Не редактировать `core/ai_router.py`, `core/reply_sender.py`, `core/google_io.py` без отдельного разрешения.
+- Не трогать topic_5, topic_210, topic_500 и другие соседние топики в рамках topic_2 fix.
+
+---
+
+## Проверки перед продолжением
 
 ```bash
-# Текущая house-смета
-sqlite3 data/core.db "SELECT id,state,bot_message_id,substr(result,1,100),updated_at FROM tasks WHERE id='076e4350-c8e7-4fea-bca6-b980faad2a64';"
-
-# Проверка price WC в истории следующей задачи
-sqlite3 data/core.db "SELECT action,created_at FROM task_history WHERE task_id='076e4350-c8e7-4fea-bca6-b980faad2a64' ORDER BY rowid DESC LIMIT 10;"
-
-# Последние topic_2 задачи
-sqlite3 data/core.db "SELECT id,state,bot_message_id,substr(raw_input,1,60),updated_at FROM tasks WHERE topic_id=2 ORDER BY rowid DESC LIMIT 5;"
-
-# Воркер
-systemctl is-active areal-task-worker
-tail -10 logs/task_worker.log
-
-# Проверка патча в памяти модуля
-python3 -c "from core.stroyka_estimate_canon import maybe_handle_stroyka_estimate; import inspect; print('PRICE_ALWAYS_ASK' in inspect.getsource(maybe_handle_stroyka_estimate))"
+python3 -m py_compile core/sample_template_engine.py core/stroyka_estimate_canon.py core/topic2_input_gate.py core/topic2_estimate_final_close_v2.py task_worker.py
+git diff -- docs/HANDOFFS/LATEST_HANDOFF.md docs/HANDOFFS/SESSION_20260705_TOPIC2_CANON_LIVE.md
+sqlite3 data/core.db "SELECT id,state,topic_id,input_type,substr(raw_input,1,120),updated_at FROM tasks WHERE topic_id=2 ORDER BY updated_at DESC LIMIT 8;"
+sqlite3 data/memory.db "SELECT key,timestamp FROM memory WHERE chat_id='-1003725299009' AND key GLOB 'topic_2_*' ORDER BY timestamp DESC LIMIT 12;"
 ```
+
+---
+
+## Progress 2026-07-05 — VAT policy patch started
+
+- Backup created: core/sample_template_engine.py.bak_20260705_vat22 and core/stroyka_estimate_canon.py.bak_20260705_vat22.
+- Removed forbidden `НДС 20%` from checked topic_2 runtime files.
+- Replaced VAT rate with 22% in topic_2 XLSX/PDF/summary VAT formulas.
+- Active P3 XLSX route now writes `НДС 22% (не включён)` with VAT amount 0 by default and total payable without VAT.
+- Active P3 Telegram summary now says VAT is not included and asks user to answer `с НДС` if a VAT 22% calculation is needed.
+- Verified: python3 -m py_compile core/sample_template_engine.py core/stroyka_estimate_canon.py core/topic2_input_gate.py core/topic2_estimate_final_close_v2.py task_worker.py -> PY_COMPILE_OK.
+- Not done yet: live Telegram regression test for без НДС / с НДС; memory after DONE; pin/reply isolation; photo/PDF/multifile flow.
+
+---
+
+## Progress 2026-07-05 — live PDF project flow patch
+
+- Backup created: task_worker.py.bak_20260705_pdf_voice_bind.
+- Backup created: core/stroyka_estimate_canon.py.bak_20260705_no_waiting_project_revive.
+- Backup created: core/topic2_estimate_final_close_v2.py.bak_20260705_drive_markers.
+- Added PATCH_TOPIC2_WAITING_PROJECT_FILE_BIND_V1 in task_worker.py before final asyncio.run(main()).
+- Voice/text phrase like `сейчас скину проект/PDF/файл` now moves topic_2 task to WAITING_CLARIFICATION with TOPIC2_WAITING_PROJECT_FILE instead of starting estimate.
+- PDF drive_file without caption now binds to recent waiting project parent and enters topic_2 file estimate flow instead of DRIVE_FILE_NO_INTENT_OFFER menu.
+- Added PATCH_TOPIC2_NO_WAITING_PROJECT_MEMORY_REVIVE_V1 in core/stroyka_estimate_canon.py to stop old estimate raw_input revive for waiting-project phrases.
+- Added PATCH_TOPIC2_DRIVE_MARKERS_REQUIRE_LINKS_V1 in core/topic2_estimate_final_close_v2.py: Drive OK markers require real drive/docs links; otherwise MISSING markers are written.
+- Verified: python3 -m py_compile task_worker.py core/stroyka_estimate_canon.py core/topic2_estimate_final_close_v2.py core/sample_template_engine.py core/topic2_input_gate.py -> OK.
+- Not restarted: systemd/worker launch intentionally not touched. Patch takes effect after normal worker reload/restart.
+- Next live test: voice says project will be sent -> bot waits; PDF upload binds to same task; no old raw_input revive marker; final result must contain real XLSX/PDF Drive links.
 
 
 ================================================================================
@@ -3887,8 +3970,8 @@ I canno
 ```
 # topic_0 COMMON
 
-GENERATED_AT: 2026-07-05T06:54:40.216004+00:00
-GIT_SHA: bef6672437429b48721d60f0b658559609445201
+GENERATED_AT: 2026-07-05T07:24:40.599310+00:00
+GIT_SHA: 348fcef33c8e3936cd3d50305a5f5420b029f2c5
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 0
@@ -3972,7 +4055,7 @@ STATUS: SYNCED_LOCAL
 ## TOPIC_2_STROYKA
 
 STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE: 0  FAILED_24H: 3
+ACTIVE: 3  FAILED_24H: 3
 DIRECTIONS_BOUND: Сметы
 
 ### LAST_FAILED (5)
@@ -4764,22 +4847,24 @@ def _write_xlsx(path: Path, items: List[Dict[str, Any]], source_text: str, photo
 ```
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-07-05T06:54:40.249145+00:00
-GIT_SHA: bef6672437429b48721d60f0b658559609445201
+GENERATED_AT: 2026-07-05T07:24:40.625828+00:00
+GIT_SHA: 348fcef33c8e3936cd3d50305a5f5420b029f2c5
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
 ROLE: Сметы
 DIRECTIONS_BOUND: estimates
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE_TASKS: 0
+ACTIVE_TASKS: 3
 FAILED_LAST_24H: 3
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 12
 - CANCELLED: 134
-- DONE: 182
+- DONE: 183
 - FAILED: 137
+- NEW: 1
+- WAITING_CLARIFICATION: 2
 
 ## LATEST_FAILED
 - 5a453d88 | STALE_TIMEOUT
@@ -5471,8 +5556,8 @@ _P6H5_NORMATIVE_EXPAND = [
 ```
 # topic_5 TEKHNADZOR
 
-GENERATED_AT: 2026-07-05T06:54:40.282522+00:00
-GIT_SHA: bef6672437429b48721d60f0b658559609445201
+GENERATED_AT: 2026-07-05T07:24:40.651838+00:00
+GIT_SHA: 348fcef33c8e3936cd3d50305a5f5420b029f2c5
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 5
@@ -5574,8 +5659,8 @@ DIRECTIONS_BOUND: Видео
 ```
 # topic_11 VIDEO
 
-GENERATED_AT: 2026-07-05T06:54:40.306905+00:00
-GIT_SHA: bef6672437429b48721d60f0b658559609445201
+GENERATED_AT: 2026-07-05T07:24:40.673331+00:00
+GIT_SHA: 348fcef33c8e3936cd3d50305a5f5420b029f2c5
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 11
@@ -6184,8 +6269,8 @@ def _normalize_sheet_register(template: Dict[str, Any], data: Dict[str, Any]) ->
 ```
 # topic_210 PROEKTIROVANIE
 
-GENERATED_AT: 2026-07-05T06:54:40.341004+00:00
-GIT_SHA: bef6672437429b48721d60f0b658559609445201
+GENERATED_AT: 2026-07-05T07:24:40.700507+00:00
+GIT_SHA: 348fcef33c8e3936cd3d50305a5f5420b029f2c5
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 210
@@ -6751,8 +6836,8 @@ except Exception:
 ```
 # topic_500 VEB_POISK
 
-GENERATED_AT: 2026-07-05T06:54:40.370875+00:00
-GIT_SHA: bef6672437429b48721d60f0b658559609445201
+GENERATED_AT: 2026-07-05T07:24:40.732317+00:00
+GIT_SHA: 348fcef33c8e3936cd3d50305a5f5420b029f2c5
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 500
@@ -6854,8 +6939,8 @@ DIRECTIONS_BOUND: Сервер DevOps
 ```
 # topic_794 DEVOPS
 
-GENERATED_AT: 2026-07-05T06:54:40.397199+00:00
-GIT_SHA: bef6672437429b48721d60f0b658559609445201
+GENERATED_AT: 2026-07-05T07:24:40.756515+00:00
+GIT_SHA: 348fcef33c8e3936cd3d50305a5f5420b029f2c5
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 794
@@ -6950,8 +7035,8 @@ DIRECTIONS_BOUND: Автозапчасти
 ```
 # topic_961 AVTOZAPCHASTI
 
-GENERATED_AT: 2026-07-05T06:54:40.425746+00:00
-GIT_SHA: bef6672437429b48721d60f0b658559609445201
+GENERATED_AT: 2026-07-05T07:24:40.782346+00:00
+GIT_SHA: 348fcef33c8e3936cd3d50305a5f5420b029f2c5
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 961
@@ -7043,8 +7128,8 @@ DIRECTIONS_BOUND: Мозги оркестра
 ```
 # topic_3008 KODY_MOZGOV
 
-GENERATED_AT: 2026-07-05T06:54:40.452062+00:00
-GIT_SHA: bef6672437429b48721d60f0b658559609445201
+GENERATED_AT: 2026-07-05T07:24:40.806376+00:00
+GIT_SHA: 348fcef33c8e3936cd3d50305a5f5420b029f2c5
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 3008
@@ -7147,8 +7232,8 @@ DIRECTIONS_BOUND: CRM лиды
 ```
 # topic_4569 CRM_LEADS
 
-GENERATED_AT: 2026-07-05T06:54:40.478550+00:00
-GIT_SHA: bef6672437429b48721d60f0b658559609445201
+GENERATED_AT: 2026-07-05T07:24:40.832835+00:00
+GIT_SHA: 348fcef33c8e3936cd3d50305a5f5420b029f2c5
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 4569
@@ -7256,8 +7341,8 @@ DIRECTIONS_BOUND: Поиск работы
 ```
 # topic_6104 JOB_SEARCH
 
-GENERATED_AT: 2026-07-05T06:54:40.499900+00:00
-GIT_SHA: bef6672437429b48721d60f0b658559609445201
+GENERATED_AT: 2026-07-05T07:24:40.861709+00:00
+GIT_SHA: 348fcef33c8e3936cd3d50305a5f5420b029f2c5
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 6104

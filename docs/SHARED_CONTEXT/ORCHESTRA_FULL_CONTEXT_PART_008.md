@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_008
-generated_at_utc: 2026-07-05T06:54:40.145307+00:00
-git_sha_before_commit: bef6672437429b48721d60f0b658559609445201
+generated_at_utc: 2026-07-05T07:24:40.521071+00:00
+git_sha_before_commit: 348fcef33c8e3936cd3d50305a5f5420b029f2c5
 part: 8/18
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 4/4
-SHA256_FULL_FILE: 1d97d7bfec3646a6972c7874d63d01820d1c9c0acb35320bde9919bc467ebe3e
+SHA256_FULL_FILE: f2bd9bfb4bc796e3dde112b06eb63c6358e45860a3665f7f8318a9a29f730122
 ====================================================================================================
                     return True
             except Exception as e:
@@ -3666,6 +3666,176 @@ except Exception as _t2ffg2_install_err:
     except Exception:
         pass
 # === /PATCH_TOPIC2_FRESH_FULL_TZ_FINAL_GUARD_V2 ===
+
+# === PATCH_TOPIC2_WAITING_PROJECT_FILE_BIND_V1 ===
+# Canon basis:
+# - voice is text;
+# - topic_2 PDF/XLSX/photo must enter estimate flow;
+# - when the user says they will send a project/file, do not revive old estimate
+#   memory and do not start a new estimate before the file arrives.
+import json as _t2wp_json
+import logging as _t2wp_log
+import inspect as _t2wp_inspect
+
+_T2WP_LOG = _t2wp_log.getLogger("task_worker")
+
+def _t2wp_s(v):
+    return "" if v is None else str(v)
+
+def _t2wp_low(v):
+    return _t2wp_s(v).lower().replace("ё", "е")
+
+def _t2wp_waiting_project_text(text):
+    t = _t2wp_low(text).replace("[voice]", " ")
+    waits = (
+        "сейчас скину",
+        "сейчас пришлю",
+        "скину проект",
+        "пришлю проект",
+        "скину файл",
+        "пришлю файл",
+        "сейчас скину проект",
+        "сейчас пришлю проект",
+    )
+    project_words = ("проект", "pdf", "файл", "чертеж", "архитектур", "стадия")
+    return any(w in t for w in waits) and any(w in t for w in project_words)
+
+def _t2wp_file_meta(raw):
+    try:
+        data = _t2wp_json.loads(_t2wp_s(raw))
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+def _t2wp_is_pdf_project(raw):
+    meta = _t2wp_file_meta(raw)
+    name = _t2wp_low(meta.get("file_name"))
+    mime = _t2wp_low(meta.get("mime_type"))
+    return bool("pdf" in mime or name.endswith(".pdf"))
+
+def _t2wp_find_waiting_project_parent(conn, chat_id, topic_id):
+    try:
+        return conn.execute(
+            """
+            SELECT * FROM tasks
+            WHERE chat_id=? AND COALESCE(topic_id,0)=?
+              AND state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION')
+              AND input_type IN ('text','voice')
+              AND updated_at >= datetime('now','-45 minutes')
+            ORDER BY updated_at DESC, rowid DESC
+            LIMIT 20
+            """,
+            (str(chat_id), int(topic_id or 0)),
+        ).fetchall()
+    except Exception:
+        return []
+
+def _t2wp_parent_for_file(conn, chat_id, topic_id):
+    for row in _t2wp_find_waiting_project_parent(conn, chat_id, topic_id):
+        raw = _t2wp_s(_task_field(row, "raw_input", ""))
+        if _t2wp_waiting_project_text(raw):
+            return row
+    return None
+
+try:
+    _T2WP_ORIG_HANDLE_NEW = _handle_new
+except Exception:
+    _T2WP_ORIG_HANDLE_NEW = None
+
+if _T2WP_ORIG_HANDLE_NEW and not getattr(_T2WP_ORIG_HANDLE_NEW, "_t2wp_wrapped", False):
+    async def _handle_new(conn, task, *args, **kwargs):
+        try:
+            topic_id = int(_task_field(task, "topic_id", 0) or 0)
+            raw = _t2wp_s(_task_field(task, "raw_input", ""))
+            input_type = _t2wp_low(_task_field(task, "input_type", "text"))
+            if topic_id == 2 and input_type in ("text", "voice") and _t2wp_waiting_project_text(raw):
+                task_id = _t2wp_s(_task_field(task, "id", ""))
+                chat_id = _t2wp_s(_task_field(task, "chat_id", ""))
+                reply_to = _task_field(task, "reply_to_message_id", None)
+                msg = (
+                    "Жду PDF/проект для расчёта. После загрузки файла привяжу его к этой задаче "
+                    "и буду считать по содержимому проекта, без старых смет и без догадок."
+                )
+                _update_task(conn, task_id, state="WAITING_CLARIFICATION", result=msg, error_message="TOPIC2_WAITING_PROJECT_FILE")
+                _history(conn, task_id, "PATCH_TOPIC2_WAITING_PROJECT_FILE_BIND_V1:WAITING_FOR_FILE")
+                conn.commit()
+                try:
+                    sent = send_reply_ex(chat_id=str(chat_id), text=msg, reply_to_message_id=reply_to, message_thread_id=2)
+                    if isinstance(sent, dict) and sent.get("bot_message_id"):
+                        _update_task(conn, task_id, bot_message_id=sent.get("bot_message_id"))
+                        conn.commit()
+                except Exception as e:
+                    _T2WP_LOG.warning("T2WP_WAIT_SEND_ERR task=%s err=%s", task_id, e)
+                return True
+        except Exception as e:
+            _T2WP_LOG.warning("T2WP_HANDLE_NEW_GUARD_ERR %s", e)
+
+        res = _T2WP_ORIG_HANDLE_NEW(conn, task, *args, **kwargs)
+        if _t2wp_inspect.isawaitable(res):
+            return await res
+        return res
+
+    _handle_new._t2wp_wrapped = True
+    _T2WP_LOG.info("PATCH_TOPIC2_WAITING_PROJECT_FILE_BIND_V1 _handle_new installed")
+
+try:
+    _T2WP_ORIG_HANDLE_DRIVE_FILE = _handle_drive_file
+except Exception:
+    _T2WP_ORIG_HANDLE_DRIVE_FILE = None
+
+if _T2WP_ORIG_HANDLE_DRIVE_FILE and not getattr(_T2WP_ORIG_HANDLE_DRIVE_FILE, "_t2wp_wrapped", False):
+    async def _handle_drive_file(conn, task, chat_id, topic_id):
+        try:
+            topic_id_i = int(topic_id or _task_field(task, "topic_id", 0) or 0)
+            raw = _t2wp_s(_task_field(task, "raw_input", ""))
+            if topic_id_i == 2 and _t2wp_is_pdf_project(raw):
+                parent = _t2wp_parent_for_file(conn, str(chat_id), topic_id_i)
+                if parent is not None:
+                    task_id = _t2wp_s(_task_field(task, "id", ""))
+                    parent_id = _t2wp_s(_task_field(parent, "id", ""))
+                    meta = _t2wp_file_meta(raw)
+                    meta["caption"] = (meta.get("caption") or "смета по проекту PDF").strip()
+                    meta["topic2_parent_task_id"] = parent_id
+                    new_raw = _t2wp_json.dumps(meta, ensure_ascii=False)
+                    parent_raw = _t2wp_s(_task_field(parent, "raw_input", ""))
+                    enriched = parent_raw + "\n\nTOPIC2_PROJECT_FILE_BOUND:" + new_raw
+                    conn.execute(
+                        "UPDATE tasks SET raw_input=?, state='IN_PROGRESS', error_message='', updated_at=datetime('now') WHERE id=?",
+                        (new_raw, task_id),
+                    )
+                    conn.execute(
+                        "UPDATE tasks SET raw_input=?, state='IN_PROGRESS', error_message='', updated_at=datetime('now') WHERE id=?",
+                        (enriched, parent_id),
+                    )
+                    _history(conn, task_id, f"PATCH_TOPIC2_WAITING_PROJECT_FILE_BIND_V1:PDF_BOUND_TO_PARENT:{parent_id}")
+                    _history(conn, parent_id, f"PATCH_TOPIC2_WAITING_PROJECT_FILE_BIND_V1:PDF_CHILD:{task_id}")
+                    conn.commit()
+                    task_dict = {}
+                    try:
+                        for k in task.keys():
+                            task_dict[k] = task[k]
+                    except Exception:
+                        task_dict = dict(task) if isinstance(task, dict) else {}
+                    task_dict["raw_input"] = new_raw
+                    task_dict["state"] = "IN_PROGRESS"
+                    h_ip = globals().get("_handle_in_progress")
+                    if h_ip:
+                        res = h_ip(conn, task_dict, str(chat_id), topic_id_i)
+                        if _t2wp_inspect.isawaitable(res):
+                            return await res
+                        return res
+        except Exception as e:
+            _T2WP_LOG.warning("T2WP_HANDLE_DRIVE_FILE_BIND_ERR %s", e)
+
+        res = _T2WP_ORIG_HANDLE_DRIVE_FILE(conn, task, chat_id, topic_id)
+        if _t2wp_inspect.isawaitable(res):
+            return await res
+        return res
+
+    _handle_drive_file._t2wp_wrapped = True
+    _T2WP_LOG.info("PATCH_TOPIC2_WAITING_PROJECT_FILE_BIND_V1 _handle_drive_file installed")
+
+# === END_PATCH_TOPIC2_WAITING_PROJECT_FILE_BIND_V1 ===
 
 if __name__ == "__main__":
     asyncio.run(main())

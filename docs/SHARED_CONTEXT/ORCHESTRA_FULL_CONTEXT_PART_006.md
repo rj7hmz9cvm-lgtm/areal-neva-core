@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_006
-generated_at_utc: 2026-07-05T06:54:40.142464+00:00
-git_sha_before_commit: bef6672437429b48721d60f0b658559609445201
+generated_at_utc: 2026-07-05T07:24:40.518979+00:00
+git_sha_before_commit: 348fcef33c8e3936cd3d50305a5f5420b029f2c5
 part: 6/18
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 2/4
-SHA256_FULL_FILE: 1d97d7bfec3646a6972c7874d63d01820d1c9c0acb35320bde9919bc467ebe3e
+SHA256_FULL_FILE: f2bd9bfb4bc796e3dde112b06eb63c6358e45860a3665f7f8318a9a29f730122
 ====================================================================================================
             args = tuple(_p6e4_sanitize_catalog_text(a) if isinstance(a, str) else a for a in args)
             kwargs = {k: (_p6e4_sanitize_catalog_text(v) if isinstance(v, str) else v) for k, v in kwargs.items()}
