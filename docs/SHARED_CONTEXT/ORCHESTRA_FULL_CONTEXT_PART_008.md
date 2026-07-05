@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_008
-generated_at_utc: 2026-07-05T18:24:58.842659+00:00
-git_sha_before_commit: d7d987d6f9b879d8b8063682982d69bce3a8af58
+generated_at_utc: 2026-07-05T18:52:22.165696+00:00
+git_sha_before_commit: 89c6bd9d7d6faabb6d8ad2d726b2667082f15f6f
 part: 8/18
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 4/4
-SHA256_FULL_FILE: 0b2d7b022228f0cacd7cc080a955527090a561b77307bdc570142f36d00f72ef
+SHA256_FULL_FILE: 7c9e2492a8a22354f14b9d163cecfa5be58c18d7f4b74e3013cf6bd17f113119
 ====================================================================================================
 
     # === FIX 2: wrap _t2fb_merge → no raw_input append for drive_file parent ===
@@ -4187,6 +4187,147 @@ except Exception as _t2dfc_install_err:
     except Exception:
         pass
 # === END_PATCH_TOPIC2_DRIVE_FILE_PICKER_CLARIFIED_CANON_V1 ===
+
+# === PATCH_TOPIC2_DRIVE_FILE_PICKER_CLARIFIED_DRIVEFILE_V1 ===
+# Same canon as CLARIFIED_CANON_V1, but on the drive_file handler path.
+# The worker dispatches active drive_file tasks through _handle_drive_file, so the
+# clarified estimate intent must be attached before DRIVE_FILE_NO_INTENT_OFFER_V1.
+try:
+    import json as _t2dfd_json
+    import re as _t2dfd_re
+    import inspect as _t2dfd_inspect
+    import logging as _t2dfd_logging
+
+    _T2DFD_LOG = _t2dfd_logging.getLogger("task_worker")
+    _T2DFD_ORIG_HANDLE_DRIVE_FILE = globals().get("_handle_drive_file")
+
+    def _t2dfd_s(v):
+        return "" if v is None else str(v)
+
+    def _t2dfd_get(task, key, default=None):
+        try:
+            if isinstance(task, dict):
+                return task.get(key, default)
+        except Exception:
+            pass
+        try:
+            if hasattr(task, "keys") and key in task.keys():
+                return task[key]
+        except Exception:
+            pass
+        try:
+            return _task_field(task, key, default)
+        except Exception:
+            return default
+
+    def _t2dfd_low(v):
+        return _t2dfd_s(v).lower().replace("ё", "е")
+
+    def _t2dfd_estimate_intent(text):
+        t = _t2dfd_low(text)
+        if _t2dfd_re.match(r"^\s*1\s*([\).:-]|$)", t):
+            return True
+        return any(w in t for w in (
+            "смет", "расчет", "расчёт", "стоимост", "цены", "материал",
+            "работ", "строительств", "проектной документац", "excel", "xlsx",
+        ))
+
+    def _t2dfd_latest_clarified(conn, task_id):
+        try:
+            row = conn.execute(
+                """
+                SELECT action FROM task_history
+                WHERE task_id=? AND action LIKE 'clarified:%'
+                ORDER BY rowid DESC LIMIT 1
+                """,
+                (str(task_id),),
+            ).fetchone()
+            if row:
+                return _t2dfd_s(row[0]).split("clarified:", 1)[1]
+        except Exception:
+            pass
+        return ""
+
+    def _t2dfd_hist_once(conn, task_id, action):
+        try:
+            if not conn.execute(
+                "SELECT 1 FROM task_history WHERE task_id=? AND action=? LIMIT 1",
+                (str(task_id), str(action)),
+            ).fetchone():
+                conn.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (str(task_id), str(action)),
+                )
+        except Exception:
+            pass
+
+    def _t2dfd_task_dict(task, raw_input):
+        data = {}
+        try:
+            for k in task.keys():
+                data[k] = task[k]
+        except Exception:
+            try:
+                data = dict(task) if isinstance(task, dict) else {}
+            except Exception:
+                data = {}
+        data["raw_input"] = raw_input
+        data["state"] = "IN_PROGRESS"
+        data["error_message"] = ""
+        data["result"] = ""
+        data["input_type"] = "drive_file"
+        data["topic_id"] = 2
+        return data
+
+    if _T2DFD_ORIG_HANDLE_DRIVE_FILE and not getattr(_T2DFD_ORIG_HANDLE_DRIVE_FILE, "_t2dfd_wrapped", False):
+        async def _handle_drive_file(conn, task, chat_id, topic_id):  # noqa: F811
+            try:
+                topic_i = int(topic_id or _t2dfd_get(task, "topic_id", 0) or 0)
+                task_id = _t2dfd_s(_t2dfd_get(task, "id", ""))
+                raw = _t2dfd_s(_t2dfd_get(task, "raw_input", ""))
+                if task_id and topic_i == 2:
+                    try:
+                        meta = _t2dfd_json.loads(raw)
+                        if not isinstance(meta, dict):
+                            meta = {}
+                    except Exception:
+                        meta = {}
+                    clarified = _t2dfd_latest_clarified(conn, task_id)
+                    already = bool(meta.get("topic2_clarified_estimate_intent"))
+                    if meta and clarified and not already and _t2dfd_estimate_intent(clarified):
+                        old_caption = _t2dfd_s(meta.get("caption", "")).strip()
+                        meta["caption"] = (old_caption + "\n" + clarified).strip() if old_caption else clarified.strip()
+                        meta["topic2_clarified_estimate_intent"] = True
+                        new_raw = _t2dfd_json.dumps(meta, ensure_ascii=False)
+                        conn.execute(
+                            "UPDATE tasks SET raw_input=?, state='IN_PROGRESS', result='', error_message='', updated_at=datetime('now') WHERE id=?",
+                            (new_raw, task_id),
+                        )
+                        _t2dfd_hist_once(conn, task_id, "PATCH_TOPIC2_DRIVE_FILE_PICKER_CLARIFIED_DRIVEFILE_V1:CAPTION_FROM_CLARIFIED")
+                        conn.commit()
+                        task = _t2dfd_task_dict(task, new_raw)
+            except Exception as e:
+                try:
+                    _T2DFD_LOG.warning("PATCH_TOPIC2_DRIVE_FILE_PICKER_CLARIFIED_DRIVEFILE_V1_ERR %s", e)
+                except Exception:
+                    pass
+            res = _T2DFD_ORIG_HANDLE_DRIVE_FILE(conn, task, chat_id, topic_id)
+            if _t2dfd_inspect.isawaitable(res):
+                return await res
+            return res
+
+        _handle_drive_file._t2dfd_wrapped = True
+        globals()["_handle_drive_file"] = _handle_drive_file
+        _T2DFD_LOG.info("PATCH_TOPIC2_DRIVE_FILE_PICKER_CLARIFIED_DRIVEFILE_V1 installed")
+except Exception as _t2dfd_install_err:
+    try:
+        logging.getLogger("task_worker").exception(
+            "PATCH_TOPIC2_DRIVE_FILE_PICKER_CLARIFIED_DRIVEFILE_V1_INSTALL_ERR %s",
+            _t2dfd_install_err,
+        )
+    except Exception:
+        pass
+# === END_PATCH_TOPIC2_DRIVE_FILE_PICKER_CLARIFIED_DRIVEFILE_V1 ===
 
 if __name__ == "__main__":
     asyncio.run(main())
