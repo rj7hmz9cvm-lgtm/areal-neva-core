@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-07-05T18:10:01.843864+00:00
-git_sha_before_commit: 844fafb211fcae417ae52d1f8663c42caeae7374
+generated_at_utc: 2026-07-05T18:20:02.056187+00:00
+git_sha_before_commit: 71e0807ce3820376db71afe96067a0465ee843f5
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,7 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: active
 
 ## GIT_LOG_30
+71e0807 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 844fafb topic2: close PDF estimate confirmation flow
 2d6f053 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 c5ea64e FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
@@ -39,24 +40,84 @@ bef6672 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 4c51410 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 64dbcda FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 573ccf6 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
-93709b3 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
 ## GIT_SHOW_STAT_HEAD
-commit 844fafb211fcae417ae52d1f8663c42caeae7374
+commit 71e0807ce3820376db71afe96067a0465ee843f5
 Author: Ila <ilakuznecov@mac.local>
-Date:   Sun Jul 5 21:06:09 2026 +0300
+Date:   Sun Jul 5 21:10:10 2026 +0300
 
-    topic2: close PDF estimate confirmation flow
+    FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
- core/file_intake_router.py             |   5 +-
- core/pdf_spec_extractor.py             |  69 +++++
- core/sample_template_engine.py         |  96 +++----
- core/stroyka_estimate_canon.py         | 228 ++++++++++++++--
- core/topic2_estimate_final_close_v2.py | 459 +++++++++++++++++++++++++++++----
- docs/HANDOFFS/LATEST_HANDOFF.md        | 192 +++++++++++---
- task_worker.py                         | 384 ++++++++++++++++++++++++++-
- telegram_daemon.py                     |  35 ++-
- 8 files changed, 1298 insertions(+), 170 deletions(-)
+ docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md    |   6 +-
+ docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md |   2 +-
+ .../SHARED_CONTEXT/DIRECTIONS/auto_parts_search.md |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/cad_dwg.md          |   4 +-
+ .../DIRECTIONS/construction_search.md              |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/crm_leads.md        |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/defect_acts.md      |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/devops_server.md    |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/documents.md        |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/email_ingress.md    |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/estimates.md        |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/general_chat.md     |   4 +-
+ .../DIRECTIONS/google_drive_storage.md             |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/internet_search.md  |   4 +-
+ .../DIRECTIONS/isolated_project_ivan.md            |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/job_search.md       |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/memory_archive.md   |   4 +-
+ .../SHARED_CONTEXT/DIRECTIONS/monolith_concrete.md |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/ocr_photo.md        |   4 +-
+ .../DIRECTIONS/orchestration_core.md               |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/photo_cleanup.md    |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/product_search.md   |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/roofing.md          |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/social_content.md   |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/spreadsheets.md     |   4 +-
+ .../SHARED_CONTEXT/DIRECTIONS/structural_design.md |   4 +-
+ .../DIRECTIONS/technical_supervision.md            |   4 +-
+ .../DIRECTIONS/telegram_automation.md              |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/video_production.md |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/vpn_network.md      |   4 +-
+ docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md      |   4 +-
+ docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |   6 +-
+ docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |   6 +-
+ docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  28 ++--
+ .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |  43 ++++--
+ .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_004.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_007.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_010.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_011.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_012.md             | 110 ++++++++++++-
+ .../ORCHESTRA_FULL_CONTEXT_PART_013.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_014.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_015.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_016.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_017.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_018.md             |   4 +-
+ docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 171 ++++++++-------------
+ .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |  11 +-
+ docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   | 116 ++++++++------
+ docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |   6 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |   4 +-
+ .../TOPICS/topic_210_PROEKTIROVANIE.md             |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |  31 ++--
+ .../TOPICS/topic_3008_KODY_MOZGOV.md               |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_5_TEKHNADZOR.md   |   4 +-
+ .../SHARED_CONTEXT/TOPICS/topic_6104_JOB_SEARCH.md |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |   4 +-
+ .../TOPICS/topic_961_AVTOZAPCHASTI.md              |   4 +-
+ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   6 +-
+ 69 files changed, 440 insertions(+), 326 deletions(-)
 
 ## GIT_CHANGED_FILES_10
 core/file_intake_router.py
@@ -142,11 +203,16 @@ telegram_daemon.py
 - CANCELLED|863
 - DONE|649
 - ARCHIVED|381
+- IN_PROGRESS|1
 
 ## CORE_DB_OPEN_TASKS
-- 0
+- 1
 
 ## LATEST_TASKS_15
+- 7dab7ad1-3335-4385-b942-4c734dbdbebe|2|drive_file|IN_PROGRESS|{"file_id": "1aHUalehkGfMtItAJpUeKInLuSUc7V43y", "file_name": "АР_Проект 21Т(1).pdf", "mime_type": "application/pdf", "c|Принял файл «АР_Проект 21Т(1).pdf». Что нужно сделать?
+
+1️⃣ Смета — извлечь позиции, посчитать объёмы, создать Excel
+2️⃣ Описание — описать содержимое документа|2026-07-05 18:19:34
 - 103a8493-2347-4f60-9dee-81ee5892ef46|2|text|DONE|да ок|Подтверждение принято|2026-07-05 17:58:57
 - 84392d62-b460-42f0-8329-15d7064af668|2|text|DONE|3|Выбор цен привязан к основной задаче: max|2026-07-05 17:30:49
 - 9225f446-cbce-4376-ba14-4cff3ab8828a|2|text|DONE|2|Выбор цен привязан к основной задаче: median|2026-07-05 17:24:15
@@ -168,7 +234,6 @@ Excel: https://drive.google.com/file/d/1zjtY9gL4YWHGDN-1sT9ly|2026-07-05 17:58:5
 
 PATCH_TOPIC2_ADDITIONAL_FACTS_FULL_RECALC_CANON_RESTORE_V1: FULL RECALC CONTEXT|P6E67_MERGED_TO_PARENT_TASK a82cfa53-b9a6-467e-935c-3e98e1f5d605|2026-07-05 12:13:59
 - ea794751-2522-488e-be9c-f76f10a48d93|2|drive_file|FAILED|{"file_id": "1FC_ZKLpC_yQ0kM7WJciJcMFIZW8PZHQm", "file_name": "Стадия Р_АР.pdf", "mime_type": "application/pdf", "captio|Задача не выполнена: NO_VALID_ARTIFACT|2026-07-05 11:50:22
-- 63c9fde2-ac68-46cb-a0cb-26fad15a4a05|2|text|DONE|2|Выбор цен привязан к основной задаче: median|2026-07-05 11:49:03
 
 ## LATEST_FAILED_10
 - 9c5946d7-f37f-488f-bf2c-b2045310238a|2|{"file_id": "1f_VpraIIeLAgELtAj94IEzbwDQ5h08Qs", "file_name": "Стадия Р_АР.pdf", "mime_type": "application/pdf", "captio|STALE_TIMEOUT|2026-07-05 17:14:13
@@ -189,6 +254,13 @@ PATCH_TOPIC2_ADDITIONAL_FACTS_FULL_RECALC_CANON_RESTORE_V1: FULL RECALC CONTEXT|
 Шаблон: М-80 или М-110 п|STALE_TIMEOUT|2026-05-09 17:18:10
 
 ## LATEST_TASK_HISTORY_20
+- 7dab7ad1-3335-4385-b942-4c734dbdbebe|state:AWAITING_CONFIRMATION:file_intake_router|2026-07-05 18:19:34
+- 7dab7ad1-3335-4385-b942-4c734dbdbebe|TOPIC2_PUBLIC_RESULT_CANON_VIOLATION:missing_canon_header|2026-07-05 18:19:34
+- 7dab7ad1-3335-4385-b942-4c734dbdbebe|TOPIC2_DRIVE_FILE_PICKER_BYPASSED_EXISTING_ESTIMATE|2026-07-05 18:17:14
+- 7dab7ad1-3335-4385-b942-4c734dbdbebe|clarified:1. Необходимо сделать расчёт полной стоимости строительства данного дома как указано в проектной документации. Удаление от города 120 км. Цены средние на работу и на мате|2026-07-05T18:17:13.952074+00:00
+- 7dab7ad1-3335-4385-b942-4c734dbdbebe|reply_sent:drive_file_no_intent_offer|2026-07-05 18:16:29
+- 7dab7ad1-3335-4385-b942-4c734dbdbebe|DRIVE_FILE_NO_INTENT_OFFER_V1:menu_shown|2026-07-05 18:16:29
+- 7dab7ad1-3335-4385-b942-4c734dbdbebe|created:NEW|2026-07-05T18:16:28.565144+00:00
 - 103a8493-2347-4f60-9dee-81ee5892ef46|TOPIC2_CONFIRM_CHILD_DONE|2026-07-05 17:58:57
 - 103a8493-2347-4f60-9dee-81ee5892ef46|TOPIC2_DONE_BLOCKED_REASON:no_estimate_generated|2026-07-05 17:58:57
 - 33bd7b5a-ade8-47a8-b07e-4db4d3cacca8|state:DONE|2026-07-05 17:58:57
@@ -202,18 +274,14 @@ PATCH_TOPIC2_ADDITIONAL_FACTS_FULL_RECALC_CANON_RESTORE_V1: FULL RECALC CONTEXT|
 - 33bd7b5a-ade8-47a8-b07e-4db4d3cacca8|TOPIC2_DONE_CONTRACT_OK|2026-07-05 17:49:14
 - 33bd7b5a-ade8-47a8-b07e-4db4d3cacca8|TOPIC2_DONE_ONLY_AFTER_USER_YES_V1:BLOCKED_DONE_TO_AWAITING_CONFIRMATION|2026-07-05 17:49:14
 - 33bd7b5a-ade8-47a8-b07e-4db4d3cacca8|TOPIC2_DRIVE_LINKS_SAVED:xlsx=https://drive.google.com/file/d/1zjtY9gL4YWHGDN-1sT9ly3rvmXGOtiaL/view?usp=drivesdk:pdf=https://drive.google.com/file/d/1ORfbDq2fwEE6DBTV-WmzveE8ydS_w|2026-07-05 17:49:14
-- 33bd7b5a-ade8-47a8-b07e-4db4d3cacca8|TOPIC2_DRIVE_UPLOAD_PDF_OK|2026-07-05 17:49:14
-- 33bd7b5a-ade8-47a8-b07e-4db4d3cacca8|TOPIC2_DRIVE_UPLOAD_XLSX_OK|2026-07-05 17:49:14
-- 33bd7b5a-ade8-47a8-b07e-4db4d3cacca8|TOPIC2_DONE_CONTRACT_OK|2026-07-05 17:49:14
-- 33bd7b5a-ade8-47a8-b07e-4db4d3cacca8|TOPIC2_MESSAGE_THREAD_ID_OK|2026-07-05 17:49:14
-- 33bd7b5a-ade8-47a8-b07e-4db4d3cacca8|TOPIC2_TELEGRAM_DELIVERED|2026-07-05 17:49:14
-- 33bd7b5a-ade8-47a8-b07e-4db4d3cacca8|TOPIC2_DRIVE_UPLOAD_PDF_OK|2026-07-05 17:49:14
-- 33bd7b5a-ade8-47a8-b07e-4db4d3cacca8|TOPIC2_DRIVE_UPLOAD_XLSX_OK|2026-07-05 17:49:14
 
 ## MEMORY_DB_COUNT
-- 5288
+- 5291
 
 ## LATEST_MEMORY_20
+- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-07-05T18:19:51.533797+00:00", "files": [{"task_id": "", "file_id": "", "file_name": "", "mime_type": "|2026-07-05T18:19:51.536582+00:00
+- topic_2_file_content_status_7dab7ad1-3335-4385-b942-4c734dbdbebe|{"ok": true, "reason": "INDEXED", "key": "topic_2_file_content_7dab7ad1-3335-4385-b942-4c734dbdbebe", "dedup": false, "kind": "document", "chars": 14986, "file_name": "АР_Проект 21|2026-07-05T18:17:27.375075
+- topic_2_file_7dab7ad1-3335-4385-b942-4c734dbdbebe|{"task_id": "7dab7ad1-3335-4385-b942-4c734dbdbebe", "chat_id": "-1003725299009", "topic_id": 2, "file_id": "1aHUalehkGfMtItAJpUeKInLuSUc7V43y", "file_name": "АР_Проект 21Т(1).pdf",|2026-07-05T18:17:14.180392
 - topic_2_user_input|{
   "task_id": "33bd7b5a-ade8-47a8-b07e-4db4d3cacca8",
   "topic_id": 2,
@@ -242,7 +310,6 @@ PATCH_TOPIC2_ADDITIONAL_FACTS_FULL_RECALC_CANON_RESTORE_V1: FULL RECALC CONTEXT|
 - topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 50, "updated_at": "2026-07-05T17:54:57.428850+00:00", "files": [{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "file_id|2026-07-05T17:54:57.429931+00:00
 - topic_11_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 11, "count": 2, "updated_at": "2026-07-05T17:54:57.373787+00:00", "files": [{"task_id": "a073c181-7a10-426e-8752-7d72dc4ef978", "file_id":|2026-07-05T17:54:57.374210+00:00
 - topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 50, "updated_at": "2026-07-05T17:54:57.364754+00:00", "files": [{"task_id": "4b402275-e99b-4d9f-b331-08f2ba2a93be", "file_id":|2026-07-05T17:54:57.365276+00:00
-- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-07-05T17:54:57.327827+00:00", "files": [{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "file_id":|2026-07-05T17:54:57.328475+00:00
 - topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-05T17:54:57.241104+00:00
 - topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "state": "FAILED", "file_id": "", "file_name": "", "mime_type"|2026-07-05T17:54:57.240964+00:00
 - topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-05T17:54:57.240856+00:00
@@ -250,15 +317,8 @@ PATCH_TOPIC2_ADDITIONAL_FACTS_FULL_RECALC_CANON_RESTORE_V1: FULL RECALC CONTEXT|
 - topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-05T17:54:57.240689+00:00
 - topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_file", "state": "FAILED", "file_id": "1bXXtuHRsXCuxBSRUl8Tj5z6E|2026-07-05T17:54:57.240617+00:00
 - topic_2_file_92de809d-9274-48ee-82b4-584058ea4e48|{"task_id": "92de809d-9274-48ee-82b4-584058ea4e48", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "search", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-05T17:54:57.240532+00:00
-- topic_210_file_ce9421cb-5451-4cea-9823-a413b698bc94|{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-05T17:54:57.240323+00:00
-- topic_210_file_c8619b7e-9ebb-4731-973a-b3f6064bbe38|{"task_id": "c8619b7e-9ebb-4731-973a-b3f6064bbe38", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-05T17:54:57.240086+00:00
 
 ## JOURNAL_AREAL_TASK_WORKER_60
-areal-task-worker.service: Scheduled restart job, restart counter is at 1392.
-Started areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
-areal-task-worker.service: Failed with result 'exit-code'.
-areal-task-worker.service: Scheduled restart job, restart counter is at 1393.
 Started areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
 areal-task-worker.service: Failed with result 'exit-code'.
@@ -314,12 +374,13 @@ areal-task-worker.service: Deactivated successfully.
 areal-task-worker.service: Consumed 17.934s CPU time, 165.2M memory peak, 0B memory swap peak.
 areal-task-worker.service: Scheduled restart job, restart counter is at 1406.
 Started areal-task-worker.service - Areal Task Worker.
+/root/.areal-neva-core/task_worker.py:641: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  _ts = datetime.datetime.utcnow().isoformat()
+/root/.areal-neva-core/task_worker.py:664: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  "timestamp": datetime.datetime.utcnow().isoformat(),
+PATCH_TOPIC2_PICKER_BYPASS_AND_RESULT_GATE_V1 AC blocked task=7dab7ad1-3335-4385-b942-4c734dbdbebe reason=missing_canon_header
 
 ## JOURNAL_TELEGRAM_INGRESS_30
-2026-07-05 14:51:44,304 INFO DAEMON: Update id=262222286 is handled. Duration 13 ms by bot id=8216054898
-2026-07-05 14:53:08,908 INFO DAEMON: Update id=262222287 is handled. Duration 74 ms by bot id=8216054898
-2026-07-05 14:53:21,719 INFO DAEMON: Task f64ed50a-2329-4cc4-8982-b80211e187d3 created state=NEW topic_id=2
-2026-07-05 14:53:21,720 INFO DAEMON: Update id=262222288 is handled. Duration 7 ms by bot id=8216054898
 2026-07-05 15:00:34,279 INFO DAEMON: Task b1276c2d-3c54-4246-9c36-523ab1600fe8 created state=NEW topic_id=2
 2026-07-05 15:00:34,279 INFO DAEMON: Update id=262222289 is handled. Duration 8 ms by bot id=8216054898
 2026-07-05 15:05:41,563 INFO DAEMON: Task 1217e297-c599-45f6-939f-8a800d352397 created state=NEW topic_id=2
@@ -346,3 +407,7 @@ Started areal-task-worker.service - Areal Task Worker.
 2026-07-05 20:30:48,680 INFO DAEMON: Update id=262222302 is handled. Duration 8 ms by bot id=8216054898
 2026-07-05 20:52:17,108 INFO DAEMON: Task 103a8493-2347-4f60-9dee-81ee5892ef46 created state=NEW topic_id=2
 2026-07-05 20:52:17,108 INFO DAEMON: Update id=262222303 is handled. Duration 12 ms by bot id=8216054898
+2026-07-05 21:16:26,111 INFO DAEMON: file_cache is only supported with oauth2client<4.0.0
+2026-07-05 21:16:28,568 INFO DAEMON: Task 7dab7ad1-3335-4385-b942-4c734dbdbebe created state=NEW topic_id=2
+2026-07-05 21:16:28,802 INFO DAEMON: Update id=262222304 is handled. Duration 3856 ms by bot id=8216054898
+2026-07-05 21:17:14,025 INFO DAEMON: Update id=262222305 is handled. Duration 85 ms by bot id=8216054898

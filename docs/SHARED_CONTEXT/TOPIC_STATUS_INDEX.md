@@ -1,12 +1,12 @@
 # TOPIC_STATUS_INDEX
 
-GENERATED_AT: 2026-07-05T18:10:02.334957+00:00
-GIT_SHA: 844fafb211fcae417ae52d1f8663c42caeae7374
+GENERATED_AT: 2026-07-05T18:20:02.898511+00:00
+GIT_SHA: 71e0807ce3820376db71afe96067a0465ee843f5
 
 | topic_id | name | role | status | active | failed_24h | source |
 |----------|------|------|--------|--------|------------|--------|
 | 0 | COMMON | Общий | UNKNOWN | 0 | 0 | TOPICS/topic_0_COMMON.md |
-| 2 | STROYKA | Сметы | INSTALLED_NOT_VERIFIED | 0 | 7 | TOPICS/topic_2_STROYKA.md |
+| 2 | STROYKA | Сметы | INSTALLED_NOT_VERIFIED | 1 | 7 | TOPICS/topic_2_STROYKA.md |
 | 5 | TEKHNADZOR | Технадзор | UNKNOWN | 0 | 0 | TOPICS/topic_5_TEKHNADZOR.md |
 | 11 | VIDEO | Видео | UNKNOWN | 0 | 0 | TOPICS/topic_11_VIDEO.md |
 | 210 | PROEKTIROVANIE | КЖ КМ | UNKNOWN | 0 | 0 | TOPICS/topic_210_PROEKTIROVANIE.md |

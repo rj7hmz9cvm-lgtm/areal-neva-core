@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-07-05T18:10:02.535561+00:00
-GIT_SHA: 844fafb211fcae417ae52d1f8663c42caeae7374
+GENERATED_AT: 2026-07-05T18:20:03.142947+00:00
+GIT_SHA: 71e0807ce3820376db71afe96067a0465ee843f5
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -16,7 +16,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 ## GLOBAL_STATUS
 | topic | name | status | active | failed_24h |
 |-------|------|--------|--------|------------|
-| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 0 | 7 |
+| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 1 | 7 |
 | 5 | TEKHNADZOR | UNKNOWN | 0 | 0 |
 | 210 | PROEKTIROVANIE | UNKNOWN | 0 | 0 |
 | 500 | VEB_POISK | UNKNOWN | 0 | 0 |
@@ -70,7 +70,7 @@ DATE_UNKNOWN
 ## ACTIVE_OR_RECENT_TOPICS
 ### topic_2 STROYKA
 role: Сметы
-active: 0
+active: 1
 failed_24h: 7
 commits_last_7d: 2
 recent_commits:
