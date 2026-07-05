@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_012
-generated_at_utc: 2026-07-05T07:24:40.527728+00:00
-git_sha_before_commit: 348fcef33c8e3936cd3d50305a5f5420b029f2c5
+generated_at_utc: 2026-07-05T07:54:43.370492+00:00
+git_sha_before_commit: 6b8f749704c2f3b2b55cf07044fa84345e982fad
 part: 12/18
 
 
@@ -1796,7 +1796,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: da22f011d3573d13595e50a42bd4c15204ab657f78c73c0785f47e040adc68ae
+SHA256_FULL_FILE: eb799bf5fcd08f6c18c38c967d0e3f49a1b0d970de074dd381ba008a04135ea6
 ====================================================================================================
 # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
 from __future__ import annotations
@@ -4289,7 +4289,8 @@ _sec_orig_maybe_handle = maybe_handle_stroyka_estimate
 
 async def maybe_handle_stroyka_estimate(conn, task, logger=None):
     raw_input = _s(_row_get(task, "raw_input", ""))
-    if _sec_raw_is_thin(raw_input):
+    input_type = _low(_row_get(task, "input_type", ""))
+    if input_type not in ("photo", "file", "drive_file", "image", "document") and _sec_raw_is_thin(raw_input):
         chat_id = _s(_row_get(task, "chat_id", ""))
         topic_id = int(_row_get(task, "topic_id", 0) or 0)
         rich = _sec_get_rich_context(conn, chat_id, topic_id)

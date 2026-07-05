@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_013
-generated_at_utc: 2026-07-05T07:24:40.529009+00:00
-git_sha_before_commit: 348fcef33c8e3936cd3d50305a5f5420b029f2c5
+generated_at_utc: 2026-07-05T07:54:43.371430+00:00
+git_sha_before_commit: 6b8f749704c2f3b2b55cf07044fa84345e982fad
 part: 13/18
 
 
@@ -6772,7 +6772,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/topic2_estimate_final_close_v2.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: a373c37bbe4e3db914f83563ff21d8a20e90c0d05f93908b136375c90b358765
+SHA256_FULL_FILE: 236dddc9fdd041f3e59bcc0e8b7a8d0a73bbc8a4dd42d8f33c0598ac7ea31ccb
 ====================================================================================================
 from __future__ import annotations
 
@@ -7208,15 +7208,21 @@ def _make_artifacts(task_id: str, topic_id: int, raw_text: str, photo_text: str 
     pdf_link = _upload(pdf, task_id, topic_id, chat_id)
     manifest_link = _upload(manifest, task_id, topic_id, chat_id)
 
+    total = 0.0
+    for item in items:
+        try:
+            total += float(item.get("total") or 0) or (float(item.get("qty") or 0) * float(item.get("price") or 0))
+        except Exception:
+            pass
+
     msg = (
-        "Сметный расчёт подготовлен без запроса цены по кругу\n"
+        "✅ Смета готова\n"
         f"Позиций: {len(items)}\n"
-        "Цены: не выдуманы, колонка Цена оставлена для заполнения\n"
-        "Excel: формулы E=C*D, итог через SUM\n\n"
-        f"XLSX: {xlsx_link}\n"
-        f"PDF: {pdf_link}\n"
-        f"MANIFEST: {manifest_link}\n\n"
-        "Ответь правками, если нужно изменить состав или цены"
+        f"Итого: {total:,.0f} руб\n".replace(",", " ")
+        + "Цены: не выдуманы, Excel содержит формулы и итог\n\n"
+        + f"Excel: {xlsx_link}\n"
+        + f"PDF: {pdf_link}\n\n"
+        + "Подтверди или пришли правки"
     )
 
     return {
@@ -7750,7 +7756,10 @@ async def handle_topic2_estimate_final_close(conn, task, send_reply_ex=None, upd
             else:
                 conn.execute("INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))", (task_id, "TOPIC2_DRIVE_UPLOAD_PDF_MISSING"))
             if x_ok and p_ok:
-                conn.execute("INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))", (task_id, "TOPIC2_DRIVE_LINKS_SAVED"))
+                conn.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (task_id, f"TOPIC2_DRIVE_LINKS_SAVED:xlsx={str(captured.get('xlsx_link'))[:160]}:pdf={str(captured.get('pdf_link'))[:160]}")
+                )
             conn.commit()
     except Exception:
         pass

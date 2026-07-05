@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-07-05T07:24:40.339114+00:00
-git_sha_before_commit: 348fcef33c8e3936cd3d50305a5f5420b029f2c5
+generated_at_utc: 2026-07-05T07:54:43.178790+00:00
+git_sha_before_commit: 6b8f749704c2f3b2b55cf07044fa84345e982fad
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,7 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: active
 
 ## GIT_LOG_30
+6b8f749 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 348fcef FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 bef6672 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 44361e7 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
@@ -39,85 +40,84 @@ a51e72a FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 8159c05 fix(price): PATCH_PRICE_ENRICHMENT_IDEMPOTENT_V1 — skip duplicate Sonar on re-poll
 9426008 fix(full-canon): FULL_CANON_CLOSURE_VERIFIED_V1 — close 7 live blockers
 7cc4523 fix(topic2): classify frame house with imitation timber finish
-8b21d75 fix(topic2): price WC always runs + gate stale-context fixes
 
 ## GIT_SHOW_STAT_HEAD
-commit 348fcef33c8e3936cd3d50305a5f5420b029f2c5
+commit 6b8f749704c2f3b2b55cf07044fa84345e982fad
 Author: root <root@graceful-olive.ptr.network>
-Date:   Sun Jul 5 09:54:44 2026 +0300
+Date:   Sun Jul 5 10:25:07 2026 +0300
 
     FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
- docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md    |  6 +--
- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md |  2 +-
- .../SHARED_CONTEXT/DIRECTIONS/auto_parts_search.md |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/cad_dwg.md          |  4 +-
- .../DIRECTIONS/construction_search.md              |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/crm_leads.md        |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/defect_acts.md      |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/devops_server.md    |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/documents.md        |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/email_ingress.md    |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/estimates.md        |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/general_chat.md     |  4 +-
- .../DIRECTIONS/google_drive_storage.md             |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/internet_search.md  |  4 +-
- .../DIRECTIONS/isolated_project_ivan.md            |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/job_search.md       |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/memory_archive.md   |  4 +-
- .../SHARED_CONTEXT/DIRECTIONS/monolith_concrete.md |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/ocr_photo.md        |  4 +-
- .../DIRECTIONS/orchestration_core.md               |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/photo_cleanup.md    |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/product_search.md   |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/roofing.md          |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/social_content.md   |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/spreadsheets.md     |  4 +-
- .../SHARED_CONTEXT/DIRECTIONS/structural_design.md |  4 +-
- .../DIRECTIONS/technical_supervision.md            |  4 +-
- .../DIRECTIONS/telegram_automation.md              |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/video_production.md |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/vpn_network.md      |  4 +-
- docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md      |  4 +-
- docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |  6 +--
- docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |  6 +--
- docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  6 +--
- .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_004.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_007.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_010.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_011.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_012.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_013.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_014.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_015.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_016.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_017.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_018.md             |  4 +-
- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 54 +++++++++++-----------
- .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |  4 +-
- docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   | 48 +++++++++----------
- docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |  4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |  4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |  4 +-
- .../TOPICS/topic_210_PROEKTIROVANIE.md             |  4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |  4 +-
- .../TOPICS/topic_3008_KODY_MOZGOV.md               |  4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |  4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |  4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_5_TEKHNADZOR.md   |  4 +-
- .../SHARED_CONTEXT/TOPICS/topic_6104_JOB_SEARCH.md |  4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |  4 +-
- .../TOPICS/topic_961_AVTOZAPCHASTI.md              |  4 +-
- docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |  4 +-
- 69 files changed, 188 insertions(+), 188 deletions(-)
+ docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md    |   6 +-
+ docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md |   2 +-
+ .../SHARED_CONTEXT/DIRECTIONS/auto_parts_search.md |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/cad_dwg.md          |   4 +-
+ .../DIRECTIONS/construction_search.md              |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/crm_leads.md        |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/defect_acts.md      |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/devops_server.md    |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/documents.md        |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/email_ingress.md    |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/estimates.md        |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/general_chat.md     |   4 +-
+ .../DIRECTIONS/google_drive_storage.md             |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/internet_search.md  |   4 +-
+ .../DIRECTIONS/isolated_project_ivan.md            |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/job_search.md       |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/memory_archive.md   |   4 +-
+ .../SHARED_CONTEXT/DIRECTIONS/monolith_concrete.md |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/ocr_photo.md        |   4 +-
+ .../DIRECTIONS/orchestration_core.md               |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/photo_cleanup.md    |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/product_search.md   |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/roofing.md          |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/social_content.md   |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/spreadsheets.md     |   4 +-
+ .../SHARED_CONTEXT/DIRECTIONS/structural_design.md |   4 +-
+ .../DIRECTIONS/technical_supervision.md            |   4 +-
+ .../DIRECTIONS/telegram_automation.md              |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/video_production.md |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/vpn_network.md      |   4 +-
+ docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md      |   4 +-
+ docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |   6 +-
+ docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |   6 +-
+ docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  36 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_001.md             | 173 +++-
+ .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_004.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |   6 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |   6 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_007.md             |   6 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_008.md             | 176 +++-
+ .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_010.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_011.md             | 114 +--
+ .../ORCHESTRA_FULL_CONTEXT_PART_012.md             | 507 +----------
+ .../ORCHESTRA_FULL_CONTEXT_PART_013.md             | 938 ++++++++++++---------
+ .../ORCHESTRA_FULL_CONTEXT_PART_014.md             | 517 +++++++++---
+ .../ORCHESTRA_FULL_CONTEXT_PART_015.md             | 108 ++-
+ .../ORCHESTRA_FULL_CONTEXT_PART_016.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_017.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_018.md             |   4 +-
+ docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 293 +++----
+ .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |   8 +-
+ docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   | 225 +++--
+ docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |   6 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |   4 +-
+ .../TOPICS/topic_210_PROEKTIROVANIE.md             |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |  10 +-
+ .../TOPICS/topic_3008_KODY_MOZGOV.md               |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_5_TEKHNADZOR.md   |   4 +-
+ .../SHARED_CONTEXT/TOPICS/topic_6104_JOB_SEARCH.md |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |   4 +-
+ .../TOPICS/topic_961_AVTOZAPCHASTI.md              |   4 +-
+ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   6 +-
+ 69 files changed, 1889 insertions(+), 1458 deletions(-)
 
 ## GIT_CHANGED_FILES_10
 docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md
@@ -191,30 +191,45 @@ docs/SHARED_CONTEXT/TOPICS/topic_961_AVTOZAPCHASTI.md
 docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md
 
 ## CORE_DB_STATE_COUNTS
-- FAILED|2996
-- CANCELLED|856
-- DONE|634
+- FAILED|2998
+- CANCELLED|858
+- DONE|637
 - ARCHIVED|381
 - WAITING_CLARIFICATION|2
-- NEW|1
+- AWAITING_CONFIRMATION|1
 
 ## CORE_DB_OPEN_TASKS
 - 3
 
 ## LATEST_TASKS_15
-- 88d9fc26-a5f3-44e7-a128-2c615c341289|2|drive_file|NEW|{"file_id": "1jjke-Boab3b8A2DhKiyQT5eIRXWOrYf6", "file_name": "Стадия Р_АР.pdf", "mime_type": "application/pdf", "captio||2026-07-05T07:23:19+00:00
+- 16b3b2e6-c3b0-4c27-95ac-854d5b3c9fdd|2|text|WAITING_CLARIFICATION|вот проект|Из какого материала строим?|2026-07-05 07:54:02
+- 5a9afade-f25d-466e-8dc7-c7b247cdd24f|2|text|DONE|посчитать работы и материалы согласно проекта|Уточнение добавлено к исходному ТЗ|2026-07-05 07:53:04
+- dfdc5ca5-7bb3-48c8-8d66-1b79d279312e|2|text|WAITING_CLARIFICATION|пусто
+
+УТОЧНЕНИЕ К ИСХОДНОМУ ТЗ:
+посчитать работы и материалы согласно проекта|Из какого материала строим?|2026-07-05 07:53:06
+- 84d1a6b5-630d-4189-9dd7-b1ba1477456b|2|text|DONE|3|Выбор цен привязан к основной задаче: max|2026-07-05 07:52:01
+- 2896fd60-3a3e-407a-b370-ee1891fdc3ac|2|text|DONE|2|Выбор цен привязан к основной задаче: median|2026-07-05 07:47:37
+- 929aa2f1-1477-490d-a79b-f37a1e528b91|2|text|CANCELLED|Если есть вопросы задавай|None|2026-07-05 07:31:05
+- a82cfa53-b9a6-467e-935c-3e98e1f5d605|2|drive_file|AWAITING_CONFIRMATION|{"file_id": "1FC_ZKLpC_yQ0kM7WJciJcMFIZW8PZHQm", "file_name": "Стадия Р_АР.pdf", "mime_type": "application/pdf", "captio|✅ Смета готова
+Позиций: 1
+Итого: 0 руб
+Цены: не выдуманы, Excel содержит формулы и итог
+
+Excel: https://drive.google.com/file/d/1l9Mr_aYNegbTTVUV9XGzVyMTXfCiBk3|2026-07-05 07:52:08
+- 88d9fc26-a5f3-44e7-a128-2c615c341289|2|drive_file|CANCELLED|{"file_id": "1jjke-Boab3b8A2DhKiyQT5eIRXWOrYf6", "file_name": "Стадия Р_АР.pdf", "mime_type": "application/pdf", "captio||2026-07-05 07:35:01
 - 3d00bfb5-f8cd-4bb7-9bdf-7f081b67f380|2|text|DONE|2|Выбор цен привязан к основной задаче: median|2026-07-05 07:13:58
-- 29331db4-0403-4a5b-8516-88e535202da6|2|drive_file|WAITING_CLARIFICATION|{"file_id": "1jjke-Boab3b8A2DhKiyQT5eIRXWOrYf6", "file_name": "Стадия Р_АР.pdf", "mime_type": "application/pdf", "captio|Принял файл «Стадия Р_АР.pdf». Что нужно сделать?
+- 29331db4-0403-4a5b-8516-88e535202da6|2|drive_file|FAILED|{"file_id": "1jjke-Boab3b8A2DhKiyQT5eIRXWOrYf6", "file_name": "Стадия Р_АР.pdf", "mime_type": "application/pdf", "captio|Принял файл «Стадия Р_АР.pdf». Что нужно сделать?
 
 1️⃣ Смета — извлечь позиции, посчитать объёмы, создать Excel
 2️⃣ Описание — описать содержимое документа
-3️⃣ |2026-07-05 07:13:41
-- ab764f2b-a336-4588-b26c-2e94a4e5f2e3|2|text|WAITING_CLARIFICATION|[VOICE] Необходимо посчитать проект. Проект находится в 100 километров от Санкт-Петербурга. Соответственно, сейчас скину|Не получил Google Drive ссылки XLSX/PDF. Локальные пути заблокированы
+3️⃣ |2026-07-05 07:24:54
+- ab764f2b-a336-4588-b26c-2e94a4e5f2e3|2|text|FAILED|[VOICE] Необходимо посчитать проект. Проект находится в 100 километров от Санкт-Петербурга. Соответственно, сейчас скину|Не получил Google Drive ссылки XLSX/PDF. Локальные пути заблокированы
 Стены: каркасная технология
 
 Учтено из дополнений к ТЗ:
 - Этажность: 1 этаж
-- Стены: карка|2026-07-05 07:14:05
+- Стены: карка|2026-07-05 07:24:54
 - 0115efea-ed49-4263-a6f0-a981a760261c|2|text|DONE|Сделай мне расчёт дом два этажа на монолитный плите толщиной 450 размеры дома 24 на 24 наружные стены кирпичные целый ря|✅ Смета готова
 
 Объект: барнхаус 24.0x24.0 м
@@ -242,55 +257,10 @@ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md
 Расчётная площадь: 1152.0 м²
 Фундамент: монолитная плита
 Стен|2026-07-04 21:53:12
-- a96ffc5c-fde6-4ae7-a225-20a012307519|2|text|CANCELLED|Сделай мне расчёт дом два этажа на монолитный плите толщиной 450 размеры дома 24 на 24 наружные стены кирпичные целый ря|⏳ Задачу понял
-
-Шаблон: Ареал Нева.xlsx
-Лист: смета
-Объект: дом
-Материал: кирпич
-Размеры: (24.0, 24.0)
-Этажей: 2
-Фундамент: монолитная плита
-Удалённость: 150.0 |2026-07-04 21:45:50
-- d556542d-de58-4d53-87bc-482cf14b17e9|2|text|CANCELLED|Сделай мне расчёт дом два этажа на монолитный плите толщиной 450 размеры дома 24 на 24 наружные стены кирпичные целый ря|✅ Предварительная смета готова
-
-Объект: барнхаус 24.0x24.0 м
-Этажей: 2
-Площадь застройки: 576.0 м²
-Расчётная площадь: 1152.0 м²
-Фундамент: монолитная плита
-Стен|2026-07-04 21:43:32
-- 3ef9e07b-d709-44f0-8e54-7ae3b9f6ea11|2|text|CANCELLED|Сделай мне расчёт дом два этажа на монолитный плите толщиной 450 размеры дома 24 на 24 наружные стены кирпичные целый ря|✅ Предварительная смета готова
-
-Объект: барнхаус 24.0x24.0 м
-Этажей: 2
-Площадь застройки: 576.0 м²
-Расчётная площадь: 1152.0 м²
-Фундамент: монолитная плита
-Стен|2026-07-04 21:35:40
-- 7c016676-37f8-4cf6-979e-50422656a377|2|text|CANCELLED|Сделай мне расчёт дом два этажа на монолитный плите толщиной 450 размеры дома 24 на 24 наружные стены кирпичные целый ря|✅ Предварительная смета готова
-
-Объект: барнхаус 24.0x24.0 м
-Этажей: 2
-Площадь застройки: 576.0 м²
-Расчётная площадь: 1152.0 м²
-Фундамент: монолитная плита
-Стен|2026-07-04 21:32:44
-- 255b625a-58c7-4034-a0e3-64ad2760920d|2|text|CANCELLED|Сделай мне расчёт дом два этажа на монолитный плите толщиной 450 размеры дома 24 на 24 наружные стены кирпичные целый ря|✅ Предварительная смета готова
-
-Объект: барнхаус 24.0x24.0 м
-Этажей: 2
-Площадь застройки: 576.0 м²
-Расчётная площадь: 1152.0 м²
-Фундамент: монолитная плита
-Стен|2026-07-04 21:29:40
-- 3922c11f-2361-4f08-880e-9f770ad02102|2|search|DONE|Максимальная цена|Выбор цены принят. Смета сгенерирована в задаче: 554d6361-f254-4e18-b6a3-1cd77356e118|2026-07-04 21:25:12
-- 554d6361-f254-4e18-b6a3-1cd77356e118|2|text|CANCELLED|Фундамент: монолитная плита 250 мм, щебёночное основание 100 мм, песчаная подушка 300 мм, выпуск подготовки на 1 м от пе|✅ Смета готова
-
-Объект: фундамент   Материал: монолит   Площадь: не указана   Этажность: не указана   Регион: СПб и ЛО
-Шаблон: Ареал Нева.xlsx   Лист: смета   Ц|2026-07-04T21:25:26.928194+00:00
 
 ## LATEST_FAILED_10
+- 29331db4-0403-4a5b-8516-88e535202da6|2|{"file_id": "1jjke-Boab3b8A2DhKiyQT5eIRXWOrYf6", "file_name": "Стадия Р_АР.pdf", "mime_type": "application/pdf", "captio|STALE_TIMEOUT|2026-07-05 07:24:54
+- ab764f2b-a336-4588-b26c-2e94a4e5f2e3|2|[VOICE] Необходимо посчитать проект. Проект находится в 100 километров от Санкт-Петербурга. Соответственно, сейчас скину|STALE_TIMEOUT|2026-07-05 07:24:54
 - 5a453d88-7bee-4b61-a510-303fda0b51ef|2|[VOICE] Дом 10х10, два этажа.|STALE_TIMEOUT|2026-07-04 20:06:42
 - c82ce66e-0e82-4d62-861b-73413d8a15e2|2|[VOICE] Привет, Орик! Как дела? Отзовись! Все ли у тебя в порядке? Расскажи, как ты себя чувствуешь? Готов ли ты работат|STALE_TIMEOUT|2026-07-04 15:40:25
 - 71aa047d-8bce-41cd-9a6e-d5620b28c1ef|0|TEST_AFTER_RESTORE_20260704|INVALID_RESULT_GATE|2026-07-04 14:50:39
@@ -302,140 +272,117 @@ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md
 - 57cee6eb-ddd9-4962-9eb9-fed3abfd3919|2|да сделай документы|STALE_TIMEOUT|2026-05-09 15:38:17
 - d9b4d3d7-6be7-49bd-84b2-e61264266776|2|Посчитай мне смету по вот этому техническому заданию|STALE_TIMEOUT|2026-05-09 14:58:24
 - 952f5635-e6f8-45bd-9b98-6bc996bd71f6|2|[VOICE] Все есть у тебя в чате, в тех заданиях.|STALE_TIMEOUT|2026-05-09 11:47:08
-- e375fd12-ddd0-4b4b-956c-25d0ce42dc7f|2|[VOICE] А вы что тут газобетонные блоки? Я тебе какое задание давал? Скажи мне пожалуйста|STALE_TIMEOUT|2026-05-09 11:45:04
-- 28345d3b-acc3-45dd-88b5-87aabb1fdc03|2|это залупа|STALE_TIMEOUT|2026-05-09 11:45:18
 
 ## LATEST_TASK_HISTORY_20
-- 88d9fc26-a5f3-44e7-a128-2c615c341289|TOPIC2_DRIVE_FILE_PICKER_BYPASSED_EXISTING_ESTIMATE|2026-07-05 07:23:20
-- 88d9fc26-a5f3-44e7-a128-2c615c341289|MANUAL_RESTART_AS_NEW_FROM_PDF:29331db4-0403-4a5b-8516-88e535202da6|2026-07-05T07:23:19+00:00
-- ab764f2b-a336-4588-b26c-2e94a4e5f2e3|PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1:DRIVE_LINK_REQUIRED|2026-07-05 07:14:05
-- ab764f2b-a336-4588-b26c-2e94a4e5f2e3|PATCH_TOPIC2_FULL_CLOSE_TZ_MATERIALS_PRICE_V2_ACTIVE_BEFORE_MAIN:RESULT_SANITIZED|2026-07-05 07:14:05
-- ab764f2b-a336-4588-b26c-2e94a4e5f2e3|TOPIC2_DONE_CONTRACT_OK|2026-07-05 07:14:05
-- ab764f2b-a336-4588-b26c-2e94a4e5f2e3|TOPIC2_MESSAGE_THREAD_ID_OK|2026-07-05 07:14:05
-- ab764f2b-a336-4588-b26c-2e94a4e5f2e3|TOPIC2_TELEGRAM_DELIVERED|2026-07-05 07:14:05
-- ab764f2b-a336-4588-b26c-2e94a4e5f2e3|TOPIC2_DRIVE_UPLOAD_PDF_OK|2026-07-05 07:14:05
-- ab764f2b-a336-4588-b26c-2e94a4e5f2e3|TOPIC2_DRIVE_UPLOAD_XLSX_OK|2026-07-05 07:14:05
-- ab764f2b-a336-4588-b26c-2e94a4e5f2e3|TOPIC2_PDF_CYRILLIC_OK|2026-07-05 07:14:05
-- ab764f2b-a336-4588-b26c-2e94a4e5f2e3|TOPIC2_PDF_CREATED|2026-07-05 07:14:05
-- ab764f2b-a336-4588-b26c-2e94a4e5f2e3|TOPIC2_XLSX_CREATED|2026-07-05 07:14:05
-- ab764f2b-a336-4588-b26c-2e94a4e5f2e3|TOPIC2_CONTEXT_READY|2026-07-05 07:14:05
-- ab764f2b-a336-4588-b26c-2e94a4e5f2e3|TOPIC2_ESTIMATE_SESSION_CREATED|2026-07-05 07:14:05
-- ab764f2b-a336-4588-b26c-2e94a4e5f2e3|TOPIC2_ESTIMATE_FINAL_CLOSE_V2:ESTIMATE_ARTIFACTS_CREATED|2026-07-05 07:14:05
-- ab764f2b-a336-4588-b26c-2e94a4e5f2e3|TOPIC2_PUBLIC_RESULT_CANON_VIOLATION:missing_canon_header|2026-07-05 07:14:05
-- ab764f2b-a336-4588-b26c-2e94a4e5f2e3|continued:1|2026-07-05T07:14:04.316735+00:00
-- ab764f2b-a336-4588-b26c-2e94a4e5f2e3|PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1:DRIVE_FINAL_START|2026-07-05 07:13:58
-- ab764f2b-a336-4588-b26c-2e94a4e5f2e3|PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1:PARENT_RAW_ENRICHED|2026-07-05 07:13:58
-- 3d00bfb5-f8cd-4bb7-9bdf-7f081b67f380|PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1:MERGED_TO:ab764f2b-a336-4588-b26c-2e94a4e5f2e3|2026-07-05 07:13:58
+- 16b3b2e6-c3b0-4c27-95ac-854d5b3c9fdd|TOPIC2_MISSING_GATE_ANTILOOP_BLOCKED_DEFAULTS:count=3|2026-07-05 07:54:02
+- 16b3b2e6-c3b0-4c27-95ac-854d5b3c9fdd|FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:clarification|2026-07-05 07:54:02
+- 16b3b2e6-c3b0-4c27-95ac-854d5b3c9fdd|TOPIC2_REPEAT_PARENT_TASK:dfdc5ca5-7bb3-48c8-8d66-1b79d279312e|2026-07-05 07:54:02
+- 16b3b2e6-c3b0-4c27-95ac-854d5b3c9fdd|clarified:Металлоконструкция|2026-07-05T07:54:00.897218+00:00
+- 16b3b2e6-c3b0-4c27-95ac-854d5b3c9fdd|FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:clarification|2026-07-05 07:53:51
+- 16b3b2e6-c3b0-4c27-95ac-854d5b3c9fdd|TOPIC2_REPEAT_PARENT_TASK:dfdc5ca5-7bb3-48c8-8d66-1b79d279312e|2026-07-05 07:53:50
+- 16b3b2e6-c3b0-4c27-95ac-854d5b3c9fdd|clarified:Всё есть в проекте|2026-07-05T07:53:50.214896+00:00
+- 16b3b2e6-c3b0-4c27-95ac-854d5b3c9fdd|TOPIC2_CANONICAL_REROUTE_V2:CANONICAL_HANDLED|2026-07-05 07:53:42
+- 16b3b2e6-c3b0-4c27-95ac-854d5b3c9fdd|FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:clarification|2026-07-05 07:53:42
+- 16b3b2e6-c3b0-4c27-95ac-854d5b3c9fdd|TOPIC2_REPEAT_PARENT_TASK:dfdc5ca5-7bb3-48c8-8d66-1b79d279312e|2026-07-05 07:53:42
+- 16b3b2e6-c3b0-4c27-95ac-854d5b3c9fdd|clarified:вот проект|2026-07-05T07:53:41.010861+00:00
+- 16b3b2e6-c3b0-4c27-95ac-854d5b3c9fdd|TOPIC2_REVISION_BOUND_TO_PARENT:2|2026-07-05 07:53:28
+- 16b3b2e6-c3b0-4c27-95ac-854d5b3c9fdd|created:NEW|2026-07-05T07:53:27.564971+00:00
+- dfdc5ca5-7bb3-48c8-8d66-1b79d279312e|TOPIC2_CANONICAL_REROUTE_V2:CANONICAL_HANDLED|2026-07-05 07:53:06
+- dfdc5ca5-7bb3-48c8-8d66-1b79d279312e|FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:clarification|2026-07-05 07:53:06
+- dfdc5ca5-7bb3-48c8-8d66-1b79d279312e|TOPIC2_REPEAT_PARENT_TASK:a82cfa53-b9a6-467e-935c-3e98e1f5d605|2026-07-05 07:53:06
+- 5a9afade-f25d-466e-8dc7-c7b247cdd24f|PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:MERGED_TO_PARENT:dfdc5ca5-7bb3-48c8-8d66-1b79d279312e|2026-07-05 07:53:04
+- dfdc5ca5-7bb3-48c8-8d66-1b79d279312e|PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:MERGED_CHILD:5a9afade-f25d-466e-8dc7-c7b247cdd24f|2026-07-05 07:53:04
+- dfdc5ca5-7bb3-48c8-8d66-1b79d279312e|clarified:посчитать работы и материалы согласно проекта|2026-07-05 07:53:04
+- dfdc5ca5-7bb3-48c8-8d66-1b79d279312e|PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:STALE_PRICE_AND_RESULT_MARKERS_RESET|2026-07-05 07:53:04
 
 ## MEMORY_DB_COUNT
-- 5270
+- 5274
 
 ## LATEST_MEMORY_20
-- topic_500_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 500, "count": 27, "updated_at": "2026-07-05T07:24:40.100586+00:00", "files": [{"task_id": "7b609434-8167-43f5-a52a-beb85e0b4ed5", "file_id|2026-07-05T07:24:40.101035+00:00
-- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 50, "updated_at": "2026-07-05T07:24:40.069492+00:00", "files": [{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "file_id|2026-07-05T07:24:40.070035+00:00
-- topic_11_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 11, "count": 2, "updated_at": "2026-07-05T07:24:39.972503+00:00", "files": [{"task_id": "a073c181-7a10-426e-8752-7d72dc4ef978", "file_id":|2026-07-05T07:24:39.975100+00:00
-- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 50, "updated_at": "2026-07-05T07:24:39.954906+00:00", "files": [{"task_id": "4b402275-e99b-4d9f-b331-08f2ba2a93be", "file_id":|2026-07-05T07:24:39.957456+00:00
-- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-07-05T07:24:39.887256+00:00", "files": [{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "file_id":|2026-07-05T07:24:39.888011+00:00
-- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-05T07:24:39.773869+00:00
-- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "state": "FAILED", "file_id": "", "file_name": "", "mime_type"|2026-07-05T07:24:39.773787+00:00
-- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-05T07:24:39.773716+00:00
-- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-05T07:24:39.773632+00:00
-- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-05T07:24:39.773570+00:00
-- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_file", "state": "FAILED", "file_id": "1bXXtuHRsXCuxBSRUl8Tj5z6E|2026-07-05T07:24:39.773500+00:00
-- topic_2_file_92de809d-9274-48ee-82b4-584058ea4e48|{"task_id": "92de809d-9274-48ee-82b4-584058ea4e48", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "search", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-05T07:24:39.773418+00:00
-- topic_210_file_ce9421cb-5451-4cea-9823-a413b698bc94|{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-05T07:24:39.773251+00:00
-- topic_210_file_c8619b7e-9ebb-4731-973a-b3f6064bbe38|{"task_id": "c8619b7e-9ebb-4731-973a-b3f6064bbe38", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-05T07:24:39.772026+00:00
-- topic_210_file_42320ab0-c49a-4a08-8f9b-5e38618a4e58|{"task_id": "42320ab0-c49a-4a08-8f9b-5e38618a4e58", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-05T07:24:39.771938+00:00
-- topic_210_file_7dca3b5f-2782-400f-af84-fb030904e917|{"task_id": "7dca3b5f-2782-400f-af84-fb030904e917", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-05T07:24:39.771628+00:00
-- topic_210_file_12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88|{"task_id": "12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "16V3s5DcAvnXj8f-3CcfZE2g5|2026-07-05T07:24:39.771382+00:00
-- topic_210_file_b1f8e982-db2e-42de-9046-833287d3567d|{"task_id": "b1f8e982-db2e-42de-9046-833287d3567d", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-05T07:24:39.771308+00:00
-- topic_210_file_eeb0d013-704a-404c-9390-5a06c90ee976|{"task_id": "eeb0d013-704a-404c-9390-5a06c90ee976", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-05T07:24:39.771113+00:00
-- topic_210_file_5ead32f3-23d5-4872-9279-a42460ba5dd1|{"task_id": "5ead32f3-23d5-4872-9279-a42460ba5dd1", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "1qy-mPcmRZxJIzEnY2Gp8B8J2|2026-07-05T07:24:39.770906+00:00
+- topic_500_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 500, "count": 27, "updated_at": "2026-07-05T07:54:42.963691+00:00", "files": [{"task_id": "7b609434-8167-43f5-a52a-beb85e0b4ed5", "file_id|2026-07-05T07:54:42.964357+00:00
+- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 50, "updated_at": "2026-07-05T07:54:42.940408+00:00", "files": [{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "file_id|2026-07-05T07:54:42.940897+00:00
+- topic_11_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 11, "count": 2, "updated_at": "2026-07-05T07:54:42.878593+00:00", "files": [{"task_id": "a073c181-7a10-426e-8752-7d72dc4ef978", "file_id":|2026-07-05T07:54:42.879322+00:00
+- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 50, "updated_at": "2026-07-05T07:54:42.865861+00:00", "files": [{"task_id": "4b402275-e99b-4d9f-b331-08f2ba2a93be", "file_id":|2026-07-05T07:54:42.866638+00:00
+- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-07-05T07:54:42.829944+00:00", "files": [{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "file_id":|2026-07-05T07:54:42.830678+00:00
+- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-05T07:54:42.751862+00:00
+- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "state": "FAILED", "file_id": "", "file_name": "", "mime_type"|2026-07-05T07:54:42.751784+00:00
+- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-05T07:54:42.751709+00:00
+- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-05T07:54:42.751605+00:00
+- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-05T07:54:42.751503+00:00
+- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_file", "state": "FAILED", "file_id": "1bXXtuHRsXCuxBSRUl8Tj5z6E|2026-07-05T07:54:42.751441+00:00
+- topic_2_file_92de809d-9274-48ee-82b4-584058ea4e48|{"task_id": "92de809d-9274-48ee-82b4-584058ea4e48", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "search", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-05T07:54:42.751369+00:00
+- topic_210_file_ce9421cb-5451-4cea-9823-a413b698bc94|{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-05T07:54:42.751212+00:00
+- topic_210_file_c8619b7e-9ebb-4731-973a-b3f6064bbe38|{"task_id": "c8619b7e-9ebb-4731-973a-b3f6064bbe38", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-05T07:54:42.751023+00:00
+- topic_210_file_42320ab0-c49a-4a08-8f9b-5e38618a4e58|{"task_id": "42320ab0-c49a-4a08-8f9b-5e38618a4e58", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-05T07:54:42.750929+00:00
+- topic_210_file_7dca3b5f-2782-400f-af84-fb030904e917|{"task_id": "7dca3b5f-2782-400f-af84-fb030904e917", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-05T07:54:42.750594+00:00
+- topic_210_file_12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88|{"task_id": "12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "16V3s5DcAvnXj8f-3CcfZE2g5|2026-07-05T07:54:42.750252+00:00
+- topic_210_file_b1f8e982-db2e-42de-9046-833287d3567d|{"task_id": "b1f8e982-db2e-42de-9046-833287d3567d", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-05T07:54:42.750156+00:00
+- topic_210_file_eeb0d013-704a-404c-9390-5a06c90ee976|{"task_id": "eeb0d013-704a-404c-9390-5a06c90ee976", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-05T07:54:42.749860+00:00
+- topic_210_file_5ead32f3-23d5-4872-9279-a42460ba5dd1|{"task_id": "5ead32f3-23d5-4872-9279-a42460ba5dd1", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "1qy-mPcmRZxJIzEnY2Gp8B8J2|2026-07-05T07:54:42.749630+00:00
 
 ## JOURNAL_AREAL_TASK_WORKER_60
-p = _p3e_parse(raw_input)
-        ^^^^^^^^^^^^^^^^^^^^^
-  File "/root/.areal-neva-core/core/sample_template_engine.py", line 5531, in _p3e_parse
-    p = _p2_parse(raw_input)
-        ^^^^^^^^^^^^^^^^^^^^
-  File "/root/.areal-neva-core/core/sample_template_engine.py", line 8377, in _p2_parse
-    result = _MPFIX_ORIG(text)
-             ^^^^^^^^^^^^^^^^^
-  File "/root/.areal-neva-core/core/sample_template_engine.py", line 5036, in _p2_parse
-    "slab_mm": slab_mm,
-               ^^^^^^^
-NameError: name 'slab_mm' is not defined
 areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
 areal-task-worker.service: Failed with result 'exit-code'.
-areal-task-worker.service: Consumed 2.350s CPU time.
-areal-task-worker.service: Scheduled restart job, restart counter is at 2.
-Started areal-task-worker.service - Areal Task Worker.
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 9.182s CPU time.
-Started areal-task-worker.service - Areal Task Worker.
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 7.218s CPU time, 132.5M memory peak, 0B memory swap peak.
+areal-task-worker.service: Scheduled restart job, restart counter is at 253.
 Started areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
-areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
-areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
 areal-task-worker.service: Failed with result 'exit-code'.
-areal-task-worker.service: Scheduled restart job, restart counter is at 1.
+areal-task-worker.service: Scheduled restart job, restart counter is at 254.
 Started areal-task-worker.service - Areal Task Worker.
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 4.020s CPU time.
+areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
+areal-task-worker.service: Failed with result 'exit-code'.
+areal-task-worker.service: Scheduled restart job, restart counter is at 255.
 Started areal-task-worker.service - Areal Task Worker.
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 4.205s CPU time.
+areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
+areal-task-worker.service: Failed with result 'exit-code'.
+areal-task-worker.service: Scheduled restart job, restart counter is at 256.
 Started areal-task-worker.service - Areal Task Worker.
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 4.532s CPU time.
+areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
+areal-task-worker.service: Failed with result 'exit-code'.
+areal-task-worker.service: Scheduled restart job, restart counter is at 257.
 Started areal-task-worker.service - Areal Task Worker.
-Stopping areal-task-worker.service - Areal Task Worker...
-areal-task-worker.service: Deactivated successfully.
-Stopped areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Consumed 1.996s CPU time.
+areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
+areal-task-worker.service: Failed with result 'exit-code'.
+areal-task-worker.service: Scheduled restart job, restart counter is at 258.
 Started areal-task-worker.service - Areal Task Worker.
-PATCH_TOPIC2_PICKER_BYPASS_AND_RESULT_GATE_V1 AC blocked task=ab764f2b-a336-4588-b26c-2e94a4e5f2e3 reason=missing_canon_header
+areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
+areal-task-worker.service: Failed with result 'exit-code'.
+areal-task-worker.service: Scheduled restart job, restart counter is at 259.
+Started areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
+areal-task-worker.service: Failed with result 'exit-code'.
+areal-task-worker.service: Scheduled restart job, restart counter is at 260.
+Started areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
+areal-task-worker.service: Failed with result 'exit-code'.
+areal-task-worker.service: Scheduled restart job, restart counter is at 261.
+Started areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
+areal-task-worker.service: Failed with result 'exit-code'.
+areal-task-worker.service: Scheduled restart job, restart counter is at 262.
+Started areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
+areal-task-worker.service: Failed with result 'exit-code'.
+areal-task-worker.service: Scheduled restart job, restart counter is at 263.
+Started areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
+areal-task-worker.service: Failed with result 'exit-code'.
+areal-task-worker.service: Scheduled restart job, restart counter is at 264.
+Started areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
+areal-task-worker.service: Failed with result 'exit-code'.
+areal-task-worker.service: Scheduled restart job, restart counter is at 265.
+Started areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
+areal-task-worker.service: Failed with result 'exit-code'.
+areal-task-worker.service: Scheduled restart job, restart counter is at 266.
+Started areal-task-worker.service - Areal Task Worker.
 /root/.areal-neva-core/task_worker.py:641: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
   _ts = datetime.datetime.utcnow().isoformat()
 /root/.areal-neva-core/task_worker.py:664: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
   "timestamp": datetime.datetime.utcnow().isoformat(),
-PDF_TABLE_OVERLAY_FAIL task=Стадия_Р_АР err=cannot import name 'extract_spec_table_overlay' from 'core.pdf_spec_extractor' (/root/.areal-neva-core/core/pdf_spec_extractor.py)
 
 ## JOURNAL_TELEGRAM_INGRESS_30
-2026-07-04 23:48:49,072 INFO DAEMON: Update id=262222250 is handled. Duration 81 ms by bot id=8216054898
-2026-07-04 23:52:25,694 INFO DAEMON: Update id=262222251 is handled. Duration 81 ms by bot id=8216054898
-2026-07-04 23:55:46,826 INFO DAEMON: Update id=262222252 is handled. Duration 158 ms by bot id=8216054898
-2026-07-05 00:02:55,734 INFO DAEMON: Update id=262222253 is handled. Duration 109 ms by bot id=8216054898
-2026-07-05 00:11:06,513 INFO DAEMON: Task 48be2be4-30f1-4888-a85f-d18c64f7a6e4 created state=NEW topic_id=2
-2026-07-05 00:11:06,513 INFO DAEMON: Update id=262222254 is handled. Duration 19 ms by bot id=8216054898
-2026-07-05 00:21:15,428 INFO DAEMON: Task a6802fe2-3efa-4c42-b4b9-1e09f676d591 created state=NEW topic_id=2
-2026-07-05 00:21:15,429 INFO DAEMON: Update id=262222255 is handled. Duration 14 ms by bot id=8216054898
-2026-07-05 00:21:23,393 INFO DAEMON: Task 78ac81ae-5cf7-4026-b2d5-21b4f9fd009c created state=NEW topic_id=2
-2026-07-05 00:21:23,393 INFO DAEMON: Update id=262222256 is handled. Duration 19 ms by bot id=8216054898
-2026-07-05 00:21:55,816 INFO DAEMON: Update id=262222257 is handled. Duration 91 ms by bot id=8216054898
-2026-07-05 00:22:05,498 INFO DAEMON: Update id=262222258 is handled. Duration 81 ms by bot id=8216054898
-2026-07-05 00:23:36,765 INFO DAEMON: Update id=262222259 is handled. Duration 79 ms by bot id=8216054898
-2026-07-05 00:25:03,530 INFO DAEMON: Task 3922c11f-2361-4f08-880e-9f770ad02102 created state=NEW topic_id=2
-2026-07-05 00:25:03,531 INFO DAEMON: Update id=262222260 is handled. Duration 12 ms by bot id=8216054898
-2026-07-05 00:25:26,990 INFO DAEMON: Update id=262222261 is handled. Duration 66 ms by bot id=8216054898
-2026-07-05 00:28:00,874 INFO DAEMON: Update id=262222262 is handled. Duration 157 ms by bot id=8216054898
-2026-07-05 00:30:37,481 INFO DAEMON: Update id=262222263 is handled. Duration 76 ms by bot id=8216054898
-2026-07-05 10:12:47,610 INFO DAEMON: STT env check groq=True
-2026-07-05 10:12:47,610 INFO DAEMON: STT start file=/root/.areal-neva-core/runtime/voice_queue/voice_1003725299009_11396.ogg size=61339 model=whisper-large-v3-turbo
-2026-07-05 10:12:47,867 INFO DAEMON: STT http_status=200
 2026-07-05 10:12:47,868 INFO DAEMON: STT ok transcript_len=161
 2026-07-05 10:12:47,969 INFO DAEMON: Task ab764f2b-a336-4588-b26c-2e94a4e5f2e3 created state=NEW topic_id=2
 2026-07-05 10:12:47,969 INFO DAEMON: Update id=262222264 is handled. Duration 703 ms by bot id=8216054898
@@ -445,3 +392,24 @@ PDF_TABLE_OVERLAY_FAIL task=Стадия_Р_АР err=cannot import name 'extract
 2026-07-05 10:13:57,877 INFO DAEMON: Task 3d00bfb5-f8cd-4bb7-9bdf-7f081b67f380 created state=NEW topic_id=2
 2026-07-05 10:13:57,877 INFO DAEMON: Update id=262222266 is handled. Duration 10 ms by bot id=8216054898
 2026-07-05 10:14:04,389 INFO DAEMON: Update id=262222267 is handled. Duration 85 ms by bot id=8216054898
+2026-07-05 10:25:23,433 INFO DAEMON: Update id=262222268 is handled. Duration 79 ms by bot id=8216054898
+2026-07-05 10:26:45,664 INFO DAEMON: Update id=262222269 is handled. Duration 94 ms by bot id=8216054898
+2026-07-05 10:27:21,269 INFO DAEMON: Update id=262222270 is handled. Duration 79 ms by bot id=8216054898
+2026-07-05 10:28:23,362 INFO DAEMON: file_cache is only supported with oauth2client<4.0.0
+2026-07-05 10:28:25,673 INFO DAEMON: Task a82cfa53-b9a6-467e-935c-3e98e1f5d605 created state=NEW topic_id=2
+2026-07-05 10:28:25,831 INFO DAEMON: Update id=262222271 is handled. Duration 3383 ms by bot id=8216054898
+2026-07-05 10:29:51,612 INFO DAEMON: Task 929aa2f1-1477-490d-a79b-f37a1e528b91 created state=NEW topic_id=2
+2026-07-05 10:29:51,612 INFO DAEMON: Update id=262222272 is handled. Duration 9 ms by bot id=8216054898
+2026-07-05 10:47:37,085 INFO DAEMON: Task 2896fd60-3a3e-407a-b370-ee1891fdc3ac created state=NEW topic_id=2
+2026-07-05 10:47:37,085 INFO DAEMON: Update id=262222273 is handled. Duration 8 ms by bot id=8216054898
+2026-07-05 10:52:00,279 INFO DAEMON: Task 84d1a6b5-630d-4189-9dd7-b1ba1477456b created state=NEW topic_id=2
+2026-07-05 10:52:00,279 INFO DAEMON: Update id=262222274 is handled. Duration 10 ms by bot id=8216054898
+2026-07-05 10:52:40,224 INFO DAEMON: Task dfdc5ca5-7bb3-48c8-8d66-1b79d279312e created state=NEW topic_id=2
+2026-07-05 10:52:40,224 INFO DAEMON: Update id=262222275 is handled. Duration 9 ms by bot id=8216054898
+2026-07-05 10:53:02,850 INFO DAEMON: Task 5a9afade-f25d-466e-8dc7-c7b247cdd24f created state=NEW topic_id=2
+2026-07-05 10:53:02,850 INFO DAEMON: Update id=262222276 is handled. Duration 12 ms by bot id=8216054898
+2026-07-05 10:53:27,567 INFO DAEMON: Task 16b3b2e6-c3b0-4c27-95ac-854d5b3c9fdd created state=NEW topic_id=2
+2026-07-05 10:53:27,567 INFO DAEMON: Update id=262222277 is handled. Duration 12 ms by bot id=8216054898
+2026-07-05 10:53:41,162 INFO DAEMON: Update id=262222278 is handled. Duration 164 ms by bot id=8216054898
+2026-07-05 10:53:50,286 INFO DAEMON: Update id=262222279 is handled. Duration 78 ms by bot id=8216054898
+2026-07-05 10:54:00,981 INFO DAEMON: Update id=262222280 is handled. Duration 91 ms by bot id=8216054898

@@ -1,14 +1,27 @@
 # ORCHESTRA_FULL_CONTEXT_PART_007
-generated_at_utc: 2026-07-05T07:24:40.520377+00:00
-git_sha_before_commit: 348fcef33c8e3936cd3d50305a5f5420b029f2c5
+generated_at_utc: 2026-07-05T07:54:43.365865+00:00
+git_sha_before_commit: 6b8f749704c2f3b2b55cf07044fa84345e982fad
 part: 7/18
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 3/4
-SHA256_FULL_FILE: f2bd9bfb4bc796e3dde112b06eb63c6358e45860a3665f7f8318a9a29f730122
+SHA256_FULL_FILE: 426fc35a90722de15c300a8f401a449e782c327c9d3ad4abba7952309cdf37a2
 ====================================================================================================
+# NO_GENERIC_RESPONSE_AS_RESULT_V1_BLOCKED rejects → task loops/fails.
+# Fix: intercept _handle_new for topic_210 meta-comments; acknowledge and close DONE.
+import logging as _t210mg_log_mod
+import inspect as _t210mg_inspect
+_T210MG_LOG = _t210mg_log_mod.getLogger("task_worker")
+
+_T210_META_PHRASES = (
+    "ты сам должен выбирать", "ты сам выбирай", "сам выбирай",
+    "бери в работу", "бери их в работу", "возьми в работу",
+    "всё правильно понял", "правильно понял", "ты правильно понял",
+    "бери и делай", "делай сам", "сам решай",
+)
+
 def _t210mg_is_meta(raw: str, input_type: str) -> bool:
     if input_type in ("photo", "file", "drive_file", "image", "document"):
         return False
@@ -7506,18 +7519,6 @@ try:
                     _t2cf2_hist_once(conn, parent_id,
                         "PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:MERGED_CHILD:" + child_id)
                     _t2cf2_hist_once(conn, child_id,
-                        "PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:MERGED_TO_PARENT:" + parent_id)
-                    _t2cf2_hist_once(conn, parent_id,
-                        "TOPIC2_DRIVE_FILE_MERGE_NO_RAW_INPUT_APPEND:" + child_id)
-                    _t2cf2_hist_once(conn, parent_id,
-                        "TOPIC2_ADDITIONAL_FACT_MERGED:" + child_id)
-                    _t2cf2_hist_once(conn, parent_id,
-                        "TOPIC2_ADDITIONAL_FACTS_RECALC_STARTED:" + child_id)
-                    conn.commit()
-                    _T2CF2_LOG.info(
-                        "PATCH_TOPIC2_CANON_FULL_CLOSE_AFTER_REQUEUE_FAILURE_V1 merge clean child=%s parent=%s (no raw_input append)",
-                        child_id, parent_id,
-                    )
 
 ====================================================================================================
 END_FILE: task_worker.py

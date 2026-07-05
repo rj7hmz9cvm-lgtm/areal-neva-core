@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_005
-generated_at_utc: 2026-07-05T07:24:40.517217+00:00
-git_sha_before_commit: 348fcef33c8e3936cd3d50305a5f5420b029f2c5
+generated_at_utc: 2026-07-05T07:54:43.364291+00:00
+git_sha_before_commit: 6b8f749704c2f3b2b55cf07044fa84345e982fad
 part: 5/18
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 1/4
-SHA256_FULL_FILE: f2bd9bfb4bc796e3dde112b06eb63c6358e45860a3665f7f8318a9a29f730122
+SHA256_FULL_FILE: 426fc35a90722de15c300a8f401a449e782c327c9d3ad4abba7952309cdf37a2
 ====================================================================================================
 
 def _force_voice_finish(raw_input: str, result: str) -> bool:
@@ -3920,6 +3920,10 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
     input_type = "drive_file"  # INPUT_TYPE_DRIVE_FIX_V1
     raw_input = task["raw_input"]
     try:
+        reply_to = task["reply_to_message_id"] if "reply_to_message_id" in task.keys() else None
+    except Exception:
+        reply_to = None
+    try:
         data = json.loads(raw_input)
         file_id = data["file_id"]
         file_name = data.get("file_name", "файл")  # HOTFIX_FILE_NAME_EARLY_V1
@@ -4133,6 +4137,8 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
             from core.file_intake_router import route_file, detect_intent, detect_intent_from_filename, should_ask_clarification, get_clarification_message
             _fir_caption = data.get("caption", "") or raw_input or ""
             _fir_intent = detect_intent(_fir_caption) or detect_intent_from_filename(file_name)
+            if int(topic_id or 0) == 2 and any(x in str(_fir_caption or "").lower().replace("ё", "е") for x in ("смет", "расчет", "стоимость", "расцен")):
+                _fir_intent = "estimate"
             _fir_topic_role = ""
             # === TOPIC2_CANONICAL_PDF_GATE_V1 ===
             # topic_2 + PDF + estimate intent → canonical maybe_handle_stroyka_estimate
@@ -4154,7 +4160,18 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
                     logger.warning("TOPIC2_CANONICAL_PDF_GATE_ERR task=%s err=%s", task_id, _t2cpg_e)
             # === END TOPIC2_CANONICAL_PDF_GATE_V1 ===
             if _fir_intent:
-                _fir_result = await route_file(local_path, task_id, int(topic_id or 0), _fir_intent)
+                _fir_result = await route_file(
+                    local_path,
+                    task_id,
+                    int(topic_id or 0),
+                    _fir_intent,
+                    raw_input=raw_input,
+                    caption=data.get("caption", ""),
+                    mime_type=data.get("mime_type", ""),
+                    file_name=file_name,
+                    conn=conn,
+                    chat_id=chat_id,
+                )
                 if _fir_result and _fir_result.get("success"):
                     _fir_msg = _fir_result.get("result_text") or _fir_result.get("drive_link") or "Готово"
                     # === TASK_WORKER_ARTIFACT_GATE_V1 ===
@@ -7354,23 +7371,6 @@ def _p6e4_sanitize_catalog_text(text):
             continue
         if any(tok in s for tok in bad_tokens):
             continue
-        if s == "https://drive.google.com/drive/folders":
-            continue
-        if s in seen:
-            continue
-        seen.add(s)
-        lines.append(line.rstrip())
-    cleaned = "\n".join(lines).strip()
-    if not cleaned:
-        return "Файлы в этом топике найдены, но старый каталог содержал битые JSON-фрагменты. Каталог очищен, повтори запрос"
-    return cleaned
-
-def _p6e4_wrap_send(name):
-    orig = globals().get(name)
-    if not orig or getattr(orig, "_p6e4_wrapped", False):
-        return
-    if _p6e4_inspect.iscoroutinefunction(orig):
-        async def wrapped(*args, **kwargs):
 
 ====================================================================================================
 END_FILE: task_worker.py

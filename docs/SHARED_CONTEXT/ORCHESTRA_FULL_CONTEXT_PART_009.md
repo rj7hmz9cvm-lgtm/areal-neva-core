@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_009
-generated_at_utc: 2026-07-05T07:24:40.521667+00:00
-git_sha_before_commit: 348fcef33c8e3936cd3d50305a5f5420b029f2c5
+generated_at_utc: 2026-07-05T07:54:43.367611+00:00
+git_sha_before_commit: 6b8f749704c2f3b2b55cf07044fa84345e982fad
 part: 9/18
 
 
@@ -3393,7 +3393,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/file_intake_router.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: cc90687dbd7f88ca7b05507b9279cbdc19a1bc27cb0b2449c753ac37c7ff1e6b
+SHA256_FULL_FILE: 3e78fa7fb9c2b3c13070d4962439a8d4d0712e010f3de496c66fb781cd3487d3
 ====================================================================================================
 from core.gemini_vision import analyze_image_file  # GEMINI_VISION_V43
 import os, logging, asyncio
@@ -4090,7 +4090,10 @@ async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *
     if _fik_orig_route_file is None:
         return {"success": False, "error": "original_route_file_missing", "intent": intent}
 
-    res = _fik_orig_route_file(file_path, task_id, topic_id, intent, fmt, *args, **kwargs)
+    clean_kwargs = dict(kwargs)
+    for k in ("raw_input", "caption", "user_text", "prompt", "mime_type", "conn", "chat_id", "file_name", "name"):
+        clean_kwargs.pop(k, None)
+    res = _fik_orig_route_file(file_path, task_id, topic_id, intent, fmt, *args, **clean_kwargs)
     if _fik_inspect.isawaitable(res):
         res = await res
     return res

@@ -1,14 +1,31 @@
 # ORCHESTRA_FULL_CONTEXT_PART_006
-generated_at_utc: 2026-07-05T07:24:40.518979+00:00
-git_sha_before_commit: 348fcef33c8e3936cd3d50305a5f5420b029f2c5
+generated_at_utc: 2026-07-05T07:54:43.365232+00:00
+git_sha_before_commit: 6b8f749704c2f3b2b55cf07044fa84345e982fad
 part: 6/18
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 2/4
-SHA256_FULL_FILE: f2bd9bfb4bc796e3dde112b06eb63c6358e45860a3665f7f8318a9a29f730122
+SHA256_FULL_FILE: 426fc35a90722de15c300a8f401a449e782c327c9d3ad4abba7952309cdf37a2
 ====================================================================================================
+        if s == "https://drive.google.com/drive/folders":
+            continue
+        if s in seen:
+            continue
+        seen.add(s)
+        lines.append(line.rstrip())
+    cleaned = "\n".join(lines).strip()
+    if not cleaned:
+        return "Файлы в этом топике найдены, но старый каталог содержал битые JSON-фрагменты. Каталог очищен, повтори запрос"
+    return cleaned
+
+def _p6e4_wrap_send(name):
+    orig = globals().get(name)
+    if not orig or getattr(orig, "_p6e4_wrapped", False):
+        return
+    if _p6e4_inspect.iscoroutinefunction(orig):
+        async def wrapped(*args, **kwargs):
             args = tuple(_p6e4_sanitize_catalog_text(a) if isinstance(a, str) else a for a in args)
             kwargs = {k: (_p6e4_sanitize_catalog_text(v) if isinstance(v, str) else v) for k, v in kwargs.items()}
             return await orig(*args, **kwargs)
@@ -7708,19 +7725,6 @@ else:
 # === PATCH_TOPIC210_META_GUARD_V1 ===
 # Root cause: topic_210 receives meta-comments ("бери в работу", "ты сам выбирай") that
 # go to the full project engine → AI generates generic "готов к выполнению" →
-# NO_GENERIC_RESPONSE_AS_RESULT_V1_BLOCKED rejects → task loops/fails.
-# Fix: intercept _handle_new for topic_210 meta-comments; acknowledge and close DONE.
-import logging as _t210mg_log_mod
-import inspect as _t210mg_inspect
-_T210MG_LOG = _t210mg_log_mod.getLogger("task_worker")
-
-_T210_META_PHRASES = (
-    "ты сам должен выбирать", "ты сам выбирай", "сам выбирай",
-    "бери в работу", "бери их в работу", "возьми в работу",
-    "всё правильно понял", "правильно понял", "ты правильно понял",
-    "бери и делай", "делай сам", "сам решай",
-)
-
 
 ====================================================================================================
 END_FILE: task_worker.py

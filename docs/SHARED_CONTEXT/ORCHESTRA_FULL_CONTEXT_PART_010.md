@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_010
-generated_at_utc: 2026-07-05T07:24:40.523546+00:00
-git_sha_before_commit: 348fcef33c8e3936cd3d50305a5f5420b029f2c5
+generated_at_utc: 2026-07-05T07:54:43.368629+00:00
+git_sha_before_commit: 6b8f749704c2f3b2b55cf07044fa84345e982fad
 part: 10/18
 
 
@@ -5196,7 +5196,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/pdf_spec_extractor.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 09a018898c6bf6640092a5df1297d9ab31e9ff6bd1633ca61593c1aa4815a024
+SHA256_FULL_FILE: 220ff5b8d57d1bef0291e929c0ca5c89e200472c149b8ca831d560330d64566a
 ====================================================================================================
 # === PDF_SPEC_EXTRACTOR_REAL_V1 ===
 from __future__ import annotations
@@ -5412,6 +5412,13 @@ def extract_spec_rows(pdf_path: str, max_pages: int = 30):
 
     return dedup
 # === END_PDF_SPEC_EXTRACTOR_REAL_V1_PDFPLUMBER ===
+
+
+# === PDF_SPEC_EXTRACTOR_TABLE_OVERLAY_COMPAT_V1 ===
+def extract_spec_table_overlay(file_path: str, **kwargs) -> Dict[str, Any]:
+    rows = extract_spec_rows(file_path, max_pages=int(kwargs.get("max_pages") or 30))
+    return {"rows": rows, "items": rows, "count": len(rows), "error": "", "stub": False}
+# === END_PDF_SPEC_EXTRACTOR_TABLE_OVERLAY_COMPAT_V1 ===
 
 ====================================================================================================
 END_FILE: core/pdf_spec_extractor.py

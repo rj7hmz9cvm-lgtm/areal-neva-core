@@ -1,14 +1,26 @@
 # ORCHESTRA_FULL_CONTEXT_PART_008
-generated_at_utc: 2026-07-05T07:24:40.521071+00:00
-git_sha_before_commit: 348fcef33c8e3936cd3d50305a5f5420b029f2c5
+generated_at_utc: 2026-07-05T07:54:43.366697+00:00
+git_sha_before_commit: 6b8f749704c2f3b2b55cf07044fa84345e982fad
 part: 8/18
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 4/4
-SHA256_FULL_FILE: f2bd9bfb4bc796e3dde112b06eb63c6358e45860a3665f7f8318a9a29f730122
+SHA256_FULL_FILE: 426fc35a90722de15c300a8f401a449e782c327c9d3ad4abba7952309cdf37a2
 ====================================================================================================
+                        "PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:MERGED_TO_PARENT:" + parent_id)
+                    _t2cf2_hist_once(conn, parent_id,
+                        "TOPIC2_DRIVE_FILE_MERGE_NO_RAW_INPUT_APPEND:" + child_id)
+                    _t2cf2_hist_once(conn, parent_id,
+                        "TOPIC2_ADDITIONAL_FACT_MERGED:" + child_id)
+                    _t2cf2_hist_once(conn, parent_id,
+                        "TOPIC2_ADDITIONAL_FACTS_RECALC_STARTED:" + child_id)
+                    conn.commit()
+                    _T2CF2_LOG.info(
+                        "PATCH_TOPIC2_CANON_FULL_CLOSE_AFTER_REQUEUE_FAILURE_V1 merge clean child=%s parent=%s (no raw_input append)",
+                        child_id, parent_id,
+                    )
                     return True
             except Exception as e:
                 try:
