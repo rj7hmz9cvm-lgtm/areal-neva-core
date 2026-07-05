@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_012
-generated_at_utc: 2026-07-05T11:54:50.137363+00:00
-git_sha_before_commit: 62c612f5f074f6775bef1db030ced1a1b7f3e830
+generated_at_utc: 2026-07-05T12:24:50.353007+00:00
+git_sha_before_commit: 0e7f79f099fb2c443a8c79f823773204244098a7
 part: 12/18
 
 
@@ -1796,7 +1796,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: eb799bf5fcd08f6c18c38c967d0e3f49a1b0d970de074dd381ba008a04135ea6
+SHA256_FULL_FILE: aafce1c7114d1c8852dab520914d708181b398b57d741c6dc1024a787874d2dc
 ====================================================================================================
 # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
 from __future__ import annotations
@@ -1963,10 +1963,27 @@ def _t2pcl_history_text(conn, task_id):
         return ""
 
 def _t2pcl_parse_explicit_price_choice(text):
-    t = _low(text)
+    raw = _s(text)
+    try:
+        if raw.strip().startswith("{"):
+            import json as _t2pcl_json
+            obj = _t2pcl_json.loads(raw)
+            if isinstance(obj, dict):
+                raw = " ".join(_s(obj.get(k, "")) for k in ("caption", "text", "raw_input", "file_name"))
+    except Exception:
+        pass
+    t = _low(raw)
     t = re.sub(r"\s+", " ", t).strip(" .,!?:;()[]{}")
     if not t:
         return ""
+    if "средн" in t or "медиан" in t:
+        return "median"
+    if "миним" in t or "дешев" in t or "дешёв" in t:
+        return "cheapest"
+    if "максим" in t or "надеж" in t or "надёж" in t or "высок" in t or "дорог" in t:
+        return "reliable"
+    if "ручн" in t or "вручную" in t or "сам укажу" in t:
+        return "manual"
     _exact = {
         "1": "cheapest", "а": "cheapest", "a": "cheapest", "а)": "cheapest", "a)": "cheapest",
         "дешевые": "cheapest", "дешёвые": "cheapest", "самые дешевые": "cheapest",
@@ -3940,7 +3957,8 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
         )
     except Exception:
         _fresh_tz = False
-    if not _fresh_tz:
+    _repeat_input_type = _low(_s(_row_get(task, "input_type", "")))
+    if not _fresh_tz and _repeat_input_type not in ("drive_file", "file", "photo", "image", "document"):
         try:
             _rpt_row = conn.execute(
                 "SELECT id FROM tasks WHERE CAST(chat_id AS TEXT)=? AND COALESCE(topic_id,0)=? AND id<>? AND state IN ('IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION','RESULT_READY') ORDER BY updated_at DESC LIMIT 1",
@@ -4540,12 +4558,27 @@ def _update_task_safe(conn, task_id, **kwargs):
             if _t2pcl_old_public_output(_t2pcl_result):
                 _t2pcl_hist = _t2pcl_history_text(conn, str(task_id))
                 if "TOPIC2_PRICE_CHOICE_CONFIRMED" not in _t2pcl_hist:
-                    kwargs["state"] = "WAITING_CLARIFICATION"
-                    kwargs["result"] = PRICE_CHOICE_PROMPT_V1
-                    kwargs["error_message"] = "TOPIC2_PRICE_CHOICE_REQUIRED"
-                    if "TOPIC2_PRICE_CHOICE_REQUESTED" not in _t2pcl_hist:
-                        _history_safe(conn, str(task_id), "TOPIC2_PRICE_CHOICE_REQUESTED")
-                    _history_safe(conn, str(task_id), "TOPIC2_OLD_PUBLIC_OUTPUT_BLOCKED_BY_PRICE_CHOICE_GATE")
+                    try:
+                        _raw_row = conn.execute("SELECT raw_input FROM tasks WHERE id=? LIMIT 1", (str(task_id),)).fetchone()
+                        _raw_text = _raw_row[0] if _raw_row else ""
+                        _choice = _t2pcl_parse_explicit_price_choice(_raw_text)
+                        if _choice:
+                            _history_safe(conn, str(task_id), "TOPIC2_PRICE_CHOICE_CONFIRMED:" + _choice)
+                            _history_safe(conn, str(task_id), "TOPIC2_PRICE_CHOICE_CONFIRMED_FROM_CAPTION")
+                        else:
+                            kwargs["state"] = "WAITING_CLARIFICATION"
+                            kwargs["result"] = PRICE_CHOICE_PROMPT_V1
+                            kwargs["error_message"] = "TOPIC2_PRICE_CHOICE_REQUIRED"
+                            if "TOPIC2_PRICE_CHOICE_REQUESTED" not in _t2pcl_hist:
+                                _history_safe(conn, str(task_id), "TOPIC2_PRICE_CHOICE_REQUESTED")
+                            _history_safe(conn, str(task_id), "TOPIC2_OLD_PUBLIC_OUTPUT_BLOCKED_BY_PRICE_CHOICE_GATE")
+                    except Exception:
+                        kwargs["state"] = "WAITING_CLARIFICATION"
+                        kwargs["result"] = PRICE_CHOICE_PROMPT_V1
+                        kwargs["error_message"] = "TOPIC2_PRICE_CHOICE_REQUIRED"
+                        if "TOPIC2_PRICE_CHOICE_REQUESTED" not in _t2pcl_hist:
+                            _history_safe(conn, str(task_id), "TOPIC2_PRICE_CHOICE_REQUESTED")
+                        _history_safe(conn, str(task_id), "TOPIC2_OLD_PUBLIC_OUTPUT_BLOCKED_BY_PRICE_CHOICE_GATE")
             elif _t2pcl_state in ("IN_PROGRESS", "WAITING_CLARIFICATION", "AWAITING_CONFIRMATION"):
                 _t2pcl_hist = _t2pcl_history_text(conn, str(task_id))
                 if ("FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:prices_shown" in _t2pcl_hist
@@ -6773,12 +6806,27 @@ try:
         if conn is not None and task_id is not None:
             try:
                 row = conn.execute(
-                    "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'TOPIC2_PRICE_ENRICHMENT_DONE:%' ORDER BY rowid DESC LIMIT 1",
+                    "SELECT rowid, action FROM task_history WHERE task_id=? AND action LIKE 'TOPIC2_PRICE_ENRICHMENT_DONE:%' ORDER BY rowid DESC LIMIT 1",
+                    (task_id,)
+                ).fetchone()
+                restart = conn.execute(
+                    "SELECT rowid, action FROM task_history WHERE task_id=? AND ("
+                    "action LIKE 'CODEX_RESTART_EXISTING_FILE_FROM_SCREENSHOT_1028_NO_DUPLICATE%' OR action LIKE 'CODEX_RESTART_AFTER_%' OR "
+                    "action LIKE 'PATCH_TOPIC2_REVISION_MODE_FULL_V1:REVISION_STARTED:%' OR "
+                    "action LIKE 'PATCH_TOPIC2_REVISION_MODE_FULL_V1:DRIVE_REVISION_MERGED_TO:%' OR "
+                    "action LIKE 'PATCH_TOPIC2_FULL_TASK_CHAIN_RESTORE_NO_REGRESSION_V1:%' OR "
+                    "action LIKE 'clarified:%') ORDER BY rowid DESC LIMIT 1",
                     (task_id,)
                 ).fetchone()
                 if row:
-                    _PEI_LOG.info("PATCH_PRICE_ENRICHMENT_IDEMPOTENT_V1: skip task=%s already=%s", task_id, row[0] if not hasattr(row, "keys") else row["action"])
-                    return ""
+                    row_vals = list(row)
+                    restart_vals = list(restart) if restart else []
+                    done_rid = int(row_vals[0])
+                    restart_rid = int(restart_vals[0]) if restart_vals else 0
+                    if done_rid > restart_rid:
+                        action = row_vals[1]
+                        _PEI_LOG.info("PATCH_PRICE_ENRICHMENT_IDEMPOTENT_V1: skip task=%s already=%s", task_id, action)
+                        return ""
             except Exception as _pei_check_e:
                 _PEI_LOG.warning("PATCH_PRICE_ENRICHMENT_IDEMPOTENT_V1_CHECK_ERR: %s", _pei_check_e)
         return await _PEI_ORIG_SEARCH(parsed, template, sheet_name, conn=conn, task_id=task_id)

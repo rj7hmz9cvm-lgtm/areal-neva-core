@@ -1,14 +1,63 @@
 # ORCHESTRA_FULL_CONTEXT_PART_008
-generated_at_utc: 2026-07-05T11:54:50.133253+00:00
-git_sha_before_commit: 62c612f5f074f6775bef1db030ced1a1b7f3e830
+generated_at_utc: 2026-07-05T12:24:50.349490+00:00
+git_sha_before_commit: 0e7f79f099fb2c443a8c79f823773204244098a7
 part: 8/18
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 4/4
-SHA256_FULL_FILE: 426fc35a90722de15c300a8f401a449e782c327c9d3ad4abba7952309cdf37a2
+SHA256_FULL_FILE: 7e4fd4f5c6889c30ab1c5a05c4cf86fda963990588531fbc935acecffc86bbdb
 ====================================================================================================
+                    parent_id = str(_t2cf2_get(parent, "id") or "")
+                    raw = str(_t2cf2_get(child, "raw_input") or "").strip()
+                    if not child_id or not parent_id or child_id == parent_id or not raw:
+                        return False
+                    # Reset stale price/result markers (same logic as orig _t2fb_reset_stale_markers).
+                    try:
+                        _reset = globals().get("_t2fb_reset_stale_markers")
+                        if _reset:
+                            _reset(conn, parent_id, raw)
+                    except Exception:
+                        pass
+                    # Also delete DONE_WITH_DRIVE_LINKS gating marker so engine runs fresh.
+                    # Without this, FINAL_DRIVE_SINGLE_GATE_V1 checks hist and blocks recalc.
+                    try:
+                        conn.execute(
+                            "DELETE FROM task_history WHERE task_id=? AND action IN (?,?,?,?,?)",
+                            (
+                                parent_id,
+                                "PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1:DONE_WITH_DRIVE_LINKS",
+                                "TOPIC2_DONE_CONTRACT_OK",
+                                "TDOIP_OVERRIDE:14_markers_and_drive_links_present",
+                                "TOPIC2_PUBLIC_RESULT_CANON_VIOLATION_RECOVERED_FROM_LATEST_ARTIFACTS",
+                                "TOPIC2_DRIVE_FILE_PICKER_BYPASSED_EXISTING_ESTIMATE",
+                            ),
+                        )
+                        _T2CF2_LOG.info(
+                            "PATCH_TOPIC2_ADDITIONAL_FACTS_FULL_RECALC_CANON_RESTORE_V1 DONE markers cleared parent=%s child=%s",
+                            parent_id, child_id,
+                        )
+                    except Exception as _me:
+                        try:
+                            _T2CF2_LOG.exception(
+                                "PATCH_TOPIC2_ADDITIONAL_FACTS_FULL_RECALC_CANON_RESTORE_V1_MARKER_DEL_ERR:%s", _me,
+                            )
+                        except Exception:
+                            pass
+                    # Mark parent IN_PROGRESS to re-trigger pipeline; keep raw_input intact.
+                    conn.execute(
+                        "UPDATE tasks SET state='IN_PROGRESS', result='', error_message='', updated_at=datetime('now') WHERE id=?",
+                        (parent_id,),
+                    )
+                    conn.execute(
+                        "UPDATE tasks SET state='DONE', result='Уточнение добавлено к исходному ТЗ', error_message=?, updated_at=datetime('now') WHERE id=?",
+                        ("MERGED_TO_PARENT:" + parent_id, child_id),
+                    )
+                    _t2cf2_hist_once(conn, parent_id, "clarified:" + raw[:500])
+                    _t2cf2_hist_once(conn, parent_id,
+                        "PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:MERGED_CHILD:" + child_id)
+                    _t2cf2_hist_once(conn, child_id,
                         "PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:MERGED_TO_PARENT:" + parent_id)
                     _t2cf2_hist_once(conn, parent_id,
                         "TOPIC2_DRIVE_FILE_MERGE_NO_RAW_INPUT_APPEND:" + child_id)

@@ -1,14 +1,48 @@
 # ORCHESTRA_FULL_CONTEXT_PART_007
-generated_at_utc: 2026-07-05T11:54:50.132184+00:00
-git_sha_before_commit: 62c612f5f074f6775bef1db030ced1a1b7f3e830
+generated_at_utc: 2026-07-05T12:24:50.348698+00:00
+git_sha_before_commit: 0e7f79f099fb2c443a8c79f823773204244098a7
 part: 7/18
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 3/4
-SHA256_FULL_FILE: 426fc35a90722de15c300a8f401a449e782c327c9d3ad4abba7952309cdf37a2
+SHA256_FULL_FILE: 7e4fd4f5c6889c30ab1c5a05c4cf86fda963990588531fbc935acecffc86bbdb
 ====================================================================================================
+        return _T25G_CURRENT(conn, task_id, **kwargs)
+    _update_task._t25g_wrapped = True
+    _T25G_LOG.info("PATCH_T210_T5_REPLIED_DONE_GATE_V1 installed")
+
+    # Force-DONE stuck IN_PROGRESS tasks for 210/5 that already have reply_sent in history
+    try:
+        import sqlite3 as _t25g_sq
+        with _t25g_sq.connect("data/core.db") as _c2:
+            _c2.row_factory = _t25g_sq.Row
+            _stuck2 = _c2.execute(
+                """SELECT DISTINCT t.id FROM tasks t
+                   JOIN task_history th ON th.task_id=t.id AND th.action LIKE 'reply_sent:%'
+                   WHERE t.state='IN_PROGRESS' AND COALESCE(t.topic_id,0) IN (210,5)"""
+            ).fetchall()
+            for _sr2 in _stuck2:
+                _c2.execute(
+                    "UPDATE tasks SET state='DONE', error_message='', updated_at=datetime('now') WHERE id=?",
+                    (_sr2["id"],)
+                )
+                _c2.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (_sr2["id"], "PATCH_T210_T5_REPLIED_DONE_GATE_V1_FORCE_DONE")
+                )
+                _T25G_LOG.info("PATCH_T210_FORCE_DONE: %s", _sr2["id"])
+            _c2.commit()
+    except Exception as _t25g_fix_e:
+        _T25G_LOG.warning("PATCH_T210_FORCE_DONE_ERR: %s", _t25g_fix_e)
+else:
+    _T25G_LOG.warning("PATCH_T210_T5_REPLIED_DONE_GATE_V1 skipped: pregate ref not found or already wrapped")
+# === END_PATCH_T210_T5_REPLIED_DONE_GATE_V1 ===
+
+# === PATCH_TOPIC210_META_GUARD_V1 ===
+# Root cause: topic_210 receives meta-comments ("бери в работу", "ты сам выбирай") that
+# go to the full project engine → AI generates generic "готов к выполнению" →
 # NO_GENERIC_RESPONSE_AS_RESULT_V1_BLOCKED rejects → task loops/fails.
 # Fix: intercept _handle_new for topic_210 meta-comments; acknowledge and close DONE.
 import logging as _t210mg_log_mod
@@ -4728,6 +4762,33 @@ try:
             pass
         return _t2fdsg_orig_update_task(conn, task_id, **kwargs)
 
+    def _t2fdsg_done_current(conn, task_id):
+        try:
+            done = conn.execute(
+                "SELECT rowid FROM task_history WHERE task_id=? AND action LIKE 'PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1:DONE_WITH_DRIVE_LINKS%' ORDER BY rowid DESC LIMIT 1",
+                (str(task_id),),
+            ).fetchone()
+            if not done:
+                return False
+            done_rid = int(done[0])
+            newer = conn.execute(
+                "SELECT rowid FROM task_history WHERE task_id=? AND rowid>? AND ("
+                "action LIKE 'CODEX_RESTART%' OR "
+                "action LIKE 'clarified:%' OR "
+                "action LIKE 'TOPIC2_PRICE_ENRICHMENT_DONE%' OR "
+                "action LIKE 'TOPIC2_PRICE_CHOICE_CONFIRMED%' OR "
+                "action LIKE 'FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:prices_shown%'"
+                ") ORDER BY rowid DESC LIMIT 1",
+                (str(task_id), done_rid),
+            ).fetchone()
+            return newer is None
+        except Exception as e:
+            try:
+                _t2fdsg_log.warning("PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1_DONE_CURRENT_ERR:%s", e)
+            except Exception:
+                pass
+            return False
+
     _t2fdsg_orig_handle_new = _handle_new
 
     async def _handle_new(conn, task, chat_id, topic_id):
@@ -4762,7 +4823,8 @@ try:
                 if state in ("NEW", "IN_PROGRESS", "WAITING_CLARIFICATION", "FAILED") and "TOPIC2_PRICE_CHOICE_CONFIRMED:" in hist:
                     m = _t2fdsg_re.search(r"TOPIC2_PRICE_CHOICE_CONFIRMED:([a-zA-Za-яА-Я0-9_ -]+)", hist)
                     final_choice = (m.group(1).strip() if m else "median") or "median"
-                    if "PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1:DONE_WITH_DRIVE_LINKS" not in hist:
+                    if not _t2fdsg_done_current(conn, task_id):
+                        _t2fdsg_hist_once(conn, task_id, "PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1:STALE_DONE_MARKER_REPROCESS")
                         await _t2fdsg_run_drive_final(conn, task, final_choice)
                         return
 
@@ -7470,55 +7532,6 @@ try:
                     # Replicate merge BUT keep parent.raw_input untouched (pure JSON).
                     # Child fact goes only to task_history clarified:.
                     child_id = str(_t2cf2_get(child, "id") or "")
-                    parent_id = str(_t2cf2_get(parent, "id") or "")
-                    raw = str(_t2cf2_get(child, "raw_input") or "").strip()
-                    if not child_id or not parent_id or child_id == parent_id or not raw:
-                        return False
-                    # Reset stale price/result markers (same logic as orig _t2fb_reset_stale_markers).
-                    try:
-                        _reset = globals().get("_t2fb_reset_stale_markers")
-                        if _reset:
-                            _reset(conn, parent_id, raw)
-                    except Exception:
-                        pass
-                    # Also delete DONE_WITH_DRIVE_LINKS gating marker so engine runs fresh.
-                    # Without this, FINAL_DRIVE_SINGLE_GATE_V1 checks hist and blocks recalc.
-                    try:
-                        conn.execute(
-                            "DELETE FROM task_history WHERE task_id=? AND action IN (?,?,?,?,?)",
-                            (
-                                parent_id,
-                                "PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1:DONE_WITH_DRIVE_LINKS",
-                                "TOPIC2_DONE_CONTRACT_OK",
-                                "TDOIP_OVERRIDE:14_markers_and_drive_links_present",
-                                "TOPIC2_PUBLIC_RESULT_CANON_VIOLATION_RECOVERED_FROM_LATEST_ARTIFACTS",
-                                "TOPIC2_DRIVE_FILE_PICKER_BYPASSED_EXISTING_ESTIMATE",
-                            ),
-                        )
-                        _T2CF2_LOG.info(
-                            "PATCH_TOPIC2_ADDITIONAL_FACTS_FULL_RECALC_CANON_RESTORE_V1 DONE markers cleared parent=%s child=%s",
-                            parent_id, child_id,
-                        )
-                    except Exception as _me:
-                        try:
-                            _T2CF2_LOG.exception(
-                                "PATCH_TOPIC2_ADDITIONAL_FACTS_FULL_RECALC_CANON_RESTORE_V1_MARKER_DEL_ERR:%s", _me,
-                            )
-                        except Exception:
-                            pass
-                    # Mark parent IN_PROGRESS to re-trigger pipeline; keep raw_input intact.
-                    conn.execute(
-                        "UPDATE tasks SET state='IN_PROGRESS', result='', error_message='', updated_at=datetime('now') WHERE id=?",
-                        (parent_id,),
-                    )
-                    conn.execute(
-                        "UPDATE tasks SET state='DONE', result='Уточнение добавлено к исходному ТЗ', error_message=?, updated_at=datetime('now') WHERE id=?",
-                        ("MERGED_TO_PARENT:" + parent_id, child_id),
-                    )
-                    _t2cf2_hist_once(conn, parent_id, "clarified:" + raw[:500])
-                    _t2cf2_hist_once(conn, parent_id,
-                        "PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:MERGED_CHILD:" + child_id)
-                    _t2cf2_hist_once(conn, child_id,
 
 ====================================================================================================
 END_FILE: task_worker.py

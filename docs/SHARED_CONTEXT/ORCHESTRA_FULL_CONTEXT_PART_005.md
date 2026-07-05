@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_005
-generated_at_utc: 2026-07-05T11:54:50.130091+00:00
-git_sha_before_commit: 62c612f5f074f6775bef1db030ced1a1b7f3e830
+generated_at_utc: 2026-07-05T12:24:50.346975+00:00
+git_sha_before_commit: 0e7f79f099fb2c443a8c79f823773204244098a7
 part: 5/18
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 1/4
-SHA256_FULL_FILE: 426fc35a90722de15c300a8f401a449e782c327c9d3ad4abba7952309cdf37a2
+SHA256_FULL_FILE: 7e4fd4f5c6889c30ab1c5a05c4cf86fda963990588531fbc935acecffc86bbdb
 ====================================================================================================
 
 def _force_voice_finish(raw_input: str, result: str) -> bool:
@@ -3924,6 +3924,28 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
     except Exception:
         reply_to = None
     try:
+        if int(topic_id or 0) == 2 and callable(globals().get("_t2fdsg_run_drive_final")):
+            _df_hist_rows = conn.execute(
+                "SELECT action FROM task_history WHERE task_id=? ORDER BY rowid ASC",
+                (str(task_id),),
+            ).fetchall()
+            _df_hist = "\\n".join(str(r[0] or "") for r in _df_hist_rows)
+            if "TOPIC2_PRICE_CHOICE_CONFIRMED:" in _df_hist:
+                _df_done_current = globals().get("_t2fdsg_done_current")
+                if not callable(_df_done_current) or not _df_done_current(conn, task_id):
+                    import re as _df_re
+                    _df_m = _df_re.search(r"TOPIC2_PRICE_CHOICE_CONFIRMED:([a-zA-Zа-яА-Я0-9_ -]+)", _df_hist)
+                    _df_choice = (_df_m.group(1).strip() if _df_m else "median") or "median"
+                    _history(conn, task_id, "PATCH_TOPIC2_DRIVE_FILE_FINAL_GATE_V1:RUN_FINAL:" + _df_choice)
+                    conn.commit()
+                    await globals()["_t2fdsg_run_drive_final"](conn, task, _df_choice)
+                    return
+    except Exception as _df_final_gate_e:
+        try:
+            logger.warning("PATCH_TOPIC2_DRIVE_FILE_FINAL_GATE_V1_ERR task=%s err=%s", task_id, _df_final_gate_e)
+        except Exception:
+            pass
+    try:
         data = json.loads(raw_input)
         file_id = data["file_id"]
         file_name = data.get("file_name", "файл")  # HOTFIX_FILE_NAME_EARLY_V1
@@ -7333,44 +7355,6 @@ def _p6e4_wrap_drive_handler(name):
                 ok = await _p6e4_run_topic2_image_estimate(conn, task)
                 if ok:
                     return True
-            return await orig(*args, **kwargs)
-    else:
-        def wrapped(*args, **kwargs):
-            conn, task = _p6e4_get_conn_task(args, kwargs)
-            if conn is not None and task is not None and _p6e4_is_topic2_image_estimate_task(task):
-                ok = _p6e4_asyncio.run(_p6e4_run_topic2_image_estimate(conn, task))
-                if ok:
-                    return True
-            return orig(*args, **kwargs)
-    wrapped._p6e4_wrapped = True
-    globals()[name] = wrapped
-
-for _p6e4_name in (
-    "_handle_drive_file_task",
-    "handle_drive_file_task",
-    "_process_drive_file_task",
-    "process_drive_file_task",
-    "_handle_file_task",
-    "handle_file_task",
-):
-    _p6e4_wrap_drive_handler(_p6e4_name)
-
-def _p6e4_sanitize_catalog_text(text):
-    if not isinstance(text, str):
-        return text
-    if "Файлы в этом топике уже есть" not in text:
-        return text
-    bad_tokens = ('{"task_id"', '"timestamp"', '"file_id"', '"file_name"', "],", "[{", "}]")
-    lines = []
-    seen = set()
-    for line in text.splitlines():
-        s = line.strip()
-        if not s:
-            if lines and lines[-1] != "":
-                lines.append("")
-            continue
-        if any(tok in s for tok in bad_tokens):
-            continue
 
 ====================================================================================================
 END_FILE: task_worker.py

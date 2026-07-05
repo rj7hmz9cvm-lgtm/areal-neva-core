@@ -1,14 +1,52 @@
 # ORCHESTRA_FULL_CONTEXT_PART_006
-generated_at_utc: 2026-07-05T11:54:50.130945+00:00
-git_sha_before_commit: 62c612f5f074f6775bef1db030ced1a1b7f3e830
+generated_at_utc: 2026-07-05T12:24:50.347850+00:00
+git_sha_before_commit: 0e7f79f099fb2c443a8c79f823773204244098a7
 part: 6/18
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 2/4
-SHA256_FULL_FILE: 426fc35a90722de15c300a8f401a449e782c327c9d3ad4abba7952309cdf37a2
+SHA256_FULL_FILE: 7e4fd4f5c6889c30ab1c5a05c4cf86fda963990588531fbc935acecffc86bbdb
 ====================================================================================================
+            return await orig(*args, **kwargs)
+    else:
+        def wrapped(*args, **kwargs):
+            conn, task = _p6e4_get_conn_task(args, kwargs)
+            if conn is not None and task is not None and _p6e4_is_topic2_image_estimate_task(task):
+                ok = _p6e4_asyncio.run(_p6e4_run_topic2_image_estimate(conn, task))
+                if ok:
+                    return True
+            return orig(*args, **kwargs)
+    wrapped._p6e4_wrapped = True
+    globals()[name] = wrapped
+
+for _p6e4_name in (
+    "_handle_drive_file_task",
+    "handle_drive_file_task",
+    "_process_drive_file_task",
+    "process_drive_file_task",
+    "_handle_file_task",
+    "handle_file_task",
+):
+    _p6e4_wrap_drive_handler(_p6e4_name)
+
+def _p6e4_sanitize_catalog_text(text):
+    if not isinstance(text, str):
+        return text
+    if "Файлы в этом топике уже есть" not in text:
+        return text
+    bad_tokens = ('{"task_id"', '"timestamp"', '"file_id"', '"file_name"', "],", "[{", "}]")
+    lines = []
+    seen = set()
+    for line in text.splitlines():
+        s = line.strip()
+        if not s:
+            if lines and lines[-1] != "":
+                lines.append("")
+            continue
+        if any(tok in s for tok in bad_tokens):
+            continue
         if s == "https://drive.google.com/drive/folders":
             continue
         if s in seen:
@@ -311,6 +349,12 @@ def _p6e67_block_final(conn, task_id, text):
         if _p6e67_has_revision_history(conn, task_id) and _p6e67_wants_artifacts(raw):
             ok, reason = _p6e67_artifact_links_ok(clean)
             if not ok:
+                if reason == "TXT_LINK_MISSING":
+                    _topic2_low = _p6e67_low(clean)
+                    _topic2_has_drive_pdf = "pdf:" in _topic2_low and "drive.google.com" in _topic2_low
+                    _topic2_has_drive_xlsx = ("excel:" in _topic2_low or "xlsx:" in _topic2_low) and "drive.google.com" in _topic2_low
+                    if _topic2_has_drive_pdf and _topic2_has_drive_xlsx:
+                        return False, "", clean
                 return True, "P6E67_BLOCK_ARTIFACT_GATE_" + reason, clean
 
     return False, "", clean
@@ -7691,40 +7735,6 @@ if not getattr(_T25G_CURRENT, "_t25g_wrapped", False) and _T25G_PREGATE:
                         return _T25G_PREGATE(conn, task_id, **kwargs)
             except Exception:
                 pass
-        return _T25G_CURRENT(conn, task_id, **kwargs)
-    _update_task._t25g_wrapped = True
-    _T25G_LOG.info("PATCH_T210_T5_REPLIED_DONE_GATE_V1 installed")
-
-    # Force-DONE stuck IN_PROGRESS tasks for 210/5 that already have reply_sent in history
-    try:
-        import sqlite3 as _t25g_sq
-        with _t25g_sq.connect("data/core.db") as _c2:
-            _c2.row_factory = _t25g_sq.Row
-            _stuck2 = _c2.execute(
-                """SELECT DISTINCT t.id FROM tasks t
-                   JOIN task_history th ON th.task_id=t.id AND th.action LIKE 'reply_sent:%'
-                   WHERE t.state='IN_PROGRESS' AND COALESCE(t.topic_id,0) IN (210,5)"""
-            ).fetchall()
-            for _sr2 in _stuck2:
-                _c2.execute(
-                    "UPDATE tasks SET state='DONE', error_message='', updated_at=datetime('now') WHERE id=?",
-                    (_sr2["id"],)
-                )
-                _c2.execute(
-                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
-                    (_sr2["id"], "PATCH_T210_T5_REPLIED_DONE_GATE_V1_FORCE_DONE")
-                )
-                _T25G_LOG.info("PATCH_T210_FORCE_DONE: %s", _sr2["id"])
-            _c2.commit()
-    except Exception as _t25g_fix_e:
-        _T25G_LOG.warning("PATCH_T210_FORCE_DONE_ERR: %s", _t25g_fix_e)
-else:
-    _T25G_LOG.warning("PATCH_T210_T5_REPLIED_DONE_GATE_V1 skipped: pregate ref not found or already wrapped")
-# === END_PATCH_T210_T5_REPLIED_DONE_GATE_V1 ===
-
-# === PATCH_TOPIC210_META_GUARD_V1 ===
-# Root cause: topic_210 receives meta-comments ("бери в работу", "ты сам выбирай") that
-# go to the full project engine → AI generates generic "готов к выполнению" →
 
 ====================================================================================================
 END_FILE: task_worker.py

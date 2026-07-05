@@ -1,7 +1,7 @@
 # SINGLE_MODEL_FULL_CONTEXT
 
-GENERATED_AT: 2026-07-05T11:54:50.515742+00:00
-GIT_SHA: 62c612f5f074f6775bef1db030ced1a1b7f3e830
+GENERATED_AT: 2026-07-05T12:24:50.717270+00:00
+GIT_SHA: 0e7f79f099fb2c443a8c79f823773204244098a7
 PURPOSE: Один файл с полным контекстом проекта для любой модели
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 
@@ -22,7 +22,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 | topic_id | name | status | active | failed_24h |
 |----------|------|--------|--------|------------|
 | 0 | COMMON | UNKNOWN | 0 | 1 |
-| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 2 | 7 |
+| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 1 | 7 |
 | 5 | TEKHNADZOR | UNKNOWN | 0 | 0 |
 | 11 | VIDEO | UNKNOWN | 0 | 0 |
 | 210 | PROEKTIROVANIE | UNKNOWN | 0 | 0 |
@@ -3970,8 +3970,8 @@ I canno
 ```
 # topic_0 COMMON
 
-GENERATED_AT: 2026-07-05T11:54:50.200015+00:00
-GIT_SHA: 62c612f5f074f6775bef1db030ced1a1b7f3e830
+GENERATED_AT: 2026-07-05T12:24:50.406283+00:00
+GIT_SHA: 0e7f79f099fb2c443a8c79f823773204244098a7
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 0
@@ -4055,7 +4055,7 @@ STATUS: SYNCED_LOCAL
 ## TOPIC_2_STROYKA
 
 STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE: 2  FAILED_24H: 7
+ACTIVE: 1  FAILED_24H: 7
 DIRECTIONS_BOUND: Сметы
 
 ### LAST_FAILED (5)
@@ -4502,10 +4502,27 @@ def _t2pcl_history_text(conn, task_id):
         return ""
 
 def _t2pcl_parse_explicit_price_choice(text):
-    t = _low(text)
+    raw = _s(text)
+    try:
+        if raw.strip().startswith("{"):
+            import json as _t2pcl_json
+            obj = _t2pcl_json.loads(raw)
+            if isinstance(obj, dict):
+                raw = " ".join(_s(obj.get(k, "")) for k in ("caption", "text", "raw_input", "file_name"))
+    except Exception:
+        pass
+    t = _low(raw)
     t = re.sub(r"\s+", " ", t).strip(" .,!?:;()[]{}")
     if not t:
         return ""
+    if "средн" in t or "медиан" in t:
+        return "median"
+    if "миним" in t or "дешев" in t or "дешёв" in t:
+        return "cheapest"
+    if "максим" in t or "надеж" in t or "надёж" in t or "высок" in t or "дорог" in t:
+        return "reliable"
+    if "ручн" in t or "вручную" in t or "сам укажу" in t:
+        return "manual"
     _exact = {
         "1": "cheapest", "а": "cheapest", "a": "cheapest", "а)": "cheapest", "a)": "cheapest",
         "дешевые": "cheapest", "дешёвые": "cheapest", "самые дешевые": "cheapest",
@@ -4570,23 +4587,6 @@ async def _t2pcl_price_choice_guard(conn, task_id, chat_id, raw_input, reply_to_
     return await _t2pcl_send_price_choice_prompt(
         conn, task_id, chat_id, reply_to_message_id,
         repeat=("TOPIC2_PRICE_CHOICE_REQUESTED" in hist),
-    )
-# === /PATCH_TOPIC2_PRICE_CHOICE_LOOP_CLOSE_V1 helpers ===
-
-def _memory_save(chat_id: str, key: str, value: Dict[str, Any]) -> None:
-    try:
-        con = sqlite3.connect(str(MEM_DB))
-        try:
-            payload = json.dumps(value, ensure_ascii=False, indent=2)
-            con.execute(
-                "INSERT OR REPLACE INTO memory (id, chat_id, key, value, timestamp) VALUES (?, ?, ?, ?, ?)",
-                (str(uuid.uuid4()), str(chat_id), str(key), payload, _now()),
-            )
-            con.commit()
-        finally:
-            con.close()
-    except Exception:
-        pass
 ```
 
 #### core/topic2_estimate_final_close_v2.py
@@ -4847,23 +4847,23 @@ def _write_xlsx(path: Path, items: List[Dict[str, Any]], source_text: str, photo
 ```
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-07-05T11:54:50.235635+00:00
-GIT_SHA: 62c612f5f074f6775bef1db030ced1a1b7f3e830
+GENERATED_AT: 2026-07-05T12:24:50.440838+00:00
+GIT_SHA: 0e7f79f099fb2c443a8c79f823773204244098a7
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
 ROLE: Сметы
 DIRECTIONS_BOUND: estimates
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE_TASKS: 2
+ACTIVE_TASKS: 1
 FAILED_LAST_24H: 7
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 12
-- CANCELLED: 139
-- DONE: 188
+- AWAITING_CONFIRMATION: 1
+- CANCELLED: 140
+- DONE: 192
 - FAILED: 141
-- WAITING_CLARIFICATION: 2
 
 ## LATEST_FAILED
 - ea794751 | NO_VALID_ARTIFACT
@@ -5555,8 +5555,8 @@ _P6H5_NORMATIVE_EXPAND = [
 ```
 # topic_5 TEKHNADZOR
 
-GENERATED_AT: 2026-07-05T11:54:50.277597+00:00
-GIT_SHA: 62c612f5f074f6775bef1db030ced1a1b7f3e830
+GENERATED_AT: 2026-07-05T12:24:50.474873+00:00
+GIT_SHA: 0e7f79f099fb2c443a8c79f823773204244098a7
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 5
@@ -5658,8 +5658,8 @@ DIRECTIONS_BOUND: Видео
 ```
 # topic_11 VIDEO
 
-GENERATED_AT: 2026-07-05T11:54:50.301940+00:00
-GIT_SHA: 62c612f5f074f6775bef1db030ced1a1b7f3e830
+GENERATED_AT: 2026-07-05T12:24:50.497879+00:00
+GIT_SHA: 0e7f79f099fb2c443a8c79f823773204244098a7
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 11
@@ -6268,8 +6268,8 @@ def _normalize_sheet_register(template: Dict[str, Any], data: Dict[str, Any]) ->
 ```
 # topic_210 PROEKTIROVANIE
 
-GENERATED_AT: 2026-07-05T11:54:50.336634+00:00
-GIT_SHA: 62c612f5f074f6775bef1db030ced1a1b7f3e830
+GENERATED_AT: 2026-07-05T12:24:50.530464+00:00
+GIT_SHA: 0e7f79f099fb2c443a8c79f823773204244098a7
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 210
@@ -6835,8 +6835,8 @@ except Exception:
 ```
 # topic_500 VEB_POISK
 
-GENERATED_AT: 2026-07-05T11:54:50.375896+00:00
-GIT_SHA: 62c612f5f074f6775bef1db030ced1a1b7f3e830
+GENERATED_AT: 2026-07-05T12:24:50.565271+00:00
+GIT_SHA: 0e7f79f099fb2c443a8c79f823773204244098a7
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 500
@@ -6938,8 +6938,8 @@ DIRECTIONS_BOUND: Сервер DevOps
 ```
 # topic_794 DEVOPS
 
-GENERATED_AT: 2026-07-05T11:54:50.399394+00:00
-GIT_SHA: 62c612f5f074f6775bef1db030ced1a1b7f3e830
+GENERATED_AT: 2026-07-05T12:24:50.590109+00:00
+GIT_SHA: 0e7f79f099fb2c443a8c79f823773204244098a7
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 794
@@ -7034,8 +7034,8 @@ DIRECTIONS_BOUND: Автозапчасти
 ```
 # topic_961 AVTOZAPCHASTI
 
-GENERATED_AT: 2026-07-05T11:54:50.426018+00:00
-GIT_SHA: 62c612f5f074f6775bef1db030ced1a1b7f3e830
+GENERATED_AT: 2026-07-05T12:24:50.617947+00:00
+GIT_SHA: 0e7f79f099fb2c443a8c79f823773204244098a7
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 961
@@ -7127,8 +7127,8 @@ DIRECTIONS_BOUND: Мозги оркестра
 ```
 # topic_3008 KODY_MOZGOV
 
-GENERATED_AT: 2026-07-05T11:54:50.450507+00:00
-GIT_SHA: 62c612f5f074f6775bef1db030ced1a1b7f3e830
+GENERATED_AT: 2026-07-05T12:24:50.649801+00:00
+GIT_SHA: 0e7f79f099fb2c443a8c79f823773204244098a7
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 3008
@@ -7231,8 +7231,8 @@ DIRECTIONS_BOUND: CRM лиды
 ```
 # topic_4569 CRM_LEADS
 
-GENERATED_AT: 2026-07-05T11:54:50.477428+00:00
-GIT_SHA: 62c612f5f074f6775bef1db030ced1a1b7f3e830
+GENERATED_AT: 2026-07-05T12:24:50.678759+00:00
+GIT_SHA: 0e7f79f099fb2c443a8c79f823773204244098a7
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 4569
@@ -7340,8 +7340,8 @@ DIRECTIONS_BOUND: Поиск работы
 ```
 # topic_6104 JOB_SEARCH
 
-GENERATED_AT: 2026-07-05T11:54:50.504484+00:00
-GIT_SHA: 62c612f5f074f6775bef1db030ced1a1b7f3e830
+GENERATED_AT: 2026-07-05T12:24:50.706184+00:00
+GIT_SHA: 0e7f79f099fb2c443a8c79f823773204244098a7
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 6104
