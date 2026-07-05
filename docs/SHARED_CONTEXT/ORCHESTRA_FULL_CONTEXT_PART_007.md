@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_007
-generated_at_utc: 2026-07-05T18:52:22.164597+00:00
-git_sha_before_commit: 89c6bd9d7d6faabb6d8ad2d726b2667082f15f6f
+generated_at_utc: 2026-07-05T19:22:21.448155+00:00
+git_sha_before_commit: e76a956d9df6276eebb07cb11c33f1256298aa83
 part: 7/18
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 3/4
-SHA256_FULL_FILE: 7c9e2492a8a22354f14b9d163cecfa5be58c18d7f4b74e3013cf6bd17f113119
+SHA256_FULL_FILE: 32fd8459a3d152d5a9fa3e8476394aa53b3573f3cbbc365b3c8824af7e7e1a63
 ====================================================================================================
         return _T25G_CURRENT(conn, task_id, **kwargs)
     _update_task._t25g_wrapped = True
@@ -5217,7 +5217,7 @@ try:
 
         if "8.0 x 12.0" in ctx or "8х12" in low or "8x12" in low or "8 на 12" in low:
             facts.append("Размеры: 8.0 x 12.0 м")
-        if "1 этаж" in low or "этажей: 1" in low or "clarified:1" in low:
+        if "этажей: 1" in low or "этажность: 1" in low:
             facts.append("Этажность: 1 этаж")
         if "сэндвич" in low or "стеновая панель" in low or "стеновые панели" in low:
             facts.append("Стены: сэндвич-панели 120 мм")
@@ -5457,7 +5457,7 @@ try:
         out = []
         if "8.0 x 12.0" in ctx or "8х12" in low or "8x12" in low:
             out.append("Размеры: 8.0 x 12.0 м")
-        if "1 этаж" in low or "этажей: 1" in low:
+        if "этажей: 1" in low or "этажность: 1" in low:
             out.append("Этажность: 1 этаж")
         if "сэндвич" in low or "стеновая панель" in low or "стеновые панели" in low:
             out.append("Стены: сэндвич-панели 120 мм")
@@ -7529,6 +7529,7 @@ try:
                     pass
             return await _t2cf2_orig_handle_drive_file(conn, task, chat_id, topic_id)
         globals()["_handle_drive_file"] = _handle_drive_file
+
 
 ====================================================================================================
 END_FILE: task_worker.py

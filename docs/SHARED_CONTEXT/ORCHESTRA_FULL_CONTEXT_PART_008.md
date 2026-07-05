@@ -1,15 +1,14 @@
 # ORCHESTRA_FULL_CONTEXT_PART_008
-generated_at_utc: 2026-07-05T18:52:22.165696+00:00
-git_sha_before_commit: 89c6bd9d7d6faabb6d8ad2d726b2667082f15f6f
+generated_at_utc: 2026-07-05T19:22:21.448847+00:00
+git_sha_before_commit: e76a956d9df6276eebb07cb11c33f1256298aa83
 part: 8/18
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 4/4
-SHA256_FULL_FILE: 7c9e2492a8a22354f14b9d163cecfa5be58c18d7f4b74e3013cf6bd17f113119
+SHA256_FULL_FILE: 32fd8459a3d152d5a9fa3e8476394aa53b3573f3cbbc365b3c8824af7e7e1a63
 ====================================================================================================
-
     # === FIX 2: wrap _t2fb_merge → no raw_input append for drive_file parent ===
     # PATCH_TOPIC2_ADDITIONAL_FACTS_FULL_RECALC_CANON_RESTORE_V1: also reset DONE_WITH_DRIVE_LINKS
     # blocking marker so that a new FACT triggers full canonical recalculation via _t2fdsg_run_drive_final.
@@ -4328,6 +4327,101 @@ except Exception as _t2dfd_install_err:
     except Exception:
         pass
 # === END_PATCH_TOPIC2_DRIVE_FILE_PICKER_CLARIFIED_DRIVEFILE_V1 ===
+
+# === PATCH_TOPIC2_DRIVE_FINAL_USE_CANON_GENERATE_V2 ===
+# Price-confirmed drive_file topic_2 finals must use stroyka canonical
+# template generator, not the standalone short final_close path.
+try:
+    import re as _t2dfcg_re
+
+    def _t2dfcg_num(v):
+        try:
+            return float(str(v or '').replace(' ', '').replace(',', '.'))
+        except Exception:
+            return 0.0
+
+    def _t2dfcg_enrich_pending(pending):
+        if not isinstance(pending, dict):
+            return pending
+        parsed = pending.get('parsed') or {}
+        if not isinstance(parsed, dict):
+            parsed = {}
+        raw = str(parsed.get('raw') or '')
+        low = raw.lower().replace('ё', 'е')
+        rows = parsed.get('pdf_spec_rows') or []
+        facts = {}
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            name = str(row.get('name') or '').lower().replace('ё', 'е')
+            qty = _t2dfcg_num(row.get('qty'))
+            price = _t2dfcg_num(row.get('price'))
+            real_qty = price if price > 0 and 0 < qty <= 20 and 'площад' in name else qty
+            if real_qty <= 0:
+                continue
+            if 'застрой' in name:
+                facts['built_area'] = real_qty
+            elif 'общая' in name:
+                facts['total_area'] = real_qty
+            elif 'теплом контур' in name:
+                facts['warm_area'] = real_qty
+        if not parsed.get('object') and ('дом' in low or facts):
+            parsed['object'] = 'дом'
+        if not parsed.get('material') and 'газобетон' in low:
+            parsed['material'] = 'газобетон'
+        if not parsed.get('foundation') and ('монолитная железобетонная плита' in low or 'фундамент - монолит' in low):
+            parsed['foundation'] = 'монолитная плита'
+        if not parsed.get('area_floor') and facts.get('built_area'):
+            parsed['area_floor'] = facts['built_area']
+        if not parsed.get('area_total') and facts.get('total_area'):
+            parsed['area_total'] = facts['total_area']
+        if not parsed.get('floors'):
+            if 'план расстановки мебели 2 этажа' in low or 'обмерный план 2-го этажа' in low or '2 этажа' in low:
+                parsed['floors'] = 2
+        if not parsed.get('dimensions') and facts.get('built_area'):
+            parsed['area'] = facts.get('built_area')
+        pending['parsed'] = parsed
+        return pending
+
+    async def _t2fdsg_run_drive_final(conn, parent, choice):  # noqa: F811
+        parent_id = str(_t2fdsg_get(parent, 'id') or '')
+        chat_id = str(_t2fdsg_get(parent, 'chat_id') or '')
+        topic_id = int(_t2fdsg_get(parent, 'topic_id', 2) or 2)
+        if not parent_id:
+            return False
+        parent = _t2fdsg_enrich_parent_raw(conn, parent, choice)
+        _t2fdsg_hist_once(conn, parent_id, 'TOPIC2_PRICE_CHOICE_CONFIRMED:' + str(choice))
+        _t2fdsg_hist_once(conn, parent_id, 'PATCH_TOPIC2_DRIVE_FINAL_USE_CANON_GENERATE_V2:START')
+        pending = _t2fdsg_load_pending(chat_id, parent_id)
+        pending = _t2dfcg_enrich_pending(pending)
+        if not pending:
+            _update_task(conn, parent_id, state='FAILED', error_message='TOPIC2_PENDING_NOT_FOUND_FOR_CANON_GENERATE')
+            conn.commit()
+            return True
+        try:
+            from core.stroyka_estimate_canon import _generate_and_send as _t2dfcg_generate
+            conn.execute("UPDATE tasks SET state='IN_PROGRESS', result='', error_message=NULL, updated_at=datetime('now') WHERE id=?", (parent_id,))
+            conn.commit()
+            choice_text = {'min': 'минимальные', 'minimum': 'минимальные', 'median': 'средние', 'max': 'максимальные', 'maximum': 'максимальные'}.get(str(choice), str(choice or 'средние'))
+            res = _t2dfcg_generate(conn, parent, pending, choice_text, logger=logger)
+            if _t2fdsg_inspect.isawaitable(res):
+                await res
+            _t2fdsg_hist_once(conn, parent_id, 'PATCH_TOPIC2_DRIVE_FINAL_USE_CANON_GENERATE_V2:DONE')
+            conn.commit()
+            return True
+        except Exception as e:
+            _update_task(conn, parent_id, state='FAILED', error_message='TOPIC2_CANON_GENERATE_EXCEPTION:' + type(e).__name__)
+            _t2fdsg_hist_once(conn, parent_id, 'PATCH_TOPIC2_DRIVE_FINAL_USE_CANON_GENERATE_V2:ERR:' + str(e)[:120])
+            conn.commit()
+            return True
+
+    logger.info('PATCH_TOPIC2_DRIVE_FINAL_USE_CANON_GENERATE_V2 installed')
+except Exception as _t2dfcg_e:
+    try:
+        logger.exception('PATCH_TOPIC2_DRIVE_FINAL_USE_CANON_GENERATE_V2_INSTALL_ERR:%s', _t2dfcg_e)
+    except Exception:
+        pass
+# === END_PATCH_TOPIC2_DRIVE_FINAL_USE_CANON_GENERATE_V2 ===
 
 if __name__ == "__main__":
     asyncio.run(main())

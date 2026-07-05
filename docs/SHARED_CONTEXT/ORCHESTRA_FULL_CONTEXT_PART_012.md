@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_012
-generated_at_utc: 2026-07-05T18:52:22.172188+00:00
-git_sha_before_commit: 89c6bd9d7d6faabb6d8ad2d726b2667082f15f6f
+generated_at_utc: 2026-07-05T19:22:21.451725+00:00
+git_sha_before_commit: e76a956d9df6276eebb07cb11c33f1256298aa83
 part: 12/18
 
 
@@ -1796,7 +1796,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: ff577d2d0fd55d4ceb40d3a7e41933c267ae424192e3c68068c835859c9007d5
+SHA256_FULL_FILE: b00f3c2b2ee30e61645ca61fc3f04efca5b9f7e3d286c87e06bc9016aa618133
 ====================================================================================================
 # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
 from __future__ import annotations
@@ -2380,6 +2380,32 @@ def _parse_request(text: str) -> Dict[str, Any]:
 
 def _missing_question(parsed: Dict[str, Any]) -> Optional[str]:
 
+    # === PATCH_TOPIC2_AREA_ONLY_PDF_ROWS_MISSING_GATE_V1 ===
+    # AR/TЭП area rows are not a VOR or material/work specification.
+    rows = parsed.get("pdf_spec_rows") or []
+    if rows:
+        usable = []
+        non_area = []
+        for row in rows:
+            try:
+                name = _clean(row.get("name", "")).lower().replace("ё", "е")
+                qty = float(row.get("qty") or 0)
+                price = float(row.get("price") or 0)
+            except Exception:
+                continue
+            if qty <= 0 and price <= 0:
+                continue
+            usable.append(row)
+            if "площад" not in name and "общая" not in name:
+                non_area.append(row)
+        if usable and not non_area:
+            return (
+                "PDF прочитан: найдены только архитектурные площади/ТЭП, но не найдена ВОР, "
+                "спецификация материалов или КЖ/конструктив для полной сметы. "
+                "Финальную смету по этим данным не создаю, чтобы не подменять расчёт догадками. "
+                "Пришли КЖ/ВОР/спецификацию материалов либо прямо напиши: `считать ориентировочно по проекту`."
+            )
+    # === END_PATCH_TOPIC2_AREA_ONLY_PDF_ROWS_MISSING_GATE_V1 ===
     if parsed.get("pdf_spec_rows") or parsed.get("ocr_table_rows"):
         return None
     # === STROYKA_FULL_CHAIN_FINAL_CLOSE_VERIFIED_DIRECT_PRICE_NO_MISSING ===
@@ -4099,17 +4125,26 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
         _mhs_mime = _s(_mhs_raw_meta.get("mime_type") or "").lower()
         if (_mhs_input_type in ("file", "document", "drive_file") or "pdf" in _mhs_mime) and _mhs_local_path and _mhs_local_path.lower().endswith(".pdf"):
             try:
-                _history_safe(conn, task_id, "TOPIC2_PDF_SPEC_EXTRACTOR_STARTED")
-                from core.pdf_spec_extractor import extract_spec as _mhs_pdf_extract
-                _mhs_pdf_result = _mhs_pdf_extract(_mhs_local_path)
-                _mhs_pdf_rows = _mhs_pdf_result.get("rows") or []
-                if _mhs_pdf_rows:
-                    _history_safe(conn, task_id, f"TOPIC2_PDF_SPEC_EXTRACTED:{len(_mhs_pdf_rows)}_rows")
-                    _history_safe(conn, task_id, f"TOPIC2_PDF_SPEC_ROWS_EXTRACTED:{len(_mhs_pdf_rows)}")
-                    parsed["pdf_spec_rows"] = _mhs_pdf_rows
-                    parsed["pdf_spec_source"] = _mhs_local_path
+                _mhs_cached = _memory_latest(chat_id, f"topic_2_estimate_pending_{task_id}") or {}
+                _mhs_cached_parsed = _mhs_cached.get("parsed") if isinstance(_mhs_cached, dict) else {}
+                _mhs_cached_rows = (_mhs_cached_parsed or {}).get("pdf_spec_rows") or []
+                if _mhs_cached_rows:
+                    parsed["pdf_spec_rows"] = _mhs_cached_rows
+                    parsed["pdf_spec_source"] = (_mhs_cached_parsed or {}).get("pdf_spec_source") or _mhs_local_path
+                    _history_safe(conn, task_id, f"TOPIC2_PDF_SPEC_REUSED_FROM_PENDING:{len(_mhs_cached_rows)}_rows")
+                    _history_safe(conn, task_id, f"TOPIC2_PDF_SPEC_ROWS_EXTRACTED:{len(_mhs_cached_rows)}")
                 else:
-                    _history_safe(conn, task_id, "TOPIC2_PDF_SPEC_EMPTY")
+                    _history_safe(conn, task_id, "TOPIC2_PDF_SPEC_EXTRACTOR_STARTED")
+                    from core.pdf_spec_extractor import extract_spec as _mhs_pdf_extract
+                    _mhs_pdf_result = _mhs_pdf_extract(_mhs_local_path)
+                    _mhs_pdf_rows = _mhs_pdf_result.get("rows") or []
+                    if _mhs_pdf_rows:
+                        _history_safe(conn, task_id, f"TOPIC2_PDF_SPEC_EXTRACTED:{len(_mhs_pdf_rows)}_rows")
+                        _history_safe(conn, task_id, f"TOPIC2_PDF_SPEC_ROWS_EXTRACTED:{len(_mhs_pdf_rows)}")
+                        parsed["pdf_spec_rows"] = _mhs_pdf_rows
+                        parsed["pdf_spec_source"] = _mhs_local_path
+                    else:
+                        _history_safe(conn, task_id, "TOPIC2_PDF_SPEC_EMPTY")
             except Exception as _mhs_pdf_e:
                 _history_safe(conn, task_id, "TOPIC2_PDF_SPEC_ERR:" + str(_mhs_pdf_e)[:80])
         elif _mhs_input_type in ("photo", "image") and _mhs_local_path:
@@ -7041,6 +7076,151 @@ if _T2NWPMR_ORIG_IS_OLD_TASK_FINISH_REQUEST and not getattr(_T2NWPMR_ORIG_IS_OLD
     _is_old_task_finish_request._t2nwpmr_wrapped = True
 
 # === END_PATCH_TOPIC2_NO_WAITING_PROJECT_MEMORY_REVIVE_V1 ===
+
+# === PATCH_TOPIC2_TEMPLATE_ROWS_FULL_AREAL_CALC_V1 ===
+# Use the selected template workbook rows as the calculation matrix instead of
+# synthetic 5-8 row summaries. This keeps the canonical 15-col AREAL_CALC output.
+_T2TR_ORIG_CLASSIFY_ITEM = _classify_item
+_T2TR_ORIG_CREATE_XLSX = _create_xlsx_from_template
+
+
+def _classify_item(name: str, section: str) -> str:  # noqa: F811
+    sec = _low(str(section or ''))
+    if 'материал' in sec:
+        return 'material'
+    if 'работ' in sec:
+        return 'work'
+    return _T2TR_ORIG_CLASSIFY_ITEM(name, section)
+
+
+def _t2tr_num(v):
+    try:
+        if v is None or v == '':
+            return 0.0
+        return float(str(v).replace(' ', '').replace(',', '.'))
+    except Exception:
+        return 0.0
+
+
+def _t2tr_template_items(template_path: Optional[str], sheet_name: Optional[str], parsed: Dict[str, Any]) -> List[Dict[str, Any]]:
+    if not template_path or not os.path.exists(template_path):
+        return []
+    try:
+        from openpyxl import load_workbook as _t2tr_lwb
+        wb = _t2tr_lwb(template_path, data_only=True, read_only=True)
+        try:
+            selected = sheet_name if sheet_name in wb.sheetnames else choose_template_sheet(parsed, wb.sheetnames)[0]
+            ws = wb[selected] if selected in wb.sheetnames else wb.active
+            rows = list(ws.iter_rows(values_only=True))
+        finally:
+            wb.close()
+    except Exception:
+        return []
+
+    header_idx = -1
+    for idx, row in enumerate(rows):
+        vals = [_low(x) for x in row[:12]]
+        if any('наименование' in v for v in vals) and any('кол-во' in v or 'количество' in v for v in vals):
+            header_idx = idx
+            break
+    if header_idx < 0:
+        return []
+
+    header = rows[header_idx]
+    header_txt = ' '.join(_low(x) for x in header[:12])
+    if 'себестоимость работ' in header_txt or (len(header) > 9 and 'материал' in _low(header[9])):
+        work_col, mat_col = 7, 9
+    else:
+        work_col, mat_col = 4, 6
+
+    items: List[Dict[str, Any]] = []
+    section = 'Прочее'
+    for row in rows[header_idx + 1:]:
+        a = _s(row[0] if len(row) > 0 else '')
+        name = _s(row[1] if len(row) > 1 else '')
+        unit = _s(row[2] if len(row) > 2 else '')
+        qty = _t2tr_num(row[3] if len(row) > 3 else 0)
+        if a and not name:
+            section = a.strip()
+            continue
+        if not name or not unit or qty <= 0:
+            continue
+        lname = _low(name)
+        if 'наименование' in lname or 'итого' in lname:
+            continue
+        work_price = _t2tr_num(row[work_col] if len(row) > work_col else 0)
+        mat_price = _t2tr_num(row[mat_col] if len(row) > mat_col else 0)
+        note = _s(row[9] if len(row) > 9 and mat_col != 9 else (row[10] if len(row) > 10 else ''))
+        if work_price > 0:
+            items.append({
+                'section': section or 'Работы',
+                'name': name[:240],
+                'unit': unit,
+                'qty': qty,
+                'price': work_price,
+                'note': (note or 'template workbook row')[:240],
+            })
+        if mat_price > 0:
+            items.append({
+                'section': (section or 'Материалы') + ' / Материалы',
+                'name': name[:240],
+                'unit': unit,
+                'qty': qty,
+                'price': mat_price,
+                'note': (note or 'template workbook row')[:240],
+            })
+    return items[:400]
+
+
+def _create_xlsx_from_template(task_id: str, parsed: Dict[str, Any], template: Dict[str, Any], template_path: Optional[str], sheet_name: Optional[str], price_text: str, choice: Dict[str, Any]) -> Tuple[str, List[Dict[str, Any]], float]:  # noqa: F811
+    template_items = _t2tr_template_items(template_path, sheet_name, parsed)
+    if len(template_items) >= 20:
+        orig_build = globals().get('_build_estimate_items')
+
+        def _t2tr_build_from_template(_parsed, _price_text, _choice):
+            return template_items
+
+        globals()['_build_estimate_items'] = _t2tr_build_from_template
+        try:
+            return _T2TR_ORIG_CREATE_XLSX(task_id, parsed, template, template_path, sheet_name, price_text, choice)
+        finally:
+            globals()['_build_estimate_items'] = orig_build
+    return _T2TR_ORIG_CREATE_XLSX(task_id, parsed, template, template_path, sheet_name, price_text, choice)
+# === END_PATCH_TOPIC2_TEMPLATE_ROWS_FULL_AREAL_CALC_V1 ===
+
+# === PATCH_TOPIC2_AREA_ONLY_WITH_TEMPLATE_ALLOWED_V2 ===
+# If a project PDF has only AR/TЭП rows but a canonical full-house template is selected,
+# do not stop the task. The template matrix is the calculation basis; PDF facts are inputs.
+_T2AOT_ORIG_MISSING_QUESTION = _missing_question
+
+
+def _t2aot_rows_are_area_only(rows) -> bool:
+    usable = []
+    non_area = []
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        name = _clean(row.get('name', '')).lower().replace('ё', 'е')
+        try:
+            qty = float(row.get('qty') or 0)
+            price = float(row.get('price') or 0)
+        except Exception:
+            qty = price = 0
+        if qty <= 0 and price <= 0:
+            continue
+        usable.append(row)
+        if 'площад' not in name and 'общая' not in name:
+            non_area.append(row)
+    return bool(usable) and not non_area
+
+
+def _missing_question(parsed: Dict[str, Any]) -> Optional[str]:  # noqa: F811
+    rows = parsed.get('pdf_spec_rows') or []
+    raw = _low(parsed.get('raw') or '')
+    if _t2aot_rows_are_area_only(rows) and any(x in raw for x in ('смет', 'стоимост', 'расчет', 'расчёт', 'проект')):
+        return None
+    return _T2AOT_ORIG_MISSING_QUESTION(parsed)
+# === END_PATCH_TOPIC2_AREA_ONLY_WITH_TEMPLATE_ALLOWED_V2 ===
 
 ====================================================================================================
 END_FILE: core/stroyka_estimate_canon.py

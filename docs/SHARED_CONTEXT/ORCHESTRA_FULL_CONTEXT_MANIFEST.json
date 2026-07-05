@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-07-05T18:52:22.182027+00:00",
-  "git_sha_before_commit": "89c6bd9d7d6faabb6d8ad2d726b2667082f15f6f",
+  "generated_at_utc": "2026-07-05T19:22:21.458988+00:00",
+  "git_sha_before_commit": "e76a956d9df6276eebb07cb11c33f1256298aa83",
   "part_max_bytes": 400000,
   "content_chunk_bytes": 340000,
   "total_records": 424,
@@ -1380,9 +1380,9 @@
       "path": "task_worker.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 1213171,
-      "sha256": "7c9e2492a8a22354f14b9d163cecfa5be58c18d7f4b74e3013cf6bd17f113119",
-      "chars": 1156717,
+      "size_bytes": 1218100,
+      "sha256": "32fd8459a3d152d5a9fa3e8476394aa53b3573f3cbbc365b3c8824af7e7e1a63",
+      "chars": 1161408,
       "chunks": 4
     },
     {
@@ -2145,9 +2145,9 @@
       "path": "core/stroyka_estimate_canon.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 287981,
-      "sha256": "ff577d2d0fd55d4ceb40d3a7e41933c267ae424192e3c68068c835859c9007d5",
-      "chars": 255266,
+      "size_bytes": 296190,
+      "sha256": "b00f3c2b2ee30e61645ca61fc3f04efca5b9f7e3d286c87e06bc9016aa618133",
+      "chars": 263049,
       "chunks": 1
     },
     {
@@ -2271,9 +2271,9 @@
       "path": "core/topic2_estimate_final_close_v2.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 51375,
-      "sha256": "c54172a0b98993f988f312907e96491a98dc650f98799c261a4cc46e11221a64",
-      "chars": 48566,
+      "size_bytes": 67193,
+      "sha256": "a687410ea4fe2c722c77e8f495ab7770b5d508a0065c459338f26ce5fa5434e3",
+      "chars": 63076,
       "chunks": 1
     },
     {
@@ -3297,7 +3297,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_008.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 369853,
+      "size_bytes": 375708,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3396,7 +3396,7 @@
       "path": "docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 32077,
+      "size_bytes": 30505,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3414,7 +3414,7 @@
       "path": "docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 348238,
+      "size_bytes": 348025,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3459,7 +3459,7 @@
       "path": "docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 6381,
+      "size_bytes": 6152,
       "sha256": "",
       "chars": 0,
       "chunks": 0

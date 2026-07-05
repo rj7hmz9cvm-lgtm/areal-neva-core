@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_013
-generated_at_utc: 2026-07-05T18:52:22.173549+00:00
-git_sha_before_commit: 89c6bd9d7d6faabb6d8ad2d726b2667082f15f6f
+generated_at_utc: 2026-07-05T19:22:21.452474+00:00
+git_sha_before_commit: e76a956d9df6276eebb07cb11c33f1256298aa83
 part: 13/18
 
 
@@ -6772,7 +6772,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/topic2_estimate_final_close_v2.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: c54172a0b98993f988f312907e96491a98dc650f98799c261a4cc46e11221a64
+SHA256_FULL_FILE: a687410ea4fe2c722c77e8f495ab7770b5d508a0065c459338f26ce5fa5434e3
 ====================================================================================================
 from __future__ import annotations
 
@@ -8073,6 +8073,367 @@ def _parse_items(text: str):
     return orient or (items or [])
 # === END_PATCH_TOPIC2_ORIENT_PROJECT_ITEMS_V1 ===
 
+# === PATCH_TOPIC2_FINAL_PDF_PENDING_BRIDGE_V1 ===
+# Canon bridge: topic_2 final artifacts must use facts already extracted by
+# stroyka_estimate_canon.py (pdf_spec_rows + online_prices), not only caption text.
+import json as _t2pbr_json
+import sqlite3 as _t2pbr_sqlite3
+import re as _t2pbr_re
+
+_T2PBR_ORIG_MAKE_ARTIFACTS = _make_artifacts
+
+
+def _t2pbr_memory_pending(task_id: str, chat_id: str = ''):
+    try:
+        con = _t2pbr_sqlite3.connect(str(BASE / 'data' / 'memory.db'))
+        try:
+            row = con.execute(
+                'SELECT value FROM memory WHERE key=? ORDER BY timestamp DESC LIMIT 1',
+                ('topic_2_estimate_pending_' + str(task_id),),
+            ).fetchone()
+            if not row and chat_id:
+                row = con.execute(
+                    'SELECT value FROM memory WHERE chat_id=? AND key LIKE ? ORDER BY timestamp DESC LIMIT 1',
+                    (str(chat_id), 'topic_2_estimate_pending_%'),
+                ).fetchone()
+            return _t2pbr_json.loads(row[0] or '{}') if row else {}
+        finally:
+            con.close()
+    except Exception:
+        return {}
+
+
+def _t2pbr_num(v) -> float:
+    try:
+        return float(str(v or '').replace(' ', '').replace(',', '.'))
+    except Exception:
+        return 0.0
+
+
+def _t2pbr_price_values(text: str, needles):
+    values = []
+    src = str(text or '')
+    for line in src.splitlines():
+        low = line.lower().replace('ё', 'е')
+        if not any(n in low for n in needles):
+            continue
+        for m in _t2pbr_re.finditer(r'(?<![\d])\d{2,6}(?:[.,]\d+)?', line):
+            val = _t2pbr_num(m.group(0))
+            if val >= 10:
+                values.append(val)
+    return values
+
+
+def _t2pbr_choose_median(values):
+    vals = sorted(float(x) for x in values if float(x or 0) > 0)
+    if not vals:
+        return 0.0
+    mid = len(vals) // 2
+    if len(vals) % 2:
+        return vals[mid]
+    return round((vals[mid - 1] + vals[mid]) / 2, 2)
+
+
+def _t2pbr_area_facts(rows):
+    facts = {}
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        name = _s(row.get('name', ''))
+        low = name.lower().replace('ё', 'е')
+        qty = _t2pbr_num(row.get('qty'))
+        price = _t2pbr_num(row.get('price'))
+        real_qty = price if price > 0 and 0 < qty <= 20 and 'площад' in low else qty
+        if real_qty <= 0:
+            continue
+        if 'застрой' in low:
+            facts['built_area'] = real_qty
+        elif 'общая' in low:
+            facts['total_area'] = real_qty
+        elif 'теплом контур' in low:
+            facts['warm_area'] = real_qty
+        elif 'крыль' in low or 'террас' in low:
+            facts['terrace_area'] = real_qty
+    return facts
+
+
+def _t2pbr_foundation_thickness(text: str) -> float:
+    low = _low(text)
+    m = _t2pbr_re.search(r'плит[а-я\s-]{0,40}(\d{2,4})\s*мм', low)
+    if not m:
+        m = _t2pbr_re.search(r'фундамент[а-я\s-]{0,80}(\d{2,4})\s*мм', low)
+    mm = _t2pbr_num(m.group(1)) if m else 300.0
+    return max(mm / 1000.0, 0.05)
+
+
+def _t2pbr_build_items(task_id: str, raw_text: str, photo_text: str, chat_id: str = ''):
+    pending = _t2pbr_memory_pending(task_id, chat_id)
+    parsed = pending.get('parsed') if isinstance(pending, dict) else {}
+    parsed = parsed if isinstance(parsed, dict) else {}
+    pdf_rows = parsed.get('pdf_spec_rows') or []
+    price_text = '\n'.join(
+        _s(x, 60000)
+        for x in (pending.get('online_prices'), pending.get('template_prices'))
+        if isinstance(pending, dict) and x
+    )
+    source_text = '\n'.join(x for x in (_s(raw_text, 60000), _s(photo_text, 60000), _s(parsed.get('raw'), 60000)) if x)
+    if not pdf_rows or not price_text:
+        return []
+
+    facts = _t2pbr_area_facts(pdf_rows)
+    built_area = facts.get('built_area') or facts.get('warm_area') or facts.get('total_area') or 0.0
+    if built_area <= 0:
+        return []
+
+    concrete_price = _t2pbr_choose_median(_t2pbr_price_values(price_text, ('бетон', 'b25', 'b22', 'в25', 'в22')))
+    rebar_price = _t2pbr_choose_median(_t2pbr_price_values(price_text, ('арматур', 'а500', 'a500')))
+    wall_work_price = _t2pbr_choose_median(_t2pbr_price_values(price_text, ('кладк', 'монтаж')))
+    gasbeton_price = _t2pbr_choose_median(_t2pbr_price_values(price_text, ('газобет', 'блок')))
+
+    thickness = _t2pbr_foundation_thickness(source_text)
+    concrete_qty = round(built_area * thickness, 2)
+    rebar_qty = round(concrete_qty * 0.08, 3)
+    warm_area = facts.get('warm_area') or facts.get('total_area') or built_area
+
+    items = []
+
+    def add(name, qty, unit, price, source, note=''):
+        if qty <= 0:
+            return
+        items.append({
+            'num': len(items) + 1,
+            'name': name[:240],
+            'qty': round(float(qty), 3),
+            'unit': unit,
+            'price': float(price or 0),
+            'source': source[:240],
+            'note': note[:240],
+        })
+
+    add('Площадь застройки по PDF', built_area, 'м²', 0, 'PDF_SPEC_ROWS_CANON', 'исходный факт, не стоимостная позиция')
+    if facts.get('total_area'):
+        add('Общая площадь по PDF', facts['total_area'], 'м²', 0, 'PDF_SPEC_ROWS_CANON', 'исходный факт, не стоимостная позиция')
+    if facts.get('warm_area'):
+        add('Площадь дома в теплом контуре по PDF', facts['warm_area'], 'м²', 0, 'PDF_SPEC_ROWS_CANON', 'исходный факт, не стоимостная позиция')
+
+    add(
+        f'Бетон для монолитной железобетонной плиты {int(thickness * 1000)} мм',
+        concrete_qty,
+        'м³',
+        concrete_price,
+        'PDF project facts + Sonar/template prices',
+        'фундамент из PDF: монолитная железобетонная плита',
+    )
+    add(
+        'Арматура А500/Ø12 для фундаментной плиты, расчетная масса',
+        rebar_qty,
+        'т',
+        rebar_price,
+        'PDF project facts + Sonar/template prices',
+        'масса рассчитана от объема бетона; уточняется по КЖ/ведомости арматуры',
+    )
+    add(
+        'Газобетон D400 для наружных/внутренних стен, расчет по теплому контуру',
+        warm_area,
+        'м²',
+        gasbeton_price,
+        'PDF project facts + template prices',
+        'PDF: наружные стены D400 375/300 мм, внутренние 250 мм, перегородки 150 мм',
+    )
+    add(
+        'Работы по кладке/монтажу стен по проекту',
+        warm_area,
+        'м²',
+        wall_work_price,
+        'PDF project facts + Sonar prices',
+        'средняя цена из подтвержденного поиска; состав уточняется по КЖ/ВОР',
+    )
+
+    subtotal = sum(float(x.get('qty') or 0) * float(x.get('price') or 0) for x in items)
+    if subtotal > 0:
+        add('Организация работ и накладные расходы', 1, 'компл', round(subtotal * 0.07, 2), 'topic_2 canon overhead', '7% от стоимостных позиций')
+        add('Расходные материалы, крепеж, герметики', 1, 'компл', round(subtotal * 0.015, 2), 'topic_2 canon overhead', '1.5% от стоимостных позиций')
+
+    return [x for x in items if _t2nz_valid_item(x)]
+
+
+def _make_artifacts(task_id: str, topic_id: int, raw_text: str, photo_text: str = '', chat_id: str = '') -> dict:
+    if int(topic_id or 0) == 2 and task_id:
+        bridge_items = _t2pbr_build_items(task_id, raw_text, photo_text, chat_id)
+        if bridge_items:
+            orig_parse = globals().get('_parse_items')
+
+            def _t2pbr_parse_override(text: str):
+                return bridge_items
+
+            globals()['_parse_items'] = _t2pbr_parse_override
+            try:
+                res = _T2PBR_ORIG_MAKE_ARTIFACTS(task_id, topic_id, raw_text, photo_text, chat_id)
+                if isinstance(res, dict):
+                    res['items_count'] = len(bridge_items)
+                    res['_topic2_pdf_pending_bridge'] = True
+                return res
+            finally:
+                globals()['_parse_items'] = orig_parse
+    return _T2PBR_ORIG_MAKE_ARTIFACTS(task_id, topic_id, raw_text, photo_text, chat_id)
+# === END_PATCH_TOPIC2_FINAL_PDF_PENDING_BRIDGE_V1 ===
+
+# === PATCH_TOPIC2_FINAL_PRICE_PARSE_FACTS_V2 ===
+# V1 price parser matched grade numbers (A500/D400/ЦПС-300) as prices.
+# Use only structured Sonar rows and template работа=/матер= fields.
+def _t2pbr_price_values(text: str, needles):
+    values = []
+    for line in str(text or '').splitlines():
+        low = line.lower().replace('ё', 'е')
+        if not any(n in low for n in needles):
+            continue
+        if '|' in line:
+            parts = [p.strip() for p in line.split('|')]
+            if len(parts) >= 2:
+                m = _t2pbr_re.search(r'\d{2,6}(?:[.,]\d+)?', parts[1])
+                if m:
+                    val = _t2pbr_num(m.group(0))
+                    if val >= 100:
+                        values.append(val)
+                continue
+        for m in _t2pbr_re.finditer(r'(?:работа|матер)\s*=\s*(\d{2,6}(?:[.,]\d+)?)', low):
+            val = _t2pbr_num(m.group(1))
+            if val >= 100:
+                values.append(val)
+    return values
+# === END_PATCH_TOPIC2_FINAL_PRICE_PARSE_FACTS_V2 ===
+
+# === PATCH_TOPIC2_FINAL_NO_ZERO_FACT_ROWS_ONLINE_PRIORITY_V3 ===
+# Keep PDF area facts as calculation basis, not zero-cost AREAL_CALC positions.
+# Prefer Sonar online prices for concrete/rebar/work; template is fallback.
+_T2PBR_V1_BUILD_ITEMS = _t2pbr_build_items
+
+
+def _t2pbr_first_price(primary_text: str, fallback_text: str, needles):
+    primary = _t2pbr_choose_median(_t2pbr_price_values(primary_text, needles))
+    if primary > 0:
+        return primary
+    return _t2pbr_choose_median(_t2pbr_price_values(fallback_text, needles))
+
+
+def _t2pbr_build_items(task_id: str, raw_text: str, photo_text: str, chat_id: str = ''):
+    pending = _t2pbr_memory_pending(task_id, chat_id)
+    parsed = pending.get('parsed') if isinstance(pending, dict) else {}
+    parsed = parsed if isinstance(parsed, dict) else {}
+    pdf_rows = parsed.get('pdf_spec_rows') or []
+    online_text = _s(pending.get('online_prices') if isinstance(pending, dict) else '', 60000)
+    template_text = _s(pending.get('template_prices') if isinstance(pending, dict) else '', 60000)
+    source_text = '\n'.join(x for x in (_s(raw_text, 60000), _s(photo_text, 60000), _s(parsed.get('raw'), 60000)) if x)
+    if not pdf_rows or not (online_text or template_text):
+        return []
+
+    facts = _t2pbr_area_facts(pdf_rows)
+    built_area = facts.get('built_area') or facts.get('warm_area') or facts.get('total_area') or 0.0
+    warm_area = facts.get('warm_area') or facts.get('total_area') or built_area
+    if built_area <= 0 or warm_area <= 0:
+        return []
+
+    concrete_price = _t2pbr_first_price(online_text, template_text, ('бетон', 'b25', 'b22', 'в25', 'в22'))
+    rebar_price = _t2pbr_first_price(online_text, template_text, ('арматур', 'а500', 'a500'))
+    wall_work_price = _t2pbr_first_price(online_text, template_text, ('кладк', 'монтаж'))
+    gasbeton_price = _t2pbr_first_price(online_text, template_text, ('газобет', 'блок'))
+
+    thickness = _t2pbr_foundation_thickness(source_text)
+    concrete_qty = round(built_area * thickness, 2)
+    rebar_qty = round(concrete_qty * 0.08, 3)
+    fact_note = 'PDF facts: застройка {} м², общая {} м², теплый контур {} м²'.format(
+        facts.get('built_area') or '', facts.get('total_area') or '', facts.get('warm_area') or ''
+    )
+
+    items = []
+
+    def add(name, qty, unit, price, source, note=''):
+        if qty <= 0:
+            return
+        items.append({
+            'num': len(items) + 1,
+            'name': name[:240],
+            'qty': round(float(qty), 3),
+            'unit': unit,
+            'price': float(price or 0),
+            'source': source[:240],
+            'note': note[:240],
+        })
+
+    add(
+        f'Бетон для монолитной железобетонной плиты {int(thickness * 1000)} мм',
+        concrete_qty,
+        'м³',
+        concrete_price,
+        'PDF project facts + Sonar online prices',
+        fact_note,
+    )
+    add(
+        'Арматура А500/Ø12 для фундаментной плиты, расчетная масса',
+        rebar_qty,
+        'т',
+        rebar_price,
+        'PDF project facts + Sonar online prices',
+        'масса рассчитана от объема бетона; уточняется по КЖ/ведомости арматуры',
+    )
+    add(
+        'Газобетон D400 для наружных/внутренних стен, расчет по теплому контуру',
+        warm_area,
+        'м²',
+        gasbeton_price,
+        'PDF project facts + Sonar/template prices',
+        'PDF: наружные стены D400 375/300 мм, внутренние 250 мм, перегородки 150 мм',
+    )
+    add(
+        'Работы по кладке/монтажу стен по проекту',
+        warm_area,
+        'м²',
+        wall_work_price,
+        'PDF project facts + Sonar online prices',
+        'цена из подтвержденного online/product search; состав уточняется по КЖ/ВОР',
+    )
+
+    subtotal = sum(float(x.get('qty') or 0) * float(x.get('price') or 0) for x in items)
+    if subtotal > 0:
+        add('Организация работ и накладные расходы', 1, 'компл', round(subtotal * 0.07, 2), 'topic_2 canon overhead', '7% от стоимостных позиций')
+        add('Расходные материалы, крепеж, герметики', 1, 'компл', round(subtotal * 0.015, 2), 'topic_2 canon overhead', '1.5% от стоимостных позиций')
+
+    return [x for x in items if _t2nz_valid_item(x)]
+# === END_PATCH_TOPIC2_FINAL_NO_ZERO_FACT_ROWS_ONLINE_PRIORITY_V3 ===
+
+# === PATCH_TOPIC2_BLOCK_AREA_ONLY_PDF_FINAL_V4 ===
+# Area/TЭП rows from an AR PDF are facts, not a sufficient VOR/specification.
+# They must not unlock a final estimate as if the full project was priced.
+def _t2pbr_rows_are_area_only(rows) -> bool:
+    usable = []
+    non_area = []
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        name = _s(row.get('name', '')).lower().replace('ё', 'е')
+        qty = _t2pbr_num(row.get('qty'))
+        price = _t2pbr_num(row.get('price'))
+        if qty <= 0 and price <= 0:
+            continue
+        usable.append(row)
+        if 'площад' not in name and 'общая' not in name:
+            non_area.append(row)
+    return bool(usable) and not non_area
+
+
+_T2PBR_V3_BUILD_ITEMS = _t2pbr_build_items
+
+
+def _t2pbr_build_items(task_id: str, raw_text: str, photo_text: str, chat_id: str = ''):
+    pending = _t2pbr_memory_pending(task_id, chat_id)
+    parsed = pending.get('parsed') if isinstance(pending, dict) else {}
+    parsed = parsed if isinstance(parsed, dict) else {}
+    pdf_rows = parsed.get('pdf_spec_rows') or []
+    if _t2pbr_rows_are_area_only(pdf_rows):
+        return []
+    return _T2PBR_V3_BUILD_ITEMS(task_id, raw_text, photo_text, chat_id)
+# === END_PATCH_TOPIC2_BLOCK_AREA_ONLY_PDF_FINAL_V4 ===
+
 
 ====================================================================================================
 END_FILE: core/topic2_estimate_final_close_v2.py
@@ -8949,411 +9310,5 @@ def process(work_item, payload: Dict[str, Any]) -> Dict[str, Any]:
 
 ====================================================================================================
 END_FILE: core/topic_autodiscovery.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/topic_drive_oauth.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 09e67527599b711f23e665802e1beed93944060a64a3674da0459bdafdd00513
-====================================================================================================
-import os
-import asyncio
-from typing import Optional, Dict, Any
-from dotenv import load_dotenv
-from google.oauth2.credentials import Credentials
-from google.auth.transport.requests import Request
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
-
-BASE = "/root/.areal-neva-core"
-load_dotenv(f"{BASE}/.env", override=True)
-
-def _oauth_service():
-    client_id = os.getenv("GDRIVE_CLIENT_ID")
-    client_secret = <REDACTED_SECRET>"GDRIVE_CLIENT_SECRET")
-    refresh_token = <REDACTED_SECRET>"GDRIVE_REFRESH_TOKEN")
-    if not client_id or not client_secret or not refresh_token:
-        raise RuntimeError("GDRIVE OAuth vars missing")
-    creds = Credentials(
-        None,
-        refresh_token=<REDACTED_SECRET>
-        token_uri="https://oauth2.googleapis.com/token",
-        client_id=client_id,
-        client_secret=<REDACTED_SECRET>
-        scopes=["https://www.googleapis.com/auth/drive"]  # SCOPE_FULL_V2,
-    )
-    creds.refresh(Request())
-    return build("drive", "v3", credentials=creds)
-
-def _root_folder_id() -> str:
-    folder_id = os.getenv("DRIVE_INGEST_FOLDER_ID", "").strip()
-    if not folder_id:
-        raise RuntimeError("DRIVE_INGEST_FOLDER_ID missing")
-    return folder_id
-
-def _find_child_folder(service, parent_id: str, name: str) -> Optional[str]:
-    # === DRIVE_CANON_SINGLE_FOLDER_PICK_V1 ===
-    # Deterministic folder lookup: if duplicates exist, use the oldest existing folder.
-    safe_name = str(name or "").replace("'", "\\'")
-    q = (
-        f"name = '{safe_name}' and "
-        f"mimeType = 'application/vnd.google-apps.folder' and "
-        f"'{parent_id}' in parents and trashed = false"
-    )
-    resp = service.files().list(
-        q=q,
-        spaces="drive",
-        fields="files(id,name,createdTime)",
-        orderBy="createdTime",
-        supportsAllDrives=True,
-        includeItemsFromAllDrives=True,
-    ).execute()
-    files = resp.get("files", [])
-    return files[0]["id"] if files else None
-    # === END_DRIVE_CANON_SINGLE_FOLDER_PICK_V1 ===
-
-def _ensure_folder(service, parent_id: str, name: str) -> str:
-    found = _find_child_folder(service, parent_id, name)
-    if found:
-        return found
-    meta = {
-        "name": name,
-        "mimeType": "application/vnd.google-apps.folder",
-        "parents": [parent_id],
-    }
-    res = service.files().create(
-        body=meta,
-        fields="id",
-        supportsAllDrives=True,
-    ).execute()
-    return res["id"]
-
-def _upload_file_sync(file_path: str, file_name: str, chat_id: str, topic_id: int, mime_type: Optional[str] = None) -> Dict[str, Any]:
-    service = _oauth_service()
-    root_id = _root_folder_id()
-    chat_folder = _ensure_folder(service, root_id, f"chat_{chat_id}")
-    topic_folder = _ensure_folder(service, chat_folder, f"topic_{int(topic_id or 0)}")
-    media = MediaFileUpload(file_path, mimetype=mime_type, resumable=True)
-    meta = {
-        "name": file_name,
-        "parents": [topic_folder],
-    }
-    res = service.files().create(
-        body=meta,
-        media_body=media,
-        fields="id,parents",
-        supportsAllDrives=True,
-    ).execute()
-    return {
-        "ok": True,
-        "drive_file_id": res.get("id"),
-        "folder_id": topic_folder,
-        "chat_folder_id": chat_folder,
-    }
-
-async def upload_file_to_topic(file_path: str, file_name: str, chat_id: str, topic_id: int, mime_type: Optional[str] = None) -> Dict[str, Any]:
-    return await asyncio.to_thread(_upload_file_sync, file_path, file_name, str(chat_id), int(topic_id or 0), mime_type)
-
-
-# === P7_TOPIC5_ACTIVE_FOLDER_UPLOAD_V1 ===
-# topic_5 object materials must upload into ActiveTechnadzorFolder, not generic topic_5 root.
-import json as _p7_t5_json
-import time as _p7_t5_time
-from pathlib import Path as _p7_t5_Path
-
-_P7_T5_ORIG_UPLOAD_FILE_SYNC = _upload_file_sync
-_P7_T5_BASE = _p7_t5_Path("/root/.areal-neva-core/data/technadzor")
-
-def _p7_t5_active_folder_path(chat_id, topic_id):
-    return _P7_T5_BASE / f"active_folder_{chat_id}_{int(topic_id or 0)}.json"
-
-def _p7_t5_load_active_folder(chat_id, topic_id):
-    if int(topic_id or 0) != 5:
-        return {}
-    p = _p7_t5_active_folder_path(str(chat_id), 5)
-    try:
-        data = _p7_t5_json.loads(p.read_text(encoding="utf-8"))
-        if data.get("folder_id") and str(data.get("status", "OPEN")).upper() != "CLOSED":
-            return data
-    except Exception:
-        return {}
-    return {}
-
-def _upload_file_sync(file_path: str, file_name: str, chat_id: str, topic_id: int, mime_type: Optional[str] = None) -> Dict[str, Any]:
-    if int(topic_id or 0) == 5:
-        af = _p7_t5_load_active_folder(str(chat_id), 5)
-        active_folder_id = str(af.get("folder_id") or "").strip()
-        if active_folder_id:
-            service = _oauth_service()
-            media = MediaFileUpload(file_path, mimetype=mime_type, resumable=True)
-            meta = {
-                "name": file_name,
-                "parents": [active_folder_id],
-            }
-            res = service.files().create(
-                body=meta,
-                media_body=media,
-                fields="id,parents,webViewLink",
-                supportsAllDrives=True,
-            ).execute()
-            return {
-                "ok": True,
-                "drive_file_id": res.get("id"),
-                "folder_id": active_folder_id,
-                "active_folder_id": active_folder_id,
-                "active_folder_name": af.get("folder_name", ""),
-                "webViewLink": res.get("webViewLink", ""),
-                "topic5_active_folder_upload": True,
-                "uploaded_at": _p7_t5_time.time(),
-            }
-    return _P7_T5_ORIG_UPLOAD_FILE_SYNC(file_path, file_name, chat_id, topic_id, mime_type)
-# === END_P7_TOPIC5_ACTIVE_FOLDER_UPLOAD_V1 ===
-
-====================================================================================================
-END_FILE: core/topic_drive_oauth.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/topic_meta_loader.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 081afc9cc3266e754882d8c6fce4db2ebb8d191a72aebc19c120afdb1fbb8dec
-====================================================================================================
-"""TOPIC_META_LOADER_V1 — читает data/topics/{tid}/meta.json при INTAKE."""
-import json
-from pathlib import Path
-from typing import Optional, Dict, Any
-
-DATA_TOPICS = Path("data/topics")
-
-# Триггеры "что это за чат" — отвечаем из meta.json напрямую
-WHAT_IS_THIS_TRIGGERS = [
-    "что мы здесь делаем", "что мы тут делаем", "для чего ты",
-    "для чего этот чат", "для чего этот топик", "для чего у нас",
-    "что мы делаем в данном чате", "что мы делаем тут",
-    "скажи для чего", "зачем этот чат", "зачем этот топик",
-    "про что чат", "про что топик", "что за чат", "что за топик",
-]
-
-def load_topic_meta(topic_id: int) -> Optional[Dict[str, Any]]:
-    """Возвращает meta.json топика или None."""
-    if topic_id is None:
-        return None
-    folder = DATA_TOPICS / str(topic_id)
-    meta_path = folder / "meta.json"
-    if not meta_path.exists():
-        return None
-    try:
-        return json.loads(meta_path.read_text(encoding="utf-8"))
-    except Exception:
-        return None
-
-def is_what_is_this_question(text: str) -> bool:
-    """True если текст — вопрос о назначении чата."""
-    if not text:
-        return False
-    t = text.lower().replace("[voice]", "").replace("🎤", "").strip()
-    return any(trigger in t for trigger in WHAT_IS_THIS_TRIGGERS)
-
-def build_topic_self_answer(meta: Dict[str, Any]) -> str:
-    """Формирует ответ от имени топика на вопрос 'что мы тут делаем'."""
-    name = meta.get("name", "Без имени")
-    direction = meta.get("direction", "general_chat")
-    
-    DIRECTION_DESCRIPTIONS = {
-        "general_chat": "общий чат для произвольных задач",
-        "crm_leads": "лиды, реклама, AmoCRM, лидогенерация",
-        "estimates": "сметы, расчёт стоимости строительства",
-        "technical_supervision": "технадзор, акты осмотра, дефекты, СП/ГОСТ",
-        "structural_design": "проектирование КЖ/КМ/КМД/АР/ОВ/ВК/ЭОМ/СС/ГП/ПЗ/СМ/ТХ",
-        "internet_search": "интернет-поиск товаров и информации",
-        "auto_parts_search": "поиск автозапчастей, артикулы, аналоги, цены",
-        "orchestration_core": "коды оркестра, AI-роутер, архитектура системы",
-        "video_production": "генерация и производство видеоконтента",
-        "devops_server": "VPN, VPS, конфигурации серверов, настройки",
-        "job_search": "поиск работы и интеграция с биржами труда",
-    }
-    
-    desc = DIRECTION_DESCRIPTIONS.get(direction, direction)
-    return f"Этот чат — {name}. Направление: {desc}."
-
-====================================================================================================
-END_FILE: core/topic_meta_loader.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/universal_file_engine.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: a19ee184aae5b7ddad4f2e625de87685894cd3141252bbb507d5b11c363c9fdd
-====================================================================================================
-# === UNIVERSAL_FILE_ENGINE_V1 ===
-from __future__ import annotations
-
-import json
-import os
-import re
-import tempfile
-import zipfile
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Dict, List
-
-from core.format_registry import classify_file
-
-def _clean(v: Any, limit: int = 20000) -> str:
-    s = "" if v is None else str(v)
-    s = s.replace("\r", "\n")
-    s = re.sub(r"[ \t]+", " ", s)
-    s = re.sub(r"\n{3,}", "\n\n", s)
-    return s.strip()[:limit]
-
-def _safe(v: Any, fallback: str = "file") -> str:
-    s = re.sub(r"[^A-Za-zА-Яа-я0-9_.-]+", "_", _clean(v, 120)).strip("._")
-    return s or fallback
-
-def _try_extract_text(path: str, file_name: str = "") -> str:
-    ext = Path(file_name or path).suffix.lower()
-    if ext == ".pdf":
-        try:
-            from pypdf import PdfReader
-            reader = PdfReader(path)
-            return _clean("\n".join((p.extract_text() or "") for p in reader.pages[:50]), 50000)
-        except Exception as e:
-            return f"PDF_PARSE_ERROR: {e}"
-    if ext == ".docx":
-        try:
-            from docx import Document
-            doc = Document(path)
-            return _clean("\n".join(p.text for p in doc.paragraphs if p.text), 50000)
-        except Exception as e:
-            return f"DOCX_PARSE_ERROR: {e}"
-    if ext in (".txt", ".md", ".csv", ".json", ".xml", ".html", ".htm", ".yaml", ".yml"):
-        try:
-            with open(path, "r", encoding="utf-8", errors="ignore") as f:
-                return _clean(f.read(), 50000)
-        except Exception as e:
-            return f"TEXT_PARSE_ERROR: {e}"
-    return ""
-
-def _write_docx(model: Dict[str, Any], task_id: str) -> str:
-    out = Path(tempfile.gettempdir()) / f"universal_file_report_{_safe(task_id)}.docx"
-    try:
-        from docx import Document
-        doc = Document()
-        doc.add_heading("UNIVERSAL FILE REPORT", level=1)
-        doc.add_paragraph(f"Файл: {model.get('file_name')}")
-        doc.add_paragraph(f"Тип: {model.get('kind')}")
-        doc.add_paragraph(f"Домен: {model.get('domain')}")
-        doc.add_paragraph(f"Расширение: {model.get('extension')}")
-        doc.add_paragraph(f"Размер: {model.get('size_bytes')} bytes")
-        doc.add_paragraph(f"Engine hint: {model.get('engine_hint')}")
-        doc.add_heading("Текст/превью", level=2)
-        doc.add_paragraph(_clean(model.get("text_preview"), 12000) or "Текст не извлечён")
-        doc.add_heading("Статус", level=2)
-        doc.add_paragraph(model.get("status") or "INDEXED_METADATA")
-        doc.save(out)
-        return str(out)
-    except Exception:
-        txt = out.with_suffix(".txt")
-        txt.write_text(json.dumps(model, ensure_ascii=False, indent=2), encoding="utf-8")
-        return str(txt)
-
-def _write_json(model: Dict[str, Any], task_id: str) -> str:
-    out = Path(tempfile.gettempdir()) / f"universal_file_model_{_safe(task_id)}.json"
-    out.write_text(json.dumps(model, ensure_ascii=False, indent=2), encoding="utf-8")
-    return str(out)
-
-def _write_xlsx(model: Dict[str, Any], task_id: str) -> str:
-    out = Path(tempfile.gettempdir()) / f"universal_file_register_{_safe(task_id)}.xlsx"
-    try:
-        from openpyxl import Workbook
-        wb = Workbook()
-        ws = wb.active
-        ws.title = "File"
-        for row, (k, v) in enumerate(model.items(), 1):
-            ws.cell(row=row, column=1, value=str(k))
-            ws.cell(row=row, column=2, value=json.dumps(v, ensure_ascii=False) if isinstance(v, (dict, list)) else str(v))
-        wb.save(out)
-        wb.close()
-        return str(out)
-    except Exception:
-        csv = out.with_suffix(".csv")
-        csv.write_text("key,value\n" + "\n".join(f"{k},{v}" for k, v in model.items()), encoding="utf-8")
-        return str(csv)
-
-def _zip(paths: List[str], task_id: str) -> str:
-    out = Path(tempfile.gettempdir()) / f"universal_file_package_{_safe(task_id)}.zip"
-    with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as z:
-        for p in paths:
-            if p and os.path.exists(p):
-                z.write(p, arcname=os.path.basename(p))
-        z.writestr("manifest.json", json.dumps({
-            "engine": "UNIVERSAL_FILE_ENGINE_V1",
-            "task_id": task_id,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "files": [os.path.basename(p) for p in paths if p and os.path.exists(p)],
-        }, ensure_ascii=False, indent=2))
-    return str(out)
-
-def process_universal_file(
-    local_path: str,
-    file_name: str = "",
-    mime_type: str = "",
-    user_text: str = "",
-    topic_role: str = "",
-    task_id: str = "universal_file",
-    topic_id: int = 0,
-) -> Dict[str, Any]:
-    if not local_path or not os.path.exists(local_path):
-        return {"success": False, "error": "FILE_NOT_FOUND", "summary": "Файл не найден"}
-
-    cls = classify_file(file_name or os.path.basename(local_path), mime_type, user_text, topic_role)
-    size = os.path.getsize(local_path)
-    text = _try_extract_text(local_path, file_name or local_path)
-
-    model = {
-        "schema": "UNIVERSAL_FILE_MODEL_V1",
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "file_name": file_name or os.path.basename(local_path),
-        "local_path": local_path,
-        "mime_type": mime_type,
-        "topic_id": topic_id,
-        "user_text": user_text,
-        "topic_role": topic_role,
-        "size_bytes": size,
-        "text_preview": _clean(text, 5000),
-        **cls,
-        "status": "INDEXED_WITH_TEXT" if text else "INDEXED_METADATA_ONLY",
-    }
-
-    docx = _write_docx(model, task_id)
-    xlsx = _write_xlsx(model, task_id)
-    js = _write_json(model, task_id)
-    package = _zip([docx, xlsx, js], task_id)
-
-    summary = "\n".join([
-        "Универсальный файловый контур отработал",
-        f"Файл: {model['file_name']}",
-        f"Тип: {model['kind']}",
-        f"Домен: {model['domain']}",
-        f"Статус: {model['status']}",
-        "Артефакты: DOCX + XLSX + JSON + ZIP",
-    ])
-
-    return {
-        "success": True,
-        "engine": "UNIVERSAL_FILE_ENGINE_V1",
-        "summary": summary,
-        "artifact_path": package,
-        "artifact_name": f"{Path(model['file_name']).stem}_universal_file_package.zip",
-        "extra_artifacts": [docx, xlsx, js],
-        "model": model,
-    }
-# === END_UNIVERSAL_FILE_ENGINE_V1 ===
-
-====================================================================================================
-END_FILE: core/universal_file_engine.py
 FILE_CHUNK: 1/1
 ====================================================================================================
