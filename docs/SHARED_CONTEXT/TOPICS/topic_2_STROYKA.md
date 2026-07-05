@@ -1,7 +1,7 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-07-05T22:22:26.956753+00:00
-GIT_SHA: dc8998f1d941a94cee3bd2cddc1d082462d7475b
+GENERATED_AT: 2026-07-05T22:33:14.076581+00:00
+GIT_SHA: d690605f5e0f0efa27c81f55ed584b23e6eb4fdb
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -25,6 +25,7 @@ FAILED_LAST_24H: 6
 - dfdc5ca5 | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
+- d690605|topic2: save canonical live repair handoff
 - 844fafb|topic2: close PDF estimate confirmation flow
 - c8a9f1c|Topic2 canonical estimate live repair
 
@@ -44,7 +45,7 @@ FAILED_LAST_24H: 6
 - clarified:100 км
 - clarified:Сделай мне полную смету
 - clarified:Нет тебе необходимо выполнить по моему заданию ты считаешь новую смету
-- clarified:Мне нужна смета на дом 10 на 10 фундамент толщиной 400 мм удалённость 
+- clarified:Мне нужна смета на дом 10 на 10 фундамент толщиной 400 мм удалённость
 - clarified:3
 - clarified:Жду тогда
 - clarified:Сделай мне расчёт дом два этажа на монолитный плите толщиной 450 разме
@@ -167,14 +168,3 @@ items: 11
 - docs/REPORTS/NOT_CLOSED.md
 - docs/HANDOFFS/LATEST_HANDOFF.md
 - git log last 14 days
-
-## 2026-07-06_SESSION_CLOSE_FACTS
-- Latest live PDF/project estimate task: `7dab7ad1-3335-4385-b942-4c734dbdbebe` -> `DONE`.
-- Confirmation child tasks: `24e594b9-1ea3-4b82-86ab-e9355021289b` and `39af79c1-80eb-4735-8f4f-61548cf13b2e` -> `DONE`.
-- Final user-visible result must remain canonical Telegram text with Drive links:
-  - Excel: `https://drive.google.com/file/d/1S27hmlqylphbfzxpn6dx6V56cjl0sfTy/view`
-  - PDF: `https://drive.google.com/file/d/16UDyFcYXlkGtG5-ow4RlqI-cXz3-OpHT/view`
-- Current topic status remains `PARTIAL LIVE VERIFIED / NOT FULL CANON CLOSED`.
-- Open verification remains: photo, OCR, PDF/XLSX/multifile, voice continuation, reply continuation, memory query, pin isolation, project/file variants.
-- Strict owner rule: work only by existing SSOT/canons; if not written in canon/SSOT, do not do by default; carry every task to the end unless explicitly stopped.
-- Do not touch systemd, `.env`, launch commands, secrets, `core/ai_router.py`, `core/reply_sender.py`, `core/google_io.py`, neighboring topics, or Git push without explicit owner permission.

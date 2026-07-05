@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_001
-generated_at_utc: 2026-07-05T22:22:26.847777+00:00
-git_sha_before_commit: dc8998f1d941a94cee3bd2cddc1d082462d7475b
+generated_at_utc: 2026-07-05T22:33:13.984595+00:00
+git_sha_before_commit: d690605f5e0f0efa27c81f55ed584b23e6eb4fdb
 part: 1/19
 
 
 ====================================================================================================
 BEGIN_FILE: docs/HANDOFFS/LATEST_HANDOFF.md
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 3435e59239322ab8919486bb8adc56fa39da5bbc032960666040d75cf43ef0f3
+SHA256_FULL_FILE: c4164869d0309bc17b84a30208dc59dd81c23e70a8c75878409eeb9df0eda526
 ====================================================================================================
 # LATEST HANDOFF — 2026-07-05 topic_2 / STROYKA
 
@@ -188,6 +188,47 @@ sqlite3 data/memory.db "SELECT key,timestamp FROM memory WHERE chat_id='-1003725
   - generic memory keys `topic_2_user_input`, `topic_2_task_summary`, `topic_2_assistant_output` point to the fresh DONE task.
 - Verified: `python3 -m py_compile core/stroyka_estimate_canon.py core/topic2_estimate_final_close_v2.py task_worker.py` -> `PY_COMPILE_OK`.
 - Systemd not touched. `.env` not touched. Neighbor topics not touched.
+
+---
+
+## Progress 2026-07-06 — session close / topic_2 live repair state
+
+Owner rules for all next work:
+- Work only from existing SSOT/canons; no invented canons, branches, architecture, routes, defaults or adjacent-topic behavior.
+- If behavior is not written in the canon/SSOT, do not do it by default.
+- Every task must be carried to the end unless the owner explicitly stops/cancels it.
+- Before any server file/database write: show applied canon/baseline/minimal target, make backup, then patch only the violating file.
+- Do not touch systemd, `.env`, launch commands, secrets, `core/ai_router.py`, `core/reply_sender.py`, `core/google_io.py`, neighboring topics, or Git push without explicit owner permission.
+
+Current live result:
+- Latest PDF/project estimate task `7dab7ad1-3335-4385-b942-4c734dbdbebe` is `DONE`.
+- Confirmation/final child tasks `24e594b9-1ea3-4b82-86ab-e9355021289b` and `39af79c1-80eb-4735-8f4f-61548cf13b2e` are `DONE`.
+- Canonical Telegram final was delivered in topic_2 with Drive links:
+  - Excel: `https://drive.google.com/file/d/1S27hmlqylphbfzxpn6dx6V56cjl0sfTy/view`
+  - PDF: `https://drive.google.com/file/d/16UDyFcYXlkGtG5-ow4RlqI-cXz3-OpHT/view`
+- Memory keys `topic_2_user_input`, `topic_2_task_summary`, `topic_2_assistant_output` were updated only after `DONE`.
+
+Runtime diff that exists and must be treated as current working baseline:
+- `core/price_enrichment.py`: price search cache for recent Perplexity/Sonar material searches; DeepSeek is not a search fallback.
+- `core/stroyka_estimate_canon.py`: VAT default without VAT, 22% wording, canonical artifact naming, final confirmation close, stricter source matching, project rows/materials/work rows logic.
+- `core/topic2_estimate_final_close_v2.py`: final artifact bridge and guards against zero/area-only invalid final artifacts.
+- `task_worker.py`: topic_2 drive-file picker/clarification routing and canonical generate route for price-confirmed Drive files.
+
+Topic_2 is still not fully closed:
+- Overall status remains `PARTIAL LIVE VERIFIED / NOT FULL CANON CLOSED`.
+- Remaining live regressions: photo with/without caption, OCR/PDF/XLSX/multifile intake, voice continuation, reply continuation, memory query, pin isolation, file/project variants.
+- Estimate logic still needs verification that every project-derived item is from the uploaded project or explicit user text, with missing data asked as clarification and internet/product search used only by canon.
+- Final output must remain Drive links in Telegram format, not local paths and not manual Telegram file-send unless explicitly requested.
+
+Do not repeat next time:
+- Do not send XLSX/PDF manually into Telegram when canonical final requires Drive links.
+- Do not treat examples/templates such as M-80 as a fixed etalon; use them as templates/samples per registry and project facts.
+- Do not regenerate prices through internet if valid recent search results are already in memory/cache and canon allows reuse.
+
+Verification at session close:
+- `python3 -m py_compile core/stroyka_estimate_canon.py core/price_enrichment.py core/topic2_input_gate.py task_worker.py` -> `PY_COMPILE_OK`.
+- `topic_2` task counts at close: `ARCHIVED=12`, `CANCELLED=143`, `DONE=205`, `FAILED=143`.
+- Cron GitHub sync was observed as enabled: `*/5 * * * * /root/.areal-neva-core/tools/full_context_aggregator_guard.sh ...`.
 
 ====================================================================================================
 END_FILE: docs/HANDOFFS/LATEST_HANDOFF.md
@@ -4423,33 +4464,33 @@ HEALTHCHECK | PRICE_AGING +5-10%
 ## MULTI_MODEL_ORCHESTRA_ACTUAL_STATE_2026_04_29
 
 ### ACTIVE MODELS (CANON)
-Gemini     — vision / OCR / схемы / таблицы  
-Mistral    — структуризация / нормализация  
-Cerebras   — reasoning / логика  
-Cohere     — rerank / фильтрация  
-Perplexity — поиск (СП/ГОСТ/цены/поставщики)  
-DeepSeek   — финальный ответ (DEFAULT)  
-Claude     — канон / проверка / ТЗ  
-GPT        — сервер / код / патчи  
-Python     — расчёт / Excel / файлы  
+Gemini     — vision / OCR / схемы / таблицы
+Mistral    — структуризация / нормализация
+Cerebras   — reasoning / логика
+Cohere     — rerank / фильтрация
+Perplexity — поиск (СП/ГОСТ/цены/поставщики)
+DeepSeek   — финальный ответ (DEFAULT)
+Claude     — канон / проверка / ТЗ
+GPT        — сервер / код / патчи
+Python     — расчёт / Excel / файлы
 
 ### MODEL_ROUTER (TARGET LOGIC)
-photo/schema      → Gemini  
-search            → Perplexity  
-structure         → Mistral  
-reasoning         → Cerebras  
-calculation       → Python ONLY  
-final             → DeepSeek  
+photo/schema      → Gemini
+search            → Perplexity
+structure         → Mistral
+reasoning         → Cerebras
+calculation       → Python ONLY
+final             → DeepSeek
 
 ### FALLBACK_CHAIN (TARGET)
-Gemini → Mistral → Cloudflare → HuggingFace  
+Gemini → Mistral → Cloudflare → HuggingFace
 
 ### STATUS
-- модели описаны в каноне ✔  
-- MODEL_ROUTER — НЕ реализован  
-- FALLBACK_CHAIN — НЕ реализован  
-- MODEL_REGISTRY — НЕ реализован  
-- MULTI-MODEL EXECUTION — НЕ реализован  
+- модели описаны в каноне ✔
+- MODEL_ROUTER — НЕ реализован
+- FALLBACK_CHAIN — НЕ реализован
+- MODEL_REGISTRY — НЕ реализован
+- MULTI-MODEL EXECUTION — НЕ реализован
 
 ### CRITICAL RULE
 Сейчас оркестр работает как:
@@ -6810,11 +6851,11 @@ FILE_CHUNK: 1/1
 SHA256_FULL_FILE: d5df2433b201f973d457e5e6af150d39db5c9285e7b99214debd4dfb10eb77ce
 ====================================================================================================
 # HANDOFF — 2026-05-07 RUNTIME_V2 + RUNTIME_V3 FULL CLOSE
-**Сессия**: 2026-05-07 10:00 → 10:45 MSK  
-**HEAD**: `ccab9ed` fix(topic2): PATCH_TOPIC2_FULL_CLOSE_RUNTIME_V3  
-**Предыдущий HEAD перед сессией**: `ad829c4` (ONEPASS_V1)  
-**Сервер**: areal-task-worker active, PID 3485017  
-**Статус**: INSTALLED — VERIFIED только после live-replay в Telegram  
+**Сессия**: 2026-05-07 10:00 → 10:45 MSK
+**HEAD**: `ccab9ed` fix(topic2): PATCH_TOPIC2_FULL_CLOSE_RUNTIME_V3
+**Предыдущий HEAD перед сессией**: `ad829c4` (ONEPASS_V1)
+**Сервер**: areal-task-worker active, PID 3485017
+**Статус**: INSTALLED — VERIFIED только после live-replay в Telegram
 
 ---
 
@@ -6853,7 +6894,7 @@ SHA256_FULL_FILE: d5df2433b201f973d457e5e6af150d39db5c9285e7b99214debd4dfb10eb77
 ## ЧТО ЗАКОММИЧЕНО (хронология)
 
 ### `ad829c4` — PATCH_TOPIC2_FULL_CANONICAL_CLOSE_ONEPASS_V1
-Принято как "PARTIAL PATCH: old-output cleanup + recursion fix".  
+Принято как "PARTIAL PATCH: old-output cleanup + recursion fix".
 Файлы: `core/stroyka_estimate_canon.py`, `core/sample_template_engine.py`, `task_worker.py`
 
 - `stroyka_estimate_canon.py`: `_final_summary` → §9 формат, убраны «Эталон сметы:»/«Лист эталона:»

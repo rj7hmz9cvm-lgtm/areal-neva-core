@@ -1,7 +1,7 @@
 # SINGLE_MODEL_FULL_CONTEXT
 
-GENERATED_AT: 2026-07-05T22:22:27.251895+00:00
-GIT_SHA: dc8998f1d941a94cee3bd2cddc1d082462d7475b
+GENERATED_AT: 2026-07-05T22:33:14.324160+00:00
+GIT_SHA: d690605f5e0f0efa27c81f55ed584b23e6eb4fdb
 PURPOSE: Один файл с полным контекстом проекта для любой модели
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 
@@ -264,6 +264,47 @@ sqlite3 data/memory.db "SELECT key,timestamp FROM memory WHERE chat_id='-1003725
   - generic memory keys `topic_2_user_input`, `topic_2_task_summary`, `topic_2_assistant_output` point to the fresh DONE task.
 - Verified: `python3 -m py_compile core/stroyka_estimate_canon.py core/topic2_estimate_final_close_v2.py task_worker.py` -> `PY_COMPILE_OK`.
 - Systemd not touched. `.env` not touched. Neighbor topics not touched.
+
+---
+
+## Progress 2026-07-06 — session close / topic_2 live repair state
+
+Owner rules for all next work:
+- Work only from existing SSOT/canons; no invented canons, branches, architecture, routes, defaults or adjacent-topic behavior.
+- If behavior is not written in the canon/SSOT, do not do it by default.
+- Every task must be carried to the end unless the owner explicitly stops/cancels it.
+- Before any server file/database write: show applied canon/baseline/minimal target, make backup, then patch only the violating file.
+- Do not touch systemd, `.env`, launch commands, secrets, `core/ai_router.py`, `core/reply_sender.py`, `core/google_io.py`, neighboring topics, or Git push without explicit owner permission.
+
+Current live result:
+- Latest PDF/project estimate task `7dab7ad1-3335-4385-b942-4c734dbdbebe` is `DONE`.
+- Confirmation/final child tasks `24e594b9-1ea3-4b82-86ab-e9355021289b` and `39af79c1-80eb-4735-8f4f-61548cf13b2e` are `DONE`.
+- Canonical Telegram final was delivered in topic_2 with Drive links:
+  - Excel: `https://drive.google.com/file/d/1S27hmlqylphbfzxpn6dx6V56cjl0sfTy/view`
+  - PDF: `https://drive.google.com/file/d/16UDyFcYXlkGtG5-ow4RlqI-cXz3-OpHT/view`
+- Memory keys `topic_2_user_input`, `topic_2_task_summary`, `topic_2_assistant_output` were updated only after `DONE`.
+
+Runtime diff that exists and must be treated as current working baseline:
+- `core/price_enrichment.py`: price search cache for recent Perplexity/Sonar material searches; DeepSeek is not a search fallback.
+- `core/stroyka_estimate_canon.py`: VAT default without VAT, 22% wording, canonical artifact naming, final confirmation close, stricter source matching, project rows/materials/work rows logic.
+- `core/topic2_estimate_final_close_v2.py`: final artifact bridge and guards against zero/area-only invalid final artifacts.
+- `task_worker.py`: topic_2 drive-file picker/clarification routing and canonical generate route for price-confirmed Drive files.
+
+Topic_2 is still not fully closed:
+- Overall status remains `PARTIAL LIVE VERIFIED / NOT FULL CANON CLOSED`.
+- Remaining live regressions: photo with/without caption, OCR/PDF/XLSX/multifile intake, voice continuation, reply continuation, memory query, pin isolation, file/project variants.
+- Estimate logic still needs verification that every project-derived item is from the uploaded project or explicit user text, with missing data asked as clarification and internet/product search used only by canon.
+- Final output must remain Drive links in Telegram format, not local paths and not manual Telegram file-send unless explicitly requested.
+
+Do not repeat next time:
+- Do not send XLSX/PDF manually into Telegram when canonical final requires Drive links.
+- Do not treat examples/templates such as M-80 as a fixed etalon; use them as templates/samples per registry and project facts.
+- Do not regenerate prices through internet if valid recent search results are already in memory/cache and canon allows reuse.
+
+Verification at session close:
+- `python3 -m py_compile core/stroyka_estimate_canon.py core/price_enrichment.py core/topic2_input_gate.py task_worker.py` -> `PY_COMPILE_OK`.
+- `topic_2` task counts at close: `ARCHIVED=12`, `CANCELLED=143`, `DONE=205`, `FAILED=143`.
+- Cron GitHub sync was observed as enabled: `*/5 * * * * /root/.areal-neva-core/tools/full_context_aggregator_guard.sh ...`.
 
 
 ================================================================================
@@ -3995,8 +4036,8 @@ I canno
 ```
 # topic_0 COMMON
 
-GENERATED_AT: 2026-07-05T22:22:26.922142+00:00
-GIT_SHA: dc8998f1d941a94cee3bd2cddc1d082462d7475b
+GENERATED_AT: 2026-07-05T22:33:14.043825+00:00
+GIT_SHA: d690605f5e0f0efa27c81f55ed584b23e6eb4fdb
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 0
@@ -4865,8 +4906,8 @@ def _write_xlsx(path: Path, items: List[Dict[str, Any]], source_text: str, photo
 ```
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-07-05T22:22:26.956753+00:00
-GIT_SHA: dc8998f1d941a94cee3bd2cddc1d082462d7475b
+GENERATED_AT: 2026-07-05T22:33:14.076581+00:00
+GIT_SHA: d690605f5e0f0efa27c81f55ed584b23e6eb4fdb
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -4890,6 +4931,7 @@ FAILED_LAST_24H: 6
 - dfdc5ca5 | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
+- d690605|topic2: save canonical live repair handoff
 - 844fafb|topic2: close PDF estimate confirmation flow
 - c8a9f1c|Topic2 canonical estimate live repair
 
@@ -5573,8 +5615,8 @@ _P6H5_NORMATIVE_EXPAND = [
 ```
 # topic_5 TEKHNADZOR
 
-GENERATED_AT: 2026-07-05T22:22:26.995945+00:00
-GIT_SHA: dc8998f1d941a94cee3bd2cddc1d082462d7475b
+GENERATED_AT: 2026-07-05T22:33:14.105785+00:00
+GIT_SHA: d690605f5e0f0efa27c81f55ed584b23e6eb4fdb
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 5
@@ -5676,8 +5718,8 @@ DIRECTIONS_BOUND: Видео
 ```
 # topic_11 VIDEO
 
-GENERATED_AT: 2026-07-05T22:22:27.025738+00:00
-GIT_SHA: dc8998f1d941a94cee3bd2cddc1d082462d7475b
+GENERATED_AT: 2026-07-05T22:33:14.127968+00:00
+GIT_SHA: d690605f5e0f0efa27c81f55ed584b23e6eb4fdb
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 11
@@ -6286,8 +6328,8 @@ def _normalize_sheet_register(template: Dict[str, Any], data: Dict[str, Any]) ->
 ```
 # topic_210 PROEKTIROVANIE
 
-GENERATED_AT: 2026-07-05T22:22:27.057717+00:00
-GIT_SHA: dc8998f1d941a94cee3bd2cddc1d082462d7475b
+GENERATED_AT: 2026-07-05T22:33:14.155603+00:00
+GIT_SHA: d690605f5e0f0efa27c81f55ed584b23e6eb4fdb
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 210
@@ -6853,8 +6895,8 @@ except Exception:
 ```
 # topic_500 VEB_POISK
 
-GENERATED_AT: 2026-07-05T22:22:27.089596+00:00
-GIT_SHA: dc8998f1d941a94cee3bd2cddc1d082462d7475b
+GENERATED_AT: 2026-07-05T22:33:14.185430+00:00
+GIT_SHA: d690605f5e0f0efa27c81f55ed584b23e6eb4fdb
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 500
@@ -6956,8 +6998,8 @@ DIRECTIONS_BOUND: Сервер DevOps
 ```
 # topic_794 DEVOPS
 
-GENERATED_AT: 2026-07-05T22:22:27.117613+00:00
-GIT_SHA: dc8998f1d941a94cee3bd2cddc1d082462d7475b
+GENERATED_AT: 2026-07-05T22:33:14.216437+00:00
+GIT_SHA: d690605f5e0f0efa27c81f55ed584b23e6eb4fdb
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 794
@@ -7052,8 +7094,8 @@ DIRECTIONS_BOUND: Автозапчасти
 ```
 # topic_961 AVTOZAPCHASTI
 
-GENERATED_AT: 2026-07-05T22:22:27.149507+00:00
-GIT_SHA: dc8998f1d941a94cee3bd2cddc1d082462d7475b
+GENERATED_AT: 2026-07-05T22:33:14.242267+00:00
+GIT_SHA: d690605f5e0f0efa27c81f55ed584b23e6eb4fdb
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 961
@@ -7145,8 +7187,8 @@ DIRECTIONS_BOUND: Мозги оркестра
 ```
 # topic_3008 KODY_MOZGOV
 
-GENERATED_AT: 2026-07-05T22:22:27.181266+00:00
-GIT_SHA: dc8998f1d941a94cee3bd2cddc1d082462d7475b
+GENERATED_AT: 2026-07-05T22:33:14.270914+00:00
+GIT_SHA: d690605f5e0f0efa27c81f55ed584b23e6eb4fdb
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 3008
@@ -7249,8 +7291,8 @@ DIRECTIONS_BOUND: CRM лиды
 ```
 # topic_4569 CRM_LEADS
 
-GENERATED_AT: 2026-07-05T22:22:27.210913+00:00
-GIT_SHA: dc8998f1d941a94cee3bd2cddc1d082462d7475b
+GENERATED_AT: 2026-07-05T22:33:14.295766+00:00
+GIT_SHA: d690605f5e0f0efa27c81f55ed584b23e6eb4fdb
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 4569
@@ -7358,8 +7400,8 @@ DIRECTIONS_BOUND: Поиск работы
 ```
 # topic_6104 JOB_SEARCH
 
-GENERATED_AT: 2026-07-05T22:22:27.242953+00:00
-GIT_SHA: dc8998f1d941a94cee3bd2cddc1d082462d7475b
+GENERATED_AT: 2026-07-05T22:33:14.317446+00:00
+GIT_SHA: d690605f5e0f0efa27c81f55ed584b23e6eb4fdb
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 6104

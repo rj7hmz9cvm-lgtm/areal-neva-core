@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-07-05T22:22:27.440816+00:00
-GIT_SHA: dc8998f1d941a94cee3bd2cddc1d082462d7475b
+GENERATED_AT: 2026-07-05T22:33:14.479423+00:00
+GIT_SHA: d690605f5e0f0efa27c81f55ed584b23e6eb4fdb
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -72,8 +72,9 @@ DATE_UNKNOWN
 role: Сметы
 active: 0
 failed_24h: 6
-commits_last_7d: 2
+commits_last_7d: 3
 recent_commits:
+- d690605|topic2: save canonical live repair handoff
 - 844fafb|topic2: close PDF estimate confirmation flow
 - c8a9f1c|Topic2 canonical estimate live repair
 markers_missing: 2

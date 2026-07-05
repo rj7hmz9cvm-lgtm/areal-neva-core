@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_007
-generated_at_utc: 2026-07-05T22:22:26.853326+00:00
-git_sha_before_commit: dc8998f1d941a94cee3bd2cddc1d082462d7475b
+generated_at_utc: 2026-07-05T22:33:13.991239+00:00
+git_sha_before_commit: d690605f5e0f0efa27c81f55ed584b23e6eb4fdb
 part: 7/19
 
 
@@ -260,7 +260,7 @@ _TFFE_LOG.info("PATCH_TOPIC2_FRESH_ESTIMATE_FALLBACK_V1 installed")
 
 # ============================================================
 # === PATCH_TOPIC2_PRICE_REPLY_REVIVE_V1 ===
-# Цель: короткий ответ ("2", "да", "жду") при WAITING_CLARIFICATION + PRICE_REQUESTED 
+# Цель: короткий ответ ("2", "да", "жду") при WAITING_CLARIFICATION + PRICE_REQUESTED
 #       идёт в parent, не создаёт новую задачу
 # Факт: 10:04-10:06 — пять ответов "2"/"" подряд → 5 P6E67_PARENT_NOT_FOUND
 # Факт: 10:36 — "Какая последняя задача" → новая задача с price menu
@@ -300,11 +300,11 @@ def _tprr_get(task, key, default=""):
 def _tprr_find_active_price_parent(conn, chat_id):
     try:
         row = conn.execute(
-            """SELECT id FROM tasks 
-               WHERE chat_id=? AND topic_id=2 
+            """SELECT id FROM tasks
+               WHERE chat_id=? AND topic_id=2
                  AND state IN ('WAITING_CLARIFICATION','IN_PROGRESS')
                  AND id IN (
-                   SELECT task_id FROM task_history 
+                   SELECT task_id FROM task_history
                    WHERE action='TOPIC2_PRICE_CHOICE_REQUESTED'
                  )
                ORDER BY updated_at DESC LIMIT 1""",
@@ -383,7 +383,7 @@ if _TPTG_ORIG_TIMEOUT and not getattr(_TPTG_ORIG_TIMEOUT, "_tptg_wrapped", False
                 """SELECT id FROM tasks
                    WHERE state='IN_PROGRESS' AND topic_id=2
                      AND id IN (
-                       SELECT task_id FROM task_history 
+                       SELECT task_id FROM task_history
                        WHERE action='TOPIC2_PRICE_CHOICE_REQUESTED'
                      )""",
             ).fetchall()
