@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-07-05T14:24:53.995311+00:00
-GIT_SHA: 68072585be7083159a1cedac0f90cf75a87375f7
+GENERATED_AT: 2026-07-05T14:54:54.945549+00:00
+GIT_SHA: 180025093724a8eddd43b7238990f9de2ebe3309
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -16,7 +16,6 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 ## GLOBAL_STATUS
 | topic | name | status | active | failed_24h |
 |-------|------|--------|--------|------------|
-| 0 | COMMON | UNKNOWN | 0 | 1 |
 | 2 | STROYKA | INSTALLED_NOT_VERIFIED | 0 | 7 |
 | 5 | TEKHNADZOR | UNKNOWN | 0 | 0 |
 | 210 | PROEKTIROVANIE | UNKNOWN | 0 | 0 |
@@ -69,17 +68,6 @@ DATE_UNKNOWN
 - AWAITING_CONFIRMATION: 19 задач — проверить не зависли ли
 
 ## ACTIVE_OR_RECENT_TOPICS
-### topic_0 COMMON
-role: Общий
-active: 0
-failed_24h: 1
-commits_last_7d: 0
-last_failed:
-- 71aa047d | INVALID_RESULT_GATE
-- 66b9f841 | INVALID_RESULT_GATE
-- 5c19256b | INVALID_RESULT_GATE
-NEXT_ACTION: investigate latest failed: INVALID_RESULT_GATE
-
 ### topic_2 STROYKA
 role: Сметы
 active: 0
