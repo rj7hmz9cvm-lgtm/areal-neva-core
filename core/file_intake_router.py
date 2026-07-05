@@ -693,7 +693,10 @@ async def route_file(file_path, task_id, topic_id=0, intent=None, fmt="excel", *
     if _fik_orig_route_file is None:
         return {"success": False, "error": "original_route_file_missing", "intent": intent}
 
-    res = _fik_orig_route_file(file_path, task_id, topic_id, intent, fmt, *args, **kwargs)
+    clean_kwargs = dict(kwargs)
+    for k in ("raw_input", "caption", "user_text", "prompt", "mime_type", "conn", "chat_id", "file_name", "name"):
+        clean_kwargs.pop(k, None)
+    res = _fik_orig_route_file(file_path, task_id, topic_id, intent, fmt, *args, **clean_kwargs)
     if _fik_inspect.isawaitable(res):
         res = await res
     return res

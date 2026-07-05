@@ -3909,6 +3909,32 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
     input_type = "drive_file"  # INPUT_TYPE_DRIVE_FIX_V1
     raw_input = task["raw_input"]
     try:
+        reply_to = task["reply_to_message_id"] if "reply_to_message_id" in task.keys() else None
+    except Exception:
+        reply_to = None
+    try:
+        if int(topic_id or 0) == 2 and callable(globals().get("_t2fdsg_run_drive_final")):
+            _df_hist_rows = conn.execute(
+                "SELECT action FROM task_history WHERE task_id=? ORDER BY rowid ASC",
+                (str(task_id),),
+            ).fetchall()
+            _df_hist = "\\n".join(str(r[0] or "") for r in _df_hist_rows)
+            if "TOPIC2_PRICE_CHOICE_CONFIRMED:" in _df_hist:
+                _df_done_current = globals().get("_t2fdsg_done_current")
+                if not callable(_df_done_current) or not _df_done_current(conn, task_id):
+                    import re as _df_re
+                    _df_m = _df_re.search(r"TOPIC2_PRICE_CHOICE_CONFIRMED:([a-zA-Zа-яА-Я0-9_ -]+)", _df_hist)
+                    _df_choice = (_df_m.group(1).strip() if _df_m else "median") or "median"
+                    _history(conn, task_id, "PATCH_TOPIC2_DRIVE_FILE_FINAL_GATE_V1:RUN_FINAL:" + _df_choice)
+                    conn.commit()
+                    await globals()["_t2fdsg_run_drive_final"](conn, task, _df_choice)
+                    return
+    except Exception as _df_final_gate_e:
+        try:
+            logger.warning("PATCH_TOPIC2_DRIVE_FILE_FINAL_GATE_V1_ERR task=%s err=%s", task_id, _df_final_gate_e)
+        except Exception:
+            pass
+    try:
         data = json.loads(raw_input)
         file_id = data["file_id"]
         file_name = data.get("file_name", "файл")  # HOTFIX_FILE_NAME_EARLY_V1
@@ -4122,6 +4148,8 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
             from core.file_intake_router import route_file, detect_intent, detect_intent_from_filename, should_ask_clarification, get_clarification_message
             _fir_caption = data.get("caption", "") or raw_input or ""
             _fir_intent = detect_intent(_fir_caption) or detect_intent_from_filename(file_name)
+            if int(topic_id or 0) == 2 and any(x in str(_fir_caption or "").lower().replace("ё", "е") for x in ("смет", "расчет", "стоимость", "расцен")):
+                _fir_intent = "estimate"
             _fir_topic_role = ""
             # === TOPIC2_CANONICAL_PDF_GATE_V1 ===
             # topic_2 + PDF + estimate intent → canonical maybe_handle_stroyka_estimate
@@ -4143,7 +4171,18 @@ async def _handle_drive_file(conn, task, chat_id, topic_id):
                     logger.warning("TOPIC2_CANONICAL_PDF_GATE_ERR task=%s err=%s", task_id, _t2cpg_e)
             # === END TOPIC2_CANONICAL_PDF_GATE_V1 ===
             if _fir_intent:
-                _fir_result = await route_file(local_path, task_id, int(topic_id or 0), _fir_intent)
+                _fir_result = await route_file(
+                    local_path,
+                    task_id,
+                    int(topic_id or 0),
+                    _fir_intent,
+                    raw_input=raw_input,
+                    caption=data.get("caption", ""),
+                    mime_type=data.get("mime_type", ""),
+                    file_name=file_name,
+                    conn=conn,
+                    chat_id=chat_id,
+                )
                 if _fir_result and _fir_result.get("success"):
                     _fir_msg = _fir_result.get("result_text") or _fir_result.get("drive_link") or "Готово"
                     # === TASK_WORKER_ARTIFACT_GATE_V1 ===
@@ -7645,6 +7684,12 @@ def _p6e67_block_final(conn, task_id, text):
         if _p6e67_has_revision_history(conn, task_id) and _p6e67_wants_artifacts(raw):
             ok, reason = _p6e67_artifact_links_ok(clean)
             if not ok:
+                if reason == "TXT_LINK_MISSING":
+                    _topic2_low = _p6e67_low(clean)
+                    _topic2_has_drive_pdf = "pdf:" in _topic2_low and "drive.google.com" in _topic2_low
+                    _topic2_has_drive_xlsx = ("excel:" in _topic2_low or "xlsx:" in _topic2_low) and "drive.google.com" in _topic2_low
+                    if _topic2_has_drive_pdf and _topic2_has_drive_xlsx:
+                        return False, "", clean
                 return True, "P6E67_BLOCK_ARTIFACT_GATE_" + reason, clean
 
     return False, "", clean
@@ -17081,6 +17126,8 @@ except Exception as _t2ffcr_install_err:
         pass
 # === /PATCH_TOPIC2_FRESH_FULL_TZ_CANON_ROUTE_V1 ===
 
+
+
 if __name__ == "__main__":
     pass  # entry point moved to final by PATCH_TOPIC2_WC_PICKER_DRAINAGE_REPLY_BIND_V3
 
@@ -19778,6 +19825,33 @@ try:
             pass
         return _t2fdsg_orig_update_task(conn, task_id, **kwargs)
 
+    def _t2fdsg_done_current(conn, task_id):
+        try:
+            done = conn.execute(
+                "SELECT rowid FROM task_history WHERE task_id=? AND action LIKE 'PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1:DONE_WITH_DRIVE_LINKS%' ORDER BY rowid DESC LIMIT 1",
+                (str(task_id),),
+            ).fetchone()
+            if not done:
+                return False
+            done_rid = int(done[0])
+            newer = conn.execute(
+                "SELECT rowid FROM task_history WHERE task_id=? AND rowid>? AND ("
+                "action LIKE 'CODEX_RESTART%' OR "
+                "action LIKE 'clarified:%' OR "
+                "action LIKE 'TOPIC2_PRICE_ENRICHMENT_DONE%' OR "
+                "action LIKE 'TOPIC2_PRICE_CHOICE_CONFIRMED%' OR "
+                "action LIKE 'FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:prices_shown%'"
+                ") ORDER BY rowid DESC LIMIT 1",
+                (str(task_id), done_rid),
+            ).fetchone()
+            return newer is None
+        except Exception as e:
+            try:
+                _t2fdsg_log.warning("PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1_DONE_CURRENT_ERR:%s", e)
+            except Exception:
+                pass
+            return False
+
     _t2fdsg_orig_handle_new = _handle_new
 
     async def _handle_new(conn, task, chat_id, topic_id):
@@ -19812,7 +19886,8 @@ try:
                 if state in ("NEW", "IN_PROGRESS", "WAITING_CLARIFICATION", "FAILED") and "TOPIC2_PRICE_CHOICE_CONFIRMED:" in hist:
                     m = _t2fdsg_re.search(r"TOPIC2_PRICE_CHOICE_CONFIRMED:([a-zA-Za-яА-Я0-9_ -]+)", hist)
                     final_choice = (m.group(1).strip() if m else "median") or "median"
-                    if "PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1:DONE_WITH_DRIVE_LINKS" not in hist:
+                    if not _t2fdsg_done_current(conn, task_id):
+                        _t2fdsg_hist_once(conn, task_id, "PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1:STALE_DONE_MARKER_REPROCESS")
                         await _t2fdsg_run_drive_final(conn, task, final_choice)
                         return
 
@@ -20205,7 +20280,9 @@ try:
             facts.append("Размеры: 8.0 x 12.0 м")
         if "1 этаж" in low or "этажей: 1" in low or "clarified:1" in low:
             facts.append("Этажность: 1 этаж")
-        if "каркасная технология" in low or "каркас" in low:
+        if "сэндвич" in low or "стеновая панель" in low or "стеновые панели" in low:
+            facts.append("Стены: сэндвич-панели 120 мм")
+        elif "каркасная технология" in low or "каркас" in low:
             facts.append("Стены: каркасная технология")
         if "монолитная плита" in low or "монолитн" in low:
             facts.append("Фундамент: монолитная плита" + (" 450 мм" if "450" in low else ""))
@@ -20275,7 +20352,9 @@ try:
 
         s = _t2v2_strip_nds(s)
 
-        if "каркас" in low:
+        if "сэндвич" in low or "стеновая панель" in low or "стеновые панели" in low:
+            s = _t2v2_replace_or_insert(s, "Стены:", "Стены: сэндвич-панели 120 мм")
+        elif "каркас" in low:
             s = _t2v2_replace_or_insert(s, "Стены:", "Стены: каркасная технология")
         if "металлочереп" in low:
             s = _t2v2_replace_or_insert(s, "Кровля:", "Кровля: металлочерепица")
@@ -20441,7 +20520,9 @@ try:
             out.append("Размеры: 8.0 x 12.0 м")
         if "1 этаж" in low or "этажей: 1" in low:
             out.append("Этажность: 1 этаж")
-        if "каркасная технология" in low or "каркас" in low:
+        if "сэндвич" in low or "стеновая панель" in low or "стеновые панели" in low:
+            out.append("Стены: сэндвич-панели 120 мм")
+        elif "каркасная технология" in low or "каркас" in low:
             out.append("Стены: каркасная технология")
         if "монолитная плита" in low or "монолитн" in low:
             out.append("Фундамент: монолитная плита" + (" 450 мм" if "450" in low else ""))
@@ -20496,7 +20577,9 @@ try:
         ctx = (raw or "") + "\n" + (history_text or "")
         low = ctx.lower().replace("ё", "е")
 
-        if "каркас" in low:
+        if "сэндвич" in low or "стеновая панель" in low or "стеновые панели" in low:
+            s = _t2sh_replace_or_insert(s, "Стены:", "Стены: сэндвич-панели 120 мм")
+        elif "каркас" in low:
             s = _t2sh_replace_or_insert(s, "Стены:", "Стены: каркасная технология")
         if "металлочереп" in low:
             s = _t2sh_replace_or_insert(s, "Кровля:", "Кровля: металлочерепица")
@@ -26238,6 +26321,295 @@ except Exception as _t2ffg2_install_err:
     except Exception:
         pass
 # === /PATCH_TOPIC2_FRESH_FULL_TZ_FINAL_GUARD_V2 ===
+
+# === PATCH_TOPIC2_WAITING_PROJECT_FILE_BIND_V1 ===
+# Canon basis:
+# - voice is text;
+# - topic_2 PDF/XLSX/photo must enter estimate flow;
+# - when the user says they will send a project/file, do not revive old estimate
+#   memory and do not start a new estimate before the file arrives.
+import json as _t2wp_json
+import logging as _t2wp_log
+import inspect as _t2wp_inspect
+
+_T2WP_LOG = _t2wp_log.getLogger("task_worker")
+
+def _t2wp_s(v):
+    return "" if v is None else str(v)
+
+def _t2wp_low(v):
+    return _t2wp_s(v).lower().replace("ё", "е")
+
+def _t2wp_waiting_project_text(text):
+    t = _t2wp_low(text).replace("[voice]", " ")
+    waits = (
+        "сейчас скину",
+        "сейчас пришлю",
+        "скину проект",
+        "пришлю проект",
+        "скину файл",
+        "пришлю файл",
+        "сейчас скину проект",
+        "сейчас пришлю проект",
+    )
+    project_words = ("проект", "pdf", "файл", "чертеж", "архитектур", "стадия")
+    return any(w in t for w in waits) and any(w in t for w in project_words)
+
+def _t2wp_file_meta(raw):
+    try:
+        data = _t2wp_json.loads(_t2wp_s(raw))
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+def _t2wp_is_pdf_project(raw):
+    meta = _t2wp_file_meta(raw)
+    name = _t2wp_low(meta.get("file_name"))
+    mime = _t2wp_low(meta.get("mime_type"))
+    return bool("pdf" in mime or name.endswith(".pdf"))
+
+def _t2wp_find_waiting_project_parent(conn, chat_id, topic_id):
+    try:
+        return conn.execute(
+            """
+            SELECT * FROM tasks
+            WHERE chat_id=? AND COALESCE(topic_id,0)=?
+              AND state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION')
+              AND input_type IN ('text','voice')
+              AND updated_at >= datetime('now','-45 minutes')
+            ORDER BY updated_at DESC, rowid DESC
+            LIMIT 20
+            """,
+            (str(chat_id), int(topic_id or 0)),
+        ).fetchall()
+    except Exception:
+        return []
+
+def _t2wp_parent_for_file(conn, chat_id, topic_id):
+    for row in _t2wp_find_waiting_project_parent(conn, chat_id, topic_id):
+        raw = _t2wp_s(_task_field(row, "raw_input", ""))
+        if _t2wp_waiting_project_text(raw):
+            return row
+    return None
+
+try:
+    _T2WP_ORIG_HANDLE_NEW = _handle_new
+except Exception:
+    _T2WP_ORIG_HANDLE_NEW = None
+
+if _T2WP_ORIG_HANDLE_NEW and not getattr(_T2WP_ORIG_HANDLE_NEW, "_t2wp_wrapped", False):
+    async def _handle_new(conn, task, *args, **kwargs):
+        try:
+            topic_id = int(_task_field(task, "topic_id", 0) or 0)
+            raw = _t2wp_s(_task_field(task, "raw_input", ""))
+            input_type = _t2wp_low(_task_field(task, "input_type", "text"))
+            if topic_id == 2 and input_type in ("text", "voice") and _t2wp_waiting_project_text(raw):
+                task_id = _t2wp_s(_task_field(task, "id", ""))
+                chat_id = _t2wp_s(_task_field(task, "chat_id", ""))
+                reply_to = _task_field(task, "reply_to_message_id", None)
+                msg = (
+                    "Жду PDF/проект для расчёта. После загрузки файла привяжу его к этой задаче "
+                    "и буду считать по содержимому проекта, без старых смет и без догадок."
+                )
+                _update_task(conn, task_id, state="WAITING_CLARIFICATION", result=msg, error_message="TOPIC2_WAITING_PROJECT_FILE")
+                _history(conn, task_id, "PATCH_TOPIC2_WAITING_PROJECT_FILE_BIND_V1:WAITING_FOR_FILE")
+                conn.commit()
+                try:
+                    sent = send_reply_ex(chat_id=str(chat_id), text=msg, reply_to_message_id=reply_to, message_thread_id=2)
+                    if isinstance(sent, dict) and sent.get("bot_message_id"):
+                        _update_task(conn, task_id, bot_message_id=sent.get("bot_message_id"))
+                        conn.commit()
+                except Exception as e:
+                    _T2WP_LOG.warning("T2WP_WAIT_SEND_ERR task=%s err=%s", task_id, e)
+                return True
+        except Exception as e:
+            _T2WP_LOG.warning("T2WP_HANDLE_NEW_GUARD_ERR %s", e)
+
+        res = _T2WP_ORIG_HANDLE_NEW(conn, task, *args, **kwargs)
+        if _t2wp_inspect.isawaitable(res):
+            return await res
+        return res
+
+    _handle_new._t2wp_wrapped = True
+    _T2WP_LOG.info("PATCH_TOPIC2_WAITING_PROJECT_FILE_BIND_V1 _handle_new installed")
+
+try:
+    _T2WP_ORIG_HANDLE_DRIVE_FILE = _handle_drive_file
+except Exception:
+    _T2WP_ORIG_HANDLE_DRIVE_FILE = None
+
+if _T2WP_ORIG_HANDLE_DRIVE_FILE and not getattr(_T2WP_ORIG_HANDLE_DRIVE_FILE, "_t2wp_wrapped", False):
+    async def _handle_drive_file(conn, task, chat_id, topic_id):
+        try:
+            topic_id_i = int(topic_id or _task_field(task, "topic_id", 0) or 0)
+            raw = _t2wp_s(_task_field(task, "raw_input", ""))
+            if topic_id_i == 2 and _t2wp_is_pdf_project(raw):
+                parent = _t2wp_parent_for_file(conn, str(chat_id), topic_id_i)
+                if parent is not None:
+                    task_id = _t2wp_s(_task_field(task, "id", ""))
+                    parent_id = _t2wp_s(_task_field(parent, "id", ""))
+                    meta = _t2wp_file_meta(raw)
+                    meta["caption"] = (meta.get("caption") or "смета по проекту PDF").strip()
+                    meta["topic2_parent_task_id"] = parent_id
+                    new_raw = _t2wp_json.dumps(meta, ensure_ascii=False)
+                    parent_raw = _t2wp_s(_task_field(parent, "raw_input", ""))
+                    enriched = parent_raw + "\n\nTOPIC2_PROJECT_FILE_BOUND:" + new_raw
+                    conn.execute(
+                        "UPDATE tasks SET raw_input=?, state='IN_PROGRESS', error_message='', updated_at=datetime('now') WHERE id=?",
+                        (new_raw, task_id),
+                    )
+                    conn.execute(
+                        "UPDATE tasks SET raw_input=?, state='IN_PROGRESS', error_message='', updated_at=datetime('now') WHERE id=?",
+                        (enriched, parent_id),
+                    )
+                    _history(conn, task_id, f"PATCH_TOPIC2_WAITING_PROJECT_FILE_BIND_V1:PDF_BOUND_TO_PARENT:{parent_id}")
+                    _history(conn, parent_id, f"PATCH_TOPIC2_WAITING_PROJECT_FILE_BIND_V1:PDF_CHILD:{task_id}")
+                    conn.commit()
+                    task_dict = {}
+                    try:
+                        for k in task.keys():
+                            task_dict[k] = task[k]
+                    except Exception:
+                        task_dict = dict(task) if isinstance(task, dict) else {}
+                    task_dict["raw_input"] = new_raw
+                    task_dict["state"] = "IN_PROGRESS"
+                    h_ip = globals().get("_handle_in_progress")
+                    if h_ip:
+                        res = h_ip(conn, task_dict, str(chat_id), topic_id_i)
+                        if _t2wp_inspect.isawaitable(res):
+                            return await res
+                        return res
+        except Exception as e:
+            _T2WP_LOG.warning("T2WP_HANDLE_DRIVE_FILE_BIND_ERR %s", e)
+
+        res = _T2WP_ORIG_HANDLE_DRIVE_FILE(conn, task, chat_id, topic_id)
+        if _t2wp_inspect.isawaitable(res):
+            return await res
+        return res
+
+    _handle_drive_file._t2wp_wrapped = True
+    _T2WP_LOG.info("PATCH_TOPIC2_WAITING_PROJECT_FILE_BIND_V1 _handle_drive_file installed")
+
+# === END_PATCH_TOPIC2_WAITING_PROJECT_FILE_BIND_V1 ===
+
+
+# === PATCH_TOPIC2_NO_VALID_PDF_ROWS_BLOCK_FINAL_V2 ===
+try:
+    import logging as _t2nvr2_logging
+    _T2NVR2_LOG = _t2nvr2_logging.getLogger("task_worker")
+
+    def _t2nvr2_has_no_valid_pdf_rows(conn, task_id):
+        try:
+            return conn.execute(
+                "SELECT 1 FROM task_history WHERE task_id=? AND action LIKE 'TOPIC2_PDF_NO_VALID_ESTIMATE_ROWS%' LIMIT 1",
+                (str(task_id),),
+            ).fetchone() is not None
+        except Exception:
+            return False
+
+    def _t2nvr2_allows_orient_project(conn, task_id):
+        try:
+            row = conn.execute("SELECT raw_input FROM tasks WHERE id=? LIMIT 1", (str(task_id),)).fetchone()
+            raw = str(row[0] if row else "").lower().replace("ё", "е")
+            return "считать ориентировочно по проекту" in raw or "факты ocr/pdf" in raw
+        except Exception:
+            return False
+
+    def _t2nvr2_wait_message():
+        return (
+            "PDF прочитан, но сметная ведомость объёмов/спецификация работ в нём не найдена. "
+            "Смету на 0 руб не создаю.\n\n"
+            "Для канонного расчёта пришли ВОР / спецификацию / раздел КР/КЖ с объёмами "
+            "или напиши: считать ориентировочно по проекту."
+        )
+
+    _T2NVR2_ORIG_RUN_DRIVE_FINAL = globals().get("_t2fdsg_run_drive_final")
+    if _T2NVR2_ORIG_RUN_DRIVE_FINAL and not getattr(_T2NVR2_ORIG_RUN_DRIVE_FINAL, "_t2nvr2_wrapped", False):
+        async def _t2fdsg_run_drive_final(conn, parent, choice):
+            try:
+                parent_id = str(_t2fdsg_get(parent, "id") or "")
+                if parent_id and _t2nvr2_has_no_valid_pdf_rows(conn, parent_id) and not _t2nvr2_allows_orient_project(conn, parent_id):
+                    msg = _t2nvr2_wait_message()
+                    _update_task(
+                        conn,
+                        parent_id,
+                        state="WAITING_CLARIFICATION",
+                        result=msg,
+                        error_message="TOPIC2_PDF_NO_VALID_ESTIMATE_ROWS",
+                    )
+                    _history(conn, parent_id, "PATCH_TOPIC2_NO_VALID_PDF_ROWS_BLOCK_FINAL_V2:FINAL_BLOCKED")
+                    conn.commit()
+                    return True
+            except Exception as e:
+                try:
+                    _T2NVR2_LOG.warning("PATCH_TOPIC2_NO_VALID_PDF_ROWS_BLOCK_FINAL_V2_ERR:%s", e)
+                except Exception:
+                    pass
+            return await _T2NVR2_ORIG_RUN_DRIVE_FINAL(conn, parent, choice)
+
+        _t2fdsg_run_drive_final._t2nvr2_wrapped = True
+        globals()["_t2fdsg_run_drive_final"] = _t2fdsg_run_drive_final
+        _T2NVR2_LOG.info("PATCH_TOPIC2_NO_VALID_PDF_ROWS_BLOCK_FINAL_V2 installed")
+except Exception as _t2nvr2_install_err:
+    try:
+        logger.exception("PATCH_TOPIC2_NO_VALID_PDF_ROWS_BLOCK_FINAL_V2_INSTALL_ERR:%s", _t2nvr2_install_err)
+    except Exception:
+        pass
+# === END_PATCH_TOPIC2_NO_VALID_PDF_ROWS_BLOCK_FINAL_V2 ===
+
+
+# === PATCH_TOPIC2_ZERO_RESULT_HARD_GATE_V1 ===
+try:
+    import re as _t2zg_re
+    import logging as _t2zg_logging
+    _T2ZG_LOG = _t2zg_logging.getLogger("task_worker")
+    _T2ZG_ORIG_UPDATE_TASK = globals().get("_update_task")
+
+    def _t2zg_topic_id(conn, task_id):
+        try:
+            row = conn.execute("SELECT COALESCE(topic_id,0) FROM tasks WHERE id=? LIMIT 1", (str(task_id),)).fetchone()
+            return int(row[0]) if row else 0
+        except Exception:
+            return 0
+
+    def _t2zg_zero_result(text):
+        s = str(text or "").lower().replace("ё", "е")
+        has_zero_positions = bool(_t2zg_re.search(r"позиц(?:ий|ии|ия)\s*:\s*0\b", s))
+        has_zero_total = bool(_t2zg_re.search(r"итого\s*:\s*0\s*руб", s))
+        return has_zero_positions or has_zero_total
+
+    if _T2ZG_ORIG_UPDATE_TASK and not getattr(_T2ZG_ORIG_UPDATE_TASK, "_t2zg_wrapped", False):
+        def _update_task(conn, task_id, **kwargs):
+            try:
+                if _t2zg_topic_id(conn, task_id) == 2 and _t2zg_zero_result(kwargs.get("result")):
+                    msg = (
+                        "Смета на 0 руб заблокирована. PDF/OCR прочитан, но финальный расчёт не содержит "
+                        "валидных позиций и итоговой суммы. Нужны ВОР/спецификация с объёмами или корректный "
+                        "укрупнённый расчёт по извлечённым параметрам проекта."
+                    )
+                    kwargs["state"] = "WAITING_CLARIFICATION"
+                    kwargs["result"] = msg
+                    kwargs["error_message"] = "TOPIC2_ZERO_RESULT_BLOCKED"
+                    try:
+                        _history(conn, str(task_id), "PATCH_TOPIC2_ZERO_RESULT_HARD_GATE_V1:BLOCKED")
+                    except Exception:
+                        pass
+            except Exception as e:
+                try:
+                    _T2ZG_LOG.warning("PATCH_TOPIC2_ZERO_RESULT_HARD_GATE_V1_ERR:%s", e)
+                except Exception:
+                    pass
+            return _T2ZG_ORIG_UPDATE_TASK(conn, task_id, **kwargs)
+
+        _update_task._t2zg_wrapped = True
+        globals()["_update_task"] = _update_task
+        _T2ZG_LOG.info("PATCH_TOPIC2_ZERO_RESULT_HARD_GATE_V1 installed")
+except Exception as _t2zg_install_err:
+    try:
+        logger.exception("PATCH_TOPIC2_ZERO_RESULT_HARD_GATE_V1_INSTALL_ERR:%s", _t2zg_install_err)
+    except Exception:
+        pass
+# === END_PATCH_TOPIC2_ZERO_RESULT_HARD_GATE_V1 ===
 
 if __name__ == "__main__":
     asyncio.run(main())

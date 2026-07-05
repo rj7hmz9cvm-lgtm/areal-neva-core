@@ -163,10 +163,27 @@ def _t2pcl_history_text(conn, task_id):
         return ""
 
 def _t2pcl_parse_explicit_price_choice(text):
-    t = _low(text)
+    raw = _s(text)
+    try:
+        if raw.strip().startswith("{"):
+            import json as _t2pcl_json
+            obj = _t2pcl_json.loads(raw)
+            if isinstance(obj, dict):
+                raw = " ".join(_s(obj.get(k, "")) for k in ("caption", "text", "raw_input", "file_name"))
+    except Exception:
+        pass
+    t = _low(raw)
     t = re.sub(r"\s+", " ", t).strip(" .,!?:;()[]{}")
     if not t:
         return ""
+    if "средн" in t or "медиан" in t:
+        return "median"
+    if "миним" in t or "дешев" in t or "дешёв" in t:
+        return "cheapest"
+    if "максим" in t or "надеж" in t or "надёж" in t or "высок" in t or "дорог" in t:
+        return "reliable"
+    if "ручн" in t or "вручную" in t or "сам укажу" in t:
+        return "manual"
     _exact = {
         "1": "cheapest", "а": "cheapest", "a": "cheapest", "а)": "cheapest", "a)": "cheapest",
         "дешевые": "cheapest", "дешёвые": "cheapest", "самые дешевые": "cheapest",
@@ -498,6 +515,10 @@ def _extract_distance_km(text: str) -> Optional[float]:
 
 def _extract_material(text: str) -> str:
     t = _low(text)
+    if "сэндвич" in t or "стеновая панель" in t or "стеновые панели" in t:
+        return "сэндвич-панели"
+    if "металлический каркас" in t or "металлического каркаса" in t or "металлическая колонна" in t:
+        return "металлокаркас"
     for key in ("газобетон", "каркас", "кирпич", "монолит", "керамоблок", "брус", "арболит"):
         if key in t:
             return key
@@ -506,7 +527,11 @@ def _extract_material(text: str) -> str:
 
 def _extract_object(text: str) -> str:
     t = _low(text)
-    for key in ("дом", "ангар", "склад", "фундамент", "кровля", "коробка"):
+    if "производственно-склад" in t:
+        return "склад"
+    if re.search(r"\\bдом(?:а|ом|е)?\\b", t):
+        return "дом"
+    for key in ("ангар", "склад", "фундамент", "кровля", "коробка"):
         if key in t:
             return key
     return ""
@@ -1324,7 +1349,7 @@ def _create_xlsx_from_template(task_id: str, parsed: Dict[str, Any], template: D
     total_fill = PatternFill(start_color="1F497D", end_color="1F497D", fill_type="solid")
     for lbl, formula, tr in [
         ("ИТОГО без НДС", f"=SUM(J{header_row + 1}:J{data_last})", total_row),
-        ("НДС 20%",       f"=J{total_row}*0.2",                    total_row + 1),
+        ("НДС 22%",       f"=J{total_row}*0.22",                    total_row + 1),
         ("С НДС",         f"=J{total_row}+J{total_row + 1}",        total_row + 2),
     ]:
         ws.cell(tr, 9, lbl).font = Font(bold=True, color="FFFFFF")
@@ -1487,7 +1512,7 @@ def _final_summary(parsed: Dict[str, Any], template: Dict[str, Any], sheet_name:
         mat_total = round(py_total * 0.47, 2)
 
     subtotal = round(mat_total + work_total + logistics_total + overhead_total, 2) or round(py_total, 2)
-    nds = round(subtotal * 0.2, 2)
+    nds = round(subtotal * 0.22, 2)
     total_nds = round(subtotal + nds, 2)
 
     return (
@@ -2059,6 +2084,108 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
     except Exception:
         pass
 
+    # PATCH_TOPIC2_CONFIRM_BEFORE_REVISION_V1
+    # Canon: final topic_2 estimate waits in AWAITING_CONFIRMATION and closes only
+    # after explicit user confirmation. Confirmation phrases must not be routed
+    # as revision/follow-up text.
+    if _is_confirm(raw_input) or _is_old_task_finish_request(raw_input):
+        try:
+            _confirm_parent = None
+            if reply_to:
+                _confirm_parent = conn.execute(
+                    """
+                    SELECT id, COALESCE(raw_input,'') AS raw_input, COALESCE(result,'') AS result
+                    FROM tasks
+                    WHERE CAST(chat_id AS TEXT)=?
+                      AND COALESCE(topic_id,0)=?
+                      AND state='AWAITING_CONFIRMATION'
+                      AND id<>?
+                      AND (bot_message_id=? OR reply_to_message_id=?)
+                    ORDER BY updated_at DESC, created_at DESC
+                    LIMIT 1
+                    """,
+                    (str(chat_id), int(topic_id), str(task_id), reply_to, reply_to),
+                ).fetchone()
+            if not _confirm_parent:
+                _confirm_parent = conn.execute(
+                    """
+                    SELECT id, COALESCE(raw_input,'') AS raw_input, COALESCE(result,'') AS result
+                    FROM tasks
+                    WHERE CAST(chat_id AS TEXT)=?
+                      AND COALESCE(topic_id,0)=?
+                      AND state='AWAITING_CONFIRMATION'
+                      AND id<>?
+                    ORDER BY updated_at DESC, created_at DESC
+                    LIMIT 1
+                    """,
+                    (str(chat_id), int(topic_id), str(task_id)),
+                ).fetchone()
+            if _confirm_parent:
+                _parent_id = _s(_confirm_parent["id"])
+                _parent_raw = _s(_confirm_parent["raw_input"])
+                _parent_result = _s(_confirm_parent["result"])
+                _parent_low = _low(_parent_result)
+                _is_final_estimate = (
+                    ("смет" in _parent_low and ("xlsx" in _parent_low or "pdf" in _parent_low
+                     or "drive.google.com" in _parent_low or "docs.google.com" in _parent_low))
+                    or "смета готов" in _parent_low
+                )
+                if _is_final_estimate:
+                    _history_safe(conn, _parent_id, "TOPIC2_EXPLICIT_CONFIRM:from_user_confirm_reply")
+                    _update_task_safe(conn, _parent_id, state="DONE", error_message="")
+                    _history_safe(conn, _parent_id, "state:DONE")
+                    try:
+                        _memory_save(chat_id, f"topic_2_user_input_{_parent_id}", {
+                            "task_id": _parent_id,
+                            "topic_id": int(topic_id),
+                            "raw_input": _parent_raw,
+                            "saved_at": _now(),
+                            "source": "TOPIC2_EXPLICIT_CONFIRM",
+                        })
+                        _memory_save(chat_id, f"topic_2_task_summary_{_parent_id}", {
+                            "task_id": _parent_id,
+                            "topic_id": int(topic_id),
+                            "summary": _parent_result,
+                            "saved_at": _now(),
+                            "source": "TOPIC2_EXPLICIT_CONFIRM",
+                        })
+                        _memory_save(chat_id, f"topic_2_assistant_output_{_parent_id}", {
+                            "task_id": _parent_id,
+                            "topic_id": int(topic_id),
+                            "result": _parent_result,
+                            "saved_at": _now(),
+                            "source": "TOPIC2_EXPLICIT_CONFIRM",
+                        })
+                        _memory_save(chat_id, "topic_2_user_input", {
+                            "task_id": _parent_id,
+                            "topic_id": int(topic_id),
+                            "raw_input": _parent_raw,
+                            "saved_at": _now(),
+                            "source": "TOPIC2_EXPLICIT_CONFIRM",
+                        })
+                        _memory_save(chat_id, "topic_2_task_summary", {
+                            "task_id": _parent_id,
+                            "topic_id": int(topic_id),
+                            "summary": _parent_result,
+                            "saved_at": _now(),
+                            "source": "TOPIC2_EXPLICIT_CONFIRM",
+                        })
+                        _memory_save(chat_id, "topic_2_assistant_output", {
+                            "task_id": _parent_id,
+                            "topic_id": int(topic_id),
+                            "result": _parent_result,
+                            "saved_at": _now(),
+                            "source": "TOPIC2_EXPLICIT_CONFIRM",
+                        })
+                    except Exception:
+                        pass
+                    _update_task_safe(conn, task_id, state="DONE", result="Подтверждение принято", error_message="")
+                    _history_safe(conn, task_id, "TOPIC2_CONFIRM_CHILD_DONE")
+                    await _send_text(chat_id, "Принял. Задача закрыта", reply_to, topic_id)
+                    return True
+        except Exception as _t2_confirm_err:
+            _history_safe(conn, task_id, f"TOPIC2_CONFIRM_BEFORE_REVISION_ERR:{_clean(str(_t2_confirm_err), 200)}")
+
     if _is_revision(raw_input):
         try:
             _rev_pid = reply_to
@@ -2140,7 +2267,8 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
         )
     except Exception:
         _fresh_tz = False
-    if not _fresh_tz:
+    _repeat_input_type = _low(_s(_row_get(task, "input_type", "")))
+    if not _fresh_tz and _repeat_input_type not in ("drive_file", "file", "photo", "image", "document"):
         try:
             _rpt_row = conn.execute(
                 "SELECT id FROM tasks WHERE CAST(chat_id AS TEXT)=? AND COALESCE(topic_id,0)=? AND id<>? AND state IN ('IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION','RESULT_READY') ORDER BY updated_at DESC LIMIT 1",
@@ -2489,7 +2617,8 @@ _sec_orig_maybe_handle = maybe_handle_stroyka_estimate
 
 async def maybe_handle_stroyka_estimate(conn, task, logger=None):
     raw_input = _s(_row_get(task, "raw_input", ""))
-    if _sec_raw_is_thin(raw_input):
+    input_type = _low(_row_get(task, "input_type", ""))
+    if input_type not in ("photo", "file", "drive_file", "image", "document") and _sec_raw_is_thin(raw_input):
         chat_id = _s(_row_get(task, "chat_id", ""))
         topic_id = int(_row_get(task, "topic_id", 0) or 0)
         rich = _sec_get_rich_context(conn, chat_id, topic_id)
@@ -2739,12 +2868,27 @@ def _update_task_safe(conn, task_id, **kwargs):
             if _t2pcl_old_public_output(_t2pcl_result):
                 _t2pcl_hist = _t2pcl_history_text(conn, str(task_id))
                 if "TOPIC2_PRICE_CHOICE_CONFIRMED" not in _t2pcl_hist:
-                    kwargs["state"] = "WAITING_CLARIFICATION"
-                    kwargs["result"] = PRICE_CHOICE_PROMPT_V1
-                    kwargs["error_message"] = "TOPIC2_PRICE_CHOICE_REQUIRED"
-                    if "TOPIC2_PRICE_CHOICE_REQUESTED" not in _t2pcl_hist:
-                        _history_safe(conn, str(task_id), "TOPIC2_PRICE_CHOICE_REQUESTED")
-                    _history_safe(conn, str(task_id), "TOPIC2_OLD_PUBLIC_OUTPUT_BLOCKED_BY_PRICE_CHOICE_GATE")
+                    try:
+                        _raw_row = conn.execute("SELECT raw_input FROM tasks WHERE id=? LIMIT 1", (str(task_id),)).fetchone()
+                        _raw_text = _raw_row[0] if _raw_row else ""
+                        _choice = _t2pcl_parse_explicit_price_choice(_raw_text)
+                        if _choice:
+                            _history_safe(conn, str(task_id), "TOPIC2_PRICE_CHOICE_CONFIRMED:" + _choice)
+                            _history_safe(conn, str(task_id), "TOPIC2_PRICE_CHOICE_CONFIRMED_FROM_CAPTION")
+                        else:
+                            kwargs["state"] = "WAITING_CLARIFICATION"
+                            kwargs["result"] = PRICE_CHOICE_PROMPT_V1
+                            kwargs["error_message"] = "TOPIC2_PRICE_CHOICE_REQUIRED"
+                            if "TOPIC2_PRICE_CHOICE_REQUESTED" not in _t2pcl_hist:
+                                _history_safe(conn, str(task_id), "TOPIC2_PRICE_CHOICE_REQUESTED")
+                            _history_safe(conn, str(task_id), "TOPIC2_OLD_PUBLIC_OUTPUT_BLOCKED_BY_PRICE_CHOICE_GATE")
+                    except Exception:
+                        kwargs["state"] = "WAITING_CLARIFICATION"
+                        kwargs["result"] = PRICE_CHOICE_PROMPT_V1
+                        kwargs["error_message"] = "TOPIC2_PRICE_CHOICE_REQUIRED"
+                        if "TOPIC2_PRICE_CHOICE_REQUESTED" not in _t2pcl_hist:
+                            _history_safe(conn, str(task_id), "TOPIC2_PRICE_CHOICE_REQUESTED")
+                        _history_safe(conn, str(task_id), "TOPIC2_OLD_PUBLIC_OUTPUT_BLOCKED_BY_PRICE_CHOICE_GATE")
             elif _t2pcl_state in ("IN_PROGRESS", "WAITING_CLARIFICATION", "AWAITING_CONFIRMATION"):
                 _t2pcl_hist = _t2pcl_history_text(conn, str(task_id))
                 if ("FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:prices_shown" in _t2pcl_hist
@@ -2776,7 +2920,7 @@ def _update_task_safe(conn, task_id, **kwargs):
                 ).fetchall()
                 hist_actions = [_s(h[0]) for h in hist]
                 price_confirmed = any("TOPIC2_PRICE_CHOICE_CONFIRMED" in a for a in hist_actions)
-                estimate_generated = any("estimate_generated" in a or "FINAL_DONE" in a or "P3_TOPIC2_FINAL" in a for a in hist_actions)
+                estimate_generated = any("estimate_generated" in a or "FINAL_DONE" in a or "P3_TOPIC2_FINAL" in a or "TOPIC2_ESTIMATE_FINAL_CLOSE_V2:ESTIMATE_ARTIFACTS_CREATED" in a for a in hist_actions)
                 explicit_confirm = any("TOPIC2_EXPLICIT_CONFIRM" in a for a in hist_actions)
 
                 if not estimate_generated:
@@ -4532,8 +4676,14 @@ def _parse_request(text: str):
         _T2PRS_LOG.info("T2PRS_INFER:object=дом:from_material=брус")
     # Fix 2b: другие признаки дома
     if not parsed.get("object"):
-        for _hint in ("дач", "коттедж", "жилой", "жилого"):
-            if _hint in t:
+        _home_hint_patterns = (
+            (r"\\bдач\\w*", "дач"),
+            (r"\\bкоттедж\\w*", "коттедж"),
+            (r"\\bжилой\\b", "жилой"),
+            (r"\\bжилого\\b", "жилого"),
+        )
+        for _pattern, _hint in _home_hint_patterns:
+            if re.search(_pattern, t):
                 parsed["object"] = "дом"
                 _T2PRS_LOG.info("T2PRS_INFER:object=дом:hint=%s", _hint)
                 break
@@ -4972,12 +5122,27 @@ try:
         if conn is not None and task_id is not None:
             try:
                 row = conn.execute(
-                    "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'TOPIC2_PRICE_ENRICHMENT_DONE:%' ORDER BY rowid DESC LIMIT 1",
+                    "SELECT rowid, action FROM task_history WHERE task_id=? AND action LIKE 'TOPIC2_PRICE_ENRICHMENT_DONE:%' ORDER BY rowid DESC LIMIT 1",
+                    (task_id,)
+                ).fetchone()
+                restart = conn.execute(
+                    "SELECT rowid, action FROM task_history WHERE task_id=? AND ("
+                    "action LIKE 'CODEX_RESTART_EXISTING_FILE_FROM_SCREENSHOT_1028_NO_DUPLICATE%' OR action LIKE 'CODEX_RESTART_AFTER_%' OR "
+                    "action LIKE 'PATCH_TOPIC2_REVISION_MODE_FULL_V1:REVISION_STARTED:%' OR "
+                    "action LIKE 'PATCH_TOPIC2_REVISION_MODE_FULL_V1:DRIVE_REVISION_MERGED_TO:%' OR "
+                    "action LIKE 'PATCH_TOPIC2_FULL_TASK_CHAIN_RESTORE_NO_REGRESSION_V1:%' OR "
+                    "action LIKE 'clarified:%') ORDER BY rowid DESC LIMIT 1",
                     (task_id,)
                 ).fetchone()
                 if row:
-                    _PEI_LOG.info("PATCH_PRICE_ENRICHMENT_IDEMPOTENT_V1: skip task=%s already=%s", task_id, row[0] if not hasattr(row, "keys") else row["action"])
-                    return ""
+                    row_vals = list(row)
+                    restart_vals = list(restart) if restart else []
+                    done_rid = int(row_vals[0])
+                    restart_rid = int(restart_vals[0]) if restart_vals else 0
+                    if done_rid > restart_rid:
+                        action = row_vals[1]
+                        _PEI_LOG.info("PATCH_PRICE_ENRICHMENT_IDEMPOTENT_V1: skip task=%s already=%s", task_id, action)
+                        return ""
             except Exception as _pei_check_e:
                 _PEI_LOG.warning("PATCH_PRICE_ENRICHMENT_IDEMPOTENT_V1_CHECK_ERR: %s", _pei_check_e)
         return await _PEI_ORIG_SEARCH(parsed, template, sheet_name, conn=conn, task_id=task_id)
@@ -5049,3 +5214,30 @@ def extract_template_prices(template_path, parsed):  # noqa: F811
 
 _KFV1_LOG.info("PATCH_KARKASNIK_SHEET_FIX_V1 installed")
 # === END_PATCH_KARKASNIK_SHEET_FIX_V1 ===
+
+# === PATCH_TOPIC2_NO_WAITING_PROJECT_MEMORY_REVIVE_V1 ===
+# A request like "сейчас скину проект/PDF" is not an old-task finish request.
+# It must wait for the incoming project file and must not revive old estimate raw_input.
+try:
+    _T2NWPMR_ORIG_IS_OLD_TASK_FINISH_REQUEST = _is_old_task_finish_request
+except Exception:
+    _T2NWPMR_ORIG_IS_OLD_TASK_FINISH_REQUEST = None
+
+def _t2nwpmr_low(value):
+    return ("" if value is None else str(value)).lower().replace("ё", "е")
+
+def _t2nwpmr_waiting_project(value):
+    t = _t2nwpmr_low(value).replace("[voice]", " ")
+    waits = ("сейчас скину", "сейчас пришлю", "скину проект", "пришлю проект", "скину файл", "пришлю файл")
+    project_words = ("проект", "pdf", "файл", "чертеж", "архитектур", "стадия")
+    return any(w in t for w in waits) and any(w in t for w in project_words)
+
+if _T2NWPMR_ORIG_IS_OLD_TASK_FINISH_REQUEST and not getattr(_T2NWPMR_ORIG_IS_OLD_TASK_FINISH_REQUEST, "_t2nwpmr_wrapped", False):
+    def _is_old_task_finish_request(text: str) -> bool:
+        if _t2nwpmr_waiting_project(text):
+            return False
+        return _T2NWPMR_ORIG_IS_OLD_TASK_FINISH_REQUEST(text)
+
+    _is_old_task_finish_request._t2nwpmr_wrapped = True
+
+# === END_PATCH_TOPIC2_NO_WAITING_PROJECT_MEMORY_REVIVE_V1 ===

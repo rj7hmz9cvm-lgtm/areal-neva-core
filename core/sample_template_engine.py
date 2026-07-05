@@ -1023,8 +1023,8 @@ def _write_estimate_xlsx(path: str, items: List[Dict[str, Any]], template: Optio
     ws.cell(row=total_row + 1, column=8, value=f"=SUM(H6:H{row-1})").font = Font(bold=True)
     ws.cell(row=total_row + 2, column=5, value="Общий итог").font = Font(bold=True)
     ws.cell(row=total_row + 2, column=9, value=f"=SUM(I6:I{row-1})").font = Font(bold=True)
-    ws.cell(row=total_row + 3, column=5, value="НДС 20%").font = Font(bold=True)
-    ws.cell(row=total_row + 3, column=9, value=f"=I{total_row+2}*20%").font = Font(bold=True)
+    ws.cell(row=total_row + 3, column=5, value="НДС 22%").font = Font(bold=True)
+    ws.cell(row=total_row + 3, column=9, value=f"=I{total_row+2}*22%").font = Font(bold=True)
     ws.cell(row=total_row + 4, column=5, value="Итого с НДС").font = Font(bold=True)
     ws.cell(row=total_row + 4, column=9, value=f"=I{total_row+2}+I{total_row+3}").font = Font(bold=True)
 
@@ -1040,7 +1040,7 @@ def _write_estimate_xlsx(path: str, items: List[Dict[str, Any]], template: Optio
     ws2["B4"] = f"='Смета'!H{total_row+1}"
     ws2["A5"] = "Общий итог"
     ws2["B5"] = f"='Смета'!I{total_row+2}"
-    ws2["A6"] = "НДС 20%"
+    ws2["A6"] = "НДС 22%"
     ws2["B6"] = f"='Смета'!I{total_row+3}"
     ws2["A7"] = "Итого с НДС"
     ws2["B7"] = f"='Смета'!I{total_row+4}"
@@ -1133,7 +1133,7 @@ def _ceu2_public_message(template: Optional[Dict[str, Any]], items: List[Dict[st
         f"Позиций: {len(items)} | Итого: {total:.2f} руб\n\n"
         f"PDF: {pdf_link}\n"
         f"XLSX: {xlsx_link}\n\n"
-        "Доволен результатом? Да / Уточни / Правки"
+        "Если нужен расчёт с НДС 22%, ответьте: с НДС. Доволен результатом? Да / Уточни / Правки"
     )
 
 async def create_estimate_from_saved_template(raw_input: str, task_id: str, chat_id: str, topic_id: int = 0) -> Dict[str, Any]:
@@ -1752,7 +1752,7 @@ def _final_public_estimate_message_v1(template: Optional[Dict[str, Any]], items:
         "Старые сметы, старые Drive-ссылки и старые результаты не использованы\n\n"
         f"PDF: {pdf_link}\n"
         f"XLSX: {xlsx_link}\n\n"
-        "Доволен результатом? Да / Уточни / Правки"
+        "Если нужен расчёт с НДС 22%, ответьте: с НДС. Доволен результатом? Да / Уточни / Правки"
     )
 
 async def create_estimate_from_saved_template(raw_input: str, task_id: str, chat_id: str, topic_id: int = 0) -> Dict[str, Any]:
@@ -2296,7 +2296,7 @@ async def tcfc1_create_estimate_from_full_context(raw_context: str, task_id: str
         "Уточнения не запрашивались: нужные данные найдены в исходном сообщении и уточнениях\n\n"
         f"PDF: {pdf_link}\n"
         f"XLSX: {xlsx_link}\n\n"
-        "Доволен результатом? Да / Уточни / Правки"
+        "Если нужен расчёт с НДС 22%, ответьте: с НДС. Доволен результатом? Да / Уточни / Правки"
     )
 
     return {
@@ -3988,7 +3988,7 @@ def _t2real_write_xlsx(path: str, rows: _t2real_List[_t2real_Dict[str, _t2real_A
     total_row = ws.max_row + 1
     ws.append(["", "", "", "", "", "", "ИТОГО", f"=SUM(H{header_row+1}:H{total_row-1})", f"=SUM(I{header_row+1}:I{total_row-1})", f"=SUM(J{header_row+1}:J{total_row-1})"])
     nds_row = ws.max_row + 1
-    ws.append(["", "", "", "", "", "", "НДС 20%", "", "", f"=J{total_row}*0.2"])
+    ws.append(["", "", "", "", "", "", "НДС 22%", "", "", f"=J{total_row}*0.22"])
     ws.append(["", "", "", "", "", "", "С НДС", "", "", f"=J{total_row}+J{nds_row}"])
 
     for row in ws.iter_rows(min_row=header_row, max_row=ws.max_row):
@@ -4027,7 +4027,7 @@ def _t2real_write_pdf(path: str, rows: _t2real_List[_t2real_Dict[str, _t2real_An
     title = ParagraphStyle("AREAL_TITLE", parent=styles["Title"], fontName=font_name, fontSize=14, leading=16)
 
     total = sum(float(r.get("total") or 0) for r in rows)
-    nds = total * 0.2
+    nds = total * 0.22
     grand = total + nds
 
     story = [
@@ -4052,7 +4052,7 @@ def _t2real_write_pdf(path: str, rows: _t2real_List[_t2real_Dict[str, _t2real_An
         ])
 
     data.append(["", "", "", "", "", "", "ИТОГО", f"{total:,.0f}".replace(",", " ")])
-    data.append(["", "", "", "", "", "", "НДС 20%", f"{nds:,.0f}".replace(",", " ")])
+    data.append(["", "", "", "", "", "", "НДС 22%", f"{nds:,.0f}".replace(",", " ")])
     data.append(["", "", "", "", "", "", "С НДС", f"{grand:,.0f}".replace(",", " ")])
 
     table = Table(data, colWidths=[25, 85, 300, 45, 50, 70, 80, 80], repeatRows=1)
@@ -4179,7 +4179,7 @@ async def handle_topic2_one_big_formula_pipeline_v1(
     _t2real_write_pdf(pdf_path, rows, params)
 
     total = round(sum(float(r.get("total") or 0) for r in rows), 2)
-    nds = round(total * 0.2, 2)
+    nds = round(total * 0.22, 2)
     grand = round(total + nds, 2)
 
     manifest = {
@@ -4191,7 +4191,7 @@ async def handle_topic2_one_big_formula_pipeline_v1(
         "params": params,
         "rows_count": len(rows),
         "total": total,
-        "nds_20": nds,
+        "nds_22": nds,
         "grand_total": grand,
         "xlsx_path": xlsx_path,
         "pdf_path": pdf_path,
@@ -4229,7 +4229,7 @@ async def handle_topic2_one_big_formula_pipeline_v1(
         "Разделы:\n- " + "\n- ".join(section_names) + "\n\n"
         f"Позиций: {len(rows)}\n"
         f"Итого: {total:,.0f} руб\n".replace(",", " ")
-        + f"НДС 20%: {nds:,.0f} руб\n".replace(",", " ")
+        + f"НДС 22%: {nds:,.0f} руб\n".replace(",", " ")
         + f"С НДС: {grand:,.0f} руб\n\n".replace(",", " ")
         + f"📊 Excel: {xlsx_link}\n"
         + f"📄 PDF: {pdf_link}\n"
@@ -4682,8 +4682,8 @@ def _p1_create_xlsx_20260504(task_id, p, rows, meta):
     total_row = ws.max_row + 2
     ws.cell(total_row, 6).value = "Итого без НДС"
     ws.cell(total_row, 7).value = f"=SUM(G2:G{total_row-2})"
-    ws.cell(total_row + 1, 6).value = "НДС 20%"
-    ws.cell(total_row + 1, 7).value = f"=G{total_row}*0.2"
+    ws.cell(total_row + 1, 6).value = "НДС 22%"
+    ws.cell(total_row + 1, 7).value = f"=G{total_row}*0.22"
     ws.cell(total_row + 2, 6).value = "Итого с НДС"
     ws.cell(total_row + 2, 7).value = f"=G{total_row}+G{total_row+1}"
 
@@ -4736,7 +4736,7 @@ def _p1_create_pdf_20260504(task_id, p, rows, total):
         data = [["Раздел", "Позиция", "Ед.", "Кол-во", "Сумма"]]
         for r in rows:
             data.append([r["section"], r["item"], r["unit"], r["qty"], f"{r['total']:,.0f}".replace(",", " ")])
-        data.append(["", "", "", "Итого с НДС", f"{total * 1.2:,.0f}".replace(",", " ")])
+        data.append(["", "", "", "Итого с НДС", f"{total * 1.22:,.0f}".replace(",", " ")])
 
         table = Table(data, colWidths=[70, 230, 36, 46, 70])
         table.setStyle(TableStyle([
@@ -4770,8 +4770,8 @@ def _p1_upload_20260504(path, task_id, topic_id):
 
 def _p1_public_summary_20260504(p, rows, xlsx_link, pdf_link):
     subtotal = sum(float(r["total"] or 0) for r in rows)
-    vat = subtotal * 0.2
-    total = subtotal + vat
+    vat = 0.0
+    total = subtotal
     sections = []
     for r in rows:
         if r["section"] not in sections:
@@ -4796,13 +4796,13 @@ def _p1_public_summary_20260504(p, rows, xlsx_link, pdf_link):
         "",
         f"Позиций: {len(rows)}",
         f"Итого: {subtotal:,.0f} руб".replace(",", " "),
-        f"НДС 20%: {vat:,.0f} руб".replace(",", " "),
-        f"С НДС: {total:,.0f} руб".replace(",", " "),
+        "НДС 22%: 0 руб (не включён)",
+        "С НДС: не рассчитывалось",
         "",
         f"📊 Excel: {xlsx_link}",
         f"📄 PDF: {pdf_link}",
         "",
-        "Доволен результатом? Да / Уточни / Правки",
+        "Если нужен расчёт с НДС 22%, ответьте: с НДС. Доволен результатом? Да / Уточни / Правки",
     ]
     return _p1_clean_public_20260504("\n".join(lines))
 
@@ -5236,8 +5236,8 @@ def _p2_create_xlsx(task_id, p, rows, prices, price_status):
     total_row = ws.max_row + 2
     ws.cell(total_row, 6).value = "Итого без НДС"
     ws.cell(total_row, 7).value = f"=SUM(G2:G{total_row-2})"
-    ws.cell(total_row + 1, 6).value = "НДС 20%"
-    ws.cell(total_row + 1, 7).value = f"=G{total_row}*0.2"
+    ws.cell(total_row + 1, 6).value = "НДС 22%"
+    ws.cell(total_row + 1, 7).value = f"=G{total_row}*0.22"
     ws.cell(total_row + 2, 6).value = "Итого с НДС"
     ws.cell(total_row + 2, 7).value = f"=G{total_row}+G{total_row+1}"
 
@@ -5318,7 +5318,7 @@ def _p2_create_pdf(task_id, p, rows, subtotal):
         data = [["Раздел", "Позиция", "Ед.", "Кол-во", "Сумма"]]
         for r in rows:
             data.append([r["section"], r["item"], r["unit"], r["qty"], f"{r['total']:,.0f}".replace(",", " ")])
-        data.append(["", "", "", "Итого с НДС", f"{subtotal * 1.2:,.0f}".replace(",", " ")])
+        data.append(["", "", "", "Итого с НДС", f"{subtotal * 1.22:,.0f}".replace(",", " ")])
 
         table = Table(data, colWidths=[70, 230, 36, 46, 70])
         table.setStyle(TableStyle([
@@ -5356,8 +5356,8 @@ def _p2_safe_upload(path, task_id, topic_id):
 
 def _p2_summary(p, rows, xlsx_link, pdf_link, price_status):
     subtotal = sum(float(r["total"] or 0) for r in rows)
-    vat = subtotal * 0.2
-    total = subtotal + vat
+    vat = 0.0
+    total = subtotal
     sections = []
     for r in rows:
         if r["section"] not in sections:
@@ -5384,13 +5384,13 @@ def _p2_summary(p, rows, xlsx_link, pdf_link, price_status):
         "",
         f"Позиций: {len(rows)}",
         f"Итого: {subtotal:,.0f} руб".replace(",", " "),
-        f"НДС 20%: {vat:,.0f} руб".replace(",", " "),
-        f"С НДС: {total:,.0f} руб".replace(",", " "),
+        "НДС 22%: 0 руб (не включён)",
+        "С НДС: не рассчитывалось",
         "",
         f"📊 Excel: {xlsx_link}",
         f"📄 PDF: {pdf_link}",
         "",
-        "Доволен результатом? Да / Уточни / Правки",
+        "Если нужен расчёт с НДС 22%, ответьте: с НДС. Доволен результатом? Да / Уточни / Правки",
     ]
     return _p2_clean_public("\n".join(lines))
 
@@ -5663,8 +5663,8 @@ def _p3e_upload(path, task_id, topic_id):
 
 def _p3e_summary(p, rows, xlsx_link, pdf_link, price_status, applied):
     subtotal = sum(float(r.get("total") or 0) for r in rows)
-    vat = subtotal * 0.2
-    total = subtotal + vat
+    vat = 0.0
+    total = subtotal
     sections = []
     for r in rows:
         sec = r.get("section", "")
@@ -5690,13 +5690,13 @@ def _p3e_summary(p, rows, xlsx_link, pdf_link, price_status, applied):
         "",
         f"Позиций: {len(rows)}",
         f"Итого: {subtotal:,.0f} руб".replace(",", " "),
-        f"НДС 20%: {vat:,.0f} руб".replace(",", " "),
-        f"С НДС: {total:,.0f} руб".replace(",", " "),
+        "НДС 22%: 0 руб (не включён)",
+        "С НДС: не рассчитывалось",
         "",
         f"📊 Excel: {xlsx_link}",
         f"📄 PDF: {pdf_link}",
         "",
-        "Доволен результатом? Да / Уточни / Правки",
+        "Если нужен расчёт с НДС 22%, ответьте: с НДС. Доволен результатом? Да / Уточни / Правки",
     ])
     return _p3e_public_clean("\n".join(lines))
 
@@ -5820,8 +5820,8 @@ def _p2_create_xlsx(task_id, p, rows, prices=None, price_status=""):
     total_row = ws.max_row + 2
     ws.cell(total_row, 6).value = "Итого без НДС"
     ws.cell(total_row, 7).value = f"=SUM(G2:G{total_row-2})"
-    ws.cell(total_row + 1, 6).value = "НДС 20%"
-    ws.cell(total_row + 1, 7).value = f"=G{total_row}*0.2"
+    ws.cell(total_row + 1, 6).value = "НДС 22%"
+    ws.cell(total_row + 1, 7).value = f"=G{total_row}*0.22"
     ws.cell(total_row + 2, 6).value = "Итого с НДС"
     ws.cell(total_row + 2, 7).value = f"=G{total_row}+G{total_row+1}"
 
@@ -6286,7 +6286,7 @@ def _p6e2_create_xlsx(task_id, p, rows):
     for r in rows:
         estimate_rows.append([r["section"], r["name"], r["unit"], r["qty"], r["price"], r["total"], r["source"], r["note"]])
     total = sum(float(r["total"] or 0) for r in rows)
-    estimate_rows += [["", "", "", "", "Итого", total, "", ""], ["", "", "", "", "НДС 20%", round(total * 0.2, 2), "", ""], ["", "", "", "", "С НДС", round(total * 1.2, 2), "", ""]]
+    estimate_rows += [["", "", "", "", "Итого", total, "", ""], ["", "", "", "", "НДС 22%", round(total * 0.22, 2), "", ""], ["", "", "", "", "С НДС", round(total * 1.22, 2), "", ""]]
     rooms_rows = [["Помещение", "Площадь", "Статус"]]
     for r in p["rooms"]:
         rooms_rows.append([r.get("name", ""), r.get("area", 0), "распознано" if r.get("area", 0) else "площадь не видна"])
@@ -6318,8 +6318,8 @@ def _p6e2_create_pdf_text(task_id, p, rows):
         f"Расчётная площадь: {round(p['dims'][0] * p['dims'][1] * max(1, p['floors']), 2)} м²",
         f"Позиций: {len(rows)}",
         f"Итого: {total:,.0f} руб".replace(",", " "),
-        f"НДС 20%: {total * 0.2:,.0f} руб".replace(",", " "),
-        f"С НДС: {total * 1.2:,.0f} руб".replace(",", " "),
+        f"НДС 22%: {total * 0.22:,.0f} руб".replace(",", " "),
+        f"С НДС: {total * 1.22:,.0f} руб".replace(",", " "),
         "",
         "Непонятные параметры оставлены с нулевым количеством или базовой ставкой с пометкой",
     ]
@@ -6367,8 +6367,8 @@ async def handle_topic2_image_estimate_p6e2(conn, task=None, chat_id=None, topic
         f"Терраса: {'да' if plan['terrace'] else 'нет'}",
         f"Позиций: {len(rows)}",
         f"Итого: {total:,.0f} руб".replace(",", " "),
-        f"НДС 20%: {total * 0.2:,.0f} руб".replace(",", " "),
-        f"С НДС: {total * 1.2:,.0f} руб".replace(",", " "),
+        f"НДС 22%: {total * 0.22:,.0f} руб".replace(",", " "),
+        f"С НДС: {total * 1.22:,.0f} руб".replace(",", " "),
         "",
         f"Excel: {xlsx}",
         f"TXT/PDF-source: {txt}",
@@ -6643,8 +6643,8 @@ try:
                 "Терраса: {}".format("да" if plan["terrace"] else "нет"),
                 "Позиций в смете: {}".format(len(rows)),
                 "Итого: {:,.0f} руб".format(total).replace(",", " "),
-                "НДС 20%: {:,.0f} руб".format(total * 0.2).replace(",", " "),
-                "С НДС: {:,.0f} руб".format(total * 1.2).replace(",", " "),
+                "НДС 22%: {:,.0f} руб".format(total * 0.22).replace(",", " "),
+                "С НДС: {:,.0f} руб".format(total * 1.22).replace(",", " "),
                 "",
                 "Excel: {}".format(xlsx),
                 "TXT/PDF-source: {}".format(txt),
@@ -7838,8 +7838,8 @@ def _p2_create_xlsx(task_id, p, rows, prices=None, price_status=""):
         data_end = row_num - 1
         ws.cell(row_num + 1, 9, "Итого без НДС")
         ws.cell(row_num + 1, 10).value = f"=SUM(J2:J{data_end})"
-        ws.cell(row_num + 2, 9, "НДС 20%")
-        ws.cell(row_num + 2, 10).value = f"=J{row_num+1}*0.2"
+        ws.cell(row_num + 2, 9, "НДС 22%")
+        ws.cell(row_num + 2, 10).value = f"=J{row_num+1}*0.22"
         ws.cell(row_num + 3, 9, "Итого с НДС")
         ws.cell(row_num + 3, 10).value = f"=J{row_num+1}+J{row_num+2}"
 
@@ -8175,14 +8175,14 @@ def _p2_create_xlsx(task_id, p, rows, prices=None, price_status=""):
     ws.cell(tr, 10).font = Font(bold=True)
     ws.cell(tr, 10).fill = total_fill
 
-    ws.cell(tr + 1, 9).value = "НДС 20%, ₽"
+    ws.cell(tr + 1, 9).value = "НДС 22% (не включён), ₽"
     ws.cell(tr + 1, 9).font = Font(bold=True)
-    ws.cell(tr + 1, 10).value = f"=J{tr}*0.2"
+    ws.cell(tr + 1, 10).value = 0
 
-    ws.cell(tr + 2, 9).value = "Итого с НДС, ₽"
+    ws.cell(tr + 2, 9).value = "Итого к оплате без НДС, ₽"
     ws.cell(tr + 2, 9).font = Font(bold=True)
     ws.cell(tr + 2, 9).fill = total_fill
-    ws.cell(tr + 2, 10).value = f"=J{tr}+J{tr+1}"
+    ws.cell(tr + 2, 10).value = f"=J{tr}"
     ws.cell(tr + 2, 10).font = Font(bold=True)
     ws.cell(tr + 2, 10).fill = total_fill
 

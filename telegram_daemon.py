@@ -847,16 +847,31 @@ async def universal_handler(message: types.Message):
                 await message.answer("Хорошо, доработаю. Подтверждение снято.  # FULLFIX_02_E")
                 return
 
-        if reply_to:
+        if reply_to and not message.voice:
             async with aiosqlite.connect(DB) as db:
                 cur = await db.execute(
-                    "SELECT id, state FROM tasks WHERE chat_id = ? AND reply_to_message_id = ? AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION') ORDER BY updated_at DESC LIMIT 1",
-                    (tg_id, reply_to)
+                    "SELECT id, state FROM tasks WHERE chat_id = ? AND (bot_message_id = ? OR reply_to_message_id = ?) AND COALESCE(topic_id,0) = COALESCE(?,0) AND state IN ('NEW','WAITING_CLARIFICATION','IN_PROGRESS','AWAITING_CONFIRMATION') ORDER BY CASE WHEN bot_message_id = ? THEN 0 ELSE 1 END, updated_at DESC LIMIT 1",
+                    (tg_id, reply_to, reply_to, topic_id, reply_to)
                 )
                 parent = await cur.fetchone()
             if parent:
                 parent_id, parent_state = parent
                 if parent_state == "WAITING_CLARIFICATION":
+                    _topic2_price_reply = (
+                        int(topic_id or 0) == 2
+                        and lower.strip().strip(" .,!?:;()[]{}") in ("1", "2", "3", "4", "а", "б", "в", "г", "a", "b", "v", "g")
+                    )
+                    if _topic2_price_reply:
+                        await create_task(message, "text", text, "NEW")
+                        return
+                    else:
+                        async with aiosqlite.connect(DB) as db:
+                            await db.execute("UPDATE tasks SET state = 'IN_PROGRESS', updated_at = ? WHERE id = ?", (now_iso(), parent_id))
+                            await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, f"clarified:{text}", now_iso()))
+                            await db.commit()
+                        await message.answer("Принято, продолжаю")
+                        return
+                if parent and parent_state == "WAITING_CLARIFICATION":
                     async with aiosqlite.connect(DB) as db:
                         await db.execute("UPDATE tasks SET state = 'IN_PROGRESS', updated_at = ? WHERE id = ?", (now_iso(), parent_id))
                         await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, f"clarified:{text}", now_iso()))
@@ -868,9 +883,9 @@ async def universal_handler(message: types.Message):
                         await db.execute("INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, ?)", (parent_id, f"confirmed:{text}", now_iso()))
                         await db.commit()
                     await message.answer("Принято, выполняю")
+                    return
                 else:
-                    await message.answer("Уточните запрос")
-                return
+                    pass
 
         # 7. SEARCH TASK
         if any(t in lower for t in SEARCH_TRIGGERS):
@@ -898,6 +913,10 @@ async def universal_handler(message: types.Message):
             voice_lower = voice_text.lower()
             voice_reply_to = message.reply_to_message.message_id if message.reply_to_message else None
             _voice_topic_id = getattr(message, "message_thread_id", None) or 0
+            try:
+                await message.answer(f"🎤 {voice_text}")
+            except Exception as _e:
+                logger.warning("transcript_send_fail err=%s", _e)
 
             # === PATCH_VOICE_CONFIRM_DIRECT ===
             # Voice does not populate message.text, so confirm/reject must be checked after STT
@@ -962,10 +981,6 @@ async def universal_handler(message: types.Message):
             if any(voice_lower.strip() == x for x in _VOICE_CONTROL):
                 if await _handle_control_text(message, tg_id, voice_text, voice_lower, voice_reply_to, _voice_topic_id):
                     return
-            try:
-                await message.answer(f"🎤 {voice_text}")
-            except Exception as _e:
-                logger.warning("transcript_send_fail err=%s", _e)
             await create_task(message, "text", "[VOICE] " + voice_text, "NEW")
             return
         

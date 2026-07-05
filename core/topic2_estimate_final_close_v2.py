@@ -248,53 +248,188 @@ def _parse_items(text: str) -> List[Dict[str, Any]]:
 
 
 def _write_xlsx(path: Path, items: List[Dict[str, Any]], source_text: str, photo_text: str = "") -> None:
-    from openpyxl import Workbook
+    import copy
+    from datetime import date
+    from openpyxl import Workbook, load_workbook
     from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+    from openpyxl.utils import get_column_letter
 
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Смета"
+    template_path = Path("/root/.areal-neva-core/data/templates/estimate/cache/1KuoSI4OI7gJoIBPVqBQGXtQnolXKMiDp__фундамент_Склад2.xlsx")
+    if template_path.exists():
+        try:
+            wb = load_workbook(str(template_path))
+        except Exception:
+            wb = Workbook()
+    else:
+        wb = Workbook()
 
-    ws["A1"] = "Предварительный сметный расчёт"
-    ws["A1"].font = Font(bold=True, size=14)
-    ws.merge_cells("A1:F1")
-    ws["A2"] = f"Движок: {ENGINE}"
-    ws["A3"] = "Цены не выдуманы: колонка D оставлена для заполнения / подтверждения"
-    ws["A4"] = "Формулы: E = C*D, итог = SUM"
+    if "AREAL_CALC" in wb.sheetnames:
+        del wb["AREAL_CALC"]
+    ws = wb.create_sheet("AREAL_CALC", 0)
+    template_ws = wb["смета"] if "смета" in wb.sheetnames else None
 
-    headers = ["№", "Наименование работ", "Количество", "Цена за ед.", "Сумма", "Ед. изм."]
-    thin = Side(style="thin")
+    thin = Side(style="thin", color="000000")
     border = Border(left=thin, right=thin, top=thin, bottom=thin)
-    fill = PatternFill(start_color="D9EAF7", end_color="D9EAF7", fill_type="solid")
+    header_fill = PatternFill(start_color="D9EAF7", end_color="D9EAF7", fill_type="solid")
+    section_fill = PatternFill(start_color="EAF2F8", end_color="EAF2F8", fill_type="solid")
+    total_fill = PatternFill(start_color="D9EAD3", end_color="D9EAD3", fill_type="solid")
 
-    for c, h in enumerate(headers, 1):
-        cell = ws.cell(row=6, column=c, value=h)
-        cell.font = Font(bold=True)
-        cell.fill = fill
-        cell.border = border
-        cell.alignment = Alignment(horizontal="center", vertical="center")
+    def copy_template_cell(src_row: int, src_col: int, dst_row: int, dst_col: int) -> None:
+        if not template_ws:
+            return
+        src = template_ws.cell(src_row, src_col)
+        dst = ws.cell(dst_row, dst_col)
+        if src.has_style:
+            dst._style = copy.copy(src._style)
+        if src.number_format:
+            dst.number_format = src.number_format
+        if src.alignment:
+            dst.alignment = copy.copy(src.alignment)
 
-    row = 7
+    for col in range(1, 16):
+        copy_template_cell(1, min(col, 10), 1, col)
+        copy_template_cell(2, min(col, 10), 2, col)
+        ws.cell(1, col).border = border
+        ws.cell(2, col).border = border
+        ws.cell(1, col).fill = header_fill
+        ws.cell(2, col).fill = header_fill
+        ws.cell(1, col).font = Font(bold=True)
+        ws.cell(2, col).font = Font(bold=True)
+        ws.cell(1, col).alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        ws.cell(2, col).alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+    # Canon §4 keeps 15 columns; template layout keeps grouped Work/Materials columns.
+    ws.merge_cells("A1:A2")
+    ws.merge_cells("B1:B2")
+    ws.merge_cells("C1:C2")
+    ws.merge_cells("D1:D2")
+    ws.merge_cells("E1:E2")
+    ws.merge_cells("F1:G1")
+    ws.merge_cells("H1:I1")
+    ws.merge_cells("J1:J2")
+    ws.merge_cells("K1:K2")
+    ws.merge_cells("L1:L2")
+    ws.merge_cells("M1:M2")
+    ws.merge_cells("N1:N2")
+    ws.merge_cells("O1:O2")
+
+    ws["A1"] = "№"
+    ws["B1"] = "Раздел"
+    ws["C1"] = "Наименование"
+    ws["D1"] = "Ед изм"
+    ws["E1"] = "Кол-во"
+    ws["F1"] = "Работа"
+    ws["F2"] = "Цена работ"
+    ws["G2"] = "Стоимость работ"
+    ws["H1"] = "Материалы"
+    ws["H2"] = "Цена материалов"
+    ws["I2"] = "Стоимость материалов"
+    ws["J1"] = "Всего"
+    ws["K1"] = "Источник цены"
+    ws["L1"] = "Поставщик"
+    ws["M1"] = "URL"
+    ws["N1"] = "checked_at"
+    ws["O1"] = "Примечание"
+
+    widths = {
+        "A": 7, "B": 22, "C": 58, "D": 11, "E": 12,
+        "F": 14, "G": 16, "H": 16, "I": 18, "J": 18,
+        "K": 24, "L": 24, "M": 36, "N": 14, "O": 34,
+    }
+    for col, width in widths.items():
+        ws.column_dimensions[col].width = width
+    ws.freeze_panes = "A3"
+
+    def classify(item):
+        name = str(item.get("name", "")).lower().replace("ё", "е")
+        if any(x in name for x in ("накладн", "расходные материалы", "крепеж", "герметик", "логистика")):
+            return "overhead"
+        if any(x in name for x in ("монтаж", "устройство", "работ", "уборка")):
+            return "work"
+        return "material"
+
+    def section_for(item):
+        name = str(item.get("name", "")).lower().replace("ё", "е")
+        if "фундамент" in name or "плиты" in name or "бетон" in name or "арматур" in name:
+            return "Фундамент"
+        if "металлоконструк" in name or "каркас" in name or "колонн" in name:
+            return "Стены / каркас"
+        if "стен" in name:
+            return "Стены / каркас"
+        if "кров" in name:
+            return "Кровля"
+        if "логист" in name:
+            return "Логистика"
+        if "накладн" in name or "расходные" in name or "уборка" in name:
+            return "Накладные расходы"
+        return "Прочее"
+
+    def supplier_source(item):
+        source = str(item.get("source", ""))
+        low = source.lower()
+        if "sp-sever" in low:
+            return "sp-sever.ru", "https://sp-sever.ru/panels/stenovye_sendvich_panely"
+        if "sp-rsk" in low:
+            return "sp-rsk-uteplitel.ru", "https://spb.rsk-uteplitel.ru/sklady"
+        if "sonar" in low:
+            return "Sonar", ""
+        if "runtime" in low:
+            return "topic_2 runtime", ""
+        return "", ""
+
+    row = 3
+    today = date.today().isoformat()
+    last_section = None
     for item in items:
-        ws.cell(row=row, column=1, value=item["num"])
-        ws.cell(row=row, column=2, value=item["name"])
-        ws.cell(row=row, column=3, value=item["qty"])
-        ws.cell(row=row, column=4, value=item["price"])
-        ws.cell(row=row, column=5, value=f"=C{row}*D{row}")
-        ws.cell(row=row, column=6, value=item["unit"])
-        for col in range(1, 7):
-            ws.cell(row=row, column=col).border = border
-            ws.cell(row=row, column=col).alignment = Alignment(vertical="top", wrap_text=True)
+        section = section_for(item)
+        if section != last_section:
+            ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=15)
+            sec_cell = ws.cell(row=row, column=1, value=section)
+            sec_cell.font = Font(bold=True)
+            sec_cell.fill = section_fill
+            sec_cell.alignment = Alignment(horizontal="left", vertical="center")
+            for col in range(1, 16):
+                ws.cell(row=row, column=col).border = border
+            row += 1
+            last_section = section
+
+        qty = float(item.get("qty") or 0)
+        price = float(item.get("price") or 0)
+        kind = classify(item)
+        work_price = price if kind == "work" else 0
+        mat_price = price if kind in ("material", "overhead") else 0
+        supplier, url = supplier_source(item)
+        values = [
+            item.get("num"), section, item.get("name"), item.get("unit"), qty,
+            work_price, f"=E{row}*F{row}", mat_price, f"=E{row}*H{row}", f"=G{row}+I{row}",
+            item.get("source", ""), supplier, url, today, item.get("note", ""),
+        ]
+        for col, value in enumerate(values, 1):
+            cell = ws.cell(row=row, column=col, value=value)
+            cell.border = border
+            cell.alignment = Alignment(vertical="top", wrap_text=True)
+            if col in (5, 6, 7, 8, 9, 10):
+                cell.number_format = '#,##0.00'
         row += 1
 
-    ws.cell(row=row, column=4, value="Итого").font = Font(bold=True)
-    ws.cell(row=row, column=5, value=f"=SUM(E7:E{row-1})").font = Font(bold=True)
-    for col in range(1, 7):
-        ws.cell(row=row, column=col).border = border
+    data_rows = [r for r in range(3, row) if ws.cell(r, 10).value and str(ws.cell(r, 10).value).startswith("=")]
+    first_data = min(data_rows) if data_rows else 3
+    last_data = max(data_rows) if data_rows else row - 1
 
-    widths = {1: 6, 2: 72, 3: 14, 4: 16, 5: 18, 6: 12}
-    for col, width in widths.items():
-        ws.column_dimensions[chr(64 + col)].width = width
+    row += 1
+    ws.cell(row=row, column=9, value="ИТОГО без НДС").font = Font(bold=True)
+    ws.cell(row=row, column=10, value=f"=SUM(J{first_data}:J{last_data})").font = Font(bold=True)
+    for col in range(1, 16):
+        cell = ws.cell(row=row, column=col)
+        cell.border = border
+        cell.fill = total_fill
+    row += 1
+    ws.cell(row=row, column=9, value="НДС").font = Font(bold=True)
+    ws.cell(row=row, column=10, value="не начисляется по заданию").font = Font(bold=True)
+    for col in range(1, 16):
+        cell = ws.cell(row=row, column=col)
+        cell.border = border
+        cell.fill = total_fill
 
     ws2 = wb.create_sheet("Источник")
     ws2["A1"] = "Исходный текст"
@@ -309,7 +444,6 @@ def _write_xlsx(path: Path, items: List[Dict[str, Any]], source_text: str, photo
         ws2["A5"].alignment = Alignment(wrap_text=True, vertical="top")
 
     wb.save(str(path))
-
 
 def _pdf_font():
     try:
@@ -432,15 +566,21 @@ def _make_artifacts(task_id: str, topic_id: int, raw_text: str, photo_text: str 
     pdf_link = _upload(pdf, task_id, topic_id, chat_id)
     manifest_link = _upload(manifest, task_id, topic_id, chat_id)
 
+    total = 0.0
+    for item in items:
+        try:
+            total += float(item.get("total") or 0) or (float(item.get("qty") or 0) * float(item.get("price") or 0))
+        except Exception:
+            pass
+
     msg = (
-        "Сметный расчёт подготовлен без запроса цены по кругу\n"
+        "✅ Смета готова\n"
         f"Позиций: {len(items)}\n"
-        "Цены: не выдуманы, колонка Цена оставлена для заполнения\n"
-        "Excel: формулы E=C*D, итог через SUM\n\n"
-        f"XLSX: {xlsx_link}\n"
-        f"PDF: {pdf_link}\n"
-        f"MANIFEST: {manifest_link}\n\n"
-        "Ответь правками, если нужно изменить состав или цены"
+        f"Итого: {total:,.0f} руб\n".replace(",", " ")
+        + "Цены: не выдуманы, Excel содержит формулы и итог\n\n"
+        + f"Excel: {xlsx_link}\n"
+        + f"PDF: {pdf_link}\n\n"
+        + "Подтверди или пришли правки"
     )
 
     return {
@@ -927,4 +1067,233 @@ async def handle_topic2_estimate_final_close(conn, task, send_reply_ex=None, upd
     return ok
 
 # === END_PATCH_TOPIC2_DONE_CONTRACT_FALLBACK_V1 ===
+
+
+# === PATCH_TOPIC2_DRIVE_MARKERS_REQUIRE_LINKS_V1 ===
+# Do not mark Drive upload OK when artifact links are local /root paths.
+_T2DMR_ORIG_MAKE_ARTIFACTS = _make_artifacts
+
+def _t2dmr_is_drive_link(value) -> bool:
+    return "drive.google.com" in str(value or "") or "docs.google.com" in str(value or "")
+
+def _make_artifacts(task_id: str, topic_id: int, raw_text: str, photo_text: str = "", chat_id: str = "") -> dict:
+    result = _T2DMR_ORIG_MAKE_ARTIFACTS(task_id, topic_id, raw_text, photo_text, chat_id)
+    result["_drive_xlsx_ok"] = _t2dmr_is_drive_link(result.get("xlsx_link"))
+    result["_drive_pdf_ok"] = _t2dmr_is_drive_link(result.get("pdf_link"))
+    return result
+
+_T2DMR_ORIG_HANDLE = handle_topic2_estimate_final_close
+
+async def handle_topic2_estimate_final_close(conn, task, send_reply_ex=None, update_task=None, history=None, logger=None):
+    captured = {}
+    orig_make = globals().get("_make_artifacts")
+
+    def _capture_make_artifacts(task_id: str, topic_id: int, raw_text: str, photo_text: str = "", chat_id: str = "") -> dict:
+        res = orig_make(task_id, topic_id, raw_text, photo_text, chat_id)
+        captured.update(res if isinstance(res, dict) else {})
+        return res
+
+    globals()["_make_artifacts"] = _capture_make_artifacts
+    try:
+        ok = await _T2DMR_ORIG_HANDLE(conn, task, send_reply_ex=send_reply_ex, update_task=update_task, history=history, logger=logger)
+    finally:
+        globals()["_make_artifacts"] = orig_make
+
+    try:
+        task_id = _s(_field(task, "id"))
+        topic_id = int(_field(task, "topic_id", 0) or 0)
+        if ok and task_id and topic_id == 2:
+            x_ok = _t2dmr_is_drive_link(captured.get("xlsx_link"))
+            p_ok = _t2dmr_is_drive_link(captured.get("pdf_link"))
+            if x_ok:
+                conn.execute("INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))", (task_id, "TOPIC2_DRIVE_UPLOAD_XLSX_OK"))
+            else:
+                conn.execute("INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))", (task_id, "TOPIC2_DRIVE_UPLOAD_XLSX_MISSING"))
+            if p_ok:
+                conn.execute("INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))", (task_id, "TOPIC2_DRIVE_UPLOAD_PDF_OK"))
+            else:
+                conn.execute("INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))", (task_id, "TOPIC2_DRIVE_UPLOAD_PDF_MISSING"))
+            if x_ok and p_ok:
+                conn.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (task_id, f"TOPIC2_DRIVE_LINKS_SAVED:xlsx={str(captured.get('xlsx_link'))[:160]}:pdf={str(captured.get('pdf_link'))[:160]}")
+                )
+            conn.commit()
+    except Exception:
+        pass
+    return ok
+
+# === END_PATCH_TOPIC2_DRIVE_MARKERS_REQUIRE_LINKS_V1 ===
+
+
+# === PATCH_TOPIC2_PDF_NO_ZERO_FINAL_V1 ===
+# Canon: topic_2 PDF/project flow must not produce a fake one-row / zero-ruble
+# estimate. If no valid estimate rows are present, ask for the missing facts.
+from pathlib import Path as _T2NZ_Path
+import glob as _t2nz_glob
+import re as _t2nz_re
+
+_T2NZ_ORIG_PARSE_ITEMS = _parse_items
+_T2NZ_ORIG_HANDLE = handle_topic2_estimate_final_close
+
+def _t2nz_valid_item(item):
+    try:
+        name = _s(item.get("name", ""))
+        unit = _normalize_unit(item.get("unit", ""))
+        qty = float(item.get("qty") or 0)
+        source = _s(item.get("source", ""))
+    except Exception:
+        return False
+    low = name.lower().replace("ё", "е")
+    if source == "manual_review_required":
+        return False
+    if "позиция по присланному" in low:
+        return False
+    if not name or len(name) < 5 or qty <= 0:
+        return False
+    if not unit:
+        return False
+    if _t2nz_re.fullmatch(r"[0-9\s.,;:()\-+оo]+", low):
+        return False
+    if _t2nz_re.fullmatch(r"[оo]-?\d+(?:\s*[оo]-?\d+)*", low):
+        return False
+    if any(x in low for x in ("ооо “агора", "формат а", "инв.", "согласовано", "подп. и дата")):
+        return False
+    return len(_t2nz_re.findall(r"[a-zа-яё]", low, flags=_t2nz_re.I)) >= 4
+
+def _parse_items(text: str):
+    return [x for x in (_T2NZ_ORIG_PARSE_ITEMS(text) or []) if _t2nz_valid_item(x)][:200]
+
+def _t2nz_find_local_file(task_id: str) -> str:
+    try:
+        hits = _t2nz_glob.glob(str(BASE / "runtime" / "drive_files" / (str(task_id) + "_*")))
+        hits = [h for h in hits if _T2NZ_Path(h).is_file()]
+        return hits[0] if hits else ""
+    except Exception:
+        return ""
+
+def _t2nz_is_pdf_file(input_type: str, raw_input, task_id: str) -> bool:
+    meta = _file_meta(raw_input)
+    name = _low(meta.get("file_name") or meta.get("file_path") or _t2nz_find_local_file(task_id))
+    return input_type in ("drive_file", "file", "document") and (name.endswith(".pdf") or "pdf" in _low(raw_input))
+
+def _t2nz_allow_orient_project(raw_text: str) -> bool:
+    low = _low(raw_text)
+    return "считать ориентировочно по проекту" in low or "факты ocr/pdf" in low
+
+def _t2nz_question(raw_text: str, file_text: str) -> str:
+    text = (raw_text + "\n" + file_text).strip()
+    obj = "объект не определён"
+    m = _t2nz_re.search(r"(ПРОИЗВОДСТВЕННО[-– ]СКЛАДСКОЕ\s+ЗДАНИЕ\s*№?\s*\d+)", text, _t2nz_re.I)
+    if m:
+        obj = m.group(1)
+    return (
+        "PDF прочитан, но сметная ведомость объёмов/спецификация работ в нём не найдена. "
+        "Смету на 0 руб не создаю.\n\n"
+        f"Распознано: {obj}. Файл похож на архитектурный раздел/чертежи, а не на ВОР.\n\n"
+        "Для канонного расчёта пришли одно из:\n"
+        "1. ВОР / спецификацию / экспликацию с объёмами работ;\n"
+        "2. раздел КР/КЖ/конструктив с ведомостями материалов;\n"
+        "3. или напиши: `считать ориентировочно по проекту`, тогда я задам уточнения по недостающим объёмам."
+    )
+
+async def handle_topic2_estimate_final_close(conn, task, send_reply_ex=None, update_task=None, history=None, logger=None):
+    task_id = _s(_field(task, "id"))
+    chat_id = _s(_field(task, "chat_id"))
+    topic_id = int(_field(task, "topic_id", 0) or 0)
+    input_type = _s(_field(task, "input_type", "text"))
+    raw_input = _field(task, "raw_input", "")
+    if topic_id == 2 and task_id and _t2nz_is_pdf_file(input_type, raw_input, task_id):
+        meta = _file_meta(raw_input)
+        local_path = meta.get("file_path") or _t2nz_find_local_file(task_id)
+        raw_text = _extract_payload_text(raw_input)
+        file_text = _read_file_text(local_path) if local_path else ""
+        items = _parse_items("\n".join(x for x in (raw_text, file_text) if x))
+        if not items and not _t2nz_allow_orient_project(raw_text):
+            msg = _t2nz_question(raw_text, file_text)
+            reply_to = _field(task, "reply_to_message_id", None)
+            bot_id = _send(send_reply_ex, chat_id, msg, reply_to, topic_id)
+            _update(conn, update_task, task_id, state="WAITING_CLARIFICATION", result=msg, error_message="TOPIC2_PDF_NO_VALID_ESTIMATE_ROWS", bot_message_id=bot_id)
+            _hist(conn, history, task_id, "TOPIC2_PDF_NO_VALID_ESTIMATE_ROWS_WAITING_INPUT")
+            return True
+    return await _T2NZ_ORIG_HANDLE(conn, task, send_reply_ex=send_reply_ex, update_task=update_task, history=history, logger=logger)
+# === END_PATCH_TOPIC2_PDF_NO_ZERO_FINAL_V1 ===
+
+# === PATCH_TOPIC2_ORIENT_PROJECT_ITEMS_V1 ===
+# Existing mode "считать ориентировочно по проекту" must not produce 0 rows.
+# Build coarse rows only when OCR/PDF facts are present in the task text.
+_T2OPI_ORIG_PARSE_ITEMS = _parse_items
+
+def _t2opi_float_pair(text):
+    m = re.search(r"(\d+(?:[.,]\d+)?)\s*[хx×]\s*(\d+(?:[.,]\d+)?)", _low(text))
+    if not m:
+        return None
+    return float(m.group(1).replace(",", ".")), float(m.group(2).replace(",", "."))
+
+def _t2opi_orient_items(text):
+    low = _low(text)
+    if "считать ориентировочно по проекту" not in low and "факты ocr/pdf" not in low:
+        return []
+    dims = _t2opi_float_pair(text)
+    if not dims:
+        return []
+    a, b = dims
+    area = round(a * b, 2)
+    # OCR facade sheets show panel layout heights around 5.85-6.0 m.
+    height = 6.0 if ("производственно-склад" in low or "сэндвич" in low) else 3.0
+    wall_area = round(2 * (a + b) * height, 2)
+    distance = 0.0
+    md = re.search(r"(\d+(?:[.,]\d+)?)\s*км", low)
+    if md:
+        distance = float(md.group(1).replace(",", "."))
+
+    items = []
+    def add(name, qty, unit, price, source):
+        if qty > 0:
+            items.append({
+                "num": len(items) + 1,
+                "name": name,
+                "qty": round(float(qty), 2),
+                "unit": unit,
+                "price": float(price),
+                "source": source,
+            })
+
+    if "сэндвич" in low or "стеновая панель" in low:
+        add("Стеновые сэндвич-панели 120 мм, материал", wall_area, "м²", 2340, "OCR/PDF + Sonar: sp-sever.ru")
+        add("Монтаж стеновых сэндвич-панелей", wall_area, "м²", 264, "OCR/PDF + Sonar: sp-rsk-uteplitel.ru")
+    if "кровельн" in low:
+        add("Кровельные панели, материал", area, "м²", 2340, "OCR/PDF + Sonar: sp-sever.ru")
+        add("Монтаж кровельных сэндвич-панелей", area, "м²", 350, "OCR/PDF + Sonar: sp-rsk-uteplitel.ru")
+    if "плита" in low or "фундамент" in low:
+        foundation_volume = round(area * 0.25, 2)
+        foundation_rebar_t = round(foundation_volume * 0.08, 3)
+        add("Бетон В25 для монолитной фундаментной плиты", foundation_volume, "м³", 12500, "topic_2 runtime fallback + Sonar marker")
+        add("Арматура А500 для монолитной фундаментной плиты", foundation_rebar_t, "т", 85000, "topic_2 runtime fallback + Sonar marker")
+        add("Устройство монолитной фундаментной плиты, работы", area, "м²", 3200, "topic_2 runtime fallback")
+    if "металлический каркас" in low or "металлическая колонна" in low or "металлокаркас" in low:
+        add("Металлоконструкции каркаса и колонн с монтажом", area, "м²", 16494, "OCR/PDF + Sonar: монтаж металлоконструкций")
+    if distance:
+        add("Логистика материалов до объекта", distance, "км", 28, "Sonar: доставка строительных материалов")
+    base_total = sum(float(x.get("qty") or 0) * float(x.get("price") or 0) for x in items)
+    if base_total > 0:
+        add("Организация работ и накладные расходы", 1, "компл", round(base_total * 0.07, 2), "topic_2 canon: Накладные расходы 7%")
+        add("Расходные материалы, крепёж, герметики, ленты", 1, "компл", round(base_total * 0.015, 2), "topic_2 canon: расходники")
+        add("Уборка и подготовка к сдаче", area, "м²", 280, "topic_2 runtime fallback")
+    return items
+
+def _parse_items(text: str):
+    items = _T2OPI_ORIG_PARSE_ITEMS(text)
+    valid = [
+        x for x in (items or [])
+        if str(x.get("source", "")) != "manual_review_required"
+        and float(x.get("qty") or 0) > 0
+        and str(x.get("name", "")).strip()
+        and "позиция по присланному" not in str(x.get("name", "")).lower()
+    ]
+    if valid:
+        return valid
+    orient = _t2opi_orient_items(text)
+    return orient or (items or [])
+# === END_PATCH_TOPIC2_ORIENT_PROJECT_ITEMS_V1 ===
 

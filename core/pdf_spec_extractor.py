@@ -212,3 +212,72 @@ def extract_spec_rows(pdf_path: str, max_pages: int = 30):
 
     return dedup
 # === END_PDF_SPEC_EXTRACTOR_REAL_V1_PDFPLUMBER ===
+
+
+# === PDF_SPEC_EXTRACTOR_TABLE_OVERLAY_COMPAT_V1 ===
+def extract_spec_table_overlay(file_path: str, **kwargs) -> Dict[str, Any]:
+    rows = extract_spec_rows(file_path, max_pages=int(kwargs.get("max_pages") or 30))
+    return {"rows": rows, "items": rows, "count": len(rows), "error": "", "stub": False}
+# === END_PDF_SPEC_EXTRACTOR_TABLE_OVERLAY_COMPAT_V1 ===
+
+
+# === PATCH_TOPIC2_PDF_SPEC_VALID_ROWS_ONLY_V1 ===
+# Canon: drawings/stamps/window marks are not estimate rows. Invalid rows must not
+# unlock a zero-ruble estimate.
+def _t2pdf_valid_estimate_row(row):
+    try:
+        name = _s(row.get("name", ""))
+        unit = _unit(row.get("unit", ""))
+        qty = float(row.get("qty") or 0)
+    except Exception:
+        return False
+    low = name.lower().replace("ё", "е")
+    if not name or len(name) < 5:
+        return False
+    if not unit:
+        return False
+    if qty <= 0 or qty > 10000000:
+        return False
+    if re.fullmatch(r"[0-9\s.,;:()\-+оo]+", low):
+        return False
+    if re.fullmatch(r"[оo]-?\d+(?:\s*[оo]-?\d+)*", low):
+        return False
+    if any(x in low for x in ("ооо “агора", "инв.", "формат а", "согласовано", "подп. и дата")):
+        return False
+    letters = re.findall(r"[a-zа-яё]", low, flags=re.I)
+    return len(letters) >= 4
+
+_T2PDF_ORIG_EXTRACT_SPEC = extract_spec
+_T2PDF_ORIG_EXTRACT_SPEC_ROWS = extract_spec_rows
+
+def _t2pdf_filter_rows(rows):
+    out = []
+    seen = set()
+    for row in rows or []:
+        if not isinstance(row, dict) or not _t2pdf_valid_estimate_row(row):
+            continue
+        key = (row.get("name"), row.get("unit"), row.get("qty"), row.get("price"), row.get("total"))
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(row)
+    return out
+
+def extract_spec(file_path: str, **kwargs) -> Dict[str, Any]:
+    res = _T2PDF_ORIG_EXTRACT_SPEC(file_path, **kwargs)
+    rows = _t2pdf_filter_rows((res or {}).get("rows") if isinstance(res, dict) else [])
+    if isinstance(res, dict):
+        res = dict(res)
+        res["rows"] = rows
+        res["count"] = len(rows)
+        if not rows:
+            res["error"] = "PDF_SPEC_NO_VALID_ESTIMATE_ROWS"
+        return res
+    return {"rows": rows, "count": len(rows), "error": "" if rows else "PDF_SPEC_NO_VALID_ESTIMATE_ROWS", "stub": False}
+
+def extract_spec_rows(pdf_path: str, max_pages: int = 30):
+    rows = _t2pdf_filter_rows(_T2PDF_ORIG_EXTRACT_SPEC_ROWS(pdf_path, max_pages=max_pages))
+    if not rows:
+        raise ValueError("PDF_SPEC_NO_VALID_ESTIMATE_ROWS")
+    return rows
+# === END_PATCH_TOPIC2_PDF_SPEC_VALID_ROWS_ONLY_V1 ===
