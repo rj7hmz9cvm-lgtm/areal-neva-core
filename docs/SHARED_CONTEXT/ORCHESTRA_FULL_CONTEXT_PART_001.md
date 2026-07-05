@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_001
-generated_at_utc: 2026-07-05T17:54:57.848665+00:00
-git_sha_before_commit: c5ea64e6163a371399e50b9231dac9084cbd41c0
+generated_at_utc: 2026-07-05T18:10:01.957552+00:00
+git_sha_before_commit: 844fafb211fcae417ae52d1f8663c42caeae7374
 part: 1/18
 
 
 ====================================================================================================
 BEGIN_FILE: docs/HANDOFFS/LATEST_HANDOFF.md
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 5e309807db3b2cdd013e1bf447ff36581f0235d8e91d190c5f8e558572a95ea9
+SHA256_FULL_FILE: 3435e59239322ab8919486bb8adc56fa39da5bbc032960666040d75cf43ef0f3
 ====================================================================================================
 # LATEST HANDOFF — 2026-07-05 topic_2 / STROYKA
 
@@ -22,7 +22,7 @@ SHA256_FULL_FILE: 5e309807db3b2cdd013e1bf447ff36581f0235d8e91d190c5f8e558572a95e
 
 | Топик | Состояние | Примечание |
 |-------|-----------|------------|
-| topic_2 STROYKA | PARTIAL LIVE VERIFIED / NOT FULL CANON CLOSED | Text-TZ estimate flow repaired for live task `0115efea-ed49-4263-a6f0-a981a760261c`; remaining canon gaps below |
+| topic_2 STROYKA | PARTIAL LIVE VERIFIED / NOT FULL CANON CLOSED | PDF/project estimate task `33bd7b5a-ade8-47a8-b07e-4db4d3cacca8` closed after explicit user confirm; remaining canon gaps below |
 | topic_5 TEKHNADZOR | не трогать в рамках topic_2 | соседний топик |
 | topic_210 PROJECT | не трогать в рамках topic_2 | соседний топик |
 | topic_500 SEARCH | не трогать без отдельной задачи | интернет-поиск только через Sonar по канону |
@@ -42,6 +42,13 @@ SHA256_FULL_FILE: 5e309807db3b2cdd013e1bf447ff36581f0235d8e91d190c5f8e558572a95e
   - созданы XLSX/PDF и Drive links;
   - финал удерживается по канону до явного подтверждения пользователя.
 - Создан отчёт `docs/HANDOFFS/SESSION_20260705_TOPIC2_CANON_LIVE.md`.
+- Live PDF/project task `33bd7b5a-ade8-47a8-b07e-4db4d3cacca8` verified:
+  - XLSX/PDF Drive links created;
+  - XLSX `AREAL_CALC` uses canonical 15 columns and grouped `Работа / Материалы / Всего` layout;
+  - reply `да ок` to bot message `11544` now closes parent task to `DONE`;
+  - child confirmation task `103a8493-2347-4f60-9dee-81ee5892ef46` closes to `DONE`;
+  - `TOPIC2_EXPLICIT_CONFIRM:from_user_confirm_reply` is written before DONE;
+  - `topic_2_user_input`, `topic_2_task_summary`, `topic_2_assistant_output` are updated after DONE.
 
 ---
 
@@ -59,10 +66,10 @@ SHA256_FULL_FILE: 5e309807db3b2cdd013e1bf447ff36581f0235d8e91d190c5f8e558572a95e
    - если пользователь не указал режим, нужно уточнить: без НДС или с НДС 22%;
    - если выбран НДС, ставка должна быть 22%, а не 20%.
 
-3. Long memory после DONE не полностью соответствует канону:
-   - task `0115efea-ed49-4263-a6f0-a981a760261c` в `core.db` имеет state `DONE`;
-   - в `memory.db` найден `topic_2_file_0115...`, но свежие `topic_2_user_input`, `topic_2_task_summary`, `topic_2_assistant_output` для этой задачи не найдены;
-   - последние summary-ключи topic_2 относятся к `2026-05-03`.
+3. Long memory после DONE:
+   - для live task `33bd7b5a-ade8-47a8-b07e-4db4d3cacca8` проверено обновление `topic_2_user_input`, `topic_2_task_summary`, `topic_2_assistant_output`;
+   - generic topic_2 memory keys заменены со старых майских значений на свежий DONE-result;
+   - правило остаётся: память писать только после `DONE`.
 
 4. Active pin содержит старые майские записи:
    - `ebf586ce-3a29-4a22-837b-7c1d55506986` от `2026-05-04`;
@@ -146,7 +153,7 @@ sqlite3 data/memory.db "SELECT key,timestamp FROM memory WHERE chat_id='-1003725
 - Active P3 XLSX route now writes `НДС 22% (не включён)` with VAT amount 0 by default and total payable without VAT.
 - Active P3 Telegram summary now says VAT is not included and asks user to answer `с НДС` if a VAT 22% calculation is needed.
 - Verified: python3 -m py_compile core/sample_template_engine.py core/stroyka_estimate_canon.py core/topic2_input_gate.py core/topic2_estimate_final_close_v2.py task_worker.py -> PY_COMPILE_OK.
-- Not done yet: live Telegram regression test for без НДС / с НДС; memory after DONE; pin/reply isolation; photo/PDF/multifile flow.
+- Not done yet: live Telegram regression test for без НДС / с НДС; broader photo/multifile flow. Memory after DONE and reply confirm closure verified for task `33bd7b5a...`.
 
 ---
 
@@ -163,6 +170,24 @@ sqlite3 data/memory.db "SELECT key,timestamp FROM memory WHERE chat_id='-1003725
 - Verified: python3 -m py_compile task_worker.py core/stroyka_estimate_canon.py core/topic2_estimate_final_close_v2.py core/sample_template_engine.py core/topic2_input_gate.py -> OK.
 - Not restarted: systemd/worker launch intentionally not touched. Patch takes effect after normal worker reload/restart.
 - Next live test: voice says project will be sent -> bot waits; PDF upload binds to same task; no old raw_input revive marker; final result must contain real XLSX/PDF Drive links.
+
+
+---
+
+## Progress 2026-07-05 — topic_2 confirm close + memory
+
+- Backup created: `core/stroyka_estimate_canon.py.bak_topic2_confirm_close_20260705`.
+- Backup created: `data/core.db.bak_topic2_confirm_close_20260705`.
+- Backup created: `data/memory.db.bak_topic2_confirm_memory_20260705`.
+- Added `PATCH_TOPIC2_CONFIRM_BEFORE_REVISION_V1` in `core/stroyka_estimate_canon.py`.
+- Confirmation phrases like `да ок` are handled before topic_2 revision routing.
+- Live verification:
+  - parent `33bd7b5a-ade8-47a8-b07e-4db4d3cacca8` -> `DONE`;
+  - child `103a8493-2347-4f60-9dee-81ee5892ef46` -> `DONE`;
+  - `AWAITING_CONFIRMATION` count for topic_2 -> `0`;
+  - generic memory keys `topic_2_user_input`, `topic_2_task_summary`, `topic_2_assistant_output` point to the fresh DONE task.
+- Verified: `python3 -m py_compile core/stroyka_estimate_canon.py core/topic2_estimate_final_close_v2.py task_worker.py` -> `PY_COMPILE_OK`.
+- Systemd not touched. `.env` not touched. Neighbor topics not touched.
 
 ====================================================================================================
 END_FILE: docs/HANDOFFS/LATEST_HANDOFF.md

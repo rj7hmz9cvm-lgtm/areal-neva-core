@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-07-05T17:54:58.444356+00:00
-GIT_SHA: c5ea64e6163a371399e50b9231dac9084cbd41c0
+GENERATED_AT: 2026-07-05T18:10:02.535561+00:00
+GIT_SHA: 844fafb211fcae417ae52d1f8663c42caeae7374
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -16,7 +16,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 ## GLOBAL_STATUS
 | topic | name | status | active | failed_24h |
 |-------|------|--------|--------|------------|
-| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 2 | 7 |
+| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 0 | 7 |
 | 5 | TEKHNADZOR | UNKNOWN | 0 | 0 |
 | 210 | PROEKTIROVANIE | UNKNOWN | 0 | 0 |
 | 500 | VEB_POISK | UNKNOWN | 0 | 0 |
@@ -70,10 +70,11 @@ DATE_UNKNOWN
 ## ACTIVE_OR_RECENT_TOPICS
 ### topic_2 STROYKA
 role: Сметы
-active: 2
+active: 0
 failed_24h: 7
-commits_last_7d: 1
+commits_last_7d: 2
 recent_commits:
+- 844fafb|topic2: close PDF estimate confirmation flow
 - c8a9f1c|Topic2 canonical estimate live repair
 markers_missing: 2
 - TOPIC2_TEMPLATE_SELECTED

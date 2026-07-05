@@ -1,7 +1,7 @@
 # SINGLE_MODEL_FULL_CONTEXT
 
-GENERATED_AT: 2026-07-05T17:54:58.236274+00:00
-GIT_SHA: c5ea64e6163a371399e50b9231dac9084cbd41c0
+GENERATED_AT: 2026-07-05T18:10:02.339145+00:00
+GIT_SHA: 844fafb211fcae417ae52d1f8663c42caeae7374
 PURPOSE: Один файл с полным контекстом проекта для любой модели
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 
@@ -22,7 +22,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 | topic_id | name | status | active | failed_24h |
 |----------|------|--------|--------|------------|
 | 0 | COMMON | UNKNOWN | 0 | 0 |
-| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 2 | 7 |
+| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 0 | 7 |
 | 5 | TEKHNADZOR | UNKNOWN | 0 | 0 |
 | 11 | VIDEO | UNKNOWN | 0 | 0 |
 | 210 | PROEKTIROVANIE | UNKNOWN | 0 | 0 |
@@ -98,7 +98,7 @@ owner_reference_registry: loaded=True items=11
 
 | Топик | Состояние | Примечание |
 |-------|-----------|------------|
-| topic_2 STROYKA | PARTIAL LIVE VERIFIED / NOT FULL CANON CLOSED | Text-TZ estimate flow repaired for live task `0115efea-ed49-4263-a6f0-a981a760261c`; remaining canon gaps below |
+| topic_2 STROYKA | PARTIAL LIVE VERIFIED / NOT FULL CANON CLOSED | PDF/project estimate task `33bd7b5a-ade8-47a8-b07e-4db4d3cacca8` closed after explicit user confirm; remaining canon gaps below |
 | topic_5 TEKHNADZOR | не трогать в рамках topic_2 | соседний топик |
 | topic_210 PROJECT | не трогать в рамках topic_2 | соседний топик |
 | topic_500 SEARCH | не трогать без отдельной задачи | интернет-поиск только через Sonar по канону |
@@ -118,6 +118,13 @@ owner_reference_registry: loaded=True items=11
   - созданы XLSX/PDF и Drive links;
   - финал удерживается по канону до явного подтверждения пользователя.
 - Создан отчёт `docs/HANDOFFS/SESSION_20260705_TOPIC2_CANON_LIVE.md`.
+- Live PDF/project task `33bd7b5a-ade8-47a8-b07e-4db4d3cacca8` verified:
+  - XLSX/PDF Drive links created;
+  - XLSX `AREAL_CALC` uses canonical 15 columns and grouped `Работа / Материалы / Всего` layout;
+  - reply `да ок` to bot message `11544` now closes parent task to `DONE`;
+  - child confirmation task `103a8493-2347-4f60-9dee-81ee5892ef46` closes to `DONE`;
+  - `TOPIC2_EXPLICIT_CONFIRM:from_user_confirm_reply` is written before DONE;
+  - `topic_2_user_input`, `topic_2_task_summary`, `topic_2_assistant_output` are updated after DONE.
 
 ---
 
@@ -135,10 +142,10 @@ owner_reference_registry: loaded=True items=11
    - если пользователь не указал режим, нужно уточнить: без НДС или с НДС 22%;
    - если выбран НДС, ставка должна быть 22%, а не 20%.
 
-3. Long memory после DONE не полностью соответствует канону:
-   - task `0115efea-ed49-4263-a6f0-a981a760261c` в `core.db` имеет state `DONE`;
-   - в `memory.db` найден `topic_2_file_0115...`, но свежие `topic_2_user_input`, `topic_2_task_summary`, `topic_2_assistant_output` для этой задачи не найдены;
-   - последние summary-ключи topic_2 относятся к `2026-05-03`.
+3. Long memory после DONE:
+   - для live task `33bd7b5a-ade8-47a8-b07e-4db4d3cacca8` проверено обновление `topic_2_user_input`, `topic_2_task_summary`, `topic_2_assistant_output`;
+   - generic topic_2 memory keys заменены со старых майских значений на свежий DONE-result;
+   - правило остаётся: память писать только после `DONE`.
 
 4. Active pin содержит старые майские записи:
    - `ebf586ce-3a29-4a22-837b-7c1d55506986` от `2026-05-04`;
@@ -222,7 +229,7 @@ sqlite3 data/memory.db "SELECT key,timestamp FROM memory WHERE chat_id='-1003725
 - Active P3 XLSX route now writes `НДС 22% (не включён)` with VAT amount 0 by default and total payable without VAT.
 - Active P3 Telegram summary now says VAT is not included and asks user to answer `с НДС` if a VAT 22% calculation is needed.
 - Verified: python3 -m py_compile core/sample_template_engine.py core/stroyka_estimate_canon.py core/topic2_input_gate.py core/topic2_estimate_final_close_v2.py task_worker.py -> PY_COMPILE_OK.
-- Not done yet: live Telegram regression test for без НДС / с НДС; memory after DONE; pin/reply isolation; photo/PDF/multifile flow.
+- Not done yet: live Telegram regression test for без НДС / с НДС; broader photo/multifile flow. Memory after DONE and reply confirm closure verified for task `33bd7b5a...`.
 
 ---
 
@@ -239,6 +246,24 @@ sqlite3 data/memory.db "SELECT key,timestamp FROM memory WHERE chat_id='-1003725
 - Verified: python3 -m py_compile task_worker.py core/stroyka_estimate_canon.py core/topic2_estimate_final_close_v2.py core/sample_template_engine.py core/topic2_input_gate.py -> OK.
 - Not restarted: systemd/worker launch intentionally not touched. Patch takes effect after normal worker reload/restart.
 - Next live test: voice says project will be sent -> bot waits; PDF upload binds to same task; no old raw_input revive marker; final result must contain real XLSX/PDF Drive links.
+
+
+---
+
+## Progress 2026-07-05 — topic_2 confirm close + memory
+
+- Backup created: `core/stroyka_estimate_canon.py.bak_topic2_confirm_close_20260705`.
+- Backup created: `data/core.db.bak_topic2_confirm_close_20260705`.
+- Backup created: `data/memory.db.bak_topic2_confirm_memory_20260705`.
+- Added `PATCH_TOPIC2_CONFIRM_BEFORE_REVISION_V1` in `core/stroyka_estimate_canon.py`.
+- Confirmation phrases like `да ок` are handled before topic_2 revision routing.
+- Live verification:
+  - parent `33bd7b5a-ade8-47a8-b07e-4db4d3cacca8` -> `DONE`;
+  - child `103a8493-2347-4f60-9dee-81ee5892ef46` -> `DONE`;
+  - `AWAITING_CONFIRMATION` count for topic_2 -> `0`;
+  - generic memory keys `topic_2_user_input`, `topic_2_task_summary`, `topic_2_assistant_output` point to the fresh DONE task.
+- Verified: `python3 -m py_compile core/stroyka_estimate_canon.py core/topic2_estimate_final_close_v2.py task_worker.py` -> `PY_COMPILE_OK`.
+- Systemd not touched. `.env` not touched. Neighbor topics not touched.
 
 
 ================================================================================
@@ -3970,8 +3995,8 @@ I canno
 ```
 # topic_0 COMMON
 
-GENERATED_AT: 2026-07-05T17:54:57.919861+00:00
-GIT_SHA: c5ea64e6163a371399e50b9231dac9084cbd41c0
+GENERATED_AT: 2026-07-05T18:10:02.027928+00:00
+GIT_SHA: 844fafb211fcae417ae52d1f8663c42caeae7374
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 0
@@ -4048,7 +4073,7 @@ STATUS: SYNCED_LOCAL
 ## TOPIC_2_STROYKA
 
 STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE: 2  FAILED_24H: 7
+ACTIVE: 0  FAILED_24H: 7
 DIRECTIONS_BOUND: Сметы
 
 ### LAST_FAILED (5)
@@ -4840,24 +4865,22 @@ def _write_xlsx(path: Path, items: List[Dict[str, Any]], source_text: str, photo
 ```
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-07-05T17:54:57.951996+00:00
-GIT_SHA: c5ea64e6163a371399e50b9231dac9084cbd41c0
+GENERATED_AT: 2026-07-05T18:10:02.062585+00:00
+GIT_SHA: 844fafb211fcae417ae52d1f8663c42caeae7374
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
 ROLE: Сметы
 DIRECTIONS_BOUND: estimates
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE_TASKS: 2
+ACTIVE_TASKS: 0
 FAILED_LAST_24H: 7
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 12
-- AWAITING_CONFIRMATION: 1
 - CANCELLED: 141
-- DONE: 196
+- DONE: 198
 - FAILED: 142
-- WAITING_CLARIFICATION: 1
 
 ## LATEST_FAILED
 - 9c5946d7 | STALE_TIMEOUT
@@ -4867,6 +4890,7 @@ FAILED_LAST_24H: 7
 - 29331db4 | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
+- 844fafb|topic2: close PDF estimate confirmation flow
 - c8a9f1c|Topic2 canonical estimate live repair
 
 ## MARKERS_LAST_24H
@@ -4879,27 +4903,27 @@ FAILED_LAST_24H: 7
 - rejected:WAITING_CLARIFICATION
 - clarified:Ты не слушал моё голосовое
 - clarified:2
-- PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:STALE_PRICE_AND_RESULT_MARKERS_RESET
-- clarified:[VOICE] уточни мне стоимость материалов также необходимо выяснить сейч
-- PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:MERGED_CHILD:5ecedcf6-2fe1-43a8-9382-
-- PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:MERGED_TO_PARENT:5d7d90dd-a11c-484d-8
-- P6_TOPIC2_CURRENT_ESTIMATE_ROUTE
-- TOPIC2_ESTIMATE_CONTEXT_HASH:d239ad9ad25ebe62
-- TOPIC2_PRICE_ENRICHMENT_STARTED
-- P3_TOPIC2_CLARIFICATION
-- TOPIC2_PRICE_ENRICHMENT_DONE
 - clarified:вот задание
-- TOPIC2_ESTIMATE_CONTEXT_HASH:c933a73e62a8b050
 - TOPIC2_FRUSTRATION_REPLY_REROUTED:from=ec9bce61-5b80-4149-bde7-5e95d2739333:text
 - TOPIC2_FRUSTRATION_REPLY_GUARD_V1:merged_to:f2efa5c0-ad58-4273-9bdb-40b486ae4241
 - clarified:[VOICE] Что с моей сметой, скажи мне?
 - PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:MERGED_CHILD:0e848578-6e59-4c26-b07d-
 - PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:MERGED_TO_PARENT:f2efa5c0-ad58-4273-9
+- P6_TOPIC2_CURRENT_ESTIMATE_ROUTE
 - TOPIC2_ESTIMATE_CONTEXT_HASH:0ad40f06318a6e7a
 - TOPIC2_BAD_DONE_BLOCKED:no_price_choice_confirmed
 - TOPIC2_PRICE_CHOICE_REQUESTED:REPAIR_AFTER_BAD_PRELIMINARY_FINAL
 - TOPIC2_PRICE_PROMPT_BOT_MESSAGE_ID_UPDATED:11190
 - TOPIC2_ESTIMATE_CONTEXT_HASH:54a4a93dc32bdc0d
+- TOPIC2_PRICE_CHOICE_REQUESTED
+- TOPIC2_ESTIMATE_CONTEXT_HASH:0b4efbfbcb1462fd
+- TOPIC2_PRICE_CHOICE_CONFIRMED:median
+- PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1:CHOICE_BOUND_FROM:cfc57f1b-97ac-41b7-b18
+- PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1:MERGED_TO:5d7d90dd-a11c-484d-81ef-f2758b
+- PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1:PARENT_RAW_ENRICHED
+- PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1:DRIVE_FINAL_START
+- continued:2
+- TOPIC2_PUBLIC_RESULT_CANON_VIOLATION:missing_canon_header
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210
@@ -5549,8 +5573,8 @@ _P6H5_NORMATIVE_EXPAND = [
 ```
 # topic_5 TEKHNADZOR
 
-GENERATED_AT: 2026-07-05T17:54:57.982411+00:00
-GIT_SHA: c5ea64e6163a371399e50b9231dac9084cbd41c0
+GENERATED_AT: 2026-07-05T18:10:02.097712+00:00
+GIT_SHA: 844fafb211fcae417ae52d1f8663c42caeae7374
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 5
@@ -5652,8 +5676,8 @@ DIRECTIONS_BOUND: Видео
 ```
 # topic_11 VIDEO
 
-GENERATED_AT: 2026-07-05T17:54:58.010509+00:00
-GIT_SHA: c5ea64e6163a371399e50b9231dac9084cbd41c0
+GENERATED_AT: 2026-07-05T18:10:02.127438+00:00
+GIT_SHA: 844fafb211fcae417ae52d1f8663c42caeae7374
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 11
@@ -6262,8 +6286,8 @@ def _normalize_sheet_register(template: Dict[str, Any], data: Dict[str, Any]) ->
 ```
 # topic_210 PROEKTIROVANIE
 
-GENERATED_AT: 2026-07-05T17:54:58.045891+00:00
-GIT_SHA: c5ea64e6163a371399e50b9231dac9084cbd41c0
+GENERATED_AT: 2026-07-05T18:10:02.158147+00:00
+GIT_SHA: 844fafb211fcae417ae52d1f8663c42caeae7374
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 210
@@ -6829,8 +6853,8 @@ except Exception:
 ```
 # topic_500 VEB_POISK
 
-GENERATED_AT: 2026-07-05T17:54:58.082844+00:00
-GIT_SHA: c5ea64e6163a371399e50b9231dac9084cbd41c0
+GENERATED_AT: 2026-07-05T18:10:02.195460+00:00
+GIT_SHA: 844fafb211fcae417ae52d1f8663c42caeae7374
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 500
@@ -6932,8 +6956,8 @@ DIRECTIONS_BOUND: Сервер DevOps
 ```
 # topic_794 DEVOPS
 
-GENERATED_AT: 2026-07-05T17:54:58.110449+00:00
-GIT_SHA: c5ea64e6163a371399e50b9231dac9084cbd41c0
+GENERATED_AT: 2026-07-05T18:10:02.220912+00:00
+GIT_SHA: 844fafb211fcae417ae52d1f8663c42caeae7374
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 794
@@ -7028,8 +7052,8 @@ DIRECTIONS_BOUND: Автозапчасти
 ```
 # topic_961 AVTOZAPCHASTI
 
-GENERATED_AT: 2026-07-05T17:54:58.139953+00:00
-GIT_SHA: c5ea64e6163a371399e50b9231dac9084cbd41c0
+GENERATED_AT: 2026-07-05T18:10:02.248738+00:00
+GIT_SHA: 844fafb211fcae417ae52d1f8663c42caeae7374
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 961
@@ -7121,8 +7145,8 @@ DIRECTIONS_BOUND: Мозги оркестра
 ```
 # topic_3008 KODY_MOZGOV
 
-GENERATED_AT: 2026-07-05T17:54:58.170009+00:00
-GIT_SHA: c5ea64e6163a371399e50b9231dac9084cbd41c0
+GENERATED_AT: 2026-07-05T18:10:02.276365+00:00
+GIT_SHA: 844fafb211fcae417ae52d1f8663c42caeae7374
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 3008
@@ -7225,8 +7249,8 @@ DIRECTIONS_BOUND: CRM лиды
 ```
 # topic_4569 CRM_LEADS
 
-GENERATED_AT: 2026-07-05T17:54:58.195913+00:00
-GIT_SHA: c5ea64e6163a371399e50b9231dac9084cbd41c0
+GENERATED_AT: 2026-07-05T18:10:02.304643+00:00
+GIT_SHA: 844fafb211fcae417ae52d1f8663c42caeae7374
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 4569
@@ -7334,8 +7358,8 @@ DIRECTIONS_BOUND: Поиск работы
 ```
 # topic_6104 JOB_SEARCH
 
-GENERATED_AT: 2026-07-05T17:54:58.227512+00:00
-GIT_SHA: c5ea64e6163a371399e50b9231dac9084cbd41c0
+GENERATED_AT: 2026-07-05T18:10:02.329591+00:00
+GIT_SHA: 844fafb211fcae417ae52d1f8663c42caeae7374
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 6104

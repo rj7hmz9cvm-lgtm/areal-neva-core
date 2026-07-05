@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_012
-generated_at_utc: 2026-07-05T17:54:57.861514+00:00
-git_sha_before_commit: c5ea64e6163a371399e50b9231dac9084cbd41c0
+generated_at_utc: 2026-07-05T18:10:01.968974+00:00
+git_sha_before_commit: 844fafb211fcae417ae52d1f8663c42caeae7374
 part: 12/18
 
 
@@ -1796,7 +1796,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 7a54d2d2a52f69a7eae4000ded866ba586167a1cbe01e488736987380c8c9107
+SHA256_FULL_FILE: ff577d2d0fd55d4ceb40d3a7e41933c267ae424192e3c68068c835859c9007d5
 ====================================================================================================
 # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
 from __future__ import annotations
@@ -3884,6 +3884,108 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
     except Exception:
         pass
 
+    # PATCH_TOPIC2_CONFIRM_BEFORE_REVISION_V1
+    # Canon: final topic_2 estimate waits in AWAITING_CONFIRMATION and closes only
+    # after explicit user confirmation. Confirmation phrases must not be routed
+    # as revision/follow-up text.
+    if _is_confirm(raw_input) or _is_old_task_finish_request(raw_input):
+        try:
+            _confirm_parent = None
+            if reply_to:
+                _confirm_parent = conn.execute(
+                    """
+                    SELECT id, COALESCE(raw_input,'') AS raw_input, COALESCE(result,'') AS result
+                    FROM tasks
+                    WHERE CAST(chat_id AS TEXT)=?
+                      AND COALESCE(topic_id,0)=?
+                      AND state='AWAITING_CONFIRMATION'
+                      AND id<>?
+                      AND (bot_message_id=? OR reply_to_message_id=?)
+                    ORDER BY updated_at DESC, created_at DESC
+                    LIMIT 1
+                    """,
+                    (str(chat_id), int(topic_id), str(task_id), reply_to, reply_to),
+                ).fetchone()
+            if not _confirm_parent:
+                _confirm_parent = conn.execute(
+                    """
+                    SELECT id, COALESCE(raw_input,'') AS raw_input, COALESCE(result,'') AS result
+                    FROM tasks
+                    WHERE CAST(chat_id AS TEXT)=?
+                      AND COALESCE(topic_id,0)=?
+                      AND state='AWAITING_CONFIRMATION'
+                      AND id<>?
+                    ORDER BY updated_at DESC, created_at DESC
+                    LIMIT 1
+                    """,
+                    (str(chat_id), int(topic_id), str(task_id)),
+                ).fetchone()
+            if _confirm_parent:
+                _parent_id = _s(_confirm_parent["id"])
+                _parent_raw = _s(_confirm_parent["raw_input"])
+                _parent_result = _s(_confirm_parent["result"])
+                _parent_low = _low(_parent_result)
+                _is_final_estimate = (
+                    ("смет" in _parent_low and ("xlsx" in _parent_low or "pdf" in _parent_low
+                     or "drive.google.com" in _parent_low or "docs.google.com" in _parent_low))
+                    or "смета готов" in _parent_low
+                )
+                if _is_final_estimate:
+                    _history_safe(conn, _parent_id, "TOPIC2_EXPLICIT_CONFIRM:from_user_confirm_reply")
+                    _update_task_safe(conn, _parent_id, state="DONE", error_message="")
+                    _history_safe(conn, _parent_id, "state:DONE")
+                    try:
+                        _memory_save(chat_id, f"topic_2_user_input_{_parent_id}", {
+                            "task_id": _parent_id,
+                            "topic_id": int(topic_id),
+                            "raw_input": _parent_raw,
+                            "saved_at": _now(),
+                            "source": "TOPIC2_EXPLICIT_CONFIRM",
+                        })
+                        _memory_save(chat_id, f"topic_2_task_summary_{_parent_id}", {
+                            "task_id": _parent_id,
+                            "topic_id": int(topic_id),
+                            "summary": _parent_result,
+                            "saved_at": _now(),
+                            "source": "TOPIC2_EXPLICIT_CONFIRM",
+                        })
+                        _memory_save(chat_id, f"topic_2_assistant_output_{_parent_id}", {
+                            "task_id": _parent_id,
+                            "topic_id": int(topic_id),
+                            "result": _parent_result,
+                            "saved_at": _now(),
+                            "source": "TOPIC2_EXPLICIT_CONFIRM",
+                        })
+                        _memory_save(chat_id, "topic_2_user_input", {
+                            "task_id": _parent_id,
+                            "topic_id": int(topic_id),
+                            "raw_input": _parent_raw,
+                            "saved_at": _now(),
+                            "source": "TOPIC2_EXPLICIT_CONFIRM",
+                        })
+                        _memory_save(chat_id, "topic_2_task_summary", {
+                            "task_id": _parent_id,
+                            "topic_id": int(topic_id),
+                            "summary": _parent_result,
+                            "saved_at": _now(),
+                            "source": "TOPIC2_EXPLICIT_CONFIRM",
+                        })
+                        _memory_save(chat_id, "topic_2_assistant_output", {
+                            "task_id": _parent_id,
+                            "topic_id": int(topic_id),
+                            "result": _parent_result,
+                            "saved_at": _now(),
+                            "source": "TOPIC2_EXPLICIT_CONFIRM",
+                        })
+                    except Exception:
+                        pass
+                    _update_task_safe(conn, task_id, state="DONE", result="Подтверждение принято", error_message="")
+                    _history_safe(conn, task_id, "TOPIC2_CONFIRM_CHILD_DONE")
+                    await _send_text(chat_id, "Принял. Задача закрыта", reply_to, topic_id)
+                    return True
+        except Exception as _t2_confirm_err:
+            _history_safe(conn, task_id, f"TOPIC2_CONFIRM_BEFORE_REVISION_ERR:{_clean(str(_t2_confirm_err), 200)}")
+
     if _is_revision(raw_input):
         try:
             _rev_pid = reply_to
@@ -4618,7 +4720,7 @@ def _update_task_safe(conn, task_id, **kwargs):
                 ).fetchall()
                 hist_actions = [_s(h[0]) for h in hist]
                 price_confirmed = any("TOPIC2_PRICE_CHOICE_CONFIRMED" in a for a in hist_actions)
-                estimate_generated = any("estimate_generated" in a or "FINAL_DONE" in a or "P3_TOPIC2_FINAL" in a for a in hist_actions)
+                estimate_generated = any("estimate_generated" in a or "FINAL_DONE" in a or "P3_TOPIC2_FINAL" in a or "TOPIC2_ESTIMATE_FINAL_CLOSE_V2:ESTIMATE_ARTIFACTS_CREATED" in a for a in hist_actions)
                 explicit_confirm = any("TOPIC2_EXPLICIT_CONFIRM" in a for a in hist_actions)
 
                 if not estimate_generated:
