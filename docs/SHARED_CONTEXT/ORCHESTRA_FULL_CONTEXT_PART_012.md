@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_012
-generated_at_utc: 2026-07-05T19:22:21.451725+00:00
-git_sha_before_commit: e76a956d9df6276eebb07cb11c33f1256298aa83
+generated_at_utc: 2026-07-05T19:52:21.422443+00:00
+git_sha_before_commit: 56ef896bc4376400f193d1f7c90db873d1520ecd
 part: 12/18
 
 
@@ -1796,7 +1796,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: b00f3c2b2ee30e61645ca61fc3f04efca5b9f7e3d286c87e06bc9016aa618133
+SHA256_FULL_FILE: dc306347071f03aa44b6c0a8d3ec21d558e1394d3f24354d961259d873f71e57
 ====================================================================================================
 # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
 from __future__ import annotations
@@ -3014,7 +3014,7 @@ async def _search_prices_online(parsed: Dict[str, Any], template: Dict[str, Any]
             ("Доставка строительных материалов", "рейс"),
         ]
         _per_item_lines = []
-        for _pi_name, _pi_unit in _items_to_enrich[:5]:
+        for _pi_name, _pi_unit in _items_to_enrich[:6]:
             if not _pi_name.strip():
                 continue
             try:
@@ -3395,10 +3395,66 @@ async def _generate_and_send(conn: sqlite3.Connection, task: Any, pending: Dict[
 
     parsed = pending.get("parsed") or {}
     template = pending.get("template") or CANON_TEMPLATE_FALLBACK["areal"]
+    parsed = _t2_pdf_text_fact_enrich(parsed, conn=conn, task_id=task_id)
     online_prices = pending.get("online_prices") or ""
     sheet_name = pending.get("sheet_name")
     _sheet_fallback = pending.get("sheet_fallback", False)
     choice = parse_price_choice(confirm_text)
+
+    # PATCH_TOPIC2_FINAL_REQUIRES_ONLINE_PRICES_V1
+    # Canon: final topic_2 estimate with internet prices must not close on empty/stale online_prices.
+    if not str(online_prices or '').strip():
+        try:
+            _history_safe(conn, task_id, 'CODEX_RESTART_AFTER_ONLINE_PRICE_EMPTY_FINAL')
+            online_prices = await _search_prices_online(parsed, template, sheet_name, conn=conn, task_id=task_id)
+            pending['online_prices'] = online_prices
+            pending['status'] = 'WAITING_PRICE_CONFIRMATION'
+            _memory_save(chat_id, f'topic_2_estimate_pending_{task_id}', pending)
+        except Exception as _online_final_e:
+            if logger:
+                logger.warning('TOPIC2_FINAL_ONLINE_PRICE_SEARCH_FAILED %s', _online_final_e)
+            text = 'Произошла ошибка при поиске актуальных цен, повторяю'
+            send_res = await _send_text(chat_id, text, reply_to, topic_id)
+            kwargs = {'state': 'IN_PROGRESS', 'result': text, 'error_message': 'TOPIC2_ONLINE_PRICE_SEARCH_REQUIRED'}
+            if isinstance(send_res, dict) and send_res.get('bot_message_id'):
+                kwargs['bot_message_id'] = send_res.get('bot_message_id')
+            _update_task_safe(conn, task_id, **kwargs)
+            _history_safe(conn, task_id, 'TOPIC2_FINAL_BLOCKED_EMPTY_ONLINE_PRICES')
+            return True
+
+    # PATCH_TOPIC2_FINAL_REQUIRES_DELIVERY_PRICE_V1
+    # Canon: distance logistics must not silently become zero when delivery price is missing.
+    try:
+        _t2_delivery_distance = float(parsed.get('distance_km') or 0)
+    except Exception:
+        _t2_delivery_distance = 0.0
+    if _t2_delivery_distance > 0 and not _numbers_from_price_text(online_prices, ('достав', 'рейс', 'манипулятор', 'кран', 'транспорт')):
+        try:
+            _history_safe(conn, task_id, 'CODEX_RESTART_AFTER_DELIVERY_PRICE_MISSING')
+            online_prices = await _search_prices_online(parsed, template, sheet_name, conn=conn, task_id=task_id)
+            pending['online_prices'] = online_prices
+            pending['status'] = 'WAITING_PRICE_CONFIRMATION'
+            _memory_save(chat_id, f'topic_2_estimate_pending_{task_id}', pending)
+        except Exception as _delivery_search_e:
+            if logger:
+                logger.warning('TOPIC2_FINAL_DELIVERY_PRICE_SEARCH_FAILED %s', _delivery_search_e)
+            text = 'Не найдена подтверждённая цена доставки/логистики. Финальную смету с нулевой логистикой не закрываю.'
+            send_res = await _send_text(chat_id, text, reply_to, topic_id)
+            kwargs = {'state': 'IN_PROGRESS', 'result': text, 'error_message': 'TOPIC2_DELIVERY_PRICE_REQUIRED'}
+            if isinstance(send_res, dict) and send_res.get('bot_message_id'):
+                kwargs['bot_message_id'] = send_res.get('bot_message_id')
+            _update_task_safe(conn, task_id, **kwargs)
+            _history_safe(conn, task_id, 'TOPIC2_FINAL_BLOCKED_DELIVERY_PRICE_MISSING')
+            return True
+        if not _numbers_from_price_text(online_prices, ('достав', 'рейс', 'манипулятор', 'кран', 'транспорт')):
+            text = 'Не найдена подтверждённая цена доставки/логистики. Финальную смету с нулевой логистикой не закрываю.'
+            send_res = await _send_text(chat_id, text, reply_to, topic_id)
+            kwargs = {'state': 'IN_PROGRESS', 'result': text, 'error_message': 'TOPIC2_DELIVERY_PRICE_REQUIRED'}
+            if isinstance(send_res, dict) and send_res.get('bot_message_id'):
+                kwargs['bot_message_id'] = send_res.get('bot_message_id')
+            _update_task_safe(conn, task_id, **kwargs)
+            _history_safe(conn, task_id, 'TOPIC2_FINAL_BLOCKED_DELIVERY_PRICE_MISSING')
+            return True
 
     # §2 price choice gate: hard block if TOPIC2_PRICE_CHOICE_CONFIRMED not in history
     try:
@@ -3914,7 +3970,23 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
     # Canon: final topic_2 estimate waits in AWAITING_CONFIRMATION and closes only
     # after explicit user confirmation. Confirmation phrases must not be routed
     # as revision/follow-up text.
-    if _is_confirm(raw_input) or _is_old_task_finish_request(raw_input):
+    _t2_confirm_text = _low(raw_input).strip()
+    _t2_price_choice_words = {
+        "1", "2", "3", "min", "median", "max",
+        "минимально", "минимальная", "минимальные", "минимум",
+        "средне", "средние", "средняя", "средний", "медиана",
+        "максимально", "максимальная", "максимальные", "максимум",
+    }
+    try:
+        _t2_is_price_choice = bool(parse_price_choice(raw_input).get("confirmed"))
+    except Exception:
+        _t2_is_price_choice = False
+    _t2_is_final_confirm = (
+        (_is_confirm(raw_input) or _is_old_task_finish_request(raw_input))
+        and not _t2_is_price_choice
+        and _t2_confirm_text not in _t2_price_choice_words
+    )
+    if _t2_is_final_confirm:
         try:
             _confirm_parent = None
             if reply_to:
@@ -3933,19 +4005,16 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
                     (str(chat_id), int(topic_id), str(task_id), reply_to, reply_to),
                 ).fetchone()
             if not _confirm_parent:
-                _confirm_parent = conn.execute(
-                    """
-                    SELECT id, COALESCE(raw_input,'') AS raw_input, COALESCE(result,'') AS result
-                    FROM tasks
-                    WHERE CAST(chat_id AS TEXT)=?
-                      AND COALESCE(topic_id,0)=?
-                      AND state='AWAITING_CONFIRMATION'
-                      AND id<>?
-                    ORDER BY updated_at DESC, created_at DESC
-                    LIMIT 1
-                    """,
-                    (str(chat_id), int(topic_id), str(task_id)),
-                ).fetchone()
+                _history_safe(conn, task_id, "TOPIC2_CONFIRM_STRICT_REPLY_REQUIRED")
+                _update_task_safe(
+                    conn,
+                    task_id,
+                    state="DONE",
+                    result="Подтверждение не привязано к смете. Ответь реплаем на сообщение со сметой: да / ок",
+                    error_message="",
+                )
+                await _send_text(chat_id, "Ответь реплаем на сообщение со сметой: да / ок", reply_to, topic_id)
+                return True
             if _confirm_parent:
                 _parent_id = _s(_confirm_parent["id"])
                 _parent_raw = _s(_confirm_parent["raw_input"])
@@ -4193,6 +4262,7 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
     except Exception:
         _alg_count = 0
 
+    parsed = _t2_pdf_text_fact_enrich(parsed, conn=conn, task_id=task_id)
     question = _missing_question(parsed)
     if question:
         send_res = await _send_text(chat_id, question, reply_to, topic_id)
@@ -4756,7 +4826,13 @@ def _update_task_safe(conn, task_id, **kwargs):
                 hist_actions = [_s(h[0]) for h in hist]
                 price_confirmed = any("TOPIC2_PRICE_CHOICE_CONFIRMED" in a for a in hist_actions)
                 estimate_generated = any("estimate_generated" in a or "FINAL_DONE" in a or "P3_TOPIC2_FINAL" in a or "TOPIC2_ESTIMATE_FINAL_CLOSE_V2:ESTIMATE_ARTIFACTS_CREATED" in a for a in hist_actions)
-                explicit_confirm = any("TOPIC2_EXPLICIT_CONFIRM" in a for a in hist_actions)
+                explicit_confirm_idx = max(
+                    [i for i, a in enumerate(hist_actions) if "TOPIC2_EXPLICIT_CONFIRM" in a and "REVOKED" not in a] or [-1]
+                )
+                revoke_confirm_idx = max(
+                    [i for i, a in enumerate(hist_actions) if "TOPIC2_EXPLICIT_CONFIRM_REVOKED" in a] or [-1]
+                )
+                explicit_confirm = explicit_confirm_idx >= 0 and explicit_confirm_idx > revoke_confirm_idx
 
                 if not estimate_generated:
                     _STV3_LOG.warning(
@@ -4988,22 +5064,30 @@ async def _generate_and_send(conn, task, pending, confirm_text, logger=None):
             c_id = _s(_row_get(task, "chat_id"))
             t_id = int(_row_get(task, "topic_id", 0) or 0)
             task_id_v = _s(_row_get(task, "id"))
-            row = conn.execute(
-                """SELECT bot_message_id FROM tasks
-                   WHERE CAST(chat_id AS TEXT)=? AND COALESCE(topic_id,0)=? AND id!=?
-                   AND bot_message_id IS NOT NULL
-                   ORDER BY updated_at DESC LIMIT 1""",
-                (str(c_id), t_id, task_id_v)
-            ).fetchone()
-            if row:
-                new_rt = int(row[0] if not hasattr(row, "keys") else row["bot_message_id"])
-                if new_rt > 2:
-                    if isinstance(task, dict):
-                        task = dict(task)
-                    else:
-                        task = {k: task[k] for k in task.keys()}
-                    task["reply_to_message_id"] = new_rt
-                    _SRC_LOG.info("PATCH_STROYKA_REPLY_CHAIN_V1 reply_to=%s task=%s", new_rt, task_id_v)
+            new_rt = 0
+            try:
+                import json as _src_json
+                raw_meta = _src_json.loads(_s(_row_get(task, "raw_input", "")) or "{}")
+                new_rt = int(raw_meta.get("telegram_message_id") or 0)
+            except Exception:
+                new_rt = 0
+            if new_rt <= 2:
+                row = conn.execute(
+                    """SELECT bot_message_id FROM tasks
+                       WHERE CAST(chat_id AS TEXT)=? AND COALESCE(topic_id,0)=? AND id!=?
+                       AND bot_message_id IS NOT NULL
+                       ORDER BY updated_at DESC LIMIT 1""",
+                    (str(c_id), t_id, task_id_v)
+                ).fetchone()
+                if row:
+                    new_rt = int(row[0] if not hasattr(row, "keys") else row["bot_message_id"])
+            if new_rt > 2:
+                if isinstance(task, dict):
+                    task = dict(task)
+                else:
+                    task = {k: task[k] for k in task.keys()}
+                task["reply_to_message_id"] = new_rt
+                _SRC_LOG.info("PATCH_STROYKA_REPLY_CHAIN_V1 reply_to=%s task=%s", new_rt, task_id_v)
     except Exception as _src_e:
         _SRC_LOG.warning("PATCH_STROYKA_REPLY_CHAIN_V1_ERR %s", _src_e)
     return await _src_orig_gas_v1(conn, task, pending, confirm_text, logger=logger)
@@ -7077,6 +7161,52 @@ if _T2NWPMR_ORIG_IS_OLD_TASK_FINISH_REQUEST and not getattr(_T2NWPMR_ORIG_IS_OLD
 
 # === END_PATCH_TOPIC2_NO_WAITING_PROJECT_MEMORY_REVIVE_V1 ===
 
+
+# === PATCH_TOPIC2_PDF_TEXT_FACT_ENRICH_V1 ===
+def _t2_pdf_text_fact_enrich(parsed: Dict[str, Any], conn=None, task_id=None) -> Dict[str, Any]:
+    try:
+        path = parsed.get('pdf_spec_source') or parsed.get('local_path') or parsed.get('file_path')
+        if not path or not os.path.exists(str(path)):
+            return parsed
+        import subprocess as _t2_pdf_subprocess
+        res = _t2_pdf_subprocess.run(['pdftotext', str(path), '-'], capture_output=True, text=True, timeout=30)
+        text = res.stdout or ''
+        low = _low(text)
+        changed = []
+        if not parsed.get('object') and 'дом' in low:
+            parsed['object'] = 'дом'
+            changed.append('object=дом')
+        if not parsed.get('material') and 'газобетон' in low:
+            parsed['material'] = 'газобетон'
+            changed.append('material=газобетон')
+        if not parsed.get('floors') and ('2 этажа' in low or '2-го этажа' in low or '2-ой этаж' in low or 'план расстановки мебели 2 этажа' in low):
+            parsed['floors'] = 2
+            changed.append('floors=2')
+        if not parsed.get('foundation') and ('монолитная железобетонная плита' in low or 'монолитная ж/б плита' in low):
+            parsed['foundation'] = 'монолитная железобетонная плита 300 мм'
+            changed.append('foundation=монолитная плита 300 мм')
+        if not parsed.get('scope'):
+            scopes = []
+            if 'план кровли' in low or 'кровл' in low:
+                scopes.append('кровля')
+            if 'план межэтажного перекрытия' in low or 'перекрыт' in low:
+                scopes.append('перекрытия')
+            if 'наружные стены' in low or 'внутренние несущие стены' in low or 'перегородки' in low:
+                scopes.append('стены и перегородки')
+            if scopes:
+                parsed['scope'] = ', '.join(dict.fromkeys(scopes))
+                changed.append('scope')
+        if changed and conn is not None and task_id is not None:
+            _history_safe(conn, task_id, 'TOPIC2_PDF_TEXT_FACTS_ENRICHED:' + ','.join(changed)[:160])
+    except Exception as _t2_pdf_text_e:
+        try:
+            if conn is not None and task_id is not None:
+                _history_safe(conn, task_id, 'TOPIC2_PDF_TEXT_FACTS_ERR:' + str(_t2_pdf_text_e)[:80])
+        except Exception:
+            pass
+    return parsed
+# === END_PATCH_TOPIC2_PDF_TEXT_FACT_ENRICH_V1 ===
+
 # === PATCH_TOPIC2_TEMPLATE_ROWS_FULL_AREAL_CALC_V1 ===
 # Use the selected template workbook rows as the calculation matrix instead of
 # synthetic 5-8 row summaries. This keeps the canonical 15-col AREAL_CALC output.
@@ -7172,9 +7302,57 @@ def _t2tr_template_items(template_path: Optional[str], sheet_name: Optional[str]
     return items[:400]
 
 
+def _t2tr_add_required_blocks(items: List[Dict[str, Any]], parsed: Dict[str, Any], price_text: str, choice: Dict[str, Any]) -> List[Dict[str, Any]]:
+    result = list(items or [])
+    sections = {_low(it.get('section', '')) for it in result if isinstance(it, dict)}
+    try:
+        distance = float(parsed.get('distance_km') or 0)
+    except Exception:
+        distance = 0.0
+    if distance > 0 and 'логистика' not in sections:
+        delivery_price = _choose_value(_numbers_from_price_text(price_text, ('достав', 'рейс', 'манипулятор', 'кран', 'транспорт')), choice)
+        trips = max(math.ceil(distance / 40), 1)
+        if delivery_price > 0:
+            result.append({
+                'section': 'Логистика',
+                'name': 'Доставка материалов от СПб',
+                'unit': 'рейс',
+                'qty': trips,
+                'price': delivery_price,
+                'note': f'{distance:g} км / 40',
+            })
+            if distance > 50:
+                result.append({
+                    'section': 'Логистика',
+                    'name': 'Транспорт бригады и проживание',
+                    'unit': 'компл',
+                    'qty': 1,
+                    'price': round(delivery_price * 0.3, 2),
+                    'note': 'при удаленности > 50 км',
+                })
+    sections = {_low(it.get('section', '')) for it in result if isinstance(it, dict)}
+    if 'накладные расходы' not in sections and 'накладные' not in sections:
+        subtotal = sum(
+            float(it.get('qty') or 0) * float(it.get('price') or 0)
+            for it in result
+            if _low(it.get('section', '')) not in ('логистика', 'накладные расходы', 'накладные')
+        )
+        if subtotal > 0:
+            result.append({
+                'section': 'Накладные расходы',
+                'name': 'Организация работ и накладные',
+                'unit': 'компл',
+                'qty': 1,
+                'price': round(subtotal * 0.07, 2),
+                'note': '7% от материалов и работ',
+            })
+    return result
+
+
 def _create_xlsx_from_template(task_id: str, parsed: Dict[str, Any], template: Dict[str, Any], template_path: Optional[str], sheet_name: Optional[str], price_text: str, choice: Dict[str, Any]) -> Tuple[str, List[Dict[str, Any]], float]:  # noqa: F811
     template_items = _t2tr_template_items(template_path, sheet_name, parsed)
     if len(template_items) >= 20:
+        template_items = _t2tr_add_required_blocks(template_items, parsed, price_text, choice)
         orig_build = globals().get('_build_estimate_items')
 
         def _t2tr_build_from_template(_parsed, _price_text, _choice):
@@ -7310,275 +7488,5 @@ async def transcribe_voice(path: str) -> str:
 
 ====================================================================================================
 END_FILE: core/stt_engine.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/technadzor_document_skill.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 7f86800da7b61771bec0e581bb3facd3ffa0f34a47ac55e87ca8fca8f3f1c74a
-====================================================================================================
-#!/usr/bin/env python3
-# === TECHNADZOR_DOCUMENT_SKILL_V1 ===
-# Converts source records from telegram_source_skill_extractor into skill cards.
-# Rejects noise. Classifies useful document-composition logic.
-# All extracted rules must keep source reference.
-from __future__ import annotations
-
-import hashlib
-import logging
-import re
-from typing import Any
-
-logger = logging.getLogger("technadzor_document_skill")
-
-SKILL_CATEGORIES = (
-    "act_structure",
-    "report_structure",
-    "defect_description_logic",
-    "photo_to_defect_linking",
-    "evidence_handling",
-    "normative_reference_handling",
-    "recommendation_logic",
-    "conclusion_logic",
-    "file_workflow",
-    "document_workflow",
-    "client_facing_language",
-    "contractor_statement_handling",
-    "owner_statement_handling",
-    "telegram_source_work_signal",
-    "rabota_poisk_reusable_pattern",
-    "unknown",
-)
-
-# Patterns → category
-_CATEGORY_PATTERNS: list[tuple[str, list[str]]] = [
-    ("act_structure", [
-        "акт", "форма акта", "состав акта", "разделы акта", "приложение к акту",
-        "акт освидетельствования", "акт скрытых", "акт приёмки", "акт проверки",
-    ]),
-    ("report_structure", [
-        "отчёт", "отчет", "заключение", "техническое заключение", "разделы отчёта",
-        "структура отчёта", "состав отчёта",
-    ]),
-    ("defect_description_logic", [
-        "дефект", "нарушение", "замечание", "несоответствие", "отклонение",
-        "трещин", "скол", "раковин", "расслоен", "коррозия",
-        "как описать", "формулировка дефекта", "описание дефекта",
-    ]),
-    ("photo_to_defect_linking", [
-        "фото", "фотофиксация", "привязка фото", "фото к дефекту",
-        "фото к акту", "фотоматериал", "приложение фото",
-    ]),
-    ("evidence_handling", [
-        "доказательство", "факт", "подтверждение", "доказательная база",
-        "источник данных", "обоснование", "исполнительная документация",
-    ]),
-    ("normative_reference_handling", [
-        "снип", "гост", "сп ", "нормати", "требования нормативов",
-        "ссылка на норму", "нормативный документ", "регламент",
-    ]),
-    ("recommendation_logic", [
-        "рекомендация", "предписание", "устранить", "необходимо устранить",
-        "рекомендуется", "следует", "требуется", "провести работы",
-    ]),
-    ("conclusion_logic", [
-        "вывод", "заключение", "итог", "резюме", "категория состояния",
-        "техническое состояние", "ограниченно работоспособ", "аварийн",
-    ]),
-    ("file_workflow", [
-        "pdf", "docx", "xlsx", "dwg", "файл", "загрузка файла",
-        "прикрепить файл", "скачать", "отправить файл", "формат файла",
-    ]),
-    ("document_workflow", [
-        "документооборот", "пакет документов", "комплект",
-        "исполнительная документация", "журнал работ", "акт скрытых",
-        "приёмка документов",
-    ]),
-    ("client_facing_language", [
-        "заказчик", "собственник", "владелец", "клиент", "застройщик",
-        "как написать заказчику", "для заказчика", "язык документа",
-    ]),
-    ("contractor_statement_handling", [
-        "подрядчик", "генподрядчик", "субподрядчик", "исполнитель",
-        "ответ подрядчика", "позиция подрядчика",
-    ]),
-    ("owner_statement_handling", [
-        "застройщик", "инвестор", "позиция застройщика",
-        "ответ застройщика", "письмо застройщика",
-    ]),
-    ("telegram_source_work_signal", [
-        "вакансия", "требуется", "нужен специалист", "ищем технадзор",
-        "ищем инженера", "найдём", "предложение работы",
-    ]),
-    ("rabota_poisk_reusable_pattern", [
-        "заказ", "тендер", "объявление", "контракт", "выбор подрядчика",
-        "объект ищет", "нужен технадзор", "проведём отбор",
-    ]),
-]
-
-TOPIC5_VALUE_KEYWORDS = [
-    "акт", "дефект", "технадзор", "заключение", "предписание",
-    "приёмка", "отчёт", "фото", "норматив", "документ",
-    "рекомендация", "вывод", "замечание",
-]
-
-NOISE_MARKERS = [
-    "реклама", "продам", "куплю", "скидка", "акция",
-    "заработок", "кредит без отказа", "займ", "только сегодня",
-    "подпишись", "переходи по ссылке", "выиграли",
-]
-
-
-def _card_id(source_ref: str, message_id: int | str) -> str:
-    raw = f"{source_ref}::{message_id}"
-    return "SK_" + hashlib.md5(raw.encode()).hexdigest()[:12].upper()
-
-
-def classify_category(text: str) -> str:
-    low = text.lower()
-    for category, patterns in _CATEGORY_PATTERNS:
-        if any(p in low for p in patterns):
-            return category
-    return "unknown"
-
-
-def extract_rule_from_text(text: str, category: str) -> str:
-    sentences = re.split(r"[.\n!?]+", text)
-    useful = []
-    for sent in sentences:
-        s = sent.strip()
-        if len(s) < 20:
-            continue
-        low = s.lower()
-        if any(kw in low for kw in TOPIC5_VALUE_KEYWORDS):
-            useful.append(s)
-        if len(useful) >= 3:
-            break
-    if useful:
-        return ". ".join(useful[:3])
-    # fallback: first substantial sentence
-    for sent in sentences:
-        s = sent.strip()
-        if len(s) >= 30:
-            return s[:300]
-    return text[:300].strip()
-
-
-def why_useful(category: str) -> str:
-    mapping = {
-        "act_structure": "Позволяет выстраивать структуру акта технадзора: разделы, приложения, обязательные поля",
-        "report_structure": "Определяет состав технического отчёта/заключения по объекту",
-        "defect_description_logic": "Формирует навык точной формулировки дефектов для актов и предписаний",
-        "photo_to_defect_linking": "Описывает правило привязки фотоматериалов к конкретным дефектам в документе",
-        "evidence_handling": "Показывает как формировать доказательную базу — факты, источники, исполнительная документация",
-        "normative_reference_handling": "Обучает правильному указанию нормативных ссылок (СП/ГОСТ/СНиП) в актах",
-        "recommendation_logic": "Задаёт логику формулировки предписаний и рекомендаций по устранению",
-        "conclusion_logic": "Показывает структуру вывода/заключения о техническом состоянии",
-        "file_workflow": "Описывает правила работы с файлами (PDF/DOCX/XLSX) при формировании пакета документов",
-        "document_workflow": "Определяет порядок формирования и передачи комплекта исполнительной документации",
-        "client_facing_language": "Задаёт профессиональный язык документов, обращённых к заказчику/собственнику",
-        "contractor_statement_handling": "Показывает как фиксировать позицию подрядчика в документах",
-        "owner_statement_handling": "Показывает как фиксировать позицию застройщика/инвестора",
-        "telegram_source_work_signal": "Сигнал о возможной работе/заказе — полезен для маршрутизации в topic_6104",
-        "rabota_poisk_reusable_pattern": "Паттерн для поиска заказов/вакансий через Telegram-источник (тема RABOTA_POISK)",
-        "unknown": "Категория не определена — требует ручной проверки владельца",
-    }
-    return mapping.get(category, "")
-
-
-def is_noise(text: str) -> bool:
-    low = (text or "").lower()
-    if any(n in low for n in NOISE_MARKERS):
-        return True
-    if len(text.strip()) < 20:
-        return True
-    return False
-
-
-def has_practical_value(text: str) -> bool:
-    low = text.lower()
-    return any(kw in low for kw in TOPIC5_VALUE_KEYWORDS)
-
-
-def build_skill_card(record: dict) -> dict | None:
-    text = record.get("text", "")
-    source_ref = record.get("source_ref", "")
-    message_id = record.get("message_id", "")
-
-    if not source_ref:
-        logger.debug("rejected: no source_ref msg=%s", message_id)
-        return None
-
-    if is_noise(text):
-        logger.debug("rejected: noise msg=%s", message_id)
-        return None
-
-    if not has_practical_value(text) and not record.get("file_name") and not record.get("links"):
-        logger.debug("rejected: no practical value msg=%s", message_id)
-        return None
-
-    category = classify_category(text)
-    extracted_rule = extract_rule_from_text(text, category)
-
-    needs_review = (
-        category == "unknown"
-        or len(extracted_rule) < 30
-        or not has_practical_value(text)
-    )
-
-    tags = [category]
-    if record.get("file_name"):
-        tags.append("has_document")
-    if record.get("links"):
-        tags.append("has_links")
-    if record.get("media_type") == "photo":
-        tags.append("has_photo")
-
-    return {
-        "id": _card_id(source_ref, message_id),
-        "source": record.get("source", "@tnz_msk"),
-        "source_ref": source_ref,
-        "message_id": message_id,
-        "message_date": record.get("message_date", ""),
-        "category": category,
-        "title": f"{category}: {extracted_rule[:60]}",
-        "source_excerpt": text[:400],
-        "extracted_rule": extracted_rule,
-        "why_useful_for_topic_5": why_useful(category),
-        "source_links": record.get("links", []),
-        "source_files": ([record["file_name"]] if record.get("file_name") else []),
-        "confidence": "low" if needs_review else "medium",
-        "needs_owner_review": needs_review,
-        "tags": tags,
-    }
-
-
-def process_records(records: list[dict]) -> dict:
-    cards: list[dict] = []
-    rejected = 0
-    for rec in records:
-        card = build_skill_card(rec)
-        if card:
-            cards.append(card)
-        else:
-            rejected += 1
-
-    by_category: dict[str, list] = {}
-    for card in cards:
-        by_category.setdefault(card["category"], []).append(card)
-
-    return {
-        "total_input": len(records),
-        "extracted": len(cards),
-        "rejected_noise": rejected,
-        "categories": list(by_category.keys()),
-        "cards": cards,
-        "by_category": by_category,
-    }
-# === END_TECHNADZOR_DOCUMENT_SKILL_V1 ===
-
-====================================================================================================
-END_FILE: core/technadzor_document_skill.py
 FILE_CHUNK: 1/1
 ====================================================================================================

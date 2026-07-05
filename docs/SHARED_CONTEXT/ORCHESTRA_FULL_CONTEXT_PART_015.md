@@ -1,8 +1,480 @@
 # ORCHESTRA_FULL_CONTEXT_PART_015
-generated_at_utc: 2026-07-05T19:22:21.454680+00:00
-git_sha_before_commit: e76a956d9df6276eebb07cb11c33f1256298aa83
+generated_at_utc: 2026-07-05T19:52:21.424966+00:00
+git_sha_before_commit: 56ef896bc4376400f193d1f7c90db873d1520ecd
 part: 15/18
 
+
+====================================================================================================
+BEGIN_FILE: areal_telegram_wrapper.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: ff7e0e9e7f77c13d370d8796b6683523ec134d09232e9b3d18fbcd63dbce47d3
+====================================================================================================
+"""
+PATCH_TELEGRAM_BIG_FILE_LOCAL_BOT_API_V1
+Patches aiogram in-memory to use local Telegram Bot API server (localhost:8081).
+Removes 20MB file size limit. telegram_daemon.py is NOT modified on disk.
+
+Markers logged to task_history (via daemon):
+  BIG_FILE_LOCAL_BOT_API_USED
+  BIG_FILE_LOCAL_DOWNLOAD_OK
+  BIG_FILE_LOCAL_DOWNLOAD_FAILED
+  BIG_FILE_TEMP_CLEANED
+  FILE_INTAKE_ROUTER_LOCAL_PATH_PASSED
+
+Activation gate: only via verify_local_bot_api.sh — do NOT activate manually.
+"""
+import os
+import sys
+import logging
+
+_LOG = logging.getLogger("areal.bigfile_patch")
+
+# Read from EnvironmentFile — never hardcode, never log values
+LOCAL_API_BASE = os.getenv("TELEGRAM_LOCAL_API_BASE", "http://localhost:8081")
+
+# ── Patch 1: aiogram Bot session → local server ──────────────────────────────
+try:
+    from aiogram.client.session.aiohttp import AiohttpSession
+    from aiogram.client.telegram import TelegramAPIServer
+    import aiogram
+
+    _orig_bot_init = aiogram.Bot.__init__
+
+    def _patched_bot_init(self, token, session=None, default=None, **kwargs):
+        if session is None:
+            try:
+                local_server = TelegramAPIServer.from_base(LOCAL_API_BASE)
+                session = AiohttpSession(api=local_server)
+                _LOG.info("BIG_FILE_LOCAL_BOT_API_USED: local server active")
+            except Exception as _e:
+                # Never log LOCAL_API_BASE value with credentials embedded
+                _LOG.warning("BIG_FILE_LOCAL_API_SESSION_FAILED: %s — falling back", type(_e).__name__)
+        _orig_bot_init(self, token, session=session, default=default, **kwargs)
+
+    aiogram.Bot.__init__ = _patched_bot_init
+    _LOG.info("PATCH_BOT_INIT_LOCAL_SERVER: installed")
+
+except Exception as _patch_err:
+    _LOG.error("PATCH_BOT_INIT_LOCAL_SERVER_FAILED: %s", type(_patch_err).__name__)
+
+# ── Patch 2: Fix download URL (in-memory only, file on disk unchanged) ────────
+_daemon_path = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "telegram_daemon.py"
+)
+
+try:
+    _code = open(_daemon_path, "r", encoding="utf-8").read()
+
+    _CLOUD_PATTERN = 'url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"'
+    # Local Bot API returns absolute disk path in file_path — copy directly, skip HTTP
+    _LOCAL_PATTERN = (
+        'if file_path.startswith("/") and os.path.exists(file_path):\n'
+        '        import shutil as _shutil_lbp, logging as _log_lbp\n'
+        '        _log_lbp.getLogger("areal.bigfile_patch").info("LOCAL_BOT_API_ABSOLUTE_PATH_USED:%s", os.path.basename(file_path))\n'
+        '        _shutil_lbp.copy2(file_path, local_path)\n'
+        '        return local_path\n'
+        f'    url = f"{LOCAL_API_BASE}/file/bot{{BOT_TOKEN}}/{{file_path}}"'
+    )
+
+    if _CLOUD_PATTERN in _code:
+        _code = _code.replace(_CLOUD_PATTERN, _LOCAL_PATTERN)
+        _LOG.info("PATCH_DOWNLOAD_URL_LOCAL_SERVER: ok (absolute path → disk copy)")
+    else:
+        _LOG.warning(
+            "PATCH_DOWNLOAD_URL_LOCAL_SERVER: pattern not found in telegram_daemon.py — "
+            "large file download URL not patched"
+        )
+
+    # ── Execute patched daemon as __main__ ────────────────────────────────────
+    _globals = {
+        "__name__": "__main__",
+        "__file__": _daemon_path,
+        "__doc__": None,
+        "__package__": None,
+        "__spec__": None,
+        "__builtins__": __builtins__,
+    }
+    exec(compile(_code, _daemon_path, "exec"), _globals)
+
+except Exception as _exec_err:
+    _LOG.error("WRAPPER_EXEC_DAEMON_FAILED: %s", _exec_err)
+    raise
+
+====================================================================================================
+END_FILE: areal_telegram_wrapper.py
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: auto_memory_dump.sh
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 51c8b3cb64183d2a3f41cf82b53daa4e234bac3e9aa4540958cecc5a1db39cb6
+====================================================================================================
+#!/bin/bash
+cd /root/.areal-neva-core
+/root/.areal-neva-core/.venv/bin/python3 /root/.areal-neva-core/orchestra_full_dump.py >> /root/.areal-neva-core/logs/auto_dump.log 2>&1
+
+====================================================================================================
+END_FILE: auto_memory_dump.sh
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: data/norms/normative_index.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 8d7a9162925e029c6590e632f7514e7d3bfda171a96ffc9b2c7d2de06f277448
+====================================================================================================
+[
+  {
+    "doc": "СП 70.13330.2012",
+    "clause": "",
+    "text": "Несущие и ограждающие конструкции. Дефекты фиксируются и устраняются по проектному решению",
+    "keywords": ["бетон", "монолит", "трещина", "раковина", "скол", "дефект"],
+    "source": "LOCAL_SAFE_INDEX"
+  },
+  {
+    "doc": "СП 63.13330.2018",
+    "clause": "",
+    "text": "Бетонные и железобетонные конструкции. Расчёт требует проверки класса бетона, арматуры и защитного слоя",
+    "keywords": ["бетон", "арматура", "защитный слой", "кж", "плита", "фундамент"],
+    "source": "LOCAL_SAFE_INDEX"
+  },
+  {
+    "doc": "ГОСТ 21.101-2020",
+    "clause": "",
+    "text": "Основные требования к проектной и рабочей документации",
+    "keywords": ["проект", "документация", "чертеж", "спецификация", "ведомость"],
+    "source": "LOCAL_SAFE_INDEX"
+  }
+]
+
+====================================================================================================
+END_FILE: data/norms/normative_index.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: data/project_templates/PROJECT_TEMPLATE_MODEL__АР_manual.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 805aeb52360d047d9cb6b06fef54cab4177aa5bf6e9797a462f58be3735a398e
+====================================================================================================
+{
+  "schema": "PROJECT_TEMPLATE_MODEL_V1",
+  "project_type": "АР",
+  "source_files": [
+    "ПРОЕКТ КД кровля 5.pdf"
+  ],
+  "sheet_register": [],
+  "marks": [
+    "АР"
+  ],
+  "sections": [
+    "плане",
+    "расчет",
+    "Расчетная",
+    "Фасады",
+    "Разрез",
+    "План",
+    "фасада"
+  ],
+  "axes_grid": {
+    "axes_letters": [],
+    "axes_numbers": [
+      "01",
+      "02",
+      "23",
+      "31"
+    ]
+  },
+  "dimensions": [
+    940,
+    730,
+    2025,
+    16940,
+    10730,
+    360,
+    2001,
+    501,
+    27751,
+    6931,
+    3254,
+    1552,
+    7463,
+    6120,
+    485,
+    1393,
+    800,
+    4350,
+    2300,
+    3590,
+    6700,
+    3570,
+    3160,
+    4000,
+    7870,
+    8381,
+    6850,
+    6750,
+    9572,
+    9903,
+    2783,
+    900,
+    944,
+    1498,
+    1631,
+    2672,
+    2968,
+    1180,
+    2822,
+    1629,
+    3600,
+    3500,
+    4987,
+    5468,
+    3916,
+    600,
+    10930,
+    10440,
+    10040,
+    10530,
+    4640,
+    5125,
+    2900,
+    2905,
+    1600,
+    1605,
+    970,
+    1925,
+    1930,
+    4980,
+    2170,
+    520,
+    780,
+    1000,
+    12730,
+    12240,
+    700,
+    12125,
+    675,
+    620,
+    12120
+  ],
+  "levels": [
+    "0.0",
+    "21.501"
+  ],
+  "nodes": [],
+  "specifications": [],
+  "materials": [
+    "металлочерепица.",
+    "бруса",
+    "Утеплитель",
+    "Утепление",
+    "Вент.брусок",
+    "Металлочерепица",
+    "Брус"
+  ],
+  "stamp_fields": {
+    "year": "2025"
+  },
+  "variable_parameters": [
+    "project_name",
+    "address",
+    "customer",
+    "area",
+    "floors",
+    "axes_grid",
+    "dimensions",
+    "materials",
+    "sheet_register"
+  ],
+  "output_documents": [
+    "DOCX_PROJECT_TEMPLATE_SUMMARY",
+    "JSON_PROJECT_TEMPLATE_MODEL",
+    "XLSX_SPECIFICATION_DRAFT"
+  ],
+  "quality": {
+    "has_sheet_register": false,
+    "has_sections": true,
+    "has_axes_or_dimensions": true,
+    "has_materials": true,
+    "text_chars": 8561,
+    "lines": 1822
+  },
+  "task_id": "",
+  "chat_id": "",
+  "topic_id": 0
+}
+====================================================================================================
+END_FILE: data/project_templates/PROJECT_TEMPLATE_MODEL__АР_manual.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: data/project_templates/PROJECT_TEMPLATE_MODEL__АР_repaired.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 756930a51f0ac08eb66c6253ff4fe99247a1fa2153b56e9dcbff2a515328fca3
+====================================================================================================
+{
+  "schema": "PROJECT_TEMPLATE_MODEL_V2_REPAIRED",
+  "project_type": "АР",
+  "source_file": "Проект АБ_ИНД_М_80_20_03_24.pdf",
+  "template_file": "/root/.areal-neva-core/data/project_templates/PROJECT_TEMPLATE_MODEL__АР_repaired.json",
+  "repaired_at": "2026-04-30T09:15:02.251470Z",
+  "sheet_register": [
+    "01 Общие данные",
+    "02 Общий вид",
+    "03 План аксонометрия",
+    "04 Экспликация помещений",
+    "05 План фундамента Отм. -0,029",
+    "06 Перспектива. Гостинная и прихожая.",
+    "07 Перспектива.",
+    "08 Перспектива.",
+    "09 Фасады",
+    "10 Расстановка выключателей и розеток",
+    "11 Маркировочный план",
+    "12 Заполнение конных и дверных проемов",
+    "02 Согласовано",
+    "05 План фундамента",
+    "06 Согласовано",
+    "07 Согласовано",
+    "08 Согласовано",
+    "03 План закладных деталей коммуникаций",
+    "04 План фундамента",
+    "05 План первого этажа",
+    "06 План кровли",
+    "07 Фасад 1-4",
+    "08 Фасад 4-1",
+    "09 Фасад А-Д",
+    "10 Фасад Д-А",
+    "13 Экспликация помещений",
+    "19 Ведомость отделки",
+    "20 Общие указания",
+    "22 Ведомость листов"
+  ],
+  "sections": [],
+  "materials": [],
+  "source": "core.db.topic_210.drive_file"
+}
+====================================================================================================
+END_FILE: data/project_templates/PROJECT_TEMPLATE_MODEL__АР_repaired.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: data/project_templates/PROJECT_TEMPLATE_MODEL__АР_smoke.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: bedd84f1787a2381a8bd97ca6b9af30e39f4e4f69f2a8849e018e72a4e4dcf72
+====================================================================================================
+{
+  "schema": "PROJECT_TEMPLATE_MODEL_V1",
+  "project_type": "АР",
+  "source_files": [
+    "АР тест.pdf"
+  ],
+  "sheet_register": [
+    {
+      "mark": "АР",
+      "number": "1",
+      "title": "Общие данные"
+    },
+    {
+      "mark": "АР",
+      "number": "2",
+      "title": "План этажа"
+    },
+    {
+      "mark": "АР",
+      "number": "3",
+      "title": "Фасады"
+    },
+    {
+      "mark": "АР",
+      "number": "4",
+      "title": "Разрез 1-1"
+    },
+    {
+      "mark": "АР",
+      "number": "5",
+      "title": "Узлы"
+    }
+  ],
+  "marks": [
+    "АР"
+  ],
+  "sections": [
+    "Общие данные",
+    "Ведомость листов",
+    "АР-1 Общие данные",
+    "АР-2 План этажа",
+    "АР-3 Фасады",
+    "АР-4 Разрез 1-1",
+    "Спецификация материалов"
+  ],
+  "axes_grid": {
+    "axes_letters": [
+      "А"
+    ],
+    "axes_numbers": [
+      "1"
+    ]
+  },
+  "dimensions": [
+    6000,
+    3000,
+    2500,
+    500,
+    2024
+  ],
+  "levels": [
+    "0.0"
+  ],
+  "nodes": [],
+  "specifications": [
+    "Ведомость листов",
+    "Спецификация материалов"
+  ],
+  "materials": [
+    "Бетон В25",
+    "Арматура А500"
+  ],
+  "stamp_fields": {
+    "address": "Ленинградская область, Всеволожский район",
+    "developer": "ООО СК Ареал-Нева",
+    "year": "2024"
+  },
+  "variable_parameters": [
+    "project_name",
+    "address",
+    "customer",
+    "area",
+    "floors",
+    "axes_grid",
+    "dimensions",
+    "materials",
+    "sheet_register"
+  ],
+  "output_documents": [
+    "DOCX_PROJECT_TEMPLATE_SUMMARY",
+    "JSON_PROJECT_TEMPLATE_MODEL",
+    "XLSX_SPECIFICATION_DRAFT"
+  ],
+  "quality": {
+    "has_sheet_register": true,
+    "has_sections": true,
+    "has_axes_or_dimensions": true,
+    "has_materials": true,
+    "text_chars": 297,
+    "lines": 17
+  },
+  "task_id": "smoke",
+  "chat_id": "-1003725299009",
+  "topic_id": 210
+}
+====================================================================================================
+END_FILE: data/project_templates/PROJECT_TEMPLATE_MODEL__АР_smoke.json
+FILE_CHUNK: 1/1
+====================================================================================================
 
 ====================================================================================================
 BEGIN_FILE: data/project_templates/PROJECT_TEMPLATE_MODEL__КД_manual.json
