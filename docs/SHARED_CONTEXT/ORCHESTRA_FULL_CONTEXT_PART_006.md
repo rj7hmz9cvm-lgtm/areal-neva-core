@@ -1,14 +1,21 @@
 # ORCHESTRA_FULL_CONTEXT_PART_006
-generated_at_utc: 2026-07-06T08:22:42.331572+00:00
-git_sha_before_commit: 5ca02cdd69238e358402491f647ce5c384e8c39a
+generated_at_utc: 2026-07-06T08:52:42.386771+00:00
+git_sha_before_commit: cdfc72406c0ded2b84941ad40096aeb9ee9dce05
 part: 6/19
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 2/4
-SHA256_FULL_FILE: 0d01de4a81225ba6f983ca40912c57bfda60bd49a21c4865becb64cbe137fa07
+SHA256_FULL_FILE: 6f7c2839708ae5cce0c530384fbd56cc14f988984e5901d37aa8adb2d46d0aa4
 ====================================================================================================
+    if _p6e4_inspect.iscoroutinefunction(orig):
+        async def wrapped(*args, **kwargs):
+            conn, task = _p6e4_get_conn_task(args, kwargs)
+            if conn is not None and task is not None and _p6e4_is_topic2_image_estimate_task(task):
+                ok = await _p6e4_run_topic2_image_estimate(conn, task)
+                if ok:
+                    return True
             return await orig(*args, **kwargs)
     else:
         def wrapped(*args, **kwargs):
@@ -7728,13 +7735,6 @@ if not getattr(_T25G_CURRENT, "_t25g_wrapped", False) and _T25G_PREGATE:
             try:
                 row = conn.execute(
                     "SELECT topic_id FROM tasks WHERE id=? LIMIT 1", (str(task_id),)
-                ).fetchone()
-                if row is not None:
-                    tid = int((row["topic_id"] if hasattr(row, "keys") else row[0]) or 0)
-                    if tid in (210, 5) and _t25g_has_reply_sent(conn, task_id):
-                        return _T25G_PREGATE(conn, task_id, **kwargs)
-            except Exception:
-                pass
 
 ====================================================================================================
 END_FILE: task_worker.py

@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_013
-generated_at_utc: 2026-07-06T08:22:42.338296+00:00
-git_sha_before_commit: 5ca02cdd69238e358402491f647ce5c384e8c39a
+generated_at_utc: 2026-07-06T08:52:42.396287+00:00
+git_sha_before_commit: cdfc72406c0ded2b84941ad40096aeb9ee9dce05
 part: 13/19
 
 
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 1/2
-SHA256_FULL_FILE: 9d9ac0dc46569251c754281ed098a7a1b420d7cea35e245b255af7da4f9b0936
+SHA256_FULL_FILE: 133bdf5beb91640e2f438779e9594fdddca4c81fac1f01ac9a1b3b37c5577fcb
 ====================================================================================================
 # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
 from __future__ import annotations
@@ -1392,6 +1392,8 @@ def _create_xlsx_from_template(task_id: str, parsed: Dict[str, Any], template: D
         ws.cell(row_idx, 9).value = f"=E{row_idx}*H{row_idx}"
         ws.cell(row_idx, 10).value = f"=G{row_idx}+I{row_idx}"
         _ps = _match_price_source(_ps_sources, it["name"], it["section"])
+        if "ручная цена" in _low(it.get("note", "")):
+            _ps = {"status": "MANUAL", "supplier": "user", "url": "", "checked_at": today_str}
         ws.cell(row_idx, 11, _ps.get("status", "template_only"))
         ws.cell(row_idx, 12, _ps.get("supplier", ""))
         ws.cell(row_idx, 13, _ps.get("url", ""))
@@ -2545,6 +2547,35 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
     template = choose_template(parsed)
     template_path = download_template_xlsx(template)
     template_prices, sheet_name, _sheet_fallback = extract_template_prices(template_path, parsed)
+
+    if not _topic2_price_search_explicit_intent_v1(raw_input):
+        pending = {
+            "version": "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3",
+            "status": "WAITING_PRICE_SEARCH_CONFIRMATION",
+            "task_id": task_id,
+            "chat_id": chat_id,
+            "topic_id": topic_id,
+            "parsed": parsed,
+            "template": template,
+            "sheet_name": sheet_name,
+            "sheet_fallback": _sheet_fallback,
+            "template_prices": template_prices,
+            "online_prices": "",
+            "created_at": _now(),
+        }
+        _memory_save(chat_id, f"topic_2_estimate_pending_{task_id}", pending)
+        text = _topic2_price_search_prompt_text_v1(parsed, template, sheet_name)
+        send_res = await _send_text(chat_id, text, reply_to, topic_id)
+        kwargs = {
+            "state": "WAITING_CLARIFICATION",
+            "result": text,
+            "error_message": "TOPIC2_PRICE_SEARCH_CONFIRMATION_REQUIRED",
+        }
+        if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+            kwargs["bot_message_id"] = send_res.get("bot_message_id")
+        _update_task_safe(conn, task_id, **kwargs)
+        _history_safe(conn, task_id, "TOPIC2_PRICE_SEARCH_CONFIRMATION_REQUESTED")
+        return True
 
     try:
         online_prices = await _search_prices_online(parsed, template, sheet_name, conn=conn, task_id=task_id)
@@ -6257,6 +6288,17 @@ except Exception:
 # === END_PATCH_TOPIC2_PROJECT_WORK_ROWS_V1 ===
 
 # === PATCH_TOPIC2_SAMPLE_MATRIX_MODE_V1 ===
+
+====================================================================================================
+END_FILE: core/stroyka_estimate_canon.py
+FILE_CHUNK: 1/2
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: core/stroyka_estimate_canon.py
+FILE_CHUNK: 2/2
+SHA256_FULL_FILE: 133bdf5beb91640e2f438779e9594fdddca4c81fac1f01ac9a1b3b37c5577fcb
+====================================================================================================
 # "Считай по проекту" means: use project facts as input and use existing
 # estimate samples as calculation structure. It must not collapse the estimate
 # to only the rows directly extracted from the PDF unless the user explicitly
@@ -6297,17 +6339,6 @@ def _t2s_sample_matrix_mode_v1(parsed):
 def _t2s_with_project_only_disabled_v1(callback):
     guard = globals().get("_t2_no_template_orient_allowed_v1")
 
-
-====================================================================================================
-END_FILE: core/stroyka_estimate_canon.py
-FILE_CHUNK: 1/2
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/stroyka_estimate_canon.py
-FILE_CHUNK: 2/2
-SHA256_FULL_FILE: 9d9ac0dc46569251c754281ed098a7a1b420d7cea35e245b255af7da4f9b0936
-====================================================================================================
     def _sample_matrix_guard(_parsed):
         return False
 
@@ -6516,6 +6547,25 @@ def _t2fo_int_v1(value, default=0):
         return int(default)
 
 
+def _t2fo_manual_monolith_work_price_v1(text):
+    s = _low(text or "")
+    if not ("монолит" in s and "работ" in s):
+        return 0.0
+    patterns = (
+        r"стоимост[ьи]\s+работ[^\d]{0,80}монолит[^\d]{0,80}(\d{3,6})(?:[.,]\d+)?\s*(?:руб|р|за|/|\s)*(?:м3|м³|метр\s+куб)",
+        r"работ[^\d]{0,80}монолит[^\d]{0,80}(\d{3,6})(?:[.,]\d+)?\s*(?:руб|р|за|/|\s)*(?:м3|м³|метр\s+куб)",
+        r"монолит[^\d]{0,80}работ[^\d]{0,80}(\d{3,6})(?:[.,]\d+)?\s*(?:руб|р|за|/|\s)*(?:м3|м³|метр\s+куб)",
+    )
+    for pat in patterns:
+        m = re.search(pat, s, re.I)
+        if m:
+            try:
+                return float(m.group(1).replace(",", "."))
+            except Exception:
+                return 0.0
+    return 0.0
+
+
 def _t2fo_build_foundation_items_v1(parsed, price_text, choice):
     parsed = parsed or {}
     P = _FTM_PRICES
@@ -6543,6 +6593,9 @@ def _t2fo_build_foundation_items_v1(parsed, price_text, choice):
 
     concrete_price = _p8v3_mp("бетон в25 w6", P["concrete_b25_mat"])
     rebar_price = _p8v3_mp("арматура металлическая д.12а500", P["rebar_a500_mat"])
+    manual_concrete_work_price = _t2fo_manual_monolith_work_price_v1(raw_text)
+    concrete_work_price = manual_concrete_work_price or _p8v3_wp("бетонирование монолитной плиты   б/н", P["concrete_pour_work"])
+    concrete_work_note = "ручная цена из правки пользователя" if manual_concrete_work_price else "работы"
     pump_price = _choose_value(_numbers_from_price_text(price_text, ("бетононасос",)), choice) or 31050
     delivery_price = round(P["logist_delivery"] * max(distance / 30.0, 1.0), 2) if distance else 0
 
@@ -6558,7 +6611,7 @@ def _t2fo_build_foundation_items_v1(parsed, price_text, choice):
     items.append(_ftm_row("Фундамент", f"Арматура А500 для плиты, {layers} слоя", "т", rebar_qty, rebar_price, "расчётная масса от объёма бетона; уточняется по КЖ"))
     items.append(_ftm_row("Фундамент", f"Армирование фундаментной плиты, {layers} слоя", "м²", area, _p8v3_wp("устройство арматурного каркаса", P["rebar_install_work"]), "работы"))
     items.append(_ftm_row("Фундамент", f"Бетон {concrete_grade} для монолитной плиты {int(slab_t * 1000)} мм", "м³", concrete_volume, concrete_price, "по ТЗ"))
-    items.append(_ftm_row("Фундамент", "Бетонирование фундаментной плиты", "м³", concrete_volume, _p8v3_wp("бетонирование монолитной плиты   б/н", P["concrete_pour_work"]), "работы"))
+    items.append(_ftm_row("Фундамент", "Бетонирование фундаментной плиты", "м³", concrete_volume, concrete_work_price, concrete_work_note))
     if any(x in raw_text for x in ("бетононасос", "насос", "подач")):
         items.append(_ftm_row("Фундамент", "Аренда бетононасоса / подача бетона", "смена", 1, pump_price, "по ТЗ: подача бетона"))
     if delivery_price:
@@ -6628,6 +6681,247 @@ except Exception:
     pass
 # === END_PATCH_TOPIC2_FOUNDATION_NO_TEMPLATE_ROWS_V1 ===
 
+# === PATCH_TOPIC2_PRICE_SEARCH_CONFIRM_AND_READY_DONE_V1 ===
+def _topic2_price_search_explicit_intent_v1(text: str) -> bool:
+    low = _low(text or "")
+    return any(x in low for x in (
+        "в интернете", "через интернет", "интернет-цен", "интернет цен",
+        "актуальн", "свеж", "sonar", "perplexity", "поищи", "поиск",
+        "найди цены", "найти цены", "проверь цены", "проверить цены",
+        "поставщик", "ссылк", "рыночн",
+    ))
+
+
+def _topic2_price_search_prompt_text_v1(parsed: Dict[str, Any], template: Dict[str, Any], sheet_name: Optional[str]) -> str:
+    return (
+        "Задачу понял.\n\n"
+        f"Шаблон: {template.get('title')}\n"
+        f"Лист: {sheet_name or 'не выбран'}\n"
+        f"Объект: {(parsed or {}).get('object') or 'не указан'}\n"
+        f"Материал: {(parsed or {}).get('material') or 'не указан'}\n"
+        f"Размеры: {(parsed or {}).get('dimensions') or 'не указаны'}\n"
+        f"Удалённость: {(parsed or {}).get('distance_km') if (parsed or {}).get('distance_km') is not None else 'не указана'} км\n\n"
+        "Перед финальной сметой нужно подтвердить цены.\n"
+        "Искать актуальные цены работ, материалов и логистики через интернет (Sonar/Perplexity)?\n\n"
+        "Ответь: да, искать / нет, укажу цены вручную"
+    )
+
+
+def _topic2_price_search_yes_v1(text: str) -> bool:
+    low = _low(text or "").strip(" .,!?:;")
+    return low in {"да", "да искать", "искать", "да поищи", "поищи", "ищи", "нужно", "надо"} or low.startswith("да ")
+
+
+def _topic2_price_search_no_v1(text: str) -> bool:
+    low = _low(text or "").strip(" .,!?:;")
+    return low in {"нет", "не надо", "не нужно", "без интернета", "не искать"} or low.startswith("нет ")
+
+
+def _topic2_final_ready_confirm_phrase_v1(text: str) -> bool:
+    low = _low(text or "").replace("[voice]", "").strip(" .,!?:;")
+    exact = {
+        "готово", "готов", "готова", "готово спасибо",
+        "подтверждаю", "закрывай", "можно закрывать",
+        "все ок", "всё ок", "все верно", "всё верно",
+        "хорошо", "отлично", "принимаю",
+    }
+    if low in exact:
+        return True
+    return any(x in low for x in (
+        "задача завершена",
+        "задачу завершить",
+        "задачу закрыть",
+        "хорошая работа",
+        "можно закрывать",
+    ))
+
+
+async def _topic2_handle_price_search_confirmation_v1(conn, task, logger=None) -> bool:
+    task_id = _s(_row_get(task, "id"))
+    chat_id = _s(_row_get(task, "chat_id"))
+    topic_id = int(_row_get(task, "topic_id", 0) or 0)
+    if topic_id != TOPIC_ID_STROYKA:
+        return False
+    raw = _s(_row_get(task, "raw_input", ""))
+    pending = _memory_latest(chat_id, "topic_2_estimate_pending_")
+    if not pending or pending.get("status") != "WAITING_PRICE_SEARCH_CONFIRMATION":
+        return False
+    if not (_topic2_price_search_yes_v1(raw) or _topic2_price_search_no_v1(raw)):
+        return False
+
+    pending_task_id = _s(pending.get("task_id") or task_id)
+    reply_to = _row_get(task, "reply_to_message_id", None) or _row_get(task, "message_id", None)
+    parsed = pending.get("parsed") or {}
+    template = pending.get("template") or CANON_TEMPLATE_FALLBACK["areal"]
+    sheet_name = pending.get("sheet_name")
+    template_prices = pending.get("template_prices") or ""
+
+    if _topic2_price_search_no_v1(raw):
+        text = (
+            "Интернет-поиск цен не запускаю.\n\n"
+            "Пришли ручные цены по позициям или напиши: считать по шаблонным ценам без интернет-проверки."
+        )
+        blocked = dict(pending)
+        blocked["status"] = "WAITING_MANUAL_PRICE_INPUT"
+        blocked["updated_at"] = _now()
+        _memory_save(chat_id, f"topic_2_estimate_pending_{pending_task_id}", blocked)
+        send_res = await _send_text(chat_id, text, reply_to, topic_id)
+        kwargs = {"state": "WAITING_CLARIFICATION", "result": text, "error_message": "TOPIC2_MANUAL_PRICE_INPUT_REQUIRED"}
+        if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+            kwargs["bot_message_id"] = send_res.get("bot_message_id")
+        _update_task_safe(conn, pending_task_id, **kwargs)
+        _history_safe(conn, pending_task_id, "TOPIC2_PRICE_SEARCH_DECLINED_BY_USER")
+        if task_id != pending_task_id:
+            _update_task_safe(conn, task_id, state="DONE", result="Интернет-поиск цен отклонён пользователем", error_message="")
+            _history_safe(conn, task_id, "TOPIC2_PRICE_SEARCH_DECLINE_CHILD_DONE")
+        return True
+
+    _history_safe(conn, pending_task_id, "TOPIC2_PRICE_SEARCH_CONFIRMED_BY_USER")
+    _history_safe(conn, task_id, "TOPIC2_PRICE_SEARCH_CONFIRMATION_ACCEPTED")
+    try:
+        online_prices = await _search_prices_online(parsed, template, sheet_name, conn=conn, task_id=pending_task_id)
+    except Exception as exc:
+        text = "SEARCH_FAILED: Sonar unavailable"
+        send_res = await _send_text(chat_id, text, reply_to, topic_id)
+        kwargs = {"state": "WAITING_CLARIFICATION", "result": text, "error_message": "TOPIC2_PRICE_SEARCH_FAILED"}
+        if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+            kwargs["bot_message_id"] = send_res.get("bot_message_id")
+        _update_task_safe(conn, pending_task_id, **kwargs)
+        _history_safe(conn, pending_task_id, "TOPIC2_PRICE_SEARCH_FAILED:" + _s(exc)[:160])
+        if task_id != pending_task_id:
+            _update_task_safe(conn, task_id, state="DONE", result=text, error_message="")
+        return True
+
+    confirmed = dict(pending)
+    confirmed["status"] = "WAITING_PRICE_CONFIRMATION"
+    confirmed["online_prices"] = online_prices
+    confirmed["updated_at"] = _now()
+    _memory_save(chat_id, f"topic_2_estimate_pending_{pending_task_id}", confirmed)
+    text = _price_confirmation_text(parsed, template, sheet_name, template_prices, online_prices)
+    send_res = await _send_text(chat_id, text, reply_to, topic_id)
+    kwargs = {"state": "WAITING_CLARIFICATION", "result": text, "error_message": "TOPIC2_PRICE_CHOICE_REQUIRED"}
+    if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+        kwargs["bot_message_id"] = send_res.get("bot_message_id")
+    _update_task_safe(conn, pending_task_id, **kwargs)
+    _history_safe(conn, pending_task_id, "TOPIC2_PRICE_CHOICE_REQUESTED_AFTER_SEARCH_CONFIRM")
+    if task_id != pending_task_id:
+        _update_task_safe(conn, task_id, state="DONE", result="Интернет-поиск цен подтверждён", error_message="")
+        _history_safe(conn, task_id, "TOPIC2_PRICE_SEARCH_CONFIRM_CHILD_DONE")
+    return True
+
+
+async def _topic2_handle_ready_done_v1(conn, task, logger=None) -> bool:
+    task_id = _s(_row_get(task, "id"))
+    chat_id = _s(_row_get(task, "chat_id"))
+    topic_id = int(_row_get(task, "topic_id", 0) or 0)
+    if topic_id != TOPIC_ID_STROYKA:
+        return False
+    raw = _s(_row_get(task, "raw_input", ""))
+    if not _topic2_final_ready_confirm_phrase_v1(raw):
+        return False
+    try:
+        if parse_price_choice(raw).get("confirmed"):
+            return False
+    except Exception:
+        pass
+    reply_to = _row_get(task, "reply_to_message_id", None) or _row_get(task, "message_id", None)
+    parent = None
+    if reply_to:
+        parent = conn.execute(
+            """
+            SELECT id, COALESCE(raw_input,'') AS raw_input, COALESCE(result,'') AS result
+            FROM tasks
+            WHERE CAST(chat_id AS TEXT)=?
+              AND COALESCE(topic_id,0)=?
+              AND state='AWAITING_CONFIRMATION'
+              AND id<>?
+              AND (bot_message_id=? OR reply_to_message_id=?)
+            ORDER BY updated_at DESC, created_at DESC
+            LIMIT 1
+            """,
+            (str(chat_id), int(topic_id), str(task_id), reply_to, reply_to),
+        ).fetchone()
+    if not parent:
+        parent = conn.execute(
+            """
+            SELECT id, COALESCE(raw_input,'') AS raw_input, COALESCE(result,'') AS result
+            FROM tasks
+            WHERE CAST(chat_id AS TEXT)=?
+              AND COALESCE(topic_id,0)=?
+              AND state='AWAITING_CONFIRMATION'
+              AND id<>?
+              AND COALESCE(result,'') LIKE '%Смета готова%'
+              AND (COALESCE(result,'') LIKE '%drive.google.com%' OR COALESCE(result,'') LIKE '%docs.google.com%')
+            ORDER BY updated_at DESC, created_at DESC
+            LIMIT 1
+            """,
+            (str(chat_id), int(topic_id), str(task_id)),
+        ).fetchone()
+    if not parent:
+        return False
+
+    parent_id = _s(parent["id"])
+    parent_raw = _s(parent["raw_input"])
+    parent_result = _s(parent["result"])
+    parent_low = _low(parent_result)
+    if not ("смета готов" in parent_low and ("xlsx" in parent_low or "pdf" in parent_low or "drive.google.com" in parent_low or "docs.google.com" in parent_low)):
+        return False
+
+    _history_safe(conn, parent_id, "TOPIC2_EXPLICIT_CONFIRM:ready_done_phrase")
+    _update_task_safe(conn, parent_id, state="DONE", error_message="")
+    _history_safe(conn, parent_id, "state:DONE")
+    try:
+        _memory_save(chat_id, f"topic_2_user_input_{parent_id}", {
+            "task_id": parent_id,
+            "topic_id": int(topic_id),
+            "raw_input": parent_raw,
+            "saved_at": _now(),
+            "source": "TOPIC2_EXPLICIT_CONFIRM",
+        })
+        _memory_save(chat_id, f"topic_2_task_summary_{parent_id}", {
+            "task_id": parent_id,
+            "topic_id": int(topic_id),
+            "summary": parent_result,
+            "saved_at": _now(),
+            "source": "TOPIC2_EXPLICIT_CONFIRM",
+        })
+        _memory_save(chat_id, f"topic_2_assistant_output_{parent_id}", {
+            "task_id": parent_id,
+            "topic_id": int(topic_id),
+            "result": parent_result,
+            "saved_at": _now(),
+            "source": "TOPIC2_EXPLICIT_CONFIRM",
+        })
+    except Exception:
+        pass
+    _update_task_safe(conn, task_id, state="DONE", result="Подтверждение принято", error_message="")
+    _history_safe(conn, task_id, "TOPIC2_CONFIRM_CHILD_DONE_READY_PHRASE")
+    await _send_text(chat_id, "Принял. Задача закрыта", reply_to, topic_id)
+    return True
+
+
+_T2PSC_PREV_MAYBE_HANDLE_V1 = maybe_handle_stroyka_estimate
+
+
+async def maybe_handle_stroyka_estimate(conn, task, logger=None):  # noqa: F811
+    try:
+        if await _topic2_handle_price_search_confirmation_v1(conn, task, logger=logger):
+            return True
+        if await _topic2_handle_ready_done_v1(conn, task, logger=logger):
+            return True
+    except Exception as exc:
+        try:
+            _history_safe(conn, _s(_row_get(task, "id")), "TOPIC2_PRICE_SEARCH_CONFIRM_OR_READY_DONE_ERR:" + _s(exc)[:160])
+        except Exception:
+            pass
+    return await _T2PSC_PREV_MAYBE_HANDLE_V1(conn, task, logger)
+
+
+try:
+    _STV3_LOG.info("PATCH_TOPIC2_PRICE_SEARCH_CONFIRM_AND_READY_DONE_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_PRICE_SEARCH_CONFIRM_AND_READY_DONE_V1 ===
 
 ====================================================================================================
 END_FILE: core/stroyka_estimate_canon.py
@@ -6987,475 +7281,5 @@ def process_records(records: list[dict]) -> dict:
 
 ====================================================================================================
 END_FILE: core/technadzor_document_skill.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/technadzor_drive_index.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 31118a4e5fa521f992b026001a821ecf8cea7570e3185a3ed6b89d59a3143c77
-====================================================================================================
-# === P6H_TOPIC5_TECHNADZOR_TEMPLATE_PHOTO_CLIENT_SAFE_CLOSE_20260504 / DRIVE_INDEX_V1 ===
-# Auto-discovery of topic_5 (technadzor) Drive folder contents as style/content
-# references — without manual "прими как образец" commands.
-#
-# Layered classification (file role):
-#   PRIMARY_PDF_STYLE         — PDF in topic root or in non-system subfolders (real client acts; main style)
-#   SECONDARY_DOCX_REFERENCE  — DOCX in service subfolders (TECHNADZOR / _drafts / _system / _templates)
-#   CLIENT_PHOTO_SOURCE       — image/* in topic root or any non-system folder (work-object photos)
-#   CLIENT_FINAL_PDF          — PDF artifacts produced earlier (kept in client folders)
-#   SYSTEM_TEMPLATE           — DOCX/JSON/manifests in service subfolders
-#   OTHER                     — anything else (audio, etc.)
-#
-# Folder classification:
-#   SYSTEM   — name in {_system, _templates, _drafts, _manifests, _archive, _tmp, TECHNADZOR}
-#   CLIENT   — anything else (work-object/customer-facing folders)
-#
-# Index is persisted to:
-#   data/templates/technadzor/ACTIVE__chat_<chat_id>__topic_<topic_id>.json
-# (filename uses literal chat_id with leading dash, matching existing convention)
-#
-# In-memory cache TTL = 5 minutes.
-from __future__ import annotations
-
-import io
-import json
-import os
-import time
-import logging
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
-
-LOG = logging.getLogger("task_worker")
-
-_CACHE_TTL_SECONDS = 300
-_CACHE: Dict[Tuple[str, int], Tuple[float, Dict[str, Any]]] = {}
-
-_BASE = Path(__file__).resolve().parent.parent
-_LOCAL_INDEX_DIR = _BASE / "data" / "templates" / "technadzor"
-_LOCAL_INDEX_DIR.mkdir(parents=True, exist_ok=True)
-_DOWNLOAD_DIR = _BASE / "data" / "memory_files" / "technadzor_index_cache"
-_DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
-
-# Folder names treated as SYSTEM (no client artifacts allowed)
-SYSTEM_FOLDER_NAMES = {
-    "_system", "_templates", "_drafts", "_manifests", "_archive", "_tmp",
-    "technadzor",  # case-insensitive match against TECHNADZOR
-}
-
-
-def is_system_folder(name: str) -> bool:
-    """True if the folder is internal/service. Match case-insensitive."""
-    if not name:
-        return False
-    return name.strip().lower() in SYSTEM_FOLDER_NAMES
-
-
-def is_client_facing_folder(name: str) -> bool:
-    """True if the folder is client-facing (object/customer/visit folder)."""
-    if not name:
-        return False
-    return not is_system_folder(name)
-
-
-def _service():
-    from core.topic_drive_oauth import _oauth_service
-    return _oauth_service()
-
-
-def _root_folder_id() -> str:
-    from core.topic_drive_oauth import _root_folder_id as r
-    return r()
-
-
-def _find_child(svc, parent_id: str, name: str) -> Optional[str]:
-    safe_name = name.replace("'", "\\'")
-    res = svc.files().list(
-        q=f"'{parent_id}' in parents and name='{safe_name}' and trashed=false",
-        fields="files(id,name,mimeType)",
-        pageSize=10,
-    ).execute()
-    files = res.get("files", [])
-    return files[0]["id"] if files else None
-
-
-def _ensure_subfolder(svc, parent_id: str, name: str) -> str:
-    fid = _find_child(svc, parent_id, name)
-    if fid:
-        return fid
-    body = {
-        "name": name,
-        "mimeType": "application/vnd.google-apps.folder",
-        "parents": [parent_id],
-    }
-    created = svc.files().create(body=body, fields="id").execute()
-    return created["id"]
-
-
-def _list_folder(svc, folder_id: str, page_size: int = 200) -> List[Dict[str, Any]]:
-    items: List[Dict[str, Any]] = []
-    page_token = <REDACTED_SECRET>
-    while True:
-        res = svc.files().list(
-            q=f"'{folder_id}' in parents and trashed=false",
-            fields="nextPageToken, files(id,name,mimeType,modifiedTime,createdTime,size,webViewLink,parents)",
-            orderBy="modifiedTime desc",
-            pageSize=page_size,
-            pageToken=<REDACTED_SECRET>
-        ).execute()
-        items.extend(res.get("files", []))
-        page_token = <REDACTED_SECRET>"nextPageToken")
-        if not page_token:
-            break
-    return items
-
-
-def classify_technadzor_drive_file(file: Dict[str, Any], parent_folder_name: str = "") -> str:
-    """Classify a Drive file by role (returns one of the role strings)."""
-    mt = file.get("mimeType", "") or ""
-    name = (file.get("name") or "").lower()
-    parent = (parent_folder_name or "").strip().lower()
-    parent_is_system = parent in SYSTEM_FOLDER_NAMES
-
-    # PDF
-    if mt == "application/pdf":
-        if parent_is_system:
-            return "SYSTEM_TEMPLATE"
-        if name.startswith("act") or "акт" in name or "осмотр" in name:
-            # PDF in non-system folder with act-like name → primary style
-            return "PRIMARY_PDF_STYLE"
-        # PDF in client folder, generic — most likely a final client PDF artifact
-        return "CLIENT_FINAL_PDF"
-
-    # DOCX
-    if mt == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-        if parent_is_system:
-            return "SYSTEM_TEMPLATE"
-        return "SECONDARY_DOCX_REFERENCE"
-
-    # Image
-    if mt.startswith("image/"):
-        if parent_is_system:
-            return "SYSTEM_TEMPLATE"
-        return "CLIENT_PHOTO_SOURCE"
-
-    # JSON / manifests / system
-    if mt in ("application/json",) or name.endswith((".json", ".log", ".bak", ".tmp")):
-        return "SYSTEM_TEMPLATE"
-
-    # Audio (voice notes)
-    if mt.startswith("audio/") or mt == "application/ogg":
-        return "OTHER"
-
-    return "OTHER"
-
-
-def _resolve_topic_folder(svc, chat_id: str, topic_id: int) -> Optional[str]:
-    root = _root_folder_id()
-    chat_folder = _find_child(svc, root, f"chat_{chat_id}")
-    if not chat_folder:
-        return None
-    return _find_child(svc, chat_folder, f"topic_{int(topic_id)}")
-
-
-def _local_index_path(chat_id: str, topic_id: int) -> Path:
-    fname = f"ACTIVE__chat_{chat_id}__topic_{int(topic_id)}.json"
-    return _LOCAL_INDEX_DIR / fname
-
-
-def _drive_url(file: Dict[str, Any]) -> str:
-    fid = file.get("id", "")
-    if file.get("webViewLink"):
-        return file["webViewLink"]
-    if file.get("mimeType") == "application/vnd.google-apps.folder":
-        return f"https://drive.google.com/drive/folders/{fid}"
-    return f"https://drive.google.com/file/d/{fid}/view"
-
-
-def scan_topic5_drive_templates(chat_id: str, topic_id: int = 5, force: bool = False) -> Dict[str, Any]:
-    """Scan Drive topic_<id> contents and return classified listing.
-
-    Cached for 5 min. Pass force=True to refresh.
-    """
-    key = (str(chat_id), int(topic_id))
-    now = time.time()
-    if not force and key in _CACHE:
-        ts, cached = _CACHE[key]
-        if now - ts < _CACHE_TTL_SECONDS:
-            return cached
-
-    svc = _service()
-    topic_fid = _resolve_topic_folder(svc, chat_id, topic_id)
-    result: Dict[str, Any] = {
-        "chat_id": str(chat_id),
-        "topic_id": int(topic_id),
-        "topic_folder_id": topic_fid,
-        "topic_folder_link": (
-            f"https://drive.google.com/drive/folders/{topic_fid}"
-            if topic_fid else None
-        ),
-        "files": [],
-        "folders_system": [],
-        "folders_client": [],
-        "by_role": {},
-        "primary_pdf_style": [],
-        "secondary_docx_reference": [],
-        "client_photo_source": [],
-        "client_final_pdf": [],
-        "system_template": [],
-        "other": [],
-        "ok": False,
-        "error": None,
-        "scanned_at": int(now),
-    }
-
-    if not topic_fid:
-        result["error"] = f"topic folder chat_{chat_id}/topic_{topic_id} not found"
-        _CACHE[key] = (now, result)
-        return result
-
-    try:
-        # Walk topic root
-        root_items = _list_folder(svc, topic_fid)
-        all_records: List[Dict[str, Any]] = []
-        sub_folder_walk: List[Tuple[str, str]] = []  # (folder_id, folder_name)
-        for it in root_items:
-            if it.get("mimeType") == "application/vnd.google-apps.folder":
-                if is_system_folder(it["name"]):
-                    result["folders_system"].append({
-                        "id": it["id"], "name": it["name"],
-                        "drive_url": _drive_url(it),
-                    })
-                else:
-                    result["folders_client"].append({
-                        "id": it["id"], "name": it["name"],
-                        "drive_url": _drive_url(it),
-                    })
-                sub_folder_walk.append((it["id"], it["name"]))
-            else:
-                role = classify_technadzor_drive_file(it, parent_folder_name="")
-                rec = _build_record(it, role, parent_folder_name="", chat_id=chat_id, topic_id=topic_id)
-                all_records.append(rec)
-
-        # Walk one level of subfolders (do not recurse deeper to keep it cheap)
-        for sub_fid, sub_name in sub_folder_walk:
-            sub_items = _list_folder(svc, sub_fid)
-            for it in sub_items:
-                if it.get("mimeType") == "application/vnd.google-apps.folder":
-                    # nested sub-subfolder — record name only, do not recurse
-                    continue
-                role = classify_technadzor_drive_file(it, parent_folder_name=sub_name)
-                rec = _build_record(it, role, parent_folder_name=sub_name, chat_id=chat_id, topic_id=topic_id)
-                all_records.append(rec)
-
-        result["files"] = all_records
-        for rec in all_records:
-            role = rec["role"]
-            bucket = role.lower()
-            if bucket == "primary_pdf_style":
-                result["primary_pdf_style"].append(rec)
-            elif bucket == "secondary_docx_reference":
-                result["secondary_docx_reference"].append(rec)
-            elif bucket == "client_photo_source":
-                result["client_photo_source"].append(rec)
-            elif bucket == "client_final_pdf":
-                result["client_final_pdf"].append(rec)
-            elif bucket == "system_template":
-                result["system_template"].append(rec)
-            else:
-                result["other"].append(rec)
-            result["by_role"].setdefault(role, 0)
-            result["by_role"][role] += 1
-
-        result["ok"] = True
-    except Exception as exc:
-        result["error"] = repr(exc)
-        LOG.exception("P6H_TOPIC5_DRIVE_INDEX_SCAN_FAIL chat=%s topic=%s", chat_id, topic_id)
-
-    _CACHE[key] = (now, result)
-    return result
-
-
-def _build_record(file: Dict[str, Any], role: str, parent_folder_name: str, chat_id: str, topic_id: int) -> Dict[str, Any]:
-    parent_lower = (parent_folder_name or "").strip().lower()
-    parent_is_system = parent_lower in SYSTEM_FOLDER_NAMES
-    return {
-        "file_id": file.get("id"),
-        "file_name": file.get("name"),
-        "mime_type": file.get("mimeType"),
-        "drive_url": _drive_url(file),
-        "folder_name": parent_folder_name or "<root>",
-        "role": role,
-        "client_facing": (not parent_is_system),
-        "created_time": file.get("createdTime"),
-        "modified_time": file.get("modifiedTime"),
-        "size": file.get("size"),
-    }
-
-
-def build_technadzor_template_index(chat_id: str = "-1003725299009", topic_id: int = 5, force: bool = True) -> Dict[str, Any]:
-    """Build full topic_5 index, persist to local JSON, return the index dict.
-
-    Persistent path:
-        data/templates/technadzor/ACTIVE__chat_<chat_id>__topic_<topic_id>.json
-    """
-    idx = scan_topic5_drive_templates(chat_id, topic_id, force=force)
-    payload = {
-        "chat_id": idx.get("chat_id"),
-        "topic_id": idx.get("topic_id"),
-        "topic_folder_id": idx.get("topic_folder_id"),
-        "topic_folder_link": idx.get("topic_folder_link"),
-        "scanned_at": idx.get("scanned_at"),
-        "ok": idx.get("ok"),
-        "error": idx.get("error"),
-        "by_role": idx.get("by_role"),
-        "folders_system": idx.get("folders_system"),
-        "folders_client": idx.get("folders_client"),
-        "files": idx.get("files"),
-        "primary_pdf_style": idx.get("primary_pdf_style"),
-        "secondary_docx_reference": idx.get("secondary_docx_reference"),
-        "client_photo_source": idx.get("client_photo_source"),
-        "client_final_pdf": idx.get("client_final_pdf"),
-        "system_template": idx.get("system_template"),
-        "other": idx.get("other"),
-        "marker": "P6H_TOPIC5_USE_EXISTING_TEMPLATES_PHOTO_TO_TECH_REPORT_20260504_V1",
-        "updated_at": int(time.time()),
-    }
-    try:
-        path = _local_index_path(str(chat_id), int(topic_id))
-        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-        payload["local_index_path"] = str(path)
-    except Exception as exc:
-        LOG.exception("P6H_TOPIC5_DRIVE_INDEX_PERSIST_FAIL chat=%s topic=%s err=%s", chat_id, topic_id, exc)
-    return payload
-
-
-def get_active_index(chat_id: str = "-1003725299009", topic_id: int = 5) -> Optional[Dict[str, Any]]:
-    """Read persisted index from disk, if present."""
-    p = _local_index_path(str(chat_id), int(topic_id))
-    if not p.exists():
-        return None
-    try:
-        return json.loads(p.read_text(encoding="utf-8"))
-    except Exception:
-        return None
-
-
-def primary_template_meta(idx: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    """Most recent PRIMARY_PDF_STYLE record. Falls back to most recent CLIENT_FINAL_PDF."""
-    if idx.get("primary_pdf_style"):
-        return idx["primary_pdf_style"][0]
-    if idx.get("client_final_pdf"):
-        return idx["client_final_pdf"][0]
-    return None
-
-
-def secondary_template_meta(idx: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    if idx.get("secondary_docx_reference"):
-        return idx["secondary_docx_reference"][0]
-    return None
-
-
-def ensure_service_subfolder(chat_id: str, topic_id: int, name: str = "_drafts") -> Optional[str]:
-    """Create/return id for a SERVICE subfolder (system, never client-facing).
-
-    Refuses to create folders with non-system names.
-    """
-    if not is_system_folder(name):
-        raise ValueError(f"Refusing to create non-system folder via service path: {name}")
-    svc = _service()
-    topic_fid = _resolve_topic_folder(svc, chat_id, topic_id)
-    if not topic_fid:
-        return None
-    return _ensure_subfolder(svc, topic_fid, name)
-
-
-def upload_to_service_subfolder(local_path: Path, dst_name: str, chat_id: str, topic_id: int, subfolder: str = "_drafts") -> Optional[Dict[str, Any]]:
-    """Upload artifact to topic_<id>/<service-subfolder>/. Subfolder MUST be system."""
-    if not is_system_folder(subfolder):
-        raise ValueError(f"Refusing to upload to non-system subfolder: {subfolder}")
-    return _upload_to_folder(local_path, dst_name, chat_id, topic_id, subfolder, allow_client=False)
-
-
-def upload_client_pdf_to_folder(local_path: Path, dst_name: str, chat_id: str, topic_id: int, target_folder_name: Optional[str] = None) -> Optional[Dict[str, Any]]:
-    """Upload final client PDF.
-
-    If target_folder_name is provided AND it's a non-system (client-facing) folder,
-    upload there. Otherwise upload to topic root.
-
-    Refuses anything that isn't .pdf — by spec, client folders accept only photos and final PDFs.
-    """
-    if not str(local_path).lower().endswith(".pdf"):
-        raise ValueError(f"Refusing to upload non-PDF to client folder: {local_path}")
-    return _upload_to_folder(local_path, dst_name, chat_id, topic_id, target_folder_name, allow_client=True)
-
-
-def _upload_to_folder(local_path: Path, dst_name: str, chat_id: str, topic_id: int, target_folder_name: Optional[str], allow_client: bool) -> Optional[Dict[str, Any]]:
-    try:
-        from googleapiclient.http import MediaFileUpload
-        svc = _service()
-        topic_fid = _resolve_topic_folder(svc, chat_id, topic_id)
-        if not topic_fid:
-            return None
-
-        if target_folder_name:
-            if is_system_folder(target_folder_name):
-                target_id = _ensure_subfolder(svc, topic_fid, target_folder_name)
-            else:
-                if not allow_client:
-                    raise ValueError(f"Client folder upload not allowed via service path: {target_folder_name}")
-                # find existing client folder, do NOT auto-create client folders
-                target_id = _find_child(svc, topic_fid, target_folder_name)
-                if not target_id:
-                    LOG.warning("P6H_TOPIC5_CLIENT_FOLDER_NOT_FOUND name=%s — uploading to topic root", target_folder_name)
-                    target_id = topic_fid
-        else:
-            target_id = topic_fid
-
-        body = {"name": dst_name, "parents": [target_id]}
-        mime = None
-        ln = str(local_path).lower()
-        if ln.endswith(".docx"):
-            mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        elif ln.endswith(".pdf"):
-            mime = "application/pdf"
-        elif ln.endswith(".xlsx"):
-            mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        elif ln.endswith(".json"):
-            mime = "application/json"
-        media = MediaFileUpload(str(local_path), mimetype=mime, resumable=False)
-        created = svc.files().create(body=body, media_body=media, fields="id,webViewLink,parents").execute()
-        return {"id": created["id"], "link": created.get("webViewLink"), "parent_id": target_id, "target_folder_name": target_folder_name}
-    except Exception:
-        LOG.exception("P6H_TOPIC5_DRIVE_UPLOAD_FAIL name=%s topic=%s sub=%s", dst_name, topic_id, target_folder_name)
-        return None
-
-
-def download_to_local(file_id: str, dst_filename: str) -> Optional[Path]:
-    """Download a Drive file to local cache. Returns path or None."""
-    try:
-        from googleapiclient.http import MediaIoBaseDownload
-        svc = _service()
-        dst = _DOWNLOAD_DIR / dst_filename
-        req = svc.files().get_media(fileId=file_id)
-        with io.FileIO(dst, "wb") as buf:
-            dl = MediaIoBaseDownload(buf, req)
-            done = False
-            while not done:
-                _, done = dl.next_chunk()
-        return dst
-    except Exception:
-        LOG.exception("P6H_TOPIC5_DRIVE_INDEX_DOWNLOAD_FAIL fid=%s", file_id)
-        return None
-
-
-try:
-    LOG.info("P6H_TOPIC5_DRIVE_INDEX_V1_INSTALLED")
-except Exception:
-    pass
-# === END_P6H_TOPIC5_DRIVE_INDEX_V1 ===
-
-====================================================================================================
-END_FILE: core/technadzor_drive_index.py
 FILE_CHUNK: 1/1
 ====================================================================================================

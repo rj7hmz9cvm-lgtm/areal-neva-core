@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_011
-generated_at_utc: 2026-07-06T08:22:42.336603+00:00
-git_sha_before_commit: 5ca02cdd69238e358402491f647ce5c384e8c39a
+generated_at_utc: 2026-07-06T08:52:42.393684+00:00
+git_sha_before_commit: cdfc72406c0ded2b84941ad40096aeb9ee9dce05
 part: 11/19
 
 
 ====================================================================================================
 BEGIN_FILE: core/sample_template_engine.py
 FILE_CHUNK: 1/2
-SHA256_FULL_FILE: 518372e8b858166f997baf655aae11efe3f6c6adb040c506111d98d975c80ef3
+SHA256_FULL_FILE: bcd97663284e60ec88f10bb84c1bc40ddc20a108e4d9510a0cc1e75d00c95606
 ====================================================================================================
 # === FULLFIX_13A_SAMPLE_FILE_INTENT_AND_TEMPLATE_ESTIMATE ===
 import os
@@ -7132,6 +7132,8 @@ async def handle_topic2_image_estimate_p6e2(conn, task=None, chat_id=None, topic
             extract_template_prices as _cpf_extract,
             _search_prices_online as _cpf_search,
             _price_confirmation_text as _cpf_confirm,
+            _topic2_price_search_explicit_intent_v1 as _cpf_price_search_explicit,
+            _topic2_price_search_prompt_text_v1 as _cpf_price_search_prompt,
             _memory_save as _cpf_memsave,
             _update_task_safe as _cpf_upd,
             _now as _cpf_now,
@@ -7236,7 +7238,26 @@ async def handle_topic2_image_estimate_p6e2(conn, task=None, chat_id=None, topic
         else:
             template_prices = str(extracted_prices or "")
             sheet_name = None
-        online_prices = await _cpf_search(parsed, template, sheet_name)
+        if not _cpf_price_search_explicit(caption):
+            pending = {
+                "version": "P6E2_CANON_PRICE_FLOW_V1",
+                "status": "WAITING_PRICE_SEARCH_CONFIRMATION",
+                "task_id": tid,
+                "chat_id": chat_id_s,
+                "topic_id": topic_id_i,
+                "parsed": parsed,
+                "template": template,
+                "sheet_name": sheet_name,
+                "template_prices": template_prices,
+                "online_prices": "",
+                "created_at": _cpf_now(),
+            }
+            _cpf_memsave(chat_id_s, f"topic_2_estimate_pending_{tid}", pending)
+            confirm_text = _cpf_price_search_prompt(parsed, template, sheet_name)
+            _cpf_upd(conn, tid, state="WAITING_CLARIFICATION", result=confirm_text, error_message="TOPIC2_PRICE_SEARCH_CONFIRMATION_REQUIRED")
+            _cpf_hist(conn, tid, "TOPIC2_PRICE_SEARCH_CONFIRMATION_REQUESTED")
+            return True
+        online_prices = await _cpf_search(parsed, template, sheet_name, conn=conn, task_id=tid)
         pending = {
             "version": "P6E2_CANON_PRICE_FLOW_V1",
             "status": "WAITING_PRICE_CONFIRMATION",
@@ -7790,6 +7811,17 @@ _TSC_LOG = _tsc_log.getLogger("sample_template_engine")
 
 def _final_estimate_score_template_v1(file_name: str, raw_input: str = "") -> int:
     try:
+
+====================================================================================================
+END_FILE: core/sample_template_engine.py
+FILE_CHUNK: 1/2
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: core/sample_template_engine.py
+FILE_CHUNK: 2/2
+SHA256_FULL_FILE: bcd97663284e60ec88f10bb84c1bc40ddc20a108e4d9510a0cc1e75d00c95606
+====================================================================================================
         fname = str(file_name or "").lower().replace("ё", "е")
         raw = str(raw_input or "").lower().replace("ё", "е")
 
@@ -7812,17 +7844,6 @@ def _final_estimate_score_template_v1(file_name: str, raw_input: str = "") -> in
         is_storage = any(x in raw for x in ("ангар", "склад", "хранилищ"))
         is_foundation_only = (
             any(x in raw for x in ("фундамент", "плита", "сваи"))
-
-====================================================================================================
-END_FILE: core/sample_template_engine.py
-FILE_CHUNK: 1/2
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/sample_template_engine.py
-FILE_CHUNK: 2/2
-SHA256_FULL_FILE: 518372e8b858166f997baf655aae11efe3f6c6adb040c506111d98d975c80ef3
-====================================================================================================
             and not any(x in raw for x in ("дом", "здание", "строительство", "этаж", "кровля"))
         )
         is_roof_only = (

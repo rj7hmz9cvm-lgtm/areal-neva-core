@@ -1,8 +1,478 @@
 # ORCHESTRA_FULL_CONTEXT_PART_014
-generated_at_utc: 2026-07-06T08:22:42.339657+00:00
-git_sha_before_commit: 5ca02cdd69238e358402491f647ce5c384e8c39a
+generated_at_utc: 2026-07-06T08:52:42.397589+00:00
+git_sha_before_commit: cdfc72406c0ded2b84941ad40096aeb9ee9dce05
 part: 14/19
 
+
+====================================================================================================
+BEGIN_FILE: core/technadzor_drive_index.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 31118a4e5fa521f992b026001a821ecf8cea7570e3185a3ed6b89d59a3143c77
+====================================================================================================
+# === P6H_TOPIC5_TECHNADZOR_TEMPLATE_PHOTO_CLIENT_SAFE_CLOSE_20260504 / DRIVE_INDEX_V1 ===
+# Auto-discovery of topic_5 (technadzor) Drive folder contents as style/content
+# references — without manual "прими как образец" commands.
+#
+# Layered classification (file role):
+#   PRIMARY_PDF_STYLE         — PDF in topic root or in non-system subfolders (real client acts; main style)
+#   SECONDARY_DOCX_REFERENCE  — DOCX in service subfolders (TECHNADZOR / _drafts / _system / _templates)
+#   CLIENT_PHOTO_SOURCE       — image/* in topic root or any non-system folder (work-object photos)
+#   CLIENT_FINAL_PDF          — PDF artifacts produced earlier (kept in client folders)
+#   SYSTEM_TEMPLATE           — DOCX/JSON/manifests in service subfolders
+#   OTHER                     — anything else (audio, etc.)
+#
+# Folder classification:
+#   SYSTEM   — name in {_system, _templates, _drafts, _manifests, _archive, _tmp, TECHNADZOR}
+#   CLIENT   — anything else (work-object/customer-facing folders)
+#
+# Index is persisted to:
+#   data/templates/technadzor/ACTIVE__chat_<chat_id>__topic_<topic_id>.json
+# (filename uses literal chat_id with leading dash, matching existing convention)
+#
+# In-memory cache TTL = 5 minutes.
+from __future__ import annotations
+
+import io
+import json
+import os
+import time
+import logging
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+LOG = logging.getLogger("task_worker")
+
+_CACHE_TTL_SECONDS = 300
+_CACHE: Dict[Tuple[str, int], Tuple[float, Dict[str, Any]]] = {}
+
+_BASE = Path(__file__).resolve().parent.parent
+_LOCAL_INDEX_DIR = _BASE / "data" / "templates" / "technadzor"
+_LOCAL_INDEX_DIR.mkdir(parents=True, exist_ok=True)
+_DOWNLOAD_DIR = _BASE / "data" / "memory_files" / "technadzor_index_cache"
+_DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+# Folder names treated as SYSTEM (no client artifacts allowed)
+SYSTEM_FOLDER_NAMES = {
+    "_system", "_templates", "_drafts", "_manifests", "_archive", "_tmp",
+    "technadzor",  # case-insensitive match against TECHNADZOR
+}
+
+
+def is_system_folder(name: str) -> bool:
+    """True if the folder is internal/service. Match case-insensitive."""
+    if not name:
+        return False
+    return name.strip().lower() in SYSTEM_FOLDER_NAMES
+
+
+def is_client_facing_folder(name: str) -> bool:
+    """True if the folder is client-facing (object/customer/visit folder)."""
+    if not name:
+        return False
+    return not is_system_folder(name)
+
+
+def _service():
+    from core.topic_drive_oauth import _oauth_service
+    return _oauth_service()
+
+
+def _root_folder_id() -> str:
+    from core.topic_drive_oauth import _root_folder_id as r
+    return r()
+
+
+def _find_child(svc, parent_id: str, name: str) -> Optional[str]:
+    safe_name = name.replace("'", "\\'")
+    res = svc.files().list(
+        q=f"'{parent_id}' in parents and name='{safe_name}' and trashed=false",
+        fields="files(id,name,mimeType)",
+        pageSize=10,
+    ).execute()
+    files = res.get("files", [])
+    return files[0]["id"] if files else None
+
+
+def _ensure_subfolder(svc, parent_id: str, name: str) -> str:
+    fid = _find_child(svc, parent_id, name)
+    if fid:
+        return fid
+    body = {
+        "name": name,
+        "mimeType": "application/vnd.google-apps.folder",
+        "parents": [parent_id],
+    }
+    created = svc.files().create(body=body, fields="id").execute()
+    return created["id"]
+
+
+def _list_folder(svc, folder_id: str, page_size: int = 200) -> List[Dict[str, Any]]:
+    items: List[Dict[str, Any]] = []
+    page_token = <REDACTED_SECRET>
+    while True:
+        res = svc.files().list(
+            q=f"'{folder_id}' in parents and trashed=false",
+            fields="nextPageToken, files(id,name,mimeType,modifiedTime,createdTime,size,webViewLink,parents)",
+            orderBy="modifiedTime desc",
+            pageSize=page_size,
+            pageToken=<REDACTED_SECRET>
+        ).execute()
+        items.extend(res.get("files", []))
+        page_token = <REDACTED_SECRET>"nextPageToken")
+        if not page_token:
+            break
+    return items
+
+
+def classify_technadzor_drive_file(file: Dict[str, Any], parent_folder_name: str = "") -> str:
+    """Classify a Drive file by role (returns one of the role strings)."""
+    mt = file.get("mimeType", "") or ""
+    name = (file.get("name") or "").lower()
+    parent = (parent_folder_name or "").strip().lower()
+    parent_is_system = parent in SYSTEM_FOLDER_NAMES
+
+    # PDF
+    if mt == "application/pdf":
+        if parent_is_system:
+            return "SYSTEM_TEMPLATE"
+        if name.startswith("act") or "акт" in name or "осмотр" in name:
+            # PDF in non-system folder with act-like name → primary style
+            return "PRIMARY_PDF_STYLE"
+        # PDF in client folder, generic — most likely a final client PDF artifact
+        return "CLIENT_FINAL_PDF"
+
+    # DOCX
+    if mt == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        if parent_is_system:
+            return "SYSTEM_TEMPLATE"
+        return "SECONDARY_DOCX_REFERENCE"
+
+    # Image
+    if mt.startswith("image/"):
+        if parent_is_system:
+            return "SYSTEM_TEMPLATE"
+        return "CLIENT_PHOTO_SOURCE"
+
+    # JSON / manifests / system
+    if mt in ("application/json",) or name.endswith((".json", ".log", ".bak", ".tmp")):
+        return "SYSTEM_TEMPLATE"
+
+    # Audio (voice notes)
+    if mt.startswith("audio/") or mt == "application/ogg":
+        return "OTHER"
+
+    return "OTHER"
+
+
+def _resolve_topic_folder(svc, chat_id: str, topic_id: int) -> Optional[str]:
+    root = _root_folder_id()
+    chat_folder = _find_child(svc, root, f"chat_{chat_id}")
+    if not chat_folder:
+        return None
+    return _find_child(svc, chat_folder, f"topic_{int(topic_id)}")
+
+
+def _local_index_path(chat_id: str, topic_id: int) -> Path:
+    fname = f"ACTIVE__chat_{chat_id}__topic_{int(topic_id)}.json"
+    return _LOCAL_INDEX_DIR / fname
+
+
+def _drive_url(file: Dict[str, Any]) -> str:
+    fid = file.get("id", "")
+    if file.get("webViewLink"):
+        return file["webViewLink"]
+    if file.get("mimeType") == "application/vnd.google-apps.folder":
+        return f"https://drive.google.com/drive/folders/{fid}"
+    return f"https://drive.google.com/file/d/{fid}/view"
+
+
+def scan_topic5_drive_templates(chat_id: str, topic_id: int = 5, force: bool = False) -> Dict[str, Any]:
+    """Scan Drive topic_<id> contents and return classified listing.
+
+    Cached for 5 min. Pass force=True to refresh.
+    """
+    key = (str(chat_id), int(topic_id))
+    now = time.time()
+    if not force and key in _CACHE:
+        ts, cached = _CACHE[key]
+        if now - ts < _CACHE_TTL_SECONDS:
+            return cached
+
+    svc = _service()
+    topic_fid = _resolve_topic_folder(svc, chat_id, topic_id)
+    result: Dict[str, Any] = {
+        "chat_id": str(chat_id),
+        "topic_id": int(topic_id),
+        "topic_folder_id": topic_fid,
+        "topic_folder_link": (
+            f"https://drive.google.com/drive/folders/{topic_fid}"
+            if topic_fid else None
+        ),
+        "files": [],
+        "folders_system": [],
+        "folders_client": [],
+        "by_role": {},
+        "primary_pdf_style": [],
+        "secondary_docx_reference": [],
+        "client_photo_source": [],
+        "client_final_pdf": [],
+        "system_template": [],
+        "other": [],
+        "ok": False,
+        "error": None,
+        "scanned_at": int(now),
+    }
+
+    if not topic_fid:
+        result["error"] = f"topic folder chat_{chat_id}/topic_{topic_id} not found"
+        _CACHE[key] = (now, result)
+        return result
+
+    try:
+        # Walk topic root
+        root_items = _list_folder(svc, topic_fid)
+        all_records: List[Dict[str, Any]] = []
+        sub_folder_walk: List[Tuple[str, str]] = []  # (folder_id, folder_name)
+        for it in root_items:
+            if it.get("mimeType") == "application/vnd.google-apps.folder":
+                if is_system_folder(it["name"]):
+                    result["folders_system"].append({
+                        "id": it["id"], "name": it["name"],
+                        "drive_url": _drive_url(it),
+                    })
+                else:
+                    result["folders_client"].append({
+                        "id": it["id"], "name": it["name"],
+                        "drive_url": _drive_url(it),
+                    })
+                sub_folder_walk.append((it["id"], it["name"]))
+            else:
+                role = classify_technadzor_drive_file(it, parent_folder_name="")
+                rec = _build_record(it, role, parent_folder_name="", chat_id=chat_id, topic_id=topic_id)
+                all_records.append(rec)
+
+        # Walk one level of subfolders (do not recurse deeper to keep it cheap)
+        for sub_fid, sub_name in sub_folder_walk:
+            sub_items = _list_folder(svc, sub_fid)
+            for it in sub_items:
+                if it.get("mimeType") == "application/vnd.google-apps.folder":
+                    # nested sub-subfolder — record name only, do not recurse
+                    continue
+                role = classify_technadzor_drive_file(it, parent_folder_name=sub_name)
+                rec = _build_record(it, role, parent_folder_name=sub_name, chat_id=chat_id, topic_id=topic_id)
+                all_records.append(rec)
+
+        result["files"] = all_records
+        for rec in all_records:
+            role = rec["role"]
+            bucket = role.lower()
+            if bucket == "primary_pdf_style":
+                result["primary_pdf_style"].append(rec)
+            elif bucket == "secondary_docx_reference":
+                result["secondary_docx_reference"].append(rec)
+            elif bucket == "client_photo_source":
+                result["client_photo_source"].append(rec)
+            elif bucket == "client_final_pdf":
+                result["client_final_pdf"].append(rec)
+            elif bucket == "system_template":
+                result["system_template"].append(rec)
+            else:
+                result["other"].append(rec)
+            result["by_role"].setdefault(role, 0)
+            result["by_role"][role] += 1
+
+        result["ok"] = True
+    except Exception as exc:
+        result["error"] = repr(exc)
+        LOG.exception("P6H_TOPIC5_DRIVE_INDEX_SCAN_FAIL chat=%s topic=%s", chat_id, topic_id)
+
+    _CACHE[key] = (now, result)
+    return result
+
+
+def _build_record(file: Dict[str, Any], role: str, parent_folder_name: str, chat_id: str, topic_id: int) -> Dict[str, Any]:
+    parent_lower = (parent_folder_name or "").strip().lower()
+    parent_is_system = parent_lower in SYSTEM_FOLDER_NAMES
+    return {
+        "file_id": file.get("id"),
+        "file_name": file.get("name"),
+        "mime_type": file.get("mimeType"),
+        "drive_url": _drive_url(file),
+        "folder_name": parent_folder_name or "<root>",
+        "role": role,
+        "client_facing": (not parent_is_system),
+        "created_time": file.get("createdTime"),
+        "modified_time": file.get("modifiedTime"),
+        "size": file.get("size"),
+    }
+
+
+def build_technadzor_template_index(chat_id: str = "-1003725299009", topic_id: int = 5, force: bool = True) -> Dict[str, Any]:
+    """Build full topic_5 index, persist to local JSON, return the index dict.
+
+    Persistent path:
+        data/templates/technadzor/ACTIVE__chat_<chat_id>__topic_<topic_id>.json
+    """
+    idx = scan_topic5_drive_templates(chat_id, topic_id, force=force)
+    payload = {
+        "chat_id": idx.get("chat_id"),
+        "topic_id": idx.get("topic_id"),
+        "topic_folder_id": idx.get("topic_folder_id"),
+        "topic_folder_link": idx.get("topic_folder_link"),
+        "scanned_at": idx.get("scanned_at"),
+        "ok": idx.get("ok"),
+        "error": idx.get("error"),
+        "by_role": idx.get("by_role"),
+        "folders_system": idx.get("folders_system"),
+        "folders_client": idx.get("folders_client"),
+        "files": idx.get("files"),
+        "primary_pdf_style": idx.get("primary_pdf_style"),
+        "secondary_docx_reference": idx.get("secondary_docx_reference"),
+        "client_photo_source": idx.get("client_photo_source"),
+        "client_final_pdf": idx.get("client_final_pdf"),
+        "system_template": idx.get("system_template"),
+        "other": idx.get("other"),
+        "marker": "P6H_TOPIC5_USE_EXISTING_TEMPLATES_PHOTO_TO_TECH_REPORT_20260504_V1",
+        "updated_at": int(time.time()),
+    }
+    try:
+        path = _local_index_path(str(chat_id), int(topic_id))
+        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        payload["local_index_path"] = str(path)
+    except Exception as exc:
+        LOG.exception("P6H_TOPIC5_DRIVE_INDEX_PERSIST_FAIL chat=%s topic=%s err=%s", chat_id, topic_id, exc)
+    return payload
+
+
+def get_active_index(chat_id: str = "-1003725299009", topic_id: int = 5) -> Optional[Dict[str, Any]]:
+    """Read persisted index from disk, if present."""
+    p = _local_index_path(str(chat_id), int(topic_id))
+    if not p.exists():
+        return None
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
+def primary_template_meta(idx: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Most recent PRIMARY_PDF_STYLE record. Falls back to most recent CLIENT_FINAL_PDF."""
+    if idx.get("primary_pdf_style"):
+        return idx["primary_pdf_style"][0]
+    if idx.get("client_final_pdf"):
+        return idx["client_final_pdf"][0]
+    return None
+
+
+def secondary_template_meta(idx: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    if idx.get("secondary_docx_reference"):
+        return idx["secondary_docx_reference"][0]
+    return None
+
+
+def ensure_service_subfolder(chat_id: str, topic_id: int, name: str = "_drafts") -> Optional[str]:
+    """Create/return id for a SERVICE subfolder (system, never client-facing).
+
+    Refuses to create folders with non-system names.
+    """
+    if not is_system_folder(name):
+        raise ValueError(f"Refusing to create non-system folder via service path: {name}")
+    svc = _service()
+    topic_fid = _resolve_topic_folder(svc, chat_id, topic_id)
+    if not topic_fid:
+        return None
+    return _ensure_subfolder(svc, topic_fid, name)
+
+
+def upload_to_service_subfolder(local_path: Path, dst_name: str, chat_id: str, topic_id: int, subfolder: str = "_drafts") -> Optional[Dict[str, Any]]:
+    """Upload artifact to topic_<id>/<service-subfolder>/. Subfolder MUST be system."""
+    if not is_system_folder(subfolder):
+        raise ValueError(f"Refusing to upload to non-system subfolder: {subfolder}")
+    return _upload_to_folder(local_path, dst_name, chat_id, topic_id, subfolder, allow_client=False)
+
+
+def upload_client_pdf_to_folder(local_path: Path, dst_name: str, chat_id: str, topic_id: int, target_folder_name: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """Upload final client PDF.
+
+    If target_folder_name is provided AND it's a non-system (client-facing) folder,
+    upload there. Otherwise upload to topic root.
+
+    Refuses anything that isn't .pdf — by spec, client folders accept only photos and final PDFs.
+    """
+    if not str(local_path).lower().endswith(".pdf"):
+        raise ValueError(f"Refusing to upload non-PDF to client folder: {local_path}")
+    return _upload_to_folder(local_path, dst_name, chat_id, topic_id, target_folder_name, allow_client=True)
+
+
+def _upload_to_folder(local_path: Path, dst_name: str, chat_id: str, topic_id: int, target_folder_name: Optional[str], allow_client: bool) -> Optional[Dict[str, Any]]:
+    try:
+        from googleapiclient.http import MediaFileUpload
+        svc = _service()
+        topic_fid = _resolve_topic_folder(svc, chat_id, topic_id)
+        if not topic_fid:
+            return None
+
+        if target_folder_name:
+            if is_system_folder(target_folder_name):
+                target_id = _ensure_subfolder(svc, topic_fid, target_folder_name)
+            else:
+                if not allow_client:
+                    raise ValueError(f"Client folder upload not allowed via service path: {target_folder_name}")
+                # find existing client folder, do NOT auto-create client folders
+                target_id = _find_child(svc, topic_fid, target_folder_name)
+                if not target_id:
+                    LOG.warning("P6H_TOPIC5_CLIENT_FOLDER_NOT_FOUND name=%s — uploading to topic root", target_folder_name)
+                    target_id = topic_fid
+        else:
+            target_id = topic_fid
+
+        body = {"name": dst_name, "parents": [target_id]}
+        mime = None
+        ln = str(local_path).lower()
+        if ln.endswith(".docx"):
+            mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        elif ln.endswith(".pdf"):
+            mime = "application/pdf"
+        elif ln.endswith(".xlsx"):
+            mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        elif ln.endswith(".json"):
+            mime = "application/json"
+        media = MediaFileUpload(str(local_path), mimetype=mime, resumable=False)
+        created = svc.files().create(body=body, media_body=media, fields="id,webViewLink,parents").execute()
+        return {"id": created["id"], "link": created.get("webViewLink"), "parent_id": target_id, "target_folder_name": target_folder_name}
+    except Exception:
+        LOG.exception("P6H_TOPIC5_DRIVE_UPLOAD_FAIL name=%s topic=%s sub=%s", dst_name, topic_id, target_folder_name)
+        return None
+
+
+def download_to_local(file_id: str, dst_filename: str) -> Optional[Path]:
+    """Download a Drive file to local cache. Returns path or None."""
+    try:
+        from googleapiclient.http import MediaIoBaseDownload
+        svc = _service()
+        dst = _DOWNLOAD_DIR / dst_filename
+        req = svc.files().get_media(fileId=file_id)
+        with io.FileIO(dst, "wb") as buf:
+            dl = MediaIoBaseDownload(buf, req)
+            done = False
+            while not done:
+                _, done = dl.next_chunk()
+        return dst
+    except Exception:
+        LOG.exception("P6H_TOPIC5_DRIVE_INDEX_DOWNLOAD_FAIL fid=%s", file_id)
+        return None
+
+
+try:
+    LOG.info("P6H_TOPIC5_DRIVE_INDEX_V1_INSTALLED")
+except Exception:
+    pass
+# === END_P6H_TOPIC5_DRIVE_INDEX_V1 ===
+
+====================================================================================================
+END_FILE: core/technadzor_drive_index.py
+FILE_CHUNK: 1/1
+====================================================================================================
 
 ====================================================================================================
 BEGIN_FILE: core/technadzor_engine.py
@@ -8840,411 +9310,5 @@ def process(work_item, payload: Dict[str, Any]) -> Dict[str, Any]:
 
 ====================================================================================================
 END_FILE: core/topic_autodiscovery.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/topic_drive_oauth.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 09e67527599b711f23e665802e1beed93944060a64a3674da0459bdafdd00513
-====================================================================================================
-import os
-import asyncio
-from typing import Optional, Dict, Any
-from dotenv import load_dotenv
-from google.oauth2.credentials import Credentials
-from google.auth.transport.requests import Request
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
-
-BASE = "/root/.areal-neva-core"
-load_dotenv(f"{BASE}/.env", override=True)
-
-def _oauth_service():
-    client_id = os.getenv("GDRIVE_CLIENT_ID")
-    client_secret = <REDACTED_SECRET>"GDRIVE_CLIENT_SECRET")
-    refresh_token = <REDACTED_SECRET>"GDRIVE_REFRESH_TOKEN")
-    if not client_id or not client_secret or not refresh_token:
-        raise RuntimeError("GDRIVE OAuth vars missing")
-    creds = Credentials(
-        None,
-        refresh_token=<REDACTED_SECRET>
-        token_uri="https://oauth2.googleapis.com/token",
-        client_id=client_id,
-        client_secret=<REDACTED_SECRET>
-        scopes=["https://www.googleapis.com/auth/drive"]  # SCOPE_FULL_V2,
-    )
-    creds.refresh(Request())
-    return build("drive", "v3", credentials=creds)
-
-def _root_folder_id() -> str:
-    folder_id = os.getenv("DRIVE_INGEST_FOLDER_ID", "").strip()
-    if not folder_id:
-        raise RuntimeError("DRIVE_INGEST_FOLDER_ID missing")
-    return folder_id
-
-def _find_child_folder(service, parent_id: str, name: str) -> Optional[str]:
-    # === DRIVE_CANON_SINGLE_FOLDER_PICK_V1 ===
-    # Deterministic folder lookup: if duplicates exist, use the oldest existing folder.
-    safe_name = str(name or "").replace("'", "\\'")
-    q = (
-        f"name = '{safe_name}' and "
-        f"mimeType = 'application/vnd.google-apps.folder' and "
-        f"'{parent_id}' in parents and trashed = false"
-    )
-    resp = service.files().list(
-        q=q,
-        spaces="drive",
-        fields="files(id,name,createdTime)",
-        orderBy="createdTime",
-        supportsAllDrives=True,
-        includeItemsFromAllDrives=True,
-    ).execute()
-    files = resp.get("files", [])
-    return files[0]["id"] if files else None
-    # === END_DRIVE_CANON_SINGLE_FOLDER_PICK_V1 ===
-
-def _ensure_folder(service, parent_id: str, name: str) -> str:
-    found = _find_child_folder(service, parent_id, name)
-    if found:
-        return found
-    meta = {
-        "name": name,
-        "mimeType": "application/vnd.google-apps.folder",
-        "parents": [parent_id],
-    }
-    res = service.files().create(
-        body=meta,
-        fields="id",
-        supportsAllDrives=True,
-    ).execute()
-    return res["id"]
-
-def _upload_file_sync(file_path: str, file_name: str, chat_id: str, topic_id: int, mime_type: Optional[str] = None) -> Dict[str, Any]:
-    service = _oauth_service()
-    root_id = _root_folder_id()
-    chat_folder = _ensure_folder(service, root_id, f"chat_{chat_id}")
-    topic_folder = _ensure_folder(service, chat_folder, f"topic_{int(topic_id or 0)}")
-    media = MediaFileUpload(file_path, mimetype=mime_type, resumable=True)
-    meta = {
-        "name": file_name,
-        "parents": [topic_folder],
-    }
-    res = service.files().create(
-        body=meta,
-        media_body=media,
-        fields="id,parents",
-        supportsAllDrives=True,
-    ).execute()
-    return {
-        "ok": True,
-        "drive_file_id": res.get("id"),
-        "folder_id": topic_folder,
-        "chat_folder_id": chat_folder,
-    }
-
-async def upload_file_to_topic(file_path: str, file_name: str, chat_id: str, topic_id: int, mime_type: Optional[str] = None) -> Dict[str, Any]:
-    return await asyncio.to_thread(_upload_file_sync, file_path, file_name, str(chat_id), int(topic_id or 0), mime_type)
-
-
-# === P7_TOPIC5_ACTIVE_FOLDER_UPLOAD_V1 ===
-# topic_5 object materials must upload into ActiveTechnadzorFolder, not generic topic_5 root.
-import json as _p7_t5_json
-import time as _p7_t5_time
-from pathlib import Path as _p7_t5_Path
-
-_P7_T5_ORIG_UPLOAD_FILE_SYNC = _upload_file_sync
-_P7_T5_BASE = _p7_t5_Path("/root/.areal-neva-core/data/technadzor")
-
-def _p7_t5_active_folder_path(chat_id, topic_id):
-    return _P7_T5_BASE / f"active_folder_{chat_id}_{int(topic_id or 0)}.json"
-
-def _p7_t5_load_active_folder(chat_id, topic_id):
-    if int(topic_id or 0) != 5:
-        return {}
-    p = _p7_t5_active_folder_path(str(chat_id), 5)
-    try:
-        data = _p7_t5_json.loads(p.read_text(encoding="utf-8"))
-        if data.get("folder_id") and str(data.get("status", "OPEN")).upper() != "CLOSED":
-            return data
-    except Exception:
-        return {}
-    return {}
-
-def _upload_file_sync(file_path: str, file_name: str, chat_id: str, topic_id: int, mime_type: Optional[str] = None) -> Dict[str, Any]:
-    if int(topic_id or 0) == 5:
-        af = _p7_t5_load_active_folder(str(chat_id), 5)
-        active_folder_id = str(af.get("folder_id") or "").strip()
-        if active_folder_id:
-            service = _oauth_service()
-            media = MediaFileUpload(file_path, mimetype=mime_type, resumable=True)
-            meta = {
-                "name": file_name,
-                "parents": [active_folder_id],
-            }
-            res = service.files().create(
-                body=meta,
-                media_body=media,
-                fields="id,parents,webViewLink",
-                supportsAllDrives=True,
-            ).execute()
-            return {
-                "ok": True,
-                "drive_file_id": res.get("id"),
-                "folder_id": active_folder_id,
-                "active_folder_id": active_folder_id,
-                "active_folder_name": af.get("folder_name", ""),
-                "webViewLink": res.get("webViewLink", ""),
-                "topic5_active_folder_upload": True,
-                "uploaded_at": _p7_t5_time.time(),
-            }
-    return _P7_T5_ORIG_UPLOAD_FILE_SYNC(file_path, file_name, chat_id, topic_id, mime_type)
-# === END_P7_TOPIC5_ACTIVE_FOLDER_UPLOAD_V1 ===
-
-====================================================================================================
-END_FILE: core/topic_drive_oauth.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/topic_meta_loader.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 081afc9cc3266e754882d8c6fce4db2ebb8d191a72aebc19c120afdb1fbb8dec
-====================================================================================================
-"""TOPIC_META_LOADER_V1 — читает data/topics/{tid}/meta.json при INTAKE."""
-import json
-from pathlib import Path
-from typing import Optional, Dict, Any
-
-DATA_TOPICS = Path("data/topics")
-
-# Триггеры "что это за чат" — отвечаем из meta.json напрямую
-WHAT_IS_THIS_TRIGGERS = [
-    "что мы здесь делаем", "что мы тут делаем", "для чего ты",
-    "для чего этот чат", "для чего этот топик", "для чего у нас",
-    "что мы делаем в данном чате", "что мы делаем тут",
-    "скажи для чего", "зачем этот чат", "зачем этот топик",
-    "про что чат", "про что топик", "что за чат", "что за топик",
-]
-
-def load_topic_meta(topic_id: int) -> Optional[Dict[str, Any]]:
-    """Возвращает meta.json топика или None."""
-    if topic_id is None:
-        return None
-    folder = DATA_TOPICS / str(topic_id)
-    meta_path = folder / "meta.json"
-    if not meta_path.exists():
-        return None
-    try:
-        return json.loads(meta_path.read_text(encoding="utf-8"))
-    except Exception:
-        return None
-
-def is_what_is_this_question(text: str) -> bool:
-    """True если текст — вопрос о назначении чата."""
-    if not text:
-        return False
-    t = text.lower().replace("[voice]", "").replace("🎤", "").strip()
-    return any(trigger in t for trigger in WHAT_IS_THIS_TRIGGERS)
-
-def build_topic_self_answer(meta: Dict[str, Any]) -> str:
-    """Формирует ответ от имени топика на вопрос 'что мы тут делаем'."""
-    name = meta.get("name", "Без имени")
-    direction = meta.get("direction", "general_chat")
-    
-    DIRECTION_DESCRIPTIONS = {
-        "general_chat": "общий чат для произвольных задач",
-        "crm_leads": "лиды, реклама, AmoCRM, лидогенерация",
-        "estimates": "сметы, расчёт стоимости строительства",
-        "technical_supervision": "технадзор, акты осмотра, дефекты, СП/ГОСТ",
-        "structural_design": "проектирование КЖ/КМ/КМД/АР/ОВ/ВК/ЭОМ/СС/ГП/ПЗ/СМ/ТХ",
-        "internet_search": "интернет-поиск товаров и информации",
-        "auto_parts_search": "поиск автозапчастей, артикулы, аналоги, цены",
-        "orchestration_core": "коды оркестра, AI-роутер, архитектура системы",
-        "video_production": "генерация и производство видеоконтента",
-        "devops_server": "VPN, VPS, конфигурации серверов, настройки",
-        "job_search": "поиск работы и интеграция с биржами труда",
-    }
-    
-    desc = DIRECTION_DESCRIPTIONS.get(direction, direction)
-    return f"Этот чат — {name}. Направление: {desc}."
-
-====================================================================================================
-END_FILE: core/topic_meta_loader.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/universal_file_engine.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: a19ee184aae5b7ddad4f2e625de87685894cd3141252bbb507d5b11c363c9fdd
-====================================================================================================
-# === UNIVERSAL_FILE_ENGINE_V1 ===
-from __future__ import annotations
-
-import json
-import os
-import re
-import tempfile
-import zipfile
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Dict, List
-
-from core.format_registry import classify_file
-
-def _clean(v: Any, limit: int = 20000) -> str:
-    s = "" if v is None else str(v)
-    s = s.replace("\r", "\n")
-    s = re.sub(r"[ \t]+", " ", s)
-    s = re.sub(r"\n{3,}", "\n\n", s)
-    return s.strip()[:limit]
-
-def _safe(v: Any, fallback: str = "file") -> str:
-    s = re.sub(r"[^A-Za-zА-Яа-я0-9_.-]+", "_", _clean(v, 120)).strip("._")
-    return s or fallback
-
-def _try_extract_text(path: str, file_name: str = "") -> str:
-    ext = Path(file_name or path).suffix.lower()
-    if ext == ".pdf":
-        try:
-            from pypdf import PdfReader
-            reader = PdfReader(path)
-            return _clean("\n".join((p.extract_text() or "") for p in reader.pages[:50]), 50000)
-        except Exception as e:
-            return f"PDF_PARSE_ERROR: {e}"
-    if ext == ".docx":
-        try:
-            from docx import Document
-            doc = Document(path)
-            return _clean("\n".join(p.text for p in doc.paragraphs if p.text), 50000)
-        except Exception as e:
-            return f"DOCX_PARSE_ERROR: {e}"
-    if ext in (".txt", ".md", ".csv", ".json", ".xml", ".html", ".htm", ".yaml", ".yml"):
-        try:
-            with open(path, "r", encoding="utf-8", errors="ignore") as f:
-                return _clean(f.read(), 50000)
-        except Exception as e:
-            return f"TEXT_PARSE_ERROR: {e}"
-    return ""
-
-def _write_docx(model: Dict[str, Any], task_id: str) -> str:
-    out = Path(tempfile.gettempdir()) / f"universal_file_report_{_safe(task_id)}.docx"
-    try:
-        from docx import Document
-        doc = Document()
-        doc.add_heading("UNIVERSAL FILE REPORT", level=1)
-        doc.add_paragraph(f"Файл: {model.get('file_name')}")
-        doc.add_paragraph(f"Тип: {model.get('kind')}")
-        doc.add_paragraph(f"Домен: {model.get('domain')}")
-        doc.add_paragraph(f"Расширение: {model.get('extension')}")
-        doc.add_paragraph(f"Размер: {model.get('size_bytes')} bytes")
-        doc.add_paragraph(f"Engine hint: {model.get('engine_hint')}")
-        doc.add_heading("Текст/превью", level=2)
-        doc.add_paragraph(_clean(model.get("text_preview"), 12000) or "Текст не извлечён")
-        doc.add_heading("Статус", level=2)
-        doc.add_paragraph(model.get("status") or "INDEXED_METADATA")
-        doc.save(out)
-        return str(out)
-    except Exception:
-        txt = out.with_suffix(".txt")
-        txt.write_text(json.dumps(model, ensure_ascii=False, indent=2), encoding="utf-8")
-        return str(txt)
-
-def _write_json(model: Dict[str, Any], task_id: str) -> str:
-    out = Path(tempfile.gettempdir()) / f"universal_file_model_{_safe(task_id)}.json"
-    out.write_text(json.dumps(model, ensure_ascii=False, indent=2), encoding="utf-8")
-    return str(out)
-
-def _write_xlsx(model: Dict[str, Any], task_id: str) -> str:
-    out = Path(tempfile.gettempdir()) / f"universal_file_register_{_safe(task_id)}.xlsx"
-    try:
-        from openpyxl import Workbook
-        wb = Workbook()
-        ws = wb.active
-        ws.title = "File"
-        for row, (k, v) in enumerate(model.items(), 1):
-            ws.cell(row=row, column=1, value=str(k))
-            ws.cell(row=row, column=2, value=json.dumps(v, ensure_ascii=False) if isinstance(v, (dict, list)) else str(v))
-        wb.save(out)
-        wb.close()
-        return str(out)
-    except Exception:
-        csv = out.with_suffix(".csv")
-        csv.write_text("key,value\n" + "\n".join(f"{k},{v}" for k, v in model.items()), encoding="utf-8")
-        return str(csv)
-
-def _zip(paths: List[str], task_id: str) -> str:
-    out = Path(tempfile.gettempdir()) / f"universal_file_package_{_safe(task_id)}.zip"
-    with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as z:
-        for p in paths:
-            if p and os.path.exists(p):
-                z.write(p, arcname=os.path.basename(p))
-        z.writestr("manifest.json", json.dumps({
-            "engine": "UNIVERSAL_FILE_ENGINE_V1",
-            "task_id": task_id,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "files": [os.path.basename(p) for p in paths if p and os.path.exists(p)],
-        }, ensure_ascii=False, indent=2))
-    return str(out)
-
-def process_universal_file(
-    local_path: str,
-    file_name: str = "",
-    mime_type: str = "",
-    user_text: str = "",
-    topic_role: str = "",
-    task_id: str = "universal_file",
-    topic_id: int = 0,
-) -> Dict[str, Any]:
-    if not local_path or not os.path.exists(local_path):
-        return {"success": False, "error": "FILE_NOT_FOUND", "summary": "Файл не найден"}
-
-    cls = classify_file(file_name or os.path.basename(local_path), mime_type, user_text, topic_role)
-    size = os.path.getsize(local_path)
-    text = _try_extract_text(local_path, file_name or local_path)
-
-    model = {
-        "schema": "UNIVERSAL_FILE_MODEL_V1",
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "file_name": file_name or os.path.basename(local_path),
-        "local_path": local_path,
-        "mime_type": mime_type,
-        "topic_id": topic_id,
-        "user_text": user_text,
-        "topic_role": topic_role,
-        "size_bytes": size,
-        "text_preview": _clean(text, 5000),
-        **cls,
-        "status": "INDEXED_WITH_TEXT" if text else "INDEXED_METADATA_ONLY",
-    }
-
-    docx = _write_docx(model, task_id)
-    xlsx = _write_xlsx(model, task_id)
-    js = _write_json(model, task_id)
-    package = _zip([docx, xlsx, js], task_id)
-
-    summary = "\n".join([
-        "Универсальный файловый контур отработал",
-        f"Файл: {model['file_name']}",
-        f"Тип: {model['kind']}",
-        f"Домен: {model['domain']}",
-        f"Статус: {model['status']}",
-        "Артефакты: DOCX + XLSX + JSON + ZIP",
-    ])
-
-    return {
-        "success": True,
-        "engine": "UNIVERSAL_FILE_ENGINE_V1",
-        "summary": summary,
-        "artifact_path": package,
-        "artifact_name": f"{Path(model['file_name']).stem}_universal_file_package.zip",
-        "extra_artifacts": [docx, xlsx, js],
-        "model": model,
-    }
-# === END_UNIVERSAL_FILE_ENGINE_V1 ===
-
-====================================================================================================
-END_FILE: core/universal_file_engine.py
 FILE_CHUNK: 1/1
 ====================================================================================================

@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_005
-generated_at_utc: 2026-07-06T08:22:42.330856+00:00
-git_sha_before_commit: 5ca02cdd69238e358402491f647ce5c384e8c39a
+generated_at_utc: 2026-07-06T08:52:42.385524+00:00
+git_sha_before_commit: cdfc72406c0ded2b84941ad40096aeb9ee9dce05
 part: 5/19
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 1/4
-SHA256_FULL_FILE: 0d01de4a81225ba6f983ca40912c57bfda60bd49a21c4865becb64cbe137fa07
+SHA256_FULL_FILE: 6f7c2839708ae5cce0c530384fbd56cc14f988984e5901d37aa8adb2d46d0aa4
 ====================================================================================================
 
 def _force_voice_finish(raw_input: str, result: str) -> bool:
@@ -6794,6 +6794,10 @@ def _p6_extract_file_meta_20260504(raw):
 
 def _p6_handle_technadzor_20260504(conn, task, chat_id, topic_id):
     task_id = _p6_s_20260504(_p6_row_get_20260504(task, "id", ""))
+    if int(topic_id or 0) != 5:
+        _p6_history_20260504(conn, task_id, f"TOPIC_ISOLATION_BLOCKED_TECHNADZOR_ROUTE_TOPIC:{int(topic_id or 0)}")
+        conn.commit()
+        return False
     raw_input = _p6_s_20260504(_p6_row_get_20260504(task, "raw_input", ""), 12000)
     reply_to = _p6_row_get_20260504(task, "reply_to_message_id", None)
     file_path, file_name = _p6_extract_file_meta_20260504(raw_input)
@@ -7006,6 +7010,10 @@ def _p6c_technadzor_like_20260504(raw_input, topic_id):
 
 async def _p6c_handle_technadzor_20260504(conn, task, chat_id, topic_id):
     task_id = _p6c_s_20260504(_p6c_row_get_20260504(task, "id", ""))
+    if int(topic_id or 0) != 5:
+        _p6c_history_20260504(conn, task_id, f"TOPIC_ISOLATION_BLOCKED_TECHNADZOR_ROUTE_TOPIC:{int(topic_id or 0)}")
+        conn.commit()
+        return False
     raw_input = _p6c_s_20260504(_p6c_row_get_20260504(task, "raw_input", ""), 50000)
     reply_to = _p6c_row_get_20260504(task, "reply_to_message_id", None)
     meta = _p6c_meta_20260504(raw_input)
@@ -7348,13 +7356,6 @@ def _p6e4_wrap_drive_handler(name):
     orig = globals().get(name)
     if not orig or getattr(orig, "_p6e4_wrapped", False):
         return
-    if _p6e4_inspect.iscoroutinefunction(orig):
-        async def wrapped(*args, **kwargs):
-            conn, task = _p6e4_get_conn_task(args, kwargs)
-            if conn is not None and task is not None and _p6e4_is_topic2_image_estimate_task(task):
-                ok = await _p6e4_run_topic2_image_estimate(conn, task)
-                if ok:
-                    return True
 
 ====================================================================================================
 END_FILE: task_worker.py

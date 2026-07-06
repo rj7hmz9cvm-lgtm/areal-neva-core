@@ -1,8 +1,414 @@
 # ORCHESTRA_FULL_CONTEXT_PART_015
-generated_at_utc: 2026-07-06T08:22:42.340951+00:00
-git_sha_before_commit: 5ca02cdd69238e358402491f647ce5c384e8c39a
+generated_at_utc: 2026-07-06T08:52:42.398457+00:00
+git_sha_before_commit: cdfc72406c0ded2b84941ad40096aeb9ee9dce05
 part: 15/19
 
+
+====================================================================================================
+BEGIN_FILE: core/topic_drive_oauth.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 09e67527599b711f23e665802e1beed93944060a64a3674da0459bdafdd00513
+====================================================================================================
+import os
+import asyncio
+from typing import Optional, Dict, Any
+from dotenv import load_dotenv
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
+
+BASE = "/root/.areal-neva-core"
+load_dotenv(f"{BASE}/.env", override=True)
+
+def _oauth_service():
+    client_id = os.getenv("GDRIVE_CLIENT_ID")
+    client_secret = <REDACTED_SECRET>"GDRIVE_CLIENT_SECRET")
+    refresh_token = <REDACTED_SECRET>"GDRIVE_REFRESH_TOKEN")
+    if not client_id or not client_secret or not refresh_token:
+        raise RuntimeError("GDRIVE OAuth vars missing")
+    creds = Credentials(
+        None,
+        refresh_token=<REDACTED_SECRET>
+        token_uri="https://oauth2.googleapis.com/token",
+        client_id=client_id,
+        client_secret=<REDACTED_SECRET>
+        scopes=["https://www.googleapis.com/auth/drive"]  # SCOPE_FULL_V2,
+    )
+    creds.refresh(Request())
+    return build("drive", "v3", credentials=creds)
+
+def _root_folder_id() -> str:
+    folder_id = os.getenv("DRIVE_INGEST_FOLDER_ID", "").strip()
+    if not folder_id:
+        raise RuntimeError("DRIVE_INGEST_FOLDER_ID missing")
+    return folder_id
+
+def _find_child_folder(service, parent_id: str, name: str) -> Optional[str]:
+    # === DRIVE_CANON_SINGLE_FOLDER_PICK_V1 ===
+    # Deterministic folder lookup: if duplicates exist, use the oldest existing folder.
+    safe_name = str(name or "").replace("'", "\\'")
+    q = (
+        f"name = '{safe_name}' and "
+        f"mimeType = 'application/vnd.google-apps.folder' and "
+        f"'{parent_id}' in parents and trashed = false"
+    )
+    resp = service.files().list(
+        q=q,
+        spaces="drive",
+        fields="files(id,name,createdTime)",
+        orderBy="createdTime",
+        supportsAllDrives=True,
+        includeItemsFromAllDrives=True,
+    ).execute()
+    files = resp.get("files", [])
+    return files[0]["id"] if files else None
+    # === END_DRIVE_CANON_SINGLE_FOLDER_PICK_V1 ===
+
+def _ensure_folder(service, parent_id: str, name: str) -> str:
+    found = _find_child_folder(service, parent_id, name)
+    if found:
+        return found
+    meta = {
+        "name": name,
+        "mimeType": "application/vnd.google-apps.folder",
+        "parents": [parent_id],
+    }
+    res = service.files().create(
+        body=meta,
+        fields="id",
+        supportsAllDrives=True,
+    ).execute()
+    return res["id"]
+
+def _upload_file_sync(file_path: str, file_name: str, chat_id: str, topic_id: int, mime_type: Optional[str] = None) -> Dict[str, Any]:
+    service = _oauth_service()
+    root_id = _root_folder_id()
+    chat_folder = _ensure_folder(service, root_id, f"chat_{chat_id}")
+    topic_folder = _ensure_folder(service, chat_folder, f"topic_{int(topic_id or 0)}")
+    media = MediaFileUpload(file_path, mimetype=mime_type, resumable=True)
+    meta = {
+        "name": file_name,
+        "parents": [topic_folder],
+    }
+    res = service.files().create(
+        body=meta,
+        media_body=media,
+        fields="id,parents",
+        supportsAllDrives=True,
+    ).execute()
+    return {
+        "ok": True,
+        "drive_file_id": res.get("id"),
+        "folder_id": topic_folder,
+        "chat_folder_id": chat_folder,
+    }
+
+async def upload_file_to_topic(file_path: str, file_name: str, chat_id: str, topic_id: int, mime_type: Optional[str] = None) -> Dict[str, Any]:
+    return await asyncio.to_thread(_upload_file_sync, file_path, file_name, str(chat_id), int(topic_id or 0), mime_type)
+
+
+# === P7_TOPIC5_ACTIVE_FOLDER_UPLOAD_V1 ===
+# topic_5 object materials must upload into ActiveTechnadzorFolder, not generic topic_5 root.
+import json as _p7_t5_json
+import time as _p7_t5_time
+from pathlib import Path as _p7_t5_Path
+
+_P7_T5_ORIG_UPLOAD_FILE_SYNC = _upload_file_sync
+_P7_T5_BASE = _p7_t5_Path("/root/.areal-neva-core/data/technadzor")
+
+def _p7_t5_active_folder_path(chat_id, topic_id):
+    return _P7_T5_BASE / f"active_folder_{chat_id}_{int(topic_id or 0)}.json"
+
+def _p7_t5_load_active_folder(chat_id, topic_id):
+    if int(topic_id or 0) != 5:
+        return {}
+    p = _p7_t5_active_folder_path(str(chat_id), 5)
+    try:
+        data = _p7_t5_json.loads(p.read_text(encoding="utf-8"))
+        if data.get("folder_id") and str(data.get("status", "OPEN")).upper() != "CLOSED":
+            return data
+    except Exception:
+        return {}
+    return {}
+
+def _upload_file_sync(file_path: str, file_name: str, chat_id: str, topic_id: int, mime_type: Optional[str] = None) -> Dict[str, Any]:
+    if int(topic_id or 0) == 5:
+        af = _p7_t5_load_active_folder(str(chat_id), 5)
+        active_folder_id = str(af.get("folder_id") or "").strip()
+        if active_folder_id:
+            service = _oauth_service()
+            media = MediaFileUpload(file_path, mimetype=mime_type, resumable=True)
+            meta = {
+                "name": file_name,
+                "parents": [active_folder_id],
+            }
+            res = service.files().create(
+                body=meta,
+                media_body=media,
+                fields="id,parents,webViewLink",
+                supportsAllDrives=True,
+            ).execute()
+            return {
+                "ok": True,
+                "drive_file_id": res.get("id"),
+                "folder_id": active_folder_id,
+                "active_folder_id": active_folder_id,
+                "active_folder_name": af.get("folder_name", ""),
+                "webViewLink": res.get("webViewLink", ""),
+                "topic5_active_folder_upload": True,
+                "uploaded_at": _p7_t5_time.time(),
+            }
+    return _P7_T5_ORIG_UPLOAD_FILE_SYNC(file_path, file_name, chat_id, topic_id, mime_type)
+# === END_P7_TOPIC5_ACTIVE_FOLDER_UPLOAD_V1 ===
+
+====================================================================================================
+END_FILE: core/topic_drive_oauth.py
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: core/topic_meta_loader.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 081afc9cc3266e754882d8c6fce4db2ebb8d191a72aebc19c120afdb1fbb8dec
+====================================================================================================
+"""TOPIC_META_LOADER_V1 — читает data/topics/{tid}/meta.json при INTAKE."""
+import json
+from pathlib import Path
+from typing import Optional, Dict, Any
+
+DATA_TOPICS = Path("data/topics")
+
+# Триггеры "что это за чат" — отвечаем из meta.json напрямую
+WHAT_IS_THIS_TRIGGERS = [
+    "что мы здесь делаем", "что мы тут делаем", "для чего ты",
+    "для чего этот чат", "для чего этот топик", "для чего у нас",
+    "что мы делаем в данном чате", "что мы делаем тут",
+    "скажи для чего", "зачем этот чат", "зачем этот топик",
+    "про что чат", "про что топик", "что за чат", "что за топик",
+]
+
+def load_topic_meta(topic_id: int) -> Optional[Dict[str, Any]]:
+    """Возвращает meta.json топика или None."""
+    if topic_id is None:
+        return None
+    folder = DATA_TOPICS / str(topic_id)
+    meta_path = folder / "meta.json"
+    if not meta_path.exists():
+        return None
+    try:
+        return json.loads(meta_path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+def is_what_is_this_question(text: str) -> bool:
+    """True если текст — вопрос о назначении чата."""
+    if not text:
+        return False
+    t = text.lower().replace("[voice]", "").replace("🎤", "").strip()
+    return any(trigger in t for trigger in WHAT_IS_THIS_TRIGGERS)
+
+def build_topic_self_answer(meta: Dict[str, Any]) -> str:
+    """Формирует ответ от имени топика на вопрос 'что мы тут делаем'."""
+    name = meta.get("name", "Без имени")
+    direction = meta.get("direction", "general_chat")
+    
+    DIRECTION_DESCRIPTIONS = {
+        "general_chat": "общий чат для произвольных задач",
+        "crm_leads": "лиды, реклама, AmoCRM, лидогенерация",
+        "estimates": "сметы, расчёт стоимости строительства",
+        "technical_supervision": "технадзор, акты осмотра, дефекты, СП/ГОСТ",
+        "structural_design": "проектирование КЖ/КМ/КМД/АР/ОВ/ВК/ЭОМ/СС/ГП/ПЗ/СМ/ТХ",
+        "internet_search": "интернет-поиск товаров и информации",
+        "auto_parts_search": "поиск автозапчастей, артикулы, аналоги, цены",
+        "orchestration_core": "коды оркестра, AI-роутер, архитектура системы",
+        "video_production": "генерация и производство видеоконтента",
+        "devops_server": "VPN, VPS, конфигурации серверов, настройки",
+        "job_search": "поиск работы и интеграция с биржами труда",
+    }
+    
+    desc = DIRECTION_DESCRIPTIONS.get(direction, direction)
+    return f"Этот чат — {name}. Направление: {desc}."
+
+====================================================================================================
+END_FILE: core/topic_meta_loader.py
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: core/universal_file_engine.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: a19ee184aae5b7ddad4f2e625de87685894cd3141252bbb507d5b11c363c9fdd
+====================================================================================================
+# === UNIVERSAL_FILE_ENGINE_V1 ===
+from __future__ import annotations
+
+import json
+import os
+import re
+import tempfile
+import zipfile
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Dict, List
+
+from core.format_registry import classify_file
+
+def _clean(v: Any, limit: int = 20000) -> str:
+    s = "" if v is None else str(v)
+    s = s.replace("\r", "\n")
+    s = re.sub(r"[ \t]+", " ", s)
+    s = re.sub(r"\n{3,}", "\n\n", s)
+    return s.strip()[:limit]
+
+def _safe(v: Any, fallback: str = "file") -> str:
+    s = re.sub(r"[^A-Za-zА-Яа-я0-9_.-]+", "_", _clean(v, 120)).strip("._")
+    return s or fallback
+
+def _try_extract_text(path: str, file_name: str = "") -> str:
+    ext = Path(file_name or path).suffix.lower()
+    if ext == ".pdf":
+        try:
+            from pypdf import PdfReader
+            reader = PdfReader(path)
+            return _clean("\n".join((p.extract_text() or "") for p in reader.pages[:50]), 50000)
+        except Exception as e:
+            return f"PDF_PARSE_ERROR: {e}"
+    if ext == ".docx":
+        try:
+            from docx import Document
+            doc = Document(path)
+            return _clean("\n".join(p.text for p in doc.paragraphs if p.text), 50000)
+        except Exception as e:
+            return f"DOCX_PARSE_ERROR: {e}"
+    if ext in (".txt", ".md", ".csv", ".json", ".xml", ".html", ".htm", ".yaml", ".yml"):
+        try:
+            with open(path, "r", encoding="utf-8", errors="ignore") as f:
+                return _clean(f.read(), 50000)
+        except Exception as e:
+            return f"TEXT_PARSE_ERROR: {e}"
+    return ""
+
+def _write_docx(model: Dict[str, Any], task_id: str) -> str:
+    out = Path(tempfile.gettempdir()) / f"universal_file_report_{_safe(task_id)}.docx"
+    try:
+        from docx import Document
+        doc = Document()
+        doc.add_heading("UNIVERSAL FILE REPORT", level=1)
+        doc.add_paragraph(f"Файл: {model.get('file_name')}")
+        doc.add_paragraph(f"Тип: {model.get('kind')}")
+        doc.add_paragraph(f"Домен: {model.get('domain')}")
+        doc.add_paragraph(f"Расширение: {model.get('extension')}")
+        doc.add_paragraph(f"Размер: {model.get('size_bytes')} bytes")
+        doc.add_paragraph(f"Engine hint: {model.get('engine_hint')}")
+        doc.add_heading("Текст/превью", level=2)
+        doc.add_paragraph(_clean(model.get("text_preview"), 12000) or "Текст не извлечён")
+        doc.add_heading("Статус", level=2)
+        doc.add_paragraph(model.get("status") or "INDEXED_METADATA")
+        doc.save(out)
+        return str(out)
+    except Exception:
+        txt = out.with_suffix(".txt")
+        txt.write_text(json.dumps(model, ensure_ascii=False, indent=2), encoding="utf-8")
+        return str(txt)
+
+def _write_json(model: Dict[str, Any], task_id: str) -> str:
+    out = Path(tempfile.gettempdir()) / f"universal_file_model_{_safe(task_id)}.json"
+    out.write_text(json.dumps(model, ensure_ascii=False, indent=2), encoding="utf-8")
+    return str(out)
+
+def _write_xlsx(model: Dict[str, Any], task_id: str) -> str:
+    out = Path(tempfile.gettempdir()) / f"universal_file_register_{_safe(task_id)}.xlsx"
+    try:
+        from openpyxl import Workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "File"
+        for row, (k, v) in enumerate(model.items(), 1):
+            ws.cell(row=row, column=1, value=str(k))
+            ws.cell(row=row, column=2, value=json.dumps(v, ensure_ascii=False) if isinstance(v, (dict, list)) else str(v))
+        wb.save(out)
+        wb.close()
+        return str(out)
+    except Exception:
+        csv = out.with_suffix(".csv")
+        csv.write_text("key,value\n" + "\n".join(f"{k},{v}" for k, v in model.items()), encoding="utf-8")
+        return str(csv)
+
+def _zip(paths: List[str], task_id: str) -> str:
+    out = Path(tempfile.gettempdir()) / f"universal_file_package_{_safe(task_id)}.zip"
+    with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as z:
+        for p in paths:
+            if p and os.path.exists(p):
+                z.write(p, arcname=os.path.basename(p))
+        z.writestr("manifest.json", json.dumps({
+            "engine": "UNIVERSAL_FILE_ENGINE_V1",
+            "task_id": task_id,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "files": [os.path.basename(p) for p in paths if p and os.path.exists(p)],
+        }, ensure_ascii=False, indent=2))
+    return str(out)
+
+def process_universal_file(
+    local_path: str,
+    file_name: str = "",
+    mime_type: str = "",
+    user_text: str = "",
+    topic_role: str = "",
+    task_id: str = "universal_file",
+    topic_id: int = 0,
+) -> Dict[str, Any]:
+    if not local_path or not os.path.exists(local_path):
+        return {"success": False, "error": "FILE_NOT_FOUND", "summary": "Файл не найден"}
+
+    cls = classify_file(file_name or os.path.basename(local_path), mime_type, user_text, topic_role)
+    size = os.path.getsize(local_path)
+    text = _try_extract_text(local_path, file_name or local_path)
+
+    model = {
+        "schema": "UNIVERSAL_FILE_MODEL_V1",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "file_name": file_name or os.path.basename(local_path),
+        "local_path": local_path,
+        "mime_type": mime_type,
+        "topic_id": topic_id,
+        "user_text": user_text,
+        "topic_role": topic_role,
+        "size_bytes": size,
+        "text_preview": _clean(text, 5000),
+        **cls,
+        "status": "INDEXED_WITH_TEXT" if text else "INDEXED_METADATA_ONLY",
+    }
+
+    docx = _write_docx(model, task_id)
+    xlsx = _write_xlsx(model, task_id)
+    js = _write_json(model, task_id)
+    package = _zip([docx, xlsx, js], task_id)
+
+    summary = "\n".join([
+        "Универсальный файловый контур отработал",
+        f"Файл: {model['file_name']}",
+        f"Тип: {model['kind']}",
+        f"Домен: {model['domain']}",
+        f"Статус: {model['status']}",
+        "Артефакты: DOCX + XLSX + JSON + ZIP",
+    ])
+
+    return {
+        "success": True,
+        "engine": "UNIVERSAL_FILE_ENGINE_V1",
+        "summary": summary,
+        "artifact_path": package,
+        "artifact_name": f"{Path(model['file_name']).stem}_universal_file_package.zip",
+        "extra_artifacts": [docx, xlsx, js],
+        "model": model,
+    }
+# === END_UNIVERSAL_FILE_ENGINE_V1 ===
+
+====================================================================================================
+END_FILE: core/universal_file_engine.py
+FILE_CHUNK: 1/1
+====================================================================================================
 
 ====================================================================================================
 BEGIN_FILE: core/universal_file_handler.py
@@ -9315,473 +9721,5 @@ SHA256_FULL_FILE: bedd84f1787a2381a8bd97ca6b9af30e39f4e4f69f2a8849e018e72a4e4dcf
 }
 ====================================================================================================
 END_FILE: data/project_templates/PROJECT_TEMPLATE_MODEL__АР_smoke.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: data/project_templates/PROJECT_TEMPLATE_MODEL__КД_manual.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 72496cf6a372720635bd37bce2ac77ab69a6260db9100ce75fb3871e84f810c3
-====================================================================================================
-{
-  "schema": "PROJECT_TEMPLATE_MODEL_V1",
-  "project_type": "КД",
-  "source_files": [
-    "АР_КД_Агалатово_02.pdf"
-  ],
-  "sheet_register": [
-    {
-      "mark": "ов",
-      "number": "1-2",
-      "title": "сорта естественной влажности согласно раздела КД, с обработкой"
-    }
-  ],
-  "marks": [
-    "КД"
-  ],
-  "sections": [
-    "Ведомость рабочих чертежей",
-    "Ведомость рабочих чертежей основного комплекта (КД02)",
-    "34 Схема расположения элементов подстропильной системы",
-    "37 Разрез 2-1, Разрез 2-2",
-    "38 Схема расположения элементов стропильной системы",
-    "39 Схема расположения обрешетки",
-    "40 Спецификация на стропильную систему, 3D вид стропильной системы",
-    "44 Спецификация на стропильную систему, 3D вид стропильной системы гаража",
-    "Ведомость рабочих чертежей основного комплекта (АР01)",
-    "01 Ведомость рабочих чертежей",
-    "02 Общие данные",
-    "03 Общие данные",
-    "04 Общие данные",
-    "05 Схема планировочной организации земельного участка",
-    "06 План расположения котлована",
-    "07 План расположения фундамента дома",
-    "08 План расположения отмостки",
-    "09 План размерный на отметке 0.000",
-    "10 План размерный на отметке +3.600",
-    "11 План размерный на отметке +6.700",
-    "12 План кладочный на отметке 0.000",
-    "13 План кладочный на отметке +3.600",
-    "14 План расположения водосточных желобов",
-    "15 План маркировочный на отметке 0.000",
-    "16 План маркировочный на отметке +3.600",
-    "20 План на отметке 0.000 с расстановкой мебели",
-    "21 План на отметке +3.600 с расстановкой мебели",
-    "22 Разрез 1-1",
-    "23 Разрез 1-2",
-    "24 Фасад 1-5",
-    "25 Фасад Г-А",
-    "26 Фасад 5-1",
-    "27 Фасад А-Г",
-    "- исходные данные для подготовки проектной документации должны быть представлены в соответствии с Постановлениями Правительства Российской Федерации",
-    "№ 840 от 29.12.2005 г. «О форме градостроительного плана земельного участка», № 840 от 29.12.2005 г. «О форме градостроительного плана земельного участка»,",
-    "Общие данные",
-    "2.1. 2.1. АрхитектурноАрхитектурно - -планировочноепланировочное решение решение",
-    "На втором этаже имеется один санузел, душевая комната и 4 спальни.",
-    "4. Наружная отделка стен - штукатурные работы по технике \"Мокрый фасад\",",
-    "клинкерная плитка, декоративные фасадные архитектурные элементы.",
-    "5. Цветовое решение материалов отделки фасадов и декоративных элементов",
-    "8. Класс конструктивной пожарной опасности здания - С2.",
-    "изделия и материалы, используемые при строительстве, должны быть сертифицированы в",
-    "3. 3. КонструктивныеКонструктивные решения решения",
-    "утрамбованного отсыпного материала. Высота подушки должна быть не менее 200 мм от поверхности песка коричневого,",
-    "2. Стены наружные несущие монолитные толщиной 200 мм, утеплены согласно разрезам.",
-    "- отделка фасада - штукатурка \"Мокрый фасад\", отледка клинкерной плиткой.",
-    "7. Стропильная система – из пиломатериалов 1-2 сорта естественной влажности согласно раздела КД, с обработкой",
-    "ЛистСхема планировочной организации земельного",
-    "Схема планировочной организации земельного участка",
-    "План расположения котлована",
-    "План расположения фундамента дома",
-    "План расположения отмостки",
-    "План размерный на отметке 0.000",
-    "План размерный на отметке +3.600"
-  ],
-  "axes_grid": {
-    "axes_letters": [
-      "А",
-      "Г"
-    ],
-    "axes_numbers": [
-      "01",
-      "1",
-      "2",
-      "02",
-      "5",
-      "21",
-      "23",
-      "31"
-    ]
-  },
-  "dimensions": [
-    2025,
-    600,
-    700,
-    2008,
-    2007,
-    840,
-    2005,
-    2006,
-    2016,
-    2003,
-    13330,
-    2011,
-    2010,
-    2001,
-    900,
-    400,
-    300,
-    1500,
-    10925,
-    17140,
-    3400,
-    5500,
-    6220,
-    620,
-    4350,
-    2300,
-    3590,
-    6700,
-    3570,
-    3160,
-    4000,
-    1100,
-    16940,
-    10725,
-    19140,
-    12925,
-    23095,
-    3900,
-    2000,
-    3290,
-    6250,
-    10125,
-    850,
-    17143,
-    3565,
-    11265,
-    17480,
-    2020,
-    1400,
-    4845,
-    5945,
-    1000,
-    1370,
-    2720,
-    1900,
-    3175,
-    770,
-    5259,
-    1022,
-    4529,
-    2850,
-    570,
-    4150,
-    2100,
-    3390,
-    6500,
-    10525,
-    4500,
-    1200,
-    2150,
-    1765,
-    1650,
-    1830,
-    1333,
-    1245,
-    550,
-    2350,
-    650,
-    450,
-    1005
-  ],
-  "levels": [
-    "0.0",
-    "3.6",
-    "6.7",
-    "5.03",
-    "29.12",
-    "16.02",
-    "19.01",
-    "13.02",
-    "22.07",
-    "3.07",
-    "30.201",
-    "55.133",
-    "50.133",
-    "3.0",
-    "2.7",
-    "7.4",
-    "6.75",
-    "43.68",
-    "17.59",
-    "7.8",
-    "1.8",
-    "7.29",
-    "13.0",
-    "54.6",
-    "7.69",
-    "7.61",
-    "23.24",
-    "19.92",
-    "18.98",
-    "16.27",
-    "5.18",
-    "1.37",
-    "92.57",
-    "-0.9",
-    "0.05",
-    "0.27",
-    "0.35"
-  ],
-  "nodes": [
-    "На втором этаже имеется один санузел, душевая комната и 4 спальни."
-  ],
-  "specifications": [
-    "Ведомость рабочих чертежей",
-    "Ведомость рабочих чертежей основного комплекта (КД02)",
-    "40 Спецификация на стропильную систему, 3D вид стропильной системы",
-    "44 Спецификация на стропильную систему, 3D вид стропильной системы гаража",
-    "Ведомость рабочих чертежей основного комплекта (АР01)",
-    "01 Ведомость рабочих чертежей"
-  ],
-  "materials": [
-    "1. Фундамент расположен на отметке -0.900, на утеплении из экструдированного пенополистирола толщиной 100 мм и \"подушке\" из",
-    "2. Стены наружные несущие монолитные толщиной 200 мм, утеплены согласно разрезам.",
-    "- монолитные железобетонные стены - 200мм,",
-    "- утепление базальтовой ватой 150мм,",
-    "- кладка полнотелого кирпича - 120 мм"
-  ],
-  "stamp_fields": {
-    "year": "2008"
-  },
-  "variable_parameters": [
-    "project_name",
-    "address",
-    "customer",
-    "area",
-    "floors",
-    "axes_grid",
-    "dimensions",
-    "materials",
-    "sheet_register"
-  ],
-  "output_documents": [
-    "DOCX_PROJECT_TEMPLATE_SUMMARY",
-    "JSON_PROJECT_TEMPLATE_MODEL",
-    "XLSX_SPECIFICATION_DRAFT"
-  ],
-  "quality": {
-    "has_sheet_register": true,
-    "has_sections": true,
-    "has_axes_or_dimensions": true,
-    "has_materials": true,
-    "text_chars": 12000,
-    "lines": 494
-  },
-  "task_id": "",
-  "chat_id": "",
-  "topic_id": 0
-}
-====================================================================================================
-END_FILE: data/project_templates/PROJECT_TEMPLATE_MODEL__КД_manual.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: data/project_templates/PROJECT_TEMPLATE_MODEL__КД_repaired.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: d6924cc53adc5cb0d1edc58d3fd6165cbdf7c084b6e32f22e63f7524790a81d3
-====================================================================================================
-{
-  "schema": "PROJECT_TEMPLATE_MODEL_V2_REPAIRED",
-  "project_type": "КД",
-  "source_file": "АР_КД_Агалатово_02.pdf",
-  "template_file": "/root/.areal-neva-core/data/project_templates/PROJECT_TEMPLATE_MODEL__КД_repaired.json",
-  "repaired_at": "2026-04-30T09:15:02.250916Z",
-  "sheet_register": [
-    "01 Ведомость рабочих чертежей",
-    "02 Общие данные",
-    "03 Общие данные",
-    "04 Общие данные",
-    "05 Схема планировочной организации земельного участка",
-    "06 План расположения котлована",
-    "07 План расположения фундамента дома",
-    "08 План расположения отмостки",
-    "09 План размерный на отметке 0.000",
-    "10 План размерный на отметке +3.600",
-    "11 План размерный на отметке +6.700",
-    "01 Общие данные",
-    "02 План балок перекрытия",
-    "03 План стропильной системы",
-    "04 План стропильной системы",
-    "06 Спецификация элементов стропильной системы",
-    "07 План обрешётки",
-    "08 План контробрешётки",
-    "16 Ведомость пиломатериалов",
-    "17 Ведомость крепежа",
-    "18 Спецификация кровельных материалов",
-    "19 Схема монтажа",
-    "20 Общие указания",
-    "21 Ведомость листов"
-  ],
-  "sections": [],
-  "materials": [],
-  "source": "core.db.topic_210.drive_file"
-}
-====================================================================================================
-END_FILE: data/project_templates/PROJECT_TEMPLATE_MODEL__КД_repaired.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: data/project_templates/PROJECT_TEMPLATE_MODEL__КЖ_repaired.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 82db86c234139cb30b4ad8578ff08eb29f94521ed89ec761a3d26f0d0d5a65fa
-====================================================================================================
-{
-  "schema": "PROJECT_TEMPLATE_MODEL_V2_REPAIRED",
-  "project_type": "КЖ",
-  "source_file": "КЖ АК-М-160.pdf",
-  "template_file": "/root/.areal-neva-core/data/project_templates/PROJECT_TEMPLATE_MODEL__КЖ_repaired.json",
-  "repaired_at": "2026-04-30T09:15:02.251190Z",
-  "sheet_register": [
-    "01 Общие данные",
-    "02 План фундаментной плиты",
-    "03 Разрез 1-1",
-    "04 Разрез 2-2",
-    "05 Схема нижнего армирования",
-    "06 Схема верхнего армирования",
-    "07 Схема дополнительного армирования",
-    "08 Узлы армирования углов",
-    "09 Узлы примыкания ленты/ребра",
-    "10 Схема закладных деталей",
-    "11 Схема выпусков арматуры",
-    "12 Схема инженерных проходок",
-    "13 План опалубки",
-    "14 Спецификация арматуры",
-    "15 Спецификация бетона",
-    "16 Ведомость материалов основания",
-    "17 Ведомость объёмов работ",
-    "18 Контрольные отметки",
-    "19 Общие указания",
-    "20 Ведомость листов"
-  ],
-  "sections": [],
-  "materials": [],
-  "source": "core.db.topic_210.drive_file"
-}
-====================================================================================================
-END_FILE: data/project_templates/PROJECT_TEMPLATE_MODEL__КЖ_repaired.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: data/templates/364b2395-0744-4a88-80a8-6e87c282aa3d.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: adcc187000a810f61ee9a17325a2d2ac5449bb8ef840f253121634f8897ffd27
-====================================================================================================
-{
-  "template_id": "364b2395-0744-4a88-80a8-6e87c282aa3d",
-  "chat_id": "-1003725299009",
-  "topic_id": 210,
-  "source_task_id": "364b2395-0744-4a88-80a8-6e87c282aa3d",
-  "source_file_name": "АР_КД_Агалатово_02.pdf",
-  "mime_type": "application/pdf",
-  "kind": "estimate_template",
-  "created_at": "2026-05-01T11:32:07.307426",
-  "active": true
-}
-====================================================================================================
-END_FILE: data/templates/364b2395-0744-4a88-80a8-6e87c282aa3d.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: data/templates/bab630ba-7e3f-4c43-88ff-3e917e5c6279.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 079024dae167be51495505f479c057e9e7e1848d9ae077c4287d618c8418f642
-====================================================================================================
-{
-  "template_id": "bab630ba-7e3f-4c43-88ff-3e917e5c6279",
-  "chat_id": "-1003725299009",
-  "topic_id": 2,
-  "source_task_id": "bab630ba-7e3f-4c43-88ff-3e917e5c6279",
-  "source_file_name": "Техническое задание Кордон снт.docx",
-  "mime_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "kind": "estimate_template",
-  "created_at": "2026-05-02T00:20:57.882990",
-  "active": true
-}
-====================================================================================================
-END_FILE: data/templates/bab630ba-7e3f-4c43-88ff-3e917e5c6279.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: data/templates/d5d1fbca-e848-4e36-b297-d12312cc5217.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: d5c22742c734298e06a8fd5cdff777b21a1df1df2e192bba477b2b16da158f06
-====================================================================================================
-{
-  "template_id": "d5d1fbca-e848-4e36-b297-d12312cc5217",
-  "chat_id": "-1003725299009",
-  "topic_id": 4569,
-  "source_task_id": "d5d1fbca-e848-4e36-b297-d12312cc5217",
-  "source_file_name": "",
-  "mime_type": "",
-  "kind": "unknown_template",
-  "created_at": "2026-05-01T10:23:26.354953",
-  "active": true
-}
-====================================================================================================
-END_FILE: data/templates/d5d1fbca-e848-4e36-b297-d12312cc5217.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: data/templates/ee10abce-9662-4797-825e-096188f40a4e.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 486eb146b39b89d7619166c2e3b99a531ab687709a2b111bcd64d5ed90105c47
-====================================================================================================
-{
-  "template_id": "ee10abce-9662-4797-825e-096188f40a4e",
-  "chat_id": "-1003725299009",
-  "topic_id": 210,
-  "source_task_id": "ee10abce-9662-4797-825e-096188f40a4e",
-  "source_file_name": "АР_КД_Агалатово_02.pdf",
-  "mime_type": "application/pdf",
-  "kind": "estimate_template",
-  "created_at": "2026-05-01T11:34:12.786364",
-  "active": true
-}
-====================================================================================================
-END_FILE: data/templates/ee10abce-9662-4797-825e-096188f40a4e.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: data/templates/estimate/ACTIVE__chat_-1003725299009__topic_3008.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 225b637da9991f976ece0bfe4c6d0a4eca022ecb9bb09fa84104e63fb6bdca92
-====================================================================================================
-{
-  "engine": "FULLFIX_13A_SAMPLE_FILE_INTENT_AND_TEMPLATE_ESTIMATE",
-  "kind": "estimate",
-  "status": "active",
-  "chat_id": "-1003725299009",
-  "topic_id": 3008,
-  "saved_by_task_id": "7270364c-bb74-4e1e-b531-de64dfe713b7",
-  "source_task_id": "f5c33c40-dacf-46c9-97ca-2dc19e245650",
-  "source_file_id": "1XsuPOtO-vyA73IX5Ui9AR9kf6uUAE5b_",
-  "source_file_name": "estimate_c925a897-66ec-435e-8312-15687f.xlsx",
-  "source_mime_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "source_caption": "",
-  "source_score": 110,
-  "saved_at": "2026-05-01T08:38:07.108195+00:00",
-  "usage_rule": "Use this file as formatting/sample reference for future estimate/project artifacts in the same chat and topic",
-  "raw_user_instruction": "этот чат у нас используется с тобой для работы, соответственно, как ты правильно и сказал, по AI роутеру Arial Niva, но также мы здесь еще с тобой пишем коды по определенным запросам команд, которые ты вот сейчас мне написал, например, напиши код. То есть здесь мы также с тобой создаем еще коды, которые делаются на основании четырех моделей, которые присутствуют у нас с тобой."
-}
-====================================================================================================
-END_FILE: data/templates/estimate/ACTIVE__chat_-1003725299009__topic_3008.json
 FILE_CHUNK: 1/1
 ====================================================================================================

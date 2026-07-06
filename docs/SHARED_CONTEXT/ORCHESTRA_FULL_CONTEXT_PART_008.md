@@ -1,14 +1,45 @@
 # ORCHESTRA_FULL_CONTEXT_PART_008
-generated_at_utc: 2026-07-06T08:22:42.333205+00:00
-git_sha_before_commit: 5ca02cdd69238e358402491f647ce5c384e8c39a
+generated_at_utc: 2026-07-06T08:52:42.389411+00:00
+git_sha_before_commit: cdfc72406c0ded2b84941ad40096aeb9ee9dce05
 part: 8/19
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 4/4
-SHA256_FULL_FILE: 0d01de4a81225ba6f983ca40912c57bfda60bd49a21c4865becb64cbe137fa07
+SHA256_FULL_FILE: 6f7c2839708ae5cce0c530384fbd56cc14f988984e5901d37aa8adb2d46d0aa4
 ====================================================================================================
+                                    except Exception:
+                                        pass
+                                # Pass cleaned task to original handler
+                                try:
+                                    if isinstance(task, dict):
+                                        task = dict(task)
+                                        task["raw_input"] = json_str
+                                    else:
+                                        # sqlite3.Row — convert to dict
+                                        try:
+                                            task = {k: task[k] for k in task.keys()}
+                                            task["raw_input"] = json_str
+                                        except Exception:
+                                            pass
+                                except Exception:
+                                    pass
+                                _T2CF2_LOG.info(
+                                    "PATCH_TOPIC2_CANON_FULL_CLOSE_AFTER_REQUEUE_FAILURE_V1 raw_input recovered task=%s tail_chars=%d",
+                                    task_id, len(tail or ""),
+                                )
+            except Exception as e:
+                try:
+                    _T2CF2_LOG.exception(
+                        "PATCH_TOPIC2_CANON_FULL_CLOSE_AFTER_REQUEUE_FAILURE_V1_DRIVE_PRE_ERR:%s", e,
+                    )
+                except Exception:
+                    pass
+            return await _t2cf2_orig_handle_drive_file(conn, task, chat_id, topic_id)
+        globals()["_handle_drive_file"] = _handle_drive_file
+
+    # === FIX 2: wrap _t2fb_merge → no raw_input append for drive_file parent ===
     # PATCH_TOPIC2_ADDITIONAL_FACTS_FULL_RECALC_CANON_RESTORE_V1: also reset DONE_WITH_DRIVE_LINKS
     # blocking marker so that a new FACT triggers full canonical recalculation via _t2fdsg_run_drive_final.
     _t2cf2_orig_t2fb_merge = globals().get("_t2fb_merge")

@@ -1,14 +1,21 @@
 # ORCHESTRA_FULL_CONTEXT_PART_007
-generated_at_utc: 2026-07-06T08:22:42.332271+00:00
-git_sha_before_commit: 5ca02cdd69238e358402491f647ce5c384e8c39a
+generated_at_utc: 2026-07-06T08:52:42.387825+00:00
+git_sha_before_commit: cdfc72406c0ded2b84941ad40096aeb9ee9dce05
 part: 7/19
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 3/4
-SHA256_FULL_FILE: 0d01de4a81225ba6f983ca40912c57bfda60bd49a21c4865becb64cbe137fa07
+SHA256_FULL_FILE: 6f7c2839708ae5cce0c530384fbd56cc14f988984e5901d37aa8adb2d46d0aa4
 ====================================================================================================
+                ).fetchone()
+                if row is not None:
+                    tid = int((row["topic_id"] if hasattr(row, "keys") else row[0]) or 0)
+                    if tid in (210, 5) and _t25g_has_reply_sent(conn, task_id):
+                        return _T25G_PREGATE(conn, task_id, **kwargs)
+            except Exception:
+                pass
         return _T25G_CURRENT(conn, task_id, **kwargs)
     _update_task._t25g_wrapped = True
     _T25G_LOG.info("PATCH_T210_T5_REPLIED_DONE_GATE_V1 installed")
@@ -3607,9 +3614,23 @@ try:
     def _t2pc_low(v):
         return str(v or "").replace("[VOICE]", "").replace("ё", "е").lower().strip()
 
+    def _t2pc_revision_facts(raw):
+        s = _t2pc_low(raw)
+        s = _t2pc_re.sub(r"\s+", " ", s)
+        if len(s) < 90 and len(s.split()) < 10:
+            return False
+        return any(x in s for x in (
+            "не вижу", "необходимо", "постав", "провер", "если нет",
+            "уточни", "стоимость работ", "цена работ", "за метр куб",
+            "м3", "м³", "правк", "исправ", "пересчит", "добав", "убер",
+            "замени", "интернете", "материал"
+        ))
+
     def _t2pc_choice(raw):
         s = _t2pc_low(raw)
         s = _t2pc_re.sub(r"\s+", " ", s)
+        if _t2pc_revision_facts(s):
+            return ""
         is_tz = len(s) > 80 and any(x in s for x in ("фундамент", "плита", "щеб", "песчан", "ламинат", "стен", "кров", "полы"))
         if is_tz and not any(x in s for x in ("дешев", "дешёв", "минималь", "средн", "медиан", "надежн", "надёжн", "проверенн", "вручную", "свои цены", "своя цена")):
             return ""
@@ -3843,8 +3864,21 @@ try:
     def _t2sc_clean(v):
         return str(v or "").replace("[VOICE]", "").replace("ё", "е").lower().strip()
 
+    def _t2sc_revision_facts(raw):
+        s = _t2sc_re.sub(r"\s+", " ", _t2sc_clean(raw))
+        if len(s) < 90 and len(s.split()) < 10:
+            return False
+        return any(x in s for x in (
+            "не вижу", "необходимо", "постав", "провер", "если нет",
+            "уточни", "стоимость работ", "цена работ", "за метр куб",
+            "м3", "м³", "правк", "исправ", "пересчит", "добав", "убер",
+            "замени", "интернете", "материал"
+        ))
+
     def _t2sc_choice(raw):
         s = _t2sc_re.sub(r"\s+", " ", _t2sc_clean(raw))
+        if _t2sc_revision_facts(s):
+            return ""
         if _t2sc_re.search(r"(^|[^0-9а-яa-z])(1|первый|вариант 1)([^0-9а-яa-z]|$)", s) or "дешев" in s or "минималь" in s:
             return "cheapest"
         if _t2sc_re.search(r"(^|[^0-9а-яa-z])(2|второй|вариант 2)([^0-9а-яa-z]|$)", s) or "средн" in s or "медиан" in s:
@@ -7500,37 +7534,6 @@ try:
                                             "PATCH_TOPIC2_CANON_FULL_CLOSE_AFTER_REQUEUE_FAILURE_V1_RAW_UPDATE_ERR:%s",
                                             _ue,
                                         )
-                                    except Exception:
-                                        pass
-                                # Pass cleaned task to original handler
-                                try:
-                                    if isinstance(task, dict):
-                                        task = dict(task)
-                                        task["raw_input"] = json_str
-                                    else:
-                                        # sqlite3.Row — convert to dict
-                                        try:
-                                            task = {k: task[k] for k in task.keys()}
-                                            task["raw_input"] = json_str
-                                        except Exception:
-                                            pass
-                                except Exception:
-                                    pass
-                                _T2CF2_LOG.info(
-                                    "PATCH_TOPIC2_CANON_FULL_CLOSE_AFTER_REQUEUE_FAILURE_V1 raw_input recovered task=%s tail_chars=%d",
-                                    task_id, len(tail or ""),
-                                )
-            except Exception as e:
-                try:
-                    _T2CF2_LOG.exception(
-                        "PATCH_TOPIC2_CANON_FULL_CLOSE_AFTER_REQUEUE_FAILURE_V1_DRIVE_PRE_ERR:%s", e,
-                    )
-                except Exception:
-                    pass
-            return await _t2cf2_orig_handle_drive_file(conn, task, chat_id, topic_id)
-        globals()["_handle_drive_file"] = _handle_drive_file
-
-    # === FIX 2: wrap _t2fb_merge → no raw_input append for drive_file parent ===
 
 ====================================================================================================
 END_FILE: task_worker.py
