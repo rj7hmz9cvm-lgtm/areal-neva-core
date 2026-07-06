@@ -1,7 +1,7 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-07-05T23:55:01.915589+00:00
-GIT_SHA: dd1058cbc8f82a987a8982573a24615ca6574bdd
+GENERATED_AT: 2026-07-06T00:22:28.167800+00:00
+GIT_SHA: 4850e44398fe8f86582dbec4175378d2c67fdad5
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -32,35 +32,35 @@ FAILED_LAST_24H: 6
 
 ## MARKERS_LAST_24H
 - created:NEW
-- clarified:8х12
-- clarified:монолит 200 мм
-- clarified:под ключ
-- clarified:вот
-- clarified:
-- rejected:WAITING_CLARIFICATION
-- clarified:Ты не слушал моё голосовое
-- clarified:2
-- clarified:вот задание
-- continued:2
-- cancelled
-- clarified:100 км
-- clarified:Сделай мне полную смету
-- clarified:Нет тебе необходимо выполнить по моему заданию ты считаешь новую смету
-- clarified:Мне нужна смета на дом 10 на 10 фундамент толщиной 400 мм удалённость 
-- clarified:3
-- clarified:Жду тогда
-- clarified:Сделай мне расчёт дом два этажа на монолитный плите толщиной 450 разме
-- clarified:Вот задачу мне выполнить
-- clarified:1
-- created:NEW_TOPIC2_LIVE_CANON_TEST
-- clarified:Максимальная
-- created:NEW_TOPIC2_LIVE_CANON_TEST_AFTER_P3_GUARD
-- clarified:максималка
-- created:NEW_TOPIC2_LIVE_CANON_TEST_AFTER_GUARD_MOVE
-- clarified:Минимальное
-- clarified:150 км
-- clarified:24 на 24
-- clarified:150
+- FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_MEMORY_REVIVE_FIX:revived_old_estimate_raw_
+- TOPIC2_ONLINE_MODEL_SONAR_CONFIRMED:perplexity/sonar
+- TOPIC2_PRICE_ENRICHMENT_STARTED
+- TOPIC2_PRICE_ENRICHMENT_DONE:3254
+- TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:каркас
+- TOPIC2_PRICE_SOURCE_FOUND:каркас:Леруа Мерлен:CONFIRMED
+- TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:Бетон В25
+- TOPIC2_PRICE_SOURCE_FOUND:Бетон В25:Молодой Ударник:CONFIRMED
+- TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:Арматура А500
+- TOPIC2_PRICE_SOURCE_FOUND:Арматура А500:Петрович:CONFIRMED
+- TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:монолитная плита
+- TOPIC2_PRICE_SOURCE_FOUND:монолитная плита:Петрович:CONFIRMED
+- TOPIC2_PRICE_WORK_SEARCH_STARTED:Работы по монтажу и кладке
+- TOPIC2_PRICE_SOURCE_FOUND:Работы по монтажу и кладке:Петрович:CONFIRMED
+- TOPIC2_PRICE_CHOICE_REQUESTED
+- TOPIC2_OLD_PUBLIC_OUTPUT_BLOCKED_BY_PRICE_CHOICE_GATE
+- FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:prices_shown
+- TOPIC2_CANONICAL_REROUTE_V2:CANONICAL_HANDLED
+- DRIVE_FILE_NO_INTENT_OFFER_V1:menu_shown
+- reply_sent:drive_file_no_intent_offer
+- TOPIC2_PRICE_CHOICE_CONFIRMED:median
+- PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1:CHOICE_BOUND_FROM:3d00bfb5-f8cd-4bb7-9bd
+- PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1:MERGED_TO:ab764f2b-a336-4588-b26c-2e94a4
+- PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1:PARENT_RAW_ENRICHED
+- PATCH_TOPIC2_FINAL_DRIVE_SINGLE_GATE_V1:DRIVE_FINAL_START
+- continued:1
+- TOPIC2_PUBLIC_RESULT_CANON_VIOLATION:missing_canon_header
+- TOPIC2_ESTIMATE_FINAL_CLOSE_V2:ESTIMATE_ARTIFACTS_CREATED
+- TOPIC2_ESTIMATE_SESSION_CREATED
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210
