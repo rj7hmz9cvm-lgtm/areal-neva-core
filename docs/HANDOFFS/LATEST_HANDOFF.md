@@ -218,3 +218,66 @@ Verification at session close:
 - `python3 -m py_compile core/stroyka_estimate_canon.py core/price_enrichment.py core/topic2_input_gate.py task_worker.py` -> `PY_COMPILE_OK`.
 - `topic_2` task counts at close: `ARCHIVED=12`, `CANCELLED=143`, `DONE=205`, `FAILED=143`.
 - Cron GitHub sync was observed as enabled: `*/5 * * * * /root/.areal-neva-core/tools/full_context_aggregator_guard.sh ...`.
+
+---
+
+## Progress 2026-07-06 — two-day topic_2 rules and live repair record
+
+This is a factual handoff record for the work done on 2026-07-05 and 2026-07-06. It is not a new canon and does not rewrite existing canon text.
+
+Applied canon sources:
+- `docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md`
+- `docs/CANON_FINAL/TOPIC_2_CANONICAL_ESTIMATE_CONTRACT.md`
+- `docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md`
+- `docs/HANDOFFS/LATEST_HANDOFF.md`
+
+Owner operating rules confirmed during the session:
+- Before any action, read and apply the relevant SSOT/canon.
+- Improvisation is forbidden: if a behavior is not written in SSOT/canon, do not do it by default.
+- Existing canons may only be appended to after explicit owner approval; do not rewrite or replace canon text.
+- Every task must be carried to completion unless the owner explicitly stops, cancels, or pauses it.
+- Before any server write: show canon/baseline/minimal target, make backup, and patch only the scoped file.
+- Do not touch systemd, `.env`, launch commands, secrets, `core/ai_router.py`, `core/reply_sender.py`, `core/google_io.py`, neighboring topics, branches, or Git push without explicit owner permission.
+
+Topic_2 functional rules clarified and treated as current working baseline:
+- `topic_2` / STROYKA estimates must be produced by the orchestra canonical engine, not manually by Codex.
+- Estimate input must come from the actual user task, uploaded project, photo, PDF, OCR text, or explicit clarification; old task data must not be mixed into a fresh task.
+- Unknown or missing data must be clarified with the user instead of invented.
+- Photo/PDF/OCR/voice/reply/pin/fixed-message context must participate in live dialogue according to canon; if a file was already provided, the bot must not ask for the same file again.
+- Price search must not run automatically when valid fresh cache/memory already contains the relevant prices.
+- When prices are missing or stale and internet prices are needed, search must be confirmed/authorized by the user and use Sonar/Perplexity only; DeepSeek is forbidden for search.
+- Topic_2 XLSX output must remain canonical `AREAL_CALC` with 15 columns; the old 8-column XLSX format is forbidden.
+- Work and material parts of one operation should stay in one estimate row when they are one smeta position, using work and material columns in the same 15-column row.
+- VAT baseline is 22%, not 20%; default estimate output is normally without VAT unless the user selects or confirms a VAT mode.
+- The supported VAT mode from the live correction is: materials with VAT, works without VAT.
+- Final topic_2 result must be delivered in Telegram with Google Drive links for XLSX and PDF. Local paths or manual file-only delivery are not canonical final output.
+- `DONE` is allowed only after explicit owner confirmation.
+
+Tasks and runtime work recorded from the two-day session:
+- VAT policy work: removed/avoided `НДС 20%` in checked topic_2 paths, switched visible VAT logic to 22%, and added user-facing clarification for VAT mode.
+- PDF/project flow work: waiting-project phrases bind to the subsequent PDF/file, and PDF without caption can bind to the waiting project task instead of asking for the same file again.
+- Confirm-close work: reply confirmation such as `да ок` closes the correct topic_2 parent only after explicit confirmation and updates topic_2 memory after `DONE`.
+- Search/memory baseline: recent valid Sonar/Perplexity price results should be reused from cache/memory when allowed; internet price search should not be repeated unnecessarily.
+- Foundation live task repair:
+  - parent task `ef67a6f0-c6e2-436e-904b-58d2c48ca3a0`;
+  - VAT correction child `b7b260d1-4d23-4819-ba3c-1970cad5a04b` merged back to the parent;
+  - latest Telegram final message: `bot_message_id=11843`;
+  - parent remains `AWAITING_CONFIRMATION`, not `DONE`, until explicit owner confirmation;
+  - final Drive Excel: `https://drive.google.com/file/d/1KZdfSEuuXoxMWh-93HoVIBI1i9lySfYP/view`;
+  - final Drive PDF: `https://drive.google.com/file/d/11sqwkORpp3AilkR2ys2C4qdyeyQ73rS6/view`.
+- Foundation XLSX/PDF repair:
+  - sand cushion and gravel base are now one mixed row each, with work and material prices in the same `AREAL_CALC` row;
+  - material VAT mode uses 22% on material totals only;
+  - checked final summary values: materials `1 141 542`, works `1 078 592`, logistics `241 875`, overhead `188 711`, total without VAT `2 650 721`, VAT 22% on materials `251 139`, total with material VAT `2 901 860`.
+
+Verification recorded:
+- `python3 -m py_compile task_worker.py core/stroyka_estimate_canon.py core/topic2_input_gate.py core/ocr_engine.py` passed during the live repair.
+- PDF text was verified to contain the VAT/material totals.
+- No systemd change was made.
+- `.env`, `core/ai_router.py`, `core/reply_sender.py`, `core/google_io.py`, and neighboring topics were not touched for this save record.
+
+Open blockers remain:
+- Topic_2 overall remains `PARTIAL LIVE VERIFIED / NOT FULL CANON CLOSED`.
+- Still needs full live verification for photo with/without caption, OCR/PDF/XLSX/multifile intake, voice continuation, reply continuation, memory query, pin isolation, and file/project variants.
+- Still needs verification that every estimate row is sourced from the current project/user input or an explicit clarification/search source.
+- Canon append/addendum is not written here; if needed, it must be shown separately and appended only after explicit owner approval.

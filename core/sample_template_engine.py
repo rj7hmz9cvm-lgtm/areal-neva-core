@@ -6069,13 +6069,36 @@ async def _p6e2_ocr_image(path):
             pass
         try:
             import pytesseract
+            from PIL import ImageEnhance, ImageOps
+            ocr_parts = []
             for lang in ("rus+eng", "eng", "rus"):
                 try:
                     t = pytesseract.image_to_string(img, lang=lang)
-                    if t and len(t) > len(text):
-                        text = t
+                    if t:
+                        ocr_parts.append(t)
                 except Exception:
                     pass
+            try:
+                w, h = img.size
+                crops = [
+                    img.crop((0, int(h * 0.70), w, h)),
+                    img.crop((0, 0, int(w * 0.24), h)),
+                ]
+                for crop in crops:
+                    prep = ImageOps.grayscale(crop)
+                    prep = ImageEnhance.Contrast(prep).enhance(2.5)
+                    prep = prep.resize((prep.width * 2, prep.height * 2))
+                    for cfg in ("--psm 6", "--psm 11"):
+                        try:
+                            t = pytesseract.image_to_string(prep, lang="rus+eng", config=cfg)
+                            if t:
+                                ocr_parts.append(t)
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+            if ocr_parts:
+                text = "\n".join(dict.fromkeys(_p6e2_s(x, 5000) for x in ocr_parts if x))
         except Exception:
             pass
     except Exception:
@@ -6091,10 +6114,48 @@ def _p6e2_numbers(text):
             pass
     return out
 
+def _p6e2_blueprint_mm_dims(text):
+    low = _p6e2_low(text)
+    nums = []
+    for m in _p6e2_re.finditer(r"(?<![\d,.])(\d{4,5})(?![\d,.])", low):
+        try:
+            n = int(m.group(1))
+        except Exception:
+            continue
+        if not (3000 <= n <= 60000):
+            continue
+        ctx = low[max(0, m.start() - 50):m.end() + 50]
+        if any(x in ctx for x in (
+            "общая площадь", "теплый контур", "тёплый контур",
+            "комната", "терраса", "крыльцо", "s кв", "м2", "м²",
+        )):
+            continue
+        nums.append(n)
+    uniq = sorted(set(nums), reverse=True)
+    if len(uniq) < 2:
+        return (0.0, 0.0)
+    length = uniq[0]
+    width = 0
+    width_candidates = [n for n in uniq[1:] if length * 0.25 <= n <= length * 0.9]
+    preferred = [n for n in width_candidates if n % 10 == 0]
+    for n in preferred or width_candidates:
+        if length * 0.25 <= n <= length * 0.9:
+            width = n
+            break
+    if not width:
+        return (0.0, 0.0)
+    a = round(length / 1000.0, 3)
+    b = round(width / 1000.0, 3)
+    return (a, b)
+
 def _p6e2_parse_plan(caption, ocr_text):
     text = "\n".join([_p6e2_s(caption, 20000), _p6e2_s(ocr_text, 20000)])
     low = _p6e2_low(text)
     dims = _p6e2_numbers(text)
+    if not dims:
+        mm_dims = _p6e2_blueprint_mm_dims(text)
+        if mm_dims[0] and mm_dims[1]:
+            dims = [mm_dims]
     main_dim = dims[0] if dims else (0.0, 0.0)
     if "размеры по плану" in low and dims:
         main_dim = dims[-1]
@@ -6602,6 +6663,20 @@ try:
             plan, reason = await _p6f_pcv_analyze_via_openrouter(lp, caption)
 
             if plan is None or plan.get("needs_clarification"):
+                try:
+                    local_ocr = await _p6e2_ocr_image(lp) if lp else ""
+                    local_plan = _p6e2_parse_plan(caption, local_ocr)
+                    if local_plan and not local_plan.get("needs_clarification"):
+                        plan = local_plan
+                        plan["source"] = "LOCAL_OCR_BLUEPRINT_DIMS"
+                        conn.execute(
+                            "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                            (tid, "P6F_PCV_LOCAL_OCR_FALLBACK_DIMS:{}x{}".format(plan["dims"][0], plan["dims"][1])),
+                        )
+                except Exception as _local_ocr_e:
+                    _P6F_PCV_LOG.warning("P6F_PCV_LOCAL_OCR_FALLBACK_ERR %s", _local_ocr_e)
+
+            if plan is None or plan.get("needs_clarification"):
                 why = reason if plan is None else "LOW_CONFIDENCE_OR_NO_DIMS"
                 msg = "Не вижу размер на фото или подпись неполная. Пришли размер в формате 7.8х9.0 м или фото плана крупнее"
                 conn.execute(
@@ -7046,10 +7121,13 @@ async def handle_topic2_image_estimate_p6e2(conn, task=None, chat_id=None, topic
             extract_template_prices as _cpf_extract,
             _search_prices_online as _cpf_search,
             _price_confirmation_text as _cpf_confirm,
+            _topic2_price_search_explicit_intent_v1 as _cpf_price_search_explicit,
+            _topic2_price_search_prompt_text_v1 as _cpf_price_search_prompt,
             _memory_save as _cpf_memsave,
             _update_task_safe as _cpf_upd,
             _now as _cpf_now,
             _history_safe as _cpf_hist,
+            _parse_request as _cpf_parse,
         )
     except Exception as _imp_e:
         _P6E2CPF_LOG.warning("P6E2_CANON_IMPORT_ERR: %s", _imp_e)
@@ -7096,14 +7174,25 @@ async def handle_topic2_image_estimate_p6e2(conn, task=None, chat_id=None, topic
             material = "монолит"
         else:
             material = "каркас"
-        scope = "под ключ" if any(x in raw_low for x in ("под ключ", "ламинат", "сантех", "санузел", "отделк")) else "коробка"
-        parsed = {
-            "object": "дом",
-            "material": material,
+        canon_parsed = _cpf_parse(caption)
+        foundation_only = (
+            canon_parsed.get("object") == "фундамент"
+            or ("фундамент" in raw_low and ("плит" in raw_low or "подуш" in raw_low or "щеб" in raw_low))
+        )
+        scope = canon_parsed.get("scope") or ("фундамент" if foundation_only else ("под ключ" if any(x in raw_low for x in ("под ключ", "ламинат", "сантех", "санузел", "отделк")) else "коробка"))
+        area_floor = round(float(a) * float(b), 2)
+        floors = int(canon_parsed.get("floors") or plan.get("floors") or 1)
+        parsed = dict(canon_parsed or {})
+        parsed.update({
+            "object": canon_parsed.get("object") or ("фундамент" if foundation_only else "дом"),
+            "material": canon_parsed.get("material") or material,
+            "dimensions": (float(a), float(b)),
             "dims": (float(a), float(b)),
-            "floors": int(plan.get("floors") or 1),
-            "foundation": plan.get("foundation") or "монолитная плита",
-            "distance_km": 0,
+            "area_floor": area_floor,
+            "area_total": round(area_floor * floors, 2),
+            "floors": floors,
+            "foundation": canon_parsed.get("foundation") or plan.get("foundation") or "монолитная плита",
+            "distance_km": canon_parsed.get("distance_km") if canon_parsed.get("distance_km") is not None else 0,
             "scope": scope,
             "height": float(plan.get("height") or 3.0),
             "rooms": plan.get("rooms") or [],
@@ -7111,12 +7200,53 @@ async def handle_topic2_image_estimate_p6e2(conn, task=None, chat_id=None, topic
             "doors": int(plan.get("doors") or 0),
             "terrace": bool(plan.get("terrace")),
             "terrace_area": float(plan.get("terrace_area") or 0),
+            "raw": caption,
             "source": "photo_plan_ocr",
-        }
+        })
+        def _mm(pattern, default=0.0):
+            m = _p6e2_re.search(pattern, raw_low)
+            return round(float(m.group(1).replace(",", ".")) / 1000.0, 3) if m else default
+        def _meters(pattern, default=0.0):
+            m = _p6e2_re.search(pattern, raw_low)
+            return round(float(m.group(1).replace(",", ".")), 3) if m else default
+        parsed["foundation_thickness_m"] = _mm(r"толщин[а-я\s]*фундамента[а-я\s]*(\d{2,4})\s*мм", 0.0) or _mm(r"толщин[а-я\s]*плиты[а-я\s]*(\d{2,4})\s*мм", 0.0)
+        parsed["sand_thickness_m"] = _mm(r"песчан[а-я\s]*подушк[а-я\s]*(?:толщин[а-я\s]*)?(\d{2,4})\s*мм", 0.0)
+        parsed["gravel_thickness_m"] = _mm(r"щеб[а-я\s]*(?:толщин[а-я\s]*)?(\d{2,4})\s*мм", 0.0)
+        parsed["foundation_offset_m"] = 1.5 if "отступ" in raw_low and "полтора" in raw_low else _meters(r"отступ[а-я\s]*(?:от[а-я\s]*границ[а-я\s]*фундамента[а-я\s]*)?(?:на\s*)?(\d+(?:[.,]\d+)?)\s*м(?:етр|етра|етров)?\b", 0.0)
+        m_layers = _p6e2_re.search(r"арматур[а-я\s]*в\s*(\d+)\s*сл", raw_low)
+        parsed["reinforcement_layers"] = int(m_layers.group(1)) if m_layers else 0
+        m_grade = _p6e2_re.search(r"бетон[а-я\s]*(\d{3})", raw_low)
+        parsed["concrete_grade"] = ("М" + m_grade.group(1)) if m_grade else ""
+        parsed["vat_mode"] = "without_vat" if "без ндс" in raw_low else ""
         template = _cpf_choose(parsed)
         tpl_path = _cpf_dl_tpl(template)
-        template_prices, sheet_name = _cpf_extract(tpl_path, parsed)
-        online_prices = await _cpf_search(parsed, template, sheet_name)
+        extracted_prices = _cpf_extract(tpl_path, parsed)
+        if isinstance(extracted_prices, (list, tuple)):
+            template_prices = extracted_prices[0] if len(extracted_prices) > 0 else ""
+            sheet_name = extracted_prices[1] if len(extracted_prices) > 1 else None
+        else:
+            template_prices = str(extracted_prices or "")
+            sheet_name = None
+        if not _cpf_price_search_explicit(caption):
+            pending = {
+                "version": "P6E2_CANON_PRICE_FLOW_V1",
+                "status": "WAITING_PRICE_SEARCH_CONFIRMATION",
+                "task_id": tid,
+                "chat_id": chat_id_s,
+                "topic_id": topic_id_i,
+                "parsed": parsed,
+                "template": template,
+                "sheet_name": sheet_name,
+                "template_prices": template_prices,
+                "online_prices": "",
+                "created_at": _cpf_now(),
+            }
+            _cpf_memsave(chat_id_s, f"topic_2_estimate_pending_{tid}", pending)
+            confirm_text = _cpf_price_search_prompt(parsed, template, sheet_name)
+            _cpf_upd(conn, tid, state="WAITING_CLARIFICATION", result=confirm_text, error_message="TOPIC2_PRICE_SEARCH_CONFIRMATION_REQUIRED")
+            _cpf_hist(conn, tid, "TOPIC2_PRICE_SEARCH_CONFIRMATION_REQUESTED")
+            return True
+        online_prices = await _cpf_search(parsed, template, sheet_name, conn=conn, task_id=tid)
         pending = {
             "version": "P6E2_CANON_PRICE_FLOW_V1",
             "status": "WAITING_PRICE_CONFIRMATION",
@@ -7132,7 +7262,7 @@ async def handle_topic2_image_estimate_p6e2(conn, task=None, chat_id=None, topic
         }
         _cpf_memsave(chat_id_s, f"topic_2_estimate_pending_{tid}", pending)
         confirm_text = _cpf_confirm(parsed, template, sheet_name, template_prices, online_prices)
-        _cpf_upd(conn, tid, state="WAITING_CLARIFICATION", result=confirm_text)
+        _cpf_upd(conn, tid, state="WAITING_CLARIFICATION", result=confirm_text, error_message="TOPIC2_PRICE_CHOICE_REQUIRED")
         _cpf_hist(conn, tid, "P6E2_CANON_PRICE_FLOW_V1:prices_shown")
         return True
     except Exception as _ex:

@@ -208,10 +208,14 @@ def _t2pcl_old_public_output(text):
     s = _s(text)
     if not s:
         return False
-    if any(x in s for x in ("⏳ Задачу понял", "Шаблон:", "Лист:", "Цены из листа")):
+    if '✅ Смета готова' not in s and any(x in s for x in ("⏳ Задачу понял", "Шаблон:", "Лист:", "Цены из листа")):
         return True
-    if "✅ Смета готова" in s and not ("drive.google.com" in s and (".xlsx" in s or "spreadsheets/d" in s) and ".pdf" in s):
-        return True
+    if '✅ Смета готова' in s:
+        has_drive_link = ('drive.google.com' in s) or ('docs.google.com' in s)
+        has_excel_link = ('Excel:' in s or 'XLSX:' in s) and has_drive_link
+        has_pdf_link = 'PDF:' in s and has_drive_link
+        if not (has_excel_link and has_pdf_link):
+            return True
     return False
 
 async def _t2pcl_send_price_choice_prompt(conn, task_id, chat_id, reply_to_message_id=None, repeat=True):
@@ -639,7 +643,7 @@ def _template_score(parsed: Dict[str, Any], tpl: Dict[str, Any]) -> int:
     if tpl.get("title") in DEPRECATED_TEMPLATE_NAMES:
         return -9999
     if obj in ("ангар", "склад", "фундамент") and ("фундамент" in name or "склад" in name):
-        score += 100
+        score += 150 if obj == "фундамент" and "фундамент" in name else 100
     if obj == "кровля" and ("крыш" in name or "перекр" in name):
         score += 100
     if material == "каркас" and ("м-80" in name or "м80" in name or "м-110" in name or "м110" in name):
@@ -1377,6 +1381,8 @@ def _create_xlsx_from_template(task_id: str, parsed: Dict[str, Any], template: D
         ws.cell(row_idx, 9).value = f"=E{row_idx}*H{row_idx}"
         ws.cell(row_idx, 10).value = f"=G{row_idx}+I{row_idx}"
         _ps = _match_price_source(_ps_sources, it["name"], it["section"])
+        if "ручная цена" in _low(it.get("note", "")):
+            _ps = {"status": "MANUAL", "supplier": "user", "url": "", "checked_at": today_str}
         ws.cell(row_idx, 11, _ps.get("status", "template_only"))
         ws.cell(row_idx, 12, _ps.get("supplier", ""))
         ws.cell(row_idx, 13, _ps.get("url", ""))
@@ -2530,6 +2536,35 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
     template = choose_template(parsed)
     template_path = download_template_xlsx(template)
     template_prices, sheet_name, _sheet_fallback = extract_template_prices(template_path, parsed)
+
+    if not _topic2_price_search_explicit_intent_v1(raw_input):
+        pending = {
+            "version": "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3",
+            "status": "WAITING_PRICE_SEARCH_CONFIRMATION",
+            "task_id": task_id,
+            "chat_id": chat_id,
+            "topic_id": topic_id,
+            "parsed": parsed,
+            "template": template,
+            "sheet_name": sheet_name,
+            "sheet_fallback": _sheet_fallback,
+            "template_prices": template_prices,
+            "online_prices": "",
+            "created_at": _now(),
+        }
+        _memory_save(chat_id, f"topic_2_estimate_pending_{task_id}", pending)
+        text = _topic2_price_search_prompt_text_v1(parsed, template, sheet_name)
+        send_res = await _send_text(chat_id, text, reply_to, topic_id)
+        kwargs = {
+            "state": "WAITING_CLARIFICATION",
+            "result": text,
+            "error_message": "TOPIC2_PRICE_SEARCH_CONFIRMATION_REQUIRED",
+        }
+        if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+            kwargs["bot_message_id"] = send_res.get("bot_message_id")
+        _update_task_safe(conn, task_id, **kwargs)
+        _history_safe(conn, task_id, "TOPIC2_PRICE_SEARCH_CONFIRMATION_REQUESTED")
+        return True
 
     try:
         online_prices = await _search_prices_online(parsed, template, sheet_name, conn=conn, task_id=task_id)
@@ -6460,3 +6495,1325 @@ try:
 except Exception:
     pass
 # === END_PATCH_TOPIC2_STRICT_PRICE_SOURCE_MATCH_V2 ===
+
+# === PATCH_TOPIC2_FOUNDATION_ONLY_PHOTO_SCOPE_V1 ===
+_T2FO_PREV_BUILD_ESTIMATE_ITEMS_V1 = _build_estimate_items
+
+
+def _t2fo_foundation_only_v1(parsed):
+    raw = _low((parsed or {}).get("raw") or "")
+    obj = _low((parsed or {}).get("object") or "")
+    scope = _low((parsed or {}).get("scope") or "")
+    return (
+        obj == "фундамент"
+        or scope == "фундамент"
+        or ("фундамент" in raw and ("плит" in raw or "подуш" in raw or "щеб" in raw))
+    )
+
+
+def _t2fo_float_v1(value, default=0.0):
+    try:
+        return float(value or default)
+    except Exception:
+        return float(default)
+
+
+def _t2fo_int_v1(value, default=0):
+    try:
+        return int(value or default)
+    except Exception:
+        return int(default)
+
+
+def _t2fo_manual_monolith_work_price_v1(text):
+    s = _low(text or "")
+    if not ("монолит" in s and "работ" in s):
+        return 0.0
+    patterns = (
+        r"стоимост[ьи]\s+работ[^\d]{0,80}монолит[^\d]{0,80}(\d{3,6})(?:[.,]\d+)?\s*(?:руб|р|за|/|\s)*(?:м3|м³|метр\s+куб)",
+        r"работ[^\d]{0,80}монолит[^\d]{0,80}(\d{3,6})(?:[.,]\d+)?\s*(?:руб|р|за|/|\s)*(?:м3|м³|метр\s+куб)",
+        r"монолит[^\d]{0,80}работ[^\d]{0,80}(\d{3,6})(?:[.,]\d+)?\s*(?:руб|р|за|/|\s)*(?:м3|м³|метр\s+куб)",
+    )
+    for pat in patterns:
+        m = re.search(pat, s, re.I)
+        if m:
+            try:
+                return float(m.group(1).replace(",", "."))
+            except Exception:
+                return 0.0
+    return 0.0
+
+
+def _t2fo_prices_from_source_lines_v1(price_text, keywords):
+    vals = []
+    for line in str(price_text or "").splitlines():
+        low = _low(line)
+        if not any(_low(k) in low for k in keywords):
+            continue
+        parts = [p.strip() for p in line.strip(" \t-—•·").split("|")]
+        if len(parts) < 2:
+            continue
+        try:
+            v = float(re.sub(r"[^0-9.,]", "", parts[1]).replace(",", "."))
+        except Exception:
+            v = 0.0
+        if 100 <= v <= 10000000:
+            vals.append(v)
+    return vals
+
+
+def _t2fo_build_foundation_items_v1(parsed, price_text, choice):
+    parsed = parsed or {}
+    P = _FTM_PRICES
+    dims = parsed.get("dimensions") or parsed.get("dims") or (0, 0)
+    try:
+        a, b = float(dims[0]), float(dims[1])
+    except Exception:
+        area_fallback = _t2fo_float_v1(parsed.get("area_floor"), 0.0)
+        a = b = area_fallback ** 0.5 if area_fallback > 0 else 0.0
+    area = _t2fo_float_v1(parsed.get("area_floor"), round(a * b, 2))
+    offset = _t2fo_float_v1(parsed.get("foundation_offset_m"), 0.0)
+    prep_area = round((a + 2 * offset) * (b + 2 * offset), 2) if offset and a and b else area
+    slab_t = _t2fo_float_v1(parsed.get("foundation_thickness_m"), 0.25)
+    sand_t = _t2fo_float_v1(parsed.get("sand_thickness_m"), 0.0)
+    gravel_t = _t2fo_float_v1(parsed.get("gravel_thickness_m"), 0.0)
+    layers = _t2fo_int_v1(parsed.get("reinforcement_layers"), 2)
+    distance = _t2fo_float_v1(parsed.get("distance_km"), 0.0)
+    raw_text = _low(parsed.get("raw") or "")
+    concrete_grade = _s(parsed.get("concrete_grade") or ("М350" if "350" in raw_text else "В25"))
+
+    concrete_volume = round(area * slab_t, 2)
+    rebar_qty = round(max(concrete_volume * 0.08 * (max(layers, 1) / 2.0), 0.1), 3)
+    formwork_perim = round(2 * (a + b), 2) if a and b else round(area ** 0.5 * 4, 2)
+    earth_volume = round(prep_area * max(sand_t + gravel_t, 0.2), 2)
+
+    concrete_price = _p8v3_mp("бетон в25 w6", P["concrete_b25_mat"])
+    rebar_price = _p8v3_mp("арматура металлическая д.12а500", P["rebar_a500_mat"])
+    sand_price = _choose_value(
+        _t2fo_prices_from_source_lines_v1(price_text, ("песок", "песчаная подушка", "песчаный")),
+        choice,
+        P["sand_mat"],
+    )
+    gravel_price = _choose_value(
+        _t2fo_prices_from_source_lines_v1(price_text, ("щебень", "щебеночное основание", "щебеночный", "щебёноч")),
+        choice,
+        P["gravel_mat"],
+    )
+    manual_concrete_work_price = _t2fo_manual_monolith_work_price_v1(raw_text)
+    concrete_work_price = manual_concrete_work_price or _p8v3_wp("бетонирование монолитной плиты   б/н", P["concrete_pour_work"])
+    concrete_work_note = "ручная цена из правки пользователя" if manual_concrete_work_price else "работы"
+    pump_price = _choose_value(_numbers_from_price_text(price_text, ("бетононасос",)), choice) or 31050
+    delivery_price = round(P["logist_delivery"] * max(distance / 30.0, 1.0), 2) if distance else 0
+
+    items = []
+    if any(x in raw_text for x in ("подготов", "землян", "котлован", "выемк", "разработка грунта")):
+        items.append(_ftm_row("Фундамент", "Подготовка основания и земляные работы", "м³", earth_volume, P["earth_work"], "по ТЗ: подготовка/земляные работы"))
+    if sand_t > 0:
+        sand_qty = round(prep_area * sand_t, 2)
+        sand_work_price = _t2fpag_choose_v1(price_text, "sand_work", choice, P["sand_work"])
+        items.append(_ftm_row("Фундамент", f"Песчаная подушка {int(sand_t * 1000)} мм с послойным уплотнением", "м³", sand_qty, sand_price + sand_work_price, f"работы+материал; площадь подготовки {prep_area:g} м²"))
+    if gravel_t > 0:
+        gravel_qty = round(prep_area * gravel_t, 2)
+        gravel_work_price = _t2fpag_choose_v1(price_text, "gravel_work", choice, P["gravel_work"])
+        items.append(_ftm_row("Фундамент", f"Щебёночное основание {int(gravel_t * 1000)} мм с уплотнением", "м³", gravel_qty, gravel_price + gravel_work_price, f"работы+материал; площадь подготовки {prep_area:g} м²"))
+    items.append(_ftm_row("Фундамент", "Опалубка периметра плиты материал", "мп", formwork_perim, P["formwork_perim_mat"], "по размерам с фото"))
+    items.append(_ftm_row("Фундамент", "Опалубка плиты монтаж/демонтаж", "мп", formwork_perim, P["formwork_install_work"], "работы"))
+    items.append(_ftm_row("Фундамент", f"Арматура А500 для плиты, {layers} слоя", "т", rebar_qty, rebar_price, "расчётная масса от объёма бетона; уточняется по КЖ"))
+    items.append(_ftm_row("Фундамент", f"Армирование фундаментной плиты, {layers} слоя", "м²", area, _p8v3_wp("устройство арматурного каркаса", P["rebar_install_work"]), "работы"))
+    items.append(_ftm_row("Фундамент", f"Бетон {concrete_grade} для монолитной плиты {int(slab_t * 1000)} мм", "м³", concrete_volume, concrete_price, "по ТЗ"))
+    items.append(_ftm_row("Фундамент", "Работы по бетону: бетонирование фундаментной плиты", "м³", concrete_volume, concrete_work_price, concrete_work_note))
+    if any(x in raw_text for x in ("бетононасос", "насос", "подач")):
+        items.append(_ftm_row("Фундамент", "Аренда бетононасоса / подача бетона", "смена", 1, pump_price, "по ТЗ: подача бетона"))
+    if delivery_price:
+        items.append(_ftm_row("Логистика", f"Доставка материалов от Санкт-Петербурга, {distance:g} км", "компл", 1, delivery_price, "по ТЗ: удалённость объекта"))
+
+    subtotal = sum(float(it["price"]) * float(it["qty"]) for it in items if it["section"] not in ("Логистика", "Накладные расходы"))
+    items.append(_ftm_row("Накладные расходы", "Организация работ и накладные", "компл", 1, round(subtotal * 0.07, 2), "7% от фундаментных работ и материалов"))
+    items.append(_ftm_row("Накладные расходы", "Расходные материалы и крепёж", "компл", 1, round(subtotal * 0.015, 2), "1.5% от фундаментных работ и материалов"))
+    return items
+
+
+def _build_estimate_items(parsed, price_text, choice):  # noqa: F811
+    if _t2fo_foundation_only_v1(parsed):
+        return _t2fo_build_foundation_items_v1(parsed, price_text, choice)
+    return _T2FO_PREV_BUILD_ESTIMATE_ITEMS_V1(parsed, price_text, choice)
+
+
+try:
+    _STV3_LOG.info("PATCH_TOPIC2_FOUNDATION_ONLY_PHOTO_SCOPE_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_FOUNDATION_ONLY_PHOTO_SCOPE_V1 ===
+
+# === PATCH_TOPIC2_FOUNDATION_NO_TEMPLATE_ROWS_V1 ===
+_T2FO_NTR_PREV_CREATE_XLSX_V1 = _create_xlsx_from_template
+
+
+def _t2fo_strip_non_areal_sheets_v1(path):
+    try:
+        from openpyxl import load_workbook as _t2fo_load_workbook
+        wb = _t2fo_load_workbook(path)
+        if "AREAL_CALC" not in wb.sheetnames:
+            return
+        for ws in list(wb.worksheets):
+            if ws.title != "AREAL_CALC":
+                wb.remove(ws)
+        ws = wb["AREAL_CALC"]
+        for row_idx in range(ws.max_row, 1, -1):
+            if _low(ws.cell(row_idx, 2).value or "") == "не входит":
+                ws.delete_rows(row_idx, ws.max_row - row_idx + 1)
+                break
+        wb.active = 0
+        wb.save(path)
+    except Exception as _t2fo_e:
+        try:
+            _STV3_LOG.warning("PATCH_TOPIC2_FOUNDATION_NO_TEMPLATE_ROWS_V1 strip failed: %s", _t2fo_e)
+        except Exception:
+            pass
+
+
+def _t2fo_create_without_template_rows_v1(task_id, parsed, template, template_path, sheet_name, price_text, choice):
+    original_create = globals().get("_T2TR_ORIG_CREATE_XLSX") or _T2FO_NTR_PREV_CREATE_XLSX_V1
+    path, items, total = original_create(task_id, parsed, template, template_path, sheet_name, price_text, choice)
+    _t2fo_strip_non_areal_sheets_v1(path)
+    return path, items, total
+
+
+def _create_xlsx_from_template(task_id, parsed, template, template_path, sheet_name, price_text, choice):  # noqa: F811
+    if _t2fo_foundation_only_v1(parsed):
+        return _t2fo_create_without_template_rows_v1(task_id, parsed, template, template_path, sheet_name, price_text, choice)
+    return _T2FO_NTR_PREV_CREATE_XLSX_V1(task_id, parsed, template, template_path, sheet_name, price_text, choice)
+
+
+try:
+    _STV3_LOG.info("PATCH_TOPIC2_FOUNDATION_NO_TEMPLATE_ROWS_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_FOUNDATION_NO_TEMPLATE_ROWS_V1 ===
+
+# === PATCH_TOPIC2_PRICE_SEARCH_CONFIRM_AND_READY_DONE_V1 ===
+def _topic2_price_search_explicit_intent_v1(text: str) -> bool:
+    low = _low(text or "")
+    return any(x in low for x in (
+        "в интернете", "через интернет", "интернет-цен", "интернет цен",
+        "актуальн", "свеж", "sonar", "perplexity", "поищи", "поиск",
+        "найди цены", "найти цены", "проверь цены", "проверить цены",
+        "поставщик", "ссылк", "рыночн",
+    ))
+
+
+def _topic2_price_search_prompt_text_v1(parsed: Dict[str, Any], template: Dict[str, Any], sheet_name: Optional[str]) -> str:
+    return (
+        "Задачу понял.\n\n"
+        f"Шаблон: {template.get('title')}\n"
+        f"Лист: {sheet_name or 'не выбран'}\n"
+        f"Объект: {(parsed or {}).get('object') or 'не указан'}\n"
+        f"Материал: {(parsed or {}).get('material') or 'не указан'}\n"
+        f"Размеры: {(parsed or {}).get('dimensions') or 'не указаны'}\n"
+        f"Удалённость: {(parsed or {}).get('distance_km') if (parsed or {}).get('distance_km') is not None else 'не указана'} км\n\n"
+        "Перед финальной сметой нужно подтвердить цены.\n"
+        "Искать актуальные цены работ, материалов и логистики через интернет (Sonar/Perplexity)?\n\n"
+        "Ответь: да, искать / нет, укажу цены вручную"
+    )
+
+
+def _topic2_price_search_yes_v1(text: str) -> bool:
+    low = _low(text or "").strip(" .,!?:;")
+    return low in {"да", "да искать", "искать", "да поищи", "поищи", "ищи", "нужно", "надо"} or low.startswith("да ")
+
+
+def _topic2_price_search_no_v1(text: str) -> bool:
+    low = _low(text or "").strip(" .,!?:;")
+    return low in {"нет", "не надо", "не нужно", "без интернета", "не искать"} or low.startswith("нет ")
+
+
+def _topic2_final_ready_confirm_phrase_v1(text: str) -> bool:
+    low = _low(text or "").replace("[voice]", "").strip(" .,!?:;")
+    exact = {
+        "готово", "готов", "готова", "готово спасибо",
+        "подтверждаю", "закрывай", "можно закрывать",
+        "все ок", "всё ок", "все верно", "всё верно",
+        "хорошо", "отлично", "принимаю",
+    }
+    if low in exact:
+        return True
+    return any(x in low for x in (
+        "задача завершена",
+        "задачу завершить",
+        "задачу закрыть",
+        "хорошая работа",
+        "можно закрывать",
+    ))
+
+
+async def _topic2_handle_price_search_confirmation_v1(conn, task, logger=None) -> bool:
+    task_id = _s(_row_get(task, "id"))
+    chat_id = _s(_row_get(task, "chat_id"))
+    topic_id = int(_row_get(task, "topic_id", 0) or 0)
+    if topic_id != TOPIC_ID_STROYKA:
+        return False
+    raw = _s(_row_get(task, "raw_input", ""))
+    pending = _memory_latest(chat_id, "topic_2_estimate_pending_")
+    if not pending or pending.get("status") != "WAITING_PRICE_SEARCH_CONFIRMATION":
+        return False
+    if not (_topic2_price_search_yes_v1(raw) or _topic2_price_search_no_v1(raw)):
+        return False
+
+    pending_task_id = _s(pending.get("task_id") or task_id)
+    reply_to = _row_get(task, "reply_to_message_id", None) or _row_get(task, "message_id", None)
+    parsed = pending.get("parsed") or {}
+    template = pending.get("template") or CANON_TEMPLATE_FALLBACK["areal"]
+    sheet_name = pending.get("sheet_name")
+    template_prices = pending.get("template_prices") or ""
+
+    if _topic2_price_search_no_v1(raw):
+        text = (
+            "Интернет-поиск цен не запускаю.\n\n"
+            "Пришли ручные цены по позициям или напиши: считать по шаблонным ценам без интернет-проверки."
+        )
+        blocked = dict(pending)
+        blocked["status"] = "WAITING_MANUAL_PRICE_INPUT"
+        blocked["updated_at"] = _now()
+        _memory_save(chat_id, f"topic_2_estimate_pending_{pending_task_id}", blocked)
+        send_res = await _send_text(chat_id, text, reply_to, topic_id)
+        kwargs = {"state": "WAITING_CLARIFICATION", "result": text, "error_message": "TOPIC2_MANUAL_PRICE_INPUT_REQUIRED"}
+        if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+            kwargs["bot_message_id"] = send_res.get("bot_message_id")
+        _update_task_safe(conn, pending_task_id, **kwargs)
+        _history_safe(conn, pending_task_id, "TOPIC2_PRICE_SEARCH_DECLINED_BY_USER")
+        if task_id != pending_task_id:
+            _update_task_safe(conn, task_id, state="DONE", result="Интернет-поиск цен отклонён пользователем", error_message="")
+            _history_safe(conn, task_id, "TOPIC2_PRICE_SEARCH_DECLINE_CHILD_DONE")
+        return True
+
+    _history_safe(conn, pending_task_id, "TOPIC2_PRICE_SEARCH_CONFIRMED_BY_USER")
+    _history_safe(conn, task_id, "TOPIC2_PRICE_SEARCH_CONFIRMATION_ACCEPTED")
+    try:
+        online_prices = await _search_prices_online(parsed, template, sheet_name, conn=conn, task_id=pending_task_id)
+    except Exception as exc:
+        text = "SEARCH_FAILED: Sonar unavailable"
+        send_res = await _send_text(chat_id, text, reply_to, topic_id)
+        kwargs = {"state": "WAITING_CLARIFICATION", "result": text, "error_message": "TOPIC2_PRICE_SEARCH_FAILED"}
+        if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+            kwargs["bot_message_id"] = send_res.get("bot_message_id")
+        _update_task_safe(conn, pending_task_id, **kwargs)
+        _history_safe(conn, pending_task_id, "TOPIC2_PRICE_SEARCH_FAILED:" + _s(exc)[:160])
+        if task_id != pending_task_id:
+            _update_task_safe(conn, task_id, state="DONE", result=text, error_message="")
+        return True
+
+    confirmed = dict(pending)
+    confirmed["status"] = "WAITING_PRICE_CONFIRMATION"
+    confirmed["online_prices"] = online_prices
+    confirmed["updated_at"] = _now()
+    _memory_save(chat_id, f"topic_2_estimate_pending_{pending_task_id}", confirmed)
+    text = _price_confirmation_text(parsed, template, sheet_name, template_prices, online_prices)
+    send_res = await _send_text(chat_id, text, reply_to, topic_id)
+    kwargs = {"state": "WAITING_CLARIFICATION", "result": text, "error_message": "TOPIC2_PRICE_CHOICE_REQUIRED"}
+    if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+        kwargs["bot_message_id"] = send_res.get("bot_message_id")
+    _update_task_safe(conn, pending_task_id, **kwargs)
+    _history_safe(conn, pending_task_id, "TOPIC2_PRICE_CHOICE_REQUESTED_AFTER_SEARCH_CONFIRM")
+    if task_id != pending_task_id:
+        _update_task_safe(conn, task_id, state="DONE", result="Интернет-поиск цен подтверждён", error_message="")
+        _history_safe(conn, task_id, "TOPIC2_PRICE_SEARCH_CONFIRM_CHILD_DONE")
+    return True
+
+
+async def _topic2_handle_ready_done_v1(conn, task, logger=None) -> bool:
+    task_id = _s(_row_get(task, "id"))
+    chat_id = _s(_row_get(task, "chat_id"))
+    topic_id = int(_row_get(task, "topic_id", 0) or 0)
+    if topic_id != TOPIC_ID_STROYKA:
+        return False
+    raw = _s(_row_get(task, "raw_input", ""))
+    if not _topic2_final_ready_confirm_phrase_v1(raw):
+        return False
+    try:
+        if parse_price_choice(raw).get("confirmed"):
+            return False
+    except Exception:
+        pass
+    reply_to = _row_get(task, "reply_to_message_id", None) or _row_get(task, "message_id", None)
+    parent = None
+    if reply_to:
+        parent = conn.execute(
+            """
+            SELECT id, COALESCE(raw_input,'') AS raw_input, COALESCE(result,'') AS result
+            FROM tasks
+            WHERE CAST(chat_id AS TEXT)=?
+              AND COALESCE(topic_id,0)=?
+              AND state='AWAITING_CONFIRMATION'
+              AND id<>?
+              AND (bot_message_id=? OR reply_to_message_id=?)
+            ORDER BY updated_at DESC, created_at DESC
+            LIMIT 1
+            """,
+            (str(chat_id), int(topic_id), str(task_id), reply_to, reply_to),
+        ).fetchone()
+    if not parent:
+        parent = conn.execute(
+            """
+            SELECT id, COALESCE(raw_input,'') AS raw_input, COALESCE(result,'') AS result
+            FROM tasks
+            WHERE CAST(chat_id AS TEXT)=?
+              AND COALESCE(topic_id,0)=?
+              AND state='AWAITING_CONFIRMATION'
+              AND id<>?
+              AND COALESCE(result,'') LIKE '%Смета готова%'
+              AND (COALESCE(result,'') LIKE '%drive.google.com%' OR COALESCE(result,'') LIKE '%docs.google.com%')
+            ORDER BY updated_at DESC, created_at DESC
+            LIMIT 1
+            """,
+            (str(chat_id), int(topic_id), str(task_id)),
+        ).fetchone()
+    if not parent:
+        return False
+
+    parent_id = _s(parent["id"])
+    parent_raw = _s(parent["raw_input"])
+    parent_result = _s(parent["result"])
+    parent_low = _low(parent_result)
+    if not ("смета готов" in parent_low and ("xlsx" in parent_low or "pdf" in parent_low or "drive.google.com" in parent_low or "docs.google.com" in parent_low)):
+        return False
+
+    _history_safe(conn, parent_id, "TOPIC2_EXPLICIT_CONFIRM:ready_done_phrase")
+    _update_task_safe(conn, parent_id, state="DONE", error_message="")
+    _history_safe(conn, parent_id, "state:DONE")
+    try:
+        _memory_save(chat_id, f"topic_2_user_input_{parent_id}", {
+            "task_id": parent_id,
+            "topic_id": int(topic_id),
+            "raw_input": parent_raw,
+            "saved_at": _now(),
+            "source": "TOPIC2_EXPLICIT_CONFIRM",
+        })
+        _memory_save(chat_id, f"topic_2_task_summary_{parent_id}", {
+            "task_id": parent_id,
+            "topic_id": int(topic_id),
+            "summary": parent_result,
+            "saved_at": _now(),
+            "source": "TOPIC2_EXPLICIT_CONFIRM",
+        })
+        _memory_save(chat_id, f"topic_2_assistant_output_{parent_id}", {
+            "task_id": parent_id,
+            "topic_id": int(topic_id),
+            "result": parent_result,
+            "saved_at": _now(),
+            "source": "TOPIC2_EXPLICIT_CONFIRM",
+        })
+    except Exception:
+        pass
+    _update_task_safe(conn, task_id, state="DONE", result="Подтверждение принято", error_message="")
+    _history_safe(conn, task_id, "TOPIC2_CONFIRM_CHILD_DONE_READY_PHRASE")
+    await _send_text(chat_id, "Принял. Задача закрыта", reply_to, topic_id)
+    return True
+
+
+_T2PSC_PREV_MAYBE_HANDLE_V1 = maybe_handle_stroyka_estimate
+
+
+async def maybe_handle_stroyka_estimate(conn, task, logger=None):  # noqa: F811
+    try:
+        if await _topic2_handle_price_search_confirmation_v1(conn, task, logger=logger):
+            return True
+        if await _topic2_handle_ready_done_v1(conn, task, logger=logger):
+            return True
+    except Exception as exc:
+        try:
+            _history_safe(conn, _s(_row_get(task, "id")), "TOPIC2_PRICE_SEARCH_CONFIRM_OR_READY_DONE_ERR:" + _s(exc)[:160])
+        except Exception:
+            pass
+    return await _T2PSC_PREV_MAYBE_HANDLE_V1(conn, task, logger)
+
+
+try:
+    _STV3_LOG.info("PATCH_TOPIC2_PRICE_SEARCH_CONFIRM_AND_READY_DONE_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_PRICE_SEARCH_CONFIRM_AND_READY_DONE_V1 ===
+
+# === PATCH_TOPIC2_FOUNDATION_MISSING_PRICE_CACHE_SONAR_V1 ===
+def _t2fo_price_text_has_family_v1(price_text, keywords):
+    low = _low(price_text or "")
+    return any(_low(k) in low for k in keywords)
+
+
+def _t2fo_offer_lines_v1(label, unit, offers):
+    lines = []
+    for offer in (offers or [])[:3]:
+        try:
+            price = float(offer.get("price") or 0)
+        except Exception:
+            price = 0.0
+        if price <= 0:
+            continue
+        lines.append(
+            "- {} | {} | {} | Санкт-Петербург и Ленинградская область | {} | {} | {}".format(
+                label,
+                price,
+                offer.get("unit") or unit,
+                offer.get("supplier") or "",
+                offer.get("url") or "",
+                offer.get("checked_at") or datetime.date.today().isoformat(),
+            )
+        )
+    return lines
+
+
+_T2FO_MISSING_PRICE_PREV_SEARCH_V1 = _search_prices_online
+
+
+async def _search_prices_online(parsed: Dict[str, Any], template: Dict[str, Any], sheet_name: Optional[str], conn=None, task_id=None) -> str:  # noqa: F811
+    result = await _T2FO_MISSING_PRICE_PREV_SEARCH_V1(parsed, template, sheet_name, conn=conn, task_id=task_id)
+    if not _t2fo_foundation_only_v1(parsed or {}):
+        return result
+
+    raw_text = _low((parsed or {}).get("raw") or "")
+    missing = []
+    if ((parsed or {}).get("sand_thickness_m") or "песчан" in raw_text or "песок" in raw_text):
+        if not _t2fo_price_text_has_family_v1(result, ("песок", "песчаная подушка", "песчаный")):
+            missing.append(("Песок строительный для песчаной подушки", "м3", "sand"))
+    if ((parsed or {}).get("gravel_thickness_m") or "щеб" in raw_text):
+        if not _t2fo_price_text_has_family_v1(result, ("щебень", "щебеночное основание", "щебеночный", "щебёноч")):
+            missing.append(("Щебень для основания фундаментной плиты", "м3", "gravel"))
+    if not missing:
+        return result
+
+    model = os.getenv("OPENROUTER_MODEL_ONLINE", "perplexity/sonar").strip() or "perplexity/sonar"
+    if "sonar" not in model.lower():
+        raise RuntimeError(f"TOPIC2_ONLINE_MODEL_GUARD_BLOCKED_NON_SONAR:{model}")
+
+    from core.price_enrichment import _openrouter_price_search as _missing_price_search
+
+    extra_lines = []
+    for item_name, unit, code in missing:
+        if conn is not None and task_id is not None:
+            _history_safe(conn, task_id, "TOPIC2_PRICE_CACHE_BEFORE_SONAR:" + code)
+            _history_safe(conn, task_id, "TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:" + item_name)
+        try:
+            offers = await asyncio.wait_for(
+                _missing_price_search(item_name, unit, "Санкт-Петербург и Ленинградская область"),
+                timeout=45,
+            )
+        except Exception:
+            offers = []
+        lines = _t2fo_offer_lines_v1(item_name, unit, offers)
+        if lines:
+            extra_lines.extend(lines)
+            if conn is not None and task_id is not None:
+                first = offers[0] if offers else {}
+                _history_safe(conn, task_id, "TOPIC2_PRICE_SOURCE_FOUND:{}:{}:{}".format(
+                    code,
+                    _s(first.get("supplier"))[:50],
+                    _s(first.get("status"))[:20],
+                ))
+        elif conn is not None and task_id is not None:
+            _history_safe(conn, task_id, "TOPIC2_PRICE_SOURCE_MISSING:" + code)
+
+    if not extra_lines:
+        return result
+    joined = (str(result or "").rstrip() + "\n" + "\n".join(extra_lines)).strip()
+    if conn is not None and task_id is not None:
+        _history_safe(conn, task_id, "TOPIC2_MISSING_PRICE_CACHE_SONAR_DONE:" + ",".join(code for _, _, code in missing))
+    return joined
+
+
+def _t2spsm_families_v1(text, section=""):  # noqa: F811
+    low = _low((text or "") + " " + (section or ""))
+    families = set()
+    checks = (
+        ("sand", ("песок", "песчан", "песчаная подушка")),
+        ("gravel", ("щебень", "щебен", "щебеноч", "щебеночное", "щебёноч")),
+        ("gasbeton", ("газобетон", "газоблок", "блок 625", "u-блок", "u блок", "лср")),
+        ("concrete", ("бетон", "монолит", "ж/б", "железобетон", "ростверк", "плита")),
+        ("rebar", ("арматур", "а500", "а240", "проволока вяз")),
+        ("wood", ("доска", "брус", "пиломат", "osb", "фанера")),
+        ("insulation", ("пенопл", "утепл", "минват", "пир", "pir")),
+        ("waterproof", ("гидроизоляц", "линокром", "мастик", "праймер")),
+        ("roof", ("кров", "стропил", "мауэрлат", "мембран", "профнастил", "черепиц")),
+        ("windows", ("окн", "окон", "пвх", "стеклопакет")),
+        ("doors", ("двер", "дверн")),
+        ("delivery", ("достав", "транспорт")),
+        ("unload", ("разгруз", "погруз")),
+        ("crane", ("кран",)),
+        ("pump", ("бетононасос",)),
+        ("masonry_work", ("кладк",)),
+        ("facade", ("фасад", "внешняя отделка")),
+        ("interior", ("внутрен", "отделк", "гкл", "ламинат", "плитк")),
+        ("engineering", ("электрик", "водоснаб", "канализац", "отоплен", "вентиляц", "инженер")),
+    )
+    for fam, terms in checks:
+        if any(term in low for term in terms):
+            families.add(fam)
+    return families
+
+
+try:
+    _STV3_LOG.info("PATCH_TOPIC2_FOUNDATION_MISSING_PRICE_CACHE_SONAR_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_FOUNDATION_MISSING_PRICE_CACHE_SONAR_V1 ===
+
+# === PATCH_TOPIC2_RELIABLE_PRICE_AND_FOUNDATION_SOURCE_GUARD_V1 ===
+# Canon/user rule: "3 / надёжные" is a reliable price level, not maximum.
+# Foundation-only final with explicit internet check must not close while
+# песок/щебень remain without live/cache source lines.
+_T2RPF_PREV_PARSE_PRICE_CHOICE_V1 = parse_price_choice
+
+
+def _t2rpf_reliable_requested_v1(text):
+    t = _low(text or "").replace("[voice]", "").strip()
+    t = re.sub(r"\s+", " ", t).strip(" .,!?:;()[]{}")
+    return (
+        t in ("3", "3.", "третий", "вариант 3", "вариант в", "в", "v", "в)", "v)")
+        or "надежн" in t
+        or "надёжн" in t
+        or "проверенн" in t
+        or "раздел три" in t
+    )
+
+
+def parse_price_choice(text: str) -> Dict[str, Any]:  # noqa: F811
+    res = dict(_T2RPF_PREV_PARSE_PRICE_CHOICE_V1(text))
+    t = _low(text or "").replace("[voice]", "").strip()
+    t = re.sub(r"\s+", " ", t).strip(" .,!?:;()[]{}")
+    explicit_max = any(x in t for x in ("максим", "max", "макс ")) and not any(x in t for x in ("не максим", "а не максим", "не max"))
+    if _t2rpf_reliable_requested_v1(text) and not explicit_max:
+        res["choice"] = "reliable"
+        res["confirmed"] = True
+    return res
+
+
+try:
+    _PPOC_PRICE_DISPLAY.update({
+        "minimum": "минимальные",
+        "cheapest": "минимальные",
+        "maximum": "максимальные",
+        "reliable": "надёжные",
+        "trusted": "надёжные",
+    })
+except Exception:
+    pass
+
+
+def _t2rpf_requires_foundation_live_prices_v1(parsed, text):
+    if not _t2fo_foundation_only_v1(parsed or {}):
+        return False
+    low = _low(text or "")
+    return any(x in low for x in ("интернет", "актуальн", "проверить", "проверь", "поищи", "найди", "стоимость песка", "стоимости песка", "стоимость щеб"))
+
+
+def _t2rpf_missing_foundation_families_v1(parsed, price_text):
+    parsed = parsed or {}
+    raw = _low(parsed.get("raw") or "")
+    missing = []
+    if (parsed.get("sand_thickness_m") or "песчан" in raw or "песок" in raw) and not _t2fo_price_text_has_family_v1(price_text, ("песок", "песчаная подушка", "песчаный")):
+        missing.append("песок")
+    if (parsed.get("gravel_thickness_m") or "щеб" in raw) and not _t2fo_price_text_has_family_v1(price_text, ("щебень", "щебеночное основание", "щебеночный", "щебёноч")):
+        missing.append("щебень")
+    return missing
+
+
+_T2RPF_PREV_GENERATE_AND_SEND_V1 = _generate_and_send
+
+
+async def _generate_and_send(conn, task, pending, confirm_text, logger=None):  # noqa: F811
+    task_id = _s(_row_get(task, "id"))
+    chat_id = _s(_row_get(task, "chat_id"))
+    topic_id = int(_row_get(task, "topic_id", 0) or 0)
+    reply_to = _row_get(task, "reply_to_message_id", None) or _row_get(task, "message_id", None)
+    parsed = (pending or {}).get("parsed") or {}
+    online_prices = (pending or {}).get("online_prices") or ""
+    raw_context = "\n".join([
+        _s(parsed.get("raw") if isinstance(parsed, dict) else ""),
+        _s(confirm_text),
+    ])
+
+    if topic_id == TOPIC_ID_STROYKA and _t2rpf_requires_foundation_live_prices_v1(parsed, raw_context):
+        missing = _t2rpf_missing_foundation_families_v1(parsed, online_prices)
+        if missing:
+            try:
+                _history_safe(conn, task_id, "TOPIC2_FOUNDATION_LIVE_PRICE_GUARD_SEARCH:" + ",".join(missing))
+                refreshed = await _search_prices_online(
+                    parsed,
+                    (pending or {}).get("template") or CANON_TEMPLATE_FALLBACK["areal"],
+                    (pending or {}).get("sheet_name"),
+                    conn=conn,
+                    task_id=task_id,
+                )
+                online_prices = refreshed or online_prices
+                pending["online_prices"] = online_prices
+                pending["status"] = "WAITING_PRICE_CONFIRMATION"
+                _memory_save(chat_id, f"topic_2_estimate_pending_{task_id}", pending)
+            except Exception as exc:
+                _history_safe(conn, task_id, "TOPIC2_FOUNDATION_LIVE_PRICE_GUARD_SEARCH_FAILED:" + _s(exc)[:160])
+        missing = _t2rpf_missing_foundation_families_v1(parsed, online_prices)
+        if missing:
+            text = (
+                "Не закрываю финальную смету: не найдены подтверждённые интернет-цены для "
+                + ", ".join(missing)
+                + ". Пришли ручные цены или разреши повторить поиск."
+            )
+            send_res = await _send_text(chat_id, text, reply_to, topic_id)
+            kwargs = {"state": "WAITING_CLARIFICATION", "result": text, "error_message": "TOPIC2_FOUNDATION_PRICE_SOURCE_REQUIRED"}
+            if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+                kwargs["bot_message_id"] = send_res.get("bot_message_id")
+            _update_task_safe(conn, task_id, **kwargs)
+            _history_safe(conn, task_id, "TOPIC2_FOUNDATION_FINAL_BLOCKED_TEMPLATE_ONLY:" + ",".join(missing))
+            return True
+
+    return await _T2RPF_PREV_GENERATE_AND_SEND_V1(conn, task, pending, confirm_text, logger=logger)
+
+
+try:
+    _STV3_LOG.info("PATCH_TOPIC2_RELIABLE_PRICE_AND_FOUNDATION_SOURCE_GUARD_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_RELIABLE_PRICE_AND_FOUNDATION_SOURCE_GUARD_V1 ===
+
+
+# === PATCH_TOPIC2_FULL_FOUNDATION_PRICE_SOURCE_GUARD_V1 ===
+# Canon: when user explicitly asks to verify material prices, final XLSX must
+# prefer live confirmed sources and foundation-only route must search missing
+# foundation price families instead of closing template_only rows silently.
+_T2FFPS_PREV_MATCH_PRICE_SOURCE_V1 = _match_price_source
+
+
+def _t2ffps_is_live_source_v1(src):
+    status = _low((src or {}).get("status") or "")
+    return status in ("live_confirmed", "confirmed") and bool((src or {}).get("supplier")) and bool((src or {}).get("url"))
+
+
+def _match_price_source(sources: List[Dict[str, Any]], item_name: str, item_section: str) -> Dict[str, Any]:  # noqa: F811
+    live_sources = [src for src in (sources or []) if _t2ffps_is_live_source_v1(src)]
+    if live_sources:
+        live = _T2FFPS_PREV_MATCH_PRICE_SOURCE_V1(live_sources, item_name, item_section)
+        if live and live.get("status") != "template_only":
+            return live
+    return _T2FFPS_PREV_MATCH_PRICE_SOURCE_V1(sources, item_name, item_section)
+
+
+_T2FFPS_PREV_SEARCH_PRICES_ONLINE_V1 = _search_prices_online
+
+
+def _t2ffps_existing_online_prices_v1(conn, task_id):
+    if conn is None or task_id is None:
+        return ""
+    try:
+        row = conn.execute("SELECT chat_id FROM tasks WHERE id=? LIMIT 1", (_s(task_id),)).fetchone()
+        chat_id = _s(row[0] if row else "")
+        if not chat_id:
+            return ""
+        import sqlite3 as _t2ffps_sqlite3
+        import json as _t2ffps_json
+        mem = _t2ffps_sqlite3.connect("/root/.areal-neva-core/data/memory.db")
+        try:
+            r = mem.execute(
+                "SELECT value FROM memory WHERE chat_id=? AND key=? ORDER BY timestamp DESC LIMIT 1",
+                (chat_id, "topic_2_estimate_pending_" + _s(task_id)),
+            ).fetchone()
+        finally:
+            mem.close()
+        if not r:
+            return ""
+        data = _t2ffps_json.loads(r[0])
+        return _s(data.get("online_prices") or "") if isinstance(data, dict) else ""
+    except Exception:
+        return ""
+
+
+def _t2ffps_has_live_source_v1(price_text, keywords):
+    try:
+        sources = _parse_price_sources(price_text or "")
+    except Exception:
+        sources = []
+    keys = tuple(_low(k) for k in (keywords or ()))
+    for src in sources:
+        if not _t2ffps_is_live_source_v1(src):
+            continue
+        pos = _low(src.get("position") or "")
+        if any(k in pos for k in keys):
+            return True
+    return False
+
+
+def _t2ffps_has_live_source_all_v1(price_text, keywords):
+    try:
+        sources = _parse_price_sources(price_text or "")
+    except Exception:
+        sources = []
+    keys = tuple(_low(k) for k in (keywords or ()))
+    for src in sources:
+        if not _t2ffps_is_live_source_v1(src):
+            continue
+        pos = _low(src.get("position") or "")
+        if keys and all(k in pos for k in keys):
+            return True
+    return False
+
+
+async def _search_prices_online(parsed: Dict[str, Any], template: Dict[str, Any], sheet_name: Optional[str], conn=None, task_id=None) -> str:  # noqa: F811
+    base = await _T2FFPS_PREV_SEARCH_PRICES_ONLINE_V1(parsed, template, sheet_name, conn=conn, task_id=task_id)
+    if not _t2fo_foundation_only_v1(parsed or {}):
+        return base
+    existing = _t2ffps_existing_online_prices_v1(conn, task_id)
+    combined = "\n".join(x for x in (existing, base) if _s(x).strip()).strip()
+
+    missing = []
+    checks = (
+        ("Опалубка для монолитной фундаментной плиты материал", "мп", "formwork_material", ("опалуб",)),
+        ("Монтаж демонтаж опалубки фундаментной плиты", "мп", "formwork_work", ("опалуб", "монтаж")),
+        ("Армирование фундаментной плиты работы", "м2", "rebar_work", ("армирован",)),
+        ("Устройство песчаной подушки с послойным уплотнением работы", "м3", "sand_work", ("песчан", "уплотн")),
+        ("Устройство щебеночного основания с уплотнением работы", "м3", "gravel_work", ("щеб", "уплотн")),
+    )
+    for item_name, unit, code, keywords in checks:
+        has_source = (
+            _t2ffps_has_live_source_all_v1(combined, keywords)
+            if code in ("sand_work", "gravel_work")
+            else _t2ffps_has_live_source_v1(combined, keywords)
+        )
+        if not has_source:
+            missing.append((item_name, unit, code))
+    if not missing:
+        return combined or base
+
+    model = os.getenv("OPENROUTER_MODEL_ONLINE", "perplexity/sonar").strip() or "perplexity/sonar"
+    if "sonar" not in model.lower():
+        raise RuntimeError(f"TOPIC2_ONLINE_MODEL_GUARD_BLOCKED_NON_SONAR:{model}")
+
+    from core.price_enrichment import _openrouter_price_search as _missing_price_search
+    extra_lines = []
+    for item_name, unit, code in missing:
+        if conn is not None and task_id is not None:
+            _history_safe(conn, task_id, "TOPIC2_PRICE_CACHE_BEFORE_SONAR:" + code)
+            _history_safe(conn, task_id, "TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:" + item_name)
+        try:
+            offers = await asyncio.wait_for(
+                _missing_price_search(item_name, unit, "Санкт-Петербург и Ленинградская область"),
+                timeout=45,
+            )
+        except Exception:
+            offers = []
+        lines = _t2fo_offer_lines_v1(item_name, unit, offers)
+        if lines:
+            extra_lines.extend(lines)
+            if conn is not None and task_id is not None:
+                first = offers[0] if offers else {}
+                _history_safe(conn, task_id, "TOPIC2_PRICE_SOURCE_FOUND:{}:{}:{}".format(
+                    code,
+                    _s(first.get("supplier"))[:50],
+                    _s(first.get("status"))[:20],
+                ))
+        elif conn is not None and task_id is not None:
+            _history_safe(conn, task_id, "TOPIC2_PRICE_SOURCE_MISSING:" + code)
+    if extra_lines and conn is not None and task_id is not None:
+        _history_safe(conn, task_id, "TOPIC2_FULL_FOUNDATION_PRICE_SOURCE_SONAR_DONE:" + ",".join(code for _, _, code in missing))
+    return (combined + "\n" + "\n".join(extra_lines)).strip() if extra_lines else (combined or base)
+
+try:
+    _STV3_LOG.info("PATCH_TOPIC2_FULL_FOUNDATION_PRICE_SOURCE_GUARD_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_FULL_FOUNDATION_PRICE_SOURCE_GUARD_V1 ===
+
+
+# === PATCH_TOPIC2_FOUNDATION_REQUIRED_PRICE_FAMILIES_V1 ===
+# Extends the existing foundation final guard: for foundation-only estimates with
+# explicit price verification, formwork and reinforcement work are required price
+# families too. This does not change non-topic_2 and does not bypass Sonar.
+_T2FRPF_PREV_MISSING_FOUNDATION_FAMILIES_V1 = _t2rpf_missing_foundation_families_v1
+
+
+def _t2rpf_missing_foundation_families_v1(parsed, price_text):  # noqa: F811
+    missing = list(_T2FRPF_PREV_MISSING_FOUNDATION_FAMILIES_V1(parsed, price_text) or [])
+    if not _t2fo_foundation_only_v1(parsed or {}):
+        return missing
+    if not _t2ffps_has_live_source_v1(price_text, ("опалуб",)):
+        missing.append("опалубка")
+    if not _t2ffps_has_live_source_v1(price_text, ("армирован",)):
+        missing.append("армирование")
+    if not _t2ffps_has_live_source_all_v1(price_text, ("песчан", "уплотн")):
+        missing.append("уплотнение песчаной подушки")
+    if not _t2ffps_has_live_source_all_v1(price_text, ("щеб", "уплотн")):
+        missing.append("уплотнение щебёночного основания")
+    out = []
+    for item in missing:
+        if item not in out:
+            out.append(item)
+    return out
+
+try:
+    _STV3_LOG.info("PATCH_TOPIC2_FOUNDATION_REQUIRED_PRICE_FAMILIES_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_FOUNDATION_REQUIRED_PRICE_FAMILIES_V1 ===
+
+# === PATCH_TOPIC2_FOUNDATION_PRICE_APPLY_MATCH_V1 ===
+# Canon/user rule: foundation-only final must apply confirmed source-line prices
+# to AREAL_CALC work/material columns, and must not attach formwork sources to
+# concrete rows just because both mention a monolithic slab.
+_T2FPAG_PREV_MATCH_PRICE_SOURCE_V1 = _match_price_source
+_T2FPAG_PREV_CREATE_XLSX_V1 = _create_xlsx_from_template
+_T2FPAG_PREV_FINAL_SUMMARY_V1 = _final_summary
+_T2FPAG_PREV_SEARCH_PRICES_ONLINE_V1 = _search_prices_online
+_T2FPAG_PREV_MISSING_FAMILIES_V1 = _t2rpf_missing_foundation_families_v1
+
+
+def _t2fpag_family_v1(text):
+    low = _low(text or "")
+    if "опалуб" in low:
+        if "материал" in low and not any(x in low for x in ("монтаж", "демонтаж", "работ")):
+            return "formwork_material"
+        if any(x in low for x in ("монтаж", "демонтаж", "работ", "установ")):
+            return "formwork_work"
+        return "formwork"
+    if "армирован" in low:
+        return "rebar_work"
+    if "арматур" in low or "а500" in low:
+        return "rebar_material"
+    if "бетонирован" in low or "заливк" in low or "работа (бетон" in low:
+        return "concrete_work"
+    if "бетон" in low or "в25" in low or "в30" in low or "м350" in low:
+        return "concrete_material"
+    if "песок" in low or "песчан" in low:
+        if any(x in low for x in ("подуш", "основан")) and any(x in low for x in ("уплотнен", "уплотнени", "работ")):
+            return "sand_base"
+        if any(x in low for x in ("устройство", "уплотнен", "уплотнени", "работ")):
+            return "sand_work"
+        return "sand"
+    if "щеб" in low:
+        if any(x in low for x in ("основан", "подуш")) and any(x in low for x in ("уплотнен", "уплотнени", "работ")):
+            return "gravel_base"
+        if any(x in low for x in ("устройство", "уплотнен", "уплотнени", "работ")):
+            return "gravel_work"
+        return "gravel"
+    if "достав" in low or "транспорт" in low:
+        return "delivery"
+    return ""
+
+
+def _t2fpag_empty_source_v1():
+    return {"supplier": "", "url": "", "checked_at": datetime.date.today().isoformat(), "status": "template_only"}
+
+
+def _match_price_source(sources: List[Dict[str, Any]], item_name: str, item_section: str) -> Dict[str, Any]:  # noqa: F811
+    item_family = _t2fpag_family_v1(item_name)
+    if item_family:
+        exact_sources = [
+            src for src in (sources or [])
+            if _t2fpag_family_v1(src.get("position") or "") == item_family
+        ]
+        if exact_sources:
+            live_exact = [src for src in exact_sources if _t2ffps_is_live_source_v1(src)]
+            if live_exact:
+                return live_exact[0]
+            return exact_sources[0]
+    matched = _T2FPAG_PREV_MATCH_PRICE_SOURCE_V1(sources, item_name, item_section)
+    matched_family = _t2fpag_family_v1((matched or {}).get("position") or "")
+    if item_family and matched_family and matched_family != item_family:
+        return _t2fpag_empty_source_v1()
+    return matched
+
+
+def _t2fpag_line_values_v1(price_text, required=(), any_of=(), exclude=()):
+    vals = []
+    req = tuple(_low(x) for x in (required or ()))
+    any_terms = tuple(_low(x) for x in (any_of or ()))
+    exc = tuple(_low(x) for x in (exclude or ()))
+    for line in str(price_text or "").splitlines():
+        low = _low(line)
+        if req and not all(x in low for x in req):
+            continue
+        if any_terms and not any(x in low for x in any_terms):
+            continue
+        if exc and any(x in low for x in exc):
+            continue
+        parts = [p.strip() for p in line.strip(" \t-—•·").split("|")]
+        if len(parts) < 2 or "нет данных" in _low(parts[1]):
+            continue
+        try:
+            value = float(re.sub(r"[^0-9.,]", "", parts[1]).replace(",", "."))
+        except Exception:
+            value = 0.0
+        if 100 <= value <= 10000000:
+            vals.append(value)
+    return vals
+
+
+def _t2fpag_choose_v1(price_text, family, choice, default=0.0):
+    if family == "formwork_material":
+        vals = _t2fpag_line_values_v1(price_text, required=("опалуб", "материал"))
+    elif family == "formwork_work":
+        vals = _t2fpag_line_values_v1(price_text, required=("опалуб",), any_of=("монтаж", "демонтаж", "работ", "установ"), exclude=("материал",))
+    elif family == "rebar_work":
+        vals = _t2fpag_line_values_v1(price_text, required=("армирован",), any_of=("работ", "монтаж", "устройств"))
+    elif family == "rebar_material":
+        vals = _t2fpag_line_values_v1(price_text, required=("арматур",), any_of=("а500",))
+    elif family == "sand_work":
+        vals = _t2fpag_line_values_v1(price_text, required=("песчан",), any_of=("уплотн", "работ", "устройств"), exclude=("песок строительный", "материал"))
+    elif family == "gravel_work":
+        vals = _t2fpag_line_values_v1(price_text, required=("щеб",), any_of=("уплотн", "работ", "устройств"), exclude=("материал",))
+    else:
+        vals = []
+    return _choose_value(vals, choice, default) if vals else float(default or 0.0)
+
+
+def _t2fpag_pending_raw_v1(task_id):
+    try:
+        import sqlite3 as _t2fpag_sqlite3
+        import json as _t2fpag_json
+        mem = _t2fpag_sqlite3.connect("/root/.areal-neva-core/data/memory.db")
+        try:
+            row = mem.execute(
+                "SELECT value FROM memory WHERE key=? ORDER BY timestamp DESC LIMIT 1",
+                ("topic_2_estimate_pending_" + _s(task_id),),
+            ).fetchone()
+        finally:
+            mem.close()
+        if not row:
+            return ""
+        data = _t2fpag_json.loads(row[0])
+        parsed = data.get("parsed") if isinstance(data, dict) else {}
+        return _s((parsed or {}).get("raw") or "")
+    except Exception:
+        return ""
+
+
+def _t2fpag_manual_concrete_work_v1(parsed, task_id=None):
+    try:
+        value = _t2fo_manual_monolith_work_price_v1((parsed or {}).get("raw") or "")
+        if value:
+            return value
+        if task_id:
+            return _t2fo_manual_monolith_work_price_v1(_t2fpag_pending_raw_v1(task_id))
+    except Exception:
+        pass
+    return 0.0
+
+
+def _t2fpag_exact_source_v1(price_text, family):
+    try:
+        for src in _parse_price_sources(price_text or ""):
+            if _t2fpag_family_v1(src.get("position") or "") == family and _t2ffps_is_live_source_v1(src):
+                return src
+    except Exception:
+        pass
+    return {}
+
+
+def _t2fpag_materials_vat_only_v1(parsed):
+    raw = _low((parsed or {}).get("raw") or "")
+    return (
+        "ндс" in raw
+        and "материал" in raw
+        and "работ" in raw
+        and "без ндс" in raw
+        and ("с ндс" in raw or "ндс" in raw)
+    )
+
+
+def _t2fpag_combined_source_v1(price_text, material_family, work_family):
+    material = _t2fpag_exact_source_v1(price_text, material_family)
+    work = _t2fpag_exact_source_v1(price_text, work_family)
+    if not material and not work:
+        return {}
+    suppliers = []
+    urls = []
+    checked = []
+    for src in (work, material):
+        if src.get("supplier") and src.get("supplier") not in suppliers:
+            suppliers.append(src.get("supplier"))
+        if src.get("url") and src.get("url") not in urls:
+            urls.append(src.get("url"))
+        if src.get("checked_at"):
+            checked.append(src.get("checked_at"))
+    return {
+        "status": "LIVE_CONFIRMED",
+        "supplier": " / ".join(suppliers),
+        "url": " / ".join(urls),
+        "checked_at": max(checked) if checked else datetime.date.today().isoformat(),
+    }
+
+
+def _t2fpag_rewrite_foundation_xlsx_v1(path, items, parsed, price_text, choice, task_id=None):
+    try:
+        from openpyxl import load_workbook as _t2fpag_load_workbook
+        wb = _t2fpag_load_workbook(path)
+        ws = wb["AREAL_CALC"] if "AREAL_CALC" in wb.sheetnames else wb.active
+        rows = []
+        for row_idx in range(2, ws.max_row + 1):
+            label = _low(ws.cell(row_idx, 9).value or "")
+            name = _s(ws.cell(row_idx, 3).value or "")
+            if label.startswith("итого"):
+                break
+            if not name:
+                continue
+            qty = float(ws.cell(row_idx, 5).value or 0)
+            work = float(ws.cell(row_idx, 6).value or 0)
+            mat = float(ws.cell(row_idx, 8).value or 0)
+            family = _t2fpag_family_v1(name)
+            if family == "formwork_material":
+                mat = _t2fpag_choose_v1(price_text, family, choice, mat or work)
+                work = 0.0
+            elif family == "formwork_work":
+                work = _t2fpag_choose_v1(price_text, family, choice, work)
+                mat = 0.0
+            elif family == "rebar_work":
+                work = _t2fpag_choose_v1(price_text, family, choice, work)
+                mat = 0.0
+            elif family == "rebar_material":
+                mat = _t2fpag_choose_v1(price_text, family, choice, mat)
+                work = 0.0
+            elif family == "concrete_work":
+                manual = _t2fpag_manual_concrete_work_v1(parsed, task_id=task_id)
+                if manual:
+                    work = manual
+                    mat = 0.0
+            elif family == "sand_base":
+                work = _t2fpag_choose_v1(price_text, "sand_work", choice, _FTM_PRICES["sand_work"])
+                mat = _choose_value(
+                    _t2fo_prices_from_source_lines_v1(price_text, ("песок", "песчаная подушка", "песчаный")),
+                    choice,
+                    _FTM_PRICES["sand_mat"],
+                )
+            elif family == "gravel_base":
+                work = _t2fpag_choose_v1(price_text, "gravel_work", choice, _FTM_PRICES["gravel_work"])
+                mat = _choose_value(
+                    _t2fo_prices_from_source_lines_v1(price_text, ("щебень", "щебеночное основание", "щебеночный", "щебёноч")),
+                    choice,
+                    _FTM_PRICES["gravel_mat"],
+                )
+            elif family == "sand_work":
+                work = _t2fpag_choose_v1(price_text, family, choice, work or _FTM_PRICES["sand_work"])
+                mat = 0.0
+            elif family == "gravel_work":
+                work = _t2fpag_choose_v1(price_text, family, choice, work or _FTM_PRICES["gravel_work"])
+                mat = 0.0
+            ws.cell(row_idx, 6, round(work, 2))
+            ws.cell(row_idx, 7).value = f"=E{row_idx}*F{row_idx}"
+            ws.cell(row_idx, 8, round(mat, 2))
+            ws.cell(row_idx, 9).value = f"=E{row_idx}*H{row_idx}"
+            ws.cell(row_idx, 10).value = f"=G{row_idx}+I{row_idx}"
+            exact_source = _t2fpag_exact_source_v1(price_text, family)
+            if family == "sand_base":
+                exact_source = _t2fpag_combined_source_v1(price_text, "sand", "sand_work")
+            elif family == "gravel_base":
+                exact_source = _t2fpag_combined_source_v1(price_text, "gravel", "gravel_work")
+            if exact_source:
+                ws.cell(row_idx, 11, exact_source.get("status", "LIVE_CONFIRMED"))
+                ws.cell(row_idx, 12, exact_source.get("supplier", ""))
+                ws.cell(row_idx, 13, exact_source.get("url", ""))
+                ws.cell(row_idx, 14, exact_source.get("checked_at", datetime.date.today().isoformat()))
+            if family == "concrete_work" and manual:
+                ws.cell(row_idx, 11, "MANUAL")
+                ws.cell(row_idx, 12, "user")
+                ws.cell(row_idx, 13, "")
+                ws.cell(row_idx, 14, datetime.date.today().isoformat())
+            if family in ("sand_work", "gravel_work") and not exact_source:
+                ws.cell(row_idx, 11, "TEMPLATE_ONLY")
+                ws.cell(row_idx, 12, "")
+                ws.cell(row_idx, 13, "")
+                ws.cell(row_idx, 14, datetime.date.today().isoformat())
+            rows.append((row_idx, name, qty, work, mat))
+
+        subtotal = sum(qty * (work + mat) for _, name, qty, work, mat in rows if _low(ws.cell(_, 2).value or "") not in ("логистика", "накладные расходы", "накладные"))
+        for row_idx, name, qty, work, mat in rows:
+            low_name = _low(name)
+            if "организация работ и накладные" in low_name:
+                ws.cell(row_idx, 6, round(subtotal * 0.07, 2))
+                ws.cell(row_idx, 8, 0)
+                ws.cell(row_idx, 7).value = f"=E{row_idx}*F{row_idx}"
+                ws.cell(row_idx, 9).value = f"=E{row_idx}*H{row_idx}"
+                ws.cell(row_idx, 10).value = f"=G{row_idx}+I{row_idx}"
+                ws.cell(row_idx, 11, "TEMPLATE_ONLY")
+                ws.cell(row_idx, 12, "")
+                ws.cell(row_idx, 13, "")
+                ws.cell(row_idx, 14, datetime.date.today().isoformat())
+            elif "расходные материалы" in low_name:
+                ws.cell(row_idx, 6, 0)
+                ws.cell(row_idx, 8, round(subtotal * 0.015, 2))
+                ws.cell(row_idx, 7).value = f"=E{row_idx}*F{row_idx}"
+                ws.cell(row_idx, 9).value = f"=E{row_idx}*H{row_idx}"
+                ws.cell(row_idx, 10).value = f"=G{row_idx}+I{row_idx}"
+                ws.cell(row_idx, 11, "TEMPLATE_ONLY")
+                ws.cell(row_idx, 12, "")
+                ws.cell(row_idx, 13, "")
+                ws.cell(row_idx, 14, datetime.date.today().isoformat())
+
+        if _t2fpag_materials_vat_only_v1(parsed):
+            for row_idx in range(2, ws.max_row + 1):
+                label = _low(ws.cell(row_idx, 9).value or "")
+                if label.startswith("итого"):
+                    data_last = row_idx - 2
+                    vat_row = row_idx + 1
+                    gross_row = row_idx + 2
+                    if data_last >= 2:
+                        ws.cell(vat_row, 9, "НДС 22% по материалам (работы без НДС)")
+                        ws.cell(vat_row, 10).value = f"=SUM(I2:I{data_last})*22%"
+                        ws.cell(gross_row, 9, "К оплате с НДС по материалам")
+                        ws.cell(gross_row, 10).value = f"=J{row_idx}+J{vat_row}"
+                    break
+
+        wb.save(path)
+        wb.close()
+    except Exception as exc:
+        try:
+            _STV3_LOG.warning("PATCH_TOPIC2_FOUNDATION_PRICE_APPLY_MATCH_V1 rewrite failed: %s", exc)
+        except Exception:
+            pass
+    return path
+
+
+def _t2fpag_items_from_xlsx_v1(path, items):
+    try:
+        from openpyxl import load_workbook as _t2fpag_load_workbook
+        wb = _t2fpag_load_workbook(path, data_only=False)
+        ws = wb["AREAL_CALC"] if "AREAL_CALC" in wb.sheetnames else wb.active
+        updated = []
+        total = 0.0
+        data_rows = []
+        for row_idx in range(2, ws.max_row + 1):
+            if _low(ws.cell(row_idx, 9).value or "").startswith("итого"):
+                break
+            name = _s(ws.cell(row_idx, 3).value or "")
+            if not name:
+                continue
+            qty = float(ws.cell(row_idx, 5).value or 0)
+            work = float(ws.cell(row_idx, 6).value or 0)
+            mat = float(ws.cell(row_idx, 8).value or 0)
+            total += qty * (work + mat)
+            data_rows.append((name, work, mat))
+        wb.close()
+        for idx, it in enumerate(items or []):
+            item = dict(it)
+            if idx < len(data_rows):
+                _, work, mat = data_rows[idx]
+                item["work_price"] = work
+                item["mat_price"] = mat
+                item["price"] = round(work + mat, 2)
+                item["kind"] = "mixed" if work and mat else ("work" if work else "material")
+            updated.append(item)
+        return updated or items, total
+    except Exception:
+        return items, sum(float(it.get("qty") or 0) * float(it.get("price") or 0) for it in (items or []))
+
+
+def _create_xlsx_from_template(task_id: str, parsed: Dict[str, Any], template: Dict[str, Any], template_path: Optional[str], sheet_name: Optional[str], price_text: str, choice: Dict[str, Any]) -> Tuple[str, List[Dict[str, Any]], float]:  # noqa: F811
+    path, items, total = _T2FPAG_PREV_CREATE_XLSX_V1(task_id, parsed, template, template_path, sheet_name, price_text, choice)
+    if _t2fo_foundation_only_v1(parsed or {}):
+        _t2fpag_rewrite_foundation_xlsx_v1(path, items, parsed, price_text, choice, task_id=task_id)
+        items, total = _t2fpag_items_from_xlsx_v1(path, items)
+    return path, items, total
+
+
+def _final_summary(parsed: Dict[str, Any], template: Dict[str, Any], sheet_name: Optional[str], choice: Dict[str, Any], py_total: float, items=None) -> str:  # noqa: F811
+    if not items or not any("work_price" in it or "mat_price" in it for it in (items or [])):
+        return _T2FPAG_PREV_FINAL_SUMMARY_V1(parsed, template, sheet_name, choice, py_total, items=items)
+    mat_total = work_total = logistics_total = overhead_total = 0.0
+    for it in items:
+        qty = float(it.get("qty") or 0)
+        sec = _s(it.get("section") or "")
+        work = float(it.get("work_price") or 0)
+        mat = float(it.get("mat_price") or 0)
+        val = qty * (work + mat)
+        if sec == "Логистика":
+            logistics_total += val
+        elif sec in ("Накладные расходы", "Накладные"):
+            overhead_total += val
+        else:
+            work_total += qty * work
+            mat_total += qty * mat
+    obj = parsed.get("object") or parsed.get("raw") or "объект"
+    material = parsed.get("material") or "не указан"
+    dims = parsed.get("dims") or parsed.get("dimensions")
+    try:
+        a, b = float(dims[0]), float(dims[1])
+        area_s = f"{a * b:.0f} м²"
+    except Exception:
+        area_s = str(parsed.get("area") or "не указана")
+    subtotal = round(mat_total + work_total + logistics_total + overhead_total, 2)
+    material_vat = round(mat_total * 0.22, 2) if _t2fpag_materials_vat_only_v1(parsed) else 0.0
+    vat_lines = (
+        f"  НДС 22% по материалам: {material_vat:,.0f} руб\n"
+        f"  С НДС по материалам: {subtotal + material_vat:,.0f} руб\n"
+        if material_vat
+        else "  НДС не включен. Если нужен расчет с НДС 22%, ответь: с НДС"
+    )
+    return (
+        f"✅ Смета готова\n\n"
+        f"Объект: {obj}   Материал: {material}   Площадь: {area_s}   "
+        f"Этажность: {parsed.get('floors') or 'не указана'}   Регион: {parsed.get('region') or parsed.get('location') or 'СПб и ЛО'}\n"
+        f"Шаблон: {template.get('title') or 'Ареал Нева.xlsx'}   Лист: {sheet_name or 'смета'}   Цены: {choice.get('choice') or 'шаблон'}\n\n"
+        f"Итого:\n"
+        f"  Материалы: {mat_total:,.0f} руб\n"
+        f"  Работы: {work_total:,.0f} руб\n"
+        f"  Логистика: {logistics_total:,.0f} руб\n"
+        f"  Накладные: {overhead_total:,.0f} руб\n"
+        f"  Итого без НДС: {subtotal:,.0f} руб\n"
+        f"{vat_lines}"
+    ).replace(",", " ")
+
+
+def _t2fpag_has_live_source_all_v1(price_text, required):
+    req = tuple(_low(x) for x in (required or ()))
+    try:
+        sources = _parse_price_sources(price_text or "")
+    except Exception:
+        sources = []
+    for src in sources:
+        if not _t2ffps_is_live_source_v1(src):
+            continue
+        pos = _low(src.get("position") or "")
+        if all(x in pos for x in req):
+            return True
+    return False
+
+
+async def _search_prices_online(parsed: Dict[str, Any], template: Dict[str, Any], sheet_name: Optional[str], conn=None, task_id=None) -> str:  # noqa: F811
+    base = await _T2FPAG_PREV_SEARCH_PRICES_ONLINE_V1(parsed, template, sheet_name, conn=conn, task_id=task_id)
+    if not _t2fo_foundation_only_v1(parsed or {}):
+        return base
+    if _t2fpag_has_live_source_all_v1(base, ("опалуб", "монтаж")):
+        return base
+    model = os.getenv("OPENROUTER_MODEL_ONLINE", "perplexity/sonar").strip() or "perplexity/sonar"
+    if "sonar" not in model.lower():
+        raise RuntimeError(f"TOPIC2_ONLINE_MODEL_GUARD_BLOCKED_NON_SONAR:{model}")
+    from core.price_enrichment import _openrouter_price_search as _t2fpag_price_search
+    if conn is not None and task_id is not None:
+        _history_safe(conn, task_id, "TOPIC2_PRICE_CACHE_BEFORE_SONAR:formwork_work")
+        _history_safe(conn, task_id, "TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:Монтаж демонтаж опалубки фундаментной плиты работы")
+    try:
+        offers = await asyncio.wait_for(
+            _t2fpag_price_search("Монтаж демонтаж опалубки фундаментной плиты работы", "мп", "Санкт-Петербург и Ленинградская область"),
+            timeout=45,
+        )
+    except Exception:
+        offers = []
+    lines = _t2fo_offer_lines_v1("Монтаж демонтаж опалубки фундаментной плиты работы", "мп", offers)
+    if lines and conn is not None and task_id is not None:
+        first = offers[0] if offers else {}
+        _history_safe(conn, task_id, "TOPIC2_PRICE_SOURCE_FOUND:formwork_work:{}:{}".format(
+            _s(first.get("supplier"))[:50],
+            _s(first.get("status"))[:20],
+        ))
+    return (base + "\n" + "\n".join(lines)).strip() if lines else base
+
+
+def _t2rpf_missing_foundation_families_v1(parsed, price_text):  # noqa: F811
+    missing = list(_T2FPAG_PREV_MISSING_FAMILIES_V1(parsed, price_text) or [])
+    if _t2fo_foundation_only_v1(parsed or {}) and not _t2fpag_has_live_source_all_v1(price_text, ("опалуб", "монтаж")):
+        missing.append("монтаж опалубки")
+    out = []
+    for item in missing:
+        if item not in out:
+            out.append(item)
+    return out
+
+
+try:
+    _STV3_LOG.info("PATCH_TOPIC2_FOUNDATION_PRICE_APPLY_MATCH_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_FOUNDATION_PRICE_APPLY_MATCH_V1 ===
