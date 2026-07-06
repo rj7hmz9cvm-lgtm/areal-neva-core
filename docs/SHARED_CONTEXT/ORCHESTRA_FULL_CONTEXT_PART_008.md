@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_008
-generated_at_utc: 2026-07-06T08:52:42.389411+00:00
-git_sha_before_commit: cdfc72406c0ded2b84941ad40096aeb9ee9dce05
+generated_at_utc: 2026-07-06T09:22:43.482587+00:00
+git_sha_before_commit: 5050af0a852e72589927a2e9cd995b26a90161f2
 part: 8/19
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 4/4
-SHA256_FULL_FILE: 6f7c2839708ae5cce0c530384fbd56cc14f988984e5901d37aa8adb2d46d0aa4
+SHA256_FULL_FILE: 915e7ffdb3d28c522e670e86d6bb39a54420f19c81359fc25debb373a00b97fc
 ====================================================================================================
                                     except Exception:
                                         pass
@@ -4461,7 +4461,28 @@ try:
             from core.stroyka_estimate_canon import _generate_and_send as _t2dfcg_generate
             conn.execute("UPDATE tasks SET state='IN_PROGRESS', result='', error_message=NULL, updated_at=datetime('now') WHERE id=?", (parent_id,))
             conn.commit()
-            choice_text = {'min': 'минимальные', 'minimum': 'минимальные', 'median': 'средние', 'max': 'максимальные', 'maximum': 'максимальные'}.get(str(choice), str(choice or 'средние'))
+            try:
+                _latest_clarified = conn.execute(
+                    "SELECT action FROM task_history WHERE task_id=? AND action LIKE 'clarified:%' ORDER BY rowid DESC LIMIT 1",
+                    (parent_id,),
+                ).fetchone()
+                _clarified_text = str(_latest_clarified[0]).split("clarified:", 1)[1] if _latest_clarified else ""
+                _parent_raw = str(_t2fdsg_get(parent, "raw_input") or "")
+                _parsed = pending.get("parsed") or {}
+                if isinstance(_parsed, dict):
+                    _parsed_raw = str(_parsed.get("raw") or "")
+                    _parts = [_parsed_raw, _parent_raw, _clarified_text]
+                    _parsed["raw"] = "\n\n".join(p for p in _parts if p and p not in _parsed_raw)
+                    pending["parsed"] = _parsed
+            except Exception:
+                pass
+            _choice_key = str(choice or "median")
+            choice_text = {
+                'min': 'минимальные', 'minimum': 'минимальные', 'cheapest': 'минимальные',
+                'median': 'средние', 'average': 'средние',
+                'max': 'максимальные', 'maximum': 'максимальные',
+                'reliable': 'надёжные', 'trusted': 'надёжные',
+            }.get(_choice_key, _choice_key or 'средние')
             res = _t2dfcg_generate(conn, parent, pending, choice_text, logger=logger)
             if _t2fdsg_inspect.isawaitable(res):
                 await res
@@ -4481,6 +4502,85 @@ except Exception as _t2dfcg_e:
     except Exception:
         pass
 # === END_PATCH_TOPIC2_DRIVE_FINAL_USE_CANON_GENERATE_V2 ===
+
+# === PATCH_TOPIC2_REVISION_FINAL_GATE_CHOICE_V1 ===
+try:
+    import re as _t2rfg_re
+    import logging as _t2rfg_logging
+
+    _T2RFG_LOG = _t2rfg_logging.getLogger("task_worker")
+    _T2RFG_ORIG_RUN_DRIVE_FINAL = globals().get("_t2fdsg_run_drive_final")
+
+    def _t2rfg_s(v):
+        return "" if v is None else str(v)
+
+    def _t2rfg_get(task, key, default=None):
+        try:
+            if isinstance(task, dict):
+                return task.get(key, default)
+            if hasattr(task, "keys") and key in task.keys():
+                return task[key]
+        except Exception:
+            pass
+        try:
+            return _task_field(task, key, default)
+        except Exception:
+            return default
+
+    def _t2rfg_hist_text(conn, task_id):
+        try:
+            rows = conn.execute(
+                "SELECT action FROM task_history WHERE task_id=? ORDER BY rowid ASC",
+                (str(task_id),),
+            ).fetchall()
+            return "\n".join(_t2rfg_s(r[0]) for r in rows)
+        except Exception:
+            return ""
+
+    def _t2rfg_normalize_choice(conn, task, choice):
+        task_id = _t2rfg_s(_t2rfg_get(task, "id", ""))
+        raw = _t2rfg_s(_t2rfg_get(task, "raw_input", ""))
+        hist = _t2rfg_hist_text(conn, task_id)
+        text = (raw + "\n" + hist).lower().replace("ё", "е")
+        if ("надежн" in text or "проверенн" in text or "раздел три" in text or "вариант 3" in text) and (
+            "не максим" in text or "а не максим" in text or "не max" in text
+        ):
+            return "reliable"
+        matches = _t2rfg_re.findall(r"TOPIC2_PRICE_CHOICE_CONFIRMED:([a-zA-Zа-яА-Я0-9_ -]+)", hist)
+        for val in reversed(matches):
+            low = val.strip().lower().replace("ё", "е")
+            if low in ("reliable", "trusted") or "надеж" in low or "провер" in low:
+                return "reliable"
+            if low in ("median", "average") or "сред" in low:
+                return "median"
+            if low in ("cheapest", "minimum", "min") or "деш" in low or "миним" in low:
+                return "cheapest"
+            if low in ("manual",) or "ручн" in low:
+                return "manual"
+            if low in ("maximum", "max") and not ("не максим" in text or "а не максим" in text):
+                return "maximum"
+        return choice
+
+    if _T2RFG_ORIG_RUN_DRIVE_FINAL and not getattr(_T2RFG_ORIG_RUN_DRIVE_FINAL, "_t2rfg_wrapped", False):
+        async def _t2fdsg_run_drive_final(conn, parent, choice):  # noqa: F811
+            fixed_choice = _t2rfg_normalize_choice(conn, parent, choice)
+            if fixed_choice != choice:
+                try:
+                    _history(conn, _t2rfg_s(_t2rfg_get(parent, "id", "")), "PATCH_TOPIC2_REVISION_FINAL_GATE_CHOICE_V1:" + _t2rfg_s(choice) + "->" + _t2rfg_s(fixed_choice))
+                    conn.commit()
+                except Exception:
+                    pass
+            return await _T2RFG_ORIG_RUN_DRIVE_FINAL(conn, parent, fixed_choice)
+
+        _t2fdsg_run_drive_final._t2rfg_wrapped = True
+        globals()["_t2fdsg_run_drive_final"] = _t2fdsg_run_drive_final
+        _T2RFG_LOG.info("PATCH_TOPIC2_REVISION_FINAL_GATE_CHOICE_V1 installed")
+except Exception as _t2rfg_install_err:
+    try:
+        logger.exception("PATCH_TOPIC2_REVISION_FINAL_GATE_CHOICE_V1_INSTALL_ERR:%s", _t2rfg_install_err)
+    except Exception:
+        pass
+# === END_PATCH_TOPIC2_REVISION_FINAL_GATE_CHOICE_V1 ===
 
 if __name__ == "__main__":
     asyncio.run(main())

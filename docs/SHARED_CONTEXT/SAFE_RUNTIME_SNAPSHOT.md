@@ -1,15 +1,16 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-07-06T08:52:42.225940+00:00
-git_sha_before_commit: cdfc72406c0ded2b84941ad40096aeb9ee9dce05
+generated_at_utc: 2026-07-06T09:22:43.300894+00:00
+git_sha_before_commit: 5050af0a852e72589927a2e9cd995b26a90161f2
 git_branch: main
 
 ## SERVICES
-- areal-task-worker: activating
+- areal-task-worker: active
 - telegram-ingress: active
 - areal-memory-api: active
 - areal-claude-bootstrap-aggregator.timer: active
 
 ## GIT_LOG_30
+5050af0 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 cdfc724 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 5ca02cd FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 20c42a8 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
@@ -39,12 +40,11 @@ d8a698f FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 dec4e95 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 c6faf53 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 3a63f77 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
-247bf55 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
 ## GIT_SHOW_STAT_HEAD
-commit cdfc72406c0ded2b84941ad40096aeb9ee9dce05
+commit 5050af0a852e72589927a2e9cd995b26a90161f2
 Author: root <root@graceful-olive.ptr.network>
-Date:   Mon Jul 6 11:22:50 2026 +0300
+Date:   Mon Jul 6 11:53:12 2026 +0300
 
     FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
@@ -82,34 +82,34 @@ Date:   Mon Jul 6 11:22:50 2026 +0300
  docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |   6 +-
  docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |   6 +-
  docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  24 +--
+ .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  32 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_004.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_007.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |  21 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |  20 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_007.md             |  71 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |  37 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_010.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_011.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_011.md             |  51 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_012.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_013.md             |  90 ++++++++---
- .../ORCHESTRA_FULL_CONTEXT_PART_014.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_015.md             |   4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_016.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_013.md             | 794 ++++++++-----------
+ .../ORCHESTRA_FULL_CONTEXT_PART_014.md             | 880 +++++++++++----------
+ .../ORCHESTRA_FULL_CONTEXT_PART_015.md             | 878 ++++++++++----------
+ .../ORCHESTRA_FULL_CONTEXT_PART_016.md             | 472 ++++++++++-
  .../ORCHESTRA_FULL_CONTEXT_PART_017.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_018.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_019.md             |   4 +-
- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 168 ++++++++++-----------
- .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |  19 +--
- docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   | 125 ++++++++-------
+ docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 184 ++---
+ .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |  10 +-
+ docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  68 +-
  docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |   6 +-
  docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |   4 +-
  .../TOPICS/topic_210_PROEKTIROVANIE.md             |   4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |  55 +++----
+ docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |  12 +-
  .../TOPICS/topic_3008_KODY_MOZGOV.md               |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |   4 +-
@@ -118,7 +118,7 @@ Date:   Mon Jul 6 11:22:50 2026 +0300
  docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |   4 +-
  .../TOPICS/topic_961_AVTOZAPCHASTI.md              |   4 +-
  docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   6 +-
- 70 files changed, 392 insertions(+), 353 deletions(-)
+ 70 files changed, 2056 insertions(+), 1706 deletions(-)
 
 ## GIT_CHANGED_FILES_10
 docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md
@@ -193,9 +193,9 @@ docs/SHARED_CONTEXT/TOPICS/topic_961_AVTOZAPCHASTI.md
 docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md
 
 ## CORE_DB_STATE_COUNTS
-- FAILED|3004
+- FAILED|3005
 - CANCELLED|865
-- DONE|662
+- DONE|663
 - ARCHIVED|381
 - AWAITING_CONFIRMATION|1
 
@@ -203,6 +203,8 @@ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md
 - 1
 
 ## LATEST_TASKS_15
+- 34734fc2-d85e-47f6-a9ed-7dece65b3670|2|text|DONE|Не вижу в смете стоимости песка и щебня. Необходимо посмотреть в интернете также необходимо поставить стоимость работ по|Уточнение добавлено к исходному ТЗ|2026-07-06 09:07:04
+- fe2b6928-1fb6-4b18-b071-c7f97e101258|2|text|FAILED|Не вижу в смете стоимости песка и щебня. Необходимо посмотреть в интернете также необходимо поставить стоимость работ по|Принял правки. Напиши одну конкретную правку к смете: что изменить?|2026-07-06 09:17:08
 - d1022463-25c8-4f75-9490-6be9a61865dd|2|text|DONE|Не вижу в смете стоимости песка и щебня. Необходимо посмотреть в интернете также необходимо поставить стоимость работ по|Правки применены к основной задаче: ручная цена работ по монолиту 4500 руб/м³, уровень цен reliable|2026-07-06 08:49:08
 - 3f293498-10d0-4f70-81ec-7222ce18faeb|2|text|DONE|3|Выбор цен привязан к основной задаче: max|2026-07-06 08:25:53
 - 6c31244d-186a-4c27-86d8-cabc470c692f|2|text|DONE|Что тебе где изменить ты о чем вообще я тебе написал задание|Выбери уровень цен: 1 дешёвые / 2 средние / 3 надёжные / 4 вручную|2026-07-06 08:25:48
@@ -215,17 +217,16 @@ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md
 - a16879c1-5874-4fad-b960-e83e3543f013|2|text|DONE|3|Выбор цен привязан к основной задаче: max|2026-07-06 07:38:26
 - ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|2|drive_file|AWAITING_CONFIRMATION|{"file_id": "1qaHdtSP33P8VGsNYYLEJ6EPrfhQ7tAh2", "file_name": "photo_-1003725299009_11648.jpg", "mime_type": "image/jpeg|✅ Смета готова
 
-Объект: фундамент Материал: монолит Площадь: 195.94 м² Этажность: 1 этаж Регион: СПб и ЛО
-Шаблон: фундамент_Склад2.xlsx Лист: смета Цены: reliab|2026-07-06 08:49:08
+Объект: фундамент   Материал: монолит   Площадь: 195.94 м²   Этажность: 1 этаж   Регион: СПб и ЛО
+Шаблон: фундамент_Склад2.xlsx   Лист: смета   |2026-07-06 09:05:02
 - e3eeed87-4d5c-4dd9-928a-47c9fb101c88|2|text|DONE|Ничего|Понял, ничего не меняю. Если понадоблюсь — напишите.|2026-07-06 05:34:47
 - 39af79c1-80eb-4735-8f4f-61548cf13b2e|2|text|DONE|Задача завершена|Подтверждение принято|2026-07-05T22:20:02.789573
 - 24e594b9-1ea3-4b82-86ab-e9355021289b|2|text|DONE|Да всё верно|Подтверждение принято|2026-07-05T22:20:02.789573
 - dfccdbfe-92e3-4fbb-9e16-5450a3fa6479|2|text|CANCELLED|[VOICE] Все есть в проекте.|None|2026-07-05 20:35:27
 - bd0d5ae1-830d-4250-a8d3-4e730864ad60|2|text|FAILED|[VOICE] Работай с той информацией, которая у тебя есть. Мне нужна смета, максимально подробная, но точная.|Уточни этажность|2026-07-05 20:45:23
-- 893e166f-7236-4895-9ffa-44e932eb05f2|2|text|CANCELLED|Хорошая работа задача завершена|None|2026-07-05 19:55:48
-- a8462a10-ad97-45cc-940b-7137e2ada126|2|text|DONE|Да всё хорошо|Понял, ничего не меняю. Если понадоблюсь — напишите.|2026-07-05 19:55:36
 
 ## LATEST_FAILED_10
+- fe2b6928-1fb6-4b18-b071-c7f97e101258|2|Не вижу в смете стоимости песка и щебня. Необходимо посмотреть в интернете также необходимо поставить стоимость работ по|STALE_TIMEOUT|2026-07-06 09:17:08
 - d63abf15-c5dd-4762-8982-7653450d2abb|2|При расчёте данного задания нужно учитывать актуальную стоимость арматуры и прочих расходных материалов на текущий момен|TOPIC_ISOLATION_INVALID_TECHNADZOR_RESULT_IN_TOPIC2|2026-07-06T08:28:30+00:00
 - ca9ca9eb-cb9f-48b0-9819-1b6015bca4a2|2|готово|STALE_TIMEOUT|2026-07-06 08:22:11
 - bd0d5ae1-830d-4250-a8d3-4e730864ad60|2|[VOICE] Работай с той информацией, которая у тебя есть. Мне нужна смета, максимально подробная, но точная.|STALE_TIMEOUT|2026-07-05 20:45:23
@@ -238,122 +239,117 @@ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md
 посчитать работы и материалы согласно проекта|STALE_TIMEOUT|2026-07-05 08:03:07
 - 29331db4-0403-4a5b-8516-88e535202da6|2|{"file_id": "1jjke-Boab3b8A2DhKiyQT5eIRXWOrYf6", "file_name": "Стадия Р_АР.pdf", "mime_type": "application/pdf", "captio|STALE_TIMEOUT|2026-07-05 07:24:54
 - 5a453d88-7bee-4b61-a510-303fda0b51ef|2|[VOICE] Дом 10х10, два этажа.|STALE_TIMEOUT|2026-07-04 20:06:42
-- c82ce66e-0e82-4d62-861b-73413d8a15e2|2|[VOICE] Привет, Орик! Как дела? Отзовись! Все ли у тебя в порядке? Расскажи, как ты себя чувствуешь? Готов ли ты работат|STALE_TIMEOUT|2026-07-04 15:40:25
 
 ## LATEST_TASK_HISTORY_20
-- d1022463-25c8-4f75-9490-6be9a61865dd|TOPIC2_REVISION_FACTS_APPLIED_TO_PARENT:ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|2026-07-06 08:49:08
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|TOPIC2_TELEGRAM_DELIVERED:11805|2026-07-06 08:49:08
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|TOPIC2_DRIVE_UPLOAD_PDF_OK|2026-07-06 08:49:08
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|TOPIC2_DRIVE_UPLOAD_XLSX_OK|2026-07-06 08:49:08
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|TOPIC2_DRIVE_LINKS_SAVED:xlsx=https://drive.google.com/file/d/1IKWr7m_BMaA_giuRLcPGTOqPl6oljmtk/view:pdf=https://drive.google.com/file/d/10BTgHkXq4wqMLBC2Wdh9tihVO8QUjVWf/view|2026-07-06 08:49:08
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|TOPIC2_DRIVE_TOPIC_FOLDER_OK|2026-07-06 08:49:08
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|TOPIC2_PDF_CYRILLIC_OK|2026-07-06 08:49:08
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|TOPIC2_PDF_CREATED:1|2026-07-06 08:49:08
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|TOPIC2_PDF_TOTALS_MATCH_XLSX:xlsx=2827998.00:pdf=2827998.00|2026-07-06 08:49:08
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|TOPIC2_XLSX_CANON_COLUMNS_OK:15|2026-07-06 08:49:08
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|TOPIC2_XLSX_FORMULAS_OK|2026-07-06 08:49:08
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|TOPIC2_XLSX_ROWS_WRITTEN:11|2026-07-06 08:49:08
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|TOPIC2_XLSX_TEMPLATE_ROWS_BLOCKED_FOR_FOUNDATION_ONLY|2026-07-06 08:49:08
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|TOPIC2_TEMPLATE_SHEET_SELECTED:смета|2026-07-06 08:49:08
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|TOPIC2_TEMPLATE_CACHE_USED|2026-07-06 08:49:08
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|TOPIC2_TEMPLATE_FILE_ID:1KuoSI4OI7gJoIBPVqBQGXtQnolXKMiDp|2026-07-06 08:49:08
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|TOPIC2_TEMPLATE_SELECTED:фундамент_Склад2.xlsx|2026-07-06 08:49:08
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|TOPIC2_PRICE_CHOICE_CONFIRMED:reliable|2026-07-06 08:49:08
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|TOPIC2_MANUAL_WORK_PRICE_APPLIED:monolith:4500|2026-07-06 08:49:08
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|TOPIC2_REVISION_FACTS_APPLIED:d1022463-25c8-4f75-9490-6be9a61865dd|2026-07-06 08:49:08
+- fe2b6928-1fb6-4b18-b071-c7f97e101258|reply_sent:stale_failed|2026-07-06 09:17:08
+- fe2b6928-1fb6-4b18-b071-c7f97e101258|state:FAILED|2026-07-06 09:17:08
+- fe2b6928-1fb6-4b18-b071-c7f97e101258|TOPIC2_REVISION_BOUND_TO_PARENT:11807|2026-07-06 09:07:06
+- fe2b6928-1fb6-4b18-b071-c7f97e101258|TOPIC2_CLARIFICATION_MERGE_V2_SKIPPED_FOR_FRESH_FULL_TZ|2026-07-06 09:07:06
+- fe2b6928-1fb6-4b18-b071-c7f97e101258|TOPIC2_PRICE_ENRICHMENT_REQUESTED_BY_FOLLOWUP:34734fc2-d85e-47f6-a9ed-7dece65b3670|2026-07-06 09:07:04
+- 34734fc2-d85e-47f6-a9ed-7dece65b3670|PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:MERGED_TO_PARENT:fe2b6928-1fb6-4b18-b071-c7f97e101258|2026-07-06 09:07:04
+- fe2b6928-1fb6-4b18-b071-c7f97e101258|PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:MERGED_CHILD:34734fc2-d85e-47f6-a9ed-7dece65b3670|2026-07-06 09:07:04
+- fe2b6928-1fb6-4b18-b071-c7f97e101258|clarified:Не вижу в смете стоимости песка и щебня. Необходимо посмотреть в интернете также необходимо поставить стоимость работ по монолиту 4500 за метр кубический также проверить |2026-07-06 09:07:04
+- fe2b6928-1fb6-4b18-b071-c7f97e101258|PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:STALE_PRICE_AND_RESULT_MARKERS_RESET|2026-07-06 09:07:04
+- 34734fc2-d85e-47f6-a9ed-7dece65b3670|created:NEW|2026-07-06T09:07:04.215160+00:00
+- fe2b6928-1fb6-4b18-b071-c7f97e101258|TOPIC2_CANONICAL_REROUTE_V2:CANONICAL_HANDLED|2026-07-06 09:06:58
+- fe2b6928-1fb6-4b18-b071-c7f97e101258|TOPIC2_REVISION_BOUND_TO_PARENT:11807|2026-07-06 09:06:58
+- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|PATCH_TOPIC2_SUPPLIER_AND_HEAL_V1:FORCE_PRICE_RESET_FROM_REPLY|2026-07-06 09:06:57
+- fe2b6928-1fb6-4b18-b071-c7f97e101258|created:NEW|2026-07-06T09:06:56.783507+00:00
+- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:estimate_generated|2026-07-06 09:05:02
+- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|TOPIC2_DRIVE_UPLOAD_PDF_OK|2026-07-06 09:05:02
+- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|TOPIC2_DRIVE_UPLOAD_XLSX_OK|2026-07-06 09:05:02
+- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|TOPIC2_PDF_CYRILLIC_OK|2026-07-06 09:05:02
+- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|TOPIC2_PDF_CREATED:1|2026-07-06 09:05:02
+- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|TOPIC2_XLSX_CANON_COLUMNS_OK:15|2026-07-06 09:05:02
 
 ## MEMORY_DB_COUNT
 - 5298
 
 ## LATEST_MEMORY_20
-- topic_500_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 500, "count": 27, "updated_at": "2026-07-06T08:52:41.969940+00:00", "files": [{"task_id": "7b609434-8167-43f5-a52a-beb85e0b4ed5", "file_id|2026-07-06T08:52:41.970546+00:00
-- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 50, "updated_at": "2026-07-06T08:52:41.953258+00:00", "files": [{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "file_id|2026-07-06T08:52:41.953914+00:00
-- topic_11_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 11, "count": 2, "updated_at": "2026-07-06T08:52:41.904231+00:00", "files": [{"task_id": "a073c181-7a10-426e-8752-7d72dc4ef978", "file_id":|2026-07-06T08:52:41.904581+00:00
-- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 50, "updated_at": "2026-07-06T08:52:41.896795+00:00", "files": [{"task_id": "4b402275-e99b-4d9f-b331-08f2ba2a93be", "file_id":|2026-07-06T08:52:41.897162+00:00
-- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-07-06T08:52:41.868568+00:00", "files": [{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "file_id":|2026-07-06T08:52:41.869059+00:00
-- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-06T08:52:41.790457+00:00
-- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "state": "FAILED", "file_id": "", "file_name": "", "mime_type"|2026-07-06T08:52:41.790381+00:00
-- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-06T08:52:41.790302+00:00
-- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-06T08:52:41.790210+00:00
-- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-06T08:52:41.790145+00:00
-- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_file", "state": "FAILED", "file_id": "1bXXtuHRsXCuxBSRUl8Tj5z6E|2026-07-06T08:52:41.790070+00:00
-- topic_2_file_92de809d-9274-48ee-82b4-584058ea4e48|{"task_id": "92de809d-9274-48ee-82b4-584058ea4e48", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "search", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-06T08:52:41.789967+00:00
-- topic_210_file_ce9421cb-5451-4cea-9823-a413b698bc94|{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-06T08:52:41.789769+00:00
-- topic_210_file_c8619b7e-9ebb-4731-973a-b3f6064bbe38|{"task_id": "c8619b7e-9ebb-4731-973a-b3f6064bbe38", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-06T08:52:41.789358+00:00
-- topic_210_file_42320ab0-c49a-4a08-8f9b-5e38618a4e58|{"task_id": "42320ab0-c49a-4a08-8f9b-5e38618a4e58", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-06T08:52:41.788702+00:00
-- topic_210_file_7dca3b5f-2782-400f-af84-fb030904e917|{"task_id": "7dca3b5f-2782-400f-af84-fb030904e917", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-06T08:52:41.787703+00:00
-- topic_210_file_12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88|{"task_id": "12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "16V3s5DcAvnXj8f-3CcfZE2g5|2026-07-06T08:52:41.787087+00:00
-- topic_210_file_b1f8e982-db2e-42de-9046-833287d3567d|{"task_id": "b1f8e982-db2e-42de-9046-833287d3567d", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-06T08:52:41.786842+00:00
-- topic_210_file_eeb0d013-704a-404c-9390-5a06c90ee976|{"task_id": "eeb0d013-704a-404c-9390-5a06c90ee976", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-06T08:52:41.786424+00:00
-- topic_210_file_5ead32f3-23d5-4872-9279-a42460ba5dd1|{"task_id": "5ead32f3-23d5-4872-9279-a42460ba5dd1", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "1qy-mPcmRZxJIzEnY2Gp8B8J2|2026-07-06T08:52:41.786184+00:00
+- topic_500_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 500, "count": 27, "updated_at": "2026-07-06T09:22:43.022910+00:00", "files": [{"task_id": "7b609434-8167-43f5-a52a-beb85e0b4ed5", "file_id|2026-07-06T09:22:43.023397+00:00
+- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 50, "updated_at": "2026-07-06T09:22:42.999419+00:00", "files": [{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "file_id|2026-07-06T09:22:43.000496+00:00
+- topic_11_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 11, "count": 2, "updated_at": "2026-07-06T09:22:42.943769+00:00", "files": [{"task_id": "a073c181-7a10-426e-8752-7d72dc4ef978", "file_id":|2026-07-06T09:22:42.944382+00:00
+- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 50, "updated_at": "2026-07-06T09:22:42.932451+00:00", "files": [{"task_id": "4b402275-e99b-4d9f-b331-08f2ba2a93be", "file_id":|2026-07-06T09:22:42.932864+00:00
+- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-07-06T09:22:42.895908+00:00", "files": [{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "file_id":|2026-07-06T09:22:42.896772+00:00
+- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-06T09:22:42.809581+00:00
+- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "state": "FAILED", "file_id": "", "file_name": "", "mime_type"|2026-07-06T09:22:42.809443+00:00
+- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-06T09:22:42.809342+00:00
+- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-06T09:22:42.809212+00:00
+- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-06T09:22:42.809077+00:00
+- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_file", "state": "FAILED", "file_id": "1bXXtuHRsXCuxBSRUl8Tj5z6E|2026-07-06T09:22:42.808902+00:00
+- topic_2_file_92de809d-9274-48ee-82b4-584058ea4e48|{"task_id": "92de809d-9274-48ee-82b4-584058ea4e48", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "search", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-06T09:22:42.808694+00:00
+- topic_210_file_ce9421cb-5451-4cea-9823-a413b698bc94|{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-06T09:22:42.808423+00:00
+- topic_210_file_c8619b7e-9ebb-4731-973a-b3f6064bbe38|{"task_id": "c8619b7e-9ebb-4731-973a-b3f6064bbe38", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-06T09:22:42.808131+00:00
+- topic_210_file_42320ab0-c49a-4a08-8f9b-5e38618a4e58|{"task_id": "42320ab0-c49a-4a08-8f9b-5e38618a4e58", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-06T09:22:42.807954+00:00
+- topic_210_file_7dca3b5f-2782-400f-af84-fb030904e917|{"task_id": "7dca3b5f-2782-400f-af84-fb030904e917", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-06T09:22:42.807415+00:00
+- topic_210_file_12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88|{"task_id": "12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "16V3s5DcAvnXj8f-3CcfZE2g5|2026-07-06T09:22:42.806903+00:00
+- topic_210_file_b1f8e982-db2e-42de-9046-833287d3567d|{"task_id": "b1f8e982-db2e-42de-9046-833287d3567d", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-06T09:22:42.806729+00:00
+- topic_210_file_eeb0d013-704a-404c-9390-5a06c90ee976|{"task_id": "eeb0d013-704a-404c-9390-5a06c90ee976", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-06T09:22:42.806075+00:00
+- topic_210_file_5ead32f3-23d5-4872-9279-a42460ba5dd1|{"task_id": "5ead32f3-23d5-4872-9279-a42460ba5dd1", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "1qy-mPcmRZxJIzEnY2Gp8B8J2|2026-07-06T09:22:42.805684+00:00
 
 ## JOURNAL_AREAL_TASK_WORKER_60
-areal-task-worker.service: Scheduled restart job, restart counter is at 5251.
+areal-task-worker.service: Scheduled restart job, restart counter is at 5455.
 Started areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
 areal-task-worker.service: Failed with result 'exit-code'.
-areal-task-worker.service: Scheduled restart job, restart counter is at 5252.
+areal-task-worker.service: Scheduled restart job, restart counter is at 5456.
 Started areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
 areal-task-worker.service: Failed with result 'exit-code'.
-areal-task-worker.service: Scheduled restart job, restart counter is at 5253.
+areal-task-worker.service: Scheduled restart job, restart counter is at 5457.
 Started areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
 areal-task-worker.service: Failed with result 'exit-code'.
-areal-task-worker.service: Scheduled restart job, restart counter is at 5254.
+areal-task-worker.service: Scheduled restart job, restart counter is at 5458.
 Started areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
 areal-task-worker.service: Failed with result 'exit-code'.
-areal-task-worker.service: Scheduled restart job, restart counter is at 5255.
+areal-task-worker.service: Scheduled restart job, restart counter is at 5459.
 Started areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
 areal-task-worker.service: Failed with result 'exit-code'.
-areal-task-worker.service: Scheduled restart job, restart counter is at 5256.
+areal-task-worker.service: Scheduled restart job, restart counter is at 5460.
 Started areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
 areal-task-worker.service: Failed with result 'exit-code'.
-areal-task-worker.service: Scheduled restart job, restart counter is at 5257.
+areal-task-worker.service: Scheduled restart job, restart counter is at 5461.
 Started areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
 areal-task-worker.service: Failed with result 'exit-code'.
-areal-task-worker.service: Scheduled restart job, restart counter is at 5258.
+areal-task-worker.service: Scheduled restart job, restart counter is at 5462.
 Started areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
 areal-task-worker.service: Failed with result 'exit-code'.
-areal-task-worker.service: Scheduled restart job, restart counter is at 5259.
+areal-task-worker.service: Scheduled restart job, restart counter is at 5463.
 Started areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
 areal-task-worker.service: Failed with result 'exit-code'.
-areal-task-worker.service: Scheduled restart job, restart counter is at 5260.
+areal-task-worker.service: Scheduled restart job, restart counter is at 5464.
 Started areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
 areal-task-worker.service: Failed with result 'exit-code'.
-areal-task-worker.service: Scheduled restart job, restart counter is at 5261.
+areal-task-worker.service: Scheduled restart job, restart counter is at 5465.
 Started areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
 areal-task-worker.service: Failed with result 'exit-code'.
-areal-task-worker.service: Scheduled restart job, restart counter is at 5262.
+areal-task-worker.service: Scheduled restart job, restart counter is at 5466.
 Started areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
 areal-task-worker.service: Failed with result 'exit-code'.
-areal-task-worker.service: Scheduled restart job, restart counter is at 5263.
+areal-task-worker.service: Scheduled restart job, restart counter is at 5467.
 Started areal-task-worker.service - Areal Task Worker.
 areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
 areal-task-worker.service: Failed with result 'exit-code'.
-areal-task-worker.service: Scheduled restart job, restart counter is at 5264.
+areal-task-worker.service: Scheduled restart job, restart counter is at 5468.
 Started areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
-areal-task-worker.service: Failed with result 'exit-code'.
-areal-task-worker.service: Scheduled restart job, restart counter is at 5265.
+areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
+areal-task-worker.service: Failed to kill control group /system.slice/areal-task-worker.service, ignoring: Invalid argument
+areal-task-worker.service: Deactivated successfully.
+areal-task-worker.service: Consumed 8.984s CPU time, 134.4M memory peak, 0B memory swap peak.
+areal-task-worker.service: Scheduled restart job, restart counter is at 5469.
 Started areal-task-worker.service - Areal Task Worker.
-areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
-areal-task-worker.service: Failed with result 'exit-code'.
 
 ## JOURNAL_TELEGRAM_INGRESS_30
-2026-07-06 08:34:31,254 INFO DAEMON: Task e3eeed87-4d5c-4dd9-928a-47c9fb101c88 created state=NEW topic_id=2
-2026-07-06 08:34:31,254 INFO DAEMON: Update id=262222334 is handled. Duration 19 ms by bot id=8216054898
-2026-07-06 08:34:47,412 INFO DAEMON: Update id=262222335 is handled. Duration 722 ms by bot id=8216054898
-2026-07-06 10:13:11,636 INFO DAEMON: file_cache is only supported with oauth2client<4.0.0
 2026-07-06 10:13:14,510 INFO DAEMON: Task ef67a6f0-c6e2-436e-904b-58d2c48ca3a0 created state=NEW topic_id=2
 2026-07-06 10:13:14,613 INFO DAEMON: Update id=262222336 is handled. Duration 3566 ms by bot id=8216054898
 2026-07-06 10:13:32,062 INFO DAEMON: Update id=262222337 is handled. Duration 83 ms by bot id=8216054898
@@ -380,3 +376,7 @@ areal-task-worker.service: Failed with result 'exit-code'.
 2026-07-06 11:26:27,376 INFO DAEMON: Update id=262222352 is handled. Duration 14 ms by bot id=8216054898
 2026-07-06 11:38:21,702 INFO DAEMON: Task d1022463-25c8-4f75-9490-6be9a61865dd created state=NEW topic_id=2
 2026-07-06 11:38:21,703 INFO DAEMON: Update id=262222353 is handled. Duration 16 ms by bot id=8216054898
+2026-07-06 12:06:56,786 INFO DAEMON: Task fe2b6928-1fb6-4b18-b071-c7f97e101258 created state=NEW topic_id=2
+2026-07-06 12:06:56,786 INFO DAEMON: Update id=262222354 is handled. Duration 18 ms by bot id=8216054898
+2026-07-06 12:07:04,217 INFO DAEMON: Task 34734fc2-d85e-47f6-a9ed-7dece65b3670 created state=NEW topic_id=2
+2026-07-06 12:07:04,217 INFO DAEMON: Update id=262222355 is handled. Duration 16 ms by bot id=8216054898

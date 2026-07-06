@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_013
-generated_at_utc: 2026-07-06T08:52:42.396287+00:00
-git_sha_before_commit: cdfc72406c0ded2b84941ad40096aeb9ee9dce05
+generated_at_utc: 2026-07-06T09:22:43.486263+00:00
+git_sha_before_commit: 5050af0a852e72589927a2e9cd995b26a90161f2
 part: 13/19
 
 
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 1/2
-SHA256_FULL_FILE: 133bdf5beb91640e2f438779e9594fdddca4c81fac1f01ac9a1b3b37c5577fcb
+SHA256_FULL_FILE: f5e55dbf958c269f99e4a91554d22c89f65a9c02b9527acfc308723711fd9075
 ====================================================================================================
 # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
 from __future__ import annotations
@@ -6297,7 +6297,7 @@ FILE_CHUNK: 1/2
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 2/2
-SHA256_FULL_FILE: 133bdf5beb91640e2f438779e9594fdddca4c81fac1f01ac9a1b3b37c5577fcb
+SHA256_FULL_FILE: f5e55dbf958c269f99e4a91554d22c89f65a9c02b9527acfc308723711fd9075
 ====================================================================================================
 # "Считай по проекту" means: use project facts as input and use existing
 # estimate samples as calculation structure. It must not collapse the estimate
@@ -6566,6 +6566,24 @@ def _t2fo_manual_monolith_work_price_v1(text):
     return 0.0
 
 
+def _t2fo_prices_from_source_lines_v1(price_text, keywords):
+    vals = []
+    for line in str(price_text or "").splitlines():
+        low = _low(line)
+        if not any(_low(k) in low for k in keywords):
+            continue
+        parts = [p.strip() for p in line.strip(" \t-—•·").split("|")]
+        if len(parts) < 2:
+            continue
+        try:
+            v = float(re.sub(r"[^0-9.,]", "", parts[1]).replace(",", "."))
+        except Exception:
+            v = 0.0
+        if 100 <= v <= 10000000:
+            vals.append(v)
+    return vals
+
+
 def _t2fo_build_foundation_items_v1(parsed, price_text, choice):
     parsed = parsed or {}
     P = _FTM_PRICES
@@ -6593,6 +6611,16 @@ def _t2fo_build_foundation_items_v1(parsed, price_text, choice):
 
     concrete_price = _p8v3_mp("бетон в25 w6", P["concrete_b25_mat"])
     rebar_price = _p8v3_mp("арматура металлическая д.12а500", P["rebar_a500_mat"])
+    sand_price = _choose_value(
+        _t2fo_prices_from_source_lines_v1(price_text, ("песок", "песчаная подушка", "песчаный")),
+        choice,
+        P["sand_mat"] + P["sand_work"],
+    )
+    gravel_price = _choose_value(
+        _t2fo_prices_from_source_lines_v1(price_text, ("щебень", "щебеночное основание", "щебеночный", "щебёноч")),
+        choice,
+        P["gravel_mat"] + P["gravel_work"],
+    )
     manual_concrete_work_price = _t2fo_manual_monolith_work_price_v1(raw_text)
     concrete_work_price = manual_concrete_work_price or _p8v3_wp("бетонирование монолитной плиты   б/н", P["concrete_pour_work"])
     concrete_work_note = "ручная цена из правки пользователя" if manual_concrete_work_price else "работы"
@@ -6603,9 +6631,9 @@ def _t2fo_build_foundation_items_v1(parsed, price_text, choice):
     if any(x in raw_text for x in ("подготов", "землян", "котлован", "выемк", "разработка грунта")):
         items.append(_ftm_row("Фундамент", "Подготовка основания и земляные работы", "м³", earth_volume, P["earth_work"], "по ТЗ: подготовка/земляные работы"))
     if sand_t > 0:
-        items.append(_ftm_row("Фундамент", f"Песчаная подушка {int(sand_t * 1000)} мм с уплотнением", "м³", round(prep_area * sand_t, 2), P["sand_mat"] + P["sand_work"], f"площадь подготовки {prep_area:g} м²"))
+        items.append(_ftm_row("Фундамент", f"Песчаная подушка {int(sand_t * 1000)} мм с уплотнением", "м³", round(prep_area * sand_t, 2), sand_price, f"площадь подготовки {prep_area:g} м²"))
     if gravel_t > 0:
-        items.append(_ftm_row("Фундамент", f"Щебёночное основание {int(gravel_t * 1000)} мм с уплотнением", "м³", round(prep_area * gravel_t, 2), P["gravel_mat"] + P["gravel_work"], f"площадь подготовки {prep_area:g} м²"))
+        items.append(_ftm_row("Фундамент", f"Щебёночное основание {int(gravel_t * 1000)} мм с уплотнением", "м³", round(prep_area * gravel_t, 2), gravel_price, f"площадь подготовки {prep_area:g} м²"))
     items.append(_ftm_row("Фундамент", "Опалубка периметра плиты материал", "мп", formwork_perim, P["formwork_perim_mat"], "по размерам с фото"))
     items.append(_ftm_row("Фундамент", "Опалубка плиты монтаж/демонтаж", "мп", formwork_perim, P["formwork_install_work"], "работы"))
     items.append(_ftm_row("Фундамент", f"Арматура А500 для плиты, {layers} слоя", "т", rebar_qty, rebar_price, "расчётная масса от объёма бетона; уточняется по КЖ"))
@@ -6922,6 +6950,128 @@ try:
 except Exception:
     pass
 # === END_PATCH_TOPIC2_PRICE_SEARCH_CONFIRM_AND_READY_DONE_V1 ===
+
+# === PATCH_TOPIC2_FOUNDATION_MISSING_PRICE_CACHE_SONAR_V1 ===
+def _t2fo_price_text_has_family_v1(price_text, keywords):
+    low = _low(price_text or "")
+    return any(_low(k) in low for k in keywords)
+
+
+def _t2fo_offer_lines_v1(label, unit, offers):
+    lines = []
+    for offer in (offers or [])[:3]:
+        try:
+            price = float(offer.get("price") or 0)
+        except Exception:
+            price = 0.0
+        if price <= 0:
+            continue
+        lines.append(
+            "- {} | {} | {} | Санкт-Петербург и Ленинградская область | {} | {} | {}".format(
+                label,
+                price,
+                offer.get("unit") or unit,
+                offer.get("supplier") or "",
+                offer.get("url") or "",
+                offer.get("checked_at") or datetime.date.today().isoformat(),
+            )
+        )
+    return lines
+
+
+_T2FO_MISSING_PRICE_PREV_SEARCH_V1 = _search_prices_online
+
+
+async def _search_prices_online(parsed: Dict[str, Any], template: Dict[str, Any], sheet_name: Optional[str], conn=None, task_id=None) -> str:  # noqa: F811
+    result = await _T2FO_MISSING_PRICE_PREV_SEARCH_V1(parsed, template, sheet_name, conn=conn, task_id=task_id)
+    if not _t2fo_foundation_only_v1(parsed or {}):
+        return result
+
+    raw_text = _low((parsed or {}).get("raw") or "")
+    missing = []
+    if ((parsed or {}).get("sand_thickness_m") or "песчан" in raw_text or "песок" in raw_text):
+        if not _t2fo_price_text_has_family_v1(result, ("песок", "песчаная подушка", "песчаный")):
+            missing.append(("Песок строительный для песчаной подушки", "м3", "sand"))
+    if ((parsed or {}).get("gravel_thickness_m") or "щеб" in raw_text):
+        if not _t2fo_price_text_has_family_v1(result, ("щебень", "щебеночное основание", "щебеночный", "щебёноч")):
+            missing.append(("Щебень для основания фундаментной плиты", "м3", "gravel"))
+    if not missing:
+        return result
+
+    model = os.getenv("OPENROUTER_MODEL_ONLINE", "perplexity/sonar").strip() or "perplexity/sonar"
+    if "sonar" not in model.lower():
+        raise RuntimeError(f"TOPIC2_ONLINE_MODEL_GUARD_BLOCKED_NON_SONAR:{model}")
+
+    from core.price_enrichment import _openrouter_price_search as _missing_price_search
+
+    extra_lines = []
+    for item_name, unit, code in missing:
+        if conn is not None and task_id is not None:
+            _history_safe(conn, task_id, "TOPIC2_PRICE_CACHE_BEFORE_SONAR:" + code)
+            _history_safe(conn, task_id, "TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:" + item_name)
+        try:
+            offers = await asyncio.wait_for(
+                _missing_price_search(item_name, unit, "Санкт-Петербург и Ленинградская область"),
+                timeout=45,
+            )
+        except Exception:
+            offers = []
+        lines = _t2fo_offer_lines_v1(item_name, unit, offers)
+        if lines:
+            extra_lines.extend(lines)
+            if conn is not None and task_id is not None:
+                first = offers[0] if offers else {}
+                _history_safe(conn, task_id, "TOPIC2_PRICE_SOURCE_FOUND:{}:{}:{}".format(
+                    code,
+                    _s(first.get("supplier"))[:50],
+                    _s(first.get("status"))[:20],
+                ))
+        elif conn is not None and task_id is not None:
+            _history_safe(conn, task_id, "TOPIC2_PRICE_SOURCE_MISSING:" + code)
+
+    if not extra_lines:
+        return result
+    joined = (str(result or "").rstrip() + "\n" + "\n".join(extra_lines)).strip()
+    if conn is not None and task_id is not None:
+        _history_safe(conn, task_id, "TOPIC2_MISSING_PRICE_CACHE_SONAR_DONE:" + ",".join(code for _, _, code in missing))
+    return joined
+
+
+def _t2spsm_families_v1(text, section=""):  # noqa: F811
+    low = _low((text or "") + " " + (section or ""))
+    families = set()
+    checks = (
+        ("sand", ("песок", "песчан", "песчаная подушка")),
+        ("gravel", ("щебень", "щебен", "щебеноч", "щебеночное", "щебёноч")),
+        ("gasbeton", ("газобетон", "газоблок", "блок 625", "u-блок", "u блок", "лср")),
+        ("concrete", ("бетон", "монолит", "ж/б", "железобетон", "ростверк", "плита")),
+        ("rebar", ("арматур", "а500", "а240", "проволока вяз")),
+        ("wood", ("доска", "брус", "пиломат", "osb", "фанера")),
+        ("insulation", ("пенопл", "утепл", "минват", "пир", "pir")),
+        ("waterproof", ("гидроизоляц", "линокром", "мастик", "праймер")),
+        ("roof", ("кров", "стропил", "мауэрлат", "мембран", "профнастил", "черепиц")),
+        ("windows", ("окн", "окон", "пвх", "стеклопакет")),
+        ("doors", ("двер", "дверн")),
+        ("delivery", ("достав", "транспорт")),
+        ("unload", ("разгруз", "погруз")),
+        ("crane", ("кран",)),
+        ("pump", ("бетононасос",)),
+        ("masonry_work", ("кладк",)),
+        ("facade", ("фасад", "внешняя отделка")),
+        ("interior", ("внутрен", "отделк", "гкл", "ламинат", "плитк")),
+        ("engineering", ("электрик", "водоснаб", "канализац", "отоплен", "вентиляц", "инженер")),
+    )
+    for fam, terms in checks:
+        if any(term in low for term in terms):
+            families.add(fam)
+    return families
+
+
+try:
+    _STV3_LOG.info("PATCH_TOPIC2_FOUNDATION_MISSING_PRICE_CACHE_SONAR_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_FOUNDATION_MISSING_PRICE_CACHE_SONAR_V1 ===
 
 ====================================================================================================
 END_FILE: core/stroyka_estimate_canon.py

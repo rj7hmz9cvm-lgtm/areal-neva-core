@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_006
-generated_at_utc: 2026-07-06T08:52:42.386771+00:00
-git_sha_before_commit: cdfc72406c0ded2b84941ad40096aeb9ee9dce05
+generated_at_utc: 2026-07-06T09:22:43.480210+00:00
+git_sha_before_commit: 5050af0a852e72589927a2e9cd995b26a90161f2
 part: 6/19
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 2/4
-SHA256_FULL_FILE: 6f7c2839708ae5cce0c530384fbd56cc14f988984e5901d37aa8adb2d46d0aa4
+SHA256_FULL_FILE: 915e7ffdb3d28c522e670e86d6bb39a54420f19c81359fc25debb373a00b97fc
 ====================================================================================================
     if _p6e4_inspect.iscoroutinefunction(orig):
         async def wrapped(*args, **kwargs):
