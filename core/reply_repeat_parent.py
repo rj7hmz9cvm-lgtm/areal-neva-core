@@ -135,6 +135,28 @@ def _clean_result(result: str) -> str:
     except Exception:
         return result.strip()
 
+def _topic500_bad_parent_result(result: str) -> bool:
+    low = _low(result)
+    if not low:
+        return False
+    bad = (
+        "смета создана",
+        "шаблон:",
+        "итого:",
+        "акт технадзора",
+        "нормативная база:",
+        "docs.google.com/spreadsheets",
+        "drive.google.com/file",
+    )
+    good = (
+        "поставщик |",
+        "площадка |",
+        "ссылка |",
+        "проверено",
+        "checked_at",
+    )
+    return any(x in low for x in bad) and not any(x in low for x in good)
+
 def prehandle_reply_repeat_parent_v1(conn: sqlite3.Connection, task: Any) -> Optional[Dict[str, Any]]:
     task_id = _s(_task_field(task, "id"))
     chat_id = _s(_task_field(task, "chat_id"))
@@ -158,6 +180,16 @@ def prehandle_reply_repeat_parent_v1(conn: sqlite3.Connection, task: Any) -> Opt
     summary = _short_task_summary(parent)
 
     if _is_repeat(raw_input):
+        if topic_id == 500 and _topic500_bad_parent_result(parent_result):
+            try:
+                conn.execute(
+                    "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                    (task_id, f"TOPIC500_REPLY_REPEAT_BAD_PARENT_BYPASS:{parent_id[:8]}"),
+                )
+                conn.commit()
+            except Exception:
+                pass
+            return None
         if parent_result:
             msg = "Повторяю результат по исходной задаче\n\n" + parent_result
             state = "DONE"
@@ -168,22 +200,22 @@ def prehandle_reply_repeat_parent_v1(conn: sqlite3.Connection, task: Any) -> Opt
                     "UPDATE tasks SET state='NEW', updated_at=datetime('now') WHERE id=?",
                     (parent_id,),
                 )
-                msg = f"Перезапускаю исходную задачу\nЗадача: {parent_id[:8]}\nКратко: {summary}"
+                msg = f"Перезапускаю исходную задачу\nКратко: {summary}"
                 state = "DONE"
                 hist = f"REPLY_REPEAT_PARENT_TASK_V1:RESTARTED:{parent_id[:8]}"
             else:
-                msg = f"Вижу исходную задачу\nЗадача: {parent_id[:8]}\nСтатус: {parent_state}\nКратко: {summary}"
+                msg = f"Вижу исходную задачу\nКратко: {summary}"
                 state = "DONE"
                 hist = f"REPLY_REPEAT_PARENT_TASK_V1:STATUS:{parent_id[:8]}"
     elif _is_status(raw_input):
         if parent_state in ("NEW", "IN_PROGRESS"):
-            msg = f"Да. Вижу задачу в реплае, продолжаю по ней\nЗадача: {parent_id[:8]}\nСтатус: {parent_state}\nКратко: {summary}"
+            msg = f"Да. Вижу задачу в реплае, продолжаю по ней\nКратко: {summary}"
         elif parent_state in ("AWAITING_CONFIRMATION", "DONE") and parent_result:
             msg = "Да. Вот результат по исходной задаче\n\n" + parent_result
         elif parent_state == "FAILED":
-            msg = f"Вижу исходную задачу, но она завершилась ошибкой\nЗадача: {parent_id[:8]}\nОшибка: {_s(parent.get('error_message')) or 'UNKNOWN'}\nНапиши: повтори — и я перезапущу её"
+            msg = f"Вижу исходную задачу, но она завершилась ошибкой\nОшибка: {_s(parent.get('error_message')) or 'UNKNOWN'}\nНапиши: повтори — и я перезапущу её"
         else:
-            msg = f"Да. Вижу исходную задачу\nЗадача: {parent_id[:8]}\nСтатус: {parent_state}\nКратко: {summary}"
+            msg = f"Да. Вижу исходную задачу\nКратко: {summary}"
         state = "DONE"
         hist = f"REPLY_REPEAT_PARENT_TASK_V1:ACK:{parent_id[:8]}"
     else:

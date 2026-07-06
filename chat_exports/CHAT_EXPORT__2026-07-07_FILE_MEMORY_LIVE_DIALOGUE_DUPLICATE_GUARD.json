@@ -1,0 +1,56 @@
+{
+  "chat_name": "2026-07-07 FILE_MEMORY_LIVE_DIALOGUE_DUPLICATE_GUARD",
+  "exported_at": "2026-07-06T21:31:38.468673+00:00",
+  "source_model": "Codex GPT-5",
+  "source_scope": "Verified server facts from current session only. No secrets included.",
+  "repository": "rj7hmz9cvm-lgtm/areal-neva-core",
+  "system": "AREAL-NEVA / ORIC Telegram orchestra",
+  "applied_canons": [
+    "docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md",
+    "docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md §16.4 and §17.3",
+    "docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md",
+    "docs/ARCHITECTURE/WORKITEM_V1.md"
+  ],
+  "runtime_files_patched": [
+    "core/file_context_intake.py",
+    "task_worker.py",
+    "core/file_memory_bridge.py",
+    "core/active_dialog_state.py",
+    "core/reply_repeat_parent.py"
+  ],
+  "patches": [
+    "TELEGRAM source link is preserved for file memory and duplicate answers via telegram_chat_id + telegram_message_id.",
+    "Historical memory recall now includes source Telegram file link when metadata exists and does not expose task UUID as public answer.",
+    "Duplicate file guard covers drive_file/file/photo/image/document instead of drive_file only.",
+    "drive_file path now runs common file_context prehandle before topic engines, preventing topic_2 PDF pipeline from bypassing duplicate guard.",
+    "Duplicate guard answer is WAITING_CLARIFICATION and asks what to do: update sample, process again, compare versions, ignore duplicate.",
+    "Public live-dialogue helper outputs were cleaned from internal task/status wording."
+  ],
+  "live_verification": [
+    "Worker restarted by direct flock task_worker.py method; systemd was not touched.",
+    "SERVER_PY_COMPILE_OK for task_worker.py and core/file_context_intake.py; earlier compile also covered file_memory_bridge.py, active_dialog_state.py, reply_repeat_parent.py.",
+    "DIFF_CHECK_OK for task_worker.py and core/file_context_intake.py.",
+    "Smoke duplicate finder: photo -> document returned DUP_FOUND True and source link https://t.me/c/3725299009/111.",
+    "First live-control task b7f12c67-dup-live-20260707-001 exposed bypass: drive_file went into topic_2 pipeline.",
+    "Second live-control task b7f12c67-dup-live-20260707-002 passed: state WAITING_CLARIFICATION, reply_to_message_id 10504, bot_message_id 12057, result starts with “Смотри, этот файл ты уже скидывал”.",
+    "Log evidence: PATCH_GLOBAL_DRIVE_FILE_CONTEXT_PREHANDLE_V1 handled task_id=b7f12c67-dup-live-20260707-002."
+  ],
+  "not_touched": [
+    "systemd unit files",
+    ".env",
+    "credentials/tokens/sessions",
+    "core/ai_router.py",
+    "core/reply_sender.py",
+    "core/google_io.py",
+    "Git branches"
+  ],
+  "open_blockers": [
+    "Need owner-driven live test with a newly resent real photo/document in Telegram across relevant topics.",
+    "Topic_2 full canon remains partial; estimate/photo/OCR/multifile flows still need separate verification.",
+    "General live-dialogue completion and memory behavior still need continued topic-by-topic checks."
+  ],
+  "safe_git_policy": [
+    "Do not stage .env, token.json, credentials.json, sessions, data, runtime, logs, backups, databases, or media artifacts.",
+    "Commit only verified source files and clean factual handoff/export files."
+  ]
+}

@@ -224,6 +224,8 @@ def load_file_memory(chat_id: str, topic_id: int, query: str = "", limit: int = 
                             "file_id": data.get("file_id") or "",
                             "file_name": data.get("file_name") or "",
                             "mime_type": data.get("mime_type") or "",
+                            "telegram_message_id": data.get("telegram_message_id") or "",
+                            "telegram_chat_id": data.get("telegram_chat_id") or chat_id,
                             "kind": data.get("kind") or data.get("type") or "",
                             "direction": classify_file_direction(val, str(data.get("file_name") or ""), str(data.get("mime_type") or "")),
                             "links": _extract_links(val),
@@ -275,6 +277,8 @@ def load_file_memory(chat_id: str, topic_id: int, query: str = "", limit: int = 
                             "file_id": data.get("file_id") or "",
                             "file_name": fname,
                             "mime_type": data.get("mime_type") or "",
+                            "telegram_message_id": data.get("telegram_message_id") or "",
+                            "telegram_chat_id": data.get("telegram_chat_id") or chat_id,
                             "input_type": r["input_type"],
                             "state": r["state"],
                             "direction": classify_file_direction(raw + "\n" + res, fname, data.get("mime_type") or ""),
@@ -446,6 +450,20 @@ def _fm_public_links(item: Dict[str, Any], limit: int = 2) -> List[str]:
 
     return found
 
+
+def _fm_telegram_source_link(item: Dict[str, Any]) -> str:
+    chat = _clean(item.get("telegram_chat_id") or "", 80)
+    msg = _clean(item.get("telegram_message_id") or "", 40)
+    if not chat or not msg:
+        return ""
+    if chat.startswith("-100"):
+        chat = chat[4:]
+    else:
+        chat = chat.lstrip("-")
+    if not chat.isdigit() or not msg.isdigit():
+        return ""
+    return f"https://t.me/c/{chat}/{msg}"
+
 def _fm_relevant_public_items(items: List[Dict[str, Any]], user_text: str, limit: int) -> List[Dict[str, Any]]:
     qdom = _fm_query_domain(user_text)
     out: List[Dict[str, Any]] = []
@@ -611,15 +629,16 @@ def build_file_followup_answer(chat_id: str, topic_id: int, user_text: str, limi
     if not items:
         return "В этом топике релевантных файлов по запросу не найдено"
 
-    lines = [
-        "Файлы в этом топике уже есть. Нашёл релевантное:",
-        "",
-    ]
+    lines = ["Нашёл файлы в этом топике:", ""]
 
     for i, item in enumerate(items, 1):
         title = item.get("_public_title") or _fm_public_title(item)
         links = item.get("_public_links") or []
         lines.append(f"{i}. {title}")
+
+        tg_link = _fm_telegram_source_link(item)
+        if tg_link:
+            lines.append(f"   Сообщение: {tg_link}")
 
         if links:
             if len(links) == 1:
@@ -629,20 +648,10 @@ def build_file_followup_answer(chat_id: str, topic_id: int, user_text: str, limi
                 for link in links[:3]:
                     lines.append(f"   - {link}")
 
-        domain = item.get("_public_domain") or _fm_item_domain(item)
-        if domain == "project":
-            lines.append("   Можно использовать как образец проектирования")
-        elif domain == "estimate":
-            lines.append("   Можно использовать как образец сметы")
-        elif domain == "technadzor":
-            lines.append("   Можно использовать для акта технадзора")
-        elif domain == "ocr":
-            lines.append("   Можно разобрать через OCR")
-
         lines.append("")
 
     lines.extend([
-        "Напиши действие: использовать как образец / открыть / обработать заново / сравнить",
+        "Напиши действие: открыть / обработать заново / использовать как образец / сравнить",
     ])
 
     try:
@@ -675,6 +684,8 @@ def save_file_catalog_snapshot(chat_id: str, topic_id: int) -> Dict[str, Any]:
                 "file_id": it.get("file_id"),
                 "file_name": it.get("file_name"),
                 "mime_type": it.get("mime_type"),
+                "telegram_message_id": it.get("telegram_message_id"),
+                "telegram_chat_id": it.get("telegram_chat_id"),
                 "direction": it.get("direction"),
                 "links": it.get("links")[:4] if it.get("links") else [],
                 "timestamp": it.get("timestamp"),

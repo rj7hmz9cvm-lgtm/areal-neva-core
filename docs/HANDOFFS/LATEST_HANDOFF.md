@@ -375,3 +375,51 @@ Not touched:
 
 Open verification:
 - Live Telegram scenarios still need separate owner-driven tests: reply continuation, voice continuation, memory query, pin isolation, file/photo/PDF intake, and correct DONE closure per topic.
+
+
+---
+
+## Progress 2026-07-07 — global file memory / duplicate guard live repair
+
+This is a factual handoff record for the live-dialogue file memory and duplicate-file repair done on 2026-07-07. It is not a new canon and does not replace existing canons.
+
+Applied canon / SSOT rules:
+- `docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md`
+- `docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md` §16.4: file without caption must reply to the file message and enter menu/clarification flow.
+- `docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md` §17.3: repeated file must trigger `FILE_DUPLICATE_MEMORY_GUARD_V1` / “Файл уже есть”.
+- `docs/CANON_FINAL/09_FILE_INTAKE_DRIVE_UPLOAD_2026-04-30.md`: `drive_file.raw_input` contains `file_id`, `file_name`, `mime_type`, `caption`, `telegram_message_id`, `telegram_chat_id`.
+- `docs/ARCHITECTURE/WORKITEM_V1.md`: supported input types include `text / voice / photo / file / drive_file / url / mixed`.
+
+Runtime files patched:
+- `core/file_context_intake.py`: duplicate guard now covers `drive_file`, `file`, `photo`, `image`, `document`; it preserves `telegram_chat_id`, builds Telegram source links, and returns `reply_to_message_id` for the current file message.
+- `task_worker.py`: `drive_file` now runs common file-context prehandle before topic engines through `PATCH_GLOBAL_DRIVE_FILE_CONTEXT_PREHANDLE_V1`; file-like prehandle is allowed even for otherwise isolated topic routes without opening ordinary text routing.
+- `core/file_memory_bridge.py`: historical file-memory answers can include the source Telegram message link when metadata exists.
+- `core/active_dialog_state.py` and `core/reply_repeat_parent.py`: public helper answers were cleaned from internal task/status wording.
+
+Live evidence:
+- Worker restart used the existing direct `flock ... task_worker.py` method; systemd was not touched.
+- `python3 -m py_compile task_worker.py core/file_context_intake.py` -> `SERVER_PY_COMPILE_OK`.
+- `git diff --check -- task_worker.py core/file_context_intake.py` -> `DIFF_CHECK_OK`.
+- Smoke duplicate finder returned `DUP_FOUND True` for `photo` -> `document` and generated `https://t.me/c/3725299009/111`.
+- First live-control task `b7f12c67-dup-live-20260707-001` found the real bypass: `drive_file` skipped common duplicate guard and entered topic_2 PDF pipeline.
+- After `PATCH_GLOBAL_DRIVE_FILE_CONTEXT_PREHANDLE_V1`, second live-control task `b7f12c67-dup-live-20260707-002` passed:
+  - state `WAITING_CLARIFICATION`;
+  - `reply_to_message_id=10504`;
+  - `bot_message_id=12057`;
+  - result starts with `Смотри, этот файл ты уже скидывал`;
+  - source line includes `https://t.me/c/3725299009/10504`;
+  - log line: `PATCH_GLOBAL_DRIVE_FILE_CONTEXT_PREHANDLE_V1 handled task_id=b7f12c67-dup-live-20260707-002`.
+
+Not touched:
+- No systemd unit files were edited.
+- `.env`, credentials, tokens, sessions, databases, runtime media, and secrets were not printed or pushed.
+- `core/ai_router.py`, `core/reply_sender.py`, and `core/google_io.py` were not edited for this repair.
+- No branch was created.
+
+Open verification:
+- Need owner-driven live Telegram test with a freshly resent real photo/document/file in the target topics.
+- Topic_2 full canon remains partial and still needs separate verification for estimate/photo/OCR/PDF/XLSX/multifile, memory, reply, voice, pin isolation, and DONE closure.
+- General live-answer completion and memory behavior remain broader open contours.
+
+Clean export:
+- `chat_exports/CHAT_EXPORT__2026-07-07_FILE_MEMORY_LIVE_DIALOGUE_DUPLICATE_GUARD.json`

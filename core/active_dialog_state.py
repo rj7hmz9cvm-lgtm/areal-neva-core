@@ -38,17 +38,40 @@ def is_short_control(text: str) -> bool:
 def _task_row_to_dict(row: sqlite3.Row) -> Dict[str, Any]:
     return {k: row[k] for k in row.keys()}
 
-def last_active_task(conn: sqlite3.Connection, chat_id: str, topic_id: int) -> Optional[Dict[str, Any]]:
+def _topic500_bad_context(row: Optional[Dict[str, Any]]) -> bool:
+    if not row:
+        return False
+    text = _s(row.get("result") or row.get("raw_input"), 3000).lower().replace("ё", "е")
+    bad = (
+        "смета создана",
+        "шаблон:",
+        "итого:",
+        "акт технадзора",
+        "нормативная база:",
+        "docs.google.com/spreadsheets",
+        "drive.google.com/file",
+    )
+    good = (
+        "поставщик |",
+        "площадка |",
+        "ссылка |",
+        "проверено",
+        "checked_at",
+    )
+    return any(x in text for x in bad) and not any(x in text for x in good)
+
+def last_active_task(conn: sqlite3.Connection, chat_id: str, topic_id: int, current_task_id: str = "") -> Optional[Dict[str, Any]]:
     conn.row_factory = sqlite3.Row
     row = conn.execute(
         """
         SELECT * FROM tasks
         WHERE chat_id=? AND COALESCE(topic_id,0)=?
+          AND id<>?
           AND state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION')
         ORDER BY updated_at DESC, created_at DESC
         LIMIT 1
         """,
-        (str(chat_id), int(topic_id or 0)),
+        (str(chat_id), int(topic_id or 0), str(current_task_id or "")),
     ).fetchone()
     return _task_row_to_dict(row) if row else None
 
@@ -108,8 +131,8 @@ def _memory_lookup(chat_id: str, topic_id: int, query: str = "") -> str:
         return ""
     return "\n".join(out)
 
-def build_active_context(conn: sqlite3.Connection, chat_id: str, topic_id: int, user_text: str = "") -> Dict[str, Any]:
-    active = last_active_task(conn, chat_id, topic_id)
+def build_active_context(conn: sqlite3.Connection, chat_id: str, topic_id: int, user_text: str = "", current_task_id: str = "") -> Dict[str, Any]:
+    active = last_active_task(conn, chat_id, topic_id, current_task_id=current_task_id)
     last_file = last_file_task(conn, chat_id, topic_id)
     mem = _memory_lookup(chat_id, topic_id, clean_voice(user_text))
     return {
@@ -123,6 +146,7 @@ def build_active_context(conn: sqlite3.Connection, chat_id: str, topic_id: int, 
     }
 
 def maybe_handle_active_dialog(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str, topic_id: int) -> Optional[Dict[str, Any]]:
+    task_id = _s(task["id"] if "id" in task.keys() else "")
     raw = _s(task["raw_input"] if "raw_input" in task.keys() else "")
     text = clean_voice(raw)
     low = text.lower()
@@ -196,15 +220,17 @@ def maybe_handle_active_dialog(conn: sqlite3.Connection, task: sqlite3.Row, chat
             }
 
     if is_short_control(text):
-        ctx = build_active_context(conn, chat_id, topic_id, raw)
+        ctx = build_active_context(conn, chat_id, topic_id, raw, current_task_id=task_id)
         active = ctx.get("active_task")
         last_file = ctx.get("last_file")
+        if int(topic_id or 0) == 500 and _topic500_bad_context(last_file):
+            last_file = None
         if active:
             res = _s(active.get("result") or active.get("raw_input"), 1200)
             return {
                 "handled": True,
                 "state": "DONE",
-                "result": f"Активный контекст найден\nЗадача: {active.get('id')}\nСтатус: {active.get('state')}\nКратко: {res}",
+                "result": f"Вижу текущий контекст. Продолжаю по нему.\nКратко: {res}",
                 "event": "ACTIVE_DIALOG_STATE_V1:SHORT_CONTROL_ACTIVE_TASK",
             }
         if last_file:
@@ -212,7 +238,7 @@ def maybe_handle_active_dialog(conn: sqlite3.Connection, task: sqlite3.Row, chat
             return {
                 "handled": True,
                 "state": "DONE",
-                "result": f"Последний файловый контекст найден\nЗадача: {last_file.get('id')}\nСтатус: {last_file.get('state')}\nКратко: {res}",
+                "result": f"Вижу последний файл в этом топике.\nКратко: {res}",
                 "event": "ACTIVE_DIALOG_STATE_V1:SHORT_CONTROL_LAST_FILE",
             }
 

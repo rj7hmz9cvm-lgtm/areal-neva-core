@@ -151,6 +151,7 @@ def _file_payload(raw_input: Any) -> Dict[str, Any]:
         "caption": _s(obj.get("caption")),
         "source": _s(obj.get("source")),
         "telegram_message_id": obj.get("telegram_message_id"),
+        "telegram_chat_id": obj.get("telegram_chat_id"),
         "raw": obj,
     }
 
@@ -255,15 +256,19 @@ def _find_duplicate(conn: sqlite3.Connection, task_id: str, chat_id: str, topic_
     if not file_id and not file_name:
         return None
 
-    params = [str(chat_id), int(topic_id or 0), int(rowid or 10**18)]
-    where = "chat_id=? AND COALESCE(topic_id,0)=? AND input_type='drive_file' AND rowid<?"
+    file_inputs = ("drive_file", "file", "photo", "image", "document")
+    params = [str(chat_id), int(topic_id or 0), int(rowid or 10**18), *file_inputs]
+    where = (
+        "chat_id=? AND COALESCE(topic_id,0)=? AND rowid<? "
+        "AND input_type IN (?,?,?,?,?)"
+    )
 
     if file_id:
-        where += " AND json_extract(raw_input,'$.file_id')=?"
-        params.append(file_id)
+        where += " AND raw_input LIKE ?"
+        params.append(f"%{file_id}%")
     elif file_name:
-        where += " AND lower(json_extract(raw_input,'$.file_name'))=lower(?)"
-        params.append(file_name)
+        where += " AND lower(raw_input) LIKE lower(?)"
+        params.append(f"%{file_name}%")
 
     try:
         row = conn.execute(
@@ -290,17 +295,38 @@ def _find_duplicate(conn: sqlite3.Connection, task_id: str, chat_id: str, topic_
         "state": row["state"] if hasattr(row, "keys") else row[2],
         "file_name": old_name,
         "file_id": old_payload.get("file_id") or file_id,
+        "telegram_message_id": old_payload.get("telegram_message_id"),
+        "telegram_chat_id": old_payload.get("telegram_chat_id") or chat_id,
         "created_at": row["created_at"] if hasattr(row, "keys") else row[6],
         "updated_at": row["updated_at"] if hasattr(row, "keys") else row[7],
     }
 
 
+def _telegram_source_link(chat_id: Any, message_id: Any) -> str:
+    chat = _s(chat_id)
+    msg = _s(message_id)
+    if not chat or not msg:
+        return ""
+    if chat.startswith("-100"):
+        chat = chat[4:]
+    else:
+        chat = chat.lstrip("-")
+    if not chat.isdigit() or not msg.isdigit():
+        return ""
+    return f"https://t.me/c/{chat}/{msg}"
+
+
 def _duplicate_message(payload: Dict[str, Any], dup: Dict[str, Any]) -> str:
     name = payload.get("file_name") or dup.get("file_name") or "файл"
+    link = _telegram_source_link(
+        dup.get("telegram_chat_id") or payload.get("telegram_chat_id"),
+        dup.get("telegram_message_id") or payload.get("telegram_message_id"),
+    )
+    source_line = f"Сообщение: {link}\n" if link else ""
     return (
         "Смотри, этот файл ты уже скидывал\n"
         f"Файл: {name}\n"
-        f"Первая найденная задача: {str(dup.get('task_id') or '')[:8]}\n"
+        f"{source_line}"
         f"Дата: {dup.get('created_at') or dup.get('updated_at') or 'UNKNOWN'}\n\n"
         "Что сделать с ним сейчас?\n"
         "1. Обновить образец\n"
@@ -326,6 +352,7 @@ def _index_telegram_file(chat_id: str, topic_id: int, task_id: str, payload: Dic
         "file_name": payload.get("file_name"),
         "mime_type": payload.get("mime_type"),
         "telegram_message_id": payload.get("telegram_message_id"),
+        "telegram_chat_id": payload.get("telegram_chat_id") or str(chat_id),
         "source": payload.get("source") or "telegram",
     }
     path = _catalog_path(chat_id, topic_id)
@@ -448,7 +475,7 @@ def prehandle_task_context_v1(conn: sqlite3.Connection, task: Any) -> Optional[D
                 "history": "CONTEXT_AWARE_FILE_INTAKE_V1:PENDING_TEMPLATE_BATCH_SAVED",
             }
 
-    if input_type in ("drive_file", "file"):
+    if input_type in ("drive_file", "file", "photo", "image", "document"):
         payload = _file_payload(raw_input)
         if _is_service_file(payload):
             return None
@@ -464,6 +491,7 @@ def prehandle_task_context_v1(conn: sqlite3.Connection, task: Any) -> Optional[D
                 "state": "WAITING_CLARIFICATION",
                 "kind": "duplicate_file_question",
                 "message": msg,
+                "reply_to_message_id": payload.get("telegram_message_id") or reply_to,
                 "history": "TELEGRAM_FILE_MEMORY_INDEX_V1:DUPLICATE_FOUND",
             }
 
@@ -804,4 +832,3 @@ def _pic_is_clarification_text(text: str) -> bool:
         return False
     return _fpcfr_orig(text)
 # === END_FIX_PIC_CLARIFICATION_FRESH_REQUEST_V1 ===
-
