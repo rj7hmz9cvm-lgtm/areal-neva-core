@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-07-06T05:25:02.567119+00:00
-git_sha_before_commit: 62d442794d8907ce7647951855ebfcc0fcabfc46
+generated_at_utc: 2026-07-06T05:35:02.058177+00:00
+git_sha_before_commit: ac196d47315688ed6aeff1ced0afa3f40eb73755
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,7 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: active
 
 ## GIT_LOG_30
+ac196d4 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 62d4427 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 69647c2 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 4af2f18 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
@@ -39,12 +40,11 @@ dfeb42b FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 e5ae7f6 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 605907a FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 f5f758c docs: refresh single model context after topic2 handoff
-d690605 topic2: save canonical live repair handoff
 
 ## GIT_SHOW_STAT_HEAD
-commit 62d442794d8907ce7647951855ebfcc0fcabfc46
-Author: root <root@graceful-olive.ptr.network>
-Date:   Mon Jul 6 08:22:43 2026 +0300
+commit ac196d47315688ed6aeff1ced0afa3f40eb73755
+Author: Ila <ilakuznecov@mac.local>
+Date:   Mon Jul 6 08:25:08 2026 +0300
 
     FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
@@ -102,9 +102,9 @@ Date:   Mon Jul 6 08:22:43 2026 +0300
  .../ORCHESTRA_FULL_CONTEXT_PART_017.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_018.md             |   4 +-
  .../ORCHESTRA_FULL_CONTEXT_PART_019.md             |   4 +-
- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 194 ++++++++++-----------
+ docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 154 ++++++++++-----------
  .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |   4 +-
- docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  48 ++---
+ docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  48 +++----
  docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |   4 +-
  docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |   4 +-
@@ -118,7 +118,7 @@ Date:   Mon Jul 6 08:22:43 2026 +0300
  docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |   4 +-
  .../TOPICS/topic_961_AVTOZAPCHASTI.md              |   4 +-
  docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   4 +-
- 70 files changed, 260 insertions(+), 260 deletions(-)
+ 70 files changed, 240 insertions(+), 240 deletions(-)
 
 ## GIT_CHANGED_FILES_10
 docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md
@@ -195,13 +195,14 @@ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md
 ## CORE_DB_STATE_COUNTS
 - FAILED|3002
 - CANCELLED|865
-- DONE|656
+- DONE|657
 - ARCHIVED|381
 
 ## CORE_DB_OPEN_TASKS
 - 0
 
 ## LATEST_TASKS_15
+- e3eeed87-4d5c-4dd9-928a-47c9fb101c88|2|text|DONE|Ничего|Понял, ничего не меняю. Если понадоблюсь — напишите.|2026-07-06 05:34:47
 - 39af79c1-80eb-4735-8f4f-61548cf13b2e|2|text|DONE|Задача завершена|Подтверждение принято|2026-07-05T22:20:02.789573
 - 24e594b9-1ea3-4b82-86ab-e9355021289b|2|text|DONE|Да всё верно|Подтверждение принято|2026-07-05T22:20:02.789573
 - dfccdbfe-92e3-4fbb-9e16-5450a3fa6479|2|text|CANCELLED|[VOICE] Все есть в проекте.|None|2026-07-05 20:35:27
@@ -224,7 +225,6 @@ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md
 Цены: не выдуманы, Excel содержит формулы и итог
 
 Excel: https://drive.google.com/file/d/1zjtY9gL4YWHGDN-1sT9ly|2026-07-05 17:58:57
-- c81e2756-db52-4277-b694-1631c3f75f14|2|text|DONE|2|Выбор цен привязан к основной задаче: median|2026-07-05 12:31:29
 
 ## LATEST_FAILED_10
 - bd0d5ae1-830d-4250-a8d3-4e730864ad60|2|[VOICE] Работай с той информацией, которая у тебя есть. Мне нужна смета, максимально подробная, но точная.|STALE_TIMEOUT|2026-07-05 20:45:23
@@ -242,6 +242,13 @@ Excel: https://drive.google.com/file/d/1zjtY9gL4YWHGDN-1sT9ly|2026-07-05 17:58:5
 - 0b1a2b5f-a924-4c6a-b123-d24d6bdac167|2|{"source": "manual_runtime_requeue", "request": "полный канонический вывод сметы XLSX и PDF без duplicate guard", "reque|NO_VALID_ARTIFACT|2026-07-04 18:31:28
 
 ## LATEST_TASK_HISTORY_20
+- e3eeed87-4d5c-4dd9-928a-47c9fb101c88|TOPIC2_CANONICAL_REROUTE_V2:CANONICAL_HANDLED|2026-07-06 05:34:47
+- e3eeed87-4d5c-4dd9-928a-47c9fb101c88|TOPIC2_META_CONFIRM_NO_CHANGE_GUARD_V1|2026-07-06 05:34:47
+- e3eeed87-4d5c-4dd9-928a-47c9fb101c88|TOPIC2_DONE_BLOCKED_REASON:no_estimate_generated|2026-07-06 05:34:47
+- e3eeed87-4d5c-4dd9-928a-47c9fb101c88|TOPIC2_CLARIFICATION_MERGE_V2_SKIPPED_FOR_FRESH_FULL_TZ|2026-07-06 05:34:47
+- e3eeed87-4d5c-4dd9-928a-47c9fb101c88|clarified:Всё хорошо спасибо за задачу выполнено|2026-07-06T05:34:46.705311+00:00
+- e3eeed87-4d5c-4dd9-928a-47c9fb101c88|TOPIC2_REVISION_BOUND_TO_PARENT:11641|2026-07-06 05:34:32
+- e3eeed87-4d5c-4dd9-928a-47c9fb101c88|created:NEW|2026-07-06T05:34:31.251469+00:00
 - 39af79c1-80eb-4735-8f4f-61548cf13b2e|TOPIC2_CONFIRM_CHILD_DONE:active_parent_closed|2026-07-05T22:20:02.789573
 - 24e594b9-1ea3-4b82-86ab-e9355021289b|TOPIC2_CONFIRM_CHILD_DONE:active_parent_closed|2026-07-05T22:20:02.789573
 - 7dab7ad1-3335-4385-b942-4c734dbdbebe|state:DONE|2026-07-05T22:20:02.789573
@@ -255,13 +262,6 @@ Excel: https://drive.google.com/file/d/1zjtY9gL4YWHGDN-1sT9ly|2026-07-05 17:58:5
 - 7dab7ad1-3335-4385-b942-4c734dbdbebe|CODEX_RESEND_CANONICAL_FINAL_REPLY_TO_SOURCE:11636:reply_to=11550:thread=2|2026-07-05T22:16:28.267814
 - 7dab7ad1-3335-4385-b942-4c734dbdbebe|CODEX_SEND_CANONICAL_NAMED_ESTIMATE_FILE_TO_TOPIC2:Смета_АР_Проект_21Т_1_7dab7ad1.pdf:ok=True:message_id=11633|2026-07-05T22:11:15.189200
 - 7dab7ad1-3335-4385-b942-4c734dbdbebe|CODEX_SEND_CANONICAL_NAMED_ESTIMATE_FILE_TO_TOPIC2:Смета_АР_Проект_21Т_1_7dab7ad1.xlsx:ok=True:message_id=11632|2026-07-05T22:11:15.188871
-- 7dab7ad1-3335-4385-b942-4c734dbdbebe|CODEX_SEND_FINAL_ESTIMATE_FILE_TO_TOPIC2:stroyka_est_7dab7ad1_1783288732.pdf:ok=True:message_id=11631|2026-07-05T22:07:02.603843
-- 7dab7ad1-3335-4385-b942-4c734dbdbebe|CODEX_SEND_FINAL_ESTIMATE_FILE_TO_TOPIC2:stroyka_estimate_7dab7ad1_1783288730.xlsx:ok=True:message_id=11630|2026-07-05T22:07:02.603558
-- 7dab7ad1-3335-4385-b942-4c734dbdbebe|CODEX_RESEND_FINAL_ESTIMATE_TO_TOPIC2:11628|2026-07-05T22:06:07.308452
-- 7dab7ad1-3335-4385-b942-4c734dbdbebe|FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:estimate_generated|2026-07-05 21:58:56
-- 7dab7ad1-3335-4385-b942-4c734dbdbebe|TOPIC2_TELEGRAM_DELIVERED:11626|2026-07-05 21:58:56
-- 7dab7ad1-3335-4385-b942-4c734dbdbebe|TOPIC2_DRIVE_UPLOAD_PDF_OK|2026-07-05 21:58:56
-- 7dab7ad1-3335-4385-b942-4c734dbdbebe|TOPIC2_DRIVE_UPLOAD_XLSX_OK|2026-07-05 21:58:56
 
 ## MEMORY_DB_COUNT
 - 5295
@@ -351,9 +351,6 @@ areal-task-worker.service: Scheduled restart job, restart counter is at 2723.
 Started areal-task-worker.service - Areal Task Worker.
 
 ## JOURNAL_TELEGRAM_INGRESS_30
-2026-07-05 23:35:20,202 INFO DAEMON: STT env check groq=True
-2026-07-05 23:35:20,202 INFO DAEMON: STT start file=/root/.areal-neva-core/runtime/voice_queue/voice_1003725299009_11603.ogg size=32321 model=whisper-large-v3-turbo
-2026-07-05 23:35:20,588 INFO DAEMON: STT http_status=200
 2026-07-05 23:35:20,588 INFO DAEMON: STT ok transcript_len=98
 2026-07-05 23:35:20,676 INFO DAEMON: Task bd0d5ae1-830d-4250-a8d3-4e730864ad60 created state=NEW topic_id=2
 2026-07-05 23:35:20,676 INFO DAEMON: Update id=262222321 is handled. Duration 679 ms by bot id=8216054898
@@ -381,3 +378,6 @@ Started areal-task-worker.service - Areal Task Worker.
 2026-07-06 04:14:08,256 ERROR DAEMON: Failed to fetch updates - TelegramServerError: Telegram server says - Bad Gateway
 2026-07-06 04:14:08,256 WARNING DAEMON: Sleep for 1.296766 seconds and try again... (tryings = 1, bot id = 8216054898)
 2026-07-06 04:14:51,253 INFO DAEMON: Connection established (tryings = 2, bot id = 8216054898)
+2026-07-06 08:34:31,254 INFO DAEMON: Task e3eeed87-4d5c-4dd9-928a-47c9fb101c88 created state=NEW topic_id=2
+2026-07-06 08:34:31,254 INFO DAEMON: Update id=262222334 is handled. Duration 19 ms by bot id=8216054898
+2026-07-06 08:34:47,412 INFO DAEMON: Update id=262222335 is handled. Duration 722 ms by bot id=8216054898
