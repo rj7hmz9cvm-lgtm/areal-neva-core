@@ -1361,10 +1361,58 @@ def _p6e2_search_messages(q):
 Искать только по текущему запросу
 Площадки: {sources}
 
-Верни только чистую выдачу поставщиков/вариантов:
-Поставщик | Площадка | Город | Цена | Наличие | Доставка | Ссылка | Проверено
-Запрещено возвращать старые товары, сметы, Excel, PDF, строительные позиции из другого запроса"""
-    return [{"role": "system", "content": "CURRENT_QUERY_ONLY. NO_STALE_CONTEXT. NO_ESTIMATE_OUTPUT. NO_INTERNAL_MARKERS."}, {"role": "user", "content": user}]
+Сначала определи режим: procurement / service-local / factual / normative / technical / news / comparison.
+
+Для procurement/service-local верни только чистую выдачу контактов без пояснительных комментариев:
+Profile/поставщик | Сайт/ссылка | Телефон | Цена/условия | Город/регион | Доставка/выезд | Дата проверки | Статус проверки
+
+Правила источников:
+- Дата проверки обязательна для каждой строки.
+- Статус проверки: подтверждено / частично проверено / не подтверждено / риск.
+- Телефон обязателен. Если прямой телефон не найден, строку помечай "не подтверждено" и пиши "телефон не найден".
+- Ссылка должна вести на сайт, профиль, карточку, объявление или страницу поставщика/исполнителя.
+- Лишние комментарии, рекомендации, блоки "что проверить", "риски" и внутренние пояснения не выводить.
+- "Подтверждено" разрешено только при прямой проверке источника, даты и ссылки.
+- Если нет даты, контакта, цены или прямого подтверждения, ставь "частично проверено" или "не подтверждено".
+- Не используй англоязычные статусы CONFIRMED/PARTIAL/UNVERIFIED/RISK в публичном ответе.
+- Не используй колонку "Проверено" и не пиши "Да" вместо статуса проверки.
+- Запрещено возвращать старые товары, сметы, Excel, PDF, строительные позиции из другого запроса.
+- Запрещены fake links, invented prices, invented source names."""
+    system = (
+        "CURRENT_QUERY_ONLY. NO_STALE_CONTEXT. NO_ESTIMATE_OUTPUT. NO_INTERNAL_MARKERS. "
+        "TOPIC_500_UNIVERSAL_SEARCH_CANON. INTERNET_SEARCH_ONLY_SONAR. "
+        "NO_FAKE_LINKS. NO_INVENTED_PRICES. CHECKED_AT_AND_SOURCE_STATUS_REQUIRED."
+    )
+    return [{"role": "system", "content": system}, {"role": "user", "content": user}]
+
+def _p6e2_apply_universal_search_canon(final):
+    text = _p6e2_search_s(final, 12000)
+    if not text:
+        return text
+    checked_at = _utc()
+    text = text.replace("Поставщик | Площадка | Город | Цена | Наличие | Доставка | Ссылка | Проверено",
+                        "Profile/поставщик | Сайт/ссылка | Телефон | Цена/условия | Город/регион | Доставка/выезд | Дата проверки | Статус проверки")
+    text = text.replace("Поставщик/исполнитель | Площадка | Город/регион | Цена | Наличие/условия | Доставка | Контакт | Ссылка | Дата проверки | Статус проверки | Риски",
+                        "Profile/поставщик | Сайт/ссылка | Телефон | Цена/условия | Город/регион | Доставка/выезд | Дата проверки | Статус проверки")
+    text = text.replace("checked_at", "Дата проверки").replace("source_status", "Статус проверки")
+    text = re.sub(r"\s*\|\s*Проверено\s*$", " | Дата проверки | Статус проверки", text, flags=re.I | re.M)
+    text = re.sub(r"\s*\|\s*Да\s*$", f" | {checked_at} | частично проверено", text, flags=re.I | re.M)
+    text = re.sub(r"\s*\|\s*Нет\s*$", f" | {checked_at} | не подтверждено", text, flags=re.I | re.M)
+    text = re.split(
+        r"\n\s*(?:Что брать|Что проверить|Что отброшено|Данные не подтверждены|Рекомендац|Комментар|Риски)\b",
+        text,
+        maxsplit=1,
+        flags=re.I,
+    )[0].rstrip()
+    replacements = {
+        "CONFIRMED": "частично проверено",
+        "PARTIAL": "частично проверено",
+        "UNVERIFIED": "не подтверждено",
+        "RISK": "риск",
+    }
+    for src, dst in replacements.items():
+        text = re.sub(rf"\b{src}\b", dst, text, flags=re.I)
+    return _p6e2_search_s(text, 12000)
 
 try:
     _P6E2_ORIG_SEARCH_RUN = SearchMonolithV2.run
@@ -1380,7 +1428,7 @@ try:
         payload["search_context"] = ""
         online_model = _assert_online_model_allowed(online_model)
         raw = await online_call(online_model, _p6e2_search_messages(q))
-        final = _p6e2_search_s(raw, 12000)
+        final = _p6e2_apply_universal_search_canon(raw)
         stale = ("rockwool", "каменная вата", "термодом", "утеплитель")
         qlow = _p6e2_search_low(q)
         flow = _p6e2_search_low(final)

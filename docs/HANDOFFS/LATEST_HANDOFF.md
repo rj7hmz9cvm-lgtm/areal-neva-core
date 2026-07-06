@@ -281,3 +281,48 @@ Open blockers remain:
 - Still needs full live verification for photo with/without caption, OCR/PDF/XLSX/multifile intake, voice continuation, reply continuation, memory query, pin isolation, and file/project variants.
 - Still needs verification that every estimate row is sourced from the current project/user input or an explicit clarification/search source.
 - Canon append/addendum is not written here; if needed, it must be shown separately and appended only after explicit owner approval.
+
+---
+
+## Progress 2026-07-06 — topic_500 search delivery and output-format checkpoint
+
+This is a factual handoff record for the topic_500 / internet-search work done on 2026-07-06. The task is not fully closed.
+
+Applied canon sources:
+- `docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md`
+- `docs/CANON_FINAL/TOPIC_500_UNIVERSAL_SEARCH_CANON.md`
+- `docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md`
+- `docs/HANDOFFS/LATEST_HANDOFF.md`
+
+Canon addendum written:
+- `docs/CANON_FINAL/TOPIC_500_UNIVERSAL_SEARCH_CANON.md` now has append-only `§11. Append-only addendum 2026-07-06 — long result delivery and contact-first search output`.
+- The addendum fixes the contract for long search results: full result goes to Google Drive, Telegram receives the Drive link.
+- The addendum fixes public procurement/service-local output: `Profile/поставщик`, `Сайт/ссылка`, `Телефон`, `Цена/условия`, `Город/регион`, `Доставка/выезд`, `Дата проверки`, `Статус проверки`.
+- It records that link/profile and phone are the main user-facing fields for contractor/supplier search.
+- It records that service comments, internal statuses, unnecessary explanation blocks, and unhelpful risk/comment blocks must not pollute the public result.
+
+Runtime work completed:
+- `core/reply_sender.py`: long Telegram replies are written to `data/telegram_artifacts`, uploaded to Google Drive through the existing topic Drive OAuth path, and delivered to Telegram as a Drive link.
+- `core/search_session.py`: topic_500 procurement/service-local prompt and postprocess now prefer compact contact-first public output.
+- `core/output_sanitizer.py`: internal English search markers are translated for public output, and the old false text "Полный результат смотри в файле" was removed unless a real file/link exists.
+- `task_worker.py`: topic_500 search tasks are protected from being swallowed by old confirmation/clarification state, and validator accepts Russian source-status markers.
+
+Live evidence:
+- Previous long search result was uploaded to Google Drive and delivered in Telegram:
+  - `bot_message_id=11912`
+  - Drive file: `https://drive.google.com/file/d/1OP6KUrXNnrYLkpitHUF7TMxhTUCti93m/view`
+- Earlier long-result delivery also succeeded:
+  - Drive file: `https://drive.google.com/file/d/1TkZ066-n56ElEuAWfN2h3PW2KnpaVk6X/view`
+- Worker was restarted by the existing direct `flock ... task_worker.py` method; systemd was not touched.
+
+Open blockers remain:
+- The user reports that answer logic is still not fully correct.
+- Task completion/finalization appears to be a broader lifecycle/dialogue blocker, not only topic_500.
+- Reply continuation, final confirmation, and lifecycle completion must be checked across the relevant canon before further patches.
+- This checkpoint is intentionally not marked DONE and should be continued after the owner explains the next failure case.
+
+Verification recorded:
+- `python3 -m py_compile core/search_session.py core/reply_sender.py core/output_sanitizer.py task_worker.py core/ai_router.py` passed after the runtime changes.
+- `.env` was not touched.
+- systemd was not touched.
+- No GitHub push was performed during this checkpoint.

@@ -1229,18 +1229,22 @@ def _recover_stale_tasks(conn: sqlite3.Connection, chat_id: Optional[str]) -> No
             row_raw_input = _s(row["raw_input"])
         except Exception:
             row_raw_input = ""
-        if _force_voice_finish(row_raw_input, result):
+        try:
+            _startup_topic_id = int(row["topic_id"] or 0)
+        except Exception:
+            _startup_topic_id = 0
+        if _startup_topic_id != 500 and _force_voice_finish(row_raw_input, result):
             _update_task(conn, row["id"], state="DONE")
             continue  # FORCE_VOICE_FINISH_HOOK
 
-        if any(m in low_result for m in done_markers):
+        if _startup_topic_id != 500 and any(m in low_result for m in done_markers):
             _update_task(conn, row["id"], state="DONE", error_message="")
             _close_pin(conn, row["id"])
             _history(conn, row["id"], "state:DONE")
             conn.commit()
             continue
 
-        if any(m in low_result for m in junk_markers):
+        if _startup_topic_id != 500 and any(m in low_result for m in junk_markers):
             _update_task(conn, row["id"], state="FAILED", error_message="JUNK_RESULT_CLEANUP")
             _close_pin(conn, row["id"])
             _history(conn, row["id"], "state:FAILED")
@@ -1958,6 +1962,8 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
     try:
         _mq_low = str(raw_input or "").strip().lower().rstrip("!?. ")
         _mq_low = _mq_low.replace("[voice] ", "").replace("[VOICE] ", "").strip()
+        if int(topic_id or 0) == 500:
+            _mq_low = ""
         _mq_markers = (
             "что обсуждали", "что делали", "что мы делали", "что мы обсуждали",
             "неделю назад", "две недели", "три недели", "месяц назад",
@@ -2157,15 +2163,17 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
             except Exception:
                 pass
             return
-        _ff13a_done = await _ff13a_handle_template_estimate_intent(
-            conn=_ff13a_conn,
-            task_id=_ff13a_task_id,
-            chat_id=_ff13a_chat_id,
-            topic_id=_ff13a_topic_id,
-            raw_input=_ff13a_raw_input,
-            input_type=_ff13a_input_type,
-            reply_to_message_id=_ff13a_reply_to,
-        )
+        _ff13a_done = False
+        if _ff13a_topic_id == 2:
+            _ff13a_done = await _ff13a_handle_template_estimate_intent(
+                conn=_ff13a_conn,
+                task_id=_ff13a_task_id,
+                chat_id=_ff13a_chat_id,
+                topic_id=_ff13a_topic_id,
+                raw_input=_ff13a_raw_input,
+                input_type=_ff13a_input_type,
+                reply_to_message_id=_ff13a_reply_to,
+            )
         # === FULLFIX_13B_SAMPLE_HARD_STOP_2 ===
         if _ff13a_done:
             try:
@@ -2779,7 +2787,19 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
         (str(chat_id), task_id, int(topic_id)),
     ).fetchone()
 
-    if pending_confirm:
+    _topic500_explicit_search = False
+    try:
+        _topic500_low = str(raw_input or "").lower().replace("ё", "е")
+        _topic500_explicit_search = int(topic_id or 0) == 500 and any(
+            x in _topic500_low for x in (
+                "найди", "найти", "поищи", "поиск", "ссылка", "ссылку",
+                "цена", "стоимость", "актуальн", "новости", "курс", "погода",
+            )
+        )
+    except Exception:
+        _topic500_explicit_search = False
+
+    if pending_confirm and not _topic500_explicit_search:
         pending_id = _s(pending_confirm["id"])
         pending_role = _extract_role_confirmation(_s(pending_confirm["result"]))
         if pending_role and _is_confirm_intent(raw_input):
@@ -2941,7 +2961,7 @@ async def _handle_new(conn: sqlite3.Connection, task: sqlite3.Row, chat_id: str,
         (str(chat_id), task_id, int(topic_id)),
     ).fetchone()
 
-    if pending_clarify:
+    if pending_clarify and not _topic500_explicit_search:
         pending_id = _s(pending_clarify["id"])
         merged = _clean(_s(pending_clarify["raw_input"]) + "\n\nУточнение пользователя:\n" + raw_input, 12000)
         _update_task(conn, pending_id, raw_input=merged, state="IN_PROGRESS", error_message="")
@@ -5317,6 +5337,20 @@ def _t500_psv_update_done(conn, task_id: str, result_text: str = "") -> None:
     except Exception:
         pass
 
+def _t500_psv_update_awaiting_confirmation(conn, task_id: str, result_text: str = "") -> None:
+    try:
+        _update_task(conn, str(task_id), state="AWAITING_CONFIRMATION", result=str(result_text or ""), error_message="")
+        return
+    except Exception:
+        pass
+    try:
+        conn.execute(
+            "UPDATE tasks SET state='AWAITING_CONFIRMATION', result=?, error_message='', updated_at=datetime('now') WHERE id=?",
+            (str(result_text or ""), str(task_id)),
+        )
+    except Exception:
+        pass
+
 def _t500_psv_update_failed(conn, task_id: str, result_text: str, error_message: str) -> None:
     try:
         _update_task(conn, str(task_id), state="FAILED", result=str(result_text or ""), error_message=str(error_message))
@@ -5357,6 +5391,7 @@ def _t500_psv_has_reply_sent(conn, task_id: str) -> bool:
 
 def _t500_psv_validate_procurement_result(text: str):
     s = str(text or "").strip()
+    slow = s.lower().replace("ё", "е")
     urls = _t500_psv_re.findall(r"https?://[^\s\]\)>,]+", s)
     unique_urls = []
     for u in urls:
@@ -5369,16 +5404,30 @@ def _t500_psv_validate_procurement_result(text: str):
     has_phone = bool(_t500_psv_re.search(r"(\+7|8)\s*[\(\- ]?\d{3}[\)\- ]?\s*\d{3}[\- ]?\d{2}[\- ]?\d{2}|телефон\s+не\s+найден", s, _t500_psv_re.I))
     has_supplier = bool(_t500_psv_re.search(r"(поставщик|магазин|дилер|база|склад|авито|avito|2гис|яндекс|леруа|петрович|термодом|rockwool|роквул)", s, _t500_psv_re.I))
     only_unconfirmed = s.upper().strip() in {"НЕ ПОДТВЕРЖДЕНО", "НЕ ПОДТВЕРЖДЕНО."}
+    false_verified = ("проверено" in slow and "| да" in slow and "source_status: confirmed" not in slow)
+    generic_avito = any(("avito.ru/all/" in u and not _t500_psv_re.search(r"_\\d{6,}", u)) for u in unique_urls)
+    social_marked_by_canon = any(x in slow for x in (
+        "source_status", "unverified", "partial", "risk",
+        "статус проверки", "не подтверж", "частично провер", "риск",
+    ))
+    unverified_tg_vk = any(("t.me/" in u or "vk.com/" in u) for u in unique_urls) and not social_marked_by_canon
+    no_contact = "телефон не найден" in slow and not _t500_psv_re.search(r"(\\+7|8)\\s*[\\(\\- ]?\\d{3}", s)
 
     if not has_min_urls:
         return False, "SEARCH_OUTPUT_INVALID_NO_DIRECT_LINKS"
     if has_bare_refs:
         return False, "SEARCH_OUTPUT_INVALID_BARE_REFS"
+    if false_verified:
+        return False, "SEARCH_OUTPUT_INVALID_FALSE_VERIFIED"
+    if generic_avito:
+        return False, "SEARCH_OUTPUT_INVALID_GENERIC_AVITO_LINK"
+    if unverified_tg_vk:
+        return False, "SEARCH_OUTPUT_INVALID_UNVERIFIED_SOCIAL_LINK"
     if not has_supplier:
         return False, "SEARCH_OUTPUT_INVALID_NO_SUPPLIER"
     if not has_price:
         return False, "SEARCH_OUTPUT_INVALID_NO_PRICE"
-    if not has_phone:
+    if not has_phone or no_contact:
         return False, "SEARCH_OUTPUT_INVALID_NO_PHONE"
     if only_unconfirmed:
         return False, "SEARCH_OUTPUT_INVALID_UNCONFIRMED_ONLY"
@@ -5393,7 +5442,7 @@ def _send_once_ex(conn, task_id, chat_id, text, reply_to, kind):  # TOPIC500_PRE
     try:
         row = conn.execute("SELECT topic_id FROM tasks WHERE id=?", (str(task_id),)).fetchone()
         topic_id = int(_t500_psv_row_get(row, "topic_id", row[0] if row else 0) or 0)
-        if topic_id == 500 and str(kind or "") == "result":
+        if topic_id == 500 and str(kind or "") in ("result", "p6_topic500_search_result"):
             ok, reason = _t500_psv_validate_procurement_result(str(text or ""))
             if not ok:
                 _t500_psv_update_failed(conn, str(task_id), str(text or ""), reason)
@@ -5436,10 +5485,13 @@ def _t500_psv_repair_sent_in_progress(conn) -> None:
             continue
         if not _t500_psv_has_reply_sent(conn, task_id):
             continue
+        current_state = str(_t500_psv_row_get(row, "state", "") or "")
+        if current_state == "AWAITING_CONFIRMATION":
+            continue
         current_result = str(_t500_psv_row_get(row, "result", "") or "")
         latest_result = _t500_psv_latest_history_result(conn, task_id) or current_result
-        _t500_psv_update_done(conn, task_id, latest_result)
-        _t500_psv_history(conn, task_id, "STARTUP_RECOVERY_REPLY_SENT_GUARD_V1:DONE_SKIP_RECOVERY")
+        _t500_psv_update_awaiting_confirmation(conn, task_id, latest_result)
+        _t500_psv_history(conn, task_id, "STARTUP_RECOVERY_REPLY_SENT_GUARD_V1:TOPIC500_KEEP_AWAITING_CONFIRMATION")
     try:
         conn.commit()
     except Exception:
@@ -6604,6 +6656,15 @@ def _p6_bad_search_result_20260504(result, raw_input):
     q = _p6_low_20260504(raw_input)
     if not low or len(low.strip()) < 80:
         return True
+    if any(x in low for x in (
+        "не удалось найти текущие предложения",
+        "в предоставленных данных отсутствуют",
+        "нет актуальных списков",
+        "не найдено актуальных",
+        "не могу выполнить поиск",
+        "я не могу выполнить поиск",
+    )):
+        return True
     # Block estimate artifacts leaking into search
     if any(x in low for x in ("смета готова", "предварительная смета готова", "xlsx:", "pdf:", "engine:", "м-110.xlsx", "ареал нева.xlsx", "позиций: 1. итого: 0.00")):
         return True
@@ -6614,10 +6675,30 @@ def _p6_bad_search_result_20260504(result, raw_input):
     # normative/factual/technical modes return substantive text without prices — allow if >80 chars
     _procurement_signals = ("поставщик", "avito", "авито", "ozon", "озон", "wildberries", "найдено:", "купить", "цена материала")
     _is_procurement_result = any(x in _procurement_signals for x in low.split()) or any(x in low for x in _procurement_signals)
-    if _is_procurement_result:
-        if ("http://" not in low and "https://" not in low) and ("₽" not in low and "руб" not in low and "цена" not in low and "найдено:" not in low):
+    _service_query = any(x in q for x in ("исполнитель", "исполнител", "подрядчик", "услуг", "предложен", "поставщик", "цена", "стоимость", "купить"))
+    if _is_procurement_result or _service_query:
+        if ("http://" not in low and "https://" not in low and "t.me/" not in low):
             return True
     return False
+
+def _p6_topic500_canonical_result_20260706(result):
+    text = _clean(_s(result), 12000)
+    low = text.lower().replace("ё", "е")
+    footer = []
+    if "checked_at" not in low:
+        try:
+            import datetime as _p6t500_dt
+            checked_at = _p6t500_dt.datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+        except Exception:
+            checked_at = "UTC"
+        footer.append("checked_at: " + checked_at)
+    if "source_status" not in low and "статус" not in low:
+        footer.append("source_status: PARTIAL если источник/дата не подтверждены в строке; CONFIRMED только при явной проверке источника")
+    if "доволен результатом" not in low:
+        footer.append("Доволен результатом? Ответь: Да / Уточни / Правки")
+    if footer:
+        text = text.rstrip() + "\n\n" + "\n".join(footer)
+    return text
 
 def _p6_find_previous_topic500_query_20260504(conn, chat_id, current_task_id):
     try:
@@ -6638,16 +6719,34 @@ def _p6_find_previous_topic500_query_20260504(conn, chat_id, current_task_id):
         for r in rows:
             raw = _p6_s_20260504(_p6_row_get_20260504(r, "raw_input", r[0] if r else ""), 4000)
             low = _p6_low_20260504(raw)
+            if _p6_is_offer_followup_without_target_20260706(raw):
+                continue
             if any(x in low for x in ("найди", "поиск", "поищи", "дешевле", "купить", "цена", "стоимость", "iphone", "pixel", "сальник", "сайлент", "саленблок", "rockwool", "утеплитель")):
                 return raw
     except Exception:
         pass
     return ""
 
+def _p6_is_offer_followup_without_target_20260706(raw):
+    low = _p6_low_20260504(raw)
+    if not low:
+        return False
+    has_offer_followup = any(x in low for x in ("самое выгод", "выгодное предлож", "не меньше трех", "не меньше трёх", "минимум три предлож", "три предложени"))
+    if not has_offer_followup:
+        return False
+    target_words = (
+        "исполнитель", "исполнител", "монолит", "проем", "проём", "алмазн",
+        "сальник", "iphone", "pixel", "rockwool", "утеплитель", "арматур",
+        "бетон", "кирпич", "поставщик", "подрядчик",
+    )
+    return not any(x in low for x in target_words)
+
 def _p6_is_vague_search_followup_20260504(raw):
     low = _p6_low_20260504(raw)
     if not low:
         return False
+    if _p6_is_offer_followup_without_target_20260706(raw):
+        return True
     if any(x in low for x in ("найди", "поищи", "поиск", "купить", "дешевле", "цена", "стоимость", "iphone", "pixel", "сальник", "сайлент", "саленблок", "rockwool", "утеплитель")):
         return False
     return len(low) <= 120 and any(x in low for x in ("то что", "то, что", "предыдущ", "прошл", "я тебя про что", "дальше", "ну что", "выполни"))
@@ -6694,7 +6793,7 @@ async def _p6_handle_topic500_search_20260504(conn, task, chat_id, topic_id):
             run_search_monolith_v2(payload, search_text, _openrouter_call, ONLINE_MODEL, SEARCH_SYSTEM_PROMPT),
             timeout=AI_TIMEOUT,
         )
-        result = _clean(_s(result), 12000)
+        result = _p6_topic500_canonical_result_20260706(result)
     except Exception as e:
         err = "P6_TOPIC500_SEARCH_ERROR:" + _p6_s_20260504(type(e).__name__ + ":" + str(e), 500)
         _p6_update_20260504(conn, task_id, state="FAILED", result="", error_message=err)
@@ -6708,11 +6807,11 @@ async def _p6_handle_topic500_search_20260504(conn, task, chat_id, topic_id):
         _p6_update_20260504(conn, task_id, state="FAILED", result=result, error_message=err)
         _p6_history_20260504(conn, task_id, err)
         conn.commit()
-        _send_once_ex(conn, task_id, str(chat_id), "Поиск заблокирован: результат нерелевантен текущему запросу или ушёл в старую сессию. Повтори товар и регион одной строкой", reply_to, "p6_topic500_bad_result")
+        _send_once_ex(conn, task_id, str(chat_id), "SEARCH_FAILED: verified sources not found. Поиск не выдал проверяемые прямые источники по текущему запросу; фейковые ссылки и неподтверждённые цены заблокированы.", reply_to, "p6_topic500_bad_result")
         return True
 
-    _p6_update_20260504(conn, task_id, state="DONE", result=result, error_message="")
-    _p6_history_20260504(conn, task_id, "P6_TOPIC500_SEARCH_DONE")
+    _p6_update_20260504(conn, task_id, state="AWAITING_CONFIRMATION", result=result, error_message="")
+    _p6_history_20260504(conn, task_id, "P6_TOPIC500_SEARCH_AWAITING_CONFIRMATION")
     try:
         _save_memory(str(chat_id), 500, raw_input, result)
     except Exception:

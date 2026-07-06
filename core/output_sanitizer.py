@@ -152,10 +152,20 @@ def sanitize_user_output(text: Any, fallback: str = "Готово") -> str:
     out = "\n".join(lines)
     out = re.sub(r"\n{3,}", "\n\n", out).strip()
     out = re.sub(r"[ \t]{2,}", " ", out)
+    replacements = {
+        "checked_at": "Дата проверки",
+        "source_status": "Статус проверки",
+        "CONFIRMED": "подтверждено",
+        "PARTIAL": "частично проверено",
+        "UNVERIFIED": "не подтверждено",
+        "RISK": "риск",
+    }
+    for src, dst in replacements.items():
+        out = re.sub(rf"\b{src}\b", dst, out, flags=re.I)
     if not out:
         out = fallback
     if len(out) > 3900:
-        out = out[:3800].rstrip() + "\n\nТекст сокращён. Полный результат смотри в файле"
+        out = out[:3800].rstrip() + "\n\nТекст сокращён из-за лимита Telegram. Если нужно, попроси показать оставшиеся строки."
     return out
 
 def sanitize_project_message(text: Any) -> str:
