@@ -326,3 +326,52 @@ Verification recorded:
 - `.env` was not touched.
 - systemd was not touched.
 - No GitHub push was performed during this checkpoint.
+## Progress 2026-07-06 — memory/live dialogue topic isolation repair
+
+This is a factual handoff record for the memory, archive, ContextLoader, and live-dialogue context repair done on 2026-07-06. It is not a new canon and does not rewrite existing canon text.
+
+Applied canon / SSOT rules:
+- `docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md` §0.3: Git/Drive/DB/patch actions require explicit owner approval.
+- `docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md` §0.4: diagnostics first: logs -> db -> pin -> memory -> context -> patch.
+- `docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md` §0.5: read current file -> patch only gap -> compile -> restart -> logs.
+- `docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md` §0.8: do not expose `.env`, credentials, sessions, tokens, or forbidden files without explicit permission.
+- `docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md` §12/§14: GitHub stores only clean safe context; full server export and private values must not be pushed.
+- `docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK.md`: GitHub = brain, server = runtime, Drive = reserve; memory context must be isolated by chat/topic.
+
+Server backup:
+- Backup directory: `/root/.areal-neva-core/backups/memory_lifecycle_20260706_181724`.
+- Contents: `runtime_files_with_secrets.tgz` and `memory.db`.
+- Backup intentionally excludes media, PDFs, XLSX artifacts, Telegram artifacts, Drive exports, templates, and heavy runtime output.
+- Secrets were backed up only on the server and were not printed or copied into this handoff.
+
+Runtime files patched:
+- `memory_api_server.py`: ensures `topic_id` and `scope` columns exist; `/archive` and `/memory` writes preserve `topic_id/scope`; `/memory` GET can filter by `chat_id + topic_id + key`.
+- `core/context_loader.py`: short memory now uses live Memory API on `127.0.0.1:8091` with Authorization instead of stale port `8765`.
+- `task_worker.py`: topic role and DONE memory writes now populate `topic_id/scope` for role, user input, task summary, and assistant output.
+- `core/archive_distributor.py`: archive distribution writes `topic_id/scope` into `memory.db`.
+
+DB maintenance:
+- `data/memory.db` was backed up before DB writes.
+- Existing concrete topic keys were backfilled from `topic_N_*` prefixes into `memory.topic_id`.
+- No memory rows were deleted.
+- `topic_0_*` remains topic 0 by design.
+
+Verification:
+- `.venv/bin/python3 -m py_compile memory_api_server.py core/context_loader.py task_worker.py core/archive_distributor.py` -> `PY_COMPILE_OK`.
+- `areal-memory-api.service` restarted and active.
+- `areal-task-worker.service` restarted and active.
+- Memory API health -> `{"status":"ok"}`.
+- ContextLoader smoke test for chat `-1003725299009`, topic `2` returned 5 rows with `TOPIC_IDS [2]`.
+- `concrete_topic_prefixed_topic0` -> `0`.
+
+Not touched:
+- No systemd unit files were edited.
+- No launch commands were changed.
+- `.env`, credentials, tokens, and sessions were not edited and not printed.
+- `core/ai_router.py`, `core/reply_sender.py`, and `core/google_io.py` were not edited in this repair.
+- Neighboring topic logic was not intentionally changed.
+- No media/artifact folders were backed up or pushed.
+- No branch was created.
+
+Open verification:
+- Live Telegram scenarios still need separate owner-driven tests: reply continuation, voice continuation, memory query, pin isolation, file/photo/PDF intake, and correct DONE closure per topic.
