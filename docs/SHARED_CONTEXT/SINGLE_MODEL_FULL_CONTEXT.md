@@ -1,7 +1,7 @@
 # SINGLE_MODEL_FULL_CONTEXT
 
-GENERATED_AT: 2026-07-06T07:52:42.975192+00:00
-GIT_SHA: 20c42a8cf2dbf4520e1f5516b596fa1753c5895f
+GENERATED_AT: 2026-07-06T08:22:42.760107+00:00
+GIT_SHA: 5ca02cdd69238e358402491f647ce5c384e8c39a
 PURPOSE: Один файл с полным контекстом проекта для любой модели
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 
@@ -22,7 +22,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 | topic_id | name | status | active | failed_24h |
 |----------|------|--------|--------|------------|
 | 0 | COMMON | UNKNOWN | 0 | 0 |
-| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 1 | 5 |
+| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 1 | 4 |
 | 5 | TEKHNADZOR | UNKNOWN | 0 | 0 |
 | 11 | VIDEO | UNKNOWN | 0 | 0 |
 | 210 | PROEKTIROVANIE | UNKNOWN | 0 | 0 |
@@ -4036,8 +4036,8 @@ I canno
 ```
 # topic_0 COMMON
 
-GENERATED_AT: 2026-07-06T07:52:42.613745+00:00
-GIT_SHA: 20c42a8cf2dbf4520e1f5516b596fa1753c5895f
+GENERATED_AT: 2026-07-06T08:22:42.406546+00:00
+GIT_SHA: 5ca02cdd69238e358402491f647ce5c384e8c39a
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 0
@@ -4114,10 +4114,14 @@ STATUS: SYNCED_LOCAL
 ## TOPIC_2_STROYKA
 
 STATUS: INSTALLED_NOT_VERIFIED
-ACTIVE: 1  FAILED_24H: 5
+ACTIVE: 1  FAILED_24H: 4
 DIRECTIONS_BOUND: Сметы
 
 ### LAST_FAILED (5)
+- ca9ca9eb | 2026-07-06 11:22:11 | STALE_TIMEOUT
+    history: reply_sent:stale_failed
+    history: state:FAILED
+    history: TOPIC2_REVISION_BOUND_TO_PARENT:11784
 - bd0d5ae1 | 2026-07-05 23:45:23 | STALE_TIMEOUT
     history: reply_sent:stale_failed
     history: state:FAILED
@@ -4134,10 +4138,6 @@ DIRECTIONS_BOUND: Сметы
     history: state:FAILED
     history: TOPIC2_MISSING_GATE_ANTILOOP_BLOCKED_DEFAULTS:count=3
     history: FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:clarification
-- dfdc5ca5 | 2026-07-05 11:03:07 | STALE_TIMEOUT
-    history: reply_sent:stale_failed
-    history: state:FAILED
-    history: TOPIC2_CANONICAL_REROUTE_V2:CANONICAL_HANDLED
 
 ### KEY_ENGINE_CODE (head 250 lines each)
 #### core/sample_template_engine.py
@@ -4606,10 +4606,14 @@ def _t2pcl_old_public_output(text):
     s = _s(text)
     if not s:
         return False
-    if any(x in s for x in ("⏳ Задачу понял", "Шаблон:", "Лист:", "Цены из листа")):
+    if '✅ Смета готова' not in s and any(x in s for x in ("⏳ Задачу понял", "Шаблон:", "Лист:", "Цены из листа")):
         return True
-    if "✅ Смета готова" in s and not ("drive.google.com" in s and (".xlsx" in s or "spreadsheets/d" in s) and ".pdf" in s):
-        return True
+    if '✅ Смета готова' in s:
+        has_drive_link = ('drive.google.com' in s) or ('docs.google.com' in s)
+        has_excel_link = ('Excel:' in s or 'XLSX:' in s) and has_drive_link
+        has_pdf_link = 'PDF:' in s and has_drive_link
+        if not (has_excel_link and has_pdf_link):
+            return True
     return False
 
 async def _t2pcl_send_price_choice_prompt(conn, task_id, chat_id, reply_to_message_id=None, repeat=True):
@@ -4642,10 +4646,6 @@ async def _t2pcl_price_choice_guard(conn, task_id, chat_id, raw_input, reply_to_
     choice = _t2pcl_parse_explicit_price_choice(raw_input)
     if choice:
         _history_safe(conn, task_id, "TOPIC2_PRICE_CHOICE_CONFIRMED:" + choice)
-        return False
-    return await _t2pcl_send_price_choice_prompt(
-        conn, task_id, chat_id, reply_to_message_id,
-        repeat=("TOPIC2_PRICE_CHOICE_REQUESTED" in hist),
 ```
 
 #### core/topic2_estimate_final_close_v2.py
@@ -4906,8 +4906,8 @@ def _write_xlsx(path: Path, items: List[Dict[str, Any]], source_text: str, photo
 ```
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-07-06T07:52:42.656452+00:00
-GIT_SHA: 20c42a8cf2dbf4520e1f5516b596fa1753c5895f
+GENERATED_AT: 2026-07-06T08:22:42.450791+00:00
+GIT_SHA: 5ca02cdd69238e358402491f647ce5c384e8c39a
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -4915,21 +4915,21 @@ ROLE: Сметы
 DIRECTIONS_BOUND: estimates
 CURRENT_STATUS: INSTALLED_NOT_VERIFIED
 ACTIVE_TASKS: 1
-FAILED_LAST_24H: 5
+FAILED_LAST_24H: 4
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 12
 - AWAITING_CONFIRMATION: 1
 - CANCELLED: 143
 - DONE: 207
-- FAILED: 143
+- FAILED: 144
 
 ## LATEST_FAILED
+- ca9ca9eb | STALE_TIMEOUT
 - bd0d5ae1 | STALE_TIMEOUT
 - 9c5946d7 | STALE_TIMEOUT
 - ea794751 | NO_VALID_ARTIFACT
 - 16b3b2e6 | STALE_TIMEOUT
-- dfdc5ca5 | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
 - f5f758c|docs: refresh single model context after topic2 handoff
@@ -4944,30 +4944,30 @@ FAILED_LAST_24H: 5
 - continued:Необходимо посчитать проект. Проект находится в 100 километров от Санк
 - continued:дду
 - cancelled
-- PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:STALE_PRICE_AND_RESULT_MARKERS_RESET
-- clarified:посчитать работы и материалы согласно проекта
-- PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:MERGED_CHILD:5a9afade-f25d-466e-8dc7-
-- PATCH_TOPIC2_FOLLOWUP_BIND_TO_PARENT_TZ_V1:MERGED_TO_PARENT:dfdc5ca5-7bb3-48c8-8
-- TOPIC2_REPEAT_PARENT_TASK:a82cfa53-b9a6-467e-935c-3e98e1f5d605
-- FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:clarification
-- TOPIC2_CANONICAL_REROUTE_V2:CANONICAL_HANDLED
-- TOPIC2_REVISION_BOUND_TO_PARENT:2
 - clarified:вот проект
-- TOPIC2_REPEAT_PARENT_TASK:dfdc5ca5-7bb3-48c8-8d66-1b79d279312e
 - clarified:Всё есть в проекте
 - clarified:Металлоконструкция
-- TOPIC2_MISSING_GATE_ANTILOOP_BLOCKED_DEFAULTS:count=3
-- state:FAILED
-- reply_sent:stale_failed
-- TOPIC2_MISSING_GATE_ANTILOOP_BLOCKED_DEFAULTS:count=4
 - clarified:Отмена задач
-- TOPIC2_CANONICAL_REROUTE_V2:FALLBACK_TO_OLD_PIPELINE
-- P3_TOPIC2_FINAL_AWAITING_CONFIRMATION_ROWS_20_PRICE_APPLIED_4
-- P3_TOPIC2_FINAL_DONE_ROWS_20_PRICE_APPLIED_4
-- TOPIC2_DONE_ONLY_AFTER_USER_YES_V1:P3_FINAL_WAITING_CONFIRMATION
-- TOPIC2_ONE_BIG_FINAL_PIPELINE_V1:superseded_by:489cfefe-3048-4056-8362-2dfc90a31
-- PATCH_TOPIC2_SUPPLIER_AND_HEAL_V1:TG_EDIT:OK
-- PATCH_TOPIC2_PDF_AND_REAL_SUPPLIERS_V1:SONAR_SEARCH_OK:8
+- CODEX_RERUN_AS_NEW_FROM:489cfefe-3048-4056-8362-2dfc90a3196a
+- FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_MEMORY_REVIVE_FIX:revived_old_estimate_raw_
+- TOPIC2_ONLINE_MODEL_SONAR_CONFIRMED:perplexity/sonar
+- TOPIC2_PRICE_ENRICHMENT_STARTED
+- TOPIC2_PRICE_ENRICHMENT_DONE:1593
+- TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:каркас
+- TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:Бетон В25
+- TOPIC2_PRICE_SOURCE_FOUND:Бетон В25:PK-Beton:CONFIRMED
+- TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:Арматура А500
+- TOPIC2_PRICE_SOURCE_FOUND:Арматура А500:Леруа Мерлен:CONFIRMED
+- TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:монолитная плита
+- TOPIC2_PRICE_SOURCE_FOUND:монолитная плита:Петрович:CONFIRMED
+- TOPIC2_PRICE_WORK_SEARCH_STARTED:Работы по монтажу и кладке
+- TOPIC2_PRICE_SOURCE_FOUND:Работы по монтажу и кладке:Петрович:CONFIRMED
+- TOPIC2_PRICE_CHOICE_REQUESTED
+- TOPIC2_OLD_PUBLIC_OUTPUT_BLOCKED_BY_PRICE_CHOICE_GATE
+- FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:prices_shown
+- TOPIC2_CANONICAL_REROUTE_V2:CANONICAL_HANDLED
+- clarified:3
+- TOPIC2_PRICE_CHOICE_CONFIRMED:maximum
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210
@@ -5040,12 +5040,7 @@ PATCH_TOPIC2_FULL_GAP_CLOSE_V4
 - TOPIC2_DONE_CONTRACT_OK
 
 ## MARKERS_MISSING
-- TOPIC2_ESTIMATE_SESSION_CREATED
-- TOPIC2_CONTEXT_READY
 - TOPIC2_LOGISTICS_CONFIRMED
-- TOPIC2_XLSX_CREATED
-- TOPIC2_MESSAGE_THREAD_ID_OK
-- TOPIC2_DONE_CONTRACT_OK
 
 ## REGRESSION_GUARDS
 - не возвращать P6E67_PARENT_NOT_FOUND на полное ТЗ
@@ -5621,8 +5616,8 @@ _P6H5_NORMATIVE_EXPAND = [
 ```
 # topic_5 TEKHNADZOR
 
-GENERATED_AT: 2026-07-06T07:52:42.690461+00:00
-GIT_SHA: 20c42a8cf2dbf4520e1f5516b596fa1753c5895f
+GENERATED_AT: 2026-07-06T08:22:42.490505+00:00
+GIT_SHA: 5ca02cdd69238e358402491f647ce5c384e8c39a
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 5
@@ -5724,8 +5719,8 @@ DIRECTIONS_BOUND: Видео
 ```
 # topic_11 VIDEO
 
-GENERATED_AT: 2026-07-06T07:52:42.714557+00:00
-GIT_SHA: 20c42a8cf2dbf4520e1f5516b596fa1753c5895f
+GENERATED_AT: 2026-07-06T08:22:42.521286+00:00
+GIT_SHA: 5ca02cdd69238e358402491f647ce5c384e8c39a
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 11
@@ -6334,8 +6329,8 @@ def _normalize_sheet_register(template: Dict[str, Any], data: Dict[str, Any]) ->
 ```
 # topic_210 PROEKTIROVANIE
 
-GENERATED_AT: 2026-07-06T07:52:42.753231+00:00
-GIT_SHA: 20c42a8cf2dbf4520e1f5516b596fa1753c5895f
+GENERATED_AT: 2026-07-06T08:22:42.563399+00:00
+GIT_SHA: 5ca02cdd69238e358402491f647ce5c384e8c39a
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 210
@@ -6901,8 +6896,8 @@ except Exception:
 ```
 # topic_500 VEB_POISK
 
-GENERATED_AT: 2026-07-06T07:52:42.794373+00:00
-GIT_SHA: 20c42a8cf2dbf4520e1f5516b596fa1753c5895f
+GENERATED_AT: 2026-07-06T08:22:42.601983+00:00
+GIT_SHA: 5ca02cdd69238e358402491f647ce5c384e8c39a
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 500
@@ -7004,8 +6999,8 @@ DIRECTIONS_BOUND: Сервер DevOps
 ```
 # topic_794 DEVOPS
 
-GENERATED_AT: 2026-07-06T07:52:42.821307+00:00
-GIT_SHA: 20c42a8cf2dbf4520e1f5516b596fa1753c5895f
+GENERATED_AT: 2026-07-06T08:22:42.632527+00:00
+GIT_SHA: 5ca02cdd69238e358402491f647ce5c384e8c39a
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 794
@@ -7100,8 +7095,8 @@ DIRECTIONS_BOUND: Автозапчасти
 ```
 # topic_961 AVTOZAPCHASTI
 
-GENERATED_AT: 2026-07-06T07:52:42.852959+00:00
-GIT_SHA: 20c42a8cf2dbf4520e1f5516b596fa1753c5895f
+GENERATED_AT: 2026-07-06T08:22:42.662575+00:00
+GIT_SHA: 5ca02cdd69238e358402491f647ce5c384e8c39a
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 961
@@ -7193,8 +7188,8 @@ DIRECTIONS_BOUND: Мозги оркестра
 ```
 # topic_3008 KODY_MOZGOV
 
-GENERATED_AT: 2026-07-06T07:52:42.889654+00:00
-GIT_SHA: 20c42a8cf2dbf4520e1f5516b596fa1753c5895f
+GENERATED_AT: 2026-07-06T08:22:42.691819+00:00
+GIT_SHA: 5ca02cdd69238e358402491f647ce5c384e8c39a
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 3008
@@ -7297,8 +7292,8 @@ DIRECTIONS_BOUND: CRM лиды
 ```
 # topic_4569 CRM_LEADS
 
-GENERATED_AT: 2026-07-06T07:52:42.926748+00:00
-GIT_SHA: 20c42a8cf2dbf4520e1f5516b596fa1753c5895f
+GENERATED_AT: 2026-07-06T08:22:42.721761+00:00
+GIT_SHA: 5ca02cdd69238e358402491f647ce5c384e8c39a
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 4569
@@ -7406,8 +7401,8 @@ DIRECTIONS_BOUND: Поиск работы
 ```
 # topic_6104 JOB_SEARCH
 
-GENERATED_AT: 2026-07-06T07:52:42.966471+00:00
-GIT_SHA: 20c42a8cf2dbf4520e1f5516b596fa1753c5895f
+GENERATED_AT: 2026-07-06T08:22:42.752196+00:00
+GIT_SHA: 5ca02cdd69238e358402491f647ce5c384e8c39a
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 6104

@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_013
-generated_at_utc: 2026-07-06T07:52:42.460947+00:00
-git_sha_before_commit: 20c42a8cf2dbf4520e1f5516b596fa1753c5895f
+generated_at_utc: 2026-07-06T08:22:42.338296+00:00
+git_sha_before_commit: 5ca02cdd69238e358402491f647ce5c384e8c39a
 part: 13/19
 
 
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 1/2
-SHA256_FULL_FILE: aac16a49dc483c414f1c7247e26ceb5bf2da1d80338b03d6ba7cfb48ac261dd5
+SHA256_FULL_FILE: 9d9ac0dc46569251c754281ed098a7a1b420d7cea35e245b255af7da4f9b0936
 ====================================================================================================
 # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
 from __future__ import annotations
@@ -219,10 +219,14 @@ def _t2pcl_old_public_output(text):
     s = _s(text)
     if not s:
         return False
-    if any(x in s for x in ("⏳ Задачу понял", "Шаблон:", "Лист:", "Цены из листа")):
+    if '✅ Смета готова' not in s and any(x in s for x in ("⏳ Задачу понял", "Шаблон:", "Лист:", "Цены из листа")):
         return True
-    if "✅ Смета готова" in s and not ("drive.google.com" in s and (".xlsx" in s or "spreadsheets/d" in s) and ".pdf" in s):
-        return True
+    if '✅ Смета готова' in s:
+        has_drive_link = ('drive.google.com' in s) or ('docs.google.com' in s)
+        has_excel_link = ('Excel:' in s or 'XLSX:' in s) and has_drive_link
+        has_pdf_link = 'PDF:' in s and has_drive_link
+        if not (has_excel_link and has_pdf_link):
+            return True
     return False
 
 async def _t2pcl_send_price_choice_prompt(conn, task_id, chat_id, reply_to_message_id=None, repeat=True):
@@ -6293,14 +6297,6 @@ def _t2s_sample_matrix_mode_v1(parsed):
 def _t2s_with_project_only_disabled_v1(callback):
     guard = globals().get("_t2_no_template_orient_allowed_v1")
 
-    def _sample_matrix_guard(_parsed):
-        return False
-
-    globals()["_t2_no_template_orient_allowed_v1"] = _sample_matrix_guard
-    try:
-        return callback()
-    finally:
-        if guard is not None:
 
 ====================================================================================================
 END_FILE: core/stroyka_estimate_canon.py
@@ -6310,8 +6306,16 @@ FILE_CHUNK: 1/2
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 2/2
-SHA256_FULL_FILE: aac16a49dc483c414f1c7247e26ceb5bf2da1d80338b03d6ba7cfb48ac261dd5
+SHA256_FULL_FILE: 9d9ac0dc46569251c754281ed098a7a1b420d7cea35e245b255af7da4f9b0936
 ====================================================================================================
+    def _sample_matrix_guard(_parsed):
+        return False
+
+    globals()["_t2_no_template_orient_allowed_v1"] = _sample_matrix_guard
+    try:
+        return callback()
+    finally:
+        if guard is not None:
             globals()["_t2_no_template_orient_allowed_v1"] = guard
 
 
@@ -6529,7 +6533,8 @@ def _t2fo_build_foundation_items_v1(parsed, price_text, choice):
     gravel_t = _t2fo_float_v1(parsed.get("gravel_thickness_m"), 0.0)
     layers = _t2fo_int_v1(parsed.get("reinforcement_layers"), 2)
     distance = _t2fo_float_v1(parsed.get("distance_km"), 0.0)
-    concrete_grade = _s(parsed.get("concrete_grade") or ("М350" if "350" in _low(parsed.get("raw") or "") else "В25"))
+    raw_text = _low(parsed.get("raw") or "")
+    concrete_grade = _s(parsed.get("concrete_grade") or ("М350" if "350" in raw_text else "В25"))
 
     concrete_volume = round(area * slab_t, 2)
     rebar_qty = round(max(concrete_volume * 0.08 * (max(layers, 1) / 2.0), 0.1), 3)
@@ -6542,7 +6547,8 @@ def _t2fo_build_foundation_items_v1(parsed, price_text, choice):
     delivery_price = round(P["logist_delivery"] * max(distance / 30.0, 1.0), 2) if distance else 0
 
     items = []
-    items.append(_ftm_row("Фундамент", "Подготовка основания и земляные работы", "м³", earth_volume, P["earth_work"], "по ТЗ: подготовка под плиту"))
+    if any(x in raw_text for x in ("подготов", "землян", "котлован", "выемк", "разработка грунта")):
+        items.append(_ftm_row("Фундамент", "Подготовка основания и земляные работы", "м³", earth_volume, P["earth_work"], "по ТЗ: подготовка/земляные работы"))
     if sand_t > 0:
         items.append(_ftm_row("Фундамент", f"Песчаная подушка {int(sand_t * 1000)} мм с уплотнением", "м³", round(prep_area * sand_t, 2), P["sand_mat"] + P["sand_work"], f"площадь подготовки {prep_area:g} м²"))
     if gravel_t > 0:
@@ -6553,7 +6559,8 @@ def _t2fo_build_foundation_items_v1(parsed, price_text, choice):
     items.append(_ftm_row("Фундамент", f"Армирование фундаментной плиты, {layers} слоя", "м²", area, _p8v3_wp("устройство арматурного каркаса", P["rebar_install_work"]), "работы"))
     items.append(_ftm_row("Фундамент", f"Бетон {concrete_grade} для монолитной плиты {int(slab_t * 1000)} мм", "м³", concrete_volume, concrete_price, "по ТЗ"))
     items.append(_ftm_row("Фундамент", "Бетонирование фундаментной плиты", "м³", concrete_volume, _p8v3_wp("бетонирование монолитной плиты   б/н", P["concrete_pour_work"]), "работы"))
-    items.append(_ftm_row("Фундамент", "Аренда бетононасоса / подача бетона", "смена", 1, pump_price, "для объёма бетона плиты"))
+    if any(x in raw_text for x in ("бетононасос", "насос", "подач")):
+        items.append(_ftm_row("Фундамент", "Аренда бетононасоса / подача бетона", "смена", 1, pump_price, "по ТЗ: подача бетона"))
     if delivery_price:
         items.append(_ftm_row("Логистика", f"Доставка материалов от Санкт-Петербурга, {distance:g} км", "компл", 1, delivery_price, "по ТЗ: удалённость объекта"))
 
@@ -6574,6 +6581,53 @@ try:
 except Exception:
     pass
 # === END_PATCH_TOPIC2_FOUNDATION_ONLY_PHOTO_SCOPE_V1 ===
+
+# === PATCH_TOPIC2_FOUNDATION_NO_TEMPLATE_ROWS_V1 ===
+_T2FO_NTR_PREV_CREATE_XLSX_V1 = _create_xlsx_from_template
+
+
+def _t2fo_strip_non_areal_sheets_v1(path):
+    try:
+        from openpyxl import load_workbook as _t2fo_load_workbook
+        wb = _t2fo_load_workbook(path)
+        if "AREAL_CALC" not in wb.sheetnames:
+            return
+        for ws in list(wb.worksheets):
+            if ws.title != "AREAL_CALC":
+                wb.remove(ws)
+        ws = wb["AREAL_CALC"]
+        for row_idx in range(ws.max_row, 1, -1):
+            if _low(ws.cell(row_idx, 2).value or "") == "не входит":
+                ws.delete_rows(row_idx, ws.max_row - row_idx + 1)
+                break
+        wb.active = 0
+        wb.save(path)
+    except Exception as _t2fo_e:
+        try:
+            _STV3_LOG.warning("PATCH_TOPIC2_FOUNDATION_NO_TEMPLATE_ROWS_V1 strip failed: %s", _t2fo_e)
+        except Exception:
+            pass
+
+
+def _t2fo_create_without_template_rows_v1(task_id, parsed, template, template_path, sheet_name, price_text, choice):
+    original_create = globals().get("_T2TR_ORIG_CREATE_XLSX") or _T2FO_NTR_PREV_CREATE_XLSX_V1
+    path, items, total = original_create(task_id, parsed, template, template_path, sheet_name, price_text, choice)
+    _t2fo_strip_non_areal_sheets_v1(path)
+    return path, items, total
+
+
+def _create_xlsx_from_template(task_id, parsed, template, template_path, sheet_name, price_text, choice):  # noqa: F811
+    if _t2fo_foundation_only_v1(parsed):
+        return _t2fo_create_without_template_rows_v1(task_id, parsed, template, template_path, sheet_name, price_text, choice)
+    return _T2FO_NTR_PREV_CREATE_XLSX_V1(task_id, parsed, template, template_path, sheet_name, price_text, choice)
+
+
+try:
+    _STV3_LOG.info("PATCH_TOPIC2_FOUNDATION_NO_TEMPLATE_ROWS_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_FOUNDATION_NO_TEMPLATE_ROWS_V1 ===
+
 
 ====================================================================================================
 END_FILE: core/stroyka_estimate_canon.py
