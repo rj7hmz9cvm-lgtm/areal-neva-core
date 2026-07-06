@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_013
-generated_at_utc: 2026-07-06T09:22:43.486263+00:00
-git_sha_before_commit: 5050af0a852e72589927a2e9cd995b26a90161f2
+generated_at_utc: 2026-07-06T09:52:44.439268+00:00
+git_sha_before_commit: 5d528b38229ba6dd2caeb4663a75c62515f156eb
 part: 13/19
 
 
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 1/2
-SHA256_FULL_FILE: f5e55dbf958c269f99e4a91554d22c89f65a9c02b9527acfc308723711fd9075
+SHA256_FULL_FILE: 8f6d16029af0ca57708ff98a37fc19acd74153481188909aed31307dafd142f1
 ====================================================================================================
 # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
 from __future__ import annotations
@@ -6297,7 +6297,7 @@ FILE_CHUNK: 1/2
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 2/2
-SHA256_FULL_FILE: f5e55dbf958c269f99e4a91554d22c89f65a9c02b9527acfc308723711fd9075
+SHA256_FULL_FILE: 8f6d16029af0ca57708ff98a37fc19acd74153481188909aed31307dafd142f1
 ====================================================================================================
 # "Считай по проекту" means: use project facts as input and use existing
 # estimate samples as calculation structure. It must not collapse the estimate
@@ -7073,6 +7073,247 @@ except Exception:
     pass
 # === END_PATCH_TOPIC2_FOUNDATION_MISSING_PRICE_CACHE_SONAR_V1 ===
 
+# === PATCH_TOPIC2_RELIABLE_PRICE_AND_FOUNDATION_SOURCE_GUARD_V1 ===
+# Canon/user rule: "3 / надёжные" is a reliable price level, not maximum.
+# Foundation-only final with explicit internet check must not close while
+# песок/щебень remain without live/cache source lines.
+_T2RPF_PREV_PARSE_PRICE_CHOICE_V1 = parse_price_choice
+
+
+def _t2rpf_reliable_requested_v1(text):
+    t = _low(text or "").replace("[voice]", "").strip()
+    t = re.sub(r"\s+", " ", t).strip(" .,!?:;()[]{}")
+    return (
+        t in ("3", "3.", "третий", "вариант 3", "вариант в", "в", "v", "в)", "v)")
+        or "надежн" in t
+        or "надёжн" in t
+        or "проверенн" in t
+        or "раздел три" in t
+    )
+
+
+def parse_price_choice(text: str) -> Dict[str, Any]:  # noqa: F811
+    res = dict(_T2RPF_PREV_PARSE_PRICE_CHOICE_V1(text))
+    t = _low(text or "").replace("[voice]", "").strip()
+    t = re.sub(r"\s+", " ", t).strip(" .,!?:;()[]{}")
+    explicit_max = any(x in t for x in ("максим", "max", "макс ")) and not any(x in t for x in ("не максим", "а не максим", "не max"))
+    if _t2rpf_reliable_requested_v1(text) and not explicit_max:
+        res["choice"] = "reliable"
+        res["confirmed"] = True
+    return res
+
+
+try:
+    _PPOC_PRICE_DISPLAY.update({
+        "minimum": "минимальные",
+        "cheapest": "минимальные",
+        "maximum": "максимальные",
+        "reliable": "надёжные",
+        "trusted": "надёжные",
+    })
+except Exception:
+    pass
+
+
+def _t2rpf_requires_foundation_live_prices_v1(parsed, text):
+    if not _t2fo_foundation_only_v1(parsed or {}):
+        return False
+    low = _low(text or "")
+    return any(x in low for x in ("интернет", "актуальн", "проверить", "проверь", "поищи", "найди", "стоимость песка", "стоимости песка", "стоимость щеб"))
+
+
+def _t2rpf_missing_foundation_families_v1(parsed, price_text):
+    parsed = parsed or {}
+    raw = _low(parsed.get("raw") or "")
+    missing = []
+    if (parsed.get("sand_thickness_m") or "песчан" in raw or "песок" in raw) and not _t2fo_price_text_has_family_v1(price_text, ("песок", "песчаная подушка", "песчаный")):
+        missing.append("песок")
+    if (parsed.get("gravel_thickness_m") or "щеб" in raw) and not _t2fo_price_text_has_family_v1(price_text, ("щебень", "щебеночное основание", "щебеночный", "щебёноч")):
+        missing.append("щебень")
+    return missing
+
+
+_T2RPF_PREV_GENERATE_AND_SEND_V1 = _generate_and_send
+
+
+async def _generate_and_send(conn, task, pending, confirm_text, logger=None):  # noqa: F811
+    task_id = _s(_row_get(task, "id"))
+    chat_id = _s(_row_get(task, "chat_id"))
+    topic_id = int(_row_get(task, "topic_id", 0) or 0)
+    reply_to = _row_get(task, "reply_to_message_id", None) or _row_get(task, "message_id", None)
+    parsed = (pending or {}).get("parsed") or {}
+    online_prices = (pending or {}).get("online_prices") or ""
+    raw_context = "\n".join([
+        _s(parsed.get("raw") if isinstance(parsed, dict) else ""),
+        _s(confirm_text),
+    ])
+
+    if topic_id == TOPIC_ID_STROYKA and _t2rpf_requires_foundation_live_prices_v1(parsed, raw_context):
+        missing = _t2rpf_missing_foundation_families_v1(parsed, online_prices)
+        if missing:
+            try:
+                _history_safe(conn, task_id, "TOPIC2_FOUNDATION_LIVE_PRICE_GUARD_SEARCH:" + ",".join(missing))
+                refreshed = await _search_prices_online(
+                    parsed,
+                    (pending or {}).get("template") or CANON_TEMPLATE_FALLBACK["areal"],
+                    (pending or {}).get("sheet_name"),
+                    conn=conn,
+                    task_id=task_id,
+                )
+                online_prices = refreshed or online_prices
+                pending["online_prices"] = online_prices
+                pending["status"] = "WAITING_PRICE_CONFIRMATION"
+                _memory_save(chat_id, f"topic_2_estimate_pending_{task_id}", pending)
+            except Exception as exc:
+                _history_safe(conn, task_id, "TOPIC2_FOUNDATION_LIVE_PRICE_GUARD_SEARCH_FAILED:" + _s(exc)[:160])
+        missing = _t2rpf_missing_foundation_families_v1(parsed, online_prices)
+        if missing:
+            text = (
+                "Не закрываю финальную смету: не найдены подтверждённые интернет-цены для "
+                + ", ".join(missing)
+                + ". Пришли ручные цены или разреши повторить поиск."
+            )
+            send_res = await _send_text(chat_id, text, reply_to, topic_id)
+            kwargs = {"state": "WAITING_CLARIFICATION", "result": text, "error_message": "TOPIC2_FOUNDATION_PRICE_SOURCE_REQUIRED"}
+            if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+                kwargs["bot_message_id"] = send_res.get("bot_message_id")
+            _update_task_safe(conn, task_id, **kwargs)
+            _history_safe(conn, task_id, "TOPIC2_FOUNDATION_FINAL_BLOCKED_TEMPLATE_ONLY:" + ",".join(missing))
+            return True
+
+    return await _T2RPF_PREV_GENERATE_AND_SEND_V1(conn, task, pending, confirm_text, logger=logger)
+
+
+try:
+    _STV3_LOG.info("PATCH_TOPIC2_RELIABLE_PRICE_AND_FOUNDATION_SOURCE_GUARD_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_RELIABLE_PRICE_AND_FOUNDATION_SOURCE_GUARD_V1 ===
+
+
+# === PATCH_TOPIC2_FULL_FOUNDATION_PRICE_SOURCE_GUARD_V1 ===
+# Canon: when user explicitly asks to verify material prices, final XLSX must
+# prefer live confirmed sources and foundation-only route must search missing
+# foundation price families instead of closing template_only rows silently.
+_T2FFPS_PREV_MATCH_PRICE_SOURCE_V1 = _match_price_source
+
+
+def _t2ffps_is_live_source_v1(src):
+    status = _low((src or {}).get("status") or "")
+    return status in ("live_confirmed", "confirmed") and bool((src or {}).get("supplier")) and bool((src or {}).get("url"))
+
+
+def _match_price_source(sources: List[Dict[str, Any]], item_name: str, item_section: str) -> Dict[str, Any]:  # noqa: F811
+    live_sources = [src for src in (sources or []) if _t2ffps_is_live_source_v1(src)]
+    if live_sources:
+        live = _T2FFPS_PREV_MATCH_PRICE_SOURCE_V1(live_sources, item_name, item_section)
+        if live and live.get("status") != "template_only":
+            return live
+    return _T2FFPS_PREV_MATCH_PRICE_SOURCE_V1(sources, item_name, item_section)
+
+
+_T2FFPS_PREV_SEARCH_PRICES_ONLINE_V1 = _search_prices_online
+
+
+def _t2ffps_existing_online_prices_v1(conn, task_id):
+    if conn is None or task_id is None:
+        return ""
+    try:
+        row = conn.execute("SELECT chat_id FROM tasks WHERE id=? LIMIT 1", (_s(task_id),)).fetchone()
+        chat_id = _s(row[0] if row else "")
+        if not chat_id:
+            return ""
+        import sqlite3 as _t2ffps_sqlite3
+        import json as _t2ffps_json
+        mem = _t2ffps_sqlite3.connect("/root/.areal-neva-core/data/memory.db")
+        try:
+            r = mem.execute(
+                "SELECT value FROM memory WHERE chat_id=? AND key=? ORDER BY timestamp DESC LIMIT 1",
+                (chat_id, "topic_2_estimate_pending_" + _s(task_id)),
+            ).fetchone()
+        finally:
+            mem.close()
+        if not r:
+            return ""
+        data = _t2ffps_json.loads(r[0])
+        return _s(data.get("online_prices") or "") if isinstance(data, dict) else ""
+    except Exception:
+        return ""
+
+
+def _t2ffps_has_live_source_v1(price_text, keywords):
+    try:
+        sources = _parse_price_sources(price_text or "")
+    except Exception:
+        sources = []
+    keys = tuple(_low(k) for k in (keywords or ()))
+    for src in sources:
+        if not _t2ffps_is_live_source_v1(src):
+            continue
+        pos = _low(src.get("position") or "")
+        if any(k in pos for k in keys):
+            return True
+    return False
+
+
+async def _search_prices_online(parsed: Dict[str, Any], template: Dict[str, Any], sheet_name: Optional[str], conn=None, task_id=None) -> str:  # noqa: F811
+    base = await _T2FFPS_PREV_SEARCH_PRICES_ONLINE_V1(parsed, template, sheet_name, conn=conn, task_id=task_id)
+    if not _t2fo_foundation_only_v1(parsed or {}):
+        return base
+    existing = _t2ffps_existing_online_prices_v1(conn, task_id)
+    combined = "\n".join(x for x in (existing, base) if _s(x).strip()).strip()
+
+    missing = []
+    checks = (
+        ("Опалубка для монолитной фундаментной плиты материал", "мп", "formwork_material", ("опалуб",)),
+        ("Монтаж демонтаж опалубки фундаментной плиты", "мп", "formwork_work", ("опалуб", "монтаж")),
+        ("Армирование фундаментной плиты работы", "м2", "rebar_work", ("армирован",)),
+    )
+    for item_name, unit, code, keywords in checks:
+        if not _t2ffps_has_live_source_v1(combined, keywords):
+            missing.append((item_name, unit, code))
+    if not missing:
+        return combined or base
+
+    model = os.getenv("OPENROUTER_MODEL_ONLINE", "perplexity/sonar").strip() or "perplexity/sonar"
+    if "sonar" not in model.lower():
+        raise RuntimeError(f"TOPIC2_ONLINE_MODEL_GUARD_BLOCKED_NON_SONAR:{model}")
+
+    from core.price_enrichment import _openrouter_price_search as _missing_price_search
+    extra_lines = []
+    for item_name, unit, code in missing:
+        if conn is not None and task_id is not None:
+            _history_safe(conn, task_id, "TOPIC2_PRICE_CACHE_BEFORE_SONAR:" + code)
+            _history_safe(conn, task_id, "TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:" + item_name)
+        try:
+            offers = await asyncio.wait_for(
+                _missing_price_search(item_name, unit, "Санкт-Петербург и Ленинградская область"),
+                timeout=45,
+            )
+        except Exception:
+            offers = []
+        lines = _t2fo_offer_lines_v1(item_name, unit, offers)
+        if lines:
+            extra_lines.extend(lines)
+            if conn is not None and task_id is not None:
+                first = offers[0] if offers else {}
+                _history_safe(conn, task_id, "TOPIC2_PRICE_SOURCE_FOUND:{}:{}:{}".format(
+                    code,
+                    _s(first.get("supplier"))[:50],
+                    _s(first.get("status"))[:20],
+                ))
+        elif conn is not None and task_id is not None:
+            _history_safe(conn, task_id, "TOPIC2_PRICE_SOURCE_MISSING:" + code)
+    if extra_lines and conn is not None and task_id is not None:
+        _history_safe(conn, task_id, "TOPIC2_FULL_FOUNDATION_PRICE_SOURCE_SONAR_DONE:" + ",".join(code for _, _, code in missing))
+    return (combined + "\n" + "\n".join(extra_lines)).strip() if extra_lines else (combined or base)
+
+try:
+    _STV3_LOG.info("PATCH_TOPIC2_FULL_FOUNDATION_PRICE_SOURCE_GUARD_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_FULL_FOUNDATION_PRICE_SOURCE_GUARD_V1 ===
+
 ====================================================================================================
 END_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 2/2
@@ -7161,275 +7402,5 @@ async def transcribe_voice(path: str) -> str:
 
 ====================================================================================================
 END_FILE: core/stt_engine.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/technadzor_document_skill.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 7f86800da7b61771bec0e581bb3facd3ffa0f34a47ac55e87ca8fca8f3f1c74a
-====================================================================================================
-#!/usr/bin/env python3
-# === TECHNADZOR_DOCUMENT_SKILL_V1 ===
-# Converts source records from telegram_source_skill_extractor into skill cards.
-# Rejects noise. Classifies useful document-composition logic.
-# All extracted rules must keep source reference.
-from __future__ import annotations
-
-import hashlib
-import logging
-import re
-from typing import Any
-
-logger = logging.getLogger("technadzor_document_skill")
-
-SKILL_CATEGORIES = (
-    "act_structure",
-    "report_structure",
-    "defect_description_logic",
-    "photo_to_defect_linking",
-    "evidence_handling",
-    "normative_reference_handling",
-    "recommendation_logic",
-    "conclusion_logic",
-    "file_workflow",
-    "document_workflow",
-    "client_facing_language",
-    "contractor_statement_handling",
-    "owner_statement_handling",
-    "telegram_source_work_signal",
-    "rabota_poisk_reusable_pattern",
-    "unknown",
-)
-
-# Patterns → category
-_CATEGORY_PATTERNS: list[tuple[str, list[str]]] = [
-    ("act_structure", [
-        "акт", "форма акта", "состав акта", "разделы акта", "приложение к акту",
-        "акт освидетельствования", "акт скрытых", "акт приёмки", "акт проверки",
-    ]),
-    ("report_structure", [
-        "отчёт", "отчет", "заключение", "техническое заключение", "разделы отчёта",
-        "структура отчёта", "состав отчёта",
-    ]),
-    ("defect_description_logic", [
-        "дефект", "нарушение", "замечание", "несоответствие", "отклонение",
-        "трещин", "скол", "раковин", "расслоен", "коррозия",
-        "как описать", "формулировка дефекта", "описание дефекта",
-    ]),
-    ("photo_to_defect_linking", [
-        "фото", "фотофиксация", "привязка фото", "фото к дефекту",
-        "фото к акту", "фотоматериал", "приложение фото",
-    ]),
-    ("evidence_handling", [
-        "доказательство", "факт", "подтверждение", "доказательная база",
-        "источник данных", "обоснование", "исполнительная документация",
-    ]),
-    ("normative_reference_handling", [
-        "снип", "гост", "сп ", "нормати", "требования нормативов",
-        "ссылка на норму", "нормативный документ", "регламент",
-    ]),
-    ("recommendation_logic", [
-        "рекомендация", "предписание", "устранить", "необходимо устранить",
-        "рекомендуется", "следует", "требуется", "провести работы",
-    ]),
-    ("conclusion_logic", [
-        "вывод", "заключение", "итог", "резюме", "категория состояния",
-        "техническое состояние", "ограниченно работоспособ", "аварийн",
-    ]),
-    ("file_workflow", [
-        "pdf", "docx", "xlsx", "dwg", "файл", "загрузка файла",
-        "прикрепить файл", "скачать", "отправить файл", "формат файла",
-    ]),
-    ("document_workflow", [
-        "документооборот", "пакет документов", "комплект",
-        "исполнительная документация", "журнал работ", "акт скрытых",
-        "приёмка документов",
-    ]),
-    ("client_facing_language", [
-        "заказчик", "собственник", "владелец", "клиент", "застройщик",
-        "как написать заказчику", "для заказчика", "язык документа",
-    ]),
-    ("contractor_statement_handling", [
-        "подрядчик", "генподрядчик", "субподрядчик", "исполнитель",
-        "ответ подрядчика", "позиция подрядчика",
-    ]),
-    ("owner_statement_handling", [
-        "застройщик", "инвестор", "позиция застройщика",
-        "ответ застройщика", "письмо застройщика",
-    ]),
-    ("telegram_source_work_signal", [
-        "вакансия", "требуется", "нужен специалист", "ищем технадзор",
-        "ищем инженера", "найдём", "предложение работы",
-    ]),
-    ("rabota_poisk_reusable_pattern", [
-        "заказ", "тендер", "объявление", "контракт", "выбор подрядчика",
-        "объект ищет", "нужен технадзор", "проведём отбор",
-    ]),
-]
-
-TOPIC5_VALUE_KEYWORDS = [
-    "акт", "дефект", "технадзор", "заключение", "предписание",
-    "приёмка", "отчёт", "фото", "норматив", "документ",
-    "рекомендация", "вывод", "замечание",
-]
-
-NOISE_MARKERS = [
-    "реклама", "продам", "куплю", "скидка", "акция",
-    "заработок", "кредит без отказа", "займ", "только сегодня",
-    "подпишись", "переходи по ссылке", "выиграли",
-]
-
-
-def _card_id(source_ref: str, message_id: int | str) -> str:
-    raw = f"{source_ref}::{message_id}"
-    return "SK_" + hashlib.md5(raw.encode()).hexdigest()[:12].upper()
-
-
-def classify_category(text: str) -> str:
-    low = text.lower()
-    for category, patterns in _CATEGORY_PATTERNS:
-        if any(p in low for p in patterns):
-            return category
-    return "unknown"
-
-
-def extract_rule_from_text(text: str, category: str) -> str:
-    sentences = re.split(r"[.\n!?]+", text)
-    useful = []
-    for sent in sentences:
-        s = sent.strip()
-        if len(s) < 20:
-            continue
-        low = s.lower()
-        if any(kw in low for kw in TOPIC5_VALUE_KEYWORDS):
-            useful.append(s)
-        if len(useful) >= 3:
-            break
-    if useful:
-        return ". ".join(useful[:3])
-    # fallback: first substantial sentence
-    for sent in sentences:
-        s = sent.strip()
-        if len(s) >= 30:
-            return s[:300]
-    return text[:300].strip()
-
-
-def why_useful(category: str) -> str:
-    mapping = {
-        "act_structure": "Позволяет выстраивать структуру акта технадзора: разделы, приложения, обязательные поля",
-        "report_structure": "Определяет состав технического отчёта/заключения по объекту",
-        "defect_description_logic": "Формирует навык точной формулировки дефектов для актов и предписаний",
-        "photo_to_defect_linking": "Описывает правило привязки фотоматериалов к конкретным дефектам в документе",
-        "evidence_handling": "Показывает как формировать доказательную базу — факты, источники, исполнительная документация",
-        "normative_reference_handling": "Обучает правильному указанию нормативных ссылок (СП/ГОСТ/СНиП) в актах",
-        "recommendation_logic": "Задаёт логику формулировки предписаний и рекомендаций по устранению",
-        "conclusion_logic": "Показывает структуру вывода/заключения о техническом состоянии",
-        "file_workflow": "Описывает правила работы с файлами (PDF/DOCX/XLSX) при формировании пакета документов",
-        "document_workflow": "Определяет порядок формирования и передачи комплекта исполнительной документации",
-        "client_facing_language": "Задаёт профессиональный язык документов, обращённых к заказчику/собственнику",
-        "contractor_statement_handling": "Показывает как фиксировать позицию подрядчика в документах",
-        "owner_statement_handling": "Показывает как фиксировать позицию застройщика/инвестора",
-        "telegram_source_work_signal": "Сигнал о возможной работе/заказе — полезен для маршрутизации в topic_6104",
-        "rabota_poisk_reusable_pattern": "Паттерн для поиска заказов/вакансий через Telegram-источник (тема RABOTA_POISK)",
-        "unknown": "Категория не определена — требует ручной проверки владельца",
-    }
-    return mapping.get(category, "")
-
-
-def is_noise(text: str) -> bool:
-    low = (text or "").lower()
-    if any(n in low for n in NOISE_MARKERS):
-        return True
-    if len(text.strip()) < 20:
-        return True
-    return False
-
-
-def has_practical_value(text: str) -> bool:
-    low = text.lower()
-    return any(kw in low for kw in TOPIC5_VALUE_KEYWORDS)
-
-
-def build_skill_card(record: dict) -> dict | None:
-    text = record.get("text", "")
-    source_ref = record.get("source_ref", "")
-    message_id = record.get("message_id", "")
-
-    if not source_ref:
-        logger.debug("rejected: no source_ref msg=%s", message_id)
-        return None
-
-    if is_noise(text):
-        logger.debug("rejected: noise msg=%s", message_id)
-        return None
-
-    if not has_practical_value(text) and not record.get("file_name") and not record.get("links"):
-        logger.debug("rejected: no practical value msg=%s", message_id)
-        return None
-
-    category = classify_category(text)
-    extracted_rule = extract_rule_from_text(text, category)
-
-    needs_review = (
-        category == "unknown"
-        or len(extracted_rule) < 30
-        or not has_practical_value(text)
-    )
-
-    tags = [category]
-    if record.get("file_name"):
-        tags.append("has_document")
-    if record.get("links"):
-        tags.append("has_links")
-    if record.get("media_type") == "photo":
-        tags.append("has_photo")
-
-    return {
-        "id": _card_id(source_ref, message_id),
-        "source": record.get("source", "@tnz_msk"),
-        "source_ref": source_ref,
-        "message_id": message_id,
-        "message_date": record.get("message_date", ""),
-        "category": category,
-        "title": f"{category}: {extracted_rule[:60]}",
-        "source_excerpt": text[:400],
-        "extracted_rule": extracted_rule,
-        "why_useful_for_topic_5": why_useful(category),
-        "source_links": record.get("links", []),
-        "source_files": ([record["file_name"]] if record.get("file_name") else []),
-        "confidence": "low" if needs_review else "medium",
-        "needs_owner_review": needs_review,
-        "tags": tags,
-    }
-
-
-def process_records(records: list[dict]) -> dict:
-    cards: list[dict] = []
-    rejected = 0
-    for rec in records:
-        card = build_skill_card(rec)
-        if card:
-            cards.append(card)
-        else:
-            rejected += 1
-
-    by_category: dict[str, list] = {}
-    for card in cards:
-        by_category.setdefault(card["category"], []).append(card)
-
-    return {
-        "total_input": len(records),
-        "extracted": len(cards),
-        "rejected_noise": rejected,
-        "categories": list(by_category.keys()),
-        "cards": cards,
-        "by_category": by_category,
-    }
-# === END_TECHNADZOR_DOCUMENT_SKILL_V1 ===
-
-====================================================================================================
-END_FILE: core/technadzor_document_skill.py
 FILE_CHUNK: 1/1
 ====================================================================================================

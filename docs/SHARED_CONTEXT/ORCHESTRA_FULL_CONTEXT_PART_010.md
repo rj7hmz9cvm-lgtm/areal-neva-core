@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_010
-generated_at_utc: 2026-07-06T09:22:43.484447+00:00
-git_sha_before_commit: 5050af0a852e72589927a2e9cd995b26a90161f2
+generated_at_utc: 2026-07-06T09:52:44.437537+00:00
+git_sha_before_commit: 5d528b38229ba6dd2caeb4663a75c62515f156eb
 part: 10/19
 
 
@@ -3560,7 +3560,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/ocr_engine.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: fe71a5f2f1fc5be7f8a9b6fa14f1752112921093c68979788afbf58a82413443
+SHA256_FULL_FILE: 90466f564b8df05ad126810bac9cfe8be548fce54efa45b0930bddf0c52d6a00
 ====================================================================================================
 # === FINAL_CLOSURE_BLOCKER_FIX_V1_OCR_TABLE_ENGINE ===
 from __future__ import annotations
@@ -3577,7 +3577,7 @@ OUT = BASE / "outputs" / "ocr"
 OUT.mkdir(parents=True, exist_ok=True)
 
 UNIT_RE = re.compile(r"\b([мm]2|[мm]²|[мm]3|[мm]³|п\.?м|пог\.?м|шт|кг|тн|тонн|т|[мm]|мм|компл)\b", re.I)
-NUM_RE = re.compile(r"-?\d+(?:[\s\u00a0]?\d{3})*(?:[.,]\d+)?")
+NUM_RE = re.compile(r"-?\d+(?:[.,]\d+)?")
 
 
 def _s(v: Any) -> str:

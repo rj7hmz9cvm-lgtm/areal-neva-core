@@ -1,8 +1,369 @@
 # ORCHESTRA_FULL_CONTEXT_PART_015
-generated_at_utc: 2026-07-06T09:22:43.487804+00:00
-git_sha_before_commit: 5050af0a852e72589927a2e9cd995b26a90161f2
+generated_at_utc: 2026-07-06T09:52:44.440946+00:00
+git_sha_before_commit: 5d528b38229ba6dd2caeb4663a75c62515f156eb
 part: 15/19
 
+
+====================================================================================================
+BEGIN_FILE: core/topic_3008_engine.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: f6f9c29ce8def6ac922df7e40ad352a08586d5070eaa1d984e2ed9dc0dab51c0
+====================================================================================================
+import asyncio, logging, os, re
+from typing import Optional
+logger = logging.getLogger(__name__)
+
+TOPIC_3008 = 3008
+TIMEOUT = 90
+
+_WRITE_CODE = ["напиши код", "написать код"]
+_VERIFY_CODE = ["проверь код", "проверить код", "верификация"]
+_CODE_BLOCK = re.compile(r"```[\w]*\n.*?```", re.DOTALL)
+
+def is_topic_3008(topic_id):
+    return int(topic_id or 0) == TOPIC_3008
+
+def detect_command(text):
+    low = text.lower()
+    if any(t in low for t in _WRITE_CODE):
+        return "write"
+    if any(t in low for t in _VERIFY_CODE):
+        return "verify"
+    if _CODE_BLOCK.search(text):
+        return "verify"
+    return "none"
+
+def extract_code(text):
+    m = _CODE_BLOCK.search(text)
+    if m:
+        raw = m.group(0)
+        lines = raw.split("\n")
+        if lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        return "\n".join(lines)
+    return text
+
+MODEL_REGISTRY = {
+    "deepseek": {"name":"DeepSeek","emoji":"🧠","role":"архитектура","api":"openrouter","model":"deepseek/deepseek-chat","env_key":"OPENROUTER_API_KEY","available":True},
+    "claude":   {"name":"Claude",  "emoji":"👤","role":"логика ТЗ", "api":"anthropic","model":"claude-opus-4-6","env_key":"ANTHROPIC_API_KEY","available":True},
+    "gpt":      {"name":"ChatGPT", "emoji":"🤖","role":"патчи",    "api":"openai",  "model":"gpt-4o","env_key":"OPENAI_API_KEY","available":True},
+    "gemini":   {"name":"Gemini",  "emoji":"🔒","role":"безопасность","api":"gemini","model":"gemini-2.0-flash","env_key":"GOOGLE_API_KEY","available":False},
+    "grok":     {"name":"Grok",    "emoji":"⚡","role":"архитектура","api":"xai",   "model":"grok-3","env_key":"XAI_API_KEY","available":False},
+}
+
+async def _call_openrouter(model_id, prompt, api_key, base_url):
+    import aiohttp
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    payload = {"model": model_id, "messages": [{"role":"user","content":prompt}], "max_tokens":1000}
+    async with aiohttp.ClientSession() as s:
+        async with s.post(f"{base_url}/chat/completions", json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=TIMEOUT)) as r:
+            d = await r.json()
+            return d["choices"][0]["message"]["content"]
+
+async def _call_anthropic(model_id, prompt, api_key):
+    import aiohttp
+    headers = {"x-api-key": api_key, "anthropic-version": "2023-06-01", "content-type": "application/json"}
+    payload = {"model": model_id, "max_tokens":1000, "messages":[{"role":"user","content":prompt}]}
+    async with aiohttp.ClientSession() as s:
+        async with s.post("https://api.anthropic.com/v1/messages", json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=TIMEOUT)) as r:
+            d = await r.json()
+            return d["content"][0]["text"]
+
+async def _call_openai(model_id, prompt, api_key):
+    import aiohttp
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    payload = {"model": model_id, "messages":[{"role":"user","content":prompt}], "max_tokens":1000}
+    async with aiohttp.ClientSession() as s:
+        async with s.post("https://api.openai.com/v1/chat/completions", json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=TIMEOUT)) as r:
+            d = await r.json()
+            return d["choices"][0]["message"]["content"]
+
+async def _verify_one(key, meta, prompt):
+    api_key = <REDACTED_SECRET>"env_key"], "")
+    if not api_key or not meta["available"]:
+        return {"key":key,"name":meta["name"],"emoji":meta["emoji"],"role":meta["role"],"result":"⚠️ НЕТ ОТВЕТА","text":"недоступна","ok":None}
+    try:
+        base_url = os.getenv("OPENROUTER_BASE_URL","https://openrouter.ai/api/v1")
+        if meta["api"] == "openrouter":
+            text = await _call_openrouter(meta["model"], prompt, api_key, base_url)
+        elif meta["api"] == "anthropic":
+            text = await _call_anthropic(meta["model"], prompt, api_key)
+        elif meta["api"] == "openai":
+            text = await _call_openai(meta["model"], prompt, api_key)
+        else:
+            return {"key":key,"name":meta["name"],"emoji":meta["emoji"],"role":meta["role"],"result":"⚠️ НЕТ ОТВЕТА","text":"API не реализован","ok":None}
+        text_clean = text.strip()[:800]
+        low = text_clean.lower()
+        ok = not any(w in low for w in ["ошибк","проблем","уязвимост","небезопасн","запрещ"])
+        return {"key":key,"name":meta["name"],"emoji":meta["emoji"],"role":meta["role"],"result":"✅" if ok else "❌","text":text_clean,"ok":ok}
+    except asyncio.TimeoutError:
+        return {"key":key,"name":meta["name"],"emoji":meta["emoji"],"role":meta["role"],"result":"⚠️ НЕТ ОТВЕТА","text":"таймаут 90с","ok":None}
+    except Exception as e:
+        return {"key":key,"name":meta["name"],"emoji":meta["emoji"],"role":meta["role"],"result":"⚠️ НЕТ ОТВЕТА","text":str(e)[:200],"ok":None}
+
+async def verify_code(code, context=""):
+    prompt = f"Проверь код на логику, архитектуру, безопасность.\n\nКонтекст: AREAL-NEVA ORCHESTRA\n{context[:300]}\n\nКод:\n```\n{code[:3000]}\n```\n\nДай краткий вердикт (2-3 предложения)."
+    available = {k:v for k,v in MODEL_REGISTRY.items()}
+    tasks = [_verify_one(k,v,prompt) for k,v in available.items()]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    lines = ["=== ВЕРИФИКАЦИЯ КОДА ===\n"]
+    approved = 0
+    critical = False
+    for r in results:
+        if isinstance(r, Exception):
+            continue
+        lines.append(f"{r['emoji']} {r['name'].upper()} ({r['role']}): {r['result']}")
+        lines.append(r['text'])
+        lines.append("")
+        if r['ok'] is True:
+            approved += 1
+        if r['key'] == 'gemini' and r['result'] == '❌':
+            critical = True
+    total = sum(1 for v in available.values() if v["available"] and os.getenv(v["env_key"]))
+    lines.append("=== ОБЩАЯ КАРТИНА ===")
+    lines.append(f"Одобрено {approved} из {max(total,1)} доступных моделей.")
+    if critical:
+        lines.append("КРИТИЧЕСКОЕ ЗАМЕЧАНИЕ: Gemini выявил проблемы безопасности!")
+    lines.append("\nРешение принимает пользователь.")
+    return "\n".join(lines)
+
+async def generate_code(description, context=""):
+    api_key = <REDACTED_SECRET>"OPENROUTER_API_KEY","")
+    base_url = os.getenv("OPENROUTER_BASE_URL","https://openrouter.ai/api/v1")
+    prompt = f"Напиши код. Только код без лишних объяснений.\n\nСистема: AREAL-NEVA ORCHESTRA (Python 3.12)\n{('Контекст: ' + context[:300]) if context else ''}\n\nЗадача: {description}"
+    try:
+        return (await _call_openrouter("deepseek/deepseek-chat", prompt, api_key, base_url)).strip()
+    except Exception as e:
+        return f"Ошибка генерации: {e}"
+
+====================================================================================================
+END_FILE: core/topic_3008_engine.py
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: core/topic_autodiscovery.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: d0d1b4283ee522045919246760eaac8dd0db474767f03ff0cd346aac7ae73994
+====================================================================================================
+# === FULLFIX_TOPIC_AUTODISCOVERY_V2 ===
+from __future__ import annotations
+import json
+import logging
+import os
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Dict, Optional, Tuple
+
+logger = logging.getLogger("task_worker")
+
+AUTODISCOVERY_VERSION = "TOPIC_AUTODISCOVERY_V2"
+CONFIG_PATH = Path("/root/.areal-neva-core/config/directions.yaml")
+DATA_TOPICS_PATH = Path("/root/.areal-neva-core/data/topics")
+NAMING_TIMEOUT_HOURS = 24
+CONFLICT_SCORE_DELTA = 30
+MIN_SCORE_TO_AUTOASSIGN = 60
+
+
+def _load_config():
+    raw = CONFIG_PATH.read_text(encoding="utf-8")
+    try:
+        return json.loads(raw)
+    except Exception:
+        import yaml
+        return yaml.safe_load(raw) or {}
+
+
+def _save_config(data: dict):
+    # Всегда пишем JSON — файл directions.yaml фактически JSON
+    CONFIG_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _load_topic_meta(topic_id: int) -> Dict:
+    meta_file = DATA_TOPICS_PATH / str(topic_id) / "meta.json"
+    if meta_file.exists():
+        try:
+            return json.loads(meta_file.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+    return {}
+
+
+def _save_topic_meta(topic_id: int, meta: dict):
+    folder = DATA_TOPICS_PATH / str(topic_id)
+    folder.mkdir(parents=True, exist_ok=True)
+    meta_file = folder / "meta.json"
+    meta_file.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _topic_known(topic_id: int, data: dict) -> Optional[str]:
+    for direction_id, profile in data.get("directions", {}).items():
+        if topic_id in (profile.get("topic_ids") or []):
+            return direction_id
+    return None
+
+
+def _detect_with_audit(work_item) -> Tuple[str, int, str, int]:
+    from core.direction_registry import DirectionRegistry
+    reg = DirectionRegistry()
+    results = []
+    for direction_id, profile in reg.directions.items():
+        score, item = reg._score_direction(direction_id, profile or {}, work_item)
+        results.append((direction_id, score))
+    results.sort(key=lambda x: -x[1])
+    top = results[0] if results else ("general_chat", 0)
+    second = results[1] if len(results) > 1 else ("general_chat", 0)
+    return top[0], top[1], second[0], second[1]
+
+
+def _create_topic_folder(topic_id: int, direction: str, name: str = ""):
+    folder = DATA_TOPICS_PATH / str(topic_id)
+    folder.mkdir(parents=True, exist_ok=True)
+    meta = _load_topic_meta(topic_id)
+    meta.update({
+        "topic_id": topic_id,
+        "direction": direction,
+        "name": name,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "version": AUTODISCOVERY_VERSION,
+    })
+    _save_topic_meta(topic_id, meta)
+    logger.info("TOPIC_AUTODISCOVERY folder: %s dir=%s name=%s", folder, direction, name)
+
+
+def _register_topic(topic_id: int, direction: str, data: dict):
+    profile = data["directions"].get(direction)
+    if profile is None:
+        return
+    topic_ids = list(profile.get("topic_ids") or [])
+    if topic_id not in topic_ids:
+        topic_ids.append(topic_id)
+        data["directions"][direction]["topic_ids"] = topic_ids
+    _save_config(data)
+    logger.info("TOPIC_REGISTERED topic_id=%s -> direction=%s", topic_id, direction)
+
+
+def _send_naming_question(chat_id: str, topic_id: int):
+    """Отправляет вопрос о названии топика один раз."""
+    try:
+        from core.reply_sender import send_reply  # IMPORT_FIX_V1
+        send_reply(
+            chat_id=str(chat_id),
+            text="Как назовём этот чат? Ответь голосом или текстом.",
+            message_thread_id=topic_id,
+        )
+        logger.info("TOPIC_NAMING_QUESTION sent chat=%s topic=%s", chat_id, topic_id)
+    except Exception as e:
+        logger.error("TOPIC_NAMING_QUESTION_ERR %s", e)
+
+
+def check_naming_timeout(chat_id: str, topic_id: int):
+    """
+    Вызывается при каждом сообщении из топика.
+    Если топик без имени и прошло 24 часа — один раз спрашивает название.
+    """
+    meta = _load_topic_meta(topic_id)
+    if not meta:
+        return
+    if meta.get("name"):
+        return
+    if meta.get("naming_asked"):
+        return
+    created_at = meta.get("created_at")
+    if not created_at:
+        return
+    try:
+        created = datetime.fromisoformat(created_at)
+        elapsed = (datetime.now(timezone.utc) - created).total_seconds() / 3600
+        if elapsed >= NAMING_TIMEOUT_HOURS:
+            meta["naming_asked"] = datetime.now(timezone.utc).isoformat()
+            _save_topic_meta(topic_id, meta)
+            _send_naming_question(chat_id, topic_id)
+    except Exception as e:
+        logger.error("TOPIC_NAMING_TIMEOUT_ERR %s", e)
+
+
+def assign_name(topic_id: int, name: str):
+    """Назначает имя топику. Вызывается когда пользователь ответил на вопрос."""
+    meta = _load_topic_meta(topic_id)
+    meta["name"] = name
+    meta["named_at"] = datetime.now(timezone.utc).isoformat()
+    _save_topic_meta(topic_id, meta)
+    logger.info("TOPIC_NAMED topic=%s name=%s", topic_id, name)
+
+
+def process(work_item, payload: Dict[str, Any]) -> Dict[str, Any]:
+    topic_id = int(getattr(work_item, "topic_id", 0) or 0)
+    chat_id = str(getattr(work_item, "chat_id", "") or payload.get("chat_id") or "")
+    if topic_id == 0:
+        return {}
+
+    try:
+        data = _load_config()
+    except Exception as e:
+        logger.error("TOPIC_AUTODISCOVERY config load error: %s", e)
+        return {}
+
+    # Уже известный топик — проверяем таймаут имени
+    known = _topic_known(topic_id, data)
+    if known:
+        try:
+            check_naming_timeout(chat_id, topic_id)
+        except Exception:
+            pass
+        return {"status": "known", "direction": known}
+
+    # Новый топик — детектируем направление
+    try:
+        top_dir, top_score, second_dir, second_score = _detect_with_audit(work_item)
+    except Exception as e:
+        logger.error("TOPIC_AUTODISCOVERY detect error: %s", e)
+        return {"status": "detect_error"}
+
+    # Недостаточный score
+    if top_score < MIN_SCORE_TO_AUTOASSIGN:
+        # Создаём папку но не регистрируем direction
+        _create_topic_folder(topic_id, "unknown", "")
+        logger.info("TOPIC_AUTODISCOVERY low score=%s topic=%s — folder created, waiting", top_score, topic_id)
+        return {"status": "low_score", "topic_id": topic_id, "score": top_score}
+
+    # Конфликт — уточняем
+    delta = top_score - second_score
+    if delta < CONFLICT_SCORE_DELTA and second_score >= MIN_SCORE_TO_AUTOASSIGN:
+        logger.warning("TOPIC_CONFLICT topic=%s %s(%s) vs %s(%s)",
+                       topic_id, top_dir, top_score, second_dir, second_score)
+        payload["topic_conflict"] = {
+            "topic_id": topic_id,
+            "candidates": [
+                {"direction": top_dir, "score": top_score},
+                {"direction": second_dir, "score": second_score},
+            ],
+        }
+        return {"status": "conflict", "candidates": [top_dir, second_dir]}
+
+    # Однозначно — регистрируем молча
+    try:
+        _register_topic(topic_id, top_dir, data)
+        _create_topic_folder(topic_id, top_dir, "")
+        payload["topic_autodiscovered"] = {
+            "topic_id": topic_id,
+            "direction": top_dir,
+            "score": top_score,
+            "version": AUTODISCOVERY_VERSION,
+        }
+        logger.info("TOPIC_AUTODISCOVERY_DONE topic=%s -> %s score=%s", topic_id, top_dir, top_score)
+        return {"status": "registered", "direction": top_dir, "score": top_score}
+    except Exception as e:
+        logger.error("TOPIC_REGISTER_ERR %s", e)
+        return {"status": "register_error"}
+# === END FULLFIX_TOPIC_AUTODISCOVERY_V2 ===
+
+====================================================================================================
+END_FILE: core/topic_autodiscovery.py
+FILE_CHUNK: 1/1
+====================================================================================================
 
 ====================================================================================================
 BEGIN_FILE: core/topic_drive_oauth.py
@@ -9249,477 +9610,5 @@ Drive = резерв и тяжёлые файлы
 
 ====================================================================================================
 END_FILE: README.md
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: areal_telegram_wrapper.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: ff7e0e9e7f77c13d370d8796b6683523ec134d09232e9b3d18fbcd63dbce47d3
-====================================================================================================
-"""
-PATCH_TELEGRAM_BIG_FILE_LOCAL_BOT_API_V1
-Patches aiogram in-memory to use local Telegram Bot API server (localhost:8081).
-Removes 20MB file size limit. telegram_daemon.py is NOT modified on disk.
-
-Markers logged to task_history (via daemon):
-  BIG_FILE_LOCAL_BOT_API_USED
-  BIG_FILE_LOCAL_DOWNLOAD_OK
-  BIG_FILE_LOCAL_DOWNLOAD_FAILED
-  BIG_FILE_TEMP_CLEANED
-  FILE_INTAKE_ROUTER_LOCAL_PATH_PASSED
-
-Activation gate: only via verify_local_bot_api.sh — do NOT activate manually.
-"""
-import os
-import sys
-import logging
-
-_LOG = logging.getLogger("areal.bigfile_patch")
-
-# Read from EnvironmentFile — never hardcode, never log values
-LOCAL_API_BASE = os.getenv("TELEGRAM_LOCAL_API_BASE", "http://localhost:8081")
-
-# ── Patch 1: aiogram Bot session → local server ──────────────────────────────
-try:
-    from aiogram.client.session.aiohttp import AiohttpSession
-    from aiogram.client.telegram import TelegramAPIServer
-    import aiogram
-
-    _orig_bot_init = aiogram.Bot.__init__
-
-    def _patched_bot_init(self, token, session=None, default=None, **kwargs):
-        if session is None:
-            try:
-                local_server = TelegramAPIServer.from_base(LOCAL_API_BASE)
-                session = AiohttpSession(api=local_server)
-                _LOG.info("BIG_FILE_LOCAL_BOT_API_USED: local server active")
-            except Exception as _e:
-                # Never log LOCAL_API_BASE value with credentials embedded
-                _LOG.warning("BIG_FILE_LOCAL_API_SESSION_FAILED: %s — falling back", type(_e).__name__)
-        _orig_bot_init(self, token, session=session, default=default, **kwargs)
-
-    aiogram.Bot.__init__ = _patched_bot_init
-    _LOG.info("PATCH_BOT_INIT_LOCAL_SERVER: installed")
-
-except Exception as _patch_err:
-    _LOG.error("PATCH_BOT_INIT_LOCAL_SERVER_FAILED: %s", type(_patch_err).__name__)
-
-# ── Patch 2: Fix download URL (in-memory only, file on disk unchanged) ────────
-_daemon_path = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "telegram_daemon.py"
-)
-
-try:
-    _code = open(_daemon_path, "r", encoding="utf-8").read()
-
-    _CLOUD_PATTERN = 'url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"'
-    # Local Bot API returns absolute disk path in file_path — copy directly, skip HTTP
-    _LOCAL_PATTERN = (
-        'if file_path.startswith("/") and os.path.exists(file_path):\n'
-        '        import shutil as _shutil_lbp, logging as _log_lbp\n'
-        '        _log_lbp.getLogger("areal.bigfile_patch").info("LOCAL_BOT_API_ABSOLUTE_PATH_USED:%s", os.path.basename(file_path))\n'
-        '        _shutil_lbp.copy2(file_path, local_path)\n'
-        '        return local_path\n'
-        f'    url = f"{LOCAL_API_BASE}/file/bot{{BOT_TOKEN}}/{{file_path}}"'
-    )
-
-    if _CLOUD_PATTERN in _code:
-        _code = _code.replace(_CLOUD_PATTERN, _LOCAL_PATTERN)
-        _LOG.info("PATCH_DOWNLOAD_URL_LOCAL_SERVER: ok (absolute path → disk copy)")
-    else:
-        _LOG.warning(
-            "PATCH_DOWNLOAD_URL_LOCAL_SERVER: pattern not found in telegram_daemon.py — "
-            "large file download URL not patched"
-        )
-
-    # ── Execute patched daemon as __main__ ────────────────────────────────────
-    _globals = {
-        "__name__": "__main__",
-        "__file__": _daemon_path,
-        "__doc__": None,
-        "__package__": None,
-        "__spec__": None,
-        "__builtins__": __builtins__,
-    }
-    exec(compile(_code, _daemon_path, "exec"), _globals)
-
-except Exception as _exec_err:
-    _LOG.error("WRAPPER_EXEC_DAEMON_FAILED: %s", _exec_err)
-    raise
-
-====================================================================================================
-END_FILE: areal_telegram_wrapper.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: auto_memory_dump.sh
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 51c8b3cb64183d2a3f41cf82b53daa4e234bac3e9aa4540958cecc5a1db39cb6
-====================================================================================================
-#!/bin/bash
-cd /root/.areal-neva-core
-/root/.areal-neva-core/.venv/bin/python3 /root/.areal-neva-core/orchestra_full_dump.py >> /root/.areal-neva-core/logs/auto_dump.log 2>&1
-
-====================================================================================================
-END_FILE: auto_memory_dump.sh
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: data/norms/normative_index.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 8d7a9162925e029c6590e632f7514e7d3bfda171a96ffc9b2c7d2de06f277448
-====================================================================================================
-[
-  {
-    "doc": "СП 70.13330.2012",
-    "clause": "",
-    "text": "Несущие и ограждающие конструкции. Дефекты фиксируются и устраняются по проектному решению",
-    "keywords": ["бетон", "монолит", "трещина", "раковина", "скол", "дефект"],
-    "source": "LOCAL_SAFE_INDEX"
-  },
-  {
-    "doc": "СП 63.13330.2018",
-    "clause": "",
-    "text": "Бетонные и железобетонные конструкции. Расчёт требует проверки класса бетона, арматуры и защитного слоя",
-    "keywords": ["бетон", "арматура", "защитный слой", "кж", "плита", "фундамент"],
-    "source": "LOCAL_SAFE_INDEX"
-  },
-  {
-    "doc": "ГОСТ 21.101-2020",
-    "clause": "",
-    "text": "Основные требования к проектной и рабочей документации",
-    "keywords": ["проект", "документация", "чертеж", "спецификация", "ведомость"],
-    "source": "LOCAL_SAFE_INDEX"
-  }
-]
-
-====================================================================================================
-END_FILE: data/norms/normative_index.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: data/project_templates/PROJECT_TEMPLATE_MODEL__АР_manual.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 805aeb52360d047d9cb6b06fef54cab4177aa5bf6e9797a462f58be3735a398e
-====================================================================================================
-{
-  "schema": "PROJECT_TEMPLATE_MODEL_V1",
-  "project_type": "АР",
-  "source_files": [
-    "ПРОЕКТ КД кровля 5.pdf"
-  ],
-  "sheet_register": [],
-  "marks": [
-    "АР"
-  ],
-  "sections": [
-    "плане",
-    "расчет",
-    "Расчетная",
-    "Фасады",
-    "Разрез",
-    "План",
-    "фасада"
-  ],
-  "axes_grid": {
-    "axes_letters": [],
-    "axes_numbers": [
-      "01",
-      "02",
-      "23",
-      "31"
-    ]
-  },
-  "dimensions": [
-    940,
-    730,
-    2025,
-    16940,
-    10730,
-    360,
-    2001,
-    501,
-    27751,
-    6931,
-    3254,
-    1552,
-    7463,
-    6120,
-    485,
-    1393,
-    800,
-    4350,
-    2300,
-    3590,
-    6700,
-    3570,
-    3160,
-    4000,
-    7870,
-    8381,
-    6850,
-    6750,
-    9572,
-    9903,
-    2783,
-    900,
-    944,
-    1498,
-    1631,
-    2672,
-    2968,
-    1180,
-    2822,
-    1629,
-    3600,
-    3500,
-    4987,
-    5468,
-    3916,
-    600,
-    10930,
-    10440,
-    10040,
-    10530,
-    4640,
-    5125,
-    2900,
-    2905,
-    1600,
-    1605,
-    970,
-    1925,
-    1930,
-    4980,
-    2170,
-    520,
-    780,
-    1000,
-    12730,
-    12240,
-    700,
-    12125,
-    675,
-    620,
-    12120
-  ],
-  "levels": [
-    "0.0",
-    "21.501"
-  ],
-  "nodes": [],
-  "specifications": [],
-  "materials": [
-    "металлочерепица.",
-    "бруса",
-    "Утеплитель",
-    "Утепление",
-    "Вент.брусок",
-    "Металлочерепица",
-    "Брус"
-  ],
-  "stamp_fields": {
-    "year": "2025"
-  },
-  "variable_parameters": [
-    "project_name",
-    "address",
-    "customer",
-    "area",
-    "floors",
-    "axes_grid",
-    "dimensions",
-    "materials",
-    "sheet_register"
-  ],
-  "output_documents": [
-    "DOCX_PROJECT_TEMPLATE_SUMMARY",
-    "JSON_PROJECT_TEMPLATE_MODEL",
-    "XLSX_SPECIFICATION_DRAFT"
-  ],
-  "quality": {
-    "has_sheet_register": false,
-    "has_sections": true,
-    "has_axes_or_dimensions": true,
-    "has_materials": true,
-    "text_chars": 8561,
-    "lines": 1822
-  },
-  "task_id": "",
-  "chat_id": "",
-  "topic_id": 0
-}
-====================================================================================================
-END_FILE: data/project_templates/PROJECT_TEMPLATE_MODEL__АР_manual.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: data/project_templates/PROJECT_TEMPLATE_MODEL__АР_repaired.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 756930a51f0ac08eb66c6253ff4fe99247a1fa2153b56e9dcbff2a515328fca3
-====================================================================================================
-{
-  "schema": "PROJECT_TEMPLATE_MODEL_V2_REPAIRED",
-  "project_type": "АР",
-  "source_file": "Проект АБ_ИНД_М_80_20_03_24.pdf",
-  "template_file": "/root/.areal-neva-core/data/project_templates/PROJECT_TEMPLATE_MODEL__АР_repaired.json",
-  "repaired_at": "2026-04-30T09:15:02.251470Z",
-  "sheet_register": [
-    "01 Общие данные",
-    "02 Общий вид",
-    "03 План аксонометрия",
-    "04 Экспликация помещений",
-    "05 План фундамента Отм. -0,029",
-    "06 Перспектива. Гостинная и прихожая.",
-    "07 Перспектива.",
-    "08 Перспектива.",
-    "09 Фасады",
-    "10 Расстановка выключателей и розеток",
-    "11 Маркировочный план",
-    "12 Заполнение конных и дверных проемов",
-    "02 Согласовано",
-    "05 План фундамента",
-    "06 Согласовано",
-    "07 Согласовано",
-    "08 Согласовано",
-    "03 План закладных деталей коммуникаций",
-    "04 План фундамента",
-    "05 План первого этажа",
-    "06 План кровли",
-    "07 Фасад 1-4",
-    "08 Фасад 4-1",
-    "09 Фасад А-Д",
-    "10 Фасад Д-А",
-    "13 Экспликация помещений",
-    "19 Ведомость отделки",
-    "20 Общие указания",
-    "22 Ведомость листов"
-  ],
-  "sections": [],
-  "materials": [],
-  "source": "core.db.topic_210.drive_file"
-}
-====================================================================================================
-END_FILE: data/project_templates/PROJECT_TEMPLATE_MODEL__АР_repaired.json
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: data/project_templates/PROJECT_TEMPLATE_MODEL__АР_smoke.json
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: bedd84f1787a2381a8bd97ca6b9af30e39f4e4f69f2a8849e018e72a4e4dcf72
-====================================================================================================
-{
-  "schema": "PROJECT_TEMPLATE_MODEL_V1",
-  "project_type": "АР",
-  "source_files": [
-    "АР тест.pdf"
-  ],
-  "sheet_register": [
-    {
-      "mark": "АР",
-      "number": "1",
-      "title": "Общие данные"
-    },
-    {
-      "mark": "АР",
-      "number": "2",
-      "title": "План этажа"
-    },
-    {
-      "mark": "АР",
-      "number": "3",
-      "title": "Фасады"
-    },
-    {
-      "mark": "АР",
-      "number": "4",
-      "title": "Разрез 1-1"
-    },
-    {
-      "mark": "АР",
-      "number": "5",
-      "title": "Узлы"
-    }
-  ],
-  "marks": [
-    "АР"
-  ],
-  "sections": [
-    "Общие данные",
-    "Ведомость листов",
-    "АР-1 Общие данные",
-    "АР-2 План этажа",
-    "АР-3 Фасады",
-    "АР-4 Разрез 1-1",
-    "Спецификация материалов"
-  ],
-  "axes_grid": {
-    "axes_letters": [
-      "А"
-    ],
-    "axes_numbers": [
-      "1"
-    ]
-  },
-  "dimensions": [
-    6000,
-    3000,
-    2500,
-    500,
-    2024
-  ],
-  "levels": [
-    "0.0"
-  ],
-  "nodes": [],
-  "specifications": [
-    "Ведомость листов",
-    "Спецификация материалов"
-  ],
-  "materials": [
-    "Бетон В25",
-    "Арматура А500"
-  ],
-  "stamp_fields": {
-    "address": "Ленинградская область, Всеволожский район",
-    "developer": "ООО СК Ареал-Нева",
-    "year": "2024"
-  },
-  "variable_parameters": [
-    "project_name",
-    "address",
-    "customer",
-    "area",
-    "floors",
-    "axes_grid",
-    "dimensions",
-    "materials",
-    "sheet_register"
-  ],
-  "output_documents": [
-    "DOCX_PROJECT_TEMPLATE_SUMMARY",
-    "JSON_PROJECT_TEMPLATE_MODEL",
-    "XLSX_SPECIFICATION_DRAFT"
-  ],
-  "quality": {
-    "has_sheet_register": true,
-    "has_sections": true,
-    "has_axes_or_dimensions": true,
-    "has_materials": true,
-    "text_chars": 297,
-    "lines": 17
-  },
-  "task_id": "smoke",
-  "chat_id": "-1003725299009",
-  "topic_id": 210
-}
-====================================================================================================
-END_FILE: data/project_templates/PROJECT_TEMPLATE_MODEL__АР_smoke.json
 FILE_CHUNK: 1/1
 ====================================================================================================

@@ -1,14 +1,20 @@
 # ORCHESTRA_FULL_CONTEXT_PART_007
-generated_at_utc: 2026-07-06T09:22:43.481470+00:00
-git_sha_before_commit: 5050af0a852e72589927a2e9cd995b26a90161f2
+generated_at_utc: 2026-07-06T09:52:44.435004+00:00
+git_sha_before_commit: 5d528b38229ba6dd2caeb4663a75c62515f156eb
 part: 7/19
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 3/4
-SHA256_FULL_FILE: 915e7ffdb3d28c522e670e86d6bb39a54420f19c81359fc25debb373a00b97fc
+SHA256_FULL_FILE: 2d0fd43cff5f449e6b0dcd855d599e8bf4df18d64882c23964f139589752e8a8
 ====================================================================================================
+if not getattr(_T25G_CURRENT, "_t25g_wrapped", False) and _T25G_PREGATE:
+    def _update_task(conn, task_id, **kwargs):
+        if kwargs.get("state") == "DONE":
+            try:
+                row = conn.execute(
+                    "SELECT topic_id FROM tasks WHERE id=? LIMIT 1", (str(task_id),)
                 ).fetchone()
                 if row is not None:
                     tid = int((row["topic_id"] if hasattr(row, "keys") else row[0]) or 0)
@@ -7530,10 +7536,6 @@ try:
                                     conn.commit()
                                 except Exception as _ue:
                                     try:
-                                        _T2CF2_LOG.exception(
-                                            "PATCH_TOPIC2_CANON_FULL_CLOSE_AFTER_REQUEUE_FAILURE_V1_RAW_UPDATE_ERR:%s",
-                                            _ue,
-                                        )
 
 ====================================================================================================
 END_FILE: task_worker.py

@@ -1,8 +1,278 @@
 # ORCHESTRA_FULL_CONTEXT_PART_014
-generated_at_utc: 2026-07-06T09:22:43.487054+00:00
-git_sha_before_commit: 5050af0a852e72589927a2e9cd995b26a90161f2
+generated_at_utc: 2026-07-06T09:52:44.440138+00:00
+git_sha_before_commit: 5d528b38229ba6dd2caeb4663a75c62515f156eb
 part: 14/19
 
+
+====================================================================================================
+BEGIN_FILE: core/technadzor_document_skill.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 7f86800da7b61771bec0e581bb3facd3ffa0f34a47ac55e87ca8fca8f3f1c74a
+====================================================================================================
+#!/usr/bin/env python3
+# === TECHNADZOR_DOCUMENT_SKILL_V1 ===
+# Converts source records from telegram_source_skill_extractor into skill cards.
+# Rejects noise. Classifies useful document-composition logic.
+# All extracted rules must keep source reference.
+from __future__ import annotations
+
+import hashlib
+import logging
+import re
+from typing import Any
+
+logger = logging.getLogger("technadzor_document_skill")
+
+SKILL_CATEGORIES = (
+    "act_structure",
+    "report_structure",
+    "defect_description_logic",
+    "photo_to_defect_linking",
+    "evidence_handling",
+    "normative_reference_handling",
+    "recommendation_logic",
+    "conclusion_logic",
+    "file_workflow",
+    "document_workflow",
+    "client_facing_language",
+    "contractor_statement_handling",
+    "owner_statement_handling",
+    "telegram_source_work_signal",
+    "rabota_poisk_reusable_pattern",
+    "unknown",
+)
+
+# Patterns → category
+_CATEGORY_PATTERNS: list[tuple[str, list[str]]] = [
+    ("act_structure", [
+        "акт", "форма акта", "состав акта", "разделы акта", "приложение к акту",
+        "акт освидетельствования", "акт скрытых", "акт приёмки", "акт проверки",
+    ]),
+    ("report_structure", [
+        "отчёт", "отчет", "заключение", "техническое заключение", "разделы отчёта",
+        "структура отчёта", "состав отчёта",
+    ]),
+    ("defect_description_logic", [
+        "дефект", "нарушение", "замечание", "несоответствие", "отклонение",
+        "трещин", "скол", "раковин", "расслоен", "коррозия",
+        "как описать", "формулировка дефекта", "описание дефекта",
+    ]),
+    ("photo_to_defect_linking", [
+        "фото", "фотофиксация", "привязка фото", "фото к дефекту",
+        "фото к акту", "фотоматериал", "приложение фото",
+    ]),
+    ("evidence_handling", [
+        "доказательство", "факт", "подтверждение", "доказательная база",
+        "источник данных", "обоснование", "исполнительная документация",
+    ]),
+    ("normative_reference_handling", [
+        "снип", "гост", "сп ", "нормати", "требования нормативов",
+        "ссылка на норму", "нормативный документ", "регламент",
+    ]),
+    ("recommendation_logic", [
+        "рекомендация", "предписание", "устранить", "необходимо устранить",
+        "рекомендуется", "следует", "требуется", "провести работы",
+    ]),
+    ("conclusion_logic", [
+        "вывод", "заключение", "итог", "резюме", "категория состояния",
+        "техническое состояние", "ограниченно работоспособ", "аварийн",
+    ]),
+    ("file_workflow", [
+        "pdf", "docx", "xlsx", "dwg", "файл", "загрузка файла",
+        "прикрепить файл", "скачать", "отправить файл", "формат файла",
+    ]),
+    ("document_workflow", [
+        "документооборот", "пакет документов", "комплект",
+        "исполнительная документация", "журнал работ", "акт скрытых",
+        "приёмка документов",
+    ]),
+    ("client_facing_language", [
+        "заказчик", "собственник", "владелец", "клиент", "застройщик",
+        "как написать заказчику", "для заказчика", "язык документа",
+    ]),
+    ("contractor_statement_handling", [
+        "подрядчик", "генподрядчик", "субподрядчик", "исполнитель",
+        "ответ подрядчика", "позиция подрядчика",
+    ]),
+    ("owner_statement_handling", [
+        "застройщик", "инвестор", "позиция застройщика",
+        "ответ застройщика", "письмо застройщика",
+    ]),
+    ("telegram_source_work_signal", [
+        "вакансия", "требуется", "нужен специалист", "ищем технадзор",
+        "ищем инженера", "найдём", "предложение работы",
+    ]),
+    ("rabota_poisk_reusable_pattern", [
+        "заказ", "тендер", "объявление", "контракт", "выбор подрядчика",
+        "объект ищет", "нужен технадзор", "проведём отбор",
+    ]),
+]
+
+TOPIC5_VALUE_KEYWORDS = [
+    "акт", "дефект", "технадзор", "заключение", "предписание",
+    "приёмка", "отчёт", "фото", "норматив", "документ",
+    "рекомендация", "вывод", "замечание",
+]
+
+NOISE_MARKERS = [
+    "реклама", "продам", "куплю", "скидка", "акция",
+    "заработок", "кредит без отказа", "займ", "только сегодня",
+    "подпишись", "переходи по ссылке", "выиграли",
+]
+
+
+def _card_id(source_ref: str, message_id: int | str) -> str:
+    raw = f"{source_ref}::{message_id}"
+    return "SK_" + hashlib.md5(raw.encode()).hexdigest()[:12].upper()
+
+
+def classify_category(text: str) -> str:
+    low = text.lower()
+    for category, patterns in _CATEGORY_PATTERNS:
+        if any(p in low for p in patterns):
+            return category
+    return "unknown"
+
+
+def extract_rule_from_text(text: str, category: str) -> str:
+    sentences = re.split(r"[.\n!?]+", text)
+    useful = []
+    for sent in sentences:
+        s = sent.strip()
+        if len(s) < 20:
+            continue
+        low = s.lower()
+        if any(kw in low for kw in TOPIC5_VALUE_KEYWORDS):
+            useful.append(s)
+        if len(useful) >= 3:
+            break
+    if useful:
+        return ". ".join(useful[:3])
+    # fallback: first substantial sentence
+    for sent in sentences:
+        s = sent.strip()
+        if len(s) >= 30:
+            return s[:300]
+    return text[:300].strip()
+
+
+def why_useful(category: str) -> str:
+    mapping = {
+        "act_structure": "Позволяет выстраивать структуру акта технадзора: разделы, приложения, обязательные поля",
+        "report_structure": "Определяет состав технического отчёта/заключения по объекту",
+        "defect_description_logic": "Формирует навык точной формулировки дефектов для актов и предписаний",
+        "photo_to_defect_linking": "Описывает правило привязки фотоматериалов к конкретным дефектам в документе",
+        "evidence_handling": "Показывает как формировать доказательную базу — факты, источники, исполнительная документация",
+        "normative_reference_handling": "Обучает правильному указанию нормативных ссылок (СП/ГОСТ/СНиП) в актах",
+        "recommendation_logic": "Задаёт логику формулировки предписаний и рекомендаций по устранению",
+        "conclusion_logic": "Показывает структуру вывода/заключения о техническом состоянии",
+        "file_workflow": "Описывает правила работы с файлами (PDF/DOCX/XLSX) при формировании пакета документов",
+        "document_workflow": "Определяет порядок формирования и передачи комплекта исполнительной документации",
+        "client_facing_language": "Задаёт профессиональный язык документов, обращённых к заказчику/собственнику",
+        "contractor_statement_handling": "Показывает как фиксировать позицию подрядчика в документах",
+        "owner_statement_handling": "Показывает как фиксировать позицию застройщика/инвестора",
+        "telegram_source_work_signal": "Сигнал о возможной работе/заказе — полезен для маршрутизации в topic_6104",
+        "rabota_poisk_reusable_pattern": "Паттерн для поиска заказов/вакансий через Telegram-источник (тема RABOTA_POISK)",
+        "unknown": "Категория не определена — требует ручной проверки владельца",
+    }
+    return mapping.get(category, "")
+
+
+def is_noise(text: str) -> bool:
+    low = (text or "").lower()
+    if any(n in low for n in NOISE_MARKERS):
+        return True
+    if len(text.strip()) < 20:
+        return True
+    return False
+
+
+def has_practical_value(text: str) -> bool:
+    low = text.lower()
+    return any(kw in low for kw in TOPIC5_VALUE_KEYWORDS)
+
+
+def build_skill_card(record: dict) -> dict | None:
+    text = record.get("text", "")
+    source_ref = record.get("source_ref", "")
+    message_id = record.get("message_id", "")
+
+    if not source_ref:
+        logger.debug("rejected: no source_ref msg=%s", message_id)
+        return None
+
+    if is_noise(text):
+        logger.debug("rejected: noise msg=%s", message_id)
+        return None
+
+    if not has_practical_value(text) and not record.get("file_name") and not record.get("links"):
+        logger.debug("rejected: no practical value msg=%s", message_id)
+        return None
+
+    category = classify_category(text)
+    extracted_rule = extract_rule_from_text(text, category)
+
+    needs_review = (
+        category == "unknown"
+        or len(extracted_rule) < 30
+        or not has_practical_value(text)
+    )
+
+    tags = [category]
+    if record.get("file_name"):
+        tags.append("has_document")
+    if record.get("links"):
+        tags.append("has_links")
+    if record.get("media_type") == "photo":
+        tags.append("has_photo")
+
+    return {
+        "id": _card_id(source_ref, message_id),
+        "source": record.get("source", "@tnz_msk"),
+        "source_ref": source_ref,
+        "message_id": message_id,
+        "message_date": record.get("message_date", ""),
+        "category": category,
+        "title": f"{category}: {extracted_rule[:60]}",
+        "source_excerpt": text[:400],
+        "extracted_rule": extracted_rule,
+        "why_useful_for_topic_5": why_useful(category),
+        "source_links": record.get("links", []),
+        "source_files": ([record["file_name"]] if record.get("file_name") else []),
+        "confidence": "low" if needs_review else "medium",
+        "needs_owner_review": needs_review,
+        "tags": tags,
+    }
+
+
+def process_records(records: list[dict]) -> dict:
+    cards: list[dict] = []
+    rejected = 0
+    for rec in records:
+        card = build_skill_card(rec)
+        if card:
+            cards.append(card)
+        else:
+            rejected += 1
+
+    by_category: dict[str, list] = {}
+    for card in cards:
+        by_category.setdefault(card["category"], []).append(card)
+
+    return {
+        "total_input": len(records),
+        "extracted": len(cards),
+        "rejected_noise": rejected,
+        "categories": list(by_category.keys()),
+        "cards": cards,
+        "by_category": by_category,
+    }
+# === END_TECHNADZOR_DOCUMENT_SKILL_V1 ===
+
+====================================================================================================
+END_FILE: core/technadzor_document_skill.py
+FILE_CHUNK: 1/1
+====================================================================================================
 
 ====================================================================================================
 BEGIN_FILE: core/technadzor_drive_index.py
@@ -8949,366 +9219,5 @@ def mark_known_invalid_stale_results(conn: sqlite3.Connection) -> int:
 
 ====================================================================================================
 END_FILE: core/topic2_input_gate.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/topic_3008_engine.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: f6f9c29ce8def6ac922df7e40ad352a08586d5070eaa1d984e2ed9dc0dab51c0
-====================================================================================================
-import asyncio, logging, os, re
-from typing import Optional
-logger = logging.getLogger(__name__)
-
-TOPIC_3008 = 3008
-TIMEOUT = 90
-
-_WRITE_CODE = ["напиши код", "написать код"]
-_VERIFY_CODE = ["проверь код", "проверить код", "верификация"]
-_CODE_BLOCK = re.compile(r"```[\w]*\n.*?```", re.DOTALL)
-
-def is_topic_3008(topic_id):
-    return int(topic_id or 0) == TOPIC_3008
-
-def detect_command(text):
-    low = text.lower()
-    if any(t in low for t in _WRITE_CODE):
-        return "write"
-    if any(t in low for t in _VERIFY_CODE):
-        return "verify"
-    if _CODE_BLOCK.search(text):
-        return "verify"
-    return "none"
-
-def extract_code(text):
-    m = _CODE_BLOCK.search(text)
-    if m:
-        raw = m.group(0)
-        lines = raw.split("\n")
-        if lines[0].startswith("```"):
-            lines = lines[1:]
-        if lines and lines[-1].strip() == "```":
-            lines = lines[:-1]
-        return "\n".join(lines)
-    return text
-
-MODEL_REGISTRY = {
-    "deepseek": {"name":"DeepSeek","emoji":"🧠","role":"архитектура","api":"openrouter","model":"deepseek/deepseek-chat","env_key":"OPENROUTER_API_KEY","available":True},
-    "claude":   {"name":"Claude",  "emoji":"👤","role":"логика ТЗ", "api":"anthropic","model":"claude-opus-4-6","env_key":"ANTHROPIC_API_KEY","available":True},
-    "gpt":      {"name":"ChatGPT", "emoji":"🤖","role":"патчи",    "api":"openai",  "model":"gpt-4o","env_key":"OPENAI_API_KEY","available":True},
-    "gemini":   {"name":"Gemini",  "emoji":"🔒","role":"безопасность","api":"gemini","model":"gemini-2.0-flash","env_key":"GOOGLE_API_KEY","available":False},
-    "grok":     {"name":"Grok",    "emoji":"⚡","role":"архитектура","api":"xai",   "model":"grok-3","env_key":"XAI_API_KEY","available":False},
-}
-
-async def _call_openrouter(model_id, prompt, api_key, base_url):
-    import aiohttp
-    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-    payload = {"model": model_id, "messages": [{"role":"user","content":prompt}], "max_tokens":1000}
-    async with aiohttp.ClientSession() as s:
-        async with s.post(f"{base_url}/chat/completions", json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=TIMEOUT)) as r:
-            d = await r.json()
-            return d["choices"][0]["message"]["content"]
-
-async def _call_anthropic(model_id, prompt, api_key):
-    import aiohttp
-    headers = {"x-api-key": api_key, "anthropic-version": "2023-06-01", "content-type": "application/json"}
-    payload = {"model": model_id, "max_tokens":1000, "messages":[{"role":"user","content":prompt}]}
-    async with aiohttp.ClientSession() as s:
-        async with s.post("https://api.anthropic.com/v1/messages", json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=TIMEOUT)) as r:
-            d = await r.json()
-            return d["content"][0]["text"]
-
-async def _call_openai(model_id, prompt, api_key):
-    import aiohttp
-    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-    payload = {"model": model_id, "messages":[{"role":"user","content":prompt}], "max_tokens":1000}
-    async with aiohttp.ClientSession() as s:
-        async with s.post("https://api.openai.com/v1/chat/completions", json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=TIMEOUT)) as r:
-            d = await r.json()
-            return d["choices"][0]["message"]["content"]
-
-async def _verify_one(key, meta, prompt):
-    api_key = <REDACTED_SECRET>"env_key"], "")
-    if not api_key or not meta["available"]:
-        return {"key":key,"name":meta["name"],"emoji":meta["emoji"],"role":meta["role"],"result":"⚠️ НЕТ ОТВЕТА","text":"недоступна","ok":None}
-    try:
-        base_url = os.getenv("OPENROUTER_BASE_URL","https://openrouter.ai/api/v1")
-        if meta["api"] == "openrouter":
-            text = await _call_openrouter(meta["model"], prompt, api_key, base_url)
-        elif meta["api"] == "anthropic":
-            text = await _call_anthropic(meta["model"], prompt, api_key)
-        elif meta["api"] == "openai":
-            text = await _call_openai(meta["model"], prompt, api_key)
-        else:
-            return {"key":key,"name":meta["name"],"emoji":meta["emoji"],"role":meta["role"],"result":"⚠️ НЕТ ОТВЕТА","text":"API не реализован","ok":None}
-        text_clean = text.strip()[:800]
-        low = text_clean.lower()
-        ok = not any(w in low for w in ["ошибк","проблем","уязвимост","небезопасн","запрещ"])
-        return {"key":key,"name":meta["name"],"emoji":meta["emoji"],"role":meta["role"],"result":"✅" if ok else "❌","text":text_clean,"ok":ok}
-    except asyncio.TimeoutError:
-        return {"key":key,"name":meta["name"],"emoji":meta["emoji"],"role":meta["role"],"result":"⚠️ НЕТ ОТВЕТА","text":"таймаут 90с","ok":None}
-    except Exception as e:
-        return {"key":key,"name":meta["name"],"emoji":meta["emoji"],"role":meta["role"],"result":"⚠️ НЕТ ОТВЕТА","text":str(e)[:200],"ok":None}
-
-async def verify_code(code, context=""):
-    prompt = f"Проверь код на логику, архитектуру, безопасность.\n\nКонтекст: AREAL-NEVA ORCHESTRA\n{context[:300]}\n\nКод:\n```\n{code[:3000]}\n```\n\nДай краткий вердикт (2-3 предложения)."
-    available = {k:v for k,v in MODEL_REGISTRY.items()}
-    tasks = [_verify_one(k,v,prompt) for k,v in available.items()]
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-    lines = ["=== ВЕРИФИКАЦИЯ КОДА ===\n"]
-    approved = 0
-    critical = False
-    for r in results:
-        if isinstance(r, Exception):
-            continue
-        lines.append(f"{r['emoji']} {r['name'].upper()} ({r['role']}): {r['result']}")
-        lines.append(r['text'])
-        lines.append("")
-        if r['ok'] is True:
-            approved += 1
-        if r['key'] == 'gemini' and r['result'] == '❌':
-            critical = True
-    total = sum(1 for v in available.values() if v["available"] and os.getenv(v["env_key"]))
-    lines.append("=== ОБЩАЯ КАРТИНА ===")
-    lines.append(f"Одобрено {approved} из {max(total,1)} доступных моделей.")
-    if critical:
-        lines.append("КРИТИЧЕСКОЕ ЗАМЕЧАНИЕ: Gemini выявил проблемы безопасности!")
-    lines.append("\nРешение принимает пользователь.")
-    return "\n".join(lines)
-
-async def generate_code(description, context=""):
-    api_key = <REDACTED_SECRET>"OPENROUTER_API_KEY","")
-    base_url = os.getenv("OPENROUTER_BASE_URL","https://openrouter.ai/api/v1")
-    prompt = f"Напиши код. Только код без лишних объяснений.\n\nСистема: AREAL-NEVA ORCHESTRA (Python 3.12)\n{('Контекст: ' + context[:300]) if context else ''}\n\nЗадача: {description}"
-    try:
-        return (await _call_openrouter("deepseek/deepseek-chat", prompt, api_key, base_url)).strip()
-    except Exception as e:
-        return f"Ошибка генерации: {e}"
-
-====================================================================================================
-END_FILE: core/topic_3008_engine.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/topic_autodiscovery.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: d0d1b4283ee522045919246760eaac8dd0db474767f03ff0cd346aac7ae73994
-====================================================================================================
-# === FULLFIX_TOPIC_AUTODISCOVERY_V2 ===
-from __future__ import annotations
-import json
-import logging
-import os
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
-
-logger = logging.getLogger("task_worker")
-
-AUTODISCOVERY_VERSION = "TOPIC_AUTODISCOVERY_V2"
-CONFIG_PATH = Path("/root/.areal-neva-core/config/directions.yaml")
-DATA_TOPICS_PATH = Path("/root/.areal-neva-core/data/topics")
-NAMING_TIMEOUT_HOURS = 24
-CONFLICT_SCORE_DELTA = 30
-MIN_SCORE_TO_AUTOASSIGN = 60
-
-
-def _load_config():
-    raw = CONFIG_PATH.read_text(encoding="utf-8")
-    try:
-        return json.loads(raw)
-    except Exception:
-        import yaml
-        return yaml.safe_load(raw) or {}
-
-
-def _save_config(data: dict):
-    # Всегда пишем JSON — файл directions.yaml фактически JSON
-    CONFIG_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-
-
-def _load_topic_meta(topic_id: int) -> Dict:
-    meta_file = DATA_TOPICS_PATH / str(topic_id) / "meta.json"
-    if meta_file.exists():
-        try:
-            return json.loads(meta_file.read_text(encoding="utf-8"))
-        except Exception:
-            return {}
-    return {}
-
-
-def _save_topic_meta(topic_id: int, meta: dict):
-    folder = DATA_TOPICS_PATH / str(topic_id)
-    folder.mkdir(parents=True, exist_ok=True)
-    meta_file = folder / "meta.json"
-    meta_file.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
-
-
-def _topic_known(topic_id: int, data: dict) -> Optional[str]:
-    for direction_id, profile in data.get("directions", {}).items():
-        if topic_id in (profile.get("topic_ids") or []):
-            return direction_id
-    return None
-
-
-def _detect_with_audit(work_item) -> Tuple[str, int, str, int]:
-    from core.direction_registry import DirectionRegistry
-    reg = DirectionRegistry()
-    results = []
-    for direction_id, profile in reg.directions.items():
-        score, item = reg._score_direction(direction_id, profile or {}, work_item)
-        results.append((direction_id, score))
-    results.sort(key=lambda x: -x[1])
-    top = results[0] if results else ("general_chat", 0)
-    second = results[1] if len(results) > 1 else ("general_chat", 0)
-    return top[0], top[1], second[0], second[1]
-
-
-def _create_topic_folder(topic_id: int, direction: str, name: str = ""):
-    folder = DATA_TOPICS_PATH / str(topic_id)
-    folder.mkdir(parents=True, exist_ok=True)
-    meta = _load_topic_meta(topic_id)
-    meta.update({
-        "topic_id": topic_id,
-        "direction": direction,
-        "name": name,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "version": AUTODISCOVERY_VERSION,
-    })
-    _save_topic_meta(topic_id, meta)
-    logger.info("TOPIC_AUTODISCOVERY folder: %s dir=%s name=%s", folder, direction, name)
-
-
-def _register_topic(topic_id: int, direction: str, data: dict):
-    profile = data["directions"].get(direction)
-    if profile is None:
-        return
-    topic_ids = list(profile.get("topic_ids") or [])
-    if topic_id not in topic_ids:
-        topic_ids.append(topic_id)
-        data["directions"][direction]["topic_ids"] = topic_ids
-    _save_config(data)
-    logger.info("TOPIC_REGISTERED topic_id=%s -> direction=%s", topic_id, direction)
-
-
-def _send_naming_question(chat_id: str, topic_id: int):
-    """Отправляет вопрос о названии топика один раз."""
-    try:
-        from core.reply_sender import send_reply  # IMPORT_FIX_V1
-        send_reply(
-            chat_id=str(chat_id),
-            text="Как назовём этот чат? Ответь голосом или текстом.",
-            message_thread_id=topic_id,
-        )
-        logger.info("TOPIC_NAMING_QUESTION sent chat=%s topic=%s", chat_id, topic_id)
-    except Exception as e:
-        logger.error("TOPIC_NAMING_QUESTION_ERR %s", e)
-
-
-def check_naming_timeout(chat_id: str, topic_id: int):
-    """
-    Вызывается при каждом сообщении из топика.
-    Если топик без имени и прошло 24 часа — один раз спрашивает название.
-    """
-    meta = _load_topic_meta(topic_id)
-    if not meta:
-        return
-    if meta.get("name"):
-        return
-    if meta.get("naming_asked"):
-        return
-    created_at = meta.get("created_at")
-    if not created_at:
-        return
-    try:
-        created = datetime.fromisoformat(created_at)
-        elapsed = (datetime.now(timezone.utc) - created).total_seconds() / 3600
-        if elapsed >= NAMING_TIMEOUT_HOURS:
-            meta["naming_asked"] = datetime.now(timezone.utc).isoformat()
-            _save_topic_meta(topic_id, meta)
-            _send_naming_question(chat_id, topic_id)
-    except Exception as e:
-        logger.error("TOPIC_NAMING_TIMEOUT_ERR %s", e)
-
-
-def assign_name(topic_id: int, name: str):
-    """Назначает имя топику. Вызывается когда пользователь ответил на вопрос."""
-    meta = _load_topic_meta(topic_id)
-    meta["name"] = name
-    meta["named_at"] = datetime.now(timezone.utc).isoformat()
-    _save_topic_meta(topic_id, meta)
-    logger.info("TOPIC_NAMED topic=%s name=%s", topic_id, name)
-
-
-def process(work_item, payload: Dict[str, Any]) -> Dict[str, Any]:
-    topic_id = int(getattr(work_item, "topic_id", 0) or 0)
-    chat_id = str(getattr(work_item, "chat_id", "") or payload.get("chat_id") or "")
-    if topic_id == 0:
-        return {}
-
-    try:
-        data = _load_config()
-    except Exception as e:
-        logger.error("TOPIC_AUTODISCOVERY config load error: %s", e)
-        return {}
-
-    # Уже известный топик — проверяем таймаут имени
-    known = _topic_known(topic_id, data)
-    if known:
-        try:
-            check_naming_timeout(chat_id, topic_id)
-        except Exception:
-            pass
-        return {"status": "known", "direction": known}
-
-    # Новый топик — детектируем направление
-    try:
-        top_dir, top_score, second_dir, second_score = _detect_with_audit(work_item)
-    except Exception as e:
-        logger.error("TOPIC_AUTODISCOVERY detect error: %s", e)
-        return {"status": "detect_error"}
-
-    # Недостаточный score
-    if top_score < MIN_SCORE_TO_AUTOASSIGN:
-        # Создаём папку но не регистрируем direction
-        _create_topic_folder(topic_id, "unknown", "")
-        logger.info("TOPIC_AUTODISCOVERY low score=%s topic=%s — folder created, waiting", top_score, topic_id)
-        return {"status": "low_score", "topic_id": topic_id, "score": top_score}
-
-    # Конфликт — уточняем
-    delta = top_score - second_score
-    if delta < CONFLICT_SCORE_DELTA and second_score >= MIN_SCORE_TO_AUTOASSIGN:
-        logger.warning("TOPIC_CONFLICT topic=%s %s(%s) vs %s(%s)",
-                       topic_id, top_dir, top_score, second_dir, second_score)
-        payload["topic_conflict"] = {
-            "topic_id": topic_id,
-            "candidates": [
-                {"direction": top_dir, "score": top_score},
-                {"direction": second_dir, "score": second_score},
-            ],
-        }
-        return {"status": "conflict", "candidates": [top_dir, second_dir]}
-
-    # Однозначно — регистрируем молча
-    try:
-        _register_topic(topic_id, top_dir, data)
-        _create_topic_folder(topic_id, top_dir, "")
-        payload["topic_autodiscovered"] = {
-            "topic_id": topic_id,
-            "direction": top_dir,
-            "score": top_score,
-            "version": AUTODISCOVERY_VERSION,
-        }
-        logger.info("TOPIC_AUTODISCOVERY_DONE topic=%s -> %s score=%s", topic_id, top_dir, top_score)
-        return {"status": "registered", "direction": top_dir, "score": top_score}
-    except Exception as e:
-        logger.error("TOPIC_REGISTER_ERR %s", e)
-        return {"status": "register_error"}
-# === END FULLFIX_TOPIC_AUTODISCOVERY_V2 ===
-
-====================================================================================================
-END_FILE: core/topic_autodiscovery.py
 FILE_CHUNK: 1/1
 ====================================================================================================

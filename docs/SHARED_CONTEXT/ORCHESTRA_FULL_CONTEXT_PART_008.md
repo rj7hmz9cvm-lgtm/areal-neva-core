@@ -1,14 +1,18 @@
 # ORCHESTRA_FULL_CONTEXT_PART_008
-generated_at_utc: 2026-07-06T09:22:43.482587+00:00
-git_sha_before_commit: 5050af0a852e72589927a2e9cd995b26a90161f2
+generated_at_utc: 2026-07-06T09:52:44.435946+00:00
+git_sha_before_commit: 5d528b38229ba6dd2caeb4663a75c62515f156eb
 part: 8/19
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 4/4
-SHA256_FULL_FILE: 915e7ffdb3d28c522e670e86d6bb39a54420f19c81359fc25debb373a00b97fc
+SHA256_FULL_FILE: 2d0fd43cff5f449e6b0dcd855d599e8bf4df18d64882c23964f139589752e8a8
 ====================================================================================================
+                                        _T2CF2_LOG.exception(
+                                            "PATCH_TOPIC2_CANON_FULL_CLOSE_AFTER_REQUEUE_FAILURE_V1_RAW_UPDATE_ERR:%s",
+                                            _ue,
+                                        )
                                     except Exception:
                                         pass
                                 # Pass cleaned task to original handler
@@ -946,12 +950,28 @@ def _t2afi_latest_drive_ids(conn, task_id):
     except Exception:
         rows = []
 
-    for (action,) in rows:
+    def _extract_drive_id(action, key):
         text = str(action or "")
-        m_x = _t2afi_re.search(r"xlsx=([A-Za-z0-9_-]+)", text)
-        m_p = _t2afi_re.search(r"pdf=([A-Za-z0-9_-]+)", text)
-        xlsx_id = m_x.group(1) if m_x else ""
-        pdf_id = m_p.group(1) if m_p else ""
+        m = _t2afi_re.search(
+            r"(?:^|:)" + key + r"=([^\s]+?)(?=:(?:xlsx|pdf)=|\s|$)",
+            text,
+        )
+        if not m:
+            return ""
+        value = m.group(1).strip().rstrip(".,;])")
+        m_url = _t2afi_re.search(r"/d/([A-Za-z0-9_-]+)", value)
+        if m_url:
+            return m_url.group(1)
+        m_qs = _t2afi_re.search(r"[?&]id=([A-Za-z0-9_-]+)", value)
+        if m_qs:
+            return m_qs.group(1)
+        if _t2afi_re.fullmatch(r"[A-Za-z0-9_-]{10,}", value):
+            return value
+        return ""
+
+    for (action,) in rows:
+        xlsx_id = _extract_drive_id(action, "xlsx")
+        pdf_id = _extract_drive_id(action, "pdf")
         if xlsx_id or pdf_id:
             return xlsx_id, pdf_id
     return "", ""
@@ -4581,6 +4601,83 @@ except Exception as _t2rfg_install_err:
     except Exception:
         pass
 # === END_PATCH_TOPIC2_REVISION_FINAL_GATE_CHOICE_V1 ===
+
+# === PATCH_TOPIC2_RELIABLE_PRICE_FINAL_WORKER_GUARD_V1 ===
+# Canon/user rule: topic_2 price option 3 is "надёжные", not maximum.
+# If the current revision explicitly says "надёжные ... не максимальные",
+# stale max/maximum markers must not drive final regeneration.
+try:
+    import re as _t2rpfw_re
+    import logging as _t2rpfw_logging
+
+    _T2RPFW_LOG = _t2rpfw_logging.getLogger("task_worker")
+
+    def _t2rpfw_s(v):
+        return "" if v is None else str(v)
+
+    def _t2rpfw_norm(text):
+        return _t2rpfw_re.sub(r"\s+", " ", _t2rpfw_s(text).lower().replace("ё", "е")).strip()
+
+    def _t2rpfw_reliable_requested(text):
+        t = _t2rpfw_norm(text).strip(" .,!?:;()[]{}")
+        explicit_max = any(x in t for x in ("максим", "max", "макс ")) and not any(x in t for x in ("не максим", "а не максим", "не max"))
+        return (
+            not explicit_max
+            and (
+                t in ("3", "3.", "третий", "вариант 3", "вариант в", "в", "v", "в)", "v)")
+                or "надежн" in t
+                or "проверенн" in t
+                or "раздел три" in t
+            )
+        )
+
+    if "_t2fdsg_price_choice" in globals():
+        _T2RPFW_ORIG_FDSG_PRICE_CHOICE = _t2fdsg_price_choice
+
+        def _t2fdsg_price_choice(text):  # noqa: F811
+            if _t2rpfw_reliable_requested(text):
+                return "reliable"
+            return _T2RPFW_ORIG_FDSG_PRICE_CHOICE(text)
+
+    if "_t2fdsg_run_drive_final" in globals():
+        _T2RPFW_ORIG_RUN_DRIVE_FINAL = _t2fdsg_run_drive_final
+
+        async def _t2fdsg_run_drive_final(conn, parent, choice):  # noqa: F811
+            parent_id = _t2rpfw_s(_t2rfg_get(parent, "id", "")) if "_t2rfg_get" in globals() else ""
+            raw = _t2rpfw_s(_t2rfg_get(parent, "raw_input", "")) if "_t2rfg_get" in globals() else ""
+            hist = ""
+            try:
+                rows = conn.execute(
+                    "SELECT action FROM task_history WHERE task_id=? ORDER BY rowid ASC",
+                    (str(parent_id),),
+                ).fetchall()
+                hist = "\n".join(_t2rpfw_s(r[0]) for r in rows)
+            except Exception:
+                hist = ""
+            text = raw + "\n" + hist
+            fixed_choice = choice
+            if _t2rpfw_reliable_requested(text) or (
+                "TOPIC2_PRICE_CHOICE_CONFIRMED:reliable" in hist
+                and str(choice).lower() in ("max", "maximum")
+            ):
+                fixed_choice = "reliable"
+            if fixed_choice != choice:
+                try:
+                    _history(conn, parent_id, "PATCH_TOPIC2_RELIABLE_PRICE_FINAL_WORKER_GUARD_V1:" + _t2rpfw_s(choice) + "->" + _t2rpfw_s(fixed_choice))
+                    conn.commit()
+                except Exception:
+                    pass
+            return await _T2RPFW_ORIG_RUN_DRIVE_FINAL(conn, parent, fixed_choice)
+
+        globals()["_t2fdsg_run_drive_final"] = _t2fdsg_run_drive_final
+
+    _T2RPFW_LOG.info("PATCH_TOPIC2_RELIABLE_PRICE_FINAL_WORKER_GUARD_V1 installed")
+except Exception as _t2rpfw_err:
+    try:
+        logger.exception("PATCH_TOPIC2_RELIABLE_PRICE_FINAL_WORKER_GUARD_V1_INSTALL_ERR:%s", _t2rpfw_err)
+    except Exception:
+        pass
+# === END_PATCH_TOPIC2_RELIABLE_PRICE_FINAL_WORKER_GUARD_V1 ===
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -1,14 +1,22 @@
 # ORCHESTRA_FULL_CONTEXT_PART_006
-generated_at_utc: 2026-07-06T09:22:43.480210+00:00
-git_sha_before_commit: 5050af0a852e72589927a2e9cd995b26a90161f2
+generated_at_utc: 2026-07-06T09:52:44.434227+00:00
+git_sha_before_commit: 5d528b38229ba6dd2caeb4663a75c62515f156eb
 part: 6/19
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 2/4
-SHA256_FULL_FILE: 915e7ffdb3d28c522e670e86d6bb39a54420f19c81359fc25debb373a00b97fc
+SHA256_FULL_FILE: 2d0fd43cff5f449e6b0dcd855d599e8bf4df18d64882c23964f139589752e8a8
 ====================================================================================================
+        if task is None and (_p6e4_val(obj, "id", None) is not None or _p6e4_val(obj, "raw_input", None) is not None):
+            task = obj
+    return conn, task
+
+def _p6e4_wrap_drive_handler(name):
+    orig = globals().get(name)
+    if not orig or getattr(orig, "_p6e4_wrapped", False):
+        return
     if _p6e4_inspect.iscoroutinefunction(orig):
         async def wrapped(*args, **kwargs):
             conn, task = _p6e4_get_conn_task(args, kwargs)
@@ -7729,12 +7737,6 @@ def _t25g_has_reply_sent(conn, task_id: str) -> bool:
     except Exception:
         return False
 
-if not getattr(_T25G_CURRENT, "_t25g_wrapped", False) and _T25G_PREGATE:
-    def _update_task(conn, task_id, **kwargs):
-        if kwargs.get("state") == "DONE":
-            try:
-                row = conn.execute(
-                    "SELECT topic_id FROM tasks WHERE id=? LIMIT 1", (str(task_id),)
 
 ====================================================================================================
 END_FILE: task_worker.py

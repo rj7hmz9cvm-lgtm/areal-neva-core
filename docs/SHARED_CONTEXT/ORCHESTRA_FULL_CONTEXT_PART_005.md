@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_005
-generated_at_utc: 2026-07-06T09:22:43.478980+00:00
-git_sha_before_commit: 5050af0a852e72589927a2e9cd995b26a90161f2
+generated_at_utc: 2026-07-06T09:52:44.433331+00:00
+git_sha_before_commit: 5d528b38229ba6dd2caeb4663a75c62515f156eb
 part: 5/19
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 1/4
-SHA256_FULL_FILE: 915e7ffdb3d28c522e670e86d6bb39a54420f19c81359fc25debb373a00b97fc
+SHA256_FULL_FILE: 2d0fd43cff5f449e6b0dcd855d599e8bf4df18d64882c23964f139589752e8a8
 ====================================================================================================
 
 def _force_voice_finish(raw_input: str, result: str) -> bool:
@@ -1158,6 +1158,7 @@ def _recover_stale_tasks(conn: sqlite3.Connection, chat_id: Optional[str]) -> No
         _hw = (["chat_id=?"] if chat_id else []) + [
             "state='IN_PROGRESS'",
             "created_at < datetime('now','-15 minutes')",
+            "NOT (COALESCE(topic_id,0)=2 AND datetime(COALESCE(updated_at, created_at, 'now')) > datetime('now','-15 minutes'))",
         ]
         for _hr in conn.execute(
             f"SELECT id,chat_id,COALESCE(topic_id,0) AS topic_id,reply_to_message_id,raw_input FROM tasks WHERE {' AND '.join(_hw)}",
@@ -3788,6 +3789,7 @@ def _in_progress_hard_timeout_by_created_at_fix_v1(conn, minutes: int = 30) -> i
             SELECT id FROM tasks
             WHERE state='IN_PROGRESS'
               AND datetime(COALESCE(created_at, updated_at, 'now')) <= datetime('now', ?)
+              AND NOT (COALESCE(topic_id,0)=2 AND datetime(COALESCE(updated_at, created_at, 'now')) > datetime('now', '-15 minutes'))
             ORDER BY created_at ASC
             LIMIT 200
             """,
@@ -7348,14 +7350,6 @@ def _p6e4_get_conn_task(args, kwargs):
     for obj in args:
         if conn is None and hasattr(obj, "execute") and hasattr(obj, "commit"):
             conn = obj
-        if task is None and (_p6e4_val(obj, "id", None) is not None or _p6e4_val(obj, "raw_input", None) is not None):
-            task = obj
-    return conn, task
-
-def _p6e4_wrap_drive_handler(name):
-    orig = globals().get(name)
-    if not orig or getattr(orig, "_p6e4_wrapped", False):
-        return
 
 ====================================================================================================
 END_FILE: task_worker.py
