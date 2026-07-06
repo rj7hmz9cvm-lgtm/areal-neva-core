@@ -1,7 +1,7 @@
 # direction: isolated_project_ivan
 
-GENERATED_AT: 2026-07-06T06:55:02.387327+00:00
-GIT_SHA: 835217ef1a68c333fa7435458fe307d6e542622b
+GENERATED_AT: 2026-07-06T07:15:03.074905+00:00
+GIT_SHA: 486f4570381d12c24aff0bb0ac42f8fd338184b9
 GENERATED_FROM: core.direction_registry.DirectionRegistry
 
 DIRECTION_ID: isolated_project_ivan
