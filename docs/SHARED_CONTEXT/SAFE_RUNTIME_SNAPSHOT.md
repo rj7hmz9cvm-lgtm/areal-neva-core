@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-07-06T07:15:02.464951+00:00
-git_sha_before_commit: 486f4570381d12c24aff0bb0ac42f8fd338184b9
+generated_at_utc: 2026-07-06T07:22:41.239059+00:00
+git_sha_before_commit: 6bce30b7e04da6eb333fadf750b3bdac7a94ad49
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,7 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: active
 
 ## GIT_LOG_30
+6bce30b FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 486f457 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 835217e FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 2f5dff4 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
@@ -39,86 +40,85 @@ c6faf53 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 4f48f3a FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 4a963f6 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 57ea8d1 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
-4850e44 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
 ## GIT_SHOW_STAT_HEAD
-commit 486f4570381d12c24aff0bb0ac42f8fd338184b9
+commit 6bce30b7e04da6eb333fadf750b3bdac7a94ad49
 Author: Ila <ilakuznecov@mac.local>
-Date:   Mon Jul 6 09:55:06 2026 +0300
+Date:   Mon Jul 6 10:15:10 2026 +0300
 
     FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
- docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md    |  6 +--
- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md |  2 +-
- .../SHARED_CONTEXT/DIRECTIONS/auto_parts_search.md |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/cad_dwg.md          |  4 +-
- .../DIRECTIONS/construction_search.md              |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/crm_leads.md        |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/defect_acts.md      |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/devops_server.md    |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/documents.md        |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/email_ingress.md    |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/estimates.md        |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/general_chat.md     |  4 +-
- .../DIRECTIONS/google_drive_storage.md             |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/internet_search.md  |  4 +-
- .../DIRECTIONS/isolated_project_ivan.md            |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/job_search.md       |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/memory_archive.md   |  4 +-
- .../SHARED_CONTEXT/DIRECTIONS/monolith_concrete.md |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/ocr_photo.md        |  4 +-
- .../DIRECTIONS/orchestration_core.md               |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/photo_cleanup.md    |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/product_search.md   |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/roofing.md          |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/social_content.md   |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/spreadsheets.md     |  4 +-
- .../SHARED_CONTEXT/DIRECTIONS/structural_design.md |  4 +-
- .../DIRECTIONS/technical_supervision.md            |  4 +-
- .../DIRECTIONS/telegram_automation.md              |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/video_production.md |  4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/vpn_network.md      |  4 +-
- docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md      |  4 +-
- docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |  6 +--
- docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |  6 +--
- docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  6 +--
- .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_004.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_007.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_010.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_011.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_012.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_013.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_014.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_015.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_016.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_017.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_018.md             |  4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_019.md             |  4 +-
- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 18 ++++----
- .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |  4 +-
- docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   | 48 +++++++++++-----------
- docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |  4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |  4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |  4 +-
- .../TOPICS/topic_210_PROEKTIROVANIE.md             |  4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |  4 +-
- .../TOPICS/topic_3008_KODY_MOZGOV.md               |  4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |  4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |  4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_5_TEKHNADZOR.md   |  4 +-
- .../SHARED_CONTEXT/TOPICS/topic_6104_JOB_SEARCH.md |  4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |  4 +-
- .../TOPICS/topic_961_AVTOZAPCHASTI.md              |  4 +-
- docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |  4 +-
- 70 files changed, 172 insertions(+), 172 deletions(-)
+ docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md    |   6 +-
+ docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md |   2 +-
+ .../SHARED_CONTEXT/DIRECTIONS/auto_parts_search.md |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/cad_dwg.md          |   4 +-
+ .../DIRECTIONS/construction_search.md              |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/crm_leads.md        |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/defect_acts.md      |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/devops_server.md    |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/documents.md        |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/email_ingress.md    |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/estimates.md        |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/general_chat.md     |   4 +-
+ .../DIRECTIONS/google_drive_storage.md             |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/internet_search.md  |   4 +-
+ .../DIRECTIONS/isolated_project_ivan.md            |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/job_search.md       |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/memory_archive.md   |   4 +-
+ .../SHARED_CONTEXT/DIRECTIONS/monolith_concrete.md |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/ocr_photo.md        |   4 +-
+ .../DIRECTIONS/orchestration_core.md               |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/photo_cleanup.md    |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/product_search.md   |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/roofing.md          |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/social_content.md   |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/spreadsheets.md     |   4 +-
+ .../SHARED_CONTEXT/DIRECTIONS/structural_design.md |   4 +-
+ .../DIRECTIONS/technical_supervision.md            |   4 +-
+ .../DIRECTIONS/telegram_automation.md              |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/video_production.md |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/vpn_network.md      |   4 +-
+ docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md      |   4 +-
+ docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |   6 +-
+ docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |   6 +-
+ docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |   6 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_004.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_007.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_010.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_011.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_012.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_013.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_014.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_015.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_016.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_017.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_018.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_019.md             |   4 +-
+ docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 346 ++++++++++-----------
+ .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |   8 +-
+ docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   | 107 +++----
+ docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |   6 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |   4 +-
+ .../TOPICS/topic_210_PROEKTIROVANIE.md             |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |  59 ++--
+ .../TOPICS/topic_3008_KODY_MOZGOV.md               |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_5_TEKHNADZOR.md   |   4 +-
+ .../SHARED_CONTEXT/TOPICS/topic_6104_JOB_SEARCH.md |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |   4 +-
+ .../TOPICS/topic_961_AVTOZAPCHASTI.md              |   4 +-
+ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   6 +-
+ 70 files changed, 396 insertions(+), 398 deletions(-)
 
 ## GIT_CHANGED_FILES_10
 docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md
@@ -197,13 +197,13 @@ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md
 - CANCELLED|865
 - DONE|657
 - ARCHIVED|381
-- IN_PROGRESS|1
+- WAITING_CLARIFICATION|1
 
 ## CORE_DB_OPEN_TASKS
 - 1
 
 ## LATEST_TASKS_15
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|2|drive_file|IN_PROGRESS|{"file_id": "1qaHdtSP33P8VGsNYYLEJ6EPrfhQ7tAh2", "file_name": "photo_-1003725299009_11648.jpg", "mime_type": "image/jpeg|Не вижу размеры объекта на фото/в ТЗ. Пришли размер в формате 7.8х9.0 или фото крупнее|2026-07-06 07:14:59
+- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|2|drive_file|WAITING_CLARIFICATION|{"file_id": "1qaHdtSP33P8VGsNYYLEJ6EPrfhQ7tAh2", "file_name": "photo_-1003725299009_11648.jpg", "mime_type": "image/jpeg|Не вижу размеры объекта на фото/в ТЗ. Пришли размер в формате 7.8х9.0 или фото крупнее|2026-07-06 07:21:03
 - e3eeed87-4d5c-4dd9-928a-47c9fb101c88|2|text|DONE|Ничего|Понял, ничего не меняю. Если понадоблюсь — напишите.|2026-07-06 05:34:47
 - 39af79c1-80eb-4735-8f4f-61548cf13b2e|2|text|DONE|Задача завершена|Подтверждение принято|2026-07-05T22:20:02.789573
 - 24e594b9-1ea3-4b82-86ab-e9355021289b|2|text|DONE|Да всё верно|Подтверждение принято|2026-07-05T22:20:02.789573
@@ -238,117 +238,115 @@ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md
 - 0b1a2b5f-a924-4c6a-b123-d24d6bdac167|2|{"source": "manual_runtime_requeue", "request": "полный канонический вывод сметы XLSX и PDF без duplicate guard", "reque|NO_VALID_ARTIFACT|2026-07-04 18:31:28
 
 ## LATEST_TASK_HISTORY_20
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|state:AWAITING_CONFIRMATION:file_intake_router|2026-07-06 07:14:59
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|P6E2_CANON_DIMS_NOT_RECOGNIZED|2026-07-06 07:14:59
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|state:AWAITING_CONFIRMATION:file_intake_router|2026-07-06 07:14:56
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|P6E2_CANON_DIMS_NOT_RECOGNIZED|2026-07-06 07:14:56
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|state:AWAITING_CONFIRMATION:file_intake_router|2026-07-06 07:14:53
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|P6E2_CANON_DIMS_NOT_RECOGNIZED|2026-07-06 07:14:53
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|state:AWAITING_CONFIRMATION:file_intake_router|2026-07-06 07:14:50
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|P6E2_CANON_DIMS_NOT_RECOGNIZED|2026-07-06 07:14:50
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|state:AWAITING_CONFIRMATION:file_intake_router|2026-07-06 07:14:47
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|P6E2_CANON_DIMS_NOT_RECOGNIZED|2026-07-06 07:14:47
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|state:AWAITING_CONFIRMATION:file_intake_router|2026-07-06 07:14:44
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|P6E2_CANON_DIMS_NOT_RECOGNIZED|2026-07-06 07:14:44
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|state:AWAITING_CONFIRMATION:file_intake_router|2026-07-06 07:14:41
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|P6E2_CANON_DIMS_NOT_RECOGNIZED|2026-07-06 07:14:41
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|state:AWAITING_CONFIRMATION:file_intake_router|2026-07-06 07:14:38
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|P6E2_CANON_DIMS_NOT_RECOGNIZED|2026-07-06 07:14:38
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|state:AWAITING_CONFIRMATION:file_intake_router|2026-07-06 07:14:35
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|P6E2_CANON_DIMS_NOT_RECOGNIZED|2026-07-06 07:14:34
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|state:AWAITING_CONFIRMATION:file_intake_router|2026-07-06 07:14:32
-- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|P6E2_CANON_DIMS_NOT_RECOGNIZED|2026-07-06 07:14:32
+- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|state:AWAITING_CONFIRMATION:file_intake_router|2026-07-06 07:21:03
+- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|P6E2_CANON_DIMS_NOT_RECOGNIZED|2026-07-06 07:21:03
+- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|clarified:Посмотри фото там есть все размеры|2026-07-06T07:20:59.208931+00:00
+- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|TOPIC2_CLARIFICATION_BOT_MESSAGE_ID:11764|2026-07-06 07:20:21
+- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|TOPIC2_CLARIFICATION_SENT:P6E2_DIMS_MISSING|2026-07-06 07:20:12
+- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|state:AWAITING_CONFIRMATION:file_intake_router|2026-07-06 07:18:50
+- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|TOPIC2_PUBLIC_RESULT_GATE_CLARIFICATION_ALLOWED:P6E2_DIMS_MISSING|2026-07-06 07:18:50
+- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|P6E2_CANON_DIMS_NOT_RECOGNIZED|2026-07-06 07:18:50
+- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|state:AWAITING_CONFIRMATION:file_intake_router|2026-07-06 07:18:41
+- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|P6E2_CANON_DIMS_NOT_RECOGNIZED|2026-07-06 07:18:41
+- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|state:AWAITING_CONFIRMATION:file_intake_router|2026-07-06 07:18:38
+- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|P6E2_CANON_DIMS_NOT_RECOGNIZED|2026-07-06 07:18:38
+- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|state:AWAITING_CONFIRMATION:file_intake_router|2026-07-06 07:18:35
+- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|P6E2_CANON_DIMS_NOT_RECOGNIZED|2026-07-06 07:18:35
+- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|state:AWAITING_CONFIRMATION:file_intake_router|2026-07-06 07:18:32
+- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|P6E2_CANON_DIMS_NOT_RECOGNIZED|2026-07-06 07:18:32
+- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|state:AWAITING_CONFIRMATION:file_intake_router|2026-07-06 07:18:29
+- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|P6E2_CANON_DIMS_NOT_RECOGNIZED|2026-07-06 07:18:29
+- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|state:AWAITING_CONFIRMATION:file_intake_router|2026-07-06 07:18:26
+- ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|P6E2_CANON_DIMS_NOT_RECOGNIZED|2026-07-06 07:18:26
 
 ## MEMORY_DB_COUNT
 - 5297
 
 ## LATEST_MEMORY_20
-- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-07-06T07:15:00.048278+00:00", "files": [{"task_id": "", "file_id": "", "file_name": "", "mime_type": "|2026-07-06T07:15:00.049137+00:00
-- topic_2_file_content_status_ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|{"ok": false, "reason": "UNSUPPORTED_TYPE", "file_name": "photo_-1003725299009_11648.jpg"}|2026-07-06T07:13:15.467249
-- topic_2_file_ef67a6f0-c6e2-436e-904b-58d2c48ca3a0|{"task_id": "ef67a6f0-c6e2-436e-904b-58d2c48ca3a0", "chat_id": "-1003725299009", "topic_id": 2, "file_id": "1qaHdtSP33P8VGsNYYLEJ6EPrfhQ7tAh2", "file_name": "photo_-1003725299009_1|2026-07-06T07:13:15.461116
-- topic_500_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 500, "count": 27, "updated_at": "2026-07-06T06:52:39.955677+00:00", "files": [{"task_id": "7b609434-8167-43f5-a52a-beb85e0b4ed5", "file_id|2026-07-06T06:52:39.956502+00:00
-- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 50, "updated_at": "2026-07-06T06:52:39.936081+00:00", "files": [{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "file_id|2026-07-06T06:52:39.936637+00:00
-- topic_11_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 11, "count": 2, "updated_at": "2026-07-06T06:52:39.888581+00:00", "files": [{"task_id": "a073c181-7a10-426e-8752-7d72dc4ef978", "file_id":|2026-07-06T06:52:39.888955+00:00
-- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 50, "updated_at": "2026-07-06T06:52:39.880335+00:00", "files": [{"task_id": "4b402275-e99b-4d9f-b331-08f2ba2a93be", "file_id":|2026-07-06T06:52:39.880860+00:00
-- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-06T06:52:39.782936+00:00
-- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "state": "FAILED", "file_id": "", "file_name": "", "mime_type"|2026-07-06T06:52:39.782842+00:00
-- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-06T06:52:39.782749+00:00
-- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-06T06:52:39.782564+00:00
-- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-06T06:52:39.782448+00:00
-- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_file", "state": "FAILED", "file_id": "1bXXtuHRsXCuxBSRUl8Tj5z6E|2026-07-06T06:52:39.782330+00:00
-- topic_2_file_92de809d-9274-48ee-82b4-584058ea4e48|{"task_id": "92de809d-9274-48ee-82b4-584058ea4e48", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "search", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-06T06:52:39.782172+00:00
-- topic_210_file_ce9421cb-5451-4cea-9823-a413b698bc94|{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-06T06:52:39.781794+00:00
-- topic_210_file_c8619b7e-9ebb-4731-973a-b3f6064bbe38|{"task_id": "c8619b7e-9ebb-4731-973a-b3f6064bbe38", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-06T06:52:39.781370+00:00
-- topic_210_file_42320ab0-c49a-4a08-8f9b-5e38618a4e58|{"task_id": "42320ab0-c49a-4a08-8f9b-5e38618a4e58", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-06T06:52:39.781247+00:00
-- topic_210_file_7dca3b5f-2782-400f-af84-fb030904e917|{"task_id": "7dca3b5f-2782-400f-af84-fb030904e917", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-06T06:52:39.780802+00:00
-- topic_210_file_12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88|{"task_id": "12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "16V3s5DcAvnXj8f-3CcfZE2g5|2026-07-06T06:52:39.780454+00:00
-- topic_210_file_b1f8e982-db2e-42de-9046-833287d3567d|{"task_id": "b1f8e982-db2e-42de-9046-833287d3567d", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-06T06:52:39.780293+00:00
+- topic_500_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 500, "count": 27, "updated_at": "2026-07-06T07:22:40.989382+00:00", "files": [{"task_id": "7b609434-8167-43f5-a52a-beb85e0b4ed5", "file_id|2026-07-06T07:22:40.990204+00:00
+- topic_210_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 210, "count": 50, "updated_at": "2026-07-06T07:22:40.968548+00:00", "files": [{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "file_id|2026-07-06T07:22:40.969284+00:00
+- topic_11_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 11, "count": 2, "updated_at": "2026-07-06T07:22:40.913263+00:00", "files": [{"task_id": "a073c181-7a10-426e-8752-7d72dc4ef978", "file_id":|2026-07-06T07:22:40.913744+00:00
+- topic_5_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 5, "count": 50, "updated_at": "2026-07-06T07:22:40.903419+00:00", "files": [{"task_id": "4b402275-e99b-4d9f-b331-08f2ba2a93be", "file_id":|2026-07-06T07:22:40.903830+00:00
+- topic_2_file_catalog_autosync|{"chat_id": "-1003725299009", "topic_id": 2, "count": 50, "updated_at": "2026-07-06T07:22:40.869289+00:00", "files": [{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "file_id":|2026-07-06T07:22:40.870009+00:00
+- topic_2_file_c925a897-66ec-435e-8312-15687f4df6d4|{"task_id": "c925a897-66ec-435e-8312-15687f4df6d4", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-06T07:22:40.795508+00:00
+- topic_5_file_4b442bb4-e731-4b17-a359-888e88084ef2|{"task_id": "4b442bb4-e731-4b17-a359-888e88084ef2", "chat_id": "-1003725299009", "topic_id": 5, "input_type": "text", "state": "FAILED", "file_id": "", "file_name": "", "mime_type"|2026-07-06T07:22:40.795435+00:00
+- topic_2_file_987c3852-1e34-445f-b80f-368e6042c1ef|{"task_id": "987c3852-1e34-445f-b80f-368e6042c1ef", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-06T07:22:40.795373+00:00
+- topic_2_file_482d7590-50d4-44af-8d42-affd58e1e9d9|{"task_id": "482d7590-50d4-44af-8d42-affd58e1e9d9", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-06T07:22:40.795295+00:00
+- topic_2_file_d68bc8e8-b2de-4cb3-84cf-308225d244de|{"task_id": "d68bc8e8-b2de-4cb3-84cf-308225d244de", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type": |2026-07-06T07:22:40.795236+00:00
+- topic_2_file_6a9c665e-6307-4247-a170-fb2847b9633d|{"task_id": "6a9c665e-6307-4247-a170-fb2847b9633d", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "drive_file", "state": "FAILED", "file_id": "1bXXtuHRsXCuxBSRUl8Tj5z6E|2026-07-06T07:22:40.795174+00:00
+- topic_2_file_92de809d-9274-48ee-82b4-584058ea4e48|{"task_id": "92de809d-9274-48ee-82b4-584058ea4e48", "chat_id": "-1003725299009", "topic_id": 2, "input_type": "search", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-06T07:22:40.795102+00:00
+- topic_210_file_ce9421cb-5451-4cea-9823-a413b698bc94|{"task_id": "ce9421cb-5451-4cea-9823-a413b698bc94", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-06T07:22:40.794898+00:00
+- topic_210_file_c8619b7e-9ebb-4731-973a-b3f6064bbe38|{"task_id": "c8619b7e-9ebb-4731-973a-b3f6064bbe38", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-06T07:22:40.794726+00:00
+- topic_210_file_42320ab0-c49a-4a08-8f9b-5e38618a4e58|{"task_id": "42320ab0-c49a-4a08-8f9b-5e38618a4e58", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-06T07:22:40.794625+00:00
+- topic_210_file_7dca3b5f-2782-400f-af84-fb030904e917|{"task_id": "7dca3b5f-2782-400f-af84-fb030904e917", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-06T07:22:40.794322+00:00
+- topic_210_file_12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88|{"task_id": "12d77b1a-89c6-41c9-81c6-b6f5cbdc6a88", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "16V3s5DcAvnXj8f-3CcfZE2g5|2026-07-06T07:22:40.794015+00:00
+- topic_210_file_b1f8e982-db2e-42de-9046-833287d3567d|{"task_id": "b1f8e982-db2e-42de-9046-833287d3567d", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-06T07:22:40.793937+00:00
+- topic_210_file_eeb0d013-704a-404c-9390-5a06c90ee976|{"task_id": "eeb0d013-704a-404c-9390-5a06c90ee976", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "text", "state": "DONE", "file_id": "", "file_name": "", "mime_type"|2026-07-06T07:22:40.793744+00:00
+- topic_210_file_5ead32f3-23d5-4872-9279-a42460ba5dd1|{"task_id": "5ead32f3-23d5-4872-9279-a42460ba5dd1", "chat_id": "-1003725299009", "topic_id": 210, "input_type": "drive_file", "state": "DONE", "file_id": "1qy-mPcmRZxJIzEnY2Gp8B8J2|2026-07-06T07:22:40.793538+00:00
 
 ## JOURNAL_AREAL_TASK_WORKER_60
-PATCH_TOPIC2_PICKER_BYPASS_AND_RESULT_GATE_V1 AC blocked task=ef67a6f0-c6e2-436e-904b-58d2c48ca3a0 reason=too_short_or_empty
-/root/.areal-neva-core/task_worker.py:641: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-  _ts = datetime.datetime.utcnow().isoformat()
-/root/.areal-neva-core/task_worker.py:664: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-  "timestamp": datetime.datetime.utcnow().isoformat(),
-PATCH_TOPIC2_PICKER_BYPASS_AND_RESULT_GATE_V1 AC blocked task=ef67a6f0-c6e2-436e-904b-58d2c48ca3a0 reason=too_short_or_empty
-/root/.areal-neva-core/task_worker.py:641: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-  _ts = datetime.datetime.utcnow().isoformat()
-/root/.areal-neva-core/task_worker.py:664: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-  "timestamp": datetime.datetime.utcnow().isoformat(),
-PATCH_TOPIC2_PICKER_BYPASS_AND_RESULT_GATE_V1 AC blocked task=ef67a6f0-c6e2-436e-904b-58d2c48ca3a0 reason=too_short_or_empty
-/root/.areal-neva-core/task_worker.py:641: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-  _ts = datetime.datetime.utcnow().isoformat()
-/root/.areal-neva-core/task_worker.py:664: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-  "timestamp": datetime.datetime.utcnow().isoformat(),
-PATCH_TOPIC2_PICKER_BYPASS_AND_RESULT_GATE_V1 AC blocked task=ef67a6f0-c6e2-436e-904b-58d2c48ca3a0 reason=too_short_or_empty
-/root/.areal-neva-core/task_worker.py:641: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-  _ts = datetime.datetime.utcnow().isoformat()
-/root/.areal-neva-core/task_worker.py:664: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-  "timestamp": datetime.datetime.utcnow().isoformat(),
-PATCH_TOPIC2_PICKER_BYPASS_AND_RESULT_GATE_V1 AC blocked task=ef67a6f0-c6e2-436e-904b-58d2c48ca3a0 reason=too_short_or_empty
-/root/.areal-neva-core/task_worker.py:641: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-  _ts = datetime.datetime.utcnow().isoformat()
-/root/.areal-neva-core/task_worker.py:664: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-  "timestamp": datetime.datetime.utcnow().isoformat(),
-PATCH_TOPIC2_PICKER_BYPASS_AND_RESULT_GATE_V1 AC blocked task=ef67a6f0-c6e2-436e-904b-58d2c48ca3a0 reason=too_short_or_empty
-/root/.areal-neva-core/task_worker.py:641: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-  _ts = datetime.datetime.utcnow().isoformat()
-/root/.areal-neva-core/task_worker.py:664: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-  "timestamp": datetime.datetime.utcnow().isoformat(),
-PATCH_TOPIC2_PICKER_BYPASS_AND_RESULT_GATE_V1 AC blocked task=ef67a6f0-c6e2-436e-904b-58d2c48ca3a0 reason=too_short_or_empty
-/root/.areal-neva-core/task_worker.py:641: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-  _ts = datetime.datetime.utcnow().isoformat()
-/root/.areal-neva-core/task_worker.py:664: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-  "timestamp": datetime.datetime.utcnow().isoformat(),
-PATCH_TOPIC2_PICKER_BYPASS_AND_RESULT_GATE_V1 AC blocked task=ef67a6f0-c6e2-436e-904b-58d2c48ca3a0 reason=too_short_or_empty
-/root/.areal-neva-core/task_worker.py:641: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-  _ts = datetime.datetime.utcnow().isoformat()
-/root/.areal-neva-core/task_worker.py:664: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-  "timestamp": datetime.datetime.utcnow().isoformat(),
-PATCH_TOPIC2_PICKER_BYPASS_AND_RESULT_GATE_V1 AC blocked task=ef67a6f0-c6e2-436e-904b-58d2c48ca3a0 reason=too_short_or_empty
-/root/.areal-neva-core/task_worker.py:641: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-  _ts = datetime.datetime.utcnow().isoformat()
-/root/.areal-neva-core/task_worker.py:664: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-  "timestamp": datetime.datetime.utcnow().isoformat(),
-PATCH_TOPIC2_PICKER_BYPASS_AND_RESULT_GATE_V1 AC blocked task=ef67a6f0-c6e2-436e-904b-58d2c48ca3a0 reason=too_short_or_empty
-/root/.areal-neva-core/task_worker.py:641: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-  _ts = datetime.datetime.utcnow().isoformat()
-/root/.areal-neva-core/task_worker.py:664: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-  "timestamp": datetime.datetime.utcnow().isoformat(),
-PATCH_TOPIC2_PICKER_BYPASS_AND_RESULT_GATE_V1 AC blocked task=ef67a6f0-c6e2-436e-904b-58d2c48ca3a0 reason=too_short_or_empty
-/root/.areal-neva-core/task_worker.py:641: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-  _ts = datetime.datetime.utcnow().isoformat()
-/root/.areal-neva-core/task_worker.py:664: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-  "timestamp": datetime.datetime.utcnow().isoformat(),
-PATCH_TOPIC2_PICKER_BYPASS_AND_RESULT_GATE_V1 AC blocked task=ef67a6f0-c6e2-436e-904b-58d2c48ca3a0 reason=too_short_or_empty
-/root/.areal-neva-core/task_worker.py:641: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-  _ts = datetime.datetime.utcnow().isoformat()
-/root/.areal-neva-core/task_worker.py:664: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-  "timestamp": datetime.datetime.utcnow().isoformat(),
+areal-task-worker.service: Scheduled restart job, restart counter is at 2847.
+Started areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
+areal-task-worker.service: Failed with result 'exit-code'.
+areal-task-worker.service: Scheduled restart job, restart counter is at 2848.
+Started areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
+areal-task-worker.service: Failed with result 'exit-code'.
+areal-task-worker.service: Scheduled restart job, restart counter is at 2849.
+Started areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
+areal-task-worker.service: Failed with result 'exit-code'.
+areal-task-worker.service: Scheduled restart job, restart counter is at 2850.
+Started areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
+areal-task-worker.service: Failed with result 'exit-code'.
+areal-task-worker.service: Scheduled restart job, restart counter is at 2851.
+Started areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
+areal-task-worker.service: Failed with result 'exit-code'.
+areal-task-worker.service: Scheduled restart job, restart counter is at 2852.
+Started areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
+areal-task-worker.service: Failed with result 'exit-code'.
+areal-task-worker.service: Scheduled restart job, restart counter is at 2853.
+Started areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
+areal-task-worker.service: Failed with result 'exit-code'.
+areal-task-worker.service: Scheduled restart job, restart counter is at 2854.
+Started areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
+areal-task-worker.service: Failed with result 'exit-code'.
+areal-task-worker.service: Scheduled restart job, restart counter is at 2855.
+Started areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
+areal-task-worker.service: Failed with result 'exit-code'.
+areal-task-worker.service: Scheduled restart job, restart counter is at 2856.
+Started areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
+areal-task-worker.service: Failed with result 'exit-code'.
+areal-task-worker.service: Scheduled restart job, restart counter is at 2857.
+Started areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
+areal-task-worker.service: Failed with result 'exit-code'.
+areal-task-worker.service: Scheduled restart job, restart counter is at 2858.
+Started areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
+areal-task-worker.service: Failed with result 'exit-code'.
+areal-task-worker.service: Scheduled restart job, restart counter is at 2859.
+Started areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
+areal-task-worker.service: Failed with result 'exit-code'.
+areal-task-worker.service: Scheduled restart job, restart counter is at 2860.
+Started areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
+areal-task-worker.service: Failed with result 'exit-code'.
+areal-task-worker.service: Scheduled restart job, restart counter is at 2861.
+Started areal-task-worker.service - Areal Task Worker.
+areal-task-worker.service: Main process exited, code=exited, status=1/FAILURE
+areal-task-worker.service: Failed with result 'exit-code'.
 
 ## JOURNAL_TELEGRAM_INGRESS_30
-2026-07-05 23:35:27,329 INFO DAEMON: Task dfccdbfe-92e3-4fbb-9e16-5450a3fa6479 created state=NEW topic_id=2
-2026-07-05 23:35:27,329 INFO DAEMON: Update id=262222322 is handled. Duration 515 ms by bot id=8216054898
 2026-07-05 23:39:31,236 INFO DAEMON: Update id=262222323 is handled. Duration 74 ms by bot id=8216054898
 2026-07-05 23:42:26,712 INFO DAEMON: Update id=262222324 is handled. Duration 87 ms by bot id=8216054898
 2026-07-06 00:11:29,369 INFO DAEMON: Update id=262222325 is handled. Duration 167 ms by bot id=8216054898
@@ -377,3 +375,5 @@ PATCH_TOPIC2_PICKER_BYPASS_AND_RESULT_GATE_V1 AC blocked task=ef67a6f0-c6e2-436e
 2026-07-06 10:13:43,598 INFO DAEMON: Update id=262222338 is handled. Duration 88 ms by bot id=8216054898
 2026-07-06 10:13:51,014 INFO DAEMON: Update id=262222339 is handled. Duration 80 ms by bot id=8216054898
 2026-07-06 10:13:58,558 INFO DAEMON: Update id=262222340 is handled. Duration 100 ms by bot id=8216054898
+2026-07-06 10:15:03,507 INFO DAEMON: Update id=262222341 is handled. Duration 72 ms by bot id=8216054898
+2026-07-06 10:20:59,280 INFO DAEMON: Update id=262222342 is handled. Duration 81 ms by bot id=8216054898

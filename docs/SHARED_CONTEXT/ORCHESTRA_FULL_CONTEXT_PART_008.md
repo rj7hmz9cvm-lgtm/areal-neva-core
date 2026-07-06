@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_008
-generated_at_utc: 2026-07-06T07:15:02.632520+00:00
-git_sha_before_commit: 486f4570381d12c24aff0bb0ac42f8fd338184b9
+generated_at_utc: 2026-07-06T07:22:41.400093+00:00
+git_sha_before_commit: 6bce30b7e04da6eb333fadf750b3bdac7a94ad49
 part: 8/19
 
 
 ====================================================================================================
 BEGIN_FILE: task_worker.py
 FILE_CHUNK: 4/4
-SHA256_FULL_FILE: 00fc27afeea2ff25a93fe899cdd5462be784c8ec3ec7300006d47ce9e64af143
+SHA256_FULL_FILE: 0d01de4a81225ba6f983ca40912c57bfda60bd49a21c4865becb64cbe137fa07
 ====================================================================================================
     # PATCH_TOPIC2_ADDITIONAL_FACTS_FULL_RECALC_CANON_RESTORE_V1: also reset DONE_WITH_DRIVE_LINKS
     # blocking marker so that a new FACT triggers full canonical recalculation via _t2fdsg_run_drive_final.
@@ -339,6 +339,35 @@ try:
                             candidate = row[1] or ""
                         ok, reason = _t2pg_validate_public_result(str(candidate))
                         if not ok:
+                            cand_text = str(candidate or "")
+                            has_p6e2_dims_missing = "P6E2_CANON_DIMS_NOT_RECOGNIZED" in str(row[1] or "")
+                            if not has_p6e2_dims_missing:
+                                try:
+                                    has_p6e2_dims_missing = bool(conn.execute(
+                                        "SELECT 1 FROM task_history WHERE task_id=? "
+                                        "AND action='P6E2_CANON_DIMS_NOT_RECOGNIZED' LIMIT 1",
+                                        (str(task_id),),
+                                    ).fetchone())
+                                except Exception:
+                                    has_p6e2_dims_missing = False
+                            if (
+                                reason == "too_short_or_empty"
+                                and (
+                                    "Не вижу размеры объекта" in cand_text
+                                    or "Пришли размер" in cand_text
+                                    or has_p6e2_dims_missing
+                                )
+                            ):
+                                if "Не вижу размеры объекта" not in cand_text and row[1]:
+                                    cand_text = str(row[1] or "")
+                                kwargs["state"] = "WAITING_CLARIFICATION"
+                                kwargs["result"] = cand_text
+                                kwargs["error_message"] = "P6E2_CANON_DIMS_NOT_RECOGNIZED"
+                                _t2pg_hist_once(
+                                    conn, str(task_id),
+                                    "TOPIC2_PUBLIC_RESULT_GATE_CLARIFICATION_ALLOWED:P6E2_DIMS_MISSING",
+                                )
+                                return _t2pg_orig_update_task(conn, task_id, **kwargs)
                             # Block AC; force IN_PROGRESS; preserve previous valid result if any
                             kwargs["state"] = "IN_PROGRESS"
                             # Preserve previous valid result if current candidate is invalid
