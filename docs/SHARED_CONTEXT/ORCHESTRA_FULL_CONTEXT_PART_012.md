@@ -1,8 +1,296 @@
 # ORCHESTRA_FULL_CONTEXT_PART_012
-generated_at_utc: 2026-07-06T07:22:41.404464+00:00
-git_sha_before_commit: 6bce30b7e04da6eb333fadf750b3bdac7a94ad49
+generated_at_utc: 2026-07-06T07:52:42.460672+00:00
+git_sha_before_commit: 20c42a8cf2dbf4520e1f5516b596fa1753c5895f
 part: 12/19
 
+
+====================================================================================================
+BEGIN_FILE: core/search_engine.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: cd8e56b848f77750e2934e99e4e8eff0c1b0d1d908d27a1939cce5e28348ba56
+====================================================================================================
+# === FULLFIX_SEARCH_ENGINE_STAGE_5 ===
+from __future__ import annotations
+from typing import Any, Dict, List, Optional
+
+SEARCH_ENGINE_VERSION = "SEARCH_ENGINE_V1"
+
+DIRECTION_SEARCH_PROFILES = {
+    "product_search":      {"sources": ["avito", "ozon", "wildberries"], "strategy": "price_compare"},
+    "auto_parts_search":   {"sources": ["drom", "exist", "emex", "zzap"], "strategy": "compatibility"},
+    "construction_search": {"sources": ["petrovitch", "lerua", "grand_line"], "strategy": "price_delivery"},
+    "internet_search":     {"sources": ["web"], "strategy": "general"},
+}
+
+DEFAULT_PROFILE = {"sources": ["web"], "strategy": "general"}
+
+
+class SearchEngine:
+    def plan(self, work_item, payload: Dict[str, Any]) -> Dict[str, Any]:
+        direction = getattr(work_item, "direction", None) or payload.get("direction") or "internet_search"
+        raw_text = (getattr(work_item, "raw_text", "") or payload.get("raw_input") or "")[:500]
+        profile = DIRECTION_SEARCH_PROFILES.get(direction, DEFAULT_PROFILE)
+
+        plan = {
+            "query": raw_text,
+            "direction": direction,
+            "sources": profile["sources"],
+            "strategy": profile["strategy"],
+            "engine_version": SEARCH_ENGINE_VERSION,
+            "shadow_mode": True,
+            "status": "planned",
+        }
+        return plan
+
+    def apply_to_payload(self, work_item, payload: Dict[str, Any]) -> Dict[str, Any]:
+        requires_search = bool((payload.get("direction_profile") or {}).get("requires_search"))
+        if not requires_search:
+            return {}
+        plan = self.plan(work_item, payload)
+        payload["search_plan"] = plan
+        try:
+            import logging
+            logging.getLogger("task_worker").info(
+                "FULLFIX_SEARCH_ENGINE_STAGE_5 dir=%s sources=%s strategy=%s",
+                plan["direction"], plan["sources"], plan["strategy"]
+            )
+        except Exception:
+            pass
+        return plan
+
+
+def plan_search(work_item, payload):
+    return SearchEngine().apply_to_payload(work_item, payload)
+# === END FULLFIX_SEARCH_ENGINE_STAGE_5 ===
+
+
+# === P6_GLOBAL_SEARCH_ENGINE_ACTIVE_PLAN_20260504_V1 ===
+# Scope:
+# - SearchEngine is no longer decorative shadow-only metadata
+# - it produces normalized active search plan for product, auto parts, construction and general web search
+# - no network call here; execution is handled by SearchMonolithV2 / ai_router online model
+
+import re as _p6se_re
+
+_P6SE_AUTO_WORDS = (
+    "сайлентблок", "саленблок", "сальник", "пыльник", "ваз", "2110", "2114",
+    "жигули", "лада", "приора", "гранта", "калина", "нива", "drom", "exist", "emex", "zzap",
+    "автозапчаст", "запчаст", "oem", "артикул"
+)
+
+_P6SE_ELECTRONICS_WORDS = (
+    "iphone", "айфон", "pixel", "google pixel", "телефон", "смартфон", "samsung", "galaxy",
+    "xiaomi", "redmi", "honor", "huawei", "pro max", "xl"
+)
+
+_P6SE_BUILD_WORDS = (
+    "утепл", "каменная вата", "rockwool", "бетон", "арматур", "профлист", "металлочереп",
+    "фальц", "клик-фальц", "кирпич", "газобетон", "доска", "брус", "стройматериал"
+)
+
+def _p6se_s(v, limit=4000):
+    try:
+        if v is None:
+            return ""
+        return str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+def _p6se_low(v):
+    return _p6se_s(v).lower().replace("ё", "е")
+
+def _p6se_direction(raw_text, current="internet_search"):
+    low = _p6se_low(raw_text)
+    if any(x in low for x in _P6SE_AUTO_WORDS):
+        return "auto_parts_search"
+    if any(x in low for x in _P6SE_ELECTRONICS_WORDS):
+        return "product_search"
+    if any(x in low for x in _P6SE_BUILD_WORDS):
+        return "construction_search"
+    return current or "internet_search"
+
+def _p6se_sources(direction):
+    if direction == "auto_parts_search":
+        return ["zzap", "exist", "emex", "drom", "auto.ru", "euroauto", "avito", "telegram"]
+    if direction == "construction_search":
+        return ["petrovich", "lerua", "vseinstrumenti", "ozon", "wildberries", "yandex_market", "avito", "2gis", "supplier_sites"]
+    if direction == "product_search":
+        return ["ozon", "wildberries", "yandex_market", "dns", "mvideo", "eldorado", "avito", "aliexpress", "official_sites"]
+    return ["web", "official_sites", "marketplaces", "classifieds", "2gis"]
+
+def _p6se_strategy(direction):
+    if direction == "auto_parts_search":
+        return "compatibility_price_availability"
+    if direction == "construction_search":
+        return "price_delivery_supplier_trust"
+    if direction == "product_search":
+        return "price_compare_availability"
+    return "general_verified_search"
+
+try:
+    _p6se_orig_plan = SearchEngine.plan
+    def _p6se_plan(self, work_item, payload):
+        payload = payload or {}
+        raw_text = (
+            getattr(work_item, "raw_text", None)
+            or payload.get("raw_input")
+            or payload.get("normalized_input")
+            or payload.get("query")
+            or ""
+        )
+        current = getattr(work_item, "direction", None) or payload.get("direction") or "internet_search"
+        direction = _p6se_direction(raw_text, current)
+        sources = _p6se_sources(direction)
+        plan = {
+            "query": _p6se_s(raw_text, 1000),
+            "direction": direction,
+            "sources": sources,
+            "strategy": _p6se_strategy(direction),
+            "engine_version": "P6_GLOBAL_SEARCH_ENGINE_ACTIVE_PLAN_20260504_V1",
+            "shadow_mode": False,
+            "status": "active",
+            "requires_online": True,
+            "must_use_current_query_only": True,
+        }
+        return plan
+    SearchEngine.plan = _p6se_plan
+
+    def _p6se_apply_to_payload(self, work_item, payload):
+        payload = payload or {}
+        plan = self.plan(work_item, payload)
+        payload["search_plan"] = plan
+        payload["direction"] = plan["direction"]
+        payload["engine"] = "search_supplier"
+        payload["requires_search"] = True
+        payload["search_sources"] = plan["sources"]
+        payload["search_strategy"] = plan["strategy"]
+        try:
+            import logging
+            logging.getLogger("task_worker").info(
+                "P6_GLOBAL_SEARCH_ENGINE_ACTIVE_PLAN dir=%s sources=%s strategy=%s",
+                plan["direction"], plan["sources"], plan["strategy"]
+            )
+        except Exception:
+            pass
+        return plan
+    SearchEngine.apply_to_payload = _p6se_apply_to_payload
+except Exception:
+    pass
+
+# === END_P6_GLOBAL_SEARCH_ENGINE_ACTIVE_PLAN_20260504_V1 ===
+
+# === P6C_SEARCH_ENGINE_ACTIVE_NO_SHADOW_PROFILE_20260504_V1 ===
+try:
+    SEARCH_ENGINE_VERSION = "P6C_SEARCH_ENGINE_ACTIVE_NO_SHADOW_PROFILE_20260504_V1"
+    DIRECTION_SEARCH_PROFILES.update({
+        "internet_search": {"sources": ["web", "marketplaces", "direct_suppliers"], "strategy": "current_query_price_compare"},
+        "product_search": {"sources": ["ozon", "wildberries", "yandex_market", "avito", "direct_suppliers"], "strategy": "current_query_price_compare"},
+        "auto_parts_search": {"sources": ["drom", "exist", "emex", "zzap", "avito"], "strategy": "current_query_compatibility_price"},
+        "construction_search": {"sources": ["petrovich", "lemanapro", "vseinstrumenti", "direct_suppliers"], "strategy": "current_query_price_delivery"},
+    })
+except Exception:
+    pass
+
+try:
+    _p6c_orig_plan_20260504 = SearchEngine.plan
+    def _p6c_plan_20260504(self, work_item, payload):
+        plan = _p6c_orig_plan_20260504(self, work_item, payload)
+        plan["shadow_mode"] = False
+        plan["status"] = "active"
+        plan["engine_version"] = "P6C_SEARCH_ENGINE_ACTIVE_NO_SHADOW_PROFILE_20260504_V1"
+        return plan
+    SearchEngine.plan = _p6c_plan_20260504
+except Exception:
+    pass
+# === END_P6C_SEARCH_ENGINE_ACTIVE_NO_SHADOW_PROFILE_20260504_V1 ===
+
+====================================================================================================
+END_FILE: core/search_engine.py
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: core/search_quality.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: c182a04e79562dc61000856b85d8cd1ac774011ebfcd85972418db2b08982cae
+====================================================================================================
+# === SEARCH_QUALITY_V1 ===
+import re
+import logging
+from typing import Optional
+
+logger = logging.getLogger(__name__)
+
+# AVAILABILITY_CHECK — проверить что результат содержит реальные данные
+def availability_check(result: str) -> bool:
+    if not result or len(result.strip()) < 40:
+        return False
+    bad = ["не нашёл", "не удалось найти", "информация недоступна",
+           "нет данных", "данные отсутствуют", "не могу найти"]
+    low = result.lower()
+    return not any(b in low for b in bad)
+
+# STALE_CONTEXT_GUARD — не использовать результат поиска старше 48ч
+def stale_context_guard(search_timestamp: Optional[str], max_age_hours: int = 48) -> bool:
+    if not search_timestamp:
+        return True
+    try:
+        from datetime import datetime, timezone
+        ts = datetime.fromisoformat(search_timestamp.replace("Z", "+00:00"))
+        now = datetime.now(timezone.utc)
+        age_h = (now - ts).total_seconds() / 3600
+        if age_h > max_age_hours:
+            logger.warning("STALE_CONTEXT_GUARD age=%.1fh > %dh", age_h, max_age_hours)
+            return False
+    except Exception:
+        pass
+    return True
+
+# NEGATIVE_SELECTION — убрать мусорные результаты
+def negative_selection(items: list) -> list:
+    noise = ["реклама", "спонсор", "купить сейчас", "акция", "скидка 90%",
+             "бесплатно навсегда", "партнёр"]
+    clean = []
+    for item in items:
+        text = str(item).lower()
+        if not any(n in text for n in noise):
+            clean.append(item)
+    return clean
+
+# SOURCE_TRACE — убедиться что есть источник
+def source_trace(result: str) -> bool:
+    patterns = [r"https?://\S+", r"\bру\b", r"\bwww\b", r"источник", r"по данным"]
+    return any(re.search(p, result, re.I) for p in patterns)
+
+# CACHE_LAYER_V1 — простой in-memory кэш поисковых запросов
+_search_cache: dict = {}
+
+def cache_get(query: str) -> Optional[str]:
+    import time
+    entry = _search_cache.get(query)
+    if entry and (time.time() - entry["ts"]) < 3600:
+        return entry["result"]
+    return None
+
+def cache_set(query: str, result: str):
+    import time
+    _search_cache[query] = {"result": result, "ts": time.time()}
+    if len(_search_cache) > 200:
+        oldest = sorted(_search_cache, key=lambda k: _search_cache[k]["ts"])[:50]
+        for k in oldest:
+            del _search_cache[k]
+
+# CONTACT_VALIDATION — есть ли телефон/email
+def contact_validation(text: str) -> bool:
+    phone = re.search(r"(\+7|8)[\s\-]?\(?\d{3}\)?[\s\-]?\d{3}[\s\-]?\d{2}[\s\-]?\d{2}", text)
+    email = re.search(r"[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}", text, re.I)
+    return bool(phone or email)
+# === END SEARCH_QUALITY_V1 ===
+
+====================================================================================================
+END_FILE: core/search_quality.py
+FILE_CHUNK: 1/1
+====================================================================================================
 
 ====================================================================================================
 BEGIN_FILE: core/search_session.py

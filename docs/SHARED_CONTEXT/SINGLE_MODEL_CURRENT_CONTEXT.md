@@ -1,7 +1,7 @@
 # SINGLE_MODEL_CURRENT_CONTEXT
 
-GENERATED_AT: 2026-07-06T07:22:42.048175+00:00
-GIT_SHA: 6bce30b7e04da6eb333fadf750b3bdac7a94ad49
+GENERATED_AT: 2026-07-06T07:52:43.222607+00:00
+GIT_SHA: 20c42a8cf2dbf4520e1f5516b596fa1753c5895f
 PURPOSE: Быстрый старт для любой модели — только актуальное состояние
 FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md
 STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
@@ -16,7 +16,7 @@ STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test
 ## GLOBAL_STATUS
 | topic | name | status | active | failed_24h |
 |-------|------|--------|--------|------------|
-| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 1 | 6 |
+| 2 | STROYKA | INSTALLED_NOT_VERIFIED | 1 | 5 |
 | 5 | TEKHNADZOR | UNKNOWN | 0 | 0 |
 | 210 | PROEKTIROVANIE | UNKNOWN | 0 | 0 |
 | 500 | VEB_POISK | UNKNOWN | 0 | 0 |
@@ -71,15 +71,19 @@ DATE_UNKNOWN
 ### topic_2 STROYKA
 role: Сметы
 active: 1
-failed_24h: 6
+failed_24h: 5
 commits_last_7d: 4
 recent_commits:
 - f5f758c|docs: refresh single model context after topic2 handoff
 - d690605|topic2: save canonical live repair handoff
 - 844fafb|topic2: close PDF estimate confirmation flow
-markers_missing: 2
-- TOPIC2_TEMPLATE_SELECTED
+markers_missing: 6
+- TOPIC2_ESTIMATE_SESSION_CREATED
+- TOPIC2_CONTEXT_READY
 - TOPIC2_LOGISTICS_CONFIRMED
+- TOPIC2_XLSX_CREATED
+- TOPIC2_MESSAGE_THREAD_ID_OK
+- TOPIC2_DONE_CONTRACT_OK
 last_failed:
 - bd0d5ae1 | STALE_TIMEOUT
 - 9c5946d7 | STALE_TIMEOUT
@@ -88,7 +92,7 @@ blockers:
 - - topic_2 не тянет проектные образцы topic_210
 - - topic_210 не тянет сметные артефакты как результат
 - - WRONG_FILES_SHOWN_IN_TOPIC_2
-NEXT_ACTION: live-test / close missing markers: 2
+NEXT_ACTION: live-test / close missing markers: 6
 
 ### topic_5 TEKHNADZOR
 role: Технадзор

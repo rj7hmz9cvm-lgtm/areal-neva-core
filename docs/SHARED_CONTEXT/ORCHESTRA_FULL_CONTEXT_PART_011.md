@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_011
-generated_at_utc: 2026-07-06T07:22:41.402749+00:00
-git_sha_before_commit: 6bce30b7e04da6eb333fadf750b3bdac7a94ad49
+generated_at_utc: 2026-07-06T07:52:42.459889+00:00
+git_sha_before_commit: 20c42a8cf2dbf4520e1f5516b596fa1753c5895f
 part: 11/19
 
 
 ====================================================================================================
 BEGIN_FILE: core/sample_template_engine.py
 FILE_CHUNK: 1/2
-SHA256_FULL_FILE: 51590f4462d850cb774756a9787d900f8de3880a247a8fb71214a76264ac145d
+SHA256_FULL_FILE: 518372e8b858166f997baf655aae11efe3f6c6adb040c506111d98d975c80ef3
 ====================================================================================================
 # === FULLFIX_13A_SAMPLE_FILE_INTENT_AND_TEMPLATE_ESTIMATE ===
 import os
@@ -6080,13 +6080,36 @@ async def _p6e2_ocr_image(path):
             pass
         try:
             import pytesseract
+            from PIL import ImageEnhance, ImageOps
+            ocr_parts = []
             for lang in ("rus+eng", "eng", "rus"):
                 try:
                     t = pytesseract.image_to_string(img, lang=lang)
-                    if t and len(t) > len(text):
-                        text = t
+                    if t:
+                        ocr_parts.append(t)
                 except Exception:
                     pass
+            try:
+                w, h = img.size
+                crops = [
+                    img.crop((0, int(h * 0.70), w, h)),
+                    img.crop((0, 0, int(w * 0.24), h)),
+                ]
+                for crop in crops:
+                    prep = ImageOps.grayscale(crop)
+                    prep = ImageEnhance.Contrast(prep).enhance(2.5)
+                    prep = prep.resize((prep.width * 2, prep.height * 2))
+                    for cfg in ("--psm 6", "--psm 11"):
+                        try:
+                            t = pytesseract.image_to_string(prep, lang="rus+eng", config=cfg)
+                            if t:
+                                ocr_parts.append(t)
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+            if ocr_parts:
+                text = "\n".join(dict.fromkeys(_p6e2_s(x, 5000) for x in ocr_parts if x))
         except Exception:
             pass
     except Exception:
@@ -6102,10 +6125,48 @@ def _p6e2_numbers(text):
             pass
     return out
 
+def _p6e2_blueprint_mm_dims(text):
+    low = _p6e2_low(text)
+    nums = []
+    for m in _p6e2_re.finditer(r"(?<![\d,.])(\d{4,5})(?![\d,.])", low):
+        try:
+            n = int(m.group(1))
+        except Exception:
+            continue
+        if not (3000 <= n <= 60000):
+            continue
+        ctx = low[max(0, m.start() - 50):m.end() + 50]
+        if any(x in ctx for x in (
+            "общая площадь", "теплый контур", "тёплый контур",
+            "комната", "терраса", "крыльцо", "s кв", "м2", "м²",
+        )):
+            continue
+        nums.append(n)
+    uniq = sorted(set(nums), reverse=True)
+    if len(uniq) < 2:
+        return (0.0, 0.0)
+    length = uniq[0]
+    width = 0
+    width_candidates = [n for n in uniq[1:] if length * 0.25 <= n <= length * 0.9]
+    preferred = [n for n in width_candidates if n % 10 == 0]
+    for n in preferred or width_candidates:
+        if length * 0.25 <= n <= length * 0.9:
+            width = n
+            break
+    if not width:
+        return (0.0, 0.0)
+    a = round(length / 1000.0, 3)
+    b = round(width / 1000.0, 3)
+    return (a, b)
+
 def _p6e2_parse_plan(caption, ocr_text):
     text = "\n".join([_p6e2_s(caption, 20000), _p6e2_s(ocr_text, 20000)])
     low = _p6e2_low(text)
     dims = _p6e2_numbers(text)
+    if not dims:
+        mm_dims = _p6e2_blueprint_mm_dims(text)
+        if mm_dims[0] and mm_dims[1]:
+            dims = [mm_dims]
     main_dim = dims[0] if dims else (0.0, 0.0)
     if "размеры по плану" in low and dims:
         main_dim = dims[-1]
@@ -6613,6 +6674,20 @@ try:
             plan, reason = await _p6f_pcv_analyze_via_openrouter(lp, caption)
 
             if plan is None or plan.get("needs_clarification"):
+                try:
+                    local_ocr = await _p6e2_ocr_image(lp) if lp else ""
+                    local_plan = _p6e2_parse_plan(caption, local_ocr)
+                    if local_plan and not local_plan.get("needs_clarification"):
+                        plan = local_plan
+                        plan["source"] = "LOCAL_OCR_BLUEPRINT_DIMS"
+                        conn.execute(
+                            "INSERT INTO task_history(task_id,action,created_at) VALUES(?,?,datetime('now'))",
+                            (tid, "P6F_PCV_LOCAL_OCR_FALLBACK_DIMS:{}x{}".format(plan["dims"][0], plan["dims"][1])),
+                        )
+                except Exception as _local_ocr_e:
+                    _P6F_PCV_LOG.warning("P6F_PCV_LOCAL_OCR_FALLBACK_ERR %s", _local_ocr_e)
+
+            if plan is None or plan.get("needs_clarification"):
                 why = reason if plan is None else "LOW_CONFIDENCE_OR_NO_DIMS"
                 msg = "Не вижу размер на фото или подпись неполная. Пришли размер в формате 7.8х9.0 м или фото плана крупнее"
                 conn.execute(
@@ -7061,6 +7136,7 @@ async def handle_topic2_image_estimate_p6e2(conn, task=None, chat_id=None, topic
             _update_task_safe as _cpf_upd,
             _now as _cpf_now,
             _history_safe as _cpf_hist,
+            _parse_request as _cpf_parse,
         )
     except Exception as _imp_e:
         _P6E2CPF_LOG.warning("P6E2_CANON_IMPORT_ERR: %s", _imp_e)
@@ -7107,14 +7183,25 @@ async def handle_topic2_image_estimate_p6e2(conn, task=None, chat_id=None, topic
             material = "монолит"
         else:
             material = "каркас"
-        scope = "под ключ" if any(x in raw_low for x in ("под ключ", "ламинат", "сантех", "санузел", "отделк")) else "коробка"
-        parsed = {
-            "object": "дом",
-            "material": material,
+        canon_parsed = _cpf_parse(caption)
+        foundation_only = (
+            canon_parsed.get("object") == "фундамент"
+            or ("фундамент" in raw_low and ("плит" in raw_low or "подуш" in raw_low or "щеб" in raw_low))
+        )
+        scope = canon_parsed.get("scope") or ("фундамент" if foundation_only else ("под ключ" if any(x in raw_low for x in ("под ключ", "ламинат", "сантех", "санузел", "отделк")) else "коробка"))
+        area_floor = round(float(a) * float(b), 2)
+        floors = int(canon_parsed.get("floors") or plan.get("floors") or 1)
+        parsed = dict(canon_parsed or {})
+        parsed.update({
+            "object": canon_parsed.get("object") or ("фундамент" if foundation_only else "дом"),
+            "material": canon_parsed.get("material") or material,
+            "dimensions": (float(a), float(b)),
             "dims": (float(a), float(b)),
-            "floors": int(plan.get("floors") or 1),
-            "foundation": plan.get("foundation") or "монолитная плита",
-            "distance_km": 0,
+            "area_floor": area_floor,
+            "area_total": round(area_floor * floors, 2),
+            "floors": floors,
+            "foundation": canon_parsed.get("foundation") or plan.get("foundation") or "монолитная плита",
+            "distance_km": canon_parsed.get("distance_km") if canon_parsed.get("distance_km") is not None else 0,
             "scope": scope,
             "height": float(plan.get("height") or 3.0),
             "rooms": plan.get("rooms") or [],
@@ -7122,11 +7209,33 @@ async def handle_topic2_image_estimate_p6e2(conn, task=None, chat_id=None, topic
             "doors": int(plan.get("doors") or 0),
             "terrace": bool(plan.get("terrace")),
             "terrace_area": float(plan.get("terrace_area") or 0),
+            "raw": caption,
             "source": "photo_plan_ocr",
-        }
+        })
+        def _mm(pattern, default=0.0):
+            m = _p6e2_re.search(pattern, raw_low)
+            return round(float(m.group(1).replace(",", ".")) / 1000.0, 3) if m else default
+        def _meters(pattern, default=0.0):
+            m = _p6e2_re.search(pattern, raw_low)
+            return round(float(m.group(1).replace(",", ".")), 3) if m else default
+        parsed["foundation_thickness_m"] = _mm(r"толщин[а-я\s]*фундамента[а-я\s]*(\d{2,4})\s*мм", 0.0) or _mm(r"толщин[а-я\s]*плиты[а-я\s]*(\d{2,4})\s*мм", 0.0)
+        parsed["sand_thickness_m"] = _mm(r"песчан[а-я\s]*подушк[а-я\s]*(?:толщин[а-я\s]*)?(\d{2,4})\s*мм", 0.0)
+        parsed["gravel_thickness_m"] = _mm(r"щеб[а-я\s]*(?:толщин[а-я\s]*)?(\d{2,4})\s*мм", 0.0)
+        parsed["foundation_offset_m"] = 1.5 if "отступ" in raw_low and "полтора" in raw_low else _meters(r"отступ[а-я\s]*(?:от[а-я\s]*границ[а-я\s]*фундамента[а-я\s]*)?(?:на\s*)?(\d+(?:[.,]\d+)?)\s*м(?:етр|етра|етров)?\b", 0.0)
+        m_layers = _p6e2_re.search(r"арматур[а-я\s]*в\s*(\d+)\s*сл", raw_low)
+        parsed["reinforcement_layers"] = int(m_layers.group(1)) if m_layers else 0
+        m_grade = _p6e2_re.search(r"бетон[а-я\s]*(\d{3})", raw_low)
+        parsed["concrete_grade"] = ("М" + m_grade.group(1)) if m_grade else ""
+        parsed["vat_mode"] = "without_vat" if "без ндс" in raw_low else ""
         template = _cpf_choose(parsed)
         tpl_path = _cpf_dl_tpl(template)
-        template_prices, sheet_name = _cpf_extract(tpl_path, parsed)
+        extracted_prices = _cpf_extract(tpl_path, parsed)
+        if isinstance(extracted_prices, (list, tuple)):
+            template_prices = extracted_prices[0] if len(extracted_prices) > 0 else ""
+            sheet_name = extracted_prices[1] if len(extracted_prices) > 1 else None
+        else:
+            template_prices = str(extracted_prices or "")
+            sheet_name = None
         online_prices = await _cpf_search(parsed, template, sheet_name)
         pending = {
             "version": "P6E2_CANON_PRICE_FLOW_V1",
@@ -7143,7 +7252,7 @@ async def handle_topic2_image_estimate_p6e2(conn, task=None, chat_id=None, topic
         }
         _cpf_memsave(chat_id_s, f"topic_2_estimate_pending_{tid}", pending)
         confirm_text = _cpf_confirm(parsed, template, sheet_name, template_prices, online_prices)
-        _cpf_upd(conn, tid, state="WAITING_CLARIFICATION", result=confirm_text)
+        _cpf_upd(conn, tid, state="WAITING_CLARIFICATION", result=confirm_text, error_message="TOPIC2_PRICE_CHOICE_REQUIRED")
         _cpf_hist(conn, tid, "P6E2_CANON_PRICE_FLOW_V1:prices_shown")
         return True
     except Exception as _ex:
@@ -7703,6 +7812,17 @@ def _final_estimate_score_template_v1(file_name: str, raw_input: str = "") -> in
         is_storage = any(x in raw for x in ("ангар", "склад", "хранилищ"))
         is_foundation_only = (
             any(x in raw for x in ("фундамент", "плита", "сваи"))
+
+====================================================================================================
+END_FILE: core/sample_template_engine.py
+FILE_CHUNK: 1/2
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: core/sample_template_engine.py
+FILE_CHUNK: 2/2
+SHA256_FULL_FILE: 518372e8b858166f997baf655aae11efe3f6c6adb040c506111d98d975c80ef3
+====================================================================================================
             and not any(x in raw for x in ("дом", "здание", "строительство", "этаж", "кровля"))
         )
         is_roof_only = (
@@ -7855,17 +7975,6 @@ def _p2_create_xlsx(task_id, p, rows, prices=None, price_status=""):
         ws.cell(row_num + 3, 10).value = f"=J{row_num+1}+J{row_num+2}"
 
         # Price check sheet
-
-====================================================================================================
-END_FILE: core/sample_template_engine.py
-FILE_CHUNK: 1/2
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/sample_template_engine.py
-FILE_CHUNK: 2/2
-SHA256_FULL_FILE: 51590f4462d850cb774756a9787d900f8de3880a247a8fb71214a76264ac145d
-====================================================================================================
         ws_price.append(["Статус", price_status or "TEMPLATE_ONLY"])
         ws_price.append(["Источник", "Интернет-проверка цен или базовые ставки"])
         ws_price.append([])
@@ -8750,292 +8859,4 @@ except Exception as _t2dps_err:
 ====================================================================================================
 END_FILE: core/sample_template_engine.py
 FILE_CHUNK: 2/2
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/search_engine.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: cd8e56b848f77750e2934e99e4e8eff0c1b0d1d908d27a1939cce5e28348ba56
-====================================================================================================
-# === FULLFIX_SEARCH_ENGINE_STAGE_5 ===
-from __future__ import annotations
-from typing import Any, Dict, List, Optional
-
-SEARCH_ENGINE_VERSION = "SEARCH_ENGINE_V1"
-
-DIRECTION_SEARCH_PROFILES = {
-    "product_search":      {"sources": ["avito", "ozon", "wildberries"], "strategy": "price_compare"},
-    "auto_parts_search":   {"sources": ["drom", "exist", "emex", "zzap"], "strategy": "compatibility"},
-    "construction_search": {"sources": ["petrovitch", "lerua", "grand_line"], "strategy": "price_delivery"},
-    "internet_search":     {"sources": ["web"], "strategy": "general"},
-}
-
-DEFAULT_PROFILE = {"sources": ["web"], "strategy": "general"}
-
-
-class SearchEngine:
-    def plan(self, work_item, payload: Dict[str, Any]) -> Dict[str, Any]:
-        direction = getattr(work_item, "direction", None) or payload.get("direction") or "internet_search"
-        raw_text = (getattr(work_item, "raw_text", "") or payload.get("raw_input") or "")[:500]
-        profile = DIRECTION_SEARCH_PROFILES.get(direction, DEFAULT_PROFILE)
-
-        plan = {
-            "query": raw_text,
-            "direction": direction,
-            "sources": profile["sources"],
-            "strategy": profile["strategy"],
-            "engine_version": SEARCH_ENGINE_VERSION,
-            "shadow_mode": True,
-            "status": "planned",
-        }
-        return plan
-
-    def apply_to_payload(self, work_item, payload: Dict[str, Any]) -> Dict[str, Any]:
-        requires_search = bool((payload.get("direction_profile") or {}).get("requires_search"))
-        if not requires_search:
-            return {}
-        plan = self.plan(work_item, payload)
-        payload["search_plan"] = plan
-        try:
-            import logging
-            logging.getLogger("task_worker").info(
-                "FULLFIX_SEARCH_ENGINE_STAGE_5 dir=%s sources=%s strategy=%s",
-                plan["direction"], plan["sources"], plan["strategy"]
-            )
-        except Exception:
-            pass
-        return plan
-
-
-def plan_search(work_item, payload):
-    return SearchEngine().apply_to_payload(work_item, payload)
-# === END FULLFIX_SEARCH_ENGINE_STAGE_5 ===
-
-
-# === P6_GLOBAL_SEARCH_ENGINE_ACTIVE_PLAN_20260504_V1 ===
-# Scope:
-# - SearchEngine is no longer decorative shadow-only metadata
-# - it produces normalized active search plan for product, auto parts, construction and general web search
-# - no network call here; execution is handled by SearchMonolithV2 / ai_router online model
-
-import re as _p6se_re
-
-_P6SE_AUTO_WORDS = (
-    "сайлентблок", "саленблок", "сальник", "пыльник", "ваз", "2110", "2114",
-    "жигули", "лада", "приора", "гранта", "калина", "нива", "drom", "exist", "emex", "zzap",
-    "автозапчаст", "запчаст", "oem", "артикул"
-)
-
-_P6SE_ELECTRONICS_WORDS = (
-    "iphone", "айфон", "pixel", "google pixel", "телефон", "смартфон", "samsung", "galaxy",
-    "xiaomi", "redmi", "honor", "huawei", "pro max", "xl"
-)
-
-_P6SE_BUILD_WORDS = (
-    "утепл", "каменная вата", "rockwool", "бетон", "арматур", "профлист", "металлочереп",
-    "фальц", "клик-фальц", "кирпич", "газобетон", "доска", "брус", "стройматериал"
-)
-
-def _p6se_s(v, limit=4000):
-    try:
-        if v is None:
-            return ""
-        return str(v).strip()[:limit]
-    except Exception:
-        return ""
-
-def _p6se_low(v):
-    return _p6se_s(v).lower().replace("ё", "е")
-
-def _p6se_direction(raw_text, current="internet_search"):
-    low = _p6se_low(raw_text)
-    if any(x in low for x in _P6SE_AUTO_WORDS):
-        return "auto_parts_search"
-    if any(x in low for x in _P6SE_ELECTRONICS_WORDS):
-        return "product_search"
-    if any(x in low for x in _P6SE_BUILD_WORDS):
-        return "construction_search"
-    return current or "internet_search"
-
-def _p6se_sources(direction):
-    if direction == "auto_parts_search":
-        return ["zzap", "exist", "emex", "drom", "auto.ru", "euroauto", "avito", "telegram"]
-    if direction == "construction_search":
-        return ["petrovich", "lerua", "vseinstrumenti", "ozon", "wildberries", "yandex_market", "avito", "2gis", "supplier_sites"]
-    if direction == "product_search":
-        return ["ozon", "wildberries", "yandex_market", "dns", "mvideo", "eldorado", "avito", "aliexpress", "official_sites"]
-    return ["web", "official_sites", "marketplaces", "classifieds", "2gis"]
-
-def _p6se_strategy(direction):
-    if direction == "auto_parts_search":
-        return "compatibility_price_availability"
-    if direction == "construction_search":
-        return "price_delivery_supplier_trust"
-    if direction == "product_search":
-        return "price_compare_availability"
-    return "general_verified_search"
-
-try:
-    _p6se_orig_plan = SearchEngine.plan
-    def _p6se_plan(self, work_item, payload):
-        payload = payload or {}
-        raw_text = (
-            getattr(work_item, "raw_text", None)
-            or payload.get("raw_input")
-            or payload.get("normalized_input")
-            or payload.get("query")
-            or ""
-        )
-        current = getattr(work_item, "direction", None) or payload.get("direction") or "internet_search"
-        direction = _p6se_direction(raw_text, current)
-        sources = _p6se_sources(direction)
-        plan = {
-            "query": _p6se_s(raw_text, 1000),
-            "direction": direction,
-            "sources": sources,
-            "strategy": _p6se_strategy(direction),
-            "engine_version": "P6_GLOBAL_SEARCH_ENGINE_ACTIVE_PLAN_20260504_V1",
-            "shadow_mode": False,
-            "status": "active",
-            "requires_online": True,
-            "must_use_current_query_only": True,
-        }
-        return plan
-    SearchEngine.plan = _p6se_plan
-
-    def _p6se_apply_to_payload(self, work_item, payload):
-        payload = payload or {}
-        plan = self.plan(work_item, payload)
-        payload["search_plan"] = plan
-        payload["direction"] = plan["direction"]
-        payload["engine"] = "search_supplier"
-        payload["requires_search"] = True
-        payload["search_sources"] = plan["sources"]
-        payload["search_strategy"] = plan["strategy"]
-        try:
-            import logging
-            logging.getLogger("task_worker").info(
-                "P6_GLOBAL_SEARCH_ENGINE_ACTIVE_PLAN dir=%s sources=%s strategy=%s",
-                plan["direction"], plan["sources"], plan["strategy"]
-            )
-        except Exception:
-            pass
-        return plan
-    SearchEngine.apply_to_payload = _p6se_apply_to_payload
-except Exception:
-    pass
-
-# === END_P6_GLOBAL_SEARCH_ENGINE_ACTIVE_PLAN_20260504_V1 ===
-
-# === P6C_SEARCH_ENGINE_ACTIVE_NO_SHADOW_PROFILE_20260504_V1 ===
-try:
-    SEARCH_ENGINE_VERSION = "P6C_SEARCH_ENGINE_ACTIVE_NO_SHADOW_PROFILE_20260504_V1"
-    DIRECTION_SEARCH_PROFILES.update({
-        "internet_search": {"sources": ["web", "marketplaces", "direct_suppliers"], "strategy": "current_query_price_compare"},
-        "product_search": {"sources": ["ozon", "wildberries", "yandex_market", "avito", "direct_suppliers"], "strategy": "current_query_price_compare"},
-        "auto_parts_search": {"sources": ["drom", "exist", "emex", "zzap", "avito"], "strategy": "current_query_compatibility_price"},
-        "construction_search": {"sources": ["petrovich", "lemanapro", "vseinstrumenti", "direct_suppliers"], "strategy": "current_query_price_delivery"},
-    })
-except Exception:
-    pass
-
-try:
-    _p6c_orig_plan_20260504 = SearchEngine.plan
-    def _p6c_plan_20260504(self, work_item, payload):
-        plan = _p6c_orig_plan_20260504(self, work_item, payload)
-        plan["shadow_mode"] = False
-        plan["status"] = "active"
-        plan["engine_version"] = "P6C_SEARCH_ENGINE_ACTIVE_NO_SHADOW_PROFILE_20260504_V1"
-        return plan
-    SearchEngine.plan = _p6c_plan_20260504
-except Exception:
-    pass
-# === END_P6C_SEARCH_ENGINE_ACTIVE_NO_SHADOW_PROFILE_20260504_V1 ===
-
-====================================================================================================
-END_FILE: core/search_engine.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/search_quality.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: c182a04e79562dc61000856b85d8cd1ac774011ebfcd85972418db2b08982cae
-====================================================================================================
-# === SEARCH_QUALITY_V1 ===
-import re
-import logging
-from typing import Optional
-
-logger = logging.getLogger(__name__)
-
-# AVAILABILITY_CHECK — проверить что результат содержит реальные данные
-def availability_check(result: str) -> bool:
-    if not result or len(result.strip()) < 40:
-        return False
-    bad = ["не нашёл", "не удалось найти", "информация недоступна",
-           "нет данных", "данные отсутствуют", "не могу найти"]
-    low = result.lower()
-    return not any(b in low for b in bad)
-
-# STALE_CONTEXT_GUARD — не использовать результат поиска старше 48ч
-def stale_context_guard(search_timestamp: Optional[str], max_age_hours: int = 48) -> bool:
-    if not search_timestamp:
-        return True
-    try:
-        from datetime import datetime, timezone
-        ts = datetime.fromisoformat(search_timestamp.replace("Z", "+00:00"))
-        now = datetime.now(timezone.utc)
-        age_h = (now - ts).total_seconds() / 3600
-        if age_h > max_age_hours:
-            logger.warning("STALE_CONTEXT_GUARD age=%.1fh > %dh", age_h, max_age_hours)
-            return False
-    except Exception:
-        pass
-    return True
-
-# NEGATIVE_SELECTION — убрать мусорные результаты
-def negative_selection(items: list) -> list:
-    noise = ["реклама", "спонсор", "купить сейчас", "акция", "скидка 90%",
-             "бесплатно навсегда", "партнёр"]
-    clean = []
-    for item in items:
-        text = str(item).lower()
-        if not any(n in text for n in noise):
-            clean.append(item)
-    return clean
-
-# SOURCE_TRACE — убедиться что есть источник
-def source_trace(result: str) -> bool:
-    patterns = [r"https?://\S+", r"\bру\b", r"\bwww\b", r"источник", r"по данным"]
-    return any(re.search(p, result, re.I) for p in patterns)
-
-# CACHE_LAYER_V1 — простой in-memory кэш поисковых запросов
-_search_cache: dict = {}
-
-def cache_get(query: str) -> Optional[str]:
-    import time
-    entry = _search_cache.get(query)
-    if entry and (time.time() - entry["ts"]) < 3600:
-        return entry["result"]
-    return None
-
-def cache_set(query: str, result: str):
-    import time
-    _search_cache[query] = {"result": result, "ts": time.time()}
-    if len(_search_cache) > 200:
-        oldest = sorted(_search_cache, key=lambda k: _search_cache[k]["ts"])[:50]
-        for k in oldest:
-            del _search_cache[k]
-
-# CONTACT_VALIDATION — есть ли телефон/email
-def contact_validation(text: str) -> bool:
-    phone = re.search(r"(\+7|8)[\s\-]?\(?\d{3}\)?[\s\-]?\d{3}[\s\-]?\d{2}[\s\-]?\d{2}", text)
-    email = re.search(r"[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}", text, re.I)
-    return bool(phone or email)
-# === END SEARCH_QUALITY_V1 ===
-
-====================================================================================================
-END_FILE: core/search_quality.py
-FILE_CHUNK: 1/1
 ====================================================================================================

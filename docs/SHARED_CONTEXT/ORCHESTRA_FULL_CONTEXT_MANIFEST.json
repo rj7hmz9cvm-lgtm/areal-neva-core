@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-07-06T07:22:41.411848+00:00",
-  "git_sha_before_commit": "6bce30b7e04da6eb333fadf750b3bdac7a94ad49",
+  "generated_at_utc": "2026-07-06T07:52:42.467270+00:00",
+  "git_sha_before_commit": "20c42a8cf2dbf4520e1f5516b596fa1753c5895f",
   "part_max_bytes": 400000,
   "content_chunk_bytes": 340000,
   "total_records": 425,
@@ -2083,9 +2083,9 @@
       "path": "core/sample_template_engine.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 385075,
-      "sha256": "51590f4462d850cb774756a9787d900f8de3880a247a8fb71214a76264ac145d",
-      "chars": 358291,
+      "size_bytes": 391041,
+      "sha256": "518372e8b858166f997baf655aae11efe3f6c6adb040c506111d98d975c80ef3",
+      "chars": 363981,
       "chunks": 2
     },
     {
@@ -2146,9 +2146,9 @@
       "path": "core/stroyka_estimate_canon.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 348403,
-      "sha256": "2f78b633cef449d38d7eb110ea461b2a233ce7e542f5d1bff1aee2f57048abc8",
-      "chars": 310616,
+      "size_bytes": 354723,
+      "sha256": "aac16a49dc483c414f1c7247e26ceb5bf2da1d80338b03d6ba7cfb48ac261dd5",
+      "chars": 315966,
       "chunks": 2
     },
     {
@@ -3298,7 +3298,7 @@
       "path": "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_008.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 380554,
+      "size_bytes": 382467,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3406,7 +3406,7 @@
       "path": "docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 34677,
+      "size_bytes": 30355,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3424,7 +3424,7 @@
       "path": "docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 351642,
+      "size_bytes": 351652,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3469,7 +3469,7 @@
       "path": "docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 6357,
+      "size_bytes": 6367,
       "sha256": "",
       "chars": 0,
       "chunks": 0

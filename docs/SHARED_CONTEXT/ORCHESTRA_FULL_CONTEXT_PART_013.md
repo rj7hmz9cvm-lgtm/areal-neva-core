@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_013
-generated_at_utc: 2026-07-06T07:22:41.404990+00:00
-git_sha_before_commit: 6bce30b7e04da6eb333fadf750b3bdac7a94ad49
+generated_at_utc: 2026-07-06T07:52:42.460947+00:00
+git_sha_before_commit: 20c42a8cf2dbf4520e1f5516b596fa1753c5895f
 part: 13/19
 
 
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 1/2
-SHA256_FULL_FILE: 2f78b633cef449d38d7eb110ea461b2a233ce7e542f5d1bff1aee2f57048abc8
+SHA256_FULL_FILE: aac16a49dc483c414f1c7247e26ceb5bf2da1d80338b03d6ba7cfb48ac261dd5
 ====================================================================================================
 # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
 from __future__ import annotations
@@ -650,7 +650,7 @@ def _template_score(parsed: Dict[str, Any], tpl: Dict[str, Any]) -> int:
     if tpl.get("title") in DEPRECATED_TEMPLATE_NAMES:
         return -9999
     if obj in ("ангар", "склад", "фундамент") and ("фундамент" in name or "склад" in name):
-        score += 100
+        score += 150 if obj == "фундамент" and "фундамент" in name else 100
     if obj == "кровля" and ("крыш" in name or "перекр" in name):
         score += 100
     if material == "каркас" and ("м-80" in name or "м80" in name or "м-110" in name or "м110" in name):
@@ -6301,9 +6301,6 @@ def _t2s_with_project_only_disabled_v1(callback):
         return callback()
     finally:
         if guard is not None:
-            globals()["_t2_no_template_orient_allowed_v1"] = guard
-
-
 
 ====================================================================================================
 END_FILE: core/stroyka_estimate_canon.py
@@ -6313,8 +6310,11 @@ FILE_CHUNK: 1/2
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 2/2
-SHA256_FULL_FILE: 2f78b633cef449d38d7eb110ea461b2a233ce7e542f5d1bff1aee2f57048abc8
+SHA256_FULL_FILE: aac16a49dc483c414f1c7247e26ceb5bf2da1d80338b03d6ba7cfb48ac261dd5
 ====================================================================================================
+            globals()["_t2_no_template_orient_allowed_v1"] = guard
+
+
 async def _t2s_await_project_only_disabled_v1(callback):
     guard = globals().get("_t2_no_template_orient_allowed_v1")
 
@@ -6482,6 +6482,98 @@ try:
 except Exception:
     pass
 # === END_PATCH_TOPIC2_STRICT_PRICE_SOURCE_MATCH_V2 ===
+
+# === PATCH_TOPIC2_FOUNDATION_ONLY_PHOTO_SCOPE_V1 ===
+_T2FO_PREV_BUILD_ESTIMATE_ITEMS_V1 = _build_estimate_items
+
+
+def _t2fo_foundation_only_v1(parsed):
+    raw = _low((parsed or {}).get("raw") or "")
+    obj = _low((parsed or {}).get("object") or "")
+    scope = _low((parsed or {}).get("scope") or "")
+    return (
+        obj == "фундамент"
+        or scope == "фундамент"
+        or ("фундамент" in raw and ("плит" in raw or "подуш" in raw or "щеб" in raw))
+    )
+
+
+def _t2fo_float_v1(value, default=0.0):
+    try:
+        return float(value or default)
+    except Exception:
+        return float(default)
+
+
+def _t2fo_int_v1(value, default=0):
+    try:
+        return int(value or default)
+    except Exception:
+        return int(default)
+
+
+def _t2fo_build_foundation_items_v1(parsed, price_text, choice):
+    parsed = parsed or {}
+    P = _FTM_PRICES
+    dims = parsed.get("dimensions") or parsed.get("dims") or (0, 0)
+    try:
+        a, b = float(dims[0]), float(dims[1])
+    except Exception:
+        area_fallback = _t2fo_float_v1(parsed.get("area_floor"), 0.0)
+        a = b = area_fallback ** 0.5 if area_fallback > 0 else 0.0
+    area = _t2fo_float_v1(parsed.get("area_floor"), round(a * b, 2))
+    offset = _t2fo_float_v1(parsed.get("foundation_offset_m"), 0.0)
+    prep_area = round((a + 2 * offset) * (b + 2 * offset), 2) if offset and a and b else area
+    slab_t = _t2fo_float_v1(parsed.get("foundation_thickness_m"), 0.25)
+    sand_t = _t2fo_float_v1(parsed.get("sand_thickness_m"), 0.0)
+    gravel_t = _t2fo_float_v1(parsed.get("gravel_thickness_m"), 0.0)
+    layers = _t2fo_int_v1(parsed.get("reinforcement_layers"), 2)
+    distance = _t2fo_float_v1(parsed.get("distance_km"), 0.0)
+    concrete_grade = _s(parsed.get("concrete_grade") or ("М350" if "350" in _low(parsed.get("raw") or "") else "В25"))
+
+    concrete_volume = round(area * slab_t, 2)
+    rebar_qty = round(max(concrete_volume * 0.08 * (max(layers, 1) / 2.0), 0.1), 3)
+    formwork_perim = round(2 * (a + b), 2) if a and b else round(area ** 0.5 * 4, 2)
+    earth_volume = round(prep_area * max(sand_t + gravel_t, 0.2), 2)
+
+    concrete_price = _p8v3_mp("бетон в25 w6", P["concrete_b25_mat"])
+    rebar_price = _p8v3_mp("арматура металлическая д.12а500", P["rebar_a500_mat"])
+    pump_price = _choose_value(_numbers_from_price_text(price_text, ("бетононасос",)), choice) or 31050
+    delivery_price = round(P["logist_delivery"] * max(distance / 30.0, 1.0), 2) if distance else 0
+
+    items = []
+    items.append(_ftm_row("Фундамент", "Подготовка основания и земляные работы", "м³", earth_volume, P["earth_work"], "по ТЗ: подготовка под плиту"))
+    if sand_t > 0:
+        items.append(_ftm_row("Фундамент", f"Песчаная подушка {int(sand_t * 1000)} мм с уплотнением", "м³", round(prep_area * sand_t, 2), P["sand_mat"] + P["sand_work"], f"площадь подготовки {prep_area:g} м²"))
+    if gravel_t > 0:
+        items.append(_ftm_row("Фундамент", f"Щебёночное основание {int(gravel_t * 1000)} мм с уплотнением", "м³", round(prep_area * gravel_t, 2), P["gravel_mat"] + P["gravel_work"], f"площадь подготовки {prep_area:g} м²"))
+    items.append(_ftm_row("Фундамент", "Опалубка периметра плиты материал", "мп", formwork_perim, P["formwork_perim_mat"], "по размерам с фото"))
+    items.append(_ftm_row("Фундамент", "Опалубка плиты монтаж/демонтаж", "мп", formwork_perim, P["formwork_install_work"], "работы"))
+    items.append(_ftm_row("Фундамент", f"Арматура А500 для плиты, {layers} слоя", "т", rebar_qty, rebar_price, "расчётная масса от объёма бетона; уточняется по КЖ"))
+    items.append(_ftm_row("Фундамент", f"Армирование фундаментной плиты, {layers} слоя", "м²", area, _p8v3_wp("устройство арматурного каркаса", P["rebar_install_work"]), "работы"))
+    items.append(_ftm_row("Фундамент", f"Бетон {concrete_grade} для монолитной плиты {int(slab_t * 1000)} мм", "м³", concrete_volume, concrete_price, "по ТЗ"))
+    items.append(_ftm_row("Фундамент", "Бетонирование фундаментной плиты", "м³", concrete_volume, _p8v3_wp("бетонирование монолитной плиты   б/н", P["concrete_pour_work"]), "работы"))
+    items.append(_ftm_row("Фундамент", "Аренда бетононасоса / подача бетона", "смена", 1, pump_price, "для объёма бетона плиты"))
+    if delivery_price:
+        items.append(_ftm_row("Логистика", f"Доставка материалов от Санкт-Петербурга, {distance:g} км", "компл", 1, delivery_price, "по ТЗ: удалённость объекта"))
+
+    subtotal = sum(float(it["price"]) * float(it["qty"]) for it in items if it["section"] not in ("Логистика", "Накладные расходы"))
+    items.append(_ftm_row("Накладные расходы", "Организация работ и накладные", "компл", 1, round(subtotal * 0.07, 2), "7% от фундаментных работ и материалов"))
+    items.append(_ftm_row("Накладные расходы", "Расходные материалы и крепёж", "компл", 1, round(subtotal * 0.015, 2), "1.5% от фундаментных работ и материалов"))
+    return items
+
+
+def _build_estimate_items(parsed, price_text, choice):  # noqa: F811
+    if _t2fo_foundation_only_v1(parsed):
+        return _t2fo_build_foundation_items_v1(parsed, price_text, choice)
+    return _T2FO_PREV_BUILD_ESTIMATE_ITEMS_V1(parsed, price_text, choice)
+
+
+try:
+    _STV3_LOG.info("PATCH_TOPIC2_FOUNDATION_ONLY_PHOTO_SCOPE_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_FOUNDATION_ONLY_PHOTO_SCOPE_V1 ===
 
 ====================================================================================================
 END_FILE: core/stroyka_estimate_canon.py
