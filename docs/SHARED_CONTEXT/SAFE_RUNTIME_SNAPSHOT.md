@@ -1,6 +1,6 @@
 # SAFE_RUNTIME_SNAPSHOT
-generated_at_utc: 2026-07-07T20:54:31.309286+00:00
-git_sha_before_commit: 26126b947eb635b3906c20d062b2d92bbd7112d9
+generated_at_utc: 2026-07-07T20:55:02.273518+00:00
+git_sha_before_commit: a18e9d3fcefcda933fa2a61a5bb519e566257dde
 git_branch: main
 
 ## SERVICES
@@ -10,6 +10,7 @@ git_branch: main
 - areal-claude-bootstrap-aggregator.timer: active
 
 ## GIT_LOG_30
+a18e9d3f FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 26126b94 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 95e659fb Save 2026-07-07 topic2 search live session
 b72088bb FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
@@ -39,89 +40,88 @@ cdfc7240 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 486f4570 FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 835217ef FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 2f5dff4c FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
-fc44f3ce FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
 ## GIT_SHOW_STAT_HEAD
-commit 26126b947eb635b3906c20d062b2d92bbd7112d9
-Author: Ila <ilakuznecov@mac.local>
-Date:   Tue Jul 7 23:35:29 2026 +0300
+commit a18e9d3fcefcda933fa2a61a5bb519e566257dde
+Author: root <root@graceful-olive.ptr.network>
+Date:   Tue Jul 7 23:54:37 2026 +0300
 
     FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context
 
- docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md    |    6 +-
- docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md |    2 +-
- .../SHARED_CONTEXT/DIRECTIONS/auto_parts_search.md |    4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/cad_dwg.md          |    4 +-
- .../DIRECTIONS/construction_search.md              |    4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/crm_leads.md        |    4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/defect_acts.md      |    4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/devops_server.md    |    4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/documents.md        |    4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/email_ingress.md    |    4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/estimates.md        |    4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/general_chat.md     |    4 +-
- .../DIRECTIONS/google_drive_storage.md             |    4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/internet_search.md  |    4 +-
- .../DIRECTIONS/isolated_project_ivan.md            |    4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/job_search.md       |    4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/memory_archive.md   |    4 +-
- .../SHARED_CONTEXT/DIRECTIONS/monolith_concrete.md |    4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/ocr_photo.md        |    4 +-
- .../DIRECTIONS/orchestration_core.md               |    4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/photo_cleanup.md    |    4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/product_search.md   |    4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/roofing.md          |    4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/social_content.md   |    4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/spreadsheets.md     |    4 +-
- .../SHARED_CONTEXT/DIRECTIONS/structural_design.md |    4 +-
- .../DIRECTIONS/technical_supervision.md            |    4 +-
- .../DIRECTIONS/telegram_automation.md              |    4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/video_production.md |    4 +-
- docs/SHARED_CONTEXT/DIRECTIONS/vpn_network.md      |    4 +-
- docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md      |    4 +-
- docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |    6 +-
- docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |    6 +-
- docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |    6 +-
- .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |   57 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |    4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |  150 ++-
- .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |   15 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_004.md             |    4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |    4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |    4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_007.md             |    4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |    4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |    4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_010.md             | 1088 ++++++++++----------
- .../ORCHESTRA_FULL_CONTEXT_PART_011.md             |  529 +++++++++-
- .../ORCHESTRA_FULL_CONTEXT_PART_012.md             |    4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_013.md             |    4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_014.md             |   28 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_015.md             |   20 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_016.md             |    8 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_017.md             |    8 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_018.md             |    4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_019.md             |    4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_020.md             |    4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_021.md             |    4 +-
- .../ORCHESTRA_FULL_CONTEXT_PART_022.md             |  110 +-
- docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       |  232 +++--
- .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |   12 +-
- docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |   66 +-
- docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |    4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |    4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |    4 +-
- .../TOPICS/topic_210_PROEKTIROVANIE.md             |    4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |   22 +-
- .../TOPICS/topic_3008_KODY_MOZGOV.md               |    4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |    4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |    4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_5_TEKHNADZOR.md   |    4 +-
- .../SHARED_CONTEXT/TOPICS/topic_6104_JOB_SEARCH.md |    4 +-
- docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |    4 +-
- .../TOPICS/topic_961_AVTOZAPCHASTI.md              |    4 +-
- docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |    4 +-
- 73 files changed, 1731 insertions(+), 856 deletions(-)
+ docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md    |   6 +-
+ docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md |   2 +-
+ .../SHARED_CONTEXT/DIRECTIONS/auto_parts_search.md |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/cad_dwg.md          |   4 +-
+ .../DIRECTIONS/construction_search.md              |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/crm_leads.md        |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/defect_acts.md      |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/devops_server.md    |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/documents.md        |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/email_ingress.md    |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/estimates.md        |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/general_chat.md     |   4 +-
+ .../DIRECTIONS/google_drive_storage.md             |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/internet_search.md  |   4 +-
+ .../DIRECTIONS/isolated_project_ivan.md            |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/job_search.md       |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/memory_archive.md   |   4 +-
+ .../SHARED_CONTEXT/DIRECTIONS/monolith_concrete.md |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/ocr_photo.md        |   4 +-
+ .../DIRECTIONS/orchestration_core.md               |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/photo_cleanup.md    |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/product_search.md   |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/roofing.md          |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/social_content.md   |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/spreadsheets.md     |   4 +-
+ .../SHARED_CONTEXT/DIRECTIONS/structural_design.md |   4 +-
+ .../DIRECTIONS/technical_supervision.md            |   4 +-
+ .../DIRECTIONS/telegram_automation.md              |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/video_production.md |   4 +-
+ docs/SHARED_CONTEXT/DIRECTIONS/vpn_network.md      |   4 +-
+ docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md      |   4 +-
+ docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md     |   6 +-
+ docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md          |   6 +-
+ docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md      |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_MANIFEST.json           |  32 +--
+ .../ORCHESTRA_FULL_CONTEXT_PART_001.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_002.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_003.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_004.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_005.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_006.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_007.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_008.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_009.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_010.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_011.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_012.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_013.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_014.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_015.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_016.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_017.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_018.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_019.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_020.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_021.md             |   4 +-
+ .../ORCHESTRA_FULL_CONTEXT_PART_022.md             |   4 +-
+ docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md       | 236 +++++++++------------
+ .../SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md |   8 +-
+ docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md   |  68 +++---
+ docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md         |   6 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md       |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_11_VIDEO.md       |   4 +-
+ .../TOPICS/topic_210_PROEKTIROVANIE.md             |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md      |  20 +-
+ .../TOPICS/topic_3008_KODY_MOZGOV.md               |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_4569_CRM_LEADS.md |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md  |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_5_TEKHNADZOR.md   |   4 +-
+ .../SHARED_CONTEXT/TOPICS/topic_6104_JOB_SEARCH.md |   4 +-
+ docs/SHARED_CONTEXT/TOPICS/topic_794_DEVOPS.md     |   4 +-
+ .../TOPICS/topic_961_AVTOZAPCHASTI.md              |   4 +-
+ docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md          |   6 +-
+ 73 files changed, 304 insertions(+), 340 deletions(-)
 
 ## GIT_CHANGED_FILES_10
 core/ai_router.py
