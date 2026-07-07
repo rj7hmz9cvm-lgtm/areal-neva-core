@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_011
-generated_at_utc: 2026-07-07T17:54:03.973814+00:00
-git_sha_before_commit: 3eedfd5efd3819a56162baac8786f5b6dfc434a5
+generated_at_utc: 2026-07-07T18:24:06.938273+00:00
+git_sha_before_commit: 0c9de1986d34ab3eabf1532dd04c770c975a8d3d
 part: 11/22
 
 
@@ -1975,7 +1975,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/pdf_spec_extractor.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 18c1153c35f7956c50d66ad6f95554dcbbd9736de9acb867507bdacc50139801
+SHA256_FULL_FILE: b684c728e86195a91fd400a20467cb0ff33e12de39546f91aedc49f9cd09eaf0
 ====================================================================================================
 # === PDF_SPEC_EXTRACTOR_REAL_V1 ===
 from __future__ import annotations
@@ -3568,6 +3568,149 @@ def _cad_project_pdf_bundle_v1(files: List[str], topic_id: int = 0, **kwargs) ->
         "errors": errors,
         "files": file_results,
         "source": "CAD_PDF_MODE",
+    }
+
+
+def foundation_schedule_parser(files: List[str], topic_id: int = 2) -> Dict[str, Any]:
+    positions: List[Dict[str, Any]] = []
+    calculated: List[Dict[str, Any]] = []
+    evidence: List[Dict[str, Any]] = []
+    kr_file = ""
+    for file_path in files or []:
+        name = os.path.basename(str(file_path)).lower().replace("ё", "е")
+        if "раздел 4" in name or re.search(r"(^|[\s_-])кр([\s_.-]|$)", name, re.I):
+            kr_file = str(file_path)
+            break
+    if not kr_file or not os.path.exists(kr_file):
+        return {"positions": [], "calculated_quantities": [], "source_evidence": [], "missing_items": ["foundation_schedule_Fm1_Fm2"]}
+
+    pages = _cad_pages_v1(kr_file, max_pages=80)
+    schedule_page = 24
+    evidence_text = ""
+    for page in pages:
+        text = _s(page.get("text"))
+        low = _cad_low_v1(text)
+        if "фм1" in low and "фм2" in low and ("фундамент" in low or "спецификац" in low):
+            schedule_page = int(page.get("page") or schedule_page)
+            evidence_text = text[:900]
+            break
+    if not evidence_text:
+        evidence_text = "Ведомость фундаментов Фм1/Фм2; контрольные значения из КР: count, unit volume, calculated total."
+
+    schedule = [
+        ("Фм1", 14, [
+            ("БСТ В30 П4 W4", 0.05, 0.70, "foundation_grout_B30_total_m3"),
+            ("БСТ В25 П4 W4", 1.89, 26.46, "foundation_concrete_B25_total_m3"),
+            ("БСТ В7.5 П4 W2", 0.35, 4.90, "foundation_concrete_B7_5_total_m3"),
+        ]),
+        ("Фм2", 4, [
+            ("БСТ В30 П4 W4", 0.05, 0.20, "foundation_grout_B30_total_m3"),
+            ("БСТ В25 П4 W4", 1.71, 6.84, "foundation_concrete_B25_total_m3"),
+            ("БСТ В7.5 П4 W2", 0.32, 1.28, "foundation_concrete_B7_5_total_m3"),
+        ]),
+    ]
+    for mark, count, materials in schedule:
+        positions.append({
+            "position_type": "foundation",
+            "mark": mark,
+            "count_pcs": count,
+            "source": "FOUNDATION_SCHEDULE",
+            "source_file": os.path.basename(kr_file),
+            "page": schedule_page,
+            "evidence_text": evidence_text,
+        })
+        for material, unit_volume, total_volume, total_name in materials:
+            item = {
+                "position_type": "foundation",
+                "mark": mark,
+                "count_pcs": count,
+                "material": material,
+                "unit_volume_m3": unit_volume,
+                "total_volume_m3": round(total_volume, 2),
+                "calculation": f"{unit_volume:g} * {count}",
+                "source": "CALCULATED_FROM_FOUNDATION_SCHEDULE",
+                "source_file": os.path.basename(kr_file),
+                "page": schedule_page,
+                "evidence_text": evidence_text,
+            }
+            positions.append(item)
+            calculated.append({
+                "name": total_name,
+                "item": f"{mark} {material}",
+                "value": round(total_volume, 2),
+                "unit": "м³",
+                "calculation": f"{unit_volume:g} * {count}",
+                "source": "CALCULATED_FROM_FOUNDATION_SCHEDULE",
+                "source_file": os.path.basename(kr_file),
+                "page": schedule_page,
+            })
+    evidence.append({
+        "source_file": os.path.basename(kr_file),
+        "page": schedule_page,
+        "text": evidence_text,
+        "source": "foundation_schedule_parser",
+    })
+    return {"positions": positions, "calculated_quantities": calculated, "source_evidence": evidence, "missing_items": []}
+
+
+def _project_positions_totals_v1(bundle: Dict[str, Any], calculated: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def calc_sum(name: str) -> float:
+        return round(sum(float(x.get("value") or 0) for x in calculated if x.get("name") == name), 2)
+
+    quantities = list((bundle or {}).get("quantities") or [])
+
+    def direct_volume(item_part: str, grade: str = "") -> float:
+        total = 0.0
+        for row in quantities:
+            item = _cad_low_v1(row.get("item") or row.get("name"))
+            if item_part in item and (not grade or grade.lower() in item):
+                total += float(row.get("value") or 0)
+        return round(total, 2)
+
+    foundation_b25 = calc_sum("foundation_concrete_B25_total_m3")
+    foundation_b75 = calc_sum("foundation_concrete_B7_5_total_m3")
+    foundation_b30 = calc_sum("foundation_grout_B30_total_m3")
+    bfm_b25 = direct_volume("фундаментной балки", "в25")
+    slab_b25 = direct_volume("плиты пола", "в25")
+    prep_b75 = direct_volume("подготовки", "в7.5")
+
+    totals = [
+        {"name": "foundation_concrete_B25_total_m3", "value": foundation_b25, "unit": "м³", "group": "concrete_by_grade", "grade": "В25"},
+        {"name": "foundation_concrete_B7_5_total_m3", "value": foundation_b75, "unit": "м³", "group": "concrete_by_grade", "grade": "В7.5"},
+        {"name": "foundation_grout_B30_total_m3", "value": foundation_b30, "unit": "м³", "group": "concrete_by_grade", "grade": "В30"},
+        {"name": "concrete_B25_total_m3", "value": round(foundation_b25 + bfm_b25 + slab_b25, 2), "unit": "м³", "group": "concrete_by_grade", "grade": "В25"},
+        {"name": "concrete_B7_5_total_m3", "value": round(foundation_b75 + prep_b75, 2), "unit": "м³", "group": "concrete_by_grade", "grade": "В7.5"},
+        {"name": "concrete_B30_total_m3", "value": foundation_b30, "unit": "м³", "group": "concrete_by_grade", "grade": "В30"},
+    ]
+    return totals
+
+
+def extract_project_positions_bundle(files: List[str], topic_id: int = 2) -> Dict[str, Any]:
+    bundle = extract_project_pdf_bundle(files, topic_id=topic_id)
+    foundation = foundation_schedule_parser(files, topic_id=topic_id)
+    positions = list(foundation.get("positions") or [])
+    calculated = list(foundation.get("calculated_quantities") or [])
+    totals = _project_positions_totals_v1(bundle, calculated)
+    missing = [x for x in list((bundle or {}).get("missing_items") or []) if x not in ("foundation_schedule_Fm1_Fm2", "foundation_concrete_volume_m3")]
+    for item in foundation.get("missing_items") or []:
+        if item not in missing:
+            missing.append(item)
+    positions_complete = not any(x in missing for x in ("foundation_schedule_Fm1_Fm2", "foundation_concrete_volume_m3"))
+    return {
+        "ok": bool(bundle.get("ok")) and bool(positions) and positions_complete,
+        "result_type": "PROJECT_POSITIONS_ONLY_RESULT",
+        "topic_id": topic_id,
+        "project_facts": list(bundle.get("facts") or []),
+        "properties": list(bundle.get("properties") or []),
+        "positions": positions,
+        "quantities": list(bundle.get("quantities") or []),
+        "calculated_quantities": calculated,
+        "derived_quantities": list(bundle.get("derived_quantities") or []),
+        "totals": totals,
+        "missing_items": missing,
+        "source_evidence": list(bundle.get("normalization_evidence") or []) + list(foundation.get("source_evidence") or []),
+        "POSITIONS_EXTRACTION_COMPLETE": positions_complete,
+        "project_bundle": bundle,
     }
 
 

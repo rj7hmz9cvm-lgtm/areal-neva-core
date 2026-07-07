@@ -1,14 +1,106 @@
 # ORCHESTRA_FULL_CONTEXT_PART_015
-generated_at_utc: 2026-07-07T17:54:03.976835+00:00
-git_sha_before_commit: 3eedfd5efd3819a56162baac8786f5b6dfc434a5
+generated_at_utc: 2026-07-07T18:24:06.941535+00:00
+git_sha_before_commit: 0c9de1986d34ab3eabf1532dd04c770c975a8d3d
 part: 15/22
 
 
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 2/2
-SHA256_FULL_FILE: 1dc7103ae8b01f49fd569dd4a539ec9c373731b18b03cbf93c29ae7d6dc7230a
+SHA256_FULL_FILE: 6517760efcd948d2ef8f41e4b62cfa131b30d416692fb0923c9c25c387c52cde
 ====================================================================================================
+            "error_message": "TOPIC2_PDF_NO_VALID_ESTIMATE_ROWS",
+        }
+        if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+            kwargs["bot_message_id"] = send_res.get("bot_message_id")
+        _update_task_safe(conn, task_id, **kwargs)
+        _history_safe(conn, task_id, "TOPIC2_PDF_NO_VALID_ESTIMATE_ROWS:area_only_no_template_final")
+        return True
+    return await _T2NT_ORIG_GENERATE_AND_SEND_V1(conn, task, pending, confirm_text, logger=logger)
+
+try:
+    _STV3_LOG.info("PATCH_TOPIC2_NO_TEMPLATE_FROM_AREA_ONLY_PDF_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_NO_TEMPLATE_FROM_AREA_ONLY_PDF_V1 ===
+# === PATCH_TOPIC2_AR_PROJECT_FACT_ROWS_V1 ===
+# AR project PDFs may contain usable quantities outside formal VOR tables:
+# foundation piles/rostverk, roof area, slab schedule, window/door schedules.
+# These rows may be used only as project-derived rows; template rows are still
+# forbidden for final output when the PDF has only AR/TEP data.
+def _t2ar_num_v1(v):
+    try:
+        return float(str(v or "").replace(" ", "").replace(",", "."))
+    except Exception:
+        return 0.0
+
+
+def _t2ar_pdf_text_v1(parsed):
+    try:
+        p = (parsed or {}).get("pdf_spec_source") or (parsed or {}).get("local_path") or (parsed or {}).get("file_path")
+        if not p or not os.path.exists(str(p)):
+            return ""
+        import subprocess as _t2ar_subprocess
+        res = _t2ar_subprocess.run(["pdftotext", "-layout", str(p), "-"], capture_output=True, text=True, timeout=45)
+        return res.stdout or ""
+    except Exception:
+        return ""
+
+
+def _t2ar_add_row_v1(rows, section, name, unit, qty, note="", kind="material"):
+    try:
+        qty = float(qty)
+    except Exception:
+        qty = 0.0
+    if qty <= 0:
+        return
+    key = (section, name, unit, round(qty, 6))
+    if any((r.get("section"), r.get("name"), r.get("unit"), round(float(r.get("qty") or 0), 6)) == key for r in rows):
+        return
+    rows.append({
+        "section": section,
+        "name": name[:240],
+        "unit": unit,
+        "qty": qty,
+        "price": 0.0,
+        "kind": kind,
+        "note": (note or "из AR PDF")[:240],
+    })
+
+
+def _t2ar_project_rows_from_pdf_v1(parsed):
+    text = _t2ar_pdf_text_v1(parsed)
+    if not text:
+        return []
+    rows = []
+    low = _low(text)
+
+    m = re.search(r"Свая\s+200х200мм\s*\(3м\)\s+(\d+)", text, re.I)
+    if m:
+        _t2ar_add_row_v1(rows, "Фундамент", "Свая 200х200мм (3м)", "шт", _t2ar_num_v1(m.group(1)), "Спецификация на сваи, лист АР-08")
+
+    m = re.search(r"Ростверк\.\s*Бетон\s*B22,?5\s*W6\s*F150\s*([\d\s]+[,.]\d+)", text, re.I | re.S)
+    if m:
+        _t2ar_add_row_v1(rows, "Фундамент", "Ростверк. Бетон B22,5 W6 F150", "м3", _t2ar_num_v1(m.group(1)), "Таблица на листе АР-08; единица приведена как бетонный объем")
+
+    m = re.search(r"Площадь\s+Поверхности\s+Уклон\s+([\d\s]+[,.]\d+)\s+20", text, re.I)
+    if m:
+        _t2ar_add_row_v1(rows, "Кровля", "Площадь поверхности кровли, уклон 20°", "м2", _t2ar_num_v1(m.group(1)), "План кровли, лист АР-10")
+
+    for mark, qty in re.findall(r"\b(ПК\s*\d{2}-\d{2}-8)\s+(\d+)", text, re.I):
+        mark_clean = re.sub(r"\s+", " ", mark).strip()
+        _t2ar_add_row_v1(rows, "Перекрытия", f"Плита перекрытия {mark_clean}", "шт", _t2ar_num_v1(qty), "Спецификация плит перекрытия, лист АР-11")
+
+    m = re.search(r"Площадь\s+монолитных\s+участков\s*-\s*([\d\s]+[,.]\d+)\s*м2", text, re.I)
+    if m:
+        _t2ar_add_row_v1(rows, "Перекрытия", "Монолитные участки перекрытия", "м2", _t2ar_num_v1(m.group(1)), "План межэтажного перекрытия, лист АР-11")
+
+    m = re.search(r"Балка\s+перекрытия\s+50х200\s+([\d\s]+)\s+(\d+)", text, re.I)
+    if m:
+        _t2ar_add_row_v1(rows, "Перекрытия", "Балка перекрытия 50х200", "шт", _t2ar_num_v1(m.group(2)), f"Длина {m.group(1).strip()} мм, лист АР-11")
+
+    win_pat = re.compile(r"\b(Ок-\d+(?:,\s*бДв-1)?)\s+(\d+)\s+([0-9\s]+×[0-9\s]+)\s+([\d\s]+[,.]\d+)", re.I)
+    for mark, qty, size, area in win_pat.findall(text):
         _t2ar_add_row_v1(rows, "Окна и двери", f"{mark.strip()} оконный/балконный блок {size.strip()}", "шт", _t2ar_num_v1(qty), f"Площадь проема {area.strip()} м2, лист АР-19")
 
     door_pat = re.compile(r"\b(Дв-\d+|нДв-1)\s+(\d+)\s+[0-9\s]+×[0-9\s]+\s+([0-9\s]+×[0-9\s]+)\s+([\d\s]+[,.]\d+)", re.I)
@@ -8675,65 +8767,5 @@ except Exception:
 
 ====================================================================================================
 END_FILE: core/technadzor_object_registry.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/telegram_artifact_fallback.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 4a26f39caf63a874a8b6f186ef3b2ce95745637edd8d21d9e8e7230b14ba4b99
-====================================================================================================
-import os
-import logging
-import requests
-from typing import Optional
-
-logger = logging.getLogger(__name__)
-
-def send_artifact_to_telegram(
-    chat_id,
-    topic_id,
-    reply_to_message_id,
-    artifact_path: str,
-    caption: str = "",
-) -> dict:
-    bot_token = <REDACTED_SECRET>"BOT_TOKEN") or os.environ.get("TELEGRAM_BOT_TOKEN")
-    if not bot_token:
-        return {"ok": False, "error": "BOT_TOKEN_NOT_SET"}
-    if not artifact_path or not os.path.exists(artifact_path):
-        return {"ok": False, "error": "ARTIFACT_NOT_FOUND"}
-    try:
-        data = {
-            "chat_id": str(chat_id),
-            "caption": caption or "Готово. Файл отправлен в Telegram.",
-        }
-        if topic_id and int(topic_id) > 0:
-            data["message_thread_id"] = str(topic_id)
-        if reply_to_message_id:
-            data["reply_to_message_id"] = str(reply_to_message_id)
-        with open(artifact_path, "rb") as f:
-            res = requests.post(
-                f"https://api.telegram.org/bot{bot_token}/sendDocument",
-                data=data,
-                files={"document": (os.path.basename(artifact_path), f)},
-                timeout=30,
-            )
-        if res.ok:
-            resp = res.json()
-            msg = resp.get("result", {})
-            doc = msg.get("document", {})
-            return {
-                "ok": True,
-                "message_id": msg.get("message_id"),
-                "file_id": doc.get("file_id"),
-                "file_name": doc.get("file_name"),
-            }
-        return {"ok": False, "error": f"TG_STATUS_{res.status_code}"}
-    except Exception as e:
-        logger.error("send_artifact_to_telegram failed: %s", e)
-        return {"ok": False, "error": str(e)}
-
-====================================================================================================
-END_FILE: core/telegram_artifact_fallback.py
 FILE_CHUNK: 1/1
 ====================================================================================================

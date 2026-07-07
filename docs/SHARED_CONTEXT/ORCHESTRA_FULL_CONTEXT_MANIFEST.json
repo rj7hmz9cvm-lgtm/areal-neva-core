@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-07-07T17:54:03.981438+00:00",
-  "git_sha_before_commit": "3eedfd5efd3819a56162baac8786f5b6dfc434a5",
+  "generated_at_utc": "2026-07-07T18:24:06.949380+00:00",
+  "git_sha_before_commit": "0c9de1986d34ab3eabf1532dd04c770c975a8d3d",
   "part_max_bytes": 400000,
   "content_chunk_bytes": 340000,
   "total_records": 431,
@@ -2023,9 +2023,9 @@
       "path": "core/pdf_spec_extractor.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 77686,
-      "sha256": "18c1153c35f7956c50d66ad6f95554dcbbd9736de9acb867507bdacc50139801",
-      "chars": 73715,
+      "size_bytes": 84933,
+      "sha256": "b684c728e86195a91fd400a20467cb0ff33e12de39546f91aedc49f9cd09eaf0",
+      "chars": 80789,
       "chunks": 1
     },
     {
@@ -2176,9 +2176,9 @@
       "path": "core/stroyka_estimate_canon.py",
       "mode": "full",
       "reason": "tracked text",
-      "size_bytes": 469273,
-      "sha256": "1dc7103ae8b01f49fd569dd4a539ec9c373731b18b03cbf93c29ae7d6dc7230a",
-      "chars": 423051,
+      "size_bytes": 473756,
+      "sha256": "6517760efcd948d2ef8f41e4b62cfa131b30d416692fb0923c9c25c387c52cde",
+      "chars": 427480,
       "chunks": 2
     },
     {
@@ -3463,7 +3463,7 @@
       "path": "docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 35285,
+      "size_bytes": 35115,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3481,7 +3481,7 @@
       "path": "docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 389597,
+      "size_bytes": 389647,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3499,7 +3499,7 @@
       "path": "docs/SHARED_CONTEXT/TOPICS/topic_0_COMMON.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 1706,
+      "size_bytes": 1686,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3517,7 +3517,7 @@
       "path": "docs/SHARED_CONTEXT/TOPICS/topic_210_PROEKTIROVANIE.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 2335,
+      "size_bytes": 2315,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3526,7 +3526,7 @@
       "path": "docs/SHARED_CONTEXT/TOPICS/topic_2_STROYKA.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 7066,
+      "size_bytes": 7039,
       "sha256": "",
       "chars": 0,
       "chunks": 0
@@ -3553,7 +3553,7 @@
       "path": "docs/SHARED_CONTEXT/TOPICS/topic_500_VEB_POISK.md",
       "mode": "excluded_generated_output",
       "reason": "generated output avoids self-ingestion",
-      "size_bytes": 3276,
+      "size_bytes": 3387,
       "sha256": "",
       "chars": 0,
       "chunks": 0

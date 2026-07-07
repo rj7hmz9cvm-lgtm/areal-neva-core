@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_014
-generated_at_utc: 2026-07-07T17:54:03.975772+00:00
-git_sha_before_commit: 3eedfd5efd3819a56162baac8786f5b6dfc434a5
+generated_at_utc: 2026-07-07T18:24:06.940737+00:00
+git_sha_before_commit: 0c9de1986d34ab3eabf1532dd04c770c975a8d3d
 part: 14/22
 
 
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 1/2
-SHA256_FULL_FILE: 1dc7103ae8b01f49fd569dd4a539ec9c373731b18b03cbf93c29ae7d6dc7230a
+SHA256_FULL_FILE: 6517760efcd948d2ef8f41e4b62cfa131b30d416692fb0923c9c25c387c52cde
 ====================================================================================================
 # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
 from __future__ import annotations
@@ -1013,7 +1013,10 @@ def _topic2_hydrate_multifile_project_pdfs_v1(conn, task: Any, parsed: Dict[str,
             _history_safe(conn, task_id, "TOPIC2_MULTIFILE_PROJECT_FACT_ERR:" + _s(exc)[:80])
     if len(local_paths) >= 2:
         try:
-            from core.pdf_spec_extractor import extract_project_pdf_bundle as _t2mf_bundle_extract
+            if _topic2_volume_extract_requested_v1(raw_input):
+                from core.pdf_spec_extractor import extract_project_positions_bundle as _t2mf_bundle_extract
+            else:
+                from core.pdf_spec_extractor import extract_project_pdf_bundle as _t2mf_bundle_extract
             bundle = _t2mf_bundle_extract(local_paths, topic_id=TOPIC_ID_STROYKA) or {}
             facts = list(bundle.get("facts") or [])
             if bundle.get("ok") and facts:
@@ -1096,18 +1099,33 @@ def _topic2_volume_extract_requested_v1(text: str) -> bool:
     low = _low(text)
     return any(x in low for x in (
         "объем", "объём", "обьем", "вытащи", "вытащить", "извлеки", "извлечь",
-        "найди объ", "проверь объ", "цены пока не искать", "сначала только объ",
+        "найди объ", "проверь объ", "позици", "цены пока не искать", "сначала только объ",
     ))
 
 
 def _topic2_bundle_volumes_message_v1(parsed: Dict[str, Any]) -> str:
     bundle = (parsed or {}).get("project_bundle") or {}
+    project_facts = list(bundle.get("project_facts") or bundle.get("facts") or [])
     properties = list(bundle.get("properties") or [])
+    positions = list(bundle.get("positions") or [])
     quantities = list(bundle.get("quantities") or [])
+    calculated_quantities = list(bundle.get("calculated_quantities") or [])
     derived_quantities = list(bundle.get("derived_quantities") or [])
+    totals = list(bundle.get("totals") or [])
     volumes = list(bundle.get("volumes") or (parsed or {}).get("project_bundle_volumes") or [])
     missing_items = list(bundle.get("missing_items") or [])
-    lines = ["✅ Объёмы извлечены", "", "Свойства материалов (не количества):"]
+    result_type = _s(bundle.get("result_type") or "VOLUMES_ONLY_RESULT")
+    header = "✅ Проектные позиции и объёмы извлечены" if result_type == "PROJECT_POSITIONS_ONLY_RESULT" else "✅ Объёмы извлечены"
+    lines = [header, "", "Project facts:"]
+    if project_facts:
+        for row in project_facts[:12]:
+            if not isinstance(row, dict):
+                continue
+            value = _s(row.get("value") or row.get("name") or row.get("key"))
+            lines.append("- {} | стр. {} | {}".format(value, _s(row.get("page")), _s(row.get("source_file"))))
+    else:
+        lines.append("- факты проекта не выделены")
+    lines.extend(["", "Properties:"])
     if properties:
         for row in properties:
             if not isinstance(row, dict):
@@ -1117,7 +1135,28 @@ def _topic2_bundle_volumes_message_v1(parsed: Dict[str, Any]) -> str:
             ))
     else:
         lines.append("- свойства не выделены")
-    lines.extend(["", "Количество из проекта:"])
+    lines.extend(["", "Positions:"])
+    foundation_rows = [p for p in positions if isinstance(p, dict) and _s(p.get("position_type")) == "foundation"]
+    if foundation_rows:
+        for mark in ("Фм1", "Фм2"):
+            count = ""
+            for row in foundation_rows:
+                if _s(row.get("mark")) == mark and row.get("count_pcs") and not row.get("material"):
+                    count = _s(row.get("count_pcs"))
+                    break
+            if count:
+                lines.append(f"- {mark}: {count} шт")
+            for row in foundation_rows:
+                if _s(row.get("mark")) == mark and row.get("material"):
+                    lines.append("  - {}: {} м³/шт -> {} м³".format(
+                        _s(row.get("material")), _s(row.get("unit_volume_m3")), _s(row.get("total_volume_m3"))
+                    ))
+    elif positions:
+        for row in positions[:20]:
+            lines.append("- {} {} {}".format(_s(row.get("position_type")), _s(row.get("mark")), _s(row.get("count_pcs"))))
+    else:
+        lines.append("- проектные позиции не выделены")
+    lines.extend(["", "Direct quantities:"])
     if quantities:
         for row in quantities:
             if not isinstance(row, dict):
@@ -1127,7 +1166,17 @@ def _topic2_bundle_volumes_message_v1(parsed: Dict[str, Any]) -> str:
             ))
     else:
         lines.append("- прямые количества не выделены")
-    lines.extend(["", "Расчётные количества из геометрии:"])
+    lines.extend(["", "Calculated quantities:"])
+    if calculated_quantities:
+        for row in calculated_quantities:
+            if not isinstance(row, dict):
+                continue
+            lines.append("- {}: {} {} | {}".format(
+                _s(row.get("item") or row.get("name")), _s(row.get("value")), _s(row.get("unit")), _s(row.get("calculation"))
+            ))
+    else:
+        lines.append("- расчётные количества по ведомостям не выделены")
+    lines.extend(["", "Derived quantities:"])
     if derived_quantities:
         for row in derived_quantities:
             if not isinstance(row, dict):
@@ -1137,6 +1186,14 @@ def _topic2_bundle_volumes_message_v1(parsed: Dict[str, Any]) -> str:
             ))
     else:
         lines.append("- расчётные количества не получены")
+    lines.extend(["", "Totals:"])
+    if totals:
+        for row in totals:
+            if not isinstance(row, dict):
+                continue
+            lines.append("- {}: {} {}".format(_s(row.get("name")), _s(row.get("value")), _s(row.get("unit"))))
+    else:
+        lines.append("- итоги не рассчитаны")
     if not (properties or quantities or derived_quantities) and volumes:
         lines.extend(["", "Raw volumes:"])
         for row in volumes:
@@ -1146,12 +1203,14 @@ def _topic2_bundle_volumes_message_v1(parsed: Dict[str, Any]) -> str:
                 _s(row.get("name")), _s(row.get("qty")), _s(row.get("unit")), _s(row.get("page")), _s(row.get("source_file"))
             ))
     if missing_items:
-        lines.extend(["", "Не найдено в проекте / требуется уточнение:"])
+        lines.extend(["", "Missing items:"])
         for item in missing_items:
             lines.append("- " + _s(item))
-        lines.extend(["", "VOLUMES_COMPLETE=False. Цены не ищу, смету не делаю до закрытия missing_items."])
+        complete = "POSITIONS_EXTRACTION_COMPLETE" if result_type == "PROJECT_POSITIONS_ONLY_RESULT" else "VOLUMES_COMPLETE"
+        lines.extend(["", f"{complete}=False. Цены не ищу, смету не делаю до закрытия missing_items."])
     else:
-        lines.extend(["", "VOLUMES_COMPLETE=True. Можно переходить к смете и ценам."])
+        complete = "POSITIONS_EXTRACTION_COMPLETE" if result_type == "PROJECT_POSITIONS_ONLY_RESULT" else "VOLUMES_COMPLETE"
+        lines.extend(["", f"{complete}=True. Можно переходить к следующему действию."])
     lines.extend([
         "",
         "Цены и смету не запускаю, потому что текущая команда — только объёмы.",
@@ -2740,22 +2799,40 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
         _topic2_volume_extract_requested_v1(raw_input)
         or not ((parsed.get("project_bundle") or {}).get("VOLUMES_COMPLETE"))
     ):
-        (parsed.get("project_bundle") or {})["result_type"] = "VOLUMES_ONLY_RESULT"
+        if not (parsed.get("project_bundle") or {}).get("result_type"):
+            (parsed.get("project_bundle") or {})["result_type"] = "VOLUMES_ONLY_RESULT"
         text = _topic2_bundle_volumes_message_v1(parsed)
         send_res = await _send_text(chat_id, text, reply_to, topic_id)
         kwargs = {"state": "WAITING_CLARIFICATION", "result": text, "error_message": ""}
         if isinstance(send_res, dict) and send_res.get("bot_message_id"):
             kwargs["bot_message_id"] = send_res.get("bot_message_id")
         _update_task_safe(conn, task_id, **kwargs)
-        _history_safe(conn, task_id, "TOPIC2_VOLUMES_ONLY_MODE")
-        _history_safe(conn, task_id, "TOPIC2_VOLUME_FACTS_NORMALIZED")
-        if (parsed.get("project_bundle") or {}).get("derived_quantities"):
-            _history_safe(conn, task_id, "TOPIC2_DERIVED_QUANTITIES_CALCULATED")
-        if (parsed.get("project_bundle") or {}).get("missing_items"):
-            _history_safe(conn, task_id, "TOPIC2_MISSING_ITEMS_REPORTED")
-        _history_safe(conn, task_id, "TOPIC2_VOLUMES_ONLY_RESULT_READY")
-        _history_safe(conn, task_id, "TOPIC2_PRICE_SEARCH_BLOCKED_BY_VOLUMES_ONLY_MODE")
-        _history_safe(conn, task_id, "TOPIC2_SMETA_GENERATION_BLOCKED_BY_VOLUMES_ONLY_MODE")
+        _bundle = parsed.get("project_bundle") or {}
+        if _s(_bundle.get("result_type")) == "PROJECT_POSITIONS_ONLY_RESULT":
+            _history_safe(conn, task_id, "TOPIC2_PROJECT_POSITIONS_ONLY_MODE")
+            _history_safe(conn, task_id, "TOPIC2_PROJECT_POSITIONS_BUNDLE_READY")
+            _history_safe(conn, task_id, "TOPIC2_PROJECT_POSITIONS_EXTRACTED")
+            if _bundle.get("positions"):
+                _history_safe(conn, task_id, "TOPIC2_FOUNDATION_SCHEDULE_EXTRACTED")
+            if _bundle.get("calculated_quantities"):
+                _history_safe(conn, task_id, "TOPIC2_FOUNDATION_TOTALS_CALCULATED")
+            if _bundle.get("totals"):
+                _history_safe(conn, task_id, "TOPIC2_TOTALS_BY_MATERIAL_CALCULATED")
+            _history_safe(conn, task_id, "TOPIC2_POSITIONS_EXTRACTION_COMPLETE_YES" if _bundle.get("POSITIONS_EXTRACTION_COMPLETE") else "TOPIC2_POSITIONS_EXTRACTION_COMPLETE_NO")
+            if _bundle.get("missing_items"):
+                _history_safe(conn, task_id, "TOPIC2_MISSING_ITEMS_REPORTED")
+            _history_safe(conn, task_id, "TOPIC2_PRICE_SEARCH_BLOCKED_BY_POSITIONS_ONLY_MODE")
+            _history_safe(conn, task_id, "TOPIC2_SMETA_GENERATION_BLOCKED_BY_POSITIONS_ONLY_MODE")
+        else:
+            _history_safe(conn, task_id, "TOPIC2_VOLUMES_ONLY_MODE")
+            _history_safe(conn, task_id, "TOPIC2_VOLUME_FACTS_NORMALIZED")
+            if _bundle.get("derived_quantities"):
+                _history_safe(conn, task_id, "TOPIC2_DERIVED_QUANTITIES_CALCULATED")
+            if _bundle.get("missing_items"):
+                _history_safe(conn, task_id, "TOPIC2_MISSING_ITEMS_REPORTED")
+            _history_safe(conn, task_id, "TOPIC2_VOLUMES_ONLY_RESULT_READY")
+            _history_safe(conn, task_id, "TOPIC2_PRICE_SEARCH_BLOCKED_BY_VOLUMES_ONLY_MODE")
+            _history_safe(conn, task_id, "TOPIC2_SMETA_GENERATION_BLOCKED_BY_VOLUMES_ONLY_MODE")
         _history_safe(conn, task_id, "TOPIC2_PROJECT_BUNDLE_VOLUMES_EXTRACTED")
         return True
 
@@ -6174,98 +6251,6 @@ async def _generate_and_send(conn, task, pending, confirm_text, logger=None):  #
         kwargs = {
             "state": "WAITING_CLARIFICATION",
             "result": msg,
-            "error_message": "TOPIC2_PDF_NO_VALID_ESTIMATE_ROWS",
-        }
-        if isinstance(send_res, dict) and send_res.get("bot_message_id"):
-            kwargs["bot_message_id"] = send_res.get("bot_message_id")
-        _update_task_safe(conn, task_id, **kwargs)
-        _history_safe(conn, task_id, "TOPIC2_PDF_NO_VALID_ESTIMATE_ROWS:area_only_no_template_final")
-        return True
-    return await _T2NT_ORIG_GENERATE_AND_SEND_V1(conn, task, pending, confirm_text, logger=logger)
-
-try:
-    _STV3_LOG.info("PATCH_TOPIC2_NO_TEMPLATE_FROM_AREA_ONLY_PDF_V1 installed")
-except Exception:
-    pass
-# === END_PATCH_TOPIC2_NO_TEMPLATE_FROM_AREA_ONLY_PDF_V1 ===
-# === PATCH_TOPIC2_AR_PROJECT_FACT_ROWS_V1 ===
-# AR project PDFs may contain usable quantities outside formal VOR tables:
-# foundation piles/rostverk, roof area, slab schedule, window/door schedules.
-# These rows may be used only as project-derived rows; template rows are still
-# forbidden for final output when the PDF has only AR/TEP data.
-def _t2ar_num_v1(v):
-    try:
-        return float(str(v or "").replace(" ", "").replace(",", "."))
-    except Exception:
-        return 0.0
-
-
-def _t2ar_pdf_text_v1(parsed):
-    try:
-        p = (parsed or {}).get("pdf_spec_source") or (parsed or {}).get("local_path") or (parsed or {}).get("file_path")
-        if not p or not os.path.exists(str(p)):
-            return ""
-        import subprocess as _t2ar_subprocess
-        res = _t2ar_subprocess.run(["pdftotext", "-layout", str(p), "-"], capture_output=True, text=True, timeout=45)
-        return res.stdout or ""
-    except Exception:
-        return ""
-
-
-def _t2ar_add_row_v1(rows, section, name, unit, qty, note="", kind="material"):
-    try:
-        qty = float(qty)
-    except Exception:
-        qty = 0.0
-    if qty <= 0:
-        return
-    key = (section, name, unit, round(qty, 6))
-    if any((r.get("section"), r.get("name"), r.get("unit"), round(float(r.get("qty") or 0), 6)) == key for r in rows):
-        return
-    rows.append({
-        "section": section,
-        "name": name[:240],
-        "unit": unit,
-        "qty": qty,
-        "price": 0.0,
-        "kind": kind,
-        "note": (note or "из AR PDF")[:240],
-    })
-
-
-def _t2ar_project_rows_from_pdf_v1(parsed):
-    text = _t2ar_pdf_text_v1(parsed)
-    if not text:
-        return []
-    rows = []
-    low = _low(text)
-
-    m = re.search(r"Свая\s+200х200мм\s*\(3м\)\s+(\d+)", text, re.I)
-    if m:
-        _t2ar_add_row_v1(rows, "Фундамент", "Свая 200х200мм (3м)", "шт", _t2ar_num_v1(m.group(1)), "Спецификация на сваи, лист АР-08")
-
-    m = re.search(r"Ростверк\.\s*Бетон\s*B22,?5\s*W6\s*F150\s*([\d\s]+[,.]\d+)", text, re.I | re.S)
-    if m:
-        _t2ar_add_row_v1(rows, "Фундамент", "Ростверк. Бетон B22,5 W6 F150", "м3", _t2ar_num_v1(m.group(1)), "Таблица на листе АР-08; единица приведена как бетонный объем")
-
-    m = re.search(r"Площадь\s+Поверхности\s+Уклон\s+([\d\s]+[,.]\d+)\s+20", text, re.I)
-    if m:
-        _t2ar_add_row_v1(rows, "Кровля", "Площадь поверхности кровли, уклон 20°", "м2", _t2ar_num_v1(m.group(1)), "План кровли, лист АР-10")
-
-    for mark, qty in re.findall(r"\b(ПК\s*\d{2}-\d{2}-8)\s+(\d+)", text, re.I):
-        mark_clean = re.sub(r"\s+", " ", mark).strip()
-        _t2ar_add_row_v1(rows, "Перекрытия", f"Плита перекрытия {mark_clean}", "шт", _t2ar_num_v1(qty), "Спецификация плит перекрытия, лист АР-11")
-
-    m = re.search(r"Площадь\s+монолитных\s+участков\s*-\s*([\d\s]+[,.]\d+)\s*м2", text, re.I)
-    if m:
-        _t2ar_add_row_v1(rows, "Перекрытия", "Монолитные участки перекрытия", "м2", _t2ar_num_v1(m.group(1)), "План межэтажного перекрытия, лист АР-11")
-
-    m = re.search(r"Балка\s+перекрытия\s+50х200\s+([\d\s]+)\s+(\d+)", text, re.I)
-    if m:
-        _t2ar_add_row_v1(rows, "Перекрытия", "Балка перекрытия 50х200", "шт", _t2ar_num_v1(m.group(2)), f"Длина {m.group(1).strip()} мм, лист АР-11")
-
-    win_pat = re.compile(r"\b(Ок-\d+(?:,\s*бДв-1)?)\s+(\d+)\s+([0-9\s]+×[0-9\s]+)\s+([\d\s]+[,.]\d+)", re.I)
-    for mark, qty, size, area in win_pat.findall(text):
 
 ====================================================================================================
 END_FILE: core/stroyka_estimate_canon.py
