@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_010
-generated_at_utc: 2026-07-07T20:24:27.451566+00:00
-git_sha_before_commit: b72088bba5fc5e80f08dfdcc817ac5ad506f3f2d
+generated_at_utc: 2026-07-07T20:35:02.490853+00:00
+git_sha_before_commit: 95e659fb0c5a3d0c0401d769e38368f72da1d0e3
 part: 10/22
 
 
@@ -3642,6 +3642,565 @@ def apply_constraints(offers: list, constraints: dict = None) -> list:
 
 ====================================================================================================
 END_FILE: core/constraint_engine.py
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: core/construction_item_normalizer.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: f56ce59f92da73a0eb910b3d985fa3106ff115f4d958ff4c5685452fea0bd050
+====================================================================================================
+from __future__ import annotations
+
+import re
+from collections import OrderedDict
+from typing import Any, Dict, Iterable, List, Optional, Tuple
+
+
+_PRIORITY = {
+    "direct_quantity": 50,
+    "quantity": 50,
+    "calculated_quantity": 40,
+    "derived_quantity": 30,
+    "total": 25,
+    "position": 20,
+    "property": 10,
+    "missing": 0,
+}
+
+
+def _s(value: Any) -> str:
+    return "" if value is None else str(value).strip()
+
+
+def _low(value: Any) -> str:
+    return _s(value).replace("ё", "е").lower()
+
+
+def _num(value: Any) -> Optional[float]:
+    if value is None or value == "":
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    text = _s(value).replace(" ", "").replace(",", ".")
+    m = re.search(r"-?\d+(?:\.\d+)?", text)
+    return float(m.group(0)) if m else None
+
+
+def normalize_units(value: Any, unit: str, raw_text: str = "") -> Dict[str, Any]:
+    raw_unit = _low(unit or raw_text)
+    canonical = _s(unit)
+    quantity_type = ""
+    if "шт" in raw_unit or "pcs" in raw_unit or "pieces" in raw_unit:
+        canonical = "pcs"
+    elif "тн" in raw_unit or "тонн" in raw_unit or "тонна" in raw_unit or raw_unit == "т" or raw_unit == "ton":
+        canonical = "t"
+    elif "кг" in raw_unit or raw_unit == "kg":
+        canonical = "kg"
+    elif "м2" in raw_unit or "м²" in raw_unit or "m2" in raw_unit or "sqm" in raw_unit or "sq.m" in raw_unit or "кв.м" in raw_unit:
+        canonical = "m2"
+    elif "м3" in raw_unit or "м³" in raw_unit or "m3" in raw_unit or "куб.м" in raw_unit:
+        canonical = "m3"
+    elif "п.м" in raw_unit or "пог.м" in raw_unit or "м.п" in raw_unit or "linear meter" in raw_unit or raw_unit == "lm":
+        canonical = "m"
+    elif raw_unit in ("м", "m"):
+        canonical = "m"
+    elif raw_unit in ("л", "литр", "l"):
+        canonical = "l"
+    aliases = {
+        "m2": ("м2", "м²", "m2", "sqm", "sq.m", "кв.м"),
+        "m3": ("м3", "м³", "m3", "куб.м"),
+        "m": ("п.м", "пог.м", "м.п", "м.п.", "lm", "linear meter"),
+        "kg": ("кг", "kg"),
+        "t": ("т", "тн", "тонн", "тонна", "ton"),
+        "pcs": ("шт", "шт.", "pcs", "pieces"),
+        "l": ("л", "литр", "l"),
+    }
+    if canonical == _s(unit):
+        for key, variants in aliases.items():
+            if any(v in raw_unit for v in variants):
+                canonical = key
+                break
+    if canonical == "m2":
+        quantity_type = "area_m2"
+    elif canonical == "m3":
+        quantity_type = "volume_m3"
+    elif canonical == "m":
+        quantity_type = "length_m"
+    elif canonical == "kg":
+        quantity_type = "mass_kg"
+    elif canonical == "t":
+        quantity_type = "mass_t"
+    elif canonical == "pcs":
+        quantity_type = "count_pcs"
+    elif canonical == "l":
+        quantity_type = "liters"
+    return {"value": _num(value), "unit": canonical, "raw_unit": unit, "quantity_type": quantity_type}
+
+
+def public_unit(unit: str, quantity_type: str = "") -> str:
+    unit = _s(unit)
+    if unit == "m3":
+        return "м³"
+    if unit == "m2":
+        return "м²"
+    if unit == "m":
+        return "п.м"
+    if unit == "pcs":
+        return "шт"
+    if unit == "l":
+        return "л"
+    if unit == "kg":
+        return "кг"
+    if unit == "t":
+        return "т"
+    return unit
+
+
+def normalize_material_alias(raw_name: str, raw_text: str = "") -> Dict[str, Any]:
+    text = f"{_low(raw_name)} {_low(raw_text)}"
+    aliases: List[str] = []
+    material_family = "other"
+    role = "other"
+    properties: Dict[str, Any] = {}
+    public_name = _s(raw_name) or "Позиция"
+
+    def thickness() -> Optional[int]:
+        m = re.search(r"(\d{2,3})\s*мм", text)
+        return int(m.group(1)) if m else None
+
+    if "сэндвич" in text or "sandwich" in text or "wall panel" in text or "roof panel" in text or "wall_panel" in text or "roof_panel" in text:
+        material_family = "sandwich_panel"
+        role = "roof" if any(x in text for x in ("кров", "roof")) else "wall"
+        t = thickness()
+        if t:
+            properties["thickness_mm"] = t
+        public_name = "Кровельные сэндвич-панели" if role == "roof" else "Стеновые сэндвич-панели"
+        aliases.extend(["sandwich panel", "сэндвич-панель"])
+    elif "гидроизоляц" in text or "waterproof" in text or "мембран" in text:
+        material_family = "waterproofing"
+        role = "floor"
+        public_name = "Гидроизоляция"
+    elif "пленэкс" in text or "plenex" in text:
+        material_family = "insulation"
+        role = "floor"
+        properties["brand"] = "Пленэкс"
+        public_name = "Пленэкс"
+    elif "вилатерм" in text or "vilaterm" in text:
+        material_family = "sealant_backer"
+        role = "joint"
+        properties["brand"] = "Вилатерм"
+        public_name = "Вилатерм"
+    elif "герметик" in text or "pu-40" in text or "pu40" in text or "sealant" in text:
+        material_family = "sealant"
+        role = "joint"
+        properties["brand"] = "PU-40" if "40" in text else ""
+        public_name = "Герметик PU-40" if properties["brand"] else "Герметик"
+    elif "песок" in text or "sand" in text:
+        material_family = "sand"
+        role = "floor"
+        public_name = "Песок"
+    elif "щеб" in text or "gravel" in text:
+        material_family = "gravel"
+        role = "foundation"
+        public_name = "Щебень"
+    elif any(x in text for x in ("бетон", "concrete", "бст", "bst", "bct", "grout")):
+        material_family = "concrete"
+        role = "grout" if "grout" in text or "подлив" in text else "foundation_beam" if "бфм" in text or "балк" in text else "foundation" if "фм" in text or "фундамент" in text else "slab" if "плит" in text or "пол" in text else "other"
+        grade = ""
+        m = re.search(r"[вb][\s_]*(\d{1,2}(?:[,. _]\d)?)", text, re.I)
+        if m:
+            grade = "B" + m.group(1).replace(",", ".").replace(" ", "_").replace(".", "_")
+        properties["grade"] = grade or "B25"
+        public_name = f"Бетон БСТ {properties['grade'].replace('B', 'В').replace('_', '.')}"
+    elif any(x in text for x in ("арматур", "а500", "a500", "а240", "a240", "rebar")):
+        material_family = "rebar"
+        role = "frame"
+        cls = "A500C" if "500" in text else "A240" if "240" in text else ""
+        dia = None
+        m = re.search(r"(?:^|\D)(\d{1,2})[-–]?\s*(?:а|a)\s*(?:500|240)|\bd\s*(\d{1,2})\b", text)
+        if m:
+            dia = int(m.group(1) or m.group(2))
+        properties.update({"class": cls, "diameter_mm": dia})
+        public_name = "Арматура " + (cls or "")
+    elif any(x in text for x in ("кирпич", "brick")):
+        material_family = "masonry"
+        role = "wall"
+        properties["type"] = "brick"
+        m = re.search(r"m\s?(\d{2,3})|м\s?(\d{2,3})", text, re.I)
+        if m:
+            properties["grade"] = "M" + (m.group(1) or m.group(2))
+        m_t = re.search(r"\bt\s*(\d{2,3})\b", text)
+        t = int(m_t.group(1)) if m_t else thickness()
+        if t:
+            properties["thickness_mm"] = t
+        public_name = "Кирпичная кладка"
+    elif any(x in text for x in ("блок", "block", "газобетон")):
+        material_family = "masonry"
+        role = "wall"
+        properties["type"] = "block"
+        t = thickness()
+        if t:
+            properties["thickness_mm"] = t
+        public_name = "Блоки стеновые"
+    elif any(x in text for x in ("доска", "board")):
+        material_family = "timber"
+        role = "other"
+        m = re.search(r"(\d{2,3})\s*[xх*]\s*(\d{2,3})", text)
+        if m:
+            properties["section_mm"] = f"{m.group(1)}x{m.group(2)}"
+        public_name = "Доска"
+    elif any(x in text for x in ("брус", "timber beam")):
+        material_family = "timber"
+        role = "beam"
+        public_name = "Брус"
+    elif any(x in text for x in ("гкл", "гвл", "гсп", "drywall")):
+        material_family = "drywall_partition"
+        role = "partition"
+        public_name = "Гипсокартон"
+    elif any(x in text for x in ("профил", "profile", "швеллер", "уголок")):
+        material_family = "profile"
+        role = "frame"
+        public_name = "Профиль"
+    elif any(x in text for x in ("утепл", "insulation", "xps")):
+        material_family = "insulation"
+        role = "other"
+        public_name = "Утеплитель"
+    elif any(x in text for x in ("сталь", "steel", "лист", "ферм", "колонн", "балк", "связ", "прогон")):
+        material_family = "rolled_steel"
+        role = "frame"
+        public_name = "Металлоконструкции"
+
+    return {
+        "material_family": material_family,
+        "role": role,
+        "scope": role,
+        "properties": properties,
+        "public_name": public_name.strip(),
+        "aliases": aliases,
+    }
+
+
+def build_canonical_keys(item: Dict[str, Any]) -> Dict[str, str]:
+    family = _s(item.get("material_family") or "other")
+    role = _s(item.get("role") or "other")
+    props = item.get("properties") or {}
+    canonical = f"{family}.{role}"
+    material = family
+    position = canonical
+    if family == "concrete":
+        grade = _s(props.get("grade") or "B25")
+        canonical = f"concrete.{grade}.{role}"
+        material = f"concrete.{grade}"
+        mark = _s(item.get("mark"))
+        position = f"foundation.{mark}.concrete.{grade}" if mark else canonical
+    elif family == "sandwich_panel":
+        canonical = f"sandwich_panel.{role}"
+        t = props.get("thickness_mm")
+        material = f"{canonical}.t{t}" if t else canonical
+        position = canonical
+    elif family == "rebar":
+        cls = _s(props.get("class") or "")
+        dia = props.get("diameter_mm")
+        canonical = "rebar" + (f".{cls}" if cls else "") + (f".d{dia}" if dia else "")
+        material = canonical
+        position = canonical
+    elif family == "timber":
+        section = _s(props.get("section_mm") or "")
+        canonical = f"timber.{role}" + (f".{section}" if section else "")
+        material = canonical
+        position = canonical
+    elif family == "masonry":
+        typ = _s(props.get("type") or "masonry")
+        grade = _s(props.get("grade") or "")
+        t = props.get("thickness_mm")
+        canonical = f"masonry.{typ}" + (f".{grade}" if grade else "") + (f".t{t}" if t else "")
+        material = canonical
+        position = f"wall.{canonical}"
+    elif family in ("waterproofing", "sand", "gravel", "sealant", "insulation", "sealant_backer"):
+        brand = _s(props.get("brand") or "")
+        canonical = family + (f".{brand}" if brand else "")
+        material = canonical
+        position = canonical
+    return {"canonical_key": canonical, "material_total_key": material, "position_key": position}
+
+
+def _source_from(row: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "source_file": _s(row.get("source_file")),
+        "page": row.get("page"),
+        "sheet": row.get("sheet"),
+        "table_name": row.get("table_name"),
+        "row_text": _s(row.get("row_text") or row.get("text") or row.get("calculation") or row.get("source")),
+        "method": _s(row.get("method") or "calculated"),
+        "confidence": _s(row.get("confidence") or "direct"),
+    }
+
+
+def canonicalize_construction_item(item: Dict[str, Any]) -> Dict[str, Any]:
+    row = dict(item or {})
+    raw_name = _s(row.get("public_name") or row.get("item") or row.get("name") or row.get("key") or row.get("material") or row.get("missing_item"))
+    raw_text = " ".join(_s(row.get(k)) for k in ("unit", "note", "calculation"))
+    alias = normalize_material_alias(raw_name, raw_text)
+    item_type = _s(row.get("item_type") or row.get("_item_type") or "quantity")
+    unit_info = normalize_units(row.get("value") if row.get("value") is not None else row.get("qty") or row.get("total_volume_m3"), _s(row.get("unit")), raw_text)
+    raw_unit_text = _low(row.get("unit") or raw_text)
+    if ("шт" in raw_unit_text or "pcs" in raw_unit_text or "pieces" in raw_unit_text) and unit_info.get("unit") == "t":
+        unit_info = dict(unit_info)
+        unit_info["unit"] = "pcs"
+        unit_info["quantity_type"] = "count_pcs"
+    props = dict(alias.get("properties") or {})
+    if item_type == "property":
+        prop_name = _s(row.get("name") or row.get("key"))
+        if prop_name:
+            props[prop_name] = row.get("value")
+    normalized = {
+        "canonical_key": "",
+        "material_total_key": "",
+        "position_key": "",
+        "public_name": alias.get("public_name") or raw_name,
+        "raw_names": [raw_name] if raw_name else [],
+        "aliases": alias.get("aliases") or [],
+        "item_type": item_type,
+        "material_family": alias.get("material_family"),
+        "role": alias.get("role"),
+        "scope": alias.get("scope"),
+        "operation": _s(row.get("operation")),
+        "properties": props,
+        "quantity": unit_info,
+        "source": _source_from(row),
+        "source_items": [row],
+        "mark": row.get("mark"),
+    }
+    normalized.update(build_canonical_keys(normalized))
+    return normalized
+
+
+def deduplicate_construction_items(items: Iterable[Dict[str, Any]]) -> Dict[str, Any]:
+    groups: "OrderedDict[Tuple[str, str, str, str, str, str], Dict[str, Any]]" = OrderedDict()
+    for item in items:
+        quantity = item.get("quantity") or {}
+        key = (
+            _s(item.get("canonical_key")),
+            _s(item.get("item_type")),
+            _s(quantity.get("quantity_type")),
+            _s(quantity.get("unit")),
+            _s(item.get("role")),
+            _s(item.get("scope")),
+        )
+        current = groups.get(key)
+        if not current:
+            groups[key] = dict(item, source_items=list(item.get("source_items") or []))
+            continue
+        current["raw_names"] = sorted(set((current.get("raw_names") or []) + (item.get("raw_names") or [])))
+        current["aliases"] = sorted(set((current.get("aliases") or []) + (item.get("aliases") or [])))
+        current.setdefault("source_items", []).extend(item.get("source_items") or [])
+        if _PRIORITY.get(_s(item.get("item_type")), 0) > _PRIORITY.get(_s(current.get("item_type")), 0):
+            replacement = dict(item, source_items=current["source_items"])
+            replacement["raw_names"] = current["raw_names"]
+            replacement["aliases"] = current["aliases"]
+            groups[key] = replacement
+    return {"items": list(groups.values()), "groups": list(groups.keys())}
+
+
+def aggregate_construction_totals(items: Iterable[Dict[str, Any]]) -> Dict[str, Any]:
+    totals: "OrderedDict[Tuple[str, str], Dict[str, Any]]" = OrderedDict()
+    seen_sources = set()
+    for item in items:
+        if _s(item.get("item_type")) in ("property", "missing"):
+            continue
+        quantity = item.get("quantity") or {}
+        value = quantity.get("value")
+        unit = _s(quantity.get("unit"))
+        if value is None or not unit:
+            continue
+        source = item.get("source") or {}
+        source_key = (_s(item.get("material_total_key")), _s(source.get("source_file")), _s(source.get("page")), _s(source.get("row_text")), value, unit)
+        if source_key in seen_sources:
+            continue
+        seen_sources.add(source_key)
+        key = (_s(item.get("material_total_key")), unit)
+        if key not in totals:
+            totals[key] = {
+                "material_total_key": key[0],
+                "public_name": item.get("public_name"),
+                "value": 0.0,
+                "unit": unit,
+                "source_items": [],
+            }
+        totals[key]["value"] = round(float(totals[key]["value"]) + float(value), 4)
+        totals[key]["source_items"].extend(item.get("source_items") or [])
+    return {"totals_by_material": list(totals.values())}
+
+
+def _flatten_items(items: Any) -> List[Dict[str, Any]]:
+    if isinstance(items, list):
+        return [dict(x) for x in items if isinstance(x, dict)]
+    if not isinstance(items, dict):
+        return []
+    rows: List[Dict[str, Any]] = []
+    for key, item_type in (
+        ("properties", "property"),
+        ("quantities", "direct_quantity"),
+        ("calculated_quantities", "calculated_quantity"),
+        ("derived_quantities", "derived_quantity"),
+        ("positions", "position"),
+        ("totals", "total"),
+    ):
+        for row in items.get(key) or []:
+            if isinstance(row, dict):
+                copy = dict(row)
+                copy["_item_type"] = item_type
+                rows.append(copy)
+    for name in items.get("missing_items") or []:
+        rows.append({"name": name, "_item_type": "missing"})
+    return rows
+
+
+def _normalize_missing(missing: Iterable[Any], present_keys: Iterable[str]) -> List[str]:
+    present = set(present_keys)
+    result: List[str] = []
+    for raw in missing or []:
+        name = _s(raw.get("name") if isinstance(raw, dict) else raw)
+        key = canonicalize_construction_item({"name": name, "_item_type": "missing"}).get("canonical_key")
+        if name in ("wall_panel_area_m2", "gross_wall_panel_area_m2") and any(k.startswith("sandwich_panel.wall") for k in present):
+            continue
+        if name in ("roof_panel_area_m2", "gross_roof_panel_area_m2") and any(k.startswith("sandwich_panel.roof") for k in present):
+            continue
+        if "foundation_concrete" in name and any(k.startswith("concrete.") for k in present):
+            continue
+        if "steel_frame" in name and any(k.startswith("rolled_steel") for k in present):
+            continue
+        if key not in present and name not in result:
+            result.append(name)
+    return result
+
+
+def normalize_construction_items(items: Any, project_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    flat = _flatten_items(items)
+    normalized = [canonicalize_construction_item(row) for row in flat]
+    dedup = deduplicate_construction_items(normalized)["items"]
+    totals = aggregate_construction_totals(dedup)["totals_by_material"]
+    present_keys = [x.get("canonical_key") for x in dedup] + [x.get("material_total_key") for x in dedup]
+    missing = _normalize_missing((items or {}).get("missing_items") if isinstance(items, dict) else [], present_keys)
+
+    public_groups = []
+    public_seen = set()
+    for item in dedup:
+        if _s(item.get("item_type")) in ("property", "missing"):
+            continue
+        if _s(item.get("material_family")) == "other":
+            continue
+        quantity = item.get("quantity") or {}
+        if _s(item.get("item_type")) == "position" and not (quantity.get("value") is not None and quantity.get("unit")):
+            continue
+        public_key = (
+            _s(item.get("material_total_key")),
+            _s(item.get("item_type")),
+            _s(quantity.get("value")),
+            _s(quantity.get("unit")),
+        )
+        if public_key in public_seen:
+            continue
+        public_seen.add(public_key)
+        public_groups.append({
+            "canonical_key": item.get("canonical_key"),
+            "material_total_key": item.get("material_total_key"),
+            "position_key": item.get("position_key"),
+            "public_name": item.get("public_name"),
+            "value": quantity.get("value"),
+            "unit": quantity.get("unit"),
+            "public_unit": public_unit(quantity.get("unit"), quantity.get("quantity_type")),
+            "quantity_type": quantity.get("quantity_type"),
+            "item_type": item.get("item_type"),
+            "source_items": item.get("source_items") or [],
+        })
+
+    price_seen = set()
+    price_items = []
+    for item in public_groups:
+        key = _s(item.get("material_total_key") or item.get("canonical_key"))
+        if not key or key in price_seen:
+            continue
+        price_seen.add(key)
+        price_items.append({
+            "material_total_key": key,
+            "canonical_key": item.get("canonical_key"),
+            "public_name": item.get("public_name"),
+            "unit": item.get("unit"),
+            "qty": item.get("value"),
+        })
+
+    estimate_rows = build_estimate_rows(public_groups, missing)
+
+    return {
+        "normalized_items": normalized,
+        "deduplicated_items": dedup,
+        "public_groups": public_groups,
+        "totals_by_material": totals,
+        "price_items": price_items,
+        "estimate_rows": estimate_rows,
+        "missing_items": missing,
+    }
+
+
+def _section_for_item(item: Dict[str, Any]) -> str:
+    key = _low(item.get("material_total_key") or item.get("canonical_key") or item.get("public_name"))
+    name = _low(item.get("public_name"))
+    if "concrete" in key and ("foundation" in key or "в30" in name or "в7.5" in name):
+        return "Фундамент"
+    if "sandwich_panel.wall" in key:
+        return "Стены / панели"
+    if "sandwich_panel.roof" in key:
+        return "Кровля"
+    if "waterproofing" in key or "insulation" in key:
+        return "Гидроизоляция / утепление"
+    if "rebar" in key:
+        return "Арматура / детали"
+    if "sealant" in key:
+        return "Герметики / вспомогательные материалы"
+    if "sand" in key or "concrete" in key:
+        return "Пол / плита"
+    return "Проектные позиции"
+
+
+def build_estimate_rows(public_groups: Iterable[Dict[str, Any]], missing_items: Iterable[str] = ()) -> List[Dict[str, Any]]:
+    rows: List[Dict[str, Any]] = []
+    for item in public_groups or []:
+        if not isinstance(item, dict):
+            continue
+        qty = item.get("value")
+        if qty is None:
+            continue
+        source_items = item.get("source_items") or []
+        source0 = source_items[0] if source_items and isinstance(source_items[0], dict) else {}
+        src = source0.get("source") if isinstance(source0.get("source"), dict) else source0
+        rows.append({
+            "section": _section_for_item(item),
+            "name": item.get("public_name"),
+            "unit": public_unit(item.get("unit"), item.get("quantity_type")),
+            "qty": qty,
+            "work_unit_price": None,
+            "material_unit_price": None,
+            "work_total": None,
+            "material_total": None,
+            "total": None,
+            "source": {
+                "source_type": "PROJECT_POSITION",
+                "source_file": _s(src.get("source_file")),
+                "page": src.get("page"),
+                "table_name": _s(src.get("table_name")),
+                "row_text": _s(src.get("row_text")),
+                "calculation": _s(src.get("calculation") or source0.get("calculation")),
+            },
+            "canonical_key": item.get("canonical_key"),
+            "position_key": item.get("position_key"),
+            "material_total_key": item.get("material_total_key"),
+        })
+    return rows
+
+====================================================================================================
+END_FILE: core/construction_item_normalizer.py
 FILE_CHUNK: 1/1
 ====================================================================================================
 
@@ -8145,530 +8704,5 @@ async def search_norms(defect_description: str, section: str = "") -> list:
 
 ====================================================================================================
 END_FILE: core/normative_db.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/normative_engine.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 355ac95be8b8f06c6adca69858b21865560a36941156094be6bd91dc207aeb8e
-====================================================================================================
-# === NORMATIVE_ENGINE_SAFE_V1 ===
-from __future__ import annotations
-from typing import Any, Dict, List
-
-NORMATIVE_INDEX = [
-    {"keywords": ["трещин", "бетон", "монолит", "раковин", "скол"], "norm_id": "СП 70.13330.2012", "section": "Несущие и ограждающие конструкции", "requirement": "Дефекты бетонных и железобетонных конструкций подлежат фиксации, оценке влияния на несущую способность и устранению по проектному решению", "confidence": "PARTIAL"},
-    {"keywords": ["бетон", "арматур", "защитный слой", "а500", "b25", "в25"], "norm_id": "СП 63.13330.2018", "section": "Бетонные и железобетонные конструкции", "requirement": "Расчёт и контроль железобетонных конструкций выполняется с учётом класса бетона, арматуры, защитного слоя и требований проектной документации", "confidence": "PARTIAL"},
-    {"keywords": ["нагрузк", "фундамент", "плита", "перекрытие", "кж"], "norm_id": "СП 20.13330.2016/2017", "section": "Нагрузки и воздействия", "requirement": "Проверка конструкций выполняется с учётом постоянных, временных и особых нагрузок по расчётным сочетаниям", "confidence": "PARTIAL"},
-    {"keywords": ["кровл", "протеч", "мембран", "пароизоляц", "водосток"], "norm_id": "СП 17.13330.2017", "section": "Кровли", "requirement": "Кровельные работы должны обеспечивать водонепроницаемость, надёжное примыкание и соответствие проектным решениям", "confidence": "PARTIAL"},
-    {"keywords": ["отделк", "штукатур", "плитк", "стяжк", "покраск"], "norm_id": "СП 71.13330.2017", "section": "Изоляционные и отделочные покрытия", "requirement": "Отделочные покрытия проверяются по основанию, геометрии, сцеплению, ровности и отсутствию видимых дефектов", "confidence": "PARTIAL"},
-    {"keywords": ["металл", "сварк", "км", "кмд", "болт", "корроз"], "norm_id": "СП 16.13330.2017", "section": "Стальные конструкции", "requirement": "Стальные конструкции должны соответствовать расчётной схеме, проектным сечениям, качеству сварных и болтовых соединений", "confidence": "PARTIAL"},
-    {"keywords": ["проект", "чертеж", "чертёж", "спецификац", "ведомость", "стадия"], "norm_id": "ГОСТ 21.101-2020", "section": "Основные требования к проектной и рабочей документации", "requirement": "Проектная и рабочая документация оформляется с составом, обозначениями и ведомостями по системе проектной документации для строительства", "confidence": "PARTIAL"},
-    {"keywords": ["кж", "железобетон", "армирование", "опалуб", "монолит"], "norm_id": "ГОСТ 21.501-2018", "section": "Правила выполнения рабочей документации архитектурных и конструктивных решений", "requirement": "Рабочие чертежи конструктивных решений должны содержать схемы, спецификации, ведомости элементов и данные для производства работ", "confidence": "PARTIAL"},
-]
-
-def search_norms_sync(text: str, limit: int = 5) -> List[Dict[str, Any]]:
-    hay = (text or "").lower()
-    scored = []
-    for row in NORMATIVE_INDEX:
-        score = sum(1 for kw in row["keywords"] if kw in hay)
-        if score:
-            item = dict(row)
-            item["score"] = score
-            scored.append(item)
-    scored.sort(key=lambda x: int(x.get("score") or 0), reverse=True)
-    return scored[:limit]
-
-def format_norms_for_act(norms: List[Dict[str, Any]]) -> str:
-    return "\n".join(f"{n.get('norm_id','')}: {n.get('requirement','')} [{n.get('confidence','PARTIAL')}]" for n in norms or [] if n.get("norm_id"))
-# === END_NORMATIVE_ENGINE_SAFE_V1 ===
-
-
-# === P6H_NORMATIVE_INDEX_EXTRA_V1 ===
-# Append-only extension to NORMATIVE_INDEX with technadzor-specific norms
-# referenced in real client acts (Киевское 95, металлокаркас, антикоррозия,
-# обследование зданий и сооружений, организация строительного контроля).
-# Each entry uses confidence=PARTIAL — promote to CONFIRMED only after manual
-# review of an authoritative source.
-import logging as _p6h_norm_logging
-
-_P6H_NORMATIVE_EXTRA = [
-    {
-        "keywords": ["антикорроз", "лакокрас", "окрас", "защитное покрытие", "ржавчин"],
-        "norm_id": "СП 28.13330.2017",
-        "section": "Защита строительных конструкций от коррозии",
-        "requirement": "Требования к защите строительных конструкций от коррозии: подготовка поверхности, выбор защитной системы, контроль качества и сохранности покрытия в процессе эксплуатации",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["металлоконструкц", "стальн", "сварн", "ферм", "колонн", "балк", "кмд", "мк", "анкерн"],
-        "norm_id": "ГОСТ 23118-2019",
-        "section": "Конструкции стальные строительные. Общие технические условия",
-        "requirement": "Требования к материалам, изготовлению, монтажу и приёмке стальных строительных конструкций, включая сварные и болтовые соединения, антикоррозионную защиту, маркировку",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["организация строительного контроля", "осс", "стройконтроль", "технадзор", "приёмка", "приемка", "освидетельств"],
-        "norm_id": "СП 48.13330.2019",
-        "section": "Организация строительства",
-        "requirement": "Порядок организации строительного контроля заказчика и подрядчика, освидетельствование скрытых работ, ведение исполнительной документации",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["обследован", "техническое состояние", "категория состояния", "несущ", "предаварийн", "аварийн"],
-        "norm_id": "СП 13-102-2003",
-        "section": "Правила обследования несущих строительных конструкций зданий и сооружений",
-        "requirement": "Порядок и состав обследований несущих конструкций, методы выявления дефектов и повреждений, классификация технического состояния (нормальное, удовлетворительное, ограниченно работоспособное, аварийное)",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["обследован", "мониторинг", "техническое состояние", "категория"],
-        "norm_id": "ГОСТ 31937-2024",
-        "section": "Здания и сооружения. Правила обследования и мониторинга технического состояния",
-        "requirement": "Современные правила обследования и мониторинга технического состояния зданий и сооружений: цели, состав работ, оформление результатов, заключение о категории состояния",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["сварн", "сварка", "шов", "провар", "наплыв", "качество свар"],
-        "norm_id": "ГОСТ Р ИСО 17637-2014",
-        "section": "Неразрушающий контроль сварных соединений. Визуальный контроль",
-        "requirement": "Правила визуального и измерительного контроля сварных соединений: критерии приёмки, фиксация дефектов, оформление результатов",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["опорн", "анкерн", "плита", "опирани", "узел колонн", "подлив"],
-        "norm_id": "СП 70.13330.2012",
-        "section": "Несущие и ограждающие конструкции — опорные узлы металлоконструкций",
-        "requirement": "Опорные узлы стальных колонн должны передавать нагрузку через плотное опирание опорной плиты на фундамент. Подливка под опорные плиты выполняется до проектного состояния, без зазоров, трещин и разрушений",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["укосин", "связи", "диагональн", "горизонтальн связи", "пространственн"],
-        "norm_id": "СП 16.13330.2017",
-        "section": "Стальные конструкции — пространственные связи",
-        "requirement": "Узлы пересечения и крепления связей жёсткости должны обеспечивать пространственную жёсткость каркаса; ослабленные или непроработанные узлы не допускаются",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["основан", "грунт", "замачив", "размыв", "просадк", "водоотвод"],
-        "norm_id": "СП 22.13330.2016",
-        "section": "Основания зданий и сооружений",
-        "requirement": "Подготовка и эксплуатация оснований: водоотвод от фундаментов, защита от замачивания, контроль осадок и просадок, обеспечение проектной несущей способности грунта",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["перекрыт", "ригел", "балк", "несущая способность"],
-        "norm_id": "СП 20.13330.2016",
-        "section": "Нагрузки и воздействия — перекрытия",
-        "requirement": "Перекрытия должны рассчитываться на постоянные и временные нагрузки с учётом особых воздействий; конструктивные решения и сечения элементов должны соответствовать расчётной схеме",
-        "confidence": "PARTIAL",
-    },
-]
-
-try:
-    NORMATIVE_INDEX.extend(_P6H_NORMATIVE_EXTRA)
-    _p6h_norm_logging.getLogger("task_worker").info(
-        "P6H_NORMATIVE_INDEX_EXTRA_V1_INSTALLED added=%d total=%d",
-        len(_P6H_NORMATIVE_EXTRA), len(NORMATIVE_INDEX),
-    )
-except Exception:
-    pass
-# === END_P6H_NORMATIVE_INDEX_EXTRA_V1 ===
-
-
-# === P6H5_NORMATIVE_FULL_EXPAND_V1 ===
-# Comprehensive normative expansion: исполнительная документация, бетон,
-# газобетон/кладка, стальные конструкции, отделка, фасады, ОВ, ВК,
-# электрика, пожарная безопасность, охрана труда (35 записей).
-# confidence=PARTIAL — promote after manual verification.
-
-_P6H5_NORMATIVE_EXPAND = [
-    # --- Блок 1: Исполнительная документация ---
-    {
-        "keywords": ["исполнительн", "акт скрытых", "скрытые работы", "освидетельств", "исполнительная документация", "кс-2", "кс-3"],
-        "norm_id": "РД-11-02-2006",
-        "section": "Требования к составу и порядку ведения исполнительной документации",
-        "requirement": "Состав и порядок ведения исполнительной документации при строительстве: акты освидетельствования скрытых работ, акты промежуточной приёмки ответственных конструкций, исполнительные схемы",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["журнал работ", "общий журнал", "журнал производства", "ожр", "специальный журнал"],
-        "norm_id": "РД-11-05-2007",
-        "section": "Порядок ведения общего и специальных журналов работ",
-        "requirement": "Порядок ведения общего журнала работ и специальных журналов при строительстве: состав записей, ответственные лица, порядок хранения и передачи",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["авторский надзор", "надзор проектировщик", "проектировщик на объекте", "журнал авторского надзора"],
-        "norm_id": "СП 11-110-99",
-        "section": "Авторский надзор за строительством зданий и сооружений",
-        "requirement": "Порядок осуществления авторского надзора проектировщиков за строительством: состав работ, права и обязанности, журнал авторского надзора",
-        "confidence": "PARTIAL",
-    },
-    # --- Блок 2: Бетон (расширение) ---
-    {
-        "keywords": ["бетонная смесь", "подвижность смеси", "водоцементн", "класс бетона", "замес бетон", "марка бетона"],
-        "norm_id": "ГОСТ 7473-2010",
-        "section": "Смеси бетонные. Технические условия",
-        "requirement": "Требования к бетонным смесям: классификация, показатели удобоукладываемости, водонепроницаемости, морозостойкости, правила приёмки и контроля",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["прочность бетона", "испытание бетона", "образец-куб", "керн бетон", "контроль прочности бетон"],
-        "norm_id": "ГОСТ 18105-2018",
-        "section": "Бетоны. Правила контроля и оценки прочности",
-        "requirement": "Правила контроля и оценки прочности бетона в конструкциях: методы испытаний, статистический контроль, приёмочные уровни",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["тяжёлый бетон", "тяжелый бетон", "состав бетона", "крупный заполнитель", "щебень бетон"],
-        "norm_id": "ГОСТ 26633-2015",
-        "section": "Бетоны тяжёлые и мелкозернистые. Технические условия",
-        "requirement": "Технические требования к тяжёлым и мелкозернистым бетонам: классы по прочности, морозостойкости, водонепроницаемости, правила приёмки и методы испытаний",
-        "confidence": "PARTIAL",
-    },
-    # --- Блок 3: Газобетон и кладка ---
-    {
-        "keywords": ["газоблок", "газобетон", "ячеистый бетон", "автоклавный бетон", "d400", "d500", "d600"],
-        "norm_id": "ГОСТ 31360-2007",
-        "section": "Изделия стеновые неармированные из ячеистого бетона автоклавного твердения",
-        "requirement": "Требования к стеновым блокам из ячеистого автоклавного бетона: классы по плотности, прочности, морозостойкости, геометрические параметры, правила приёмки",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["кладка газобетон", "армирование газобетон", "газобетонный блок", "стена из газобетон"],
-        "norm_id": "СП 339.1325800.2017",
-        "section": "Конструкции с применением автоклавного газобетона",
-        "requirement": "Проектирование и возведение конструкций из автоклавного газобетона: кладочные растворы, армирование, обеспечение жёсткости, допустимые деформации",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["кладка", "каменная конструкц", "кирпич", "кладочный раствор", "армокаменн", "кладка блоков"],
-        "norm_id": "СП 15.13330.2020",
-        "section": "Каменные и армокаменные конструкции",
-        "requirement": "Расчёт и проектирование каменных и армокаменных конструкций: требования к материалам, кладке, перевязке швов, анкеровке и армированию",
-        "confidence": "PARTIAL",
-    },
-    # --- Блок 4: Стальные конструкции (расширение) ---
-    {
-        "keywords": ["проектирование стальных", "расчёт металлоконструкц", "расчет металлоконструкц", "км проект", "стальная конструкц"],
-        "norm_id": "СП 294.1325800.2017",
-        "section": "Конструкции стальные. Правила проектирования",
-        "requirement": "Актуализированные правила проектирования стальных конструкций: расчётные сопротивления, предельные состояния, соединения, устойчивость элементов",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["прокат стальн", "двутавр", "швеллер", "уголок металл", "листовой прокат", "сортовой прокат"],
-        "norm_id": "ГОСТ 27772-2015",
-        "section": "Прокат для стальных строительных конструкций. Общие технические условия",
-        "requirement": "Требования к прокату (двутавры, швеллеры, уголки, листы) для стальных строительных конструкций: марки стали, механические характеристики, допуски, испытания",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["лстк", "тонкостенный профиль", "профиль холодногнутый", "оцинкованный профиль", "лёгкая стальная конструкц"],
-        "norm_id": "СП 260.1325800.2016",
-        "section": "Конструкции стальные тонкостенные из холодногнутых оцинкованных профилей",
-        "requirement": "Проектирование и монтаж ЛСТК: расчёт профилей, узлы соединений, защита от коррозии, контроль качества монтажа",
-        "confidence": "PARTIAL",
-    },
-    # --- Блок 5: Внутренняя отделка (расширение) ---
-    {
-        "keywords": ["гипсокартон", "гкл", "перегородка гкл", "подвесной потолок", "профиль cd", "профиль ud"],
-        "norm_id": "СП 163.1325800.2014",
-        "section": "Конструкции с применением гипсокартонных и гипсоволокнистых листов",
-        "requirement": "Устройство перегородок, облицовок и подвесных потолков с применением ГКЛ: шаг стоек, крепление, зазоры, огнестойкость, звукоизоляция",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["лист гипсокартонный", "гипсокартон технические", "влагостойкий гкл", "огнестойкий гкл"],
-        "norm_id": "ГОСТ 6266-2018",
-        "section": "Листы гипсокартонные. Технические условия",
-        "requirement": "Технические требования к гипсокартонным листам: типы (ГКЛ, ГКЛВ, ГКЛО), размеры, прочность на изгиб, влагостойкость, маркировка",
-        "confidence": "PARTIAL",
-    },
-    # --- Блок 6: Фасады и тепловая защита ---
-    {
-        "keywords": ["тепловая защита", "утепление фасад", "теплопотери", "сопротивление теплопередач", "утеплитель стен"],
-        "norm_id": "СП 50.13330.2012",
-        "section": "Тепловая защита зданий",
-        "requirement": "Требования к тепловой защите зданий: нормируемые значения сопротивления теплопередаче, воздухопроницаемости, защита от переувлажнения ограждающих конструкций",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["сфтк", "фасадная система", "навесной фасад", "вентилируемый фасад", "штукатурный фасад", "утепление стен снаружи"],
-        "norm_id": "СП 293.1325800.2017",
-        "section": "Системы фасадные теплоизоляционные композиционные с наружными штукатурными слоями",
-        "requirement": "Проектирование и монтаж СФТК: состав системы, крепление утеплителя, армирующий слой, декоративное покрытие, контроль адгезии и геометрии",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["окно пвх", "оконный блок пвх", "профиль пвх", "остекление", "монтаж окон", "монтажный шов окна"],
-        "norm_id": "ГОСТ 30674-99",
-        "section": "Блоки оконные из поливинилхлоридных профилей. Технические условия",
-        "requirement": "Требования к оконным блокам из ПВХ: конструкция, размеры, сопротивление теплопередаче, воздухо- и водопроницаемость, испытания, монтаж",
-        "confidence": "PARTIAL",
-    },
-    # --- Блок 7: ОВ (отопление, вентиляция) ---
-    {
-        "keywords": ["отоплен", "вентиляц", "кондицион", "овик", "воздуховод", "тепловой узел", "радиатор отоплен"],
-        "norm_id": "СП 60.13330.2020",
-        "section": "Отопление, вентиляция и кондиционирование воздуха",
-        "requirement": "Проектирование и монтаж систем ОВиК: параметры микроклимата, расчёт теплопотерь, воздухообмен, выбор оборудования, испытание и наладка систем",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["санитарно-технические системы", "внутренние инженерные системы", "монтаж инженерных систем", "приёмка инженерных систем"],
-        "norm_id": "СП 73.13330.2016",
-        "section": "Внутренние санитарно-технические системы зданий",
-        "requirement": "Монтаж внутренних санитарно-технических систем: водоснабжение, водоотведение, отопление, вентиляция — требования к производству работ и приёмке",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["тепловая изоляция трубопровод", "изоляция труб", "теплоизоляция оборудован", "тепловые сети изоляц"],
-        "norm_id": "СП 61.13330.2012",
-        "section": "Тепловая изоляция оборудования и трубопроводов",
-        "requirement": "Требования к тепловой изоляции трубопроводов и оборудования: выбор материала, толщина изоляции, конструктивные решения, контроль качества",
-        "confidence": "PARTIAL",
-    },
-    # --- Блок 8: ВК (водоснабжение, канализация) ---
-    {
-        "keywords": ["внутренний водопровод", "внутренняя канализац", "водоотведение здания", "трубопровод вк", "сантехника монтаж"],
-        "norm_id": "СП 30.13330.2020",
-        "section": "Внутренний водопровод и канализация зданий",
-        "requirement": "Проектирование и монтаж внутреннего водопровода и канализации: давление в системе, уклоны труб, вентиляция стояков, испытание на герметичность, приёмка",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["наружный водопровод", "наружное водоснабжение", "водонапорная башня", "насосная станция водоснабж"],
-        "norm_id": "СП 31.13330.2021",
-        "section": "Водоснабжение. Наружные сети и сооружения",
-        "requirement": "Проектирование наружных сетей водоснабжения: расчётные расходы, трубы и арматура, защита от замерзания, испытание на прочность и герметичность",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["наружная канализац", "ливневая канализац", "дождевой коллектор", "выпуск канализац", "дворовая канализац"],
-        "norm_id": "СП 32.13330.2018",
-        "section": "Канализация. Наружные сети и сооружения",
-        "requirement": "Проектирование наружных канализационных сетей: уклоны, глубины заложения, смотровые колодцы, испытание на герметичность, ливневые и хозяйственно-бытовые системы",
-        "confidence": "PARTIAL",
-    },
-    # --- Блок 9: Электрика ---
-    {
-        "keywords": ["электроустановка", "кабельная линия", "электрощит", "электропроводка", "ввод электрический", "пуэ"],
-        "norm_id": "ПУЭ (7-е изд.)",
-        "section": "Правила устройства электроустановок",
-        "requirement": "Общие требования к устройству электроустановок: выбор проводников и кабелей, защитная аппаратура, заземление, молниезащита, вводно-распределительные устройства",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["электроустановки жилых", "электрика в квартире", "групповые цепи", "щит учёта", "электромонтаж жилые"],
-        "norm_id": "СП 256.1325800.2016",
-        "section": "Электроустановки жилых и общественных зданий. Правила проектирования и монтажа",
-        "requirement": "Проектирование и монтаж электроустановок жилых и общественных зданий: схемы питания, сечения проводников, УЗО, автоматы, заземление, приёмо-сдаточные испытания",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["узо", "дифавтомат", "заземление", "молниезащита", "потенциаловыравнивание", "поражение током"],
-        "norm_id": "ГОСТ Р 50571-4-41-2022",
-        "section": "Электроустановки зданий. Защита от поражения электрическим током",
-        "requirement": "Требования к защите от поражения электрическим током: автоматическое отключение, двойная изоляция, выравнивание потенциалов, применение УЗО и дифавтоматов",
-        "confidence": "PARTIAL",
-    },
-    # --- Блок 10: Пожарная безопасность ---
-    {
-        "keywords": ["пожарная безопасность", "огнестойкость", "возгорание", "пожаробезопасность", "класс пожарной опасности"],
-        "norm_id": "123-ФЗ",
-        "section": "Технический регламент о требованиях пожарной безопасности",
-        "requirement": "Общие требования пожарной безопасности к зданиям: классы конструктивной пожарной опасности, степени огнестойкости, требования к эвакуации и противопожарным преградам",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["эвакуационный выход", "путь эвакуации", "ширина прохода", "лестничная клетка", "эвакуация людей"],
-        "norm_id": "СП 1.13130.2020",
-        "section": "Системы противопожарной защиты. Эвакуационные пути и выходы",
-        "requirement": "Требования к эвакуационным путям и выходам: ширина, высота, протяжённость, количество выходов, незадымляемые лестничные клетки",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["предел огнестойкости", "нормируемый предел огнестойкост", "пожарная секция", "огнестойкость несущих конструкц"],
-        "norm_id": "СП 2.13130.2020",
-        "section": "Системы противопожарной защиты. Обеспечение огнестойкости объектов защиты",
-        "requirement": "Требования к огнестойкости строительных конструкций: нормирование пределов огнестойкости несущих и ограждающих конструкций в зависимости от степени огнестойкости здания",
-        "confidence": "PARTIAL",
-    },
-    # --- Блок 11: Охрана труда и техника безопасности ---
-    {
-        "keywords": ["охрана труда", "техника безопасности", "безопасность труда строительство", "несчастный случай", "производственный травматизм"],
-        "norm_id": "СНиП 12-03-2001",
-        "section": "Безопасность труда в строительстве. Часть 1. Общие требования",
-        "requirement": "Общие требования безопасности труда при строительстве: организация рабочих мест, опасные зоны, средства защиты, санитарно-бытовые условия, расследование несчастных случаев",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["безопасность строительного производства", "работы повышенной опасности", "наряд-допуск", "опасные строительные работы"],
-        "norm_id": "СНиП 12-04-2002",
-        "section": "Безопасность труда в строительстве. Часть 2. Строительное производство",
-        "requirement": "Требования безопасности при производстве строительных работ: земляные, монтажные, кровельные, отделочные работы, работы с механизмами — наряды-допуски, ограждения опасных зон",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["правила по охране труда строительство", "пот строительство", "требования охраны труда", "безопасность на строительной площадке"],
-        "norm_id": "Приказ Минтруда №336н",
-        "section": "Правила по охране труда в строительстве",
-        "requirement": "Актуальные правила по охране труда при строительстве: требования к организации работ, применению механизмов, защитным устройствам, оформлению нарядов-допусков",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["работы на высоте", "высотные работы", "страховочная система", "строительные леса", "подмости"],
-        "norm_id": "Приказ Минтруда №883н",
-        "section": "Правила по охране труда при работе на высоте",
-        "requirement": "Требования безопасности при работах на высоте: применение страховочных систем, устройство лесов и подмостей, ограждения проёмов, допуск и обучение персонала",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["инструктаж по охране труда", "вводный инструктаж", "журнал инструктажей", "обучение безопасности труда"],
-        "norm_id": "ГОСТ 12.0.004-2015",
-        "section": "Система стандартов безопасности труда. Организация обучения безопасности труда",
-        "requirement": "Порядок обучения и проверки знаний по охране труда: виды инструктажей (вводный, первичный, повторный, внеплановый, целевой), ведение журналов инструктажей",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["средства индивидуальной защиты", "сиз", "каска строительная", "защитный жилет", "очки защитные", "перчатки рабочие"],
-        "norm_id": "ГОСТ 12.4.011-89",
-        "section": "Система стандартов безопасности труда. Средства защиты работающих",
-        "requirement": "Классификация и требования к средствам индивидуальной и коллективной защиты работников: каски, жилеты, очки, перчатки, монтажные пояса, страховочные привязи",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["организация строительной площадки", "стройплощадка требования", "временные сооружения стройплощадка", "бытовки стройплощадка"],
-        "norm_id": "СП 49.13330.2010",
-        "section": "Безопасность труда в строительстве",
-        "requirement": "Требования к организации и обустройству строительных площадок: временные сооружения, санитарно-бытовые помещения, ограждения, освещение, безопасная организация труда",
-        "confidence": "PARTIAL",
-    },
-]
-
-try:
-    NORMATIVE_INDEX.extend(_P6H5_NORMATIVE_EXPAND)
-    _p6h_norm_logging.getLogger("task_worker").info(
-        "P6H5_NORMATIVE_FULL_EXPAND_V1_INSTALLED added=%d total=%d",
-        len(_P6H5_NORMATIVE_EXPAND), len(NORMATIVE_INDEX),
-    )
-except Exception:
-    pass
-# === END_P6H5_NORMATIVE_FULL_EXPAND_V1 ===
-
-# === P6H6_LOADS_V1 ===
-# Append-only: keyword coverage for load types under СП 20.13330.2017 only.
-# No new norms, no clause numbers. topic_5 + topic_210 shared.
-
-_P6H6_LOADS = [
-    {
-        "keywords": ["снеговая нагрузка", "снеговой район", "снеговой мешок", "масса снега", "снег на кровле"],
-        "norm_id": "СП 20.13330.2017",
-        "section": "Нагрузки и воздействия — снеговые нагрузки",
-        "requirement": "Снеговые нагрузки на конструкции определяются по нормативному значению снегового покрова для соответствующего снегового района с учётом схем распределения снега на кровле",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["ветровая нагрузка", "ветровой район", "пульсация ветра", "скоростной напор", "ветровое давление"],
-        "norm_id": "СП 20.13330.2017",
-        "section": "Нагрузки и воздействия — ветровые нагрузки",
-        "requirement": "Ветровые нагрузки определяются по нормативному значению ветрового давления для соответствующего ветрового района с учётом пульсационной составляющей",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["постоянная нагрузка", "собственный вес конструкц", "нагрузка от конструкции", "нагрузка от покрытия", "нагрузка от перегородок"],
-        "norm_id": "СП 20.13330.2017",
-        "section": "Нагрузки и воздействия — постоянные нагрузки",
-        "requirement": "Постоянные нагрузки включают собственный вес несущих и ограждающих конструкций и другие воздействия, неизменные в течение срока эксплуатации",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["временная нагрузка", "полезная нагрузка", "нагрузка на перекрытие", "нагрузка от людей", "нагрузка от оборудования", "нагрузка от складируемых материалов"],
-        "norm_id": "СП 20.13330.2017",
-        "section": "Нагрузки и воздействия — временные нагрузки",
-        "requirement": "Временные нагрузки на перекрытия и покрытия принимаются по нормативным значениям в зависимости от назначения помещения и характера использования",
-        "confidence": "PARTIAL",
-    },
-    {
-        "keywords": ["сочетание нагрузок", "расчётное сочетание", "особое сочетание", "основное сочетание", "коэффициент сочетания", "коэффициент надёжности по нагрузке"],
-        "norm_id": "СП 20.13330.2017",
-        "section": "Нагрузки и воздействия — сочетания нагрузок",
-        "requirement": "Расчёт конструкций выполняется на основные и особые сочетания нагрузок с применением коэффициентов сочетания и коэффициентов надёжности по нагрузке",
-        "confidence": "PARTIAL",
-    },
-]
-
-try:
-    NORMATIVE_INDEX.extend(_P6H6_LOADS)
-    _p6h_norm_logging.getLogger("task_worker").info(
-        "P6H6_LOADS_V1_INSTALLED added=%d total=%d",
-        len(_P6H6_LOADS), len(NORMATIVE_INDEX),
-    )
-except Exception:
-    pass
-# === END_P6H6_LOADS_V1 ===
-
-====================================================================================================
-END_FILE: core/normative_engine.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/normative_source_engine.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 570992de13fccd6bac9fbd100d64c2a766772eb0158450b267b5a576ff722467
-====================================================================================================
-# === NORMATIVE_SOURCE_ENGINE_FULL_CLOSE_V1 ===
-# === NORMATIVE_NO_HALLUCINATION_GUARD_V1 ===
-from __future__ import annotations
-
-import json
-import re
-from pathlib import Path
-from typing import Any, Dict, List
-
-BASE = Path("/root/.areal-neva-core")
-NORM_INDEX = BASE / "data/norms/normative_index.json"
-
-def _load() -> List[Dict[str, Any]]:
-    if NORM_INDEX.exists():
-        try:
-            data = json.loads(NORM_INDEX.read_text(encoding="utf-8"))
-            return data if isinstance(data, list) else []
-        except Exception:
-            return []
-    return []
-
-def search_normative_sources(text: str, limit: int = 8) -> List[Dict[str, Any]]:
-    hay = (text or "").lower()
-    out = []
-    for row in _load():
-        keys = " ".join(row.get("keywords") or []).lower()
-        score = sum(1 for w in re.findall(r"[а-яa-z0-9]{4,}", hay) if w in keys or w in str(row).lower())
-        if score:
-            r = dict(row)
-            r["score"] = score
-            r["confidence"] = "CONFIRMED" if r.get("source") and r.get("clause") else "PARTIAL"
-            out.append(r)
-    out.sort(key=lambda x: int(x.get("score") or 0), reverse=True)
-    return out[:limit]
-
-def assert_no_exact_clause_without_source(norm: Dict[str, Any]) -> bool:
-    return not bool(norm.get("clause")) or bool(norm.get("source"))
-
-def format_normative_sources(rows: List[Dict[str, Any]]) -> str:
-    lines = []
-    for r in rows:
-        confidence = "CONFIRMED" if assert_no_exact_clause_without_source(r) and r.get("source") else "PARTIAL"
-        lines.append(f"{r.get('doc','UNKNOWN')} {r.get('clause','')}: {r.get('text','')} [{confidence}] {r.get('source','')}")
-    return "\n".join(lines)
-# === END_NORMATIVE_NO_HALLUCINATION_GUARD_V1 ===
-# === END_NORMATIVE_SOURCE_ENGINE_FULL_CLOSE_V1 ===
-
-====================================================================================================
-END_FILE: core/normative_source_engine.py
 FILE_CHUNK: 1/1
 ====================================================================================================

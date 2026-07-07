@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_016
-generated_at_utc: 2026-07-07T20:24:27.455716+00:00
-git_sha_before_commit: b72088bba5fc5e80f08dfdcc817ac5ad506f3f2d
+generated_at_utc: 2026-07-07T20:35:02.494981+00:00
+git_sha_before_commit: 95e659fb0c5a3d0c0401d769e38368f72da1d0e3
 part: 16/22
 
 
@@ -9110,7 +9110,7 @@ def build_topic_self_answer(meta: Dict[str, Any]) -> str:
     """Формирует ответ от имени топика на вопрос 'что мы тут делаем'."""
     name = meta.get("name", "Без имени")
     direction = meta.get("direction", "general_chat")
-
+    
     DIRECTION_DESCRIPTIONS = {
         "general_chat": "общий чат для произвольных задач",
         "crm_leads": "лиды, реклама, AmoCRM, лидогенерация",
@@ -9124,7 +9124,7 @@ def build_topic_self_answer(meta: Dict[str, Any]) -> str:
         "devops_server": "VPN, VPS, конфигурации серверов, настройки",
         "job_search": "поиск работы и интеграция с биржами труда",
     }
-
+    
     desc = DIRECTION_DESCRIPTIONS.get(direction, direction)
     return f"Этот чат — {name}. Направление: {desc}."
 

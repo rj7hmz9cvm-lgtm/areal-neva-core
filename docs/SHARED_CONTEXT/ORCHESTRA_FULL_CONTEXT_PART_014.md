@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_014
-generated_at_utc: 2026-07-07T20:24:27.454089+00:00
-git_sha_before_commit: b72088bba5fc5e80f08dfdcc817ac5ad506f3f2d
+generated_at_utc: 2026-07-07T20:35:02.493704+00:00
+git_sha_before_commit: 95e659fb0c5a3d0c0401d769e38368f72da1d0e3
 part: 14/22
 
 
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 1/2
-SHA256_FULL_FILE: c355286dc3b75cc60782a4ed873a37405620b12bf79a4f8614a474ff666953bd
+SHA256_FULL_FILE: 48e25637bf4a8331dafef0a3c55e47fdc3fc8853e02bb642bf90ce7c32fcdadd
 ====================================================================================================
 # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
 from __future__ import annotations
@@ -3611,6 +3611,14 @@ def _update_task_safe(conn, task_id, **kwargs):
                 hist_actions = [_s(h[0]) for h in hist]
                 price_confirmed = any("TOPIC2_PRICE_CHOICE_CONFIRMED" in a for a in hist_actions)
                 estimate_generated = any("estimate_generated" in a or "FINAL_DONE" in a or "P3_TOPIC2_FINAL" in a or "TOPIC2_ESTIMATE_FINAL_CLOSE_V2:ESTIMATE_ARTIFACTS_CREATED" in a for a in hist_actions)
+                if not estimate_generated:
+                    estimate_generated = all(any(marker in a for a in hist_actions) for marker in (
+                        "TOPIC2_XLSX_CREATED",
+                        "TOPIC2_PDF_CREATED",
+                        "TOPIC2_DRIVE_UPLOAD_XLSX_OK",
+                        "TOPIC2_DRIVE_UPLOAD_PDF_OK",
+                        "TOPIC2_TELEGRAM_DELIVERED",
+                    ))
                 explicit_confirm_idx = max(
                     [i for i, a in enumerate(hist_actions) if "TOPIC2_EXPLICIT_CONFIRM" in a and "REVOKED" not in a] or [-1]
                 )
@@ -6225,20 +6233,6 @@ def _create_xlsx_from_template(task_id: str, parsed: Dict[str, Any], template: D
 # === PATCH_TOPIC2_AREA_ONLY_WITH_TEMPLATE_ALLOWED_V2 ===
 # If a project PDF has only AR/TЭП rows but a canonical full-house template is selected,
 # do not stop the task. The template matrix is the calculation basis; PDF facts are inputs.
-_T2AOT_ORIG_MISSING_QUESTION = _missing_question
-
-
-def _t2aot_rows_are_area_only(rows) -> bool:
-    usable = []
-    non_area = []
-    for row in rows or []:
-        if not isinstance(row, dict):
-            continue
-        name = _clean(row.get('name', '')).lower().replace('ё', 'е')
-        try:
-            qty = float(row.get('qty') or 0)
-            price = float(row.get('price') or 0)
-        except Exception:
 
 ====================================================================================================
 END_FILE: core/stroyka_estimate_canon.py

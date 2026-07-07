@@ -1,8 +1,143 @@
 # ORCHESTRA_FULL_CONTEXT_PART_002
-generated_at_utc: 2026-07-07T20:24:27.444876+00:00
-git_sha_before_commit: b72088bba5fc5e80f08dfdcc817ac5ad506f3f2d
+generated_at_utc: 2026-07-07T20:35:02.483105+00:00
+git_sha_before_commit: 95e659fb0c5a3d0c0401d769e38368f72da1d0e3
 part: 2/22
 
+
+====================================================================================================
+BEGIN_FILE: docs/HANDOFFS/SESSION_20260707_TOPIC2_SEARCH_FINAL_SAVE.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: d736368b1383dfaa23fb735ed06031dd43bbfa6781473af6f19037a4a7c3302a
+====================================================================================================
+# SESSION 2026-07-07 — topic_2, search policy, file/OCR live close
+
+This handoff records the factual work completed on 2026-07-07. It is a session record, not a replacement for existing canons. No secrets, `.env`, credentials, tokens, DB files, runtime artifacts, Telegram media, or Drive exports are included here.
+
+## Scope
+
+- Main topic: `topic_2` / STROYKA / estimates.
+- Related shared contours: internet/product search, file intake, PDF/CAD-PDF extraction, live dialogue, reply/confirmation close.
+- Explicitly preserved boundaries: no `.env`, no credentials, no sessions, no systemd launch change, no Git branch creation, no neighboring topic rewrite as part of topic_2 close.
+
+## Search / Internet Rules Verified
+
+- Search route for internet/product/price data must use Sonar/Perplexity only.
+- DeepSeek is forbidden for internet/search and forbidden as search fallback.
+- For topic_2 price enrichment, cache/memory/archive are checked before fresh Sonar search.
+- Topic_2 search is only a tool for prices/materials/suppliers/logistics/norms and must not mix with topic_500 final output.
+- Long/product-search output must not expose internal markers or raw JSON to Telegram.
+
+## Topic_2 AR+KR Project Flow Closed
+
+Source task used for live close:
+
+- `7a06ad98-7bd1-4d1c-af57-7b375ade17e1`
+- chat: `-1003725299009`
+- topic_id: `2`
+- source files:
+  - `runtime/drive_files/287a613c-c47d-4fae-9a71-d57fa3f2b762_Раздел 3 - АР.pdf`
+  - `runtime/drive_files/287a613c-c47d-4fae-9a71-d57fa3f2b762_Раздел 4 - КР.pdf`
+
+Implemented/verified:
+
+- CAD-PDF / project extraction for AR+KR source facts.
+- Normalized billable rows for project-derived estimate rows.
+- Double-count guard: unit/detail/rollup rows are not all included in `AREAL_CALC`.
+- Evidence-only rows are moved to `SOURCE_EVIDENCE`.
+- Material and work prices are handled as separate price requirements for each billable row.
+- `PRICE_AUDIT` separates `material` and `work` prices.
+- `SOURCE_EVIDENCE` is filled for calculated/derived rows.
+- XLSX and PDF are regenerated and uploaded to Drive.
+- Telegram final is sent with Drive XLSX/PDF links.
+- `DONE` is only after explicit owner confirmation.
+
+Final live result:
+
+- Telegram `bot_message_id`: `12369`
+- state after owner finish phrase repair: `DONE`
+- XLSX: `https://drive.google.com/file/d/1WUnvjSgmVz0L1c-mBZy7HGz1JibWk9IR/view`
+- PDF: `https://drive.google.com/file/d/1kO7y_N06NBvI-n2XqSL3IEDSJZTClxqx/view`
+
+Final checked values:
+
+- `AREAL_CALC`: 15 columns, 15 billable rows.
+- formulas: work = `E*F`, material = `E*H`, total = `G+I`, final totals through `SUM`.
+- `PRICE_AUDIT`: 30 rows = 15 material + 15 work, missing = 0.
+- `SOURCE_EVIDENCE`: 35 rows, calculated source missing = 0.
+- PDF contains work total, material total, and combined total.
+- Missing project data remains explicitly listed:
+  - `openings_area_m2`
+  - `roof_overhangs`
+  - `steel_frame_mass_kg`
+
+## Completion / DONE Fix
+
+Observed failure:
+
+- Owner phrase `Всё я доволен задачей завершена` was routed into clarification/price-choice instead of closing the awaiting parent.
+- Parent lookup expected text `Смета готова`, while the current AR+KR final says `Смета по извлечённым позициям готова`.
+- DONE guard did not accept the new AR+KR artifact marker set and wrote a misleading `TOPIC2_DONE_BLOCKED_REASON:no_estimate_generated` marker.
+
+Fixed:
+
+- Finish detector recognizes additional owner-close phrases:
+  - `задачей завершена`
+  - `задача закрыта`
+  - `задачей закрыта`
+  - `доволен задачей`
+  - `доволен результатом`
+  - `всё верно`
+  - `все верно`
+- Parent lookup recognizes `Смета по извлечённым позициям готова`.
+- DONE guard accepts the new marker set:
+  - `TOPIC2_XLSX_CREATED`
+  - `TOPIC2_PDF_CREATED`
+  - `TOPIC2_DRIVE_UPLOAD_XLSX_OK`
+  - `TOPIC2_DRIVE_UPLOAD_PDF_OK`
+  - `TOPIC2_TELEGRAM_DELIVERED`
+- Parent task `7a06ad98-7bd1-4d1c-af57-7b375ade17e1` was repaired to `DONE` after explicit owner confirmation.
+- Topic_2 memory keys were updated after DONE:
+  - `topic_2_user_input`
+  - `topic_2_task_summary`
+  - `topic_2_assistant_output`
+
+## Verification Commands Run
+
+- `python3 -m py_compile core/stroyka_estimate_canon.py core/pdf_spec_extractor.py core/topic2_estimate_final_close_v2.py task_worker.py core/construction_item_normalizer.py`
+- XLSX validation:
+  - 15 columns
+  - 15 rows
+  - formulas OK
+  - no forbidden double-count rows
+  - `PRICE_AUDIT` 30 rows
+  - `SOURCE_EVIDENCE` calculated source missing = 0
+- PDF validation:
+  - PDF exists locally
+  - PDF contains material/work/total values
+- Task state validation:
+  - parent state = `DONE`
+  - result contains Drive XLSX/PDF links
+  - memory keys updated after DONE
+
+## Backups Created
+
+- `backups/topic2_final_estimate_rows_work_price_20260707_224848`
+- `backups/stroyka_estimate_canon.py.bak_source_evidence_20260707_230602`
+- `backups/topic2_done_close_fix_20260707_232242/stroyka_estimate_canon.py.bak`
+- `backups/topic2_done_state_repair_20260707_232400`
+
+Server-only backups may contain runtime data and are not for GitHub.
+
+## Remaining Work
+
+- Continue live tests for other topics only as separate scoped tasks.
+- Topic_5 TEKHNADZOR still needs separate canon-bound verification.
+- Topic_500 universal search still needs separate live regression tests for duplicate phone filtering and source liveness, outside this topic_2 save.
+
+====================================================================================================
+END_FILE: docs/HANDOFFS/SESSION_20260707_TOPIC2_SEARCH_FINAL_SAVE.md
+FILE_CHUNK: 1/1
+====================================================================================================
 
 ====================================================================================================
 BEGIN_FILE: docs/HANDOFFS/SESSION_20260707_TOPIC2_SEARCH_OCR_LIVE.md
@@ -9969,16 +10104,5 @@ SHA256_FULL_FILE: f1945cd6c19e56b3c1c78943ef5ec18116907a4ca1efc40a57d48ab1db7adf
 ﻿
 ====================================================================================================
 END_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_CANON_AND_TECH_CONTOUR__2026-04-27.txt
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_CANON_CLOSE__2026-04-28.txt
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 459ca409e6d4251c8a59b69c556d9a3e9022a41046cf05b10be68c1f250bfab4
-====================================================================================================
-﻿{"chat_id":"current_chat","chat_name":"AREAL_NEVA_ORCHESTRA_CANON_CLOSE","exported_at":"2026-04-28T00:00:00+03:00","source_model":"GPT-5.5 Thinking","system":"AREAL-NEVA ORCHESTRA: серверный Telegram-оркестр на /root/.areal-neva-core с telegram-ingress, areal-task-worker, areal-memory-api, core.db, memory.db, Google Drive storage","architecture":"Telegram -> telegram_daemon.py -> core.db -> task_worker.py -> core/ai_router.py -> core/reply_sender.py -> Telegram; файлы через Drive/drive_files/artifact pipeline; память через memory.db и topic_id","pipeline":"NEW -> IN_PROGRESS -> AWAITING_CONFIRMATION -> DONE -> ARCHIVED; ветки WAITING_CLARIFICATION, FAILED, CANCELLED; STALE_TIMEOUT=600 подтвержден grep","files":["/root/.areal-neva-core/task_worker.py -> основной worker/lifecycle/file/direct-context","/root/.areal-neva-core/telegram_daemon.py -> Telegram ingress/STT/task creation","/root/.areal-neva-core/core/ai_router.py -> AI routing","/root/.areal-neva-core/core/reply_sender.py -> Telegram reply sending","/root/.areal-neva-core/google_io.py -> Google Drive IO forbidden to edit","/root/.areal-neva-core/data/core.db -> runtime tasks/pin/drive_files","/root/.areal-neva-core/data/memory.db -> long memory forbidden schema edit","/root/.areal-neva-core/core/engine_base.py -> proposed/created compatibility for engine imports in latest code block"],"code":"Ubuntu VPS, Python venv /root/.areal-neva-core/.venv/bin/python3, SQLite, systemd, Telegram bot, OpenRouter/DeepSeek/Perplexity, Groq STT, Google Drive","patches":["PHASE1 markers -> task_worker.py -> MEMORY_SAVED/MEMORY_SKIPPED/INTENT/CONTEXT/ROUTER_OK -> applied_by_terminal","PHASE2_NO_BLIND_CLOSE -> telegram_daemon.py -> line 502 -> applied_by_terminal","PHASE3 history/file-list skip -> task_worker.py -> _is_history_or_file_list_question_safe_final + TEXT_FOLLOWUP_REQUEUE_SKIPPED_HISTORY -> applied_by_terminal","Broken PHASE4 Runtime history attempt -> task_worker.py -> SyntaxError line 1505 -> failed then restored","CANON_CLOSE_FACT_HELPERS_V1 -> task_worker.py -> direct-context helpers lines 1477..1672 -> applied_by_terminal","DIRECT_CALL_INSERTED_OK -> task_worker.py -> call at line 1902 -> applied_by_terminal","CANON_STALE_DONE_WITH_RESULT -> task_worker.py -> line 758 -> applied_by_terminal"],"commands":["ssh areal grep/sed diagnostics around _load_memory_context and _is_history_or_file_list_question_safe_final","ssh areal cp task_worker.py backups and py_compile","ssh areal restore from task_worker.py.bak.20260427_222059","ssh areal diagnostics services/syntax/last tasks/logs","ssh areal sqlite3 queries for tasks, drive_files, memory","ssh areal patches inserting PHASE3 and canon direct context","ssh areal forbidden file stat compare","ssh areal DB schema compare","ssh areal active definitions and logs"],"db":"core.db schema confirmed: tasks(id,chat_id,user_id,input_type,raw_input,state,result,error_message,reply_to_message_id,created_at,updated_at,bot_message_id,topic_id,task_type); pin(...topic_id); drive_files(...artifact_file_id). Queue status after patch: ARCHIVED 371, CANCELLED 164, DONE 93, FAILED 47. DB schema unchanged confirmed by diff","memory":"memory.db exists; latest visible keys include topic_3008_user_input/assistant_output/task_summary, topic_961, topic_5_role, topic_500. Topic isolation expected by topic_{id}_* keys. memory.db schema edit forbidden","services":["telegram-ingress: active","areal-task-worker: active","areal-memory-api: active"],"canons":["Оркестр = исполнительная система, не чат-бот","Telegram/Server/Drive separation: Telegram IO, server logic/runtime, Drive heavy files/artifacts","Topic isolation by chat_id+topic_id","Lifecycle NEW->IN_PROGRESS->AWAITING_CONFIRMATION->DONE->ARCHIVED","Intent priority FINISH > CONFIRM > REVISION > TASK > SEARCH > CHAT","Reply continuity: bot_message_id != reply_to_message_id","File pipeline 8 stages: INTAKE DOWNLOAD CLASSIFY ROUTE EXTRACT PROCESS ARTIFACT DELIVER","File task without artifact is not complete","User-facing answer must not show FAILED/STALE/stage/error_message/raw paths","Excel estimate formulas: =C2*D2 and =SUM","Golden backup: code cp backup, SQLite sqlite3 .backup","Forbidden files: .env credentials sessions google_io.py memory.db schema ai_router.py telegram_daemon.py reply_sender.py systemd units without permission"],"decisions":["Do not rewrite core; only overlays above existing logic","Do not mutate historical failed rows with invented result text","Keep only first cleanup UPDATE that changes stale failed tasks with existing result to DONE; remove invented cleanup results","Direct-context for history/file/status should bypass INVALID_RESULT_GATE","Engine import failure is P0 before file pipeline can close","KZH PDF must produce estimate artifact, not source Drive link"],"errors":["SyntaxError unterminated string literal line 1505 -> bad heredoc/string patch -> restored backup 20260427_222059","PHASE3 missing after restore -> grep empty -> reapplied PHASE3","History/file questions failed -> INVALID_RESULT_GATE/STALE_TIMEOUT -> direct-context handler inserted","Direct-context initially not called -> function existed but no call -> DIRECT_CALL_INSERTED_OK","User-facing file status showed system/source file links/stage -> still broken by user report","KZH PDF tasks remain stalled in TEXT_FOLLOWUP_REQUEUED/STALE without artifact -> file pipeline not closed"],"solutions":["PHASE3 skip prevents history/file-list questions from being requeued as drive_file -> applied","Direct context call inserted before requeue -> applied","Forbidden files stat compare -> unchanged confirmed","DB schema compare -> unchanged confirmed","engine_base import compatibility -> drafted in latest code block, execution status UNKNOWN in this export","Clean user-facing file logic -> drafted latest code block, execution status UNKNOWN in this export"],"state":"Система active и syntax OK; поведенческие direct-context частично работают, но полный канон не закрыт из-за file pipeline/artifact/engine/OCR/user-facing issues","what_working":["services active active active","task_worker.py syntax OK","telegram_daemon.py syntax OK","CANON_FILE_LIST_CONTEXT_HIT logged for task 26983094","CANON_FILE_STATUS_CONTEXT_HIT logged for task 2e24b41f","forbidden files unchanged after patch","DB schema unchanged after patch","reply_to/bot_message_id columns exist"],"what_broken":["Last file task 2b053aad remains IN_PROGRESS with TEXT_FOLLOWUP_REQUEUED_AS_DRIVE_FILE","KZH PDF У1-02-26-Р-КЖ1.6.pdf shows no completed estimate artifact","Direct file answer shows source/system Drive file instead of ready estimate","Old tasks орик/вот failed INVALID_RESULT_GATE","Old file/history tasks failed INVALID_RESULT_GATE/STALE_TIMEOUT","OCR/estimate result for ВОР кирпичная кладка previously produced garbage values per chat facts"],"what_not_done":["Full engine import fix not verified after latest drafted code","route_file real engine execution not proven","KZH PDF -> Excel/Sheets estimate artifact not proven","VOICE_CONFIRM code not proven","INTAKE_OFFER_ACTIONS not proven","topic_3008 five-model verification not proven","INBOX aggregator/AmoCRM not implemented/proven","Userbot monitor_jobs.py not written/proven","Clean memory guard not fully proven","Pin relevancy not fully proven"],"current_breakpoint":"Need execute/verify P0 code: engine_base imports -> route_file -> KZH PDF artifact -> clean user-facing status without system trash","root_causes":["engine_base import failure -> stated in canon/handoff as core.ocr_engine/core.technadzor_engine fail No module named engine_base","direct-context not called -> grep showed function only, no call until DIRECT_CALL_INSERTED_OK","file status answering source links -> user live test showed answer with source KZH file, not estimate","stale recovery marks tasks FAILED despite existing result -> fixed partially with CANON_STALE_DONE_WITH_RESULT"],"verification":["services active active active -> terminal output","task_worker.py SYNTAX_OK -> terminal output","telegram_daemon.py SYNTAX_OK -> terminal output","TEXT_FOLLOWUP_REQUEUE_SKIPPED_HISTORY line 1540 -> grep output","CONTEXT line 1711 and ROUTER_OK line 1762 -> grep output","DIRECT_CALL_INSERTED_OK -> terminal output","_canon_complete_direct_context_v1 call line 1902 -> grep output","FORBIDDEN_FILES_UNCHANGED_OK -> terminal output","DB_SCHEMA_UNCHANGED_OK -> terminal output","CANON_FILE_LIST_CONTEXT_HIT and CANON_FILE_STATUS_CONTEXT_HIT -> task_worker.log output"],"limits":["tail logs short, normally <=20..80 lines","no web guessing; facts/logs only","backup first before file edits","SQLite backup via sqlite3 .backup","do not edit .env credentials sessions google_io.py memory.db schema ai_router.py telegram_daemon.py reply_sender.py systemd units without direct permission","no DB schema changes without direct permission","no invented historical result mutation","only overlays/patches, no core rewrite"]}
-====================================================================================================
-END_FILE: chat_exports/CHAT_EXPORT__AREAL_NEVA_ORCHESTRA_CANON_CLOSE__2026-04-28.txt
 FILE_CHUNK: 1/1
 ====================================================================================================

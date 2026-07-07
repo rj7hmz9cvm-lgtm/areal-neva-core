@@ -1,14 +1,28 @@
 # ORCHESTRA_FULL_CONTEXT_PART_015
-generated_at_utc: 2026-07-07T20:24:27.455193+00:00
-git_sha_before_commit: b72088bba5fc5e80f08dfdcc817ac5ad506f3f2d
+generated_at_utc: 2026-07-07T20:35:02.494491+00:00
+git_sha_before_commit: 95e659fb0c5a3d0c0401d769e38368f72da1d0e3
 part: 15/22
 
 
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 2/2
-SHA256_FULL_FILE: c355286dc3b75cc60782a4ed873a37405620b12bf79a4f8614a474ff666953bd
+SHA256_FULL_FILE: 48e25637bf4a8331dafef0a3c55e47fdc3fc8853e02bb642bf90ce7c32fcdadd
 ====================================================================================================
+_T2AOT_ORIG_MISSING_QUESTION = _missing_question
+
+
+def _t2aot_rows_are_area_only(rows) -> bool:
+    usable = []
+    non_area = []
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        name = _clean(row.get('name', '')).lower().replace('ё', 'е')
+        try:
+            qty = float(row.get('qty') or 0)
+            price = float(row.get('price') or 0)
+        except Exception:
             qty = price = 0
         if qty <= 0 and price <= 0:
             continue

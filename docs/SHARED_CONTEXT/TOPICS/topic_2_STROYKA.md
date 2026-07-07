@@ -1,7 +1,7 @@
 # topic_2 STROYKA
 
-GENERATED_AT: 2026-07-07T20:24:27.564890+00:00
-GIT_SHA: b72088bba5fc5e80f08dfdcc817ac5ad506f3f2d
+GENERATED_AT: 2026-07-07T20:35:02.605940+00:00
+GIT_SHA: 95e659fb0c5a3d0c0401d769e38368f72da1d0e3
 GENERATED_FROM: tools/full_context_aggregator.py
 
 TOPIC_ID: 2
@@ -13,7 +13,7 @@ FAILED_LAST_24H: 21
 
 ## DB_STATE_COUNTS
 - ARCHIVED: 12
-- CANCELLED: 153
+- CANCELLED: 154
 - DONE: 247
 - FAILED: 166
 
@@ -25,6 +25,7 @@ FAILED_LAST_24H: 21
 - e65b555f | STALE_TIMEOUT
 
 ## COMMITS_LAST_14D
+- 95e659fb|Save 2026-07-07 topic2 search live session
 - c4473391|docs: save 2026-07-07 topic2 search ocr handoff
 - ed4c3c7b|topic2: append live rules and save repair state
 - f5f758c8|docs: refresh single model context after topic2 handoff
@@ -56,13 +57,13 @@ FAILED_LAST_24H: 21
 - clarified:да мне нужна смета по позициям указанным в данном документе это монтаж
 - confirmed:DONE
 - confirmed:ок
-- TOPIC2_VOICE_FINISH_REPLAY_REQUESTED_BY_CODEX
-- TOPIC2_EXPLICIT_CONFIRM:ready_done_phrase
-- TOPIC2_DONE_CONTRACT_OK
-- state:DONE
-- TOPIC2_DONE_BLOCKED_REASON:no_estimate_generated
-- TOPIC2_CONFIRM_CHILD_DONE_READY_PHRASE
-- PATCH_TOPIC2_READY_DONE_BEFORE_FRUSTRATION_V1:handled_by_canon_ready_done
+- state:FAILED
+- reply_sent:stale_failed
+- GLOBAL_MEMORY_RECALL_REPLAY_REQUESTED_BY_CODEX
+- TOPIC2_DONE_ONLY_AFTER_USER_YES_V1:BLOCKED_DONE_TO_AWAITING_CONFIRMATION
+- TOPIC2_PUBLIC_RESULT_CANON_VIOLATION:missing_canon_header
+- PATCH_GLOBAL_HISTORICAL_MEMORY_RECALL_V1:core_tasks=c94ec497
+- FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3:clarification
 
 ## BLOCKERS_FROM_NOT_CLOSED
 - - topic_2 не тянет проектные образцы topic_210
@@ -147,6 +148,7 @@ PATCH_TOPIC2_FULL_GAP_CLOSE_V4
 - TOPIC2_DRIVE_UPLOAD_PDF_OK
 - TOPIC2_TELEGRAM_DELIVERED
 - TOPIC2_MESSAGE_THREAD_ID_OK
+- TOPIC2_DONE_CONTRACT_OK
 
 ## REGRESSION_GUARDS
 - не возвращать P6E67_PARENT_NOT_FOUND на полное ТЗ
