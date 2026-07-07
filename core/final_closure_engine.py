@@ -501,6 +501,7 @@ _INDEX_QUERY_RE_V1 = re.compile(
 _TOPIC_ROLE_MAP_V1 = {
     2: "СМЕТЫ / СТРОЙКА",
     5: "ТЕХНАДЗОР / АКТЫ / ДЕФЕКТЫ",
+    500: "ВЕБ-ПОИСК / ИНТЕРНЕТ-ПОИСК / ПОИСК ТОВАРОВ И ИСПОЛНИТЕЛЕЙ",
     210: "ПРОЕКТИРОВАНИЕ / АР / КЖ / КД / КР / КМ / ОВ / ВК / ЭО",
 }
 
@@ -742,6 +743,9 @@ _p6h4tw_fce_orig_handle_technadzor = _handle_technadzor
 
 
 def _handle_technadzor(raw_input: str, task_id: str, chat_id: str, topic_id: int) -> Dict[str, Any]:  # noqa: F811
+    if int(topic_id or 0) != 5:
+        return {"handled": False}
+
     _low = (raw_input or "").lower().replace("ё", "е")
     _is_folder_intent = any(t in _low for t in _P6H4TW_FCE_FOLDER_INTENTS)
 

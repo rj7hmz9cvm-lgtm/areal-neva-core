@@ -54,11 +54,28 @@ class ContextLoader:
         return refs
 
     def _load_short_memory(self, chat_id, topic_id):
-        import urllib.request, json
-        url = f"http://127.0.0.1:8765/memory?chat_id={chat_id}&topic_id={topic_id}&limit=5"
+        import json
+        import os
+        import urllib.parse
+        import urllib.request
+
+        params = urllib.parse.urlencode({
+            "chat_id": str(chat_id),
+            "topic_id": int(topic_id or 0),
+            "limit": 5,
+        })
+        url = f"http://127.0.0.1:8091/memory?{params}"
         try:
-            req = urllib.request.urlopen(url, timeout=2)
-            data = json.loads(req.read().decode())
+            token = os.getenv("MEMORY_API_TOKEN", "")
+            if not token:
+                try:
+                    from memory_api_server import TOKEN as token  # type: ignore
+                except Exception:
+                    token = ""
+            headers = {"Authorization": f"Bearer {token}"} if token else {}
+            req = urllib.request.Request(url, headers=headers)
+            resp = urllib.request.urlopen(req, timeout=2)
+            data = json.loads(resp.read().decode())
             return data if isinstance(data, (list, dict)) else None
         except Exception:
             return None

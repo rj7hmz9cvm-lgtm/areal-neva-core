@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_014
-generated_at_utc: 2026-07-07T19:24:08.717919+00:00
-git_sha_before_commit: 75f68ff0c25d5c4594ccc3083e30a8f7c1a4611b
+generated_at_utc: 2026-07-07T20:24:27.454089+00:00
+git_sha_before_commit: b72088bba5fc5e80f08dfdcc817ac5ad506f3f2d
 part: 14/22
 
 
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 1/2
-SHA256_FULL_FILE: d587db0166339357ee403db6e01bc6dcbf0409a6aecfada5e0ba6cd35ea1fcff
+SHA256_FULL_FILE: c355286dc3b75cc60782a4ed873a37405620b12bf79a4f8614a474ff666953bd
 ====================================================================================================
 # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
 from __future__ import annotations
@@ -1485,6 +1485,13 @@ def _is_old_task_finish_request(text: str) -> bool:
         "предыдущее техническое задание",
         "посмотри что мы строим",
         "задача завершена",
+        "задачей завершена",
+        "задача закрыта",
+        "задачей закрыта",
+        "доволен задачей",
+        "доволен результатом",
+        "всё верно",
+        "все верно",
         "все задачи отменены",
         # === END_FULL_STROYKA_LOOP_FINAL_CLOSE_REVIVE_PHRASES_FIX ===
 
@@ -2686,7 +2693,7 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
                       AND COALESCE(topic_id,0)=?
                       AND state='AWAITING_CONFIRMATION'
                       AND id<>?
-                      AND COALESCE(result,'') LIKE '%Смета готова%'
+                      AND (COALESCE(result,'') LIKE '%Смета готова%' OR COALESCE(result,'') LIKE '%Смета по извлечённым позициям готова%')
                       AND (COALESCE(result,'') LIKE '%drive.google.com%' OR COALESCE(result,'') LIKE '%docs.google.com%')
                     ORDER BY updated_at DESC, created_at DESC
                     LIMIT 1
@@ -6232,17 +6239,6 @@ def _t2aot_rows_are_area_only(rows) -> bool:
             qty = float(row.get('qty') or 0)
             price = float(row.get('price') or 0)
         except Exception:
-            qty = price = 0
-        if qty <= 0 and price <= 0:
-            continue
-        usable.append(row)
-        if 'площад' not in name and 'общая' not in name:
-            non_area.append(row)
-    return bool(usable) and not non_area
-
-
-def _missing_question(parsed: Dict[str, Any]) -> Optional[str]:  # noqa: F811
-    rows = parsed.get('pdf_spec_rows') or []
 
 ====================================================================================================
 END_FILE: core/stroyka_estimate_canon.py

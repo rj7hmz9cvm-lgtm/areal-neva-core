@@ -1,6 +1,7 @@
 # === SEARCH_MONOLITH_V2_FULL ===
 from __future__ import annotations
 import json, logging, os, re, sqlite3, time
+import urllib.request, urllib.error
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional
@@ -8,6 +9,7 @@ from typing import Any, Callable, Dict, List, Optional
 logger = logging.getLogger("search_session")
 BASE = "/root/.areal-neva-core"
 MEM_DB = f"{BASE}/data/memory.db"
+CORE_DB = f"{BASE}/data/core.db"
 SEARCH_SESSION_VERSION = "SEARCH_MONOLITH_V2_FULL"
 SESSION_TTL_SEC = 7200
 MAX_CLARIFICATIONS = 3
@@ -1414,6 +1416,207 @@ def _p6e2_apply_universal_search_canon(final):
         text = re.sub(rf"\b{src}\b", dst, text, flags=re.I)
     return _p6e2_search_s(text, 12000)
 
+def _p6e2_norm_phone(value):
+    digits = re.sub(r"\D+", "", str(value or ""))
+    if len(digits) == 11 and digits.startswith("8"):
+        digits = "7" + digits[1:]
+    return digits if len(digits) >= 10 else ""
+
+def _p6e2_is_placeholder_phone(phone):
+    digits = _p6e2_norm_phone(phone)
+    if not digits:
+        return False
+    tail = digits[-7:]
+    if tail in {"1234567", "1111111", "2222222", "3333333", "4444444", "5555555", "6666666", "7777777", "8888888", "9999999", "0000000"}:
+        return True
+    if re.search(r"(\d)\1{5,}", tail):
+        return True
+    return False
+
+def _p6e2_dedupe_contacts(text):
+    lines = str(text or "").splitlines()
+    seen = {}
+    out = []
+    phone_re = re.compile(r"(?:\+7|8)\s*[\(\- ]?\d{3}[\)\- ]?\s*\d{3}[\- ]?\d{2}[\- ]?\d{2}")
+    for line in lines:
+        phones = [_p6e2_norm_phone(x) for x in phone_re.findall(line)]
+        phones = [x for x in phones if x]
+        if not phones:
+            out.append(line)
+            continue
+        if any(_p6e2_is_placeholder_phone(x) for x in phones):
+            continue
+        key = phones[0]
+        if key in seen:
+            seen[key]["count"] += 1
+            seen[key]["sources"].append(line.strip())
+            continue
+        seen[key] = {"count": 1, "sources": [line.strip()]}
+        out.append(line)
+    duplicate_notes = []
+    for phone, data in seen.items():
+        if data["count"] > 1:
+            duplicate_notes.append(f"DUPLICATE_CONTACT: +{phone} встречается в {data['count']} строках; оставлен один профиль, остальные объявления считаются дублями")
+    if duplicate_notes:
+        out.append("")
+        out.extend(duplicate_notes)
+    return "\n".join(out).strip()
+
+def _p6e2_extract_urls(line):
+    urls = re.findall(r"https?://[^\s\]\)>,|]+", str(line or ""))
+    return [u.rstrip(".,;:") for u in urls]
+
+def _p6e2_url_alive(url):
+    try:
+        req = urllib.request.Request(
+            url,
+            method="HEAD",
+            headers={"User-Agent": "Mozilla/5.0 AREAL-NEVA source verifier"},
+        )
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            return 200 <= int(getattr(resp, "status", 0) or 0) < 400
+    except Exception:
+        try:
+            req = urllib.request.Request(
+                url,
+                headers={"User-Agent": "Mozilla/5.0 AREAL-NEVA source verifier"},
+            )
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                return 200 <= int(getattr(resp, "status", 0) or 0) < 400
+        except Exception:
+            return False
+
+def _p6e2_url_live_text(url):
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "Mozilla/5.0 AREAL-NEVA source verifier"},
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            status = int(getattr(resp, "status", 0) or 0)
+            if not (200 <= status < 400):
+                return False, ""
+            raw = resp.read(180000) or b""
+            return True, raw.decode("utf-8", "ignore")
+    except Exception:
+        return False, ""
+
+def _p6e2_verify_live_source_lines(text):
+    lines = str(text or "").splitlines()
+    out = []
+    cache = {}
+    text_cache = {}
+    phone_re = re.compile(r"(?:\+7|8)\s*[\(\- ]?\d{3}[\)\- ]?\s*\d{3}[\- ]?\d{2}[\- ]?\d{2}")
+    for line in lines:
+        urls = _p6e2_extract_urls(line)
+        raw_phones = phone_re.findall(line)
+        phones = [_p6e2_norm_phone(x) for x in raw_phones]
+        phones = [x for x in phones if x]
+        has_phone = bool(phones)
+        if not urls:
+            if has_phone:
+                continue
+            out.append(line)
+            continue
+        alive = False
+        phone_confirmed = not has_phone
+        for url in urls[:2]:
+            if url not in cache:
+                cache[url] = _p6e2_url_alive(url)
+            if cache[url]:
+                alive = True
+                if has_phone:
+                    if url not in text_cache:
+                        text_cache[url] = _p6e2_url_live_text(url)
+                    _, body = text_cache[url]
+                    digits = re.sub(r"\D+", "", body or "")
+                    if any(phone in digits for phone in phones):
+                        phone_confirmed = True
+                break
+        if alive and phone_confirmed:
+            out.append(line)
+    return "\n".join(out).strip()
+
+def _p6e2_query_region_guard(text, query):
+    qlow = str(query or "").lower().replace("ё", "е")
+    if not any(x in qlow for x in ("санкт-петербург", "санкт петербург", "спб", "ленинградск")):
+        return str(text or "").strip()
+    forbidden = (
+        "москва", "московск", "екатеринбург", "новосибирск", "казань", "краснодар",
+        "ростов", "нижний новгород", "самара", "воронеж", "пермь", "уфа",
+    )
+    lines = []
+    for line in str(text or "").splitlines():
+        low = line.lower().replace("ё", "е")
+        if any(x in low for x in forbidden):
+            continue
+        lines.append(line)
+    return "\n".join(lines).strip()
+
+def _p6e2_seen_topic500_phones(chat_id, topic_id=500):
+    phones = set()
+    phone_re = re.compile(r"(?:\+7|8)\s*[\(\- ]?\d{3}[\)\- ]?\s*\d{3}[\- ]?\d{2}[\- ]?\d{2}")
+    try:
+        with sqlite3.connect(MEM_DB, timeout=10) as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                """
+                SELECT value FROM memory
+                WHERE chat_id=?
+                  AND COALESCE(topic_id,0)=?
+                  AND (key LIKE 'topic_500_%assistant_output'
+                       OR key LIKE 'topic_500_%task_summary'
+                       OR key LIKE 'topic_500_archive_%')
+                ORDER BY timestamp DESC
+                LIMIT 40
+                """,
+                (str(chat_id), int(topic_id or 500)),
+            ).fetchall()
+        for row in rows:
+            for raw_phone in phone_re.findall(str(row["value"] or "")):
+                phone = _p6e2_norm_phone(raw_phone)
+                if phone and not _p6e2_is_placeholder_phone(phone):
+                    phones.add(phone)
+    except Exception:
+        pass
+    try:
+        with sqlite3.connect(CORE_DB, timeout=10) as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                """
+                SELECT result FROM tasks
+                WHERE chat_id=?
+                  AND COALESCE(topic_id,0)=?
+                  AND COALESCE(result,'')<>''
+                  AND state IN ('DONE','AWAITING_CONFIRMATION','FAILED')
+                ORDER BY rowid DESC
+                LIMIT 40
+                """,
+                (str(chat_id), int(topic_id or 500)),
+            ).fetchall()
+        for row in rows:
+            for raw_phone in phone_re.findall(str(row["result"] or "")):
+                phone = _p6e2_norm_phone(raw_phone)
+                if phone and not _p6e2_is_placeholder_phone(phone):
+                    phones.add(phone)
+    except Exception:
+        pass
+    return phones
+
+def _p6e2_filter_seen_contacts(text, seen_phones):
+    if not seen_phones:
+        return str(text or "").strip()
+    lines = str(text or "").splitlines()
+    out = []
+    phone_re = re.compile(r"(?:\+7|8)\s*[\(\- ]?\d{3}[\)\- ]?\s*\d{3}[\- ]?\d{2}[\- ]?\d{2}")
+    for line in lines:
+        phones = [_p6e2_norm_phone(x) for x in phone_re.findall(line)]
+        phones = [x for x in phones if x]
+        if phones and any(x in seen_phones for x in phones):
+            continue
+        out.append(line)
+    return "\n".join(out).strip()
+
 try:
     _P6E2_ORIG_SEARCH_RUN = SearchMonolithV2.run
     async def _p6e2_search_run(self, payload, user_text, online_call, online_model, base_system_prompt=""):
@@ -1429,6 +1632,12 @@ try:
         online_model = _assert_online_model_allowed(online_model)
         raw = await online_call(online_model, _p6e2_search_messages(q))
         final = _p6e2_apply_universal_search_canon(raw)
+        final = _p6e2_dedupe_contacts(final)
+        final = _p6e2_verify_live_source_lines(final)
+        final = _p6e2_query_region_guard(final, q)
+        final = _p6e2_filter_seen_contacts(final, _p6e2_seen_topic500_phones(payload.get("chat_id"), 500))
+        if not re.search(r"(?:\+7|8)\s*[\(\- ]?\d{3}[\)\- ]?\s*\d{3}[\- ]?\d{2}[\- ]?\d{2}", final):
+            final = "Новых подтверждённых живых контактов по текущему запросу не найдено"
         stale = ("rockwool", "каменная вата", "термодом", "утеплитель")
         qlow = _p6e2_search_low(q)
         flow = _p6e2_search_low(final)

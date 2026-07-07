@@ -697,12 +697,19 @@ def save_file_catalog_snapshot(chat_id: str, topic_id: int) -> Dict[str, Any]:
     with _conn(MEM_DB) as mem:
         if not _has_table(mem, "memory"):
             mem.execute("CREATE TABLE IF NOT EXISTS memory (id TEXT PRIMARY KEY, chat_id TEXT, key TEXT, value TEXT, timestamp TEXT)")
+        cols = {r[1] for r in mem.execute("PRAGMA table_info(memory)").fetchall()}
         mem.execute("DELETE FROM memory WHERE chat_id=? AND key=?", (chat_id, key))
         mid = hashlib.sha1(f"{chat_id}:{key}".encode()).hexdigest()
-        mem.execute(
-            "INSERT OR REPLACE INTO memory (id,chat_id,key,value,timestamp) VALUES (?,?,?,?,?)",
-            (mid, chat_id, key, json.dumps(payload, ensure_ascii=False), _utc()),
-        )
+        if "topic_id" in cols and "scope" in cols:
+            mem.execute(
+                "INSERT OR REPLACE INTO memory (id,chat_id,key,value,timestamp,topic_id,scope) VALUES (?,?,?,?,?,?,?)",
+                (mid, chat_id, key, json.dumps(payload, ensure_ascii=False), _utc(), topic_id, "topic"),
+            )
+        else:
+            mem.execute(
+                "INSERT OR REPLACE INTO memory (id,chat_id,key,value,timestamp) VALUES (?,?,?,?,?)",
+                (mid, chat_id, key, json.dumps(payload, ensure_ascii=False), _utc()),
+            )
         mem.commit()
 
     return {"ok": True, "key": key, "count": len(items)}

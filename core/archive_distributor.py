@@ -110,8 +110,8 @@ def distribute_timeline(timeline_path: str, chat_id: str = CHAT_ID, dry_run: boo
                 ).fetchone()
                 if not existing:
                     conn.execute(
-                        "INSERT INTO memory (chat_id, key, value, timestamp) VALUES (?, ?, ?, ?)",
-                        (chat_id, dedup_key, value, str(ts)[:19])
+                        "INSERT INTO memory (id, chat_id, key, value, timestamp, topic_id, scope) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        (__import__("uuid").uuid4().hex, chat_id, dedup_key, value, str(ts)[:19], int(topic_id or 0), "archive")
                     )
 
             stats["distributed"] += 1

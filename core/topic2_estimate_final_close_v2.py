@@ -1658,3 +1658,25 @@ def _t2pbr_build_items(task_id: str, raw_text: str, photo_text: str, chat_id: st
     return _T2PBR_V3_BUILD_ITEMS(task_id, raw_text, photo_text, chat_id)
 # === END_PATCH_TOPIC2_BLOCK_AREA_ONLY_PDF_FINAL_V4 ===
 
+# === PATCH_TOPIC2_FINAL_BRIDGE_NO_HOUSE_FOR_FILE_SPECS_V1 ===
+# FACT ONLY: the final artifact bridge may not turn arbitrary PDF/file specs
+# into a house/foundation estimate. It may use the house bridge only when the
+# current task text actually contains house/foundation terms.
+_T2PBR_NOHOUSE_PREV_BUILD_ITEMS_V1 = _t2pbr_build_items
+
+
+def _t2pbr_build_items(task_id: str, raw_text: str, photo_text: str, chat_id: str = ''):
+    pending = _t2pbr_memory_pending(task_id, chat_id)
+    parsed = pending.get('parsed') if isinstance(pending, dict) else {}
+    parsed = parsed if isinstance(parsed, dict) else {}
+    pdf_rows = parsed.get('pdf_spec_rows') or []
+    source_text = _s(raw_text, 60000) + "\n" + _s(photo_text, 60000) + "\n" + _s(parsed.get('raw'), 60000)
+    low = _low(source_text)
+    house_terms = (
+        "дом", "фундамент", "плита", "газобетон", "кирпич", "стены",
+        "кровля", "окна", "перекрытия", "санузел", "ламинат",
+    )
+    if pdf_rows and not any(term in low for term in house_terms):
+        return []
+    return _T2PBR_NOHOUSE_PREV_BUILD_ITEMS_V1(task_id, raw_text, photo_text, chat_id)
+# === END_PATCH_TOPIC2_FINAL_BRIDGE_NO_HOUSE_FOR_FILE_SPECS_V1 ===

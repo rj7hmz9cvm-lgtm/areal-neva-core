@@ -240,6 +240,23 @@ async def route_file(file_path: str, task_id: str, topic_id: int, intent: str, f
         elif intent == "vision":
             result = await analyze_image_file(file_path, None)
             return {"success": True, "engine": "gemini_vision", "result_text": result, "text_result": result}
+        elif intent == "description":
+            from core.universal_file_handler import extract_text_from_file
+            data = extract_text_from_file(file_path, task_id, topic_id)
+            if not data.get("success"):
+                return {"success": False, "error": data.get("error") or "FILE_DESCRIPTION_FAILED"}
+            text = (data.get("text") or "").strip()
+            rows = data.get("rows") or []
+            if not text and rows:
+                text = "\n".join(" | ".join(str(c or "") for c in row) for row in rows[:20])
+            if not text:
+                return {"success": False, "error": "FILE_DESCRIPTION_EMPTY"}
+            msg = (
+                f"Файл прочитан ({data.get('type') or 'unknown'}).\n"
+                f"Строк таблиц: {len(rows)}\n\n"
+                + text[:3500]
+            )
+            return {"success": True, "engine": "universal_file_handler", "result_text": msg, "text_result": msg}
         elif intent == "search":
             from core.search_engine import search_in_estimates
             results = search_in_estimates(file_path, topic_id)

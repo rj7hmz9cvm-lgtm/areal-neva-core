@@ -1,8 +1,2697 @@
 # ORCHESTRA_FULL_CONTEXT_PART_018
-generated_at_utc: 2026-07-07T19:24:08.722143+00:00
-git_sha_before_commit: 75f68ff0c25d5c4594ccc3083e30a8f7c1a4611b
+generated_at_utc: 2026-07-07T20:24:27.457510+00:00
+git_sha_before_commit: b72088bba5fc5e80f08dfdcc817ac5ad506f3f2d
 part: 18/22
 
+
+====================================================================================================
+BEGIN_FILE: data/templates/estimate/TEMPLATE__chat_-1003725299009__topic_2__20260430_100323.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 2751853a7fec499884e42f27a565e5d1374b91b8c0c7aaec43cecba88b3128f3
+====================================================================================================
+{
+  "engine": "FULLFIX_13A_SAMPLE_FILE_INTENT_AND_TEMPLATE_ESTIMATE",
+  "kind": "estimate",
+  "status": "active",
+  "chat_id": "-1003725299009",
+  "topic_id": 2,
+  "saved_by_task_id": "d390b50d-2f5e-4aeb-871a-3b30cc149d18",
+  "source_task_id": "12f63475-a307-49d5-bf85-45852622840e",
+  "source_file_id": "1Ert7YACjcfZcodklU7UnckLN3xgsyuKD",
+  "source_file_name": "ВОР_кирпичная_кладка_ИСПРАВЛЕНО.xlsx",
+  "source_mime_type": "",
+  "source_caption": "",
+  "source_score": 150,
+  "saved_at": "2026-04-30T10:03:23.387650+00:00",
+  "usage_rule": "Use this file as formatting/sample reference for future estimate/project artifacts in the same chat and topic",
+  "raw_user_instruction": "Тот файл который я тебе скинул последний возьми его как образец для составления сметы"
+}
+====================================================================================================
+END_FILE: data/templates/estimate/TEMPLATE__chat_-1003725299009__topic_2__20260430_100323.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: data/templates/estimate/TEMPLATE__chat_-1003725299009__topic_3008__20260501_083807.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 225b637da9991f976ece0bfe4c6d0a4eca022ecb9bb09fa84104e63fb6bdca92
+====================================================================================================
+{
+  "engine": "FULLFIX_13A_SAMPLE_FILE_INTENT_AND_TEMPLATE_ESTIMATE",
+  "kind": "estimate",
+  "status": "active",
+  "chat_id": "-1003725299009",
+  "topic_id": 3008,
+  "saved_by_task_id": "7270364c-bb74-4e1e-b531-de64dfe713b7",
+  "source_task_id": "f5c33c40-dacf-46c9-97ca-2dc19e245650",
+  "source_file_id": "1XsuPOtO-vyA73IX5Ui9AR9kf6uUAE5b_",
+  "source_file_name": "estimate_c925a897-66ec-435e-8312-15687f.xlsx",
+  "source_mime_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "source_caption": "",
+  "source_score": 110,
+  "saved_at": "2026-05-01T08:38:07.108195+00:00",
+  "usage_rule": "Use this file as formatting/sample reference for future estimate/project artifacts in the same chat and topic",
+  "raw_user_instruction": "этот чат у нас используется с тобой для работы, соответственно, как ты правильно и сказал, по AI роутеру Arial Niva, но также мы здесь еще с тобой пишем коды по определенным запросам команд, которые ты вот сейчас мне написал, например, напиши код. То есть здесь мы также с тобой создаем еще коды, которые делаются на основании четырех моделей, которые присутствуют у нас с тобой."
+}
+====================================================================================================
+END_FILE: data/templates/estimate/TEMPLATE__chat_-1003725299009__topic_3008__20260501_083807.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: data/templates/estimate/deprecated/DEPRECATED__ACTIVE__chat_-1003725299009__topic_2__VOR_20260503.original.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: f58425288c17d830efcab61e9238e10842f7d55434c1f35a8249f262001212c2
+====================================================================================================
+{
+  "engine": "FULLFIX_13A_SAMPLE_FILE_INTENT_AND_TEMPLATE_ESTIMATE",
+  "kind": "estimate",
+  "status": "deprecated",
+  "chat_id": "-1003725299009",
+  "topic_id": 2,
+  "saved_by_task_id": "d390b50d-2f5e-4aeb-871a-3b30cc149d18",
+  "source_task_id": "12f63475-a307-49d5-bf85-45852622840e",
+  "source_file_id": "1Ert7YACjcfZcodklU7UnckLN3xgsyuKD",
+  "source_file_name": "ВОР_кирпичная_кладка_ИСПРАВЛЕНО.xlsx",
+  "source_mime_type": "",
+  "source_caption": "",
+  "source_score": 150,
+  "saved_at": "2026-04-30T10:03:23.387650+00:00",
+  "usage_rule": "Use this file as formatting/sample reference for future estimate/project artifacts in the same chat and topic",
+  "raw_user_instruction": "Тот файл который я тебе скинул последний возьми его как образец для составления сметы",
+  "deprecated_reason": "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3: VOR disabled from active topic_2 estimate logic",
+  "deprecated_at": "2026-05-03T11:39:40.822192"
+}
+
+====================================================================================================
+END_FILE: data/templates/estimate/deprecated/DEPRECATED__ACTIVE__chat_-1003725299009__topic_2__VOR_20260503.original.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: data/templates/index.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 4fefe3e44a76c132b89c1186ecc62d498869ba8185064756cfe43da0f0726914
+====================================================================================================
+{
+  "_schema": "TEMPLATE_INDEX_DICT_FIX_V1",
+  "_legacy_type": "list",
+  "_legacy_data": [
+    {
+      "template_id": "d5d1fbca-e848-4e36-b297-d12312cc5217",
+      "chat_id": "-1003725299009",
+      "topic_id": 4569,
+      "source_task_id": "d5d1fbca-e848-4e36-b297-d12312cc5217",
+      "source_file_name": "",
+      "mime_type": "",
+      "kind": "unknown_template",
+      "created_at": "2026-05-01T10:23:26.354953",
+      "active": true
+    },
+    {
+      "template_id": "364b2395-0744-4a88-80a8-6e87c282aa3d",
+      "chat_id": "-1003725299009",
+      "topic_id": 210,
+      "source_task_id": "364b2395-0744-4a88-80a8-6e87c282aa3d",
+      "source_file_name": "АР_КД_Агалатово_02.pdf",
+      "mime_type": "application/pdf",
+      "kind": "estimate_template",
+      "created_at": "2026-05-01T11:32:07.307426",
+      "active": false
+    },
+    {
+      "template_id": "ee10abce-9662-4797-825e-096188f40a4e",
+      "chat_id": "-1003725299009",
+      "topic_id": 210,
+      "source_task_id": "ee10abce-9662-4797-825e-096188f40a4e",
+      "source_file_name": "АР_КД_Агалатово_02.pdf",
+      "mime_type": "application/pdf",
+      "kind": "estimate_template",
+      "created_at": "2026-05-01T11:34:12.786364",
+      "active": true
+    },
+    {
+      "template_id": "bab630ba-7e3f-4c43-88ff-3e917e5c6279",
+      "chat_id": "-1003725299009",
+      "topic_id": 2,
+      "source_task_id": "bab630ba-7e3f-4c43-88ff-3e917e5c6279",
+      "source_file_name": "Техническое задание Кордон снт.docx",
+      "mime_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "kind": "estimate_template",
+      "created_at": "2026-05-02T00:20:57.882990",
+      "active": true
+    }
+  ]
+}
+====================================================================================================
+END_FILE: data/templates/index.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: data/topics/0/meta.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 99110904300dc66aa8fe5e9cc9aa1de41ba518ca5ce020af0cb0e2c4fb0739f8
+====================================================================================================
+{
+  "topic_id": 0,
+  "name": "ЛИДЫ АМО",
+  "direction": "crm_leads",
+  "chat_id": "-1003725299009",
+  "chat_name": "НЕЙРОНКИ ЧАТ",
+  "synced_at": "2026-05-01T09:28:21.231172+00:00",
+  "synced_by": "TOPIC_SYNC_FULL_V1"
+}
+====================================================================================================
+END_FILE: data/topics/0/meta.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: data/topics/11/meta.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 04c69440018c5cb2105f1624418040b5c4dac9a5da55f0ac5b07727ed5a103e0
+====================================================================================================
+{
+  "topic_id": 11,
+  "name": "ВИДЕОКОНТЕНТ",
+  "direction": "video_production",
+  "chat_id": "-1003725299009",
+  "chat_name": "НЕЙРОНКИ ЧАТ",
+  "synced_at": "2026-05-01T09:28:21.231872+00:00",
+  "synced_by": "TOPIC_SYNC_FULL_V1"
+}
+====================================================================================================
+END_FILE: data/topics/11/meta.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: data/topics/2/meta.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 51744f466380c4b2398e4e6b98c21d35fa9435a905eb9c53b308aa6a8d8836ca
+====================================================================================================
+{
+  "topic_id": 2,
+  "name": "СТРОЙКА",
+  "direction": "estimates",
+  "chat_id": "-1003725299009",
+  "chat_name": "НЕЙРОНКИ ЧАТ",
+  "synced_at": "2026-05-01T09:28:21.231412+00:00",
+  "synced_by": "TOPIC_SYNC_FULL_V1"
+}
+====================================================================================================
+END_FILE: data/topics/2/meta.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: data/topics/210/meta.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: ce50915df1bdab1a3baf419fea40ed5b9dfc1f6d009a4daecf0b4e7fcb36110a
+====================================================================================================
+{
+  "topic_id": 210,
+  "name": "ПРОЕКТИРОВАНИЕ",
+  "direction": "structural_design",
+  "chat_id": "-1003725299009",
+  "chat_name": "НЕЙРОНКИ ЧАТ",
+  "synced_at": "2026-05-01T09:28:21.232182+00:00",
+  "synced_by": "TOPIC_SYNC_FULL_V1"
+}
+====================================================================================================
+END_FILE: data/topics/210/meta.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: data/topics/3008/meta.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 997992e041d0f6ac8ad7dd83631d2eef51a26013445370bc050ff361e3f29c0e
+====================================================================================================
+{
+  "topic_id": 3008,
+  "name": "КОДЫ МОЗГОВ",
+  "direction": "orchestration_core",
+  "chat_id": "-1003725299009",
+  "chat_name": "НЕЙРОНКИ ЧАТ",
+  "synced_at": "2026-05-01T09:28:21.232993+00:00",
+  "synced_by": "TOPIC_SYNC_FULL_V1"
+}
+====================================================================================================
+END_FILE: data/topics/3008/meta.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: data/topics/4569/meta.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: a436174d9ec1dfc8e15f469fc81c061d7b8bbef1538638faefd32fec954e9343
+====================================================================================================
+{
+  "topic_id": 4569,
+  "name": "ЛИДЫ РЕКЛАМА",
+  "direction": "crm_leads",
+  "chat_id": "-1003725299009",
+  "chat_name": "НЕЙРОНКИ ЧАТ",
+  "synced_at": "2026-05-01T09:28:21.233153+00:00",
+  "synced_by": "TOPIC_SYNC_FULL_V1"
+}
+====================================================================================================
+END_FILE: data/topics/4569/meta.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: data/topics/5/meta.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 7ee48f4af7bf89f492bef00163145e6ee01981b768f38dd4c30e35b8e3311bf6
+====================================================================================================
+{
+  "topic_id": 5,
+  "name": "ТЕХНАДЗОР",
+  "direction": "technical_supervision",
+  "chat_id": "-1003725299009",
+  "chat_name": "НЕЙРОНКИ ЧАТ",
+  "synced_at": "2026-05-01T09:28:21.231656+00:00",
+  "synced_by": "TOPIC_SYNC_FULL_V1"
+}
+====================================================================================================
+END_FILE: data/topics/5/meta.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: data/topics/500/meta.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: fe567370b38840c0c5b5625ad07f3c7bc8473beeaccca3d54386fed17599275c
+====================================================================================================
+{
+  "topic_id": 500,
+  "name": "ВЕБ ПОИСК",
+  "direction": "internet_search",
+  "chat_id": "-1003725299009",
+  "chat_name": "НЕЙРОНКИ ЧАТ",
+  "synced_at": "2026-05-01T09:28:21.232499+00:00",
+  "synced_by": "TOPIC_SYNC_FULL_V1"
+}
+====================================================================================================
+END_FILE: data/topics/500/meta.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: data/topics/6104/meta.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 1e7f11136e5ddd7e984c3cbc17affc50d1c3f2f207ceecd341a32c7cf3a95e58
+====================================================================================================
+{
+  "topic_id": 6104,
+  "name": "РАБОТА ПОИСК",
+  "direction": "job_search",
+  "chat_id": "-1003725299009",
+  "chat_name": "НЕЙРОНКИ ЧАТ",
+  "synced_at": "2026-05-01T09:28:21.233266+00:00",
+  "synced_by": "TOPIC_SYNC_FULL_V1"
+}
+====================================================================================================
+END_FILE: data/topics/6104/meta.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: data/topics/794/meta.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: cac974b2d8a0b3bf5dc1955a1fae4c6385a6a02fa96e5efcca1346cfc03db928
+====================================================================================================
+{
+  "topic_id": 794,
+  "name": "НЕЙРОНКИ СОФТ ВПН ВПС",
+  "direction": "devops_server",
+  "chat_id": "-1003725299009",
+  "chat_name": "НЕЙРОНКИ ЧАТ",
+  "synced_at": "2026-05-01T09:28:21.232700+00:00",
+  "synced_by": "TOPIC_SYNC_FULL_V1"
+}
+====================================================================================================
+END_FILE: data/topics/794/meta.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: data/topics/961/meta.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: c1b720f5d6b47a31456f65ecdf73132c8522479962158c9e97bbdc93b9697d25
+====================================================================================================
+{
+  "topic_id": 961,
+  "name": "АВТО ЗАПЧАСТИ",
+  "direction": "auto_parts_search",
+  "chat_id": "-1003725299009",
+  "chat_name": "НЕЙРОНКИ ЧАТ",
+  "synced_at": "2026-05-01T09:28:21.232859+00:00",
+  "synced_by": "TOPIC_SYNC_FULL_V1"
+}
+====================================================================================================
+END_FILE: data/topics/961/meta.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/CHAT_EXPORTS/CHAT_EXPORT__2026-05-05_TECHNADZOR_FOLDER_DISCOVERY_FULL_CLOSE.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 8ea8e43903c6fe9dfa1ea078db41f8b928807d6652aa966afee4e1634da49ea1
+====================================================================================================
+{"chat_id":"current_chat_2026-05-05","chat_name":"TECHNADZOR_FOLDER_DISCOVERY_FULL_CLOSE","exported_at":"2026-05-05T10:45:00Z","source_model":"GPT-5.5 Thinking","system":"AREAL-NEVA / NEURON SOFT ORCHESTRA. FACT ONLY export for current chat. GitHub SSOT repository rj7hmz9cvm-lgtm/areal-neva-core.","architecture":"Server-first Telegram orchestration. Telegram topic_5 is technadzor interface. Google Drive is storage. Server stores logic/runtime. External Vision is owner-gated optional with EXTERNAL_PHOTO_ANALYSIS_ALLOWED=False by default.","pipeline":"topic_5 Telegram text/voice/files -> task_worker/final_closure_engine -> technadzor_engine.process_technadzor -> ActiveTechnadzorFolder/VisitMaterial/VisitPackage -> Drive OAuth topic-aware storage -> Telegram response. Folder discovery must resolve user folders by fresh Drive lookup before AI fallback.","files":["docs/HANDOFFS/LATEST_HANDOFF.md","docs/CANON_FINAL/TECHNADZOR_DOMAIN_LOGIC_CANON.md","core/technadzor_engine.py","core/final_closure_engine.py","task_worker.py","core/stt_engine.py","core/technadzor_drive_index.py"],"code":"Confirmed latest handoff records folder discovery live closed. Patches listed there: f1d6763 final_closure_engine topic5 route fix and technadzor_engine folder discovery; e1aa647 task_worker FCE hook unbound task fields fixed via _task_field; 8bf752e task_worker send path fixed via _task_field; 0a5c766 technadzor_engine excludes system folders; 48b1e55 technadzor_engine final folder root fix; f2e119f handoff update; previous P6H4TW/P6H4FD/P6H4TW_BATCH_TRIGGER commits include d90b5ad, ff753aa, 6463220, a5cae41, 38270c6.","patches":["TECHNADZOR_DOMAIN_LOGIC_CANON_V2 addendum accepted as ADDENDUM_NOT_REPLACEMENT, not superseding V1","EXTERNAL_PHOTO_ANALYSIS_ALLOWED=False guard added and OpenAI/GPT vision fallback forbidden","P6H_PART_4 VisitBuffer/ActiveFolder/VisitMaterial/VisitPackage implemented in code path","P6H4TW_BATCH_TRIGGER_V1 moved/wrapped process_technadzor in technadzor_engine because hook after asyncio.run in task_worker was dead","Folder discovery bug fixed to search Russian user root ТЕХНАДЗОР instead of system TECHNADZOR and exclude system folders","FCE hook fixed to use _task_field before local assignments","Folder/context intent must not fall to general AI"],"commands":["GitHub commits checked through connector","Google Drive folder metadata checked for old folder 1K2sJuMbXWt4xZWxFR8pXXPg1342Qu28j, new folder 1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG, user root 1s2y5l2mJFTb7P90XVokErXYVzmoH-VtD, system root 1vKQM0Z2qBmiKtgeyx95JaNEQAp5mJLOm","Requested server-side py_compile, restart areal-task-worker, live smoke in topic_5"],"db":"Observed task 5276 DONE in handoff with result finding folder тест надзор. Earlier task 5275 FAILED INVALID_RESULT_GATE because folder clarification/state was reprocessed. Earlier task 5274 DONE incorrectly set TECHNADZOR as active folder.","memory":"Topic scoped memory and active folder state must preserve chat_id+topic_id isolation. ActiveTechnadzorFolder must store folder_id, folder_name, folder_url, owner_instruction, updated_at, source=fresh_drive_lookup. Do not write debug/errors/system trash into long memory.","services":["areal-task-worker","telegram-ingress","areal-memory-api"],"errors":["Bot returned old folder Выезд 8 апреля 2026 instead of new тест надзор","Resolver selected system TECHNADZOR instead of user folder","Resolver searched wrong root TECHNADZOR 1vKQM0Z2qBmiKtgeyx95JaNEQAp5mJLOm instead of ТЕХНАДЗОР 1s2y5l2mJFTb7P90XVokErXYVzmoH-VtD","FCE hook UnboundLocalError cannot access local variable task_id before assignment","WAITING_CLARIFICATION was reprocessed into INVALID_RESULT_GATE for folder discovery","topic_500 internet search reported by owner as not working and remains needing diagnostics/live proof"],"decisions":["External Vision is not a blocker for full close; it is CLOSED_AS_OWNER_GATED_OPTIONAL","Vision model must not be changed, no Llama/Pixtral/OpenAI/GPT, no direct Google Gemini API for Vision","TECHNADZOR is system/service folder and must never become ActiveTechnadzorFolder","ТЕХНАДЗОР is user folder root for technadzor user folders and also must not become ActiveTechnadzorFolder","ActiveTechnadzorFolder can only be a child/user project folder such as тест надзор","The folder named тест надзор exists and should be found by name without owner sending URL","User source docs folder 1sTMg-2cJpWmjJLEj-4Y80brWl5e70AZk is flat clean owner source folder; no extra subfolders required now; orchestra service files go elsewhere"],"solutions":["Folder/context intent in topic_5 must bypass narrow is_technadzor_intent and call process_technadzor directly","Folder discovery must extract target folder name from raw input","Search order: explicit URL -> exact/fuzzy child folder under ТЕХНАДЗОР -> strict Drive-wide name fallback -> concrete clarification","Return contract: handled=True ok=True for processed folder commands, handled=False ok=False for not handled","For not found folder/context command return DONE handled message to avoid AI fallback and INVALID_RESULT_GATE","System folders excluded from candidates: TECHNADZOR, ТЕХНАДЗОР, topic_5, _orchestra_work, _system, _tmp, _archive, _drafts, _templates, _manifests"],"state":"LATEST_HANDOFF currently states FOLDER DISCOVERY LIVE CLOSED with control case PASSED. topic_5 code side considered closed, live smoke still needed for real Telegram file/photo/разбор/акт flows. topic_500 internet search not working per owner and must be diagnosed separately.","what_working":["GitHub main contains handoff update f2e119f and folder discovery status","Google Drive connector confirms new folder тест надзор exists","Owner docs folder contains three act/source documents and no service trash","P6H/P6H4TW/P6H4FD code path documented in handoff"],"what_broken":["topic_500 internet search reported not working","Before final folder fix the resolver selected wrong/stale/system folders","Live Telegram smoke for topic_5 full file/photo flow still pending"],"what_not_done":["Full live smoke: topic_5 photo/file -> buffer -> voice/text note -> сделай разбор -> one response","Drive folder URL/name -> загрузи папку -> сделай акт","topic_2 real estimate request smoke","topic_500 real search smoke with Sonar and sources","Update docs/canon with current chat export and latest folder docs if needed"],"current_breakpoint":"Owner requested full current chat/session export and GitHub update after resolving folder discovery issues and before continuing broader testing.","root_causes":["Folder resolver used stale/old active folder or wrong system root instead of fresh user-root Drive lookup","Narrow technadzor intent did not classify folder/context commands","FCE hook referenced local variables before assignment","Return/state contract caused folder clarification to be reprocessed by general gates"],"verification":["Google Drive metadata confirmed old folder Выезд 8 апреля 2026 id 1K2sJuMbXWt4xZWxFR8pXXPg1342Qu28j","Google Drive metadata confirmed new folder тест надзор id 1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG under ТЕХНАДЗОР id 1s2y5l2mJFTb7P90XVokErXYVzmoH-VtD","Google Drive metadata confirmed system TECHNADZOR id 1vKQM0Z2qBmiKtgeyx95JaNEQAp5mJLOm contains only service DOCX files","LATEST_HANDOFF fetched from GitHub confirms task 5276 DONE and found тест надзор"],"limits":["No SSH direct execution from ChatGPT environment; server commands must be run by owner/Claude on server","Google Drive chat export standard says Drive telegram_exports, but user asked GitHub update; this file is GitHub JSON export counterpart","No hidden assumptions; UNKNOWN should be used where not verified"]}
+====================================================================================================
+END_FILE: docs/CHAT_EXPORTS/CHAT_EXPORT__2026-05-05_TECHNADZOR_FOLDER_DISCOVERY_FULL_CLOSE.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/SHARED_CONTEXT/DWG_CONVERTER_STATUS.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: c1575faa9c30f7376fc965272741bac01693c844705a64e8b4ab6813ad0e4e73
+====================================================================================================
+{
+  "checked_at": "2026-05-01T22:49:05.964682+00:00",
+  "dwg2dxf": null,
+  "ODAFileConverter": null,
+  "geometry_status": "DWG_METADATA_ONLY_DXF_FULL_PARSE_READY",
+  "note": "DXF parses directly. DWG full geometry requires dwg2dxf or ODAFileConverter; without converter DWG metadata path remains active"
+}
+====================================================================================================
+END_FILE: docs/SHARED_CONTEXT/DWG_CONVERTER_STATUS.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/TECHNADZOR/NORMATIVE_ENGINE_SHARED_CONTEXT.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 9011f21b0b01ee1ac4003c659691ab5e1f7cae2cdde825f9eb706352568f28a0
+====================================================================================================
+{
+  "version": "NORMATIVE_ENGINE_SHARED_CONTEXT_V2",
+  "updated_at": "2026-05-05",
+  "status": "VERIFIED_FROM_CODE",
+  "git_head": "73b4946",
+  "sources": {
+    "normative_engine": "core/normative_engine.py",
+    "norms_map": "core/project_engine.py NORMS_MAP lines 39-45"
+  },
+
+  "normative_engine_committed": {
+    "total_entries": 59,
+    "blocks": {
+      "NORMATIVE_ENGINE_SAFE_V1": 8,
+      "P6H_NORMATIVE_INDEX_EXTRA_V1": 10,
+      "P6H5_NORMATIVE_FULL_EXPAND_V1": 36,
+      "P6H6_LOADS_V1": 5
+    },
+    "smoke_test": "11/11 PASS at commit 73b4946",
+    "shared_topic5_topic210": [
+      "СП 70.13330.2012",
+      "СП 63.13330.2018",
+      "СП 20.13330.2016/2017",
+      "СП 16.13330.2017",
+      "СП 17.13330.2017"
+    ],
+    "primarily_topic5": [
+      "СП 28.13330.2017",
+      "ГОСТ 23118-2019",
+      "СП 48.13330.2019",
+      "СП 13-102-2003",
+      "ГОСТ 31937-2024",
+      "ГОСТ Р ИСО 17637-2014",
+      "СП 22.13330.2016"
+    ],
+    "primarily_topic210": [
+      "ГОСТ 21.101-2020",
+      "ГОСТ 21.501-2018",
+      "СП 71.13330.2017"
+    ],
+    "p6h5_topic210_ov_vk_eom": [
+      "СП 60.13330.2020", "СП 73.13330.2016", "СП 61.13330.2012",
+      "СП 30.13330.2020", "СП 31.13330.2021", "СП 32.13330.2018",
+      "ПУЭ (7-е изд.)", "СП 256.1325800.2016", "ГОСТ Р 50571-4-41-2022"
+    ],
+    "p6h6_loads_sp20": [
+      "снеговые нагрузки",
+      "ветровые нагрузки",
+      "постоянные нагрузки",
+      "временные нагрузки",
+      "сочетания нагрузок"
+    ]
+  },
+
+  "norms_map_committed": {
+    "кж": ["СП 63.13330.2018", "ГОСТ 34028-2016", "СП 20.13330.2017"],
+    "км": ["СП 16.13330.2017", "ГОСТ 27772-2015", "СП 20.13330.2017"],
+    "ар": ["СП 118.13330.2022", "ГОСТ 21.501-2018"],
+    "ов": ["СП 60.13330.2020", "ГОСТ 30494-2011"],
+    "вк": ["СП 30.13330.2020", "СП 31.13330.2021"],
+    "эом": ["СП 256.1325800.2016", "ПУЭ-7"],
+    "overlap_with_normative_engine": ["СП 63.13330.2018", "СП 20.13330.2017", "СП 16.13330.2017", "ГОСТ 21.501-2018"],
+    "only_in_norms_map": ["ГОСТ 34028-2016", "ГОСТ 30494-2011", "СП 118.13330.2022", "ПУЭ-7", "ГОСТ 27772-2015"]
+  },
+
+  "loads_calculation": {
+    "normative_binding_status": "CLOSED",
+    "normative_binding_note": "P6H6 committed — все виды нагрузок покрыты ключевыми словами СП 20",
+    "calc_logic_status": "PARTIAL_CALC",
+    "calc_logic_note": "calc_loads() покрывает только снег/ветер по районам",
+    "committed": {
+      "calc_loads_fn": "core/project_engine.py:68",
+      "covers": ["snow_kPa by region (1-8)", "wind_kPa by region (1-8)"],
+      "norm_reference": "СП 20.13330.2017"
+    },
+    "not_implemented": [
+      "постоянные нагрузки (собственный вес)",
+      "временные нагрузки (полезная нагрузка по назначению помещения)",
+      "сочетания нагрузок",
+      "проверка предельных состояний"
+    ]
+  },
+
+  "open_items": {
+    "calc_logic": "PARTIAL_CALC — автоматический расчёт постоянных/временных/сочетаний не реализован",
+    "topic5_live_test": "NOT_DONE — фото/буфер/разбор через реальный Telegram не пройден",
+    "document_output_live": "NOT_DONE — PDF/DOCX/Drive link/fallback не подтверждены живым тестом",
+    "topic210_live": "NOT_DONE — ОВ/ВК/ЭОМ/КЖ/КМ через реальные файлы не прогнаны",
+    "vision": "BLOCKED — EXTERNAL_PHOTO_ANALYSIS_ALLOWED=False, owner decision required",
+    "missing_in_norms_map": ["сс", "гп", "пз", "см", "тх"]
+  }
+}
+
+====================================================================================================
+END_FILE: docs/TECHNADZOR/NORMATIVE_ENGINE_SHARED_CONTEXT.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/TECHNADZOR/NORMATIVE_ENGINE_SHARED_CONTEXT.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: fbe4915ea50f48d499b50d5e242969fe82790379f9887fbfe5a08c6aff1cb1cd
+====================================================================================================
+# NORMATIVE ENGINE — SHARED CONTEXT (topic_5 + topic_210)
+
+version: NORMATIVE_ENGINE_SHARED_CONTEXT_V2
+updated_at: 2026-05-05
+status: VERIFIED_FROM_CODE
+source_1: core/normative_engine.py — git HEAD 73b4946 (P6H5+P6H6 committed)
+source_2: core/project_engine.py NORMS_MAP — git HEAD 73b4946
+note: Только нормы из committed кода. Не изобретать новые нормы. Не добавлять пункты.
+
+---
+
+## 1. Два нормативных контура
+
+```
+normative_engine.py — SHARED
+  keyword-based search_norms_sync(text)
+  Используется: topic_5 (технадзор) + topic_210 (проектирование)
+  Committed: 59 записей (HEAD 73b4946)
+    — base 8 (NORMATIVE_ENGINE_SAFE_V1)
+    — P6H extension 10 (P6H_NORMATIVE_INDEX_EXTRA_V1)
+    — P6H5 expansion 36 (P6H5_NORMATIVE_FULL_EXPAND_V1) ← теперь COMMITTED
+    — P6H6 loads 5 (P6H6_LOADS_V1) ← теперь COMMITTED
+
+project_engine.py NORMS_MAP — topic_210 ONLY
+  section-based NORMS_MAP[section] → list of norm_ids
+  Используется: topic_210 — АР / КЖ / КМ / ОВ / ВК / ЭОМ
+  Committed: 6 разделов (HEAD 2deb7c8)
+```
+
+---
+
+## 2. normative_engine.py — committed 18 записей
+
+### 2.1 Общие (topic_5 + topic_210)
+
+| norm_id | Раздел | topic_5 | topic_210 |
+|---|---|---|---|
+| СП 70.13330.2012 | Несущие и ограждающие конструкции | акты: бетон, трещины | КЖ: несущая способность |
+| СП 63.13330.2018 | Бетонные и железобетонные конструкции | акты: ЖБ дефекты | КЖ: армирование, защитный слой |
+| СП 20.13330.2016/2017 | Нагрузки и воздействия | акты: основания, перекрытия | КЖ/КМ: расчётные нагрузки |
+| СП 16.13330.2017 | Стальные конструкции | акты: сварка, связи, узлы | КМ: металлокаркас |
+| СП 17.13330.2017 | Кровли | акты: протечки, примыкания | АР: кровельные решения |
+
+### 2.2 Преимущественно topic_5
+
+| norm_id | Раздел |
+|---|---|
+| СП 28.13330.2017 | Защита строительных конструкций от коррозии |
+| ГОСТ 23118-2019 | Конструкции стальные строительные. Общие ТУ |
+| СП 48.13330.2019 | Организация строительства (стройконтроль) |
+| СП 13-102-2003 | Обследование несущих строительных конструкций |
+| ГОСТ 31937-2024 | Обследование и мониторинг технического состояния |
+| ГОСТ Р ИСО 17637-2014 | Визуальный контроль сварных соединений |
+| СП 22.13330.2016 | Основания зданий и сооружений |
+| СП 70.13330.2012 *(2-я запись)* | Опорные узлы металлоконструкций |
+| СП 16.13330.2017 *(2-я запись)* | Пространственные связи |
+| СП 20.13330.2016 *(2-я запись)* | Нагрузки — перекрытия |
+
+### 2.3 Преимущественно topic_210
+
+| norm_id | Раздел |
+|---|---|
+| ГОСТ 21.101-2020 | Основные требования к проектной и рабочей документации |
+| ГОСТ 21.501-2018 | Рабочая документация АР и КР |
+| СП 71.13330.2017 | Изоляционные и отделочные покрытия |
+
+---
+
+## 3. project_engine.py NORMS_MAP — topic_210, 6 разделов
+
+Источник: `core/project_engine.py`, строки 39–45, HEAD 2deb7c8.
+
+```python
+NORMS_MAP = {
+    "кж":  ["СП 63.13330.2018", "ГОСТ 34028-2016", "СП 20.13330.2017"],
+    "км":  ["СП 16.13330.2017", "ГОСТ 27772-2015", "СП 20.13330.2017"],
+    "ар":  ["СП 118.13330.2022", "ГОСТ 21.501-2018"],
+    "ов":  ["СП 60.13330.2020", "ГОСТ 30494-2011"],
+    "вк":  ["СП 30.13330.2020", "СП 31.13330.2021"],
+    "эом": ["СП 256.1325800.2016", "ПУЭ-7"],
+}
+```
+
+NORMS_MAP частично пересекается с normative_engine.py (committed):
+- СП 63.13330.2018 — в NORMS_MAP["кж"] и в normative_engine base
+- СП 20.13330.2017 — в NORMS_MAP["кж","км"] и в normative_engine ("СП 20.13330.2016/2017")
+- СП 16.13330.2017 — в NORMS_MAP["км"] и в normative_engine base
+- ГОСТ 21.501-2018 — в NORMS_MAP["ар"] и в normative_engine base
+
+Только в NORMS_MAP (не в normative_engine committed):
+- ГОСТ 34028-2016 — прокат арматурный (КЖ)
+- ГОСТ 30494-2011 — параметры микроклимата (ОВ)
+- СП 118.13330.2022 — общественные здания (АР)
+- ПУЭ-7 — электроустановки (ЭОМ)
+- ГОСТ 27772-2015 — прокат стальной (КМ)
+
+---
+
+## 4. Расчёт нагрузок и несущей способности — PARTIAL
+
+### Что есть в committed коде
+
+`core/project_engine.py` — `calc_loads(region)`, строки 68–73:
+```python
+{"snow_kPa": ..., "wind_kPa": ..., "region": region, "note": "СП 20.13330.2017 — район N"}
+```
+
+Закрыто только:
+- снеговая нагрузка по 8 районам (SNOW_LOADS)
+- ветровая нагрузка по 8 районам (WIND_LOADS)
+- нормативная привязка: СП 20.13330.2017
+
+Нормативные документы в committed движке (оба контура):
+- СП 20.13330.2016/2017 — нагрузки и воздействия (normative_engine)
+- СП 16.13330.2017 — стальные конструкции (normative_engine + NORMS_MAP КМ)
+- СП 63.13330.2018 — ЖБ конструкции (normative_engine + NORMS_MAP КЖ)
+- СП 22.13330.2016 — основания (normative_engine)
+
+### Что НЕ закрыто
+
+```
+FULL расчёт несущей способности: НЕ ЗАКРЫТ
+
+Отсутствует в committed коде:
+- постоянные нагрузки (собственный вес конструкций)
+- временные нагрузки (полезная нагрузка на перекрытия по назначению)
+- особые нагрузки (сейсмика, взрыв, обрушение)
+- крановые нагрузки
+- нагрузки на фундаменты от надземных конструкций
+- расчёт сечений элементов по нормативным требованиям
+- проверка предельных состояний (1-я группа, 2-я группа)
+```
+
+### Что необходимо добавить (в оба направления)
+
+**topic_5 (ТЕХНАДЗОР):**
+Нормы ветровых и снеговых нагрузок нужны при проверке несущих конструкций в актах осмотра:
+- установить соответствие пролётов, прогонов, связей расчётным нагрузкам
+- фиксировать нагрузочный класс объекта при документировании дефектов несущих элементов
+
+**topic_210 (ПРОЕКТИРОВАНИЕ):**
+Для полноценного разбора КЖ/КМ разделов проектной документации:
+- нормативная привязка по видам нагрузок (не только снег/ветер)
+- расчётные сочетания нагрузок
+- классы ответственности и коэффициенты надёжности
+
+Статус: `PARTIAL — базовая нормативная привязка закрыта; полный расчётный контур не реализован`
+
+---
+
+## 5. P6H5 + P6H6 — COMMITTED (73b4946)
+
+`core/normative_engine.py` — оба блока зафиксированы в коммите 73b4946.
+Статус: `COMMITTED`
+
+**P6H5_NORMATIVE_FULL_EXPAND_V1** (36 норм):
+- ИД / журналы: РД-11-02-2006, РД-11-05-2007, СП 11-110-99
+- Бетонные смеси: ГОСТ 7473-2010, ГОСТ 18105-2018, ГОСТ 26633-2015
+- Газобетон / кладка: ГОСТ 31360-2007, СП 339.1325800.2017, СП 15.13330.2020
+- КМ: СП 294.1325800.2017, ГОСТ 27772-2015, СП 260.1325800.2016
+- ГКЛ: СП 163.1325800.2014, ГОСТ 6266-2018
+- Фасады / окна: СП 50.13330.2012, СП 293.1325800.2017, ГОСТ 30674-99
+- ОВ: СП 60.13330.2020, СП 73.13330.2016, СП 61.13330.2012
+- ВК: СП 30.13330.2020, СП 31.13330.2021, СП 32.13330.2018
+- ЭОМ: ПУЭ (7-е изд.), СП 256.1325800.2016, ГОСТ Р 50571-4-41-2022
+- Пожарная безопасность: 123-ФЗ, СП 1.13130.2020, СП 2.13130.2020
+- Охрана труда: СНиП 12-03-2001, СНиП 12-04-2002, Приказ №336н/№883н, ГОСТ 12.0.004-2015, ГОСТ 12.4.011-89, СП 49.13330.2010
+
+**P6H6_LOADS_V1** (5 записей — СП 20.13330.2017):
+снеговые, ветровые, постоянные, временные, сочетания нагрузок
+
+P6H5 частично дублирует NORMS_MAP (ОВ, ВК, ЭОМ) — оба источника теперь committed.
+smoke 11/11 PASS при commit.
+
+---
+
+## 6. Правила использования нормативного контура
+
+```
+1. topic_5 (ТЕХНАДЗОР):
+   - Использовать search_norms_sync() из normative_engine.py
+   - NORMS_MAP не применяется
+   - Если норма не найдена → "норма не подтверждена"
+
+2. topic_210 (ПРОЕКТИРОВАНИЕ):
+   - Раздел: detect_section() → NORMS_MAP[section]
+   - normative_engine дополнительно для текстового поиска
+   - Нельзя смешивать нормы разных разделов
+
+3. Общий запрет:
+   - Не изобретать новые СП/ГОСТ
+   - Не придумывать пункты нормативов
+   - Confidence=PARTIAL у всех committed записей
+
+4. Нагрузки:
+   - Нормативная привязка по всем видам нагрузок: ЗАКРЫТА (P6H6, СП 20)
+   - calc_loads() в project_engine: только снег/ветер по районам
+   - Автоматический расчёт постоянных/временных/сочетаний нагрузок: НЕ РЕАЛИЗОВАН
+   - Статус: PARTIAL_CALC — нормы есть, расчётная логика отсутствует
+```
+
+---
+
+## 7. Верификация с каноном
+
+Canon `TECHNADZOR_DOMAIN_LOGIC_CANON.md`, §22:
+```
+СП 16, СП 70, СП 28, ГОСТ 23118, СП 48, СП 13-102, ГОСТ 31937, СП 63, СП 22
+```
+Все 9 норм присутствуют в committed normative_engine.py. ✓
+
+Canon `01_SYSTEM_LOGIC_FULL.md`:
+```
+topic_210: КЖ / КМ / КМД / АР / ОВ / ВК / ЭОМ / СС / ГП / ПЗ / СМ / ТХ
+```
+- ОВ / ВК / ЭОМ — committed нормы в project_engine.py NORMS_MAP. ✓
+- СС / ГП / ПЗ / СМ / ТХ — в NORMS_MAP отсутствуют. NOT_PRESENT.
+
+====================================================================================================
+END_FILE: docs/TECHNADZOR/NORMATIVE_ENGINE_SHARED_CONTEXT.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/TECHNADZOR/TOPIC5_DOCUMENT_OUTPUT_CONTRACT.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 557b97c8c932bb7c5228ff7049330426530dca78340f4cddab5435c59e290633
+====================================================================================================
+{
+  "version": "TOPIC5_DOCUMENT_OUTPUT_CONTRACT_V1",
+  "updated_at": "2026-05-05",
+  "status": "CODE_AUDIT_DRAFT_NOT_LIVE_VERIFIED",
+  "source": "technadzor_engine.py audit + owner addendum 2026-05-05",
+
+  "output_types": [
+    {"type": "TEXT_REPORT", "status": "ACTIVE", "note": "рабочий путь"},
+    {"type": "PDF_ACT", "status": "NOT_IMPLEMENTED", "note": "local-check 2026-05-05: ModuleNotFoundError reportlab"},
+    {"type": "DOCX", "status": "NOT_IMPLEMENTED", "note": "local-check 2026-05-05: ModuleNotFoundError python-docx"},
+    {"type": "XLSX", "status": "UNVERIFIED"},
+    {"type": "GOOGLE_DOC", "status": "FUTURE_OPTIONAL_NOT_VERIFIED"},
+    {"type": "TELEGRAM_ONLY", "status": "ACTIVE", "note": "нет файла, только текст"}
+  ],
+
+  "document_statuses": [
+    "TELEGRAM_TEXT_REPORT_SENT",
+    "LOCAL_DRAFT_CREATED",
+    "DOCX_DRAFT_CREATED",
+    "PDF_GENERATION_NOT_IMPLEMENTED",
+    "DRIVE_UPLOAD_PENDING",
+    "DRIVE_UPLOAD_DONE",
+    "DRIVE_UPLOAD_FAILED",
+    "TELEGRAM_LINK_SENT",
+    "FALLBACK_SENT",
+    "CLIENT_DOCUMENT_DELIVERED"
+  ],
+
+  "done_rule": {
+    "done": "CLIENT_DOCUMENT_DELIVERED",
+    "not_done": [
+      "LOCAL_DRAFT_CREATED",
+      "DOCX_DRAFT_CREATED",
+      "DRIVE_UPLOAD_DONE without TELEGRAM_LINK_SENT"
+    ],
+    "conditions": [
+      "Document exists (PDF / DOCX / TEXT)",
+      "Uploaded to Drive (PDF/DOCX) OR text sent to Telegram (TEXT)",
+      "Owner/client received link or text in Telegram"
+    ]
+  },
+
+  "forbidden_patterns": [
+    "calling LOCAL_DRAFT_CREATED done",
+    "calling DOCX_DRAFT_CREATED done without Drive upload and Telegram link",
+    "claiming PDF generated without reportlab local-check",
+    "Drive upload without Telegram confirmation",
+    "sending /root/... path to client",
+    "placing DOCX in client_facing without explicit owner command"
+  ],
+
+  "delivery_chain": {
+    "entry": "task_worker._handle_in_progress",
+    "process": "process_technadzor (wrapper chain, 8 definitions)",
+    "build": "_p6h_build_* (text / docx / pdf)",
+    "drive_upload_fn": "technadzor_drive_index.upload_client_pdf_to_folder",
+    "drive_upload_fn_line": 383,
+    "drive_upload_fn_verified": true,
+    "fallback": "FALLBACK_SENT + error status in ObjectCard"
+  },
+
+  "packages_local_check_20260505": {
+    "reportlab": "NOT_INSTALLED",
+    "python_docx": "NOT_INSTALLED",
+    "dejavu_fonts": "PRESENT"
+  },
+
+  "file_naming": {
+    "docx_draft": "Черновик_акта_<объект>_<дата>.docx",
+    "pdf_final": "Акт_осмотра_<объект>_<дата>.pdf",
+    "xlsx_registry": "Реестр_замечаний_<объект>_<дата>.xlsx",
+    "date_format": "YYYYMMDD",
+    "object_name": "Russian name from ObjectCard"
+  },
+
+  "drive_placement": {
+    "client_facing_folder": "финальный PDF; DOCX только по явной команде владельца",
+    "topic5_system_folder": "служебные файлы, черновики, JSON манифесты",
+    "forbidden": "путь /root/... клиенту"
+  }
+}
+
+====================================================================================================
+END_FILE: docs/TECHNADZOR/TOPIC5_DOCUMENT_OUTPUT_CONTRACT.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/TECHNADZOR/TOPIC5_DOCUMENT_OUTPUT_CONTRACT.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: edff2931c8896b02651a0175466d81c5659f3ebc155ccfa5f9a60b6ddc44480d
+====================================================================================================
+# TOPIC5 DOCUMENT OUTPUT CONTRACT
+
+version: TOPIC5_DOCUMENT_OUTPUT_CONTRACT_V1
+updated_at: 2026-05-05
+status: CODE_AUDIT_DRAFT_NOT_LIVE_VERIFIED
+source: technadzor_engine.py audit + owner addendum 2026-05-05
+
+---
+
+## 1. Типы выходных документов
+
+| Тип | Константа | Статус |
+|---|---|---|
+| Текстовый разбор | TEXT_REPORT | ACTIVE — рабочий путь |
+| PDF акт | PDF_ACT | NOT_IMPLEMENTED — local-check 2026-05-05: ModuleNotFoundError |
+| DOCX черновик | DOCX | NOT_IMPLEMENTED — local-check 2026-05-05: ModuleNotFoundError |
+| XLSX реестр | XLSX | UNVERIFIED |
+| Google Doc | GOOGLE_DOC | FUTURE_OPTIONAL_NOT_VERIFIED |
+| Только Telegram | TELEGRAM_ONLY | ACTIVE — нет файла, только текст |
+
+---
+
+## 2. Статусы документа
+
+```
+TELEGRAM_TEXT_REPORT_SENT   — текстовый разбор отправлен в Telegram
+LOCAL_DRAFT_CREATED         — черновик создан локально (НЕ ДОСТАВЛЕН клиенту)
+DOCX_DRAFT_CREATED          — DOCX создан локально (НЕ ДОСТАВЛЕН клиенту)
+PDF_GENERATION_NOT_IMPLEMENTED — reportlab не установлен: ModuleNotFoundError
+DRIVE_UPLOAD_PENDING        — ожидает загрузки на Drive
+DRIVE_UPLOAD_DONE           — загружен на Drive
+DRIVE_UPLOAD_FAILED         — ошибка загрузки на Drive
+TELEGRAM_LINK_SENT          — ссылка на Drive отправлена в Telegram
+FALLBACK_SENT               — текстовый fallback вместо файла
+CLIENT_DOCUMENT_DELIVERED   — документ доставлен: Drive + Telegram ссылка получена
+```
+
+---
+
+## 3. Правило DONE
+
+```
+CLIENT_DOCUMENT_DELIVERED = задача выполнена
+LOCAL_DRAFT_CREATED        ≠ задача выполнена
+DOCX_DRAFT_CREATED         ≠ задача выполнена
+DRIVE_UPLOAD_DONE без Telegram ссылки ≠ задача выполнена
+
+Закрыто только когда:
+  1. Документ существует (PDF / DOCX / TEXT)
+  2. Загружен на Drive (PDF/DOCX) ИЛИ текст отправлен в Telegram (TEXT)
+  3. Владелец/клиент получил ссылку или текст в Telegram
+```
+
+---
+
+## 4. Запрещённые паттерны
+
+- Называть LOCAL_DRAFT_CREATED «готово» или «документ создан»
+- Называть DOCX_DRAFT_CREATED «акт готов» без Drive-загрузки и Telegram-ссылки
+- Сообщать «PDF сгенерирован» без фактической проверки reportlab
+- Загружать на Drive без подтверждения ссылки в Telegram
+- Отправлять клиенту путь вида /root/...
+- Помещать DOCX в client_facing папку без явной команды владельца
+
+---
+
+## 5. Цепочка доставки
+
+```
+Telegram (владелец)
+  → task_worker._handle_in_progress
+  → process_technadzor (wrapper chain, 8 definitions)
+  → VisitPackage собран
+  → _p6h_build_* (text / docx / pdf builder)
+  → technadzor_drive_index.upload_client_pdf_to_folder (line 383, verified)
+  → Telegram ответ со ссылкой
+```
+
+Если любой шаг падает → FALLBACK_SENT + статус ошибки в ObjectCard.
+
+---
+
+## 6. Статус пакетов (local-check 2026-05-05)
+
+```
+reportlab:    ModuleNotFoundError — не установлен
+python-docx:  ModuleNotFoundError — не установлен
+DejaVu fonts: присутствуют (/usr/share/fonts/truetype/dejavu/)
+
+Код _p6h_build_pdf_act / _p6h_build_docx_act существует в technadzor_engine.py
+но упадёт на import при вызове.
+
+Текущий рабочий путь: TEXT_REPORT → Telegram text
+```
+
+---
+
+## 7. Именование файлов
+
+```
+Черновик DOCX:  Черновик_акта_<объект>_<дата>.docx
+Финальный PDF:  Акт_осмотра_<объект>_<дата>.pdf
+Реестр XLSX:    Реестр_замечаний_<объект>_<дата>.xlsx
+```
+
+Дата формат: YYYYMMDD.
+Объект: имя из ObjectCard на русском для клиентских файлов.
+
+---
+
+## 8. Drive placement
+
+```
+client_facing=True папка → финальный PDF акт
+                           DOCX — только по явной команде владельца
+topic_5 system folder    → служебные файлы, черновики, JSON манифесты
+Путь /root/...           → НИКОГДА не отправлять клиенту
+```
+
+====================================================================================================
+END_FILE: docs/TECHNADZOR/TOPIC5_DOCUMENT_OUTPUT_CONTRACT.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/TECHNADZOR/TOPIC5_RUNTIME_USAGE_RULES.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 4093ded0ac87b42cc50beb5578095a4ae85e9bc4ec5ec7f5ddb5ead599618fa3
+====================================================================================================
+# TOPIC5 RUNTIME USAGE RULES
+
+version: TOPIC5_RUNTIME_USAGE_RULES_V1
+updated_at: 2026-05-05
+status: CODE_AUDIT_VERIFIED
+
+---
+
+## 1. Что можно трогать / что нельзя
+
+### Запрещено редактировать напрямую
+```
+task_worker.py           — overlay chain (_handle_in_progress 14 definitions)
+telegram_daemon.py       — Telegram polling loop
+ai_router.py             — routing logic
+reply_sender.py          — delivery chain
+google_io.py             — Drive OAuth
+normative_engine.py      — dirty (+283 lines P6H5 expansion), не stage, не commit
+.env / credentials.json  — секреты
+token.json / *.session   — OAuth токены
+data/core.db             — рабочая БД
+data/memory.db           — memory БД
+```
+
+### Разрешено
+```
+docs/**                  — документация (append или новые файлы)
+core/technadzor_engine.py — только append к концу файла (monkeypatch pattern)
+core/normative_engine.py  — только append к концу файла (если явно разрешено)
+```
+
+---
+
+## 2. Append-only rule
+
+Все изменения кода в `/root/.areal-neva-core` — только дописывание к концу файла.
+Это соответствует существующему паттерну wrapper/monkeypatch-цепочек.
+
+Нельзя: редактировать существующие функции в середине файла.
+Можно: добавить новую обёртку в конец, которая вызывает предыдущую версию.
+
+---
+
+## 3. Перед любым патчем
+
+1. Прочитать `docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL.md`
+2. Прочитать `HANDOFFS/LATEST_HANDOFF.md`
+3. Убедиться что normative_engine.py не попадает в staged
+
+---
+
+## 4. Активное состояние системы (2026-05-05)
+
+```
+ActiveTechnadzorFolder:
+  object: тест надзор
+  folder_id: 1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG
+  status: OPEN
+  verified: true (task 5276 DONE)
+
+process_technadzor wrapper chain:
+  _p6h4tw_v1_wrapped = True
+  P6H4FD → P6H4TW → ... (8 definitions)
+
+Vision guard:
+  EXTERNAL_PHOTO_ANALYSIS_ALLOWED = False
+  OpenRouter Google: 403 при попытке включить
+
+SearchMonolithV2:
+  model: perplexity/sonar (via OpenRouter)
+  OPENROUTER_API_KEY: confirmed in .env
+  HTTP: real calls via urllib
+```
+
+---
+
+## 5. Изоляция объектов
+
+- Дефекты KIEVSKOE_95 → только KIEVSKOE_95
+- Дефекты NOVICHKOVO → только NOVICHKOVO
+- Дефекты SUSANINO → только SUSANINO
+- Нельзя переносить замечания между объектами
+- Нельзя применять металлокаркасные нормы к каркасному дому без проверки
+
+---
+
+## 6. Перед git push
+
+```bash
+mv core/context_aggregator.py /tmp/context_aggregator_backup.py
+# ... push ...
+mv /tmp/context_aggregator_backup.py core/context_aggregator.py
+```
+
+Это обязательный шаг перед каждым push.
+
+====================================================================================================
+END_FILE: docs/TECHNADZOR/TOPIC5_RUNTIME_USAGE_RULES.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/TECHNADZOR/TOPIC5_TECHNADZOR_SYSTEM_LOGIC_FINAL.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: e3bf441983629d033eb5d781360ea364c905fd229134d0ec3f2ed943a9080fa4
+====================================================================================================
+{
+  "version": "TOPIC5_TECHNADZOR_SYSTEM_LOGIC_FINAL_V1",
+  "updated_at": "2026-05-05",
+  "status": "FINAL_DOCUMENTED",
+  "topic": "topic_5",
+  "topic_name": "ТЕХНАДЗОР",
+  "main_principle": "Drive folder = work container. Telegram = owner explanation + control. Files = materials (not tasks). 61 photos = one visit = one act.",
+  "task_components": [
+    "OwnerInstruction",
+    "InputFiles",
+    "ActiveFolder",
+    "ObjectContext",
+    "PreviousActs"
+  ],
+  "material_paths": {
+    "PATH_A": "Drive folder → owner Telegram explanation → ActiveTechnadzorFolder → VisitPackage → one result",
+    "PATH_B": "Telegram files + voice → VisitBuffer → owner explanation → VisitPackage → one result"
+  },
+  "task_lifecycle": [
+    "owner creates/selects Drive folder",
+    "Оркестр opens ActiveTechnadzorFolder",
+    "owner uploads materials + explains via voice/text",
+    "Оркестр collects VisitMaterials (COLLECTING_VISIT_MATERIALS)",
+    "owner commands 'сделай разбор/акт/документ'",
+    "Оркестр assembles VisitPackage",
+    "ObjectContext loaded (history, previous acts)",
+    "Norms matched via normative_engine",
+    "One result output: text report / PDF / DOCX / XLSX",
+    "ObjectCard updated",
+    "Drive upload: final document only to topic folder"
+  ],
+  "drive_facts": {
+    "технадзор_root_id": "1s2y5l2mJFTb7P90XVokErXYVzmoH-VtD",
+    "технадзор_root_url": "https://drive.google.com/drive/folders/1s2y5l2mJFTb7P90XVokErXYVzmoH-VtD",
+    "topic_5_folder_id": "1yWIJdSrypH3BbIozCz-OAw1R6hmnMRHK",
+    "technadzor_system_id": "1vKQM0Z2qBmiKtgeyx95JaNEQAp5mJLOm",
+    "known_user_folders": [
+      "Сусанино. Технадзор",
+      "КП _Новичково_ Александр",
+      "Выезд ангар Киевское ш",
+      "Документы личные работа НЕ ОРКЕСТР",
+      "тест надзор"
+    ]
+  },
+  "system_folder_blacklist": [
+    "TECHNADZOR",
+    "ТЕХНАДЗОР",
+    "topic_5",
+    "_system",
+    "_tmp",
+    "_archive",
+    "_drafts",
+    "_templates",
+    "_manifests"
+  ],
+  "active_folder_state_file": "data/technadzor/active_folder_{chat_id}_{topic_id}.json",
+  "visit_buffer_file": "data/technadzor/buf_{chat_id}_{topic_id}.json",
+  "current_active_folder": {
+    "folder_id": "1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG",
+    "folder_name": "тест надзор",
+    "status": "TEST_ACTIVE_FOLDER",
+    "verified_task": "rowid_5276_DONE"
+  },
+  "remark_statuses": [
+    "новое замечание",
+    "подтверждено по фото",
+    "частично видно по фото",
+    "устранено",
+    "устранено частично",
+    "не устранено",
+    "требует доведения",
+    "не проверялось на текущем выезде",
+    "требует уточнения"
+  ],
+  "base_sections": [
+    "опорные узлы",
+    "сварные соединения",
+    "антикоррозионная защита",
+    "основание и водоотведение",
+    "крепления и узлы покрытия",
+    "связи / укосины / элементы жёсткости",
+    "бетонные и железобетонные конструкции",
+    "кровля / фасад / ограждающие конструкции",
+    "прочие замечания"
+  ],
+  "output_formats": ["PDF", "DOCX", "GoogleDocs", "TelegramText", "XLSX", "Appendix"],
+  "language_rules": {
+    "client_and_owner_output": "Russian only",
+    "code_internal": "English"
+  },
+  "vision_status": {
+    "EXTERNAL_PHOTO_ANALYSIS_ALLOWED": false,
+    "status": "VISION_BLOCKED_OWNER_DECISION_REQUIRED",
+    "reason": "OpenRouter Google 403 + no other Vision model authorized",
+    "fallback": "owner voice/text + previous acts + filenames/metadata"
+  },
+  "code_status": {
+    "visit_buffer": "VERIFIED",
+    "active_folder": "VERIFIED",
+    "folder_discovery": "LIVE_CLOSED_task5276",
+    "drive_batch_trigger": "INSTALLED_P6H4TW_BATCH_TRIGGER_V1",
+    "stt_hallucination_guard": "INSTALLED",
+    "vision_guard": "INSTALLED_EXTERNAL_PHOTO_ANALYSIS_ALLOWED_FALSE"
+  }
+}
+
+====================================================================================================
+END_FILE: docs/TECHNADZOR/TOPIC5_TECHNADZOR_SYSTEM_LOGIC_FINAL.json
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/TECHNADZOR/TOPIC5_TECHNADZOR_SYSTEM_LOGIC_FINAL.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 59b575c0ccca40bac5fb41a2907fc7d2801f4032826805668f594db34284d49c
+====================================================================================================
+# TOPIC5 TECHNADZOR — SYSTEM LOGIC FINAL
+
+version: TOPIC5_TECHNADZOR_SYSTEM_LOGIC_FINAL_V1
+updated_at: 2026-05-05
+status: FINAL_DOCUMENTED
+topic: topic_5 / ТЕХНАДЗОР
+references:
+  canon: docs/CANON_FINAL/TECHNADZOR_DOMAIN_LOGIC_CANON.md
+  unified_context: docs/TECHNADZOR/unified_context/TOPIC5_UNIFIED_TECHNADZOR_CONTEXT.md
+
+---
+
+## 1. Главный принцип
+
+```
+Google Drive папка = контейнер работы
+Telegram topic_5   = пояснение владельца и управление задачей
+Файлы              = материалы (не задачи)
+Голос/текст владельца = техническое ТЗ + привязка замечаний
+Оркестр            = связывает файлы, пояснения, объект, нормы, историю
+Финал              = один разбор или один документ по всей задаче
+```
+
+Файл сам по себе — не задача.
+61 фото = один выезд = один акт.
+Никаких задач на каждое фото.
+
+---
+
+## 2. Составные части TechnadzorTask
+
+```
+TechnadzorTask =
+  OwnerInstruction (голос или текст владельца)
+  + InputFiles     (фото / PDF / DOCX из Drive или Telegram)
+  + ActiveFolder   (текущая рабочая Drive-папка)
+  + ObjectContext  (ObjectCard — история объекта)
+  + PreviousActs   (предыдущие акты если есть)
+```
+
+---
+
+## 3. Два пути передачи материалов
+
+### Путь A — Drive (предпочтительный)
+1. Владелец создаёт папку на Drive в ТЕХНАДЗОР root
+2. Загружает фото, документы
+3. В Telegram topic_5 поясняет: объект, задача, что проверить
+4. Оркестр принимает папку как ActiveTechnadzorFolder
+5. По команде "сделай разбор/акт" — формирует один результат
+
+### Путь B — Telegram
+1. Владелец присылает фото/файлы напрямую в topic_5
+2. Комментирует голосом или текстом
+3. Оркестр копит в VisitBuffer
+4. По команде — flush → VisitPackage → один результат
+
+**Смешивание путей допустимо:** файлы из Drive + голос из Telegram = норма.
+
+---
+
+## 4. Жизненный цикл задачи topic_5
+
+```
+Владелец → папка / фото / объяснение
+→ Оркестр: ActiveTechnadzorFolder открыта?
+     НЕТ → "К какой папке отнести материалы?"
+     ДА  → принять, связать с объектом
+→ VisitMaterial создаётся (COLLECTING_VISIT_MATERIALS)
+→ По команде "сделай разбор/акт/документ":
+     → VisitPackage собирается
+     → ObjectContext загружается (история, предыдущие акты)
+     → Нормы подбираются через normative_engine
+     → Один результат: текстовый разбор / PDF акт / DOCX / XLSX
+→ ObjectCard обновляется
+→ Drive upload (только PDF/DOCX итогового документа в topic-папку)
+```
+
+---
+
+## 5. ActiveTechnadzorFolder
+
+```python
+ActiveTechnadzorFolder:
+  chat_id:           str
+  topic_id:          int = 5
+  object_name:       str        # название объекта
+  visit_date:        str        # дата выезда
+  drive_folder_url:  str        # ссылка на Drive папку
+  drive_folder_id:   str        # id папки
+  folder_name:       str        # название папки как на Drive
+  client_facing:     bool       # true = клиентская папка
+  mode_hint:         str        # INITIAL_INSPECTION / FOLLOWUP / NEXT_INSPECTION / ...
+  active_since:      str        # timestamp открытия
+  last_update:       str        # timestamp последнего изменения
+  owner_instructions: list[str] # инструкции владельца
+  status:            str        # OPEN / FLUSHED / CLOSED
+```
+
+**Файл состояния:** `data/technadzor/active_folder_{chat_id}_{topic_id}.json`
+
+**Системные папки — НИКОГДА не становятся ActiveTechnadzorFolder:**
+- TECHNADZOR
+- ТЕХНАДЗОР
+- topic_5
+- _system / _tmp / _archive / _drafts / _templates / _manifests
+
+**Верифицированное Drive дерево:**
+- ТЕХНАДЗОР root: `1s2y5l2mJFTb7P90XVokErXYVzmoH-VtD`
+- topic_5 system folder: `1yWIJdSrypH3BbIozCz-OAw1R6hmnMRHK`
+- TECHNADZOR system: `1vKQM0Z2qBmiKtgeyx95JaNEQAp5mJLOm`
+
+---
+
+## 6. VisitMaterial
+
+```python
+VisitMaterial:
+  material_id:          str         # uuid
+  source:               str         # TELEGRAM / DRIVE
+  file_type:            str         # PHOTO / VIDEO / PDF / DOCX / XLSX / TEXT / VOICE / OTHER
+  file_name:            str
+  drive_url:            str | None
+  telegram_message_id:  int | None
+  added_at:             str         # iso timestamp
+  owner_comment:        str | None  # пояснение владельца
+  group_label:          str | None  # "опорные узлы" / "сварные соединения" / ...
+  include_in_report:    bool = True
+  include_in_act:       bool = True
+  defect_hint:          str | None  # краткое описание дефекта из голоса владельца
+  section_hint:         str | None  # к какому разделу отнести
+  status:               str         # PENDING / LINKED / EXCLUDED
+```
+
+**Буфер:** `data/technadzor/buf_{chat_id}_{topic_id}.json`
+
+---
+
+## 7. VisitPackage
+
+```python
+VisitPackage:
+  active_folder:        ActiveTechnadzorFolder
+  object_name:          str
+  visit_date:           str
+  previous_acts:        list[str]   # ссылки на Drive или file_id предыдущих актов
+  photos:               list[VisitMaterial]
+  videos:               list[VisitMaterial]
+  documents:            list[VisitMaterial]
+  owner_instructions:   list[str]
+  client_comments:      list[str]
+  contractor_comments:  list[str]
+  material_groups:      dict[str, list[VisitMaterial]]  # group_label → materials
+  excluded_materials:   list[VisitMaterial]
+  requested_output:     str    # TEXT_REPORT / PDF_ACT / DOCX / XLSX / TELEGRAM
+```
+
+---
+
+## 8. ObservationCard
+
+```python
+ObservationCard:
+  source:             str   # OWNER_VOICE / OWNER_TEXT / PHOTO_EVIDENCE /
+                            # PREVIOUS_ACT / CLIENT_TEXT / CONTRACTOR_TEXT /
+                            # PROJECT_DOCUMENT / EXECUTIVE_DOCUMENT
+  author:             str
+  author_role:        str   # owner / client / contractor
+  material_type:      str   # photo / voice / text / document
+  object:             str
+  date:               str
+  claim:              str   # суть наблюдения
+  linked_files:       list[str]
+  confirmed:          str   # yes / no / partial
+  contradiction:      bool
+  needs_owner_question: bool
+```
+
+---
+
+## 9. DefectCard
+
+```python
+DefectCard:
+  photo_no:             int | None    # номер фото в разборе
+  file_name:            str
+  source:               str
+  node_location:        str           # узел / место
+  what_visible:         str           # что видно на фото/в материале
+  defect_remark:        str           # дефект или замечание
+  why_bad:              str           # почему плохо
+  possible_consequences: str
+  what_to_fix:          str
+  what_to_check_on_site: str
+  normative_reference:  str | None
+  norm_status:          str           # CONFIRMED / PARTIAL / NOT_FOUND / SOURCE_MENTIONED_ONLY
+  remark_status:        str           # см. список статусов замечаний
+  confirmation_source:  str
+  owner_question:       str | None    # вопрос к владельцу если нужен
+```
+
+---
+
+## 10. Статусы замечаний
+
+- новое замечание
+- подтверждено по фото
+- частично видно по фото
+- устранено
+- устранено частично
+- не устранено
+- требует доведения
+- не проверялось на текущем выезде
+- требует уточнения
+
+---
+
+## 11. Группировка замечаний
+
+Группировка по смыслу, не по порядку фото.
+
+Базовые секции:
+- опорные узлы
+- сварные соединения
+- антикоррозионная защита
+- основание и водоотведение
+- крепления и узлы покрытия
+- связи / укосины / элементы жёсткости
+- бетонные и железобетонные конструкции
+- кровля / фасад / ограждающие конструкции
+- прочие замечания
+
+Профили добавляют секции: металлокаркас / бетон / кровля / фасад / инженерные сети / электрика / отделка / каркасный дом / нагрузки.
+
+---
+
+## 12. Логика работы с предыдущими актами
+
+Если предыдущие акты есть:
+- не начинать с нуля
+- добавить раздел "Связь с предыдущими актами"
+- показать что было → что проверено → что устранено → что не устранено → что новое
+- если акт не распарсить → "предыдущий акт найден, содержание требует ручной сверки"
+
+---
+
+## 13. Правила противоречий
+
+| Ситуация | Формулировка |
+|---|---|
+| Владелец говорит одно, фото показывает другое | задать уточнение |
+| Подрядчик говорит "устранено", фото не подтверждает | "устранение по представленным фото не подтверждено" |
+| Предыдущий акт имел дефект, фото нет | "не проверялось на текущем выезде" |
+| Только слова заказчика | "по информации заказчика, требуется проверка" |
+| Только слова подрядчика | "по информации подрядчика, требуется фотофиксация результата и проверка на объекте" |
+
+---
+
+## 14. Нормы
+
+- Если найден документ + пункт → цитировать документ + пункт
+- Если найден только документ → цитировать документ
+- Если ничего не найдено → "норма не подтверждена"
+- Никогда не изобретать пункты нормативов
+- Упоминание нормы в старом акте = SOURCE_MENTIONED_CLAUSE, не автоматически подтверждено
+
+---
+
+## 15. Форматы вывода
+
+- PDF (приоритетный финальный формат)
+- DOCX / Word (если владелец запросил для клиента)
+- Google Docs (если владелец запросил)
+- Telegram текстовый разбор (для оперативного ответа)
+- XLSX (реестр замечаний)
+- Приложение к акту
+
+Нет жёсткой привязки к PDF-only. Нет жёсткой привязки к металлокаркасу.
+
+---
+
+## 16. Клиентская vs служебная папка
+
+**Клиентская папка (client_facing=True) может содержать:**
+- оригинальные фото объекта
+- финальный PDF акт
+- чистый акт + приложения
+- материалы, одобренные владельцем для клиента
+
+**Клиентская папка НЕ должна содержать:**
+- черновики
+- рабочий DOCX (если владелец не запросил явно Word для клиента)
+- JSON / манифесты / логи / debug / temp / кэш
+- файлы с task_id
+- реестр объектов
+- runtime-файлы
+- smoke/test файлы
+- пути /root/...
+
+---
+
+## 17. Vision guard
+
+`EXTERNAL_PHOTO_ANALYSIS_ALLOWED = False` по умолчанию.
+
+Без явного разрешения владельца — никакой отправки фото наружу.
+
+Если Vision заблокирован:
+- использовать голос/текст владельца
+- использовать предыдущие акты
+- использовать документы
+- использовать имена/метаданные файлов
+- чётко указать в результате: "Автоматический визуальный анализ фото не выполнялся, так как Vision заблокирован. Выводы основаны на предыдущих актах, пояснениях владельца и доступных именах/метаданных файлов"
+
+---
+
+## 18. Язык вывода
+
+Все клиентские и владельческие тексты — только **русский**:
+- Telegram ответы
+- акты / разборы / документы
+- имена файлов (результирующих)
+- таблицы замечаний
+- рекомендации / последствия / выводы
+
+English — только внутри кода (функции, классы, enum, маркеры).
+
+---
+
+## 19. Правило одного вопроса
+
+Если данных не хватает — задать один конкретный вопрос.
+Никогда не спрашивать "что строим?" если объект уже был активен.
+Никогда не спрашивать несколько вопросов сразу без крайней необходимости.
+
+---
+
+## 20. Статусы задачи
+
+CODE_CLOSED_ITEMS (topic_5 контур, верифицировано):
+- topic_5 photo/file buffer ✅
+- active folder set/get ✅
+- Drive folder batch trigger ✅ (P6H4TW_BATCH_TRIGGER_V1)
+- flush to process_technadzor ✅
+- external Vision guarded (EXTERNAL_PHOTO_ANALYSIS_ALLOWED=False) ✅
+- STT hallucination guard ✅
+- folder discovery LIVE CLOSED (task 5276 DONE) ✅
+
+VISION_BLOCKED_OWNER_DECISION_REQUIRED:
+- OpenRouter Google → 403
+- Ни одна Vision модель не включена без явного разрешения владельца
+- Решение о включении Vision остаётся за владельцем
+
+---
+
+## 21. Контракт вывода документов
+
+Полный контракт: `docs/TECHNADZOR/TOPIC5_DOCUMENT_OUTPUT_CONTRACT.md`
+
+Ключевые правила:
+
+```
+CLIENT_DOCUMENT_DELIVERED = задача выполнена
+LOCAL_DRAFT_CREATED        ≠ задача выполнена
+DOCX_DRAFT_CREATED         ≠ задача выполнена
+
+Рабочий путь (2026-05-05): TEXT_REPORT → Telegram text
+PDF/DOCX: NOT_IMPLEMENTED (reportlab / python-docx не установлены, local-check подтверждён)
+```
+
+Именование файлов:
+```
+Черновик_акта_<объект>_<дата>.docx
+Акт_осмотра_<объект>_<дата>.pdf
+Реестр_замечаний_<объект>_<дата>.xlsx
+```
+
+Drive placement:
+- client_facing папка → финальный PDF; DOCX только по явной команде владельца
+- Путь /root/... → никогда не отправлять клиенту
+
+---
+
+## 22. Реестр unified_context файлов
+
+Полный индекс: `docs/TECHNADZOR/unified_context/TOPIC5_UNIFIED_TECHNADZOR_CONTEXT.md`
+
+Ключевые файлы:
+- OBJECT_CONTEXT_INDEX.json — индекс объектов
+- OWNER_ACT_STYLE_PROFILE.md — стиль актов (из 3 реальных Drive актов)
+- OWNER_ACTS_INDEX.json — индекс всех актов (5 актов, все DRIVE_VERIFIED)
+- NORMATIVE_CONTEXT_INDEX.json — нормативная база
+- TNZ_MSK_SKILL_BINDING.json — @tnz_msk как скилл оформления (не нормативная база)
+
+====================================================================================================
+END_FILE: docs/TECHNADZOR/TOPIC5_TECHNADZOR_SYSTEM_LOGIC_FINAL.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/TECHNADZOR/TOPIC5_TECHNADZOR_SYSTEM_LOGIC_FINAL_REPORT.md
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 3fa5aa20e7d214e993ed3cdd8e92f54c81539f60605513169901b9ace0eb726f
+====================================================================================================
+# TOPIC5 TECHNADZOR — ИТОГОВЫЙ ОТЧЁТ
+
+version: TOPIC5_TECHNADZOR_SYSTEM_LOGIC_FINAL_REPORT_V1
+date: 2026-05-05
+status: FINAL
+
+---
+
+## 1. Что сделано
+
+### Документы контекста (unified_context/)
+- KIEVSKOE_95_OBJECT_CONTEXT.md — DRIVE_VERIFIED (3 акта прочитаны с Drive)
+- NOVICHKOVO_OBJECT_CONTEXT.md — DRIVE_VERIFIED (акт Щеглово прочитан, source ref добавлен)
+- SUSANINO_OBJECT_CONTEXT.md — DRIVE_VERIFIED (неподтверждённое авторство фото убрано → UNKNOWN)
+- OWNER_ACT_STYLE_PROFILE.md — DRIVE_VERIFIED (профиль стиля из 3 реальных актов)
+- OBJECT_CONTEXT_INDEX.json — VERIFIED (все folder_id подтверждены Drive API)
+- OWNER_ACTS_INDEX.json — DRIVE_VERIFIED (5 актов, все прочитаны)
+- NORMATIVE_CONTEXT_INDEX.json — VERIFIED_FROM_ACTS
+- TNZ_MSK_SKILL_BINDING.json — VERIFIED
+- CHAT_EXPORT_TECHNADZOR_BINDING.json — VERIFIED
+- OWNER_ENGINEERING_LOAD_VALIDATION_PATTERN.md/.json — SOURCE_FROM_OWNER_CONVERSATION
+- TOPIC5_UNIFIED_TECHNADZOR_CONTEXT.md/.json — VERIFIED
+
+### Системные документы
+- TOPIC5_TECHNADZOR_SYSTEM_LOGIC_FINAL.md — CODE_AUDIT_VERIFIED (20 секций)
+- TOPIC5_TECHNADZOR_SYSTEM_LOGIC_FINAL.json — CODE_AUDIT_VERIFIED
+- TOPIC5_DOCUMENT_OUTPUT_CONTRACT.md/.json — CODE_AUDIT_DRAFT_NOT_LIVE_VERIFIED
+- TOPIC5_RUNTIME_USAGE_RULES.md — CODE_AUDIT_VERIFIED
+
+---
+
+## 2. Исправленные ошибки
+
+| Файл | Ошибка | Исправление |
+|---|---|---|
+| SUSANINO_OBJECT_CONTEXT.md | Выдуманное авторство фото (Фото Илья + Фото от заказчиков) | Заменено на UNKNOWN / NOT_VERIFIED |
+| NOVICHKOVO_OBJECT_CONTEXT.md | Нет ссылки на источник | Добавлен source_file (Drive id: 1mqE0G-U5mB889IQMlh5e02UFFSkoADW9) |
+| OWNER_ACT_STYLE_PROFILE.md | Предыдущая версия создана до чтения Drive актов | Полностью переписан из 3 реальных актов |
+
+---
+
+## 3. Верифицированные факты системы
+
+### Wrapper chains
+- `process_technadzor`: 8 определений в technadzor_engine.py, `_p6h4tw_v1_wrapped=True`
+- `_handle_in_progress`: 14 определений в task_worker.py
+- `_handle_new`: 4 определения в task_worker.py
+
+### Drive
+- ТЕХНАДЗОР root: `1s2y5l2mJFTb7P90XVokErXYVzmoH-VtD`
+- topic_5 system: `1yWIJdSrypH3BbIozCz-OAw1R6hmnMRHK`
+- Active test folder: `тест надзор` (`1Jfw1VKgOi2GgdlimK-HCBw7mx9a_FbKG`) — task 5276 DONE
+
+### Пакеты (local-check 2026-05-05)
+- reportlab: NOT INSTALLED (ModuleNotFoundError)
+- python-docx: NOT INSTALLED (ModuleNotFoundError)
+- DejaVu fonts: PRESENT
+
+### Vision
+- `EXTERNAL_PHOTO_ANALYSIS_ALLOWED = False`
+- OpenRouter Google: 403
+
+### Search
+- SearchMonolithV2 → perplexity/sonar via OpenRouter
+- OPENROUTER_API_KEY подтверждён в .env
+
+---
+
+## 4. Открытые вопросы
+
+| Вопрос | Статус |
+|---|---|
+| Vision для 3-го выезда Киевское (04.05.2026) | OWNER_DECISION_REQUIRED |
+| reportlab/python-docx — установить? | OWNER_DECISION_REQUIRED |
+| @tnz_msk карты (66 на review) — одобрить? | OWNER_DECISION_REQUIRED |
+| ГОСТ 30971 — добавить в normative_engine? | OWNER_DECISION_REQUIRED |
+
+---
+
+## 5. Что НЕ делалось
+
+- Runtime patches: нет
+- Drive mutations: нет
+- normative_engine.py: не staged, не committed
+- Запрещённые файлы: не редактировались
+
+====================================================================================================
+END_FILE: docs/TECHNADZOR/TOPIC5_TECHNADZOR_SYSTEM_LOGIC_FINAL_REPORT.md
+FILE_CHUNK: 1/1
+====================================================================================================
+
+====================================================================================================
+BEGIN_FILE: docs/TECHNADZOR/source_skills/tnz_msk/LINKED_DOCUMENTS_INDEX.json
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 5f685fff1da97501adca5e14d8c99bddcd01f846778f99d1485eae20baaaa6e4
+====================================================================================================
+{
+  "schema": "TNZ_MSK_LINKED_DOCUMENTS_INDEX_V1",
+  "source": "@tnz_msk",
+  "scanned_at": "2026-05-05T07:49:28.093641+00:00",
+  "downloaded_count": 6,
+  "downloaded_paths": [
+    "/root/.areal-neva-core/data/memory_files/TEHNADZOR/source_skills/tnz_msk/downloaded_docs/ГОСТ Р 72509-2026.pdf",
+    "/root/.areal-neva-core/data/memory_files/TEHNADZOR/source_skills/tnz_msk/downloaded_docs/0001202512310019.pdf",
+    "/root/.areal-neva-core/data/memory_files/TEHNADZOR/source_skills/tnz_msk/downloaded_docs/Чек-лист по окнам.pdf",
+    "/root/.areal-neva-core/data/memory_files/TEHNADZOR/source_skills/tnz_msk/downloaded_docs/checklist_priemka_white_box.pdf",
+    "/root/.areal-neva-core/data/memory_files/TEHNADZOR/source_skills/tnz_msk/downloaded_docs/cheklist_priemka_kvartiry_v_betone_kirillitsa.pdf",
+    "/root/.areal-neva-core/data/memory_files/TEHNADZOR/source_skills/tnz_msk/downloaded_docs/ВСН 53-86 Утратил силу.pdf"
+  ],
+  "linked_urls": [
+    "https://donstroy.moscow/owners/keys/",
+    "https://ds-fest.ru/",
+    "https://framerfest.ru/",
+    "https://markets.house/",
+    "https://max.ru/tnz_msk",
+    "https://poly.cam/",
+    "https://t.me/+26x9OiOEawphMDdi",
+    "https://t.me/KarabanovPV",
+    "https://t.me/developers_policy/8029",
+    "https://t.me/glebgrinfeld/668",
+    "https://t.me/neural_ntw",
+    "https://t.me/neural_ntw/175",
+    "https://t.me/parket_expert",
+    "https://t.me/tnz_msk",
+    "https://t.me/tnz_msk/116",
+    "https://t.me/tnz_msk/2899",
+    "https://t.me/tnz_msk/3290",
+    "https://t.me/tnz_msk/3391",
+    "https://t.me/tnz_msk/3436",
+    "https://t.me/tnz_msk/3606",
+    "https://t.me/tnz_msk/3635",
+    "https://t.me/tnz_msk/3654",
+    "https://t.me/tnz_msk/3785",
+    "https://t.me/tnz_msk/4",
+    "https://t.me/tnz_msk?livestream",
+    "https://telegra.ph/Svetlyachkam-na-zavist-06-14",
+    "https://telegra.ph/Svetlyachkam-na-zavist-part-2-08-05",
+    "https://telegra.ph/U-nas-promerzanie--D-12-19",
+    "https://vk.com/clip-216130923_456240215",
+    "https://www.gosuslugi.ru/snet/6895ec2c06836073af0da543",
+    "https://www.youtube.com/watch?v=7kZHpvqMqRM",
+    "https://www.youtube.com/watch?v=A4sMjYyN7FM",
+    "https://www.youtube.com/watch?v=HGQU1ZdylT0",
+    "https://www.youtube.com/watch?v=LWE3TCS8njs",
+    "https://www.youtube.com/watch?v=Vt7w9kjG460",
+    "https://www.youtube.com/watch?v=i4yUN8YANJs",
+    "https://www.youtube.com/watch?v=vhXxJp1MS6E",
+    "https://yandex.ru/adv/edu/materials/registraciya-blogerov-ot-10000-podpischikov?ysclid=mdfrqderhy804916339",
+    "https://yandex.ru/maps/?um=constructor%3Af35f7f3f5f880a78b46c473eca916075f563f6eaf036006f7519a3f3f3751e89&source=constructorLink",
+    "https://yandex.ru/video/touch/preview/17284700974743076036"
+  ],
+  "document_messages": [
+    {
+      "message_id": 4059,
+      "date": "2026-05-01T09:44:47+00:00",
+      "source_ref": "https://t.me/tnz_msk/4059",
+      "file_name": "IMG_5198.MOV"
+    },
+    {
+      "message_id": 4058,
+      "date": "2026-05-01T09:44:47+00:00",
+      "source_ref": "https://t.me/tnz_msk/4058",
+      "file_name": "IMG_5200.MOV"
+    },
+    {
+      "message_id": 4036,
+      "date": "2026-04-24T12:33:58+00:00",
+      "source_ref": "https://t.me/tnz_msk/4036",
+      "file_name": "IMG_4848.MOV"
+    },
+    {
+      "message_id": 4023,
+      "date": "2026-04-20T09:48:36+00:00",
+      "source_ref": "https://t.me/tnz_msk/4023",
+      "file_name": "IMG_4666.MOV"
+    },
+    {
+      "message_id": 4021,
+      "date": "2026-04-16T10:53:00+00:00",
+      "source_ref": "https://t.me/tnz_msk/4021",
+      "file_name": "IMG_4381.MOV"
+    },
+    {
+      "message_id": 4005,
+      "date": "2026-04-11T23:16:43+00:00",
+      "source_ref": "https://t.me/tnz_msk/4005",
+      "file_name": "IMG_5079.MP4"
+    },
+    {
+      "message_id": 4004,
+      "date": "2026-04-11T23:16:43+00:00",
+      "source_ref": "https://t.me/tnz_msk/4004",
+      "file_name": "IMG_5078.MOV"
+    },
+    {
+      "message_id": 3998,
+      "date": "2026-04-09T08:40:29+00:00",
+      "source_ref": "https://t.me/tnz_msk/3998",
+      "file_name": "IMG_4172.MP4"
+    },
+    {
+      "message_id": 3992,
+      "date": "2026-04-05T10:04:13+00:00",
+      "source_ref": "https://t.me/tnz_msk/3992",
+      "file_name": "IMG_1448.mp4"
+    },
+    {
+      "message_id": 3988,
+      "date": "2026-04-02T20:51:08+00:00",
+      "source_ref": "https://t.me/tnz_msk/3988",
+      "file_name": "IMG_1642.MP4"
+    },
+    {
+      "message_id": 3978,
+      "date": "2026-04-01T09:16:29+00:00",
+      "source_ref": "https://t.me/tnz_msk/3978",
+      "file_name": "IMG_3415.MOV"
+    },
+    {
+      "message_id": 3977,
+      "date": "2026-04-01T09:16:29+00:00",
+      "source_ref": "https://t.me/tnz_msk/3977",
+      "file_name": "IMG_3421.MOV"
+    },
+    {
+      "message_id": 3971,
+      "date": "2026-04-01T07:36:09+00:00",
+      "source_ref": "https://t.me/tnz_msk/3971",
+      "file_name": "IMG_3860.MP4"
+    },
+    {
+      "message_id": 3965,
+      "date": "2026-03-31T21:05:06+00:00",
+      "source_ref": "https://t.me/tnz_msk/3965",
+      "file_name": "IMG_1570.MP4"
+    },
+    {
+      "message_id": 3943,
+      "date": "2026-03-20T15:06:37+00:00",
+      "source_ref": "https://t.me/tnz_msk/3943",
+      "file_name": "IMG_3518.MOV"
+    },
+    {
+      "message_id": 3929,
+      "date": "2026-03-10T19:44:38+00:00",
+      "source_ref": "https://t.me/tnz_msk/3929",
+      "file_name": "video_2026-03-10_22-40-41.mp4"
+    },
+    {
+      "message_id": 3903,
+      "date": "2026-02-21T10:11:56+00:00",
+      "source_ref": "https://t.me/tnz_msk/3903",
+      "file_name": "IMG_2455.MP4"
+    },
+    {
+      "message_id": 3901,
+      "date": "2026-02-20T16:46:09+00:00",
+      "source_ref": "https://t.me/tnz_msk/3901",
+      "file_name": "ГОСТ Р 72509-2026.pdf"
+    },
+    {
+      "message_id": 3895,
+      "date": "2026-02-18T04:05:04+00:00",
+      "source_ref": "https://t.me/tnz_msk/3895",
+      "file_name": "IMG_2370.MP4"
+    },
+    {
+      "message_id": 3893,
+      "date": "2026-02-17T15:11:09+00:00",
+      "source_ref": "https://t.me/tnz_msk/3893",
+      "file_name": "IMG_2365.MP4"
+    },
+    {
+      "message_id": 3892,
+      "date": "2026-02-17T12:38:38+00:00",
+      "source_ref": "https://t.me/tnz_msk/3892",
+      "file_name": "IMG_2355.MOV"
+    },
+    {
+      "message_id": 3891,
+      "date": "2026-02-17T04:57:01+00:00",
+      "source_ref": "https://t.me/tnz_msk/3891",
+      "file_name": "Бот.mp4"
+    },
+    {
+      "message_id": 3890,
+      "date": "2026-02-13T13:26:36+00:00",
+      "source_ref": "https://t.me/tnz_msk/3890",
+      "file_name": "IMG_2239.MP4"
+    },
+    {
+      "message_id": 3883,
+      "date": "2026-02-08T15:44:09+00:00",
+      "source_ref": "https://t.me/tnz_msk/3883",
+      "file_name": "IMG_2135.MP4"
+    },
+    {
+      "message_id": 3865,
+      "date": "2026-02-05T14:25:43+00:00",
+      "source_ref": "https://t.me/tnz_msk/3865",
+      "file_name": "IMG_2034.MP4"
+    },
+    {
+      "message_id": 3864,
+      "date": "2026-02-05T14:25:43+00:00",
+      "source_ref": "https://t.me/tnz_msk/3864",
+      "file_name": "IMG_2035.MP4"
+    },
+    {
+      "message_id": 3844,
+      "date": "2026-01-23T15:48:47+00:00",
+      "source_ref": "https://t.me/tnz_msk/3844",
+      "file_name": "IMG_1542.MP4"
+    },
+    {
+      "message_id": 3840,
+      "date": "2026-01-22T12:52:31+00:00",
+      "source_ref": "https://t.me/tnz_msk/3840",
+      "file_name": "IMG_1471.MP4"
+    },
+    {
+      "message_id": 3836,
+      "date": "2026-01-22T09:56:29+00:00",
+      "source_ref": "https://t.me/tnz_msk/3836",
+      "file_name": "IMG_1454.MP4"
+    },
+    {
+      "message_id": 3833,
+      "date": "2026-01-20T07:49:01+00:00",
+      "source_ref": "https://t.me/tnz_msk/3833",
+      "file_name": "1113 (1)(1).mp4"
+    },
+    {
+      "message_id": 3817,
+      "date": "2026-01-14T10:10:10+00:00",
+      "source_ref": "https://t.me/tnz_msk/3817",
+      "file_name": "IMG_1195.MOV"
+    },
+    {
+      "message_id": 3807,
+      "date": "2026-01-05T09:30:54+00:00",
+      "source_ref": "https://t.me/tnz_msk/3807",
+      "file_name": "0001202512310019.pdf"
+    },
+    {
+      "message_id": 3784,
+      "date": "2025-12-23T15:12:48+00:00",
+      "source_ref": "https://t.me/tnz_msk/3784",
+      "file_name": "IMG_0527.MP4"
+    },
+    {
+      "message_id": 3751,
+      "date": "2025-12-08T15:32:00+00:00",
+      "source_ref": "https://t.me/tnz_msk/3751",
+      "file_name": "IMG_9952.MP4"
+    },
+    {
+      "message_id": 3749,
+      "date": "2025-12-08T15:32:00+00:00",
+      "source_ref": "https://t.me/tnz_msk/3749",
+      "file_name": "IMG_9949.MP4"
+    },
+    {
+      "message_id": 3748,
+      "date": "2025-12-08T15:32:00+00:00",
+      "source_ref": "https://t.me/tnz_msk/3748",
+      "file_name": "IMG_9948.MP4"
+    },
+    {
+      "message_id": 3747,
+      "date": "2025-12-08T15:32:00+00:00",
+      "source_ref": "https://t.me/tnz_msk/3747",
+      "file_name": "IMG_9944.MP4"
+    },
+    {
+      "message_id": 3746,
+      "date": "2025-12-08T15:32:00+00:00",
+      "source_ref": "https://t.me/tnz_msk/3746",
+      "file_name": "IMG_9947.MP4"
+    },
+    {
+      "message_id": 3743,
+      "date": "2025-12-07T08:10:45+00:00",
+      "source_ref": "https://t.me/tnz_msk/3743",
+      "file_name": "IMG_9831.MP4"
+    },
+    {
+      "message_id": 3740,
+      "date": "2025-12-06T11:16:23+00:00",
+      "source_ref": "https://t.me/tnz_msk/3740",
+      "file_name": "IMG_9862.MP4"
+    },
+    {
+      "message_id": 3735,
+      "date": "2025-12-04T08:41:01+00:00",
+      "source_ref": "https://t.me/tnz_msk/3735",
+      "file_name": "IMG_9750.MP4"
+    },
+    {
+      "message_id": 3730,
+      "date": "2025-11-29T15:29:42+00:00",
+      "source_ref": "https://t.me/tnz_msk/3730",
+      "file_name": "IMG_9618.MOV"
+    },
+    {
+      "message_id": 3729,
+      "date": "2025-11-29T15:29:42+00:00",
+      "source_ref": "https://t.me/tnz_msk/3729",
+      "file_name": "IMG_9617.MOV"
+    },
+    {
+      "message_id": 3728,
+      "date": "2025-11-29T15:29:42+00:00",
+      "source_ref": "https://t.me/tnz_msk/3728",
+      "file_name": "IMG_9615.MOV"
+    },
+    {
+      "message_id": 3714,
+      "date": "2025-11-28T12:14:17+00:00",
+      "source_ref": "https://t.me/tnz_msk/3714",
+      "file_name": "IMG_9573.MP4"
+    },
+    {
+      "message_id": 3710,
+      "date": "2025-11-26T12:22:21+00:00",
+      "source_ref": "https://t.me/tnz_msk/3710",
+      "file_name": "Чек-лист по окнам.pdf"
+    },
+    {
+      "message_id": 3694,
+      "date": "2025-11-24T18:30:19+00:00",
+      "source_ref": "https://t.me/tnz_msk/3694",
+      "file_name": "IMG_9373.MP4"
+    },
+    {
+      "message_id": 3693,
+      "date": "2025-11-24T18:30:19+00:00",
+      "source_ref": "https://t.me/tnz_msk/3693",
+      "file_name": "IMG_9374.MP4"
+    },
+    {
+      "message_id": 3691,
+      "date": "2025-11-24T16:58:33+00:00",
+      "source_ref": "https://t.me/tnz_msk/3691",
+      "file_name": "record.ogg"
+    },
+    {
+      "message_id": 3690,
+      "date": "2025-11-24T16:58:33+00:00",
+      "source_ref": "https://t.me/tnz_msk/3690",
+      "file_name": "record.mp4"
+    },
+    {
+      "message_id": 3675,
+      "date": "2025-11-20T16:47:01+00:00",
+      "source_ref": "https://t.me/tnz_msk/3675",
+      "file_name": "IMG_9159.MP4"
+    },
+    {
+      "message_id": 3657,
+      "date": "2025-11-17T15:33:27+00:00",
+      "source_ref": "https://t.me/tnz_msk/3657",
+      "file_name": "IMG_8898.MOV"
+    },
+    {
+      "message_id": 3656,
+      "date": "2025-11-17T15:33:27+00:00",
+      "source_ref": "https://t.me/tnz_msk/3656",
+      "file_name": "IMG_8899.MOV"
+    },
+    {
+      "message_id": 3630,
+      "date": "2025-11-07T14:37:49+00:00",
+      "source_ref": "https://t.me/tnz_msk/3630",
+      "file_name": "19700121_1234_690d225fb42481919d3aa09139f5e817.mp4"
+    },
+    {
+      "message_id": 3629,
+      "date": "2025-11-06T09:58:26+00:00",
+      "source_ref": "https://t.me/tnz_msk/3629",
+      "file_name": "IMG_8340.MOV"
+    },
+    {
+      "message_id": 3628,
+      "date": "2025-11-06T09:58:26+00:00",
+      "source_ref": "https://t.me/tnz_msk/3628",
+      "file_name": "IMG_8360.MOV"
+    },
+    {
+      "message_id": 3625,
+      "date": "2025-11-06T09:58:26+00:00",
+      "source_ref": "https://t.me/tnz_msk/3625",
+      "file_name": "IMG_8351.MOV"
+    },
+    {
+      "message_id": 3623,
+      "date": "2025-11-06T09:58:26+00:00",
+      "source_ref": "https://t.me/tnz_msk/3623",
+      "file_name": "IMG_8329.MOV"
+    },
+    {
+      "message_id": 3622,
+      "date": "2025-11-06T08:10:44+00:00",
+      "source_ref": "https://t.me/tnz_msk/3622",
+      "file_name": "IMG_8345.MOV"
+    },
+    {
+      "message_id": 3621,
+      "date": "2025-11-05T18:41:26+00:00",
+      "source_ref": "https://t.me/tnz_msk/3621",
+      "file_name": "video_2025-11-05_21-40-44.mp4"
+    },
+    {
+      "message_id": 3604,
+      "date": "2025-11-03T09:45:12+00:00",
+      "source_ref": "https://t.me/tnz_msk/3604",
+      "file_name": "IMG_8161.MP4"
+    },
+    {
+      "message_id": 3589,
+      "date": "2025-10-28T11:59:37+00:00",
+      "source_ref": "https://t.me/tnz_msk/3589",
+      "file_name": "IMG_8035.MOV"
+    },
+    {
+      "message_id": 3588,
+      "date": "2025-10-28T11:59:37+00:00",
+      "source_ref": "https://t.me/tnz_msk/3588",
+      "file_name": "IMG_8010.MOV"
+    },
+    {
+      "message_id": 3587,
+      "date": "2025-10-28T11:59:37+00:00",
+      "source_ref": "https://t.me/tnz_msk/3587",
+      "file_name": "IMG_8037.MP4"
+    },
+    {
+      "message_id": 3586,
+      "date": "2025-10-28T11:59:37+00:00",
+      "source_ref": "https://t.me/tnz_msk/3586",
+      "file_name": "IMG_8038.MP4"
+    },
+    {
+      "message_id": 3585,
+      "date": "2025-10-27T16:28:38+00:00",
+      "source_ref": "https://t.me/tnz_msk/3585",
+      "file_name": "IMG_7990.MOV"
+    },
+    {
+      "message_id": 3581,
+      "date": "2025-10-26T04:45:04+00:00",
+      "source_ref": "https://t.me/tnz_msk/3581",
+      "file_name": "sora_video_1761427768738.mp4"
+    },
+    {
+      "message_id": 3580,
+      "date": "2025-10-25T04:16:01+00:00",
+      "source_ref": "https://t.me/tnz_msk/3580",
+      "file_name": "ScreenRecorderProject96.mp4"
+    },
+    {
+      "message_id": 3579,
+      "date": "2025-10-24T16:00:05+00:00",
+      "source_ref": "https://t.me/tnz_msk/3579",
+      "file_name": "IMG_7820.MP4"
+    },
+    {
+      "message_id": 3576,
+      "date": "2025-10-24T15:58:30+00:00",
+      "source_ref": "https://t.me/tnz_msk/3576",
+      "file_name": "IMG_7820.MP4"
+    },
+    {
+      "message_id": 3571,
+      "date": "2025-10-24T03:39:01+00:00",
+      "source_ref": "https://t.me/tnz_msk/3571",
+      "file_name": "checklist_priemka_white_box.pdf"
+    },
+    {
+      "message_id": 3563,
+      "date": "2025-10-22T13:51:42+00:00",
+      "source_ref": "https://t.me/tnz_msk/3563",
+      "file_name": "IMG_7621.MOV"
+    },
+    {
+      "message_id": 3562,
+      "date": "2025-10-22T13:51:42+00:00",
+      "source_ref": "https://t.me/tnz_msk/3562",
+      "file_name": "IMG_7620.MOV"
+    },
+    {
+      "message_id": 3561,
+      "date": "2025-10-22T13:51:42+00:00",
+      "source_ref": "https://t.me/tnz_msk/3561",
+      "file_name": "IMG_7646.MP4"
+    },
+    {
+      "message_id": 3559,
+      "date": "2025-10-22T04:06:58+00:00",
+      "source_ref": "https://t.me/tnz_msk/3559",
+      "file_name": "cheklist_priemka_kvartiry_v_betone_kirillitsa.pdf"
+    },
+    {
+      "message_id": 3547,
+      "date": "2025-10-20T16:58:36+00:00",
+      "source_ref": "https://t.me/tnz_msk/3547",
+      "file_name": "IMG_7494.MP4"
+    },
+    {
+      "message_id": 3539,
+      "date": "2025-10-20T10:15:40+00:00",
+      "source_ref": "https://t.me/tnz_msk/3539",
+      "file_name": "IMG_7437.MOV"
+    },
+    {
+      "message_id": 3537,
+      "date": "2025-10-18T09:48:03+00:00",
+      "source_ref": "https://t.me/tnz_msk/3537",
+      "file_name": "IMG_7318.MP4"
+    },
+    {
+      "message_id": 3536,
+      "date": "2025-10-17T14:52:29+00:00",
+      "source_ref": "https://t.me/tnz_msk/3536",
+      "file_name": "IMG_7341.MP4"
+    },
+    {
+      "message_id": 3521,
+      "date": "2025-10-15T14:50:27+00:00",
+      "source_ref": "https://t.me/tnz_msk/3521",
+      "file_name": "IMG_7247.MOV"
+    },
+    {
+      "message_id": 3520,
+      "date": "2025-10-15T14:50:27+00:00",
+      "source_ref": "https://t.me/tnz_msk/3520",
+      "file_name": "IMG_7248.MOV"
+    },
+    {
+      "message_id": 3519,
+      "date": "2025-10-15T14:50:27+00:00",
+      "source_ref": "https://t.me/tnz_msk/3519",
+      "file_name": "IMG_7246.MP4"
+    },
+    {
+      "message_id": 3492,
+      "date": "2025-10-08T13:35:45+00:00",
+      "source_ref": "https://t.me/tnz_msk/3492",
+      "file_name": "IMG_4490.MOV"
+    },
+    {
+      "message_id": 3491,
+      "date": "2025-10-08T04:59:01+00:00",
+      "source_ref": "https://t.me/tnz_msk/3491",
+      "file_name": "watermark-removed-20251008_0035_01k709amyafkka83bp7j708xxn.mp4"
+    },
+    {
+      "message_id": 3487,
+      "date": "2025-10-06T04:28:01+00:00",
+      "source_ref": "https://t.me/tnz_msk/3487",
+      "file_name": "video_2025-10-06_00-15-54.mp4"
+    },
+    {
+      "message_id": 3486,
+      "date": "2025-10-05T17:29:36+00:00",
+      "source_ref": "https://t.me/tnz_msk/3486",
+      "file_name": "IMG_6893.MP4"
+    },
+    {
+      "message_id": 3485,
+      "date": "2025-10-05T14:08:47+00:00",
+      "source_ref": "https://t.me/tnz_msk/3485",
+      "file_name": "IMG_6882.MP4"
+    },
+    {
+      "message_id": 3484,
+      "date": "2025-10-05T09:13:04+00:00",
+      "source_ref": "https://t.me/tnz_msk/3484",
+      "file_name": "20251005_1211_01k6st6fgee749rtfghjefsra1.mp4"
+    },
+    {
+      "message_id": 3483,
+      "date": "2025-10-03T14:20:47+00:00",
+      "source_ref": "https://t.me/tnz_msk/3483",
+      "file_name": "IMG_6817.MP4"
+    },
+    {
+      "message_id": 3482,
+      "date": "2025-10-01T20:27:52+00:00",
+      "source_ref": "https://t.me/tnz_msk/3482",
+      "file_name": "20251001_2327_01k6gq89y0fpkamh6ycr0txqhs.mp4"
+    },
+    {
+      "message_id": 3481,
+      "date": "2025-10-01T19:47:49+00:00",
+      "source_ref": "https://t.me/tnz_msk/3481",
+      "file_name": "20251001_2246_01k6gmxkw2f4fvn46zhbm80y56.mp4"
+    },
+    {
+      "message_id": 3479,
+      "date": "2025-09-30T21:58:56+00:00",
+      "source_ref": "https://t.me/tnz_msk/3479",
+      "file_name": "IMG_7556.MP4"
+    },
+    {
+      "message_id": 3475,
+      "date": "2025-09-29T04:33:01+00:00",
+      "source_ref": "https://t.me/tnz_msk/3475",
+      "file_name": "Новый проект.mp4"
+    },
+    {
+      "message_id": 3471,
+      "date": "2025-09-24T16:24:24+00:00",
+      "source_ref": "https://t.me/tnz_msk/3471",
+      "file_name": "IMG_6579.MP4"
+    },
+    {
+      "message_id": 3466,
+      "date": "2025-09-19T09:23:17+00:00",
+      "source_ref": "https://t.me/tnz_msk/3466",
+      "file_name": "IMG_6370.MP4"
+    },
+    {
+      "message_id": 3442,
+      "date": "2025-09-13T08:53:50+00:00",
+      "source_ref": "https://t.me/tnz_msk/3442",
+      "file_name": "IMG_6006.MP4"
+    },
+    {
+      "message_id": 3441,
+      "date": "2025-09-13T08:53:50+00:00",
+      "source_ref": "https://t.me/tnz_msk/3441",
+      "file_name": "IMG_6005.MP4"
+    },
+    {
+      "message_id": 3425,
+      "date": "2025-08-29T09:02:09+00:00",
+      "source_ref": "https://t.me/tnz_msk/3425",
+      "file_name": "IMG_5435.MOV"
+    },
+    {
+      "message_id": 3424,
+      "date": "2025-08-28T10:14:26+00:00",
+      "source_ref": "https://t.me/tnz_msk/3424",
+      "file_name": "IMG_5368.MP4"
+    },
+    {
+      "message_id": 3422,
+      "date": "2025-08-27T13:19:15+00:00",
+      "source_ref": "https://t.me/tnz_msk/3422",
+      "file_name": "IMG_5337.MP4"
+    },
+    {
+      "message_id": 3417,
+      "date": "2025-08-27T13:19:15+00:00",
+      "source_ref": "https://t.me/tnz_msk/3417",
+      "file_name": "IMG_5329.MOV"
+    },
+    {
+      "message_id": 3416,
+      "date": "2025-08-27T09:01:51+00:00",
+      "source_ref": "https://t.me/tnz_msk/3416",
+      "file_name": "IMG_5302.MP4"
+    },
+    {
+      "message_id": 3401,
+      "date": "2025-08-22T18:56:35+00:00",
+      "source_ref": "https://t.me/tnz_msk/3401",
+      "file_name": "IMG_5811.MP4"
+    },
+    {
+      "message_id": 3398,
+      "date": "2025-08-21T11:51:07+00:00",
+      "source_ref": "https://t.me/tnz_msk/3398",
+      "file_name": "IMG_4981.MOV"
+    },
+    {
+      "message_id": 3387,
+      "date": "2025-08-14T15:59:15+00:00",
+      "source_ref": "https://t.me/tnz_msk/3387",
+      "file_name": "IMG_4764.MP4"
+    },
+    {
+      "message_id": 3377,
+      "date": "2025-08-13T07:50:12+00:00",
+      "source_ref": "https://t.me/tnz_msk/3377",
+      "file_name": "IMG_4715.MOV"
+    },
+    {
+      "message_id": 3375,
+      "date": "2025-08-12T20:21:21+00:00",
+      "source_ref": "https://t.me/tnz_msk/3375",
+      "file_name": "IMG_6243.MOV"
+    },
+    {
+      "message_id": 3367,
+      "date": "2025-08-10T20:18:55+00:00",
+      "source_ref": "https://t.me/tnz_msk/3367",
+      "file_name": "IMG_4661.MP4"
+    },
+    {
+      "message_id": 3356,
+      "date": "2025-08-08T12:49:54+00:00",
+      "source_ref": "https://t.me/tnz_msk/3356",
+      "file_name": "IMG_4469.MOV"
+    },
+    {
+      "message_id": 3353,
+      "date": "2025-08-07T20:00:39+00:00",
+      "source_ref": "https://t.me/tnz_msk/3353",
+      "file_name": "video_2025-08-07_21-50-56.mp4"
+    },
+    {
+      "message_id": 3352,
+      "date": "2025-08-07T17:35:18+00:00",
+      "source_ref": "https://t.me/tnz_msk/3352",
+      "file_name": "IMG_4386.MP4"
+    },
+    {
+      "message_id": 3344,
+      "date": "2025-08-07T17:35:18+00:00",
+      "source_ref": "https://t.me/tnz_msk/3344",
+      "file_name": "IMG_4365.MOV"
+    },
+    {
+      "message_id": 3334,
+      "date": "2025-08-07T06:49:54+00:00",
+      "source_ref": "https://t.me/tnz_msk/3334",
+      "file_name": "IMG_4386.MP4"
+    },
+    {
+      "message_id": 3316,
+      "date": "2025-08-03T12:35:23+00:00",
+      "source_ref": "https://t.me/tnz_msk/3316",
+      "file_name": "IMG_0125.MP4"
+    },
+    {
+      "message_id": 3315,
+      "date": "2025-08-02T12:55:18+00:00",
+      "source_ref": "https://t.me/tnz_msk/3315",
+      "file_name": "IMG_4218.MOV"
+    },
+    {
+      "message_id": 3313,
+      "date": "2025-08-02T12:55:18+00:00",
+      "source_ref": "https://t.me/tnz_msk/3313",
+      "file_name": "IMG_4213.MOV"
+    },
+    {
+      "message_id": 3312,
+      "date": "2025-08-02T12:55:18+00:00",
+      "source_ref": "https://t.me/tnz_msk/3312",
+      "file_name": "IMG_4210.MOV"
+    },
+    {
+      "message_id": 3311,
+      "date": "2025-08-02T12:55:18+00:00",
+      "source_ref": "https://t.me/tnz_msk/3311",
+      "file_name": "IMG_4209.MOV"
+    },
+    {
+      "message_id": 3310,
+      "date": "2025-08-02T12:55:18+00:00",
+      "source_ref": "https://t.me/tnz_msk/3310",
+      "file_name": "IMG_4205.MOV"
+    },
+    {
+      "message_id": 3309,
+      "date": "2025-08-01T19:48:54+00:00",
+      "source_ref": "https://t.me/tnz_msk/3309",
+      "file_name": "video_2025-08-01_22-47-43.mp4"
+    },
+    {
+      "message_id": 3302,
+      "date": "2025-08-01T08:43:01+00:00",
+      "source_ref": "https://t.me/tnz_msk/3302",
+      "file_name": "polycam.mp4"
+    },
+    {
+      "message_id": 3291,
+      "date": "2025-07-26T21:10:26+00:00",
+      "source_ref": "https://t.me/tnz_msk/3291",
+      "file_name": "IMG_2715.MP4"
+    },
+    {
+      "message_id": 3282,
+      "date": "2025-07-25T10:53:59+00:00",
+      "source_ref": "https://t.me/tnz_msk/3282",
+      "file_name": "IMG_3851.MP4"
+    },
+    {
+      "message_id": 3271,
+      "date": "2025-07-24T09:23:23+00:00",
+      "source_ref": "https://t.me/tnz_msk/3271",
+      "file_name": "IMG_3811.MOV"
+    },
+    {
+      "message_id": 3258,
+      "date": "2025-07-18T08:25:12+00:00",
+      "source_ref": "https://t.me/tnz_msk/3258",
+      "file_name": "IMG_3419.MOV"
+    },
+    {
+      "message_id": 3242,
+      "date": "2025-07-15T07:43:13+00:00",
+      "source_ref": "https://t.me/tnz_msk/3242",
+      "file_name": "IMG_3158.MP4"
+    },
+    {
+      "message_id": 3231,
+      "date": "2025-07-11T14:20:47+00:00",
+      "source_ref": "https://t.me/tnz_msk/3231",
+      "file_name": "IMG_2811.MP4"
+    },
+    {
+      "message_id": 3227,
+      "date": "2025-07-10T11:31:02+00:00",
+      "source_ref": "https://t.me/tnz_msk/3227",
+      "file_name": "IMG_2695.MOV"
+    },
+    {
+      "message_id": 3202,
+      "date": "2025-07-05T15:56:37+00:00",
+      "source_ref": "https://t.me/tnz_msk/3202",
+      "file_name": "IMG_2463.MP4"
+    },
+    {
+      "message_id": 3201,
+      "date": "2025-07-05T15:56:37+00:00",
+      "source_ref": "https://t.me/tnz_msk/3201",
+      "file_name": "IMG_2465.MP4"
+    },
+    {
+      "message_id": 3200,
+      "date": "2025-07-05T15:56:36+00:00",
+      "source_ref": "https://t.me/tnz_msk/3200",
+      "file_name": "IMG_2464.MP4"
+    },
+    {
+      "message_id": 3199,
+      "date": "2025-07-04T18:24:36+00:00",
+      "source_ref": "https://t.me/tnz_msk/3199",
+      "file_name": "IMG_2400.MP4"
+    },
+    {
+      "message_id": 3198,
+      "date": "2025-07-04T14:26:38+00:00",
+      "source_ref": "https://t.me/tnz_msk/3198",
+      "file_name": "IMG_2406.MOV"
+    },
+    {
+      "message_id": 3186,
+      "date": "2025-07-02T15:22:26+00:00",
+      "source_ref": "https://t.me/tnz_msk/3186",
+      "file_name": "IMG_2264.MOV"
+    },
+    {
+      "message_id": 3184,
+      "date": "2025-07-01T20:39:15+00:00",
+      "source_ref": "https://t.me/tnz_msk/3184",
+      "file_name": "Видео WhatsApp 2025-06-30 в 15.51.31_6dd6737c.mp4"
+    },
+    {
+      "message_id": 3183,
+      "date": "2025-06-30T10:53:23+00:00",
+      "source_ref": "https://t.me/tnz_msk/3183",
+      "file_name": "IMG_9935.MOV"
+    },
+    {
+      "message_id": 3182,
+      "date": "2025-06-30T10:00:13+00:00",
+      "source_ref": "https://t.me/tnz_msk/3182",
+      "file_name": "IMG_1576.MP4"
+    },
+    {
+      "message_id": 3180,
+      "date": "2025-06-30T08:13:00+00:00",
+      "source_ref": "https://t.me/tnz_msk/3180",
+      "file_name": "IMG_2110.MP4"
+    },
+    {
+      "message_id": 3179,
+      "date": "2025-06-30T07:16:23+00:00",
+      "source_ref": "https://t.me/tnz_msk/3179",
+      "file_name": "IMG_2107.MP4"
+    },
+    {
+      "message_id": 3166,
+      "date": "2025-06-27T14:03:03+00:00",
+      "source_ref": "https://t.me/tnz_msk/3166",
+      "file_name": "IMG_2048.MP4"
+    },
+    {
+      "message_id": 3136,
+      "date": "2025-06-19T14:31:25+00:00",
+      "source_ref": "https://t.me/tnz_msk/3136",
+      "file_name": "IMG_1460.MOV"
+    },
+    {
+      "message_id": 3134,
+      "date": "2025-06-19T10:15:20+00:00",
+      "source_ref": "https://t.me/tnz_msk/3134",
+      "file_name": "IMG_1598.MP4"
+    },
+    {
+      "message_id": 3130,
+      "date": "2025-06-19T10:15:20+00:00",
+      "source_ref": "https://t.me/tnz_msk/3130",
+      "file_name": "IMG_1440.MOV"
+    },
+    {
+      "message_id": 3128,
+      "date": "2025-06-18T08:03:32+00:00",
+      "source_ref": "https://t.me/tnz_msk/3128",
+      "file_name": "IMG_1565.MP4"
+    },
+    {
+      "message_id": 3117,
+      "date": "2025-06-14T15:35:50+00:00",
+      "source_ref": "https://t.me/tnz_msk/3117",
+      "file_name": "IMG_1406.MP4"
+    },
+    {
+      "message_id": 3112,
+      "date": "2025-06-10T08:20:34+00:00",
+      "source_ref": "https://t.me/tnz_msk/3112",
+      "file_name": "IMG_1191.MP4"
+    },
+    {
+      "message_id": 3111,
+      "date": "2025-06-08T07:42:30+00:00",
+      "source_ref": "https://t.me/tnz_msk/3111",
+      "file_name": "IMG_1130.MP4"
+    },
+    {
+      "message_id": 3086,
+      "date": "2025-05-30T11:10:00+00:00",
+      "source_ref": "https://t.me/tnz_msk/3086",
+      "file_name": "AIIN.mp4"
+    },
+    {
+      "message_id": 3084,
+      "date": "2025-05-29T20:46:59+00:00",
+      "source_ref": "https://t.me/tnz_msk/3084",
+      "file_name": "record.ogg"
+    },
+    {
+      "message_id": 3083,
+      "date": "2025-05-29T16:17:46+00:00",
+      "source_ref": "https://t.me/tnz_msk/3083",
+      "file_name": "record.mp4"
+    },
+    {
+      "message_id": 3077,
+      "date": "2025-05-28T04:09:01+00:00",
+      "source_ref": "https://t.me/tnz_msk/3077",
+      "file_name": "ВСН 53-86 Утратил силу.pdf"
+    },
+    {
+      "message_id": 3072,
+      "date": "2025-05-25T12:09:34+00:00",
+      "source_ref": "https://t.me/tnz_msk/3072",
+      "file_name": "IMG_0537.MOV"
+    },
+    {
+      "message_id": 3070,
+      "date": "2025-05-25T12:09:34+00:00",
+      "source_ref": "https://t.me/tnz_msk/3070",
+      "file_name": "IMG_0547.MOV"
+    },
+    {
+      "message_id": 3067,
+      "date": "2025-05-25T12:09:34+00:00",
+      "source_ref": "https://t.me/tnz_msk/3067",
+      "file_name": "IMG_0546.MOV"
+    },
+    {
+      "message_id": 3063,
+      "date": "2025-05-24T05:31:01+00:00",
+      "source_ref": "https://t.me/tnz_msk/3063",
+      "file_name": "IMG_0477.MP4"
+    },
+    {
+      "message_id": 3062,
+      "date": "2025-05-24T05:31:01+00:00",
+      "source_ref": "https://t.me/tnz_msk/3062",
+      "file_name": "IMG_0476.MP4"
+    },
+    {
+      "message_id": 3050,
+      "date": "2025-05-21T16:29:46+00:00",
+      "source_ref": "https://t.me/tnz_msk/3050",
+      "file_name": "IMG_3938.MOV"
+    },
+    {
+      "message_id": 3037,
+      "date": "2025-05-19T08:44:00+00:00",
+      "source_ref": "https://t.me/tnz_msk/3037",
+      "file_name": "IMG_0223.MP4"
+    },
+    {
+      "message_id": 3034,
+      "date": "2025-05-14T17:17:37+00:00",
+      "source_ref": "https://t.me/tnz_msk/3034",
+      "file_name": "video_2025-05-15_00-14-14.mp4"
+    },
+    {
+      "message_id": 3033,
+      "date": "2025-05-14T10:51:51+00:00",
+      "source_ref": "https://t.me/tnz_msk/3033",
+      "file_name": "IMG_9931.MOV"
+    },
+    {
+      "message_id": 3031,
+      "date": "2025-05-13T07:07:25+00:00",
+      "source_ref": "https://t.me/tnz_msk/3031",
+      "file_name": "IMG_9914.MOV"
+    }
+  ]
+}
+====================================================================================================
+END_FILE: docs/TECHNADZOR/source_skills/tnz_msk/LINKED_DOCUMENTS_INDEX.json
+FILE_CHUNK: 1/1
+====================================================================================================
 
 ====================================================================================================
 BEGIN_FILE: docs/TECHNADZOR/source_skills/tnz_msk/SOURCE_INDEX.json

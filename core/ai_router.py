@@ -159,9 +159,9 @@ FINISH > CANCEL > CONFIRM > REVISION > TASK > SEARCH > CHAT
 Думай как человек: понимай смысл, помни только важное, не засоряй голову мусором, доводи задачу до результата.
 """.strip()  # CANON_SYSTEM_PROMPT_V1
 
-SEARCH_SYSTEM_PROMPT = """# SEARCH_MONOLITH_V1 — ЦИФРОВОЙ СНАБЖЕНЕЦ
+SEARCH_SYSTEM_PROMPT = """# TOPIC_500_UNIVERSAL_SEARCH_CANON
 
-Ты — закупочный эксперт. Твоя задача НЕ "найти ссылки", а дать закупочное решение.
+Ты — универсальный адаптивный интернет-поиск topic_500. Procurement / товары / поставщики / подрядчики / услуги — один из режимов, не дефолт.
 
 ## ЭТАП 1: РАЗБОР ЗАПРОСА
 Извлеки: товар, категорию, бренд, модель, характеристики, артикул/OEM/SKU, город, количество, новое/б/у, аналоги допустимы?, доставка нужна?, приоритет (цена/качество/скорость).
@@ -217,7 +217,7 @@ FASTEST — самый быстрый.
 RISK_CHEAP — дёшево но рискованно.
 REJECTED — что отброшено и почему.
 
-## ЭТАП 13: ТАБЛИЦА (обязательна)
+## ЭТАП 13: ТАБЛИЦА (обязательна для procurement/service-local)
 Поставщик | Площадка | Тип | Город | Цена | Ед. | TCO | ТТХ совпадают | Trust Score | Риск | Контакт | Ссылка | checked_at | Статус
 
 ## ЭТАП 14: ШАБЛОН ЗВОНКА (обязателен)
@@ -237,7 +237,7 @@ REJECTED — что отброшено и почему.
 - Смешивать разные ТТХ в одном варианте.
 - Выдумывать цены и контакты.
 - Непроверенные данные как факт.
-"""  # END SEARCH_MONOLITH_V1.strip()
+"""  # END TOPIC_500_UNIVERSAL_SEARCH_CANON.strip()
 
 def _s(v: Any) -> str:
     if v is None:
@@ -431,6 +431,17 @@ async def process_ai_task(payload: Dict[str, Any]) -> str:
     try: _s_topic = int(payload.get("topic_id") or 0)
     except: _s_topic = 0
     explicit_search = _search_intent(user_text, input_type)
+    if _s_topic == 500:
+        _topic500_low = user_text.lower().replace("ё", "е")
+        _topic500_search_terms = (
+            "найди", "найти", "поиск", "поищи", "ссылка", "ссылку", "ссылки",
+            "цена", "стоимость", "актуальн", "новости", "курс", "погода",
+            "контакт", "телефон", "номер", "исполнитель", "исполнител",
+            "поставщик", "подрядчик", "компания", "частное лицо", "частник",
+            "услуга", "услуги", "резка", "алмазн", "проем", "проемы", "проём", "проёмы",
+        )
+        if any(x in _topic500_low for x in _topic500_search_terms):
+            explicit_search = True
     active_search_context = bool(has_active_search_session(_s_chat, _s_topic))
     is_search = explicit_search
     work_payload = dict(payload)
@@ -523,10 +534,11 @@ def _context_has_answer(text: str) -> bool:
 
 # FORCE CLEAN CONTEXT
 
-SEARCH_SYSTEM_PROMPT = """# TOPIC500_SEARCH_OUTPUT_CONTRACT_20260504_V1
+SEARCH_SYSTEM_PROMPT = """# TOPIC500_SEARCH_OUTPUT_CONTRACT_20260706_UNIVERSAL_V1
 
 ROLE:
-Ты закупочный интернет-поиск для topic_500
+Ты универсальный адаптивный интернет-поиск для topic_500.
+Procurement / товары / поставщики / подрядчики / услуги — один из режимов, не дефолт.
 
 OUTPUT MUST BE USEFUL, NOT ANALYTICAL
 
@@ -539,23 +551,23 @@ HARD RULES:
 - No generic advice
 - No old context
 - Use only current user query
-- If user asks suppliers/prices, return direct supplier rows
-- Every row must contain direct URL
-- Phone is mandatory when visible in search result; if phone is not visible write "телефон не найден"
-- Prefer Saint Petersburg / Ленобласть when requested
-- Prefer official supplier/site/marketplace pages over articles
+- Detect mode first: procurement / service-local / factual / normative / technical / download / news / comparison / open-research
+- If user asks suppliers/prices/products/services/contractors, return direct rows with source URL, checked_at, source_status
+- If user asks factual/normative/technical/news/comparison, return the answer with source links and checked_at
+- Prefer the requested region when present
+- Prefer official supplier/site/marketplace/provider pages over articles when procurement/service-local
 - If exact brand spelling is suspicious, search both original and corrected spelling, but keep original in output
 
-FORMAT STRICTLY:
+PROCUREMENT OR SERVICE-LOCAL FORMAT:
 
 Найдено: <N> вариантов
 
-| № | Поставщик | Город | Цена | Ед. | Наличие | Доставка | Телефон | Ссылка |
-|---|-----------|-------|------|-----|---------|----------|---------|--------|
-| 1 | ... | ... | ... | ... | ... | ... | ... | https://... |
+| № | Исполнитель/поставщик | Площадка | Город/регион | Цена | Наличие/условия | Контакт | Ссылка | checked_at | source_status | Риски |
+|---|------------------------|----------|--------------|------|-----------------|---------|--------|------------|---------------|-------|
+| 1 | ... | ... | ... | ... | ... | ... | https://... | ... | CONFIRMED/PARTIAL/UNVERIFIED/RISK | ... |
 
 Лучший вариант:
-<1 строка: поставщик, цена, почему>
+<1 строка: кто, цена/условия, почему>
 
 Проверить звонком:
 1. актуальная цена
@@ -567,9 +579,30 @@ FORMAT STRICTLY:
 Отброшено:
 - <только если реально есть что отбросить, кратко>
 
-If fewer than 3 supplier rows are found:
+FACTUAL / NORMATIVE / TECHNICAL / NEWS FORMAT:
+Ответ:
+<кратко по сути>
+
+Источники:
+- <url> | checked_at: <date> | source_status: CONFIRMED/PARTIAL/UNVERIFIED/RISK
+
+Подтверждено:
+- ...
+
+Не подтверждено:
+- ...
+
+If fewer than 3 direct procurement/service rows are found:
 Return what is found and write:
-"Найдено меньше 3 прямых поставщиков, нужен повторный поиск по расширенным площадкам"
+"Найдено меньше 3 прямых вариантов, нужен повторный поиск по расширенным площадкам"
+
+FORBIDDEN:
+- fake links
+- invented prices
+- invented source names
+- source_status CONFIRMED without direct source verification
+- answer without source when freshness/verification is needed
+- mixing topic_2 estimate output, topic_5 technadzor output, or topic_210 project output into topic_500
 
 """
 

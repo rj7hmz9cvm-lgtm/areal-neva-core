@@ -1,8 +1,4730 @@
 # ORCHESTRA_FULL_CONTEXT_PART_016
-generated_at_utc: 2026-07-07T19:24:08.719560+00:00
-git_sha_before_commit: 75f68ff0c25d5c4594ccc3083e30a8f7c1a4611b
+generated_at_utc: 2026-07-07T20:24:27.455716+00:00
+git_sha_before_commit: b72088bba5fc5e80f08dfdcc817ac5ad506f3f2d
 part: 16/22
 
+
+====================================================================================================
+BEGIN_FILE: core/technadzor_engine.py
+FILE_CHUNK: 1/1
+SHA256_FULL_FILE: 23ad1be4c83a5d078344ec017ea6069bbed68fcab1d3951c031befc110a26820
+====================================================================================================
+# === FINAL_CLOSURE_BLOCKER_FIX_V1_TECHNADZOR_ENGINE ===
+from __future__ import annotations
+
+import re
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict
+
+BASE = Path("/root/.areal-neva-core")
+OUT = BASE / "outputs" / "technadzor"
+OUT.mkdir(parents=True, exist_ok=True)
+
+
+def is_technadzor_intent(text: str = "", file_name: str = "") -> bool:
+    t = f"{text} {file_name}".lower().replace("ё", "е")
+    return bool(re.search(r"\b(акт|технадзор|техническ.*надзор|дефект|замечан|нарушен|освидетельств|стройконтроль|сп|гост|снип)\b", t))
+
+
+def _norm_refs(text: str) -> str:
+    refs = []
+    for m in re.findall(r"\b(сп\s*\d+[.\d]*|гост\s*\d+[.\d-]*|снип\s*[\w.\-]+)\b", text or "", flags=re.I):
+        refs.append(m.upper().replace("  ", " "))
+    return ", ".join(sorted(set(refs))) if refs else "Норма не подтверждена"
+
+
+def process_technadzor(text: str = "", task_id: str = "", chat_id: str = "", topic_id: int = 0, file_path: str = "", file_name: str = "") -> Dict[str, Any]:
+    if not is_technadzor_intent(text, file_name):
+        return {"ok": False, "handled": False, "reason": "NOT_TECHNADZOR"}
+
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    stem = f"TECHNADZOR_ACT__{task_id[:8] or ts}"
+    txt_path = OUT / f"{stem}.txt"
+
+    body = [
+        "АКТ ТЕХНИЧЕСКОГО НАДЗОРА",
+        "",
+        f"Дата: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        f"Задача: {task_id}",
+        f"Топик: {topic_id}",
+    ]
+
+    if file_name:
+        body.append(f"Файл: {file_name}")
+
+    body.extend(
+        [
+            "",
+            "Исходное описание:",
+            (text or "").strip() or "UNKNOWN",
+            "",
+            "Нормативная база:",
+            _norm_refs(text),
+            "",
+            "Вывод:",
+            "Черновик акта создан. Если норматив не подтверждён источником, в акте указано: Норма не подтверждена",
+        ]
+    )
+
+    txt_path.write_text("\n".join(body) + "\n", encoding="utf-8")
+
+    return {
+        "ok": True,
+        "handled": True,
+        "kind": "technadzor_act",
+        "state": "DONE",
+        "artifact_path": str(txt_path),
+        "message": "Технадзорный акт подготовлен",  # TECHNADZOR_PUBLIC_MESSAGE_NO_LOCAL_PATH_V1
+        "history": "FINAL_CLOSURE_BLOCKER_FIX_V1:TECHNADZOR_ACT_CREATED",
+    }
+
+
+# === END_FINAL_CLOSURE_BLOCKER_FIX_V1_TECHNADZOR_ENGINE ===
+
+
+# === P6_TECHNADZOR_TEMPLATE_AND_ARTIFACT_CLOSE_20260504_V1 ===
+# Scope:
+# - technadzor sample/template files can be saved as active reference per chat/topic
+# - future technadzor acts use active reference metadata
+# - produces TXT and DOCX when python-docx exists; no DB schema changes
+
+import json as _p6tz_json
+import re as _p6tz_re
+from datetime import datetime as _p6tz_datetime
+from pathlib import Path as _p6tz_Path
+
+_P6TZ_BASE = _p6tz_Path("/root/.areal-neva-core")
+_P6TZ_TEMPLATE_DIR = _P6TZ_BASE / "data/templates/technadzor"
+_P6TZ_OUT = _P6TZ_BASE / "outputs/technadzor"
+_P6TZ_TEMPLATE_DIR.mkdir(parents=True, exist_ok=True)
+_P6TZ_OUT.mkdir(parents=True, exist_ok=True)
+
+def _p6tz_s(v, limit=12000):
+    try:
+        if v is None:
+            return ""
+        return str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+def _p6tz_low(v):
+    return _p6tz_s(v).lower().replace("ё", "е")
+
+def _p6tz_template_path(chat_id, topic_id):
+    safe_chat = _p6tz_re.sub(r"[^0-9a-zA-Z_-]+", "_", str(chat_id or "unknown"))
+    return _P6TZ_TEMPLATE_DIR / f"ACTIVE__chat_{safe_chat}__topic_{int(topic_id or 0)}.json"
+
+def _p6tz_is_template_intent(text="", file_name=""):
+    low = _p6tz_low(str(text) + " " + str(file_name))
+    return any(x in low for x in ("образец", "шаблон", "пример", "как образец", "как шаблон", "возьми его как образец", "сохрани как образец")) and any(x in low for x in ("технадзор", "акт", "замечан", "дефект", "строительный контроль", "стройконтроль"))
+
+def _p6tz_save_template(text="", task_id="", chat_id="", topic_id=0, file_path="", file_name=""):
+    meta = {
+        "engine": "P6_TECHNADZOR_TEMPLATE_AND_ARTIFACT_CLOSE_20260504_V1",
+        "kind": "technadzor_template",
+        "status": "active",
+        "chat_id": str(chat_id or ""),
+        "topic_id": int(topic_id or 0),
+        "source_task_id": str(task_id or ""),
+        "source_file_path": str(file_path or ""),
+        "source_file_name": str(file_name or ""),
+        "raw_user_instruction": _p6tz_s(text, 4000),
+        "usage_rule": "Use this file as formatting/sample reference for future technadzor acts in same chat/topic",
+        "saved_at": _p6tz_datetime.now().isoformat(),
+    }
+    path = _p6tz_template_path(chat_id, topic_id)
+    path.write_text(_p6tz_json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+    return path
+
+def _p6tz_load_template(chat_id, topic_id):
+    path = _p6tz_template_path(chat_id, topic_id)
+    if not path.exists():
+        return {}
+    try:
+        return _p6tz_json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+def _p6tz_refs(text):
+    refs = []
+    for m in _p6tz_re.findall(r"\b(сп\s*\d+[.\d]*|гост\s*\d+[.\d-]*|снип\s*[\w.\-]+)\b", text or "", flags=_p6tz_re.I):
+        refs.append(m.upper().replace("  ", " "))
+    return ", ".join(sorted(set(refs))) if refs else "Норма не подтверждена"
+
+def _p6tz_make_docx(path, lines):
+    try:
+        from docx import Document
+        doc = Document()
+        for i, line in enumerate(lines):
+            if i == 0:
+                doc.add_heading(line, level=1)
+            elif line == "":
+                doc.add_paragraph("")
+            else:
+                doc.add_paragraph(line)
+        doc.save(str(path))
+        return str(path)
+    except Exception:
+        return ""
+
+try:
+    _p6tz_orig_is_intent = is_technadzor_intent
+    def is_technadzor_intent(text: str = "", file_name: str = "") -> bool:
+        low = _p6tz_low(str(text) + " " + str(file_name))
+        if _p6tz_is_template_intent(text, file_name):
+            return True
+        if any(x in low for x in ("технадзор", "акт", "замечан", "дефект", "нарушен", "освидетельств", "стройконтроль", "строительный контроль", "сп ", "гост", "снип")):
+            return True
+        return _p6tz_orig_is_intent(text, file_name)
+except Exception:
+    pass
+
+try:
+    _p6tz_orig_process = process_technadzor
+    def process_technadzor(text: str = "", task_id: str = "", chat_id: str = "", topic_id: int = 0, file_path: str = "", file_name: str = ""):
+        if _p6tz_is_template_intent(text, file_name):
+            meta_path = _p6tz_save_template(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id, file_path=file_path, file_name=file_name)
+            return {
+                "ok": True,
+                "handled": True,
+                "kind": "technadzor_template_saved",
+                "state": "DONE",
+                "artifact_path": str(meta_path),
+                "message": "Образец технадзора сохранён для этого топика",
+                "history": "P6_TECHNADZOR_TEMPLATE_SAVED",
+            }
+
+        if not is_technadzor_intent(text, file_name):
+            return {"ok": False, "handled": False, "reason": "NOT_TECHNADZOR"}
+
+        tpl = _p6tz_load_template(chat_id, topic_id)
+        ts = _p6tz_datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe = str(task_id or ts)[:8] or ts
+        stem = f"TECHNADZOR_ACT__{safe}"
+        txt_path = _P6TZ_OUT / f"{stem}.txt"
+        docx_path = _P6TZ_OUT / f"{stem}.docx"
+
+        lines = [
+            "АКТ ТЕХНИЧЕСКОГО НАДЗОРА",
+            "",
+            f"Дата: {_p6tz_datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            f"Задача: {task_id}",
+            f"Топик: {topic_id}",
+        ]
+        if file_name:
+            lines.append(f"Файл: {file_name}")
+        if tpl:
+            lines.append(f"Образец: {tpl.get('source_file_name') or tpl.get('source_file_path') or 'активный шаблон топика'}")
+        lines += [
+            "",
+            "Исходное описание:",
+            _p6tz_s(text, 6000) or "UNKNOWN",
+            "",
+            "Нормативная база:",
+            _p6tz_refs(text),
+            "",
+            "Выявленные замечания:",
+            "1. Требуется заполнение по присланным фото/файлам и описанию",
+            "",
+            "Требуемые действия:",
+            "1. Устранить замечания",
+            "2. Предоставить фотофиксацию устранения",
+            "3. Повторно предъявить участок работ техническому надзору",
+            "",
+            "Статус:",
+            "Черновик подготовлен по текущим данным",
+        ]
+
+        txt_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        docx_created = _p6tz_make_docx(docx_path, lines)
+        return {
+            "ok": True,
+            "handled": True,
+            "kind": "technadzor_act",
+            "state": "DONE",
+            "artifact_path": docx_created or str(txt_path),
+            "extra_artifact_path": str(txt_path),
+            "message": "Технадзорный акт подготовлен",
+            "history": "P6_TECHNADZOR_ACT_CREATED",
+        }
+except Exception:
+    pass
+
+# === END_P6_TECHNADZOR_TEMPLATE_AND_ARTIFACT_CLOSE_20260504_V1 ===
+
+# === P6C_TECHNADZOR_CONN_COMPAT_TEMPLATE_ACT_CLOSE_20260504_V1 ===
+import json as _p6c_te_json
+import re as _p6c_te_re
+from pathlib import Path as _p6c_te_Path
+from datetime import datetime as _p6c_te_datetime
+
+_P6C_TE_BASE = _p6c_te_Path("/root/.areal-neva-core")
+_P6C_TE_OUT = _P6C_TE_BASE / "outputs" / "technadzor"
+_P6C_TE_TPL = _P6C_TE_BASE / "data" / "templates" / "technadzor"
+_P6C_TE_OUT.mkdir(parents=True, exist_ok=True)
+_P6C_TE_TPL.mkdir(parents=True, exist_ok=True)
+
+def _p6c_te_s(v, limit=50000):
+    try:
+        if v is None:
+            return ""
+        return str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+def _p6c_te_low(v):
+    return _p6c_te_s(v).lower().replace("ё", "е")
+
+def is_technadzor_intent(text: str = "", file_name: str = "") -> bool:
+    low = _p6c_te_low(f"{text} {file_name}")
+    return any(x in low for x in (
+        "технадзор", "акт", "осмотр", "выезд", "дефект", "замечан",
+        "образец написания", "образец акта", "как образец"
+    ))
+
+def _p6c_te_is_template(text, file_name):
+    low = _p6c_te_low(f"{text} {file_name}")
+    return any(x in low for x in (
+        "образец", "как образец", "прими это как факт", "образец написания",
+        "возьми это как образец", "шаблон"
+    ))
+
+def _p6c_te_read_text(file_path):
+    fp = _p6c_te_Path(_p6c_te_s(file_path))
+    if not fp.exists():
+        return ""
+    suf = fp.suffix.lower()
+    try:
+        if suf == ".txt":
+            return fp.read_text(encoding="utf-8", errors="ignore")[:30000]
+        if suf == ".pdf":
+            try:
+                import fitz
+                doc = fitz.open(str(fp))
+                return "\n".join(page.get_text("text") for page in doc)[:30000]
+            except Exception:
+                return ""
+        if suf == ".docx":
+            try:
+                import docx
+                d = docx.Document(str(fp))
+                return "\n".join(p.text for p in d.paragraphs)[:30000]
+            except Exception:
+                return ""
+    except Exception:
+        return ""
+    return ""
+
+def _p6c_te_save_template(chat_id, topic_id, task_id, text, file_name, file_path):
+    data = {
+        "engine": "P6C_TECHNADZOR_CONN_COMPAT_TEMPLATE_ACT_CLOSE_20260504_V1",
+        "chat_id": str(chat_id or ""),
+        "topic_id": int(topic_id or 0),
+        "task_id": str(task_id or ""),
+        "file_name": _p6c_te_s(file_name),
+        "file_path": _p6c_te_s(file_path),
+        "saved_at": _p6c_te_datetime.utcnow().isoformat() + "Z",
+        "template_text": _p6c_te_s(text, 25000),
+    }
+    out = _P6C_TE_TPL / f"ACTIVE__chat_{chat_id}__topic_{int(topic_id or 0)}.json"
+    out.write_text(_p6c_te_json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    return str(out)
+
+def _p6c_te_load_template(chat_id, topic_id):
+    p = _P6C_TE_TPL / f"ACTIVE__chat_{chat_id}__topic_{int(topic_id or 0)}.json"
+    if not p.exists():
+        return {}
+    try:
+        return _p6c_te_json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+def _p6c_te_write_act(task_id, chat_id, topic_id, body):
+    out = _P6C_TE_OUT / f"TECHNADZOR_ACT__{str(task_id)[:8]}.txt"
+    out.write_text(body, encoding="utf-8")
+    return str(out)
+
+def process_technadzor(text: str = "", task_id: str = "", chat_id: str = "", topic_id: int = 0, file_path: str = "", file_name: str = "", **kwargs):
+    conn = kwargs.get("conn")
+    raw_text = _p6c_te_s(text, 50000)
+    file_name = _p6c_te_s(file_name or kwargs.get("name") or "")
+    file_path = _p6c_te_s(file_path or kwargs.get("local_path") or "")
+    task_id = _p6c_te_s(task_id or kwargs.get("id") or kwargs.get("task_id") or "technadzor")
+    chat_id = _p6c_te_s(chat_id or kwargs.get("chat_id") or "")
+    try:
+        topic_id = int(topic_id or kwargs.get("topic_id") or 0)
+    except Exception:
+        topic_id = 0
+
+    extracted = _p6c_te_read_text(file_path)
+    combined = "\n".join(x for x in [raw_text, extracted] if x).strip()
+
+    if _p6c_te_is_template(raw_text, file_name):
+        tpl_path = _p6c_te_save_template(chat_id, topic_id, task_id, combined, file_name, file_path)
+        return {
+            "ok": True,
+            "status": "DONE",
+            "result_text": f"Образец технадзора принят и сохранён\nФайл: {file_name}\nШаблон: активен для topic_{topic_id}",
+            "artifact_path": tpl_path,
+            "history": "P6C_TECHNADZOR_TEMPLATE_SAVED",
+        }
+
+    tpl = _p6c_te_load_template(chat_id, topic_id)
+    tpl_note = "Использован сохранённый образец" if tpl else "Сохранённый образец не найден"
+
+    body = "\n".join([
+        "АКТ ОСМОТРА ПО ФАКТУ ВЫЕЗДА",
+        "",
+        f"Дата формирования: {_p6c_te_datetime.now().strftime('%d.%m.%Y %H:%M')}",
+        f"Файл: {file_name or 'без файла'}",
+        f"Источник: topic_{topic_id}",
+        f"Шаблон: {tpl_note}",
+        "",
+        "Исходные данные:",
+        combined[:12000] if combined else "Данные из файла не извлечены автоматически",
+        "",
+        "Вывод технического надзора:",
+        "Документ сформирован как рабочий черновик акта. Требуется проверка владельцем перед выдачей заказчику.",
+    ])
+    artifact = _p6c_te_write_act(task_id, chat_id, topic_id, body)
+
+    return {
+        "ok": True,
+        "status": "DONE",
+        "result_text": f"Акт технадзора сформирован\nФайл: {file_name or 'без файла'}\nАртефакт: {artifact}",
+        "artifact_path": artifact,
+        "history": "P6C_TECHNADZOR_ACT_CREATED",
+    }
+# === END_P6C_TECHNADZOR_CONN_COMPAT_TEMPLATE_ACT_CLOSE_20260504_V1 ===
+
+# === P6E2_TECHNADZOR_FOLDER_AWARE_NO_DRIVE_POLLUTION_20260504_V1 ===
+import json as _p6e2_te_json
+import re as _p6e2_te_re
+from pathlib import Path as _p6e2_te_Path
+from datetime import datetime as _p6e2_te_datetime
+
+_P6E2_TE_BASE = _p6e2_te_Path("/root/.areal-neva-core")
+_P6E2_TE_OUT = _P6E2_TE_BASE / "outputs" / "technadzor"
+_P6E2_TE_TPL = _P6E2_TE_BASE / "data" / "templates" / "technadzor"
+_P6E2_TE_OUT.mkdir(parents=True, exist_ok=True)
+_P6E2_TE_TPL.mkdir(parents=True, exist_ok=True)
+
+def _p6e2_te_s(v, limit=50000):
+    try:
+        if v is None:
+            return ""
+        return str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+def _p6e2_te_low(v):
+    return _p6e2_te_s(v).lower().replace("ё", "е")
+
+def _p6e2_te_is_template(text, file_name=""):
+    low = _p6e2_te_low(text + " " + file_name)
+    return any(x in low for x in ("как образец", "образец написания", "прими это как факт", "возьми это как образец", "шаблон акта"))
+
+def _p6e2_te_extract_links(text):
+    return _p6e2_te_re.findall(r"https?://\S+", _p6e2_te_s(text, 50000))
+
+def _p6e2_te_read_file(path):
+    p = _p6e2_te_Path(_p6e2_te_s(path))
+    if not p.exists():
+        return ""
+    try:
+        if p.suffix.lower() == ".txt":
+            return p.read_text(encoding="utf-8", errors="ignore")[:50000]
+        if p.suffix.lower() == ".docx":
+            import docx
+            d = docx.Document(str(p))
+            return "\n".join(x.text for x in d.paragraphs)[:50000]
+        if p.suffix.lower() == ".pdf":
+            try:
+                import fitz
+                doc = fitz.open(str(p))
+                return "\n".join(page.get_text("text") for page in doc)[:50000]
+            except Exception:
+                return ""
+    except Exception:
+        return ""
+    return ""
+
+def _p6e2_te_tpl_path(chat_id, topic_id):
+    return _P6E2_TE_TPL / f"ACTIVE__chat_{chat_id}__topic_{int(topic_id or 0)}.json"
+
+def _p6e2_te_save_template(chat_id, topic_id, task_id, body, file_name, file_path, links):
+    data = {
+        "engine": "P6E2_TECHNADZOR_FOLDER_AWARE_NO_DRIVE_POLLUTION_20260504_V1",
+        "chat_id": str(chat_id),
+        "topic_id": int(topic_id or 0),
+        "task_id": str(task_id),
+        "file_name": _p6e2_te_s(file_name),
+        "file_path": _p6e2_te_s(file_path),
+        "drive_links_seen": links,
+        "saved_at": _p6e2_te_datetime.utcnow().isoformat() + "Z",
+        "template_text": _p6e2_te_s(body, 30000),
+    }
+    p = _p6e2_te_tpl_path(chat_id, topic_id)
+    p.write_text(_p6e2_te_json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    return str(p)
+
+def _p6e2_te_load_template(chat_id, topic_id):
+    p = _p6e2_te_tpl_path(chat_id, topic_id)
+    if not p.exists():
+        return {}
+    try:
+        return _p6e2_te_json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+def is_technadzor_intent(text: str = "", file_name: str = "") -> bool:
+    low = _p6e2_te_low(text + " " + file_name)
+    return any(x in low for x in ("технадзор", "акт", "осмотр", "выезд", "дефект", "замечан", "нарушен", "образец написания", "как образец", "прими это как факт"))
+
+def process_technadzor(text: str = "", task_id: str = "", chat_id: str = "", topic_id: int = 0, file_path: str = "", file_name: str = "", **kwargs):
+    raw = _p6e2_te_s(text, 50000)
+    extracted = _p6e2_te_read_file(file_path)
+    combined = "\n".join(x for x in (raw, extracted) if x).strip()
+    links = _p6e2_te_extract_links(combined)
+    task_id = _p6e2_te_s(task_id or kwargs.get("task_id") or kwargs.get("id") or "technadzor")
+    chat_id = _p6e2_te_s(chat_id or kwargs.get("chat_id") or "")
+    try:
+        topic_id = int(topic_id or kwargs.get("topic_id") or 0)
+    except Exception:
+        topic_id = 0
+    file_name = _p6e2_te_s(file_name or kwargs.get("file_name") or kwargs.get("name") or "")
+    file_path = _p6e2_te_s(file_path or kwargs.get("local_path") or "")
+
+    if _p6e2_te_is_template(raw, file_name):
+        tpl = _p6e2_te_save_template(chat_id, topic_id, task_id, combined, file_name, file_path, links)
+        return {
+            "ok": True,
+            "handled": True,
+            "status": "DONE",
+            "state": "DONE",
+            "result_text": f"Образец технадзора принят и сохранён\nФайл: {file_name or 'без файла'}\nШаблон: active topic_{topic_id}\nDrive-ссылки учтены: {len(links)}",
+            "message": "Образец технадзора принят и сохранён",
+            "artifact_path": tpl,
+            "history": "P6E2_TECHNADZOR_TEMPLATE_SAVED",
+        }
+
+    if not is_technadzor_intent(combined, file_name):
+        return {"ok": False, "handled": False, "reason": "NOT_TECHNADZOR"}
+
+    tpl = _p6e2_te_load_template(chat_id, topic_id)
+    tpl_note = "использован сохранённый образец" if tpl else "сохранённый образец не найден"
+    out = _P6E2_TE_OUT / f"TECHNADZOR_ACT__{str(task_id)[:8]}.txt"
+    body = "\n".join([
+        "АКТ ОСМОТРА ПО ФАКТУ ВЫЕЗДА",
+        "",
+        f"Дата формирования: {_p6e2_te_datetime.now().strftime('%d.%m.%Y %H:%M')}",
+        f"Файл: {file_name or 'без файла'}",
+        f"Источник: topic_{topic_id}",
+        f"Шаблон: {tpl_note}",
+        f"Drive-ссылки в исходных данных: {len(links)}",
+        "",
+        "Исходные данные:",
+        combined[:15000] if combined else "UNKNOWN",
+        "",
+        "Вывод технического надзора:",
+        "Документ сформирован по текущим данным и сохранён локально без записи мусора в Google Drive",
+    ])
+    out.write_text(body + "\n", encoding="utf-8")
+    return {
+        "ok": True,
+        "handled": True,
+        "status": "DONE",
+        "state": "DONE",
+        "result_text": f"Акт технадзора сформирован\nФайл: {file_name or 'без файла'}\nАртефакт: {out}",
+        "message": "Акт технадзора сформирован",
+        "artifact_path": str(out),
+        "history": "P6E2_TECHNADZOR_ACT_CREATED",
+    }
+# === END_P6E2_TECHNADZOR_FOLDER_AWARE_NO_DRIVE_POLLUTION_20260504_V1 ===
+
+
+# === P6F_TECHNADZOR_CLEAN_OUTPUT_AND_NORM_GATE_V1 ===
+# FACT: wraps process_technadzor to ensure clean user-facing output.
+# Uses core.normative_engine for confirmed references; if no confidence
+# >= PARTIAL — explicitly states "норма не подтверждена" (per canon).
+# Forbids JSON output to user.
+import json as _p6f_tnz_json
+import logging as _p6f_tnz_logging
+
+_P6F_TNZ_LOG = _p6f_tnz_logging.getLogger("technadzor_engine")
+
+def _p6f_tnz_clean_for_user(text):
+    if not text:
+        return ""
+    s = str(text).strip()
+    if (s.startswith("{") and s.rstrip().endswith("}")) or (s.startswith("[") and s.rstrip().endswith("]")):
+        try:
+            obj = _p6f_tnz_json.loads(s)
+            if isinstance(obj, dict):
+                summary = str(obj.get("summary") or obj.get("message") or "").strip()
+                if summary:
+                    return summary
+                lines = []
+                for k in ("kind", "state", "artifact_path", "history"):
+                    if k in obj:
+                        v = obj[k]
+                        if k == "artifact_path":
+                            lines.append("Артефакт: создан")
+                        else:
+                            lines.append(str(k) + ": " + str(v))
+                if lines:
+                    return "\n".join(lines)
+                return "Технадзорный результат подготовлен"
+        except Exception:
+            pass
+    return s
+
+def _p6f_tnz_norm_block(text):
+    try:
+        from core.normative_engine import search_norms_sync, format_norms_for_act
+    except Exception:
+        return ""
+    try:
+        norms = search_norms_sync(text or "", limit=3)
+    except Exception:
+        return ""
+    if not norms:
+        return "Норма не подтверждена. Акт оформлен без ссылки на конкретный пункт СП/ГОСТ"
+    confirmed_or_partial = [n for n in norms if str(n.get("confidence", "")).upper() in ("CONFIRMED", "PARTIAL")]
+    if not confirmed_or_partial:
+        return "Норма не подтверждена. Источник не найден"
+    try:
+        return format_norms_for_act(confirmed_or_partial)
+    except Exception:
+        out = []
+        for n in confirmed_or_partial:
+            nid = str(n.get("norm_id", "")).strip()
+            sec = str(n.get("section", "")).strip()
+            req = str(n.get("requirement", "")).strip()
+            conf = str(n.get("confidence", "")).strip()
+            if nid:
+                out.append(f"- {nid} | {sec} | {req} | confidence={conf}")
+        return "\n".join(out)
+
+try:
+    _P6F_TNZ_ORIG_PROCESS = process_technadzor
+    if not getattr(_P6F_TNZ_ORIG_PROCESS, "_p6f_tnz_wrapped", False):
+        def process_technadzor(text="", task_id="", chat_id="", topic_id=0, file_path="", file_name="", **kwargs):
+            try:
+                res = _P6F_TNZ_ORIG_PROCESS(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs)
+            except TypeError:
+                res = _P6F_TNZ_ORIG_PROCESS(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id, file_path=file_path, file_name=file_name)
+            try:
+                if isinstance(res, dict) and res.get("ok") and res.get("handled"):
+                    raw_msg = res.get("message") or ""
+                    clean = _p6f_tnz_clean_for_user(raw_msg)
+                    norm_block = _p6f_tnz_norm_block(text)
+                    artifact_line = ""
+                    if res.get("artifact_path"):
+                        artifact_line = "Артефакт акта: создан"
+                    parts = [clean]
+                    if norm_block:
+                        parts.append("\nНормативная база:\n" + norm_block)
+                    if artifact_line:
+                        parts.append("\n" + artifact_line)
+                    res["message"] = "\n".join([p for p in parts if p]).strip()
+                    res["history"] = (res.get("history") or "") + ";P6F_TNZ_CLEANED_OUTPUT"
+            except Exception as _e:
+                try:
+                    _P6F_TNZ_LOG.warning("P6F_TNZ_WRAP_ERR %s", _e)
+                except Exception:
+                    pass
+            return res
+        process_technadzor._p6f_tnz_wrapped = True
+        _P6F_TNZ_LOG.info("P6F_TECHNADZOR_CLEAN_OUTPUT_AND_NORM_GATE_INSTALLED")
+except Exception as _e:
+    try:
+        _P6F_TNZ_LOG.exception("P6F_TNZ_INSTALL_ERR %s", _e)
+    except Exception:
+        pass
+# === END_P6F_TECHNADZOR_CLEAN_OUTPUT_AND_NORM_GATE_V1 ===
+
+
+# === P6F_TECHNADZOR_PHOTO_TO_DOCX_REAL_V1 ===
+# FACT: real photo defect → Vision (OpenRouter) → DOCX акт →
+# Drive upload via topic_drive_oauth.upload_file_to_topic.
+# No direct Google API. Norms only via core.normative_engine
+# (no invented references).
+import os as _p6f_tnz_os
+import base64 as _p6f_tnz_base64
+import asyncio as _p6f_tnz_asyncio
+import json as _p6f_tnz_json2
+import logging as _p6f_tnz_logging2
+
+_P6F_TNZ_REAL_LOG = _p6f_tnz_logging2.getLogger("technadzor_engine")
+
+_P6F_TNZ_REAL_PROMPT = (
+    "Ты эксперт технического надзора в строительстве. На фото фиксация состояния "
+    "конструкций или дефекта. Верни СТРОГО JSON без пояснений со схемой:\n"
+    "{\n"
+    "  \"summary\": \"кратко что видно\",\n"
+    "  \"defects\": [{\n"
+    "    \"title\": \"короткое название\",\n"
+    "    \"location\": \"место\",\n"
+    "    \"severity\": \"low|medium|high|critical\",\n"
+    "    \"description\": \"что не так\",\n"
+    "    \"recommendation\": \"что делать\"\n"
+    "  }],\n"
+    "  \"confidence\": \"HIGH|MEDIUM|LOW\"\n"
+    "}\n"
+    "Если на фото нет дефектов — defects=[]. "
+    "Не выдумывай нормы СП/ГОСТ — это не твоя задача."
+)
+
+def _p6f_tnz_is_image_path(path):
+    if not path:
+        return False
+    p = str(path).lower()
+    return any(p.endswith(e) for e in (".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif", ".bmp"))
+
+async def _p6f_tnz_vision_via_openrouter(local_path):
+    if not _p6f_tnz_is_image_path(local_path) or not _p6f_tnz_os.path.exists(str(local_path)):
+        return None, "PATH_MISSING"
+    api_key = <REDACTED_SECRET>"OPENROUTER_API_KEY") or "").strip()
+    if not api_key:
+        return None, "NO_OPENROUTER_KEY"
+    base_url = (_p6f_tnz_os.getenv("OPENROUTER_BASE_URL") or "https://openrouter.ai/api/v1").strip().rstrip("/")
+    model = (_p6f_tnz_os.getenv("OPENROUTER_VISION_MODEL") or "google/gemini-2.5-flash").strip()
+    ext = _p6f_tnz_os.path.splitext(str(local_path))[1].lower().lstrip(".") or "jpeg"
+    mime = "image/jpeg" if ext in ("jpg", "jpeg") else "image/{}".format(ext)
+    try:
+        with open(str(local_path), "rb") as f:
+            b64 = _p6f_tnz_base64.b64encode(f.read()).decode("utf-8")
+    except Exception as e:
+        return None, "READ_ERR:{}".format(e)
+
+    body = {
+        "model": model,
+        "messages": [{
+            "role": "user",
+            "content": [
+                {"type": "text", "text": _P6F_TNZ_REAL_PROMPT},
+                {"type": "image_url", "image_url": {"url": "data:" + mime + ";base64," + b64}},
+            ],
+        }],
+        "temperature": 0.1,
+    }
+    headers = {"Authorization": "Bearer " + api_key, "Content-Type": "application/json"}
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=httpx.Timeout(180.0, connect=30.0)) as client:
+            r = await client.post(base_url + "/chat/completions", headers=headers, json=body)
+            r.raise_for_status()
+            data = r.json()
+        content = data["choices"][0]["message"]["content"]
+        if isinstance(content, list):
+            content = "\n".join(x.get("text", "") if isinstance(x, dict) else str(x) for x in content)
+    except Exception as e:
+        return None, "OPENROUTER_CALL_ERR:{}".format(type(e).__name__)
+
+    s = str(content).strip()
+    if s.startswith("```"):
+        import re as _re
+        s = _re.sub(r"^```(?:json)?\s*", "", s)
+        s = _re.sub(r"\s*```\s*$", "", s)
+    try:
+        return _p6f_tnz_json2.loads(s), "OK"
+    except Exception:
+        return {"summary": s[:2000], "defects": [], "confidence": "LOW"}, "PARTIAL"
+
+def _p6f_tnz_norms_block(text_for_search):
+    try:
+        from core.normative_engine import search_norms_sync
+    except Exception:
+        return [], ""
+    try:
+        norms = search_norms_sync(text_for_search or "", limit=3)
+    except Exception:
+        return [], ""
+    confirmed = [n for n in norms if str(n.get("confidence", "")).upper() in ("CONFIRMED", "PARTIAL")]
+    if not confirmed:
+        return [], "Норма не подтверждена"
+    return confirmed, ""
+
+def _p6f_tnz_build_docx_lines(vision_result, norms, file_name, task_id):
+    from datetime import datetime as _dt
+    lines = [
+        "АКТ ТЕХНИЧЕСКОГО НАДЗОРА",
+        "",
+        "Дата: " + _dt.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "Задача: " + str(task_id),
+        "",
+    ]
+    if file_name:
+        lines.append("Источник: фото " + str(file_name))
+        lines.append("")
+    summary = (vision_result.get("summary") or "").strip() if isinstance(vision_result, dict) else ""
+    if summary:
+        lines.extend(["Сводка по фото:", summary, ""])
+    defects = vision_result.get("defects") or [] if isinstance(vision_result, dict) else []
+    if defects:
+        lines.append("Выявленные дефекты:")
+        for i, d in enumerate(defects, 1):
+            lines.append("{}. {}".format(i, d.get("title", "Дефект")))
+            if d.get("location"):
+                lines.append("   Место: " + str(d["location"]))
+            if d.get("severity"):
+                lines.append("   Степень: " + str(d["severity"]))
+            if d.get("description"):
+                lines.append("   Описание: " + str(d["description"]))
+            if d.get("recommendation"):
+                lines.append("   Рекомендация: " + str(d["recommendation"]))
+            lines.append("")
+    else:
+        lines.extend(["Дефекты на фото не выявлены или фото недостаточно информативно", ""])
+
+    if norms:
+        lines.append("Нормативная база:")
+        for n in norms:
+            lines.append("- " + str(n.get("norm_id", "")) + " — " + str(n.get("section", "")))
+            req = str(n.get("requirement", "")).strip()
+            if req:
+                lines.append("  " + req)
+            lines.append("  confidence=" + str(n.get("confidence", "")))
+        lines.append("")
+    else:
+        lines.extend(["Нормативная база: норма не подтверждена", ""])
+
+    confidence = vision_result.get("confidence", "LOW") if isinstance(vision_result, dict) else "LOW"
+    lines.append("Источник анализа: OpenRouter Vision (model=google/gemini-2.5-flash, confidence={})".format(confidence))
+    return lines
+
+async def _p6f_tnz_upload_to_topic(local_path, file_name, chat_id, topic_id):
+    try:
+        from core.topic_drive_oauth import upload_file_to_topic
+    except Exception as e:
+        _P6F_TNZ_REAL_LOG.warning("P6F_TNZ_UPLOAD_IMPORT_ERR %s", e)
+        return None, "NO_UPLOADER"
+    try:
+        result = await upload_file_to_topic(
+            file_path=str(local_path),
+            file_name=str(file_name),
+            chat_id=str(chat_id),
+            topic_id=int(topic_id or 5),
+        )
+        if isinstance(result, dict) and result.get("ok"):
+            file_id = result.get("drive_file_id") or result.get("id") or ""
+            if file_id:
+                return "https://drive.google.com/file/d/" + str(file_id) + "/view", "OK"
+            link = result.get("link") or result.get("web_view_link") or ""
+            return link, "OK_NO_ID"
+        return None, "UPLOAD_FAIL:" + str(result)[:200]
+    except Exception as e:
+        return None, "UPLOAD_ERR:{}".format(type(e).__name__)
+
+async def p6f_tnz_handle_photo_act_real(file_path, file_name, task_id, chat_id, topic_id, user_text=""):
+    """
+    Real entry point: photo → Vision → DOCX → Drive upload → return dict.
+    Used by topic_5 photo-act flow.
+    """
+    vision, vstatus = await _p6f_tnz_vision_via_openrouter(file_path)
+    if vision is None:
+        return {
+            "ok": False, "handled": True, "kind": "technadzor_photo_act",
+            "state": "WAITING_CLARIFICATION",
+            "message": "Не удалось проанализировать фото через Vision ({}). Пришли фото крупнее или текстовое описание дефекта".format(vstatus),
+            "history": "P6F_TNZ_VISION_FAIL:{}".format(vstatus),
+        }
+    norms_text = (vision.get("summary", "") or "") + " " + " ".join(
+        str(d.get("title", "")) + " " + str(d.get("description", ""))
+        for d in (vision.get("defects") or [])
+    ) + " " + str(user_text or "")
+    confirmed_norms, _ = _p6f_tnz_norms_block(norms_text)
+    docx_lines = _p6f_tnz_build_docx_lines(vision, confirmed_norms, file_name, task_id)
+
+    from datetime import datetime as _dt
+    ts = _dt.now().strftime("%Y%m%d_%H%M%S")
+    safe = (str(task_id or ts)[:8] or ts).replace("/", "_").replace("\\", "_")
+    out_dir = "/root/.areal-neva-core/outputs/technadzor_acts"
+    _p6f_tnz_os.makedirs(out_dir, exist_ok=True)
+    docx_path = "{}/TECHNADZOR_ACT_PHOTO__{}_{}.docx".format(out_dir, safe, ts)
+
+    try:
+        from core.technadzor_engine import _p6tz_make_docx as _make_docx
+    except Exception:
+        _make_docx = None
+    if _make_docx is None:
+        return {
+            "ok": False, "handled": True, "kind": "technadzor_photo_act",
+            "state": "FAILED",
+            "message": "DOCX-генератор недоступен (python-docx не установлен)",
+            "history": "P6F_TNZ_DOCX_GEN_MISSING",
+        }
+    written = _make_docx(docx_path, docx_lines)
+    if not written:
+        return {
+            "ok": False, "handled": True, "kind": "technadzor_photo_act",
+            "state": "FAILED",
+            "message": "Ошибка создания DOCX акта",
+            "history": "P6F_TNZ_DOCX_WRITE_FAIL",
+        }
+
+    drive_link, ustatus = await _p6f_tnz_upload_to_topic(
+        docx_path, _p6f_tnz_os.path.basename(docx_path), chat_id or "-1003725299009", topic_id or 5
+    )
+    confidence = vision.get("confidence", "LOW")
+    summary = vision.get("summary", "") or ""
+    defects_count = len(vision.get("defects") or [])
+    norms_count = len(confirmed_norms)
+
+    public_lines = [
+        "Акт технадзора по фото готов",
+        "Файл: " + str(file_name or "photo"),
+        "Уверенность Vision: " + str(confidence),
+        "Дефектов на фото: " + str(defects_count),
+        "Нормативных ссылок: " + str(norms_count) + (" (confidence=PARTIAL/CONFIRMED)" if norms_count else " — норма не подтверждена"),
+    ]
+    if drive_link:
+        public_lines.append("Drive DOCX: " + str(drive_link))
+    else:
+        public_lines.append("Drive upload: не выполнен (" + str(ustatus) + "). DOCX лежит локально, доставка через Telegram fallback в следующей итерации")
+    if summary:
+        public_lines.append("")
+        public_lines.append("Краткое описание: " + summary[:600])
+
+    history_marker = "P6F_TNZ_PHOTO_ACT_DONE_DEFECTS_{}_NORMS_{}_DRIVE_{}".format(
+        defects_count, norms_count, "OK" if drive_link else "FAIL"
+    )
+    return {
+        "ok": True,
+        "handled": True,
+        "kind": "technadzor_photo_act",
+        "state": "DONE" if drive_link else "AWAITING_CONFIRMATION",
+        "artifact_path": docx_path,
+        "drive_link": drive_link or "",
+        "message": "\n".join(public_lines),
+        "history": history_marker,
+    }
+
+_P6F_TNZ_REAL_LOG.info("P6F_TECHNADZOR_PHOTO_TO_DOCX_REAL_V1_INSTALLED")
+# === END_P6F_TECHNADZOR_PHOTO_TO_DOCX_REAL_V1 ===
+
+
+# === P6H_TOPIC5_USE_EXISTING_TEMPLATES_PHOTO_TO_TECH_REPORT_20260504_V1 ===
+# Append-only wrapper.
+# - Auto-indexes Drive topic_5 contents (PRIMARY_PDF_STYLE, SECONDARY_DOCX_REFERENCE, etc.)
+#   on first photo / "акт" request per chat — without manual "образец" command.
+# - On photo: Vision (existing _p6f_tnz_vision_via_openrouter) → section classifier
+#   → clean Telegram text (no JSON, no /root, no internal paths).
+# - On "сделай акт" / "оформи акт": same + DOCX (service folder _drafts) +
+#   client-grade PDF A4 with cyrillic + clickable hyperlinks.
+# - DOCX always lands in topic_5/_drafts/ (system).  PDF lands in topic root by default;
+#   if user explicitly named a client folder, drop PDF there (only PDF allowed in client
+#   folders per spec).
+# - Telegram fallback when Drive upload fails — handled by existing P6F path
+#   (we keep returning local artifact_path in that case so caller can retry).
+import logging as _p6h_logging
+import os as _p6h_os
+import asyncio as _p6h_asyncio
+from pathlib import Path as _P6H_Path
+from datetime import datetime as _p6h_dt
+
+_P6H_LOG = _p6h_logging.getLogger("task_worker")
+
+# Eager import so drive_index install marker fires at worker startup
+try:
+    from core import technadzor_drive_index as _p6h_tdi  # noqa: F401
+except Exception as _e_imp:
+    _P6H_LOG.warning("P6H_DRIVE_INDEX_IMPORT_FAIL: %s", _e_imp)
+_P6H_BASE = _P6H_Path(__file__).resolve().parent.parent
+_P6H_OUTDIR = _P6H_BASE / "outputs" / "technadzor_p6h"
+_P6H_OUTDIR.mkdir(parents=True, exist_ok=True)
+
+_P6H_DEJAVU = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+_P6H_DEJAVU_BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+
+# Section classifier — keyword (lowercase substring) → canonical section title.
+_P6H_SECTIONS = [
+    ("Опорные узлы колонн",                        ["опорн", "анкерн", "колонн", "подлив", "опорная плита", "узел опор"]),
+    ("Сварные соединения металлоконструкций",      ["сварн", "сварка", "шов", "провар", "наплыв", "сварные стык"]),
+    ("Антикоррозионная защита",                    ["окрас", "лакокрас", "корроз", "защитн", "ржавчин", "антикорроз"]),
+    ("Состояние основания и прилегающей территории", ["грунт", "основан", "замачив", "размыв", "просадк", "водоотвод", "канав", "лужа"]),
+    ("Перекрытия",                                  ["перекрыт", "ригел", "балк перекрыт", "плита перекрыт"]),
+    ("Узлы пересечения укосин",                     ["укосин", "связи", "диагональн", "жесткост", "пространств"]),
+    ("Узлы крепления элементов покрытия",           ["крепл", "примыкан", "покрыт", "узел кров"]),
+    ("Бетонные / железобетонные конструкции",       ["бетон", "железобетон", "арматур", "ж/б", "опалуб", "монолит"]),
+    ("Гидроизоляция",                               ["гидроизол", "пароизол", "мембран"]),
+    ("Кровля",                                       ["кровл", "крыш", "водосток", "желоб", "конек"]),
+    ("Фасад",                                        ["фасад", "облиц", "сайдинг"]),
+    ("Общие обзорные материалы",                    ["обзор", "общ вид", "общий вид"]),
+]
+
+
+def _p6h_classify_defect(d):
+    text_pool = " ".join([
+        str(d.get("title", "") or ""),
+        str(d.get("description", "") or ""),
+        str(d.get("section_hint", "") or ""),
+        str(d.get("category", "") or ""),
+    ]).lower()
+    for section, kws in _P6H_SECTIONS:
+        for kw in kws:
+            if kw in text_pool:
+                return section
+    return "Прочие выявленные замечания"
+
+
+def _p6h_group_defects_by_section(defects):
+    groups = {}
+    for d in defects or []:
+        sec = _p6h_classify_defect(d)
+        groups.setdefault(sec, []).append(d)
+    ordered = []
+    for sec, _ in _P6H_SECTIONS:
+        if sec in groups:
+            ordered.append((sec, groups[sec]))
+    if "Прочие выявленные замечания" in groups:
+        ordered.append(("Прочие выявленные замечания", groups["Прочие выявленные замечания"]))
+    return ordered
+
+
+def _p6h_clean_text(s, limit=4000):
+    """Strip JSON/system markers, /root paths, traceback patterns, internal markers
+    so result text is safe to send to Telegram."""
+    if not s:
+        return ""
+    txt = str(s)
+    # Strip lines starting with /root or containing internal markers
+    bad_substrings = ["/root/", "task_id=", "TRACEBACK", "Traceback (most recent",
+                       "P6F_", "P6G_", "P6H_", "P6E", "INSTALLED",
+                       "MARKER:", "DEBUG:", "DEBUG ", "MANIFEST", "raw_input"]
+    cleaned_lines = []
+    for ln in txt.splitlines():
+        keep = True
+        for bad in bad_substrings:
+            if bad in ln:
+                keep = False
+                break
+        if keep:
+            cleaned_lines.append(ln)
+    out = "\n".join(cleaned_lines).strip()
+    # Collapse triple+ blank lines
+    while "\n\n\n" in out:
+        out = out.replace("\n\n\n", "\n\n")
+    return out[:limit]
+
+
+def _p6h_norms_for_haystack(text):
+    try:
+        from core.normative_engine import search_norms_sync
+        return search_norms_sync(text or "", limit=8)
+    except Exception:
+        return []
+
+
+def _p6h_norms_for_section(section_title, defect_texts):
+    haystack = (section_title + " " + " ".join(defect_texts)).strip()
+    return _p6h_norms_for_haystack(haystack)
+
+
+def _p6h_human_act_number(task_id):
+    """Pretty act number 12-03/26 style — fall back to short task_id if missing."""
+    today = _p6h_dt.now()
+    n = today.strftime("%d-%m") + "/" + today.strftime("%y")
+    if task_id:
+        suffix = str(task_id)[:6]
+        return f"{n}-{suffix}"
+    return n
+
+
+# ────────────────────────────────────────────────────────────────────
+# DOCX builder — service-side, draft, with clickable hyperlinks
+# ────────────────────────────────────────────────────────────────────
+def _p6h_docx_add_hyperlink(paragraph, url, text):
+    try:
+        from docx.oxml.shared import OxmlElement, qn
+    except Exception:
+        paragraph.add_run(text + " (" + url + ")")
+        return None
+    part = paragraph.part
+    r_id = part.relate_to(
+        url,
+        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+        is_external=True,
+    )
+    hyperlink = OxmlElement("w:hyperlink")
+    hyperlink.set(qn("r:id"), r_id)
+    new_run = OxmlElement("w:r")
+    rPr = OxmlElement("w:rPr")
+    color = OxmlElement("w:color")
+    color.set(qn("w:val"), "0563C1")
+    rPr.append(color)
+    underline = OxmlElement("w:u")
+    underline.set(qn("w:val"), "single")
+    rPr.append(underline)
+    new_run.append(rPr)
+    text_el = OxmlElement("w:t")
+    text_el.text = text
+    new_run.append(text_el)
+    hyperlink.append(new_run)
+    paragraph._element.append(hyperlink)
+    return hyperlink
+
+
+def _p6h_build_docx_act(payload, dst_path):
+    """payload = {
+        act_number, date_str, place, object_descr, method, performer, specialist,
+        photos_link, general_purpose, sections=[(title, defects=[{title,description,norm_id,section_norms}], norms=[...], photos_block=[...])],
+        recommendations=[str], consequences=[str], violations_table=[(violation, norm_id, photo)]
+    }"""
+    from docx import Document
+    from docx.shared import Pt
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+
+    doc = Document()
+
+    # Header
+    h = doc.add_paragraph()
+    h.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    r = h.add_run(f"АКТ ОСМОТРА ОБЪЕКТА № {payload.get('act_number','')}")
+    r.bold = True
+    r.font.size = Pt(14)
+    sub = doc.add_paragraph()
+    sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    sub.add_run("Методом визуального неразрушающего контроля").italic = True
+
+    doc.add_paragraph(f"Дата осмотра: {payload.get('date_str','')}")
+    doc.add_paragraph(f"Место осмотра: {payload.get('place','')}")
+    doc.add_paragraph(f"Объект осмотра: {payload.get('object_descr','')}")
+    doc.add_paragraph(f"Метод обследования: {payload.get('method','визуальный неразрушающий контроль с выездом на объект')}")
+    if payload.get("performer"):
+        doc.add_paragraph(f"Представитель подрядчика: {payload['performer']}")
+    doc.add_paragraph(f"Технический специалист: {payload.get('specialist','Кузнецов Илья Владимирович')}")
+
+    if payload.get("photos_link"):
+        p = doc.add_paragraph("Ссылка на фотоматериалы: ")
+        _p6h_docx_add_hyperlink(p, payload["photos_link"], payload["photos_link"])
+
+    # 1. Общие сведения
+    doc.add_paragraph()
+    h1 = doc.add_paragraph()
+    h1.add_run("1. Общие сведения").bold = True
+    doc.add_paragraph(payload.get("general_purpose",
+        "Осмотр выполнен методом визуального неразрушающего контроля с выездом на "
+        "объект. Цель осмотра — выявление фактически наблюдаемых дефектов, определение "
+        "рекомендаций к устранению и возможных последствий для заказчика при сохранении "
+        "текущего состояния объекта"))
+
+    # 2. Установлено по факту осмотра
+    doc.add_paragraph()
+    h2 = doc.add_paragraph()
+    h2.add_run("2. Установлено по факту осмотра").bold = True
+    sections = payload.get("sections") or []
+    for i, sec in enumerate(sections, 1):
+        ph = doc.add_paragraph()
+        ph.add_run(f"2.{i} {sec.get('title','')}").bold = True
+        # facts
+        for d in sec.get("defects") or []:
+            line = (d.get("title") or "").strip()
+            descr = (d.get("description") or "").strip()
+            if line and descr:
+                doc.add_paragraph(f"— {line}: {descr}")
+            elif line:
+                doc.add_paragraph(f"— {line}")
+            elif descr:
+                doc.add_paragraph(f"— {descr}")
+        # norm refs for section
+        norms = sec.get("norms") or []
+        if norms:
+            np = doc.add_paragraph()
+            np.add_run("Нормативная отсылка: ").italic = True
+            np.add_run("; ".join(f"{n.get('norm_id','')} — {n.get('section','')}" for n in norms if n.get("norm_id")))
+        else:
+            np = doc.add_paragraph()
+            np.add_run("Нормативная отсылка: ").italic = True
+            np.add_run("норма не подтверждена").italic = True
+        # photos
+        photos = sec.get("photos_block") or []
+        if photos:
+            pp = doc.add_paragraph()
+            pp.add_run("Фотоматериалы: ").italic = True
+            pp.add_run(", ".join(photos))
+
+    # Рекомендации
+    if payload.get("recommendations"):
+        doc.add_paragraph()
+        rh = doc.add_paragraph()
+        rh.add_run("3. Рекомендовано к устранению").bold = True
+        for i, line in enumerate(payload["recommendations"], 1):
+            doc.add_paragraph(f"{i}. {line}")
+
+    # Возможные последствия
+    if payload.get("consequences"):
+        doc.add_paragraph()
+        ch = doc.add_paragraph()
+        ch.add_run("4. Возможные последствия при отсутствии устранения").bold = True
+        for line in payload["consequences"]:
+            doc.add_paragraph(f"— {line}")
+
+    # Таблица: Нарушение / Норматив / Фото
+    if payload.get("violations_table"):
+        doc.add_paragraph()
+        th = doc.add_paragraph()
+        th.add_run("5. Сводная таблица нарушений").bold = True
+        tbl = doc.add_table(rows=1, cols=3)
+        tbl.style = "Light Grid"
+        hdr = tbl.rows[0].cells
+        hdr[0].text = "Нарушение"
+        hdr[1].text = "Норматив"
+        hdr[2].text = "Фото"
+        for v, n, ph in payload["violations_table"]:
+            row = tbl.add_row().cells
+            row[0].text = str(v or "")
+            row[1].text = str(n or "норма не подтверждена")
+            row[2].text = str(ph or "")
+
+    # Подпись
+    doc.add_paragraph()
+    doc.add_paragraph()
+    sig = doc.add_paragraph()
+    sig.add_run(f"Технический специалист: {payload.get('specialist','Кузнецов Илья Владимирович')}").bold = True
+    doc.add_paragraph(f"Дата: {payload.get('date_str','')}")
+
+    doc.save(str(dst_path))
+    return str(dst_path)
+
+
+# ────────────────────────────────────────────────────────────────────
+# PDF builder — A4, cyrillic, clickable hyperlinks (reportlab platypus)
+# ────────────────────────────────────────────────────────────────────
+def _p6h_register_fonts():
+    try:
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        if "DejaVuSans" not in pdfmetrics.getRegisteredFontNames():
+            pdfmetrics.registerFont(TTFont("DejaVuSans", _P6H_DEJAVU))
+        if "DejaVuSans-Bold" not in pdfmetrics.getRegisteredFontNames():
+            pdfmetrics.registerFont(TTFont("DejaVuSans-Bold", _P6H_DEJAVU_BOLD))
+        return True
+    except Exception:
+        return False
+
+
+def _p6h_build_pdf_act(payload, dst_path):
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether
+    from reportlab.lib.units import cm
+    from reportlab.lib import colors
+
+    _p6h_register_fonts()
+
+    styles = getSampleStyleSheet()
+    base_font = "DejaVuSans"
+    bold_font = "DejaVuSans-Bold"
+
+    sty_title = ParagraphStyle("title", parent=styles["Title"], fontName=bold_font, fontSize=14, alignment=1, spaceAfter=4)
+    sty_subtitle = ParagraphStyle("subtitle", parent=styles["Normal"], fontName=base_font, fontSize=10, alignment=1, textColor=colors.grey, spaceAfter=10)
+    sty_h2 = ParagraphStyle("h2", parent=styles["Heading2"], fontName=bold_font, fontSize=12, spaceBefore=8, spaceAfter=4)
+    sty_h3 = ParagraphStyle("h3", parent=styles["Heading3"], fontName=bold_font, fontSize=11, spaceBefore=6, spaceAfter=2)
+    sty_body = ParagraphStyle("body", parent=styles["Normal"], fontName=base_font, fontSize=10, leading=13, spaceAfter=2)
+    sty_italic = ParagraphStyle("italic", parent=sty_body, textColor=colors.grey)
+    sty_small = ParagraphStyle("small", parent=sty_body, fontSize=9)
+
+    flow = []
+    flow.append(Paragraph(f"АКТ ОСМОТРА ОБЪЕКТА № {payload.get('act_number','')}", sty_title))
+    flow.append(Paragraph("Методом визуального неразрушающего контроля", sty_subtitle))
+    flow.append(Paragraph(f"<b>Дата осмотра:</b> {payload.get('date_str','')}", sty_body))
+    flow.append(Paragraph(f"<b>Место осмотра:</b> {payload.get('place','')}", sty_body))
+    flow.append(Paragraph(f"<b>Объект осмотра:</b> {payload.get('object_descr','')}", sty_body))
+    flow.append(Paragraph(f"<b>Метод обследования:</b> {payload.get('method','визуальный неразрушающий контроль с выездом на объект')}", sty_body))
+    if payload.get("performer"):
+        flow.append(Paragraph(f"<b>Представитель подрядчика:</b> {payload['performer']}", sty_body))
+    flow.append(Paragraph(f"<b>Технический специалист:</b> {payload.get('specialist','Кузнецов Илья Владимирович')}", sty_body))
+    if payload.get("photos_link"):
+        flow.append(Paragraph(
+            f'<b>Ссылка на фотоматериалы:</b> <link href="{payload["photos_link"]}"><font color="#0563C1"><u>{payload["photos_link"]}</u></font></link>',
+            sty_body,
+        ))
+
+    flow.append(Spacer(1, 8))
+    flow.append(Paragraph("1. Общие сведения", sty_h2))
+    flow.append(Paragraph(payload.get("general_purpose",
+        "Осмотр выполнен методом визуального неразрушающего контроля с выездом на "
+        "объект. Цель осмотра — выявление фактически наблюдаемых дефектов, определение "
+        "рекомендаций к устранению и возможных последствий для заказчика."), sty_body))
+
+    flow.append(Paragraph("2. Установлено по факту осмотра", sty_h2))
+    sections = payload.get("sections") or []
+    for i, sec in enumerate(sections, 1):
+        flow.append(Paragraph(f"2.{i} {sec.get('title','')}", sty_h3))
+        for d in sec.get("defects") or []:
+            line = (d.get("title") or "").strip()
+            descr = (d.get("description") or "").strip()
+            txt = (line + ((": " + descr) if descr and line else descr)).strip()
+            if txt:
+                flow.append(Paragraph("— " + txt, sty_body))
+        norms = sec.get("norms") or []
+        if norms:
+            ns = "; ".join(f"{n.get('norm_id','')} — {n.get('section','')}" for n in norms if n.get("norm_id"))
+            flow.append(Paragraph(f"<i>Нормативная отсылка:</i> {ns}", sty_italic))
+        else:
+            flow.append(Paragraph("<i>Нормативная отсылка: норма не подтверждена</i>", sty_italic))
+        photos = sec.get("photos_block") or []
+        if photos:
+            flow.append(Paragraph(f"<i>Фотоматериалы:</i> {', '.join(photos)}", sty_italic))
+
+    if payload.get("recommendations"):
+        flow.append(Spacer(1, 4))
+        flow.append(Paragraph("3. Рекомендовано к устранению", sty_h2))
+        for i, line in enumerate(payload["recommendations"], 1):
+            flow.append(Paragraph(f"{i}. {line}", sty_body))
+
+    if payload.get("consequences"):
+        flow.append(Spacer(1, 4))
+        flow.append(Paragraph("4. Возможные последствия при отсутствии устранения", sty_h2))
+        for line in payload["consequences"]:
+            flow.append(Paragraph("— " + line, sty_body))
+
+    if payload.get("violations_table"):
+        flow.append(Spacer(1, 6))
+        flow.append(Paragraph("5. Сводная таблица нарушений", sty_h2))
+        rows = [["Нарушение", "Норматив", "Фото"]]
+        for v, n, ph in payload["violations_table"]:
+            rows.append([Paragraph(str(v or ""), sty_small),
+                         Paragraph(str(n or "норма не подтверждена"), sty_small),
+                         Paragraph(str(ph or ""), sty_small)])
+        tbl = Table(rows, colWidths=[7*cm, 6*cm, 4*cm], repeatRows=1)
+        tbl.setStyle(TableStyle([
+            ("FONTNAME", (0, 0), (-1, -1), base_font),
+            ("FONTNAME", (0, 0), (-1, 0), bold_font),
+            ("FONTSIZE", (0, 0), (-1, -1), 9),
+            ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+            ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ]))
+        flow.append(tbl)
+
+    flow.append(Spacer(1, 16))
+    flow.append(Paragraph(
+        f"<b>Технический специалист:</b> {payload.get('specialist','Кузнецов Илья Владимирович')}",
+        sty_body,
+    ))
+    flow.append(Paragraph(f"<b>Дата:</b> {payload.get('date_str','')}", sty_body))
+
+    doc = SimpleDocTemplate(
+        str(dst_path), pagesize=A4,
+        leftMargin=2 * cm, rightMargin=2 * cm,
+        topMargin=2 * cm, bottomMargin=2 * cm,
+        title=f"Акт осмотра № {payload.get('act_number','')}",
+    )
+    doc.build(flow)
+    return str(dst_path)
+
+
+# ────────────────────────────────────────────────────────────────────
+# Async pipeline: photo → Vision → sections → response (and optionally DOCX+PDF)
+# ────────────────────────────────────────────────────────────────────
+async def _p6h_process_photo_async(file_path, file_name, task_id, chat_id, topic_id, user_text="", make_act=False, place="", object_descr=""):
+    # Ensure Drive index is built (silently, best-effort)
+    try:
+        from core import technadzor_drive_index as _tdi
+        idx = _tdi.build_technadzor_template_index(str(chat_id), int(topic_id), force=False)
+    except Exception:
+        idx = {}
+
+    # Vision
+    vision, vstatus = await _p6f_tnz_vision_via_openrouter(file_path)
+    if vstatus == "FAIL" or vision is None:
+        return {
+            "ok": False, "handled": True, "kind": "technadzor_p6h_photo",
+            "state": "WAITING_CLARIFICATION",
+            "message": "Не удалось проанализировать фото через Vision. Пришли крупнее или текстовое описание дефекта",
+            "history": "P6H_VISION_FAIL",
+        }
+
+    summary = (vision.get("summary") or "").strip() if isinstance(vision, dict) else ""
+    defects = (vision.get("defects") or []) if isinstance(vision, dict) else []
+    confidence = vision.get("confidence", "LOW") if isinstance(vision, dict) else "LOW"
+
+    grouped = _p6h_group_defects_by_section(defects)
+
+    # Norms per section + global
+    section_norms = []
+    all_haystack = summary + " " + (user_text or "") + " " + " ".join(
+        str(d.get("title", "")) + " " + str(d.get("description", "")) for d in defects
+    )
+    global_norms = _p6h_norms_for_haystack(all_haystack)
+
+    # Build sections payload (used by both DOCX and PDF, and partly by Telegram)
+    sections_payload = []
+    for sec_title, ds in grouped:
+        defect_texts = [str(d.get("title", "")) + " " + str(d.get("description", "")) for d in ds]
+        snorms = _p6h_norms_for_section(sec_title, defect_texts)
+        section_norms.append((sec_title, snorms))
+        sections_payload.append({
+            "title": sec_title,
+            "defects": ds,
+            "norms": snorms,
+            "photos_block": [str(file_name or "")] if file_name else [],
+        })
+
+    # Topic folder link from index for "Ссылка на фотоматериалы"
+    topic_folder_link = (idx or {}).get("topic_folder_link", "")
+
+    # Build clean Telegram text response.
+    # If make_act=False — photo-only response (template per spec).
+    # If make_act=True  — short summary + DOCX/PDF links.
+    if not make_act:
+        out_lines = ["Технический осмотр по фото", ""]
+        # 1. Что видно
+        out_lines.append("1. Что видно:")
+        if summary:
+            out_lines.append(_p6h_clean_text(summary, 700))
+        else:
+            out_lines.append("Описание не сформировано")
+        out_lines.append("")
+        # 2. Замечания
+        out_lines.append("2. Обнаруженные замечания:")
+        if grouped:
+            for sec_title, ds in grouped:
+                titles = []
+                for d in ds:
+                    t = str(d.get("title") or d.get("description") or "").strip()
+                    if t:
+                        titles.append(t[:120])
+                line = f"— {sec_title}: " + ("; ".join(titles) if titles else "замечания зафиксированы")
+                out_lines.append(_p6h_clean_text(line, 500))
+        else:
+            out_lines.append("Дефектов на фото не выявлено")
+        out_lines.append("")
+        # 3. Почему плохо — берём severity/why из Vision если есть, иначе общий
+        out_lines.append("3. Почему это плохо:")
+        why_lines = []
+        for d in defects:
+            w = str(d.get("why") or d.get("severity") or d.get("impact") or "").strip()
+            if w:
+                why_lines.append("— " + w[:200])
+        if why_lines:
+            out_lines.extend(why_lines[:6])
+        elif grouped:
+            out_lines.append("Зафиксированные отклонения снижают эксплуатационную надёжность и/или несущую способность конструкции и требуют проверки и устранения")
+        else:
+            out_lines.append("Отклонений не выявлено")
+        out_lines.append("")
+        # 4. Как исправить
+        out_lines.append("4. Как исправить:")
+        fix_lines = []
+        for d in defects:
+            f = str(d.get("fix") or d.get("recommendation") or "").strip()
+            if f:
+                fix_lines.append("— " + f[:200])
+        if fix_lines:
+            out_lines.extend(fix_lines[:6])
+        else:
+            out_lines.append("Привести узлы и покрытия к нормативному состоянию по соответствующим СП/ГОСТ. Уточнить решения по проектной документации")
+        out_lines.append("")
+        # 5. Что проверить на объекте
+        out_lines.append("5. Что проверить на объекте:")
+        check_lines = []
+        for d in defects:
+            c = str(d.get("verify") or d.get("check") or "").strip()
+            if c:
+                check_lines.append("— " + c[:200])
+        if check_lines:
+            out_lines.extend(check_lines[:6])
+        else:
+            out_lines.append("Состояние конструкции в полном объёме, наличие и соответствие исполнительной документации, ранее выданные предписания и их устранение")
+        out_lines.append("")
+        # 6. Норма
+        out_lines.append("6. Нормативная отсылка:")
+        if global_norms:
+            for n in global_norms[:5]:
+                out_lines.append("— " + str(n.get("norm_id","")) + ": " + str(n.get("section","")) + f" [{n.get('confidence','PARTIAL')}]")
+        else:
+            out_lines.append("норма не подтверждена")
+        out_lines.append("")
+        # 7. Акт
+        out_lines.append("7. Акт:")
+        out_lines.append("Могу оформить акт по текущим фото — напишите «сделай акт» / «оформи акт»")
+
+        return {
+            "ok": True, "handled": True, "kind": "technadzor_p6h_photo",
+            "state": "DONE",
+            "message": _p6h_clean_text("\n".join(out_lines), 6000),
+            "history": "P6H_PHOTO_REPORT_DEFECTS_{}_NORMS_{}".format(len(defects), len(global_norms)),
+        }
+
+    # ── Build DOCX (service _drafts) + PDF (client topic root) ──
+    ts = _p6h_dt.now().strftime("%Y%m%d_%H%M%S")
+    safe_tid = (str(task_id or ts)[:8] or ts).replace("/", "_").replace("\\", "_")
+    docx_local = _P6H_OUTDIR / f"P6H_TNZ_ACT_DRAFT__{safe_tid}_{ts}.docx"
+    pdf_local = _P6H_OUTDIR / f"АКТ_ОСМОТРА__{safe_tid}_{ts}.pdf"
+
+    # Recommendations / consequences — pulled from defects
+    recs = []
+    cons = []
+    for d in defects:
+        r = str(d.get("fix") or d.get("recommendation") or "").strip()
+        if r:
+            recs.append(r[:300])
+        c = str(d.get("consequence") or d.get("why") or "").strip()
+        if c:
+            cons.append(c[:300])
+    # Violation table rows
+    vtable = []
+    for sec_title, ds in grouped:
+        for d in ds:
+            v = str(d.get("title") or d.get("description") or sec_title)[:200]
+            sn = ""
+            for n in section_norms:
+                if n[0] == sec_title and n[1]:
+                    sn = n[1][0].get("norm_id", "")
+                    break
+            ph = str(file_name or "")
+            vtable.append((v, sn or "норма не подтверждена", ph))
+
+    payload = {
+        "act_number": _p6h_human_act_number(task_id),
+        "date_str": _p6h_dt.now().strftime("%d.%m.%Y"),
+        "place": place or "место уточняется по запросу владельца",
+        "object_descr": object_descr or "объект уточняется по запросу владельца",
+        "method": "визуальный неразрушающий контроль с выездом на объект",
+        "performer": "",
+        "specialist": "Кузнецов Илья Владимирович",
+        "photos_link": topic_folder_link or "",
+        "general_purpose": (
+            "Осмотр выполнен методом визуального неразрушающего контроля. "
+            "Цель осмотра — выявление фактически наблюдаемых дефектов, определение "
+            "рекомендаций к устранению и возможных последствий для заказчика при "
+            "сохранении текущего состояния объекта."
+        ),
+        "sections": sections_payload,
+        "recommendations": recs[:20] if recs else ["Привести выявленные узлы и покрытия к нормативному состоянию по соответствующим СП/ГОСТ"],
+        "consequences": cons[:10] if cons else ["Снижение несущей способности и эксплуатационной надёжности конструкций"],
+        "violations_table": vtable[:30],
+    }
+
+    docx_ok = False
+    pdf_ok = False
+    try:
+        _p6h_build_docx_act(payload, docx_local)
+        docx_ok = True
+    except Exception:
+        _P6H_LOG.exception("P6H_DOCX_BUILD_FAIL")
+    try:
+        _p6h_build_pdf_act(payload, pdf_local)
+        pdf_ok = True
+    except Exception:
+        _P6H_LOG.exception("P6H_PDF_BUILD_FAIL")
+
+    drive_docx = None
+    drive_pdf = None
+    if docx_ok or pdf_ok:
+        try:
+            from core import technadzor_drive_index as _tdi
+            if docx_ok:
+                drive_docx = _tdi.upload_to_service_subfolder(
+                    docx_local, docx_local.name, str(chat_id), int(topic_id), subfolder="_drafts",
+                )
+            if pdf_ok:
+                drive_pdf = _tdi.upload_client_pdf_to_folder(
+                    pdf_local, pdf_local.name, str(chat_id), int(topic_id), target_folder_name=None,
+                )
+        except Exception:
+            _P6H_LOG.exception("P6H_UPLOAD_FAIL")
+
+    pdf_link = (drive_pdf or {}).get("link", "") if drive_pdf else ""
+    docx_link = (drive_docx or {}).get("link", "") if drive_docx else ""
+
+    msg_lines = ["Акт сформирован"]
+    if pdf_link:
+        msg_lines.append(f"PDF: {pdf_link}")
+    elif pdf_ok:
+        msg_lines.append("PDF: подготовлен локально, загрузка на Drive не выполнена — повторная попытка через retry queue")
+    else:
+        msg_lines.append("PDF: ошибка генерации")
+    if docx_link:
+        msg_lines.append(f"DOCX (черновик, служебно): {docx_link}")
+    if topic_folder_link:
+        msg_lines.append(f"Фото: {topic_folder_link}")
+    msg_lines.append("Норма: " + ("подтверждена" if global_norms else "не подтверждена"))
+
+    return {
+        "ok": True if (pdf_ok or docx_ok) else False,
+        "handled": True,
+        "kind": "technadzor_p6h_act",
+        "state": "DONE" if pdf_link else "AWAITING_CONFIRMATION",
+        "artifact_path": str(pdf_local if pdf_ok else docx_local),
+        "extra_artifact_path": str(docx_local if docx_ok else ""),
+        "drive_link": pdf_link or docx_link or "",
+        "message": _p6h_clean_text("\n".join(msg_lines), 4000),
+        "history": "P6H_ACT_DOCX_{}_PDF_{}_DRIVE_PDF_{}".format(
+            "OK" if docx_ok else "FAIL",
+            "OK" if pdf_ok else "FAIL",
+            "OK" if pdf_link else "FAIL",
+        ),
+    }
+
+
+# ────────────────────────────────────────────────────────────────────
+# Sync wrapper around process_technadzor — only intercepts topic_5
+# ────────────────────────────────────────────────────────────────────
+def _p6h_is_image_path(path):
+    if not path:
+        return False
+    p = str(path).lower()
+    return p.endswith((".jpg", ".jpeg", ".png", ".webp", ".bmp", ".heic"))
+
+
+_P6H_ACT_TRIGGERS = (
+    "сделай акт", "оформи акт", "выдай акт", "финальн", "акт по фото",
+    "сформируй акт", "подготовь акт", "сделать акт", "оформить акт",
+)
+
+
+def _p6h_should_handle(topic_id, file_path, user_text):
+    if int(topic_id or 0) != 5:
+        return False
+    if file_path and _p6h_is_image_path(file_path):
+        return True
+    low = (user_text or "").lower()
+    if any(t in low for t in _P6H_ACT_TRIGGERS):
+        return True
+    return False
+
+
+def _p6h_run_async(coro):
+    """Run coro from sync context. Mimics codebase pattern."""
+    try:
+        return _p6h_asyncio.run(coro)
+    except RuntimeError:
+        # Already in a loop — schedule in a worker thread with its own loop
+        import threading
+        result = {"v": None, "exc": None}
+        def _runner():
+            new_loop = _p6h_asyncio.new_event_loop()
+            try:
+                _p6h_asyncio.set_event_loop(new_loop)
+                result["v"] = new_loop.run_until_complete(coro)
+            except Exception as e:
+                result["exc"] = e
+            finally:
+                new_loop.close()
+        t = threading.Thread(target=_runner, daemon=True)
+        t.start()
+        t.join()
+        if result["exc"]:
+            raise result["exc"]
+        return result["v"]
+
+
+try:
+    _p6h_orig_process = process_technadzor
+    if not getattr(_p6h_orig_process, "_p6h_wrapped", False):
+        def process_technadzor(text="", task_id="", chat_id="", topic_id=0, file_path="", file_name="", **kwargs):
+            try:
+                if _p6h_should_handle(topic_id, file_path, text):
+                    is_image = _p6h_is_image_path(file_path)
+                    low = (text or "").lower()
+                    make_act = any(t in low for t in _P6H_ACT_TRIGGERS)
+                    if is_image or make_act:
+                        return _p6h_run_async(
+                            _p6h_process_photo_async(
+                                file_path=file_path,
+                                file_name=file_name,
+                                task_id=task_id,
+                                chat_id=chat_id,
+                                topic_id=topic_id,
+                                user_text=text,
+                                make_act=make_act,
+                            )
+                        )
+            except Exception:
+                _P6H_LOG.exception("P6H_WRAPPER_FAIL — falling back to original")
+            return _p6h_orig_process(
+                text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id,
+                file_path=file_path, file_name=file_name, **kwargs,
+            )
+        process_technadzor._p6h_wrapped = True
+        _p6h_orig_process._p6h_wrapped = True
+    _P6H_LOG.info("P6H_TOPIC5_USE_EXISTING_TEMPLATES_PHOTO_TO_TECH_REPORT_20260504_V1_INSTALLED")
+except Exception as _exc:
+    _P6H_LOG.exception("P6H_TOPIC5_INSTALL_FAIL: %s", _exc)
+# === END_P6H_TOPIC5_USE_EXISTING_TEMPLATES_PHOTO_TO_TECH_REPORT_20260504_V1 ===
+
+
+# === P6H_PART_2: PHOTO_NUMBER_DEFECT_NORM_CLARIFICATION_LOGIC + VOICE_LIVE_DIALOG_CLARIFICATION_GATE_20260504 ===
+# Adds on top of P6H_PART_1:
+# - voice transcript parser (extracts object_hint, folder_hint, visit_date_hint, client_facing flag, raw user-stated defects)
+# - clarification gate (returns WAITING_CLARIFICATION with concrete questions, never «что строим?»)
+# - photo-numbered Telegram output («Фото №N — <file>»)
+# - 8-column violations_table for акты
+# - memory summary write after DONE (key topic_5_technadzor_photo_report_summary)
+# - replaces _p6h_process_photo_async with enhanced version
+import re as _p6h2_re
+import json as _p6h2_json
+
+_P6H2_LOG = _p6h_logging.getLogger("task_worker")
+
+_P6H2_FOLDER_HINT_PATTERNS = [
+    _p6h2_re.compile(r"папк[аеу]?\s+[«\"\'']?([^«»\"\'\.,;\n]{2,80})[»\"\'']?", _p6h2_re.IGNORECASE),
+    _p6h2_re.compile(r"директор[ияю]?\s+[«\"\'']?([^«»\"\'\.,;\n]{2,80})[»\"\'']?", _p6h2_re.IGNORECASE),
+]
+_P6H2_OBJECT_HINTS = [
+    "ангар", "склад", "цех", "корпус", "коттедж", "дом", "здание", "сооружение",
+    "фундамент", "кровл", "фасад", "перекрыт", "колонн", "балк", "ферм", "плита",
+    "паркинг", "гараж", "трибун", "купол", "теплиц",
+]
+_P6H2_DATE_RE = _p6h2_re.compile(
+    r"(?P<d>\d{1,2})[\s\-./](?P<m>\d{1,2}|январ|феврал|март|апрел|ма[яй]|июн|июл|август|сентябр|октябр|ноябр|декабр)[\s\-./а-я]*?(?P<y>\d{2,4})?",
+    _p6h2_re.IGNORECASE,
+)
+_P6H2_CLIENT_HINTS = ("заказчик", "клиент", "генподряд", "застройщ", "владельцу объекта")
+_P6H2_INTERNAL_HINTS = ("служебн", "не для клиента", "черновик", "внутрен", "тестов", "smoke")
+
+
+def _p6h_parse_voice_instruction(raw_input):
+    """Parse [VOICE] transcript into structured TZ context.
+
+    Returns dict with keys:
+      object_hint, folder_hint, visit_date_hint, client_facing,
+      explicit_include, explicit_exclude, output_kind, requires_act
+    All values are conservative — present only when transcript explicitly mentioned them.
+    """
+    text = (raw_input or "").strip()
+    if text.startswith("[VOICE]"):
+        text_body = text[len("[VOICE]"):].strip()
+    else:
+        text_body = text
+    low = text_body.lower()
+    ctx = {
+        "is_voice": text.startswith("[VOICE]"),
+        "transcript": text_body,
+        "object_hint": "",
+        "folder_hint": "",
+        "visit_date_hint": "",
+        "client_facing": None,  # None=unknown, True/False=explicit
+        "explicit_include": [],
+        "explicit_exclude": [],
+        "output_kind": "",  # text|act|pdf|docx|description
+        "requires_act": False,
+    }
+    if not text_body:
+        return ctx
+
+    # Object
+    for h in _P6H2_OBJECT_HINTS:
+        if h in low:
+            ctx["object_hint"] = h
+            break
+
+    # Folder hint
+    for pat in _P6H2_FOLDER_HINT_PATTERNS:
+        m = pat.search(text_body)
+        if m:
+            ctx["folder_hint"] = m.group(1).strip()
+            break
+
+    # Date hint
+    m = _P6H2_DATE_RE.search(text_body)
+    if m:
+        ctx["visit_date_hint"] = m.group(0).strip()
+
+    # Client-facing
+    if any(h in low for h in _P6H2_CLIENT_HINTS):
+        ctx["client_facing"] = True
+    if any(h in low for h in _P6H2_INTERNAL_HINTS):
+        ctx["client_facing"] = False
+
+    # Output
+    if any(t in low for t in _P6H_ACT_TRIGGERS):
+        ctx["requires_act"] = True
+        ctx["output_kind"] = "act"
+    elif "pdf" in low or "пдф" in low:
+        ctx["output_kind"] = "pdf"
+    elif "docx" in low or "ворд" in low or "word" in low:
+        ctx["output_kind"] = "docx"
+    elif "описан" in low or "опиши" in low or "посмотри" in low:
+        ctx["output_kind"] = "description"
+
+    # Explicit include/exclude lists
+    for marker, key in (("включ", "explicit_include"), ("не включ", "explicit_exclude"),
+                         ("исключ", "explicit_exclude")):
+        i = low.find(marker)
+        if i >= 0:
+            tail = text_body[i:i + 240]
+            ctx[key].append(tail.strip())
+    return ctx
+
+
+def _p6h_should_wait_for_clarification(vision, defects, voice_ctx, drive_idx):
+    """Returns (should_wait: bool, questions: [str]).
+
+    Triggers:
+      • Vision confidence=LOW AND no defects → ask what's on the photo, before/after, side
+      • voice_ctx folder_hint set but folder not in Drive index
+      • voice_ctx client_facing is None AND folder_hint set (need to know if it's customer-visible)
+    Never asks "что строим?" / "что это?" / "пришлите шаблон".
+    """
+    questions = []
+    confidence = (vision or {}).get("confidence", "LOW") if isinstance(vision, dict) else "LOW"
+    nd = len(defects or [])
+
+    # 1. Folder named by owner — check it exists
+    fh = (voice_ctx or {}).get("folder_hint", "").strip()
+    if fh:
+        folders = []
+        for f in (drive_idx or {}).get("folders_client", []) + (drive_idx or {}).get("folders_system", []):
+            folders.append(f.get("name", ""))
+        if not any(fh.lower() == n.lower() or fh.lower() in n.lower() for n in folders if n):
+            questions.append(
+                f"Не нашёл папку «{fh}» в Drive topic_5. "
+                "Уточни точное имя или создай её перед загрузкой фото"
+            )
+
+    # 2. Folder client_facing flag uncertain
+    if fh and (voice_ctx or {}).get("client_facing") is None:
+        questions.append(
+            f"Папку «{fh}» считать клиентской (туда складывать только фото и чистовой PDF) "
+            "или служебной (тогда туда можно DOCX-черновик)?"
+        )
+
+    # 3. Vision low-confidence + no defects on a photo
+    if confidence == "LOW" and nd == 0:
+        questions.append(
+            "Фото не позволяет однозначно определить дефект. "
+            "Это до или после исправления? С какой стороны конструкции снято? "
+            "Что именно нужно зафиксировать на этом фото?"
+        )
+
+    # Never trigger generic clarifier
+    return (bool(questions), questions)
+
+
+def _p6h_save_summary_to_memory(chat_id, topic_id, summary_dict):
+    """Persist a compact summary to memory.db under topic_5_technadzor_photo_report_summary.
+
+    Uses task_worker._save_memory_safe if exposed; falls back to direct memory_client write.
+    Stores ONLY: folder, object, date, owner_directives, defect_brief, pdf_link, status.
+    """
+    try:
+        payload = {
+            "folder": str(summary_dict.get("folder") or "")[:200],
+            "object": str(summary_dict.get("object") or "")[:200],
+            "date": str(summary_dict.get("date") or "")[:40],
+            "owner_directives": (summary_dict.get("owner_directives") or [])[:6],
+            "defect_brief": (summary_dict.get("defect_brief") or [])[:12],
+            "pdf_link": str(summary_dict.get("pdf_link") or "")[:400],
+            "docx_link": str(summary_dict.get("docx_link") or "")[:400],
+            "status": str(summary_dict.get("status") or "")[:60],
+            "ts": int(_p6h_dt.now().timestamp()),
+        }
+        body = _p6h2_json.dumps(payload, ensure_ascii=False)[:4000]
+    except Exception:
+        return False
+    try:
+        from core.memory_client import save_memory  # type: ignore
+        key = f"topic_{int(topic_id or 5)}_technadzor_photo_report_summary"
+        save_memory(chat_id=str(chat_id), key=key, value=body)
+        return True
+    except Exception:
+        try:
+            import sqlite3 as _sql
+            db = _P6H_BASE / "data" / "memory.db"
+            con = _sql.connect(str(db))
+            cur = con.cursor()
+            cur.execute(
+                "INSERT INTO memory(chat_id,key,value,timestamp) VALUES (?,?,?,strftime('%s','now'))",
+                (str(chat_id), f"topic_{int(topic_id or 5)}_technadzor_photo_report_summary", body),
+            )
+            con.commit()
+            con.close()
+            return True
+        except Exception:
+            _P6H2_LOG.exception("P6H2_MEMORY_SAVE_FAIL")
+            return False
+
+
+def _p6h_format_photo_numbered_response(vision, defects, grouped, global_norms, file_name, photo_no=1, voice_ctx=None):
+    """Build per-photo numbered Telegram text per spec section 'Формат текстового ответа без акта'."""
+    fname = str(file_name or "photo")
+    out = ["Технический осмотр по фото", ""]
+    if voice_ctx and (voice_ctx.get("folder_hint") or voice_ctx.get("object_hint")):
+        out.append("Объект / папка:")
+        parts = []
+        if voice_ctx.get("object_hint"):
+            parts.append(voice_ctx["object_hint"])
+        if voice_ctx.get("folder_hint"):
+            parts.append(f"папка «{voice_ctx['folder_hint']}»")
+        if voice_ctx.get("visit_date_hint"):
+            parts.append(f"дата {voice_ctx['visit_date_hint']}")
+        out.append(" / ".join(parts))
+        out.append("")
+
+    out.append(f"Фото №{photo_no} — {fname}")
+
+    summary = (vision or {}).get("summary", "") if isinstance(vision, dict) else ""
+    out.append("Что видно:")
+    if summary:
+        out.append(_p6h_clean_text(summary, 600))
+    else:
+        out.append("по фото однозначно не определяется")
+
+    out.append("")
+    out.append("Замечание:")
+    if grouped:
+        per_section = []
+        for sec_title, ds in grouped:
+            tt = []
+            for d in ds:
+                t = str(d.get("title") or d.get("description") or "").strip()
+                if t:
+                    tt.append(t[:120])
+            per_section.append(f"— {sec_title}: " + ("; ".join(tt) if tt else "замечания зафиксированы"))
+        out.extend(per_section)
+    else:
+        out.append("Дефектов на фото не выявлено")
+
+    out.append("")
+    out.append("Чем опасно:")
+    risks = []
+    for d in defects or []:
+        r = str(d.get("risk") or d.get("why") or d.get("severity") or d.get("impact") or "").strip()
+        if r:
+            risks.append("— " + r[:200])
+    if risks:
+        out.extend(risks[:6])
+    elif grouped:
+        out.append("Зафиксированные отклонения снижают эксплуатационную надёжность и/или несущую способность конструкции")
+    else:
+        out.append("Отклонений не выявлено")
+
+    out.append("")
+    out.append("Как исправить:")
+    fixes = []
+    for d in defects or []:
+        f = str(d.get("recommended_fix") or d.get("fix") or d.get("recommendation") or "").strip()
+        if f:
+            fixes.append("— " + f[:200])
+    if fixes:
+        out.extend(fixes[:6])
+    else:
+        out.append("Привести к нормативному состоянию по соответствующим СП/ГОСТ; уточнить решения по проектной документации")
+
+    out.append("")
+    out.append("Что проверить:")
+    checks = []
+    for d in defects or []:
+        c = d.get("site_checks") or d.get("verify") or d.get("check")
+        if isinstance(c, list):
+            for x in c[:3]:
+                xs = str(x).strip()
+                if xs:
+                    checks.append("— " + xs[:200])
+        elif c:
+            checks.append("— " + str(c)[:200])
+    if checks:
+        out.extend(checks[:6])
+    else:
+        out.append("Состояние конструкции в полном объёме, исполнительная документация, ранее выданные предписания")
+
+    out.append("")
+    out.append("Нормативная отсылка:")
+    if global_norms:
+        for n in global_norms[:5]:
+            out.append("— " + str(n.get("norm_id", "")) + ": " + str(n.get("section", "")) + f" [{n.get('confidence', 'PARTIAL')}]")
+    else:
+        out.append("норма не подтверждена")
+
+    out.append("")
+    out.append("Итог:")
+    crit = [d for d in (defects or []) if str(d.get("severity", "")).lower() in ("high", "critical", "критическ", "high_risk")]
+    out.append(f"— критичные замечания: {len(crit)}")
+    out.append(f"— рабочие замечания: {len(defects or []) - len(crit)}")
+    out.append("— нужен ли акт: могу оформить акт по текущим фото — напиши «сделай акт»")
+
+    return _p6h_clean_text("\n".join(out), 6000)
+
+
+# Override _p6h_process_photo_async with the enhanced version
+async def _p6h_process_photo_async(file_path, file_name, task_id, chat_id, topic_id, user_text="", make_act=False, place="", object_descr=""):
+    # 1. Drive index — best-effort eager build
+    try:
+        from core import technadzor_drive_index as _tdi
+        idx = _tdi.build_technadzor_template_index(str(chat_id), int(topic_id), force=False)
+    except Exception:
+        idx = {}
+
+    # 2. Voice transcript parsing
+    voice_ctx = _p6h_parse_voice_instruction(user_text or "")
+
+    # 3. Vision
+    vision, vstatus = await _p6f_tnz_vision_via_openrouter(file_path)
+    if vstatus == "FAIL" or vision is None:
+        return {
+            "ok": False, "handled": True, "kind": "technadzor_p6h_photo",
+            "state": "WAITING_CLARIFICATION",
+            "message": "Не удалось проанализировать фото через Vision. "
+                       "Пришли крупнее или короткое описание дефекта текстом",
+            "history": "P6H_VISION_FAIL",
+        }
+
+    summary = (vision.get("summary") or "").strip() if isinstance(vision, dict) else ""
+    defects = (vision.get("defects") or []) if isinstance(vision, dict) else []
+
+    # Tag defects with photo_no/file_name (single-photo task = #1)
+    photo_no = 1
+    for d in defects:
+        if isinstance(d, dict):
+            d.setdefault("photo_no", photo_no)
+            d.setdefault("file_name", file_name or "")
+
+    grouped = _p6h_group_defects_by_section(defects)
+
+    # 4. Clarification gate
+    should_wait, questions = _p6h_should_wait_for_clarification(vision, defects, voice_ctx, idx)
+    if should_wait and not make_act:
+        return {
+            "ok": True, "handled": True, "kind": "technadzor_p6h_clarify",
+            "state": "WAITING_CLARIFICATION",
+            "message": _p6h_clean_text(
+                "Технадзор topic_5 — нужны уточнения перед разбором:\n\n" + "\n".join(f"— {q}" for q in questions),
+                3000,
+            ),
+            "history": "P6H_CLARIFY:{}".format(len(questions)),
+        }
+
+    # 5. Norms
+    haystack = " ".join([
+        summary, voice_ctx.get("transcript", "") or "",
+    ] + [str(d.get("title", "")) + " " + str(d.get("description", "")) for d in defects])
+    global_norms = _p6h_norms_for_haystack(haystack)
+
+    # 6. Per-section payload
+    sections_payload = []
+    for sec_title, ds in grouped:
+        defect_texts = [str(d.get("title", "")) + " " + str(d.get("description", "")) for d in ds]
+        snorms = _p6h_norms_for_section(sec_title, defect_texts)
+        sections_payload.append({
+            "title": sec_title,
+            "defects": ds,
+            "norms": snorms,
+            "photos_block": [str(file_name or "")] if file_name else [],
+        })
+
+    topic_folder_link = (idx or {}).get("topic_folder_link", "")
+
+    # 7a. Photo-only response (numbered format)
+    if not make_act:
+        msg = _p6h_format_photo_numbered_response(
+            vision, defects, grouped, global_norms, file_name or "photo",
+            photo_no=photo_no, voice_ctx=voice_ctx,
+        )
+        # Save compact summary to memory
+        _p6h_save_summary_to_memory(chat_id, topic_id, {
+            "folder": voice_ctx.get("folder_hint") or "",
+            "object": voice_ctx.get("object_hint") or "",
+            "date": voice_ctx.get("visit_date_hint") or "",
+            "owner_directives": (voice_ctx.get("explicit_include") or []) + (voice_ctx.get("explicit_exclude") or []),
+            "defect_brief": [str(d.get("title") or d.get("description") or "")[:200] for d in defects][:8],
+            "pdf_link": "",
+            "docx_link": "",
+            "status": "PHOTO_REPORT_DONE",
+        })
+        return {
+            "ok": True, "handled": True, "kind": "technadzor_p6h_photo",
+            "state": "DONE",
+            "message": msg,
+            "history": "P6H_PHOTO_REPORT_PHOTO{}_DEFECTS_{}_NORMS_{}".format(photo_no, len(defects), len(global_norms)),
+        }
+
+    # 7b. Build act: DOCX (service) + PDF (client topic root) + upload
+    ts = _p6h_dt.now().strftime("%Y%m%d_%H%M%S")
+    safe_tid = (str(task_id or ts)[:8] or ts).replace("/", "_").replace("\\", "_")
+    docx_local = _P6H_OUTDIR / f"P6H_TNZ_ACT_DRAFT__{safe_tid}_{ts}.docx"
+    pdf_local = _P6H_OUTDIR / f"АКТ_ОСМОТРА__{safe_tid}_{ts}.pdf"
+
+    recs = []
+    cons = []
+    for d in defects:
+        r = str(d.get("recommended_fix") or d.get("fix") or d.get("recommendation") or "").strip()
+        if r:
+            recs.append(r[:300])
+        c = str(d.get("consequence") or d.get("risk") or d.get("why") or "").strip()
+        if c:
+            cons.append(c[:300])
+
+    # 8-column violations table per spec
+    violations_8 = []
+    for sec_title, ds in grouped:
+        for d in ds:
+            num = len(violations_8) + 1
+            ph = str(d.get("file_name") or file_name or "")
+            place_node = sec_title
+            violation = str(d.get("title") or d.get("description") or sec_title)[:200]
+            consequence = str(d.get("consequence") or d.get("risk") or "")[:200]
+            fix = str(d.get("recommended_fix") or d.get("fix") or "")[:200]
+            # find norm for this defect's section
+            norm_id = ""
+            for s in sections_payload:
+                if s["title"] == sec_title and s["norms"]:
+                    norm_id = s["norms"][0].get("norm_id", "") or ""
+                    break
+            status = ""
+            conf = (vision or {}).get("confidence", "LOW")
+            if conf == "HIGH" and norm_id:
+                status = "CONFIRMED_BY_PHOTO"
+            elif conf in ("HIGH", "MEDIUM") and not norm_id:
+                status = "NORM_NOT_CONFIRMED"
+            elif conf == "MEDIUM":
+                status = "PARTIAL_BY_PHOTO"
+            else:
+                status = "NEEDS_OWNER_CLARIFICATION"
+            violations_8.append((num, ph, place_node, violation, consequence, fix, norm_id or "норма не подтверждена", status))
+
+    payload = {
+        "act_number": _p6h_human_act_number(task_id),
+        "date_str": _p6h_dt.now().strftime("%d.%m.%Y"),
+        "place": place or (voice_ctx.get("folder_hint") or "место уточняется по запросу владельца"),
+        "object_descr": object_descr or (voice_ctx.get("object_hint") or "объект уточняется по запросу владельца"),
+        "method": "визуальный неразрушающий контроль с выездом на объект",
+        "performer": "",
+        "specialist": "Кузнецов Илья Владимирович",
+        "photos_link": topic_folder_link or "",
+        "general_purpose": (
+            "Осмотр выполнен методом визуального неразрушающего контроля. "
+            "Цель осмотра — выявление фактически наблюдаемых дефектов, определение "
+            "рекомендаций к устранению и возможных последствий для заказчика."
+        ),
+        "sections": sections_payload,
+        "recommendations": (recs[:20] if recs else
+                             ["Привести выявленные узлы и покрытия к нормативному состоянию по соответствующим СП/ГОСТ"]),
+        "consequences": (cons[:10] if cons else
+                          ["Снижение несущей способности и эксплуатационной надёжности конструкций"]),
+        # 8-col rich table
+        "violations_table_8col": violations_8[:30],
+        # 3-col simple table (back-compat for DOCX/PDF builders that use violations_table)
+        "violations_table": [(v, n, p) for (_no, p, _pl, v, _co, _fi, n, _st) in violations_8[:30]],
+    }
+
+    docx_ok = False
+    pdf_ok = False
+    try:
+        _p6h_build_docx_act(payload, docx_local)
+        docx_ok = True
+    except Exception:
+        _P6H2_LOG.exception("P6H2_DOCX_BUILD_FAIL")
+    try:
+        _p6h_build_pdf_act(payload, pdf_local)
+        pdf_ok = True
+    except Exception:
+        _P6H2_LOG.exception("P6H2_PDF_BUILD_FAIL")
+
+    drive_docx = None
+    drive_pdf = None
+    if docx_ok or pdf_ok:
+        try:
+            from core import technadzor_drive_index as _tdi2
+            if docx_ok:
+                drive_docx = _tdi2.upload_to_service_subfolder(
+                    docx_local, docx_local.name, str(chat_id), int(topic_id), subfolder="_drafts",
+                )
+            if pdf_ok:
+                target_folder = None
+                # Owner explicitly named a client folder for the final PDF?
+                fh = voice_ctx.get("folder_hint", "") or ""
+                if fh:
+                    # Only allow target placement if folder is explicitly client-facing per voice
+                    if voice_ctx.get("client_facing") is True:
+                        from core.technadzor_drive_index import is_system_folder as _is_sys
+                        if not _is_sys(fh):
+                            target_folder = fh
+                drive_pdf = _tdi2.upload_client_pdf_to_folder(
+                    pdf_local, pdf_local.name, str(chat_id), int(topic_id),
+                    target_folder_name=target_folder,
+                )
+        except Exception:
+            _P6H2_LOG.exception("P6H2_UPLOAD_FAIL")
+
+    pdf_link = (drive_pdf or {}).get("link", "") if drive_pdf else ""
+    docx_link = (drive_docx or {}).get("link", "") if drive_docx else ""
+
+    msg_lines = ["Акт сформирован"]
+    if pdf_link:
+        msg_lines.append(f"PDF: {pdf_link}")
+    elif pdf_ok:
+        msg_lines.append("PDF: подготовлен локально, загрузка на Drive не выполнена — Telegram fallback в следующей итерации")
+    else:
+        msg_lines.append("PDF: ошибка генерации — повторите позже")
+    if docx_link:
+        msg_lines.append(f"DOCX (черновик, служебно): {docx_link}")
+    if topic_folder_link:
+        msg_lines.append(f"Фото: {topic_folder_link}")
+    msg_lines.append("Норма: " + ("подтверждена" if global_norms else "не подтверждена"))
+
+    # Memory save
+    _p6h_save_summary_to_memory(chat_id, topic_id, {
+        "folder": voice_ctx.get("folder_hint") or "",
+        "object": voice_ctx.get("object_hint") or "",
+        "date": voice_ctx.get("visit_date_hint") or "",
+        "owner_directives": (voice_ctx.get("explicit_include") or []) + (voice_ctx.get("explicit_exclude") or []),
+        "defect_brief": [str(d.get("title") or d.get("description") or "")[:200] for d in defects][:8],
+        "pdf_link": pdf_link,
+        "docx_link": docx_link,
+        "status": "ACT_DONE" if pdf_link else ("ACT_PARTIAL" if (pdf_ok or docx_ok) else "ACT_FAIL"),
+    })
+
+    return {
+        "ok": True if (pdf_ok or docx_ok) else False,
+        "handled": True,
+        "kind": "technadzor_p6h_act",
+        "state": "DONE" if pdf_link else "AWAITING_CONFIRMATION",
+        "artifact_path": str(pdf_local if pdf_ok else docx_local),
+        "extra_artifact_path": str(docx_local if docx_ok else ""),
+        "drive_link": pdf_link or docx_link or "",
+        "message": _p6h_clean_text("\n".join(msg_lines), 4000),
+        "history": "P6H_ACT_DOCX_{}_PDF_{}_DRIVE_PDF_{}".format(
+            "OK" if docx_ok else "FAIL",
+            "OK" if pdf_ok else "FAIL",
+            "OK" if pdf_link else "FAIL",
+        ),
+    }
+
+
+_P6H2_LOG.info("P6H_TOPIC5_PHOTO_NUMBER_DEFECT_NORM_CLARIFICATION_LOGIC_20260504_INSTALLED")
+_P6H2_LOG.info("P6H_TOPIC5_VOICE_LIVE_DIALOG_CLARIFICATION_GATE_20260504_INSTALLED")
+# === END_P6H_PART_2 ===
+
+
+# === P6H_PART_3: TOPIC5_OBJECT_REGISTRY_INSPECTION_CHAIN_20260504 ===
+# Final wiring of object registry into the photo pipeline.
+# Replaces _p6h_process_photo_async with a registry-aware version that:
+#   • Identifies object_id from voice/Drive/file_name signals.
+#   • Loads existing card and prior inspection_chain.
+#   • Detects visit_mode (initial / repeat / extension / description_only).
+#   • Adds clarification questions when object_id is ambiguous OR when voice/Vision conflict.
+#   • For follow-up acts: carries forward open_items with statuses
+#     (УСТРАНЕНО / УСТРАНЕНО ЧАСТИЧНО / НЕ УСТРАНЕНО / ТРЕБУЕТ УТОЧНЕНИЯ / ...).
+#   • After the act is built, appends an inspection record to the chain
+#     (server JSON + memory + timeline).
+#   • Never writes registry/system files into client-facing folders.
+
+try:
+    from core import technadzor_object_registry as _p6h3_reg
+except Exception as _exc_reg:
+    _p6h3_reg = None
+    _P6H2_LOG.warning("P6H3_REGISTRY_IMPORT_FAIL: %s", _exc_reg)
+
+
+async def _p6h_process_photo_async(file_path, file_name, task_id, chat_id, topic_id, user_text="", make_act=False, place="", object_descr=""):
+    # 1. Drive index
+    try:
+        from core import technadzor_drive_index as _tdi
+        idx = _tdi.build_technadzor_template_index(str(chat_id), int(topic_id), force=False)
+    except Exception:
+        idx = {}
+
+    # 2. Voice context
+    voice_ctx = _p6h_parse_voice_instruction(user_text or "")
+
+    # 3. Object registry — identify object_id
+    object_id = ""
+    object_card = None
+    visit_mode = "initial"
+    derive_sources = {}
+    if _p6h3_reg is not None:
+        try:
+            object_id, derive_sources = _p6h3_reg.derive_object_id_from_context(
+                voice_ctx, idx, file_path or "", file_name or "",
+            )
+            if object_id:
+                object_card = _p6h3_reg.load_object(object_id)
+            visit_mode = _p6h3_reg.detect_visit_mode(object_card, voice_ctx)
+        except Exception:
+            _P6H2_LOG.exception("P6H3_REGISTRY_DERIVE_FAIL")
+
+    # 4. Vision
+    vision, vstatus = await _p6f_tnz_vision_via_openrouter(file_path)
+    if vstatus == "FAIL" or vision is None:
+        return {
+            "ok": False, "handled": True, "kind": "technadzor_p6h_photo",
+            "state": "WAITING_CLARIFICATION",
+            "message": "Не удалось проанализировать фото через Vision. "
+                       "Пришли крупнее или короткое описание дефекта текстом",
+            "history": "P6H_VISION_FAIL",
+        }
+
+    summary = (vision.get("summary") or "").strip() if isinstance(vision, dict) else ""
+    defects = (vision.get("defects") or []) if isinstance(vision, dict) else []
+    photo_no = 1
+    for d in defects:
+        if isinstance(d, dict):
+            d.setdefault("photo_no", photo_no)
+            d.setdefault("file_name", file_name or "")
+
+    grouped = _p6h_group_defects_by_section(defects)
+
+    # 5. Clarification gate (registry + Vision + voice/Vision conflict)
+    should_wait_basic, basic_questions = _p6h_should_wait_for_clarification(vision, defects, voice_ctx, idx)
+    questions = list(basic_questions)
+
+    # Object identity question — only if no folder/object hints AND no object_id derived
+    if not object_id and not voice_ctx.get("folder_hint") and not voice_ctx.get("object_hint"):
+        existing_summaries = []
+        if _p6h3_reg is not None:
+            try:
+                existing_summaries = _p6h3_reg.list_object_summaries()
+            except Exception:
+                existing_summaries = []
+        if existing_summaries:
+            names = ", ".join(
+                f"«{e.get('object_name') or e.get('object_id')}»"
+                for e in existing_summaries[:5]
+            )
+            questions.append(
+                f"Это новый объект или продолжение одного из существующих ({names})? "
+                "Уточни — иначе не смогу привязать к истории объекта"
+            )
+        else:
+            questions.append(
+                "Назови объект (адрес / папка / имя), чтобы я завёл карточку и привязал акт"
+            )
+
+    # Voice/Vision conflict
+    if _p6h3_reg is not None and voice_ctx.get("transcript"):
+        try:
+            conflict_flags = _p6h3_reg.detect_voice_vision_conflict(voice_ctx, grouped)
+        except Exception:
+            conflict_flags = []
+        for cf in conflict_flags:
+            if cf not in questions:
+                questions.append(cf)
+    else:
+        conflict_flags = []
+
+    # If photo-only mode AND we have questions — return WAITING_CLARIFICATION
+    if questions and not make_act:
+        return {
+            "ok": True, "handled": True, "kind": "technadzor_p6h_clarify",
+            "state": "WAITING_CLARIFICATION",
+            "message": _p6h_clean_text(
+                "Технадзор topic_5 — нужны уточнения перед разбором:\n\n"
+                + "\n".join(f"— {q}" for q in questions),
+                3000,
+            ),
+            "history": "P6H_CLARIFY_WITH_REGISTRY:{}_visit_{}".format(len(questions), visit_mode),
+        }
+
+    # 6. Norms
+    haystack = " ".join([
+        summary, voice_ctx.get("transcript", "") or "",
+    ] + [str(d.get("title", "")) + " " + str(d.get("description", "")) for d in defects])
+    global_norms = _p6h_norms_for_haystack(haystack)
+
+    # 7. Sections payload
+    sections_payload = []
+    for sec_title, ds in grouped:
+        defect_texts = [str(d.get("title", "")) + " " + str(d.get("description", "")) for d in ds]
+        snorms = _p6h_norms_for_section(sec_title, defect_texts)
+        sections_payload.append({
+            "title": sec_title,
+            "defects": ds,
+            "norms": snorms,
+            "photos_block": [str(file_name or "")] if file_name else [],
+        })
+
+    topic_folder_link = (idx or {}).get("topic_folder_link", "")
+
+    # 7a. Photo-only response (numbered) ── append registry context if known
+    if not make_act:
+        msg = _p6h_format_photo_numbered_response(
+            vision, defects, grouped, global_norms, file_name or "photo",
+            photo_no=photo_no, voice_ctx=voice_ctx,
+        )
+        if object_id and object_card:
+            registry_tail = (
+                "\n\nКарточка объекта: "
+                f"{object_card.get('object_name') or object_id}"
+                f" (осмотров в истории: {len(object_card.get('inspection_chain') or [])})"
+            )
+            msg = (msg + registry_tail).strip()
+
+        # Update memory summary
+        try:
+            _p6h_save_summary_to_memory(chat_id, topic_id, {
+                "folder": voice_ctx.get("folder_hint") or "",
+                "object": voice_ctx.get("object_hint") or object_id or "",
+                "date": voice_ctx.get("visit_date_hint") or "",
+                "owner_directives": (voice_ctx.get("explicit_include") or []) + (voice_ctx.get("explicit_exclude") or []),
+                "defect_brief": [str(d.get("title") or d.get("description") or "")[:200] for d in defects][:8],
+                "pdf_link": "",
+                "docx_link": "",
+                "status": f"PHOTO_REPORT_DONE:visit={visit_mode}",
+            })
+        except Exception:
+            pass
+
+        return {
+            "ok": True, "handled": True, "kind": "technadzor_p6h_photo",
+            "state": "DONE",
+            "message": msg,
+            "history": "P6H_PHOTO_REPORT_PHOTO{}_DEFECTS_{}_NORMS_{}_VISIT_{}".format(
+                photo_no, len(defects), len(global_norms), visit_mode,
+            ),
+        }
+
+    # 7b. Act build — DOCX (service _drafts) + PDF (client topic root or named client folder)
+    ts = _p6h_dt.now().strftime("%Y%m%d_%H%M%S")
+    safe_tid = (str(task_id or ts)[:8] or ts).replace("/", "_").replace("\\", "_")
+    docx_local = _P6H_OUTDIR / f"P6H_TNZ_ACT_DRAFT__{safe_tid}_{ts}.docx"
+    pdf_local = _P6H_OUTDIR / f"АКТ_ОСМОТРА__{safe_tid}_{ts}.pdf"
+
+    # Recommendations / consequences
+    recs, cons = [], []
+    for d in defects:
+        r = str(d.get("recommended_fix") or d.get("fix") or d.get("recommendation") or "").strip()
+        if r:
+            recs.append(r[:300])
+        c = str(d.get("consequence") or d.get("risk") or d.get("why") or "").strip()
+        if c:
+            cons.append(c[:300])
+
+    # Carry forward open_items for follow-up acts
+    carried_open_items = []
+    if _p6h3_reg is not None and visit_mode in ("repeat", "extension"):
+        try:
+            carried_open_items = _p6h3_reg.carry_forward_open_items(object_card, defects)
+        except Exception:
+            carried_open_items = []
+
+    # Build follow-up section payload (added before regular sections in act)
+    if carried_open_items:
+        follow_section = {
+            "title": "Состояние ранее выданных замечаний (повторный осмотр)",
+            "defects": [
+                {
+                    "title": f"[{it.get('status','?')}] {it.get('title','') or it.get('description','')}",
+                    "description": (it.get("description", "") or "")[:300]
+                                    + (f" (из акта № {it.get('from_act_no')})" if it.get("from_act_no") else ""),
+                }
+                for it in carried_open_items
+            ],
+            "norms": [],
+            "photos_block": [],
+        }
+        sections_payload.insert(0, follow_section)
+
+    # 8-column violations table
+    violations_8 = []
+    for sec_title, ds in grouped:
+        for d in ds:
+            num = len(violations_8) + 1
+            ph = str(d.get("file_name") or file_name or "")
+            place_node = sec_title
+            violation = str(d.get("title") or d.get("description") or sec_title)[:200]
+            consequence = str(d.get("consequence") or d.get("risk") or "")[:200]
+            fix = str(d.get("recommended_fix") or d.get("fix") or "")[:200]
+            norm_id = ""
+            for s in sections_payload:
+                if s["title"] == sec_title and s["norms"]:
+                    norm_id = s["norms"][0].get("norm_id", "") or ""
+                    break
+            conf = (vision or {}).get("confidence", "LOW")
+            if conf == "HIGH" and norm_id:
+                status = "CONFIRMED_BY_PHOTO"
+            elif conf in ("HIGH", "MEDIUM") and not norm_id:
+                status = "NORM_NOT_CONFIRMED"
+            elif conf == "MEDIUM":
+                status = "PARTIAL_BY_PHOTO"
+            else:
+                status = "NEEDS_OWNER_CLARIFICATION"
+            violations_8.append((num, ph, place_node, violation, consequence, fix, norm_id or "норма не подтверждена", status))
+
+    # Determine general_purpose by visit_mode
+    if visit_mode == "repeat":
+        gen_purpose = (
+            "Повторный осмотр выполнен в развитие предыдущих актов по объекту. "
+            "Цель — фиксация выполненных исправлений и неустранённых замечаний, "
+            "определение рекомендаций к доведению конструктивных решений до нормативного состояния."
+        )
+    elif visit_mode == "extension":
+        gen_purpose = (
+            "Дополнение к предыдущему акту по объекту. "
+            "Фиксируются дополнительные материалы и замечания, обнаруженные после основного осмотра."
+        )
+    else:
+        gen_purpose = (
+            "Осмотр выполнен методом визуального неразрушающего контроля. "
+            "Цель осмотра — выявление фактически наблюдаемых дефектов, определение "
+            "рекомендаций к устранению и возможных последствий для заказчика."
+        )
+
+    # Act number — for follow-up, hint at parent
+    act_number = _p6h_human_act_number(task_id)
+    if visit_mode == "repeat" and object_card and (object_card.get("last_act_no") or ""):
+        act_number = act_number + f" (в развитие акта № {object_card['last_act_no']})"
+
+    payload = {
+        "act_number": act_number,
+        "date_str": _p6h_dt.now().strftime("%d.%m.%Y"),
+        "place": place or (voice_ctx.get("folder_hint") or "место уточняется по запросу владельца"),
+        "object_descr": object_descr or (voice_ctx.get("object_hint") or
+                                          (object_card.get("object_name") if object_card else "")
+                                          or "объект уточняется по запросу владельца"),
+        "method": "визуальный неразрушающий контроль с выездом на объект",
+        "performer": "",
+        "specialist": "Кузнецов Илья Владимирович",
+        "photos_link": topic_folder_link or "",
+        "general_purpose": gen_purpose,
+        "sections": sections_payload,
+        "recommendations": (recs[:20] if recs else
+                             ["Привести выявленные узлы и покрытия к нормативному состоянию по соответствующим СП/ГОСТ"]),
+        "consequences": (cons[:10] if cons else
+                          ["Снижение несущей способности и эксплуатационной надёжности конструкций"]),
+        "violations_table_8col": violations_8[:30],
+        "violations_table": [(v, n, p) for (_no, p, _pl, v, _co, _fi, n, _st) in violations_8[:30]],
+    }
+
+    # Build files
+    docx_ok = pdf_ok = False
+    try:
+        _p6h_build_docx_act(payload, docx_local)
+        docx_ok = True
+    except Exception:
+        _P6H2_LOG.exception("P6H3_DOCX_BUILD_FAIL")
+    try:
+        _p6h_build_pdf_act(payload, pdf_local)
+        pdf_ok = True
+    except Exception:
+        _P6H2_LOG.exception("P6H3_PDF_BUILD_FAIL")
+
+    # Upload — DOCX → _drafts (system).  PDF → client folder if explicitly named, else topic root.
+    drive_docx = drive_pdf = None
+    if docx_ok or pdf_ok:
+        try:
+            from core import technadzor_drive_index as _tdi2
+            if docx_ok:
+                drive_docx = _tdi2.upload_to_service_subfolder(
+                    docx_local, docx_local.name, str(chat_id), int(topic_id), subfolder="_drafts",
+                )
+            if pdf_ok:
+                target_folder = None
+                fh = voice_ctx.get("folder_hint", "") or ""
+                if fh and voice_ctx.get("client_facing") is True:
+                    from core.technadzor_drive_index import is_system_folder as _is_sys
+                    if not _is_sys(fh):
+                        target_folder = fh
+                drive_pdf = _tdi2.upload_client_pdf_to_folder(
+                    pdf_local, pdf_local.name, str(chat_id), int(topic_id),
+                    target_folder_name=target_folder,
+                )
+        except Exception:
+            _P6H2_LOG.exception("P6H3_UPLOAD_FAIL")
+
+    pdf_link = (drive_pdf or {}).get("link", "") if drive_pdf else ""
+    docx_link = (drive_docx or {}).get("link", "") if drive_docx else ""
+
+    # Record inspection in chain
+    if _p6h3_reg is not None and (object_id or pdf_ok or docx_ok):
+        try:
+            # If we still don't have object_id by here (e.g., act forced through),
+            # create a synthetic stable id from file/date so chain still records.
+            if not object_id:
+                object_id = _p6h3_reg._slug(
+                    voice_ctx.get("object_hint") or
+                    voice_ctx.get("folder_hint") or
+                    (file_name.rsplit(".", 1)[0] if file_name else "") or
+                    f"obj_{ts}"
+                )
+            new_open = []
+            for sec_title, ds in grouped:
+                for d in ds:
+                    new_open.append({
+                        "title": str(d.get("title") or "")[:200],
+                        "description": str(d.get("description") or "")[:300],
+                        "section": sec_title,
+                        "act_no": payload["act_number"],
+                    })
+            _p6h3_reg.record_inspection(
+                object_id, str(chat_id),
+                act_no=payload["act_number"],
+                date_str=payload["date_str"],
+                mode=visit_mode,
+                pdf_link=pdf_link,
+                docx_link=docx_link,
+                source_photo_folder=voice_ctx.get("folder_hint") or "",
+                findings=[{"section": s["title"],
+                            "defects": s["defects"][:10],
+                            "norms": [n.get("norm_id") for n in (s.get("norms") or [])]}
+                           for s in sections_payload],
+                open_items=new_open,
+                closed_items=[
+                    {"title": it.get("title"), "from_act_no": it.get("from_act_no")}
+                    for it in carried_open_items if it.get("status") == "УСТРАНЕНО"
+                ],
+                new_items=new_open,
+                owner_observation=voice_ctx.get("transcript", "")[:1000],
+                conflict_flags=conflict_flags or [],
+                object_name=(voice_ctx.get("object_hint") or
+                              (object_card.get("object_name") if object_card else "") or ""),
+                object_folder_url=topic_folder_link or "",
+            )
+        except Exception:
+            _P6H2_LOG.exception("P6H3_RECORD_INSPECTION_FAIL")
+
+    msg_lines = ["Акт сформирован"]
+    if pdf_link:
+        msg_lines.append(f"PDF: {pdf_link}")
+    elif pdf_ok:
+        msg_lines.append("PDF: подготовлен локально, загрузка на Drive не выполнена — Telegram fallback")
+    else:
+        msg_lines.append("PDF: ошибка генерации — повторите позже")
+    if docx_link:
+        msg_lines.append(f"DOCX (черновик, служебно): {docx_link}")
+    if topic_folder_link:
+        msg_lines.append(f"Фото: {topic_folder_link}")
+    msg_lines.append("Норма: " + ("подтверждена" if global_norms else "не подтверждена"))
+    if visit_mode == "repeat":
+        msg_lines.append(f"Тип осмотра: повторный (история объекта: {len((object_card or {}).get('inspection_chain') or []) + 1} записей)")
+    elif visit_mode == "extension":
+        msg_lines.append("Тип осмотра: дополнение к предыдущему акту")
+    else:
+        msg_lines.append("Тип осмотра: первичный")
+
+    # Memory summary
+    try:
+        _p6h_save_summary_to_memory(chat_id, topic_id, {
+            "folder": voice_ctx.get("folder_hint") or "",
+            "object": voice_ctx.get("object_hint") or object_id or "",
+            "date": payload["date_str"],
+            "owner_directives": (voice_ctx.get("explicit_include") or []) + (voice_ctx.get("explicit_exclude") or []),
+            "defect_brief": [str(d.get("title") or d.get("description") or "")[:200] for d in defects][:8],
+            "pdf_link": pdf_link,
+            "docx_link": docx_link,
+            "status": ("ACT_DONE" if pdf_link else ("ACT_PARTIAL" if (pdf_ok or docx_ok) else "ACT_FAIL"))
+                       + f":visit={visit_mode}",
+        })
+    except Exception:
+        pass
+
+    return {
+        "ok": True if (pdf_ok or docx_ok) else False,
+        "handled": True,
+        "kind": "technadzor_p6h_act",
+        "state": "DONE" if pdf_link else "AWAITING_CONFIRMATION",
+        "artifact_path": str(pdf_local if pdf_ok else docx_local),
+        "extra_artifact_path": str(docx_local if docx_ok else ""),
+        "drive_link": pdf_link or docx_link or "",
+        "message": _p6h_clean_text("\n".join(msg_lines), 4000),
+        "history": "P6H_ACT_VISIT_{}_DOCX_{}_PDF_{}_DRIVE_PDF_{}_OPEN_CARRIED_{}".format(
+            visit_mode,
+            "OK" if docx_ok else "FAIL",
+            "OK" if pdf_ok else "FAIL",
+            "OK" if pdf_link else "FAIL",
+            len(carried_open_items),
+        ),
+    }
+
+
+_P6H2_LOG.info("P6H_TOPIC5_OBJECT_REGISTRY_INSPECTION_CHAIN_20260504_INSTALLED")
+# === END_P6H_PART_3 ===
+
+# ─── P6H_EXTERNAL_VISION_GUARD_V1 ──────────────────────────────────────────
+# CANON: TECHNADZOR_DOMAIN_LOGIC_CANON_V2 §33
+# EXTERNAL_PHOTO_ANALYSIS_ALLOWED = False by default
+# Vision запускается только после явного разрешения владельца
+
+_P6H_EXTERNAL_VISION_ALLOWED = False
+
+_p6h_vision_orig = _p6f_tnz_vision_via_openrouter  # сохраняем оригинал
+
+async def _p6f_tnz_vision_via_openrouter(local_path):  # noqa: F811
+    if not _P6H_EXTERNAL_VISION_ALLOWED:
+        _P6H2_LOG.warning("EXTERNAL_VISION_BLOCKED path=%s EXTERNAL_PHOTO_ANALYSIS_ALLOWED=False", local_path)
+        return {}, "EXTERNAL_PHOTO_ANALYSIS_BLOCKED"
+    return await _p6h_vision_orig(local_path)
+
+def _p6h_allow_external_vision():
+    global _P6H_EXTERNAL_VISION_ALLOWED
+    _P6H_EXTERNAL_VISION_ALLOWED = True
+    _P6H2_LOG.info("EXTERNAL_VISION_ALLOWED_SET owner_approved=True")
+
+_P6H2_LOG.info("P6H_EXTERNAL_VISION_GUARD_V1_INSTALLED allowed=%s", _P6H_EXTERNAL_VISION_ALLOWED)
+# ─── END P6H_EXTERNAL_VISION_GUARD_V1 ──────────────────────────────────────
+
+# ─── P6H_PART_4_VISIT_BUFFER_V1 ────────────────────────────────────────────
+# CANON: TECHNADZOR_DOMAIN_LOGIC_CANON_V2
+# ActiveTechnadzorFolder / VisitMaterial / visit_buffer_add / visit_buffer_flush
+
+import os as _p6h4_os
+import json as _p6h4_json
+import time as _p6h4_time
+import logging as _p6h4_logging
+
+_P6H4_LOG = _p6h4_logging.getLogger("task_worker")
+
+_P6H4_BASE = _p6h4_os.path.join(
+    _p6h4_os.path.dirname(_p6h4_os.path.dirname(_p6h4_os.path.abspath(__file__))),
+    "data", "technadzor"
+)
+
+
+def _p6h4_ensure():
+    _p6h4_os.makedirs(_P6H4_BASE, exist_ok=True)
+
+
+def _p6h4_buf_path(chat_id, topic_id):
+    _p6h4_ensure()
+    return _p6h4_os.path.join(_P6H4_BASE, f"buf_{chat_id}_{topic_id}.json")
+
+
+def _p6h4_folder_path(chat_id, topic_id):
+    _p6h4_ensure()
+    return _p6h4_os.path.join(_P6H4_BASE, f"active_folder_{chat_id}_{topic_id}.json")
+
+
+def visit_buffer_add(chat_id, topic_id, material: dict) -> int:
+    """Append VisitMaterial to persistent buffer. Returns new total count."""
+    path = _p6h4_buf_path(str(chat_id), int(topic_id))
+    try:
+        with open(path, "r", encoding="utf-8") as _f:
+            buf = _p6h4_json.load(_f)
+    except Exception:
+        buf = {"materials": [], "created_at": _p6h4_time.time()}
+    if "material_id" not in material:
+        material["material_id"] = f"{int(_p6h4_time.time() * 1000)}"
+    material.setdefault("added_at", _p6h4_time.time())
+    buf["materials"].append(material)
+    buf["updated_at"] = _p6h4_time.time()
+    with open(path, "w", encoding="utf-8") as _f:
+        _p6h4_json.dump(buf, _f, ensure_ascii=False, indent=2)
+    count = len(buf["materials"])
+    _P6H4_LOG.info("P6H4_VISIT_BUFFER_ADD chat=%s topic=%s count=%s", chat_id, topic_id, count)
+    return count
+
+
+def visit_buffer_flush(chat_id, topic_id) -> list:
+    """Return all buffered VisitMaterials and clear buffer."""
+    path = _p6h4_buf_path(str(chat_id), int(topic_id))
+    try:
+        with open(path, "r", encoding="utf-8") as _f:
+            buf = _p6h4_json.load(_f)
+        materials = buf.get("materials", [])
+        _p6h4_os.remove(path)
+        _P6H4_LOG.info("P6H4_VISIT_BUFFER_FLUSH chat=%s topic=%s count=%s", chat_id, topic_id, len(materials))
+        return materials
+    except Exception:
+        _P6H4_LOG.info("P6H4_VISIT_BUFFER_FLUSH_EMPTY chat=%s topic=%s", chat_id, topic_id)
+        return []
+
+
+def visit_buffer_count(chat_id, topic_id) -> int:
+    path = _p6h4_buf_path(str(chat_id), int(topic_id))
+    try:
+        with open(path, "r", encoding="utf-8") as _f:
+            buf = _p6h4_json.load(_f)
+        return len(buf.get("materials", []))
+    except Exception:
+        return 0
+
+
+def set_active_folder(chat_id, topic_id, folder_data: dict):
+    path = _p6h4_folder_path(str(chat_id), int(topic_id))
+    folder_data["set_at"] = _p6h4_time.time()
+    with open(path, "w", encoding="utf-8") as _f:
+        _p6h4_json.dump(folder_data, _f, ensure_ascii=False, indent=2)
+    _P6H4_LOG.info(
+        "P6H4_ACTIVE_FOLDER_SET chat=%s topic=%s name=%s",
+        chat_id, topic_id, folder_data.get("folder_name", "?"),
+    )
+
+
+def get_active_folder(chat_id, topic_id) -> dict:
+    path = _p6h4_folder_path(str(chat_id), int(topic_id))
+    try:
+        with open(path, "r", encoding="utf-8") as _f:
+            return _p6h4_json.load(_f)
+    except Exception:
+        return {}
+
+
+def process_drive_folder_batch(chat_id, topic_id, folder_id: str, folder_name: str = "") -> int:
+    """Scan Drive folder, add all files as VisitMaterials. Returns count added."""
+    added = 0
+    try:
+        from core.topic_drive_oauth import get_drive_service as _p6h4_get_drive
+        svc = _p6h4_get_drive(chat_id=str(chat_id), topic_id=int(topic_id))
+        items = svc.files().list(
+            q=f"'{folder_id}' in parents and trashed=false",
+            fields="files(id,name,mimeType,webViewLink)",
+            pageSize=200,
+        ).execute().get("files", [])
+        for item in items:
+            mime = item.get("mimeType", "")
+            if "folder" in mime:
+                continue
+            ftype = "PHOTO" if mime.startswith("image/") else "PDF" if "pdf" in mime else "OTHER"
+            mat = {
+                "source": "DRIVE",
+                "file_type": ftype,
+                "file_name": item.get("name", ""),
+                "drive_url": item.get("webViewLink", ""),
+                "drive_file_id": item.get("id", ""),
+                "include_in_act": True,
+                "include_in_report": True,
+                "group_label": folder_name or "",
+            }
+            visit_buffer_add(str(chat_id), int(topic_id), mat)
+            added += 1
+        _P6H4_LOG.info("P6H4_DRIVE_FOLDER_BATCH chat=%s topic=%s folder=%s added=%s", chat_id, topic_id, folder_id, added)
+    except Exception as _p6h4_batch_err:
+        _P6H4_LOG.warning("P6H4_DRIVE_FOLDER_BATCH_ERR %s", _p6h4_batch_err)
+    return added
+
+
+_P6H4_LOG.info("P6H_PART_4_VISIT_BUFFER_V1_INSTALLED")
+# ─── END P6H_PART_4_VISIT_BUFFER_V1 ─────────────────────────────────────────
+
+
+# === P6H4TW_BATCH_TRIGGER_V1 ===
+# FIX: original P6H_PART_4 hook in task_worker.py is after asyncio.run() and never fires.
+# This wrapper hooks process_technadzor here (before asyncio.run()), intercepting all topic_5 calls.
+# Handles: photo/file buffering, Drive folder batch load, visit buffer flush to process_technadzor.
+# EXTERNAL_PHOTO_ANALYSIS_ALLOWED=False: no Vision without explicit owner permission.
+import logging as _p6h4tw_v1_log_mod
+import os as _p6h4tw_v1_os
+import re as _p6h4tw_v1_re
+
+_P6H4TW_V1_LOG = _p6h4tw_v1_log_mod.getLogger("task_worker")
+_P6H4TW_V1_DRIVE_RE = _p6h4tw_v1_re.compile(
+    r"https://drive\.google\.com/drive/folders/([A-Za-z0-9_-]+)"
+)
+_P6H4TW_V1_BATCH_TRIGGERS = (
+    "загрузи все файлы из папки", "загрузи все файлы",
+    "возьми файлы из папки", "прочитай папку",
+    "обработай папку", "сделай разбор по папке", "сделай акт по папке",
+    "разбор по папке", "акт по папке",
+    "загрузи папку", "возьми из папки",
+)
+_P6H4TW_V1_BATCH_AND_FLUSH = (
+    "сделай разбор по папке", "сделай акт по папке",
+    "разбор по папке", "акт по папке",
+)
+_P6H4TW_V1_FLUSH_TRIGGERS = (
+    "сделай акт", "собери акт", "сделай разбор", "сделай анализ",
+    "собери разбор", "разберись", "сделай отчет", "сделай отчёт",
+    "начни анализ", "сформируй акт",
+)
+_P6H4TW_V1_ACTIVE_FOLDER_TRIGGERS = (
+    "работаем по этой папке", "установи папку", "активная папка это",
+    "drive.google.com/drive/folders/",
+)
+_P6H4TW_V1_SHOW_FOLDER_TRIGGERS = (
+    "покажи активную папку", "какая активная папка", "какая папка",
+    "текущая папка", "покажи папку",
+)
+
+
+def _p6h4tw_v1_low(v):
+    return str(v or "").lower().replace("ё", "е")
+
+
+try:
+    _p6h4tw_v1_orig = process_technadzor
+    if not getattr(_p6h4tw_v1_orig, "_p6h4tw_v1_wrapped", False):
+
+        def process_technadzor(text="", task_id="", chat_id="", topic_id=0, file_path="", file_name="", **kwargs):  # noqa: F811
+            if int(topic_id or 0) != 5:
+                return _p6h4tw_v1_orig(
+                    text=text, task_id=task_id, chat_id=chat_id,
+                    topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs
+                )
+
+            chat_str = str(chat_id)
+            txt_low = _p6h4tw_v1_low(text)
+
+            # ── Photo / Drive file → buffer (no Vision) ──────────────────────
+            if file_path or file_name:
+                fn = file_name or _p6h4tw_v1_os.path.basename(file_path or "")
+                fn_low = fn.lower()
+                is_photo = fn_low.endswith((".jpg", ".jpeg", ".png", ".webp", ".heic"))
+                ftype = "PHOTO" if is_photo else "PDF" if fn_low.endswith(".pdf") else "DOCUMENT"
+                material = {
+                    "source": "telegram",
+                    "file_type": ftype,
+                    "file_name": fn,
+                    "drive_file_id": "",
+                    "drive_url": file_path or "",
+                    "caption": text or "",
+                    "include_in_act": True,
+                    "include_in_report": True,
+                }
+                try:
+                    count = visit_buffer_add(chat_str, 5, material)
+                    _P6H4TW_V1_LOG.info(
+                        "P6H4TW_V1_PHOTO_BUFFERED chat=%s count=%s fn=%s", chat_str, count, fn
+                    )
+                    return {
+                        "ok": True,
+                        "result_text": f"Добавлено в пакет ({count} шт.). Когда готово — скажи «сделай разбор».",
+                        "history": "P6H4TW_V1_PHOTO_BUFFERED",
+                    }
+                except Exception as _e:
+                    _P6H4TW_V1_LOG.warning("P6H4TW_V1_BUF_ADD_ERR %s", _e)
+                    return _p6h4tw_v1_orig(
+                        text=text, task_id=task_id, chat_id=chat_id,
+                        topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs
+                    )
+
+            # ── Drive folder URL / set active folder ─────────────────────────
+            m_drive = _P6H4TW_V1_DRIVE_RE.search(text or "")
+            if m_drive or any(t in txt_low for t in _P6H4TW_V1_ACTIVE_FOLDER_TRIGGERS):
+                folder_id = m_drive.group(1) if m_drive else ""
+                folder_name = ""
+                if folder_id:
+                    try:
+                        from core.topic_drive_oauth import get_drive_service as _p6h4tw_v1_gds
+                        svc = _p6h4tw_v1_gds(chat_id=chat_str, topic_id=5)
+                        folder_name = (
+                            svc.files().get(fileId=folder_id, fields="name").execute().get("name", "")
+                        )
+                    except Exception:
+                        pass
+                try:
+                    set_active_folder(chat_str, 5, {
+                        "folder_id": folder_id,
+                        "folder_name": folder_name,
+                        "source_text": (text or "")[:500],
+                    })
+                    return {
+                        "ok": True,
+                        "result_text": f"Активная папка установлена: {folder_name or folder_id or '(из текста)'}.",
+                        "history": "P6H4TW_V1_ACTIVE_FOLDER_SET",
+                    }
+                except Exception as _e:
+                    _P6H4TW_V1_LOG.warning("P6H4TW_V1_SET_FOLDER_ERR %s", _e)
+
+            # ── Show active folder ────────────────────────────────────────────
+            if any(t in txt_low for t in _P6H4TW_V1_SHOW_FOLDER_TRIGGERS):
+                try:
+                    af = get_active_folder(chat_str, 5)
+                    if af:
+                        name = af.get("folder_name") or af.get("folder_id", "(нет имени)")
+                        fid = af.get("folder_id", "")
+                        link = f"https://drive.google.com/drive/folders/{fid}" if fid else "—"
+                        msg = f"Активная папка: {name}\n{link}"
+                    else:
+                        msg = "Активная папка не установлена. Пришли ссылку на папку."
+                    return {"ok": True, "result_text": msg, "history": "P6H4TW_V1_SHOW_FOLDER"}
+                except Exception as _e:
+                    _P6H4TW_V1_LOG.warning("P6H4TW_V1_SHOW_FOLDER_ERR %s", _e)
+
+            # ── Drive folder batch load ───────────────────────────────────────
+            if any(t in txt_low for t in _P6H4TW_V1_BATCH_TRIGGERS):
+                try:
+                    m_drive2 = _P6H4TW_V1_DRIVE_RE.search(text or "")
+                    if m_drive2:
+                        batch_fid = m_drive2.group(1)
+                        batch_fname = ""
+                        try:
+                            from core.topic_drive_oauth import get_drive_service as _p6h4tw_v1_gds2
+                            svc2 = _p6h4tw_v1_gds2(chat_id=chat_str, topic_id=5)
+                            batch_fname = (
+                                svc2.files().get(fileId=batch_fid, fields="name").execute().get("name", "")
+                            )
+                        except Exception:
+                            pass
+                    else:
+                        af2 = get_active_folder(chat_str, 5) or {}
+                        batch_fid = af2.get("folder_id", "")
+                        batch_fname = af2.get("folder_name", "")
+                    if not batch_fid:
+                        return {
+                            "ok": True,
+                            "result_text": "Не найдена активная папка. Пришли ссылку на папку Drive.",
+                            "history": "P6H4TW_V1_BATCH_NO_FOLDER",
+                        }
+                    added = process_drive_folder_batch(chat_str, 5, batch_fid, batch_fname)
+                    _P6H4TW_V1_LOG.info(
+                        "P6H4TW_V1_BATCH_LOADED chat=%s folder=%s added=%s", chat_str, batch_fid, added
+                    )
+                    do_flush = any(t in txt_low for t in _P6H4TW_V1_BATCH_AND_FLUSH)
+                    if not do_flush:
+                        return {
+                            "ok": True,
+                            "result_text": (
+                                f"Принял. Файлы из папки добавлены в пакет выезда: {added} шт. "
+                                "Vision не запускаю без разрешения владельца. Скажи «сделай разбор» когда готово."
+                            ),
+                            "history": "P6H4TW_V1_BATCH_LOADED",
+                        }
+                    txt_low = "сделай разбор"  # fall through to flush
+                except Exception as _e:
+                    _P6H4TW_V1_LOG.warning("P6H4TW_V1_BATCH_ERR %s", _e)
+
+            # ── Flush buffer → process_technadzor ────────────────────────────
+            if any(t in txt_low for t in _P6H4TW_V1_FLUSH_TRIGGERS):
+                try:
+                    count = visit_buffer_count(chat_str, 5)
+                    if count == 0:
+                        return {
+                            "ok": True,
+                            "result_text": "Буфер пуст — сначала пришли фото или файлы.",
+                            "history": "P6H4TW_V1_FLUSH_EMPTY",
+                        }
+                    materials = visit_buffer_flush(chat_str, 5)
+                    lines = ["Технический надзор. Акт по материалам выезда:", "VISIT_PACKAGE:"]
+                    for i, m in enumerate(materials, 1):
+                        fn2 = m.get("file_name", f"файл {i}")
+                        url2 = m.get("drive_url", "")
+                        note2 = (m.get("caption", "") or m.get("voice_comment", "") or "").strip()
+                        line = f"  {i}. {fn2}"
+                        if url2:
+                            line += f" {url2}"
+                        if note2:
+                            line += f" — {note2}"
+                        lines.append(line)
+                    package_text = "\n".join(lines)
+                    _P6H4TW_V1_LOG.info(
+                        "P6H4TW_V1_FLUSH chat=%s count=%s", chat_str, len(materials)
+                    )
+                    return _p6h4tw_v1_orig(
+                        text=package_text, task_id=task_id, chat_id=chat_id,
+                        topic_id=topic_id, file_path="", file_name="", **kwargs
+                    )
+                except Exception as _e:
+                    _P6H4TW_V1_LOG.warning("P6H4TW_V1_FLUSH_ERR %s", _e)
+
+            # ── Default pass-through ──────────────────────────────────────────
+            return _p6h4tw_v1_orig(
+                text=text, task_id=task_id, chat_id=chat_id,
+                topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs
+            )
+
+        process_technadzor._p6h4tw_v1_wrapped = True
+        _p6h4tw_v1_orig._p6h4tw_v1_wrapped = True
+        _P6H4TW_V1_LOG.info("P6H4TW_BATCH_TRIGGER_V1_INSTALLED")
+except Exception as _p6h4tw_v1_err:
+    _P6H4TW_V1_LOG.exception("P6H4TW_V1_INSTALL_ERR %s", _p6h4tw_v1_err)
+# === END_P6H4TW_BATCH_TRIGGER_V1 ===
+
+# === P6H4FD_FOLDER_DISCOVERY_V1 ===
+import re as _p6h4fd_re
+import logging as _p6h4fd_log_mod
+
+_P6H4FD_LOG = _p6h4fd_log_mod.getLogger("technadzor_engine.p6h4fd")
+
+_P6H4FD_FOLDER_INTENTS = (
+    "папка",
+    "новая папка",
+    "создана папка",
+    "создал папку",
+    "обнаружь папку",
+    "найди папку",
+    "папка называется",
+    "работаем по папке",
+    "текущая папка",
+    "прими папку",
+    "туда складывать",
+    "туда загружать",
+    "все материалы туда",
+)
+
+# Matches "папк[у/а/и] <name>" — captures up to 60 chars until punctuation or end
+_P6H4FD_NAME_RE = _p6h4fd_re.compile(
+    r"(?:папк[уаи]|папка)\s+([А-Яа-яёЁA-Za-z0-9][А-Яа-яёЁA-Za-z0-9 \-_]{0,60}?)(?:[,.\n!?]|$)",
+    _p6h4fd_re.IGNORECASE,
+)
+
+
+def _p6h4fd_extract_name(text: str) -> str:
+    m = _P6H4FD_NAME_RE.search(text)
+    if m:
+        return m.group(1).strip()
+    return ""
+
+
+def _p6h4fd_norm(s: str) -> str:
+    return " ".join(s.lower().replace("ё", "е").split())
+
+
+def _p6h4fd_match_score(candidate: str, folder_name: str) -> int:
+    c = _p6h4fd_norm(candidate)
+    f = _p6h4fd_norm(folder_name)
+    if not c:
+        return 0
+    if c == f:
+        return 100
+    if c in f or f in c:
+        return 80
+    cw = set(c.split())
+    fw = set(f.split())
+    overlap = len(cw & fw)
+    return overlap * 10 if overlap else 0
+
+
+try:
+    _p6h4fd_orig_pt = process_technadzor
+    if not getattr(_p6h4fd_orig_pt, "_p6h4fd_wrapped", False):
+
+        def process_technadzor(  # noqa: F811
+            text="", task_id="", chat_id="", topic_id=0,
+            file_path="", file_name="", **kwargs
+        ):
+            if int(topic_id or 0) != 5:
+                return _p6h4fd_orig_pt(
+                    text=text, task_id=task_id, chat_id=chat_id,
+                    topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs
+                )
+
+            txt_low = (text or "").lower().replace("ё", "е")
+            if not any(t in txt_low for t in _P6H4FD_FOLDER_INTENTS):
+                return _p6h4fd_orig_pt(
+                    text=text, task_id=task_id, chat_id=chat_id,
+                    topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs
+                )
+
+            # — folder/context intent: fresh Drive lookup by name —
+            try:
+                candidate = _p6h4fd_extract_name(text or "")
+                chat_str = str(chat_id or "")
+                _P6H4FD_LOG.info(
+                    "P6H4FD_DISCOVERY_START candidate=%r chat=%s", candidate, chat_str
+                )
+
+                from core.technadzor_drive_index import _service as _p6h4fd_svc
+
+                # system/container names — never a valid active folder result
+                _P6H4FD_NEVER_RESULT = frozenset({
+                    "technadzor", "технадзор", "topic_5", "_orchestra_work",
+                    "_system", "_tmp", "_archive", "_drafts", "_templates", "_manifests",
+                })
+
+                def _p6h4fd_is_container(name):
+                    return (name or "").strip().lower() in _P6H4FD_NEVER_RESULT
+
+                svc = _p6h4fd_svc()
+
+                def _p6h4fd_list_subfolders(parent_fid):
+                    r = svc.files().list(
+                        q=(
+                            f"'{parent_fid}' in parents"
+                            " and mimeType='application/vnd.google-apps.folder'"
+                            " and trashed=false"
+                        ),
+                        fields="files(id,name,createdTime,modifiedTime)",
+                        orderBy="createdTime desc",
+                        pageSize=50,
+                    ).execute()
+                    return r.get("files", [])
+
+                # Step A: search inside correct user ТЕХНАДЗОР root
+                _TECHNADZOR_ROOT_FID = "1s2y5l2mJFTb7P90XVokErXYVzmoH-VtD"
+                raw_a = _p6h4fd_list_subfolders(_TECHNADZOR_ROOT_FID)
+                folders = [f for f in raw_a if not _p6h4fd_is_container(f.get("name", ""))]
+                _P6H4FD_LOG.info("P6H4FD_ROOT_SEARCH count=%s", len(folders))
+
+                # Step D: fallback — Drive-wide exact name search
+                if not folders and candidate:
+                    _safe = candidate.replace("'", "\\'")
+                    _gr = svc.files().list(
+                        q=(
+                            f"name='{_safe}'"
+                            " and mimeType='application/vnd.google-apps.folder'"
+                            " and trashed=false"
+                        ),
+                        fields="files(id,name,createdTime,modifiedTime)",
+                        orderBy="createdTime desc",
+                        pageSize=10,
+                    ).execute()
+                    folders = [
+                        f for f in _gr.get("files", [])
+                        if not _p6h4fd_is_container(f.get("name", ""))
+                    ]
+                    _P6H4FD_LOG.info("P6H4FD_GLOBAL_SEARCH count=%s candidate=%r", len(folders), candidate)
+
+                if not folders:
+                    msg_nf = (
+                        "Папку не нашёл"
+                        + (f" «{candidate}»" if candidate else "")
+                        + ". Укажи точное название или пришли ссылку."
+                    )
+                    return {
+                        "ok": True,
+                        "handled": True,
+                        "state": "DONE",
+                        "result_text": msg_nf,
+                        "message": msg_nf,
+                        "history": "P6H4FD_V1:NO_USER_FOLDERS",
+                    }
+
+                # exact match first, then fuzzy, then newest
+                best = None
+                best_score = 0
+                if candidate:
+                    for f in folders:
+                        score = _p6h4fd_match_score(candidate, f.get("name", ""))
+                        if score > best_score:
+                            best_score = score
+                            best = f
+
+                if best is None or best_score == 0:
+                    best = folders[0]
+
+                fid = best["id"]
+                fname = best.get("name", "")
+                link = f"https://drive.google.com/drive/folders/{fid}"
+
+                set_active_folder(chat_str, 5, {
+                    "folder_id": fid,
+                    "folder_name": fname,
+                    "source_text": (text or "")[:500],
+                })
+                msg = f"Нашёл папку «{fname}» и установил её как активную.\n{link}"
+                _P6H4FD_LOG.info(
+                    "P6H4FD_SET_ACTIVE folder_id=%s name=%r score=%s chat=%s",
+                    fid, fname, best_score, chat_str,
+                )
+                return {
+                    "ok": True,
+                    "handled": True,
+                    "result_text": msg,
+                    "message": msg,
+                    "history": f"P6H4FD_V1:SET_ACTIVE:{fid}",
+                }
+
+            except Exception as _e:
+                _P6H4FD_LOG.warning("P6H4FD_ERR %s", _e)
+                # on error fall through to lower wrapper
+                return _p6h4fd_orig_pt(
+                    text=text, task_id=task_id, chat_id=chat_id,
+                    topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs
+                )
+
+        process_technadzor._p6h4fd_wrapped = True
+        _p6h4fd_orig_pt._p6h4fd_wrapped = True
+        _P6H4FD_LOG.info("P6H4FD_FOLDER_DISCOVERY_V1_INSTALLED")
+except Exception as _p6h4fd_err:
+    _P6H4FD_LOG.exception("P6H4FD_INSTALL_ERR %s", _p6h4fd_err)
+# === END_P6H4FD_FOLDER_DISCOVERY_V1 ===
+
+# === PHOTO_RECOGNITION_TOPIC5_RUNTIME_BINDING_V1 ===
+try:
+    _photo_t5_orig_process_technadzor = process_technadzor
+
+    def process_technadzor(
+        text: str = "",
+        task_id: str = "",
+        chat_id: str = "",
+        topic_id: int = 0,
+        file_path: str = "",
+        file_name: str = "",
+        **kwargs,
+    ):
+        from core.photo_recognition_engine import is_image_file, process_photo_recognition
+
+        clean_kwargs = dict(kwargs)
+        for key in (
+            "text", "raw_input", "task_id", "id", "chat_id", "topic_id",
+            "file_path", "local_path", "file_name", "name",
+        ):
+            clean_kwargs.pop(key, None)
+
+        raw_text = str(text or kwargs.get("raw_input") or "")
+        fp = str(file_path or kwargs.get("local_path") or "")
+        fn = str(file_name or kwargs.get("file_name") or kwargs.get("name") or "")
+        resolved_task_id = str(task_id or kwargs.get("task_id") or kwargs.get("id") or "")
+        resolved_chat_id = str(chat_id or kwargs.get("chat_id") or "")
+
+        try:
+            tid = int(topic_id or kwargs.get("topic_id") or 0)
+        except Exception:
+            tid = 0
+
+        photo_result = None
+        if tid == 5 and is_image_file(file_name=fn, file_path=fp):
+            photo_result = process_photo_recognition(
+                topic_id=5,
+                file_name=fn,
+                file_path=fp,
+                owner_comment=raw_text,
+                source="TELEGRAM",
+            )
+
+            if not raw_text.strip():
+                return {
+                    "ok": True,
+                    "handled": True,
+                    "status": "WAITING_CLARIFICATION",
+                    "state": "WAITING_CLARIFICATION",
+                    "kind": "technadzor_photo_material",
+                    "message": "Фото принято как материал технадзора. Укажи, к какому замечанию или разделу его отнести",
+                    "result_text": "Фото принято как материал технадзора. Укажи, к какому замечанию или разделу его отнести",
+                    "photo_recognition": photo_result,
+                    "history": "PHOTO_RECOGNITION_TOPIC5_RUNTIME_BINDING_V1:WAITING_OWNER_COMMENT",
+                }
+
+        result = _photo_t5_orig_process_technadzor(
+            text=raw_text,
+            task_id=resolved_task_id,
+            chat_id=resolved_chat_id,
+            topic_id=tid,
+            file_path=fp,
+            file_name=fn,
+            **clean_kwargs,
+        )
+
+        if photo_result and isinstance(result, dict):
+            result["photo_recognition"] = photo_result
+            result["photo_recognition_status"] = photo_result.get("status")
+            result["history"] = str(result.get("history") or "") + "|PHOTO_RECOGNITION_TOPIC5_RUNTIME_BINDING_V1"
+            if "message" not in result and "result_text" not in result:
+                result["message"] = "Фото принято и связано с технадзорным материалом"
+
+        return result
+except Exception:
+    pass
+# === END_PHOTO_RECOGNITION_TOPIC5_RUNTIME_BINDING_V1 ===
+
+
+# === P7_TOPIC5_REPLY_VOICE_BINDING_V1 ===
+# Binds Telegram text/voice reply to the VisitMaterial created from the replied photo/file.
+import json as _p7_t5_json
+import re as _p7_t5_re
+import time as _p7_t5_time
+from pathlib import Path as _p7_t5_Path
+
+_P7_T5_ORIG_PROCESS_TECHNADZOR = process_technadzor
+_P7_T5_DATA = _p7_t5_Path("/root/.areal-neva-core/data/technadzor")
+
+def _p7_t5_s(v, limit=20000):
+    try:
+        return "" if v is None else str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+def _p7_t5_low(v):
+    return _p7_t5_s(v).lower().replace("ё", "е")
+
+def _p7_t5_task_get(task, key, default=None):
+    if task is None:
+        return default
+    try:
+        if isinstance(task, dict):
+            return task.get(key, default)
+        return task[key]
+    except Exception:
+        return getattr(task, key, default)
+
+def _p7_t5_parse_payload(text):
+    raw = _p7_t5_s(text, 50000)
+    try:
+        obj = _p7_t5_json.loads(raw)
+        return obj if isinstance(obj, dict) else {"text": raw}
+    except Exception:
+        return {"text": raw}
+
+def _p7_t5_buf_path(chat_id):
+    _P7_T5_DATA.mkdir(parents=True, exist_ok=True)
+    return _P7_T5_DATA / f"buf_{chat_id}_5.json"
+
+def _p7_t5_active_folder(chat_id):
+    p = _P7_T5_DATA / f"active_folder_{chat_id}_5.json"
+    try:
+        obj = _p7_t5_json.loads(p.read_text(encoding="utf-8"))
+        return obj if isinstance(obj, dict) else {}
+    except Exception:
+        return {}
+
+def _p7_t5_load_buf(chat_id):
+    p = _p7_t5_buf_path(chat_id)
+    try:
+        obj = _p7_t5_json.loads(p.read_text(encoding="utf-8"))
+        if isinstance(obj, dict):
+            obj.setdefault("materials", [])
+            return obj
+    except Exception:
+        pass
+    return {"materials": [], "created_at": _p7_t5_time.time()}
+
+def _p7_t5_save_buf(chat_id, buf):
+    p = _p7_t5_buf_path(chat_id)
+    buf["updated_at"] = _p7_t5_time.time()
+    p.write_text(_p7_t5_json.dumps(buf, ensure_ascii=False, indent=2), encoding="utf-8")
+
+def _p7_t5_msg_id_from_name(name):
+    m = _p7_t5_re.search(r"_([0-9]{3,})\.[A-Za-z0-9]+$", _p7_t5_s(name))
+    return m.group(1) if m else ""
+
+def _p7_t5_add_material(chat_id, material):
+    buf = _p7_t5_load_buf(chat_id)
+    mid = _p7_t5_s(material.get("telegram_message_id"))
+    fname = _p7_t5_s(material.get("file_name"))
+    for old in buf.get("materials", []):
+        if mid and _p7_t5_s(old.get("telegram_message_id")) == mid:
+            old.update({k: v for k, v in material.items() if v not in ("", None)})
+            _p7_t5_save_buf(chat_id, buf)
+            return len(buf.get("materials", [])), old
+        if fname and _p7_t5_s(old.get("file_name")) == fname:
+            old.update({k: v for k, v in material.items() if v not in ("", None)})
+            _p7_t5_save_buf(chat_id, buf)
+            return len(buf.get("materials", [])), old
+    buf["materials"].append(material)
+    _p7_t5_save_buf(chat_id, buf)
+    return len(buf.get("materials", [])), material
+
+def _p7_t5_bind_comment(chat_id, reply_to_message_id, comment, is_voice=False):
+    reply_id = _p7_t5_s(reply_to_message_id)
+    if not reply_id:
+        return None
+    comment = _p7_t5_s(comment, 8000)
+    if not comment:
+        return None
+
+    buf = _p7_t5_load_buf(chat_id)
+    for m in buf.get("materials", []):
+        ids = {
+            _p7_t5_s(m.get("telegram_message_id")),
+            _p7_t5_s(m.get("reply_to_message_id")),
+            _p7_t5_msg_id_from_name(m.get("file_name")),
+        }
+        if reply_id in ids:
+            field = "voice_comment" if is_voice else "owner_comment"
+            prev = _p7_t5_s(m.get(field))
+            m[field] = (prev + "\n" + comment).strip() if prev and comment not in prev else comment
+            m["status"] = "LINKED"
+            m["linked_reply_to_message_id"] = reply_id
+            m["updated_at"] = _p7_t5_time.time()
+            _p7_t5_save_buf(chat_id, buf)
+            return m
+    return None
+
+def _p7_t5_is_flush_command(text):
+    low = _p7_t5_low(text)
+    return any(x in low for x in (
+        "сделай акт", "собери акт", "сделай разбор", "сделай анализ",
+        "собери разбор", "сформируй акт", "сделай отчет", "сделай отчёт"
+    ))
+
+def process_technadzor(text: str = "", task_id: str = "", chat_id: str = "", topic_id: int = 0, file_path: str = "", file_name: str = "", **kwargs):
+    if int(topic_id or 0) != 5:
+        return _P7_T5_ORIG_PROCESS_TECHNADZOR(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs)
+
+    chat = _p7_t5_s(chat_id or _p7_t5_task_get(kwargs.get("task"), "chat_id", ""))
+    payload = _p7_t5_parse_payload(text)
+    task = kwargs.get("task")
+    reply_to = payload.get("telegram_reply_to_message_id") or _p7_t5_task_get(task, "reply_to_message_id", "")
+    current_msg = payload.get("telegram_message_id") or _p7_t5_msg_id_from_name(file_name)
+    comment = payload.get("transcript") or payload.get("text") or text
+    is_voice = _p7_t5_low(comment).startswith("[voice]") or _p7_t5_low(payload.get("input_type", "")) == "voice"
+    comment_clean = _p7_t5_re.sub(r"^\s*\[VOICE\]\s*", "", _p7_t5_s(comment), flags=_p7_t5_re.I)
+
+    if (file_path or file_name) and not _p7_t5_is_flush_command(comment_clean):
+        af = _p7_t5_active_folder(chat)
+        fn = _p7_t5_s(file_name or payload.get("file_name") or payload.get("name") or "")
+        low_fn = fn.lower()
+        ftype = "PHOTO" if low_fn.endswith((".jpg", ".jpeg", ".png", ".webp", ".heic")) else "PDF" if low_fn.endswith(".pdf") else "DOCUMENT"
+        material = {
+            "source": "TELEGRAM",
+            "file_type": ftype,
+            "file_name": fn,
+            "telegram_message_id": _p7_t5_s(current_msg),
+            "reply_to_message_id": _p7_t5_s(reply_to),
+            "drive_file_id": _p7_t5_s(payload.get("drive_file_id")),
+            "drive_url": _p7_t5_s(payload.get("drive_url") or payload.get("webViewLink") or file_path),
+            "active_folder_id": _p7_t5_s(af.get("folder_id")),
+            "active_folder_name": _p7_t5_s(af.get("folder_name")),
+            "caption": _p7_t5_s(payload.get("caption") or comment_clean),
+            "include_in_act": True,
+            "include_in_report": True,
+            "status": "PENDING",
+            "added_at": _p7_t5_time.time(),
+        }
+        count, _ = _p7_t5_add_material(chat, material)
+        return {
+            "ok": True,
+            "handled": True,
+            "state": "DONE",
+            "result_text": f"Фото/файл принят в пакет выезда: {count} шт. Активная папка: {material.get('active_folder_name') or material.get('active_folder_id')}.",
+            "message": "Фото/файл принят в пакет выезда",
+            "history": "P7_TOPIC5_MATERIAL_BUFFERED_WITH_ACTIVE_FOLDER",
+        }
+
+    if reply_to and comment_clean and not _p7_t5_is_flush_command(comment_clean):
+        linked = _p7_t5_bind_comment(chat, reply_to, comment_clean, is_voice=is_voice)
+        if linked:
+            return {
+                "ok": True,
+                "handled": True,
+                "state": "DONE",
+                "result_text": f"Пояснение привязано к фото: {linked.get('file_name', '')}",
+                "message": "Пояснение привязано к фото",
+                "history": "P7_TOPIC5_REPLY_VOICE_BOUND_TO_MATERIAL",
+            }
+
+    return _P7_T5_ORIG_PROCESS_TECHNADZOR(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs)
+# === END_P7_TOPIC5_REPLY_VOICE_BINDING_V1 ===
+
+# === FULLFIX_TOPIC5_TECHNADZOR_CANON_CONTOUR_V2_TECHNADZOR ===
+import json as _t5v2_json
+import sqlite3 as _t5v2_sqlite3
+import time as _t5v2_time
+import uuid as _t5v2_uuid
+from pathlib import Path as _t5v2_Path
+
+_T5V2_ORIG_PROCESS_TECHNADZOR = process_technadzor
+_T5V2_DB = "/root/.areal-neva-core/data/core.db"
+_T5V2_DATA = _t5v2_Path("/root/.areal-neva-core/data/technadzor")
+_T5V2_DATA.mkdir(parents=True, exist_ok=True)
+
+def _t5v2_s(v, limit=50000):
+    try:
+        if v is None:
+            return ""
+        return str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+def _t5v2_low(v):
+    return _t5v2_s(v).lower().replace("ё", "е")
+
+def _t5v2_json_load(raw):
+    try:
+        d = _t5v2_json.loads(_t5v2_s(raw))
+        return d if isinstance(d, dict) else {}
+    except Exception:
+        return {}
+
+def _t5v2_get(obj, key, default=""):
+    try:
+        if isinstance(obj, dict):
+            return obj.get(key, default)
+        return obj[key]
+    except Exception:
+        return getattr(obj, key, default)
+
+def _t5v2_task(task_id, kwargs):
+    task = kwargs.get("task")
+    if task:
+        return {
+            "id": _t5v2_s(_t5v2_get(task, "id", task_id)),
+            "chat_id": _t5v2_s(_t5v2_get(task, "chat_id", kwargs.get("chat_id", ""))),
+            "topic_id": int(_t5v2_get(task, "topic_id", kwargs.get("topic_id", 0)) or 0),
+            "reply_to_message_id": _t5v2_s(_t5v2_get(task, "reply_to_message_id", "")),
+            "bot_message_id": _t5v2_s(_t5v2_get(task, "bot_message_id", "")),
+            "input_type": _t5v2_s(_t5v2_get(task, "input_type", "")),
+            "raw_input": _t5v2_s(_t5v2_get(task, "raw_input", "")),
+        }
+
+    if not task_id:
+        return {}
+
+    con = _t5v2_sqlite3.connect(_T5V2_DB)
+    try:
+        r = con.execute(
+            "SELECT id,chat_id,topic_id,reply_to_message_id,bot_message_id,input_type,raw_input FROM tasks WHERE id=? LIMIT 1",
+            (_t5v2_s(task_id),)
+        ).fetchone()
+    finally:
+        con.close()
+
+    if not r:
+        return {}
+
+    return {
+        "id": _t5v2_s(r[0]),
+        "chat_id": _t5v2_s(r[1]),
+        "topic_id": int(r[2] or 0),
+        "reply_to_message_id": _t5v2_s(r[3]),
+        "bot_message_id": _t5v2_s(r[4]),
+        "input_type": _t5v2_s(r[5]),
+        "raw_input": _t5v2_s(r[6]),
+    }
+
+def _t5v2_is_photo_meta(meta):
+    fn = _t5v2_s(meta.get("file_name") or meta.get("name"))
+    mt = _t5v2_s(meta.get("mime_type"))
+    return fn.lower().endswith((".jpg", ".jpeg", ".png", ".webp", ".heic")) or mt.startswith("image/")
+
+def _t5v2_msg_id(meta):
+    for k in ("telegram_message_id", "_reply_to_message_id", "reply_to_message_id"):
+        v = _t5v2_s(meta.get(k))
+        if v:
+            return v
+    fn = _t5v2_s(meta.get("file_name"))
+    import re as _re
+    m = _re.search(r"_(\d+)\.(?:jpg|jpeg|png|webp|heic)$", fn, _re.I)
+    return m.group(1) if m else ""
+
+def _t5v2_photo_rows(chat_id, topic_id=5):
+    con = _t5v2_sqlite3.connect(_T5V2_DB)
+    try:
+        rows = con.execute(
+            """
+            SELECT rowid,id,raw_input,reply_to_message_id,created_at
+            FROM tasks
+            WHERE chat_id=?
+              AND topic_id=?
+              AND input_type='drive_file'
+            ORDER BY rowid DESC
+            LIMIT 300
+            """,
+            (_t5v2_s(chat_id), int(topic_id or 0))
+        ).fetchall()
+    finally:
+        con.close()
+
+    out = []
+    for rowid, tid, raw, reply_to, created_at in rows:
+        meta = _t5v2_json_load(raw)
+        if not _t5v2_is_photo_meta(meta):
+            continue
+        meta["_rowid"] = int(rowid)
+        meta["_task_id"] = _t5v2_s(tid)
+        meta["_reply_to_message_id"] = _t5v2_s(reply_to)
+        meta["_created_at"] = _t5v2_s(created_at)
+        out.append(meta)
+    return out
+
+def _t5v2_parent_reply_by_bot(chat_id, topic_id, bot_message_id):
+    if not bot_message_id:
+        return ""
+    con = _t5v2_sqlite3.connect(_T5V2_DB)
+    try:
+        r = con.execute(
+            """
+            SELECT reply_to_message_id
+            FROM tasks
+            WHERE chat_id=?
+              AND topic_id=?
+              AND CAST(bot_message_id AS TEXT)=?
+            ORDER BY rowid DESC
+            LIMIT 1
+            """,
+            (_t5v2_s(chat_id), int(topic_id or 0), _t5v2_s(bot_message_id))
+        ).fetchone()
+    finally:
+        con.close()
+    return _t5v2_s(r[0]) if r else ""
+
+def _t5v2_find_anchor_photo(chat_id, topic_id, reply_to_message_id):
+    rid = _t5v2_s(reply_to_message_id)
+    if not rid:
+        return {}
+
+    rows = _t5v2_photo_rows(chat_id, topic_id)
+
+    for meta in rows:
+        ids = {
+            _t5v2_s(meta.get("_reply_to_message_id")),
+            _t5v2_s(meta.get("telegram_message_id")),
+            _t5v2_msg_id(meta),
+        }
+        if rid in ids:
+            return meta
+
+    parent_reply = _t5v2_parent_reply_by_bot(chat_id, topic_id, rid)
+    if parent_reply and parent_reply != rid:
+        for meta in rows:
+            ids = {
+                _t5v2_s(meta.get("_reply_to_message_id")),
+                _t5v2_s(meta.get("telegram_message_id")),
+                _t5v2_msg_id(meta),
+            }
+            if parent_reply in ids:
+                return meta
+
+    return {}
+
+def _t5v2_group_requested(text):
+    low = _t5v2_low(text)
+    return any(x in low for x in (
+        "этими фото",
+        "эти фото",
+        "этих фото",
+        "все фото",
+        "всеми фото",
+        "несколько фото",
+        "три фото",
+        "фотографии",
+        "с ними",
+        "по ним",
+        "их",
+        "фото",
+        "пакет",
+    ))
+
+def _t5v2_select_photo_group(chat_id, topic_id, anchor, text):
+    if not anchor:
+        return []
+
+    if not _t5v2_group_requested(text):
+        return [anchor]
+
+    rows = _t5v2_photo_rows(chat_id, topic_id)
+
+    try:
+        anchor_rowid = int(anchor.get("_rowid") or 0)
+    except Exception:
+        anchor_rowid = 0
+
+    try:
+        anchor_msg = int(_t5v2_msg_id(anchor) or 0)
+    except Exception:
+        anchor_msg = 0
+
+    selected = []
+    for meta in rows:
+        try:
+            rowid = int(meta.get("_rowid") or 0)
+        except Exception:
+            rowid = 0
+
+        try:
+            msg = int(_t5v2_msg_id(meta) or 0)
+        except Exception:
+            msg = 0
+
+        same_row_cluster = bool(anchor_rowid and abs(rowid - anchor_rowid) <= 10)
+        same_msg_cluster = bool(anchor_msg and msg and abs(msg - anchor_msg) <= 20)
+
+        if same_row_cluster and same_msg_cluster:
+            selected.append(meta)
+
+    selected = sorted(selected, key=lambda m: int(m.get("_rowid") or 0))
+    return selected or [anchor]
+
+def _t5v2_active_folder(chat_id):
+    try:
+        if "get_active_folder" in globals():
+            af = get_active_folder(str(chat_id), 5)
+            if isinstance(af, dict):
+                return af
+    except Exception:
+        pass
+
+    try:
+        p = _T5V2_DATA / f"active_folder_{chat_id}_5.json"
+        d = _t5v2_json.loads(p.read_text(encoding="utf-8"))
+        return d if isinstance(d, dict) else {}
+    except Exception:
+        return {}
+
+def _t5v2_buf_path(chat_id):
+    return _T5V2_DATA / f"buf_{chat_id}_5.json"
+
+def _t5v2_load_buf(chat_id):
+    p = _t5v2_buf_path(chat_id)
+    try:
+        d = _t5v2_json.loads(p.read_text(encoding="utf-8"))
+        if isinstance(d, dict):
+            d.setdefault("materials", [])
+            return d
+    except Exception:
+        pass
+    return {"source": "topic5_visit_buffer", "materials": [], "created_at": _t5v2_time.time()}
+
+def _t5v2_save_buf(chat_id, buf):
+    buf["updated_at"] = _t5v2_time.time()
+    _t5v2_buf_path(chat_id).write_text(_t5v2_json.dumps(buf, ensure_ascii=False, indent=2), encoding="utf-8")
+
+def _t5v2_material(chat_id, meta, comment=""):
+    af = _t5v2_active_folder(chat_id)
+    fid = _t5v2_s(meta.get("drive_file_id") or meta.get("file_id") or meta.get("id"))
+    fn = _t5v2_s(meta.get("file_name") or meta.get("name"))
+    mid = _t5v2_msg_id(meta)
+    clean = _t5v2_s(comment, 20000)
+
+    if clean.upper().startswith("[VOICE]"):
+        clean = clean[7:].strip()
+
+    return {
+        "material_id": str(_t5v2_uuid.uuid4()),
+        "source": "TELEGRAM",
+        "file_type": "PHOTO",
+        "file_name": fn,
+        "drive_file_id": fid,
+        "drive_url": _t5v2_s(meta.get("drive_url") or meta.get("webViewLink") or (f"https://drive.google.com/file/d/{fid}/view?usp=drivesdk" if fid else "")),
+        "telegram_message_id": mid,
+        "reply_to_message_id": mid,
+        "source_task_id": _t5v2_s(meta.get("_task_id")),
+        "active_folder_id": _t5v2_s(af.get("folder_id")),
+        "active_folder_name": _t5v2_s(af.get("folder_name")),
+        "include_in_report": True,
+        "include_in_act": True,
+        "status": "LINKED" if clean else "PENDING",
+        "voice_comment": clean,
+        "added_at": _t5v2_time.time(),
+        "updated_at": _t5v2_time.time(),
+    }
+
+def _t5v2_upsert_material(chat_id, material):
+    buf = _t5v2_load_buf(chat_id)
+    mid = _t5v2_s(material.get("telegram_message_id"))
+    fn = _t5v2_s(material.get("file_name"))
+
+    target = None
+    for old in buf.get("materials", []):
+        if (mid and _t5v2_s(old.get("telegram_message_id")) == mid) or (fn and _t5v2_s(old.get("file_name")) == fn):
+            target = old
+            break
+
+    if target is None:
+        buf["materials"].append(material)
+    else:
+        old_comment = _t5v2_s(target.get("voice_comment"), 20000)
+        new_comment = _t5v2_s(material.get("voice_comment"), 20000)
+        target.update({k: v for k, v in material.items() if v not in ("", None)})
+
+        if old_comment and new_comment and new_comment not in old_comment:
+            target["voice_comment"] = old_comment + "\n" + new_comment
+        elif old_comment and not new_comment:
+            target["voice_comment"] = old_comment
+
+    _t5v2_save_buf(chat_id, buf)
+    return len(buf.get("materials", []))
+
+def _t5v2_bind_photos(chat_id, photos, comment):
+    count = 0
+    for meta in photos:
+        count = _t5v2_upsert_material(chat_id, _t5v2_material(chat_id, meta, comment))
+    return count
+
+def _t5v2_positive_act(text):
+    low = _t5v2_low(text)
+
+    negated = any(x in low for x in (
+        "не делай акт",
+        "не надо акт",
+        "не нужно акт",
+        "не формируй акт",
+        "не должен был сделать акт",
+        "не должен делать акт",
+        "акт не для каждого",
+        "не для каждого из",
+        "принять к сведению",
+        "принять это к сведению",
+        "прими к сведению",
+        "прими это к сведению",
+    ))
+
+    positive = any(x in low for x in (
+        "сделай акт",
+        "сформируй акт",
+        "собери акт",
+        "готовь акт",
+        "акт по этим фото",
+        "сделай разбор",
+        "сформируй документ",
+    ))
+
+    return positive and not negated
+
+def _t5v2_buffer_summary(chat_id):
+    buf = _t5v2_load_buf(chat_id)
+    mats = buf.get("materials", [])
+
+    lines = []
+    for i, m in enumerate(mats, 1):
+        lines.append(f"Фото №{i}: {m.get('file_name','')}")
+        if m.get("voice_comment"):
+            lines.append(f"Пояснение: {m.get('voice_comment')}")
+        if m.get("drive_url"):
+            lines.append(f"Ссылка: {m.get('drive_url')}")
+
+    return "\n".join(lines), len(mats)
+
+def process_technadzor(text: str = "", task_id: str = "", chat_id: str = "", topic_id: int = 0, file_path: str = "", file_name: str = "", **kwargs):
+    task = _t5v2_task(task_id, kwargs)
+
+    try:
+        tid = int(topic_id or task.get("topic_id") or kwargs.get("topic_id") or 0)
+    except Exception:
+        tid = 0
+
+    if tid != 5:
+        return _T5V2_ORIG_PROCESS_TECHNADZOR(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs)
+
+    chat = _t5v2_s(chat_id or task.get("chat_id") or kwargs.get("chat_id"))
+    raw = _t5v2_s(text or task.get("raw_input"))
+    input_type = _t5v2_s(task.get("input_type"))
+    reply_to = _t5v2_s(task.get("reply_to_message_id"))
+
+    if input_type == "drive_file":
+        meta = _t5v2_json_load(raw)
+        if _t5v2_is_photo_meta(meta):
+            count = _t5v2_upsert_material(chat, _t5v2_material(chat, meta, ""))
+            return {
+                "ok": True,
+                "handled": True,
+                "state": "DONE",
+                "status": "DONE",
+                "result_text": f"Фото принято в пакет технадзора: {count} шт. Акт не формирую без отдельной команды.",
+                "message": "Фото принято в пакет технадзора",
+                "history": "FULLFIX_TOPIC5_PHOTO_TO_VISITBUFFER",
+            }
+
+    if input_type in ("text", "voice", "") and reply_to and raw and not _t5v2_positive_act(raw):
+        anchor = _t5v2_find_anchor_photo(chat, 5, reply_to)
+        if anchor:
+            photos = _t5v2_select_photo_group(chat, 5, anchor, raw)
+            count = _t5v2_bind_photos(chat, photos, raw)
+            names = ", ".join(_t5v2_s(p.get("file_name")) for p in photos if p.get("file_name"))
+            return {
+                "ok": True,
+                "handled": True,
+                "state": "DONE",
+                "status": "DONE",
+                "result_text": f"Пояснение принято к фото: {len(photos)} шт. В пакете технадзора: {count} шт. Акт не формирую без отдельной команды.\nФайлы: {names}",
+                "message": "Пояснение принято к фото",
+                "history": "FULLFIX_TOPIC5_REPLY_TO_PHOTO_BOUND",
+            }
+
+    if input_type in ("text", "voice", "") and _t5v2_positive_act(raw):
+        summary, n = _t5v2_buffer_summary(chat)
+        if n <= 0:
+            return {
+                "ok": True,
+                "handled": True,
+                "state": "DONE",
+                "status": "DONE",
+                "result_text": "В пакете технадзора нет фото. Сначала пришли фото или ответь голосом на фото.",
+                "message": "В пакете технадзора нет фото",
+                "history": "FULLFIX_TOPIC5_ACT_NO_MATERIALS",
+            }
+
+        enriched = raw + "\n\nПакет фото технадзора:\n" + summary
+        return _T5V2_ORIG_PROCESS_TECHNADZOR(text=enriched, task_id=task_id, chat_id=chat, topic_id=5, file_path=file_path, file_name=file_name, **kwargs)
+
+    return _T5V2_ORIG_PROCESS_TECHNADZOR(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id, file_path=file_path, file_name=file_name, **kwargs)
+# === END_FULLFIX_TOPIC5_TECHNADZOR_CANON_CONTOUR_V2_TECHNADZOR ===
+
+# === P6H_VISION_BLOCKED_FALLBACK_V1 ===
+# CANON §17: когда Vision заблокирован — строить акт из текста/голоса владельца
+# + метаданных файла + предыдущих актов, не останавливаться.
+# Сообщение в документе: "Визуальный анализ фото не выполнялся..."
+import logging as _p6hvbf_log
+_P6HVBF_LOG = _p6hvbf_log.getLogger("technadzor_engine")
+
+_P6HVBF_ORIG = p6f_tnz_handle_photo_act_real
+
+async def p6f_tnz_handle_photo_act_real(file_path, file_name, task_id, chat_id, topic_id, user_text=""):  # noqa: F811
+    vision, vstatus = await _p6f_tnz_vision_via_openrouter(file_path)
+    if vstatus == "EXTERNAL_PHOTO_ANALYSIS_BLOCKED":
+        # Canon §17: Vision blocked → build act from owner text + file metadata
+        _P6HVBF_LOG.info("P6HVBF_VISION_BLOCKED_FALLBACK file=%s user_text_len=%s", file_name, len(user_text or ""))
+        vision = {
+            "summary": (
+                "Автоматический визуальный анализ фото не выполнялся, так как Vision заблокирован. "
+                "Выводы основаны на предыдущих актах, пояснениях владельца и доступных именах/метаданных файлов."
+            ),
+            "defects": [],
+            "confidence": "LOW",
+            "_vision_blocked": True,
+        }
+        if user_text and str(user_text).strip():
+            vision["summary"] += "\n\nПояснение владельца: " + str(user_text).strip()
+        if file_name:
+            vision["summary"] += "\n\nФайл: " + str(file_name)
+        vstatus = "BLOCKED_FALLBACK"
+    # delegate to original with resolved vision
+    # re-enter original logic but skip first vision call
+    if vision is None:
+        return await _P6HVBF_ORIG(file_path, file_name, task_id, chat_id, topic_id, user_text)
+    # replicate original body with already-resolved vision
+    import os as _p6hvbf_os
+    from datetime import datetime as _p6hvbf_dt
+    norms_text = (vision.get("summary", "") or "") + " " + str(user_text or "")
+    confirmed_norms, _ = _p6f_tnz_norms_block(norms_text)
+    docx_lines = _p6f_tnz_build_docx_lines(vision, confirmed_norms, file_name, task_id)
+    ts = _p6hvbf_dt.now().strftime("%Y%m%d_%H%M%S")
+    safe = (str(task_id or ts)[:8] or ts).replace("/", "_").replace("\\", "_")
+    out_dir = "/root/.areal-neva-core/outputs/technadzor_acts"
+    _p6hvbf_os.makedirs(out_dir, exist_ok=True)
+    docx_path = "{}/TECHNADZOR_ACT_PHOTO__{}_{}.docx".format(out_dir, safe, ts)
+    written = _p6tz_make_docx(docx_path, docx_lines)
+    if not written:
+        return {
+            "ok": False, "handled": True, "kind": "technadzor_photo_act",
+            "state": "FAILED",
+            "message": "Ошибка создания DOCX акта",
+            "history": "P6HVBF_DOCX_WRITE_FAIL",
+        }
+    drive_link, ustatus = await _p6f_tnz_upload_to_topic(
+        docx_path, _p6hvbf_os.path.basename(docx_path), chat_id or "-1003725299009", topic_id or 5
+    )
+    defects_count = len(vision.get("defects") or [])
+    norms_count = len(confirmed_norms)
+    public_lines = [
+        "Акт технического надзора сформирован (Vision заблокирован — анализ по тексту владельца)",
+        "Файл: " + str(file_name or ""),
+        "Дефектов в тексте: {}".format(defects_count),
+        "Нормативных ссылок: {}".format(norms_count) if norms_count else "Нормативная база: норма не подтверждена",
+    ]
+    if drive_link:
+        public_lines.append("Drive DOCX: " + str(drive_link))
+    return {
+        "ok": bool(drive_link),
+        "handled": True,
+        "kind": "technadzor_photo_act",
+        "message": "\n".join(public_lines),
+        "state": "DONE" if drive_link else "AWAITING_CONFIRMATION",
+        "drive_link": drive_link or "",
+        "history": "P6HVBF:vision={},defects={},norms={},upload={}".format(
+            vstatus, defects_count, norms_count, "OK" if drive_link else "FAIL"
+        ),
+    }
+
+p6f_tnz_handle_photo_act_real._p6hvbf_wrapped = True
+_P6HVBF_LOG.info("P6H_VISION_BLOCKED_FALLBACK_V1_INSTALLED")
+# === END_P6H_VISION_BLOCKED_FALLBACK_V1 ===
+
+# === P6_ACT_MATERIAL_FILTER_V1 ===
+# Canon §4/§5: в акт только реальные фото + пояснения к дефектам.
+# Фильтрует буфер перед тем как enriched-текст попадёт в LLM:
+# - исключает PDF/XLSX/DOCX (образцы, старые акты, таблицы)
+# - удаляет служебные команды из voice_comment
+# - передаёт объект/адрес/основание из active_folder в заголовок акта
+import logging as _p6amf_log
+import re as _p6amf_re
+
+_P6AMF_LOG = _p6amf_log.getLogger("technadzor_engine")
+
+_P6AMF_SERVICE_PATTERNS = [
+    "сделай акт", "делай акт", "оформи акт", "собери акт", "готовь акт",
+    "формируй акт", "сделать акт", "финальный акт",
+    "добавь в папку", "добавить в папку", "добавить в эту папку",
+    "не в тот чат", "не туда", "ошибочно",
+    "это тест", "тест надзор", "проверка связи",
+    "ты добавил", "добавил все", "ты все добавил",
+    "какой адрес", "какой у него адрес",
+    "дай мне нормы", "дай нормы",
+]
+
+_P6AMF_NON_PHOTO_EXT = (".xlsx", ".xls", ".pdf", ".docx", ".doc", ".pptx")
+_P6AMF_NON_PHOTO_TYPES = ("PDF", "XLSX", "XLS", "DOCX", "DOC", "OTHER")
+
+def _p6amf_is_service_comment(text):
+    if not text:
+        return False
+    low = str(text).lower().strip()
+    return any(p in low for p in _P6AMF_SERVICE_PATTERNS)
+
+def _p6amf_is_real_photo(m):
+    """True only for real photo materials that belong in the act."""
+    ft = str(m.get("file_type", "PHOTO")).upper()
+    if ft in _P6AMF_NON_PHOTO_TYPES:
+        return False
+    fn = str(m.get("file_name", "")).lower()
+    if any(fn.endswith(ext) for ext in _P6AMF_NON_PHOTO_EXT):
+        return False
+    if m.get("include_in_act") is False:
+        return False
+    return True
+
+def _p6amf_clean_comment(text):
+    """Return comment if substantive, empty string if service command."""
+    if _p6amf_is_service_comment(text):
+        return ""
+    return str(text or "").strip()
+
+def _p6amf_build_enriched(raw, active_folder, materials):
+    """Build structured enriched text for act LLM call."""
+    obj = active_folder.get("object_name") or active_folder.get("folder_name") or ""
+    addr = active_folder.get("object_address") or obj
+    basis = active_folder.get("visit_basis") or ""
+    src = active_folder.get("source_request") or ""
+    instructions = active_folder.get("owner_instructions") or []
+
+    # Filter to real photos only
+    photos = [m for m in materials if _p6amf_is_real_photo(m)]
+    # Excluded non-photo files (for reference note only)
+    excluded = [m for m in materials if not _p6amf_is_real_photo(m)]
+
+    lines = ["КОМАНДА: Сформировать акт технического надзора", ""]
+    if obj:
+        lines.append(f"ОБЪЕКТ: {obj}")
+    if addr and addr != obj:
+        lines.append(f"АДРЕС: {addr}")
+    if basis:
+        lines.append(f"ОСНОВАНИЕ: {basis}")
+    if src:
+        lines.append(f"ИСТОЧНИК ЗАЯВКИ: {src}")
+    lines.append("")
+
+    if instructions:
+        lines.append("ИНСТРУКЦИИ ВЛАДЕЛЬЦА:")
+        # Skip command-like instructions
+        for ins in instructions:
+            if not _p6amf_is_service_comment(ins):
+                lines.append("— " + str(ins).strip())
+        lines.append("")
+
+    lines.append(f"ФОТОМАТЕРИАЛЫ ОБЪЕКТА ({len(photos)} шт.):")
+    for i, m in enumerate(photos, 1):
+        fn = m.get("file_name", "")
+        lines.append(f"Фото №{i}: {fn}")
+        vc = _p6amf_clean_comment(m.get("voice_comment", ""))
+        if vc:
+            lines.append(f"  Пояснение: {vc}")
+        du = m.get("drive_url", "")
+        if du:
+            lines.append(f"  Ссылка: {du}")
+    lines.append("")
+
+    if excluded:
+        lines.append(f"Справочные файлы (не входят в фотофиксацию): {', '.join(m.get('file_name','') for m in excluded)}")
+        lines.append("")
+
+    return "\n".join(lines)
+
+# Wrap process_technadzor to intercept act command path
+_P6AMF_ORIG_PT = process_technadzor
+
+def process_technadzor(text="", task_id="", chat_id="", topic_id=0, file_path="", file_name="", **kwargs):  # noqa: F811
+    try:
+        tid = int(topic_id or (kwargs.get("topic_id") or 0))
+    except Exception:
+        tid = 0
+    if tid != 5:
+        return _P6AMF_ORIG_PT(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id,
+                               file_path=file_path, file_name=file_name, **kwargs)
+
+    # Only intercept act command path
+    raw = str(text or "").strip()
+    if not _t5v2_positive_act(raw):
+        return _P6AMF_ORIG_PT(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id,
+                               file_path=file_path, file_name=file_name, **kwargs)
+
+    try:
+        chat = str(chat_id or "")
+        buf = _t5v2_load_buf(chat)
+        materials = buf.get("materials", [])
+        if not materials:
+            return _P6AMF_ORIG_PT(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id,
+                                   file_path=file_path, file_name=file_name, **kwargs)
+
+        active_folder = get_active_folder(chat, 5) or {}
+        enriched = _p6amf_build_enriched(raw, active_folder, materials)
+
+        photo_count = len([m for m in materials if _p6amf_is_real_photo(m)])
+        excluded_count = len(materials) - photo_count
+        _P6AMF_LOG.info(
+            "P6AMF_ACT_FILTER chat=%s photos=%s excluded=%s obj=%s",
+            chat, photo_count, excluded_count, active_folder.get("object_name", "")
+        )
+        return _P6AMF_ORIG_PT(text=enriched, task_id=task_id, chat_id=chat, topic_id=5,
+                               file_path=file_path, file_name=file_name, **kwargs)
+    except Exception as _e:
+        _P6AMF_LOG.exception("P6AMF_ERR %s", _e)
+        return _P6AMF_ORIG_PT(text=text, task_id=task_id, chat_id=chat_id, topic_id=topic_id,
+                               file_path=file_path, file_name=file_name, **kwargs)
+
+process_technadzor._p6amf_wrapped = True
+_P6AMF_LOG.info("P6_ACT_MATERIAL_FILTER_V1_INSTALLED")
+# === END_P6_ACT_MATERIAL_FILTER_V1 ===
+
+
+# === PATCH_TOPIC5_CANONICAL_ACT_ENGINE_V3 ===
+# АКТ ОСМОТРА ОБЪЕКТА — TECHNADZOR_DOMAIN_LOGIC_CANON
+# 8 разделов, таблица замечаний 8 колонок.
+# ok=True если файлы сгенерированы, даже если upload упал.
+# Dispatcher отвечает за upload fallback и НИКОГДА не вызывает старый дамп при ok=True.
+
+import json as _t5ca_json
+import logging as _t5ca_logging
+import tempfile as _t5ca_tmp
+from datetime import datetime as _t5ca_dt
+from pathlib import Path as _t5ca_Path
+
+_T5CA_LOG = _t5ca_logging.getLogger("technadzor_engine")
+_T5CA_DATA = _t5ca_Path("/root/.areal-neva-core/data/technadzor")
+_T5CA_SPECIALIST = "Кузнецов Илья Владимирович"
+_T5CA_DEJAVU = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+_T5CA_DEJAVU_BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+_T5CA_NORM_NONE = "норма не подтверждена"
+
+_T5CA_PHOTO_EXT = (".jpg", ".jpeg", ".png", ".webp", ".heic")
+_T5CA_NON_PHOTO_TYPES = ("PDF", "XLSX", "XLS", "DOCX", "DOC", "OTHER")
+# Фразы-мусор — не включать в замечания
+_T5CA_GARBAGE = [
+    "сделай акт", "делай акт", "оформи акт", "финальный акт", "итоговый акт",
+    "добавь в папку", "добавить в папку", "нужно добавить в папку",
+    "не в тот чат", "это тест", "тест надзор", "проверка связи",
+    "ты добавил", "добавил все", "какой адрес", "дай нормы", "дай мне нормы",
+    "какую задачу", "что по итогу", "видишь их да или нет",
+    "делай финальный", "сделай мне пожалуйста акт", "положи в правильную папку",
+]
+
+
+def _t5ca_s(v, limit=50000):
+    try:
+        return "" if v is None else str(v).strip()[:limit]
+    except Exception:
+        return ""
+
+
+def _t5ca_read_json(path):
+    try:
+        with open(str(path), encoding="utf-8") as _f:
+            return _t5ca_json.load(_f)
+    except Exception:
+        return {}
+
+
+def _t5ca_is_photo(m):
+    fn = _t5ca_s(m.get("file_name", "")).lower()
+    ft = _t5ca_s(m.get("file_type", "")).upper()
+    if ft == "PHOTO":
+        return True
+    if ft in _T5CA_NON_PHOTO_TYPES:
+        return False
+    return any(fn.endswith(e) for e in _T5CA_PHOTO_EXT)
+
+
+def _t5ca_is_garbage(text):
+    low = _t5ca_s(text).lower()
+    return any(p in low for p in _T5CA_GARBAGE)
+
+
+def _t5ca_match_norms(text):
+    """Нормы только если norm_id непустой — не выдумывать."""
+    if not text or not text.strip():
+        return []
+    try:
+        from core.normative_engine import search_norms_sync
+        raw = search_norms_sync(str(text), limit=5)
+        return [n for n in (raw or []) if n.get("norm_id")]
+    except Exception:
+        return []
+
+
+def _t5ca_norm_str(comment):
+    norms = _t5ca_match_norms(comment)
+    if norms:
+        parts = []
+        for n in norms[:2]:
+            nid = _t5ca_s(n.get("norm_id", ""))
+            sec = _t5ca_s(n.get("section", ""))
+            parts.append(f"{nid} — {sec}" if sec else nid)
+        return "; ".join(parts)
+    return _T5CA_NORM_NONE
+
+
+def _t5ca_register_fonts():
+    try:
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        if "T5CADejavu" not in pdfmetrics.getRegisteredFontNames():
+            pdfmetrics.registerFont(TTFont("T5CADejavu", _T5CA_DEJAVU))
+        if "T5CADejavuB" not in pdfmetrics.getRegisteredFontNames():
+            pdfmetrics.registerFont(TTFont("T5CADejavuB", _T5CA_DEJAVU_BOLD))
+        return True
+    except Exception:
+        return False
+
+
+def _t5ca_cell_w(cell, emu):
+    try:
+        from docx.oxml.ns import qn
+        from docx.oxml import OxmlElement
+        twips = str(max(1, int(emu / 635)))
+        tc = cell._tc
+        tcPr = tc.get_or_add_tcPr()
+        for old in tcPr.findall(qn("w:tcW")):
+            tcPr.remove(old)
+        tcW = OxmlElement("w:tcW")
+        tcW.set(qn("w:w"), twips)
+        tcW.set(qn("w:type"), "dxa")
+        tcPr.append(tcW)
+    except Exception:
+        pass
+
+
+def _t5ca_build_sections(af, materials):
+    """Build all content lists needed for the act."""
+    obj_name = _t5ca_s(af.get("object_name", ""))
+    obj_addr = _t5ca_s(af.get("object_address") or af.get("object_name") or "")
+    obj_loc = (obj_addr or obj_name)[:40]
+    visit_basis = _t5ca_s(af.get("visit_basis", "запрос заказчика"))
+    source_req = _t5ca_s(af.get("source_request", ""))
+
+    file_count = len(materials)
+    photo_count = sum(1 for m in materials if _t5ca_is_photo(m))
+
+    # remark_rows: №, Фото, Узел/место, Нарушение, Последствия, Что сделать, Норматив, Статус
+    remark_rows = []
+    all_comments = []
+    all_files = []
+
+    for idx, m in enumerate(materials, 1):
+        fn = _t5ca_s(m.get("file_name", f"файл_{idx}"), 80)
+        all_files.append(fn)
+        if not _t5ca_is_photo(m):
+            continue
+        raw = _t5ca_s(m.get("voice_comment") or m.get("comment") or "")
+        comment = "" if _t5ca_is_garbage(raw) else raw[:300]
+        if comment:
+            all_comments.append(comment)
+
+        norm_col = _t5ca_norm_str(comment) if comment else _T5CA_NORM_NONE
+
+        lc = comment.lower() if comment else ""
+        if "заменить" in lc or "старое оборудование" in lc or "вышло из строя" in lc:
+            rec = "Рекомендуется заменить"
+        elif "сварн" in lc or "шов" in lc:
+            rec = "Необходимо проверить качество сварных соединений"
+        elif "примыкание" in lc or "щельник" in lc:
+            rec = "Рекомендуется выполнить нормальное примыкание"
+        elif comment:
+            rec = "Рекомендуется повторный осмотр после устранения"
+        else:
+            rec = ""
+
+        remark_rows.append([
+            str(idx), fn, obj_loc,
+            comment or "—", "",   # Нарушение, Последствия (manual)
+            rec, norm_col, "Открыто",
+        ])
+
+    facts = list(dict.fromkeys(c for c in all_comments if c))[:20]
+
+    recs = []
+    for comment in all_comments:
+        lc = comment.lower()
+        if "заменить" in lc or "старое оборудование" in lc:
+            recs.append(f"Рекомендуется заменить: {comment[:200]}")
+        elif "примыкание" in lc or "щельник" in lc:
+            recs.append(f"Рекомендуется выполнить нормальное примыкание: {comment[:200]}")
+        elif "сварн" in lc:
+            recs.append(f"Необходимо проверить сварные соединения: {comment[:200]}")
+    for inst in af.get("owner_instructions", []):
+        ci = _t5ca_s(inst)
+        if _t5ca_is_garbage(ci):
+            continue
+        lc = ci.lower()
+        if any(x in lc for x in ("рекоменд", "нужно", "необходимо")):
+            recs.append(ci[:300])
+    recs = list(dict.fromkeys(recs))[:20]
+
+    conseqs = []
+    for comment in all_comments:
+        lc = comment.lower()
+        if "старое оборудование" in lc or "вышло из строя" in lc:
+            conseqs.append("Выход оборудования из строя, аварийная ситуация")
+        if "сварн" in lc or "шов" in lc:
+            conseqs.append("Разрушение сварного соединения, нарушение несущей способности")
+        if "примыкание" in lc or "щельник" in lc:
+            conseqs.append("Проникновение влаги, нарушение теплоизоляции")
+    conseqs = list(dict.fromkeys(conseqs))[:10]
+
+    norms_global = _t5ca_match_norms(" ".join(all_comments))
+    norms_found = [r[6] for r in remark_rows if r[6] and r[6] != _T5CA_NORM_NONE]
+
+    basis = f"Основание: {visit_basis}." + (f" Источник: {source_req}." if source_req else "")
+
+    return dict(
+        obj_name=obj_name, obj_addr=obj_addr, file_count=file_count,
+        photo_count=photo_count, all_files=all_files,
+        remark_rows=remark_rows, facts=facts, recs=recs, conseqs=conseqs,
+        norms_global=norms_global, norms_found=norms_found, basis=basis,
+    )
+
+
+def _t5ca_write_docx(dst, act_num, date_str, af, sec):
+    try:
+        from docx import Document
+        from docx.shared import Cm, Pt
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+
+        obj_name = sec["obj_name"]
+        obj_addr = sec["obj_addr"]
+        folder_name = _t5ca_s(af.get("folder_name", ""))
+
+        doc = Document()
+        s = doc.sections[0]
+        s.page_width, s.page_height = s.page_height, s.page_width
+        s.left_margin = s.right_margin = Cm(2)
+        s.top_margin = Cm(2)
+        s.bottom_margin = Cm(1.5)
+
+        h = doc.add_heading(f"АКТ ОСМОТРА ОБЪЕКТА № {act_num}", level=1)
+        h.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        sub = doc.add_paragraph("Методом визуального неразрушающего контроля")
+        sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+        doc.add_paragraph(f"Дата осмотра: {date_str}")
+        doc.add_paragraph(f"Место осмотра: {obj_addr or obj_name}")
+        doc.add_paragraph(f"Объект осмотра: {obj_name}")
+        doc.add_paragraph(f"Основание осмотра: {sec['basis']}")
+        doc.add_paragraph(f"Метод обследования: визуальный неразрушающий контроль с выездом на объект")
+        doc.add_paragraph(f"Технический специалист: {_T5CA_SPECIALIST}")
+        if folder_name:
+            doc.add_paragraph(f"Ссылка на фотоматериалы: папка Drive «{folder_name}»")
+
+        doc.add_heading("1. Общие сведения", level=2)
+        doc.add_paragraph(
+            "Осмотр выполнен методом визуального неразрушающего контроля с выездом на объект. "
+            "Цель — выявление фактически наблюдаемых дефектов и формирование рекомендаций "
+            "по их устранению."
+        )
+        doc.add_paragraph(
+            f"Файлов в пакете: {sec['file_count']}. Фотоматериалов: {sec['photo_count']}."
+        )
+
+        doc.add_heading("2. Основание текущего осмотра", level=2)
+        doc.add_paragraph(sec["basis"])
+
+        doc.add_heading("3. Установлено по факту осмотра", level=2)
+        if sec["facts"]:
+            for i, f in enumerate(sec["facts"], 1):
+                doc.add_paragraph(f"{i}. {f[:400]}", style="List Number")
+        else:
+            doc.add_paragraph("Данные фиксируются по пояснениям владельца и фотоматериалам.")
+
+        doc.add_heading("4. Рекомендовано к устранению", level=2)
+        if sec["recs"]:
+            for i, r in enumerate(sec["recs"], 1):
+                doc.add_paragraph(f"{i}. {r[:400]}", style="List Number")
+        else:
+            doc.add_paragraph("Рекомендации формируются по результатам детального осмотра.")
+
+        doc.add_heading("5. Возможные последствия при отсутствии устранения", level=2)
+        if sec["conseqs"]:
+            for c in sec["conseqs"]:
+                doc.add_paragraph(f"— {c[:300]}", style="List Bullet")
+        else:
+            doc.add_paragraph("Последствия определяются по характеру выявленных дефектов.")
+
+        doc.add_heading("6. Таблица замечаний", level=2)
+        col_hdrs = ["№", "Фото", "Узел/место", "Нарушение",
+                    "Последствия", "Что сделать", "Норматив", "Статус"]
+        col_emu = [int(c * 360000) for c in [0.7, 3.2, 2.5, 5.0, 3.0, 4.0, 4.5, 1.8]]
+        tbl = doc.add_table(rows=1, cols=8)
+        tbl.style = "Table Grid"
+        hc = tbl.rows[0].cells
+        for i, ht in enumerate(col_hdrs):
+            hc[i].text = ht
+            _t5ca_cell_w(hc[i], col_emu[i])
+            for p in hc[i].paragraphs:
+                for run in p.runs:
+                    run.bold = True
+                    run.font.size = Pt(8)
+        for row_data in sec["remark_rows"]:
+            row = tbl.add_row().cells
+            for i, val in enumerate(row_data):
+                row[i].text = _t5ca_s(val, 300)
+                _t5ca_cell_w(row[i], col_emu[i])
+                for p in row[i].paragraphs:
+                    for run in p.runs:
+                        run.font.size = Pt(8)
+
+        doc.add_heading("7. Заключение", level=2)
+        if sec["norms_found"]:
+            doc.add_paragraph(
+                f"По результатам осмотра выявлены дефекты. "
+                f"Нормативные документы: {'; '.join(dict.fromkeys(sec['norms_found'][:3]))}. "
+                "Рекомендуется выполнить мероприятия из раздела 4 "
+                "и провести повторный осмотр после их устранения."
+            )
+        else:
+            doc.add_paragraph(
+                "По результатам осмотра зафиксированы замечания согласно таблице. "
+                "Нормативные пункты не подтверждены без дополнительного анализа. "
+                "Рекомендуется повторный осмотр после устранения."
+            )
+
+        doc.add_heading("8. Приложение: перечень фото и документов", level=2)
+        doc.add_paragraph(
+            f"Фотоматериалов: {sec['photo_count']} шт. "
+            f"Файлов в пакете: {sec['file_count']} шт."
+        )
+        for fn in sec["all_files"]:
+            doc.add_paragraph(f"— {fn}", style="List Bullet")
+
+        doc.add_paragraph("")
+        doc.add_paragraph(
+            f"Технический специалист: {_T5CA_SPECIALIST}     _____________     {date_str}"
+        )
+        doc.add_paragraph(
+            "Представитель заказчика: _______________________     _____________     ___________"
+        )
+
+        doc.save(str(dst))
+        return True
+    except Exception as _e:
+        _T5CA_LOG.exception("T5CA_DOCX_ERR %s", _e)
+        return False
+
+
+def _t5ca_write_pdf(dst, act_num, date_str, af, sec):
+    try:
+        from reportlab.lib.pagesizes import A4, landscape as _ls
+        from reportlab.lib.styles import ParagraphStyle
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.units import cm
+        from reportlab.lib import colors
+
+        ok = _t5ca_register_fonts()
+        base = "T5CADejavu" if ok else "Helvetica"
+        bold = "T5CADejavuB" if ok else "Helvetica-Bold"
+
+        st = lambda name, **kw: ParagraphStyle(name, fontName=base, **kw)  # noqa: E731
+        sb = lambda name, **kw: ParagraphStyle(name, fontName=bold, **kw)  # noqa: E731
+
+        sty_t = sb("t5t", fontSize=13, alignment=1, spaceAfter=3)
+        sty_s = st("t5s", fontSize=10, alignment=1, spaceAfter=6, textColor=colors.grey)
+        sty_h = sb("t5h", fontSize=11, spaceBefore=8, spaceAfter=3)
+        sty_b = st("t5b", fontSize=10, leading=13, spaceAfter=2)
+        sty_sm = st("t5sm", fontSize=7, leading=9)
+        sty_smb = sb("t5smb", fontSize=7, leading=9)
+
+        obj_name = sec["obj_name"]
+        obj_addr = sec["obj_addr"]
+        folder_name = _t5ca_s(af.get("folder_name", ""))
+
+        flow = []
+        flow.append(Paragraph(f"АКТ ОСМОТРА ОБЪЕКТА № {act_num}", sty_t))
+        flow.append(Paragraph("Методом визуального неразрушающего контроля", sty_s))
+        flow.append(Paragraph(f"Дата: {date_str}  |  Объект: {obj_name}", sty_b))
+        flow.append(Paragraph(f"Место: {obj_addr or obj_name}", sty_b))
+        flow.append(Paragraph(f"Основание: {sec['basis']}", sty_b))
+        flow.append(Paragraph(f"Технический специалист: {_T5CA_SPECIALIST}", sty_b))
+        if folder_name:
+            flow.append(Paragraph(f"Фотоматериалы: папка Drive «{folder_name}»", sty_b))
+        flow.append(Spacer(1, 6))
+
+        flow.append(Paragraph("1. Общие сведения", sty_h))
+        flow.append(Paragraph(
+            "Осмотр выполнен методом визуального неразрушающего контроля. "
+            f"Файлов в пакете: {sec['file_count']}. Фотоматериалов: {sec['photo_count']}.",
+            sty_b,
+        ))
+
+        flow.append(Paragraph("2. Основание текущего осмотра", sty_h))
+        flow.append(Paragraph(sec["basis"], sty_b))
+
+        flow.append(Paragraph("3. Установлено по факту осмотра", sty_h))
+        if sec["facts"]:
+            for i, f in enumerate(sec["facts"], 1):
+                flow.append(Paragraph(f"{i}. {f[:400]}", sty_b))
+        else:
+            flow.append(Paragraph(
+                "Данные фиксируются по пояснениям владельца и фотоматериалам.", sty_b))
+
+        flow.append(Paragraph("4. Рекомендовано к устранению", sty_h))
+        if sec["recs"]:
+            for i, r in enumerate(sec["recs"], 1):
+                flow.append(Paragraph(f"{i}. {r[:400]}", sty_b))
+        else:
+            flow.append(Paragraph("Рекомендации формируются по результатам осмотра.", sty_b))
+
+        flow.append(Paragraph("5. Возможные последствия при отсутствии устранения", sty_h))
+        if sec["conseqs"]:
+            for c in sec["conseqs"]:
+                flow.append(Paragraph(f"— {c[:300]}", sty_b))
+        else:
+            flow.append(Paragraph(
+                "Последствия определяются по характеру выявленных дефектов.", sty_b))
+
+        flow.append(Paragraph("6. Таблица замечаний", sty_h))
+        col_hdrs = ["№", "Фото", "Узел/место", "Нарушение",
+                    "Последствия", "Что сделать", "Норматив", "Статус"]
+        col_w = [0.7*cm, 3.2*cm, 2.5*cm, 5.0*cm, 3.0*cm, 4.0*cm, 4.5*cm, 1.8*cm]
+        rows = [[Paragraph(h, sty_smb) for h in col_hdrs]]
+        for r in sec["remark_rows"]:
+            rows.append([Paragraph(_t5ca_s(c, 250), sty_sm) for c in r])
+        tbl = Table(rows, colWidths=col_w, repeatRows=1)
+        tbl.setStyle(TableStyle([
+            ("FONTNAME", (0, 0), (-1, -1), base),
+            ("FONTNAME", (0, 0), (-1, 0), bold),
+            ("FONTSIZE", (0, 0), (-1, -1), 7),
+            ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+            ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ]))
+        flow.append(tbl)
+        flow.append(Spacer(1, 6))
+
+        flow.append(Paragraph("7. Заключение", sty_h))
+        if sec["norms_found"]:
+            flow.append(Paragraph(
+                f"Выявлены дефекты. Нормативные документы: "
+                f"{'; '.join(dict.fromkeys(sec['norms_found'][:3]))}. "
+                "Рекомендуется повторный осмотр после устранения.",
+                sty_b,
+            ))
+        else:
+            flow.append(Paragraph(
+                "Зафиксированы замечания. Нормативные пункты не подтверждены без анализа. "
+                "Рекомендуется повторный осмотр после устранения.",
+                sty_b,
+            ))
+
+        flow.append(Paragraph("8. Приложение: перечень фото и документов", sty_h))
+        flow.append(Paragraph(
+            f"Фото: {sec['photo_count']} шт., файлов в пакете: {sec['file_count']} шт.",
+            sty_b,
+        ))
+        for fn in sec["all_files"]:
+            flow.append(Paragraph(f"— {fn}", sty_sm))
+
+        flow.append(Spacer(1, 12))
+        flow.append(Paragraph(
+            f"Технический специалист: {_T5CA_SPECIALIST}     ___________     {date_str}",
+            sty_b,
+        ))
+        flow.append(Paragraph(
+            "Представитель заказчика: _______________________     ___________     ___________",
+            sty_b,
+        ))
+
+        SimpleDocTemplate(
+            str(dst), pagesize=_ls(A4),
+            leftMargin=2*cm, rightMargin=2*cm,
+            topMargin=2*cm, bottomMargin=2*cm,
+        ).build(flow)
+        return True
+    except Exception as _e:
+        _T5CA_LOG.exception("T5CA_PDF_ERR %s", _e)
+        return False
+
+
+def t5_canonical_act_generate(chat_id: str, topic_id: int, task_id: str) -> dict:
+    """
+    PATCH_TOPIC5_CANONICAL_ACT_ENGINE_V3
+    ok=True если DOCX или PDF сгенерированы (даже без upload).
+    Dispatcher отвечает за fallback upload.
+    """
+    markers = []
+    result = {
+        "ok": False, "docx_link": "", "pdf_link": "",
+        "docx_path": "", "pdf_path": "",
+        "photo_count": 0, "file_count": 0, "norm_count": 0,
+        "obj_name": "", "obj_addr": "", "folder_name": "", "folder_id": "",
+        "upload_ok": False, "error": "", "markers": markers,
+    }
+    try:
+        buf = _t5ca_read_json(_T5CA_DATA / f"buf_{chat_id}_{topic_id}.json")
+        af = _t5ca_read_json(_T5CA_DATA / f"active_folder_{chat_id}_{topic_id}.json")
+        materials = buf.get("materials", [])
+
+        result["obj_name"] = _t5ca_s(af.get("object_name", ""))
+        result["obj_addr"] = _t5ca_s(af.get("object_address") or af.get("object_name") or "")
+        result["folder_name"] = _t5ca_s(af.get("folder_name", ""))
+        result["folder_id"] = _t5ca_s(af.get("folder_id", ""))
+
+        if not materials:
+            result["error"] = "NO_MATERIALS"
+            return result
+
+        sec = _t5ca_build_sections(af, materials)
+        result["file_count"] = sec["file_count"]
+        result["photo_count"] = sec["photo_count"]
+        result["norm_count"] = len(sec["norms_global"])
+
+        markers.append("TOPIC5_GARBAGE_FILTER_OK")
+        markers.append("TOPIC5_ACT_STRUCTURE_OK")
+        if sec["remark_rows"]:
+            markers.append("TOPIC5_DEFECT_TABLE_OK")
+        markers.append("TOPIC5_RECOMMENDATIONS_SECTION_OK")
+        markers.append("TOPIC5_NORMATIVE_SECTION_OK")
+
+        date_str = _t5ca_dt.now().strftime("%d.%m.%Y")
+        act_num = _t5ca_dt.now().strftime("%d.%m/%y")
+        safe = (task_id[:6] if task_id else "000000").upper()
+        base_name = f"AKT_OSMOTRA_{safe}_{_t5ca_dt.now().strftime('%Y%m%d')}"
+
+        out_dir = _t5ca_Path(_t5ca_tmp.gettempdir()) / f"areal_t5ca_{task_id}"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        docx_path = out_dir / f"{base_name}.docx"
+        pdf_path = out_dir / f"{base_name}.pdf"
+
+        docx_ok = _t5ca_write_docx(docx_path, act_num, date_str, af, sec)
+        if docx_ok and docx_path.exists():
+            markers.append("TOPIC5_DOCX_CREATED")
+            result["docx_path"] = str(docx_path)
+
+        pdf_ok = _t5ca_write_pdf(pdf_path, act_num, date_str, af, sec)
+        if pdf_ok and pdf_path.exists():
+            markers.append("TOPIC5_PDF_CREATED")
+            result["pdf_path"] = str(pdf_path)
+
+        if not docx_ok and not pdf_ok:
+            result["error"] = "FILE_GENERATION_FAILED"
+            return result
+
+        # ok=True means files are ready — dispatcher handles upload
+        result["ok"] = True
+
+        # Try service account upload
+        folder_id = result["folder_id"]
+        for path_key, link_key in (("docx_path", "docx_link"), ("pdf_path", "pdf_link")):
+            fpath = result.get(path_key, "")
+            if not fpath:
+                continue
+            try:
+                from core.drive_service_account_uploader import upload_artifact_service_account
+                lnk = upload_artifact_service_account(
+                    fpath, name=_t5ca_Path(fpath).name,
+                    folder_id=folder_id or None,
+                ) or ""
+                result[link_key] = lnk
+            except Exception as _ue:
+                _T5CA_LOG.warning("T5CA_SA_UPLOAD_WARN %s %s", path_key, _ue)
+
+        if result["docx_link"] or result["pdf_link"]:
+            markers.append("TOPIC5_DRIVE_LINKS_SAVED")
+            result["upload_ok"] = True
+
+        _T5CA_LOG.info(
+            "T5CA_DONE task=%s photos=%s files=%s norms=%s docx=%s pdf=%s upload=%s",
+            task_id, sec["photo_count"], sec["file_count"], len(sec["norms_global"]),
+            docx_ok, pdf_ok, result["upload_ok"],
+        )
+        return result
+
+    except Exception as _e:
+        _T5CA_LOG.exception("T5CA_ERR task=%s %s", task_id, _e)
+        result["error"] = _t5ca_s(str(_e), 200)
+        return result
+
+
+_T5CA_LOG.info("PATCH_TOPIC5_CANONICAL_ACT_ENGINE_V3 installed")
+# === END_PATCH_TOPIC5_CANONICAL_ACT_ENGINE_V3 ===
+
+
+# === CANON_TOPIC5_TECHNADZOR_ISOLATION_GUARD_V1 ===
+_CANON_TOPIC5_ORIG_PROCESS_TECHNADZOR = process_technadzor
+
+
+def process_technadzor(text="", task_id="", chat_id="", topic_id=0, file_path="", file_name="", **kwargs):  # noqa: F811
+    try:
+        tid = int(topic_id or kwargs.get("topic_id") or 0)
+    except Exception:
+        tid = 0
+    if tid != 5:
+        return {
+            "ok": False,
+            "handled": False,
+            "state": "SKIPPED",
+            "message": "",
+            "history": "CANON_TOPIC5_TECHNADZOR_ISOLATION_GUARD_V1:SKIPPED_NON_TOPIC5",
+        }
+    return _CANON_TOPIC5_ORIG_PROCESS_TECHNADZOR(
+        text=text,
+        task_id=task_id,
+        chat_id=chat_id,
+        topic_id=topic_id,
+        file_path=file_path,
+        file_name=file_name,
+        **kwargs,
+    )
+
+
+# === END_CANON_TOPIC5_TECHNADZOR_ISOLATION_GUARD_V1 ===
+
+====================================================================================================
+END_FILE: core/technadzor_engine.py
+FILE_CHUNK: 1/1
+====================================================================================================
 
 ====================================================================================================
 BEGIN_FILE: core/technadzor_object_registry.py
@@ -4388,7 +9110,7 @@ def build_topic_self_answer(meta: Dict[str, Any]) -> str:
     """Формирует ответ от имени топика на вопрос 'что мы тут делаем'."""
     name = meta.get("name", "Без имени")
     direction = meta.get("direction", "general_chat")
-    
+
     DIRECTION_DESCRIPTIONS = {
         "general_chat": "общий чат для произвольных задач",
         "crm_leads": "лиды, реклама, AmoCRM, лидогенерация",
@@ -4402,7 +9124,7 @@ def build_topic_self_answer(meta: Dict[str, Any]) -> str:
         "devops_server": "VPN, VPS, конфигурации серверов, настройки",
         "job_search": "поиск работы и интеграция с биржами труда",
     }
-    
+
     desc = DIRECTION_DESCRIPTIONS.get(direction, direction)
     return f"Этот чат — {name}. Направление: {desc}."
 
@@ -4583,5242 +9305,5 @@ def process_universal_file(
 
 ====================================================================================================
 END_FILE: core/universal_file_engine.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/universal_file_handler.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 10f50019c01f6a903296f3616568273fe69b0910481c12cc1105b19fec8ee2a7
-====================================================================================================
-# === UNIVERSAL_FILE_HANDLER_V1 ===
-import os, logging, tempfile, subprocess, csv, zipfile, json
-from typing import Dict, Any, Optional
-
-logger = logging.getLogger(__name__)
-
-# --- Magic bytes detection ---
-_MAGIC = {
-    b"%PDF": "pdf",
-    b"PK\x03\x04": "xlsx_or_zip",
-    b"\xd0\xcf\x11\xe0": "doc_or_xls",
-    b"\xff\xd8\xff": "jpg",
-    b"\x89PNG": "png",
-    b"GIF8": "gif",
-    b"BM": "bmp",
-    b"II\x2a\x00": "tiff",
-    b"MM\x00\x2a": "tiff",
-    b"RIFF": "webp_or_avi",
-    b"ftyp": "mp4",
-    b"ID3": "mp3",
-    b"AC10": "dwg",
-    b"AC12": "dwg",
-    b"AC14": "dwg",
-    b"AC15": "dwg",
-    b"AC18": "dwg",
-    b"AC21": "dwg",
-    b"AC24": "dwg",
-    b"AC27": "dwg",
-    b"  0\r\nSECTION": "dxf",
-}
-
-EXT_MAP = {
-    ".pdf": "pdf", ".docx": "docx", ".doc": "doc_old",
-    ".xlsx": "xlsx", ".xls": "xls_old", ".csv": "csv",
-    ".txt": "text", ".md": "text", ".json": "json", ".xml": "xml",
-    ".jpg": "image", ".jpeg": "image", ".png": "image",
-    ".heic": "image", ".webp": "image", ".bmp": "image", ".tiff": "image",
-    ".dwg": "dwg", ".dxf": "dxf", ".dgn": "dgn",
-    ".zip": "zip", ".rar": "rar", ".7z": "7z",
-    ".mp4": "video", ".avi": "video", ".mov": "video",
-    ".mp3": "audio", ".ogg": "audio", ".wav": "audio",
-    ".odt": "odt", ".ods": "ods", ".rtf": "rtf",
-}
-
-def detect_type(file_path: str) -> str:
-    ext = os.path.splitext(file_path)[1].lower()
-    try:
-        with open(file_path, "rb") as f:
-            header = f.read(16)
-        for magic, ftype in _MAGIC.items():
-            if header[:len(magic)] == magic:
-                # PK magic = ZIP or XLSX — уточняем по расширению
-                if ftype == "xlsx_or_zip":
-                    return "xlsx" if ext in (".xlsx", ".xlsm", ".xltx") else "zip"
-                # RIFF = webp or avi — уточняем по расширению
-                if ftype == "webp_or_avi":
-                    return "image" if ext == ".webp" else "video"
-                return ftype
-    except Exception:
-        pass
-    return EXT_MAP.get(ext, "unknown")
-
-
-def extract_text_from_file(file_path: str, task_id: str = "", topic_id: int = 0) -> Dict[str, Any]:
-    """
-    Универсальный экстрактор текста/данных из любого файла.
-    Маркер: UNIVERSAL_FILE_HANDLER_V1
-    Возвращает: {"success": bool, "type": str, "text": str, "rows": list, "error": str}
-    """
-    result = {"success": False, "type": "unknown", "text": "", "rows": [], "error": ""}
-    ftype = detect_type(file_path)
-    result["type"] = ftype
-    logger.info("UNIVERSAL_FILE_HANDLER type=%s file=%s", ftype, os.path.basename(file_path))
-
-    try:
-        # --- PDF ---
-        if ftype == "pdf":
-            import pdfplumber, re
-            with pdfplumber.open(file_path) as pdf:
-                parts = []
-                rows = []
-                for page in pdf.pages:
-                    t = page.extract_text() or ""
-                    t = re.sub(r'\(cid:\d+\)', '', t)
-                    if t.strip():
-                        parts.append(t)
-                    for tbl in (page.extract_tables() or []):
-                        rows.extend(tbl)
-                result["text"] = "\n".join(parts)
-                result["rows"] = rows
-                result["success"] = True
-
-        # --- DOCX / ODT ---
-        elif ftype in ("docx", "odt"):
-            import docx as _docx
-            doc = _docx.Document(file_path)
-            result["text"] = "\n".join(p.text for p in doc.paragraphs if p.text.strip())
-            result["rows"] = [[c.text for c in row.cells] for tbl in doc.tables for row in tbl.rows]
-            result["success"] = True
-
-        # --- XLSX / ODS ---
-        elif ftype in ("xlsx_or_zip", "xlsx"):
-            from openpyxl import load_workbook
-            wb = load_workbook(file_path, data_only=True)
-            rows = []
-            for ws in wb.worksheets:
-                for row in ws.iter_rows(values_only=True):
-                    if any(c is not None for c in row):
-                        rows.append([str(c) if c is not None else "" for c in row])
-            result["rows"] = rows
-            result["text"] = "\n".join("\t".join(r) for r in rows[:50])
-            result["success"] = True
-
-        # --- CSV ---
-        elif ftype == "csv":
-            rows = []
-            enc = "utf-8"
-            try:
-                import chardet
-                with open(file_path, "rb") as f:
-                    enc = chardet.detect(f.read(4096)).get("encoding", "utf-8") or "utf-8"
-            except Exception:
-                pass
-            with open(file_path, encoding=enc, errors="replace") as f:
-                for row in csv.reader(f):
-                    rows.append(row)
-            result["rows"] = rows
-            result["text"] = "\n".join("\t".join(r) for r in rows[:50])
-            result["success"] = True
-
-        # --- TEXT / JSON / XML / MD ---
-        elif ftype in ("text", "json", "xml", "rtf"):
-            enc = "utf-8"
-            try:
-                import chardet
-                with open(file_path, "rb") as f:
-                    enc = chardet.detect(f.read(4096)).get("encoding", "utf-8") or "utf-8"
-            except Exception:
-                pass
-            with open(file_path, encoding=enc, errors="replace") as f:
-                result["text"] = f.read(50000)
-            result["success"] = True
-
-        # --- ИЗОБРАЖЕНИЯ (JPG/PNG/HEIC/BMP/TIFF/WEBP/GIF) ---
-        elif ftype in ("jpg", "png", "image", "gif", "bmp", "tiff", "webp_or_avi"):
-            import pytesseract
-            from PIL import Image
-            try:
-                from pillow_heif import register_heif_opener
-                register_heif_opener()
-            except Exception:
-                pass
-            img = Image.open(file_path)
-            text = pytesseract.image_to_string(img, lang="rus+eng")
-            result["text"] = text.strip()
-            result["success"] = True
-            result["type"] = "image"
-
-        # --- DWG → конвертация в DXF → ezdxf ---
-        elif ftype == "dwg":
-            result = _handle_dwg(file_path, result)
-
-        # --- DXF ---
-        elif ftype == "dxf":
-            result = _handle_dxf(file_path, result)
-
-        # --- ZIP ---
-        elif ftype == "zip":
-            result = _handle_zip(file_path, task_id, topic_id, result)
-
-        # --- RAR ---
-        elif ftype == "rar":
-            try:
-                import rarfile
-                tmp = tempfile.mkdtemp()
-                with rarfile.RarFile(file_path) as rf:
-                    rf.extractall(tmp)
-                texts = []
-                for fn in os.listdir(tmp)[:5]:
-                    sub = extract_text_from_file(os.path.join(tmp, fn), task_id, topic_id)
-                    if sub["success"]:
-                        texts.append(f"[{fn}]\n{sub['text']}")
-                result["text"] = "\n\n".join(texts)
-                result["success"] = True
-                result["type"] = "rar"
-            except Exception as e:
-                result["error"] = f"RAR: {e}"
-
-        # --- 7Z ---
-        elif ftype == "7z":
-            try:
-                import py7zr
-                tmp = tempfile.mkdtemp()
-                with py7zr.SevenZipFile(file_path) as sz:
-                    sz.extractall(tmp)
-                texts = []
-                for fn in os.listdir(tmp)[:5]:
-                    sub = extract_text_from_file(os.path.join(tmp, fn), task_id, topic_id)
-                    if sub["success"]:
-                        texts.append(f"[{fn}]\n{sub['text']}")
-                result["text"] = "\n\n".join(texts)
-                result["success"] = True
-                result["type"] = "7z"
-            except Exception as e:
-                result["error"] = f"7Z: {e}"
-
-        # --- ВИДЕО/АУДИО — метаданные через ffmpeg ---
-        elif ftype in ("mp4", "video", "mp3", "audio"):
-            try:
-                out = subprocess.check_output(
-                    ["ffmpeg", "-i", file_path],
-                    stderr=subprocess.STDOUT, timeout=10
-                ).decode(errors="replace")
-            except subprocess.CalledProcessError as e:
-                out = e.output.decode(errors="replace")
-            result["text"] = out[:2000]
-            result["success"] = True
-
-        # --- UNKNOWN — попытка открыть как текст ---
-        else:
-            try:
-                with open(file_path, "r", encoding="utf-8", errors="replace") as f:
-                    txt = f.read(10000)
-                if len(txt.strip()) > 20:
-                    result["text"] = txt
-                    result["success"] = True
-                    result["type"] = "text_fallback"
-                else:
-                    result["error"] = f"Формат не поддерживается: {os.path.splitext(file_path)[1]}"
-            except Exception as e:
-                result["error"] = f"Неизвестный формат: {e}"
-
-    except Exception as e:
-        logger.error("UNIVERSAL_FILE_HANDLER_ERROR type=%s err=%s", ftype, e)
-        result["error"] = str(e)
-
-    return result
-
-
-def _handle_dwg(file_path: str, result: dict) -> dict:
-    """DWG: конвертация через dwg2dxf (libredwg), fallback через imagemagick preview"""
-    dxf_path = file_path.replace(".dwg", ".dxf").replace(".DWG", ".dxf")
-    if not dxf_path.endswith(".dxf"):
-        dxf_path = file_path + ".dxf"
-
-    # Попытка 1: dwg2dxf
-    try:
-        subprocess.run(["dwg2dxf", file_path, "-o", dxf_path],
-                       timeout=30, capture_output=True, check=True)
-        if os.path.exists(dxf_path):
-            logger.info("DWG→DXF conversion OK: %s", dxf_path)
-            return _handle_dxf(dxf_path, result)
-    except Exception as e:
-        logger.warning("dwg2dxf failed: %s", e)
-
-    # Попытка 2: imagemagick — превью в PNG + OCR
-    try:
-        png_path = file_path + "_preview.png"
-        subprocess.run(
-            ["convert", "-density", "150", file_path + "[0]", png_path],
-            timeout=30, capture_output=True, check=True
-        )
-        if os.path.exists(png_path):
-            import pytesseract
-            from PIL import Image
-            text = pytesseract.image_to_string(Image.open(png_path), lang="rus+eng")
-            result["text"] = f"[DWG файл — превью через OCR]\n{text.strip()}"
-            result["success"] = True
-            result["type"] = "dwg_ocr_preview"
-            return result
-    except Exception as e:
-        logger.warning("DWG imagemagick fallback failed: %s", e)
-
-    result["error"] = "DWG: конвертация не удалась. Пришли файл в формате .dxf"
-    result["text"] = "Файл формата DWG получен. Для полной обработки конвертируй в DXF."
-    result["success"] = False
-    return result
-
-
-def _handle_dxf(file_path: str, result: dict) -> dict:
-    """DXF через ezdxf"""
-    try:
-        import ezdxf
-        doc = ezdxf.readfile(file_path)
-        msp = doc.modelspace()
-        counts = {}
-        texts = []
-        for e in msp:
-            t = e.dxftype()
-            counts[t] = counts.get(t, 0) + 1
-            if t in ("TEXT", "MTEXT") and hasattr(e.dxf, "text"):
-                txt = str(e.dxf.text or "").strip()
-                if txt:
-                    texts.append(txt)
-        summary = "DXF элементы:\n"
-        for k, v in sorted(counts.items(), key=lambda x: -x[1])[:15]:
-            summary += f"  {k}: {v}\n"
-        if texts:
-            summary += "\nТексты в чертеже:\n" + "\n".join(texts[:30])
-        result["text"] = summary
-        result["rows"] = [[k, str(v)] for k, v in counts.items()]
-        result["success"] = True
-        result["type"] = "dxf"
-    except Exception as e:
-        result["error"] = f"DXF: {e}"
-    return result
-
-
-def _handle_zip(file_path: str, task_id: str, topic_id: int, result: dict) -> dict:
-    """ZIP — распаковка и рекурсивная обработка"""
-    try:
-        tmp = tempfile.mkdtemp()
-        with zipfile.ZipFile(file_path) as zf:
-            names = zf.namelist()[:20]
-            zf.extractall(tmp)
-        texts = []
-        all_rows = []
-        for fn in names:
-            fp = os.path.join(tmp, fn)
-            if not os.path.isfile(fp):
-                continue
-            sub = extract_text_from_file(fp, task_id, topic_id)
-            if sub["success"]:
-                texts.append(f"[{fn}]\n{sub['text'][:1000]}")
-                all_rows.extend(sub.get("rows", []))
-        result["text"] = f"ZIP архив ({len(names)} файлов):\n\n" + "\n\n".join(texts)
-        result["rows"] = all_rows
-        result["success"] = True
-        result["type"] = "zip"
-    except Exception as e:
-        result["error"] = f"ZIP: {e}"
-    return result
-# === END UNIVERSAL_FILE_HANDLER_V1 ===
-
-====================================================================================================
-END_FILE: core/universal_file_handler.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/upload_retry_queue.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: c84118ed90d2faa43ddc5a8f1c63e8767639e25641c2b6ebc4c1ca38570171c2
-====================================================================================================
-"""
-Upload retry queue.
-Finds tasks where artifact was sent to Telegram (Drive failed),
-checks if Drive is now available, re-uploads to Drive.
-Notifies user in Telegram with new Drive link.
-"""
-import os
-import sqlite3
-import logging
-import json
-import tempfile
-import requests
-from dotenv import load_dotenv
-
-load_dotenv("/root/.areal-neva-core/.env", override=True)
-
-logging.basicConfig(
-    filename="/root/.areal-neva-core/logs/upload_retry_queue.log",
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(message)s",
-)
-logger = logging.getLogger(__name__)
-
-DB_PATH = "/root/.areal-neva-core/data/core.db"
-BOT_TOKEN = <REDACTED_SECRET>"BOT_TOKEN") or os.environ.get("TELEGRAM_BOT_TOKEN")
-
-
-def check_drive_alive() -> bool:
-    # === ROOT_TMP_UPLOAD_GUARD_V1 ===
-    # Healthcheck MUST NOT upload tmp*.txt into AI_ORCHESTRA root.
-    # It only lists the configured Drive root via OAuth.
-    try:
-        from core.topic_drive_oauth import _oauth_service, _root_folder_id
-        service = _oauth_service()
-        root_id = _root_folder_id()
-        service.files().list(
-            q=f"'{root_id}' in parents and trashed = false",
-            spaces="drive",
-            pageSize=1,
-            fields="files(id,name)",
-            supportsAllDrives=True,
-            includeItemsFromAllDrives=True,
-        ).execute()
-        logger.info("ROOT_TMP_UPLOAD_GUARD_V1: DRIVE_HEALTH_CHECK_LIST_OK root=%s", root_id)
-        return True
-    except Exception as e:
-        logger.warning("ROOT_TMP_UPLOAD_GUARD_V1: DRIVE_HEALTH_CHECK_FAILED err=%s", e)
-        return False
-    # === END_ROOT_TMP_UPLOAD_GUARD_V1 ===
-
-
-def get_pending_retry_tasks(conn: sqlite3.Connection):
-    return conn.execute(
-        """
-        SELECT t.id, t.chat_id, t.topic_id, t.result,
-               th_tg.action as tg_action
-        FROM tasks t
-        JOIN task_history th_tg ON th_tg.task_id = t.id
-            AND th_tg.action LIKE 'TELEGRAM_ARTIFACT_FALLBACK_SENT:%'
-        WHERE t.state IN ('AWAITING_CONFIRMATION','DONE')
-          AND NOT EXISTS (
-              SELECT 1 FROM task_history th2
-              WHERE th2.task_id = t.id
-                AND th2.action LIKE 'DRIVE_RETRY_UPLOAD_OK:%'
-          )
-        ORDER BY t.updated_at DESC
-        LIMIT 20
-        """,
-    ).fetchall()
-
-
-def parse_tg_action(action: str) -> dict:
-    result = {}
-    for part in action.split(":"):
-        if "=" in part:
-            k, v = part.split("=", 1)
-            result[k] = v
-    return result
-
-
-def download_from_telegram(file_id: str, dest_path: str) -> bool:
-    try:
-        r = requests.get(
-            f"https://api.telegram.org/bot{BOT_TOKEN}/getFile",
-            params={"file_id": file_id},
-            timeout=15,
-        )
-        if not r.ok:
-            return False
-        file_path = r.json().get("result", {}).get("file_path")
-        if not file_path:
-            return False
-        dl = requests.get(
-            f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}",
-            timeout=30,
-        )
-        if not dl.ok:
-            return False
-        with open(dest_path, "wb") as f:
-            f.write(dl.content)
-        return True
-    except Exception as e:
-        logger.error("TG_DOWNLOAD_FAILED file_id=%s err=%s", file_id, e)
-        return False
-
-
-def notify_telegram(chat_id, topic_id, message: str):
-    if not BOT_TOKEN:
-        return
-    try:
-        data = {"chat_id": str(chat_id), "text": message, "parse_mode": "HTML"}
-        if topic_id and int(topic_id) > 0:
-            data["message_thread_id"] = str(topic_id)
-        requests.post(
-            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-            json=data, timeout=10,
-        )
-    except Exception as e:
-        logger.warning("NOTIFY_FAILED err=%s", e)
-
-
-def run():
-    logger.info("RETRY_QUEUE_START")
-
-    if not check_drive_alive():
-        logger.info("DRIVE_UNAVAILABLE — skip retry")
-        return
-
-    logger.info("DRIVE_ALIVE — checking pending tasks")
-
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-
-    try:
-        pending = get_pending_retry_tasks(conn)
-        logger.info("PENDING_RETRY_COUNT=%d", len(pending))
-
-        for row in pending:
-            task_id = row["id"]
-            chat_id = row["chat_id"]
-            topic_id = row["topic_id"]
-            tg_info = parse_tg_action(row["tg_action"])
-            file_id = tg_info.get("file_id")
-
-            if not file_id:
-                logger.warning("RETRY_SKIP task=%s no file_id", task_id)
-                continue
-
-            logger.info("RETRY_ATTEMPT task=%s file_id=%s", task_id, file_id)
-
-            with tempfile.NamedTemporaryFile(
-                suffix=".bin", delete=False,
-                dir="/root/.areal-neva-core/runtime"
-            ) as tmp:
-                tmp_path = tmp.name
-
-            ok = download_from_telegram(file_id, tmp_path)
-            if not ok:
-                logger.error("RETRY_TG_DOWNLOAD_FAILED task=%s", task_id)
-                try:
-                    os.remove(tmp_path)
-                except Exception:
-                    pass
-                continue
-
-            # PATCH_RETRY_TOPIC_FOLDER_V1: upload to topic folder, not INGEST root
-            try:
-                import mimetypes as _mt
-                from core.topic_drive_oauth import _upload_file_sync
-                # Get original file name from task raw_input
-                try:
-                    _raw = conn.execute("SELECT raw_input FROM tasks WHERE id=?", (task_id,)).fetchone()
-                    _orig_name = json.loads(_raw["raw_input"] or "{}").get("file_name", f"artifact_{task_id[:8]}")
-                except Exception:
-                    _orig_name = f"artifact_{task_id[:8]}"
-                _mime = _mt.guess_type(_orig_name)[0] or "application/octet-stream"
-                _up = _upload_file_sync(
-                    tmp_path, _orig_name,
-                    str(row["chat_id"]), int(topic_id or 0), _mime
-                )
-                _fid = _up.get("drive_file_id") if isinstance(_up, dict) else None
-                drive_link = f"https://drive.google.com/file/d/{_fid}/view" if _fid else None
-            except Exception as e:
-                logger.error("RETRY_DRIVE_UPLOAD_FAILED task=%s err=%s", task_id, e)
-                drive_link = None
-            finally:
-                try:
-                    os.remove(tmp_path)
-                except Exception:
-                    pass
-
-            if not drive_link or "drive.google.com" not in str(drive_link):
-                logger.error("RETRY_NO_LINK task=%s", task_id)
-                continue
-
-            old_result = row["result"] or ""
-            new_result = old_result.replace(
-                "Файл отправлен в Telegram. Внешнее хранилище временно недоступно.",
-                f"Файл доступен на Drive: {drive_link}"
-            )
-            if new_result == old_result:
-                new_result = old_result + f"\n\nФайл теперь на Drive: {drive_link}"
-
-            conn.execute(
-                "UPDATE tasks SET result=?, updated_at=datetime('now') WHERE id=?",
-                (new_result, task_id),
-            )
-            conn.execute(
-                "INSERT INTO task_history (task_id, action, created_at) VALUES (?, ?, datetime('now'))",
-                (task_id, f"DRIVE_RETRY_UPLOAD_OK:{drive_link}"),
-            )
-            conn.commit()
-
-            notify_telegram(
-                chat_id, topic_id,
-                f"✅ Файл теперь доступен на Google Drive:\n{drive_link}"
-            )
-            logger.info("RETRY_UPLOAD_OK task=%s link=%s", task_id, drive_link)
-
-    finally:
-        conn.close()
-
-    logger.info("RETRY_QUEUE_DONE")
-
-
-if __name__ == "__main__":
-    # === FULLFIX_20_RETRY_LOOP ===
-    import time as _ff20_time
-    logger.info("UPLOAD_RETRY_SERVICE_START")
-    while True:
-        try:
-            run()
-        except Exception as _ff20_re:
-            logger.exception("UPLOAD_RETRY_LOOP_ERR=%s", _ff20_re)
-        _ff20_time.sleep(300)
-    # === END FULLFIX_20_RETRY_LOOP ===
-
-====================================================================================================
-END_FILE: core/upload_retry_queue.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/web_engine.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 60ae8879713e63665e3b98acb78976ad8f6522694bb018b072daed8bd67c8912
-====================================================================================================
-import logging
-
-logger = logging.getLogger("web_engine")
-
-async def web_search(query: str) -> str:
-    # Search handled by ONLINE_MODEL (perplexity/sonar) in ai_router.py
-    logger.warning("web_search_stub called query=%s", (query or "")[:100])
-    return ""
-
-====================================================================================================
-END_FILE: core/web_engine.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: core/work_item.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: ec6ecd21b8594924d8b0bdd0bde9e53d00e69485f45b88db8f7aedb11624f2f3
-====================================================================================================
-# === FULLFIX_DIRECTION_KERNEL_STAGE_1_WORKITEM ===
-from __future__ import annotations
-from dataclasses import dataclass, field, asdict
-from typing import Any, Dict, List, Optional
-
-
-def _get(row, key, default=None):
-    if row is None: return default
-    if isinstance(row, dict): return row.get(key, default)
-    try: return row[key]
-    except Exception: return getattr(row, key, default)
-
-def _int(v, d=0):
-    try:
-        if v is None or v == "": return d
-        return int(v)
-    except Exception: return d
-
-def _str(v, d=""):
-    if v is None: return d
-    return str(v)
-
-
-@dataclass
-class WorkItem:
-    work_id: str
-    chat_id: str
-    topic_id: int
-    user_id: Optional[str] = None
-    message_id: Optional[int] = None
-    reply_to_message_id: Optional[int] = None
-    bot_message_id: Optional[int] = None
-    source_type: str = "telegram"
-    input_type: str = "unknown"
-    raw_text: str = ""
-    state: str = "NEW"
-    intent: str = "UNKNOWN"
-    direction: Optional[str] = None
-    direction_profile: Dict[str, Any] = field(default_factory=dict)
-    formats_in: List[str] = field(default_factory=list)
-    formats_out: List[str] = field(default_factory=list)
-    attachments: List[Dict[str, Any]] = field(default_factory=list)
-    parsed_data: Dict[str, Any] = field(default_factory=dict)
-    context_refs: Dict[str, Any] = field(default_factory=dict)
-    execution_plan: List[Dict[str, Any]] = field(default_factory=list)
-    quality_gates: List[str] = field(default_factory=list)
-    result: Dict[str, Any] = field(default_factory=dict)
-    audit: Dict[str, Any] = field(default_factory=dict)
-    errors: List[Dict[str, Any]] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
-
-    @classmethod
-    def from_task_row(cls, row, extra=None):
-        extra = extra or {}
-        raw_text = _str(extra.get("raw_text") or extra.get("raw_input") or _get(row, "raw_input", ""))
-        input_type = _str(extra.get("input_type") or _get(row, "input_type", "unknown"), "unknown")
-        topic_id = _int(extra.get("topic_id") if extra.get("topic_id") is not None else _get(row, "topic_id", 0), 0)
-        wi = cls(
-            work_id=_str(extra.get("work_id") or extra.get("task_id") or _get(row, "id", "")),
-            chat_id=_str(extra.get("chat_id") or _get(row, "chat_id", "")),
-            topic_id=topic_id,
-            user_id=_str(extra.get("user_id") or _get(row, "user_id", "")) or None,
-            message_id=_int(extra.get("message_id") or _get(row, "message_id", None), 0) or None,
-            reply_to_message_id=_int(extra.get("reply_to_message_id") if extra.get("reply_to_message_id") is not None else _get(row, "reply_to_message_id", None), 0) or None,
-            bot_message_id=_int(extra.get("bot_message_id") if extra.get("bot_message_id") is not None else _get(row, "bot_message_id", None), 0) or None,
-            source_type=_str(extra.get("source_type") or "telegram"),
-            input_type=input_type,
-            raw_text=raw_text,
-            state=_str(extra.get("state") or _get(row, "state", "NEW"), "NEW"),
-            created_at=_str(extra.get("created_at") or _get(row, "created_at", "")) or None,
-            updated_at=_str(extra.get("updated_at") or _get(row, "updated_at", "")) or None,
-        )
-        wi.formats_in = wi._detect_formats_in()
-        wi.result = {"text": _str(_get(row, "result", ""))}
-        err = _str(_get(row, "error_message", ""))
-        if err:
-            wi.errors.append({"code": "TASK_ERROR", "message": err, "fatal": False})
-        wi.audit["created_by"] = "FULLFIX_DIRECTION_KERNEL_STAGE_1"
-        return wi
-
-    def _detect_formats_in(self):
-        t = (self.input_type or "").lower()
-        raw = (self.raw_text or "").lower()
-        out = []
-        if t in ("text","voice","photo","file","drive_file","url","mixed"): out.append(t)
-        if ".pdf" in raw or "pdf" in t: out.append("pdf")
-        if ".xlsx" in raw or ".xls" in raw: out.append("xlsx")
-        if ".dwg" in raw: out.append("dwg")
-        if t in ("photo","image"): out.append("photo")
-        if not out: out.append("text")
-        return list(dict.fromkeys(out))
-
-    def set_direction(self, direction, profile=None):
-        self.direction = direction
-        self.direction_profile = profile or {}
-        self.audit["direction"] = direction
-        self.audit["direction_profile_id"] = self.direction_profile.get("id", direction)
-
-    def set_intent(self, intent):
-        self.intent = intent or "UNKNOWN"
-        self.audit["intent"] = self.intent
-
-    def add_audit(self, key, value):
-        self.audit[str(key)] = value
-
-    def add_error(self, code, message, fatal=False):
-        self.errors.append({"code": str(code), "message": str(message), "fatal": bool(fatal)})
-
-    def to_dict(self): return asdict(self)
-
-    def to_payload(self):
-        return {
-            "id": self.work_id, "task_id": self.work_id,
-            "chat_id": self.chat_id, "topic_id": self.topic_id,
-            "user_id": self.user_id, "message_id": self.message_id,
-            "reply_to_message_id": self.reply_to_message_id,
-            "bot_message_id": self.bot_message_id,
-            "source_type": self.source_type, "input_type": self.input_type,
-            "raw_input": self.raw_text, "raw_text": self.raw_text,
-            "state": self.state, "intent": self.intent,
-            "direction": self.direction, "direction_profile": self.direction_profile,
-            "formats_in": self.formats_in, "formats_out": self.formats_out,
-            "attachments": self.attachments, "parsed_data": self.parsed_data,
-            "context_refs": self.context_refs, "execution_plan": self.execution_plan,
-            "quality_gates": self.quality_gates, "result": self.result,
-            "audit": self.audit, "direction_audit": self.audit,
-            "errors": self.errors, "metadata": self.metadata,
-            "work_item": self.to_dict(),
-        }
-# === END FULLFIX_DIRECTION_KERNEL_STAGE_1_WORKITEM ===
-
-====================================================================================================
-END_FILE: core/work_item.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: tools/full_context_aggregator.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: b122b0a322c8d966053ebb38926b64b77da4d5fe896dde785440f212de3407eb
-====================================================================================================
-#!/usr/bin/env python3
-# === FULL_CONTEXT_AGGREGATOR_V1 ===
-from __future__ import annotations
-
-import fcntl
-import hashlib
-import json
-import os
-import re
-import sqlite3
-import subprocess
-import sys
-import time
-import urllib.request
-from datetime import datetime, timezone
-from pathlib import Path
-
-BASE = Path("/root/.areal-neva-core")
-OUTPUT_DIR = BASE / "docs/SHARED_CONTEXT"
-REPO = "rj7hmz9cvm-lgtm/areal-neva-core"
-RAW_MAIN = f"https://raw.githubusercontent.com/{REPO}/main"
-LOCK_PATH = Path("/tmp/areal_full_context_aggregator.lock")
-PART_MAX_BYTES = 400_000
-CONTENT_CHUNK_BYTES = 340_000
-
-TEXT_SUFFIXES = {
-    ".py", ".md", ".json", ".yaml", ".yml", ".sh", ".txt", ".service", ".timer",
-    ".conf", ".ini", ".toml", ".sql", ".csv", ".gitignore", ".dockerignore",
-}
-TEXT_NAMES = {".gitignore", ".dockerignore", "Dockerfile", "Makefile"}
-
-SECRET_PATH_PARTS = {
-    ".env", ".secret_patterns", "token.json", "credentials.json", "client_secret.json",
-}
-SECRET_PATH_FRAGMENTS = (
-    "service_account",
-    "client_secret",
-    "private_key",
-    "credentials",
-    "/sessions/",
-    "/keys/",
-)
-BINARY_SUFFIXES = {
-    ".session", ".db", ".sqlite", ".sqlite3", ".pdf", ".dwg", ".dxf", ".jpg", ".jpeg",
-    ".png", ".mp4", ".mov", ".webp", ".gif", ".ico", ".pyc", ".pyo", ".so", ".o",
-    ".zip", ".tar", ".gz", ".tgz", ".7z", ".rar", ".xlsx", ".xls", ".docx", ".doc",
-}
-SKIP_DIR_PARTS = {".git", "__pycache__", ".venv", "venv", "node_modules", ".mypy_cache", ".pytest_cache"}
-
-GENERATED_EXACT = {
-    "docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md",
-    "docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md",
-    "docs/SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md",
-    "docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md",
-    "docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md",
-    "docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md",
-    "docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md",
-    "docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md",
-    "docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
-    "docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md",
-    "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md",
-    "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_MANIFEST.json",
-}
-
-GENERATED_PREFIXES = (
-    "docs/SHARED_CONTEXT/TOPICS/",
-    "docs/SHARED_CONTEXT/DIRECTIONS/",
-    "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_",
-)
-
-# === FULL_CONTEXT_NOISE_EXCLUDE_V1 ===
-# One-time operational logs are excluded from model context parts
-# Canon, handoffs, NOT_CLOSED, code, configs and useful reports remain included fully
-NOISE_PATH_FRAGMENTS = (
-    "DRIVE_AI_ORCHESTRA_ROOT_CLEANUP",
-    "DRIVE_AI_ORCHESTRA_ROOT_FOLDER_FINAL_CLEAN",
-    "CLAUDE_BOOTSTRAP_PENDING_PUSH",
-)
-# === END_FULL_CONTEXT_NOISE_EXCLUDE_V1 ===
-
-PRIORITY_PREFIXES = [
-    "docs/HANDOFFS/LATEST_HANDOFF",
-    "docs/REPORTS/NOT_CLOSED",
-    "docs/CANON_FINAL/01_SYSTEM_LOGIC_FULL",
-    "docs/CANON_FINAL/",
-    "docs/ARCHITECTURE/ORCHESTRA_MASTER_BLOCK",
-    "docs/ARCHITECTURE/SEARCH_MONOLITH",
-    "docs/ARCHITECTURE/",
-    "docs/HANDOFFS/",
-    "docs/REPORTS/",
-    "chat_exports/",
-    "config/",
-    "task_worker.py",
-    "telegram_daemon.py",
-    "core/project_route_guard.py",
-    "core/final_closure_engine.py",
-    "core/file_context_intake.py",
-    "core/reply_repeat_parent.py",
-    "core/estimate_engine.py",
-    "core/project_engine.py",
-    "core/file_intake_router.py",
-    "core/ai_router.py",
-    "core/",
-    "tools/full_context_aggregator.py",
-    "tools/context_aggregator.py",
-    "tools/claude_bootstrap_aggregator.py",
-    "tools/",
-]
-
-TOPIC_REGISTRY = """TOPIC_REGISTRY:
-topic_0=CHAT_ZADACH: общий чат
-topic_2=STROYKA: estimate_engine, Excel =C*D =SUM, Python считает, LLM не считает
-topic_5=TEKHNADZOR: technadzor_engine, Gemini vision, нормы СП/ГОСТ без выдумывания
-topic_11=VIDEOKONTENT
-topic_210=PROEKTIROVANIE: project_engine, PROJECT_TEMPLATE_MODEL, не OCR текст
-topic_500=VEB_POISK: только Perplexity, 14 этапов, file-context/file-menu запрещены
-topic_794=NEJRONKI_SOFT_VPN_VPS
-topic_961=AVTO_ZAPCHASTI: OEM, Exist/Drom/Emex
-topic_3008=KODY_MOZGOV: верификация кода, No Auto-Patch
-topic_4569=LIDY_REKLAMA_AMO
-topic_6104=RABOTA_POISK"""
-
-PROTOCOL = """OPERATING_PROTOCOL:
-MODE: FACT_ONLY / ZERO_ASSUMPTIONS / GITHUB_SSOT / CANON_LOCK
-ONE_LINK_GOAL: модель читает MODEL_BOOTSTRAP_CONTEXT.md и сразу получает всю картину
-PATCH_ORDER: DIAGNOSTICS → BAK → PATCH → PY_COMPILE → RESTART → LOGS → DB_VERIFY → GIT_PUSH → FINAL_VERIFY
-FORBIDDEN: .env, credentials, token, sessions, raw DB dumps, rm -rf project/canon dirs
-CONTEXT_RULE: разрешённые текстовые файлы включаются полностью без обрезки
-BIG_TEXT_RULE: большие текстовые файлы дробятся по PART-файлам, не режутся
-SECRET_RULE: секретные значения редактируются как <REDACTED_SECRET>
-STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test"""
-
-SECRET_VALUE_PATTERNS = [
-    re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----", re.S),
-    re.compile(r"github_pat_[A-Za-z0-9_]{50,}"),
-    re.compile(r"ghp_[A-Za-z0-9_]{30,}"),
-    re.compile(r"sk-[A-Za-z0-9_\-]{20,}"),
-    re.compile(r"\b\d{8,10}:[A-Za-z0-9_\-]{30,}\b"),
-    re.compile(r"1//[A-Za-z0-9_\-]{20,}"),
-    re.compile(r'("private_key"\s*:\s*")[^"]+(")'),
-    re.compile(r'((?:API_KEY|TOKEN|SECRET|PASSWORD)\s*=\s*)[^\s\'"]+', re.I),
-]
-
-
-def run(cmd: list[str], check: bool = False) -> str:
-    p = subprocess.run(cmd, cwd=str(BASE), text=True, capture_output=True)
-    out = ((p.stdout or "") + (p.stderr or "")).strip()
-    if check and p.returncode != 0:
-        raise RuntimeError(f"CMD_FAIL: {' '.join(cmd)}\n{out}")
-    return out
-
-
-def sha256_text(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8", errors="replace")).hexdigest()
-
-
-def sha256_file(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
-def utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def sanitize_text(text: str) -> str:
-    out = text
-    for pat in SECRET_VALUE_PATTERNS:
-        if pat.pattern.startswith('("private_key"'):
-            out = pat.sub(r'\1<REDACTED_SECRET>\2', out)
-        elif "(?:API_KEY|TOKEN|SECRET|PASSWORD)" in pat.pattern:
-            out = pat.sub(r"\1<REDACTED_SECRET>", out)
-        else:
-            out = pat.sub("<REDACTED_SECRET>", out)
-    return out
-
-
-def is_generated_output(rel: str) -> bool:
-    if rel in GENERATED_EXACT:
-        return True
-    return any(rel.startswith(p) for p in GENERATED_PREFIXES)
-
-
-def classify_path(rel: str) -> tuple[str, str]:
-    low = rel.lower()
-    parts = set(Path(rel).parts)
-    name = Path(rel).name
-    suffix = Path(rel).suffix.lower()
-
-    if is_generated_output(rel):
-        return "excluded_generated_output", "generated output avoids self-ingestion"
-    if any(x in rel for x in NOISE_PATH_FRAGMENTS):
-        return "excluded_noise_report", "operational one-time report excluded from model context"
-    if any(x in parts for x in SKIP_DIR_PARTS):
-        return "excluded_dir", "runtime/cache/git dir"
-    if name in SECRET_PATH_PARTS:
-        return "excluded_secret_path", "secret path"
-    if any(x in low for x in SECRET_PATH_FRAGMENTS):
-        return "excluded_secret_path", "secret path fragment"
-    if ".bak" in low or low.endswith(".bak") or ".bak_" in low:
-        return "excluded_backup", "backup file"
-    if suffix in BINARY_SUFFIXES:
-        return "excluded_binary", "binary/raw db/heavy media"
-    if suffix in TEXT_SUFFIXES or name in TEXT_NAMES:
-        return "full", "tracked text"
-    return "excluded_non_text", "suffix not allowlisted"
-
-
-def sort_key(rel: str) -> tuple[int, str]:
-    for i, p in enumerate(PRIORITY_PREFIXES):
-        if rel.startswith(p) or p in rel:
-            return (i, rel)
-    return (len(PRIORITY_PREFIXES), rel)
-
-
-def git_tracked_files() -> list[str]:
-    raw = subprocess.check_output(["git", "ls-files", "-z"], cwd=str(BASE))
-    files = [x for x in raw.decode("utf-8", errors="replace").split("\0") if x]
-    for extra in (
-        "tools/full_context_aggregator.py",
-        "tools/claude_bootstrap_aggregator.py",
-    ):
-        if (BASE / extra).exists() and extra not in files:
-            files.append(extra)
-    return sorted(set(files), key=sort_key)
-
-
-def collect_files() -> tuple[list[dict], list[dict]]:
-    full_items: list[dict] = []
-    manifest_items: list[dict] = []
-
-    for rel in git_tracked_files():
-        mode, reason = classify_path(rel)
-        p = BASE / rel
-        size = p.stat().st_size if p.exists() else 0
-
-        record = {
-            "path": rel,
-            "mode": mode,
-            "reason": reason,
-            "size_bytes": size,
-            "sha256": "",
-            "chars": 0,
-            "chunks": 0,
-        }
-
-        if mode != "full":
-            manifest_items.append(record)
-            continue
-
-        try:
-            text = p.read_text(encoding="utf-8", errors="replace")
-            text = sanitize_text(text)
-            record["sha256"] = sha256_text(text)
-            record["chars"] = len(text)
-            full_items.append({"path": rel, "content": text, "record": record})
-        except Exception as e:
-            record["mode"] = "read_error"
-            record["reason"] = str(e)
-        manifest_items.append(record)
-
-    return full_items, manifest_items
-
-
-def split_text_by_bytes(text: str, limit: int) -> list[str]:
-    chunks: list[str] = []
-    current: list[str] = []
-    current_size = 0
-
-    for line in text.splitlines(True):
-        b = len(line.encode("utf-8", errors="replace"))
-        if current and current_size + b > limit:
-            chunks.append("".join(current))
-            current = []
-            current_size = 0
-
-        if b > limit:
-            data = line.encode("utf-8", errors="replace")
-            for i in range(0, len(data), limit):
-                chunks.append(data[i:i + limit].decode("utf-8", errors="replace"))
-            continue
-
-        current.append(line)
-        current_size += b
-
-    if current:
-        chunks.append("".join(current))
-    return chunks or [""]
-
-
-def build_file_blocks(full_items: list[dict]) -> tuple[list[str], dict[str, int]]:
-    blocks: list[str] = []
-    chunk_counts: dict[str, int] = {}
-
-    for item in full_items:
-        rel = item["path"]
-        content = item["content"]
-        chunks = split_text_by_bytes(content, CONTENT_CHUNK_BYTES)
-        chunk_counts[rel] = len(chunks)
-        for idx, chunk in enumerate(chunks, 1):
-            header = (
-                "\n" + "=" * 100 + "\n"
-                f"BEGIN_FILE: {rel}\n"
-                f"FILE_CHUNK: {idx}/{len(chunks)}\n"
-                f"SHA256_FULL_FILE: {sha256_text(content)}\n"
-                + "=" * 100 + "\n"
-            )
-            footer = (
-                "\n" + "=" * 100 + "\n"
-                f"END_FILE: {rel}\n"
-                f"FILE_CHUNK: {idx}/{len(chunks)}\n"
-                + "=" * 100 + "\n"
-            )
-            blocks.append(header + chunk + footer)
-    return blocks, chunk_counts
-
-
-def split_blocks_to_parts(blocks: list[str]) -> list[str]:
-    parts: list[str] = []
-    current: list[str] = []
-    size = 0
-
-    for block in blocks:
-        bsize = len(block.encode("utf-8", errors="replace"))
-        if current and size + bsize > PART_MAX_BYTES:
-            parts.append("".join(current))
-            current = []
-            size = 0
-        current.append(block)
-        size += bsize
-
-    if current:
-        parts.append("".join(current))
-    return parts
-
-
-def sql_rows(db: Path, query: str, limit: int = 20) -> list[str]:
-    try:
-        if not db.exists():
-            return ["DB_NOT_FOUND"]
-        con = sqlite3.connect(str(db))
-        rows = con.execute(query).fetchmany(limit)
-        con.close()
-        return ["|".join(str(x) for x in r) for r in rows]
-    except Exception as e:
-        return [f"SQL_ERROR:{e}"]
-
-
-def build_runtime_snapshot(git_sha: str) -> str:
-    core_db = BASE / "data/core.db"
-    mem_db = BASE / "data/memory.db"
-    lines: list[str] = []
-
-    lines.append("# SAFE_RUNTIME_SNAPSHOT")
-    lines.append(f"generated_at_utc: {utc_now()}")
-    lines.append(f"git_sha_before_commit: {git_sha}")
-    lines.append(f"git_branch: {run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'])}")
-    lines.append("")
-    lines.append("## SERVICES")
-    for svc in (
-        "areal-task-worker",
-        "telegram-ingress",
-        "areal-memory-api",
-        "areal-claude-bootstrap-aggregator.timer",
-    ):
-        lines.append(f"- {svc}: {run(['systemctl', 'is-active', svc])}")
-    lines.append("")
-    lines.append("## GIT_LOG_30")
-    lines.append(run(["git", "log", "--oneline", "-30"]))
-    lines.append("")
-    lines.append("## GIT_SHOW_STAT_HEAD")
-    lines.append(run(["git", "show", "--stat", "HEAD"]))
-    lines.append("")
-    lines.append("## GIT_CHANGED_FILES_10")
-    lines.append(run(["git", "diff", "--name-only", "HEAD~10..HEAD"]))
-    lines.append("")
-    lines.append("## CORE_DB_STATE_COUNTS")
-    lines.extend(f"- {x}" for x in sql_rows(core_db, "SELECT state,COUNT(*) FROM tasks GROUP BY state ORDER BY 2 DESC"))
-    lines.append("")
-    lines.append("## CORE_DB_OPEN_TASKS")
-    lines.extend(f"- {x}" for x in sql_rows(core_db, "SELECT COUNT(*) FROM tasks WHERE state IN ('NEW','IN_PROGRESS','WAITING_CLARIFICATION','AWAITING_CONFIRMATION')"))
-    lines.append("")
-    lines.append("## LATEST_TASKS_15")
-    lines.extend(f"- {x}" for x in sql_rows(core_db, "SELECT id,COALESCE(topic_id,0),input_type,state,substr(raw_input,1,120),substr(result,1,160),updated_at FROM tasks ORDER BY rowid DESC LIMIT 15", 15))
-    lines.append("")
-    lines.append("## LATEST_FAILED_10")
-    lines.extend(f"- {x}" for x in sql_rows(core_db, "SELECT id,COALESCE(topic_id,0),substr(raw_input,1,120),substr(error_message,1,160),updated_at FROM tasks WHERE state='FAILED' ORDER BY rowid DESC LIMIT 10", 10))
-    lines.append("")
-    lines.append("## LATEST_TASK_HISTORY_20")
-    lines.extend(f"- {x}" for x in sql_rows(core_db, "SELECT task_id,substr(action,1,180),created_at FROM task_history ORDER BY id DESC LIMIT 20", 20))
-    lines.append("")
-    lines.append("## MEMORY_DB_COUNT")
-    lines.extend(f"- {x}" for x in sql_rows(mem_db, "SELECT COUNT(*) FROM memory"))
-    lines.append("")
-    lines.append("## LATEST_MEMORY_20")
-    lines.extend(f"- {x}" for x in sql_rows(mem_db, "SELECT key,substr(value,1,180),timestamp FROM memory ORDER BY timestamp DESC LIMIT 20", 20))
-    lines.append("")
-    lines.append("## JOURNAL_AREAL_TASK_WORKER_60")
-    lines.append(sanitize_text(run(["journalctl", "-u", "areal-task-worker", "-n", "60", "--no-pager", "--output=cat"])))
-    lines.append("")
-    lines.append("## JOURNAL_TELEGRAM_INGRESS_30")
-    lines.append(sanitize_text(run(["journalctl", "-u", "telegram-ingress", "-n", "30", "--no-pager", "--output=cat"])))
-    return "\n".join(lines).rstrip() + "\n"
-
-
-def write(path: Path, content: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
-    print(f"WRITTEN {path.relative_to(BASE)} {len(content.encode('utf-8'))} bytes")
-
-
-def cleanup_old_parts() -> None:
-    for p in OUTPUT_DIR.glob("ORCHESTRA_FULL_CONTEXT_PART_*.md"):
-        p.unlink()
-
-
-def build_manifest(records: list[dict], chunk_counts: dict[str, int], git_sha: str, parts_count: int) -> str:
-    out_records = []
-    for r in records:
-        rr = dict(r)
-        rr["chunks"] = chunk_counts.get(r["path"], 0)
-        out_records.append(rr)
-
-    data = {
-        "generated_at_utc": utc_now(),
-        "git_sha_before_commit": git_sha,
-        "part_max_bytes": PART_MAX_BYTES,
-        "content_chunk_bytes": CONTENT_CHUNK_BYTES,
-        "total_records": len(out_records),
-        "included_full_files": sum(1 for r in out_records if r["mode"] == "full"),
-        "excluded_records": sum(1 for r in out_records if r["mode"] != "full"),
-        "parts_count": parts_count,
-        "raw_main": RAW_MAIN,
-        "outputs": {
-            "model_bootstrap": f"{RAW_MAIN}/docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md",
-            "claude_alias": f"{RAW_MAIN}/docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md",
-            "one_shared": f"{RAW_MAIN}/docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md",
-            "runtime": f"{RAW_MAIN}/docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
-            "full_context_index": f"{RAW_MAIN}/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md",
-            "manifest": f"{RAW_MAIN}/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_MANIFEST.json",
-            "single_model_source": f"{RAW_MAIN}/docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md",
-            "single_model_full_context": f"{RAW_MAIN}/docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md",
-            "single_model_current_context": f"{RAW_MAIN}/docs/SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md",
-            "topic_status_index": f"{RAW_MAIN}/docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md",
-            "direction_status_index": f"{RAW_MAIN}/docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md",
-            "topics_dir": f"{RAW_MAIN}/docs/SHARED_CONTEXT/TOPICS/",
-            "directions_dir": f"{RAW_MAIN}/docs/SHARED_CONTEXT/DIRECTIONS/",
-            "parts": [
-                f"{RAW_MAIN}/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_{i:03d}.md"
-                for i in range(1, parts_count + 1)
-            ],
-        },
-        "files": out_records,
-    }
-    return json.dumps(data, ensure_ascii=False, indent=2) + "\n"
-
-
-def build_context_index(git_sha: str, parts_count: int, records: list[dict]) -> str:
-    parts_links = "\n".join(
-        f"- PART_{i:03d}: {RAW_MAIN}/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_{i:03d}.md"
-        for i in range(1, parts_count + 1)
-    )
-    return f"""# ORCHESTRA_FULL_CONTEXT
-
-generated_at_utc: {utc_now()}
-git_sha_before_commit: {git_sha}
-parts_count: {parts_count}
-included_full_files: {sum(1 for r in records if r["mode"] == "full")}
-excluded_records: {sum(1 for r in records if r["mode"] != "full")}
-
-{PROTOCOL}
-
-{TOPIC_REGISTRY}
-
-## FULL_CONTEXT_PARTS
-{parts_links}
-
-## MANIFEST
-{RAW_MAIN}/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_MANIFEST.json
-
-## RUNTIME
-{RAW_MAIN}/docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md
-
-## STATUS_INDEX
-FIRST_READ_CURRENT_CONTEXT: {RAW_MAIN}/docs/SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md
-FIRST_READ_SINGLE_MODEL_SOURCE: {RAW_MAIN}/docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md
-FIRST_READ_TOPIC_STATUS: {RAW_MAIN}/docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md
-FIRST_READ_DIRECTION_STATUS: {RAW_MAIN}/docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md
-"""
-
-
-def build_model_bootstrap(git_sha: str, parts_count: int, manifest_sha: str) -> str:
-    parts_links = "\n".join(
-        f"- PART_{i:03d}: {RAW_MAIN}/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_{i:03d}.md"
-        for i in range(1, parts_count + 1)
-    )
-    return f"""# MODEL_BOOTSTRAP_CONTEXT
-
-SYSTEM: AREAL-NEVA ORCHESTRA
-GENERATED_AT_UTC: {utc_now()}
-GIT_SHA_BEFORE_COMMIT: {git_sha}
-MODE: FACT_ONLY / ZERO_ASSUMPTIONS / GITHUB_SSOT / CANON_LOCK
-NO_TRUNCATION: TRUE
-TEXT_FILES_INCLUDED_FULLY: TRUE
-BIG_FILES_SPLIT_TO_PARTS: TRUE
-MANIFEST_SHA256: {manifest_sha}
-
-RAW_THIS_FILE:
-{RAW_MAIN}/docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md
-
-CLAUDE_ALIAS:
-{RAW_MAIN}/docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md
-
-IF_UNAVAILABLE:
-MODEL_BOOTSTRAP_CONTEXT_UNAVAILABLE
-
-{PROTOCOL}
-
-{TOPIC_REGISTRY}
-
-## READ_ORDER
-1. This MODEL_BOOTSTRAP_CONTEXT
-2. SINGLE_MODEL_CURRENT_CONTEXT — quick start
-3. SINGLE_MODEL_SOURCE — operational index
-4. TOPIC_STATUS_INDEX
-5. DIRECTION_STATUS_INDEX
-6. Required topic/direction file from TOPICS/ or DIRECTIONS/
-7. SAFE_RUNTIME_SNAPSHOT
-8. SINGLE_MODEL_FULL_CONTEXT — audit only
-9. ORCHESTRA_FULL_CONTEXT_MANIFEST
-10. ORCHESTRA_FULL_CONTEXT_PART_XXX only if dispute/raw dump needed
-
-## RAW_LINKS
-SINGLE_MODEL_CURRENT_CONTEXT:
-{RAW_MAIN}/docs/SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md
-
-SINGLE_MODEL_SOURCE:
-{RAW_MAIN}/docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md
-
-TOPIC_STATUS_INDEX:
-{RAW_MAIN}/docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md
-
-DIRECTION_STATUS_INDEX:
-{RAW_MAIN}/docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md
-
-SAFE_RUNTIME_SNAPSHOT:
-{RAW_MAIN}/docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md
-
-ORCHESTRA_FULL_CONTEXT_INDEX:
-{RAW_MAIN}/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md
-
-ORCHESTRA_FULL_CONTEXT_MANIFEST:
-{RAW_MAIN}/docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_MANIFEST.json
-
-## FULL_CONTEXT_PARTS
-{parts_links}
-
-## PRIORITY_OF_TRUTH
-1. Live user output + terminal
-2. SAFE_RUNTIME_SNAPSHOT
-3. LATEST_HANDOFF
-4. NOT_CLOSED
-5. CANON_FINAL
-6. ARCHITECTURE
-7. FULL_CONTEXT_PARTS
-8. chat_exports
-9. UNKNOWN
-
-## CURRENT_OPEN_STATUS
-CANON_ROUTE_FIX_V2: INSTALLED, live-test required
-FULL_CONTEXT_AGGREGATOR_V1: this file is generated by full_context_aggregator.py
-"""
-
-
-def build_session_start_prompt() -> str:
-    return f"""# CLAUDE_SESSION_START_PROMPT
-
-GENERATED_AT_UTC: {utc_now()}
-
-MANDATORY FIRST STEP:
-Read this file before answering any technical question:
-
-{RAW_MAIN}/docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md
-
-If unavailable, answer only:
-MODEL_BOOTSTRAP_CONTEXT_UNAVAILABLE
-
-This prompt is an alias. The universal source for all models is MODEL_BOOTSTRAP_CONTEXT.md
-"""
-
-
-def ensure_secret_patterns() -> None:
-    p = BASE / ".secret_patterns"
-    if p.exists():
-        return
-    p.write_text(
-        "\n".join([
-            r"-----BEGIN [A-Z ]*PRIVATE KEY-----",
-            r"github_pat_[A-Za-z0-9_]{50,}",
-            r"ghp_[A-Za-z0-9_]{30,}",
-            r"sk-[A-Za-z0-9_\-]{20,}",
-            r"\b[0-9]{8,10}:[A-Za-z0-9_\-]{30,}\b",
-            r"1//[A-Za-z0-9_\-]{20,}",
-            r'"private_key"\s*:\s*"[^"]+',
-            r"(?:OPENROUTER_API_KEY|TELEGRAM_BOT_TOKEN|GROQ_API_KEY|GITHUB_TOKEN)\s*=\s*[^<\s]+",
-            "",
-        ]),
-        encoding="utf-8",
-    )
-    os.chmod(p, 0o600)
-    print("SECRET_PATTERNS_CREATED")
-
-
-def stage_outputs(parts_count: int) -> None:
-    generated = [
-        "tools/full_context_aggregator.py",
-        "tools/context_aggregator.py",
-        "tools/claude_bootstrap_aggregator.py",
-        "docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md",
-        "docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md",
-        "docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md",
-        "docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
-        "docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md",
-        "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md",
-        "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_MANIFEST.json",
-        "docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md",
-        "docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md",
-        "docs/SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md",
-        "docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md",
-        "docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md",
-    ] + [
-        f"docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_{i:03d}.md"
-        for i in range(1, parts_count + 1)
-    ]
-    topics_dir = BASE / "docs" / "SHARED_CONTEXT" / "TOPICS"
-    if topics_dir.exists():
-        for ff in topics_dir.glob("*.md"):
-            generated.append(str(ff.relative_to(BASE)))
-    directions_dir = BASE / "docs" / "SHARED_CONTEXT" / "DIRECTIONS"
-    if directions_dir.exists():
-        for ff in directions_dir.glob("*.md"):
-            generated.append(str(ff.relative_to(BASE)))
-    subprocess.run(["git", "add", "-u", "docs/SHARED_CONTEXT"], cwd=str(BASE), check=True)
-    subprocess.run(["git", "add"] + generated, cwd=str(BASE), check=True)
-
-
-def run_secret_scan() -> None:
-    scan = BASE / "tools/secret_scan.sh"
-    if not scan.exists():
-        raise RuntimeError("SECRET_SCAN_NOT_FOUND")
-    ensure_secret_patterns()
-    p = subprocess.run(["bash", str(scan)], cwd=str(BASE), text=True, capture_output=True)
-    out = ((p.stdout or "") + (p.stderr or "")).strip()
-    print(out)
-    if "SECRET_SCAN_SKIP" in out:
-        raise RuntimeError("SECRET_SCAN_SKIP_IS_FAIL")
-    if p.returncode != 0:
-        raise RuntimeError("SECRET_SCAN_FAILED")
-    print("SECRET_SCAN_OK_CONFIRMED")
-
-
-def commit_push_verify() -> str:
-    status = run(["git", "status", "--short"])
-    print("GIT_STATUS_BEFORE_COMMIT:")
-    print(status if status else "clean")
-
-    if "D tools/context_aggregator.py" in status:
-        raise RuntimeError("CONTEXT_AGGREGATOR_DELETED_REFUSE_COMMIT")
-
-    if not status.strip():
-        print("NO_GIT_CHANGE")
-        return run(["git", "rev-parse", "HEAD"], check=True)
-
-    commit = subprocess.run(
-        ["git", "commit", "-m", "FULL_CONTEXT_AGGREGATOR_V1: universal no-truncation model context"],
-        cwd=str(BASE),
-        text=True,
-        capture_output=True,
-    )
-    print(commit.stdout.strip())
-    if commit.returncode != 0 and "nothing to commit" not in (commit.stdout + commit.stderr):
-        print(commit.stderr.strip())
-        raise RuntimeError("COMMIT_FAILED")
-
-    # === FULL_CONTEXT_AGGREGATOR_TOKEN_PUSH_V1 ===
-    token = <REDACTED_SECRET>"GITHUB_TOKEN", "").strip()
-    if not token:
-        env_path = BASE / ".env"
-        if env_path.exists():
-            for line in env_path.read_text(encoding="utf-8", errors="replace").splitlines():
-                line = line.strip()
-                if not line or line.startswith("#") or "=" not in line:
-                    continue
-                k, v = line.split("=", 1)
-                if k.strip() == "GITHUB_TOKEN":
-                    token = <REDACTED_SECRET>"'").strip('"')
-                    break
-    if not token:
-        raise RuntimeError("GITHUB_TOKEN_MISSING_FOR_PUSH")
-
-    import base64 as _b64_fca
-    auth = _b64_fca.b64encode(("x-access-token:" + token).encode("utf-8")).decode("ascii")
-    push = subprocess.run(
-        ["git", "-c", "http.https://github.com/.extraheader=AUTHORIZATION: basic " + auth, "push", "origin", "main"],
-        cwd=str(BASE),
-        text=True,
-        capture_output=True,
-    )
-    print(push.stdout.strip())
-    print(push.stderr.strip())
-    if push.returncode != 0:
-        raise RuntimeError("PUSH_FAILED")
-    # === END_FULL_CONTEXT_AGGREGATOR_TOKEN_PUSH_V1 ===
-
-    new_sha = run(["git", "rev-parse", "HEAD"], check=True)
-    print(f"PUSH_OK {new_sha}")
-    return new_sha
-
-
-def verify_raw_exact(commit_sha: str) -> None:
-    local_path = OUTPUT_DIR / "MODEL_BOOTSTRAP_CONTEXT.md"
-    expected = sha256_file(local_path)
-    url = f"https://raw.githubusercontent.com/{REPO}/{commit_sha}/docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md"
-
-    for i in range(1, 8):
-        try:
-            with urllib.request.urlopen(url, timeout=20) as r:
-                data = r.read()
-            actual = hashlib.sha256(data).hexdigest()
-            if actual == expected:
-                print(f"RAW_EXACT_SHA_VERIFY_OK {commit_sha}")
-                return
-            print(f"RAW_HASH_MISMATCH attempt={i}")
-        except Exception as e:
-            print(f"RAW_VERIFY_FAIL attempt={i}: {e}")
-        time.sleep(5)
-
-    raise RuntimeError("RAW_EXACT_SHA_VERIFY_FAILED")
-
-
-def main() -> None:
-    with LOCK_PATH.open("w") as lock:
-        try:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            print("FULL_CONTEXT_AGGREGATOR_ALREADY_RUNNING")
-            return
-
-        print(f"FULL_CONTEXT_AGGREGATOR_V1_START {utc_now()}")
-
-        if not run(["git", "ls-files", "tools/context_aggregator.py"]).strip():
-            print("CONTEXT_AGGREGATOR_GITIGNORED_OK — using tools/full_context_aggregator.py as tracked source")
-
-        git_sha_before = run(["git", "rev-parse", "HEAD"], check=True)
-
-        full_items, manifest_records = collect_files()
-        print(f"INCLUDED_FULL_FILES {len(full_items)}")
-        print(f"MANIFEST_RECORDS {len(manifest_records)}")
-
-        blocks, chunk_counts = build_file_blocks(full_items)
-        parts = split_blocks_to_parts(blocks)
-        print(f"PARTS_COUNT {len(parts)}")
-
-        cleanup_old_parts()
-
-        runtime = build_runtime_snapshot(git_sha_before)
-        write(OUTPUT_DIR / "SAFE_RUNTIME_SNAPSHOT.md", runtime)
-
-        for i, content in enumerate(parts, 1):
-            header = (
-                f"# ORCHESTRA_FULL_CONTEXT_PART_{i:03d}\n"
-                f"generated_at_utc: {utc_now()}\n"
-                f"git_sha_before_commit: {git_sha_before}\n"
-                f"part: {i}/{len(parts)}\n\n"
-            )
-            write(OUTPUT_DIR / f"ORCHESTRA_FULL_CONTEXT_PART_{i:03d}.md", header + content)
-
-        manifest = build_manifest(manifest_records, chunk_counts, git_sha_before, len(parts))
-        write(OUTPUT_DIR / "ORCHESTRA_FULL_CONTEXT_MANIFEST.json", manifest)
-
-        context_index = build_context_index(git_sha_before, len(parts), manifest_records)
-        write(OUTPUT_DIR / "ORCHESTRA_FULL_CONTEXT.md", context_index)
-
-        bootstrap = build_model_bootstrap(git_sha_before, len(parts), sha256_text(manifest))
-        write(OUTPUT_DIR / "MODEL_BOOTSTRAP_CONTEXT.md", bootstrap)
-        write(OUTPUT_DIR / "CLAUDE_BOOTSTRAP_CONTEXT.md", bootstrap)
-        write(OUTPUT_DIR / "ONE_SHARED_CONTEXT.md", bootstrap)
-        write(OUTPUT_DIR / "CLAUDE_SESSION_START_PROMPT.md", build_session_start_prompt())
-
-        smsv1_generate_all(git_sha_before)
-        if "--no-auto-push" in sys.argv:
-            print("NO_AUTO_PUSH_MODE — skip stage/scan/push")
-            new_sha = git_sha_before
-        else:
-            stage_outputs(len(parts))
-            run_secret_scan()
-            new_sha = commit_push_verify()
-            verify_raw_exact(new_sha)
-
-        print(f"FULL_CONTEXT_AGGREGATOR_V1_DONE {utc_now()}")
-        print(f"COMMIT_SHA {new_sha}")
-        print(f"PARTS {len(parts)}")
-        print(f"FILES_INCLUDED {len(full_items)}")
-
-
-
-# === PATCH_AGGREGATOR_SINGLE_MODEL_SOURCE_V1 ===
-import sqlite3 as _smsv1_sqlite
-
-_SMSV1_TOPICS_DIR = OUTPUT_DIR / "TOPICS"
-_SMSV1_DIRECTIONS_DIR = OUTPUT_DIR / "DIRECTIONS"
-
-_SMSV1_FORBIDDEN_FILES = (
-    ".env", "credentials", "sessions/",
-    "core/ai_router.py", "core/reply_sender.py", "core/google_io.py",
-    "task_worker.py", "telegram_daemon.py",
-    "data/core.db", "data/memory.db",
-)
-
-_SMSV1_TOPIC_NAMES = {
-    0: "COMMON",
-    2: "STROYKA",
-    5: "TEKHNADZOR",
-    11: "VIDEO",
-    210: "PROEKTIROVANIE",
-    500: "VEB_POISK",
-    794: "DEVOPS",
-    961: "AVTOZAPCHASTI",
-    3008: "KODY_MOZGOV",
-    4569: "CRM_LEADS",
-    6104: "JOB_SEARCH",
-}
-
-def _smsv1_load_directions():
-    try:
-        sys.path.insert(0, str(BASE))
-        from core.direction_registry import DirectionRegistry
-        reg = DirectionRegistry()
-        return reg.directions, "DirectionRegistry"
-    except Exception as e:
-        return {}, f"FAIL:{e}"
-
-def _smsv1_db_state(topic_id):
-    db = BASE / "data" / "core.db"
-    if not db.exists():
-        return {}
-    try:
-        conn = _smsv1_sqlite.connect(str(db))
-        conn.row_factory = _smsv1_sqlite.Row
-        cur = conn.execute(
-            "SELECT state, COUNT(*) c FROM tasks WHERE topic_id=? GROUP BY state",
-            (int(topic_id),)
-        )
-        states = {row["state"]: row["c"] for row in cur.fetchall()}
-        cur = conn.execute(
-            "SELECT COUNT(*) FROM tasks WHERE topic_id=? AND state='FAILED' "
-            "AND updated_at >= datetime('now','-24 hours')",
-            (int(topic_id),)
-        )
-        failed_24h = cur.fetchone()[0]
-        cur = conn.execute(
-            "SELECT id, substr(coalesce(error_message,''),1,80) em "
-            "FROM tasks WHERE topic_id=? AND state='FAILED' "
-            "ORDER BY rowid DESC LIMIT 5",
-            (int(topic_id),)
-        )
-        last_failed = [dict(r) for r in cur.fetchall()]
-        conn.close()
-        return {"states": states, "failed_24h": failed_24h, "last_failed": last_failed}
-    except Exception as e:
-        return {"error": str(e)}
-
-def _smsv1_markers_24h(topic_id):
-    db = BASE / "data" / "core.db"
-    if not db.exists():
-        return []
-    try:
-        conn = _smsv1_sqlite.connect(str(db))
-        cur = conn.execute(
-            "SELECT DISTINCT substr(action,1,80) FROM task_history "
-            "WHERE task_id IN (SELECT id FROM tasks WHERE topic_id=?) "
-            "AND created_at >= datetime('now','-24 hours') LIMIT 100",
-            (int(topic_id),)
-        )
-        out = [r[0] for r in cur.fetchall()]
-        conn.close()
-        return out
-    except Exception:
-        return []
-
-def _smsv1_runtime_catalog_summary(topic_id):
-    try:
-        sys.path.insert(0, str(BASE))
-        from core.runtime_file_catalog import load_catalog
-        cat_dir = BASE / "data" / "telegram_file_catalog"
-        chats = set()
-        if cat_dir.exists():
-            for f in cat_dir.glob(f"*__topic_{int(topic_id)}.jsonl"):
-                name = f.stem
-                if "__topic_" in name and name.startswith("chat_"):
-                    cid = name[len("chat_"):name.index("__topic_")]
-                    chats.add(cid)
-        total = 0
-        sample = []
-        for cid in chats:
-            rows = load_catalog(cid, int(topic_id))
-            total += len(rows)
-            if rows and len(sample) < 3:
-                sample.append({"chat_id": cid, "files": len(rows), "last_file": rows[-1].get("file_name", "")})
-        return {"total": total, "chats": len(chats), "sample": sample}
-    except Exception as e:
-        return {"total": 0, "error": str(e)}
-
-def _smsv1_git_log_per_topic(topic_id, days=14):
-    out = run(["git", "-C", str(BASE), "log", f"--since={days} days ago", "--pretty=format:%h|%s", "-200"])
-    if not out:
-        return []
-    matches = []
-    needles = (f"topic_{topic_id}", f"topic{topic_id}")
-    for line in out.splitlines():
-        low = line.lower()
-        if any(n in low for n in needles):
-            matches.append(line.strip())
-    return matches[:30]
-
-def _smsv1_extract_blockers_from_not_closed(topic_id):
-    nc = BASE / "docs" / "REPORTS" / "NOT_CLOSED.md"
-    if not nc.exists():
-        return []
-    text = nc.read_text(encoding="utf-8", errors="ignore")
-    needle = f"topic_{topic_id}"
-    out = []
-    for line in text.splitlines():
-        if needle in line.lower() and len(out) < 20:
-            out.append(line.strip()[:200])
-    return out
-
-def _smsv1_drive_chat_exports_status():
-    paths = [
-        Path("/root/AI_ORCHESTRA/telegram_exports"),
-        BASE / "data" / "chat_exports",
-        BASE / "chat_exports",
-        Path("chat_exports"),
-    ]
-    found = []
-    for pp in paths:
-        try:
-            if pp.exists():
-                files = list(pp.rglob("*.json")) + list(pp.rglob("*.txt")) + list(pp.rglob("*.md"))
-                if files:
-                    found.append({"path": str(pp), "files": len(files)})
-        except Exception:
-            continue
-    if found:
-        return {"status": "SYNCED_LOCAL", "locations": found}
-    return {"status": "NOT_SYNCED_OR_NOT_AVAILABLE", "locations": []}
-
-def _smsv1_drive_binding():
-    return {
-        "DRIVE_UPLOAD_ENGINE": "core/topic_drive_oauth.py",
-        "AUTH_ENV": "GDRIVE_CLIENT_ID / GDRIVE_CLIENT_SECRET / GDRIVE_REFRESH_TOKEN",
-        "ROOT_ENV": "DRIVE_INGEST_FOLDER_ID",
-        "PATH_PATTERN": "chat_<chat_id>/topic_<topic_id>",
-        "TOPIC_5_SPECIAL": "active_folder_override",
-    }
-
-def _smsv1_load_owner_reference():
-    out = {"loaded": False, "items": 0}
-    paths = [
-        BASE / "config" / "owner_reference_registry.json",
-        BASE / "data" / "templates" / "reference_monolith" / "owner_reference_full_index.json",
-    ]
-    import json as _j
-    for pth in paths:
-        if pth.exists():
-            try:
-                d = _j.loads(pth.read_text(encoding="utf-8"))
-                if isinstance(d, dict):
-                    out["loaded"] = True
-                    out["items"] += len(d)
-                    out[pth.name] = list(d.keys())[:10]
-                elif isinstance(d, list):
-                    out["loaded"] = True
-                    out["items"] += len(d)
-            except Exception as e:
-                out[f"err_{pth.name}"] = str(e)[:80]
-    rep = BASE / "docs" / "REPORTS" / "AREAL_REFERENCE_FULL_MONOLITH_V1_REPORT.md"
-    if rep.exists():
-        out["report"] = rep.read_text(encoding="utf-8", errors="ignore")[:300]
-    return out
-
-def _smsv1_load_estimate_templates():
-    out = {"loaded": False, "templates": []}
-    pth = BASE / "config" / "estimate_template_registry.json"
-    if not pth.exists():
-        return out
-    try:
-        import json as _j
-        d = _j.loads(pth.read_text(encoding="utf-8"))
-        out["loaded"] = True
-        if isinstance(d, dict):
-            for k, v in d.items():
-                if isinstance(v, dict) and "source_files" in v:
-                    for sf in (v.get("source_files") or [])[:10]:
-                        out["templates"].append({
-                            "key": sf.get("key"),
-                            "title": sf.get("title"),
-                            "role": sf.get("template_role"),
-                            "drive_url": sf.get("drive_url"),
-                        })
-    except Exception as e:
-        out["error"] = str(e)[:120]
-    return out
-
-def _smsv1_topic2_required_truth():
-    return {
-        "NEXT_REQUIRED_PATCH": "PATCH_TOPIC2_FULL_GAP_CLOSE_V4",
-        "OPEN": [
-            "P6E2 photo intercept before canonical",
-            "pdf_spec_extractor.py exists but not connected to canonical flow",
-            "ocr_table_engine.py exists but not connected to topic_2 flow",
-            "per-item materials + works internet price search missing",
-            "TOPIC2_MULTIFILE_PROJECT_CONTEXT_* missing",
-            "TOPIC2_REVISION_BOUND_TO_PARENT missing",
-            "TOPIC2_REPEAT_PARENT_TASK missing",
-            "TOPIC2_AFTER_PRICE_CHOICE_GENERATION_STARTED missing",
-            "TOPIC2_FORBIDDEN_FINAL_RESULT_BLOCKED missing",
-            "TOPIC2_PDF_TOTALS_MATCH_XLSX missing",
-            "live verification pending",
-        ],
-        "REQUIRED_MARKERS": [
-            "TOPIC2_ESTIMATE_SESSION_CREATED",
-            "TOPIC2_CONTEXT_READY",
-            "TOPIC2_TEMPLATE_SELECTED",
-            "TOPIC2_PRICE_ENRICHMENT_DONE",
-            "TOPIC2_PRICE_CHOICE_CONFIRMED",
-            "TOPIC2_LOGISTICS_CONFIRMED",
-            "TOPIC2_XLSX_CREATED",
-            "TOPIC2_PDF_CREATED",
-            "TOPIC2_PDF_CYRILLIC_OK",
-            "TOPIC2_DRIVE_UPLOAD_XLSX_OK",
-            "TOPIC2_DRIVE_UPLOAD_PDF_OK",
-            "TOPIC2_TELEGRAM_DELIVERED",
-            "TOPIC2_MESSAGE_THREAD_ID_OK",
-            "TOPIC2_DONE_CONTRACT_OK",
-        ],
-        "REGRESSION_GUARDS": [
-            "не возвращать P6E67_PARENT_NOT_FOUND на полное ТЗ",
-            "не возвращать INVALID_PUBLIC_RESULT при наличии markers + Drive ссылок",
-            "не убивать задачи с TOPIC2_PRICE_CHOICE_REQUESTED 30-мин таймаутом",
-            "не плодить новые задачи на короткий ответ 2/да при WAITING_PRICE",
-        ],
-        "LIVE_VERIFY_COMMANDS": [
-            "sqlite3 data/core.db \"SELECT id,state FROM tasks WHERE topic_id=2 ORDER BY rowid DESC LIMIT 10\"",
-            "journalctl -u areal-task-worker --since '10 minutes ago' | grep -E 'TOPIC2|TPRR|TPTG|TFFE|TDOIP'",
-            "sqlite3 data/core.db \"SELECT action FROM task_history WHERE task_id IN (SELECT id FROM tasks WHERE topic_id=2 ORDER BY rowid DESC LIMIT 1)\"",
-        ],
-    }
-
-def _smsv1_compute_markers_missing(topic_id, markers_24h):
-    if int(topic_id) != 2:
-        return []
-    required = _smsv1_topic2_required_truth()["REQUIRED_MARKERS"]
-    actual = " ".join(markers_24h)
-    return [m for m in required if m not in actual]
-
-def _smsv1_topic_safe_name(tid):
-    return _SMSV1_TOPIC_NAMES.get(int(tid), f"TOPIC_{tid}")
-
-def _smsv1_derive_status(commits, failed_24h, active_count):
-    if failed_24h >= 3 and not commits:
-        return "BROKEN"
-    if commits and failed_24h == 0 and not active_count:
-        return "IDLE_NO_FAILURES_NOT_VERIFIED"
-    if commits:
-        return "INSTALLED_NOT_VERIFIED"
-    return "UNKNOWN"
-
-def _smsv1_render_topic_file(topic_id, role, directions_bound, git_sha):
-    db = _smsv1_db_state(topic_id)
-    markers = _smsv1_markers_24h(topic_id)
-    blockers = _smsv1_extract_blockers_from_not_closed(topic_id)
-    commits = _smsv1_git_log_per_topic(topic_id, 14)
-    drive = _smsv1_drive_binding()
-    chat_exports = _smsv1_drive_chat_exports_status()
-    catalog = _smsv1_runtime_catalog_summary(topic_id)
-
-    states = db.get("states", {}) if isinstance(db, dict) else {}
-    failed_24h = db.get("failed_24h", 0) if isinstance(db, dict) else 0
-    last_failed = db.get("last_failed", []) if isinstance(db, dict) else []
-    active = sum(states.get(s, 0) for s in ("NEW", "IN_PROGRESS", "WAITING_CLARIFICATION", "AWAITING_CONFIRMATION"))
-    status = _smsv1_derive_status(commits, failed_24h, active)
-
-    parts = [
-        f"# topic_{topic_id} {_smsv1_topic_safe_name(topic_id)}",
-        "",
-        f"GENERATED_AT: {utc_now()}",
-        f"GIT_SHA: {git_sha}",
-        "GENERATED_FROM: tools/full_context_aggregator.py",
-        "",
-        f"TOPIC_ID: {topic_id}",
-        f"ROLE: {role}",
-        f"DIRECTIONS_BOUND: {', '.join(directions_bound) if directions_bound else 'none'}",
-        f"CURRENT_STATUS: {status}",
-        f"ACTIVE_TASKS: {active}",
-        f"FAILED_LAST_24H: {failed_24h}",
-        "",
-        "## DB_STATE_COUNTS",
-    ]
-    if states:
-        for s, c in sorted(states.items()):
-            parts.append(f"- {s}: {c}")
-    else:
-        parts.append("- (no data)")
-
-    parts += ["", "## LATEST_FAILED"]
-    if last_failed:
-        for t in last_failed:
-            parts.append(f"- {str(t.get('id',''))[:8]} | {t.get('em','')}")
-    else:
-        parts.append("- (none)")
-
-    parts += ["", "## COMMITS_LAST_14D"]
-    if commits:
-        for c in commits:
-            parts.append(f"- {c}")
-    else:
-        parts.append("- (none matching topic)")
-
-    parts += ["", "## MARKERS_LAST_24H"]
-    if markers:
-        for m in markers[:30]:
-            parts.append(f"- {m}")
-    else:
-        parts.append("- (none)")
-
-    parts += ["", "## BLOCKERS_FROM_NOT_CLOSED"]
-    if blockers:
-        for b in blockers:
-            parts.append(f"- {b}")
-    else:
-        parts.append("- (none)")
-
-    parts += ["", "## RUNTIME_FILE_CATALOG_SUMMARY"]
-    parts.append(f"total_files: {catalog.get('total', 0)}")
-    parts.append(f"chats: {catalog.get('chats', 0)}")
-    if catalog.get("error"):
-        parts.append(f"error: {catalog['error']}")
-
-    parts += ["", "## DRIVE_UPLOAD_CONTRACT"]
-    for k, v in drive.items():
-        parts.append(f"{k}: {v}")
-
-    parts += ["", "## DRIVE_CHAT_EXPORTS_STATUS"]
-    parts.append(f"STATUS: {chat_exports.get('status')}")
-    for loc in chat_exports.get("locations", []):
-        parts.append(f"- {loc.get('path')} files={loc.get('files')}")
-
-    parts += ["", "## FORBIDDEN_FILES"]
-    for f in _SMSV1_FORBIDDEN_FILES:
-        parts.append(f"- {f}")
-
-    if int(topic_id) == 2:
-        truth = _smsv1_topic2_required_truth()
-        parts += ["", "## NEXT_REQUIRED_PATCH", truth["NEXT_REQUIRED_PATCH"]]
-        parts += ["", "## OPEN_CONTOURS"]
-        for it in truth["OPEN"]:
-            parts.append(f"- {it}")
-        parts += ["", "## REQUIRED_MARKERS"]
-        for m in truth["REQUIRED_MARKERS"]:
-            parts.append(f"- {m}")
-        missing = _smsv1_compute_markers_missing(2, markers)
-        parts += ["", "## MARKERS_MISSING"]
-        if missing:
-            for m in missing:
-                parts.append(f"- {m}")
-        else:
-            parts.append("- (all present in last 24h)")
-        parts += ["", "## REGRESSION_GUARDS"]
-        for g in truth["REGRESSION_GUARDS"]:
-            parts.append(f"- {g}")
-        parts += ["", "## LIVE_VERIFY_COMMANDS"]
-        for c in truth["LIVE_VERIFY_COMMANDS"]:
-            parts.append(f"- {c}")
-        et = _smsv1_load_estimate_templates()
-        parts += ["", "## ESTIMATE_TEMPLATE_REGISTRY"]
-        parts.append(f"loaded: {et.get('loaded', False)}")
-        for t in et.get("templates", [])[:10]:
-            parts.append(f"- {t.get('key')} | {t.get('title')} | {t.get('role')}")
-
-    if int(topic_id) in (2, 5, 210):
-        ref = _smsv1_load_owner_reference()
-        parts += ["", "## OWNER_REFERENCE_REGISTRY"]
-        parts.append(f"loaded: {ref.get('loaded', False)}")
-        parts.append(f"items: {ref.get('items', 0)}")
-
-    parts += ["", "## FACT_SOURCE_LIST"]
-    parts.append("- core.db live state and task_history")
-    parts.append("- config/directions.yaml via core.direction_registry.DirectionRegistry")
-    parts.append("- core/runtime_file_catalog.py")
-    parts.append("- config/estimate_template_registry.json")
-    parts.append("- config/owner_reference_registry.json")
-    parts.append("- data/templates/reference_monolith/owner_reference_full_index.json")
-    parts.append("- docs/REPORTS/NOT_CLOSED.md")
-    parts.append("- docs/HANDOFFS/LATEST_HANDOFF.md")
-    parts.append("- git log last 14 days")
-    parts.append("")
-    return "\n".join(parts) + "\n"
-
-def _smsv1_render_direction_file(direction_id, profile, topic_status_map, git_sha):
-    parts = [
-        f"# direction: {direction_id}",
-        "",
-        f"GENERATED_AT: {utc_now()}",
-        f"GIT_SHA: {git_sha}",
-        "GENERATED_FROM: core.direction_registry.DirectionRegistry",
-        "",
-        f"DIRECTION_ID: {direction_id}",
-        f"TITLE: {profile.get('title') or profile.get('name') or '?'}",
-        f"ENABLED: {profile.get('enabled', False)}",
-        f"ENGINE: {profile.get('engine','?')}",
-        f"REQUIRES_SEARCH: {profile.get('requires_search', False)}",
-        f"TOPIC_IDS: {profile.get('topic_ids', [])}",
-        f"INPUT_TYPES: {profile.get('input_types', [])}",
-        f"INPUT_FORMATS: {profile.get('input_formats', [])}",
-        f"OUTPUT_FORMATS: {profile.get('output_formats', [])}",
-        f"QUALITY_GATES: {profile.get('quality_gates', [])}",
-        f"ALIASES: {(profile.get('aliases') or [])[:20]}",
-        f"STRONG_ALIASES: {profile.get('strong_aliases') or []}",
-        "",
-        "## BOUND_TOPICS_STATUS",
-    ]
-    tids = profile.get("topic_ids") or []
-    if tids:
-        for tid in tids:
-            parts.append(f"- topic_{tid}: {topic_status_map.get(int(tid), 'UNKNOWN')}")
-    else:
-        parts.append("- (no topic_ids bound)")
-    parts.append("")
-    return "\n".join(parts) + "\n"
-
-def _smsv1_render_single_model_source(directions, topic_status_map, topic_meta, git_sha):
-    parts = [
-        "# SINGLE_MODEL_SOURCE",
-        "",
-        f"GENERATED_AT: {utc_now()}",
-        f"GIT_SHA: {git_sha}",
-        "STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test",
-        "",
-        "## PRIORITY_OF_TRUTH",
-        "1. SAFE_RUNTIME_SNAPSHOT / live core.db",
-        "2. docs/HANDOFFS/LATEST_HANDOFF.md",
-        "3. docs/REPORTS/NOT_CLOSED.md",
-        "4. newest docs/HANDOFFS/*",
-        "5. newest chat_exports/*",
-        "6. locally synced Google Drive telegram_exports",
-        "7. docs/CANON_FINAL/*",
-        "8. git log last 14 days",
-        "9. code grep",
-        "10. UNKNOWN",
-        "",
-        "## READ_ORDER",
-        "1. THIS FILE",
-        "2. TOPIC_STATUS_INDEX.md",
-        "3. DIRECTION_STATUS_INDEX.md",
-        "4. required TOPICS/topic_<id>_*.md or DIRECTIONS/<id>.md",
-        "5. SAFE_RUNTIME_SNAPSHOT.md",
-        "6. ORCHESTRA_FULL_CONTEXT_MANIFEST.json",
-        "7. PART files only if needed",
-        "",
-        "## DRIVE_BINDING",
-    ]
-    for k, v in _smsv1_drive_binding().items():
-        parts.append(f"{k}: {v}")
-
-    ref = _smsv1_load_owner_reference()
-    et = _smsv1_load_estimate_templates()
-    parts += ["", "## REFERENCE_REGISTRIES"]
-    parts.append(f"estimate_template_registry: loaded={et.get('loaded', False)} templates_count={len(et.get('templates', []))}")
-    parts.append(f"owner_reference_registry: loaded={ref.get('loaded', False)} items={ref.get('items', 0)}")
-    if ref.get("report"):
-        parts.append(f"AREAL_REFERENCE_REPORT_SUMMARY: {ref['report'][:200]}")
-    if et.get("templates"):
-        parts.append("estimate_templates_top5:")
-        for t in et["templates"][:5]:
-            parts.append(f"- {t.get('key')} | {t.get('title')} | {t.get('role')}")
-
-    chat_exports = _smsv1_drive_chat_exports_status()
-    parts += ["", "## DRIVE_CHAT_EXPORTS_STATUS"]
-    parts.append(f"STATUS: {chat_exports.get('status')}")
-    for loc in chat_exports.get("locations", []):
-        parts.append(f"- {loc.get('path')} files={loc.get('files')}")
-
-    parts += ["", "## GLOBAL_TOPIC_TABLE"]
-    parts.append("| topic_id | name | status | active | failed_24h |")
-    parts.append("|----------|------|--------|--------|------------|")
-    for tid, meta in sorted(topic_meta.items()):
-        parts.append(f"| {tid} | {_smsv1_topic_safe_name(tid)} | {meta.get('status','?')} | {meta.get('active',0)} | {meta.get('failed_24h',0)} |")
-
-    parts += ["", "## DIRECTION_TABLE"]
-    parts.append("| direction_id | engine | enabled | topic_ids | quality_gates |")
-    parts.append("|--------------|--------|---------|-----------|---------------|")
-    for did, prof in directions.items():
-        prof = prof or {}
-        parts.append(f"| {did} | {prof.get('engine','?')} | {prof.get('enabled', False)} | {prof.get('topic_ids', [])} | {prof.get('quality_gates', [])} |")
-
-    parts += ["", "## SOURCE_LINKS"]
-    parts.append("- CURRENT_CONTEXT (quick start): docs/SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md")
-    parts.append("- FULL_CONTEXT (audit): docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md")
-    parts.append("- TOPIC_STATUS_INDEX: docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md")
-    parts.append("- DIRECTION_STATUS_INDEX: docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md")
-    parts.append("- LATEST_HANDOFF: docs/HANDOFFS/LATEST_HANDOFF.md")
-    parts.append("- NOT_CLOSED: docs/REPORTS/NOT_CLOSED.md")
-    parts.append("- SAFE_RUNTIME_SNAPSHOT: docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md")
-    parts.append("- MANIFEST: docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_MANIFEST.json")
-    parts.append("- DirectionRegistry: core/direction_registry.py")
-    parts.append("")
-    return "\n".join(parts) + "\n"
-
-def _smsv1_render_topic_status_index(topic_meta, git_sha):
-    parts = [
-        "# TOPIC_STATUS_INDEX",
-        "",
-        f"GENERATED_AT: {utc_now()}",
-        f"GIT_SHA: {git_sha}",
-        "",
-        "| topic_id | name | role | status | active | failed_24h | source |",
-        "|----------|------|------|--------|--------|------------|--------|",
-    ]
-    for tid, meta in sorted(topic_meta.items()):
-        parts.append(f"| {tid} | {_smsv1_topic_safe_name(tid)} | {meta.get('role','?')} | {meta.get('status','?')} | {meta.get('active',0)} | {meta.get('failed_24h',0)} | TOPICS/topic_{tid}_{_smsv1_topic_safe_name(tid)}.md |")
-    parts.append("")
-    return "\n".join(parts) + "\n"
-
-def _smsv1_render_direction_status_index(directions, topic_status_map, git_sha):
-    parts = [
-        "# DIRECTION_STATUS_INDEX",
-        "",
-        f"GENERATED_AT: {utc_now()}",
-        f"GIT_SHA: {git_sha}",
-        "Source: core/direction_registry.DirectionRegistry from config/directions.yaml",
-        "",
-        "| direction | enabled | engine | topic_ids | bound_status |",
-        "|-----------|---------|--------|-----------|--------------|",
-    ]
-    for did, prof in directions.items():
-        prof = prof or {}
-        tids = prof.get("topic_ids") or []
-        bound = ",".join(f"{tid}:{topic_status_map.get(int(tid), '?')}" for tid in tids) or "-"
-        parts.append(f"| {did} | {prof.get('enabled', False)} | {prof.get('engine','?')} | {tids} | {bound} |")
-    parts.append("")
-    return "\n".join(parts) + "\n"
-
-
-
-# === SMSV1_FULL_CONTEXT_APPLIED ===
-def _smfc_read_file(path, max_chars=None):
-    p = BASE / path
-    if not p.exists():
-        return f"# (file missing: {path})\n"
-    try:
-        text = p.read_text(encoding="utf-8", errors="ignore")
-        if max_chars and len(text) > max_chars:
-            text = text[:max_chars] + f"\n\n... [TRUNCATED at {max_chars} chars from {len(text)} total — see source file] ..."
-        return text
-    except Exception as e:
-        return f"# (read error {path}: {e})\n"
-
-def _smfc_last_failed_per_topic(topic_id, limit=5):
-    try:
-        conn = _smsv1_sqlite.connect(str(BASE / "data" / "core.db"))
-        conn.row_factory = _smsv1_sqlite.Row
-        cur = conn.execute(
-            "SELECT id, datetime(updated_at,'localtime') t, "
-            "substr(coalesce(error_message,''),1,200) em, "
-            "substr(raw_input,1,150) ri "
-            "FROM tasks WHERE topic_id=? AND state='FAILED' "
-            "ORDER BY rowid DESC LIMIT ?",
-            (int(topic_id), limit)
-        )
-        rows = []
-        for r in cur.fetchall():
-            d = dict(r)
-            hist_cur = conn.execute(
-                "SELECT substr(action,1,100) FROM task_history "
-                "WHERE task_id=? ORDER BY rowid DESC LIMIT 5",
-                (d["id"],)
-            )
-            d["history"] = [h[0] for h in hist_cur.fetchall()]
-            rows.append(d)
-        conn.close()
-        return rows
-    except Exception as e:
-        return [{"error": str(e)}]
-
-def _smfc_render_full_context(directions, topic_status_map, topic_meta, git_sha):
-    parts = []
-    parts.append("# SINGLE_MODEL_FULL_CONTEXT")
-    parts.append("")
-    parts.append(f"GENERATED_AT: {utc_now()}")
-    parts.append(f"GIT_SHA: {git_sha}")
-    parts.append("PURPOSE: Один файл с полным контекстом проекта для любой модели")
-    parts.append("STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test")
-    parts.append("")
-    parts.append("## CONTENTS")
-    parts.append("1. SUMMARY (карта статусов всех топиков и направлений)")
-    parts.append("2. DOCS/HANDOFFS/LATEST_HANDOFF.md (полностью)")
-    parts.append("3. DOCS/REPORTS/NOT_CLOSED.md (полностью)")
-    parts.append("4. DOCS/CANON_FINAL/* (полностью)")
-    parts.append("5. PER_TOPIC: status + last failed + key engine code (head)")
-    parts.append("6. PER_DIRECTION: profile + bound topics status")
-    parts.append("7. SOURCE_LINKS")
-    parts.append("")
-    parts.append("=" * 80)
-    parts.append("# 1. SUMMARY")
-    parts.append("=" * 80)
-    parts.append("")
-    parts.append("## GLOBAL_TOPIC_TABLE")
-    parts.append("| topic_id | name | status | active | failed_24h |")
-    parts.append("|----------|------|--------|--------|------------|")
-    for tid, meta in sorted(topic_meta.items()):
-        parts.append(f"| {tid} | {_smsv1_topic_safe_name(tid)} | {meta.get('status','?')} | "
-                     f"{meta.get('active',0)} | {meta.get('failed_24h',0)} |")
-    parts.append("")
-    parts.append("## DIRECTION_TABLE")
-    parts.append("| direction_id | engine | enabled | topic_ids |")
-    parts.append("|--------------|--------|---------|-----------|")
-    for did, prof in directions.items():
-        parts.append(f"| {did} | {(prof or {}).get('engine','?')} | "
-                     f"{(prof or {}).get('enabled', False)} | {(prof or {}).get('topic_ids', [])} |")
-    parts.append("")
-    parts.append("## DRIVE_BINDING")
-    for k, v in _smsv1_drive_binding().items():
-        parts.append(f"{k}: {v}")
-    parts.append("")
-    parts.append("## REFERENCE_REGISTRIES")
-    et = _smsv1_load_estimate_templates()
-    ref = _smsv1_load_owner_reference()
-    parts.append(f"estimate_template_registry: loaded={et.get('loaded')} count={len(et.get('templates', []))}")
-    parts.append(f"owner_reference_registry: loaded={ref.get('loaded')} items={ref.get('items', 0)}")
-    for t in et.get("templates", [])[:10]:
-        parts.append(f"- {t.get('key')} | {t.get('title')} | {t.get('role')}")
-    parts.append("")
-
-    parts.append("=" * 80)
-    parts.append("# 2. LATEST_HANDOFF")
-    parts.append("=" * 80)
-    parts.append("")
-    parts.append(_smfc_read_file("docs/HANDOFFS/LATEST_HANDOFF.md"))
-    parts.append("")
-
-    parts.append("=" * 80)
-    parts.append("# 3. NOT_CLOSED")
-    parts.append("=" * 80)
-    parts.append("")
-    parts.append(_smfc_read_file("docs/REPORTS/NOT_CLOSED.md"))
-    parts.append("")
-
-    parts.append("=" * 80)
-    parts.append("# 4. CANON_FINAL")
-    parts.append("=" * 80)
-    parts.append("")
-    canon_dir = BASE / "docs" / "CANON_FINAL"
-    if canon_dir.exists():
-        for f in sorted(canon_dir.glob("*.md")):
-            parts.append(f"## CANON_FINAL/{f.name}")
-            parts.append("")
-            parts.append(_smfc_read_file(f"docs/CANON_FINAL/{f.name}"))
-            parts.append("")
-
-    parts.append("=" * 80)
-    parts.append("# 5. PER_TOPIC")
-    parts.append("=" * 80)
-    parts.append("")
-    
-    # Engine maps per topic
-    topic_engines = {
-        2: ["core/sample_template_engine.py", "core/stroyka_estimate_canon.py", "core/topic2_estimate_final_close_v2.py"],
-        5: ["core/technadzor_engine.py", "core/normative_engine.py"],
-        210: ["core/project_engine.py", "core/cad_project_engine.py"],
-        500: ["core/search_session.py", "core/search_engine.py"],
-    }
-    
-    for tid in sorted(topic_meta.keys()):
-        meta = topic_meta[tid]
-        parts.append(f"## TOPIC_{tid}_{_smsv1_topic_safe_name(tid)}")
-        parts.append("")
-        parts.append(f"STATUS: {meta.get('status','?')}")
-        parts.append(f"ACTIVE: {meta.get('active',0)}  FAILED_24H: {meta.get('failed_24h',0)}")
-        parts.append(f"DIRECTIONS_BOUND: {meta.get('role','?')}")
-        parts.append("")
-        # Last failed
-        failed = _smfc_last_failed_per_topic(tid, 5)
-        if failed and not failed[0].get("error"):
-            parts.append("### LAST_FAILED (5)")
-            for f in failed:
-                parts.append(f"- {f.get('id','')[:8]} | {f.get('t','')} | {f.get('em','')[:80]}")
-                if f.get("history"):
-                    for h in f["history"][:3]:
-                        parts.append(f"    history: {h}")
-            parts.append("")
-        # Engine code (head 250 lines)
-        if tid in topic_engines:
-            parts.append("### KEY_ENGINE_CODE (head 250 lines each)")
-            for engine_path in topic_engines[tid]:
-                ep = BASE / engine_path
-                if ep.exists():
-                    parts.append(f"#### {engine_path}")
-                    parts.append("```python")
-                    try:
-                        lines = ep.read_text(encoding="utf-8", errors="ignore").splitlines()[:250]
-                        parts.append("\n".join(lines))
-                    except Exception as e:
-                        parts.append(f"# read error: {e}")
-                    parts.append("```")
-                    parts.append("")
-        # Topic file inline (markers, blockers, regression)
-        topic_file = BASE / "docs" / "SHARED_CONTEXT" / "TOPICS" / f"topic_{tid}_{_smsv1_topic_safe_name(tid)}.md"
-        if topic_file.exists():
-            parts.append(f"### TOPIC_FILE_INLINE")
-            parts.append("```")
-            parts.append(_smfc_read_file(f"docs/SHARED_CONTEXT/TOPICS/topic_{tid}_{_smsv1_topic_safe_name(tid)}.md"))
-            parts.append("```")
-            parts.append("")
-
-    parts.append("=" * 80)
-    parts.append("# 6. PER_DIRECTION")
-    parts.append("=" * 80)
-    parts.append("")
-    for did, prof in directions.items():
-        prof = prof or {}
-        if not prof.get("enabled", False):
-            continue
-        parts.append(f"## {did}")
-        parts.append(f"engine: {prof.get('engine','?')}")
-        parts.append(f"topic_ids: {prof.get('topic_ids', [])}")
-        parts.append(f"input_types: {prof.get('input_types', [])}")
-        parts.append(f"output_formats: {prof.get('output_formats', [])}")
-        parts.append(f"quality_gates: {prof.get('quality_gates', [])}")
-        parts.append(f"aliases: {(prof.get('aliases') or [])[:10]}")
-        parts.append("")
-
-    parts.append("=" * 80)
-    parts.append("# 7. SOURCE_LINKS")
-    parts.append("=" * 80)
-    parts.append("")
-    parts.append("- TOPIC_STATUS_INDEX: docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md")
-    parts.append("- DIRECTION_STATUS_INDEX: docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md")
-    parts.append("- SAFE_RUNTIME_SNAPSHOT: docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md")
-    parts.append("- MANIFEST: docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_MANIFEST.json")
-    parts.append("- DirectionRegistry: core/direction_registry.py")
-    parts.append("- runtime_file_catalog: core/runtime_file_catalog.py")
-    parts.append("- topic_drive_oauth: core/topic_drive_oauth.py")
-    parts.append("- ORCHESTRA_FULL_CONTEXT_PARTS: 17 files (full project dump)")
-    parts.append("")
-    return "\n".join(parts) + "\n"
-
-# === END SMSV1_FULL_CONTEXT_APPLIED ===
-
-
-
-# === SMCC_CURRENT_CONTEXT_APPLIED ===
-import re as _smcc_re
-from datetime import datetime as _smcc_dt, timezone as _smcc_tz, timedelta as _smcc_td
-
-_SMCC_MAX_TOPIC_BYTES = 2000
-_SMCC_MAX_TOTAL_BYTES = 40000
-
-_SMCC_OPEN_KEYS = (
-    "NOT CLOSED", "NOT_VERIFIED", "NOT VERIFIED", "INSTALLED, NOT VERIFIED",
-    "INSTALLED НО НЕ VERIFIED", "НЕ VERIFIED", "НЕ ЗАКРЫТО", "НЕ ПРОВЕРЕНО",
-    "PENDING", "BLOCKER", "TODO", "OPEN", "BROKEN", "ОСТАЁТСЯ", "БЛОКЕР",
-)
-_SMCC_CLOSED_KEYS = (
-    "VERIFIED", "CLOSED", "DONE", "ARCHIVED", "OBSOLETE", "SUPERSEDED",
-    "ЗАКРЫТО", "ПОДТВЕРЖДЕНО", "АРХИВ",
-)
-_SMCC_LINE_FILTER = (
-    "⚠️", "❌", "🔴", "OPEN:", "BROKEN:", "PENDING:", "BLOCKER:",
-    "NOT VERIFIED", "INSTALLED, NOT VERIFIED", "НЕ VERIFIED", "НЕ ЗАКРЫТО",
-    "- ", "* ",
-)
-_SMCC_DATE_RE = _smcc_re.compile(r"(\d{2}[\.\-/]\d{2}[\.\-/]\d{4}|\d{4}[\.\-/]\d{2}[\.\-/]\d{2})")
-
-
-def _smcc_clip(text, limit):
-    if len(text.encode("utf-8")) <= limit:
-        return text
-    raw = text.encode("utf-8")[:limit]
-    cut = raw.decode("utf-8", errors="ignore")
-    nl = cut.rfind("\n")
-    if nl > int(limit * 0.65):
-        cut = cut[:nl]
-    return cut.rstrip() + "\n... [TRUNCATED — see SINGLE_MODEL_FULL_CONTEXT.md]\n"
-
-
-def _smcc_classify_section(header):
-    h = header.upper()
-    is_open = any(k in h for k in _SMCC_OPEN_KEYS)
-    is_closed = any(k in h for k in _SMCC_CLOSED_KEYS)
-    if is_open:
-        return "OPEN"
-    if is_closed:
-        return "CLOSED"
-    return "UNKNOWN"
-
-
-def _smcc_extract_date(header):
-    m = _SMCC_DATE_RE.search(header)
-    if not m:
-        return None
-    raw = m.group(1).replace("/", ".").replace("-", ".")
-    parts = raw.split(".")
-    try:
-        if len(parts[0]) == 4:
-            y, mo, d = int(parts[0]), int(parts[1]), int(parts[2])
-        else:
-            d, mo, y = int(parts[0]), int(parts[1]), int(parts[2])
-        return _smcc_dt(y, mo, d, tzinfo=_smcc_tz.utc)
-    except Exception:
-        return None
-
-
-def _smcc_parse_not_closed():
-    nc = BASE / "docs" / "REPORTS" / "NOT_CLOSED.md"
-    if not nc.exists():
-        return []
-    text = nc.read_text(encoding="utf-8", errors="ignore")
-    sections = []
-    cur = None
-    for line in text.splitlines():
-        if line.startswith("## ") or line.startswith("### "):
-            if cur:
-                sections.append(cur)
-            cur = {"header": line.strip(), "lines": []}
-        elif cur is not None:
-            cur["lines"].append(line)
-    if cur:
-        sections.append(cur)
-
-    cutoff = _smcc_dt.now(_smcc_tz.utc) - _smcc_td(days=30)
-    out = []
-    for s in sections:
-        if _smcc_classify_section(s["header"]) != "OPEN":
-            continue
-        date = _smcc_extract_date(s["header"])
-        if date and date < cutoff:
-            continue
-
-        lines = []
-        for ln in s["lines"]:
-            t = ln.strip()
-            if not t:
-                continue
-            u = t.upper()
-            if any(t.startswith(prefix) for prefix in _SMCC_LINE_FILTER) or any(k in u for k in ("NOT VERIFIED", "PENDING", "BLOCKER", "BROKEN", "НЕ ЗАКРЫТО")):
-                lines.append(t[:220])
-            if len(lines) >= 10:
-                break
-
-        if lines:
-            out.append({"header": s["header"], "date_unknown": date is None, "lines": lines})
-        if len(out) >= 12:
-            break
-    return out
-
-
-def _smcc_recent_commits_topic(topic_id):
-    try:
-        return _smsv1_git_log_per_topic(topic_id, 7)
-    except Exception:
-        return []
-
-
-def _smcc_topic_section(tid, name, role, db, markers_24h, blockers_topic):
-    states = db.get("states", {}) if isinstance(db, dict) else {}
-    failed_24h = db.get("failed_24h", 0) if isinstance(db, dict) else 0
-    last_failed = (db.get("last_failed", []) or [])[:5]
-    active = sum(states.get(s, 0) for s in ("NEW", "IN_PROGRESS", "WAITING_CLARIFICATION", "AWAITING_CONFIRMATION"))
-    commits = _smcc_recent_commits_topic(tid)
-
-    if active == 0 and failed_24h == 0 and not commits and int(tid) not in (2, 5, 210, 500):
-        return None
-
-    missing = []
-    if int(tid) == 2:
-        try:
-            missing = _smsv1_compute_markers_missing(2, markers_24h)[:20]
-        except Exception:
-            missing = []
-
-    parts = []
-    parts.append(f"### topic_{tid} {name}")
-    parts.append(f"role: {role}")
-    parts.append(f"active: {active}")
-    parts.append(f"failed_24h: {failed_24h}")
-    parts.append(f"commits_last_7d: {len(commits)}")
-
-    if commits:
-        parts.append("recent_commits:")
-        for c in commits[:3]:
-            parts.append(f"- {c[:140]}")
-
-    if missing:
-        parts.append(f"markers_missing: {len(missing)}")
-        for m in missing[:8]:
-            parts.append(f"- {m}")
-
-    if last_failed:
-        parts.append("last_failed:")
-        for f in last_failed[:3]:
-            parts.append(f"- {str(f.get('id',''))[:8]} | {str(f.get('em',''))[:100]}")
-
-    if blockers_topic:
-        parts.append("blockers:")
-        for b in blockers_topic[:3]:
-            parts.append(f"- {str(b)[:140]}")
-
-    next_action = "live-test required"
-    if missing:
-        next_action = f"live-test / close missing markers: {len(missing)}"
-    elif last_failed:
-        next_action = f"investigate latest failed: {str(last_failed[0].get('em',''))[:80]}"
-    elif blockers_topic:
-        next_action = f"close blocker: {str(blockers_topic[0])[:80]}"
-    elif commits:
-        next_action = "verify recent installed code by live-test"
-
-    parts.append(f"NEXT_ACTION: {next_action}")
-    parts.append("")
-    return _smcc_clip("\n".join(parts), _SMCC_MAX_TOPIC_BYTES)
-
-
-def _smcc_render_current_context(directions, topic_status_map, topic_meta, git_sha):
-    parts = []
-    parts.append("# SINGLE_MODEL_CURRENT_CONTEXT")
-    parts.append("")
-    parts.append(f"GENERATED_AT: {utc_now()}")
-    parts.append(f"GIT_SHA: {git_sha}")
-    parts.append("PURPOSE: Быстрый старт для любой модели — только актуальное состояние")
-    parts.append("FULL_AUDIT: docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md")
-    parts.append("STATUS_RULE: INSTALLED != VERIFIED; VERIFIED только после live-test")
-    parts.append("")
-    parts.append("## READ_ORDER")
-    parts.append("1. This SINGLE_MODEL_CURRENT_CONTEXT")
-    parts.append("2. SINGLE_MODEL_SOURCE")
-    parts.append("3. Topic/direction file if needed")
-    parts.append("4. SINGLE_MODEL_FULL_CONTEXT only for audit/dispute")
-    parts.append("5. ORCHESTRA_FULL_CONTEXT_PART_*.md only for raw dump")
-    parts.append("")
-    parts.append("## GLOBAL_STATUS")
-    parts.append("| topic | name | status | active | failed_24h |")
-    parts.append("|-------|------|--------|--------|------------|")
-    for tid, meta in sorted(topic_meta.items()):
-        if meta.get("active", 0) > 0 or meta.get("failed_24h", 0) > 0 or int(tid) in (2, 5, 210, 500):
-            parts.append(f"| {tid} | {_smsv1_topic_safe_name(tid)} | {meta.get('status','?')} | {meta.get('active',0)} | {meta.get('failed_24h',0)} |")
-    parts.append("")
-
-    parts.append("## OPEN_BLOCKERS_FROM_NOT_CLOSED")
-    open_sections = _smcc_parse_not_closed()
-    if open_sections:
-        for s in open_sections[:5]:
-            parts.append(f"### {s['header'].lstrip('#').strip()}")
-            if s.get("date_unknown"):
-                parts.append("DATE_UNKNOWN")
-            for ln in s["lines"][:6]:
-                parts.append(ln)
-            parts.append("")
-    else:
-        parts.append("(no current open sections detected)")
-        parts.append("")
-
-    parts.append("## ACTIVE_OR_RECENT_TOPICS")
-    for tid in sorted(topic_meta.keys()):
-        meta = topic_meta[tid]
-        db = _smsv1_db_state(tid)
-        markers = _smsv1_markers_24h(tid)
-        blockers = _smsv1_extract_blockers_from_not_closed(tid)
-        sec = _smcc_topic_section(tid, _smsv1_topic_safe_name(tid), meta.get("role", "?"), db, markers, blockers)
-        if sec:
-            parts.append(sec)
-
-    parts.append("## STRICT_RULES")
-    parts.append("- INSTALLED != VERIFIED")
-    parts.append("- VERIFIED только после live-test")
-    parts.append("- Diagnostics → BAK → PATCH → PY_COMPILE → RESTART → LOGS → DB_VERIFY → GIT_PUSH → FINAL_VERIFY")
-    parts.append("- Не объявлять закрытым без live-теста")
-    parts.append("- BROKEN / REJECTED / UNKNOWN не использовать как канон")
-    parts.append("- chat_id + topic_id обязательны для контекста")
-    parts.append("- FULL_CONTEXT использовать только для аудита или спора")
-    parts.append("")
-
-    parts.append("## ALLOWED_FILES_BY_SCOPE")
-    parts.append("- core/stroyka_estimate_canon.py — topic_2 estimates")
-    parts.append("- core/sample_template_engine.py — topic_2 estimates/templates")
-    parts.append("- core/topic2_estimate_final_close_v2.py — topic_2 legacy/fallback")
-    parts.append("- core/technadzor_engine.py — topic_5")
-    parts.append("- core/normative_engine.py — topic_5")
-    parts.append("- core/project_engine.py — topic_210")
-    parts.append("- core/search_session.py — topic_500")
-    parts.append("- tools/full_context_aggregator.py — aggregator")
-    parts.append("")
-
-    parts.append("## FORBIDDEN_FILES")
-    parts.append("- .env / credentials / sessions/")
-    parts.append("- core/ai_router.py")
-    parts.append("- core/reply_sender.py")
-    parts.append("- core/google_io.py")
-    parts.append("- telegram_daemon.py")
-    parts.append("- data/core.db / data/memory.db schema")
-    parts.append("- systemd unit files")
-    parts.append("")
-
-    parts.append("## CONDITIONAL_PATCH")
-    parts.append("- task_worker.py — only with explicit task scope and diagnostics-first")
-    parts.append("")
-
-    parts.append("## DRIVE_BINDING")
-    for k, v in _smsv1_drive_binding().items():
-        parts.append(f"{k}: {v}")
-    parts.append("")
-
-    parts.append("## REFERENCE_REGISTRIES")
-    et = _smsv1_load_estimate_templates()
-    ref = _smsv1_load_owner_reference()
-    parts.append(f"estimate_template_registry: loaded={et.get('loaded')} count={len(et.get('templates', []))}")
-    parts.append(f"owner_reference_registry: loaded={ref.get('loaded')} items={ref.get('items', 0)}")
-    parts.append("")
-
-    parts.append("## SOURCE_LINKS")
-    parts.append(f"- CURRENT_CONTEXT: {RAW_MAIN}/docs/SHARED_CONTEXT/SINGLE_MODEL_CURRENT_CONTEXT.md")
-    parts.append(f"- SINGLE_MODEL_SOURCE: {RAW_MAIN}/docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md")
-    parts.append(f"- FULL_CONTEXT_AUDIT: {RAW_MAIN}/docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md")
-    parts.append(f"- TOPIC_STATUS_INDEX: {RAW_MAIN}/docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md")
-    parts.append(f"- DIRECTION_STATUS_INDEX: {RAW_MAIN}/docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md")
-    parts.append(f"- LATEST_HANDOFF: {RAW_MAIN}/docs/HANDOFFS/LATEST_HANDOFF.md")
-    parts.append(f"- NOT_CLOSED_FULL: {RAW_MAIN}/docs/REPORTS/NOT_CLOSED.md")
-    parts.append("")
-
-    return _smcc_clip("\n".join(parts) + "\n", _SMCC_MAX_TOTAL_BYTES)
-# === END_SMCC_CURRENT_CONTEXT_APPLIED ===
-
-def smsv1_generate_all(git_sha):
-    _SMSV1_TOPICS_DIR.mkdir(parents=True, exist_ok=True)
-    _SMSV1_DIRECTIONS_DIR.mkdir(parents=True, exist_ok=True)
-
-    directions, dr_source = _smsv1_load_directions()
-    topic_ids_set = set(int(k) for k in _SMSV1_TOPIC_NAMES.keys())
-    direction_role_map = {}
-    for did, prof in directions.items():
-        for tid in ((prof or {}).get("topic_ids") or []):
-            try:
-                tid_int = int(tid)
-                topic_ids_set.add(tid_int)
-                direction_role_map.setdefault(tid_int, []).append(did)
-            except Exception:
-                pass
-
-    topic_meta = {}
-    topic_status_map = {}
-
-    for tid in sorted(topic_ids_set):
-        directions_bound = direction_role_map.get(tid, [])
-        if directions_bound and directions_bound[0] in directions:
-            role = (directions[directions_bound[0]] or {}).get("title") or (directions[directions_bound[0]] or {}).get("name") or "?"
-        else:
-            role = "Общий" if tid == 0 else "?"
-        content = _smsv1_render_topic_file(tid, role, directions_bound, git_sha)
-        safe_name = _smsv1_topic_safe_name(tid)
-        write(_SMSV1_TOPICS_DIR / f"topic_{tid}_{safe_name}.md", content)
-
-        st = "UNKNOWN"
-        active = 0
-        failed_24h = 0
-        for line in content.splitlines():
-            if line.startswith("CURRENT_STATUS:"):
-                st = line.split(":", 1)[1].strip()
-            elif line.startswith("FAILED_LAST_24H:"):
-                try:
-                    failed_24h = int(line.split(":", 1)[1].strip())
-                except Exception:
-                    pass
-            elif line.startswith("ACTIVE_TASKS:"):
-                try:
-                    active = int(line.split(":", 1)[1].strip())
-                except Exception:
-                    pass
-        topic_meta[tid] = {"role": role, "status": st, "active": active, "failed_24h": failed_24h}
-        topic_status_map[tid] = st
-
-    for did, prof in directions.items():
-        write(_SMSV1_DIRECTIONS_DIR / f"{did}.md", _smsv1_render_direction_file(did, prof or {}, topic_status_map, git_sha))
-
-    write(OUTPUT_DIR / "TOPIC_STATUS_INDEX.md", _smsv1_render_topic_status_index(topic_meta, git_sha))
-    write(OUTPUT_DIR / "DIRECTION_STATUS_INDEX.md", _smsv1_render_direction_status_index(directions, topic_status_map, git_sha))
-    write(OUTPUT_DIR / "SINGLE_MODEL_SOURCE.md", _smsv1_render_single_model_source(directions, topic_status_map, topic_meta, git_sha))
-
-    try:
-        full_ctx = _smfc_render_full_context(directions, topic_status_map, topic_meta, git_sha)
-        write(OUTPUT_DIR / "SINGLE_MODEL_FULL_CONTEXT.md", full_ctx)
-        print(f"SMFC_GENERATED full_context_size={len(full_ctx)}")
-    except Exception as _smfc_e:
-        print(f"SMFC_FAIL {_smfc_e}")
-    try:
-        current_ctx = _smcc_render_current_context(directions, topic_status_map, topic_meta, git_sha)
-        write(OUTPUT_DIR / "SINGLE_MODEL_CURRENT_CONTEXT.md", current_ctx)
-        print(f"SMCC_GENERATED current_context_size={len(current_ctx.encode('utf-8'))}")
-    except Exception as _smcc_e:
-        print(f"SMCC_FAIL {_smcc_e}")
-    print(f"SMSV1_GENERATED directions={len(directions)} topics={len(topic_meta)} dr={dr_source}")
-
-# === END_PATCH_AGGREGATOR_SINGLE_MODEL_SOURCE_V1 ===
-
-if __name__ == "__main__":
-    main()
-# === END_FULL_CONTEXT_AGGREGATOR_V1 ===
-
-====================================================================================================
-END_FILE: tools/full_context_aggregator.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: tools/context_aggregator.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 069bfcbd7cb905f16621726e8c56d54aea8340b8513d405d9fc6c6df655c2a36
-====================================================================================================
-#!/usr/bin/env python3
-# === CONTEXT_AGGREGATOR_WRAPPER_V1 ===
-from __future__ import annotations
-import subprocess
-import sys
-from pathlib import Path
-
-BASE = Path("/root/.areal-neva-core")
-
-def main() -> None:
-    print("CONTEXT_AGGREGATOR_WRAPPER_V1 -> full_context_aggregator.py")
-    p = subprocess.run([sys.executable, str(BASE / "tools/full_context_aggregator.py")], cwd=str(BASE))
-    sys.exit(p.returncode)
-
-if __name__ == "__main__":
-    main()
-# === END_CONTEXT_AGGREGATOR_WRAPPER_V1 ===
-
-====================================================================================================
-END_FILE: tools/context_aggregator.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: tools/claude_bootstrap_aggregator.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: c2f2cd0625c8961b4638a63547ed4c7b3c505ec64a1017f11ccc1a837a42cbda
-====================================================================================================
-#!/usr/bin/env python3
-# === CLAUDE_BOOTSTRAP_AGGREGATOR_WRAPPER_V1 ===
-# CANON_FINAL_REMOVE_COMMAND_DISABLED
-from __future__ import annotations
-import subprocess
-import sys
-from pathlib import Path
-
-BASE = Path("/root/.areal-neva-core")
-
-def main() -> None:
-    print("CLAUDE_BOOTSTRAP_AGGREGATOR_WRAPPER_V1 -> full_context_aggregator.py")
-    p = subprocess.run([sys.executable, str(BASE / "tools/full_context_aggregator.py")], cwd=str(BASE))
-    sys.exit(p.returncode)
-
-if __name__ == "__main__":
-    main()
-# === END_CLAUDE_BOOTSTRAP_AGGREGATOR_WRAPPER_V1 ===
-
-====================================================================================================
-END_FILE: tools/claude_bootstrap_aggregator.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: tools/__init__.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-====================================================================================================
-
-====================================================================================================
-END_FILE: tools/__init__.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: tools/areal_reference_full_monolith_v1.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: c571186116ab07d575b430586287bd9a0ab372cfb60fc106d6445d8c6ef35297
-====================================================================================================
-#!/usr/bin/env python3
-# === AREAL_REFERENCE_FULL_MONOLITH_V1 ===
-from __future__ import annotations
-
-import io
-import json
-import os
-import re
-import sqlite3
-import sys
-import uuid
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Dict, List
-
-BASE = Path("/root/.areal-neva-core")
-CHAT_ID = "-1003725299009"
-MAX_DOWNLOAD = 5 * 1024 * 1024
-
-ROOTS = {
-    "ESTIMATES_TEMPLATES": "19Z3acDgPub4nV55mad5mb8ju63FsqoG9",
-    "TOPIC_210": "17QGniGggGgYEAD8lIyUK6TjgMIIDKhAq",
-    "TOPIC_5": "1yWIJdSrypH3BbIozCz-OAw1R6hmnMRHK",
-}
-
-MEMORY_DB = BASE / "data" / "memory.db"
-REGISTRY_PATH = BASE / "config" / "owner_reference_registry.json"
-CANON_PATH = BASE / "docs" / "CANON_FINAL" / "OWNER_REFERENCE_FULL_WORKFLOW_CANON.md"
-REPORT_PATH = BASE / "docs" / "REPORTS" / "AREAL_REFERENCE_FULL_MONOLITH_V1_REPORT.md"
-INDEX_PATH = BASE / "data" / "templates" / "reference_monolith" / "owner_reference_full_index.json"
-VERSION = "AREAL_REFERENCE_FULL_MONOLITH_V1"
-
-def now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-def s(v: Any) -> str:
-    return "" if v is None else str(v)
-
-def clean(v: Any, limit: int = 20000) -> str:
-    return re.sub(r"\s+", " ", s(v)).strip()[:limit]
-
-def env_load() -> None:
-    try:
-        from dotenv import load_dotenv
-        load_dotenv(str(BASE / ".env"), override=True)
-    except Exception:
-        pass
-
-def get_drive_service():
-    env_load()
-    cid = os.getenv("GDRIVE_CLIENT_ID", "").strip()
-    sec = os.getenv("GDRIVE_CLIENT_SECRET", "").strip()
-    ref = os.getenv("GDRIVE_REFRESH_TOKEN", "").strip()
-    if cid and sec and ref:
-        from google.oauth2.credentials import Credentials
-        from google.auth.transport.requests import Request
-        from googleapiclient.discovery import build
-        creds = Credentials(
-            None,
-            refresh_token=<REDACTED_SECRET>
-            token_uri="https://oauth2.googleapis.com/token",
-            client_id=cid,
-            client_secret=<REDACTED_SECRET>
-            scopes=["https://www.googleapis.com/auth/drive"],
-        )
-        creds.refresh(Request())
-        return build("drive", "v3", credentials=creds)
-    sys.path.insert(0, str(BASE))
-    import google_io
-    return google_io.get_drive_service()
-
-def drive_account(service) -> str:
-    u = service.about().get(fields="user").execute().get("user", {})
-    return s(u.get("emailAddress") or u.get("displayName") or "UNKNOWN")
-
-def list_children(service, parent_id: str) -> List[Dict[str, Any]]:
-    out = []
-    token = <REDACTED_SECRET>
-    while True:
-        res = service.files().list(
-            q=f"'{parent_id}' in parents and trashed=false",
-            fields="files(id,name,mimeType,modifiedTime,size,webViewLink,parents),nextPageToken",
-            pageSize=1000,
-            pageToken=<REDACTED_SECRET>
-            supportsAllDrives=True,
-            includeItemsFromAllDrives=True,
-        ).execute()
-        out.extend(res.get("files", []))
-        token = <REDACTED_SECRET>"nextPageToken")
-        if not token:
-            break
-    return out
-
-def list_recursive(service, parent_id: str, prefix: str) -> List[Dict[str, Any]]:
-    out = []
-    for f in list_children(service, parent_id):
-        item = dict(f)
-        item["_path"] = prefix + "/" + s(f.get("name"))
-        out.append(item)
-        if f.get("mimeType") == "application/vnd.google-apps.folder":
-            out.extend(list_recursive(service, f["id"], item["_path"]))
-    return out
-
-def size_ok(meta: Dict[str, Any]) -> bool:
-    try:
-        size = int(meta.get("size") or 0)
-        return size > 0 and size <= MAX_DOWNLOAD
-    except Exception:
-        return False
-
-def download_bytes(service, meta: Dict[str, Any]) -> bytes:
-    from googleapiclient.http import MediaIoBaseDownload
-    fid = meta["id"]
-    mime = s(meta.get("mimeType"))
-
-    if mime == "application/vnd.google-apps.document":
-        req = service.files().export_media(fileId=fid, mimeType="text/plain")
-    elif mime == "application/vnd.google-apps.spreadsheet":
-        req = service.files().export_media(fileId=fid, mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    else:
-        req = service.files().get_media(fileId=fid, supportsAllDrives=True)
-
-    buf = io.BytesIO()
-    dl = MediaIoBaseDownload(buf, req)
-    done = False
-    while not done:
-        _, done = dl.next_chunk()
-        if buf.tell() > MAX_DOWNLOAD:
-            raise RuntimeError("DOWNLOAD_LIMIT_5MB_EXCEEDED")
-    return buf.getvalue()
-
-def classify_domain(name: str, path: str, mime: str) -> str:
-    low = f"{name} {path} {mime}".lower()
-    if any(x in low for x in ["смет", "estimate", "расцен", "м-80", "м-110", "ареал нева", "фундамент_склад", "крыша и перекр"]):
-        return "estimate"
-    if any(x in low for x in ["технадзор", "дефект", "акт_", "акт ", "исполнительн"]):
-        return "technadzor"
-    if any(x in low for x in ["проект", "эскиз", "план участка", "посадк", ".dwg", ".dxf", ".ifc", ".pln", "архитект", "спецификац"]):
-        return "design"
-    if re.search(r"(^|[^а-яa-z0-9])(ар|кр|кж|кд|км|кмд|ов|вк|эо|эм|эос)([^а-яa-z0-9]|$)", low):
-        return "design"
-    if mime.startswith("image/"):
-        return "design"
-    return "other"
-
-def discipline(name: str, path: str, mime: str) -> str:
-    low = f"{name} {path}".lower()
-    checks = [
-        ("AR", ["ар", "архитект"]),
-        ("KJ", ["кж", "железобет", "плита"]),
-        ("KD", ["кд", "стропил", "дерев"]),
-        ("KR", ["кр", "конструктив"]),
-        ("KM", ["км", "металл"]),
-        ("KMD", ["кмд"]),
-        ("OV", ["ов", "отоп", "вентиляц"]),
-        ("VK", ["вк", "водоснаб", "канализац"]),
-        ("EO", ["эо", "эм", "эос", "электр"]),
-        ("SPEC", ["спецификац", "ведом"]),
-        ("SKETCH", ["эскиз", ".jpg", ".jpeg", ".png", ".webp"]),
-        ("GP", ["план участка", "посадк", "генплан"]),
-        ("PLN_MODEL", [".pln", "archicad"]),
-        ("IFC_MODEL", [".ifc"]),
-        ("CAD", [".dwg", ".dxf"]),
-    ]
-    for code, keys in checks:
-        if any(k in low for k in keys):
-            return code
-    if mime.startswith("image/"):
-        return "SKETCH"
-    return "DESIGN"
-
-def estimate_role(name: str, path: str) -> str:
-    low = f"{name} {path}".lower()
-    if "м-80" in low or "m-80" in low:
-        return "m80"
-    if "м-110" in low or "m-110" in low:
-        return "m110"
-    if "крыша" in low or "перекр" in low:
-        return "roof_floor"
-    if "фундамент" in low:
-        return "foundation"
-    if "ареал нева" in low:
-        return "areal_neva"
-    return "estimate_reference"
-
-def analyze_xlsx(raw: bytes) -> Dict[str, Any]:
-    import openpyxl
-    wb = openpyxl.load_workbook(io.BytesIO(raw), data_only=False, read_only=False)
-    total = 0
-    sheets = []
-    for ws in wb.worksheets:
-        fc = 0
-        mat = 0
-        work = 0
-        logi = 0
-        for row in ws.iter_rows():
-            vals = []
-            for c in row:
-                if c.value is None:
-                    continue
-                val = str(c.value)
-                vals.append(val)
-                if val.startswith("="):
-                    fc += 1
-            rt = " ".join(vals).lower()
-            if any(x in rt for x in ["материал", "бетон", "арматур", "газобетон", "кирпич", "доска", "кровл"]):
-                mat += 1
-            if any(x in rt for x in ["работ", "монтаж", "устройств", "кладк", "вязк"]):
-                work += 1
-            if any(x in rt for x in ["достав", "логист", "разгруз", "манипулятор", "кран", "транспорт", "прожив"]):
-                logi += 1
-        total += fc
-        sheets.append({"sheet_name": ws.title, "formula_count": fc, "material_hits": mat, "work_hits": work, "logistics_hits": logi})
-    return {"formula_total": total, "sheets": sheets}
-
-def analyze_file(service, meta: Dict[str, Any]) -> Dict[str, Any]:
-    name = s(meta.get("name"))
-    path = s(meta.get("_path"))
-    mime = s(meta.get("mimeType"))
-    domain = classify_domain(name, path, mime)
-    item = {
-        "name": name,
-        "file_id": s(meta.get("id")),
-        "mimeType": mime,
-        "path": path,
-        "size": s(meta.get("size")),
-        "modifiedTime": s(meta.get("modifiedTime")),
-        "url": s(meta.get("webViewLink")),
-        "domain": domain,
-    }
-    if meta.get("mimeType") == "application/vnd.google-apps.folder":
-        item["domain"] = "folder"
-        return item
-
-    if domain == "estimate":
-        item["role"] = estimate_role(name, path)
-        item["formula_total"] = 0
-        item["sheets"] = []
-        if (
-            name.lower().endswith((".xlsx", ".xlsm", ".xls"))
-            or mime == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            or mime == "application/vnd.google-apps.spreadsheet"
-        ):
-            if mime == "application/vnd.google-apps.spreadsheet" or size_ok(meta):
-                try:
-                    item.update(analyze_xlsx(download_bytes(service, meta)))
-                except Exception as e:
-                    item["extract_error"] = clean(type(e).__name__ + ": " + str(e), 500)
-            else:
-                item["extract_skipped"] = "SIZE_LIMIT_5MB"
-    elif domain == "design":
-        item["discipline"] = discipline(name, path, mime)
-    elif domain == "technadzor":
-        item["role"] = "technadzor_reference"
-    return item
-
-def slim(policy: Dict[str, Any]) -> Dict[str, Any]:
-    def slim_items(items):
-        out = []
-        for x in items:
-            y = {k: v for k, v in x.items() if k not in {"text_preview", "sample_formulas"}}
-            if "sheets" in y:
-                y["sheets"] = [
-                    {k: sh.get(k) for k in ("sheet_name", "formula_count", "material_hits", "work_hits", "logistics_hits")}
-                    for sh in y.get("sheets", [])
-                ]
-            out.append(y)
-        return out
-    return {
-        "version": policy["version"],
-        "status": policy["status"],
-        "updated_at": policy["updated_at"],
-        "counts": policy["counts"],
-        "estimate_references": slim_items(policy["estimate_references"][:40]),
-        "design_references": slim_items(policy["design_references"][:80]),
-        "technadzor_references": slim_items(policy["technadzor_references"][:40]),
-    }
-
-def save_memory(policy: Dict[str, Any]) -> None:
-    val = json.dumps(slim(policy), ensure_ascii=False, indent=2)
-    ts = now()
-    rows = [
-        ("owner_reference_full_workflow_v1", 0),
-        ("topic_2_estimate_reference_v1", 2),
-        ("topic_210_design_reference_v1", 210),
-        ("topic_5_technadzor_reference_v1", 5),
-    ]
-    conn = sqlite3.connect(str(MEMORY_DB))
-    try:
-        cols = [r[1] for r in conn.execute("PRAGMA table_info(memory)").fetchall()]
-        for key, topic_id in rows:
-            rec = {
-                "id": str(uuid.uuid4()),
-                "chat_id": CHAT_ID,
-                "key": key,
-                "value": val,
-                "timestamp": ts,
-                "topic_id": topic_id,
-                "scope": "topic",
-            }
-            use = [c for c in ["id", "chat_id", "key", "value", "timestamp", "topic_id", "scope"] if c in cols]
-            conn.execute(
-                f"INSERT INTO memory({','.join(use)}) VALUES ({','.join(['?'] * len(use))})",
-                [rec[c] for c in use],
-            )
-        conn.commit()
-    finally:
-        conn.close()
-
-def main() -> int:
-    service = get_drive_service()
-    account = drive_account(service)
-    print("DRIVE_ACCOUNT", account)
-
-    all_items = []
-    for label, folder_id in ROOTS.items():
-        meta = service.files().get(fileId=folder_id, fields="id,name,mimeType", supportsAllDrives=True).execute()
-        print("ROOT_OK", label, meta.get("name"), folder_id)
-        for f in list_recursive(service, folder_id, label):
-            if f.get("mimeType") == "application/vnd.google-apps.folder":
-                continue
-            item = analyze_file(service, f)
-            all_items.append(item)
-            print("INDEXED", item.get("domain"), item.get("name"))
-
-    estimates = [x for x in all_items if x.get("domain") == "estimate"]
-    designs = [x for x in all_items if x.get("domain") == "design"]
-    technadzor = [x for x in all_items if x.get("domain") == "technadzor"]
-    formula_total = sum(int(x.get("formula_total") or 0) for x in estimates)
-
-    counts = {
-        "estimate_files": len(estimates),
-        "design_files": len(designs),
-        "technadzor_files": len(technadzor),
-        "formula_total": formula_total,
-        "all_files": len(all_items),
-    }
-
-    policy = {
-        "version": VERSION,
-        "status": "ACTIVE",
-        "updated_at": now(),
-        "drive_account": account,
-        "counts": counts,
-        "estimate_references": estimates,
-        "design_references": designs,
-        "technadzor_references": technadzor,
-    }
-
-    REGISTRY_PATH.parent.mkdir(parents=True, exist_ok=True)
-    old = {}
-    if REGISTRY_PATH.exists():
-        try:
-            old = json.loads(REGISTRY_PATH.read_text(encoding="utf-8"))
-        except Exception:
-            old = {}
-    old["owner_reference_full_workflow_v1"] = policy
-    old["active"] = VERSION
-    old["topic_isolation"] = {"estimate": 2, "technadzor": 5, "design": 210}
-    REGISTRY_PATH.write_text(json.dumps(old, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-
-    INDEX_PATH.parent.mkdir(parents=True, exist_ok=True)
-    INDEX_PATH.write_text(json.dumps(policy, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-
-    CANON_PATH.parent.mkdir(parents=True, exist_ok=True)
-    CANON_PATH.write_text(
-        "# OWNER_REFERENCE_FULL_WORKFLOW_CANON\n\n"
-        f"version: {VERSION}\n"
-        f"updated_at: {policy['updated_at']}\n\n"
-        "Илья — главный канон\n\n"
-        "Сметы: М-80, М-110, крыша, фундамент, Ареал Нева — эталон формул и структуры\n\n"
-        "Проектирование: АР, КР, КЖ, КД, КМ, КМД, ОВ, ВК, ЭО, ЭМ, ЭОС, эскизы, планы участка — разные разделы, не смешивать\n\n"
-        "Технадзор: акты, дефекты, исполнительные — отдельный контур\n\n"
-        "Если данных не хватает — один короткий вопрос\n\n"
-        f"counts: {json.dumps(counts, ensure_ascii=False)}\n",
-        encoding="utf-8",
-    )
-
-    save_memory(policy)
-
-    REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    REPORT_PATH.write_text(
-        "# AREAL_REFERENCE_FULL_MONOLITH_V1_REPORT\n\n"
-        f"status: OK\nversion: {VERSION}\nupdated_at: {policy['updated_at']}\n"
-        f"estimate_files: {counts['estimate_files']}\n"
-        f"design_files: {counts['design_files']}\n"
-        f"technadzor_files: {counts['technadzor_files']}\n"
-        f"formula_total: {counts['formula_total']}\n",
-        encoding="utf-8",
-    )
-
-    print("ESTIMATE_FILES", counts["estimate_files"])
-    print("DESIGN_FILES", counts["design_files"])
-    print("TECHNADZOR_FILES", counts["technadzor_files"])
-    print("FORMULA_TOTAL", counts["formula_total"])
-
-    if counts["estimate_files"] < 5:
-        raise RuntimeError("ESTIMATE_FILES_LT_5")
-    if counts["design_files"] < 10:
-        raise RuntimeError("DESIGN_FILES_LT_10")
-    if counts["formula_total"] < 3000:
-        raise RuntimeError("FORMULA_TOTAL_LT_3000")
-
-    print("AREAL_REFERENCE_FULL_MONOLITH_INDEX_OK")
-    return 0
-
-if __name__ == "__main__":
-    raise SystemExit(main())
-# === END_AREAL_REFERENCE_FULL_MONOLITH_V1 ===
-
-====================================================================================================
-END_FILE: tools/areal_reference_full_monolith_v1.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: tools/drive_ai_orchestra_root_cleanup_v1.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: a15c2c05d0617a95bf3892e3dd7d85c3daefc4a2594b5a96fc7bea3f65032f87
-====================================================================================================
-#!/usr/bin/env python3
-# === DRIVE_AI_ORCHESTRA_ROOT_CLEANUP_V1 ===
-from __future__ import annotations
-
-import json
-import os
-import re
-import sys
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Dict, List, Tuple
-
-BASE = Path("/root/.areal-neva-core")
-ROOT_ID = "13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB"
-CHAT_FOLDER_NAME = "chat_-1003725299009"
-CHAT_ID = "-1003725299009"
-TS = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-REPORT_PATH = BASE / "docs" / "REPORTS" / "DRIVE_AI_ORCHESTRA_ROOT_CLEANUP_V1_REPORT.md"
-
-CANON_ROOT_FOLDERS = {
-    "chat_-1003725299009",
-    "ESTIMATES",
-    "CANON_FINAL",
-    "telegram_exports",
-    "CHAT_EXPORTS",
-    "_QUARANTINE_ROOT_CLEANUP",
-    "AI_ORCHESTRA",
-}
-
-TMP_RE = re.compile(r"^tmp[a-z0-9_ -]*\.txt$", re.I)
-
-def now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-def s(v: Any) -> str:
-    return "" if v is None else str(v)
-
-def low(v: Any) -> str:
-    return s(v).lower().strip()
-
-def env_load() -> None:
-    env_path = BASE / ".env"
-    try:
-        from dotenv import load_dotenv
-        load_dotenv(str(env_path), override=True)
-        return
-    except Exception:
-        pass
-
-    if env_path.exists():
-        for line in env_path.read_text(encoding="utf-8", errors="ignore").splitlines():
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            k, v = line.split("=", 1)
-            os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
-
-def get_drive_service():
-    env_load()
-
-    cid = os.getenv("GDRIVE_CLIENT_ID", "").strip()
-    sec = os.getenv("GDRIVE_CLIENT_SECRET", "").strip()
-    ref = os.getenv("GDRIVE_REFRESH_TOKEN", "").strip()
-
-    if cid and sec and ref:
-        from google.oauth2.credentials import Credentials
-        from google.auth.transport.requests import Request
-        from googleapiclient.discovery import build
-
-        creds = Credentials(
-            None,
-            refresh_token=<REDACTED_SECRET>
-            token_uri="https://oauth2.googleapis.com/token",
-            client_id=cid,
-            client_secret=<REDACTED_SECRET>
-            scopes=["https://www.googleapis.com/auth/drive"],
-        )
-        creds.refresh(Request())
-        return build("drive", "v3", credentials=creds)
-
-    sys.path.insert(0, str(BASE))
-    import google_io
-    return google_io.get_drive_service()
-
-def q_escape(name: str) -> str:
-    return name.replace("\\", "\\\\").replace("'", "\\'")
-
-def list_children(service, parent_id: str) -> List[Dict[str, Any]]:
-    out: List[Dict[str, Any]] = []
-    token = <REDACTED_SECRET>
-    while True:
-        res = service.files().list(
-            q=f"'{parent_id}' in parents and trashed=false",
-            fields="files(id,name,mimeType,modifiedTime,size,webViewLink,parents),nextPageToken",
-            pageSize=1000,
-            pageToken=<REDACTED_SECRET>
-            supportsAllDrives=True,
-            includeItemsFromAllDrives=True,
-        ).execute()
-        out.extend(res.get("files", []))
-        token = <REDACTED_SECRET>"nextPageToken")
-        if not token:
-            break
-    return out
-
-def find_child_folder(service, parent_id: str, name: str) -> str | None:
-    res = service.files().list(
-        q=f"'{parent_id}' in parents and trashed=false and mimeType='application/vnd.google-apps.folder' and name='{q_escape(name)}'",
-        fields="files(id,name,mimeType,parents)",
-        pageSize=20,
-        supportsAllDrives=True,
-        includeItemsFromAllDrives=True,
-    ).execute()
-    files = res.get("files", [])
-    return files[0]["id"] if files else None
-
-def ensure_folder(service, parent_id: str, name: str) -> str:
-    existing = find_child_folder(service, parent_id, name)
-    if existing:
-        return existing
-
-    meta = {
-        "name": name,
-        "mimeType": "application/vnd.google-apps.folder",
-        "parents": [parent_id],
-    }
-    created = service.files().create(
-        body=meta,
-        fields="id,name,parents",
-        supportsAllDrives=True,
-    ).execute()
-    return created["id"]
-
-def drive_about(service) -> str:
-    about = service.about().get(fields="user").execute()
-    user = about.get("user", {}) or {}
-    return s(user.get("emailAddress") or user.get("displayName") or "UNKNOWN")
-
-def parents(f: Dict[str, Any]) -> List[str]:
-    return list(f.get("parents") or [])
-
-def move_file(service, f: Dict[str, Any], target_id: str, target_path: str, moves: List[Dict[str, Any]]) -> None:
-    fid = f["id"]
-    current = parents(f)
-
-    if target_id in current and ROOT_ID not in current:
-        return
-
-    remove_parents = ",".join([p for p in current if p == ROOT_ID])
-    add_parents = target_id if target_id not in current else ""
-
-    if not remove_parents and not add_parents:
-        return
-
-    kwargs = {
-        "fileId": fid,
-        "fields": "id,name,parents",
-        "supportsAllDrives": True,
-    }
-    if add_parents:
-        kwargs["addParents"] = add_parents
-    if remove_parents:
-        kwargs["removeParents"] = remove_parents
-
-    service.files().update(**kwargs).execute()
-
-    moves.append({
-        "file_id": fid,
-        "name": f.get("name"),
-        "mimeType": f.get("mimeType"),
-        "target": target_path,
-    })
-
-def classify_target(f: Dict[str, Any], folders: Dict[str, str]) -> Tuple[str, str]:
-    name = s(f.get("name"))
-    n = low(name)
-    mime = s(f.get("mimeType"))
-    is_folder = mime == "application/vnd.google-apps.folder"
-
-    if is_folder and name in CANON_ROOT_FOLDERS:
-        return "SKIP_CANON_ROOT_FOLDER", ""
-
-    if is_folder and name == "Образцы смет и проектов":
-        return folders["design_references"], "chat_-1003725299009/topic_210/PROJECT_DESIGN_REFERENCES"
-
-    if TMP_RE.match(name) or n.startswith("tmp"):
-        return folders["quarantine_tmp"], f"_QUARANTINE_ROOT_CLEANUP/{TS}/tmp_txt"
-
-    if n in {"upload_many_compat_v2.txt"} or "compat" in n:
-        return folders["quarantine_service"], f"_QUARANTINE_ROOT_CLEANUP/{TS}/service_tmp"
-
-    if "chat_export" in n or "chat export" in n:
-        return folders["telegram_exports_root_imports"], "telegram_exports/_ROOT_IMPORTS"
-
-    if n.endswith(".manifest.json") or mime == "application/json":
-        if n.startswith("estimate_"):
-            return folders["estimate_manifests"], "ESTIMATES/generated/_manifests"
-        if "кж_compact_project" in n or "project" in n or "кж" in n:
-            return folders["project_manifests"], "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS/_manifests"
-        return folders["quarantine_manifests"], f"_QUARANTINE_ROOT_CLEANUP/{TS}/manifests"
-
-    if name in {"М-80.xlsx", "M-80.xlsx", "М-110.xlsx", "M-110.xlsx", "крыша и перекр.xlsx", "фундамент_Склад2.xlsx", "Ареал Нева.xlsx"}:
-        return folders["estimate_templates"], "ESTIMATES/templates"
-
-    if n.startswith("estimate_") or "смет" in n:
-        if n.endswith(".xlsx") or "spreadsheet" in mime:
-            return folders["estimate_generated"], "ESTIMATES/generated"
-        if n.endswith(".pdf"):
-            return folders["estimate_generated_pdf"], "ESTIMATES/generated/pdf"
-        return folders["estimate_generated"], "ESTIMATES/generated"
-
-    if n.startswith("act_") or "акт" in n or "дефект" in n or "технадзор" in n:
-        return folders["technadzor"], "chat_-1003725299009/topic_5/TECHNADZOR"
-
-    if (
-        "кж_compact_project" in n
-        or "проект" in n
-        or "project" in n
-        or re.search(r"(^|[^а-яa-z])(ар|кр|кж|кд)([^а-яa-z]|$)", n)
-        or n.endswith((".dwg", ".dxf", ".pln"))
-    ):
-        return folders["project_artifacts"], "chat_-1003725299009/topic_210/PROJECT_ARTIFACTS"
-
-    if n.endswith((".docx", ".doc", ".pdf", ".xlsx", ".xls", ".csv", ".txt", ".zip", ".rar", ".7z")):
-        return folders["quarantine_unknown_files"], f"_QUARANTINE_ROOT_CLEANUP/{TS}/unknown_files"
-
-    if is_folder:
-        return folders["quarantine_unknown_folders"], f"_QUARANTINE_ROOT_CLEANUP/{TS}/unknown_folders"
-
-    return folders["quarantine_unknown_files"], f"_QUARANTINE_ROOT_CLEANUP/{TS}/unknown_files"
-
-def main() -> int:
-    service = get_drive_service()
-    account = drive_about(service)
-    print("DRIVE_ACCOUNT", account)
-
-    root_meta = service.files().get(
-        fileId=ROOT_ID,
-        fields="id,name,mimeType,trashed,webViewLink",
-        supportsAllDrives=True,
-    ).execute()
-    print("ROOT_OK", root_meta.get("name"), root_meta.get("id"))
-
-    chat = ensure_folder(service, ROOT_ID, CHAT_FOLDER_NAME)
-    topic_0 = ensure_folder(service, chat, "topic_0")
-    topic_2 = ensure_folder(service, chat, "topic_2")
-    topic_5 = ensure_folder(service, chat, "topic_5")
-    topic_210 = ensure_folder(service, chat, "topic_210")
-
-    estimates = ensure_folder(service, ROOT_ID, "ESTIMATES")
-    canon_final = ensure_folder(service, ROOT_ID, "CANON_FINAL")
-    telegram_exports = ensure_folder(service, ROOT_ID, "telegram_exports")
-    quarantine = ensure_folder(service, ROOT_ID, "_QUARANTINE_ROOT_CLEANUP")
-    quarantine_ts = ensure_folder(service, quarantine, TS)
-
-    folders = {
-        "topic_0": topic_0,
-        "topic_2": topic_2,
-        "topic_5": topic_5,
-        "topic_210": topic_210,
-        "estimates": estimates,
-        "canon_final": canon_final,
-        "telegram_exports": telegram_exports,
-
-        "estimate_templates": ensure_folder(service, estimates, "templates"),
-        "estimate_generated": ensure_folder(service, estimates, "generated"),
-        "estimate_generated_pdf": ensure_folder(service, ensure_folder(service, estimates, "generated"), "pdf"),
-        "estimate_manifests": ensure_folder(service, ensure_folder(service, estimates, "generated"), "_manifests"),
-
-        "design_references": ensure_folder(service, topic_210, "PROJECT_DESIGN_REFERENCES"),
-        "project_artifacts": ensure_folder(service, topic_210, "PROJECT_ARTIFACTS"),
-        "project_manifests": ensure_folder(service, ensure_folder(service, topic_210, "PROJECT_ARTIFACTS"), "_manifests"),
-
-        "technadzor": ensure_folder(service, topic_5, "TECHNADZOR"),
-
-        "telegram_exports_root_imports": ensure_folder(service, telegram_exports, "_ROOT_IMPORTS"),
-
-        "quarantine_tmp": ensure_folder(service, quarantine_ts, "tmp_txt"),
-        "quarantine_service": ensure_folder(service, quarantine_ts, "service_tmp"),
-        "quarantine_manifests": ensure_folder(service, quarantine_ts, "manifests"),
-        "quarantine_unknown_files": ensure_folder(service, quarantine_ts, "unknown_files"),
-        "quarantine_unknown_folders": ensure_folder(service, quarantine_ts, "unknown_folders"),
-    }
-
-    before = list_children(service, ROOT_ID)
-    root_files_before = [x for x in before if x.get("mimeType") != "application/vnd.google-apps.folder"]
-    print("ROOT_CHILDREN_BEFORE", len(before))
-    print("ROOT_FILES_BEFORE", len(root_files_before))
-
-    moves: List[Dict[str, Any]] = []
-    skipped: List[Dict[str, Any]] = []
-
-    for f in before:
-        name = s(f.get("name"))
-        target_id, target_path = classify_target(f, folders)
-
-        if target_id == "SKIP_CANON_ROOT_FOLDER":
-            skipped.append({"name": name, "reason": "canonical_root_folder"})
-            continue
-
-        if not target_id:
-            skipped.append({"name": name, "reason": "no_target"})
-            continue
-
-        move_file(service, f, target_id, target_path, moves)
-
-    after = list_children(service, ROOT_ID)
-    root_files_after = [x for x in after if x.get("mimeType") != "application/vnd.google-apps.folder"]
-    noncanonical_root = [
-        x for x in after
-        if x.get("mimeType") != "application/vnd.google-apps.folder"
-        or x.get("name") not in {
-            CHAT_FOLDER_NAME,
-            "ESTIMATES",
-            "CANON_FINAL",
-            "telegram_exports",
-            "CHAT_EXPORTS",
-            "_QUARANTINE_ROOT_CLEANUP",
-        }
-    ]
-
-    print("ROOT_CHILDREN_AFTER", len(after))
-    print("ROOT_FILES_AFTER", len(root_files_after))
-    print("MOVED_COUNT", len(moves))
-    print("SKIPPED_COUNT", len(skipped))
-    print("NONCANONICAL_ROOT_COUNT", len(noncanonical_root))
-
-    for m in moves[:300]:
-        print("MOVED", m["name"], "=>", m["target"])
-
-    REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    lines = []
-    lines.append("# DRIVE_AI_ORCHESTRA_ROOT_CLEANUP_V1_REPORT")
-    lines.append("")
-    lines.append("status: OK")
-    lines.append("timestamp: " + now())
-    lines.append("drive_account: " + account)
-    lines.append("root_id: " + ROOT_ID)
-    lines.append("")
-    lines.append("## COUNTS")
-    lines.append(f"- root_children_before: {len(before)}")
-    lines.append(f"- root_files_before: {len(root_files_before)}")
-    lines.append(f"- moved_count: {len(moves)}")
-    lines.append(f"- skipped_count: {len(skipped)}")
-    lines.append(f"- root_children_after: {len(after)}")
-    lines.append(f"- root_files_after: {len(root_files_after)}")
-    lines.append(f"- noncanonical_root_count: {len(noncanonical_root)}")
-    lines.append("")
-    lines.append("## CANONICAL FOLDERS")
-    lines.append("- AI_ORCHESTRA/chat_-1003725299009/topic_0")
-    lines.append("- AI_ORCHESTRA/chat_-1003725299009/topic_2")
-    lines.append("- AI_ORCHESTRA/chat_-1003725299009/topic_5")
-    lines.append("- AI_ORCHESTRA/chat_-1003725299009/topic_210")
-    lines.append("- AI_ORCHESTRA/ESTIMATES")
-    lines.append("- AI_ORCHESTRA/CANON_FINAL")
-    lines.append("- AI_ORCHESTRA/telegram_exports")
-    lines.append("- AI_ORCHESTRA/_QUARANTINE_ROOT_CLEANUP")
-    lines.append("")
-    lines.append("## MOVES")
-    for m in moves:
-        lines.append(f"- `{m['name']}` -> `{m['target']}`")
-    lines.append("")
-    lines.append("## SKIPPED")
-    for s0 in skipped:
-        lines.append(f"- `{s0['name']}`: {s0['reason']}")
-    lines.append("")
-    lines.append("## NONCANONICAL_ROOT_AFTER")
-    for x in noncanonical_root[:200]:
-        lines.append(f"- `{x.get('name')}` | `{x.get('mimeType')}` | `{x.get('id')}`")
-    lines.append("")
-    lines.append("## RAW_JSON")
-    lines.append("```json")
-    lines.append(json.dumps({
-        "status": "OK",
-        "timestamp": now(),
-        "drive_account": account,
-        "root_id": ROOT_ID,
-        "counts": {
-            "root_children_before": len(before),
-            "root_files_before": len(root_files_before),
-            "moved_count": len(moves),
-            "skipped_count": len(skipped),
-            "root_children_after": len(after),
-            "root_files_after": len(root_files_after),
-            "noncanonical_root_count": len(noncanonical_root),
-        },
-        "moves": moves,
-        "skipped": skipped,
-        "noncanonical_root_after": [
-            {"id": x.get("id"), "name": x.get("name"), "mimeType": x.get("mimeType")}
-            for x in noncanonical_root[:500]
-        ],
-    }, ensure_ascii=False, indent=2))
-    lines.append("```")
-    REPORT_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-    if len(root_files_after) > 0:
-        print("ROOT_FILES_REMAIN_AFTER_CLEANUP")
-        for x in root_files_after[:100]:
-            print("ROOT_FILE_LEFT", x.get("name"), x.get("mimeType"), x.get("id"))
-
-    print("REPORT_OK", REPORT_PATH)
-    print("DRIVE_AI_ORCHESTRA_ROOT_CLEANUP_V1_OK")
-    return 0
-
-if __name__ == "__main__":
-    raise SystemExit(main())
-# === END_DRIVE_AI_ORCHESTRA_ROOT_CLEANUP_V1 ===
-
-====================================================================================================
-END_FILE: tools/drive_ai_orchestra_root_cleanup_v1.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: tools/dwg_converter_healthcheck.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: c69921875c85f57c4825a5c904e331b4e292e547b5262d206ca88f987ca8f854
-====================================================================================================
-#!/usr/bin/env python3
-# === DWG_CONVERTER_HEALTHCHECK_V1 ===
-from __future__ import annotations
-import json
-import shutil
-from datetime import datetime, timezone
-from pathlib import Path
-
-BASE = Path("/root/.areal-neva-core")
-OUT = BASE / "docs/SHARED_CONTEXT/DWG_CONVERTER_STATUS.json"
-
-def main():
-    status = {
-        "checked_at": datetime.now(timezone.utc).isoformat(),
-        "dwg2dxf": shutil.which("dwg2dxf"),
-        "ODAFileConverter": shutil.which("ODAFileConverter") or shutil.which("ODAFileConverter.exe"),
-        "geometry_status": "FULL_DWG_GEOMETRY_READY" if (shutil.which("dwg2dxf") or shutil.which("ODAFileConverter") or shutil.which("ODAFileConverter.exe")) else "DWG_METADATA_ONLY_DXF_FULL_PARSE_READY",
-        "note": "DXF parses directly. DWG full geometry requires dwg2dxf or ODAFileConverter; without converter DWG metadata path remains active",
-    }
-    OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps(status, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(json.dumps(status, ensure_ascii=False))
-
-if __name__ == "__main__":
-    main()
-# === END_DWG_CONVERTER_HEALTHCHECK_V1 ===
-
-====================================================================================================
-END_FILE: tools/dwg_converter_healthcheck.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: tools/estimate_top_templates_logistics_canon_v4.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 7b41927a49d37b6f8be75db07e21c5f3eea770fa4ea71e5482465318e70af7c8
-====================================================================================================
-#!/usr/bin/env python3
-# === ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4 ===
-from __future__ import annotations
-
-import io
-import json
-import os
-import re
-import sqlite3
-import sys
-import uuid
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Dict, List
-
-BASE = Path("/root/.areal-neva-core")
-sys.path.insert(0, str(BASE))
-
-AI_ORCHESTRA_FOLDER_ID = "13No7_E7Mwj1n1awNQ-lzbohWGOiEM2PB"
-MEMORY_DB = BASE / "data" / "memory.db"
-REGISTRY_PATH = BASE / "config" / "estimate_template_registry.json"
-CANON_PATH = BASE / "docs" / "CANON_FINAL" / "ESTIMATE_TEMPLATE_M80_M110_CANON.md"
-REPORT_PATH = BASE / "docs" / "REPORTS" / "ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4_REPORT.md"
-FORMULA_INDEX_PATH = BASE / "data" / "templates" / "estimate_logic" / "estimate_template_formula_index.json"
-
-TEMPLATES = [
-    {"key": "M80", "aliases": ["М-80.xlsx", "M-80.xlsx"], "role": "full_house_estimate_template", "description": "Эталон полной сметы М-80"},
-    {"key": "M110", "aliases": ["М-110.xlsx", "M-110.xlsx"], "role": "full_house_estimate_template", "description": "Эталон полной сметы М-110"},
-    {"key": "ROOF_FLOORS", "aliases": ["крыша и перекр.xlsx"], "role": "roof_and_floor_estimate_template", "description": "Эталон расчёта кровли и перекрытий"},
-    {"key": "FOUNDATION_WAREHOUSE", "aliases": ["фундамент_Склад2.xlsx"], "role": "foundation_estimate_template", "description": "Эталон расчёта фундамента"},
-    {"key": "AREAL_NEVA", "aliases": ["Ареал Нева.xlsx"], "role": "general_company_estimate_template", "description": "Общий эталон сметной структуры Ареал-Нева"},
-]
-
-SECTION_ORDER = [
-    "Фундамент",
-    "Каркас",
-    "Стены",
-    "Перекрытия",
-    "Кровля",
-    "Окна, двери",
-    "Внешняя отделка",
-    "Внутренняя отделка",
-    "Инженерные коммуникации",
-    "Логистика",
-    "Накладные расходы",
-]
-
-UNIVERSAL_MATERIAL_GROUPS = {
-    "стены": ["кирпич", "газобетон", "керамоблок", "арболит", "монолит", "каркас", "брус"],
-    "фундамент": ["монолитная плита", "лента", "сваи", "ростверк", "утеплённая плита", "складской фундамент"],
-    "кровля": ["металлочерепица", "профнастил", "гибкая черепица", "фальц", "мембрана", "стропильная система"],
-    "перекрытия": ["деревянные балки", "монолит", "плиты", "металлические балки"],
-    "утепление": ["минвата", "роквул", "пеноплэкс", "pir", "эковата"],
-    "отделка": ["имитация бруса", "штукатурка", "плитка", "гкл", "цсп", "фасадная доска"],
-    "инженерия": ["электрика", "водоснабжение", "канализация", "отопление", "вентиляция"],
-    "логистика": ["доставка", "разгрузка", "манипулятор", "кран", "проживание", "транспорт бригады", "удалённость"],
-}
-
-FORMULA_POLICY = [
-    "Топовые сметы являются эталонами логики расчёта, а не прайс-листами",
-    "Новые сметы считаются по такой же структуре: разделы, строки, колонки, формулы, итоги, примечания, исключения",
-    "Материал может быть любым: кирпич, газобетон, каркас, монолит, кровля, перекрытия, отделка, инженерия",
-    "При замене материала сохраняется расчётная логика: количество × цена = сумма; работа + материалы = всего; разделы = итоги; финальный итог = сумма разделов",
-    "Каркасный сценарий, газобетон/монолитная плита, кровля/перекрытия и фундамент считаются как разные сценарии и не смешиваются",
-    "Если объёмов не хватает — оркестр спрашивает только недостающие объёмы",
-    "Если пользователь прислал файл как образец — сначала принять как образец, а не запускать поиск цен",
-]
-
-PRICE_CONFIRMATION_FLOW = [
-    "Интернет-цены материалов и техники не подставляются молча",
-    "Для финальной сметы оркестр ищет актуальные цены по материалам, технике, доставке и разгрузке",
-    "По каждой позиции показывает: источник, цена, единица, дата/регион, ссылка",
-    "Оркестр предлагает среднюю/медианную цену без явных выбросов",
-    "Пользователь выбирает: средняя / минимальная / максимальная / конкретная ссылка / ручная цена",
-    "Пользователь может добавить наценку, запас, скидку, поправку по позиции, разделу или всей смете",
-    "До подтверждения цен финальный XLSX/PDF не выпускается",
-    "После подтверждения цены пересчитываются по формулам шаблона",
-]
-
-LOGISTICS_POLICY = [
-    "Перед финальной сметой оркестр обязан запросить локацию объекта или расстояние от города",
-    "Стоимость объекта рядом с городом и объекта за 200 км не может быть одинаковой",
-    "Оркестр обязан учитывать доставку материалов, транспорт бригады, разгрузку, манипулятор/кран, проживание, удалённость, дорожные условия",
-    "Если логистика неизвестна — оркестр задаёт один короткий вопрос: город/населённый пункт или расстояние от города, подъезд для грузовой техники, нужна ли разгрузка/манипулятор",
-    "Логистика считается отдельным блоком сметы или отдельным коэффициентом, но не смешивается молча с ценами материалов",
-    "Перед финальным результатом оркестр показывает логистические допущения и спрашивает подтверждение",
-]
-
-def now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-def s(v: Any) -> str:
-    return "" if v is None else str(v)
-
-def clean(v: Any) -> str:
-    return re.sub(r"\s+", " ", s(v)).strip()
-
-def get_drive_service():
-    from dotenv import load_dotenv
-    load_dotenv("/root/.areal-neva-core/.env", override=True)
-
-    from google.oauth2.credentials import Credentials
-    from google.auth.transport.requests import Request
-    from googleapiclient.discovery import build
-
-    cid = os.getenv("GDRIVE_CLIENT_ID", "").strip()
-    sec = os.getenv("GDRIVE_CLIENT_SECRET", "").strip()
-    ref = os.getenv("GDRIVE_REFRESH_TOKEN", "").strip()
-
-    if cid and sec and ref:
-        creds = Credentials(
-            None,
-            refresh_token=<REDACTED_SECRET>
-            token_uri="https://oauth2.googleapis.com/token",
-            client_id=cid,
-            client_secret=<REDACTED_SECRET>
-            scopes=["https://www.googleapis.com/auth/drive"],
-        )
-        creds.refresh(Request())
-        return build("drive", "v3", credentials=creds)
-
-    import google_io
-    return google_io.get_drive_service()
-
-def find_file(service, aliases: List[str]) -> Dict[str, Any]:
-    for name in aliases:
-        safe_name = name.replace("'", "\\'")
-        for q in [
-            f"name='{safe_name}' and '{AI_ORCHESTRA_FOLDER_ID}' in parents and trashed=false",
-            f"name='{safe_name}' and trashed=false",
-        ]:
-            res = service.files().list(
-                q=q,
-                fields="files(id,name,mimeType,modifiedTime,size,webViewLink,parents)",
-                pageSize=20,
-                supportsAllDrives=True,
-                includeItemsFromAllDrives=True,
-            ).execute()
-            files = res.get("files", [])
-            if files:
-                files.sort(key=lambda x: x.get("modifiedTime") or "", reverse=True)
-                return files[0]
-    raise RuntimeError("DRIVE_TEMPLATE_NOT_FOUND_OR_NOT_ACCESSIBLE: " + " / ".join(aliases))
-
-def download_xlsx(service, meta: Dict[str, Any]) -> bytes:
-    from googleapiclient.http import MediaIoBaseDownload
-
-    mime = meta.get("mimeType") or ""
-    file_id = meta["id"]
-
-    if mime == "application/vnd.google-apps.spreadsheet":
-        req = service.files().export_media(
-            fileId=file_id,
-            mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
-    else:
-        req = service.files().get_media(fileId=file_id, supportsAllDrives=True)
-
-    buf = io.BytesIO()
-    dl = MediaIoBaseDownload(buf, req)
-    done = False
-    while not done:
-        _, done = dl.next_chunk()
-    return buf.getvalue()
-
-def row_text(row: List[Any]) -> str:
-    return " ".join(clean(x) for x in row if clean(x))
-
-def detect_scenario(text: str, title: str) -> str:
-    title_low = (title or "").lower()
-    low = (title + " " + text).lower()
-
-    # ВАЖНО: сначала название файла/листа, потому что полные сметы М-80/М-110
-    # содержат внутри кровлю и перекрытия, но листы называются "Каркас" и "Газобетон"
-    if any(x in title_low for x in ["каркас", "frame"]):
-        return "frame_house"
-
-    if any(x in title_low for x in ["газобетон", "газо", "кладка", "masonry"]):
-        return "gasbeton_or_masonry_with_monolithic_foundation"
-
-    if any(x in title_low for x in ["фундамент", "склад", "foundation"]):
-        return "foundation"
-
-    if any(x in title_low for x in ["крыш", "кров", "перекр", "roof", "floor"]):
-        return "roof_and_floors"
-
-    # Потом fallback по содержимому
-    if any(x in low for x in ["газобетон", "кладка стен", "арматурного каркаса", "бетон в20", "бетон в22"]):
-        return "gasbeton_or_masonry_with_monolithic_foundation"
-
-    if any(x in low for x in ["каркас", "свая винтовая", "свайный фундамент", "обвязка свай", "доска с/к"]):
-        return "frame_house"
-
-    if any(x in low for x in ["фундамент", "монолитная плита", "ростверк", "свая", "склад"]):
-        if not any(y in low for y in ["кровля", "кровель", "стропил", "перекрыт"]):
-            return "foundation"
-
-    if any(x in low for x in ["кров", "стропил", "перекр", "балк"]):
-        return "roof_and_floors"
-
-    return "general_estimate"
-
-def extract_formula_cells(ws) -> List[Dict[str, str]]:
-    out = []
-    for row in ws.iter_rows():
-        for c in row:
-            val = c.value
-            if isinstance(val, str) and val.startswith("="):
-                out.append({"sheet": ws.title, "cell": c.coordinate, "formula": val[:500]})
-    return out
-
-def extract_structure(ws_values, file_title: str) -> Dict[str, Any]:
-    rows = [list(r) for r in ws_values.iter_rows(values_only=True)]
-    sections = []
-    header_rows = []
-    total_rows = []
-    sample_rows = []
-    material_rows = 0
-    work_rows = 0
-    logistics_rows = 0
-
-    for i, r in enumerate(rows, start=1):
-        txt = row_text(r)
-        low = txt.lower()
-        if not txt:
-            continue
-
-        for sec in SECTION_ORDER:
-            if low.strip(" :") == sec.lower() and sec not in sections:
-                sections.append(sec)
-
-        if "№ п/п" in txt and ("Наименование" in txt or "Наименование работ" in txt):
-            header_rows.append(i)
-
-        if low.startswith("итого") or "итого сметная стоимость" in low or "всего" == low.strip():
-            total_rows.append({"row": i, "text": txt[:300]})
-
-        if any(x in low for x in ["логист", "достав", "транспорт", "разгруз", "манипулятор", "кран", "проживан", "удален", "удалён", "км"]):
-            logistics_rows += 1
-
-        name = clean(r[1] if len(r) > 1 else "")
-        unit = clean(r[2] if len(r) > 2 else "")
-        qty = clean(r[3] if len(r) > 3 else "")
-        work_price = clean(r[4] if len(r) > 4 else "")
-        material_price = clean(r[6] if len(r) > 6 else "")
-
-        if name and (unit or qty):
-            if work_price and work_price not in ("0", "0.0", "0,0", "-"):
-                work_rows += 1
-            if material_price and material_price not in ("0", "0.0", "0,0", "-"):
-                material_rows += 1
-            if len(sample_rows) < 35:
-                sample_rows.append({
-                    "row": i,
-                    "name": name[:180],
-                    "unit": unit,
-                    "qty": qty,
-                    "work_price": work_price,
-                    "material_price": material_price,
-                })
-
-    hay = "\n".join(row_text(r) for r in rows[:250])
-    return {
-        "scenario": detect_scenario(hay, file_title),
-        "sections": sections,
-        "header_rows": header_rows,
-        "total_rows": total_rows[:50],
-        "material_rows": material_rows,
-        "work_rows": work_rows,
-        "logistics_rows": logistics_rows,
-        "sample_rows": sample_rows,
-        "row_count": len(rows),
-    }
-
-def analyze_template(service, template: Dict[str, Any], meta: Dict[str, Any]) -> Dict[str, Any]:
-    import openpyxl
-
-    raw = download_xlsx(service, meta)
-    wb_formula = openpyxl.load_workbook(io.BytesIO(raw), data_only=False, read_only=False)
-    wb_values = openpyxl.load_workbook(io.BytesIO(raw), data_only=True, read_only=True)
-
-    sheets = []
-    formula_total = 0
-    formula_samples = []
-
-    for ws_f, ws_v in zip(wb_formula.worksheets, wb_values.worksheets):
-        formulas = extract_formula_cells(ws_f)
-        struct = extract_structure(ws_v, f"{meta.get('name') or ''} {ws_f.title}")
-        formula_total += len(formulas)
-        formula_samples.extend(formulas[:50])
-        sheets.append({
-            "sheet_name": ws_f.title,
-            "scenario": struct["scenario"],
-            "sections": struct["sections"],
-            "header_rows": struct["header_rows"],
-            "total_rows": struct["total_rows"],
-            "material_rows": struct["material_rows"],
-            "work_rows": struct["work_rows"],
-            "logistics_rows": struct["logistics_rows"],
-            "sample_rows": struct["sample_rows"],
-            "formula_count": len(formulas),
-            "formula_samples": formulas[:30],
-            "row_count": struct["row_count"],
-        })
-
-    return {
-        "key": template["key"],
-        "title": meta["name"],
-        "template_role": template["role"],
-        "description": template["description"],
-        "file_id": meta["id"],
-        "drive_url": meta.get("webViewLink") or f"https://drive.google.com/file/d/{meta['id']}/view",
-        "mimeType": meta.get("mimeType"),
-        "modifiedTime": meta.get("modifiedTime"),
-        "parents": meta.get("parents") or [],
-        "formula_total": formula_total,
-        "formula_samples": formula_samples[:120],
-        "sheets": sheets,
-    }
-
-def build_policy(source_files: List[Dict[str, Any]]) -> Dict[str, Any]:
-    return {
-        "version": "ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4",
-        "status": "ACTIVE_CANON",
-        "updated_at": now(),
-        "purpose": "Use top estimate files as scalable estimate calculation logic templates with mandatory logistics and web price confirmation",
-        "source_files": source_files,
-        "canonical_columns": [
-            "№ п/п",
-            "Наименование",
-            "Ед. изм.",
-            "Кол-во",
-            "Работа Цена",
-            "Работа Стоимость",
-            "Материалы Цена",
-            "Материалы Стоимость",
-            "Всего",
-            "Примечание",
-        ],
-        "canonical_sections": SECTION_ORDER,
-        "universal_material_groups": UNIVERSAL_MATERIAL_GROUPS,
-        "formula_policy": FORMULA_POLICY,
-        "price_confirmation_flow": PRICE_CONFIRMATION_FLOW,
-        "logistics_policy": LOGISTICS_POLICY,
-        "runtime_rule": "ai_router injects this context through core.estimate_template_policy.build_estimate_template_context",
-    }
-
-def write_canon(policy: Dict[str, Any]) -> None:
-    CANON_PATH.parent.mkdir(parents=True, exist_ok=True)
-    lines = []
-    lines.append("# ESTIMATE_TEMPLATE_TOP_CANON")
-    lines.append("")
-    lines.append("status: ACTIVE_CANON")
-    lines.append("version: ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4")
-    lines.append("updated_at: " + policy["updated_at"])
-    lines.append("")
-    lines.append("## ГЛАВНОЕ")
-    lines.append("")
-    lines.append("М-80.xlsx, М-110.xlsx, крыша и перекр.xlsx, фундамент_Склад2.xlsx, Ареал Нева.xlsx — топовые эталонные сметы")
-    lines.append("Они являются образцами логики построения смет, формул, разделов, колонок, итогов, примечаний и исключений")
-    lines.append("Они не являются фиксированным прайсом")
-    lines.append("Оркестр обязан переносить их расчётную логику на любые новые задачи и любые материалы")
-    lines.append("")
-    lines.append("## ЧТО СОХРАНЯТЬ")
-    for r in policy["formula_policy"]:
-        lines.append("- " + r)
-    lines.append("")
-    lines.append("## ЦЕНЫ ИЗ ИНТЕРНЕТА")
-    for r in policy["price_confirmation_flow"]:
-        lines.append("- " + r)
-    lines.append("")
-    lines.append("## ЛОГИСТИКА И НАКЛАДНЫЕ")
-    for r in policy["logistics_policy"]:
-        lines.append("- " + r)
-    lines.append("")
-    lines.append("## КОЛОНКИ")
-    lines.append(" | ".join(policy["canonical_columns"]))
-    lines.append("")
-    lines.append("## РАЗДЕЛЫ")
-    for i, sec in enumerate(policy["canonical_sections"], 1):
-        lines.append(f"{i}. {sec}")
-    lines.append("")
-    lines.append("## МАТЕРИАЛЫ")
-    for group, values in policy["universal_material_groups"].items():
-        lines.append(f"- {group}: " + ", ".join(values))
-    lines.append("")
-    lines.append("## ПРОЧИТАННЫЕ ШАБЛОНЫ")
-    for src in policy["source_files"]:
-        lines.append("")
-        lines.append(f"### {src['title']}")
-        lines.append(f"- role: `{src['template_role']}`")
-        lines.append(f"- file_id: `{src['file_id']}`")
-        lines.append(f"- drive_url: {src['drive_url']}")
-        lines.append(f"- formula_total: {src['formula_total']}")
-        for sh in src["sheets"]:
-            lines.append(f"  - sheet: {sh['sheet_name']} | scenario={sh['scenario']} | formulas={sh['formula_count']} | material_rows={sh['material_rows']} | work_rows={sh['work_rows']} | logistics_rows={sh['logistics_rows']}")
-    lines.append("")
-    lines.append("## ОБЯЗАТЕЛЬНОЕ ПОВЕДЕНИЕ")
-    lines.append("")
-    lines.append("При новой смете оркестр обязан брать структуру и формулы из топовых эталонов")
-    lines.append("Оркестр обязан подставлять конкретные объёмы и материалы задачи")
-    lines.append("Оркестр обязан запросить локацию/удалённость/доступ/разгрузку до финального расчёта")
-    lines.append("Оркестр обязан обновлять цены материалов и логистики через интернет только с подтверждением пользователя")
-    lines.append("Оркестр обязан показывать найденные цены, источники, ссылки и среднюю/медианную цену")
-    lines.append("Пользователь выбирает цену или задаёт ручную, может добавить наценку/скидку/запас")
-    lines.append("Финальный XLSX/PDF запрещён до подтверждения цен и логистики")
-    lines.append("")
-    CANON_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-def write_registry(policy: Dict[str, Any]) -> None:
-    REGISTRY_PATH.parent.mkdir(parents=True, exist_ok=True)
-    old = {}
-    if REGISTRY_PATH.exists():
-        try:
-            old = json.loads(REGISTRY_PATH.read_text(encoding="utf-8"))
-        except Exception:
-            old = {}
-    old["estimate_top_templates_logistics_canon_v4"] = policy
-    old["active_estimate_template_policy"] = "ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4"
-    old["estimate_formula_logic_preserve_required"] = True
-    old["estimate_material_price_web_refresh_required"] = True
-    old["estimate_price_confirmation_required"] = True
-    old["estimate_logistics_required"] = True
-    old["estimate_final_xlsx_forbidden_before_price_and_logistics_confirmation"] = True
-    REGISTRY_PATH.write_text(json.dumps(old, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-
-def write_formula_index(policy: Dict[str, Any]) -> None:
-    FORMULA_INDEX_PATH.parent.mkdir(parents=True, exist_ok=True)
-    FORMULA_INDEX_PATH.write_text(json.dumps(policy, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-
-def save_memory_sqlite(policy: Dict[str, Any]) -> None:
-    if not MEMORY_DB.exists():
-        raise RuntimeError(f"MEMORY_DB_MISSING: {MEMORY_DB}")
-
-    value = json.dumps(policy, ensure_ascii=False, indent=2)
-    ts = now()
-    keys = [
-        "estimate_top_templates_logistics_canon_v4",
-        "topic_0_estimate_top_templates_logistics_canon_v4",
-        "topic_2_estimate_top_templates_logistics_canon_v4",
-        "topic_210_estimate_top_templates_logistics_canon_v4",
-        "estimate_universal_material_calculation_policy_v4",
-        "estimate_price_confirmation_required_v4",
-        "estimate_logistics_required_v4",
-    ]
-
-    conn = sqlite3.connect(str(MEMORY_DB))
-    try:
-        cols = [r[1] for r in conn.execute("PRAGMA table_info(memory)").fetchall()]
-        for key in keys:
-            data = {
-                "id": str(uuid.uuid4()),
-                "chat_id": "-1003725299009",
-                "key": key,
-                "value": value,
-                "timestamp": ts,
-                "topic_id": 2,
-                "scope": "topic",
-            }
-            use_cols = [c for c in ["id", "chat_id", "key", "value", "timestamp", "topic_id", "scope"] if c in cols]
-            sql = f"INSERT INTO memory({','.join(use_cols)}) VALUES ({','.join(['?'] * len(use_cols))})"
-            conn.execute(sql, [data[c] for c in use_cols])
-        conn.commit()
-    finally:
-        conn.close()
-
-def write_report(policy: Dict[str, Any]) -> None:
-    REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    lines = [
-        "# ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4_REPORT",
-        "",
-        "status: OK",
-        "updated_at: " + policy["updated_at"],
-        "canon: docs/CANON_FINAL/ESTIMATE_TEMPLATE_M80_M110_CANON.md",
-        "registry: config/estimate_template_registry.json",
-        "formula_index: data/templates/estimate_logic/estimate_template_formula_index.json",
-        "",
-        "## CLOSED",
-        "- top estimate templates resolved from Drive",
-        "- XLSX formulas extracted",
-        "- universal material logic registered",
-        "- web price confirmation registered",
-        "- logistics and overhead clarification registered",
-        "- direct sqlite memory write completed",
-        "- ai_router context hook enabled",
-        "",
-        "## RAW_POLICY",
-        "```json",
-        json.dumps(policy, ensure_ascii=False, indent=2),
-        "```",
-    ]
-    REPORT_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-def main() -> int:
-    service = get_drive_service()
-    about = service.about().get(fields="user").execute()
-    print("DRIVE_ACCOUNT", about.get("user", {}).get("emailAddress"))
-
-    source_files = []
-    for template in TEMPLATES:
-        meta = find_file(service, template["aliases"])
-        print("TEMPLATE_FOUND", template["key"], meta.get("name"), meta.get("id"), meta.get("parents"))
-        source_files.append(analyze_template(service, template, meta))
-
-    if not source_files:
-        raise RuntimeError("NO_TEMPLATES_ANALYZED")
-
-    policy = build_policy(source_files)
-    write_canon(policy)
-    write_registry(policy)
-    write_formula_index(policy)
-    save_memory_sqlite(policy)
-    write_report(policy)
-
-    print("ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4_OK")
-    for src in source_files:
-        print("SOURCE", src["title"], src["file_id"], "role", src["template_role"], "formulas", src["formula_total"])
-        for sh in src["sheets"]:
-            print("SHEET", sh["sheet_name"], sh["scenario"], "formulas", sh["formula_count"], "materials", sh["material_rows"], "works", sh["work_rows"], "logistics", sh["logistics_rows"])
-    return 0
-
-if __name__ == "__main__":
-    raise SystemExit(main())
-# === END_ESTIMATE_TOP_TEMPLATES_LOGISTICS_CANON_V4 ===
-
-====================================================================================================
-END_FILE: tools/estimate_top_templates_logistics_canon_v4.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: tools/extract_tnz_msk_document_skill.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 8087be31e961487f7661690181841850967aa0c551bed91a25eed4a6a3d27bed
-====================================================================================================
-#!/usr/bin/env python3
-# === EXTRACT_TNZ_MSK_DOCUMENT_SKILL_V1 ===
-# One-shot CLI extractor: reads @tnz_msk via Telethon, extracts document-composition
-# methodology for topic_5 technadzor, writes skill package and report.
-# Usage:
-#   .venv/bin/python tools/extract_tnz_msk_document_skill.py --sample 1000
-#   .venv/bin/python tools/extract_tnz_msk_document_skill.py --dry-run
-from __future__ import annotations
-
-import argparse
-import asyncio
-import json
-import sys
-from datetime import datetime, timezone
-from pathlib import Path
-
-BASE = Path(__file__).parent.parent
-if str(BASE) not in sys.path:
-    sys.path.insert(0, str(BASE))
-
-from core.telegram_source_skill_extractor import run_source_scan
-from core.technadzor_document_skill import process_records
-
-SKILL_DIR = BASE / "data/memory_files/TEHNADZOR/source_skills/tnz_msk"
-DOCS_DIR = SKILL_DIR / "downloaded_docs"
-REPORT_PATH = BASE / "docs/REPORTS/TNZ_MSK_DOCUMENT_SKILL_EXTRACTION_REPORT.md"
-HANDOFF_PATH = BASE / "docs/HANDOFFS/HANDOFF_20260505_TNZ_MSK_DOCUMENT_SKILL_EXTRACTION.md"
-
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def _write(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text, encoding="utf-8")
-
-
-def _write_json(path: Path, obj) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(obj, ensure_ascii=False, indent=2), encoding="utf-8")
-
-
-def build_skill_md(result: dict, scan_stats: dict, access: dict) -> str:
-    cards = result["cards"]
-    by_cat = result["by_category"]
-    lines = [
-        "# TECHNADZOR DOCUMENT COMPOSITION SKILL",
-        f"> Source: {access.get('title','')} (@tnz_msk) | Extracted: {_now()}",
-        "> Status: SKILL_PACKAGE — NOT A CANON OVERWRITE. Requires owner review before promotion.",
-        "",
-        "## Source Summary",
-        f"- Channel: @tnz_msk — «{access.get('title','')}»",
-        f"- Messages scanned: {scan_stats.get('total_fetched', 0)}",
-        f"- With text: {scan_stats.get('total_fetched', 0) - scan_stats.get('skipped_empty', 0)}",
-        f"- Detected documents: {scan_stats.get('detected_docs', 0)}",
-        f"- Detected links: {scan_stats.get('detected_links', 0)}",
-        f"- Noise filtered: {scan_stats.get('skipped_noise', 0)}",
-        f"- Skill cards extracted: {result['extracted']}",
-        f"- Rejected (noise/no value): {result['rejected_noise']}",
-        "",
-        "## Extracted Skill Categories",
-        "",
-    ]
-    for cat in result["categories"]:
-        cat_cards = by_cat.get(cat, [])
-        lines.append(f"### {cat} ({len(cat_cards)} rules)")
-        lines.append("")
-        for card in cat_cards[:5]:
-            lines.append(f"**Rule:** {card['extracted_rule']}")
-            lines.append(f"- Source: [{card['source_ref']}]({card['source_ref']})")
-            lines.append(f"- Why useful for topic_5: {card['why_useful_for_topic_5']}")
-            if card.get("source_links"):
-                lines.append(f"- Links: {', '.join(card['source_links'][:3])}")
-            if card.get("source_files"):
-                lines.append(f"- Files: {', '.join(card['source_files'])}")
-            if card["needs_owner_review"]:
-                lines.append("- ⚠ Needs owner review")
-            lines.append("")
-        if len(cat_cards) > 5:
-            lines.append(f"_...and {len(cat_cards) - 5} more in JSON_")
-            lines.append("")
-
-    lines += [
-        "## Document Composition Methodology Summary",
-        "",
-        "Based on extracted patterns from @tnz_msk, the following methodology applies to topic_5:",
-        "",
-        "### Act Composition Logic",
-        "1. State object name, address, date, inspection participants",
-        "2. List defects found with precise location references",
-        "3. Reference applicable norms (СП/ГОСТ/СНиП) for each defect",
-        "4. Attach photo evidence with numbered links to each defect item",
-        "5. State required corrective actions with deadlines",
-        "6. Conclude with overall assessment",
-        "",
-        "### Defect Description Logic",
-        "- Format: `[Location] — [Defect type] — [Dimension/scale] — [Normative reference] — [Required action]`",
-        "- Example: «Трещины в монолитной плите перекрытия оси А-В/1-3 — ширина раскрытия 0,5мм — "
-        "нарушение СП 70.13330.2012 п.5.3 — требуется заключение проектировщика»",
-        "",
-        "### Photo-to-Defect Linking Logic",
-        "- Each defect item in the act must reference photo numbers: «Фото 1, 2»",
-        "- Photos must be appended as numbered attachment to the act",
-        "- Photo description must match defect description location and type",
-        "",
-        "### Normative Reference Handling",
-        "- Always cite specific norm + section, not just norm number",
-        "- Example: «СП 70.13330.2012, раздел 5, п.5.3.2»",
-        "- For defects without clear norm — mark as `нормативная база уточняется`",
-        "",
-        "### Conclusion/Recommendation Logic",
-        "- Conclusion = technical state category (нормальное / удовлетворительное / ограниченно работоспособное / аварийное)",
-        "- Recommendation = specific action + responsible party + deadline",
-        "- Use imperative form: «Устранить», «Провести», «Выполнить»",
-        "",
-        "### File Workflow",
-        "- Acts issued as: DOCX (editable) + PDF (signed/sealed version)",
-        "- Photos attached as: ZIP archive with numbered files OR embedded in DOCX",
-        "- Spreadsheet defect logs: XLSX with columns [№, Описание, Локация, Норматив, Фото, Статус]",
-        "",
-        "## What Is Not Verified",
-        "- Document download from linked URLs not attempted (--no-download-documents mode)",
-        "- Norms referenced in channel posts not cross-checked against current editions",
-        "- No legal review of extracted wording",
-        "",
-        "## What Needs Owner Review",
-        f"- {sum(1 for c in cards if c['needs_owner_review'])} cards marked `needs_owner_review=true`",
-        "- All `unknown` category cards",
-        "- Any rule with confidence=low",
-        "",
-        "## Integration Target",
-        "- topic_5 / TECHNADZOR skill layer",
-        "- Not a CANON_FINAL overwrite",
-        "- Must be manually validated before promotion to canon",
-        "",
-        "---",
-        "",
-        "## Reusable Telegram Source Analysis Pattern for RABOTA_POISK (topic_6104)",
-        "",
-        "### Pattern: Telegram Source → Professional Signal → topic_6104",
-        "",
-        "This pattern was prototyped on @tnz_msk and is reusable for any Telegram channel "
-        "as a source of work opportunities, job leads, or project orders.",
-        "",
-        "**Step 1 — Source Access**",
-        "```python",
-        "client = build_client(session_path)  # existing authorized session",
-        "access = await check_source_access('@channel_name', client)",
-        "```",
-        "",
-        "**Step 2 — Bounded Scan**",
-        "- Never scan entire history in one pass",
-        "- Use `limit=1000` for initial analysis, `limit=0` only after validation",
-        "- Collect: text, links, file names, message dates",
-        "",
-        "**Step 3 — Noise Rejection (CRITICAL)**",
-        "- Filter: ads, motivational posts, chatter, reposts without content",
-        "- Keep only: vacancy signals, order requests, project announcements, professional leads",
-        "- One message → one `is_relevant()` check → skip if False",
-        "",
-        "**Step 4 — Signal Classification**",
-        "- Vacancy signal: «требуется», «ищем», «нужен специалист»",
-        "- Order signal: «объект», «тендер», «выбор подрядчика», «заказ»",
-        "- Lead signal: contact mention + professional topic",
-        "",
-        "**Step 5 — Compact Output**",
-        "- Do NOT create one core.db task per message",
-        "- Do NOT write raw history to memory.db",
-        "- Write ONE compact summary record per scan session",
-        "- Key: `topic_6104_rabota_poisk_<source>_<date>`",
-        "",
-        "**Step 6 — Routing**",
-        "- Useful signals → route to topic_6104 as single aggregated report",
-        "- Format: [source] [date] [signal_type] [excerpt] [link]",
-        "",
-        "**Reuse**: swap `@tnz_msk` for any Telegram channel, "
-        "swap skill categories for job/order detection, "
-        "route output to topic_6104 instead of topic_5.",
-    ]
-    return "\n".join(lines)
-
-
-def build_report_md(result: dict, scan_stats: dict, access: dict,
-                    args_ns: argparse.Namespace) -> str:
-    now = _now()
-    return f"""# TNZ_MSK DOCUMENT SKILL EXTRACTION REPORT
-Generated: {now}
-
-## Diagnostics
-- Source: @tnz_msk — «{access.get('title', '')}»
-- Session: authorized ✅
-- Telethon: 1.43.2 ✅
-- Mode: {'DRY-RUN' if getattr(args_ns, 'dry_run', False) else 'LIVE'}
-- Sample limit: {getattr(args_ns, 'sample', 1000)}
-
-## Scan Statistics
-| Metric | Count |
-|--------|-------|
-| Total messages fetched | {scan_stats.get('total_fetched', 0)} |
-| Skipped (empty) | {scan_stats.get('skipped_empty', 0)} |
-| Skipped (noise) | {scan_stats.get('skipped_noise', 0)} |
-| Detected documents | {scan_stats.get('detected_docs', 0)} |
-| Detected links | {scan_stats.get('detected_links', 0)} |
-
-## Skill Extraction
-| Metric | Count |
-|--------|-------|
-| Records passed to skill extractor | {result['total_input']} |
-| Skill cards extracted | {result['extracted']} |
-| Rejected (noise/no value) | {result['rejected_noise']} |
-| Skill categories | {len(result['categories'])} |
-| Needs owner review | {sum(1 for c in result['cards'] if c['needs_owner_review'])} |
-
-## Skill Categories Extracted
-{chr(10).join(f'- {cat}: {len(result["by_category"].get(cat, []))} rules' for cat in result['categories'])}
-
-## Output Files
-- `data/memory_files/TEHNADZOR/source_skills/tnz_msk/TECHNADZOR_DOCUMENT_COMPOSITION_SKILL.md`
-- `data/memory_files/TEHNADZOR/source_skills/tnz_msk/TECHNADZOR_DOCUMENT_COMPOSITION_SKILL.json`
-- `data/memory_files/TEHNADZOR/source_skills/tnz_msk/SOURCE_INDEX.json`
-- `data/memory_files/TEHNADZOR/source_skills/tnz_msk/LINKED_DOCUMENTS_INDEX.json`
-
-## Rules
-- No raw history saved to memory.db ✅
-- No core.db tasks created ✅
-- No forbidden files touched ✅
-- Each extracted rule has source_ref ✅
-- RABOTA_POISK reusable pattern documented ✅
-"""
-
-
-def build_handoff_md(result: dict, scan_stats: dict, commit_hint: str = "pending") -> str:
-    return f"""# HANDOFF: TNZ_MSK DOCUMENT SKILL EXTRACTION
-Date: 2026-05-05
-Task: TELEGRAM_SOURCE_SKILL_EXTRACTION_TNZ_MSK_V1
-Status: COMPLETED
-
-## What Was Done
-- Read @tnz_msk via authorized Telethon session (read-only)
-- Scanned {scan_stats.get('total_fetched', 0)} messages
-- Extracted {result['extracted']} skill cards across {len(result['categories'])} categories
-- Rejected {result['rejected_noise']} noise records
-- Built topic_5 technadzor document composition skill package
-- Created reusable RABOTA_POISK Telegram source analysis pattern
-
-## New Files Created
-- core/telegram_source_skill_extractor.py
-- core/technadzor_document_skill.py
-- tools/extract_tnz_msk_document_skill.py
-- data/memory_files/TEHNADZOR/source_skills/tnz_msk/TECHNADZOR_DOCUMENT_COMPOSITION_SKILL.md
-- data/memory_files/TEHNADZOR/source_skills/tnz_msk/TECHNADZOR_DOCUMENT_COMPOSITION_SKILL.json
-- data/memory_files/TEHNADZOR/source_skills/tnz_msk/SOURCE_INDEX.json
-- data/memory_files/TEHNADZOR/source_skills/tnz_msk/LINKED_DOCUMENTS_INDEX.json
-- docs/REPORTS/TNZ_MSK_DOCUMENT_SKILL_EXTRACTION_REPORT.md
-- docs/HANDOFFS/HANDOFF_20260505_TNZ_MSK_DOCUMENT_SKILL_EXTRACTION.md
-
-## Uncommitted / Untouched
-- core/normative_engine.py — modified (P6H5 norm expansion), staged separately by user
-
-## Skill Categories Extracted
-{chr(10).join(f'- {cat}' for cat in result['categories'])}
-
-## Next Steps
-- Owner review of `needs_owner_review=true` cards
-- Promotion of validated skills to technadzor_engine prompt context
-- Reuse RABOTA_POISK pattern for topic_6104 channel scan
-- Consider scheduling periodic re-scan of @tnz_msk (new posts only, delta scan)
-
-## Commit
-{commit_hint}
-"""
-
-
-async def main_async(args: argparse.Namespace) -> None:
-    limit = args.sample
-    download = args.download_documents and not args.dry_run
-
-    print(f"[INFO] source={args.source} sample={limit} download={download} dry_run={args.dry_run}")
-
-    result_raw = await run_source_scan(
-        source=args.source,
-        limit=limit,
-        download_docs=download,
-        docs_output_dir=DOCS_DIR if download else None,
-    )
-
-    if not result_raw.get("ok"):
-        print(f"[ERROR] source access failed: {result_raw.get('error')}")
-        sys.exit(1)
-
-    access = result_raw["access"]
-    scan = result_raw["scan"]
-    scan_stats = {k: v for k, v in scan.items() if k != "records"}
-    records = scan["records"]
-    downloaded = result_raw.get("downloaded_documents", [])
-
-    print(f"[INFO] fetched={scan['total_fetched']} docs={scan['detected_docs']} "
-          f"links={scan['detected_links']} noise={scan['skipped_noise']} "
-          f"downloaded={len(downloaded)}")
-
-    result = process_records(records)
-    print(f"[INFO] extracted={result['extracted']} rejected={result['rejected_noise']} "
-          f"categories={result['categories']}")
-
-    if args.dry_run:
-        print("[DRY-RUN] Would write files but skipping.")
-        print(json.dumps({
-            "scan_stats": scan_stats,
-            "extracted": result["extracted"],
-            "rejected": result["rejected_noise"],
-            "categories": result["categories"],
-        }, ensure_ascii=False, indent=2))
-        return
-
-    # Build outputs
-    skill_md = build_skill_md(result, scan_stats, access)
-    skill_json = {
-        "schema": "TECHNADZOR_DOCUMENT_COMPOSITION_SKILL_V1",
-        "source": args.source,
-        "channel_title": access.get("title", ""),
-        "extracted_at": _now(),
-        "scan_stats": scan_stats,
-        "extracted": result["extracted"],
-        "rejected_noise": result["rejected_noise"],
-        "categories": result["categories"],
-        "cards": result["cards"],
-    }
-    source_index = {
-        "schema": "TNZ_MSK_SOURCE_INDEX_V1",
-        "source": args.source,
-        "scanned_at": _now(),
-        "total_fetched": scan["total_fetched"],
-        "records_count": len(records),
-        "records": [{
-            "message_id": r["message_id"],
-            "date": r["message_date"],
-            "source_ref": r["source_ref"],
-            "has_links": bool(r.get("links")),
-            "has_file": bool(r.get("file_name")),
-            "media_type": r.get("media_type"),
-        } for r in records[:500]],
-    }
-    linked_docs = {
-        "schema": "TNZ_MSK_LINKED_DOCUMENTS_INDEX_V1",
-        "source": args.source,
-        "scanned_at": _now(),
-        "downloaded_count": len(downloaded),
-        "downloaded_paths": downloaded,
-        "linked_urls": sorted({
-            url for r in records
-            for url in r.get("links", [])
-        })[:200],
-        "document_messages": [{
-            "message_id": r["message_id"],
-            "date": r["message_date"],
-            "source_ref": r["source_ref"],
-            "file_name": r.get("file_name"),
-        } for r in records if r.get("file_name")][:200],
-    }
-
-    _write(SKILL_DIR / "TECHNADZOR_DOCUMENT_COMPOSITION_SKILL.md", skill_md)
-    _write_json(SKILL_DIR / "TECHNADZOR_DOCUMENT_COMPOSITION_SKILL.json", skill_json)
-    _write_json(SKILL_DIR / "SOURCE_INDEX.json", source_index)
-    _write_json(SKILL_DIR / "LINKED_DOCUMENTS_INDEX.json", linked_docs)
-
-    report_md = build_report_md(result, scan_stats, access, args)
-    _write(REPORT_PATH, report_md)
-
-    handoff_md = build_handoff_md(result, scan_stats)
-    _write(HANDOFF_PATH, handoff_md)
-
-    if args.write_memory_summary:
-        import sqlite3
-        mem_db = BASE / "data/memory.db"
-        if mem_db.exists():
-            conn = sqlite3.connect(str(mem_db))
-            ts = _now()
-            chat_id = "-1003725299009"
-            summary_val = json.dumps({
-                "schema": "TNZ_MSK_SKILL_SUMMARY_V1",
-                "extracted_at": ts,
-                "categories": result["categories"],
-                "extracted": result["extracted"],
-                "source": args.source,
-            }, ensure_ascii=False)
-            for key, val in [
-                ("topic_5_tnz_msk_skill_summary", summary_val),
-                ("topic_5_tnz_msk_skill_index",
-                 json.dumps({"categories": result["categories"]}, ensure_ascii=False)),
-                ("topic_5_tnz_msk_skill_extracted_at", ts),
-            ]:
-                conn.execute(
-                    "INSERT OR REPLACE INTO memory(chat_id,key,value,timestamp) VALUES(?,?,?,?)",
-                    (chat_id, key, val, ts)
-                )
-            conn.commit()
-            conn.close()
-            print("[INFO] memory summary written (3 keys only)")
-
-    print(f"[OK] skill written → {SKILL_DIR}")
-    print(f"[OK] report → {REPORT_PATH}")
-    print(f"[OK] handoff → {HANDOFF_PATH}")
-
-
-def main():
-    parser = argparse.ArgumentParser(description="Extract technadzor document skill from Telegram source")
-    parser.add_argument("--source", default="@tnz_msk")
-    parser.add_argument("--limit", type=int, default=0)
-    parser.add_argument("--sample", type=int, default=1000)
-    parser.add_argument("--download-documents", dest="download_documents", action="store_true", default=False)
-    parser.add_argument("--no-download-documents", dest="download_documents", action="store_false")
-    parser.add_argument("--write-memory-summary", dest="write_memory_summary", action="store_true", default=False)
-    parser.add_argument("--dry-run", dest="dry_run", action="store_true", default=False)
-    args = parser.parse_args()
-    asyncio.run(main_async(args))
-
-
-if __name__ == "__main__":
-    main()
-# === END_EXTRACT_TNZ_MSK_DOCUMENT_SKILL_V1 ===
-
-====================================================================================================
-END_FILE: tools/extract_tnz_msk_document_skill.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: tools/final_session_code_tail_verify.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 7cd72b9a9b65a65ec55a53196a1a6b8fbdc7c8f57485fe391c1b42374adc7aa4
-====================================================================================================
-#!/usr/bin/env python3
-# === FINAL_SESSION_CODE_TAIL_VERIFY_V4_FILE_MEMORY_PUBLIC ===
-from __future__ import annotations
-
-import asyncio
-import json
-import sqlite3
-import subprocess
-import sys
-from pathlib import Path
-from datetime import datetime, timezone
-
-BASE = Path("/root/.areal-neva-core")
-sys.path.insert(0, str(BASE))
-
-REPORT = BASE / "docs" / "REPORTS" / "FINAL_SESSION_CODE_TAIL_VERIFY_REPORT.md"
-CORE_DB = BASE / "data" / "core.db"
-
-BAD_ROUTE_IMPORT = "from core.model_router import " + "route_domain"
-BAD_FINAL_IMPORT = "from core.final_closure_engine import " + "handle_final_closure"
-BAD_PRICE_SYMBOL = "prehandle_price_" + "decision_v1"
-
-REQUIRED_MARKERS = {
-    "task_worker.py": [
-        "FINAL_CLOSURE_BLOCKER_FIX_V1_TASK_WORKER_HOOK",
-        "END_FULL_TECH_CONTOUR_CLOSE_V1_WIRED",
-        "ACTIVE_DIALOG_STATE_V1_TASK_WORKER_HOOK",
-        "VOICE_CONFIRM_AWAITING_V1",
-    ],
-    "core/file_memory_bridge.py": [
-        "FILE_MEMORY_PUBLIC_OUTPUT_DOMAIN_FILTER_V6_FINAL_SESSION",
-        "_fm_item_domain",
-        "_fm_public_links",
-        "_fm_public_title",
-    ],
-    "core/output_sanitizer.py": [
-        "UNIFIED_USER_OUTPUT_SANITIZER_V5_STRICT_PUBLIC_CLEAN",
-        "sanitize_user_output",
-        "sanitize_project_message",
-        "sanitize_estimate_message",
-    ],
-    "core/price_enrichment.py": [
-        "PRICE_DECISION_BEFORE_WEB_SEARCH_V1",
-        "prehandle_price_task_v1",
-        "_base_prehandle_price_task_v1",
-    ],
-    "core/file_context_intake.py": [
-        "PENDING_INTENT_CLARIFICATION_V1",
-        "PROJECT_SAMPLE_TEXT_INTAKE_V1",
-    ],
-    "core/final_closure_engine.py": [
-        "FINAL_CLOSURE_BLOCKER_FIX_V1_ENGINE",
-        "FINAL_CLOSURE_MEMORY_QUERY_PUBLIC_OUTPUT_V3",
-        "maybe_handle_final_closure",
-    ],
-    "core/model_router.py": [
-        "FINAL_CLOSURE_BLOCKER_FIX_V1_MODEL_ROUTER",
-        "detect_domain",
-    ],
-    "core/runtime_file_catalog.py": ["FINAL_CLOSURE_BLOCKER_FIX_V1_RUNTIME_FILE_CATALOG"],
-    "core/archive_guard.py": ["FINAL_CLOSURE_BLOCKER_FIX_V1_ARCHIVE_DUPLICATE_GUARD"],
-    "core/technadzor_engine.py": [
-        "FINAL_CLOSURE_BLOCKER_FIX_V1_TECHNADZOR_ENGINE",
-        "TECHNADZOR_PUBLIC_MESSAGE_NO_LOCAL_PATH_V1",
-    ],
-    "core/ocr_engine.py": [
-        "FINAL_CLOSURE_BLOCKER_FIX_V1_OCR_TABLE_ENGINE",
-        "OCR_TABLE_REQUIRES_REAL_RECOGNITION_ENGINE",
-    ],
-    "core/estimate_engine.py": ["create_estimate_xlsx_from_rows"],
-    "core/sheets_generator.py": ["USER_ENTERED"],
-}
-
-def run(cmd):
-    try:
-        return subprocess.check_output(cmd, cwd=str(BASE), text=True, stderr=subprocess.STDOUT).strip()
-    except Exception as e:
-        return "ERROR: " + str(e)
-
-def read(rel):
-    p = BASE / rel
-    return p.read_text(encoding="utf-8", errors="replace") if p.exists() else ""
-
-def line_no(rel, needle):
-    for i, line in enumerate(read(rel).splitlines(), 1):
-        if needle in line:
-            return i
-    return -1
-
-def marker_check():
-    out = {}
-    for rel, markers in REQUIRED_MARKERS.items():
-        txt = read(rel)
-        missing = [m for m in markers if m not in txt]
-        out[rel] = {"exists": bool(txt), "missing": missing, "ok": bool(txt) and not missing}
-    return out
-
-def public_def_count(rel, prefix):
-    return sum(1 for line in read(rel).splitlines() if line.startswith(prefix))
-
-def exact_bad_import_present(import_line, files):
-    return any(import_line in read(x) for x in files)
-
-def smoke_check():
-    res = {}
-
-    from core.model_router import detect_domain
-    rc = {
-        "estimate": detect_domain("сделай смету по образцу").get("domain"),
-        "estimate_inflected": detect_domain("сделай смету").get("domain"),
-        "technadzor": detect_domain("сделай акт технадзора").get("domain"),
-        "memory": detect_domain("какие файлы я скидывал").get("domain"),
-        "project": detect_domain("сделай проект КЖ плиты").get("domain"),
-    }
-    res["router_cases"] = rc
-    res["router_ok"] = (rc["estimate"] == "estimate" and rc["estimate_inflected"] == "estimate"
-        and rc["technadzor"] == "technadzor" and rc["memory"] == "memory" and rc["project"] == "project")
-
-    from core.file_memory_bridge import _fm_item_domain, _fm_public_links, _fm_public_title
-    project_item = {
-        "file_name": "4. АР АК-М-160.pdf",
-        "direction": "TECHNADZOR_ACT_GOST_SP",
-        "summary": "акт технадзора",
-        "value": "blob https://docs.google.com/spreadsheets/d/BAD/edit",
-        "links": ["https://drive.google.com/file/d/REAL/view?usp=drivesdk"],
-    }
-    res["file_memory_domain_project_ok"] = _fm_item_domain(project_item) == "project"
-    res["file_memory_title_ok"] = _fm_public_title(project_item) == "АР АК-М-160.pdf"
-    res["file_memory_links_only_item_ok"] = _fm_public_links(project_item) == ["https://drive.google.com/file/d/REAL/view?usp=drivesdk"]
-    res["file_memory_no_blob_link_ok"] = _fm_public_links({"file_name": "КЖ.pdf", "links": []}) == []
-
-    from core.output_sanitizer import sanitize_user_output
-    dirty = "MANIFEST:\nhttps://drive.google.com/file/d/M/view\nDrive file_id: abc\nКратко: {\"task_id\":\"bad\"}\n/root/.areal-neva-core/tmp\nНормальный текст"
-    clean = sanitize_user_output(dirty)
-    res["sanitizer_public_ok"] = (
-        "MANIFEST" not in clean and "file_id" not in clean.lower()
-        and "task_id" not in clean.lower() and "/root/" not in clean
-        and "Нормальный текст" in clean
-    )
-
-    from core.price_enrichment import prehandle_price_task_v1
-    price_res = asyncio.run(prehandle_price_task_v1(sqlite3.connect(":memory:"), {
-        "id": "v", "chat_id": "-1", "topic_id": 2, "input_type": "text", "raw_input": "смета",
-    }))
-    res["price_function_exists"] = callable(prehandle_price_task_v1)
-    res["price_function_result_type_ok"] = price_res is None or isinstance(price_res, dict)
-
-    from core.final_closure_engine import maybe_handle_final_closure
-    mc = sqlite3.connect(str(CORE_DB))
-    mc.row_factory = sqlite3.Row
-    try:
-        mr = maybe_handle_final_closure(mc, {
-            "id": "v", "chat_id": "-1003725299009", "topic_id": 2,
-            "input_type": "text", "raw_input": "какие файлы я скидывал",
-        }, "v", "-1003725299009", 2, "какие файлы я скидывал", "text", None)
-    finally:
-        mc.close()
-    mm = (mr or {}).get("message", "")
-    res["final_closure_memory_ok"] = bool(mr and mr.get("handled"))
-    res["final_closure_public_ok"] = (
-        "MANIFEST" not in mm and "DXF:" not in mm and "file_id" not in mm.lower()
-        and "task=" not in mm.lower() and "Кратко:" not in mm and "/root/" not in mm
-    )
-
-    from core.estimate_engine import create_estimate_xlsx_from_rows
-    res["estimate_xlsx_function_ok"] = callable(create_estimate_xlsx_from_rows)
-
-    from core.technadzor_engine import process_technadzor
-    tech = process_technadzor(text="акт технадзора", task_id="v", chat_id="-1", topic_id=2)
-    res["technadzor_public_message_ok"] = bool(tech.get("handled")) and "/root/" not in str(tech.get("message", ""))
-
-    res["google_sheets_user_entered_ok"] = "USER_ENTERED" in read("core/sheets_generator.py")
-    res["ocr_real_not_closed_fact"] = "OCR_TABLE_REQUIRES_REAL_RECOGNITION_ENGINE" in read("core/ocr_engine.py")
-    dwg = run(["bash", "-lc", "command -v odafileconverter || command -v dwg2dxf || true"])
-    res["dwg_converter_present"] = bool(dwg.strip())
-
-    return res
-
-def main():
-    verify_files = ["tools/final_session_code_tail_verify.py", "tools/live_tech_contour_verify.py"]
-    report = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "git": {
-            "head": run(["git", "rev-parse", "--short", "HEAD"]),
-            "origin": run(["git", "rev-parse", "--short", "origin/main"]),
-            "ahead_behind": run(["git", "rev-list", "--left-right", "--count", "origin/main...HEAD"]),
-            "status": run(["git", "status", "--short"]),
-        },
-        "markers": marker_check(),
-        "hook_order": {
-            "full_end": line_no("task_worker.py", "END_FULL_TECH_CONTOUR_CLOSE_V1_WIRED"),
-            "final_hook": line_no("task_worker.py", "FINAL_CLOSURE_BLOCKER_FIX_V1_TASK_WORKER_HOOK"),
-            "active_dialog": line_no("task_worker.py", "ACTIVE_DIALOG_STATE_V1_TASK_WORKER_HOOK"),
-        },
-        "counts": {
-            "public_prehandle_price_task_v1": public_def_count("core/price_enrichment.py", "async def prehandle_price_task_v1"),
-            "base_prehandle_price_task_v1": public_def_count("core/price_enrichment.py", "async def _base_prehandle_price_task_v1"),
-            "create_estimate_xlsx_from_rows": public_def_count("core/estimate_engine.py", "def create_estimate_xlsx_from_rows"),
-            "prehandle_task_context_v1": public_def_count("core/file_context_intake.py", "def prehandle_task_context_v1"),
-        },
-        "forbidden": {
-            "telegram_daemon_dirty": bool(run(["git", "status", "--short", "--", "telegram_daemon.py"])),
-            "final_closure_has_voice_handler_def": (
-                "def handle_voice_confirm" in read("core/final_closure_engine.py")
-                or "def voice_confirm" in read("core/final_closure_engine.py")
-            ),
-            "wrong_route_import": exact_bad_import_present(BAD_ROUTE_IMPORT, verify_files),
-            "wrong_final_closure_import": exact_bad_import_present(BAD_FINAL_IMPORT, verify_files),
-            "wrong_price_symbol": any(BAD_PRICE_SYMBOL in read(x) for x in verify_files + ["core/price_enrichment.py"]),
-        },
-        "smoke": smoke_check(),
-    }
-
-    report["markers_ok"] = all(v.get("ok") for v in report["markers"].values())
-    report["hook_order_ok"] = (
-        report["hook_order"]["full_end"] > 0
-        and report["hook_order"]["final_hook"] > report["hook_order"]["full_end"]
-        and report["hook_order"]["final_hook"] < report["hook_order"]["active_dialog"]
-    )
-    report["counts_ok"] = (
-        report["counts"]["public_prehandle_price_task_v1"] == 1
-        and report["counts"]["base_prehandle_price_task_v1"] == 1
-        and report["counts"]["create_estimate_xlsx_from_rows"] == 1
-        and report["counts"]["prehandle_task_context_v1"] == 2
-    )
-    report["forbidden_ok"] = not any(report["forbidden"].values())
-    required_smoke = [
-        "router_ok", "file_memory_domain_project_ok", "file_memory_title_ok",
-        "file_memory_links_only_item_ok", "file_memory_no_blob_link_ok",
-        "sanitizer_public_ok", "price_function_exists", "price_function_result_type_ok",
-        "final_closure_memory_ok", "final_closure_public_ok",
-        "estimate_xlsx_function_ok", "technadzor_public_message_ok", "google_sheets_user_entered_ok",
-    ]
-    report["smoke_ok"] = all(bool(report["smoke"].get(k)) for k in required_smoke)
-    report["status"] = "OK" if (
-        report["markers_ok"] and report["hook_order_ok"]
-        and report["counts_ok"] and report["forbidden_ok"] and report["smoke_ok"]
-    ) else "FAILED"
-
-    REPORT.parent.mkdir(parents=True, exist_ok=True)
-    lines = [
-        "# FINAL_SESSION_CODE_TAIL_VERIFY_REPORT", "",
-        f"generated_at: {report['generated_at']}",
-        f"status: {report['status']}",
-        f"markers_ok: {report['markers_ok']}",
-        f"hook_order_ok: {report['hook_order_ok']}",
-        f"counts_ok: {report['counts_ok']}",
-        f"forbidden_ok: {report['forbidden_ok']}",
-        f"smoke_ok: {report['smoke_ok']}", "",
-        "## RAW_JSON", "```json",
-        json.dumps(report, ensure_ascii=False, indent=2),
-        "```",
-    ]
-    REPORT.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    print("STATUS", report["status"])
-    if report["status"] != "OK":
-        raise SystemExit(1)
-
-if __name__ == "__main__":
-    main()
-# === END_FINAL_SESSION_CODE_TAIL_VERIFY_V4_FILE_MEMORY_PUBLIC ===
-
-====================================================================================================
-END_FILE: tools/final_session_code_tail_verify.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: tools/full_context_aggregator_guard.py
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: 01edf2d4ca491599fb7966444efc3c55d2349e09991496c2947020f86a02e8cc
-====================================================================================================
-#!/usr/bin/env python3
-from __future__ import annotations
-
-import fcntl
-import hashlib
-import json
-import os
-import sqlite3
-import subprocess
-import sys
-import time
-from pathlib import Path
-from typing import Any
-
-BASE = Path("/root/.areal-neva-core")
-STATE_PATH = BASE / "data" / "full_context_aggregator_guard_state.json"
-LOCK_PATH = BASE / "data" / "full_context_aggregator_guard.lock"
-AGGREGATOR = BASE / "tools" / "full_context_aggregator.py"
-PYTHON = BASE / ".venv" / "bin" / "python3"
-
-GENERATED_EXACT = {
-    "docs/SHARED_CONTEXT/MODEL_BOOTSTRAP_CONTEXT.md",
-    "docs/SHARED_CONTEXT/CLAUDE_BOOTSTRAP_CONTEXT.md",
-    "docs/SHARED_CONTEXT/ONE_SHARED_CONTEXT.md",
-    "docs/SHARED_CONTEXT/SAFE_RUNTIME_SNAPSHOT.md",
-    "docs/SHARED_CONTEXT/CLAUDE_SESSION_START_PROMPT.md",
-    "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT.md",
-    "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_MANIFEST.json",
-    "docs/SHARED_CONTEXT/SINGLE_MODEL_SOURCE.md",
-    "docs/SHARED_CONTEXT/SINGLE_MODEL_FULL_CONTEXT.md",
-    "docs/SHARED_CONTEXT/TOPIC_STATUS_INDEX.md",
-    "docs/SHARED_CONTEXT/DIRECTION_STATUS_INDEX.md",
-}
-
-GENERATED_PREFIXES = (
-    "docs/SHARED_CONTEXT/ORCHESTRA_FULL_CONTEXT_PART_",
-    "docs/SHARED_CONTEXT/TOPICS/",
-    "docs/SHARED_CONTEXT/DIRECTIONS/",
-)
-
-LOCAL_RUNTIME_SOURCES = (
-    "chat_exports",
-    "data/chat_exports",
-    "data/telegram_file_catalog",
-    "data/templates/reference_monolith",
-)
-
-ABS_RUNTIME_SOURCES = (
-    Path("/root/AI_ORCHESTRA/telegram_exports"),
-)
-
-FORBIDDEN_STAGED_RE = (
-    ".env",
-    "credentials",
-    "sessions",
-    "memory.db",
-    "tasks.db",
-    "core.db",
-    "google_io.py",
-    "ai_router.py",
-    "telegram_daemon.py",
-    "reply_sender.py",
-    "systemd",
-    ".bak",
-    "core_db_backups",
-    "data/technadzor",
-)
-
-
-def run(args: list[str], check: bool = True) -> str:
-    p = subprocess.run(
-        args,
-        cwd=str(BASE),
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        check=False,
-    )
-    if check and p.returncode != 0:
-        raise RuntimeError((p.stdout or "").strip() or f"COMMAND_FAILED: {args}")
-    return (p.stdout or "").strip()
-
-
-def sha_file(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(1024 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
-def is_generated(rel: str) -> bool:
-    if rel in GENERATED_EXACT:
-        return True
-    return any(rel.startswith(prefix) for prefix in GENERATED_PREFIXES)
-
-
-def tracked_source_snapshot() -> list[dict[str, Any]]:
-    out = run(["git", "ls-files"], check=True)
-    items: list[dict[str, Any]] = []
-    for rel in sorted(x.strip() for x in out.splitlines() if x.strip()):
-        if is_generated(rel):
-            continue
-        if rel.endswith(".bak") or ".bak." in rel:
-            continue
-        p = BASE / rel
-        if not p.exists() or not p.is_file():
-            continue
-        try:
-            st = p.stat()
-            items.append({
-                "path": rel,
-                "size": st.st_size,
-                "sha256": sha_file(p),
-            })
-        except Exception as e:
-            items.append({"path": rel, "error": str(e)[:160]})
-    return items
-
-
-def local_tree_snapshot(root: Path, label: str) -> list[dict[str, Any]]:
-    if not root.exists():
-        return []
-    rows: list[dict[str, Any]] = []
-    try:
-        for p in sorted(x for x in root.rglob("*") if x.is_file()):
-            if len(rows) >= 5000:
-                rows.append({"label": label, "truncated": True})
-                break
-            try:
-                st = p.stat()
-                rows.append({
-                    "label": label,
-                    "path": str(p.relative_to(root)),
-                    "size": st.st_size,
-                    "mtime": int(st.st_mtime),
-                })
-            except Exception as e:
-                rows.append({"label": label, "path": str(p), "error": str(e)[:120]})
-    except Exception as e:
-        rows.append({"label": label, "root": str(root), "error": str(e)[:120]})
-    return rows
-
-
-def db_watermark() -> dict[str, Any]:
-    db = BASE / "data" / "core.db"
-    if not db.exists():
-        return {"status": "NO_CORE_DB"}
-    result: dict[str, Any] = {"status": "OK"}
-    try:
-        conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True, timeout=3)
-        cur = conn.cursor()
-
-        cur.execute("PRAGMA table_info(tasks)")
-        task_cols = {r[1] for r in cur.fetchall()}
-        cur.execute("PRAGMA table_info(task_history)")
-        hist_cols = {r[1] for r in cur.fetchall()}
-
-        if "updated_at" in task_cols:
-            cur.execute("SELECT MAX(updated_at), COUNT(*) FROM tasks")
-            result["tasks_max_updated_at"], result["tasks_count"] = cur.fetchone()
-        else:
-            cur.execute("SELECT MAX(rowid), COUNT(*) FROM tasks")
-            result["tasks_max_rowid"], result["tasks_count"] = cur.fetchone()
-
-        if "created_at" in hist_cols:
-            cur.execute("SELECT MAX(created_at), COUNT(*) FROM task_history")
-            result["history_max_created_at"], result["history_count"] = cur.fetchone()
-        else:
-            cur.execute("SELECT MAX(rowid), COUNT(*) FROM task_history")
-            result["history_max_rowid"], result["history_count"] = cur.fetchone()
-
-        cur.execute("SELECT COALESCE(topic_id,0), state, COUNT(*) FROM tasks GROUP BY COALESCE(topic_id,0), state")
-        result["topic_state_counts"] = [list(r) for r in cur.fetchall()]
-
-        conn.close()
-    except Exception as e:
-        result = {"status": "DB_READ_FAIL", "error": str(e)[:200]}
-    return result
-
-
-def fingerprint_payload() -> dict[str, Any]:
-    local_sources = []
-    for rel in LOCAL_RUNTIME_SOURCES:
-        local_sources.extend(local_tree_snapshot(BASE / rel, rel))
-    for abs_root in ABS_RUNTIME_SOURCES:
-        local_sources.extend(local_tree_snapshot(abs_root, str(abs_root)))
-
-    return {
-        "git_head": run(["git", "rev-parse", "HEAD"], check=True),
-        "tracked_sources": tracked_source_snapshot(),
-        "db_watermark": db_watermark(),
-        "runtime_sources": local_sources,
-    }
-
-
-def fingerprint(payload: dict[str, Any]) -> str:
-    raw = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
-    return hashlib.sha256(raw).hexdigest()
-
-
-def load_state() -> dict[str, Any]:
-    if not STATE_PATH.exists():
-        return {}
-    try:
-        return json.loads(STATE_PATH.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-
-
-def save_state(fp: str, payload: dict[str, Any]) -> None:
-    STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    tmp = STATE_PATH.with_suffix(".tmp")
-    data = {
-        "saved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "fingerprint": fp,
-        "git_head": payload.get("git_head"),
-        "db_watermark": payload.get("db_watermark"),
-    }
-    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    tmp.replace(STATE_PATH)
-
-
-def staged_files() -> list[str]:
-    out = run(["git", "diff", "--cached", "--name-only"], check=True)
-    return [x.strip() for x in out.splitlines() if x.strip()]
-
-
-def assert_no_staged_before_run() -> None:
-    staged = staged_files()
-    if not staged:
-        return
-    raise RuntimeError("PREEXISTING_STAGED_CHANGES_REFUSE_AGGREGATOR_RUN:\n" + "\n".join(staged[:200]))
-
-
-def run_aggregator() -> None:
-    if not AGGREGATOR.exists():
-        raise RuntimeError("FULL_CONTEXT_AGGREGATOR_NOT_FOUND")
-    assert_no_staged_before_run()
-    py = str(PYTHON if PYTHON.exists() else sys.executable)
-    p = subprocess.run(
-        [py, str(AGGREGATOR)],
-        cwd=str(BASE),
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        check=False,
-    )
-    if p.stdout:
-        print(p.stdout.rstrip())
-    if p.returncode != 0:
-        raise RuntimeError(f"FULL_CONTEXT_AGGREGATOR_FAILED:{p.returncode}")
-
-
-
-# === DIRTY_TRACKED_NONGENERATED_GUARD_V1 ===
-def dirty_tracked_nongenerated() -> list[str]:
-    out = run(["git", "status", "--porcelain"], check=True)
-    dirty: list[str] = []
-    for line in out.splitlines():
-        if not line:
-            continue
-        status = line[:2]
-        path = line[3:].strip()
-        if " -> " in path:
-            path = path.split(" -> ", 1)[1].strip()
-        if status.startswith("??"):
-            continue
-        if is_generated(path):
-            continue
-        if path in {
-            "tools/full_context_aggregator_guard.py",
-            "tools/full_context_aggregator_guard.sh",
-        }:
-            continue
-        dirty.append(f"{status} {path}")
-    return dirty
-
-
-def assert_clean_tracked_sources() -> None:
-    dirty = dirty_tracked_nongenerated()
-    if dirty:
-        raise RuntimeError(
-            "DIRTY_TRACKED_NONGENERATED_REFUSE_AGGREGATOR_RUN:\n"
-            + "\n".join(dirty[:200])
-        )
-# === END_DIRTY_TRACKED_NONGENERATED_GUARD_V1 ===
-
-
-def acquire_lock() -> Any:
-    LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
-    f = LOCK_PATH.open("w")
-    try:
-        fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        return f
-    except BlockingIOError:
-        return None
-
-
-def main() -> int:
-    lock = acquire_lock()
-    if lock is None:
-        return 0
-
-    payload = fingerprint_payload()
-    fp = fingerprint(payload)
-    state = load_state()
-    old_fp = state.get("fingerprint")
-
-    if "--status" in sys.argv:
-        dirty = dirty_tracked_nongenerated()
-        print(f"CURRENT_FINGERPRINT={fp}")
-        print(f"SAVED_FINGERPRINT={old_fp or 'NONE'}")
-        print(f"CHANGED={fp != old_fp}")
-        print(f"GIT_HEAD={payload.get('git_head')}")
-        print("DIRTY_TRACKED_NONGENERATED=" + (",".join(dirty) if dirty else "NONE"))
-        return 0
-
-    if "--init" in sys.argv:
-        assert_clean_tracked_sources()
-        save_state(fp, payload)
-        print(f"AGGREGATOR_GUARD_INIT_OK fingerprint={fp}")
-        return 0
-
-    assert_clean_tracked_sources()
-
-    force = "--force" in sys.argv
-    if not force and old_fp == fp:
-        return 0
-
-    print(f"AGGREGATOR_CHANGE_DETECTED old={old_fp or 'NONE'} new={fp} force={force}")
-    run_aggregator()
-
-    after_payload = fingerprint_payload()
-    after_fp = fingerprint(after_payload)
-    save_state(after_fp, after_payload)
-    print(f"AGGREGATOR_GUARD_DONE fingerprint={after_fp}")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
-
-====================================================================================================
-END_FILE: tools/full_context_aggregator_guard.py
-FILE_CHUNK: 1/1
-====================================================================================================
-
-====================================================================================================
-BEGIN_FILE: tools/full_context_aggregator_guard.sh
-FILE_CHUNK: 1/1
-SHA256_FULL_FILE: e242d0afb767dde16a3aa5cddaf36b7618fa09188a57269b971d0b4d9ad0de0c
-====================================================================================================
-#!/usr/bin/env bash
-set -Eeuo pipefail
-cd /root/.areal-neva-core
-
-set -a
-set +u
-[ -f .env ] && . ./.env
-set -u
-set +a
-
-exec /root/.areal-neva-core/.venv/bin/python3 /root/.areal-neva-core/tools/full_context_aggregator_guard.py "$@"
-
-====================================================================================================
-END_FILE: tools/full_context_aggregator_guard.sh
 FILE_CHUNK: 1/1
 ====================================================================================================

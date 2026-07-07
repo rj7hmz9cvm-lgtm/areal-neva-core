@@ -96,12 +96,20 @@ def _memory_write(chat_id: str, key: str, value: Any) -> None:
                 return
             payload = json.dumps(value, ensure_ascii=False) if not isinstance(value, str) else value
             ts = _now()
+            topic_match = re.match(r"^topic_(\d+)_", str(key))
+            topic_id = int(topic_match.group(1)) if topic_match else 0
             if "id" in cols:
                 mid = hashlib.sha1(f"{chat_id}:{key}:{ts}:{payload[:80]}".encode("utf-8")).hexdigest()
-                conn.execute(
-                    "INSERT OR IGNORE INTO memory (id,chat_id,key,value,timestamp) VALUES (?,?,?,?,?)",
-                    (mid, str(chat_id), str(key), payload, ts),
-                )
+                if "topic_id" in cols and "scope" in cols:
+                    conn.execute(
+                        "INSERT OR IGNORE INTO memory (id,chat_id,key,value,timestamp,topic_id,scope) VALUES (?,?,?,?,?,?,?)",
+                        (mid, str(chat_id), str(key), payload, ts, topic_id, "topic"),
+                    )
+                else:
+                    conn.execute(
+                        "INSERT OR IGNORE INTO memory (id,chat_id,key,value,timestamp) VALUES (?,?,?,?,?)",
+                        (mid, str(chat_id), str(key), payload, ts),
+                    )
             else:
                 conn.execute(
                     "INSERT INTO memory (chat_id,key,value,timestamp) VALUES (?,?,?,?)",
@@ -229,13 +237,7 @@ def latest_pending_instruction_for_topic(topic_id: int, chat_id: str = "") -> st
         except Exception:
             chat_ids = []
     for cid in chat_ids:
-        raw = _memory_latest(cid, f"topic_{int(topic_id or 0)}_pending_file_intent")
-        if not raw:
-            continue
-        try:
-            data = json.loads(raw)
-        except Exception:
-            data = {}
+        data = _load_pending_intent(cid, topic_id)
         if data.get("raw_text"):
             return str(data["raw_text"])
     return ""
@@ -323,16 +325,17 @@ def _duplicate_message(payload: Dict[str, Any], dup: Dict[str, Any]) -> str:
         dup.get("telegram_message_id") or payload.get("telegram_message_id"),
     )
     source_line = f"Сообщение: {link}\n" if link else ""
+    try:
+        from core.intake_offer_actions import get_offer_text as _canon_offer_text
+        offer_text = _canon_offer_text()
+    except Exception:
+        offer_text = "Что сделать с файлом?\n\nНапиши номер или опиши задачу."
     return (
-        "Смотри, этот файл ты уже скидывал\n"
+        "Файл уже есть\n"
         f"Файл: {name}\n"
         f"{source_line}"
         f"Дата: {dup.get('created_at') or dup.get('updated_at') or 'UNKNOWN'}\n\n"
-        "Что сделать с ним сейчас?\n"
-        "1. Обновить образец\n"
-        "2. Обработать заново\n"
-        "3. Сравнить версии\n"
-        "4. Игнорировать дубль"
+        f"{offer_text}"
     )
 
 
@@ -432,7 +435,18 @@ def _load_pending_intent(chat_id: str, topic_id: int) -> Dict[str, Any]:
         return {}
     try:
         data = json.loads(raw)
-        return data if isinstance(data, dict) else {}
+        if not isinstance(data, dict):
+            return {}
+        created_at = str(data.get("created_at") or "")
+        ttl_sec = int(data.get("ttl_sec") or 7200)
+        if created_at:
+            created = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+            if created.tzinfo is None:
+                created = created.replace(tzinfo=timezone.utc)
+            age = (datetime.now(timezone.utc) - created.astimezone(timezone.utc)).total_seconds()
+            if age > ttl_sec:
+                return {}
+        return data
     except Exception:
         return {}
 
@@ -443,6 +457,31 @@ def _pending_is_template_batch(intent: Dict[str, Any]) -> bool:
     if intent.get("kind") != "estimate":
         return False
     return intent.get("mode") in {"template_batch", "pending_estimate_files"}
+
+
+def _topic2_project_pdf_not_template(topic_id: int, payload: Dict[str, Any], pending: Dict[str, Any]) -> bool:
+    if int(topic_id or 0) != 2:
+        return False
+    name = _low(payload.get("file_name"))
+    mime = _low(payload.get("mime_type"))
+    caption = _low(payload.get("caption"))
+    current_text = f"{name} {caption}"
+    if ".pdf" not in name and "pdf" not in mime:
+        return False
+    explicit_template = any(x in caption for x in ("образец", "образцы", "шаблон", "сохрани как образец", "возьми как образец"))
+    if explicit_template:
+        return False
+    project_markers = (
+        "раздел", " ар", "кр", "кж", "км", "кмд", "рп", "рабоч", "проект",
+        "архитектур", "конструктив", "документац",
+    )
+    if any(x in current_text for x in project_markers):
+        return True
+    raw_text = _low((pending or {}).get("raw_text"))
+    stale_template_only = any(x in raw_text for x in ("принимай эти сметы как образцы", "как образцы")) and not any(
+        x in current_text for x in ("смета", "кс-2", "кс2", "ведомост", "расцен")
+    )
+    return stale_template_only
 
 
 def prehandle_task_context_v1(conn: sqlite3.Connection, task: Any) -> Optional[Dict[str, Any]]:
@@ -482,20 +521,32 @@ def prehandle_task_context_v1(conn: sqlite3.Connection, task: Any) -> Optional[D
 
         _index_telegram_file(chat_id, topic_id, task_id, payload)
 
-        dup = _find_duplicate(conn, task_id, chat_id, topic_id, payload)
-        if dup:
-            msg = _duplicate_message(payload, dup)
-            _memory_write(chat_id, f"topic_{topic_id}_last_duplicate_file", {"current_task_id": task_id, "payload": payload, "duplicate": dup})
-            return {
-                "handled": True,
-                "state": "WAITING_CLARIFICATION",
-                "kind": "duplicate_file_question",
-                "message": msg,
-                "reply_to_message_id": payload.get("telegram_message_id") or reply_to,
-                "history": "TELEGRAM_FILE_MEMORY_INDEX_V1:DUPLICATE_FOUND",
-            }
+        if not payload.get("raw", {}).get("file_duplicate_choice_intent"):
+            dup = _find_duplicate(conn, task_id, chat_id, topic_id, payload)
+            if dup:
+                msg = _duplicate_message(payload, dup)
+                _memory_write(chat_id, f"topic_{topic_id}_last_duplicate_file", {"current_task_id": task_id, "payload": payload, "duplicate": dup})
+                return {
+                    "handled": True,
+                    "state": "WAITING_CLARIFICATION",
+                    "kind": "duplicate_file_question",
+                    "message": msg,
+                    "reply_to_message_id": payload.get("telegram_message_id") or reply_to,
+                    "history": "TELEGRAM_FILE_MEMORY_INDEX_V1:DUPLICATE_FOUND",
+                }
 
         pending = _load_pending_intent(chat_id, topic_id)
+        if payload.get("raw", {}).get("file_duplicate_choice_intent"):
+            pending = None
+        if pending and _topic2_project_pdf_not_template(topic_id, payload, pending):
+            _memory_write(chat_id, f"topic_{topic_id}_pending_file_intent_skipped", {
+                "task_id": task_id,
+                "reason": "TOPIC2_PROJECT_PDF_NOT_TEMPLATE",
+                "file_name": payload.get("file_name"),
+                "telegram_message_id": payload.get("telegram_message_id"),
+                "created_at": _now(),
+            })
+            pending = None
         if _pending_is_template_batch(pending):
             saved = _save_estimate_template(chat_id, topic_id, task_id, payload, pending.get("raw_text") or "")
             file_name = payload.get("file_name") or "файл"

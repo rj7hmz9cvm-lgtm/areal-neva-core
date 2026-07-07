@@ -4678,3 +4678,34 @@ def t5_canonical_act_generate(chat_id: str, topic_id: int, task_id: str) -> dict
 
 _T5CA_LOG.info("PATCH_TOPIC5_CANONICAL_ACT_ENGINE_V3 installed")
 # === END_PATCH_TOPIC5_CANONICAL_ACT_ENGINE_V3 ===
+
+
+# === CANON_TOPIC5_TECHNADZOR_ISOLATION_GUARD_V1 ===
+_CANON_TOPIC5_ORIG_PROCESS_TECHNADZOR = process_technadzor
+
+
+def process_technadzor(text="", task_id="", chat_id="", topic_id=0, file_path="", file_name="", **kwargs):  # noqa: F811
+    try:
+        tid = int(topic_id or kwargs.get("topic_id") or 0)
+    except Exception:
+        tid = 0
+    if tid != 5:
+        return {
+            "ok": False,
+            "handled": False,
+            "state": "SKIPPED",
+            "message": "",
+            "history": "CANON_TOPIC5_TECHNADZOR_ISOLATION_GUARD_V1:SKIPPED_NON_TOPIC5",
+        }
+    return _CANON_TOPIC5_ORIG_PROCESS_TECHNADZOR(
+        text=text,
+        task_id=task_id,
+        chat_id=chat_id,
+        topic_id=topic_id,
+        file_path=file_path,
+        file_name=file_name,
+        **kwargs,
+    )
+
+
+# === END_CANON_TOPIC5_TECHNADZOR_ISOLATION_GUARD_V1 ===

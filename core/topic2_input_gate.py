@@ -382,6 +382,12 @@ def topic2_pre_estimate_gate(
     if topic_id != 2:
         return {"allow": True, "reason": "not_topic2"}
 
+    raw_payload = _json(_row_get(task, "raw_input", ""))
+    duplicate_choice = _s(raw_payload.get("file_duplicate_choice_intent")).strip().lower()
+    if duplicate_choice and duplicate_choice != "estimate":
+        _history(conn, task_id, f"TOPIC2_INPUT_GATE_FILE_MENU_BYPASS:{duplicate_choice}")
+        return {"allow": True, "reason": "file_menu_choice_not_estimate", "domain": "file_intake_menu"}
+
     if _is_status(raw_text):
         return {"allow": True, "reason": "status_query_not_estimate"}
 

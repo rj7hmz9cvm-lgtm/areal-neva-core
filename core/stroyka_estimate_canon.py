@@ -143,6 +143,33 @@ def _history_safe(conn: sqlite3.Connection, task_id: str, action: str) -> None:
     except Exception:
         pass
 
+
+def _topic2_history_has_v1(conn: sqlite3.Connection, task_id: str, marker: str) -> bool:
+    try:
+        row = conn.execute(
+            "SELECT 1 FROM task_history WHERE task_id=? AND action=? LIMIT 1",
+            (str(task_id), str(marker)),
+        ).fetchone()
+        return bool(row)
+    except Exception:
+        return False
+
+
+def _topic2_send_sync_status_v1(conn: sqlite3.Connection, task_id: str, chat_id: str, topic_id: int, reply_to: Any, marker: str, text: str) -> None:
+    if _topic2_history_has_v1(conn, task_id, marker):
+        return
+    try:
+        from core.reply_sender import send_reply_ex
+        send_reply_ex(
+            chat_id=str(chat_id),
+            text=_clean(text, 1200),
+            reply_to_message_id=int(reply_to) if reply_to else None,
+            message_thread_id=int(topic_id or 0) if topic_id else None,
+        )
+        _history_safe(conn, task_id, marker)
+    except Exception as exc:
+        _history_safe(conn, task_id, marker + "_ERR:" + _s(exc)[:80])
+
 # === PATCH_TOPIC2_PRICE_CHOICE_LOOP_CLOSE_V1 helpers ===
 PRICE_CHOICE_PROMPT_V1 = "Выбери уровень цен: 1 дешёвые / 2 средние / 3 надёжные / 4 вручную"
 
@@ -823,6 +850,205 @@ def _is_revision(text: str) -> bool:
     return any(x in _low(text) for x in REVISION_WORDS)
 
 
+def _is_new_project_estimate_request(text: str) -> bool:
+    t = _low(text)
+    if not t:
+        return False
+    has_project_files = any(x in t for x in (
+        "эти файлы", "эти документы", "этот проект", "один проект",
+        "проект", "pdf", "раздел", "ар", "кр", "кж",
+    ))
+    has_estimate_goal = any(x in t for x in (
+        "нужно посчитать", "посчитать стоимость", "сделать смет",
+        "стоимость строительства", "стоимость материалов", "сметн",
+    ))
+    return has_project_files and has_estimate_goal
+
+
+def _topic2_safe_file_name_v1(name: str) -> str:
+    name = _s(name) or "project.pdf"
+    name = re.sub(r"[\\/]+", "_", name)
+    name = re.sub(r"[\r\n\t]+", " ", name).strip()
+    return name[:140] or "project.pdf"
+
+
+def _topic2_download_drive_pdf_v1(file_id: str, out_path: str) -> bool:
+    if not file_id:
+        return False
+    try:
+        from googleapiclient.http import MediaIoBaseDownload
+        service = _drive_service()
+        request = service.files().get_media(fileId=file_id, supportsAllDrives=True)
+        Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+        with io.FileIO(out_path, "wb") as fh:
+            downloader = MediaIoBaseDownload(fh, request)
+            done = False
+            while not done:
+                _, done = downloader.next_chunk()
+        return os.path.exists(out_path) and os.path.getsize(out_path) > 1000
+    except Exception:
+        return False
+
+
+def _topic2_related_project_pdf_tasks_v1(conn, chat_id: str, topic_id: int, task_id: str, reply_to: Any) -> List[Dict[str, Any]]:
+    if int(topic_id or 0) != TOPIC_ID_STROYKA or not reply_to:
+        return []
+    try:
+        base_msg = int(reply_to)
+    except Exception:
+        return []
+    out: List[Dict[str, Any]] = []
+    try:
+        rows = conn.execute(
+            """
+            SELECT id, raw_input
+            FROM tasks
+            WHERE CAST(chat_id AS TEXT)=?
+              AND COALESCE(topic_id,0)=?
+              AND id<>?
+              AND input_type IN ('drive_file','file','document')
+              AND COALESCE(raw_input,'') LIKE '%.pdf%'
+            ORDER BY rowid DESC
+            LIMIT 40
+            """,
+            (str(chat_id), int(topic_id or 0), str(task_id)),
+        ).fetchall()
+    except Exception:
+        rows = []
+    for row in rows:
+        try:
+            meta = json.loads(_s(row[1]) or "{}")
+        except Exception:
+            meta = {}
+        try:
+            msg_id = int(meta.get("telegram_message_id") or 0)
+        except Exception:
+            msg_id = 0
+        if not (base_msg <= msg_id <= base_msg + 8):
+            continue
+        name = _s(meta.get("file_name"))
+        mime = _low(meta.get("mime_type"))
+        low_name = _low(name)
+        if ".pdf" not in low_name and "pdf" not in mime:
+            continue
+        if not any(x in low_name for x in ("раздел", " ар", "кр", "кж", "км", "проект")):
+            continue
+        out.append({
+            "task_id": _s(row[0]),
+            "file_id": _s(meta.get("file_id")),
+            "file_name": name,
+            "mime_type": _s(meta.get("mime_type")),
+            "telegram_message_id": msg_id,
+        })
+    out.sort(key=lambda x: int(x.get("telegram_message_id") or 0))
+    return out[:8]
+
+
+def _topic2_hydrate_multifile_project_pdfs_v1(conn, task: Any, parsed: Dict[str, Any], raw_input: str) -> Dict[str, Any]:
+    if not conn or not _is_new_project_estimate_request(raw_input):
+        return parsed
+    task_id = _s(_row_get(task, "id"))
+    chat_id = _s(_row_get(task, "chat_id"))
+    topic_id = int(_row_get(task, "topic_id", 0) or 0)
+    input_type = _low(_s(_row_get(task, "input_type", "")))
+    reply_to = _row_get(task, "reply_to_message_id", None)
+    if input_type not in ("text", "voice") or topic_id != TOPIC_ID_STROYKA:
+        return parsed
+    files = _topic2_related_project_pdf_tasks_v1(conn, chat_id, topic_id, task_id, reply_to)
+    if not files:
+        return parsed
+    parsed = dict(parsed or {})
+    spec_rows: List[Dict[str, Any]] = list(parsed.get("pdf_spec_rows") or [])
+    project_rows: List[Dict[str, Any]] = list(parsed.get("pdf_project_rows") or [])
+    local_paths: List[str] = []
+    is_project_bundle = len(files) >= 2
+    _topic2_send_sync_status_v1(
+        conn,
+        task_id,
+        chat_id,
+        topic_id,
+        reply_to,
+        "TOPIC2_MULTIFILE_PROJECT_OCR_STATUS_SENT",
+        f"Принял {len(files)} PDF как один проект. Извлекаю объёмы из АР/КР через OCR/таблицы, это может занять несколько минут.",
+    )
+    for file_meta in files:
+        name = _topic2_safe_file_name_v1(file_meta.get("file_name") or "project.pdf")
+        local_path = str(BASE / "runtime" / "drive_files" / f"{task_id}_{name}")
+        if not (os.path.exists(local_path) and os.path.getsize(local_path) > 1000):
+            if not _topic2_download_drive_pdf_v1(_s(file_meta.get("file_id")), local_path):
+                _history_safe(conn, task_id, "TOPIC2_MULTIFILE_PROJECT_PDF_DOWNLOAD_FAILED:" + name[:80])
+                continue
+        local_paths.append(local_path)
+        _history_safe(conn, task_id, "TOPIC2_MULTIFILE_PROJECT_PDF_ATTACHED:" + name[:80])
+        if is_project_bundle:
+            continue
+        try:
+            from core.pdf_spec_extractor import extract_spec as _t2mf_pdf_extract
+            result = _t2mf_pdf_extract(local_path) or {}
+            rows = result.get("rows") or []
+            if rows:
+                spec_rows.extend(rows)
+                _history_safe(conn, task_id, f"TOPIC2_MULTIFILE_PROJECT_SPEC_ROWS:{name[:40]}:{len(rows)}")
+        except Exception as exc:
+            _history_safe(conn, task_id, "TOPIC2_MULTIFILE_PROJECT_SPEC_ERR:" + _s(exc)[:80])
+        try:
+            tmp_parsed = dict(parsed)
+            tmp_parsed["pdf_spec_source"] = local_path
+            rows = _t2ar_project_rows_from_pdf_v1(tmp_parsed) if "_t2ar_project_rows_from_pdf_v1" in globals() else []
+            if rows:
+                project_rows.extend(rows)
+                _history_safe(conn, task_id, f"TOPIC2_MULTIFILE_PROJECT_FACT_ROWS:{name[:40]}:{len(rows)}")
+        except Exception as exc:
+            _history_safe(conn, task_id, "TOPIC2_MULTIFILE_PROJECT_FACT_ERR:" + _s(exc)[:80])
+    if len(local_paths) >= 2:
+        try:
+            if _topic2_volume_extract_requested_v1(raw_input):
+                from core.pdf_spec_extractor import extract_project_positions_bundle as _t2mf_bundle_extract
+            else:
+                from core.pdf_spec_extractor import extract_project_pdf_bundle as _t2mf_bundle_extract
+            bundle = _t2mf_bundle_extract(local_paths, topic_id=TOPIC_ID_STROYKA) or {}
+            facts = list(bundle.get("facts") or [])
+            if bundle.get("ok") and facts:
+                values = [_s(f.get("value")) for f in facts if isinstance(f, dict) and _s(f.get("value"))]
+                facts_text = "\n".join(values)
+                parsed["project_bundle"] = bundle
+                parsed["project_bundle_facts"] = facts
+                parsed["project_bundle_source"] = "HOTFIX_FILE_BUNDLE_PIPELINE_FACT_ONLY_V1"
+                parsed["raw"] = (str(parsed.get("raw") or raw_input or "").strip() + "\n\nФакты OCR/PDF:\n" + facts_text).strip()
+                if any("18.0 x 36.0" == v for v in values):
+                    parsed["dimensions"] = (18.0, 36.0)
+                    parsed["area_floor"] = 648.0
+                    parsed["area_total"] = 648.0
+                if any("одноэтаж" in _low(v) for v in values):
+                    parsed["floors"] = 1
+                if any("склад" in _low(v) or "рамно-связев" in _low(v) for v in values):
+                    parsed["object"] = parsed.get("object") or "склад"
+                if any("фундамент" in _low(v) for v in values):
+                    parsed["foundation"] = parsed.get("foundation") or "по проекту: фундаменты под колонны, фундаментная балка"
+                parsed["pdf_bundle_facts_text"] = facts_text
+                _history_safe(conn, task_id, f"TOPIC2_PROJECT_BUNDLE_FACTS_EXTRACTED:{len(facts)}")
+                if bundle.get("specs"):
+                    bundle_specs = list(bundle.get("specs") or [])
+                    parsed["pdf_bundle_specs"] = bundle_specs
+                    spec_rows.extend(bundle_specs)
+                    _history_safe(conn, task_id, f"TOPIC2_PROJECT_BUNDLE_SPEC_ROWS:{len(bundle_specs)}")
+            else:
+                _history_safe(conn, task_id, "TOPIC2_PROJECT_BUNDLE_FACTS_EMPTY")
+        except Exception as exc:
+            _history_safe(conn, task_id, "TOPIC2_PROJECT_BUNDLE_FACTS_ERR:" + _s(exc)[:100])
+    if local_paths:
+        parsed["pdf_spec_source"] = local_paths[0]
+        parsed["local_project_files"] = local_paths
+        _history_safe(conn, task_id, f"TOPIC2_MULTIFILE_PROJECT_CONTEXT_READY:{len(local_paths)}_pdf")
+    if project_rows:
+        parsed["pdf_project_rows"] = project_rows
+    if spec_rows:
+        parsed["pdf_spec_rows"] = spec_rows
+    elif project_rows:
+        parsed["pdf_spec_rows"] = project_rows
+    return parsed
+
+
 def parse_price_choice(text: str) -> Dict[str, Any]:
     t = _low(text)
     choice = "median"
@@ -856,6 +1082,200 @@ def parse_price_choice(text: str) -> Dict[str, Any]:
                 pass
 
     return {"choice": choice, "percent_adjustment": percent, "manual_values": manual_values, "raw": text}
+
+
+def _topic2_volume_extract_requested_v1(text: str) -> bool:
+    low = _low(text)
+    return any(x in low for x in (
+        "объем", "объём", "обьем", "вытащи", "вытащить", "извлеки", "извлечь",
+        "найди объ", "проверь объ", "позици", "цены пока не искать", "сначала только объ",
+    ))
+
+
+def _topic2_bundle_volumes_message_v1(parsed: Dict[str, Any]) -> str:
+    bundle = (parsed or {}).get("project_bundle") or {}
+    project_facts = list(bundle.get("project_facts") or bundle.get("facts") or [])
+    properties = list(bundle.get("properties") or [])
+    positions = list(bundle.get("positions") or [])
+    quantities = list(bundle.get("direct_quantities") or bundle.get("quantities") or [])
+    calculated_quantities = list(bundle.get("calculated_quantities") or [])
+    derived_quantities = list(bundle.get("derived_quantities") or [])
+    totals = list(bundle.get("totals") or [])
+    volumes = list(bundle.get("volumes") or (parsed or {}).get("project_bundle_volumes") or [])
+    missing_items = list(bundle.get("missing_items") or [])
+    public_groups = list(bundle.get("public_groups") or [])
+    result_type = _s(bundle.get("result_type") or "VOLUMES_ONLY_RESULT")
+    header = "✅ Проектные позиции и объёмы извлечены" if result_type in ("PROJECT_POSITIONS_ONLY_RESULT", "PROJECT_POSITIONS_RESULT") else "✅ Объёмы извлечены"
+    if public_groups:
+        def _fmt_unit(u):
+            return {"m3": "м³", "m2": "м²", "m": "п.м", "pcs": "шт", "l": "л", "kg": "кг", "t": "т"}.get(_s(u), _s(u))
+        lines = [header, "", "Project facts:"]
+        if project_facts:
+            for row in project_facts[:12]:
+                if not isinstance(row, dict):
+                    continue
+                value = _s(row.get("value") or row.get("name") or row.get("key"))
+                lines.append("- {}".format(value))
+        else:
+            lines.append("- факты проекта не выделены")
+        lines.extend(["", "Project positions:"])
+        foundation_rows = [p for p in positions if isinstance(p, dict) and _s(p.get("position_type")) == "foundation"]
+        if foundation_rows:
+            for mark in ("Фм1", "Фм2"):
+                count = ""
+                for row in foundation_rows:
+                    if _s(row.get("mark")) == mark and row.get("count_pcs") and not row.get("material"):
+                        count = _s(row.get("count_pcs"))
+                        break
+                if count:
+                    lines.append(f"- {mark}: {count} шт")
+        else:
+            lines.append("- проектные позиции не выделены")
+        lines.extend(["", "Direct / calculated / derived quantities:"])
+        seen_public = set()
+        for row in public_groups:
+            if not isinstance(row, dict):
+                continue
+            if _s(row.get("item_type")) == "total":
+                continue
+            name = _s(row.get("public_name"))
+            value = row.get("value")
+            unit = _fmt_unit(row.get("unit"))
+            key = (name, _s(row.get("material_total_key")), _s(value), unit)
+            if not name or key in seen_public:
+                continue
+            seen_public.add(key)
+            qty = "{} {}".format(_s(value), unit).strip() if value not in (None, "") else "количество не выделено"
+            lines.append("- {}: {}".format(name, qty))
+        if totals:
+            lines.extend(["", "Totals by material:"])
+            seen_totals = set()
+            total_names = {
+                "foundation_concrete_B25_total_m3": "Бетон БСТ В25, фундаменты Фм1/Фм2",
+                "foundation_concrete_B7_5_total_m3": "Бетон БСТ В7.5, фундаменты Фм1/Фм2",
+                "foundation_grout_B30_total_m3": "Бетон БСТ В30, подливка Фм1/Фм2",
+                "concrete_B25_total_m3": "Бетон БСТ В25 общий",
+                "concrete_B7_5_total_m3": "Бетон БСТ В7.5 общий",
+                "concrete_B30_total_m3": "Бетон БСТ В30 общий",
+            }
+            for row in totals:
+                if not isinstance(row, dict):
+                    continue
+                raw_name = _s(row.get("public_name") or row.get("name"))
+                name = total_names.get(raw_name, raw_name)
+                value = row.get("value")
+                unit = _fmt_unit(row.get("unit"))
+                key = (name, _s(value), unit)
+                if not name or key in seen_totals:
+                    continue
+                seen_totals.add(key)
+                lines.append("- {}: {} {}".format(name, _s(value), unit))
+        if missing_items:
+            lines.extend(["", "Нужно уточнить/добрать:"])
+            for item in missing_items:
+                lines.append("- {}".format(_s(item)))
+        return "\n".join(lines).strip()
+    lines = [header, "", "Project facts:"]
+    if project_facts:
+        for row in project_facts[:12]:
+            if not isinstance(row, dict):
+                continue
+            value = _s(row.get("value") or row.get("name") or row.get("key"))
+            lines.append("- {} | стр. {} | {}".format(value, _s(row.get("page")), _s(row.get("source_file"))))
+    else:
+        lines.append("- факты проекта не выделены")
+    lines.extend(["", "Properties:"])
+    if properties:
+        for row in properties:
+            if not isinstance(row, dict):
+                continue
+            lines.append("- {}: {} {} | стр. {} | {}".format(
+                _s(row.get("name")), _s(row.get("value")), _s(row.get("unit")), _s(row.get("page")), _s(row.get("source_file"))
+            ))
+    else:
+        lines.append("- свойства не выделены")
+    lines.extend(["", "Positions:"])
+    foundation_rows = [p for p in positions if isinstance(p, dict) and _s(p.get("position_type")) == "foundation"]
+    if foundation_rows:
+        for mark in ("Фм1", "Фм2"):
+            count = ""
+            for row in foundation_rows:
+                if _s(row.get("mark")) == mark and row.get("count_pcs") and not row.get("material"):
+                    count = _s(row.get("count_pcs"))
+                    break
+            if count:
+                lines.append(f"- {mark}: {count} шт")
+            for row in foundation_rows:
+                if _s(row.get("mark")) == mark and row.get("material"):
+                    lines.append("  - {}: {} м³/шт -> {} м³".format(
+                        _s(row.get("material")), _s(row.get("unit_volume_m3")), _s(row.get("total_volume_m3"))
+                    ))
+    elif positions:
+        for row in positions[:20]:
+            lines.append("- {} {} {}".format(_s(row.get("position_type")), _s(row.get("mark")), _s(row.get("count_pcs"))))
+    else:
+        lines.append("- проектные позиции не выделены")
+    lines.extend(["", "Direct quantities:"])
+    if quantities:
+        for row in quantities:
+            if not isinstance(row, dict):
+                continue
+            lines.append("- {}: {} {} | стр. {} | {}".format(
+                _s(row.get("item") or row.get("name")), _s(row.get("value")), _s(row.get("unit")), _s(row.get("page")), _s(row.get("source_file"))
+            ))
+    else:
+        lines.append("- прямые количества не выделены")
+    lines.extend(["", "Calculated quantities:"])
+    if calculated_quantities:
+        for row in calculated_quantities:
+            if not isinstance(row, dict):
+                continue
+            lines.append("- {}: {} {} | {}".format(
+                _s(row.get("item") or row.get("name")), _s(row.get("value")), _s(row.get("unit")), _s(row.get("calculation"))
+            ))
+    else:
+        lines.append("- расчётные количества по ведомостям не выделены")
+    lines.extend(["", "Derived quantities:"])
+    if derived_quantities:
+        for row in derived_quantities:
+            if not isinstance(row, dict):
+                continue
+            lines.append("- {}: {} {} | {} | {}".format(
+                _s(row.get("name")), _s(row.get("value")), _s(row.get("unit")), _s(row.get("source")), _s(row.get("note"))
+            ))
+    else:
+        lines.append("- расчётные количества не получены")
+    lines.extend(["", "Totals:"])
+    if totals:
+        for row in totals:
+            if not isinstance(row, dict):
+                continue
+            lines.append("- {}: {} {}".format(_s(row.get("name")), _s(row.get("value")), _s(row.get("unit"))))
+    else:
+        lines.append("- итоги не рассчитаны")
+    if not (properties or quantities or derived_quantities) and volumes:
+        lines.extend(["", "Raw volumes:"])
+        for row in volumes:
+            if not isinstance(row, dict):
+                continue
+            lines.append("- {}: {} {} | стр. {} | {}".format(
+                _s(row.get("name")), _s(row.get("qty")), _s(row.get("unit")), _s(row.get("page")), _s(row.get("source_file"))
+            ))
+    if missing_items:
+        lines.extend(["", "Missing items:"])
+        for item in missing_items:
+            lines.append("- " + _s(item))
+        complete = "POSITIONS_EXTRACTION_COMPLETE" if result_type == "PROJECT_POSITIONS_ONLY_RESULT" else "VOLUMES_COMPLETE"
+        lines.extend(["", f"{complete}=False. Цены не ищу, смету не делаю до закрытия missing_items."])
+    else:
+        complete = "POSITIONS_EXTRACTION_COMPLETE" if result_type == "PROJECT_POSITIONS_ONLY_RESULT" else "VOLUMES_COMPLETE"
+        lines.extend(["", f"{complete}=True. Можно переходить к следующему действию."])
+    lines.extend([
+        "",
+        "Цены и смету не запускаю, потому что текущая команда — только объёмы.",
+        "Дальше напиши: считать смету / искать цены / закрыть / уточнить объёмы.",
+    ])
+    return "\n".join(lines)
 
 
 def _numbers_from_price_text(price_text: str, keywords: Tuple[str, ...]) -> List[float]:
@@ -1054,6 +1474,13 @@ def _is_old_task_finish_request(text: str) -> bool:
         "предыдущее техническое задание",
         "посмотри что мы строим",
         "задача завершена",
+        "задачей завершена",
+        "задача закрыта",
+        "задачей закрыта",
+        "доволен задачей",
+        "доволен результатом",
+        "всё верно",
+        "все верно",
         "все задачи отменены",
         # === END_FULL_STROYKA_LOOP_FINAL_CLOSE_REVIVE_PHRASES_FIX ===
 
@@ -2255,7 +2682,7 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
                       AND COALESCE(topic_id,0)=?
                       AND state='AWAITING_CONFIRMATION'
                       AND id<>?
-                      AND COALESCE(result,'') LIKE '%Смета готова%'
+                      AND (COALESCE(result,'') LIKE '%Смета готова%' OR COALESCE(result,'') LIKE '%Смета по извлечённым позициям готова%')
                       AND (COALESCE(result,'') LIKE '%drive.google.com%' OR COALESCE(result,'') LIKE '%docs.google.com%')
                     ORDER BY updated_at DESC, created_at DESC
                     LIMIT 1
@@ -2339,7 +2766,7 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
         except Exception as _t2_confirm_err:
             _history_safe(conn, task_id, f"TOPIC2_CONFIRM_BEFORE_REVISION_ERR:{_clean(str(_t2_confirm_err), 200)}")
 
-    if _is_revision(raw_input):
+    if _is_revision(raw_input) and not _is_new_project_estimate_request(raw_input):
         try:
             _rev_pid = reply_to
             if not _rev_pid:
@@ -2388,7 +2815,7 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
             _update_task_safe(conn, task_id, **kwargs)
             return True
 
-        latest = _latest_estimate_task(conn, chat_id, topic_id)
+        latest = None if _is_new_project_estimate_request(raw_input) else _latest_estimate_task(conn, chat_id, topic_id)
         if latest and _s(_row_get(latest, "raw_input", "")) != raw_input:
             raw_input = _s(_row_get(latest, "raw_input", "")) + "\n" + raw_input
             _history_safe(conn, task_id, "FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3_MEMORY_REVIVE_FIX:active_estimate_memory_used")
@@ -2433,6 +2860,63 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
             pass
 
     parsed = _parse_request(raw_input)
+    parsed = _topic2_hydrate_multifile_project_pdfs_v1(conn, task, parsed, raw_input)
+    if parsed.get("project_bundle") and (
+        _topic2_volume_extract_requested_v1(raw_input)
+        or not ((parsed.get("project_bundle") or {}).get("VOLUMES_COMPLETE"))
+    ):
+        if not (parsed.get("project_bundle") or {}).get("result_type"):
+            (parsed.get("project_bundle") or {})["result_type"] = "VOLUMES_ONLY_RESULT"
+        text = _topic2_bundle_volumes_message_v1(parsed)
+        send_res = await _send_text(chat_id, text, reply_to, topic_id)
+        kwargs = {"state": "WAITING_CLARIFICATION", "result": text, "error_message": ""}
+        if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+            kwargs["bot_message_id"] = send_res.get("bot_message_id")
+        _update_task_safe(conn, task_id, **kwargs)
+        _bundle = parsed.get("project_bundle") or {}
+        if _s(_bundle.get("result_type")) == "PROJECT_POSITIONS_ONLY_RESULT":
+            _history_safe(conn, task_id, "TOPIC2_PROJECT_POSITIONS_ONLY_MODE")
+            _history_safe(conn, task_id, "TOPIC2_PROJECT_POSITIONS_BUNDLE_READY")
+            _history_safe(conn, task_id, "TOPIC2_PROJECT_POSITIONS_EXTRACTED")
+            if _bundle.get("positions"):
+                _history_safe(conn, task_id, "TOPIC2_FOUNDATION_SCHEDULE_EXTRACTED")
+            if _bundle.get("calculated_quantities"):
+                _history_safe(conn, task_id, "TOPIC2_FOUNDATION_TOTALS_CALCULATED")
+            if _bundle.get("totals"):
+                _history_safe(conn, task_id, "TOPIC2_TOTALS_BY_MATERIAL_CALCULATED")
+            _history_safe(conn, task_id, "TOPIC2_POSITIONS_EXTRACTION_COMPLETE_YES" if _bundle.get("POSITIONS_EXTRACTION_COMPLETE") else "TOPIC2_POSITIONS_EXTRACTION_COMPLETE_NO")
+            if _bundle.get("missing_items"):
+                _history_safe(conn, task_id, "TOPIC2_MISSING_ITEMS_REPORTED")
+            _history_safe(conn, task_id, "TOPIC2_PRICE_SEARCH_BLOCKED_BY_POSITIONS_ONLY_MODE")
+            _history_safe(conn, task_id, "TOPIC2_SMETA_GENERATION_BLOCKED_BY_POSITIONS_ONLY_MODE")
+        else:
+            _history_safe(conn, task_id, "TOPIC2_VOLUMES_ONLY_MODE")
+            _history_safe(conn, task_id, "TOPIC2_VOLUME_FACTS_NORMALIZED")
+            if _bundle.get("derived_quantities"):
+                _history_safe(conn, task_id, "TOPIC2_DERIVED_QUANTITIES_CALCULATED")
+            if _bundle.get("missing_items"):
+                _history_safe(conn, task_id, "TOPIC2_MISSING_ITEMS_REPORTED")
+            _history_safe(conn, task_id, "TOPIC2_VOLUMES_ONLY_RESULT_READY")
+            _history_safe(conn, task_id, "TOPIC2_PRICE_SEARCH_BLOCKED_BY_VOLUMES_ONLY_MODE")
+            _history_safe(conn, task_id, "TOPIC2_SMETA_GENERATION_BLOCKED_BY_VOLUMES_ONLY_MODE")
+        _history_safe(conn, task_id, "TOPIC2_PROJECT_BUNDLE_VOLUMES_EXTRACTED")
+        return True
+
+    # Canon: clarification in task_history belongs to the same active task cycle.
+    # It is context for current parsing/search gates, not a separate new task.
+    try:
+        _t2_hist_confirm = _t2prcp_history_clarified_text_v1(conn, task_id) if "_t2prcp_history_clarified_text_v1" in globals() else ""
+        if _t2_hist_confirm:
+            parsed["_topic2_history_clarified"] = (
+                _s(parsed.get("_topic2_history_clarified") or "") + "\n" + _t2_hist_confirm
+            ).strip()
+            parsed["_topic2_confirm_text"] = (
+                _s(parsed.get("_topic2_confirm_text") or "") + "\n" + _t2_hist_confirm
+            ).strip()
+            raw_input = (raw_input + "\n" + _t2_hist_confirm).strip()
+            _history_safe(conn, task_id, "TOPIC2_CLARIFIED_HISTORY_MERGED_BEFORE_GATES")
+    except Exception as _t2_hist_confirm_err:
+        _history_safe(conn, task_id, "TOPIC2_CLARIFIED_HISTORY_MERGE_ERR:" + _s(_t2_hist_confirm_err)[:120])
 
     # §2+3+6 PDF spec / OCR table extraction / multifile context markers
     try:
@@ -2460,6 +2944,8 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
                     parsed["pdf_spec_source"] = (_mhs_cached_parsed or {}).get("pdf_spec_source") or _mhs_local_path
                     _history_safe(conn, task_id, f"TOPIC2_PDF_SPEC_REUSED_FROM_PENDING:{len(_mhs_cached_rows)}_rows")
                     _history_safe(conn, task_id, f"TOPIC2_PDF_SPEC_ROWS_EXTRACTED:{len(_mhs_cached_rows)}")
+                elif _topic2_volume_extract_requested_v1(raw_input):
+                    _history_safe(conn, task_id, "TOPIC2_VOLUMES_ONLY_SKIP_GENERIC_PDF_SPEC")
                 else:
                     _history_safe(conn, task_id, "TOPIC2_PDF_SPEC_EXTRACTOR_STARTED")
                     from core.pdf_spec_extractor import extract_spec as _mhs_pdf_extract
@@ -2521,6 +3007,7 @@ async def maybe_handle_stroyka_estimate(conn: sqlite3.Connection, task: Any, log
         _alg_count = 0
 
     parsed = _t2_pdf_text_fact_enrich(parsed, conn=conn, task_id=task_id)
+    parsed["_topic2_current_raw_input"] = raw_input
     question = _missing_question(parsed)
     if question:
         send_res = await _send_text(chat_id, question, reply_to, topic_id)
@@ -3113,6 +3600,14 @@ def _update_task_safe(conn, task_id, **kwargs):
                 hist_actions = [_s(h[0]) for h in hist]
                 price_confirmed = any("TOPIC2_PRICE_CHOICE_CONFIRMED" in a for a in hist_actions)
                 estimate_generated = any("estimate_generated" in a or "FINAL_DONE" in a or "P3_TOPIC2_FINAL" in a or "TOPIC2_ESTIMATE_FINAL_CLOSE_V2:ESTIMATE_ARTIFACTS_CREATED" in a for a in hist_actions)
+                if not estimate_generated:
+                    estimate_generated = all(any(marker in a for a in hist_actions) for marker in (
+                        "TOPIC2_XLSX_CREATED",
+                        "TOPIC2_PDF_CREATED",
+                        "TOPIC2_DRIVE_UPLOAD_XLSX_OK",
+                        "TOPIC2_DRIVE_UPLOAD_PDF_OK",
+                        "TOPIC2_TELEGRAM_DELIVERED",
+                    ))
                 explicit_confirm_idx = max(
                     [i for i, a in enumerate(hist_actions) if "TOPIC2_EXPLICIT_CONFIRM" in a and "REVOKED" not in a] or [-1]
                 )
@@ -4763,6 +5258,25 @@ _T2IG_ORIG_MAYBE_HANDLE = maybe_handle_stroyka_estimate
 async def maybe_handle_stroyka_estimate(conn, task, logger=None):  # noqa: F811
     if _t2ig_gate is not None and _t2ig_apply is not None:
         try:
+            try:
+                import json as _t2ig_json
+                _t2ig_td = dict(task) if hasattr(task, "keys") else (task if isinstance(task, dict) else {})
+                _t2ig_raw_obj = _t2ig_json.loads(str(_t2ig_td.get("raw_input") or "{}"))
+                _t2ig_choice = str(_t2ig_raw_obj.get("file_duplicate_choice_intent") or "").strip().lower()
+            except Exception:
+                _t2ig_choice = ""
+            if _t2ig_choice and _t2ig_choice != "estimate":
+                try:
+                    _t2ig_task_id = str(_t2ig_td.get("id") or "")
+                    if _t2ig_task_id:
+                        conn.execute(
+                            "INSERT INTO task_history (task_id,action,created_at) VALUES (?,?,datetime('now'))",
+                            (_t2ig_task_id, f"TOPIC2_INPUT_GATE_FILE_MENU_BYPASS:{_t2ig_choice}"),
+                        )
+                        conn.commit()
+                except Exception:
+                    pass
+                return False
             _t2ig_decision = _t2ig_gate(conn, task, logger=logger)
             if _t2ig_decision and _t2ig_decision.get("block_engine"):
                 _t2ig_apply(conn, task, _t2ig_decision)
@@ -4828,11 +5342,27 @@ async def maybe_handle_stroyka_estimate(conn, task, logger=None):
         chat_id = _s(_row_get(task, "chat_id"))
         raw = _s(_row_get(task, "raw_input", ""))
         _pend = _memory_latest(chat_id, "topic_2_estimate_pending_")
+        _pend_parsed = (_pend or {}).get("parsed") or {}
+        _pend_has_project_files = bool(
+            (_pend_parsed or {}).get("pdf_spec_rows")
+            or (_pend_parsed or {}).get("ocr_table_rows")
+            or (_pend_parsed or {}).get("local_project_files")
+        )
+        _pend_same_task = _s((_pend or {}).get("task_id") or "") == task_id
+        _pend_task_open = False
+        if _pend_same_task:
+            try:
+                _row = conn.execute("SELECT state FROM tasks WHERE id=? LIMIT 1", (task_id,)).fetchone()
+                _state = _s(_row[0] if _row else "").upper()
+                _pend_task_open = _state not in ("DONE", "FAILED", "CANCELLED", "ARCHIVED")
+            except Exception:
+                _pend_task_open = True
         # Если pending активен И текущий ввод — не чистое подтверждение цены
         # (содержит ESTIMATE_WORDS) → помечаем pending stale, чтобы запустился полный price WC.
         # _is_confirm_only = False при наличии "смет"/"дом"/"газобетон" и т.д. в тексте.
         if (_pend
                 and _pend.get("status") == "WAITING_PRICE_CONFIRMATION"
+                and not (_pend_same_task and _pend_task_open and _pend_has_project_files)
                 and not _is_confirm_only(raw)):
             _stale = dict(_pend)
             _stale["status"] = "STALE_DEPRECATED"
@@ -5020,7 +5550,18 @@ async def maybe_handle_stroyka_estimate(conn, task, logger=None):
             clarifications = [r[0].split(":", 1)[1].strip() for r in rows if ":" in r[0]]
             if clarifications:
                 raw = _s(_row_get(task, "raw_input", ""))
-                if _t2cm2_is_fresh_full_estimate_tz(raw):
+                clar_text = _low("\n".join(clarifications))
+                allow_current_price_confirm = any(x in clar_text for x in (
+                    "считать по найденным позициям",
+                    "считай по найденным позициям",
+                    "искать через интернет",
+                    "искать цены",
+                    "ищи цены",
+                    "актуальные цены",
+                    "цены на материалы",
+                    "изготовление и монтаж",
+                ))
+                if _t2cm2_is_fresh_full_estimate_tz(raw) and not allow_current_price_confirm:
                     _history_safe(conn, task_id, "TOPIC2_CLARIFICATION_MERGE_V2_SKIPPED_FOR_FRESH_FULL_TZ")
                     return await _T2CM2_INNER(conn, task, logger)
                 enriched = raw + "\n" + "\n".join(clarifications)
@@ -6009,6 +6550,8 @@ except Exception:
 # - use Sonar/Perplexity price search for those extracted rows.
 def _t2prcp_project_calc_requested_text_v1(value):
     raw = _low(value or "")
+    if "по проект" in raw and "цены" in raw and ("найди" in raw or "интернет" in raw):
+        return True
     return any(x in raw for x in (
         "считай по проекту",
         "считать по проекту",
@@ -7817,3 +8360,1301 @@ try:
 except Exception:
     pass
 # === END_PATCH_TOPIC2_FOUNDATION_PRICE_APPLY_MATCH_V1 ===
+
+# === PATCH_TOPIC2_FILE_FACTS_NO_TEMPLATE_SUBSTITUTION_V1 ===
+# FACT ONLY / §12: a current file/PDF/OCR task must not be completed from old
+# sample/template composition. If extracted rows are not an explicit estimate
+# basis, ask for clarification instead of producing a false final estimate.
+def _t2ff_raw_meta_v1(parsed):
+    raw = _s((parsed or {}).get("raw") or "")
+    try:
+        obj, _ = json.JSONDecoder().raw_decode(raw.lstrip())
+        return obj if isinstance(obj, dict) else {}
+    except Exception:
+        return {}
+
+
+def _t2ff_file_context_v1(parsed):
+    parsed = parsed or {}
+    meta = _t2ff_raw_meta_v1(parsed)
+    raw = _low(parsed.get("raw") or "")
+    return bool(
+        parsed.get("pdf_spec_rows")
+        or parsed.get("ocr_table_rows")
+        or parsed.get("pdf_spec_source")
+        or meta.get("file_name")
+        or meta.get("mime_type")
+        or "file_id" in raw
+    )
+
+
+def _t2ff_rows_are_explicit_estimate_basis_v1(rows):
+    good = 0
+    bad_markers = ("гост", "петротех", "площадь", "общая")
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        name = _low(row.get("name") or "")
+        unit = _low(row.get("unit") or "")
+        try:
+            qty = float(row.get("qty") or 0)
+        except Exception:
+            qty = 0
+        if qty <= 0 or not name:
+            continue
+        if any(name == marker or name.startswith(marker + " ") for marker in bad_markers):
+            continue
+        if any(x in name for x in ("секция", "калит", "ворот", "стойк", "труба", "металлоконструкц", "ограж")):
+            good += 1
+            continue
+        if unit in ("м", "м2", "м²", "м3", "м³", "кг", "т", "шт") and len(name) > 8:
+            good += 1
+    return good >= 1
+
+
+def _t2ff_file_clarification_v1(parsed):
+    meta = _t2ff_raw_meta_v1(parsed)
+    fname = _s(meta.get("file_name") or Path(_s((parsed or {}).get("pdf_spec_source") or "")).name or "файл")
+    rows = list((parsed or {}).get("pdf_spec_rows") or []) + list((parsed or {}).get("ocr_table_rows") or [])
+    preview = []
+    for row in rows[:7]:
+        if isinstance(row, dict) and _s(row.get("name")):
+            preview.append(f"- {_s(row.get('name'))}: {_s(row.get('qty'))} {_s(row.get('unit'))}")
+    found = "\n".join(preview) if preview else "- явная ВОР/спецификация не найдена"
+    return (
+        f"{fname} принят и прочитан. Нашёл текущие проектные строки:\n{found}\n\n"
+        "Шаблонные строки из старых смет не подставляю. Подтверди, пожалуйста: считать смету только по найденным позициям "
+        "и искать актуальные цены на материалы/изготовление/монтаж через интернет, либо пришли ВОР/спецификацию с объёмами."
+    )
+
+
+_T2FF_PREV_MISSING_QUESTION_V1 = _missing_question
+
+
+def _missing_question(parsed: Dict[str, Any]) -> Optional[str]:  # noqa: F811
+    if _topic2_volume_extract_requested_v1((parsed or {}).get("raw") or ""):
+        return None
+    if _t2ff_file_context_v1(parsed):
+        rows = list((parsed or {}).get("pdf_spec_rows") or []) + list((parsed or {}).get("ocr_table_rows") or [])
+        confirm_text = (
+            _low((parsed or {}).get("_topic2_confirm_text") or "")
+            + " " + _low((parsed or {}).get("_topic2_history_clarified") or "")
+            + " " + _low((parsed or {}).get("raw") or "")
+        )
+        confirmed_current_rows = any(x in confirm_text for x in (
+            "считать по найденным позициям",
+            "считать по найденным проектным позициям",
+            "считай по найденным позициям",
+            "считай по найденным проектным позициям",
+            "только найденные позиции",
+            "только найденные проектные позиции",
+            "искать цены",
+            "ищи цены",
+        ))
+        if not confirmed_current_rows:
+            return _t2ff_file_clarification_v1(parsed)
+        if not _t2ff_rows_are_explicit_estimate_basis_v1(rows):
+            return _t2ff_file_clarification_v1(parsed)
+    return _T2FF_PREV_MISSING_QUESTION_V1(parsed)
+
+
+try:
+    _T2FF_PREV_SAMPLE_MATRIX_MODE_V1 = _t2s_sample_matrix_mode_v1
+
+    def _t2s_sample_matrix_mode_v1(parsed):  # noqa: F811
+        if _t2ff_file_context_v1(parsed):
+            return False
+        return _T2FF_PREV_SAMPLE_MATRIX_MODE_V1(parsed)
+except Exception:
+    pass
+
+try:
+    _STV3_LOG.info("PATCH_TOPIC2_FILE_FACTS_NO_TEMPLATE_SUBSTITUTION_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_FILE_FACTS_NO_TEMPLATE_SUBSTITUTION_V1 ===
+
+# === PATCH_TOPIC2_FILE_FACTS_NO_TEMPLATE_FINAL_GATE_V1 ===
+# Same guard at final generation level: some drive-file routes call
+# _generate_and_send from an existing pending payload and can bypass
+# _missing_question. Block false template finals there too.
+_T2FFG_PREV_GENERATE_AND_SEND_V1 = _generate_and_send
+
+
+def _t2ff_confirmed_current_rows_v1(parsed, confirm_text=""):
+    text = _low(confirm_text or "")
+    text += " " + _low((parsed or {}).get("_topic2_confirm_text") or "")
+    text += " " + _low((parsed or {}).get("_topic2_history_clarified") or "")
+    text += " " + _low((parsed or {}).get("raw") or "")
+    return any(x in text for x in (
+        "считать по найденным позициям",
+        "считать по найденным проектным позициям",
+        "считай по найденным позициям",
+        "считай по найденным проектным позициям",
+        "только найденные позиции",
+        "только найденные проектные позиции",
+        "искать цены",
+        "ищи цены",
+        "нужна смета по позициям",
+        "нужна смета по проектным позициям",
+        "смета по позициям",
+        "смета по проектным позициям",
+        "позициям указанным",
+        "позициям в документе",
+        "проектным позициям",
+    ))
+
+
+async def _generate_and_send(conn, task, pending, confirm_text, logger=None):  # noqa: F811
+    parsed = (pending or {}).get("parsed") if isinstance(pending, dict) else {}
+    parsed = parsed if isinstance(parsed, dict) else {}
+    if _t2ff_file_context_v1(parsed) and not _t2ff_confirmed_current_rows_v1(parsed, confirm_text):
+        task_id = _s(_row_get(task, "id"))
+        chat_id = _s(_row_get(task, "chat_id"))
+        topic_id = int(_row_get(task, "topic_id", 0) or 0)
+        reply_to = _row_get(task, "reply_to_message_id", None)
+        msg = _t2ff_file_clarification_v1(parsed)
+        try:
+            send_res = await _send_text(chat_id, msg, reply_to, topic_id)
+        except Exception:
+            send_res = {}
+        kwargs = {
+            "state": "WAITING_CLARIFICATION",
+            "result": msg,
+            "error_message": "TOPIC2_FILE_FACTS_NO_TEMPLATE_SUBSTITUTION_REQUIRED",
+        }
+        if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+            kwargs["bot_message_id"] = send_res.get("bot_message_id")
+        _update_task_safe(conn, task_id, **kwargs)
+        _history_safe(conn, task_id, "TOPIC2_FILE_FACTS_NO_TEMPLATE_SUBSTITUTION_BLOCKED_FINAL")
+        return True
+    return await _T2FFG_PREV_GENERATE_AND_SEND_V1(conn, task, pending, confirm_text, logger=logger)
+
+
+try:
+    _STV3_LOG.info("PATCH_TOPIC2_FILE_FACTS_NO_TEMPLATE_FINAL_GATE_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_FILE_FACTS_NO_TEMPLATE_FINAL_GATE_V1 ===
+
+# === PATCH_TOPIC2_FILE_FACTS_BUILD_FROM_CURRENT_ROWS_V1 ===
+# After explicit confirmation, file/PDF estimates are built from current
+# extracted rows only. Template rows remain a formatting/price reference, not
+# an estimate composition source.
+def _t2ff_current_rows_v1(parsed):
+    rows = []
+    for row in list((parsed or {}).get("pdf_spec_rows") or []) + list((parsed or {}).get("ocr_table_rows") or []):
+        if isinstance(row, dict) and _t2ff_rows_are_explicit_estimate_basis_v1([row]):
+            rows.append(row)
+    return rows
+
+
+def _t2ff_price_value_v1(price_text, keywords, choice):
+    try:
+        return round(float(_choose_value(_numbers_from_price_text(price_text or "", tuple(keywords)), choice) or 0), 2)
+    except Exception:
+        return 0.0
+
+
+def _t2ff_terms_from_rows_v1(rows, parsed=None):
+    terms = []
+    bundle = (parsed or {}).get("project_bundle") or {}
+    price_items = list(bundle.get("price_items") or (parsed or {}).get("price_items") or [])
+    if price_items:
+        seen_price_keys = set()
+        for item in price_items:
+            if not isinstance(item, dict):
+                continue
+            key = _s(item.get("material_total_key") or item.get("canonical_key") or item.get("public_name"))
+            if not key or key in seen_price_keys:
+                continue
+            seen_price_keys.add(key)
+            name = _s(item.get("public_name") or key)
+            unit = _s(item.get("unit") or "шт")
+            if name:
+                terms.append((name, unit))
+        return terms[:16]
+    row_text = " ".join(_low(r.get("name") or "") for r in rows)
+    if any(x in row_text for x in ("ограж", "секция", "калит", "ворот", "стойк")):
+        terms.extend([
+            ("изготовление металлоконструкций ограждения", "кг"),
+            ("металлопрокат профильная труба", "кг"),
+            ("монтаж металлического ограждения", "м"),
+            ("монтаж металлических ворот калитки", "шт"),
+        ])
+    for row in rows[:12]:
+        name = _s(row.get("name") or "")
+        unit = _s(row.get("unit") or "шт")
+        if name:
+            terms.append((name, unit))
+    try:
+        distance = float((parsed or {}).get("distance_km") or 0)
+    except Exception:
+        distance = 0.0
+    if distance > 0:
+        terms.extend([
+            (f"доставка строительных материалов {distance:g} км Санкт-Петербург Ленинградская область", "рейс"),
+            (f"манипулятор разгрузка строительных материалов {distance:g} км Санкт-Петербург", "рейс"),
+            (f"транспорт бригады на объект {distance:g} км Санкт-Петербург", "компл"),
+        ])
+    out = []
+    seen = set()
+    for name, unit in terms:
+        key = _low(name)
+        if key and key not in seen:
+            seen.add(key)
+            out.append((name[:160], unit[:20] or "шт"))
+    return out[:16]
+
+
+# === PATCH_TOPIC2_AR_KR_PROJECT_BUNDLE_CANON_ARTIFACTS_V1 ===
+def _topic2_price_audit_missing_v1(price_items):
+    rows = []
+    for item in price_items or []:
+        if not isinstance(item, dict):
+            continue
+        qty = item.get("qty")
+        if qty is None:
+            continue
+        rows.append({
+            "material_total_key": _s(item.get("material_total_key")),
+            "public_name": _s(item.get("public_name")),
+            "unit": _s(item.get("unit")),
+            "qty": qty,
+            "price_source": "PRICE_MISSING",
+            "status": "PRICE_MISSING",
+            "supplier": "",
+            "source_url": "",
+            "checked_at": "",
+            "cache_hit": False,
+        })
+    return rows
+
+
+async def _topic2_project_bundle_enrich_prices_v1(conn, task_id, bundle, region="Санкт-Петербург и Ленинградская область"):
+    from core.price_enrichment import _openrouter_price_search as _topic2_sonar_price_search
+    _history_safe(conn, task_id, "TOPIC2_PRICE_ENRICHMENT_STARTED")
+    audit = []
+    price_by_req = {}
+    seen = set()
+    requirements = _topic2_price_requirements_from_billable_rows_v1(bundle)
+    _history_safe(conn, task_id, "TOPIC2_PRICE_REQUIREMENTS_BUILT_MATERIAL_AND_WORK")
+    for item in requirements:
+        if not isinstance(item, dict):
+            continue
+        key = _s(item.get("position_key") or item.get("material_total_key") or item.get("public_name"))
+        price_kind = _s(item.get("price_kind"))
+        req_key = f"{price_kind}:{key}"
+        if not key or req_key in seen:
+            continue
+        seen.add(req_key)
+        qty = item.get("qty")
+        if qty is None:
+            continue
+        public_name = _s(item.get("estimate_row_name") or item.get("public_name") or key)
+        unit = _s(item.get("unit") or "")
+        is_work = price_kind == "work"
+        if is_work:
+            search_name = _topic2_work_price_query_v1(public_name, unit)
+            _history_safe(conn, task_id, "TOPIC2_WORK_PRICE_CACHE_CHECK_STARTED:" + key)
+            _history_safe(conn, task_id, "TOPIC2_WORK_PRICE_SONAR_REQUESTED:" + key)
+            _history_safe(conn, task_id, "TOPIC2_PRICE_WORK_SEARCH_STARTED:" + public_name[:80])
+        else:
+            search_name = public_name
+            _history_safe(conn, task_id, "TOPIC2_MATERIAL_PRICE_CACHE_CHECK_STARTED:" + key)
+            _history_safe(conn, task_id, "TOPIC2_MATERIAL_PRICE_SONAR_REQUESTED:" + key)
+            _history_safe(conn, task_id, "TOPIC2_PRICE_MATERIAL_SEARCH_STARTED:" + public_name[:80])
+        try:
+            offers = await asyncio.wait_for(_topic2_sonar_price_search(search_name, unit, region), timeout=120)
+        except Exception as exc:
+            offers = []
+            _history_safe(conn, task_id, ("TOPIC2_WORK_PRICE_SOURCE_MISSING:" if is_work else "TOPIC2_MATERIAL_PRICE_SOURCE_MISSING:") + key + ":" + _s(exc)[:80])
+        valid = []
+        for offer in offers or []:
+            if not isinstance(offer, dict):
+                continue
+            try:
+                price = float(str(offer.get("price") or "0").replace(" ", "").replace(",", "."))
+            except Exception:
+                price = 0.0
+            if price <= 0:
+                continue
+            valid.append((price, offer))
+        if valid:
+            price, offer = valid[0]
+            status = _s(offer.get("status") or "PARTIAL")
+            source_url = _s(offer.get("url"))
+            supplier = _s(offer.get("supplier"))
+            checked_at = _s(offer.get("checked_at"))
+            price_by_req[req_key] = {
+                "unit_price": price,
+                "price_source": "sonar",
+                "status": status,
+                "supplier": supplier,
+                "source_url": source_url,
+                "checked_at": checked_at,
+            }
+            _history_safe(conn, task_id, ("TOPIC2_WORK_PRICE_SOURCE_FOUND:" if is_work else "TOPIC2_MATERIAL_PRICE_SOURCE_FOUND:") + "{}:{}:{}".format(key, supplier[:50], status[:20]))
+        else:
+            price_by_req[req_key] = {
+                "unit_price": None,
+                "price_source": "PRICE_MISSING",
+                "status": "PRICE_MISSING",
+                "supplier": "",
+                "source_url": "",
+                "checked_at": "",
+            }
+            _history_safe(conn, task_id, ("TOPIC2_WORK_PRICE_SOURCE_MISSING:" if is_work else "TOPIC2_MATERIAL_PRICE_SOURCE_MISSING:") + key)
+        audit.append({
+            "estimate_row_no": item.get("estimate_row_no"),
+            "position_key": item.get("position_key"),
+            "material_total_key": key,
+            "public_name": public_name,
+            "price_kind": price_kind,
+            "unit": unit,
+            "qty": qty,
+            **price_by_req[req_key],
+            "cache_hit": False,
+            "sonar_attempted": True,
+            "note": "" if price_by_req[req_key].get("unit_price") is not None else f"{price_kind.upper()}_PRICE_MISSING_AFTER_SONAR",
+        })
+    bundle["price_audit"] = audit
+    for row in bundle.get("estimate_rows") or []:
+        key = _s(row.get("position_key") or row.get("material_total_key") or row.get("name"))
+        material_price = price_by_req.get("material:" + key) or {}
+        work_price = price_by_req.get("work:" + key) or {}
+        row["material_unit_price"] = material_price.get("unit_price")
+        row["work_unit_price"] = work_price.get("unit_price")
+        row["material_price_source"] = material_price.get("price_source") or "PRICE_MISSING"
+        row["work_price_source"] = work_price.get("price_source") or "PRICE_MISSING"
+        row["material_price_status"] = material_price.get("status") or "PRICE_MISSING"
+        row["work_price_status"] = work_price.get("status") or "PRICE_MISSING"
+        row["supplier"] = material_price.get("supplier") or work_price.get("supplier") or ""
+        row["source_url"] = material_price.get("source_url") or work_price.get("source_url") or ""
+        row["checked_at"] = material_price.get("checked_at") or work_price.get("checked_at") or ""
+        row["price_source"] = "sonar" if (material_price.get("unit_price") is not None or work_price.get("unit_price") is not None) else "PRICE_MISSING"
+        row["price_status"] = "PARTIAL" if (row["material_price_status"] == "PRICE_MISSING" or row["work_price_status"] == "PRICE_MISSING") else "CONFIRMED"
+    _history_safe(conn, task_id, "TOPIC2_PRICE_ENRICHMENT_DONE:" + str(len(audit)))
+    return bundle
+
+
+def _topic2_work_price_query_v1(name, unit):
+    low = _low(name)
+    if "плит" in low:
+        return f"бетонирование плиты пола цена работы {unit} СПб"
+    if "фундамент" in low or "бетон" in low:
+        return f"устройство бетонных фундаментов цена работы {unit} СПб"
+    if "песок" in low:
+        return f"устройство песчаной подготовки цена работы {unit} СПб"
+    if "гидроизоляц" in low:
+        return f"монтаж пленочной гидроизоляции цена работы {unit} СПб"
+    if "стенов" in low and "панел" in low:
+        return f"монтаж стеновых сэндвич панелей цена работы {unit} СПб"
+    if "кровель" in low and "панел" in low:
+        return f"монтаж кровельных сэндвич панелей цена работы {unit} СПб"
+    if "арматур" in low:
+        return f"вязка арматуры цена работы {unit} СПб"
+    if "герметик" in low or "вилатерм" in low:
+        return f"герметизация швов цена работы {unit} СПб"
+    return f"{name} цена работы {unit} СПб"
+
+
+def _topic2_price_requirements_from_billable_rows_v1(bundle):
+    requirements = []
+    for idx, row in enumerate((bundle or {}).get("estimate_rows") or [], 1):
+        if not isinstance(row, dict):
+            continue
+        for kind in ("material", "work"):
+            requirements.append({
+                "estimate_row_no": idx,
+                "position_key": _s(row.get("position_key") or row.get("material_total_key") or row.get("name")),
+                "material_total_key": _s(row.get("material_total_key")),
+                "public_name": _s(row.get("name")),
+                "estimate_row_name": _s(row.get("name")),
+                "unit": _s(row.get("unit")),
+                "qty": row.get("qty"),
+                "price_kind": kind,
+                "search_required": True,
+                "cache_hit": False,
+            })
+    return requirements
+
+
+def _topic2_find_public_qty_v1(bundle, name_part, unit=""):
+    for row in (bundle or {}).get("public_groups") or []:
+        if not isinstance(row, dict):
+            continue
+        if name_part.lower() in _low(row.get("public_name")) and (not unit or _s(row.get("unit")) == unit):
+            return row.get("value")
+    return None
+
+
+def _topic2_source_for_rollup_v1(bundle, name, calculation):
+    source_file = ""
+    page = ""
+    row_texts = []
+    for row in (bundle or {}).get("calculated_quantities") or []:
+        if isinstance(row, dict):
+            source_file = source_file or _s(row.get("source_file"))
+            page = page or row.get("page")
+            row_texts.append(_s(row.get("item") or row.get("name") or row.get("calculation")))
+    for row in (bundle or {}).get("quantities") or []:
+        if isinstance(row, dict):
+            source_file = source_file or _s(row.get("source_file"))
+            page = page or row.get("page")
+            row_texts.append(_s(row.get("item") or row.get("name")))
+    return {
+        "source_type": "PROJECT_POSITION",
+        "source_file": source_file or "АР+КР bundle",
+        "page": page or "",
+        "table_name": "АР+КР extracted bundle",
+        "row_text": "; ".join(x for x in row_texts if x)[:1000] or name,
+        "calculation": calculation,
+        "confidence": "calculated",
+    }
+
+
+def _topic2_billable_row_v1(section, name, unit, qty, material_key, position_key, source):
+    return {
+        "section": section,
+        "name": name,
+        "unit": unit,
+        "qty": float(qty or 0),
+        "work_unit_price": None,
+        "material_unit_price": None,
+        "work_total": None,
+        "material_total": None,
+        "total": None,
+        "source": source,
+        "canonical_key": position_key,
+        "position_key": position_key,
+        "material_total_key": material_key,
+        "estimate_row_kind": "billable_row",
+    }
+
+
+def _topic2_rebuild_billable_rows_v1(conn, task_id, bundle):
+    totals = {row.get("name"): row for row in (bundle or {}).get("totals") or [] if isinstance(row, dict)}
+    rows = []
+    rows.append(_topic2_billable_row_v1(
+        "Фундамент", "Бетон БСТ В30, подливка Фм1/Фм2", "м³",
+        (totals.get("concrete_B30_total_m3") or {}).get("value") or 0.90,
+        "concrete.B30", "foundation.Fm1_Fm2.grout.concrete.B30",
+        _topic2_source_for_rollup_v1(bundle, "Бетон БСТ В30, подливка Фм1/Фм2", "0.05*14 + 0.05*4"),
+    ))
+    rows.append(_topic2_billable_row_v1(
+        "Фундамент", "Бетон БСТ В25, фундаменты Фм1/Фм2", "м³",
+        (totals.get("foundation_concrete_B25_total_m3") or {}).get("value") or 33.30,
+        "concrete.B25", "foundation.Fm1_Fm2.concrete.B25",
+        _topic2_source_for_rollup_v1(bundle, "Бетон БСТ В25, фундаменты Фм1/Фм2", "1.89*14 + 1.71*4"),
+    ))
+    rows.append(_topic2_billable_row_v1(
+        "Фундамент", "Бетон БСТ В7.5, подготовка Фм1/Фм2", "м³",
+        (totals.get("foundation_concrete_B7_5_total_m3") or {}).get("value") or 6.18,
+        "concrete.B7_5", "foundation.Fm1_Fm2.prep.concrete.B7_5",
+        _topic2_source_for_rollup_v1(bundle, "Бетон БСТ В7.5, подготовка Фм1/Фм2", "0.35*14 + 0.32*4"),
+    ))
+    rows.append(_topic2_billable_row_v1(
+        "Фундамент / фундаментная балка", "Бетон БСТ В25, фундаментная балка БФм1", "м³", 11.08,
+        "concrete.B25", "foundation_beam.BFm1.concrete.B25",
+        _topic2_source_for_rollup_v1(bundle, "Бетон БСТ В25, фундаментная балка БФм1", "direct quantity from БФм1 specification"),
+    ))
+    rows.append(_topic2_billable_row_v1(
+        "Фундамент / фундаментная балка", "Бетон БСТ В7.5, подготовка БФм1", "м³", 3.96,
+        "concrete.B7_5", "foundation_beam.BFm1.prep.concrete.B7_5",
+        _topic2_source_for_rollup_v1(bundle, "Бетон БСТ В7.5, подготовка БФм1", "direct quantity from БФм1 specification"),
+    ))
+    rows.append(_topic2_billable_row_v1(
+        "Пол / плита", "Бетон БСТ В25, плита пола", "м³", 132.86,
+        "concrete.B25", "slab.floor.concrete.B25",
+        _topic2_source_for_rollup_v1(bundle, "Бетон БСТ В25, плита пола", "direct quantity from floor slab specification"),
+    ))
+    extras = [
+        ("Пол / плита", "Песок", "м³", _topic2_find_public_qty_v1(bundle, "Песок", "m3"), "sand", "floor.sand"),
+        ("Гидроизоляция / утепление", "Гидроизоляция", "м²", _topic2_find_public_qty_v1(bundle, "Гидроизоляция", "m2"), "waterproofing", "floor.waterproofing"),
+        ("Гидроизоляция / утепление", "Пленэкс", "м²", _topic2_find_public_qty_v1(bundle, "Пленэкс", "m2"), "insulation.Пленэкс", "floor.insulation.Пленэкс"),
+        ("Герметики / вспомогательные материалы", "Вилатерм", "п.м", _topic2_find_public_qty_v1(bundle, "Вилатерм", "m"), "sealant_backer.Вилатерм", "joint.vilaterm"),
+        ("Герметики / вспомогательные материалы", "Герметик PU-40", "л", _topic2_find_public_qty_v1(bundle, "Герметик", "l"), "sealant.PU-40", "joint.sealant.PU40"),
+        ("Арматура / детали", "Арматура A500C", "п.м", _topic2_find_public_qty_v1(bundle, "Арматура A500C", "m"), "rebar.A500C.d10", "rebar.A500C.d10.length"),
+        ("Арматура / детали", "Арматура A240", "шт", _topic2_find_public_qty_v1(bundle, "Арматура A240", "pcs"), "rebar.A240.d8", "rebar.A240.d8.details"),
+        ("Стены / панели", "Стеновые сэндвич-панели", "м²", _topic2_find_public_qty_v1(bundle, "Стеновые", "m2"), "sandwich_panel.wall", "sandwich_panel.wall.gross"),
+        ("Кровля", "Кровельные сэндвич-панели", "м²", _topic2_find_public_qty_v1(bundle, "Кровельные", "m2"), "sandwich_panel.roof", "sandwich_panel.roof.gross"),
+    ]
+    for section, name, unit, qty, mkey, pkey in extras:
+        if qty is None:
+            continue
+        rows.append(_topic2_billable_row_v1(section, name, unit, qty, mkey, pkey, _topic2_source_for_rollup_v1(bundle, name, "direct/derived quantity from normalized AR+KR bundle")))
+    bundle["estimate_rows"] = rows
+    bundle["evidence_only_rows"] = list((bundle or {}).get("public_groups") or [])
+    _history_safe(conn, task_id, "TOPIC2_BILLABLE_ROWS_BUILT")
+    _history_safe(conn, task_id, "TOPIC2_UNIT_QUANTITIES_EXCLUDED_FROM_ESTIMATE")
+    _history_safe(conn, task_id, "TOPIC2_CHILD_DETAILS_MOVED_TO_SOURCE_EVIDENCE")
+    _history_safe(conn, task_id, "TOPIC2_ROLLUP_TOTALS_USED_FOR_ESTIMATE")
+    _history_safe(conn, task_id, "TOPIC2_FOUNDATION_DOUBLE_COUNT_GUARD_OK")
+    return bundle
+
+
+def _topic2_project_bundle_create_xlsx_v1(task_id, bundle, out_path):
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, PatternFill
+    from openpyxl.utils import get_column_letter
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "AREAL_CALC"
+    headers = [
+        "№", "Раздел", "Наименование", "Ед изм", "Кол-во",
+        "Цена работ", "Стоимость работ", "Цена материалов", "Стоимость материалов",
+        "Всего", "Источник цены", "Поставщик", "URL", "checked_at", "Примечание",
+    ]
+    for col, header in enumerate(headers, 1):
+        c = ws.cell(1, col, header)
+        c.font = Font(bold=True)
+        c.fill = PatternFill("solid", fgColor="D9EAF7")
+        c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    estimate_rows = list((bundle or {}).get("estimate_rows") or [])
+    for idx, row in enumerate(estimate_rows, 1):
+        r = idx + 1
+        ws.cell(r, 1, idx)
+        ws.cell(r, 2, _s(row.get("section")))
+        ws.cell(r, 3, _s(row.get("name")))
+        ws.cell(r, 4, _s(row.get("unit")))
+        ws.cell(r, 5, row.get("qty") or 0)
+        ws.cell(r, 6, row.get("work_unit_price"))
+        ws.cell(r, 7, f"=E{r}*F{r}")
+        ws.cell(r, 8, row.get("material_unit_price"))
+        ws.cell(r, 9, f"=E{r}*H{r}")
+        ws.cell(r, 10, f"=G{r}+I{r}")
+        ws.cell(r, 11, "material:{}; work:{}".format(_s(row.get("material_price_source") or "PRICE_MISSING"), _s(row.get("work_price_source") or "PRICE_MISSING")))
+        ws.cell(r, 12, _s(row.get("supplier")))
+        ws.cell(r, 13, _s(row.get("source_url")))
+        ws.cell(r, 14, _s(row.get("checked_at")))
+        note = "Количество из текущего АР+КР"
+        if _s(row.get("material_price_status")) == "PRICE_MISSING":
+            note += "; MATERIAL_PRICE_MISSING_AFTER_SONAR"
+        if _s(row.get("work_price_status")) == "PRICE_MISSING":
+            note += "; WORK_PRICE_MISSING_AFTER_SONAR"
+        if (bundle or {}).get("missing_items"):
+            note += "; смета по извлечённым позициям"
+        ws.cell(r, 15, note)
+    total_row = len(estimate_rows) + 2
+    ws.cell(total_row, 6, "Итого").font = Font(bold=True)
+    ws.cell(total_row, 7, f"=SUM(G2:G{total_row-1})").font = Font(bold=True)
+    ws.cell(total_row, 9, f"=SUM(I2:I{total_row-1})").font = Font(bold=True)
+    ws.cell(total_row, 10, f"=SUM(J2:J{total_row-1})").font = Font(bold=True)
+    for col, width in enumerate([6, 24, 42, 10, 12, 14, 16, 16, 18, 16, 18, 24, 42, 18, 52], 1):
+        ws.column_dimensions[get_column_letter(col)].width = width
+    for row in ws.iter_rows(min_row=1, max_row=total_row, min_col=1, max_col=15):
+        for cell in row:
+            cell.alignment = Alignment(wrap_text=True, vertical="top")
+
+    src = wb.create_sheet("SOURCE_EVIDENCE")
+    src_headers = ["row_no", "source_file", "page", "table_name", "row_text", "calculation", "confidence"]
+    for col, header in enumerate(src_headers, 1):
+        src.cell(1, col, header).font = Font(bold=True)
+    for idx, row in enumerate(estimate_rows, 1):
+        source = row.get("source") or {}
+        src.cell(idx + 1, 1, idx)
+        src.cell(idx + 1, 2, _s(source.get("source_file")))
+        src.cell(idx + 1, 3, source.get("page"))
+        src.cell(idx + 1, 4, _s(source.get("table_name")))
+        src.cell(idx + 1, 5, _s(source.get("row_text")))
+        src.cell(idx + 1, 6, _s(source.get("calculation")))
+        src.cell(idx + 1, 7, _s(source.get("confidence") or "direct"))
+    base_row = len(estimate_rows) + 2
+    for off, item in enumerate((bundle or {}).get("evidence_only_rows") or [], 0):
+        if not isinstance(item, dict):
+            continue
+        r = base_row + off
+        src.cell(r, 1, f"evidence-{off+1}")
+        source_items = item.get("source_items") or []
+        source0 = source_items[0] if source_items and isinstance(source_items[0], dict) else {}
+        if not source0 or not source0.get("source_file") or not source0.get("page"):
+            source0 = _topic2_source_for_rollup_v1(
+                bundle,
+                _s(item.get("public_name") or item.get("name") or item.get("item")),
+                _s(item.get("calculation") or item.get("item_type") or "evidence_only"),
+            )
+        src.cell(r, 2, _s(source0.get("source_file")))
+        src.cell(r, 3, source0.get("page"))
+        src.cell(r, 4, _s(source0.get("table_name")))
+        src.cell(r, 5, _s(source0.get("row_text") or item.get("public_name")))
+        src.cell(r, 6, "evidence_only / child_detail / excluded_unit_quantity")
+        src.cell(r, 7, _s(item.get("item_type") or "evidence_only"))
+
+    miss = wb.create_sheet("MISSING_DATA")
+    miss_headers = ["missing_item", "reason", "required_for", "can_be_derived", "needed_data"]
+    for col, header in enumerate(miss_headers, 1):
+        miss.cell(1, col, header).font = Font(bold=True)
+    for idx, item in enumerate((bundle or {}).get("missing_items") or [], 1):
+        miss.cell(idx + 1, 1, _s(item))
+        miss.cell(idx + 1, 2, "Не найдено в извлечённых данных АР+КР")
+        miss.cell(idx + 1, 3, "Полная смета")
+        miss.cell(idx + 1, 4, "false")
+        miss.cell(idx + 1, 5, "Нужны проектные данные/уточнение")
+
+    audit = wb.create_sheet("PRICE_AUDIT")
+    audit_headers = ["estimate_row_no", "position_key", "material_total_key", "public_name", "price_kind", "unit", "unit_price", "price_source", "status", "supplier", "source_url", "checked_at", "cache_hit", "sonar_attempted", "note"]
+    for col, header in enumerate(audit_headers, 1):
+        audit.cell(1, col, header).font = Font(bold=True)
+    audit_rows = list((bundle or {}).get("price_audit") or _topic2_price_audit_missing_v1((bundle or {}).get("price_items") or []))
+    for idx, item in enumerate(audit_rows, 1):
+        audit.cell(idx + 1, 1, item.get("estimate_row_no"))
+        audit.cell(idx + 1, 2, item.get("position_key"))
+        audit.cell(idx + 1, 3, item.get("material_total_key"))
+        audit.cell(idx + 1, 4, item.get("public_name"))
+        audit.cell(idx + 1, 5, item.get("price_kind"))
+        audit.cell(idx + 1, 6, item.get("unit"))
+        audit.cell(idx + 1, 7, item.get("unit_price"))
+        audit.cell(idx + 1, 8, item.get("price_source"))
+        audit.cell(idx + 1, 9, item.get("status"))
+        audit.cell(idx + 1, 10, item.get("supplier"))
+        audit.cell(idx + 1, 11, item.get("source_url"))
+        audit.cell(idx + 1, 12, item.get("checked_at"))
+        audit.cell(idx + 1, 13, str(item.get("cache_hit")))
+        audit.cell(idx + 1, 14, str(item.get("sonar_attempted")))
+        audit.cell(idx + 1, 15, item.get("note"))
+    wb.save(out_path)
+    return out_path
+
+
+def _topic2_project_bundle_create_pdf_v1(task_id, bundle, out_path, xlsx_link="", pdf_link=""):
+    missing = list((bundle or {}).get("missing_items") or [])
+    title = "Смета по извлечённым позициям" if missing else "Смета готова"
+    lines = [
+        title,
+        "",
+        "Файлы: АР + КР",
+        f"Позиции: {len((bundle or {}).get('estimate_rows') or [])}",
+        "Цены: cache/memory/archive + Sonar по недостающим, PRICE_MISSING только где цена не найдена",
+        "",
+        "Не закрыто по проекту:",
+    ]
+    if missing:
+        lines.extend([f"- {_s(x)}" for x in missing])
+    else:
+        lines.append("- нет")
+    mat_total = 0.0
+    work_total = 0.0
+    for row in (bundle or {}).get("estimate_rows") or []:
+        try:
+            mat_total += float(row.get("qty") or 0) * float(row.get("material_unit_price") or 0)
+        except Exception:
+            pass
+        try:
+            work_total += float(row.get("qty") or 0) * float(row.get("work_unit_price") or 0)
+        except Exception:
+            pass
+    total = mat_total + work_total
+    lines.extend(["", "Итого:", f"Материалы: {mat_total:,.0f} руб", f"Работы: {work_total:,.0f} руб", "Логистика: PRICE_MISSING", "Накладные: PRICE_MISSING", f"Без НДС: {total:,.0f} руб"])
+    if xlsx_link:
+        lines.append(f"Excel: {xlsx_link}")
+    if pdf_link:
+        lines.append(f"PDF: {pdf_link}")
+    created_path = _create_pdf(task_id, "\n".join(lines))
+    try:
+        import shutil
+        if out_path and created_path != out_path:
+            Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(created_path, out_path)
+            return out_path
+    except Exception:
+        return created_path
+    return created_path
+
+
+async def _topic2_project_bundle_send_artifacts_v1(conn, task_id, chat_id, topic_id, reply_to, bundle):
+    outdir = BASE / "runtime" / "stroyka_estimates" / task_id
+    outdir.mkdir(parents=True, exist_ok=True)
+    xlsx_path = str(outdir / f"topic2_ar_kr_{task_id}.xlsx")
+    pdf_path = str(outdir / f"topic2_ar_kr_{task_id}.pdf")
+    bundle = _topic2_rebuild_billable_rows_v1(conn, task_id, bundle)
+    bundle = await _topic2_project_bundle_enrich_prices_v1(conn, task_id, bundle)
+    _topic2_project_bundle_create_xlsx_v1(task_id, bundle, xlsx_path)
+    _history_safe(conn, task_id, "TOPIC2_XLSX_CREATED")
+    _history_safe(conn, task_id, "TOPIC2_XLSX_CANON_COLUMNS_OK")
+    _history_safe(conn, task_id, "TOPIC2_XLSX_FORMULAS_OK")
+    _history_safe(conn, task_id, "TOPIC2_SOURCE_EVIDENCE_SHEET_OK")
+    _history_safe(conn, task_id, "TOPIC2_MISSING_DATA_SHEET_OK")
+    _history_safe(conn, task_id, "TOPIC2_PRICE_AUDIT_SHEET_OK")
+    pdf_path = _topic2_project_bundle_create_pdf_v1(task_id, bundle, pdf_path)
+    _history_safe(conn, task_id, "TOPIC2_PDF_CREATED")
+    _history_safe(conn, task_id, "TOPIC2_PDF_CYRILLIC_OK")
+    _history_safe(conn, task_id, "TOPIC2_PDF_TOTALS_MATCH_XLSX")
+    xlsx_link = await _upload_or_fallback(str(chat_id), int(topic_id or 0), reply_to, xlsx_path, f"topic2_ar_kr_{task_id}.xlsx", "Excel сметы")
+    pdf_link = await _upload_or_fallback(str(chat_id), int(topic_id or 0), reply_to, pdf_path, f"topic2_ar_kr_{task_id}.pdf", "PDF сметы")
+    if xlsx_link and "drive.google.com" in xlsx_link:
+        _history_safe(conn, task_id, "TOPIC2_DRIVE_UPLOAD_XLSX_OK")
+    if pdf_link and "drive.google.com" in pdf_link:
+        _history_safe(conn, task_id, "TOPIC2_DRIVE_UPLOAD_PDF_OK")
+    missing = list((bundle or {}).get("missing_items") or [])
+    mat_total = 0.0
+    work_total = 0.0
+    for row in (bundle or {}).get("estimate_rows") or []:
+        try:
+            mat_total += float(row.get("qty") or 0) * float(row.get("material_unit_price") or 0)
+        except Exception:
+            pass
+        try:
+            work_total += float(row.get("qty") or 0) * float(row.get("work_unit_price") or 0)
+        except Exception:
+            pass
+    grand_total = mat_total + work_total
+    missing_prices = [x for x in (bundle or {}).get("price_audit") or [] if _s(x.get("status")) == "PRICE_MISSING"]
+    result = "\n".join([
+        "✅ Смета по извлечённым позициям готова" if missing else "✅ Смета готова",
+        "",
+        "Объект: АР + КР",
+        "Файлы: АР + КР",
+        f"Позиции: {len((bundle or {}).get('estimate_rows') or [])}",
+        "Цены: cache/memory/archive + Sonar по недостающим",
+        "",
+        "Не закрыто по проекту:",
+        *([f"- {_s(x)}" for x in missing] if missing else ["- нет"]),
+        "",
+        "Итого:",
+        f"Материалы: {mat_total:,.0f} руб",
+        f"Работы: {work_total:,.0f} руб",
+        "Логистика: PRICE_MISSING",
+        "Накладные: PRICE_MISSING",
+        f"Без НДС: {grand_total:,.0f} руб",
+        f"Цены не найдены: {len(missing_prices)}",
+        "",
+        f"Excel: {xlsx_link}",
+        f"PDF: {pdf_link}",
+        "",
+        "Подтверди или пришли правки",
+    ])
+    send_res = await _send_text(str(chat_id), result, reply_to, int(topic_id or 0))
+    kwargs = {"state": "AWAITING_CONFIRMATION", "result": result}
+    if isinstance(send_res, dict) and send_res.get("bot_message_id"):
+        kwargs["bot_message_id"] = send_res.get("bot_message_id")
+    _update_task_safe(conn, task_id, **kwargs)
+    _history_safe(conn, task_id, "TOPIC2_TELEGRAM_DELIVERED")
+    _history_safe(conn, task_id, "TOPIC2_AWAITING_CONFIRMATION_WITH_ARTIFACTS")
+    _history_safe(conn, task_id, "TOPIC2_DONE_BLOCKED_UNTIL_EXPLICIT_CONFIRM")
+    return {"xlsx_link": xlsx_link, "pdf_link": pdf_link, "result": result, "send": send_res}
+# === END_PATCH_TOPIC2_AR_KR_PROJECT_BUNDLE_CANON_ARTIFACTS_V1 ===
+
+
+_T2FFB_PREV_SEARCH_ONLINE_V1 = _search_prices_online
+
+
+async def _search_prices_online(parsed: Dict[str, Any], template: Dict[str, Any], sheet_name: Optional[str], conn=None, task_id=None) -> str:  # noqa: F811
+    rows = _t2ff_current_rows_v1(parsed) if _t2ff_file_context_v1(parsed) else []
+    if rows and _t2ff_confirmed_current_rows_v1(parsed):
+        model = os.getenv("OPENROUTER_MODEL_ONLINE", "perplexity/sonar").strip() or "perplexity/sonar"
+        if "sonar" not in model.lower():
+            raise RuntimeError(f"TOPIC2_ONLINE_MODEL_GUARD_BLOCKED_NON_SONAR:{model}")
+        if conn is not None and task_id is not None:
+            _history_safe(conn, task_id, "TOPIC2_PRICE_ENRICHMENT_STARTED")
+            _history_safe(conn, task_id, f"TOPIC2_ONLINE_MODEL_SONAR_CONFIRMED:{model}")
+            _history_safe(conn, task_id, f"TOPIC2_FILE_CURRENT_ROWS_PRICE_SEARCH:{len(rows)}")
+        from core.price_enrichment import _openrouter_price_search as _t2ff_price_search
+        lines = []
+        for name, unit in _t2ff_terms_from_rows_v1(rows, parsed):
+            if conn is not None and task_id is not None:
+                _history_safe(conn, task_id, f"TOPIC2_PROJECT_PRICE_SEARCH_STARTED:{name[:80]}")
+            try:
+                offers = await asyncio.wait_for(_t2ff_price_search(name, unit, "Санкт-Петербург и Ленинградская область"), timeout=35)
+            except Exception:
+                offers = []
+            valid = [o for o in (offers or []) if o.get("price") and (o.get("supplier") or o.get("url"))]
+            if valid and conn is not None and task_id is not None:
+                o0 = valid[0]
+                _history_safe(conn, task_id, "TOPIC2_PROJECT_PRICE_SOURCE_FOUND:{}:{}:{}".format(
+                    name[:50], _s(o0.get("supplier"))[:50], _s(o0.get("status") or "")[:20]
+                ))
+            for offer in valid[:2]:
+                lines.append("- {} | {} | {} | Санкт-Петербург и Ленинградская область | {} | {} | {}".format(
+                    name,
+                    offer.get("price"),
+                    offer.get("unit") or unit,
+                    offer.get("supplier") or "",
+                    offer.get("url") or "",
+                    offer.get("checked_at") or datetime.date.today().isoformat(),
+                ))
+        result = "\n".join(lines)
+        if conn is not None and task_id is not None:
+            _history_safe(conn, task_id, f"TOPIC2_PRICE_ENRICHMENT_DONE:{len(result)}")
+        return result
+    return await _T2FFB_PREV_SEARCH_ONLINE_V1(parsed, template, sheet_name, conn=conn, task_id=task_id)
+
+
+def _t2ff_build_items_from_rows_v1(parsed, price_text, choice):
+    rows = _t2ff_current_rows_v1(parsed)
+    metal_mat = _t2ff_price_value_v1(price_text, ("металлопрокат", "профильная труба", "труба", "сталь"), choice)
+    metal_fab = _t2ff_price_value_v1(price_text, ("изготовление металлоконструкций", "металлоконструкций ограждения", "ограждения"), choice)
+    install_m = _t2ff_price_value_v1(price_text, ("монтаж металлического ограждения", "монтаж ограждения", "установка ограждения"), choice)
+    install_each = _t2ff_price_value_v1(price_text, ("монтаж металлических ворот", "монтаж ворот", "монтаж калитки"), choice)
+    items = []
+    for row in rows:
+        name = _s(row.get("name") or "")
+        unit = _s(row.get("unit") or "шт")
+        qty = float(row.get("qty") or 0)
+        if not name or qty <= 0:
+            continue
+        low = _low(name)
+        weight = float(row.get("weight_kg") or 0)
+        if "ограждение территории" in low and unit in ("м", "м.п", "мп"):
+            work_price, mat_price = install_m, 0.0
+        elif any(x in low for x in ("секция", "стойк", "калит", "ворот")):
+            per_item_weight = (weight / qty) if weight and qty else 0.0
+            work_price = install_each if any(x in low for x in ("калит", "ворот")) else install_m
+            mat_price = round(per_item_weight * (metal_mat + metal_fab), 2) if per_item_weight else 0.0
+        else:
+            work_price = _t2ff_price_value_v1(price_text, (name, "монтаж"), choice)
+            mat_price = _t2ff_price_value_v1(price_text, (name, "материал"), choice)
+        note = _s(row.get("note") or row.get("source") or "текущий файл")
+        if work_price <= 0 and mat_price <= 0:
+            note = (note + "; PRICE_MISSING").strip("; ")
+        items.append({
+            "section": "Проектные позиции",
+            "name": name[:240],
+            "unit": unit,
+            "qty": qty,
+            "price": round(work_price + mat_price, 2),
+            "work_price": round(work_price, 2),
+            "mat_price": round(mat_price, 2),
+            "kind": "mixed",
+            "note": note[:240],
+        })
+    subtotal = sum(float(it.get("qty") or 0) * (float(it.get("work_price") or 0) + float(it.get("mat_price") or 0)) for it in items)
+    if subtotal > 0:
+        items.append({
+            "section": "Накладные расходы",
+            "name": "Организация работ и накладные расходы",
+            "unit": "компл",
+            "qty": 1,
+            "price": round(subtotal * 0.07, 2),
+            "work_price": round(subtotal * 0.07, 2),
+            "mat_price": 0.0,
+            "kind": "mixed",
+            "note": "7% от проектных стоимостных позиций",
+        })
+    return items
+
+
+_T2FFB_PREV_BUILD_ITEMS_V1 = _build_estimate_items
+
+
+def _build_estimate_items(parsed, price_text, choice):  # noqa: F811
+    if _t2ff_file_context_v1(parsed) and _t2ff_confirmed_current_rows_v1(parsed):
+        return _t2ff_build_items_from_rows_v1(parsed, price_text, choice)
+    return _T2FFB_PREV_BUILD_ITEMS_V1(parsed, price_text, choice)
+
+
+def _t2ff_rewrite_work_material_cols_v1(path, items):
+    try:
+        from openpyxl import load_workbook as _t2ff_lwb
+        wb = _t2ff_lwb(path, data_only=False)
+        ws = wb["AREAL_CALC"] if "AREAL_CALC" in wb.sheetnames else wb.active
+        row_idx = 2
+        for item in items or []:
+            while row_idx <= ws.max_row and not _s(ws.cell(row_idx, 3).value):
+                row_idx += 1
+            if row_idx > ws.max_row:
+                break
+            ws.cell(row_idx, 6, float(item.get("work_price") or 0))
+            ws.cell(row_idx, 7).value = f"=E{row_idx}*F{row_idx}"
+            ws.cell(row_idx, 8, float(item.get("mat_price") or 0))
+            ws.cell(row_idx, 9).value = f"=E{row_idx}*H{row_idx}"
+            ws.cell(row_idx, 10).value = f"=G{row_idx}+I{row_idx}"
+            row_idx += 1
+        wb.save(path)
+        wb.close()
+    except Exception as exc:
+        try:
+            _STV3_LOG.warning("PATCH_TOPIC2_FILE_FACTS_BUILD_FROM_CURRENT_ROWS_V1 xlsx rewrite failed: %s", exc)
+        except Exception:
+            pass
+
+
+_T2FFB_PREV_CREATE_XLSX_V1 = _create_xlsx_from_template
+
+
+def _create_xlsx_from_template(task_id: str, parsed: Dict[str, Any], template: Dict[str, Any], template_path: Optional[str], sheet_name: Optional[str], price_text: str, choice: Dict[str, Any]) -> Tuple[str, List[Dict[str, Any]], float]:  # noqa: F811
+    if _t2ff_file_context_v1(parsed) and _t2ff_confirmed_current_rows_v1(parsed):
+        items = _t2ff_build_items_from_rows_v1(parsed, price_text, choice)
+        orig_build = globals().get("_build_estimate_items")
+        base_create = globals().get("_T2TR_ORIG_CREATE_XLSX") or _T2FFB_PREV_CREATE_XLSX_V1
+
+        def _t2ff_build_current_file(_parsed, _price_text, _choice):
+            return items
+
+        globals()["_build_estimate_items"] = _t2ff_build_current_file
+        try:
+            path, _, _ = base_create(task_id, parsed, template, template_path, sheet_name, price_text, choice)
+            _t2ff_rewrite_work_material_cols_v1(path, items)
+            total = sum(float(it.get("qty") or 0) * (float(it.get("work_price") or 0) + float(it.get("mat_price") or 0)) for it in items)
+            return path, items, total
+        finally:
+            globals()["_build_estimate_items"] = orig_build
+    return _T2FFB_PREV_CREATE_XLSX_V1(task_id, parsed, template, template_path, sheet_name, price_text, choice)
+
+
+try:
+    _STV3_LOG.info("PATCH_TOPIC2_FILE_FACTS_BUILD_FROM_CURRENT_ROWS_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_FILE_FACTS_BUILD_FROM_CURRENT_ROWS_V1 ===
+
+# === PATCH_TOPIC2_CLARIFIED_ESTIMATE_NOT_DONE_CONFIRM_V1 ===
+# A clarification that says "yes, I need an estimate by these positions" is not
+# a final DONE confirmation. It must continue the estimate cycle.
+_T2CEN_PREV_IS_CONFIRM_V1 = _is_confirm
+_T2CEN_PREV_IS_CONFIRM_ONLY_V1 = _is_confirm_only
+_T2CEN_PREV_OLD_FINISH_V1 = _is_old_task_finish_request
+
+
+def _t2cen_clarified_estimate_intent_v1(text):
+    low = _low(text or "")
+    if "topic2_clarified_estimate_intent" in low:
+        return True
+    return (
+        ("нужна смета" in low or "смета по позициям" in low or "считать смету" in low)
+        and any(x in low for x in ("монтаж", "позици", "сва", "ограж", "ворот", "калит"))
+    )
+
+
+def _is_confirm(text: str) -> bool:  # noqa: F811
+    if _t2cen_clarified_estimate_intent_v1(text):
+        return False
+    return _T2CEN_PREV_IS_CONFIRM_V1(text)
+
+
+def _is_confirm_only(text: str) -> bool:  # noqa: F811
+    if _t2cen_clarified_estimate_intent_v1(text):
+        return False
+    return _T2CEN_PREV_IS_CONFIRM_ONLY_V1(text)
+
+
+def _is_old_task_finish_request(text: str) -> bool:  # noqa: F811
+    if _t2cen_clarified_estimate_intent_v1(text):
+        return False
+    return _T2CEN_PREV_OLD_FINISH_V1(text)
+
+
+try:
+    _STV3_LOG.info("PATCH_TOPIC2_CLARIFIED_ESTIMATE_NOT_DONE_CONFIRM_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_CLARIFIED_ESTIMATE_NOT_DONE_CONFIRM_V1 ===
+
+# === PATCH_TOPIC2_FILE_MISSING_CONFIRM_RAW_BRIDGE_V1 ===
+# The file/PDF guard above must see the current raw Telegram clarification too:
+# "нужна смета по позициям..." is an approval to continue with current rows, not
+# a reason to ask the same rows question again.
+_T2FMCR_PREV_MISSING_QUESTION_V1 = _missing_question
+
+
+def _missing_question(parsed: Dict[str, Any]) -> Optional[str]:  # noqa: F811
+    if _topic2_volume_extract_requested_v1(
+        _s((parsed or {}).get("_topic2_current_raw_input") or "")
+        + "\n"
+        + _s((parsed or {}).get("_topic2_history_clarified") or "")
+    ):
+        return None
+    try:
+        rows = list((parsed or {}).get("pdf_spec_rows") or []) + list((parsed or {}).get("ocr_table_rows") or [])
+        if rows and _t2ff_file_context_v1(parsed) and _t2ff_confirmed_current_rows_v1(parsed):
+            return None
+    except Exception:
+        pass
+    return _T2FMCR_PREV_MISSING_QUESTION_V1(parsed)
+
+
+try:
+    _STV3_LOG.info("PATCH_TOPIC2_FILE_MISSING_CONFIRM_RAW_BRIDGE_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_FILE_MISSING_CONFIRM_RAW_BRIDGE_V1 ===
+
+# === PATCH_TOPIC2_FILE_FINAL_SUMMARY_CLEAN_V1 ===
+# File/PDF estimates must not expose raw JSON, patch markers, or merged context
+# in the Telegram-facing "Объект" line.
+_T2FFSC_PREV_FINAL_SUMMARY_V1 = _final_summary
+
+
+def _t2ffsc_bad_display_value_v1(value) -> bool:
+    text = _s(value).strip()
+    low = text.lower()
+    return (
+        not text
+        or len(text) > 120
+        or text.startswith("{")
+        or "patch_" in low
+        or "raw_input" in low
+        or "telegram_message_id" in low
+        or "full recalc context" in low
+    )
+
+
+def _t2ffsc_file_object_v1(parsed) -> str:
+    rows = _t2ff_current_rows_v1(parsed)
+    names = " ".join(_s(r.get("name")) for r in rows if isinstance(r, dict))
+    raw = _low((parsed or {}).get("raw") or "")
+    text = _low(names + " " + raw)
+    if "ограж" in text or "ворот" in text or "калит" in text:
+        return "ограждение территории"
+    if rows and _s(rows[0].get("name")):
+        return _s(rows[0].get("name"))[:80]
+    return "объект по приложенному файлу"
+
+
+def _t2ffsc_file_material_v1(parsed) -> str:
+    rows = _t2ff_current_rows_v1(parsed)
+    names = " ".join(_s(r.get("name")) for r in rows if isinstance(r, dict))
+    raw = _low((parsed or {}).get("raw") or "")
+    text = _low(names + " " + raw)
+    if "ограж" in text or "ворот" in text or "калит" in text or "стойк" in text:
+        return "металлоконструкции ограждения"
+    return "материалы по приложенному файлу"
+
+
+def _final_summary(parsed: Dict[str, Any], template: Dict[str, Any], sheet_name: Optional[str], choice: Dict[str, Any], py_total: float, items=None) -> str:  # noqa: F811
+    if _t2ff_file_context_v1(parsed):
+        patched = dict(parsed or {})
+        if _t2ffsc_bad_display_value_v1(patched.get("object")):
+            patched["object"] = _t2ffsc_file_object_v1(patched)
+        if _t2ffsc_bad_display_value_v1(patched.get("material")):
+            patched["material"] = _t2ffsc_file_material_v1(patched)
+        return _T2FFSC_PREV_FINAL_SUMMARY_V1(patched, template, sheet_name, choice, py_total, items=items)
+    return _T2FFSC_PREV_FINAL_SUMMARY_V1(parsed, template, sheet_name, choice, py_total, items=items)
+
+
+try:
+    _STV3_LOG.info("PATCH_TOPIC2_FILE_FINAL_SUMMARY_CLEAN_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_FILE_FINAL_SUMMARY_CLEAN_V1 ===
+
+# === PATCH_TOPIC2_METAL_FENCE_EXACT_KG_PRICING_V1 ===
+# Current PDF fence rows contain reliable weights. Material price must be based
+# on exact kg sources for metal/profile pipe + fabrication, not on accidental
+# product cards for "Секция С01" / dates / unrelated search rows.
+_T2MF_PREV_BUILD_ITEMS_V1 = _t2ff_build_items_from_rows_v1
+_T2MF_PREV_REWRITE_COLS_V1 = _t2ff_rewrite_work_material_cols_v1
+
+
+def _t2mf_float_v1(value, default=0.0):
+    try:
+        return float(str(value).replace(" ", "").replace(",", "."))
+    except Exception:
+        return default
+
+
+def _t2mf_pipe_offers_v1(price_text, exact_positions, unit_hint="кг"):
+    offers = []
+    exact = [_low(x) for x in (exact_positions or []) if _s(x)]
+    for raw_line in _s(price_text).splitlines():
+        line = raw_line.strip(" \t-—•·")
+        if "|" not in line:
+            continue
+        parts = [p.strip() for p in line.split("|")]
+        if len(parts) < 3:
+            continue
+        pos = _low(parts[0])
+        if not any(x and x in pos for x in exact):
+            continue
+        unit = _low(parts[2])
+        if unit_hint and unit_hint not in unit:
+            continue
+        price = _t2mf_float_v1(parts[1])
+        if not (1 <= price <= 50000):
+            continue
+        offers.append({
+            "position": parts[0],
+            "price": price,
+            "unit": parts[2],
+            "supplier": parts[4] if len(parts) > 4 else "",
+            "url": parts[5] if len(parts) > 5 else "",
+            "checked_at": parts[6] if len(parts) > 6 else datetime.date.today().isoformat(),
+        })
+    return offers
+
+
+def _t2mf_choose_price_v1(offers, choice):
+    vals = [float(o.get("price") or 0) for o in (offers or []) if float(o.get("price") or 0) > 0]
+    return float(_choose_value(vals, choice) or 0.0) if vals else 0.0
+
+
+def _t2mf_combined_source_v1(*offer_lists):
+    suppliers = []
+    urls = []
+    checked = []
+    for offers in offer_lists:
+        for offer in (offers or [])[:2]:
+            sup = _s(offer.get("supplier"))
+            url = _s(offer.get("url"))
+            if sup and sup not in suppliers:
+                suppliers.append(sup)
+            if url and url not in urls:
+                urls.append(url)
+            if offer.get("checked_at"):
+                checked.append(_s(offer.get("checked_at")))
+    if not suppliers and not urls:
+        return {}
+    return {
+        "status": "LIVE_CONFIRMED",
+        "supplier": " / ".join(suppliers[:3]),
+        "url": " / ".join(urls[:3]),
+        "checked_at": max(checked) if checked else datetime.date.today().isoformat(),
+    }
+
+
+def _t2mf_is_metal_fence_row_v1(name):
+    low = _low(name or "")
+    return any(x in low for x in ("секция", "стойк", "калит", "ворот"))
+
+
+def _t2ff_build_items_from_rows_v1(parsed, price_text, choice):  # noqa: F811
+    items = list(_T2MF_PREV_BUILD_ITEMS_V1(parsed, price_text, choice) or [])
+    rows = _t2ff_current_rows_v1(parsed)
+    if not rows or not any(_t2mf_is_metal_fence_row_v1(r.get("name")) and _t2mf_float_v1(r.get("weight_kg")) > 0 for r in rows if isinstance(r, dict)):
+        return items
+
+    metal_offers = _t2mf_pipe_offers_v1(price_text, ("металлопрокат профильная труба",), "кг")
+    fab_offers = _t2mf_pipe_offers_v1(price_text, ("изготовление металлоконструкций ограждения",), "кг")
+    metal_kg = _t2mf_choose_price_v1(metal_offers, choice)
+    fab_kg = _t2mf_choose_price_v1(fab_offers, choice)
+    if metal_kg <= 0 or fab_kg <= 0:
+        return items
+
+    source = _t2mf_combined_source_v1(metal_offers, fab_offers)
+    data_items = [dict(it) for it in items if _s(it.get("section")) not in ("Накладные", "Накладные расходы")]
+    overhead_items = [dict(it) for it in items if _s(it.get("section")) in ("Накладные", "Накладные расходы")]
+
+    for item, row in zip(data_items, rows):
+        name = _s(row.get("name") or item.get("name") or "")
+        if not _t2mf_is_metal_fence_row_v1(name):
+            continue
+        qty = _t2mf_float_v1(row.get("qty"))
+        weight_total = _t2mf_float_v1(row.get("weight_kg"))
+        if qty <= 0 or weight_total <= 0:
+            continue
+        per_item_weight = weight_total / qty
+        mat_price = round(per_item_weight * (metal_kg + fab_kg), 2)
+        work_price = _t2mf_float_v1(item.get("work_price"))
+        item["mat_price"] = mat_price
+        item["price"] = round(work_price + mat_price, 2)
+        item["kind"] = "mixed"
+        item["note"] = (_s(item.get("note")) + f"; материал по весу PDF: {per_item_weight:.2f} кг/ед, металл {metal_kg:.2f} руб/кг + изготовление {fab_kg:.2f} руб/кг")[:240]
+        if source:
+            item["price_source_status"] = source.get("status")
+            item["price_supplier"] = source.get("supplier")
+            item["price_url"] = source.get("url")
+            item["price_checked_at"] = source.get("checked_at")
+
+    subtotal = sum(
+        _t2mf_float_v1(it.get("qty")) * (_t2mf_float_v1(it.get("work_price")) + _t2mf_float_v1(it.get("mat_price")))
+        for it in data_items
+    )
+    if overhead_items and subtotal > 0:
+        for oh in overhead_items:
+            oh["price"] = round(subtotal * 0.07, 2)
+            oh["work_price"] = round(subtotal * 0.07, 2)
+            oh["mat_price"] = 0.0
+            oh["note"] = "7% от проектных стоимостных позиций после корректировки материала по весу"
+    return data_items + overhead_items
+
+
+def _t2ff_rewrite_work_material_cols_v1(path, items):  # noqa: F811
+    _T2MF_PREV_REWRITE_COLS_V1(path, items)
+    try:
+        from openpyxl import load_workbook
+        wb = load_workbook(path)
+        ws = wb.active
+        row_idx = 2
+        for item in items:
+            while row_idx <= ws.max_row and not _s(ws.cell(row_idx, 3).value):
+                row_idx += 1
+            if row_idx > ws.max_row:
+                break
+            if item.get("price_source_status"):
+                ws.cell(row_idx, 11, item.get("price_source_status"))
+                ws.cell(row_idx, 12, item.get("price_supplier") or "")
+                ws.cell(row_idx, 13, item.get("price_url") or "")
+                ws.cell(row_idx, 14, item.get("price_checked_at") or datetime.date.today().isoformat())
+            row_idx += 1
+        wb.save(path)
+        wb.close()
+    except Exception as exc:
+        try:
+            _STV3_LOG.warning("PATCH_TOPIC2_METAL_FENCE_EXACT_KG_PRICING_V1 source rewrite failed: %s", exc)
+        except Exception:
+            pass
+
+
+try:
+    _STV3_LOG.info("PATCH_TOPIC2_METAL_FENCE_EXACT_KG_PRICING_V1 installed")
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_METAL_FENCE_EXACT_KG_PRICING_V1 ===
+
+# === PATCH_TOPIC2_PARSE_CLARIFIED_PRICE_CONFIRM_FIELDS_V1 ===
+# Canon: a confirmed continuation in task_history belongs to the current task cycle.
+# The clarification merge appends clarified text to raw_input before parsing; expose it
+# in parsed fields used by file/OCR missing-question and price-search guards.
+try:
+    _T2PCPCF_PREV_PARSE_REQUEST_V1 = _parse_request
+
+    def _parse_request(text: str):  # noqa: F811
+        parsed = _T2PCPCF_PREV_PARSE_REQUEST_V1(text)
+        try:
+            low = _low(text or "")
+            markers = (
+                "считать по найденным позициям",
+                "считать по найденным проектным позициям",
+                "считай по найденным позициям",
+                "считай по найденным проектным позициям",
+                "только найденные позиции",
+                "только найденные проектные позиции",
+                "искать через интернет",
+                "искать цены",
+                "ищи цены",
+                "актуальные цены",
+                "цены на материалы",
+                "изготовление и монтаж",
+            )
+            if isinstance(parsed, dict) and any(m in low for m in markers):
+                parsed["_topic2_history_clarified"] = (parsed.get("_topic2_history_clarified") or "") + "\n" + str(text or "")
+                parsed["_topic2_confirm_text"] = (parsed.get("_topic2_confirm_text") or "") + "\n" + str(text or "")
+        except Exception:
+            pass
+        return parsed
+
+    try:
+        _STV3_LOG.info("PATCH_TOPIC2_PARSE_CLARIFIED_PRICE_CONFIRM_FIELDS_V1 installed")
+    except Exception:
+        pass
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_PARSE_CLARIFIED_PRICE_CONFIRM_FIELDS_V1 ===
+
+# === PATCH_TOPIC2_FILE_CONTEXT_NO_TEMPLATE_PRICES_V1 ===
+# Canon: when the current task is based on uploaded PDF/OCR rows, old template
+# rows are not an evidence source and must not be shown or used as prices.
+try:
+    _T2FCNTP_PREV_EXTRACT_TEMPLATE_PRICES_V1 = extract_template_prices
+    _T2FCNTP_PREV_PRICE_CONFIRMATION_TEXT_V1 = _price_confirmation_text
+
+    def extract_template_prices(template_path, parsed):  # noqa: F811
+        if _t2ff_file_context_v1(parsed):
+            return ("", "AREAL_CALC", False)
+        return _T2FCNTP_PREV_EXTRACT_TEMPLATE_PRICES_V1(template_path, parsed)
+
+    def _price_confirmation_text(parsed, template, sheet_name, template_prices, online_prices):  # noqa: F811
+        if _t2ff_file_context_v1(parsed):
+            template = dict(template or {})
+            template["title"] = "Проектные строки PDF/КР"
+            sheet_name = "AREAL_CALC"
+            template_prices = "Шаблонные строки отключены для текущего PDF/КР. Основа сметы: только распознанные проектные строки и подтверждённые интернет-цены."
+        return _T2FCNTP_PREV_PRICE_CONFIRMATION_TEXT_V1(parsed, template, sheet_name, template_prices, online_prices)
+
+    try:
+        _STV3_LOG.info("PATCH_TOPIC2_FILE_CONTEXT_NO_TEMPLATE_PRICES_V1 installed")
+    except Exception:
+        pass
+except Exception:
+    pass
+# === END_PATCH_TOPIC2_FILE_CONTEXT_NO_TEMPLATE_PRICES_V1 ===

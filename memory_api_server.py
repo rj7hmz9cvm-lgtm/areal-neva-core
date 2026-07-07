@@ -10,7 +10,13 @@ def init_db():
     with sqlite3.connect(DB) as conn:
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("CREATE TABLE IF NOT EXISTS memory (id TEXT PRIMARY KEY, chat_id TEXT, key TEXT, value TEXT, timestamp TEXT)")
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(memory)").fetchall()}
+        if "topic_id" not in cols:
+            conn.execute("ALTER TABLE memory ADD COLUMN topic_id INTEGER DEFAULT 0")
+        if "scope" not in cols:
+            conn.execute("ALTER TABLE memory ADD COLUMN scope TEXT DEFAULT 'topic'")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_chat_id ON memory(chat_id)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_memory_chat_topic ON memory(chat_id, topic_id)")
         # ARCHIVE_DUPLICATE_GUARD_V1: enforce uniqueness on (chat_id, key)
         conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_memory_chat_key_unique ON memory(chat_id, key)")
         conn.commit()
@@ -27,12 +33,20 @@ def archive():  # ARCHIVE_ENDPOINT_SCOPE_V2
         task_id = str(data.get("task_id") or str(uuid.uuid4()))
         value = data.get("value") or json.dumps(data, ensure_ascii=False)
         key = f"topic_{topic_id}_archive_{task_id[:8]}"
+        init_db()
         with sqlite3.connect(DB) as conn:
             existing = conn.execute("SELECT 1 FROM memory WHERE chat_id=? AND key=? LIMIT 1", (chat_id, key)).fetchone()  # ARCHIVE_DEDUP_BY_KEY_V1
             if existing:
+                conn.execute(
+                    "UPDATE memory SET topic_id=?, scope=? WHERE chat_id=? AND key=?",
+                    (topic_id, "archive", chat_id, key),
+                )
+                conn.commit()
                 return jsonify({"ok": True, "key": key, "dedup": True}), 200
-            conn.execute("INSERT INTO memory (id, chat_id, key, value, timestamp) VALUES (?,?,?,?,?)",
-                (str(uuid.uuid4()), chat_id, key, str(value), datetime.utcnow().isoformat()))
+            conn.execute(
+                "INSERT INTO memory (id, chat_id, key, value, timestamp, topic_id, scope) VALUES (?,?,?,?,?,?,?)",
+                (str(uuid.uuid4()), chat_id, key, str(value), datetime.utcnow().isoformat(), topic_id, "archive"),
+            )
             conn.commit()
         return jsonify({"ok": True, "key": key, "dedup": False}), 200
     except Exception as e:
@@ -42,10 +56,25 @@ def archive():  # ARCHIVE_ENDPOINT_SCOPE_V2
 def get_memory():
     if request.headers.get("Authorization") != f"Bearer {TOKEN}": return jsonify({"error": "unauthorized"}), 403
     chat_id = request.args.get("chat_id")
+    topic_arg = request.args.get("topic_id")
+    key_arg = request.args.get("key")
     limit = int(request.args.get("limit", 100))
+    init_db()
     with sqlite3.connect(DB) as conn:
-        rows = conn.execute("SELECT chat_id, key, value, timestamp FROM memory WHERE chat_id=? ORDER BY timestamp DESC LIMIT ?", (chat_id, limit)).fetchall()
-    return jsonify([{"chat_id": r[0], "key": r[1], "value": r[2], "timestamp": r[3]} for r in rows])
+        where = ["chat_id=?"]
+        params = [chat_id]
+        if topic_arg is not None and str(topic_arg).strip() != "":
+            where.append("COALESCE(topic_id,0)=?")
+            params.append(int(topic_arg or 0))
+        if key_arg:
+            where.append("key=?")
+            params.append(key_arg)
+        params.append(limit)
+        rows = conn.execute(
+            f"SELECT chat_id, key, value, timestamp, COALESCE(topic_id,0), COALESCE(scope,'topic') FROM memory WHERE {' AND '.join(where)} ORDER BY timestamp DESC LIMIT ?",
+            params,
+        ).fetchall()
+    return jsonify([{"chat_id": r[0], "key": r[1], "value": r[2], "timestamp": r[3], "topic_id": r[4], "scope": r[5]} for r in rows])
 
 @app.route("/memory", methods=["POST"])
 def post_memory():
@@ -54,14 +83,23 @@ def post_memory():
     chat_id = data["chat_id"]
     key = data.get("key", "full_export")
     value = str(data.get("value", ""))
+    topic_id = int(data.get("topic_id") or 0)
+    scope = str(data.get("scope") or "topic")
     ts = datetime.utcnow().isoformat()
+    init_db()
     with sqlite3.connect(DB) as conn:
         # ARCHIVE_DUPLICATE_GUARD_V1: upsert by (chat_id, key)
         existing = conn.execute("SELECT id FROM memory WHERE chat_id=? AND key=? LIMIT 1", (chat_id, key)).fetchone()
         if existing:
-            conn.execute("UPDATE memory SET value=?, timestamp=? WHERE chat_id=? AND key=?", (value, ts, chat_id, key))
+            conn.execute(
+                "UPDATE memory SET value=?, timestamp=?, topic_id=?, scope=? WHERE chat_id=? AND key=?",
+                (value, ts, topic_id, scope, chat_id, key),
+            )
         else:
-            conn.execute("INSERT INTO memory (id, chat_id, key, value, timestamp) VALUES (?,?,?,?,?)", (str(uuid.uuid4()), chat_id, key, value, ts))
+            conn.execute(
+                "INSERT INTO memory (id, chat_id, key, value, timestamp, topic_id, scope) VALUES (?,?,?,?,?,?,?)",
+                (str(uuid.uuid4()), chat_id, key, value, ts, topic_id, scope),
+            )
         conn.commit()
     return jsonify({"status": "ok"}), 201
 
