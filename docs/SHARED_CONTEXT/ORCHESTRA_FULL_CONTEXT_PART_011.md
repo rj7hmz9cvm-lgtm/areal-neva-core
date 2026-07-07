@@ -1,6 +1,6 @@
 # ORCHESTRA_FULL_CONTEXT_PART_011
-generated_at_utc: 2026-07-07T18:54:08.409294+00:00
-git_sha_before_commit: c68b0dc28c81012640c7c52bc5e4765016af155f
+generated_at_utc: 2026-07-07T19:24:08.716188+00:00
+git_sha_before_commit: 75f68ff0c25d5c4594ccc3083e30a8f7c1a4611b
 part: 11/22
 
 
@@ -1975,7 +1975,7 @@ FILE_CHUNK: 1/1
 ====================================================================================================
 BEGIN_FILE: core/pdf_spec_extractor.py
 FILE_CHUNK: 1/1
-SHA256_FULL_FILE: f0bd2d514d7bff597b8bd2461f997cfdb346fcef6e18a0d40f7a44b1ea54b7b6
+SHA256_FULL_FILE: ae9c361266d55ddec81bf8c8dccf25b8ebf9b26375adcefcae916f600965ddab
 ====================================================================================================
 # === PDF_SPEC_EXTRACTOR_REAL_V1 ===
 from __future__ import annotations
@@ -3698,12 +3698,13 @@ def extract_project_positions_bundle(files: List[str], topic_id: int = 2) -> Dic
     positions_complete = not any(x in missing for x in ("foundation_schedule_Fm1_Fm2", "foundation_concrete_volume_m3"))
     result = {
         "ok": bool(bundle.get("ok")) and bool(positions) and positions_complete,
-        "result_type": "PROJECT_POSITIONS_ONLY_RESULT",
+        "result_type": "PROJECT_POSITIONS_RESULT",
         "topic_id": topic_id,
         "project_facts": list(bundle.get("facts") or []),
         "properties": list(bundle.get("properties") or []),
         "positions": positions,
         "quantities": list(bundle.get("quantities") or []),
+        "direct_quantities": list(bundle.get("quantities") or []),
         "calculated_quantities": calculated,
         "derived_quantities": list(bundle.get("derived_quantities") or []),
         "totals": totals,
@@ -3721,6 +3722,7 @@ def extract_project_positions_bundle(files: List[str], topic_id: int = 2) -> Dic
         result["public_groups"] = list(normalized.get("public_groups") or [])
         result["totals_by_material"] = list(normalized.get("totals_by_material") or [])
         result["price_items"] = list(normalized.get("price_items") or [])
+        result["estimate_rows"] = list(normalized.get("estimate_rows") or [])
         result["missing_items"] = list(normalized.get("missing_items") or result.get("missing_items") or [])
     except Exception as exc:
         result.setdefault("normalization_errors", []).append(str(exc))

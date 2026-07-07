@@ -1,13 +1,13 @@
 # ORCHESTRA_FULL_CONTEXT_PART_014
-generated_at_utc: 2026-07-07T18:54:08.411507+00:00
-git_sha_before_commit: c68b0dc28c81012640c7c52bc5e4765016af155f
+generated_at_utc: 2026-07-07T19:24:08.717919+00:00
+git_sha_before_commit: 75f68ff0c25d5c4594ccc3083e30a8f7c1a4611b
 part: 14/22
 
 
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 1/2
-SHA256_FULL_FILE: b6843f1c2d43cf262f810db30db01f9ef30c8900b040d42ef8787c043e3b6de2
+SHA256_FULL_FILE: d587db0166339357ee403db6e01bc6dcbf0409a6aecfada5e0ba6cd35ea1fcff
 ====================================================================================================
 # === FULL_STROYKA_ESTIMATE_CANON_CLOSE_V3 ===
 from __future__ import annotations
@@ -1108,45 +1108,83 @@ def _topic2_bundle_volumes_message_v1(parsed: Dict[str, Any]) -> str:
     project_facts = list(bundle.get("project_facts") or bundle.get("facts") or [])
     properties = list(bundle.get("properties") or [])
     positions = list(bundle.get("positions") or [])
-    quantities = list(bundle.get("quantities") or [])
+    quantities = list(bundle.get("direct_quantities") or bundle.get("quantities") or [])
     calculated_quantities = list(bundle.get("calculated_quantities") or [])
     derived_quantities = list(bundle.get("derived_quantities") or [])
     totals = list(bundle.get("totals") or [])
     volumes = list(bundle.get("volumes") or (parsed or {}).get("project_bundle_volumes") or [])
     missing_items = list(bundle.get("missing_items") or [])
     public_groups = list(bundle.get("public_groups") or [])
-    price_items = list(bundle.get("price_items") or [])
     result_type = _s(bundle.get("result_type") or "VOLUMES_ONLY_RESULT")
-    header = "✅ Проектные позиции и объёмы извлечены" if result_type == "PROJECT_POSITIONS_ONLY_RESULT" else "✅ Объёмы извлечены"
+    header = "✅ Проектные позиции и объёмы извлечены" if result_type in ("PROJECT_POSITIONS_ONLY_RESULT", "PROJECT_POSITIONS_RESULT") else "✅ Объёмы извлечены"
     if public_groups:
-        lines = [header, "", "Нормализованные позиции:"]
+        def _fmt_unit(u):
+            return {"m3": "м³", "m2": "м²", "m": "п.м", "pcs": "шт", "l": "л", "kg": "кг", "t": "т"}.get(_s(u), _s(u))
+        lines = [header, "", "Project facts:"]
+        if project_facts:
+            for row in project_facts[:12]:
+                if not isinstance(row, dict):
+                    continue
+                value = _s(row.get("value") or row.get("name") or row.get("key"))
+                lines.append("- {}".format(value))
+        else:
+            lines.append("- факты проекта не выделены")
+        lines.extend(["", "Project positions:"])
+        foundation_rows = [p for p in positions if isinstance(p, dict) and _s(p.get("position_type")) == "foundation"]
+        if foundation_rows:
+            for mark in ("Фм1", "Фм2"):
+                count = ""
+                for row in foundation_rows:
+                    if _s(row.get("mark")) == mark and row.get("count_pcs") and not row.get("material"):
+                        count = _s(row.get("count_pcs"))
+                        break
+                if count:
+                    lines.append(f"- {mark}: {count} шт")
+        else:
+            lines.append("- проектные позиции не выделены")
+        lines.extend(["", "Direct / calculated / derived quantities:"])
         seen_public = set()
         for row in public_groups:
             if not isinstance(row, dict):
                 continue
+            if _s(row.get("item_type")) == "total":
+                continue
             name = _s(row.get("public_name"))
             value = row.get("value")
-            unit = _s(row.get("unit"))
+            unit = _fmt_unit(row.get("unit"))
             key = (name, _s(row.get("material_total_key")), _s(value), unit)
             if not name or key in seen_public:
                 continue
             seen_public.add(key)
             qty = "{} {}".format(_s(value), unit).strip() if value not in (None, "") else "количество не выделено"
             lines.append("- {}: {}".format(name, qty))
-        if price_items:
-            lines.extend(["", "Ключи для поиска цен без дублей:"])
-            for row in price_items:
+        if totals:
+            lines.extend(["", "Totals by material:"])
+            seen_totals = set()
+            total_names = {
+                "foundation_concrete_B25_total_m3": "Бетон БСТ В25, фундаменты Фм1/Фм2",
+                "foundation_concrete_B7_5_total_m3": "Бетон БСТ В7.5, фундаменты Фм1/Фм2",
+                "foundation_grout_B30_total_m3": "Бетон БСТ В30, подливка Фм1/Фм2",
+                "concrete_B25_total_m3": "Бетон БСТ В25 общий",
+                "concrete_B7_5_total_m3": "Бетон БСТ В7.5 общий",
+                "concrete_B30_total_m3": "Бетон БСТ В30 общий",
+            }
+            for row in totals:
                 if not isinstance(row, dict):
                     continue
-                lines.append("- {} ({})".format(_s(row.get("public_name")), _s(row.get("material_total_key"))))
+                raw_name = _s(row.get("public_name") or row.get("name"))
+                name = total_names.get(raw_name, raw_name)
+                value = row.get("value")
+                unit = _fmt_unit(row.get("unit"))
+                key = (name, _s(value), unit)
+                if not name or key in seen_totals:
+                    continue
+                seen_totals.add(key)
+                lines.append("- {}: {} {}".format(name, _s(value), unit))
         if missing_items:
             lines.extend(["", "Нужно уточнить/добрать:"])
             for item in missing_items:
                 lines.append("- {}".format(_s(item)))
-        lines.extend([
-            "",
-            "Цены не искал. Смету не собирал. Режим: извлечение/нормализация/дедупликация."
-        ])
         return "\n".join(lines).strip()
     lines = [header, "", "Project facts:"]
     if project_facts:
@@ -6205,51 +6243,6 @@ def _t2aot_rows_are_area_only(rows) -> bool:
 
 def _missing_question(parsed: Dict[str, Any]) -> Optional[str]:  # noqa: F811
     rows = parsed.get('pdf_spec_rows') or []
-    raw = _low(parsed.get('raw') or '')
-    if _t2aot_rows_are_area_only(rows) and any(x in raw for x in ('смет', 'стоимост', 'расчет', 'расчёт', 'проект')):
-        return None
-    return _T2AOT_ORIG_MISSING_QUESTION(parsed)
-# === END_PATCH_TOPIC2_AREA_ONLY_WITH_TEMPLATE_ALLOWED_V2 ===
-# === PATCH_TOPIC2_NO_TEMPLATE_FROM_AREA_ONLY_PDF_V1 ===
-# Canon: PDF estimate contour is PDF -> table/spec rows -> normalized AREAL_CALC.
-# If PDF has only AR/TEP area facts, template rows must not become a final estimate
-# unless the user explicitly asks for an orientational calculation.
-def _t2_no_template_area_only_rows_v1(rows):
-    usable = []
-    non_area = []
-    for row in rows or []:
-        if not isinstance(row, dict):
-            continue
-        name = _clean(row.get("name", "")).lower().replace("ё", "е")
-        try:
-            qty = float(row.get("qty") or 0)
-            price = float(row.get("price") or 0)
-        except Exception:
-            qty = price = 0
-        if qty <= 0 and price <= 0:
-            continue
-        usable.append(row)
-        if "площад" not in name and "общая" not in name:
-            non_area.append(row)
-    return bool(usable) and not non_area
-
-
-def _t2_no_template_orient_allowed_v1(parsed):
-    raw = _low((parsed or {}).get("raw") or "")
-    return any(x in raw for x in (
-        "считать ориентировочно по проекту",
-        "сделай ориентировочный расчет",
-        "сделай ориентировочный расчёт",
-        "ориентировочно по проекту",
-        "ориентировочная смета",
-        "ориентировочный расчет",
-        "ориентировочный расчёт",
-    ))
-
-
-def _t2_no_valid_pdf_rows_message_v1():
-    return (
-        "PDF прочитан, но сметная ведомость объёмов / ВОР / спецификация материалов / раздел КЖ с объёмами не найдены. "
 
 ====================================================================================================
 END_FILE: core/stroyka_estimate_canon.py

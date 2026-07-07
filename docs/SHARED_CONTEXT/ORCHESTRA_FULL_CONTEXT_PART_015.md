@@ -1,14 +1,59 @@
 # ORCHESTRA_FULL_CONTEXT_PART_015
-generated_at_utc: 2026-07-07T18:54:08.412433+00:00
-git_sha_before_commit: c68b0dc28c81012640c7c52bc5e4765016af155f
+generated_at_utc: 2026-07-07T19:24:08.718653+00:00
+git_sha_before_commit: 75f68ff0c25d5c4594ccc3083e30a8f7c1a4611b
 part: 15/22
 
 
 ====================================================================================================
 BEGIN_FILE: core/stroyka_estimate_canon.py
 FILE_CHUNK: 2/2
-SHA256_FULL_FILE: b6843f1c2d43cf262f810db30db01f9ef30c8900b040d42ef8787c043e3b6de2
+SHA256_FULL_FILE: d587db0166339357ee403db6e01bc6dcbf0409a6aecfada5e0ba6cd35ea1fcff
 ====================================================================================================
+    raw = _low(parsed.get('raw') or '')
+    if _t2aot_rows_are_area_only(rows) and any(x in raw for x in ('смет', 'стоимост', 'расчет', 'расчёт', 'проект')):
+        return None
+    return _T2AOT_ORIG_MISSING_QUESTION(parsed)
+# === END_PATCH_TOPIC2_AREA_ONLY_WITH_TEMPLATE_ALLOWED_V2 ===
+# === PATCH_TOPIC2_NO_TEMPLATE_FROM_AREA_ONLY_PDF_V1 ===
+# Canon: PDF estimate contour is PDF -> table/spec rows -> normalized AREAL_CALC.
+# If PDF has only AR/TEP area facts, template rows must not become a final estimate
+# unless the user explicitly asks for an orientational calculation.
+def _t2_no_template_area_only_rows_v1(rows):
+    usable = []
+    non_area = []
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        name = _clean(row.get("name", "")).lower().replace("ё", "е")
+        try:
+            qty = float(row.get("qty") or 0)
+            price = float(row.get("price") or 0)
+        except Exception:
+            qty = price = 0
+        if qty <= 0 and price <= 0:
+            continue
+        usable.append(row)
+        if "площад" not in name and "общая" not in name:
+            non_area.append(row)
+    return bool(usable) and not non_area
+
+
+def _t2_no_template_orient_allowed_v1(parsed):
+    raw = _low((parsed or {}).get("raw") or "")
+    return any(x in raw for x in (
+        "считать ориентировочно по проекту",
+        "сделай ориентировочный расчет",
+        "сделай ориентировочный расчёт",
+        "ориентировочно по проекту",
+        "ориентировочная смета",
+        "ориентировочный расчет",
+        "ориентировочный расчёт",
+    ))
+
+
+def _t2_no_valid_pdf_rows_message_v1():
+    return (
+        "PDF прочитан, но сметная ведомость объёмов / ВОР / спецификация материалов / раздел КЖ с объёмами не найдены. "
         "Вижу только архитектурные данные и площади, поэтому финальную смету из шаблона не создаю, чтобы не подменять расчёт догадками.\n\n"
         "Пришли ВОР / спецификацию / КЖ с объёмами либо прямо напиши: считать ориентировочно по проекту."
     )
